@@ -73,4 +73,4 @@ def spatial_modulate_julia(
     )
     jl = _ensure()
     out = jl.spatial_modulate(k, p, n, dim, k_base, form, exponent, length, eps)
-    return validate_spatial_modulator_output(np.asarray(out, dtype=np.float64), n=n)
+    return validate_spatial_modulator_output(out, n=n)

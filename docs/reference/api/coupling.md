@@ -553,6 +553,6 @@ Use it when spatial proximity, mobile agents, tissue geometry, sensor placement,
 
 The module also exposes exponential, power-law, and inverse-distance kernels. The inverse-distance form is reserved for Swarmalator compatibility and uses an epsilon-regularised denominator so the historical kernel remains bit-true without introducing singularities.
 
-The reference implementation is NumPy. Rust, Go, Julia, and Mojo adapters are validated as optional accelerators and must reproduce the same invariants before their output is accepted: finite real-valued matrices, exact shape, non-negative entries, zero diagonal, and symmetry preservation for symmetric inputs.
+The reference implementation is NumPy. Rust, Go, Julia, and Mojo adapters are validated as optional accelerators and must reproduce the same invariants before their output is accepted: finite real-valued matrices, exact shape or flat cardinality, non-boolean and non-complex values, non-negative entries, zero diagonal, and symmetry preservation for symmetric inputs. The public dispatcher preserves matrix-shaped output for callers after replaying the shared direct output validator; optional backend fallback remains limited to loader or runtime unavailability.
 
 See [Coupling - Spatial Modulator](coupling_spatial_modulator.md) for examples, backend notes, and the benchmark contract.

@@ -31,6 +31,9 @@ import numpy as np
 from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.coupling._julia_runtime import require_juliacall_main
+from scpn_phase_orchestrator.experimental.accelerators.coupling import (
+    _spatial_modulator_validation,
+)
 
 __all__ = [
     "ACTIVE_BACKEND",
@@ -294,7 +297,10 @@ def _load_rust_fn() -> Callable[..., FloatArray]:
             float(decay_length_scale),
             float(epsilon),
         )
-        return np.asarray(values, dtype=np.float64)
+        return _spatial_modulator_validation.validate_spatial_modulator_output(
+            values,
+            n=int(n),
+        )
 
     return _rust
 
@@ -385,21 +391,31 @@ def _dispatch() -> Callable[..., FloatArray] | None:
 
 def _validate_backend_output(value: object, *, n: int) -> FloatArray:
     """Return the backend output matching the reference, else raise."""
-    if _contains_boolean_alias(value) or _contains_complex_alias(value):
-        raise ValueError("spatial backend output must be finite real-valued")
     try:
-        out = np.asarray(value, dtype=np.float64)
-    except (TypeError, ValueError) as exc:
-        raise ValueError("spatial backend output must be finite real-valued") from exc
-    if out.shape == (n * n,):
-        out = out.reshape(n, n)
-    if out.shape != (n, n):
-        raise ValueError(f"spatial backend output shape {out.shape} must be ({n}, {n})")
-    if not np.all(np.isfinite(out)):
-        raise ValueError("spatial backend output must contain only finite values")
-    if np.max(np.abs(np.diag(out))) > 1.0e-10:
-        raise ValueError("spatial backend output diagonal must be zero")
-    return np.ascontiguousarray(out, dtype=np.float64)
+        raw = np.asarray(value)
+    except (TypeError, ValueError):
+        raw = None
+    payload: object = (
+        raw.reshape(n * n) if raw is not None and raw.shape == (n, n) else value
+    )
+    try:
+        flat = _spatial_modulator_validation.validate_spatial_modulator_output(
+            payload,
+            n=n,
+        )
+    except ValueError as exc:
+        message = str(exc).replace(
+            "spatial modulator output",
+            "spatial backend output",
+            1,
+        )
+        if "length" in message and "does not match" in message:
+            message = (
+                f"spatial backend output must be shape ({n}, {n}) "
+                f"or length {n * n}; {message}"
+            )
+        raise ValueError(message) from exc
+    return np.ascontiguousarray(flat.reshape(n, n), dtype=np.float64)
 
 
 @dataclass(frozen=True)
@@ -418,6 +434,7 @@ class SpatialCouplingModulator:
     epsilon: float = 1.0e-12
 
     def __post_init__(self) -> None:
+        """Validate immutable scalar controls and the optional distance kernel."""
         _validate_non_negative_scalar(self.K_base, name="K_base")
         _validate_decay_form(self.decay_form)
         _validate_scalar(self.decay_exponent, name="decay_exponent", positive=True)

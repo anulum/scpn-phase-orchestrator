@@ -15,7 +15,7 @@ import hashlib
 import json
 import time
 from pathlib import Path
-from typing import Any
+from typing import TypeAlias, TypedDict
 
 import numpy as np
 from numpy.typing import NDArray
@@ -26,8 +26,23 @@ from scpn_phase_orchestrator.coupling.spatial_modulator import (
     SpatialCouplingModulator,
 )
 
-BACKEND_ORDER = ("rust", "mojo", "julia", "go", "python")
-PARITY_TOLERANCES = {
+FloatArray: TypeAlias = NDArray[np.float64]
+BenchmarkResult: TypeAlias = dict[str, object]
+
+
+class ReferenceContracts(TypedDict):
+    """Reference invariants enforced by the spatial-modulator parity gate."""
+
+    manual_formula_abs_error: float
+    translation_abs_error: float
+    permutation_abs_error: float
+    symmetry_abs_error: float
+    zero_diagonal_abs_error: float
+    nearer_pair_weight_exceeds_far_pair: bool
+
+
+BACKEND_ORDER: tuple[str, ...] = ("rust", "mojo", "julia", "go", "python")
+PARITY_TOLERANCES: dict[str, float] = {
     "rust": 1.0e-12,
     "mojo": 1.0e-9,
     "julia": 1.0e-10,
@@ -38,6 +53,7 @@ BENCHMARK_EVIDENCE_KIND = "local_regression_non_isolated"
 
 
 def _validate_int_control(value: object, *, name: str, minimum: int) -> int:
+    """Return a validated integer benchmark control value."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, (int, np.integer)):
         raise ValueError(f"{name} must be an integer")
     parsed = int(value)
@@ -46,9 +62,8 @@ def _validate_int_control(value: object, *, name: str, minimum: int) -> int:
     return parsed
 
 
-def _problem(
-    n: int, dim: int, seed: int
-) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+def _problem(n: int, dim: int, seed: int) -> tuple[FloatArray, FloatArray]:
+    """Return a deterministic symmetric coupling problem for the benchmark."""
     rng = np.random.default_rng(seed)
     raw = rng.uniform(0.2, 1.4, size=(n, n))
     knm = 0.5 * (raw + raw.T)
@@ -59,22 +74,25 @@ def _problem(
     )
 
 
-def _force_backend(backend: str):
+def _force_backend(backend: str) -> str:
+    """Set the active backend and return the previous backend name."""
     previous = sm_mod.ACTIVE_BACKEND
     sm_mod.ACTIVE_BACKEND = backend
     return previous
 
 
 def _restore_backend(previous: str) -> None:
+    """Restore the active backend after an isolated benchmark call."""
     sm_mod.ACTIVE_BACKEND = previous
 
 
 def _bench_backend(
     backend: str,
-    knm: NDArray[np.float64],
-    positions: NDArray[np.float64],
+    knm: FloatArray,
+    positions: FloatArray,
     calls: int,
-) -> tuple[float, NDArray[np.float64]]:
+) -> tuple[float, FloatArray]:
+    """Return elapsed wall time and output matrix for one backend."""
     modulator = SpatialCouplingModulator(K_base=0.75)
     previous = _force_backend(backend)
     try:
@@ -87,22 +105,25 @@ def _bench_backend(
         _restore_backend(previous)
 
 
-def _array_sha256(array: NDArray[np.floating]) -> str:
+def _array_sha256(array: FloatArray) -> str:
+    """Return a stable SHA-256 digest for a float64 matrix."""
     values = np.ascontiguousarray(array, dtype=np.float64)
     return hashlib.sha256(values.tobytes()).hexdigest()
 
 
 def _backend_status(backend: str) -> tuple[bool, str]:
+    """Return whether the named backend is available and why not when absent."""
     if backend == "python" or backend in AVAILABLE_BACKENDS:
         return True, ""
     return False, f"{backend} backend was not resolved by coupling.spatial_modulator"
 
 
 def _reference_contracts(
-    knm: NDArray[np.float64],
-    positions: NDArray[np.float64],
-    reference: NDArray[np.float64],
-) -> dict[str, Any]:
+    knm: FloatArray,
+    positions: FloatArray,
+    reference: FloatArray,
+) -> ReferenceContracts:
+    """Return mathematical contract errors for the Python reference output."""
     modulator = SpatialCouplingModulator(K_base=0.75)
     distances = modulator.distance_matrix(positions)
     manual = 0.75 * knm / (1.0 + distances)
@@ -134,7 +155,7 @@ def benchmark_spatial_modulator_polyglot_parity_gate(
     dim: int = 2,
     calls: int = 1,
     seed: int = 2026,
-) -> dict[str, object]:
+) -> BenchmarkResult:
     """Record spatial-modulator parity across declared backend slots."""
 
     n = _validate_int_control(n, name="n", minimum=2)
@@ -257,6 +278,7 @@ def benchmark_spatial_modulator_polyglot_parity_gate(
 
 
 def main() -> int:
+    """Run the spatial-modulator benchmark CLI."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, default=None)
     parser.add_argument("--sizes", type=int, nargs="+", default=[16])

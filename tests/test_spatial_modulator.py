@@ -15,12 +15,15 @@ import importlib
 import json
 import sys
 import types
-from typing import get_type_hints
+from collections.abc import Callable
+from pathlib import Path
+from typing import Any, TypeAlias, cast, get_type_hints
 
 import numpy as np
 import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
+from numpy.typing import NDArray
 
 from benchmarks.spatial_modulator_benchmark import (
     benchmark_spatial_modulator_polyglot_parity_gate,
@@ -59,9 +62,21 @@ from scpn_phase_orchestrator.upde.swarmalator import SwarmalatorEngine
 from tests.typing_contracts import assert_precise_ndarray_hint
 
 TWO_PI = 2.0 * np.pi
+FloatArray: TypeAlias = NDArray[np.float64]
+DirectArgs: TypeAlias = tuple[
+    FloatArray,
+    FloatArray,
+    int,
+    int,
+    float,
+    int,
+    float,
+    float,
+    float,
+]
 
 
-def _base() -> np.ndarray:
+def _base() -> FloatArray:
     return np.array(
         [
             [0.0, 2.0, 1.0],
@@ -72,7 +87,7 @@ def _base() -> np.ndarray:
     )
 
 
-def _positions() -> np.ndarray:
+def _positions() -> FloatArray:
     return np.array([[0.0, 0.0], [3.0, 4.0], [6.0, 8.0]], dtype=np.float64)
 
 
@@ -121,14 +136,14 @@ def test_exponential_power_law_and_inverse_distance_contracts() -> None:
 def test_jacobian_positions_matches_jax_reference() -> None:
     from jax import config
 
-    config.update("jax_enable_x64", True)
+    cast(Callable[[str, bool], None], config.update)("jax_enable_x64", True)
     import jax
     import jax.numpy as jnp
 
     positions = np.array([[0.0, 0.1], [1.2, -0.4], [2.0, 0.7]], dtype=np.float64)
     modulator = SpatialCouplingModulator(K_base=0.7)
 
-    def reference(flat):
+    def reference(flat: Any) -> Any:
         x = flat.reshape((3, 2))
         diff = x[:, None, :] - x[None, :, :]
         squared = jnp.sum(diff * diff, axis=2)
@@ -238,8 +253,11 @@ class _FakeGoSpatialLib:
         self.values = values
         self.rc = rc
 
-    def SpatialModulate(self, *_args):
-        out_ref = ctypes.cast(_args[-1], ctypes.POINTER(ctypes.c_double))
+    def SpatialModulate(self, *_args: object) -> int:
+        out_ref = ctypes.cast(
+            cast(Any, _args[-1]),
+            ctypes.POINTER(ctypes.c_double),
+        )
         for index, value in enumerate(self.values):
             out_ref[index] = value
         return self.rc
@@ -249,11 +267,38 @@ class _FakeJuliaSpatialModule:
     def __init__(self, values: tuple[float, ...]) -> None:
         self.values = values
 
-    def spatial_modulate(self, *_args):
+    def spatial_modulate(self, *_args: object) -> FloatArray:
         return np.array(self.values, dtype=np.float64)
 
 
-def _direct_args():
+class _ArrayAliasRejector:
+    def __array__(self, dtype: object | None = None) -> object:
+        raise TypeError("array alias rejected")
+
+
+class _ComplexAliasRejector:
+    def __init__(self) -> None:
+        self.calls = 0
+
+    def __array__(self, dtype: object | None = None) -> object:
+        self.calls += 1
+        if self.calls == 1:
+            return np.array([object()], dtype=object)
+        raise TypeError("complex alias rejected")
+
+
+class _FirstArrayCallRejector:
+    def __init__(self) -> None:
+        self.calls = 0
+
+    def __array__(self, dtype: object | None = None) -> object:
+        self.calls += 1
+        if self.calls == 1:
+            raise ValueError("first array conversion rejected")
+        return np.array(["not-a-number"], dtype=object)
+
+
+def _direct_args() -> DirectArgs:
     return (
         np.array([0.0, 0.2, 0.2, 0.0], dtype=np.float64),
         np.array([0.0, 1.0], dtype=np.float64),
@@ -267,6 +312,98 @@ def _direct_args():
     )
 
 
+def test_alias_probe_exceptions_are_treated_as_absent_aliases() -> None:
+    assert sm_mod._contains_boolean_alias(_ArrayAliasRejector()) is False
+    assert sm_mod._contains_complex_alias(_ComplexAliasRejector()) is False
+
+
+def test_one_dimensional_positions_and_custom_distance_modulate() -> None:
+    modulator = SpatialCouplingModulator(
+        K_base=1.0,
+        distance_fn=lambda _left, _right: np.array(
+            [[0.0, 2.0], [2.0, 0.0]],
+            dtype=np.float64,
+        ),
+    )
+
+    field = modulator.modulation_matrix(np.array([0.0, 1.0], dtype=np.float64))
+    got = modulator.modulate(
+        np.array([[0.0, 1.0], [1.0, 0.0]], dtype=np.float64),
+        np.array([0.0, 1.0], dtype=np.float64),
+    )
+
+    expected = np.array([[0.0, 1.0 / 3.0], [1.0 / 3.0, 0.0]], dtype=np.float64)
+    np.testing.assert_allclose(field, expected)
+    np.testing.assert_allclose(got, expected)
+
+
+def test_public_backend_output_rejects_first_array_conversion_failure() -> None:
+    with pytest.raises(ValueError, match="finite real-valued"):
+        sm_mod._validate_backend_output(_FirstArrayCallRejector(), n=2)
+
+
+def test_backend_loader_success_paths(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(sm_mod, "require_juliacall_main", lambda: object())
+    monkeypatch.setattr(_spatial_modulator_go, "_load_lib", lambda: object())
+
+    assert sm_mod._load_julia_fn() is _spatial_modulator_julia.spatial_modulate_julia
+    assert sm_mod._load_go_fn() is _spatial_modulator_go.spatial_modulate_go
+
+
+def test_dispatch_skips_failed_optional_backend(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def unavailable_backend(_name: str) -> object:
+        raise ImportError("backend unavailable")
+
+    monkeypatch.setattr(sm_mod, "ACTIVE_BACKEND", "rust")
+    monkeypatch.setattr(sm_mod, "AVAILABLE_BACKENDS", [])
+    monkeypatch.setattr(sm_mod, "_load_backend", unavailable_backend)
+
+    assert sm_mod._dispatch() is None
+
+
+def test_direct_julia_ensure_cache_and_file_guards(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    cached = object()
+    monkeypatch.setattr(_spatial_modulator_julia, "_JULIA_MODULE", cached)
+    assert _spatial_modulator_julia._ensure() is cached
+
+    class _FakeJuliaMain:
+        def __init__(self, module: object) -> None:
+            self.SpatialModulatorJL = module
+            self.includes: list[str] = []
+
+        def include(self, path: str) -> None:
+            self.includes.append(path)
+
+    module = object()
+    side_file = tmp_path / "spatial_modulator.jl"
+    side_file.write_text("module SpatialModulatorJL end\n", encoding="utf-8")
+    fake_main = _FakeJuliaMain(module)
+    monkeypatch.setattr(_spatial_modulator_julia, "_JULIA_MODULE", None)
+    monkeypatch.setattr(_spatial_modulator_julia, "_JULIA_FILE", side_file)
+    monkeypatch.setattr(
+        _spatial_modulator_julia,
+        "require_julia_main",
+        lambda: fake_main,
+    )
+
+    assert _spatial_modulator_julia._ensure() is module
+    assert fake_main.includes == [str(side_file)]
+
+    monkeypatch.setattr(_spatial_modulator_julia, "_JULIA_MODULE", None)
+    monkeypatch.setattr(
+        _spatial_modulator_julia,
+        "_JULIA_FILE",
+        tmp_path / "missing.jl",
+    )
+    with pytest.raises(ImportError, match="julia side-file not found"):
+        _spatial_modulator_julia._ensure()
+
+
 @pytest.mark.parametrize(
     ("module", "fn_name", "loader_name"),
     [
@@ -277,11 +414,11 @@ def _direct_args():
 )
 def test_direct_backend_rejects_invalid_inputs_before_runtime_loading(
     monkeypatch: pytest.MonkeyPatch,
-    module,
+    module: types.ModuleType,
     fn_name: str,
     loader_name: str,
 ) -> None:
-    def forbidden_loader():
+    def forbidden_loader() -> None:
         raise AssertionError("runtime loader must not be called")
 
     monkeypatch.setattr(module, loader_name, forbidden_loader)
@@ -300,7 +437,8 @@ def test_direct_go_julia_mojo_outputs_are_validated(
         lambda: _FakeGoSpatialLib((0.0, 0.1, 0.1, 0.0)),
     )
     np.testing.assert_allclose(
-        _spatial_modulator_go.spatial_modulate_go(*_direct_args()), [0.0, 0.1, 0.1, 0.0]
+        _spatial_modulator_go.spatial_modulate_go(*_direct_args()),
+        np.array([0.0, 0.1, 0.1, 0.0], dtype=np.float64),
     )
 
     monkeypatch.setattr(
@@ -310,14 +448,15 @@ def test_direct_go_julia_mojo_outputs_are_validated(
     )
     np.testing.assert_allclose(
         _spatial_modulator_julia.spatial_modulate_julia(*_direct_args()),
-        [0.0, 0.2, 0.2, 0.0],
+        np.array([0.0, 0.2, 0.2, 0.0], dtype=np.float64),
     )
 
     monkeypatch.setattr(
         _spatial_modulator_mojo, "_ensure_exe", lambda: "spatial_modulator"
     )
+    mojo_subprocess = cast(Any, _spatial_modulator_mojo.__dict__["subprocess"])
     monkeypatch.setattr(
-        _spatial_modulator_mojo.subprocess,
+        mojo_subprocess,
         "run",
         lambda *_args, **_kwargs: types.SimpleNamespace(
             returncode=0, stdout="0.0\n0.3\n0.3\n0.0\n", stderr=""
@@ -325,8 +464,21 @@ def test_direct_go_julia_mojo_outputs_are_validated(
     )
     np.testing.assert_allclose(
         _spatial_modulator_mojo.spatial_modulate_mojo(*_direct_args()),
-        [0.0, 0.3, 0.3, 0.0],
+        np.array([0.0, 0.3, 0.3, 0.0], dtype=np.float64),
     )
+
+
+def test_direct_julia_rejects_boolean_output_alias(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class _BooleanJuliaSpatialModule:
+        def spatial_modulate(self, *_args: object) -> object:
+            return np.array([0.0, True, 0.5, 0.0], dtype=object)
+
+    monkeypatch.setattr(_spatial_modulator_julia, "_ensure", _BooleanJuliaSpatialModule)
+
+    with pytest.raises(ValueError, match="finite real-valued"):
+        _spatial_modulator_julia.spatial_modulate_julia(*_direct_args())
 
 
 def test_public_spatial_accelerator_wrappers_forward_to_direct_modules() -> None:
@@ -411,10 +563,33 @@ def test_spatial_backend_validation_rejects_bad_output_invariants() -> None:
 
 def test_rust_loader_contract(monkeypatch: pytest.MonkeyPatch) -> None:
     fake_spo = types.ModuleType("spo_kernel")
-    fake_spo.spatial_modulate_rust = lambda *args: [0.0, 0.4, 0.4, 0.0]
+
+    def spatial_modulate_rust(*_args: object) -> list[float]:
+        return [0.0, 0.4, 0.4, 0.0]
+
+    fake_spo.__dict__["spatial_modulate_rust"] = spatial_modulate_rust
     monkeypatch.setitem(sys.modules, "spo_kernel", fake_spo)
     fn = sm_mod._load_rust_fn()
-    np.testing.assert_allclose(fn(*_direct_args()), [0.0, 0.4, 0.4, 0.0])
+    np.testing.assert_allclose(
+        fn(*_direct_args()),
+        np.array([0.0, 0.4, 0.4, 0.0], dtype=np.float64),
+    )
+
+
+def test_rust_loader_rejects_boolean_output_alias(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    fake_spo = types.ModuleType("spo_kernel")
+
+    def spatial_modulate_rust(*_args: object) -> object:
+        return np.array([0.0, True, 0.5, 0.0], dtype=object)
+
+    fake_spo.__dict__["spatial_modulate_rust"] = spatial_modulate_rust
+    monkeypatch.setitem(sys.modules, "spo_kernel", fake_spo)
+    fn = sm_mod._load_rust_fn()
+
+    with pytest.raises(ValueError, match="finite real-valued"):
+        fn(*_direct_args())
 
 
 def test_backend_annotations_use_float64_ndarray() -> None:
@@ -433,18 +608,24 @@ def test_spatial_modulator_benchmark_gate_reports_contracts() -> None:
     out = benchmark_spatial_modulator_polyglot_parity_gate(
         n=6, dim=2, calls=1, seed=2026
     )
-    records = json.loads(str(out["backend_records_json"]))
-    thresholds = json.loads(str(out["acceptance_thresholds_json"]))
+    records = cast(
+        list[dict[str, object]],
+        json.loads(str(out["backend_records_json"])),
+    )
+    thresholds = cast(
+        dict[str, object],
+        json.loads(str(out["acceptance_thresholds_json"])),
+    )
 
     assert out["suite"] == "spatial_modulator_polyglot_parity_gate"
     assert out["backend_count"] == 5
     assert out["python_reference_present"] == 1
     assert out["acceptance_passed"] == 1
-    assert float(out["manual_formula_abs_error"]) <= 1.0e-12
-    assert float(out["translation_abs_error"]) <= 1.0e-12
-    assert float(out["permutation_abs_error"]) <= 1.0e-12
-    assert float(out["symmetry_abs_error"]) <= 1.0e-12
-    assert float(out["zero_diagonal_abs_error"]) <= 1.0e-12
+    assert float(cast(float, out["manual_formula_abs_error"])) <= 1.0e-12
+    assert float(cast(float, out["translation_abs_error"])) <= 1.0e-12
+    assert float(cast(float, out["permutation_abs_error"])) <= 1.0e-12
+    assert float(cast(float, out["symmetry_abs_error"])) <= 1.0e-12
+    assert float(cast(float, out["zero_diagonal_abs_error"])) <= 1.0e-12
     assert out["nearer_pair_weight_exceeds_far_pair"] == 1
     assert thresholds["require_inverse_plus_one_formula"] is True
     assert thresholds["require_translation_invariance"] is True

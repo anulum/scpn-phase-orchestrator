@@ -47,6 +47,14 @@ surfaces. The benchmark gate records each declared backend slot and accepts only
 when available backends match the Python reference within the documented
 tolerance.
 
+The public dispatcher and direct accelerator wrappers share the same
+spatial-modulator output validator. Rust wrapper returns and direct Julia returns
+are validated before dtype coercion, so boolean aliases, complex aliases,
+non-finite values, wrong cardinality, and non-zero diagonals are rejected instead
+of being widened into apparently valid float matrices. Public dispatch still
+returns an `(n, n)` matrix to callers; backend fallback is reserved for loader or
+runtime unavailability, not malformed backend physics evidence.
+
 ## Why spatial modulation is an operations control
 
 - In moving populations, coupling strength should not be treated as static.

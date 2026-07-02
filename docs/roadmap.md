@@ -49,11 +49,12 @@ TODO queue.
 | Cross-domain meta-transfer | Replay proposals, nested corpora, package export, entry points, non-publishing evidence, and pre-publish enforcement exist. | Validate larger private or partner audit-history corpora and decide optional package publication. |
 | Plugin ecosystem | Registry, catalogue, Rust-facing metadata, approval-bound execution requests, storage, revocation, lifecycle, scheduler, retry, and dashboard artefacts exist. | Build a curated signed domainpack and extension store with reputation, audit scores, revocation, provenance, operator UX refinement, and adapter-family onboarding. |
 
-Latest U1 closure: the public swarmalator dispatcher and Rust wrapper now
-validate optional backend position/phase outputs before publication, preserving
-fallback only for loader/runtime unavailability while rejecting malformed,
-boolean-alias, non-finite, wrong-cardinality, and out-of-torus outputs before
-they can become public swarmalator state.
+Latest U1 closure: the public spatial-modulator dispatcher, Rust wrapper, and
+direct Julia bridge now validate optional backend coupling-matrix outputs before
+publication, preserving fallback only for loader/runtime unavailability while
+rejecting malformed, boolean-alias, complex-alias, non-finite, wrong-cardinality,
+and non-zero-diagonal outputs before they can become public spatial coupling
+state.
 
 | Parent item | Completed evidence consolidated here | Remaining open scope |
 |-------------|--------------------------------------|----------------------|
@@ -279,7 +280,7 @@ for the detailed historical release plan and internal planning notes.
 
 | Item | Current state | Remaining work |
 | --- | --- | --- |
-| PHA-C.1 spatial coupling modulation | Implemented as `SpatialCouplingModulator` with bounded inverse-plus-one, exponential, power-law, and epsilon-regularised inverse-distance kernels; integrated into the Swarmalator Python reference path; exposed through NumPy plus optional Rust, Go, Julia, and Mojo adapter contracts; documented in the coupling API; and covered by a dedicated polyglot benchmark gate. | Keep benchmark snapshots refreshed as accelerators evolve and reuse the same contract when downstream PHA-C graph lanes consume spatially modulated `K_nm`. |
+| PHA-C.1 spatial coupling modulation | Implemented as `SpatialCouplingModulator` with bounded inverse-plus-one, exponential, power-law, and epsilon-regularised inverse-distance kernels; integrated into the Swarmalator Python reference path; exposed through NumPy plus optional Rust, Go, Julia, and Mojo adapter contracts; public optional-backend outputs replay shared finite real-valued cardinality and zero-diagonal validation before publication; documented in the coupling API; and covered by a dedicated polyglot benchmark gate. | Keep benchmark snapshots refreshed as accelerators evolve and reuse the same contract when downstream PHA-C graph lanes consume spatially modulated `K_nm`. |
 
 ## PHA-C time-varying frequency status
 

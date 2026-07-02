@@ -59,6 +59,11 @@ positions must keep `(N, D)` shape or `N*D` flattened cardinality, phases must
 keep oscillator cardinality, values must be finite real numbers, phases must
 stay inside `[0, 2*pi)`, and boolean aliases are rejected before float
 coercion.
+The public spatial-modulator dispatcher and Rust wrapper, plus the direct Julia
+bridge, apply the shared direct spatial-modulator output validator before
+publication: outputs must keep `N*N` cardinality or matrix shape, contain finite
+real non-boolean values, and preserve the zero self-coupling diagonal before the
+public dispatcher reshapes them for callers.
 The public PAC dispatcher applies the direct phase-amplitude-coupling output
 validators to optional backend returns before publication: modulation-index
 scalars must be finite values in `[0, 1]`, and PAC-matrix payloads must keep
