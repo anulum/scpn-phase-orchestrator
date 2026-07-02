@@ -52,6 +52,9 @@ import numpy as np
 from numpy.typing import NDArray
 
 from scpn_phase_orchestrator._compat import TWO_PI
+from scpn_phase_orchestrator.experimental.accelerators.upde import (
+    _hypergraph_validation,
+)
 from scpn_phase_orchestrator.upde._julia_runtime import require_juliacall_main
 
 FloatArray = NDArray[np.float64]
@@ -113,7 +116,7 @@ def _load_rust_fn() -> Callable[..., FloatArray]:
         n_steps: int,
     ) -> FloatArray:
         """Call the Rust hypergraph Kuramoto step kernel."""
-        return np.asarray(
+        return _validate_backend_output(
             hypergraph_run_rust(
                 np.ascontiguousarray(phases, dtype=np.float64),
                 np.ascontiguousarray(omegas, dtype=np.float64),
@@ -128,7 +131,7 @@ def _load_rust_fn() -> Callable[..., FloatArray]:
                 float(dt),
                 int(n_steps),
             ),
-            dtype=np.float64,
+            n=int(n),
         )
 
     return _rust
@@ -281,6 +284,11 @@ def _validate_optional_state_array(
     return _validate_state_array(value, name=name, shape=shape).ravel()
 
 
+def _validate_backend_output(value: object, *, n: int) -> FloatArray:
+    """Return a validated hypergraph backend phase vector, else raise."""
+    return _hypergraph_validation.validate_hypergraph_output(value, n=n)
+
+
 def _validate_hyperedge(edge: Hyperedge, *, n_oscillators: int) -> Hyperedge:
     """Return a validated hyperedge of distinct oscillator indices, else raise."""
     nodes = tuple(edge.nodes)
@@ -328,17 +336,14 @@ def _python_run(
     p = np.asarray(phases, dtype=np.float64).copy()
     om = np.asarray(omegas, dtype=np.float64)
     has_pairwise = knm_flat.size == n * n
-    knm = knm_flat.reshape(n, n) if has_pairwise else None
     has_alpha = alpha_flat.size == n * n
-    alpha = alpha_flat.reshape(n, n) if has_alpha else None
-    alpha_zero = (alpha is None) or bool(np.all(alpha == 0.0))
+    alpha_zero = (not has_alpha) or bool(np.all(alpha_flat == 0.0))
 
     n_edges = int(edge_offsets.size)
     for _ in range(n_steps):
         deriv = om.copy()
         if has_pairwise:
-            if knm is None:
-                raise RuntimeError("pairwise coupling matrix was not initialised")
+            knm = knm_flat.reshape(n, n)
             s = np.sin(p)
             c = np.cos(p)
             if alpha_zero:
@@ -349,8 +354,7 @@ def _python_run(
                 )
                 deriv += np.sum(knm * sin_diff, axis=1)
             else:
-                if alpha is None:
-                    raise RuntimeError("phase frustration matrix was not initialised")
+                alpha = alpha_flat.reshape(n, n)
                 diff = p[np.newaxis, :] - p[:, np.newaxis] - alpha
                 deriv += np.sum(knm * np.sin(diff), axis=1)
         if zeta != 0.0:
@@ -382,7 +386,18 @@ class HypergraphEngine:
         n_oscillators: int,
         dt: float,
         hyperedges: list[Hyperedge] | None = None,
-    ):
+    ) -> None:
+        """Initialise a validated hypergraph Kuramoto engine.
+
+        Parameters
+        ----------
+        n_oscillators : int
+            Positive number of oscillators in the simulated system.
+        dt : float
+            Positive finite explicit-Euler step size.
+        hyperedges : list[Hyperedge] | None
+            Optional initial hyperedge definitions to validate and store.
+        """
         self._n = _validate_positive_int(n_oscillators, name="n_oscillators")
         self._dt = _validate_positive_float(dt, name="dt")
         self._hyperedges = [
@@ -556,7 +571,25 @@ class HypergraphEngine:
         en, eo, es = self._encode_edges()
         backend_fn = _dispatch()
         if backend_fn is not None:
-            return backend_fn(
+            return _validate_backend_output(
+                backend_fn(
+                    phases64,
+                    omegas64,
+                    self._n,
+                    en,
+                    eo,
+                    es,
+                    knm_flat,
+                    alpha_flat,
+                    float(zeta),
+                    float(psi),
+                    float(self._dt),
+                    int(n_steps),
+                ),
+                n=self._n,
+            )
+        return _validate_backend_output(
+            _python_run(
                 phases64,
                 omegas64,
                 self._n,
@@ -569,20 +602,8 @@ class HypergraphEngine:
                 float(psi),
                 float(self._dt),
                 int(n_steps),
-            )
-        return _python_run(
-            phases64,
-            omegas64,
-            self._n,
-            en,
-            eo,
-            es,
-            knm_flat,
-            alpha_flat,
-            float(zeta),
-            float(psi),
-            float(self._dt),
-            int(n_steps),
+            ),
+            n=self._n,
         )
 
     def order_parameter(self, phases: FloatArray) -> float:

@@ -182,6 +182,12 @@ and optional pairwise `K_nm`/`alpha` flat buffers must be empty or exactly
 `N*N` with zero diagonals. Zero-step direct calls return the torus-normalised
 input phases without requiring the optional runtime.
 
+The public `HypergraphEngine.run()` dispatcher and Rust wrapper replay the same
+output validator before publishing optional-backend results. Returned phase
+vectors must keep oscillator cardinality, contain only finite real values, and
+remain on the torus in `[0, 2*pi)`; loader/runtime unavailability can still fall
+back to Python, but malformed backend physics evidence raises immediately.
+
 This avoids Python object overhead and enables zero-copy transfer.
 
 ### Input Contracts
@@ -206,6 +212,7 @@ This avoids Python object overhead and enables zero-copy transfer.
 - **External drive** ($\zeta$, $\Psi$) for entrainment
 - **Full Rust FFI acceleration** with flat-encoded edge transfer
 - **Direct Go/Julia/Mojo boundary validation** before optional runtime loading
+- **Public optional-backend output validation** before phase vectors publish
 - **Order parameter computation** — built-in `order_parameter()` method
 - **step() and run()** — single-step or batch integration
 

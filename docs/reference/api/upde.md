@@ -460,6 +460,12 @@ This generalizes:
 Supports mixed-order interactions: some edges pairwise, some 3-body,
 some 4-body, in the same network.
 
+Optional hypergraph backends are validated before their results publish:
+returned phase vectors must keep oscillator cardinality, contain finite real
+values, and remain in `[0, 2*pi)`. Loader/runtime unavailability can still fall
+back to Python; malformed backend outputs raise instead of becoming simulation
+evidence.
+
 **Usage:**
 
 ```python

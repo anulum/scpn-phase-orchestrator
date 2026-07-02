@@ -19,11 +19,16 @@ from __future__ import annotations
 
 import contextlib
 import math
+import sys
+import types
+from collections.abc import Callable, Iterator
+from typing import NoReturn, TypeAlias, cast
 
 import numpy as np
 import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
+from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.experimental.accelerators.upde import _hypergraph_mojo
 from scpn_phase_orchestrator.experimental.accelerators.upde import (
@@ -43,7 +48,43 @@ from scpn_phase_orchestrator.upde.hypergraph import HypergraphEngine
 
 TWO_PI = 2.0 * math.pi
 TOL = 1e-12
-DIRECT_BACKENDS = (hypergraph_run_go, hypergraph_run_julia, hypergraph_run_mojo)
+FloatArray: TypeAlias = NDArray[np.float64]
+IntArray: TypeAlias = NDArray[np.int64]
+BackendFn: TypeAlias = Callable[
+    [
+        FloatArray,
+        FloatArray,
+        int,
+        IntArray,
+        IntArray,
+        FloatArray,
+        FloatArray,
+        FloatArray,
+        float,
+        float,
+        float,
+        int,
+    ],
+    FloatArray,
+]
+BackendArgs: TypeAlias = tuple[
+    FloatArray,
+    FloatArray,
+    int,
+    IntArray,
+    IntArray,
+    FloatArray,
+    FloatArray,
+    FloatArray,
+    float,
+    float,
+    float,
+    int,
+]
+DIRECT_BACKENDS: tuple[BackendFn, ...] = cast(
+    tuple[BackendFn, ...],
+    (hypergraph_run_go, hypergraph_run_julia, hypergraph_run_mojo),
+)
 
 
 def test__hypergraph_validation_helper_is_directly_linked_to_backend_tests() -> None:
@@ -52,7 +93,7 @@ def test__hypergraph_validation_helper_is_directly_linked_to_backend_tests() -> 
 
 
 @contextlib.contextmanager
-def _force_backend(name: str):
+def _force_backend(name: str) -> Iterator[None]:
     prev = h_mod.ACTIVE_BACKEND
     h_mod.ACTIVE_BACKEND = name
     try:
@@ -61,7 +102,7 @@ def _force_backend(name: str):
         h_mod.ACTIVE_BACKEND = prev
 
 
-def _problem(seed: int, n: int = 6):
+def _problem(seed: int, n: int = 6) -> tuple[FloatArray, FloatArray, FloatArray]:
     rng = np.random.default_rng(seed)
     theta = rng.uniform(0, TWO_PI, n)
     omega = rng.normal(0.5, 0.2, n)
@@ -76,10 +117,10 @@ def _run_backend(
     n: int = 6,
     n_steps: int = 20,
     *,
-    alpha=None,
+    alpha: FloatArray | None = None,
     zeta: float = 0.0,
     psi: float = 0.0,
-):
+) -> FloatArray:
     if backend not in h_mod.AVAILABLE_BACKENDS:
         pytest.skip(f"backend {backend!r} unavailable")
     theta, omega, knm = _problem(seed, n)
@@ -99,22 +140,22 @@ def _run_backend(
 
 
 class TestBackendParity:
-    def test_rust_matches_python(self):
+    def test_rust_matches_python(self) -> None:
         ref = _run_backend("python", 0)
         got = _run_backend("rust", 0)
         assert np.max(np.abs(got - ref)) < TOL
 
-    def test_julia_matches_python(self):
+    def test_julia_matches_python(self) -> None:
         ref = _run_backend("python", 1)
         got = _run_backend("julia", 1)
         assert np.max(np.abs(got - ref)) < TOL
 
-    def test_go_matches_python(self):
+    def test_go_matches_python(self) -> None:
         ref = _run_backend("python", 2)
         got = _run_backend("go", 2)
         assert np.max(np.abs(got - ref)) < TOL
 
-    def test_mojo_matches_python(self):
+    def test_mojo_matches_python(self) -> None:
         ref = _run_backend("python", 3, n=6)
         got = _run_backend("mojo", 3, n=6)
         assert np.max(np.abs(got - ref)) < 1e-10
@@ -123,7 +164,7 @@ class TestBackendParity:
 class TestAlphaNonZero:
     """The alpha-nonzero branch uses the direct ``sin(diff)`` form."""
 
-    def _run(self, backend: str, seed: int):
+    def _run(self, backend: str, seed: int) -> FloatArray:
         n = 6  # ``_run_backend`` seeds edges up to index 5
         rng = np.random.default_rng(seed + 100)
         theta, omega, knm = _problem(seed, n)
@@ -138,17 +179,17 @@ class TestAlphaNonZero:
             psi=1.2,
         )
 
-    def test_rust_alpha(self):
+    def test_rust_alpha(self) -> None:
         ref = self._run("python", 5)
         got = self._run("rust", 5)
         assert np.max(np.abs(got - ref)) < TOL
 
-    def test_go_alpha(self):
+    def test_go_alpha(self) -> None:
         ref = self._run("python", 6)
         got = self._run("go", 6)
         assert np.max(np.abs(got - ref)) < TOL
 
-    def test_julia_alpha(self):
+    def test_julia_alpha(self) -> None:
         ref = self._run("python", 7)
         got = self._run("julia", 7)
         assert np.max(np.abs(got - ref)) < TOL
@@ -157,7 +198,7 @@ class TestAlphaNonZero:
 class TestNoPairwise:
     """Hypergraph-only coupling (no pairwise K) must still agree."""
 
-    def _run(self, backend: str, seed: int):
+    def _run(self, backend: str, seed: int) -> FloatArray:
         if backend not in h_mod.AVAILABLE_BACKENDS:
             pytest.skip(f"backend {backend!r} unavailable")
         n = 5
@@ -170,12 +211,12 @@ class TestNoPairwise:
         with _force_backend(backend):
             return eng.run(theta, omega, n_steps=30)
 
-    def test_rust_vs_python(self):
+    def test_rust_vs_python(self) -> None:
         ref = self._run("python", 9)
         got = self._run("rust", 9)
         assert np.max(np.abs(got - ref)) < TOL
 
-    def test_go_vs_python(self):
+    def test_go_vs_python(self) -> None:
         ref = self._run("python", 10)
         got = self._run("go", 10)
         assert np.max(np.abs(got - ref)) < TOL
@@ -191,7 +232,7 @@ class TestHypothesisParity:
         deadline=None,
         suppress_health_check=[HealthCheck.too_slow],
     )
-    def test_rust_hypothesis(self, n, seed):
+    def test_rust_hypothesis(self, n: int, seed: int) -> None:
         if "rust" not in h_mod.AVAILABLE_BACKENDS:
             pytest.skip("rust unavailable")
         ref = _run_backend("python", seed, n=n)
@@ -207,7 +248,7 @@ class TestHypothesisParity:
         deadline=None,
         suppress_health_check=[HealthCheck.too_slow],
     )
-    def test_go_hypothesis(self, n, seed):
+    def test_go_hypothesis(self, n: int, seed: int) -> None:
         if "go" not in h_mod.AVAILABLE_BACKENDS:
             pytest.skip("go unavailable")
         ref = _run_backend("python", seed, n=n)
@@ -216,7 +257,21 @@ class TestHypothesisParity:
 
 
 class TestDispatchFallbackChain:
-    def test_dispatch_falls_back_to_python_when_loader_fails(self, monkeypatch):
+    def test_load_julia_fn_returns_bridge_when_runtime_gate_passes(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        def runtime_gate() -> object:
+            return object()
+
+        monkeypatch.setattr(h_mod, "require_juliacall_main", runtime_gate)
+
+        assert h_mod._load_julia_fn() is hypergraph_run_julia
+
+    def test_dispatch_falls_back_to_python_when_loader_fails(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
         previous_backend = h_mod.ACTIVE_BACKEND
         previous_available = list(h_mod.AVAILABLE_BACKENDS)
         previous_loader = h_mod._LOADERS["go"]
@@ -238,7 +293,35 @@ class TestDispatchFallbackChain:
 
         assert backend is None
 
-    def test_dispatch_uses_cached_loader_once(self, monkeypatch):
+    def test_dispatch_returns_python_when_every_optional_backend_fails(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        previous_backend = h_mod.ACTIVE_BACKEND
+        previous_available = list(h_mod.AVAILABLE_BACKENDS)
+        previous_loader = h_mod._LOADERS["go"]
+        h_mod.ACTIVE_BACKEND = "go"
+        h_mod.AVAILABLE_BACKENDS = ["go"]
+        h_mod._BACKEND_CACHE.clear()
+
+        def unavailable_loader() -> BackendFn:
+            raise ImportError("go backend unavailable")
+
+        monkeypatch.setitem(h_mod._LOADERS, "go", unavailable_loader)
+        try:
+            backend = h_mod._dispatch()
+        finally:
+            h_mod.ACTIVE_BACKEND = previous_backend
+            h_mod.AVAILABLE_BACKENDS = previous_available
+            monkeypatch.setitem(h_mod._LOADERS, "go", previous_loader)
+            h_mod._BACKEND_CACHE.clear()
+
+        assert backend is None
+
+    def test_dispatch_uses_cached_loader_once(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
         previous_backend = h_mod.ACTIVE_BACKEND
         previous_available = list(h_mod.AVAILABLE_BACKENDS)
         previous_loader = h_mod._LOADERS["go"]
@@ -263,7 +346,7 @@ class TestDispatchFallbackChain:
         ) -> np.ndarray:
             return np.asarray(phases, dtype=np.float64)
 
-        def loader():
+        def loader() -> BackendFn:
             nonlocal call_count
             call_count += 1
             return fake_backend
@@ -283,7 +366,7 @@ class TestDispatchFallbackChain:
         assert call_count == 1
 
 
-def _direct_payload(n: int = 6):
+def _direct_payload(n: int = 6) -> BackendArgs:
     phases = np.linspace(0.1, 1.1, n, dtype=np.float64)
     omegas = np.linspace(0.2, 0.7, n, dtype=np.float64)
     edge_nodes = np.array([0, 1, 2, 1, 3, 4, 5], dtype=np.int64)
@@ -308,7 +391,95 @@ def _direct_payload(n: int = 6):
     )
 
 
+class TestPublicBackendOutputContracts:
+    """Public dispatchers validate optional backend output before publication."""
+
+    def test_run_rejects_uncoercible_phase_payload(self) -> None:
+        class BadArray:
+            def __array__(self, dtype: object | None = None) -> NoReturn:
+                raise TypeError("cannot coerce")
+
+        engine = HypergraphEngine(2, 0.01)
+
+        with pytest.raises(ValueError, match="phases must be a finite float array"):
+            engine.run(
+                cast(FloatArray, BadArray()),
+                np.array([0.3, 0.4], dtype=np.float64),
+                n_steps=1,
+            )
+
+    @pytest.mark.parametrize(
+        "backend_output",
+        [
+            np.array([-0.1, 0.2], dtype=np.float64),
+            np.array([0.1, TWO_PI + 1e-6], dtype=np.float64),
+        ],
+    )
+    def test_run_rejects_optional_backend_output_outside_torus(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        backend_output: FloatArray,
+    ) -> None:
+        def malformed_backend(
+            _phases: FloatArray,
+            _omegas: FloatArray,
+            _n: int,
+            _edge_nodes: IntArray,
+            _edge_offsets: IntArray,
+            _edge_strengths: FloatArray,
+            _knm_flat: FloatArray,
+            _alpha_flat: FloatArray,
+            _zeta: float,
+            _psi: float,
+            _dt: float,
+            _n_steps: int,
+        ) -> FloatArray:
+            return backend_output
+
+        monkeypatch.setattr(h_mod, "_dispatch", lambda: malformed_backend)
+        engine = HypergraphEngine(2, 0.01)
+        engine.add_edge((0, 1), strength=0.4)
+
+        with pytest.raises(ValueError, match=r"\[0, 2\*pi\)"):
+            engine.run(
+                np.array([0.1, 0.2], dtype=np.float64),
+                np.array([0.3, 0.4], dtype=np.float64),
+                n_steps=1,
+            )
+
+    def test_rust_wrapper_rejects_optional_backend_output_outside_torus(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        fake_module = types.ModuleType("spo_kernel")
+
+        def hypergraph_run_rust(
+            _phases: FloatArray,
+            _omegas: FloatArray,
+            n: int,
+            _edge_nodes: IntArray,
+            _edge_offsets: IntArray,
+            _edge_strengths: FloatArray,
+            _knm_flat: FloatArray,
+            _alpha_flat: FloatArray,
+            _zeta: float,
+            _psi: float,
+            _dt: float,
+            _n_steps: int,
+        ) -> list[float]:
+            return [0.1] * (int(n) - 1) + [TWO_PI + 1e-6]
+
+        fake_module.__dict__["hypergraph_run_rust"] = hypergraph_run_rust
+        monkeypatch.setitem(sys.modules, "spo_kernel", fake_module)
+        rust_backend = h_mod._load_rust_fn()
+
+        with pytest.raises(ValueError, match=r"\[0, 2\*pi\)"):
+            rust_backend(*_direct_payload())
+
+
 class TestDirectMojoBoundaryContracts:
+    """Direct Mojo subprocess parsing validates raw stdout before publication."""
+
     @pytest.mark.parametrize(
         ("stdout", "match"),
         [
@@ -327,14 +498,20 @@ class TestDirectMojoBoundaryContracts:
         match: str,
     ) -> None:
         monkeypatch.setattr(_hypergraph_mojo, "_ensure_exe", lambda: "hypergraph")
+
+        class Proc:
+            def __init__(self, stdout_value: str) -> None:
+                self.returncode = 0
+                self.stdout = stdout_value
+                self.stderr = ""
+
+        def fake_run(*_args: object, **_kwargs: object) -> Proc:
+            return Proc(stdout)
+
         monkeypatch.setattr(
-            _hypergraph_mojo.subprocess,
+            cast(object, _hypergraph_mojo.__dict__["subprocess"]),
             "run",
-            lambda *_args, **_kwargs: type(
-                "Proc",
-                (),
-                {"returncode": 0, "stdout": stdout, "stderr": ""},
-            )(),
+            fake_run,
         )
 
         with pytest.raises(ValueError, match=match):
@@ -362,29 +539,40 @@ class TestDirectBackendBoundaryContracts:
             (11, -1),
         ],
     )
-    def test_validation_precedes_runtime_load(self, backend, index, replacement):
+    def test_validation_precedes_runtime_load(
+        self,
+        backend: BackendFn,
+        index: int,
+        replacement: object,
+    ) -> None:
         args = list(_direct_payload())
         args[index] = replacement
         with pytest.raises(ValueError):
-            backend(*args)
+            backend(*cast(BackendArgs, tuple(args)))
 
     @pytest.mark.parametrize("backend", DIRECT_BACKENDS)
-    def test_rejects_duplicate_nodes_in_one_hyperedge(self, backend):
+    def test_rejects_duplicate_nodes_in_one_hyperedge(
+        self,
+        backend: BackendFn,
+    ) -> None:
         args = list(_direct_payload())
         args[3] = np.array([0, 1, 1], dtype=np.int64)
         args[4] = np.array([0], dtype=np.int64)
         args[5] = np.array([0.4], dtype=np.float64)
 
         with pytest.raises(ValueError, match="repeat nodes"):
-            backend(*args)
+            backend(*cast(BackendArgs, tuple(args)))
 
     @pytest.mark.parametrize("backend", DIRECT_BACKENDS)
-    def test_zero_step_normalises_without_optional_runtime(self, backend):
+    def test_zero_step_normalises_without_optional_runtime(
+        self,
+        backend: BackendFn,
+    ) -> None:
         args = list(_direct_payload())
         raw_phases = np.array([-0.25, 0.0, TWO_PI + 0.2, 9.0, 1.5, 2.0])
         args[0] = raw_phases
         args[11] = 0
 
-        got = backend(*args)
+        got = backend(*cast(BackendArgs, tuple(args)))
 
         np.testing.assert_allclose(got, np.mod(raw_phases, TWO_PI))
