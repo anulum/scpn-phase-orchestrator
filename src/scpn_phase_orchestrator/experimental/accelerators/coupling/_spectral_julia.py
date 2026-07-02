@@ -20,7 +20,10 @@ from scpn_phase_orchestrator.experimental.accelerators._julia_runtime import (
     require_julia_main,
 )
 
-from ._spectral_validation import validate_spectral_backend_inputs
+from ._spectral_validation import (
+    validate_spectral_backend_inputs,
+    validate_spectral_backend_output,
+)
 
 __all__ = ["spectral_eig_julia"]
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -57,7 +60,4 @@ def spectral_eig_julia(
         k,
         n,
     )
-    return (
-        np.asarray(eigvals, dtype=np.float64),
-        np.asarray(fiedler, dtype=np.float64),
-    )
+    return validate_spectral_backend_output((eigvals, fiedler), n=n)

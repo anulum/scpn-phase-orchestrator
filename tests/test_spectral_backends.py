@@ -41,6 +41,7 @@ from scpn_phase_orchestrator.coupling.spectral import (
     spectral_gap,
 )
 from scpn_phase_orchestrator.experimental.accelerators.coupling import (
+    _spectral_julia,
     _spectral_mojo,
 )
 from scpn_phase_orchestrator.experimental.accelerators.coupling import (
@@ -65,6 +66,7 @@ SpectralDirectBackend = Callable[[np.ndarray, object], tuple[np.ndarray, np.ndar
 
 def test__spectral_validation_helper_is_directly_linked_to_backend_tests() -> None:
     assert callable(spectral_validation.validate_spectral_backend_inputs)
+    assert callable(spectral_validation.validate_spectral_backend_output)
 
 
 @contextlib.contextmanager
@@ -102,6 +104,16 @@ def _asymmetric_problem() -> np.ndarray:
         ],
         dtype=np.float64,
     )
+
+
+class _FakeJuliaSpectralModule:
+    def __init__(self, output: tuple[object, object]) -> None:
+        self._output = output
+
+    def spectral_eig(
+        self, _knm_flat: np.ndarray, _n: int
+    ) -> tuple[object, object]:
+        return self._output
 
 
 class TestDirectBackendBoundaryContracts:
@@ -166,6 +178,22 @@ class TestDirectBackendBoundaryContracts:
         assert fiedler.dtype == np.float64
         assert eigvals.shape == fiedler.shape == (0,)
 
+    def test_direct_julia_rejects_boolean_output_alias_before_widening(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        output = (
+            np.array([0.0, np.bool_(True)], dtype=object),
+            np.array([1.0, -1.0], dtype=np.float64),
+        )
+        monkeypatch.setattr(
+            _spectral_julia,
+            "_ensure",
+            lambda: _FakeJuliaSpectralModule(output),
+        )
+
+        with pytest.raises(ValueError, match="real-valued numeric arrays"):
+            spectral_eig_julia(_problem(7, n=2).ravel(), 2)
+
 
 class TestDirectMojoBoundaryContracts:
     """Direct Mojo spectral adapter rejects malformed backend stdout."""
@@ -209,6 +237,30 @@ class TestDirectMojoBoundaryContracts:
 
         with pytest.raises(ValueError, match="Mojo spectral LAPACK error"):
             _spectral_mojo.spectral_eig_mojo(_problem(23, n=3).ravel(), 3)
+
+    @pytest.mark.parametrize(
+        ("stdout", "match"),
+        [
+            ("-0.1\n1.0\n1.0\n-1.0\n", "non-negative"),
+            ("1.0\n0.0\n1.0\n-1.0\n", "sorted ascending"),
+            ("0.0\n1.0\n0.0\n0.0\n", "fiedler vector must be non-zero"),
+        ],
+    )
+    def test_mojo_runner_rejects_output_contract_violations(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        stdout: str,
+        match: str,
+    ) -> None:
+        monkeypatch.setattr(_spectral_mojo, "_ensure_exe", lambda: "spectral")
+        monkeypatch.setattr(
+            _spectral_mojo.subprocess,
+            "run",
+            lambda *_args, **_kwargs: _mojo_proc(stdout),
+        )
+
+        with pytest.raises(ValueError, match=match):
+            _spectral_mojo.spectral_eig_mojo(_problem(23, n=2).ravel(), 2)
 
 
 def _run_backend(backend: str, seed: int, n: int = 6):

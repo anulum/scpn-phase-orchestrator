@@ -57,6 +57,9 @@ import numpy as np
 from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.coupling._julia_runtime import require_juliacall_main
+from scpn_phase_orchestrator.experimental.accelerators.coupling import (
+    _spectral_validation as spectral_validation,
+)
 
 __all__ = [
     "ACTIVE_BACKEND",
@@ -242,39 +245,7 @@ def _validate_spectral_output(
     n: int,
 ) -> tuple[FloatArray, FloatArray]:
     """Return the backend spectral output matching the reference, else raise."""
-    if not isinstance(value, tuple) or len(value) != 2:
-        raise ValueError("spectral primitive output must be (eigvals, fiedler)")
-    eigvals_raw = value[0]
-    fiedler_raw = value[1]
-    if (
-        _contains_boolean_alias(eigvals_raw)
-        or _contains_boolean_alias(fiedler_raw)
-        or _contains_complex_alias(eigvals_raw)
-        or _contains_complex_alias(fiedler_raw)
-    ):
-        raise ValueError("spectral primitive output must be real-valued numeric arrays")
-    try:
-        eigvals = np.asarray(eigvals_raw, dtype=np.float64)
-        fiedler = np.asarray(fiedler_raw, dtype=np.float64)
-    except (TypeError, ValueError) as exc:
-        raise ValueError("spectral primitive output must be numeric") from exc
-    if eigvals.shape != (n,):
-        raise ValueError(f"spectral eigenvalue shape {eigvals.shape} must be ({n},)")
-    if fiedler.shape != (n,):
-        raise ValueError(f"spectral fiedler shape {fiedler.shape} must be ({n},)")
-    if not np.all(np.isfinite(eigvals)) or not np.all(np.isfinite(fiedler)):
-        raise ValueError("spectral primitive output must contain only finite values")
-    tolerance = 1e-10
-    if np.any(eigvals < -tolerance):
-        raise ValueError("spectral eigenvalues must be non-negative")
-    if np.any(np.diff(eigvals) < -tolerance):
-        raise ValueError("spectral eigenvalues must be sorted ascending")
-    if n > 1 and np.linalg.norm(fiedler) <= tolerance:
-        raise ValueError("spectral fiedler vector must be non-zero")
-    return (
-        np.ascontiguousarray(np.maximum(eigvals, 0.0), dtype=np.float64),
-        np.ascontiguousarray(fiedler, dtype=np.float64),
-    )
+    return spectral_validation.validate_spectral_backend_output(value, n=n)
 
 
 def _spectral_eig_checked(

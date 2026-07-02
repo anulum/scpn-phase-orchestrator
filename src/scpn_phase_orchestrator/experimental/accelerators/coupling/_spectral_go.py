@@ -18,7 +18,10 @@ import numpy as np
 from numpy.typing import NDArray
 
 from .._go_runtime import load_go_library
-from ._spectral_validation import validate_spectral_backend_inputs
+from ._spectral_validation import (
+    validate_spectral_backend_inputs,
+    validate_spectral_backend_output,
+)
 
 __all__ = ["spectral_eig_go"]
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -70,4 +73,4 @@ def spectral_eig_go(
     )
     if rc != 0:
         raise ValueError(f"Go SpectralEig rc={rc}")
-    return eigvals, fiedler
+    return validate_spectral_backend_output((eigvals, fiedler), n=n)

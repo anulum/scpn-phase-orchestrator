@@ -361,6 +361,13 @@ or subprocess runtimes. The contract rejects boolean aliases, complex or
 non-finite flattened coupling payloads, non-vector inputs, malformed `n*n`
 buffer lengths, and invalid oscillator counts. Empty spectral problems return
 empty eigenvalue and Fiedler vectors without optional runtime loading.
+After backend execution, the same shared output validator is replayed for the
+direct Go, Julia, and Mojo adapters and for the public optional primitive path:
+returned eigenvalues and the Fiedler vector must be finite real non-boolean
+vectors of length `N`, eigenvalues must be non-negative and sorted ascending,
+and the Fiedler vector must be non-zero for `N > 1`. Malformed backend physics
+payloads raise immediately; fallback remains reserved for loader or runtime
+unavailability.
 Public spectral helpers enforce the same real-valued boundary on coupling
 matrices, frequency vectors, `gamma_max`, optional primitive eigensystem
 outputs, and Rust fast-path scalar/vector returns. Boolean aliases are not

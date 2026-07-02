@@ -70,6 +70,12 @@ parity fallback: gradient, curl, and harmonic payloads must keep `N*N`
 cardinality or `(N, N)` matrix shape, contain finite real non-boolean values,
 and remain antisymmetric. Malformed backend outputs raise immediately, while
 validated numerical parity mismatches still fall back to the NumPy reference.
+The public spectral dispatcher, plus the direct Go, Julia, and Mojo bridges,
+apply the shared spectral output validator before publication: eigensystem
+payloads must contain finite real non-boolean eigenvalue and Fiedler vectors of
+length `N`, eigenvalues must be non-negative and sorted ascending, and
+non-trivial Fiedler vectors must be non-zero. Malformed spectral payloads raise
+immediately, preserving fallback only for loader or runtime unavailability.
 The public PAC dispatcher applies the direct phase-amplitude-coupling output
 validators to optional backend returns before publication: modulation-index
 scalars must be finite values in `[0, 1]`, and PAC-matrix payloads must keep

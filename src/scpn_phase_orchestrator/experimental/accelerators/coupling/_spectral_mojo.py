@@ -18,7 +18,10 @@ import numpy as np
 from numpy.typing import NDArray
 
 from .._mojo_runtime import require_mojo_executable, run_mojo_executable
-from ._spectral_validation import validate_spectral_backend_inputs
+from ._spectral_validation import (
+    validate_spectral_backend_inputs,
+    validate_spectral_backend_output,
+)
 
 __all__ = ["_ensure_exe", "spectral_eig_mojo"]
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -71,4 +74,4 @@ def spectral_eig_mojo(
         )
     eigvals = parsed[:n].copy()
     fiedler = parsed[n:].copy()
-    return eigvals, fiedler
+    return validate_spectral_backend_output((eigvals, fiedler), n=n)
