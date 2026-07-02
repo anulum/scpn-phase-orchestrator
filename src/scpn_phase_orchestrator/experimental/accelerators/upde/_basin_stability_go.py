@@ -16,6 +16,7 @@ from pathlib import Path
 import numpy as np
 from numpy.typing import NDArray
 
+from .._go_runtime import load_go_library
 from ._basin_stability_validation import (
     validate_basin_stability_inputs,
     validate_basin_stability_output,
@@ -40,7 +41,7 @@ def _load_lib() -> ctypes.CDLL:
             f"cd go && go build -buildmode=c-shared "
             f"-o libbasin_stability.so basin_stability.go"
         )
-    lib = ctypes.CDLL(str(_LIB_PATH))
+    lib = load_go_library(_LIB_PATH)
     lib.SteadyStateR.restype = ctypes.c_double
     lib.SteadyStateR.argtypes = [
         ctypes.POINTER(ctypes.c_double),

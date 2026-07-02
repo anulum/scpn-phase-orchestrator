@@ -17,6 +17,7 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from .._go_runtime import load_go_library
 from ._delay_validation import validate_delay_backend_inputs
 
 __all__ = ["delayed_kuramoto_run_go"]
@@ -36,7 +37,7 @@ def _load_lib() -> ctypes.CDLL:
             f"libdelay.so not found at {_LIB_PATH}. Build with: "
             f"cd go && go build -buildmode=c-shared -o libdelay.so delay.go"
         )
-    lib = ctypes.CDLL(str(_LIB_PATH))
+    lib = load_go_library(_LIB_PATH)
     lib.DelayedKuramotoRun.restype = ctypes.c_int
     lib.DelayedKuramotoRun.argtypes = [
         ctypes.POINTER(ctypes.c_double),

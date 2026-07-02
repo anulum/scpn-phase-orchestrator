@@ -23,6 +23,8 @@ from scpn_phase_orchestrator.experimental.accelerators.upde._engine_validation i
     validate_upde_schedule_backend_inputs,
 )
 
+from .._go_runtime import load_go_library
+
 __all__ = ["upde_run_go", "upde_run_omega_schedule_go"]
 FloatArray: TypeAlias = NDArray[np.float64]
 
@@ -43,7 +45,7 @@ def _load_lib() -> ctypes.CDLL:
             f"cd go && go build -buildmode=c-shared -o libupde_engine.so "
             f"upde_engine.go"
         )
-    lib = ctypes.CDLL(str(_LIB_PATH))
+    lib = load_go_library(_LIB_PATH)
     lib.UPDERun.restype = ctypes.c_int
     lib.UPDERun.argtypes = [
         ctypes.POINTER(ctypes.c_double),  # phases (in/out)

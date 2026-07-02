@@ -17,6 +17,7 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from .._go_runtime import load_go_library
 from ._pac_validation import (
     validate_modulation_index_inputs,
     validate_modulation_index_output,
@@ -42,7 +43,7 @@ def _load_lib() -> ctypes.CDLL:
             f"libpac.so not found at {_LIB_PATH}. Build with: "
             f"cd go && go build -buildmode=c-shared -o libpac.so pac.go"
         )
-    lib = ctypes.CDLL(str(_LIB_PATH))
+    lib = load_go_library(_LIB_PATH)
     lib.ModulationIndex.restype = ctypes.c_int
     lib.ModulationIndex.argtypes = [
         ctypes.POINTER(ctypes.c_double),

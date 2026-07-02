@@ -17,6 +17,7 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from .._go_runtime import load_go_library
 from ._chimera_validation import (
     validate_chimera_backend_inputs,
     validate_chimera_backend_output,
@@ -40,7 +41,7 @@ def _load_lib() -> ctypes.CDLL:
             f"libchimera.so not found at {_LIB_PATH}. Build with: "
             f"cd go && go build -buildmode=c-shared -o libchimera.so chimera.go"
         )
-    lib = ctypes.CDLL(str(_LIB_PATH))
+    lib = load_go_library(_LIB_PATH)
     lib.LocalOrderParameter.restype = ctypes.c_int
     lib.LocalOrderParameter.argtypes = [
         ctypes.POINTER(ctypes.c_double),

@@ -17,6 +17,7 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from .._go_runtime import load_go_library
 from ._entropy_prod_validation import (
     validate_entropy_prod_backend_inputs,
     validate_entropy_prod_backend_output,
@@ -41,7 +42,7 @@ def _load_lib() -> ctypes.CDLL:
             f"cd go && go build -buildmode=c-shared -o libentropy_prod.so "
             f"entropy_prod.go"
         )
-    lib = ctypes.CDLL(str(_LIB_PATH))
+    lib = load_go_library(_LIB_PATH)
     lib.EntropyProductionRate.restype = ctypes.c_int
     lib.EntropyProductionRate.argtypes = [
         ctypes.POINTER(ctypes.c_double),

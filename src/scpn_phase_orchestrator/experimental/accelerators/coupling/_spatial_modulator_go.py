@@ -17,6 +17,7 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from .._go_runtime import load_go_library
 from ._spatial_modulator_validation import (
     validate_spatial_modulator_inputs,
     validate_spatial_modulator_output,
@@ -40,7 +41,7 @@ def _load_lib() -> ctypes.CDLL:
             "cd go && go build -buildmode=c-shared -o libspatial_modulator.so "
             "spatial_modulator.go"
         )
-    lib = ctypes.CDLL(str(_LIB_PATH))
+    lib = load_go_library(_LIB_PATH)
     lib.SpatialModulate.restype = ctypes.c_int
     lib.SpatialModulate.argtypes = [
         ctypes.POINTER(ctypes.c_double),

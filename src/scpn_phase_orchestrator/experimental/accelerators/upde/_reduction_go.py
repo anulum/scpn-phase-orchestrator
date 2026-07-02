@@ -13,6 +13,7 @@ from __future__ import annotations
 import ctypes
 from pathlib import Path
 
+from .._go_runtime import load_go_library
 from ._reduction_validation import validate_oa_inputs, validate_oa_output
 
 __all__ = ["oa_run_go"]
@@ -32,7 +33,7 @@ def _load_lib() -> ctypes.CDLL:
             f"cd go && go build -buildmode=c-shared "
             f"-o libreduction.so reduction.go"
         )
-    lib = ctypes.CDLL(str(_LIB_PATH))
+    lib = load_go_library(_LIB_PATH)
     lib.OARun.restype = ctypes.c_int
     lib.OARun.argtypes = [
         ctypes.c_double,

@@ -17,6 +17,7 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from .._go_runtime import load_go_library
 from ._splitting_validation import (
     validate_splitting_inputs,
     validate_splitting_output,
@@ -41,7 +42,7 @@ def _load_lib() -> ctypes.CDLL:
             f"cd go && go build -buildmode=c-shared "
             f"-o libsplitting.so splitting.go"
         )
-    lib = ctypes.CDLL(str(_LIB_PATH))
+    lib = load_go_library(_LIB_PATH)
     lib.SplittingRun.restype = ctypes.c_int
     lib.SplittingRun.argtypes = [
         ctypes.POINTER(ctypes.c_double),

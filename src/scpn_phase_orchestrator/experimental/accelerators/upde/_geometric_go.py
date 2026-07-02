@@ -17,6 +17,7 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from .._go_runtime import load_go_library
 from ._geometric_validation import (
     TWO_PI,
     validate_torus_inputs,
@@ -41,7 +42,7 @@ def _load_lib() -> ctypes.CDLL:
             f"cd go && go build -buildmode=c-shared "
             f"-o libgeometric.so geometric.go"
         )
-    lib = ctypes.CDLL(str(_LIB_PATH))
+    lib = load_go_library(_LIB_PATH)
     lib.TorusRun.restype = ctypes.c_int
     lib.TorusRun.argtypes = [
         ctypes.POINTER(ctypes.c_double),

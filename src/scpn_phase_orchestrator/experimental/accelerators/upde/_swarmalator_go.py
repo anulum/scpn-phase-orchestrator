@@ -17,6 +17,7 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from .._go_runtime import load_go_library
 from ._swarmalator_validation import (
     validate_swarmalator_inputs,
     validate_swarmalator_output,
@@ -41,7 +42,7 @@ def _load_lib() -> ctypes.CDLL:
             f"cd go && go build -buildmode=c-shared -o libswarmalator.so "
             f"swarmalator.go"
         )
-    lib = ctypes.CDLL(str(_LIB_PATH))
+    lib = load_go_library(_LIB_PATH)
     lib.SwarmalatorStep.restype = ctypes.c_int
     lib.SwarmalatorStep.argtypes = [
         ctypes.POINTER(ctypes.c_double),

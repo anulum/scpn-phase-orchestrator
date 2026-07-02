@@ -148,7 +148,7 @@
       "inputs": ["flat float64 arrays + scalar params"],
       "outputs": ["float64 arrays/tuples/scalars"],
       "backends": ["rust", "webgpu", "mojo", "julia", "go", "python"],
-      "note": "load-bearing polyglot accelerator layer (misnomer 'experimental'); 168 files; accessed indirectly via dispatchers."
+      "note": "load-bearing polyglot accelerator layer (misnomer 'experimental'); 170 files; accessed indirectly via dispatchers."
     }
   ],
   "backends": [

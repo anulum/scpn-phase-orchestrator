@@ -17,6 +17,7 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from .._go_runtime import load_go_library
 from ._winding_validation import (
     expected_winding_backend_output,
     validate_winding_backend_inputs,
@@ -41,7 +42,7 @@ def _load_lib() -> ctypes.CDLL:
             f"libwinding.so not found at {_LIB_PATH}. Build with: "
             f"cd go && go build -buildmode=c-shared -o libwinding.so winding.go"
         )
-    lib = ctypes.CDLL(str(_LIB_PATH))
+    lib = load_go_library(_LIB_PATH)
     lib.WindingNumbers.restype = ctypes.c_int
     lib.WindingNumbers.argtypes = [
         ctypes.POINTER(ctypes.c_double),

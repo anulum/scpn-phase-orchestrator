@@ -17,6 +17,7 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from .._go_runtime import load_go_library
 from ._koopman_edmd_validation import (
     validate_edmd_backend_inputs,
     validate_edmd_backend_output,
@@ -41,7 +42,7 @@ def _load_lib() -> ctypes.CDLL:
             f"cd go && go build -buildmode=c-shared -o libkoopman_edmd.so "
             f"koopman_edmd.go"
         )
-    lib = ctypes.CDLL(str(_LIB_PATH))
+    lib = load_go_library(_LIB_PATH)
     double_ptr = ctypes.POINTER(ctypes.c_double)
     lib.KoopmanEdmdSolve.restype = ctypes.c_int
     lib.KoopmanEdmdSolve.argtypes = [

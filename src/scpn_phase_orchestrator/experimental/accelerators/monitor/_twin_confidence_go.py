@@ -21,6 +21,7 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from .._go_runtime import load_go_library
 from ._twin_confidence_validation import (
     validate_twin_divergence_backend_inputs,
     validate_twin_divergence_backend_output,
@@ -44,7 +45,7 @@ def _load_lib() -> ctypes.CDLL:
             f"cd go && go build -buildmode=c-shared -o libtwin_confidence.so "
             f"twin_confidence.go"
         )
-    lib = ctypes.CDLL(str(_LIB_PATH))
+    lib = load_go_library(_LIB_PATH)
     lib.TwinDivergence.restype = ctypes.c_int
     lib.TwinDivergence.argtypes = [
         ctypes.POINTER(ctypes.c_double),  # model_phases

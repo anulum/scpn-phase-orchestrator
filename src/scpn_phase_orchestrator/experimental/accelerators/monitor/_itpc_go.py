@@ -17,6 +17,7 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from .._go_runtime import load_go_library
 from ._itpc_validation import (
     expected_compute_itpc_backend_output,
     expected_itpc_persistence_backend_output,
@@ -45,7 +46,7 @@ def _load_lib() -> ctypes.CDLL:
             f"libitpc.so not found at {_LIB_PATH}. Build with: "
             f"cd go && go build -buildmode=c-shared -o libitpc.so itpc.go"
         )
-    lib = ctypes.CDLL(str(_LIB_PATH))
+    lib = load_go_library(_LIB_PATH)
     lib.ComputeITPC.restype = ctypes.c_int
     lib.ComputeITPC.argtypes = [
         ctypes.POINTER(ctypes.c_double),

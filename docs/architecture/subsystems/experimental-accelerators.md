@@ -39,7 +39,10 @@ Production UPDE, monitor, and coupling Julia forwarders, plus the direct
 accelerator Julia `_ensure()` loaders, require `juliacall.Main`, not just an
 importable `juliacall` package; partial Julia initialisation is treated as an
 unavailable optional backend and the dispatcher falls through instead of
-advertising a bridge that will fail after selection.
+advertising a bridge that will fail after selection. Direct Go loaders demote
+host dynamic-loader failures for present but unloadable `c-shared` artifacts to
+`ImportError`, preserving the same optional-backend unavailability contract as a
+missing shared library.
 Nothing here is re-exported in the public API — access is always indirect
 through a production subsystem's dispatcher.
 
@@ -48,8 +51,9 @@ through a production subsystem's dispatcher.
 - The naming is misleading; treat this as the acceleration layer, not a research
   sandbox.
 - The polyglot backends are environment-gated — Go/Julia/Mojo require their
-  toolchains; absent or partially initialised Julia runtimes fail before
-  side-file loading and fall through to Python through the owning dispatcher.
+  toolchains; absent or unloadable Go shared libraries and partially initialised
+  Julia runtimes fail before backend execution and fall through to Python through
+  the owning dispatcher.
 - `monitor/psychedelic` is a heuristic with no cited reference; the PHA-C
   acceptance lane is a deterministic evidence-binding chain (distinct from the
   conformal twin-confidence gate, which lives in `monitor/twin_conformal_gate.py`).

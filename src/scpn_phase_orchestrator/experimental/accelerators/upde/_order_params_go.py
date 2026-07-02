@@ -21,6 +21,7 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from .._go_runtime import load_go_library
 from ._order_params_validation import (
     validate_layer_coherence_inputs,
     validate_order_parameter_inputs,
@@ -53,7 +54,7 @@ def _load_lib() -> ctypes.CDLL:
             f"cd go && go build -buildmode=c-shared -o liborder_params.so "
             f"order_params.go"
         )
-    lib = ctypes.CDLL(str(_LIB_PATH))
+    lib = load_go_library(_LIB_PATH)
 
     lib.OrderParameter.restype = ctypes.c_int
     lib.OrderParameter.argtypes = [

@@ -17,6 +17,7 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from .._go_runtime import load_go_library
 from ._te_validation import (
     expected_phase_te_backend_output,
     expected_te_matrix_backend_output,
@@ -45,7 +46,7 @@ def _load_lib() -> ctypes.CDLL:
             f"cd go && go build -buildmode=c-shared -o libtransfer_entropy.so "
             f"transfer_entropy.go"
         )
-    lib = ctypes.CDLL(str(_LIB_PATH))
+    lib = load_go_library(_LIB_PATH)
     lib.PhaseTransferEntropy.restype = ctypes.c_int
     lib.PhaseTransferEntropy.argtypes = [
         ctypes.POINTER(ctypes.c_double),

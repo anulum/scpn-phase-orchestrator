@@ -17,6 +17,7 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from .._go_runtime import load_go_library
 from ._npe_validation import (
     expected_npe_backend_output,
     expected_phase_distance_backend_output,
@@ -44,7 +45,7 @@ def _load_lib() -> ctypes.CDLL:
             f"libnpe.so not found at {_LIB_PATH}. Build with: "
             f"cd go && go build -buildmode=c-shared -o libnpe.so npe.go"
         )
-    lib = ctypes.CDLL(str(_LIB_PATH))
+    lib = load_go_library(_LIB_PATH)
     lib.PhaseDistanceMatrix.restype = ctypes.c_int
     lib.PhaseDistanceMatrix.argtypes = [
         ctypes.POINTER(ctypes.c_double),

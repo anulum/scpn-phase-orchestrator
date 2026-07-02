@@ -22,6 +22,7 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from .._go_runtime import load_go_library
 from ._attnres_validation import (
     validate_attnres_backend_inputs,
     validate_attnres_backend_output,
@@ -45,7 +46,7 @@ def _load_lib() -> ctypes.CDLL:
             f"libattnres.so not found at {_LIB_PATH}. Build with: "
             f"cd go && go build -buildmode=c-shared -o libattnres.so attnres.go"
         )
-    lib = ctypes.CDLL(str(_LIB_PATH))
+    lib = load_go_library(_LIB_PATH)
     lib.AttnResModulate.restype = ctypes.c_int
     lib.AttnResModulate.argtypes = [
         ctypes.POINTER(ctypes.c_double),  # knm

@@ -17,6 +17,7 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from .._go_runtime import load_go_library
 from ._envelope_validation import (
     validate_envelope_modulation_input,
     validate_envelope_modulation_output,
@@ -42,7 +43,7 @@ def _load_lib() -> ctypes.CDLL:
             f"cd go && go build -buildmode=c-shared -o libenvelope.so "
             f"envelope.go"
         )
-    lib = ctypes.CDLL(str(_LIB_PATH))
+    lib = load_go_library(_LIB_PATH)
     lib.ExtractEnvelope.restype = ctypes.c_int
     lib.ExtractEnvelope.argtypes = [
         ctypes.POINTER(ctypes.c_double),

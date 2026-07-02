@@ -22,6 +22,7 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from .._go_runtime import load_go_library
 from ._lyapunov_validation import (
     validate_lyapunov_backend_inputs,
     validate_lyapunov_backend_output,
@@ -45,7 +46,7 @@ def _load_lib() -> ctypes.CDLL:
             f"cd go && go build -buildmode=c-shared -o liblyapunov.so "
             f"lyapunov.go"
         )
-    lib = ctypes.CDLL(str(_LIB_PATH))
+    lib = load_go_library(_LIB_PATH)
     lib.LyapunovSpectrum.restype = ctypes.c_int
     lib.LyapunovSpectrum.argtypes = [
         ctypes.POINTER(ctypes.c_double),  # phases_init

@@ -17,6 +17,7 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from .._go_runtime import load_go_library
 from ._recurrence_validation import (
     expected_recurrence_backend_output,
     validate_cross_recurrence_backend_inputs,
@@ -44,7 +45,7 @@ def _load_lib() -> ctypes.CDLL:
             f"cd go && go build -buildmode=c-shared -o librecurrence.so "
             f"recurrence.go"
         )
-    lib = ctypes.CDLL(str(_LIB_PATH))
+    lib = load_go_library(_LIB_PATH)
     lib.RecurrenceMatrix.restype = ctypes.c_int
     lib.RecurrenceMatrix.argtypes = [
         ctypes.POINTER(ctypes.c_double),

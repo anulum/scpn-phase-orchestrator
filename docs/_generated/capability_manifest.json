@@ -8,11 +8,11 @@
     "optional_extras": 20,
     "public_api_exports": 24,
     "public_documentation_pages": 217,
-    "python_package_modules": 680,
-    "research_experimental_modules": 215,
+    "python_package_modules": 681,
+    "research_experimental_modules": 216,
     "runtime_serving_modules": 136,
     "rust_kernel_files": 97,
-    "test_files": 755
+    "test_files": 756
   },
   "documentation": {
     "public_pages": [
@@ -697,6 +697,7 @@
       "src/scpn_phase_orchestrator/autotune/supervisor_candidate.py",
       "src/scpn_phase_orchestrator/experimental/__init__.py",
       "src/scpn_phase_orchestrator/experimental/accelerators/__init__.py",
+      "src/scpn_phase_orchestrator/experimental/accelerators/_go_runtime.py",
       "src/scpn_phase_orchestrator/experimental/accelerators/_julia_runtime.py",
       "src/scpn_phase_orchestrator/experimental/accelerators/coupling/__init__.py",
       "src/scpn_phase_orchestrator/experimental/accelerators/coupling/_attnres_go.py",
@@ -1179,6 +1180,7 @@
     "src/scpn_phase_orchestrator/exceptions.py",
     "src/scpn_phase_orchestrator/experimental/__init__.py",
     "src/scpn_phase_orchestrator/experimental/accelerators/__init__.py",
+    "src/scpn_phase_orchestrator/experimental/accelerators/_go_runtime.py",
     "src/scpn_phase_orchestrator/experimental/accelerators/_julia_runtime.py",
     "src/scpn_phase_orchestrator/experimental/accelerators/coupling/__init__.py",
     "src/scpn_phase_orchestrator/experimental/accelerators/coupling/_attnres_go.py",
@@ -1968,6 +1970,7 @@
       "tests/test_evs.py",
       "tests/test_exceptions.py",
       "tests/test_experimental_accelerator_namespace.py",
+      "tests/test_experimental_direct_go_runtime_contracts.py",
       "tests/test_experimental_direct_julia_runtime_contracts.py",
       "tests/test_explainability_report.py",
       "tests/test_explosive_sync.py",

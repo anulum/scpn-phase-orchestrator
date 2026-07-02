@@ -17,6 +17,7 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from .._go_runtime import load_go_library
 from ._poincare_validation import (
     validate_phase_poincare_backend_inputs,
     validate_poincare_backend_outputs,
@@ -42,7 +43,7 @@ def _load_lib() -> ctypes.CDLL:
             f"cd go && go build -buildmode=c-shared -o libpoincare.so "
             f"poincare.go"
         )
-    lib = ctypes.CDLL(str(_LIB_PATH))
+    lib = load_go_library(_LIB_PATH)
     lib.PoincareSection.restype = ctypes.c_int
     lib.PoincareSection.argtypes = [
         ctypes.POINTER(ctypes.c_double),

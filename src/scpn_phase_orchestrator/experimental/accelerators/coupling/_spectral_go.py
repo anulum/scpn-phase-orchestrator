@@ -17,6 +17,7 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from .._go_runtime import load_go_library
 from ._spectral_validation import validate_spectral_backend_inputs
 
 __all__ = ["spectral_eig_go"]
@@ -37,7 +38,7 @@ def _load_lib() -> ctypes.CDLL:
             f"cd go && go build -buildmode=c-shared "
             f"-o libspectral.so spectral.go"
         )
-    lib = ctypes.CDLL(str(_LIB_PATH))
+    lib = load_go_library(_LIB_PATH)
     lib.SpectralEig.restype = ctypes.c_int
     lib.SpectralEig.argtypes = [
         ctypes.POINTER(ctypes.c_double),

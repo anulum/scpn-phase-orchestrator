@@ -17,6 +17,7 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from .._go_runtime import load_go_library
 from ._opt_entropy_validation import (
     expected_ordinal_pattern_backend_output,
     expected_transition_entropy_backend_output,
@@ -45,7 +46,7 @@ def _load_lib() -> ctypes.CDLL:
             f"libopt_entropy.so not found at {_LIB_PATH}. Build with: "
             f"cd go && go build -buildmode=c-shared -o libopt_entropy.so opt_entropy.go"
         )
-    lib = ctypes.CDLL(str(_LIB_PATH))
+    lib = load_go_library(_LIB_PATH)
     lib.OrdinalPatternSequence.restype = ctypes.c_int
     lib.OrdinalPatternSequence.argtypes = [
         ctypes.POINTER(ctypes.c_double),

@@ -17,6 +17,7 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from .._go_runtime import load_go_library
 from ._pid_validation import (
     validate_pid_backend_inputs,
     validate_pid_scalar_output,
@@ -40,7 +41,7 @@ def _load_lib() -> ctypes.CDLL:
             f"libpid.so not found at {_LIB_PATH}. Build with: "
             f"cd go && go build -buildmode=c-shared -o libpid.so pid.go"
         )
-    lib = ctypes.CDLL(str(_LIB_PATH))
+    lib = load_go_library(_LIB_PATH)
     lib.PidDecomposition.restype = ctypes.c_int
     lib.PidDecomposition.argtypes = [
         ctypes.POINTER(ctypes.c_double),
