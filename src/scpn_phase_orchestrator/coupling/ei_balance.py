@@ -43,7 +43,7 @@ FloatArray: TypeAlias = NDArray[np.float64]
 def _contains_boolean_alias(value: object) -> bool:
     """Return whether the value contains any boolean alias."""
     raw = np.asarray(value, dtype=object)
-    return any(isinstance(item, bool) for item in raw.ravel())
+    return any(isinstance(item, (bool, np.bool_)) for item in raw.ravel())
 
 
 def _validate_knm(value: object) -> FloatArray:

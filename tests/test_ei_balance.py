@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+import builtins
+import importlib
 from typing import get_type_hints
 
 import numpy as np
@@ -135,6 +137,11 @@ class TestComputeEIBalance:
         with pytest.raises(ValueError, match="knm must not contain boolean"):
             compute_ei_balance([[0.0, True], [1.0, 0.0]], [0], [1])
 
+    def test_numpy_boolean_coupling_alias_is_rejected(self) -> None:
+        knm = np.array([[0.0, np.bool_(True)], [1.0, 0.0]], dtype=object)
+        with pytest.raises(ValueError, match="knm must not contain boolean"):
+            compute_ei_balance(knm, [0], [1])
+
     @pytest.mark.parametrize("indices", [[True], [np.bool_(True)]])
     def test_boolean_indices_are_rejected(self, indices):
         knm = _uniform_knm(2)
@@ -228,6 +235,11 @@ class TestAdjustEIRatio:
         knm = _uniform_knm(2)
         with pytest.raises(ValueError, match="inhibitory indices"):
             adjust_ei_ratio(knm, [0], [True], target_ratio=1.0)
+
+    def test_numpy_boolean_coupling_alias_is_rejected(self) -> None:
+        knm = np.array([[0.0, np.bool_(True)], [1.0, 0.0]], dtype=object)
+        with pytest.raises(ValueError, match="knm must not contain boolean"):
+            adjust_ei_ratio(knm, [0], [1], target_ratio=1.0)
 
     @pytest.mark.parametrize("target_ratio", [0.0, -1.0, np.nan, True])
     def test_invalid_target_ratio_is_rejected(self, target_ratio):
@@ -423,3 +435,28 @@ class TestNumpyFallbackPaths:
 
         np.testing.assert_array_equal(adjusted, knm)
         assert adjusted is not knm
+
+
+def test_ei_balance_module_import_falls_back_when_rust_kernel_missing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    real_import = builtins.__import__
+
+    def guarded_import(
+        name: str,
+        globals: dict[str, object] | None = None,
+        locals: dict[str, object] | None = None,
+        fromlist: tuple[str, ...] = (),
+        level: int = 0,
+    ) -> object:
+        if name == "spo_kernel":
+            raise ImportError("spo_kernel unavailable for test")
+        return real_import(name, globals, locals, fromlist, level)
+
+    monkeypatch.setattr(builtins, "__import__", guarded_import)
+    try:
+        reloaded = importlib.reload(ei_balance_module)
+        assert reloaded._HAS_RUST is False
+    finally:
+        monkeypatch.setattr(builtins, "__import__", real_import)
+        importlib.reload(ei_balance_module)

@@ -204,6 +204,13 @@ def test_to_upde_knm_returns_the_transpose() -> None:
     [
         (np.ones((3, 240), dtype=bool), "boolean"),
         (np.empty((0, 3), dtype=bool), "boolean"),
+        (
+            np.array(
+                [[0.1, np.bool_(True), 0.3, 0.4], [0.2, 0.3, 0.4, 0.5]],
+                dtype=object,
+            ),
+            "boolean",
+        ),
         (np.array([["a", "b", "c"], ["d", "e", "f"]]), "finite 2-D array"),
         (np.ones((1, 240)), "at least 2 oscillators"),
         (np.full((3, 240), np.inf), "finite 2-D array"),

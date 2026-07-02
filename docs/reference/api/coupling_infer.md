@@ -26,7 +26,9 @@ The current production backend is transfer entropy over binned phase states.
 JSON-safe diagnostic record, until those estimators have benchmarked
 implementations.
 The boundary rejects boolean aliases, complex values, non-finite samples, and
-non-2-D phase series before inference. Backend transfer-entropy matrices must be
+non-2-D phase series before inference. Boolean aliases include Python `bool`,
+NumPy boolean scalars, and object arrays that contain either form. Backend
+transfer-entropy matrices must be
 finite, non-negative, correctly shaped, and zero on the diagonal; invalid
 backend scores fail closed instead of being silently normalised.
 
@@ -176,7 +178,8 @@ execution.
 
 The boundary rejects:
 
-- boolean aliases anywhere in the input,
+- boolean aliases anywhere in the input, including NumPy boolean scalars stored
+  in object arrays,
 - complex values,
 - non-numeric values,
 - non-finite values,

@@ -4,10 +4,12 @@ The coupling subsystem builds, adapts, and analyses the inter-oscillator
 coupling matrix K_nm — the central object in Kuramoto dynamics. K_ij
 determines how strongly oscillator j pulls oscillator i toward synchrony.
 
-The subsystem spans 11 modules: construction (knm), geometry constraints,
-phase lag estimation, template management, Hodge decomposition, spectral
-analysis, plasticity, transfer-entropy adaptation, causal inference,
-connectome generation, E/I balance, and a universal Bayesian prior.
+The subsystem spans 27 source files: public API modules for construction
+(knm), geometry constraints, phase lag estimation, template management, Hodge
+decomposition, spectral analysis, plasticity, transfer-entropy adaptation,
+causal inference, connectome generation, E/I balance, attention residuals,
+spatial modulation, and a universal Bayesian prior, plus validated backend
+bridge files.
 
 ## Pipeline position
 
@@ -30,6 +32,9 @@ engine execution.
 The inference boundary requires finite real phase samples and enforces the
 transfer-entropy invariant that directed scores are non-negative with no
 self-edge diagonal.
+Across the coupling public boundary, boolean aliases mean Python `bool`,
+NumPy boolean scalars, and object arrays containing either form; those inputs
+are rejected before any float coercion.
 
 ---
 
@@ -410,6 +415,8 @@ K_ij(t+1) = (1 - decay) × K_ij(t) + lr × TE(i → j)
 - Updates coupling: pairs with causal influence get stronger
 - Applies decay to forget old coupling structure
 - Clamps K ≥ 0 and zeros diagonal
+- Rejects boolean aliases in both `knm` and `phase_history` before numeric
+  coercion
 
 Unlike Hebbian plasticity (symmetric), TE captures **directed**
 information flow — oscillator i can influence j without j influencing i.
@@ -456,6 +463,9 @@ interaction-type blocks (e.g. `excitatory_strength` blends `e_to_e` and
   target_ratio=1.0) → NDArray` — scales inhibitory coupling to
   achieve target ratio
 
+Both helpers reject boolean aliases in `knm` before computing row means or
+scaling inhibitory rows.
+
 ::: scpn_phase_orchestrator.coupling.ei_balance
 
 ---
@@ -482,6 +492,10 @@ experimental programme.
   with Dörfler-Bullo K_c for a finite one-dimensional frequency vector
 - `log_probability(K_base, decay_alpha) → float` — unnormalised
   log-probability under Gaussian prior
+
+`estimate_Kc` rejects boolean aliases in `omegas`, including NumPy boolean
+scalars carried inside object arrays, before constructing the prior graph.
+
 **Detailed documentation:** [Universal Prior — detailed reference](coupling_prior.md)
 
 ::: scpn_phase_orchestrator.coupling.prior

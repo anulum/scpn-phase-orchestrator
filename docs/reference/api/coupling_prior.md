@@ -58,7 +58,9 @@ The public boundary validates `omegas` as a finite one-dimensional
 real-valued frequency vector before constructing the distance-decay
 matrix or dispatching to the spectral critical-coupling calculation.
 Boolean aliases, complex values, non-finite values, empty vectors, and
-length mismatches are rejected.
+length mismatches are rejected. The alias boundary includes Python `bool`,
+NumPy boolean scalars, and object arrays containing either form so frequencies
+cannot be silently coerced into `0.0`/`1.0` weights.
 
 ### Distance-Decay Matrix
 

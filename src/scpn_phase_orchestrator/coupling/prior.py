@@ -48,7 +48,7 @@ _MAX_SEED = 2**64 - 1
 def _contains_boolean_alias(value: object) -> bool:
     """Return whether the value contains any boolean alias."""
     raw = np.asarray(value, dtype=object)
-    return any(isinstance(item, bool) for item in raw.ravel())
+    return any(isinstance(item, (bool, np.bool_)) for item in raw.ravel())
 
 
 def _validate_finite_real(value: object, *, name: str) -> float:

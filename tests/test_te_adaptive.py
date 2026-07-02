@@ -8,6 +8,9 @@
 
 from __future__ import annotations
 
+import builtins
+import importlib
+
 import numpy as np
 import pytest
 
@@ -81,6 +84,21 @@ class TestTEAdaptive:
             (
                 np.zeros((2, 2), dtype=np.float64),
                 np.array([[True, False, True], [False, True, False]]),
+                {},
+                "boolean",
+            ),
+            (
+                np.array([[0.0, np.bool_(True)], [0.2, 0.0]], dtype=object),
+                np.ones((2, 5), dtype=np.float64),
+                {},
+                "boolean",
+            ),
+            (
+                np.zeros((2, 2), dtype=np.float64),
+                np.array(
+                    [[0.0, np.bool_(True), 0.2], [0.3, 0.4, 0.5]],
+                    dtype=object,
+                ),
                 {},
                 "boolean",
             ),
@@ -339,13 +357,8 @@ class TestTEAdaptiveValidationGuards:
     """Direct contracts for the array/scalar validation helpers."""
 
     def test_native_bool_dtype_array_is_rejected(self) -> None:
-        # A list of numpy bool scalars coerces to a bool-dtype array without
-        # tripping the object-iteration alias check, so the native-dtype guard
-        # is what refuses it.
-        value = [np.bool_(True), np.bool_(False)]
-
         with pytest.raises(ValueError, match="must not contain boolean values"):
-            te_mod._as_finite_real_array(value, name="probe")
+            te_mod._as_finite_real_array(np.array([], dtype=np.bool_), name="probe")
 
     def test_non_float_convertible_object_array_is_rejected(self) -> None:
         value = np.array([["a", "b"], ["c", "d"]], dtype=object)
@@ -365,3 +378,28 @@ class TestTEAdaptiveValidationGuards:
     def test_adapted_coupling_wrong_shape_is_rejected(self) -> None:
         with pytest.raises(RuntimeError, match="TE adaptive backend returned wrong"):
             te_mod._validate_adapted_coupling(np.zeros((2, 3)), n=2)
+
+
+def test_te_adaptive_module_import_falls_back_when_rust_kernel_missing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    real_import = builtins.__import__
+
+    def guarded_import(
+        name: str,
+        globals: dict[str, object] | None = None,
+        locals: dict[str, object] | None = None,
+        fromlist: tuple[str, ...] = (),
+        level: int = 0,
+    ) -> object:
+        if name == "spo_kernel":
+            raise ImportError("spo_kernel unavailable for test")
+        return real_import(name, globals, locals, fromlist, level)
+
+    monkeypatch.setattr(builtins, "__import__", guarded_import)
+    try:
+        reloaded = importlib.reload(te_mod)
+        assert reloaded._HAS_RUST is False
+    finally:
+        monkeypatch.setattr(builtins, "__import__", real_import)
+        importlib.reload(te_mod)

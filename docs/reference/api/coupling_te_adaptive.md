@@ -169,7 +169,7 @@ UPDEEngine.step() ──→ phases(t) ──→ trajectory buffer
 
 | Parameter | Type | Shape | Range | Source |
 |-----------|------|-------|-------|--------|
-| `knm` | `NDArray[float64]` | `(N, N)` | finite real, $\geq 0$, diagonal = 0 | Current coupling matrix |
+| `knm` | `NDArray[float64]` | `(N, N)` | finite real, no boolean aliases, $\geq 0$, diagonal = 0 | Current coupling matrix |
 | `phase_history` | `NDArray[float64]` | `(N, T)` | finite real, no boolean aliases | Recent phase trajectories |
 | `lr` | `float` | scalar | $\geq 0$ | Learning rate (default 0.01) |
 | `decay` | `float` | scalar | $[0, 1]$ | Decay rate (default 0.0) |
@@ -184,7 +184,9 @@ UPDEEngine.step() ──→ phases(t) ──→ trajectory buffer
 The public boundary rejects boolean aliases, complex values, non-finite
 samples, negative coupling, non-zero self-coupling, mismatched oscillator
 counts, invalid scalar update parameters, and invalid bin counts before the
-update. Transfer-entropy scores and optional Rust update results are also
+update. Boolean aliases include Python `bool`, NumPy boolean scalars, and
+object arrays that contain either form. Transfer-entropy scores and optional
+Rust update results are also
 validated as finite `N x N` matrices with non-negative off-diagonal values and
 zero self-coupling before returning a matrix to engine callers.
 

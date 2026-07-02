@@ -191,11 +191,79 @@ class TestHodgeValidation:
         with pytest.raises(ValueError, match="phases must not contain boolean values"):
             hodge_decomposition(knm, phases)
 
+    def test_empty_boolean_phase_dtype_rejected(self, python_backend: None) -> None:
+        phases = np.array([], dtype=np.bool_)
+        knm = np.zeros((0, 0), dtype=np.float64)
+        with pytest.raises(ValueError, match="phases must not contain boolean values"):
+            hodge_decomposition(knm, phases)
+
+    def test_numpy_boolean_phase_alias_rejected(self, python_backend: None) -> None:
+        phases = np.array([0.0, np.bool_(True)], dtype=object)
+        knm = np.array([[0.0, 1.0], [1.0, 0.0]], dtype=np.float64)
+        with pytest.raises(ValueError, match="phases must not contain boolean values"):
+            hodge_decomposition(knm, phases)
+
+    def test_non_numeric_phase_object_array_rejected(
+        self, python_backend: None
+    ) -> None:
+        phases = np.array(["bad"], dtype=object)
+        knm = np.zeros((1, 1), dtype=np.float64)
+        with pytest.raises(ValueError, match="phases must be a finite 1-D"):
+            hodge_decomposition(knm, phases)
+
     def test_boolean_coupling_matrix_rejected(self, python_backend: None) -> None:
         phases = np.array([0.0, 1.0], dtype=np.float64)
         knm = np.array([[False, True], [True, False]], dtype=np.bool_)
         with pytest.raises(ValueError, match="knm must not contain boolean values"):
             hodge_decomposition(knm, phases)
+
+    def test_empty_boolean_coupling_dtype_rejected(self, python_backend: None) -> None:
+        knm = np.zeros((0, 0), dtype=np.bool_)
+        with pytest.raises(ValueError, match="knm must not contain boolean values"):
+            hodge._validate_coupling_matrix(knm, expected_n=0)
+
+    def test_numpy_boolean_coupling_alias_rejected(self, python_backend: None) -> None:
+        phases = np.array([0.0, 1.0], dtype=np.float64)
+        knm = np.array([[0.0, np.bool_(True)], [1.0, 0.0]], dtype=object)
+        with pytest.raises(ValueError, match="knm must not contain boolean values"):
+            hodge_decomposition(knm, phases)
+
+    def test_non_numeric_coupling_object_array_rejected(
+        self, python_backend: None
+    ) -> None:
+        phases = np.array([0.0], dtype=np.float64)
+        knm = np.array([["bad"]], dtype=object)
+        with pytest.raises(ValueError, match="knm must be a finite square matrix"):
+            hodge_decomposition(knm, phases)
+
+    def test_empty_pseudoinverse_application_returns_empty_vector(self) -> None:
+        result = hodge._psd_pinv_apply(
+            np.zeros((0, 0), dtype=np.float64),
+            np.zeros(0, dtype=np.float64),
+        )
+        np.testing.assert_array_equal(result, np.zeros(0, dtype=np.float64))
+
+    def test_backend_output_shape_is_validated(self) -> None:
+        with pytest.raises(ValueError, match="invalid shape"):
+            hodge._normalise_backend_output(
+                (
+                    np.zeros((1, 1), dtype=np.float64),
+                    np.zeros((2, 2), dtype=np.float64),
+                    np.zeros((2, 2), dtype=np.float64),
+                ),
+                expected_n=2,
+            )
+
+    def test_backend_output_finiteness_is_validated(self) -> None:
+        with pytest.raises(ValueError, match="non-finite"):
+            hodge._normalise_backend_output(
+                (
+                    np.full((2, 2), np.nan, dtype=np.float64),
+                    np.zeros((2, 2), dtype=np.float64),
+                    np.zeros((2, 2), dtype=np.float64),
+                ),
+                expected_n=2,
+            )
 
 
 def test_large_phase_values_preserve_phase_shift_invariance(
@@ -218,6 +286,19 @@ def test_large_phase_values_preserve_phase_shift_invariance(
 
 
 class TestDispatchFallbackChain:
+    def test_dispatch_returns_python_when_every_backend_fails(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def _fail() -> None:
+            raise ImportError("backend unavailable")
+
+        monkeypatch.setattr(hodge, "_BACKEND_CACHE", {})
+        monkeypatch.setattr(hodge, "ACTIVE_BACKEND", "rust")
+        monkeypatch.setattr(hodge, "AVAILABLE_BACKENDS", ["go"])
+        monkeypatch.setattr(hodge, "_LOADERS", {"rust": _fail, "go": _fail})
+
+        assert hodge._dispatch() is None
+
     def test_dispatch_falls_back_to_next_backend_when_active_fails(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:

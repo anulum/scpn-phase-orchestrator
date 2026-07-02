@@ -8,6 +8,9 @@
 
 from __future__ import annotations
 
+import builtins
+import importlib
+
 import numpy as np
 import pytest
 
@@ -101,12 +104,20 @@ class TestUniversalPrior:
         with pytest.raises((TypeError, ValueError), match="n_layers"):
             prior.estimate_Kc(np.array([0.1, 0.2]), True)
 
+    def test_estimate_Kc_rejects_non_positive_layer_count(self) -> None:
+        prior = UniversalPrior()
+        with pytest.raises(ValueError, match="n_layers"):
+            prior.estimate_Kc(np.array([0.1, 0.2]), 0)
+
     @pytest.mark.parametrize(
         "omegas",
         [
             np.array([0.1, np.nan]),
             np.array([0.1, np.inf]),
+            np.array([], dtype=np.bool_),
             np.array([True, False]),
+            np.array([0.1, np.bool_(True)], dtype=object),
+            np.array(["not-float"], dtype=object),
             np.array([[0.1, 0.2]]),
             np.array([1.0 + 0.1j, 2.0 + 0.2j]),
         ],
@@ -144,11 +155,26 @@ class TestUniversalPrior:
         with pytest.raises((TypeError, ValueError), match="finite real value|finite"):
             prior.log_probability(value, 0.25)  # type: ignore[arg-type]
 
+    @pytest.mark.parametrize("value", ["0.25", None, object()])
+    def test_log_probability_rejects_invalid_decay_alpha_types(
+        self, value: object
+    ) -> None:
+        prior = UniversalPrior()
+        with pytest.raises((TypeError, ValueError), match="finite real value|finite"):
+            prior.log_probability(0.47, value)  # type: ignore[arg-type]
+
     def test_log_probability_symmetric(self):
         prior = UniversalPrior()
         lp1 = prior.log_probability(0.47 + 0.1, 0.25)
         lp2 = prior.log_probability(0.47 - 0.1, 0.25)
         assert abs(lp1 - lp2) < 1e-10
+
+    def test_log_probability_python_fallback(self, monkeypatch: pytest.MonkeyPatch):
+        prior = UniversalPrior()
+
+        monkeypatch.setattr(prior_module, "_HAS_RUST", False)
+
+        assert prior.log_probability(0.47, 0.25) == pytest.approx(0.0)
 
     def test_log_probability_rejects_non_finite_rust_result(self, monkeypatch):
         prior = UniversalPrior()
@@ -214,3 +240,28 @@ class TestCouplingPriorPipelineWiring:
 def test_universal_prior_rejects_invalid_hyperparameters(kwargs):
     with pytest.raises((TypeError, ValueError), match="prior"):
         UniversalPrior(**kwargs)
+
+
+def test_prior_module_import_falls_back_when_rust_kernel_missing(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    real_import = builtins.__import__
+
+    def guarded_import(
+        name: str,
+        globals: dict[str, object] | None = None,
+        locals: dict[str, object] | None = None,
+        fromlist: tuple[str, ...] = (),
+        level: int = 0,
+    ) -> object:
+        if name == "spo_kernel":
+            raise ImportError("spo_kernel unavailable for test")
+        return real_import(name, globals, locals, fromlist, level)
+
+    monkeypatch.setattr(builtins, "__import__", guarded_import)
+    try:
+        reloaded = importlib.reload(prior_module)
+        assert reloaded._HAS_RUST is False
+    finally:
+        monkeypatch.setattr(builtins, "__import__", real_import)
+        importlib.reload(prior_module)
