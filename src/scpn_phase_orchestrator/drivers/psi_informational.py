@@ -15,6 +15,7 @@ inputs so cadence-driven forcing remains bounded and deterministic.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from math import isfinite
 from numbers import Real
 from typing import TypeAlias
@@ -29,9 +30,26 @@ __all__ = ["InformationalDriver"]
 FloatArray: TypeAlias = NDArray[np.float64]
 
 
+def _contains_boolean_alias(value: object) -> bool:
+    """Return whether ``value`` carries a Python or NumPy boolean alias."""
+    if isinstance(value, (bool, np.bool_)):
+        return True
+    if isinstance(value, np.ndarray):
+        if np.issubdtype(value.dtype, np.bool_):
+            return True
+        if value.dtype == object:
+            return any(_contains_boolean_alias(item) for item in value.flat)
+        return False
+    if isinstance(value, (str, bytes)):
+        return False
+    if isinstance(value, Iterable):
+        return any(_contains_boolean_alias(item) for item in value)
+    return False
+
+
 def _require_finite_real(value: object, *, name: str) -> float:
     """Return ``value`` as a finite real float, else raise ``ValueError``."""
-    if isinstance(value, bool) or not isinstance(value, Real):
+    if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise ValueError(f"{name} must be finite")
     parsed = float(value)
     if not isfinite(parsed):
@@ -41,6 +59,8 @@ def _require_finite_real(value: object, *, name: str) -> float:
 
 def _require_finite_real_array(value: object, *, name: str) -> FloatArray:
     """Return ``value`` as a validated finite real array, else raise."""
+    if _contains_boolean_alias(value):
+        raise ValueError(f"{name} must be finite")
     array = np.asarray(value)
     dtype = array.dtype
     if (
@@ -59,12 +79,20 @@ class InformationalDriver:
     """External drive Psi_I(t) = 2*pi*cadence_hz*t (mod 2*pi)."""
 
     def __init__(self, cadence_hz: float):
-        if isinstance(cadence_hz, bool):
-            raise ValueError("cadence_hz must be finite and positive")
-        try:
-            parsed_cadence = float(cadence_hz)
-        except (TypeError, ValueError) as exc:
-            raise ValueError("cadence_hz must be finite and positive") from exc
+        """Initialise an informational cadence reference driver.
+
+        Parameters
+        ----------
+        cadence_hz : float
+            Positive event cadence in hertz.
+
+        Raises
+        ------
+        ValueError
+            If the cadence is a boolean alias, non-real, non-finite, or not
+            positive.
+        """
+        parsed_cadence = _require_finite_real(cadence_hz, name="cadence_hz")
         if not isfinite(parsed_cadence) or parsed_cadence <= 0.0:
             raise ValueError(
                 f"cadence_hz must be finite and positive, got {cadence_hz}"

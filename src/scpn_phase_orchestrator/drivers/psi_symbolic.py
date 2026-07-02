@@ -30,9 +30,15 @@ IntArray: TypeAlias = NDArray[np.int64]
 
 
 def _contains_bool(value: object) -> bool:
-    """Return whether the value is a boolean alias."""
-    if isinstance(value, bool):
+    """Return whether ``value`` carries a Python or NumPy boolean alias."""
+    if isinstance(value, (bool, np.bool_)):
         return True
+    if isinstance(value, np.ndarray):
+        if np.issubdtype(value.dtype, np.bool_):
+            return True
+        if value.dtype == object:
+            return any(_contains_bool(item) for item in value.flat)
+        return False
     if isinstance(value, (str, bytes)):
         return False
     if isinstance(value, Iterable):
@@ -42,13 +48,15 @@ def _contains_bool(value: object) -> bool:
 
 def _validate_step(value: object) -> int:
     """Return the validated step index, else raise."""
-    if isinstance(value, bool) or not isinstance(value, Integral):
+    if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral):
         raise ValueError("step must be an integer")
     return int(value)
 
 
 def _validate_steps(value: object) -> IntArray:
-    """Return the step count as a validated positive integer, else raise."""
+    """Return validated integer step indices, else raise."""
+    if _contains_bool(value):
+        raise ValueError("steps must be integer")
     steps = np.asarray(value)
     dtype = steps.dtype
     if (
@@ -64,6 +72,19 @@ class SymbolicDriver:
     """Deterministic phase sequence driver for symbolic/semiotic channels."""
 
     def __init__(self, sequence: list[float]):
+        """Initialise a cyclic symbolic reference sequence.
+
+        Parameters
+        ----------
+        sequence : list[float]
+            Non-empty one-dimensional phase sequence in radians.
+
+        Raises
+        ------
+        ValueError
+            If the sequence is empty, multi-dimensional, non-finite, or carries
+            Python or NumPy boolean aliases.
+        """
         if not sequence:
             raise ValueError("sequence must be non-empty")
         if _contains_bool(sequence):

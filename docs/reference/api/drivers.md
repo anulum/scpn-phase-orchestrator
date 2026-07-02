@@ -51,7 +51,7 @@ sources, plasma heating pulses.
 | Parameter | Type | Constraint | Description |
 |-----------|------|------------|-------------|
 | `frequency` | `float` | > 0 | Drive frequency in Hz |
-| `amplitude` | `float` | any | Peak amplitude (default 1.0) |
+| `amplitude` | `float` | >= 0 | Peak amplitude (default 1.0) |
 
 **Batch mode:** `compute_batch(t_array)` vectorises over a NumPy array
 of time values for efficient integration.
@@ -129,9 +129,9 @@ All drivers share the same interface:
 
 | Driver | Validation | Raises |
 |--------|-----------|--------|
-| PhysicalDriver | `frequency > 0` | `ValueError` |
-| InformationalDriver | `cadence_hz > 0` | `ValueError` |
-| SymbolicDriver | `len(sequence) > 0` | `ValueError` |
+| PhysicalDriver | `frequency > 0`, `amplitude >= 0`, finite real scalar and vector time inputs, no Python or NumPy boolean aliases | `ValueError` |
+| InformationalDriver | `cadence_hz > 0`, finite real scalar and vector time inputs, no Python or NumPy boolean aliases | `ValueError` |
+| SymbolicDriver | `len(sequence) > 0`, one-dimensional finite real sequence, integer step inputs, no Python or NumPy boolean aliases | `ValueError` |
 
 ### Output ranges
 

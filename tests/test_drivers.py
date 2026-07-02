@@ -105,6 +105,8 @@ class TestPhysicalDriver:
             np.array([0.0, float("nan")]),
             np.array([0.0, float("inf")]),
             np.array([True, False]),
+            [0.0, np.bool_(True)],
+            np.array([0.0, np.bool_(True)], dtype=object),
             np.array(["0.25"], dtype=object),
         ],
     )
@@ -166,7 +168,9 @@ class TestInformationalDriver:
         with pytest.raises(ValueError, match="positive"):
             InformationalDriver(cadence_hz=-1.0)
 
-    @pytest.mark.parametrize("cadence_hz", [float("nan"), float("inf"), "fast", True])
+    @pytest.mark.parametrize(
+        "cadence_hz", [float("nan"), float("inf"), "fast", True, np.bool_(True)]
+    )
     def test_invalid_cadence_rejected(self, cadence_hz: object):
         with pytest.raises(ValueError, match="cadence_hz"):
             InformationalDriver(cadence_hz=cast(Any, cadence_hz))
@@ -177,6 +181,8 @@ class TestInformationalDriver:
             np.array([0.0, float("nan")]),
             np.array([0.0, float("inf")]),
             np.array([True, False]),
+            [0.0, np.bool_(True)],
+            np.array([0.0, np.bool_(True)], dtype=object),
             np.array(["0.25"], dtype=object),
         ],
     )
@@ -213,7 +219,7 @@ class TestSymbolicDriver:
         assert drv.compute(5) == 3.0
         assert drv.compute(100) == drv.compute(100 % 3)
 
-    @pytest.mark.parametrize("step", [True, 1.5, "2"])
+    @pytest.mark.parametrize("step", [True, np.bool_(True), 1.5, "2"])
     def test_compute_rejects_non_integer_step(self, step: object):
         drv = SymbolicDriver(sequence=[1.0, 2.0, 3.0])
         with pytest.raises(ValueError, match="step must be an integer"):
@@ -230,6 +236,8 @@ class TestSymbolicDriver:
         "steps",
         [
             np.array([True, False]),
+            [0, np.bool_(True)],
+            np.array([0, np.bool_(True)], dtype=object),
             np.array([0.0, 1.0]),
             np.array([1 + 0j]),
             np.array(["1"], dtype=object),
@@ -258,6 +266,10 @@ class TestSymbolicDriver:
     def test_boolean_sequence_values_rejected(self):
         with pytest.raises(ValueError, match="finite real"):
             SymbolicDriver(sequence=cast(Any, [0.0, True]))
+
+    def test_numpy_boolean_sequence_values_rejected(self):
+        with pytest.raises(ValueError, match="finite real"):
+            SymbolicDriver(sequence=cast(Any, [0.0, np.bool_(True)]))
 
     def test_multidimensional_sequence_rejected(self):
         with pytest.raises(ValueError, match="one-dimensional"):
