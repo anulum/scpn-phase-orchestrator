@@ -45,6 +45,11 @@ The public PAC dispatcher applies the direct phase-amplitude-coupling output
 validators to optional backend returns before publication: modulation-index
 scalars must be finite values in `[0, 1]`, and PAC-matrix payloads must keep
 `N*N` cardinality with every entry inside `[0, 1]`.
+The public basin-stability dispatcher applies the shared direct output
+validator to optional backend returns before publication: steady-state order
+parameters must be finite non-boolean scalars inside `[0, 1]`, preserving
+fallback only for loader/runtime unavailability and not for malformed backend
+physics evidence.
 The public order-parameter dispatcher applies the direct scalar output
 validators to optional backend returns before publication: order-parameter
 magnitudes, PLV, and layer coherence must be finite real scalars inside

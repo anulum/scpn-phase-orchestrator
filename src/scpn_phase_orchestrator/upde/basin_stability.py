@@ -44,6 +44,9 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator.experimental.accelerators.upde import (
+    _basin_stability_validation,
+)
 from scpn_phase_orchestrator.upde._julia_runtime import require_juliacall_main
 
 __all__ = [
@@ -77,7 +80,7 @@ def _load_rust_fn() -> Callable[..., float]:
         n_measure: int,
     ) -> float:
         """Call the Rust basin-stability Monte-Carlo kernel."""
-        return float(
+        return _basin_stability_validation.validate_basin_stability_output(
             steady_state_r_rust(
                 np.ascontiguousarray(phases_init, dtype=np.float64),
                 np.ascontiguousarray(omegas, dtype=np.float64),
@@ -372,7 +375,7 @@ def steady_state_r(
     knm_flat = knm.ravel()
     backend_fn = _dispatch()
     if backend_fn is not None:
-        return float(
+        return _basin_stability_validation.validate_basin_stability_output(
             backend_fn(
                 phases_init,
                 omegas,
@@ -418,6 +421,7 @@ class BasinStabilityResult:
     R_threshold: float
 
     def __post_init__(self) -> None:
+        """Validate and canonicalise basin-stability result fields."""
         s_b = _validate_unit_interval(self.S_B, name="S_B")
         n_samples = _validate_integral(self.n_samples, name="n_samples", minimum=0)
         n_converged = _validate_integral(
@@ -458,7 +462,7 @@ def _monte_carlo_R_finals(
     for i in range(n_samples):
         phases_init = rng.uniform(0, 2 * np.pi, n)
         if backend_fn is not None:
-            R_finals[i] = float(
+            R_finals[i] = _basin_stability_validation.validate_basin_stability_output(
                 backend_fn(
                     phases_init,
                     np.ascontiguousarray(omegas, dtype=np.float64),

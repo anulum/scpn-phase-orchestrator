@@ -411,6 +411,11 @@ that converge.
 `multi_basin_stability()` classifies outcomes at multiple R thresholds
 to detect multi-stability (chimera states, partial synchronization).
 
+Optional Rust, Go, Julia, and Mojo backend outputs are validated before public
+publication: each steady-state order-parameter scalar must be finite,
+non-boolean, and inside `[0, 1]`. Loader/runtime unavailability can still fall
+through to Python; malformed backend physics evidence fails closed.
+
 **Usage:**
 
 ```python

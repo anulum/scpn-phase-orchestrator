@@ -274,6 +274,14 @@ The Mojo subprocess boundary accepts exactly one finite scalar stdout record
 for the steady-state order parameter, rejecting blank, multi-line, non-finite,
 and out-of-range records before they can enter the basin classification.
 
+Public dispatcher outputs use the same fail-closed contract. If `steady_state_r()`,
+`basin_stability()`, or `multi_basin_stability()` selects an optional Rust,
+Go, Julia, or Mojo backend, the backend scalar is validated before publication:
+it must be a finite, non-boolean steady-state order parameter in `[0, 1]`.
+Loader and runtime unavailability still fall back through the backend chain, but
+physics-contract violations propagate instead of being widened by `float(...)`
+or converted into synthetic basin-stability evidence.
+
 ### 4.3 Reproducibility
 
 All functions accept `seed` parameter. Initial conditions are generated
