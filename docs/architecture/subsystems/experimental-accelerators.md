@@ -53,6 +53,12 @@ The public inertial dispatcher and Rust wrapper apply the shared inertial
 output validator to optional backend returns before publication: swing-equation
 `theta` and `omega_dot` vectors must keep oscillator cardinality and finite
 values, with returned phases remaining inside `[0, 2*pi)`.
+The public swarmalator dispatcher and Rust wrapper apply the shared direct
+swarmalator output validator to optional backend returns before publication:
+positions must keep `(N, D)` shape or `N*D` flattened cardinality, phases must
+keep oscillator cardinality, values must be finite real numbers, phases must
+stay inside `[0, 2*pi)`, and boolean aliases are rejected before float
+coercion.
 The public PAC dispatcher applies the direct phase-amplitude-coupling output
 validators to optional backend returns before publication: modulation-index
 scalars must be finite values in `[0, 1]`, and PAC-matrix payloads must keep

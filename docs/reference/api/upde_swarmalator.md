@@ -240,6 +240,14 @@ ordered as flattened positions followed by torus phases. Blank, truncated,
 overlong, non-numeric, non-finite, or out-of-domain phase lines are rejected
 before public arrays are returned.
 
+The public `SwarmalatorEngine.step()` dispatcher and the Rust wrapper replay
+the same output contract before publication: optional backend positions must
+have `(N, d)` shape or exactly `N*d` flattened values, phases must have length
+`N`, all values must be finite real numbers, phases must stay in `[0, 2*pi)`,
+and object-dtype boolean aliases are rejected instead of being widened to
+`0.0` or `1.0`. Loader and runtime unavailability still fall back to Python;
+malformed backend physics payloads raise `ValueError`.
+
 ---
 
 ## 4. Features
@@ -561,6 +569,8 @@ Euler integration is conditionally stable. For $dt = 0.01$:
   output finite, shapes correct, J=0 phase-position independence
 - `tests/test_degenerate_edges.py` — swarmalator edge cases: N=2,
   dimensions 1/2/3, J=0 decoupling
+- `tests/test_swarmalator_backends.py` — direct and public optional-backend
+  input/output validation, fallback, loader, and typed-array contracts
 
 These span direct, property-based, and degenerate-edge tests across the files
 above.
@@ -569,6 +579,6 @@ above.
 
 ## Source
 
-- Python: `src/scpn_phase_orchestrator/upde/swarmalator.py` (100 lines)
+- Python: `src/scpn_phase_orchestrator/upde/swarmalator.py`
 - Rust: `spo-kernel/crates/spo-engine/src/swarmalator.rs`
 - FFI: `spo-kernel/crates/spo-ffi/src/lib.rs` (PySwarmalatorStepper)

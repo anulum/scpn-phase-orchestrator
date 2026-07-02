@@ -39,6 +39,9 @@ from scpn_phase_orchestrator._compat import TWO_PI
 from scpn_phase_orchestrator.coupling.spatial_modulator import (
     SpatialCouplingModulator,
 )
+from scpn_phase_orchestrator.experimental.accelerators.upde import (
+    _swarmalator_validation,
+)
 from scpn_phase_orchestrator.upde._julia_runtime import require_juliacall_main
 
 __all__ = [
@@ -80,10 +83,7 @@ def _load_rust_fn() -> Callable[..., tuple[FloatArray, FloatArray]]:
             float(j),
             float(k),
         )
-        return (
-            np.asarray(new_pos, dtype=np.float64).reshape(n, dim),
-            np.asarray(new_phases, dtype=np.float64),
-        )
+        return _validate_backend_output(new_pos, new_phases, n=int(n), dim=int(dim))
 
     return cast("Callable[..., tuple[FloatArray, FloatArray]]", _rust)
 
@@ -238,19 +238,16 @@ def _validate_backend_output(
     dim: int,
 ) -> tuple[FloatArray, FloatArray]:
     """Return the backend output matching the reference, else raise."""
-    out_pos = _validate_state_array(
-        pos,
-        name="backend output positions",
-        shape=(n, dim),
-    )
-    out_phases = _validate_state_array(
-        phases,
-        name="backend output phases",
-        shape=(n,),
-    )
-    if np.any(out_phases < 0.0) or np.any(out_phases >= TWO_PI):
-        raise ValueError("backend output phases must be in [0, 2*pi)")
-    return out_pos, out_phases
+    try:
+        return _swarmalator_validation.validate_swarmalator_output(
+            pos,
+            phases,
+            n=n,
+            dim=dim,
+        )
+    except ValueError as exc:
+        message = str(exc).replace("swarmalator output", "backend output", 1)
+        raise ValueError(message) from exc
 
 
 def _python_step(
@@ -309,7 +306,8 @@ class SwarmalatorEngine:
     (new_pos, new_phases)``.
     """
 
-    def __init__(self, n_agents: int, dim: int = 2, dt: float = 0.01):
+    def __init__(self, n_agents: int, dim: int = 2, dt: float = 0.01) -> None:
+        """Initialise the stateless swarmalator stepper geometry."""
         self._n = _validate_positive_int(n_agents, name="n_agents")
         self._dim = _validate_positive_int(dim, name="dim")
         self._dt = _validate_positive_float(dt, name="dt")
@@ -392,7 +390,7 @@ class SwarmalatorEngine:
                 n=self._n,
                 dim=self._dim,
             )
-        return _python_step(
+        new_pos, new_phases = _python_step(
             pos64,
             phases64,
             omegas64,
@@ -404,6 +402,7 @@ class SwarmalatorEngine:
             k,
             self._dt,
         )
+        return _validate_backend_output(new_pos, new_phases, n=self._n, dim=self._dim)
 
     def run(
         self,

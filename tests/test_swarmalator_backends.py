@@ -20,12 +20,14 @@ from __future__ import annotations
 import ctypes
 import sys
 import types
-from typing import get_type_hints
+from collections.abc import Callable
+from typing import TypeAlias, cast, get_type_hints
 
 import numpy as np
 import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
+from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.experimental.accelerators.upde import (
     _swarmalator_go,
@@ -45,6 +47,35 @@ from tests.typing_contracts import assert_precise_ndarray_hint
 swarmalator_step_go = _swarmalator_go.swarmalator_step_go
 swarmalator_step_julia = _swarmalator_julia.swarmalator_step_julia
 swarmalator_step_mojo = _swarmalator_mojo.swarmalator_step_mojo
+
+FloatArray: TypeAlias = NDArray[np.float64]
+BackendArgs: TypeAlias = tuple[
+    FloatArray,
+    FloatArray,
+    FloatArray,
+    int,
+    int,
+    float,
+    float,
+    float,
+    float,
+    float,
+]
+BackendFn: TypeAlias = Callable[
+    [
+        FloatArray,
+        FloatArray,
+        FloatArray,
+        int,
+        int,
+        float,
+        float,
+        float,
+        float,
+        float,
+    ],
+    tuple[FloatArray, FloatArray],
+]
 
 TWO_PI = 2.0 * np.pi
 
@@ -66,7 +97,7 @@ def test__swarmalator_validation_helper_is_directly_linked_to_backend_tests() ->
     np.testing.assert_array_equal(phases, args[1])
 
 
-def _valid_direct_args():
+def _valid_direct_args() -> BackendArgs:
     return (
         np.array([[0.0, 0.5], [1.0, -0.25]], dtype=np.float64),
         np.array([0.2, 0.4], dtype=np.float64),
@@ -81,7 +112,7 @@ def _valid_direct_args():
     )
 
 
-def _with_direct_arg(index: int, value):
+def _with_direct_arg(index: int, value: object) -> tuple[object, ...]:
     args = list(_valid_direct_args())
     args[index] = value
     return tuple(args)
@@ -98,9 +129,9 @@ class _FakeGoSwarmalatorLib:
         self.phases = phases
         self.rc = rc
 
-    def SwarmalatorStep(self, *_args):
-        pos_ref = ctypes.cast(_args[-2], ctypes.POINTER(ctypes.c_double))
-        phase_ref = ctypes.cast(_args[-1], ctypes.POINTER(ctypes.c_double))
+    def SwarmalatorStep(self, *_args: object) -> int:
+        pos_ref = cast(ctypes.Array[ctypes.c_double], _args[-2])
+        phase_ref = cast(ctypes.Array[ctypes.c_double], _args[-1])
         for index, value in enumerate(self.positions):
             pos_ref[index] = value
         for index, value in enumerate(self.phases):
@@ -117,7 +148,7 @@ class _FakeJuliaSwarmalatorModule:
         self.positions = positions
         self.phases = phases
 
-    def swarmalator_step(self, *_args):
+    def swarmalator_step(self, *_args: object) -> tuple[FloatArray, FloatArray]:
         return (
             np.array(self.positions, dtype=np.float64),
             np.array(self.phases, dtype=np.float64),
@@ -125,11 +156,11 @@ class _FakeJuliaSwarmalatorModule:
 
 
 def _call_direct_backend(
-    module,
+    module: object,
     monkeypatch: pytest.MonkeyPatch,
     positions: tuple[float, ...],
     phases: tuple[float, ...],
-):
+) -> tuple[FloatArray, FloatArray]:
     if module is _swarmalator_go:
         monkeypatch.setattr(
             _swarmalator_go,
@@ -148,7 +179,7 @@ def _call_direct_backend(
     monkeypatch.setattr(_swarmalator_mojo, "_ensure_exe", lambda: "swarmalator")
     stdout = "".join(f"{value}\n" for value in (*positions, *phases))
     monkeypatch.setattr(
-        _swarmalator_mojo.subprocess,
+        cast(object, _swarmalator_mojo.__dict__["subprocess"]),
         "run",
         lambda *_args, **_kwargs: types.SimpleNamespace(
             returncode=0,
@@ -169,7 +200,13 @@ def _reset(prev: str) -> None:
     sw_mod.ACTIVE_BACKEND = prev
 
 
-def _problem(seed: int, n: int = 16, dim: int = 2):
+def _problem(
+    seed: int, n: int = 16, dim: int = 2
+) -> tuple[
+    FloatArray,
+    FloatArray,
+    FloatArray,
+]:
     rng = np.random.default_rng(seed)
     pos = rng.uniform(-1, 1, (n, dim))
     phases = rng.uniform(0, TWO_PI, n)
@@ -177,12 +214,18 @@ def _problem(seed: int, n: int = 16, dim: int = 2):
     return pos, phases, omegas
 
 
-def _direct_payload(n: int = 3, dim: int = 2):
+def _direct_payload(n: int = 3, dim: int = 2) -> BackendArgs:
     pos, phases, omegas = _problem(19, n=n, dim=dim)
     return pos, phases, omegas, n, dim, 1.0, 1.0, 0.8, 1.2, 0.01
 
 
-def _reference_step(pos, phases, omegas, n: int, dim: int):
+def _reference_step(
+    pos: FloatArray,
+    phases: FloatArray,
+    omegas: FloatArray,
+    n: int,
+    dim: int,
+) -> tuple[FloatArray, FloatArray]:
     prev = _force("python")
     try:
         eng = SwarmalatorEngine(n, dim, 0.01)
@@ -324,7 +367,11 @@ class TestBackendTypingContracts:
             (swarmalator_step_mojo, "mojo"),
         ],
     )
-    def test_backend_annotations_use_float64_ndarray(self, fn, label: str) -> None:
+    def test_backend_annotations_use_float64_ndarray(
+        self,
+        fn: Callable[..., object],
+        label: str,
+    ) -> None:
         hints = get_type_hints(fn)
         for name in ("pos", "phases", "omegas", "return"):
             text = str(hints[name])
@@ -366,13 +413,13 @@ class TestDirectSwarmalatorBoundaryContracts:
     def test_direct_backend_rejects_invalid_inputs_before_runtime_loading(
         self,
         monkeypatch: pytest.MonkeyPatch,
-        module,
+        module: types.ModuleType,
         fn_name: str,
         loader_name: str,
-        args,
+        args: tuple[object, ...],
         match: str,
     ) -> None:
-        def forbidden_loader():
+        def forbidden_loader() -> None:
             raise AssertionError("runtime loader must not be called")
 
         monkeypatch.setattr(module, loader_name, forbidden_loader)
@@ -387,7 +434,7 @@ class TestDirectSwarmalatorBoundaryContracts:
     def test_direct_backend_accepts_valid_position_phase_output(
         self,
         monkeypatch: pytest.MonkeyPatch,
-        module,
+        module: types.ModuleType,
     ) -> None:
         got_pos, got_phases = _call_direct_backend(
             module,
@@ -422,7 +469,7 @@ class TestDirectSwarmalatorBoundaryContracts:
     def test_direct_backend_rejects_non_physical_outputs(
         self,
         monkeypatch: pytest.MonkeyPatch,
-        module,
+        module: types.ModuleType,
         positions: tuple[float, ...],
         phases: tuple[float, ...],
         match: str,
@@ -441,7 +488,7 @@ class TestDirectSwarmalatorBoundaryContracts:
     def test_direct_backend_rejects_wrong_output_cardinality(
         self,
         monkeypatch: pytest.MonkeyPatch,
-        module,
+        module: types.ModuleType,
         positions: tuple[float, ...],
         phases: tuple[float, ...],
         match: str,
@@ -451,14 +498,26 @@ class TestDirectSwarmalatorBoundaryContracts:
 
 
 class TestBackendLoaderContracts:
-    def test_rust_loader_reshapes_flat_kernel_positions(self, monkeypatch) -> None:
-        calls = {}
+    def test_rust_loader_reshapes_flat_kernel_positions(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        calls: dict[str, object] = {}
 
         class PySwarmalatorStepper:
             def __init__(self, n: int, dim: int, dt: float) -> None:
                 calls["init"] = (n, dim, dt)
 
-            def step(self, pos, phases, omegas, a, b, j, k):
+            def step(
+                self,
+                pos: FloatArray,
+                phases: FloatArray,
+                omegas: FloatArray,
+                a: float,
+                b: float,
+                j: float,
+                k: float,
+            ) -> tuple[FloatArray, FloatArray]:
                 calls["contiguous"] = (
                     pos.flags.c_contiguous,
                     phases.flags.c_contiguous,
@@ -467,7 +526,7 @@ class TestBackendLoaderContracts:
                 return pos + a - b + j - k, phases + omegas
 
         fake_spo = types.ModuleType("spo_kernel")
-        fake_spo.PySwarmalatorStepper = PySwarmalatorStepper
+        fake_spo.__dict__["PySwarmalatorStepper"] = PySwarmalatorStepper
         monkeypatch.setitem(sys.modules, "spo_kernel", fake_spo)
 
         fn = sw_mod._load_rust_fn()
@@ -503,7 +562,7 @@ class TestBackendLoaderContracts:
     ) -> None:
         monkeypatch.setattr(_swarmalator_mojo, "_ensure_exe", lambda: "swarmalator")
         monkeypatch.setattr(
-            _swarmalator_mojo.subprocess,
+            cast(object, _swarmalator_mojo.__dict__["subprocess"]),
             "run",
             lambda *_args, **_kwargs: type(
                 "Proc",
@@ -516,30 +575,43 @@ class TestBackendLoaderContracts:
             _swarmalator_mojo.swarmalator_step_mojo(*_direct_payload())
 
     def test_optional_backend_loaders_return_callable_numeric_kernels(
-        self, monkeypatch
+        self,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         def install_backend(
             module_name: str, function_name: str, offset: float
         ) -> None:
             module = types.ModuleType(module_name)
 
-            def _ensure_exe() -> None:
-                module.loaded = True
+            def _ensure_exe() -> str:
+                module.__dict__["loaded"] = True
+                return "swarmalator"
 
             def _load_lib() -> None:
-                module.loaded = True
+                module.__dict__["loaded"] = True
 
-            def kernel(pos, phases, omegas, n, dim, a, b, j, k, dt):
+            def kernel(
+                pos: FloatArray,
+                phases: FloatArray,
+                omegas: FloatArray,
+                _n: int,
+                _dim: int,
+                _a: float,
+                _b: float,
+                _j: float,
+                _k: float,
+                dt: float,
+            ) -> tuple[FloatArray, FloatArray]:
                 return pos + offset + dt, (phases + omegas * dt + offset) % TWO_PI
 
-            module.loaded = False
-            module._ensure_exe = _ensure_exe
-            module._load_lib = _load_lib
-            setattr(module, function_name, kernel)
+            module.__dict__["loaded"] = False
+            module.__dict__["_ensure_exe"] = _ensure_exe
+            module.__dict__["_load_lib"] = _load_lib
+            module.__dict__[function_name] = kernel
             monkeypatch.setitem(sys.modules, module_name, module)
 
         fake_juliacall = types.ModuleType("juliacall")
-        fake_juliacall.Main = object()
+        fake_juliacall.__dict__["Main"] = object()
         monkeypatch.setitem(sys.modules, "juliacall", fake_juliacall)
         install_backend(
             "scpn_phase_orchestrator.experimental.accelerators.upde._swarmalator_mojo",
@@ -560,7 +632,7 @@ class TestBackendLoaderContracts:
         pos = np.array([[0.0, 1.0], [2.0, 3.0]], dtype=np.float64)
         phases = np.array([0.5, 1.5], dtype=np.float64)
         omegas = np.array([0.2, -0.1], dtype=np.float64)
-        args = (pos, phases, omegas, 2, 2, 1.0, 1.0, 0.8, 1.2, 0.01)
+        args: BackendArgs = (pos, phases, omegas, 2, 2, 1.0, 1.0, 0.8, 1.2, 0.01)
 
         for loader, offset in (
             (sw_mod._load_mojo_fn, 0.10),
@@ -575,8 +647,185 @@ class TestBackendLoaderContracts:
             )
 
 
+class TestPublicBackendOutputContracts:
+    """Public swarmalator dispatchers replay direct backend output contracts."""
+
+    def test_step_rejects_boolean_coupling_alias(
+        self,
+    ) -> None:
+        engine = SwarmalatorEngine(2, 2, 0.01)
+
+        with pytest.raises(ValueError, match="a must be finite real"):
+            engine.step(
+                np.array([[0.0, 0.5], [1.0, -0.25]], dtype=np.float64),
+                np.array([0.2, 0.4], dtype=np.float64),
+                np.array([0.1, -0.2], dtype=np.float64),
+                a=True,
+            )
+
+    def test_step_rejects_nonfinite_coupling(
+        self,
+    ) -> None:
+        engine = SwarmalatorEngine(2, 2, 0.01)
+
+        with pytest.raises(ValueError, match="b must be finite real"):
+            engine.step(
+                np.array([[0.0, 0.5], [1.0, -0.25]], dtype=np.float64),
+                np.array([0.2, 0.4], dtype=np.float64),
+                np.array([0.1, -0.2], dtype=np.float64),
+                b=np.inf,
+            )
+
+    def test_step_rejects_complex_position_input(
+        self,
+    ) -> None:
+        engine = SwarmalatorEngine(2, 2, 0.01)
+
+        with pytest.raises(ValueError, match="pos"):
+            engine.step(
+                np.array([[0.0 + 1.0j, 0.5], [1.0, -0.25]], dtype=np.complex128),
+                np.array([0.2, 0.4], dtype=np.float64),
+                np.array([0.1, -0.2], dtype=np.float64),
+            )
+
+    def test_step_rejects_uncoercible_position_input(
+        self,
+    ) -> None:
+        engine = SwarmalatorEngine(2, 2, 0.01)
+
+        with pytest.raises(ValueError, match="pos"):
+            engine.step(
+                np.array([[object(), 0.5], [1.0, -0.25]], dtype=object),
+                np.array([0.2, 0.4], dtype=np.float64),
+                np.array([0.1, -0.2], dtype=np.float64),
+            )
+
+    def test_step_rejects_optional_backend_boolean_position_alias(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        def malformed_backend(
+            _pos: FloatArray,
+            _phases: FloatArray,
+            _omegas: FloatArray,
+            _n: int,
+            _dim: int,
+            _a: float,
+            _b: float,
+            _j: float,
+            _k: float,
+            _dt: float,
+        ) -> tuple[object, FloatArray]:
+            return (
+                np.array([[True, 0.2], [0.3, 0.4]], dtype=object),
+                np.array([0.5, 0.6], dtype=np.float64),
+            )
+
+        monkeypatch.setattr(sw_mod, "_dispatch", lambda: malformed_backend)
+        engine = SwarmalatorEngine(2, 2, 0.01)
+
+        with pytest.raises(ValueError, match="not boolean"):
+            engine.step(
+                np.array([[0.0, 0.5], [1.0, -0.25]], dtype=np.float64),
+                np.array([0.2, 0.4], dtype=np.float64),
+                np.array([0.1, -0.2], dtype=np.float64),
+            )
+
+    def test_step_rejects_optional_backend_boolean_phase_alias(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        def malformed_backend(
+            _pos: FloatArray,
+            _phases: FloatArray,
+            _omegas: FloatArray,
+            _n: int,
+            _dim: int,
+            _a: float,
+            _b: float,
+            _j: float,
+            _k: float,
+            _dt: float,
+        ) -> tuple[FloatArray, object]:
+            return (
+                np.array([[0.1, 0.2], [0.3, 0.4]], dtype=np.float64),
+                np.array([True, 0.6], dtype=object),
+            )
+
+        monkeypatch.setattr(sw_mod, "_dispatch", lambda: malformed_backend)
+        engine = SwarmalatorEngine(2, 2, 0.01)
+
+        with pytest.raises(ValueError, match="not boolean"):
+            engine.step(
+                np.array([[0.0, 0.5], [1.0, -0.25]], dtype=np.float64),
+                np.array([0.2, 0.4], dtype=np.float64),
+                np.array([0.1, -0.2], dtype=np.float64),
+            )
+
+    def test_rust_wrapper_rejects_boolean_phase_alias(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        class PySwarmalatorStepper:
+            def __init__(self, _n: int, _dim: int, _dt: float) -> None:
+                pass
+
+            def step(
+                self,
+                _pos: FloatArray,
+                _phases: FloatArray,
+                _omegas: FloatArray,
+                _a: float,
+                _b: float,
+                _j: float,
+                _k: float,
+            ) -> tuple[FloatArray, object]:
+                return (
+                    np.array([0.1, 0.2, 0.3, 0.4], dtype=np.float64),
+                    np.array([True, 0.6], dtype=object),
+                )
+
+        fake_spo = types.ModuleType("spo_kernel")
+        fake_spo.__dict__["PySwarmalatorStepper"] = PySwarmalatorStepper
+        monkeypatch.setitem(sys.modules, "spo_kernel", fake_spo)
+
+        with pytest.raises(ValueError, match="not boolean"):
+            sw_mod._load_rust_fn()(*_direct_payload(n=2, dim=2))
+
+
 class TestDispatchFallbackChain:
-    def test_dispatch_falls_back_to_python_when_loader_fails(self, monkeypatch):
+    def test_dispatch_returns_python_when_every_native_loader_fails(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        previous_backend = sw_mod.ACTIVE_BACKEND
+        previous_available = list(sw_mod.AVAILABLE_BACKENDS)
+        previous_go_loader = sw_mod._LOADERS["go"]
+        previous_rust_loader = sw_mod._LOADERS["rust"]
+        sw_mod.ACTIVE_BACKEND = "go"
+        sw_mod.AVAILABLE_BACKENDS = ["rust"]
+        sw_mod._BACKEND_CACHE.clear()
+
+        def failing_loader() -> BackendFn:
+            raise ImportError("native backend unavailable")
+
+        monkeypatch.setitem(sw_mod._LOADERS, "go", failing_loader)
+        monkeypatch.setitem(sw_mod._LOADERS, "rust", failing_loader)
+        try:
+            backend = sw_mod._dispatch()
+        finally:
+            sw_mod.ACTIVE_BACKEND = previous_backend
+            sw_mod.AVAILABLE_BACKENDS = previous_available
+            monkeypatch.setitem(sw_mod._LOADERS, "go", previous_go_loader)
+            monkeypatch.setitem(sw_mod._LOADERS, "rust", previous_rust_loader)
+            sw_mod._BACKEND_CACHE.clear()
+
+        assert backend is None
+
+    def test_dispatch_falls_back_to_python_when_loader_fails(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
         previous_backend = sw_mod.ACTIVE_BACKEND
         previous_available = list(sw_mod.AVAILABLE_BACKENDS)
         previous_loader = sw_mod._LOADERS["go"]
@@ -598,7 +847,10 @@ class TestDispatchFallbackChain:
 
         assert backend is None
 
-    def test_dispatch_uses_cached_loader_once(self, monkeypatch):
+    def test_dispatch_uses_cached_loader_once(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
         previous_backend = sw_mod.ACTIVE_BACKEND
         previous_available = list(sw_mod.AVAILABLE_BACKENDS)
         previous_loader = sw_mod._LOADERS["go"]
@@ -608,9 +860,9 @@ class TestDispatchFallbackChain:
         call_count = 0
 
         def fake_backend(
-            pos: np.ndarray,
-            phases: np.ndarray,
-            _omegas: np.ndarray,
+            pos: FloatArray,
+            phases: FloatArray,
+            _omegas: FloatArray,
             _n: int,
             _dim: int,
             _a: float,
@@ -618,10 +870,10 @@ class TestDispatchFallbackChain:
             _j: float,
             _k: float,
             _dt: float,
-        ) -> tuple[np.ndarray, np.ndarray]:
+        ) -> tuple[FloatArray, FloatArray]:
             return pos.copy(), phases.copy()
 
-        def loader():
+        def loader() -> BackendFn:
             nonlocal call_count
             call_count += 1
             return fake_backend

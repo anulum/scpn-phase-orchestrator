@@ -216,6 +216,10 @@ positive; and attraction, repulsion, phase-attraction modulation, and
 phase-coupling coefficients must be finite real controls. Backend outputs must
 return finite positions and torus phases in `[0, 2*pi)`, and Mojo stdout must
 contain exactly `N*D + N` scalar lines.
+The public `SwarmalatorEngine.step()` dispatcher and Rust wrapper apply the
+same output contract before publication, including object-dtype boolean-alias
+rejection, while preserving Python fallback only for loader/runtime
+unavailability.
 
 ::: scpn_phase_orchestrator.upde.swarmalator
 
