@@ -124,7 +124,9 @@ def test_optional_backend_loader_returns_julia_callable(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """The Julia loader returns the backend callable when juliacall imports."""
-    monkeypatch.setitem(sys.modules, "juliacall", ModuleType("juliacall"))
+    fake_juliacall = ModuleType("juliacall")
+    fake_juliacall.Main = object()
+    monkeypatch.setitem(sys.modules, "juliacall", fake_juliacall)
     monkeypatch.setattr(
         lyapunov_julia_mod,
         "lyapunov_spectrum_julia",

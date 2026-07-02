@@ -460,7 +460,9 @@ class TestDispatcherSurface:
 
         go._load_lib = load_lib
 
-        monkeypatch.setitem(sys.modules, "juliacall", types.ModuleType("juliacall"))
+        fake_juliacall = types.ModuleType("juliacall")
+        fake_juliacall.Main = object()
+        monkeypatch.setitem(sys.modules, "juliacall", fake_juliacall)
         monkeypatch.setitem(
             sys.modules,
             "scpn_phase_orchestrator.experimental.accelerators.coupling._spectral_mojo",

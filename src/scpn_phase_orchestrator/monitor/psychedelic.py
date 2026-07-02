@@ -29,6 +29,7 @@ from typing import Any, TypeAlias, cast
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator.monitor._julia_runtime import require_juliacall_main
 from scpn_phase_orchestrator.monitor.chimera import detect_chimera
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
 
@@ -82,8 +83,7 @@ def _load_mojo_fn() -> Callable[..., float]:
 
 def _load_julia_fn() -> Callable[..., float]:
     """Load the Julia psychedelic phase-dispersion backend callable."""
-    import juliacall  # noqa: F401
-
+    require_juliacall_main()
     from ..experimental.accelerators.monitor._psychedelic_julia import (
         entropy_from_phases_julia,
     )

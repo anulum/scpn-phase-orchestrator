@@ -1,18 +1,18 @@
 {
   "SPDX-License-Identifier": "AGPL-3.0-or-later",
   "counts": {
-    "core_engine_modules": 297,
+    "core_engine_modules": 299,
     "domainpacks": 36,
     "github_workflows": 12,
     "integration_modules": 27,
     "optional_extras": 20,
     "public_api_exports": 24,
     "public_documentation_pages": 217,
-    "python_package_modules": 677,
+    "python_package_modules": 679,
     "research_experimental_modules": 214,
     "runtime_serving_modules": 136,
     "rust_kernel_files": 97,
-    "test_files": 753
+    "test_files": 754
   },
   "documentation": {
     "public_pages": [
@@ -393,6 +393,7 @@
       "src/scpn_phase_orchestrator/coupling/_hodge_go.py",
       "src/scpn_phase_orchestrator/coupling/_hodge_julia.py",
       "src/scpn_phase_orchestrator/coupling/_hodge_mojo.py",
+      "src/scpn_phase_orchestrator/coupling/_julia_runtime.py",
       "src/scpn_phase_orchestrator/coupling/_spatial_modulator_go.py",
       "src/scpn_phase_orchestrator/coupling/_spatial_modulator_julia.py",
       "src/scpn_phase_orchestrator/coupling/_spatial_modulator_mojo.py",
@@ -433,6 +434,7 @@
       "src/scpn_phase_orchestrator/monitor/_itpc_go.py",
       "src/scpn_phase_orchestrator/monitor/_itpc_julia.py",
       "src/scpn_phase_orchestrator/monitor/_itpc_mojo.py",
+      "src/scpn_phase_orchestrator/monitor/_julia_runtime.py",
       "src/scpn_phase_orchestrator/monitor/_lyapunov_go.py",
       "src/scpn_phase_orchestrator/monitor/_lyapunov_julia.py",
       "src/scpn_phase_orchestrator/monitor/_lyapunov_mojo.py",
@@ -1148,6 +1150,7 @@
     "src/scpn_phase_orchestrator/coupling/_hodge_go.py",
     "src/scpn_phase_orchestrator/coupling/_hodge_julia.py",
     "src/scpn_phase_orchestrator/coupling/_hodge_mojo.py",
+    "src/scpn_phase_orchestrator/coupling/_julia_runtime.py",
     "src/scpn_phase_orchestrator/coupling/_spatial_modulator_go.py",
     "src/scpn_phase_orchestrator/coupling/_spatial_modulator_julia.py",
     "src/scpn_phase_orchestrator/coupling/_spatial_modulator_mojo.py",
@@ -1368,6 +1371,7 @@
     "src/scpn_phase_orchestrator/monitor/_itpc_go.py",
     "src/scpn_phase_orchestrator/monitor/_itpc_julia.py",
     "src/scpn_phase_orchestrator/monitor/_itpc_mojo.py",
+    "src/scpn_phase_orchestrator/monitor/_julia_runtime.py",
     "src/scpn_phase_orchestrator/monitor/_lyapunov_go.py",
     "src/scpn_phase_orchestrator/monitor/_lyapunov_julia.py",
     "src/scpn_phase_orchestrator/monitor/_lyapunov_mojo.py",
@@ -2079,6 +2083,7 @@
       "tests/test_modal_participation.py",
       "tests/test_modbus_tls.py",
       "tests/test_monitor_coherence.py",
+      "tests/test_monitor_coupling_julia_runtime_contracts.py",
       "tests/test_monitor_stl_modules.py",
       "tests/test_morphogenetic_supervisor.py",
       "tests/test_moving_frame_validation_guards.py",

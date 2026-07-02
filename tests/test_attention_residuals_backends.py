@@ -581,6 +581,7 @@ class TestBackendLoaderDispatch:
         fake_backend = object()
 
         fake_juliacall = types.ModuleType("juliacall")
+        fake_juliacall.Main = object()
         fake_julia = types.ModuleType(
             "scpn_phase_orchestrator.experimental.accelerators.coupling._attnres_julia"
         )

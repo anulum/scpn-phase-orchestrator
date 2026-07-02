@@ -30,6 +30,8 @@ from typing import Literal, TypeAlias, cast
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator.coupling._julia_runtime import require_juliacall_main
+
 __all__ = [
     "ACTIVE_BACKEND",
     "AVAILABLE_BACKENDS",
@@ -310,17 +312,7 @@ def _load_mojo_fn() -> Callable[..., FloatArray]:
 
 def _load_julia_fn() -> Callable[..., FloatArray]:
     """Load the Julia spatial-modulator backend callable."""
-    import importlib
-
-    juliacall = importlib.import_module("juliacall")
-    # The Julia backend needs ``juliacall.Main``. When juliacall cannot finish
-    # initialising the Julia runtime (for example a partial init under a
-    # coverage thread tracer) the package imports but ``Main`` is absent; treat
-    # that as an unavailable backend here rather than letting the later engine
-    # call crash with ImportError after dispatch. Mirrors upde/_run.py.
-    if not hasattr(juliacall, "Main"):
-        raise ImportError("juliacall.Main unavailable; Julia runtime not initialised")
-
+    require_juliacall_main()
     from ..experimental.accelerators.coupling._spatial_modulator_julia import (
         spatial_modulate_julia,
     )

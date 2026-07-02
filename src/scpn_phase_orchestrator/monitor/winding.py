@@ -22,6 +22,8 @@ from typing import TypeAlias, cast
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator.monitor._julia_runtime import require_juliacall_main
+
 FloatArray: TypeAlias = NDArray[np.float64]
 IntArray: TypeAlias = NDArray[np.int64]
 
@@ -63,8 +65,7 @@ def _load_mojo_fn() -> Callable[..., IntArray]:
 
 def _load_julia_fn() -> Callable[..., IntArray]:
     """Load the Julia winding-number backend callable."""
-    import juliacall  # noqa: F401
-
+    require_juliacall_main()
     from ..experimental.accelerators.monitor._winding_julia import (
         winding_numbers_julia,
     )

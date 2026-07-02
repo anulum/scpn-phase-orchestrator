@@ -24,6 +24,8 @@ from typing import TypeAlias, cast
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator.monitor._julia_runtime import require_juliacall_main
+
 FloatArray: TypeAlias = NDArray[np.float64]
 
 __all__ = [
@@ -74,8 +76,7 @@ def _load_mojo_fn() -> Callable[..., float]:
 
 def _load_julia_fn() -> Callable[..., float]:
     """Load the Julia entropy-production-rate backend callable."""
-    import juliacall  # noqa: F401
-
+    require_juliacall_main()
     from ..experimental.accelerators.monitor._entropy_prod_julia import (
         entropy_production_rate_julia,
     )

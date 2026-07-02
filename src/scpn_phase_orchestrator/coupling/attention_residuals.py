@@ -53,6 +53,8 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator.coupling._julia_runtime import require_juliacall_main
+
 __all__ = [
     "ACTIVE_BACKEND",
     "AVAILABLE_BACKENDS",
@@ -267,8 +269,7 @@ def _load_mojo() -> _BackendFn:  # pragma: no cover — toolchain-gated
 
 def _load_julia() -> _BackendFn:  # pragma: no cover — toolchain-gated
     """Load the Julia AttnRes backend callable."""
-    import juliacall  # noqa: F401
-
+    require_juliacall_main()
     from ..experimental.accelerators.coupling._attnres_julia import (
         attnres_modulate_julia,
     )

@@ -50,6 +50,8 @@ from typing import TypeAlias, cast
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator.monitor._julia_runtime import require_juliacall_main
+
 __all__ = [
     "ACTIVE_BACKEND",
     "AVAILABLE_BACKENDS",
@@ -110,8 +112,7 @@ def _load_mojo_fn() -> PidBackend:
 def _load_julia_fn() -> PidBackend:
     # pragma: no cover — toolchain
     """Load the Julia PID backend callable."""
-    import juliacall  # noqa: F401
-
+    require_juliacall_main()
     from ..experimental.accelerators.monitor._pid_julia import (
         pid_decomposition_julia,
     )

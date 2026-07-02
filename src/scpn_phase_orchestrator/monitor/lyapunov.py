@@ -31,6 +31,8 @@ from typing import TypeAlias, cast
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator.monitor._julia_runtime import require_juliacall_main
+
 __all__ = [
     "ACTIVE_BACKEND",
     "AVAILABLE_BACKENDS",
@@ -68,8 +70,7 @@ def _load_mojo_fn() -> LyapunovBackendFn:
 
 def _load_julia_fn() -> LyapunovBackendFn:
     """Load the Julia Lyapunov backend callable."""
-    import juliacall  # noqa: F401
-
+    require_juliacall_main()
     from ..experimental.accelerators.monitor._lyapunov_julia import (
         lyapunov_spectrum_julia,
     )

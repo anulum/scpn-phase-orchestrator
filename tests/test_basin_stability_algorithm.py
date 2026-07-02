@@ -710,7 +710,9 @@ class TestBackendLoaderContracts:
         go_mod.steady_state_r_go = fake_backend
 
         monkeypatch.setitem(sys.modules, mojo_mod.__name__, mojo_mod)
-        monkeypatch.setitem(sys.modules, "juliacall", types.ModuleType("juliacall"))
+        fake_juliacall = types.ModuleType("juliacall")
+        fake_juliacall.Main = object()
+        monkeypatch.setitem(sys.modules, "juliacall", fake_juliacall)
         monkeypatch.setitem(sys.modules, julia_mod.__name__, julia_mod)
         monkeypatch.setitem(sys.modules, go_mod.__name__, go_mod)
 

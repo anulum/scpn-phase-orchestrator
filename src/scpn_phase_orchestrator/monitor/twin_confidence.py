@@ -53,6 +53,8 @@ from typing import TypeAlias, cast
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator.monitor._julia_runtime import require_juliacall_main
+
 FloatArray: TypeAlias = NDArray[np.float64]
 
 __all__ = [
@@ -294,10 +296,7 @@ def _load_mojo() -> _BackendFn:  # pragma: no cover — toolchain-gated
 
 def _load_julia() -> _BackendFn:  # pragma: no cover — toolchain-gated
     """Load the Julia twin-confidence backend callable."""
-    import juliacall  # noqa: F401
-
-    if not hasattr(juliacall, "Main"):  # partial install guard
-        raise ImportError("juliacall imported but juliacall.Main is unavailable")
+    require_juliacall_main()
     from ..experimental.accelerators.monitor._twin_confidence_julia import (
         twin_divergence_julia,
     )

@@ -421,6 +421,7 @@ class TestBackendLoaderDispatch:
     ) -> None:
         sentinel = object()
         fake_juliacall = types.ModuleType("juliacall")
+        fake_juliacall.Main = object()
         fake_backend = types.ModuleType(
             "scpn_phase_orchestrator.experimental.accelerators.coupling._hodge_julia"
         )

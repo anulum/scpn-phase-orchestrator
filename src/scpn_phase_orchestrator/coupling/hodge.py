@@ -96,6 +96,8 @@ from typing import TypeAlias, cast
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator.coupling._julia_runtime import require_juliacall_main
+
 FloatArray: TypeAlias = NDArray[np.float64]
 IntArray: TypeAlias = NDArray[np.int64]
 # (gradient, curl, harmonic) edge-flow matrices, each (N, N) antisymmetric.
@@ -170,8 +172,7 @@ def _load_mojo_fn() -> HodgeBackend:
 def _load_julia_fn() -> HodgeBackend:
     # pragma: no cover — toolchain
     """Load the Julia Hodge-decomposition backend callable."""
-    import juliacall  # noqa: F401
-
+    require_juliacall_main()
     from ..experimental.accelerators.coupling._hodge_julia import (
         hodge_decomposition_julia,
     )

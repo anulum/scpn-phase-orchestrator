@@ -35,11 +35,12 @@ than widened to `0.0`/`1.0` backend payloads.
 The per-language forwarder modules in the production subsystems
 (`upde/_engine_mojo.py`, `monitor/_lyapunov_julia.py`, …) re-export from here.
 Selection is the per-lane fastest-first chain (see [backends.md](../backends.md)).
-UPDE Julia forwarders require `juliacall.Main`, not just an importable
-`juliacall` package; partial Julia initialisation is treated as an unavailable
-optional backend and the dispatcher falls through instead of advertising a
-bridge that will fail after selection. Nothing here is re-exported in the public
-API — access is always indirect through a production subsystem's dispatcher.
+Production UPDE, monitor, and coupling Julia forwarders require
+`juliacall.Main`, not just an importable `juliacall` package; partial Julia
+initialisation is treated as an unavailable optional backend and the dispatcher
+falls through instead of advertising a bridge that will fail after selection.
+Nothing here is re-exported in the public API — access is always indirect
+through a production subsystem's dispatcher.
 
 ## Scope boundaries
 

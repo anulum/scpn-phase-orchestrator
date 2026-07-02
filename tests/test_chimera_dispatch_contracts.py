@@ -88,7 +88,9 @@ def test_optional_backend_loader_returns_julia_callable(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """The Julia loader returns the local-order backend when juliacall imports."""
-    monkeypatch.setitem(sys.modules, "juliacall", ModuleType("juliacall"))
+    fake_juliacall = ModuleType("juliacall")
+    fake_juliacall.Main = object()
+    monkeypatch.setitem(sys.modules, "juliacall", fake_juliacall)
     monkeypatch.setattr(
         chimera_julia_mod,
         "local_order_parameter_julia",

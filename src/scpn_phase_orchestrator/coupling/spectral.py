@@ -56,6 +56,8 @@ from typing import Any, TypeAlias, cast
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator.coupling._julia_runtime import require_juliacall_main
+
 __all__ = [
     "ACTIVE_BACKEND",
     "AVAILABLE_BACKENDS",
@@ -326,8 +328,7 @@ def _load_julia_primitive() -> Callable[
 ]:
     # pragma: no cover — toolchain
     """Load the Julia spectral primitive backend."""
-    import juliacall  # noqa: F401
-
+    require_juliacall_main()
     from ..experimental.accelerators.coupling._spectral_julia import (
         spectral_eig_julia,
     )
