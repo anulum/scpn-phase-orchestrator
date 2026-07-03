@@ -109,11 +109,32 @@ def _contains_complex_alias(raw: ArrayPayload) -> bool:
     return any(isinstance(value, complex | np.complexfloating) for value in raw.flat)
 
 
+def _is_numeric_string_alias(value: object) -> bool:
+    """Return whether ``value`` is a string-like scalar parsable as a float."""
+    if not isinstance(value, (str, bytes, np.str_, np.bytes_)):
+        return False
+    try:
+        float(value)
+    except (TypeError, ValueError):
+        return False
+    return True
+
+
+def _contains_numeric_string_alias(raw: ArrayPayload) -> bool:
+    """Return whether the array contains a numeric string alias."""
+    if raw.dtype.kind not in {"O", "S", "U"}:
+        return False
+    object_array = raw.astype(object, copy=False)
+    return any(_is_numeric_string_alias(value) for value in object_array.flat)
+
+
 def _validate_series(series: object) -> FloatArray:
     """Return ``series`` as a 1-D contiguous finite float array, else raise."""
     raw = np.asarray(series)
     if _contains_boolean_alias(raw):
         raise ValueError("series must not contain boolean values")
+    if _contains_numeric_string_alias(raw):
+        raise ValueError("series must not contain numeric-string aliases")
     if _contains_complex_alias(raw):
         raise ValueError("series must contain real-valued samples")
     try:
@@ -165,6 +186,10 @@ def _validate_codes_output(
     raw = np.asarray(codes)
     if _contains_boolean_alias(raw):
         raise ValueError("ordinal pattern backend output must not contain booleans")
+    if _contains_numeric_string_alias(raw):
+        raise ValueError(
+            "ordinal pattern backend output must not contain numeric-string aliases"
+        )
     if _contains_complex_alias(raw):
         raise ValueError("ordinal pattern backend output must contain real values")
     floated = raw.astype(np.float64, copy=False)
@@ -371,7 +396,7 @@ def _ordinal_codes_reference(
 ) -> IntArray:
     """Return the reference ordinal-pattern codes for the series (NumPy floor)."""
     count = _ordinal_window_count(int(series.shape[0]), dimension, delay)
-    codes = np.empty(count, dtype=np.int64)
+    codes: IntArray = np.empty(count, dtype=np.int64)
     fact = [_factorial(k) for k in range(dimension)]
     for m in range(count):
         window = series[m : m + (dimension - 1) * delay + 1 : delay]

@@ -113,8 +113,9 @@ value = transition_entropy(series, dimension=3, delay=1)        # float in [0, 1
 Key parameters:
 
 * `series`: finite real one-dimensional array of shape `(T,)`. Boolean
-  aliases, complex samples (including object-dtype complex aliases), non-finite
-  values, and multi-dimensional inputs are rejected before backend dispatch.
+  aliases, numeric-string aliases, complex samples (including object-dtype
+  complex aliases), non-finite values, and multi-dimensional inputs are rejected
+  before backend dispatch.
 * `dimension`: embedding dimension `D`, an integer in `[2, 7]`. Larger `D`
   resolves finer ordinal structure but needs `D!`-times more data to populate
   the transition graph; `D = 3` (default) suits the short windows the monitor
@@ -165,11 +166,15 @@ public dispatcher boundary absorbs the Mojo floor with a `1e-9` check
 (`_DISPATCH_ENTROPY_TOLERANCE`).
 
 Every backend output is revalidated at the Python boundary before it leaves the
-monitor: code vectors must be finite, integer-valued, the correct length, and
-bounded in `[0, D! − 1]`; the scalar must be a finite real in `[0, 1]` and
-match the exact reference within the backend tolerance. Malformed or
-physics-divergent payloads fall back to the NumPy reference instead of entering
-the monitor.
+monitor: code vectors must reject boolean, numeric-string, and complex aliases,
+remain finite and integer-valued, keep the correct length, and stay bounded in
+`[0, D! − 1]`; the scalar must be a finite real in `[0, 1]` and match the exact
+reference within the backend tolerance. Malformed or physics-divergent payloads
+fall back to the NumPy reference instead of entering the monitor.
+The direct Go, Julia, and Mojo bridge validators enforce the same series-input
+and ordinal-code output contract before optional runtime loading and after
+backend execution, so direct accelerator callers do not bypass the public
+numeric-domain guard.
 
 ---
 
@@ -184,23 +189,22 @@ these figures price the safety boundary, not the bare kernel:
 
 | N | rust (ms) | mojo (ms) | julia (ms) | go (ms) | python (ms) |
 |---|---:|---:|---:|---:|---:|
-| 256 | 2.44 | 52.76 | 3.28 | 3.33 | 1.54 |
-| 1024 | 7.19 | 63.97 | 13.16 | 13.41 | 7.55 |
-| 4096 | 25.28 | 134.31 | 52.32 | 55.11 | 34.69 |
+| 256 | 3.32 | 203.60 | 7.31 | 9.24 | 3.29 |
+| 1024 | 11.11 | 237.60 | 23.50 | 22.77 | 11.46 |
+| 4096 | 53.60 | 280.76 | 68.57 | 81.49 | 38.10 |
 
 Observations (honest, not aspirational):
 
 * **The reference check dominates at these sizes.** Because the dispatcher
   recomputes the Python reference on every call to verify the backend, the
-  `rust` row includes the Python cost plus the Rust round-trip; at `N = 256`
-  the pure-Python path is therefore the fastest single number. Rust overtakes
-  Python only once the kernel work outgrows the reference overhead
-  (`N = 4096`). Callers who have already validated a backend and want raw
+  `rust` row includes the Python cost plus the Rust round-trip; in this safety
+  boundary snapshot, pure Python remains competitive and is the fastest row at
+  `N = 4096`. Callers who have already validated a backend and want raw
   throughput should pin `ACTIVE_BACKEND` and bypass per-call reference
   recomputation in a tight loop.
-* **Mojo is ruled out of hot loops:** the subprocess spawn floors each call at
-  ~50 ms regardless of `N`. It earns its second slot as a correctness
-  cross-check, not as a production hot path.
+* **Mojo is ruled out of hot loops:** the subprocess spawn and text protocol
+  floor each call at roughly 200 ms on this host. It earns its second slot as a
+  correctness cross-check, not as a production hot path.
 * **Go and Julia track each other** within a factor of two; Julia's first call
   pays a JIT warm-up not shown here (one warm-up call precedes timing).
 

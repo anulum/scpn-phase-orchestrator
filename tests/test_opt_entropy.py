@@ -131,6 +131,8 @@ class TestInputValidation:
             (np.array([0.0, np.bool_(True)], dtype=object), "boolean"),
             (np.array([0.0 + 1.0j, 1.0 + 0.0j]), "real-valued"),
             (np.array([0.0, 1.0j], dtype=object), "real-valued"),
+            (np.array(["0.0", "1.0", "0.5"]), "numeric-string"),
+            (np.array([0.0, "1.0", 0.5], dtype=object), "numeric-string"),
             (np.array(["a", "b", "c"], dtype=object), "one-dimensional float array"),
         ],
     )
@@ -309,6 +311,7 @@ class TestBackendBoundaryHardening:
             np.array([[0, 1], [2, 3]], dtype=np.int64),  # wrong rank
             np.array([True, False]),  # boolean alias
             np.array([0.0 + 1.0j, 1.0 + 0.0j]),  # complex
+            np.array(["0", "1"]),  # numeric strings
             np.array([np.inf, 0.0]),  # non-finite
             np.array([0, 0], dtype=np.int64),  # in-range integer but != reference
         ],
@@ -333,6 +336,17 @@ class TestBackendBoundaryHardening:
 
 
 class TestDispatchInternals:
+    def test_load_julia_fns_returns_bridge_callables(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(oe_module, "require_juliacall_main", lambda: object())
+
+        loaded = oe_module._load_julia_fns()
+
+        assert set(loaded) == {"ordinal_pattern_sequence", "transition_entropy"}
+        assert callable(loaded["ordinal_pattern_sequence"])
+        assert callable(loaded["transition_entropy"])
+
     def test_resolve_backends_skips_failing_loader(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:

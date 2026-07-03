@@ -78,11 +78,32 @@ def _contains_complex_alias(raw: ArrayPayload) -> bool:
     return any(isinstance(value, complex | np.complexfloating) for value in raw.flat)
 
 
+def _is_numeric_string_alias(value: object) -> bool:
+    """Return whether ``value`` is a string-like scalar parsable as a float."""
+    if not isinstance(value, (str, bytes, np.str_, np.bytes_)):
+        return False
+    try:
+        float(value)
+    except (TypeError, ValueError):
+        return False
+    return True
+
+
+def _contains_numeric_string_alias(raw: ArrayPayload) -> bool:
+    """Return whether the array contains a numeric string alias."""
+    if raw.dtype.kind not in {"O", "S", "U"}:
+        return False
+    object_array = raw.astype(object, copy=False)
+    return any(_is_numeric_string_alias(value) for value in object_array.flat)
+
+
 def validate_series_backend_input(series: object) -> FloatArray:
     """Return a finite real one-dimensional scalar series for direct backends."""
     raw = np.asarray(series)
     if _contains_boolean_alias(raw):
         raise ValueError("series must not contain boolean values")
+    if _contains_numeric_string_alias(raw):
+        raise ValueError("series must not contain numeric-string aliases")
     if _contains_complex_alias(raw):
         raise ValueError("series must contain real-valued samples")
     try:
@@ -138,7 +159,7 @@ def _ordinal_codes(series: FloatArray, dimension: int, delay: int) -> IntArray:
     """
     length = int(series.shape[0])
     count = ordinal_window_count(length, dimension, delay)
-    codes = np.empty(count, dtype=np.int64)
+    codes: IntArray = np.empty(count, dtype=np.int64)
     fact = [factorial(k) for k in range(dimension)]
     for m in range(count):
         window = [float(series[m + k * delay]) for k in range(dimension)]
@@ -236,6 +257,10 @@ def validate_ordinal_pattern_backend_output(
     raw = np.asarray(codes)
     if _contains_boolean_alias(raw):
         raise ValueError("ordinal pattern backend output must not contain booleans")
+    if _contains_numeric_string_alias(raw):
+        raise ValueError(
+            "ordinal pattern backend output must not contain numeric-string aliases"
+        )
     if _contains_complex_alias(raw):
         raise ValueError("ordinal pattern backend output must contain real values")
     if not np.all(np.isfinite(raw.astype(np.float64, copy=False))):

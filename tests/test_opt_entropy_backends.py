@@ -151,6 +151,7 @@ class TestDirectBackendBoundaryContracts:
             (np.array([np.nan, 1.0]), "finite"),
             (np.array([True, False]), "booleans"),
             (np.array([0.0 + 1.0j, 1.0]), "real values"),
+            (np.array(["0", "1"]), "numeric-string"),
         ],
     )
     def test_ordinal_backend_output_rejects_invalid(
@@ -216,6 +217,8 @@ class TestDirectBackendBoundaryContracts:
             np.array([0.0 + 1.0j, 1.0 + 0.0j]),
             np.array([0.0, np.inf]),
             np.array([[0.0, 1.0]]),
+            np.array(["0.0", "1.0", "0.5"]),
+            np.array([0.0, "1.0", 0.5], dtype=object),
         ],
     )
     def test_backend_rejects_invalid_series_before_runtime_load(

@@ -49,11 +49,11 @@ TODO queue.
 | Cross-domain meta-transfer | Replay proposals, nested corpora, package export, entry points, non-publishing evidence, and pre-publish enforcement exist. | Validate larger private or partner audit-history corpora and decide optional package publication. |
 | Plugin ecosystem | Registry, catalogue, Rust-facing metadata, approval-bound execution requests, storage, revocation, lifecycle, scheduler, retry, and dashboard artefacts exist. | Build a curated signed domainpack and extension store with reputation, audit scores, revocation, provenance, operator UX refinement, and adapter-family onboarding. |
 
-Latest U1 closure: the public NPE dispatcher and direct Go, Julia, and Mojo
-bridge contract now validate phase inputs and returned phase-distance matrices
-before publication. Boolean aliases, complex/object-complex aliases,
-numeric-string aliases, non-finite values, cardinality drift, asymmetric
-matrices, non-zero diagonals, and out-of-range distances fail closed before
+Latest U1 closure: the public OPT-entropy dispatcher and direct Go, Julia, and
+Mojo bridge contracts now validate scalar series inputs and returned ordinal
+code vectors before publication. Boolean aliases, complex/object-complex
+aliases, numeric-string aliases, non-finite values, cardinality drift,
+non-integer code aliases, and out-of-range ordinal codes fail closed before
 backend payloads are widened to `float64` or consumed by the physics monitor,
 polyglot parity gate, Studio, or downstream regime-review lanes.
 
