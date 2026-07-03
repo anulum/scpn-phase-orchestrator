@@ -110,9 +110,7 @@ class _FakeJuliaSpectralModule:
     def __init__(self, output: tuple[object, object]) -> None:
         self._output = output
 
-    def spectral_eig(
-        self, _knm_flat: np.ndarray, _n: int
-    ) -> tuple[object, object]:
+    def spectral_eig(self, _knm_flat: np.ndarray, _n: int) -> tuple[object, object]:
         return self._output
 
 
