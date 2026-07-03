@@ -215,6 +215,40 @@ def _contains_complex_alias(value: object) -> bool:
     return any(isinstance(item, (complex, np.complexfloating)) for item in array.flat)
 
 
+def _is_string_like(value: object) -> bool:
+    """Return whether ``value`` is a Python or NumPy string scalar."""
+    return isinstance(value, (str, bytes, np.str_, np.bytes_))
+
+
+def _is_numeric_string_alias(value: object) -> bool:
+    """Return whether ``value`` is a string scalar parsable as a float."""
+    if not _is_string_like(value):
+        return False
+    try:
+        float(cast("str | bytes", value))
+    except (TypeError, ValueError):
+        return False
+    return True
+
+
+def _contains_numeric_string_alias(value: object) -> bool:
+    """Return whether the value contains numeric-string aliases."""
+    try:
+        raw = np.asarray(value)
+    except (TypeError, ValueError):
+        return False
+    if raw.dtype.kind not in {"O", "S", "U"}:
+        return False
+    saw_string = False
+    for item in raw.astype(object, copy=False).flat:
+        if not _is_string_like(item):
+            continue
+        saw_string = True
+        if not _is_numeric_string_alias(item):
+            return False
+    return saw_string
+
+
 def _has_complex_payload(value: object) -> bool:
     """Return whether the value carries a complex-number payload."""
     try:
@@ -231,6 +265,8 @@ def _validate_state_history(value: object, *, name: str) -> FloatArray:
         raise ValueError(f"{name} must not contain boolean values")
     if _has_complex_payload(value):
         raise ValueError(f"{name} must contain real-valued samples")
+    if _contains_numeric_string_alias(value):
+        raise ValueError(f"{name} must not contain numeric-string aliases")
     try:
         array = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
@@ -251,6 +287,8 @@ def _validate_normal(normal: object, *, expected_dim: int) -> FloatArray:
         raise ValueError("normal must not contain boolean values")
     if _has_complex_payload(normal):
         raise ValueError("normal must contain real-valued samples")
+    if _contains_numeric_string_alias(normal):
+        raise ValueError("normal must not contain numeric-string aliases")
     try:
         normal_vec = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
@@ -266,6 +304,8 @@ def _validate_normal(normal: object, *, expected_dim: int) -> FloatArray:
 
 def _validate_finite_real(value: object, *, name: str) -> float:
     """Return ``value`` as a finite real float, else raise ``ValueError``."""
+    if _is_numeric_string_alias(value):
+        raise ValueError(f"{name} must not be a numeric-string alias")
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite real, got {value!r}")
     result = float(value)
@@ -276,6 +316,8 @@ def _validate_finite_real(value: object, *, name: str) -> float:
 
 def _validate_oscillator_idx(value: object, *, n: int) -> int:
     """Return the oscillator index as a valid in-range integer, else raise."""
+    if _is_numeric_string_alias(value):
+        raise ValueError("oscillator_idx must not be a numeric-string alias")
     if isinstance(value, bool) or not isinstance(value, Integral):
         raise ValueError(f"oscillator_idx must be an integer in [0, {n})")
     idx = int(value)
@@ -295,6 +337,7 @@ class PoincareResult:
     std_return_time: float
 
     def __post_init__(self) -> None:
+        """Validate crossing arrays and derived return-time statistics."""
         crossings = _validate_crossings(self.crossings)
         crossing_times = _validate_crossing_times(
             self.crossing_times,
@@ -340,6 +383,8 @@ def _validate_crossings(value: object) -> FloatArray:
         raise ValueError("crossings must not contain boolean values")
     if _has_complex_payload(value):
         raise ValueError("crossings must contain real-valued samples")
+    if _contains_numeric_string_alias(value):
+        raise ValueError("crossings must not contain numeric-string aliases")
     try:
         crossings = np.asarray(value, dtype=np.float64)
     except (TypeError, ValueError) as exc:
@@ -357,6 +402,8 @@ def _validate_crossing_times(value: object, *, expected_count: int) -> FloatArra
         raise ValueError("crossing_times must not contain boolean values")
     if _has_complex_payload(value):
         raise ValueError("crossing_times must contain real-valued samples")
+    if _contains_numeric_string_alias(value):
+        raise ValueError("crossing_times must not contain numeric-string aliases")
     try:
         crossing_times = np.asarray(value, dtype=np.float64)
     except (TypeError, ValueError) as exc:
@@ -387,6 +434,8 @@ def _validate_return_times(
         raise ValueError("return_times must not contain boolean values")
     if _has_complex_payload(value):
         raise ValueError("return_times must contain real-valued samples")
+    if _contains_numeric_string_alias(value):
+        raise ValueError("return_times must not contain numeric-string aliases")
     try:
         return_times_array = np.asarray(value, dtype=np.float64)
     except (TypeError, ValueError) as exc:

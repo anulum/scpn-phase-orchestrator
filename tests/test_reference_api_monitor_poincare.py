@@ -32,6 +32,7 @@ def test_poincare_api_reference_documents_monitor_contracts() -> None:
         "sample-index units",
         "strictly increasing",
         "boolean aliases",
+        "numeric-string aliases",
         "complex aliases",
         "backend-output",
         "Python fallback",

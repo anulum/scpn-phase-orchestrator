@@ -81,6 +81,21 @@ def test_alias_helpers_fail_closed_when_array_protocol_raises() -> None:
     assert poincare_module._contains_boolean_alias(value) is False
     assert poincare_module._contains_complex_alias(value) is False
     assert poincare_module._has_complex_payload(value) is False
+    assert poincare_module._is_numeric_string_alias(1.0) is False
+    assert poincare_module._is_numeric_string_alias("not-a-number") is False
+    assert poincare_module._contains_numeric_string_alias(value) is False
+    assert (
+        poincare_module._contains_numeric_string_alias(
+            np.array([1.0, "not-a-number"], dtype=object)
+        )
+        is False
+    )
+    assert (
+        poincare_module._contains_numeric_string_alias(
+            np.array([1.0, "2.0"], dtype=object)
+        )
+        is True
+    )
 
 
 def test_rust_backend_loader_wraps_and_pads_kernel_outputs(
@@ -155,6 +170,18 @@ def test_rust_backend_loader_wraps_and_pads_kernel_outputs(
     assert phase_count == 1
 
 
+def test_julia_backend_loader_returns_poincare_callables(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Julia backend loader must expose both public dispatch callables."""
+    monkeypatch.setattr(poincare_module, "require_juliacall_main", lambda: None)
+
+    loaded = poincare_module._load_julia_fns()
+
+    assert callable(loaded["section"])
+    assert callable(loaded["phase"])
+
+
 def test_dispatch_returns_none_when_backend_lacks_requested_callable(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -180,6 +207,35 @@ def test_public_section_rejects_three_dimensional_history() -> None:
     """The public section API must reject rank-3 trajectories."""
     with pytest.raises(ValueError, match="trajectory must be 1D or 2D"):
         poincare_section(np.zeros((2, 2, 2)), normal=[1.0, 0.0])
+
+
+def test_public_section_rejects_numeric_string_backend_payload(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Public backend replay must reject numeric-string crossing payloads."""
+
+    def _numeric_string_section(
+        _traj_flat: FloatArray,
+        _t: int,
+        _d: int,
+        _normal: FloatArray,
+        _offset: float,
+        _direction_id: int,
+    ) -> tuple[FloatArray, FloatArray, int]:
+        return (
+            cast(FloatArray, np.array(["0.0", "1.0"], dtype=object)),
+            cast(FloatArray, np.array(["0.5", "0.0"], dtype=object)),
+            1,
+        )
+
+    monkeypatch.setattr(
+        poincare_module,
+        "_dispatch",
+        lambda _fn_name: _numeric_string_section,
+    )
+
+    with pytest.raises(ValueError, match="numeric-string"):
+        poincare_section([[-1.0], [1.0]], normal=[1.0], offset=0.0)
 
 
 @pytest.mark.parametrize(

@@ -120,17 +120,20 @@ finite real 1-D or 2-D trajectories and a finite real section normal.
 The public boundary rejects:
 
 - boolean aliases in trajectory data,
+- numeric-string aliases in trajectory data,
 - complex trajectory values,
 - non-numeric trajectory values,
 - non-finite trajectory values,
 - trajectories with rank other than one or two,
 - boolean aliases in the normal vector,
+- numeric-string aliases in the normal vector,
 - complex normal values,
 - non-numeric normal values,
 - non-finite normal values,
 - normal vectors whose length does not match the state dimension,
 - non-finite or non-real `offset`,
 - boolean alias `offset`,
+- numeric-string alias `offset`,
 - unknown `direction` values.
 
 A one-dimensional trajectory is treated as a one-dimensional state history with
@@ -145,17 +148,20 @@ real phase histories with shape `(T, N)`.
 The public boundary rejects:
 
 - boolean aliases in phase data,
+- numeric-string aliases in phase data,
 - complex phase values,
 - non-numeric phase values,
 - non-finite phase values,
 - arrays with rank other than one or two,
 - non-integral oscillator indexes,
 - boolean alias oscillator indexes,
+- numeric-string alias oscillator indexes,
 - negative oscillator indexes,
 - oscillator indexes outside `[0, N)`,
 - non-finite section phases,
 - non-real section phases,
-- boolean alias section phases.
+- boolean alias section phases,
+- numeric-string alias section phases.
 
 A one-dimensional phase history is treated as a single-oscillator history with
 shape `(T, 1)` after validation.
@@ -182,10 +188,13 @@ It rejects malformed records even if a caller constructs the dataclass directly.
 A valid result satisfies:
 
 - `crossings` is a finite two-dimensional `float64` array,
+- `crossings` contains no boolean, numeric-string, or complex aliases,
 - `crossing_times` is a finite one-dimensional `float64` array,
+- `crossing_times` contains no boolean, numeric-string, or complex aliases,
 - crossing-time count equals crossing row count,
 - crossing times are strictly increasing when more than one crossing exists,
 - `return_times` is a finite one-dimensional `float64` array,
+- `return_times` contains no boolean, numeric-string, or complex aliases,
 - return-time length equals `max(0, n_crossings - 1)`,
 - every return time is non-negative within numerical tolerance,
 - return times match `np.diff(crossing_times)`,
@@ -311,25 +320,30 @@ Section backend inputs must satisfy:
 
 - flattened trajectory buffer is a real finite `float64` vector,
 - no boolean aliases are present in the trajectory buffer,
+- no numeric-string aliases are present in the trajectory buffer,
 - no complex aliases are present in the trajectory buffer,
 - `t` is a non-boolean positive integer,
 - `d` is a non-boolean positive integer,
 - flattened trajectory length exactly equals `t*d`,
 - normal vector is real finite `float64`,
+- no numeric-string aliases are present in the normal vector,
 - normal vector length equals `d`,
 - `offset` is a finite real scalar,
+- `offset` is not a numeric-string alias,
 - `direction_id` is one of `0`, `1`, or `2`.
 
 Phase backend inputs must satisfy:
 
 - flattened phase buffer is a real finite `float64` vector,
 - no boolean aliases are present in the phase buffer,
+- no numeric-string aliases are present in the phase buffer,
 - no complex aliases are present in the phase buffer,
 - `t` is a non-boolean positive integer,
 - `n` is a non-boolean positive integer,
 - flattened phase length exactly equals `t*n`,
 - `oscillator_idx` is in `[0, n)`,
-- `section_phase` is a finite real scalar.
+- `section_phase` is a finite real scalar,
+- `section_phase` is not a numeric-string alias.
 
 These checks keep Python, Go, Julia, and Mojo surfaces aligned.
 Invalid physics states fail in Python before optional runtime loading or FFI
@@ -343,8 +357,10 @@ public assembly boundary.
 Output contracts:
 
 - crossing buffers are finite real `float64` vectors,
+- crossing buffers contain no boolean, numeric-string, or complex aliases,
 - crossing buffer length is exactly `t*dim`,
 - time buffers are finite real `float64` vectors,
+- time buffers contain no boolean, numeric-string, or complex aliases,
 - time buffer length is exactly `t`,
 - crossing count is a non-boolean integer,
 - crossing count is non-negative,

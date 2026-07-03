@@ -658,9 +658,11 @@ points (Poincare map), and computes return time statistics. Return time
 regularity distinguishes periodic orbits (constant return time) from
 chaotic ones (fluctuating return times).
 
-Direct accelerator contracts require finite real crossing coordinates,
-strictly increasing sampled crossing times, and Mojo text output with an
-explicit crossing-count header plus exact raw-line cardinality.
+Public and direct accelerator contracts reject boolean aliases,
+numeric-string aliases, complex values, non-finite values, malformed
+cardinality, and out-of-range crossing counts before section evidence reaches
+reports. Mojo text output keeps an explicit crossing-count header plus exact
+raw-line cardinality because stdout is a text transport.
 
 **Detailed documentation:** [Poincare section monitor](monitor_poincare.md)
 

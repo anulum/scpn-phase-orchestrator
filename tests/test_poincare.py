@@ -69,6 +69,10 @@ class TestPoincareSection:
             (np.array([[0.0], [np.nan]], dtype=np.float64), "trajectory"),
             (np.array([[0.0], [np.inf]], dtype=np.float64), "trajectory"),
             (np.array([[0.0], [True]], dtype=object), "trajectory"),
+            (
+                np.array([["0.0"], ["1.0"]], dtype=object),
+                "numeric-string",
+            ),
             (np.array([[0.0], [1.0j]], dtype=object), "trajectory"),
             (np.array([[0.0], [1.0j]]), "trajectory"),
             ([["not-a-state"]], "trajectory"),
@@ -88,6 +92,7 @@ class TestPoincareSection:
             (np.array([1.0, 0.0]), "normal shape"),
             (np.array([np.nan]), "normal"),
             (np.array([True], dtype=object), "normal"),
+            (np.array(["1.0"], dtype=object), "numeric-string"),
             (np.array([1.0j], dtype=object), "normal"),
             (np.array([1.0j]), "normal"),
             ([["not-a-normal"]], "normal"),
@@ -111,9 +116,17 @@ class TestPoincareSection:
         assert result.mean_return_time == 0.0
         assert result.std_return_time == 0.0
 
-    @pytest.mark.parametrize("offset", [False, np.nan, np.inf, "0.0"])
-    def test_rejects_invalid_offset(self, offset: Any) -> None:
-        with pytest.raises(ValueError, match="offset"):
+    @pytest.mark.parametrize(
+        ("offset", "match"),
+        [
+            (False, "offset"),
+            (np.nan, "offset"),
+            (np.inf, "offset"),
+            ("0.0", "numeric-string"),
+        ],
+    )
+    def test_rejects_invalid_offset(self, offset: Any, match: str) -> None:
+        with pytest.raises(ValueError, match=match):
             poincare_section(np.zeros((3, 1)), normal=np.array([1.0]), offset=offset)
 
     def test_accepts_array_like_section_inputs(self) -> None:
@@ -258,6 +271,7 @@ class TestPhasePoincare:
             np.array([[0.0], [np.nan]], dtype=np.float64),
             np.array([[0.0], [np.inf]], dtype=np.float64),
             np.array([[0.0], [True]], dtype=object),
+            np.array([["0.0"], ["6.3"]], dtype=object),
             np.array([[0.0], [1.0j]], dtype=object),
             np.array([[0.0], [1.0j]]),
             [["not-a-phase"]],
@@ -272,9 +286,19 @@ class TestPhasePoincare:
         with pytest.raises(ValueError, match="oscillator_idx"):
             phase_poincare(np.zeros((3, 2)), oscillator_idx=oscillator_idx)
 
-    @pytest.mark.parametrize("section_phase", [False, np.nan, np.inf, "0.0"])
-    def test_rejects_invalid_section_phase(self, section_phase: Any) -> None:
-        with pytest.raises(ValueError, match="section_phase"):
+    @pytest.mark.parametrize(
+        ("section_phase", "match"),
+        [
+            (False, "section_phase"),
+            (np.nan, "section_phase"),
+            (np.inf, "section_phase"),
+            ("0.0", "numeric-string"),
+        ],
+    )
+    def test_rejects_invalid_section_phase(
+        self, section_phase: Any, match: str
+    ) -> None:
+        with pytest.raises(ValueError, match=match):
             phase_poincare(np.zeros((3, 2)), section_phase=section_phase)
 
     def test_accepts_array_like_phase_history(self) -> None:
@@ -369,8 +393,10 @@ class TestPoincareResultValidation:
             ({"crossings": [0.0, 1.0]}, "crossings must be two-dimensional"),
             ({"crossings": [[0.0], [np.nan]]}, "crossings"),
             ({"crossings": [[0.0], [True]]}, "crossings"),
+            ({"crossings": [["0.0"], ["1.0"]]}, "numeric-string"),
             ({"crossings": [[0.0], [1.0j]]}, "crossings"),
             ({"crossing_times": [0.0]}, "crossing_times shape"),
+            ({"crossing_times": ["0.5", "2.5"]}, "numeric-string"),
             ({"crossing_times": [2.0, 1.0]}, "crossing_times must be"),
             (
                 {
@@ -383,6 +409,7 @@ class TestPoincareResultValidation:
             ({"crossing_times": [0.0, np.inf]}, "crossing_times"),
             ({"crossing_times": [0.0, 1.0j]}, "crossing_times"),
             ({"return_times": [1.0, 2.0]}, "return_times shape"),
+            ({"return_times": ["2.0"]}, "numeric-string"),
             ({"return_times": [1.0j]}, "return_times"),
             ({"return_times": [-1.0]}, "return_times must be non-negative"),
             ({"return_times": [3.0]}, "return_times must match"),

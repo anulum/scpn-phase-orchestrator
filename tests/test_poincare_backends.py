@@ -138,6 +138,21 @@ class TestDirectBackendBoundaryContracts:
 
         assert poincare_validation._contains_boolean_alias(value) is False
         assert poincare_validation._contains_complex_alias(value) is False
+        assert poincare_validation._is_numeric_string_alias(1.0) is False
+        assert poincare_validation._is_numeric_string_alias("not-a-number") is False
+        assert poincare_validation._contains_numeric_string_alias(value) is False
+        assert (
+            poincare_validation._contains_numeric_string_alias(
+                np.array([1.0, "not-a-number"], dtype=object)
+            )
+            is False
+        )
+        assert (
+            poincare_validation._contains_numeric_string_alias(
+                np.array([1.0, "2.0"], dtype=object)
+            )
+            is True
+        )
 
     def test_backend_output_contract_accepts_valid_payload(self) -> None:
         crossings = np.array([0.0, 1.0, 0.0, 0.0, 2.0, 0.0])
@@ -168,8 +183,20 @@ class TestDirectBackendBoundaryContracts:
                 1,
                 "crossings_flat",
             ),
+            (
+                np.array(["0.0", "1.0", "0.0", "0.0", "0.0", "0.0"]),
+                np.zeros(3),
+                1,
+                "numeric-string",
+            ),
             (np.zeros(6), np.array([0.0, np.nan, 0.0]), 1, "finite"),
             (np.zeros(6), np.array([0.0, True, 0.0], dtype=object), 1, "times"),
+            (
+                np.zeros(6),
+                np.array(["0.5", "0.0", "0.0"], dtype=object),
+                1,
+                "numeric-string",
+            ),
             (np.zeros(6), np.zeros(2), 1, "times length"),
             (np.zeros(6), np.zeros(3), True, "n_cr"),
             (np.zeros(6), np.zeros(3), 3, "available intervals"),
@@ -253,6 +280,15 @@ class TestDirectBackendBoundaryContracts:
                 "finite one-dimensional",
             ),
             (
+                np.array(["0.0", "1.0"], dtype=object),
+                2,
+                1,
+                np.array([1.0]),
+                0.0,
+                0,
+                "numeric-string",
+            ),
+            (
                 np.array([[0.0], [1.0]]),
                 2,
                 1,
@@ -274,9 +310,12 @@ class TestDirectBackendBoundaryContracts:
                 0,
                 "normal",
             ),
+            (np.array([0.0, 1.0]), 2, 1, np.array(["1.0"]), 0.0, 0, "numeric-string"),
             (np.array([0.0, 1.0]), 2, 1, np.array([1.0, 0.0]), 0.0, 0, "normal"),
+            (np.array([0.0, 1.0]), 2, 1, np.array([1.0]), "0.0", 0, "numeric-string"),
             (np.array([0.0, 1.0]), 2, 1, np.array([1.0]), "origin", 0, "offset"),
             (np.array([0.0, 1.0]), 2, 1, np.array([1.0]), math.inf, 0, "offset"),
+            (np.array([0.0, 1.0]), 2, 1, np.array([1.0]), 0.0, "0", "numeric-string"),
             (np.array([0.0, 1.0]), 2, 1, np.array([1.0]), 0.0, 3, "direction"),
         ],
     )
@@ -302,12 +341,14 @@ class TestDirectBackendBoundaryContracts:
         ("phases_flat", "t", "n", "oscillator_idx", "section_phase", "match"),
         [
             (np.array([True, False]), 2, 1, 0, 0.0, "phases_flat"),
+            (np.array(["0.0", "1.0"], dtype=object), 2, 1, 0, 0.0, "numeric-string"),
             (np.array([0.0, 1.0j], dtype=object), 2, 1, 0, 0.0, "phases_flat"),
             (np.array([0.0, np.inf]), 2, 1, 0, 0.0, "phases_flat"),
             (np.array([0.0, 1.0]), 0, 1, 0, 0.0, "t"),
             (np.array([0.0, 1.0]), 2, 2, 0, 0.0, "t\\*n"),
             (np.array([0.0, 1.0]), 2, 1, True, 0.0, "oscillator_idx"),
             (np.array([0.0, 1.0]), 2, 1, 1, 0.0, "oscillator_idx"),
+            (np.array([0.0, 1.0]), 2, 1, 0, "0.0", "numeric-string"),
             (np.array([0.0, 1.0]), 2, 1, 0, np.nan, "section_phase"),
         ],
     )
