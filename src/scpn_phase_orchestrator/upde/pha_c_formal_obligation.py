@@ -159,12 +159,12 @@ class PHACKinematicProofObligation:
     record_sha256: str
 
     def to_dict(self) -> dict[str, bool | float | int | str]:
-        """Return a JSON-safe canonical representation.
+        """Return a verified JSON-safe canonical representation.
 
         Returns
         -------
         dict[str, bool | float | int | str]
-            Return a JSON-safe canonical representation.
+            The verified JSON-safe canonical representation.
         """
         return pha_c_kinematic_proof_obligation_to_dict(self)
 
@@ -402,20 +402,21 @@ def _dict_without_record_hash(
 def pha_c_kinematic_proof_obligation_to_dict(
     obligation: PHACKinematicProofObligation,
 ) -> dict[str, bool | float | int | str]:
-    """Return a canonical JSON-safe proof-obligation manifest.
+    """Return a verified canonical JSON-safe proof-obligation manifest.
 
     Parameters
     ----------
     obligation : PHACKinematicProofObligation
-        The PHA-C kinematic proof obligation to operate on.
+        The PHA-C kinematic proof obligation to verify and serialise.
 
     Returns
     -------
     dict[str, bool | float | int | str]
-        The canonical JSON-safe proof-obligation manifest.
+        The verified canonical JSON-safe proof-obligation manifest.
     """
-    payload = _dict_without_record_hash(obligation)
-    payload["record_sha256"] = obligation.record_sha256
+    verified = verify_pha_c_kinematic_proof_obligation(obligation)
+    payload = _dict_without_record_hash(verified)
+    payload["record_sha256"] = verified.record_sha256
     return payload
 
 

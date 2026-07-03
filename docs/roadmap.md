@@ -49,15 +49,14 @@ TODO queue.
 | Cross-domain meta-transfer | Replay proposals, nested corpora, package export, entry points, non-publishing evidence, and pre-publish enforcement exist. | Validate larger private or partner audit-history corpora and decide optional package publication. |
 | Plugin ecosystem | Registry, catalogue, Rust-facing metadata, approval-bound execution requests, storage, revocation, lifecycle, scheduler, retry, and dashboard artefacts exist. | Build a curated signed domainpack and extension store with reputation, audit scores, revocation, provenance, operator UX refinement, and adapter-family onboarding. |
 
-Latest U1 closure: the PHA-C event/state handoff and event-timeline Rust, Go,
-Julia, and Mojo source-contract rows now validate raw `PHACHandoffRecord` and
-`PHACTimelineRecord` fields before parity publication. The shared validators
-reject numeric strings, non-finite numeric fields, boolean aliases, malformed
-integer fields, non-plain lock/non-actuation flags, malformed string/hash
-fields, and typed field divergence before canonical dictionary projection can
-hide source-contract drift. The handoff and timeline benchmark max-error
-helpers use the same strict fail-closed parsers before benchmark records or
-downstream PHA-C review lanes consume them.
+Latest U1 closure: the PHA-C Lean kinematic proof-obligation public
+serialisers now replay `verify_pha_c_kinematic_proof_obligation(...)` before
+returning canonical JSON manifests. A stale or tampered
+`PHACKinematicProofObligation` cannot publish mismatched fixed-point budget,
+certificate, theorem, flag, or hash fields through `to_dict()` or
+`pha_c_kinematic_proof_obligation_to_dict(...)`; publication fails before
+downstream release, benchmark, Studio, or MIF/FRC review lanes consume the
+manifest.
 
 | Parent item | Completed evidence consolidated here | Remaining open scope |
 |-------------|--------------------------------------|----------------------|

@@ -543,6 +543,19 @@ def test_kinematic_obligation_verifier_rejects_invalid_manifest_types() -> None:
         )
 
 
+def test_kinematic_obligation_public_dict_serialisers_verify_manifest() -> None:
+    obligation = build_pha_c_kinematic_proof_obligation(_record())
+    tampered = replace(
+        obligation,
+        drive_bound_units=obligation.drive_bound_units + 1,
+    )
+
+    with pytest.raises(ValueError, match="drive_bound_units"):
+        tampered.to_dict()
+    with pytest.raises(ValueError, match="drive_bound_units"):
+        pha_c_kinematic_proof_obligation_to_dict(tampered)
+
+
 def test_kinematic_obligation_verifier_rejects_replay_math_mismatches() -> None:
     obligation = build_pha_c_kinematic_proof_obligation(
         _record(spatial_tol_m=0.1),

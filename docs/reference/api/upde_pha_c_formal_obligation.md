@@ -212,6 +212,13 @@ verify_pha_c_kinematic_proof_obligation(obligation)
 If `proof_obligations_discharged` disagrees with the fixed-point certificate
 math, verification fails closed.
 
+The public serialisation helpers
+`PHACKinematicProofObligation.to_dict()` and
+`pha_c_kinematic_proof_obligation_to_dict(...)` call the same verifier before
+returning a manifest. A stale or tampered dataclass therefore cannot publish a
+canonical JSON payload without replaying the fixed-point certificate checks and
+hash validation first.
+
 ::: scpn_phase_orchestrator.upde.pha_c_formal_obligation.PHACKinematicProofObligation
 
 ::: scpn_phase_orchestrator.upde.pha_c_formal_obligation.build_pha_c_kinematic_proof_obligation
