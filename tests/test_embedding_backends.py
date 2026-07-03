@@ -159,6 +159,13 @@ class TestDirectBackendBoundaryContracts:
             (np.array([0.0, 2.0, 1.0]), "shape"),
             (np.array([[0.0, np.inf], [1.0, 3.0], [2.0, 4.0]]), "finite"),
             (np.array([[0.0, True], [1.0, 3.0], [2.0, 4.0]], dtype=object), "boolean"),
+            (
+                np.array(
+                    [["0.0", "2.0"], ["1.0", "3.0"], ["2.0", "4.0"]],
+                    dtype=object,
+                ),
+                "numeric-string",
+            ),
             (np.array([[0.0, 2.0j], [1.0, 3.0], [2.0, 4.0]]), "real"),
             (np.array([[0.0, 2.0], [1.0, 99.0], [2.0, 4.0]]), "exact indexing"),
         ],
@@ -187,7 +194,14 @@ class TestDirectBackendBoundaryContracts:
 
     @pytest.mark.parametrize(
         "value",
-        [np.bool_(True), -1.0, np.inf, 1.0 + 0.0j, np.array([1.0])],
+        [
+            np.bool_(True),
+            -1.0,
+            np.inf,
+            np.array("1.0", dtype=object),
+            1.0 + 0.0j,
+            np.array([1.0]),
+        ],
     )
     def test_mi_backend_output_contract_rejects_invalid_payloads(
         self,
@@ -220,6 +234,16 @@ class TestDirectBackendBoundaryContracts:
             (np.array([1.0]), np.array([0.0, 1.0]), "shape"),
             (np.array([True, 1.0], dtype=object), np.array([1.0, 0.0]), "booleans"),
             (np.array([1.0, 2.0]), np.array([True, 0.0], dtype=object), "booleans"),
+            (
+                np.array(["1.0", "2.0"], dtype=object),
+                np.array([1.0, 0.0]),
+                "numeric-string",
+            ),
+            (
+                np.array([1.0, 2.0]),
+                np.array(["1", "0"], dtype=object),
+                "numeric-string",
+            ),
         ],
     )
     def test_nn_backend_output_contract_rejects_invalid_payloads(
@@ -244,6 +268,7 @@ class TestDirectBackendBoundaryContracts:
         [
             (np.array([0.0, True], dtype=object), 1, 2, "signal"),
             (np.array([0.0 + 1.0j, 1.0 + 0.0j]), 1, 2, "signal"),
+            (np.array(["0.0", "1.0", "2.0"], dtype=object), 1, 2, "numeric-string"),
             (np.array([0.0, np.nan, 2.0]), 1, 2, "signal"),
             (np.array([[0.0, 1.0]]), 1, 2, "signal"),
             (np.arange(8, dtype=np.float64), np.bool_(True), 2, "delay"),
@@ -285,6 +310,12 @@ class TestDirectBackendBoundaryContracts:
         [
             (np.array([0.0, np.bool_(False)], dtype=object), 1, 8, "signal"),
             (np.array([0.0, 1.0j]), 1, 8, "signal"),
+            (
+                np.array(["0.0", "1.0", "0.0", "1.0"], dtype=object),
+                1,
+                8,
+                "numeric-string",
+            ),
             (np.array([0.0, np.inf]), 1, 8, "signal"),
             (np.arange(8, dtype=np.float64), np.bool_(True), 8, "lag"),
             (np.arange(8, dtype=np.float64), -1, 8, "lag"),
@@ -329,6 +360,7 @@ class TestDirectBackendBoundaryContracts:
         [
             (np.array([0.0, True], dtype=object), 1, 2, "embedded"),
             (np.array([0.0 + 1.0j, 1.0 + 0.0j]), 1, 2, "embedded"),
+            (np.array(["0.0", "1.0"], dtype=object), 1, 2, "numeric-string"),
             (np.array([0.0, np.nan]), 1, 2, "embedded"),
             (np.arange(6, dtype=np.float64), np.bool_(True), 3, "t"),
             (np.arange(6, dtype=np.float64), 3, 0, "m"),
@@ -685,6 +717,18 @@ class TestDispatcherFallthroughForRust:
             )
             == 3
         )
+
+    def test_julia_loader_returns_bridge_callables(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setattr(em_mod, "require_juliacall_main", lambda: object())
+
+        loaded = em_mod._load_julia_fns()
+
+        assert callable(loaded["de"])
+        assert callable(loaded["mi"])
+        assert callable(loaded["nn"])
 
     def test_rust_active_uses_native_delay_and_dimension_wrappers(
         self,

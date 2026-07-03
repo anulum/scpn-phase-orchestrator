@@ -59,27 +59,31 @@ supports false-nearest-neighbor dimension selection.
 
 Go, Julia, and Mojo direct bridge calls share the same typed pre-dispatch
 contract before optional runtime loading. Signal payloads must be finite
-real one-dimensional `float64` arrays. Delay, dimension, lag, bin-count,
-row-count, and embedding-dimension controls must be integer values in the
-public API domain. Embedded nearest-neighbor payloads must be finite real
-flat `float64` arrays whose length matches `T*m`.
+real one-dimensional `float64` arrays and must reject numeric-string aliases
+before float coercion. Delay, dimension, lag, bin-count, row-count, and
+embedding-dimension controls must be integer values in the public API domain.
+Embedded nearest-neighbor payloads must be finite real flat `float64` arrays
+whose length matches `T*m`, with numeric-string aliases rejected at the same
+pre-dispatch boundary.
 
 Boolean aliases, object-dtype complex aliases, complex samples, non-finite
-samples, non-vector signal payloads, malformed flattened embedding lengths,
-invalid delay/dimension requests, invalid lags, and invalid bin counts are
-rejected before shared-library, Julia, or subprocess execution.
+samples, numeric-string aliases, non-vector signal payloads, malformed
+flattened embedding lengths, invalid delay/dimension requests, invalid lags,
+and invalid bin counts are rejected before shared-library, Julia, or
+subprocess execution.
 
 Direct backend return payloads are validated before they are handed back to the
 public monitor boundary. The public dispatcher repeats the same physics-facing
 checks after backend fallback resolution so a shape-correct optional backend
 cannot silently return the wrong phase-space reconstruction. Delay-embedding
 outputs must have the exact `(T_effective, dimension)` shape and match the
-mathematical indexing `x[t + k*tau]`; object-dtype complex aliases are rejected
-before float coercion; mutual-information outputs must be finite non-negative
-real scalars; nearest-neighbor outputs must contain finite non-negative
-distances and integral in-range neighbor indices, with self-neighbors rejected
-for non-trivial embeddings. Malformed Mojo text output is normalised to
-deterministic `ValueError` failures rather than leaking parser exceptions.
+mathematical indexing `x[t + k*tau]`; numeric-string aliases and object-dtype
+complex aliases are rejected before float coercion; mutual-information outputs
+must be finite non-negative real scalars; nearest-neighbor outputs must contain
+finite non-negative distances and integral in-range neighbor indices, with
+self-neighbors rejected for non-trivial embeddings. Malformed Mojo text output
+is normalised to deterministic `ValueError` failures rather than leaking parser
+exceptions.
 
 ## Invariants
 

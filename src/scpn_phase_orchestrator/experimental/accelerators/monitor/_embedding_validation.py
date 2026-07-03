@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 from numbers import Integral
-from typing import TypeAlias
+from typing import TypeAlias, cast
 
 import numpy as np
 from numpy.typing import NDArray
@@ -48,6 +48,36 @@ def _contains_complex_alias(raw: ArrayPayload) -> bool:
     return any(isinstance(value, (complex, np.complexfloating)) for value in raw.flat)
 
 
+def _is_string_like(value: object) -> bool:
+    """Return whether ``value`` is a Python or NumPy string scalar."""
+    return isinstance(value, (str, bytes, np.str_, np.bytes_))
+
+
+def _is_numeric_string_alias(value: object) -> bool:
+    """Return whether ``value`` is a string scalar parsable as a float."""
+    if not _is_string_like(value):
+        return False
+    try:
+        float(cast("str | bytes", value))
+    except (TypeError, ValueError):
+        return False
+    return True
+
+
+def _contains_numeric_string_alias(raw: ArrayPayload) -> bool:
+    """Return whether the value contains numeric-string aliases."""
+    if raw.dtype.kind not in {"O", "S", "U"}:
+        return False
+    saw_string = False
+    for value in raw.astype(object, copy=False).flat:
+        if not _is_string_like(value):
+            continue
+        saw_string = True
+        if not _is_numeric_string_alias(value):
+            return False
+    return saw_string
+
+
 def _validate_int_at_least(value: object, *, name: str, minimum: int) -> int:
     """Return ``value`` as an integer at least the minimum, else raise."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral):
@@ -65,6 +95,8 @@ def _validate_float_vector(value: object, *, name: str) -> FloatArray:
         raise ValueError(f"{name} must not contain boolean values")
     if _contains_complex_alias(raw):
         raise ValueError(f"{name} must contain real values")
+    if _contains_numeric_string_alias(raw):
+        raise ValueError(f"{name} must not contain numeric-string aliases")
     try:
         array = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
@@ -137,6 +169,10 @@ def validate_delay_embed_backend_output(
         raise ValueError("delay embedding backend output must not contain booleans")
     if _contains_complex_alias(raw):
         raise ValueError("delay embedding backend output must contain real values")
+    if _contains_numeric_string_alias(raw):
+        raise ValueError(
+            "delay embedding backend output must not contain numeric-string aliases"
+        )
     try:
         array = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
@@ -165,6 +201,10 @@ def validate_mutual_information_backend_output(value: object) -> float:
         raise ValueError("mutual information backend output must not be boolean")
     if _contains_complex_alias(raw):
         raise ValueError("mutual information backend output must be real")
+    if _contains_numeric_string_alias(raw):
+        raise ValueError(
+            "mutual information backend output must not contain numeric-string aliases"
+        )
     try:
         scalar = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
@@ -195,6 +235,14 @@ def validate_nearest_neighbor_backend_outputs(
         raise ValueError("nearest-neighbor distances must contain real values")
     if _contains_complex_alias(raw_idx):
         raise ValueError("nearest-neighbor indices must contain integer values")
+    if _contains_numeric_string_alias(raw_dist):
+        raise ValueError(
+            "nearest-neighbor distances must not contain numeric-string aliases"
+        )
+    if _contains_numeric_string_alias(raw_idx):
+        raise ValueError(
+            "nearest-neighbor indices must not contain numeric-string aliases"
+        )
     try:
         dist = raw_dist.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:

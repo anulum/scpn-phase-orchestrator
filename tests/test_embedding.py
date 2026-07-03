@@ -25,6 +25,11 @@ from scpn_phase_orchestrator.monitor.embedding import (
 )
 
 
+class _ArrayProtocolFailure:
+    def __array__(self, dtype: object = None) -> np.ndarray:
+        raise TypeError("array protocol unavailable")
+
+
 class TestDelayEmbed:
     def test_shape(self):
         s = np.arange(100, dtype=float)
@@ -59,6 +64,7 @@ class TestDelayEmbed:
             np.array([0.0, np.inf], dtype=np.float64),
             np.array([0.0, True], dtype=object),
             np.array([0.0, np.bool_(True)], dtype=object),
+            np.array(["0.0", "1.0", "2.0"], dtype=object),
             np.array([0.0 + 0.0j, 1.0 + 0.25j]),
             ["not-a-signal"],
         ],
@@ -137,6 +143,7 @@ class TestMutualInformationContracts:
             np.array([0.0, np.inf], dtype=np.float64),
             np.array([0.0, True], dtype=object),
             np.array([0.0, np.bool_(True)], dtype=object),
+            np.array(["0.0", "1.0", "0.0", "1.0"], dtype=object),
             np.array([0.0 + 0.0j, 1.0 + 0.25j]),
             ["not-a-signal"],
         ],
@@ -166,6 +173,26 @@ class TestMutualInformationContracts:
 
         assert mi >= 0.0
 
+    def test_zero_histogram_returns_zero(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        def _zero_histogram2d(
+            _x: np.ndarray,
+            _y: np.ndarray,
+            bins: int,
+        ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+            return (
+                np.zeros((bins, bins), dtype=np.float64),
+                np.array([], dtype=np.float64),
+                np.array([], dtype=np.float64),
+            )
+
+        monkeypatch.setattr(em_mod, "_dispatch", lambda _fn_name: None)
+        monkeypatch.setattr(em_mod.np, "histogram2d", _zero_histogram2d)
+
+        assert mutual_information(np.array([0.0, 1.0, 2.0]), 1, 2) == 0.0
+
 
 class TestNearestNeighborContracts:
     @pytest.mark.parametrize(
@@ -175,6 +202,7 @@ class TestNearestNeighborContracts:
             np.array([[0.0], [np.inf]], dtype=np.float64),
             np.array([[0.0], [True]], dtype=object),
             np.array([[0.0], [np.bool_(True)]], dtype=object),
+            np.array([["0.0"], ["1.0"], ["3.0"]], dtype=object),
             np.array([[0.0 + 0.0j], [1.0 + 0.25j]]),
             [["not-a-point"]],
         ],
@@ -213,6 +241,26 @@ class TestNearestNeighborContracts:
 
 
 class TestValidationBoundarySemantics:
+    def test_public_alias_helpers_fail_closed_on_array_protocol_failure(
+        self,
+    ) -> None:
+        value = _ArrayProtocolFailure()
+
+        assert em_mod._contains_boolean_alias(value) is False
+        assert em_mod._contains_numeric_string_alias(value) is False
+        assert em_mod._is_numeric_string_alias(0.5) is False
+        assert em_mod._is_numeric_string_alias("not-a-number") is False
+        assert (
+            em_mod._contains_numeric_string_alias(np.array([0.0, "1.0"], dtype=object))
+            is True
+        )
+        assert (
+            em_mod._contains_numeric_string_alias(
+                np.array([0.0, "not-a-number"], dtype=object)
+            )
+            is False
+        )
+
     def test_validate_int_at_least_accepts_numpy_integers(self) -> None:
         assert em_mod._validate_int_at_least(np.int64(4), name="k", minimum=1) == 4
 
@@ -257,6 +305,82 @@ class TestValidationBoundarySemantics:
                 n_points=2,
             )
 
+    def test_public_output_helpers_reject_numeric_string_aliases(
+        self,
+    ) -> None:
+        signal = np.arange(8, dtype=np.float64)
+        with pytest.raises(ValueError, match="numeric-string"):
+            em_mod._validate_delay_embedding_output(
+                np.array([["0.0", "2.0"], ["1.0", "3.0"], ["2.0", "4.0"]]),
+                signal=signal,
+                delay=2,
+                t_effective=3,
+                dimension=2,
+            )
+        with pytest.raises(ValueError, match="numeric-string"):
+            em_mod._validate_non_negative_scalar(
+                np.array("1.0", dtype=object),
+                name="mutual_information",
+            )
+        with pytest.raises(ValueError, match="numeric-string"):
+            em_mod._validate_nn_output(
+                np.array(["1.0", "1.0", "2.0"], dtype=object),
+                np.array([1.0, 0.0, 1.0]),
+                n_points=3,
+            )
+        with pytest.raises(ValueError, match="numeric-string"):
+            em_mod._validate_nn_output(
+                np.array([1.0, 1.0, 2.0]),
+                np.array(["1", "0", "1"], dtype=object),
+                n_points=3,
+            )
+
+    def test_public_output_helpers_reject_uncoercible_numeric_payloads(
+        self,
+    ) -> None:
+        signal = np.arange(4, dtype=np.float64)
+        with pytest.raises(ValueError, match="signal"):
+            em_mod._validate_signal(np.array([object()], dtype=object))
+        with pytest.raises(ValueError, match="delay embedding output"):
+            em_mod._validate_delay_embedding_output(
+                np.array([[object()]], dtype=object),
+                signal=signal,
+                delay=1,
+                t_effective=1,
+                dimension=1,
+            )
+        with pytest.raises(ValueError, match="exact indexing"):
+            em_mod._validate_delay_embedding_output(
+                np.array([[99.0]], dtype=np.float64),
+                signal=signal,
+                delay=1,
+                t_effective=1,
+                dimension=1,
+            )
+        with pytest.raises(ValueError, match="mutual_information"):
+            em_mod._validate_non_negative_scalar(
+                np.array(object(), dtype=object),
+                name="mutual_information",
+            )
+        with pytest.raises(ValueError, match="numeric"):
+            em_mod._validate_nn_output(
+                np.array([object()], dtype=object),
+                np.array([0.0]),
+                n_points=1,
+            )
+        with pytest.raises(ValueError, match="finite"):
+            em_mod._validate_nn_output(
+                np.array([1.0]),
+                np.array([np.inf]),
+                n_points=1,
+            )
+        with pytest.raises(ValueError, match="in range"):
+            em_mod._validate_nn_output(
+                np.array([1.0]),
+                np.array([1.0]),
+                n_points=1,
+            )
+
 
 class TestEmbeddingResultBoundary:
     def test_normalises_valid_record(self) -> None:
@@ -295,6 +419,12 @@ class TestEmbeddingResultBoundary:
             },
             {
                 "trajectory": [[0.0, np.bool_(True)]],
+                "delay": 1,
+                "dimension": 2,
+                "T_effective": 1,
+            },
+            {
+                "trajectory": [["0.0", "1.0"]],
                 "delay": 1,
                 "dimension": 2,
                 "T_effective": 1,
@@ -352,6 +482,15 @@ class TestOptimalDelay:
         tau = optimal_delay(s, max_lag=10)
         assert tau >= 1
 
+    def test_python_fallback_returns_default_without_local_minimum(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setattr(em_mod, "ACTIVE_BACKEND", "python")
+        monkeypatch.setattr(em_mod, "_dispatch", lambda _fn_name: None)
+
+        assert optimal_delay(np.ones(30), max_lag=6, n_bins=4) == 1
+
     @pytest.mark.parametrize("max_lag", [False, 0, -1, 1.5, "10"])
     def test_rejects_invalid_max_lag(self, max_lag: Any) -> None:
         with pytest.raises(ValueError, match="max_lag"):
@@ -376,6 +515,17 @@ class TestOptimalDimension:
         s = np.ones(500)
         m = optimal_dimension(s, delay=1, max_dim=5)
         assert m == 1
+
+    def test_python_fallback_skips_zero_distance_neighbors(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setattr(em_mod, "ACTIVE_BACKEND", "python")
+        monkeypatch.setattr(em_mod, "_dispatch", lambda _fn_name: None)
+
+        signal = np.array([0.0, 0.0, 1.0, 1.0, 2.0, 2.0] * 4)
+
+        assert optimal_dimension(signal, delay=1, max_dim=3) >= 1
 
     @pytest.mark.parametrize("delay", [False, 0, -1, 1.5, "1"])
     def test_rejects_invalid_delay(self, delay: Any) -> None:
@@ -481,6 +631,10 @@ class TestEmbeddingBackendFallbacks:
             np.array([[0.0, np.nan], [1.0, 2.0], [2.0, 3.0]], dtype=np.float64),
             np.array([[0.0, np.bool_(True)], [1.0, 2.0], [2.0, 3.0]], dtype=object),
             np.array(
+                [["0.0", "1.0"], ["1.0", "2.0"], ["2.0", "3.0"]],
+                dtype=object,
+            ),
+            np.array(
                 [[0.0 + 0.0j, 1.0], [1.0, 2.0 + 0.25j], [2.0, 3.0]],
             ),
             np.zeros((2, 3), dtype=np.float64),
@@ -535,7 +689,16 @@ class TestEmbeddingBackendFallbacks:
 
     @pytest.mark.parametrize(
         "backend_value",
-        [-0.1, np.nan, np.inf, [0.5], True, np.bool_(True), 0.5 + 0.0j],
+        [
+            -0.1,
+            np.nan,
+            np.inf,
+            [0.5],
+            True,
+            np.bool_(True),
+            np.array("0.5", dtype=object),
+            0.5 + 0.0j,
+        ],
     )
     def test_invalid_mutual_information_backend_payload_fails_closed(
         self,
@@ -595,6 +758,14 @@ class TestEmbeddingBackendFallbacks:
             (
                 np.array([1.0, 1.0, 1.0], dtype=np.float64),
                 np.array([np.bool_(True), 0, 1], dtype=object),
+            ),
+            (
+                np.array(["1.0", "1.0", "2.0"], dtype=object),
+                np.array([1, 0, 1], dtype=np.int64),
+            ),
+            (
+                np.array([1.0, 1.0, 2.0], dtype=np.float64),
+                np.array(["1", "0", "1"], dtype=object),
             ),
             (
                 np.array([1.0, 1.0, 2.0], dtype=np.float64),

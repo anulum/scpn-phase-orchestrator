@@ -210,6 +210,7 @@ class EmbeddingResult:
     T_effective: int
 
     def __post_init__(self) -> None:
+        """Validate and normalise the embedded trajectory record."""
         trajectory = _validate_embedded(self.trajectory)
         delay = _validate_int_at_least(self.delay, name="delay", minimum=1)
         dimension = _validate_int_at_least(self.dimension, name="dimension", minimum=1)
@@ -248,6 +249,40 @@ def _contains_complex_alias(value: object) -> bool:
     return any(isinstance(item, (complex, np.complexfloating)) for item in raw.flat)
 
 
+def _is_string_like(value: object) -> bool:
+    """Return whether ``value`` is a Python or NumPy string scalar."""
+    return isinstance(value, (str, bytes, np.str_, np.bytes_))
+
+
+def _is_numeric_string_alias(value: object) -> bool:
+    """Return whether ``value`` is a string scalar parsable as a float."""
+    if not _is_string_like(value):
+        return False
+    try:
+        float(cast("str | bytes", value))
+    except (TypeError, ValueError):
+        return False
+    return True
+
+
+def _contains_numeric_string_alias(value: object) -> bool:
+    """Return whether the value contains numeric-string aliases."""
+    try:
+        raw = np.asarray(value)
+    except (TypeError, ValueError):
+        return False
+    if raw.dtype.kind not in {"O", "S", "U"}:
+        return False
+    saw_string = False
+    for item in raw.astype(object, copy=False).flat:
+        if not _is_string_like(item):
+            continue
+        saw_string = True
+        if not _is_numeric_string_alias(item):
+            return False
+    return saw_string
+
+
 def _validate_signal(signal: object, *, name: str = "signal") -> FloatArray:
     """Return the signal as a validated 1-D finite array, else raise."""
     if _contains_boolean_alias(signal):
@@ -255,6 +290,8 @@ def _validate_signal(signal: object, *, name: str = "signal") -> FloatArray:
     raw = np.asarray(signal)
     if _contains_complex_alias(raw):
         raise ValueError(f"{name} must contain real-valued samples")
+    if _contains_numeric_string_alias(raw):
+        raise ValueError(f"{name} must not contain numeric-string aliases")
     try:
         array = raw.astype(np.float64, copy=True).ravel()
     except (TypeError, ValueError) as exc:
@@ -273,6 +310,8 @@ def _validate_embedded(embedded: object) -> FloatArray:
     raw = np.asarray(embedded)
     if _contains_complex_alias(raw):
         raise ValueError("embedded must contain real-valued coordinates")
+    if _contains_numeric_string_alias(raw):
+        raise ValueError("embedded must not contain numeric-string aliases")
     try:
         array = np.atleast_2d(raw.astype(np.float64, copy=True))
     except (TypeError, ValueError) as exc:
@@ -320,6 +359,10 @@ def _validate_delay_embedding_output(
     raw = np.asarray(value)
     if _contains_complex_alias(raw):
         raise ValueError("delay embedding output must contain real values")
+    if _contains_numeric_string_alias(raw):
+        raise ValueError(
+            "delay embedding output must not contain numeric-string aliases"
+        )
     try:
         embedded = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
@@ -350,6 +393,8 @@ def _validate_non_negative_scalar(value: object, *, name: str) -> float:
     raw = np.asarray(value)
     if _contains_complex_alias(raw):
         raise ValueError(f"{name} must contain real values")
+    if _contains_numeric_string_alias(raw):
+        raise ValueError(f"{name} must not contain numeric-string aliases")
     try:
         scalar = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
@@ -379,6 +424,14 @@ def _validate_nn_output(
         raise ValueError("nearest-neighbor distances must contain real values")
     if _contains_complex_alias(raw_idx):
         raise ValueError("nearest-neighbor indices must be integer values")
+    if _contains_numeric_string_alias(raw_dist):
+        raise ValueError(
+            "nearest-neighbor distances must not contain numeric-string aliases"
+        )
+    if _contains_numeric_string_alias(raw_idx):
+        raise ValueError(
+            "nearest-neighbor indices must not contain numeric-string aliases"
+        )
     try:
         dist = raw_dist.astype(np.float64, copy=True)
         idx_float = raw_idx.astype(np.float64, copy=True)

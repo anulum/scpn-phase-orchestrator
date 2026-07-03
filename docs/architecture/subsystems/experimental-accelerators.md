@@ -162,6 +162,13 @@ execution: phase vectors, flattened coupling matrices, and backend local-order
 outputs reject boolean aliases, complex/object-complex aliases, numeric-string
 aliases, non-finite values, wrong cardinality, non-zero coupling diagonals, and
 unit-interval drift before float coercion or publication.
+The public delay-embedding dispatcher and direct Go, Julia, and Mojo bridges
+apply shared embedding validators before optional runtime loading and after
+backend execution: scalar signals, embedded trajectories, mutual-information
+scalars, and nearest-neighbor backend outputs reject boolean aliases,
+complex/object-complex aliases, numeric-string aliases, non-finite values, wrong
+cardinality, delay-index drift, non-integral neighbor indices, and self-neighbor
+violations before float coercion or publication.
 The public transfer-entropy dispatcher and direct Go, Julia, and Mojo bridges
 apply shared TE validators before optional runtime loading and after backend
 execution: source/target phase vectors, flattened phase-series payloads,
