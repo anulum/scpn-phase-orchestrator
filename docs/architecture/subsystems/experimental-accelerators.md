@@ -209,3 +209,8 @@ through a production subsystem's dispatcher.
 - `monitor/psychedelic` is a heuristic with no cited reference; the PHA-C
   acceptance lane is a deterministic evidence-binding chain (distinct from the
   conformal twin-confidence gate, which lives in `monitor/twin_conformal_gate.py`).
+- `monitor/psychedelic` Go, Julia, and Mojo entropy adapters share one direct
+  validator that rejects boolean, numeric-string, complex, non-finite, and
+  invalid-bin-count aliases before optional runtime loading. Backend entropy
+  outputs are rechecked as finite real scalars inside `[0, log(n_bins)]` before
+  public monitor publication.

@@ -63,6 +63,10 @@ def test_reduce_coupling_half():
         (np.ones(4), "knm must be a finite 2-D matrix"),
         (np.array([[0.0, np.nan], [1.0, 0.0]]), "knm"),
         (np.array([[0.0, True], [1.0, 0.0]], dtype=object), "knm"),
+        (
+            np.array([["0.0", "1.0"], ["1.0", "0.0"]], dtype=object),
+            "numeric-string",
+        ),
         (np.array([[0.0, 1.0 + 0.0j], [1.0, 0.0]]), "real-valued"),
         (
             np.array([[0.0, complex(1.0, 0.0)], [1.0, 0.0]], dtype=object),
@@ -89,6 +93,7 @@ def test_reduce_coupling_rejects_invalid_reduction_factor(reduction_factor):
         np.array([[0.0, np.nan], [1.0, 0.0]], dtype=np.float64),
         np.array([[False, True], [True, False]], dtype=np.bool_),
         np.array([[0.0, np.bool_(True)], [1.0, 0.0]], dtype=object),
+        np.array([["0.0", "1.0"], ["1.0", "0.0"]], dtype=object),
         np.array([[0.0, 1.0 + 0.0j], [1.0, 0.0]]),
         np.array([[0.0, complex(1.0, 0.0)], [1.0, 0.0]], dtype=object),
     ],
@@ -148,6 +153,7 @@ def test_entropy_empty_phases():
         np.array([[0.0, 1.0]]),
         np.array([0.0, np.inf]),
         np.array([0.0, True], dtype=object),
+        np.array(["0.0", "1.0"], dtype=object),
         np.array([0.0, 1.0 + 0.0j]),
         np.array([0.0, complex(1.0, 0.0)], dtype=object),
     ],
@@ -183,6 +189,17 @@ def test_entropy_invalid_backend_payload_fails_closed(
     )
 
     with pytest.raises(ValueError):
+        entropy_from_phases(phases, n_bins=4)
+
+
+def test_entropy_rejects_numeric_string_backend_payload(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Backend entropy payloads must not be accepted through string coercion."""
+    phases = np.linspace(0.0, 1.0, 16)
+    monkeypatch.setattr(psychedelic_mod, "_dispatch", lambda: lambda *_args: "0.5")
+
+    with pytest.raises(ValueError, match="numeric-string"):
         entropy_from_phases(phases, n_bins=4)
 
 

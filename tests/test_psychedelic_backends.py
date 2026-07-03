@@ -134,6 +134,12 @@ class TestDirectBackendBoundaryContracts:
                 ValueError,
                 "real-valued",
             ),
+            (
+                np.array(["0.0", "1.0"], dtype=object),
+                4,
+                ValueError,
+                "numeric-string",
+            ),
             (np.array([0.0, np.inf]), 4, ValueError, "finite"),
             (np.array([[0.0, 1.0]]), 4, ValueError, "one-dimensional"),
             (np.linspace(0.0, 1.0, 4), np.bool_(True), TypeError, "n_bins"),

@@ -588,12 +588,13 @@ embedded = delay_embed(signal, delay=tau, dimension=m)
 
 The psychedelic monitor is a research diagnostic for phase-dispersion
 simulation inspired by entropic-brain hypotheses. Public Python calls and
-Go/Julia/Mojo entropy adapters reject boolean aliases, complex phases,
-object arrays carrying Python or NumPy complex scalar aliases, non-finite
-phases, invalid bin counts, complex entropy payloads, and invalid
-coupling-reduction backend matrices before results are accepted. This preserves
-the circular Shannon entropy and Kuramoto coupling semantics over real-valued
-phase observations; it is not a clinical, dosage, or actuation interface.
+Go/Julia/Mojo entropy adapters reject boolean aliases, numeric-string aliases,
+complex phases, object arrays carrying Python or NumPy complex scalar aliases,
+non-finite phases, invalid bin counts, numeric-string entropy payloads, complex
+entropy payloads, and invalid coupling-reduction backend matrices before
+results are accepted. This preserves the circular Shannon entropy and Kuramoto
+coupling semantics over real-valued phase observations; it is not a clinical,
+dosage, or actuation interface.
 
 Direct accelerator boundary contract: Go, Julia, and Mojo entropy adapters use
 one shared `float64` validation path before loading shared-library, Julia, or
@@ -601,9 +602,9 @@ subprocess runtimes. Empty phase samples return zero entropy without requiring
 optional runtimes, matching the public Python fallback and preserving the
 Shannon special case for an empty empirical distribution.
 Direct backend entropy outputs are also revalidated as finite real scalars in
-the physical interval `[0, log(n_bins)]`; malformed Mojo raw stdout line counts,
-blank-line insertion, and non-scalar tokens are rejected before the value
-reaches downstream monitor logic.
+the physical interval `[0, log(n_bins)]` and must not arrive as numeric strings;
+malformed Mojo raw stdout line counts, blank-line insertion, and non-scalar
+tokens are rejected before the value reaches downstream monitor logic.
 
 ::: scpn_phase_orchestrator.monitor.psychedelic
 

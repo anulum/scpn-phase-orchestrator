@@ -174,6 +174,40 @@ def _contains_complex_alias(value: object) -> bool:
     return any(isinstance(item, (complex, np.complexfloating)) for item in raw.flat)
 
 
+def _is_string_like(value: object) -> bool:
+    """Return whether ``value`` is a Python or NumPy string scalar."""
+    return isinstance(value, (str, bytes, np.str_, np.bytes_))
+
+
+def _is_numeric_string_alias(value: object) -> bool:
+    """Return whether ``value`` is a string scalar parsable as a float."""
+    if not _is_string_like(value):
+        return False
+    try:
+        float(cast("str | bytes", value))
+    except (TypeError, ValueError):
+        return False
+    return True
+
+
+def _contains_numeric_string_alias(value: object) -> bool:
+    """Return whether the value contains numeric-string aliases."""
+    try:
+        raw = np.asarray(value)
+    except (TypeError, ValueError):
+        return False
+    if raw.dtype.kind not in {"O", "S", "U"}:
+        return False
+    saw_string = False
+    for item in raw.astype(object, copy=False).flat:
+        if not _is_string_like(item):
+            continue
+        saw_string = True
+        if not _is_numeric_string_alias(item):
+            return False
+    return saw_string
+
+
 def _has_complex_payload(value: object) -> bool:
     """Return whether the value carries a complex-number payload."""
     try:
@@ -190,6 +224,8 @@ def _validate_phase_vector(value: object, *, name: str) -> FloatArray:
     raw = np.asarray(value)
     if _has_complex_payload(value):
         raise ValueError(f"{name} must contain real-valued phases")
+    if _contains_numeric_string_alias(raw):
+        raise ValueError(f"{name} must not contain numeric-string aliases")
     try:
         phases = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
@@ -210,6 +246,8 @@ def _validate_coupling_matrix(
     raw = np.asarray(value)
     if _has_complex_payload(value):
         raise ValueError(f"{name} must contain real-valued couplings")
+    if _contains_numeric_string_alias(raw):
+        raise ValueError(f"{name} must not contain numeric-string aliases")
     try:
         matrix = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
@@ -284,6 +322,10 @@ def _validate_reduced_coupling(
     raw = np.asarray(value)
     if _has_complex_payload(value):
         raise ValueError("reduced coupling matrix must contain real values")
+    if _contains_numeric_string_alias(raw):
+        raise ValueError(
+            "reduced coupling matrix must not contain numeric-string aliases"
+        )
     try:
         reduced = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
@@ -307,6 +349,8 @@ def _validate_entropy_value(value: object, *, n_bins: int) -> float:
     raw = np.asarray(value)
     if _has_complex_payload(value):
         raise ValueError("entropy output must contain real values")
+    if _contains_numeric_string_alias(raw):
+        raise ValueError("entropy output must not contain numeric-string aliases")
     try:
         scalar = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:

@@ -14,6 +14,8 @@ import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.experimental.accelerators.monitor._psychedelic_validation import (  # noqa: E501
+    _contains_numeric_string_alias,
+    _is_numeric_string_alias,
     validate_psychedelic_backend_inputs,
     validate_psychedelic_entropy_backend_output,
 )
@@ -26,6 +28,15 @@ class _ArrayProtocolFailure:
         raise TypeError("array protocol unavailable")
 
 
+class TestNumericStringHelpers:
+    def test_numeric_string_helper_rejects_only_numeric_string_aliases(self) -> None:
+        assert not _is_numeric_string_alias(1.0)
+        assert not _contains_numeric_string_alias(
+            np.array([1.0, "not-a-number"], dtype=object)
+        )
+        assert _contains_numeric_string_alias(np.array([1.0, "0.2"], dtype=object))
+
+
 class TestPsychedelicInputs:
     def test_valid_round_trips(self) -> None:
         phases, n_bins = validate_psychedelic_backend_inputs(_PHASES, 4)
@@ -36,6 +47,12 @@ class TestPsychedelicInputs:
         [
             (np.array([True, False]), 4, ValueError, "must not contain boolean"),
             (np.array([0.1 + 1j, 0.2]), 4, ValueError, "must be real-valued"),
+            (
+                np.array(["0.1", "0.2"], dtype=object),
+                4,
+                ValueError,
+                "numeric-string",
+            ),
             (np.zeros((2, 2)), 4, ValueError, "must be one-dimensional"),
             (np.array([0.1, np.inf]), 4, ValueError, "only finite values"),
             (_PHASES, True, TypeError, "n_bins must be an integer"),
@@ -62,6 +79,7 @@ class TestPsychedelicEntropyOutput:
         [
             (np.array([True]), "must not contain boolean"),
             (np.array(0.5 + 1j), "must be real-valued"),
+            ("0.5", "numeric-string"),
             (np.array([0.5, 0.6]), "must be scalar"),
             (np.inf, "must be finite"),
             (99.0, r"must lie in \[0, log\(n_bins\)\]"),
