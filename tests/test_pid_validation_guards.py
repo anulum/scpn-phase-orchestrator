@@ -14,6 +14,8 @@ import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.experimental.accelerators.monitor._pid_validation import (
+    _contains_numeric_string_alias,
+    _is_numeric_string_alias,
     validate_pid_backend_inputs,
     validate_pid_scalar_output,
 )
@@ -27,6 +29,29 @@ class _ObjectProbeRaises:
         if dtype is object or dtype == np.dtype(object):
             raise ValueError("object probe refused")
         return np.array([0.0, 1.0, 2.0, 3.0], dtype=np.float64)
+
+
+class _ArrayProtocolFailure:
+    """Array-like payload that rejects every NumPy coercion attempt."""
+
+    def __array__(self, dtype: object | None = None) -> np.ndarray:
+        """Raise as a hostile array-protocol implementation would."""
+        raise TypeError("array protocol unavailable")
+
+
+class TestPidNumericStringHelpers:
+    def test_numeric_string_helpers_reject_only_numeric_string_aliases(self) -> None:
+        assert _is_numeric_string_alias(1.0) is False
+        assert _contains_numeric_string_alias(_ArrayProtocolFailure()) is False
+        assert (
+            _contains_numeric_string_alias(
+                np.array([1.0, "not-a-number"], dtype=object)
+            )
+            is False
+        )
+        assert (
+            _contains_numeric_string_alias(np.array([1.0, "2.0"], dtype=object)) is True
+        )
 
 
 def _inputs(**overrides: Any) -> dict[str, Any]:
@@ -68,6 +93,14 @@ class TestPidBackendInputs:
                 "must not contain boolean",
             ),
             (
+                {
+                    "phase_history_flat": np.array(
+                        ["0.0", "1.0", "2.0", "3.0"], dtype=object
+                    )
+                },
+                "numeric-string",
+            ),
+            (
                 {"phase_history_flat": np.array([0.0 + 1j, 1.0, 2.0, 3.0])},
                 "phase_history must be real-valued",
             ),
@@ -89,6 +122,7 @@ class TestPidBackendInputs:
             ),
             ({"phase_history_flat": np.array([0.0, 1.0])}, "does not match t.n"),
             ({"group_a": np.array([True])}, "group_a must not contain boolean"),
+            ({"group_a": np.array(["0"], dtype=object)}, "numeric-string"),
             ({"group_a": np.array([0.0 + 1j])}, "group_a must be integer-valued"),
             (
                 {"group_a": np.array([object()], dtype=object)},
@@ -114,6 +148,7 @@ class TestPidScalarOutput:
         ("value", "match"),
         [
             (True, "must not be a boolean"),
+            ("0.5", "numeric-string"),
             (np.array(0.0 + 1j), "must be a real scalar"),
             (object(), "must be a real scalar"),
             (np.array([0.5, 0.6]), "must be a scalar"),

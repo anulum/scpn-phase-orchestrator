@@ -310,8 +310,8 @@ non-negative and `MI(A; Y) = I_red + U_A` holds by construction. A single
 snapshot (`T = 1`) carries no distributional information, so every component is
 `0`; meaningful decomposition needs `T ≥ 2`. Histories, group indices, bin
 counts, and backend scalar outputs are validated as finite real quantities;
-boolean aliases, complex dtypes, and out-of-range indices are rejected before
-estimation or backend acceptance.
+boolean aliases, numeric-string aliases, complex dtypes, and out-of-range
+indices are rejected before estimation or backend acceptance.
 
 **Usage:**
 

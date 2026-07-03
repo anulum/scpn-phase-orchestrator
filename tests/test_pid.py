@@ -112,6 +112,7 @@ class TestPidValidation:
             np.zeros((2, 2, 2)),
             np.array([[0.0, np.nan], [1.0, 2.0]]),
             np.array([[True, False], [False, True]]),
+            np.array([["0.0", "1.0"], ["2.0", "3.0"]], dtype=object),
             np.array([[0.0, 1.0 + 0.0j], [1.0, 2.0]]),
         ],
     )
@@ -131,6 +132,7 @@ class TestPidValidation:
         [
             ([0.5], TypeError),
             ([True], TypeError),
+            (["1"], TypeError),
             ([-1], IndexError),
             ([8], IndexError),
             (np.array([[0]]), ValueError),

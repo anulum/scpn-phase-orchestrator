@@ -78,13 +78,15 @@ are complementary: neither group alone carries the full target information.
 The public boundary rejects:
 
 - boolean phase aliases,
+- numeric-string phase aliases,
 - complex phase samples, including object-dtype complex aliases,
 - non-finite phase samples,
 - non-vector or out-of-range group indices,
+- numeric-string group indices,
 - boolean, complex, non-integral, or non-finite group indices,
 - `n_bins < 2`,
 - boolean or non-integral `n_bins` values,
-- backend scalar outputs that are non-finite or negative.
+- backend scalar outputs that are numeric strings, non-finite, or negative.
 
 One-dimensional phase input is interpreted as a single timestep. Because a
 single timestep does not define a distribution, both public functions return
@@ -109,8 +111,8 @@ boundary are rejected before a result can be accepted.
 
 Direct Go, Julia, and Mojo bridge wrappers share the same typed backend input
 validation before optional runtime loading. Their outputs are validated as
-finite non-negative redundancy and synergy scalars before returning to the
-public dispatcher.
+finite non-negative redundancy and synergy scalars, never numeric-string
+aliases, before returning to the public dispatcher.
 
 ---
 

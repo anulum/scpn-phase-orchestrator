@@ -212,6 +212,40 @@ def _contains_complex_alias(value: object) -> bool:
     return any(isinstance(item, (complex, np.complexfloating)) for item in raw.flat)
 
 
+def _is_string_like(value: object) -> bool:
+    """Return whether ``value`` is a Python or NumPy string scalar."""
+    return isinstance(value, (str, bytes, np.str_, np.bytes_))
+
+
+def _is_numeric_string_alias(value: object) -> bool:
+    """Return whether ``value`` is a string scalar parsable as a float."""
+    if not _is_string_like(value):
+        return False
+    try:
+        float(cast("str | bytes", value))
+    except (TypeError, ValueError):
+        return False
+    return True
+
+
+def _contains_numeric_string_alias(value: object) -> bool:
+    """Return whether the value contains numeric-string aliases."""
+    try:
+        raw = np.asarray(value)
+    except (TypeError, ValueError):
+        return False
+    if raw.dtype.kind not in {"O", "S", "U"}:
+        return False
+    saw_string = False
+    for item in raw.astype(object, copy=False).flat:
+        if not _is_string_like(item):
+            continue
+        saw_string = True
+        if not _is_numeric_string_alias(item):
+            return False
+    return saw_string
+
+
 def _has_complex_payload(value: object) -> bool:
     """Return whether the value carries a complex-number payload."""
     try:
@@ -228,6 +262,8 @@ def _validate_phase_history(value: object) -> FloatArray:
     raw = np.asarray(value)
     if _has_complex_payload(value):
         raise ValueError("phases must contain real-valued samples")
+    if _contains_numeric_string_alias(raw):
+        raise ValueError("phases must not contain numeric-string aliases")
     try:
         history = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
@@ -250,6 +286,8 @@ def _validate_group_indices(value: object, *, name: str, n_osc: int) -> IntArray
         raise TypeError(f"{name} must contain integer indices, not booleans")
     if _has_complex_payload(value):
         raise TypeError(f"{name} must contain real integer indices")
+    if _contains_numeric_string_alias(raw):
+        raise TypeError(f"{name} must not contain numeric-string aliases")
     try:
         numeric = np.asarray(value, dtype=np.float64)
     except (TypeError, ValueError) as exc:
@@ -264,9 +302,15 @@ def _validate_group_indices(value: object, *, name: str, n_osc: int) -> IntArray
     return np.ascontiguousarray(indices, dtype=np.int64)
 
 
-def _validate_pid_scalar(value: float, *, name: str) -> float:
+def _validate_pid_scalar(value: object, *, name: str) -> float:
     """Return a backend PID component as a validated non-negative float, else raise."""
-    result = float(value)
+    if isinstance(value, (bool, np.bool_)):
+        raise ValueError(f"{name} must not be a boolean value")
+    if _has_complex_payload(value):
+        raise ValueError(f"{name} must be a real scalar")
+    if _contains_numeric_string_alias(value):
+        raise ValueError(f"{name} must not contain numeric-string aliases")
+    result = float(cast("float", value))
     if not np.isfinite(result) or result < 0.0:
         raise ValueError(f"{name} must be finite and non-negative")
     return result
@@ -399,8 +443,11 @@ def _decompose(
     if backend_fn is not None:
         try:
             red, syn = backend_fn(flat, t, n, group_a_idx, group_b_idx, bin_count)
-            return float(red), float(syn)
-        except (ImportError, RuntimeError, OSError, KeyError, ValueError):
+            return (
+                _validate_pid_scalar(red, name="redundancy"),
+                _validate_pid_scalar(syn, name="synergy"),
+            )
+        except (ImportError, RuntimeError, OSError, KeyError):
             pass
     return _pid_python(flat, t, n, group_a_idx, group_b_idx, bin_count)
 

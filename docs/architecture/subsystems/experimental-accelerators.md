@@ -214,3 +214,8 @@ through a production subsystem's dispatcher.
   invalid-bin-count aliases before optional runtime loading. Backend entropy
   outputs are rechecked as finite real scalars inside `[0, log(n_bins)]` before
   public monitor publication.
+- `monitor/pid` Go, Julia, and Mojo partial-information-decomposition adapters
+  share one direct validator that rejects boolean, numeric-string, complex,
+  non-finite, non-integral, out-of-range, and invalid-bin-count aliases before
+  optional runtime loading. Backend redundancy/synergy outputs are rechecked as
+  finite non-negative real scalars before public monitor publication.

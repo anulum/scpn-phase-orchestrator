@@ -63,6 +63,30 @@ def test_public_pid_uses_python_when_all_accelerated_backends_fail(
     assert synergy(_history(), [0, 1], [2, 3], 4) >= 0.0
 
 
+def test_public_pid_uses_python_when_selected_backend_raises_runtime_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Runtime unavailability from a selected backend falls back to Python."""
+
+    def _failing_backend(*_args: Any) -> pid_module.PidTuple:
+        raise RuntimeError("backend execution unavailable")
+
+    monkeypatch.setattr(pid_module, "_dispatch", lambda: _failing_backend)
+
+    assert synergy(_history(), [0, 1], [2, 3], 4) >= 0.0
+
+
+def test_public_pid_load_julia_function_returns_bridge_callable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The public Julia loader requires runtime availability before exporting."""
+    monkeypatch.setattr(pid_module, "require_juliacall_main", lambda: None)
+
+    loaded = pid_module._load_julia_fn()
+
+    assert callable(loaded)
+
+
 def test_public_pid_zero_timestep_nonempty_history_returns_zero(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -115,6 +139,28 @@ def test_public_pid_validates_backend_scalar_output(
         redundancy(_history(), [0, 1], [2, 3], 4)
 
 
+def test_public_pid_rejects_numeric_string_backend_scalar_output(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Backend PID components must not pass through string-to-float coercion."""
+
+    def _bad_backend(*_args: Any) -> pid_module.PidTuple:
+        return "0.5", 0.0  # type: ignore[return-value]
+
+    monkeypatch.setattr(pid_module, "_dispatch", lambda: _bad_backend)
+
+    with pytest.raises(ValueError, match="numeric-string"):
+        redundancy(_history(), [0, 1], [2, 3], 4)
+
+
+def test_public_pid_scalar_output_rejects_boolean_and_complex_aliases() -> None:
+    """Backend PID components cannot be boolean or complex scalar aliases."""
+    with pytest.raises(ValueError, match="boolean"):
+        pid_module._validate_pid_scalar(True, name="redundancy")
+    with pytest.raises(ValueError, match="real scalar"):
+        pid_module._validate_pid_scalar(0.5 + 0.0j, name="synergy")
+
+
 class _ArrayRaises:
     """Array protocol object that simulates a NumPy coercion failure."""
 
@@ -129,6 +175,22 @@ def test_pid_alias_detectors_tolerate_array_protocol_failures() -> None:
     assert pid_module._contains_boolean_alias(value) is False
     assert pid_module._contains_complex_alias(value) is False
     assert pid_module._has_complex_payload(value) is False
+
+
+def test_pid_numeric_string_helpers_cover_non_alias_edges() -> None:
+    """Numeric-string alias checks keep non-string and nonnumeric paths distinct."""
+    assert pid_module._is_numeric_string_alias(1.0) is False
+    assert pid_module._contains_numeric_string_alias(_ArrayRaises()) is False
+    assert (
+        pid_module._contains_numeric_string_alias(
+            np.array([1.0, "not-a-number"], dtype=object)
+        )
+        is False
+    )
+    assert (
+        pid_module._contains_numeric_string_alias(np.array([1.0, "2.0"], dtype=object))
+        is True
+    )
 
 
 def test_pid_information_primitives_return_zero_for_empty_counts() -> None:
