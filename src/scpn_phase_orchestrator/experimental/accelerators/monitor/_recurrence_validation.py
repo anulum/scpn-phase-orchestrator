@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 from numbers import Integral, Real
-from typing import TypeAlias
+from typing import TypeAlias, cast
 
 import numpy as np
 from numpy.typing import NDArray
@@ -35,6 +35,36 @@ def _contains_boolean_alias(raw: ArrayPayload) -> bool:
     if raw.dtype != object:
         return False
     return any(isinstance(value, (bool, np.bool_)) for value in raw.flat)
+
+
+def _is_string_like(value: object) -> bool:
+    """Return whether ``value`` is a Python or NumPy string scalar."""
+    return isinstance(value, (str, bytes, np.str_, np.bytes_))
+
+
+def _is_numeric_string_alias(value: object) -> bool:
+    """Return whether ``value`` is a string scalar parsable as a float."""
+    if not _is_string_like(value):
+        return False
+    try:
+        float(cast("str | bytes", value))
+    except (TypeError, ValueError):
+        return False
+    return True
+
+
+def _contains_numeric_string_alias(raw: ArrayPayload) -> bool:
+    """Return whether the array contains only numeric string aliases."""
+    if raw.dtype.kind not in {"O", "S", "U"}:
+        return False
+    saw_string = False
+    for value in raw.astype(object, copy=False).flat:
+        if not _is_string_like(value):
+            continue
+        saw_string = True
+        if not _is_numeric_string_alias(value):
+            return False
+    return saw_string
 
 
 def _validate_int_at_least(value: object, *, name: str, minimum: int) -> int:
@@ -75,6 +105,8 @@ def _validate_flat_trajectory(
     raw = np.asarray(value)
     if _contains_boolean_alias(raw):
         raise ValueError(f"{name} must not contain boolean values")
+    if _contains_numeric_string_alias(raw):
+        raise ValueError(f"{name} must not contain numeric-string aliases")
     if np.iscomplexobj(raw):
         raise ValueError(f"{name} must contain real-valued trajectory samples")
     try:
@@ -177,6 +209,8 @@ def validate_recurrence_backend_output(
         raise ValueError(f"{name} output must be array-like") from exc
     if array.size != t_int * t_int:
         raise ValueError(f"{name} output size must be {t_int * t_int}")
+    if _contains_numeric_string_alias(array):
+        raise ValueError(f"{name} output must not contain numeric-string aliases")
     try:
         numeric = array.reshape(t_int, t_int).astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
@@ -198,6 +232,10 @@ def validate_recurrence_backend_output(
             raise ValueError(
                 f"{name} expected output must have size {t_int * t_int}"
             ) from exc
+        if _contains_numeric_string_alias(expected_array):
+            raise ValueError(
+                f"{name} expected output must not contain numeric-string aliases"
+            )
         try:
             expected_numeric = expected_array.astype(np.uint8, copy=False)
         except (TypeError, ValueError) as exc:

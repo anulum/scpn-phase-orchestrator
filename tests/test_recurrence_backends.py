@@ -171,6 +171,15 @@ class TestDirectBackendBoundaryContracts:
         ("traj_flat", "t", "d", "epsilon", "angular", "message"),
         [
             (np.array([0.0, True], dtype=object), 2, 1, 0.5, False, "traj_flat"),
+            (np.array(["0.0", "1.0"], dtype=str), 2, 1, 0.5, False, "numeric-string"),
+            (
+                np.array([0.0, "1.0"], dtype=object),
+                2,
+                1,
+                0.5,
+                False,
+                "numeric-string",
+            ),
             (np.array([0.0 + 1.0j, 1.0 + 0.0j]), 2, 1, 0.5, False, "traj_flat"),
             (np.array([0.0, np.inf]), 2, 1, 0.5, False, "traj_flat"),
             (np.array([[0.0, 1.0]]), 2, 1, 0.5, False, "traj_flat"),
@@ -214,6 +223,15 @@ class TestDirectBackendBoundaryContracts:
                 0.5,
                 False,
                 "traj_b_flat",
+            ),
+            (
+                np.array([0.0, 1.0]),
+                np.array(["0.0", "1.0"], dtype=str),
+                2,
+                1,
+                0.5,
+                False,
+                "numeric-string",
             ),
             (
                 np.array([0.0, 1.0]),
@@ -264,6 +282,11 @@ class TestDirectBackendBoundaryContracts:
             (np.array([0, 1, 1]), "recurrence_matrix", "size"),
             (np.array([0, 1, 2, 1]), "recurrence_matrix", "0/1"),
             (np.array([1, np.inf, 0, 1]), "recurrence_matrix", "finite"),
+            (
+                np.array(["1", "0", "0", "1"], dtype=str),
+                "recurrence_matrix",
+                "numeric-string",
+            ),
             (np.array([0, 1, 1, 1]), "recurrence_matrix", "true diagonal"),
             (np.array([1, 1, 0, 1]), "recurrence_matrix", "symmetric"),
             (np.array([0, 1, 2, 1]), "cross_recurrence_matrix", "0/1"),
@@ -277,6 +300,15 @@ class TestDirectBackendBoundaryContracts:
                 value,
                 t=2,
                 name=name,
+            )
+
+    def test_output_validation_rejects_numeric_string_expected(self) -> None:
+        with pytest.raises(ValueError, match="expected output .*numeric-string"):
+            recurrence_validation.validate_recurrence_backend_output(
+                np.array([1, 0, 0, 1], dtype=np.uint8),
+                t=2,
+                name="recurrence_matrix",
+                expected=np.array(["1", "0", "0", "1"], dtype=str),
             )
 
     def test_output_validation_rejects_exact_threshold_divergence(self) -> None:

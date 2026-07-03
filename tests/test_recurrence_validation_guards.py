@@ -13,6 +13,9 @@ from typing import Any
 import numpy as np
 import pytest
 
+from scpn_phase_orchestrator.experimental.accelerators.monitor import (
+    _recurrence_validation as recurrence_validation,
+)
 from scpn_phase_orchestrator.experimental.accelerators.monitor._recurrence_validation import (  # noqa: E501
     expected_recurrence_backend_output,
     validate_cross_recurrence_backend_inputs,
@@ -43,6 +46,9 @@ class TestRecurrenceInputs:
         traj, t, d, eps, ang = validate_recurrence_backend_inputs(**_inputs())
         assert (t, d) == (2, 1)
 
+    def test_numeric_string_helper_ignores_non_string_scalars(self) -> None:
+        assert not recurrence_validation._is_numeric_string_alias(1.0)
+
     @pytest.mark.parametrize(
         ("overrides", "match"),
         [
@@ -54,6 +60,8 @@ class TestRecurrenceInputs:
                 {"traj_flat": np.array([True, 1.0], dtype=object)},
                 "must not contain boolean",
             ),
+            ({"traj_flat": np.array(["0.0", "1.0"])}, "numeric-string"),
+            ({"traj_flat": np.array([0.0, "1.0"], dtype=object)}, "numeric-string"),
             ({"traj_flat": np.array([0.0 + 1j, 1.0])}, "must contain real-valued"),
             ({"traj_flat": np.array(["not-float", "1.0"])}, "must be a finite"),
             ({"traj_flat": np.array([[0.0], [1.0]])}, "must be one-dimensional"),
@@ -92,6 +100,17 @@ class TestCrossRecurrenceInputs:
                 angular=False,
             )
 
+    def test_rejects_numeric_string_second_trajectory(self) -> None:
+        with pytest.raises(ValueError, match="traj_b_flat .*numeric-string"):
+            validate_cross_recurrence_backend_inputs(
+                traj_a_flat=np.array([0.0, 1.0]),
+                traj_b_flat=np.array(["0.0", "1.0"]),
+                t=2,
+                d=1,
+                epsilon=0.5,
+                angular=False,
+            )
+
 
 class TestRecurrenceOutput:
     def test_valid_round_trips(self) -> None:
@@ -122,6 +141,14 @@ class TestRecurrenceOutput:
         with pytest.raises(ValueError, match="output must be numeric"):
             validate_recurrence_backend_output(
                 np.array(["one", "zero", "zero", "one"], dtype=object),
+                t=2,
+                name="recurrence",
+            )
+
+    def test_rejects_numeric_string_output_values(self) -> None:
+        with pytest.raises(ValueError, match="output .*numeric-string"):
+            validate_recurrence_backend_output(
+                np.array(["1", "0", "0", "1"]),
                 t=2,
                 name="recurrence",
             )
@@ -163,6 +190,15 @@ class TestRecurrenceOutput:
                 t=2,
                 name="recurrence",
                 expected=np.array(["one", "zero", "zero", "one"], dtype=object),
+            )
+
+    def test_rejects_numeric_string_expected_output(self) -> None:
+        with pytest.raises(ValueError, match="expected output .*numeric-string"):
+            validate_recurrence_backend_output(
+                np.array([1, 0, 0, 1], dtype=np.uint8),
+                t=2,
+                name="recurrence",
+                expected=np.array(["1", "0", "0", "1"]),
             )
 
 

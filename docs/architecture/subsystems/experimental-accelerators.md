@@ -142,6 +142,13 @@ correlation-integral output, and Kaplan-Yorke scalar payloads reject boolean
 aliases, complex/object-complex aliases, numeric-string aliases, non-finite
 values, shape drift, and out-of-domain physics values before float coercion or
 publication.
+The public recurrence dispatcher and direct Go, Julia, and Mojo bridges apply
+the shared recurrence validators before optional runtime loading and after
+backend execution: trajectory payloads, backend recurrence matrices, and exact
+reference-output payloads reject boolean aliases, complex/object-complex
+aliases, numeric-string aliases, non-finite values, wrong cardinality,
+non-binary cells, diagonal/symmetry drift, and exact-threshold divergence before
+float or `uint8` coercion or publication.
 
 ## Wiring
 

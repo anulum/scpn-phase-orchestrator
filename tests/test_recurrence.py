@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+import sys
+from types import ModuleType
 from typing import Any
 
 import numpy as np
@@ -21,6 +23,11 @@ from scpn_phase_orchestrator.monitor.recurrence import (
     recurrence_matrix,
     rqa,
 )
+
+
+class _ArrayConversionFailure:
+    def __array__(self, dtype: object | None = None) -> np.ndarray[Any, Any]:
+        raise ValueError("synthetic conversion failure")
 
 
 class TestRecurrenceMatrix:
@@ -66,7 +73,10 @@ class TestRecurrenceMatrix:
             (np.array([0.0, np.nan], dtype=np.float64), "trajectory"),
             (np.array([[0.0], [np.inf]], dtype=np.float64), "trajectory"),
             (np.array([0.0, True], dtype=object), "trajectory"),
+            (np.array(["0.0", "1.0"], dtype=str), "trajectory"),
+            (np.array([0.0, "1.0"], dtype=object), "trajectory"),
             (np.array([0.0 + 1.0j, 1.0 + 0.0j]), "trajectory"),
+            (np.zeros((1, 1, 1), dtype=np.float64), "trajectory"),
             ([["not-a-state"]], "trajectory"),
         ],
     )
@@ -130,12 +140,16 @@ class TestRecurrenceMatrix:
             np.array([1, 0, 1], dtype=np.uint8),
             np.array([1, 0, 0, 2], dtype=np.uint8),
             np.array([1, 0, 0, np.nan], dtype=np.float64),
+            np.array(["1", "0", "0", "1"], dtype=str),
+            np.array([1, "0", 0, 1], dtype=object),
+            np.array(["one", "zero", "zero", "one"], dtype=object),
+            _ArrayConversionFailure(),
             np.array([0, 0, 0, 1], dtype=np.uint8),
             np.array([1, 1, 0, 1], dtype=np.uint8),
         ],
     )
     def test_backend_invalid_matrix_payload_fails_closed(
-        self, monkeypatch: pytest.MonkeyPatch, backend_output: np.ndarray
+        self, monkeypatch: pytest.MonkeyPatch, backend_output: Any
     ) -> None:
         def fake_rm(_traj_flat, _t, _d, _epsilon, _angular):
             return backend_output
@@ -149,6 +163,78 @@ class TestRecurrenceMatrix:
         )
         with pytest.raises(ValueError):
             recurrence_matrix(np.array([[0.0], [1.0]]), epsilon=0.5)
+
+    def test_backend_expected_shape_mismatch_fails_closed(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def fake_rm(_traj_flat, _t, _d, _epsilon, _angular):
+            return np.array([1, 0, 0, 1], dtype=np.uint8)
+
+        import scpn_phase_orchestrator.monitor.recurrence as rec_mod
+
+        monkeypatch.setattr(
+            rec_mod,
+            "_dispatch",
+            lambda fn_name: fake_rm if fn_name == "rm" else None,
+        )
+        monkeypatch.setattr(
+            rec_mod,
+            "_expected_recurrence_matrix",
+            lambda *_args, **_kwargs: np.ones((1, 1), dtype=bool),
+        )
+
+        with pytest.raises(ValueError, match="expected output shape"):
+            recurrence_matrix(np.array([[0.0], [1.0]]), epsilon=0.5)
+
+    def test_private_alias_helpers_fail_closed_on_conversion_errors(self) -> None:
+        assert not recurrence_module._contains_boolean_alias(_ArrayConversionFailure())
+        assert not recurrence_module._contains_numeric_string_alias(
+            _ArrayConversionFailure()
+        )
+        assert not recurrence_module._is_numeric_string_alias(1.0)
+
+    def test_dispatch_skips_unknown_and_empty_backends(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        previous_active = recurrence_module.ACTIVE_BACKEND
+        previous_available = recurrence_module.AVAILABLE_BACKENDS
+        monkeypatch.setattr(recurrence_module, "ACTIVE_BACKEND", "unknown")
+        monkeypatch.setattr(recurrence_module, "AVAILABLE_BACKENDS", ["empty"])
+        monkeypatch.setitem(recurrence_module._LOADERS, "empty", lambda: {})
+        recurrence_module._BACKEND_CACHE.clear()
+        try:
+            assert recurrence_module._dispatch("rm") is None
+        finally:
+            recurrence_module._BACKEND_CACHE.clear()
+            recurrence_module.ACTIVE_BACKEND = previous_active
+            recurrence_module.AVAILABLE_BACKENDS = previous_available
+
+    def test_julia_loader_returns_backend_functions(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        module_name = (
+            "scpn_phase_orchestrator.experimental.accelerators.monitor."
+            "_recurrence_julia"
+        )
+        fake_module = ModuleType(module_name)
+
+        def fake_recurrence_matrix() -> None:
+            return None
+
+        def fake_cross_recurrence_matrix() -> None:
+            return None
+
+        fake_module.recurrence_matrix_julia = fake_recurrence_matrix
+        fake_module.cross_recurrence_matrix_julia = fake_cross_recurrence_matrix
+        monkeypatch.setitem(sys.modules, module_name, fake_module)
+        monkeypatch.setattr(recurrence_module, "require_juliacall_main", lambda: None)
+
+        loaded = recurrence_module._load_julia_fns()
+
+        assert loaded == {
+            "rm": fake_recurrence_matrix,
+            "cross_rm": fake_cross_recurrence_matrix,
+        }
 
 
 class TestRQA:
@@ -223,7 +309,9 @@ class TestRQA:
         [
             ({"recurrence_rate": -0.1}, "recurrence_rate"),
             ({"recurrence_rate": 1.1}, "recurrence_rate"),
+            ({"determinism": False}, "determinism"),
             ({"determinism": np.nan}, "determinism"),
+            ({"avg_diagonal": "0.1"}, "avg_diagonal"),
             ({"avg_diagonal": -0.1}, "avg_diagonal"),
             ({"max_diagonal": -1}, "max_diagonal"),
             ({"max_diagonal": 1.5}, "max_diagonal"),
@@ -317,6 +405,8 @@ class TestCrossRecurrence:
             (np.zeros(2), np.array([0.0, np.inf]), "traj_b"),
             (np.array([0.0, True], dtype=object), np.zeros(2), "traj_a"),
             (np.zeros(2), np.array([0.0, False], dtype=object), "traj_b"),
+            (np.array(["0.0", "1.0"], dtype=str), np.zeros(2), "traj_a"),
+            (np.zeros(2), np.array([0.0, "1.0"], dtype=object), "traj_b"),
             (np.array([0.0 + 1.0j, 1.0]), np.zeros(2), "traj_a"),
             (np.zeros(2), np.array([0.0, 1.0j]), "traj_b"),
             ([["not-a-state"]], np.zeros((1, 1)), "traj_a"),
@@ -335,6 +425,20 @@ class TestCrossRecurrence:
     def test_cross_rejects_invalid_epsilon(self, epsilon: Any) -> None:
         with pytest.raises(ValueError, match="epsilon"):
             cross_recurrence_matrix(np.zeros(4), np.zeros(4), epsilon=epsilon)
+
+    def test_cross_rejects_shape_mismatch(self) -> None:
+        with pytest.raises(ValueError, match="trajectories must match"):
+            cross_recurrence_matrix(np.zeros((2, 1)), np.zeros((3, 1)), epsilon=0.1)
+
+    def test_cross_empty_trajectory_returns_empty_matrix(self) -> None:
+        result = cross_recurrence_matrix(
+            np.empty((0, 1), dtype=np.float64),
+            np.empty((0, 1), dtype=np.float64),
+            epsilon=0.1,
+        )
+
+        assert result.shape == (0, 0)
+        assert result.dtype == bool
 
     @pytest.mark.parametrize("metric", ["manhattan", "", None])
     def test_cross_rejects_unknown_metric(self, metric: Any) -> None:

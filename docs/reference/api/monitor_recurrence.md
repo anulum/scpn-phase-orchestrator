@@ -164,18 +164,21 @@ arrays whose length matches ``T*d``; ``T`` and ``d`` must be integer
 controls with ``T >= 0`` and ``d >= 1``; ``epsilon`` must be a finite
 non-negative real; and the direct ``angular`` argument must be an
 explicit boolean flag. Boolean aliases inside trajectory payloads,
-complex samples, non-finite samples, malformed lengths, and invalid
-controls are rejected before shared-library, Julia, or subprocess
-execution.
+complex samples, numeric-string aliases, non-finite samples, malformed
+lengths, and invalid controls are rejected before shared-library, Julia,
+or subprocess execution.
 Direct backend outputs are also validated before return as numeric
-``0``/``1`` recurrence relations of size ``T*T``. Plain recurrence outputs
-must keep the true diagonal and symmetry invariants; cross-recurrence outputs
-may be non-symmetric but must still be binary and finite. Both plain and
+``0``/``1`` recurrence relations of size ``T*T`` while rejecting
+numeric-string aliases before numeric coercion. Plain recurrence outputs must
+keep the true diagonal and symmetry invariants; cross-recurrence outputs may be
+non-symmetric but must still be binary and finite. Both plain and
 cross-recurrence outputs must also match the exact reference threshold relation
 ``Θ(ε - distance)`` for every cell after the bridge returns. This closes the
 otherwise plausible failure mode where a backend emits a shape-correct binary
 matrix that preserves superficial invariants while changing the recurrence
-physics.
+physics. The exact-reference output used by the shared validator rejects
+numeric-string aliases as well, so parity comparisons cannot silently widen
+stringly typed fixtures or generated payloads to ``uint8``.
 The Mojo subprocess bridge also enforces exact stdout cardinality before
 integer parsing: ``REC`` and ``CROSS`` must each emit exactly ``T*T``
 integer lines. Missing, extra, blank, or non-integer lines fail closed before
@@ -238,9 +241,9 @@ Current available backends for this run: ``rust``, ``mojo``, ``julia``,
 
 | T   | rust (ms) | mojo (ms) | julia (ms) | go (ms) | python (ms) |
 | --- | --------: | --------: | ---------: | ------: | ----------: |
-| 30  |    1.5558 |   98.3779 |     0.2383 |  1.9220 |      0.0625 |
-| 100 |    0.6425 |  192.0372 |     5.9711 | 17.1577 |      1.8259 |
-| 300 |   28.8925 |  518.2477 |    43.5352 | 36.2976 |     20.2669 |
+| 30  |    3.3836 |  150.6513 |     1.2305 |  8.0378 |      0.1581 |
+| 100 |   15.4293 |  154.7800 |    19.7573 | 19.6608 |      0.7260 |
+| 300 |   68.3062 |  315.4719 |    65.3366 | 75.7222 |     10.7551 |
 
 Observations:
 

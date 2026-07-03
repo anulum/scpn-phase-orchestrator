@@ -210,11 +210,46 @@ def _contains_boolean_alias(value: object) -> bool:
     return any(isinstance(item, (bool, np.bool_)) for item in array.flat)
 
 
+def _is_string_like(value: object) -> bool:
+    """Return whether ``value`` is a Python or NumPy string scalar."""
+    return isinstance(value, (str, bytes, np.str_, np.bytes_))
+
+
+def _is_numeric_string_alias(value: object) -> bool:
+    """Return whether ``value`` is a string scalar parsable as a float."""
+    if not _is_string_like(value):
+        return False
+    try:
+        float(cast("str | bytes", value))
+    except (TypeError, ValueError):
+        return False
+    return True
+
+
+def _contains_numeric_string_alias(value: object) -> bool:
+    """Return whether ``value`` contains only numeric string aliases."""
+    try:
+        array = np.asarray(value, dtype=object)
+    except (TypeError, ValueError):
+        return False
+
+    saw_string = False
+    for item in array.flat:
+        if not _is_string_like(item):
+            continue
+        saw_string = True
+        if not _is_numeric_string_alias(item):
+            return False
+    return saw_string
+
+
 def _validate_trajectory(value: object, *, name: str) -> FloatArray:
     """Return the trajectory as a validated 2-D finite array, else raise."""
     raw = np.asarray(value)
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
+    if _contains_numeric_string_alias(value):
+        raise ValueError(f"{name} must not contain numeric-string aliases")
     if np.iscomplexobj(raw):
         raise ValueError(f"{name} must contain real-valued trajectory samples")
     try:
@@ -319,6 +354,10 @@ def _backend_recurrence_matrix(
     if array.size != t * t:
         raise ValueError(
             f"{name} backend output size must be {t * t}, got {array.size}"
+        )
+    if _contains_numeric_string_alias(value):
+        raise ValueError(
+            f"{name} backend output must not contain numeric-string aliases"
         )
     try:
         numeric = array.astype(np.float64, copy=False).ravel()
