@@ -119,7 +119,15 @@ class TestDirectBackendBoundaryContracts:
 
         assert chimera_validation._contains_boolean_alias(value) is False
         assert chimera_validation._contains_complex_alias(value) is False
+        assert chimera_validation._contains_numeric_string_alias(value) is False
         assert chimera_validation._has_complex_payload(value) is False
+        assert chimera_validation._is_numeric_string_alias(0.5) is False
+        assert (
+            chimera_validation._contains_numeric_string_alias(
+                np.array([0.0, "1.0"], dtype=object)
+            )
+            is True
+        )
 
     @pytest.mark.parametrize(
         "backend",
@@ -142,6 +150,12 @@ class TestDirectBackendBoundaryContracts:
                 "finite one-dimensional",
             ),
             (
+                np.array(["0.0", "1.0"], dtype=object),
+                np.zeros(4),
+                2,
+                "numeric-string",
+            ),
+            (
                 np.array([0.0 + 0.25j, 1.0], dtype=object),
                 np.zeros(4),
                 2,
@@ -158,6 +172,12 @@ class TestDirectBackendBoundaryContracts:
                 np.array([0.0, 1.0 + 0.25j, 1.0, 0.0], dtype=object),
                 2,
                 "real-valued",
+            ),
+            (
+                np.array([0.0, 1.0]),
+                np.array(["0.0", "1.0", "1.0", "0.0"], dtype=object),
+                2,
+                "numeric-string",
             ),
             (np.array([0.0, 1.0]), np.zeros((2, 2)), 2, "knm_flat"),
             (np.array([0.0, 1.0]), np.zeros(3), 2, "n\\*n"),
@@ -182,6 +202,7 @@ class TestDirectBackendBoundaryContracts:
             (np.array([0.1, np.bool_(True)], dtype=object), "boolean"),
             (np.array([0.1, 0.2 + 0.1j], dtype=np.complex128), "real-valued"),
             (np.array([0.1, 0.2 + 0.1j], dtype=object), "real-valued"),
+            (np.array(["0.1", "0.2"], dtype=object), "numeric-string"),
             (np.array([0.1, 1.2]), "\\[0, 1\\]"),
             (np.array([0.1]), "length"),
         ],

@@ -156,6 +156,12 @@ reference-output payloads reject boolean aliases, complex/object-complex
 aliases, numeric-string aliases, non-finite values, wrong cardinality,
 non-binary cells, diagonal/symmetry drift, and exact-threshold divergence before
 float or `uint8` coercion or publication.
+The public chimera dispatcher and direct Go, Julia, and Mojo bridges apply the
+shared chimera validators before optional runtime loading and after backend
+execution: phase vectors, flattened coupling matrices, and backend local-order
+outputs reject boolean aliases, complex/object-complex aliases, numeric-string
+aliases, non-finite values, wrong cardinality, non-zero coupling diagonals, and
+unit-interval drift before float coercion or publication.
 The public transfer-entropy dispatcher and direct Go, Julia, and Mojo bridges
 apply shared TE validators before optional runtime loading and after backend
 execution: source/target phase vectors, flattened phase-series payloads,

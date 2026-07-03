@@ -173,6 +173,7 @@ class ChimeraState:
     chimera_index: float = 0.0
 
     def __post_init__(self) -> None:
+        """Validate and normalise immutable Chimera result fields."""
         coherent = _validate_index_list(self.coherent_indices, name="coherent_indices")
         incoherent = _validate_index_list(
             self.incoherent_indices,
@@ -230,6 +231,40 @@ def _contains_complex_alias(value: object) -> bool:
     return any(isinstance(item, (complex, np.complexfloating)) for item in raw.flat)
 
 
+def _is_string_like(value: object) -> bool:
+    """Return whether ``value`` is a Python or NumPy string scalar."""
+    return isinstance(value, (str, bytes, np.str_, np.bytes_))
+
+
+def _is_numeric_string_alias(value: object) -> bool:
+    """Return whether ``value`` is a string scalar parsable as a float."""
+    if not _is_string_like(value):
+        return False
+    try:
+        float(cast("str | bytes", value))
+    except (TypeError, ValueError):
+        return False
+    return True
+
+
+def _contains_numeric_string_alias(value: object) -> bool:
+    """Return whether the value contains numeric string aliases."""
+    try:
+        raw = np.asarray(value)
+    except (TypeError, ValueError):
+        return False
+    if raw.dtype.kind not in {"O", "S", "U"}:
+        return False
+    saw_string = False
+    for item in raw.astype(object, copy=False).flat:
+        if not _is_string_like(item):
+            continue
+        saw_string = True
+        if not _is_numeric_string_alias(item):
+            return False
+    return saw_string
+
+
 def _has_complex_payload(value: object) -> bool:
     """Return whether the value carries a complex-number payload."""
     try:
@@ -249,6 +284,8 @@ def _validate_chimera_inputs(
         raise ValueError("phases must not contain boolean values")
     if _has_complex_payload(phases):
         raise ValueError("phases must contain real-valued phase samples")
+    if _contains_numeric_string_alias(raw_phases):
+        raise ValueError("phases must not contain numeric-string aliases")
     try:
         phases_array = raw_phases.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
@@ -264,6 +301,8 @@ def _validate_chimera_inputs(
         raise ValueError("knm must not contain boolean values")
     if _has_complex_payload(knm):
         raise ValueError("knm must contain real-valued couplings")
+    if _contains_numeric_string_alias(raw_knm):
+        raise ValueError("knm must not contain numeric-string aliases")
     try:
         knm_array = raw_knm.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
@@ -287,6 +326,10 @@ def _validate_local_order(value: object, *, n_oscillators: int) -> FloatArray:
         raise ValueError("local order parameter output must not contain boolean values")
     if _has_complex_payload(value):
         raise ValueError("local order parameter output must contain real values")
+    if _contains_numeric_string_alias(raw):
+        raise ValueError(
+            "local order parameter output must not contain numeric-string aliases"
+        )
     try:
         local = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:

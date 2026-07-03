@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 from numbers import Integral
-from typing import TypeAlias
+from typing import TypeAlias, cast
 
 import numpy as np
 from numpy.typing import NDArray
@@ -35,6 +35,40 @@ def _contains_complex_alias(value: object) -> bool:
     except (TypeError, ValueError):
         return False
     return any(isinstance(item, (complex, np.complexfloating)) for item in array.flat)
+
+
+def _is_string_like(value: object) -> bool:
+    """Return whether ``value`` is a Python or NumPy string scalar."""
+    return isinstance(value, (str, bytes, np.str_, np.bytes_))
+
+
+def _is_numeric_string_alias(value: object) -> bool:
+    """Return whether ``value`` is a string scalar parsable as a float."""
+    if not _is_string_like(value):
+        return False
+    try:
+        float(cast("str | bytes", value))
+    except (TypeError, ValueError):
+        return False
+    return True
+
+
+def _contains_numeric_string_alias(raw: object) -> bool:
+    """Return whether the value contains numeric string aliases."""
+    try:
+        array = np.asarray(raw)
+    except (TypeError, ValueError):
+        return False
+    if array.dtype.kind not in {"O", "S", "U"}:
+        return False
+    saw_string = False
+    for value in array.astype(object, copy=False).flat:
+        if not _is_string_like(value):
+            continue
+        saw_string = True
+        if not _is_numeric_string_alias(value):
+            return False
+    return saw_string
 
 
 def _has_complex_payload(value: object) -> bool:
@@ -63,6 +97,8 @@ def _validate_float_vector(value: object, name: str) -> FloatArray:
         raise ValueError(f"{name} must not contain boolean values")
     if _has_complex_payload(value):
         raise ValueError(f"{name} must be real-valued")
+    if _contains_numeric_string_alias(raw):
+        raise ValueError(f"{name} must not contain numeric-string aliases")
     try:
         array = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:

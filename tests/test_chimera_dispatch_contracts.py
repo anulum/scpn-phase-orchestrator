@@ -174,11 +174,17 @@ def test_alias_probe_helpers_treat_unprobeable_payload_as_absent() -> None:
     assert chimera_mod._contains_boolean_alias(probe) is False
     assert chimera_mod._contains_complex_alias(probe) is False
     assert chimera_mod._has_complex_payload(probe) is False
+    assert chimera_mod._is_numeric_string_alias(0.5) is False
+    assert (
+        chimera_mod._contains_numeric_string_alias(np.array([0.0, "1.0"], dtype=object))
+        is True
+    )
 
 
 def test_complex_payload_probe_handles_uncoercible_values() -> None:
     """Complex-payload probing tolerates values NumPy cannot coerce."""
     assert chimera_mod._has_complex_payload(_UncoercibleProbe()) is False
+    assert chimera_mod._contains_numeric_string_alias(_UncoercibleProbe()) is False
 
 
 def test_local_order_parameter_accepts_empty_public_input() -> None:

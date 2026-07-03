@@ -85,13 +85,14 @@ def local_order_parameter(
 Returns a ``(N,)`` array of ``R_i`` values. The compute surface for
 the 5-backend chain.
 
-Inputs must be finite real-valued arrays. Boolean aliases and complex
-phase/coupling payloads, including object arrays that hide Python or
-NumPy complex scalar aliases, are rejected before backend dispatch
-because the neighbourhood phasor statistic is defined over real phase
-angles and real coupling weights. Backend local-order vectors are
-revalidated as finite real values in ``[0, 1]`` before their results
-are accepted.
+Inputs must be finite real-valued arrays. Boolean aliases,
+numeric-string aliases such as `"0.5"`, and complex phase/coupling
+payloads, including object arrays that hide Python or NumPy complex
+scalar aliases, are rejected before backend dispatch because the
+neighbourhood phasor statistic is defined over real phase angles and
+real coupling weights. Backend local-order vectors are revalidated as
+finite real values in ``[0, 1]`` with the same numeric-string rejection
+before their results are accepted.
 
 ### 2.2 `detect_chimera`
 
@@ -147,15 +148,17 @@ The direct Go, Julia, and Mojo wrappers validate before loading their optional
 runtimes:
 
 * `phases` must be a one-dimensional finite real `float64` vector with no
-  boolean aliases, complex dtypes, or object-carried complex scalar aliases.
+  boolean aliases, numeric-string aliases, complex dtypes, or object-carried
+  complex scalar aliases.
 * `knm_flat` must be a one-dimensional finite real `float64` vector with no
-  boolean aliases, complex dtypes, or object-carried complex scalar aliases.
+  boolean aliases, numeric-string aliases, complex dtypes, or object-carried
+  complex scalar aliases.
 * `n` must be a non-boolean non-negative integer.
 * `phases.size` must equal `n` and `knm_flat.size` must equal `n * n`.
 * the flattened coupling matrix must have a zero self-coupling diagonal.
 * returned `local_order` must be a finite real vector of length `n` with no
-  boolean aliases, no complex dtype/object-complex payloads, and values inside
-  the physical interval `[0, 1]`.
+  boolean aliases, no numeric-string aliases, no complex dtype/object-complex
+  payloads, and values inside the physical interval `[0, 1]`.
 
 Empty direct calls preserve the Python public contract by returning an empty
 local-order vector before shared-library loading, Julia initialisation, or
@@ -295,15 +298,16 @@ finally:
 
 ## 7. Tests
 
-Three files (24 tests):
+The focused Chimera suites cover algorithmic properties, public dispatch
+contracts, direct accelerator boundary guards, backend parity, and slow
+stability checks:
 
 ### 7.1 `tests/test_chimera_algorithm.py`
 
-13 tests:
-
 * `TestLocalOrderParameter` — perfect sync → ``1``; uniform on
   circle → ``1/(N−1)``; unit-interval bound; isolated oscillator
-  → ``0``; empty input.
+  → ``0``; empty input; numeric-string, boolean, complex, non-finite,
+  shape, and diagonal rejection.
 * `TestDetectChimera` — perfect sync → all coherent; antiphase
   → all incoherent; chimera index in ``[0, 1]``; partition totals
   to ``N``; empty input returns empty state.
@@ -321,8 +325,9 @@ Module-specific backend tests cover:
 * `TestJuliaParity` — two seeds at `1e-12`.
 * `TestGoParity` — Hypothesis sweep at `1e-12`.
 * `TestMojoParity` — two seeds at `1e-9`.
-* `TestDirectBackendBoundaryContracts` — invalid inputs fail before optional
-  runtime loading, and nonphysical local-order outputs fail before return.
+* `TestDirectBackendBoundaryContracts` — invalid inputs, including
+  numeric-string aliases, fail before optional runtime loading, and
+  nonphysical local-order outputs fail before return.
 * `TestCrossBackendConsistency` — iterates every
   `AVAILABLE_BACKENDS` under the tolerance matrix + confirms
   `detect_chimera` routes through `local_order_parameter`.
