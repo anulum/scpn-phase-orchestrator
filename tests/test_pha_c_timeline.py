@@ -12,13 +12,18 @@ from __future__ import annotations
 
 import importlib
 import json
+import runpy
+import sys
 from dataclasses import replace
+from pathlib import Path
+from typing import cast
 
 import numpy as np
 import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
+from benchmarks import pha_c_timeline_benchmark
 from benchmarks.pha_c_timeline_benchmark import (
     benchmark_pha_c_timeline_polyglot_parity_gate,
 )
@@ -485,6 +490,80 @@ def test_timeline_validation_rejects_numeric_divergence() -> None:
         )
 
 
+def test_timeline_validation_rejects_numeric_string_record_field() -> None:
+    timeline = _valid_timeline()
+    forged = replace(
+        timeline,
+        min_phase_margin_rad=cast(float, str(timeline.min_phase_margin_rad)),
+    )
+
+    with pytest.raises(ValueError, match="min_phase_margin_rad"):
+        _pha_c_timeline_validation.validate_pha_c_event_timeline(
+            forged,
+            timeline,
+        )
+
+
+@pytest.mark.parametrize(
+    ("changes", "match"),
+    [
+        (
+            {"max_phase_dispersion_rad": float("nan")},
+            "max_phase_dispersion_rad.*finite",
+        ),
+        ({"sample_count": "5"}, "sample_count.*integer"),
+        ({"first_lock_observed": np.bool_(True)}, "first_lock_observed.*bool"),
+        ({"claim_boundary": b"claim"}, "claim_boundary.*string"),
+    ],
+)
+def test_timeline_validation_rejects_strict_record_field_type_drift(
+    changes: dict[str, object],
+    match: str,
+) -> None:
+    timeline = _valid_timeline()
+
+    with pytest.raises(ValueError, match=match):
+        _pha_c_timeline_validation.validate_pha_c_event_timeline(
+            replace(timeline, **changes),
+            timeline,
+        )
+
+
+def test_timeline_benchmark_error_rejects_numeric_string_record_field() -> None:
+    from benchmarks.pha_c_timeline_benchmark import _record_max_abs_error
+
+    timeline = _valid_timeline()
+    forged = replace(
+        timeline,
+        min_phase_margin_rad=cast(float, str(timeline.min_phase_margin_rad)),
+    )
+
+    with pytest.raises(ValueError, match="min_phase_margin_rad"):
+        _record_max_abs_error(forged, timeline)
+
+
+def test_timeline_validation_rejects_integer_divergence() -> None:
+    timeline = _valid_timeline()
+    forged = replace(timeline, reset_count=timeline.reset_count + 1)
+
+    with pytest.raises(ValueError, match="reset_count"):
+        _pha_c_timeline_validation.validate_pha_c_event_timeline(
+            forged,
+            timeline,
+        )
+
+
+def test_timeline_validation_rejects_boolean_divergence() -> None:
+    timeline = _valid_timeline()
+    forged = replace(timeline, first_lock_observed=not timeline.first_lock_observed)
+
+    with pytest.raises(ValueError, match="first_lock_observed"):
+        _pha_c_timeline_validation.validate_pha_c_event_timeline(
+            forged,
+            timeline,
+        )
+
+
 def test_timeline_validation_rejects_discrete_divergence() -> None:
     phases, positions, times = _trajectory()
     timeline = _valid_timeline()
@@ -642,3 +721,98 @@ def test_verify_accepts_a_never_locked_timeline() -> None:
     assert timeline.first_lock_index == -1
     assert timeline.first_lock_time == 0.0
     assert verify_pha_c_event_timeline(timeline) is timeline
+
+
+def test_pha_c_timeline_benchmark_rejects_invalid_int_controls() -> None:
+    with pytest.raises(ValueError, match="n must be an integer"):
+        pha_c_timeline_benchmark._validate_int_control(
+            True,
+            name="n",
+            minimum=2,
+        )
+    with pytest.raises(ValueError, match="calls must be at least 1"):
+        pha_c_timeline_benchmark._validate_int_control(
+            0,
+            name="calls",
+            minimum=1,
+        )
+    with pytest.raises(ValueError, match="flag must be an integer"):
+        pha_c_timeline_benchmark._payload_int(True, name="flag")
+
+
+def test_pha_c_timeline_benchmark_main_writes_output(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    payload = {"suite": "stub", "acceptance_passed": 1}
+    output_path = tmp_path / "timeline.json"
+
+    def fake_gate(*, n: int, calls: int) -> dict[str, object]:
+        assert n == 3
+        assert calls == 1
+        return payload
+
+    monkeypatch.setattr(
+        pha_c_timeline_benchmark,
+        "benchmark_pha_c_timeline_polyglot_parity_gate",
+        fake_gate,
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "pha-c-timeline",
+            "--n",
+            "3",
+            "--calls",
+            "1",
+            "--parity-gate",
+            "--output",
+            str(output_path),
+        ],
+    )
+
+    assert pha_c_timeline_benchmark._main() == 0
+    assert json.loads(output_path.read_text(encoding="utf-8")) == payload
+    assert json.loads(capsys.readouterr().out) == payload
+
+
+def test_pha_c_timeline_benchmark_main_fails_parity_gate(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    payload = {"suite": "stub", "acceptance_passed": 0}
+
+    def fake_gate(*, n: int, calls: int) -> dict[str, object]:
+        assert n == 8
+        assert calls == 3
+        return payload
+
+    monkeypatch.setattr(
+        pha_c_timeline_benchmark,
+        "benchmark_pha_c_timeline_polyglot_parity_gate",
+        fake_gate,
+    )
+    monkeypatch.setattr(sys, "argv", ["pha-c-timeline", "--parity-gate"])
+
+    assert pha_c_timeline_benchmark._main() == 1
+    assert json.loads(capsys.readouterr().out) == payload
+
+
+def test_pha_c_timeline_benchmark_module_entrypoint(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.setattr(sys, "argv", ["pha-c-timeline", "--n", "2", "--calls", "1"])
+
+    with pytest.raises(SystemExit) as exc_info:
+        runpy.run_path(
+            str(Path(pha_c_timeline_benchmark.__file__).resolve()),
+            run_name="__main__",
+        )
+
+    assert exc_info.value.code == 0
+    assert json.loads(capsys.readouterr().out)["suite"] == (
+        "pha_c_timeline_polyglot_parity_gate"
+    )

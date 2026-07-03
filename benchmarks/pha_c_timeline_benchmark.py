@@ -26,6 +26,7 @@ from scpn_phase_orchestrator.experimental.accelerators.upde import (
     _pha_c_timeline_julia,
     _pha_c_timeline_mojo,
     _pha_c_timeline_rust,
+    _pha_c_timeline_validation,
 )
 from scpn_phase_orchestrator.upde.pha_c_timeline import (
     PHA_C_TIMELINE_CLAIM_BOUNDARY,
@@ -63,6 +64,7 @@ BACKEND_FUNCTIONS: dict[str, BackendFn] = {
 
 
 def _validate_int_control(value: object, *, name: str, minimum: int) -> int:
+    """Return a benchmark integer control after fail-closed validation."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, (int, np.integer)):
         raise ValueError(f"{name} must be an integer")
     parsed = int(value)
@@ -71,9 +73,17 @@ def _validate_int_control(value: object, *, name: str, minimum: int) -> int:
     return parsed
 
 
+def _payload_int(value: object, *, name: str) -> int:
+    """Return a JSON-like payload integer after rejecting booleans."""
+    if isinstance(value, (bool, np.bool_)) or not isinstance(value, (int, np.integer)):
+        raise ValueError(f"{name} must be an integer")
+    return int(value)
+
+
 def _problem(
     n: int,
 ) -> tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]]:
+    """Build the deterministic timeline benchmark trajectory."""
     locked_phase = np.linspace(-0.002, 0.002, n, dtype=np.float64)
     locked_position = np.linspace(-0.0005, 0.0005, n, dtype=np.float64)
     failed_phase = np.linspace(-0.02, 0.02, n, dtype=np.float64)
@@ -101,6 +111,7 @@ def _problem(
 
 
 def _timeline_sha256(record: PHACTimelineRecord) -> str:
+    """Return the SHA-256 digest of a canonical timeline payload."""
     return hashlib.sha256(
         json.dumps(record.to_dict(), sort_keys=True, separators=(",", ":")).encode(),
     ).hexdigest()
@@ -110,46 +121,11 @@ def _record_max_abs_error(
     got: PHACTimelineRecord,
     reference: PHACTimelineRecord,
 ) -> float:
-    got_dict = got.to_dict()
-    ref_dict = reference.to_dict()
-    numeric_error = max(
-        abs(float(got_dict[field]) - float(ref_dict[field]))
-        for field in (
-            "start_time",
-            "end_time",
-            "duration_s",
-            "first_lock_time",
-            "max_phase_dispersion_rad",
-            "max_spatial_dispersion_m",
-            "min_phase_margin_rad",
-            "min_spatial_margin_m",
-            "min_phase_order_parameter",
-            "max_distance_to_reference_m",
-            "tolerance_profile_multiplier",
-        )
+    """Return the strict field-level parity error for timeline records."""
+    return _pha_c_timeline_validation.pha_c_timeline_record_max_abs_error(
+        got,
+        reference,
     )
-    discrete_error = max(
-        int(got_dict[field] != ref_dict[field])
-        for field in (
-            "sample_count",
-            "oscillator_count",
-            "first_lock_index",
-            "first_lock_observed",
-            "final_lock_achieved",
-            "lock_sample_count",
-            "lock_loss_count",
-            "reset_count",
-            "max_consecutive_lock_samples",
-            "tolerance_profile_name",
-            "claim_boundary",
-            "execution_disabled",
-            "actuating",
-            "sample_records_sha256",
-            "transition_table_sha256",
-            "timeline_sha256",
-        )
-    )
-    return max(numeric_error, float(discrete_error))
 
 
 def _bench_backend(
@@ -159,6 +135,7 @@ def _bench_backend(
     times: NDArray[np.float64],
     calls: int,
 ) -> tuple[float, PHACTimelineRecord]:
+    """Run one backend and return elapsed time plus verified timeline evidence."""
     fn = BACKEND_FUNCTIONS[backend]
     record = fn(
         phases,
@@ -184,6 +161,7 @@ def _bench_backend(
 
 
 def _margin_equation_contracts(record: PHACTimelineRecord) -> dict[str, object]:
+    """Return signed-margin replay flags for a timeline record."""
     phase_validated = (
         abs(
             record.min_phase_margin_rad
@@ -207,6 +185,7 @@ def _margin_equation_contracts(record: PHACTimelineRecord) -> dict[str, object]:
 
 
 def _reference_contracts(record: PHACTimelineRecord) -> dict[str, Any]:
+    """Return acceptance-contract flags derived from the reference timeline."""
     margin_contracts = _margin_equation_contracts(record)
     return {
         "first_lock_observed": int(record.first_lock_observed),
@@ -292,10 +271,14 @@ def benchmark_pha_c_timeline_polyglot_parity_gate(
         "require_no_native_kernel_claim": True,
     }
     source_contract_count = sum(
-        int(record["source_contract_validation"]) for record in records
+        _payload_int(
+            record["source_contract_validation"], name="source_contract_validation"
+        )
+        for record in records
     )
     native_kernel_count = sum(
-        int(record["native_kernel_present"]) for record in records
+        _payload_int(record["native_kernel_present"], name="native_kernel_present")
+        for record in records
     )
     acceptance_passed = (
         len(records) == len(BACKEND_ORDER)
@@ -319,9 +302,18 @@ def benchmark_pha_c_timeline_polyglot_parity_gate(
         and contracts["has_timeline_hash"] == 1
         and contracts["hash_replay_validated"] == 1
         and all(
-            int(record["signed_margin_equations_validated"]) == 1 for record in records
+            _payload_int(
+                record["signed_margin_equations_validated"],
+                name="signed_margin_equations_validated",
+            )
+            == 1
+            for record in records
         )
-        and all(int(record["hash_replay_validated"]) == 1 for record in records)
+        and all(
+            _payload_int(record["hash_replay_validated"], name="hash_replay_validated")
+            == 1
+            for record in records
+        )
     )
     benchmark_payload = {
         "n": n,
@@ -383,6 +375,7 @@ def benchmark_pha_c_timeline_polyglot_parity_gate(
 
 
 def _main() -> int:
+    """Run the command-line PHA-C timeline parity gate."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--n", type=int, default=8)
     parser.add_argument("--calls", type=int, default=3)
@@ -401,7 +394,10 @@ def _main() -> int:
             encoding="utf-8",
         )
     print(json.dumps(payload, indent=2, sort_keys=True))
-    if args.parity_gate and int(payload["acceptance_passed"]) != 1:
+    if (
+        args.parity_gate
+        and _payload_int(payload["acceptance_passed"], name="acceptance_passed") != 1
+    ):
         return 1
     return 0
 

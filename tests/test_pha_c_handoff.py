@@ -12,13 +12,18 @@ from __future__ import annotations
 
 import importlib
 import json
+import runpy
+import sys
 from dataclasses import replace
+from pathlib import Path
+from typing import cast
 
 import numpy as np
 import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
+from benchmarks import pha_c_handoff_benchmark
 from benchmarks.pha_c_handoff_benchmark import (
     benchmark_pha_c_handoff_polyglot_parity_gate,
 )
@@ -478,6 +483,80 @@ def test_handoff_validation_rejects_numeric_divergence() -> None:
         )
 
 
+def test_handoff_validation_rejects_numeric_string_record_field() -> None:
+    record = _valid_handoff_record()
+    forged = replace(
+        record,
+        phase_margin_rad=cast(float, str(record.phase_margin_rad)),
+    )
+
+    with pytest.raises(ValueError, match="phase_margin_rad"):
+        _pha_c_handoff_validation.validate_pha_c_handoff_record(
+            forged,
+            record,
+        )
+
+
+@pytest.mark.parametrize(
+    ("changes", "match"),
+    [
+        ({"phase_dispersion_rad": float("nan")}, "phase_dispersion_rad.*finite"),
+        ({"oscillator_count": "3"}, "oscillator_count.*integer"),
+        ({"phase_locked": np.bool_(True)}, "phase_locked.*bool"),
+        ({"claim_boundary": b"claim"}, "claim_boundary.*string"),
+    ],
+)
+def test_handoff_validation_rejects_strict_record_field_type_drift(
+    changes: dict[str, object],
+    match: str,
+) -> None:
+    record = _valid_handoff_record()
+
+    with pytest.raises(ValueError, match=match):
+        _pha_c_handoff_validation.validate_pha_c_handoff_record(
+            replace(record, **changes),
+            record,
+        )
+
+
+def test_handoff_benchmark_error_rejects_numeric_string_record_field() -> None:
+    from benchmarks.pha_c_handoff_benchmark import _record_max_abs_error
+
+    record = _valid_handoff_record()
+    forged = replace(
+        record,
+        phase_margin_rad=cast(float, str(record.phase_margin_rad)),
+    )
+
+    with pytest.raises(ValueError, match="phase_margin_rad"):
+        _record_max_abs_error(forged, record)
+
+
+def test_handoff_validation_rejects_integer_divergence() -> None:
+    record = _valid_handoff_record()
+    forged = replace(
+        record,
+        consecutive_lock_samples=record.consecutive_lock_samples + 1,
+    )
+
+    with pytest.raises(ValueError, match="consecutive_lock_samples"):
+        _pha_c_handoff_validation.validate_pha_c_handoff_record(
+            forged,
+            record,
+        )
+
+
+def test_handoff_validation_rejects_boolean_divergence() -> None:
+    record = _valid_handoff_record()
+    forged = replace(record, phase_locked=not record.phase_locked)
+
+    with pytest.raises(ValueError, match="phase_locked"):
+        _pha_c_handoff_validation.validate_pha_c_handoff_record(
+            forged,
+            record,
+        )
+
+
 def test_handoff_validation_rejects_discrete_divergence() -> None:
     record = _valid_handoff_record()
     expected = build_pha_c_handoff_record(
@@ -584,3 +663,98 @@ def test_build_rejects_non_numeric_phase_vector() -> None:
             np.array(["a", "b", "c"]),
             np.array([0.0, 0.0005, -0.0008]),
         )
+
+
+def test_pha_c_handoff_benchmark_rejects_invalid_int_controls() -> None:
+    with pytest.raises(ValueError, match="n must be an integer"):
+        pha_c_handoff_benchmark._validate_int_control(
+            True,
+            name="n",
+            minimum=2,
+        )
+    with pytest.raises(ValueError, match="calls must be at least 1"):
+        pha_c_handoff_benchmark._validate_int_control(
+            0,
+            name="calls",
+            minimum=1,
+        )
+    with pytest.raises(ValueError, match="flag must be an integer"):
+        pha_c_handoff_benchmark._payload_int(True, name="flag")
+
+
+def test_pha_c_handoff_benchmark_main_writes_output(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    payload = {"suite": "stub", "acceptance_passed": 1}
+    output_path = tmp_path / "handoff.json"
+
+    def fake_gate(*, n: int, calls: int) -> dict[str, object]:
+        assert n == 3
+        assert calls == 1
+        return payload
+
+    monkeypatch.setattr(
+        pha_c_handoff_benchmark,
+        "benchmark_pha_c_handoff_polyglot_parity_gate",
+        fake_gate,
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "pha-c-handoff",
+            "--n",
+            "3",
+            "--calls",
+            "1",
+            "--parity-gate",
+            "--output",
+            str(output_path),
+        ],
+    )
+
+    assert pha_c_handoff_benchmark._main() == 0
+    assert json.loads(output_path.read_text(encoding="utf-8")) == payload
+    assert json.loads(capsys.readouterr().out) == payload
+
+
+def test_pha_c_handoff_benchmark_main_fails_parity_gate(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    payload = {"suite": "stub", "acceptance_passed": 0}
+
+    def fake_gate(*, n: int, calls: int) -> dict[str, object]:
+        assert n == 8
+        assert calls == 3
+        return payload
+
+    monkeypatch.setattr(
+        pha_c_handoff_benchmark,
+        "benchmark_pha_c_handoff_polyglot_parity_gate",
+        fake_gate,
+    )
+    monkeypatch.setattr(sys, "argv", ["pha-c-handoff", "--parity-gate"])
+
+    assert pha_c_handoff_benchmark._main() == 1
+    assert json.loads(capsys.readouterr().out) == payload
+
+
+def test_pha_c_handoff_benchmark_module_entrypoint(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.setattr(sys, "argv", ["pha-c-handoff", "--n", "2", "--calls", "1"])
+
+    with pytest.raises(SystemExit) as exc_info:
+        runpy.run_path(
+            str(Path(pha_c_handoff_benchmark.__file__).resolve()),
+            run_name="__main__",
+        )
+
+    assert exc_info.value.code == 0
+    assert json.loads(capsys.readouterr().out)["suite"] == (
+        "pha_c_handoff_polyglot_parity_gate"
+    )

@@ -112,6 +112,14 @@ canonical timeline hash without requiring raw trajectory matrices. The signed
 margin replay rejects records whose positive-looking phase or spatial margin no
 longer matches `tolerance - maximum_dispersion`.
 
+The Rust, Go, Julia, and Mojo source-contract rows are validated before
+canonical dictionary projection. Raw `PHACTimelineRecord` fields must keep
+their declared domains: numeric evidence must be finite real non-boolean
+scalars, counts and indexes must be integers, observation/non-actuation flags
+must be plain booleans, and provenance/hash fields must be strings. Numeric
+strings, boolean aliases, and bytes-like string substitutes are rejected before
+`to_dict()` can coerce them into a matching canonical payload.
+
 ## Handoff versus timeline
 
 | Surface | Scope | Main output | Use when |
@@ -132,7 +140,9 @@ contract. If native kernels are later added, they must preserve the same hashes
 signed margins, signed-margin equations, and fail-closed input boundaries. The
 benchmark payload publishes `phase_margin_equation_validated`,
 `spatial_margin_equation_validated`, `signed_margin_equations_validated`, and
-`margin_replay_tolerance` for every backend row.
+`margin_replay_tolerance` for every backend row. The benchmark's maximum-error
+helper uses the same strict raw-field parser as the source-contract validator,
+so malformed fields cannot be hidden by canonical payload coercion.
 
 ```bash
 uv run python benchmarks/pha_c_timeline_benchmark.py \
@@ -155,6 +165,9 @@ The timeline fails closed on:
 - negative tolerances;
 - invalid consecutive-sample controls;
 - unknown tolerance profile names.
+- source-contract records with numeric strings, non-finite raw numeric fields,
+  boolean aliases, malformed integer fields, non-plain booleans, or non-string
+  provenance/hash fields.
 
 ::: scpn_phase_orchestrator.upde.pha_c_timeline.PHACTimelineRecord
 

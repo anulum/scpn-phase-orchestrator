@@ -49,14 +49,15 @@ TODO queue.
 | Cross-domain meta-transfer | Replay proposals, nested corpora, package export, entry points, non-publishing evidence, and pre-publish enforcement exist. | Validate larger private or partner audit-history corpora and decide optional package publication. |
 | Plugin ecosystem | Registry, catalogue, Rust-facing metadata, approval-bound execution requests, storage, revocation, lifecycle, scheduler, retry, and dashboard artefacts exist. | Build a curated signed domainpack and extension store with reputation, audit scores, revocation, provenance, operator UX refinement, and adapter-family onboarding. |
 
-Latest U1 closure: the PHA-C acceptance Rust, Go, Julia, and Mojo
-source-contract rows now validate raw `PHACAcceptanceRecord` fields before
-parity publication. The shared validator rejects numeric strings, non-finite
-numeric fields, boolean aliases, malformed integer fields, non-plain lock flags,
-malformed string/hash fields, and typed field divergence before canonical
-dictionary projection can hide source-contract drift. The acceptance benchmark's
-max-error helper and imported subgate flags now use the same strict fail-closed
-parsers before benchmark records or downstream PHA-C review lanes consume them.
+Latest U1 closure: the PHA-C event/state handoff and event-timeline Rust, Go,
+Julia, and Mojo source-contract rows now validate raw `PHACHandoffRecord` and
+`PHACTimelineRecord` fields before parity publication. The shared validators
+reject numeric strings, non-finite numeric fields, boolean aliases, malformed
+integer fields, non-plain lock/non-actuation flags, malformed string/hash
+fields, and typed field divergence before canonical dictionary projection can
+hide source-contract drift. The handoff and timeline benchmark max-error
+helpers use the same strict fail-closed parsers before benchmark records or
+downstream PHA-C review lanes consume them.
 
 | Parent item | Completed evidence consolidated here | Remaining open scope |
 |-------------|--------------------------------------|----------------------|
@@ -312,13 +313,13 @@ for the detailed historical release plan and internal planning notes.
 
 | Item | Implemented evidence | Remaining scope |
 |---|---|---|
-| PHA-C.4 downstream handoff | Implemented as `PHACHandoffRecord` with merge-window evidence, signed phase/spatial margins, explicit signed-margin equation replay under `PHA_C_HANDOFF_MARGIN_REPLAY_TOLERANCE`, tolerance-profile provenance, Kuramoto order parameter, source vector digests, source-chain hash, canonical record hash, fixed non-actuating claim boundary, independent hash-replay verification, Rust/Go/Julia/Mojo source-contract parity adapters with explicit non-native provenance, finite non-negative comparator-tolerance validation, module-specific fail-closed coverage, public API documentation, and a dedicated local-regression benchmark snapshot. | Trajectory-level event/state consumption is now handled by `PHACTimelineRecord`; keep handoff benchmark snapshots refreshed under the benchmark-isolation protocol if native handoff kernels are later introduced, and require native handoff kernels to preserve the signed-margin equations. |
+| PHA-C.4 downstream handoff | Implemented as `PHACHandoffRecord` with merge-window evidence, signed phase/spatial margins, explicit signed-margin equation replay under `PHA_C_HANDOFF_MARGIN_REPLAY_TOLERANCE`, tolerance-profile provenance, Kuramoto order parameter, source vector digests, source-chain hash, canonical record hash, fixed non-actuating claim boundary, independent hash-replay verification, Rust/Go/Julia/Mojo source-contract parity adapters with explicit non-native provenance, finite non-negative comparator-tolerance validation, raw source-contract record field validation before canonical projection, module-specific fail-closed coverage, public API documentation, and a dedicated local-regression benchmark snapshot. | Trajectory-level event/state consumption is now handled by `PHACTimelineRecord`; keep handoff benchmark snapshots refreshed under the benchmark-isolation protocol if native handoff kernels are later introduced, and require native handoff kernels to preserve the signed-margin equations and raw field domains. |
 
 ## PHA-C event timeline status
 
 | Item | Implemented evidence | Remaining scope |
 |---|---|---|
-| PHA-C.4 trajectory event timeline | Implemented as `PHACTimelineRecord` with deterministic per-sample handoff chaining, first-lock time/index evidence, final-lock state, lock-loss counts, reset counts, minimum signed phase/spatial margins, explicit signed-margin equation replay under `PHA_C_TIMELINE_MARGIN_REPLAY_TOLERANCE`, tolerance-profile provenance, time/sample/transition/timeline hashes, fixed non-actuating claim boundary, independent hash-replay verification, Rust/Go/Julia/Mojo source-contract parity adapters with explicit non-native provenance, finite non-negative comparator-tolerance validation, module-specific fail-closed coverage, public API documentation, and a dedicated local-regression benchmark snapshot. | Keep benchmark snapshots refreshed under the benchmark-isolation protocol if native timeline kernels are later introduced; downstream MIF/FRC lanes can consume the review-only timeline without raw moving-frame arrays, but native timeline kernels must preserve the signed-margin equations. |
+| PHA-C.4 trajectory event timeline | Implemented as `PHACTimelineRecord` with deterministic per-sample handoff chaining, first-lock time/index evidence, final-lock state, lock-loss counts, reset counts, minimum signed phase/spatial margins, explicit signed-margin equation replay under `PHA_C_TIMELINE_MARGIN_REPLAY_TOLERANCE`, tolerance-profile provenance, time/sample/transition/timeline hashes, fixed non-actuating claim boundary, independent hash-replay verification, Rust/Go/Julia/Mojo source-contract parity adapters with explicit non-native provenance, finite non-negative comparator-tolerance validation, raw source-contract record field validation before canonical projection, module-specific fail-closed coverage, public API documentation, and a dedicated local-regression benchmark snapshot. | Keep benchmark snapshots refreshed under the benchmark-isolation protocol if native timeline kernels are later introduced; downstream MIF/FRC lanes can consume the review-only timeline without raw moving-frame arrays, but native timeline kernels must preserve the signed-margin equations and raw field domains. |
 
 ## PHA-C acceptance-chain status
 

@@ -10,7 +10,11 @@
 
 from __future__ import annotations
 
+from math import isfinite
+from numbers import Integral, Real
 from typing import Any, cast
+
+import numpy as np
 
 from scpn_phase_orchestrator.upde.pha_c_handoff import (
     PHACHandoffRecord,
@@ -34,18 +38,22 @@ _NUMERIC_FIELDS = (
     "spatial_tol_m",
     "tolerance_profile_multiplier",
 )
-_DISCRETE_FIELDS = (
+_INT_FIELDS = (
     "oscillator_count",
+    "consecutive_lock_samples",
+    "required_consecutive_samples",
+)
+_BOOL_FIELDS = (
     "phase_locked",
     "spatial_locked",
     "lock_achieved",
-    "consecutive_lock_samples",
-    "required_consecutive_samples",
+    "execution_disabled",
+    "actuating",
+)
+_STRING_FIELDS = (
     "tolerance_profile_name",
     "claim_boundary",
     "evidence_kind",
-    "execution_disabled",
-    "actuating",
     "phase_state_sha256",
     "position_state_sha256",
     "merge_report_sha256",
@@ -59,6 +67,85 @@ def expected_pha_c_handoff_record(*args: object, **kwargs: object) -> PHACHandof
     return build_pha_c_handoff_record(*cast(Any, args), **cast(Any, kwargs))
 
 
+def _validate_real_record_field(record: PHACHandoffRecord, field: str) -> float:
+    """Return a record field as a finite non-boolean real scalar."""
+    value = getattr(record, field)
+    if isinstance(value, (bool, np.bool_)) or not isinstance(
+        value,
+        (Real, np.floating, np.integer),
+    ):
+        raise ValueError(f"PHA-C handoff field {field!r} must be a finite real scalar")
+    parsed = float(value)
+    if not isfinite(parsed):
+        raise ValueError(f"PHA-C handoff field {field!r} must be finite")
+    return parsed
+
+
+def _validate_int_record_field(record: PHACHandoffRecord, field: str) -> int:
+    """Return a record field as an integer after rejecting boolean aliases."""
+    value = getattr(record, field)
+    if isinstance(value, (bool, np.bool_)) or not isinstance(
+        value,
+        (Integral, np.integer),
+    ):
+        raise ValueError(f"PHA-C handoff field {field!r} must be an integer")
+    return int(value)
+
+
+def _validate_bool_record_field(record: PHACHandoffRecord, field: str) -> bool:
+    """Return a record field after confirming it is a plain ``bool``."""
+    value = getattr(record, field)
+    if type(value) is not bool:
+        raise ValueError(f"PHA-C handoff field {field!r} must be bool")
+    return value
+
+
+def _validate_string_record_field(record: PHACHandoffRecord, field: str) -> str:
+    """Return a record field after confirming it is a string."""
+    value = getattr(record, field)
+    if not isinstance(value, str):
+        raise ValueError(f"PHA-C handoff field {field!r} must be a string")
+    return value
+
+
+def pha_c_handoff_record_max_abs_error(
+    got: PHACHandoffRecord,
+    expected: PHACHandoffRecord,
+) -> float:
+    """Return strict maximum field error for PHA-C handoff parity."""
+    numeric_error = max(
+        abs(
+            _validate_real_record_field(got, field)
+            - _validate_real_record_field(expected, field)
+        )
+        for field in _NUMERIC_FIELDS
+    )
+    int_error = max(
+        int(
+            _validate_int_record_field(got, field)
+            != _validate_int_record_field(expected, field)
+        )
+        for field in _INT_FIELDS
+    )
+    bool_error = max(
+        int(
+            _validate_bool_record_field(got, field)
+            is not _validate_bool_record_field(expected, field)
+        )
+        for field in _BOOL_FIELDS
+    )
+    string_error = max(
+        int(
+            _validate_string_record_field(got, field)
+            != _validate_string_record_field(expected, field)
+        )
+        for field in _STRING_FIELDS
+    )
+    verify_pha_c_handoff_record(got)
+    verify_pha_c_handoff_record(expected)
+    return max(numeric_error, float(int_error), float(bool_error), float(string_error))
+
+
 def validate_pha_c_handoff_record(
     got: PHACHandoffRecord,
     expected: PHACHandoffRecord,
@@ -67,15 +154,31 @@ def validate_pha_c_handoff_record(
 ) -> PHACHandoffRecord:
     """Validate an accelerator handoff against the Python reference contract."""
     tolerance_f = validate_non_negative_tolerance(tolerance)
-    verify_pha_c_handoff_record(got)
-    verify_pha_c_handoff_record(expected)
-    got_dict = got.to_dict()
-    expected_dict = expected.to_dict()
     for field in _NUMERIC_FIELDS:
-        error = abs(float(got_dict[field]) - float(expected_dict[field]))
+        error = abs(
+            _validate_real_record_field(got, field)
+            - _validate_real_record_field(expected, field)
+        )
         if error > tolerance_f:
             raise ValueError(f"PHA-C handoff field {field!r} diverged by {error}")
-    for field in _DISCRETE_FIELDS:
-        if got_dict[field] != expected_dict[field]:
+    for field in _INT_FIELDS:
+        if _validate_int_record_field(got, field) != _validate_int_record_field(
+            expected,
+            field,
+        ):
             raise ValueError(f"PHA-C handoff field {field!r} diverged")
+    for field in _BOOL_FIELDS:
+        if _validate_bool_record_field(got, field) is not _validate_bool_record_field(
+            expected,
+            field,
+        ):
+            raise ValueError(f"PHA-C handoff field {field!r} diverged")
+    for field in _STRING_FIELDS:
+        if _validate_string_record_field(got, field) != _validate_string_record_field(
+            expected,
+            field,
+        ):
+            raise ValueError(f"PHA-C handoff field {field!r} diverged")
+    verify_pha_c_handoff_record(got)
+    verify_pha_c_handoff_record(expected)
     return got

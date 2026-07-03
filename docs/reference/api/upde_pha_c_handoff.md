@@ -93,6 +93,14 @@ margin replay tolerance is published as
 `PHA_C_HANDOFF_MARGIN_REPLAY_TOLERANCE`; both phase and spatial margins must
 replay as `tolerance - dispersion` inside that bound.
 
+The Rust, Go, Julia, and Mojo source-contract rows are validated before
+canonical dictionary projection. Raw `PHACHandoffRecord` fields must keep their
+declared domains: numeric evidence must be finite real non-boolean scalars,
+counts must be integers, lock and non-actuation flags must be plain booleans,
+and provenance/hash fields must be strings. Numeric strings, boolean aliases,
+and bytes-like string substitutes are rejected before `to_dict()` can coerce
+them into a matching canonical payload.
+
 ## Polyglot parity
 
 The benchmark gate records Rust, Mojo, Julia, Go, and Python source-contract
@@ -100,6 +108,9 @@ slots. The current handoff path is evidence construction, not a numerical hot
 loop, so the non-Python slots validate parity against the Python reference
 contract. If native kernels are later added, they must preserve the same hashes
 signed margins, signed-margin equations, and fail-closed input boundaries.
+The benchmark's maximum-error helper uses the same strict raw-field parser as
+the source-contract validator, so malformed fields cannot be hidden by canonical
+payload coercion.
 
 ```bash
 uv run python benchmarks/pha_c_handoff_benchmark.py \
@@ -124,6 +135,9 @@ The handoff fails closed on:
 - non-finite timestamps or references;
 - negative tolerances;
 - invalid consecutive-sample controls.
+- source-contract records with numeric strings, non-finite raw numeric fields,
+  boolean aliases, malformed integer fields, non-plain booleans, or non-string
+  provenance/hash fields.
 
 ::: scpn_phase_orchestrator.upde.pha_c_handoff.PHACHandoffRecord
 

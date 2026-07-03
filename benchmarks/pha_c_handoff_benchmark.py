@@ -26,6 +26,7 @@ from scpn_phase_orchestrator.experimental.accelerators.upde import (
     _pha_c_handoff_julia,
     _pha_c_handoff_mojo,
     _pha_c_handoff_rust,
+    _pha_c_handoff_validation,
 )
 from scpn_phase_orchestrator.upde.pha_c_handoff import (
     PHA_C_HANDOFF_CLAIM_BOUNDARY,
@@ -63,6 +64,7 @@ BACKEND_FUNCTIONS: dict[str, BackendFn] = {
 
 
 def _validate_int_control(value: object, *, name: str, minimum: int) -> int:
+    """Return a benchmark integer control after fail-closed validation."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, (int, np.integer)):
         raise ValueError(f"{name} must be an integer")
     parsed = int(value)
@@ -71,13 +73,22 @@ def _validate_int_control(value: object, *, name: str, minimum: int) -> int:
     return parsed
 
 
+def _payload_int(value: object, *, name: str) -> int:
+    """Return a JSON-like payload integer after rejecting booleans."""
+    if isinstance(value, (bool, np.bool_)) or not isinstance(value, (int, np.integer)):
+        raise ValueError(f"{name} must be an integer")
+    return int(value)
+
+
 def _problem(n: int) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+    """Build the deterministic handoff benchmark sample vectors."""
     phases = np.linspace(-0.004, 0.004, n, dtype=np.float64)
     positions = np.linspace(-0.001, 0.001, n, dtype=np.float64)
     return phases, positions
 
 
 def _record_sha256(record: PHACHandoffRecord) -> str:
+    """Return the SHA-256 digest of a canonical handoff payload."""
     return hashlib.sha256(
         json.dumps(record.to_dict(), sort_keys=True, separators=(",", ":")).encode()
     ).hexdigest()
@@ -87,38 +98,11 @@ def _record_max_abs_error(
     got: PHACHandoffRecord,
     reference: PHACHandoffRecord,
 ) -> float:
-    got_dict = got.to_dict()
-    ref_dict = reference.to_dict()
-    numeric_error = max(
-        abs(float(got_dict[field]) - float(ref_dict[field]))
-        for field in (
-            "t",
-            "phase_dispersion_rad",
-            "spatial_dispersion_m",
-            "phase_margin_rad",
-            "spatial_margin_m",
-            "phase_order_parameter",
-            "distance_to_reference_max_m",
-            "tolerance_profile_multiplier",
-        )
+    """Return the strict field-level parity error for handoff records."""
+    return _pha_c_handoff_validation.pha_c_handoff_record_max_abs_error(
+        got,
+        reference,
     )
-    discrete_error = max(
-        int(got_dict[field] != ref_dict[field])
-        for field in (
-            "oscillator_count",
-            "phase_locked",
-            "spatial_locked",
-            "lock_achieved",
-            "consecutive_lock_samples",
-            "tolerance_profile_name",
-            "claim_boundary",
-            "execution_disabled",
-            "actuating",
-            "source_chain_sha256",
-            "record_sha256",
-        )
-    )
-    return max(numeric_error, float(discrete_error))
 
 
 def _bench_backend(
@@ -127,6 +111,7 @@ def _bench_backend(
     positions: NDArray[np.float64],
     calls: int,
 ) -> tuple[float, PHACHandoffRecord]:
+    """Run one backend and return elapsed time plus verified handoff evidence."""
     fn = BACKEND_FUNCTIONS[backend]
     record = fn(
         phases,
@@ -154,6 +139,7 @@ def _bench_backend(
 
 
 def _reference_contracts(record: PHACHandoffRecord) -> dict[str, Any]:
+    """Return acceptance-contract flags derived from the reference record."""
     margin_contracts = _margin_equation_contracts(record)
     return {
         "lock_achieved": int(record.lock_achieved),
@@ -173,6 +159,7 @@ def _reference_contracts(record: PHACHandoffRecord) -> dict[str, Any]:
 
 
 def _margin_equation_contracts(record: PHACHandoffRecord) -> dict[str, object]:
+    """Return signed-margin replay flags for a handoff record."""
     phase_margin_equation_validated = (
         abs(
             record.phase_margin_rad
@@ -258,10 +245,14 @@ def benchmark_pha_c_handoff_polyglot_parity_gate(
         "require_no_native_kernel_claim": True,
     }
     source_contract_count = sum(
-        int(record["source_contract_validation"]) for record in records
+        _payload_int(
+            record["source_contract_validation"], name="source_contract_validation"
+        )
+        for record in records
     )
     native_kernel_count = sum(
-        int(record["native_kernel_present"]) for record in records
+        _payload_int(record["native_kernel_present"], name="native_kernel_present")
+        for record in records
     )
     acceptance_passed = (
         len(records) == len(BACKEND_ORDER)
@@ -281,9 +272,18 @@ def benchmark_pha_c_handoff_polyglot_parity_gate(
         and contracts["has_record_hash"] == 1
         and contracts["hash_replay_validated"] == 1
         and contracts["signed_margin_equations_validated"] == 1
-        and all(int(record["hash_replay_validated"]) == 1 for record in records)
         and all(
-            int(record["signed_margin_equations_validated"]) == 1 for record in records
+            _payload_int(record["hash_replay_validated"], name="hash_replay_validated")
+            == 1
+            for record in records
+        )
+        and all(
+            _payload_int(
+                record["signed_margin_equations_validated"],
+                name="signed_margin_equations_validated",
+            )
+            == 1
+            for record in records
         )
     )
     benchmark_payload = {
@@ -343,6 +343,7 @@ def benchmark_pha_c_handoff_polyglot_parity_gate(
 
 
 def _main() -> int:
+    """Run the command-line PHA-C handoff parity gate."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--n", type=int, default=8)
     parser.add_argument("--calls", type=int, default=3)
@@ -361,7 +362,10 @@ def _main() -> int:
             encoding="utf-8",
         )
     print(json.dumps(payload, indent=2, sort_keys=True))
-    if args.parity_gate and int(payload["acceptance_passed"]) != 1:
+    if (
+        args.parity_gate
+        and _payload_int(payload["acceptance_passed"], name="acceptance_passed") != 1
+    ):
         return 1
     return 0
 
