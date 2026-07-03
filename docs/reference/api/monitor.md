@@ -410,6 +410,12 @@ in `[0, 1]` plus an operator status. See the dedicated
 [Twin Confidence](monitor_twin_confidence.md) page for the formalism, the
 polyglot backend chain, and benchmarks.
 
+The public and direct backend boundaries reject boolean aliases, complex
+aliases, numeric-string aliases, non-finite payloads, shape mismatches, invalid
+order-parameter ranges, and backend-output range violations before divergence
+evidence can feed the operator summary, Prometheus export, Studio panel, or
+conformal twin-confidence gate.
+
 ::: scpn_phase_orchestrator.monitor.twin_confidence
 
 ### Conformal Twin-Confidence Gate

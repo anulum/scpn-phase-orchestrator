@@ -18,7 +18,7 @@ same contract as the NumPy reference in
 from __future__ import annotations
 
 from numbers import Integral
-from typing import TypeAlias
+from typing import TypeAlias, cast
 
 import numpy as np
 from numpy.typing import NDArray
@@ -43,6 +43,40 @@ def _contains_boolean_alias(value: object) -> bool:
     return any(isinstance(item, (bool, np.bool_)) for item in array.flat)
 
 
+def _is_string_like(value: object) -> bool:
+    """Return whether ``value`` is a Python or NumPy string scalar."""
+    return isinstance(value, (str, bytes, np.str_, np.bytes_))
+
+
+def _is_numeric_string_alias(value: object) -> bool:
+    """Return whether ``value`` is a string scalar parsable as a float."""
+    if not _is_string_like(value):
+        return False
+    try:
+        float(cast("str | bytes", value))
+    except (TypeError, ValueError):
+        return False
+    return True
+
+
+def _contains_numeric_string_alias(value: object) -> bool:
+    """Return whether the value contains numeric-string aliases."""
+    try:
+        array = np.asarray(value)
+    except (TypeError, ValueError):  # pragma: no cover - numpy always coerces
+        return False
+    if array.dtype.kind not in {"O", "S", "U"}:
+        return False
+    saw_string = False
+    for item in array.astype(object, copy=False).flat:
+        if not _is_string_like(item):
+            continue
+        saw_string = True
+        if not _is_numeric_string_alias(item):
+            return False
+    return saw_string
+
+
 def _validate_vector(value: object, *, name: str) -> FloatArray:
     """Return ``value`` as a validated 1-D finite array, else raise."""
     raw = np.asarray(value)
@@ -50,6 +84,8 @@ def _validate_vector(value: object, *, name: str) -> FloatArray:
         raise ValueError(f"{name} must not contain boolean values")
     if np.iscomplexobj(raw):
         raise ValueError(f"{name} must be a finite real-valued vector")
+    if _contains_numeric_string_alias(value):
+        raise ValueError(f"{name} must not contain numeric-string aliases")
     try:
         array = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
@@ -151,6 +187,8 @@ def validate_twin_divergence_backend_output(value: object) -> FloatArray:
         If the result is not a finite two-element pair in the valid ranges
         ``[0, ln 2]`` and ``[0, 1]`` (within parity tolerance).
     """
+    if _contains_numeric_string_alias(value):
+        raise ValueError("backend output must not contain numeric-string aliases")
     array = np.asarray(value, dtype=np.float64).ravel()
     if array.shape != (2,):
         raise ValueError(f"backend output shape {array.shape} is not (2,)")

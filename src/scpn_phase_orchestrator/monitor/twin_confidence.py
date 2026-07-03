@@ -488,6 +488,8 @@ def _as_real_vector(name: str, value: object) -> FloatArray:
         raise ValueError(f"{name} must not contain boolean values")
     if _contains_complex_alias(value):
         raise ValueError(f"{name} must be real-valued")
+    if _contains_numeric_string_alias(value):
+        raise ValueError(f"{name} must not contain numeric-string aliases")
     try:
         parsed = np.asarray(value, dtype=np.float64)
     except (TypeError, ValueError) as exc:
@@ -515,6 +517,40 @@ def _contains_complex_alias(value: object) -> bool:
     except (TypeError, ValueError):  # pragma: no cover - numpy always coerces
         return False
     return any(isinstance(item, (complex, np.complexfloating)) for item in raw.flat)
+
+
+def _is_string_like(value: object) -> bool:
+    """Return whether ``value`` is a Python or NumPy string scalar."""
+    return isinstance(value, (str, bytes, np.str_, np.bytes_))
+
+
+def _is_numeric_string_alias(value: object) -> bool:
+    """Return whether ``value`` is a string scalar parsable as a float."""
+    if not _is_string_like(value):
+        return False
+    try:
+        float(cast("str | bytes", value))
+    except (TypeError, ValueError):
+        return False
+    return True
+
+
+def _contains_numeric_string_alias(value: object) -> bool:
+    """Return whether the value contains numeric-string aliases."""
+    try:
+        raw = np.asarray(value)
+    except (TypeError, ValueError):  # pragma: no cover - numpy usually coerces
+        return False
+    if raw.dtype.kind not in {"O", "S", "U"}:
+        return False
+    saw_string = False
+    for item in raw.astype(object, copy=False).flat:
+        if not _is_string_like(item):
+            continue
+        saw_string = True
+        if not _is_numeric_string_alias(item):
+            return False
+    return saw_string
 
 
 def _validate_positive_int(name: str, value: object) -> int:
@@ -549,6 +585,10 @@ def _validate_order_window(name: str, value: object) -> FloatArray:
 
 def _validate_kernel_output(value: object, *, backend: str) -> tuple[float, float]:
     """Return the backend kernel output matching the reference, else raise."""
+    if _contains_numeric_string_alias(value):
+        raise ValueError(
+            f"backend {backend!r} output must not contain numeric-string aliases"
+        )
     parsed = np.asarray(value, dtype=np.float64).ravel()
     if parsed.shape != (2,):
         raise ValueError(f"backend {backend!r} output shape {parsed.shape} is not (2,)")
@@ -682,6 +722,7 @@ class TwinConfidenceCalibrator:
     _order_w1: list[float] = cast("list[float]", None)
 
     def __post_init__(self) -> None:
+        """Validate configuration and initialise sample buffers."""
         self.band_z = _validate_finite_real("band_z", self.band_z, minimum=0.0)
         self._phase_js = []
         self._order_w1 = []

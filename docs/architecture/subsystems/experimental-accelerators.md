@@ -255,3 +255,9 @@ through a production subsystem's dispatcher.
   scalar-control aliases before optional runtime loading. Backend winding vectors
   are rechecked as finite integer vectors with valid wrapped-increment bounds
   and exact NumPy reference equality before public monitor publication.
+- `monitor/twin_confidence` Go, Julia, and Mojo adapters share one direct
+  validator that rejects boolean, numeric-string, complex, non-finite,
+  cardinality, and order-parameter range aliases before optional runtime
+  loading. Backend divergence pairs are rechecked as finite real
+  `(Jensen-Shannon, Wasserstein-1)` outputs inside `[0, ln 2] x [0, 1]` before
+  public monitor, Prometheus, Studio, or conformal-gate publication.

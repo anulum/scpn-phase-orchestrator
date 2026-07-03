@@ -121,8 +121,9 @@ def score_twin_confidence(
 
 `phase_order_divergence` validates that the phase vectors share a non-empty
 length `N`, the order windows share a non-empty length `W`, every value is a
-finite real (boolean and complex aliases rejected), the order values lie in
-`[0, 1]`, and `n_bins` is a positive integer. `score_twin_confidence` requires
+finite real (boolean, complex, and numeric-string aliases rejected before float
+coercion), the order values lie in `[0, 1]`, and `n_bins` is a positive
+integer. `score_twin_confidence` requires
 `sensitivity > 0`, both confidence thresholds in `[0, 1]`, and
 `critical_confidence ≤ warning_confidence`. Every dataclass exposes a
 deterministic JSON-safe `to_audit_record()`, and `TwinConfidenceScore` carries a
@@ -178,8 +179,10 @@ always appended as the guaranteed fallback.
 The backend kernel computes only the raw `(js, w1)` pair from flat `float64`
 buffers; the public entry point validates inputs once, dispatches, and validates
 the returned pair (shape `(2,)`, finite, `js ∈ [0, ln 2]`, `w1 ∈ [0, 1]` within
-parity tolerance). Force a backend for tests/benchmarks via
-`twin_confidence.ACTIVE_BACKEND = "go"`.
+parity tolerance). Public and direct Go, Julia, and Mojo backend-output
+contracts reject numeric-string aliases before float coercion, so a backend
+cannot publish text-encoded divergence evidence. Force a backend for
+tests/benchmarks via `twin_confidence.ACTIVE_BACKEND = "go"`.
 
 ### 3.1 Semantic equivalence
 
@@ -242,10 +245,12 @@ Observations:
 * `tests/test_twin_confidence.py` — algorithm invariants (JS symmetry and
   boundedness, exact Wasserstein on a shift, phase-wrap invariance), every
   input-validation and kernel-output branch, the dispatcher, calibration, and
-  the confidence map including band membership and the deterministic hash.
+  the confidence map including band membership, numeric-string alias rejection,
+  and the deterministic hash.
 * `tests/test_twin_confidence_backends.py` — the shared backend-validation
-  contract (always runs) plus per-backend parity against the NumPy reference and
-  pairwise cross-backend agreement, each gated on toolchain availability.
+  contract (always runs, including direct numeric-string input and
+  backend-output rejection) plus per-backend parity against the NumPy reference
+  and pairwise cross-backend agreement, each gated on toolchain availability.
 * `tests/test_twin_confidence_stability.py` (`@pytest.mark.slow`) — divergence
   bounds over a random sweep, metric symmetry and identity of indiscernibles,
   monotone confidence decay, calibration robustness, long-run drift-freedom on

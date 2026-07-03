@@ -28,6 +28,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from pathlib import Path
+from typing import cast
 
 import numpy as np
 import pytest
@@ -57,6 +58,14 @@ TwinBackend = Callable[
     np.ndarray,
 ]
 LN2 = float(np.log(2.0))
+
+
+class _ArrayRaises:
+    """Array-like sentinel that refuses NumPy coercion."""
+
+    def __array__(self, dtype: object | None = None) -> np.ndarray:
+        """Raise during NumPy array coercion."""
+        raise ValueError("array coercion refused")
 
 
 def _rust_backend(
@@ -135,6 +144,57 @@ def test_validation_rejects_non_numeric_array() -> None:
         validation._validate_vector(["a", "b"], name="model_phases")
 
 
+@pytest.mark.parametrize(
+    ("field", "payload"),
+    [
+        ("model_phases", np.array(["0.1", "0.2"], dtype=object)),
+        ("observed_phases", np.array(["0.3", "0.4"], dtype=object)),
+        ("model_order", np.array(["0.5", "0.6"], dtype=object)),
+        ("observed_order", np.array(["0.2", "0.3"], dtype=object)),
+    ],
+)
+def test_validation_rejects_numeric_string_arrays(
+    field: str,
+    payload: object,
+) -> None:
+    values: dict[str, object] = {
+        "model_phases": np.array([0.1, 0.2], dtype=np.float64),
+        "observed_phases": np.array([0.3, 0.4], dtype=np.float64),
+        "model_order": np.array([0.5, 0.6], dtype=np.float64),
+        "observed_order": np.array([0.2, 0.3], dtype=np.float64),
+    }
+    values[field] = payload
+
+    with pytest.raises(ValueError, match="numeric-string"):
+        validation.validate_twin_divergence_backend_inputs(
+            values["model_phases"],
+            values["observed_phases"],
+            values["model_order"],
+            values["observed_order"],
+            2,
+            2,
+            8,
+        )
+
+
+def test_validation_numeric_string_alias_helpers_cover_false_paths() -> None:
+    payload = _ArrayRaises()
+
+    assert validation._is_numeric_string_alias(1.0) is False
+    assert validation._is_numeric_string_alias("not-a-number") is False
+    assert validation._contains_numeric_string_alias(payload) is False
+    assert (
+        validation._contains_numeric_string_alias(
+            np.array([1.0, "not-a-number"], dtype=object)
+        )
+        is False
+    )
+    assert (
+        validation._contains_numeric_string_alias(np.array([1.0, "2.0"], dtype=object))
+        is True
+    )
+
+
 def test_validation_rejects_non_one_dimensional() -> None:
     with pytest.raises(ValueError, match="one-dimensional"):
         validation._validate_vector(np.zeros((2, 2)), name="model_phases")
@@ -185,6 +245,11 @@ def test_validation_output_rejects_non_finite() -> None:
         validation.validate_twin_divergence_backend_output([np.inf, 0.1])
 
 
+def test_validation_output_rejects_numeric_string_pair() -> None:
+    with pytest.raises(ValueError, match="numeric-string"):
+        validation.validate_twin_divergence_backend_output(["0.1", "0.2"])
+
+
 def test_validation_output_rejects_js_out_of_range() -> None:
     with pytest.raises(ValueError, match="Jensen"):
         validation.validate_twin_divergence_backend_output([1.0, 0.1])
@@ -211,6 +276,25 @@ def test_bridge_validates_before_toolchain(backend_fn: TwinBackend) -> None:
             np.array([0.3, 0.4]),
             np.array([0.5, 9.0]),
             np.array([0.5, 0.6]),
+            2,
+            2,
+            8,
+        )
+
+
+@pytest.mark.parametrize(
+    "backend_fn",
+    [twin_divergence_go, twin_divergence_julia, twin_divergence_mojo],
+)
+def test_bridge_rejects_numeric_string_inputs_before_toolchain(
+    backend_fn: TwinBackend,
+) -> None:
+    with pytest.raises(ValueError, match="numeric-string"):
+        backend_fn(
+            cast("validation.FloatArray", np.array(["0.1", "0.2"], dtype=object)),
+            np.array([0.3, 0.4], dtype=np.float64),
+            np.array([0.5, 0.6], dtype=np.float64),
+            np.array([0.2, 0.3], dtype=np.float64),
             2,
             2,
             8,

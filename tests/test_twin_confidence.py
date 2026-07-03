@@ -16,6 +16,8 @@ and the deterministic audit records.
 from __future__ import annotations
 
 import json
+from pathlib import Path
+from typing import cast
 
 import numpy as np
 import pytest
@@ -34,6 +36,14 @@ from scpn_phase_orchestrator.monitor.twin_confidence import (
 
 TWO_PI = 2.0 * np.pi
 LN2 = float(np.log(2.0))
+
+
+class _ArrayRaises:
+    """Array-like sentinel that refuses NumPy coercion."""
+
+    def __array__(self, dtype: object | None = None) -> np.ndarray:
+        """Raise during NumPy array coercion."""
+        raise ValueError("array coercion refused")
 
 
 # ---------------------------------------------------------------------
@@ -157,6 +167,52 @@ def test_complex_alias_rejected() -> None:
         phase_order_divergence([1 + 1j, 2, 3], b, c, d)  # type: ignore[arg-type]
 
 
+@pytest.mark.parametrize(
+    ("field", "payload"),
+    [
+        ("model_phases", np.array(["0.1", "0.2", "0.3"], dtype=object)),
+        ("observed_phases", np.array(["0.2", "0.3", "0.4"], dtype=object)),
+        ("model_order", np.array(["0.4", "0.5"], dtype=object)),
+        ("observed_order", np.array(["0.5", "0.6"], dtype=object)),
+    ],
+)
+def test_numeric_string_vector_aliases_rejected(
+    field: str,
+    payload: np.ndarray,
+) -> None:
+    a, b, c, d = _ok_args()
+    values = {
+        "model_phases": a,
+        "observed_phases": b,
+        "model_order": c,
+        "observed_order": d,
+    }
+    values[field] = cast("tc.FloatArray", payload)
+
+    with pytest.raises(ValueError, match="numeric-string"):
+        phase_order_divergence(
+            values["model_phases"],
+            values["observed_phases"],
+            values["model_order"],
+            values["observed_order"],
+        )
+
+
+def test_numeric_string_alias_helpers_cover_false_paths() -> None:
+    payload = _ArrayRaises()
+
+    assert tc._is_numeric_string_alias(1.0) is False
+    assert tc._is_numeric_string_alias("not-a-number") is False
+    assert tc._contains_numeric_string_alias(payload) is False
+    assert (
+        tc._contains_numeric_string_alias(np.array([1.0, "not-a-number"], dtype=object))
+        is False
+    )
+    assert (
+        tc._contains_numeric_string_alias(np.array([1.0, "2.0"], dtype=object)) is True
+    )
+
+
 def test_non_one_dimensional_phase_rejected() -> None:
     _, b, c, d = _ok_args()
     with pytest.raises(ValueError, match="one-dimensional"):
@@ -240,6 +296,14 @@ def test_kernel_output_w1_out_of_range_rejected() -> None:
         tc._validate_kernel_output(np.array([0.1, 2.0]), backend="python")
 
 
+def test_kernel_output_numeric_string_pair_rejected() -> None:
+    with pytest.raises(ValueError, match="numeric-string"):
+        tc._validate_kernel_output(
+            np.array(["0.1", "0.2"], dtype=object),
+            backend="python",
+        )
+
+
 def test_kernel_output_clamps_tiny_negatives() -> None:
     js, w1 = tc._validate_kernel_output(np.array([-1e-13, -1e-13]), backend="python")
     assert js == 0.0
@@ -302,6 +366,32 @@ def test_public_entry_uses_python_path(monkeypatch: pytest.MonkeyPatch) -> None:
     div = phase_order_divergence(a, b, c, d)
     assert div.backend == "python"
     assert div.phase_js_divergence >= 0.0
+
+
+def test_public_entry_rejects_numeric_string_backend_payload(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def _numeric_string_backend(
+        model_phases: tc.FloatArray,
+        observed_phases: tc.FloatArray,
+        model_order: tc.FloatArray,
+        observed_order: tc.FloatArray,
+        n: int,
+        w: int,
+        n_bins: int,
+    ) -> tc.FloatArray:
+        del model_phases, observed_phases, model_order, observed_order, n, w, n_bins
+        return cast("tc.FloatArray", np.array(["0.1", "0.2"], dtype=object))
+
+    monkeypatch.setattr(
+        tc,
+        "_dispatch_backend",
+        lambda: ("probe", _numeric_string_backend),
+    )
+    a, b, c, d = _ok_args()
+
+    with pytest.raises(ValueError, match="numeric-string"):
+        phase_order_divergence(a, b, c, d)
 
 
 def test_load_backend_is_cached(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -587,3 +677,11 @@ def test_prometheus_rejects_empty_prefix(prefix: str) -> None:
     summary = summarise_twin_confidence([_score("healthy", 1.0)])
     with pytest.raises(ValueError, match="prefix"):
         twin_confidence_prometheus_text(summary, prefix=prefix)
+
+
+def test_twin_confidence_api_reference_documents_numeric_string_contracts() -> None:
+    doc = Path("docs/reference/api/monitor_twin_confidence.md").read_text()
+
+    assert "numeric-string aliases" in doc
+    assert "before float coercion" in doc
+    assert "backend-output" in doc
