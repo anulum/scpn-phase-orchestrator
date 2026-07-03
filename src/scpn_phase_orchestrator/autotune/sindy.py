@@ -18,26 +18,36 @@ state.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from math import isfinite
 from numbers import Integral, Real
-from typing import TypeAlias
+from typing import TypeAlias, cast
 
 import numpy as np
 from numpy.typing import NDArray
 from scipy.linalg import lstsq
 
+FloatArray: TypeAlias = NDArray[np.float64]
+_RustSindyFit: TypeAlias = Callable[
+    [FloatArray, int, int, float, float, int],
+    object,
+]
+
 try:
     from spo_kernel import (
-        sindy_fit_rust as _rust_sindy_fit,
+        sindy_fit_rust as _loaded_rust_sindy_fit,
     )
 
+    _rust_sindy_fit: _RustSindyFit | None = cast(
+        "_RustSindyFit",
+        _loaded_rust_sindy_fit,
+    )
     _HAS_RUST = True
 except ImportError:
+    _rust_sindy_fit = None
     _HAS_RUST = False
 
 __all__ = ["PhaseSINDy"]
-
-FloatArray: TypeAlias = NDArray[np.float64]
 
 
 def _is_boolean_alias(value: object) -> bool:
@@ -155,6 +165,8 @@ class PhaseSINDy:
             )
 
         if _HAS_RUST:
+            if _rust_sindy_fit is None:  # pragma: no cover - set when _HAS_RUST
+                raise RuntimeError("Rust SINDy backend unavailable")
             p_flat = np.ascontiguousarray(phases_array, dtype=np.float64).ravel()
             result_flat = _rust_sindy_fit(
                 p_flat,

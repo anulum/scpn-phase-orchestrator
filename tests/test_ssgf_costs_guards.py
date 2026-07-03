@@ -15,6 +15,7 @@ from typing import Any
 import numpy as np
 import pytest
 
+import scpn_phase_orchestrator.coupling.spectral as spectral_mod
 import scpn_phase_orchestrator.ssgf.costs as costs_mod
 from scpn_phase_orchestrator.ssgf.costs import (
     _validate_rust_costs,
@@ -125,10 +126,12 @@ class TestNumpyFallback:
         (a reload of the real module would change the ``SSGFCosts`` class
         identity held by other test modules). The copy must mark the Rust
         backend absent, keep the loader slot ``None``, and still compute costs
-        through the NumPy floor that agree with the Rust-backed values from
-        the untouched module.
+        through the NumPy floor that agree with the reference values from the
+        untouched module.
         """
-        rust_costs = compute_ssgf_costs(_W, _PHASES, _WEIGHTS)
+        original_has_rust = costs_mod._HAS_RUST
+        original_rust_costs = costs_mod._rust_costs
+        reference_costs = compute_ssgf_costs(_W, _PHASES, _WEIGHTS)
         monkeypatch.setitem(sys.modules, "spo_kernel", None)
         spec = importlib.util.spec_from_file_location(
             "ssgf_costs_rustless_copy", costs_mod.__file__
@@ -143,13 +146,19 @@ class TestNumpyFallback:
 
         assert rustless._HAS_RUST is False
         assert rustless._rust_costs is None
+        monkeypatch.setattr(spectral_mod, "ACTIVE_BACKEND", "python")
+        monkeypatch.setattr(spectral_mod, "AVAILABLE_BACKENDS", ["python"])
+        monkeypatch.setattr(spectral_mod, "_RUST_CACHE", None)
         python_costs = rustless.compute_ssgf_costs(_W, _PHASES, _WEIGHTS)
-        assert costs_mod._HAS_RUST is True  # the real module is untouched
-        assert python_costs.c1_sync == pytest.approx(rust_costs.c1_sync)
-        assert python_costs.c2_spectral_gap == pytest.approx(rust_costs.c2_spectral_gap)
-        assert python_costs.c3_sparsity == pytest.approx(rust_costs.c3_sparsity)
-        assert python_costs.c4_symmetry == pytest.approx(rust_costs.c4_symmetry)
-        assert python_costs.u_total == pytest.approx(rust_costs.u_total)
+        assert costs_mod._HAS_RUST is original_has_rust  # real module is untouched
+        assert costs_mod._rust_costs is original_rust_costs
+        assert python_costs.c1_sync == pytest.approx(reference_costs.c1_sync)
+        assert python_costs.c2_spectral_gap == pytest.approx(
+            reference_costs.c2_spectral_gap
+        )
+        assert python_costs.c3_sparsity == pytest.approx(reference_costs.c3_sparsity)
+        assert python_costs.c4_symmetry == pytest.approx(reference_costs.c4_symmetry)
+        assert python_costs.u_total == pytest.approx(reference_costs.u_total)
 
 
 class TestBooleanAliasDetector:
