@@ -28,6 +28,7 @@ from scpn_phase_orchestrator.experimental.accelerators.upde import (
     _pha_c_acceptance_julia,
     _pha_c_acceptance_mojo,
     _pha_c_acceptance_rust,
+    _pha_c_acceptance_validation,
 )
 from scpn_phase_orchestrator.upde.pha_c_acceptance import (
     PHA_C_ACCEPTANCE_CLAIM_BOUNDARY,
@@ -80,12 +81,20 @@ BACKEND_FUNCTIONS: dict[str, BackendFn] = {
 
 
 def _validate_int_control(value: object, *, name: str, minimum: int) -> int:
+    """Return a benchmark integer control after fail-closed validation."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, (int, np.integer)):
         raise ValueError(f"{name} must be an integer")
     parsed = int(value)
     if parsed < minimum:
         raise ValueError(f"{name} must be at least {minimum}")
     return parsed
+
+
+def _payload_int(value: object, *, name: str) -> int:
+    """Return a JSON-like payload integer after rejecting booleans."""
+    if isinstance(value, (bool, np.bool_)) or not isinstance(value, (int, np.integer)):
+        raise ValueError(f"{name} must be an integer")
+    return int(value)
 
 
 def _problem(
@@ -97,12 +106,13 @@ def _problem(
     NDArray[np.float64],
     NDArray[np.float64],
 ]:
+    """Build the deterministic benchmark problem arrays."""
     phases = np.linspace(-0.002, 0.002, n, dtype=np.float64)
     positions = np.linspace(-0.0006, 0.0006, n, dtype=np.float64)
-    knm = np.full((n, n), 0.04, dtype=np.float64)
+    knm: NDArray[np.float64] = np.full((n, n), 0.04, dtype=np.float64)
     np.fill_diagonal(knm, 0.0)
     steps = 4
-    omega = np.zeros((steps, n), dtype=np.float64)
+    omega: NDArray[np.float64] = np.zeros((steps, n), dtype=np.float64)
     velocity_base = np.linspace(0.10, 0.12, n, dtype=np.float64)
     velocities = np.vstack(
         [velocity_base + 1.0e-3 * step for step in range(steps)],
@@ -111,6 +121,7 @@ def _problem(
 
 
 def _record_sha256(record: PHACAcceptanceRecord) -> str:
+    """Return the canonical payload hash for an acceptance record."""
     return hashlib.sha256(
         json.dumps(record.to_dict(), sort_keys=True, separators=(",", ":")).encode(),
     ).hexdigest()
@@ -120,60 +131,11 @@ def _record_max_abs_error(
     got: PHACAcceptanceRecord,
     reference: PHACAcceptanceRecord,
 ) -> float:
-    got_dict = got.to_dict()
-    ref_dict = reference.to_dict()
-    numeric_error = max(
-        abs(float(got_dict[field]) - float(ref_dict[field]))
-        for field in (
-            "start_time",
-            "end_time",
-            "dt",
-            "first_lock_time",
-            "max_abs_doppler_term",
-            "max_abs_spatial_coupling",
-            "max_phase_dispersion_rad",
-            "max_spatial_dispersion_m",
-            "kinematic_residual_max_m",
-            "max_abs_velocity_m_per_s",
-            "path_length_max_m",
-            "kinematic_summary_replay_tolerance",
-            "min_phase_margin_rad",
-            "min_spatial_margin_m",
-            "min_phase_order_parameter",
-            "max_distance_to_reference_m",
-            "tolerance_profile_multiplier",
-        )
+    """Return the strict maximum field error for acceptance parity."""
+    return _pha_c_acceptance_validation.pha_c_acceptance_record_max_abs_error(
+        got,
+        reference,
     )
-    discrete_error = max(
-        int(got_dict[field] != ref_dict[field])
-        for field in (
-            "sample_count",
-            "step_count",
-            "oscillator_count",
-            "first_lock_index",
-            "first_lock_observed",
-            "final_lock_achieved",
-            "lock_sample_count",
-            "lock_loss_count",
-            "reset_count",
-            "final_position_equation_validated",
-            "max_abs_velocity_equation_validated",
-            "path_length_equation_validated",
-            "kinematic_equations_validated",
-            "tolerance_profile_name",
-            "moving_frame_backend_request",
-            "claim_boundary",
-            "execution_disabled",
-            "actuating",
-            "omega_schedule_sha256",
-            "velocity_schedule_sha256",
-            "phase_trajectory_sha256",
-            "position_trajectory_sha256",
-            "timeline_sha256",
-            "acceptance_sha256",
-        )
-    )
-    return max(numeric_error, float(discrete_error))
 
 
 def _bench_backend(
@@ -185,6 +147,7 @@ def _bench_backend(
     velocities: NDArray[np.float64],
     calls: int,
 ) -> tuple[float, PHACAcceptanceRecord]:
+    """Benchmark one declared backend and return verified acceptance evidence."""
     fn = BACKEND_FUNCTIONS[backend]
     kwargs = {
         "dt": 1.0e-3,
@@ -200,13 +163,15 @@ def _bench_backend(
 
 
 def _gate_passed(payload: dict[str, object]) -> bool:
+    """Return whether a subgate payload exposes a passing acceptance flag."""
     for key in ("acceptance_passed", "all_available_passed"):
         if key in payload:
-            return int(payload[key]) == 1
+            return _payload_int(payload[key], name=key) == 1
     return False
 
 
 def _margin_equation_contracts(record: PHACAcceptanceRecord) -> dict[str, object]:
+    """Return replayed signed-margin equation flags for a record."""
     phase_validated = (
         abs(
             record.min_phase_margin_rad
@@ -230,6 +195,7 @@ def _margin_equation_contracts(record: PHACAcceptanceRecord) -> dict[str, object
 
 
 def _subgate_records() -> list[dict[str, object]]:
+    """Collect normalized PHA-C subgate benchmark payloads."""
     if str(ROOT) not in sys.path:
         sys.path.insert(0, str(ROOT))
     gate_paths = (
@@ -268,19 +234,30 @@ def _subgate_records() -> list[dict[str, object]]:
             {
                 "suite": payload.get("suite", "unknown"),
                 "passed": int(_gate_passed(payload)),
-                "backend_count": int(payload.get("backend_count", 0)),
-                "parity_pass_count": int(payload.get("parity_pass_count", 0)),
-                "source_contract_backend_count": int(
-                    payload.get("source_contract_backend_count", 0),
+                "backend_count": _payload_int(
+                    payload.get("backend_count", 0),
+                    name="backend_count",
                 ),
-                "native_kernel_count": int(payload.get("native_kernel_count", 0)),
+                "parity_pass_count": _payload_int(
+                    payload.get("parity_pass_count", 0),
+                    name="parity_pass_count",
+                ),
+                "source_contract_backend_count": _payload_int(
+                    payload.get("source_contract_backend_count", 0),
+                    name="source_contract_backend_count",
+                ),
+                "native_kernel_count": _payload_int(
+                    payload.get("native_kernel_count", 0),
+                    name="native_kernel_count",
+                ),
                 "polyglot_claim_boundary": payload.get("polyglot_claim_boundary", ""),
                 "benchmark_evidence_kind": payload.get(
                     "benchmark_evidence_kind",
                     BENCHMARK_EVIDENCE_KIND,
                 ),
-                "hash_replay_validated": int(
+                "hash_replay_validated": _payload_int(
                     payload.get("hash_replay_validated", 0),
+                    name="hash_replay_validated",
                 ),
             },
         )
@@ -288,6 +265,7 @@ def _subgate_records() -> list[dict[str, object]]:
 
 
 def _reference_contracts(record: PHACAcceptanceRecord) -> dict[str, Any]:
+    """Return release-gate contract fields derived from the reference record."""
     obligation = verify_pha_c_kinematic_proof_obligation(
         build_pha_c_kinematic_proof_obligation(record),
     )
@@ -567,7 +545,9 @@ def benchmark_pha_c_acceptance_polyglot_gate(
             },
         )
     subgates = _subgate_records() if include_subgates else []
-    subgate_pass_count = sum(int(record["passed"]) for record in subgates)
+    subgate_pass_count = sum(
+        _payload_int(record["passed"], name="passed") for record in subgates
+    )
     wall_time = time.perf_counter() - t0
     thresholds = {
         "backend_order": list(BACKEND_ORDER),
@@ -604,10 +584,15 @@ def benchmark_pha_c_acceptance_polyglot_gate(
         "require_no_native_kernel_claim": True,
     }
     source_contract_count = sum(
-        int(record["source_contract_validation"]) for record in records
+        _payload_int(
+            record["source_contract_validation"],
+            name="source_contract_validation",
+        )
+        for record in records
     )
     native_kernel_count = sum(
-        int(record["native_kernel_present"]) for record in records
+        _payload_int(record["native_kernel_present"], name="native_kernel_present")
+        for record in records
     )
     acceptance_passed = (
         len(records) == len(BACKEND_ORDER)
@@ -646,19 +631,36 @@ def benchmark_pha_c_acceptance_polyglot_gate(
         and contracts["has_acceptance_hash"] == 1
         and contracts["has_timeline_hash"] == 1
         and contracts["hash_replay_validated"] == 1
-        and all(int(record["formal_obligation_discharged"]) == 1 for record in records)
         and all(
-            int(record["formal_obligation_acceptance_kinematic_equations_validated"])
+            _payload_int(
+                record["formal_obligation_discharged"],
+                name="formal_obligation_discharged",
+            )
             == 1
             for record in records
         )
         and all(
-            int(record["formal_obligation_acceptance_replay_certificate_discharged"])
+            _payload_int(
+                record["formal_obligation_acceptance_kinematic_equations_validated"],
+                name="formal_obligation_acceptance_kinematic_equations_validated",
+            )
             == 1
             for record in records
         )
         and all(
-            int(record["formal_obligation_acceptance_certificate_discharged"]) == 1
+            _payload_int(
+                record["formal_obligation_acceptance_replay_certificate_discharged"],
+                name="formal_obligation_acceptance_replay_certificate_discharged",
+            )
+            == 1
+            for record in records
+        )
+        and all(
+            _payload_int(
+                record["formal_obligation_acceptance_certificate_discharged"],
+                name="formal_obligation_acceptance_certificate_discharged",
+            )
+            == 1
             for record in records
         )
         and all(
@@ -672,10 +674,29 @@ def benchmark_pha_c_acceptance_polyglot_gate(
             for record in records
         )
         and all(
-            int(record["signed_margin_equations_validated"]) == 1 for record in records
+            _payload_int(
+                record["signed_margin_equations_validated"],
+                name="signed_margin_equations_validated",
+            )
+            == 1
+            for record in records
         )
-        and all(int(record["kinematic_equations_validated"]) == 1 for record in records)
-        and all(int(record["hash_replay_validated"]) == 1 for record in records)
+        and all(
+            _payload_int(
+                record["kinematic_equations_validated"],
+                name="kinematic_equations_validated",
+            )
+            == 1
+            for record in records
+        )
+        and all(
+            _payload_int(
+                record["hash_replay_validated"],
+                name="hash_replay_validated",
+            )
+            == 1
+            for record in records
+        )
         and (not include_subgates or subgate_pass_count == len(subgates))
     )
     benchmark_payload = {
@@ -981,6 +1002,7 @@ def benchmark_pha_c_acceptance_polyglot_gate(
 
 
 def _main() -> int:
+    """Run the command-line PHA-C acceptance benchmark gate."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--n", type=int, default=8)
     parser.add_argument("--calls", type=int, default=2)
@@ -1001,10 +1023,17 @@ def _main() -> int:
             encoding="utf-8",
         )
     print(json.dumps(payload, indent=2, sort_keys=True))
-    if args.parity_gate and int(payload["acceptance_passed"]) != 1:
+    if (
+        args.parity_gate
+        and _payload_int(
+            payload["acceptance_passed"],
+            name="acceptance_passed",
+        )
+        != 1
+    ):
         return 1
     return 0
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     raise SystemExit(_main())

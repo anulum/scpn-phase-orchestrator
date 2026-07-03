@@ -180,6 +180,13 @@ summary equations. The same benchmark row now publishes
 `formal_obligation_acceptance_certificate_predicate`, and
 `formal_obligation_acceptance_certificate_theorem`, and the parity gate fails
 unless every backend row discharges the combined Lean acceptance certificate.
+Before calculating parity error, the source-contract validator now compares raw
+`PHACAcceptanceRecord` fields rather than the canonical `to_dict()` payload, so
+numeric strings, non-finite values, boolean aliases, malformed integer fields,
+non-plain lock flags, malformed string/hash fields, and typed field divergence
+fail closed before benchmark rows are published. Imported subgate payload flags
+are also parsed as strict integers so malformed benchmark evidence cannot be
+accepted through Python string coercion.
 
 ```bash
 uv run python benchmarks/pha_c_acceptance_benchmark.py \
@@ -202,6 +209,11 @@ The acceptance builder fails closed on:
 - invalid moving-frame backend names;
 - non-positive `dt`, tolerances, or integration controls;
 - unknown tolerance profile names.
+
+The polyglot source-contract validator also fails closed on acceptance records
+whose raw dataclass fields do not preserve the expected numeric, integer,
+boolean, and string/hash domains, even if their canonical dictionary projection
+would coerce to the reference value.
 
 ::: scpn_phase_orchestrator.upde.pha_c_acceptance.PHACAcceptanceRecord
 

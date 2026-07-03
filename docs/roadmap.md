@@ -49,12 +49,14 @@ TODO queue.
 | Cross-domain meta-transfer | Replay proposals, nested corpora, package export, entry points, non-publishing evidence, and pre-publish enforcement exist. | Validate larger private or partner audit-history corpora and decide optional package publication. |
 | Plugin ecosystem | Registry, catalogue, Rust-facing metadata, approval-bound execution requests, storage, revocation, lifecycle, scheduler, retry, and dashboard artefacts exist. | Build a curated signed domainpack and extension store with reputation, audit scores, revocation, provenance, operator UX refinement, and adapter-family onboarding. |
 
-Latest U1 closure: the merge-window Rust, Go, Julia, and Mojo source-contract
-adapters now validate raw `MergeReport` output fields before parity publication.
-The shared validator rejects boolean-alias or non-finite numeric fields,
-non-plain lock flags, invalid consecutive counts, invalid tolerances, and
-reference-divergent signed-margin evidence before benchmark records or
-downstream PHA-C review lanes consume it.
+Latest U1 closure: the PHA-C acceptance Rust, Go, Julia, and Mojo
+source-contract rows now validate raw `PHACAcceptanceRecord` fields before
+parity publication. The shared validator rejects numeric strings, non-finite
+numeric fields, boolean aliases, malformed integer fields, non-plain lock flags,
+malformed string/hash fields, and typed field divergence before canonical
+dictionary projection can hide source-contract drift. The acceptance benchmark's
+max-error helper and imported subgate flags now use the same strict fail-closed
+parsers before benchmark records or downstream PHA-C review lanes consume them.
 
 | Parent item | Completed evidence consolidated here | Remaining open scope |
 |-------------|--------------------------------------|----------------------|

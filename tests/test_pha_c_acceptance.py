@@ -12,13 +12,17 @@ from __future__ import annotations
 
 import importlib
 import json
+import sys
 from dataclasses import replace
+from pathlib import Path
+from typing import cast
 
 import numpy as np
 import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
+from benchmarks import pha_c_acceptance_benchmark
 from benchmarks.pha_c_acceptance_benchmark import (
     benchmark_pha_c_acceptance_polyglot_gate,
 )
@@ -523,6 +527,185 @@ def test_pha_c_acceptance_benchmark_gate_accepts_declared_backends() -> None:
     )
 
 
+def test_pha_c_acceptance_benchmark_rejects_invalid_int_controls() -> None:
+    with pytest.raises(ValueError, match="n must be an integer"):
+        pha_c_acceptance_benchmark._validate_int_control(
+            True,
+            name="n",
+            minimum=3,
+        )
+    with pytest.raises(ValueError, match="calls must be at least 1"):
+        pha_c_acceptance_benchmark._validate_int_control(
+            0,
+            name="calls",
+            minimum=1,
+        )
+    with pytest.raises(ValueError, match="flag must be an integer"):
+        pha_c_acceptance_benchmark._payload_int(True, name="flag")
+
+
+def test_pha_c_acceptance_benchmark_gate_passed_payload_shapes() -> None:
+    assert pha_c_acceptance_benchmark._gate_passed({"acceptance_passed": 1})
+    assert pha_c_acceptance_benchmark._gate_passed({"all_available_passed": 1})
+    assert not pha_c_acceptance_benchmark._gate_passed({"acceptance_passed": 0})
+    assert not pha_c_acceptance_benchmark._gate_passed({})
+
+
+def test_pha_c_acceptance_subgate_records_collects_gate_payloads(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    gate_specs: dict[str, tuple[str, dict[str, object]]] = {
+        "benchmarks.spatial_modulator_benchmark": (
+            "benchmark_spatial_modulator_polyglot_parity_gate",
+            {"all_available_passed": 1},
+        ),
+        "benchmarks.upde_time_varying_omega_benchmark": (
+            "benchmark_upde_time_varying_omega_polyglot_gate",
+            {"acceptance_passed": 1},
+        ),
+        "benchmarks.upde_doppler_benchmark": (
+            "benchmark_upde_doppler_polyglot_gate",
+            {"acceptance_passed": 1},
+        ),
+        "benchmarks.upde_moving_frame_benchmark": (
+            "benchmark_upde_moving_frame_polyglot_gate",
+            {"acceptance_passed": 1},
+        ),
+        "benchmarks.merge_window_benchmark": (
+            "benchmark_merge_window_polyglot_parity_gate",
+            {"acceptance_passed": 1},
+        ),
+        "benchmarks.pha_c_handoff_benchmark": (
+            "benchmark_pha_c_handoff_polyglot_parity_gate",
+            {"acceptance_passed": 1},
+        ),
+        "benchmarks.pha_c_timeline_benchmark": (
+            "benchmark_pha_c_timeline_polyglot_parity_gate",
+            {"acceptance_passed": 1},
+        ),
+    }
+
+    def fake_import_module(module_name: str) -> object:
+        attr_name, payload = gate_specs[module_name]
+        enriched_payload = {
+            "suite": module_name.rsplit(".", maxsplit=1)[-1],
+            "backend_count": 5,
+            "parity_pass_count": 5,
+            "source_contract_backend_count": 4,
+            "native_kernel_count": 0,
+            "polyglot_claim_boundary": "source_contract_not_native_kernel",
+            "benchmark_evidence_kind": "local_regression_non_isolated",
+            "hash_replay_validated": 1,
+            **payload,
+        }
+
+        class ModuleStub:
+            """Tiny imported-module stand-in for subgate collection."""
+
+        module = ModuleStub()
+
+        def gate() -> dict[str, object]:
+            return enriched_payload
+
+        setattr(module, attr_name, gate)
+        return module
+
+    monkeypatch.setattr(
+        pha_c_acceptance_benchmark.importlib,
+        "import_module",
+        fake_import_module,
+    )
+    original_sys_path = list(sys.path)
+    root_text = str(pha_c_acceptance_benchmark.ROOT)
+    sys.path[:] = [entry for entry in sys.path if entry != root_text]
+    try:
+        records = pha_c_acceptance_benchmark._subgate_records()
+        assert sys.path[0] == root_text
+    finally:
+        sys.path[:] = original_sys_path
+
+    assert len(records) == len(gate_specs)
+    assert all(record["passed"] == 1 for record in records)
+    assert all(record["backend_count"] == 5 for record in records)
+
+
+def test_pha_c_acceptance_benchmark_main_writes_output(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    payload = {"suite": "stub", "acceptance_passed": 1}
+    output_path = tmp_path / "acceptance.json"
+
+    def fake_gate(
+        *,
+        n: int,
+        calls: int,
+        include_subgates: bool,
+    ) -> dict[str, object]:
+        assert n == 3
+        assert calls == 1
+        assert not include_subgates
+        return payload
+
+    monkeypatch.setattr(
+        pha_c_acceptance_benchmark,
+        "benchmark_pha_c_acceptance_polyglot_gate",
+        fake_gate,
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "pha-c-acceptance",
+            "--n",
+            "3",
+            "--calls",
+            "1",
+            "--skip-subgates",
+            "--parity-gate",
+            "--output",
+            str(output_path),
+        ],
+    )
+
+    assert pha_c_acceptance_benchmark._main() == 0
+    assert json.loads(output_path.read_text(encoding="utf-8")) == payload
+    assert json.loads(capsys.readouterr().out) == payload
+
+
+def test_pha_c_acceptance_benchmark_main_fails_parity_gate(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    payload = {"suite": "stub", "acceptance_passed": 0}
+
+    def fake_gate(
+        *,
+        n: int,
+        calls: int,
+        include_subgates: bool,
+    ) -> dict[str, object]:
+        assert n == 8
+        assert calls == 2
+        assert not include_subgates
+        return payload
+
+    monkeypatch.setattr(
+        pha_c_acceptance_benchmark,
+        "benchmark_pha_c_acceptance_polyglot_gate",
+        fake_gate,
+    )
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        ["pha-c-acceptance", "--skip-subgates", "--parity-gate"],
+    )
+
+    assert pha_c_acceptance_benchmark._main() == 1
+    assert json.loads(capsys.readouterr().out) == payload
+
+
 def test_acceptance_signed_margins_are_hash_replayed() -> None:
     from dataclasses import replace
 
@@ -707,6 +890,77 @@ def test_acceptance_validation_rejects_numeric_divergence() -> None:
             expected,
             tolerance=0.0,
         )
+
+
+def test_acceptance_validation_rejects_numeric_string_record_field() -> None:
+    record = _valid_record()
+    forged = replace(
+        record,
+        max_abs_doppler_term=cast(float, str(record.max_abs_doppler_term)),
+    )
+
+    with pytest.raises(ValueError, match="max_abs_doppler_term"):
+        _pha_c_acceptance_validation.validate_pha_c_acceptance_record(
+            forged,
+            record,
+        )
+
+
+@pytest.mark.parametrize(
+    ("changes", "match"),
+    [
+        ({"max_abs_doppler_term": float("nan")}, "max_abs_doppler_term.*finite"),
+        ({"sample_count": "5"}, "sample_count.*integer"),
+        ({"first_lock_observed": np.bool_(True)}, "first_lock_observed.*bool"),
+        ({"claim_boundary": b"claim"}, "claim_boundary.*string"),
+    ],
+)
+def test_acceptance_validation_rejects_strict_record_field_type_drift(
+    changes: dict[str, object],
+    match: str,
+) -> None:
+    record = _valid_record()
+
+    with pytest.raises(ValueError, match=match):
+        _pha_c_acceptance_validation.validate_pha_c_acceptance_record(
+            replace(record, **changes),
+            record,
+        )
+
+
+def test_acceptance_validation_rejects_integer_divergence() -> None:
+    record = _valid_record()
+    forged = replace(record, reset_count=record.reset_count + 1)
+
+    with pytest.raises(ValueError, match="reset_count"):
+        _pha_c_acceptance_validation.validate_pha_c_acceptance_record(
+            forged,
+            record,
+        )
+
+
+def test_acceptance_validation_rejects_boolean_divergence() -> None:
+    record = _valid_record()
+    forged = replace(record, final_lock_achieved=not record.final_lock_achieved)
+
+    with pytest.raises(ValueError, match="final_lock_achieved"):
+        _pha_c_acceptance_validation.validate_pha_c_acceptance_record(
+            forged,
+            record,
+        )
+
+
+def test_acceptance_benchmark_error_rejects_numeric_string_record_field() -> None:
+    from benchmarks.pha_c_acceptance_benchmark import _record_max_abs_error
+
+    record = _valid_record()
+    forged = replace(
+        record,
+        max_abs_doppler_term=cast(float, str(record.max_abs_doppler_term)),
+    )
+
+    with pytest.raises(ValueError, match="max_abs_doppler_term"):
+        _record_max_abs_error(forged, record)
 
 
 def test_acceptance_validation_rejects_discrete_divergence() -> None:

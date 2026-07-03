@@ -10,6 +10,10 @@
 
 from __future__ import annotations
 
+from math import isfinite
+from numbers import Integral, Real
+
+import numpy as np
 from numpy.typing import ArrayLike
 
 from scpn_phase_orchestrator.coupling.spatial_modulator import (
@@ -50,28 +54,32 @@ _NUMERIC_FIELDS = (
     "spatial_tol_m",
     "tolerance_profile_multiplier",
 )
-_DISCRETE_FIELDS = (
+_INT_FIELDS = (
     "sample_count",
     "step_count",
     "oscillator_count",
     "first_lock_index",
-    "first_lock_observed",
-    "final_lock_achieved",
     "lock_sample_count",
     "lock_loss_count",
     "reset_count",
     "max_consecutive_lock_samples",
+    "required_consecutive_samples",
+)
+_BOOL_FIELDS = (
+    "first_lock_observed",
+    "final_lock_achieved",
     "final_position_equation_validated",
     "max_abs_velocity_equation_validated",
     "path_length_equation_validated",
     "kinematic_equations_validated",
+    "execution_disabled",
+    "actuating",
+)
+_STRING_FIELDS = (
     "tolerance_profile_name",
-    "required_consecutive_samples",
     "moving_frame_backend_request",
     "claim_boundary",
     "evidence_kind",
-    "execution_disabled",
-    "actuating",
     "omega_schedule_sha256",
     "velocity_schedule_sha256",
     "phase_trajectory_sha256",
@@ -138,6 +146,87 @@ def expected_pha_c_acceptance_record(
     )
 
 
+def _validate_real_record_field(record: PHACAcceptanceRecord, field: str) -> float:
+    """Return a record field as a finite non-boolean real scalar."""
+    value = getattr(record, field)
+    if isinstance(value, (bool, np.bool_)) or not isinstance(
+        value,
+        (Real, np.floating, np.integer),
+    ):
+        raise ValueError(
+            f"PHA-C acceptance field {field!r} must be a finite real scalar"
+        )
+    parsed = float(value)
+    if not isfinite(parsed):
+        raise ValueError(f"PHA-C acceptance field {field!r} must be finite")
+    return parsed
+
+
+def _validate_int_record_field(record: PHACAcceptanceRecord, field: str) -> int:
+    """Return a record field as an integer after rejecting boolean aliases."""
+    value = getattr(record, field)
+    if isinstance(value, (bool, np.bool_)) or not isinstance(
+        value,
+        (Integral, np.integer),
+    ):
+        raise ValueError(f"PHA-C acceptance field {field!r} must be an integer")
+    return int(value)
+
+
+def _validate_bool_record_field(record: PHACAcceptanceRecord, field: str) -> bool:
+    """Return a record field after confirming it is a plain ``bool``."""
+    value = getattr(record, field)
+    if type(value) is not bool:
+        raise ValueError(f"PHA-C acceptance field {field!r} must be bool")
+    return value
+
+
+def _validate_string_record_field(record: PHACAcceptanceRecord, field: str) -> str:
+    """Return a record field after confirming it is a string."""
+    value = getattr(record, field)
+    if not isinstance(value, str):
+        raise ValueError(f"PHA-C acceptance field {field!r} must be a string")
+    return value
+
+
+def pha_c_acceptance_record_max_abs_error(
+    got: PHACAcceptanceRecord,
+    expected: PHACAcceptanceRecord,
+) -> float:
+    """Return strict maximum field error for PHA-C acceptance parity."""
+    numeric_error = max(
+        abs(
+            _validate_real_record_field(got, field)
+            - _validate_real_record_field(expected, field)
+        )
+        for field in _NUMERIC_FIELDS
+    )
+    int_error = max(
+        int(
+            _validate_int_record_field(got, field)
+            != _validate_int_record_field(expected, field)
+        )
+        for field in _INT_FIELDS
+    )
+    bool_error = max(
+        int(
+            _validate_bool_record_field(got, field)
+            is not _validate_bool_record_field(expected, field)
+        )
+        for field in _BOOL_FIELDS
+    )
+    string_error = max(
+        int(
+            _validate_string_record_field(got, field)
+            != _validate_string_record_field(expected, field)
+        )
+        for field in _STRING_FIELDS
+    )
+    verify_pha_c_acceptance_record(got)
+    verify_pha_c_acceptance_record(expected)
+    return max(numeric_error, float(int_error), float(bool_error), float(string_error))
+
+
 def validate_pha_c_acceptance_record(
     got: PHACAcceptanceRecord,
     expected: PHACAcceptanceRecord,
@@ -146,15 +235,31 @@ def validate_pha_c_acceptance_record(
 ) -> PHACAcceptanceRecord:
     """Validate an accelerator acceptance record against the reference."""
     tolerance_f = validate_non_negative_tolerance(tolerance)
-    verify_pha_c_acceptance_record(got)
-    verify_pha_c_acceptance_record(expected)
-    got_dict = got.to_dict()
-    expected_dict = expected.to_dict()
     for field in _NUMERIC_FIELDS:
-        error = abs(float(got_dict[field]) - float(expected_dict[field]))
+        error = abs(
+            _validate_real_record_field(got, field)
+            - _validate_real_record_field(expected, field)
+        )
         if error > tolerance_f:
             raise ValueError(f"PHA-C acceptance field {field!r} diverged by {error}")
-    for field in _DISCRETE_FIELDS:
-        if got_dict[field] != expected_dict[field]:
+    for field in _INT_FIELDS:
+        if _validate_int_record_field(got, field) != _validate_int_record_field(
+            expected,
+            field,
+        ):
             raise ValueError(f"PHA-C acceptance field {field!r} diverged")
+    for field in _BOOL_FIELDS:
+        if _validate_bool_record_field(got, field) is not _validate_bool_record_field(
+            expected,
+            field,
+        ):
+            raise ValueError(f"PHA-C acceptance field {field!r} diverged")
+    for field in _STRING_FIELDS:
+        if _validate_string_record_field(got, field) != _validate_string_record_field(
+            expected,
+            field,
+        ):
+            raise ValueError(f"PHA-C acceptance field {field!r} diverged")
+    verify_pha_c_acceptance_record(got)
+    verify_pha_c_acceptance_record(expected)
     return got
