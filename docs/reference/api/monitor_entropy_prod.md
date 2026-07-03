@@ -378,13 +378,14 @@ pytest tests/test_entropy_prod_stability.py -m slow
 
 ### 8.1 Public validation
 
-The public monitor validates shape, finiteness, real-valuedness, and
-boolean aliases before backend dispatch. The Go / Julia / Mojo direct
-adapter wrappers share the same validation helper, so direct adapter
-tests fail closed before entering polyglot runtimes.
-Direct backend outputs are validated before return as finite real
-non-negative entropy-production scalars. Boolean aliases, complex values,
-non-finite results, and negative rates fail closed at the Python boundary.
+The public monitor validates shape, finiteness, real-valuedness, boolean
+aliases, and numeric-string aliases before backend dispatch. The Go / Julia /
+Mojo direct adapter wrappers share the same validation helper, so direct
+adapter tests fail closed before entering polyglot runtimes. Direct backend
+outputs are validated before return as finite real non-negative
+entropy-production scalars. Boolean aliases, numeric-string aliases, complex
+values, non-finite results, and negative rates fail closed at the Python
+boundary.
 
 ### 8.2 Not thread-safe on the Python fallback
 

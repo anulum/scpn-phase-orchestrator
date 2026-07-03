@@ -14,11 +14,21 @@ import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.experimental.accelerators.monitor._entropy_prod_validation import (  # noqa: E501
+    _contains_numeric_string_alias,
+    _is_numeric_string_alias,
     validate_entropy_prod_backend_inputs,
     validate_entropy_prod_backend_output,
 )
 
 _KNM = np.array([[0.0, 1.0], [1.0, 0.0]], dtype=np.float64)
+
+
+class _ArrayProtocolFailure:
+    """Array-like payload that rejects every NumPy coercion attempt."""
+
+    def __array__(self, dtype: object | None = None) -> np.ndarray:
+        """Raise as a hostile array-protocol implementation would."""
+        raise TypeError("array protocol unavailable")
 
 
 def _inputs(**overrides: Any) -> dict[str, Any]:
@@ -37,6 +47,22 @@ def _call(**overrides: Any) -> Any:
     return validate_entropy_prod_backend_inputs(**_inputs(**overrides))
 
 
+class TestEntropyProdNumericStringHelpers:
+    def test_numeric_string_helpers_reject_only_numeric_string_aliases(self) -> None:
+        assert _is_numeric_string_alias(1.0) is False
+        assert _is_numeric_string_alias("not-a-number") is False
+        assert _contains_numeric_string_alias(_ArrayProtocolFailure()) is False
+        assert (
+            _contains_numeric_string_alias(
+                np.array([1.0, "not-a-number"], dtype=object)
+            )
+            is False
+        )
+        assert (
+            _contains_numeric_string_alias(np.array([1.0, "2.0"], dtype=object)) is True
+        )
+
+
 class TestEntropyProdInputs:
     def test_valid_round_trips(self) -> None:
         phases, omegas, knm, alpha, dt = _call()
@@ -46,13 +72,25 @@ class TestEntropyProdInputs:
         ("overrides", "match"),
         [
             ({"phases": np.array([True, False])}, "phases must not contain boolean"),
+            (
+                {"phases": np.array(["0.1", "0.2"], dtype=object)},
+                "numeric-string",
+            ),
             ({"phases": np.array([0.1 + 1j, 0.2])}, "phases must contain real-valued"),
             ({"phases": np.zeros((2, 2))}, "phases shape .* must be one-dimensional"),
             ({"phases": np.array([0.1, np.inf])}, "phases must contain only finite"),
             ({"omegas": np.array([0.0, 0.0, 0.0])}, "omegas shape .* does not match"),
             (
+                {"omegas": np.array(["0.0", "0.0"], dtype=object)},
+                "numeric-string",
+            ),
+            (
                 {"knm": np.array([[True, False], [False, True]])},
                 "knm must not contain boolean",
+            ),
+            (
+                {"knm": np.array([["0.0", "1.0"], ["1.0", "0.0"]], dtype=object)},
+                "numeric-string",
             ),
             ({"knm": np.array([[0.0, 1j], [1j, 0.0]])}, "knm must contain real-valued"),
             ({"knm": np.zeros((2, 3))}, "knm shape .* does not match"),
@@ -61,8 +99,10 @@ class TestEntropyProdInputs:
                 "knm must contain only finite",
             ),
             ({"alpha": 0.5 + 1j}, "alpha must be a finite real-valued scalar"),
+            ({"alpha": "0.5"}, "numeric-string"),
             ({"alpha": "x"}, "alpha must be a finite real"),
             ({"alpha": float("inf")}, "alpha must be finite"),
+            ({"dt": "0.01"}, "numeric-string"),
             ({"dt": -0.1}, "dt must be non-negative"),
         ],
     )
@@ -79,6 +119,7 @@ class TestEntropyProdOutput:
         ("value", "match"),
         [
             (True, "must not be a boolean"),
+            ("0.5", "numeric-string"),
             (np.array(0.0 + 1j), "must be real-valued"),
             (np.inf, "must be finite"),
             (-0.5, "must be non-negative"),

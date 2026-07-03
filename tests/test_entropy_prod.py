@@ -15,6 +15,14 @@ from scpn_phase_orchestrator.monitor import entropy_prod as entropy_prod_module
 from scpn_phase_orchestrator.monitor.entropy_prod import entropy_production_rate
 
 
+class _ArrayRaises:
+    """Array-protocol payload that refuses NumPy coercion."""
+
+    def __array__(self, dtype: object | None = None) -> np.ndarray:
+        """Raise as hostile array-protocol objects do."""
+        raise TypeError("array protocol unavailable")
+
+
 def _all_to_all(n: int, k: float = 1.0) -> np.ndarray:
     knm = np.full((n, n), k)
     np.fill_diagonal(knm, 0.0)
@@ -122,6 +130,23 @@ class TestEntropyProductionRate:
             ("phases", np.array([0.0, True], dtype=object), "phases"),
             ("omegas", np.array([1.0, False], dtype=object), "omegas"),
             ("knm", np.array([[0.0, True], [1.0, 0.0]], dtype=object), "knm"),
+            ("phases", np.array(["0.0", "1.0"], dtype=object), "numeric-string"),
+            ("omegas", np.array(["1.0", "2.0"], dtype=object), "numeric-string"),
+            (
+                "knm",
+                np.array([["0.0", "1.0"], ["1.0", "0.0"]], dtype=object),
+                "numeric-string",
+            ),
+            (
+                "phases",
+                np.array(["not-a-float", "still-not"], dtype=object),
+                "one-dimensional float array",
+            ),
+            (
+                "knm",
+                np.array([["not-a-float", "0.0"], ["0.0", "0.0"]], dtype=object),
+                "two-dimensional float array",
+            ),
             ("phases", np.array([0.0 + 1.0j, 1.0 + 0.0j]), "phases"),
             ("omegas", np.array([1.0 + 1.0j, 2.0 + 0.0j]), "omegas"),
             ("knm", np.array([[0.0 + 0.0j, 1.0 + 1.0j], [1.0, 0.0]]), "knm"),
@@ -162,6 +187,29 @@ class TestEntropyProductionRate:
 
         with pytest.raises(ValueError, match="boolean"):
             entropy_production_rate(phases, omegas, knm, alpha=alpha, dt=dt)
+
+    @pytest.mark.parametrize(
+        ("alpha", "dt"),
+        [
+            ("1.0", 0.01),
+            (1.0, "0.01"),
+        ],
+    )
+    def test_rejects_numeric_string_scalars(self, alpha: object, dt: object) -> None:
+        phases = np.array([0.0, 1.0], dtype=np.float64)
+        omegas = np.array([1.0, 2.0], dtype=np.float64)
+        knm = _all_to_all(2)
+
+        with pytest.raises(ValueError, match="numeric-string"):
+            entropy_production_rate(phases, omegas, knm, alpha=alpha, dt=dt)
+
+    def test_rejects_non_numeric_scalar_payload(self) -> None:
+        phases = np.array([0.0, 1.0], dtype=np.float64)
+        omegas = np.array([1.0, 2.0], dtype=np.float64)
+        knm = _all_to_all(2)
+
+        with pytest.raises(ValueError, match="alpha must be a finite real"):
+            entropy_production_rate(phases, omegas, knm, alpha="x", dt=0.01)
 
     @pytest.mark.parametrize(
         ("alpha", "dt", "match"),
@@ -218,6 +266,16 @@ class TestEntropyProdPipelineWiring:
 
 
 class TestEntropyProdRustDispatch:
+    def test_load_julia_function_returns_bridge_callable(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The public Julia loader requires runtime availability before exporting."""
+        monkeypatch.setattr(entropy_prod_module, "require_juliacall_main", lambda: None)
+
+        loaded = entropy_prod_module._load_julia_fn()
+
+        assert callable(loaded)
+
     def test_entropy_production_uses_backend_when_available(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -314,6 +372,30 @@ class TestEntropyProdRustDispatch:
 
         assert backend is None
 
+    def test_dispatch_returns_python_when_all_selected_loaders_fail(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        previous_backend = entropy_prod_module.ACTIVE_BACKEND
+        previous_available = list(entropy_prod_module.AVAILABLE_BACKENDS)
+        previous_loader = entropy_prod_module._LOADERS["go"]
+        entropy_prod_module.ACTIVE_BACKEND = "go"
+        entropy_prod_module.AVAILABLE_BACKENDS = ["go"]
+        entropy_prod_module._BACKEND_CACHE.clear()
+        monkeypatch.setitem(
+            entropy_prod_module._LOADERS,
+            "go",
+            lambda: (_ for _ in ()).throw(ImportError("go backend unavailable")),
+        )
+        try:
+            backend = entropy_prod_module._dispatch()
+        finally:
+            entropy_prod_module.ACTIVE_BACKEND = previous_backend
+            entropy_prod_module.AVAILABLE_BACKENDS = previous_available
+            monkeypatch.setitem(entropy_prod_module._LOADERS, "go", previous_loader)
+            entropy_prod_module._BACKEND_CACHE.clear()
+
+        assert backend is None
+
     def test_dispatch_uses_cached_loader_once(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -352,3 +434,27 @@ class TestEntropyProdRustDispatch:
         assert b1 is fake_backend
         assert b2 is fake_backend
         assert call_count == 1
+
+
+def test_entropy_prod_alias_helpers_cover_defensive_edges() -> None:
+    """Alias helpers keep array-protocol and nonnumeric paths distinct."""
+    value = _ArrayRaises()
+
+    assert entropy_prod_module._contains_boolean_alias(value) is False
+    assert entropy_prod_module._contains_complex_alias(value) is False
+    assert entropy_prod_module._has_complex_payload(value) is False
+    assert entropy_prod_module._is_numeric_string_alias(1.0) is False
+    assert entropy_prod_module._is_numeric_string_alias("not-a-number") is False
+    assert entropy_prod_module._contains_numeric_string_alias(value) is False
+    assert (
+        entropy_prod_module._contains_numeric_string_alias(
+            np.array([1.0, "not-a-number"], dtype=object)
+        )
+        is False
+    )
+    assert (
+        entropy_prod_module._contains_numeric_string_alias(
+            np.array([1.0, "2.0"], dtype=object)
+        )
+        is True
+    )

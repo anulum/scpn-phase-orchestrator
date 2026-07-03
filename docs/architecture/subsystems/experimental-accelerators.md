@@ -176,6 +176,12 @@ backend scalar or matrix outputs, and exact-reference payloads reject boolean
 aliases, numeric-string aliases, complex values, non-finite values, wrong
 cardinality, entropy-bound violations, non-zero matrix diagonals, and
 exact-histogram-estimator divergence before float coercion or publication.
+The public entropy-production dispatcher and direct Go, Julia, and Mojo bridges
+apply shared entropy-production validators before optional runtime loading and
+after backend execution: phase vectors, frequency vectors, coupling matrices,
+scalar controls, and backend entropy-rate outputs reject boolean aliases,
+numeric-string aliases, complex values, non-finite values, shape mismatches,
+negative timesteps, and negative rates before float coercion or publication.
 
 ## Wiring
 
@@ -219,3 +225,8 @@ through a production subsystem's dispatcher.
   non-finite, non-integral, out-of-range, and invalid-bin-count aliases before
   optional runtime loading. Backend redundancy/synergy outputs are rechecked as
   finite non-negative real scalars before public monitor publication.
+- `monitor/entropy_prod` Go, Julia, and Mojo adapters share one direct validator
+  that rejects boolean, numeric-string, complex, non-finite, shape-mismatched,
+  and negative-timestep aliases before optional runtime loading. Backend
+  entropy-rate outputs are rechecked as finite non-negative real scalars before
+  public monitor publication.

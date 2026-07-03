@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 from numbers import Real
-from typing import TypeAlias
+from typing import TypeAlias, cast
 
 import numpy as np
 from numpy.typing import NDArray
@@ -37,6 +37,40 @@ def _contains_complex_alias(value: object) -> bool:
     return any(isinstance(item, (complex, np.complexfloating)) for item in array.flat)
 
 
+def _is_string_like(value: object) -> bool:
+    """Return whether ``value`` is a Python or NumPy string scalar."""
+    return isinstance(value, (str, bytes, np.str_, np.bytes_))
+
+
+def _is_numeric_string_alias(value: object) -> bool:
+    """Return whether ``value`` is a string scalar parsable as a float."""
+    if not _is_string_like(value):
+        return False
+    try:
+        float(cast("str | bytes", value))
+    except (TypeError, ValueError):
+        return False
+    return True
+
+
+def _contains_numeric_string_alias(value: object) -> bool:
+    """Return whether the value contains numeric-string aliases."""
+    try:
+        raw = np.asarray(value)
+    except (TypeError, ValueError):
+        return False
+    if raw.dtype.kind not in {"O", "S", "U"}:
+        return False
+    saw_string = False
+    for item in raw.astype(object, copy=False).flat:
+        if not _is_string_like(item):
+            continue
+        saw_string = True
+        if not _is_numeric_string_alias(item):
+            return False
+    return saw_string
+
+
 def _has_complex_payload(value: object) -> bool:
     """Return whether the value carries a complex-number payload."""
     array = np.asarray(value)
@@ -47,6 +81,8 @@ def _validate_finite_float(value: object, *, name: str) -> float:
     """Return ``value`` as a finite float, else raise ``ValueError``."""
     if _has_complex_payload(value):
         raise ValueError(f"{name} must be a finite real-valued scalar")
+    if _is_numeric_string_alias(value):
+        raise ValueError(f"{name} must not be a numeric-string alias")
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite real, got {value!r}")
     result = float(value)
@@ -62,6 +98,8 @@ def _validate_vector(value: object, *, name: str) -> FloatArray:
         raise ValueError(f"{name} must not contain boolean values")
     if _has_complex_payload(value):
         raise ValueError(f"{name} must contain real-valued samples")
+    if _contains_numeric_string_alias(value):
+        raise ValueError(f"{name} must not contain numeric-string aliases")
     try:
         array = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
@@ -85,6 +123,8 @@ def _validate_matrix(
         raise ValueError(f"{name} must not contain boolean values")
     if _has_complex_payload(value):
         raise ValueError(f"{name} must contain real-valued couplings")
+    if _contains_numeric_string_alias(value):
+        raise ValueError(f"{name} must not contain numeric-string aliases")
     try:
         array = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
@@ -131,6 +171,10 @@ def validate_entropy_prod_backend_output(value: object) -> float:
     raw = np.asarray(value)
     if _has_complex_payload(value):
         raise ValueError("entropy_production_rate must be real-valued")
+    if _contains_numeric_string_alias(value):
+        raise ValueError(
+            "entropy_production_rate must not contain numeric-string aliases"
+        )
     try:
         result = float(raw)
     except (TypeError, ValueError) as exc:

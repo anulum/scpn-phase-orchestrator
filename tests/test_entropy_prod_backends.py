@@ -407,6 +407,28 @@ class TestEntropyProductionAdapterContracts:
                 0.01,
             )
 
+    def test_rejects_numeric_string_arrays_before_runtime(
+        self,
+        name: str,
+        backend,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        if name == "go":
+            monkeypatch.setattr(_entropy_prod_go, "_load_lib", lambda: None)
+        elif name == "julia":
+            monkeypatch.setattr(_entropy_prod_julia, "_ensure", lambda: None)
+        else:
+            monkeypatch.setattr(_entropy_prod_mojo, "_run", lambda _payload: 0.0)
+
+        with pytest.raises(ValueError, match="numeric-string"):
+            backend(
+                np.array(["0.0", "1.0"], dtype=object),
+                np.zeros(2),
+                np.zeros((2, 2)),
+                1.0,
+                0.01,
+            )
+
     def test_rejects_shape_mismatch_before_runtime(
         self,
         name: str,
@@ -528,9 +550,25 @@ class TestEntropyProductionAdapterContracts:
                 np.zeros(2),
                 np.zeros(2),
                 np.zeros((2, 2)),
+                "0.5",
+                0.01,
+                "numeric-string",
+            ),
+            (
+                np.zeros(2),
+                np.zeros(2),
+                np.zeros((2, 2)),
                 np.inf,
                 0.01,
                 "alpha must be finite",
+            ),
+            (
+                np.zeros(2),
+                np.zeros(2),
+                np.zeros((2, 2)),
+                1.0,
+                "0.01",
+                "numeric-string",
             ),
             (
                 np.zeros(2),
@@ -569,3 +607,14 @@ def test_entropy_prod_validation_rejects_non_scalar_backend_output() -> None:
     """Backend scalar validation rejects non-castable production output."""
     with pytest.raises(ValueError, match="finite real scalar"):
         _entropy_prod_validation.validate_entropy_prod_backend_output("not-a-number")
+
+
+def test_mojo_backend_rejects_numeric_string_entropy_output(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Backend scalar validation rejects string-to-float output aliases."""
+    phases, omegas, knm = _problem(43, n=3)
+    monkeypatch.setattr(_entropy_prod_mojo, "_run", lambda _payload: "0.5")
+
+    with pytest.raises(ValueError, match="numeric-string"):
+        entropy_production_rate_mojo(phases, omegas, knm, 0.5, 0.01)

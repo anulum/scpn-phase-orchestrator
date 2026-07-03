@@ -443,6 +443,11 @@ thermal equilibrium (detailed balance) has zero entropy production;
 a synchronised Kuramoto network actively maintained by coupling
 has positive entropy production.
 
+The public dispatcher and backend adapters reject boolean aliases,
+numeric-string aliases, complex/object-complex payloads, non-finite values,
+shape mismatches, negative timesteps, and negative backend entropy-rate outputs
+before publishing a dissipation value.
+
 ::: scpn_phase_orchestrator.monitor.entropy_prod
 
 ## Winding Number
