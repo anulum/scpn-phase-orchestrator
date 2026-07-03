@@ -24,6 +24,8 @@ venv/
 .coverage.*
 coverage*.xml
 htmlcov/
+coverage_html/
+bandit_results.json
 .ipynb_checkpoints/
 .tox/
 
