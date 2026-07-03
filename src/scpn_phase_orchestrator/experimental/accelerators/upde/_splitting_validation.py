@@ -37,10 +37,45 @@ ValidatedSplittingInputs: TypeAlias = tuple[
 ]
 
 
+def _is_string_like(value: object) -> bool:
+    """Return whether ``value`` is a Python or NumPy string scalar."""
+    return isinstance(value, (str, bytes, np.str_, np.bytes_))
+
+
+def _is_numeric_string_alias(value: object) -> bool:
+    """Return whether ``value`` is a string scalar accepted by ``float``."""
+    if not _is_string_like(value):
+        return False
+    text = value.decode() if isinstance(value, (bytes, np.bytes_)) else str(value)
+    if text.strip() == "":
+        return False
+    try:
+        float(text)
+    except ValueError:
+        return False
+    return True
+
+
+def _contains_numeric_string_alias(value: Any) -> bool:
+    """Return whether ``value`` contains a stringified numeric scalar."""
+    if _is_numeric_string_alias(value):
+        return True
+    try:
+        array = np.asarray(value)
+    except (TypeError, ValueError):
+        return False
+    if array.dtype.kind not in {"O", "S", "U"}:
+        return False
+    object_array = array.astype(object, copy=False)
+    return any(_is_numeric_string_alias(item) for item in object_array.flat)
+
+
 def _as_real_vector(value: Any, *, name: str) -> FloatArray:
     """Return ``value`` as a validated finite real vector, else raise."""
     if contains_boolean_alias(value):
         raise ValueError(f"{name} must be real-valued, not boolean")
+    if _contains_numeric_string_alias(value):
+        raise ValueError(f"{name} must not contain numeric-string aliases")
     array = np.asarray(value)
     if array.ndim != 1:
         raise ValueError(f"{name} must be a one-dimensional vector")

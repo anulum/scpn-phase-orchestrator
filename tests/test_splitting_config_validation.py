@@ -109,6 +109,51 @@ def test_splitting_run_rejects_non_finite_state_arrays(
 @pytest.mark.parametrize(
     ("field", "bad_value"),
     [
+        ("phases", np.array(["0.0", "0.1", "0.2", "0.3"], dtype=object)),
+        ("omegas", np.array(["1.0", "1.1", "1.2", "1.3"], dtype=object)),
+        (
+            "knm",
+            np.array(
+                [
+                    ["0.0", "0.1", "0.2", "0.3"],
+                    ["0.1", "0.0", "0.2", "0.3"],
+                    ["0.1", "0.2", "0.0", "0.3"],
+                    ["0.1", "0.2", "0.3", "0.0"],
+                ],
+                dtype=object,
+            ),
+        ),
+        ("alpha", np.zeros((4, 4), dtype=object).astype(str)),
+    ],
+)
+def test_splitting_run_rejects_numeric_string_state_arrays(
+    field: str,
+    bad_value: np.ndarray,
+) -> None:
+    engine = SplittingEngine(n_oscillators=4, dt=0.01)
+    values = {
+        "phases": np.zeros(4, dtype=np.float64),
+        "omegas": np.ones(4, dtype=np.float64),
+        "knm": np.zeros((4, 4), dtype=np.float64),
+        "alpha": np.zeros((4, 4), dtype=np.float64),
+    }
+    values[field] = bad_value
+
+    with pytest.raises(ValueError, match="numeric-string"):
+        engine.run(
+            values["phases"],
+            values["omegas"],
+            values["knm"],
+            0.0,
+            0.0,
+            values["alpha"],
+            n_steps=1,
+        )
+
+
+@pytest.mark.parametrize(
+    ("field", "bad_value"),
+    [
         ("zeta", False),
         ("zeta", np.nan),
         ("zeta", np.inf),

@@ -380,8 +380,17 @@ Pre-allocates three scratch arrays:
 | `step` | `(phases, omegas, knm, zeta, psi, alpha)` | `NDArray[float64]` shape `(N,)` |
 | `run` | `(phases, omegas, knm, zeta, psi, alpha, n_steps)` | `NDArray[float64]` shape `(N,)` |
 
-`step()` always uses the Python path (for single-step interactive use).
-`run()` dispatches to Rust when `_HAS_RUST` is `True`.
+`step()` delegates to `run(..., n_steps=1)`. For positive timesteps, `run()`
+uses the resolved fastest available Rust, Mojo, Julia, or Go backend when the
+optional toolchain is healthy; malformed backend payloads raise instead of
+falling back. Negative timesteps intentionally use the Python reference path for
+reversibility checks.
+
+Public state arrays, direct Go/Julia/Mojo vectors and flattened matrices, and
+backend phase outputs reject numeric-string aliases before float coercion.
+Nonnumeric string payloads remain ordinary numeric parse errors. Mojo stdout is
+the text transport exception: it is parsed line by line and then revalidated as
+finite torus phases with exact cardinality.
 
 ### Rust Engine Function
 
@@ -414,19 +423,16 @@ out-of-domain output is rejected before public arrays are returned.
 - `coupling_deriv(theta, knm, alpha, n, zeta, psi) -> Vec<f64>` —
   computes $f_B(\theta)$ for all $N$ oscillators
 
-### Auto-Select Logic
+### Backend Selection Logic
 
 ```python
-try:
-    from spo_kernel import splitting_run_rust as _rust_splitting_run
-    _HAS_RUST = True
-except ImportError:
-    _HAS_RUST = False
+ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 ```
 
-The `run()` method dispatches to Rust when available. The Python
-path flattens `knm` and `alpha` to contiguous row-major arrays
-before the FFI call.
+The resolver probes available Rust, Mojo, Julia, and Go backends, keeps Python
+as the reference fallback, and chooses the fastest healthy backend for positive
+timesteps. The Python path and every optional backend receive contiguous
+row-major `knm` and `alpha` buffers.
 
 ---
 

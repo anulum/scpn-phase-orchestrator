@@ -246,6 +246,41 @@ def _validate_finite_float(value: object, *, name: str) -> float:
     return coerced
 
 
+def _is_string_like(value: object) -> bool:
+    """Return whether ``value`` is a Python or NumPy string scalar."""
+    return isinstance(value, (str, bytes, np.str_, np.bytes_))
+
+
+def _is_numeric_string_alias(value: object) -> bool:
+    """Return whether ``value`` is a string scalar accepted by ``float``."""
+    if not _is_string_like(value):
+        return False
+    text = value.decode() if isinstance(value, (bytes, np.bytes_)) else str(value)
+    if text.strip() == "":
+        return False
+    try:
+        float(text)
+    except ValueError:
+        return False
+    return True
+
+
+def _contains_numeric_string_alias(value: object) -> bool:
+    """Return whether ``value`` contains a stringified numeric scalar."""
+    if _is_numeric_string_alias(value):
+        return True
+    try:
+        array = np.asarray(value)
+    except (TypeError, ValueError):
+        return False
+    if array.dtype.kind not in {"O", "S", "U"}:
+        return False
+    object_array = array.astype(object, copy=False)
+    return any(
+        _is_numeric_string_alias(cast("object", item)) for item in object_array.flat
+    )
+
+
 def _validate_state_array(
     value: object,
     *,
@@ -253,6 +288,8 @@ def _validate_state_array(
     shape: tuple[int, ...],
 ) -> FloatArray:
     """Return the state as a validated finite array, else raise."""
+    if _contains_numeric_string_alias(value):
+        raise ValueError(f"{name} must not contain numeric-string aliases")
     try:
         arr = np.asarray(value, dtype=np.float64)
     except (TypeError, ValueError) as exc:
@@ -266,6 +303,8 @@ def _validate_state_array(
 
 def _validate_backend_output(value: object, *, n: int) -> FloatArray:
     """Return the backend output matching the reference, else raise."""
+    if _contains_numeric_string_alias(value):
+        raise ValueError("backend output must not contain numeric-string aliases")
     try:
         output = np.asarray(value, dtype=np.float64)
     except (TypeError, ValueError) as exc:
@@ -383,6 +422,7 @@ class SplittingEngine:
     """
 
     def __init__(self, n_oscillators: int, dt: float):
+        """Create a Strang-splitting engine for ``n_oscillators`` and ``dt``."""
         n_oscillators = _validate_positive_int(
             n_oscillators,
             name="n_oscillators",

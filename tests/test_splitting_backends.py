@@ -76,6 +76,11 @@ def _with_direct_arg(index: int, value):
     return tuple(args)
 
 
+class _ArrayProtocolFailure:
+    def __array__(self, *_args, **_kwargs):
+        raise TypeError("array protocol failed")
+
+
 class _FakeGoSplittingLib:
     def __init__(self, output: tuple[float, ...], rc: int = 0):
         self.output = output
@@ -273,8 +278,30 @@ class TestDirectSplittingBoundaryContracts:
         [
             (_with_direct_arg(0, np.array([True, False])), "phases"),
             (_with_direct_arg(0, np.array([0.1])), "phases"),
+            (
+                _with_direct_arg(
+                    0,
+                    np.array(["0.1", "0.2"], dtype=object),
+                ),
+                "numeric-string",
+            ),
             (_with_direct_arg(1, np.array([0.1 + 0.0j, 0.2])), "omegas"),
+            (_with_direct_arg(1, np.array([0.1])), "omegas length"),
+            (
+                _with_direct_arg(
+                    1,
+                    np.array(["0.1", "0.2"], dtype=object),
+                ),
+                "numeric-string",
+            ),
             (_with_direct_arg(2, np.zeros(3, dtype=np.float64)), "knm_flat"),
+            (
+                _with_direct_arg(
+                    2,
+                    np.array(["0.0", "0.4", "0.2", "0.0"], dtype=object),
+                ),
+                "numeric-string",
+            ),
             (
                 _with_direct_arg(
                     2,
@@ -283,7 +310,18 @@ class TestDirectSplittingBoundaryContracts:
                 "diagonal",
             ),
             (_with_direct_arg(3, np.zeros(3, dtype=np.float64)), "alpha_flat"),
+            (
+                _with_direct_arg(
+                    3,
+                    np.array(["0.0", "0.0", "0.0", "0.0"], dtype=object),
+                ),
+                "numeric-string",
+            ),
             (_with_direct_arg(4, True), "n"),
+            (_with_direct_arg(4, 1.5), "n"),
+            (_with_direct_arg(5, True), "zeta"),
+            (_with_direct_arg(5, "0.0"), "zeta"),
+            (_with_direct_arg(5, np.nan), "zeta"),
             (_with_direct_arg(7, 0.0), "dt"),
             (_with_direct_arg(7, -0.01), "dt"),
             (_with_direct_arg(8, 0), "n_steps"),
@@ -305,6 +343,92 @@ class TestDirectSplittingBoundaryContracts:
 
         with pytest.raises(ValueError, match=match):
             getattr(module, fn_name)(*args)
+
+    def test_direct_validation_output_rejects_numeric_string_aliases(self) -> None:
+        with pytest.raises(ValueError, match="numeric-string"):
+            splitting_validation.validate_splitting_output(
+                np.array(["0.2", "0.4"], dtype=object),
+                n=2,
+            )
+
+    @pytest.mark.parametrize(
+        ("value", "match"),
+        [
+            ("0.2", "numeric-string"),
+            (np.array(["", "bad"], dtype=object), "numeric"),
+            (np.zeros((1, 2), dtype=np.float64), "one-dimensional"),
+            (np.array([np.nan, 0.2], dtype=np.float64), "finite"),
+        ],
+    )
+    def test_direct_validation_output_defensive_failures(
+        self,
+        value,
+        match: str,
+    ) -> None:
+        with pytest.raises(ValueError, match=match):
+            splitting_validation.validate_splitting_output(value, n=2)
+
+    def test_direct_numeric_string_probe_ignores_unarrayable_value(self) -> None:
+        assert not splitting_validation._contains_numeric_string_alias(
+            _ArrayProtocolFailure(),
+        )
+
+    def test_direct_julia_backend_rejects_numeric_string_output_before_coercion(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        module = types.SimpleNamespace(
+            splitting_run=lambda *_args: np.array(["0.2", "0.4"], dtype=object),
+        )
+        monkeypatch.setattr(_splitting_julia, "_ensure", lambda: module)
+
+        with pytest.raises(ValueError, match="numeric-string"):
+            _splitting_julia.splitting_run_julia(*_valid_direct_args())
+
+    def test_direct_julia_loader_returns_cached_module(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        cached = object()
+        monkeypatch.setattr(_splitting_julia, "_JULIA_MODULE", cached)
+
+        assert _splitting_julia._ensure() is cached
+
+    def test_direct_julia_loader_rejects_missing_side_file(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path,
+    ) -> None:
+        monkeypatch.setattr(_splitting_julia, "_JULIA_MODULE", None)
+        monkeypatch.setattr(_splitting_julia, "_JULIA_FILE", tmp_path / "missing.jl")
+        monkeypatch.setattr(_splitting_julia, "require_julia_main", lambda: object())
+
+        with pytest.raises(ImportError, match="julia side-file not found"):
+            _splitting_julia._ensure()
+
+    def test_direct_julia_loader_includes_side_file(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path,
+    ) -> None:
+        included: list[str] = []
+        module = object()
+        side_file = tmp_path / "splitting.jl"
+        side_file.write_text("module SplittingJL end\n")
+        fake_main = types.SimpleNamespace(
+            include=lambda path: included.append(path),
+            SplittingJL=module,
+        )
+        monkeypatch.setattr(_splitting_julia, "_JULIA_MODULE", None)
+        monkeypatch.setattr(_splitting_julia, "_JULIA_FILE", side_file)
+        monkeypatch.setattr(
+            _splitting_julia,
+            "require_julia_main",
+            lambda: fake_main,
+        )
+
+        assert _splitting_julia._ensure() is module
+        assert included == [str(side_file)]
 
     @pytest.mark.parametrize(
         "module",

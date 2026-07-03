@@ -508,9 +508,11 @@ oscillator count; flattened pairwise coupling and phase-lag buffers must have
 exactly `N*N` values; pairwise self-coupling `K_ii` must be zero; `zeta` and
 `psi` must be finite controls; and direct accelerator `dt` plus `n_steps` must
 be positive. Backend outputs must be finite torus phases in `[0, 2*pi)`, and
-Mojo stdout must contain exactly one phase line per oscillator. The public
-`SplittingEngine` still supports negative `dt` for reversibility checks by
-using the Python reference path instead of direct optional accelerators.
+public state arrays, direct vectors/matrices, and backend outputs reject
+numeric-string aliases before float coercion. Mojo stdout must contain exactly
+one phase line per oscillator. The public `SplittingEngine` still supports
+negative `dt` for reversibility checks by using the Python reference path
+instead of direct optional accelerators.
 **Detailed documentation:** [Strang Splitting — detailed reference](upde_splitting.md)
 
 ::: scpn_phase_orchestrator.upde.splitting

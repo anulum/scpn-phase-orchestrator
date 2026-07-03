@@ -196,6 +196,15 @@ reject boolean aliases, numeric-string aliases, complex values, non-finite
 values, malformed cardinality, fractional integer evidence, out-of-bound
 winding counts, and exact-reference divergence before float or integer
 coercion or publication.
+The public Strang-splitting dispatcher and direct Go, Julia, and Mojo bridges
+apply shared splitting validators before optional runtime loading and after
+backend execution: phase vectors, frequency vectors, flattened coupling and
+phase-lag matrices, and backend phase outputs reject numeric-string aliases,
+complex values, non-finite values, malformed cardinality, non-zero
+self-coupling, and out-of-domain torus phases before float coercion or
+publication. The direct adapters also reject boolean aliases before optional
+runtime loading. Mojo stdout remains a text transport with exact phase-line
+cardinality checks before the same torus validator runs.
 
 ## Wiring
 

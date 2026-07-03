@@ -8,12 +8,21 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
 from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 from scpn_phase_orchestrator.upde.splitting import SplittingEngine
+
+SPLITTING_REFERENCE = Path("docs/reference/api/upde_splitting.md")
+
+
+class _ArrayProtocolFailure:
+    def __array__(self, *_args, **_kwargs):
+        raise TypeError("array protocol failed")
 
 
 def _coupled_knm(n: int, k: float = 0.5) -> np.ndarray:
@@ -178,6 +187,106 @@ class TestSplittingEngine:
                 np.zeros((2, 2)),
             )
 
+    def test_accelerated_backend_numeric_string_output_is_rejected(
+        self,
+        monkeypatch,
+    ):
+        import scpn_phase_orchestrator.upde.splitting as split_mod
+
+        def malformed_backend(
+            _phases,
+            _omegas,
+            _knm_flat,
+            _alpha_flat,
+            _n,
+            _zeta,
+            _psi,
+            _dt,
+            _n_steps,
+        ):
+            return np.array(["0.1", "0.2"], dtype=object)
+
+        monkeypatch.setattr(split_mod, "_dispatch", lambda: malformed_backend)
+
+        eng = SplittingEngine(2, dt=0.01)
+        with pytest.raises(ValueError, match="numeric-string"):
+            eng.step(
+                np.zeros(2),
+                np.ones(2),
+                np.zeros((2, 2)),
+                0.0,
+                0.0,
+                np.zeros((2, 2)),
+            )
+
+    @pytest.mark.parametrize(
+        ("phases", "match"),
+        [
+            (np.array(["", "bad"], dtype=object), "finite float array"),
+            (_ArrayProtocolFailure(), "finite float array"),
+        ],
+    )
+    def test_uncoercible_state_arrays_raise_public_validation_error(
+        self,
+        phases,
+        match: str,
+    ):
+        eng = SplittingEngine(2, dt=0.01)
+
+        with pytest.raises(ValueError, match=match):
+            eng.run(
+                phases,
+                np.ones(2),
+                np.zeros((2, 2)),
+                0.0,
+                0.0,
+                np.zeros((2, 2)),
+                n_steps=1,
+            )
+
+    @pytest.mark.parametrize(
+        ("backend_output", "match"),
+        [
+            ("0.1", "numeric-string"),
+            (np.array(["bad", "payload"], dtype=object), "finite phase vector"),
+            (np.array([0.1], dtype=np.float64), "backend output shape"),
+            (np.array([0.1, np.nan], dtype=np.float64), "finite phases"),
+        ],
+    )
+    def test_accelerated_backend_malformed_outputs_are_rejected(
+        self,
+        monkeypatch,
+        backend_output,
+        match: str,
+    ):
+        import scpn_phase_orchestrator.upde.splitting as split_mod
+
+        def malformed_backend(
+            _phases,
+            _omegas,
+            _knm_flat,
+            _alpha_flat,
+            _n,
+            _zeta,
+            _psi,
+            _dt,
+            _n_steps,
+        ):
+            return backend_output
+
+        monkeypatch.setattr(split_mod, "_dispatch", lambda: malformed_backend)
+
+        eng = SplittingEngine(2, dt=0.01)
+        with pytest.raises(ValueError, match=match):
+            eng.step(
+                np.zeros(2),
+                np.ones(2),
+                np.zeros((2, 2)),
+                0.0,
+                0.0,
+                np.zeros((2, 2)),
+            )
+
 
 class TestSplittingDispatch:
     def test_dispatch_falls_back_to_python_when_loader_fails(
@@ -195,6 +304,30 @@ class TestSplittingDispatch:
             split_mod._LOADERS,
             "go",
             lambda: (_ for _ in ()).throw(ImportError("go backend unavailable")),
+        )
+        try:
+            backend = split_mod._dispatch()
+        finally:
+            split_mod.ACTIVE_BACKEND = previous_backend
+            split_mod.AVAILABLE_BACKENDS = previous_available
+            monkeypatch.setitem(split_mod._LOADERS, "go", previous_loader)
+            split_mod._BACKEND_CACHE.clear()
+
+        assert backend is None
+
+    def test_dispatch_returns_none_when_all_non_python_backends_fail(self, monkeypatch):
+        import scpn_phase_orchestrator.upde.splitting as split_mod
+
+        previous_backend = split_mod.ACTIVE_BACKEND
+        previous_available = list(split_mod.AVAILABLE_BACKENDS)
+        previous_loader = split_mod._LOADERS["go"]
+        split_mod.ACTIVE_BACKEND = "go"
+        split_mod.AVAILABLE_BACKENDS = []
+        split_mod._BACKEND_CACHE.clear()
+        monkeypatch.setitem(
+            split_mod._LOADERS,
+            "go",
+            lambda: (_ for _ in ()).throw(ImportError("go unavailable")),
         )
         try:
             backend = split_mod._dispatch()
@@ -360,6 +493,13 @@ class TestSplittingPipelineEndToEnd:
             eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
         elapsed = (time.perf_counter() - t0) / 500
         assert elapsed < 3e-3, f"split.step(64) took {elapsed * 1e3:.2f}ms"
+
+
+def test_splitting_reference_documents_numeric_string_contract() -> None:
+    doc = SPLITTING_REFERENCE.read_text()
+
+    assert "numeric-string aliases before float coercion" in doc
+    assert "direct Go/Julia/Mojo" in doc
 
 
 # Pipeline wiring: SplittingEngine tests exercise full pipeline

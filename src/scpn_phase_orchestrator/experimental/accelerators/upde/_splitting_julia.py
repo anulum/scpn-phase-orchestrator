@@ -85,5 +85,4 @@ def splitting_run_julia(
         dt_f,
         n_steps_i,
     )
-    result_array: FloatArray = np.asarray(result, dtype=np.float64)
-    return validate_splitting_output(result_array, n=n_i)
+    return validate_splitting_output(result, n=n_i)
