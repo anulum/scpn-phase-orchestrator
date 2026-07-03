@@ -89,6 +89,12 @@ and Go carry the matrices numerically; Mojo round-trips them through a text
 subprocess protocol, which is why the shared budget is `1e-9` rather than the
 `1e-12` of the in-process backends.
 
+The direct Go, Julia, and Mojo bridges also share a fail-closed matrix contract
+before and after backend execution. Snapshot inputs and returned `(A, B, C)`
+matrices must be two-dimensional, finite, real numeric payloads with no boolean,
+complex, or numeric-string aliases; output matrices must keep the exact
+`(N, N)`, `(N, m)`, and `(n, N)` shapes before publication.
+
 ### 3.2 Building the backends
 
 | Backend | Build |

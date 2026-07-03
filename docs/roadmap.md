@@ -49,14 +49,12 @@ TODO queue.
 | Cross-domain meta-transfer | Replay proposals, nested corpora, package export, entry points, non-publishing evidence, and pre-publish enforcement exist. | Validate larger private or partner audit-history corpora and decide optional package publication. |
 | Plugin ecosystem | Registry, catalogue, Rust-facing metadata, approval-bound execution requests, storage, revocation, lifecycle, scheduler, retry, and dashboard artefacts exist. | Build a curated signed domainpack and extension store with reputation, audit scores, revocation, provenance, operator UX refinement, and adapter-family onboarding. |
 
-Latest U1 closure: the PHA-C Lean kinematic proof-obligation public
-serialisers now replay `verify_pha_c_kinematic_proof_obligation(...)` before
-returning canonical JSON manifests. A stale or tampered
-`PHACKinematicProofObligation` cannot publish mismatched fixed-point budget,
-certificate, theorem, flag, or hash fields through `to_dict()` or
-`pha_c_kinematic_proof_obligation_to_dict(...)`; publication fails before
-downstream release, benchmark, Studio, or MIF/FRC review lanes consume the
-manifest.
+Latest U1 closure: the direct Koopman-EDMD Go, Julia, and Mojo bridge
+contract now validates snapshot inputs and returned `(A, B, C)` matrices before
+publication. Boolean aliases, complex aliases, numeric-string aliases,
+non-finite values, and shape drift fail closed before backend payloads are
+widened to `float64` or consumed by the monitor predictor, benchmark parity
+gate, Studio, or downstream Koopman-MPC review lanes.
 
 | Parent item | Completed evidence consolidated here | Remaining open scope |
 |-------------|--------------------------------------|----------------------|

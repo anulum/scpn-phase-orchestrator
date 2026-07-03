@@ -64,9 +64,4 @@ def koopman_edmd_solve_julia(
         np.ascontiguousarray(states, dtype=np.float64),
         float(regularisation),
     )
-    return validate_edmd_backend_output(
-        np.asarray(a, dtype=np.float64),
-        np.asarray(b, dtype=np.float64),
-        np.asarray(c, dtype=np.float64),
-        dims,
-    )
+    return validate_edmd_backend_output(a, b, c, dims)

@@ -18,6 +18,7 @@ expensive step the backends are meant to replace.
 
 from __future__ import annotations
 
+from numbers import Real
 from typing import TypeAlias
 
 import numpy as np
@@ -46,11 +47,70 @@ class BackendDimensions:
         self.state_dim = state_dim
 
 
+def _contains_boolean_alias(value: object) -> bool:
+    """Return whether a raw backend payload contains a boolean alias."""
+    try:
+        raw = np.asarray(value, dtype=object)
+    except (TypeError, ValueError):
+        return False
+    return any(isinstance(item, (bool, np.bool_)) for item in raw.flat)
+
+
+def _contains_complex_alias(value: object) -> bool:
+    """Return whether a raw backend payload contains a complex alias."""
+    try:
+        raw = np.asarray(value)
+    except (TypeError, ValueError):
+        return False
+    if np.iscomplexobj(raw):
+        return True
+    if raw.dtype != object:
+        return False
+    raw_object = np.asarray(value, dtype=object)
+    return any(
+        isinstance(item, (complex, np.complexfloating)) for item in raw_object.flat
+    )
+
+
+def _contains_only_real_numbers(value: object) -> bool:
+    """Return whether an object-dtype payload carries only real non-bool values."""
+    raw = np.asarray(value, dtype=object)
+    return all(
+        isinstance(item, Real) and not isinstance(item, (bool, np.bool_))
+        for item in raw.flat
+    )
+
+
+def _coerce_real_matrix(value: object, *, name: str) -> FloatArray:
+    """Return a finite real matrix after rejecting lossy dtype aliases first."""
+    if _contains_boolean_alias(value):
+        raise ValueError(f"{name} must not contain boolean values")
+    if _contains_complex_alias(value):
+        raise ValueError(f"{name} must be real-valued")
+    try:
+        raw = np.asarray(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must contain only real numbers") from exc
+    if raw.dtype == object:
+        if not _contains_only_real_numbers(value):
+            raise ValueError(f"{name} must contain only real numbers")
+    elif raw.dtype.kind not in {"f", "i", "u"}:
+        raise ValueError(f"{name} must contain only real numbers")
+    array = np.asarray(raw, dtype=np.float64)
+    if array.ndim != 2:
+        raise ValueError(f"{name} must be a 2-D array")
+    if array.size == 0:
+        raise ValueError(f"{name} must be non-empty")
+    if not np.all(np.isfinite(array)):
+        raise ValueError(f"{name} must contain only finite values")
+    return np.ascontiguousarray(array, dtype=np.float64)
+
+
 def validate_edmd_backend_inputs(
-    x_lift: FloatArray,
-    inputs: FloatArray,
-    y_lift: FloatArray,
-    states: FloatArray,
+    x_lift: object,
+    inputs: object,
+    y_lift: object,
+    states: object,
 ) -> BackendDimensions:
     """Validate the snapshot matrices and return their shared dimensions.
 
@@ -71,39 +131,32 @@ def validate_edmd_backend_inputs(
     Raises
     ------
     ValueError
-        If the matrices are not 2-D, are empty, disagree on the sample count,
-        on the lift dimension, or contain non-finite entries.
+        If the matrices are not real-valued, 2-D, non-empty, finite, or if they
+        disagree on the sample count or lift dimension.
     """
     matrices = {
-        "x_lift": x_lift,
-        "inputs": inputs,
-        "y_lift": y_lift,
-        "states": states,
+        "x_lift": _coerce_real_matrix(x_lift, name="x_lift"),
+        "inputs": _coerce_real_matrix(inputs, name="inputs"),
+        "y_lift": _coerce_real_matrix(y_lift, name="y_lift"),
+        "states": _coerce_real_matrix(states, name="states"),
     }
-    for name, matrix in matrices.items():
-        if matrix.ndim != 2:
-            raise ValueError(f"{name} must be a 2-D array")
-        if matrix.size == 0:
-            raise ValueError(f"{name} must be non-empty")
-        if not np.all(np.isfinite(matrix)):
-            raise ValueError(f"{name} must contain only finite values")
-    samples = x_lift.shape[0]
+    samples = matrices["x_lift"].shape[0]
     if any(matrix.shape[0] != samples for matrix in matrices.values()):
         raise ValueError("all snapshot matrices must share the sample count")
-    if y_lift.shape[1] != x_lift.shape[1]:
+    if matrices["y_lift"].shape[1] != matrices["x_lift"].shape[1]:
         raise ValueError("x_lift and y_lift must share the lift dimension")
     return BackendDimensions(
         samples=int(samples),
-        lift_dim=int(x_lift.shape[1]),
-        input_dim=int(inputs.shape[1]),
-        state_dim=int(states.shape[1]),
+        lift_dim=int(matrices["x_lift"].shape[1]),
+        input_dim=int(matrices["inputs"].shape[1]),
+        state_dim=int(matrices["states"].shape[1]),
     )
 
 
 def validate_edmd_backend_output(
-    state_matrix: FloatArray,
-    input_matrix: FloatArray,
-    output_matrix: FloatArray,
+    state_matrix: object,
+    input_matrix: object,
+    output_matrix: object,
     dimensions: BackendDimensions,
 ) -> tuple[FloatArray, FloatArray, FloatArray]:
     """Validate the contracted shapes and finiteness of a backend's ``(A, B, C)``.
@@ -124,7 +177,8 @@ def validate_edmd_backend_output(
     Raises
     ------
     ValueError
-        If any matrix has the wrong shape or contains non-finite entries.
+        If any matrix has the wrong shape or contains lossy aliases,
+        non-numeric, complex, non-finite, or boolean values.
     """
     n_lift = dimensions.lift_dim
     expected = {
@@ -134,10 +188,8 @@ def validate_edmd_backend_output(
     }
     validated: list[FloatArray] = []
     for name, (matrix, shape) in expected.items():
-        array = np.asarray(matrix, dtype=np.float64)
+        array = _coerce_real_matrix(matrix, name=name)
         if array.shape != shape:
             raise ValueError(f"{name} must have shape {shape}, got {array.shape}")
-        if not np.all(np.isfinite(array)):
-            raise ValueError(f"{name} must contain only finite values")
-        validated.append(np.ascontiguousarray(array, dtype=np.float64))
+        validated.append(array)
     return validated[0], validated[1], validated[2]

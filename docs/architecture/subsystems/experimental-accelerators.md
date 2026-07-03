@@ -111,6 +111,11 @@ The public envelope dispatcher now applies its direct accelerator output
 validators to optional backend returns before publication: RMS-envelope vectors
 must keep input cardinality, finite values, and non-negative values, while
 modulation depth must be a finite scalar in `[0, 1]`.
+Direct Koopman-EDMD Go, Julia, and Mojo bridges apply the shared EDMD backend
+validator before and after execution: snapshot matrices and returned `(A, B, C)`
+payloads must be finite real non-boolean numeric matrices, reject complex and
+numeric-string aliases before float coercion, and preserve the contracted
+`(N, N)`, `(N, m)`, and `(n, N)` shapes.
 
 ## Wiring
 
