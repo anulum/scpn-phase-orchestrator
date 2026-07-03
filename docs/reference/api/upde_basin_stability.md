@@ -267,20 +267,24 @@ pre-runtime boundary contract: `phases_init` and `omegas` must be finite real
 one-dimensional `float64` vectors of length `N`; `knm_flat` and `alpha_flat`
 must be finite real flattened `N*N` buffers; `N` must be a positive integer;
 `k_scale` must be finite; `dt` must be positive; and transient/measurement
-step counts must be non-negative integers. A zero-measure direct call returns
-`0.0` without requiring the optional backend binary or runtime. Non-zero
-backend results are checked as order parameters and must lie in `[0, 1]`.
-The Mojo subprocess boundary accepts exactly one finite scalar stdout record
-for the steady-state order parameter, rejecting blank, multi-line, non-finite,
-and out-of-range records before they can enter the basin classification.
+step counts must be non-negative integers. Boolean, complex, non-finite, and
+numeric-string aliases are rejected before float coercion or optional runtime
+loading. A zero-measure direct call returns `0.0` without requiring the optional
+backend binary or runtime. Non-zero backend results are checked as order
+parameters and must lie in `[0, 1]`. The Mojo subprocess boundary accepts
+exactly one finite scalar stdout record for the steady-state order parameter,
+rejecting blank, multi-line, non-finite, and out-of-range records before they
+can enter the basin classification.
 
 Public dispatcher outputs use the same fail-closed contract. If `steady_state_r()`,
 `basin_stability()`, or `multi_basin_stability()` selects an optional Rust,
 Go, Julia, or Mojo backend, the backend scalar is validated before publication:
-it must be a finite, non-boolean steady-state order parameter in `[0, 1]`.
-Loader and runtime unavailability still fall back through the backend chain, but
-physics-contract violations propagate instead of being widened by `float(...)`
-or converted into synthetic basin-stability evidence.
+it must be a finite, non-boolean, non-numeric-string steady-state order
+parameter in `[0, 1]`. Public phase, frequency, coupling, phase-lag, scalar
+control, threshold, and count inputs reject numeric-string aliases before float
+coercion. Loader and runtime unavailability still fall back through the backend
+chain, but physics-contract violations propagate instead of being widened by
+`float(...)` or converted into synthetic basin-stability evidence.
 
 ### 4.3 Reproducibility
 
@@ -580,19 +584,20 @@ not by the $M$-element result array.
 
 ## Test Coverage
 
-- `tests/test_basin_stability.py` — 7 tests: S_B bounds [0,1], high
-  coupling S_B→1, weak coupling S_B→0, multi_basin keys, R_final shape,
-  seed reproducibility, custom threshold
+- `tests/test_basin_stability.py` — public estimator, result, dispatcher,
+  bridge, and boundary tests, including numeric-string alias rejection before
+  float coercion
 - `tests/test_prop_basin_stability.py` — 17 property tests (Hypothesis):
   S_B always in [0,1], n_converged ≤ n_samples, R_final shape matches
   n_samples, deterministic with same seed
 - `tests/test_basin_stability_backends.py` — backend parity plus direct
-  accelerator boundary contracts for Go, Julia, and Mojo
+  accelerator boundary contracts for Go, Julia, and Mojo, including
+  numeric-string pre-runtime guards
 
 ---
 
 ## Source
 
-- Python: `src/scpn_phase_orchestrator/upde/basin_stability.py` (257 lines)
+- Python: `src/scpn_phase_orchestrator/upde/basin_stability.py`
 - Rust: `spo-kernel/crates/spo-engine/src/basin_stability.rs`
 - FFI: `spo-kernel/crates/spo-ffi/src/lib.rs` (basin_stability_rust)

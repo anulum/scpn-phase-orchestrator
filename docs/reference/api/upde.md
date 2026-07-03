@@ -427,8 +427,11 @@ to detect multi-stability (chimera states, partial synchronization).
 
 Optional Rust, Go, Julia, and Mojo backend outputs are validated before public
 publication: each steady-state order-parameter scalar must be finite,
-non-boolean, and inside `[0, 1]`. Loader/runtime unavailability can still fall
-through to Python; malformed backend physics evidence fails closed.
+non-boolean, non-numeric-string, and inside `[0, 1]`. Public and direct
+phase, frequency, flattened coupling, phase-lag, scalar-control, threshold,
+and count inputs reject numeric-string aliases before float coercion.
+Loader/runtime unavailability can still fall through to Python; malformed
+backend physics evidence fails closed.
 
 **Usage:**
 

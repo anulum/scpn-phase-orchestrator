@@ -41,6 +41,8 @@ ValidatedInputs: TypeAlias = tuple[
 
 def _as_finite_vector(value: Any, *, name: str) -> FloatArray:
     """Return ``value`` as a validated finite vector, else raise."""
+    if _contains_numeric_string_alias(value):
+        raise ValueError(f"{name} must not contain numeric-string aliases")
     if contains_boolean_alias(value):
         raise TypeError(f"{name} must be real-valued, not boolean")
     array = np.asarray(value)
@@ -69,6 +71,8 @@ def _as_flat_matrix(value: Any, *, name: str, n: int) -> FloatArray:
 
 def _as_finite_real(value: Any, *, name: str, positive: bool = False) -> float:
     """Return ``value`` as a finite real float, else raise ``ValueError``."""
+    if _is_numeric_string_alias(value):
+        raise ValueError(f"{name} must not be a numeric-string alias")
     if contains_boolean_alias(value):
         raise TypeError(f"{name} must be a real scalar, not boolean")
     if not isinstance(value, Real):
@@ -83,6 +87,8 @@ def _as_finite_real(value: Any, *, name: str, positive: bool = False) -> float:
 
 def _as_int(value: Any, *, name: str, minimum: int) -> int:
     """Return ``value`` as a validated integer, else raise ``ValueError``."""
+    if _is_numeric_string_alias(value):
+        raise ValueError(f"{name} must not be a numeric-string alias")
     if contains_boolean_alias(value):
         raise TypeError(f"{name} must be an integer, not boolean")
     if not isinstance(value, Integral):
@@ -91,6 +97,33 @@ def _as_int(value: Any, *, name: str, minimum: int) -> int:
     if out < minimum:
         raise ValueError(f"{name} must be >= {minimum}")
     return out
+
+
+def _is_string_like(value: object) -> bool:
+    """Return whether ``value`` is a Python or NumPy string scalar."""
+    return isinstance(value, (str, np.str_))
+
+
+def _is_numeric_string_alias(value: object) -> bool:
+    """Return whether ``value`` is a string scalar accepted by ``float``."""
+    if not _is_string_like(value):
+        return False
+    try:
+        float(str(value))
+    except ValueError:
+        return False
+    return True
+
+
+def _contains_numeric_string_alias(value: object) -> bool:
+    """Return whether ``value`` contains a stringified numeric scalar."""
+    if _is_numeric_string_alias(value):
+        return True
+    try:
+        array = np.asarray(value, dtype=object)
+    except (TypeError, ValueError):
+        return False
+    return any(_is_numeric_string_alias(item) for item in array.flat)
 
 
 def validate_basin_stability_inputs(

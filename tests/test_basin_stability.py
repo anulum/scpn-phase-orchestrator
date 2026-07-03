@@ -282,6 +282,63 @@ class TestBasinStabilityValidation:
                 seed=seed,
             )
 
+    def test_nonreal_public_scalar_is_rejected(self) -> None:
+        """Public scalar validation rejects non-real objects."""
+        with pytest.raises(ValueError, match="dt must be a finite real"):
+            basin_stability(
+                np.zeros(2, dtype=np.float64),
+                np.array([[0.0, 0.4], [0.4, 0.0]], dtype=np.float64),
+                dt=object(),
+                n_samples=1,
+                n_transient=1,
+                n_measure=1,
+            )
+
+    def test_nonfinite_public_scalar_is_rejected(self) -> None:
+        """Public scalar validation rejects non-finite real values."""
+        with pytest.raises(ValueError, match="dt must be a finite real"):
+            basin_stability(
+                np.zeros(2, dtype=np.float64),
+                np.array([[0.0, 0.4], [0.4, 0.0]], dtype=np.float64),
+                dt=float("nan"),
+                n_samples=1,
+                n_transient=1,
+                n_measure=1,
+            )
+
+    def test_public_vectors_reject_boolean_aliases(self) -> None:
+        """Public vector validation rejects boolean aliases before coercion."""
+        with pytest.raises(ValueError, match="omegas must not contain boolean"):
+            basin_stability(
+                np.array([False, True], dtype=object),
+                np.array([[0.0, 0.4], [0.4, 0.0]], dtype=np.float64),
+                n_samples=1,
+                n_transient=1,
+                n_measure=1,
+            )
+
+    def test_public_matrix_rejects_boolean_aliases(self) -> None:
+        """Public matrix validation rejects boolean aliases before coercion."""
+        with pytest.raises(ValueError, match="knm must not contain boolean"):
+            basin_stability(
+                np.zeros(2, dtype=np.float64),
+                np.array([[False, 0.4], [0.4, False]], dtype=object),
+                n_samples=1,
+                n_transient=1,
+                n_measure=1,
+            )
+
+    def test_public_omegas_reject_nonfinite_values(self) -> None:
+        """Public natural frequencies must be finite."""
+        with pytest.raises(ValueError, match="omegas must contain only finite"):
+            basin_stability(
+                np.array([0.0, np.inf], dtype=np.float64),
+                np.array([[0.0, 0.4], [0.4, 0.0]], dtype=np.float64),
+                n_samples=1,
+                n_transient=1,
+                n_measure=1,
+            )
+
     def test_boolean_is_rejected_where_integer_is_required(self) -> None:
         N = 4
         omegas = np.zeros(N)
@@ -289,6 +346,80 @@ class TestBasinStabilityValidation:
         np.fill_diagonal(knm, 0)
         with pytest.raises(ValueError, match="n_samples must be an integer >= 0"):
             basin_stability(omegas, knm, n_samples=True)
+
+    @pytest.mark.parametrize(
+        ("field", "value"),
+        [
+            ("omegas", np.array(["0.0", "0.1"], dtype=object)),
+            (
+                "knm",
+                np.array([["0.0", "0.4"], ["0.4", "0.0"]], dtype=object),
+            ),
+            (
+                "alpha",
+                np.array([["0.0", "0.1"], ["0.2", "0.0"]], dtype=object),
+            ),
+            ("dt", "0.01"),
+            ("n_samples", "4"),
+            ("R_threshold", "0.8"),
+        ],
+    )
+    def test_numeric_string_aliases_are_rejected_before_public_coercion(
+        self, field: str, value: object
+    ) -> None:
+        """Public basin-stability inputs must reject numeric strings."""
+        kwargs: dict[str, object] = {
+            "omegas": np.zeros(2, dtype=np.float64),
+            "knm": np.array([[0.0, 0.4], [0.4, 0.0]], dtype=np.float64),
+            "alpha": np.zeros((2, 2), dtype=np.float64),
+            "dt": 0.01,
+            "n_samples": 4,
+            "R_threshold": 0.8,
+            "n_transient": 1,
+            "n_measure": 1,
+        }
+        kwargs[field] = value
+
+        with pytest.raises(ValueError, match="numeric-string"):
+            basin_stability(**kwargs)
+
+    @pytest.mark.parametrize(
+        ("field", "value"),
+        [
+            ("phases_init", np.array(["0.1", "0.2"], dtype=object)),
+            ("omegas", np.array(["1.0", "1.1"], dtype=object)),
+            (
+                "knm",
+                np.array([["0.0", "0.4"], ["0.4", "0.0"]], dtype=object),
+            ),
+            (
+                "alpha",
+                np.array([["0.0", "0.1"], ["0.2", "0.0"]], dtype=object),
+            ),
+            ("k_scale", "1.0"),
+            ("dt", "0.01"),
+            ("n_transient", "1"),
+            ("n_measure", "1"),
+        ],
+    )
+    def test_steady_state_numeric_string_aliases_are_rejected(
+        self, field: str, value: object
+    ) -> None:
+        """Public one-trial inputs must reject numeric strings."""
+        kwargs: dict[str, object] = {
+            "phases_init": np.zeros(2, dtype=np.float64),
+            "omegas": np.ones(2, dtype=np.float64),
+            "knm": np.array([[0.0, 0.4], [0.4, 0.0]], dtype=np.float64),
+            "alpha": np.zeros((2, 2), dtype=np.float64),
+            "k_scale": 1.0,
+            "dt": 0.01,
+            "n_transient": 1,
+            "n_measure": 1,
+        }
+        kwargs[field] = value
+
+        with pytest.raises(ValueError, match="numeric-string"):
+            steady_state_r(**kwargs)
 
 
 class TestBasinStabilityEdgeSemantics:
@@ -329,6 +460,42 @@ class TestBasinStabilityEdgeSemantics:
         assert result.n_converged == result.n_samples
         assert result.S_B == 1.0
 
+    def test_result_rejects_converged_count_above_samples(self) -> None:
+        """Result construction enforces converged/sample consistency."""
+        with pytest.raises(ValueError, match="n_converged must be <= n_samples"):
+            BasinStabilityResult(
+                S_B=1.0,
+                n_samples=1,
+                n_converged=2,
+                R_final=np.array([1.0], dtype=np.float64),
+                R_threshold=0.8,
+            )
+
+    def test_result_rejects_out_of_range_final_order_parameter(self) -> None:
+        """Result construction enforces unit-interval final R values."""
+        with pytest.raises(ValueError, match="R_final values must lie in"):
+            BasinStabilityResult(
+                S_B=1.0,
+                n_samples=1,
+                n_converged=1,
+                R_final=np.array([1.2], dtype=np.float64),
+                R_threshold=0.8,
+            )
+
+    def test_multi_basin_accepts_phase_lag_matrix(self) -> None:
+        """Multi-threshold estimation validates and uses non-null phase lag."""
+        results = multi_basin_stability(
+            np.zeros(2, dtype=np.float64),
+            np.array([[0.0, 0.4], [0.4, 0.0]], dtype=np.float64),
+            alpha=np.zeros((2, 2), dtype=np.float64),
+            n_samples=1,
+            n_transient=1,
+            n_measure=1,
+            R_thresholds=(0.5,),
+        )
+
+        assert list(results) == ["R>=0.50"]
+
 
 class TestPublicBasinStabilityOutputContracts:
     def _problem(self) -> tuple[FloatArray, FloatArray, FloatArray]:
@@ -342,6 +509,7 @@ class TestPublicBasinStabilityOutputContracts:
         ("output", "match"),
         [
             (True, "steady-state R"),
+            ("0.5", "numeric-string"),
             (1.2, r"\[0, 1\]"),
             (float("nan"), "finite"),
         ],
@@ -384,6 +552,33 @@ class TestPublicBasinStabilityOutputContracts:
         monkeypatch.setattr(basin_mod, "_dispatch", lambda: fake_backend)
 
         with pytest.raises(TypeError, match="steady-state R"):
+            runner(
+                omegas,
+                knm,
+                n_transient=1,
+                n_measure=1,
+                n_samples=3,
+            )
+
+    @pytest.mark.parametrize(
+        "runner",
+        [basin_stability, multi_basin_stability],
+        ids=["basin", "multi"],
+    )
+    def test_public_monte_carlo_rejects_numeric_string_backend_output(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        runner: Callable[..., object],
+    ) -> None:
+        """Monte Carlo publication must reject stringified backend scalars."""
+
+        def fake_backend(*_args: object) -> str:
+            return "0.5"
+
+        _, omegas, knm = self._problem()
+        monkeypatch.setattr(basin_mod, "_dispatch", lambda: fake_backend)
+
+        with pytest.raises(ValueError, match="numeric-string"):
             runner(
                 omegas,
                 knm,
@@ -439,6 +634,13 @@ class TestBasinStabilityDefensiveContracts:
         self,
     ) -> None:
         assert basin_mod._contains_boolean_alias(_ArrayConversionFailure()) is False
+
+    def test_numeric_string_probe_treats_conversion_failure_as_not_string(
+        self,
+    ) -> None:
+        assert (
+            basin_mod._contains_numeric_string_alias(_ArrayConversionFailure()) is False
+        )
 
     def test_steady_state_rejects_uncoercible_matrix_values(self) -> None:
         bad_knm = cast(FloatArray, np.array([["not-float"]], dtype=object))
@@ -537,7 +739,7 @@ class TestDirectBasinStabilityValidationContracts:
                 np.zeros(1, dtype=np.float64),
                 np.zeros(1, dtype=np.float64),
                 1,
-                cast(float, "1.0"),
+                cast(float, "not-real"),
                 0.01,
                 0,
                 1,
@@ -550,12 +752,27 @@ class TestDirectBasinStabilityValidationContracts:
                 np.ones(1, dtype=np.float64),
                 np.zeros(1, dtype=np.float64),
                 np.zeros(1, dtype=np.float64),
-                cast(int, "1"),
+                cast(int, "not-int"),
                 1.0,
                 0.01,
                 0,
                 1,
             )
+
+    def test_rejects_numeric_string_backend_output(self) -> None:
+        """Backend outputs must not be stringified order parameters."""
+        with pytest.raises(ValueError, match="numeric-string"):
+            basin_validation.validate_basin_stability_output("0.5")
+
+    def test_direct_numeric_string_probe_covers_scalar_and_failure_paths(
+        self,
+    ) -> None:
+        """Direct validator helper handles scalar aliases and bad array hooks."""
+        assert basin_validation._contains_numeric_string_alias("0.5") is True
+        assert (
+            basin_validation._contains_numeric_string_alias(_ArrayConversionFailure())
+            is False
+        )
 
 
 class TestBasinStabilityJuliaBridgeContracts:
@@ -593,6 +810,15 @@ class TestBasinStabilityJuliaBridgeContracts:
         with pytest.raises(ImportError, match="julia side-file not found"):
             basin_julia._ensure()
 
+    def test_public_julia_loader_returns_bridge_callable(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Public Julia loader returns the direct bridge callable after probing."""
+        monkeypatch.setattr(basin_mod, "require_juliacall_main", lambda: object())
+
+        assert basin_mod._load_julia_fn() is basin_julia.steady_state_r_julia
+
     def test_steady_state_bridge_validates_and_returns_backend_output(
         self,
         monkeypatch: pytest.MonkeyPatch,
@@ -614,6 +840,34 @@ class TestBasinStabilityJuliaBridgeContracts:
 
         assert result == 0.75
         assert fake_module.seen_n_measure == 1
+
+    def test_steady_state_bridge_rejects_numeric_string_output(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Julia backend return values must fail before string coercion."""
+        fake_module = _FakeJuliaModule(output=cast(float, "0.75"))
+        monkeypatch.setattr(basin_julia, "_ensure", lambda: fake_module)
+
+        with pytest.raises(ValueError, match="numeric-string"):
+            basin_julia.steady_state_r_julia(
+                np.zeros(2, dtype=np.float64),
+                np.ones(2, dtype=np.float64),
+                np.zeros(4, dtype=np.float64),
+                np.zeros(4, dtype=np.float64),
+                2,
+                1.0,
+                0.01,
+                0,
+                1,
+            )
+
+
+def test_basin_stability_docs_record_numeric_string_contract() -> None:
+    """Public docs must record the basin numeric-string boundary."""
+    doc = Path("docs/reference/api/upde_basin_stability.md").read_text(encoding="utf-8")
+
+    assert "numeric-string aliases are rejected before float coercion" in doc
 
 
 class TestDispatchFallbackChain:

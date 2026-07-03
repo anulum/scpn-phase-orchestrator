@@ -196,8 +196,37 @@ def _contains_boolean_alias(value: object) -> bool:
     return any(isinstance(item, (bool, np.bool_)) for item in arr.flat)
 
 
+def _is_string_like(value: object) -> bool:
+    """Return whether ``value`` is a Python or NumPy string scalar."""
+    return isinstance(value, (str, np.str_))
+
+
+def _is_numeric_string_alias(value: object) -> bool:
+    """Return whether ``value`` is a string scalar accepted by ``float``."""
+    if not _is_string_like(value):
+        return False
+    try:
+        float(str(value))
+    except ValueError:
+        return False
+    return True
+
+
+def _contains_numeric_string_alias(value: object) -> bool:
+    """Return whether ``value`` contains a stringified numeric scalar."""
+    if _is_numeric_string_alias(value):
+        return True
+    try:
+        arr = np.asarray(value, dtype=object)
+    except (TypeError, ValueError):
+        return False
+    return any(_is_numeric_string_alias(item) for item in arr.flat)
+
+
 def _validate_integral(value: object, *, name: str, minimum: int) -> int:
     """Return ``value`` as a validated integer, else raise ``ValueError``."""
+    if _contains_numeric_string_alias(value):
+        raise ValueError(f"{name} must not be a numeric-string alias")
     if isinstance(value, bool) or not isinstance(value, Integral) or value < minimum:
         raise ValueError(f"{name} must be an integer >= {minimum}, got {value!r}")
     return int(value)
@@ -205,6 +234,8 @@ def _validate_integral(value: object, *, name: str, minimum: int) -> int:
 
 def _validate_finite_float(value: object, *, name: str) -> float:
     """Return ``value`` as a finite float, else raise ``ValueError``."""
+    if _contains_numeric_string_alias(value):
+        raise ValueError(f"{name} must not be a numeric-string alias")
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite real, got {value!r}")
     coerced = float(value)
@@ -231,6 +262,8 @@ def _validate_unit_interval(value: object, *, name: str) -> float:
 
 def _validate_vector(value: object, *, name: str, shape: tuple[int, ...]) -> FloatArray:
     """Return the value as a validated 1-D finite array, else raise."""
+    if _contains_numeric_string_alias(value):
+        raise ValueError(f"{name} must not contain numeric-string aliases")
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
     try:
@@ -251,6 +284,8 @@ def _validate_omegas(value: object) -> FloatArray:
 
 def _validate_nonempty_vector(value: object, *, name: str) -> FloatArray:
     """Return the value as a validated non-empty finite vector, else raise."""
+    if _contains_numeric_string_alias(value):
+        raise ValueError(f"{name} must not contain numeric-string aliases")
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
     try:

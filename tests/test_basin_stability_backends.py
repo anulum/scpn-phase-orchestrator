@@ -186,6 +186,33 @@ class TestDirectBackendBoundaryContracts:
         payload[8] = 0
         assert backend(*payload) == 0.0
 
+    @pytest.mark.parametrize("backend", DIRECT_BACKENDS)
+    @pytest.mark.parametrize(
+        ("index", "replacement"),
+        [
+            (0, lambda payload: np.array(["0.1"] * payload[4], dtype=object)),
+            (1, lambda payload: np.array(["0.0"] * payload[4], dtype=object)),
+            (2, lambda payload: np.array(["0.0"] * (payload[4] ** 2), dtype=object)),
+            (3, lambda payload: np.array(["0.0"] * (payload[4] ** 2), dtype=object)),
+            (5, lambda _payload: "1.0"),
+            (6, lambda _payload: "0.01"),
+            (7, lambda _payload: "1"),
+            (8, lambda _payload: "1"),
+        ],
+    )
+    def test_numeric_string_inputs_fail_before_optional_runtime_loading(
+        self,
+        backend: DirectBackend,
+        index: int,
+        replacement: Callable[[tuple], object],
+    ) -> None:
+        """Direct Go/Julia/Mojo inputs must reject numeric-string aliases."""
+
+        payload = list(_direct_payload())
+        payload[index] = replacement(tuple(payload))
+        with pytest.raises(ValueError, match="numeric-string"):
+            backend(*payload)
+
     @pytest.mark.parametrize(
         ("stdout", "match"),
         [
