@@ -171,9 +171,12 @@ class TestDirectBackendBoundaryContracts:
             (np.array([[0.0, np.pi + 1.0], [np.pi + 1.0, 0.0]]), r"\[0, pi\]"),
             (np.array([[0.0, 0.25], [0.5, 0.0]]), "symmetric"),
             (np.array([[0.1, 0.25], [0.25, 0.0]]), "diagonal"),
+            (np.array([[False, True], [True, False]], dtype=np.bool_), "booleans"),
             (np.array([[False, 0.25], [0.25, False]], dtype=object), "booleans"),
             (np.array([[0.0, 0.25j], [0.25j, 0.0]]), "real values"),
             (np.array([[0.0, 0.25j], [0.25j, 0.0]], dtype=object), "real values"),
+            (np.array([["0.0", "0.25"], ["0.25", "0.0"]]), "numeric-string"),
+            (np.array([["not-number", "bad"], ["bad", "not-number"]]), "numeric"),
         ],
     )
     def test_phase_distance_backend_output_rejects_invalid_physics(
@@ -186,6 +189,90 @@ class TestDirectBackendBoundaryContracts:
                 distances,
                 n_phases=2,
             )
+
+    def test_phase_distance_backend_input_rejects_numeric_string_aliases(
+        self,
+    ) -> None:
+        with pytest.raises(ValueError, match="numeric-string"):
+            npe_validation.validate_phase_distance_backend_input(
+                np.array(["0.0", "1.0"]),
+            )
+
+    def test_phase_distance_backend_input_rejects_nonnumeric_strings(
+        self,
+    ) -> None:
+        with pytest.raises(ValueError, match="float array"):
+            npe_validation.validate_phase_distance_backend_input(
+                np.array(["not-number"]),
+            )
+
+    def test_npe_backend_input_rejects_numeric_string_aliases(
+        self,
+    ) -> None:
+        with pytest.raises(ValueError, match="numeric-string"):
+            npe_validation.validate_npe_backend_inputs(
+                np.array([0.0, "1.0"], dtype=object),
+                np.pi,
+            )
+
+    def test_phase_distance_backend_output_rejects_wrong_expected_shape(
+        self,
+    ) -> None:
+        with pytest.raises(ValueError, match="expected phase distance"):
+            npe_validation.validate_phase_distance_backend_output(
+                np.zeros((2, 2), dtype=np.float64),
+                n_phases=2,
+                expected=np.zeros((3,), dtype=np.float64),
+            )
+
+    def test_expected_npe_degenerate_distance_cases(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        assert (
+            npe_validation._npe_from_distance_matrix(
+                np.zeros((1, 1), dtype=np.float64),
+                np.pi,
+            )
+            == 0.0
+        )
+        assert (
+            npe_validation._npe_from_distance_matrix(
+                np.array([[0.0, 2.0], [2.0, 0.0]], dtype=np.float64),
+                0.5,
+            )
+            == 0.0
+        )
+        assert (
+            npe_validation._npe_from_distance_matrix(
+                np.array([[0.0, 1.0e-20], [1.0e-20, 0.0]], dtype=np.float64),
+                np.pi,
+            )
+            == 0.0
+        )
+
+        original_log = np.log
+
+        def fake_log(value: object) -> object:
+            if isinstance(value, np.ndarray):
+                return original_log(value)
+            return 0.0
+
+        monkeypatch.setattr(npe_validation.np, "log", fake_log)
+        assert (
+            npe_validation._npe_from_distance_matrix(
+                np.array(
+                    [
+                        [0.0, 0.25, 0.5],
+                        [0.25, 0.0, 0.75],
+                        [0.5, 0.75, 0.0],
+                    ],
+                    dtype=np.float64,
+                ),
+                np.pi,
+            )
+            == 0.0
+        )
 
     def test_phase_distance_backend_output_rejects_exact_distance_divergence(
         self,
@@ -250,6 +337,8 @@ class TestDirectBackendBoundaryContracts:
             np.array([0.0, 1.0j], dtype=object),
             np.array([0.0, np.inf]),
             np.array([[0.0, 1.0]]),
+            np.array(["0.0", "1.0"]),
+            np.array([0.0, "1.0"], dtype=object),
         ],
     )
     def test_phase_distance_backend_rejects_invalid_phases_before_runtime_load(
@@ -276,6 +365,8 @@ class TestDirectBackendBoundaryContracts:
             np.array([0.0, 1.0j], dtype=object),
             np.array([0.0, np.nan]),
             np.array([[0.0, 1.0]]),
+            np.array(["0.0", "1.0"]),
+            np.array([0.0, "1.0"], dtype=object),
         ],
     )
     def test_npe_backend_rejects_invalid_phases_before_runtime_load(

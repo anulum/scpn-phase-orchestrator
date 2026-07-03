@@ -60,6 +60,9 @@ class TestPhaseDistanceMatrix:
             (np.array([0.0, np.bool_(True)], dtype=object), "phases"),
             (np.array([0.0 + 0.0j, 1.0 + 0.5j]), "real-valued"),
             (np.array([0.0, 1.0 + 0.5j], dtype=object), "real-valued"),
+            (np.array(["0.0", "1.0"]), "numeric-string"),
+            (np.array([0.0, "1.0"], dtype=object), "numeric-string"),
+            (np.array(["not-number"]), "float array"),
         ],
     )
     def test_rejects_invalid_phase_buffers(
@@ -133,6 +136,9 @@ class TestNPE:
             (np.array([0.0, np.bool_(True)], dtype=object), "phases"),
             (np.array([0.0 + 0.0j, 1.0 + 0.5j]), "real-valued"),
             (np.array([0.0, 1.0 + 0.5j], dtype=object), "real-valued"),
+            (np.array(["0.0", "1.0"]), "numeric-string"),
+            (np.array([0.0, "1.0"], dtype=object), "numeric-string"),
+            (np.array(["not-number"]), "float array"),
         ],
     )
     def test_rejects_invalid_phase_buffers(
@@ -356,6 +362,9 @@ class TestNPEBoundaryHardening:
             np.array([[0.1, 0.2], [0.2, 0.0]], dtype=np.float64),
             np.array([[False, True], [True, False]], dtype=np.bool_),
             np.array([[0.0, np.bool_(True)], [1.0, 0.0]], dtype=object),
+            np.array([["0.0", str(np.pi)], [str(np.pi), "0.0"]]),
+            np.array([[0.0, 1.0j], [1.0j, 0.0]], dtype=object),
+            np.array([["not-number", "bad"], ["bad", "not-number"]]),
         ],
     )
     def test_invalid_backend_matrix_fails_closed(
@@ -386,6 +395,100 @@ class TestNPEBoundaryHardening:
             npe_module.AVAILABLE_BACKENDS = previous_available
             monkeypatch.setitem(npe_module._LOADERS, "go", previous_loader)
             npe_module._BACKEND_CACHE.clear()
+
+    def test_load_julia_fns_exports_bridge_callables(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        monkeypatch.setattr(npe_module, "require_juliacall_main", lambda: None)
+
+        loaded = npe_module._load_julia_fns()
+
+        assert callable(loaded["phase_distance_matrix"])
+        assert callable(loaded["compute_npe"])
+
+    def test_dispatch_skips_backend_missing_requested_callable(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        previous_backend = npe_module.ACTIVE_BACKEND
+        previous_available = list(npe_module.AVAILABLE_BACKENDS)
+        previous_loader = npe_module._LOADERS["go"]
+
+        npe_module.ACTIVE_BACKEND = "go"
+        npe_module.AVAILABLE_BACKENDS = ["go"]
+        npe_module._BACKEND_CACHE.clear()
+        monkeypatch.setitem(
+            npe_module._LOADERS,
+            "go",
+            lambda: {"phase_distance_matrix": lambda _phases: np.zeros((1, 1))},
+        )
+        try:
+            assert npe_module._dispatch("compute_npe") is None
+        finally:
+            npe_module.ACTIVE_BACKEND = previous_backend
+            npe_module.AVAILABLE_BACKENDS = previous_available
+            monkeypatch.setitem(npe_module._LOADERS, "go", previous_loader)
+            npe_module._BACKEND_CACHE.clear()
+
+    def test_distance_matrix_validator_rejects_wrong_expected_shape(self) -> None:
+        with pytest.raises(ValueError, match="expected output shape"):
+            npe_module._validate_distance_matrix(
+                np.zeros((2, 2), dtype=np.float64),
+                n_phases=2,
+                expected=np.zeros((3,), dtype=np.float64),
+            )
+
+    def test_private_npe_distance_entropy_degenerate_cases(self) -> None:
+        assert (
+            npe_module._npe_from_distance_matrix(
+                np.zeros((1, 1), dtype=np.float64),
+                np.pi,
+            )
+            == 0.0
+        )
+        assert (
+            npe_module._npe_from_distance_matrix(
+                np.array([[0.0, 2.0], [2.0, 0.0]], dtype=np.float64),
+                0.5,
+            )
+            == 0.0
+        )
+        assert (
+            npe_module._npe_from_distance_matrix(
+                np.array([[0.0, 1.0e-20], [1.0e-20, 0.0]], dtype=np.float64),
+                np.pi,
+            )
+            == 0.0
+        )
+
+    def test_private_npe_distance_entropy_rejects_zero_max_entropy(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        original_log = np.log
+
+        def fake_log(value: Any) -> Any:
+            if isinstance(value, np.ndarray):
+                return original_log(value)
+            return 0.0
+
+        monkeypatch.setattr(npe_module.np, "log", fake_log)
+
+        assert (
+            npe_module._npe_from_distance_matrix(
+                np.array(
+                    [
+                        [0.0, 0.25, 0.5],
+                        [0.25, 0.0, 0.75],
+                        [0.5, 0.75, 0.0],
+                    ],
+                    dtype=np.float64,
+                ),
+                np.pi,
+            )
+            == 0.0
+        )
 
     @pytest.mark.parametrize("backend_value", [-0.1, 1.1, np.nan, np.inf, True])
     def test_invalid_backend_score_fails_closed(

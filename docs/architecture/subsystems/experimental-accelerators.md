@@ -123,6 +123,12 @@ complex/object-complex aliases, numeric-string aliases, non-finite values,
 shape mismatches, and non-zero coupling diagonals before float coercion.
 Returned spectra must keep `N` cardinality, contain finite real non-boolean
 non-string exponents, and remain sorted in descending Lyapunov order.
+The public NPE dispatcher and direct Go, Julia, and Mojo bridges apply the
+shared NPE backend validators before optional runtime loading and after backend
+execution: phase vectors and phase-distance matrices reject boolean aliases,
+complex/object-complex aliases, numeric-string aliases, non-finite values,
+wrong cardinality, asymmetric matrices, non-zero diagonals, and out-of-range
+distances before float coercion or publication.
 
 ## Wiring
 

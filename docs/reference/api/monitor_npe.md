@@ -172,19 +172,23 @@ match the exact H₀ persistent-entropy reference for the supplied
 fall back to the NumPy reference implementation instead of entering
 the physics monitor. Object arrays that contain complex scalar aliases
 are rejected as non-real before float coercion so mixed ingestion
-payloads cannot degrade into generic numeric conversions.
+payloads cannot degrade into generic numeric conversions. Numeric-string
+phase or distance payloads are also rejected before `float64` coercion, so
+text-encoded telemetry cannot silently enter the circular-distance contract.
 
 Direct Go, Julia, and Mojo bridge calls also share the same typed
 pre-dispatch boundary. Phase vectors are accepted only as finite
-real one-dimensional ``float64`` arrays with boolean aliases and
-complex samples, including object-dtype complex aliases, rejected
-before optional runtime loading. Direct ``compute_npe_*`` calls also
+real one-dimensional ``float64`` arrays with boolean aliases,
+numeric-string aliases, and complex samples, including object-dtype
+complex aliases, rejected before optional runtime loading. Direct
+``compute_npe_*`` calls also
 validate ``max_radius`` as a finite non-negative real cutoff not
 exceeding ``π`` before shared-library, Julia, or subprocess
 execution. Direct backend outputs are also validated before return:
 distance outputs must contain exactly ``N × N`` finite real values,
 reshape to a symmetric matrix with zero diagonal, remain bounded in
-``[0, π]``, and preserve exact wrapped circular distances; scalar NPE
+``[0, π]``, reject numeric-string aliases before coercion, and preserve
+exact wrapped circular distances; scalar NPE
 outputs must be finite real values in ``[0, 1]`` and preserve the
 exact persistent-entropy scalar up to the backend tolerance. This
 keeps optional polyglot bridges fail-closed if a shared library,
@@ -222,14 +226,16 @@ tolerance-bounded agreement for every available backend (`1e-12` for native
 array bridges, `1e-9` for Mojo text round-trips). The stored reference-suite
 snapshot exposes the gate as `npe_polyglot`.
 
-Current available backends for this run: ``rust``, ``mojo``, ``go``,
-``python``. Julia was not available in the local benchmark environment.
+Current available backends for this run: ``rust``, ``mojo``, ``julia``,
+``go``, ``python``. The deterministic parity gate passed all five declared
+backend slots with benchmark hash
+``1573f0fb380d8b26fb76689bf2626c9e11a7a0f0bac58c25768177764cc28605``.
 
-| N   | rust (ms) | mojo (ms) | go (ms) | python (ms) |
-| --- | --------: | --------: | ------: | ----------: |
-| 16  |    0.2696 |   45.2720 |  0.4459 |      0.2363 |
-| 64  |    1.8924 |   47.3462 |  4.2675 |      1.4894 |
-| 256 |   28.5384 |  412.2933 | 76.9749 |     31.8514 |
+| N   | rust (ms) | mojo (ms) | julia (ms) | go (ms) | python (ms) |
+| --- | --------: | --------: | ---------: | ------: | ----------: |
+| 16  |    1.0591 |  270.6090 |     2.0531 |  1.3303 |      0.4345 |
+| 64  |   14.3669 |  201.6425 |     8.2710 |  9.3504 |      4.1184 |
+| 256 |  125.9204 | 1280.4799 |   266.5458 | 245.3634 |    102.5902 |
 
 The native backends still exercise their compiled kernels, but every public
 result now pays for a deterministic reference check. This is intentional for

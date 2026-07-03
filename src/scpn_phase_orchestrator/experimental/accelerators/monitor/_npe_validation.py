@@ -48,11 +48,32 @@ def _contains_complex_alias(raw: ArrayPayload) -> bool:
     return any(isinstance(value, complex | np.complexfloating) for value in raw.flat)
 
 
+def _is_numeric_string_alias(value: object) -> bool:
+    """Return whether ``value`` is a string-like scalar parsable as a float."""
+    if not isinstance(value, (str, bytes, np.str_, np.bytes_)):
+        return False
+    try:
+        float(value)
+    except (TypeError, ValueError):
+        return False
+    return True
+
+
+def _contains_numeric_string_alias(raw: ArrayPayload) -> bool:
+    """Return whether the array contains a numeric string alias."""
+    if raw.dtype.kind not in {"O", "S", "U"}:
+        return False
+    object_array = raw.astype(object, copy=False)
+    return any(_is_numeric_string_alias(value) for value in object_array.flat)
+
+
 def validate_phase_distance_backend_input(phases: object) -> FloatArray:
     """Return a finite real one-dimensional phase vector for direct backends."""
     raw = np.asarray(phases)
     if _contains_boolean_alias(raw):
         raise ValueError("phases must not contain boolean values")
+    if _contains_numeric_string_alias(raw):
+        raise ValueError("phases must not contain numeric-string aliases")
     if _contains_complex_alias(raw):
         raise ValueError("phases must contain real-valued phase samples")
     try:
@@ -141,6 +162,10 @@ def validate_phase_distance_backend_output(
     raw = np.asarray(distances)
     if _contains_boolean_alias(raw):
         raise ValueError("phase distance backend output must not contain booleans")
+    if _contains_numeric_string_alias(raw):
+        raise ValueError(
+            "phase distance backend output must not contain numeric-string aliases"
+        )
     if _contains_complex_alias(raw):
         raise ValueError("phase distance backend output must contain real values")
     try:
