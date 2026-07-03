@@ -152,9 +152,44 @@ def _contains_boolean_alias(value: object) -> bool:
     return any(isinstance(item, (bool, np.bool_)) for item in array.flat)
 
 
+def _contains_complex_alias(value: object) -> bool:
+    """Return whether the value contains any complex-number alias."""
+    try:
+        raw = np.asarray(value)
+    except (TypeError, ValueError):
+        return False
+    if np.iscomplexobj(raw):
+        return True
+    if isinstance(value, np.ndarray) and raw.dtype != object:
+        return False
+    try:
+        array = np.asarray(value, dtype=object)
+    except (TypeError, ValueError):
+        return False
+    return any(isinstance(item, (complex, np.complexfloating)) for item in array.flat)
+
+
+def _contains_numeric_string_alias(value: object) -> bool:
+    """Return whether the value contains a parseable numeric string alias."""
+    try:
+        array = np.asarray(value, dtype=object)
+    except (TypeError, ValueError):
+        return False
+    contains_alias = False
+    for item in array.flat:
+        if not isinstance(item, (str, bytes, np.str_, np.bytes_)):
+            continue
+        try:
+            float(item)
+        except (TypeError, ValueError):
+            return False
+        contains_alias = True
+    return contains_alias
+
+
 def _validate_finite_real(value: object, *, name: str) -> float:
     """Return ``value`` as a finite real float, else raise ``ValueError``."""
-    if isinstance(value, bool) or not isinstance(value, Real):
+    if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite real, got {value!r}")
     result = float(value)
     if not np.isfinite(result):
@@ -180,7 +215,7 @@ def _validate_non_negative_real(value: object, *, name: str) -> float:
 
 def _validate_int_at_least(value: object, *, name: str, minimum: int) -> int:
     """Return ``value`` as an integer at least the minimum, else raise."""
-    if isinstance(value, bool) or not isinstance(value, Integral):
+    if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral):
         raise ValueError(f"{name} must be an integer >= {minimum}, got {value!r}")
     result = int(value)
     if result < minimum:
@@ -193,6 +228,10 @@ def _validate_vector(value: object, *, name: str) -> FloatArray:
     raw = np.asarray(value)
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
+    if _contains_numeric_string_alias(value):
+        raise ValueError(f"{name} must contain only real numbers")
+    if np.iscomplexobj(raw) or _contains_complex_alias(value):
+        raise ValueError(f"{name} must be a finite real-valued vector")
     try:
         array = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
@@ -214,6 +253,10 @@ def _validate_matrix(
     raw = np.asarray(value)
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
+    if _contains_numeric_string_alias(value):
+        raise ValueError(f"{name} must contain only real numbers")
+    if np.iscomplexobj(raw) or _contains_complex_alias(value):
+        raise ValueError(f"{name} must be a finite real-valued matrix")
     try:
         array = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
@@ -245,6 +288,7 @@ class LyapunovState:
     max_phase_diff: float
 
     def __post_init__(self) -> None:
+        """Normalize scalar aliases and reject invalid state fields."""
         v_value = _validate_finite_real(self.V, name="V")
         dv_dt_value = _validate_finite_real(self.dV_dt, name="dV_dt")
         if not isinstance(self.in_basin, bool):
@@ -276,6 +320,7 @@ class LyapunovGuard:
     """
 
     def __init__(self, basin_threshold: object = np.pi / 2):
+        """Create a guard with a validated geodesic basin threshold."""
         basin_threshold = _validate_positive_real(
             basin_threshold,
             name="basin_threshold",
@@ -499,8 +544,15 @@ def _lyapunov_spectrum_python(
 
 def _validate_spectrum_output(value: object, *, n: int) -> FloatArray:
     """Return the backend Lyapunov spectrum matching the reference."""
+    raw = np.asarray(value)
+    if _contains_boolean_alias(value):
+        raise ValueError("Lyapunov spectrum output must not contain boolean values")
+    if _contains_numeric_string_alias(value):
+        raise ValueError("Lyapunov spectrum output must contain only real numbers")
+    if np.iscomplexobj(raw) or _contains_complex_alias(value):
+        raise ValueError("Lyapunov spectrum output must be real-valued")
     try:
-        spectrum = np.asarray(value, dtype=np.float64)
+        spectrum = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError("Lyapunov spectrum output must be numeric") from exc
     if spectrum.shape != (n,):

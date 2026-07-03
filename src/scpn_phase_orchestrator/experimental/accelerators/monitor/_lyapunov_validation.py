@@ -28,12 +28,49 @@ def _contains_boolean_alias(value: object) -> bool:
     return any(isinstance(item, (bool, np.bool_)) for item in array.flat)
 
 
+def _contains_complex_alias(value: object) -> bool:
+    """Return whether the value contains any complex-number alias."""
+    try:
+        raw = np.asarray(value)
+    except (TypeError, ValueError):
+        return False
+    if np.iscomplexobj(raw):
+        return True
+    if isinstance(value, np.ndarray) and raw.dtype != object:
+        return False
+    try:
+        array = np.asarray(value, dtype=object)
+    except (TypeError, ValueError):
+        return False
+    return any(isinstance(item, (complex, np.complexfloating)) for item in array.flat)
+
+
+def _contains_numeric_string_alias(value: object) -> bool:
+    """Return whether the value contains a parseable numeric string alias."""
+    try:
+        array = np.asarray(value, dtype=object)
+    except (TypeError, ValueError):
+        return False
+    contains_alias = False
+    for item in array.flat:
+        if not isinstance(item, (str, bytes, np.str_, np.bytes_)):
+            continue
+        try:
+            float(item)
+        except (TypeError, ValueError):
+            return False
+        contains_alias = True
+    return contains_alias
+
+
 def _validate_vector(value: object, *, name: str) -> FloatArray:
     """Return ``value`` as a validated 1-D finite array, else raise."""
     raw = np.asarray(value)
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
-    if np.iscomplexobj(raw):
+    if _contains_numeric_string_alias(value):
+        raise ValueError(f"{name} must contain only real numbers")
+    if np.iscomplexobj(raw) or _contains_complex_alias(value):
         raise ValueError(f"{name} must be a finite real-valued vector")
     try:
         array = raw.astype(np.float64, copy=True)
@@ -51,7 +88,9 @@ def _validate_matrix(value: object, *, name: str, n: int) -> FloatArray:
     raw = np.asarray(value)
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
-    if np.iscomplexobj(raw):
+    if _contains_numeric_string_alias(value):
+        raise ValueError(f"{name} must contain only real numbers")
+    if np.iscomplexobj(raw) or _contains_complex_alias(value):
         raise ValueError(f"{name} must be a finite real-valued matrix")
     try:
         array = raw.astype(np.float64, copy=True)
@@ -160,7 +199,9 @@ def validate_lyapunov_backend_output(value: object, n: int) -> FloatArray:
     raw = np.asarray(value)
     if _contains_boolean_alias(value):
         raise ValueError("Lyapunov backend output must not contain boolean values")
-    if np.iscomplexobj(raw):
+    if _contains_numeric_string_alias(value):
+        raise ValueError("Lyapunov backend output must contain only real numbers")
+    if np.iscomplexobj(raw) or _contains_complex_alias(value):
         raise ValueError("Lyapunov backend output must be real-valued")
     try:
         spectrum = raw.astype(np.float64, copy=True)

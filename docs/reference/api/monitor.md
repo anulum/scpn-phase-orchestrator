@@ -394,6 +394,11 @@ The "edge of chaos" (λ ≈ 0) is where consciousness-like dynamics
 operate (PNAS 2022) and where reservoir computing achieves optimal
 performance (arXiv:2407.16172).
 
+The spectrum surface validates phase/frequency vectors, coupling/lag matrices,
+and optional backend spectra before float coercion. Boolean aliases, complex
+aliases, numeric-string aliases, non-finite values, unsorted spectra, and wrong
+cardinality fail closed before publication.
+
 ::: scpn_phase_orchestrator.monitor.lyapunov
 
 ## Digital-Twin Confidence

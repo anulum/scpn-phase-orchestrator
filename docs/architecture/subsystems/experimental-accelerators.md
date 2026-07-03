@@ -116,6 +116,13 @@ validator before and after execution: snapshot matrices and returned `(A, B, C)`
 payloads must be finite real non-boolean numeric matrices, reject complex and
 numeric-string aliases before float coercion, and preserve the contracted
 `(N, N)`, `(N, m)`, and `(n, N)` shapes.
+Direct Lyapunov Go, Julia, and Mojo bridges apply the shared Lyapunov backend
+validator before optional runtime loading and after backend execution:
+phase/frequency vectors and coupling/lag matrices reject boolean aliases,
+complex/object-complex aliases, numeric-string aliases, non-finite values,
+shape mismatches, and non-zero coupling diagonals before float coercion.
+Returned spectra must keep `N` cardinality, contain finite real non-boolean
+non-string exponents, and remain sorted in descending Lyapunov order.
 
 ## Wiring
 

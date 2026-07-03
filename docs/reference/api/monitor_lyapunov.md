@@ -189,6 +189,11 @@ Returns `(N,)` exponents sorted descending. `knm` and `alpha` are
 row-major `(N, N)` matrices; flat versions are also accepted (the
 dispatcher reshapes them for each backend).
 
+Public validation runs before float coercion. Phase/frequency vectors and
+coupling/lag matrices must contain finite real non-boolean numeric values;
+numeric strings such as `"1.0"`, complex dtypes, object-complex aliases, and
+boolean aliases are rejected before backend dispatch.
+
 **Guidelines** on the integrator parameters:
 
 | Parameter       | Typical range        | Effect                                                    |
@@ -254,8 +259,9 @@ tolerances listed in the parity tests:
 Direct Go, Julia, and Mojo wrappers revalidate backend spectra before returning
 them. Accepted spectra must contain exactly `N` finite real exponents and must
 already be sorted in descending Lyapunov order. Malformed length, complex,
-non-finite, boolean-alias, or unsorted backend payloads are rejected at the
-adapter boundary rather than being passed to downstream stability logic.
+non-finite, boolean-alias, numeric-string, or unsorted backend payloads are
+rejected at the adapter boundary rather than being passed to downstream
+stability logic.
 The Mojo subprocess bridge additionally requires the `SPEC` executable to emit
 exactly `N` scalar stdout lines before numeric parsing; missing, extra, blank,
 or non-scalar lines fail closed before spectrum validation.
@@ -314,9 +320,10 @@ unless it contains exactly one scalar line per Lyapunov exponent.
 The direct Mojo, Julia, and Go bridge functions validate all array and scalar
 inputs before loading optional runtimes: phase/frequency vectors and
 coupling/lag matrices must be finite real `float64` arrays with boolean aliases
-rejected, `dt` must be positive, `n_steps` and `qr_interval` must be integer
-counts, `zeta` must be non-negative, `psi` must be finite, and the coupling
-diagonal must remain zero.
+rejected, complex/object-complex aliases rejected, numeric-string aliases
+rejected before float coercion, `dt` must be positive, `n_steps` and
+`qr_interval` must be integer counts, `zeta` must be non-negative, `psi` must
+be finite, and the coupling diagonal must remain zero.
 
 **Build:**
 

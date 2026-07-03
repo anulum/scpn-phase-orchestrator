@@ -42,6 +42,14 @@ class _ObjectProbe:
         return np.array([0.0, 0.1], dtype=np.float64)
 
 
+class _ArrayFails:
+    """Array-like value that rejects all NumPy array conversion attempts."""
+
+    def __array__(self, dtype: object = None) -> FloatArray:
+        """Raise a conversion error for defensive alias-helper paths."""
+        raise TypeError("array conversion rejected")
+
+
 def _matrix() -> FloatArray:
     """Return a valid two-node zero-diagonal coupling matrix."""
     return np.array([[0.0, 0.4], [0.4, 0.0]], dtype=np.float64)
@@ -118,6 +126,17 @@ def test_optional_backend_loader_returns_mojo_callable(
     )
 
     assert lyapunov_mod._load_mojo_fn() is _sorted_backend
+
+
+def test_complex_alias_helper_handles_failure_and_complex_dtype() -> None:
+    """Public alias detection handles failed probes and complex dtypes."""
+    assert lyapunov_mod._contains_complex_alias(_ArrayFails()) is False
+    assert (
+        lyapunov_mod._contains_complex_alias(
+            np.array([1.0 + 0.0j], dtype=np.complex128)
+        )
+        is True
+    )
 
 
 def test_optional_backend_loader_returns_julia_callable(
@@ -237,6 +256,84 @@ def test_lyapunov_spectrum_rejects_omega_shape_mismatch() -> None:
         )
 
 
+@pytest.mark.parametrize(
+    ("field", "payload", "match"),
+    [
+        (
+            "phases_init",
+            np.array(["0.0", "0.1"]),
+            "phases_init must contain only real numbers",
+        ),
+        (
+            "omegas",
+            np.array(["1.0", "1.1"]),
+            "omegas must contain only real numbers",
+        ),
+        (
+            "knm",
+            np.array([["0.0", "0.4"], ["0.4", "0.0"]]),
+            "knm must contain only real numbers",
+        ),
+        (
+            "alpha",
+            np.array([["0.0", "0.0"], ["0.0", "0.0"]]),
+            "alpha must contain only real numbers",
+        ),
+    ],
+)
+def test_lyapunov_spectrum_rejects_numeric_string_array_inputs(
+    field: str,
+    payload: object,
+    match: str,
+) -> None:
+    """The public spectrum API rejects numeric strings before backend dispatch."""
+    kwargs: dict[str, object] = {
+        "phases_init": np.array([0.0, 0.1], dtype=np.float64),
+        "omegas": np.array([1.0, 1.0], dtype=np.float64),
+        "knm": _matrix(),
+        "alpha": _alpha(),
+        "n_steps": 1,
+    }
+    kwargs[field] = payload
+
+    with pytest.raises(ValueError, match=match):
+        lyapunov_mod.lyapunov_spectrum(**kwargs)
+
+
+@pytest.mark.parametrize(
+    ("field", "payload", "match"),
+    [
+        (
+            "phases_init",
+            np.array([0.0 + 0.0j, 0.1 + 0.0j], dtype=np.complex128),
+            "phases_init must be a finite real-valued vector",
+        ),
+        (
+            "knm",
+            np.array([[0.0, 0.4 + 0.0j], [0.4, 0.0]], dtype=np.complex128),
+            "knm must be a finite real-valued matrix",
+        ),
+    ],
+)
+def test_lyapunov_spectrum_rejects_complex_array_inputs(
+    field: str,
+    payload: object,
+    match: str,
+) -> None:
+    """The public spectrum API rejects complex arrays before float coercion."""
+    kwargs: dict[str, object] = {
+        "phases_init": np.array([0.0, 0.1], dtype=np.float64),
+        "omegas": np.array([1.0, 1.0], dtype=np.float64),
+        "knm": _matrix(),
+        "alpha": _alpha(),
+        "n_steps": 1,
+    }
+    kwargs[field] = payload
+
+    with pytest.raises(ValueError, match=match):
+        lyapunov_mod.lyapunov_spectrum(**kwargs)
+
+
 def test_lyapunov_spectrum_rejects_empty_phase_vector() -> None:
     """The spectrum API requires at least one oscillator."""
     with pytest.raises(ValueError, match="at least one oscillator"):
@@ -269,6 +366,37 @@ def test_lyapunov_spectrum_rejects_invalid_integer_parameters() -> None:
             n_steps=1,
             qr_interval=0,
         )
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "match"),
+    [
+        ("n_steps", np.bool_(True), "n_steps must be an integer"),
+        ("qr_interval", np.bool_(True), "qr_interval must be an integer"),
+        ("zeta", np.bool_(True), "zeta must be a finite real"),
+        ("psi", np.bool_(True), "psi must be a finite real"),
+    ],
+)
+def test_lyapunov_spectrum_rejects_numpy_boolean_scalar_aliases(
+    field: str,
+    value: object,
+    match: str,
+) -> None:
+    """The public spectrum API rejects NumPy boolean scalar aliases."""
+    kwargs: dict[str, object] = {
+        "phases_init": np.array([0.0, 0.1], dtype=np.float64),
+        "omegas": np.array([1.0, 1.0], dtype=np.float64),
+        "knm": _matrix(),
+        "alpha": _alpha(),
+        "n_steps": 1,
+        "qr_interval": 1,
+        "zeta": 0.0,
+        "psi": 0.0,
+    }
+    kwargs[field] = value
+
+    with pytest.raises(ValueError, match=match):
+        lyapunov_mod.lyapunov_spectrum(**kwargs)
 
 
 def test_python_spectrum_covers_driven_jacobian_path(
@@ -339,6 +467,42 @@ def test_backend_output_validation_rejects_non_numeric_payload(
         return ["bad", "payload"]
 
     with pytest.raises(ValueError, match="output must be numeric"):
+        _spectrum_with_backend(
+            monkeypatch,
+            active_backend="rust",
+            backend=_bad_backend,
+        )
+
+
+@pytest.mark.parametrize(
+    ("value", "match"),
+    [
+        ([True, False], "must not contain boolean"),
+        (["1.0", "0.0"], "must contain only real numbers"),
+        ([1.0 + 0.0j, 0.0 + 0.0j], "must be real-valued"),
+    ],
+)
+def test_backend_output_validation_rejects_lossy_alias_payloads(
+    monkeypatch: pytest.MonkeyPatch,
+    value: object,
+    match: str,
+) -> None:
+    """Backend spectra reject lossy aliases before float coercion."""
+
+    def _bad_backend(
+        _phases: FloatArray,
+        _omegas: FloatArray,
+        _knm: FloatArray,
+        _alpha_matrix: FloatArray,
+        _dt: float,
+        _n_steps: int,
+        _qr_interval: int,
+        _zeta: float,
+        _psi: float,
+    ) -> object:
+        return value
+
+    with pytest.raises(ValueError, match=match):
         _spectrum_with_backend(
             monkeypatch,
             active_backend="rust",

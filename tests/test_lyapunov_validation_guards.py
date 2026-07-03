@@ -13,12 +13,20 @@ from typing import Any
 import numpy as np
 import pytest
 
+from scpn_phase_orchestrator.experimental.accelerators.monitor import (
+    _lyapunov_validation as lyapunov_validation,
+)
 from scpn_phase_orchestrator.experimental.accelerators.monitor._lyapunov_validation import (  # noqa: E501
     validate_lyapunov_backend_inputs,
     validate_lyapunov_backend_output,
 )
 
 _KNM = np.array([[0.0, 1.0], [1.0, 0.0]], dtype=np.float64)
+
+
+class _ArrayFails:
+    def __array__(self, dtype: object = None) -> np.ndarray:
+        raise TypeError("array conversion rejected")
 
 
 class _ObjectDtypeFails:
@@ -48,6 +56,16 @@ def _call(**overrides: Any) -> Any:
     return validate_lyapunov_backend_inputs(**_inputs(**overrides))
 
 
+def test_complex_alias_helper_handles_failure_and_complex_dtype() -> None:
+    assert lyapunov_validation._contains_complex_alias(_ArrayFails()) is False
+    assert (
+        lyapunov_validation._contains_complex_alias(
+            np.array([1.0 + 0.0j], dtype=np.complex128)
+        )
+        is True
+    )
+
+
 class TestLyapunovInputs:
     def test_valid_round_trips(self) -> None:
         result = _call()
@@ -59,10 +77,18 @@ class TestLyapunovInputs:
             ({"phases_init": np.array([True, False])}, "phases_init must not contain"),
             ({"phases_init": _ObjectDtypeFails()}, "omegas shape .* does not match"),
             ({"phases_init": np.array(["bad", "payload"])}, "phases_init must"),
+            (
+                {"phases_init": np.array(["0.1", "0.2"])},
+                "phases_init must contain only real numbers",
+            ),
             ({"phases_init": np.zeros((2, 2))}, "phases_init.*one-dimensional"),
             ({"omegas": np.array([0.0, 0.0, 0.0])}, "omegas shape .* does not match"),
             ({"knm": np.array([[0.0, 1j], [1j, 0.0]])}, "knm must"),
             ({"knm": np.array([["bad", "payload"], ["data", "0.0"]])}, "knm must"),
+            (
+                {"knm": np.array([["0.0", "1.0"], ["1.0", "0.0"]])},
+                "knm must contain only real numbers",
+            ),
             ({"alpha": np.zeros((2, 3), dtype=np.float64)}, "alpha shape"),
             ({"knm": np.array([[True, False], [False, True]])}, "knm must"),
             ({"knm": np.array([[0.0, np.inf], [np.inf, 0.0]])}, "knm must"),
@@ -95,6 +121,7 @@ class TestLyapunovOutput:
             (np.array([True, False]), "must not contain boolean"),
             (np.array([1.0 + 1j, 2.0]), "must be real-valued"),
             (np.array(["not-a-number", "still-bad"]), "must be numeric"),
+            (np.array(["1.0", "0.0"]), "must contain only real numbers"),
             (np.array([1.0, 2.0, 3.0]), "does not match"),
         ],
     )
