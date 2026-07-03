@@ -19,8 +19,7 @@ from numpy.typing import NDArray
 from scpn_phase_orchestrator.experimental.accelerators._julia_runtime import (
     require_julia_main,
 )
-
-from ._swarmalator_validation import (
+from scpn_phase_orchestrator.upde._swarmalator_validation import (
     validate_swarmalator_inputs,
     validate_swarmalator_output,
 )

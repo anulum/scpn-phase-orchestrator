@@ -17,11 +17,12 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
-from .._go_runtime import load_go_library
-from ._simplicial_validation import (
+from scpn_phase_orchestrator.upde._simplicial_validation import (
     validate_simplicial_inputs,
     validate_simplicial_output,
 )
+
+from .._go_runtime import load_go_library
 
 __all__ = ["simplicial_run_go"]
 

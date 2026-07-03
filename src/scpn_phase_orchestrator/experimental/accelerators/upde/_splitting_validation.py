@@ -17,7 +17,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from scpn_phase_orchestrator._compat import TWO_PI
-from scpn_phase_orchestrator.experimental.accelerators.upde._validation_common import (
+from scpn_phase_orchestrator.upde._validation_common import (
     contains_boolean_alias,
 )
 

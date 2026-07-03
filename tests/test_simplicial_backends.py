@@ -29,7 +29,7 @@ from scpn_phase_orchestrator.experimental.accelerators.upde import (
     _simplicial_julia,
     _simplicial_mojo,
 )
-from scpn_phase_orchestrator.experimental.accelerators.upde import (
+from scpn_phase_orchestrator.upde import (
     _simplicial_validation as simplicial_validation,
 )
 from scpn_phase_orchestrator.upde import simplicial as s_mod

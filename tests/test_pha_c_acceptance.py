@@ -965,7 +965,7 @@ def test_acceptance_benchmark_error_rejects_numeric_string_record_field() -> Non
 
 def test_acceptance_validation_rejects_discrete_divergence() -> None:
     record = _valid_record()
-    expected = _build_with(backend="go")
+    expected = replace(record, moving_frame_backend_request="go")
 
     with pytest.raises(ValueError, match="moving_frame_backend_request"):
         _pha_c_acceptance_validation.validate_pha_c_acceptance_record(

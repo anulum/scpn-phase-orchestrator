@@ -18,12 +18,12 @@ import numpy as np
 from numpy.typing import NDArray
 
 from scpn_phase_orchestrator._compat import TWO_PI
-
-from .._mojo_runtime import require_mojo_executable, run_mojo_executable
-from ._simplicial_validation import (
+from scpn_phase_orchestrator.upde._simplicial_validation import (
     validate_simplicial_inputs,
     validate_simplicial_output,
 )
+
+from .._mojo_runtime import require_mojo_executable, run_mojo_executable
 
 __all__ = ["_ensure_exe", "simplicial_run_mojo"]
 

@@ -36,9 +36,6 @@ from scpn_phase_orchestrator.experimental.accelerators.upde import (
 from scpn_phase_orchestrator.experimental.accelerators.upde import (
     _order_params_mojo as order_params_mojo_mod,
 )
-from scpn_phase_orchestrator.experimental.accelerators.upde import (
-    _order_params_validation as order_params_validation,
-)
 from scpn_phase_orchestrator.experimental.accelerators.upde._order_params_go import (
     layer_coherence_go,
     order_parameter_go,
@@ -53,6 +50,9 @@ from scpn_phase_orchestrator.experimental.accelerators.upde._order_params_mojo i
     layer_coherence_mojo,
     order_parameter_mojo,
     plv_mojo,
+)
+from scpn_phase_orchestrator.upde import (
+    _order_params_validation as order_params_validation,
 )
 from scpn_phase_orchestrator.upde import order_params as op_mod
 from scpn_phase_orchestrator.upde.order_params import (

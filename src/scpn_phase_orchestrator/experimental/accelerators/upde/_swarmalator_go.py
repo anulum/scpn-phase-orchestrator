@@ -17,11 +17,12 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
-from .._go_runtime import load_go_library
-from ._swarmalator_validation import (
+from scpn_phase_orchestrator.upde._swarmalator_validation import (
     validate_swarmalator_inputs,
     validate_swarmalator_output,
 )
+
+from .._go_runtime import load_go_library
 
 __all__ = ["swarmalator_step_go"]
 

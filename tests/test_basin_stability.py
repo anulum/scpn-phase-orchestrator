@@ -21,7 +21,7 @@ from numpy.typing import NDArray
 from scpn_phase_orchestrator.experimental.accelerators.upde import (
     _basin_stability_julia as basin_julia,
 )
-from scpn_phase_orchestrator.experimental.accelerators.upde import (
+from scpn_phase_orchestrator.upde import (
     _basin_stability_validation as basin_validation,
 )
 from scpn_phase_orchestrator.upde import basin_stability as basin_mod

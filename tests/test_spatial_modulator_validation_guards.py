@@ -13,7 +13,7 @@ from typing import Any
 import numpy as np
 import pytest
 
-from scpn_phase_orchestrator.experimental.accelerators.coupling._spatial_modulator_validation import (  # noqa: E501
+from scpn_phase_orchestrator.coupling._spatial_modulator_validation import (  # noqa: E501
     validate_spatial_modulator_inputs,
     validate_spatial_modulator_output,
 )

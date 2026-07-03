@@ -17,11 +17,12 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
-from .._mojo_runtime import require_mojo_executable, run_mojo_executable
-from ._spatial_modulator_validation import (
+from scpn_phase_orchestrator.coupling._spatial_modulator_validation import (
     validate_spatial_modulator_inputs,
     validate_spatial_modulator_output,
 )
+
+from .._mojo_runtime import require_mojo_executable, run_mojo_executable
 
 __all__ = ["_ensure_exe", "spatial_modulate_mojo"]
 FloatArray: TypeAlias = NDArray[np.float64]

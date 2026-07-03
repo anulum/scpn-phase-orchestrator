@@ -17,11 +17,12 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
-from .._mojo_runtime import require_mojo_executable, run_mojo_executable
-from ._spectral_validation import (
+from scpn_phase_orchestrator.coupling._spectral_validation import (
     validate_spectral_backend_inputs,
     validate_spectral_backend_output,
 )
+
+from .._mojo_runtime import require_mojo_executable, run_mojo_executable
 
 __all__ = ["_ensure_exe", "spectral_eig_mojo"]
 FloatArray: TypeAlias = NDArray[np.float64]

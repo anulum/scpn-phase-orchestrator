@@ -35,7 +35,7 @@ from scpn_phase_orchestrator.experimental.accelerators.upde import (
     _reduction_julia,
     _reduction_mojo,
 )
-from scpn_phase_orchestrator.experimental.accelerators.upde import (
+from scpn_phase_orchestrator.upde import (
     _reduction_validation as reduction_validation,
 )
 from scpn_phase_orchestrator.upde import reduction as r_mod

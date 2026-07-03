@@ -37,7 +37,7 @@ from numbers import Integral, Real
 import numpy as np
 from numpy.typing import NDArray
 
-from scpn_phase_orchestrator.experimental.accelerators.upde import _inertial_validation
+from scpn_phase_orchestrator.upde import _inertial_validation
 from scpn_phase_orchestrator.upde._julia_runtime import require_juliacall_main
 
 FloatArray = NDArray[np.float64]

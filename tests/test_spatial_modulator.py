@@ -38,6 +38,9 @@ from scpn_phase_orchestrator.coupling import (
 from scpn_phase_orchestrator.coupling import (
     _spatial_modulator_mojo as public_spatial_mojo,
 )
+from scpn_phase_orchestrator.coupling import (
+    _spatial_modulator_validation as spatial_validation,
+)
 from scpn_phase_orchestrator.coupling import spatial_modulator as sm_mod
 from scpn_phase_orchestrator.coupling.spatial_modulator import spatial_modulate
 from scpn_phase_orchestrator.experimental.accelerators.coupling import (
@@ -53,9 +56,6 @@ from scpn_phase_orchestrator.experimental.accelerators.coupling import (
 )
 from scpn_phase_orchestrator.experimental.accelerators.coupling import (
     _spatial_modulator_mojo as direct_spatial_mojo,
-)
-from scpn_phase_orchestrator.experimental.accelerators.coupling import (
-    _spatial_modulator_validation as spatial_validation,
 )
 from scpn_phase_orchestrator.upde import swarmalator as sw_mod
 from scpn_phase_orchestrator.upde.swarmalator import SwarmalatorEngine
@@ -520,7 +520,7 @@ def test_public_spatial_accelerator_wrappers_forward_to_direct_modules() -> None
     )
     assert (
         importlib.import_module(
-            "scpn_phase_orchestrator.experimental.accelerators.coupling._spatial_modulator_validation"
+            "scpn_phase_orchestrator.coupling._spatial_modulator_validation"
         )
         is spatial_validation
     )

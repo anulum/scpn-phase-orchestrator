@@ -19,8 +19,7 @@ from numpy.typing import NDArray
 from scpn_phase_orchestrator.experimental.accelerators._julia_runtime import (
     require_julia_main,
 )
-
-from ._market_validation import (
+from scpn_phase_orchestrator.upde._market_validation import (
     validate_market_order_inputs,
     validate_market_order_output,
     validate_market_plv_inputs,

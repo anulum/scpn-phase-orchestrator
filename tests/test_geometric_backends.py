@@ -33,9 +33,6 @@ from hypothesis import strategies as st
 from scpn_phase_orchestrator.experimental.accelerators.upde import (
     _geometric_mojo,
 )
-from scpn_phase_orchestrator.experimental.accelerators.upde import (
-    _geometric_validation as geometric_validation,
-)
 from scpn_phase_orchestrator.experimental.accelerators.upde._geometric_go import (
     torus_run_go,
 )
@@ -44,6 +41,9 @@ from scpn_phase_orchestrator.experimental.accelerators.upde._geometric_julia imp
 )
 from scpn_phase_orchestrator.experimental.accelerators.upde._geometric_mojo import (
     torus_run_mojo,
+)
+from scpn_phase_orchestrator.upde import (
+    _geometric_validation as geometric_validation,
 )
 from scpn_phase_orchestrator.upde import geometric as g_mod
 from scpn_phase_orchestrator.upde.geometric import TorusEngine

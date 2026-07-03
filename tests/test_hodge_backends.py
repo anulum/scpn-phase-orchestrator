@@ -27,6 +27,9 @@ import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
+from scpn_phase_orchestrator.coupling import (
+    _hodge_validation as hodge_validation,
+)
 from scpn_phase_orchestrator.coupling import hodge as h_mod
 from scpn_phase_orchestrator.coupling.hodge import (
     AVAILABLE_BACKENDS,
@@ -35,9 +38,6 @@ from scpn_phase_orchestrator.coupling.hodge import (
 from scpn_phase_orchestrator.experimental.accelerators.coupling import (
     _hodge_julia,
     _hodge_mojo,
-)
-from scpn_phase_orchestrator.experimental.accelerators.coupling import (
-    _hodge_validation as hodge_validation,
 )
 from scpn_phase_orchestrator.experimental.accelerators.coupling._hodge_go import (
     hodge_decomposition_go,

@@ -19,7 +19,7 @@ import pytest
 from scpn_phase_orchestrator.experimental.accelerators.upde import (
     _order_params_julia as order_params_julia,
 )
-from scpn_phase_orchestrator.experimental.accelerators.upde import (
+from scpn_phase_orchestrator.upde import (
     _order_params_validation as order_params_validation,
 )
 from scpn_phase_orchestrator.upde import order_params

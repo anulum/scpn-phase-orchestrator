@@ -16,11 +16,12 @@ from pathlib import Path
 import numpy as np
 from numpy.typing import NDArray
 
-from .._go_runtime import load_go_library
-from ._basin_stability_validation import (
+from scpn_phase_orchestrator.upde._basin_stability_validation import (
     validate_basin_stability_inputs,
     validate_basin_stability_output,
 )
+
+from .._go_runtime import load_go_library
 
 __all__ = ["steady_state_r_go"]
 

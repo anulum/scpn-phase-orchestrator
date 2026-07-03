@@ -11,15 +11,15 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
+from scpn_phase_orchestrator.coupling import (
+    _spectral_validation as spectral_validation,
+)
 from scpn_phase_orchestrator.coupling.spectral import (
     _validate_rust_fiedler_vector,
     _validate_spectral_output,
     fiedler_value,
     spectral_eig,
     sync_convergence_rate,
-)
-from scpn_phase_orchestrator.experimental.accelerators.coupling import (
-    _spectral_validation as spectral_validation,
 )
 
 

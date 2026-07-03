@@ -32,6 +32,9 @@ import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
+from scpn_phase_orchestrator.coupling import (
+    _spectral_validation as spectral_validation,
+)
 from scpn_phase_orchestrator.coupling import spectral as s_mod
 from scpn_phase_orchestrator.coupling.spectral import (
     fiedler_value,
@@ -43,9 +46,6 @@ from scpn_phase_orchestrator.coupling.spectral import (
 from scpn_phase_orchestrator.experimental.accelerators.coupling import (
     _spectral_julia,
     _spectral_mojo,
-)
-from scpn_phase_orchestrator.experimental.accelerators.coupling import (
-    _spectral_validation as spectral_validation,
 )
 from scpn_phase_orchestrator.experimental.accelerators.coupling._spectral_go import (
     spectral_eig_go,

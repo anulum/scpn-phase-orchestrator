@@ -23,13 +23,14 @@ from scpn_phase_orchestrator.monitor.merge_window import (
     DEFAULT_PHASE_TOL_RAD,
     DEFAULT_SPATIAL_TOL_M,
 )
+from scpn_phase_orchestrator.upde._validation_common import (
+    validate_non_negative_tolerance,
+)
 from scpn_phase_orchestrator.upde.pha_c_acceptance import (
     PHACAcceptanceRecord,
     build_pha_c_acceptance_record,
     verify_pha_c_acceptance_record,
 )
-
-from ._validation_common import validate_non_negative_tolerance
 
 _NUMERIC_FIELDS = (
     "start_time",

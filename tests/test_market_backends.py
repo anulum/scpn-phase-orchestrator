@@ -37,7 +37,7 @@ from scpn_phase_orchestrator.experimental.accelerators.upde import (
 from scpn_phase_orchestrator.experimental.accelerators.upde import (
     _market_mojo as market_mojo_mod,
 )
-from scpn_phase_orchestrator.experimental.accelerators.upde import (
+from scpn_phase_orchestrator.upde import (
     _market_validation as market_validation,
 )
 from scpn_phase_orchestrator.upde import market as m_mod

@@ -17,11 +17,12 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
-from .._mojo_runtime import require_mojo_executable, run_mojo_executable
-from ._inertial_validation import (
+from scpn_phase_orchestrator.upde._inertial_validation import (
     validate_inertial_inputs,
     validate_inertial_output,
 )
+
+from .._mojo_runtime import require_mojo_executable, run_mojo_executable
 
 __all__ = ["_ensure_exe", "inertial_step_mojo"]
 

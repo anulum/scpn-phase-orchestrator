@@ -19,8 +19,7 @@ from numpy.typing import NDArray
 from scpn_phase_orchestrator.experimental.accelerators._julia_runtime import (
     require_julia_main,
 )
-
-from ._inertial_validation import (
+from scpn_phase_orchestrator.upde._inertial_validation import (
     validate_inertial_inputs,
     validate_inertial_output,
 )

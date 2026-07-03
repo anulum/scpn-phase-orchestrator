@@ -25,11 +25,12 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
-from .._mojo_runtime import require_mojo_executable, run_mojo_executable
-from ._attnres_validation import (
+from scpn_phase_orchestrator.coupling._attnres_validation import (
     validate_attnres_backend_inputs,
     validate_attnres_backend_output,
 )
+
+from .._mojo_runtime import require_mojo_executable, run_mojo_executable
 
 __all__ = ["attnres_modulate_mojo"]
 

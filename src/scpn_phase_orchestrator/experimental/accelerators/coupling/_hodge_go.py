@@ -17,11 +17,12 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
-from .._go_runtime import load_go_library
-from ._hodge_validation import (
+from scpn_phase_orchestrator.coupling._hodge_validation import (
     validate_hodge_backend_inputs,
     validate_hodge_backend_output,
 )
+
+from .._go_runtime import load_go_library
 
 __all__ = ["hodge_decomposition_go"]
 FloatArray: TypeAlias = NDArray[np.float64]

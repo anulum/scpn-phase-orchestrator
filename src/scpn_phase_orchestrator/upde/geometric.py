@@ -38,9 +38,8 @@ from typing import cast
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator.upde._geometric_validation import validate_torus_output
 from scpn_phase_orchestrator.upde._julia_runtime import require_juliacall_main
-
-from ..experimental.accelerators.upde._geometric_validation import validate_torus_output
 
 FloatArray = NDArray[np.float64]
 

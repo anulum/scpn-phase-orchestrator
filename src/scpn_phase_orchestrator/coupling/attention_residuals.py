@@ -53,10 +53,10 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
-from scpn_phase_orchestrator.coupling._julia_runtime import require_juliacall_main
-from scpn_phase_orchestrator.experimental.accelerators.coupling import (
+from scpn_phase_orchestrator.coupling import (
     _attnres_validation as attnres_validation,
 )
+from scpn_phase_orchestrator.coupling._julia_runtime import require_juliacall_main
 
 __all__ = [
     "ACTIVE_BACKEND",

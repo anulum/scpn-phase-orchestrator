@@ -19,8 +19,7 @@ from numpy.typing import NDArray
 from scpn_phase_orchestrator.experimental.accelerators._julia_runtime import (
     require_julia_main,
 )
-
-from ._envelope_validation import (
+from scpn_phase_orchestrator.upde._envelope_validation import (
     validate_envelope_modulation_input,
     validate_envelope_modulation_output,
     validate_extract_envelope_input,

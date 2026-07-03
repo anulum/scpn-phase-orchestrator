@@ -17,11 +17,12 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
-from .._go_runtime import load_go_library
-from ._inertial_validation import (
+from scpn_phase_orchestrator.upde._inertial_validation import (
     validate_inertial_inputs,
     validate_inertial_output,
 )
+
+from .._go_runtime import load_go_library
 
 __all__ = ["inertial_step_go"]
 

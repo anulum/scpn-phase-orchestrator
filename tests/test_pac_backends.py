@@ -32,7 +32,7 @@ from scpn_phase_orchestrator.experimental.accelerators.upde import (
 from scpn_phase_orchestrator.experimental.accelerators.upde import (
     _pac_mojo as pac_mojo_mod,
 )
-from scpn_phase_orchestrator.experimental.accelerators.upde import (
+from scpn_phase_orchestrator.upde import (
     _pac_validation as pac_validation,
 )
 from scpn_phase_orchestrator.upde import pac as pac_mod

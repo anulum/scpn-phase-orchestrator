@@ -14,8 +14,12 @@ import math
 import subprocess
 from pathlib import Path
 
+from scpn_phase_orchestrator.upde._reduction_validation import (
+    validate_oa_inputs,
+    validate_oa_output,
+)
+
 from .._mojo_runtime import require_mojo_executable, run_mojo_executable
-from ._reduction_validation import validate_oa_inputs, validate_oa_output
 
 __all__ = ["_ensure_exe", "oa_run_mojo"]
 

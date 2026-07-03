@@ -23,13 +23,12 @@ from typing import Any, TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
-from scpn_phase_orchestrator.experimental.accelerators._julia_runtime import (
-    require_julia_main,
-)
-
-from ._attnres_validation import (
+from scpn_phase_orchestrator.coupling._attnres_validation import (
     validate_attnres_backend_inputs,
     validate_attnres_backend_output,
+)
+from scpn_phase_orchestrator.experimental.accelerators._julia_runtime import (
+    require_julia_main,
 )
 
 __all__ = ["attnres_modulate_julia"]

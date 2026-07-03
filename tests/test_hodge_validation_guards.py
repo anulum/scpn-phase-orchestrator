@@ -13,10 +13,10 @@ from typing import Any
 import numpy as np
 import pytest
 
-from scpn_phase_orchestrator.experimental.accelerators.coupling import (
+from scpn_phase_orchestrator.coupling import (
     _hodge_validation as hodge_validation,
 )
-from scpn_phase_orchestrator.experimental.accelerators.coupling._hodge_validation import (  # noqa: E501
+from scpn_phase_orchestrator.coupling._hodge_validation import (  # noqa: E501
     validate_hodge_backend_inputs,
     validate_hodge_backend_output,
 )

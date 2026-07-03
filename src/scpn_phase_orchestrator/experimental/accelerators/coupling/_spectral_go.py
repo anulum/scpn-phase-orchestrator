@@ -17,11 +17,12 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
-from .._go_runtime import load_go_library
-from ._spectral_validation import (
+from scpn_phase_orchestrator.coupling._spectral_validation import (
     validate_spectral_backend_inputs,
     validate_spectral_backend_output,
 )
+
+from .._go_runtime import load_go_library
 
 __all__ = ["spectral_eig_go"]
 FloatArray: TypeAlias = NDArray[np.float64]

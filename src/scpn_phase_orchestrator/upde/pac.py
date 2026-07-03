@@ -34,11 +34,11 @@ from typing import TypeAlias, cast
 import numpy as np
 from numpy.typing import NDArray
 
-from scpn_phase_orchestrator.experimental.accelerators.upde._pac_validation import (
+from scpn_phase_orchestrator.upde._julia_runtime import require_juliacall_main
+from scpn_phase_orchestrator.upde._pac_validation import (
     validate_modulation_index_output,
     validate_pac_matrix_output,
 )
-from scpn_phase_orchestrator.upde._julia_runtime import require_juliacall_main
 
 FloatArray: TypeAlias = NDArray[np.float64]
 

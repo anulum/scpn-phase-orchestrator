@@ -17,12 +17,13 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
-from .._mojo_runtime import require_mojo_executable, run_mojo_executable
-from ._geometric_validation import (
+from scpn_phase_orchestrator.upde._geometric_validation import (
     TWO_PI,
     validate_torus_inputs,
     validate_torus_output,
 )
+
+from .._mojo_runtime import require_mojo_executable, run_mojo_executable
 
 __all__ = ["_ensure_exe", "torus_run_mojo"]
 

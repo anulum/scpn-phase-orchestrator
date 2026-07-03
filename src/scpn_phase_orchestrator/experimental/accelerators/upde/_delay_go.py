@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import ctypes
 from pathlib import Path
-from typing import TypeAlias, cast
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -40,7 +40,7 @@ def _load_lib() -> ctypes.CDLL:
             f"libdelay.so not found at {_LIB_PATH}. Build with: "
             f"cd go && go build -buildmode=c-shared -o libdelay.so delay.go"
         )
-    lib = cast(ctypes.CDLL, load_go_library(_LIB_PATH))
+    lib = load_go_library(_LIB_PATH)
     lib.DelayedKuramotoRun.restype = ctypes.c_int
     lib.DelayedKuramotoRun.argtypes = [
         ctypes.POINTER(ctypes.c_double),

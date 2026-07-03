@@ -33,8 +33,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from scpn_phase_orchestrator._compat import TWO_PI
-
-from ..experimental.accelerators.upde._order_params_validation import (
+from scpn_phase_orchestrator.upde._order_params_validation import (
     validate_mean_phase_output,
     validate_unit_interval_output,
 )
@@ -95,14 +94,15 @@ def _load_mojo_fns() -> dict[str, object]:  # pragma: no cover — toolchain-gat
 
 def _load_julia_fns() -> dict[str, object]:  # pragma: no cover — toolchain-gated
     """Load the Julia order-parameter backend callables."""
-    from ..experimental.accelerators._julia_runtime import require_julia_main
+    from scpn_phase_orchestrator.upde._julia_runtime import require_juliacall_main
+
     from ..experimental.accelerators.upde._order_params_julia import (
         layer_coherence_julia,
         order_parameter_julia,
         plv_julia,
     )
 
-    require_julia_main()
+    require_juliacall_main()
     return {
         "order_parameter": order_parameter_julia,
         "plv": plv_julia,

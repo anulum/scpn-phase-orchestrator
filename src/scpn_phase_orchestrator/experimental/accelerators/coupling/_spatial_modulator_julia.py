@@ -16,13 +16,12 @@ from typing import Any, TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
-from scpn_phase_orchestrator.experimental.accelerators._julia_runtime import (
-    require_julia_main,
-)
-
-from ._spatial_modulator_validation import (
+from scpn_phase_orchestrator.coupling._spatial_modulator_validation import (
     validate_spatial_modulator_inputs,
     validate_spatial_modulator_output,
+)
+from scpn_phase_orchestrator.experimental.accelerators._julia_runtime import (
+    require_julia_main,
 )
 
 __all__ = ["spatial_modulate_julia"]

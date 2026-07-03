@@ -16,13 +16,12 @@ from typing import Any, TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
-from scpn_phase_orchestrator.experimental.accelerators._julia_runtime import (
-    require_julia_main,
-)
-
-from ._hodge_validation import (
+from scpn_phase_orchestrator.coupling._hodge_validation import (
     validate_hodge_backend_inputs,
     validate_hodge_backend_output,
+)
+from scpn_phase_orchestrator.experimental.accelerators._julia_runtime import (
+    require_julia_main,
 )
 
 __all__ = ["hodge_decomposition_julia"]

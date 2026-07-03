@@ -31,9 +31,6 @@ from numpy.typing import NDArray
 from scpn_phase_orchestrator.experimental.accelerators.upde import (
     _inertial_mojo,
 )
-from scpn_phase_orchestrator.experimental.accelerators.upde import (
-    _inertial_validation as inertial_validation,
-)
 from scpn_phase_orchestrator.experimental.accelerators.upde._inertial_go import (
     inertial_step_go,
 )
@@ -42,6 +39,9 @@ from scpn_phase_orchestrator.experimental.accelerators.upde._inertial_julia impo
 )
 from scpn_phase_orchestrator.experimental.accelerators.upde._inertial_mojo import (
     inertial_step_mojo,
+)
+from scpn_phase_orchestrator.upde import (
+    _inertial_validation as inertial_validation,
 )
 from scpn_phase_orchestrator.upde import inertial as i_mod
 from scpn_phase_orchestrator.upde.inertial import InertialKuramotoEngine

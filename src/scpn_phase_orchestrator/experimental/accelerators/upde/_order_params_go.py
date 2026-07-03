@@ -21,14 +21,15 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
-from .._go_runtime import load_go_library
-from ._order_params_validation import (
+from scpn_phase_orchestrator.upde._order_params_validation import (
     validate_layer_coherence_inputs,
     validate_order_parameter_inputs,
     validate_order_parameter_output,
     validate_plv_inputs,
     validate_unit_interval_output,
 )
+
+from .._go_runtime import load_go_library
 
 FloatArray: TypeAlias = NDArray[np.float64]
 IntArray: TypeAlias = NDArray[np.int64]

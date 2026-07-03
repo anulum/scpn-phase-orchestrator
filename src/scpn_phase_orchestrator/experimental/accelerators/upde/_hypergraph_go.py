@@ -17,12 +17,13 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
-from .._go_runtime import load_go_library
-from ._hypergraph_validation import (
+from scpn_phase_orchestrator.upde._hypergraph_validation import (
     TWO_PI,
     validate_hypergraph_inputs,
     validate_hypergraph_output,
 )
+
+from .._go_runtime import load_go_library
 
 __all__ = ["hypergraph_run_go"]
 

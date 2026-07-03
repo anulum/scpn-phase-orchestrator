@@ -17,11 +17,12 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
-from .._go_runtime import load_go_library
-from ._spatial_modulator_validation import (
+from scpn_phase_orchestrator.coupling._spatial_modulator_validation import (
     validate_spatial_modulator_inputs,
     validate_spatial_modulator_output,
 )
+
+from .._go_runtime import load_go_library
 
 __all__ = ["_load_lib", "spatial_modulate_go"]
 FloatArray: TypeAlias = NDArray[np.float64]

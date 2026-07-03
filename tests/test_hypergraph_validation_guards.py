@@ -13,7 +13,7 @@ from typing import Any
 import numpy as np
 import pytest
 
-from scpn_phase_orchestrator.experimental.accelerators.upde._hypergraph_validation import (  # noqa: E501
+from scpn_phase_orchestrator.upde._hypergraph_validation import (  # noqa: E501
     validate_hypergraph_inputs,
     validate_hypergraph_output,
 )

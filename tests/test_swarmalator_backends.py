@@ -34,7 +34,7 @@ from scpn_phase_orchestrator.experimental.accelerators.upde import (
     _swarmalator_julia,
     _swarmalator_mojo,
 )
-from scpn_phase_orchestrator.experimental.accelerators.upde import (
+from scpn_phase_orchestrator.upde import (
     _swarmalator_validation as swarmalator_validation,
 )
 from scpn_phase_orchestrator.upde import swarmalator as sw_mod

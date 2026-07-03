@@ -13,7 +13,7 @@ from typing import Any
 import numpy as np
 import pytest
 
-from scpn_phase_orchestrator.experimental.accelerators.coupling._attnres_validation import (  # noqa: E501
+from scpn_phase_orchestrator.coupling._attnres_validation import (  # noqa: E501
     validate_attnres_backend_inputs,
     validate_attnres_backend_output,
 )

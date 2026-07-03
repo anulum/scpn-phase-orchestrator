@@ -31,12 +31,11 @@ from typing import TypeAlias, cast
 import numpy as np
 from numpy.typing import NDArray
 
-from scpn_phase_orchestrator.upde._julia_runtime import require_juliacall_main
-
-from ..experimental.accelerators.upde._envelope_validation import (
+from scpn_phase_orchestrator.upde._envelope_validation import (
     validate_envelope_modulation_output,
     validate_extract_envelope_output,
 )
+from scpn_phase_orchestrator.upde._julia_runtime import require_juliacall_main
 
 __all__ = [
     "ACTIVE_BACKEND",

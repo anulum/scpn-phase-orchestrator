@@ -97,10 +97,10 @@ from typing import TypeAlias, cast
 import numpy as np
 from numpy.typing import NDArray
 
-from scpn_phase_orchestrator.coupling._julia_runtime import require_juliacall_main
-from scpn_phase_orchestrator.experimental.accelerators.coupling._hodge_validation import (  # noqa: E501
+from scpn_phase_orchestrator.coupling._hodge_validation import (
     validate_hodge_backend_output,
 )
+from scpn_phase_orchestrator.coupling._julia_runtime import require_juliacall_main
 
 FloatArray: TypeAlias = NDArray[np.float64]
 IntArray: TypeAlias = NDArray[np.int64]

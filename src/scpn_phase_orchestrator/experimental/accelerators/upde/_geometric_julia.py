@@ -19,8 +19,7 @@ from numpy.typing import NDArray
 from scpn_phase_orchestrator.experimental.accelerators._julia_runtime import (
     require_julia_main,
 )
-
-from ._geometric_validation import (
+from scpn_phase_orchestrator.upde._geometric_validation import (
     TWO_PI,
     validate_torus_inputs,
     validate_torus_output,

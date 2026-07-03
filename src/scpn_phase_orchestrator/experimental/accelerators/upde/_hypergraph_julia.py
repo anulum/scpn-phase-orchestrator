@@ -19,8 +19,7 @@ from numpy.typing import NDArray
 from scpn_phase_orchestrator.experimental.accelerators._julia_runtime import (
     require_julia_main,
 )
-
-from ._hypergraph_validation import (
+from scpn_phase_orchestrator.upde._hypergraph_validation import (
     TWO_PI,
     validate_hypergraph_inputs,
     validate_hypergraph_output,

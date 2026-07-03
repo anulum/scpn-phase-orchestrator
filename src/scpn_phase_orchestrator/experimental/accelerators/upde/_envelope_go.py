@@ -17,13 +17,14 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
-from .._go_runtime import load_go_library
-from ._envelope_validation import (
+from scpn_phase_orchestrator.upde._envelope_validation import (
     validate_envelope_modulation_input,
     validate_envelope_modulation_output,
     validate_extract_envelope_input,
     validate_extract_envelope_output,
 )
+
+from .._go_runtime import load_go_library
 
 __all__ = ["envelope_modulation_depth_go", "extract_envelope_go"]
 FloatArray: TypeAlias = NDArray[np.float64]

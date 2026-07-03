@@ -39,7 +39,7 @@ from scpn_phase_orchestrator._compat import TWO_PI
 from scpn_phase_orchestrator.coupling.spatial_modulator import (
     SpatialCouplingModulator,
 )
-from scpn_phase_orchestrator.experimental.accelerators.upde import (
+from scpn_phase_orchestrator.upde import (
     _swarmalator_validation,
 )
 from scpn_phase_orchestrator.upde._julia_runtime import require_juliacall_main

@@ -16,11 +16,12 @@ from pathlib import Path
 import numpy as np
 from numpy.typing import NDArray
 
-from .._mojo_runtime import require_mojo_executable, run_mojo_executable
-from ._basin_stability_validation import (
+from scpn_phase_orchestrator.upde._basin_stability_validation import (
     validate_basin_stability_inputs,
     validate_basin_stability_output,
 )
+
+from .._mojo_runtime import require_mojo_executable, run_mojo_executable
 
 __all__ = ["_ensure_exe", "steady_state_r_mojo"]
 

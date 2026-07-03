@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import subprocess
 from pathlib import Path
-from typing import TypeAlias, cast
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -36,7 +36,7 @@ def _ensure_exe() -> Path:
             f"{_EXE_PATH} not built. Run: mojo build mojo/delay.mojo "
             f"-o mojo/delay_mojo -Xlinker -lm"
         )
-    return cast(Path, require_mojo_executable(_EXE_PATH))
+    return require_mojo_executable(_EXE_PATH)
 
 
 def delayed_kuramoto_run_mojo(

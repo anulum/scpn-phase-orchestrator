@@ -16,13 +16,14 @@ from typing import Any, cast
 
 import numpy as np
 
+from scpn_phase_orchestrator.upde._validation_common import (
+    validate_non_negative_tolerance,
+)
 from scpn_phase_orchestrator.upde.pha_c_handoff import (
     PHACHandoffRecord,
     build_pha_c_handoff_record,
     verify_pha_c_handoff_record,
 )
-
-from ._validation_common import validate_non_negative_tolerance
 
 _NUMERIC_FIELDS = (
     "t",

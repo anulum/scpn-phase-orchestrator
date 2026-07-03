@@ -13,8 +13,12 @@ from __future__ import annotations
 import ctypes
 from pathlib import Path
 
+from scpn_phase_orchestrator.upde._reduction_validation import (
+    validate_oa_inputs,
+    validate_oa_output,
+)
+
 from .._go_runtime import load_go_library
-from ._reduction_validation import validate_oa_inputs, validate_oa_output
 
 __all__ = ["oa_run_go"]
 

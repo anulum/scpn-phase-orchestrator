@@ -42,6 +42,9 @@ from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
 from scpn_phase_orchestrator.coupling import (
+    _attnres_validation as attnres_validation,
+)
+from scpn_phase_orchestrator.coupling import (
     attention_residuals as attnres_mod,
 )
 from scpn_phase_orchestrator.coupling.attention_residuals import (
@@ -50,9 +53,6 @@ from scpn_phase_orchestrator.coupling.attention_residuals import (
 )
 from scpn_phase_orchestrator.experimental.accelerators.coupling import (
     _attnres_mojo,
-)
-from scpn_phase_orchestrator.experimental.accelerators.coupling import (
-    _attnres_validation as attnres_validation,
 )
 from scpn_phase_orchestrator.experimental.accelerators.coupling._attnres_go import (
     attnres_modulate_go,

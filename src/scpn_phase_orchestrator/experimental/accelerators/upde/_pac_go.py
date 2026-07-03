@@ -17,13 +17,14 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
-from .._go_runtime import load_go_library
-from ._pac_validation import (
+from scpn_phase_orchestrator.upde._pac_validation import (
     validate_modulation_index_inputs,
     validate_modulation_index_output,
     validate_pac_matrix_inputs,
     validate_pac_matrix_output,
 )
+
+from .._go_runtime import load_go_library
 
 __all__ = ["modulation_index_go", "pac_matrix_go"]
 

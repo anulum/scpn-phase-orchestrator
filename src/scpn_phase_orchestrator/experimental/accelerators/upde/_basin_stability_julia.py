@@ -19,8 +19,7 @@ from numpy.typing import NDArray
 from scpn_phase_orchestrator.experimental.accelerators._julia_runtime import (
     require_julia_main,
 )
-
-from ._basin_stability_validation import (
+from scpn_phase_orchestrator.upde._basin_stability_validation import (
     validate_basin_stability_inputs,
     validate_basin_stability_output,
 )

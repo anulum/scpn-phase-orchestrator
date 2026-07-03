@@ -36,11 +36,11 @@ import numpy as np
 from numpy.typing import NDArray
 from scipy.signal import hilbert
 
-from scpn_phase_orchestrator.experimental.accelerators.upde._market_validation import (
+from scpn_phase_orchestrator.upde._julia_runtime import require_juliacall_main
+from scpn_phase_orchestrator.upde._market_validation import (
     validate_market_order_output,
     validate_market_plv_output,
 )
-from scpn_phase_orchestrator.upde._julia_runtime import require_juliacall_main
 
 BoolArray = NDArray[np.bool_]
 FloatArray = NDArray[np.float64]

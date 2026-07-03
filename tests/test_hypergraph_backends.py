@@ -31,9 +31,6 @@ from hypothesis import strategies as st
 from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.experimental.accelerators.upde import _hypergraph_mojo
-from scpn_phase_orchestrator.experimental.accelerators.upde import (
-    _hypergraph_validation as hypergraph_validation,
-)
 from scpn_phase_orchestrator.experimental.accelerators.upde._hypergraph_go import (
     hypergraph_run_go,
 )
@@ -42,6 +39,9 @@ from scpn_phase_orchestrator.experimental.accelerators.upde._hypergraph_julia im
 )
 from scpn_phase_orchestrator.experimental.accelerators.upde._hypergraph_mojo import (
     hypergraph_run_mojo,
+)
+from scpn_phase_orchestrator.upde import (
+    _hypergraph_validation as hypergraph_validation,
 )
 from scpn_phase_orchestrator.upde import hypergraph as h_mod
 from scpn_phase_orchestrator.upde.hypergraph import HypergraphEngine

@@ -56,10 +56,10 @@ from typing import Any, TypeAlias, cast
 import numpy as np
 from numpy.typing import NDArray
 
-from scpn_phase_orchestrator.coupling._julia_runtime import require_juliacall_main
-from scpn_phase_orchestrator.experimental.accelerators.coupling import (
+from scpn_phase_orchestrator.coupling import (
     _spectral_validation as spectral_validation,
 )
+from scpn_phase_orchestrator.coupling._julia_runtime import require_juliacall_main
 
 __all__ = [
     "ACTIVE_BACKEND",

@@ -17,13 +17,14 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
-from .._mojo_runtime import require_mojo_executable, run_mojo_executable
-from ._envelope_validation import (
+from scpn_phase_orchestrator.upde._envelope_validation import (
     validate_envelope_modulation_input,
     validate_envelope_modulation_output,
     validate_extract_envelope_input,
     validate_extract_envelope_output,
 )
+
+from .._mojo_runtime import require_mojo_executable, run_mojo_executable
 
 __all__ = [
     "_ensure_exe",

@@ -16,8 +16,10 @@ from typing import Any
 from scpn_phase_orchestrator.experimental.accelerators._julia_runtime import (
     require_julia_main,
 )
-
-from ._reduction_validation import validate_oa_inputs, validate_oa_output
+from scpn_phase_orchestrator.upde._reduction_validation import (
+    validate_oa_inputs,
+    validate_oa_output,
+)
 
 __all__ = ["oa_run_julia"]
 

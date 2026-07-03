@@ -16,8 +16,11 @@ import pytest
 from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.experimental.accelerators.upde import (
-    _basin_stability_validation,
     _engine_validation,
+    _splitting_validation,
+)
+from scpn_phase_orchestrator.upde import (
+    _basin_stability_validation,
     _envelope_validation,
     _geometric_validation,
     _hypergraph_validation,
@@ -25,7 +28,6 @@ from scpn_phase_orchestrator.experimental.accelerators.upde import (
     _market_validation,
     _pac_validation,
     _simplicial_validation,
-    _splitting_validation,
     _swarmalator_validation,
     _validation_common,
 )

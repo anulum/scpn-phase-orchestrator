@@ -28,9 +28,6 @@ from hypothesis import strategies as st
 from scpn_phase_orchestrator.experimental.accelerators.upde import (
     _envelope_mojo as envelope_mojo_mod,
 )
-from scpn_phase_orchestrator.experimental.accelerators.upde import (
-    _envelope_validation as envelope_validation,
-)
 from scpn_phase_orchestrator.experimental.accelerators.upde._envelope_go import (
     envelope_modulation_depth_go,
     extract_envelope_go,
@@ -42,6 +39,9 @@ from scpn_phase_orchestrator.experimental.accelerators.upde._envelope_julia impo
 from scpn_phase_orchestrator.experimental.accelerators.upde._envelope_mojo import (
     envelope_modulation_depth_mojo,
     extract_envelope_mojo,
+)
+from scpn_phase_orchestrator.upde import (
+    _envelope_validation as envelope_validation,
 )
 from scpn_phase_orchestrator.upde import envelope as e_mod
 from scpn_phase_orchestrator.upde.envelope import (
