@@ -148,6 +148,15 @@ def test_rust_loader_exposes_phase_and_matrix_kernels(monkeypatch) -> None:
     assert kernels["te_matrix"] is fake_spo.transfer_entropy_matrix_rust
 
 
+def test_julia_loader_exposes_direct_bridge_callables(monkeypatch) -> None:
+    monkeypatch.setattr(te_mod, "require_juliacall_main", lambda: None)
+
+    kernels = te_mod._load_julia_fns()
+
+    assert kernels["phase_te"] is phase_te_julia
+    assert kernels["te_matrix"] is te_matrix_julia
+
+
 def test_dispatch_calls_active_backend_with_contiguous_arrays(monkeypatch) -> None:
     captured: dict[str, object] = {}
 
@@ -391,6 +400,9 @@ class TestDirectBackendBoundaryContracts:
     @pytest.mark.parametrize(
         "value",
         [
+            "0.1",
+            np.array("0.1"),
+            "not-a-scalar",
             np.bool_(False),
             -1.0e-3,
             np.inf,
@@ -405,6 +417,36 @@ class TestDirectBackendBoundaryContracts:
     ) -> None:
         with pytest.raises(ValueError, match="transfer entropy backend output"):
             te_validation.validate_te_backend_output(value, n_bins=4)
+
+    def test_pairwise_te_backend_output_rejects_numeric_string_expected(
+        self,
+    ) -> None:
+        with pytest.raises(ValueError, match="expected.*numeric-string"):
+            te_validation.validate_te_backend_output(
+                0.0,
+                n_bins=4,
+                expected="0.0",
+            )
+
+    def test_pairwise_te_backend_output_rejects_nonnumeric_expected(
+        self,
+    ) -> None:
+        with pytest.raises(ValueError, match="expected.*numeric"):
+            te_validation.validate_te_backend_output(
+                0.0,
+                n_bins=4,
+                expected=object(),
+            )
+
+    def test_pairwise_te_backend_output_rejects_vector_expected(
+        self,
+    ) -> None:
+        with pytest.raises(ValueError, match="expected.*scalar"):
+            te_validation.validate_te_backend_output(
+                0.0,
+                n_bins=4,
+                expected=np.array([0.0], dtype=np.float64),
+            )
 
     def test_pairwise_te_backend_output_rejects_exact_estimator_divergence(
         self,
@@ -452,6 +494,11 @@ class TestDirectBackendBoundaryContracts:
             (np.array([[0.0, np.log(4) + 1.0], [0.1, 0.0]]), "log"),
             (np.array([[0.1, 0.0], [0.0, 0.0]]), "diagonal"),
             (np.array([[False, 0.1], [0.2, False]], dtype=object), "boolean"),
+            (np.array([["0.0", "0.1"], ["0.2", "0.0"]], dtype=str), "numeric-string"),
+            (
+                np.array([["not-a-te", "0.1"], ["0.2", "0.0"]], dtype=object),
+                "numeric",
+            ),
             (np.array([[0.0, 0.1j], [0.2j, 0.0]]), "real"),
         ],
     )
@@ -488,6 +535,28 @@ class TestDirectBackendBoundaryContracts:
                 n_osc=2,
                 n_bins=2,
                 expected=expected,
+            )
+
+    def test_te_matrix_backend_output_rejects_numeric_string_expected(
+        self,
+    ) -> None:
+        with pytest.raises(ValueError, match="expected.*numeric-string"):
+            te_validation.validate_te_matrix_backend_output(
+                np.zeros((2, 2), dtype=np.float64),
+                n_osc=2,
+                n_bins=4,
+                expected=np.array([["0.0", "0.1"], ["0.2", "0.0"]], dtype=str),
+            )
+
+    def test_te_matrix_backend_output_rejects_nonnumeric_expected(
+        self,
+    ) -> None:
+        with pytest.raises(ValueError, match="expected.*numeric"):
+            te_validation.validate_te_matrix_backend_output(
+                np.zeros((2, 2), dtype=np.float64),
+                n_osc=2,
+                n_bins=4,
+                expected=np.array([["not-a-te", "0.1"], ["0.2", "0.0"]], dtype=object),
             )
 
     @pytest.mark.parametrize("backend", ["go", "julia", "mojo"])
@@ -559,6 +628,10 @@ class TestDirectBackendBoundaryContracts:
         ("field", "value", "match"),
         [
             ("source", np.array([0.0, np.bool_(True)], dtype=object), "source"),
+            ("source", np.array(["0.0", "0.1", "0.2"], dtype=str), "numeric-string"),
+            ("source", np.array(["not-a-phase", "0.1"], dtype=object), "source"),
+            ("source", np.array([[0.0, 0.1]], dtype=np.float64), "one-dimensional"),
+            ("target", np.array([0.0, "0.1", 0.2], dtype=object), "numeric-string"),
             ("target", np.array([0.0, np.inf], dtype=np.float64), "target"),
             ("source", np.array([0.0 + 0.0j, 1.0 + 0.0j]), "source"),
             ("n_bins", np.bool_(True), "n_bins"),
@@ -599,8 +672,23 @@ class TestDirectBackendBoundaryContracts:
                 np.array([0.0, np.bool_(True)], dtype=object),
                 "phase_series",
             ),
+            (
+                "phase_series",
+                np.array(["0.0", "0.1", "0.2", "0.3"], dtype=str),
+                "numeric-string",
+            ),
+            (
+                "phase_series",
+                np.array(["not-a-phase", "0.1", "0.2", "0.3"], dtype=object),
+                "phase_series",
+            ),
+            ("phase_series", np.array([0.0, 0.1], dtype=np.float64), "phase_series"),
             ("phase_series", np.array([0.0 + 0.0j, 1.0 + 0.0j]), "phase_series"),
-            ("phase_series", np.array([0.0, np.nan], dtype=np.float64), "phase_series"),
+            (
+                "phase_series",
+                np.array([0.0, np.nan, 0.2, 0.3], dtype=np.float64),
+                "phase_series",
+            ),
             ("n_osc", np.bool_(True), "n_osc"),
             ("n_time", np.bool_(True), "n_time"),
             ("n_bins", np.bool_(True), "n_bins"),
@@ -625,6 +713,30 @@ class TestDirectBackendBoundaryContracts:
 
         with pytest.raises(ValueError, match=match):
             fn(**kwargs)
+
+    def test_expected_pairwise_te_backend_output_returns_zero_for_short_series(
+        self,
+    ) -> None:
+        source = np.array([0.0, 0.1], dtype=np.float64)
+        target = np.array([0.2, 0.3], dtype=np.float64)
+
+        assert te_validation.expected_phase_te_backend_output(source, target, 4) == 0.0
+
+    def test_te_validation_alias_probes_are_defensive(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        assert te_validation._is_numeric_string_alias(0.0) is False
+
+        def raising_asarray(
+            _value: object, *_args: object, **_kwargs: object
+        ) -> object:
+            raise TypeError("cannot inspect")
+
+        monkeypatch.setattr(te_validation.np, "asarray", raising_asarray)
+
+        assert te_validation._contains_boolean_alias(object()) is False
+        assert te_validation._contains_numeric_string_alias(object()) is False
 
 
 def test_public_transfer_entropy_rejects_exact_contract_divergence(

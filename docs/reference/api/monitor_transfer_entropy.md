@@ -99,11 +99,13 @@ Key parameters:
 
 * ``source`` / ``target`` — 1-D phase arrays, equal length. Radians,
   any finite real value; wrapping is applied internally. Complex
-  samples and boolean aliases are rejected at the public boundary
-  because oscillator phase is a real-valued angle.
+  samples, boolean aliases, and numeric-string aliases are rejected at
+  the public boundary because oscillator phase is a real-valued angle,
+  not a stringly-typed transport field.
 * ``phase_series`` — ``(n_oscillators, n_timesteps)`` array with
-  finite real-valued entries. The matrix API enforces a zero diagonal
-  even when an accelerated backend returns tiny floating-point
+  finite real-valued entries. Boolean and numeric-string aliases are
+  rejected before float coercion. The matrix API enforces a zero
+  diagonal even when an accelerated backend returns tiny floating-point
   self-information roundoff.
 * ``n_bins`` — number of phase bins. Default 16; typical range
   8–32. Python and NumPy integer aliases are accepted; booleans and
@@ -113,29 +115,33 @@ Key parameters:
 Inputs with length < 3 return ``0.0`` because the 1-step Markov
 estimator needs at least one ``(Y_t, Y_{t+1}, X_t)`` triple.
 
-The direct Go, Julia, and Mojo bridge functions share the same typed
-validation boundary before optional runtime loading: phase vectors and flattened
-matrix-series payloads must be finite real `float64` arrays with boolean aliases
-rejected, oscillator/time/bin counts must be integer-valued, and `n_bins` must
-be at least two.
+The direct Go, Julia, and Mojo bridge functions share the same typed validation
+boundary before optional runtime loading: phase vectors and flattened
+matrix-series payloads must be finite real `float64` arrays with boolean and
+numeric-string aliases rejected, oscillator/time/bin counts must be
+integer-valued, and `n_bins` must be at least two.
 
 Direct backend return payloads are also validated before return. Pairwise TE
-must be a finite non-negative real scalar not exceeding `log(n_bins)`. Matrix TE
-payloads must contain exactly `N*N` finite real values, be non-negative, stay
-within the same entropy bound, and carry an exact zero diagonal. This keeps Go,
-Julia, and Mojo bridge failures deterministic if an optional runtime emits a
-malformed scalar, a diagonal self-information leak, or an out-of-domain matrix.
-The Mojo subprocess bridge additionally requires exact stdout cardinality:
-pairwise TE emits one scalar line, and matrix TE emits exactly `N*N` scalar
-lines. Blank, missing, extra, and non-scalar stdout lines fail closed before
-the entropy-domain validators accept the result.
+must be a finite non-negative real scalar not exceeding `log(n_bins)`, with
+numeric-string scalar aliases rejected before float coercion. Matrix TE payloads
+must contain exactly `N*N` finite real values, reject numeric-string aliases, be
+non-negative, stay within the same entropy bound, and carry an exact zero
+diagonal. Exact-reference payloads used to guard direct backend parity reject the
+same numeric-string aliases before comparison. This keeps Go, Julia, and Mojo
+bridge failures deterministic if an optional runtime emits a malformed scalar, a
+diagonal self-information leak, or an out-of-domain matrix. The Mojo subprocess
+bridge additionally requires exact stdout cardinality: pairwise TE emits one
+scalar line, and matrix TE emits exactly `N*N` scalar lines. Blank, missing,
+extra, and non-scalar stdout lines fail closed before the entropy-domain
+validators accept the result.
 
 Public and direct accelerator boundaries also preserve the exact estimator, not
 only its numeric range. Pairwise backend scalars and matrix payloads must match
 the NumPy histogram estimator for the supplied phase data (`1e-12` for
 Rust/Julia/Go, `1e-9` for Mojo text transport). Direct Go, Julia, and Mojo
-wrappers fail closed on plausible but wrong in-range values; the public API
-discards such backend results and returns the Python reference instead.
+wrappers fail closed on plausible but wrong in-range values. The public API uses
+the Python reference only when an optional backend is unavailable; malformed
+backend outputs and exact-reference divergences are contract failures.
 
 ---
 
@@ -191,7 +197,7 @@ Useful for A/B comparisons or deterministic cross-backend tests.
 
 ## 4. Measured benchmarks
 
-Output from
+Output from the 2026-07-03 local, non-isolated rerun
 ``PYTHONPATH=src python benchmarks/transfer_entropy_benchmark.py
 --sizes 200 1000 5000 --calls 50``:
 
@@ -201,24 +207,26 @@ include exact NumPy reference validation at the public API.
 
 | N | Rust | Mojo | Julia | Go | Python |
 |---|---|---|---|---|---|
-| 200 | **0.029 ms** | 322.192 ms | 131.332 ms | 0.439 ms | 3.455 ms |
-| 1000 | **0.072 ms** | 218.835 ms | 0.411 ms | 0.266 ms | 8.007 ms |
-| 5000 | **0.218 ms** | 271.422 ms | 1.534 ms | 1.198 ms | 13.438 ms |
+| 200 | 4.524 ms | 69.567 ms | 23.043 ms | 8.316 ms | 3.515 ms |
+| 1000 | 5.490 ms | 78.295 ms | 13.054 ms | 12.494 ms | 6.877 ms |
+| 5000 | 12.676 ms | 117.974 ms | 45.354 ms | 28.334 ms | 13.211 ms |
 
 Observations:
 
-* **Rust beats Python by 62× at N = 5000** and by 119× at
-  N = 1000, the largest gap among the five migrated modules so
-  far. The histogram + conditional-entropy path has a long inner
-  loop that Python / NumPy can't vectorise cleanly.
-* **Julia catches Go at N = 1000** after JIT warm-up. At
-  N = 200 Julia is dominated by PythonCall's first-call
-  overhead.
-* **Mojo dominated by subprocess spawn** — ``~200–320 ms`` per
-  call regardless of ``N``. Disqualified from hot loops until
-  Mojo 0.27+ ships the ctypes ABI.
-* **Python fallback at ~14 ms/call at N = 5000** is usable for
-  offline post-hoc analysis but not for a per-step monitor.
+* The rerun is **local regression evidence only** (`isolation_method=none`), not
+  a production throughput claim. Other local agents were active during the run.
+* The public timing path for non-Python backends includes the exact NumPy
+  histogram reference validation before publishing backend results. These rows
+  therefore measure public dispatch plus contract validation, not raw kernel
+  throughput.
+* The parity gate
+  ``PYTHONPATH=src:. python benchmarks/transfer_entropy_benchmark.py
+  --parity-gate --sizes 256 --calls 1`` passed with all five declared backends
+  available, `acceptance_passed=1`, and
+  `benchmark_sha256=9c72c9403691f66f76fe8acd58f4d27485903f8de78ea5fc33925dfe8dc23824`.
+* Mojo remains dominated by subprocess transport, while Rust, Julia, and Go are
+  useful as parity-checked optional backends once callers account for public
+  reference-validation overhead.
 
 ### 4.1 Hot-loop budget
 
@@ -393,7 +401,7 @@ regularisation so parity holds bit-for-bit.
 | `src/scpn_phase_orchestrator/experimental/accelerators/monitor/_te_julia.py` | `juliacall` bridge |
 | `src/scpn_phase_orchestrator/experimental/accelerators/monitor/_te_go.py` | `ctypes` bridge |
 | `src/scpn_phase_orchestrator/experimental/accelerators/monitor/_te_mojo.py` | subprocess bridge |
-| `tests/test_transfer_entropy_backends.py` | 8 per-backend parity tests |
+| `tests/test_transfer_entropy_backends.py` | Per-backend parity and boundary tests |
 | `tests/test_transfer_entropy_stability.py` | 6 stability tests (slow) |
 | `benchmarks/transfer_entropy_benchmark.py` | Multi-backend wall-clock harness |
 

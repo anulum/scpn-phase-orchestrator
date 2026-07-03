@@ -163,11 +163,45 @@ def _contains_boolean_alias(value: object) -> bool:
     return any(isinstance(item, (bool, np.bool_)) for item in array.flat)
 
 
+def _is_string_scalar(value: object) -> bool:
+    """Return whether ``value`` is a Python or NumPy string scalar."""
+    return isinstance(value, (str, bytes, np.str_, np.bytes_))
+
+
+def _is_numeric_string_alias(value: object) -> bool:
+    """Return whether ``value`` is a string scalar accepted by ``float``."""
+    if not _is_string_scalar(value):
+        return False
+    try:
+        float(cast("str | bytes", value))
+    except (TypeError, ValueError):
+        return False
+    return True
+
+
+def _contains_numeric_string_alias(value: object) -> bool:
+    """Return whether ``value`` contains string scalars that parse as floats."""
+    try:
+        array = np.asarray(value, dtype=object)
+    except (TypeError, ValueError):
+        return False
+    saw_string = False
+    for item in array.flat:
+        if not _is_string_scalar(item):
+            continue
+        saw_string = True
+        if not _is_numeric_string_alias(item):
+            return False
+    return saw_string
+
+
 def _validate_phase_vector(value: object, *, name: str) -> FloatArray:
     """Return the value as a 1-D contiguous finite phase vector, else raise."""
     raw = np.asarray(value)
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
+    if _contains_numeric_string_alias(value):
+        raise ValueError(f"{name} must not contain numeric-string aliases")
     if np.iscomplexobj(raw):
         raise ValueError(f"{name} must be a finite real-valued 1-D phase vector")
     try:
@@ -186,6 +220,8 @@ def _validate_phase_series(value: object, *, name: str) -> FloatArray:
     raw = np.asarray(value)
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
+    if _contains_numeric_string_alias(value):
+        raise ValueError(f"{name} must not contain numeric-string aliases")
     if np.iscomplexobj(raw):
         raise ValueError(f"{name} must be a finite real-valued 2-D phase series")
     try:
@@ -248,6 +284,10 @@ def _validate_te_matrix(
     """Return a backend transfer-entropy matrix matching the reference, else raise."""
     if _contains_boolean_alias(value):
         raise ValueError("transfer entropy matrix must not contain boolean values")
+    if _contains_numeric_string_alias(value):
+        raise ValueError(
+            "transfer entropy matrix must not contain numeric-string aliases"
+        )
     try:
         matrix = np.asarray(value, dtype=np.float64)
     except (TypeError, ValueError) as exc:
@@ -362,7 +402,8 @@ def phase_transfer_entropy(
     Raises
     ------
     ValueError
-        If the source or target series are non-finite or mismatched in length.
+        If the source or target series contain boolean aliases, numeric-string
+        aliases, complex values, non-finite values, or non-vector shapes.
     """
     bin_count = _validate_n_bins(n_bins)
     source_values = _validate_phase_vector(source, name="source")
@@ -417,6 +458,12 @@ def transfer_entropy_matrix(phase_series: FloatArray, n_bins: int = 16) -> Float
     -------
     FloatArray
         The pairwise TE matrix with zero diagonal.
+
+    Raises
+    ------
+    ValueError
+        If ``phase_series`` contains boolean aliases, numeric-string aliases,
+        complex values, non-finite values, or a non-matrix shape.
     """
     bin_count = _validate_n_bins(n_bins)
     series = _validate_phase_series(phase_series, name="phase_series")

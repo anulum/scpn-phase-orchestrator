@@ -143,6 +143,16 @@ class TestTransferEntropy:
             (np.array([True, False, True]), np.array([0.0, 1.0, 2.0]), "source"),
             (np.array([0.0, 1.0, 2.0]), np.array([True, False, True]), "target"),
             (
+                np.array(["0.0", "1.0", "2.0"], dtype=str),
+                np.array([0.0, 1.0, 2.0]),
+                "source",
+            ),
+            (
+                np.array([0.0, 1.0, 2.0]),
+                np.array([0.0, "1.0", 2.0], dtype=object),
+                "target",
+            ),
+            (
                 np.array([0.0, True, 2.0], dtype=object),
                 np.array([0.0, 1.0, 2.0]),
                 "source",
@@ -192,6 +202,18 @@ class TestTransferEntropy:
 
     def test_matrix_rejects_mixed_boolean_alias_phase_series(self):
         series = np.array([[0.0, True, 2.0], [0.1, 1.1, 2.1]], dtype=object)
+        with pytest.raises(ValueError, match="phase_series"):
+            transfer_entropy_matrix(series)
+
+    def test_matrix_rejects_numeric_string_phase_series(self):
+        series = np.array([["0.0", "1.0", "2.0"], ["0.1", "1.1", "2.1"]])
+        with pytest.raises(ValueError, match="phase_series"):
+            transfer_entropy_matrix(series)
+
+    def test_matrix_preserves_generic_error_for_nonnumeric_string_phase_series(
+        self,
+    ) -> None:
+        series = np.array([["not-a-phase", "1.0", "2.0"], ["0.1", "1.1", "2.1"]])
         with pytest.raises(ValueError, match="phase_series"):
             transfer_entropy_matrix(series)
 
@@ -438,6 +460,10 @@ def test_te_matrix_backend_failure_falls_back_to_python(monkeypatch):
         np.eye(3, dtype=np.float64),
         np.array([[False, True, False], [False, False, False], [False, False, False]]),
         np.array(
+            [["0.0", "0.1", "0.2"], ["0.3", "0.0", "0.4"], ["0.5", "0.6", "0.0"]],
+            dtype=str,
+        ),
+        np.array(
             [[0.0, np.bool_(True), 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]],
             dtype=object,
         ),
@@ -470,6 +496,19 @@ def test_te_matrix_backend_invalid_payload_fails_closed(
             transfer_entropy_matrix(data, n_bins=8)
     finally:
         te_mod.ACTIVE_BACKEND = previous
+
+
+def test_public_numeric_string_alias_probes_are_defensive(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    assert te_mod._is_numeric_string_alias(0.0) is False
+
+    def raising_asarray(_value: object, *_args: object, **_kwargs: object) -> object:
+        raise TypeError("cannot inspect")
+
+    monkeypatch.setattr(te_mod.np, "asarray", raising_asarray)
+
+    assert te_mod._contains_numeric_string_alias(object()) is False
 
 
 def test_dispatch_falls_back_to_python_when_loader_fails(monkeypatch):

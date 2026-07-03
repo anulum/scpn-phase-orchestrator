@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 from numbers import Integral
-from typing import TypeAlias
+from typing import TypeAlias, cast
 
 import numpy as np
 from numpy.typing import NDArray
@@ -40,11 +40,45 @@ def _contains_boolean_alias(value: object) -> bool:
     return any(isinstance(item, (bool, np.bool_)) for item in array.flat)
 
 
+def _is_string_scalar(value: object) -> bool:
+    """Return whether ``value`` is a Python or NumPy string scalar."""
+    return isinstance(value, (str, bytes, np.str_, np.bytes_))
+
+
+def _is_numeric_string_alias(value: object) -> bool:
+    """Return whether ``value`` is a string scalar accepted by ``float``."""
+    if not _is_string_scalar(value):
+        return False
+    try:
+        float(cast("str | bytes", value))
+    except (TypeError, ValueError):
+        return False
+    return True
+
+
+def _contains_numeric_string_alias(value: object) -> bool:
+    """Return whether ``value`` contains string scalars that parse as floats."""
+    try:
+        array = np.asarray(value, dtype=object)
+    except (TypeError, ValueError):
+        return False
+    saw_string = False
+    for item in array.flat:
+        if not _is_string_scalar(item):
+            continue
+        saw_string = True
+        if not _is_numeric_string_alias(item):
+            return False
+    return saw_string
+
+
 def _validate_phase_vector(value: object, *, name: str) -> FloatArray:
     """Return the phases as a validated 1-D finite array, else raise."""
     raw = np.asarray(value)
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
+    if _contains_numeric_string_alias(value):
+        raise ValueError(f"{name} must not contain numeric-string aliases")
     if np.iscomplexobj(raw):
         raise ValueError(f"{name} must be a finite real-valued phase vector")
     try:
@@ -68,6 +102,8 @@ def _validate_phase_series_flat(
     raw = np.asarray(value)
     if _contains_boolean_alias(value):
         raise ValueError("phase_series must not contain boolean values")
+    if _contains_numeric_string_alias(value):
+        raise ValueError("phase_series must not contain numeric-string aliases")
     if np.iscomplexobj(raw):
         raise ValueError("phase_series must be a finite real-valued phase series")
     try:
@@ -99,7 +135,11 @@ def validate_phase_te_backend_inputs(
     target: object,
     n_bins: object,
 ) -> tuple[FloatArray, FloatArray, int]:
-    """Validate direct pairwise transfer-entropy backend arguments."""
+    """Validate direct pairwise transfer-entropy backend arguments.
+
+    Boolean aliases, numeric-string aliases, complex values, non-finite phase
+    samples, and invalid bin counts fail before optional backend loading.
+    """
     source_values = _validate_phase_vector(source, name="source")
     target_values = _validate_phase_vector(target, name="target")
     return (
@@ -115,7 +155,11 @@ def validate_te_matrix_backend_inputs(
     n_time: object,
     n_bins: object,
 ) -> tuple[FloatArray, int, int, int]:
-    """Validate direct transfer-entropy matrix backend arguments."""
+    """Validate direct transfer-entropy matrix backend arguments.
+
+    The flattened phase-series payload must be real, finite, non-string numeric,
+    and sized exactly as ``n_osc * n_time`` before optional backend loading.
+    """
     oscillator_count = _validate_int_at_least(n_osc, name="n_osc", minimum=1)
     timestep_count = _validate_int_at_least(n_time, name="n_time", minimum=1)
     return (
@@ -192,7 +236,7 @@ def expected_te_matrix_backend_output(
 ) -> FloatArray:
     """Return the exact NumPy transfer-entropy matrix reference."""
     series = np.asarray(phase_series, dtype=np.float64).reshape(n_osc, n_time)
-    matrix = np.zeros((n_osc, n_osc), dtype=np.float64)
+    matrix: FloatArray = np.zeros((n_osc, n_osc), dtype=np.float64)
     for i in range(n_osc):
         for j in range(n_osc):
             if i != j:
@@ -208,13 +252,21 @@ def validate_te_backend_output(
     value: object,
     *,
     n_bins: int,
-    expected: float | None = None,
+    expected: object | None = None,
     atol: float = 1e-12,
 ) -> float:
-    """Validate a direct pairwise transfer-entropy backend scalar."""
+    """Validate a direct pairwise transfer-entropy backend scalar.
+
+    Backend outputs and exact-reference payloads reject boolean, complex,
+    numeric-string, non-finite, negative, and entropy-bound violations.
+    """
     raw = np.asarray(value)
     if _contains_boolean_alias(raw):
         raise ValueError("transfer entropy backend output must not be boolean")
+    if _contains_numeric_string_alias(raw):
+        raise ValueError(
+            "transfer entropy backend output must not contain numeric-string aliases"
+        )
     if np.iscomplexobj(raw):
         raise ValueError("transfer entropy backend output must be real")
     try:
@@ -231,17 +283,52 @@ def validate_te_backend_output(
     if result > max_entropy + tolerance:
         raise ValueError("transfer entropy backend output must not exceed log(n_bins)")
     result = max(result, 0.0)
-    if expected is not None and not np.isclose(
-        result,
-        float(expected),
-        rtol=0.0,
-        atol=atol,
-    ):
-        raise ValueError(
-            "transfer entropy backend output diverged from exact "
-            "transfer-entropy reference"
-        )
+    if expected is not None:
+        if _contains_numeric_string_alias(expected):
+            raise ValueError(
+                "expected transfer entropy backend output must not contain "
+                "numeric-string aliases"
+            )
+        try:
+            expected_scalar = np.asarray(expected, dtype=np.float64)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(
+                "expected transfer entropy backend output must be numeric"
+            ) from exc
+        if expected_scalar.shape != ():
+            raise ValueError("expected transfer entropy backend output must be scalar")
+        expected_value = float(expected_scalar)
+        if not np.isclose(
+            result,
+            expected_value,
+            rtol=0.0,
+            atol=atol,
+        ):
+            raise ValueError(
+                "transfer entropy backend output diverged from exact "
+                "transfer-entropy reference"
+            )
     return result
+
+
+def _coerce_expected_te_matrix(
+    expected: object,
+    *,
+    n_osc: int,
+) -> FloatArray:
+    """Return an expected TE matrix after numeric-string alias rejection."""
+    if _contains_numeric_string_alias(expected):
+        raise ValueError(
+            "expected transfer entropy matrix backend output must not contain "
+            "numeric-string aliases"
+        )
+    try:
+        reference = np.asarray(expected, dtype=np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(
+            "expected transfer entropy matrix backend output must be numeric"
+        ) from exc
+    return reference.reshape(n_osc, n_osc)
 
 
 def validate_te_matrix_backend_output(
@@ -249,13 +336,23 @@ def validate_te_matrix_backend_output(
     *,
     n_osc: int,
     n_bins: int,
-    expected: FloatArray | None = None,
+    expected: object | None = None,
     atol: float = 1e-12,
 ) -> FloatArray:
-    """Validate a direct transfer-entropy matrix backend payload."""
+    """Validate a direct transfer-entropy matrix backend payload.
+
+    Backend matrices and exact-reference payloads reject boolean, complex,
+    numeric-string, non-finite, wrong-cardinality, negative, entropy-bound, and
+    non-zero-diagonal violations.
+    """
     raw = np.asarray(value)
     if _contains_boolean_alias(raw):
         raise ValueError("transfer entropy matrix backend output has boolean values")
+    if _contains_numeric_string_alias(raw):
+        raise ValueError(
+            "transfer entropy matrix backend output must not contain "
+            "numeric-string aliases"
+        )
     if np.iscomplexobj(raw):
         raise ValueError("transfer entropy matrix backend output must be real")
     try:
@@ -286,7 +383,7 @@ def validate_te_matrix_backend_output(
     matrix = np.maximum(matrix, 0.0)
     np.fill_diagonal(matrix, 0.0)
     if expected is not None:
-        reference = np.asarray(expected, dtype=np.float64).reshape(n_osc, n_osc)
+        reference = _coerce_expected_te_matrix(expected, n_osc=n_osc)
         if not np.allclose(matrix, reference, rtol=0.0, atol=atol):
             raise ValueError(
                 "transfer entropy matrix backend output diverged from exact "

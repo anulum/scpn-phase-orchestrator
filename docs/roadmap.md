@@ -49,14 +49,15 @@ TODO queue.
 | Cross-domain meta-transfer | Replay proposals, nested corpora, package export, entry points, non-publishing evidence, and pre-publish enforcement exist. | Validate larger private or partner audit-history corpora and decide optional package publication. |
 | Plugin ecosystem | Registry, catalogue, Rust-facing metadata, approval-bound execution requests, storage, revocation, lifecycle, scheduler, retry, and dashboard artefacts exist. | Build a curated signed domainpack and extension store with reputation, audit scores, revocation, provenance, operator UX refinement, and adapter-family onboarding. |
 
-Latest U1 closure: the public recurrence dispatcher and direct Go, Julia, and
-Mojo bridge contracts now reject numeric-string aliases before float or `uint8`
-coercion across trajectory inputs, backend recurrence matrices, and exact
-reference-output payloads. The recurrence boundary now fails closed for boolean
-aliases, complex/object-complex aliases, numeric-string aliases, non-finite
-values, wrong cardinality, non-binary cells, diagonal/symmetry drift, and
-exact-threshold divergence before backend payloads are published to the physics
-monitor, benchmark parity gate, Studio, or downstream regime-review lanes.
+Latest U1 closure: the public transfer-entropy dispatcher and direct Go, Julia,
+and Mojo bridge contracts now reject numeric-string aliases before float coercion
+across source/target phase vectors, matrix phase-series payloads, backend scalar
+or matrix outputs, and exact-reference payloads. The transfer-entropy boundary
+now fails closed for boolean aliases, numeric-string aliases, complex values,
+non-finite values, wrong cardinality, entropy-bound violations, non-zero matrix
+diagonals, and exact-histogram-estimator divergence before backend payloads are
+published to the physics monitor, benchmark parity gate, Studio, or downstream
+regime-review lanes.
 
 | Parent item | Completed evidence consolidated here | Remaining open scope |
 |-------------|--------------------------------------|----------------------|
