@@ -103,8 +103,8 @@ Returns ``(n_timepoints,)`` floats in ``[0, 1]``. A 1-D input is
 treated as a single trial (output = ``array([1.0])``). Empty trials
 return ``array([])``. `phases_trials` must be a finite real 1-D or
 2-D phase array; boolean aliases and complex samples, including
-object-dtype complex aliases from mixed ingestion payloads, are
-rejected before float coercion.
+object-dtype complex aliases from mixed ingestion payloads, and numeric-string
+aliases are rejected before float coercion.
 
 ### 2.2 `itpc_persistence`
 
@@ -164,17 +164,19 @@ The direct Go, Julia, and Mojo wrappers validate before loading their optional
 runtimes:
 
 * `phases_flat` must be a one-dimensional finite real `float64` buffer with no
-  boolean aliases or complex values, including object-dtype complex aliases.
+  boolean aliases, complex values, object-dtype complex aliases, or
+  numeric-string aliases.
 * `n_trials` and `n_tp` must be non-boolean non-negative integers.
 * the flat buffer length must exactly match `n_trials * n_tp`.
 * `pause_indices` must be a one-dimensional integer buffer with no boolean
   aliases.
 * returned ITPC vectors must have exactly ``n_tp`` finite real values in
-  ``[0, 1]`` with no boolean or object-complex aliases and match the NumPy
-  reference estimator to tolerance.
+  ``[0, 1]`` with no boolean, object-complex, or numeric-string aliases and
+  match the NumPy reference estimator to tolerance.
 * returned persistence scores must be finite real scalars in ``[0, 1]`` and
   match the mean NumPy ITPC over valid pause indices with no boolean or
-  object-complex aliases; Mojo persistence must emit exactly one scalar.
+  object-complex or numeric-string aliases; Mojo persistence must emit exactly
+  one scalar.
 * the Mojo subprocess bridge must emit exact stdout cardinality before numeric
   parsing: `ITPC` emits one scalar line per time point and `PERS` emits one
   scalar line. Missing, extra, blank, or non-scalar lines fail closed.
@@ -402,9 +404,9 @@ every backend returns the empty array.
 `compute_itpc` accepts finite real-valued phase arrays. Integer inputs
 are converted to ``float64`` because they still denote real phase
 angles. Boolean aliases, complex phase samples, NaN, and Inf are
-rejected before backend dispatch. Backend ITPC vectors and persistence
-scalars are also revalidated as finite real values in ``[0, 1]`` before
-their results are accepted.
+rejected before backend dispatch, as are numeric-string aliases such as
+``"0.5"``. Backend ITPC vectors and persistence scalars are also revalidated as
+finite real values in ``[0, 1]`` before their results are accepted.
 
 ### 8.3 Pause-index overflow
 

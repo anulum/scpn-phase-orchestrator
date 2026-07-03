@@ -13,6 +13,9 @@ from typing import Any
 import numpy as np
 import pytest
 
+from scpn_phase_orchestrator.experimental.accelerators.monitor import (
+    _itpc_validation as itpc_validation,
+)
 from scpn_phase_orchestrator.experimental.accelerators.monitor._itpc_validation import (
     expected_compute_itpc_backend_output,
     expected_itpc_persistence_backend_output,
@@ -26,6 +29,10 @@ _PHASES = np.zeros(6, dtype=np.float64)  # n_trials=2 * n_tp=3
 _ITPC = np.array([0.5, 0.5, 0.5], dtype=np.float64)
 
 
+def test_numeric_string_alias_helper_ignores_real_numbers() -> None:
+    assert itpc_validation._is_numeric_string_alias(0.5) is False
+
+
 class TestComputeItpcInputs:
     def test_valid_round_trips(self) -> None:
         phases, trials, tp = validate_compute_itpc_backend_inputs(_PHASES, 2, 3)
@@ -37,6 +44,8 @@ class TestComputeItpcInputs:
             (_PHASES, True, 3, "n_trials must"),
             (_PHASES, 2, -1, "n_tp must"),
             (np.array(["not-a-float"], dtype=object), 1, 1, "finite"),
+            (np.array(["0.0"], dtype=object), 1, 1, "numeric-string"),
+            (np.array([0.0, "0.5"], dtype=object), 1, 2, "numeric-string"),
             (np.zeros(5), 2, 3, "phases"),
         ],
     )
@@ -68,6 +77,8 @@ class TestComputeItpcOutput:
             (np.array([True, False, False]), "must not contain boolean"),
             (np.array([0.5 + 1j, 0.5, 0.5]), "must be real-valued"),
             (np.array(["not-a-float"], dtype=object), "must be numeric"),
+            (np.array(["0.5", "0.5", "0.5"]), "numeric-string"),
+            (np.array([0.5, "0.5", 0.5], dtype=object), "numeric-string"),
             (np.zeros(2), "does not match"),
             (np.array([np.inf, 0.5, 0.5]), "only finite values"),
             (np.array([2.0, 0.5, 0.5]), r"must lie in \[0, 1\]"),
@@ -89,6 +100,14 @@ class TestComputeItpcOutput:
                 _ITPC,
                 3,
                 expected=np.array([0.5, 0.5], dtype=np.float64),
+            )
+
+    def test_rejects_numeric_string_expected_reference(self) -> None:
+        with pytest.raises(ValueError, match="expected.*numeric-string"):
+            validate_compute_itpc_backend_output(
+                _ITPC,
+                3,
+                expected=np.array(["0.5", "0.5", "0.5"]),
             )
 
     def test_expected_reference_handles_empty_dimensions(self) -> None:
@@ -120,6 +139,8 @@ class TestPersistenceOutput:
             (np.array([True]), "must not contain booleans"),
             (np.array(0.5 + 1j), "must be real-valued"),
             (np.array("not-a-float", dtype=object), "must be numeric"),
+            (np.array("0.5"), "numeric-string"),
+            (np.array("0.5", dtype=object), "numeric-string"),
             (np.array([0.5, 0.6]), "must be scalar"),
             (np.inf, "must be finite"),
             (2.0, r"must lie in \[0, 1\]"),
@@ -154,6 +175,10 @@ class TestPersistenceOutput:
             3,
             np.array([99], dtype=np.int64),
         ) == pytest.approx(0.0)
+
+    def test_rejects_numeric_string_expected_reference(self) -> None:
+        with pytest.raises(ValueError, match="expected.*numeric-string"):
+            validate_itpc_persistence_backend_output(0.5, expected="0.5")
 
 
 class TestPersistenceInputs:

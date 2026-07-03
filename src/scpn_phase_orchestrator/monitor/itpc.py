@@ -167,6 +167,36 @@ def _contains_complex_alias(raw: ArrayPayload) -> bool:
     return any(isinstance(value, complex | np.complexfloating) for value in raw.flat)
 
 
+def _is_string_like(value: object) -> bool:
+    """Return whether ``value`` is a Python or NumPy string scalar."""
+    return isinstance(value, (str, bytes, np.str_, np.bytes_))
+
+
+def _is_numeric_string_alias(value: object) -> bool:
+    """Return whether ``value`` is a string scalar parsable as a float."""
+    if not _is_string_like(value):
+        return False
+    try:
+        float(cast("str | bytes", value))
+    except (TypeError, ValueError):
+        return False
+    return True
+
+
+def _contains_numeric_string_alias(raw: ArrayPayload) -> bool:
+    """Return whether the array contains numeric string aliases."""
+    if raw.dtype.kind not in {"O", "S", "U"}:
+        return False
+    saw_string = False
+    for value in raw.astype(object, copy=False).flat:
+        if not _is_string_like(value):
+            continue
+        saw_string = True
+        if not _is_numeric_string_alias(value):
+            return False
+    return saw_string
+
+
 def _validate_phases_trials(phases_trials: object) -> FloatArray:
     """Return the per-trial phase array as a validated 2-D finite array, else raise."""
     raw = np.asarray(phases_trials)
@@ -174,6 +204,8 @@ def _validate_phases_trials(phases_trials: object) -> FloatArray:
         raise ValueError("phases_trials must not contain boolean values")
     if _contains_complex_alias(raw):
         raise ValueError("phases_trials must contain real-valued phase samples")
+    if _contains_numeric_string_alias(raw):
+        raise ValueError("phases_trials must not contain numeric-string aliases")
     try:
         phases = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
@@ -225,6 +257,8 @@ def _validate_itpc_values(
         raise ValueError("ITPC output must not contain boolean values")
     if _contains_complex_alias(raw):
         raise ValueError("ITPC output must contain real values")
+    if _contains_numeric_string_alias(raw):
+        raise ValueError("ITPC output must not contain numeric-string aliases")
     try:
         itpc = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
@@ -260,6 +294,10 @@ def _validate_persistence_value(
         raise ValueError("ITPC persistence output must not contain boolean values")
     if _contains_complex_alias(raw):
         raise ValueError("ITPC persistence output must contain real values")
+    if _contains_numeric_string_alias(raw):
+        raise ValueError(
+            "ITPC persistence output must not contain numeric-string aliases"
+        )
     try:
         scalar = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:

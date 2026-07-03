@@ -17,6 +17,30 @@ from scpn_phase_orchestrator.monitor import itpc as itpc_mod
 from scpn_phase_orchestrator.monitor.itpc import compute_itpc, itpc_persistence
 
 
+def test_numeric_string_alias_helper_ignores_real_numbers() -> None:
+    assert itpc_mod._is_numeric_string_alias(0.5) is False
+
+
+def test_private_reference_helper_handles_1d_and_zero_trials() -> None:
+    np.testing.assert_array_equal(
+        itpc_mod._compute_itpc_reference(np.array([0.1, 0.2], dtype=np.float64)),
+        np.array([1.0], dtype=np.float64),
+    )
+    np.testing.assert_array_equal(
+        itpc_mod._compute_itpc_reference(np.zeros((0, 3), dtype=np.float64)),
+        np.zeros(3, dtype=np.float64),
+    )
+
+
+def test_private_output_validator_rejects_expected_shape_mismatch() -> None:
+    with pytest.raises(ValueError, match="exact reference shape"):
+        itpc_mod._validate_itpc_values(
+            np.array([0.5, 0.5], dtype=np.float64),
+            n_timepoints=2,
+            expected=np.array([0.5], dtype=np.float64),
+        )
+
+
 def test_perfect_alignment_gives_itpc_one():
     phases = np.zeros((20, 50))
     itpc = compute_itpc(phases)
@@ -64,6 +88,8 @@ def test_1d_input_returns_scalar_one():
         (np.array([[0.0, np.bool_(True)]], dtype=object), "phases_trials"),
         (np.array([[0.0 + 0.0j, 0.5 + 0.25j]]), "real-valued"),
         (np.array([[0.0, 0.5 + 0.25j]], dtype=object), "real-valued"),
+        (np.array([["0.0", "0.5"]]), "numeric-string"),
+        (np.array([[0.0, "0.5"]], dtype=object), "numeric-string"),
         ([["not-a-phase"]], "phases_trials"),
     ],
 )
@@ -123,6 +149,7 @@ def test_persistence_out_of_bounds_indices_ignored():
         np.array([[0.0, True]], dtype=object),
         np.array([[0.0, np.bool_(True)]], dtype=object),
         np.array([[0.0 + 0.0j, 0.5 + 0.25j]]),
+        np.array([["0.0", "0.5"]]),
         [["not-a-phase"]],
     ],
 )
@@ -252,6 +279,10 @@ class TestITPCBackendDispatch:
             np.array([0.5 + 0.0j, 0.5 + 0.25j]),
             np.array([True, False], dtype=np.bool_),
             np.array([0.5, np.bool_(True)], dtype=object),
+            np.array(["not-a-float"], dtype=object),
+            np.array([0.5], dtype=np.float64),
+            np.array(["0.5", "0.5"]),
+            np.array([0.5, "0.5"], dtype=object),
         ],
     )
     def test_invalid_itpc_backend_payload_fails_closed(
@@ -282,7 +313,19 @@ class TestITPCBackendDispatch:
 
     @pytest.mark.parametrize(
         "backend_value",
-        [-0.1, 1.1, np.nan, np.inf, [0.5], True, np.bool_(True), 0.5 + 0.0j],
+        [
+            -0.1,
+            1.1,
+            np.nan,
+            np.inf,
+            [0.5],
+            True,
+            np.bool_(True),
+            0.5 + 0.0j,
+            np.array("not-a-float", dtype=object),
+            "0.5",
+            np.array("0.5", dtype=object),
+        ],
     )
     def test_invalid_persistence_backend_payload_fails_closed(
         self,

@@ -223,6 +223,8 @@ class TestDirectBackendBoundaryContracts:
             (np.array([0.0, np.nan]), 1, 2, "phases_flat"),
             (np.array([0.0, 1.0], dtype=np.complex128), 1, 2, "real-valued"),
             (np.array([0.0, 1.0j], dtype=object), 1, 2, "real-valued"),
+            (np.array(["0.0", "1.0"]), 1, 2, "numeric-string"),
+            (np.array([0.0, "1.0"], dtype=object), 1, 2, "numeric-string"),
             (np.array([[0.0, 1.0]]), 1, 2, "one-dimensional"),
             (np.array([0.0, 1.0]), True, 2, "n_trials"),
             (np.array([0.0, 1.0]), -1, 2, "n_trials"),
@@ -252,6 +254,14 @@ class TestDirectBackendBoundaryContracts:
             (np.array([True, False]), 1, 2, np.array([0]), "phases_flat"),
             (np.array([0.0, np.inf]), 1, 2, np.array([0]), "phases_flat"),
             (np.array([0.0, 1.0j], dtype=object), 1, 2, np.array([0]), "real-valued"),
+            (np.array(["0.0", "1.0"]), 1, 2, np.array([0]), "numeric-string"),
+            (
+                np.array([0.0, "1.0"], dtype=object),
+                1,
+                2,
+                np.array([0]),
+                "numeric-string",
+            ),
             (np.array([0.0, 1.0]), True, 2, np.array([0]), "n_trials"),
             (np.array([0.0, 1.0]), 1, True, np.array([0]), "n_tp"),
             (np.array([0.0, 1.0]), 2, 2, np.array([0]), "n_trials\\*n_tp"),
@@ -485,6 +495,31 @@ def test_rust_loader_returns_kernel_functions(monkeypatch: pytest.MonkeyPatch) -
     assert loaded == {
         "itpc": fake_kernel.compute_itpc_rust,
         "persistence": fake_kernel.itpc_persistence_rust,
+    }
+
+
+def test_direct_loader_wrappers_return_backend_functions(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(itpc_mojo_mod, "_ensure_exe", lambda: "itpc_mojo")
+    mojo_loaded = it_mod._load_mojo_fns()
+    assert mojo_loaded == {
+        "itpc": compute_itpc_mojo,
+        "persistence": itpc_persistence_mojo,
+    }
+
+    monkeypatch.setattr(it_mod, "require_juliacall_main", lambda: object())
+    julia_loaded = it_mod._load_julia_fns()
+    assert julia_loaded == {
+        "itpc": compute_itpc_julia,
+        "persistence": itpc_persistence_julia,
+    }
+
+    monkeypatch.setattr(itpc_go_mod, "_load_lib", lambda: object())
+    go_loaded = it_mod._load_go_fns()
+    assert go_loaded == {
+        "itpc": compute_itpc_go,
+        "persistence": itpc_persistence_go,
     }
 
 

@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 from numbers import Integral
-from typing import TypeAlias
+from typing import TypeAlias, cast
 
 import numpy as np
 from numpy.typing import NDArray
@@ -36,6 +36,37 @@ def _contains_complex_alias(raw: object) -> bool:
     return any(isinstance(value, complex | np.complexfloating) for value in array.flat)
 
 
+def _is_string_like(value: object) -> bool:
+    """Return whether ``value`` is a Python or NumPy string scalar."""
+    return isinstance(value, (str, bytes, np.str_, np.bytes_))
+
+
+def _is_numeric_string_alias(value: object) -> bool:
+    """Return whether ``value`` is a string scalar parsable as a float."""
+    if not _is_string_like(value):
+        return False
+    try:
+        float(cast("str | bytes", value))
+    except (TypeError, ValueError):
+        return False
+    return True
+
+
+def _contains_numeric_string_alias(raw: object) -> bool:
+    """Return whether the value contains numeric string aliases."""
+    array = np.asarray(raw)
+    if array.dtype.kind not in {"O", "S", "U"}:
+        return False
+    saw_string = False
+    for value in array.astype(object, copy=False).flat:
+        if not _is_string_like(value):
+            continue
+        saw_string = True
+        if not _is_numeric_string_alias(value):
+            return False
+    return saw_string
+
+
 def _validate_int(value: object, name: str, *, minimum: int) -> int:
     """Return ``value`` as a validated integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral):
@@ -57,6 +88,8 @@ def _validate_phase_buffer(
         raise ValueError("phases_flat must not contain boolean values")
     if _contains_complex_alias(raw):
         raise ValueError("phases_flat must be real-valued")
+    if _contains_numeric_string_alias(raw):
+        raise ValueError("phases_flat must not contain numeric-string aliases")
     try:
         phases = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
@@ -137,6 +170,8 @@ def validate_compute_itpc_backend_output(
         raise ValueError("ITPC backend output must not contain boolean values")
     if _contains_complex_alias(raw):
         raise ValueError("ITPC backend output must be real-valued")
+    if _contains_numeric_string_alias(raw):
+        raise ValueError("ITPC backend output must not contain numeric-string aliases")
     try:
         itpc = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
@@ -152,6 +187,10 @@ def validate_compute_itpc_backend_output(
         raise ValueError("ITPC backend output must lie in [0, 1]")
     clipped = np.ascontiguousarray(np.clip(itpc, 0.0, 1.0), dtype=np.float64)
     if expected is not None:
+        if _contains_numeric_string_alias(expected):
+            raise ValueError(
+                "ITPC expected output must not contain numeric-string aliases"
+            )
         reference = np.asarray(expected, dtype=np.float64)
         if reference.shape != clipped.shape:
             raise ValueError("ITPC exact reference shape must match backend output")
@@ -172,6 +211,10 @@ def validate_itpc_persistence_backend_output(
         raise ValueError("ITPC persistence backend output must not contain booleans")
     if _contains_complex_alias(raw):
         raise ValueError("ITPC persistence backend output must be real-valued")
+    if _contains_numeric_string_alias(raw):
+        raise ValueError(
+            "ITPC persistence backend output must not contain numeric-string aliases"
+        )
     try:
         scalar = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
@@ -185,6 +228,10 @@ def validate_itpc_persistence_backend_output(
     if score < -tolerance or score > 1.0 + tolerance:
         raise ValueError("ITPC persistence backend output must lie in [0, 1]")
     clipped = min(1.0, max(0.0, score))
+    if expected is not None and _contains_numeric_string_alias(expected):
+        raise ValueError(
+            "ITPC persistence expected output must not contain numeric-string aliases"
+        )
     if expected is not None and not np.isclose(
         clipped,
         float(expected),

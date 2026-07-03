@@ -37,6 +37,31 @@ def test_compute_itpc_falls_back_to_python_when_active_backend_loader_fails(
     )
 
     result = compute_itpc(phases)
+    itpc_mod._BACKEND_FN_CACHE.clear()
+    np.testing.assert_allclose(result, expected)
+
+
+def test_compute_itpc_falls_back_when_active_backend_call_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    phases = np.array([[0.0, 0.5], [1.0, 1.5]], dtype=np.float64)
+    monkeypatch.setattr(itpc_mod, "ACTIVE_BACKEND", "python")
+    expected = compute_itpc(phases)
+
+    def raising_itpc(*_args: object) -> np.ndarray:
+        raise RuntimeError("kernel crashed after dispatch")
+
+    monkeypatch.setattr(itpc_mod, "ACTIVE_BACKEND", "go")
+    monkeypatch.setattr(itpc_mod, "AVAILABLE_BACKENDS", ["go", "python"])
+    itpc_mod._BACKEND_FN_CACHE.clear()
+    monkeypatch.setitem(
+        itpc_mod._LOADERS,
+        "go",
+        lambda: {"itpc": raising_itpc},
+    )
+
+    result = compute_itpc(phases)
+    itpc_mod._BACKEND_FN_CACHE.clear()
     np.testing.assert_allclose(result, expected)
 
 
@@ -58,7 +83,51 @@ def test_itpc_persistence_falls_back_to_python_when_persistence_kernel_missing(
     )
 
     result = itpc_persistence(phases, [0, 1, 4])
+    itpc_mod._BACKEND_FN_CACHE.clear()
     assert result == pytest.approx(expected)
+
+
+def test_itpc_persistence_falls_back_when_active_backend_call_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    phases = np.array([[0.0, 0.3, 0.6], [0.0, 0.3, 0.6]], dtype=np.float64)
+    pause_idx = np.array([0, 1, 4], dtype=np.int64)
+
+    monkeypatch.setattr(itpc_mod, "ACTIVE_BACKEND", "python")
+    expected = itpc_persistence(phases, pause_idx)
+
+    def raising_persistence(*_args: object) -> float:
+        raise RuntimeError("kernel crashed after dispatch")
+
+    monkeypatch.setattr(itpc_mod, "ACTIVE_BACKEND", "go")
+    monkeypatch.setattr(itpc_mod, "AVAILABLE_BACKENDS", ["go", "python"])
+    itpc_mod._BACKEND_FN_CACHE.clear()
+    monkeypatch.setitem(
+        itpc_mod._LOADERS,
+        "go",
+        lambda: {"persistence": raising_persistence},
+    )
+
+    result = itpc_persistence(phases, [0, 1, 4])
+    itpc_mod._BACKEND_FN_CACHE.clear()
+    assert result == pytest.approx(expected)
+
+
+def test_dispatch_returns_none_when_no_loader_or_backend_function(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(itpc_mod, "ACTIVE_BACKEND", "ghost")
+    monkeypatch.setattr(itpc_mod, "AVAILABLE_BACKENDS", ["ghost"])
+
+    assert itpc_mod._dispatch("itpc") is None
+
+    monkeypatch.setattr(itpc_mod, "ACTIVE_BACKEND", "go")
+    monkeypatch.setattr(itpc_mod, "AVAILABLE_BACKENDS", ["go"])
+    itpc_mod._BACKEND_FN_CACHE.clear()
+    monkeypatch.setitem(itpc_mod._LOADERS, "go", lambda: {"persistence": object()})
+
+    assert itpc_mod._dispatch("itpc") is None
+    itpc_mod._BACKEND_FN_CACHE.clear()
 
 
 def test_itpc_persistence_filters_pause_indices_and_means_valid_positions() -> None:

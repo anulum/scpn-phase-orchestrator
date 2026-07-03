@@ -129,6 +129,13 @@ execution: phase vectors and phase-distance matrices reject boolean aliases,
 complex/object-complex aliases, numeric-string aliases, non-finite values,
 wrong cardinality, asymmetric matrices, non-zero diagonals, and out-of-range
 distances before float coercion or publication.
+The public ITPC dispatcher and direct Go, Julia, and Mojo bridges apply shared
+ITPC validators before optional runtime loading and after backend execution:
+trial phase buffers, backend ITPC vectors, persistence scalars, and
+exact-reference payloads reject boolean aliases, complex/object-complex
+aliases, numeric-string aliases, non-finite values, wrong cardinality,
+unit-interval violations, and exact-estimator divergence before float coercion
+or publication.
 The public OPT-entropy dispatcher and direct Go, Julia, and Mojo bridges apply
 the shared ordinal-transition entropy validators before optional runtime loading
 and after backend execution: scalar series and ordinal-code vectors reject
