@@ -189,6 +189,13 @@ result records, and backend crossing/time outputs reject boolean aliases,
 numeric-string aliases, complex values, non-finite values, malformed
 cardinality, out-of-range crossing counts, and non-increasing crossing times
 before float coercion or publication.
+The public winding dispatcher and direct Go, Julia, and Mojo bridges apply
+shared winding validators before optional runtime loading and after backend
+execution: phase buffers, integer scalar controls, and backend winding vectors
+reject boolean aliases, numeric-string aliases, complex values, non-finite
+values, malformed cardinality, fractional integer evidence, out-of-bound
+winding counts, and exact-reference divergence before float or integer
+coercion or publication.
 
 ## Wiring
 
@@ -243,3 +250,8 @@ through a production subsystem's dispatcher.
   time buffers are rechecked as finite real vectors with valid sampled-interval
   bounds before public monitor publication; Mojo stdout remains a text transport
   with explicit line-cardinality checks.
+- `monitor/winding` Go, Julia, and Mojo adapters share one direct validator
+  that rejects boolean, numeric-string, complex, non-finite, cardinality, and
+  scalar-control aliases before optional runtime loading. Backend winding vectors
+  are rechecked as finite integer vectors with valid wrapped-increment bounds
+  and exact NumPy reference equality before public monitor publication.

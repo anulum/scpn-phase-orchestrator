@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 from numbers import Integral
-from typing import TypeAlias
+from typing import TypeAlias, cast
 
 import numpy as np
 from numpy.typing import NDArray
@@ -39,6 +39,40 @@ def _contains_complex_alias(raw: object) -> bool:
     return any(isinstance(item, (complex, np.complexfloating)) for item in array.flat)
 
 
+def _is_string_like(value: object) -> bool:
+    """Return whether ``value`` is a Python or NumPy string scalar."""
+    return isinstance(value, (str, bytes, np.str_, np.bytes_))
+
+
+def _is_numeric_string_alias(value: object) -> bool:
+    """Return whether ``value`` is a string scalar parsable as a float."""
+    if not _is_string_like(value):
+        return False
+    try:
+        float(cast("str | bytes", value))
+    except (TypeError, ValueError):
+        return False
+    return True
+
+
+def _contains_numeric_string_alias(raw: object) -> bool:
+    """Return whether the value contains numeric-string aliases."""
+    try:
+        array = np.asarray(raw)
+    except (TypeError, ValueError):
+        return False
+    if array.dtype.kind not in {"O", "S", "U"}:
+        return False
+    saw_string = False
+    for item in array.astype(object, copy=False).flat:
+        if not _is_string_like(item):
+            continue
+        saw_string = True
+        if not _is_numeric_string_alias(item):
+            return False
+    return saw_string
+
+
 def _has_complex_payload(raw: object) -> bool:
     """Return whether the value carries a complex-number payload."""
     try:
@@ -50,6 +84,8 @@ def _has_complex_payload(raw: object) -> bool:
 
 def _validate_int(value: object, name: str, *, minimum: int) -> int:
     """Return ``value`` as a validated integer, else raise ``ValueError``."""
+    if _is_numeric_string_alias(value):
+        raise ValueError(f"{name} must not be a numeric-string alias")
     if isinstance(value, bool) or not isinstance(value, Integral):
         raise ValueError(f"{name} must be an integer >= {minimum}")
     result = int(value)
@@ -71,6 +107,8 @@ def validate_winding_backend_inputs(
         raise ValueError("phases_flat must not contain boolean values")
     if _has_complex_payload(phases_flat):
         raise ValueError("phases_flat must be real-valued")
+    if _contains_numeric_string_alias(phases_flat):
+        raise ValueError("phases_flat must not contain numeric-string aliases")
     try:
         phases = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
@@ -120,6 +158,8 @@ def validate_winding_backend_output(
         raise ValueError("winding output must not contain boolean values")
     if _has_complex_payload(value):
         raise ValueError("winding output must be real-valued")
+    if _contains_numeric_string_alias(value):
+        raise ValueError("winding output must not contain numeric-string aliases")
     try:
         array = np.asarray(value)
     except (TypeError, ValueError) as exc:

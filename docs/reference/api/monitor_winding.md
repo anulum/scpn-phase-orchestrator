@@ -15,9 +15,8 @@ no net rotation. The ``wrap`` operator handles the ``θ = 2π → 0``
 jump at each step so the cumulative increment reflects true
 rotation rather than storage discontinuities.
 
-This is the twelfth module migrated to the AttnRes-level standard:
-five-language backend chain, bit-exact integer parity across all
-four non-Python backends, exact public-boundary reference validation,
+This module uses a five-language backend chain, bit-exact integer parity across
+all four non-Python backends, exact public-boundary reference validation,
 multi-backend benchmark, and ``pytest.mark.slow`` stability tests.
 
 ---
@@ -72,9 +71,9 @@ def winding_numbers(phases_history: NDArray) -> NDArray: ...
 
 Takes a ``(T, N)`` phase history; returns ``(N,)`` int64 array.
 ``T < 2`` short-circuits to a zero vector.
-The public boundary rejects boolean aliases, complex dtypes, and object arrays
-containing complex scalar aliases before any float coercion, preserving the
-real-valued wrapped-increment topology contract.
+The public boundary rejects boolean aliases, numeric-string aliases, complex
+dtypes, and object arrays containing complex scalar aliases before any float
+coercion, preserving the real-valued wrapped-increment topology contract.
 
 ### 2.2 `winding_vector`
 
@@ -110,13 +109,14 @@ The direct Go, Julia, and Mojo wrappers validate before loading their optional
 runtimes:
 
 * `phases_flat` must be a one-dimensional finite real `float64` buffer with no
-  boolean aliases, complex dtypes, or object-complex scalar aliases.
-* `t` must be a non-boolean integer at least 2.
-* `n` must be a non-boolean positive integer.
+  boolean aliases, numeric-string aliases, complex dtypes, or object-complex
+  scalar aliases.
+* `t` must be a non-boolean, non-numeric-string integer at least 2.
+* `n` must be a non-boolean, non-numeric-string positive integer.
 * the flat buffer length must exactly match `t * n`.
 * returned winding vectors must be finite real integer-valued `int64` arrays of
-  length `n`, contain no boolean or complex aliases, and stay within the
-  wrapped-increment bound implied by `t`.
+  length `n`, contain no boolean, numeric-string, or complex aliases, and stay
+  within the wrapped-increment bound implied by `t`.
 * returned winding vectors must also equal the exact NumPy wrapped-increment
   reference for the supplied phase history; direct wrappers fail closed on
   plausible but wrong integer outputs.

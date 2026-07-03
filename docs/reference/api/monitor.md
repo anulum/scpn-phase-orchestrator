@@ -469,6 +469,12 @@ Different winding numbers for different oscillators indicate frequency
 differences; a sudden change in winding number signals a phase slip
 (loss of synchronization with a specific partner).
 
+Public and direct accelerator contracts reject boolean aliases,
+numeric-string aliases, complex/object-complex payloads, non-finite phase
+histories, malformed cardinality, non-integer winding outputs, out-of-bound
+winding counts, and exact-reference divergence before integer winding evidence
+reaches reports or benchmark gates.
+
 ::: scpn_phase_orchestrator.monitor.winding
 
 ## Inter-Trial Phase Coherence (ITPC)

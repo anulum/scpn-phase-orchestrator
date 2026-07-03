@@ -73,6 +73,32 @@ def test_alias_detectors_treat_uncoercible_payloads_as_non_aliases() -> None:
     assert winding_module._contains_boolean_alias(payload) is False
     assert winding_module._contains_complex_alias(payload) is False
     assert winding_module._has_complex_payload(payload) is False
+    assert winding_module._is_numeric_string_alias(1.0) is False
+    assert winding_module._is_numeric_string_alias("not-a-number") is False
+    assert winding_module._contains_numeric_string_alias(payload) is False
+    assert (
+        winding_module._contains_numeric_string_alias(
+            np.array([1.0, "not-a-number"], dtype=object)
+        )
+        is False
+    )
+    assert (
+        winding_module._contains_numeric_string_alias(
+            np.array([1.0, "2.0"], dtype=object)
+        )
+        is True
+    )
+
+
+def test_julia_backend_loader_returns_winding_callable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Julia backend loader must expose the winding-number callable."""
+    monkeypatch.setattr(winding_module, "require_juliacall_main", lambda: None)
+
+    loaded = winding_module._load_julia_fn()
+
+    assert callable(loaded)
 
 
 def test_backend_winding_rejects_uncoercible_array_like_output() -> None:

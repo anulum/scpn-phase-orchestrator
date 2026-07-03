@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import get_type_hints
 
 import numpy as np
@@ -16,6 +17,8 @@ import pytest
 from scpn_phase_orchestrator.monitor import winding as winding_module
 from scpn_phase_orchestrator.monitor.winding import winding_numbers, winding_vector
 from tests.typing_contracts import assert_precise_ndarray_hint
+
+WINDING_REFERENCE = Path("docs/reference/api/monitor_winding.md")
 
 
 class TestWindingNumbers:
@@ -124,6 +127,10 @@ class TestWindingNumbers:
         with pytest.raises(ValueError, match="phases_history"):
             winding_numbers(np.array([[0.0, True], [1.0, 2.0]], dtype=object))
 
+    def test_rejects_numeric_string_phase_history(self) -> None:
+        with pytest.raises(ValueError, match="numeric-string"):
+            winding_numbers(np.array([["0.0"], ["6.4"]], dtype=object))
+
     @pytest.mark.parametrize(
         "history",
         [
@@ -225,6 +232,7 @@ class TestWindingRustDispatch:
             np.array([100, 0], dtype=np.int64),
             np.array([True, False], dtype=np.bool_),
             np.array([1, np.bool_(False)], dtype=object),
+            np.array(["0", "-1"], dtype=object),
             np.array([0.0 + 1.0j, -1.0], dtype=object),
             np.array([0.0 + 1.0j, -1.0], dtype=np.complex128),
         ],
@@ -297,3 +305,9 @@ class TestWindingRustDispatch:
         assert b1 is fake_backend
         assert b2 is fake_backend
         assert call_count == 1
+
+
+def test_winding_api_reference_documents_numeric_string_contracts() -> None:
+    doc = WINDING_REFERENCE.read_text(encoding="utf-8")
+
+    assert "numeric-string aliases" in doc

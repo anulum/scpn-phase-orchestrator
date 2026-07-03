@@ -13,10 +13,20 @@ from typing import Any
 import numpy as np
 import pytest
 
-from scpn_phase_orchestrator.experimental.accelerators.monitor._winding_validation import (  # noqa: E501
-    validate_winding_backend_inputs,
-    validate_winding_backend_output,
+from scpn_phase_orchestrator.experimental.accelerators.monitor import (
+    _winding_validation as winding_validation,
 )
+
+validate_winding_backend_inputs = winding_validation.validate_winding_backend_inputs
+validate_winding_backend_output = winding_validation.validate_winding_backend_output
+
+
+class _ArrayRaises:
+    """Array-like sentinel that refuses NumPy coercion."""
+
+    def __array__(self, dtype: object | None = None) -> np.ndarray:
+        """Raise during NumPy array coercion."""
+        raise ValueError("array coercion refused")
 
 
 def _inputs(**overrides: Any) -> dict[str, Any]:
@@ -38,15 +48,25 @@ class TestWindingInputs:
         ("overrides", "match"),
         [
             ({"t": True}, "t must"),
+            ({"t": "2"}, "numeric-string"),
             ({"t": 1}, "t must"),
             ({"n": 0}, "n must"),
+            ({"n": "2"}, "numeric-string"),
             (
                 {"phases_flat": np.array([True, False, False, False])},
                 "must not contain boolean",
             ),
             (
+                {"phases_flat": np.array(["0.0", "1.0", "2.0", "3.0"])},
+                "numeric-string",
+            ),
+            (
                 {"phases_flat": np.array([0.0 + 1j, 1.0, 2.0, 3.0])},
                 "must be real-valued",
+            ),
+            (
+                {"phases_flat": np.array([object(), 1.0, 2.0, 3.0])},
+                "finite one-dimensional float array",
             ),
             ({"phases_flat": np.zeros((2, 2))}, "must be one-dimensional"),
             ({"phases_flat": np.array([0.0, np.inf, 2.0, 3.0])}, "only finite values"),
@@ -73,7 +93,10 @@ class TestWindingOutput:
         ("value", "match"),
         [
             (np.array([True, False]), "must not contain boolean"),
+            (np.array(["0", "1"], dtype=object), "numeric-string"),
             (np.array([0.0 + 1j, 1.0]), "must be real-valued"),
+            (_ArrayRaises(), "array-like"),
+            (np.array([object(), 1.0], dtype=object), "must be numeric"),
             (np.array([0, 1, 2]), r"shape .* must be \(2,\)"),
             (np.array([0.5, 1.0]), "must contain integer"),
             (np.array([5, 0]), "exceeds wrapped-increment bound"),
@@ -94,3 +117,26 @@ class TestWindingOutput:
             validate_winding_backend_output(
                 np.array([0, 1]), t=2, n=2, expected=np.array([1, 0], dtype=np.int64)
             )
+
+
+def test_alias_helpers_fail_closed_on_uncoercible_payloads() -> None:
+    payload = _ArrayRaises()
+
+    assert winding_validation._contains_boolean_alias(payload) is False
+    assert winding_validation._contains_complex_alias(payload) is False
+    assert winding_validation._has_complex_payload(payload) is False
+    assert winding_validation._is_numeric_string_alias(1.0) is False
+    assert winding_validation._is_numeric_string_alias("not-a-number") is False
+    assert winding_validation._contains_numeric_string_alias(payload) is False
+    assert (
+        winding_validation._contains_numeric_string_alias(
+            np.array([1.0, "not-a-number"], dtype=object)
+        )
+        is False
+    )
+    assert (
+        winding_validation._contains_numeric_string_alias(
+            np.array([1.0, "2.0"], dtype=object)
+        )
+        is True
+    )
