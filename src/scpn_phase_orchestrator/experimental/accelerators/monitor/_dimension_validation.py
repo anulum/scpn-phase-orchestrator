@@ -47,6 +47,25 @@ def _contains_complex_alias(value: object) -> bool:
     return any(isinstance(item, (complex, np.complexfloating)) for item in raw.flat)
 
 
+def _is_numeric_string_alias(value: object) -> bool:
+    """Return whether ``value`` is a string-like scalar parsable as a float."""
+    if not isinstance(value, (str, bytes, np.str_, np.bytes_)):
+        return False
+    try:
+        float(value)
+    except (TypeError, ValueError):
+        return False
+    return True
+
+
+def _contains_numeric_string_alias(raw: ArrayPayload) -> bool:
+    """Return whether the array contains a numeric string alias."""
+    if raw.dtype.kind not in {"O", "S", "U"}:
+        return False
+    object_array = raw.astype(object, copy=False)
+    return any(_is_numeric_string_alias(value) for value in object_array.flat)
+
+
 def _has_complex_payload(value: object) -> bool:
     """Return whether the value carries a complex-number payload."""
     raw = np.asarray(value)
@@ -68,6 +87,8 @@ def _validate_float_vector(value: object, *, name: str) -> FloatArray:
     raw = np.asarray(value)
     if _contains_boolean_alias(raw):
         raise ValueError(f"{name} must not contain boolean values")
+    if _contains_numeric_string_alias(raw):
+        raise ValueError(f"{name} must not contain numeric-string aliases")
     if _has_complex_payload(value):
         raise ValueError(f"{name} must contain real values")
     try:
@@ -87,6 +108,8 @@ def _validate_index_vector(value: object, *, name: str, upper_bound: int) -> Int
     raw = np.asarray(value)
     if _contains_boolean_alias(raw):
         raise ValueError(f"{name} must not contain boolean values")
+    if _contains_numeric_string_alias(raw):
+        raise ValueError(f"{name} must not contain numeric-string aliases")
     if _has_complex_payload(value):
         raise ValueError(f"{name} must contain integer indices")
     try:
@@ -234,6 +257,8 @@ def validate_kaplan_yorke_backend_output(
     if isinstance(value, (bool, np.bool_)):
         raise ValueError("kaplan_yorke_dimension must not be a boolean value")
     raw = np.asarray(value)
+    if _is_numeric_string_alias(value) or _contains_numeric_string_alias(raw):
+        raise ValueError("kaplan_yorke_dimension must not be a numeric-string alias")
     if _has_complex_payload(value):
         raise ValueError("kaplan_yorke_dimension must be real-valued")
     try:
@@ -247,6 +272,12 @@ def validate_kaplan_yorke_backend_output(
     clipped = min(max(dimension, 0.0), float(spectrum.size))
     if expected is not None:
         expected_raw = np.asarray(expected)
+        if _is_numeric_string_alias(expected) or _contains_numeric_string_alias(
+            expected_raw
+        ):
+            raise ValueError(
+                "expected kaplan_yorke_dimension must not be a numeric-string alias"
+            )
         if _has_complex_payload(expected):
             raise ValueError("expected kaplan_yorke_dimension must be real-valued")
         try:

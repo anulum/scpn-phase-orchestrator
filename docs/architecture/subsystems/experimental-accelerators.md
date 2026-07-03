@@ -135,6 +135,13 @@ and after backend execution: scalar series and ordinal-code vectors reject
 boolean aliases, complex/object-complex aliases, numeric-string aliases,
 non-finite values, wrong cardinality, non-integer code aliases, and out-of-range
 ordinal codes before float coercion or publication.
+The public fractal-dimension dispatcher and direct Go, Julia, and Mojo bridges
+apply the shared dimension validators before optional runtime loading and after
+backend execution: trajectory, epsilon, pair-index, Lyapunov-spectrum,
+correlation-integral output, and Kaplan-Yorke scalar payloads reject boolean
+aliases, complex/object-complex aliases, numeric-string aliases, non-finite
+values, shape drift, and out-of-domain physics values before float coercion or
+publication.
 
 ## Wiring
 

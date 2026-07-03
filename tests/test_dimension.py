@@ -24,6 +24,13 @@ from scpn_phase_orchestrator.monitor.dimension import (
 )
 
 
+class _ArrayCoercionFailure:
+    """Array-like test double that refuses NumPy coercion."""
+
+    def __array__(self, dtype: object | None = None, copy: object | None = None) -> Any:
+        raise TypeError("array coercion disabled")
+
+
 class TestCorrelationIntegral:
     def test_increases_with_epsilon(self):
         """C(ε) is monotonically non-decreasing."""
@@ -75,6 +82,12 @@ class TestCorrelationIntegral:
 
         np.testing.assert_allclose(C, [0.0, 2.0 / 3.0])
 
+    def test_single_sample_trajectory_returns_zero_for_all_thresholds(self) -> None:
+        """A single sample has no distinct pairs, so C(eps)=0."""
+        C = correlation_integral(np.array([[1.0, 2.0]]), np.array([0.1, 1.0]))
+
+        np.testing.assert_array_equal(C, np.array([0.0, 0.0]))
+
     def test_prepare_pair_indices_filters_equal_indices(self):
         """Subsampling never allows i == j diagonal pairs."""
         idx_i, idx_j = dim_mod._prepare_pair_indices(total_t=20, max_pairs=10, seed=1)
@@ -82,6 +95,10 @@ class TestCorrelationIntegral:
         assert np.all(idx_i != idx_j)
         assert idx_i.dtype == np.int64
         assert idx_j.dtype == np.int64
+
+    def test_prepare_pair_indices_returns_none_for_single_sample(self) -> None:
+        """One sample cannot form off-diagonal pairs."""
+        assert dim_mod._prepare_pair_indices(total_t=1, max_pairs=10, seed=1) is None
 
     @pytest.mark.parametrize(
         "trajectory",
@@ -92,6 +109,8 @@ class TestCorrelationIntegral:
             np.array([0.0, True], dtype=object),
             np.array([0.0 + 1.0j, 1.0 + 0.0j], dtype=np.complex128),
             np.array([0.0 + 1.0j, 1.0], dtype=object),
+            np.array(["0.0", "1.0", "2.0"]),
+            np.array([0.0, "1.0", 2.0], dtype=object),
             [["not-a-point"]],
         ],
     )
@@ -109,6 +128,8 @@ class TestCorrelationIntegral:
             np.array([0.1, True], dtype=object),
             np.array([0.1 + 1.0j], dtype=np.complex128),
             np.array([0.1 + 1.0j], dtype=object),
+            np.array(["0.1", "1.0"]),
+            np.array([0.1, "1.0"], dtype=object),
             ["not-epsilon"],
         ],
     )
@@ -223,6 +244,13 @@ class TestKaplanYorkeDimension:
         # Actually: j=2 (0-indexed cumsum[2]=0.0 ≥ 0), j+1=3 ≥ 3 → returns 3.0
         assert d == 3.0
 
+    def test_empty_spectrum_returns_zero_dimension(self) -> None:
+        """An empty Lyapunov spectrum has zero Kaplan-Yorke dimension."""
+        assert kaplan_yorke_dimension(np.array([], dtype=np.float64)) == 0.0
+        assert dim_mod._kaplan_yorke_exact_reference(
+            np.array([], dtype=np.float64)
+        ) == pytest.approx(0.0)
+
     @pytest.mark.parametrize(
         "lyapunov_exponents",
         [
@@ -232,6 +260,8 @@ class TestKaplanYorkeDimension:
             np.array([0.1, True], dtype=object),
             np.array([0.1 + 1.0j, -0.2 + 0.0j], dtype=np.complex128),
             np.array([0.1 + 1.0j, -0.2], dtype=object),
+            np.array(["0.1", "-0.2"]),
+            np.array([0.1, "-0.2"], dtype=object),
             ["not-an-exponent"],
         ],
     )
@@ -271,6 +301,8 @@ class TestCorrelationDimensionResult:
         "epsilons",
         [
             [0.1, True],
+            ["0.1", "1.0"],
+            np.array([0.1, "1.0"], dtype=object),
             [np.nan, 1.0],
             [0.1 + 1.0j, 1.0 + 0.0j],
             np.array([0.1 + 1.0j, 1.0], dtype=object),
@@ -306,6 +338,9 @@ class TestCorrelationDimensionResult:
         [
             [0.25],
             [0.25, True],
+            ["not-ci", "still-not-ci"],
+            ["0.25", "0.75"],
+            np.array([0.25, "0.75"], dtype=object),
             [0.25 + 1.0j, 0.75 + 0.0j],
             np.array([0.25 + 1.0j, 0.75], dtype=object),
             [0.25, np.nan],
@@ -327,6 +362,10 @@ class TestCorrelationDimensionResult:
         "slope",
         [
             [1.0, 2.0, 3.0],
+            [1.0, True],
+            ["not-a-slope"],
+            ["1.25"],
+            np.array([1.25, "1.5"], dtype=object),
             [np.nan],
             [[1.0]],
             np.array([1.0 + 0.1j], dtype=object),
@@ -364,6 +403,15 @@ class TestCorrelationDimensionResult:
 
 
 class TestBackendDispatch:
+    def test_alias_helpers_treat_uncoercible_arrays_as_absent(self) -> None:
+        """Alias scanners fail closed when NumPy cannot inspect a payload."""
+        broken = _ArrayCoercionFailure()
+
+        assert dim_mod._contains_boolean_alias(broken) is False
+        assert dim_mod._contains_complex_alias(broken) is False
+        assert dim_mod._contains_numeric_string_alias(broken) is False
+        assert dim_mod._has_complex_payload(broken) is False
+
     def test_dispatch_returns_none_when_active_loader_fails(self, monkeypatch):
         previous_backend = dim_mod.ACTIVE_BACKEND
         previous_available = list(dim_mod.AVAILABLE_BACKENDS)
@@ -376,6 +424,28 @@ class TestBackendDispatch:
             "go",
             lambda: (_ for _ in ()).throw(ImportError("go backend unavailable")),
         )
+        try:
+            backend_fn = dim_mod._dispatch("ci")
+        finally:
+            dim_mod.ACTIVE_BACKEND = previous_backend
+            dim_mod.AVAILABLE_BACKENDS = previous_available
+            monkeypatch.setitem(dim_mod._LOADERS, "go", previous_loader)
+            dim_mod._BACKEND_FN_CACHE.clear()
+
+        assert backend_fn is None
+
+    def test_dispatch_returns_none_when_no_backend_can_provide_function(
+        self,
+        monkeypatch,
+    ) -> None:
+        """Dispatcher returns Python fallback when the active backend lacks a fn."""
+        previous_backend = dim_mod.ACTIVE_BACKEND
+        previous_available = list(dim_mod.AVAILABLE_BACKENDS)
+        previous_loader = dim_mod._LOADERS["go"]
+        dim_mod.ACTIVE_BACKEND = "go"
+        dim_mod.AVAILABLE_BACKENDS = []
+        dim_mod._BACKEND_FN_CACHE.clear()
+        monkeypatch.setitem(dim_mod._LOADERS, "go", lambda: {})
         try:
             backend_fn = dim_mod._dispatch("ci")
         finally:
@@ -413,6 +483,7 @@ class TestBackendDispatch:
             np.array([0.5, 0.4], dtype=np.float64),
             np.array([True, False], dtype=np.bool_),
             np.array([0.5, np.bool_(True)], dtype=object),
+            np.array(["0.0", "0.5"], dtype=object),
             np.array([0.5 + 1.0j, 0.75 + 0.0j], dtype=np.complex128),
         ],
     )
@@ -447,7 +518,7 @@ class TestBackendDispatch:
 
     @pytest.mark.parametrize(
         "backend_value",
-        [-0.1, np.nan, np.inf, 4.0, True, np.bool_(True)],
+        [-0.1, np.nan, np.inf, 4.0, True, np.bool_(True), 1.0 + 0.1j],
     )
     def test_invalid_kaplan_yorke_backend_payload_fails_closed(
         self,
@@ -503,6 +574,28 @@ class TestBackendDispatch:
             dim_mod._BACKEND_FN_CACHE.clear()
 
         assert backend_fn is fake_ci
+
+    def test_julia_loader_exposes_ci_and_ky_functions(self, monkeypatch) -> None:
+        """Julia loader imports the direct dimension entrypoints lazily."""
+
+        def fake_ci(*_args: object) -> np.ndarray:
+            return np.array([0.0], dtype=np.float64)
+
+        def fake_ky(_exponents: object) -> float:
+            return 0.0
+
+        module_name = (
+            "scpn_phase_orchestrator.experimental.accelerators.monitor._dimension_julia"
+        )
+        fake_module = types.ModuleType(module_name)
+        fake_module.correlation_integral_julia = fake_ci
+        fake_module.kaplan_yorke_dimension_julia = fake_ky
+        monkeypatch.setattr(dim_mod, "require_juliacall_main", lambda: None)
+        monkeypatch.setitem(sys.modules, module_name, fake_module)
+
+        loaded = dim_mod._load_julia_fns()
+
+        assert loaded == {"ci": fake_ci, "ky": fake_ky}
 
     def test_rust_loader_exposes_ci_and_ky_functions(self, monkeypatch):
         def fake_ci(*_args):
@@ -594,6 +687,58 @@ class TestBackendDispatch:
         assert calls[0][1] == 2
         np.testing.assert_array_equal(calls[0][2], idx_i)
         np.testing.assert_array_equal(calls[0][3], idx_j)
+
+    @pytest.mark.parametrize("backend", ["rust", "go"])
+    def test_correlation_integral_backend_runtime_failure_falls_back_to_python(
+        self,
+        monkeypatch,
+        backend: str,
+    ) -> None:
+        """Runtime backend failures preserve the exact Python result."""
+        previous_backend = dim_mod.ACTIVE_BACKEND
+        previous_loader = dim_mod._LOADERS[backend]
+
+        def failing_ci(*_args: object) -> np.ndarray:
+            raise RuntimeError(f"{backend} backend unavailable")
+
+        dim_mod.ACTIVE_BACKEND = backend
+        dim_mod._BACKEND_FN_CACHE.clear()
+        monkeypatch.setitem(dim_mod._LOADERS, backend, lambda: {"ci": failing_ci})
+        try:
+            C = correlation_integral(
+                np.array([[0.0], [1.0], [2.0]], dtype=np.float64),
+                np.array([0.5, 1.5], dtype=np.float64),
+                max_pairs=10,
+            )
+        finally:
+            dim_mod.ACTIVE_BACKEND = previous_backend
+            monkeypatch.setitem(dim_mod._LOADERS, backend, previous_loader)
+            dim_mod._BACKEND_FN_CACHE.clear()
+
+        np.testing.assert_array_equal(C, np.array([0.0, 2.0 / 3.0]))
+
+    def test_kaplan_yorke_backend_runtime_failure_falls_back_to_python(
+        self,
+        monkeypatch,
+    ) -> None:
+        """Runtime backend failures preserve the exact Python KY result."""
+        previous_backend = dim_mod.ACTIVE_BACKEND
+        previous_loader = dim_mod._LOADERS["go"]
+
+        def failing_ky(*_args: object) -> float:
+            raise RuntimeError("go backend unavailable")
+
+        dim_mod.ACTIVE_BACKEND = "go"
+        dim_mod._BACKEND_FN_CACHE.clear()
+        monkeypatch.setitem(dim_mod._LOADERS, "go", lambda: {"ky": failing_ky})
+        try:
+            result = kaplan_yorke_dimension(np.array([0.5, -1.0]))
+        finally:
+            dim_mod.ACTIVE_BACKEND = previous_backend
+            monkeypatch.setitem(dim_mod._LOADERS, "go", previous_loader)
+            dim_mod._BACKEND_FN_CACHE.clear()
+
+        assert result == pytest.approx(1.5)
 
 
 class TestCorrelationDimensionEdgeCases:

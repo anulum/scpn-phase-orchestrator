@@ -175,6 +175,26 @@ def _contains_complex_alias(value: object) -> bool:
     return any(isinstance(item, (complex, np.complexfloating)) for item in array.flat)
 
 
+def _is_numeric_string_alias(value: object) -> bool:
+    """Return whether ``value`` is a string-like scalar parsable as a float."""
+    if not isinstance(value, (str, bytes, np.str_, np.bytes_)):
+        return False
+    try:
+        float(value)
+    except (TypeError, ValueError):
+        return False
+    return True
+
+
+def _contains_numeric_string_alias(value: object) -> bool:
+    """Return whether the value contains a numeric string alias."""
+    try:
+        array = np.asarray(value, dtype=object)
+    except (TypeError, ValueError):
+        return False
+    return any(_is_numeric_string_alias(item) for item in array.flat)
+
+
 def _has_complex_payload(value: object) -> bool:
     """Return whether the value carries a complex-number payload."""
     try:
@@ -189,6 +209,8 @@ def _validate_trajectory(trajectory: object) -> FloatArray:
     raw = np.asarray(trajectory)
     if _contains_boolean_alias(trajectory):
         raise ValueError("trajectory must not contain boolean values")
+    if _contains_numeric_string_alias(trajectory):
+        raise ValueError("trajectory must not contain numeric-string aliases")
     if _has_complex_payload(trajectory):
         raise ValueError("trajectory must contain real-valued phase-space samples")
     try:
@@ -209,6 +231,8 @@ def _validate_epsilons(epsilons: object) -> FloatArray:
     raw = np.asarray(epsilons)
     if _contains_boolean_alias(epsilons):
         raise ValueError("epsilons must not contain boolean values")
+    if _contains_numeric_string_alias(epsilons):
+        raise ValueError("epsilons must not contain numeric-string aliases")
     if _has_complex_payload(epsilons):
         raise ValueError("epsilons must contain real-valued distance thresholds")
     try:
@@ -247,6 +271,8 @@ def _validate_spectrum(lyapunov_exponents: object) -> FloatArray:
     raw = np.asarray(lyapunov_exponents)
     if _contains_boolean_alias(lyapunov_exponents):
         raise ValueError("lyapunov_exponents must not contain boolean values")
+    if _contains_numeric_string_alias(lyapunov_exponents):
+        raise ValueError("lyapunov_exponents must not contain numeric-string aliases")
     if _has_complex_payload(lyapunov_exponents):
         raise ValueError("lyapunov_exponents must contain real-valued exponents")
     try:
@@ -276,6 +302,10 @@ def _validate_ci_values(value: object, *, expected_size: int) -> FloatArray:
     """Return backend correlation-integral values matching the reference."""
     if _contains_boolean_alias(value):
         raise ValueError("correlation integral output must not contain boolean values")
+    if _contains_numeric_string_alias(value):
+        raise ValueError(
+            "correlation integral output must not contain numeric-string aliases"
+        )
     raw = np.asarray(value)
     if _has_complex_payload(value):
         raise ValueError("correlation integral output must contain real values")
@@ -363,6 +393,8 @@ class CorrelationDimensionResult:
             raise ValueError(f"C_eps {exc}") from exc
         if _contains_boolean_alias(self.slope):
             raise ValueError("slope must not contain boolean values")
+        if _contains_numeric_string_alias(self.slope):
+            raise ValueError("slope must not contain numeric-string aliases")
         if _has_complex_payload(self.slope):
             raise ValueError("slope must contain real values")
         try:
@@ -453,9 +485,6 @@ def _kaplan_yorke_exact_reference(lyapunov_exponents: FloatArray) -> float:
         return float(len(le_sorted))
 
     denom = abs(le_sorted[j + 1])
-    if denom == 0:
-        return float(j + 1)
-
     return float(j + 1) + float(cumsum[j]) / float(denom)
 
 
@@ -617,20 +646,10 @@ def correlation_dimension(
     log_eps = np.log(epsilons[valid])
     log_C = np.log(C_eps[valid])
     slopes = np.diff(log_C) / np.diff(log_eps)
-    full_slopes = np.zeros(len(epsilons) - 1, dtype=np.float64)
+    full_slopes: FloatArray = np.zeros(len(epsilons) - 1, dtype=np.float64)
     full_slopes[first_valid : first_valid + len(slopes)] = slopes
 
     window = min(5, len(slopes))
-    if window < 2:
-        D2 = max(0.0, float(slopes[0])) if len(slopes) > 0 else 0.0
-        return CorrelationDimensionResult(
-            D2=D2,
-            epsilons=epsilons,
-            C_eps=C_eps,
-            slope=full_slopes,
-            scaling_range=(float(epsilons[0]), float(epsilons[-1])),
-        )
-
     best_var = float(np.inf)
     best_start = 0
     for i in range(len(slopes) - window + 1):

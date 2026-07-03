@@ -104,9 +104,11 @@ def correlation_integral(
 
 Returns a ``(K,)`` array of fractions in ``[0, 1]``.
 Trajectory coordinates, epsilon thresholds, and accelerated-backend
-``C(ε)`` payloads must be finite real values; complex-valued inputs,
+``C(ε)`` payloads must be finite real values. Boolean aliases,
+numeric-string aliases such as `"0.1"`, and complex-valued inputs,
 including object arrays that hide Python or NumPy complex scalar
-aliases, are rejected instead of being projected onto their real part.
+aliases, are rejected before float coercion instead of being widened or
+projected onto their real part.
 
 ### 2.2 `correlation_dimension`
 
@@ -129,10 +131,10 @@ def kaplan_yorke_dimension(lyapunov_exponents: NDArray) -> float: ...
 ```
 
 Input order is irrelevant — the kernel sorts internally.
-The Lyapunov spectrum must be finite and real-valued. Complex
-exponents, including object-array complex scalar aliases, are not
-coerced because Kaplan-Yorke dimension is defined on an ordered real
-Lyapunov spectrum.
+The Lyapunov spectrum must be finite and real-valued. Boolean aliases,
+numeric-string aliases, and complex exponents, including object-array
+complex scalar aliases, are not coerced because Kaplan-Yorke dimension
+is defined on an ordered real Lyapunov spectrum.
 
 ---
 
@@ -171,15 +173,15 @@ integral inputs must provide a finite real one-dimensional
 non-negative epsilon thresholds, integer ``T``/``d`` controls, and
 same-length integer pair-index arrays that stay inside ``[0, T)``
 without self-pairs. Direct Kaplan-Yorke calls accept only finite
-real one-dimensional Lyapunov spectra. Boolean aliases and complex
-payloads are rejected before shared-library, Julia, or subprocess
-execution.
+real one-dimensional Lyapunov spectra. Boolean aliases, numeric-string
+aliases, and complex payloads are rejected before shared-library,
+Julia, or subprocess execution.
 Direct backend outputs are checked before return: correlation-integral
 vectors must match the epsilon count, stay finite, lie in ``[0, 1]``,
 and remain non-decreasing as epsilon grows; Kaplan-Yorke outputs must
 be finite real scalars in ``[0, len(lyapunov_exponents)]``. Object
-arrays containing complex scalar aliases fail the same real-valued
-boundary checks as complex dtypes, before float coercion.
+arrays containing numeric-string or complex scalar aliases fail the same
+boundary checks as string or complex dtypes, before float coercion.
 Those plausibility checks are not the boundary contract by themselves:
 direct Go, Julia, and Mojo calls also recompute the exact NumPy
 Grassberger-Procaccia result for the supplied pair indices and the exact
@@ -243,21 +245,18 @@ warm-up + five measured calls. Reproduce with
 
 | T   | rust (ms) | mojo (ms) | julia (ms) | go (ms) | python (ms) |
 | --- | --------: | --------: | ---------: | ------: | ----------: |
-| 50  |    2.6892 |   54.3128 |     0.9735 |  1.8144 |      0.2983 |
-| 150 |    3.6439 |   54.9813 |     5.4222 | 10.4022 |      1.3629 |
-| 400 |   30.7320 |  168.0808 |    52.9558 | 61.7603 |     12.2240 |
+| 50  |   13.2891 |  103.7628 |     3.8804 |  6.1846 |      1.0712 |
+| 150 |   49.1502 |  171.1865 |    15.1655 | 18.3201 |      3.2572 |
+| 400 |  181.5419 |  409.7201 |    97.1224 | 89.7578 |     13.1647 |
 
 Observations:
 
-* **Python wins at T=50** — the NumPy vector ops fit the whole
-  pair set in registers; ctypes / juliacall call overheads
-  dominate.
-* **Julia wins at T=150** — after `juliacall` warm-up the
-  `@inbounds` loop approaches the Rust kernel.
-* **Rust wins at T=400** — allocation-free iteration over the
-  full pair set pays off.
-* **Go c-shared** is competitive with Rust up to T=150 then falls
-  behind the compiled-release Rust path.
+* **Python wins at T=50, T=150, and T=400** on this host run — the NumPy vector
+  path avoids optional-backend dispatch and cross-language call overhead.
+* **Go c-shared is the fastest optional non-Python backend at T=400**, edging
+  Julia and the Rust wheel after validation overhead.
+* **Julia remains competitive at T=400** once `juliacall` is warm, but the
+  direct Python reference stays faster across the measured sizes.
 * **Mojo** is subprocess-bound at every size.
 
 Raw JSON: `python benchmarks/dimension_benchmark.py --output /tmp/dim_bench.json`.
