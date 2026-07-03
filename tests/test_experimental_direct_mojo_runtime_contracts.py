@@ -19,6 +19,8 @@ from typing import cast
 
 import pytest
 
+import scpn_phase_orchestrator.experimental.accelerators._mojo_runtime as mojo_runtime
+
 MojoExecutableProbe = Callable[[], Path]
 MojoExecutableValidator = Callable[[Path], Path]
 MojoProcessRunner = Callable[..., subprocess.CompletedProcess[str]]
@@ -77,16 +79,40 @@ def test_direct_mojo_bridges_reject_non_executable_artefact(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
-    """Direct Mojo probes must reject a present artefact without execute bits."""
+    """Direct Mojo probes must delegate present artefacts to the runtime guard."""
     module = importlib.import_module(module_name)
     fake_executable = tmp_path / "mojo-backend"
     fake_executable.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
-    fake_executable.chmod(0o600)
+    checked_paths: list[Path] = []
+
+    def reject_executable(executable_path: Path) -> Path:
+        checked_paths.append(executable_path)
+        raise ImportError(
+            f"{executable_path.name} exists at {executable_path} but is not executable"
+        )
 
     monkeypatch.setattr(module, "_EXE_PATH", fake_executable)
-
+    monkeypatch.setattr(module, "require_mojo_executable", reject_executable)
     with pytest.raises(ImportError, match="not executable"):
         _direct_executable_probe(module)()
+    assert checked_paths == [fake_executable]
+
+
+def test_direct_mojo_runtime_probe_rejects_non_executable_artefact(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """The shared Mojo runtime probe must reject denied execution access."""
+    executable = tmp_path / "mojo-backend"
+    executable.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+
+    def deny_access(_path: Path, _mode: int) -> bool:
+        return False
+
+    monkeypatch.setattr(mojo_runtime.os, "access", deny_access)
+
+    with pytest.raises(ImportError, match="not executable"):
+        mojo_runtime.require_mojo_executable(executable)
 
 
 def test_direct_mojo_runtime_probe_accepts_executable_artefact(
