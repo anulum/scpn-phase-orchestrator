@@ -48,7 +48,10 @@ inside `[0, 2*pi)`.
 The public hypergraph dispatcher and Rust wrapper apply the shared hypergraph
 output validator to optional backend returns before publication: mixed-order
 phase vectors must keep oscillator cardinality, contain finite values, and stay
-inside `[0, 2*pi)`.
+inside `[0, 2*pi)`. Public and direct hypergraph state arrays, flat matrix
+buffers, index buffers, hyperedge strengths, scalar controls, step counts, and
+backend outputs also reject numeric-string aliases before Python, NumPy, or
+accelerator coercion.
 The public inertial dispatcher and Rust wrapper apply the shared inertial
 output validator to optional backend returns before publication: swing-equation
 `theta` and `omega_dot` vectors must keep oscillator cardinality and finite

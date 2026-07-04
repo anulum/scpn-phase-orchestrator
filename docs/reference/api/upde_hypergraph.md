@@ -187,6 +187,10 @@ output validator before publishing optional-backend results. Returned phase
 vectors must keep oscillator cardinality, contain only finite real values, and
 remain on the torus in `[0, 2*pi)`; loader/runtime unavailability can still fall
 back to Python, but malformed backend physics evidence raises immediately.
+Public phase/frequency arrays, optional pairwise and phase-lag matrices,
+hyperedge strengths, scalar controls, step counts, direct backend vectors and
+index buffers, optional-backend outputs, and direct Julia raw returns reject
+numeric-string aliases before float or integer coercion.
 
 This avoids Python object overhead and enables zero-copy transfer.
 
@@ -213,6 +217,7 @@ This avoids Python object overhead and enables zero-copy transfer.
 - **Full Rust FFI acceleration** with flat-encoded edge transfer
 - **Direct Go/Julia/Mojo boundary validation** before optional runtime loading
 - **Public optional-backend output validation** before phase vectors publish
+- **Pre-coercion numeric-string rejection** on public and direct boundaries
 - **Order parameter computation** — built-in `order_parameter()` method
 - **step() and run()** — single-step or batch integration
 

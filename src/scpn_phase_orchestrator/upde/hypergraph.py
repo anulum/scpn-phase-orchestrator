@@ -55,6 +55,10 @@ from scpn_phase_orchestrator._compat import TWO_PI
 from scpn_phase_orchestrator.upde import (
     _hypergraph_validation,
 )
+from scpn_phase_orchestrator.upde._hypergraph_validation import (
+    _contains_numeric_string_alias,
+    _is_numeric_string_alias,
+)
 from scpn_phase_orchestrator.upde._julia_runtime import require_juliacall_main
 
 FloatArray = NDArray[np.float64]
@@ -229,6 +233,11 @@ def _dispatch() -> Callable[..., FloatArray] | None:
 
 def _validate_positive_int(value: object, *, name: str) -> int:
     """Return ``value`` as a positive integer, else raise ``ValueError``."""
+    if _is_numeric_string_alias(value):
+        raise ValueError(
+            f"{name} must be >= 1 as a non-boolean integer, "
+            f"not a numeric-string alias, got {value!r}"
+        )
     if isinstance(value, bool) or not isinstance(value, Integral) or value < 1:
         raise ValueError(f"{name} must be >= 1 as a non-boolean integer, got {value!r}")
     return int(value)
@@ -236,6 +245,11 @@ def _validate_positive_int(value: object, *, name: str) -> int:
 
 def _validate_positive_float(value: object, *, name: str) -> float:
     """Return ``value`` as a strictly positive finite float, else raise."""
+    if _is_numeric_string_alias(value):
+        raise ValueError(
+            f"{name} must be positive finite real, "
+            f"not a numeric-string alias, got {value!r}"
+        )
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be positive finite real, got {value!r}")
     coerced = float(value)
@@ -246,6 +260,10 @@ def _validate_positive_float(value: object, *, name: str) -> float:
 
 def _validate_finite_float(value: object, *, name: str) -> float:
     """Return ``value`` as a finite float, else raise ``ValueError``."""
+    if _is_numeric_string_alias(value):
+        raise ValueError(
+            f"{name} must be a finite real, not a numeric-string alias, got {value!r}"
+        )
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be finite real, got {value!r}")
     coerced = float(value)
@@ -261,6 +279,8 @@ def _validate_state_array(
     shape: tuple[int, ...],
 ) -> FloatArray:
     """Return the state as a validated finite array, else raise."""
+    if _contains_numeric_string_alias(value):
+        raise ValueError(f"{name} must not contain numeric-string aliases")
     try:
         arr = np.asarray(value, dtype=np.float64)
     except (TypeError, ValueError) as exc:
@@ -297,10 +317,20 @@ def _validate_hyperedge(edge: Hyperedge, *, n_oscillators: int) -> Hyperedge:
     if len(set(nodes)) != len(nodes):
         raise ValueError("hyperedge nodes must be unique")
     for node in nodes:
+        if _is_numeric_string_alias(node):
+            raise ValueError(
+                f"hyperedge node must be an integer, "
+                f"not a numeric-string alias, got {node!r}"
+            )
         if isinstance(node, bool) or not isinstance(node, Integral):
             raise ValueError(f"hyperedge node must be an integer, got {node!r}")
         if int(node) < 0 or int(node) >= n_oscillators:
             raise ValueError(f"hyperedge node {node!r} outside [0, {n_oscillators})")
+    if _is_numeric_string_alias(edge.strength):
+        raise ValueError(
+            f"hyperedge strength must be finite real, "
+            f"not a numeric-string alias, got {edge.strength!r}"
+        )
     if isinstance(edge.strength, bool) or not isinstance(edge.strength, Real):
         raise ValueError(
             f"hyperedge strength must be finite real, got {edge.strength!r}"

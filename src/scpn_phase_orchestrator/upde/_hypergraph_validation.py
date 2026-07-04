@@ -27,8 +27,43 @@ TWO_PI = 2.0 * np.pi
 __all__ = ["TWO_PI", "validate_hypergraph_inputs", "validate_hypergraph_output"]
 
 
+def _is_string_like(value: object) -> bool:
+    """Return whether ``value`` is a Python or NumPy string scalar."""
+    return isinstance(value, (str, bytes, np.str_, np.bytes_))
+
+
+def _is_numeric_string_alias(value: object) -> bool:
+    """Return whether ``value`` is a string scalar accepted by ``float``."""
+    if not _is_string_like(value):
+        return False
+    text = value.decode() if isinstance(value, (bytes, np.bytes_)) else str(value)
+    if text.strip() == "":
+        return False
+    try:
+        float(text)
+    except ValueError:
+        return False
+    return True
+
+
+def _contains_numeric_string_alias(value: object) -> bool:
+    """Return whether ``value`` contains a stringified numeric scalar."""
+    if _is_numeric_string_alias(value):
+        return True
+    try:
+        array = np.asarray(value)
+    except (TypeError, ValueError):
+        return False
+    if array.dtype.kind not in {"O", "S", "U"}:
+        return False
+    object_array = array.astype(object, copy=False)
+    return any(_is_numeric_string_alias(item) for item in object_array.flat)
+
+
 def _as_real_vector(value: Any, *, name: str) -> FloatArray:
     """Return ``value`` as a validated finite real vector, else raise."""
+    if _contains_numeric_string_alias(value):
+        raise ValueError(f"{name} must not contain numeric-string aliases")
     if contains_boolean_alias(value):
         raise ValueError(f"{name} must be real-valued, not boolean")
     arr = np.asarray(value)
@@ -46,6 +81,8 @@ def _as_real_vector(value: Any, *, name: str) -> FloatArray:
 
 def _as_index_vector(value: Any, *, name: str) -> IntArray:
     """Return ``value`` as a validated integer index vector, else raise."""
+    if _contains_numeric_string_alias(value):
+        raise ValueError(f"{name} must not contain numeric-string aliases")
     if contains_boolean_alias(value):
         raise ValueError(f"{name} must contain non-boolean integer indices")
     arr = np.asarray(value)
@@ -58,6 +95,8 @@ def _as_index_vector(value: Any, *, name: str) -> IntArray:
 
 def _validate_positive_int(value: Any, *, name: str) -> int:
     """Return ``value`` as a positive integer, else raise ``ValueError``."""
+    if _is_numeric_string_alias(value):
+        raise ValueError(f"{name} must not be a numeric-string alias")
     if contains_boolean_alias(value):
         raise ValueError(f"{name} must be a non-boolean integer")
     if not isinstance(value, Integral) or value < 1:
@@ -67,6 +106,8 @@ def _validate_positive_int(value: Any, *, name: str) -> int:
 
 def _validate_non_negative_int(value: Any, *, name: str) -> int:
     """Return ``value`` as a non-negative integer, else raise ``ValueError``."""
+    if _is_numeric_string_alias(value):
+        raise ValueError(f"{name} must not be a numeric-string alias")
     if contains_boolean_alias(value):
         raise ValueError(f"{name} must be a non-boolean integer")
     if not isinstance(value, Integral) or value < 0:
@@ -76,6 +117,8 @@ def _validate_non_negative_int(value: Any, *, name: str) -> int:
 
 def _validate_real_scalar(value: Any, *, name: str) -> float:
     """Return ``value`` as a finite real scalar, else raise ``ValueError``."""
+    if _is_numeric_string_alias(value):
+        raise ValueError(f"{name} must not be a numeric-string alias")
     if contains_boolean_alias(value):
         raise ValueError(f"{name} must be finite real, not boolean")
     if not isinstance(value, Real):

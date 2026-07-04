@@ -484,7 +484,10 @@ Optional hypergraph backends are validated before their results publish:
 returned phase vectors must keep oscillator cardinality, contain finite real
 values, and remain in `[0, 2*pi)`. Loader/runtime unavailability can still fall
 back to Python; malformed backend outputs raise instead of becoming simulation
-evidence.
+evidence. Public phase, frequency, optional matrix, scalar, count, and
+order-parameter inputs, direct backend vectors, index buffers, scalar controls,
+and backend outputs reject numeric-string aliases before Python, NumPy, or
+accelerator coercion.
 
 **Usage:**
 

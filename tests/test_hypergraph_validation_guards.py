@@ -64,6 +64,18 @@ class TestHypergraphInputs:
             ({"phases": np.array([0.1, 0.2])}, "must both have length n"),
             ({"omegas": np.zeros(2)}, "must both have length n"),
             (
+                {"phases": np.array([True, False, True], dtype=object)},
+                "phases must be real-valued, not boolean",
+            ),
+            (
+                {"phases": np.array(["0.1", "0.2", "0.3"])},
+                "phases must not contain numeric-string aliases",
+            ),
+            (
+                {"omegas": np.array(["0.0", "0.1", "0.2"])},
+                "omegas must not contain numeric-string aliases",
+            ),
+            (
                 {"edge_offsets": np.array([0, 1]), "edge_strengths": np.array([1.0])},
                 "equal length",
             ),
@@ -98,7 +110,35 @@ class TestHypergraphInputs:
                 {"edge_nodes": np.array([0.0, 1.0, 2.0])},
                 "edge_nodes must contain non-boolean integer",
             ),
+            (
+                {"edge_nodes": np.array(["0", "1", "2"])},
+                "edge_nodes must not contain numeric-string aliases",
+            ),
+            (
+                {"edge_nodes": np.array([0, True, 2], dtype=object)},
+                "edge_nodes must contain non-boolean integer",
+            ),
+            (
+                {"edge_strengths": np.array(["0.4"])},
+                "edge_strengths must not contain numeric-string aliases",
+            ),
+            (
+                {"knm_flat": np.array(["0.0"] * 9)},
+                "knm_flat must not contain numeric-string aliases",
+            ),
+            (
+                {"alpha_flat": np.array(["0.0"] * 9)},
+                "alpha_flat must not contain numeric-string aliases",
+            ),
+            ({"n": "3"}, "n must not be a numeric-string alias"),
             ({"psi": True}, "psi must be finite real"),
+            ({"psi": "0.0"}, "psi must not be a numeric-string alias"),
+            ({"zeta": "0.0"}, "zeta must not be a numeric-string alias"),
+            ({"zeta": "not numeric"}, "zeta must be finite real"),
+            ({"zeta": " "}, "zeta must be finite real"),
+            ({"dt": "0.01"}, "dt must not be a numeric-string alias"),
+            ({"n_steps": True}, "n_steps must be a non-boolean integer"),
+            ({"n_steps": "10"}, "n_steps must not be a numeric-string alias"),
             ({"edge_nodes": np.array([0, 1, 9])}, "edge_nodes entries must be valid"),
             ({"edge_nodes": np.array([0, 1, 1])}, "must not repeat nodes"),
             ({"edge_offsets": np.array([1])}, "must start at zero"),
@@ -124,6 +164,14 @@ class TestHypergraphOutput:
         [
             (np.array([0.1, 0.2]), "must have length 3"),
             (np.array([0.1, 0.2, 10.0]), r"phases must be in \[0, 2\*pi\)"),
+            (
+                np.array(["0.1", "0.2", "0.3"]),
+                "hypergraph backend output must not contain numeric-string aliases",
+            ),
+            (
+                "0.1",
+                "hypergraph backend output must not contain numeric-string aliases",
+            ),
         ],
     )
     def test_rejects_corrupt_output(self, value: Any, match: str) -> None:

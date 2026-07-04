@@ -8,7 +8,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import pytest
@@ -52,6 +52,7 @@ def test_hypergraph_engine_rejects_invalid_constructor_edges(edge: Hyperedge) ->
         ((0,), 1.0),
         ((0, 0), 1.0),
         ((0, 4), 1.0),
+        ((0, "node"), 1.0),
         ((0, "1"), 1.0),
         ((0, 1), float("inf")),
         ((0, 1), False),
@@ -173,6 +174,68 @@ def test_hypergraph_run_rejects_non_finite_state_arrays(
             pairwise_knm=pairwise_knm,
             alpha=alpha,
         )
+
+
+@pytest.mark.parametrize(
+    ("field", "bad_value", "match"),
+    [
+        ("phases", np.array(["0.0", "0.1", "0.2", "0.3"]), "phases"),
+        ("omegas", np.array(["1.0", "1.1", "1.2", "1.3"]), "omegas"),
+        (
+            "pairwise_knm",
+            np.array(
+                [
+                    ["0.0", "0.1", "0.2", "0.3"],
+                    ["0.1", "0.0", "0.2", "0.3"],
+                    ["0.1", "0.2", "0.0", "0.3"],
+                    ["0.1", "0.2", "0.3", "0.0"],
+                ],
+            ),
+            "pairwise_knm",
+        ),
+        (
+            "alpha",
+            np.array(
+                [
+                    ["0.0", "0.1", "0.2", "0.3"],
+                    ["0.1", "0.0", "0.2", "0.3"],
+                    ["0.1", "0.2", "0.0", "0.3"],
+                    ["0.1", "0.2", "0.3", "0.0"],
+                ],
+            ),
+            "alpha",
+        ),
+    ],
+)
+def test_hypergraph_run_rejects_numeric_string_state_arrays_before_coercion(
+    field: str,
+    bad_value: np.ndarray,
+    match: str,
+) -> None:
+    engine = HypergraphEngine(n_oscillators=4, dt=0.01)
+    values: dict[str, object] = {
+        "phases": np.zeros(4, dtype=np.float64),
+        "omegas": np.ones(4, dtype=np.float64),
+        "pairwise_knm": np.zeros((4, 4), dtype=np.float64),
+        "alpha": np.zeros((4, 4), dtype=np.float64),
+    }
+    values[field] = bad_value
+
+    with pytest.raises(ValueError, match=match):
+        engine.run(
+            cast(Any, values["phases"]),
+            cast(Any, values["omegas"]),
+            n_steps=1,
+            pairwise_knm=cast(Any, values["pairwise_knm"]),
+            alpha=cast(Any, values["alpha"]),
+        )
+
+
+def test_hypergraph_order_parameter_rejects_numeric_string_phases() -> None:
+    engine = HypergraphEngine(n_oscillators=4, dt=0.01)
+
+    with pytest.raises(ValueError, match="phases"):
+        engine.order_parameter(np.array(["0.0", "0.1", "0.2", "0.3"]))
 
 
 @pytest.mark.parametrize(

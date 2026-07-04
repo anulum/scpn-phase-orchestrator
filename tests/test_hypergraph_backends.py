@@ -30,7 +30,10 @@ from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 from numpy.typing import NDArray
 
-from scpn_phase_orchestrator.experimental.accelerators.upde import _hypergraph_mojo
+from scpn_phase_orchestrator.experimental.accelerators.upde import (
+    _hypergraph_julia,
+    _hypergraph_mojo,
+)
 from scpn_phase_orchestrator.experimental.accelerators.upde._hypergraph_go import (
     hypergraph_run_go,
 )
@@ -447,6 +450,37 @@ class TestPublicBackendOutputContracts:
                 n_steps=1,
             )
 
+    def test_run_rejects_optional_backend_numeric_string_output(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        def malformed_backend(
+            _phases: FloatArray,
+            _omegas: FloatArray,
+            _n: int,
+            _edge_nodes: IntArray,
+            _edge_offsets: IntArray,
+            _edge_strengths: FloatArray,
+            _knm_flat: FloatArray,
+            _alpha_flat: FloatArray,
+            _zeta: float,
+            _psi: float,
+            _dt: float,
+            _n_steps: int,
+        ) -> FloatArray:
+            return cast(FloatArray, np.array(["0.1", "0.2"]))
+
+        monkeypatch.setattr(h_mod, "_dispatch", lambda: malformed_backend)
+        engine = HypergraphEngine(2, 0.01)
+        engine.add_edge((0, 1), strength=0.4)
+
+        with pytest.raises(ValueError, match="numeric-string aliases"):
+            engine.run(
+                np.array([0.1, 0.2], dtype=np.float64),
+                np.array([0.3, 0.4], dtype=np.float64),
+                n_steps=1,
+            )
+
     def test_rust_wrapper_rejects_optional_backend_output_outside_torus(
         self,
         monkeypatch: pytest.MonkeyPatch,
@@ -518,6 +552,26 @@ class TestDirectMojoBoundaryContracts:
             _hypergraph_mojo.hypergraph_run_mojo(*_direct_payload())
 
 
+class TestDirectJuliaBoundaryContracts:
+    """Direct Julia bridge validates raw returns before publication."""
+
+    def test_julia_bridge_rejects_numeric_string_raw_output(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        class JuliaModule:
+            def hypergraph_run(
+                self,
+                *_args: object,
+            ) -> list[str]:
+                return ["0.1", "0.2", "0.3", "0.4", "0.5", "0.6"]
+
+        monkeypatch.setattr(_hypergraph_julia, "_ensure", JuliaModule)
+
+        with pytest.raises(ValueError, match="numeric-string aliases"):
+            hypergraph_run_julia(*_direct_payload())
+
+
 class TestDirectBackendBoundaryContracts:
     """Direct Go/Julia/Mojo bridges reject invalid hypergraph payloads early."""
 
@@ -525,9 +579,18 @@ class TestDirectBackendBoundaryContracts:
     @pytest.mark.parametrize(
         "index,replacement",
         [
+            (0, np.array(["0.0", "0.1", "0.2", "0.3", "0.4", "0.5"])),
             (0, np.array([0.0, np.nan], dtype=np.float64)),
+            (1, np.array(["0.0", "0.1", "0.2", "0.3", "0.4", "0.5"])),
             (1, np.array([0.0, 1.0 + 0.1j], dtype=np.complex128)),
             (2, True),
+            (5, np.array(["0.4", "0.25"])),
+            (6, np.array(["0.0"] * 36)),
+            (7, np.array(["0.0"] * 36)),
+            (8, "0.1"),
+            (9, "0.3"),
+            (10, "0.01"),
+            (11, "4"),
             (3, np.array([0, 1, 6], dtype=np.int64)),
             (4, np.array([1], dtype=np.int64)),
             (5, np.array([0.2], dtype=np.float64)),
