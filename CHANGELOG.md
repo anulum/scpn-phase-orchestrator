@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `scpn_phase_orchestrator.monitor.critical_slowing_down` implements the classical
+  critical-slowing-down early-warning indicator (rising variance and lag-one
+  autocorrelation, robust-z alarm) as a passive monitor — the literature baseline
+  detector and the first member of the early-warning detector suite.
+- `bench/early_warning_leadtime.py` is a fair, matched-false-alarm head-to-head
+  between the ordinal-transition-entropy detector and critical slowing down on a
+  controlled inertial-vs-overdamped Kuramoto transition, with a falsification
+  gate. Each detector reads the observable it is designed for and shares the alarm
+  rule, so the comparison isolates the indicator. The tested logic (alarm rule,
+  calibration, lead-time evaluation, verdict) is pinned in
+  `tests/test_early_warning_leadtime.py`.
+
+### Changed
+
+- `bench/competitive_kuramoto.py` is retired as a head-to-head: it compares an
+  active SPO supervisor that changes the dynamics against passive SciPy — a
+  different-task comparison, not a fair benchmark. It now points to the fair
+  early-warning lead-time head-to-head.
+
 ## [0.11.0] - 2026-07-04
 
 ### Added

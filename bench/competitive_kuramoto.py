@@ -8,6 +8,16 @@
 
 """Competitive benchmark: SPO supervisor recovery vs raw SciPy Kuramoto.
 
+.. deprecated::
+   RETIRED as a head-to-head — it is not a fair same-task comparison. The SPO
+   supervisor actively adjusts the coupling ``K`` to restore coherence while raw
+   SciPy relies only on the natural dynamics, so the two solve *different tasks*;
+   the apparent win is the physics change, not a faster solver (a fair passive
+   configuration ties). Kept only as an illustration of the supervisor's effect.
+   For a fair, matched-false-alarm head-to-head on a defined metric see
+   ``bench/early_warning_leadtime.py`` (early-warning lead time, entropy vs
+   critical slowing down).
+
 Measures time-to-recovery (steps until R > 0.7) after a phase perturbation.
 SPO supervisor actively adjusts coupling K to restore coherence, while
 raw SciPy relies only on the natural Kuramoto dynamics.
