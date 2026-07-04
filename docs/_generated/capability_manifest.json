@@ -7,12 +7,12 @@
     "integration_modules": 27,
     "optional_extras": 20,
     "public_api_exports": 24,
-    "public_documentation_pages": 217,
-    "python_package_modules": 687,
+    "public_documentation_pages": 218,
+    "python_package_modules": 688,
     "research_experimental_modules": 201,
-    "runtime_serving_modules": 141,
+    "runtime_serving_modules": 142,
     "rust_kernel_files": 97,
-    "test_files": 766
+    "test_files": 768
   },
   "documentation": {
     "public_pages": [
@@ -232,6 +232,7 @@
       "docs/tutorials/04_differentiable_kuramoto.md",
       "docs/tutorials/05_from_raw_sources_to_run.md",
       "docs/tutorials/06_deterministic_replay_for_debugging.md",
+      "docs/validation/iso_ne_case1_forced_oscillation.md",
       "docs/video_scripts.md"
     ]
   },
@@ -1008,6 +1009,7 @@
       "src/scpn_phase_orchestrator/runtime/ibr_ride_through.py",
       "src/scpn_phase_orchestrator/runtime/network_security.py",
       "src/scpn_phase_orchestrator/runtime/observability.py",
+      "src/scpn_phase_orchestrator/runtime/pmu_ieee_adapter.py",
       "src/scpn_phase_orchestrator/runtime/pmu_ringdown.py",
       "src/scpn_phase_orchestrator/runtime/replay.py",
       "src/scpn_phase_orchestrator/runtime/server.py",
@@ -1559,6 +1561,7 @@
     "src/scpn_phase_orchestrator/runtime/ibr_ride_through.py",
     "src/scpn_phase_orchestrator/runtime/network_security.py",
     "src/scpn_phase_orchestrator/runtime/observability.py",
+    "src/scpn_phase_orchestrator/runtime/pmu_ieee_adapter.py",
     "src/scpn_phase_orchestrator/runtime/pmu_ringdown.py",
     "src/scpn_phase_orchestrator/runtime/replay.py",
     "src/scpn_phase_orchestrator/runtime/server.py",
@@ -2064,6 +2067,7 @@
       "tests/test_integrated_information.py",
       "tests/test_integrated_information_contracts.py",
       "tests/test_inverse.py",
+      "tests/test_iso_ne_case1_real_evidence.py",
       "tests/test_itpc.py",
       "tests/test_itpc_algorithm.py",
       "tests/test_itpc_backends.py",
@@ -2221,6 +2225,7 @@
       "tests/test_plugins_registry_runtime_contracts.py",
       "tests/test_plugins_registry_shared.py",
       "tests/test_plugins_registry_storage_contracts.py",
+      "tests/test_pmu_ieee_adapter.py",
       "tests/test_pmu_ringdown.py",
       "tests/test_poincare.py",
       "tests/test_poincare_algorithm.py",

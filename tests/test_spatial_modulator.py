@@ -271,6 +271,11 @@ class _FakeJuliaSpatialModule:
         return np.array(self.values, dtype=np.float64)
 
 
+class _StringJuliaSpatialModule:
+    def spatial_modulate(self, *_args: object) -> object:
+        return np.array(["0.0", "0.2", "0.2", "0.0"], dtype=object)
+
+
 class _ArrayAliasRejector:
     def __array__(self, dtype: object | None = None) -> object:
         raise TypeError("array alias rejected")
@@ -428,6 +433,35 @@ def test_direct_backend_rejects_invalid_inputs_before_runtime_loading(
         getattr(module, fn_name)(*args)
 
 
+@pytest.mark.parametrize(
+    ("index", "value"),
+    [
+        (0, np.array(["0.0", "0.2", "0.2", "0.0"], dtype=object)),
+        (1, np.array(["0.0", "1.0"], dtype=object)),
+        (2, "2"),
+        (3, "1"),
+        (4, "1.0"),
+        (5, "0"),
+        (6, "1.0"),
+        (7, "1.0"),
+        (8, "1e-12"),
+    ],
+)
+def test_direct_backend_rejects_numeric_string_inputs_before_runtime_loading(
+    monkeypatch: pytest.MonkeyPatch,
+    index: int,
+    value: object,
+) -> None:
+    def forbidden_loader() -> None:
+        raise AssertionError("runtime loader must not be called")
+
+    monkeypatch.setattr(_spatial_modulator_go, "_load_lib", forbidden_loader)
+    args = list(_direct_args())
+    args[index] = value
+    with pytest.raises(ValueError, match="numeric-string"):
+        _spatial_modulator_go.spatial_modulate_go(*args)
+
+
 def test_direct_go_julia_mojo_outputs_are_validated(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -478,6 +512,15 @@ def test_direct_julia_rejects_boolean_output_alias(
     monkeypatch.setattr(_spatial_modulator_julia, "_ensure", _BooleanJuliaSpatialModule)
 
     with pytest.raises(ValueError, match="finite real-valued"):
+        _spatial_modulator_julia.spatial_modulate_julia(*_direct_args())
+
+
+def test_direct_julia_rejects_numeric_string_output_alias(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(_spatial_modulator_julia, "_ensure", _StringJuliaSpatialModule)
+
+    with pytest.raises(ValueError, match="numeric-string"):
         _spatial_modulator_julia.spatial_modulate_julia(*_direct_args())
 
 

@@ -51,6 +51,10 @@ _DECAY_TO_CODE: dict[str, int] = {
     "power_law": 2,
     "inverse_distance": 3,
 }
+_contains_numeric_string_alias = (
+    _spatial_modulator_validation.contains_numeric_string_alias
+)
+_is_numeric_string_alias = _spatial_modulator_validation.is_numeric_string_alias
 
 
 def _contains_boolean_alias(value: object) -> bool:
@@ -83,6 +87,8 @@ def _contains_complex_alias(value: object) -> bool:
 
 def _validate_scalar(value: object, *, name: str, positive: bool = False) -> float:
     """Return ``value`` as a validated finite scalar, else raise."""
+    if _is_numeric_string_alias(value):
+        raise ValueError(f"{name} must not be a numeric-string alias")
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite real scalar")
     resolved = float(value)
@@ -113,6 +119,8 @@ def _validate_positions(value: object) -> FloatArray:
     """Return the oscillator positions as a validated finite array, else raise."""
     if _contains_boolean_alias(value):
         raise ValueError("positions must not contain boolean values")
+    if _contains_numeric_string_alias(value):
+        raise ValueError("positions must not contain numeric-string aliases")
     raw = np.asarray(value)
     if np.iscomplexobj(raw) or _contains_complex_alias(value):
         raise ValueError("positions must be finite real coordinates")
@@ -135,6 +143,8 @@ def _validate_knm_base(value: object, *, expected_n: int | None = None) -> Float
     """Return the base coupling as a validated finite square matrix, else raise."""
     if _contains_boolean_alias(value):
         raise ValueError("k_nm_base must not contain boolean values")
+    if _contains_numeric_string_alias(value):
+        raise ValueError("k_nm_base must not contain numeric-string aliases")
     raw = np.asarray(value)
     if np.iscomplexobj(raw) or _contains_complex_alias(value):
         raise ValueError("k_nm_base must be a finite real square matrix")
@@ -160,6 +170,8 @@ def _validate_distance_matrix(value: object, *, n: int) -> FloatArray:
     """Return the distance matrix as a validated finite array, else raise."""
     if _contains_boolean_alias(value) or _contains_complex_alias(value):
         raise ValueError("distance matrix must be finite real-valued")
+    if _contains_numeric_string_alias(value):
+        raise ValueError("distance matrix must not contain numeric-string aliases")
     try:
         distances = np.asarray(value, dtype=np.float64)
     except (TypeError, ValueError) as exc:

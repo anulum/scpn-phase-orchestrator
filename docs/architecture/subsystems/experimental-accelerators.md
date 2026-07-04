@@ -72,7 +72,10 @@ The public spatial-modulator dispatcher and Rust wrapper, plus the direct Julia
 bridge, apply the shared direct spatial-modulator output validator before
 publication: outputs must keep `N*N` cardinality or matrix shape, contain finite
 real non-boolean values, and preserve the zero self-coupling diagonal before the
-public dispatcher reshapes them for callers.
+public dispatcher reshapes them for callers. Public and direct spatial-modulator
+positions, base-coupling buffers, scalar controls, count/form inputs, optional
+backend outputs, and Julia raw returns also reject numeric-string aliases before
+Python, NumPy, or accelerator coercion.
 The public Hodge dispatcher and Rust wrapper, plus the direct Go, Julia, and
 Mojo bridges, apply the shared Hodge output validator before publication or
 parity fallback: gradient, curl, and harmonic payloads must keep `N*N`

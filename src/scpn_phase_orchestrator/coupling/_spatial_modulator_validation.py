@@ -49,8 +49,42 @@ def _contains_complex_alias(value: object) -> bool:
     return any(isinstance(item, (complex, np.complexfloating)) for item in raw.ravel())
 
 
+def is_numeric_string_alias(value: object) -> bool:
+    """Return whether ``value`` is a string scalar accepted by ``float``."""
+    if not isinstance(value, (str, bytes, np.str_, np.bytes_)):
+        return False
+    if isinstance(value, (bytes, np.bytes_)):
+        text = bytes(value).decode()
+    else:
+        text = str(value)
+    if text.strip() == "":
+        return False
+    try:
+        float(text)
+    except ValueError:
+        return False
+    return True
+
+
+def contains_numeric_string_alias(value: object) -> bool:
+    """Return whether ``value`` contains a stringified numeric scalar."""
+    if is_numeric_string_alias(value):
+        return True
+    try:
+        raw = np.asarray(value)
+    except (TypeError, ValueError):
+        return False
+    if raw.dtype.kind not in {"O", "S", "U"}:
+        return False
+    return any(
+        is_numeric_string_alias(item) for item in raw.astype(object, copy=False).flat
+    )
+
+
 def _validate_positive_int(value: object, *, name: str) -> int:
     """Return ``value`` as a positive integer, else raise ``ValueError``."""
+    if is_numeric_string_alias(value):
+        raise ValueError(f"{name} must not be a numeric-string alias")
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral):
         raise ValueError(f"{name} must be a positive integer")
     parsed = int(value)
@@ -61,6 +95,8 @@ def _validate_positive_int(value: object, *, name: str) -> int:
 
 def _validate_scalar(value: object, *, name: str, positive: bool = False) -> float:
     """Return ``value`` as a validated finite scalar, else raise."""
+    if is_numeric_string_alias(value):
+        raise ValueError(f"{name} must not be a numeric-string alias")
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite real scalar")
     parsed = float(value)
@@ -75,6 +111,8 @@ def _validate_flat(value: object, *, name: str, expected: int) -> FloatArray:
     """Return ``value`` as a validated flattened array, else raise."""
     if _contains_boolean_alias(value) or _contains_complex_alias(value):
         raise ValueError(f"{name} must be finite real-valued")
+    if contains_numeric_string_alias(value):
+        raise ValueError(f"{name} must not contain numeric-string aliases")
     try:
         arr = np.asarray(value, dtype=np.float64)
     except (TypeError, ValueError) as exc:
@@ -100,6 +138,8 @@ def validate_spatial_modulator_inputs(
     """Validate direct backend inputs before optional runtime loading."""
     n_int = _validate_positive_int(n, name="n")
     dim_int = _validate_positive_int(dim, name="dim")
+    if is_numeric_string_alias(decay_form_code):
+        raise ValueError("decay_form_code must not be a numeric-string alias")
     if isinstance(decay_form_code, (bool, np.bool_)) or not isinstance(
         decay_form_code,
         Integral,
@@ -130,6 +170,10 @@ def validate_spatial_modulator_output(value: object, *, n: int) -> FloatArray:
     """Validate direct backend output cardinality and physics invariants."""
     if _contains_boolean_alias(value) or _contains_complex_alias(value):
         raise ValueError("spatial modulator output must be finite real-valued")
+    if contains_numeric_string_alias(value):
+        raise ValueError(
+            "spatial modulator output must not contain numeric-string aliases"
+        )
     try:
         out = np.asarray(value, dtype=np.float64)
     except (TypeError, ValueError) as exc:

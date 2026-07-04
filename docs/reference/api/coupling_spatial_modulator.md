@@ -15,8 +15,9 @@ K'_ij = K_base * K_ij / (1 + ||x_i - x_j||),   K'_ii = 0
 
 The diagonal is always zero because self-coupling is not physical for the
 standard UPDE contract. Inputs must be finite, real-valued, non-boolean arrays;
-base coupling matrices must be square and zero diagonal; distance matrices from
-custom distance functions must be symmetric, non-negative, and zero diagonal.
+numeric-string aliases are rejected before float coercion. Base coupling
+matrices must be square and zero diagonal; distance matrices from custom
+distance functions must be symmetric, non-negative, and zero diagonal.
 
 ## Decay forms
 
@@ -48,12 +49,15 @@ when available backends match the Python reference within the documented
 tolerance.
 
 The public dispatcher and direct accelerator wrappers share the same
-spatial-modulator output validator. Rust wrapper returns and direct Julia returns
-are validated before dtype coercion, so boolean aliases, complex aliases,
-non-finite values, wrong cardinality, and non-zero diagonals are rejected instead
-of being widened into apparently valid float matrices. Public dispatch still
-returns an `(n, n)` matrix to callers; backend fallback is reserved for loader or
-runtime unavailability, not malformed backend physics evidence.
+spatial-modulator output validator. Public positions, base coupling matrices,
+scalar decay controls, direct accelerator counts/forms/flat buffers, Rust
+wrapper returns, optional backend outputs, and direct Julia raw returns are
+validated before dtype coercion, so numeric-string aliases, boolean aliases,
+complex aliases, non-finite values, wrong cardinality, and non-zero diagonals are
+rejected instead of being widened into apparently valid float matrices. Public
+dispatch still returns an `(n, n)` matrix to callers; backend fallback is
+reserved for loader or runtime unavailability, not malformed backend physics
+evidence.
 
 ## Why spatial modulation is an operations control
 

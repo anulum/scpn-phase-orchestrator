@@ -7,16 +7,16 @@
 |---|---:|
 | Package version | 0.10.0 |
 | Public API exports | 24 |
-| Python package modules | 687 |
+| Python package modules | 688 |
 | Core Engine modules | 315 |
-| Runtime/Serving modules | 141 |
+| Runtime/Serving modules | 142 |
 | Integration modules | 27 |
 | Research/Experimental modules | 201 |
 | Domainpack files | 36 |
 | Rust kernel files | 97 |
 | Optional extras | 20 |
-| Python test files | 766 |
-| Public documentation pages | 217 |
+| Python test files | 768 |
+| Public documentation pages | 218 |
 | GitHub Actions workflows | 12 |
 
 Evidence boundary: this snapshot is a static inventory. Performance, coverage, hardware, and scientific-fidelity claims require their own committed evidence artifacts.

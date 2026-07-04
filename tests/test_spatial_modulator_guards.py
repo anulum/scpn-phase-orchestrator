@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import Any, cast
 
 import numpy as np
 import pytest
@@ -39,6 +40,22 @@ class TestScalarAndFormGuards:
         with pytest.raises(ValueError, match="K_base must be a finite real scalar"):
             SpatialCouplingModulator(K_base=True)
 
+    @pytest.mark.parametrize(
+        ("kwargs", "match"),
+        [
+            ({"K_base": "1.0"}, "K_base.*numeric-string"),
+            ({"decay_exponent": "1.0"}, "decay_exponent.*numeric-string"),
+            ({"decay_length_scale": "1.0"}, "decay_length_scale.*numeric-string"),
+            ({"epsilon": "1e-12"}, "epsilon.*numeric-string"),
+        ],
+    )
+    def test_rejects_numeric_string_scalar_controls(
+        self, kwargs: dict[str, object], match: str
+    ) -> None:
+        controls = cast("dict[str, Any]", {"K_base": 1.0} | kwargs)
+        with pytest.raises(ValueError, match=match):
+            SpatialCouplingModulator(**controls)
+
     def test_rejects_non_finite_length_scale(self) -> None:
         with pytest.raises(ValueError, match="decay_length_scale must be finite"):
             SpatialCouplingModulator(K_base=1.0, decay_length_scale=float("inf"))
@@ -54,6 +71,11 @@ class TestScalarAndFormGuards:
 
 class TestPositionGuards:
     """``_validate_positions`` reached through ``modulation_matrix``."""
+
+    def test_rejects_numeric_string_positions(self) -> None:
+        modulator = SpatialCouplingModulator(K_base=1.0)
+        with pytest.raises(ValueError, match="positions.*numeric-string"):
+            modulator.modulation_matrix(np.array(["0.0", "1.0"], dtype=object))
 
     def test_rejects_boolean_positions(self) -> None:
         modulator = SpatialCouplingModulator(K_base=1.0)
@@ -83,6 +105,12 @@ class TestPositionGuards:
 
 class TestKnmBaseGuards:
     """``_validate_knm_base`` reached through ``modulate``."""
+
+    def test_rejects_numeric_string_base(self) -> None:
+        modulator = SpatialCouplingModulator(K_base=1.0)
+        base = np.array([["0.0", "1.0"], ["1.0", "0.0"]], dtype=object)
+        with pytest.raises(ValueError, match="k_nm_base.*numeric-string"):
+            modulator.modulate(base, _POSITIONS)
 
     def test_rejects_boolean_base(self) -> None:
         modulator = SpatialCouplingModulator(K_base=1.0)
@@ -114,6 +142,16 @@ class TestKnmBaseGuards:
 
 class TestDistanceMatrixGuards:
     """``_validate_distance_matrix`` reached through a custom distance kernel."""
+
+    def test_rejects_numeric_string_distance_matrix(self) -> None:
+        modulator = SpatialCouplingModulator(
+            K_base=1.0,
+            distance_fn=_const_distance_fn(
+                np.array([["0.0", "1.0"], ["1.0", "0.0"]], dtype=object)
+            ),
+        )
+        with pytest.raises(ValueError, match="distance matrix.*numeric-string"):
+            modulator.distance_matrix(_POSITIONS)
 
     def test_rejects_complex_distance_matrix(self) -> None:
         modulator = SpatialCouplingModulator(
@@ -207,6 +245,12 @@ class TestPythonDecayWeights:
 
 class TestBackendOutputContract:
     """``_validate_backend_output`` guards untrusted compute-backend output."""
+
+    def test_rejects_numeric_string_output(self) -> None:
+        with pytest.raises(ValueError, match="numeric-string"):
+            _validate_backend_output(
+                np.array(["0.0", "0.5", "0.5", "0.0"], dtype=object), n=2
+            )
 
     def test_rejects_complex_output(self) -> None:
         with pytest.raises(ValueError, match="finite real-valued"):
