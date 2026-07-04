@@ -111,8 +111,12 @@ disk, `R` must match `|z|`, and `psi` must match `atan2(Im(z), Re(z))` for
 non-zero radius.
 The public envelope dispatcher now applies its direct accelerator output
 validators to optional backend returns before publication: RMS-envelope vectors
-must keep input cardinality, finite values, and non-negative values, while
-modulation depth must be a finite scalar in `[0, 1]`.
+must keep input cardinality, finite values, non-negative values, and no
+numeric-string aliases, while modulation depth must be a finite scalar in
+`[0, 1]` with the same numeric-string alias rejection. Public amplitude and
+envelope inputs, the `window` control, and the direct Go, Julia, and Mojo
+bridge inputs share that pre-coercion alias boundary before optional runtime
+loading.
 Direct Koopman-EDMD Go, Julia, and Mojo bridges apply the shared EDMD backend
 validator before and after execution: snapshot matrices and returned `(A, B, C)`
 payloads must be finite real non-boolean numeric matrices, reject complex and

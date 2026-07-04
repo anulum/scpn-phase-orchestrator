@@ -51,6 +51,28 @@ class TestExtractEnvelope:
         with pytest.raises(ValueError, match="finite"):
             extract_envelope(amp, window=2)
 
+    @pytest.mark.parametrize(
+        "amplitudes",
+        [
+            np.array(["1.0", "2.0", "3.0"], dtype=object),
+            np.array([["1.0", "2.0"], ["3.0", "4.0"]], dtype=np.str_),
+        ],
+    )
+    def test_numeric_string_amplitudes_rejected_before_float_coercion(
+        self,
+        amplitudes: np.ndarray,
+    ) -> None:
+        with pytest.raises(ValueError, match="numeric-string"):
+            extract_envelope(amplitudes, window=2)
+
+    @pytest.mark.parametrize("window", ["2", np.str_("2")])
+    def test_numeric_string_window_rejected_before_integer_coercion(
+        self,
+        window: object,
+    ) -> None:
+        with pytest.raises(ValueError, match="numeric-string"):
+            extract_envelope(np.array([1.0, 2.0, 3.0]), window=window)  # type: ignore[arg-type]
+
     def test_rms_values_nonnegative(self) -> None:
         rng = np.random.default_rng(0)
         amp = rng.standard_normal(200)
@@ -150,6 +172,20 @@ class TestEnvelopeModulationDepth:
 
     def test_empty_returns_zero(self) -> None:
         assert envelope_modulation_depth(np.array([])) == 0.0
+
+    @pytest.mark.parametrize(
+        "envelope",
+        [
+            np.array(["0.1", "0.2"], dtype=object),
+            np.array(["0.1", "0.2"], dtype=np.str_),
+        ],
+    )
+    def test_numeric_string_envelope_rejected_before_float_coercion(
+        self,
+        envelope: np.ndarray,
+    ) -> None:
+        with pytest.raises(ValueError, match="numeric-string"):
+            envelope_modulation_depth(envelope)
 
     def test_all_zeros_returns_zero(self) -> None:
         assert envelope_modulation_depth(np.zeros(10)) == 0.0

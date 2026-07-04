@@ -26,6 +26,9 @@ from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
 from scpn_phase_orchestrator.experimental.accelerators.upde import (
+    _envelope_julia as envelope_julia_mod,
+)
+from scpn_phase_orchestrator.experimental.accelerators.upde import (
     _envelope_mojo as envelope_mojo_mod,
 )
 from scpn_phase_orchestrator.experimental.accelerators.upde._envelope_go import (
@@ -102,6 +105,35 @@ def _amps(seed: int, n: int = 500) -> np.ndarray:
     return np.abs(np.random.default_rng(seed).normal(1.0, 0.3, n))
 
 
+class _FakeJuliaEnvelopeModule:
+    def __init__(
+        self,
+        *,
+        extract_output: object,
+        modulation_output: object,
+    ) -> None:
+        """Create a minimal Julia envelope module stand-in."""
+        self.extract_output = extract_output
+        self.modulation_output = modulation_output
+
+    def extract_envelope(self, amps: np.ndarray, window: int) -> object:
+        """Return the configured extraction payload."""
+        assert amps.flags.c_contiguous
+        assert window == 2
+        return self.extract_output
+
+    def envelope_modulation_depth(self, env: np.ndarray) -> object:
+        """Return the configured modulation-depth payload."""
+        assert env.flags.c_contiguous
+        return self.modulation_output
+
+
+class _ArrayConversionFailure:
+    def __array__(self, dtype: object | None = None) -> np.ndarray:
+        """Raise during NumPy coercion to exercise defensive helper paths."""
+        raise TypeError("array conversion failed")
+
+
 class TestDirectBackendBoundaryContracts:
     @pytest.mark.parametrize("backend", DIRECT_EXTRACT_BACKENDS)
     @pytest.mark.parametrize(
@@ -143,6 +175,99 @@ class TestDirectBackendBoundaryContracts:
     ) -> None:
         with pytest.raises((TypeError, ValueError)):
             backend(env)
+
+    @pytest.mark.parametrize("backend", DIRECT_EXTRACT_BACKENDS)
+    @pytest.mark.parametrize(
+        ("amps", "window"),
+        [
+            (np.array(["1.0", "2.0", "3.0"], dtype=object), 2),
+            (np.array(["1.0", "2.0", "3.0"], dtype=np.str_), 2),
+            (np.ones(4, dtype=np.float64), "2"),
+            (np.ones(4, dtype=np.float64), np.str_("2")),
+        ],
+    )
+    def test_extract_numeric_string_inputs_fail_before_optional_runtime_loading(
+        self,
+        backend: ExtractBackend,
+        amps: np.ndarray,
+        window: object,
+    ) -> None:
+        with pytest.raises(ValueError, match="numeric-string"):
+            backend(amps, window)  # type: ignore[arg-type]
+
+    @pytest.mark.parametrize("backend", DIRECT_MOD_BACKENDS)
+    @pytest.mark.parametrize(
+        "env",
+        [
+            np.array(["0.1", "0.2"], dtype=object),
+            np.array(["0.1", "0.2"], dtype=np.str_),
+        ],
+    )
+    def test_mod_numeric_string_inputs_fail_before_optional_runtime_loading(
+        self,
+        backend: ModBackend,
+        env: np.ndarray,
+    ) -> None:
+        with pytest.raises(ValueError, match="numeric-string"):
+            backend(env)
+
+    def test_extract_output_validator_rejects_numeric_string_aliases(self) -> None:
+        with pytest.raises(ValueError, match="numeric-string"):
+            envelope_validation.validate_extract_envelope_output(
+                np.array(["0.5", "0.6"], dtype=object),
+                n=2,
+            )
+
+    def test_mod_output_validator_rejects_numeric_string_aliases(self) -> None:
+        with pytest.raises(ValueError, match="numeric-string"):
+            envelope_validation.validate_envelope_modulation_output("0.25")
+
+    @pytest.mark.parametrize("value", ["", "   ", "not-a-number"])
+    def test_numeric_string_helper_ignores_non_numeric_text(self, value: str) -> None:
+        assert not envelope_validation._contains_numeric_string_alias(value)
+
+    def test_numeric_string_helper_tolerates_array_conversion_failure(self) -> None:
+        assert not envelope_validation._contains_numeric_string_alias(
+            _ArrayConversionFailure()
+        )
+
+    def test_vector_validator_preserves_nonnumeric_string_type_error(self) -> None:
+        with pytest.raises(TypeError, match="amps must be numeric"):
+            envelope_validation.validate_extract_envelope_input(
+                np.array(["not-a-number"], dtype=object),
+                2,
+            )
+
+    def test_private_vector_validator_rejects_disallowed_empty_vector(self) -> None:
+        with pytest.raises(ValueError, match="must not be empty"):
+            envelope_validation._as_finite_vector(
+                np.array([], dtype=np.float64),
+                name="amps",
+                allow_empty=False,
+            )
+
+    def test_window_validator_preserves_nonnumeric_type_error(self) -> None:
+        with pytest.raises(TypeError, match="window must be an integer"):
+            envelope_validation.validate_extract_envelope_input(
+                np.ones(4, dtype=np.float64),
+                2.5,  # type: ignore[arg-type]
+            )
+
+    @pytest.mark.parametrize(
+        "value",
+        [
+            True,
+            0.25 + 0.0j,
+            np.array([0.1, 0.2], dtype=np.float64),
+            float("nan"),
+        ],
+    )
+    def test_mod_output_validator_preserves_non_string_rejections(
+        self,
+        value: object,
+    ) -> None:
+        with pytest.raises((TypeError, ValueError)):
+            envelope_validation.validate_envelope_modulation_output(value)
 
     @pytest.mark.parametrize("backend", DIRECT_EXTRACT_BACKENDS)
     def test_extract_empty_returns_empty_without_optional_runtime(
@@ -222,6 +347,37 @@ class TestDirectBackendBoundaryContracts:
                 "MOD 1 0.5\n",
                 expected_count=expected_count,
                 label=label,
+            )
+
+    def test_julia_extract_validates_raw_output_before_float_coercion(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        fake_module = _FakeJuliaEnvelopeModule(
+            extract_output=np.array(["0.5", "0.6", "0.7"], dtype=object),
+            modulation_output=0.25,
+        )
+        monkeypatch.setattr(envelope_julia_mod, "_ensure", lambda: fake_module)
+
+        with pytest.raises(ValueError, match="numeric-string"):
+            envelope_julia_mod.extract_envelope_julia(
+                np.array([1.0, 2.0, 3.0], dtype=np.float64),
+                2,
+            )
+
+    def test_julia_mod_validates_raw_output_before_float_coercion(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        fake_module = _FakeJuliaEnvelopeModule(
+            extract_output=np.array([0.5, 0.6, 0.7], dtype=np.float64),
+            modulation_output="0.25",
+        )
+        monkeypatch.setattr(envelope_julia_mod, "_ensure", lambda: fake_module)
+
+        with pytest.raises(ValueError, match="numeric-string"):
+            envelope_julia_mod.envelope_modulation_depth_julia(
+                np.array([0.5, 0.6, 0.7], dtype=np.float64)
             )
 
 
@@ -396,6 +552,51 @@ class TestBackendTypingContracts:
 
 
 class TestBackendLoaderContracts:
+    def test_julia_loader_returns_cached_module(self, monkeypatch) -> None:
+        cached = object()
+        monkeypatch.setattr(envelope_julia_mod, "_JULIA_MODULE", cached)
+
+        assert envelope_julia_mod._ensure() is cached
+
+    def test_julia_loader_rejects_missing_side_file(
+        self, monkeypatch, tmp_path
+    ) -> None:
+        monkeypatch.setattr(envelope_julia_mod, "_JULIA_MODULE", None)
+        monkeypatch.setattr(
+            envelope_julia_mod,
+            "require_julia_main",
+            lambda: types.SimpleNamespace(),
+        )
+        monkeypatch.setattr(envelope_julia_mod, "_JULIA_FILE", tmp_path / "missing.jl")
+
+        with pytest.raises(ImportError, match="julia side-file not found"):
+            envelope_julia_mod._ensure()
+
+    def test_julia_loader_includes_side_file_and_caches_module(
+        self,
+        monkeypatch,
+        tmp_path,
+    ) -> None:
+        module = object()
+        included: list[str] = []
+        julia_file = tmp_path / "envelope.jl"
+        julia_file.write_text("module EnvelopeJL\nend\n", encoding="utf-8")
+        fake_main = types.SimpleNamespace(
+            EnvelopeJL=module,
+            include=lambda path: included.append(path),
+        )
+        monkeypatch.setattr(envelope_julia_mod, "_JULIA_MODULE", None)
+        monkeypatch.setattr(
+            envelope_julia_mod,
+            "require_julia_main",
+            lambda: fake_main,
+        )
+        monkeypatch.setattr(envelope_julia_mod, "_JULIA_FILE", julia_file)
+
+        assert envelope_julia_mod._ensure() is module
+        assert included == [str(julia_file)]
+        assert envelope_julia_mod._JULIA_MODULE is module
+
     def test_rust_loader_flattens_inputs_and_returns_float64(self, monkeypatch) -> None:
         calls = {}
 

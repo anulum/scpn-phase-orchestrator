@@ -60,12 +60,9 @@ def extract_envelope_julia(amps: FloatArray, window: int) -> FloatArray:
         return np.full(a.size, rms, dtype=np.float64)
     jl = _ensure()
     return validate_extract_envelope_output(
-        np.asarray(
-            jl.extract_envelope(
-                a,
-                window_i,
-            ),
-            dtype=np.float64,
+        jl.extract_envelope(
+            a,
+            window_i,
         ),
         n=int(a.size),
     )

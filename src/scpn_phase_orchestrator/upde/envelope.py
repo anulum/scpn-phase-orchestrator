@@ -32,6 +32,8 @@ import numpy as np
 from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.upde._envelope_validation import (
+    _contains_numeric_string_alias,
+    _is_numeric_string_alias,
     validate_envelope_modulation_output,
     validate_extract_envelope_output,
 )
@@ -238,6 +240,10 @@ def extract_envelope(
     ValueError
         If ``window`` is not a positive integer no larger than the history.
     """
+    if _contains_numeric_string_alias(amplitudes_history):
+        raise ValueError("amplitudes_history must not contain numeric-string aliases")
+    if _is_numeric_string_alias(window):
+        raise ValueError("window must not be a numeric-string alias")
     amplitudes = np.asarray(amplitudes_history, dtype=np.float64)
     if amplitudes.size == 0:
         return amplitudes.copy()
@@ -288,6 +294,8 @@ def envelope_modulation_depth(envelope: FloatArray) -> float:
     float
         The modulation depth ``(max − min) / (max + min)`` in ``[0, 1]``.
     """
+    if _contains_numeric_string_alias(envelope):
+        raise ValueError("envelope must not contain numeric-string aliases")
     if envelope.size == 0:
         return 0.0
     backend_fn = _dispatch("mod")

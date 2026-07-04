@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TypeAlias
 
 import numpy as np
@@ -54,6 +55,35 @@ def _install_optional_backend(
     monkeypatch.setattr(envelope_mod, "_LOADERS", {"rust": load_backend})
 
 
+def _install_raw_optional_backend(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    extract_output: object,
+    modulation_output: object,
+) -> None:
+    """Install an optional backend that returns raw, unnormalised payloads."""
+
+    def extract_backend(_amps: FloatArray, _window: int) -> object:
+        """Return the raw configured RMS-envelope payload."""
+        return extract_output
+
+    def modulation_backend(_env: FloatArray) -> object:
+        """Return the raw configured modulation-depth payload."""
+        return modulation_output
+
+    def load_backend() -> dict[str, object]:
+        """Return the raw optional backend callables."""
+        return {
+            "extract": extract_backend,
+            "mod": modulation_backend,
+        }
+
+    monkeypatch.setattr(envelope_mod, "_BACKEND_CACHE", {})
+    monkeypatch.setattr(envelope_mod, "ACTIVE_BACKEND", "rust")
+    monkeypatch.setattr(envelope_mod, "AVAILABLE_BACKENDS", ["rust", "python"])
+    monkeypatch.setattr(envelope_mod, "_LOADERS", {"rust": load_backend})
+
+
 def test_public_extract_rejects_nonphysical_optional_output(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -82,6 +112,20 @@ def test_public_extract_rejects_wrong_length_optional_output(
         extract_envelope(np.array([1.0, 2.0, 3.0], dtype=np.float64), window=2)
 
 
+def test_public_extract_rejects_numeric_string_optional_output(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Reject optional backend RMS-envelope numeric-string aliases."""
+    _install_raw_optional_backend(
+        monkeypatch,
+        extract_output=np.array(["0.5", "0.6", "0.7"], dtype=object),
+        modulation_output=0.25,
+    )
+
+    with pytest.raises(ValueError, match="numeric-string"):
+        extract_envelope(np.array([1.0, 2.0, 3.0], dtype=np.float64), window=2)
+
+
 def test_public_modulation_rejects_out_of_range_optional_output(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -93,6 +137,20 @@ def test_public_modulation_rejects_out_of_range_optional_output(
     )
 
     with pytest.raises(ValueError, match="modulation depth must lie in \\[0, 1\\]"):
+        envelope_modulation_depth(np.array([0.5, 0.6, 0.7], dtype=np.float64))
+
+
+def test_public_modulation_rejects_numeric_string_optional_output(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Reject optional backend modulation-depth numeric-string aliases."""
+    _install_raw_optional_backend(
+        monkeypatch,
+        extract_output=np.array([0.5, 0.6, 0.7], dtype=np.float64),
+        modulation_output="0.25",
+    )
+
+    with pytest.raises(ValueError, match="numeric-string"):
         envelope_modulation_depth(np.array([0.5, 0.6, 0.7], dtype=np.float64))
 
 
@@ -162,3 +220,20 @@ def test_public_modulation_non_positive_python_floor_returns_zero(
     monkeypatch.setattr(envelope_mod, "_dispatch", lambda _fn_name: None)
 
     assert envelope_modulation_depth(np.array([-3.0, -1.0], dtype=np.float64)) == 0.0
+
+
+def test_envelope_reference_docs_pin_numeric_string_contracts() -> None:
+    """Keep API and architecture docs aligned with envelope alias guards."""
+    repo_root = Path(__file__).resolve().parents[1]
+    upde_envelope = (repo_root / "docs/reference/api/upde_envelope.md").read_text(
+        encoding="utf-8"
+    )
+    upde = (repo_root / "docs/reference/api/upde.md").read_text(encoding="utf-8")
+    accelerators = (
+        repo_root / "docs/architecture/subsystems/experimental-accelerators.md"
+    ).read_text(encoding="utf-8")
+    roadmap = (repo_root / "docs/roadmap.md").read_text(encoding="utf-8")
+
+    for document in (upde_envelope, upde, accelerators, roadmap):
+        assert "envelope" in document.lower()
+        assert "numeric-string" in document

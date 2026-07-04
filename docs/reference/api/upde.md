@@ -366,8 +366,11 @@ Amplitude envelope extraction and numerical integration utilities
 (DP54 coefficients, error estimation, step size control).
 The public envelope dispatcher validates optional backend RMS-envelope outputs
 before publication: extracted envelopes must keep input cardinality, remain
-finite, and stay non-negative; modulation-depth outputs must be finite scalars
-inside `[0, 1]`. Loader/runtime failures still fall through to the Python floor.
+finite, stay non-negative, and reject numeric-string aliases before coercion;
+modulation-depth outputs must be finite scalars inside `[0, 1]` and reject
+numeric-string aliases as well. Public amplitude/envelope inputs and `window`
+share the same alias boundary. Loader/runtime failures still fall through to
+the Python floor.
 **Detailed documentation:** [Envelope (RMS) — detailed reference](upde_envelope.md)
 
 ::: scpn_phase_orchestrator.upde.envelope

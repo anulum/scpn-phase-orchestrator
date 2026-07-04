@@ -346,23 +346,28 @@ pub fn envelope_modulation_depth(envelope: &[f64]) -> f64
 
 Direct Go, Julia, and Mojo accelerator entrypoints share the same boundary
 contract before optional runtime loading: extraction inputs must be finite real
-one-dimensional `float64` vectors and `window` must be a positive integer;
-modulation-depth inputs must be finite real one-dimensional vectors. Empty
-inputs return the documented empty vector or `0.0` without loading optional
-runtimes. For `window >= len(amplitudes)`, direct extraction returns the global
-RMS replicated over the output vector, matching the public NumPy path and
-avoiding backend-specific edge-case drift. Backend extraction outputs must be
-finite non-negative vectors with the same length as the input; backend
-modulation-depth outputs must be finite scalars in `[0, 1]`. The direct Mojo
-subprocess bridge additionally requires exact raw stdout cardinality: one
-finite scalar line per extracted envelope sample for `RMS` and exactly one
-finite scalar line for `MOD`; blank, truncated, overlong, non-numeric, and
-non-finite output is rejected before public validators run.
+one-dimensional `float64` vectors, numeric-string aliases are rejected before
+float coercion, and `window` must be a positive integer rather than a
+stringified count; modulation-depth inputs must be finite real one-dimensional
+vectors with the same numeric-string alias rejection. Empty inputs return the
+documented empty vector or `0.0` without loading optional runtimes. For
+`window >= len(amplitudes)`, direct extraction returns the global RMS replicated
+over the output vector, matching the public NumPy path and avoiding
+backend-specific edge-case drift. Backend extraction outputs must be finite
+non-negative vectors with the same length as the input and no numeric-string
+aliases; backend modulation-depth outputs must be finite scalars in `[0, 1]`
+and no numeric-string aliases. The direct Mojo subprocess bridge additionally
+requires exact raw stdout cardinality: one finite scalar line per extracted
+envelope sample for `RMS` and exactly one finite scalar line for `MOD`; blank,
+truncated, overlong, non-numeric, and non-finite output is rejected before
+public validators run.
 
 The public `extract_envelope()` and `envelope_modulation_depth()` dispatchers
 apply the same output contract to optional backend returns before exposing
-results: RMS-envelope payloads must be finite, non-negative, and exactly as long
-as the submitted 1-D input, while modulation depth must be a finite scalar in
+results: public amplitude/envelope inputs, `window`, RMS-envelope payloads, and
+modulation-depth payloads reject numeric-string aliases before coercion;
+RMS-envelope payloads must also be finite, non-negative, and exactly as long as
+the submitted 1-D input, while modulation depth must be a finite scalar in
 `[0, 1]`. Optional backend loader/runtime unavailability still falls through to
 the Python implementation; malformed backend physics payloads fail closed.
 
