@@ -77,11 +77,14 @@ positions, base-coupling buffers, scalar controls, count/form inputs, optional
 backend outputs, and Julia raw returns also reject numeric-string aliases before
 Python, NumPy, or accelerator coercion.
 The public Hodge dispatcher and Rust wrapper, plus the direct Go, Julia, and
-Mojo bridges, apply the shared Hodge output validator before publication or
-parity fallback: gradient, curl, and harmonic payloads must keep `N*N`
-cardinality or `(N, N)` matrix shape, contain finite real non-boolean values,
-and remain antisymmetric. Malformed backend outputs raise immediately, while
-validated numerical parity mismatches still fall back to the NumPy reference.
+Mojo bridges, reject numeric-string aliases before Python, NumPy, or
+accelerator coercion for public coupling/phase/triangle inputs, direct count and
+flattened simplex inputs, backend outputs, and Julia raw returns. They also
+apply the shared Hodge output validator before publication or parity fallback:
+gradient, curl, and harmonic payloads must keep `N*N` cardinality or `(N, N)`
+matrix shape, contain finite real non-boolean values, and remain antisymmetric.
+Malformed backend outputs raise immediately, while validated numerical parity
+mismatches still fall back to the NumPy reference.
 The public spectral dispatcher, plus the direct Go, Julia, and Mojo bridges,
 apply the shared spectral output validator before publication: eigensystem
 payloads must contain finite real non-boolean eigenvalue and Fiedler vectors of

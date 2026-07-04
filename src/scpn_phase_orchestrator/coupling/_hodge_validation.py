@@ -20,7 +20,12 @@ FloatArray: TypeAlias = NDArray[np.float64]
 IntArray: TypeAlias = NDArray[np.int64]
 HodgeTuple: TypeAlias = tuple[FloatArray, FloatArray, FloatArray]
 
-__all__ = ["validate_hodge_backend_inputs", "validate_hodge_backend_output"]
+__all__ = [
+    "contains_numeric_string_alias",
+    "is_numeric_string_alias",
+    "validate_hodge_backend_inputs",
+    "validate_hodge_backend_output",
+]
 
 
 def _contains_boolean_alias(value: object) -> bool:
@@ -54,8 +59,45 @@ def _contains_complex_alias(value: object) -> bool:
     return any(isinstance(item, (complex, np.complexfloating)) for item in raw.flat)
 
 
+def is_numeric_string_alias(value: object) -> bool:
+    """Return whether ``value`` is a string scalar accepted by ``float``."""
+    if not isinstance(value, (str, bytes, np.str_, np.bytes_)):
+        return False
+    try:
+        if isinstance(value, (bytes, np.bytes_)):
+            text = bytes(value).decode()
+        else:
+            text = str(value)
+    except UnicodeDecodeError:
+        return False
+    if text.strip() == "":
+        return False
+    try:
+        float(text)
+    except ValueError:
+        return False
+    return True
+
+
+def contains_numeric_string_alias(value: object) -> bool:
+    """Return whether ``value`` contains a stringified numeric scalar."""
+    if is_numeric_string_alias(value):
+        return True
+    try:
+        raw = np.asarray(value)
+    except (TypeError, ValueError):
+        return False
+    if raw.dtype.kind not in {"O", "S", "U"}:
+        return False
+    return any(
+        is_numeric_string_alias(item) for item in raw.astype(object, copy=False).flat
+    )
+
+
 def _validate_n(value: object) -> int:
     """Return the validated oscillator count, else raise."""
+    if is_numeric_string_alias(value):
+        raise ValueError("n must not be a numeric-string alias")
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral):
         raise ValueError("n must be a non-negative integer")
     n_int = int(value)
@@ -68,6 +110,8 @@ def _validate_float_vector(value: object, *, name: str) -> FloatArray:
     """Return ``value`` as a validated finite float vector, else raise."""
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
+    if contains_numeric_string_alias(value):
+        raise ValueError(f"{name} must not contain numeric-string aliases")
     raw = np.asarray(value)
     if np.iscomplexobj(raw) or _contains_complex_alias(value):
         raise ValueError(f"{name} must be real-valued")
@@ -95,6 +139,8 @@ def _validate_simplex_array(
     """Validate a flattened simplex index array (edges or triangles)."""
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
+    if contains_numeric_string_alias(value):
+        raise ValueError(f"{name} must not contain numeric-string aliases")
     raw = np.asarray(value)
     if np.iscomplexobj(raw):
         raise ValueError(f"{name} must be integer-valued")
@@ -113,6 +159,8 @@ def _validate_simplex_array(
 
 def _validate_count(value: object, *, name: str) -> int:
     """Return the validated element count, else raise."""
+    if is_numeric_string_alias(value):
+        raise ValueError(f"{name} must not be a numeric-string alias")
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral):
         raise ValueError(f"{name} must be a non-negative integer")
     count = int(value)
@@ -162,6 +210,8 @@ def _validate_output_matrix(value: object, *, n: int) -> FloatArray:
     """Return one validated backend flow matrix."""
     if _contains_boolean_alias(value) or _contains_complex_alias(value):
         raise ValueError("Hodge backend output must be finite real-valued")
+    if contains_numeric_string_alias(value):
+        raise ValueError("Hodge backend output must not contain numeric-string aliases")
     try:
         raw = np.asarray(value, dtype=np.float64)
     except (TypeError, ValueError) as exc:

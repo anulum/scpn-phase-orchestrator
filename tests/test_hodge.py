@@ -20,6 +20,20 @@ def _symmetric_coupling(n: int, k: float = 1.0) -> np.ndarray:
     return knm
 
 
+class _ArrayProtocolSwitch:
+    """Expose different arrays for object-probe and numeric coercion paths."""
+
+    def __init__(self, object_array: np.ndarray, numeric_array: np.ndarray) -> None:
+        self._object_array = object_array
+        self._numeric_array = numeric_array
+
+    def __array__(self, dtype: object = None) -> np.ndarray:
+        """Return the probe array for object dtype and the numeric array otherwise."""
+        if dtype is not None and np.dtype(dtype) == np.dtype(object):
+            return self._object_array
+        return self._numeric_array
+
+
 class TestHodgeDecomposition:
     def test_returns_hodge_result_dataclass(self):
         res = hodge_decomposition(_symmetric_coupling(3), np.zeros(3))
@@ -119,6 +133,132 @@ class TestHodgeDecomposition:
         knm = [[0.0, True], [0.0, 0.0]]
         with pytest.raises(ValueError, match="knm must not contain boolean"):
             hodge_decomposition(knm, phases)
+
+    def test_numeric_string_phase_alias_is_rejected(self):
+        knm = np.zeros((2, 2), dtype=np.float64)
+        with pytest.raises(ValueError, match="phases.*numeric-string"):
+            hodge_decomposition(knm, np.array(["0.0", "0.5"], dtype=object))
+
+    def test_numeric_string_coupling_alias_is_rejected(self):
+        phases = np.array([0.0, 0.5], dtype=np.float64)
+        knm = np.array([[0.0, "1.0"], ["1.0", 0.0]], dtype=object)
+        with pytest.raises(ValueError, match="knm.*numeric-string"):
+            hodge_decomposition(knm, phases)
+
+    def test_numeric_string_triangle_node_alias_is_rejected(self):
+        phases = np.array([0.0, 0.5, 1.0], dtype=np.float64)
+        knm = _symmetric_coupling(3)
+        with pytest.raises(ValueError, match="triangle node.*numeric-string"):
+            hodge_decomposition(knm, phases, triangles=[["0", 1, 2]])
+
+    def test_phase_object_with_bool_numeric_dtype_is_rejected(self):
+        knm = np.zeros((2, 2), dtype=np.float64)
+        phases = _ArrayProtocolSwitch(
+            object_array=np.array([0.0, 1.0], dtype=object),
+            numeric_array=np.array([True, False], dtype=bool),
+        )
+        with pytest.raises(ValueError, match="phases must not contain boolean"):
+            hodge_decomposition(knm, phases)
+
+    def test_phase_cast_failure_is_rejected(self):
+        knm = np.zeros((2, 2), dtype=np.float64)
+        phases = np.array(["left", object()], dtype=object)
+        with pytest.raises(ValueError, match="phases must be a finite 1-D"):
+            hodge_decomposition(knm, phases)
+
+    def test_phase_matrix_is_rejected(self):
+        knm = np.zeros((2, 2), dtype=np.float64)
+        phases = np.zeros((1, 2), dtype=np.float64)
+        with pytest.raises(ValueError, match="phases must be a finite 1-D"):
+            hodge_decomposition(knm, phases)
+
+    def test_coupling_object_with_bool_numeric_dtype_is_rejected(self):
+        phases = np.array([0.0, 0.5], dtype=np.float64)
+        knm = _ArrayProtocolSwitch(
+            object_array=np.zeros((2, 2), dtype=object),
+            numeric_array=np.array([[True, False], [False, True]], dtype=bool),
+        )
+        with pytest.raises(ValueError, match="knm must not contain boolean"):
+            hodge_decomposition(knm, phases)
+
+    def test_coupling_cast_failure_is_rejected(self):
+        phases = np.array([0.0, 0.5], dtype=np.float64)
+        knm = np.array([["left", object()], [object(), "right"]], dtype=object)
+        with pytest.raises(ValueError, match="knm must be a finite square matrix"):
+            hodge_decomposition(knm, phases)
+
+    def test_coupling_nonfinite_is_rejected(self):
+        phases = np.array([0.0, 0.5], dtype=np.float64)
+        knm = np.array([[0.0, np.inf], [np.inf, 0.0]], dtype=np.float64)
+        with pytest.raises(ValueError, match="knm must contain only finite"):
+            hodge_decomposition(knm, phases)
+
+    def test_dispatch_skips_duplicate_and_failed_backends(self, monkeypatch):
+        import scpn_phase_orchestrator.coupling.hodge as hodge_mod
+
+        def unavailable(_: str):
+            raise RuntimeError("backend unavailable")
+
+        monkeypatch.setattr(hodge_mod, "ACTIVE_BACKEND", "julia")
+        monkeypatch.setattr(hodge_mod, "AVAILABLE_BACKENDS", ["julia", "python"])
+        monkeypatch.setattr(hodge_mod, "_load_backend", unavailable)
+        assert hodge_mod._dispatch() is None
+
+        monkeypatch.setattr(hodge_mod, "AVAILABLE_BACKENDS", [])
+        assert hodge_mod._dispatch() is None
+
+    def test_python_tuple_api_matches_public_result(self, monkeypatch):
+        import scpn_phase_orchestrator.coupling.hodge as hodge_mod
+
+        monkeypatch.setattr(hodge_mod, "ACTIVE_BACKEND", "python")
+        monkeypatch.setattr(hodge_mod, "AVAILABLE_BACKENDS", ["python"])
+        knm = _symmetric_coupling(3)
+        phases = np.array([0.0, 0.5, 1.0], dtype=np.float64)
+        gradient, curl, harmonic = hodge_mod._python_decomposition(knm, phases)
+        public = hodge_decomposition(knm, phases)
+        np.testing.assert_allclose(gradient, public.gradient)
+        np.testing.assert_allclose(curl, public.curl)
+        np.testing.assert_allclose(harmonic, public.harmonic)
+
+    def test_empty_pseudoinverse_returns_empty_vector(self):
+        import scpn_phase_orchestrator.coupling.hodge as hodge_mod
+
+        result = hodge_mod._psd_pinv_apply(
+            np.zeros((0, 0), dtype=np.float64),
+            np.zeros(0, dtype=np.float64),
+        )
+        assert result.shape == (0,)
+
+    def test_matching_backend_output_is_used(self, monkeypatch):
+        import scpn_phase_orchestrator.coupling.hodge as hodge_mod
+
+        knm = _symmetric_coupling(3)
+        phases = np.array([0.0, 0.5, 1.0], dtype=np.float64)
+        expected = hodge_mod._python_decomposition(knm, phases)
+
+        def backend(
+            knm_flat,
+            backend_phases,
+            n,
+            edges_flat,
+            n_edges,
+            tris_flat,
+            n_tris,
+        ):
+            assert n == 3
+            assert knm_flat.shape == (9,)
+            assert backend_phases.shape == (3,)
+            assert edges_flat.shape == (6,)
+            assert n_edges == 3
+            assert tris_flat.shape == (3,)
+            assert n_tris == 1
+            return expected
+
+        monkeypatch.setattr(hodge_mod, "_dispatch", lambda: backend)
+        result = hodge_decomposition(knm, phases)
+        np.testing.assert_allclose(result.gradient, expected[0])
+        np.testing.assert_allclose(result.curl, expected[1])
+        np.testing.assert_allclose(result.harmonic, expected[2])
 
 
 class TestHodgePipelineWiring:

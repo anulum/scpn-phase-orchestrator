@@ -60,6 +60,23 @@ class TestHodgeInputs:
         assert hodge_validation._contains_complex_alias(_ArrayFailure()) is False
         assert hodge_validation._contains_complex_alias(_ObjectArrayFailure()) is False
 
+    def test_numeric_string_helpers_classify_only_numeric_strings(self) -> None:
+        assert hodge_validation.contains_numeric_string_alias("1.0")
+        assert hodge_validation.is_numeric_string_alias(np.bytes_(b"1.0"))
+        assert not hodge_validation.is_numeric_string_alias(b"\xff")
+        assert not hodge_validation.is_numeric_string_alias("")
+        assert not hodge_validation.is_numeric_string_alias("not-a-number")
+        assert not hodge_validation.contains_numeric_string_alias(_ArrayFailure())
+        assert not hodge_validation.contains_numeric_string_alias(
+            np.array([1.0, 2.0], dtype=np.float64)
+        )
+        assert not hodge_validation.contains_numeric_string_alias(
+            np.array(["not-a-number", object()], dtype=object)
+        )
+        assert hodge_validation.contains_numeric_string_alias(
+            np.array([object(), "1.0"], dtype=object)
+        )
+
     def test_valid_round_trips(self) -> None:
         k, p, n, edges, n_edges, tris, n_tris = validate_hodge_backend_inputs(
             **_inputs()
@@ -70,9 +87,18 @@ class TestHodgeInputs:
         ("overrides", "match"),
         [
             ({"n": True}, "n must be a non-negative integer"),
+            ({"n": "3"}, "n.*numeric-string"),
             ({"n": -1}, "n must be non-negative"),
             ({"knm_flat": np.zeros(4)}, "knm_flat length .* does not match"),
+            (
+                {"knm_flat": np.array(["0.0"] * 9, dtype=object)},
+                "knm_flat.*numeric-string",
+            ),
             ({"phases": np.array([0.1, 0.2])}, "phases length .* does not match"),
+            (
+                {"phases": np.array(["0.1", "0.2", "0.3"], dtype=object)},
+                "phases.*numeric-string",
+            ),
             (
                 {"phases": np.array([True, False, False])},
                 "phases must not contain boolean",
@@ -88,7 +114,12 @@ class TestHodgeInputs:
             ),
             ({"phases": np.zeros((1, 3), dtype=np.float64)}, "one-dimensional"),
             ({"n_edges": True}, "n_edges must be a non-negative integer"),
+            ({"n_edges": "3"}, "n_edges.*numeric-string"),
             ({"n_edges": -1}, "n_edges must be non-negative"),
+            (
+                {"edges_flat": np.array(["0", "1", "1", "2", "0", "2"])},
+                "edges_flat.*numeric-string",
+            ),
             (
                 {"edges_flat": np.array([True, False])},
                 "edges_flat must not contain boolean",
@@ -98,7 +129,7 @@ class TestHodgeInputs:
                 "edges_flat must be integer-valued",
             ),
             (
-                {"edges_flat": np.array(["0", "bad"], dtype=object)},
+                {"edges_flat": np.array(["left", "right"], dtype=object)},
                 "edges_flat must be an integer index array",
             ),
             (
@@ -114,6 +145,11 @@ class TestHodgeInputs:
             (
                 {"edges_flat": np.array([0, 9, 1, 2, 0, 2])},
                 r"edges_flat indices must lie in \[0, 3\)",
+            ),
+            ({"n_tris": "1"}, "n_tris.*numeric-string"),
+            (
+                {"tris_flat": np.array(["0", "1", "2"])},
+                "tris_flat.*numeric-string",
             ),
             ({"tris_flat": np.array([0, 1])}, "tris_flat length .* does not match"),
         ],
@@ -177,6 +213,14 @@ class TestHodgeOutputs:
                     np.zeros((2, 2), dtype=np.float64),
                 ),
                 "finite real-valued",
+            ),
+            (
+                (
+                    np.array([["0.0", "1.0"], ["-1.0", "0.0"]], dtype=object),
+                    np.zeros((2, 2), dtype=np.float64),
+                    np.zeros((2, 2), dtype=np.float64),
+                ),
+                "numeric-string",
             ),
             (
                 (

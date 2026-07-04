@@ -36,6 +36,7 @@ from scpn_phase_orchestrator.coupling.hodge import (
     hodge_decomposition,
 )
 from scpn_phase_orchestrator.experimental.accelerators.coupling import (
+    _hodge_go,
     _hodge_julia,
     _hodge_mojo,
 )
@@ -228,6 +229,92 @@ class TestDirectBackendBoundaryContracts:
         )
 
         with pytest.raises(ValueError, match="finite real-valued"):
+            hodge_decomposition_julia(
+                np.array([0.0, 1.0, 1.0, 0.0], dtype=np.float64),
+                np.array([0.0, 0.4], dtype=np.float64),
+                2,
+                np.array([0, 1], dtype=np.int64),
+                1,
+                _zeros_int(),
+                0,
+            )
+
+    @pytest.mark.parametrize(
+        ("backend", "patch_target"),
+        [
+            (hodge_decomposition_go, _hodge_go),
+            (hodge_decomposition_julia, _hodge_julia),
+            (hodge_decomposition_mojo, _hodge_mojo),
+        ],
+    )
+    @pytest.mark.parametrize(
+        "args",
+        [
+            (
+                np.array(["0.0", "1.0", "-1.0", "0.0"], dtype=object),
+                np.zeros(2, dtype=np.float64),
+                2,
+                np.array([0, 1], dtype=np.int64),
+                1,
+                _zeros_int(),
+                0,
+            ),
+            (
+                np.zeros(4, dtype=np.float64),
+                np.array(["0.0", "0.4"], dtype=object),
+                2,
+                np.array([0, 1], dtype=np.int64),
+                1,
+                _zeros_int(),
+                0,
+            ),
+            (
+                np.zeros(4, dtype=np.float64),
+                np.zeros(2, dtype=np.float64),
+                2,
+                np.array(["0", "1"], dtype=object),
+                1,
+                _zeros_int(),
+                0,
+            ),
+        ],
+    )
+    def test_direct_backends_reject_numeric_string_inputs_before_runtime_load(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        backend: HodgeDirectBackend,
+        patch_target: object,
+        args: tuple[object, ...],
+    ) -> None:
+        """Stringified numeric direct inputs fail before loading any runtime."""
+
+        def forbidden_loader() -> object:
+            raise AssertionError("runtime loader must not be called")
+
+        if patch_target is _hodge_go:
+            monkeypatch.setattr(_hodge_go, "_load_lib", forbidden_loader)
+        elif patch_target is _hodge_julia:
+            monkeypatch.setattr(_hodge_julia, "_ensure", forbidden_loader)
+        else:
+            monkeypatch.setattr(_hodge_mojo, "_ensure_exe", forbidden_loader)
+
+        with pytest.raises(ValueError, match="numeric-string"):
+            backend(*args)
+
+    def test_direct_julia_rejects_numeric_string_output_alias(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Julia outputs reject stringified numerics before float coercion."""
+        bad_gradient = np.array(["0.0", "1.0", "-1.0", "0.0"], dtype=object)
+        zero = np.zeros(4, dtype=np.float64)
+        monkeypatch.setattr(
+            _hodge_julia,
+            "_ensure",
+            lambda: _FakeJuliaHodgeModule((bad_gradient, zero, zero.copy())),
+        )
+
+        with pytest.raises(ValueError, match="numeric-string"):
             hodge_decomposition_julia(
                 np.array([0.0, 1.0, 1.0, 0.0], dtype=np.float64),
                 np.array([0.0, 0.4], dtype=np.float64),

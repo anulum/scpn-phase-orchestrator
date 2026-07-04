@@ -310,18 +310,21 @@ validates each accelerated backend against the NumPy reference within
 `rtol = 1e-10` / `atol = 1e-12` (matching the spectral solver) and falls
 back to NumPy only after the backend has returned a valid Hodge payload.
 
-Direct accelerator boundary contract: the public Rust wrapper and the Go,
-Julia, and Mojo Hodge adapters use one typed `float64` input validation path
-before loading shared-library, Julia, or subprocess runtimes. The contract
-rejects boolean aliases, complex or non-finite payloads, malformed flattened
-`n*n` coupling buffers, phase vectors whose length does not match `n`, and
-invalid oscillator counts. After backend execution, the same output validator
-checks that `gradient`, `curl`, and `harmonic` are finite real non-boolean
-`(N, N)` or flattened `N*N` antisymmetric matrices before publication or parity
-fallback. Malformed backend outputs raise immediately; fallback is reserved for
-validated numerical parity mismatches. Empty Hodge systems return empty
-components without requiring optional runtimes, matching the public Python
-special case.
+Direct accelerator boundary contract: the public Python dispatcher, public Rust
+wrapper, and the Go, Julia, and Mojo Hodge adapters reject numeric-string
+aliases before Python, NumPy, shared-library, Julia, or subprocess coercion.
+The public surface applies the boundary to `knm`, `phases`, and explicit
+triangle nodes; the direct adapters apply it to counts, flattened coupling,
+phase, edge, triangle, backend-output, and Julia raw-return payloads. The
+shared typed `float64` path also rejects boolean aliases, complex or non-finite
+payloads, malformed flattened `n*n` coupling buffers, phase vectors whose
+length does not match `n`, and invalid oscillator counts before optional runtime
+loading. After backend execution, the same output validator checks that
+`gradient`, `curl`, and `harmonic` are finite real non-boolean `(N, N)` or
+flattened `N*N` antisymmetric matrices before publication or parity fallback.
+Malformed backend outputs raise immediately; fallback is reserved for validated
+numerical parity mismatches. Empty Hodge systems return empty components
+without requiring optional runtimes, matching the public Python special case.
 
 ::: scpn_phase_orchestrator.coupling.hodge
 

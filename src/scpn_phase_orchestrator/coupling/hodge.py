@@ -98,6 +98,8 @@ import numpy as np
 from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.coupling._hodge_validation import (
+    contains_numeric_string_alias,
+    is_numeric_string_alias,
     validate_hodge_backend_output,
 )
 from scpn_phase_orchestrator.coupling._julia_runtime import require_juliacall_main
@@ -287,6 +289,8 @@ def _validate_phase_vector(value: object, *, name: str) -> FloatArray:
     """Return the phases as a validated 1-D finite array, else raise."""
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
+    if contains_numeric_string_alias(value):
+        raise ValueError(f"{name} must not contain numeric-string aliases")
     raw = np.asarray(value)
     if raw.dtype == np.bool_:
         raise ValueError(f"{name} must not contain boolean values")
@@ -305,6 +309,8 @@ def _validate_coupling_matrix(value: object, *, expected_n: int) -> FloatArray:
     """Return the coupling as a validated finite square matrix, else raise."""
     if _contains_boolean_alias(value):
         raise ValueError("knm must not contain boolean values")
+    if contains_numeric_string_alias(value):
+        raise ValueError("knm must not contain numeric-string aliases")
     raw = np.asarray(value)
     if raw.dtype == np.bool_:
         raise ValueError("knm must not contain boolean values")
@@ -346,6 +352,8 @@ def _validate_triangles(
         if len(nodes) != 3:
             raise ValueError("each triangle must have exactly three nodes")
         for node in nodes:
+            if is_numeric_string_alias(node):
+                raise ValueError("triangle node must not be a numeric-string alias")
             if isinstance(node, bool) or not isinstance(node, Integral):
                 raise ValueError(f"triangle node must be an integer, got {node!r}")
         i, j, k = sorted(int(node) for node in nodes)
