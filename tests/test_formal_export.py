@@ -987,6 +987,16 @@ def test_petri_net_tla_export_serialises_actions_and_invariants() -> None:
     assert "Active_done == done > 0" in export.module
 
 
+def test_petri_net_tla_export_prefixes_digit_leading_module_names() -> None:
+    export = export_petri_net_tla(
+        _net(),
+        Marking(tokens={"warmup": 1, "nominal": 2}),
+        module_name="123 formal module",
+    )
+
+    assert "---- MODULE SpoModule_123_formal_module ----" in export.module
+
+
 def test_petri_net_tla_export_serialises_source_and_stuttering_nets() -> None:
     source_net = PetriNet(
         [Place("123-start"), Place("phase-1")],

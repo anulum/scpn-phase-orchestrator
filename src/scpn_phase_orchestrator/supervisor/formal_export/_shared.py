@@ -53,10 +53,7 @@ def _identifier(raw: str, *, prefix: str) -> str:
 
 def _tla_module_identifier(raw: str) -> str:
     """Return a sanitised TLA+ module identifier for a name."""
-    identifier = _identifier(raw, prefix="SpoModule")
-    if not identifier[0].isalpha():
-        identifier = f"Spo{identifier}"
-    return identifier
+    return _identifier(raw, prefix="SpoModule")
 
 
 def _unique_identifier(
