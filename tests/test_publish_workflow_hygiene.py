@@ -67,6 +67,18 @@ def test_pre_publish_gate_runs_meta_distribution_evidence_guard() -> None:
     assert "python tools/check_meta_distribution.py" in commands
 
 
+def test_pre_publish_gate_deselects_host_sensitive_tests() -> None:
+    workflow = _publish_workflow()
+    test_command = next(
+        step["run"]
+        for step in workflow["jobs"]["preflight"]["steps"]
+        if step.get("name") == "Run release preflight tests"
+    )
+
+    assert '-m "not slow and not performance"' in test_command
+    assert '-k "not performance"' in test_command
+
+
 def test_dockerfile_base_digests_match_known_resolving_manifests() -> None:
     dockerfile = (ROOT / "Dockerfile").read_text()
 

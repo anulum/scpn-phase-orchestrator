@@ -90,14 +90,15 @@ review record.
 
 ## Current Release Boundary
 
-Version `0.10.0` builds on the `0.9.0` polyglot-completion baseline and adds
-review-only governance and operator surfaces around the phase-control core:
-Koopman EDMD, Koopman-MPC, neural control-barrier filtering, post-quantum audit
-seals, twin-confidence scoring, OPC-UA and MQTT ingestion, an interactive WASM
-playground, and strict typing plus NumPy-convention docstrings across the public
-library. The public docs route readers from use-case selection through Python
-APIs, tutorials, notebooks, benchmark snapshots, and release hygiene without
-requiring them to reverse-engineer the source tree.
+Version `0.11.0` builds on the `0.10.0` governance and operator-surface baseline
+and adds real-data PMU ringdown evidence, IEEE multi-header PMU adaptation,
+deterministic certification and conformity-report packaging, formal-export
+evidence mapping, perf-isolated branch-coverage gates, hardened release
+provenance, and stricter pre-coercion input contracts across public and direct
+polyglot surfaces. The public docs route readers from use-case selection through
+Python APIs, tutorials, notebooks, benchmark snapshots, real-data validation
+evidence, and release hygiene without requiring them to reverse-engineer the
+source tree.
 
 | Reader concern | Where the release answers it |
 |----------------|------------------------------|

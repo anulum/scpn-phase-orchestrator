@@ -33,7 +33,7 @@ built on Kuramoto/UPDE phase dynamics. New here? Start with
 
 > **Active Development** — SCPN Phase Orchestrator is under intensive development. The core UPDE engine, 3-channel oscillator extraction (P/I/S), supervisor with regime management, and Rust FFI acceleration are functional and guarded by local and CI verification gates. Public capability counts are generated from the manifest below rather than maintained by hand. APIs may evolve as this work progresses.
 
-**Version:** 0.10.0
+**Version:** 0.11.0
 **Status:** active development; public inventory is generated below.
 
 [![CI](https://github.com/anulum/scpn-phase-orchestrator/actions/workflows/ci.yml/badge.svg)](https://github.com/anulum/scpn-phase-orchestrator/actions/workflows/ci.yml)
@@ -61,20 +61,20 @@ evidence pages and GitHub run records.
 
 ## Current Release Boundary
 
-Version `0.10.0` builds on the `0.9.0` polyglot-completion baseline. It adds
-review-only governance and operator surfaces around the phase-control core:
-Koopman EDMD with a five-backend chain, Koopman-MPC, the neural control-barrier
-filter, post-quantum audit seals, twin-confidence scoring, OPC-UA and MQTT edge
-ingestion, the interactive WASM playground, and strict typing plus
-NumPy-convention docstring enforcement across the public library. The release
-keeps the downstream accelerator chain in a single documented review boundary:
+Version `0.11.0` builds on the `0.10.0` governance and operator-surface
+baseline. It adds real-data PMU ringdown evidence, IEEE multi-header PMU
+adaptation, deterministic certification and conformity-report packaging,
+formal-export evidence mapping, perf-isolated branch-coverage gates, hardened
+release provenance, and stricter pre-coercion input contracts across public and
+direct polyglot surfaces. The release keeps the downstream accelerator chain in
+a single documented review boundary:
 
 | Release surface | What is now reviewable |
 |-----------------|------------------------|
-| PHA-C and polyglot gates | spatial, Doppler, moving-frame, delay, PID, Hodge, E/I-balance, winding, Poincaré, Koopman, ordinal-entropy, and twin-confidence rows keep Rust, Go, Julia, Mojo, and Python parity evidence explicit |
-| Governance and assurance | control-barrier filtering, foundation-model proposal governance, assurance-case exports, post-quantum audit seals, SLSA/cosign release evidence, and production audit-key enforcement remain review-only |
-| Operator surfaces | `spo doctor`, `spo quickstart power`, `spo twin-confidence`, `spo chaos`, `spo supervisor-candidate`, OPC-UA/MQTT ingestion, and the WASM playground provide bounded, replayable entry points |
-| Documentation posture | public API docstrings, generated capability inventory, architecture maps, release hygiene, and the current benchmark pages are aligned with code and CI gates |
+| PHA-C and polyglot gates | spatial, Doppler, moving-frame, delay, PID, Hodge, E/I-balance, winding, Poincaré, Koopman, ordinal-entropy, twin-confidence, swarmalator, inertial, hypergraph, spectral, and real-grid rows keep Rust, Go, Julia, Mojo, and Python evidence explicit |
+| Governance and assurance | control-barrier filtering, certification packages, conformity reports, formal package evidence, post-quantum audit seals, SLSA/cosign release evidence, and production audit-key enforcement remain review-only |
+| Operator surfaces | `spo doctor`, `spo quickstart power`, `spo twin-confidence`, `spo chaos`, `spo supervisor-candidate`, `spo pmu-ieee-adapt`, `spo pmu-ringdown`, OPC-UA/MQTT ingestion, and the WASM playground provide bounded, replayable entry points |
+| Documentation posture | public API docstrings, generated capability inventory, real-data validation pages, architecture maps, release hygiene, and the current benchmark pages are aligned with code and CI gates |
 | Benchmark posture | canonical reference-suite rows remain labelled as local non-isolated regression evidence unless production isolation metadata is present |
 
 This release does not claim live accelerator, quantum, neuromorphic, PLC, or
@@ -211,7 +211,7 @@ inside a dashboard or notebook; it turns them into inspectable artefacts.
 
 | Surface | Current inventory |
 |---|---:|
-| Package version | 0.10.0 |
+| Package version | 0.11.0 |
 | Public API exports | 24 |
 | Python package modules | 688 |
 | Core Engine modules | 315 |

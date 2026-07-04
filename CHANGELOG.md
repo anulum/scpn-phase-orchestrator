@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-07-04
+
 ### Added
 
 - `examples/real_data/iso_ne_case1/` holds the first non-synthetic sealed PRC
@@ -2488,7 +2490,8 @@ proxy to the full arXiv:2603.15031 Transformer architecture:
 - Module linkage guard (`tools/check_test_module_linkage.py`) requiring test files for all source modules
 - Rust kernel (`spo-kernel/`) with PyO3 bindings for UPDEEngine, RegimeManager, CoherenceMonitor
 
-[Unreleased]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/anulum/scpn-phase-orchestrator/compare/v0.6.6...v0.8.0
