@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterator, Mapping
+
 import pytest
 
 from scpn_phase_orchestrator.exceptions import PolicyError
@@ -76,6 +78,21 @@ def _result(package_hash: str, **changes: object) -> FormalCheckerResult:
     }
     base.update(changes)
     return FormalCheckerResult(**base)  # type: ignore[arg-type]
+
+
+class _DuplicateRuntimeBounds(Mapping[str, object]):
+    """Mapping fixture that exposes duplicate keys through ``items()``."""
+
+    def __getitem__(self, key: str) -> object:
+        if key == "R_min":
+            return 0.5
+        raise KeyError(key)
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(("R_min", "R_min"))
+
+    def __len__(self) -> int:
+        return 2
 
 
 # --- FormalTextArtifact ----------------------------------------------------
@@ -252,6 +269,20 @@ def test_runtime_certificate_rejects_malformed_bounds(bounds, match) -> None:
     package = _smt_package()
     with pytest.raises(PolicyError, match=match):
         build_runtime_control_certificate(package, (), (), bounds)
+
+
+def test_runtime_certificate_rejects_duplicate_runtime_bound_names() -> None:
+    package = _smt_package()
+    with pytest.raises(
+        PolicyError,
+        match="runtime bounds must not contain duplicate names",
+    ):
+        build_runtime_control_certificate(
+            package,
+            (),
+            (),
+            _DuplicateRuntimeBounds(),
+        )
 
 
 # --- FormalRuntimeCertificate __post_init__ branches -----------------------

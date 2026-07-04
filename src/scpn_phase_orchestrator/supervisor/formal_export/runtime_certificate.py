@@ -44,6 +44,7 @@ class FormalCheckerAvailability:
     execution_permitted: bool = False
 
     def __post_init__(self) -> None:
+        """Validate the non-executing checker availability contract."""
         _require_package_identifier(self.property_name, "availability property_name")
         if self.checker not in _SUPPORTED_CHECKERS:
             raise PolicyError(
@@ -124,6 +125,7 @@ class FormalCheckerResult:
     execution_permitted: bool = False
 
     def __post_init__(self) -> None:
+        """Validate reviewed checker result identity and fail-closed status."""
         _require_package_identifier(self.property_name, "checker result property_name")
         if self.checker not in _SUPPORTED_CHECKERS:
             raise PolicyError(
@@ -192,6 +194,7 @@ class FormalRuntimeCertificate:
     actuation_permitted: bool = False
 
     def __post_init__(self) -> None:
+        """Validate certificate integrity and non-actuating runtime status."""
         _require_package_identifier(self.certificate_name, "certificate_name")
         _require_package_identifier(self.package_name, "certificate package_name")
         _require_sha256(self.package_hash, "certificate package_hash")
