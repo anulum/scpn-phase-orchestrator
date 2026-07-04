@@ -235,8 +235,11 @@ the dVOC grid pack. `screen_oscillation_modes` takes the modes recovered by the
 for PRC-028-1 disturbance-data analysis and PRC-030-1 unexpected IBR event
 mitigation workflows, and seals the screening into a content-addressed,
 review-only `PRCOscillationEvidence` record. Undamped modes and positive but
-poorly damped modes are flagged for operator review. The capture timestamp is
-supplied by the caller, so the record is deterministic and reproducible. Like the
+poorly damped modes are flagged for operator review. Each finding also carries
+the engineering mode family from the matrix-pencil estimator, and the record
+aggregates `mode_family_counts`, so inter-area and sub-synchronous oscillation
+signals are visible in the same sealed package. The capture timestamp is supplied
+by the caller, so the record is deterministic and reproducible. Like the
 assurance-case bundle, it is a technical evidence-mapping aid, not a legal
 conformity assessment, and it never actuates.
 

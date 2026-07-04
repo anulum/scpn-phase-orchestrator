@@ -15,7 +15,11 @@ import pytest
 
 from scpn_phase_orchestrator.monitor.oscillation_modes import (
     DEFAULT_DAMPING_THRESHOLD,
+    INTER_AREA_MODE,
+    LOCAL_MODE,
+    SUB_SYNCHRONOUS_MODE,
     OscillationMode,
+    classify_oscillation_band,
     estimate_oscillation_modes,
 )
 
@@ -50,7 +54,59 @@ class TestOscillationMode:
             "amplitude": 1.0,
             "phase_rad": 0.1,
             "poorly_damped": False,
+            "mode_family": INTER_AREA_MODE,
         }
+
+
+class TestModeFamilyClassification:
+    @pytest.mark.parametrize(
+        ("frequency", "expected"),
+        [
+            (0.0, "aperiodic"),
+            (0.5, INTER_AREA_MODE),
+            (1.8, LOCAL_MODE),
+            (18.0, SUB_SYNCHRONOUS_MODE),
+            (72.0, "super_synchronous"),
+        ],
+    )
+    def test_classifies_power_grid_mode_family(
+        self, frequency: float, expected: str
+    ) -> None:
+        assert classify_oscillation_band(frequency) == expected
+
+    def test_detected_modes_carry_family_in_the_public_record(self) -> None:
+        inter_area = _damped(0.45, 0.02, 1.0, 0.0)
+        subsynchronous = _damped(18.0, 0.04, 0.25, 0.3)
+
+        modes = estimate_oscillation_modes(
+            inter_area + subsynchronous, _FS, model_order=4
+        )
+
+        families = {mode.to_dict()["mode_family"] for mode in modes}
+        assert INTER_AREA_MODE in families
+        assert SUB_SYNCHRONOUS_MODE in families
+
+    @pytest.mark.parametrize(
+        ("kwargs", "match"),
+        [
+            ({"frequency_hz": -0.1}, "frequency_hz must be non-negative"),
+            ({"frequency_hz": True}, "frequency_hz must be a finite real"),
+            ({"inter_area_max_hz": 0.0}, "inter_area_max_hz must be positive"),
+            ({"local_max_hz": 0.5}, "frequency bands must satisfy"),
+            ({"synchronous_frequency_hz": 2.0}, "frequency bands must satisfy"),
+            (
+                {"zero_frequency_tolerance_hz": -1.0e-3},
+                "zero_frequency_tolerance_hz must be non-negative",
+            ),
+        ],
+    )
+    def test_rejects_invalid_mode_family_parameters(
+        self, kwargs: dict[str, object], match: str
+    ) -> None:
+        base: dict[str, object] = {"frequency_hz": 0.5}
+        base.update(kwargs)
+        with pytest.raises(ValueError, match=match):
+            classify_oscillation_band(**base)  # type: ignore[arg-type]
 
 
 class TestCleanRecovery:

@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from typing import cast
+
 import numpy as np
 import pytest
 
@@ -23,6 +25,8 @@ from scpn_phase_orchestrator.assurance.prc_oscillation import (
     screen_oscillation_modes,
 )
 from scpn_phase_orchestrator.monitor.oscillation_modes import (
+    INTER_AREA_MODE,
+    SUB_SYNCHRONOUS_MODE,
     OscillationMode,
     estimate_oscillation_modes,
 )
@@ -112,7 +116,18 @@ class TestScreening:
         assert [f.mode_index for f in evidence.findings] == [0, 1]
         assert evidence.findings[0].frequency_hz == pytest.approx(0.3)
         assert evidence.findings[0].amplitude == pytest.approx(2.0)
+        assert evidence.findings[0].mode_family == INTER_AREA_MODE
         assert evidence.findings[1].damping_ratio == pytest.approx(0.12)
+
+    def test_family_counts_distinguish_inter_area_and_sub_synchronous_modes(
+        self,
+    ) -> None:
+        evidence = _screen((_mode(0.3, 0.015), _mode(18.0, 0.02)))
+
+        assert evidence.mode_family_counts == {
+            INTER_AREA_MODE: 1,
+            SUB_SYNCHRONOUS_MODE: 1,
+        }
 
     def test_standard_and_disclaimer_attached(self) -> None:
         evidence = _screen((_mode(0.3, 0.015),))
@@ -158,6 +173,13 @@ class TestEvidenceRecord:
         assert base.content_hash != other_event.content_hash
         assert base.content_hash != other_mode.content_hash
 
+    def test_mode_family_counts_are_read_only_after_hashing(self) -> None:
+        evidence = _screen((_mode(0.3, 0.015),))
+        counts = cast(dict[str, int], evidence.mode_family_counts)
+
+        with pytest.raises(TypeError):
+            counts[INTER_AREA_MODE] = 99
+
     def test_to_audit_record_round_trips_fields(self) -> None:
         evidence = _screen((_mode(0.3, 0.015),))
         record = evidence.to_audit_record()
@@ -166,8 +188,10 @@ class TestEvidenceRecord:
         assert record["verdict"] == FLAGGED_FOR_REVIEW
         assert record["content_hash"] == evidence.content_hash
         assert record["standard"] == PRC_OSCILLATION_STANDARD
+        assert record["mode_family_counts"] == {INTER_AREA_MODE: 1}
         assert isinstance(record["findings"], list)
         assert record["findings"][0]["classification"] == POORLY_DAMPED
+        assert record["findings"][0]["mode_family"] == INTER_AREA_MODE
 
     def test_mode_finding_audit_record(self) -> None:
         finding = _screen((_mode(0.3, 0.015, 2.0),)).findings[0]
@@ -178,6 +202,7 @@ class TestEvidenceRecord:
             "frequency_hz": pytest.approx(0.3),
             "damping_ratio": pytest.approx(0.015),
             "amplitude": pytest.approx(2.0),
+            "mode_family": INTER_AREA_MODE,
             "classification": POORLY_DAMPED,
             "flagged": True,
         }

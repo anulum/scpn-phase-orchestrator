@@ -4,9 +4,10 @@
 ringdown — the response of a wide-area signal (a bus frequency, a tie-line angle,
 the network order parameter) after a disturbance. The ringdown is a sum of damped
 sinusoids; each is a *mode*, and a mode's **damping ratio** is the quantity that
-matters for reliability: North American standards (NERC PRC-028 and the proposed
-PRC-030 oscillation-monitoring rules) flag a mode whose damping ratio sits below a
-few percent as a poorly-damped inter-area oscillation.
+matters for reliability: NERC PRC-028-1 disturbance monitoring and PRC-030-1
+unexpected IBR event-mitigation evidence workflows depend on measured
+disturbance records and post-event analysis, so this estimator reports the
+frequency and damping evidence that reviewer packages consume.
 
 ## Method
 
@@ -30,6 +31,25 @@ reported as a pure decay at `frequency = 0`. Modes are returned ordered by
 descending amplitude, and any mode whose damping ratio is below the screening
 threshold (`DEFAULT_DAMPING_THRESHOLD = 0.03`) is flagged `poorly_damped`; a
 growing (unstable) mode has a negative damping ratio.
+
+## Mode-family Screen
+
+Each `OscillationMode.to_dict()` record now carries `mode_family`, computed by
+`classify_oscillation_band`. The default taxonomy is an engineering review
+screen, not a regulatory clause threshold:
+
+- `aperiodic` — near-zero-frequency real-pole decay;
+- `inter_area` — low-frequency area-to-area swings below 1 Hz;
+- `local` — local electromechanical swings below 3 Hz;
+- `sub_synchronous` — higher oscillations below the configured synchronous grid
+  frequency (60 Hz by default);
+- `super_synchronous` — modes at or above the configured synchronous frequency.
+
+The cut-points are explicit function parameters so 50 Hz systems or operator
+practice can override them without changing the estimator. The PRC evidence
+record preserves per-mode families and aggregates `mode_family_counts`, allowing
+one package to distinguish inter-area and sub-synchronous review signals while
+keeping the same review-only claim boundary.
 
 ## Relationship to `autotune.freq_id`
 

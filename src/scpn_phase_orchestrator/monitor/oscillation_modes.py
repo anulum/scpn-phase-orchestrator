@@ -12,9 +12,8 @@ After a grid disturbance, the ringdown of a wide-area signal (a bus frequency, a
 tie-line angle, the network order parameter) is a sum of damped sinusoids; each
 sinusoid is an electromechanical *mode*. A mode's **damping ratio** is the
 reliability quantity that matters — North American reliability standards
-(NERC PRC-028 / the proposed PRC-030 oscillation monitoring rules) treat a mode
-whose damping ratio falls below a few percent as a poorly-damped, flaggable
-inter-area oscillation.
+(NERC PRC-028-1 / PRC-030-1 evidence workflows) treat a mode whose damping ratio
+falls below a few percent as a poorly-damped, flaggable oscillation.
 
 :func:`estimate_oscillation_modes` fits the ringdown with the matrix-pencil
 method of Hua & Sarkar (1990): build a Hankel matrix from the samples, take its
@@ -61,13 +60,97 @@ FloatArray: TypeAlias = NDArray[np.float64]
 ComplexArray: TypeAlias = NDArray[np.complex128]
 
 __all__ = [
+    "APERIODIC_MODE",
     "DEFAULT_DAMPING_THRESHOLD",
+    "INTER_AREA_MODE",
+    "LOCAL_MODE",
     "OscillationMode",
+    "SUB_SYNCHRONOUS_MODE",
+    "SUPER_SYNCHRONOUS_MODE",
+    "classify_oscillation_band",
     "estimate_oscillation_modes",
 ]
 
 #: Damping ratio below which a mode is flagged poorly damped (PRC-028 screening).
 DEFAULT_DAMPING_THRESHOLD = 0.03
+#: Mode family for real-pole or near-DC decay, not an oscillatory swing.
+APERIODIC_MODE = "aperiodic"
+#: Low-frequency grid swing family, normally used for area-to-area dynamics.
+INTER_AREA_MODE = "inter_area"
+#: Local plant/electromechanical swing family above the inter-area band.
+LOCAL_MODE = "local"
+#: Oscillatory family below the configured synchronous grid frequency.
+SUB_SYNCHRONOUS_MODE = "sub_synchronous"
+#: Oscillatory family at or above the configured synchronous grid frequency.
+SUPER_SYNCHRONOUS_MODE = "super_synchronous"
+
+
+def classify_oscillation_band(
+    frequency_hz: float,
+    *,
+    inter_area_max_hz: float = 1.0,
+    local_max_hz: float = 3.0,
+    synchronous_frequency_hz: float = 60.0,
+    zero_frequency_tolerance_hz: float = 1.0e-9,
+) -> str:
+    """Classify a detected mode into a grid oscillation family.
+
+    The defaults are an engineering review taxonomy, not regulatory clause
+    thresholds: near-zero modes are aperiodic decay, modes below 1 Hz are
+    inter-area swings, modes below 3 Hz are local electromechanical swings,
+    and higher modes below the configured synchronous frequency are labelled
+    sub-synchronous for review. Callers may override the cut-points for
+    50 Hz systems or local operator practice.
+
+    Parameters
+    ----------
+    frequency_hz : float
+        Non-negative modal frequency in hertz.
+    inter_area_max_hz : float
+        Exclusive upper bound for the inter-area family.
+    local_max_hz : float
+        Exclusive upper bound for the local electromechanical family.
+    synchronous_frequency_hz : float
+        Nominal grid synchronous frequency; modes below it and above
+        ``local_max_hz`` are labelled sub-synchronous.
+    zero_frequency_tolerance_hz : float
+        Non-negative tolerance below which a mode is treated as aperiodic.
+
+    Returns
+    -------
+    str
+        One of :data:`APERIODIC_MODE`, :data:`INTER_AREA_MODE`,
+        :data:`LOCAL_MODE`, :data:`SUB_SYNCHRONOUS_MODE`, or
+        :data:`SUPER_SYNCHRONOUS_MODE`.
+
+    Raises
+    ------
+    ValueError
+        If any frequency or boundary is non-finite, negative, or unordered.
+    """
+    frequency = _non_negative_real(frequency_hz, "frequency_hz")
+    inter_area_max = _positive_real(inter_area_max_hz, "inter_area_max_hz")
+    local_max = _positive_real(local_max_hz, "local_max_hz")
+    synchronous_frequency = _positive_real(
+        synchronous_frequency_hz, "synchronous_frequency_hz"
+    )
+    zero_tolerance = _non_negative_real(
+        zero_frequency_tolerance_hz, "zero_frequency_tolerance_hz"
+    )
+    if not zero_tolerance < inter_area_max < local_max < synchronous_frequency:
+        raise ValueError(
+            "frequency bands must satisfy zero_tolerance < inter_area_max_hz "
+            "< local_max_hz < synchronous_frequency_hz"
+        )
+    if frequency <= zero_tolerance:
+        return APERIODIC_MODE
+    if frequency < inter_area_max:
+        return INTER_AREA_MODE
+    if frequency < local_max:
+        return LOCAL_MODE
+    if frequency < synchronous_frequency:
+        return SUB_SYNCHRONOUS_MODE
+    return SUPER_SYNCHRONOUS_MODE
 
 
 @dataclass(frozen=True)
@@ -95,14 +178,14 @@ class OscillationMode:
     phase_rad: float
     poorly_damped: bool
 
-    def to_dict(self) -> dict[str, bool | float]:
+    def to_dict(self) -> dict[str, bool | float | str]:
         """Return a JSON-serialisable mapping of the mode.
 
         Returns
         -------
-        dict[str, bool | float]
+        dict[str, bool | float | str]
             The frequency, damping ratio, amplitude, phase, and the
-            poorly-damped flag.
+            poorly-damped flag plus the engineering mode family.
         """
         return {
             "frequency_hz": self.frequency_hz,
@@ -110,6 +193,7 @@ class OscillationMode:
             "amplitude": self.amplitude,
             "phase_rad": self.phase_rad,
             "poorly_damped": self.poorly_damped,
+            "mode_family": classify_oscillation_band(self.frequency_hz),
         }
 
 

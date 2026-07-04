@@ -9,6 +9,8 @@
 from __future__ import annotations
 
 import re
+import shutil
+import subprocess
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -135,6 +137,22 @@ def _nav_paths(nav: object) -> Iterator[str]:
             yield from _nav_paths(value)
 
 
+def _tracked_python_sources() -> tuple[Path, ...]:
+    """Return Python sources that are part of the committed public tree."""
+    git = shutil.which("git")
+    if git is None:
+        raise RuntimeError("git executable is required for API docs inventory")
+    result = subprocess.run(
+        [git, "ls-files", "--", SOURCE_ROOT.as_posix()],
+        check=True,
+        stdout=subprocess.PIPE,
+        text=True,
+    )
+    return tuple(
+        Path(path) for path in result.stdout.splitlines() if path.endswith(".py")
+    )
+
+
 def test_all_api_reference_pages_are_in_mkdocs_nav() -> None:
     config_text = MKDOCS_CONFIG.read_text(encoding="utf-8")
     for tag in (
@@ -166,7 +184,7 @@ def test_public_source_modules_have_api_autodoc() -> None:
     }
 
     public_modules = set()
-    for path in SOURCE_ROOT.rglob("*.py"):
+    for path in _tracked_python_sources():
         relative = path.relative_to(SOURCE_ROOT)
         if relative.name == "__init__.py":
             continue

@@ -19,6 +19,10 @@ import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.actuation.koopman_mpc import KoopmanMPCConfig
+from scpn_phase_orchestrator.monitor.oscillation_modes import (
+    APERIODIC_MODE,
+    INTER_AREA_MODE,
+)
 from scpn_phase_orchestrator.runtime.dvoc_oscillation_damping import (
     OscillationDampingResult,
     _weakest_damping,
@@ -129,6 +133,8 @@ def test_damp_oscillation_exports_hash_sealed_audit_record() -> None:
     )
     assert record["before_evidence_hash"] == result.before_evidence.content_hash
     assert record["after_evidence_hash"] == result.after_evidence.content_hash
+    assert record["before_mode_family_counts"] == {INTER_AREA_MODE: 1}
+    assert record["after_mode_family_counts"] == {APERIODIC_MODE: 1}
     before_record = record["before"]
     after_record = record["after"]
     assert isinstance(before_record, dict)

@@ -14,9 +14,10 @@ electromechanical modes of a ringdown and their damping ratios;
 :func:`screen_oscillation_modes` screens those damping ratios for NERC
 PRC-028-1 disturbance-data analysis and PRC-030-1 unexpected IBR event mitigation
 workflows: a mode whose damping ratio sits below a few percent is poorly damped,
-and a mode with non-positive damping is undamped (growing). The screening is
-packaged as a hash-sealed, review-only :class:`PRCOscillationEvidence` record
-suitable for an oscillation-monitoring audit trail.
+and a mode with non-positive damping is undamped (growing). The screening also
+preserves an engineering mode-family label for each finding, so inter-area and
+sub-synchronous signals stay visible in the hash-sealed, review-only
+:class:`PRCOscillationEvidence` record.
 
 The record is content-addressed with the same canonical-JSON SHA-256 hashing the
 assurance-case bundle uses, so it can be referenced by a stable digest and any
@@ -42,14 +43,16 @@ References
 from __future__ import annotations
 
 import math
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from numbers import Real
+from types import MappingProxyType
 
 from scpn_phase_orchestrator.assurance._hashing import canonical_record_hash
 from scpn_phase_orchestrator.monitor.oscillation_modes import (
     DEFAULT_DAMPING_THRESHOLD,
     OscillationMode,
+    classify_oscillation_band,
 )
 
 __all__ = [
@@ -109,6 +112,9 @@ class PRCModeFinding:
         Dimensionless damping ratio of the mode.
     amplitude : float
         Modal amplitude in the units of the source signal.
+    mode_family : str
+        Engineering oscillation family such as ``inter_area`` or
+        ``sub_synchronous``.
     classification : str
         One of :data:`UNDAMPED`, :data:`POORLY_DAMPED`, or :data:`ACCEPTABLE`.
     flagged : bool
@@ -120,6 +126,7 @@ class PRCModeFinding:
     frequency_hz: float
     damping_ratio: float
     amplitude: float
+    mode_family: str
     classification: str
     flagged: bool
 
@@ -137,6 +144,7 @@ class PRCModeFinding:
             "frequency_hz": self.frequency_hz,
             "damping_ratio": self.damping_ratio,
             "amplitude": self.amplitude,
+            "mode_family": self.mode_family,
             "classification": self.classification,
             "flagged": self.flagged,
         }
@@ -162,6 +170,8 @@ class PRCOscillationEvidence:
         Damping ratio at or below which a mode is flagged undamped (growing).
     findings : tuple[PRCModeFinding, ...]
         Per-mode screening outcomes, in the order screened.
+    mode_family_counts : Mapping[str, int]
+        Read-only number of screened modes by engineering family.
     flagged_count : int
         Number of findings flagged for review.
     worst_damping_ratio : float | None
@@ -186,6 +196,7 @@ class PRCOscillationEvidence:
     poorly_damped_threshold: float
     undamped_threshold: float
     findings: tuple[PRCModeFinding, ...]
+    mode_family_counts: Mapping[str, int]
     flagged_count: int
     worst_damping_ratio: float | None
     verdict: str
@@ -195,6 +206,9 @@ class PRCOscillationEvidence:
 
     def __post_init__(self) -> None:
         """Compute the content hash from the canonical evidence payload."""
+        object.__setattr__(
+            self, "mode_family_counts", MappingProxyType(dict(self.mode_family_counts))
+        )
         object.__setattr__(
             self, "content_hash", canonical_record_hash(self._canonical_payload())
         )
@@ -209,6 +223,7 @@ class PRCOscillationEvidence:
             "poorly_damped_threshold": self.poorly_damped_threshold,
             "undamped_threshold": self.undamped_threshold,
             "findings": [finding.to_audit_record() for finding in self.findings],
+            "mode_family_counts": dict(self.mode_family_counts),
             "flagged_count": self.flagged_count,
             "worst_damping_ratio": self.worst_damping_ratio,
             "verdict": self.verdict,
@@ -296,6 +311,7 @@ def screen_oscillation_modes(
         poorly_damped_threshold=poorly,
         undamped_threshold=undamped,
         findings=findings,
+        mode_family_counts=_mode_family_counts(findings),
         flagged_count=flagged_count,
         worst_damping_ratio=worst,
         verdict=verdict,
@@ -316,9 +332,18 @@ def _screen_mode(
         frequency_hz=mode.frequency_hz,
         damping_ratio=mode.damping_ratio,
         amplitude=mode.amplitude,
+        mode_family=classify_oscillation_band(mode.frequency_hz),
         classification=classification,
         flagged=flagged,
     )
+
+
+def _mode_family_counts(findings: Sequence[PRCModeFinding]) -> dict[str, int]:
+    """Return deterministic mode-family counts for the evidence payload."""
+    counts: dict[str, int] = {}
+    for finding in findings:
+        counts[finding.mode_family] = counts.get(finding.mode_family, 0) + 1
+    return counts
 
 
 def _classify(damping: float, undamped: float, poorly: float) -> tuple[str, bool]:

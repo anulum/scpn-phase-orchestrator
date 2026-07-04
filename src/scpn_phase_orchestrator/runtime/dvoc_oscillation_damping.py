@@ -16,7 +16,8 @@ EDMD-with-control Koopman predictor (``monitor.koopman_edmd``) is then fitted fr
 input-excited snapshots and driven in closed loop by the condensed Koopman MPC
 (``actuation.koopman_mpc``); the controlled ringdown is re-screened, and the
 weakest mode is now better damped. The result carries both hash-sealed PRC
-evidence records, so the damping improvement is auditable end to end.
+evidence records and their mode-family counts, so the damping improvement and
+inter-area/sub-synchronous review signal are auditable end to end.
 
 The pipeline is review-only and offline: it operates on a caller-supplied
 discrete-time plant ``x_{k+1} = A x_k + B u_k`` and emits evidence; it performs no
@@ -167,6 +168,8 @@ class OscillationDampingResult:
             "after": self.after_evidence.to_audit_record(),
             "before_evidence_hash": self.before_evidence.content_hash,
             "after_evidence_hash": self.after_evidence.content_hash,
+            "before_mode_family_counts": dict(self.before_evidence.mode_family_counts),
+            "after_mode_family_counts": dict(self.after_evidence.mode_family_counts),
             "uncontrolled_damping_ratio": self.uncontrolled_damping_ratio,
             "controlled_damping_ratio": self.controlled_damping_ratio,
             "damping_delta": damping_delta,

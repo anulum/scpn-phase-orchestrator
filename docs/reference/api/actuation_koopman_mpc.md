@@ -118,9 +118,10 @@ is re-screened and the weakest mode is now better damped. The result carries bot
 hash-sealed `PRCOscillationEvidence` records and exports one deterministic
 `scpn_dvoc_oscillation_damping_audit_v1` record that binds the before/after
 evidence hashes, damping delta, terminal signal magnitudes, fitted-predictor
-residual, and `review_only_offline_no_live_actuation` claim boundary. The
-`spo koopman-mpc` command runs this pipeline on a default grid oscillator and
-writes the same combined audit record when `--output` is supplied. The pipeline
-is review-only and offline — it performs no live actuation.
+residual, before/after `mode_family_counts`, and
+`review_only_offline_no_live_actuation` claim boundary. The `spo koopman-mpc`
+command runs this pipeline on a default grid oscillator and writes the same
+combined audit record when `--output` is supplied. The pipeline is review-only
+and offline — it performs no live actuation.
 
 ::: scpn_phase_orchestrator.runtime.dvoc_oscillation_damping
