@@ -125,3 +125,17 @@ combined audit record when `--output` is supplied. The pipeline is review-only
 and offline — it performs no live actuation.
 
 ::: scpn_phase_orchestrator.runtime.dvoc_oscillation_damping
+
+## 9. PMU ringdown evidence ingress
+
+`runtime.pmu_ringdown` is the operator-data ingress for the same review-only PRC
+screening chain. `screen_pmu_ringdown_csv` reads a local PMU or historian CSV
+with `time_s` and `frequency_hz` columns, verifies finite uniformly sampled data,
+converts measured frequency into nominal-frequency deviation, estimates
+oscillation modes, and seals the resulting `PRCOscillationEvidence` with the
+source CSV SHA-256 digest. The `spo pmu-ringdown` command exposes the same path
+for reviewed operator captures and writes one deterministic
+`scpn_pmu_ringdown_prc_audit_v1` record when `--output` is supplied. This is a
+data-screening path only; it never fits a plant model and never actuates.
+
+::: scpn_phase_orchestrator.runtime.pmu_ringdown

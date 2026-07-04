@@ -29,6 +29,7 @@ from scpn_phase_orchestrator.runtime.dvoc_oscillation_damping import (
     damp_oscillation,
     underdamped_oscillator,
 )
+from scpn_phase_orchestrator.runtime.pmu_ringdown import screen_pmu_ringdown_csv
 
 
 @main.command("koopman-mpc")
@@ -106,3 +107,91 @@ def koopman_mpc(
         payload = result.to_audit_record()
         Path(output).write_text(json.dumps(payload, indent=2), encoding="utf-8")
         click.echo(f"\nPRC evidence written to {output}")
+
+
+@main.command("pmu-ringdown")
+@click.argument("csv_path", type=click.Path(exists=True, dir_okay=False))
+@click.option("--event-id", required=True, help="Operator event identifier")
+@click.option("--captured-at", required=True, help="Capture timestamp for evidence")
+@click.option("--signal-source", required=True, help="PMU or historian signal label")
+@click.option("--time-column", default="time_s", help="Timestamp column in seconds")
+@click.option(
+    "--frequency-column",
+    default="frequency_hz",
+    help="Measured frequency column in hertz",
+)
+@click.option(
+    "--nominal-frequency-hz",
+    default=60.0,
+    type=float,
+    help="Nominal grid frequency subtracted before screening",
+)
+@click.option(
+    "--output",
+    default=None,
+    type=click.Path(),
+    help="Write the sealed PMU PRC evidence JSON here",
+)
+def pmu_ringdown(
+    csv_path: str,
+    event_id: str,
+    captured_at: str,
+    signal_source: str,
+    time_column: str,
+    frequency_column: str,
+    nominal_frequency_hz: float,
+    output: str | None,
+) -> None:
+    """Screen an operator PMU frequency ringdown CSV for PRC review evidence.
+
+    Parameters
+    ----------
+    csv_path : str
+        PMU CSV path with timestamp and measured-frequency columns.
+    event_id : str
+        Operator event identifier stamped into the evidence.
+    captured_at : str
+        Capture timestamp stamped into the evidence.
+    signal_source : str
+        PMU or historian signal label.
+    time_column : str
+        CSV timestamp column in seconds.
+    frequency_column : str
+        CSV measured-frequency column in hertz.
+    nominal_frequency_hz : float
+        Nominal grid frequency subtracted before mode estimation.
+    output : str | None
+        Optional destination for the sealed PMU PRC evidence JSON.
+
+    Raises
+    ------
+    ClickException
+        If the PMU CSV or screening controls are invalid.
+    """
+    try:
+        evidence = screen_pmu_ringdown_csv(
+            Path(csv_path),
+            event_id=event_id,
+            captured_at=captured_at,
+            signal_source=signal_source,
+            time_column=time_column,
+            frequency_column=frequency_column,
+            nominal_frequency_hz=nominal_frequency_hz,
+        )
+    except ValueError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    flagged = sum(finding.flagged for finding in evidence.prc_evidence.findings)
+    finding_count = len(evidence.prc_evidence.findings)
+    click.echo("=== PMU ringdown PRC screening ===")
+    click.echo(
+        f"source: {evidence.signal_source}  samples={evidence.sample_count}  "
+        f"fs={evidence.sampling_rate_hz:.4f} Hz"
+    )
+    click.echo(f"flagged={flagged}/{finding_count}")
+    click.echo(f"source sha256: {evidence.source_sha256}")
+
+    if output is not None:
+        payload = evidence.to_audit_record()
+        Path(output).write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        click.echo(f"\nPMU PRC evidence written to {output}")

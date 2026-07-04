@@ -80,6 +80,28 @@ class _FakeDampingResult:
         }
 
 
+@dataclass(frozen=True)
+class _FakePMURingdownResult:
+    prc_evidence: _FakeEvidence
+    signal_source: str
+    sample_count: int
+    sampling_rate_hz: float
+    source_sha256: str
+
+    def to_audit_record(self) -> dict[str, object]:
+        """Return the PMU ringdown audit record written by the command."""
+        return {
+            "schema": "scpn_pmu_ringdown_prc_audit_v1",
+            "claim_boundary": "review_only_offline_no_live_actuation",
+            "review_only": True,
+            "sample_count": self.sample_count,
+            "sampling_rate_hz": self.sampling_rate_hz,
+            "source_sha256": self.source_sha256,
+            "prc_evidence_hash": "b" * 64,
+            "content_hash": "c" * 64,
+        }
+
+
 @dataclass
 class _DampingCall:
     state_matrix: FloatArray | None = None
@@ -113,6 +135,10 @@ def _placeholder_damp_oscillation(
     )
 
 
+def _placeholder_screen_pmu_ringdown_csv(*args: object, **kwargs: object) -> object:
+    raise AssertionError(f"unexpected PMU ringdown call: {args}, {kwargs}")
+
+
 def _load_koopman_cli(
     monkeypatch: pytest.MonkeyPatch,
 ) -> tuple[types.ModuleType, click.Group]:
@@ -133,6 +159,10 @@ def _load_koopman_cli(
             "underdamped_oscillator": _placeholder_underdamped_oscillator,
         }
     )
+    pmu_module = types.ModuleType("scpn_phase_orchestrator.runtime.pmu_ringdown")
+    pmu_module.__dict__["screen_pmu_ringdown_csv"] = (
+        _placeholder_screen_pmu_ringdown_csv
+    )
 
     monkeypatch.setitem(sys.modules, "scpn_phase_orchestrator.runtime.cli", cli_package)
     monkeypatch.setitem(
@@ -144,6 +174,11 @@ def _load_koopman_cli(
         sys.modules,
         "scpn_phase_orchestrator.runtime.dvoc_oscillation_damping",
         damping_module,
+    )
+    monkeypatch.setitem(
+        sys.modules,
+        "scpn_phase_orchestrator.runtime.pmu_ringdown",
+        pmu_module,
     )
 
     spec = importlib.util.spec_from_file_location(_MODULE_NAME, _MODULE_PATH)
@@ -316,3 +351,119 @@ def test_koopman_mpc_cli_reports_invalid_oscillator_params(
 
     assert result.exit_code != 0
     assert "Error: invalid oscillator: f=-1.0" in result.output
+
+
+def test_pmu_ringdown_cli_writes_review_only_prc_payload(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """The PMU command screens operator CSV data and writes sealed evidence."""
+    cli_koopman_mpc, main = _load_koopman_cli(monkeypatch)
+    csv_path = tmp_path / "pmu.csv"
+    csv_path.write_text("time_s,frequency_hz\n0.0,60.0\n0.02,60.1\n", encoding="utf-8")
+    output_path = tmp_path / "pmu-prc.json"
+
+    def fake_screen_pmu_ringdown_csv(
+        path: Path,
+        *,
+        event_id: str,
+        captured_at: str,
+        signal_source: str,
+        time_column: str,
+        frequency_column: str,
+        nominal_frequency_hz: float,
+    ) -> _FakePMURingdownResult:
+        assert path == csv_path
+        assert event_id == "PMU-EVT-001"
+        assert captured_at == "2026-07-04T10:00:00Z"
+        assert signal_source == "PMU/BUS-42/frequency"
+        assert time_column == "timestamp"
+        assert frequency_column == "freq"
+        assert nominal_frequency_hz == 50.0
+        return _FakePMURingdownResult(
+            prc_evidence=_FakeEvidence(
+                event_id="PMU-EVT-001",
+                findings=(_FakeFinding(True), _FakeFinding(False)),
+            ),
+            signal_source="PMU/BUS-42/frequency",
+            sample_count=128,
+            sampling_rate_hz=25.0,
+            source_sha256="d" * 64,
+        )
+
+    monkeypatch.setattr(
+        cli_koopman_mpc,
+        "screen_pmu_ringdown_csv",
+        fake_screen_pmu_ringdown_csv,
+    )
+
+    result = CliRunner().invoke(
+        main,
+        [
+            "pmu-ringdown",
+            str(csv_path),
+            "--event-id",
+            "PMU-EVT-001",
+            "--captured-at",
+            "2026-07-04T10:00:00Z",
+            "--signal-source",
+            "PMU/BUS-42/frequency",
+            "--time-column",
+            "timestamp",
+            "--frequency-column",
+            "freq",
+            "--nominal-frequency-hz",
+            "50.0",
+            "--output",
+            str(output_path),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "=== PMU ringdown PRC screening ===" in result.output
+    assert "source: PMU/BUS-42/frequency  samples=128  fs=25.0000 Hz" in result.output
+    assert "flagged=1/2" in result.output
+    assert f"PMU PRC evidence written to {output_path}" in result.output
+
+    payload = json.loads(output_path.read_text(encoding="utf-8"))
+    assert payload["schema"] == "scpn_pmu_ringdown_prc_audit_v1"
+    assert payload["claim_boundary"] == "review_only_offline_no_live_actuation"
+    assert payload["review_only"] is True
+    assert payload["sample_count"] == 128
+    assert payload["source_sha256"] == "d" * 64
+
+
+def test_pmu_ringdown_cli_reports_invalid_operator_csv(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Invalid PMU screening inputs are surfaced as Click errors."""
+    cli_koopman_mpc, main = _load_koopman_cli(monkeypatch)
+    csv_path = tmp_path / "pmu.csv"
+    csv_path.write_text("time_s,frequency_hz\n0.0,60.0\n", encoding="utf-8")
+
+    def fake_screen_pmu_ringdown_csv(*_: object, **__: object) -> object:
+        raise ValueError("PMU ringdown CSV is missing required column frequency_hz")
+
+    monkeypatch.setattr(
+        cli_koopman_mpc,
+        "screen_pmu_ringdown_csv",
+        fake_screen_pmu_ringdown_csv,
+    )
+
+    result = CliRunner().invoke(
+        main,
+        [
+            "pmu-ringdown",
+            str(csv_path),
+            "--event-id",
+            "PMU-EVT-001",
+            "--captured-at",
+            "2026-07-04T10:00:00Z",
+            "--signal-source",
+            "PMU/BUS-42/frequency",
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "Error: PMU ringdown CSV is missing required column" in result.output
