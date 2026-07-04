@@ -303,6 +303,7 @@ class TestSyncConvergenceRate:
             (np.ones((2, 2)), np.array([True, False]), 0.0, "omegas"),
             (np.ones((2, 2)), np.zeros(3), 0.0, "omegas"),
             (np.ones((2, 2)), np.zeros(2), True, "gamma_max"),
+            (np.ones((2, 2)), np.zeros(2), "0.1", "numeric-string"),
             (np.ones((2, 2)), np.zeros(2), np.nan, "gamma_max"),
         ],
     )
@@ -514,6 +515,21 @@ class TestValidationBoundaries:
         with pytest.raises(ValueError, match="knm must be a finite square matrix"):
             graph_laplacian(knm)
 
+    def test_defensive_boolean_dtype_matrix_guard(self, monkeypatch):
+        monkeypatch.setattr(s_mod, "_contains_boolean_alias", lambda _value: False)
+
+        with pytest.raises(ValueError, match="knm must not contain boolean"):
+            graph_laplacian(np.array([[True, False], [False, True]]))
+
+    def test_defensive_boolean_dtype_omega_guard(self, monkeypatch):
+        monkeypatch.setattr(s_mod, "_contains_boolean_alias", lambda _value: False)
+
+        with pytest.raises(ValueError, match="omegas must not contain boolean"):
+            sync_convergence_rate(
+                np.array([[0.0, 1.0], [1.0, 0.0]]),
+                np.array([True, False]),
+            )
+
     def test_optional_backend_boolean_output_fails_closed(self, monkeypatch):
         knm = np.array(
             [
@@ -554,6 +570,54 @@ class TestValidationBoundaries:
             fiedler_value(knm)
         with pytest.raises(ValueError, match="Fiedler vector"):
             fiedler_vector(knm)
+
+    def test_rust_fast_path_rejects_numeric_string_scalar(self, monkeypatch):
+        knm = np.array([[0.0, 1.0], [1.0, 0.0]], dtype=np.float64)
+
+        def rust_bundle():
+            return {
+                "fv": lambda flat, n: "1.0",
+                "fvec": lambda flat, n: np.array([1.0, -1.0], dtype=np.float64),
+            }
+
+        monkeypatch.setattr(s_mod, "ACTIVE_BACKEND", "rust")
+        monkeypatch.setattr(s_mod, "_RUST_CACHE", None)
+        monkeypatch.setattr(s_mod, "_load_rust_bundle", rust_bundle)
+
+        with pytest.raises(ValueError, match="numeric-string"):
+            fiedler_value(knm)
+
+    def test_checked_primitive_reraises_python_floor_loader_failure(self, monkeypatch):
+        def failing_python_floor(flat, n):
+            raise ImportError("python floor unavailable")
+
+        monkeypatch.setattr(s_mod, "_python_spectral_eig", failing_python_floor)
+        monkeypatch.setattr(s_mod, "_primitive", lambda: failing_python_floor)
+
+        with pytest.raises(ImportError, match="python floor unavailable"):
+            s_mod._spectral_eig_checked(np.zeros(4, dtype=np.float64), 2)
+
+    def test_checked_primitive_falls_back_after_optional_loader_failure(
+        self, monkeypatch
+    ):
+        def failing_optional(_flat, _n):
+            raise ImportError("optional backend unavailable")
+
+        monkeypatch.setattr(s_mod, "_primitive", lambda: failing_optional)
+
+        eigvals, fiedler = s_mod._spectral_eig_checked(
+            np.array([0.0, 1.0, 1.0, 0.0], dtype=np.float64),
+            2,
+        )
+
+        np.testing.assert_allclose(eigvals, [0.0, 2.0], atol=1e-12)
+        assert fiedler.shape == (2,)
+
+    def test_primitive_uses_python_floor_when_no_named_backend_loads(self, monkeypatch):
+        monkeypatch.setattr(s_mod, "ACTIVE_BACKEND", "rust")
+        monkeypatch.setattr(s_mod, "AVAILABLE_BACKENDS", ["rust"])
+
+        assert s_mod._primitive() is s_mod._python_spectral_eig
 
     @pytest.mark.parametrize(
         ("knm", "omegas", "match"),

@@ -142,9 +142,16 @@ class TestDirectBackendBoundaryContracts:
                 ValueError,
                 "real-valued",
             ),
+            (
+                np.array(["0.0", "0.4", "0.4", "0.0"], dtype=object),
+                2,
+                ValueError,
+                "numeric-string",
+            ),
             (np.zeros((2, 2)), 2, ValueError, "one-dimensional"),
             (np.zeros(3), 2, ValueError, "n\\*n"),
             (np.zeros(4), True, ValueError, "n"),
+            (np.zeros(4), "2", ValueError, "numeric-string"),
             (np.zeros(4), -1, ValueError, "n"),
         ],
     )
@@ -190,6 +197,22 @@ class TestDirectBackendBoundaryContracts:
         )
 
         with pytest.raises(ValueError, match="real-valued numeric arrays"):
+            spectral_eig_julia(_problem(7, n=2).ravel(), 2)
+
+    def test_direct_julia_rejects_numeric_string_output_alias(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        output = (
+            np.array(["0.0", "1.0"], dtype=object),
+            np.array([1.0, -1.0], dtype=np.float64),
+        )
+        monkeypatch.setattr(
+            _spectral_julia,
+            "_ensure",
+            lambda: _FakeJuliaSpectralModule(output),
+        )
+
+        with pytest.raises(ValueError, match="numeric-string"):
             spectral_eig_julia(_problem(7, n=2).ravel(), 2)
 
 

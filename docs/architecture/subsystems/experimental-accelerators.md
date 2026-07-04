@@ -87,10 +87,14 @@ Malformed backend outputs raise immediately, while validated numerical parity
 mismatches still fall back to the NumPy reference.
 The public spectral dispatcher, plus the direct Go, Julia, and Mojo bridges,
 apply the shared spectral output validator before publication: eigensystem
-payloads must contain finite real non-boolean eigenvalue and Fiedler vectors of
-length `N`, eigenvalues must be non-negative and sorted ascending, and
-non-trivial Fiedler vectors must be non-zero. Malformed spectral payloads raise
-immediately, preserving fallback only for loader or runtime unavailability.
+payloads must contain finite real non-boolean, non-numeric-string eigenvalue
+and Fiedler vectors of length `N`, eigenvalues must be non-negative and sorted
+ascending, and non-trivial Fiedler vectors must be non-zero. Public coupling
+matrices, frequency vectors, scalar controls, direct flattened coupling buffers,
+direct oscillator counts, backend outputs, and Julia raw returns reject
+numeric-string aliases before Python, NumPy, or accelerator coercion. Malformed
+spectral payloads raise immediately, preserving fallback only for loader or
+runtime unavailability.
 The public AttnRes dispatcher, plus the direct Go, Julia, and Mojo bridges,
 apply the shared AttnRes output validator before publication: modulated
 coupling payloads may be flat `N*N` vectors or `(N, N)` matrices, but must

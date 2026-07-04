@@ -14,6 +14,7 @@ import pytest
 from scpn_phase_orchestrator.coupling import (
     _spectral_validation as spectral_validation,
 )
+from scpn_phase_orchestrator.coupling import spectral as s_mod
 from scpn_phase_orchestrator.coupling.spectral import (
     _validate_rust_fiedler_vector,
     _validate_spectral_output,
@@ -47,6 +48,34 @@ class _FailedObjectArrayProtocol:
         return np.array([1.0, 2.0], dtype=np.float64)
 
 
+class _ObjectThenFailedObjectArrayProtocol:
+    def __array__(
+        self,
+        dtype: object | None = None,
+        copy: object | None = None,
+    ) -> np.ndarray:
+        if dtype is not None:
+            raise TypeError("object coercion failed")
+        return np.array([1.0, 2.0], dtype=object)
+
+
+class TestSpectralAliasHelpers:
+    """Alias helpers pin defensive pre-coercion edge cases."""
+
+    def test_numeric_string_alias_helper_handles_scalar_forms(self) -> None:
+        assert spectral_validation.is_numeric_string_alias(b"1.0")
+        assert spectral_validation.contains_numeric_string_alias("1.0")
+        assert not spectral_validation.is_numeric_string_alias(b"\xff")
+        assert not spectral_validation.is_numeric_string_alias(" ")
+
+    def test_private_boolean_alias_helper_handles_failed_array_protocol(self) -> None:
+        assert not s_mod._contains_boolean_alias(_FailedArrayProtocol())
+
+    def test_private_complex_alias_helper_handles_failed_object_protocol(self) -> None:
+        assert s_mod._contains_complex_alias(np.array([1.0 + 0.0j]))
+        assert not s_mod._contains_complex_alias(_ObjectThenFailedObjectArrayProtocol())
+
+
 class TestCouplingMatrixObjectArrayGuards:
     """Object-dtype matrices that smuggle non-real entries must fail closed."""
 
@@ -63,6 +92,11 @@ class TestCouplingMatrixObjectArrayGuards:
         with pytest.raises(ValueError, match="finite square matrix"):
             fiedler_value(knm)
 
+    def test_rejects_object_matrix_with_numeric_string_entry(self) -> None:
+        knm = np.array([[0.0, "0.4"], [0.4, 0.0]], dtype=object)
+        with pytest.raises(ValueError, match="numeric-string"):
+            spectral_eig(knm)
+
 
 class TestOmegaVectorGuards:
     """Frequency vectors must coerce to a finite 1-D float array."""
@@ -74,6 +108,11 @@ class TestOmegaVectorGuards:
     def test_rejects_non_numeric_omegas(self) -> None:
         omegas = np.array(["a", "b"], dtype=object)
         with pytest.raises(ValueError, match="1-D frequency vector"):
+            sync_convergence_rate(_valid_knm(), omegas)
+
+    def test_rejects_numeric_string_omegas(self) -> None:
+        omegas = np.array(["0.0", "1.0"], dtype=object)
+        with pytest.raises(ValueError, match="numeric-string"):
             sync_convergence_rate(_valid_knm(), omegas)
 
 
@@ -92,6 +131,11 @@ class TestSpectralOutputContract:
     def test_rejects_non_numeric_arrays(self) -> None:
         value = (np.array(["a", "b"], dtype=object), np.array([0.0, 1.0]))
         with pytest.raises(ValueError, match="must be numeric"):
+            _validate_spectral_output(value, n=2)
+
+    def test_rejects_numeric_string_arrays(self) -> None:
+        value = (np.array(["0.0", "1.0"], dtype=object), np.array([1.0, -1.0]))
+        with pytest.raises(ValueError, match="numeric-string"):
             _validate_spectral_output(value, n=2)
 
     def test_rejects_eigenvalue_shape_mismatch(self) -> None:
@@ -153,6 +197,20 @@ class TestSharedSpectralBackendInputContract:
             spectral_validation.validate_spectral_backend_inputs(
                 np.array(["x", "y"], dtype=object),
                 1,
+            )
+
+    def test_rejects_numeric_string_array(self) -> None:
+        with pytest.raises(ValueError, match="numeric-string"):
+            spectral_validation.validate_spectral_backend_inputs(
+                np.array(["0.0", "0.4", "0.4", "0.0"], dtype=object),
+                2,
+            )
+
+    def test_rejects_numeric_string_oscillator_count(self) -> None:
+        with pytest.raises(ValueError, match="numeric-string"):
+            spectral_validation.validate_spectral_backend_inputs(
+                np.zeros(4, dtype=np.float64),
+                "2",
             )
 
     def test_rejects_two_dimensional_array(self) -> None:
@@ -232,6 +290,14 @@ class TestSharedSpectralBackendOutputContract:
         with pytest.raises(ValueError, match="must be numeric"):
             spectral_validation.validate_spectral_backend_output(value, n=2)
 
+    def test_rejects_numeric_string_arrays(self) -> None:
+        value = (
+            np.array(["0.0", "1.0"], dtype=object),
+            np.array([1.0, -1.0]),
+        )
+        with pytest.raises(ValueError, match="numeric-string"):
+            spectral_validation.validate_spectral_backend_output(value, n=2)
+
     def test_rejects_failed_array_protocol_as_non_numeric(self) -> None:
         value = (_FailedArrayProtocol(), np.array([1.0, -1.0]))
         with pytest.raises(ValueError, match="must be numeric"):
@@ -279,6 +345,13 @@ class TestRustFiedlerVectorContract:
     def test_rejects_non_numeric_vector(self) -> None:
         with pytest.raises(ValueError, match="must be numeric"):
             _validate_rust_fiedler_vector(np.array(["a", "b"], dtype=object), n=2)
+
+    def test_rejects_numeric_string_vector(self) -> None:
+        with pytest.raises(ValueError, match="numeric-string"):
+            _validate_rust_fiedler_vector(
+                np.array(["1.0", "-1.0"], dtype=object),
+                n=2,
+            )
 
     def test_rejects_shape_mismatch(self) -> None:
         with pytest.raises(ValueError, match="must be"):

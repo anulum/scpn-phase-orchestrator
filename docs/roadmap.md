@@ -49,15 +49,15 @@ TODO queue.
 | Cross-domain meta-transfer | Replay proposals, nested corpora, package export, entry points, non-publishing evidence, and pre-publish enforcement exist. | Validate larger private or partner audit-history corpora and decide optional package publication. |
 | Plugin ecosystem | Registry, catalogue, Rust-facing metadata, approval-bound execution requests, storage, revocation, lifecycle, scheduler, retry, and dashboard artefacts exist. | Build a curated signed domainpack and extension store with reputation, audit scores, revocation, provenance, operator UX refinement, and adapter-family onboarding. |
 
-Latest U1 closure: the public Hodge decomposition surface, public Rust wrapper,
-and direct Go, Julia, and Mojo bridge contracts now reject numeric-string
-aliases before float or integer coercion across public coupling matrices, phase
-vectors, explicit triangle nodes, direct count/form inputs, flattened coupling,
-edge, and triangle buffers, optional backend outputs, and Julia raw-return
-boundaries. The Hodge boundary still replays finite real-valued cardinality,
-non-boolean/non-complex payload, valid simplex topology, and antisymmetric
-gradient/curl/harmonic output checks before publication or parity fallback;
-fallback remains reserved for validated numerical parity mismatches.
+Latest U1 closure: the public spectral graph-analysis surface, public Rust
+wrapper, and direct Go, Julia, and Mojo bridge contracts now reject
+numeric-string aliases before float or integer coercion across public coupling
+matrices, frequency vectors, scalar controls, direct flattened coupling buffers,
+direct oscillator counts, backend eigensystem outputs, and Julia raw-return
+boundaries. The spectral boundary still replays finite real-valued cardinality,
+non-boolean/non-complex payload, non-negative sorted eigenvalues, and non-zero
+non-trivial Fiedler vectors before publication or parity fallback; fallback
+remains reserved for validated numerical parity mismatches.
 
 | Parent item | Completed evidence consolidated here | Remaining open scope |
 |-------------|--------------------------------------|----------------------|

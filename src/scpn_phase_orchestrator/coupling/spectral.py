@@ -111,6 +111,8 @@ def _validate_coupling_matrix(knm: object) -> FloatArray:
     """Return the coupling as a validated finite square matrix, else raise."""
     if _contains_boolean_alias(knm):
         raise ValueError("knm must not contain boolean values")
+    if spectral_validation.contains_numeric_string_alias(knm):
+        raise ValueError("knm must not contain numeric-string aliases")
     raw = np.asarray(knm)
     if raw.dtype == np.bool_:
         raise ValueError("knm must not contain boolean values")
@@ -139,6 +141,8 @@ def _validate_omega_vector(omegas: object) -> FloatArray:
     """Return the omega vector as a validated finite array, else raise."""
     if _contains_boolean_alias(omegas):
         raise ValueError("omegas must not contain boolean values")
+    if spectral_validation.contains_numeric_string_alias(omegas):
+        raise ValueError("omegas must not contain numeric-string aliases")
     raw = np.asarray(omegas)
     if raw.dtype == np.bool_:
         raise ValueError("omegas must not contain boolean values")
@@ -159,6 +163,8 @@ def _validate_omega_vector(omegas: object) -> FloatArray:
 
 def _validate_gamma_max(value: object) -> float:
     """Return the validated maximum damping (gamma), else raise."""
+    if spectral_validation.is_numeric_string_alias(value):
+        raise TypeError("gamma_max must not be a numeric-string alias")
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise TypeError("gamma_max must be a finite real value")
     gamma = float(value)
@@ -173,6 +179,8 @@ def _validate_non_negative_scalar(
     value: object, *, name: str, allow_infinite: bool = False
 ) -> float:
     """Return ``value`` as a non-negative finite scalar, else raise."""
+    if spectral_validation.is_numeric_string_alias(value):
+        raise ValueError(f"{name} must not be a numeric-string alias")
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a non-negative scalar")
     resolved = float(value)
@@ -185,6 +193,8 @@ def _validate_non_negative_scalar(
 
 def _validate_rust_fiedler_vector(value: object, *, n: int) -> FloatArray:
     """Return the Rust Fiedler vector matching the reference, else raise."""
+    if spectral_validation.contains_numeric_string_alias(value):
+        raise ValueError("Fiedler vector must not contain numeric-string aliases")
     if _contains_boolean_alias(value) or _contains_complex_alias(value):
         raise ValueError("Fiedler vector must be real-valued and non-boolean")
     try:

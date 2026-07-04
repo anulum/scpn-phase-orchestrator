@@ -360,22 +360,26 @@ with higher λ₂ synchronise more easily.
 
 Direct accelerator boundary contract: Go, Julia, and Mojo spectral adapters use
 one shared typed `float64` validation path before loading shared-library, Julia,
-or subprocess runtimes. The contract rejects boolean aliases, complex or
-non-finite flattened coupling payloads, non-vector inputs, malformed `n*n`
-buffer lengths, and invalid oscillator counts. Empty spectral problems return
-empty eigenvalue and Fiedler vectors without optional runtime loading.
+or subprocess runtimes. The contract rejects boolean aliases, numeric-string
+aliases, complex or non-finite flattened coupling payloads, non-vector inputs,
+malformed `n*n` buffer lengths, and invalid oscillator counts. Empty spectral
+problems return empty eigenvalue and Fiedler vectors without optional runtime
+loading.
 After backend execution, the same shared output validator is replayed for the
 direct Go, Julia, and Mojo adapters and for the public optional primitive path:
-returned eigenvalues and the Fiedler vector must be finite real non-boolean
-vectors of length `N`, eigenvalues must be non-negative and sorted ascending,
-and the Fiedler vector must be non-zero for `N > 1`. Malformed backend physics
-payloads raise immediately; fallback remains reserved for loader or runtime
-unavailability.
+returned eigenvalues and the Fiedler vector must be finite real non-boolean,
+non-numeric-string vectors of length `N`, eigenvalues must be non-negative and
+sorted ascending, and the Fiedler vector must be non-zero for `N > 1`.
+Malformed backend physics payloads raise immediately; fallback remains reserved
+for loader or runtime unavailability.
 Public spectral helpers enforce the same real-valued boundary on coupling
 matrices, frequency vectors, `gamma_max`, optional primitive eigensystem
 outputs, and Rust fast-path scalar/vector returns. Boolean aliases are not
 coerced into weights or frequencies, and complex-valued aliases are rejected
-before NumPy can discard imaginary components.
+before NumPy can discard imaginary components. Numeric-string aliases are
+rejected before Python, NumPy, Rust, Julia, Go, or Mojo can widen them into
+ordinary floating-point weights, frequencies, scalar controls, or eigensystem
+payloads.
 
 ::: scpn_phase_orchestrator.coupling.spectral
 
