@@ -13,6 +13,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   critical-slowing-down early-warning indicator (rising variance and lag-one
   autocorrelation, robust-z alarm) as a passive monitor — the literature baseline
   detector and the first member of the early-warning detector suite.
+- `scpn_phase_orchestrator.monitor.synchronisation` implements the rising-
+  synchronisation early-warning indicator (the windowed Kuramoto order parameter
+  climbing above its baseline, robust-z alarm) as a passive monitor — the
+  first-moment, order-parameter member of the suite, complementary to the
+  critical-slowing-down (second-moment) and transition-entropy (regularisation)
+  detectors, and the indicator that carries the leading precursor on a real
+  scalp-EEG seizure. It shares the suite's alarm contract.
 - `bench/early_warning_leadtime.py` is a fair, matched-false-alarm head-to-head
   between the ordinal-transition-entropy detector and critical slowing down on a
   controlled inertial-vs-overdamped Kuramoto transition, with a falsification
