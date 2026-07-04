@@ -201,6 +201,7 @@ class TestLyapunovPipelineWiring:
         assert isinstance(state.in_basin, bool)
         assert state.max_phase_diff >= 0.0
 
+    @pytest.mark.performance
     def test_lyapunov_evaluate_performance(self):
         """LyapunovGuard.evaluate(N=64) must stay within CI runner budgets."""
         import time

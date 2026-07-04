@@ -496,7 +496,7 @@ class TestSplittingPipelineEndToEnd:
 
 
 def test_splitting_reference_documents_numeric_string_contract() -> None:
-    doc = SPLITTING_REFERENCE.read_text()
+    doc = SPLITTING_REFERENCE.read_text(encoding="utf-8")
 
     assert "numeric-string aliases before float coercion" in doc
     assert "direct Go/Julia/Mojo" in doc

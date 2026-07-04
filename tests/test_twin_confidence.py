@@ -680,7 +680,9 @@ def test_prometheus_rejects_empty_prefix(prefix: str) -> None:
 
 
 def test_twin_confidence_api_reference_documents_numeric_string_contracts() -> None:
-    doc = Path("docs/reference/api/monitor_twin_confidence.md").read_text()
+    doc = Path("docs/reference/api/monitor_twin_confidence.md").read_text(
+        encoding="utf-8"
+    )
 
     assert "numeric-string aliases" in doc
     assert "before float coercion" in doc

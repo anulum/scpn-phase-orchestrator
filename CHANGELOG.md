@@ -171,6 +171,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - DSSE/provenance round-trip tests now assert the exact SLSA predicate type
   instead of using URL-prefix substring checks, resolving the CodeQL
   incomplete-URL-substring-sanitisation alerts in those tests.
+- CI test and FFI lanes now deselect host-sensitive `performance` tests, the
+  Lyapunov wall-clock guard carries the `performance` marker, and Windows doc
+  contract tests read UTF-8 Markdown explicitly instead of relying on the
+  platform default codec.
 
 ## [0.10.0] - 2026-06-25
 

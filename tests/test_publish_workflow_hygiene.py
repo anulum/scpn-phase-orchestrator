@@ -124,7 +124,8 @@ def test_ci_slow_tests_run_once_outside_python_matrix() -> None:
         for step in jobs["test"]["steps"]
         if step.get("name") == "Run tests (with coverage on 3.12)"
     )
-    assert '-m "not slow"' in test_command
+    assert '-m "not slow and not performance"' in test_command
+    assert '-k "not performance"' in test_command
 
     slow_job = jobs["slow-tests"]
     assert slow_job["timeout-minutes"] == 20
@@ -185,4 +186,7 @@ def test_ffi_matrix_excludes_slow_tests() -> None:
     ]
 
     assert pytest_commands
-    assert all('-m "not slow"' in command for command in pytest_commands)
+    assert all(
+        '-m "not slow and not performance"' in command for command in pytest_commands
+    )
+    assert all('-k "not performance"' in command for command in pytest_commands)

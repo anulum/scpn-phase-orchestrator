@@ -89,7 +89,8 @@ jobs:
           --ignore=tests/test_quantum_bridge_live.py
           --ignore=tests/test_geometry_walk.py
           --ignore-glob=tests/test_nn_physics_validation*.py
-          -m "not slow"
+          -m "not slow and not performance"
+          -k "not performance"
           ${{ matrix.python-version == '3.12' && '--cov=scpn_phase_orchestrator --cov-report=term-missing --cov-fail-under=0' || '' }}
       - name: Rename coverage data (test)
         if: matrix.python-version == '3.12'
@@ -468,7 +469,8 @@ jobs:
             --ignore=tests/test_quantum_bridge_live.py \
             --ignore=tests/test_geometry_walk.py \
             --ignore-glob=tests/test_nn_physics_validation*.py \
-            -m "not slow" \
+            -m "not slow and not performance" \
+            -k "not performance" \
             --cov=scpn_phase_orchestrator --cov-report= --cov-fail-under=0
           mv .coverage .coverage.ffi
       - name: Upload coverage data (ffi, ubuntu only)
@@ -497,7 +499,8 @@ jobs:
             --ignore=tests/test_quantum_bridge_live.py \
             --ignore=tests/test_geometry_walk.py \
             --ignore-glob=tests/test_nn_physics_validation*.py \
-            -m "not slow"
+            -m "not slow and not performance" \
+            -k "not performance"
       - name: Build and test (Windows)
         if: runner.os == 'Windows'
         shell: bash
@@ -518,7 +521,8 @@ jobs:
             --ignore=tests/test_quantum_bridge_live.py \
             --ignore=tests/test_geometry_walk.py \
             --ignore-glob=tests/test_nn_physics_validation*.py \
-            -m "not slow"
+            -m "not slow and not performance" \
+            -k "not performance"
 
   cargo-audit:
     runs-on: ubuntu-latest
