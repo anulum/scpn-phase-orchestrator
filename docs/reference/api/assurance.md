@@ -262,3 +262,21 @@ or legal compliance. Observations outside the review envelope use
 `assessor_review_required`, not pass/fail language.
 
 ::: scpn_phase_orchestrator.assurance.prc_ride_through
+
+## Power-Grid PRC Assessor Bundle
+
+`scpn_phase_orchestrator.assurance.power_grid_prc_bundle` binds the three
+power-grid PRC review artefacts into one deterministic handoff package:
+
+- `scpn_dvoc_oscillation_damping_audit_v1` from the offline dVOC/Koopman-MPC
+  damping screen;
+- `scpn_pmu_ringdown_prc_audit_v1` from an operator PMU frequency ringdown CSV;
+- `scpn_ibr_ride_through_prc029_audit_v1` from an operator voltage/frequency
+  ride-through CSV.
+
+The builder verifies the source JSON SHA-256 metadata, exact child schema,
+review-only claim boundary, and each child `content_hash` before sealing the
+bundle as `scpn_power_grid_prc_audit_bundle_v1`. The bundle keeps the full child
+records for assessor replay and carries no live-actuation or conformity claim.
+
+::: scpn_phase_orchestrator.assurance.power_grid_prc_bundle

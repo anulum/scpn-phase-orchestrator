@@ -39,6 +39,7 @@ from scpn_phase_orchestrator.runtime.cli import koopman_mpc as koopman_mpc
 from scpn_phase_orchestrator.runtime.cli import meta as meta
 from scpn_phase_orchestrator.runtime.cli import monitoring as monitoring
 from scpn_phase_orchestrator.runtime.cli import plugins as plugins
+from scpn_phase_orchestrator.runtime.cli import power_grid as power_grid
 from scpn_phase_orchestrator.runtime.cli import provenance as provenance
 from scpn_phase_orchestrator.runtime.cli import queuewaves as queuewaves
 from scpn_phase_orchestrator.runtime.cli import quickstart as quickstart

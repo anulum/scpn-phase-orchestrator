@@ -418,6 +418,71 @@ spo certification-evidence --system grid-review \
 
 ---
 
+## `spo koopman-mpc`
+
+Run the review-only dVOC oscillation-damping demonstration and emit the sealed
+before/after PRC oscillation evidence when `--output` is set. The command builds
+a local underdamped oscillator, fits a Koopman predictor, applies offline
+Koopman-MPC damping, and maps both ringdowns to PRC-028-1 / PRC-030-1 review
+evidence. It does not actuate a live plant.
+
+```
+spo koopman-mpc [--frequency-hz HZ] [--damping-ratio ZETA] [--dt S] [--horizon N] [--output PATH]
+```
+
+**Options:**
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--frequency-hz HZ` | `0.5` | Natural oscillator frequency |
+| `--damping-ratio ZETA` | `0.02` | Open-loop damping ratio |
+| `--dt S` | `0.02` | Sampling interval in seconds |
+| `--horizon N` | `300` | Ringdown steps for each pass |
+| `--output PATH` | None | Write `scpn_dvoc_oscillation_damping_audit_v1` JSON |
+
+**Example:**
+
+```bash
+spo koopman-mpc --output dvoc_oscillation_damping.json
+```
+
+---
+
+## `spo pmu-ringdown`
+
+Screen a local PMU or historian frequency ringdown CSV for PRC oscillation
+review evidence. The command validates uniformly sampled finite frequency data,
+subtracts the nominal grid frequency, estimates oscillation modes, and writes a
+hash-sealed `scpn_pmu_ringdown_prc_audit_v1` record when `--output` is set.
+
+```
+spo pmu-ringdown <csv_path> --event-id ID --captured-at TIMESTAMP --signal-source LABEL [--nominal-frequency-hz HZ] [--output PATH]
+```
+
+**Options:**
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--event-id ID` | Required | Operator event identifier stamped into the evidence |
+| `--captured-at TIMESTAMP` | Required | Capture timestamp stamped into the evidence |
+| `--signal-source LABEL` | Required | PMU or historian signal label |
+| `--time-column` | `time_s` | Timestamp column in seconds |
+| `--frequency-column` | `frequency_hz` | Frequency column in hertz |
+| `--nominal-frequency-hz HZ` | `60.0` | Nominal frequency subtracted before screening |
+| `--output PATH` | None | Write the sealed JSON evidence record |
+
+**Example:**
+
+```bash
+spo pmu-ringdown pmu_ringdown.csv \
+  --event-id PMU-EVT-001 \
+  --captured-at 2026-07-04T10:00:00Z \
+  --signal-source PMU/BUS-42/frequency \
+  --output pmu_prc.json
+```
+
+---
+
 ## `spo ibr-ride-through`
 
 Screen a local operator CSV for NERC PRC-029-1 ride-through review evidence.
@@ -451,6 +516,45 @@ spo ibr-ride-through ride_through.csv \
   --captured-at 2026-07-04T13:45:00Z \
   --signal-source IBR-17/high-side-transformer \
   --output prc029_ride_through.json
+```
+
+---
+
+## `spo power-grid-prc-bundle`
+
+Bind the review-only dVOC, PMU ringdown, and IBR ride-through evidence files
+into one assessor handoff package. The command verifies each child schema,
+claim boundary, content hash, and source-file SHA-256 before writing
+`scpn_power_grid_prc_audit_bundle_v1`. It is a packaging surface only: it does
+not re-screen data, actuate, or certify compliance.
+
+```
+spo power-grid-prc-bundle --bundle-id ID --created-at TIMESTAMP --operator-context TEXT --dvoc-evidence PATH --pmu-ringdown PATH --ibr-ride-through PATH [--output PATH]
+```
+
+**Options:**
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--bundle-id ID` | Required | Operator bundle identifier |
+| `--created-at TIMESTAMP` | Required | Bundle creation timestamp |
+| `--operator-context TEXT` | Required | Human-readable assessor review context |
+| `--dvoc-evidence PATH` | Required | `scpn_dvoc_oscillation_damping_audit_v1` JSON |
+| `--pmu-ringdown PATH` | Required | `scpn_pmu_ringdown_prc_audit_v1` JSON |
+| `--ibr-ride-through PATH` | Required | `scpn_ibr_ride_through_prc029_audit_v1` JSON |
+| `--output PATH` | None | Write the sealed bundle JSON |
+
+**Example:**
+
+```bash
+spo power-grid-prc-bundle \
+  --bundle-id PG-REVIEW-001 \
+  --created-at 2026-07-04T15:10:00Z \
+  --operator-context "western interconnection post-event review" \
+  --dvoc-evidence dvoc_oscillation_damping.json \
+  --pmu-ringdown pmu_prc.json \
+  --ibr-ride-through prc029_ride_through.json \
+  --output power_grid_prc_bundle.json
 ```
 
 ---
