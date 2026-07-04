@@ -20,6 +20,7 @@ from scpn_phase_orchestrator.runtime.cli._payloads import (
 )
 
 _HEX = "a" * 64
+_OTHER_HEX = "b" * 64
 
 
 def _storage_manifest(**overrides: Any) -> dict[str, Any]:
@@ -48,6 +49,15 @@ def _storage_manifest(**overrides: Any) -> dict[str, Any]:
 
 
 class TestStorageManifestLoader:
+    def test_valid_round_trips_revoked_request_hashes(self) -> None:
+        payload = _storage_manifest(revoked_request_hashes=[_HEX, _OTHER_HEX])
+
+        manifest = _load_storage_manifest_from_payload(payload)
+
+        assert manifest.revoked_request_hashes == (_HEX, _OTHER_HEX)
+        assert manifest.kind == "monitor"
+        assert manifest.audit_record is payload
+
     def test_rejects_schema_mismatch(self) -> None:
         with pytest.raises(click.ClickException, match="storage manifest schema"):
             _load_storage_manifest_from_payload(_storage_manifest(schema="x"))

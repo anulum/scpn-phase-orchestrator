@@ -44,6 +44,15 @@ def _adapter(**overrides: Any) -> dict[str, Any]:
 
 
 class TestStorageAdapterLoader:
+    def test_valid_round_trips_write_performed_flag(self) -> None:
+        payload = _adapter(write_performed=False)
+
+        adapter = _load_storage_adapter_from_payload(payload)
+
+        assert adapter.storage_backend == "filesystem"
+        assert adapter.write_performed is False
+        assert adapter.audit_record is payload
+
     def test_rejects_schema_mismatch(self) -> None:
         with pytest.raises(click.ClickException, match="storage adapter schema"):
             _load_storage_adapter_from_payload(_adapter(schema="x"))
