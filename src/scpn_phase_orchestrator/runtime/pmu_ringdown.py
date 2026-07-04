@@ -48,6 +48,9 @@ __all__ = [
 PMU_RINGDOWN_AUDIT_SCHEMA = "scpn_pmu_ringdown_prc_audit_v1"
 PMU_RINGDOWN_CLAIM_BOUNDARY = "review_only_offline_no_live_actuation"
 
+#: Supported deviation-signal detrend modes.
+_DETREND_MODES = ("none", "mean")
+
 
 @dataclass(frozen=True, slots=True)
 class PMURingdownEvidence:
@@ -74,9 +77,19 @@ class PMURingdownEvidence:
     sample_count : int
         Number of accepted samples.
     sampling_rate_hz : float
-        Uniform sampling rate inferred from the timestamp column.
+        Uniform sampling rate inferred from the timestamp column (the raw
+        capture rate, before any decimation).
     duration_s : float
         Capture duration from first to last sample.
+    detrend : str
+        Detrend mode applied to the deviation signal before estimation
+        (``"none"`` or ``"mean"``).
+    analysis_rate_hz : float
+        Sampling rate of the signal actually fed to the estimator, after
+        optional decimation. Equals ``sampling_rate_hz`` when no decimation
+        was requested.
+    analysis_sample_count : int
+        Number of samples fed to the estimator after optional decimation.
     prc_evidence : PRCOscillationEvidence
         Hash-sealed PRC screening evidence for the frequency-deviation signal.
     claim_boundary : str
@@ -99,6 +112,9 @@ class PMURingdownEvidence:
     sample_count: int
     sampling_rate_hz: float
     duration_s: float
+    detrend: str
+    analysis_rate_hz: float
+    analysis_sample_count: int
     prc_evidence: PRCOscillationEvidence
     claim_boundary: str = PMU_RINGDOWN_CLAIM_BOUNDARY
     review_only: bool = True
@@ -125,6 +141,9 @@ class PMURingdownEvidence:
             "sample_count": self.sample_count,
             "sampling_rate_hz": self.sampling_rate_hz,
             "duration_s": self.duration_s,
+            "detrend": self.detrend,
+            "analysis_rate_hz": self.analysis_rate_hz,
+            "analysis_sample_count": self.analysis_sample_count,
             "prc_evidence_hash": self.prc_evidence.content_hash,
             "prc_evidence": self.prc_evidence.to_audit_record(),
             "claim_boundary": self.claim_boundary,
@@ -153,11 +172,26 @@ def screen_pmu_ringdown_csv(
     time_column: str = "time_s",
     frequency_column: str = "frequency_hz",
     nominal_frequency_hz: float = 60.0,
+    detrend: str = "mean",
+    analysis_rate_hz: float | None = None,
     min_samples: int = 8,
-    sampling_jitter_tolerance: float = 1.0e-6,
-    model_order: int | None = None,
+    max_analysis_samples: int = 1200,
+    sampling_jitter_tolerance: float = 5.0e-2,
+    model_order: int | None = 8,
 ) -> PMURingdownEvidence:
     """Screen a PMU frequency ringdown CSV into hash-sealed PRC evidence.
+
+    The defaults are tuned for real operator captures. A raw PMU frequency
+    channel sits at a small offset from the nominal frequency (the operating
+    point rarely equals exactly 60/50 Hz) and is reported on a decimal-rounded
+    timestamp grid at the full reporting rate. Left untreated, the offset is
+    fit as a dominant 0 Hz mode that buries the electromechanical oscillation,
+    the rounded timestamps fail an over-tight uniformity check, and the full
+    reporting rate makes a several-minute capture too long for the estimator.
+    The defaults address all three: mean detrending removes the operating-point
+    offset, ``analysis_rate_hz`` decimates an over-sampled capture, the
+    uniformity tolerance accepts rounded timestamps, and a bounded model order
+    keeps a noisy real signal from fragmenting into spurious modes.
 
     Parameters
     ----------
@@ -175,12 +209,30 @@ def screen_pmu_ringdown_csv(
         Name of the measured frequency column in hertz.
     nominal_frequency_hz : float
         Nominal grid frequency subtracted before mode estimation.
+    detrend : str
+        Deviation-signal detrend mode: ``"mean"`` (default) removes the
+        operating-point offset, ``"none"`` disables detrending. A linear
+        detrend is intentionally not offered — it distorts a decaying ringdown.
+    analysis_rate_hz : float | None
+        Target analysis rate in hertz. When set below the raw capture rate the
+        deviation signal is anti-alias (block-mean) decimated to approximately
+        this rate before estimation; ``None`` estimates at the raw rate. Use
+        roughly ten times the highest mode frequency of interest.
     min_samples : int
-        Minimum accepted sample count. Must be at least four.
+        Minimum accepted raw sample count. Must be at least four.
+    max_analysis_samples : int
+        Upper bound on the post-decimation sample count fed to the estimator.
+        A longer signal fails closed with guidance rather than making the
+        matrix-pencil singular value decomposition intractable.
     sampling_jitter_tolerance : float
-        Relative tolerance for timestamp uniformity.
+        Tolerance for timestamp uniformity, as a fraction of the sample
+        interval, measured against the best-fit uniform grid (so decimal
+        rounding does not accumulate).
     model_order : int | None
-        Optional matrix-pencil model order forwarded to the estimator.
+        Matrix-pencil model order forwarded to the estimator. The default of
+        eight suits screening for a handful of dominant modes; ``None`` selects
+        the order from the singular-value spectrum (only advisable for clean
+        captures).
 
     Returns
     -------
@@ -199,8 +251,15 @@ def screen_pmu_ringdown_csv(
     time_field = _non_empty_str(time_column, "time_column")
     frequency_field = _non_empty_str(frequency_column, "frequency_column")
     nominal = _positive_real(nominal_frequency_hz, "nominal_frequency_hz")
+    detrend_mode = _validated_detrend(detrend)
     sample_floor = _min_samples(min_samples)
+    analysis_ceiling = _max_analysis_samples(max_analysis_samples)
     jitter = _non_negative_real(sampling_jitter_tolerance, "sampling_jitter_tolerance")
+    target_rate = (
+        None
+        if analysis_rate_hz is None
+        else _positive_real(analysis_rate_hz, "analysis_rate_hz")
+    )
 
     source_bytes = csv_path.read_bytes()
     times, frequencies = _read_pmu_csv(csv_path, time_field, frequency_field)
@@ -211,15 +270,24 @@ def screen_pmu_ringdown_csv(
     sample_interval = _uniform_sample_interval(times, time_field, jitter)
     sampling_rate = 1.0 / sample_interval
     deviation = np.ascontiguousarray(frequencies - nominal, dtype=np.float64)
+    analysis_signal, analysis_rate = _decimate_signal(
+        deviation, sampling_rate, target_rate
+    )
+    if analysis_signal.shape[0] > analysis_ceiling:
+        raise ValueError(
+            f"analysis signal has {analysis_signal.shape[0]} samples, above the "
+            f"{analysis_ceiling} limit; set analysis_rate_hz to decimate the capture"
+        )
+    analysis_signal = _detrend_signal(analysis_signal, detrend_mode)
     modes = estimate_oscillation_modes(
-        deviation, sampling_rate, model_order=model_order
+        analysis_signal, analysis_rate, model_order=model_order
     )
     prc_evidence = screen_oscillation_modes(
         modes,
         event_id=event,
         captured_at=captured,
         signal_source=f"{source}/deviation",
-        sampling_rate_hz=sampling_rate,
+        sampling_rate_hz=analysis_rate,
     )
     return PMURingdownEvidence(
         schema=PMU_RINGDOWN_AUDIT_SCHEMA,
@@ -234,6 +302,9 @@ def screen_pmu_ringdown_csv(
         sample_count=int(times.shape[0]),
         sampling_rate_hz=sampling_rate,
         duration_s=float(times[-1] - times[0]),
+        detrend=detrend_mode,
+        analysis_rate_hz=analysis_rate,
+        analysis_sample_count=int(analysis_signal.shape[0]),
         prc_evidence=prc_evidence,
     )
 
@@ -270,15 +341,74 @@ def _read_pmu_csv(
 def _uniform_sample_interval(
     times: FloatArray, time_column: str, jitter_tolerance: float
 ) -> float:
-    """Return the uniform sample interval, else raise ``ValueError``."""
+    """Return the uniform sample interval, else raise ``ValueError``.
+
+    Uniformity is measured against the best-fit uniform grid anchored at the
+    first sample rather than against consecutive differences, so decimal
+    rounding of individual timestamps (bounded by half the rounding step) does
+    not accumulate into a spurious non-uniformity.
+    """
     intervals = np.diff(times)
     if np.any(intervals <= 0.0):
         raise ValueError(f"{time_column} must be strictly increasing")
-    sample_interval = float(np.median(intervals))
+    count = times.shape[0]
+    sample_interval = float((times[-1] - times[0]) / (count - 1))
+    grid = times[0] + sample_interval * np.arange(count, dtype=np.float64)
     tolerance = max(1.0e-12, jitter_tolerance * sample_interval)
-    if float(np.max(np.abs(intervals - sample_interval))) > tolerance:
+    if float(np.max(np.abs(times - grid))) > tolerance:
         raise ValueError(f"{time_column} must be uniformly sampled")
     return sample_interval
+
+
+def _decimate_signal(
+    signal: FloatArray, source_rate: float, target_rate: float | None
+) -> tuple[FloatArray, float]:
+    """Anti-alias (block-mean) decimate ``signal`` toward ``target_rate``.
+
+    Averaging each block of ``factor`` samples is a boxcar low-pass that
+    suppresses content above the reduced Nyquist frequency before downsampling,
+    so a slow electromechanical mode is preserved while the oversampled band is
+    removed. Returns the signal and rate unchanged when no decimation applies.
+    """
+    if target_rate is None or target_rate >= source_rate:
+        return signal, source_rate
+    factor = int(round(source_rate / target_rate))
+    if factor <= 1:
+        return signal, source_rate
+    usable = (signal.shape[0] // factor) * factor
+    if usable < factor:
+        return signal, source_rate
+    blocks = signal[:usable].reshape(-1, factor).mean(axis=1)
+    return np.ascontiguousarray(blocks, dtype=np.float64), source_rate / factor
+
+
+def _detrend_signal(deviation: FloatArray, mode: str) -> FloatArray:
+    """Remove the operating-point offset so the estimator fits oscillatory modes.
+
+    Mean removal deletes the DC bias between the operating point and the
+    nominal frequency without distorting a decaying ringdown. A linear detrend
+    is deliberately unsupported: it would absorb part of the decay envelope and
+    move a genuine mode toward 0 Hz.
+    """
+    if mode == "none":
+        return deviation
+    return np.ascontiguousarray(deviation - float(np.mean(deviation)), dtype=np.float64)
+
+
+def _validated_detrend(mode: object) -> str:
+    """Return a supported detrend mode, else raise ``ValueError``."""
+    if mode not in _DETREND_MODES:
+        raise ValueError(f"detrend must be one of {_DETREND_MODES!r}, got {mode!r}")
+    return str(mode)
+
+
+def _max_analysis_samples(value: object) -> int:
+    """Return a valid post-decimation sample ceiling, else raise ``ValueError``."""
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise ValueError(f"max_analysis_samples must be an integer, got {value!r}")
+    if value < 4:
+        raise ValueError("max_analysis_samples must be at least 4")
+    return value
 
 
 def _min_samples(value: object) -> int:

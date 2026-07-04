@@ -452,11 +452,16 @@ spo koopman-mpc --output dvoc_oscillation_damping.json
 
 Screen a local PMU or historian frequency ringdown CSV for PRC oscillation
 review evidence. The command validates uniformly sampled finite frequency data,
-subtracts the nominal grid frequency, estimates oscillation modes, and writes a
-hash-sealed `scpn_pmu_ringdown_prc_audit_v1` record when `--output` is set.
+subtracts the nominal grid frequency, mean-detrends the deviation to remove the
+operating-point offset, optionally decimates an over-sampled capture, estimates
+oscillation modes, and writes a hash-sealed `scpn_pmu_ringdown_prc_audit_v1`
+record when `--output` is set. Timestamp uniformity is measured against the
+best-fit uniform grid, so a capture exported with decimal-rounded timestamps is
+accepted. The record keeps both the raw capture rate and the post-decimation
+analysis rate.
 
 ```
-spo pmu-ringdown <csv_path> --event-id ID --captured-at TIMESTAMP --signal-source LABEL [--nominal-frequency-hz HZ] [--output PATH]
+spo pmu-ringdown <csv_path> --event-id ID --captured-at TIMESTAMP --signal-source LABEL [--nominal-frequency-hz HZ] [--detrend MODE] [--analysis-rate-hz HZ] [--output PATH]
 ```
 
 **Options:**
@@ -469,6 +474,8 @@ spo pmu-ringdown <csv_path> --event-id ID --captured-at TIMESTAMP --signal-sourc
 | `--time-column` | `time_s` | Timestamp column in seconds |
 | `--frequency-column` | `frequency_hz` | Frequency column in hertz |
 | `--nominal-frequency-hz HZ` | `60.0` | Nominal frequency subtracted before screening |
+| `--detrend MODE` | `mean` | Deviation detrend: `mean` removes the operating-point offset, `none` disables it |
+| `--analysis-rate-hz HZ` | None | Decimate an over-sampled capture to this rate before estimation (about ten times the highest mode of interest) |
 | `--output PATH` | None | Write the sealed JSON evidence record |
 
 **Example:**

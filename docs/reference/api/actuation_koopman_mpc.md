@@ -130,11 +130,16 @@ and offline — it performs no live actuation.
 
 `runtime.pmu_ringdown` is the operator-data ingress for the same review-only PRC
 screening chain. `screen_pmu_ringdown_csv` reads a local PMU or historian CSV
-with `time_s` and `frequency_hz` columns, verifies finite uniformly sampled data,
-converts measured frequency into nominal-frequency deviation, estimates
-oscillation modes, and seals the resulting `PRCOscillationEvidence` with the
-source CSV SHA-256 digest. The `spo pmu-ringdown` command exposes the same path
-for reviewed operator captures and writes one deterministic
+with `time_s` and `frequency_hz` columns, verifies finite data whose timestamps
+match a best-fit uniform grid (so decimal-rounded operator timestamps are
+accepted), converts measured frequency into nominal-frequency deviation,
+mean-detrends the deviation to remove the operating-point offset that would
+otherwise dominate the estimate, optionally block-mean decimates an over-sampled
+capture to a requested analysis rate, estimates oscillation modes under a bounded
+model order, and seals the resulting `PRCOscillationEvidence` with the source CSV
+SHA-256 digest. The record keeps both the raw capture rate and the
+post-decimation analysis rate. The `spo pmu-ringdown` command exposes the same
+path for reviewed operator captures and writes one deterministic
 `scpn_pmu_ringdown_prc_audit_v1` record when `--output` is supplied. This is a
 data-screening path only; it never fits a plant model and never actuates.
 

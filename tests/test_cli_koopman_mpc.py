@@ -87,6 +87,9 @@ class _FakePMURingdownResult:
     sample_count: int
     sampling_rate_hz: float
     source_sha256: str
+    detrend: str = "mean"
+    analysis_rate_hz: float = 25.0
+    analysis_sample_count: int = 128
 
     def to_audit_record(self) -> dict[str, object]:
         """Return the PMU ringdown audit record written by the command."""
@@ -96,6 +99,9 @@ class _FakePMURingdownResult:
             "review_only": True,
             "sample_count": self.sample_count,
             "sampling_rate_hz": self.sampling_rate_hz,
+            "detrend": self.detrend,
+            "analysis_rate_hz": self.analysis_rate_hz,
+            "analysis_sample_count": self.analysis_sample_count,
             "source_sha256": self.source_sha256,
             "prc_evidence_hash": "b" * 64,
             "content_hash": "c" * 64,
@@ -409,6 +415,8 @@ def test_pmu_ringdown_cli_writes_review_only_prc_payload(
         time_column: str,
         frequency_column: str,
         nominal_frequency_hz: float,
+        detrend: str,
+        analysis_rate_hz: float | None,
     ) -> _FakePMURingdownResult:
         assert path == csv_path
         assert event_id == "PMU-EVT-001"
@@ -417,6 +425,8 @@ def test_pmu_ringdown_cli_writes_review_only_prc_payload(
         assert time_column == "timestamp"
         assert frequency_column == "freq"
         assert nominal_frequency_hz == 50.0
+        assert detrend == "mean"
+        assert analysis_rate_hz == 5.0
         return _FakePMURingdownResult(
             prc_evidence=_FakeEvidence(
                 event_id="PMU-EVT-001",
@@ -451,6 +461,10 @@ def test_pmu_ringdown_cli_writes_review_only_prc_payload(
             "freq",
             "--nominal-frequency-hz",
             "50.0",
+            "--detrend",
+            "mean",
+            "--analysis-rate-hz",
+            "5.0",
             "--output",
             str(output_path),
         ],
@@ -459,6 +473,7 @@ def test_pmu_ringdown_cli_writes_review_only_prc_payload(
     assert result.exit_code == 0, result.output
     assert "=== PMU ringdown PRC screening ===" in result.output
     assert "source: PMU/BUS-42/frequency  samples=128  fs=25.0000 Hz" in result.output
+    assert "analysis: detrend=mean  samples=128  fs=25.0000 Hz" in result.output
     assert "flagged=1/2" in result.output
     assert f"PMU PRC evidence written to {output_path}" in result.output
 
@@ -468,6 +483,52 @@ def test_pmu_ringdown_cli_writes_review_only_prc_payload(
     assert payload["review_only"] is True
     assert payload["sample_count"] == 128
     assert payload["source_sha256"] == "d" * 64
+
+
+def test_pmu_ringdown_cli_prints_summary_without_output(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Omitting --output prints the screening summary and writes no file."""
+    cli_koopman_mpc, main = _load_koopman_cli(monkeypatch)
+    csv_path = tmp_path / "pmu.csv"
+    csv_path.write_text("time_s,frequency_hz\n0.0,60.0\n0.02,60.1\n", encoding="utf-8")
+
+    def fake_screen_pmu_ringdown_csv(path: Path, **_: object) -> _FakePMURingdownResult:
+        return _FakePMURingdownResult(
+            prc_evidence=_FakeEvidence(
+                event_id="PMU-EVT-002",
+                findings=(_FakeFinding(False),),
+            ),
+            signal_source="PMU/BUS-7/frequency",
+            sample_count=64,
+            sampling_rate_hz=30.0,
+            source_sha256="e" * 64,
+        )
+
+    monkeypatch.setattr(
+        cli_koopman_mpc,
+        "screen_pmu_ringdown_csv",
+        fake_screen_pmu_ringdown_csv,
+    )
+
+    result = CliRunner().invoke(
+        main,
+        [
+            "pmu-ringdown",
+            str(csv_path),
+            "--event-id",
+            "PMU-EVT-002",
+            "--captured-at",
+            "2026-07-04T10:00:00Z",
+            "--signal-source",
+            "PMU/BUS-7/frequency",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "flagged=0/1" in result.output
+    assert "written to" not in result.output
 
 
 def test_pmu_ringdown_cli_reports_invalid_operator_csv(

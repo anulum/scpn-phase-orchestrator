@@ -119,6 +119,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- PMU ringdown PRC screening (`runtime.pmu_ringdown.screen_pmu_ringdown_csv`,
+  `spo pmu-ringdown`) now recovers real oscillation modes from operator
+  captures. The deviation signal is mean-detrended so the operating-point
+  offset is not fit as a dominant 0 Hz mode that buries the electromechanical
+  swing; timestamp uniformity is measured against the best-fit uniform grid so
+  decimal-rounded operator timestamps are accepted; `analysis_rate_hz` provides
+  anti-alias block-mean decimation with a `max_analysis_samples` ceiling that
+  fails closed rather than making the estimate intractable; and the default
+  model order is bounded so a noisy signal does not fragment into spurious
+  modes. The command gains `--detrend` and `--analysis-rate-hz`, and the sealed
+  record adds the detrend mode plus the post-decimation analysis rate and
+  sample count. Validated on a documented real inter-area oscillation event.
 - `tests/test_itpc_bridge_paths.py` failed-subprocess test grants the execute
   bit to its fake Mojo artefact: the hardened runtime probe rejects
   non-executable artefacts before the subprocess path, so the test never

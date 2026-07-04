@@ -130,6 +130,18 @@ def koopman_mpc(
     help="Nominal grid frequency subtracted before screening",
 )
 @click.option(
+    "--detrend",
+    default="mean",
+    type=click.Choice(["none", "mean"]),
+    help="Deviation-signal detrend before estimation (mean removes the offset)",
+)
+@click.option(
+    "--analysis-rate-hz",
+    default=None,
+    type=float,
+    help="Decimate an over-sampled capture to this rate before estimation",
+)
+@click.option(
     "--output",
     default=None,
     type=click.Path(),
@@ -143,6 +155,8 @@ def pmu_ringdown(
     time_column: str,
     frequency_column: str,
     nominal_frequency_hz: float,
+    detrend: str,
+    analysis_rate_hz: float | None,
     output: str | None,
 ) -> None:
     """Screen an operator PMU frequency ringdown CSV for PRC review evidence.
@@ -163,6 +177,10 @@ def pmu_ringdown(
         CSV measured-frequency column in hertz.
     nominal_frequency_hz : float
         Nominal grid frequency subtracted before mode estimation.
+    detrend : str
+        Deviation-signal detrend mode (``"none"`` or ``"mean"``).
+    analysis_rate_hz : float | None
+        Optional decimation target rate for an over-sampled capture.
     output : str | None
         Optional destination for the sealed PMU PRC evidence JSON.
 
@@ -180,6 +198,8 @@ def pmu_ringdown(
             time_column=time_column,
             frequency_column=frequency_column,
             nominal_frequency_hz=nominal_frequency_hz,
+            detrend=detrend,
+            analysis_rate_hz=analysis_rate_hz,
         )
     except ValueError as exc:
         raise click.ClickException(str(exc)) from exc
@@ -190,6 +210,11 @@ def pmu_ringdown(
     click.echo(
         f"source: {evidence.signal_source}  samples={evidence.sample_count}  "
         f"fs={evidence.sampling_rate_hz:.4f} Hz"
+    )
+    click.echo(
+        f"analysis: detrend={evidence.detrend}  "
+        f"samples={evidence.analysis_sample_count}  "
+        f"fs={evidence.analysis_rate_hz:.4f} Hz"
     )
     click.echo(f"flagged={flagged}/{finding_count}")
     click.echo(f"source sha256: {evidence.source_sha256}")
