@@ -27,6 +27,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   rule, so the comparison isolates the indicator. The tested logic (alarm rule,
   calibration, lead-time evaluation, verdict) is pinned in
   `tests/test_early_warning_leadtime.py`.
+- `scpn_phase_orchestrator.assurance.early_warning_evidence` seals any suite
+  detector's alarm into a hash-addressed, review-only `EarlyWarningEvidence`
+  record: the contributing indicators and their robust z-scores at the alarm
+  window, the screened-signal provenance, the claim boundary, and — against a
+  caller-supplied ground-truth onset — the honest lead time, including a
+  non-positive lead when the alarm was late. `seal_early_warning` is a
+  detector-neutral primitive; `seal_critical_slowing_down_alarm`,
+  `seal_synchronisation_alarm`, and `seal_transition_entropy_alarm` bridge the
+  three suite detectors onto it. This is the assurance envelope the fair
+  head-to-head identified as the differentiator once detection proved a commodity.
 
 ### Changed
 
