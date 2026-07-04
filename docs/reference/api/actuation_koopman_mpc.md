@@ -126,7 +126,28 @@ and offline — it performs no live actuation.
 
 ::: scpn_phase_orchestrator.runtime.dvoc_oscillation_damping
 
-## 9. PMU ringdown evidence ingress
+## 9. IEEE PMU concentrator adapter
+
+`runtime.pmu_ieee_adapter` adapts the wide, multi-header CSV that phasor
+measurement concentrators and the oscillation-detection literature export into
+the two-column series `runtime.pmu_ringdown` consumes. `read_ieee_pmu_recording`
+locates the header block by its quantity-type row (`T` for time, `F` for
+frequency), enumerates the frequency channels with their exact-zero dropout and
+non-finite counts, and — when a unit row is present — confirms each frequency
+channel is reported in hertz. `IEEEPMURecording.select_cleanest_channel` returns
+the channel that is free of dropouts and within a plausible band of the nominal
+frequency, breaking ties toward the largest peak-to-peak swing, which carries the
+most oscillation content. `write_ingester_csv` writes that channel with Python's
+shortest round-tripping decimal and returns an `AdaptedIngesterCSV` provenance
+record whose SHA-256 digests link the derived CSV back to the source capture;
+`adapt_ieee_pmu_csv` runs the read, selection, and write in one call. The
+`spo pmu-ieee-adapt` command exposes this path, and the derived CSV feeds
+`spo pmu-ringdown` directly. This is a format-conversion path only; it never fits
+a plant model and never actuates.
+
+::: scpn_phase_orchestrator.runtime.pmu_ieee_adapter
+
+## 10. PMU ringdown evidence ingress
 
 `runtime.pmu_ringdown` is the operator-data ingress for the same review-only PRC
 screening chain. `screen_pmu_ringdown_csv` reads a local PMU or historian CSV
@@ -145,7 +166,7 @@ data-screening path only; it never fits a plant model and never actuates.
 
 ::: scpn_phase_orchestrator.runtime.pmu_ringdown
 
-## 10. IBR ride-through evidence ingress
+## 11. IBR ride-through evidence ingress
 
 `runtime.ibr_ride_through` is the PRC-029-ready operator-data ingress for
 voltage and frequency ride-through review. `screen_ibr_ride_through_csv` reads a

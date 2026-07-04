@@ -130,6 +130,17 @@ class _FakeRideThroughResult:
         }
 
 
+@dataclass(frozen=True)
+class _FakeAdaptedIngesterCSV:
+    source_name: str
+    source_sha256: str
+    output_name: str
+    output_sha256: str
+    channel_label: str
+    channel_column_index: int
+    row_count: int
+
+
 @dataclass
 class _DampingCall:
     state_matrix: FloatArray | None = None
@@ -171,6 +182,10 @@ def _placeholder_screen_ibr_ride_through_csv(*args: object, **kwargs: object) ->
     raise AssertionError(f"unexpected IBR ride-through call: {args}, {kwargs}")
 
 
+def _placeholder_adapt_ieee_pmu_csv(*args: object, **kwargs: object) -> object:
+    raise AssertionError(f"unexpected IEEE adapter call: {args}, {kwargs}")
+
+
 def _load_koopman_cli(
     monkeypatch: pytest.MonkeyPatch,
 ) -> tuple[types.ModuleType, click.Group]:
@@ -195,6 +210,10 @@ def _load_koopman_cli(
     pmu_module.__dict__["screen_pmu_ringdown_csv"] = (
         _placeholder_screen_pmu_ringdown_csv
     )
+    ieee_adapter_module = types.ModuleType(
+        "scpn_phase_orchestrator.runtime.pmu_ieee_adapter"
+    )
+    ieee_adapter_module.__dict__["adapt_ieee_pmu_csv"] = _placeholder_adapt_ieee_pmu_csv
     ride_through_module = types.ModuleType(
         "scpn_phase_orchestrator.runtime.ibr_ride_through"
     )
@@ -217,6 +236,11 @@ def _load_koopman_cli(
         sys.modules,
         "scpn_phase_orchestrator.runtime.pmu_ringdown",
         pmu_module,
+    )
+    monkeypatch.setitem(
+        sys.modules,
+        "scpn_phase_orchestrator.runtime.pmu_ieee_adapter",
+        ieee_adapter_module,
     )
     monkeypatch.setitem(
         sys.modules,
@@ -567,6 +591,98 @@ def test_pmu_ringdown_cli_reports_invalid_operator_csv(
     assert "Error: PMU ringdown CSV is missing required column" in result.output
 
 
+def test_pmu_ieee_adapt_cli_reports_selected_channel_and_provenance(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """The adapter command echoes the selected channel and hashed provenance."""
+    cli_koopman_mpc, main = _load_koopman_cli(monkeypatch)
+    csv_path = tmp_path / "ieee.csv"
+    csv_path.write_text("Time,Sub:1:Ln:1\nT,F\nsec,HZ\n0.0,60.0\n", encoding="utf-8")
+    output_path = tmp_path / "ingester.csv"
+
+    def fake_adapt_ieee_pmu_csv(
+        source: Path,
+        dest: Path,
+        *,
+        nominal_frequency_hz: float,
+        plausible_band_hz: float,
+        time_column: str,
+        frequency_column: str,
+    ) -> _FakeAdaptedIngesterCSV:
+        assert source == csv_path
+        assert dest == output_path
+        assert nominal_frequency_hz == 50.0
+        assert plausible_band_hz == 1.5
+        assert time_column == "t"
+        assert frequency_column == "f"
+        return _FakeAdaptedIngesterCSV(
+            source_name="ieee.csv",
+            source_sha256="a" * 64,
+            output_name="ingester.csv",
+            output_sha256="b" * 64,
+            channel_label="Sub:9:Ln:20",
+            channel_column_index=126,
+            row_count=5400,
+        )
+
+    monkeypatch.setattr(
+        cli_koopman_mpc,
+        "adapt_ieee_pmu_csv",
+        fake_adapt_ieee_pmu_csv,
+    )
+
+    result = CliRunner().invoke(
+        main,
+        [
+            "pmu-ieee-adapt",
+            str(csv_path),
+            str(output_path),
+            "--nominal-frequency-hz",
+            "50.0",
+            "--plausible-band-hz",
+            "1.5",
+            "--time-column",
+            "t",
+            "--frequency-column",
+            "f",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "=== IEEE PMU concentrator adapter ===" in result.output
+    assert f"source: ieee.csv  sha256={'a' * 64}" in result.output
+    assert "channel: Sub:9:Ln:20  column=126" in result.output
+    assert f"output: ingester.csv  rows=5400  sha256={'b' * 64}" in result.output
+
+
+def test_pmu_ieee_adapt_cli_reports_selection_failure(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """A parse or selection failure is surfaced as a Click error."""
+    cli_koopman_mpc, main = _load_koopman_cli(monkeypatch)
+    csv_path = tmp_path / "ieee.csv"
+    csv_path.write_text("Time,Sub:1:Ln:1\nT,F\nsec,HZ\n0.0,50.0\n", encoding="utf-8")
+
+    def fake_adapt_ieee_pmu_csv(*_: object, **__: object) -> object:
+        raise ValueError("no frequency channel within 2.0 Hz of 60.0 Hz")
+
+    monkeypatch.setattr(
+        cli_koopman_mpc,
+        "adapt_ieee_pmu_csv",
+        fake_adapt_ieee_pmu_csv,
+    )
+
+    result = CliRunner().invoke(
+        main,
+        ["pmu-ieee-adapt", str(csv_path), str(tmp_path / "out.csv")],
+    )
+
+    assert result.exit_code != 0
+    assert "Error: no frequency channel within" in result.output
+
+
 def test_ibr_ride_through_cli_writes_review_only_prc029_payload(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
@@ -655,6 +771,57 @@ def test_ibr_ride_through_cli_writes_review_only_prc029_payload(
     assert payload["review_only"] is True
     assert payload["sample_count"] == 96
     assert payload["source_sha256"] == "e" * 64
+
+
+def test_ibr_ride_through_cli_prints_summary_without_output(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Omitting --output prints the ride-through summary and writes no file."""
+    cli_koopman_mpc, main = _load_koopman_cli(monkeypatch)
+    csv_path = tmp_path / "ride-through.csv"
+    csv_path.write_text(
+        "time_s,voltage_pu,frequency_hz\n0.0,0.82,60.0\n3.5,0.82,60.0\n",
+        encoding="utf-8",
+    )
+
+    def fake_screen_ibr_ride_through_csv(
+        path: Path, **_: object
+    ) -> _FakeRideThroughResult:
+        return _FakeRideThroughResult(
+            prc029_evidence=_FakeEvidence(
+                event_id="IBR-EVT-003",
+                findings=(_FakeFinding(False),),
+            ),
+            signal_source="IBR-3/low-side",
+            sample_count=48,
+            duration_s=3.5,
+            source_sha256="f" * 64,
+        )
+
+    monkeypatch.setattr(
+        cli_koopman_mpc,
+        "screen_ibr_ride_through_csv",
+        fake_screen_ibr_ride_through_csv,
+    )
+
+    result = CliRunner().invoke(
+        main,
+        [
+            "ibr-ride-through",
+            str(csv_path),
+            "--event-id",
+            "IBR-EVT-003",
+            "--captured-at",
+            "2026-07-04T13:45:00Z",
+            "--signal-source",
+            "IBR-3/low-side",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "flagged=0/1" in result.output
+    assert "written to" not in result.output
 
 
 def test_ibr_ride_through_cli_reports_invalid_operator_csv(

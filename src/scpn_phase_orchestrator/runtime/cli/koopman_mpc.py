@@ -32,6 +32,7 @@ from scpn_phase_orchestrator.runtime.dvoc_oscillation_damping import (
 from scpn_phase_orchestrator.runtime.ibr_ride_through import (
     screen_ibr_ride_through_csv,
 )
+from scpn_phase_orchestrator.runtime.pmu_ieee_adapter import adapt_ieee_pmu_csv
 from scpn_phase_orchestrator.runtime.pmu_ringdown import screen_pmu_ringdown_csv
 
 
@@ -223,6 +224,78 @@ def pmu_ringdown(
         payload = evidence.to_audit_record()
         Path(output).write_text(json.dumps(payload, indent=2), encoding="utf-8")
         click.echo(f"\nPMU PRC evidence written to {output}")
+
+
+@main.command("pmu-ieee-adapt")
+@click.argument("csv_path", type=click.Path(exists=True, dir_okay=False))
+@click.argument("output_path", type=click.Path(dir_okay=False))
+@click.option(
+    "--nominal-frequency-hz",
+    default=60.0,
+    type=float,
+    help="Nominal grid frequency used to reject out-of-band channels",
+)
+@click.option(
+    "--plausible-band-hz",
+    default=2.0,
+    type=float,
+    help="Half-width in hertz of the accepted band about the nominal frequency",
+)
+@click.option("--time-column", default="time_s", help="Timestamp column to write")
+@click.option(
+    "--frequency-column",
+    default="frequency_hz",
+    help="Frequency column to write",
+)
+def pmu_ieee_adapt(
+    csv_path: str,
+    output_path: str,
+    nominal_frequency_hz: float,
+    plausible_band_hz: float,
+    time_column: str,
+    frequency_column: str,
+) -> None:
+    """Adapt an IEEE-format PMU concentrator CSV into ringdown screener input.
+
+    Parameters
+    ----------
+    csv_path : str
+        Path to the IEEE-format multi-header PMU concentrator CSV.
+    output_path : str
+        Destination path for the derived two-column ingester CSV.
+    nominal_frequency_hz : float
+        Nominal grid frequency used to reject out-of-band channels.
+    plausible_band_hz : float
+        Half-width in hertz of the accepted band about the nominal frequency.
+    time_column : str
+        Timestamp column name written to the derived CSV.
+    frequency_column : str
+        Frequency column name written to the derived CSV.
+
+    Raises
+    ------
+    ClickException
+        If the source cannot be parsed or no channel qualifies for selection.
+    """
+    try:
+        export = adapt_ieee_pmu_csv(
+            Path(csv_path),
+            Path(output_path),
+            nominal_frequency_hz=nominal_frequency_hz,
+            plausible_band_hz=plausible_band_hz,
+            time_column=time_column,
+            frequency_column=frequency_column,
+        )
+    except ValueError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    click.echo("=== IEEE PMU concentrator adapter ===")
+    click.echo(f"source: {export.source_name}  sha256={export.source_sha256}")
+    click.echo(f"channel: {export.channel_label}  column={export.channel_column_index}")
+    click.echo(
+        f"output: {export.output_name}  rows={export.row_count}  "
+        f"sha256={export.output_sha256}"
+    )
 
 
 @main.command("ibr-ride-through")

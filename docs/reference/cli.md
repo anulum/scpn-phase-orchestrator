@@ -448,6 +448,53 @@ spo koopman-mpc --output dvoc_oscillation_damping.json
 
 ---
 
+## `spo pmu-ieee-adapt`
+
+Convert an IEEE-format multi-header PMU concentrator CSV into the two-column
+`time_s,frequency_hz` series the ringdown screener consumes. Phasor measurement
+concentrators and the oscillation-detection literature export a wide layout — a
+label row, a quantity-type row (`T` for time, `F` for frequency, `VM`/`VA`/`IM`/
+`IA` for the phasor channels), a unit row, and a secondary-label row, then one
+time column and five channels per unit. The command parses that layout, counts
+each frequency channel's dropouts, selects the channel that is free of dropouts
+and within `--plausible-band-hz` of the nominal frequency (breaking ties toward
+the largest peak-to-peak swing, which carries the most oscillation content), and
+writes the selected channel with a SHA-256 provenance line linking the derived
+CSV back to the source capture. The derived CSV is then screened with
+`spo pmu-ringdown`.
+
+```
+spo pmu-ieee-adapt <csv_path> <output_path> [--nominal-frequency-hz HZ] [--plausible-band-hz HZ] [--time-column NAME] [--frequency-column NAME]
+```
+
+**Options:**
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `<csv_path>` | Required | IEEE-format multi-header PMU concentrator CSV |
+| `<output_path>` | Required | Destination for the derived two-column ingester CSV |
+| `--nominal-frequency-hz HZ` | `60.0` | Nominal grid frequency used to reject out-of-band channels |
+| `--plausible-band-hz HZ` | `2.0` | Half-width in hertz of the accepted band about the nominal frequency |
+| `--time-column NAME` | `time_s` | Timestamp column name written to the derived CSV |
+| `--frequency-column NAME` | `frequency_hz` | Frequency column name written to the derived CSV |
+
+**Example:**
+
+```bash
+spo pmu-ieee-adapt concentrator_capture.csv ringdown.csv \
+  --nominal-frequency-hz 60.0 \
+  --plausible-band-hz 2.0
+
+spo pmu-ringdown ringdown.csv \
+  --event-id PMU-EVT-001 \
+  --captured-at 2026-07-04T10:00:00Z \
+  --signal-source PMU/BUS-42/frequency \
+  --analysis-rate-hz 5.0 \
+  --output pmu_prc.json
+```
+
+---
+
 ## `spo pmu-ringdown`
 
 Screen a local PMU or historian frequency ringdown CSV for PRC oscillation

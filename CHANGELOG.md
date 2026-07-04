@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `scpn_phase_orchestrator.runtime.pmu_ieee_adapter` adapts the wide,
+  multi-header PMU concentrator CSV used by phasor measurement units and the
+  oscillation-detection literature into the two-column `time_s,frequency_hz`
+  series the ringdown screener consumes. It parses the header block by its
+  quantity-type row, enumerates the frequency channels with their dropout and
+  non-finite counts, selects the dropout-free channel within a plausible band of
+  the nominal frequency (breaking ties toward the largest peak-to-peak swing),
+  and writes the selected channel with a SHA-256 provenance record linking the
+  derived CSV back to the source capture. `spo pmu-ieee-adapt` exposes the path
+  and its derived CSV feeds `spo pmu-ringdown` directly.
 - Perf-isolated branch-coverage gate: `tools/coverage_guard.py` now parses and
   enforces branch rates (global / per-domain / per-file) alongside line rates,
   failing closed when branch floors are configured against a line-only report;
