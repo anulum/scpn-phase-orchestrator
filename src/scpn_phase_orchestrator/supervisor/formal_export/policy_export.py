@@ -157,8 +157,6 @@ def _tla_policy_guard_expr(
 def _regime_guard_expr(rule: PolicyRule, regime_names: dict[str, int]) -> str:
     """Return the PRISM guard expression for a regime."""
     regimes = [regime.upper() for regime in rule.regimes]
-    if not regimes:
-        raise PolicyError(f"policy rule {rule.name!r} has no regimes")
     parts = [f"regime = {regime_names[regime]}" for regime in regimes]
     return "(" + " | ".join(parts) + ")"
 
@@ -166,8 +164,6 @@ def _regime_guard_expr(rule: PolicyRule, regime_names: dict[str, int]) -> str:
 def _tla_regime_guard_expr(rule: PolicyRule, regime_names: dict[str, int]) -> str:
     """Return the TLA+ guard expression for a regime."""
     regimes = [regime.upper() for regime in rule.regimes]
-    if not regimes:
-        raise PolicyError(f"policy rule {rule.name!r} has no regimes")
     parts = [f"regime = {regime_names[regime]}" for regime in regimes]
     return "(" + " \\/ ".join(parts) + ")"
 
