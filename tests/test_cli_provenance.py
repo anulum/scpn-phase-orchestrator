@@ -31,6 +31,7 @@ from scpn_phase_orchestrator.assurance.dsse import (
     DsseSignature,
     _pae,
 )
+from scpn_phase_orchestrator.assurance.provenance import SLSA_PROVENANCE_PREDICATE_TYPE
 from scpn_phase_orchestrator.runtime.audit_pqc import (
     generate_signing_seed,
     sign_bytes,
@@ -334,7 +335,7 @@ class TestAttestVerifyRoundTrip:
         assert verify.exit_code == 0, verify.output
         verified = json.loads(verify.output)
         assert verified["verified"] is True
-        assert verified["statement"]["predicateType"].startswith("https://slsa.dev")
+        assert verified["statement"]["predicateType"] == SLSA_PROVENANCE_PREDICATE_TYPE
 
     def test_attest_and_verify_with_files(
         self, runner: CliRunner, tmp_path: Path

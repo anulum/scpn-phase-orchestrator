@@ -16,12 +16,7 @@ managed because downstream code imports these names directly.
 
 from __future__ import annotations
 
-from importlib.metadata import PackageNotFoundError, version
-
-try:
-    __version__ = version("scpn-phase-orchestrator")
-except PackageNotFoundError:  # pragma: no cover
-    __version__ = "0.0.0+unknown"
+__version__ = "0.10.0"
 
 import os as _os
 

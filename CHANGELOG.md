@@ -160,6 +160,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `TestNeurocoreBridgeScaleTiming` now carries the `performance` marker: its
   per-step wall-clock budgets are host-sensitive and flip under branch
   instrumentation or machine load, so perf-isolated lanes deselect the class.
+- Source-tree imports now expose the same `__version__` as `pyproject.toml`, and
+  the version-sync guard checks the package constant alongside `pyproject.toml`,
+  `CITATION.cff`, and `spo-kernel/Cargo.toml`.
+- `.gitignore` now covers root-level `TODO` scratch files and `node_modules/`
+  build trees.
+
+### Security
+
+- DSSE/provenance round-trip tests now assert the exact SLSA predicate type
+  instead of using URL-prefix substring checks, resolving the CodeQL
+  incomplete-URL-substring-sanitisation alerts in those tests.
 
 ## [0.10.0] - 2026-06-25
 

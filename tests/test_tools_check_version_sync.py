@@ -80,7 +80,11 @@ class TestExtract:
 
 
 def _make_repo(
-    tmp_path: Path, py_ver: str | None, cite_ver: str | None, cargo_ver: str | None
+    tmp_path: Path,
+    py_ver: str | None,
+    cite_ver: str | None,
+    cargo_ver: str | None,
+    package_ver: str | None = None,
 ) -> Path:
     """Lay out a scratch repo with the three version-bearing files."""
     if py_ver is not None:
@@ -96,6 +100,15 @@ def _make_repo(
         kernel.mkdir()
         (kernel / "Cargo.toml").write_text(
             f'[package]\nname = "spo-kernel"\nversion = "{cargo_ver}"\n',
+            encoding="utf-8",
+        )
+    if package_ver is None:
+        package_ver = py_ver
+    if package_ver is not None:
+        package_root = tmp_path / "src" / "scpn_phase_orchestrator"
+        package_root.mkdir(parents=True)
+        (package_root / "__init__.py").write_text(
+            f'__version__ = "{package_ver}"\n',
             encoding="utf-8",
         )
     return tmp_path
@@ -146,6 +159,13 @@ def test_cargo_mismatch_returns_one(tmp_path: Path) -> None:
     assert "Cargo.toml: 0.5.9" in proc.stdout
 
 
+def test_package_mismatch_returns_one(tmp_path: Path) -> None:
+    repo = _make_repo(tmp_path, "0.6.0", "0.6.0", "0.6.0", "0.5.9")
+    proc = _run_with_fake_root(repo)
+    assert proc.returncode == 1
+    assert "src/scpn_phase_orchestrator/__init__.py: 0.5.9" in proc.stdout
+
+
 def test_missing_file_returns_one(tmp_path: Path) -> None:
     """Deleting CITATION.cff should surface as a FileNotFoundError via
     the regex reader; script exits non-zero."""
@@ -163,6 +183,12 @@ def test_pyproject_version_missing_returns_one(tmp_path: Path) -> None:
     kernel.mkdir()
     (kernel / "Cargo.toml").write_text(
         '[package]\nversion = "0.6.0"\n', encoding="utf-8"
+    )
+    package_root = tmp_path / "src" / "scpn_phase_orchestrator"
+    package_root.mkdir(parents=True)
+    (package_root / "__init__.py").write_text(
+        '__version__ = "0.6.0"\n',
+        encoding="utf-8",
     )
     proc = _run_with_fake_root(tmp_path)
     assert proc.returncode == 1

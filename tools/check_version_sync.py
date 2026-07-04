@@ -26,11 +26,16 @@ def main() -> int:
     pyproject = _extract(ROOT / "pyproject.toml", r'^version\s*=\s*"([^"]+)"')
     citation = _extract(ROOT / "CITATION.cff", r"^version:\s*(\S+)")
     cargo = _extract(ROOT / "spo-kernel" / "Cargo.toml", r'^version\s*=\s*"([^"]+)"')
+    package = _extract(
+        ROOT / "src" / "scpn_phase_orchestrator" / "__init__.py",
+        r'^__version__\s*=\s*"([^"]+)"',
+    )
 
     versions = {
         "pyproject.toml": pyproject,
         "CITATION.cff": citation,
         "Cargo.toml": cargo,
+        "src/scpn_phase_orchestrator/__init__.py": package,
     }
     missing = [k for k, v in versions.items() if v is None]
     if missing:

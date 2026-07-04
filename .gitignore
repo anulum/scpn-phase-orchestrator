@@ -84,6 +84,7 @@ CLAUDE.md
 .tmp_pytest_ok/
 .venv-linux/
 HANDOVER_*.md
+TODO
 
 # WASM binaries (built artifacts, not source)
 *.wasm
@@ -270,3 +271,4 @@ mojo/spectral_mojo
 go/libtwin_confidence.so
 go/libtwin_confidence.h
 mojo/twin_confidence_mojo
+node_modules/

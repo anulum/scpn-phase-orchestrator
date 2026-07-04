@@ -31,6 +31,7 @@ from scpn_phase_orchestrator.assurance.dsse import (
     verify_dsse_envelope,
 )
 from scpn_phase_orchestrator.assurance.provenance import (
+    SLSA_PROVENANCE_PREDICATE_TYPE,
     ArtifactSubject,
     BuildDefinition,
     RunDetails,
@@ -218,7 +219,7 @@ class TestSignVerify:
         envelope = sign_provenance_statement(_statement(), key)  # type: ignore[arg-type]
         assert verify_dsse_envelope(envelope, pub) is True
         # The wrapped statement survives the round-trip.
-        assert envelope.statement()["predicateType"].startswith("https://slsa.dev")
+        assert envelope.statement()["predicateType"] == SLSA_PROVENANCE_PREDICATE_TYPE
 
     def test_sign_rejects_unknown_algorithm(self) -> None:
         key, _pub = self._key_and_pub()
