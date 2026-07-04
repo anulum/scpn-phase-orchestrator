@@ -64,6 +64,21 @@ class _FakeDampingResult:
     controlled_damping_ratio: float
     damping_improved: bool
 
+    def to_audit_record(self) -> dict[str, object]:
+        """Return the combined audit record written by the command."""
+        return {
+            "schema": "scpn_dvoc_oscillation_damping_audit_v1",
+            "claim_boundary": "review_only_offline_no_live_actuation",
+            "review_only": True,
+            "before": self.before_evidence.to_audit_record(),
+            "after": self.after_evidence.to_audit_record(),
+            "damping_improved": self.damping_improved,
+            "damping_delta": (
+                self.controlled_damping_ratio - self.uncontrolled_damping_ratio
+            ),
+            "content_hash": "a" * 64,
+        }
+
 
 @dataclass
 class _DampingCall:
@@ -237,19 +252,22 @@ def test_koopman_mpc_cli_writes_prc_evidence_payload(
     assert captured.fs == 20.0
 
     payload = json.loads(output_path.read_text(encoding="utf-8"))
-    assert payload == {
-        "before": {
-            "event_id": "dvoc-damping-open-loop",
-            "finding_count": 2,
-            "flagged_count": 1,
-        },
-        "after": {
-            "event_id": "dvoc-damping-closed-loop",
-            "finding_count": 2,
-            "flagged_count": 0,
-        },
-        "damping_improved": True,
+    assert payload["schema"] == "scpn_dvoc_oscillation_damping_audit_v1"
+    assert payload["claim_boundary"] == "review_only_offline_no_live_actuation"
+    assert payload["review_only"] is True
+    assert payload["before"] == {
+        "event_id": "dvoc-damping-open-loop",
+        "finding_count": 2,
+        "flagged_count": 1,
     }
+    assert payload["after"] == {
+        "event_id": "dvoc-damping-closed-loop",
+        "finding_count": 2,
+        "flagged_count": 0,
+    }
+    assert payload["damping_improved"] is True
+    assert payload["damping_delta"] == pytest.approx(0.2292)
+    assert len(str(payload["content_hash"])) == 64
 
 
 def test_koopman_mpc_cli_prints_summary_without_output(

@@ -227,17 +227,17 @@ on the reusable `scpn_phase_orchestrator.reporting.markdown_to_pdf_bytes` helper
 
 ::: scpn_phase_orchestrator.assurance.report
 
-## Oscillation-monitoring evidence (NERC PRC-028 / PRC-030)
+## Oscillation-Monitoring Evidence (NERC PRC-028-1 / PRC-030-1)
 
 `scpn_phase_orchestrator.assurance.prc_oscillation` is the audit-package end of
 the dVOC grid pack. `screen_oscillation_modes` takes the modes recovered by the
-[matrix-pencil estimator](monitor_oscillation_modes.md), screens each damping
-ratio against the oscillation-monitoring practice underlying NERC PRC-028 and the
-proposed PRC-030 — undamped (non-positive damping) and poorly-damped (below a few
-percent) modes are flagged — and seals the screening into a content-addressed,
-review-only `PRCOscillationEvidence` record. The capture timestamp is supplied by
-the caller (the measurement time of the event), so the record is deterministic and
-reproducible. Like the assurance-case bundle, it is a technical evidence-mapping
-aid, not a legal conformity assessment, and it never actuates.
+[matrix-pencil estimator](monitor_oscillation_modes.md), screens each damping ratio
+for PRC-028-1 disturbance-data analysis and PRC-030-1 unexpected IBR event
+mitigation workflows, and seals the screening into a content-addressed,
+review-only `PRCOscillationEvidence` record. Undamped modes and positive but
+poorly damped modes are flagged for operator review. The capture timestamp is
+supplied by the caller, so the record is deterministic and reproducible. Like the
+assurance-case bundle, it is a technical evidence-mapping aid, not a legal
+conformity assessment, and it never actuates.
 
 ::: scpn_phase_orchestrator.assurance.prc_oscillation

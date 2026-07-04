@@ -106,6 +106,39 @@ def test_damp_oscillation_seals_both_evidence_records() -> None:
     assert result.before_evidence.captured_at == _CAPTURED_AT
 
 
+def test_damp_oscillation_exports_hash_sealed_audit_record() -> None:
+    state_matrix, input_matrix = _grid_plant()
+    result = damp_oscillation(
+        state_matrix,
+        input_matrix,
+        initial_state=np.array([1.0, 0.0]),
+        horizon=250,
+        fs=50.0,
+        captured_at=_CAPTURED_AT,
+        event_prefix="audit-test",
+    )
+
+    record = result.to_audit_record()
+
+    assert record["schema"] == "scpn_dvoc_oscillation_damping_audit_v1"
+    assert record["claim_boundary"] == "review_only_offline_no_live_actuation"
+    assert record["review_only"] is True
+    assert record["damping_improved"] is True
+    assert record["damping_delta"] == pytest.approx(
+        result.controlled_damping_ratio - result.uncontrolled_damping_ratio
+    )
+    assert record["before_evidence_hash"] == result.before_evidence.content_hash
+    assert record["after_evidence_hash"] == result.after_evidence.content_hash
+    before_record = record["before"]
+    after_record = record["after"]
+    assert isinstance(before_record, dict)
+    assert isinstance(after_record, dict)
+    assert before_record["content_hash"] == result.before_evidence.content_hash
+    assert after_record["content_hash"] == result.after_evidence.content_hash
+    assert len(str(record["content_hash"])) == 64
+    assert record == result.to_audit_record()
+
+
 def test_damp_oscillation_accepts_a_custom_config() -> None:
     state_matrix, input_matrix = _grid_plant()
     config = KoopmanMPCConfig(

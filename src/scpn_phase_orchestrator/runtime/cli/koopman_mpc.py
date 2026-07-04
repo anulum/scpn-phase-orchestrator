@@ -103,10 +103,6 @@ def koopman_mpc(
     click.echo(f"damping improved: {result.damping_improved}")
 
     if output is not None:
-        payload = {
-            "before": result.before_evidence.to_audit_record(),
-            "after": result.after_evidence.to_audit_record(),
-            "damping_improved": result.damping_improved,
-        }
+        payload = result.to_audit_record()
         Path(output).write_text(json.dumps(payload, indent=2), encoding="utf-8")
         click.echo(f"\nPRC evidence written to {output}")

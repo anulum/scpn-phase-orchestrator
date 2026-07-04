@@ -115,9 +115,12 @@ underdamped oscillator rings down and the matrix-pencil estimator plus the NERC
 PRC screener flag its poorly-damped mode; an EDMD-with-control Koopman predictor
 is fitted and driven in closed loop by the Koopman MPC; the controlled ringdown
 is re-screened and the weakest mode is now better damped. The result carries both
-hash-sealed `PRCOscillationEvidence` records, so the damping improvement is
-auditable. The `spo koopman-mpc` command runs this pipeline on a default grid
-oscillator. The pipeline is review-only and offline — it performs no live
-actuation.
+hash-sealed `PRCOscillationEvidence` records and exports one deterministic
+`scpn_dvoc_oscillation_damping_audit_v1` record that binds the before/after
+evidence hashes, damping delta, terminal signal magnitudes, fitted-predictor
+residual, and `review_only_offline_no_live_actuation` claim boundary. The
+`spo koopman-mpc` command runs this pipeline on a default grid oscillator and
+writes the same combined audit record when `--output` is supplied. The pipeline
+is review-only and offline — it performs no live actuation.
 
 ::: scpn_phase_orchestrator.runtime.dvoc_oscillation_damping

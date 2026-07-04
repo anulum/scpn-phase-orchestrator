@@ -11,12 +11,12 @@
 This is the audit-package end of the dVOC grid pack. The matrix-pencil estimator
 (:mod:`~scpn_phase_orchestrator.monitor.oscillation_modes`) detects the
 electromechanical modes of a ringdown and their damping ratios;
-:func:`screen_oscillation_modes` screens those damping ratios against the
-oscillation-monitoring practice underlying NERC PRC-028 / the proposed PRC-030 —
-a mode whose damping ratio sits below a few percent is poorly damped, and a mode
-with non-positive damping is undamped (growing) — and packages the screening as a
-hash-sealed, review-only :class:`PRCOscillationEvidence` record suitable for an
-oscillation-monitoring audit trail.
+:func:`screen_oscillation_modes` screens those damping ratios for NERC
+PRC-028-1 disturbance-data analysis and PRC-030-1 unexpected IBR event mitigation
+workflows: a mode whose damping ratio sits below a few percent is poorly damped,
+and a mode with non-positive damping is undamped (growing). The screening is
+packaged as a hash-sealed, review-only :class:`PRCOscillationEvidence` record
+suitable for an oscillation-monitoring audit trail.
 
 The record is content-addressed with the same canonical-JSON SHA-256 hashing the
 assurance-case bundle uses, so it can be referenced by a stable digest and any
@@ -25,18 +25,18 @@ is the measurement time of the PMU/ringdown event, not a wall-clock reading take
 here) so the record is deterministic and reproducible.
 
 This is a technical evidence-mapping aid, not a legal conformity assessment: it
-links measured modal damping to the oscillation-screening concept those standards
-codify (FERC Order 901 directed NERC to develop the oscillation-monitoring
-requirements). The exact identifiers, thresholds, and reporting obligations must
-be confirmed against the issued standard — see :data:`PRC_OSCILLATION_DISCLAIMER`.
-The screening is review-only: it reads detected modes and reports findings; it
-never changes bindings, layers, or coupling.
+links measured modal damping to the disturbance-monitoring and unexpected-event
+mitigation workflows those standards support. The exact identifiers, thresholds,
+and reporting obligations must be confirmed against the issued standards — see
+:data:`PRC_OSCILLATION_DISCLAIMER`. The screening is review-only: it reads
+detected modes and reports findings; it never changes bindings, layers, or
+coupling.
 
 References
 ----------
-* NERC PRC-028 (disturbance monitoring) and the proposed PRC-030
-  (oscillation monitoring), developed under FERC Order 901 (2024) — damping-ratio
-  screening of inter-area oscillations.
+* NERC PRC-028-1 (disturbance monitoring and reporting for inverter-based
+  resources) and PRC-030-1 (unexpected inverter-based resource event mitigation),
+  developed under FERC Order 901.
 """
 
 from __future__ import annotations
@@ -78,17 +78,20 @@ FLAGGED_FOR_REVIEW = "flagged_for_review"
 NO_EXCEEDANCE = "no_exceedance"
 
 #: Standard family the screening evidence is mapped to.
-PRC_OSCILLATION_STANDARD = "NERC PRC-028 / PRC-030 (oscillation monitoring)"
+PRC_OSCILLATION_STANDARD = (
+    "NERC PRC-028-1 / PRC-030-1 "
+    "(IBR disturbance monitoring and unexpected event mitigation)"
+)
 
 #: Review-only disclaimer carried by every evidence record.
 PRC_OSCILLATION_DISCLAIMER = (
     "This oscillation-monitoring evidence record is a technical evidence-mapping "
-    "artifact. It screens measured modal damping against the oscillation-screening "
-    "concept underlying NERC PRC-028 and the proposed PRC-030 (developed under FERC "
-    "Order 901); it does not constitute legal advice, a conformity assessment, or a "
-    "certification of compliance. The exact clause identifiers, damping thresholds, "
-    "and reporting obligations must be confirmed against the issued standard, and "
-    "conformance determined by a qualified assessor."
+    "artifact. It screens measured modal damping for NERC PRC-028-1 disturbance "
+    "monitoring and PRC-030-1 unexpected IBR event mitigation workflows; it does "
+    "not constitute legal advice, a conformity assessment, or a certification of "
+    "compliance. The exact clause identifiers, damping thresholds, and reporting "
+    "obligations must be confirmed against the issued standards, and conformance "
+    "determined by a qualified assessor."
 )
 
 

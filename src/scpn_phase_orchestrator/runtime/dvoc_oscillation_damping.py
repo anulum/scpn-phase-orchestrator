@@ -36,7 +36,9 @@ from scpn_phase_orchestrator.actuation.koopman_mpc import (
     KoopmanMPCConfig,
     KoopmanMPCController,
 )
+from scpn_phase_orchestrator.assurance._hashing import canonical_record_hash
 from scpn_phase_orchestrator.assurance.prc_oscillation import (
+    PRC_OSCILLATION_STANDARD,
     PRCOscillationEvidence,
     screen_oscillation_modes,
 )
@@ -50,10 +52,15 @@ from scpn_phase_orchestrator.monitor.oscillation_modes import estimate_oscillati
 FloatArray: TypeAlias = NDArray[np.float64]
 
 __all__ = [
+    "DVOC_OSCILLATION_AUDIT_SCHEMA",
+    "DVOC_OSCILLATION_CLAIM_BOUNDARY",
     "OscillationDampingResult",
     "damp_oscillation",
     "underdamped_oscillator",
 ]
+
+DVOC_OSCILLATION_AUDIT_SCHEMA = "scpn_dvoc_oscillation_damping_audit_v1"
+DVOC_OSCILLATION_CLAIM_BOUNDARY = "review_only_offline_no_live_actuation"
 
 
 def underdamped_oscillator(
@@ -129,6 +136,50 @@ class OscillationDampingResult:
     damping_improved: bool
     fit_residual: float
 
+    def to_audit_record(self) -> dict[str, object]:
+        """Return the hash-sealed before/after damping audit record.
+
+        Returns
+        -------
+        dict[str, object]
+            A JSON-safe deterministic record that binds the open-loop and
+            closed-loop PRC evidence hashes, damping improvement, terminal
+            signal magnitudes, fitted-predictor residual, and non-actuating
+            claim boundary under a single content hash.
+        """
+        payload = self._audit_payload()
+        payload["content_hash"] = canonical_record_hash(payload)
+        return payload
+
+    def _audit_payload(self) -> dict[str, object]:
+        """Return the canonical dVOC audit payload before hashing."""
+        damping_delta = self.controlled_damping_ratio - self.uncontrolled_damping_ratio
+        return {
+            "schema": DVOC_OSCILLATION_AUDIT_SCHEMA,
+            "standard": PRC_OSCILLATION_STANDARD,
+            "claim_boundary": DVOC_OSCILLATION_CLAIM_BOUNDARY,
+            "review_only": True,
+            "control_pipeline": (
+                "oscillation_modes -> prc_oscillation -> koopman_edmd -> "
+                "koopman_mpc -> prc_oscillation"
+            ),
+            "before": self.before_evidence.to_audit_record(),
+            "after": self.after_evidence.to_audit_record(),
+            "before_evidence_hash": self.before_evidence.content_hash,
+            "after_evidence_hash": self.after_evidence.content_hash,
+            "uncontrolled_damping_ratio": self.uncontrolled_damping_ratio,
+            "controlled_damping_ratio": self.controlled_damping_ratio,
+            "damping_delta": damping_delta,
+            "damping_improved": self.damping_improved,
+            "before_flagged_count": _flagged_count(self.before_evidence),
+            "after_flagged_count": _flagged_count(self.after_evidence),
+            "uncontrolled_samples": int(self.uncontrolled_signal.shape[0]),
+            "controlled_samples": int(self.controlled_signal.shape[0]),
+            "uncontrolled_terminal_abs": float(abs(self.uncontrolled_signal[-1])),
+            "controlled_terminal_abs": float(abs(self.controlled_signal[-1])),
+            "fit_residual": self.fit_residual,
+        }
+
 
 def _open_loop_ringdown(
     state_matrix: FloatArray, initial_state: FloatArray, horizon: int
@@ -140,6 +191,11 @@ def _open_loop_ringdown(
         state = state_matrix @ state
         signal.append(float(state[0]))
     return np.asarray(signal, dtype=np.float64)
+
+
+def _flagged_count(evidence: PRCOscillationEvidence) -> int:
+    """Return the number of flagged PRC findings in an evidence record."""
+    return sum(1 for finding in evidence.findings if finding.flagged)
 
 
 def _fit_plant_koopman(
@@ -169,16 +225,16 @@ def _closed_loop_ringdown(
     horizon: int,
 ) -> FloatArray:
     """Return the closed-loop ringdown response under control."""
-    state = initial_state
+    state: FloatArray = initial_state
     input_dim = input_matrix.shape[1]
-    previous_input = np.zeros(input_dim, dtype=np.float64)
-    reference = np.zeros(state_matrix.shape[0], dtype=np.float64)
+    previous_input: FloatArray = np.zeros(input_dim, dtype=np.float64)
+    reference: FloatArray = np.zeros(state_matrix.shape[0], dtype=np.float64)
     signal = [float(state[0])]
     for _ in range(horizon):
         decision = controller.solve(
             state, reference=reference, previous_input=previous_input
         )
-        control = decision.proposed_input
+        control: FloatArray = decision.proposed_input
         state = state_matrix @ state + input_matrix @ control
         previous_input = control
         signal.append(float(state[0]))

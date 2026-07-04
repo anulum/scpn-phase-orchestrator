@@ -121,6 +121,10 @@ class TestScreening:
         assert evidence.disclaimer == PRC_OSCILLATION_DISCLAIMER
         assert evidence.poorly_damped_threshold == pytest.approx(0.03)
         assert evidence.undamped_threshold == pytest.approx(0.0)
+        assert "PRC-028-1" in PRC_OSCILLATION_STANDARD
+        assert "PRC-030-1" in PRC_OSCILLATION_STANDARD
+        assert "proposed" not in PRC_OSCILLATION_STANDARD.lower()
+        assert "proposed" not in PRC_OSCILLATION_DISCLAIMER.lower()
 
 
 class TestEmptyModes:
