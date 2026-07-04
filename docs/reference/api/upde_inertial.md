@@ -217,13 +217,18 @@ state before loading optional runtimes. The direct boundary requires finite
 real one-dimensional `float64` buffers for `theta`, `omega_dot`, `power`,
 `inertia`, and `damping`; positive inertia, damping, and timestep values;
 an exactly `N*N` flat pairwise coupling buffer; and a zero self-coupling
-diagonal. Backend outputs must return finite `(theta, omega_dot)` vectors of
-length `N`, with phases on the torus `[0, 2π)`.
+diagonal. Numeric-string aliases are rejected before these values are widened
+by Python, NumPy, or accelerator boundary casts. Backend outputs must return
+finite `(theta, omega_dot)` vectors of length `N`, with phases on the torus
+`[0, 2π)`, and backend output aliases are rejected before publication.
 
 The public `InertialKuramotoEngine.step()` dispatcher and Rust wrapper replay
 that same output contract before returning optional backend state. Loader and
 runtime unavailability still fall back through the backend chain, but malformed
 backend physics payloads raise instead of becoming simulation state.
+The public `step()`, `run()`, `frequency_deviation()`, and `coherence()`
+entrypoints apply the same pre-coercion numeric-string rejection to state
+arrays, coupling buffers, step counts, and diagnostic inputs.
 
 The direct Mojo bridge also preserves raw stdout cardinality: `INERT` must
 emit exactly `2N` scalar lines, ordered as `N` torus phases followed by `N`

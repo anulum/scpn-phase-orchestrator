@@ -455,6 +455,110 @@ class TestDirectBackendBoundaryContracts:
                 n=2,
             )
 
+    @pytest.mark.parametrize(
+        ("index", "replacement", "match"),
+        [
+            (0, np.array(["0.1", "0.2", "0.3", "0.4"]), "theta.*numeric-string"),
+            (
+                1,
+                np.array(["0.0", "0.1", "0.2", "0.3"]),
+                "omega_dot.*numeric-string",
+            ),
+            (2, np.array(["0.0", "0.1", "0.2", "0.3"]), "power.*numeric-string"),
+            (3, np.array(["0.0"] * 16), "knm_flat.*numeric-string"),
+            (4, np.array(["1.0", "1.0", "1.0", "1.0"]), "inertia.*numeric-string"),
+            (5, np.array(["0.1", "0.1", "0.1", "0.1"]), "damping.*numeric-string"),
+            (6, "4", "n.*numeric-string"),
+            (7, "0.01", "dt.*numeric-string"),
+        ],
+    )
+    @pytest.mark.parametrize("backend", DIRECT_BACKENDS)
+    def test_validation_rejects_numeric_string_inputs_before_runtime_load(
+        self,
+        backend: BackendFn,
+        index: int,
+        replacement: object,
+        match: str,
+    ) -> None:
+        args = list(_direct_payload())
+        args[index] = replacement
+
+        with pytest.raises(ValueError, match=match):
+            backend(*cast(BackendArgs, tuple(args)))
+
+    @pytest.mark.parametrize(
+        ("theta", "omega_dot", "match"),
+        [
+            (
+                np.array(["0.1", "0.2"], dtype=str),
+                np.array([0.0, 0.1], dtype=np.float64),
+                "theta.*numeric-string",
+            ),
+            (
+                np.array([0.1, 0.2], dtype=np.float64),
+                np.array(["0.0", "0.1"], dtype=str),
+                "omega_dot.*numeric-string",
+            ),
+        ],
+    )
+    def test_output_validation_rejects_numeric_string_aliases(
+        self,
+        theta: object,
+        omega_dot: object,
+        match: str,
+    ) -> None:
+        with pytest.raises(ValueError, match=match):
+            inertial_validation.validate_inertial_output(theta, omega_dot, n=2)
+
+
+class TestDirectValidationDefensiveBranches:
+    """Shared inertial validator pins non-runtime defensive branches."""
+
+    def test_numeric_string_helper_handles_scalar_and_nonnumeric_strings(self) -> None:
+        assert inertial_validation._contains_numeric_string_alias(b"0.1") is True
+        assert inertial_validation._contains_numeric_string_alias(" ") is False
+        assert inertial_validation._contains_numeric_string_alias("bad") is False
+
+    def test_numeric_string_helper_treats_uncoercible_payloads_as_not_aliases(
+        self,
+    ) -> None:
+        class BadArray:
+            def __array__(self, dtype: object | None = None) -> object:
+                raise TypeError("cannot coerce")
+
+        assert inertial_validation._contains_numeric_string_alias(BadArray()) is False
+
+    def test_direct_validator_keeps_nonnumeric_string_payload_on_generic_path(
+        self,
+    ) -> None:
+        args = list(_direct_payload())
+        args[0] = np.array(["bad", "phase", "payload", "values"])
+
+        with pytest.raises(
+            ValueError, match="theta must be a finite real-valued vector"
+        ):
+            inertial_validation.validate_inertial_inputs(*args)
+
+    @pytest.mark.parametrize(
+        ("index", "replacement", "match"),
+        [
+            (6, 0, "n must be >= 1"),
+            (7, True, "dt must be positive finite real, not boolean"),
+            (7, object(), "dt must be positive finite real"),
+        ],
+    )
+    def test_direct_validator_scalar_domain_branches(
+        self,
+        index: int,
+        replacement: object,
+        match: str,
+    ) -> None:
+        args = list(_direct_payload())
+        args[index] = replacement
+
+        with pytest.raises(ValueError, match=match):
+            inertial_validation.validate_inertial_inputs(*args)
+
 
 class TestPublicBackendOutputContracts:
     """Public inertial dispatchers replay direct backend output contracts."""
@@ -527,6 +631,67 @@ class TestPublicBackendOutputContracts:
                 np.array([1.0, 1.0], dtype=np.float64),
                 np.array([0.1, 0.1], dtype=np.float64),
             )
+
+    def test_step_rejects_optional_backend_numeric_string_output(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        def malformed_backend(
+            _theta: FloatArray,
+            _omega_dot: FloatArray,
+            _power: FloatArray,
+            _knm_flat: FloatArray,
+            _inertia: FloatArray,
+            _damping: FloatArray,
+            _n: int,
+            _dt: float,
+        ) -> tuple[FloatArray, FloatArray]:
+            return (
+                cast(FloatArray, np.array(["0.1", "0.2"])),
+                cast(FloatArray, np.array(["0.0", "0.1"])),
+            )
+
+        monkeypatch.setattr(i_mod, "_dispatch", lambda: malformed_backend)
+        engine = InertialKuramotoEngine(2, 0.01)
+
+        with pytest.raises(ValueError, match="numeric-string"):
+            engine.step(
+                np.array([0.1, 0.2], dtype=np.float64),
+                np.array([0.0, 0.0], dtype=np.float64),
+                np.array([0.0, 0.0], dtype=np.float64),
+                np.zeros((2, 2), dtype=np.float64),
+                np.array([1.0, 1.0], dtype=np.float64),
+                np.array([0.1, 0.1], dtype=np.float64),
+            )
+
+    def test_julia_bridge_rejects_numeric_string_raw_output(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        class FakeJuliaModule:
+            def inertial_step(
+                self,
+                _theta: FloatArray,
+                _omega_dot: FloatArray,
+                _power: FloatArray,
+                _knm_flat: FloatArray,
+                _inertia: FloatArray,
+                _damping: FloatArray,
+                _n: int,
+                _dt: float,
+            ) -> tuple[object, object]:
+                return (
+                    np.array(["0.1", "0.2"], dtype=str),
+                    np.array([0.0, 0.1], dtype=np.float64),
+                )
+
+        monkeypatch.setattr(
+            "scpn_phase_orchestrator.experimental.accelerators.upde._inertial_julia._ensure",
+            lambda: FakeJuliaModule(),
+        )
+
+        with pytest.raises(ValueError, match="theta.*numeric-string"):
+            inertial_step_julia(*_direct_payload(n=2))
 
     def test_rust_wrapper_rejects_optional_backend_theta_outside_torus(
         self,

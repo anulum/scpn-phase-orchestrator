@@ -169,6 +169,10 @@ and `omega_dot` must keep oscillator cardinality and finite values, with
 returned phases inside `[0, 2*pi)`. Backend loader/runtime unavailability may
 fall through to Python; malformed backend physics payloads raise instead of
 becoming swing-equation state.
+Public and direct inertial state vectors, coupling buffers, scalar controls,
+step counts, `frequency_deviation()` inputs, `coherence()` inputs, optional
+backend outputs, and direct Julia raw returns reject numeric-string aliases
+before Python, NumPy, or accelerator coercion.
 
 ::: scpn_phase_orchestrator.upde.inertial
 

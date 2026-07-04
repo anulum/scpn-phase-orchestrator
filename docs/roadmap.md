@@ -49,16 +49,15 @@ TODO queue.
 | Cross-domain meta-transfer | Replay proposals, nested corpora, package export, entry points, non-publishing evidence, and pre-publish enforcement exist. | Validate larger private or partner audit-history corpora and decide optional package publication. |
 | Plugin ecosystem | Registry, catalogue, Rust-facing metadata, approval-bound execution requests, storage, revocation, lifecycle, scheduler, retry, and dashboard artefacts exist. | Build a curated signed domainpack and extension store with reputation, audit scores, revocation, provenance, operator UX refinement, and adapter-family onboarding. |
 
-Latest U1 closure: the public hypergraph engine and direct Go, Julia, and Mojo
-bridge contracts now reject numeric-string aliases before float or integer
-coercion across phase vectors, frequency vectors, flat edge-index buffers,
-edge-strength buffers, optional pairwise and phase-lag matrices, scalar
-controls, step counts, order-parameter phase inputs, optional backend outputs,
-and Julia raw return values. The hypergraph boundary still replays finite torus
-cardinality and `[0, 2*pi)` phase-domain checks before mixed-order k-body phase
-vectors are published by the UPDE integrator or optional accelerator dispatch
-chain; direct adapters also keep their existing boolean, complex, duplicate-edge,
-zero-diagonal, and edge-cardinality guards.
+Latest U1 closure: the public inertial swing-equation engine and direct Go,
+Julia, and Mojo bridge contracts now reject numeric-string aliases before float
+or integer coercion across `theta`, `omega_dot`, power, coupling, inertia,
+damping, step-count, frequency-deviation, coherence, optional backend output,
+and Julia raw-return boundaries. The inertial boundary still replays finite
+`(theta, omega_dot)` cardinality plus `[0, 2*pi)` phase-domain checks before
+publishing swing-equation state; direct adapters also keep their existing
+boolean, complex, zero-diagonal, positive-inertia, positive-damping, and
+positive-timestep guards.
 
 | Parent item | Completed evidence consolidated here | Remaining open scope |
 |-------------|--------------------------------------|----------------------|

@@ -55,7 +55,10 @@ accelerator coercion.
 The public inertial dispatcher and Rust wrapper apply the shared inertial
 output validator to optional backend returns before publication: swing-equation
 `theta` and `omega_dot` vectors must keep oscillator cardinality and finite
-values, with returned phases remaining inside `[0, 2*pi)`.
+values, with returned phases remaining inside `[0, 2*pi)`. Public and direct
+inertial state arrays, coupling buffers, scalar controls, step counts, metrics,
+backend outputs, and Julia raw returns also reject numeric-string aliases before
+Python, NumPy, or accelerator coercion.
 The public swarmalator dispatcher and Rust wrapper apply the shared direct
 swarmalator output validator to optional backend returns before publication:
 positions must keep `(N, D)` shape or `N*D` flattened cardinality, phases must

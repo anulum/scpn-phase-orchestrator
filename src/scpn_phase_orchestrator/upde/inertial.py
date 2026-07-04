@@ -38,6 +38,10 @@ import numpy as np
 from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.upde import _inertial_validation
+from scpn_phase_orchestrator.upde._inertial_validation import (
+    _contains_numeric_string_alias,
+    _is_numeric_string_alias,
+)
 from scpn_phase_orchestrator.upde._julia_runtime import require_juliacall_main
 
 FloatArray = NDArray[np.float64]
@@ -189,6 +193,10 @@ def _dispatch() -> _Loader | None:
 
 def _validate_positive_int(value: object, *, name: str) -> int:
     """Return ``value`` as a positive integer, else raise ``ValueError``."""
+    if _is_numeric_string_alias(value):
+        raise ValueError(
+            f"{name} must be >= 1 as a non-boolean integer, not a numeric-string alias"
+        )
     if isinstance(value, bool) or not isinstance(value, Integral) or value < 1:
         raise ValueError(f"{name} must be >= 1 as a non-boolean integer, got {value!r}")
     return int(value)
@@ -196,6 +204,10 @@ def _validate_positive_int(value: object, *, name: str) -> int:
 
 def _validate_positive_float(value: object, *, name: str) -> float:
     """Return ``value`` as a strictly positive finite float, else raise."""
+    if _is_numeric_string_alias(value):
+        raise ValueError(
+            f"{name} must be positive finite real, not a numeric-string alias"
+        )
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be positive finite real, got {value!r}")
     coerced = float(value)
@@ -211,6 +223,8 @@ def _validate_state_array(
     shape: tuple[int, ...],
 ) -> FloatArray:
     """Return the state as a validated finite array, else raise."""
+    if _contains_numeric_string_alias(value):
+        raise ValueError(f"{name} must not contain numeric-string aliases")
     try:
         arr = np.asarray(value, dtype=np.float64)
     except (TypeError, ValueError) as exc:
@@ -436,7 +450,12 @@ class InertialKuramotoEngine:
         float
             The maximum absolute frequency deviation in cycles per unit time.
         """
-        return float(np.max(np.abs(omega_dot)) / TWO_PI)
+        omega_dot64 = _validate_state_array(
+            omega_dot,
+            name="omega_dot",
+            shape=(self._n,),
+        )
+        return float(np.max(np.abs(omega_dot64)) / TWO_PI)
 
     def coherence(self, theta: FloatArray) -> float:
         """Return the Kuramoto order parameter for the supplied phases.
@@ -451,4 +470,5 @@ class InertialKuramotoEngine:
         float
             The Kuramoto order parameter ``R``.
         """
-        return float(np.abs(np.mean(np.exp(1j * theta))))
+        theta64 = _validate_state_array(theta, name="theta", shape=(self._n,))
+        return float(np.abs(np.mean(np.exp(1j * theta64))))
