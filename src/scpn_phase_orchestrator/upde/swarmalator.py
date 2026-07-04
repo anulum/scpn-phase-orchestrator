@@ -43,6 +43,10 @@ from scpn_phase_orchestrator.upde import (
     _swarmalator_validation,
 )
 from scpn_phase_orchestrator.upde._julia_runtime import require_juliacall_main
+from scpn_phase_orchestrator.upde._swarmalator_validation import (
+    _contains_numeric_string_alias,
+    _is_numeric_string_alias,
+)
 
 __all__ = [
     "ACTIVE_BACKEND",
@@ -182,6 +186,10 @@ def _dispatch() -> Callable[..., tuple[FloatArray, FloatArray]] | None:
 
 def _validate_positive_int(value: object, *, name: str) -> int:
     """Return ``value`` as a positive integer, else raise ``ValueError``."""
+    if _is_numeric_string_alias(value):
+        raise ValueError(
+            f"{name} must be >= 1 as a non-boolean integer, not a numeric-string alias"
+        )
     if isinstance(value, bool) or not isinstance(value, Integral) or value < 1:
         raise ValueError(f"{name} must be >= 1 as a non-boolean integer, got {value!r}")
     return int(value)
@@ -189,6 +197,10 @@ def _validate_positive_int(value: object, *, name: str) -> int:
 
 def _validate_positive_float(value: object, *, name: str) -> float:
     """Return ``value`` as a strictly positive finite float, else raise."""
+    if _is_numeric_string_alias(value):
+        raise ValueError(
+            f"{name} must be positive finite real, not a numeric-string alias"
+        )
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be positive finite real, got {value!r}")
     coerced = float(value)
@@ -199,6 +211,8 @@ def _validate_positive_float(value: object, *, name: str) -> float:
 
 def _validate_finite_float(value: object, *, name: str) -> float:
     """Return ``value`` as a finite float, else raise ``ValueError``."""
+    if _is_numeric_string_alias(value):
+        raise ValueError(f"{name} must be finite real, not a numeric-string alias")
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be finite real, got {value!r}")
     coerced = float(value)
@@ -214,6 +228,8 @@ def _validate_state_array(
     shape: tuple[int, ...],
 ) -> FloatArray:
     """Return the state as a validated finite array, else raise."""
+    if _contains_numeric_string_alias(value):
+        raise ValueError(f"{name} must not contain numeric-string aliases")
     raw = np.asarray(value)
     if np.issubdtype(raw.dtype, np.bool_):
         raise ValueError(f"{name} must be real-valued, not boolean")

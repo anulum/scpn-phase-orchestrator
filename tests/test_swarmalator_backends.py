@@ -118,6 +118,11 @@ def _with_direct_arg(index: int, value: object) -> tuple[object, ...]:
     return tuple(args)
 
 
+class _UnarrayableProbe:
+    def __array__(self, _dtype: object | None = None) -> object:
+        raise TypeError("cannot expose array")
+
+
 class _FakeGoSwarmalatorLib:
     def __init__(
         self,
@@ -383,6 +388,45 @@ class TestBackendTypingContracts:
 
 
 class TestDirectSwarmalatorBoundaryContracts:
+    def test_direct_numeric_string_probe_ignores_unarrayable_value(self) -> None:
+        assert (
+            swarmalator_validation._contains_numeric_string_alias(_UnarrayableProbe())
+            is False
+        )
+
+    @pytest.mark.parametrize(
+        ("value", "match"),
+        [
+            (
+                np.array([["0.0", "0.5"], ["1.0", "-0.25"]], dtype=object),
+                "numeric-string",
+            ),
+            (
+                np.array(["0.2", "0.4"], dtype=object),
+                "numeric-string",
+            ),
+        ],
+    )
+    def test_direct_validation_output_rejects_numeric_string_aliases(
+        self,
+        value: object,
+        match: str,
+    ) -> None:
+        positions = (
+            value
+            if np.asarray(value).ndim == 2
+            else np.array([[0.0, 0.5], [1.0, -0.25]], dtype=np.float64)
+        )
+        phases = value if np.asarray(value).ndim == 1 else np.array([0.2, 0.4])
+
+        with pytest.raises(ValueError, match=match):
+            swarmalator_validation.validate_swarmalator_output(
+                positions,
+                phases,
+                n=2,
+                dim=2,
+            )
+
     @pytest.mark.parametrize(
         ("module", "fn_name", "loader_name"),
         [
@@ -396,18 +440,51 @@ class TestDirectSwarmalatorBoundaryContracts:
         [
             (_with_direct_arg(0, np.array([[True, False], [False, True]])), "pos"),
             (_with_direct_arg(0, np.zeros(3, dtype=np.float64)), "pos"),
+            (
+                _with_direct_arg(
+                    0,
+                    np.array([["0.0", "0.5"], ["1.0", "-0.25"]], dtype=object),
+                ),
+                "numeric-string",
+            ),
+            (
+                _with_direct_arg(
+                    0,
+                    np.array([["bad", "0.5"], ["1.0", "-0.25"]], dtype=object),
+                ),
+                "pos",
+            ),
             (_with_direct_arg(1, np.array([0.1 + 0.0j, 0.2])), "phases"),
+            (_with_direct_arg(1, np.array(["0.2", "0.4"])), "numeric-string"),
+            (_with_direct_arg(1, np.array(["bad", "worse"], dtype=object)), "phases"),
+            (_with_direct_arg(1, np.array([[0.2, 0.4]])), "one-dimensional"),
+            (_with_direct_arg(1, np.array([0.2])), "phases length"),
             (_with_direct_arg(2, np.array([True, False])), "omegas"),
+            (
+                _with_direct_arg(2, np.array([0.1, "-0.2"], dtype=object)),
+                "numeric-string",
+            ),
+            (_with_direct_arg(2, np.array([0.1])), "omegas length"),
             (_with_direct_arg(3, True), "n"),
+            (_with_direct_arg(3, "2"), "numeric-string"),
+            (_with_direct_arg(3, 1.5), "n"),
             (_with_direct_arg(3, 0), "n"),
             (_with_direct_arg(4, True), "dim"),
+            (_with_direct_arg(4, "2"), "numeric-string"),
             (_with_direct_arg(4, 0), "dim"),
             (_with_direct_arg(5, True), "a"),
+            (_with_direct_arg(5, "1.0"), "numeric-string"),
+            (_with_direct_arg(5, ""), "a"),
+            (_with_direct_arg(5, "bad"), "a"),
             (_with_direct_arg(6, np.inf), "b"),
+            (_with_direct_arg(6, "1.0"), "numeric-string"),
             (_with_direct_arg(7, object()), "j"),
+            (_with_direct_arg(7, "0.8"), "numeric-string"),
             (_with_direct_arg(8, np.nan), "k"),
+            (_with_direct_arg(8, "1.2"), "numeric-string"),
             (_with_direct_arg(9, 0.0), "dt"),
             (_with_direct_arg(9, -0.01), "dt"),
+            (_with_direct_arg(9, "0.01"), "numeric-string"),
         ],
     )
     def test_direct_backend_rejects_invalid_inputs_before_runtime_loading(
@@ -495,6 +572,26 @@ class TestDirectSwarmalatorBoundaryContracts:
     ) -> None:
         with pytest.raises(ValueError, match=match):
             _call_direct_backend(module, monkeypatch, positions, phases)
+
+    def test_direct_julia_backend_rejects_numeric_string_output_before_coercion(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        class RawJuliaSwarmalatorModule:
+            def swarmalator_step(self, *_args: object) -> tuple[object, object]:
+                return (
+                    np.array(["0.1", "0.2", "0.3", "0.4"], dtype=object),
+                    np.array([0.5, "0.6"], dtype=object),
+                )
+
+        monkeypatch.setattr(
+            _swarmalator_julia,
+            "_ensure",
+            lambda: RawJuliaSwarmalatorModule(),
+        )
+
+        with pytest.raises(ValueError, match="numeric-string"):
+            _swarmalator_julia.swarmalator_step_julia(*_valid_direct_args())
 
 
 class TestBackendLoaderContracts:
@@ -650,6 +747,138 @@ class TestBackendLoaderContracts:
 class TestPublicBackendOutputContracts:
     """Public swarmalator dispatchers replay direct backend output contracts."""
 
+    @pytest.mark.parametrize(
+        ("constructor_args", "match"),
+        [
+            (("2", 2, 0.01), "numeric-string"),
+            ((2, "2", 0.01), "numeric-string"),
+            ((2, 2, "0.01"), "numeric-string"),
+            ((0, 2, 0.01), "n_agents"),
+            ((2, 2, True), "dt"),
+            ((2, 2, 0.0), "dt"),
+        ],
+    )
+    def test_constructor_rejects_numeric_string_aliases(
+        self,
+        constructor_args: tuple[object, object, object],
+        match: str,
+    ) -> None:
+        with pytest.raises(ValueError, match=match):
+            SwarmalatorEngine(*constructor_args)
+
+    @pytest.mark.parametrize(
+        ("kwargs", "match"),
+        [
+            ({"a": "1.0"}, "numeric-string"),
+            ({"b": "1.0"}, "numeric-string"),
+            ({"j": "0.8"}, "numeric-string"),
+            ({"k": "1.2"}, "numeric-string"),
+        ],
+    )
+    def test_step_rejects_numeric_string_scalar_aliases(
+        self,
+        kwargs: dict[str, object],
+        match: str,
+    ) -> None:
+        engine = SwarmalatorEngine(2, 2, 0.01)
+
+        with pytest.raises(ValueError, match=match):
+            engine.step(
+                np.array([[0.0, 0.5], [1.0, -0.25]], dtype=np.float64),
+                np.array([0.2, 0.4], dtype=np.float64),
+                np.array([0.1, -0.2], dtype=np.float64),
+                **kwargs,
+            )
+
+    @pytest.mark.parametrize(
+        ("pos", "phases", "omegas", "match"),
+        [
+            (
+                np.array([["0.0", "0.5"], ["1.0", "-0.25"]], dtype=object),
+                np.array([0.2, 0.4], dtype=np.float64),
+                np.array([0.1, -0.2], dtype=np.float64),
+                "numeric-string",
+            ),
+            (
+                np.array([[0.0, 0.5], [1.0, -0.25]], dtype=np.float64),
+                np.array(["0.2", "0.4"], dtype=object),
+                np.array([0.1, -0.2], dtype=np.float64),
+                "numeric-string",
+            ),
+            (
+                np.array([[0.0, 0.5], [1.0, -0.25]], dtype=np.float64),
+                np.array([0.2, 0.4], dtype=np.float64),
+                np.array([0.1, "-0.2"], dtype=object),
+                "numeric-string",
+            ),
+        ],
+    )
+    def test_step_rejects_numeric_string_state_aliases(
+        self,
+        pos: object,
+        phases: object,
+        omegas: object,
+        match: str,
+    ) -> None:
+        engine = SwarmalatorEngine(2, 2, 0.01)
+
+        with pytest.raises(ValueError, match=match):
+            engine.step(pos, phases, omegas)
+
+    def test_run_rejects_numeric_string_step_count(self) -> None:
+        engine = SwarmalatorEngine(2, 2, 0.01)
+
+        with pytest.raises(ValueError, match="numeric-string"):
+            engine.run(
+                np.array([[0.0, 0.5], [1.0, -0.25]], dtype=np.float64),
+                np.array([0.2, 0.4], dtype=np.float64),
+                np.array([0.1, -0.2], dtype=np.float64),
+                n_steps="2",
+            )
+
+    def test_order_parameter_rejects_numeric_string_phase_aliases(self) -> None:
+        engine = SwarmalatorEngine(2, 2, 0.01)
+
+        with pytest.raises(ValueError, match="numeric-string"):
+            engine.order_parameter(np.array(["0.2", "0.4"], dtype=object))
+
+    def test_order_parameter_rejects_scalar_numeric_string_alias(self) -> None:
+        engine = SwarmalatorEngine(2, 2, 0.01)
+
+        with pytest.raises(ValueError, match="numeric-string"):
+            engine.order_parameter("0.2")
+
+    def test_step_rejects_optional_backend_numeric_string_aliases(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        def malformed_backend(
+            _pos: FloatArray,
+            _phases: FloatArray,
+            _omegas: FloatArray,
+            _n: int,
+            _dim: int,
+            _a: float,
+            _b: float,
+            _j: float,
+            _k: float,
+            _dt: float,
+        ) -> tuple[object, object]:
+            return (
+                np.array([["0.1", "0.2"], ["0.3", "0.4"]], dtype=object),
+                np.array([0.5, "0.6"], dtype=object),
+            )
+
+        monkeypatch.setattr(sw_mod, "_dispatch", lambda: malformed_backend)
+        engine = SwarmalatorEngine(2, 2, 0.01)
+
+        with pytest.raises(ValueError, match="numeric-string"):
+            engine.step(
+                np.array([[0.0, 0.5], [1.0, -0.25]], dtype=np.float64),
+                np.array([0.2, 0.4], dtype=np.float64),
+                np.array([0.1, -0.2], dtype=np.float64),
+            )
+
     def test_step_rejects_boolean_coupling_alias(
         self,
     ) -> None:
@@ -674,6 +903,36 @@ class TestPublicBackendOutputContracts:
                 np.array([0.2, 0.4], dtype=np.float64),
                 np.array([0.1, -0.2], dtype=np.float64),
                 b=np.inf,
+            )
+
+    def test_step_rejects_boolean_state_array(self) -> None:
+        engine = SwarmalatorEngine(2, 2, 0.01)
+
+        with pytest.raises(ValueError, match="pos must be real-valued, not boolean"):
+            engine.step(
+                np.array([[True, False], [False, True]]),
+                np.array([0.2, 0.4], dtype=np.float64),
+                np.array([0.1, -0.2], dtype=np.float64),
+            )
+
+    def test_step_rejects_wrong_shape_state_array(self) -> None:
+        engine = SwarmalatorEngine(2, 2, 0.01)
+
+        with pytest.raises(ValueError, match="pos shape"):
+            engine.step(
+                np.array([0.0, 0.5, 1.0], dtype=np.float64),
+                np.array([0.2, 0.4], dtype=np.float64),
+                np.array([0.1, -0.2], dtype=np.float64),
+            )
+
+    def test_step_rejects_nonfinite_state_array(self) -> None:
+        engine = SwarmalatorEngine(2, 2, 0.01)
+
+        with pytest.raises(ValueError, match="pos must contain only finite values"):
+            engine.step(
+                np.array([[0.0, np.inf], [1.0, -0.25]], dtype=np.float64),
+                np.array([0.2, 0.4], dtype=np.float64),
+                np.array([0.1, -0.2], dtype=np.float64),
             )
 
     def test_step_rejects_complex_position_input(

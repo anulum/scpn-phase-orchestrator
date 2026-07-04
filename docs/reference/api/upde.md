@@ -214,16 +214,19 @@ O'Keeffe, Hong, Strogatz, Nature Communications 2017.
 Direct Go, Julia, and Mojo swarmalator accelerator entrypoints share a
 validated position-phase boundary before optional runtime loading: positions
 must be finite real `float64` values with shape `(N, D)` or exactly `N*D`
-flattened values; phase and frequency vectors must be finite real
-one-dimensional `float64` arrays of length `N`; `N`, `D`, and `dt` must be
-positive; and attraction, repulsion, phase-attraction modulation, and
+flattened values without numeric-string aliases; phase and frequency vectors
+must be finite real one-dimensional `float64` arrays of length `N` without
+numeric-string aliases; `N`, `D`, and `dt` must be positive and non-string
+typed; and attraction, repulsion, phase-attraction modulation, and
 phase-coupling coefficients must be finite real controls. Backend outputs must
-return finite positions and torus phases in `[0, 2*pi)`, and Mojo stdout must
-contain exactly `N*D + N` scalar lines.
+return finite positions and torus phases in `[0, 2*pi)` without numeric-string
+aliases, and Mojo stdout must contain exactly `N*D + N` scalar lines.
 The public `SwarmalatorEngine.step()` dispatcher and Rust wrapper apply the
 same output contract before publication, including object-dtype boolean-alias
-rejection, while preserving Python fallback only for loader/runtime
-unavailability.
+rejection, while public constructor controls, state arrays, scalar controls,
+step counts, order-parameter inputs, optional backend outputs, and direct Julia
+raw returns reject numeric-string aliases before Python, NumPy, or accelerator
+coercion. Loader and runtime unavailability still fall back to Python.
 
 ::: scpn_phase_orchestrator.upde.swarmalator
 

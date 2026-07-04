@@ -245,8 +245,12 @@ the same output contract before publication: optional backend positions must
 have `(N, d)` shape or exactly `N*d` flattened values, phases must have length
 `N`, all values must be finite real numbers, phases must stay in `[0, 2*pi)`,
 and object-dtype boolean aliases are rejected instead of being widened to
-`0.0` or `1.0`. Loader and runtime unavailability still fall back to Python;
-malformed backend physics payloads raise `ValueError`.
+`0.0` or `1.0`. Public constructor controls, position arrays, phase arrays,
+frequency arrays, scalar controls, run-step counts, `order_parameter()` phase
+inputs, direct Go/Julia/Mojo validator inputs, optional backend outputs, and
+direct Julia raw returns also reject numeric-string aliases before Python,
+NumPy, or accelerator coercion. Loader and runtime unavailability still fall
+back to Python; malformed backend physics payloads raise `ValueError`.
 
 ---
 

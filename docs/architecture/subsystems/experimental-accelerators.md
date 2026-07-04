@@ -64,7 +64,10 @@ swarmalator output validator to optional backend returns before publication:
 positions must keep `(N, D)` shape or `N*D` flattened cardinality, phases must
 keep oscillator cardinality, values must be finite real numbers, phases must
 stay inside `[0, 2*pi)`, and boolean aliases are rejected before float
-coercion.
+coercion. Public and direct swarmalator constructor controls, position arrays,
+phase arrays, frequency arrays, scalar controls, run-step counts,
+order-parameter inputs, optional backend outputs, and Julia raw returns also
+reject numeric-string aliases before Python, NumPy, or accelerator coercion.
 The public spatial-modulator dispatcher and Rust wrapper, plus the direct Julia
 bridge, apply the shared direct spatial-modulator output validator before
 publication: outputs must keep `N*N` cardinality or matrix shape, contain finite

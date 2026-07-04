@@ -38,8 +38,43 @@ ValidatedSwarmalatorInputs: TypeAlias = tuple[
 ]
 
 
+def _is_string_like(value: object) -> bool:
+    """Return whether ``value`` is a Python or NumPy string scalar."""
+    return isinstance(value, (str, bytes, np.str_, np.bytes_))
+
+
+def _is_numeric_string_alias(value: object) -> bool:
+    """Return whether ``value`` is a string scalar accepted by ``float``."""
+    if not _is_string_like(value):
+        return False
+    text = value.decode() if isinstance(value, (bytes, np.bytes_)) else str(value)
+    if text.strip() == "":
+        return False
+    try:
+        float(text)
+    except ValueError:
+        return False
+    return True
+
+
+def _contains_numeric_string_alias(value: object) -> bool:
+    """Return whether ``value`` contains a stringified numeric scalar."""
+    if _is_numeric_string_alias(value):
+        return True
+    try:
+        array = np.asarray(value)
+    except (TypeError, ValueError):
+        return False
+    if array.dtype.kind not in {"O", "S", "U"}:
+        return False
+    object_array = array.astype(object, copy=False)
+    return any(_is_numeric_string_alias(item) for item in object_array.flat)
+
+
 def _as_real_array(value: Any, *, name: str) -> FloatArray:
     """Return ``value`` as a validated finite real array, else raise."""
+    if _contains_numeric_string_alias(value):
+        raise ValueError(f"{name} must not contain numeric-string aliases")
     if contains_boolean_alias(value):
         raise ValueError(f"{name} must be real-valued, not boolean")
     array = np.asarray(value)
@@ -74,6 +109,8 @@ def _as_position_matrix(value: Any, *, n: int, dim: int, name: str) -> FloatArra
 
 def _as_positive_int(value: Any, *, name: str) -> int:
     """Return ``value`` as a positive integer, else raise ``ValueError``."""
+    if _is_numeric_string_alias(value):
+        raise ValueError(f"{name} must not be a numeric-string alias")
     if contains_boolean_alias(value):
         raise ValueError(f"{name} must be a non-boolean integer")
     if not isinstance(value, Integral):
@@ -86,6 +123,8 @@ def _as_positive_int(value: Any, *, name: str) -> int:
 
 def _as_finite_real(value: Any, *, name: str) -> float:
     """Return ``value`` as a finite real float, else raise ``ValueError``."""
+    if _is_numeric_string_alias(value):
+        raise ValueError(f"{name} must not be a numeric-string alias")
     if contains_boolean_alias(value):
         raise ValueError(f"{name} must be finite real, not boolean")
     if not isinstance(value, Real):
