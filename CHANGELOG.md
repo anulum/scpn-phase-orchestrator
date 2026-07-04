@@ -17,7 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   controls, and the source digest of the derived series; a README documents the
   citation-only data acquisition (the raw capture is not redistributed) and the
   exact reproduction commands, and `tests/test_iso_ne_case1_real_evidence.py`
-  recomputes the content seals and asserts the documented mode is flagged.
+  recomputes the content seals and asserts the documented mode is flagged. The
+  docs site adds a *Real-Data Case Study: ISO-NE Forced Oscillation* validation
+  page presenting the disturbance, the pipeline, the recovered modes, and the
+  honest scope limits.
 - `scpn_phase_orchestrator.runtime.pmu_ieee_adapter` adapts the wide,
   multi-header PMU concentrator CSV used by phasor measurement units and the
   oscillation-detection literature into the two-column `time_s,frequency_hz`

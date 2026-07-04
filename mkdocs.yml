@@ -258,6 +258,7 @@ nav:
       - "Safety Certification Analysis": papers/SAFETY_CERT_DRAFT.md
       - "FEP Correspondence": papers/FEP_CORRESPONDENCE.md
   - Validation:
+      - "Real-Data Case Study: ISO-NE Forced Oscillation": validation/iso_ne_case1_forced_oscillation.md
       - "V&V Report": VALIDATION_REPORT.md
       - "Safety Analysis": SAFETY_ANALYSIS.md
       - "Clinical Study Protocol": VALIDATION_STUDY_PROTOCOL.md
