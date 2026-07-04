@@ -11,6 +11,8 @@ from __future__ import annotations
 import ast
 import importlib
 import inspect
+import shutil
+import subprocess
 from collections.abc import Callable, Iterator
 from pathlib import Path
 from types import ModuleType
@@ -22,10 +24,28 @@ from scpn_phase_orchestrator.monitor.boundaries import BoundaryObserver
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
 from scpn_phase_orchestrator.upde.swarmalator import SwarmalatorEngine
 
+SOURCE_ROOT = Path("src/scpn_phase_orchestrator")
+
+
+def _tracked_python_sources() -> tuple[Path, ...]:
+    """Return Python sources from the committed public source inventory."""
+    git = shutil.which("git")
+    if git is None:
+        raise RuntimeError("git executable is required for docstring inventory")
+    result = subprocess.run(
+        [git, "ls-files", "--", SOURCE_ROOT.as_posix()],
+        check=True,
+        stdout=subprocess.PIPE,
+        text=True,
+    )
+    return tuple(
+        Path(path) for path in result.stdout.splitlines() if path.endswith(".py")
+    )
+
 
 def test_source_public_python_surfaces_have_docstrings() -> None:
     missing: list[str] = []
-    for path in sorted(Path("src/scpn_phase_orchestrator").rglob("*.py")):
+    for path in _tracked_python_sources():
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
         if not ast.get_docstring(tree):
             missing.append(f"{path}:1 module")
@@ -83,10 +103,9 @@ def _discover_enforced_modules() -> tuple[str, ...]:
     gRPC stubs, and the ``sys.modules`` compatibility aliases (which re-point at
     an already-enforced module).
     """
-    root = Path("src/scpn_phase_orchestrator")
     modules: list[str] = []
-    for path in sorted(root.rglob("*.py")):
-        parts = path.relative_to(root).with_suffix("").parts
+    for path in _tracked_python_sources():
+        parts = path.relative_to(SOURCE_ROOT).with_suffix("").parts
         if any(part.startswith("_") for part in parts):
             continue
         if "grpc_gen" in parts:

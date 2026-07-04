@@ -29,6 +29,9 @@ from scpn_phase_orchestrator.runtime.dvoc_oscillation_damping import (
     damp_oscillation,
     underdamped_oscillator,
 )
+from scpn_phase_orchestrator.runtime.ibr_ride_through import (
+    screen_ibr_ride_through_csv,
+)
 from scpn_phase_orchestrator.runtime.pmu_ringdown import screen_pmu_ringdown_csv
 
 
@@ -195,3 +198,96 @@ def pmu_ringdown(
         payload = evidence.to_audit_record()
         Path(output).write_text(json.dumps(payload, indent=2), encoding="utf-8")
         click.echo(f"\nPMU PRC evidence written to {output}")
+
+
+@main.command("ibr-ride-through")
+@click.argument("csv_path", type=click.Path(exists=True, dir_okay=False))
+@click.option("--event-id", required=True, help="Operator event identifier")
+@click.option("--captured-at", required=True, help="Capture timestamp for evidence")
+@click.option("--signal-source", required=True, help="IBR measurement source label")
+@click.option(
+    "--ibr-category",
+    default="other_ibr",
+    type=click.Choice(["ac_wind", "other_ibr"]),
+    help="PRC-029 voltage ride-through table selector",
+)
+@click.option("--time-column", default="time_s", help="Timestamp column in seconds")
+@click.option("--voltage-column", default="voltage_pu", help="Voltage column in p.u.")
+@click.option(
+    "--frequency-column",
+    default="frequency_hz",
+    help="Measured frequency column in hertz",
+)
+@click.option(
+    "--output",
+    default=None,
+    type=click.Path(),
+    help="Write the sealed PRC-029 ride-through evidence JSON here",
+)
+def ibr_ride_through(
+    csv_path: str,
+    event_id: str,
+    captured_at: str,
+    signal_source: str,
+    ibr_category: str,
+    time_column: str,
+    voltage_column: str,
+    frequency_column: str,
+    output: str | None,
+) -> None:
+    """Screen an IBR voltage/frequency CSV for PRC-029 review evidence.
+
+    Parameters
+    ----------
+    csv_path : str
+        CSV path with timestamp, voltage, and measured-frequency columns.
+    event_id : str
+        Operator event identifier stamped into the evidence.
+    captured_at : str
+        Capture timestamp stamped into the evidence.
+    signal_source : str
+        IBR measurement source label.
+    ibr_category : str
+        PRC-029 voltage table selector.
+    time_column : str
+        CSV timestamp column in seconds.
+    voltage_column : str
+        CSV voltage column in per unit.
+    frequency_column : str
+        CSV measured-frequency column in hertz.
+    output : str | None
+        Optional destination for the sealed PRC-029 ride-through evidence JSON.
+
+    Raises
+    ------
+    ClickException
+        If the CSV or screening controls are invalid.
+    """
+    try:
+        evidence = screen_ibr_ride_through_csv(
+            Path(csv_path),
+            event_id=event_id,
+            captured_at=captured_at,
+            signal_source=signal_source,
+            ibr_category=ibr_category,
+            time_column=time_column,
+            voltage_column=voltage_column,
+            frequency_column=frequency_column,
+        )
+    except ValueError as exc:
+        raise click.ClickException(str(exc)) from exc
+
+    flagged = sum(finding.flagged for finding in evidence.prc029_evidence.findings)
+    finding_count = len(evidence.prc029_evidence.findings)
+    click.echo("=== IBR ride-through PRC-029 screening ===")
+    click.echo(
+        f"source: {evidence.signal_source}  samples={evidence.sample_count}  "
+        f"duration={evidence.duration_s:.4f} s"
+    )
+    click.echo(f"flagged={flagged}/{finding_count}")
+    click.echo(f"source sha256: {evidence.source_sha256}")
+
+    if output is not None:
+        payload = evidence.to_audit_record()
+        Path(output).write_text(json.dumps(payload, indent=2), encoding="utf-8")
+        click.echo(f"\nIBR ride-through evidence written to {output}")

@@ -418,6 +418,43 @@ spo certification-evidence --system grid-review \
 
 ---
 
+## `spo ibr-ride-through`
+
+Screen a local operator CSV for NERC PRC-029-1 ride-through review evidence.
+The command reads timestamp, voltage, and frequency columns, applies the
+review-only PRC-029 voltage/frequency screening tables, and writes a
+hash-sealed `scpn_ibr_ride_through_prc029_audit_v1` record when `--output` is
+set. It does not actuate or certify compliance.
+
+```
+spo ibr-ride-through <csv_path> --event-id ID --captured-at TIMESTAMP --signal-source LABEL [--ibr-category other_ibr|ac_wind] [--output PATH]
+```
+
+**Options:**
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--event-id ID` | Required | Operator event identifier stamped into the evidence |
+| `--captured-at TIMESTAMP` | Required | Capture timestamp stamped into the evidence |
+| `--signal-source LABEL` | Required | Operator-facing IBR measurement source label |
+| `--ibr-category` | `other_ibr` | PRC-029 voltage table selector (`other_ibr` or `ac_wind`) |
+| `--time-column` | `time_s` | Timestamp column in seconds |
+| `--voltage-column` | `voltage_pu` | Voltage column in per unit |
+| `--frequency-column` | `frequency_hz` | Frequency column in hertz |
+| `--output PATH` | None | Write the sealed JSON evidence record |
+
+**Example:**
+
+```bash
+spo ibr-ride-through ride_through.csv \
+  --event-id IBR-EVT-001 \
+  --captured-at 2026-07-04T13:45:00Z \
+  --signal-source IBR-17/high-side-transformer \
+  --output prc029_ride_through.json
+```
+
+---
+
 ## `spo scaffold`
 
 Scaffold a new domainpack directory with starter files.

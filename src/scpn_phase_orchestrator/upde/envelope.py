@@ -293,6 +293,11 @@ def envelope_modulation_depth(envelope: FloatArray) -> float:
     -------
     float
         The modulation depth ``(max − min) / (max + min)`` in ``[0, 1]``.
+
+    Raises
+    ------
+    ValueError
+        If ``envelope`` contains numeric-string aliases.
     """
     if _contains_numeric_string_alias(envelope):
         raise ValueError("envelope must not contain numeric-string aliases")

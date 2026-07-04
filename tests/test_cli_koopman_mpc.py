@@ -102,6 +102,28 @@ class _FakePMURingdownResult:
         }
 
 
+@dataclass(frozen=True)
+class _FakeRideThroughResult:
+    prc029_evidence: _FakeEvidence
+    signal_source: str
+    sample_count: int
+    duration_s: float
+    source_sha256: str
+
+    def to_audit_record(self) -> dict[str, object]:
+        """Return the IBR ride-through audit record written by the command."""
+        return {
+            "schema": "scpn_ibr_ride_through_prc029_audit_v1",
+            "claim_boundary": "review_only_offline_no_live_actuation",
+            "review_only": True,
+            "sample_count": self.sample_count,
+            "duration_s": self.duration_s,
+            "source_sha256": self.source_sha256,
+            "prc029_evidence_hash": "e" * 64,
+            "content_hash": "f" * 64,
+        }
+
+
 @dataclass
 class _DampingCall:
     state_matrix: FloatArray | None = None
@@ -139,6 +161,10 @@ def _placeholder_screen_pmu_ringdown_csv(*args: object, **kwargs: object) -> obj
     raise AssertionError(f"unexpected PMU ringdown call: {args}, {kwargs}")
 
 
+def _placeholder_screen_ibr_ride_through_csv(*args: object, **kwargs: object) -> object:
+    raise AssertionError(f"unexpected IBR ride-through call: {args}, {kwargs}")
+
+
 def _load_koopman_cli(
     monkeypatch: pytest.MonkeyPatch,
 ) -> tuple[types.ModuleType, click.Group]:
@@ -163,6 +189,12 @@ def _load_koopman_cli(
     pmu_module.__dict__["screen_pmu_ringdown_csv"] = (
         _placeholder_screen_pmu_ringdown_csv
     )
+    ride_through_module = types.ModuleType(
+        "scpn_phase_orchestrator.runtime.ibr_ride_through"
+    )
+    ride_through_module.__dict__["screen_ibr_ride_through_csv"] = (
+        _placeholder_screen_ibr_ride_through_csv
+    )
 
     monkeypatch.setitem(sys.modules, "scpn_phase_orchestrator.runtime.cli", cli_package)
     monkeypatch.setitem(
@@ -179,6 +211,11 @@ def _load_koopman_cli(
         sys.modules,
         "scpn_phase_orchestrator.runtime.pmu_ringdown",
         pmu_module,
+    )
+    monkeypatch.setitem(
+        sys.modules,
+        "scpn_phase_orchestrator.runtime.ibr_ride_through",
+        ride_through_module,
     )
 
     spec = importlib.util.spec_from_file_location(_MODULE_NAME, _MODULE_PATH)
@@ -467,3 +504,132 @@ def test_pmu_ringdown_cli_reports_invalid_operator_csv(
 
     assert result.exit_code != 0
     assert "Error: PMU ringdown CSV is missing required column" in result.output
+
+
+def test_ibr_ride_through_cli_writes_review_only_prc029_payload(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """The ride-through command writes sealed PRC-029 evidence."""
+    cli_koopman_mpc, main = _load_koopman_cli(monkeypatch)
+    csv_path = tmp_path / "ride-through.csv"
+    csv_path.write_text(
+        "time_s,voltage_pu,frequency_hz\n0.0,0.82,60.0\n3.5,0.82,60.0\n",
+        encoding="utf-8",
+    )
+    output_path = tmp_path / "ride-through-prc029.json"
+
+    def fake_screen_ibr_ride_through_csv(
+        path: Path,
+        *,
+        event_id: str,
+        captured_at: str,
+        signal_source: str,
+        ibr_category: str,
+        time_column: str,
+        voltage_column: str,
+        frequency_column: str,
+    ) -> _FakeRideThroughResult:
+        assert path == csv_path
+        assert event_id == "IBR-EVT-001"
+        assert captured_at == "2026-07-04T13:45:00Z"
+        assert signal_source == "IBR-17/high-side-transformer"
+        assert ibr_category == "ac_wind"
+        assert time_column == "timestamp"
+        assert voltage_column == "vpu"
+        assert frequency_column == "freq"
+        return _FakeRideThroughResult(
+            prc029_evidence=_FakeEvidence(
+                event_id="IBR-EVT-001",
+                findings=(_FakeFinding(True), _FakeFinding(False)),
+            ),
+            signal_source="IBR-17/high-side-transformer",
+            sample_count=96,
+            duration_s=7.0,
+            source_sha256="e" * 64,
+        )
+
+    monkeypatch.setattr(
+        cli_koopman_mpc,
+        "screen_ibr_ride_through_csv",
+        fake_screen_ibr_ride_through_csv,
+    )
+
+    result = CliRunner().invoke(
+        main,
+        [
+            "ibr-ride-through",
+            str(csv_path),
+            "--event-id",
+            "IBR-EVT-001",
+            "--captured-at",
+            "2026-07-04T13:45:00Z",
+            "--signal-source",
+            "IBR-17/high-side-transformer",
+            "--ibr-category",
+            "ac_wind",
+            "--time-column",
+            "timestamp",
+            "--voltage-column",
+            "vpu",
+            "--frequency-column",
+            "freq",
+            "--output",
+            str(output_path),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "=== IBR ride-through PRC-029 screening ===" in result.output
+    assert (
+        "source: IBR-17/high-side-transformer  samples=96  duration=7.0000 s"
+        in result.output
+    )
+    assert "flagged=1/2" in result.output
+    assert f"IBR ride-through evidence written to {output_path}" in result.output
+
+    payload = json.loads(output_path.read_text(encoding="utf-8"))
+    assert payload["schema"] == "scpn_ibr_ride_through_prc029_audit_v1"
+    assert payload["claim_boundary"] == "review_only_offline_no_live_actuation"
+    assert payload["review_only"] is True
+    assert payload["sample_count"] == 96
+    assert payload["source_sha256"] == "e" * 64
+
+
+def test_ibr_ride_through_cli_reports_invalid_operator_csv(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    """Invalid ride-through screening inputs are surfaced as Click errors."""
+    cli_koopman_mpc, main = _load_koopman_cli(monkeypatch)
+    csv_path = tmp_path / "ride-through.csv"
+    csv_path.write_text(
+        "time_s,voltage_pu,frequency_hz\n0.0,1.0,60.0\n",
+        encoding="utf-8",
+    )
+
+    def fake_screen_ibr_ride_through_csv(*_: object, **__: object) -> object:
+        raise ValueError("IBR ride-through CSV is missing required column voltage_pu")
+
+    monkeypatch.setattr(
+        cli_koopman_mpc,
+        "screen_ibr_ride_through_csv",
+        fake_screen_ibr_ride_through_csv,
+    )
+
+    result = CliRunner().invoke(
+        main,
+        [
+            "ibr-ride-through",
+            str(csv_path),
+            "--event-id",
+            "IBR-EVT-001",
+            "--captured-at",
+            "2026-07-04T13:45:00Z",
+            "--signal-source",
+            "IBR-17/high-side-transformer",
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "Error: IBR ride-through CSV is missing required column" in result.output

@@ -244,3 +244,21 @@ assurance-case bundle, it is a technical evidence-mapping aid, not a legal
 conformity assessment, and it never actuates.
 
 ::: scpn_phase_orchestrator.assurance.prc_oscillation
+
+## Ride-Through Evidence (NERC PRC-029-1)
+
+`scpn_phase_orchestrator.assurance.prc_ride_through` screens operator-provided
+high-side transformer voltage and frequency samples against the approved NERC
+PRC-029-1 ride-through tables. It carries both voltage categories from
+Attachment 1 — AC-connected wind IBRs and all other IBRs — plus the Attachment 2
+frequency bands. The screener aggregates cumulative duration inside the
+standard's voltage and frequency review windows, records the operation region,
+minimum ride-through duration, observed value range, and review classification
+for each non-nominal band, then seals the record as `PRCRideThroughEvidence`.
+
+The record is review-only. It does not evaluate real/reactive-current
+performance, phase-jump exceptions, hardware-limit exemptions, reporting duties,
+or legal compliance. Observations outside the review envelope use
+`assessor_review_required`, not pass/fail language.
+
+::: scpn_phase_orchestrator.assurance.prc_ride_through

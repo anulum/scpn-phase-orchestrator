@@ -139,3 +139,17 @@ for reviewed operator captures and writes one deterministic
 data-screening path only; it never fits a plant model and never actuates.
 
 ::: scpn_phase_orchestrator.runtime.pmu_ringdown
+
+## 10. IBR ride-through evidence ingress
+
+`runtime.ibr_ride_through` is the PRC-029-ready operator-data ingress for
+voltage and frequency ride-through review. `screen_ibr_ride_through_csv` reads a
+local CSV with `time_s`, `voltage_pu`, and `frequency_hz` columns, rejects
+malformed or non-finite data, runs the PRC-029 ride-through screener, and seals
+the result with the source CSV SHA-256 digest. The `spo ibr-ride-through`
+command exposes the same path and writes one deterministic
+`scpn_ibr_ride_through_prc029_audit_v1` record when `--output` is supplied.
+This is a data-screening path only; it never fits a plant model, never actuates,
+and never claims compliance.
+
+::: scpn_phase_orchestrator.runtime.ibr_ride_through
