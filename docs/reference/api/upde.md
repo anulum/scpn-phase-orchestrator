@@ -241,7 +241,11 @@ over long simulations. Essential for multi-hour or multi-day simulations
 where phase wrapping drift becomes significant.
 The public dispatcher validates optional backend outputs before publication:
 selected Rust, Go, Julia, or Mojo returns must be finite phase vectors with the
-same oscillator cardinality and values in `[0, 2*pi)`.
+same oscillator cardinality, values in `[0, 2*pi)`, and no numeric-string
+aliases. Public constructor, state, scalar-control, and order-parameter phase
+inputs plus direct Go/Julia/Mojo phase, frequency, coupling, phase-lag, scalar,
+count, and backend-output boundaries reject numeric-string aliases before float
+coercion or optional native runtime loading.
 **Detailed documentation:** [Geometric (SO(2)) — detailed reference](upde_geometric.md)
 
 ::: scpn_phase_orchestrator.upde.geometric

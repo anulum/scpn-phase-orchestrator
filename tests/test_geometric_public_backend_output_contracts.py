@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import TypeAlias
+from typing import TypeAlias, cast
 
 import numpy as np
 import pytest
@@ -30,7 +30,7 @@ TorusBackendFn: TypeAlias = Callable[
 def _install_optional_backend(
     monkeypatch: pytest.MonkeyPatch,
     *,
-    output: FloatArray,
+    output: object,
 ) -> None:
     """Install a deterministic optional torus backend for public API tests."""
 
@@ -46,7 +46,7 @@ def _install_optional_backend(
         _n_steps: int,
     ) -> FloatArray:
         """Return the configured torus phase payload."""
-        return np.ascontiguousarray(output, dtype=np.float64)
+        return cast(FloatArray, output)
 
     def load_backend() -> TorusBackendFn:
         """Return the configured optional backend callable."""
@@ -108,6 +108,19 @@ def test_public_torus_rejects_out_of_domain_optional_output(
     )
 
     with pytest.raises(ValueError, match="result phases must lie in"):
+        _run_public_engine()
+
+
+def test_public_torus_rejects_numeric_string_optional_output(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Reject optional torus backend output numeric-string aliases."""
+    _install_optional_backend(
+        monkeypatch,
+        output=np.array(["0.4", "0.5", "0.6"], dtype=object),
+    )
+
+    with pytest.raises(ValueError, match="result.*numeric-string"):
         _run_public_engine()
 
 

@@ -38,7 +38,11 @@ from typing import cast
 import numpy as np
 from numpy.typing import NDArray
 
-from scpn_phase_orchestrator.upde._geometric_validation import validate_torus_output
+from scpn_phase_orchestrator.upde._geometric_validation import (
+    _contains_numeric_string_alias,
+    _is_numeric_string_alias,
+    validate_torus_output,
+)
 from scpn_phase_orchestrator.upde._julia_runtime import require_juliacall_main
 
 FloatArray = NDArray[np.float64]
@@ -181,6 +185,11 @@ def _dispatch() -> Callable[..., FloatArray] | None:
 
 def _validate_positive_int(value: object, *, name: str) -> int:
     """Return ``value`` as a positive integer, else raise ``ValueError``."""
+    if _is_numeric_string_alias(value):
+        raise ValueError(
+            f"{name} must be >= 1 as a non-boolean integer, "
+            f"not a numeric-string alias, got {value!r}"
+        )
     if isinstance(value, bool) or not isinstance(value, Integral) or value < 1:
         raise ValueError(f"{name} must be >= 1 as a non-boolean integer, got {value!r}")
     return int(value)
@@ -188,6 +197,11 @@ def _validate_positive_int(value: object, *, name: str) -> int:
 
 def _validate_nonnegative_int(value: object, *, name: str) -> int:
     """Return ``value`` as a non-negative integer, else raise ``ValueError``."""
+    if _is_numeric_string_alias(value):
+        raise ValueError(
+            f"{name} must be >= 0 as a non-boolean integer, "
+            f"not a numeric-string alias, got {value!r}"
+        )
     if isinstance(value, bool) or not isinstance(value, Integral) or value < 0:
         raise ValueError(f"{name} must be >= 0 as a non-boolean integer, got {value!r}")
     return int(value)
@@ -195,6 +209,11 @@ def _validate_nonnegative_int(value: object, *, name: str) -> int:
 
 def _validate_positive_float(value: object, *, name: str) -> float:
     """Return ``value`` as a strictly positive finite float, else raise."""
+    if _is_numeric_string_alias(value):
+        raise ValueError(
+            f"{name} must be positive finite real, "
+            f"not a numeric-string alias, got {value!r}"
+        )
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be positive finite real, got {value!r}")
     coerced = float(value)
@@ -205,6 +224,10 @@ def _validate_positive_float(value: object, *, name: str) -> float:
 
 def _validate_finite_float(value: object, *, name: str) -> float:
     """Return ``value`` as a finite float, else raise ``ValueError``."""
+    if _is_numeric_string_alias(value):
+        raise ValueError(
+            f"{name} must be a finite real, not a numeric-string alias, got {value!r}"
+        )
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite real, got {value!r}")
     coerced = float(value)
@@ -220,6 +243,8 @@ def _validate_state_array(
     shape: tuple[int, ...],
 ) -> FloatArray:
     """Return the state as a validated finite array, else raise."""
+    if _contains_numeric_string_alias(value):
+        raise ValueError(f"{name} must not contain numeric-string aliases")
     try:
         arr = np.asarray(value, dtype=np.float64)
     except (TypeError, ValueError) as exc:

@@ -44,6 +44,9 @@ Dispatched through `upde/_run.py` with the fastest-first chain
 modules (`_engine_go.py`, `_engine_mojo.py`, …) point to
 `experimental/accelerators/upde/`. Rust paths exist for the standard, sparse,
 sheaf, geometric, inertial, and Ott–Antonsen engines.
+Geometric direct Go, Julia, and Mojo bridges validate torus phase, frequency,
+coupling, lag, scalar, count, and backend-output payloads before optional native
+runtime loading; numeric-string aliases are rejected at the Python boundary.
 
 ## Wiring
 

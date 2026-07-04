@@ -24,6 +24,7 @@ import math
 import sys
 import types
 from collections.abc import Callable
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -31,6 +32,7 @@ from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
 from scpn_phase_orchestrator.experimental.accelerators.upde import (
+    _geometric_julia,
     _geometric_mojo,
 )
 from scpn_phase_orchestrator.experimental.accelerators.upde._geometric_go import (
@@ -194,6 +196,194 @@ class TestDirectBackendBoundaryContracts:
         payload[index] = replacement(tuple(payload))
         with pytest.raises((TypeError, ValueError)):
             backend(*payload)
+
+    @pytest.mark.parametrize("backend", DIRECT_BACKENDS)
+    @pytest.mark.parametrize(
+        ("index", "replacement"),
+        [
+            (0, lambda payload: np.array(["0.1"] * payload[4], dtype=object)),
+            (1, lambda payload: np.array(["1.0"] * payload[4], dtype=object)),
+            (
+                2,
+                lambda payload: np.array(
+                    ["0.0"] * (payload[4] * payload[4]), dtype=object
+                ),
+            ),
+            (
+                3,
+                lambda payload: np.array(
+                    ["0.0"] * (payload[4] * payload[4]), dtype=object
+                ),
+            ),
+            (4, lambda _payload: "5"),
+            (5, lambda _payload: "0.2"),
+            (6, lambda _payload: "0.7"),
+            (7, lambda _payload: "0.01"),
+            (8, lambda _payload: "4"),
+        ],
+    )
+    def test_numeric_string_aliases_fail_before_optional_runtime_loading(
+        self,
+        backend: DirectBackend,
+        index: int,
+        replacement: Callable[[tuple], object],
+    ) -> None:
+        """Reject direct Go/Julia/Mojo numeric-string aliases before loading."""
+        payload = list(_direct_payload())
+        payload[index] = replacement(tuple(payload))
+
+        with pytest.raises(ValueError, match="numeric-string"):
+            backend(*payload)
+
+    def test_validation_rejects_numeric_string_backend_output(self) -> None:
+        """Reject raw numeric-string phase output before float coercion."""
+        with pytest.raises(ValueError, match="numeric-string"):
+            geometric_validation.validate_torus_output(
+                np.array(["0.1", "0.2", "0.3"], dtype=object),
+                n=3,
+            )
+
+    def test_numeric_string_helper_rejects_blank_and_bad_array_aliases(self) -> None:
+        """Classify only coercible string scalars as numeric-string aliases."""
+
+        class BadArray:
+            """Array-like object that refuses NumPy conversion."""
+
+            def __array__(self) -> object:
+                """Raise during NumPy conversion."""
+                raise TypeError("no array conversion")
+
+        assert not geometric_validation._is_numeric_string_alias("   ")
+        assert geometric_validation._contains_numeric_string_alias("0.25")
+        assert not geometric_validation._contains_numeric_string_alias(BadArray())
+
+    @pytest.mark.parametrize(
+        ("index", "replacement", "exc_type", "match"),
+        [
+            (
+                0,
+                lambda _payload: np.array(["bad", "bad", "bad", "bad", "bad"]),
+                TypeError,
+                "phases must be numeric",
+            ),
+            (
+                0,
+                lambda _payload: np.array([], dtype=np.float64),
+                ValueError,
+                "phases must contain at least one oscillator",
+            ),
+            (4, lambda _payload: 1.5, TypeError, "n must be an integer"),
+            (5, lambda _payload: object(), TypeError, "zeta must be a real scalar"),
+        ],
+    )
+    def test_validation_rejects_non_alias_malformed_inputs(
+        self,
+        index: int,
+        replacement: Callable[[tuple], object],
+        exc_type: type[Exception],
+        match: str,
+    ) -> None:
+        """Keep non-alias validation branches explicit after alias hardening."""
+        payload = list(_direct_payload())
+        payload[index] = replacement(tuple(payload))
+
+        with pytest.raises(exc_type, match=match):
+            geometric_validation.validate_torus_inputs(*payload)
+
+    def test_julia_loader_returns_cached_module(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Return the cached Julia module without probing the runtime."""
+        cached = object()
+        monkeypatch.setattr(_geometric_julia, "_JULIA_MODULE", cached)
+
+        assert _geometric_julia._ensure() is cached
+
+    def test_julia_loader_rejects_missing_side_file(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        """Reject missing Julia side files after runtime acquisition."""
+        missing_file = tmp_path / "missing_geometric.jl"
+        monkeypatch.setattr(_geometric_julia, "_JULIA_MODULE", None)
+        monkeypatch.setattr(_geometric_julia, "_JULIA_FILE", missing_file)
+        monkeypatch.setattr(_geometric_julia, "require_julia_main", lambda: object())
+
+        with pytest.raises(ImportError, match="julia side-file not found"):
+            _geometric_julia._ensure()
+
+    def test_julia_loader_includes_side_file_and_caches_module(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        """Include the Julia side file and cache the exported module handle."""
+
+        class FakeJuliaMain:
+            """Minimal Julia runtime stand-in with an exported module."""
+
+            GeometricJL = object()
+
+            def __init__(self) -> None:
+                self.included: str | None = None
+
+            def include(self, path: str) -> None:
+                """Record the included Julia source path."""
+                self.included = path
+
+        side_file = tmp_path / "geometric.jl"
+        side_file.write_text("module GeometricJL\nend\n", encoding="utf-8")
+        fake_main = FakeJuliaMain()
+        monkeypatch.setattr(_geometric_julia, "_JULIA_MODULE", None)
+        monkeypatch.setattr(_geometric_julia, "_JULIA_FILE", side_file)
+        monkeypatch.setattr(
+            _geometric_julia,
+            "require_julia_main",
+            lambda: fake_main,
+        )
+
+        assert _geometric_julia._ensure() is fake_main.GeometricJL
+        assert fake_main.included == str(side_file)
+
+    def test_julia_output_validation_rejects_raw_numeric_string_aliases(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Reject Julia return values that arrive as numeric-string aliases."""
+
+        class FakeJuliaModule:
+            """Minimal Julia module stand-in returning malformed torus output."""
+
+            def torus_run(self, *_args: object) -> np.ndarray:
+                """Return a raw numeric-string vector."""
+                return np.array(["0.1", "0.2", "0.3", "0.4", "0.5"], dtype=object)
+
+        monkeypatch.setattr(_geometric_julia, "_ensure", FakeJuliaModule)
+
+        with pytest.raises(ValueError, match="numeric-string"):
+            _geometric_julia.torus_run_julia(*_direct_payload())
+
+    def test_julia_output_validation_accepts_numeric_vectors(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Return validated Julia phase vectors after compatibility coercion."""
+
+        class FakeJuliaModule:
+            """Minimal Julia module stand-in returning valid torus output."""
+
+            def torus_run(self, *_args: object) -> list[float]:
+                """Return a valid finite torus phase vector."""
+                return [0.1, 0.2, 0.3, 0.4, 0.5]
+
+        monkeypatch.setattr(_geometric_julia, "_ensure", FakeJuliaModule)
+
+        np.testing.assert_allclose(
+            _geometric_julia.torus_run_julia(*_direct_payload()),
+            np.array([0.1, 0.2, 0.3, 0.4, 0.5], dtype=np.float64),
+        )
 
     @pytest.mark.parametrize("backend", DIRECT_BACKENDS)
     def test_zero_steps_normalises_phases_without_optional_runtime(
