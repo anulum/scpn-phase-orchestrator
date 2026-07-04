@@ -89,6 +89,29 @@ def _lifecycle(**overrides: Any) -> dict[str, Any]:
 
 
 class TestLifecycleLoader:
+    def test_valid_round_trips_optional_hash_fields(self) -> None:
+        approved = _load_lifecycle_from_payload(_lifecycle())
+        revoked = _load_lifecycle_from_payload(
+            _lifecycle(
+                status="revoked",
+                storage_manifest_hash=_HEX,
+                storage_backend="filesystem",
+                storage_uri="file:///tmp/store",
+                revoked=True,
+                revocation_list_hash=_HEX,
+                revocation_hash=_HEX,
+                revoked_by="deployment_gate",
+                revocation_reference="REV-1",
+            )
+        )
+
+        assert approved.storage_manifest_hash is None
+        assert approved.revocation_hash is None
+        assert revoked.status == "revoked"
+        assert revoked.storage_manifest_hash == _HEX
+        assert revoked.revocation_hash == _HEX
+        assert revoked.revoked_by == "deployment_gate"
+
     def test_rejects_schema_mismatch(self) -> None:
         with pytest.raises(click.ClickException, match="lifecycle schema mismatch"):
             _load_lifecycle_from_payload(_lifecycle(schema="x"))
@@ -130,6 +153,14 @@ def _summary(**overrides: Any) -> dict[str, Any]:
 
 
 class TestLifecycleSummaryLoader:
+    def test_valid_round_trips_hash_lists(self) -> None:
+        summary = _load_lifecycle_summary_from_payload(_summary())
+
+        assert summary.request_count == 1
+        assert summary.lifecycle_hashes == (_HEX,)
+        assert summary.approved_request_hashes == (_HEX,)
+        assert summary.stored_request_hashes == ()
+
     def test_rejects_schema_mismatch(self) -> None:
         with pytest.raises(click.ClickException, match="lifecycle summary schema"):
             _load_lifecycle_summary_from_payload(_summary(schema="x"))

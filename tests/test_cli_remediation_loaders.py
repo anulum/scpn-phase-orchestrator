@@ -157,6 +157,35 @@ class TestMultistoreDrilldownLoader:
                 _drilldown(stores=[_store(storage_missing_request_hashes=[1])])
             )
 
+    def test_rejects_non_string_global_flagged_hashes(self) -> None:
+        with pytest.raises(
+            click.ClickException,
+            match="global_flagged_request_hashes must be a string list",
+        ):
+            _load_lifecycle_multistore_drilldown_payload(
+                _drilldown(global_flagged_request_hashes=[1])
+            )
+
+    def test_rejects_malformed_global_flagged_hashes(self) -> None:
+        with pytest.raises(
+            click.ClickException,
+            match="global_flagged_request_hash 'short' is not a valid",
+        ):
+            _load_lifecycle_multistore_drilldown_payload(
+                _drilldown(global_flagged_request_hashes=["short"])
+            )
+
+    def test_rejects_malformed_store_hash_list_items(self) -> None:
+        with pytest.raises(
+            click.ClickException,
+            match="external_write_followup_request_hashes 'short' is not a valid",
+        ):
+            _load_lifecycle_multistore_drilldown_payload(
+                _drilldown(
+                    stores=[_store(external_write_followup_request_hashes=["short"])]
+                )
+            )
+
 
 def _action(**overrides: Any) -> dict[str, Any]:
     action: dict[str, Any] = {
