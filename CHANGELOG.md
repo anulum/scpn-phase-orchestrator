@@ -60,6 +60,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   by the *same* suite because each is a synchronisation transition in a population
   of coupled oscillators. Pinned on synthetic arrays in
   `tests/test_early_warning_suite.py`.
+- `bench/analytic_phase_pipeline.py` is the shared raw-signal to analytic-phase
+  pipeline every capstone adapter reuses: a zero-phase Butterworth `bandpass`, the
+  per-channel Hilbert `analytic_phase`, and `decimate_analytic_phase` (anti-aliased
+  decimation of a *wrapped* phase field via its continuous `sin`/`cos` components,
+  reconstructed with `atan2`). Extracted from the scalp-EEG capstone once the
+  cardiac adapter needed the same three steps with different parameters. Pinned on
+  synthetic tones in `tests/test_analytic_phase_pipeline.py`.
 - `bench/early_warning_domain.py` is the domain-neutral matched-false-alarm
   lead-time harness the per-domain capstones share: it segments a recording
   (`slice_observables`, `null_trials`), calibrates each detector to a matched

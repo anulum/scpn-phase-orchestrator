@@ -5,14 +5,14 @@
     "domainpacks": 36,
     "github_workflows": 12,
     "integration_modules": 27,
-    "optional_extras": 21,
+    "optional_extras": 22,
     "public_api_exports": 24,
     "public_documentation_pages": 218,
     "python_package_modules": 693,
     "research_experimental_modules": 201,
     "runtime_serving_modules": 143,
     "rust_kernel_files": 97,
-    "test_files": 777
+    "test_files": 778
   },
   "documentation": {
     "public_pages": [
@@ -322,6 +322,7 @@
   ],
   "packaging": {
     "optional_extras": [
+      "cardiac",
       "dev",
       "eeg",
       "full",
@@ -1797,6 +1798,7 @@
       "tests/test_adapters_network_validation.py",
       "tests/test_adapters_slice_c.py",
       "tests/test_adjoint.py",
+      "tests/test_analytic_phase_pipeline.py",
       "tests/test_api_docs_navigation.py",
       "tests/test_architecture_studio_manifest.py",
       "tests/test_assurance_case.py",

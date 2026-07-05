@@ -37,9 +37,6 @@ from bench.early_warning_leadtime_eeg import (
     STEP,
     WINDOW,
     EEGPhaseAdapter,
-    analytic_phase,
-    bandpass,
-    decimate_analytic_phase,
     edf_start_datetime,
     eeg_observables,
     load_edf_channels,
@@ -79,76 +76,6 @@ def _raw_tone(
     for channel in range(n_channels):
         raw[channel] = np.sin(_TWO_PI * hz * times + offsets[channel])
     return raw
-
-
-# --------------------------------------------------------------------------- #
-# bandpass / analytic_phase / decimate_analytic_phase                          #
-# --------------------------------------------------------------------------- #
-
-
-def test_bandpass_keeps_in_band_and_rejects_out_of_band() -> None:
-    fs = 256.0
-    n = 2048
-    times = np.arange(n) / fs
-    in_band = np.sin(_TWO_PI * 10.0 * times)
-    out_band = np.sin(_TWO_PI * 60.0 * times)
-    signal = np.vstack([in_band + out_band])
-    filtered = bandpass(signal, sampling_rate_hz=fs)
-    # The 10 Hz component survives; the 60 Hz component is strongly attenuated.
-    residual_out = float(np.std(filtered[0] - in_band))
-    assert residual_out < 0.2
-    assert float(np.std(filtered[0])) > 0.5
-
-
-def test_bandpass_promotes_a_single_channel() -> None:
-    fs = 256.0
-    tone = np.sin(_TWO_PI * 12.0 * np.arange(1024) / fs)
-    filtered = bandpass(tone, sampling_rate_hz=fs)
-    assert filtered.shape == (1, 1024)
-
-
-def test_bandpass_rejects_a_band_above_nyquist() -> None:
-    with pytest.raises(ValueError, match="Nyquist"):
-        bandpass(np.zeros((2, 512)), sampling_rate_hz=64.0, band_hz=(4.0, 40.0))
-
-
-def test_bandpass_rejects_a_low_edge_at_or_above_the_high_edge() -> None:
-    with pytest.raises(ValueError, match="must be below high"):
-        bandpass(np.zeros((2, 512)), sampling_rate_hz=256.0, band_hz=(30.0, 30.0))
-
-
-def test_bandpass_rejects_a_malformed_band() -> None:
-    with pytest.raises(ValueError, match="low, high"):
-        bandpass(np.zeros((2, 512)), sampling_rate_hz=256.0, band_hz=(4.0, 20.0, 30.0))
-
-
-def test_analytic_phase_advances_linearly_for_a_pure_tone() -> None:
-    fs = 256.0
-    hz = 10.0
-    tone = np.cos(_TWO_PI * hz * np.arange(1024) / fs)
-    phase = analytic_phase(tone)
-    increments = np.diff(np.unwrap(phase[0]))
-    expected = _TWO_PI * hz / fs
-    # The interior increments track the tone's angular step (edges excluded).
-    assert np.allclose(increments[50:-50], expected, atol=1.0e-3)
-
-
-def test_decimate_reduces_length_and_preserves_a_constant_phase() -> None:
-    phases = np.zeros((3, 2400), dtype=np.float64)
-    decimated = decimate_analytic_phase(phases, factor=8)
-    assert decimated.shape == (3, 300)
-    assert np.allclose(decimated, 0.0, atol=1.0e-6)
-
-
-def test_decimate_with_unit_factor_is_the_identity() -> None:
-    phases = np.linspace(-np.pi, np.pi, 200).reshape(2, 100)
-    decimated = decimate_analytic_phase(phases, factor=1)
-    assert np.array_equal(decimated, phases)
-
-
-def test_decimate_rejects_a_non_positive_factor() -> None:
-    with pytest.raises(ValueError, match="factor"):
-        decimate_analytic_phase(np.zeros((2, 80)), factor=0)
 
 
 # --------------------------------------------------------------------------- #
@@ -319,46 +246,6 @@ def test_module_constants_match_the_documented_pipeline() -> None:
     assert BAND_HZ == (4.0, 30.0)
     assert WINDOW == 128
     assert STEP == 16
-
-
-# --------------------------------------------------------------------------- #
-# validator guards                                                            #
-# --------------------------------------------------------------------------- #
-
-
-def test_bandpass_rejects_boolean_signals() -> None:
-    with pytest.raises(ValueError, match="boolean"):
-        bandpass(np.ones((2, 512), dtype=bool), sampling_rate_hz=256.0)
-
-
-def test_bandpass_rejects_non_numeric_signals() -> None:
-    with pytest.raises(ValueError, match="real float array"):
-        bandpass(np.array([["a", "b", "c", "d"]]), sampling_rate_hz=256.0)
-
-
-def test_bandpass_rejects_a_three_dimensional_signal() -> None:
-    with pytest.raises(ValueError, match="one- or two-dimensional"):
-        bandpass(np.zeros((2, 2, 2)), sampling_rate_hz=256.0)
-
-
-def test_bandpass_rejects_an_empty_signal() -> None:
-    with pytest.raises(ValueError, match="at least one sample"):
-        bandpass(np.zeros((2, 0)), sampling_rate_hz=256.0)
-
-
-def test_bandpass_rejects_a_non_positive_rate() -> None:
-    with pytest.raises(ValueError, match="finite and positive"):
-        bandpass(np.zeros((2, 512)), sampling_rate_hz=0.0)
-
-
-def test_bandpass_rejects_a_boolean_rate() -> None:
-    with pytest.raises(ValueError, match="positive real"):
-        bandpass(np.zeros((2, 512)), sampling_rate_hz=True)
-
-
-def test_decimate_rejects_a_non_integer_factor() -> None:
-    with pytest.raises(ValueError, match="positive integer"):
-        decimate_analytic_phase(np.zeros((2, 80)), factor=1.5)
 
 
 # --------------------------------------------------------------------------- #
