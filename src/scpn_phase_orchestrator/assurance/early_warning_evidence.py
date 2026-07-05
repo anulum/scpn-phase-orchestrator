@@ -58,6 +58,7 @@ if TYPE_CHECKING:  # pragma: no cover - import only for static typing
     from scpn_phase_orchestrator.monitor.critical_slowing_down import (
         CriticalSlowingDownWarning,
     )
+    from scpn_phase_orchestrator.monitor.ensemble_warning import EnsembleWarning
     from scpn_phase_orchestrator.monitor.explosive_sync import ExplosiveSyncWarning
     from scpn_phase_orchestrator.monitor.synchronisation import SynchronisationWarning
 
@@ -72,6 +73,7 @@ __all__ = [
     "EarlyWarningIndicator",
     "seal_critical_slowing_down_alarm",
     "seal_early_warning",
+    "seal_ensemble_alarm",
     "seal_synchronisation_alarm",
     "seal_transition_entropy_alarm",
 ]
@@ -618,6 +620,82 @@ def seal_transition_entropy_alarm(
         warning_triggered=warning.warning_triggered,
         warning_window=warning.warning_window,
         warning_sample=warning.warning_sample,
+        indicators=indicators,
+        transition_onset_sample=transition_onset_sample,
+    )
+
+
+def seal_ensemble_alarm(
+    ensemble: EnsembleWarning,
+    *,
+    observable: str,
+    signal_source: str,
+    captured_at: str,
+    sampling_rate_hz: float,
+    window: int,
+    step: int,
+    transition_onset_sample: int | None = None,
+) -> EarlyWarningEvidence:
+    """Seal a fused ensemble alarm, pinning every member's contribution.
+
+    Each fused member becomes an indicator carrying its native robust z-score at
+    the reported window, so an auditor sees exactly which detectors drove — or
+    failed to drive — the fused decision. The suite is run on one window grid, so
+    ``window`` and ``step`` are supplied by the caller that ran it.
+
+    Parameters
+    ----------
+    ensemble : EnsembleWarning
+        The fused decision to seal.
+    observable, signal_source, captured_at : str
+        Provenance of the screened signal, forwarded to :func:`seal_early_warning`.
+    sampling_rate_hz : float
+        Sampling rate of the screened signal, in hertz.
+    window, step : int
+        Analysis window length and hop the suite was run with.
+    transition_onset_sample : int | None
+        Caller-supplied ground-truth onset sample.
+
+    Returns
+    -------
+    EarlyWarningEvidence
+        The sealed record for the fused ensemble alarm.
+
+    Raises
+    ------
+    ValueError
+        If ``ensemble`` is not an
+        :class:`~scpn_phase_orchestrator.monitor.ensemble_warning.EnsembleWarning`
+        or the forwarded provenance is invalid.
+    """
+    from scpn_phase_orchestrator.monitor.ensemble_warning import EnsembleWarning
+
+    if not isinstance(ensemble, EnsembleWarning):
+        raise ValueError("ensemble must be an EnsembleWarning")
+    indicators = tuple(
+        EarlyWarningIndicator(
+            name=contribution.name,
+            direction=contribution.direction,
+            robust_z=contribution.robust_z,
+            baseline_median=contribution.baseline_median,
+            z_threshold=contribution.z_threshold,
+            breached=contribution.breached,
+        )
+        for contribution in ensemble.contributions
+    )
+    return seal_early_warning(
+        detector=f"ensemble_{ensemble.rule}",
+        observable=observable,
+        signal_source=signal_source,
+        captured_at=captured_at,
+        sampling_rate_hz=sampling_rate_hz,
+        window=window,
+        step=step,
+        persistence=ensemble.persistence,
+        n_baseline_windows=ensemble.n_baseline_windows,
+        warning_triggered=ensemble.warning_triggered,
+        warning_window=ensemble.warning_window,
+        warning_sample=ensemble.warning_sample,
         indicators=indicators,
         transition_onset_sample=transition_onset_sample,
     )

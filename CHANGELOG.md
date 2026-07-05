@@ -37,6 +37,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `seal_synchronisation_alarm`, and `seal_transition_entropy_alarm` bridge the
   three suite detectors onto it. This is the assurance envelope the fair
   head-to-head identified as the differentiator once detection proved a commodity.
+- `scpn_phase_orchestrator.monitor.ensemble_warning` fuses the detector suite into
+  one decision over a shared window grid, with two rules: `weighted` (a weighted
+  mean of the members' oriented z-scores against a single scalar threshold, so it
+  calibrates continuously to a matched false-alarm rate) and `vote` (an alarm when
+  at least `min_votes` members breach their own gate). The fused baseline is the
+  widest member's, and both rules require a persistence run; the gain must be shown
+  as matched-false-alarm lead time, never a raw detection rate. Three adapters
+  (`member_from_critical_slowing_down`, `member_from_synchronisation`,
+  `member_from_transition_entropy`) build the aligned member evidence, and
+  `assurance.early_warning_evidence.seal_ensemble_alarm` seals a fused alarm —
+  pinning every member's native contribution — into an `EarlyWarningEvidence`.
 
 ### Changed
 
