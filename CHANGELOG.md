@@ -51,15 +51,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `bench/early_warning_leadtime_eeg.py` is the real scalp-EEG capstone: it turns a
   CHB-MIT recording into one decimated analytic-phase field (band-pass 4–30 Hz,
   Hilbert phase, phase-consistent decimation 256→32 Hz), runs the three-member
-  suite and its weighted fusion, calibrates every detector to a matched
-  false-alarm rate on separate interictal recordings, and seals an
-  `EarlyWarningEvidence` per detector per seizure — including a sealed silence when
-  a detector does not fire. The gain from fusion is reported as matched-false-alarm
-  lead, never a raw detection rate. The raw EDF is citation-only and never
-  redistributed; the pipeline, calibration, lead, sealing, and EDF ingestion are
-  pinned on synthetic arrays in `tests/test_early_warning_leadtime_eeg.py`. EDF
-  ingestion needs the optional `eeg` extra (`pip install -e .[eeg]`, pyedflib); its
-  tests are gated on that extra, as the suite gates jax and juliacall tests.
+  suite and its weighted fusion, and seals an `EarlyWarningEvidence` per detector
+  per seizure — including a sealed silence when a detector does not fire. Each
+  seizure is scored on a fixed pre-onset segment (a leading baseline plus a
+  detection horizon ending at onset) so the baseline is guaranteed clean and every
+  alarm is a genuine lead; an onset too early for a clean baseline is excluded and
+  reported, never counted as a silent null. The matched false-alarm threshold is
+  calibrated over many equal-length interictal null trials (`null_trials`), not a
+  handful of whole recordings. The gain from fusion is reported as
+  matched-false-alarm lead, never a raw detection rate. The raw EDF is
+  citation-only and never redistributed; the pipeline, segmentation, calibration,
+  lead, sealing, and EDF ingestion are pinned on synthetic arrays in
+  `tests/test_early_warning_leadtime_eeg.py`. EDF ingestion needs the optional
+  `eeg` extra (`pip install -e .[eeg]`, pyedflib); its tests are gated on that
+  extra, as the suite gates jax and juliacall tests.
 
 ### Changed
 

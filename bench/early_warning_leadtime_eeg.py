@@ -52,25 +52,37 @@ which all three suite members read complementary moments:
 
 Window 128, step 16 at 32 Hz — a 4-second window hopped every 0.5 s.
 
+Fixed pre-onset segment — a clean baseline
+------------------------------------------
+Each seizure is evaluated on a fixed segment ending at onset: a leading
+``BASELINE_SECONDS`` baseline followed by a ``HORIZON_SECONDS`` detection window
+(:data:`SEGMENT_SECONDS` total). The baseline is a fixed pre-onset interval, not
+a fraction of the whole recording, so an early-onset seizure cannot contaminate
+its own baseline with ictal samples; the onset sits at the segment end, so every
+window is pre-ictal and any alarm is a genuine lead. A seizure whose onset is
+earlier than :data:`SEGMENT_SECONDS` cannot form a clean baseline and is
+**excluded and reported as such**, never counted as a silent null.
+
 Matched false alarm — the honest comparison
 --------------------------------------------
 A lead time is only meaningful at a fixed false-alarm rate, and one ictal file
-cannot self-calibrate its own false-alarm rate. Each detector (the three members
-and the weighted fusion) is therefore calibrated on **separate interictal**
-recordings: its alarm threshold is the smallest that holds the false-alarm rate
-at or below :data:`TARGET_FALSE_ALARM` across the interictal null ensemble. Only
-then is its lead time — ``onset − alarm`` in samples, converted to seconds —
-measured on the annotated seizures. **The gain from fusion is reported as
-improved matched-false-alarm lead, never as a raw detection rate**: an OR of the
-members trivially raises the rate by spending the false-alarm budget. If the
-fusion does not beat the best single member at matched false alarm, this
-capstone says so — that is a valid result, and the auditable moat holds
+cannot self-calibrate its own. Each interictal recording is cut into many
+non-overlapping null trials of the *same* length and baseline/horizon structure
+as a seizure's pre-onset segment (:func:`null_trials`), giving a fine
+false-alarm estimate rather than a handful of whole-recording trials. Each
+detector's threshold is the smallest that holds the trial false-alarm rate at or
+below :data:`TARGET_FALSE_ALARM`; only then is its lead — ``onset − alarm`` in
+samples, converted to seconds — measured on the seizures. **The gain from fusion
+is reported as improved matched-false-alarm lead, never as a raw detection
+rate**: an OR of the members trivially raises the rate by spending the
+false-alarm budget. If the fusion does not beat the best single member at matched
+false alarm, this capstone says so — a valid result, and the auditable moat holds
 regardless.
 
-Every seizure yields four sealed :class:`EarlyWarningEvidence` records (three
-members + fusion), including a sealed *silence* when a detector does not fire —
-the honest half of the moat. Only these derived, sealed artefacts are committed,
-mirroring ``examples/real_data/iso_ne_case1/``; the raw EDF never is.
+Every evaluated seizure yields four sealed :class:`EarlyWarningEvidence` records
+(three members + fusion), including a sealed *silence* when a detector does not
+fire — the honest half of the moat. Only these derived, sealed artefacts are
+committed, mirroring ``examples/real_data/iso_ne_case1/``; the raw EDF never is.
 
 References
 ----------
@@ -144,6 +156,20 @@ TARGET_FALSE_ALARM = 0.10
 #: Threshold grid (0.25 … 10.0) the calibration searches for the matched rate.
 THRESHOLD_GRID = tuple(round(0.25 * k, 2) for k in range(1, 41))
 
+#: Leading baseline length, in seconds, of an analysis segment. Fixed (not a
+#: fraction of the whole recording) so an early-onset seizure cannot contaminate
+#: the baseline with ictal samples.
+BASELINE_SECONDS = 300.0
+#: Detection horizon, in seconds, before onset — the pre-onset window the suite
+#: is allowed to warn within, and the maximum measurable lead.
+HORIZON_SECONDS = 600.0
+#: Full analysis-segment length (baseline + horizon), in seconds.
+SEGMENT_SECONDS = BASELINE_SECONDS + HORIZON_SECONDS
+#: Analysis-segment length in decimated samples.
+SEGMENT_SAMPLES = int(SEGMENT_SECONDS * DECIMATED_RATE_HZ)
+#: Baseline fraction of an analysis segment (its leading ``BASELINE_SECONDS``).
+SEGMENT_BASELINE_FRACTION = BASELINE_SECONDS / SEGMENT_SECONDS
+
 #: Detector labels in report order — the three suite members then the fusion.
 CRITICAL_SLOWING_DOWN = "critical_slowing_down"
 SYNCHRONISATION = "synchronisation"
@@ -214,7 +240,9 @@ __all__ = [
     "evaluate_seizure",
     "false_alarm_rate",
     "load_edf_channels",
+    "null_trials",
     "seizure_lead_samples",
+    "slice_observables",
 ]
 
 
@@ -410,6 +438,92 @@ def eeg_observables(
         order_parameter=np.ascontiguousarray(order_parameter, dtype=np.float64),
         sampling_rate_hz=fs / q,
     )
+
+
+def slice_observables(
+    observables: EEGObservables, *, start: int, stop: int
+) -> EEGObservables:
+    """Return the observables restricted to the sample half-open range.
+
+    Slicing an already-decimated observable keeps the analysis on a chosen
+    interval — the fixed pre-onset segment of a seizure, or a null trial cut from
+    an interictal recording — without re-running the pipeline.
+
+    Parameters
+    ----------
+    observables : EEGObservables
+        The field to slice.
+    start, stop : int
+        Half-open sample range ``[start, stop)``; ``0 <= start < stop <= n``.
+
+    Returns
+    -------
+    EEGObservables
+        The restricted field at the same sampling rate.
+
+    Raises
+    ------
+    ValueError
+        If the range is malformed or exceeds the field length.
+    """
+    start_int = _non_negative_int(start, "start")
+    stop_int = _non_negative_int(stop, "stop")
+    n_samples = observables.n_samples
+    if start_int >= stop_int:
+        raise ValueError(f"start {start_int} must be below stop {stop_int}")
+    if stop_int > n_samples:
+        raise ValueError(f"stop {stop_int} exceeds the field length {n_samples}")
+    return EEGObservables(
+        phases=np.ascontiguousarray(
+            observables.phases[:, start_int:stop_int], dtype=np.float64
+        ),
+        phase_field=np.ascontiguousarray(
+            observables.phase_field[:, start_int:stop_int], dtype=np.float64
+        ),
+        order_parameter=np.ascontiguousarray(
+            observables.order_parameter[start_int:stop_int], dtype=np.float64
+        ),
+        sampling_rate_hz=observables.sampling_rate_hz,
+    )
+
+
+def null_trials(
+    interictal_observables: Sequence[EEGObservables],
+    *,
+    segment_samples: int = SEGMENT_SAMPLES,
+) -> list[EEGObservables]:
+    """Cut each interictal recording into non-overlapping null trials.
+
+    Every trial has the same length as a seizure's pre-onset analysis segment, so
+    the false-alarm rate is estimated over many comparable trials rather than a
+    handful of whole recordings — a finer, fairer matched-false-alarm calibration.
+
+    Parameters
+    ----------
+    interictal_observables : sequence of EEGObservables
+        Seizure-free recordings to segment.
+    segment_samples : int
+        Trial length in decimated samples; must be a positive integer.
+
+    Returns
+    -------
+    list[EEGObservables]
+        The non-overlapping trials, in recording then time order.
+
+    Raises
+    ------
+    ValueError
+        If ``segment_samples`` is not a positive integer.
+    """
+    length = _positive_int(segment_samples, "segment_samples")
+    trials: list[EEGObservables] = []
+    for observables in interictal_observables:
+        n_samples = observables.n_samples
+        for start in range(0, n_samples - length + 1, length):
+            trials.append(
+                slice_observables(observables, start=start, stop=start + length)
+            )
+    return trials
 
 
 # --------------------------------------------------------------------------- #
@@ -967,6 +1081,8 @@ def main(
     *,
     interictal_records: Sequence[str] = INTERICTAL_RECORDS,
     seizures: Mapping[str, int] = SEIZURE_ONSETS_S,
+    segment_samples: int = SEGMENT_SAMPLES,
+    baseline_fraction: float = SEGMENT_BASELINE_FRACTION,
 ) -> None:
     """Run the capstone over CHB-MIT chb01 and write the sealed derived artefacts.
 
@@ -986,33 +1102,54 @@ def main(
         Seizure-free record stems forming the false-alarm null.
     seizures : Mapping[str, int]
         Record stem to annotated onset (seconds) for each seizure to evaluate.
+    segment_samples : int
+        Pre-onset analysis-segment length in decimated samples; also the null
+        trial length. Defaults to :data:`SEGMENT_SAMPLES`.
+    baseline_fraction : float
+        Leading baseline fraction of each segment. Defaults to
+        :data:`SEGMENT_BASELINE_FRACTION`.
     """
     data = Path(data_dir)
     out = Path(output_dir)
     out.mkdir(parents=True, exist_ok=True)
+    segment_seconds = segment_samples / DECIMATED_RATE_HZ
 
+    # Finer matched-false-alarm null: cut each interictal hour into many trials of
+    # the same length and structure as a seizure's pre-onset analysis segment.
     null_observables = [
         eeg_observables(load_edf_channels(data / f"{record}.edf"))
         for record in interictal_records
     ]
-    thresholds = calibrate_detectors(null_observables)
+    trials = null_trials(null_observables, segment_samples=segment_samples)
+    thresholds = calibrate_detectors(trials, baseline_fraction=baseline_fraction)
 
     leads_by_detector: dict[str, list[float]] = {name: [] for name in DETECTORS}
     seizure_records: list[dict[str, object]] = []
+    excluded: list[dict[str, object]] = []
     for record_id, onset_s in seizures.items():
         path = data / f"{record_id}.edf"
         observables = eeg_observables(load_edf_channels(path))
         onset_sample = int(round(onset_s * observables.sampling_rate_hz))
+        if onset_sample < segment_samples:
+            # Too early for a clean pre-onset baseline; excluded, not counted null.
+            excluded.append({"record_id": record_id, "onset_s": onset_s})
+            continue
+        # Fixed pre-onset segment with a guaranteed-clean leading baseline; the
+        # onset sits at the segment end, so any alarm is a genuine lead.
+        segment = slice_observables(
+            observables, start=onset_sample - segment_samples, stop=onset_sample
+        )
         result = evaluate_seizure(
-            observables,
+            segment,
             record_id=record_id,
-            onset_sample=onset_sample,
+            onset_sample=segment_samples,
             signal_source=(
                 f"CHB-MIT scalp EEG {record_id} (Shoeb 2009) / seizure onset "
-                f"{onset_s} s"
+                f"{onset_s} s / {segment_seconds:g} s pre-onset segment"
             ),
             captured_at=edf_start_datetime(path),
             thresholds=thresholds,
+            baseline_fraction=baseline_fraction,
         )
         (out / f"{record_id}_early_warning_evidence.json").write_text(
             json.dumps(result.to_audit_record(), indent=2) + "\n", encoding="utf-8"
@@ -1036,16 +1173,22 @@ def main(
         "band_hz": list(BAND_HZ),
         "window": WINDOW,
         "step": STEP,
+        "baseline_seconds": baseline_fraction * segment_seconds,
+        "horizon_seconds": (1.0 - baseline_fraction) * segment_seconds,
+        "segment_seconds": segment_seconds,
         "target_false_alarm": TARGET_FALSE_ALARM,
         "interictal_null_records": list(interictal_records),
+        "n_null_trials": len(trials),
         "matched_false_alarm_thresholds": thresholds,
         "seizures": seizure_records,
+        "excluded_seizures": excluded,
         "verdict": _verdict(leads_by_detector),
     }
     (out / "early_warning_leadtime_eeg_results.json").write_text(
         json.dumps(payload, indent=2) + "\n", encoding="utf-8"
     )
     print(payload["verdict"])
+    print(f"{len(trials)} null trials; {len(excluded)} seizures excluded (early onset)")
     print(f"results written to {out}")
 
 
@@ -1116,6 +1259,18 @@ def _positive_real(value: object, name: str) -> float:
     result = float(value)
     if not np.isfinite(result) or result <= 0.0:
         raise ValueError(f"{name} must be finite and positive, got {result}")
+    return result
+
+
+def _non_negative_int(value: object, name: str) -> int:
+    """Return ``value`` as a non-negative integer, else raise ``ValueError``."""
+    from numbers import Integral
+
+    if isinstance(value, bool) or not isinstance(value, Integral):
+        raise ValueError(f"{name} must be a non-negative integer, got {value!r}")
+    result = int(value)
+    if result < 0:
+        raise ValueError(f"{name} must be a non-negative integer, got {result}")
     return result
 
 

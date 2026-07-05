@@ -51,7 +51,9 @@ from bench.early_warning_leadtime_eeg import (
     false_alarm_rate,
     load_edf_channels,
     main,
+    null_trials,
     seizure_lead_samples,
+    slice_observables,
 )
 from bench.early_warning_leadtime_eeg import _verdict as verdict
 from scpn_phase_orchestrator.assurance.early_warning_evidence import (
@@ -269,6 +271,70 @@ def test_eeg_observables_rejects_a_non_finite_recording() -> None:
     raw[0, 0] = np.inf
     with pytest.raises(ValueError, match="finite"):
         eeg_observables(raw)
+
+
+# --------------------------------------------------------------------------- #
+# slice_observables / null_trials — pre-onset segment and null trials          #
+# --------------------------------------------------------------------------- #
+
+
+def test_slice_observables_restricts_every_field() -> None:
+    observables = _incoherent_observables(n_samples=500, seed=8)
+    sliced = slice_observables(observables, start=100, stop=420)
+    assert sliced.n_samples == 320
+    assert sliced.phases.shape == (observables.n_channels, 320)
+    assert sliced.phase_field.shape == (observables.n_channels, 320)
+    assert sliced.order_parameter.shape == (320,)
+    assert sliced.sampling_rate_hz == observables.sampling_rate_hz
+    assert np.array_equal(sliced.phases, observables.phases[:, 100:420])
+
+
+def test_slice_observables_rejects_an_inverted_range() -> None:
+    observables = _incoherent_observables(n_samples=400, seed=9)
+    with pytest.raises(ValueError, match="must be below stop"):
+        slice_observables(observables, start=200, stop=200)
+
+
+def test_slice_observables_rejects_a_range_past_the_end() -> None:
+    observables = _incoherent_observables(n_samples=400, seed=9)
+    with pytest.raises(ValueError, match="exceeds the field length"):
+        slice_observables(observables, start=0, stop=500)
+
+
+def test_slice_observables_rejects_a_non_integer_bound() -> None:
+    observables = _incoherent_observables(n_samples=400, seed=9)
+    with pytest.raises(ValueError, match="non-negative integer"):
+        slice_observables(observables, start=1.5, stop=100)
+
+
+def test_slice_observables_rejects_a_negative_bound() -> None:
+    observables = _incoherent_observables(n_samples=400, seed=9)
+    with pytest.raises(ValueError, match="non-negative integer"):
+        slice_observables(observables, start=-1, stop=100)
+
+
+def test_null_trials_cuts_non_overlapping_equal_length_trials() -> None:
+    observables = _incoherent_observables(n_samples=700, seed=10)
+    trials = null_trials([observables], segment_samples=320)
+    # 700 // 320 == 2 non-overlapping trials; the trailing 60 samples are dropped.
+    assert len(trials) == 2
+    assert all(trial.n_samples == 320 for trial in trials)
+    assert np.array_equal(trials[0].order_parameter, observables.order_parameter[:320])
+    assert np.array_equal(
+        trials[1].order_parameter, observables.order_parameter[320:640]
+    )
+
+
+def test_null_trials_spans_multiple_recordings() -> None:
+    a = _incoherent_observables(n_samples=700, seed=11)
+    b = _incoherent_observables(n_samples=340, seed=12)
+    trials = null_trials([a, b], segment_samples=320)
+    assert len(trials) == 3  # 2 from the 700-sample record, 1 from the 340-sample one
+
+
+def test_null_trials_rejects_a_non_positive_segment() -> None:
+    with pytest.raises(ValueError, match="segment_samples"):
+        null_trials([_incoherent_observables(n_samples=400)], segment_samples=0)
 
 
 # --------------------------------------------------------------------------- #
@@ -645,10 +711,13 @@ def test_main_writes_sealed_derived_artefacts(tmp_path: Path) -> None:
     data.mkdir()
     out = tmp_path / "derived"
     rates = [256.0, 256.0, 256.0, 256.0]
+    # A short (320-sample, 10 s) segment keeps the synthetic recordings small; the
+    # module's own SEGMENT_SAMPLES is used for the real corpus.
+    segment_samples = 320
     for record in ("null_a", "null_b"):
         _write_edf(data / f"{record}.edf", rates=rates, seconds=12)
-    # The seizure recording locks into coherence at 6 s and is labelled with a
-    # later onset (11 s), so the suite raises a leading alarm the run accumulates.
+    # The seizure locks into coherence at 6 s with a later onset (11 s), so its
+    # pre-onset segment has a clean incoherent baseline and a leading rise.
     _write_edf(
         data / "seizure_x.edf",
         rates=rates,
@@ -656,17 +725,23 @@ def test_main_writes_sealed_derived_artefacts(tmp_path: Path) -> None:
             n_channels=len(rates), fs=256.0, seconds=12, rise_second=6, seed=2
         ),
     )
+    # An early onset (2 s) leaves no room for a clean pre-onset segment.
+    _write_edf(data / "seizure_early.edf", rates=rates, seconds=12)
 
     main(
         data,
         out,
         interictal_records=("null_a", "null_b"),
-        seizures={"seizure_x": 11},
+        seizures={"seizure_x": 11, "seizure_early": 2},
+        segment_samples=segment_samples,
+        baseline_fraction=1.0 / 3.0,
     )
 
     per_seizure = out / "seizure_x_early_warning_evidence.json"
     aggregate = out / "early_warning_leadtime_eeg_results.json"
     assert per_seizure.exists()
+    # The early-onset seizure is excluded, not sealed as a silent null.
+    assert not (out / "seizure_early_early_warning_evidence.json").exists()
     assert aggregate.exists()
 
     sealed = json.loads(per_seizure.read_text(encoding="utf-8"))
@@ -679,4 +754,7 @@ def test_main_writes_sealed_derived_artefacts(tmp_path: Path) -> None:
     assert payload["benchmark"] == "early_warning_leadtime_eeg"
     assert set(payload["matched_false_alarm_thresholds"]) == set(DETECTORS)
     assert payload["interictal_null_records"] == ["null_a", "null_b"]
+    assert payload["n_null_trials"] == 2  # one 320-sample trial per 384-sample null
+    assert payload["segment_seconds"] == pytest.approx(10.0)
+    assert [e["record_id"] for e in payload["excluded_seizures"]] == ["seizure_early"]
     assert payload["verdict"]
