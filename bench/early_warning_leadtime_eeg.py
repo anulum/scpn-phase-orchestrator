@@ -19,6 +19,16 @@ interictal recordings, with every alarm (or silence) sealed into a
 content-addressed, claim-bounded :class:`EarlyWarningEvidence` record carrying an
 honest lead time.
 
+This capstone is the scalp-EEG *adapter* onto the domain-neutral machinery. The
+signal processing here — band-pass, Hilbert analytic phase, phase-consistent
+decimation — is the only EEG-specific work; it produces the neutral
+:class:`~scpn_phase_orchestrator.monitor.early_warning_suite.SuiteObservables`
+bundle, and everything downstream (segmentation, matched-false-alarm calibration,
+lead measurement, sealing, verdict) is the shared harness in
+:mod:`bench.early_warning_domain`, reused unchanged by the cardiac and grid
+capstones. :class:`EEGPhaseAdapter` packages the pipeline as a
+:class:`~scpn_phase_orchestrator.monitor.early_warning_suite.DomainObservableAdapter`.
+
 Corpus
 ------
 The CHB-MIT Scalp EEG Database (Shoeb 2009; Goldberger et al. 2000, PhysioNet):
@@ -38,10 +48,10 @@ which all three suite members read complementary moments:
 2. Per-channel Hilbert analytic phase ``φ(t)``.
 3. Decimation 256 → 32 Hz applied to the *continuous* components ``sin φ`` and
    ``cos φ`` (a wrapped phase must never be low-pass filtered — its ±π jumps are
-   not band-limited), with the phase reconstructed by ``atan2``. All three
-   observables are then derived from that single decimated field, so the members
-   read one consistent representation rather than three independently filtered
-   ones:
+   not band-limited), with the phase reconstructed by ``atan2``. The neutral
+   bundle's ``sin(phase)`` projection and cross-channel order parameter are then
+   derived from that single decimated field, so the members read one consistent
+   representation rather than three independently filtered ones:
 
    * critical slowing down reads the cross-channel order parameter
      ``R(t) = |⟨e^{iφ}⟩|`` (second-moment variance / autocorrelation rise);
@@ -68,16 +78,16 @@ Matched false alarm — the honest comparison
 A lead time is only meaningful at a fixed false-alarm rate, and one ictal file
 cannot self-calibrate its own. Each interictal recording is cut into many
 non-overlapping null trials of the *same* length and baseline/horizon structure
-as a seizure's pre-onset segment (:func:`null_trials`), giving a fine
-false-alarm estimate rather than a handful of whole-recording trials. Each
-detector's threshold is the smallest that holds the trial false-alarm rate at or
-below :data:`TARGET_FALSE_ALARM`; only then is its lead — ``onset − alarm`` in
-samples, converted to seconds — measured on the seizures. **The gain from fusion
-is reported as improved matched-false-alarm lead, never as a raw detection
-rate**: an OR of the members trivially raises the rate by spending the
-false-alarm budget. If the fusion does not beat the best single member at matched
-false alarm, this capstone says so — a valid result, and the auditable moat holds
-regardless.
+as a seizure's pre-onset segment (:func:`~bench.early_warning_domain.null_trials`),
+giving a fine false-alarm estimate rather than a handful of whole-recording
+trials. Each detector's threshold is the smallest that holds the trial
+false-alarm rate at or below :data:`TARGET_FALSE_ALARM`; only then is its lead —
+``onset − alarm`` in samples, converted to seconds — measured on the seizures.
+**The gain from fusion is reported as improved matched-false-alarm lead, never as
+a raw detection rate**: an OR of the members trivially raises the rate by spending
+the false-alarm budget. If the fusion does not beat the best single member at
+matched false alarm, this capstone says so — a valid result, and the auditable
+moat holds regardless.
 
 Every evaluated seizure yields four sealed :class:`EarlyWarningEvidence` records
 (three members + fusion), including a sealed *silence* when a detector does not
@@ -96,7 +106,7 @@ References
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -104,31 +114,28 @@ import numpy as np
 from numpy.typing import NDArray
 from scipy.signal import butter, decimate, hilbert, sosfiltfilt
 
-from scpn_phase_orchestrator.assurance.early_warning_evidence import (
-    EarlyWarningEvidence,
-    seal_critical_slowing_down_alarm,
-    seal_ensemble_alarm,
-    seal_synchronisation_alarm,
-    seal_transition_entropy_alarm,
+from bench.early_warning_domain import (
+    DEFAULT_TARGET_FALSE_ALARM,
+    DETECTORS,
+    calibrate_detectors,
+    domain_verdict,
+    evaluate_seizure,
+    null_trials,
+    slice_observables,
 )
-from scpn_phase_orchestrator.monitor.critical_slowing_down import (
-    critical_slowing_down_warning,
+from scpn_phase_orchestrator.monitor.early_warning_suite import (
+    CRITICAL_SLOWING_DOWN,
+    ENSEMBLE_WEIGHTED,
+    SYNCHRONISATION,
+    TRANSITION_ENTROPY,
+    SuiteObservables,
+    observables_from_phases,
 )
-from scpn_phase_orchestrator.monitor.ensemble_warning import (
-    WEIGHTED_RULE,
-    ensemble_warning,
-    member_from_critical_slowing_down,
-    member_from_synchronisation,
-    member_from_transition_entropy,
-)
-from scpn_phase_orchestrator.monitor.explosive_sync import explosive_sync_warning
-from scpn_phase_orchestrator.monitor.synchronisation import synchronisation_warning
 
 if TYPE_CHECKING:  # pragma: no cover - import only for static typing
     from collections.abc import Mapping, Sequence
 
 FloatArray = NDArray[np.float64]
-IntArray = NDArray[np.int64]
 
 #: Native sampling rate of the CHB-MIT scalp-EEG recordings, in hertz.
 SAMPLING_RATE_HZ = 256.0
@@ -145,16 +152,8 @@ FILTER_ORDER = 4
 WINDOW = 128
 #: Hop between consecutive windows in samples (0.5 s at 32 Hz).
 STEP = 16
-#: Leading fraction of windows used to fit each detector's baseline.
-BASELINE_FRACTION = 0.25
-#: Consecutive breaching windows required to raise an alarm.
-PERSISTENCE = 2
-#: Minimum fractional change gate shared by the member detectors.
-RELATIVE_GATE = 0.05
 #: Target false-alarm rate the detectors are calibrated to on the interictal null.
-TARGET_FALSE_ALARM = 0.10
-#: Threshold grid (0.25 … 10.0) the calibration searches for the matched rate.
-THRESHOLD_GRID = tuple(round(0.25 * k, 2) for k in range(1, 41))
+TARGET_FALSE_ALARM = DEFAULT_TARGET_FALSE_ALARM
 
 #: Leading baseline length, in seconds, of an analysis segment. Fixed (not a
 #: fraction of the whole recording) so an early-onset seizure cannot contaminate
@@ -170,18 +169,6 @@ SEGMENT_SAMPLES = int(SEGMENT_SECONDS * DECIMATED_RATE_HZ)
 #: Baseline fraction of an analysis segment (its leading ``BASELINE_SECONDS``).
 SEGMENT_BASELINE_FRACTION = BASELINE_SECONDS / SEGMENT_SECONDS
 
-#: Detector labels in report order — the three suite members then the fusion.
-CRITICAL_SLOWING_DOWN = "critical_slowing_down"
-SYNCHRONISATION = "synchronisation"
-TRANSITION_ENTROPY = "transition_entropy"
-ENSEMBLE_WEIGHTED = "ensemble_weighted"
-DETECTORS = (
-    CRITICAL_SLOWING_DOWN,
-    SYNCHRONISATION,
-    TRANSITION_ENTROPY,
-    ENSEMBLE_WEIGHTED,
-)
-
 _OBSERVABLE_CSD = (
     "cross-channel Kuramoto order parameter R(t) of scalp-EEG analytic phase "
     "(4-30 Hz, decimated to 32 Hz)"
@@ -194,6 +181,13 @@ _OBSERVABLE_ENSEMBLE = (
     "fused early-warning suite over scalp-EEG analytic phase "
     "(4-30 Hz, decimated to 32 Hz)"
 )
+#: The scalp-EEG observable description sealed into each detector's record.
+_OBSERVABLE_DESCRIPTIONS = {
+    CRITICAL_SLOWING_DOWN: _OBSERVABLE_CSD,
+    SYNCHRONISATION: _OBSERVABLE_SYNC,
+    TRANSITION_ENTROPY: _OBSERVABLE_ENTROPY,
+    ENSEMBLE_WEIGHTED: _OBSERVABLE_ENSEMBLE,
+}
 
 #: Annotated seizure onset times (seconds into each CHB-MIT chb01 record).
 SEIZURE_ONSETS_S: dict[str, int] = {
@@ -220,70 +214,24 @@ __all__ = [
     "DECIMATION",
     "DETECTORS",
     "FILTER_ORDER",
-    "PERSISTENCE",
-    "RELATIVE_GATE",
     "SAMPLING_RATE_HZ",
     "STEP",
     "TARGET_FALSE_ALARM",
-    "THRESHOLD_GRID",
     "WINDOW",
-    "DetectorTrajectory",
-    "EEGObservables",
-    "SeizureLeadResult",
+    "EEGPhaseAdapter",
     "analytic_phase",
     "bandpass",
-    "calibrate_detectors",
-    "calibrate_threshold",
     "decimate_analytic_phase",
-    "detector_trajectories",
+    "edf_start_datetime",
     "eeg_observables",
-    "evaluate_seizure",
-    "false_alarm_rate",
     "load_edf_channels",
-    "null_trials",
-    "seizure_lead_samples",
-    "slice_observables",
+    "main",
 ]
 
 
 # --------------------------------------------------------------------------- #
 # Observable pipeline (pure — fully exercised on synthetic arrays)             #
 # --------------------------------------------------------------------------- #
-
-
-@dataclass(frozen=True)
-class EEGObservables:
-    """The decimated analytic-phase observables the detector suite reads.
-
-    Attributes
-    ----------
-    phases : FloatArray
-        Per-channel reconstructed analytic phase in radians, shape ``(N, T)`` at
-        :attr:`sampling_rate_hz`; the rising-synchronisation input.
-    phase_field : FloatArray
-        Per-channel projection ``sin(phase)``, shape ``(N, T)``; the
-        ordinal-transition-entropy input.
-    order_parameter : FloatArray
-        Cross-channel Kuramoto order parameter ``R(t) = |⟨e^{iφ}⟩|``, shape
-        ``(T,)``; the critical-slowing-down input.
-    sampling_rate_hz : float
-        Analysis sampling rate after decimation, in hertz.
-    """
-
-    phases: FloatArray = field(repr=False)
-    phase_field: FloatArray = field(repr=False)
-    order_parameter: FloatArray = field(repr=False)
-    sampling_rate_hz: float
-
-    @property
-    def n_channels(self) -> int:
-        """Number of channels in the observable field."""
-        return int(self.phases.shape[0])
-
-    @property
-    def n_samples(self) -> int:
-        """Number of samples per channel after decimation."""
-        return int(self.phases.shape[1])
 
 
 def bandpass(
@@ -395,8 +343,14 @@ def eeg_observables(
     decimation: int = DECIMATION,
     band_hz: tuple[float, float] = BAND_HZ,
     filter_order: int = FILTER_ORDER,
-) -> EEGObservables:
-    """Turn a raw multichannel recording into the suite's decimated observables.
+) -> SuiteObservables:
+    """Turn a raw multichannel recording into the suite's neutral observables.
+
+    This is the scalp-EEG-specific half of the capstone: band-pass, Hilbert
+    analytic phase, and phase-consistent decimation to a per-channel phase field,
+    from which
+    :func:`~scpn_phase_orchestrator.monitor.early_warning_suite.observables_from_phases`
+    derives the neutral bundle the domain-neutral suite reads.
 
     Parameters
     ----------
@@ -414,7 +368,7 @@ def eeg_observables(
 
     Returns
     -------
-    EEGObservables
+    SuiteObservables
         The reconstructed phases, the ``sin(phase)`` field, and the cross-channel
         order parameter, all at ``sampling_rate_hz / decimation``.
 
@@ -430,535 +384,60 @@ def eeg_observables(
     q = _positive_int(decimation, "decimation")
     filtered = bandpass(array, sampling_rate_hz=fs, band_hz=band_hz, order=filter_order)
     phases = decimate_analytic_phase(analytic_phase(filtered), factor=q)
-    phase_field = np.sin(phases)
-    order_parameter = np.abs(np.mean(np.exp(1j * phases), axis=0))
-    return EEGObservables(
-        phases=np.ascontiguousarray(phases, dtype=np.float64),
-        phase_field=np.ascontiguousarray(phase_field, dtype=np.float64),
-        order_parameter=np.ascontiguousarray(order_parameter, dtype=np.float64),
-        sampling_rate_hz=fs / q,
-    )
-
-
-def slice_observables(
-    observables: EEGObservables, *, start: int, stop: int
-) -> EEGObservables:
-    """Return the observables restricted to the sample half-open range.
-
-    Slicing an already-decimated observable keeps the analysis on a chosen
-    interval — the fixed pre-onset segment of a seizure, or a null trial cut from
-    an interictal recording — without re-running the pipeline.
-
-    Parameters
-    ----------
-    observables : EEGObservables
-        The field to slice.
-    start, stop : int
-        Half-open sample range ``[start, stop)``; ``0 <= start < stop <= n``.
-
-    Returns
-    -------
-    EEGObservables
-        The restricted field at the same sampling rate.
-
-    Raises
-    ------
-    ValueError
-        If the range is malformed or exceeds the field length.
-    """
-    start_int = _non_negative_int(start, "start")
-    stop_int = _non_negative_int(stop, "stop")
-    n_samples = observables.n_samples
-    if start_int >= stop_int:
-        raise ValueError(f"start {start_int} must be below stop {stop_int}")
-    if stop_int > n_samples:
-        raise ValueError(f"stop {stop_int} exceeds the field length {n_samples}")
-    return EEGObservables(
-        phases=np.ascontiguousarray(
-            observables.phases[:, start_int:stop_int], dtype=np.float64
-        ),
-        phase_field=np.ascontiguousarray(
-            observables.phase_field[:, start_int:stop_int], dtype=np.float64
-        ),
-        order_parameter=np.ascontiguousarray(
-            observables.order_parameter[start_int:stop_int], dtype=np.float64
-        ),
-        sampling_rate_hz=observables.sampling_rate_hz,
-    )
-
-
-def null_trials(
-    interictal_observables: Sequence[EEGObservables],
-    *,
-    segment_samples: int = SEGMENT_SAMPLES,
-) -> list[EEGObservables]:
-    """Cut each interictal recording into non-overlapping null trials.
-
-    Every trial has the same length as a seizure's pre-onset analysis segment, so
-    the false-alarm rate is estimated over many comparable trials rather than a
-    handful of whole recordings — a finer, fairer matched-false-alarm calibration.
-
-    Parameters
-    ----------
-    interictal_observables : sequence of EEGObservables
-        Seizure-free recordings to segment.
-    segment_samples : int
-        Trial length in decimated samples; must be a positive integer.
-
-    Returns
-    -------
-    list[EEGObservables]
-        The non-overlapping trials, in recording then time order.
-
-    Raises
-    ------
-    ValueError
-        If ``segment_samples`` is not a positive integer.
-    """
-    length = _positive_int(segment_samples, "segment_samples")
-    trials: list[EEGObservables] = []
-    for observables in interictal_observables:
-        n_samples = observables.n_samples
-        for start in range(0, n_samples - length + 1, length):
-            trials.append(
-                slice_observables(observables, start=start, stop=start + length)
-            )
-    return trials
-
-
-# --------------------------------------------------------------------------- #
-# Detector trajectories and the shared matched-false-alarm machinery           #
-# --------------------------------------------------------------------------- #
+    return observables_from_phases(phases, sampling_rate_hz=fs / q)
 
 
 @dataclass(frozen=True)
-class DetectorTrajectory:
-    """A detector's oriented per-window score and gate on one recording.
+class EEGPhaseAdapter:
+    """The scalp-EEG bridge from raw EDF channels to :class:`SuiteObservables`.
 
-    ``score`` is signed so larger always means more anomalous (the entropy drop
-    is negated), and ``relative`` with ``relative_gate`` is the fractional-change
-    guard applied alongside the calibrated threshold — the same gate the detector
-    applies internally, so calibration and the final seal agree.
-    """
-
-    name: str
-    score: FloatArray = field(repr=False)
-    relative: FloatArray = field(repr=False)
-    relative_gate: float
-    window_starts: IntArray = field(repr=False)
-    n_baseline: int
-
-
-def detector_trajectories(
-    observables: EEGObservables,
-    *,
-    window: int = WINDOW,
-    step: int = STEP,
-    baseline_fraction: float = BASELINE_FRACTION,
-    persistence: int = PERSISTENCE,
-) -> dict[str, DetectorTrajectory]:
-    """Run the suite once at a zero gate and return each detector's trajectory.
-
-    The three members are run with a zero z-threshold so their oriented z-score
-    trajectories are threshold-free; the fused score is their weighted mean.
-    Calibration and lead measurement then apply a threshold to these
-    trajectories, so the slow ordinal-entropy sweep runs once per recording
-    rather than once per grid point.
-
-    Parameters
-    ----------
-    observables : EEGObservables
-        The decimated observable field.
-    window, step : int
-        Analysis window length and hop in samples.
-    baseline_fraction : float
-        Leading fraction of windows used to fit each baseline.
-    persistence : int
-        Echoed for symmetry; the alarm run length is applied at scoring time.
-
-    Returns
-    -------
-    dict[str, DetectorTrajectory]
-        A trajectory per label in :data:`DETECTORS`, all on one window grid.
-    """
-    csd = critical_slowing_down_warning(
-        observables.order_parameter[np.newaxis, :],
-        window=window,
-        step=step,
-        baseline_fraction=baseline_fraction,
-        z_threshold=0.0,
-        rise_threshold=0.0,
-        persistence=persistence,
-    )
-    sync = synchronisation_warning(
-        observables.phases,
-        window=window,
-        step=step,
-        baseline_fraction=baseline_fraction,
-        z_threshold=0.0,
-        rise_threshold=0.0,
-        persistence=persistence,
-    )
-    entropy = explosive_sync_warning(
-        observables.phase_field,
-        window=window,
-        step=step,
-        baseline_fraction=baseline_fraction,
-        z_threshold=0.0,
-        drop_threshold=0.0,
-        persistence=persistence,
-    )
-    members = [
-        member_from_critical_slowing_down(csd),
-        member_from_synchronisation(sync),
-        member_from_transition_entropy(entropy),
-    ]
-    fused = ensemble_warning(
-        members,
-        rule=WEIGHTED_RULE,
-        fused_threshold=0.0,
-        persistence=persistence,
-    )
-    ones = np.ones(int(fused.fused_score.shape[0]), dtype=np.float64)
-    return {
-        CRITICAL_SLOWING_DOWN: DetectorTrajectory(
-            name=CRITICAL_SLOWING_DOWN,
-            score=np.asarray(csd.combined_z, dtype=np.float64),
-            relative=np.asarray(csd.relative_rise, dtype=np.float64),
-            relative_gate=RELATIVE_GATE,
-            window_starts=np.asarray(csd.window_starts, dtype=np.int64),
-            n_baseline=csd.n_baseline_windows,
-        ),
-        SYNCHRONISATION: DetectorTrajectory(
-            name=SYNCHRONISATION,
-            score=np.asarray(sync.robust_z, dtype=np.float64),
-            relative=np.asarray(sync.relative_rise, dtype=np.float64),
-            relative_gate=RELATIVE_GATE,
-            window_starts=np.asarray(sync.window_starts, dtype=np.int64),
-            n_baseline=sync.n_baseline_windows,
-        ),
-        TRANSITION_ENTROPY: DetectorTrajectory(
-            name=TRANSITION_ENTROPY,
-            score=-np.asarray(entropy.robust_z, dtype=np.float64),
-            relative=np.asarray(entropy.relative_drop, dtype=np.float64),
-            relative_gate=RELATIVE_GATE,
-            window_starts=np.asarray(entropy.window_starts, dtype=np.int64),
-            n_baseline=entropy.n_baseline_windows,
-        ),
-        ENSEMBLE_WEIGHTED: DetectorTrajectory(
-            name=ENSEMBLE_WEIGHTED,
-            score=np.asarray(fused.fused_score, dtype=np.float64),
-            relative=ones,
-            relative_gate=0.0,
-            window_starts=np.asarray(fused.window_starts, dtype=np.int64),
-            n_baseline=fused.n_baseline_windows,
-        ),
-    }
-
-
-def _alarm_sample(
-    trajectory: DetectorTrajectory, *, threshold: float, persistence: int
-) -> int | None:
-    """Return the sample of the first sustained breach, or ``None``.
-
-    A window breaches when it is past the baseline, its oriented score meets the
-    threshold, and its relative change meets the trajectory's gate; ``persistence``
-    consecutive breaches raise the alarm. This is the one rule shared by
-    calibration and lead measurement, and it reproduces each detector's own gate.
-    """
-    n_windows = int(trajectory.score.shape[0])
-    past_baseline = np.arange(n_windows) >= trajectory.n_baseline
-    breaches = (
-        past_baseline
-        & (trajectory.score >= threshold)
-        & (trajectory.relative >= trajectory.relative_gate)
-    )
-    run = 0
-    for index in range(n_windows):
-        if breaches[index]:
-            run += 1
-            if run >= persistence:
-                start = index - persistence + 1
-                return int(trajectory.window_starts[start])
-        else:
-            run = 0
-    return None
-
-
-def false_alarm_rate(
-    null_trajectories: Sequence[DetectorTrajectory],
-    threshold: float,
-    *,
-    persistence: int = PERSISTENCE,
-) -> float:
-    """Return the fraction of interictal null trajectories that alarm."""
-    if not null_trajectories:
-        raise ValueError("null_trajectories must not be empty")
-    alarms = sum(
-        _alarm_sample(trajectory, threshold=threshold, persistence=persistence)
-        is not None
-        for trajectory in null_trajectories
-    )
-    return alarms / len(null_trajectories)
-
-
-def calibrate_threshold(
-    null_trajectories: Sequence[DetectorTrajectory],
-    *,
-    target_fa: float = TARGET_FALSE_ALARM,
-    persistence: int = PERSISTENCE,
-    grid: Sequence[float] = THRESHOLD_GRID,
-) -> float:
-    """Return the smallest grid threshold whose null false-alarm rate ≤ target.
-
-    Falls back to the largest grid threshold when even that exceeds the target,
-    so the null ensemble can never leave the detector uncalibrated.
-    """
-    if not null_trajectories:
-        raise ValueError("null_trajectories must not be empty")
-    for threshold in grid:
-        if (
-            false_alarm_rate(null_trajectories, threshold, persistence=persistence)
-            <= target_fa
-        ):
-            return float(threshold)
-    return float(grid[-1])
-
-
-def calibrate_detectors(
-    null_observables: Sequence[EEGObservables],
-    *,
-    target_fa: float = TARGET_FALSE_ALARM,
-    persistence: int = PERSISTENCE,
-    window: int = WINDOW,
-    step: int = STEP,
-    baseline_fraction: float = BASELINE_FRACTION,
-) -> dict[str, float]:
-    """Calibrate every detector to a matched false alarm on the interictal null.
-
-    Parameters
-    ----------
-    null_observables : sequence of EEGObservables
-        Interictal (seizure-free) recordings forming the false-alarm null.
-    target_fa : float
-        Target false-alarm rate each detector is held at or below.
-    persistence, window, step, baseline_fraction :
-        Suite analysis parameters, forwarded to :func:`detector_trajectories`.
-
-    Returns
-    -------
-    dict[str, float]
-        The matched-false-alarm threshold for each label in :data:`DETECTORS`.
-
-    Raises
-    ------
-    ValueError
-        If the null ensemble is empty.
-    """
-    if not null_observables:
-        raise ValueError("null_observables must not be empty")
-    per_detector: dict[str, list[DetectorTrajectory]] = {name: [] for name in DETECTORS}
-    for observables in null_observables:
-        trajectories = detector_trajectories(
-            observables,
-            window=window,
-            step=step,
-            baseline_fraction=baseline_fraction,
-            persistence=persistence,
-        )
-        for name, trajectory in trajectories.items():
-            per_detector[name].append(trajectory)
-    return {
-        name: calibrate_threshold(
-            trajectories, target_fa=target_fa, persistence=persistence
-        )
-        for name, trajectories in per_detector.items()
-    }
-
-
-def seizure_lead_samples(
-    trajectory: DetectorTrajectory,
-    *,
-    onset_sample: int,
-    threshold: float,
-    persistence: int = PERSISTENCE,
-) -> int | None:
-    """Return the leading alarm's lead in samples, or ``None`` if not leading.
-
-    A detection is an alarm at or before the annotated onset; its lead is
-    ``onset_sample − alarm_sample``. An alarm after the onset (or no alarm) is
-    not a lead and returns ``None``.
-    """
-    alarm = _alarm_sample(trajectory, threshold=threshold, persistence=persistence)
-    if alarm is None or alarm > onset_sample:
-        return None
-    return onset_sample - alarm
-
-
-# --------------------------------------------------------------------------- #
-# Per-seizure sealing (re-runs each detector at its calibrated threshold)       #
-# --------------------------------------------------------------------------- #
-
-
-@dataclass(frozen=True)
-class SeizureLeadResult:
-    """The sealed evidence and matched-false-alarm leads for one seizure.
+    A ``DomainObservableAdapter`` packaging the band-pass / Hilbert / decimation
+    pipeline, so the neutral suite can screen scalp EEG exactly as it screens
+    cardiac or grid signals through their own adapters.
 
     Attributes
     ----------
-    record_id : str
-        The CHB-MIT record label, e.g. ``chb01_03``.
-    onset_sample : int
-        Annotated seizure onset in decimated samples.
-    evidences : dict[str, EarlyWarningEvidence]
-        A sealed record per label in :data:`DETECTORS` — including a sealed
-        silence when a detector did not fire.
+    sampling_rate_hz : float
+        Native sampling rate of the raw channels, in hertz.
+    decimation : int
+        Decimation factor applied to the analytic-phase components.
+    band_hz : tuple[float, float]
+        Band-pass passband in hertz.
+    filter_order : int
+        Butterworth order.
     """
 
-    record_id: str
-    onset_sample: int
-    evidences: dict[str, EarlyWarningEvidence]
+    sampling_rate_hz: float = SAMPLING_RATE_HZ
+    decimation: int = DECIMATION
+    band_hz: tuple[float, float] = BAND_HZ
+    filter_order: int = FILTER_ORDER
 
-    def lead_seconds(self) -> dict[str, float | None]:
-        """Return each detector's honest lead in seconds (``None`` if it was late)."""
-        return {
-            name: (evidence.lead_seconds if evidence.lead_is_early else None)
-            for name, evidence in self.evidences.items()
-        }
+    @property
+    def domain(self) -> str:
+        """Return the domain label ``scalp_eeg``."""
+        return "scalp_eeg"
 
-    def to_audit_record(self) -> dict[str, object]:
-        """Return a JSON-safe mapping of the sealed per-detector evidence."""
-        return {
-            "record_id": self.record_id,
-            "onset_sample": self.onset_sample,
-            "detectors": {
-                name: evidence.to_audit_record()
-                for name, evidence in self.evidences.items()
-            },
-        }
+    def observables(self, raw: FloatArray) -> SuiteObservables:
+        """Return the neutral observable bundle for one raw EEG recording.
 
+        Parameters
+        ----------
+        raw : FloatArray
+            Raw per-channel scalp EEG, shape ``(N, T)`` with at least two
+            channels, at :attr:`sampling_rate_hz`.
 
-def evaluate_seizure(
-    observables: EEGObservables,
-    *,
-    record_id: str,
-    onset_sample: int,
-    signal_source: str,
-    captured_at: str,
-    thresholds: Mapping[str, float],
-    window: int = WINDOW,
-    step: int = STEP,
-    baseline_fraction: float = BASELINE_FRACTION,
-    persistence: int = PERSISTENCE,
-) -> SeizureLeadResult:
-    """Run the suite at the calibrated thresholds and seal each detector's alarm.
-
-    Each detector is re-run with its matched-false-alarm threshold as the gate,
-    so the sealed :class:`EarlyWarningEvidence` records the alarm decision at the
-    calibrated operating point and an honest lead against ``onset_sample``.
-
-    Parameters
-    ----------
-    observables : EEGObservables
-        The seizure recording's decimated observables.
-    record_id : str
-        CHB-MIT record label, carried into the result.
-    onset_sample : int
-        Annotated seizure onset in decimated samples.
-    signal_source, captured_at : str
-        Provenance forwarded into every sealed record.
-    thresholds : Mapping[str, float]
-        The matched-false-alarm threshold per label in :data:`DETECTORS`.
-    window, step, baseline_fraction, persistence :
-        Suite analysis parameters.
-
-    Returns
-    -------
-    SeizureLeadResult
-        The four sealed records and the recording provenance.
-
-    Raises
-    ------
-    KeyError
-        If ``thresholds`` is missing a detector label.
-    """
-    csd = critical_slowing_down_warning(
-        observables.order_parameter[np.newaxis, :],
-        window=window,
-        step=step,
-        baseline_fraction=baseline_fraction,
-        z_threshold=thresholds[CRITICAL_SLOWING_DOWN],
-        rise_threshold=RELATIVE_GATE,
-        persistence=persistence,
-    )
-    sync = synchronisation_warning(
-        observables.phases,
-        window=window,
-        step=step,
-        baseline_fraction=baseline_fraction,
-        z_threshold=thresholds[SYNCHRONISATION],
-        rise_threshold=RELATIVE_GATE,
-        persistence=persistence,
-    )
-    entropy = explosive_sync_warning(
-        observables.phase_field,
-        window=window,
-        step=step,
-        baseline_fraction=baseline_fraction,
-        z_threshold=thresholds[TRANSITION_ENTROPY],
-        drop_threshold=RELATIVE_GATE,
-        persistence=persistence,
-    )
-    fused = ensemble_warning(
-        [
-            member_from_critical_slowing_down(csd),
-            member_from_synchronisation(sync),
-            member_from_transition_entropy(entropy),
-        ],
-        rule=WEIGHTED_RULE,
-        fused_threshold=thresholds[ENSEMBLE_WEIGHTED],
-        persistence=persistence,
-    )
-    fs = observables.sampling_rate_hz
-    evidences = {
-        CRITICAL_SLOWING_DOWN: seal_critical_slowing_down_alarm(
-            csd,
-            observable=_OBSERVABLE_CSD,
-            signal_source=signal_source,
-            captured_at=captured_at,
-            sampling_rate_hz=fs,
-            transition_onset_sample=onset_sample,
-        ),
-        SYNCHRONISATION: seal_synchronisation_alarm(
-            sync,
-            observable=_OBSERVABLE_SYNC,
-            signal_source=signal_source,
-            captured_at=captured_at,
-            sampling_rate_hz=fs,
-            transition_onset_sample=onset_sample,
-        ),
-        TRANSITION_ENTROPY: seal_transition_entropy_alarm(
-            entropy,
-            observable=_OBSERVABLE_ENTROPY,
-            signal_source=signal_source,
-            captured_at=captured_at,
-            sampling_rate_hz=fs,
-            transition_onset_sample=onset_sample,
-        ),
-        ENSEMBLE_WEIGHTED: seal_ensemble_alarm(
-            fused,
-            observable=_OBSERVABLE_ENSEMBLE,
-            signal_source=signal_source,
-            captured_at=captured_at,
-            sampling_rate_hz=fs,
-            window=window,
-            step=step,
-            transition_onset_sample=onset_sample,
-        ),
-    }
-    return SeizureLeadResult(
-        record_id=record_id, onset_sample=onset_sample, evidences=evidences
-    )
+        Returns
+        -------
+        SuiteObservables
+            The decimated analytic-phase bundle the suite reads.
+        """
+        return eeg_observables(
+            raw,
+            sampling_rate_hz=self.sampling_rate_hz,
+            decimation=self.decimation,
+            band_hz=self.band_hz,
+            filter_order=self.filter_order,
+        )
 
 
 # --------------------------------------------------------------------------- #
@@ -1020,6 +499,16 @@ def edf_start_datetime(path: str | Path) -> str:
     CHB-MIT anonymises the physical capture instant, so this is provenance from
     the file rather than a wall-clock reading, and is carried into the seals
     verbatim for reproducibility.
+
+    Parameters
+    ----------
+    path : str or Path
+        Path to the EDF recording.
+
+    Returns
+    -------
+    str
+        The recording's start datetime in ISO-8601 form.
     """
     import pyedflib
 
@@ -1034,50 +523,6 @@ def edf_start_datetime(path: str | Path) -> str:
 # --------------------------------------------------------------------------- #
 # Orchestration (I/O shell over the tested logic)                              #
 # --------------------------------------------------------------------------- #
-
-
-def _verdict(leads_by_detector: Mapping[str, list[float]], n_seizures: int) -> str:
-    """Return the honest matched-false-alarm verdict across the seizures.
-
-    The headline is the detection count first, then the lead: a lead measured on
-    one seizure is not a robust advantage however long it is, so a fusion
-    advantage is named only when the fusion *leads more seizures* than every
-    single member. When detection is sparse — or no detector leads any seizure —
-    the verdict says so plainly, since the auditable moat holds regardless of
-    which detector leads or whether any does.
-    """
-    led = {name: len(leads_by_detector.get(name, [])) for name in DETECTORS}
-    median = {
-        name: (float(np.median(leads_by_detector[name])) if led[name] else None)
-        for name in DETECTORS
-    }
-    members = {name: led[name] for name in DETECTORS if name != ENSEMBLE_WEIGHTED}
-    detail = "; ".join(
-        f"{name} {led[name]}/{n_seizures}"
-        + (f" (median lead {median[name]:.0f} s)" if median[name] is not None else "")
-        for name in DETECTORS
-    )
-    if all(count == 0 for count in led.values()):
-        return (
-            "NO EARLY WARNING: at a matched false-alarm rate no detector leads any "
-            f"of the {n_seizures} evaluated seizures. Detection is a commodity "
-            "here; the auditable sealed evidence, not a lead, is the deliverable."
-        )
-    fusion_led = led[ENSEMBLE_WEIGHTED]
-    if members and fusion_led > max(members.values()):
-        return (
-            f"FUSION DETECTS MORE: at a matched false-alarm rate the weighted "
-            f"fusion leads {fusion_led}/{n_seizures} seizures, more than any single "
-            f"member ({detail}). The gain is more leading detections at fixed false "
-            "alarm, not a spent false-alarm budget."
-        )
-    return (
-        "SPARSE DETECTION, NO ROBUST ADVANTAGE: at a matched false-alarm rate "
-        f"detection is sparse and no detector leads more seizures than the fusion "
-        f"({detail}). A longer lead on one seizure is not a robust advantage; "
-        "consistent with detection as a commodity, the auditable sealed evidence "
-        "is the deliverable."
-    )
 
 
 def main(
@@ -1118,22 +563,29 @@ def main(
     out = Path(output_dir)
     out.mkdir(parents=True, exist_ok=True)
     segment_seconds = segment_samples / DECIMATED_RATE_HZ
+    adapter = EEGPhaseAdapter()
 
     # Finer matched-false-alarm null: cut each interictal hour into many trials of
     # the same length and structure as a seizure's pre-onset analysis segment.
     null_observables = [
-        eeg_observables(load_edf_channels(data / f"{record}.edf"))
+        adapter.observables(load_edf_channels(data / f"{record}.edf"))
         for record in interictal_records
     ]
     trials = null_trials(null_observables, segment_samples=segment_samples)
-    thresholds = calibrate_detectors(trials, baseline_fraction=baseline_fraction)
+    thresholds = calibrate_detectors(
+        trials,
+        target_fa=TARGET_FALSE_ALARM,
+        window=WINDOW,
+        step=STEP,
+        baseline_fraction=baseline_fraction,
+    )
 
     leads_by_detector: dict[str, list[float]] = {name: [] for name in DETECTORS}
     seizure_records: list[dict[str, object]] = []
     excluded: list[dict[str, object]] = []
     for record_id, onset_s in seizures.items():
         path = data / f"{record_id}.edf"
-        observables = eeg_observables(load_edf_channels(path))
+        observables = adapter.observables(load_edf_channels(path))
         onset_sample = int(round(onset_s * observables.sampling_rate_hz))
         if onset_sample < segment_samples:
             # Too early for a clean pre-onset baseline; excluded, not counted null.
@@ -1154,6 +606,9 @@ def main(
             ),
             captured_at=edf_start_datetime(path),
             thresholds=thresholds,
+            observable_descriptions=_OBSERVABLE_DESCRIPTIONS,
+            window=WINDOW,
+            step=STEP,
             baseline_fraction=baseline_fraction,
         )
         (out / f"{record_id}_early_warning_evidence.json").write_text(
@@ -1187,7 +642,12 @@ def main(
         "matched_false_alarm_thresholds": thresholds,
         "seizures": seizure_records,
         "excluded_seizures": excluded,
-        "verdict": _verdict(leads_by_detector, len(seizure_records)),
+        "verdict": domain_verdict(
+            leads_by_detector,
+            len(seizure_records),
+            noun="seizures",
+            singular="seizure",
+        ),
     }
     (out / "early_warning_leadtime_eeg_results.json").write_text(
         json.dumps(payload, indent=2) + "\n", encoding="utf-8"
@@ -1264,18 +724,6 @@ def _positive_real(value: object, name: str) -> float:
     result = float(value)
     if not np.isfinite(result) or result <= 0.0:
         raise ValueError(f"{name} must be finite and positive, got {result}")
-    return result
-
-
-def _non_negative_int(value: object, name: str) -> int:
-    """Return ``value`` as a non-negative integer, else raise ``ValueError``."""
-    from numbers import Integral
-
-    if isinstance(value, bool) or not isinstance(value, Integral):
-        raise ValueError(f"{name} must be a non-negative integer, got {value!r}")
-    result = int(value)
-    if result < 0:
-        raise ValueError(f"{name} must be a non-negative integer, got {result}")
     return result
 
 

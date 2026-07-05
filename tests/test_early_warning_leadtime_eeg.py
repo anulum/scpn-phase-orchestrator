@@ -6,14 +6,17 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — real-EEG early-warning capstone logic tests
 
-"""Tests for the scalp-EEG early-warning lead-time capstone on synthetic data.
+"""Tests for the scalp-EEG early-warning capstone adapter on synthetic data.
 
-The capstone reads a citation-only corpus, so every signal-processing and
-evaluation path is pinned here on **synthetic arrays** — never the protected raw
-recordings. The observable pipeline (band-pass, analytic phase, phase-consistent
-decimation), the matched-false-alarm calibration and lead machinery, the sealed
-per-seizure evidence, and the EDF ingestion (on a synthetic EDF written in the
-test) are each exercised directly, so the logic's correctness does not depend on
+This capstone is the scalp-EEG *adapter* onto the domain-neutral harness (tested
+in ``tests/test_early_warning_domain.py``): the only EEG-specific work is the
+signal-processing pipeline that produces the neutral observable bundle, plus the
+EDF ingestion and the end-to-end orchestration. Those read a citation-only
+corpus, so every path is pinned here on **synthetic arrays** — never the
+protected raw recordings. The observable pipeline (band-pass, analytic phase,
+phase-consistent decimation), the :class:`EEGPhaseAdapter`, the EDF ingestion (on
+a synthetic EDF written in the test), and the end-to-end ``main`` (over synthetic
+EDFs) are each exercised directly, so the logic's correctness does not depend on
 downloading the CHB-MIT database.
 """
 
@@ -30,44 +33,30 @@ import pytest
 from bench.early_warning_leadtime_eeg import (
     BAND_HZ,
     DETECTORS,
-    ENSEMBLE_WEIGHTED,
     SAMPLING_RATE_HZ,
     STEP,
-    SYNCHRONISATION,
-    THRESHOLD_GRID,
     WINDOW,
-    DetectorTrajectory,
-    EEGObservables,
-    SeizureLeadResult,
+    EEGPhaseAdapter,
     analytic_phase,
     bandpass,
-    calibrate_detectors,
-    calibrate_threshold,
     decimate_analytic_phase,
-    detector_trajectories,
     edf_start_datetime,
     eeg_observables,
-    evaluate_seizure,
-    false_alarm_rate,
     load_edf_channels,
     main,
-    null_trials,
-    seizure_lead_samples,
-    slice_observables,
 )
-from bench.early_warning_leadtime_eeg import _verdict as verdict
-from scpn_phase_orchestrator.assurance.early_warning_evidence import (
-    EARLY_WARNING_FLAGGED,
-    NO_EARLY_WARNING,
+from scpn_phase_orchestrator.monitor.early_warning_suite import (
+    DomainObservableAdapter,
+    SuiteObservables,
 )
 
 _TWO_PI = 2.0 * np.pi
 
 # The EDF-ingestion path needs pyedflib, an optional native dependency declared as
-# the ``eeg`` extra (``pip install -e .[eeg]``). The pipeline, calibration, lead,
-# sealing, and verdict tests never touch it; only the EDF I/O and end-to-end
-# orchestration tests do, so they are gated on its presence — the same pattern the
-# suite uses for jax, juliacall, and the other optional backends.
+# the ``eeg`` extra (``pip install -e .[eeg]``). The pipeline and adapter tests
+# never touch it; only the EDF I/O and end-to-end orchestration tests do, so they
+# are gated on its presence — the same pattern the suite uses for jax, juliacall,
+# and the other optional backends.
 _requires_pyedflib = pytest.mark.skipif(
     importlib.util.find_spec("pyedflib") is None,
     reason="pyedflib is an optional dependency (install the 'eeg' extra)",
@@ -90,79 +79,6 @@ def _raw_tone(
     for channel in range(n_channels):
         raw[channel] = np.sin(_TWO_PI * hz * times + offsets[channel])
     return raw
-
-
-def _transition_observables(
-    *,
-    n_channels: int = 6,
-    n_samples: int = 320,
-    rise_sample: int = 150,
-    fs: float = 32.0,
-    seed: int = 0,
-) -> EEGObservables:
-    """Return observables whose channels lock into coherence from ``rise_sample``.
-
-    The baseline is incoherent (independent random phases) and, from
-    ``rise_sample`` on, every channel follows one shared phase with a little
-    jitter — a rising-synchronisation precursor that the suite should flag while
-    the labelled onset is placed later.
-    """
-    rng = np.random.default_rng(seed)
-    phases = rng.uniform(-np.pi, np.pi, (n_channels, n_samples))
-    shared = rng.uniform(-np.pi, np.pi, n_samples)
-    jitter = 0.05 * rng.standard_normal((n_channels, n_samples))
-    for channel in range(n_channels):
-        phases[channel, rise_sample:] = (
-            shared[rise_sample:] + jitter[channel, rise_sample:]
-        )
-    phases = np.arctan2(np.sin(phases), np.cos(phases))
-    order = np.abs(np.mean(np.exp(1j * phases), axis=0))
-    return EEGObservables(
-        phases=np.ascontiguousarray(phases, dtype=np.float64),
-        phase_field=np.ascontiguousarray(np.sin(phases), dtype=np.float64),
-        order_parameter=np.ascontiguousarray(order, dtype=np.float64),
-        sampling_rate_hz=fs,
-    )
-
-
-def _incoherent_observables(
-    *, n_channels: int = 6, n_samples: int = 320, fs: float = 32.0, seed: int = 1
-) -> EEGObservables:
-    """Return a seizure-free (incoherent throughout) interictal-null observable."""
-    rng = np.random.default_rng(seed)
-    phases = rng.uniform(-np.pi, np.pi, (n_channels, n_samples))
-    order = np.abs(np.mean(np.exp(1j * phases), axis=0))
-    return EEGObservables(
-        phases=np.ascontiguousarray(phases, dtype=np.float64),
-        phase_field=np.ascontiguousarray(np.sin(phases), dtype=np.float64),
-        order_parameter=np.ascontiguousarray(order, dtype=np.float64),
-        sampling_rate_hz=fs,
-    )
-
-
-def _trajectory(
-    values: list[float],
-    *,
-    relative_gate: float = 0.0,
-    n_baseline: int = 0,
-    relative: list[float] | None = None,
-    name: str = "probe",
-) -> DetectorTrajectory:
-    """Return a detector trajectory with 16-sample hops for the shared alarm rule."""
-    score = np.asarray(values, dtype=np.float64)
-    gate = (
-        np.ones(score.shape[0], dtype=np.float64)
-        if relative is None
-        else np.asarray(relative, dtype=np.float64)
-    )
-    return DetectorTrajectory(
-        name=name,
-        score=score,
-        relative=gate,
-        relative_gate=relative_gate,
-        window_starts=np.arange(score.shape[0], dtype=np.int64) * STEP,
-        n_baseline=n_baseline,
-    )
 
 
 # --------------------------------------------------------------------------- #
@@ -236,15 +152,16 @@ def test_decimate_rejects_a_non_positive_factor() -> None:
 
 
 # --------------------------------------------------------------------------- #
-# eeg_observables                                                              #
+# eeg_observables and the EEGPhaseAdapter                                       #
 # --------------------------------------------------------------------------- #
 
 
 def test_eeg_observables_shapes_rate_and_derived_fields() -> None:
     raw = _raw_tone(n_channels=4, n_samples=2400, fs=256.0, hz=10.0, seed=3)
     observables = eeg_observables(raw)
+    assert isinstance(observables, SuiteObservables)
     assert observables.sampling_rate_hz == pytest.approx(32.0)
-    assert observables.n_channels == 4
+    assert observables.n_nodes == 4
     assert observables.n_samples == 300
     assert observables.phases.shape == (4, 300)
     assert observables.phase_field.shape == (4, 300)
@@ -273,272 +190,18 @@ def test_eeg_observables_rejects_a_non_finite_recording() -> None:
         eeg_observables(raw)
 
 
-# --------------------------------------------------------------------------- #
-# slice_observables / null_trials — pre-onset segment and null trials          #
-# --------------------------------------------------------------------------- #
-
-
-def test_slice_observables_restricts_every_field() -> None:
-    observables = _incoherent_observables(n_samples=500, seed=8)
-    sliced = slice_observables(observables, start=100, stop=420)
-    assert sliced.n_samples == 320
-    assert sliced.phases.shape == (observables.n_channels, 320)
-    assert sliced.phase_field.shape == (observables.n_channels, 320)
-    assert sliced.order_parameter.shape == (320,)
-    assert sliced.sampling_rate_hz == observables.sampling_rate_hz
-    assert np.array_equal(sliced.phases, observables.phases[:, 100:420])
-
-
-def test_slice_observables_rejects_an_inverted_range() -> None:
-    observables = _incoherent_observables(n_samples=400, seed=9)
-    with pytest.raises(ValueError, match="must be below stop"):
-        slice_observables(observables, start=200, stop=200)
-
-
-def test_slice_observables_rejects_a_range_past_the_end() -> None:
-    observables = _incoherent_observables(n_samples=400, seed=9)
-    with pytest.raises(ValueError, match="exceeds the field length"):
-        slice_observables(observables, start=0, stop=500)
-
-
-def test_slice_observables_rejects_a_non_integer_bound() -> None:
-    observables = _incoherent_observables(n_samples=400, seed=9)
-    with pytest.raises(ValueError, match="non-negative integer"):
-        slice_observables(observables, start=1.5, stop=100)
-
-
-def test_slice_observables_rejects_a_negative_bound() -> None:
-    observables = _incoherent_observables(n_samples=400, seed=9)
-    with pytest.raises(ValueError, match="non-negative integer"):
-        slice_observables(observables, start=-1, stop=100)
-
-
-def test_null_trials_cuts_non_overlapping_equal_length_trials() -> None:
-    observables = _incoherent_observables(n_samples=700, seed=10)
-    trials = null_trials([observables], segment_samples=320)
-    # 700 // 320 == 2 non-overlapping trials; the trailing 60 samples are dropped.
-    assert len(trials) == 2
-    assert all(trial.n_samples == 320 for trial in trials)
-    assert np.array_equal(trials[0].order_parameter, observables.order_parameter[:320])
-    assert np.array_equal(
-        trials[1].order_parameter, observables.order_parameter[320:640]
-    )
-
-
-def test_null_trials_spans_multiple_recordings() -> None:
-    a = _incoherent_observables(n_samples=700, seed=11)
-    b = _incoherent_observables(n_samples=340, seed=12)
-    trials = null_trials([a, b], segment_samples=320)
-    assert len(trials) == 3  # 2 from the 700-sample record, 1 from the 340-sample one
-
-
-def test_null_trials_rejects_a_non_positive_segment() -> None:
-    with pytest.raises(ValueError, match="segment_samples"):
-        null_trials([_incoherent_observables(n_samples=400)], segment_samples=0)
-
-
-# --------------------------------------------------------------------------- #
-# detector_trajectories                                                        #
-# --------------------------------------------------------------------------- #
-
-
-def test_detector_trajectories_share_one_window_grid() -> None:
-    observables = _transition_observables(seed=5)
-    trajectories = detector_trajectories(observables)
-    assert set(trajectories) == set(DETECTORS)
-    reference = trajectories[DETECTORS[0]].window_starts
-    for name in DETECTORS:
-        assert np.array_equal(trajectories[name].window_starts, reference)
-        assert trajectories[name].score.shape == reference.shape
-
-
-def test_detector_trajectories_flag_a_coherence_rise() -> None:
-    observables = _transition_observables(seed=6)
-    trajectories = detector_trajectories(observables)
-    synchrony = trajectories[SYNCHRONISATION]
-    # The post-baseline coherence lock drives the synchrony z-score up.
-    post = synchrony.score[synchrony.n_baseline :]
-    assert float(post.max()) > 3.0
-
-
-# --------------------------------------------------------------------------- #
-# shared alarm rule, calibration, lead                                         #
-# --------------------------------------------------------------------------- #
-
-
-def test_alarm_fires_on_a_sustained_post_baseline_breach() -> None:
-    lead = seizure_lead_samples(
-        _trajectory([0.0, 0.0, 5.0, 5.0, 0.0]),
-        onset_sample=100,
-        threshold=3.0,
-        persistence=2,
-    )
-    assert lead == 100 - STEP * 2  # alarm at window_starts[2] = 32
-
-
-def test_alarm_requires_the_full_persistence_run() -> None:
-    lead = seizure_lead_samples(
-        _trajectory([0.0, 5.0, 0.0, 5.0]),
-        onset_sample=100,
-        threshold=3.0,
-        persistence=2,
-    )
-    assert lead is None
-
-
-def test_alarm_relative_gate_blocks_a_high_score() -> None:
-    trajectory = _trajectory(
-        [0.0, 5.0, 5.0], relative=[0.0, 0.01, 0.01], relative_gate=0.5
-    )
-    assert (
-        seizure_lead_samples(trajectory, onset_sample=100, threshold=3.0, persistence=2)
-        is None
-    )
-
-
-def test_alarm_ignores_breaches_inside_the_baseline() -> None:
-    trajectory = _trajectory([5.0, 5.0, 5.0, 5.0], n_baseline=2)
-    lead = seizure_lead_samples(
-        trajectory, onset_sample=100, threshold=3.0, persistence=2
-    )
-    assert lead == 100 - STEP * 2  # first breach at the first post-baseline window
-
-
-def test_lead_is_none_when_the_alarm_follows_the_onset() -> None:
-    lead = seizure_lead_samples(
-        _trajectory([0.0, 0.0, 5.0, 5.0]),
-        onset_sample=10,  # earlier than the alarm at sample 32
-        threshold=3.0,
-        persistence=2,
-    )
-    assert lead is None
-
-
-def test_false_alarm_rate_counts_alarming_nulls() -> None:
-    nulls = [_trajectory([0.0, 5.0, 5.0]) for _ in range(3)]
-    nulls += [_trajectory([0.0, 0.0, 0.0]) for _ in range(7)]
-    assert false_alarm_rate(nulls, 3.0, persistence=2) == pytest.approx(0.3)
-
-
-def test_false_alarm_rate_rejects_an_empty_null() -> None:
-    with pytest.raises(ValueError, match="must not be empty"):
-        false_alarm_rate([], 3.0)
-
-
-def test_calibrate_threshold_picks_the_smallest_meeting_the_target() -> None:
-    nulls = [_trajectory([0.0, 5.0, 5.0]) for _ in range(3)]
-    nulls += [_trajectory([0.0, 0.0, 0.0]) for _ in range(7)]
-    threshold = calibrate_threshold(nulls, target_fa=0.1, persistence=2)
-    assert threshold == 5.25
-    assert false_alarm_rate(nulls, threshold, persistence=2) == 0.0
-
-
-def test_calibrate_threshold_falls_back_to_the_largest_grid_value() -> None:
-    nulls = [_trajectory([0.0, 100.0, 100.0]) for _ in range(4)]
-    assert (
-        calibrate_threshold(nulls, target_fa=0.0, persistence=2) == THRESHOLD_GRID[-1]
-    )
-
-
-def test_calibrate_threshold_rejects_an_empty_null() -> None:
-    with pytest.raises(ValueError, match="must not be empty"):
-        calibrate_threshold([])
-
-
-def test_calibrate_detectors_returns_a_threshold_per_detector() -> None:
-    nulls = [_incoherent_observables(seed=seed) for seed in (10, 11, 12)]
-    thresholds = calibrate_detectors(nulls, target_fa=0.5)
-    assert set(thresholds) == set(DETECTORS)
-    for value in thresholds.values():
-        assert THRESHOLD_GRID[0] <= value <= THRESHOLD_GRID[-1]
-
-
-def test_calibrate_detectors_rejects_an_empty_null() -> None:
-    with pytest.raises(ValueError, match="must not be empty"):
-        calibrate_detectors([])
-
-
-# --------------------------------------------------------------------------- #
-# evaluate_seizure — sealing at the calibrated thresholds                      #
-# --------------------------------------------------------------------------- #
-
-
-def _evaluate(thresholds: dict[str, float], *, onset_sample: int) -> SeizureLeadResult:
-    observables = _transition_observables(rise_sample=150, n_samples=320, seed=7)
-    return evaluate_seizure(
-        observables,
-        record_id="synthetic_01",
-        onset_sample=onset_sample,
-        signal_source="synthetic coherence-rise fixture",
-        captured_at="2009-01-01T12:00:00",
-        thresholds=thresholds,
-    )
-
-
-def test_evaluate_seizure_seals_every_detector_with_a_leading_alarm() -> None:
-    thresholds = dict.fromkeys(DETECTORS, 0.0)
-    result = _evaluate(thresholds, onset_sample=300)
-    assert set(result.evidences) == set(DETECTORS)
-    synchrony = result.evidences[SYNCHRONISATION]
-    assert synchrony.verdict == EARLY_WARNING_FLAGGED
-    assert synchrony.warning_triggered is True
-    assert synchrony.lead_is_early is True
-    assert synchrony.content_hash  # sealed
-    # The synchrony lead is reported in seconds against the 32 Hz analysis rate.
-    assert result.lead_seconds()[SYNCHRONISATION] is not None
-
-
-def test_evaluate_seizure_seals_a_silence_when_no_detector_fires() -> None:
-    thresholds = dict.fromkeys(DETECTORS, 1.0e3)
-    result = _evaluate(thresholds, onset_sample=300)
-    for name in DETECTORS:
-        evidence = result.evidences[name]
-        assert evidence.verdict == NO_EARLY_WARNING
-        assert evidence.warning_triggered is False
-        assert result.lead_seconds()[name] is None
-
-
-def test_seizure_lead_result_audit_record_round_trips() -> None:
-    result = _evaluate(dict.fromkeys(DETECTORS, 0.0), onset_sample=300)
-    record = result.to_audit_record()
-    encoded = json.loads(json.dumps(record))
-    assert encoded["record_id"] == "synthetic_01"
-    assert encoded["onset_sample"] == 300
-    assert set(encoded["detectors"]) == set(DETECTORS)
-    assert encoded["detectors"][SYNCHRONISATION]["content_hash"]
-
-
-# --------------------------------------------------------------------------- #
-# verdict                                                                      #
-# --------------------------------------------------------------------------- #
-
-
-def test_verdict_names_a_fusion_advantage_only_on_more_detections() -> None:
-    # The fusion leads three seizures, more than any single member (one each).
-    leads = {
-        "critical_slowing_down": [10.0],
-        "synchronisation": [20.0],
-        "transition_entropy": [],
-        ENSEMBLE_WEIGHTED: [30.0, 40.0, 50.0],
-    }
-    assert verdict(leads, 6).startswith("FUSION DETECTS MORE")
-
-
-def test_verdict_calls_a_single_seizure_lead_not_a_robust_advantage() -> None:
-    # The real chb01 shape: fusion and synchronisation each lead one seizure, the
-    # fusion by a longer lead — a longer lead on n=1 is not a robust advantage.
-    leads = {
-        "critical_slowing_down": [],
-        "synchronisation": [441.5],
-        "transition_entropy": [],
-        ENSEMBLE_WEIGHTED: [450.5],
-    }
-    assert verdict(leads, 6).startswith("SPARSE DETECTION, NO ROBUST ADVANTAGE")
-
-
-def test_verdict_reports_no_early_warning_when_nothing_leads() -> None:
-    leads = {name: [] for name in DETECTORS}
-    assert verdict(leads, 6).startswith("NO EARLY WARNING")
+def test_eeg_phase_adapter_satisfies_the_protocol_and_wraps_the_pipeline() -> None:
+    adapter = EEGPhaseAdapter()
+    assert isinstance(adapter, DomainObservableAdapter)
+    assert adapter.domain == "scalp_eeg"
+    raw = _raw_tone(n_channels=3, n_samples=2400, fs=256.0, hz=10.0, seed=5)
+    observables = adapter.observables(raw)
+    assert isinstance(observables, SuiteObservables)
+    assert observables.n_nodes == 3
+    assert observables.sampling_rate_hz == pytest.approx(32.0)
+    # The adapter is exactly the pipeline function packaged as an adapter.
+    direct = eeg_observables(raw)
+    assert np.array_equal(observables.phases, direct.phases)
 
 
 # --------------------------------------------------------------------------- #
@@ -646,7 +309,7 @@ def test_load_then_observables_wire_end_to_end(tmp_path: Path) -> None:
     _write_edf(path, rates=[256.0, 256.0, 256.0], seconds=10)
     raw = load_edf_channels(path)
     observables = eeg_observables(raw)
-    assert observables.n_channels == 3
+    assert observables.n_nodes == 3
     assert observables.sampling_rate_hz == pytest.approx(32.0)
     assert observables.order_parameter.shape[0] == observables.n_samples
 
@@ -723,6 +386,15 @@ def test_main_writes_sealed_derived_artefacts(tmp_path: Path) -> None:
             n_channels=len(rates), fs=256.0, seconds=12, rise_second=6, seed=2
         ),
     )
+    # A seizure that never locks (the coherence rise is placed past the record) is
+    # evaluated but leads no detector — a sealed silence, the honest half.
+    _write_edf(
+        data / "seizure_flat.edf",
+        rates=rates,
+        data=_rising_coherence_channels(
+            n_channels=len(rates), fs=256.0, seconds=12, rise_second=100, seed=3
+        ),
+    )
     # An early onset (2 s) leaves no room for a clean pre-onset segment.
     _write_edf(data / "seizure_early.edf", rates=rates, seconds=12)
 
@@ -730,7 +402,7 @@ def test_main_writes_sealed_derived_artefacts(tmp_path: Path) -> None:
         data,
         out,
         interictal_records=("null_a", "null_b"),
-        seizures={"seizure_x": 11, "seizure_early": 2},
+        seizures={"seizure_x": 11, "seizure_flat": 11, "seizure_early": 2},
         segment_samples=segment_samples,
         baseline_fraction=1.0 / 3.0,
     )
@@ -747,6 +419,18 @@ def test_main_writes_sealed_derived_artefacts(tmp_path: Path) -> None:
     assert set(sealed["detectors"]) == set(DETECTORS)
     for detector in DETECTORS:
         assert sealed["detectors"][detector]["content_hash"]
+
+    # The never-locking seizure is still sealed for every detector; without a
+    # genuine coherence rise at least one detector does not lead it, so `main`
+    # exercises the honestly-recorded no-lead path too.
+    flat = json.loads(
+        (out / "seizure_flat_early_warning_evidence.json").read_text(encoding="utf-8")
+    )
+    assert set(flat["detectors"]) == set(DETECTORS)
+    assert any(
+        flat["detectors"][detector]["warning_triggered"] is False
+        for detector in DETECTORS
+    )
 
     payload = json.loads(aggregate.read_text(encoding="utf-8"))
     assert payload["benchmark"] == "early_warning_leadtime_eeg"

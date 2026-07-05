@@ -60,23 +60,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   by the *same* suite because each is a synchronisation transition in a population
   of coupled oscillators. Pinned on synthetic arrays in
   `tests/test_early_warning_suite.py`.
-- `bench/early_warning_leadtime_eeg.py` is the real scalp-EEG capstone: it turns a
+- `bench/early_warning_domain.py` is the domain-neutral matched-false-alarm
+  lead-time harness the per-domain capstones share: it segments a recording
+  (`slice_observables`, `null_trials`), calibrates each detector to a matched
+  false-alarm rate on a no-transition null (`detector_trajectories`,
+  `calibrate_detectors`), measures the honest lead of each alarm against an
+  annotated onset (`seizure_lead_samples`), seals every alarm or silence
+  (`evaluate_seizure`), and reads the detection-count-first verdict
+  (`domain_verdict`). It reads only the neutral `SuiteObservables`, so scalp EEG,
+  cardiac ECG, and grid PMU capstones reuse it unchanged behind their own
+  adapters. Pinned on synthetic observables in `tests/test_early_warning_domain.py`.
+- `bench/early_warning_leadtime_eeg.py` is the real scalp-EEG capstone — the
+  scalp-EEG adapter onto that shared harness. Its EEG-specific half turns a
   CHB-MIT recording into one decimated analytic-phase field (band-pass 4–30 Hz,
-  Hilbert phase, phase-consistent decimation 256→32 Hz), runs the three-member
-  suite and its weighted fusion, and seals an `EarlyWarningEvidence` per detector
-  per seizure — including a sealed silence when a detector does not fire. Each
-  seizure is scored on a fixed pre-onset segment (a leading baseline plus a
-  detection horizon ending at onset) so the baseline is guaranteed clean and every
-  alarm is a genuine lead; an onset too early for a clean baseline is excluded and
-  reported, never counted as a silent null. The matched false-alarm threshold is
-  calibrated over many equal-length interictal null trials (`null_trials`), not a
+  Hilbert phase, phase-consistent decimation 256→32 Hz) and packages it as an
+  `EEGPhaseAdapter` producing the neutral `SuiteObservables`; the segmentation,
+  matched-false-alarm calibration, lead measurement, sealing, and verdict are the
+  shared harness. Each seizure is scored on a fixed pre-onset segment (a leading
+  baseline plus a detection horizon ending at onset) so the baseline is guaranteed
+  clean and every alarm is a genuine lead; an onset too early for a clean baseline
+  is excluded and reported, never counted as a silent null. The matched false-alarm
+  threshold is calibrated over many equal-length interictal null trials, not a
   handful of whole recordings. The gain from fusion is reported as
   matched-false-alarm lead, never a raw detection rate. The raw EDF is
-  citation-only and never redistributed; the pipeline, segmentation, calibration,
-  lead, sealing, and EDF ingestion are pinned on synthetic arrays in
-  `tests/test_early_warning_leadtime_eeg.py`. EDF ingestion needs the optional
-  `eeg` extra (`pip install -e .[eeg]`, pyedflib); its tests are gated on that
-  extra, as the suite gates jax and juliacall tests.
+  citation-only and never redistributed; the pipeline, adapter, and EDF ingestion
+  are pinned on synthetic arrays in `tests/test_early_warning_leadtime_eeg.py`. EDF
+  ingestion needs the optional `eeg` extra (`pip install -e .[eeg]`, pyedflib); its
+  tests are gated on that extra, as the suite gates jax and juliacall tests.
 - `examples/real_data/chb01_seizures/` is the empirical capstone's sealed
   artefact: the suite and fusion run on the real CHB-MIT chb01 seizures, with an
   `EarlyWarningEvidence` per detector per seizure and an aggregate results record.

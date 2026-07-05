@@ -12,7 +12,7 @@
     "research_experimental_modules": 201,
     "runtime_serving_modules": 143,
     "rust_kernel_files": 97,
-    "test_files": 776
+    "test_files": 777
   },
   "documentation": {
     "public_pages": [
@@ -1967,6 +1967,7 @@
       "tests/test_drivers.py",
       "tests/test_drivers_oscillators.py",
       "tests/test_dvoc_oscillation_damping.py",
+      "tests/test_early_warning_domain.py",
       "tests/test_early_warning_evidence.py",
       "tests/test_early_warning_leadtime.py",
       "tests/test_early_warning_leadtime_eeg.py",
