@@ -1036,42 +1036,47 @@ def edf_start_datetime(path: str | Path) -> str:
 # --------------------------------------------------------------------------- #
 
 
-def _verdict(leads_by_detector: Mapping[str, list[float]]) -> str:
+def _verdict(leads_by_detector: Mapping[str, list[float]], n_seizures: int) -> str:
     """Return the honest matched-false-alarm verdict across the seizures.
 
-    Names a fusion advantage only if the weighted fusion's median leading lead
-    strictly exceeds every single member's at the matched false-alarm rate; says
-    so plainly otherwise, since the auditable moat holds either way.
+    The headline is the detection count first, then the lead: a lead measured on
+    one seizure is not a robust advantage however long it is, so a fusion
+    advantage is named only when the fusion *leads more seizures* than every
+    single member. When detection is sparse — or no detector leads any seizure —
+    the verdict says so plainly, since the auditable moat holds regardless of
+    which detector leads or whether any does.
     """
-    medians = {
-        name: (float(np.median(leads)) if leads else None)
-        for name, leads in leads_by_detector.items()
+    led = {name: len(leads_by_detector.get(name, [])) for name in DETECTORS}
+    median = {
+        name: (float(np.median(leads_by_detector[name])) if led[name] else None)
+        for name in DETECTORS
     }
-    fusion = medians.get(ENSEMBLE_WEIGHTED)
-    members = {
-        name: value
-        for name, value in medians.items()
-        if name != ENSEMBLE_WEIGHTED and value is not None
-    }
-    if fusion is None:
+    members = {name: led[name] for name in DETECTORS if name != ENSEMBLE_WEIGHTED}
+    detail = "; ".join(
+        f"{name} {led[name]}/{n_seizures}"
+        + (f" (median lead {median[name]:.0f} s)" if median[name] is not None else "")
+        for name in DETECTORS
+    )
+    if all(count == 0 for count in led.values()):
         return (
-            "NO FUSION LEAD: the weighted fusion produced no leading detection at "
-            "the matched false-alarm rate; report the members' leads on their own."
+            "NO EARLY WARNING: at a matched false-alarm rate no detector leads any "
+            f"of the {n_seizures} evaluated seizures. Detection is a commodity "
+            "here; the auditable sealed evidence, not a lead, is the deliverable."
         )
-    if members and all(fusion > value for value in members.values()):
-        best = max(members, key=members.__getitem__)
+    fusion_led = led[ENSEMBLE_WEIGHTED]
+    if members and fusion_led > max(members.values()):
         return (
-            "FUSION LEADS: at a matched false-alarm rate the weighted fusion's "
-            f"median leading lead ({fusion:.1f} s) exceeds every single member's "
-            f"(best single: {best} at {members[best]:.1f} s). The advantage is a "
-            "lead-time improvement at fixed false alarm, not a spent false-alarm "
-            "budget."
+            f"FUSION DETECTS MORE: at a matched false-alarm rate the weighted "
+            f"fusion leads {fusion_led}/{n_seizures} seizures, more than any single "
+            f"member ({detail}). The gain is more leading detections at fixed false "
+            "alarm, not a spent false-alarm budget."
         )
     return (
-        "NO FUSION ADVANTAGE: at a matched false-alarm rate the weighted fusion "
-        f"(median leading lead {fusion:.1f} s) does not beat the best single "
-        "member; report the honest per-detector leads. The auditable, sealed "
-        "evidence is the deliverable regardless of which detector leads."
+        "SPARSE DETECTION, NO ROBUST ADVANTAGE: at a matched false-alarm rate "
+        f"detection is sparse and no detector leads more seizures than the fusion "
+        f"({detail}). A longer lead on one seizure is not a robust advantage; "
+        "consistent with detection as a commodity, the auditable sealed evidence "
+        "is the deliverable."
     )
 
 
@@ -1182,7 +1187,7 @@ def main(
         "matched_false_alarm_thresholds": thresholds,
         "seizures": seizure_records,
         "excluded_seizures": excluded,
-        "verdict": _verdict(leads_by_detector),
+        "verdict": _verdict(leads_by_detector, len(seizure_records)),
     }
     (out / "early_warning_leadtime_eeg_results.json").write_text(
         json.dumps(payload, indent=2) + "\n", encoding="utf-8"

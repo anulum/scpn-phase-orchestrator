@@ -65,6 +65,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `tests/test_early_warning_leadtime_eeg.py`. EDF ingestion needs the optional
   `eeg` extra (`pip install -e .[eeg]`, pyedflib); its tests are gated on that
   extra, as the suite gates jax and juliacall tests.
+- `examples/real_data/chb01_seizures/` is the empirical capstone's sealed
+  artefact: the suite and fusion run on the real CHB-MIT chb01 seizures, with an
+  `EarlyWarningEvidence` per detector per seizure and an aggregate results record.
+  The honest matched-false-alarm result is **sparse detection with no robust
+  advantage** — one of six evaluated seizures is led (rising synchronisation and
+  the fusion, ≈ 7.4 min before onset on `chb01_04`), critical slowing down and
+  transition entropy lead none, and the fusion detects no more seizures than its
+  best member; a longer lead on one seizure is not a robust advantage. This is the
+  strategy made concrete: detection is a commodity, so the deliverable is the
+  auditable sealed evidence, not the lead. `tests/test_chb01_seizure_evidence.py`
+  recomputes every seal, pins the leading detection's digest, and guards the
+  sparse-detection result; the raw EDF is citation-only and never redistributed.
 
 ### Changed
 

@@ -12,7 +12,7 @@
     "research_experimental_modules": 201,
     "runtime_serving_modules": 143,
     "rust_kernel_files": 97,
-    "test_files": 774
+    "test_files": 775
   },
   "documentation": {
     "public_pages": [
@@ -1870,6 +1870,7 @@
       "tests/test_causal_supervisor.py",
       "tests/test_chaos.py",
       "tests/test_chaos_cli.py",
+      "tests/test_chb01_seizure_evidence.py",
       "tests/test_check_tracked_ignored.py",
       "tests/test_chemical_reactor_domainpack.py",
       "tests/test_chemical_reactor_morphogenetic_field_demo.py",

@@ -513,34 +513,32 @@ def test_seizure_lead_result_audit_record_round_trips() -> None:
 # --------------------------------------------------------------------------- #
 
 
-def test_verdict_names_a_fusion_lead_when_it_beats_every_member() -> None:
+def test_verdict_names_a_fusion_advantage_only_on_more_detections() -> None:
+    # The fusion leads three seizures, more than any single member (one each).
     leads = {
         "critical_slowing_down": [10.0],
         "synchronisation": [20.0],
-        "transition_entropy": [15.0],
-        ENSEMBLE_WEIGHTED: [40.0],
+        "transition_entropy": [],
+        ENSEMBLE_WEIGHTED: [30.0, 40.0, 50.0],
     }
-    assert verdict(leads).startswith("FUSION LEADS")
+    assert verdict(leads, 6).startswith("FUSION DETECTS MORE")
 
 
-def test_verdict_reports_no_advantage_when_a_member_matches_the_fusion() -> None:
+def test_verdict_calls_a_single_seizure_lead_not_a_robust_advantage() -> None:
+    # The real chb01 shape: fusion and synchronisation each lead one seizure, the
+    # fusion by a longer lead — a longer lead on n=1 is not a robust advantage.
     leads = {
-        "critical_slowing_down": [10.0],
-        "synchronisation": [50.0],
-        "transition_entropy": [15.0],
-        ENSEMBLE_WEIGHTED: [40.0],
+        "critical_slowing_down": [],
+        "synchronisation": [441.5],
+        "transition_entropy": [],
+        ENSEMBLE_WEIGHTED: [450.5],
     }
-    assert verdict(leads).startswith("NO FUSION ADVANTAGE")
+    assert verdict(leads, 6).startswith("SPARSE DETECTION, NO ROBUST ADVANTAGE")
 
 
-def test_verdict_reports_no_fusion_lead_when_the_fusion_is_silent() -> None:
-    leads = {
-        "critical_slowing_down": [10.0],
-        "synchronisation": [20.0],
-        "transition_entropy": [15.0],
-        ENSEMBLE_WEIGHTED: [],
-    }
-    assert verdict(leads).startswith("NO FUSION LEAD")
+def test_verdict_reports_no_early_warning_when_nothing_leads() -> None:
+    leads = {name: [] for name in DETECTORS}
+    assert verdict(leads, 6).startswith("NO EARLY WARNING")
 
 
 # --------------------------------------------------------------------------- #

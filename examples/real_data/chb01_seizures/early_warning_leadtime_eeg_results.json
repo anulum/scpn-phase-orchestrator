@@ -1,0 +1,99 @@
+{
+  "benchmark": "early_warning_leadtime_eeg",
+  "corpus": "CHB-MIT Scalp EEG Database, subject chb01 (Shoeb 2009)",
+  "sampling_rate_hz": 256.0,
+  "decimated_rate_hz": 32.0,
+  "band_hz": [
+    4.0,
+    30.0
+  ],
+  "window": 128,
+  "step": 16,
+  "baseline_seconds": 300.0,
+  "horizon_seconds": 600.0000000000001,
+  "segment_seconds": 900.0,
+  "target_false_alarm": 0.1,
+  "interictal_null_records": [
+    "chb01_01",
+    "chb01_02",
+    "chb01_05",
+    "chb01_06",
+    "chb01_07"
+  ],
+  "n_null_trials": 20,
+  "matched_false_alarm_thresholds": {
+    "critical_slowing_down": 4.5,
+    "synchronisation": 3.75,
+    "transition_entropy": 0.25,
+    "ensemble_weighted": 3.0
+  },
+  "seizures": [
+    {
+      "record_id": "chb01_03",
+      "onset_s": 2996,
+      "lead_seconds": {
+        "critical_slowing_down": null,
+        "synchronisation": null,
+        "transition_entropy": null,
+        "ensemble_weighted": null
+      }
+    },
+    {
+      "record_id": "chb01_04",
+      "onset_s": 1467,
+      "lead_seconds": {
+        "critical_slowing_down": null,
+        "synchronisation": 441.5,
+        "transition_entropy": null,
+        "ensemble_weighted": 450.5
+      }
+    },
+    {
+      "record_id": "chb01_15",
+      "onset_s": 1732,
+      "lead_seconds": {
+        "critical_slowing_down": null,
+        "synchronisation": null,
+        "transition_entropy": null,
+        "ensemble_weighted": null
+      }
+    },
+    {
+      "record_id": "chb01_16",
+      "onset_s": 1015,
+      "lead_seconds": {
+        "critical_slowing_down": null,
+        "synchronisation": null,
+        "transition_entropy": null,
+        "ensemble_weighted": null
+      }
+    },
+    {
+      "record_id": "chb01_18",
+      "onset_s": 1720,
+      "lead_seconds": {
+        "critical_slowing_down": null,
+        "synchronisation": null,
+        "transition_entropy": null,
+        "ensemble_weighted": null
+      }
+    },
+    {
+      "record_id": "chb01_26",
+      "onset_s": 1862,
+      "lead_seconds": {
+        "critical_slowing_down": null,
+        "synchronisation": null,
+        "transition_entropy": null,
+        "ensemble_weighted": null
+      }
+    }
+  ],
+  "excluded_seizures": [
+    {
+      "record_id": "chb01_21",
+      "onset_s": 327
+    }
+  ],
+  "verdict": "SPARSE DETECTION, NO ROBUST ADVANTAGE: at a matched false-alarm rate detection is sparse and no detector leads more seizures than the fusion (critical_slowing_down 0/6; synchronisation 1/6 (median lead 442 s); transition_entropy 0/6; ensemble_weighted 1/6 (median lead 450 s)). A longer lead on one seizure is not a robust advantage; consistent with detection as a commodity, the auditable sealed evidence is the deliverable."
+}
