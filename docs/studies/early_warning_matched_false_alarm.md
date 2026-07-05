@@ -1,0 +1,145 @@
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<!-- © Concepts 1996–2026 Miroslav Šotek. All rights reserved. -->
+<!-- © Code 2020–2026 Miroslav Šotek. All rights reserved. -->
+<!-- ORCID: 0009-0009-3560-0851 | Contact: www.anulum.li | protoscience@anulum.li -->
+
+# Generic early-warning detection is at chance across four physical domains when held to a matched false-alarm rate
+
+**Miroslav Šotek** (ANULUM / Fortis Studio) · ORCID 0009-0009-3560-0851 · protoscience@anulum.li
+
+*A same-protocol replication across brain, heart, power-grid and palaeoclimate data, with an AR(1)-Kendall-τ head-to-head against Dakos et al. 2008.*
+
+---
+
+## Abstract
+
+Generic early-warning signals (EWS) — the rising variance and lag-one autocorrelation of *critical slowing down*, and related synchronisation and ordinal-entropy indicators — are widely reported to precede abrupt transitions in the brain, the heart, power systems and the climate. Most of that evidence rests on a **retrospective, per-record** test: a rising trend measured over one pre-transition window and compared to surrogates of the *same* record. We ask a different, operational question: **at a fixed false-alarm budget, does an early-warning detector fire on transitions more often than on no-transition controls?** We build one domain-adaptable detector suite and one matched-false-alarm evaluation harness, apply them unchanged (through a per-domain adapter) to four independent labelled corpora — scalp-EEG seizures, cardiac atrial-fibrillation onsets, power-grid growing oscillations, and palaeoclimate abrupt transitions — and score every result with a label-permutation significance test. Across all four domains, **no detector reaches significance** (every best-member p ≥ 0.05): the sparse detection observed is what the matched false-alarm rate produces by chance. Running the canonical literature detector — the Dakos et al. 2008 AR(1)-Kendall-τ trend — through the **same** protocol on the **same** segments confirms it: on its own palaeoclimate records it leads 0 of 6 transitions (p = 1.00), and it beats chance in none of the four domains, though on scalp EEG it is the strongest signal anywhere (3 of 6, p = 0.067). We conclude that the operational bar — matched false alarm plus a significance test — is stricter than the retrospective per-record test the literature uses, that generic EWS *detection* behaves as a commodity at this bar, and that the defensible deliverable is not a lead but the **auditable, hash-sealed, byte-reproducible evidence** — including the sealed silences — that the protocol produces. We state the limitations plainly: the corpora are small (6–12 transitions), so the test has low power, and "at chance" bounds the *demonstrated* skill rather than proving early warning impossible.
+
+---
+
+## 1. Background and question
+
+The theory of critical transitions predicts that a dynamical system approaching a bifurcation recovers more slowly from perturbations, which shows up as a rising variance and a rising lag-one autocorrelation of an observable — *critical slowing down* (Scheffer et al. 2009). The same idea motivates rising-synchronisation and ordinal-transition-entropy indicators. These generic early-warning signals have been reported before epileptic seizures, cardiac arrhythmias, power-system instability, ecological collapse and abrupt climate change.
+
+Almost all of that evidence answers a **retrospective, per-record** question: *within one pre-transition window, is there a statistically significant rising trend of the indicator, relative to surrogate time series of that same record?* (e.g. the Kendall-τ trend test of Dakos et al. 2008). This question is valuable but it is not the question an operator or clinician faces. The operational question is: *if I set an alarm threshold that fires on at most a fixed fraction of no-transition situations, does the detector then fire on genuine transitions more often than that fraction?* — a **matched-false-alarm** question, followed by *is the transition hit-rate above chance?*
+
+This study builds the machinery to answer the operational question honestly, applies it across four independent physical domains with one shared suite, and runs the canonical literature detector through the identical protocol as a same-segments head-to-head.
+
+## 2. Methods
+
+### 2.1 The detector suite
+
+One suite of three passive detectors reads a neutral observable bundle and emits per-window scores:
+
+- **Critical slowing down** — the larger of the robust (median/MAD) z-scores of the windowed variance and lag-one autocorrelation of the observable, against a leading baseline.
+- **Rising synchronisation** — the robust z-score of the Kuramoto order parameter of a population of phase oscillators.
+- **Ordinal-transition entropy** — the robust z-score of the (negated) ordinal-pattern transition entropy of the phase field.
+- **Weighted fusion** — the weighted mean of the three members.
+
+The single-series domains (palaeoclimate) carry one scalar observable, so only critical slowing down applies; the multi-node domains (EEG, ECG, grid) carry a population of oscillators and use all four.
+
+### 2.2 The matched-false-alarm harness
+
+For each domain: a per-domain adapter turns the raw recording into the neutral observable bundle. Each transition is scored on a **fixed pre-onset segment ending at the annotated onset**, so every window is pre-onset and any alarm is a genuine lead. A **no-transition null** — a stable, transition-free stretch — is cut into non-overlapping trials of the same length. Each detector's alarm threshold is set **continuously** to the tightest value holding the trial false-alarm rate at or below a target of 10 % (the quantile of the null alarm scores, with no grid ceiling, so a variance-heavy detector is never silently clipped). A transition is *led* when the detector alarms within its pre-onset segment. The achieved false-alarm rate is recorded alongside every threshold.
+
+### 2.3 The permutation significance test
+
+A sealed detection count leaves one question open: does the detector lead transitions *more than the matched false-alarm rate explains*? We answer it with a **label-permutation (exchangeability) test**. Each segment — transition or null — alarms or not at the calibrated threshold. Under the null hypothesis that transition segments are indistinguishable from nulls, which of the pooled segments carry the "transition" label is exchangeable. We draw 10 000 random transition-sized subsets of the pooled alarm outcomes (fixed seed, so the p-value is byte-reproducible), build the null distribution of the lead count, and report the one-sided p-value with an add-one correction. A small p-value means the detector beats the matched false-alarm rate.
+
+### 2.4 The competitor head-to-head
+
+The canonical literature detector is Dakos et al. 2008: the **Kendall rank correlation τ of the windowed lag-one autocorrelation against time** — a rising-AR(1) trend. We implement it as a per-segment score, calibrate a matched-false-alarm τ threshold on the null segments exactly as above, and run the **same** permutation test on the resulting alarms. Because the two detectors read the same one-dimensional signal (the detrended proxy residual for palaeoclimate, the cross-node Kuramoto order parameter for the multi-node domains), the head-to-head is a same-segments, same-budget, same-test comparison in which only the detector differs.
+
+### 2.5 Corpora (citation-only)
+
+| Domain | Corpus | Transitions | Null |
+|--------|--------|:-----------:|------|
+| Brain (scalp EEG) | CHB-MIT, subject chb01 (Shoeb 2009, PhysioNet) | 6 seizures | interictal records |
+| Heart (ECG) | MIT-BIH AFDB (Moody & Mark 1983, PhysioNet) | 6 AF onsets | sinus stretches |
+| Grid (PMU) | PSML 23-bus co-simulation (Zheng et al. 2021) | 12 growing oscillations | damped disturbances |
+| Palaeoclimate | Dakos et al. 2008 records (earlywarningtoolbox/datasets) | 6 of 8 evaluated | stable pre-approach intervals |
+
+All raw data are public and cited; none is redistributed. Only derived, hash-sealed, byte-reproducible evidence records are committed. Each detector's alarm — or silence — is sealed into a content-addressed (canonical-JSON SHA-256) `EarlyWarningEvidence` record, so the result, including every sealed silence, is auditable and reproduces bit-for-bit from a fresh run.
+
+## 3. Results
+
+### 3.1 SCPN suite across four domains
+
+At a matched false-alarm rate (target 10 %), detection is sparse everywhere, and **no detector reaches significance in any domain**:
+
+| Domain | Best member | Led / N | Permutation p |
+|--------|-------------|:-------:|:-------------:|
+| Brain (EEG) | critical slowing down | 2 / 6 | 0.215 |
+| Heart (ECG) | synchronisation | 2 / 6 | 0.219 |
+| Grid (PMU) | critical slowing down | 3 / 12 | 0.195 |
+| Palaeoclimate | critical slowing down | 1 / 6 | 0.514 |
+
+The fusion never leads more transitions than its best single member, so there is no robust fusion advantage. The observed lead counts are within what the matched false-alarm rate produces by chance (expected counts 0.6–1.7 across the domains).
+
+### 3.2 Head-to-head: SCPN vs Dakos AR(1)-Kendall-τ
+
+Running the canonical Dakos detector through the identical protocol on the identical segments:
+
+| Domain | SCPN best member (led/N, p) | Dakos AR(1)-Kendall-τ (led/N, p) |
+|--------|:---------------------------:|:--------------------------------:|
+| Palaeoclimate | CSD 1/6, p = 0.514 | 0/6, **p = 1.000** |
+| Grid | CSD 3/12, p = 0.195 | 1/12, **p = 0.713** |
+| Heart | sync 2/6, p = 0.219 | 0/6, **p = 1.000** |
+| Brain (EEG) | CSD 2/6, p = 0.215 | **3/6, p = 0.067** |
+
+On its own palaeoclimate records — the data Dakos et al. analysed — the AR(1)-Kendall-τ detector, at a matched operating point, leads **zero** of six transitions (p = 1.00): it does not beat chance, and it does no better than the SCPN suite. The same holds for grid and heart. The one exception is scalp EEG, where the rising-AR(1) trend is the **strongest signal anywhere in the study** (3 of 6, p = 0.067) — marginally short of significance, and better than the SCPN detectors on that domain.
+
+### 3.3 The honest reading
+
+The result is not "nothing works". It is: **at a matched operating point and a permutation significance test, nothing reaches significance at these corpus sizes** — neither the SCPN suite nor the canonical literature detector, in any of the four domains. The literature's positive EWS results come from a *retrospective per-record* significance test that this operational protocol is stricter than. The one place a detector comes close — the AR(1) trend on scalp EEG — is consistent with the seizure-prediction literature's use of autocorrelation features and warrants a larger, higher-power EEG corpus.
+
+## 4. Discussion
+
+**Detection is a commodity; the moat is the evidence.** Across four independent physical domains, generic early-warning *detection* at an honest operating point is sparse and, by a permutation test, at chance. This is not a defect of one suite: the canonical Dakos detector fares no better on its own data. What is *not* a commodity is the auditable, reproducible, claim-bounded envelope the protocol produces — a matched-false-alarm operating point, a permutation p-value, and a hash-sealed `EarlyWarningEvidence` record for every transition, **including the sealed silences**. A positive early-warning claim should be required to clear this operational bar; most published EWS results have only cleared the retrospective per-record one.
+
+**The evaluation gap is the finding.** The difference between "there is a detectable rising trend in this record's approach" (retrospective, per-record, vs surrogates) and "the detector fires on transitions more than on controls at a fixed false-alarm budget" (operational, matched, significance-tested) is exactly the gap between the literature's positive results and this study's null. That gap — not any single detector — is what the four-domain replication and the Dakos head-to-head expose.
+
+## 5. Limitations
+
+Stated plainly, because they bound the claim:
+
+- **Small corpora, low power.** With 6–12 transitions per domain, the permutation test has limited power; "at chance" bounds the *demonstrated* skill and does **not** prove early warning is impossible. A modestly skilled detector could remain non-significant at this n.
+- **One competitor.** Only the Dakos AR(1)-Kendall-τ detector was run head-to-head; modern approaches (e.g. deep-learning tipping-point predictors) were not tested and could behave differently.
+- **Single-subject EEG; within-record climate null.** The EEG corpus is one subject (chb01); the palaeoclimate null is the stable pre-approach interval of each record, which carries that record's own variability and so is conservative.
+- **Parameterisation.** One reasonable choice of window, step, baseline and target false alarm was used per domain; a sweep was not performed.
+- **A modality not yet included.** Gene-expression / dynamical-network-biomarker early warning of disease deterioration and cancer (Chen et al. 2012) is a different modality — few timepoints, many genes, cross-sample statistics — and is deferred to a follow-up with a dedicated detector.
+
+## 6. Reproduction
+
+Every result regenerates deterministically (no randomness in the pipelines; the permutation test uses a fixed seed). With each raw corpus in a directory:
+
+```bash
+python bench/early_warning_leadtime_eeg.py     DATA OUT   # brain
+python bench/early_warning_leadtime_cardiac.py DATA OUT   # heart
+python bench/early_warning_leadtime_grid.py    DATA OUT   # grid
+python bench/early_warning_leadtime_climate.py DATA OUT   # palaeoclimate
+python bench/head_to_head_ar1_kendall.py OUT \
+    --climate-dir C --grid-dir G --cardiac-dir H --eeg-dir E   # head-to-head
+```
+
+The sealed evidence, aggregate results (with the permutation block), and the head-to-head comparison are committed under `examples/real_data/`. A fresh run reproduces every `content_hash` bit-for-bit.
+
+## 7. Data availability
+
+Raw corpora are public and cited, not redistributed:
+
+- CHB-MIT Scalp EEG Database — <https://physionet.org/content/chbmit/>
+- MIT-BIH Atrial Fibrillation Database — <https://physionet.org/content/afdb/>
+- PSML power-system dataset (Zheng et al. 2021) — the 23-bus Millisecond-level PMU measurements.
+- Dakos et al. 2008 palaeoclimate records — <https://github.com/earlywarningtoolbox/datasets>.
+
+## References
+
+- Scheffer M, Bascompte J, Brock WA, et al. Early-warning signals for critical transitions. *Nature* 461:53 (2009).
+- Dakos V, Scheffer M, van Nes EH, Brovkin V, Petoukhov V, Held H. Slowing down as an early warning signal for abrupt climate change. *PNAS* 105(38):14308 (2008).
+- Dakos V, Carpenter SR, Brock WA, et al. Methods for detecting early warning signals of critical transitions in time series. *PLoS ONE* 7(7):e41010 (2012).
+- Shoeb A. Application of machine learning to epileptic seizure onset detection and treatment. PhD thesis, MIT (2009); CHB-MIT via PhysioNet.
+- Moody GB, Mark RG. A new method for detecting atrial fibrillation using R-R intervals. *Computers in Cardiology* 10:227 (1983).
+- Goldberger AL, Amaral LAN, Glass L, et al. PhysioBank, PhysioToolkit, and PhysioNet. *Circulation* 101(23):e215 (2000).
+- Zheng X, et al. A multi-scale time-series dataset with benchmark for machine learning in electricity (PSML) (2021).
+- Chen L, Liu R, Liu Z-P, Li M, Aihara K. Detecting early-warning signals for sudden deterioration of complex diseases by dynamical network biomarkers. *Scientific Reports* 2:342 (2012).

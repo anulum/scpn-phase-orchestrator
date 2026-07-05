@@ -16,7 +16,7 @@
 | Rust kernel files | 97 |
 | Optional extras | 22 |
 | Python test files | 787 |
-| Public documentation pages | 218 |
+| Public documentation pages | 219 |
 | GitHub Actions workflows | 12 |
 
 Evidence boundary: this snapshot is a static inventory. Performance, coverage, hardware, and scientific-fidelity claims require their own committed evidence artifacts.
