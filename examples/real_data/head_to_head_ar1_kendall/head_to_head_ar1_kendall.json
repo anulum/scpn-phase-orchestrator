@@ -1,0 +1,106 @@
+{
+  "benchmark": "head_to_head_ar1_kendall",
+  "question": "At a matched false-alarm rate, does the canonical Dakos et al. 2008 AR(1)-Kendall-tau detector beat the SCPN suite, or chance?",
+  "comparisons": [
+    {
+      "domain": "palaeoclimate",
+      "signal": "detrended proxy residual",
+      "n_transitions": 6,
+      "scpn": {
+        "detector": "critical_slowing_down",
+        "observed_led": 1,
+        "n_transitions": 6,
+        "p_value": 0.5144485551444855
+      },
+      "dakos_ar1_kendall": {
+        "detector": "ar1_kendall_tau",
+        "tau_threshold": 0.6363636363636365,
+        "achieved_false_alarm": 0.1,
+        "significance": {
+          "observed_led": 0,
+          "n_transitions": 6,
+          "pooled_alarm_rate": 0.08928571428571429,
+          "expected_led": 0.5357142857142857,
+          "p_value": 1.0,
+          "n_permutations": 10000,
+          "seed": 0
+        }
+      }
+    },
+    {
+      "domain": "grid",
+      "signal": "cross-bus Kuramoto order parameter",
+      "n_transitions": 12,
+      "scpn": {
+        "detector": "critical_slowing_down",
+        "observed_led": 3,
+        "n_transitions": 12,
+        "p_value": 0.1952804719528047
+      },
+      "dakos_ar1_kendall": {
+        "detector": "ar1_kendall_tau",
+        "tau_threshold": 0.35238095238095246,
+        "achieved_false_alarm": 0.08333333333333333,
+        "significance": {
+          "observed_led": 1,
+          "n_transitions": 12,
+          "pooled_alarm_rate": 0.08333333333333333,
+          "expected_led": 1.0,
+          "p_value": 0.7126287371262874,
+          "n_permutations": 10000,
+          "seed": 0
+        }
+      }
+    },
+    {
+      "domain": "cardiac",
+      "signal": "cross-lead Kuramoto order parameter",
+      "n_transitions": 6,
+      "scpn": {
+        "detector": "synchronisation",
+        "observed_led": 2,
+        "n_transitions": 6,
+        "p_value": 0.21927807219278073
+      },
+      "dakos_ar1_kendall": {
+        "detector": "ar1_kendall_tau",
+        "tau_threshold": 0.08556464624332726,
+        "achieved_false_alarm": 0.1,
+        "significance": {
+          "observed_led": 0,
+          "n_transitions": 6,
+          "pooled_alarm_rate": 0.07692307692307693,
+          "expected_led": 0.46153846153846156,
+          "p_value": 1.0,
+          "n_permutations": 10000,
+          "seed": 0
+        }
+      }
+    },
+    {
+      "domain": "eeg",
+      "signal": "cross-channel Kuramoto order parameter",
+      "n_transitions": 6,
+      "scpn": {
+        "detector": "critical_slowing_down",
+        "observed_led": 2,
+        "n_transitions": 6,
+        "p_value": 0.21547845215478453
+      },
+      "dakos_ar1_kendall": {
+        "detector": "ar1_kendall_tau",
+        "tau_threshold": 0.07891801450083662,
+        "achieved_false_alarm": 0.1,
+        "significance": {
+          "observed_led": 3,
+          "n_transitions": 6,
+          "pooled_alarm_rate": 0.19230769230769232,
+          "expected_led": 1.153846153846154,
+          "p_value": 0.066993300669933,
+          "n_permutations": 10000,
+          "seed": 0
+        }
+      }
+    }
+  ]
+}

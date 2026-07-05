@@ -12,7 +12,7 @@
     "research_experimental_modules": 201,
     "runtime_serving_modules": 143,
     "rust_kernel_files": 97,
-    "test_files": 786
+    "test_files": 787
   },
   "documentation": {
     "public_pages": [
@@ -2054,6 +2054,7 @@
       "tests/test_grpc_service.py",
       "tests/test_hardware_io.py",
       "tests/test_hdl_compiler.py",
+      "tests/test_head_to_head_ar1_kendall.py",
       "tests/test_hierarchy_transport_demos.py",
       "tests/test_hierarchy_transport_domainpack_workflow.py",
       "tests/test_hodge.py",
