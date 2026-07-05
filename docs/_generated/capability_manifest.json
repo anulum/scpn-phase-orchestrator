@@ -12,7 +12,7 @@
     "research_experimental_modules": 201,
     "runtime_serving_modules": 143,
     "rust_kernel_files": 97,
-    "test_files": 785
+    "test_files": 786
   },
   "documentation": {
     "public_pages": [
@@ -1924,6 +1924,7 @@
       "tests/test_coherence_monitor_config_validation.py",
       "tests/test_compat.py",
       "tests/test_compat_deep.py",
+      "tests/test_competitor_ar1_kendall.py",
       "tests/test_connectome.py",
       "tests/test_connectome_python_fallback.py",
       "tests/test_connectome_validation_guards.py",

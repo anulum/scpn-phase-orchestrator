@@ -131,6 +131,7 @@ __all__ = [
     "null_trials",
     "permutation_significance",
     "permutation_significance_by_detector",
+    "permutation_significance_from_alarms",
     "seizure_lead_samples",
     "slice_observables",
 ]
@@ -660,6 +661,75 @@ class PermutationSignificance:
         }
 
 
+def permutation_significance_from_alarms(
+    transition_alarms: Sequence[bool],
+    null_alarms: Sequence[bool],
+    *,
+    n_permutations: int = DEFAULT_PERMUTATIONS,
+    seed: int = DEFAULT_PERMUTATION_SEED,
+) -> PermutationSignificance:
+    """Test whether a transition alarm count beats a matched-false-alarm null.
+
+    The detector-agnostic core of the significance test: it needs only the binary alarm
+    outcome of each transition segment and each null trial, so it scores any detector —
+    the SCPN suite via :func:`permutation_significance`, or a competitor (e.g. an
+    AR(1)-Kendall-τ trend detector) whose per-segment score is thresholded to a matched
+    false alarm the same way. Under the null that transition segments are exchangeable
+    with nulls, drawing ``n_permutations`` random transition-sized subsets of the pooled
+    outcomes builds the null distribution of the alarm count; the one-sided p-value is
+    the fraction reaching the observed count, with an add-one correction.
+
+    Parameters
+    ----------
+    transition_alarms : sequence of bool
+        Whether each transition segment alarmed at its calibrated threshold.
+    null_alarms : sequence of bool
+        Whether each null trial alarmed at that threshold.
+    n_permutations : int
+        Number of random relabellings to draw; must be a positive integer.
+    seed : int
+        Seed of the resampling, so the p-value is reproducible.
+
+    Returns
+    -------
+    PermutationSignificance
+        The observed and expected alarm counts and the permutation p-value.
+
+    Raises
+    ------
+    ValueError
+        If either alarm set is empty or ``n_permutations`` is not positive.
+    """
+    if not transition_alarms:
+        raise ValueError("transition_alarms must not be empty")
+    if not null_alarms:
+        raise ValueError("null_alarms must not be empty")
+    draws = _positive_int(n_permutations, "n_permutations")
+    transition = [bool(alarm) for alarm in transition_alarms]
+    null = [bool(alarm) for alarm in null_alarms]
+    observed = int(sum(transition))
+    n_transitions = len(transition)
+    pool = np.array(transition + null, dtype=bool)
+    total = int(pool.shape[0])
+    rng = np.random.default_rng(seed)
+    reached = 0
+    for _ in range(draws):
+        subset = rng.permutation(total)[:n_transitions]
+        if int(pool[subset].sum()) >= observed:
+            reached += 1
+    p_value = (1 + reached) / (draws + 1)
+    pooled_rate = float(pool.mean())
+    return PermutationSignificance(
+        observed_led=observed,
+        n_transitions=n_transitions,
+        pooled_alarm_rate=pooled_rate,
+        expected_led=n_transitions * pooled_rate,
+        p_value=p_value,
+        n_permutations=draws,
+        seed=int(seed),
+    )
+
+
 def permutation_significance(
     transition_trajectories: Sequence[DetectorTrajectory],
     null_trajectories: Sequence[DetectorTrajectory],
@@ -710,7 +780,6 @@ def permutation_significance(
         raise ValueError("transition_trajectories must not be empty")
     if not null_trajectories:
         raise ValueError("null_trajectories must not be empty")
-    draws = _positive_int(n_permutations, "n_permutations")
     transition_alarms = [
         _alarm_sample(t, threshold=threshold, persistence=persistence) is not None
         for t in transition_trajectories
@@ -719,26 +788,8 @@ def permutation_significance(
         _alarm_sample(t, threshold=threshold, persistence=persistence) is not None
         for t in null_trajectories
     ]
-    observed = int(sum(transition_alarms))
-    n_transitions = len(transition_alarms)
-    pool = np.array(transition_alarms + null_alarms, dtype=bool)
-    total = int(pool.shape[0])
-    rng = np.random.default_rng(seed)
-    reached = 0
-    for _ in range(draws):
-        subset = rng.permutation(total)[:n_transitions]
-        if int(pool[subset].sum()) >= observed:
-            reached += 1
-    p_value = (1 + reached) / (draws + 1)
-    pooled_rate = float(pool.mean())
-    return PermutationSignificance(
-        observed_led=observed,
-        n_transitions=n_transitions,
-        pooled_alarm_rate=pooled_rate,
-        expected_led=n_transitions * pooled_rate,
-        p_value=p_value,
-        n_permutations=draws,
-        seed=int(seed),
+    return permutation_significance_from_alarms(
+        transition_alarms, null_alarms, n_permutations=n_permutations, seed=seed
     )
 
 

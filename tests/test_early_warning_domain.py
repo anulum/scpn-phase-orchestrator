@@ -40,6 +40,7 @@ from bench.early_warning_domain import (
     null_trials,
     permutation_significance,
     permutation_significance_by_detector,
+    permutation_significance_from_alarms,
     seizure_lead_samples,
     slice_observables,
 )
@@ -462,6 +463,36 @@ def test_permutation_by_detector_needs_every_threshold() -> None:
         permutation_significance_by_detector(
             transitions, nulls, thresholds={SYNCHRONISATION: 0.0}
         )
+
+
+def test_permutation_from_alarms_scores_a_binary_outcome() -> None:
+    # Three of three transitions alarm, none of seven nulls — the same clear-signal
+    # case, from raw alarm booleans (the competitor detector's path).
+    result = permutation_significance_from_alarms(
+        [True, True, True], [False] * 7, n_permutations=5000
+    )
+    assert result.observed_led == 3
+    assert result.pooled_alarm_rate == pytest.approx(0.3)
+    assert result.p_value < 0.05
+
+
+def test_permutation_from_alarms_matches_the_trajectory_path() -> None:
+    # The trajectory API delegates to the alarm-boolean core, so a hand-built pair of
+    # alarming transitions and silent nulls gives the same p-value both ways.
+    transitions = [_trajectory([0.0, 5.0, 5.0]) for _ in range(2)]
+    nulls = [_trajectory([0.0, 0.0, 0.0]) for _ in range(6)]
+    from_traj = permutation_significance(transitions, nulls, threshold=3.0, seed=4)
+    from_alarms = permutation_significance_from_alarms(
+        [True, True], [False] * 6, seed=4
+    )
+    assert from_traj.p_value == from_alarms.p_value
+
+
+def test_permutation_from_alarms_rejects_empty_sets() -> None:
+    with pytest.raises(ValueError, match="transition_alarms must not be empty"):
+        permutation_significance_from_alarms([], [False])
+    with pytest.raises(ValueError, match="null_alarms must not be empty"):
+        permutation_significance_from_alarms([True], [])
 
 
 # --------------------------------------------------------------------------- #
