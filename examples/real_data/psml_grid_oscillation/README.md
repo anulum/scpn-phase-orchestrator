@@ -47,6 +47,12 @@ honest operating point, the detection is a **commodity**. The deliverable is the
 **auditable, reproducible, claim-bounded sealed evidence** — not the lead, and not
 a claim that the suite predicts grid instability.
 
+A label-permutation significance test (10 000 relabellings, seed 0, recorded in the
+aggregate as `permutation_significance`) confirms this: even critical slowing down,
+the best member, leads 3 / 12 against 1.7 expected by chance at the matched false-alarm
+rate — **p ≈ 0.20**, not significant. No detector beats chance, so the sparse detection
+is exactly what the matched false-alarm rate produces.
+
 ## The source data (not included here)
 
 The raw co-simulation data is **citation-only** and is **not redistributed** here.

@@ -28,6 +28,44 @@
     "transition_entropy": 0.08333333333333333,
     "ensemble_weighted": 0.08333333333333333
   },
+  "permutation_significance": {
+    "critical_slowing_down": {
+      "observed_led": 3,
+      "n_transitions": 12,
+      "pooled_alarm_rate": 0.1388888888888889,
+      "expected_led": 1.6666666666666667,
+      "p_value": 0.1952804719528047,
+      "n_permutations": 10000,
+      "seed": 0
+    },
+    "synchronisation": {
+      "observed_led": 0,
+      "n_transitions": 12,
+      "pooled_alarm_rate": 0.05555555555555555,
+      "expected_led": 0.6666666666666666,
+      "p_value": 1.0,
+      "n_permutations": 10000,
+      "seed": 0
+    },
+    "transition_entropy": {
+      "observed_led": 2,
+      "n_transitions": 12,
+      "pooled_alarm_rate": 0.1111111111111111,
+      "expected_led": 1.3333333333333333,
+      "p_value": 0.40445955404459555,
+      "n_permutations": 10000,
+      "seed": 0
+    },
+    "ensemble_weighted": {
+      "observed_led": 2,
+      "n_transitions": 12,
+      "pooled_alarm_rate": 0.1111111111111111,
+      "expected_led": 1.3333333333333333,
+      "p_value": 0.4072592740725927,
+      "n_permutations": 10000,
+      "seed": 0
+    }
+  },
   "transitions": [
     {
       "record_id": "row_115",

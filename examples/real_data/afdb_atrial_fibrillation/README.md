@@ -35,6 +35,11 @@ operating point, the detection is a **commodity**. The deliverable is the
 **auditable, reproducible, claim-bounded sealed evidence** — including the sealed
 silences — not the lead, and not a claim that the suite predicts AF.
 
+A label-permutation significance test (10 000 relabellings, seed 0, recorded in the
+aggregate as `permutation_significance`) confirms this: the best members —
+synchronisation and the fusion — each lead 2 / 6 against 0.9 expected by chance at the
+matched false-alarm rate, **p ≈ 0.22**, not significant. No detector beats chance.
+
 ### Two honest caveats specific to this domain
 
 - **Thin oscillator population.** AFDB carries only two ECG leads, so the

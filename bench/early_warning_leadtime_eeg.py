@@ -126,6 +126,7 @@ from bench.early_warning_domain import (
     domain_verdict,
     evaluate_seizure,
     null_trials,
+    permutation_significance_by_detector,
     slice_observables,
 )
 from scpn_phase_orchestrator.monitor.early_warning_suite import (
@@ -486,6 +487,7 @@ def main(
     leads_by_detector: dict[str, list[float]] = {name: [] for name in DETECTORS}
     seizure_records: list[dict[str, object]] = []
     excluded: list[dict[str, object]] = []
+    transition_segments: list[SuiteObservables] = []
     for record_id, onset_s in seizures.items():
         path = data / f"{record_id}.edf"
         observables = adapter.observables(load_edf_channels(path))
@@ -499,6 +501,7 @@ def main(
         segment = slice_observables(
             observables, start=onset_sample - segment_samples, stop=onset_sample
         )
+        transition_segments.append(segment)
         result = evaluate_seizure(
             segment,
             record_id=record_id,
@@ -528,6 +531,15 @@ def main(
             }
         )
 
+    significance = permutation_significance_by_detector(
+        transition_segments,
+        trials,
+        thresholds=thresholds,
+        window=WINDOW,
+        step=STEP,
+        baseline_fraction=baseline_fraction,
+    )
+
     payload = {
         "benchmark": "early_warning_leadtime_eeg",
         "corpus": "CHB-MIT Scalp EEG Database, subject chb01 (Shoeb 2009)",
@@ -544,6 +556,9 @@ def main(
         "n_null_trials": len(trials),
         "matched_false_alarm_thresholds": thresholds,
         "achieved_false_alarm": calibration.achieved_false_alarm,
+        "permutation_significance": {
+            name: result.to_audit_record() for name, result in significance.items()
+        },
         "seizures": seizure_records,
         "excluded_seizures": excluded,
         "verdict": domain_verdict(

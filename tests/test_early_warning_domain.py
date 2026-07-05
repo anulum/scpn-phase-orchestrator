@@ -39,6 +39,7 @@ from bench.early_warning_domain import (
     false_alarm_rate,
     null_trials,
     permutation_significance,
+    permutation_significance_by_detector,
     seizure_lead_samples,
     slice_observables,
 )
@@ -428,6 +429,38 @@ def test_permutation_rejects_a_non_positive_permutation_count() -> None:
             [_trajectory([0.0, 0.0, 0.0])],
             threshold=3.0,
             n_permutations=0,
+        )
+
+
+def test_permutation_by_detector_covers_every_suite_member() -> None:
+    transitions = [_transition_observables(seed=s) for s in (20, 21)]
+    nulls = [_incoherent_observables(seed=s) for s in (30, 31, 32)]
+    thresholds = dict.fromkeys(DETECTORS, 0.0)
+    result = permutation_significance_by_detector(
+        transitions, nulls, thresholds=thresholds, n_permutations=2000
+    )
+    assert set(result) == set(DETECTORS)
+    for name in DETECTORS:
+        assert result[name].n_transitions == 2
+        assert 0.0 < result[name].p_value <= 1.0
+
+
+def test_permutation_by_detector_rejects_empty_sets() -> None:
+    nulls = [_incoherent_observables(seed=1)]
+    thresholds = dict.fromkeys(DETECTORS, 0.0)
+    with pytest.raises(ValueError, match="transition_observables must not be empty"):
+        permutation_significance_by_detector([], nulls, thresholds=thresholds)
+    transitions = [_transition_observables(seed=1)]
+    with pytest.raises(ValueError, match="null_observables must not be empty"):
+        permutation_significance_by_detector(transitions, [], thresholds=thresholds)
+
+
+def test_permutation_by_detector_needs_every_threshold() -> None:
+    transitions = [_transition_observables(seed=2)]
+    nulls = [_incoherent_observables(seed=3)]
+    with pytest.raises(KeyError):
+        permutation_significance_by_detector(
+            transitions, nulls, thresholds={SYNCHRONISATION: 0.0}
         )
 
 

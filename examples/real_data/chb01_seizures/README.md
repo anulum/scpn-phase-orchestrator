@@ -39,6 +39,12 @@ detector" but the **auditable, reproducible, claim-bounded sealed evidence** her
 which records the sparse-detection result faithfully, including the sealed
 *silences*.
 
+A label-permutation significance test (10 000 relabellings, seed 0, recorded in the
+aggregate as `permutation_significance`) confirms this: even critical slowing down,
+the best member, leads 2 / 6 against 0.9 expected by chance at the matched false-alarm
+rate — **p ≈ 0.22**, not significant. No detector beats chance, so the sparse detection
+is exactly what the matched false-alarm rate produces.
+
 ## The source data (not included here)
 
 The raw scalp-EEG recordings are **citation-only** and are **not redistributed**

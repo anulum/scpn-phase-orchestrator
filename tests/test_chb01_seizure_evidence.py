@@ -127,6 +127,21 @@ def test_every_detector_is_held_at_or_below_the_target_false_alarm(
         assert rate <= 0.10 + 1.0e-9
 
 
+def test_no_detector_beats_the_matched_false_alarm(aggregate: dict[str, Any]) -> None:
+    """No detector's lead count is significant at the matched false-alarm rate."""
+    sig = aggregate["permutation_significance"]
+    assert set(sig) == {
+        "critical_slowing_down",
+        "synchronisation",
+        "transition_entropy",
+        "ensemble_weighted",
+    }
+    for detector in sig.values():
+        assert detector["p_value"] > 0.05  # none beats chance
+    # Critical slowing down leads the most (2/6) yet is still not significant.
+    assert sig["critical_slowing_down"]["observed_led"] == 2
+
+
 def test_early_onset_seizure_is_excluded_not_a_silent_null(
     aggregate: dict[str, Any],
 ) -> None:

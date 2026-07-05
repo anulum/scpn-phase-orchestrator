@@ -88,6 +88,7 @@ from bench.early_warning_domain import (
     domain_verdict,
     evaluate_seizure,
     null_trials,
+    permutation_significance_by_detector,
     slice_observables,
 )
 from scpn_phase_orchestrator.monitor.early_warning_suite import (
@@ -541,6 +542,7 @@ def main(
     leads_by_detector: dict[str, list[float]] = {name: [] for name in DETECTORS}
     onset_records: list[dict[str, object]] = []
     excluded: list[dict[str, object]] = []
+    transition_segments: list[SuiteObservables] = []
     for record_id in af_records:
         stem = data / record_id
         onsets = afib_onsets(stem, min_baseline_native=segment_native)
@@ -555,6 +557,7 @@ def main(
         segment = slice_observables(
             adapter.observables(leads), start=0, stop=segment_samples
         )
+        transition_segments.append(segment)
         result = evaluate_seizure(
             segment,
             record_id=record_id,
@@ -585,6 +588,15 @@ def main(
             }
         )
 
+    significance = permutation_significance_by_detector(
+        transition_segments,
+        trials,
+        thresholds=thresholds,
+        window=WINDOW,
+        step=STEP,
+        baseline_fraction=baseline_fraction,
+    )
+
     payload = {
         "benchmark": "early_warning_leadtime_cardiac",
         "corpus": "MIT-BIH Atrial Fibrillation Database (Moody & Mark 1983)",
@@ -601,6 +613,9 @@ def main(
         "n_null_trials": len(trials),
         "matched_false_alarm_thresholds": thresholds,
         "achieved_false_alarm": calibration.achieved_false_alarm,
+        "permutation_significance": {
+            name: result.to_audit_record() for name, result in significance.items()
+        },
         "af_onsets": onset_records,
         "excluded_records": excluded,
         "verdict": domain_verdict(

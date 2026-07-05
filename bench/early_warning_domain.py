@@ -130,6 +130,7 @@ __all__ = [
     "false_alarm_rate",
     "null_trials",
     "permutation_significance",
+    "permutation_significance_by_detector",
     "seizure_lead_samples",
     "slice_observables",
 ]
@@ -739,6 +740,93 @@ def permutation_significance(
         n_permutations=draws,
         seed=int(seed),
     )
+
+
+def permutation_significance_by_detector(
+    transition_observables: Sequence[SuiteObservables],
+    null_observables: Sequence[SuiteObservables],
+    *,
+    thresholds: Mapping[str, float],
+    persistence: int = DEFAULT_PERSISTENCE,
+    window: int = DEFAULT_WINDOW,
+    step: int = DEFAULT_STEP,
+    baseline_fraction: float = DEFAULT_BASELINE_FRACTION,
+    relative_gate: float = DEFAULT_RELATIVE_GATE,
+    n_permutations: int = DEFAULT_PERMUTATIONS,
+    seed: int = DEFAULT_PERMUTATION_SEED,
+) -> dict[str, PermutationSignificance]:
+    """Run the permutation significance test for every suite detector.
+
+    Each transition segment and null trial is turned into its per-detector trajectories
+    (:func:`detector_trajectories`) once, and :func:`permutation_significance` runs
+    per detector at that detector's calibrated threshold, so a multi-node capstone can
+    ask of each member and of the fusion whether its lead count beats the matched false
+    alarm — the same question the single-series capstone asks of its one detector.
+
+    Parameters
+    ----------
+    transition_observables : sequence of SuiteObservables
+        The pre-onset transition segments, each ending at its onset.
+    null_observables : sequence of SuiteObservables
+        The no-transition null trials.
+    thresholds : Mapping[str, float]
+        The calibrated matched-false-alarm threshold per label in :data:`DETECTORS`.
+    persistence, window, step, baseline_fraction, relative_gate :
+        Suite analysis parameters, matching the calibration.
+    n_permutations : int
+        Number of random relabellings per detector.
+    seed : int
+        Seed of the resampling, so each p-value is reproducible.
+
+    Returns
+    -------
+    dict[str, PermutationSignificance]
+        The significance test per label in :data:`DETECTORS`.
+
+    Raises
+    ------
+    ValueError
+        If either observable set is empty.
+    KeyError
+        If ``thresholds`` is missing a detector label.
+    """
+    if not transition_observables:
+        raise ValueError("transition_observables must not be empty")
+    if not null_observables:
+        raise ValueError("null_observables must not be empty")
+    transition_trajectories = [
+        detector_trajectories(
+            observables,
+            window=window,
+            step=step,
+            baseline_fraction=baseline_fraction,
+            persistence=persistence,
+            relative_gate=relative_gate,
+        )
+        for observables in transition_observables
+    ]
+    null_trajectories = [
+        detector_trajectories(
+            observables,
+            window=window,
+            step=step,
+            baseline_fraction=baseline_fraction,
+            persistence=persistence,
+            relative_gate=relative_gate,
+        )
+        for observables in null_observables
+    ]
+    return {
+        name: permutation_significance(
+            [trajectories[name] for trajectories in transition_trajectories],
+            [trajectories[name] for trajectories in null_trajectories],
+            threshold=thresholds[name],
+            persistence=persistence,
+            n_permutations=n_permutations,
+            seed=seed,
+        )
+        for name in DETECTORS
+    }
 
 
 # --------------------------------------------------------------------------- #

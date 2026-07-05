@@ -33,6 +33,44 @@
     "transition_entropy": 0.0,
     "ensemble_weighted": 0.1
   },
+  "permutation_significance": {
+    "critical_slowing_down": {
+      "observed_led": 2,
+      "n_transitions": 6,
+      "pooled_alarm_rate": 0.15384615384615385,
+      "expected_led": 0.9230769230769231,
+      "p_value": 0.21547845215478453,
+      "n_permutations": 10000,
+      "seed": 0
+    },
+    "synchronisation": {
+      "observed_led": 1,
+      "n_transitions": 6,
+      "pooled_alarm_rate": 0.11538461538461539,
+      "expected_led": 0.6923076923076923,
+      "p_value": 0.5598440155984401,
+      "n_permutations": 10000,
+      "seed": 0
+    },
+    "transition_entropy": {
+      "observed_led": 0,
+      "n_transitions": 6,
+      "pooled_alarm_rate": 0.0,
+      "expected_led": 0.0,
+      "p_value": 1.0,
+      "n_permutations": 10000,
+      "seed": 0
+    },
+    "ensemble_weighted": {
+      "observed_led": 1,
+      "n_transitions": 6,
+      "pooled_alarm_rate": 0.11538461538461539,
+      "expected_led": 0.6923076923076923,
+      "p_value": 0.5582441755824418,
+      "n_permutations": 10000,
+      "seed": 0
+    }
+  },
   "seizures": [
     {
       "record_id": "chb01_03",
