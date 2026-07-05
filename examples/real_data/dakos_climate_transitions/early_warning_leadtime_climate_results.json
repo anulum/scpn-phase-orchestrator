@@ -48,5 +48,14 @@
       "reason": "record too short"
     }
   ],
+  "permutation_significance": {
+    "observed_led": 1,
+    "n_transitions": 6,
+    "pooled_alarm_rate": 0.10714285714285714,
+    "expected_led": 0.6428571428571428,
+    "p_value": 0.5144485551444855,
+    "n_permutations": 10000,
+    "seed": 0
+  },
   "verdict": "SINGLE-INDICATOR DETECTION: at a matched false-alarm rate critical slowing down leads 1/6 climate transitions (median lead 722473 yr). A lead on one climate transition is evidence, not a robust precursor; consistent with detection as a commodity, the auditable sealed evidence \u2014 including the sealed silences \u2014 is the deliverable."
 }

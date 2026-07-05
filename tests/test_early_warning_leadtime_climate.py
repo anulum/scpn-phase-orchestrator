@@ -275,6 +275,10 @@ def test_main_seals_a_transition_and_writes_the_aggregate(tmp_path: Path) -> Non
     assert "critical_slowing_down" in results["achieved_false_alarm"]
     assert len(results["transitions"]) == 1
     assert "climate transitions" in results["verdict"]
+    significance = results["permutation_significance"]
+    assert significance["n_transitions"] == 1
+    assert 0.0 < significance["p_value"] <= 1.0
+    assert significance["seed"] == 0
 
 
 def test_main_reports_a_too_short_record_as_excluded(tmp_path: Path) -> None:

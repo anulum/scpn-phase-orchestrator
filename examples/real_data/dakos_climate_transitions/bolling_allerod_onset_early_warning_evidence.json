@@ -4,7 +4,7 @@
   "detector": {
     "detector": "critical_slowing_down",
     "observable": "Greenland ice-core \u03b4\u00b9\u2078O across the B\u00f8lling\u2013Aller\u00f8d warming onset (~14.6 ka; detrended residual of the toolbox _Y1int)",
-    "signal_source": "Greenland ice \u03b4\u00b9\u2078O, B\u00f8lling\u2013Aller\u00f8d (earlywarningtoolbox/datasets GBA_temp, via NOAA WDC Paleoclimatology); Dakos et al. 2008, PNAS 105:14308 / 60-sample pre-onset segment (detrended residual)",
+    "signal_source": "Greenland ice \u03b4\u00b9\u2078O, B\u00f8lling\u2013Aller\u00f8d (earlywarningtoolbox/datasets GBA_temp, via NOAA WDC Paleo); Dakos et al. 2008, PNAS 105:14308 / 60-sample pre-onset segment (detrended residual)",
     "captured_at": "Dakos2008/bolling_allerod_onset",
     "sampling_rate_hz": 0.020360584395399443,
     "window": 30,
@@ -39,6 +39,6 @@
     "verdict": "no_early_warning",
     "framework": "Generic early-warning-signals framework (Scheffer et al. 2009, Nature 461:53)",
     "disclaimer": "This early-warning evidence record is a technical evidence-mapping artefact. It seals a passive detector's alarm decision, the contributing indicators and their robust z-scores, and the provenance of the screened signal; it does not constitute a clinical, operational, or safety decision, nor a certification of compliance. Any reported lead time is measured against a caller-supplied ground-truth onset and holds only for the recorded observable and detector configuration; a non-positive lead means the alarm was coincident with or later than the transition.",
-    "content_hash": "f5e3c6d6eb9fb11ba9897f69354b902a5b17abd4b222ee5d0fe7c15eb7b155d8"
+    "content_hash": "5828dc6ef4c20751acac3ad2d5f7a878610994ab8fde297cd5e05ee4f2ebd00e"
   }
 }

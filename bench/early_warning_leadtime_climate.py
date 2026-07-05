@@ -60,8 +60,10 @@ is calibrated on non-overlapping null trials cut from the pooled stable pre-appr
 intervals; every alarm or silence is sealed into a claim-bounded
 :class:`~scpn_phase_orchestrator.assurance.early_warning_evidence.EarlyWarningEvidence`.
 A record too short to yield both a full pre-onset segment and one preceding null trial
-is reported and excluded, never counted as a silent miss. Only the derived, sealed
-artefacts are committed; the raw proxy series never is.
+is reported and excluded, never counted as a silent miss. A label-permutation
+significance test then asks whether the lead count beats the matched false-alarm rate or
+is what chance gives, and its p-value is recorded in the aggregate. Only the derived,
+sealed artefacts are committed; the raw proxy series never is.
 
 References
 ----------
@@ -84,10 +86,12 @@ import numpy as np
 from numpy.typing import NDArray
 from scipy.ndimage import gaussian_filter1d
 
+from bench.early_warning_domain import DetectorTrajectory, permutation_significance
 from bench.early_warning_single_series import (
     DETECTOR,
     SingleSeriesObservable,
     calibrate_single_series,
+    critical_slowing_down_trajectory,
     evaluate_single_series,
     null_series_trials,
     single_series_verdict,
@@ -610,6 +614,20 @@ def main(
             }
         )
 
+    def _trajectory(observable: SingleSeriesObservable) -> DetectorTrajectory:
+        return critical_slowing_down_trajectory(
+            observable,
+            window=WINDOW,
+            step=STEP,
+            baseline_fraction=baseline_fraction,
+        )
+
+    significance = permutation_significance(
+        [_trajectory(segments.transition_segment) for segments in segmented],
+        [_trajectory(trial) for trial in null_trials],
+        threshold=threshold,
+    )
+
     payload = {
         "benchmark": "early_warning_leadtime_climate",
         "corpus": "Dakos et al. 2008 palaeoclimate abrupt-transition records",
@@ -624,6 +642,7 @@ def main(
         "achieved_false_alarm": calibration.achieved_false_alarm,
         "transitions": transition_records,
         "excluded_records": excluded,
+        "permutation_significance": significance.to_audit_record(),
         "verdict": single_series_verdict(
             leads,
             len(transition_records),
@@ -636,6 +655,11 @@ def main(
         json.dumps(payload, indent=2) + "\n", encoding="utf-8"
     )
     print(payload["verdict"])
+    print(
+        f"permutation p-value {significance.p_value:.3f} "
+        f"({significance.observed_led}/{significance.n_transitions} led vs "
+        f"{significance.expected_led:.2f} expected by chance)"
+    )
     print(
         f"{len(null_trials)} null trials; {len(excluded)} records excluded (too short)"
     )

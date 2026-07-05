@@ -103,6 +103,10 @@ DEFAULT_PERSISTENCE = 2
 DEFAULT_RELATIVE_GATE = 0.05
 #: Default target false-alarm rate the detectors are calibrated to on the null.
 DEFAULT_TARGET_FALSE_ALARM = 0.10
+#: Default number of label permutations for the significance test.
+DEFAULT_PERMUTATIONS = 10000
+#: Default seed for the permutation test's resampling, so the p-value is reproducible.
+DEFAULT_PERMUTATION_SEED = 0
 
 __all__ = [
     "DEFAULT_BASELINE_FRACTION",
@@ -111,9 +115,12 @@ __all__ = [
     "DEFAULT_STEP",
     "DEFAULT_TARGET_FALSE_ALARM",
     "DEFAULT_WINDOW",
+    "DEFAULT_PERMUTATIONS",
+    "DEFAULT_PERMUTATION_SEED",
     "DETECTORS",
     "Calibration",
     "DetectorTrajectory",
+    "PermutationSignificance",
     "SeizureLeadResult",
     "calibrate_detectors",
     "calibrate_threshold",
@@ -122,6 +129,7 @@ __all__ = [
     "evaluate_seizure",
     "false_alarm_rate",
     "null_trials",
+    "permutation_significance",
     "seizure_lead_samples",
     "slice_observables",
 ]
@@ -586,6 +594,151 @@ def seizure_lead_samples(
     if alarm is None or alarm > onset_sample:
         return None
     return onset_sample - alarm
+
+
+# --------------------------------------------------------------------------- #
+# Permutation significance (is the detection rate above the matched false alarm?) #
+# --------------------------------------------------------------------------- #
+
+
+@dataclass(frozen=True)
+class PermutationSignificance:
+    """Whether a detector's lead count beats a matched-false-alarm null by chance.
+
+    A calibrated detector alarms on some fraction of the no-transition null trials by
+    construction (the matched false-alarm rate). The question a sealed detection count
+    leaves open is whether the transitions alarm *more often than that* — or whether the
+    lead count is what a random relabelling of transitions and nulls would give. This
+    holds the answer as a label-permutation (exchangeability) test.
+
+    Attributes
+    ----------
+    observed_led : int
+        Number of transition segments that alarmed at the calibrated threshold.
+    n_transitions : int
+        Number of transition segments tested.
+    pooled_alarm_rate : float
+        Fraction of the pooled transition-and-null segments that alarmed.
+    expected_led : float
+        Lead count expected under the null (``n_transitions × pooled_alarm_rate``).
+    p_value : float
+        One-sided permutation p-value: the fraction of random relabellings whose
+        transition-slot alarm count reached ``observed_led``, with the standard
+        add-one correction so it is never zero.
+    n_permutations : int
+        Number of random relabellings drawn.
+    seed : int
+        Seed of the resampling, so the p-value is reproducible.
+    """
+
+    observed_led: int
+    n_transitions: int
+    pooled_alarm_rate: float
+    expected_led: float
+    p_value: float
+    n_permutations: int
+    seed: int
+
+    def to_audit_record(self) -> dict[str, object]:
+        """Return a JSON-safe mapping of the significance test.
+
+        Returns
+        -------
+        dict[str, object]
+            The observed and expected lead counts, the pooled alarm rate, the
+            permutation p-value, and the resampling parameters.
+        """
+        return {
+            "observed_led": self.observed_led,
+            "n_transitions": self.n_transitions,
+            "pooled_alarm_rate": self.pooled_alarm_rate,
+            "expected_led": self.expected_led,
+            "p_value": self.p_value,
+            "n_permutations": self.n_permutations,
+            "seed": self.seed,
+        }
+
+
+def permutation_significance(
+    transition_trajectories: Sequence[DetectorTrajectory],
+    null_trajectories: Sequence[DetectorTrajectory],
+    *,
+    threshold: float,
+    persistence: int = DEFAULT_PERSISTENCE,
+    n_permutations: int = DEFAULT_PERMUTATIONS,
+    seed: int = DEFAULT_PERMUTATION_SEED,
+) -> PermutationSignificance:
+    """Test whether the transition lead count beats a matched-false-alarm null.
+
+    Each trajectory — transition segment or null trial — alarms or not at the
+    calibrated ``threshold`` under the shared alarm rule (:func:`_alarm_sample`); a
+    transition segment ends at its onset, so any alarm on it is a lead. Under the null
+    hypothesis that the transition segments are indistinguishable from the nulls, which
+    of the pooled segments are labelled "transition" is exchangeable. Drawing
+    ``n_permutations`` random transition-sized subsets of the pool builds the null
+    distribution of the lead count, and the one-sided p-value is the fraction reaching
+    the observed count (with an add-one correction). A small p-value means the
+    detector leads transitions more than the matched false-alarm rate explains.
+
+    Parameters
+    ----------
+    transition_trajectories : sequence of DetectorTrajectory
+        One detector's trajectory on each transition segment.
+    null_trajectories : sequence of DetectorTrajectory
+        The same detector's trajectory on each no-transition null trial.
+    threshold : float
+        The calibrated matched-false-alarm threshold.
+    persistence : int
+        Consecutive breaching windows required to alarm.
+    n_permutations : int
+        Number of random relabellings to draw; must be a positive integer.
+    seed : int
+        Seed of the resampling, so the p-value is reproducible.
+
+    Returns
+    -------
+    PermutationSignificance
+        The observed and expected lead counts and the permutation p-value.
+
+    Raises
+    ------
+    ValueError
+        If either trajectory set is empty or ``n_permutations`` is not positive.
+    """
+    if not transition_trajectories:
+        raise ValueError("transition_trajectories must not be empty")
+    if not null_trajectories:
+        raise ValueError("null_trajectories must not be empty")
+    draws = _positive_int(n_permutations, "n_permutations")
+    transition_alarms = [
+        _alarm_sample(t, threshold=threshold, persistence=persistence) is not None
+        for t in transition_trajectories
+    ]
+    null_alarms = [
+        _alarm_sample(t, threshold=threshold, persistence=persistence) is not None
+        for t in null_trajectories
+    ]
+    observed = int(sum(transition_alarms))
+    n_transitions = len(transition_alarms)
+    pool = np.array(transition_alarms + null_alarms, dtype=bool)
+    total = int(pool.shape[0])
+    rng = np.random.default_rng(seed)
+    reached = 0
+    for _ in range(draws):
+        subset = rng.permutation(total)[:n_transitions]
+        if int(pool[subset].sum()) >= observed:
+            reached += 1
+    p_value = (1 + reached) / (draws + 1)
+    pooled_rate = float(pool.mean())
+    return PermutationSignificance(
+        observed_led=observed,
+        n_transitions=n_transitions,
+        pooled_alarm_rate=pooled_rate,
+        expected_led=n_transitions * pooled_rate,
+        p_value=p_value,
+        n_permutations=draws,
+        seed=int(seed),
+    )
 
 
 # --------------------------------------------------------------------------- #

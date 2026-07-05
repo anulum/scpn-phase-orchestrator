@@ -118,6 +118,18 @@ def test_exactly_one_transition_is_led(aggregate: dict[str, Any]) -> None:
     assert led[0]["lead_years"] > 0.0
 
 
+def test_the_lead_count_is_not_significant(aggregate: dict[str, Any]) -> None:
+    """The one lead is consistent with chance at the matched false-alarm rate."""
+    sig = aggregate["permutation_significance"]
+    assert sig["observed_led"] == 1
+    assert sig["n_transitions"] == 6
+    assert sig["n_permutations"] == 10000
+    assert sig["expected_led"] == pytest.approx(0.643, abs=1.0e-2)
+    # The permutation p-value is far above 0.05 — the single lead does not beat the
+    # matched false-alarm rate, so detection here is at chance.
+    assert sig["p_value"] > 0.05
+
+
 def test_records_carry_the_review_only_claim_boundary() -> None:
     """Every sealed record keeps the review-only evidence-mapping disclaimer."""
     for record_id in _PINNED:

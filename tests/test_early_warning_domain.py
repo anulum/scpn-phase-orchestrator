@@ -29,6 +29,7 @@ from bench.early_warning_domain import (
     DETECTORS,
     Calibration,
     DetectorTrajectory,
+    PermutationSignificance,
     SeizureLeadResult,
     calibrate_detectors,
     calibrate_threshold,
@@ -37,6 +38,7 @@ from bench.early_warning_domain import (
     evaluate_seizure,
     false_alarm_rate,
     null_trials,
+    permutation_significance,
     seizure_lead_samples,
     slice_observables,
 )
@@ -350,6 +352,83 @@ def test_calibrate_detectors_returns_thresholds_and_achieved_rate() -> None:
 def test_calibrate_detectors_rejects_an_empty_null() -> None:
     with pytest.raises(ValueError, match="must not be empty"):
         calibrate_detectors([])
+
+
+# --------------------------------------------------------------------------- #
+# permutation_significance                                                     #
+# --------------------------------------------------------------------------- #
+
+
+def test_permutation_flags_a_detector_that_beats_the_null() -> None:
+    # Three transitions all alarm; seven nulls never do — drawing all three alarming
+    # slots into the transition label is rare, so the p-value is small.
+    transitions = [_trajectory([0.0, 5.0, 5.0]) for _ in range(3)]
+    nulls = [_trajectory([0.0, 0.0, 0.0]) for _ in range(7)]
+    result = permutation_significance(
+        transitions, nulls, threshold=3.0, n_permutations=5000, seed=0
+    )
+    assert isinstance(result, PermutationSignificance)
+    assert result.observed_led == 3
+    assert result.n_transitions == 3
+    assert result.pooled_alarm_rate == pytest.approx(0.3)
+    assert result.expected_led == pytest.approx(0.9)
+    assert result.p_value < 0.05  # the lead count beats the matched false alarm
+
+
+def test_permutation_does_not_flag_chance_level_detection() -> None:
+    # Transitions and nulls alarm identically, so the observed count is exactly what a
+    # relabelling gives — the p-value is not small.
+    transitions = [_trajectory([0.0, 5.0, 5.0])]
+    nulls = [_trajectory([0.0, 5.0, 5.0]) for _ in range(5)]
+    result = permutation_significance(
+        transitions, nulls, threshold=3.0, n_permutations=5000, seed=0
+    )
+    assert result.observed_led == 1
+    assert result.pooled_alarm_rate == pytest.approx(1.0)
+    assert result.p_value == pytest.approx(1.0)  # every relabelling reaches the count
+
+
+def test_permutation_is_reproducible_under_a_fixed_seed() -> None:
+    transitions = [_trajectory([0.0, 5.0, 5.0]) for _ in range(2)]
+    nulls = [_trajectory([0.0, 0.0, 0.0]) for _ in range(6)]
+    first = permutation_significance(transitions, nulls, threshold=3.0, seed=7)
+    second = permutation_significance(transitions, nulls, threshold=3.0, seed=7)
+    assert first.p_value == second.p_value
+
+
+def test_permutation_audit_record_round_trips() -> None:
+    transitions = [_trajectory([0.0, 5.0, 5.0])]
+    nulls = [_trajectory([0.0, 0.0, 0.0]) for _ in range(3)]
+    record = json.loads(
+        json.dumps(
+            permutation_significance(
+                transitions, nulls, threshold=3.0, n_permutations=100
+            ).to_audit_record()
+        )
+    )
+    assert record["observed_led"] == 1
+    assert record["n_permutations"] == 100
+    assert 0.0 < record["p_value"] <= 1.0
+
+
+def test_permutation_rejects_an_empty_transition_set() -> None:
+    with pytest.raises(ValueError, match="transition_trajectories must not be empty"):
+        permutation_significance([], [_trajectory([0.0, 0.0, 0.0])], threshold=3.0)
+
+
+def test_permutation_rejects_an_empty_null_set() -> None:
+    with pytest.raises(ValueError, match="null_trajectories must not be empty"):
+        permutation_significance([_trajectory([0.0, 5.0, 5.0])], [], threshold=3.0)
+
+
+def test_permutation_rejects_a_non_positive_permutation_count() -> None:
+    with pytest.raises(ValueError, match="n_permutations"):
+        permutation_significance(
+            [_trajectory([0.0, 5.0, 5.0])],
+            [_trajectory([0.0, 0.0, 0.0])],
+            threshold=3.0,
+            n_permutations=0,
+        )
 
 
 # --------------------------------------------------------------------------- #

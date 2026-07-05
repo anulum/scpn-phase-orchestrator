@@ -37,6 +37,13 @@ including the Younger Dryas termination — are **sealed silences**. A lead on o
 is evidence, not a robust precursor. The deliverable is the **auditable, reproducible,
 claim-bounded sealed evidence** — including the sealed silences — not the lead.
 
+A label-permutation significance test (10 000 relabellings, seed 0, recorded in the
+aggregate as `permutation_significance`) puts the one lead at **p ≈ 0.51**: the observed
+1/6 is exactly what the matched false-alarm rate produces by chance (≈ 0.64 expected). So
+on this corpus critical slowing down is **not distinguishable from chance** at a matched
+operating point — the sharpest possible statement of detection-as-commodity, and the
+reason the auditable sealed evidence, not the lead, is the deliverable.
+
 ### Two honest caveats specific to this domain
 
 - **A different statistic from Dakos.** Dakos et al. 2008 read a *rising Kendall-τ
