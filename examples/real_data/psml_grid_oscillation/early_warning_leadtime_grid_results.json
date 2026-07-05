@@ -1,0 +1,136 @@
+{
+  "benchmark": "early_warning_leadtime_grid",
+  "corpus": "PSML 23-bus power-system co-simulation (Zheng et al. 2021)",
+  "sampling_rate_hz": 238.09523809523915,
+  "band_hz": [
+    0.2,
+    5.0
+  ],
+  "window": 119,
+  "step": 24,
+  "segment_seconds": 2.0,
+  "baseline_seconds": 0.6666666666666666,
+  "horizon_seconds": 1.3333333333333335,
+  "target_false_alarm": 0.1,
+  "n_transitions_found": 27,
+  "n_null_scenarios_found": 187,
+  "n_transitions_evaluated": 12,
+  "n_null_trials": 24,
+  "matched_false_alarm_thresholds": {
+    "critical_slowing_down": 10.0,
+    "synchronisation": 3.5,
+    "transition_entropy": 3.75,
+    "ensemble_weighted": 10.0
+  },
+  "transitions": [
+    {
+      "record_id": "row_115",
+      "lead_seconds": {
+        "critical_slowing_down": null,
+        "synchronisation": null,
+        "transition_entropy": null,
+        "ensemble_weighted": 1.4951999999999934
+      }
+    },
+    {
+      "record_id": "row_117",
+      "lead_seconds": {
+        "critical_slowing_down": 1.3943999999999939,
+        "synchronisation": null,
+        "transition_entropy": null,
+        "ensemble_weighted": null
+      }
+    },
+    {
+      "record_id": "row_123",
+      "lead_seconds": {
+        "critical_slowing_down": null,
+        "synchronisation": null,
+        "transition_entropy": null,
+        "ensemble_weighted": null
+      }
+    },
+    {
+      "record_id": "row_148",
+      "lead_seconds": {
+        "critical_slowing_down": null,
+        "synchronisation": null,
+        "transition_entropy": null,
+        "ensemble_weighted": null
+      }
+    },
+    {
+      "record_id": "row_156",
+      "lead_seconds": {
+        "critical_slowing_down": 1.3943999999999939,
+        "synchronisation": null,
+        "transition_entropy": null,
+        "ensemble_weighted": null
+      }
+    },
+    {
+      "record_id": "row_175",
+      "lead_seconds": {
+        "critical_slowing_down": 0.9911999999999956,
+        "synchronisation": null,
+        "transition_entropy": null,
+        "ensemble_weighted": 0.8903999999999961
+      }
+    },
+    {
+      "record_id": "row_176",
+      "lead_seconds": {
+        "critical_slowing_down": 1.0919999999999952,
+        "synchronisation": null,
+        "transition_entropy": 1.2935999999999943,
+        "ensemble_weighted": 1.0919999999999952
+      }
+    },
+    {
+      "record_id": "row_183",
+      "lead_seconds": {
+        "critical_slowing_down": null,
+        "synchronisation": null,
+        "transition_entropy": null,
+        "ensemble_weighted": null
+      }
+    },
+    {
+      "record_id": "row_253",
+      "lead_seconds": {
+        "critical_slowing_down": 0.9911999999999956,
+        "synchronisation": null,
+        "transition_entropy": 1.2935999999999943,
+        "ensemble_weighted": 0.9911999999999956
+      }
+    },
+    {
+      "record_id": "row_288",
+      "lead_seconds": {
+        "critical_slowing_down": null,
+        "synchronisation": null,
+        "transition_entropy": null,
+        "ensemble_weighted": null
+      }
+    },
+    {
+      "record_id": "row_301",
+      "lead_seconds": {
+        "critical_slowing_down": 1.4951999999999934,
+        "synchronisation": null,
+        "transition_entropy": null,
+        "ensemble_weighted": null
+      }
+    },
+    {
+      "record_id": "row_313",
+      "lead_seconds": {
+        "critical_slowing_down": 1.4951999999999934,
+        "synchronisation": null,
+        "transition_entropy": null,
+        "ensemble_weighted": 1.4951999999999934
+      }
+    }
+  ],
+  "verdict": "SPARSE DETECTION, NO ROBUST ADVANTAGE: at a matched false-alarm rate detection is sparse and no detector leads more growing-oscillation instabilities than the fusion (critical_slowing_down 7/12 (median lead 1 s); synchronisation 0/12; transition_entropy 2/12 (median lead 1 s); ensemble_weighted 5/12 (median lead 1 s)). A longer lead on one instability is not a robust advantage; consistent with detection as a commodity, the auditable sealed evidence is the deliverable."
+}

@@ -1,0 +1,158 @@
+{
+  "record_id": "row_156",
+  "onset_sample": 476,
+  "detectors": {
+    "critical_slowing_down": {
+      "detector": "critical_slowing_down",
+      "observable": "cross-bus Kuramoto order parameter R(t) of 23-bus voltage analytic phase (0.2-5 Hz)",
+      "signal_source": "PSML row_156 (Zheng et al. 2021) / growing gen_trip oscillation / 2 s pre-onset segment ending at the annotated instability endpoint",
+      "captured_at": "PSML/row_156",
+      "sampling_rate_hz": 238.09523809523915,
+      "window": 119,
+      "step": 24,
+      "persistence": 2,
+      "n_baseline_windows": 5,
+      "warning_triggered": true,
+      "warning_window": 6,
+      "warning_sample": 144,
+      "transition_onset_sample": 476,
+      "lead_samples": 332,
+      "lead_seconds": 1.3943999999999939,
+      "lead_is_early": true,
+      "indicators": [
+        {
+          "name": "variance",
+          "direction": "rise",
+          "robust_z": 38.64482634510295,
+          "baseline_median": 2.560009969795111e-08,
+          "z_threshold": 10.0,
+          "breached": true
+        },
+        {
+          "name": "lag1_autocorrelation",
+          "direction": "rise",
+          "robust_z": -7.550990620239174,
+          "baseline_median": 0.9908248422149771,
+          "z_threshold": 10.0,
+          "breached": false
+        }
+      ],
+      "verdict": "early_warning_flagged",
+      "framework": "Generic early-warning-signals framework (Scheffer et al. 2009, Nature 461:53)",
+      "disclaimer": "This early-warning evidence record is a technical evidence-mapping artefact. It seals a passive detector's alarm decision, the contributing indicators and their robust z-scores, and the provenance of the screened signal; it does not constitute a clinical, operational, or safety decision, nor a certification of compliance. Any reported lead time is measured against a caller-supplied ground-truth onset and holds only for the recorded observable and detector configuration; a non-positive lead means the alarm was coincident with or later than the transition.",
+      "content_hash": "d96c201189dafca7e23c2b584db1bf5b10e7e852610b077313b5d3d57c4b538f"
+    },
+    "synchronisation": {
+      "detector": "synchronisation",
+      "observable": "per-bus 23-bus voltage analytic phase (0.2-5 Hz)",
+      "signal_source": "PSML row_156 (Zheng et al. 2021) / growing gen_trip oscillation / 2 s pre-onset segment ending at the annotated instability endpoint",
+      "captured_at": "PSML/row_156",
+      "sampling_rate_hz": 238.09523809523915,
+      "window": 119,
+      "step": 24,
+      "persistence": 2,
+      "n_baseline_windows": 5,
+      "warning_triggered": false,
+      "warning_window": null,
+      "warning_sample": null,
+      "transition_onset_sample": 476,
+      "lead_samples": null,
+      "lead_seconds": null,
+      "lead_is_early": false,
+      "indicators": [
+        {
+          "name": "order_parameter",
+          "direction": "rise",
+          "robust_z": 1.0669182974395177,
+          "baseline_median": 0.9983759406778493,
+          "z_threshold": 3.5,
+          "breached": false
+        }
+      ],
+      "verdict": "no_early_warning",
+      "framework": "Generic early-warning-signals framework (Scheffer et al. 2009, Nature 461:53)",
+      "disclaimer": "This early-warning evidence record is a technical evidence-mapping artefact. It seals a passive detector's alarm decision, the contributing indicators and their robust z-scores, and the provenance of the screened signal; it does not constitute a clinical, operational, or safety decision, nor a certification of compliance. Any reported lead time is measured against a caller-supplied ground-truth onset and holds only for the recorded observable and detector configuration; a non-positive lead means the alarm was coincident with or later than the transition.",
+      "content_hash": "9a0f85247566a288a77c3eeee49b3f5915f1f5313bfcbca7771d80520fa3240e"
+    },
+    "transition_entropy": {
+      "detector": "transition_entropy",
+      "observable": "per-bus phase projection sin(phase) of 23-bus voltage (0.2-5 Hz)",
+      "signal_source": "PSML row_156 (Zheng et al. 2021) / growing gen_trip oscillation / 2 s pre-onset segment ending at the annotated instability endpoint",
+      "captured_at": "PSML/row_156",
+      "sampling_rate_hz": 238.09523809523915,
+      "window": 119,
+      "step": 24,
+      "persistence": 2,
+      "n_baseline_windows": 5,
+      "warning_triggered": false,
+      "warning_window": null,
+      "warning_sample": null,
+      "transition_onset_sample": 476,
+      "lead_samples": null,
+      "lead_seconds": null,
+      "lead_is_early": false,
+      "indicators": [
+        {
+          "name": "transition_entropy",
+          "direction": "drop",
+          "robust_z": 0.0,
+          "baseline_median": 0.0,
+          "z_threshold": 3.75,
+          "breached": false
+        }
+      ],
+      "verdict": "no_early_warning",
+      "framework": "Generic early-warning-signals framework (Scheffer et al. 2009, Nature 461:53)",
+      "disclaimer": "This early-warning evidence record is a technical evidence-mapping artefact. It seals a passive detector's alarm decision, the contributing indicators and their robust z-scores, and the provenance of the screened signal; it does not constitute a clinical, operational, or safety decision, nor a certification of compliance. Any reported lead time is measured against a caller-supplied ground-truth onset and holds only for the recorded observable and detector configuration; a non-positive lead means the alarm was coincident with or later than the transition.",
+      "content_hash": "aff41c2815be84f2aba5d61a25cff0ef4d42616bcbfa28dfa3f6a5bab2aeabb5"
+    },
+    "ensemble_weighted": {
+      "detector": "ensemble_weighted",
+      "observable": "fused early-warning suite over 23-bus voltage analytic phase (0.2-5 Hz)",
+      "signal_source": "PSML row_156 (Zheng et al. 2021) / growing gen_trip oscillation / 2 s pre-onset segment ending at the annotated instability endpoint",
+      "captured_at": "PSML/row_156",
+      "sampling_rate_hz": 238.09523809523915,
+      "window": 119,
+      "step": 24,
+      "persistence": 2,
+      "n_baseline_windows": 5,
+      "warning_triggered": false,
+      "warning_window": null,
+      "warning_sample": null,
+      "transition_onset_sample": 476,
+      "lead_samples": null,
+      "lead_seconds": null,
+      "lead_is_early": false,
+      "indicators": [
+        {
+          "name": "critical_slowing_down",
+          "direction": "rise",
+          "robust_z": 98.35553527983977,
+          "baseline_median": 2.560009969795111e-08,
+          "z_threshold": 10.0,
+          "breached": true
+        },
+        {
+          "name": "synchronisation",
+          "direction": "rise",
+          "robust_z": -34.53486322459388,
+          "baseline_median": 0.9983759406778493,
+          "z_threshold": 3.5,
+          "breached": false
+        },
+        {
+          "name": "transition_entropy",
+          "direction": "drop",
+          "robust_z": 0.0,
+          "baseline_median": 0.0,
+          "z_threshold": 3.75,
+          "breached": false
+        }
+      ],
+      "verdict": "no_early_warning",
+      "framework": "Generic early-warning-signals framework (Scheffer et al. 2009, Nature 461:53)",
+      "disclaimer": "This early-warning evidence record is a technical evidence-mapping artefact. It seals a passive detector's alarm decision, the contributing indicators and their robust z-scores, and the provenance of the screened signal; it does not constitute a clinical, operational, or safety decision, nor a certification of compliance. Any reported lead time is measured against a caller-supplied ground-truth onset and holds only for the recorded observable and detector configuration; a non-positive lead means the alarm was coincident with or later than the transition.",
+      "content_hash": "263c0676a8778b04cad47838319ab1b5ca6e18027c0c8e2772544fd72628e4b6"
+    }
+  }
+}

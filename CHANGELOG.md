@@ -131,6 +131,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and never redistributed.
 - The `cardiac` optional dependency extra installs `wfdb` for the cardiac-ECG
   early-warning capstone's WFDB ingestion.
+- `bench/early_warning_leadtime_grid.py` is the third-domain capstone — the
+  power-grid adapter onto the shared harness — completing the domain-adaptable
+  proof across brain, heart, and grid. `GridPhaseAdapter` band-passes the 23
+  transmission-bus voltages to the electromechanical mode band (0.2–5 Hz), takes
+  the per-bus Hilbert analytic phase, and reads the cross-bus order parameter (a
+  genuine 23-node spatial population, and a synchronisation *rise* — the direction
+  the suite was built for). The transition is a `gen_trip` scenario whose
+  oscillation *grows* between the trip and the annotated `end` (the onset), and the
+  false-alarm null is the *damped* `bus_fault` / `branch_trip` scenarios, so the
+  calibration asks whether the suite leads a growing instability more often than it
+  false-alarms on a stable disturbance. Reads PSML CSV scenarios (`bus_voltages`,
+  `oscillation_info`, `oscillation_growth_ratio`, `classify_scenario`,
+  `discover_scenarios`). Pinned on synthetic arrays and synthetic PSML-format
+  scenarios in `tests/test_early_warning_leadtime_grid.py`.
+- `examples/real_data/psml_grid_oscillation/` is the grid capstone's sealed
+  artefact: the suite and fusion run on twelve real PSML growing-oscillation
+  scenarios, sealed per detector per instability. The honest matched-false-alarm
+  result is once more **sparse detection with no robust advantage** — critical
+  slowing down (the classical variance rise) leads the most (7 / 12), the fusion no
+  more (5 / 12), rising synchronisation none — the same conclusion a third time,
+  across an independent physical domain. It is byte-reproducible (two independent
+  runs produce identical sealed records, verified by diff).
+  `tests/test_psml_grid_evidence.py` recomputes every seal, pins two led
+  instabilities' digests, and guards the sparse-detection result; the raw PSML data
+  (CC BY 4.0) is citation-only and never redistributed.
 
 ### Changed
 
