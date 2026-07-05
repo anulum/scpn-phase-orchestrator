@@ -35,6 +35,8 @@
         "tomli",
         "websockets",
         "websockets.*",
+        "wfdb",
+        "wfdb.*",
         "yaml"
       ],
       "settings": {
