@@ -48,6 +48,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `member_from_transition_entropy`) build the aligned member evidence, and
   `assurance.early_warning_evidence.seal_ensemble_alarm` seals a fused alarm —
   pinning every member's native contribution — into an `EarlyWarningEvidence`.
+- `bench/early_warning_leadtime_eeg.py` is the real scalp-EEG capstone: it turns a
+  CHB-MIT recording into one decimated analytic-phase field (band-pass 4–30 Hz,
+  Hilbert phase, phase-consistent decimation 256→32 Hz), runs the three-member
+  suite and its weighted fusion, calibrates every detector to a matched
+  false-alarm rate on separate interictal recordings, and seals an
+  `EarlyWarningEvidence` per detector per seizure — including a sealed silence when
+  a detector does not fire. The gain from fusion is reported as matched-false-alarm
+  lead, never a raw detection rate. The raw EDF is citation-only and never
+  redistributed; the pipeline, calibration, lead, sealing, and EDF ingestion are
+  pinned on synthetic arrays in `tests/test_early_warning_leadtime_eeg.py`.
 
 ### Changed
 
