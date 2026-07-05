@@ -497,6 +497,7 @@ def single_series_verdict(
     *,
     noun: str = "transitions",
     singular: str = "transition",
+    lead_unit: str = "s",
 ) -> str:
     """Return the honest matched-false-alarm verdict across the transitions.
 
@@ -509,14 +510,17 @@ def single_series_verdict(
     Parameters
     ----------
     leads : Mapping[str, float | None]
-        Per-record lead in seconds, ``None`` where the detector did not lead. The
-        keys are the evaluated record labels.
+        Per-record lead, ``None`` where the detector did not lead, in the observable's
+        native time unit (``lead_unit``). The keys are the evaluated record labels.
     n_transitions : int
         Number of evaluated transitions the count is out of.
     noun : str
         Plural noun for the transition kind, e.g. ``collapses`` or ``glaciations``.
     singular : str
         Singular of ``noun``.
+    lead_unit : str
+        Unit the leads are quoted in — ``s`` for a per-second observable, ``yr`` for a
+        palaeoclimate record sampled in years.
 
     Returns
     -------
@@ -536,10 +540,10 @@ def single_series_verdict(
     subject = "one " + singular if led == 1 else f"{led} {noun}"
     return (
         "SINGLE-INDICATOR DETECTION: at a matched false-alarm rate critical slowing "
-        f"down leads {led}/{n_transitions} {noun} (median lead {median_lead:.0f} s). "
-        f"A lead on {subject} is evidence, not a robust precursor; consistent with "
-        "detection as a commodity, the auditable sealed evidence — including the "
-        "sealed silences — is the deliverable."
+        f"down leads {led}/{n_transitions} {noun} (median lead {median_lead:.0f} "
+        f"{lead_unit}). A lead on {subject} is evidence, not a robust precursor; "
+        "consistent with detection as a commodity, the auditable sealed evidence — "
+        "including the sealed silences — is the deliverable."
     )
 
 

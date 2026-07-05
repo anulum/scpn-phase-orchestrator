@@ -12,7 +12,7 @@
     "research_experimental_modules": 201,
     "runtime_serving_modules": 143,
     "rust_kernel_files": 97,
-    "test_files": 783
+    "test_files": 785
   },
   "documentation": {
     "public_pages": [
@@ -1945,6 +1945,7 @@
       "tests/test_critical_slowing_down.py",
       "tests/test_cybernetic_closure_contracts.py",
       "tests/test_cybernetic_closure_validation.py",
+      "tests/test_dakos_climate_evidence.py",
       "tests/test_degenerate_edges.py",
       "tests/test_delay.py",
       "tests/test_delay_backends.py",
@@ -1974,6 +1975,7 @@
       "tests/test_early_warning_evidence.py",
       "tests/test_early_warning_leadtime.py",
       "tests/test_early_warning_leadtime_cardiac.py",
+      "tests/test_early_warning_leadtime_climate.py",
       "tests/test_early_warning_leadtime_eeg.py",
       "tests/test_early_warning_leadtime_grid.py",
       "tests/test_early_warning_single_series.py",

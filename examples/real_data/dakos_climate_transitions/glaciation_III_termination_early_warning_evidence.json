@@ -1,0 +1,44 @@
+{
+  "record_id": "glaciation_III_termination",
+  "onset_sample": 60,
+  "detector": {
+    "detector": "critical_slowing_down",
+    "observable": "Vostok ice-core deuterium (\u03b4D) across the termination of glaciation III (detrended residual of the toolbox _Y1int)",
+    "signal_source": "Vostok \u03b4D, glaciation III (earlywarningtoolbox/datasets Vostok3deut; Petit et al. 1999); analysed in Dakos et al. 2008, PNAS 105:14308 / 60-sample pre-onset segment (detrended residual)",
+    "captured_at": "Dakos2008/glaciation_III_termination",
+    "sampling_rate_hz": 0.0038166735009305115,
+    "window": 30,
+    "step": 3,
+    "persistence": 2,
+    "n_baseline_windows": 6,
+    "warning_triggered": false,
+    "warning_window": null,
+    "warning_sample": null,
+    "transition_onset_sample": 60,
+    "lead_samples": null,
+    "lead_seconds": null,
+    "lead_is_early": false,
+    "indicators": [
+      {
+        "name": "variance",
+        "direction": "rise",
+        "robust_z": 0.47996321116967766,
+        "baseline_median": 4.495433122115603,
+        "z_threshold": 7.881077691219692,
+        "breached": false
+      },
+      {
+        "name": "lag1_autocorrelation",
+        "direction": "rise",
+        "robust_z": 2.778016206232275,
+        "baseline_median": 0.6261761299083297,
+        "z_threshold": 7.881077691219692,
+        "breached": false
+      }
+    ],
+    "verdict": "no_early_warning",
+    "framework": "Generic early-warning-signals framework (Scheffer et al. 2009, Nature 461:53)",
+    "disclaimer": "This early-warning evidence record is a technical evidence-mapping artefact. It seals a passive detector's alarm decision, the contributing indicators and their robust z-scores, and the provenance of the screened signal; it does not constitute a clinical, operational, or safety decision, nor a certification of compliance. Any reported lead time is measured against a caller-supplied ground-truth onset and holds only for the recorded observable and detector configuration; a non-positive lead means the alarm was coincident with or later than the transition.",
+    "content_hash": "cedabc82f3884c4c131813123bde205acc397bfbf3461ffa2e547d92f0420a46"
+  }
+}

@@ -372,3 +372,16 @@ def test_verdict_names_several_leads_in_the_plural_with_the_median() -> None:
     assert "3/3 glaciations" in verdict
     assert "on 3 glaciations is evidence" in verdict
     assert "median lead 200 s" in verdict
+
+
+def test_verdict_quotes_the_lead_in_the_requested_unit() -> None:
+    # A palaeoclimate record leads in years, not seconds.
+    verdict = single_series_verdict(
+        {"a": 722473.0},
+        6,
+        noun="climate transitions",
+        singular="climate transition",
+        lead_unit="yr",
+    )
+    assert "median lead 722473 yr" in verdict
+    assert " s)" not in verdict

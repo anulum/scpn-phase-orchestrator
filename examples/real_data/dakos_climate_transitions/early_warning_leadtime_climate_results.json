@@ -1,0 +1,52 @@
+{
+  "benchmark": "early_warning_leadtime_climate",
+  "corpus": "Dakos et al. 2008 palaeoclimate abrupt-transition records",
+  "detrend_bandwidth_percent": 10.0,
+  "window": 30,
+  "step": 3,
+  "segment_samples": 60,
+  "baseline_fraction": 0.5,
+  "target_false_alarm": 0.1,
+  "n_null_trials": 50,
+  "matched_false_alarm_threshold": 7.881077691219692,
+  "achieved_false_alarm": {
+    "critical_slowing_down": 0.1
+  },
+  "transitions": [
+    {
+      "record_id": "eocene_oligocene_greenhouse_end",
+      "lead_years": 722472.885032538
+    },
+    {
+      "record_id": "glaciation_I_termination",
+      "lead_years": null
+    },
+    {
+      "record_id": "glaciation_II_termination",
+      "lead_years": null
+    },
+    {
+      "record_id": "glaciation_III_termination",
+      "lead_years": null
+    },
+    {
+      "record_id": "bolling_allerod_onset",
+      "lead_years": null
+    },
+    {
+      "record_id": "younger_dryas_termination",
+      "lead_years": null
+    }
+  ],
+  "excluded_records": [
+    {
+      "record_id": "glaciation_IV_termination",
+      "reason": "record too short"
+    },
+    {
+      "record_id": "north_africa_desertification",
+      "reason": "record too short"
+    }
+  ],
+  "verdict": "SINGLE-INDICATOR DETECTION: at a matched false-alarm rate critical slowing down leads 1/6 climate transitions (median lead 722473 yr). A lead on one climate transition is evidence, not a robust precursor; consistent with detection as a commodity, the auditable sealed evidence \u2014 including the sealed silences \u2014 is the deliverable."
+}
