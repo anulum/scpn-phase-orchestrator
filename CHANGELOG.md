@@ -106,6 +106,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   auditable sealed evidence, not the lead. `tests/test_chb01_seizure_evidence.py`
   recomputes every seal, pins the leading detection's digest, and guards the
   sparse-detection result; the raw EDF is citation-only and never redistributed.
+- `bench/early_warning_leadtime_cardiac.py` is the second-domain capstone — the
+  cardiac-ECG adapter onto the shared harness — proving the early-warning design
+  is domain-adaptable: the *same* suite and matched-false-alarm harness screen the
+  onset of atrial fibrillation in the two-lead surface ECG through nothing but a
+  different adapter. `CardiacPhaseAdapter` band-passes 5–20 Hz, takes the per-lead
+  Hilbert analytic phase, and decimates 250 → 50 Hz to the neutral bundle; the
+  WFDB reader and rhythm-annotation parsing find each `(AFIB` onset and the longest
+  sinus stretch for the null. It carries two honest caveats: only two ECG leads
+  (a thin oscillator population) and AF onset being a desynchronisation (opposite
+  to a seizure's synchronisation rise). Pinned on synthetic arrays and a synthetic
+  WFDB record in `tests/test_early_warning_leadtime_cardiac.py`; WFDB ingestion
+  needs the optional `cardiac` extra (`pip install -e .[cardiac]`, wfdb), and its
+  tests are gated on that extra.
+- `examples/real_data/afdb_atrial_fibrillation/` is the cardiac capstone's sealed
+  artefact: the suite and fusion run on six real MIT-BIH AFDB onsets, sealed per
+  detector per onset. The honest matched-false-alarm result is again **sparse
+  detection with no robust advantage** — two of six onsets led (`04043`, `04908`),
+  the fusion leading no more onsets than its best single member — mirroring the
+  scalp-EEG finding across an independent physiological domain and confirming the
+  deliverable is the auditable sealed evidence, not the lead.
+  `tests/test_afdb_af_evidence.py` recomputes every seal, pins the two led onsets'
+  digests, and guards the sparse-detection result; the raw ECG is citation-only
+  and never redistributed.
+- The `cardiac` optional dependency extra installs `wfdb` for the cardiac-ECG
+  early-warning capstone's WFDB ingestion.
 
 ### Changed
 

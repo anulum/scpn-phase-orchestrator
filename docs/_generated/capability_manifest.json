@@ -12,7 +12,7 @@
     "research_experimental_modules": 201,
     "runtime_serving_modules": 143,
     "rust_kernel_files": 97,
-    "test_files": 778
+    "test_files": 780
   },
   "documentation": {
     "public_pages": [
@@ -1798,6 +1798,7 @@
       "tests/test_adapters_network_validation.py",
       "tests/test_adapters_slice_c.py",
       "tests/test_adjoint.py",
+      "tests/test_afdb_af_evidence.py",
       "tests/test_analytic_phase_pipeline.py",
       "tests/test_api_docs_navigation.py",
       "tests/test_architecture_studio_manifest.py",
@@ -1972,6 +1973,7 @@
       "tests/test_early_warning_domain.py",
       "tests/test_early_warning_evidence.py",
       "tests/test_early_warning_leadtime.py",
+      "tests/test_early_warning_leadtime_cardiac.py",
       "tests/test_early_warning_leadtime_eeg.py",
       "tests/test_early_warning_suite.py",
       "tests/test_edge_consensus_sheaf_obstruction_demo.py",

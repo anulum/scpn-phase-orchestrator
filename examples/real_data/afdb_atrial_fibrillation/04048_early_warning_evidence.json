@@ -1,0 +1,158 @@
+{
+  "record_id": "04048",
+  "onset_sample": 45000,
+  "detectors": {
+    "critical_slowing_down": {
+      "detector": "critical_slowing_down",
+      "observable": "cross-lead Kuramoto order parameter R(t) of 2-lead ECG analytic phase (5-20 Hz, decimated to 50 Hz)",
+      "signal_source": "MIT-BIH AFDB 04048 (Moody & Mark 1983) / AF onset 2226.71 s / 900 s pre-onset segment",
+      "captured_at": "AFDB/04048",
+      "sampling_rate_hz": 50.0,
+      "window": 200,
+      "step": 25,
+      "persistence": 2,
+      "n_baseline_windows": 598,
+      "warning_triggered": false,
+      "warning_window": null,
+      "warning_sample": null,
+      "transition_onset_sample": 45000,
+      "lead_samples": null,
+      "lead_seconds": null,
+      "lead_is_early": false,
+      "indicators": [
+        {
+          "name": "variance",
+          "direction": "rise",
+          "robust_z": 0.7969275175487623,
+          "baseline_median": 0.09856142891254212,
+          "z_threshold": 5.75,
+          "breached": false
+        },
+        {
+          "name": "lag1_autocorrelation",
+          "direction": "rise",
+          "robust_z": 1.1452369506361302,
+          "baseline_median": 0.8347422356809839,
+          "z_threshold": 5.75,
+          "breached": false
+        }
+      ],
+      "verdict": "no_early_warning",
+      "framework": "Generic early-warning-signals framework (Scheffer et al. 2009, Nature 461:53)",
+      "disclaimer": "This early-warning evidence record is a technical evidence-mapping artefact. It seals a passive detector's alarm decision, the contributing indicators and their robust z-scores, and the provenance of the screened signal; it does not constitute a clinical, operational, or safety decision, nor a certification of compliance. Any reported lead time is measured against a caller-supplied ground-truth onset and holds only for the recorded observable and detector configuration; a non-positive lead means the alarm was coincident with or later than the transition.",
+      "content_hash": "88b1fae217f01f21fe309c883d524696be4d0b19527a1cbfad646648a39c0589"
+    },
+    "synchronisation": {
+      "detector": "synchronisation",
+      "observable": "per-lead 2-lead ECG analytic phase (5-20 Hz, decimated to 50 Hz)",
+      "signal_source": "MIT-BIH AFDB 04048 (Moody & Mark 1983) / AF onset 2226.71 s / 900 s pre-onset segment",
+      "captured_at": "AFDB/04048",
+      "sampling_rate_hz": 50.0,
+      "window": 200,
+      "step": 25,
+      "persistence": 2,
+      "n_baseline_windows": 598,
+      "warning_triggered": false,
+      "warning_window": null,
+      "warning_sample": null,
+      "transition_onset_sample": 45000,
+      "lead_samples": null,
+      "lead_seconds": null,
+      "lead_is_early": false,
+      "indicators": [
+        {
+          "name": "order_parameter",
+          "direction": "rise",
+          "robust_z": 1.761083432012474,
+          "baseline_median": 0.5073661667382015,
+          "z_threshold": 4.25,
+          "breached": false
+        }
+      ],
+      "verdict": "no_early_warning",
+      "framework": "Generic early-warning-signals framework (Scheffer et al. 2009, Nature 461:53)",
+      "disclaimer": "This early-warning evidence record is a technical evidence-mapping artefact. It seals a passive detector's alarm decision, the contributing indicators and their robust z-scores, and the provenance of the screened signal; it does not constitute a clinical, operational, or safety decision, nor a certification of compliance. Any reported lead time is measured against a caller-supplied ground-truth onset and holds only for the recorded observable and detector configuration; a non-positive lead means the alarm was coincident with or later than the transition.",
+      "content_hash": "59740fbffe0c11db5eb83392ed3f64a9a99b6fc3f43e08a54273a78bc7130957"
+    },
+    "transition_entropy": {
+      "detector": "transition_entropy",
+      "observable": "per-lead phase projection sin(phase) of 2-lead ECG (5-20 Hz, decimated to 50 Hz)",
+      "signal_source": "MIT-BIH AFDB 04048 (Moody & Mark 1983) / AF onset 2226.71 s / 900 s pre-onset segment",
+      "captured_at": "AFDB/04048",
+      "sampling_rate_hz": 50.0,
+      "window": 200,
+      "step": 25,
+      "persistence": 2,
+      "n_baseline_windows": 598,
+      "warning_triggered": false,
+      "warning_window": null,
+      "warning_sample": null,
+      "transition_onset_sample": 45000,
+      "lead_samples": null,
+      "lead_seconds": null,
+      "lead_is_early": false,
+      "indicators": [
+        {
+          "name": "transition_entropy",
+          "direction": "drop",
+          "robust_z": -1.634162474952317,
+          "baseline_median": 0.847260357415895,
+          "z_threshold": 2.75,
+          "breached": false
+        }
+      ],
+      "verdict": "no_early_warning",
+      "framework": "Generic early-warning-signals framework (Scheffer et al. 2009, Nature 461:53)",
+      "disclaimer": "This early-warning evidence record is a technical evidence-mapping artefact. It seals a passive detector's alarm decision, the contributing indicators and their robust z-scores, and the provenance of the screened signal; it does not constitute a clinical, operational, or safety decision, nor a certification of compliance. Any reported lead time is measured against a caller-supplied ground-truth onset and holds only for the recorded observable and detector configuration; a non-positive lead means the alarm was coincident with or later than the transition.",
+      "content_hash": "0dc48c1750c34505e1d6c1f26a11860628fb7416f0928462f5da99576a11f994"
+    },
+    "ensemble_weighted": {
+      "detector": "ensemble_weighted",
+      "observable": "fused early-warning suite over 2-lead ECG analytic phase (5-20 Hz, decimated to 50 Hz)",
+      "signal_source": "MIT-BIH AFDB 04048 (Moody & Mark 1983) / AF onset 2226.71 s / 900 s pre-onset segment",
+      "captured_at": "AFDB/04048",
+      "sampling_rate_hz": 50.0,
+      "window": 200,
+      "step": 25,
+      "persistence": 2,
+      "n_baseline_windows": 598,
+      "warning_triggered": false,
+      "warning_window": null,
+      "warning_sample": null,
+      "transition_onset_sample": 45000,
+      "lead_samples": null,
+      "lead_seconds": null,
+      "lead_is_early": false,
+      "indicators": [
+        {
+          "name": "critical_slowing_down",
+          "direction": "rise",
+          "robust_z": 1.0821797028220494,
+          "baseline_median": 0.09856142891254212,
+          "z_threshold": 5.75,
+          "breached": false
+        },
+        {
+          "name": "synchronisation",
+          "direction": "rise",
+          "robust_z": 1.2127437317344454,
+          "baseline_median": 0.5073661667382015,
+          "z_threshold": 4.25,
+          "breached": false
+        },
+        {
+          "name": "transition_entropy",
+          "direction": "drop",
+          "robust_z": -0.8665066974652172,
+          "baseline_median": 0.847260357415895,
+          "z_threshold": 2.75,
+          "breached": false
+        }
+      ],
+      "verdict": "no_early_warning",
+      "framework": "Generic early-warning-signals framework (Scheffer et al. 2009, Nature 461:53)",
+      "disclaimer": "This early-warning evidence record is a technical evidence-mapping artefact. It seals a passive detector's alarm decision, the contributing indicators and their robust z-scores, and the provenance of the screened signal; it does not constitute a clinical, operational, or safety decision, nor a certification of compliance. Any reported lead time is measured against a caller-supplied ground-truth onset and holds only for the recorded observable and detector configuration; a non-positive lead means the alarm was coincident with or later than the transition.",
+      "content_hash": "8e3017edbde6801ec2efecb977e6bcb96f151ee98d48ca5735d3e1c78a7ce74e"
+    }
+  }
+}

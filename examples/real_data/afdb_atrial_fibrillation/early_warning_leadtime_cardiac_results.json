@@ -1,0 +1,91 @@
+{
+  "benchmark": "early_warning_leadtime_cardiac",
+  "corpus": "MIT-BIH Atrial Fibrillation Database (Moody & Mark 1983)",
+  "sampling_rate_hz": 250.0,
+  "decimated_rate_hz": 50.0,
+  "band_hz": [
+    5.0,
+    20.0
+  ],
+  "window": 200,
+  "step": 25,
+  "baseline_seconds": 300.0,
+  "horizon_seconds": 600.0000000000001,
+  "segment_seconds": 900.0,
+  "target_false_alarm": 0.1,
+  "sinus_null_records": [
+    "04015",
+    "04126"
+  ],
+  "n_null_trials": 20,
+  "matched_false_alarm_thresholds": {
+    "critical_slowing_down": 5.75,
+    "synchronisation": 4.25,
+    "transition_entropy": 2.75,
+    "ensemble_weighted": 2.5
+  },
+  "af_onsets": [
+    {
+      "record_id": "04043",
+      "onset_s": 1066.0,
+      "lead_seconds": {
+        "critical_slowing_down": null,
+        "synchronisation": 224.0,
+        "transition_entropy": null,
+        "ensemble_weighted": 224.0
+      }
+    },
+    {
+      "record_id": "04048",
+      "onset_s": 2226.7,
+      "lead_seconds": {
+        "critical_slowing_down": null,
+        "synchronisation": null,
+        "transition_entropy": null,
+        "ensemble_weighted": null
+      }
+    },
+    {
+      "record_id": "04746",
+      "onset_s": 4390.0,
+      "lead_seconds": {
+        "critical_slowing_down": null,
+        "synchronisation": null,
+        "transition_entropy": null,
+        "ensemble_weighted": null
+      }
+    },
+    {
+      "record_id": "04908",
+      "onset_s": 4908.9,
+      "lead_seconds": {
+        "critical_slowing_down": 529.0,
+        "synchronisation": 45.0,
+        "transition_entropy": null,
+        "ensemble_weighted": 528.5
+      }
+    },
+    {
+      "record_id": "05091",
+      "onset_s": 6532.2,
+      "lead_seconds": {
+        "critical_slowing_down": null,
+        "synchronisation": null,
+        "transition_entropy": null,
+        "ensemble_weighted": null
+      }
+    },
+    {
+      "record_id": "07879",
+      "onset_s": 7132.3,
+      "lead_seconds": {
+        "critical_slowing_down": null,
+        "synchronisation": null,
+        "transition_entropy": null,
+        "ensemble_weighted": null
+      }
+    }
+  ],
+  "excluded_records": [],
+  "verdict": "SPARSE DETECTION, NO ROBUST ADVANTAGE: at a matched false-alarm rate detection is sparse and no detector leads more AF onsets than the fusion (critical_slowing_down 1/6 (median lead 529 s); synchronisation 2/6 (median lead 134 s); transition_entropy 0/6; ensemble_weighted 2/6 (median lead 376 s)). A longer lead on one AF onset is not a robust advantage; consistent with detection as a commodity, the auditable sealed evidence is the deliverable."
+}
