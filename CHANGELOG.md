@@ -57,7 +57,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   a detector does not fire. The gain from fusion is reported as matched-false-alarm
   lead, never a raw detection rate. The raw EDF is citation-only and never
   redistributed; the pipeline, calibration, lead, sealing, and EDF ingestion are
-  pinned on synthetic arrays in `tests/test_early_warning_leadtime_eeg.py`.
+  pinned on synthetic arrays in `tests/test_early_warning_leadtime_eeg.py`. EDF
+  ingestion needs the optional `eeg` extra (`pip install -e .[eeg]`, pyedflib); its
+  tests are gated on that extra, as the suite gates jax and juliacall tests.
 
 ### Changed
 

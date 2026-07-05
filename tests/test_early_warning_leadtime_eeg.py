@@ -20,6 +20,7 @@ downloading the CHB-MIT database.
 from __future__ import annotations
 
 import datetime as dt
+import importlib.util
 import json
 from pathlib import Path
 
@@ -59,6 +60,16 @@ from scpn_phase_orchestrator.assurance.early_warning_evidence import (
 )
 
 _TWO_PI = 2.0 * np.pi
+
+# The EDF-ingestion path needs pyedflib, an optional native dependency declared as
+# the ``eeg`` extra (``pip install -e .[eeg]``). The pipeline, calibration, lead,
+# sealing, and verdict tests never touch it; only the EDF I/O and end-to-end
+# orchestration tests do, so they are gated on its presence — the same pattern the
+# suite uses for jax, juliacall, and the other optional backends.
+_requires_pyedflib = pytest.mark.skipif(
+    importlib.util.find_spec("pyedflib") is None,
+    reason="pyedflib is an optional dependency (install the 'eeg' extra)",
+)
 
 
 # --------------------------------------------------------------------------- #
@@ -539,6 +550,7 @@ def _rising_coherence_channels(
     return channels
 
 
+@_requires_pyedflib
 def test_load_edf_channels_selects_the_expected_rate(tmp_path: Path) -> None:
     path = tmp_path / "synthetic.edf"
     _write_edf(path, rates=[256.0, 256.0, 128.0])
@@ -547,6 +559,7 @@ def test_load_edf_channels_selects_the_expected_rate(tmp_path: Path) -> None:
     assert channels.shape == (2, 256 * 4)
 
 
+@_requires_pyedflib
 def test_load_edf_channels_rejects_a_recording_without_the_rate(
     tmp_path: Path,
 ) -> None:
@@ -556,12 +569,14 @@ def test_load_edf_channels_rejects_a_recording_without_the_rate(
         load_edf_channels(path, expected_rate_hz=256.0)
 
 
+@_requires_pyedflib
 def test_edf_start_datetime_reads_the_recording_stamp(tmp_path: Path) -> None:
     path = tmp_path / "stamped.edf"
     _write_edf(path, rates=[256.0, 256.0])
     assert edf_start_datetime(path).startswith("2009-01-01T12:00:00")
 
 
+@_requires_pyedflib
 def test_load_then_observables_wire_end_to_end(tmp_path: Path) -> None:
     path = tmp_path / "wire.edf"
     _write_edf(path, rates=[256.0, 256.0, 256.0], seconds=10)
@@ -624,6 +639,7 @@ def test_decimate_rejects_a_non_integer_factor() -> None:
 # --------------------------------------------------------------------------- #
 
 
+@_requires_pyedflib
 def test_main_writes_sealed_derived_artefacts(tmp_path: Path) -> None:
     data = tmp_path / "corpus"
     data.mkdir()

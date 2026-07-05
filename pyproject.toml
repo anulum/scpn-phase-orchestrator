@@ -62,6 +62,7 @@ queuewaves = [
 studio = ["streamlit>=1.36,<2.0", "scpn-studio-platform>=0.3,<0.4"]
 nn = ["jax>=0.4,<1.0", "equinox>=0.11,<1.0", "optax>=0.2,<1.0"]
 mpc = ["osqp>=1.0,<2.0"]
+eeg = ["pyedflib>=0.1.42,<0.2"]  # EDF ingestion for the scalp-EEG early-warning capstone
 nengo = []  # pure-numpy LIF engine, no external deps
 lava = []  # external Lava runtime is operator-managed; lava-nc pins vulnerable asteval
 otel = ["opentelemetry-api>=1.20,<2.0", "opentelemetry-sdk>=1.20,<2.0"]
