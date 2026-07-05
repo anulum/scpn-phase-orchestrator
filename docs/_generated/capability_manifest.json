@@ -12,7 +12,7 @@
     "research_experimental_modules": 201,
     "runtime_serving_modules": 143,
     "rust_kernel_files": 97,
-    "test_files": 782
+    "test_files": 783
   },
   "documentation": {
     "public_pages": [
@@ -1976,6 +1976,7 @@
       "tests/test_early_warning_leadtime_cardiac.py",
       "tests/test_early_warning_leadtime_eeg.py",
       "tests/test_early_warning_leadtime_grid.py",
+      "tests/test_early_warning_single_series.py",
       "tests/test_early_warning_suite.py",
       "tests/test_edge_consensus_sheaf_obstruction_demo.py",
       "tests/test_ei_balance.py",
