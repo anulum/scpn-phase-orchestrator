@@ -754,3 +754,49 @@ Self-model error records and review-only reconfiguration examples.
 ::: scpn_phase_orchestrator.monitor.self_model
 
 ::: scpn_phase_orchestrator.monitor.self_model_examples
+
+## Early-Warning Detector Suite
+
+Three complementary passive detectors share one alarm contract — a robust
+(median / MAD) z-score against a leading baseline, a relative-change gate, and a
+persistence run — so they can be compared, and fused, at a matched false-alarm
+rate. Each reads a different moment of an approaching synchronisation transition
+(a seizure onset, a grid coherence collapse): critical slowing down reads the
+second-moment variance / autocorrelation rise, rising synchronisation reads the
+first-moment Kuramoto order-parameter rise, and the
+[ordinal-transition-entropy detector](monitor_explosive_sync.md) reads a
+regularisation drop. All are passive — they read observables and emit a warning
+record; they never actuate. A fair head-to-head
+(`bench/early_warning_leadtime.py`) established that the *detection* is a
+commodity, so the value is the auditable, sealed
+[early-warning evidence](assurance.md#early-warning-assurance-evidence) around
+the alarm, not a claim that any one detector warns earlier.
+
+### Critical Slowing Down
+
+Rising variance and lag-one autocorrelation of an observable ahead of a critical
+transition (Scheffer et al. 2009; Dakos et al. 2012) — the classical
+early-warning baseline, implemented as a passive windowed monitor. Either a
+rising variance or a lengthening autocorrelation is a valid warning; requiring
+both understates the classical method.
+
+::: scpn_phase_orchestrator.monitor.critical_slowing_down
+
+### Rising Synchronisation
+
+A sustained rise in the windowed Kuramoto order parameter
+`R(t) = |⟨e^{iθ}⟩|`, the first-moment coherence precursor complementary to the
+slowing-down and entropy indicators.
+
+::: scpn_phase_orchestrator.monitor.synchronisation
+
+### Ensemble Fusion
+
+Fuses the suite over one window grid: a `weighted` rule (weighted mean of the
+members' oriented z-scores against a scalar threshold, calibratable to a matched
+false-alarm rate) and a `vote` rule (at least `min_votes` members breach their
+own gate). The gain from fusion must be reported as an improvement in
+matched-false-alarm lead time, never as a raw detection rate — an OR of the
+members trivially raises the rate by spending the false-alarm budget.
+
+::: scpn_phase_orchestrator.monitor.ensemble_warning

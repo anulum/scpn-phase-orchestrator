@@ -323,6 +323,19 @@ def member_from_critical_slowing_down(warning: object) -> MemberEvidence:
     The member's oriented z-score is the detector's ``combined_z`` (already a
     rise), and its gate reconstructs the detector's own per-window breach mask.
 
+    Parameters
+    ----------
+    warning : object
+        A
+        :class:`~scpn_phase_orchestrator.monitor.critical_slowing_down.CriticalSlowingDownWarning`
+        to align onto the shared fusion grid.
+
+    Returns
+    -------
+    MemberEvidence
+        The oriented per-window evidence, with ``combined_z`` as the oriented
+        z-score and the detector's own per-window breach mask reconstructed.
+
     Raises
     ------
     ValueError
@@ -357,6 +370,19 @@ def member_from_critical_slowing_down(warning: object) -> MemberEvidence:
 
 def member_from_synchronisation(warning: object) -> MemberEvidence:
     """Adapt a rising-synchronisation warning into fused member evidence.
+
+    Parameters
+    ----------
+    warning : object
+        A
+        :class:`~scpn_phase_orchestrator.monitor.synchronisation.SynchronisationWarning`
+        to align onto the shared fusion grid.
+
+    Returns
+    -------
+    MemberEvidence
+        The oriented per-window evidence, with the order-parameter robust
+        z-score as the oriented score and the detector's own breach mask.
 
     Raises
     ------
@@ -393,6 +419,20 @@ def member_from_transition_entropy(warning: object) -> MemberEvidence:
 
     The member warns on a *drop*, so its oriented z-score is the negation of the
     detector's signed ``robust_z``.
+
+    Parameters
+    ----------
+    warning : object
+        An
+        :class:`~scpn_phase_orchestrator.monitor.explosive_sync.ExplosiveSyncWarning`
+        to align onto the shared fusion grid.
+
+    Returns
+    -------
+    MemberEvidence
+        The oriented per-window evidence; because the member warns on a *drop*,
+        the oriented z-score is the negation of the detector's signed
+        ``robust_z``.
 
     Raises
     ------

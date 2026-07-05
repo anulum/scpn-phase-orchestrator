@@ -280,3 +280,28 @@ bundle as `scpn_power_grid_prc_audit_bundle_v1`. The bundle keeps the full child
 records for assessor replay and carries no live-actuation or conformity claim.
 
 ::: scpn_phase_orchestrator.assurance.power_grid_prc_bundle
+
+## Early-Warning Assurance Evidence
+
+`scpn_phase_orchestrator.assurance.early_warning_evidence` is the auditable
+envelope around the [early-warning detector suite](monitor.md#early-warning-detector-suite).
+A fair head-to-head established that early-warning *detection* is a commodity —
+no single indicator beats the others by a decisive margin — so what this module
+supplies is not a better detector but a content-addressed record that pins which
+indicators contributed and their robust z-scores at the alarm window, the
+provenance of the screened signal, the claim boundary (a review-only technical
+artefact, not a clinical, operational, or safety decision, nor a certification),
+and, when a ground-truth transition onset is supplied, the **honest lead time** —
+including a non-positive lead when the alarm was late rather than suppressing it.
+
+`seal_early_warning` is the detector-neutral primitive: it depends only on the
+alarm decision, the provenance, and a pre-extracted set of
+`EarlyWarningIndicator` contributions, so it seals any present or future detector
+(including the real-EEG capstone) without importing detector internals. The
+`seal_*_alarm` adapters bridge each concrete suite detector — and the fused
+ensemble — onto that primitive. The record is content-addressed with the same
+canonical-JSON SHA-256 the assurance-case bundle and the NERC PRC oscillation
+evidence use, so a sealed alarm can be referenced by a stable digest and any
+later mutation is detectable. It never actuates.
+
+::: scpn_phase_orchestrator.assurance.early_warning_evidence
