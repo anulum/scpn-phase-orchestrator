@@ -48,6 +48,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `member_from_transition_entropy`) build the aligned member evidence, and
   `assurance.early_warning_evidence.seal_ensemble_alarm` seals a fused alarm —
   pinning every member's native contribution — into an `EarlyWarningEvidence`.
+- `scpn_phase_orchestrator.monitor.early_warning_suite` makes the suite
+  domain-adaptable: `SuiteObservables` is the neutral phase-observable bundle
+  every member reads (per-node phases, their `sin(phase)` projection, and the
+  cross-node Kuramoto order parameter), a `DomainObservableAdapter` protocol is a
+  domain's bridge from raw signals to that bundle, and `run_early_warning_suite`
+  runs the three members and the weighted fusion over the bundle with no knowledge
+  of the domain that produced it. `observables_from_phases` derives the projection
+  and order parameter so an adapter need only supply per-node phases. A scalp-EEG
+  seizure, a grid coherence collapse, and a cardiac arrhythmia are then screened
+  by the *same* suite because each is a synchronisation transition in a population
+  of coupled oscillators. Pinned on synthetic arrays in
+  `tests/test_early_warning_suite.py`.
 - `bench/early_warning_leadtime_eeg.py` is the real scalp-EEG capstone: it turns a
   CHB-MIT recording into one decimated analytic-phase field (band-pass 4–30 Hz,
   Hilbert phase, phase-consistent decimation 256→32 Hz), runs the three-member

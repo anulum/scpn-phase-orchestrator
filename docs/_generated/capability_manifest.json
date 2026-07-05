@@ -1,18 +1,18 @@
 {
   "SPDX-License-Identifier": "AGPL-3.0-or-later",
   "counts": {
-    "core_engine_modules": 318,
+    "core_engine_modules": 319,
     "domainpacks": 36,
     "github_workflows": 12,
     "integration_modules": 27,
     "optional_extras": 21,
     "public_api_exports": 24,
     "public_documentation_pages": 218,
-    "python_package_modules": 692,
+    "python_package_modules": 693,
     "research_experimental_modules": 201,
     "runtime_serving_modules": 143,
     "rust_kernel_files": 97,
-    "test_files": 775
+    "test_files": 776
   },
   "documentation": {
     "public_pages": [
@@ -477,6 +477,7 @@
       "src/scpn_phase_orchestrator/monitor/coherence.py",
       "src/scpn_phase_orchestrator/monitor/critical_slowing_down.py",
       "src/scpn_phase_orchestrator/monitor/dimension.py",
+      "src/scpn_phase_orchestrator/monitor/early_warning_suite.py",
       "src/scpn_phase_orchestrator/monitor/embedding.py",
       "src/scpn_phase_orchestrator/monitor/ensemble_warning.py",
       "src/scpn_phase_orchestrator/monitor/entropy_prod.py",
@@ -1417,6 +1418,7 @@
     "src/scpn_phase_orchestrator/monitor/coherence.py",
     "src/scpn_phase_orchestrator/monitor/critical_slowing_down.py",
     "src/scpn_phase_orchestrator/monitor/dimension.py",
+    "src/scpn_phase_orchestrator/monitor/early_warning_suite.py",
     "src/scpn_phase_orchestrator/monitor/embedding.py",
     "src/scpn_phase_orchestrator/monitor/ensemble_warning.py",
     "src/scpn_phase_orchestrator/monitor/entropy_prod.py",
@@ -1968,6 +1970,7 @@
       "tests/test_early_warning_evidence.py",
       "tests/test_early_warning_leadtime.py",
       "tests/test_early_warning_leadtime_eeg.py",
+      "tests/test_early_warning_suite.py",
       "tests/test_edge_consensus_sheaf_obstruction_demo.py",
       "tests/test_ei_balance.py",
       "tests/test_embedding.py",

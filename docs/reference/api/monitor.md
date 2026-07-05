@@ -800,3 +800,16 @@ matched-false-alarm lead time, never as a raw detection rate — an OR of the
 members trivially raises the rate by spending the false-alarm budget.
 
 ::: scpn_phase_orchestrator.monitor.ensemble_warning
+
+### Domain-Adaptable Suite
+
+Runs the three members and the weighted fusion over one neutral observable
+bundle (`SuiteObservables`: per-node phases, their `sin(phase)` projection, and
+the cross-node order parameter), so a scalp-EEG seizure, a grid coherence
+collapse, and a cardiac arrhythmia are screened by the *same* suite. Each is a
+synchronisation transition in a population of coupled oscillators; the only
+per-domain work is a `DomainObservableAdapter` that turns that domain's raw
+signals into the bundle. The suite itself is domain-neutral — it never learns
+where the observables came from.
+
+::: scpn_phase_orchestrator.monitor.early_warning_suite
