@@ -41,21 +41,21 @@ _DIR = (
 _PINNED = {
     "row_176": {
         "critical_slowing_down": (
-            "07449bf32b759c5449d50349a07209fe79f3c2de74534715352f2b58d7ac5b02"
+            "41088a7dc67629c4007a37670c0d36a7003750c98f5debbf6d4e0746026c71fb"
         ),
         "transition_entropy": (
-            "c314e67fe36ab8ac26fc0774fb7dfc93bac3975bd5f809f4f82b6a342191e2b5"
+            "ab7732b98fff8438c27c2c4cbcc0f6560039e0f89d45ec46161f807a5dfc4e10"
         ),
         "ensemble_weighted": (
-            "8ec864924c37fce50e3fc01f4507d8f22510f76be515f4227a6280b25027207f"
+            "468a869ec3b6358d259772e0877260a59f3f557f383dd6aec6fd48f6e39748da"
         ),
     },
-    "row_313": {
+    "row_175": {
         "critical_slowing_down": (
-            "6317d71bcc54b1466579a80e2ccee67e94d2f3138e084fb92d650f3ad834c029"
+            "8d7e341729d715601ccef41fc9a43bda974ff75923f530471357c714a2f70e60"
         ),
         "ensemble_weighted": (
-            "9807a6d5f00f7bf7a71800ccd80f1533f61639038f11aaa0159f6f43cf023677"
+            "e5e9ffc675d80cf08476157a3ae704d999f906f750c729f3b939ddf1491be4fd"
         ),
     },
 }
@@ -108,12 +108,14 @@ def test_aggregate_records_the_honest_sparse_verdict(
     assert aggregate["n_transitions_evaluated"] == 12
     assert aggregate["n_null_trials"] == 24
     assert aggregate["segment_seconds"] == 2.0
-    assert aggregate["matched_false_alarm_thresholds"] == {
-        "critical_slowing_down": 10.0,
-        "synchronisation": 3.5,
-        "transition_entropy": 3.75,
-        "ensemble_weighted": 10.0,
-    }
+
+
+def test_every_detector_is_held_at_or_below_the_target_false_alarm(
+    aggregate: dict[str, Any],
+) -> None:
+    """The continuous calibration holds each detector at or below the 10 % target."""
+    for rate in aggregate["achieved_false_alarm"].values():
+        assert rate <= 0.10 + 1.0e-9
 
 
 def test_critical_slowing_down_leads_and_the_fusion_has_no_advantage(

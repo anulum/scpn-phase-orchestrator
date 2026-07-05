@@ -22,10 +22,16 @@
   ],
   "n_null_trials": 20,
   "matched_false_alarm_thresholds": {
-    "critical_slowing_down": 4.5,
-    "synchronisation": 3.75,
-    "transition_entropy": 0.25,
-    "ensemble_weighted": 3.0
+    "critical_slowing_down": 4.274048774356526,
+    "synchronisation": 3.7474762071511156,
+    "transition_entropy": 0.0,
+    "ensemble_weighted": 2.8937677491356917
+  },
+  "achieved_false_alarm": {
+    "critical_slowing_down": 0.1,
+    "synchronisation": 0.1,
+    "transition_entropy": 0.0,
+    "ensemble_weighted": 0.1
   },
   "seizures": [
     {
@@ -42,10 +48,10 @@
       "record_id": "chb01_04",
       "onset_s": 1467,
       "lead_seconds": {
-        "critical_slowing_down": null,
+        "critical_slowing_down": 412.0,
         "synchronisation": 441.5,
         "transition_entropy": null,
-        "ensemble_weighted": 450.5
+        "ensemble_weighted": 452.0
       }
     },
     {
@@ -82,7 +88,7 @@
       "record_id": "chb01_26",
       "onset_s": 1862,
       "lead_seconds": {
-        "critical_slowing_down": null,
+        "critical_slowing_down": 405.5,
         "synchronisation": null,
         "transition_entropy": null,
         "ensemble_weighted": null
@@ -95,5 +101,5 @@
       "onset_s": 327
     }
   ],
-  "verdict": "SPARSE DETECTION, NO ROBUST ADVANTAGE: at a matched false-alarm rate detection is sparse and no detector leads more seizures than the fusion (critical_slowing_down 0/6; synchronisation 1/6 (median lead 442 s); transition_entropy 0/6; ensemble_weighted 1/6 (median lead 450 s)). A longer lead on one seizure is not a robust advantage; consistent with detection as a commodity, the auditable sealed evidence is the deliverable."
+  "verdict": "SPARSE DETECTION, NO ROBUST ADVANTAGE: at a matched false-alarm rate detection is sparse and no detector leads more seizures than the fusion (critical_slowing_down 2/6 (median lead 409 s); synchronisation 1/6 (median lead 442 s); transition_entropy 0/6; ensemble_weighted 1/6 (median lead 452 s)). A longer lead on one seizure is not a robust advantage; consistent with detection as a commodity, the auditable sealed evidence is the deliverable."
 }

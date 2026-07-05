@@ -12,35 +12,35 @@
       "step": 24,
       "persistence": 2,
       "n_baseline_windows": 5,
-      "warning_triggered": true,
-      "warning_window": 6,
-      "warning_sample": 144,
+      "warning_triggered": false,
+      "warning_window": null,
+      "warning_sample": null,
       "transition_onset_sample": 476,
-      "lead_samples": 332,
-      "lead_seconds": 1.3943999999999939,
-      "lead_is_early": true,
+      "lead_samples": null,
+      "lead_seconds": null,
+      "lead_is_early": false,
       "indicators": [
         {
           "name": "variance",
           "direction": "rise",
           "robust_z": 37.02805977547095,
           "baseline_median": 0.0004996736507005007,
-          "z_threshold": 10.0,
-          "breached": true
+          "z_threshold": 480.2014146956326,
+          "breached": false
         },
         {
           "name": "lag1_autocorrelation",
           "direction": "rise",
           "robust_z": -1.547437931096806,
           "baseline_median": 0.9943767835880529,
-          "z_threshold": 10.0,
+          "z_threshold": 480.2014146956326,
           "breached": false
         }
       ],
-      "verdict": "early_warning_flagged",
+      "verdict": "no_early_warning",
       "framework": "Generic early-warning-signals framework (Scheffer et al. 2009, Nature 461:53)",
       "disclaimer": "This early-warning evidence record is a technical evidence-mapping artefact. It seals a passive detector's alarm decision, the contributing indicators and their robust z-scores, and the provenance of the screened signal; it does not constitute a clinical, operational, or safety decision, nor a certification of compliance. Any reported lead time is measured against a caller-supplied ground-truth onset and holds only for the recorded observable and detector configuration; a non-positive lead means the alarm was coincident with or later than the transition.",
-      "content_hash": "a9ae7ae0fceb8151ac629854f1387a12109c124a8104fa14bda90e303f6ec328"
+      "content_hash": "1272017c6c65d0fc2ebf020f3fbeca1ef74bd74f5bb87628ab32841ac5e3b36b"
     },
     "synchronisation": {
       "detector": "synchronisation",
@@ -65,14 +65,14 @@
           "direction": "rise",
           "robust_z": 0.7146128693134003,
           "baseline_median": 0.9355477562896507,
-          "z_threshold": 3.5,
+          "z_threshold": 3.3214248430567874,
           "breached": false
         }
       ],
       "verdict": "no_early_warning",
       "framework": "Generic early-warning-signals framework (Scheffer et al. 2009, Nature 461:53)",
       "disclaimer": "This early-warning evidence record is a technical evidence-mapping artefact. It seals a passive detector's alarm decision, the contributing indicators and their robust z-scores, and the provenance of the screened signal; it does not constitute a clinical, operational, or safety decision, nor a certification of compliance. Any reported lead time is measured against a caller-supplied ground-truth onset and holds only for the recorded observable and detector configuration; a non-positive lead means the alarm was coincident with or later than the transition.",
-      "content_hash": "cef9c49c1227f4ea48f67aac38205393c8e906caff5904528444e71baa6e5c11"
+      "content_hash": "6acb5f5cade20e9914e7a227696482dfc15d14adc2dc8515fbade175cd6f97e2"
     },
     "transition_entropy": {
       "detector": "transition_entropy",
@@ -97,14 +97,14 @@
           "direction": "drop",
           "robust_z": -8.241157185512078,
           "baseline_median": 0.43953993319427304,
-          "z_threshold": 3.75,
+          "z_threshold": 3.6912970984519613,
           "breached": true
         }
       ],
       "verdict": "no_early_warning",
       "framework": "Generic early-warning-signals framework (Scheffer et al. 2009, Nature 461:53)",
       "disclaimer": "This early-warning evidence record is a technical evidence-mapping artefact. It seals a passive detector's alarm decision, the contributing indicators and their robust z-scores, and the provenance of the screened signal; it does not constitute a clinical, operational, or safety decision, nor a certification of compliance. Any reported lead time is measured against a caller-supplied ground-truth onset and holds only for the recorded observable and detector configuration; a non-positive lead means the alarm was coincident with or later than the transition.",
-      "content_hash": "65a13b1574f39aacf70c7c8b4c3113a364fb2c1a319f99d7c91a2c87ddfa4bb0"
+      "content_hash": "4e5f0ba60428340eea628d9814aa6bd53241ec1deecbd4d33bb8ba85634f52cd"
     },
     "ensemble_weighted": {
       "detector": "ensemble_weighted",
@@ -129,15 +129,15 @@
           "direction": "rise",
           "robust_z": 37.02805977547095,
           "baseline_median": 0.0004996736507005007,
-          "z_threshold": 10.0,
-          "breached": true
+          "z_threshold": 480.2014146956326,
+          "breached": false
         },
         {
           "name": "synchronisation",
           "direction": "rise",
           "robust_z": -4.983541107433617,
           "baseline_median": 0.9355477562896507,
-          "z_threshold": 3.5,
+          "z_threshold": 3.3214248430567874,
           "breached": false
         },
         {
@@ -145,14 +145,14 @@
           "direction": "drop",
           "robust_z": -1.7079693258868116,
           "baseline_median": 0.43953993319427304,
-          "z_threshold": 3.75,
+          "z_threshold": 3.6912970984519613,
           "breached": false
         }
       ],
       "verdict": "no_early_warning",
       "framework": "Generic early-warning-signals framework (Scheffer et al. 2009, Nature 461:53)",
       "disclaimer": "This early-warning evidence record is a technical evidence-mapping artefact. It seals a passive detector's alarm decision, the contributing indicators and their robust z-scores, and the provenance of the screened signal; it does not constitute a clinical, operational, or safety decision, nor a certification of compliance. Any reported lead time is measured against a caller-supplied ground-truth onset and holds only for the recorded observable and detector configuration; a non-positive lead means the alarm was coincident with or later than the transition.",
-      "content_hash": "9c4bde55970241a85022a23d2d10fffc819a009b6ba2494abd13fe378549156d"
+      "content_hash": "14704a0ce8a4e8905670e46ff9c9589b92feb9a7a6baf02e3210210634d0ec86"
     }
   }
 }

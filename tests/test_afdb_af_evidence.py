@@ -45,21 +45,21 @@ _LED = ("04043", "04908")
 _PINNED = {
     "04043": {
         "synchronisation": (
-            "fa30c57dd3de860db7cf6aab89db832ca63046cd93649ac0420ec0fc081b211e"
+            "a96be77975138394a4f86af3c41a29d3e22ee961752f9f7eb3a6439206c235fa"
         ),
         "ensemble_weighted": (
-            "d21b3a7f0c327b364799983110d86012cc840a9a0d179470649d7a7e14417940"
+            "ac60f240218699f3f1e1bba2499856af72366e73ebefd34cceb6a94caeb999be"
         ),
     },
     "04908": {
         "critical_slowing_down": (
-            "bcc926773edd5edc8fd06823317676b445536f4f50ccc3497dacb8f776e93876"
+            "fb893bad8a8bd8f45962e9b283a3b44cad4047475e38a148d553788814b5b0ed"
         ),
         "synchronisation": (
-            "1899f61ef4fb08415f9ae48c0dd3d62bab7ca2c272f4248d9a35d95e161dcddd"
+            "d9cb4de4146134f4e7c1f4ec9a298c9f6aec2de3c2a3ba8fd8a574bec646fc0d"
         ),
         "ensemble_weighted": (
-            "f3c728b46d912f0eb1276207f9afe54fa6582bf6c9ee3086e2ce710e8422f5f3"
+            "3da43ce7e1475cfa83f115cc943a4b0725072870e76bee838250bd29f7a4d7ac"
         ),
     },
 }
@@ -119,12 +119,14 @@ def test_aggregate_records_the_honest_sparse_verdict(
     assert aggregate["verdict"].startswith("SPARSE DETECTION, NO ROBUST ADVANTAGE")
     assert aggregate["n_null_trials"] == 20
     assert aggregate["segment_seconds"] == 900.0
-    assert aggregate["matched_false_alarm_thresholds"] == {
-        "critical_slowing_down": 5.75,
-        "synchronisation": 4.25,
-        "transition_entropy": 2.75,
-        "ensemble_weighted": 2.5,
-    }
+
+
+def test_every_detector_is_held_at_or_below_the_target_false_alarm(
+    aggregate: dict[str, Any],
+) -> None:
+    """The continuous calibration holds each detector at or below the 10 % target."""
+    for rate in aggregate["achieved_false_alarm"].values():
+        assert rate <= 0.10 + 1.0e-9
 
 
 def test_the_fusion_has_no_robust_advantage(aggregate: dict[str, Any]) -> None:

@@ -11,13 +11,12 @@
 `examples/real_data/chb01_seizures/` is the empirical capstone of the
 early-warning detector suite: the suite and its weighted fusion run on real
 annotated seizures from the CHB-MIT Scalp EEG Database (Shoeb 2009), calibrated
-to a matched false-alarm rate, and sealed per detector per seizure. These tests
-guard the committed derived artefact without the raw EEG (citation-only, not
+to an exact matched false-alarm rate, and sealed per detector per seizure. These
+tests guard the committed derived artefact without the raw EEG (citation-only, not
 redistributed): they recompute every sealed record's content hash to prove it was
-not hand-edited, pin the digests of the one leading detection, and assert the
-honest sparse-detection result — one of six evaluated seizures led, no robust
-early-warning advantage, and the early-onset seizure excluded rather than counted
-as a silent null.
+not hand-edited, pin the digests of the led detections, assert every detector was
+held at or below the target false-alarm rate, and assert the honest
+sparse-detection result.
 """
 
 from __future__ import annotations
@@ -41,18 +40,28 @@ _SEIZURES = (
     "chb01_18",
     "chb01_26",
 )
-#: The single seizure that produced a leading alarm at matched false alarm.
-_LED_SEIZURE = "chb01_04"
-#: Digests of the leading detections on ``chb01_04``. The pipeline and detectors
-#: are deterministic, so regenerating the artefact reproduces these; pinning them
-#: ties the committed evidence to a fixed derived provenance.
+#: The two seizures with a leading alarm at the matched false-alarm rate.
+_LED = ("chb01_04", "chb01_26")
+#: Digests of the leading detections. The pipeline, detectors, and continuous
+#: calibration are deterministic, so regenerating the artefact reproduces these;
+#: pinning them ties the committed evidence to a fixed derived provenance.
 _PINNED = {
-    "synchronisation": (
-        "639db152b4948be6e8444a3e959735c62a79501d347963cb91e7e3786a16759b"
-    ),
-    "ensemble_weighted": (
-        "a687a87e4db37e8178775960d15f863efa4a055cfd8efee53e59d1a1186943bf"
-    ),
+    "chb01_04": {
+        "critical_slowing_down": (
+            "0b057ae3b7c5d89da990839095f54d70d13ac591ffa78e842a30ea47105f4895"
+        ),
+        "synchronisation": (
+            "9b2bdc39e75d2be3e7da5d5e452ae0443c9583306ae132a3fd5a1e6bdf651ad9"
+        ),
+        "ensemble_weighted": (
+            "8a8b046038d8416d340b7058fd23e641c3ca65e9ea390d0d1716c80f68c9fe7e"
+        ),
+    },
+    "chb01_26": {
+        "critical_slowing_down": (
+            "badcb6b558b929f43385168e1930bd217944c982c14e44ac19d509b1acf264cb"
+        ),
+    },
 }
 
 
@@ -81,29 +90,24 @@ def test_every_detector_seal_recomputes() -> None:
             assert canonical_record_hash(payload) == sealed, f"{record_id}/{name}"
 
 
-def test_only_the_led_seizure_fires_and_pins_its_digest() -> None:
-    """``chb01_04`` alone is led (synchronisation + fusion), with pinned digests."""
-    detectors = _evidence(_LED_SEIZURE)["detectors"]
-    assert detectors["synchronisation"]["content_hash"] == _PINNED["synchronisation"]
-    assert (
-        detectors["ensemble_weighted"]["content_hash"] == _PINNED["ensemble_weighted"]
-    )
-    assert detectors["synchronisation"]["lead_is_early"] is True
-    assert detectors["ensemble_weighted"]["lead_is_early"] is True
-    # Critical slowing down and transition entropy do not fire even here.
-    assert detectors["critical_slowing_down"]["warning_triggered"] is False
-    assert detectors["transition_entropy"]["warning_triggered"] is False
+def test_the_led_seizures_pin_their_digests() -> None:
+    """The led seizures carry the pinned leading-detection digests."""
+    for record_id, pins in _PINNED.items():
+        detectors = _evidence(record_id)["detectors"]
+        for name, digest in pins.items():
+            assert detectors[name]["content_hash"] == digest, f"{record_id}/{name}"
+            assert detectors[name]["warning_triggered"] is True
+            assert detectors[name]["lead_is_early"] is True
 
 
 def test_the_other_evaluated_seizures_are_sealed_silences() -> None:
-    """No detector fires on the five seizures other than ``chb01_04``."""
+    """No detector leads the four seizures other than the two led records."""
     for record_id in _SEIZURES:
-        if record_id == _LED_SEIZURE:
+        if record_id in _LED:
             continue
         detectors = _evidence(record_id)["detectors"]
         for name, record in detectors.items():
-            assert record["warning_triggered"] is False, f"{record_id}/{name} fired"
-            assert record["lead_is_early"] is False
+            assert record["lead_is_early"] is False, f"{record_id}/{name} led"
 
 
 def test_aggregate_records_the_honest_sparse_verdict(
@@ -113,12 +117,14 @@ def test_aggregate_records_the_honest_sparse_verdict(
     assert aggregate["verdict"].startswith("SPARSE DETECTION, NO ROBUST ADVANTAGE")
     assert aggregate["n_null_trials"] == 20
     assert aggregate["segment_seconds"] == 900.0
-    assert aggregate["matched_false_alarm_thresholds"] == {
-        "critical_slowing_down": 4.5,
-        "synchronisation": 3.75,
-        "transition_entropy": 0.25,
-        "ensemble_weighted": 3.0,
-    }
+
+
+def test_every_detector_is_held_at_or_below_the_target_false_alarm(
+    aggregate: dict[str, Any],
+) -> None:
+    """The continuous calibration holds each detector at or below the 10 % target."""
+    for rate in aggregate["achieved_false_alarm"].values():
+        assert rate <= 0.10 + 1.0e-9
 
 
 def test_early_onset_seizure_is_excluded_not_a_silent_null(
@@ -132,6 +138,6 @@ def test_early_onset_seizure_is_excluded_not_a_silent_null(
 
 def test_records_carry_the_review_only_claim_boundary() -> None:
     """Every sealed record keeps the review-only evidence-mapping disclaimer."""
-    detectors = _evidence(_LED_SEIZURE)["detectors"]
+    detectors = _evidence("chb01_04")["detectors"]
     for record in detectors.values():
         assert "technical evidence-mapping artefact" in record["disclaimer"]

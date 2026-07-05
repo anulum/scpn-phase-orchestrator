@@ -19,10 +19,16 @@
   ],
   "n_null_trials": 20,
   "matched_false_alarm_thresholds": {
-    "critical_slowing_down": 5.75,
-    "synchronisation": 4.25,
-    "transition_entropy": 2.75,
-    "ensemble_weighted": 2.5
+    "critical_slowing_down": 5.696504012190101,
+    "synchronisation": 4.174308611666475,
+    "transition_entropy": 2.7431015101042653,
+    "ensemble_weighted": 2.285542170027985
+  },
+  "achieved_false_alarm": {
+    "critical_slowing_down": 0.1,
+    "synchronisation": 0.1,
+    "transition_entropy": 0.1,
+    "ensemble_weighted": 0.1
   },
   "af_onsets": [
     {
@@ -32,7 +38,7 @@
         "critical_slowing_down": null,
         "synchronisation": 224.0,
         "transition_entropy": null,
-        "ensemble_weighted": 224.0
+        "ensemble_weighted": 224.5
       }
     },
     {
@@ -62,7 +68,7 @@
         "critical_slowing_down": 529.0,
         "synchronisation": 45.0,
         "transition_entropy": null,
-        "ensemble_weighted": 528.5
+        "ensemble_weighted": 529.0
       }
     },
     {
@@ -87,5 +93,5 @@
     }
   ],
   "excluded_records": [],
-  "verdict": "SPARSE DETECTION, NO ROBUST ADVANTAGE: at a matched false-alarm rate detection is sparse and no detector leads more AF onsets than the fusion (critical_slowing_down 1/6 (median lead 529 s); synchronisation 2/6 (median lead 134 s); transition_entropy 0/6; ensemble_weighted 2/6 (median lead 376 s)). A longer lead on one AF onset is not a robust advantage; consistent with detection as a commodity, the auditable sealed evidence is the deliverable."
+  "verdict": "SPARSE DETECTION, NO ROBUST ADVANTAGE: at a matched false-alarm rate detection is sparse and no detector leads more AF onsets than the fusion (critical_slowing_down 1/6 (median lead 529 s); synchronisation 2/6 (median lead 134 s); transition_entropy 0/6; ensemble_weighted 2/6 (median lead 377 s)). A longer lead on one AF onset is not a robust advantage; consistent with detection as a commodity, the auditable sealed evidence is the deliverable."
 }

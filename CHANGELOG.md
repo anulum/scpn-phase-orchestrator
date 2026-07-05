@@ -159,6 +159,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `bench/early_warning_domain.calibrate_threshold` now sets each detector's
+  matched-false-alarm threshold **continuously** — the quantile of the null
+  trajectories' alarm scores (:func:`_null_alarm_score`), the highest threshold at
+  which a null still alarms — instead of scanning a fixed `0.25 … 10.0` grid. This
+  matches the target false-alarm rate exactly (up to the null resolution) with no
+  ceiling: a detector whose nulls need a threshold above the old grid maximum is no
+  longer silently clipped to it. `calibrate_detectors` now returns a `Calibration`
+  (thresholds plus the achieved false-alarm rate per detector), and each capstone's
+  aggregate records `achieved_false_alarm` so the operating point is transparent.
+  All three sealed artefacts (`chb01_seizures`, `afdb_atrial_fibrillation`,
+  `psml_grid_oscillation`) were regenerated at the exact matched rate and remain
+  byte-reproducible; the honest sparse-detection conclusion holds in every domain.
+  The grid result is corrected downward — critical slowing down leads 3 / 12, not
+  the 7 / 12 the clipped grid over-counted — because its variance-heavy
+  damped-disturbance nulls need a threshold far above any bounded grid.
 - `bench/competitive_kuramoto.py` is retired as a head-to-head: it compares an
   active SPO supervisor that changes the dynamics against passive SciPy — a
   different-task comparison, not a fair benchmark. It now points to the fair

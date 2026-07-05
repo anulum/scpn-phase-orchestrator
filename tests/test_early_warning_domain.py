@@ -26,8 +26,8 @@ import pytest
 
 from bench.early_warning_domain import (
     DEFAULT_STEP,
-    DEFAULT_THRESHOLD_GRID,
     DETECTORS,
+    Calibration,
     DetectorTrajectory,
     SeizureLeadResult,
     calibrate_detectors,
@@ -297,20 +297,39 @@ def test_false_alarm_rate_rejects_an_empty_null() -> None:
         false_alarm_rate([], 3.0)
 
 
-def test_calibrate_threshold_picks_the_smallest_meeting_the_target() -> None:
+def test_calibrate_threshold_matches_the_target_exactly() -> None:
+    # Three nulls alarm at score 5, seven never; the tightest threshold holding the
+    # rate at or below 10 % (of 10 nulls, one may alarm — but the three are tied, so
+    # the conservative choice sits just above 5 and none of them alarm).
     nulls = [_trajectory([0.0, 5.0, 5.0]) for _ in range(3)]
     nulls += [_trajectory([0.0, 0.0, 0.0]) for _ in range(7)]
     threshold = calibrate_threshold(nulls, target_fa=0.1, persistence=2)
-    assert threshold == 5.25
+    assert threshold > 5.0
+    assert threshold == pytest.approx(5.0)  # just above 5, no grid rounding
+    assert false_alarm_rate(nulls, threshold, persistence=2) == 0.0
+    assert false_alarm_rate(nulls, 5.0, persistence=2) == pytest.approx(0.3)
+
+
+def test_calibrate_threshold_has_no_ceiling() -> None:
+    # Every null alarms only at a score of 100 — far above any fixed grid maximum.
+    # The continuous calibration places the threshold just above it, not at a clip.
+    nulls = [_trajectory([0.0, 100.0, 100.0]) for _ in range(4)]
+    threshold = calibrate_threshold(nulls, target_fa=0.0, persistence=2)
+    assert threshold > 100.0
     assert false_alarm_rate(nulls, threshold, persistence=2) == 0.0
 
 
-def test_calibrate_threshold_falls_back_to_the_largest_grid_value() -> None:
-    nulls = [_trajectory([0.0, 100.0, 100.0]) for _ in range(4)]
-    assert (
-        calibrate_threshold(nulls, target_fa=0.0, persistence=2)
-        == DEFAULT_THRESHOLD_GRID[-1]
-    )
+def test_calibrate_threshold_opens_the_gate_at_unit_target() -> None:
+    # Allowing every null to alarm collapses to the tightest valid gate, 0.
+    nulls = [_trajectory([0.0, 5.0, 5.0]) for _ in range(3)]
+    assert calibrate_threshold(nulls, target_fa=1.0, persistence=2) == 0.0
+
+
+def test_calibrate_threshold_is_zero_when_no_null_can_alarm() -> None:
+    # Every window sits inside the baseline, so no null can alarm at any threshold;
+    # the matched gate is the detectors' tightest valid value, 0.
+    nulls = [_trajectory([5.0, 5.0, 5.0], n_baseline=3) for _ in range(3)]
+    assert calibrate_threshold(nulls, target_fa=0.0, persistence=2) == 0.0
 
 
 def test_calibrate_threshold_rejects_an_empty_null() -> None:
@@ -318,12 +337,14 @@ def test_calibrate_threshold_rejects_an_empty_null() -> None:
         calibrate_threshold([])
 
 
-def test_calibrate_detectors_returns_a_threshold_per_detector() -> None:
+def test_calibrate_detectors_returns_thresholds_and_achieved_rate() -> None:
     nulls = [_incoherent_observables(seed=seed) for seed in (10, 11, 12)]
-    thresholds = calibrate_detectors(nulls, target_fa=0.5)
-    assert set(thresholds) == set(DETECTORS)
-    for value in thresholds.values():
-        assert DEFAULT_THRESHOLD_GRID[0] <= value <= DEFAULT_THRESHOLD_GRID[-1]
+    calibration = calibrate_detectors(nulls, target_fa=0.5)
+    assert isinstance(calibration, Calibration)
+    assert set(calibration.thresholds) == set(DETECTORS)
+    assert set(calibration.achieved_false_alarm) == set(DETECTORS)
+    for rate in calibration.achieved_false_alarm.values():
+        assert 0.0 <= rate <= 0.5  # held at or below the target
 
 
 def test_calibrate_detectors_rejects_an_empty_null() -> None:

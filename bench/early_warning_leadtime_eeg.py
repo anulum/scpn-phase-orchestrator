@@ -474,13 +474,14 @@ def main(
         for record in interictal_records
     ]
     trials = null_trials(null_observables, segment_samples=segment_samples)
-    thresholds = calibrate_detectors(
+    calibration = calibrate_detectors(
         trials,
         target_fa=TARGET_FALSE_ALARM,
         window=WINDOW,
         step=STEP,
         baseline_fraction=baseline_fraction,
     )
+    thresholds = calibration.thresholds
 
     leads_by_detector: dict[str, list[float]] = {name: [] for name in DETECTORS}
     seizure_records: list[dict[str, object]] = []
@@ -542,6 +543,7 @@ def main(
         "interictal_null_records": list(interictal_records),
         "n_null_trials": len(trials),
         "matched_false_alarm_thresholds": thresholds,
+        "achieved_false_alarm": calibration.achieved_false_alarm,
         "seizures": seizure_records,
         "excluded_seizures": excluded,
         "verdict": domain_verdict(

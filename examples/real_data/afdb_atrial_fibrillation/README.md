@@ -22,7 +22,7 @@ At a matched false-alarm rate (≤ 10 % over 20 sinus-rhythm null trials),
 | critical_slowing_down | 1 / 6 | 529 s |
 | synchronisation | 2 / 6 | 134 s |
 | transition_entropy | 0 / 6 | — |
-| ensemble_weighted (fusion) | 2 / 6 | 376 s |
+| ensemble_weighted (fusion) | 2 / 6 | 377 s |
 
 Two records are led — `04043` (rising synchronisation + fusion) and `04908`
 (critical slowing down + rising synchronisation + fusion); the other four are
@@ -83,9 +83,11 @@ segment); the false-alarm null is the longest sinus stretch of `04015` and
   **excluded**, not counted as a silent null.
 - **Matched false alarm.** The longest sinus stretch of each null record is cut
   into non-overlapping 900 s trials (20 trials total); every detector's threshold
-  is the smallest that holds the trial false-alarm rate at or below 10 %. The
-  calibrated robust-z thresholds were: critical slowing down 5.75, rising
-  synchronisation 4.25, transition entropy 2.75, fusion 2.5.
+  is set continuously to the tightest value holding the trial false-alarm rate at
+  or below 10 % (the quantile of the null alarm scores, with no grid ceiling). The
+  calibrated robust-z thresholds were ≈ critical slowing down 5.7, rising
+  synchronisation 4.2, transition entropy 2.7, fusion 2.3, and each detector's
+  achieved false-alarm rate is recorded in the aggregate.
 - **Sealing.** Each evaluated onset yields four `EarlyWarningEvidence` records (one
   per detector), including a sealed silence where a detector did not fire. Each
   record's `content_hash` is a canonical-JSON SHA-256, the same seal the

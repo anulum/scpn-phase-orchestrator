@@ -19,17 +19,19 @@ is sparse and no detector shows a robust early-warning advantage**:
 
 | Detector | Seizures led | Median lead |
 |----------|-------------:|------------:|
-| critical_slowing_down | 0 / 6 | — |
-| synchronisation | 1 / 6 | 441.5 s |
+| critical_slowing_down | 2 / 6 | 409 s |
+| synchronisation | 1 / 6 | 442 s |
 | transition_entropy | 0 / 6 | — |
-| ensemble_weighted (fusion) | 1 / 6 | 450.5 s |
+| ensemble_weighted (fusion) | 1 / 6 | 452 s |
 
-Only `chb01_04` produces a leading alarm: rising synchronisation and the fusion
-each flag a coherence rise ≈ 7.4 min before the annotated onset (the fusion 9 s
-earlier than synchronisation on that single seizure). Critical slowing down and
-transition entropy lead no seizure; the fusion detects no more seizures than its
-best single member. A longer lead on one seizure (`n = 1`) is **not** a robust
-advantage.
+Two seizures are led: `chb01_04` (critical slowing down, rising synchronisation,
+and the fusion, ≈ 7 min before onset) and `chb01_26` (critical slowing down only).
+Transition entropy leads no seizure; **the fusion detects no more seizures than
+critical slowing down alone** (its best single member), so there is no robust
+fusion advantage. Leads on two of six seizures are not evidence of a reliable
+precursor. The false-alarm threshold is set continuously to the exact 10 % target
+(the quantile of the null alarm scores), not searched on a fixed grid, so the
+matched operating point is exact and no detector is clipped.
 
 This is the point of the programme, made concrete: on real data, at an honest
 operating point, the detection is a **commodity** — the SCPN value is not "a better
@@ -75,9 +77,11 @@ The seizure onset times used here are the clinician annotations from
   it is too early for a clean baseline.
 - **Matched false alarm.** Each interictal recording is cut into non-overlapping
   900 s null trials of the same structure (20 trials total); every detector's
-  threshold is the smallest that holds the trial false-alarm rate at or below
-  10 %. The calibrated robust-z thresholds were: critical slowing down 4.5, rising
-  synchronisation 3.75, transition entropy 0.25, fusion 3.0.
+  threshold is set continuously to the tightest value holding the trial false-alarm
+  rate at or below 10 % (the quantile of the null alarm scores, with no grid
+  ceiling). The calibrated robust-z thresholds were ≈ critical slowing down 4.3,
+  rising synchronisation 3.7, transition entropy 0.0, fusion 2.9, and each
+  detector's achieved false-alarm rate is recorded in the aggregate.
 - **Sealing.** Each evaluated seizure yields four `EarlyWarningEvidence` records
   (one per detector), including a sealed silence where a detector did not fire.
   Each record's `content_hash` is a canonical-JSON SHA-256, the same seal the
@@ -105,7 +109,7 @@ The raw EDF is read but never copied; only the derived sealed records are.
   decision, nor a certification. It never actuates.
 - **One subject, one montage.** It shows the shipped suite on `chb01`'s seizures;
   it is not a population study or a seizure-prediction benchmark.
-- **Sparse detection.** Only one of six evaluated seizures is led at matched false
-  alarm; the single leading lead is not evidence of a robust precursor. The honest
-  reading is that detection is a commodity, which is exactly why the auditable
-  sealed evidence — not the lead — is the deliverable.
+- **Sparse detection.** Two of six evaluated seizures are led at matched false
+  alarm, with no robust fusion advantage; the leads are not evidence of a reliable
+  precursor. The honest reading is that detection is a commodity, which is exactly
+  why the auditable sealed evidence — not the lead — is the deliverable.

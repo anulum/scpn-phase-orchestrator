@@ -103,8 +103,6 @@ DEFAULT_PERSISTENCE = 2
 DEFAULT_RELATIVE_GATE = 0.05
 #: Default target false-alarm rate the detectors are calibrated to on the null.
 DEFAULT_TARGET_FALSE_ALARM = 0.10
-#: Default threshold grid (0.25 … 10.0) the calibration searches.
-DEFAULT_THRESHOLD_GRID = tuple(round(0.25 * k, 2) for k in range(1, 41))
 
 __all__ = [
     "DEFAULT_BASELINE_FRACTION",
@@ -112,9 +110,9 @@ __all__ = [
     "DEFAULT_RELATIVE_GATE",
     "DEFAULT_STEP",
     "DEFAULT_TARGET_FALSE_ALARM",
-    "DEFAULT_THRESHOLD_GRID",
     "DEFAULT_WINDOW",
     "DETECTORS",
+    "Calibration",
     "DetectorTrajectory",
     "SeizureLeadResult",
     "calibrate_detectors",
@@ -419,17 +417,45 @@ def false_alarm_rate(
     return alarms / len(null_trajectories)
 
 
+def _null_alarm_score(trajectory: DetectorTrajectory, persistence: int) -> float:
+    """Return the highest threshold at which the trajectory still alarms.
+
+    Gate each window as :func:`_alarm_sample` does — post-baseline and the
+    relative-change gate held — scoring a gated window by its oriented score and a
+    baseline or gate-blocked window by ``-inf``. The trajectory alarms at a
+    threshold ``θ`` exactly when some ``persistence``-long run of windows all score
+    at or above ``θ``, so the highest such ``θ`` is the largest, over all runs, of
+    the run's minimum gated score. Returns ``-inf`` when no run can ever alarm.
+    """
+    n_windows = int(trajectory.score.shape[0])
+    past_baseline = np.arange(n_windows) >= trajectory.n_baseline
+    gated = np.where(
+        past_baseline & (trajectory.relative >= trajectory.relative_gate),
+        trajectory.score,
+        -np.inf,
+    )
+    best = -np.inf
+    for start in range(n_windows - persistence + 1):
+        best = max(best, float(gated[start : start + persistence].min()))
+    return best
+
+
 def calibrate_threshold(
     null_trajectories: Sequence[DetectorTrajectory],
     *,
     target_fa: float = DEFAULT_TARGET_FALSE_ALARM,
     persistence: int = DEFAULT_PERSISTENCE,
-    grid: Sequence[float] = DEFAULT_THRESHOLD_GRID,
 ) -> float:
-    """Return the smallest grid threshold whose null false-alarm rate ≤ target.
+    """Return the exact threshold holding the null false-alarm rate at or below target.
 
-    Falls back to the largest grid threshold when even that exceeds the target,
-    so the null ensemble can never leave the detector uncalibrated.
+    The threshold is set continuously from the null ensemble, not searched on a
+    fixed grid: each null trajectory's alarm score (:func:`_null_alarm_score`) is
+    the highest threshold at which it still alarms, so allowing at most
+    ``floor(target_fa · n)`` nulls to alarm means placing the threshold just above
+    the corresponding order statistic of those scores. This matches the false-alarm
+    rate exactly (up to the null resolution) with no ceiling — a detector whose
+    nulls need a threshold above any grid is no longer silently clipped to the grid
+    maximum.
 
     Parameters
     ----------
@@ -439,13 +465,13 @@ def calibrate_threshold(
         Target false-alarm rate the detector is held at or below.
     persistence : int
         Consecutive breaching windows required to alarm.
-    grid : sequence of float
-        Ascending threshold grid searched for the matched rate.
 
     Returns
     -------
     float
-        The matched-false-alarm threshold.
+        The matched-false-alarm threshold, in ``[0, ∞)`` (the detectors' own gate
+        range); ``0.0`` — the tightest valid gate — when the null never alarms even
+        there or every null may alarm within the budget.
 
     Raises
     ------
@@ -454,13 +480,34 @@ def calibrate_threshold(
     """
     if not null_trajectories:
         raise ValueError("null_trajectories must not be empty")
-    for threshold in grid:
-        if (
-            false_alarm_rate(null_trajectories, threshold, persistence=persistence)
-            <= target_fa
-        ):
-            return float(threshold)
-    return float(grid[-1])
+    scores = sorted(
+        (_null_alarm_score(t, persistence) for t in null_trajectories), reverse=True
+    )
+    allowed = int(np.floor(target_fa * len(scores)))
+    if allowed >= len(scores):
+        return 0.0
+    boundary = scores[allowed]
+    if boundary == -np.inf:
+        return 0.0
+    return float(max(0.0, np.nextafter(boundary, np.inf)))
+
+
+@dataclass(frozen=True)
+class Calibration:
+    """The matched-false-alarm thresholds and the rate each actually achieved.
+
+    Attributes
+    ----------
+    thresholds : dict[str, float]
+        The matched-false-alarm threshold per label in :data:`DETECTORS`.
+    achieved_false_alarm : dict[str, float]
+        The null false-alarm rate actually held at each threshold — reported so a
+        detector held below the target (or, in a degenerate corpus, unable to be)
+        is visible rather than a silently clipped grid maximum.
+    """
+
+    thresholds: dict[str, float]
+    achieved_false_alarm: dict[str, float]
 
 
 def calibrate_detectors(
@@ -472,7 +519,7 @@ def calibrate_detectors(
     step: int = DEFAULT_STEP,
     baseline_fraction: float = DEFAULT_BASELINE_FRACTION,
     relative_gate: float = DEFAULT_RELATIVE_GATE,
-) -> dict[str, float]:
+) -> Calibration:
     """Calibrate every detector to a matched false alarm on the no-transition null.
 
     Parameters
@@ -486,8 +533,9 @@ def calibrate_detectors(
 
     Returns
     -------
-    dict[str, float]
-        The matched-false-alarm threshold for each label in :data:`DETECTORS`.
+    Calibration
+        The matched-false-alarm threshold and the achieved rate for each label in
+        :data:`DETECTORS`.
 
     Raises
     ------
@@ -508,12 +556,17 @@ def calibrate_detectors(
         )
         for name, trajectory in trajectories.items():
             per_detector[name].append(trajectory)
-    return {
-        name: calibrate_threshold(
-            trajectories, target_fa=target_fa, persistence=persistence
+    thresholds: dict[str, float] = {}
+    achieved: dict[str, float] = {}
+    for name, trajectory_list in per_detector.items():
+        threshold = calibrate_threshold(
+            trajectory_list, target_fa=target_fa, persistence=persistence
         )
-        for name, trajectories in per_detector.items()
-    }
+        thresholds[name] = threshold
+        achieved[name] = false_alarm_rate(
+            trajectory_list, threshold, persistence=persistence
+        )
+    return Calibration(thresholds=thresholds, achieved_false_alarm=achieved)
 
 
 def seizure_lead_samples(

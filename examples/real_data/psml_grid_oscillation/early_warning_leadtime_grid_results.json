@@ -17,10 +17,16 @@
   "n_transitions_evaluated": 12,
   "n_null_trials": 24,
   "matched_false_alarm_thresholds": {
-    "critical_slowing_down": 10.0,
-    "synchronisation": 3.5,
-    "transition_entropy": 3.75,
-    "ensemble_weighted": 10.0
+    "critical_slowing_down": 480.2014146956326,
+    "synchronisation": 3.3214248430567874,
+    "transition_entropy": 3.6912970984519613,
+    "ensemble_weighted": 157.23192176389654
+  },
+  "achieved_false_alarm": {
+    "critical_slowing_down": 0.08333333333333333,
+    "synchronisation": 0.08333333333333333,
+    "transition_entropy": 0.08333333333333333,
+    "ensemble_weighted": 0.08333333333333333
   },
   "transitions": [
     {
@@ -29,13 +35,13 @@
         "critical_slowing_down": null,
         "synchronisation": null,
         "transition_entropy": null,
-        "ensemble_weighted": 1.4951999999999934
+        "ensemble_weighted": null
       }
     },
     {
       "record_id": "row_117",
       "lead_seconds": {
-        "critical_slowing_down": 1.3943999999999939,
+        "critical_slowing_down": null,
         "synchronisation": null,
         "transition_entropy": null,
         "ensemble_weighted": null
@@ -62,7 +68,7 @@
     {
       "record_id": "row_156",
       "lead_seconds": {
-        "critical_slowing_down": 1.3943999999999939,
+        "critical_slowing_down": null,
         "synchronisation": null,
         "transition_entropy": null,
         "ensemble_weighted": null
@@ -71,19 +77,19 @@
     {
       "record_id": "row_175",
       "lead_seconds": {
-        "critical_slowing_down": 0.9911999999999956,
+        "critical_slowing_down": 0.688799999999997,
         "synchronisation": null,
         "transition_entropy": null,
-        "ensemble_weighted": 0.8903999999999961
+        "ensemble_weighted": 0.688799999999997
       }
     },
     {
       "record_id": "row_176",
       "lead_seconds": {
-        "critical_slowing_down": 1.0919999999999952,
+        "critical_slowing_down": 0.7895999999999965,
         "synchronisation": null,
         "transition_entropy": 1.2935999999999943,
-        "ensemble_weighted": 1.0919999999999952
+        "ensemble_weighted": 0.7895999999999965
       }
     },
     {
@@ -98,10 +104,10 @@
     {
       "record_id": "row_253",
       "lead_seconds": {
-        "critical_slowing_down": 0.9911999999999956,
+        "critical_slowing_down": null,
         "synchronisation": null,
         "transition_entropy": 1.2935999999999943,
-        "ensemble_weighted": 0.9911999999999956
+        "ensemble_weighted": null
       }
     },
     {
@@ -116,7 +122,7 @@
     {
       "record_id": "row_301",
       "lead_seconds": {
-        "critical_slowing_down": 1.4951999999999934,
+        "critical_slowing_down": 1.3943999999999939,
         "synchronisation": null,
         "transition_entropy": null,
         "ensemble_weighted": null
@@ -125,12 +131,12 @@
     {
       "record_id": "row_313",
       "lead_seconds": {
-        "critical_slowing_down": 1.4951999999999934,
+        "critical_slowing_down": null,
         "synchronisation": null,
         "transition_entropy": null,
-        "ensemble_weighted": 1.4951999999999934
+        "ensemble_weighted": null
       }
     }
   ],
-  "verdict": "SPARSE DETECTION, NO ROBUST ADVANTAGE: at a matched false-alarm rate detection is sparse and no detector leads more growing-oscillation instabilities than the fusion (critical_slowing_down 7/12 (median lead 1 s); synchronisation 0/12; transition_entropy 2/12 (median lead 1 s); ensemble_weighted 5/12 (median lead 1 s)). A longer lead on one instability is not a robust advantage; consistent with detection as a commodity, the auditable sealed evidence is the deliverable."
+  "verdict": "SPARSE DETECTION, NO ROBUST ADVANTAGE: at a matched false-alarm rate detection is sparse and no detector leads more growing-oscillation instabilities than the fusion (critical_slowing_down 3/12 (median lead 1 s); synchronisation 0/12; transition_entropy 2/12 (median lead 1 s); ensemble_weighted 2/12 (median lead 1 s)). A longer lead on one instability is not a robust advantage; consistent with detection as a commodity, the auditable sealed evidence is the deliverable."
 }
