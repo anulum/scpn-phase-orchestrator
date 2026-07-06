@@ -12,7 +12,7 @@
     "research_experimental_modules": 201,
     "runtime_serving_modules": 145,
     "rust_kernel_files": 97,
-    "test_files": 812
+    "test_files": 814
   },
   "documentation": {
     "public_pages": [
@@ -2092,6 +2092,8 @@
       "tests/test_hodge_backends.py",
       "tests/test_hodge_benchmark.py",
       "tests/test_hodge_validation_guards.py",
+      "tests/test_hopf_bridge_external_validation.py",
+      "tests/test_hopf_bridge_external_validation_evidence.py",
       "tests/test_hybrid_cocompiler.py",
       "tests/test_hybrid_order_examples.py",
       "tests/test_hybrid_order_parameters.py",

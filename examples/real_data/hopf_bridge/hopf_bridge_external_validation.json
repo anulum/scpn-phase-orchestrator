@@ -1,0 +1,113 @@
+{
+  "benchmark": "hopf_bridge_external_validation",
+  "content_hash": "ceb5c6a3b668d540059707018e49e2a7dba8c7084484f45e558d3c72e5b9816c",
+  "frequency_invariance": {
+    "frequencies_hz": [
+      0.2,
+      0.4,
+      0.8,
+      1.2
+    ],
+    "pearson": [
+      0.969790128050703,
+      0.9697901280507031,
+      0.9697901280507032,
+      0.9697901280507031
+    ],
+    "pearson_spread": 2.220446049250313e-16
+  },
+  "method": "sweep the Hopf parameter \u03b1; integrate the stochastic Hopf normal form; the envelope-growth family reads the rectified ringdown, the autocorrelation family reads the stationary series; correlate each against the analytic \u03b1.",
+  "question": "On a Hopf bifurcation, which detector family recovers the true eigenvalue \u03b1?",
+  "record": {
+    "families": {
+      "autocorrelation": {
+        "correlation": {
+          "mean_abs_error": 0.6914002024858549,
+          "n": 14,
+          "pearson": 0.9724213151436084,
+          "spearman": 0.9736263736263736
+        },
+        "estimate": [
+          -1.138614214745845,
+          -1.1375416594633536,
+          -1.1081937424682642,
+          -1.0167098857172356,
+          -1.0568647193084977,
+          -0.9902879335899589,
+          -1.0021440004381652,
+          -0.9198957402126581,
+          -0.9081603066393352,
+          -0.8272491458907207,
+          -0.8797137474658873,
+          -0.8691060005397596,
+          -0.767394190761342,
+          -0.7677275475609454
+        ]
+      },
+      "envelope_growth": {
+        "correlation": {
+          "mean_abs_error": 0.03555219354734943,
+          "n": 14,
+          "pearson": 0.9697901280507031,
+          "spearman": 0.9692307692307693
+        },
+        "estimate": [
+          -0.3925723138716793,
+          -0.41035362021590627,
+          -0.40524150571730183,
+          -0.3992784802550906,
+          -0.3498804565009891,
+          -0.3328952404513996,
+          -0.2891231669938083,
+          -0.32635390009728477,
+          -0.24671562216744186,
+          -0.19476710968932104,
+          -0.15786682484042686,
+          -0.13263431704151465,
+          -0.10812590174467618,
+          -0.08417188884165062
+        ]
+      }
+    },
+    "n": 14,
+    "omega_hz": 0.4,
+    "ring_sigma": 0.002,
+    "true_alpha": [
+      -0.5,
+      -0.46384615384615385,
+      -0.4276923076923077,
+      -0.3915384615384615,
+      -0.3553846153846154,
+      -0.3192307692307692,
+      -0.28307692307692306,
+      -0.2469230769230769,
+      -0.21076923076923076,
+      -0.17461538461538462,
+      -0.13846153846153847,
+      -0.10230769230769232,
+      -0.06615384615384612,
+      -0.03
+    ]
+  },
+  "snr_robustness": [
+    {
+      "pearson": 0.9697901280507031,
+      "ring_sigma": 0.002
+    },
+    {
+      "pearson": 0.8895425930384911,
+      "ring_sigma": 0.005
+    },
+    {
+      "pearson": 0.7692611693956125,
+      "ring_sigma": 0.01
+    },
+    {
+      "pearson": 0.6243726297310698,
+      "ring_sigma": 0.02
+    }
+  ],
+  "step": 16,
+  "verdict": "On a Hopf bifurcation both families track \u03b1, but only the envelope-growth family recovers it in MAGNITUDE (mean |\u03c3\u2212\u03b1|=0.04, Spearman \u03c1=0.97, frequency-invariant); the autocorrelation family's magnitude is confounded by the oscillation (mean |rate\u2212\u03b1|=0.69, pinned near ln(cos \u03c9\u0394t)/\u0394t). The eigenvalue's real part is universal, but the magnitude-correct estimator is regime-dependent: envelope-growth for an oscillatory mode, the autocorrelation for a non-oscillatory one.",
+  "window": 128
+}

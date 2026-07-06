@@ -285,6 +285,28 @@ stated plainly: a quasi-static per-point sweep (an independent stationary run at
 value, not one non-stationary approach), additive noise only, and scalar reduced normal forms
 rather than the full high-dimensional systems.
 
+### 3.11 The Hopf bridge: which family recovers the eigenvalue on an oscillatory mode
+
+The grid section (§3.9) validates the *oscillatory* envelope-growth family on real systems;
+§3.10 validates the *single-series* autocorrelation family on *non-oscillatory* bifurcations.
+A **Hopf** bifurcation is where the two meet: it presents an *oscillatory* critical slowing
+down (eigenvalue α ± iω with α → 0⁻), so both families point at the same mode against one
+analytic ground truth. We sweep the Hopf parameter α, integrate the stochastic normal form
+(dr = (α r − r³) dt on the amplitude, dθ = ω dt on the phase), and read each family with its
+shipped detector. The **envelope-growth family recovers α in rank *and* magnitude** (Spearman
+ρ = 0.97, mean |σ − α| = 0.04 at an adequate ringdown SNR), and the recovery is
+**frequency-invariant** (identical across 0.2–1.2 Hz, because it fits the envelope, not the
+oscillation). The **autocorrelation family tracks α but not its magnitude** (mean
+|rate − α| = 0.69): its lag-one autocorrelation is confounded by the oscillation, pinned near
+cos(ω Δt), so ln(AR1)/Δt does not estimate α. This completes a **regime map**: the
+eigenvalue's real part is the universal quantity, but the magnitude-correct estimator is
+regime-dependent — envelope-growth for an oscillatory mode (here, and the grid), the
+autocorrelation for a non-oscillatory one (§3.10). Hash-sealed in
+`examples/real_data/hopf_bridge/hopf_bridge_external_validation.json`. The one honest
+sensitivity is stated as a curve, not hidden: the envelope magnitude recovery **degrades with
+ringdown SNR** (ρ falls from 0.97 to 0.62 as the ringdown noise rises), a physical floor — a
+decay cannot be read below the noise it sinks into.
+
 ## 4. Discussion
 
 **Detection is a commodity; the moat is the evidence.** Across four independent physical domains — and a fifth, molecular one — generic early-warning *detection* at an honest operating point is sparse and, by a permutation or selection-controlled test, at chance. This is not a defect of one suite: the canonical Dakos detector fares no better on its own data, and the celebrated single-cell and bulk DNB benchmarks do not clear a modality-appropriate honest null either. What is *not* a commodity is the auditable, reproducible, claim-bounded envelope the protocol produces — a matched-false-alarm operating point, a permutation p-value, and a hash-sealed `EarlyWarningEvidence` record for every transition, **including the sealed silences**. A positive early-warning claim should be required to clear this operational bar; most published EWS results have only cleared the retrospective per-record one.
