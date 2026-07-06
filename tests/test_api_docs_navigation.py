@@ -23,6 +23,7 @@ SOURCE_ROOT = Path("src") / "scpn_phase_orchestrator"
 AUTODOC_EXCLUSIONS = {
     "scpn_phase_orchestrator.runtime.audit_logger",
     "scpn_phase_orchestrator.runtime.replay",
+    "scpn_phase_orchestrator.runtime.grid_modal_replay",
     "scpn_phase_orchestrator.runtime.audit_signing",
     "scpn_phase_orchestrator.runtime.audit_stream",
     "scpn_phase_orchestrator.runtime.cli",
