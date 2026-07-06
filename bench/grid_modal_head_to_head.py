@@ -192,9 +192,7 @@ def head_to_head_payload(
     """
     modal_significance = modal_record["significance"]
     assert isinstance(modal_significance, dict)
-    generic_payload = {
-        name: dict(record) for name, record in generic_records.items()
-    }
+    generic_payload = {name: dict(record) for name, record in generic_records.items()}
     payload: dict[str, object] = {
         "benchmark": BENCHMARK,
         "question": (

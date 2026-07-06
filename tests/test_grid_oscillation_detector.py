@@ -120,9 +120,9 @@ def test_envelope_growth_rate_recovers_a_planted_sigma_with_recency() -> None:
     rate = 100.0
     times = np.arange(500) / rate
     envelope = np.exp(0.7 * times)  # perfectly log-linear: any weighting recovers 0.7
-    assert envelope_growth_rate(
-        envelope, rate=rate, recency_top=3.0
-    ) == pytest.approx(0.7, abs=1e-6)
+    assert envelope_growth_rate(envelope, rate=rate, recency_top=3.0) == pytest.approx(
+        0.7, abs=1e-6
+    )
 
 
 def test_envelope_growth_rate_is_negative_for_a_damped_envelope() -> None:
