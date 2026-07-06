@@ -3,17 +3,17 @@
 <!-- © Code 2020–2026 Miroslav Šotek. All rights reserved. -->
 <!-- ORCID: 0009-0009-3560-0851 | Contact: www.anulum.li | protoscience@anulum.li -->
 
-# Generic early-warning detection is at chance across four physical domains when held to a matched false-alarm rate
+# Generic early-warning detection is at chance across four physical domains — and a molecular fifth — when held to an honest operating point
 
 **Miroslav Šotek** (ANULUM / Fortis Studio) · ORCID 0009-0009-3560-0851 · protoscience@anulum.li
 
-*A same-protocol replication across brain, heart, power-grid and palaeoclimate data, with an AR(1)-Kendall-τ head-to-head against Dakos et al. 2008.*
+*A same-protocol replication across brain, heart, power-grid and palaeoclimate data, with an AR(1)-Kendall-τ head-to-head against Dakos et al. 2008, and a dynamical-network-biomarker extension to single-cell and bulk cancer/injury transcriptomics.*
 
 ---
 
 ## Abstract
 
-Generic early-warning signals (EWS) — the rising variance and lag-one autocorrelation of *critical slowing down*, and related synchronisation and ordinal-entropy indicators — are widely reported to precede abrupt transitions in the brain, the heart, power systems and the climate. Most of that evidence rests on a **retrospective, per-record** test: a rising trend measured over one pre-transition window and compared to surrogates of the *same* record. We ask a different, operational question: **at a fixed false-alarm budget, does an early-warning detector fire on transitions more often than on no-transition controls?** We build one domain-adaptable detector suite and one matched-false-alarm evaluation harness, apply them unchanged (through a per-domain adapter) to four independent labelled corpora — scalp-EEG seizures, cardiac atrial-fibrillation onsets, power-grid growing oscillations, and palaeoclimate abrupt transitions — and score every result with a label-permutation significance test. Across all four domains, **no detector reaches significance** (every best-member p ≥ 0.05): the sparse detection observed is what the matched false-alarm rate produces by chance. Running the canonical literature detector — the Dakos et al. 2008 AR(1)-Kendall-τ trend — through the **same** protocol on the **same** segments confirms it: on its own palaeoclimate records it leads 0 of 6 transitions (p = 1.00), and it beats chance in none of the four domains, though on scalp EEG it is the strongest signal anywhere (3 of 6, p = 0.067). We conclude that the operational bar — matched false alarm plus a significance test — is stricter than the retrospective per-record test the literature uses, that generic EWS *detection* behaves as a commodity at this bar, and that the defensible deliverable is not a lead but the **auditable, hash-sealed, byte-reproducible evidence** — including the sealed silences — that the protocol produces. We state the limitations plainly: the corpora are small (6–12 transitions), so the test has low power, and "at chance" bounds the *demonstrated* skill rather than proving early warning impossible.
+Generic early-warning signals (EWS) — the rising variance and lag-one autocorrelation of *critical slowing down*, and related synchronisation and ordinal-entropy indicators — are widely reported to precede abrupt transitions in the brain, the heart, power systems and the climate. Most of that evidence rests on a **retrospective, per-record** test: a rising trend measured over one pre-transition window and compared to surrogates of the *same* record. We ask a different, operational question: **at a fixed false-alarm budget, does an early-warning detector fire on transitions more often than on no-transition controls?** We build one domain-adaptable detector suite and one matched-false-alarm evaluation harness, apply them unchanged (through a per-domain adapter) to four independent labelled corpora — scalp-EEG seizures, cardiac atrial-fibrillation onsets, power-grid growing oscillations, and palaeoclimate abrupt transitions — and score every result with a label-permutation significance test. Across all four domains, **no detector reaches significance** (every best-member p ≥ 0.05): the sparse detection observed is what the matched false-alarm rate produces by chance. Running the canonical literature detector — the Dakos et al. 2008 AR(1)-Kendall-τ trend — through the **same** protocol on the **same** segments confirms it: on its own palaeoclimate records it leads 0 of 6 transitions (p = 1.00), and it beats chance in none of the four domains, though on scalp EEG it is the strongest signal anywhere (3 of 6, p = 0.067). We conclude that the operational bar — matched false alarm plus a significance test — is stricter than the retrospective per-record test the literature uses, that generic EWS *detection* behaves as a commodity at this bar, and that the defensible deliverable is not a lead but the **auditable, hash-sealed, byte-reproducible evidence** — including the sealed silences — that the protocol produces. Extending the same honesty to a **molecular fifth modality** — dynamical-network-biomarker (DNB) early warning of cell-fate and disease transitions, where the statistic is cross-sample rather than sliding-window — reaches the same conclusion: the celebrated single-cell transition index of Mojtahedi et al. 2016 clears a matched operating point on only 1 of 3 leukaemic lineages (permutation p = 0.27), and the canonical GSE2565 phosgene-injury DNB benchmark does **not** beat a *selection-controlled* surrogate null (surrogate-rank p = 0.39) that re-selects the biomarker module on each shuffled surrogate — showing the apparent DNB rise is largely a selection artefact. We state the limitations plainly: the corpora are small (3–12 transitions; the bulk DNB case has one exposed arm), so the tests have low power, and "at chance" bounds the *demonstrated* skill rather than proving early warning impossible.
 
 ---
 
@@ -61,6 +61,15 @@ The canonical literature detector is Dakos et al. 2008: the **Kendall rank corre
 
 All raw data are public and cited; none is redistributed. Only derived, hash-sealed, byte-reproducible evidence records are committed. Each detector's alarm — or silence — is sealed into a content-addressed (canonical-JSON SHA-256) `EarlyWarningEvidence` record, so the result, including every sealed silence, is auditable and reproduces bit-for-bit from a fresh run.
 
+### 2.6 The molecular fifth modality (DNB)
+
+Dynamical-network-biomarker early warning (Chen et al. 2012) is a *different modality*: few timepoints, many genes, and a **cross-sample** statistic computed over the sample population at each timepoint, so the sliding-window suite does not apply. Its index rises to a peak at the tipping point. Two published index forms are implemented and each is run through a modality-appropriate honest test that keeps the same philosophy — a controlled null and a permutation/rank p-value:
+
+- **Single-cell (Mojtahedi et al. 2016).** The transition index is the ratio of mean signed gene–gene to mean signed cell–cell correlation over the curated panel (which *is* the critical module, so no selection). We take the per-lineage index trajectory and its bootstrap standard error **from the published supplement** (not re-derived from the confounded raw qPCR); the pre-transition rising limb (Days 0, 1, 3) is scored by its least-squares slope; the matched-false-alarm null is a **temporally-shuffled surrogate** resampled from the published mean and SE; and the three lineages' alarms are tested by the same label-permutation core as the physical domains.
+- **Bulk (GSE2565 phosgene lung injury).** Here the module must be *selected*, which introduces **selection freedom**: the composite index `SD_in · PCC_in / PCC_out` is evaluated on a module chosen to peak at the transition, so a rise is partly guaranteed by construction. The only honest null **re-selects the entire module on each surrogate**: it shuffles the timepoint labels across the arm's samples and reruns module selection from scratch, so the surrogate has the same selection freedom as the real analysis. The observed rising slope is ranked against these selection-controlled surrogates for a one-sided p-value, and also thresholded to a matched false alarm.
+
+Both DNB paths seal a hash-addressed, byte-reproducible record exactly as the physical domains do.
+
 ## 3. Results
 
 ### 3.1 SCPN suite across four domains
@@ -93,9 +102,22 @@ On its own palaeoclimate records — the data Dakos et al. analysed — the AR(1
 
 The result is not "nothing works". It is: **at a matched operating point and a permutation significance test, nothing reaches significance at these corpus sizes** — neither the SCPN suite nor the canonical literature detector, in any of the four domains. The literature's positive EWS results come from a *retrospective per-record* significance test that this operational protocol is stricter than. The one place a detector comes close — the AR(1) trend on scalp EEG — is consistent with the seizure-prediction literature's use of autocorrelation features and warrants a larger, higher-power EEG corpus.
 
+### 3.4 The molecular fifth domain (DNB)
+
+The same conclusion holds when the honesty is carried to a molecular modality:
+
+| Case | Test | Result | p |
+|------|------|--------|:-:|
+| Single-cell (Mojtahedi 2016) | matched-FA + permutation, 3 lineages | 1 / 3 lineages clear the 10 % operating point | 0.266 |
+| Bulk (GSE2565 phosgene) | selection-controlled surrogate rank, 1 exposed arm | exposed-arm rise does not beat reselecting surrogates | 0.385 |
+
+The single-cell transition index rises 2.8-fold toward the erythroid bifurcation — an unmistakable effect size — yet at its published four-timepoint resolution only the strongest of three lineages clears a matched false-alarm operating point, and the corpus-level permutation test is not significant (p = 0.27); the binding constraint is the temporal resolution, not the effect size. The bulk GSE2565 case is sharper: the phosgene-exposed arm's apparent DNB rise (slope 1.15) sits *below* the 90th percentile of surrogates that were allowed to **re-select the biomarker module on shuffled time** (surrogate-rank p = 0.385), and it barely exceeds the air control's own selected-module rise (p = 0.414). Once the null is granted the same selection freedom as the analysis, the celebrated bulk DNB rise is largely a **selection artefact**. Both molecular cases are hash-sealed and byte-reproducible.
+
 ## 4. Discussion
 
-**Detection is a commodity; the moat is the evidence.** Across four independent physical domains, generic early-warning *detection* at an honest operating point is sparse and, by a permutation test, at chance. This is not a defect of one suite: the canonical Dakos detector fares no better on its own data. What is *not* a commodity is the auditable, reproducible, claim-bounded envelope the protocol produces — a matched-false-alarm operating point, a permutation p-value, and a hash-sealed `EarlyWarningEvidence` record for every transition, **including the sealed silences**. A positive early-warning claim should be required to clear this operational bar; most published EWS results have only cleared the retrospective per-record one.
+**Detection is a commodity; the moat is the evidence.** Across four independent physical domains — and a fifth, molecular one — generic early-warning *detection* at an honest operating point is sparse and, by a permutation or selection-controlled test, at chance. This is not a defect of one suite: the canonical Dakos detector fares no better on its own data, and the celebrated single-cell and bulk DNB benchmarks do not clear a modality-appropriate honest null either. What is *not* a commodity is the auditable, reproducible, claim-bounded envelope the protocol produces — a matched-false-alarm operating point, a permutation p-value, and a hash-sealed `EarlyWarningEvidence` record for every transition, **including the sealed silences**. A positive early-warning claim should be required to clear this operational bar; most published EWS results have only cleared the retrospective per-record one.
+
+**Selection freedom is a hidden operating cost.** The bulk-DNB case adds a specific lesson: when the detector *chooses* its own module (or feature set) to peak at the transition, an honest null must be granted the same choice. A surrogate that re-selects from scratch on shuffled time absorbs most of the apparent signal — so a fair null for a self-selecting detector is not an afterthought but the whole test.
 
 **The evaluation gap is the finding.** The difference between "there is a detectable rising trend in this record's approach" (retrospective, per-record, vs surrogates) and "the detector fires on transitions more than on controls at a fixed false-alarm budget" (operational, matched, significance-tested) is exactly the gap between the literature's positive results and this study's null. That gap — not any single detector — is what the four-domain replication and the Dakos head-to-head expose.
 
@@ -103,11 +125,11 @@ The result is not "nothing works". It is: **at a matched operating point and a p
 
 Stated plainly, because they bound the claim:
 
-- **Small corpora, low power.** With 6–12 transitions per domain, the permutation test has limited power; "at chance" bounds the *demonstrated* skill and does **not** prove early warning is impossible. A modestly skilled detector could remain non-significant at this n.
-- **One competitor.** Only the Dakos AR(1)-Kendall-τ detector was run head-to-head; modern approaches (e.g. deep-learning tipping-point predictors) were not tested and could behave differently.
+- **Small corpora, low power.** With 6–12 transitions per physical domain — and only 3 lineages (single-cell) or 1 exposed arm (bulk) in the molecular one — the significance tests have limited power; "at chance" bounds the *demonstrated* skill and does **not** prove early warning is impossible. A modestly skilled detector could remain non-significant at this n.
+- **One competitor.** Only the Dakos AR(1)-Kendall-τ detector was run head-to-head on the physical domains; modern approaches (e.g. deep-learning tipping-point predictors) were not tested and could behave differently.
 - **Single-subject EEG; within-record climate null.** The EEG corpus is one subject (chb01); the palaeoclimate null is the stable pre-approach interval of each record, which carries that record's own variability and so is conservative.
 - **Parameterisation.** One reasonable choice of window, step, baseline and target false alarm was used per domain; a sweep was not performed.
-- **A modality not yet included.** Gene-expression / dynamical-network-biomarker early warning of disease deterioration and cancer (Chen et al. 2012) is a different modality — few timepoints, many genes, cross-sample statistics — and is deferred to a follow-up with a dedicated detector.
+- **DNB caveats.** The single-cell index is taken from the published supplement (its bootstrap SE drives the surrogate), not re-derived from the confounded raw qPCR; the bulk case has one exposed arm, so it is a single-transition surrogate test, not a corpus, and its module search is a greedy reimplementation of the DNB selection rather than the authors' exact procedure. These bound the molecular result to "no significance at this resolution / under a selection-controlled null", not a refutation of the DNB method.
 
 ## 6. Reproduction
 
@@ -120,9 +142,11 @@ python bench/early_warning_leadtime_grid.py    DATA OUT   # grid
 python bench/early_warning_leadtime_climate.py DATA OUT   # palaeoclimate
 python bench/head_to_head_ar1_kendall.py OUT \
     --climate-dir C --grid-dir G --cardiac-dir H --eeg-dir E   # head-to-head
+python -m bench.early_warning_dnb          OUT               # single-cell DNB (embedded summary)
+python -m bench.early_warning_dnb_bulk     DATA OUT          # bulk GSE2565 DNB
 ```
 
-The sealed evidence, aggregate results (with the permutation block), and the head-to-head comparison are committed under `examples/real_data/`. A fresh run reproduces every `content_hash` bit-for-bit.
+The single-cell DNB capstone reads only the embedded published summary, so it needs no external data; the bulk capstone reads the citation-only GSE2565 files. The sealed evidence, aggregate results (with the permutation block), and the head-to-head comparison are committed under `examples/real_data/`. A fresh run reproduces every `content_hash` bit-for-bit.
 
 ## 7. Data availability
 
@@ -132,6 +156,8 @@ Raw corpora are public and cited, not redistributed:
 - MIT-BIH Atrial Fibrillation Database — <https://physionet.org/content/afdb/>
 - PSML power-system dataset (Zheng et al. 2021) — the 23-bus Millisecond-level PMU measurements.
 - Dakos et al. 2008 palaeoclimate records — <https://github.com/earlywarningtoolbox/datasets>.
+- Mojtahedi et al. 2016 single-cell transition index — Table S2 of the paper (index + bootstrap SE per lineage per day).
+- GSE2565 phosgene lung-injury expression — <https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE2565>.
 
 ## References
 
@@ -143,3 +169,5 @@ Raw corpora are public and cited, not redistributed:
 - Goldberger AL, Amaral LAN, Glass L, et al. PhysioBank, PhysioToolkit, and PhysioNet. *Circulation* 101(23):e215 (2000).
 - Zheng X, et al. A multi-scale time-series dataset with benchmark for machine learning in electricity (PSML) (2021).
 - Chen L, Liu R, Liu Z-P, Li M, Aihara K. Detecting early-warning signals for sudden deterioration of complex diseases by dynamical network biomarkers. *Scientific Reports* 2:342 (2012).
+- Mojtahedi M, Skupin A, Zhou J, et al. Cell fate decision as high-dimensional critical state transition. *PLoS Biology* 14(12):e2000640 (2016).
+- Sciuto AM, Phillips CS, Orzolek LD, Hensley JL, Chang L-Y, Nadadur SS. Genomic analysis of murine pulmonary tissue following carbonyl chloride inhalation. *Chemical Research in Toxicology* 18(11):1654 (2005); GSE2565.
