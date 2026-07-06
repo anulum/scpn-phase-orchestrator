@@ -24,9 +24,31 @@ estimates it directly:
 
 * :func:`cross_bus_deviation` — the per-sample mean absolute deviation of the bus
   voltages from their cross-bus mean, an amplitude envelope of the collective mode;
-* :func:`envelope_growth_rate` — the exponential growth rate ``σ`` of that envelope, the
-  slope of its log against time; ``σ > 0`` is a growing (unstable) mode, ``σ < 0`` a
-  damped one.
+* :func:`per_bus_deviation` — the same deviation *kept per bus*, so a growth rate can be
+  measured on each bus and the most unstable one taken;
+* :func:`envelope_growth_rate` — the exponential growth rate ``σ`` of a deviation
+  envelope, the slope of its log against time; ``σ > 0`` is a growing (unstable) mode,
+  ``σ < 0`` a damped one. A ``recency_top`` weighting lets later samples count for more,
+  because a real instability *accelerates* toward onset, so the growth close to the
+  disturbance is the most informative.
+
+Two aggregations are offered, mirroring the seizure detector, because grid
+instability is spatially localised to a mode/bus cluster:
+
+* ``"mean"`` — the growth rate of the whole-network :func:`cross_bus_deviation`
+  envelope, the natural first choice;
+* ``"focal"`` — the *most unstable bus's* growth rate, the per-segment maximum over the
+  per-bus envelopes. The maximum inflates the statistic under the null, but the
+  matched-false-alarm threshold is calibrated on that *same* per-bus maximum over the
+  damped null segments, so the multiplicity is absorbed and the comparison stays honest.
+
+An accuracy study on the real PSML corpus (dev/held-out split, every variant disclosed,
+no operating point tuned on the held-out half) selected ``"focal"`` aggregation with a
+recency weighting as the operating point: it leads roughly half of the instability
+transitions at a matched ten-percent false alarm, where the whole-network unweighted
+growth rate — and every generic detector — leads far fewer. Those are the module
+defaults (:data:`DEFAULT_AGGREGATION`, :data:`DEFAULT_RECENCY_TOP`); the whole-network
+unweighted path is retained for the head-to-head comparison.
 
 The per-segment ``σ`` is calibrated to a matched false alarm on damped-disturbance null
 segments and tested by the shared label-permutation core
@@ -70,12 +92,22 @@ FloatArray = NDArray[np.float64]
 #: A deviation floor so a perfectly flat window cannot take a logarithm of zero.
 _DEVIATION_FLOOR = 1.0e-12
 
+#: The validated default aggregation — the most unstable bus, un-diluted.
+DEFAULT_AGGREGATION = "focal"
+
+#: The validated default recency weighting: later samples (nearer the disturbance, where
+#: an instability has accelerated) count up to this many times as much as the earliest.
+DEFAULT_RECENCY_TOP = 3.0
+
 __all__ = [
+    "DEFAULT_AGGREGATION",
+    "DEFAULT_RECENCY_TOP",
     "ModalGrowthSignificance",
     "cross_bus_deviation",
     "envelope_growth_rate",
     "modal_growth_score",
     "modal_growth_significance",
+    "per_bus_deviation",
 ]
 
 
@@ -111,12 +143,66 @@ def cross_bus_deviation(voltages: FloatArray) -> FloatArray:
     return np.ascontiguousarray(np.abs(centred).mean(axis=0))
 
 
-def envelope_growth_rate(deviation: FloatArray, *, rate: float) -> float:
+def per_bus_deviation(voltages: FloatArray) -> FloatArray:
+    """Return the per-bus voltage-deviation envelopes, one per bus.
+
+    The absolute deviation of each bus voltage from the cross-bus mean, *without*
+    averaging over the buses — the raw material for the ``"focal"`` aggregation, which
+    measures the growth rate on every bus and keeps the most unstable one.
+
+    Parameters
+    ----------
+    voltages : FloatArray
+        Per-bus voltage magnitudes, shape ``(buses, samples)`` with at least one bus.
+
+    Returns
+    -------
+    FloatArray
+        The per-bus deviation envelopes, shape ``(buses, samples)``.
+
+    Raises
+    ------
+    ValueError
+        If ``voltages`` is not a two-dimensional buses-by-samples array with a bus and a
+        sample.
+    """
+    values = np.asarray(voltages, dtype=np.float64)
+    if values.ndim != 2:
+        raise ValueError("voltages must be two-dimensional (buses × samples)")
+    if values.shape[0] < 1 or values.shape[1] < 1:
+        raise ValueError("voltages must have at least one bus and one sample")
+    centred = values - values.mean(axis=0, keepdims=True)
+    return np.ascontiguousarray(np.abs(centred))
+
+
+def _recency_weighted_slope(
+    times: FloatArray, logs: FloatArray, recency_top: float
+) -> float:
+    """Return the weighted-least-squares slope of ``logs`` on ``times``.
+
+    Linear weights rise from one at the first sample to ``recency_top`` at the last, so
+    the growth close to the disturbance dominates the fit. With ``recency_top == 1`` the
+    weights are uniform and this reduces to ordinary least squares; the caller reserves
+    that case for :func:`numpy.polyfit` and only calls here for a genuine weighting.
+    """
+    weights = np.linspace(1.0, recency_top, times.shape[0])
+    total = weights.sum()
+    mean_t = float((weights * times).sum() / total)
+    mean_y = float((weights * logs).sum() / total)
+    denom = float((weights * (times - mean_t) ** 2).sum())
+    return float((weights * (times - mean_t) * (logs - mean_y)).sum() / denom)
+
+
+def envelope_growth_rate(
+    deviation: FloatArray, *, rate: float, recency_top: float = 1.0
+) -> float:
     """Return the exponential growth rate of a deviation envelope.
 
     Fits ``log(envelope)`` linearly against time and returns the slope ``σ``: the real
     part of the dominant mode's eigenvalue. ``σ > 0`` is a growing (unstable) mode,
     ``σ < 0`` a damped one. The envelope is floored away from zero before the logarithm.
+    With ``recency_top > 1`` the later samples are up-weighted (see
+    :func:`_recency_weighted_slope`), as a real instability accelerates toward onset.
 
     Parameters
     ----------
@@ -124,6 +210,9 @@ def envelope_growth_rate(deviation: FloatArray, *, rate: float) -> float:
         The deviation envelope over the segment, shape ``(T,)`` with ``T >= 2``.
     rate : float
         Sampling rate in Hz; must be positive, so ``σ`` is per second.
+    recency_top : float
+        Weight of the last sample relative to the first, ``>= 1``. ``1.0`` (the default)
+        is an unweighted ordinary-least-squares fit.
 
     Returns
     -------
@@ -133,8 +222,8 @@ def envelope_growth_rate(deviation: FloatArray, *, rate: float) -> float:
     Raises
     ------
     ValueError
-        If ``deviation`` is not a one-dimensional array of at least two samples, or
-        ``rate`` is not positive.
+        If ``deviation`` is not a one-dimensional array of at least two samples,
+        ``rate`` is not positive, or ``recency_top`` is not a finite number ``>= 1``.
     """
     values = np.asarray(deviation, dtype=np.float64)
     if values.ndim != 1:
@@ -143,17 +232,29 @@ def envelope_growth_rate(deviation: FloatArray, *, rate: float) -> float:
         raise ValueError("deviation must have at least two samples")
     if not np.isfinite(rate) or rate <= 0.0:
         raise ValueError("rate must be a positive finite number")
+    if not np.isfinite(recency_top) or recency_top < 1.0:
+        raise ValueError("recency_top must be a finite number at least one")
     times = np.arange(values.shape[0], dtype=np.float64) / rate
     logs = np.log(np.maximum(values, _DEVIATION_FLOOR))
-    slope = np.polyfit(times, logs, 1)[0]
-    return float(slope) if np.isfinite(slope) else 0.0
+    if recency_top == 1.0:
+        slope = float(np.polyfit(times, logs, 1)[0])
+    else:
+        slope = _recency_weighted_slope(times, logs, recency_top)
+    return slope if np.isfinite(slope) else 0.0
 
 
-def modal_growth_score(segment: FloatArray, *, rate: float) -> float:
-    """Return one segment's modal growth rate ``σ``.
+def modal_growth_score(
+    segment: FloatArray,
+    *,
+    rate: float,
+    aggregation: str = DEFAULT_AGGREGATION,
+    recency_top: float = DEFAULT_RECENCY_TOP,
+) -> float:
+    """Return one segment's modal growth rate ``σ`` under the chosen aggregation.
 
-    Composes :func:`cross_bus_deviation` and :func:`envelope_growth_rate`: the growth
-    rate of the segment's cross-bus deviation envelope.
+    ``"mean"`` scores the growth rate of the whole-network :func:`cross_bus_deviation`
+    envelope; ``"focal"`` scores the maximum growth rate over the per-bus envelopes
+    (:func:`per_bus_deviation`) — the most unstable bus, un-diluted.
 
     Parameters
     ----------
@@ -161,13 +262,31 @@ def modal_growth_score(segment: FloatArray, *, rate: float) -> float:
         The segment's per-bus voltages, shape ``(buses, samples)``.
     rate : float
         Sampling rate in Hz.
+    aggregation : str
+        ``"mean"`` (whole network) or ``"focal"`` (most unstable bus).
+    recency_top : float
+        Recency weighting passed to :func:`envelope_growth_rate`.
 
     Returns
     -------
     float
         The growth rate ``σ`` in inverse seconds.
+
+    Raises
+    ------
+    ValueError
+        If ``aggregation`` is neither ``"mean"`` nor ``"focal"``.
     """
-    return envelope_growth_rate(cross_bus_deviation(segment), rate=rate)
+    if aggregation == "mean":
+        return envelope_growth_rate(
+            cross_bus_deviation(segment), rate=rate, recency_top=recency_top
+        )
+    if aggregation == "focal":
+        return max(
+            envelope_growth_rate(envelope, rate=rate, recency_top=recency_top)
+            for envelope in per_bus_deviation(segment)
+        )
+    raise ValueError(f"aggregation must be 'mean' or 'focal', got {aggregation!r}")
 
 
 @dataclass(frozen=True)
@@ -176,6 +295,10 @@ class ModalGrowthSignificance:
 
     Attributes
     ----------
+    aggregation : str
+        The channel aggregation used (``"mean"`` or ``"focal"``).
+    recency_top : float
+        The recency weighting used in the growth-rate fit.
     score_threshold : float
         The matched-false-alarm growth-rate threshold set on the damped null segments.
     achieved_false_alarm : float
@@ -185,6 +308,8 @@ class ModalGrowthSignificance:
         test the generic SCPN suite is scored by.
     """
 
+    aggregation: str
+    recency_top: float
     score_threshold: float
     achieved_false_alarm: float
     significance: PermutationSignificance
@@ -192,7 +317,9 @@ class ModalGrowthSignificance:
     def to_audit_record(self) -> dict[str, object]:
         """Return a JSON-safe mapping of the grid modal-growth result."""
         return {
-            "detector": "modal_envelope_growth_rate",
+            "detector": f"modal_envelope_growth_rate_{self.aggregation}",
+            "aggregation": self.aggregation,
+            "recency_top": self.recency_top,
             "score_threshold": self.score_threshold,
             "achieved_false_alarm": self.achieved_false_alarm,
             "significance": self.significance.to_audit_record(),
@@ -204,6 +331,8 @@ def modal_growth_significance(
     null_segments: Sequence[FloatArray],
     *,
     rate: float,
+    aggregation: str = DEFAULT_AGGREGATION,
+    recency_top: float = DEFAULT_RECENCY_TOP,
     target_fa: float = DEFAULT_TARGET_FALSE_ALARM,
     n_permutations: int = DEFAULT_PERMUTATIONS,
     seed: int = DEFAULT_PERMUTATION_SEED,
@@ -211,10 +340,11 @@ def modal_growth_significance(
     """Score the modal-growth detector through the matched-false-alarm protocol.
 
     Each pre-onset transition segment and damped null segment is reduced to its modal
-    growth rate ``σ`` (:func:`modal_growth_score`); the threshold is calibrated on the
-    null rates to a matched false alarm; a segment alarms when its ``σ`` meets the
-    threshold; and the instability alarm count is tested for significance by the shared
-    label-permutation core, so the p-value is directly comparable to the generic suite.
+    growth rate ``σ`` (:func:`modal_growth_score`) under the chosen aggregation and
+    recency weighting; the threshold is calibrated on the null rates to a matched false
+    alarm; a segment alarms when its ``σ`` meets the threshold; and the instability
+    alarm count is tested for significance by the shared label-permutation core, so the
+    p-value is directly comparable to the generic suite.
 
     Parameters
     ----------
@@ -224,6 +354,10 @@ def modal_growth_significance(
         Each damped-disturbance null segment, same shape convention.
     rate : float
         Sampling rate in Hz.
+    aggregation : str
+        ``"mean"`` (whole network) or ``"focal"`` (most unstable bus).
+    recency_top : float
+        Recency weighting passed to :func:`envelope_growth_rate`.
     target_fa : float
         Target false-alarm rate the growth-rate threshold is held at or below.
     n_permutations : int
@@ -234,8 +368,8 @@ def modal_growth_significance(
     Returns
     -------
     ModalGrowthSignificance
-        The calibrated threshold, achieved false-alarm rate, and permutation
-        significance.
+        The aggregation, recency weighting, calibrated threshold, achieved false-alarm
+        rate, and permutation significance.
 
     Raises
     ------
@@ -246,8 +380,18 @@ def modal_growth_significance(
         raise ValueError("transition_segments must not be empty")
     if not null_segments:
         raise ValueError("null_segments must not be empty")
-    transition_scores = [modal_growth_score(s, rate=rate) for s in transition_segments]
-    null_scores = [modal_growth_score(s, rate=rate) for s in null_segments]
+    transition_scores = [
+        modal_growth_score(
+            s, rate=rate, aggregation=aggregation, recency_top=recency_top
+        )
+        for s in transition_segments
+    ]
+    null_scores = [
+        modal_growth_score(
+            s, rate=rate, aggregation=aggregation, recency_top=recency_top
+        )
+        for s in null_segments
+    ]
     threshold = calibrate_score_threshold(null_scores, target_fa=target_fa)
     transition_alarms = [score >= threshold for score in transition_scores]
     null_alarms = [score >= threshold for score in null_scores]
@@ -256,6 +400,8 @@ def modal_growth_significance(
         transition_alarms, null_alarms, n_permutations=n_permutations, seed=seed
     )
     return ModalGrowthSignificance(
+        aggregation=aggregation,
+        recency_top=recency_top,
         score_threshold=threshold,
         achieved_false_alarm=achieved,
         significance=significance,
