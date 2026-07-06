@@ -12,7 +12,7 @@
     "research_experimental_modules": 201,
     "runtime_serving_modules": 143,
     "rust_kernel_files": 97,
-    "test_files": 794
+    "test_files": 796
   },
   "documentation": {
     "public_pages": [
@@ -2054,6 +2054,7 @@
       "tests/test_geometry_constraints_deep.py",
       "tests/test_geometry_projection.py",
       "tests/test_geometry_walk.py",
+      "tests/test_grid_modal_head_to_head.py",
       "tests/test_grid_oscillation_detector.py",
       "tests/test_grpc_gen_aliases.py",
       "tests/test_grpc_service.py",
@@ -2310,6 +2311,7 @@
       "tests/test_property_invariants.py",
       "tests/test_property_monitors.py",
       "tests/test_psml_grid_evidence.py",
+      "tests/test_psml_modal_head_to_head.py",
       "tests/test_psychedelic.py",
       "tests/test_psychedelic_algorithm.py",
       "tests/test_psychedelic_backends.py",

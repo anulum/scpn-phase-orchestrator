@@ -1,0 +1,82 @@
+{
+  "benchmark": "grid_modal_head_to_head",
+  "question": "At a matched false alarm on the identical non-circular disturbance-type split, does the domain-specific modal envelope-growth detector beat the generic SCPN early-warning suite?",
+  "corpus": {
+    "source": "PSML 23-bus power-system dataset (Zheng et al. 2021)",
+    "n_transitions": 90,
+    "n_nulls": 88,
+    "n_dropped_bad_rate": 3,
+    "sampling_rate_hz": 238.09523809523915,
+    "segment_seconds": 2.0,
+    "labelling": "disturbance type \u2014 generator trip = transition, damped bus fault or branch trip = null (independent of the growth statistic)"
+  },
+  "operating_point": {
+    "aggregation": "focal",
+    "recency_top": 3.0,
+    "selection": "chosen on the even-index development half, validated on the odd-index held-out half before this full-corpus comparison"
+  },
+  "target_false_alarm": 0.1,
+  "n_permutations": 10000,
+  "seed": 0,
+  "modal": {
+    "detector": "modal_envelope_growth_rate_focal",
+    "aggregation": "focal",
+    "recency_top": 3.0,
+    "score_threshold": 1.3203407954771857,
+    "achieved_false_alarm": 0.09090909090909091,
+    "significance": {
+      "observed_led": 36,
+      "n_transitions": 90,
+      "pooled_alarm_rate": 0.24719101123595505,
+      "expected_led": 22.247191011235955,
+      "p_value": 9.999000099990002e-05,
+      "n_permutations": 10000,
+      "seed": 0
+    }
+  },
+  "generic_suite": {
+    "critical_slowing_down": {
+      "observed_led": 13,
+      "n_transitions": 90,
+      "pooled_alarm_rate": 0.11797752808988764,
+      "expected_led": 10.617977528089888,
+      "p_value": 0.1847815218478152,
+      "n_permutations": 10000,
+      "seed": 0
+    },
+    "synchronisation": {
+      "observed_led": 3,
+      "n_transitions": 90,
+      "pooled_alarm_rate": 0.06179775280898876,
+      "expected_led": 5.561797752808989,
+      "p_value": 0.9761023897610239,
+      "n_permutations": 10000,
+      "seed": 0
+    },
+    "transition_entropy": {
+      "observed_led": 8,
+      "n_transitions": 90,
+      "pooled_alarm_rate": 0.0898876404494382,
+      "expected_led": 8.089887640449438,
+      "p_value": 0.6286371362863714,
+      "n_permutations": 10000,
+      "seed": 0
+    },
+    "ensemble_weighted": {
+      "observed_led": 11,
+      "n_transitions": 90,
+      "pooled_alarm_rate": 0.10674157303370786,
+      "expected_led": 9.606741573033707,
+      "p_value": 0.32356764323567644,
+      "n_permutations": 10000,
+      "seed": 0
+    }
+  },
+  "held_out_validation": {
+    "n_transitions": 45,
+    "observed_led": 24,
+    "p_value": 0.00019998000199980003
+  },
+  "verdict": "The domain-specific modal envelope-growth detector leads 36/90 transitions (p=0.0001), beating the best generic member (critical_slowing_down, 13/90, p=0.1848) and every generic detector at a matched false alarm on the identical disturbance-type split.",
+  "content_hash": "bc6895879088b31b763c566aa315f0edcfc842f537e81102cbd5706cf3ef7bf2"
+}
