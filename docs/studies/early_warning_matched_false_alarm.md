@@ -261,6 +261,30 @@ points only (the well-damped benchmarks do not enter a clean growing-oscillation
 this is a damping-ranking test, not a stable-versus-unstable classification), and a
 fourteen-point sweep per system.
 
+### 3.10 Critical-slowing-down external validation against the analytic eigenvalue
+
+The grid section validates the *oscillatory* detector against a simulated eigenvalue. The
+single-series **critical-slowing-down** detector — the one the palaeoclimate capstone runs
+on the Dakos records — admits an even harder, non-circular test, because its ground truth
+can be written in closed form rather than simulated. We sweep a control parameter
+quasi-statically toward a codimension-one bifurcation, integrate the stochastic normal form
+at each operating point, and read the shipped detector's two indicators — the lag-one
+autocorrelation and the variance. The true recovery rate λ is the normal-form **Jacobian
+eigenvalue** analytically (−2√μ for the fold / saddle-node, μ for the supercritical
+pitchfork). On both independent classes — one with a quadratic nonlinearity, one with a
+globally confining cubic one — the detector's autocorrelation channel recovers the true λ
+(Spearman ρ = 0.98 fold, 0.96 pitchfork), and because the lag-one autocorrelation of a
+linear-response process is exp(λ Δt), the implied rate ln(AR1)/Δt tracks λ **in magnitude**,
+not merely in rank (Pearson ρ = 0.98, 0.96) — a stronger statement than the rank-only grid
+test can make. The variance channel rises in step (ρ = 0.98 on both) as the stationary
+variance σ²/2|λ| diverges. So the quantity the detector estimates on the Dakos records — a
+falling recovery rate — is exactly what a bifurcation presents, confirmed against a
+first-principles reference and hash-sealed in
+`examples/real_data/csd_bifurcation/csd_bifurcation_external_validation.json`. The limits are
+stated plainly: a quasi-static per-point sweep (an independent stationary run at each control
+value, not one non-stationary approach), additive noise only, and scalar reduced normal forms
+rather than the full high-dimensional systems.
+
 ## 4. Discussion
 
 **Detection is a commodity; the moat is the evidence.** Across four independent physical domains — and a fifth, molecular one — generic early-warning *detection* at an honest operating point is sparse and, by a permutation or selection-controlled test, at chance. This is not a defect of one suite: the canonical Dakos detector fares no better on its own data, and the celebrated single-cell and bulk DNB benchmarks do not clear a modality-appropriate honest null either. What is *not* a commodity is the auditable, reproducible, claim-bounded envelope the protocol produces — a matched-false-alarm operating point, a permutation p-value, and a hash-sealed `EarlyWarningEvidence` record for every transition, **including the sealed silences**. A positive early-warning claim should be required to clear this operational bar; most published EWS results have only cleared the retrospective per-record one.
