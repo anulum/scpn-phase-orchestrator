@@ -200,6 +200,35 @@ single horizon forking path that does not survive multiplicity, it is disclosed 
 artefact as exploratory and explicitly **not** claimed — the same discipline that keeps the
 programme's positive results honest applies to its near-misses.)
 
+### 3.8 The moat cannot even be posed on DNB: a resolution-limit boundary
+
+The second candidate for the grid moat's transfer is the molecular DNB modality of §3.4,
+and it fails for a different, structural reason. The DNB early-warning signal is a genuine
+critical-slowing-down *rise* of the transition index toward the tipping point — but it is
+measured over only a handful of pre-transition timepoints: the single-cell Mojtahedi rising
+limb is **three** points (Days 0, 1, 3, from the published Table S2), and the bulk GSE2565
+exposed-arm limb is **four** (0.5, 1, 4, 8 h). On three-to-four points the grid statistic's
+discriminating machinery has no purchase: a fit-quality gate needs enough of a trajectory to
+tell an exponential from any other monotone rise, and on so few points *every* rise fits an
+exponential well enough (R² = 0.67–0.86 across all four trajectories) to pass a 0.5 gate — so
+the gate keeps every one and rejects none, exactly the discrimination it is meant to provide,
+gone. The exponential growth rate, moreover, simply re-orders the three single-cell lineages
+in the same order as the existing linear slope (0.61 > 0.48 > 0.22 vs 0.128 > 0.092 > 0.028),
+adding no separating information. So the modal-growth transfer collapses to the linear slope
+the existing DNB detector already uses, and the moat's winning form cannot even be *posed*.
+This boundary is hash-sealed in `examples/real_data/mojtahedi_fate/dnb_modal_transfer.json`.
+
+Together, §3.7 and §3.8 bound the moat from both sides. The grid detector transfers only to a
+domain that carries **both** a genuine exponential instability (a linear mode's eigenvalue,
+which fits an exponential and whose fault-vs-instability contrast a fit-quality gate can read)
+**and** a trajectory long enough to fit and gate that form. The power grid has both; scalp EEG
+has a resolved trajectory but a non-exponential preictal rise the gate rejects (a model
+mismatch, §3.7); DNB has a genuine early-warning rise but only a three-to-four-point limb the
+gate cannot resolve (a resolution limit, §3.8). The exponential-growth moat is therefore not a
+general early-warning method but a **domain-specific** one whose applicability is itself an
+auditable, sealed result — the same honest boundary-drawing that separates the commodity
+generic detectors from the genuinely skilled grid detector.
+
 ## 4. Discussion
 
 **Detection is a commodity; the moat is the evidence.** Across four independent physical domains — and a fifth, molecular one — generic early-warning *detection* at an honest operating point is sparse and, by a permutation or selection-controlled test, at chance. This is not a defect of one suite: the canonical Dakos detector fares no better on its own data, and the celebrated single-cell and bulk DNB benchmarks do not clear a modality-appropriate honest null either. What is *not* a commodity is the auditable, reproducible, claim-bounded envelope the protocol produces — a matched-false-alarm operating point, a permutation p-value, and a hash-sealed `EarlyWarningEvidence` record for every transition, **including the sealed silences**. A positive early-warning claim should be required to clear this operational bar; most published EWS results have only cleared the retrospective per-record one.

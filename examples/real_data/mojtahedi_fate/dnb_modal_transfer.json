@@ -1,0 +1,51 @@
+{
+  "benchmark": "dnb_modal_transfer",
+  "bulk_gse2565": {
+    "exponential_fit_r2": 0.8041286031072538,
+    "gate_keeps": true,
+    "gated_growth_rate": 0.6129713999080949,
+    "growth_rate": 0.6129713999080949,
+    "label": "gse2565_cg_exposed",
+    "n_points": 4,
+    "slope": 1.154452278078188
+  },
+  "content_hash": "30a0bf7bceacd3b60145707683554c331da0f1867a6995c3d4fc6daa4ea3b77b",
+  "corpus": {
+    "bulk_rising_limb_points": 4,
+    "bulk_source": "GSE2565 phosgene lung, exposed (CG) arm",
+    "single_cell_rising_limb_points": 3,
+    "single_cell_source": "Mojtahedi et al. 2016 Table S2 (three lineages)"
+  },
+  "min_resolvable_points": 6,
+  "question": "Can the grid modal-growth + fit-quality-gate moat be posed on the DNB critical-slowing-down early-warning corpora?",
+  "single_cell_mojtahedi": [
+    {
+      "exponential_fit_r2": 0.8210097731856585,
+      "gate_keeps": true,
+      "gated_growth_rate": 0.6091065123631507,
+      "growth_rate": 0.6091065123631507,
+      "label": "erythroid_epo",
+      "n_points": 3,
+      "slope": 0.12841989647188104
+    },
+    {
+      "exponential_fit_r2": 0.8605578744701232,
+      "gate_keeps": true,
+      "gated_growth_rate": 0.4785668956230217,
+      "growth_rate": 0.4785668956230217,
+      "label": "myeloid_gmcsf_il3",
+      "n_points": 3,
+      "slope": 0.09220401535590056
+    },
+    {
+      "exponential_fit_r2": 0.670727133035004,
+      "gate_keeps": true,
+      "gated_growth_rate": 0.21671303740265868,
+      "growth_rate": 0.21671303740265868,
+      "label": "combined_epo_gmcsf",
+      "n_points": 3,
+      "slope": 0.028155931196964502
+    }
+  ],
+  "verdict": "The grid modal-growth moat cannot be posed on DNB early warning: its rising limbs are 4 points at most \u2014 below the 6 a growth-form fit and gate need \u2014 so the fit-quality gate is uninformative (R\u00b2 0.67\u20130.86, all 4/4 kept, none rejected) and the exponential growth rate re-orders the transitions exactly as the existing linear slope does, adding no separating information. The DNB rise is a genuine critical-slowing-down divergence, not the exponential instability the moat is built to fit."
+}

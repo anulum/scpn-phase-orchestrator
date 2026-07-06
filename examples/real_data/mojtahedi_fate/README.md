@@ -50,6 +50,43 @@ resolution**, not the effect size — three lineages and four timepoints give th
 low power by construction, so this silence bounds demonstrated skill; it is not a proof of
 impossibility.
 
+## The grid modal-growth moat cannot be posed here
+
+`dnb_modal_transfer.json` seals a second, negative result: a test of whether the
+**power-grid** detector's winning form — the exponential envelope-growth rate and the
+fit-quality (R²) gate that certifies its streaming operating point — transfers to this DNB
+signal. It scores the transition-index rising limb by the exponential growth rate of its
+envelope (the grid statistic) instead of a linear slope, over both DNB corpora: the
+three-point single-cell limbs above and the four-point bulk GSE2565 exposed-arm limb
+(`bench.early_warning_dnb_bulk`).
+
+It cannot even be posed. On three-to-four points the fit-quality gate is **uninformative**:
+
+| Trajectory | Points | Exp-fit R² | Gate keeps? |
+|------------|-------:|-----------:|:-----------:|
+| erythroid_epo | 3 | 0.82 | ✓ |
+| myeloid_gmcsf_il3 | 3 | 0.86 | ✓ |
+| combined_epo_gmcsf | 3 | 0.67 | ✓ |
+| gse2565_cg_exposed | 4 | 0.80 | ✓ |
+
+Every monotone rise fits an exponential well enough to pass a 0.5 gate, so the gate keeps
+all four and rejects none — the discrimination it is meant to provide is gone. The
+exponential growth rate, moreover, re-orders the three single-cell lineages in the same
+order as the linear slope, adding no separating information: the transfer collapses to the
+slope the existing detector already uses. The DNB rise is a genuine critical-slowing-down
+divergence — a power law, not an exponential — and its early-warning trajectories are too
+short to fit or gate a growth form. Together with the scalp-EEG result (a resolved but
+non-exponential trajectory the gate rejects), this bounds the grid moat: it needs both a
+genuine exponential instability and a resolved trajectory, which the power grid has and
+these domains do not. Regenerate it (deterministic):
+
+```bash
+python bench/dnb_modal_transfer.py DATA examples/real_data/mojtahedi_fate/dnb_modal_transfer.json
+```
+
+with `DATA` holding the GSE2565 files; the single-cell limbs are read from the in-code
+published Table S2, so no raw single-cell data is needed.
+
 ## Reproduce
 
 ```bash
