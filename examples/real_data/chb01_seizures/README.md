@@ -108,6 +108,39 @@ python bench/early_warning_leadtime_eeg.py DATA OUT
 `early_warning_leadtime_eeg_results.json`, identical to the files committed here.
 The raw EDF is read but never copied; only the derived sealed records are.
 
+## The grid modal-growth moat does not transfer here
+
+`seizure_modal_transfer.json` seals a second, negative result on this same corpus: a
+test of whether the **power-grid** detector's winning form — the exponential
+envelope-growth rate, focal aggregation, and the fit-quality (R²) gate that certifies
+its streaming operating point — transfers to scalp EEG. It scores the same a-priori
+beta/delta band-power ratio trajectory by the exponential growth rate of its envelope
+(the grid statistic) instead of a rank trend, through the identical matched-false-alarm
++ permutation moat on the same six preictal segments.
+
+It does **not** transfer. At a matched 10 % false alarm:
+
+| Detector (focal) | Seizures led | p |
+|------------------|-------------:|----:|
+| spectral beta/delta rank trend (a-priori) | 1 / 6 | 0.57 |
+| modal exponential-growth rate | 0 / 6 | 1.00 |
+| modal growth + R²-gate | 0 / 6 (false alarm → 0) | 1.00 |
+
+The fit-quality gate, built to reject a fault's *non-exponential* step-like transient,
+rejects the preictal signal too — every gated score is clamped, so nothing alarms. A
+robustness grid over window, recency weighting and gate leaves the modal score at 0 / 6
+at **every** setting, so this is a model mismatch, not a parameter artefact: the grid
+statistic presupposes a linear instability's eigenvalue (a true exponential), which EEG
+preictal dynamics do not exhibit. A shorter 600 s horizon surfaces a spectral 3 / 6
+(p = 0.04); with one subject, n = 6 and a single horizon forking path that does not
+survive multiplicity, it is recorded in the artefact as exploratory and **not** claimed.
+
+Regenerate it (deterministic given the seed, so it reproduces byte for byte):
+
+```bash
+python bench/seizure_modal_transfer.py DATA examples/real_data/chb01_seizures/seizure_modal_transfer.json
+```
+
 ## Scope and limits (what this is not)
 
 - **Review-only, offline.** The `EarlyWarningEvidence` disclaimer applies: this is

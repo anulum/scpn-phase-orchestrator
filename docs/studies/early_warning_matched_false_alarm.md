@@ -173,6 +173,33 @@ deployment modality, and the honest streaming operating point — hash-sealed in
 `examples/real_data/psml_modal_growth/grid_modal_stream_operating_point.json` — is the
 auditable deliverable, not the flattering per-window figure.
 
+### 3.7 The grid moat's winning form does not transfer to EEG: a model-mismatch boundary
+
+A natural next question is whether the grid detector's *winning form* — the exponential
+envelope-growth rate, focal aggregation, and the fit-quality gate that lifts its streaming
+operating point (§3.6) — carries to another domain. We test it on the murky scalp EEG:
+the same a-priori seizure feature as §3.5 (the per-channel beta/delta band-power ratio
+trajectory) is scored not by a Kendall-τ rank trend but by the **exponential growth rate of
+its envelope**, with the identical focal aggregation, recency weighting and R²-gate the grid
+uses, through the same matched-false-alarm + permutation moat on the same six chb01 preictal
+segments. It does **not** transfer: the exponential-growth score leads **0 of 6** preictal
+segments (p = 1.00) in both aggregations, and the fit-quality gate — built to reject a
+fault's *non-exponential* step-like transient — rejects the preictal *signal* too (every
+gated score is clamped, the achieved false alarm falls to zero, 0 of 6 led), below even the
+a-priori rank trend's 1 of 6. A robustness grid over the analysis window (512/1024/2048
+samples), recency weighting (1.0/3.0) and gate (off/0.5) leaves the modal focal score at 0 of
+6 at **every** setting, so this is a model mismatch, not a parameter artefact. The reason is
+physical: the grid statistic presupposes a *linear instability's eigenvalue* — the deviation
+grows as a true exponential, which the fit and its quality gate are built to measure — whereas
+the preictal band-power rise, if present, is a slow, noisy, non-exponential drift the rank
+trend reads better than an exponential fit. The exponential-growth moat is therefore
+**grid-specific**, and this boundary is itself hash-sealed in
+`examples/real_data/chb01_seizures/seizure_modal_transfer.json`. (A shorter 600 s horizon
+does surface a spectral rank-trend lead of 3 of 6, p = 0.04; with one subject, n = 6, and a
+single horizon forking path that does not survive multiplicity, it is disclosed in the
+artefact as exploratory and explicitly **not** claimed — the same discipline that keeps the
+programme's positive results honest applies to its near-misses.)
+
 ## 4. Discussion
 
 **Detection is a commodity; the moat is the evidence.** Across four independent physical domains — and a fifth, molecular one — generic early-warning *detection* at an honest operating point is sparse and, by a permutation or selection-controlled test, at chance. This is not a defect of one suite: the canonical Dakos detector fares no better on its own data, and the celebrated single-cell and bulk DNB benchmarks do not clear a modality-appropriate honest null either. What is *not* a commodity is the auditable, reproducible, claim-bounded envelope the protocol produces — a matched-false-alarm operating point, a permutation p-value, and a hash-sealed `EarlyWarningEvidence` record for every transition, **including the sealed silences**. A positive early-warning claim should be required to clear this operational bar; most published EWS results have only cleared the retrospective per-record one.

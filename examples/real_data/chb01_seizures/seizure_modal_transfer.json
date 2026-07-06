@@ -1,0 +1,238 @@
+{
+  "benchmark": "seizure_modal_transfer",
+  "content_hash": "613788c8dbe329197770873af1fc7df7422fbcaa53c51124406d83cd4232d6f4",
+  "corpus": {
+    "n_nulls": 20,
+    "n_transitions": 6,
+    "sampling_rate_hz": 256.0,
+    "segment_seconds": 900.0,
+    "source": "CHB-MIT scalp-EEG (Shoeb 2009), subject chb01"
+  },
+  "exploratory_shorter_horizon": {
+    "claim": "not claimed \u2014 one subject, n=6, a single horizon forking path whose p does not survive multiplicity; needs pre-registration and more subjects",
+    "segment_seconds": 600.0,
+    "spectral_focal": {
+      "achieved_false_alarm": 0.1,
+      "aggregation": "focal",
+      "detector": "spectral_beta_delta_rise",
+      "led": 3,
+      "n_transitions": 6,
+      "score_threshold": 0.26623420349711574,
+      "significance": {
+        "expected_led": 1.0,
+        "n_permutations": 10000,
+        "n_transitions": 6,
+        "observed_led": 3,
+        "p_value": 0.040495950404959506,
+        "pooled_alarm_rate": 0.16666666666666666,
+        "seed": 0
+      }
+    }
+  },
+  "modal_growth": {
+    "focal": {
+      "achieved_false_alarm": 0.1,
+      "aggregation": "focal",
+      "detector": "modal_growth_rise",
+      "led": 0,
+      "n_transitions": 6,
+      "score_threshold": 0.002287061675504104,
+      "significance": {
+        "expected_led": 0.46153846153846156,
+        "n_permutations": 10000,
+        "n_transitions": 6,
+        "observed_led": 0,
+        "p_value": 1.0,
+        "pooled_alarm_rate": 0.07692307692307693,
+        "seed": 0
+      }
+    },
+    "mean": {
+      "achieved_false_alarm": 0.1,
+      "aggregation": "mean",
+      "detector": "modal_growth_rise",
+      "led": 0,
+      "n_transitions": 6,
+      "score_threshold": 0.000773966217752769,
+      "significance": {
+        "expected_led": 0.46153846153846156,
+        "n_permutations": 10000,
+        "n_transitions": 6,
+        "observed_led": 0,
+        "p_value": 1.0,
+        "pooled_alarm_rate": 0.07692307692307693,
+        "seed": 0
+      }
+    }
+  },
+  "modal_growth_r2_gated": {
+    "focal": {
+      "achieved_false_alarm": 0.0,
+      "aggregation": "focal",
+      "detector": "modal_growth_rise_r2_gated",
+      "led": 0,
+      "n_transitions": 6,
+      "score_threshold": 5e-324,
+      "significance": {
+        "expected_led": 0.0,
+        "n_permutations": 10000,
+        "n_transitions": 6,
+        "observed_led": 0,
+        "p_value": 1.0,
+        "pooled_alarm_rate": 0.0,
+        "seed": 0
+      }
+    },
+    "mean": {
+      "achieved_false_alarm": 0.0,
+      "aggregation": "mean",
+      "detector": "modal_growth_rise_r2_gated",
+      "led": 0,
+      "n_transitions": 6,
+      "score_threshold": 5e-324,
+      "significance": {
+        "expected_led": 0.0,
+        "n_permutations": 10000,
+        "n_transitions": 6,
+        "observed_led": 0,
+        "p_value": 1.0,
+        "pooled_alarm_rate": 0.0,
+        "seed": 0
+      }
+    }
+  },
+  "n_permutations": 10000,
+  "operating_point": {
+    "feature": "beta/delta band-power ratio trajectory",
+    "r2_gate": 0.5,
+    "recency_top": 3.0,
+    "step_samples": 512,
+    "window_samples": 1024
+  },
+  "question": "Does the grid modal-growth + fit-quality-gate moat \u2014 exponential envelope growth rate, focal, R\u00b2-gated \u2014 transfer to scalp-EEG seizure prediction?",
+  "robustness_modal_focal": [
+    {
+      "achieved_false_alarm": 0.1,
+      "led": 0,
+      "r2_gate": 0.0,
+      "recency_top": 1.0,
+      "window": 512
+    },
+    {
+      "achieved_false_alarm": 0.0,
+      "led": 0,
+      "r2_gate": 0.5,
+      "recency_top": 1.0,
+      "window": 512
+    },
+    {
+      "achieved_false_alarm": 0.1,
+      "led": 0,
+      "r2_gate": 0.0,
+      "recency_top": 3.0,
+      "window": 512
+    },
+    {
+      "achieved_false_alarm": 0.0,
+      "led": 0,
+      "r2_gate": 0.5,
+      "recency_top": 3.0,
+      "window": 512
+    },
+    {
+      "achieved_false_alarm": 0.1,
+      "led": 0,
+      "r2_gate": 0.0,
+      "recency_top": 1.0,
+      "window": 1024
+    },
+    {
+      "achieved_false_alarm": 0.0,
+      "led": 0,
+      "r2_gate": 0.5,
+      "recency_top": 1.0,
+      "window": 1024
+    },
+    {
+      "achieved_false_alarm": 0.1,
+      "led": 0,
+      "r2_gate": 0.0,
+      "recency_top": 3.0,
+      "window": 1024
+    },
+    {
+      "achieved_false_alarm": 0.0,
+      "led": 0,
+      "r2_gate": 0.5,
+      "recency_top": 3.0,
+      "window": 1024
+    },
+    {
+      "achieved_false_alarm": 0.1,
+      "led": 0,
+      "r2_gate": 0.0,
+      "recency_top": 1.0,
+      "window": 2048
+    },
+    {
+      "achieved_false_alarm": 0.0,
+      "led": 0,
+      "r2_gate": 0.5,
+      "recency_top": 1.0,
+      "window": 2048
+    },
+    {
+      "achieved_false_alarm": 0.1,
+      "led": 0,
+      "r2_gate": 0.0,
+      "recency_top": 3.0,
+      "window": 2048
+    },
+    {
+      "achieved_false_alarm": 0.0,
+      "led": 0,
+      "r2_gate": 0.5,
+      "recency_top": 3.0,
+      "window": 2048
+    }
+  ],
+  "seed": 0,
+  "spectral_kendall_tau": {
+    "focal": {
+      "achieved_false_alarm": 0.1,
+      "aggregation": "focal",
+      "detector": "spectral_beta_delta_rise",
+      "led": 1,
+      "n_transitions": 6,
+      "score_threshold": 0.28356665606108816,
+      "significance": {
+        "expected_led": 0.6923076923076923,
+        "n_permutations": 10000,
+        "n_transitions": 6,
+        "observed_led": 1,
+        "p_value": 0.5669433056694331,
+        "pooled_alarm_rate": 0.11538461538461539,
+        "seed": 0
+      }
+    },
+    "mean": {
+      "achieved_false_alarm": 0.1,
+      "aggregation": "mean",
+      "detector": "spectral_beta_delta_rise",
+      "led": 1,
+      "n_transitions": 6,
+      "score_threshold": 0.1813951638561884,
+      "significance": {
+        "expected_led": 0.6923076923076923,
+        "n_permutations": 10000,
+        "n_transitions": 6,
+        "observed_led": 1,
+        "p_value": 0.5625437456254374,
+        "pooled_alarm_rate": 0.11538461538461539,
+        "seed": 0
+      }
+    }
+  },
+  "target_false_alarm": 0.1,
+  "verdict": "The grid modal-growth moat does not transfer to scalp EEG: on the same chb01 segments the exponential-growth score leads 0/6 preictal segments and the fit-quality gate 0/6 (it rejects a non-exponential preictal rise as a transient), below the a-priori Kendall-\u03c4 spectral trend at 1/6, itself at chance. The exponential-growth model is grid-specific \u2014 it presupposes a linear instability's eigenvalue that EEG preictal dynamics do not exhibit."
+}
