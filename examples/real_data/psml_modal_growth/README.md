@@ -122,6 +122,36 @@ reproduces the sealed `content_hash`
 `tests/test_psml_stream_operating_point.py` recomputes it from the committed payload alone
 and pins it.
 
+## The advisory — from a stream alarm to an operator decision, honestly
+
+`grid_early_warning_advisory.json` closes the loop end-to-end on real data: the certified
+streaming monitor (built straight from the operating-point artefact above) is replayed over
+a real generator-trip scenario (`Natural Oscillation/row_108`), and the first stream alarm
+is turned into a claim-bounded, review-only operator advisory
+(`assurance.grid_early_warning_advisory`). The sealed record surfaces the growth rate
+σ = 1.47 (crossing the certified threshold 1.20) on the most-unstable bus, the full
+operating point, and — as first-class fields — the **honest recall (11/45 ≈ 24 %)** and the
+matched stream false alarm (≈ 10 %) read from the operating-point artefact.
+
+It is honest by construction. The advisory carries `non_actuating = true` and
+`actuating = false`: it never actuates, it informs a human review. It is sealed **without**
+a ground-truth onset — the real live-deployment case, where an operator receives the alarm
+and investigates without knowing when (or whether) an onset follows — so no lead is claimed.
+The sealed recall makes the limit explicit: an advisory is a reason to inspect, and the
+*absence* of an advisory is not evidence of stability. Regenerate it (the raw voltages are
+read but never redistributed; only the derived advisory is committed):
+
+```bash
+python bench/grid_advisory_example.py DATA \
+  examples/real_data/psml_modal_growth/grid_modal_stream_operating_point.json \
+  examples/real_data/psml_modal_growth/grid_early_warning_advisory.json
+```
+
+with `DATA` the PSML `Millisecond-level PMU Measurements` directory. The integrity test
+`tests/test_grid_advisory_example_evidence.py` recomputes the seal from the committed
+payload alone (np.polyfit BLAS drift makes a fresh pipeline run reproduce σ only to
+floating-point tolerance, so the seal — not the re-run — is what is pinned).
+
 ## References
 
 * Zheng, C. et al. 2021. *PSML: A Multi-scale Time-series Dataset for Machine Learning in
