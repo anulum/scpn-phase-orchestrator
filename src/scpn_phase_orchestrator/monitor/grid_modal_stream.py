@@ -185,7 +185,7 @@ class GridModalStreamMonitor:
             threshold=float(modal["score_threshold"]),
             aggregation=str(modal["aggregation"]),
             recency_top=float(modal["recency_top"]),
-            **kwargs,  # type: ignore[arg-type]
+            **kwargs,  # type: ignore[arg-type]  # keys checked by __init__ signature
         )
 
     @property
