@@ -12,7 +12,7 @@
     "research_experimental_modules": 201,
     "runtime_serving_modules": 143,
     "rust_kernel_files": 97,
-    "test_files": 796
+    "test_files": 797
   },
   "documentation": {
     "public_pages": [
@@ -1966,6 +1966,7 @@
       "tests/test_distributed_sync_validation.py",
       "tests/test_dnb_detector.py",
       "tests/test_doctor.py",
+      "tests/test_domain_detectors.py",
       "tests/test_domainpack_amplitude.py",
       "tests/test_domainpack_binding_workflow.py",
       "tests/test_domainpack_validation.py",
