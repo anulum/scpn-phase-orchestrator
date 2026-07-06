@@ -234,6 +234,21 @@ def test_reset_clears_window_and_alarm_state() -> None:
 # --------------------------------------------------------------------------- #
 
 
+def test_operating_point_properties_echo_the_construction() -> None:
+    monitor = GridModalStreamMonitor(
+        rate=100.0,
+        threshold=0.1,
+        window_seconds=2.0,
+        step_seconds=0.5,
+        persistence=3,
+        recency_top=3.0,
+    )
+    assert monitor.window_seconds == pytest.approx(2.0)
+    assert monitor.step_seconds == pytest.approx(0.5)
+    assert monitor.persistence == 3
+    assert monitor.recency_top == pytest.approx(3.0)
+
+
 def test_from_evidence_carries_the_certified_operating_point() -> None:
     monitor = GridModalStreamMonitor.from_evidence(_EVIDENCE, rate=238.095)
     payload = json.loads(_EVIDENCE.read_text(encoding="utf-8"))

@@ -305,3 +305,27 @@ evidence use, so a sealed alarm can be referenced by a stable digest and any
 later mutation is detectable. It never actuates.
 
 ::: scpn_phase_orchestrator.assurance.early_warning_evidence
+
+## Grid Early-Warning Advisory
+
+`scpn_phase_orchestrator.assurance.grid_early_warning_advisory` is the step from a
+live grid instability alarm to an operator *decision surface* — the pinnacle the
+[streaming monitor](monitor_grid_modal_stream.md) was built toward — done honestly.
+When the certified streaming monitor raises a `StreamAlarm`, this module turns it
+into a claim-bounded advisory record: the growth rate σ that crossed the certified
+threshold, the most-unstable bus, the alarm time, the certified operating point, and
+— as a first-class sealed field — the detector's **honest recall**, so the reader
+knows how much the detector misses.
+
+The advisory is passive and review-only. It never actuates: every record carries
+`non_actuating = True` and `actuating = False`, the fail-closed stance of the STL
+runtime actuation gate. The sealed recall is the point: at its certified streaming
+operating point the detector leads only about a quarter of growing-instability
+episodes at a matched ten-percent stream false alarm, so an advisory is a reason to
+look, never a guarantee, and the *absence* of an advisory is not evidence of
+stability. `seal_grid_early_warning_advisory` is the neutral primitive;
+`advise_from_stream_alarm` reads the alarm claims and the certified operating point
+straight off a live monitor. The record is content-addressed with the same
+canonical-JSON SHA-256 seal, so any later mutation is detectable.
+
+::: scpn_phase_orchestrator.assurance.grid_early_warning_advisory

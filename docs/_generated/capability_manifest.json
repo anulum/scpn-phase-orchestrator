@@ -8,11 +8,11 @@
     "optional_extras": 22,
     "public_api_exports": 24,
     "public_documentation_pages": 221,
-    "python_package_modules": 696,
+    "python_package_modules": 697,
     "research_experimental_modules": 201,
-    "runtime_serving_modules": 144,
+    "runtime_serving_modules": 145,
     "rust_kernel_files": 97,
-    "test_files": 806
+    "test_files": 807
   },
   "documentation": {
     "public_pages": [
@@ -931,6 +931,7 @@
       "src/scpn_phase_orchestrator/assurance/envelope.py",
       "src/scpn_phase_orchestrator/assurance/evidence.py",
       "src/scpn_phase_orchestrator/assurance/formal_evidence.py",
+      "src/scpn_phase_orchestrator/assurance/grid_early_warning_advisory.py",
       "src/scpn_phase_orchestrator/assurance/power_grid_prc_bundle.py",
       "src/scpn_phase_orchestrator/assurance/prc_oscillation.py",
       "src/scpn_phase_orchestrator/assurance/prc_ride_through.py",
@@ -1121,6 +1122,7 @@
     "src/scpn_phase_orchestrator/assurance/envelope.py",
     "src/scpn_phase_orchestrator/assurance/evidence.py",
     "src/scpn_phase_orchestrator/assurance/formal_evidence.py",
+    "src/scpn_phase_orchestrator/assurance/grid_early_warning_advisory.py",
     "src/scpn_phase_orchestrator/assurance/power_grid_prc_bundle.py",
     "src/scpn_phase_orchestrator/assurance/prc_oscillation.py",
     "src/scpn_phase_orchestrator/assurance/prc_ride_through.py",
@@ -2065,6 +2067,7 @@
       "tests/test_geometry_constraints_deep.py",
       "tests/test_geometry_projection.py",
       "tests/test_geometry_walk.py",
+      "tests/test_grid_early_warning_advisory.py",
       "tests/test_grid_modal_growth.py",
       "tests/test_grid_modal_head_to_head.py",
       "tests/test_grid_modal_replay.py",

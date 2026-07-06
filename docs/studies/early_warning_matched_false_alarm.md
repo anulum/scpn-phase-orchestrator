@@ -171,7 +171,13 @@ discrimination limit the pre-onset-window benchmark does not face. This sharpens
 lesson once more: even a genuinely skilled per-window detector must be re-certified for its
 deployment modality, and the honest streaming operating point — hash-sealed in
 `examples/real_data/psml_modal_growth/grid_modal_stream_operating_point.json` — is the
-auditable deliverable, not the flattering per-window figure.
+auditable deliverable, not the flattering per-window figure. The final step from a live
+alarm to a *decision* is taken honestly too: a passive, review-only advisory
+(`assurance.grid_early_warning_advisory`) turns each stream alarm into a claim-bounded
+operator record that surfaces σ, the most-unstable bus, and the certified operating point,
+and seals the ~24 % recall as a first-class field — so the advisory never actuates, is a
+reason to inspect rather than a guarantee, and makes explicit that the *absence* of an
+advisory is not evidence of stability.
 
 ### 3.7 The grid moat's winning form does not transfer to EEG: a model-mismatch boundary
 

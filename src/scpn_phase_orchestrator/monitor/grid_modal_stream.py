@@ -334,6 +334,26 @@ class GridModalStreamMonitor:
         """The fit-quality gate on the live rate; ``0.0`` means the gate is off."""
         return self._r2_gate
 
+    @property
+    def window_seconds(self) -> float:
+        """The effective window length in seconds (the rounded operating point)."""
+        return self._window / self._rate
+
+    @property
+    def step_seconds(self) -> float:
+        """The effective re-scoring hop in seconds (the rounded operating point)."""
+        return self._step / self._rate
+
+    @property
+    def persistence(self) -> int:
+        """Consecutive above-threshold windows required before an alarm fires."""
+        return self._persistence
+
+    @property
+    def recency_top(self) -> float:
+        """The recency weighting the growth rate is fitted under."""
+        return self._recency_top
+
     def reset(self) -> None:
         """Clear the window and alarm state, as if freshly constructed."""
         self._buffer.clear()
