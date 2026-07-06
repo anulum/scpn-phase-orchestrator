@@ -12,7 +12,7 @@
     "research_experimental_modules": 201,
     "runtime_serving_modules": 144,
     "rust_kernel_files": 97,
-    "test_files": 800
+    "test_files": 802
   },
   "documentation": {
     "public_pages": [
@@ -2065,6 +2065,7 @@
       "tests/test_grid_modal_head_to_head.py",
       "tests/test_grid_modal_replay.py",
       "tests/test_grid_modal_stream.py",
+      "tests/test_grid_modal_stream_operating_point.py",
       "tests/test_grid_oscillation_detector.py",
       "tests/test_grpc_gen_aliases.py",
       "tests/test_grpc_service.py",
@@ -2322,6 +2323,7 @@
       "tests/test_property_monitors.py",
       "tests/test_psml_grid_evidence.py",
       "tests/test_psml_modal_head_to_head.py",
+      "tests/test_psml_stream_operating_point.py",
       "tests/test_psychedelic.py",
       "tests/test_psychedelic_algorithm.py",
       "tests/test_psychedelic_backends.py",

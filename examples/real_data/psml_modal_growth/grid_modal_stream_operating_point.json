@@ -1,0 +1,171 @@
+{
+  "benchmark": "grid_modal_stream_operating_point",
+  "question": "Deployed as a live stream at a matched stream false alarm, how much of the offline per-window grid modal-growth skill survives?",
+  "corpus": {
+    "source": "PSML 23-bus power-system dataset (Zheng et al. 2021)",
+    "n_transitions": 90,
+    "n_nulls": 186
+  },
+  "target_stream_false_alarm": 0.1,
+  "offline_per_window": {
+    "led": 36,
+    "n_transitions": 90,
+    "per_window_false_alarm": 0.09090909090909091
+  },
+  "naive_stream_at_per_window_threshold": {
+    "window_seconds": 2.0,
+    "step_seconds": 0.5,
+    "threshold": 1.3203407954771857,
+    "led": 82,
+    "n_transitions": 90,
+    "stream_false_alarm": 0.7258064516129032
+  },
+  "search": [
+    {
+      "window_seconds": 1.0,
+      "step_seconds": 0.5,
+      "feature": "focal",
+      "persistence": 1,
+      "threshold": 7.50253192727883,
+      "dev_led": 4,
+      "n_dev": 45,
+      "held_out_led": 1,
+      "n_held_out": 45,
+      "held_out_false_alarm": 0.06451612903225806
+    },
+    {
+      "window_seconds": 1.0,
+      "step_seconds": 0.5,
+      "feature": "focal",
+      "persistence": 2,
+      "threshold": 4.712409902636777,
+      "dev_led": 0,
+      "n_dev": 45,
+      "held_out_led": 2,
+      "n_held_out": 45,
+      "held_out_false_alarm": 0.06451612903225806
+    },
+    {
+      "window_seconds": 1.0,
+      "step_seconds": 0.5,
+      "feature": "focal",
+      "persistence": 3,
+      "threshold": 3.2562483857598754,
+      "dev_led": 6,
+      "n_dev": 45,
+      "held_out_led": 8,
+      "n_held_out": 45,
+      "held_out_false_alarm": 0.053763440860215055
+    },
+    {
+      "window_seconds": 1.0,
+      "step_seconds": 0.5,
+      "feature": "r2gate",
+      "persistence": 1,
+      "threshold": 7.50253192727883,
+      "dev_led": 4,
+      "n_dev": 45,
+      "held_out_led": 1,
+      "n_held_out": 45,
+      "held_out_false_alarm": 0.06451612903225806
+    },
+    {
+      "window_seconds": 1.0,
+      "step_seconds": 0.5,
+      "feature": "r2gate",
+      "persistence": 2,
+      "threshold": 4.661953019398261,
+      "dev_led": 0,
+      "n_dev": 45,
+      "held_out_led": 4,
+      "n_held_out": 45,
+      "held_out_false_alarm": 0.06451612903225806
+    },
+    {
+      "window_seconds": 1.0,
+      "step_seconds": 0.5,
+      "feature": "r2gate",
+      "persistence": 3,
+      "threshold": 2.9049587238247283,
+      "dev_led": 4,
+      "n_dev": 45,
+      "held_out_led": 6,
+      "n_held_out": 45,
+      "held_out_false_alarm": 0.0967741935483871
+    },
+    {
+      "window_seconds": 2.0,
+      "step_seconds": 0.5,
+      "feature": "focal",
+      "persistence": 1,
+      "threshold": 2.865629181091293,
+      "dev_led": 3,
+      "n_dev": 45,
+      "held_out_led": 7,
+      "n_held_out": 45,
+      "held_out_false_alarm": 0.0967741935483871
+    },
+    {
+      "window_seconds": 2.0,
+      "step_seconds": 0.5,
+      "feature": "focal",
+      "persistence": 2,
+      "threshold": 1.6289129618394034,
+      "dev_led": 11,
+      "n_dev": 45,
+      "held_out_led": 9,
+      "n_held_out": 45,
+      "held_out_false_alarm": 0.1827956989247312
+    },
+    {
+      "window_seconds": 2.0,
+      "step_seconds": 0.5,
+      "feature": "focal",
+      "persistence": 3,
+      "threshold": 1.3218266307739444,
+      "dev_led": 5,
+      "n_dev": 45,
+      "held_out_led": 10,
+      "n_held_out": 45,
+      "held_out_false_alarm": 0.10752688172043011
+    },
+    {
+      "window_seconds": 2.0,
+      "step_seconds": 0.5,
+      "feature": "r2gate",
+      "persistence": 1,
+      "threshold": 2.865629181091293,
+      "dev_led": 3,
+      "n_dev": 45,
+      "held_out_led": 6,
+      "n_held_out": 45,
+      "held_out_false_alarm": 0.0967741935483871
+    },
+    {
+      "window_seconds": 2.0,
+      "step_seconds": 0.5,
+      "feature": "r2gate",
+      "persistence": 2,
+      "threshold": 1.2038016817727057,
+      "dev_led": 10,
+      "n_dev": 45,
+      "held_out_led": 11,
+      "n_held_out": 45,
+      "held_out_false_alarm": 0.0967741935483871
+    },
+    {
+      "window_seconds": 2.0,
+      "step_seconds": 0.5,
+      "feature": "r2gate",
+      "persistence": 3,
+      "threshold": 0.6857055623733471,
+      "dev_led": 8,
+      "n_dev": 45,
+      "held_out_led": 8,
+      "n_held_out": 45,
+      "held_out_false_alarm": 0.0967741935483871
+    }
+  ],
+  "verdict": "At a matched stream false alarm, streaming deployment leads 11/45 transitions (24%, held-out FA 10%) with r2gate (window 2s, persistence 2), well below the offline per-window 36/90 (40%): a fault's transient growth makes the stream operating point stricter, and the fit-quality gate that rejects step-like faults holds the false alarm at target where the plain focal rate drifts.",
+  "content_hash": "3e2d74b7970d9f4aa78cda431f90d0bb4c6dc9cadd9366e45c79474f2d31f8f2"
+}

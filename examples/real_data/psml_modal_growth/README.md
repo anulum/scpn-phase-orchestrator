@@ -79,6 +79,49 @@ integrity test `tests/test_psml_modal_head_to_head.py` recomputes the hash **fro
 committed payload alone** (no raw re-run, so no cross-platform float drift) and pins it. No
 raw PSML data is committed.
 
+## The streaming operating point — the honest live-deployment reality
+
+The head-to-head above is a *per-window* result: given the pre-onset window, the detector
+leads 40% of transitions at a matched 10% per-window false alarm. Deploying it on a **live
+stream** is a stricter problem, and `grid_modal_stream_operating_point.json` measures how
+much stricter, honestly, on the same corpus.
+
+The gap is physical: a damped bus-fault or branch-trip produces a **short transient growth**
+window that the continuous monitor scores and alarms on, so scoring every window over a
+whole stream compounds the false alarm far above the per-window rate. At the certified
+per-window threshold the stream is useless — it leads 82/90 transitions but false-alarms on
+**73%** of damped scenarios. Recalibrating for the stream (a persistence debounce plus an
+**exponential-fit-quality gate** that rejects a fault's step-like transient — a fault fits an
+exponential poorly, a genuine instability well) recovers a usable operating point:
+
+| Operating point | Leads | False alarm |
+|-----------------|:-----:|:-----------:|
+| offline per-window (the head-to-head above) | 36/90 (40%) | 9% per-window |
+| naive stream at the per-window threshold | 82/90 | **73% stream** |
+| **streaming, fit-quality-gated, matched stream FA** | **11/45 held-out (24%)** | **10% stream** |
+
+At a matched stream false alarm the fit-quality gate (window 2 s, persistence 2) leads
+**24%** of held-out transitions with a median lead of ~0.5 s, holding the false alarm at
+target where the plain focal rate drifts to 18%. This is well below the per-window 40%: the
+offline certification is **necessary but not sufficient** for a stream, because
+distinguishing a sustained instability from a damped fault online requires observing the
+damping sign over several cycles — a physical lead-time / discrimination limit. The operating
+point was chosen on a development half and reported on a held-out half; every window / step /
+persistence / feature configuration searched is sealed in the artefact, so the honest
+conclusion is auditable.
+
+```bash
+PYTHONPATH=src:. python -m bench.grid_modal_stream_operating_point \
+    <dir-with-PSML-scenarios> \
+    examples/real_data/psml_modal_growth/grid_modal_head_to_head.json \
+    examples/real_data/psml_modal_growth
+```
+
+reproduces the sealed `content_hash`
+(`3e2d74b7970d9f4aa78cda431f90d0bb4c6dc9cadd9366e45c79474f2d31f8f2`); the integrity test
+`tests/test_psml_stream_operating_point.py` recomputes it from the committed payload alone
+and pins it.
+
 ## References
 
 * Zheng, C. et al. 2021. *PSML: A Multi-scale Time-series Dataset for Machine Learning in

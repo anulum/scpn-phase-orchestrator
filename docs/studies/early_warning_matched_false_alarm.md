@@ -153,6 +153,26 @@ The gold-standard wide-area-monitoring estimator — **matrix-pencil modal dampi
 
 The counterpoint confirms this is not detector-worship. The **scalp-EEG spectral** detector — a beta/delta band-power rise, a-priori bands, tested through the same moat on the chb01 seizures — is itself at chance (1 of 6 led, p ≈ 0.56, in both whole-head and focal aggregations): the preictal state is murky and the corpus small, so a domain-specific detector on a domain without a clean signature fares no better than the generic suite. **The moat is what certifies the difference** between a genuine, physically-grounded early warning (grid modal growth) and a plausible but empty one (preictal spectral rise) — the same honest test that flags the commodity detectors as at chance flags the domain-specific one as genuinely skilled.
 
+### 3.6 The streaming operating point: offline certification is necessary, not sufficient
+
+The grid head-to-head of §3.5 is a *per-window* result — it scores the pre-onset window. Run
+the same certified detector as a **live stream** (scoring every sliding window causally, as a
+PMU feed would deliver it) and the operating point is markedly stricter, because a damped
+bus-fault or branch-trip produces a *short transient growth* window the continuous monitor
+alarms on. At the certified per-window threshold the stream leads 82 of 90 transitions but
+false-alarms on **73%** of damped scenarios — operationally useless. Recalibrating for the
+stream at a matched stream-level false alarm, with a persistence debounce and an
+exponential-fit-quality gate that rejects a fault's step-like transient (a fault fits an
+exponential poorly, a genuine instability well), the fit-quality-gated detector leads **11 of
+45 held-out transitions (24%)** at a matched 10% stream false alarm — well below the offline
+per-window 40%. The gap is physical: distinguishing a sustained instability from a damped
+fault *online* requires observing the damping sign over several cycles, a lead-time /
+discrimination limit the pre-onset-window benchmark does not face. This sharpens the moat's
+lesson once more: even a genuinely skilled per-window detector must be re-certified for its
+deployment modality, and the honest streaming operating point — hash-sealed in
+`examples/real_data/psml_modal_growth/grid_modal_stream_operating_point.json` — is the
+auditable deliverable, not the flattering per-window figure.
+
 ## 4. Discussion
 
 **Detection is a commodity; the moat is the evidence.** Across four independent physical domains — and a fifth, molecular one — generic early-warning *detection* at an honest operating point is sparse and, by a permutation or selection-controlled test, at chance. This is not a defect of one suite: the canonical Dakos detector fares no better on its own data, and the celebrated single-cell and bulk DNB benchmarks do not clear a modality-appropriate honest null either. What is *not* a commodity is the auditable, reproducible, claim-bounded envelope the protocol produces — a matched-false-alarm operating point, a permutation p-value, and a hash-sealed `EarlyWarningEvidence` record for every transition, **including the sealed silences**. A positive early-warning claim should be required to clear this operational bar; most published EWS results have only cleared the retrospective per-record one.
