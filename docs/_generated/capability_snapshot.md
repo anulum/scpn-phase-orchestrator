@@ -7,9 +7,9 @@
 |---|---:|
 | Package version | 0.11.0 |
 | Public API exports | 24 |
-| Python package modules | 695 |
+| Python package modules | 696 |
 | Core Engine modules | 321 |
-| Runtime/Serving modules | 143 |
+| Runtime/Serving modules | 144 |
 | Integration modules | 27 |
 | Research/Experimental modules | 201 |
 | Domainpack files | 36 |
