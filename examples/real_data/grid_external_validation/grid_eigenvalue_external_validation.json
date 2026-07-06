@@ -1,0 +1,226 @@
+{
+  "andes_version": "2.0.0",
+  "benchmark": "grid_eigenvalue_external_validation",
+  "content_hash": "4714ab1821d4f67c230cf6438af07bc50b6e53593e32325fe9815cdb73182f8d",
+  "method": "per operating point: ANDES small-signal analysis gives the true dominant electromechanical \u03c3; a brief disturbance gives a ringdown the detector scores by its envelope growth rate under each aggregation; correlate.",
+  "question": "Does the grid detector's time-domain growth rate recover the true small-signal eigenvalue \u03c3 on independent power systems?",
+  "systems": [
+    {
+      "aggregations": {
+        "focal": {
+          "correlation": {
+            "n": 14,
+            "pearson": -0.6771629512232784,
+            "spearman": -0.5868131868131868
+          },
+          "detector_sigma": [
+            0.0934,
+            0.1801,
+            0.1928,
+            0.1284,
+            0.0693,
+            0.0395,
+            0.0492,
+            0.032,
+            0.0335,
+            0.0465,
+            0.0407,
+            0.0623,
+            0.0543,
+            0.0413
+          ]
+        },
+        "mean": {
+          "correlation": {
+            "n": 14,
+            "pearson": 0.8076314407460576,
+            "spearman": 0.8681318681318682
+          },
+          "detector_sigma": [
+            -0.0166,
+            -0.0174,
+            -0.0171,
+            -0.0134,
+            -0.0053,
+            -0.0003,
+            -0.0004,
+            -0.0003,
+            -0.0006,
+            -0.0005,
+            -0.0005,
+            -0.0002,
+            0.0001,
+            -0.0
+          ]
+        },
+        "spatial": {
+          "correlation": {
+            "n": 14,
+            "pearson": 0.742583594207962,
+            "spearman": 0.47252747252747257
+          },
+          "detector_sigma": [
+            -0.0245,
+            -0.0252,
+            -0.0217,
+            -0.012,
+            -0.0012,
+            0.0008,
+            0.0008,
+            0.0006,
+            0.0005,
+            0.0004,
+            0.0003,
+            0.0003,
+            0.0002,
+            -0.0
+          ]
+        }
+      },
+      "case": "ieee39/ieee39_full.xlsx",
+      "loads": [
+        0.7,
+        0.7484615384615384,
+        0.7969230769230768,
+        0.8453846153846154,
+        0.8938461538461538,
+        0.9423076923076923,
+        0.9907692307692308,
+        1.0392307692307692,
+        1.0876923076923077,
+        1.1361538461538463,
+        1.1846153846153846,
+        1.2330769230769232,
+        1.2815384615384615,
+        1.33
+      ],
+      "n": 14,
+      "name": "ieee39",
+      "true_sigma": [
+        -0.4786,
+        -0.4795,
+        -0.4652,
+        -0.4448,
+        -0.4216,
+        -0.3978,
+        -0.3746,
+        -0.3522,
+        -0.3304,
+        -0.3083,
+        -0.285,
+        -0.259,
+        -0.2279,
+        -0.1879
+      ]
+    },
+    {
+      "aggregations": {
+        "focal": {
+          "correlation": {
+            "n": 14,
+            "pearson": -0.38018066671389905,
+            "spearman": -0.2703296703296703
+          },
+          "detector_sigma": [
+            0.1323,
+            0.1143,
+            0.0944,
+            0.0633,
+            0.0276,
+            0.0241,
+            0.0241,
+            0.0305,
+            0.0536,
+            0.0535,
+            0.0319,
+            0.0462,
+            0.0367,
+            0.0681
+          ]
+        },
+        "mean": {
+          "correlation": {
+            "n": 14,
+            "pearson": 0.5825017492905603,
+            "spearman": 0.6043956043956044
+          },
+          "detector_sigma": [
+            -0.0564,
+            -0.0412,
+            -0.0291,
+            -0.0223,
+            -0.0167,
+            -0.0119,
+            -0.0067,
+            -0.0083,
+            -0.0086,
+            -0.0077,
+            -0.0062,
+            -0.0062,
+            -0.0067,
+            -0.0072
+          ]
+        },
+        "spatial": {
+          "correlation": {
+            "n": 14,
+            "pearson": 0.5458345923804937,
+            "spearman": 0.6615384615384616
+          },
+          "detector_sigma": [
+            -0.0556,
+            -0.0372,
+            -0.0233,
+            -0.0154,
+            -0.0105,
+            -0.006,
+            -0.0004,
+            -0.0018,
+            -0.002,
+            -0.0024,
+            -0.0027,
+            -0.0021,
+            -0.0013,
+            -0.0009
+          ]
+        }
+      },
+      "case": "kundur/kundur_full.xlsx",
+      "loads": [
+        0.6,
+        0.6461538461538461,
+        0.6923076923076923,
+        0.7384615384615384,
+        0.7846153846153846,
+        0.8307692307692307,
+        0.8769230769230769,
+        0.923076923076923,
+        0.9692307692307691,
+        1.0153846153846153,
+        1.0615384615384615,
+        1.1076923076923078,
+        1.1538461538461537,
+        1.2
+      ],
+      "n": 14,
+      "name": "kundur",
+      "true_sigma": [
+        -0.3095,
+        -0.3213,
+        -0.3823,
+        -0.438,
+        -0.3922,
+        -0.278,
+        -0.1897,
+        -0.1472,
+        -0.1357,
+        -0.1443,
+        -0.1693,
+        -0.21,
+        -0.2456,
+        -0.2037
+      ]
+    }
+  ],
+  "verdict": "On independent systems (ieee39, kundur) with ANDES eigenvalue ground truth, the detector's coherent growth rate generalises \u2014 it recovers the true dominant-mode \u03c3 trend (best Spearman \u03c1=0.87); the focal aggregation (the PSML winner) does not transfer, so the growth-rate quantity is universal but the best aggregation is regime-dependent."
+}

@@ -12,7 +12,7 @@
     "research_experimental_modules": 201,
     "runtime_serving_modules": 145,
     "rust_kernel_files": 97,
-    "test_files": 808
+    "test_files": 810
   },
   "documentation": {
     "public_pages": [
@@ -2069,6 +2069,8 @@
       "tests/test_geometry_walk.py",
       "tests/test_grid_advisory_example_evidence.py",
       "tests/test_grid_early_warning_advisory.py",
+      "tests/test_grid_eigenvalue_external_validation.py",
+      "tests/test_grid_eigenvalue_external_validation_evidence.py",
       "tests/test_grid_modal_growth.py",
       "tests/test_grid_modal_head_to_head.py",
       "tests/test_grid_modal_replay.py",

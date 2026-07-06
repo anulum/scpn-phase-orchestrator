@@ -235,6 +235,32 @@ general early-warning method but a **domain-specific** one whose applicability i
 auditable, sealed result — the same honest boundary-drawing that separates the commodity
 generic detectors from the genuinely skilled grid detector.
 
+### 3.9 Cross-system external validation against eigenvalue ground truth
+
+The PSML result is on one 23-bus corpus, and its held-out ceiling (≈ 50 %) proved robust
+across method classes (matrix-pencil modal identification) and aggregations (per-bus focal,
+dominant spatial mode) — none beat the ceiling at a matched false alarm, and their union of
+led transitions is unharvestable there because combining raises the null floor. To test the
+detector on *independent* systems, we run a stronger, non-circular check: on the IEEE 39-bus
+New England system and the Kundur two-area system (both in the open-source ANDES simulator),
+we sweep the operating point, take the true dominant electromechanical mode's growth rate σ
+from ANDES **small-signal eigenvalue analysis** — a completely different method from the
+detector's time-domain envelope slope — and score a ringdown from a small disturbance at
+each point. The detector's **coherent** aggregation (the cross-bus mean, or the dominant
+spatial mode) recovers the true σ trend on both systems (Spearman ρ = 0.87 on IEEE-39,
+0.60–0.66 on Kundur), so the quantity the detector estimates — the dominant mode's damping —
+generalises across systems and simulators. The **focal** aggregation, the PSML winner, does
+**not** transfer (ρ = −0.59 and −0.27): on a slow coherent inter-area mode the per-bus
+maximum locks onto spurious local excursions rather than the network mode. The
+growth-rate quantity is therefore universal, but the best **aggregation is
+regime-dependent** — focal for PSML's fast, localised oscillations, coherent for the slow
+inter-area modes here — a new, actionable finding hash-sealed in
+`examples/real_data/grid_external_validation/grid_eigenvalue_external_validation.json`. The
+test is honest about its limits: a simulated (not field-PMU) ground truth, stable operating
+points only (the well-damped benchmarks do not enter a clean growing-oscillation regime, so
+this is a damping-ranking test, not a stable-versus-unstable classification), and a
+fourteen-point sweep per system.
+
 ## 4. Discussion
 
 **Detection is a commodity; the moat is the evidence.** Across four independent physical domains — and a fifth, molecular one — generic early-warning *detection* at an honest operating point is sparse and, by a permutation or selection-controlled test, at chance. This is not a defect of one suite: the canonical Dakos detector fares no better on its own data, and the celebrated single-cell and bulk DNB benchmarks do not clear a modality-appropriate honest null either. What is *not* a commodity is the auditable, reproducible, claim-bounded envelope the protocol produces — a matched-false-alarm operating point, a permutation p-value, and a hash-sealed `EarlyWarningEvidence` record for every transition, **including the sealed silences**. A positive early-warning claim should be required to clear this operational bar; most published EWS results have only cleared the retrospective per-record one.
