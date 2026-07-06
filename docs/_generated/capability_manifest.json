@@ -12,7 +12,7 @@
     "research_experimental_modules": 201,
     "runtime_serving_modules": 143,
     "rust_kernel_files": 97,
-    "test_files": 798
+    "test_files": 799
   },
   "documentation": {
     "public_pages": [
@@ -2055,6 +2055,7 @@
       "tests/test_geometry_constraints_deep.py",
       "tests/test_geometry_projection.py",
       "tests/test_geometry_walk.py",
+      "tests/test_grid_modal_growth.py",
       "tests/test_grid_modal_head_to_head.py",
       "tests/test_grid_modal_stream.py",
       "tests/test_grid_oscillation_detector.py",

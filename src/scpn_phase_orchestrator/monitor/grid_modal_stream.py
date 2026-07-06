@@ -8,26 +8,24 @@
 
 """A causal, real-time streaming monitor for the certified grid modal-growth detector.
 
-The offline head-to-head (:mod:`bench.grid_modal_head_to_head`) *certifies* the grid
-modal detector: on real PMU data, at a matched false alarm, its growth-rate σ leads
-instability transitions far more than chance. That certification is done on fixed
-pre-onset segments — the training/validation harness. This module is the step to the
-pinnacle: it runs the *same* detector **causally on a live stream**, so the certified
-operating point becomes an operational early warning.
+The offline head-to-head (``bench.grid_modal_head_to_head``) *certifies* the grid modal
+detector (``monitor.grid_modal_growth``): on real PMU data, at a matched false alarm,
+its growth-rate ``σ`` leads instability transitions far more than chance. That
+certification is done on fixed pre-onset segments — the training/validation harness.
+This module is the step to the pinnacle: it runs the *same* detector **causally on a
+live stream**, so the certified operating point becomes an operational early warning.
 
 The monitor keeps a sliding window of the most recent per-bus voltage samples and, every
-``step``, re-scores that window with the **identical primitives** the offline detector
-uses (:func:`~bench.grid_oscillation_detector.per_bus_deviation`,
-:func:`~bench.grid_oscillation_detector.envelope_growth_rate`) — so the streaming score
-on a window is bit-for-bit the offline
-:func:`~bench.grid_oscillation_detector.modal_growth_score` on that same window. That
-identity is what makes the **offline-calibrated threshold valid online**: the monitor
-never recalibrates, it carries the certified threshold and fires when the live σ crosses
-it (after an optional persistence debounce), latching until σ falls back below so each
-instability episode raises one lead event.
+``step``, re-scores that window with the **identical primitives** the detector uses
+(``per_bus_deviation``, ``envelope_growth_rate``) — so the streaming score on a window
+is bit-for-bit the offline ``modal_growth_score`` on that same window. That identity is
+what makes the **offline-calibrated threshold valid online**: the monitor never
+recalibrates, it carries the certified threshold and fires when the live ``σ`` crosses
+it (after an optional persistence debounce), latching until ``σ`` falls back below so
+each instability episode raises one lead event.
 
-:meth:`GridModalStreamMonitor.from_evidence` closes the loop: it builds the monitor
-from a sealed head-to-head artefact, taking the aggregation, recency weighting, and
+:meth:`GridModalStreamMonitor.from_evidence` closes the loop: it builds the monitor from
+a sealed head-to-head artefact, taking the aggregation, recency weighting, and
 matched-false-alarm threshold straight from the certification — the certified detector
 becomes the live monitor with no hand-set constants.
 """
@@ -41,7 +39,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from bench.grid_oscillation_detector import (
+from scpn_phase_orchestrator.monitor.grid_modal_growth import (
     DEFAULT_AGGREGATION,
     DEFAULT_RECENCY_TOP,
     cross_bus_deviation,
@@ -54,7 +52,7 @@ if TYPE_CHECKING:  # pragma: no cover - import only for static typing
 
     FloatArray = NDArray[np.float64]
 
-__all__ = ["GridModalStreamMonitor", "StreamAlarm"]
+__all__ = ["GridModalStreamMonitor", "StreamAlarm", "WHOLE_NETWORK_BUS"]
 
 #: The whole-network aggregation reports no single bus.
 WHOLE_NETWORK_BUS = -1
@@ -62,7 +60,7 @@ WHOLE_NETWORK_BUS = -1
 
 @dataclass(frozen=True)
 class StreamAlarm:
-    """A lead event raised by the streaming monitor when live σ crosses the threshold.
+    """A lead event raised when the live growth rate ``σ`` crosses the threshold.
 
     Attributes
     ----------
@@ -71,11 +69,11 @@ class StreamAlarm:
     time_s : float
         ``sample_index / rate`` — the alarm time in seconds from the stream start.
     score : float
-        The modal growth rate σ at the alarm window.
+        The modal growth rate ``σ`` at the alarm window.
     threshold : float
-        The certified matched-false-alarm threshold σ crossed.
+        The certified matched-false-alarm threshold ``σ`` crossed.
     bus : int
-        The most unstable bus under the focal aggregation (its per-bus σ is the
+        The most unstable bus under the focal aggregation (its per-bus ``σ`` is the
         maximum), or :data:`WHOLE_NETWORK_BUS` under the whole-network aggregation.
     """
 
@@ -94,7 +92,8 @@ class GridModalStreamMonitor:
     rate : float
         Sampling rate in Hz; must be positive and finite.
     threshold : float
-        The certified matched-false-alarm growth-rate threshold; σ at or above it fires.
+        The certified matched-false-alarm growth-rate threshold; ``σ`` at or above it
+        fires.
     window_seconds : float
         Sliding-window length in seconds, matching the offline segment length.
     step_seconds : float
@@ -191,12 +190,12 @@ class GridModalStreamMonitor:
 
     @property
     def latest_score(self) -> float:
-        """The most recently computed growth rate σ, or NaN before the first scoring."""
+        """The most recent growth rate ``σ``, or NaN before the first score."""
         return self._latest_score
 
     @property
     def threshold(self) -> float:
-        """The certified matched-false-alarm threshold σ must reach to alarm."""
+        """The certified matched-false-alarm threshold ``σ`` must reach to alarm."""
         return self._threshold
 
     @property
@@ -214,7 +213,7 @@ class GridModalStreamMonitor:
         self._latest_score = float("nan")
 
     def _score_window(self) -> tuple[float, int]:
-        """Return the current window's growth rate σ and its most unstable bus."""
+        """Return the current window's growth rate ``σ`` and its most unstable bus."""
         window = np.stack(self._buffer, axis=1)  # (buses, window)
         if self._aggregation == "mean":
             score = envelope_growth_rate(
@@ -233,7 +232,7 @@ class GridModalStreamMonitor:
         return per_bus[bus], bus
 
     def update(self, sample: FloatArray) -> StreamAlarm | None:
-        """Push one per-bus voltage sample; return an alarm if σ crosses the threshold.
+        """Push one per-bus voltage sample; return an alarm on a threshold crossing.
 
         Parameters
         ----------

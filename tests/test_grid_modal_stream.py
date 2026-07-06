@@ -24,12 +24,12 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from bench.grid_modal_stream import (
+from scpn_phase_orchestrator.monitor.grid_modal_growth import modal_growth_score
+from scpn_phase_orchestrator.monitor.grid_modal_stream import (
     WHOLE_NETWORK_BUS,
     GridModalStreamMonitor,
     StreamAlarm,
 )
-from bench.grid_oscillation_detector import modal_growth_score
 
 _REPO = Path(__file__).resolve().parents[1]
 _EVIDENCE = _REPO / "examples/real_data/psml_modal_growth/grid_modal_head_to_head.json"
