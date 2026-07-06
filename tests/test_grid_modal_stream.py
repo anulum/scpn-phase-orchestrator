@@ -190,6 +190,7 @@ def test_from_evidence_carries_the_certified_operating_point() -> None:
     modal = payload["modal"]
     assert monitor.threshold == pytest.approx(modal["score_threshold"])
     assert monitor.aggregation == modal["aggregation"]
+    assert monitor.rate == pytest.approx(238.095)
 
 
 def test_mean_aggregation_attributes_the_whole_network() -> None:

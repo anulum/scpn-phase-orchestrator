@@ -1,18 +1,18 @@
 {
   "SPDX-License-Identifier": "AGPL-3.0-or-later",
   "counts": {
-    "core_engine_modules": 319,
+    "core_engine_modules": 321,
     "domainpacks": 36,
     "github_workflows": 12,
     "integration_modules": 27,
     "optional_extras": 22,
     "public_api_exports": 24,
     "public_documentation_pages": 219,
-    "python_package_modules": 693,
+    "python_package_modules": 695,
     "research_experimental_modules": 201,
     "runtime_serving_modules": 143,
     "rust_kernel_files": 97,
-    "test_files": 799
+    "test_files": 800
   },
   "documentation": {
     "public_pages": [
@@ -485,6 +485,8 @@
       "src/scpn_phase_orchestrator/monitor/entropy_prod.py",
       "src/scpn_phase_orchestrator/monitor/evs.py",
       "src/scpn_phase_orchestrator/monitor/explosive_sync.py",
+      "src/scpn_phase_orchestrator/monitor/grid_modal_growth.py",
+      "src/scpn_phase_orchestrator/monitor/grid_modal_stream.py",
       "src/scpn_phase_orchestrator/monitor/hybrid_order.py",
       "src/scpn_phase_orchestrator/monitor/hybrid_order_examples.py",
       "src/scpn_phase_orchestrator/monitor/information_integration.py",
@@ -1426,6 +1428,8 @@
     "src/scpn_phase_orchestrator/monitor/entropy_prod.py",
     "src/scpn_phase_orchestrator/monitor/evs.py",
     "src/scpn_phase_orchestrator/monitor/explosive_sync.py",
+    "src/scpn_phase_orchestrator/monitor/grid_modal_growth.py",
+    "src/scpn_phase_orchestrator/monitor/grid_modal_stream.py",
     "src/scpn_phase_orchestrator/monitor/hybrid_order.py",
     "src/scpn_phase_orchestrator/monitor/hybrid_order_examples.py",
     "src/scpn_phase_orchestrator/monitor/information_integration.py",
@@ -2057,6 +2061,7 @@
       "tests/test_geometry_walk.py",
       "tests/test_grid_modal_growth.py",
       "tests/test_grid_modal_head_to_head.py",
+      "tests/test_grid_modal_replay.py",
       "tests/test_grid_modal_stream.py",
       "tests/test_grid_oscillation_detector.py",
       "tests/test_grpc_gen_aliases.py",

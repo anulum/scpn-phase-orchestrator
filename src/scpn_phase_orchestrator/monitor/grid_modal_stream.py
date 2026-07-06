@@ -194,6 +194,11 @@ class GridModalStreamMonitor:
         return self._latest_score
 
     @property
+    def rate(self) -> float:
+        """The stream sampling rate in Hz the monitor was constructed with."""
+        return self._rate
+
+    @property
     def threshold(self) -> float:
         """The certified matched-false-alarm threshold ``σ`` must reach to alarm."""
         return self._threshold
