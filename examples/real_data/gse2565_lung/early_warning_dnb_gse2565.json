@@ -1,0 +1,51 @@
+{
+  "benchmark": "early_warning_dnb_gse2565",
+  "corpus": "GSE2565 phosgene acute lung injury (Chen/Aihara 2012 DNB benchmark)",
+  "modality": "bulk dynamical network biomarker (selection-controlled surrogate)",
+  "rising_limb_hours": [
+    "0.5",
+    "1",
+    "4",
+    "8"
+  ],
+  "n_top_probes": 150,
+  "n_surrogates_per_arm": 1000,
+  "seed": 0,
+  "target_false_alarm": 0.1,
+  "arms": [
+    {
+      "group": "CG",
+      "observed_slope": 1.154452278078188,
+      "module_probes": [
+        "1427451_a_at",
+        "1417464_at",
+        "1448745_s_at",
+        "1418735_at",
+        "1427735_a_at"
+      ],
+      "surrogate_mean": 1.0708238317385388,
+      "surrogate_p90": 1.7764958817454397,
+      "p_value": 0.38461538461538464,
+      "matched_false_alarm_threshold": 1.7762656936392673,
+      "alarmed": false
+    },
+    {
+      "group": "Air",
+      "observed_slope": 0.9659450121831862,
+      "module_probes": [
+        "1452544_x_at",
+        "1427651_x_at",
+        "AFFX-18SRNAMur/X00686_5_at",
+        "1425470_at"
+      ],
+      "surrogate_mean": 1.0085650023592678,
+      "surrogate_p90": 1.7989964772972131,
+      "p_value": 0.41358641358641357,
+      "matched_false_alarm_threshold": 1.7989613193324416,
+      "alarmed": false
+    }
+  ],
+  "verdict": "The phosgene-exposed arm's DNB rise, tested against selection-controlled surrogates that re-select the module on shuffled time, does not reach significance (surrogate-rank p=0.385): the apparent module rise is largely a selection artefact once the null is allowed the same freedom.",
+  "note": "single exposed arm \u2014 a selection-controlled surrogate test, not a corpus; bounds demonstrated skill on this record, not a population claim",
+  "content_hash": "e5180ff4a7896acceba7da628207705129c8a22744a6e57e604898c623970b1f"
+}
