@@ -26,6 +26,7 @@ from bench.dnb_detector import (
     _mean_abs_offdiagonal,
     _mean_offdiagonal,
     dnb_index,
+    dnb_regression_slope,
     dnb_significance,
     dnb_trend_score,
     select_dnb_module,
@@ -222,6 +223,33 @@ def test_trend_score_rejects_a_non_vector() -> None:
 
 
 # --------------------------------------------------------------------------- #
+# dnb_regression_slope                                                        #
+# --------------------------------------------------------------------------- #
+
+
+def test_regression_slope_is_positive_for_a_rise() -> None:
+    assert dnb_regression_slope([0.1, 0.2, 0.4, 0.7]) > 0.0
+
+
+def test_regression_slope_is_zero_below_two_points() -> None:
+    assert dnb_regression_slope([0.5]) == 0.0
+
+
+def test_regression_slope_is_zero_for_a_flat_trajectory() -> None:
+    assert dnb_regression_slope([2.0, 2.0, 2.0]) == pytest.approx(0.0)
+
+
+def test_regression_slope_is_zero_for_a_non_finite_trajectory() -> None:
+    # A nan timepoint yields an undefined fit, reported as no trend rather than nan.
+    assert dnb_regression_slope([float("nan"), 1.0, 2.0]) == 0.0
+
+
+def test_regression_slope_rejects_a_non_vector() -> None:
+    with pytest.raises(ValueError, match="one-dimensional"):
+        dnb_regression_slope([[1.0, 2.0], [3.0, 4.0]])
+
+
+# --------------------------------------------------------------------------- #
 # dnb_significance                                                            #
 # --------------------------------------------------------------------------- #
 
@@ -243,6 +271,24 @@ def test_dnb_significance_scores_rising_transitions_against_shuffled_nulls() -> 
     # Reproducible under a fixed seed.
     again = dnb_significance(transitions, nulls, n_permutations=2000)
     assert again.significance.p_value == result.significance.p_value
+
+
+def test_dnb_significance_accepts_a_continuous_slope_score() -> None:
+    # The coarse-timepoint path: a continuous slope resolves a matched operating point a
+    # rank statistic cannot, so the threshold and alarms come from real slopes.
+    transitions = [[0.14, 0.15, 0.40], [0.14, 0.16, 0.33], [0.14, 0.13, 0.20]]
+    nulls = [
+        [0.40, 0.14, 0.15],
+        [0.20, 0.33, 0.14],
+        [0.16, 0.14, 0.33],
+        [0.14, 0.40, 0.15],
+        [0.33, 0.16, 0.14],
+    ]
+    result = dnb_significance(
+        transitions, nulls, score=dnb_regression_slope, n_permutations=2000
+    )
+    assert result.significance.n_transitions == 3
+    assert 0.0 < result.significance.p_value <= 1.0
 
 
 def test_dnb_significance_audit_record_is_json_safe() -> None:

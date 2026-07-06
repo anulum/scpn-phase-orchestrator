@@ -63,7 +63,13 @@ from bench.early_warning_domain import (
 )
 
 if TYPE_CHECKING:  # pragma: no cover - import only for static typing
-    from collections.abc import Sequence
+    from collections.abc import Callable, Sequence
+
+    #: A one-dimensional real series the detectors coerce with ``np.asarray``: a plain
+    #: float sequence or a float array.
+    RealSeries = Sequence[float] | NDArray[np.float64]
+    #: A corpus of such series.
+    RealSeriesCorpus = Sequence[RealSeries]
 
 FloatArray = NDArray[np.float64]
 
@@ -74,6 +80,7 @@ _DEFAULT_MIN_MODULE = 3
 __all__ = [
     "DnbSignificance",
     "dnb_index",
+    "dnb_regression_slope",
     "dnb_significance",
     "dnb_trend_score",
     "select_dnb_module",
@@ -247,7 +254,7 @@ def single_cell_transition_index(expression: FloatArray) -> float:
     return gene_gene / max(cell_cell, _CORRELATION_FLOOR)
 
 
-def dnb_trend_score(trajectory: Sequence[float]) -> float:
+def dnb_trend_score(trajectory: RealSeries) -> float:
     """Return the Kendall-τ rising trend of a DNB-index trajectory.
 
     An operational early-warning detector sees the index only up to the present, so it
@@ -275,6 +282,39 @@ def dnb_trend_score(trajectory: Sequence[float]) -> float:
         return 0.0
     tau = kendalltau(np.arange(values.shape[0]), values)[0]
     return float(tau) if np.isfinite(tau) else 0.0
+
+
+def dnb_regression_slope(trajectory: RealSeries) -> float:
+    """Return the ordinary-least-squares slope of a DNB-index trajectory over time.
+
+    A continuous rising-trend statistic, the alternative to the rank-based
+    :func:`dnb_trend_score` for the few timepoints a molecular corpus supplies. On four
+    published timepoints a Kendall τ takes only a handful of discrete values, so a
+    matched-false-alarm threshold cannot land on a clean operating point; the slope of
+    the index against its (uniform) timepoint index is continuous and order-sensitive —
+    a temporally-shuffled surrogate regresses to a slope near zero — so a matched false
+    alarm is placed exactly. The positions are uniform ranks, as in
+    :func:`dnb_trend_score`, so a non-uniform real-time spacing does not weight the fit.
+
+    Parameters
+    ----------
+    trajectory : sequence of float
+        The DNB index at each pre-transition timepoint, in real time order.
+
+    Returns
+    -------
+    float
+        The least-squares slope against timepoint index; ``0.0`` when fewer than two
+        timepoints are given or the slope is undefined.
+    """
+    values = np.asarray(trajectory, dtype=np.float64)
+    if values.ndim != 1:
+        raise ValueError("trajectory must be one-dimensional")
+    if values.shape[0] < 2:
+        return 0.0
+    positions = np.arange(values.shape[0], dtype=np.float64)
+    slope = np.polyfit(positions, values, 1)[0]
+    return float(slope) if np.isfinite(slope) else 0.0
 
 
 @dataclass(frozen=True)
@@ -314,9 +354,10 @@ class DnbSignificance:
 
 
 def dnb_significance(
-    transition_trajectories: Sequence[Sequence[float]],
-    null_trajectories: Sequence[Sequence[float]],
+    transition_trajectories: RealSeriesCorpus,
+    null_trajectories: RealSeriesCorpus,
     *,
+    score: Callable[[RealSeries], float] = dnb_trend_score,
     target_fa: float = DEFAULT_TARGET_FALSE_ALARM,
     n_permutations: int = DEFAULT_PERMUTATIONS,
     seed: int = DEFAULT_PERMUTATION_SEED,
@@ -324,8 +365,9 @@ def dnb_significance(
     """Score DNB-index trajectories through the matched-false-alarm protocol.
 
     Each transition and surrogate-null trajectory is reduced to its rising-trend score
-    (:func:`dnb_trend_score`); the threshold is calibrated on the null scores to a
-    matched false alarm
+    (:func:`dnb_trend_score` by default, or :func:`dnb_regression_slope` for the few
+    timepoints where a rank statistic is too coarse); the threshold is calibrated on the
+    null scores to a matched false alarm
     (:func:`~bench.early_warning_domain.calibrate_score_threshold`); a trajectory alarms
     when its score meets the threshold; and the transition alarm count is tested for
     significance by the shared label-permutation core, so the p-value is directly
@@ -337,6 +379,9 @@ def dnb_significance(
         The DNB-index rising limb of each real, time-ordered transition trajectory.
     null_trajectories : sequence of sequence of float
         The DNB-index limb of each temporally-shuffled surrogate (or control-arm) null.
+    score : callable
+        The per-trajectory rising-trend statistic; :func:`dnb_trend_score` (Kendall τ)
+        by default, or :func:`dnb_regression_slope` for coarse-timepoint corpora.
     target_fa : float
         Target false-alarm rate the trend-score threshold is held at or below.
     n_permutations : int
@@ -359,8 +404,8 @@ def dnb_significance(
         raise ValueError("transition_trajectories must not be empty")
     if not null_trajectories:
         raise ValueError("null_trajectories must not be empty")
-    transition_scores = [dnb_trend_score(t) for t in transition_trajectories]
-    null_scores = [dnb_trend_score(t) for t in null_trajectories]
+    transition_scores = [score(t) for t in transition_trajectories]
+    null_scores = [score(t) for t in null_trajectories]
     threshold = calibrate_score_threshold(null_scores, target_fa=target_fa)
     transition_alarms = [score >= threshold for score in transition_scores]
     null_alarms = [score >= threshold for score in null_scores]

@@ -1,0 +1,85 @@
+{
+  "benchmark": "early_warning_dnb_mojtahedi",
+  "corpus": "Mojtahedi et al. 2016 single-cell leukaemic fate bifurcation (published transition index, Table S2)",
+  "modality": "single-cell dynamical network biomarker (cross-cell transition index)",
+  "index_definition": "mean signed gene-gene / mean signed cell-cell correlation (Mojtahedi 2016)",
+  "score": "least-squares slope of the transition index over the rising limb",
+  "rising_limb_days": [
+    0,
+    1,
+    3
+  ],
+  "target_false_alarm": 0.1,
+  "n_resamples_per_lineage": 2000,
+  "n_null_trajectories": 6000,
+  "seed": 0,
+  "matched_false_alarm_threshold": 0.1172218257952418,
+  "achieved_false_alarm": 0.1,
+  "lineages": [
+    {
+      "lineage_id": "erythroid_epo",
+      "day_labels": [
+        0,
+        1,
+        3,
+        6
+      ],
+      "index_means": [
+        0.142912793234395,
+        0.148789966145399,
+        0.399752586178157,
+        0.251935631232389
+      ],
+      "rising_limb_slope": 0.12841989647188104,
+      "alarmed": true,
+      "citation": "Mojtahedi et al. 2016, PLoS Biol 14:e2000640, Table S2 \u2014 EPO-treated erythroid arm transition index (mean signed gene-gene over cell-cell correlation) and bootstrap SE"
+    },
+    {
+      "lineage_id": "myeloid_gmcsf_il3",
+      "day_labels": [
+        0,
+        1,
+        3,
+        6
+      ],
+      "index_means": [
+        0.142912793234395,
+        0.156885888646943,
+        0.327320823946196,
+        0.164584194345332
+      ],
+      "rising_limb_slope": 0.09220401535590056,
+      "alarmed": false,
+      "citation": "Mojtahedi et al. 2016, PLoS Biol 14:e2000640, Table S2 \u2014 GM-CSF/IL-3-treated myeloid arm transition index and bootstrap SE"
+    },
+    {
+      "lineage_id": "combined_epo_gmcsf",
+      "day_labels": [
+        0,
+        1,
+        3,
+        6
+      ],
+      "index_means": [
+        0.142912793234395,
+        0.131008857018087,
+        0.199224655628324,
+        0.106658433664927
+      ],
+      "rising_limb_slope": 0.028155931196964502,
+      "alarmed": false,
+      "citation": "Mojtahedi et al. 2016, PLoS Biol 14:e2000640, Table S2 \u2014 combined EPO + GM-CSF arm transition index and bootstrap SE"
+    }
+  ],
+  "permutation_significance": {
+    "observed_led": 1,
+    "n_transitions": 3,
+    "pooled_alarm_rate": 0.10011660836248543,
+    "expected_led": 0.3003498250874563,
+    "p_value": 0.2655734426557344,
+    "n_permutations": 10000,
+    "seed": 0
+  },
+  "verdict": "1 of 3 lineages' DNB rise cleared the 10% matched false-alarm operating point; the DNB transition index rises toward the fate bifurcation but does not reach significance across the corpus (permutation p=0.266).",
+  "content_hash": "353b2e7c6c62252b168047e6a7eb4d8a9881c8dc3e4d85477f3694302fab3f26"
+}
