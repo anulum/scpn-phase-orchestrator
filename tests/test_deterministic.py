@@ -199,13 +199,21 @@ class TestDeadlineMiss:
 
 
 class TestGarbageCollectorControl:
+    # These tests assert the garbage-collector freeze/restore contract, not
+    # deadline compliance, so they run under ``miss_policy='observe'``: a
+    # scheduling hiccup on a shared CI runner records a miss but must not abort
+    # the loop and mask the GC assertions. The abort path is exercised
+    # deterministically by ``test_gc_restored_even_on_abort`` and the
+    # ``TestDeadlineMiss`` cases, which force a miss with a real sleep.
     def test_gc_frozen_during_loop_and_restored(self) -> None:
         assert gc.isenabled()
         states: list[bool] = []
         run_deterministic_loop(
             lambda _i: states.append(gc.isenabled()),
             steps=3,
-            budget=DeadlineBudget(period_s=0.001, freeze_gc=True),
+            budget=DeadlineBudget(
+                period_s=0.001, freeze_gc=True, miss_policy="observe"
+            ),
         )
         assert states == [False, False, False]
         assert gc.isenabled() is True
@@ -216,7 +224,9 @@ class TestGarbageCollectorControl:
         run_deterministic_loop(
             lambda _i: states.append(gc.isenabled()),
             steps=2,
-            budget=DeadlineBudget(period_s=0.001, freeze_gc=False),
+            budget=DeadlineBudget(
+                period_s=0.001, freeze_gc=False, miss_policy="observe"
+            ),
         )
         assert states == [True, True]
         assert gc.isenabled() is True
@@ -227,7 +237,9 @@ class TestGarbageCollectorControl:
             run_deterministic_loop(
                 lambda _i: None,
                 steps=2,
-                budget=DeadlineBudget(period_s=0.001, freeze_gc=True),
+                budget=DeadlineBudget(
+                    period_s=0.001, freeze_gc=True, miss_policy="observe"
+                ),
             )
             assert gc.isenabled() is False
         finally:
