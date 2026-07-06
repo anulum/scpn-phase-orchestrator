@@ -49,6 +49,7 @@ from bench.early_warning_domain import (
     DEFAULT_PERMUTATIONS,
     DEFAULT_TARGET_FALSE_ALARM,
     PermutationSignificance,
+    calibrate_score_threshold,
     permutation_significance_from_alarms,
 )
 
@@ -157,11 +158,7 @@ def calibrate_tau_threshold(
     """
     if not null_taus:
         raise ValueError("null_taus must not be empty")
-    scores = sorted((float(tau) for tau in null_taus), reverse=True)
-    allowed = int(np.floor(target_fa * len(scores)))
-    if allowed >= len(scores):
-        return float(-np.inf)
-    return float(np.nextafter(scores[allowed], np.inf))
+    return calibrate_score_threshold(null_taus, target_fa=target_fa)
 
 
 @dataclass(frozen=True)

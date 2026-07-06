@@ -32,6 +32,7 @@ from bench.early_warning_domain import (
     PermutationSignificance,
     SeizureLeadResult,
     calibrate_detectors,
+    calibrate_score_threshold,
     calibrate_threshold,
     detector_trajectories,
     domain_verdict,
@@ -339,6 +340,33 @@ def test_calibrate_threshold_is_zero_when_no_null_can_alarm() -> None:
 def test_calibrate_threshold_rejects_an_empty_null() -> None:
     with pytest.raises(ValueError, match="must not be empty"):
         calibrate_threshold([])
+
+
+def test_calibrate_score_threshold_holds_the_false_alarm_at_target() -> None:
+    # Ten null scores, one allowed to alarm at 10 %: the threshold sits just above the
+    # largest, so at most that one exceeds it. Unlike the detector gate there is no
+    # clamp to zero — a score threshold may be negative.
+    nulls = [-0.4, -0.2, 0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.9]
+    threshold = calibrate_score_threshold(nulls, target_fa=0.1)
+    assert 0.6 < threshold < 0.9  # just above the second-largest null
+    assert sum(score >= threshold for score in nulls) == 1
+
+
+def test_calibrate_score_threshold_places_a_negative_gate() -> None:
+    # All-negative nulls: the matched gate is itself negative, not clamped to zero.
+    nulls = [-0.9, -0.7, -0.5, -0.3]
+    threshold = calibrate_score_threshold(nulls, target_fa=0.0)
+    assert threshold > -0.3
+    assert threshold < 0.0
+
+
+def test_calibrate_score_threshold_opens_the_gate_when_all_may_alarm() -> None:
+    assert calibrate_score_threshold([0.2, 0.3], target_fa=1.0) == float(-np.inf)
+
+
+def test_calibrate_score_threshold_rejects_an_empty_null() -> None:
+    with pytest.raises(ValueError, match="null_scores must not be empty"):
+        calibrate_score_threshold([])
 
 
 def test_calibrate_detectors_returns_thresholds_and_achieved_rate() -> None:
