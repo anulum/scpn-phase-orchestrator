@@ -69,7 +69,44 @@ def test_records_the_honest_single_cell_result(payload: dict[str, Any]) -> None:
     assert lineages["combined_epo_gmcsf"]["alarmed"] is False
 
 
-def test_committed_artefact_matches_a_fresh_run(payload: dict[str, Any]) -> None:
-    # The embedded-summary capstone is self-contained, so a fresh run must reproduce the
-    # committed artefact exactly — proof the sealed evidence was not drifted or edited.
-    assert evaluate_mojtahedi() == payload
+def _reproduces(fresh: Any, committed: Any, *, rel: float = 1.0e-9) -> bool:
+    """Return whether ``fresh`` reproduces ``committed`` up to a float tolerance.
+
+    Every non-float field (labels, counts, decisions) must match exactly; float fields
+    match within ``rel`` — far tighter than any meaningful drift, but loose enough to
+    absorb the last-ULP differences between BLAS backends (``np.polyfit`` on macOS
+    Accelerate vs Linux OpenBLAS), which shift a raw slope in its final bit.
+    """
+    if isinstance(fresh, float) or isinstance(committed, float):
+        return fresh == pytest.approx(committed, rel=rel, abs=1.0e-12)
+    if isinstance(fresh, dict):
+        return (
+            isinstance(committed, dict)
+            and fresh.keys() == committed.keys()
+            and all(_reproduces(fresh[key], committed[key], rel=rel) for key in fresh)
+        )
+    if isinstance(fresh, list):
+        return (
+            isinstance(committed, list)
+            and len(fresh) == len(committed)
+            and all(
+                _reproduces(a, b, rel=rel)
+                for a, b in zip(fresh, committed, strict=True)
+            )
+        )
+    return bool(fresh == committed)
+
+
+def test_committed_reproduces_from_a_fresh_run(payload: dict[str, Any]) -> None:
+    # The embedded-summary capstone is self-contained, so a fresh run reproduces the
+    # committed artefact — proof the sealed evidence was not drifted or edited. The
+    # content hash is bit-exact only on the reference platform (a raw slope's final bit
+    # is BLAS-dependent), so the numeric fields are compared within a floating-point
+    # tolerance and every decision — the alarm counts and the permutation p-value —
+    # reproduces exactly.
+    fresh = evaluate_mojtahedi()
+    fresh_body = {key: value for key, value in fresh.items() if key != "content_hash"}
+    committed_body = {k: v for k, v in payload.items() if k != "content_hash"}
+    assert _reproduces(fresh_body, committed_body)
+    assert fresh["permutation_significance"]["observed_led"] == 1
+    assert fresh["lineages"][0]["alarmed"] is True
