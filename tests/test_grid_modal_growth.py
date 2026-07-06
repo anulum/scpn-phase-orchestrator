@@ -23,6 +23,8 @@ import pytest
 from scpn_phase_orchestrator.monitor.grid_modal_growth import (
     cross_bus_deviation,
     envelope_growth_rate,
+    fit_gated_growth_rate,
+    growth_rate_and_fit,
     modal_growth_score,
     per_bus_deviation,
 )
@@ -50,6 +52,30 @@ def _oscillation(
             for _ in range(buses)
         ]
     )
+
+
+def _monotone_growth(sigma: float, *, buses: int = 4) -> np.ndarray:
+    """Return buses whose per-bus deviation is a smooth monotone ``exp(sigma·t)``.
+
+    Each bus offsets the (constant) cross-bus mean by ``offset·exp(sigma·t)`` with
+    offsets summing to zero, so every per-bus deviation is a clean exponential — a fit
+    the ``R²`` gate keeps (unlike a rectified sine, whose zero crossings fit poorly).
+    """
+    time = np.arange(_SAMPLES) / _RATE
+    offsets = np.linspace(-0.3, 0.3, buses)
+    return 1.0 + offsets[:, None] * np.exp(sigma * time)[None, :]
+
+
+def _step_transient(*, buses: int = 4) -> np.ndarray:
+    """Return buses whose per-bus deviation jumps late — a fault's step, not a mode.
+
+    The deviation trends upward (a positive slope) but fits an exponential poorly (a low
+    ``R²``), so the fit-quality gate rejects it.
+    """
+    voltages = np.ones((buses, _SAMPLES))
+    voltages[1, -40:] = 3.0
+    voltages[2, -40:] = 2.5
+    return voltages
 
 
 # --------------------------------------------------------------------------- #
@@ -196,3 +222,118 @@ def test_modal_growth_score_rejects_an_unknown_aggregation() -> None:
         modal_growth_score(
             _oscillation(rng, sigma=0.5), rate=_RATE, aggregation="median"
         )
+
+
+def test_modal_growth_score_gate_keeps_smooth_focal_growth() -> None:
+    # a genuine instability fits an exponential well, so the gate is a no-op on it
+    segment = _monotone_growth(0.6)
+    ungated = modal_growth_score(segment, rate=_RATE, aggregation="focal")
+    gated = modal_growth_score(segment, rate=_RATE, aggregation="focal", r2_gate=0.5)
+    assert gated == pytest.approx(ungated, abs=1e-9)
+    assert gated == pytest.approx(0.6, abs=1e-6)
+
+
+def test_modal_growth_score_gate_keeps_smooth_mean_growth() -> None:
+    segment = _monotone_growth(0.6)
+    ungated = modal_growth_score(segment, rate=_RATE, aggregation="mean")
+    gated = modal_growth_score(segment, rate=_RATE, aggregation="mean", r2_gate=0.5)
+    assert gated == pytest.approx(ungated, abs=1e-9)
+
+
+def test_modal_growth_score_gate_clamps_a_step_segment() -> None:
+    segment = _step_transient()
+    ungated = modal_growth_score(segment, rate=_RATE, aggregation="focal")
+    gated = modal_growth_score(segment, rate=_RATE, aggregation="focal", r2_gate=0.5)
+    assert ungated > 0.0  # the step's upward trend reads as growth ungated
+    assert gated == 0.0  # the fit gate rejects it
+
+
+def test_modal_growth_score_rejects_a_gate_out_of_range() -> None:
+    with pytest.raises(ValueError, match="r2_gate must be a finite number"):
+        modal_growth_score(_monotone_growth(0.5), rate=_RATE, r2_gate=1.5)
+
+
+# --------------------------------------------------------------------------- #
+# growth_rate_and_fit                                                         #
+# --------------------------------------------------------------------------- #
+
+
+def test_growth_rate_and_fit_recovers_sigma_with_a_high_r2() -> None:
+    times = np.arange(_SAMPLES) / _RATE
+    sigma, r2 = growth_rate_and_fit(np.exp(0.8 * times), rate=_RATE, recency_top=3.0)
+    assert sigma == pytest.approx(0.8, abs=1e-6)
+    assert r2 == pytest.approx(1.0, abs=1e-9)
+
+
+def test_growth_rate_and_fit_sigma_matches_envelope_growth_rate() -> None:
+    times = np.arange(_SAMPLES) / _RATE
+    envelope = np.exp(0.6 * times) * (1.0 + 0.05 * np.sin(3.0 * times))
+    for recency_top in (1.0, 3.0):
+        sigma, _ = growth_rate_and_fit(envelope, rate=_RATE, recency_top=recency_top)
+        # the gate must never perturb the certified rate, on either fit path
+        assert sigma == envelope_growth_rate(
+            envelope, rate=_RATE, recency_top=recency_top
+        )
+
+
+def test_growth_rate_and_fit_low_r2_for_a_step_transient() -> None:
+    envelope = np.full(_SAMPLES, 0.05)
+    envelope[-40:] = 1.5  # a fault's step-like jump, not a smooth exponential
+    sigma, r2 = growth_rate_and_fit(envelope, rate=_RATE, recency_top=3.0)
+    assert sigma > 0.0  # the step still trends upward
+    assert r2 < 0.5  # but fits an exponential poorly
+
+
+def test_growth_rate_and_fit_zero_r2_for_a_flat_envelope() -> None:
+    # a constant log envelope has no variance to explain, so R^2 is defined as zero
+    sigma, r2 = growth_rate_and_fit(np.full(_SAMPLES, 0.7), rate=_RATE, recency_top=3.0)
+    assert sigma == pytest.approx(0.0, abs=1e-9)
+    assert r2 == 0.0
+
+
+def test_growth_rate_and_fit_propagates_input_guards() -> None:
+    with pytest.raises(ValueError, match="at least two samples"):
+        growth_rate_and_fit(np.zeros(1), rate=_RATE)
+
+
+# --------------------------------------------------------------------------- #
+# fit_gated_growth_rate                                                       #
+# --------------------------------------------------------------------------- #
+
+
+def test_fit_gated_growth_rate_off_equals_the_plain_rate() -> None:
+    times = np.arange(_SAMPLES) / _RATE
+    envelope = np.exp(0.7 * times)
+    assert fit_gated_growth_rate(
+        envelope, rate=_RATE, recency_top=3.0, r2_gate=0.0
+    ) == envelope_growth_rate(envelope, rate=_RATE, recency_top=3.0)
+
+
+def test_fit_gated_growth_rate_keeps_a_well_fit_growing_rate() -> None:
+    times = np.arange(_SAMPLES) / _RATE
+    gated = fit_gated_growth_rate(
+        np.exp(0.7 * times), rate=_RATE, recency_top=3.0, r2_gate=0.5
+    )
+    assert gated == pytest.approx(0.7, abs=1e-6)
+
+
+def test_fit_gated_growth_rate_keeps_a_well_fit_damped_rate() -> None:
+    times = np.arange(_SAMPLES) / _RATE
+    # a smoothly damped envelope fits well (high R^2), so its negative rate is kept
+    gated = fit_gated_growth_rate(
+        np.exp(-0.4 * times), rate=_RATE, recency_top=3.0, r2_gate=0.5
+    )
+    assert gated < 0.0
+
+
+def test_fit_gated_growth_rate_clamps_a_poorly_fit_transient() -> None:
+    envelope = np.full(_SAMPLES, 0.05)
+    envelope[-40:] = 1.5  # positive slope but a poor exponential fit (R^2 < 0.5)
+    gated = fit_gated_growth_rate(envelope, rate=_RATE, recency_top=3.0, r2_gate=0.5)
+    assert gated == 0.0  # min(sigma, 0) once the fit gate rejects it
+
+
+@pytest.mark.parametrize("gate", [1.5, -0.1, float("nan")])
+def test_fit_gated_growth_rate_rejects_a_gate_out_of_range(gate: float) -> None:
+    with pytest.raises(ValueError, match="r2_gate must be a finite number"):
+        fit_gated_growth_rate(np.ones(8), rate=_RATE, r2_gate=gate)

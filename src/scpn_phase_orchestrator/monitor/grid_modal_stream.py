@@ -24,10 +24,20 @@ recalibrates, it carries the certified threshold and fires when the live ``σ`` 
 it (after an optional persistence debounce), latching until ``σ`` falls back below so
 each instability episode raises one lead event.
 
-:meth:`GridModalStreamMonitor.from_evidence` closes the loop: it builds the monitor from
-a sealed head-to-head artefact, taking the aggregation, recency weighting, and
-matched-false-alarm threshold straight from the certification — the certified detector
-becomes the live monitor with no hand-set constants.
+:meth:`GridModalStreamMonitor.from_evidence` closes the loop for the offline per-window
+operating point: it builds the monitor from a sealed head-to-head artefact, taking the
+aggregation, recency weighting, and matched-false-alarm threshold straight from the
+certification — the certified detector becomes the live monitor with no hand-set
+constants.
+
+A live stream is stricter than the pre-onset window, because a damped fault has a
+transient growth window the continuous monitor also alarms on, so the plain per-window
+threshold over-alarms online. The ``r2_gate`` carries the fit-quality gate
+(``grid_modal_growth.fit_gated_growth_rate``) into the live scoring: it rejects a
+fault's step-like transient and holds the stream false alarm at target.
+:meth:`GridModalStreamMonitor.from_stream_evidence` builds the monitor at the
+*streaming* winner — window, step, persistence, threshold, and gate — read straight
+from a sealed streaming operating-point artefact.
 """
 
 from __future__ import annotations
@@ -35,7 +45,7 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 
@@ -43,7 +53,7 @@ from scpn_phase_orchestrator.monitor.grid_modal_growth import (
     DEFAULT_AGGREGATION,
     DEFAULT_RECENCY_TOP,
     cross_bus_deviation,
-    envelope_growth_rate,
+    fit_gated_growth_rate,
     per_bus_deviation,
 )
 
@@ -56,6 +66,45 @@ __all__ = ["GridModalStreamMonitor", "StreamAlarm", "WHOLE_NETWORK_BUS"]
 
 #: The whole-network aggregation reports no single bus.
 WHOLE_NETWORK_BUS = -1
+
+#: The fit-quality gate the sealed streaming search's ``"r2gate"`` feature was run at;
+#: the streaming operating-point artefact records only *whether* a row is gated, so the
+#: gate level is carried here (mirrors the search runner's ``R2_GATE`` constant).
+_CERTIFIED_STREAM_R2_GATE = 0.5
+
+
+def _select_stream_operating_point(
+    rows: list[dict[str, object]], *, target_false_alarm: float
+) -> dict[str, object]:
+    """Return the sealed streaming search's winning configuration row.
+
+    The winner is the development-best configuration (most development leads) *among*
+    those whose held-out false alarm holds the target out of sample — a matched-false-
+    alarm benchmark disqualifies a configuration whose false alarm drifts above target,
+    even if it leads more. This mirrors the sealed verdict's selection exactly, so the
+    monitor deploys the very configuration the artefact reports.
+
+    Parameters
+    ----------
+    rows : list of dict
+        The sealed ``search`` rows, each with ``feature``, ``window_seconds``,
+        ``step_seconds``, ``persistence``, ``threshold``, ``dev_led``, and
+        ``held_out_false_alarm``.
+    target_false_alarm : float
+        The matched stream false-alarm target the winner must hold out of sample.
+
+    Returns
+    -------
+    dict
+        The winning row.
+    """
+    holders = [
+        row
+        for row in rows
+        if cast("float", row["held_out_false_alarm"]) <= target_false_alarm * 1.2
+    ]
+    pool = holders or rows
+    return max(pool, key=lambda row: cast("int", row["dev_led"]))
 
 
 @dataclass(frozen=True)
@@ -105,13 +154,20 @@ class GridModalStreamMonitor:
     persistence : int
         Consecutive re-scored windows at or above the threshold required before an alarm
         fires; ``1`` fires on the first crossing. Must be a positive integer.
+    r2_gate : float
+        Fit-quality gate in ``[0, 1]`` applied to each envelope's growth rate before
+        aggregating (see ``grid_modal_growth.fit_gated_growth_rate``). ``0.0`` (the
+        default) disables the gate, so the live score stays bit-for-bit the offline
+        ``modal_growth_score``; the certified *streaming* operating point uses a
+        positive gate to reject a fault's step-like transient.
 
     Raises
     ------
     ValueError
         If ``rate``/``window_seconds``/``step_seconds`` are not positive finite, the
-        window is shorter than two samples, ``persistence`` is below one, or
-        ``aggregation`` is neither ``"focal"`` nor ``"mean"``.
+        window is shorter than two samples, ``persistence`` is below one,
+        ``aggregation`` is neither ``"focal"`` nor ``"mean"``, or ``r2_gate`` is not a
+        finite number in ``[0, 1]``.
     """
 
     def __init__(
@@ -124,6 +180,7 @@ class GridModalStreamMonitor:
         aggregation: str = DEFAULT_AGGREGATION,
         recency_top: float = DEFAULT_RECENCY_TOP,
         persistence: int = 1,
+        r2_gate: float = 0.0,
     ) -> None:
         if not np.isfinite(rate) or rate <= 0.0:
             raise ValueError("rate must be a positive finite number")
@@ -137,6 +194,8 @@ class GridModalStreamMonitor:
             )
         if persistence < 1:
             raise ValueError("persistence must be a positive integer")
+        if not np.isfinite(r2_gate) or not 0.0 <= r2_gate <= 1.0:
+            raise ValueError("r2_gate must be a finite number in [0, 1]")
         self._rate = float(rate)
         self._threshold = float(threshold)
         self._window = int(round(window_seconds * rate))
@@ -146,6 +205,7 @@ class GridModalStreamMonitor:
         self._aggregation = aggregation
         self._recency_top = float(recency_top)
         self._persistence = int(persistence)
+        self._r2_gate = float(r2_gate)
         self._buffer: list[FloatArray] = []
         self._index = 0
         self._since_score = 0
@@ -188,6 +248,67 @@ class GridModalStreamMonitor:
             **kwargs,  # type: ignore[arg-type]  # keys checked by __init__ signature
         )
 
+    @classmethod
+    def from_stream_evidence(
+        cls,
+        evidence_path: str | Path,
+        *,
+        rate: float,
+        recency_top: float = DEFAULT_RECENCY_TOP,
+        gate_r2: float = _CERTIFIED_STREAM_R2_GATE,
+        target_false_alarm: float = 0.10,
+    ) -> GridModalStreamMonitor:
+        """Build a monitor at the certified *streaming* operating point.
+
+        Reads a sealed streaming operating-point artefact, selects its winning
+        configuration (:func:`_select_stream_operating_point` — the development-best
+        that holds the target false alarm out of sample, exactly the sealed verdict's
+        choice), and configures the monitor with that window, step, persistence, and
+        threshold, turning the fit-quality gate on iff the winner is the ``"r2gate"``
+        feature. This deploys the honest streaming winner — not the more permissive
+        per-window operating point of :meth:`from_evidence` — with no hand-set
+        thresholds.
+
+        Parameters
+        ----------
+        evidence_path : str or Path
+            Path to a sealed ``grid_modal_stream_operating_point.json`` artefact.
+        rate : float
+            The live stream's sampling rate in Hz.
+        recency_top : float
+            The recency weighting the search was run at; defaults to the certified
+            :data:`~scpn_phase_orchestrator.monitor.grid_modal_growth.DEFAULT_RECENCY_TOP`.
+            The artefact does not carry it, so it is set here for transparency.
+        gate_r2 : float
+            The fit-quality gate level the search's ``"r2gate"`` feature used; defaults
+            to the certified value. Only applied when the winner is a gated
+            configuration.
+        target_false_alarm : float
+            The matched stream false-alarm target used to select the winner; must match
+            the artefact's ``target_stream_false_alarm``.
+
+        Returns
+        -------
+        GridModalStreamMonitor
+            A monitor at the certified streaming operating point.
+        """
+        payload = json.loads(Path(evidence_path).read_text(encoding="utf-8"))
+        rows = cast("list[dict[str, object]]", payload["search"])
+        winner = _select_stream_operating_point(
+            rows, target_false_alarm=target_false_alarm
+        )
+        gated = str(winner["feature"]) == "r2gate"
+        return cls(
+            rate=rate,
+            threshold=float(cast("float", winner["threshold"])),
+            window_seconds=float(cast("float", winner["window_seconds"])),
+            step_seconds=float(cast("float", winner["step_seconds"])),
+            aggregation="focal",
+            recency_top=recency_top,
+            persistence=int(cast("int", winner["persistence"])),
+            r2_gate=gate_r2 if gated else 0.0,
+        )
+
     @property
     def latest_score(self) -> float:
         """The most recent growth rate ``σ``, or NaN before the first score."""
@@ -208,6 +329,11 @@ class GridModalStreamMonitor:
         """The certified aggregation scored under (``"focal"`` or ``"mean"``)."""
         return self._aggregation
 
+    @property
+    def r2_gate(self) -> float:
+        """The fit-quality gate on the live rate; ``0.0`` means the gate is off."""
+        return self._r2_gate
+
     def reset(self) -> None:
         """Clear the window and alarm state, as if freshly constructed."""
         self._buffer.clear()
@@ -218,18 +344,27 @@ class GridModalStreamMonitor:
         self._latest_score = float("nan")
 
     def _score_window(self) -> tuple[float, int]:
-        """Return the current window's growth rate ``σ`` and its most unstable bus."""
+        """Return the current window's growth rate ``σ`` and its most unstable bus.
+
+        The rate is scored through the same fit-quality gate as the offline detector
+        (``r2_gate`` off by default), so a gated live score equals the offline
+        ``modal_growth_score`` on the same window.
+        """
         window = np.stack(self._buffer, axis=1)  # (buses, window)
         if self._aggregation == "mean":
-            score = envelope_growth_rate(
+            score = fit_gated_growth_rate(
                 cross_bus_deviation(window),
                 rate=self._rate,
                 recency_top=self._recency_top,
+                r2_gate=self._r2_gate,
             )
             return score, WHOLE_NETWORK_BUS
         per_bus = [
-            envelope_growth_rate(
-                envelope, rate=self._rate, recency_top=self._recency_top
+            fit_gated_growth_rate(
+                envelope,
+                rate=self._rate,
+                recency_top=self._recency_top,
+                r2_gate=self._r2_gate,
             )
             for envelope in per_bus_deviation(window)
         ]

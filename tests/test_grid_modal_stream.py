@@ -33,6 +33,7 @@ from scpn_phase_orchestrator.monitor.grid_modal_stream import (
 
 _REPO = Path(__file__).resolve().parents[1]
 _EVIDENCE = _REPO / "examples/real_data/psml_modal_growth/grid_modal_head_to_head.json"
+_STREAM_EVIDENCE = _EVIDENCE.parent / "grid_modal_stream_operating_point.json"
 
 
 def _oscillation(rng: np.random.Generator, *, sigma: float, n: int, buses: int = 4):
@@ -49,6 +50,17 @@ def _oscillation(rng: np.random.Generator, *, sigma: float, n: int, buses: int =
             for _ in range(buses)
         ]
     )
+
+
+def _monotone(sigma: float, *, n: int, buses: int = 4) -> np.ndarray:
+    """Return (buses, n) whose per-bus deviation is a smooth monotone ``exp(sigma·t)``.
+
+    Offsets summing to zero keep the cross-bus mean constant, so every per-bus deviation
+    is a clean exponential — a fit the ``R²`` gate keeps, unlike a rectified sine.
+    """
+    time = np.arange(n) / 100.0
+    offsets = np.linspace(-0.3, 0.3, buses)
+    return 1.0 + offsets[:, None] * np.exp(sigma * time)[None, :]
 
 
 def _feed(monitor: GridModalStreamMonitor, segment: np.ndarray) -> list[StreamAlarm]:
@@ -94,6 +106,44 @@ def test_mean_aggregation_matches_the_offline_mean_score() -> None:
         segment, rate=100.0, aggregation="mean", recency_top=3.0
     )
     assert monitor.latest_score == pytest.approx(offline, rel=1e-12)
+
+
+def test_gated_streaming_score_matches_the_offline_gated_score() -> None:
+    # the identity must hold *with* the fit-quality gate: the live gated score on a
+    # window equals the offline modal_growth_score gated on the same window
+    rng = np.random.default_rng(10)
+    segment = _oscillation(rng, sigma=0.5, n=100)
+    monitor = GridModalStreamMonitor(
+        rate=100.0, threshold=0.0, window_seconds=1.0, step_seconds=1.0, r2_gate=0.5
+    )
+    _feed(monitor, segment)
+    gated = modal_growth_score(
+        segment, rate=100.0, aggregation="focal", recency_top=3.0, r2_gate=0.5
+    )
+    ungated = modal_growth_score(
+        segment, rate=100.0, aggregation="focal", recency_top=3.0
+    )
+    assert monitor.latest_score == pytest.approx(gated, rel=1e-12, abs=1e-12)
+    assert gated < ungated  # the gate is active — it clamped the rectified-sine window
+    assert monitor.r2_gate == 0.5
+
+
+def test_gated_mean_streaming_score_matches_the_offline_gated_score() -> None:
+    rng = np.random.default_rng(11)
+    segment = _oscillation(rng, sigma=0.4, n=100)
+    monitor = GridModalStreamMonitor(
+        rate=100.0,
+        threshold=0.0,
+        window_seconds=1.0,
+        step_seconds=1.0,
+        aggregation="mean",
+        r2_gate=0.5,
+    )
+    _feed(monitor, segment)
+    gated = modal_growth_score(
+        segment, rate=100.0, aggregation="mean", recency_top=3.0, r2_gate=0.5
+    )
+    assert monitor.latest_score == pytest.approx(gated, rel=1e-12, abs=1e-12)
 
 
 # --------------------------------------------------------------------------- #
@@ -193,6 +243,69 @@ def test_from_evidence_carries_the_certified_operating_point() -> None:
     assert monitor.rate == pytest.approx(238.095)
 
 
+def _winning_row(target_false_alarm: float) -> dict:
+    """Return the sealed stream search's development-best row that holds the target."""
+    payload = json.loads(_STREAM_EVIDENCE.read_text(encoding="utf-8"))
+    rows = payload["search"]
+    holders = [r for r in rows if r["held_out_false_alarm"] <= target_false_alarm * 1.2]
+    return max(holders or rows, key=lambda r: r["dev_led"])
+
+
+def test_from_stream_evidence_deploys_the_gated_winner() -> None:
+    monitor = GridModalStreamMonitor.from_stream_evidence(_STREAM_EVIDENCE, rate=238.0)
+    winner = _winning_row(0.10)  # certified winner: r2gate, window 2 s, persistence 2
+    assert winner["feature"] == "r2gate"
+    assert monitor.threshold == pytest.approx(winner["threshold"])
+    assert monitor.aggregation == "focal"
+    assert monitor.rate == pytest.approx(238.0)
+    assert monitor.r2_gate == 0.5  # the gated winner turns the fit gate on
+
+
+def test_from_stream_evidence_leaves_the_gate_off_for_a_focal_winner() -> None:
+    # a lax false-alarm target lets a plain focal configuration win, so no gate is set
+    monitor = GridModalStreamMonitor.from_stream_evidence(
+        _STREAM_EVIDENCE, rate=238.0, target_false_alarm=0.20
+    )
+    winner = _winning_row(0.20)
+    assert winner["feature"] == "focal"
+    assert monitor.r2_gate == 0.0
+    assert monitor.threshold == pytest.approx(winner["threshold"])
+
+
+def test_from_stream_evidence_falls_back_when_no_row_holds_the_target() -> None:
+    # an impossible target leaves no holder, so selection falls back to all rows
+    monitor = GridModalStreamMonitor.from_stream_evidence(
+        _STREAM_EVIDENCE, rate=238.0, target_false_alarm=0.0
+    )
+    best = _winning_row(0.0)
+    assert monitor.threshold == pytest.approx(best["threshold"])
+
+
+def test_r2_gate_keeps_a_smooth_growing_stream() -> None:
+    # a genuine instability fits an exponential well, so the gate lets it alarm
+    segment = _monotone(0.6, n=160)
+    monitor = GridModalStreamMonitor(
+        rate=100.0, threshold=0.1, window_seconds=1.0, step_seconds=0.25, r2_gate=0.5
+    )
+    assert len(_feed(monitor, segment)) == 1
+    assert monitor.r2_gate == 0.5
+
+
+def test_r2_gate_silences_a_poorly_fit_stream_the_plain_rate_would_alarm() -> None:
+    # a rectified-sine oscillation fits an exponential poorly (deep zero-crossing
+    # notches), so the plain rate alarms but the fit gate rejects every window
+    rng = np.random.default_rng(12)
+    segment = _oscillation(rng, sigma=0.6, n=160)
+    ungated = GridModalStreamMonitor(
+        rate=100.0, threshold=0.1, window_seconds=1.0, step_seconds=0.25
+    )
+    gated = GridModalStreamMonitor(
+        rate=100.0, threshold=0.1, window_seconds=1.0, step_seconds=0.25, r2_gate=0.5
+    )
+    assert _feed(ungated, segment)  # the plain focal rate alarms
+    assert _feed(gated, segment) == []  # the gate rejects the poorly-fit windows
+
+
 def test_mean_aggregation_attributes_the_whole_network() -> None:
     rng = np.random.default_rng(8)
     segment = _oscillation(rng, sigma=0.6, n=140)
@@ -220,6 +333,7 @@ def test_mean_aggregation_attributes_the_whole_network() -> None:
         ({"step_seconds": 0.0}, "step_seconds must be a positive"),
         ({"aggregation": "median"}, "aggregation must be"),
         ({"persistence": 0}, "persistence must be a positive"),
+        ({"r2_gate": 1.5}, "r2_gate must be a finite number"),
         ({"rate": 1.0, "window_seconds": 0.001}, "too short"),
     ],
 )

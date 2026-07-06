@@ -29,10 +29,16 @@ early-warning quantity (Kundur 1994). The detector estimates it directly:
   envelope, the slope of its log against time; ``σ > 0`` grows (unstable), ``σ < 0``
   damps. A ``recency_top`` weighting lets later samples count for more, because a real
   instability *accelerates* toward onset;
+* :func:`growth_rate_and_fit` — the same ``σ`` *and* the exponential-fit quality ``R²``,
+  which is high for a smooth exponential and low for a step-like transient;
+* :func:`fit_gated_growth_rate` — ``σ`` gated by that fit quality: the growth rate is
+  clamped to non-positive when ``R²`` falls below a gate, so a damped fault's step-like
+  transient (a poor exponential fit) cannot pass as an instability — the one principled
+  lever that lifts the *streaming* operating point above the plain rate;
 * :func:`modal_growth_score` — one segment's ``σ`` under the ``"focal"`` (most unstable
   bus) or ``"mean"`` (whole network) aggregation, the certified default being
   ``"focal"`` with a recency weighting (:data:`DEFAULT_AGGREGATION`,
-  :data:`DEFAULT_RECENCY_TOP`).
+  :data:`DEFAULT_RECENCY_TOP`); an optional ``r2_gate`` applies the fit-quality gate.
 
 The detector is passive: it reads bus voltages and returns a growth rate; it never
 actuates and never recalibrates — the operating point is fixed by the certification.
@@ -67,6 +73,8 @@ __all__ = [
     "DEFAULT_RECENCY_TOP",
     "cross_bus_deviation",
     "envelope_growth_rate",
+    "fit_gated_growth_rate",
+    "growth_rate_and_fit",
     "modal_growth_score",
     "per_bus_deviation",
 ]
@@ -204,18 +212,117 @@ def envelope_growth_rate(
     return slope if np.isfinite(slope) else 0.0
 
 
+def growth_rate_and_fit(
+    deviation: FloatArray, *, rate: float, recency_top: float = 1.0
+) -> tuple[float, float]:
+    """Return the growth rate ``σ`` and the quality ``R²`` of its exponential fit.
+
+    ``σ`` is exactly :func:`envelope_growth_rate` (the log-envelope slope under the same
+    recency weighting), so the gate composes with the certified detector without
+    changing its rate. ``R²`` is the (recency-weighted) coefficient of determination of
+    that straight-line log fit: near one for a smooth exponential — a genuine growing
+    mode — and low for a step-like transient such as a damped fault, whose log envelope
+    is a poor line. Comparing ``R²`` to a gate is what separates the two online.
+
+    Parameters
+    ----------
+    deviation : FloatArray
+        The deviation envelope over the segment, shape ``(T,)`` with ``T >= 2``.
+    rate : float
+        Sampling rate in Hz; must be positive.
+    recency_top : float
+        Weight of the last sample relative to the first, ``>= 1``; ``1.0`` unweighted.
+
+    Returns
+    -------
+    tuple of float
+        ``(σ, R²)``: the growth rate in inverse seconds and the fit quality. ``R²`` is
+        ``0.0`` when the log envelope is flat (no variance to explain).
+
+    Raises
+    ------
+    ValueError
+        If ``deviation`` is not a one-dimensional array of at least two samples,
+        ``rate`` is not positive, or ``recency_top`` is not a finite number ``>= 1``.
+    """
+    slope = envelope_growth_rate(deviation, rate=rate, recency_top=recency_top)
+    values = np.asarray(deviation, dtype=np.float64)
+    times = np.arange(values.shape[0], dtype=np.float64) / rate
+    logs = np.log(np.maximum(values, _DEVIATION_FLOOR))
+    weights = np.linspace(1.0, recency_top, values.shape[0])
+    total = weights.sum()
+    mean_t = float((weights * times).sum() / total)
+    mean_y = float((weights * logs).sum() / total)
+    predicted = mean_y + slope * (times - mean_t)
+    ss_res = float((weights * (logs - predicted) ** 2).sum())
+    ss_tot = float((weights * (logs - mean_y) ** 2).sum())
+    r2 = 1.0 - ss_res / ss_tot if ss_tot > 0.0 else 0.0
+    return slope, r2
+
+
+def fit_gated_growth_rate(
+    deviation: FloatArray,
+    *,
+    rate: float,
+    recency_top: float = 1.0,
+    r2_gate: float = 0.0,
+) -> float:
+    """Return the growth rate ``σ`` gated by its exponential-fit quality ``R²``.
+
+    With ``r2_gate`` at ``0`` the gate is off and this is exactly
+    :func:`envelope_growth_rate`. With ``r2_gate > 0`` the growth rate is kept only when
+    its fit quality reaches the gate (``R² >= r2_gate``); otherwise it is clamped to
+    non-positive (``min(σ, 0)``), so a step-like transient — a damped fault, which fits
+    an exponential poorly — cannot be read as a growing instability. This is the
+    streaming detector's principled false-alarm lever.
+
+    Parameters
+    ----------
+    deviation : FloatArray
+        The deviation envelope over the segment, shape ``(T,)`` with ``T >= 2``.
+    rate : float
+        Sampling rate in Hz; must be positive.
+    recency_top : float
+        Weight of the last sample relative to the first, ``>= 1``.
+    r2_gate : float
+        Fit-quality gate in ``[0, 1]``. ``0.0`` (the default) disables the gate and
+        preserves the plain growth rate exactly.
+
+    Returns
+    -------
+    float
+        The gated growth rate ``σ`` in inverse seconds.
+
+    Raises
+    ------
+    ValueError
+        If ``r2_gate`` is not a finite number in ``[0, 1]``, or the arguments forwarded
+        to :func:`envelope_growth_rate` are invalid.
+    """
+    if not np.isfinite(r2_gate) or not 0.0 <= r2_gate <= 1.0:
+        raise ValueError("r2_gate must be a finite number in [0, 1]")
+    if r2_gate <= 0.0:
+        return envelope_growth_rate(deviation, rate=rate, recency_top=recency_top)
+    sigma, r2 = growth_rate_and_fit(deviation, rate=rate, recency_top=recency_top)
+    return sigma if r2 >= r2_gate else min(sigma, 0.0)
+
+
 def modal_growth_score(
     segment: FloatArray,
     *,
     rate: float,
     aggregation: str = DEFAULT_AGGREGATION,
     recency_top: float = DEFAULT_RECENCY_TOP,
+    r2_gate: float = 0.0,
 ) -> float:
     """Return one segment's modal growth rate ``σ`` under the chosen aggregation.
 
     ``"mean"`` scores the growth rate of the whole-network :func:`cross_bus_deviation`
     envelope; ``"focal"`` scores the maximum growth rate over the per-bus envelopes
-    (:func:`per_bus_deviation`) — the most unstable bus, un-diluted.
+    (:func:`per_bus_deviation`) — the most unstable bus, un-diluted. An ``r2_gate``
+    above zero applies the fit-quality gate (:func:`fit_gated_growth_rate`) to every
+    envelope before aggregating; at ``r2_gate == 0`` (the certified offline default) the
+    score is the plain growth rate exactly.
 
     Parameters
     ----------
@@ -227,6 +334,9 @@ def modal_growth_score(
         ``"mean"`` (whole network) or ``"focal"`` (most unstable bus).
     recency_top : float
         Recency weighting passed to :func:`envelope_growth_rate`.
+    r2_gate : float
+        Fit-quality gate in ``[0, 1]`` passed to :func:`fit_gated_growth_rate`; ``0.0``
+        disables it.
 
     Returns
     -------
@@ -236,15 +346,23 @@ def modal_growth_score(
     Raises
     ------
     ValueError
-        If ``aggregation`` is neither ``"mean"`` nor ``"focal"``.
+        If ``aggregation`` is neither ``"mean"`` nor ``"focal"``, or ``r2_gate`` is
+        not a finite number in ``[0, 1]``.
     """
+    if not np.isfinite(r2_gate) or not 0.0 <= r2_gate <= 1.0:
+        raise ValueError("r2_gate must be a finite number in [0, 1]")
     if aggregation == "mean":
-        return envelope_growth_rate(
-            cross_bus_deviation(segment), rate=rate, recency_top=recency_top
+        return fit_gated_growth_rate(
+            cross_bus_deviation(segment),
+            rate=rate,
+            recency_top=recency_top,
+            r2_gate=r2_gate,
         )
     if aggregation == "focal":
         return max(
-            envelope_growth_rate(envelope, rate=rate, recency_top=recency_top)
+            fit_gated_growth_rate(
+                envelope, rate=rate, recency_top=recency_top, r2_gate=r2_gate
+            )
             for envelope in per_bus_deviation(segment)
         )
     raise ValueError(f"aggregation must be 'mean' or 'focal', got {aggregation!r}")
