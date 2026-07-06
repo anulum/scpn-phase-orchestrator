@@ -12,7 +12,7 @@
     "research_experimental_modules": 201,
     "runtime_serving_modules": 143,
     "rust_kernel_files": 97,
-    "test_files": 792
+    "test_files": 793
   },
   "documentation": {
     "public_pages": [
@@ -2377,6 +2377,7 @@
       "tests/test_scpn_control_bridge.py",
       "tests/test_scpn_physics_knm.py",
       "tests/test_security_scan.py",
+      "tests/test_seizure_detector.py",
       "tests/test_self_model_guards.py",
       "tests/test_self_model_monitor.py",
       "tests/test_self_model_reconfiguration_examples.py",
