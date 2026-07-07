@@ -307,11 +307,37 @@ sensitivity is stated as a curve, not hidden: the envelope magnitude recovery **
 ringdown SNR** (ρ falls from 0.97 to 0.62 as the ringdown noise rises), a physical floor — a
 decay cannot be read below the noise it sinks into.
 
+### 3.12 The eigenvalue regime map, consolidated
+
+The three external validations above (§3.9–§3.11) are one result seen from three angles.
+Each pins a shipped detector against an *independent* ground truth for the mode's eigenvalue
+— one simulated (ANDES small-signal analysis), two analytic (normal-form Jacobian) — and
+together they map which estimator recovers that eigenvalue in which regime:
+
+| Mode (§) | Systems | Ground truth for the eigenvalue | Estimator that recovers it | Recovery |
+|----------|---------|----------------------------------|----------------------------|----------|
+| Oscillatory, real systems (§3.9) | IEEE-39, Kundur | ANDES small-signal eigenvalue σ (simulated) | envelope-growth, coherent aggregation | rank (ρ = 0.87 / 0.60–0.66) |
+| Non-oscillatory bifurcation (§3.10) | fold, supercritical pitchfork | normal-form Jacobian λ (analytic) | autocorrelation, ln(AR1)/Δt | **magnitude** (ρ = 0.98 / 0.96, Pearson too) |
+| Oscillatory bifurcation (§3.11) | Hopf normal form | normal-form eigenvalue α (analytic) | envelope-growth σ | **magnitude** (ρ = 0.97, \|σ − α\| = 0.04) |
+
+The **eigenvalue's real part — the growth rate, or its sign-flipped damping — is the
+universal quantity**, validated across three independent ground-truth methods. The
+**magnitude-correct estimator is regime-dependent**, and the split is not arbitrary but
+mechanical: on an *oscillatory* mode the lag-one autocorrelation is confounded by the
+oscillation (pinned near cos(ω Δt), so ln(AR1)/Δt ≠ α), while the envelope carries the decay
+cleanly — so envelope-growth wins on the grid and the Hopf mode. On a *non-oscillatory* mode
+there is no oscillation for the envelope to fit, and the linear-response autocorrelation is
+exactly exp(λ Δt) — so the autocorrelation channel wins on the fold and the pitchfork. Pick
+the estimator by whether the mode oscillates; the quantity you are estimating is the same
+eigenvalue in every case.
+
 ## 4. Discussion
 
 **Detection is a commodity; the moat is the evidence.** Across four independent physical domains — and a fifth, molecular one — generic early-warning *detection* at an honest operating point is sparse and, by a permutation or selection-controlled test, at chance. This is not a defect of one suite: the canonical Dakos detector fares no better on its own data, and the celebrated single-cell and bulk DNB benchmarks do not clear a modality-appropriate honest null either. What is *not* a commodity is the auditable, reproducible, claim-bounded envelope the protocol produces — a matched-false-alarm operating point, a permutation p-value, and a hash-sealed `EarlyWarningEvidence` record for every transition, **including the sealed silences**. A positive early-warning claim should be required to clear this operational bar; most published EWS results have only cleared the retrospective per-record one.
 
 **A domain-specific detector wins where the signature is deterministic — and the moat certifies which.** The commodity result is about *modality-neutral* detectors. When the domain carries a physically deterministic, directly-measurable instability — a growing electromechanical mode, whose exponential envelope *is* the eigenvalue crossing into instability — a detector that reads that quantity beats the whole generic suite decisively (grid modal growth, 36/90, p = 0.0001, versus every generic member at chance). But the same detector *idea* on a murky domain (the preictal spectral rise) is itself at chance. So the deliverable is not "build domain-specific detectors" as a slogan — a domain-specific detector does not automatically win — but the **matched-false-alarm moat that certifies the difference**: the identical honest test that flags commodity detection as at chance also licenses a genuinely-skilled detector where a real signature exists, and refuses to license a plausible-but-empty one where it does not. Value is unlocked per-domain, and only when the physics carries a detectable signal that clears the operational bar.
+
+**The winning detector estimates an eigenvalue, and that is externally checkable.** The domain-specific grid result is not a black box that happens to correlate with trouble: the quantity it reads is the dominant mode's growth rate — the real part of a physical eigenvalue crossing toward instability — and §3.9–§3.12 confirm it against three *independent* ground truths (a power-system simulator's small-signal eigenvalues, and the closed-form Jacobian eigenvalues of two bifurcation classes). This turns the moat from a matched-false-alarm *ranking* into a claim about a named, first-principles quantity, and it yields a small operational rule (§3.12): the eigenvalue's real part is universal, but read it with the envelope-growth family on an oscillatory mode and the autocorrelation family on a non-oscillatory one — because on an oscillatory mode the lag-one autocorrelation is confounded by the oscillation, and on a non-oscillatory one there is no envelope to fit. A detector that clears the operational bar *and* estimates a quantity you can check against an eigenvalue is a stronger deliverable than either property alone.
 
 **Selection freedom is a hidden operating cost.** The bulk-DNB case adds a specific lesson: when the detector *chooses* its own module (or feature set) to peak at the transition, an honest null must be granted the same choice. A surrogate that re-selects from scratch on shuffled time absorbs most of the apparent signal — so a fair null for a self-selecting detector is not an afterthought but the whole test.
 
