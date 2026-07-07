@@ -133,7 +133,9 @@ See the [Differentiable Kuramoto guide](guide/differentiable_kuramoto.md).
 
 ### What are the UPDE engines?
 
-SPO ships 18 ODE engine variants beyond the standard Kuramoto:
+SPO ships 18 phase-dynamics variants — the standard Kuramoto plus 17 extensions,
+reductions, and analysis engines (the [homepage](index.md) counts the 9 core
+time-stepping integrators; the list below adds the reductions and analysis tools):
 
 1. **Standard Kuramoto** — first-order phase coupling
 2. **Stuart-Landau** — phase + amplitude with Hopf bifurcation

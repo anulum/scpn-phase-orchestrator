@@ -120,7 +120,7 @@ traffic_flow, vortex_shedding, weather_teleconnection, wildlife_migration
 | Supervisor | `regimes`, `policy`, `policy_rules`, `events`, `petri_net`, `petri_adapter`, `predictive` | OK |
 | UPDE engines | `engine` (Euler/RK4/RK45), `stuart_landau`, `delay`, `inertial`, `jax_engine` | OK |
 | UPDE analysis | `order_params`, `metrics`, `pac`, `bifurcation`, `reduction` (Ott-Antonsen) | OK |
-| SSGF | `closure`, `free_energy`, `ethical`, `carrier`, `costs`, `pgbo`, `tcbo` | OK |
+| SSGF | `closure`, `free_energy`, `ethical`, `carrier`, `costs`, `pgbo`, `topological_integration` | OK |
 | Drivers | `psi_physical`, `psi_informational`, `psi_symbolic` | OK |
 | Adapters | `remanentia_bridge`, `synapse_channel_bridge`, `synapse_coupling_bridge` | OK |
 | Reporting | `plots` (CoherencePlot) | OK |
@@ -159,7 +159,7 @@ Difference: 0.0000 (float32 sufficient for this configuration).
 | Adapters | 3 bridge modules | OK |
 | Advanced supervisor | PetriNet, EventBus, Policy, Predictive | OK |
 | Advanced engines | Delay, Inertial, JAX, OA reduction, PAC | OK |
-| SSGF | 7 submodules (closure, FE, ethical, carrier, costs, pgbo, tcbo) | OK |
+| SSGF | 7 submodules (closure, FE, ethical, carrier, costs, pgbo, topological_integration) | OK |
 | Full module tree | 152/153 (1 expected skip: grpc) | OK |
 | End-to-end wiring | binding→coupling→engine→monitor→imprint→audit→nn/ | OK |
 | NumPy↔JAX parity | R difference = 0.0000 on power_grid | OK |

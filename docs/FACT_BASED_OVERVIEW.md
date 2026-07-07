@@ -53,6 +53,7 @@ deployment claim; several are optional or review-only.
 | Dynamics | `upde/` | UPDE / Kuramoto integration, bifurcation and Ott–Antonsen reduction |
 | Differentiable | `nn/` (JAX/equinox) | phase-oscillator layers, order parameter, coupling inference; can run on GPU/TPU |
 | Detection | `monitor/` | critical-slowing-down indicators and grid modal growth-rate estimation |
+| Evaluation | `evaluation/` | detector-agnostic matched-false-alarm + label-permutation auditor with hash-sealed records (`spo audit-detector`) |
 | Supervision | `supervisor/` | regime classification (nominal / degraded / critical) and a Petri-net state machine |
 | Control (review-only) | policy surfaces | bounded, rate-limited control *proposals* with replay evidence — not actuation |
 | Assurance | `assurance/` | hash-sealed evidence records and canonical-record hashing |

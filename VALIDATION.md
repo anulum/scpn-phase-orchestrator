@@ -4,11 +4,12 @@
 
 | Suite | Count | Scope |
 |-------|------:|-------|
-| Python unit/integration | 1305 | `pytest tests/` across 80+ files |
+| Python unit/integration | 21583 | `pytest tests/` across 824 files (2026-07-07; see the capability manifest for the live count) |
+| Detector auditor | 81 | `scpn_phase_orchestrator.evaluation` + `spo audit-detector`: matched-false-alarm calibration, permutation significance, sealed records, real-detector head-to-head (6 files) |
 | Rust unit/integration | 203 | `cargo test --workspace` across 5 crates |
 | FFI parity | 20 | Python vs Rust parity: UPDE, Stuart-Landau, Petri net, RuleEngine |
 | Notebook execution | 10 | `nbclient` runs all `.ipynb` cells under Python 3.12 |
-| Domainpack validation | 31 | Each domainpack exercises `binding_spec.yaml → run.py` end-to-end |
+| Domainpack validation | 36 | Each domainpack exercises `binding_spec.yaml → run.py` end-to-end |
 
 CI runs tests on Python 3.10–3.13 and Rust on Linux, macOS, Windows.
 
@@ -69,7 +70,7 @@ Output includes system fingerprint (Python/numpy/scipy versions, platform) for
 reproducibility. `bench/compare_baseline.py` fails CI if any config regresses
 >20% vs `bench/baseline.json`.
 
-## Domainpack Integration (25 domains)
+## Domainpack Integration (36 domains)
 
 Each domainpack provides a `binding_spec.yaml` + `run.py` exercising the full
 pipeline: binding validation → oscillator instantiation → UPDE stepping →

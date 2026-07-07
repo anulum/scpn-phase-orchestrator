@@ -195,6 +195,51 @@ spo replay run.jsonl --verify --output report.json
 
 ---
 
+## `spo audit-detector`
+
+Audit any early-warning detector's event-vs-null skill from a JSON scores file,
+at a matched false-alarm rate with a label-permutation p-value. Reads a local
+file and prints JSON; it never actuates, signs, or reaches the network.
+
+```
+spo audit-detector <scores_json> [OPTIONS]
+```
+
+**Arguments:**
+
+| Argument | Description |
+|----------|-------------|
+| `scores_json` | JSON object with `event_scores` and `null_scores` arrays of per-segment scores (higher = more evidence of a transition) and an optional `detector_name` |
+
+**Options:**
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--target-false-alarm` | 0.10 | False-alarm rate the alarm threshold is held at or below |
+| `--n-permutations` | 10000 | Random relabellings drawn for the permutation p-value |
+| `--seed` | 0 | Seed of the permutation resampling |
+| `--alpha` | 0.05 | Significance level for the convenience beats-chance flag |
+| `--corpus-id` | None | Corpus provenance identifier; with `--captured-at` seals the verdict |
+| `--captured-at` | None | Caller-supplied audit timestamp; required (with `--corpus-id`) to seal |
+| `--output PATH` | None | Also write the JSON record to this path |
+
+**Output:** the audit verdict as JSON (matched threshold, achieved false alarm,
+detection rate, permutation p-value); a hash-sealed record when `--corpus-id` and
+`--captured-at` are both given. Malformed scores (missing key, empty, non-numeric,
+non-finite) are rejected, never silently dropped.
+
+**Example:**
+
+```bash
+spo audit-detector scores.json \
+  --target-false-alarm 0.10 \
+  --corpus-id grid-2026 --captured-at 2026-07-07T15:00:00+02:00
+```
+
+See the [auditor API](api/evaluation.md) for the underlying package.
+
+---
+
 ## `spo federated-transport-preflight`
 
 Build review-only federated transport evidence from node update audit records.

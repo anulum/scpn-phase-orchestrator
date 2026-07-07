@@ -79,7 +79,7 @@ a single documented review boundary:
 |-----------------|------------------------|
 | PHA-C and polyglot gates | spatial, Doppler, moving-frame, delay, PID, Hodge, E/I-balance, winding, Poincaré, Koopman, ordinal-entropy, twin-confidence, swarmalator, inertial, hypergraph, spectral, and real-grid rows keep Rust, Go, Julia, Mojo, and Python evidence explicit |
 | Governance and assurance | control-barrier filtering, certification packages, conformity reports, formal package evidence, post-quantum audit seals, SLSA/cosign release evidence, and production audit-key enforcement remain review-only |
-| Operator surfaces | `spo doctor`, `spo quickstart power`, `spo twin-confidence`, `spo chaos`, `spo supervisor-candidate`, `spo pmu-ieee-adapt`, `spo pmu-ringdown`, OPC-UA/MQTT ingestion, and the WASM playground provide bounded, replayable entry points |
+| Operator surfaces | `spo doctor`, `spo quickstart power`, `spo twin-confidence`, `spo chaos`, `spo supervisor-candidate`, `spo pmu-ieee-adapt`, `spo pmu-ringdown`, `spo audit-detector`, OPC-UA/MQTT ingestion, and the WASM playground provide bounded, replayable entry points |
 | Documentation posture | public API docstrings, generated capability inventory, real-data validation pages, architecture maps, release hygiene, and the current benchmark pages are aligned with code and CI gates |
 | Benchmark posture | canonical reference-suite rows remain labelled as local non-isolated regression evidence unless production isolation metadata is present |
 
@@ -151,7 +151,11 @@ an independent ground truth from what has not.
   (study §3.10–3.14).
 - **Honest, false-alarm-controlled evaluation.** A matched-false-alarm operating
   point plus a permutation significance test plus a hash-sealed evidence record —
-  a reproducible way to test any early-warning claim (study §2).
+  a reproducible way to test any early-warning claim (study §2). Shipped as the
+  detector-agnostic `scpn_phase_orchestrator.evaluation` package and the
+  `spo audit-detector` CLI, which audit any detector's event-vs-null skill from its
+  per-segment scores alone (see the
+  [auditor API](docs/reference/api/evaluation.md)).
 
 **Empirically at chance on real data, stated plainly:** across five real
 modalities (grid, EEG, ecological/climate, molecular), generic early-warning
@@ -395,6 +399,18 @@ Order parameter, PLV, PAC (cross-frequency coupling), chimera detection,
 EVS (entrainment verification), PID (redundancy/synergy), Lyapunov
 exponent, entropy production, winding number, ITPC, coupling estimation
 (including non-sinusoidal harmonics), HCP connectome generation.
+
+### Detector Auditing (`evaluation/`)
+
+| Surface | What it does |
+|---------|-------------|
+| `audit_detector` | Scores any detector's event-vs-null skill from per-segment scores at a matched false-alarm rate, with a label-permutation p-value |
+| `seal_detector_audit` | Binds a verdict to its corpus provenance under a SHA-256 canonical-JSON hash |
+| `spo audit-detector` | Same audit from a JSON scores file, without writing Python |
+
+Detector-agnostic: it judges the SCPN suite, an AR(1)/Kendall-τ baseline, or a
+black-box classifier on identical footing. See the
+[auditor API](docs/reference/api/evaluation.md).
 
 ### Hardware Deployment
 
