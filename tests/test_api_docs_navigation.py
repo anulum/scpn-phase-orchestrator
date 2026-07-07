@@ -44,6 +44,7 @@ AUTODOC_EXCLUSIONS = {
     "scpn_phase_orchestrator.runtime.cli.assurance",
     "scpn_phase_orchestrator.runtime.cli.provenance",
     "scpn_phase_orchestrator.runtime.cli.audit",
+    "scpn_phase_orchestrator.runtime.cli.evaluation",
     "scpn_phase_orchestrator.runtime.cli.digital_twin",
     "scpn_phase_orchestrator.runtime.cli.koopman_mpc",
     "scpn_phase_orchestrator.runtime.cli.power_grid",
