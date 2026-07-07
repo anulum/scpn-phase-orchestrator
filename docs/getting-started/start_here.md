@@ -196,11 +196,11 @@ advanced analysis tools.
 1. **Read:** [Kuramoto Theory](../concepts/kuramoto_theory.md) — full
    derivations including mean-field, Ott-Antonsen reduction, and
    bifurcation analysis.
-2. **Explore:** all 12 engine variants — simplicial (3-body), Hodge
+2. **Explore:** the extended engine variants — simplicial (3-body), Hodge
    decomposition, stochastic resonance, Ott-Antonsen reduction,
    geometric integrator, torus topology.
 3. **Try:** [Advanced Dynamics Guide](../guide/advanced_dynamics.md) —
-   all 9 engines with worked examples.
+   the core engines with worked examples.
 4. **Deep:** FEP-Kuramoto correspondence (Friston free energy applied
    to oscillator control), spectral alignment function (SAF for
    topology optimisation), basin stability analysis.
@@ -261,7 +261,7 @@ After your entry point:
 - **Control:** [Control Systems Guide](../guide/control_systems.md) —
   MPC, regime manager, Petri net sequencing.
 - **Analysis:** [Analysis Toolkit Guide](../guide/analysis_toolkit.md)
-  — 19 monitors (coherence, Lyapunov, chimera, PAC, transfer entropy,
+  — the analysis monitors (coherence, Lyapunov, chimera, PAC, transfer entropy,
   winding numbers, recurrence, EVS, embedding, dimension, entropy
   production, PID, STL, NPE, Poincare, sleep staging, session start,
   psychedelic, winding).
@@ -316,8 +316,8 @@ print(f"Order parameter R = {R:.3f}")
 scpn_phase_orchestrator/
     oscillators/     P/I/S phase extractors
     coupling/        K_nm construction, spectral analysis, plasticity
-    upde/            12 integration engines
-    monitor/         19 analysis monitors
+    upde/            integration engines and phase-dynamics variants
+    monitor/         coherence, early-warning, and analysis monitors
     supervisor/      Regime management, policy engine, Petri net
     actuation/       Control action mapping, constraints, HDL compiler
     imprint/         Memory model (exposure accumulation)

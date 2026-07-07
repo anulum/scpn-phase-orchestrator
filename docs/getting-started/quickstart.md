@@ -1,67 +1,17 @@
 # Quickstart
 
-Five minutes from install to synchronized oscillators.
+Five minutes from install to a real, audited result — starting with one command.
 
-## Why Start Here
-
-This quickstart exists to create one verifiable proof point before any broader
-integration: a minimal run that is deterministic, auditable, and easy to
-reproduce.
-
-For teams evaluating SPO, this page answers three immediate questions:
-
-- Can our environment execute a coupled-oscillator simulation end-to-end?
-- Do we get coherent outputs from known initial conditions?
-- Can we verify the same output with fixed seeds and immutable input files?
-
-Those three checks are intentionally practical. If they pass, the same domain
-can move into CLI workflows, policy review, and production staging using the
-later pages.
-
-## Practical evidence for this page
-
-Each step in this quickstart maps to a verification checkpoint:
-
-- first simulation verifies engine execution and deterministic seeding,
-- `spo validate` verifies configuration integrity,
-- `spo run` verifies bounded execution path,
-- `spo replay --verify` verifies reproducibility,
-- `spo report` verifies summarised evidence ready for review.
-
-This page is the first production-entry gate. The recommended sequence is to
-complete the checkpoints in order, then widen scope only after the same profile
-reproduces stable outputs in a second run.
-
-## 1. Install
+## The fastest result — one command
 
 ```bash
 pip install scpn-phase-orchestrator
-```
-
-For repository development, use the one-command setup and smoke run:
-
-```bash
-make quickstart
-```
-
-That target creates `.venv`, installs the development extras, validates
-`domainpacks/minimal_domain/binding_spec.yaml`, runs a short audited
-simulation, and prints a coherence report.
-
-## 1a. One command — `spo quickstart power`
-
-The single fastest way to see a real result. It runs the whole supported
-workflow — validate, run, replay (audit-chain verification), and report — on a
-bundled, research-tier power-grid binding, so nothing else needs to be on disk:
-
-```bash
 spo quickstart power
-spo quickstart eeg                                          # neuroscience demo
-spo quickstart power --steps 500 --output power_report.md   # save the report
 ```
 
-Output walks the four checkpoints and ends with a Markdown explainability
-report:
+That runs the whole supported workflow — validate → run → replay (audit-chain
+verification) → report — on a bundled, research-tier power-grid binding, so nothing
+else needs to be on disk. You should see the four checkpoints and a coherence report:
 
 ```
 === SPO quickstart: power ===
@@ -72,7 +22,23 @@ binding power_grid_quickstart v0.1.0 (safety_tier=research) — 12 oscillators, 
 [4/4] report: regimes …
 ```
 
-The bundled binding is **research-tier** so the local runtime may execute it.
+`spo quickstart eeg` runs the neuroscience demo; add `--steps 500 --output
+report.md` to save the report. For repository development, `make quickstart` creates
+`.venv`, installs the extras, and runs the same smoke check on the minimal binding.
+
+Once that makes sense, the sections below break the same steps out so you can run
+them on your own bindings, and explain the checkpoints (deterministic seeding,
+configuration integrity, bounded execution, reproducible replay, review-ready
+evidence). Each is a verification gate: if they pass, the same domain can move into
+CLI workflows, policy review, and production staging using the later pages.
+
+## 1. Install
+
+```bash
+pip install scpn-phase-orchestrator
+```
+
+The bundled quickstart binding is **research-tier** so the local runtime may execute it.
 The production `domainpacks/power_grid` binding is `safety_tier: production` and
 is deliberately not executable by the local runtime — it requires the
 formal-export and certified-controller pipeline. Once the one-command run makes
