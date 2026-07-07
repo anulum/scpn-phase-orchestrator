@@ -257,7 +257,7 @@ inside a dashboard or notebook; it turns them into inspectable artefacts.
 | Public API exports | 24 |
 | Python package modules | 702 |
 | Core Engine modules | 321 |
-| Runtime/Serving modules | 146 |
+| Runtime/Serving modules | 150 |
 | Integration modules | 27 |
 | Research/Experimental modules | 201 |
 | Domainpack files | 36 |

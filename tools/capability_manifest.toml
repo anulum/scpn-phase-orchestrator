@@ -38,6 +38,7 @@ runtime_serving = [
     "artifacts",
     "assurance",
     "audit",
+    "evaluation",
     "grpc_gen",
     "meta",
     "plugins",
