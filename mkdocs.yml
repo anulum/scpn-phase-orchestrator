@@ -211,6 +211,7 @@ nav:
       - Drivers: reference/api/drivers.md
       - Audit: reference/api/audit.md
       - Assurance Case: reference/api/assurance.md
+      - "Honest Early-Warning Auditor": reference/api/evaluation.md
       - Reporting: reference/api/reporting.md
       - Artifacts: reference/api/artifacts.md
       - Distributed Sync: reference/api/distributed.md

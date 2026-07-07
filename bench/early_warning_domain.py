@@ -60,6 +60,7 @@ from scpn_phase_orchestrator.assurance.early_warning_evidence import (
     seal_synchronisation_alarm,
     seal_transition_entropy_alarm,
 )
+from scpn_phase_orchestrator.evaluation.skill import calibrate_score_threshold
 from scpn_phase_orchestrator.monitor.critical_slowing_down import (
     critical_slowing_down_warning,
 )
@@ -501,47 +502,6 @@ def calibrate_threshold(
     if boundary == -np.inf:
         return 0.0
     return float(max(0.0, np.nextafter(boundary, np.inf)))
-
-
-def calibrate_score_threshold(
-    null_scores: Sequence[float], *, target_fa: float = DEFAULT_TARGET_FALSE_ALARM
-) -> float:
-    """Return the tightest score threshold holding the null false-alarm rate at target.
-
-    The detector-agnostic matched-false-alarm calibrator for a *bounded per-segment
-    score* — a trend statistic already living on its own scale (a Kendall-τ, a DNB
-    index rise) rather than the SCPN detectors' non-negative alarm gate. Sort the null
-    segments' scores and place the alarm threshold just above the
-    ``floor(target_fa · n)``-th largest, so at most that fraction of nulls has
-    ``score ≥ threshold``. Unlike :func:`calibrate_threshold` there is no clamp to
-    ``[0, ∞)``: the score may legitimately be negative (a falling trend), so the gate
-    is placed wherever the null order statistic falls.
-
-    Parameters
-    ----------
-    null_scores : sequence of float
-        The per-segment score of each no-transition null trial.
-    target_fa : float
-        Target false-alarm rate the detector is held at or below.
-
-    Returns
-    -------
-    float
-        The matched-false-alarm score threshold; ``-inf`` (the gate fully open) when
-        every null may alarm within the budget.
-
-    Raises
-    ------
-    ValueError
-        If ``null_scores`` is empty.
-    """
-    if not null_scores:
-        raise ValueError("null_scores must not be empty")
-    scores = sorted((float(score) for score in null_scores), reverse=True)
-    allowed = int(np.floor(target_fa * len(scores)))
-    if allowed >= len(scores):
-        return float(-np.inf)
-    return float(np.nextafter(scores[allowed], np.inf))
 
 
 @dataclass(frozen=True)
