@@ -148,7 +148,7 @@ pip install -e ".[dev,plot]"
 jupyter lab notebooks/
 ```
 
-19 notebooks total. CI executes the shipped notebook suite on Python 3.12
+20 notebooks total. CI executes the shipped notebook suite on Python 3.12
 with `jupyter nbconvert --execute`; see
 [Notebook Execution Matrix](notebook_execution_matrix.md) for per-notebook
 extras, runtime class, and CI expectation.

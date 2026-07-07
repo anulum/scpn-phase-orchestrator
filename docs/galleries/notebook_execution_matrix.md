@@ -51,6 +51,7 @@ jupyter lab notebooks/
 | `17_power_grid_stability.ipynb` | Power systems | `dev`, `notebook`, `plot` | executed | medium | inertial Kuramoto transient |
 | `18_market_regime_detection.ipynb` | Finance | `dev`, `notebook`, `plot` | executed | medium | Hilbert phase extraction and market regimes |
 | `19_swarmalator_dynamics.ipynb` | Robotics | `dev`, `notebook`, `plot` | executed | medium | spatial and phase swarmalator dynamics |
+| `20_honest_early_warning_auditor.ipynb` | Evaluation | `dev`, `notebook` | executed | fast | matched-false-alarm + permutation audit of a detector |
 
 Runtime classes:
 

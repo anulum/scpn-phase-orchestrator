@@ -84,6 +84,7 @@ jupyter lab notebooks/
 | `17_power_grid_stability.ipynb` | Power systems | Inertial Kuramoto and generator-trip transient |
 | `18_market_regime_detection.ipynb` | Finance | Market phase extraction and regime detection |
 | `19_swarmalator_dynamics.ipynb` | Robotics | Spatial + phase swarmalator dynamics |
+| `20_honest_early_warning_auditor.ipynb` | Evaluation | Audit any detector's skill at a matched false alarm — skilful vs no-skill, sealed verdict |
 
 CI executes the shipped notebook suite on Python 3.12 with `nbconvert`.
 See the [Notebook Execution Matrix](notebook_execution_matrix.md) for

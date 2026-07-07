@@ -62,7 +62,7 @@ If any major path lacks onboarding/tutorial coverage, that path is treated as
 | Contributor onboarding | setup, repository map, checks, documentation duties | [Contributor Onboarding](../guide/contributor_onboarding.md) |
 | API reference | 67 MkDocs API pages, all wired into navigation | [API Reference](api/index.md) |
 | Domainpacks | 36 domainpacks documented in the gallery | [Domainpack Gallery](../galleries/domainpack_gallery.md) |
-| Notebooks | 19 notebook workflows | [Notebooks & Demos](../galleries/notebooks_and_demos.md) |
+| Notebooks | 20 notebook workflows | [Notebooks & Demos](../galleries/notebooks_and_demos.md) |
 | Notebook CI matrix | per-notebook extras and execution expectations | [Notebook Execution Matrix](../galleries/notebook_execution_matrix.md) |
 | Examples | 28 terminal-first Python examples | [Notebooks & Demos](../galleries/notebooks_and_demos.md) |
 | Interactive demos | Streamlit tools, browser WASM demo, CLI demo | [Interactive Tools](../guide/interactive_tools.md) |
