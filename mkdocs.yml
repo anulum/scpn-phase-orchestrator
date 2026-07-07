@@ -251,8 +251,6 @@ nav:
       - Architecture & Product Boundaries: architecture_product_boundaries.md
       - Architecture Decisions: architecture_decisions.md
       - Assumptions & Constants: ASSUMPTIONS.md
-      - Competitive Analysis: competitive_analysis.md
-      - "What SPO Does That No One Else Can": competitive_comparison.md
   - Papers:
       - "JOSS: Phase Dynamics Compiler": papers/JOSS_DRAFT.md
       - "Dual R+p_h1 Consciousness Criterion": papers/DUAL_R_PH1_DRAFT.md
