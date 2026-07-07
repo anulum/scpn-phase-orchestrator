@@ -308,18 +308,18 @@ learning to **hard real-time hardware execution**. It compiles a
 stabilized Kuramoto network ($K_{nm}$, $\omega$) directly into structural
 Verilog code.
 
-### Use Case: Nanosecond-Scale Control
+### Experimental HDL synthesis path
 
-In applications like **Nuclear Fusion Plasma Control**, the latency
-requirements for suppressing tearing modes are in the microsecond or
-nanosecond range. Even the high-performance Rust kernel running on a
-standard CPU may introduce jitter due to OS context switching.
+The HDL synthesis path is a research feature that emits structural Verilog from a
+Kuramoto network. Motivation: a CPU (even the Rust kernel) can introduce OS
+scheduling jitter, so mapping the integration loop to parallel hardware can, in
+principle, reduce latency and timing variance.
 
-By compiling the synchronization manifold into an FPGA bitstream, the
-control logic is executed in parallel hardware, achieving:
-- **Zero Jitter:** Deterministic execution timing.
-- **Nanosecond Latency:** Direct mapping of the UPDE integration loop to gates.
-- **Massive Parallelism:** All $O(N^2)$ interactions computed concurrently.
+This path is **experimental and unvalidated**. It has no field evidence and no
+safety certification; it must not be treated as a controller for any live system
+(fusion, medical, grid, or otherwise). Any latency, jitter, or throughput figure
+is design-dependent and must be measured on real hardware before use — the words
+"zero jitter" or a specific "nanosecond" latency are not claimed here as facts.
 
 ### Implementation Details
 

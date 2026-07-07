@@ -2,10 +2,10 @@
 
 ## Overview
 
-SCPN Phase Orchestrator is a domain-agnostic coherence control compiler.
-It transforms hierarchical oscillator systems into phase-locked control
-logic via Kuramoto/UPDE dynamics with a Rust-accelerated kernel and
-optional JAX differentiable backend.
+SCPN Phase Orchestrator is a domain-agnostic synchronisation-analysis toolkit
+with a review-only control-proposal surface. It represents hierarchical
+oscillator systems via Kuramoto/UPDE dynamics with a Rust-accelerated kernel and
+an optional JAX differentiable backend.
 
 > The detailed, per-subsystem architecture map (inputs/outputs, processing
 > models, backend wiring, interface contracts, cross-repo wire formats, and

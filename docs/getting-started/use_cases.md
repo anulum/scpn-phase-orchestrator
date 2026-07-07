@@ -8,10 +8,11 @@
 
 # Use Cases and Value Map
 
-SCPN Phase Orchestrator is a coherence-control compiler. It turns cyclic,
-event-driven, and state-machine behaviour into phase variables, runs those
-variables through coupled-oscillator dynamics, and produces reviewable control
-signals for systems where synchrony is useful, harmful, or diagnostic.
+SCPN Phase Orchestrator is a synchronisation-analysis toolkit with a review-only
+control-proposal surface. It turns cyclic, event-driven, and state-machine
+behaviour into phase variables, runs those variables through coupled-oscillator
+dynamics, and produces reviewable control *proposals* for systems where synchrony
+is useful, harmful, or diagnostic — for human review, not automated actuation.
 
 The practical question it answers is:
 

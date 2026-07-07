@@ -10,24 +10,30 @@ wearing different clothes: **coupled rhythms drifting into — or out of — syn
 SCPN Phase Orchestrator (SPO) is a Python library and CLI for that problem. It
 takes the repeating signals a system already produces — waveforms, event
 streams, state changes — turns them into a shared language of **phase** (where
-each rhythm sits in its cycle), and answers three operational questions:
+each rhythm sits in its cycle), and gives operators a way to ask three questions
+with *honest, false-alarm-controlled* evidence rather than one confident number:
 
 1. **What is locking together,** and is that lock useful or dangerous?
-2. **How close is the system to a regime change** — a blackout, a cascade, a
-   desync, a seizure?
-3. **Which single, bounded knob** can steer it back — leaving a reviewable,
-   replayable record *before* anything touches hardware?
+2. **Is the system's damping falling toward a regime change?** SPO estimates this
+   where the signature is a physically deterministic mode — e.g. a grid
+   oscillation, checked against small-signal eigenvalues. On noisier domains,
+   generic early-warning detection is at chance at an honest operating point, and
+   SPO is built to *report that* rather than overclaim (see **Evidence status**
+   below).
+3. **Which single, bounded knob** could steer it back — as a reviewable,
+   replayable *proposal*, before anything touches hardware.
 
-The same engine serves a grid operator, an SRE chasing retry storms, a plasma
-physicist, and a neuroscientist, because underneath they are all
-coupled-oscillator systems. SPO ships **36 ready-made domain packs** (power
+The same representation applies to a grid operator, an SRE chasing retry storms, a
+plasma physicist, or a neuroscientist, because underneath these are
+coupled-oscillator systems. SPO ships bindings for **36 such domains** (power
 grids, fusion, cloud queues, cardiac and EEG rhythms, swarm robotics, traffic,
-markets, and more) plus the tools to bind a new one — and it never actuates
-blindly: every proposed change is bounded, rate-limited, and audit-logged for
-human review.
+markets, and more) — a binding is a reusable scaffold, **not** a validated
+detector for that domain — and it never actuates blindly: every proposed change
+is bounded, rate-limited, and audit-logged for human review.
 
-*For specialists, in one line:* a domain-agnostic coherence-control compiler
-built on Kuramoto/UPDE phase dynamics. New here? Start with
+*For specialists, in one line:* a domain-agnostic synchronisation-analysis and
+honest-evaluation toolkit built on Kuramoto/UPDE phase dynamics, with a
+review-only control-proposal surface. New here? Start with
 [Use Cases and Value Map](docs/getting-started/use_cases.md) or the
 [Executive Overview](docs/getting-started/executive_overview.md).
 
@@ -109,7 +115,7 @@ you need to understand what the software is for before choosing an API.
 
 ## Executive overview (What SPO Is and What It Is Not)
 
-SPO is a production-oriented control compiler for systems that can be expressed as coupled oscillatory processes. It gives teams a single interface for turning telemetry into phase variables, evaluating coherence risk, and proposing bounded control updates with replay evidence.
+SPO is a synchronisation-analysis toolkit for systems that can be expressed as coupled oscillatory processes, with a review-only control-proposal surface. It gives teams a single interface for turning telemetry into phase variables, evaluating coherence, and *proposing* bounded control updates with replay evidence for human review — it does not close a control loop on hardware.
 
 In practical terms, SPO is useful when:
 
@@ -126,6 +132,42 @@ For a compact business, operator, and technical orientation, read the
 where SPO creates value, how the pieces fit together, which surfaces are
 execution-ready, and which frontier tracks remain review-only until external
 evidence is attached.
+
+## Evidence status: what is externally validated (and what is not)
+
+To avoid overstating what SPO can do, this separates what has been checked against
+an independent ground truth from what has not.
+
+**Externally validated (against an independent reference):**
+
+- **Grid modal damping estimation.** On the IEEE-39 and Kundur systems, SPO's
+  estimate of the dominant electromechanical mode's growth rate matches the
+  small-signal eigenvalue from the ANDES simulator
+  ([study §3.9](docs/studies/early_warning_matched_false_alarm.md)) — a checkable
+  physical quantity, not a proxy.
+- **The eigenvalue regime map.** Across five systems (fold, pitchfork, Hopf, and
+  the unimodal and bimodal Kuramoto transitions) the shipped detectors recover the
+  analytic eigenvalue's real part, and the correct estimator is regime-dependent
+  (study §3.10–3.14).
+- **Honest, false-alarm-controlled evaluation.** A matched-false-alarm operating
+  point plus a permutation significance test plus a hash-sealed evidence record —
+  a reproducible way to test any early-warning claim (study §2).
+
+**Empirically at chance on real data, stated plainly:** across five real
+modalities (grid, EEG, ecological/climate, molecular), generic early-warning
+detectors at an honest operating point perform **at chance** under a
+permutation-controlled test (study §3.1–3.8), consistent with the wider
+literature. **SPO does not claim to predict tipping points in these domains.** The
+one place a detector clears the bar is the grid, where the signature is a
+physically deterministic growing mode.
+
+**Not yet validated (engineering surfaces):** closed-loop control, hardware / PLC
+/ quantum / neuromorphic actuation, and live deployment are review-only and carry
+no field evidence.
+
+**In one line:** SPO is a synchronisation-dynamics and honest-evaluation toolkit
+whose one externally-validated detection niche is grid modal damping against
+eigenvalues; it is **not** a validated general tipping-point predictor.
 
 ## Reader Map
 
@@ -222,7 +264,7 @@ inside a dashboard or notebook; it turns them into inspectable artefacts.
 | Rust kernel files | 97 |
 | Optional extras | 22 |
 | Python test files | 818 |
-| Public documentation pages | 219 |
+| Public documentation pages | 217 |
 | GitHub Actions workflows | 12 |
 
 Evidence boundary: this snapshot is a static inventory. Performance, coverage, hardware, and scientific-fidelity claims require their own committed evidence artifacts.
@@ -286,11 +328,12 @@ Each stage has a production reason to exist:
 
 ## Capabilities
 
-### GPU-First Differentiable Phase Dynamics (`nn/` module, JAX)
+### Differentiable Phase Dynamics (`nn/` module, JAX)
 
 `nn/` is the primary API for ML users. It exposes JAX/equinox layers and
-runtime checks directly from `scpn_phase_orchestrator.nn` so production
-training jobs fail fast when no GPU/TPU backend is visible.
+runtime checks directly from `scpn_phase_orchestrator.nn`, and can run on
+GPU/TPU; `require_accelerator()` lets training jobs fail fast when no
+accelerator backend is visible.
 
 ```python
 from scpn_phase_orchestrator.nn import (
@@ -365,7 +408,7 @@ exponent, entropy production, winding number, ITPC, coupling estimation
 See [Documentation Coverage](docs/reference/documentation_coverage.md) for the
 current repo-wide documentation inventory and the enforced API-reference policy.
 
-### Unique Analysis Capabilities
+### Additional Analysis Modules
 
 | Module | What it does |
 |--------|-------------|

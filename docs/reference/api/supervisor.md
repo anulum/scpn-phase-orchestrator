@@ -1,10 +1,10 @@
 # Supervisor
 
-The supervisor subsystem provides closed-loop control of oscillator
-dynamics — the feature that distinguishes SPO from all other oscillator
-libraries. TVB, neurolib, Brian2, and NEST are open-loop simulators.
-SPO's supervisor predicts, detects, and corrects synchronisation problems
-in real time.
+The supervisor subsystem adds a regime-classification and control-*proposal*
+layer over oscillator dynamics, which simulate-and-observe libraries (TVB,
+neurolib, Brian2, NEST) do not provide. It predicts and detects synchronisation
+problems and *proposes* bounded corrections for review — it does not close a
+control loop on hardware.
 
 ## Pipeline position
 

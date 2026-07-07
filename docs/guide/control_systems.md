@@ -1,7 +1,8 @@
 # Control Systems
 
-SPO is the only oscillator library with closed-loop supervisory control.
-TVB, neurolib, Brian2, and NEST are all open-loop simulators.
+SPO adds a supervision layer over coupled-oscillator dynamics that emits
+review-only control *proposals*; TVB, neurolib, Brian2, and NEST are
+simulate-and-observe libraries. SPO does not close a control loop on hardware.
 
 ## Model-Predictive Controller (MPC)
 

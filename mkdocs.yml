@@ -8,7 +8,7 @@
 
 site_name: SCPN Phase Orchestrator
 site_url: https://anulum.github.io/scpn-phase-orchestrator
-site_description: Domain-agnostic coherence control compiler built on Kuramoto/UPDE phase dynamics
+site_description: Domain-agnostic synchronisation-analysis and honest-evaluation toolkit built on Kuramoto/UPDE phase dynamics
 site_author: Miroslav Šotek
 repo_url: https://github.com/anulum/scpn-phase-orchestrator
 repo_name: anulum/scpn-phase-orchestrator
@@ -100,7 +100,6 @@ nav:
       - Testing: guide/testing.md
       - Release Hygiene: RELEASE_HYGIENE.md
       - Contributor Onboarding: guide/contributor_onboarding.md
-      - Video Scripts: video_scripts.md
   - Specifications:
       - Binding Spec Schema: specs/binding_spec.schema.json
       - Phase Contract: specs/phase_contract.md
@@ -264,7 +263,6 @@ nav:
       - "Clinical Study Protocol": VALIDATION_STUDY_PROTOCOL.md
       - "Formal Kinematic Safety": formal/kinematic_safety.md
   - FAQ: faq.md
-  - Pricing: pricing.md
 
 plugins:
   - search

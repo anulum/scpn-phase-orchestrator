@@ -1,121 +1,81 @@
 # SCPN Phase Orchestrator: Fact-Based Overview
 
-## 1. What This Software Is
-The **SCPN Phase Orchestrator (SPO)** is a domain-agnostic **Closed-Loop Coherence Control Compiler**. It transforms hierarchical oscillator systems (from plasma physics to biological rhythms) into controllable mathematical manifolds. Unlike standard simulators that perform open-loop modeling, SPO is designed to **supervise** and **stabilize** synchronization dynamics in real-time.
+This page states, plainly, what SPO is, what has been checked against an
+independent ground truth, and what has not. It deliberately avoids superlatives
+and does not describe review-only or unvalidated surfaces as if they were
+deployed capabilities.
 
-At its core, SPO solves the **Universal Phase Dynamics Equation (UPDE)**:
-945741 \dot{\theta}_i = \omega_i + \sum_j K_{ij} \sin(\theta_j - \theta_i - \alpha_{ij}) + \zeta \sin(\Psi - \theta_i) 945741
+## 1. What SPO is
 
-## 1a. Deployment intent and operational role
+SPO is a Python library and CLI for analysing **coupled-oscillator systems**. It
+turns the repeating signals a system produces into phase variables built on
+Kuramoto / UPDE dynamics, and provides detectors, a regime supervisor, and a
+**review-only** control-proposal surface. It is a research and evaluation toolkit,
+not a deployed controller and not a validated general early-warning system.
 
-SPO is positioned for teams that need three specific capabilities:
+At its core is the Universal Phase Dynamics Equation (UPDE):
 
-- a formalized way to represent domain dynamics as coupled oscillatory structure,
-- a controlled simulation path with reproducible replay evidence,
-- and a constrained policy path from model output to actuator command.
+$$\dot{\theta}_i = \omega_i + \sum_j K_{ij}\,\sin(\theta_j - \theta_i - \alpha_{ij}) + \zeta\,\sin(\Psi - \theta_i)$$
 
-This differentiates it from generic simulation libraries in two ways:
+## 2. Evidence status (validated vs not)
 
-1. **Separation of concerns** between discovery (binding), dynamics, supervision, and execution gating.
-2. **Evidence-first control** where every runtime-affecting step is logged, bounded,
-   and reviewable.
+**Externally validated against an independent reference:**
 
-The project is also intended to bridge engineering domains: it supports power,
-traffic, neuroscience, plasma, and compute-operations teams with a shared internal
-contract for synchronization state and safety boundaries.
+- **Grid modal damping estimation.** On the IEEE-39 and Kundur systems, the
+  estimated growth rate of the dominant electromechanical mode matches the
+  small-signal eigenvalue from the ANDES simulator
+  ([study §3.9](studies/early_warning_matched_false_alarm.md)).
+- **The eigenvalue regime map.** Across five systems (fold, pitchfork, Hopf, and
+  the unimodal and bimodal Kuramoto transitions) the shipped detectors recover the
+  analytic eigenvalue's real part; the correct estimator is regime-dependent
+  (study §3.10–3.14).
+- **Honest, false-alarm-controlled evaluation.** A matched-false-alarm operating
+  point, a permutation significance test, and a hash-sealed evidence record
+  (study §2).
 
-## 2. Key Capabilities (Measured Reality)
-SPO is built on a hybrid architecture: a high-performance **Rust Kernel (spo-kernel)** for integration and a **JAX Differentiable Backend** for AI-driven inference.
+**Empirically at chance on real data:** across five real modalities (grid, EEG,
+ecological/climate, molecular), generic early-warning detection at an honest
+operating point is at chance under a permutation-controlled test (study §3.1–3.8),
+consistent with the wider literature. **SPO does not claim to predict tipping
+points in these domains.** The one place a detector clears the bar is the grid.
 
-### High-Performance Scalability
-*   **Dense Integration:** Sub-10μs latencies for small systems (N=16); sub-10ms for massive swarms (N=1024).
-*   **Sparse Integration:** Utilizes CSR (Compressed Sparse Row) matrices to scale to **N=10,000+** oscillators with minimal memory footprint ((N+E)$ complexity).
-*   **Real-Time Plasticity:** In-place Hebbian learning directly in the integration loop, allowing coupling matrices to adapt at the nanosecond scale.
+**Not yet validated:** closed-loop control, hardware / PLC / FPGA / quantum /
+neuromorphic actuation, BCI feedback, and distributed-mesh coupling are
+adapter-scoped, review-only, and carry no field evidence.
 
-### Advanced Observability
-*   **Gauge-Theoretic Monitoring:** Computes scalar curvature proxies ($) using rank-2 metric tensors to detect topological defects and chimera states.
-*   **Topological Consciousness Boundary (TCBO):** Uses $ persistent homology to gate high-level control logic only when the system reaches sufficient topological integration.
+## 3. Components that exist in the codebase
 
-### Closed-Loop Control
-*   **Active Inference Agent:** A predictive state-space model that minimizes Variational Free Energy to drive systems toward target coherence ({target}$).
-*   **Petri Net Supervisor:** Formal state-machine transitions based on dynamical regimes (Nominal, Degraded, Critical).
+These modules are present and covered by tests. Presence is not a performance or
+deployment claim; several are optional or review-only.
 
+| Area | Module | What it does |
+|------|--------|--------------|
+| Dynamics | `upde/` | UPDE / Kuramoto integration, bifurcation and Ott–Antonsen reduction |
+| Differentiable | `nn/` (JAX/equinox) | phase-oscillator layers, order parameter, coupling inference; can run on GPU/TPU |
+| Detection | `monitor/` | critical-slowing-down indicators and grid modal growth-rate estimation |
+| Supervision | `supervisor/` | regime classification (nominal / degraded / critical) and a Petri-net state machine |
+| Control (review-only) | policy surfaces | bounded, rate-limited control *proposals* with replay evidence — not actuation |
+| Assurance | `assurance/` | hash-sealed evidence records and canonical-record hashing |
+| Acceleration | `spo-kernel` (Rust FFI) | integration kernels with parity tests against the Python path |
+| Adapters (optional, review-only) | `adapters/` | OPC-UA / MQTT ingestion, LSL, mesh, and simulator bridges — scaffolds, not validated integrations |
 
-### Distributed Mesh Synchronization
-*   **Layer 12 Gaian Mesh Bridge:** Allows independent SPO instances on different servers to "couple" via stateless UDP heartbeats. Nodes exchange macroscopic Order Parameters ($R, \Psi$) instead of heavy $O(N)$ phase vectors, enabling planetary-scale decentralized synchronization.
+## 4. Performance claims
 
+Latency and throughput are environment-specific and are **not** quoted here as
+static facts. Where a number is needed, reproduce it on the target hardware with
+the committed benchmark scripts and record the run metadata (platform, Python
+version, backend, lockfile). The canonical benchmark snapshots under `benchmarks/`
+and the CI benchmark gates are the reference; treat any figure without attached
+run metadata as unverified.
 
-### Hardware Synthesis (FPGA)
-*   **HDL Synthesis Compiler:** Compiles stabilized Kuramoto manifolds directly into structural Verilog. This bypasses the CPU entirely, enabling nanosecond-scale, jitter-free control for life-critical systems like nuclear fusion containment.
+## 5. Where SPO fits
 
+SPO is between an academic research toolkit and a production monitoring system. Its
+one externally-validated niche is grid modal-damping estimation checked against
+eigenvalues; its most transferable asset is the honest, false-alarm-controlled
+evaluation methodology, which applies to any early-warning claim. It is a
+complement to ground-truth tools such as ANDES (which it validates against), not a
+replacement for deployed control-room monitoring products.
 
-### Semantic Domain Modeling (LLM Bridge)
-*   **LLM Semantic Domain Compiler:** A natural language interface that translates plain-English system descriptions into formal SCPN configurations. It automatically synthesizes hierarchical coupling matrices and frequency distributions from text, lowering the barrier for domain-specific modeling.
-
-
-### Cellular Sheaf Kuramoto Engine
-*   **Multi-Dimensional Phase Vectors:** Implements $\vec{\theta} \in \mathbb{R}^D$ and block coupling matrices $B_{ij} \in \mathbb{R}^{D \times D}$. Enables cross-frequency coupling (e.g., Alpha-Gamma phase locking), multi-modal synchronization, and complex opinion dynamics over vector spaces natively in the Rust kernel.
-
-
-### Biological BCI Integration (LSL)
-*   **LSL BCI Entrainment Bridge:** Establishes a sub-millisecond feedback loop with human brainwaves via the Lab Streaming Layer. Extracts instantaneous neural phases using real-time Hilbert transforms, allowing the Active Inference Agent to steer human cognitive states via predictive entrainment.
-
-
-### Symbolic Equation Discovery (Phase-SINDy)
-*   **Phase-SINDy Module:** Automatically reverse-engineers the governing differential equations of an unknown oscillator system from raw time-series data. Uses sparse identification (STLSQ) to discover the underlying physical topology and natural frequencies, outputting human-readable symbolic math.
-
-
-### Holographic Manifold Visualization (WebXR)
-*   **WebXR Manifold Streamer:** Broadcasts real-time simulation telemetry (metric tensors, $H_1$ homology, and phase states) via 60Hz WebSockets. Enables interactive 3D visualization of the synchronization manifold's curvature and folding in WebGL/Three.js environments.
-
-## 3. End-to-End Benchmarks (Intel i5-11600K @ 3.90GHz)
-*Measured on April 1, 2026, using bench/bench_e2e_advanced.py.*
-
-| Experiment | Scale | Latency |
-|:---|:---|:---|
-| **Sparse UPDE Integration** | N=10,000 (100k edges) | **2.39 ms / step** |
-| **Dense Integration Baseline** | N=256 (65k edges) | **643.42 us / step** |
-| **Plasticity Overhead** | N=256 (Hebbian) | **+146.80 us / step** |
-| **Active Inference Control** | Hidden=16 | **0.45 us / step** |
-| **Gauged PGBO Curvature** | N=256 | **21.05 ms / observation** |
-
-## 4. Market Placement & Position
-SPO occupies the **High-Frequency Coherence Control** market. It is positioned between academic research tools and industrial real-time controllers.
-
-*   **Primary Market:** Advanced R&D environments requiring low-latency synchronization control (Nuclear Fusion, Quantum Computing, Neuromorphic Engineering).
-*   **Secondary Market:** Large-scale infrastructure monitoring (Power Grids, National Traffic Flow, Financial Regime Detection).
-*   **Position:** The *only* oscillator framework that combines **Native Rust Speed**, **JAX Differentiability**, and **Closed-Loop Supervisory Logic** in a single domain-agnostic package.
-
-## 5. Competitive Placement
-
-| Capability | SPO | Brian2 / NEST | Julia (DynSys.jl) | AKOrN (Transformers) |
-|:---|:---:|:---:|:---:|:---:|
-| **Control Loop** | **Closed-Loop** | Open-Loop | Open-Loop | Feed-Forward |
-| **Backend** | **Rust / JAX** | C++ / Python | Julia JIT | PyTorch / JAX |
-| **Plasticity** | **Inner-Loop (ns)** | Event-based | Manual | Gradient-based |
-| **Domain Agnostic** | **High** | Neuroscience | General Math | Computer Vision |
-| **Real-Time FFI** | **Yes** | Limited | No | No |
-
-### The SPO Advantage:
-1.  **VS Neuroscience Simulators (Brian2/NEST):** SPO is 10-100x faster for phase-oscillator systems because it doesn't carry the overhead of full spiking neuron morphologies.
-2.  **VS General ODE Libraries (Julia/SciPy):** SPO provides a specialized "Control Compiler" layer (Regime Managers, Policies, Audits) that generic math libraries lack.
-3.  **VS Modern ML Components (AKOrN):** SPO adds **Amplitude (Stuart-Landau)** and **Higher-Order Coupling (Simplicial)**, avoiding the degradation issues seen in phase-only attention mechanisms.
-
-## Evidence and maintenance note
-
-This page is a market-facing overview and should be used alongside the project
-benchmark and benchmark-suite artifacts for strict claims verification. Several numeric
-claims are environment- and build-configuration-dependent, so reproduce-time context
-matters for direct comparison.
-
-For claim-grounding in production discussions, use:
-
-- `benchmarks/` result snapshots and suite metadata,
-- CI benchmark gates,
-- and changelog/release notes for version-specific interpretation.
-
-When numbers are re-used externally, include run metadata (platform, Python, backend,
-lockfile, evidence-kind) so stakeholders can compare against the same context.
-
-This keeps the overview aligned with reproducible evidence and reduces the risk of
-reusing stale figures as static guarantees.
+For related material, see the [study](studies/early_warning_matched_false_alarm.md)
+and the architecture and product-boundary pages.

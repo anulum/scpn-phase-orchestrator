@@ -292,8 +292,10 @@ Hilbert phase buffer.
 - **Real-Time Phase Extraction:** Uses Hilbert transforms on sliding windows
   to track neural phase state.
 - **Hardware Agnostic:** Supports any EEG device with an LSL outlet.
-- **Closed-Loop Feedback:** Enables the orchestrator to steer human brainwave
-  coherence via adaptive auditory or visual stimulation targets.
+- **Review-only stimulation targets (research scaffold):** can compute proposed
+  auditory/visual stimulation targets from the measured phase, for offline
+  research use only. This is an unvalidated experimental adapter — it makes no
+  clinical claim and must not be used to drive stimulation of a person.
 
 ::: scpn_phase_orchestrator.adapters.lsl_bci_bridge
 

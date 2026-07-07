@@ -7,7 +7,7 @@
     "integration_modules": 27,
     "optional_extras": 22,
     "public_api_exports": 24,
-    "public_documentation_pages": 219,
+    "public_documentation_pages": 217,
     "python_package_modules": 697,
     "research_experimental_modules": 201,
     "runtime_serving_modules": 145,
@@ -101,7 +101,6 @@
       "docs/papers/JOSS_DRAFT.md",
       "docs/papers/SAFETY_CERT_DRAFT.md",
       "docs/papers/SSGF_IDENTITY_DRAFT.md",
-      "docs/pricing.md",
       "docs/reference/api/actuation.md",
       "docs/reference/api/actuation_koopman_mpc.md",
       "docs/reference/api/adapters.md",
@@ -233,8 +232,7 @@
       "docs/tutorials/04_differentiable_kuramoto.md",
       "docs/tutorials/05_from_raw_sources_to_run.md",
       "docs/tutorials/06_deterministic_replay_for_debugging.md",
-      "docs/validation/iso_ne_case1_forced_oscillation.md",
-      "docs/video_scripts.md"
+      "docs/validation/iso_ne_case1_forced_oscillation.md"
     ]
   },
   "domainpacks": [

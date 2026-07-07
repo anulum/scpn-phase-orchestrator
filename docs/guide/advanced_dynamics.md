@@ -1,7 +1,6 @@
 # Advanced Dynamics
 
-Beyond basic Kuramoto, SPO provides several unique dynamical modules
-that no other oscillator library offers.
+Beyond basic Kuramoto, SPO provides several additional dynamical modules.
 
 ## Variational Free Energy Predictor
 

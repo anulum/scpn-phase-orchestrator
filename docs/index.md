@@ -43,10 +43,11 @@ hardware. The same engine maps onto plasma, cloud infrastructure, traffic,
 power grids, factories, and biology, because underneath they are all
 coupled-cycle systems.
 
-*For specialists, in one line:* a domain-agnostic coherence-control compiler
-built on Kuramoto/UPDE phase dynamics — bind signals, extract oscillator
-phases, run coupled dynamics, measure coherence, classify regimes, and emit
-bounded review artefacts.
+*For specialists, in one line:* a domain-agnostic synchronisation-analysis and
+honest-evaluation toolkit built on Kuramoto/UPDE phase dynamics, with a
+review-only control-proposal surface — bind signals, extract oscillator phases,
+run coupled dynamics, measure coherence, classify regimes, and emit bounded
+review artefacts.
 
 ## What this project is for
 

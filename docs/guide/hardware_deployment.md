@@ -62,7 +62,9 @@ Hardware-accelerated Kuramoto solver for Xilinx Zynq-7020:
 - AXI-Lite runtime reconfiguration
 - Resource: ~8K LUTs, ~4K FFs, 1 BRAM, 2 DSP48 (45% utilization)
 
-Deterministic latency for closed-loop control (BCI, DBS, power grid).
+Deterministic latency in a research/simulation setting. Any live use (medical,
+grid, or otherwise) would require separate field validation and safety evidence,
+which SPO does not claim.
 
 Source: `spo-kernel/crates/spo-fpga/`
 
