@@ -331,6 +331,35 @@ exactly exp(λ Δt) — so the autocorrelation channel wins on the fold and the 
 the estimator by whether the mode oscillates; the quantity you are estimating is the same
 eigenvalue in every case.
 
+### 3.13 The regime map extends to the collective coordinate
+
+§3.9–§3.12 validate the eigenvalue on *scalar* systems (normal forms) and on a per-bus grid
+mode. The last test carries it to the model SCPN is built around, one dimension harder: the
+eigenvalue now lives on the **emergent collective coordinate** of a high-dimensional system,
+not a one-line normal form. For the noisy Kuramoto model of `N = 512` phase oscillators
+(Lorentzian frequencies, half-width γ, phase diffusion `D`), the incoherent state loses
+stability at the mean-field critical coupling `K_c = 2(γ + D)` — the `K_c = 2γ` of the
+Ott–Antonsen reduction, generalised for noise — and just below it the fundamental mean-field
+mode is real and non-oscillatory with the analytic eigenvalue `λ(K) = (K − K_c)/2`
+(Sakaguchi 1988). The regime map's non-oscillatory prescription therefore predicts the
+*autocorrelation* family should recover λ; sweeping `K` below `K_c` and reading the shipped
+detector on the mean field `Z = (1/N) Σ exp(i θ)` confirms it — **but only through the right
+observable**. Both the signed real part `Re(Z)` and the order-parameter amplitude `|Z|` track
+λ in **rank** (Spearman ρ = 0.97 and 0.98: the collective coordinate slows down as
+`K → K_c`), yet **only the signed `Re(Z)` recovers λ in magnitude**, fitting it with slope
+1.19 (≈ 1) because its lag-one autocorrelation is `exp(λ Δt)`; the folded amplitude `|Z|` a
+practitioner usually watches fits with slope 2.66 — it ranks the eigenvalue but cannot size
+it. So the map's magnitude tier survives the jump from a scalar normal form to a
+512-oscillator order parameter, with one added, actionable rule: to read the distance to the
+synchronisation threshold, monitor the signed mean-field component, not the order-parameter
+magnitude, and use a long enough autocorrelation window that the finite-window bias does not
+steepen the estimate. Hash-sealed in
+`examples/real_data/kuramoto_synchronization/kuramoto_synchronization_external_validation.json`.
+Honest limits: the eigenvalue is the `N → ∞` mean-field result while the runs are finite-`N`
+(an `O(1/√N)` correction, which is why the signed slope is near, not exactly, one), a
+quasi-static per-coupling sweep, a Lorentzian law with additive noise, and coupling below
+`K_c` only.
+
 ## 4. Discussion
 
 **Detection is a commodity; the moat is the evidence.** Across four independent physical domains — and a fifth, molecular one — generic early-warning *detection* at an honest operating point is sparse and, by a permutation or selection-controlled test, at chance. This is not a defect of one suite: the canonical Dakos detector fares no better on its own data, and the celebrated single-cell and bulk DNB benchmarks do not clear a modality-appropriate honest null either. What is *not* a commodity is the auditable, reproducible, claim-bounded envelope the protocol produces — a matched-false-alarm operating point, a permutation p-value, and a hash-sealed `EarlyWarningEvidence` record for every transition, **including the sealed silences**. A positive early-warning claim should be required to clear this operational bar; most published EWS results have only cleared the retrospective per-record one.

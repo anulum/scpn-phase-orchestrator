@@ -12,7 +12,7 @@
     "research_experimental_modules": 201,
     "runtime_serving_modules": 145,
     "rust_kernel_files": 97,
-    "test_files": 814
+    "test_files": 816
   },
   "documentation": {
     "public_pages": [
@@ -2144,6 +2144,8 @@
       "tests/test_koopman_edmd_validation.py",
       "tests/test_koopman_mpc.py",
       "tests/test_kuramoto_layer.py",
+      "tests/test_kuramoto_synchronization_external_validation.py",
+      "tests/test_kuramoto_synchronization_external_validation_evidence.py",
       "tests/test_laser_array_domainpack.py",
       "tests/test_loader_errors.py",
       "tests/test_lock_metrics.py",

@@ -1,0 +1,95 @@
+{
+  "benchmark": "kuramoto_synchronization_external_validation",
+  "content_hash": "c49179fbf5de8baa031d0b50e13ec76896771ef008a2f961dc2d956ac9b7e071",
+  "diffusion": 0.5,
+  "gamma": 0.5,
+  "method": "per coupling K below K_c = 2(\u03b3 + D): integrate the noisy Kuramoto model, sample the mean field Z = (1/N) \u03a3 exp(i \u03b8); the shipped CSD detector reads the lag-one autocorrelation (as an ln(AR1)/\u0394t implied rate) on the signed Re(Z) and on the folded |Z|; correlate and least-squares fit each against the analytic \u03bb.",
+  "oscillators": 512,
+  "question": "Does critical slowing down of the Kuramoto mean field recover the analytic incoherent-state eigenvalue \u03bb = (K \u2212 K_c)/2?",
+  "record": {
+    "coupling": [
+      0.6,
+      0.7127272727272728,
+      0.8254545454545454,
+      0.9381818181818182,
+      1.050909090909091,
+      1.1636363636363636,
+      1.2763636363636364,
+      1.3890909090909092,
+      1.501818181818182,
+      1.6145454545454547,
+      1.7272727272727275,
+      1.84
+    ],
+    "critical_coupling": 2.0,
+    "n": 12,
+    "observables": {
+      "mean_field_real": {
+        "correlation": {
+          "intercept": -0.07464179498253071,
+          "mean_abs_gap": 0.1502694157779606,
+          "n": 12,
+          "pearson": 0.9673854583719417,
+          "slope": 1.193916976398538,
+          "spearman": 0.9720279720279721
+        },
+        "detector_value": [
+          -1.0013150071321213,
+          -0.8893248974851676,
+          -0.7350623473850374,
+          -0.6786904908381884,
+          -0.4904701880280961,
+          -0.568248202161303,
+          -0.5192883915089648,
+          -0.44318024270099515,
+          -0.44837184652066625,
+          -0.2691969517762488,
+          -0.23250026401396662,
+          -0.2075841597847713
+        ]
+      },
+      "order_parameter_amplitude": {
+        "correlation": {
+          "intercept": -0.15484026915318228,
+          "mean_abs_gap": 0.8034381648961201,
+          "n": 12,
+          "pearson": 0.9838178410489624,
+          "slope": 2.663071527545993,
+          "spearman": 0.9790209790209792
+        },
+        "detector_value": [
+          -2.114205178168514,
+          -1.9704877856759242,
+          -1.617540910977988,
+          -1.6227261705432938,
+          -1.2550078711369104,
+          -1.2875106157958907,
+          -1.0084109071162606,
+          -0.8813171092440072,
+          -0.9480888562009847,
+          -0.6595298394976126,
+          -0.48969500251427295,
+          -0.4667377318817816
+        ]
+      }
+    },
+    "true_rate": [
+      -0.7,
+      -0.6436363636363636,
+      -0.5872727272727273,
+      -0.5309090909090909,
+      -0.4745454545454545,
+      -0.4181818181818182,
+      -0.3618181818181818,
+      -0.3054545454545454,
+      -0.24909090909090903,
+      -0.19272727272727264,
+      -0.13636363636363624,
+      -0.07999999999999996
+    ]
+  },
+  "sampling_dt": 0.25,
+  "step": 64,
+  "verdict": "On the Kuramoto incoherent-state transition with the analytic eigenvalue \u03bb = (K \u2212 K_c)/2 as ground truth, the shipped detector's autocorrelation tracks \u03bb in rank on both mean-field observables (Spearman \u03c1\u22650.97), but the signed mean-field component recovers \u03bb in magnitude: Re(Z) fits \u03bb with slope 1.19 (\u22481), while the folded order-parameter amplitude |Z| fits with slope 2.66 \u2014 it ranks the eigenvalue but cannot size it. Critical slowing down of the collective coordinate is confirmed against a first-principles reference.",
+  "window": 512
+}
