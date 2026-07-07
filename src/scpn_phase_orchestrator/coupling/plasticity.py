@@ -150,7 +150,7 @@ def three_factor_update(
     Factors:
         1. eligibility — pairwise phase correlation (Hebbian trace)
         2. modulator — scalar reward/error signal from L16 director
-        3. phase_gate — boolean from TCBO consciousness boundary
+        3. phase_gate — boolean from the topological-integration gate
 
     Friston 2005, Philos. Trans. R. Soc. B
     360:815-836 (free energy & synaptic plasticity).
@@ -164,7 +164,7 @@ def three_factor_update(
     modulator : float
         scalar neuromodulatory signal.
     phase_gate : bool
-        if False, no update occurs (TCBO below consciousness threshold).
+        if False, no update occurs (integration gate below threshold).
     lr : float
         learning rate.
 

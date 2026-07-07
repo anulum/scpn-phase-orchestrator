@@ -36,7 +36,7 @@ connectome kernels (try/except import, validated within tolerance).
 `coupling_est` is intentionally Python-only for small-N least-squares review.
 `plasticity` is also intentionally Python-only at the public API boundary:
 `spo-engine/src/plasticity.rs` includes a native model with decay and `dt`, while
-the Python API is the validated TCBO-gated three-factor update used by the live
+the Python API is the validated integration-gated three-factor update used by the live
 coupling tests. The Rust file remains a native reference/parity candidate, not a
 hidden dispatcher. Multi-language forwarders route to
 `experimental/accelerators/coupling/`.

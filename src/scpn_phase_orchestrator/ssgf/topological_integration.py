@@ -4,22 +4,23 @@
 # © Code 2020–2026 Miroslav Šotek. All rights reserved.
 # ORCID: 0009-0009-3560-0851
 # Contact: www.anulum.li | protoscience@anulum.li
-# SCPN Phase Orchestrator — Topological Consciousness Boundary Observable
+# SCPN Phase Orchestrator — Topological Integration Observable
 #
 # Measures H1 persistent homology of delay-embedded phase dynamics.
-# p_h1 > tau_h1 (default 0.72) → consciousness gate open.
+# p_h1 > tau_h1 (default 0.72) → topological-integration gate open.
 #
 # Requires ripser for full Vietoris-Rips persistence. Falls back to
 # phase-locking value (PLV) based approximation without ripser.
 
-"""Topological Consciousness Boundary Observable over phase-history windows.
+"""Topological Integration Observable over phase-history windows.
 
 The observer accumulates copied phase snapshots, delay-embeds recent history,
 and computes H1 persistence through ``ripser`` when available. Without ripser
 it falls back to a PLV approximation that preserves the same public state shape
-but not the same topological guarantee. The module is a diagnostic gate over
-numeric phase history only; it does not assert phenomenology, perform actuation,
-or make safety-critical decisions by itself.
+but not the same topological guarantee. The scalar ``p_h1`` is a
+dynamical-structure measure — the persistence of first-homology loops in the
+phase point cloud — and nothing more: it does not assert phenomenology, perform
+actuation, or make safety-critical decisions by itself.
 """
 
 from __future__ import annotations
@@ -32,11 +33,11 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
-__all__ = ["TCBOObserver", "TCBOState"]
+__all__ = ["TopologicalIntegrationObserver", "TopologicalIntegrationState"]
 
 FloatArray: TypeAlias = NDArray[np.float64]
 
-_TAU_H1 = 0.72  # from SCPN-CODEBASE optimizations/tcbo/observer.py
+_TAU_H1 = 0.72
 
 try:
     from ripser import ripser as _ripser
@@ -47,25 +48,28 @@ except ImportError:  # pragma: no cover
 
 
 @dataclass
-class TCBOState:
-    """TCBO observation: p_h1 score, consciousness gate, and method."""
+class TopologicalIntegrationState:
+    """One observation: p_h1 score, the integration gate, and the method."""
 
     p_h1: float
-    is_conscious: bool
+    is_integrated: bool
     s_h1: float
     method: str
 
 
-class TCBOObserver:
-    """Topological Consciousness Boundary Observable.
+class TopologicalIntegrationObserver:
+    """Topological Integration Observable.
 
-    Delay-embeds multichannel phase signals, computes H1 persistent
-    homology via Vietoris-Rips filtration, squashes max lifetime to
-    [0,1] via logistic, gates consciousness at p_h1 > tau_h1.
+    Delay-embeds multichannel phase signals, computes H1 persistent homology via
+    a Vietoris-Rips filtration, squashes the maximum loop lifetime to ``[0, 1]``
+    with a logistic, and opens an integration gate at ``p_h1 > tau_h1``.
 
-    The threshold tau_h1 = 0.72 operates in the metastable R~0.4-0.8
-    regime — consistent with phenomenological evidence that consciousness
-    lives at intermediate synchronization, not maximum sync (R>0.95).
+    The default threshold ``tau_h1 = 0.72`` is set for the metastable
+    ``R ~ 0.4-0.8`` regime, where persistent first-homology loops are most
+    pronounced — full synchrony (``R > 0.95``) collapses the point cloud and
+    incoherence (``R < 0.2``) fills it uniformly, and neither produces a dominant
+    persistent 1-cycle. This is a topological-structure measure, not a claim
+    about consciousness or phenomenology.
     """
 
     def __init__(
@@ -104,17 +108,17 @@ class TCBOObserver:
 
     @property
     def tau_h1(self) -> float:
-        """Consciousness gate threshold on p_h1.
+        """Integration gate threshold on p_h1.
 
         Returns
         -------
         float
-            Consciousness gate threshold on p_h1.
+            Integration gate threshold on p_h1.
         """
         return self._tau_h1
 
-    def observe(self, phases: FloatArray) -> TCBOState:
-        """Add phase snapshot, compute TCBO if enough history.
+    def observe(self, phases: FloatArray) -> TopologicalIntegrationState:
+        """Add a phase snapshot and compute the observable if enough history.
 
         Parameters
         ----------
@@ -123,8 +127,8 @@ class TCBOObserver:
 
         Returns
         -------
-        TCBOState
-            Add phase snapshot, compute TCBO if enough history.
+        TopologicalIntegrationState
+            The p_h1 score, integration gate, loop lifetime, and method.
 
         Raises
         ------
@@ -150,9 +154,9 @@ class TCBOObserver:
 
         min_len = self._embed_dim * self._embed_delay + 2
         if len(self._history) < min_len:
-            return TCBOState(
+            return TopologicalIntegrationState(
                 p_h1=0.0,
-                is_conscious=False,
+                is_integrated=False,
                 s_h1=0.0,
                 method="insufficient_data",
             )
@@ -161,27 +165,31 @@ class TCBOObserver:
             return self._observe_ripser()
         return self._observe_plv()  # pragma: no cover
 
-    def _observe_ripser(self) -> TCBOState:
+    def _observe_ripser(self) -> TopologicalIntegrationState:
         """Return the Ripser persistence observation, if available."""
         cloud = self._delay_embed()
         result = _ripser(cloud, maxdim=1)
         h1 = result["dgms"][1]
         if len(h1) == 0:
-            return TCBOState(p_h1=0.0, is_conscious=False, s_h1=0.0, method="ripser")
+            return TopologicalIntegrationState(
+                p_h1=0.0, is_integrated=False, s_h1=0.0, method="ripser"
+            )
         lifetimes = h1[:, 1] - h1[:, 0]
         finite_mask = np.isfinite(lifetimes)
         if not np.any(finite_mask):
-            return TCBOState(p_h1=0.0, is_conscious=False, s_h1=0.0, method="ripser")
+            return TopologicalIntegrationState(
+                p_h1=0.0, is_integrated=False, s_h1=0.0, method="ripser"
+            )
         s_h1 = float(np.max(lifetimes[finite_mask]))
         p_h1 = 1.0 / (1.0 + np.exp(-self._beta * s_h1))
-        return TCBOState(
+        return TopologicalIntegrationState(
             p_h1=p_h1,
-            is_conscious=p_h1 > self._tau_h1,
+            is_integrated=p_h1 > self._tau_h1,
             s_h1=s_h1,
             method="ripser",
         )
 
-    def _observe_plv(self) -> TCBOState:  # pragma: no cover
+    def _observe_plv(self) -> TopologicalIntegrationState:  # pragma: no cover
         """PLV-based approximation when ripser is not available.
 
         Uses mean pairwise PLV as a proxy for topological integration.
@@ -192,9 +200,9 @@ class TCBOObserver:
         recent: FloatArray = np.array(self._history[-self._window_size :])
         n_osc = recent.shape[1]
         if n_osc < 2:
-            return TCBOState(
+            return TopologicalIntegrationState(
                 p_h1=0.0,
-                is_conscious=False,
+                is_integrated=False,
                 s_h1=0.0,
                 method="plv_approx",
             )
@@ -212,9 +220,9 @@ class TCBOObserver:
 
         s_h1 = mean_plv  # proxy
         p_h1 = 1.0 / (1.0 + np.exp(-self._beta * (s_h1 - 0.3)))
-        return TCBOState(
+        return TopologicalIntegrationState(
             p_h1=p_h1,
-            is_conscious=p_h1 > self._tau_h1,
+            is_integrated=p_h1 > self._tau_h1,
             s_h1=s_h1,
             method="plv_approx",
         )

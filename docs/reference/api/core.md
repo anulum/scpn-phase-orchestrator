@@ -155,7 +155,7 @@ Individual modules handle their own optional imports locally:
 |--------|-------|---------|
 | `nn/` | `pytest.importorskip("jax")` | jax, equinox, optax |
 | `reporting/plots.py` | `_HAS_MPL` | matplotlib |
-| `ssgf/tcbo.py` | `_HAS_RIPSER` | ripser |
+| `ssgf/topological_integration.py` | `_HAS_RIPSER` | ripser |
 | `upde/engine.py` | `_HAS_RUST` (from _compat) | spo_kernel |
 | `coupling/knm.py` | `_HAS_RUST` (from _compat) | spo_kernel |
 | `oscillators/physical.py` | `_HAS_RUST` (from _compat) | spo_kernel |

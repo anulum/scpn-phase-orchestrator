@@ -60,13 +60,13 @@
       "inputs": ["coupling spec", "phases/time-series", "current knm"],
       "outputs": ["CouplingState(knm,alpha)", "Hodge decomposition", "spectral metrics"],
       "backends": ["rust", "mojo", "julia", "go", "python"],
-      "note": "coupling_est and public plasticity are intentionally Python-only; plasticity.rs remains a native reference/parity candidate because its decay+dt semantics differ from the validated TCBO-gated Python API. Reserved inference methods fail closed with UnsupportedInferenceMethodError."
+      "note": "coupling_est and public plasticity are intentionally Python-only; plasticity.rs remains a native reference/parity candidate because its decay+dt semantics differ from the validated integration-gated Python API. Reserved inference methods fail closed with UnsupportedInferenceMethodError."
     },
     {
       "name": "ssgf",
       "status": "library-only",
       "inputs": ["phases", "W", "latent z", "cost weights"],
-      "outputs": ["SSGFState", "SSGFCosts", "PGBO/TCBO snapshots"],
+      "outputs": ["SSGFState", "SSGFCosts", "PGBO / topological-integration snapshots"],
       "backends": ["rust", "python"],
       "note": "self-stabilising gauge-field closure; opt-in, not in default loop."
     },

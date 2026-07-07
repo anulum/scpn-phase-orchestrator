@@ -170,9 +170,9 @@ when R crosses a threshold from below.
 The Self-Stabilizing Gauge Field is a free energy framework that maps
 Kuramoto dynamics to Friston's Free Energy Principle. The `ssgf/` module
 implements the carrier field, Langevin noise injection, Boltzmann weighting,
-free energy closure, and the TCBO (Topological Consciousness Boundary
-Observer) and PGBO (Phase Gradient Boundary Observer) constructs from the
-SCPN consciousness model.
+free energy closure, and the topological-integration observable (H1 persistent
+homology, `p_h1`) and PGBO (Phase Gradient Boundary Observer) constructs from the
+SSGF module.
 
 ### Can SPO solve combinatorial optimization problems?
 

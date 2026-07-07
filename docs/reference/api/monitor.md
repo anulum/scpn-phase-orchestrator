@@ -390,7 +390,7 @@ sensitivity to initial conditions:
 - λ ≈ 0: edge of chaos (critical regime, maximal computational capacity)
 - λ < 0: stable attractor (perturbations decay exponentially)
 
-The "edge of chaos" (λ ≈ 0) is where consciousness-like dynamics
+The "edge of chaos" (λ ≈ 0) is where flexible, high-capacity dynamics
 operate (PNAS 2022) and where reservoir computing achieves optimal
 performance (arXiv:2407.16172).
 

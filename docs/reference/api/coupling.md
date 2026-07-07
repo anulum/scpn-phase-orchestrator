@@ -297,7 +297,7 @@ edge `i → j`, `M[j, i] = −M[i, j]`).
   a triangle-free graph carrying a cycle (for example, a 4-cycle), a
   circulating current is *purely harmonic* — the topological content
   that a plain symmetric/antisymmetric matrix split cannot represent. In
-  the SCPN consciousness model this is the identity invariant that
+  the SCPN identity-coherence model this is the identity invariant that
   persists across regime changes.
 
 `hodge_decomposition(knm, phases, triangles=None)` computes all three
@@ -412,7 +412,7 @@ Coupling adaptation rule inspired by biological synaptic plasticity:
 
 1. **Eligibility** (local): cos(Δθ) — pairwise Hebbian trace
 2. **Modulator** (global): scalar from L16 director layer (dopamine analog)
-3. **Phase gate** (global): Boolean from TCBO consciousness boundary
+3. **Phase gate** (global): Boolean from topological-integration gate
 
 **Reference:** Friston 2005 on free energy and synaptic plasticity.
 

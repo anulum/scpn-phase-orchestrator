@@ -64,7 +64,7 @@ The full catalogue follows, organised by domain.
 | `fusion_equilibrium` | Fusion plasma | 6 | 12 | P/I |
 | `gene_oscillator` | Repressilator + quorum sensing | 3 | 6 | P/I/S |
 | `geometry_walk` | Graph systems | 2 | 8 | S |
-| `identity_coherence` | Consciousness/identity model (SSGF) | 6 | 30 | P/I/S |
+| `identity_coherence` | Identity-coherence model (SSGF) | 6 | 30 | P/I/S |
 | `laser_array` | Photonics | 3 | 8 | P/I |
 | `manufacturing_spc` | Manufacturing | 3 | 9 | P/I/S |
 | `metaphysics_demo` | P/I/S showcase | 3 | 7 | P/I/S |

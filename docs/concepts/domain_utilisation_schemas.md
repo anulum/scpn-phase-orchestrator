@@ -221,7 +221,7 @@ chemical diffusion as the coupling channel.
 The SSGF identity model treats cognitive traits (working style,
 reasoning patterns, values) as oscillators whose synchronisation
 defines coherent identity.  Chimera states (partial coherence) model
-cognitive dissonance.  An application of the SCPN consciousness
+cognitive dissonance.  An application of the SCPN identity-coherence
 framework to AI self-modelling.
 
 ### Musical Acoustics

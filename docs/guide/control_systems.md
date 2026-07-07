@@ -59,7 +59,7 @@ Coupling adaptation rule: K_ij += lr × eligibility × modulator × gate.
 
 1. **Eligibility**: cos(θ_j - θ_i) — pairwise Hebbian trace
 2. **Modulator**: scalar neuromodulatory signal from L16 director
-3. **Phase gate**: Boolean from TCBO consciousness boundary
+3. **Phase gate**: Boolean from topological-integration gate
 
 Grounded in Friston 2005 on free energy and synaptic plasticity.
 

@@ -11,7 +11,8 @@
 The SSGF package exposes deterministic Python implementations, with optional
 Rust acceleration in selected numeric kernels, for latent geometry decoding,
 cybernetic closure, total-cost evaluation, ethical cost diagnostics, stochastic
-free-energy helpers, PGBO alignment observation, and TCBO boundary observation.
+free-energy helpers, PGBO alignment observation, and topological-integration
+observation.
 The package-level surface is import-only: validation, fallback parity, and
 mutation boundaries are owned by the concrete modules.
 """
@@ -28,7 +29,10 @@ from scpn_phase_orchestrator.ssgf.free_energy import (
     effective_temperature,
 )
 from scpn_phase_orchestrator.ssgf.pgbo import PGBO, PGBOSnapshot
-from scpn_phase_orchestrator.ssgf.tcbo import TCBOObserver, TCBOState
+from scpn_phase_orchestrator.ssgf.topological_integration import (
+    TopologicalIntegrationObserver,
+    TopologicalIntegrationState,
+)
 
 __all__ = [
     "ClosureState",
@@ -39,8 +43,8 @@ __all__ = [
     "PGBOSnapshot",
     "SSGFCosts",
     "SSGFState",
-    "TCBOObserver",
-    "TCBOState",
+    "TopologicalIntegrationObserver",
+    "TopologicalIntegrationState",
     "add_langevin_noise",
     "boltzmann_weight",
     "compute_ethical_cost",

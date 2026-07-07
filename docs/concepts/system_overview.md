@@ -238,7 +238,7 @@ theory concepts from the SCPN framework:
 
 - **GeometryCarrier**: tracks the state of a geometric field coupled to
   the oscillator phases. Phase coherence modulates field curvature.
-- **TCBO (Thermodynamic-Cybernetic Boundary Observer)**: monitors the
+- **Topological Integration Observable (p_h1)**: monitors the
   system's thermodynamic consistency — entropy production, free energy
   balance, Boltzmann weighting of states.
 - **PGBO (Probabilistic-Geometric Boundary Observer)**: monitors

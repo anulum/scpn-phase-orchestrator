@@ -6,13 +6,13 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — SPO supervision on neurolib output
 #
-# Demonstrates SPO's unique value: regime detection, TCBO consciousness
+# Demonstrates SPO's value: regime detection, topological integration
 # gate, and predictive supervision on top of neurolib's neural dynamics.
 
 """Feed neurolib ALN output into SPO's supervision layer.
 
 Shows what neurolib CAN'T do: regime classification, boundary monitoring,
-TCBO consciousness boundary, predictive control.
+topological-integration gate, predictive control.
 
 Usage:
     python experiments/regime_on_neurolib.py
@@ -31,7 +31,9 @@ from scipy.signal import hilbert
 
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryState
 from scpn_phase_orchestrator.monitor.npe import compute_npe
-from scpn_phase_orchestrator.ssgf.tcbo import TCBOObserver
+from scpn_phase_orchestrator.ssgf.topological_integration import (
+    TopologicalIntegrationObserver,
+)
 from scpn_phase_orchestrator.supervisor.events import EventBus
 from scpn_phase_orchestrator.supervisor.regimes import RegimeManager
 from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
@@ -74,12 +76,14 @@ def main() -> None:
     # SPO supervision components
     event_bus = EventBus()
     regime_manager = RegimeManager(event_bus=event_bus)
-    tcbo = TCBOObserver(tau_h1=0.72, window_size=30, embed_dim=2, embed_delay=1)
+    integration = TopologicalIntegrationObserver(
+        tau_h1=0.72, window_size=30, embed_dim=2, embed_delay=1
+    )
 
     regime_history = []
     R_history = []
     npe_history = []
-    tcbo_history = []
+    integration_history = []
 
     print(f"\nRunning SPO supervision on {n_windows} windows...")
     for w in range(n_windows):
@@ -95,9 +99,9 @@ def main() -> None:
         npe = compute_npe(window_phases)
         npe_history.append(float(npe))
 
-        # TCBO
-        tcbo_state = tcbo.observe(window_phases)
-        tcbo_history.append(tcbo_state.p_h1)
+        # topological-integration
+        integration_state = integration.observe(window_phases)
+        integration_history.append(integration_state.p_h1)
 
         # Regime classification
         layer_states = [LayerState(R=R, psi=psi)]
@@ -125,7 +129,7 @@ def main() -> None:
     print(f"R range: [{min(R_history):.4f}, {max(R_history):.4f}]")
     print(f"R mean: {np.mean(R_history):.4f}")
     print(f"NPE range: [{min(npe_history):.4f}, {max(npe_history):.4f}]")
-    print(f"TCBO p_h1 mean: {np.mean(tcbo_history):.4f}")
+    print(f"topological-integration p_h1 mean: {np.mean(integration_history):.4f}")
     print(f"Regime distribution: {regime_counts}")
     print(f"Regime transitions: {transitions}")
     print(f"Events logged: {event_bus.count}")
@@ -137,7 +141,7 @@ def main() -> None:
         "R_min": round(float(min(R_history)), 4),
         "R_max": round(float(max(R_history)), 4),
         "NPE_mean": round(float(np.mean(npe_history)), 4),
-        "TCBO_p_h1_mean": round(float(np.mean(tcbo_history)), 4),
+        "p_h1_mean": round(float(np.mean(integration_history)), 4),
         "regime_counts": regime_counts,
         "n_transitions": transitions,
         "n_events": event_bus.count,

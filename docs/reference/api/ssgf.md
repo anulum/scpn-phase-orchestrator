@@ -29,10 +29,10 @@ The curvature proxy $ represents how much the phase embedding
 
 ::: scpn_phase_orchestrator.ssgf.pgbo
 
-## TCBO (Topological Consciousness Boundary Observable)
+## Topological Integration Observable (p_h1)
 
 Measures the **H1 persistent homology** of the delay-embedded phase
-dynamics. It acts as a "consciousness gate," allowing higher-level
+dynamics. It acts as a topological-integration gate, allowing higher-level
 director logic to engage only when topological integration exceeds
 the $\tau_{h1} > 0.72$ threshold.
 
@@ -40,7 +40,7 @@ the $\tau_{h1} > 0.72$ threshold.
 - **Vietoris-Rips Filtration:** Computes max $ lifetimes using the `ripser` algorithm (or Rust-native streaming PH).
 - **Complexity Gating:** Prevents the supervisor from acting on chaotic or topologically incoherent noise.
 
-::: scpn_phase_orchestrator.ssgf.tcbo
+::: scpn_phase_orchestrator.ssgf.topological_integration
 
 ## SSGF Costs
 
@@ -186,7 +186,7 @@ for step in range(1000):
 
 In the full SCPN stack, the SSGF curvature metrics are exported to the
 **Layer 16 Director**, which uses them to calculate the global
-**Consciousness Coherence Index (CCI)**. When $K_g$ drops below critical
+**Geometric Coherence Index (GCI)**. When $K_g$ drops below critical
 levels, the director triggers a "Geometry Reset" or shifts the
 regime of the \`ActiveInferenceAgent\`.
 
@@ -235,9 +235,9 @@ weight may be reduced to allow for directed causal interactions.
 
 ---
 
-## TCBO Consciousness Gate: Implementation Details
+## Topological Integration Gate: Implementation Details
 
-The \`TCBOObserver\` implements persistent homology using the
+The \`TopologicalIntegrationObserver\` implements persistent homology using the
 Vietoris-Rips filtration. This is a topological method that
 captures the "holes" in the point-cloud embedding of the phases.
 
@@ -247,7 +247,7 @@ While $H_0$ (connected components) measures simple clusters, $H_1$
 (one-dimensional holes) measures **cycles**. Synchronization is a
 cyclical phenomenon. The presence of long-lived $H_1$ cycles in the
 phase space indicates that the network has formed a stable, integrated
-topological loop — a necessary condition for autonomous consciousness
+topological loop — a persistent first-homology cycle
 within the SCPN framework.
 
 ### The 0.72 Threshold
@@ -269,7 +269,7 @@ across the two backends.
 | Order Parameter R | Full | Full | 7.3us (Rust) vs 45us (Py) |
 | SSGF Costs | Full | Planned | Crucial for real-time W evolution |
 | Gauged PGBO | Full | Full | Curvature proxy implementation |
-| TCBO (H1) | Full | In Progress | Moving to streaming Rust engine |
+| Topological integration (H1) | Full | In Progress | Moving to streaming Rust engine |
 | Plasticity (Hebbian)| Full | Full | Sub-microsecond inner loop |
 | Geometry Carrier | Full | Full | softplus decode (Python NumPy faster for N>16) |
 | Ethical Cost (C15) | Full | Full | SEC + CBF, 5.7x at N=8, Jacobi eigenvalues |
