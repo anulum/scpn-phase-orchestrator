@@ -360,6 +360,34 @@ Honest limits: the eigenvalue is the `N → ∞` mean-field result while the run
 quasi-static per-coupling sweep, a Lorentzian law with additive noise, and coupling below
 `K_c` only.
 
+### 3.14 The collective map has two regimes, mirroring the whole study
+
+§3.13 recovered the eigenvalue on a *non-oscillatory* collective transition. A **bimodal**
+frequency law is the oscillatory counterpart, and completes a two-regime map inside the
+Kuramoto model — the collective analogue of the Hopf bridge (§3.11). For a symmetric bimodal
+Lorentzian (peaks at `±ω₀`, half-width `Δ`), the incoherent state loses stability at
+`K_c = 4Δ`, and for `ω₀ > K/4` the fundamental eigenvalue is **complex** (Martens et al. 2009,
+via the Ott–Antonsen reduction): `λ_±(K) = K/4 − Δ ± √((K/4)² − ω₀²)`, so `Re(λ) = K/4 − Δ`
+and `Ω = √(ω₀² − (K/4)²)`. Below `K_c` the order parameter is a damped oscillation — exactly
+the regime where the Hopf bridge found the *envelope* family, not the autocorrelation, sizes
+the eigenvalue. Ringing down from a partially-coherent start (`N = 4000`, `ω₀ = 1.5`,
+`Δ = 0.5`) and reading two families confirms it: the **envelope-growth family on the
+sub-population order parameter `|Z₊|` recovers `Re(λ)` in magnitude** (Spearman ρ = 0.99,
+fitted slope 0.93 ≈ 1), while the **autocorrelation family is confounded by the oscillation**
+`Ω` (fitted slope 15.8 — it ranks the eigenvalue but cannot size it). The observable is the
+subtlety: the *global* mean field is a standing wave of two counter-rotating modes, so `|Z|`
+oscillates to zero and cannot be fit, whereas the sub-population `Z₊` is a single complex mode
+whose modulus decays smoothly as `exp(Re(λ) t)`. The measured oscillation frequency matches
+the analytic `Ω` to a mean absolute error of 0.11 (~7 %) — the analytic `Ω` is nearly constant
+across the sweep, so this is a value check, not a rank one — confirming the mode oscillates at
+the predicted frequency, i.e. the eigenvalue is genuinely complex. Hash-sealed in
+`examples/real_data/kuramoto_bimodal/kuramoto_bimodal_hopf_external_validation.json`. So the
+collective coordinate carries **both** regimes of the study's map: non-oscillatory →
+autocorrelation (§3.13), oscillatory → envelope-growth (here), exactly as the scalar normal
+forms (§3.10, §3.11) and the grid (§3.9) do. Honest limits: a noiseless finite-`N` ringdown
+(the `O(1/√N)` floor bounds the envelope), the oscillatory regime `ω₀ > Δ` only, and coupling
+below `K_c`.
+
 ## 4. Discussion
 
 **Detection is a commodity; the moat is the evidence.** Across four independent physical domains — and a fifth, molecular one — generic early-warning *detection* at an honest operating point is sparse and, by a permutation or selection-controlled test, at chance. This is not a defect of one suite: the canonical Dakos detector fares no better on its own data, and the celebrated single-cell and bulk DNB benchmarks do not clear a modality-appropriate honest null either. What is *not* a commodity is the auditable, reproducible, claim-bounded envelope the protocol produces — a matched-false-alarm operating point, a permutation p-value, and a hash-sealed `EarlyWarningEvidence` record for every transition, **including the sealed silences**. A positive early-warning claim should be required to clear this operational bar; most published EWS results have only cleared the retrospective per-record one.

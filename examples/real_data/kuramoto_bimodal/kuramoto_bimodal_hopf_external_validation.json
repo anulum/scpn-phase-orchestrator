@@ -1,0 +1,127 @@
+{
+  "benchmark": "kuramoto_bimodal_hopf_external_validation",
+  "content_hash": "77fdede86094a2927a185de5a9cce411219fd7258b61412fdb8a97e88b7ca8b9",
+  "delta": 0.5,
+  "method": "per coupling K below K_c = 4\u0394: ringdown the noiseless bimodal Kuramoto model from a partially-coherent start; the envelope-growth family fits the sub-population modulus |Z+| (a single complex mode), the autocorrelation family reads the shipped CSD detector on the global Re(Z) tail; correlate and least-squares fit each against the analytic Re(\u03bb), and check the measured oscillation frequency against the analytic \u03a9.",
+  "omega0": 1.5,
+  "oscillators": 4000,
+  "question": "On the oscillatory bimodal Kuramoto transition, which family recovers the complex incoherent-state eigenvalue Re(\u03bb) = K/4 \u2212 \u0394 in magnitude?",
+  "record": {
+    "coupling": [
+      0.6,
+      0.7127272727272728,
+      0.8254545454545454,
+      0.9381818181818182,
+      1.050909090909091,
+      1.1636363636363636,
+      1.2763636363636364,
+      1.3890909090909092,
+      1.501818181818182,
+      1.6145454545454547,
+      1.7272727272727275,
+      1.84
+    ],
+    "critical_coupling": 2.0,
+    "families": {
+      "autocorrelation": {
+        "correlation": {
+          "intercept": -2.316635855751523,
+          "mean_abs_gap": 5.201645450388532,
+          "n": 12,
+          "pearson": 0.917023562084312,
+          "slope": 15.794920998138519,
+          "spearman": 0.9580419580419581
+        },
+        "detector_value": [
+          -7.996483082259371,
+          -6.1670097250786,
+          -6.952933724567919,
+          -6.160252438766279,
+          -6.749358371661404,
+          -6.067524422119817,
+          -6.001766668619172,
+          -5.146518050488791,
+          -3.900950785922445,
+          -4.445192689331311,
+          -3.5034987454310396,
+          -1.6682567004162383
+        ]
+      },
+      "envelope_growth": {
+        "correlation": {
+          "intercept": -0.02280981555860448,
+          "mean_abs_gap": 0.01492195525528231,
+          "n": 12,
+          "pearson": 0.9858857746391866,
+          "slope": 0.9258525682479326,
+          "spearman": 0.9860139860139862
+        },
+        "detector_value": [
+          -0.3617329108701107,
+          -0.3266219530557002,
+          -0.2737635154677918,
+          -0.28702669506333095,
+          -0.23713948886038505,
+          -0.21794177391186678,
+          -0.1614898441600191,
+          -0.15411005533559502,
+          -0.15588690274789155,
+          -0.09656394949179913,
+          -0.09468436554931763,
+          -0.07325134188960787
+        ]
+      }
+    },
+    "frequency": {
+      "analytic": [
+        1.49248115565993,
+        1.489379481418158,
+        1.4857368709117966,
+        1.4815493342282147,
+        1.4768122359207652,
+        1.4715202685747981,
+        1.4656674219397583,
+        1.4592469471931617,
+        1.4522513158188293,
+        1.4446721724842675,
+        1.4365002811873164,
+        1.4277254638059798
+      ],
+      "mean_abs_error": 0.10585612214807189,
+      "measured": [
+        1.1780972450961724,
+        1.5707963267948966,
+        1.308996938995747,
+        1.8325957145940457,
+        1.5707963267948966,
+        1.4398966328953218,
+        1.5707963267948966,
+        1.4388973985907447,
+        1.4634748386287855,
+        1.4922565104551517,
+        1.413716694115407,
+        1.413716694115407
+      ],
+      "spearman": 0.06293706293706294
+    },
+    "n": 12,
+    "true_rate": [
+      -0.35,
+      -0.3218181818181818,
+      -0.29363636363636364,
+      -0.26545454545454544,
+      -0.23727272727272725,
+      -0.2090909090909091,
+      -0.1809090909090909,
+      -0.1527272727272727,
+      -0.12454545454545451,
+      -0.09636363636363632,
+      -0.06818181818181812,
+      -0.03999999999999998
+    ]
+  },
+  "sampling_dt": 0.1,
+  "step": 8,
+  "verdict": "On the oscillatory bimodal Kuramoto transition with the analytic complex eigenvalue Re(\u03bb) = K/4 \u2212 \u0394 as ground truth, both families track Re(\u03bb) in rank (Spearman \u03c1\u22650.96), but the envelope-growth family recovers Re(\u03bb) in magnitude: envelope-growth on the sub-population |Z\u208a| fits Re(\u03bb) with slope 0.93 (\u22481), while the autocorrelation family is confounded by the oscillation \u03a9 and fits with slope 15.79 \u2014 it ranks the eigenvalue but cannot size it. The analytic \u03a9 is nearly constant across the sweep, so the measured frequency is checked in value, not rank: it matches \u03a9 to mean |\u0394\u03a9|=0.11, confirming the mode oscillates at the predicted frequency (a complex eigenvalue); critical slowing down of the collective mode is confirmed against a first-principles reference.",
+  "window": 64
+}

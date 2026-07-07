@@ -12,7 +12,7 @@
     "research_experimental_modules": 201,
     "runtime_serving_modules": 145,
     "rust_kernel_files": 97,
-    "test_files": 816
+    "test_files": 818
   },
   "documentation": {
     "public_pages": [
@@ -2143,6 +2143,8 @@
       "tests/test_koopman_edmd_backends.py",
       "tests/test_koopman_edmd_validation.py",
       "tests/test_koopman_mpc.py",
+      "tests/test_kuramoto_bimodal_hopf_external_validation.py",
+      "tests/test_kuramoto_bimodal_hopf_external_validation_evidence.py",
       "tests/test_kuramoto_layer.py",
       "tests/test_kuramoto_synchronization_external_validation.py",
       "tests/test_kuramoto_synchronization_external_validation_evidence.py",
