@@ -114,32 +114,31 @@ They are separate surfaces, but they serve the same review-first control path.
   hardware-native compilation remain evidence-bound until the relevant artefacts
   are published.
 
-## Market Value Summary
+## Where the value actually is
 
-The market value is a unified language for synchrony risk. Instead of separate
-teams arguing through dashboards, notebooks, and controller logs, SPO gives them
-a common artefact chain: binding spec, phase state, coupling matrix, regime,
-proposal, replay log, and benchmark context.
+SPO's value is concrete and evidence-bound, not a slogan:
 
-That is most valuable in domains where drift, lock-in, cascade, or unsafe
-control can become expensive: energy, fusion, industrial operations, clinical
-research, robotics, aerospace, cloud platforms, and high-value digital twins.
+- **An honest evaluator anyone can point at a detector.** `spo audit-detector` (the
+  `evaluation` package) scores any early-warning detector's event-vs-null skill at a
+  matched false-alarm rate, with a permutation p-value and a hash-sealed record. A team
+  can check whether a detector — theirs or a vendor's — beats chance *before* trusting
+  it. Most published tipping-point indicators do not, and measuring that honestly is
+  uncommon.
+- **One externally-validated niche: grid modal damping.** SPO's growth-rate estimate
+  tracks ANDES small-signal eigenvalues (Spearman ρ up to 0.87) on independent systems
+  — a checkable physical quantity a grid team can act on, positioned as a complement to
+  ANDES, not a competitor to commercial mode meters.
+- **Evidence continuity.** One artefact chain — binding spec → phase state → coupling →
+  regime → bounded proposal → deterministic replay log — so a control decision is
+  reconstructible and reviewable end to end, across simulation and runtime.
+- **One representation across domains.** The same phase model applies to a grid, a
+  service mesh, or an EEG, because underneath they are coupled-oscillator systems, so a
+  team reuses one toolchain instead of rebuilding per domain.
 
-## Why this matters commercially
-
-The commercial distinction is not only performance speed. It is the reduction of
-decision ambiguity in synchrony control. Many teams already have partial
-telemetry, partial models, and partial evidence, then use separate tools to fill
-gaps under incident pressure.
-
-SPO compresses that pre-production path by making three assumptions explicit
-before any control proposal is considered:
-
-1. a bounded, auditable phase contract (`theta`, `omega`, `K`, `alpha`, `zeta`, `Psi`),
-2. a measurable coherence and coupling evidence trail (`R`, `PLV`, `PAC`, `TE`, `Lyapunov`, etc.),
-3. a replayable proposal path with limits and human review surfaces.
-
-That shifts the default from "ad-hoc tuning" to "evidence-backed iteration", which is usually the key commercial difference in safety-critical and regulated settings.
+Where drift, lock-in, cascade, or unsafe control is expensive — energy, fusion,
+industrial operations, clinical research, robotics, cloud platforms — that combination
+of a checkable niche, an honest evaluator, and a reviewable proposal path is the point.
+It shifts the default from ad-hoc tuning to evidence-backed iteration.
 
 ## How teams usually adopt this
 

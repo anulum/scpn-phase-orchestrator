@@ -255,6 +255,7 @@ nav:
       - "JOSS: Phase Dynamics Compiler": papers/JOSS_DRAFT.md
       - "Safety Certification Analysis": papers/SAFETY_CERT_DRAFT.md
   - Validation:
+      - "Early-Warning: Honest False-Alarm Evaluation": studies/early_warning_matched_false_alarm.md
       - "Real-Data Case Study: ISO-NE Forced Oscillation": validation/iso_ne_case1_forced_oscillation.md
       - "V&V Report": VALIDATION_REPORT.md
       - "Safety Analysis": SAFETY_ANALYSIS.md

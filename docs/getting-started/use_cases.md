@@ -39,18 +39,27 @@ bounded control proposals with deterministic replay evidence.
 
 ## Where It Creates Value
 
-| Market or domain | Operational problem | SPO value path | Buyer-facing value |
-|------------------|---------------------|----------------|--------------------|
-| Power and energy | Grid oscillations, weak damping, inverter coordination | detect harmful coherence, test coupling policies, produce audit-backed control proposals | fewer unreviewed tuning changes and clearer stability evidence for grid operators |
-| Fusion and plasma | MHD mode coupling, transport oscillations, control timing | map multi-rate observables into coupled phase channels and review stabilising proposals | one evidence layer between plasma diagnostics, control timing, and safety review |
-| Cloud and platform operations | Retry storms, queue cascades, service-heartbeat lock-in | detect synchronised failure modes and desynchronise overloaded layers | lower incident blast radius through earlier cascade evidence and replayable remediation proposals |
-| Manufacturing and machinery | Vibration, process drift, cyclic defects, SPC patterns | expose phase coupling between process variables and control loops | faster root-cause triage for cyclic defects and drift before scrap or downtime grows |
-| Cardiology and neuroscience | rhythm coherence, seizure precursors, band coupling | analyse phase locking, PAC/PLV/ITPC, and multi-scale synchrony without hidden actuation | reproducible research and clinical-review evidence without claiming autonomous treatment |
-| Robotics and swarms | gait coordination, leader-follower locking, swarm consensus | prototype phase policies before physical deployment | safer progression from simulation to robot trials with bounded control envelopes |
-| Traffic and logistics | signal timing, platoon waves, queue waves | simulate coordination policies and detect unstable synchronisation patterns | evidence for congestion-wave mitigation before changing live signal plans |
-| Finance and markets | regime coupling, sector synchrony, crash precursors | review cyclic coherence and coupling shifts as risk evidence, not trading advice | transparent market-regime diagnostics for analysts, not opaque prediction claims |
-| Digital twins | plant/twin drift and residual coherence | bind real telemetry to phase-state twins with replayable audit records | measurable plant/twin mismatch and reviewable predictive-maintenance hypotheses |
-| Research platforms | differentiable oscillator models and inverse coupling | optimise coupling matrices and infer topology from trajectory data | one package for theory, reproducible experiments, and accelerator-backed topology search |
+Read the **Evidence** column honestly: exactly one domain — the power grid — is
+externally validated (SPO's growth-rate estimate tracks ANDES small-signal
+eigenvalues, ρ up to 0.87). Every other row is a **reusable scaffold**: a working
+binding that parses, runs, and gives you a starting point, **not** a validated
+detector for that domain. Generic early-warning detection is at chance on real data
+outside the grid, and SPO reports that rather than overclaiming. Use the
+[`spo audit-detector`](../reference/api/evaluation.md) auditor to check any detector
+before you trust it.
+
+| Market or domain | Operational problem | SPO value path | Evidence |
+|------------------|---------------------|----------------|----------|
+| Power and energy | Grid oscillations, weak damping, inverter coordination | detect harmful coherence, test coupling policies, produce audit-backed control proposals | **Validated** — growth rate vs ANDES eigenvalues (ρ≤0.87) |
+| Fusion and plasma | MHD mode coupling, transport oscillations, control timing | map multi-rate observables into coupled phase channels and review stabilising proposals | Scaffold — not yet validated |
+| Cloud and platform operations | Retry storms, queue cascades, service-heartbeat lock-in | detect synchronised failure modes and desynchronise overloaded layers | Scaffold — not yet validated |
+| Manufacturing and machinery | Vibration, process drift, cyclic defects, SPC patterns | expose phase coupling between process variables and control loops | Scaffold — not yet validated |
+| Cardiology and neuroscience | rhythm coherence, seizure precursors, band coupling | analyse phase locking, PAC/PLV/ITPC, and multi-scale synchrony without hidden actuation | Scaffold — review-only, no clinical claim |
+| Robotics and swarms | gait coordination, leader-follower locking, swarm consensus | prototype phase policies before physical deployment | Scaffold — not yet validated |
+| Traffic and logistics | signal timing, platoon waves, queue waves | simulate coordination policies and detect unstable synchronisation patterns | Scaffold — not yet validated |
+| Finance and markets | regime coupling, sector synchrony, crash precursors | review cyclic coherence and coupling shifts as risk evidence, not trading advice | Scaffold — diagnostic, not prediction |
+| Digital twins | plant/twin drift and residual coherence | bind real telemetry to phase-state twins with replayable audit records | Scaffold — not yet validated |
+| Research platforms | differentiable oscillator models and inverse coupling | optimise coupling matrices and infer topology from trajectory data | Toolkit — numerically validated vs analytic solutions |
 
 ## How to Recognise a Good SPO Use Case
 

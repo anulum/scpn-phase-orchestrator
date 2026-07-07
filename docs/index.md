@@ -49,6 +49,35 @@ review-only control-proposal surface — bind signals, extract oscillator phases
 run coupled dynamics, measure coherence, classify regimes, and emit bounded
 review artefacts.
 
+## What is validated — and what is not
+
+SPO's most defensible asset is not a magic detector; it is **honesty under a
+controlled false-alarm rate**. Stated plainly:
+
+- **One externally-validated detection niche: grid modal damping.** On the IEEE-39
+  and Kundur systems, SPO's estimate of the dominant electromechanical mode's
+  growth rate tracks the small-signal eigenvalue computed by the ANDES simulator
+  (Spearman ρ up to 0.87) — a checkable physical quantity, not a proxy. See the
+  [early-warning study](studies/early_warning_matched_false_alarm.md).
+- **Generic early-warning detection is at chance on real data, and SPO reports
+  that.** Across five real modalities (grid, EEG, ecological/climate, molecular),
+  generic tipping-point indicators at an honest operating point perform at chance
+  under a permutation-controlled test. SPO does **not** claim to predict tipping
+  points in these domains; the grid is the one exception, where the signature is a
+  physically deterministic growing mode.
+- **A shipped tool to check any early-warning claim: the honest auditor.** The
+  [`scpn_phase_orchestrator.evaluation`](reference/api/evaluation.md) package and
+  the `spo audit-detector` CLI score *any* detector's event-vs-null skill at a
+  matched false-alarm rate, with a label-permutation p-value and a hash-sealed
+  record — the SCPN suite, an AR(1)/Kendall-τ baseline, or a black-box classifier,
+  on identical footing. Turning "most detectors are at chance" from an
+  embarrassment into a measurement is the point.
+
+Everything else — the 36 domain packs, the control-proposal surface, the assurance
+bundle — is a **reusable scaffold or a review-only artefact**, not a validated
+claim. That evidence discipline runs through the whole toolkit; the
+[fact-based overview](FACT_BASED_OVERVIEW.md) separates the validated from the not.
+
 ## What this project is for
 
 The software is intended for teams that must make control decisions from
@@ -162,11 +191,19 @@ binding_spec.yaml   3-channel          Kuramoto, Stuart-Landau,     Policy DSL  
 
 <div class="grid cards" markdown>
 
--   **36 Domainpacks**
+-   **Honest Early-Warning Auditor**
 
     ---
 
-    Plug-and-play domain bindings: plasma control, power grids, traffic flow, cardiac rhythm, neuroscience EEG, swarm robotics, queuewaves, brain connectome, sleep architecture, and 27 more.
+    Score *any* detector's event-vs-null skill at a matched false-alarm rate, with a label-permutation p-value and a hash-sealed record — the SCPN suite, an AR(1)/Kendall-τ baseline, or a black-box classifier, on identical footing. `spo audit-detector`.
+
+    [:octicons-arrow-right-24: Auditor](reference/api/evaluation.md)
+
+-   **36 Domainpacks (scaffolds)**
+
+    ---
+
+    Plug-and-play domain bindings: plasma control, power grids, traffic flow, cardiac rhythm, neuroscience EEG, swarm robotics, queuewaves, brain connectome, sleep architecture, and 27 more — reusable scaffolds, with the power grid the one externally-validated niche.
 
     [:octicons-arrow-right-24: Gallery](galleries/domainpack_gallery.md)
 

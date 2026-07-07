@@ -4,6 +4,15 @@ Each domainpack ships a `binding_spec.yaml` that maps a real-world problem onto
 SCPN Kuramoto oscillators. The notebooks below demonstrate baseline vs orchestrated
 simulations.
 
+!!! note "What a domainpack is — and is not"
+    A domainpack is a **reusable scaffold**: a working binding that parses, runs end
+    to end, and gives you a starting point for that domain. It is **not** a validated
+    detector for that domain. Exactly one domain — **power grid** — is externally
+    validated (growth rate vs ANDES eigenvalues, ρ≤0.87); the rest are templates that
+    demonstrate SPO is domain-agnostic. Before trusting any detector on real data, run
+    it through the [`spo audit-detector`](../reference/api/evaluation.md) auditor —
+    generic early-warning detection is at chance outside the grid, and SPO reports that.
+
 This page is searchable — use the search box (top of the docs) to filter by
 domain, feature, or pack name. Packs marked **⭐ try first** below are the
 recommended starting points.
