@@ -1,9 +1,8 @@
 # Toward Safety Certification of Kuramoto-Based Control Systems
 
-**Status: First-of-its-kind analysis. No published safety certification
-exists for oscillator-based control systems. This paper identifies what
-has been verified, what has not, and what would be required for
-certification under IEC 62443 and IEC 61508.**
+**Status: No published safety certification exists for oscillator-based control
+systems. This paper identifies what has been verified, what has not, and what
+would be required for certification under IEC 62443 and IEC 61508.**
 
 Miroslav Šotek (ORCID: 0009-0009-3560-0851)
 Anulum Research

@@ -8,7 +8,7 @@
 
 """Integrity tests for the committed grid modal-vs-generic head-to-head evidence.
 
-`examples/real_data/psml_modal_growth/` is the flagship deliverable: on the real PSML
+`examples/real_data/psml_modal_growth/` is the primary deliverable: on the real PSML
 23-bus corpus, the domain-specific modal envelope-growth detector (focal aggregation,
 recency-weighted growth rate) against the whole generic SCPN early-warning suite, on the
 identical non-circular disturbance-type split at a matched false alarm. These tests

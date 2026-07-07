@@ -1178,9 +1178,8 @@ Domainpack hierarchy proofs:
 ## Active Inference Agent
 
 The `ActiveInferenceAgent` provides a **predictive control framework** based on
-Karl Friston's Variational Free Energy Principle. It represents the next-generation
-of SPO controllers, moving beyond static YAML rules into self-adaptive state-space
-models.
+Karl Friston's Variational Free Energy Principle. It moves beyond static YAML
+rules into self-adaptive state-space models.
 
 ### Mathematical Model
 

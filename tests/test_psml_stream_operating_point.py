@@ -71,7 +71,7 @@ def test_naive_streaming_is_useless(payload: dict[str, Any]) -> None:
 
 def test_streaming_skill_is_below_per_window_and_gated(payload: dict[str, Any]) -> None:
     # the honest streaming operating point (fit-quality gate) leads far fewer than the
-    # offline per-window flagship, but holds the target false alarm
+    # offline per-window detector, but holds the target false alarm
     assert "r2gate" in payload["verdict"]
     assert "24%" in payload["verdict"]
     assert "40%" in payload["verdict"]

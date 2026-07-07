@@ -15,8 +15,8 @@ end to end, and the first two run in a single command:
 
 | Pack | Why start here | One command |
 |------|----------------|-------------|
-| **power_grid** ⭐ | The grid-forming (dVOC) flagship — detect, flag, and damp a poorly-damped oscillation mode with auditable before/after evidence. | `spo quickstart power` |
-| **neuroscience_eeg** ⭐ | The neuroscience flagship — six EEG bands, coherence control across the spectrum. | `spo quickstart eeg` |
+| **power_grid** ⭐ | The grid-forming (dVOC) reference pack — detect, flag, and damp a poorly-damped oscillation mode with auditable before/after evidence. | `spo quickstart power` |
+| **neuroscience_eeg** ⭐ | The neuroscience reference pack — six EEG bands, coherence control across the spectrum. | `spo quickstart eeg` |
 | **minimal_domain** ⭐ | The simplest possible binding spec — four oscillators — to learn the schema before scaling up. | `spo run domainpacks/minimal_domain/binding_spec.yaml` |
 
 The full catalogue follows, organised by domain.

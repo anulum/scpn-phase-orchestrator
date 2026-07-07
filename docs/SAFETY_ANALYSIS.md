@@ -3,8 +3,7 @@
 SPDX-License-Identifier: AGPL-3.0-or-later
 Commercial license available
 
-First-of-its-kind safety analysis for Kuramoto-based oscillator control
-in industrial settings.
+Safety analysis for Kuramoto-based oscillator control in industrial settings.
 
 ---
 

@@ -15,8 +15,8 @@ Companion documents:
   outputs, processing model, backend wiring, and honest scope boundaries.
 
 Scope of this document set: **architecture only** (structure, data flow,
-contracts). A state-of-the-art assessment of each component is maintained
-separately and internally.
+contracts). A maturity assessment of each component is maintained separately and
+internally.
 
 ---
 

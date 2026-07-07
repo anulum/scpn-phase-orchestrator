@@ -167,7 +167,7 @@ Every domainpack README must include these sections:
 6. **Imprint** — physical basis or "None" with justification
 7. **Scenario** — step count and scenario timeline
 
-See `domainpacks/cardiac_rhythm/README.md` as the gold standard.
+See `domainpacks/cardiac_rhythm/README.md` as a complete reference example.
 
 ## 12. Validate and Run
 

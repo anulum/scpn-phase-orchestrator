@@ -8,7 +8,7 @@
 
 """Head-to-head: the domain-specific grid modal-growth detector vs the generic suite.
 
-This is the flagship comparison. The programme's four-domain result put every generic
+This is the primary comparison. The programme's four-domain result put every generic
 early-warning member (critical slowing down, synchronisation, ordinal entropy, their
 fusion) at chance at a matched false-alarm rate. The domain-specific modal envelope-
 growth detector (:mod:`bench.grid_oscillation_detector`), at its validated operating
