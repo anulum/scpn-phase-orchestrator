@@ -63,6 +63,31 @@ The lag-1 autocorrelation detector — a real critical-slowing signal — beats 
 decisively; the window-mean control lands at chance. Both verdicts are read from
 scores alone, so a competitor's classifier would be judged on identical footing.
 
+## A head-to-head between two real detectors
+
+`bench/auditor_detector_head_to_head.py` goes further: it audits the *real* SCPN
+modal envelope-growth detector
+([`modal_growth_score`](monitor_grid_modal_growth.md)) against a published
+competitor — the Dakos et al. 2008 AR(1)/Kendall-τ rising-autocorrelation trend —
+on two synthetic-but-honest regimes (a growing oscillatory mode, and a monotone
+rising-autocorrelation slowdown). With clearly skilful detectors the permutation
+p-value saturates (both beat chance), so the auditor's **detection rate at the
+matched false alarm** is the discriminator, and it is regime-dependent:
+
+```console
+$ python -m bench.auditor_detector_head_to_head
+oscillatory  scpn-modal-growth    achieved_fa=0.100 detect=1.000 p=9.999e-05 beats_chance=True
+oscillatory  ar1-kendall-tau      achieved_fa=0.100 detect=0.775 p=9.999e-05 beats_chance=True
+monotone     scpn-modal-growth    achieved_fa=0.100 detect=0.550 p=9.999e-05 beats_chance=True
+monotone     ar1-kendall-tau      achieved_fa=0.100 detect=0.775 p=9.999e-05 beats_chance=True
+```
+
+The envelope-growth detector leads on the oscillatory regime, the AR(1) competitor
+leads on the monotone one — the eigenvalue-regime-map finding, adjudicated without
+bias by one matched-false-alarm + permutation test. Real field data would replace
+the synthetic corpora without changing the auditor. This is the integration proof:
+the productised auditor plugs into actual detector code, not just toy scorers.
+
 ## Sealing an audit
 
 `seal_detector_audit` binds a verdict to its corpus provenance — an identifier and
