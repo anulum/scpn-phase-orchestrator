@@ -96,13 +96,27 @@ class AuditRecord:
         }
 
     def to_record(self) -> dict[str, object]:
-        """Return the canonical payload plus the computed ``content_hash``."""
+        """Return the canonical payload plus the computed ``content_hash``.
+
+        Returns
+        -------
+        dict[str, object]
+            The corpus provenance, the audit verdict, the framework and
+            disclaimer, and the ``content_hash`` sealed over them.
+        """
         record = self._canonical_payload()
         record["content_hash"] = self.content_hash
         return record
 
     def verify(self) -> bool:
-        """Return whether the stored hash still matches the recorded fields."""
+        """Return whether the stored hash still matches the recorded fields.
+
+        Returns
+        -------
+        bool
+            ``True`` when recomputing the content hash from the current fields
+            reproduces the stored ``content_hash``; ``False`` after any tampering.
+        """
         return self.content_hash == canonical_record_hash(self._canonical_payload())
 
 

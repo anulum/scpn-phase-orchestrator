@@ -190,7 +190,14 @@ class PermutationSignificance:
     seed: int
 
     def to_record(self) -> dict[str, object]:
-        """Return a JSON-safe mapping of the significance test."""
+        """Return a JSON-safe mapping of the significance test.
+
+        Returns
+        -------
+        dict[str, object]
+            The observed and expected alarm counts, the pooled alarm rate, the
+            permutation p-value, and the resampling parameters.
+        """
         return {
             "observed_alarms": self.observed_alarms,
             "n_events": self.n_events,

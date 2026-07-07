@@ -11,9 +11,11 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import click
 import numpy as np
 from click.testing import CliRunner
 
+import scpn_phase_orchestrator.runtime.cli.evaluation as cli_evaluation
 from scpn_phase_orchestrator.runtime.cli import main
 
 
@@ -29,6 +31,14 @@ def _skilful_spec() -> dict[str, object]:
         "event_scores": rng.normal(2.0, 1.0, 50).tolist(),
         "null_scores": rng.normal(0.0, 1.0, 300).tolist(),
     }
+
+
+class TestCommandRegistration:
+    def test_command_is_a_registered_click_command(self):
+        command = cli_evaluation.audit_detector_command
+        assert isinstance(command, click.Command)
+        assert command.name == "audit-detector"
+        assert "audit-detector" in main.commands
 
 
 class TestAuditDetectorCommand:

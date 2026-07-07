@@ -115,6 +115,13 @@ class DetectorAudit:
         The ``matched_threshold`` is emitted as the string ``"-inf"`` when the
         gate is fully open, so the record stays strict JSON (a hash of it rejects
         non-finite numbers).
+
+        Returns
+        -------
+        dict[str, object]
+            The detector label, target and achieved false alarm, matched
+            threshold, detection counts, nested permutation significance, and the
+            ``beats_chance`` decision.
         """
         threshold: object = self.matched_threshold
         if self.matched_threshold == float("-inf"):
