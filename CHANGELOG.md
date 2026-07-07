@@ -7,8 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-07-07
+
 ### Added
 
+- `scpn_phase_orchestrator.evaluation` is the detector-agnostic **honest
+  early-warning auditor**, the productised form of the matched-false-alarm
+  methodology. `audit_detector(event_scores, null_scores, …)` scores any detector's
+  event-vs-null skill at a matched false-alarm rate with a label-permutation p-value
+  and returns a `DetectorAudit`; `seal_detector_audit` binds a verdict to its corpus
+  provenance under a SHA-256 canonical-JSON hash (`AuditRecord`); the skill
+  primitives (`calibrate_score_threshold`, `matched_false_alarm_rate`,
+  `permutation_significance_from_alarms`, `surrogate_rank_pvalue`) are public for
+  callers composing their own harness. It audits the SCPN suite, an AR(1)/Kendall-τ
+  baseline, or a black-box classifier on identical footing, from per-segment scores
+  alone. Pinned by `tests/test_evaluation_skill.py`,
+  `tests/test_evaluation_auditor.py`, and `tests/test_evaluation_record.py`.
+- `spo audit-detector` audits a detector from a JSON scores file without writing
+  Python — matched-false-alarm threshold, permutation p-value, and, given a corpus
+  id and capture timestamp, a hash-sealed record. Strict score parsing (a missing
+  key, empty list, or non-numeric/non-finite entry is an error, never a silently
+  dropped score). Pinned by `tests/test_cli_evaluation.py`.
+- `bench/auditor_detector_head_to_head.py` audits the real SCPN modal
+  envelope-growth detector against the AR(1)/Kendall-τ competitor through the public
+  auditor, on two synthetic-but-honest regimes (oscillatory instability, monotone
+  rising autocorrelation). The auditor objectively surfaces regime-dependent skill —
+  envelope growth leads the oscillatory regime, AR(1)/Kendall-τ the monotone one —
+  the eigenvalue-regime-map finding adjudicated by one matched-false-alarm +
+  permutation test. `bench/honest_auditor_worked_example.py` is the toy-scorer
+  counterpart. Pinned by `tests/test_auditor_detector_head_to_head.py`.
 - `scpn_phase_orchestrator.monitor.critical_slowing_down` implements the classical
   critical-slowing-down early-warning indicator (rising variance and lag-one
   autocorrelation, robust-z alarm) as a passive monitor — the literature baseline
@@ -159,6 +186,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Renamed the SSGF `tcbo` observable to `topological_integration`
+  (`TopologicalIntegrationObserver`, `is_conscious` → `is_integrated`) across code,
+  tests, and docs. The H1 persistent-homology maths is unchanged; the consciousness
+  framing is dropped and honest disclaimers kept.
+- `bench/early_warning_domain` re-exports `calibrate_score_threshold` from the new
+  `scpn_phase_orchestrator.evaluation` package rather than defining its own copy
+  (no behaviour change; the calibrator is now the single installable source).
+- Documentation aligned with the shipped auditor and recalibrated for honest
+  positioning: the docs homepage now surfaces the validated grid niche, the
+  at-chance-on-real-data stance, and the auditor; the applications tables mark which
+  domain is externally validated versus a scaffold; self-congratulatory superlatives
+  were removed from public docs, tests, and code comments; stale references
+  (`tcbo`, capability counts) were refreshed.
 - `bench/early_warning_domain.calibrate_threshold` now sets each detector's
   matched-false-alarm threshold **continuously** — the quantile of the null
   trajectories' alarm scores (:func:`_null_alarm_score`), the highest threshold at
