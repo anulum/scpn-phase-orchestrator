@@ -95,9 +95,11 @@ configuration.
   (production, 53 engine modules, 2-96x speedup), and JAX (GPU batches).
 - **36 domainpacks** covering physical, biological, engineering, and
   financial systems.
-- **TCBO (Topological Consciousness Boundary Observable).** H1 persistent
-  homology of delay-embedded phase signals, gating a consciousness
-  criterion at p_h1 > 0.72 in the metastable R~0.4-0.8 regime.
+- **Topological integration index (`p_h1`).** H1 persistent homology of
+  delay-embedded phase signals yields a scalar loop-persistence measure; a gate
+  at p_h1 > 0.72 flags topologically non-trivial integration in the metastable
+  R~0.4-0.8 regime. This is a dynamical-structure measure, not a claim about
+  consciousness or phenomenology.
 - **PGBO (Phase-Geometry Bidirectional Observer).** Monitors alignment
   between phase coherence and SSGF geometry, detecting when the coupling
   topology supports or fights the current synchronization pattern.
@@ -118,7 +120,7 @@ connectome, K=2.0, 30s simulation):
 
 - Regime FSM detected 19 transitions across 3000 analysis windows
 - Kuramoto R = 0.41 +/- 0.07 (metastable regime)
-- TCBO p_h1 = 0.998 (consciousness boundary consistently open)
+- p_h1 = 0.998 (topological integration index high; persistent H1 loop present)
 - NPE mean = 0.80 (high phase entropy, consistent with metastability)
 - Scaling: 47 ms/step at N=1000 oscillators (Python backend)
 - JAX autodiff gradients: correlation 1.0000 vs finite differences
