@@ -255,15 +255,15 @@ inside a dashboard or notebook; it turns them into inspectable artefacts.
 |---|---:|
 | Package version | 0.11.0 |
 | Public API exports | 24 |
-| Python package modules | 701 |
+| Python package modules | 702 |
 | Core Engine modules | 321 |
-| Runtime/Serving modules | 145 |
+| Runtime/Serving modules | 146 |
 | Integration modules | 27 |
 | Research/Experimental modules | 201 |
 | Domainpack files | 36 |
 | Rust kernel files | 97 |
 | Optional extras | 22 |
-| Python test files | 822 |
+| Python test files | 823 |
 | Public documentation pages | 215 |
 | GitHub Actions workflows | 12 |
 

@@ -23,6 +23,7 @@ from scpn_phase_orchestrator.runtime.cli import audit as audit
 from scpn_phase_orchestrator.runtime.cli import binding as binding
 from scpn_phase_orchestrator.runtime.cli import diagnostics as diagnostics
 from scpn_phase_orchestrator.runtime.cli import digital_twin as digital_twin
+from scpn_phase_orchestrator.runtime.cli import evaluation as evaluation
 from scpn_phase_orchestrator.runtime.cli import (
     evolutionary_grammar as evolutionary_grammar,
 )

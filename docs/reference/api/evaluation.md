@@ -74,6 +74,27 @@ the string `"-inf"` so the record stays strict JSON. The sealed record carries a
 explicit disclaimer: an audit measures skill on *the supplied corpus only* and is
 not a certification of field performance.
 
+## Auditing from the command line
+
+`spo audit-detector` runs the same audit without writing Python, so a detector's
+skill can be checked from a scores file. The file is a JSON object with
+`event_scores` and `null_scores` arrays of per-segment scores (higher means more
+evidence of a transition) and an optional `detector_name`:
+
+```bash
+spo audit-detector scores.json \
+  --target-false-alarm 0.10 \
+  --corpus-id grid-2026 \
+  --captured-at 2026-07-07T15:00:00+02:00
+```
+
+Without `--corpus-id`/`--captured-at` the command prints the bare verdict; supply
+both (they must be given together) to seal it into a hash-addressed record.
+`--output` also writes the JSON to a file. Score entries must be finite numbers —
+a missing key, an empty list, or a non-numeric or non-finite entry is an error,
+never a silently dropped score. The command reads a local file and prints JSON; it
+never actuates, signs, or reaches the network.
+
 ## Skill primitives
 
 For callers composing their own harness, the detector-agnostic primitives are

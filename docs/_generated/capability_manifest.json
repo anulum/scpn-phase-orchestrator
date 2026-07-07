@@ -8,11 +8,11 @@
     "optional_extras": 22,
     "public_api_exports": 24,
     "public_documentation_pages": 215,
-    "python_package_modules": 701,
+    "python_package_modules": 702,
     "research_experimental_modules": 201,
-    "runtime_serving_modules": 145,
+    "runtime_serving_modules": 146,
     "rust_kernel_files": 97,
-    "test_files": 822
+    "test_files": 823
   },
   "documentation": {
     "public_pages": [
@@ -979,6 +979,7 @@
       "src/scpn_phase_orchestrator/runtime/cli/binding.py",
       "src/scpn_phase_orchestrator/runtime/cli/diagnostics.py",
       "src/scpn_phase_orchestrator/runtime/cli/digital_twin.py",
+      "src/scpn_phase_orchestrator/runtime/cli/evaluation.py",
       "src/scpn_phase_orchestrator/runtime/cli/evolutionary_grammar.py",
       "src/scpn_phase_orchestrator/runtime/cli/federated_dp_noise_service.py",
       "src/scpn_phase_orchestrator/runtime/cli/federated_secure_aggregation.py",
@@ -1544,6 +1545,7 @@
     "src/scpn_phase_orchestrator/runtime/cli/binding.py",
     "src/scpn_phase_orchestrator/runtime/cli/diagnostics.py",
     "src/scpn_phase_orchestrator/runtime/cli/digital_twin.py",
+    "src/scpn_phase_orchestrator/runtime/cli/evaluation.py",
     "src/scpn_phase_orchestrator/runtime/cli/evolutionary_grammar.py",
     "src/scpn_phase_orchestrator/runtime/cli/federated_dp_noise_service.py",
     "src/scpn_phase_orchestrator/runtime/cli/federated_secure_aggregation.py",
@@ -1901,6 +1903,7 @@
       "tests/test_cli_auto_coupling.py",
       "tests/test_cli_binding_auto_branches.py",
       "tests/test_cli_digital_twin_contracts.py",
+      "tests/test_cli_evaluation.py",
       "tests/test_cli_evolutionary_grammar.py",
       "tests/test_cli_federated_dp_noise_service.py",
       "tests/test_cli_federated_secure_aggregation.py",
