@@ -945,6 +945,12 @@ mutating runtime state or enabling actuation.
 
 ::: scpn_phase_orchestrator.supervisor.formal_export.smt_export
 
+`export_petri_net_to_prism` renders a guard-gated Petri net as a finite PRISM
+MDP model, preserving the runtime engine's first-enabled transition priority and
+exposing guard metrics as PRISM constants for scenario binding.
+
+::: scpn_phase_orchestrator.supervisor.formal
+
 ---
 
 ## Rust Supervisor Backend Probe

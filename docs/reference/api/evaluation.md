@@ -133,3 +133,12 @@ counterpart against a surrogate ensemble).
 ::: scpn_phase_orchestrator.evaluation.skill
 
 ::: scpn_phase_orchestrator.evaluation.record
+
+## Cross-domain meta-analysis
+
+`detector_meta_analysis` reads the committed detector-evidence aggregates under
+`examples/real_data/*/`, normalises each detector's performance into a common
+table, ranks detectors per domain and overall, and renders a Markdown ranking
+report with a refinement backlog.
+
+::: scpn_phase_orchestrator.evaluation.detector_meta_analysis
