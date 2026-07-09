@@ -251,9 +251,7 @@ def test_detector_trajectories_include_multiscale_when_requested() -> None:
 
 
 def test_calibrate_and_evaluate_multiscale() -> None:
-    nulls = [
-        _incoherent_observables(n_samples=320, seed=i) for i in range(8)
-    ]
+    nulls = [_incoherent_observables(n_samples=320, seed=i) for i in range(8)]
     transition = _transition_observables(seed=9)
     calibration = calibrate_detectors(
         nulls, target_fa=0.1, window=64, step=8, multiscale=True

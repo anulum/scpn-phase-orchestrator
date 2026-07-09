@@ -107,9 +107,7 @@ PSML_ZIP_SIZE = 5_179_159_297  # bytes, as reported by Zenodo on 2026-07-09
 
 CHBMIT_BASE = "https://physionet.org/files/chbmit/1.0.0"
 AFDB_BASE = "https://physionet.org/files/afdb/1.0.0"
-DAKOS_RAW_BASE = (
-    "https://raw.githubusercontent.com/earlywarningtoolbox/datasets/master"
-)
+DAKOS_RAW_BASE = "https://raw.githubusercontent.com/earlywarningtoolbox/datasets/master"
 
 
 # --------------------------------------------------------------------------- #
@@ -236,9 +234,13 @@ def download_file(
                     fh.write(chunk)
                     current += len(chunk)
                     chunks_since_print += 1
-                    if not quiet and total and (
-                        current - last_print >= print_threshold
-                        or chunks_since_print >= 50
+                    if (
+                        not quiet
+                        and total
+                        and (
+                            current - last_print >= print_threshold
+                            or chunks_since_print >= 50
+                        )
                     ):
                         print(
                             f"\r    {_progress_bar(current, total)}",
@@ -263,8 +265,7 @@ def download_file(
     actual_size = dest.stat().st_size
     if expected_size and actual_size != expected_size:
         print(
-            f"  ! size mismatch for {dest}: "
-            f"expected {expected_size}, got {actual_size}"
+            f"  ! size mismatch for {dest}: expected {expected_size}, got {actual_size}"
         )
 
     if expected_sha256 and not _sha256_matches(dest, expected_sha256):
@@ -437,9 +438,9 @@ def verify_corpus(data_root: Path) -> dict[str, dict[str, object]]:
         "zip_present": psml_zip.exists(),
         "zip_size_bytes": psml_zip.stat().st_size if psml_zip.exists() else 0,
         "extracted": (psml_dir / ".extracted").exists(),
-        "scenario_count": len(
-            list((psml_dir).rglob("trans.csv"))
-        ) if psml_dir.exists() else 0,
+        "scenario_count": len(list((psml_dir).rglob("trans.csv")))
+        if psml_dir.exists()
+        else 0,
     }
 
     chbmit_dir = data_root / "chb01_seizures"
