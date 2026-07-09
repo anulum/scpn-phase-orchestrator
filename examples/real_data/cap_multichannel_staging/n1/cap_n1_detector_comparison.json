@@ -1,0 +1,70 @@
+{
+  "benchmark": "cap_multichannel_n3_vs_wake",
+  "corpus": "PhysioNet CAP Sleep Database",
+  "subject_recording": "n1",
+  "annotation_file": "n1.txt",
+  "channels": [
+    "F1-F3",
+    "F3-C3",
+    "C3-P3",
+    "P3-O1",
+    "F2-F4",
+    "F4-C4",
+    "C4-P4",
+    "P4-O2"
+  ],
+  "sampling_rate_hz": 100.0,
+  "epoch_seconds": 30.0,
+  "delta_band_hz": [
+    0.5,
+    4.0
+  ],
+  "n_epochs": 1154,
+  "n_n3": 321,
+  "n_wake": 39,
+  "target_false_alarm": 0.1,
+  "detectors": {
+    "normalized_delta_envelope": {
+      "detector_name": "normalized_delta_envelope",
+      "n_events": 321,
+      "n_nulls": 39,
+      "score_mean_events": 0.762208,
+      "score_mean_nulls": 0.701798,
+      "target_false_alarm": 0.1,
+      "matched_threshold": 0.7791120000000001,
+      "achieved_false_alarm": 0.07692307692307693,
+      "detection_rate": 0.38006230529595014,
+      "n_events_alarmed": 122,
+      "p_value": 9.999000099990002e-05,
+      "beats_chance": true,
+      "permutation_seed": 42,
+      "n_permutations": 10000,
+      "corpus_id": "cap-n1-multichannel-n3-vs-wake",
+      "captured_at": "2026-07-08T22:00:00Z",
+      "audit_content_hash": "ce4ecc10453673da472bcdc8ff508d40dcd371f8cfc03e8146764a4c58d0931a"
+    },
+    "multi_channel_delta_kuramoto": {
+      "detector_name": "multi_channel_delta_kuramoto",
+      "n_events": 321,
+      "n_nulls": 39,
+      "score_mean_events": 0.628552,
+      "score_mean_nulls": 0.604416,
+      "target_false_alarm": 0.1,
+      "matched_threshold": 0.6607930000000001,
+      "achieved_false_alarm": 0.07692307692307693,
+      "detection_rate": 0.23052959501557632,
+      "n_events_alarmed": 74,
+      "p_value": 0.0170982901709829,
+      "beats_chance": true,
+      "permutation_seed": 42,
+      "n_permutations": 10000,
+      "corpus_id": "cap-n1-multichannel-n3-vs-wake",
+      "captured_at": "2026-07-08T22:00:00Z",
+      "audit_content_hash": "52db1dcb9c5f46523deefaf47a11c0a4f848c6d22fed7a245c848171e6634352"
+    }
+  },
+  "source_files": {
+    "edf_sha256": "25d4e62a7a90d8245c71c7f168e34756238bb6ac7b1d43dcc75818d0331d43f4",
+    "txt_sha256": "913ffd33166376f7eb46c946377e5b4017ad38809b28757763cb5bfd71004143"
+  }
+}

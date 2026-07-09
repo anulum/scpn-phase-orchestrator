@@ -1,0 +1,35 @@
+{
+  "benchmark": "sleep_staging_sleepedf",
+  "corpus": "PhysioNet Sleep-EDF Expanded",
+  "subject_recording": "SC4001E0-PSG",
+  "hypnogram": "SC4001EC-Hypnogram",
+  "channel": "EEG Fpz-Cz",
+  "sampling_rate_hz": 100.0,
+  "epoch_seconds": 30.0,
+  "delta_band_hz": [
+    0.5,
+    4.0
+  ],
+  "n_epochs": 2650,
+  "n_n3": 220,
+  "n_wake": 1997,
+  "score_mean_n3": 0.837146,
+  "score_mean_wake": 0.654445,
+  "target_false_alarm": 0.1,
+  "detector_name": "normalized_delta_envelope",
+  "matched_threshold": 0.7534150000000001,
+  "achieved_false_alarm": 0.09964947421131698,
+  "detection_rate": 0.9590909090909091,
+  "n_events_alarmed": 211,
+  "p_value": 9.999000099990002e-05,
+  "beats_chance": true,
+  "permutation_seed": 42,
+  "n_permutations": 10000,
+  "corpus_id": "sleepedf-n3-vs-wake-sc4001e0-psg",
+  "captured_at": "2026-07-08T21:00:00Z",
+  "audit_content_hash": "836b9deda96455b31734c319cb3f30e87fb1ec005fe4a397a555619b57e690d0",
+  "source_files": {
+    "psg_sha256": "2b40a18adf76af69a42d6db1f30f31d26b369f6d27ca0050ef30147ef892b131",
+    "hypnogram_sha256": "a4cf67694ade1b52a0ddd06d5817fd45d2d3e8bac5302f640f3e9cfbbf12a996"
+  }
+}

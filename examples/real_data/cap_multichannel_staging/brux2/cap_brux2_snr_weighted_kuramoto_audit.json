@@ -1,0 +1,28 @@
+{
+  "corpus_id": "cap-brux2-multichannel-n3-vs-wake",
+  "captured_at": "2026-07-08T22:00:00Z",
+  "audit": {
+    "detector_name": "snr_weighted_delta_kuramoto",
+    "target_false_alarm": 0.1,
+    "matched_threshold": 0.7398660000000001,
+    "achieved_false_alarm": 0.09448818897637795,
+    "n_events": 289,
+    "n_events_alarmed": 13,
+    "detection_rate": 0.04498269896193772,
+    "n_nulls": 127,
+    "significance": {
+      "observed_alarms": 13,
+      "n_events": 289,
+      "pooled_alarm_rate": 0.06009615384615385,
+      "expected_alarms": 17.367788461538463,
+      "p_value": 0.9841015898410159,
+      "n_permutations": 10000,
+      "seed": 42
+    },
+    "alpha": 0.05,
+    "beats_chance": false
+  },
+  "framework": "Matched-false-alarm calibration with a label-permutation significance test (exchangeability null), after Boettiger & Hastings 2012, J. R. Soc. Interface 9:2527.",
+  "disclaimer": "This audit record measures a detector's event-vs-null skill on the supplied corpus only: the matched-false-alarm threshold, the rate it achieved, the event detection rate, and the permutation p-value of the event alarm count. It is not a certification of field performance and does not transfer to any other corpus, detector configuration, or deployment; a low p-value means the events alarmed more than the matched false alarm on this corpus, nothing more.",
+  "content_hash": "8d396df69c914a5138e47c9e50f6810b5766098ada5dc5cffa82e7d423002d5b"
+}

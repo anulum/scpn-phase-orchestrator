@@ -1,0 +1,348 @@
+{
+  "benchmark": "cap_multichannel_n3_vs_wake",
+  "corpus": "PhysioNet CAP Sleep Database",
+  "target_false_alarm": 0.1,
+  "n_recordings": 4,
+  "recording_ids": [
+    "n1",
+    "n2",
+    "brux2",
+    "narco2"
+  ],
+  "per_recording": [
+    {
+      "recording_id": "n1",
+      "channels": [
+        "F1-F3",
+        "F3-C3",
+        "C3-P3",
+        "P3-O1",
+        "F2-F4",
+        "F4-C4",
+        "C4-P4",
+        "P4-O2"
+      ],
+      "sampling_rate_hz": 100.0,
+      "n_epochs": 1154,
+      "n_n3": 321,
+      "n_wake": 39,
+      "source_files": {
+        "edf_sha256": "25d4e62a7a90d8245c71c7f168e34756238bb6ac7b1d43dcc75818d0331d43f4",
+        "txt_sha256": "913ffd33166376f7eb46c946377e5b4017ad38809b28757763cb5bfd71004143"
+      },
+      "detectors": {
+        "normalized_delta_envelope": {
+          "detector_name": "normalized_delta_envelope",
+          "n_events": 321,
+          "n_nulls": 39,
+          "score_mean_events": 0.762208,
+          "score_mean_nulls": 0.701798,
+          "target_false_alarm": 0.1,
+          "matched_threshold": 0.7791120000000001,
+          "achieved_false_alarm": 0.07692307692307693,
+          "detection_rate": 0.38006230529595014,
+          "n_events_alarmed": 122,
+          "p_value": 9.999000099990002e-05,
+          "beats_chance": true,
+          "permutation_seed": 42,
+          "n_permutations": 10000,
+          "corpus_id": "cap-n1-multichannel-n3-vs-wake",
+          "captured_at": "2026-07-08T22:00:00Z",
+          "audit_content_hash": "ce4ecc10453673da472bcdc8ff508d40dcd371f8cfc03e8146764a4c58d0931a"
+        },
+        "multi_channel_delta_kuramoto": {
+          "detector_name": "multi_channel_delta_kuramoto",
+          "n_events": 321,
+          "n_nulls": 39,
+          "score_mean_events": 0.628552,
+          "score_mean_nulls": 0.604416,
+          "target_false_alarm": 0.1,
+          "matched_threshold": 0.6607930000000001,
+          "achieved_false_alarm": 0.07692307692307693,
+          "detection_rate": 0.23052959501557632,
+          "n_events_alarmed": 74,
+          "p_value": 0.0170982901709829,
+          "beats_chance": true,
+          "permutation_seed": 42,
+          "n_permutations": 10000,
+          "corpus_id": "cap-n1-multichannel-n3-vs-wake",
+          "captured_at": "2026-07-08T22:00:00Z",
+          "audit_content_hash": "52db1dcb9c5f46523deefaf47a11c0a4f848c6d22fed7a245c848171e6634352"
+        },
+        "snr_weighted_delta_kuramoto": {
+          "detector_name": "snr_weighted_delta_kuramoto",
+          "n_events": 321,
+          "n_nulls": 39,
+          "score_mean_events": 0.628688,
+          "score_mean_nulls": 0.604584,
+          "target_false_alarm": 0.1,
+          "matched_threshold": 0.6642920000000001,
+          "achieved_false_alarm": 0.07692307692307693,
+          "detection_rate": 0.21806853582554517,
+          "n_events_alarmed": 70,
+          "p_value": 0.024997500249975,
+          "beats_chance": true,
+          "permutation_seed": 42,
+          "n_permutations": 10000,
+          "corpus_id": "cap-n1-multichannel-n3-vs-wake",
+          "captured_at": "2026-07-08T22:00:00Z",
+          "audit_content_hash": "c5da64619849a85cb68435769efa80757918e46d1527fe8bdf4bd4eb9948deab"
+        }
+      }
+    },
+    {
+      "recording_id": "n2",
+      "channels": [
+        "F4-C4",
+        "C4-P4",
+        "P4-O2"
+      ],
+      "sampling_rate_hz": 100.0,
+      "n_epochs": 1470,
+      "n_n3": 197,
+      "n_wake": 143,
+      "source_files": {
+        "edf_sha256": "2bea9302fb7a50a10558cddcb9a6666da55799e051b90fc5f4cd661943b68782",
+        "txt_sha256": "933b6aeedec614036af82e168e8bb314b8592b30315d31c004f5d058f3ae16a7"
+      },
+      "detectors": {
+        "normalized_delta_envelope": {
+          "detector_name": "normalized_delta_envelope",
+          "n_events": 197,
+          "n_nulls": 143,
+          "score_mean_events": 0.646038,
+          "score_mean_nulls": 0.614799,
+          "target_false_alarm": 0.1,
+          "matched_threshold": 0.8145970000000001,
+          "achieved_false_alarm": 0.0979020979020979,
+          "detection_rate": 0.005076142131979695,
+          "n_events_alarmed": 1,
+          "p_value": 1.0,
+          "beats_chance": false,
+          "permutation_seed": 42,
+          "n_permutations": 10000,
+          "corpus_id": "cap-n2-multichannel-n3-vs-wake",
+          "captured_at": "2026-07-08T22:00:00Z",
+          "audit_content_hash": "e8407f52542ed2203a9cb318bbf2d7642a206c53e06178ced92225dbd8d2eedd"
+        },
+        "multi_channel_delta_kuramoto": {
+          "detector_name": "multi_channel_delta_kuramoto",
+          "n_events": 197,
+          "n_nulls": 143,
+          "score_mean_events": 0.728472,
+          "score_mean_nulls": 0.72288,
+          "target_false_alarm": 0.1,
+          "matched_threshold": 0.7913220000000001,
+          "achieved_false_alarm": 0.0979020979020979,
+          "detection_rate": 0.2233502538071066,
+          "n_events_alarmed": 44,
+          "p_value": 0.0023997600239976003,
+          "beats_chance": true,
+          "permutation_seed": 42,
+          "n_permutations": 10000,
+          "corpus_id": "cap-n2-multichannel-n3-vs-wake",
+          "captured_at": "2026-07-08T22:00:00Z",
+          "audit_content_hash": "76a0c3fc9e489baac8da7afee2d52d3a8d2c55a040ae2fdbb770d44c3b71f1fc"
+        },
+        "snr_weighted_delta_kuramoto": {
+          "detector_name": "snr_weighted_delta_kuramoto",
+          "n_events": 197,
+          "n_nulls": 143,
+          "score_mean_events": 0.733045,
+          "score_mean_nulls": 0.724613,
+          "target_false_alarm": 0.1,
+          "matched_threshold": 0.7922010000000002,
+          "achieved_false_alarm": 0.0979020979020979,
+          "detection_rate": 0.2182741116751269,
+          "n_events_alarmed": 43,
+          "p_value": 0.0022997700229977,
+          "beats_chance": true,
+          "permutation_seed": 42,
+          "n_permutations": 10000,
+          "corpus_id": "cap-n2-multichannel-n3-vs-wake",
+          "captured_at": "2026-07-08T22:00:00Z",
+          "audit_content_hash": "b9bac09b97f153810e56fcf11c6b4f469f096ccff427d9bf20a38928767b91ab"
+        }
+      }
+    },
+    {
+      "recording_id": "brux2",
+      "channels": [
+        "F3-C3",
+        "C3-P3",
+        "P3-O1",
+        "F4-C4",
+        "C4-P4",
+        "P4-O2"
+      ],
+      "sampling_rate_hz": 100.0,
+      "n_epochs": 1044,
+      "n_n3": 289,
+      "n_wake": 127,
+      "source_files": {
+        "edf_sha256": "141487dad3975c0c24a693e6c19ba4809558750bb880299bb21f12a985286646",
+        "txt_sha256": "db4cf667cc2680e86e688cc154c645acdc209240162b68323b61e9a13ca0b73d"
+      },
+      "detectors": {
+        "normalized_delta_envelope": {
+          "detector_name": "normalized_delta_envelope",
+          "n_events": 289,
+          "n_nulls": 127,
+          "score_mean_events": 0.756578,
+          "score_mean_nulls": 0.465148,
+          "target_false_alarm": 0.1,
+          "matched_threshold": 0.6941240000000001,
+          "achieved_false_alarm": 0.09448818897637795,
+          "detection_rate": 0.9134948096885813,
+          "n_events_alarmed": 264,
+          "p_value": 9.999000099990002e-05,
+          "beats_chance": true,
+          "permutation_seed": 42,
+          "n_permutations": 10000,
+          "corpus_id": "cap-brux2-multichannel-n3-vs-wake",
+          "captured_at": "2026-07-08T22:00:00Z",
+          "audit_content_hash": "7b75e93aa95912a851bbe1c23556701b15821f2a69052e34a5720d841cfdf2b3"
+        },
+        "multi_channel_delta_kuramoto": {
+          "detector_name": "multi_channel_delta_kuramoto",
+          "n_events": 289,
+          "n_nulls": 127,
+          "score_mean_events": 0.687027,
+          "score_mean_nulls": 0.682812,
+          "target_false_alarm": 0.1,
+          "matched_threshold": 0.7324030000000001,
+          "achieved_false_alarm": 0.09448818897637795,
+          "detection_rate": 0.06228373702422145,
+          "n_events_alarmed": 18,
+          "p_value": 0.9133086691330867,
+          "beats_chance": false,
+          "permutation_seed": 42,
+          "n_permutations": 10000,
+          "corpus_id": "cap-brux2-multichannel-n3-vs-wake",
+          "captured_at": "2026-07-08T22:00:00Z",
+          "audit_content_hash": "eed2d7fda5b1f19d01e4b7a04a57d72c10c0b2a5f5e0de12655a323230aa9e8f"
+        },
+        "snr_weighted_delta_kuramoto": {
+          "detector_name": "snr_weighted_delta_kuramoto",
+          "n_events": 289,
+          "n_nulls": 127,
+          "score_mean_events": 0.686905,
+          "score_mean_nulls": 0.686459,
+          "target_false_alarm": 0.1,
+          "matched_threshold": 0.7398660000000001,
+          "achieved_false_alarm": 0.09448818897637795,
+          "detection_rate": 0.04498269896193772,
+          "n_events_alarmed": 13,
+          "p_value": 0.9841015898410159,
+          "beats_chance": false,
+          "permutation_seed": 42,
+          "n_permutations": 10000,
+          "corpus_id": "cap-brux2-multichannel-n3-vs-wake",
+          "captured_at": "2026-07-08T22:00:00Z",
+          "audit_content_hash": "8d396df69c914a5138e47c9e50f6810b5766098ada5dc5cffa82e7d423002d5b"
+        }
+      }
+    },
+    {
+      "recording_id": "narco2",
+      "channels": [
+        "F4-C4",
+        "C4-P4",
+        "P4-O2"
+      ],
+      "sampling_rate_hz": 100.0,
+      "n_epochs": 1149,
+      "n_n3": 188,
+      "n_wake": 180,
+      "source_files": {
+        "edf_sha256": "a5b964a42ade6b45434fd99d598ad6515f4f066e93e7a8ffa0054e19d6f0461e",
+        "txt_sha256": "08e2ccc3842447452dc39b814cfa87e4c0446df2661f8503ae12d1fc4bd0f606"
+      },
+      "detectors": {
+        "normalized_delta_envelope": {
+          "detector_name": "normalized_delta_envelope",
+          "n_events": 188,
+          "n_nulls": 180,
+          "score_mean_events": 0.733022,
+          "score_mean_nulls": 0.549006,
+          "target_false_alarm": 0.1,
+          "matched_threshold": 0.6580440000000001,
+          "achieved_false_alarm": 0.1,
+          "detection_rate": 0.8031914893617021,
+          "n_events_alarmed": 151,
+          "p_value": 9.999000099990002e-05,
+          "beats_chance": true,
+          "permutation_seed": 42,
+          "n_permutations": 10000,
+          "corpus_id": "cap-narco2-multichannel-n3-vs-wake",
+          "captured_at": "2026-07-08T22:00:00Z",
+          "audit_content_hash": "55b7ef52e5a1413f7f0168520917883eb680603ca8650cecfcdc6286ee6a8ec3"
+        },
+        "multi_channel_delta_kuramoto": {
+          "detector_name": "multi_channel_delta_kuramoto",
+          "n_events": 188,
+          "n_nulls": 180,
+          "score_mean_events": 0.60314,
+          "score_mean_nulls": 0.552752,
+          "target_false_alarm": 0.1,
+          "matched_threshold": 0.7599580000000001,
+          "achieved_false_alarm": 0.1,
+          "detection_rate": 0.21808510638297873,
+          "n_events_alarmed": 41,
+          "p_value": 0.0012998700129987,
+          "beats_chance": true,
+          "permutation_seed": 42,
+          "n_permutations": 10000,
+          "corpus_id": "cap-narco2-multichannel-n3-vs-wake",
+          "captured_at": "2026-07-08T22:00:00Z",
+          "audit_content_hash": "41f95df6c01f72724abe9a241157534ab3206fd96b89d71e38024447782beb33"
+        },
+        "snr_weighted_delta_kuramoto": {
+          "detector_name": "snr_weighted_delta_kuramoto",
+          "n_events": 188,
+          "n_nulls": 180,
+          "score_mean_events": 0.581111,
+          "score_mean_nulls": 0.548885,
+          "target_false_alarm": 0.1,
+          "matched_threshold": 0.7588990000000001,
+          "achieved_false_alarm": 0.1,
+          "detection_rate": 0.21808510638297873,
+          "n_events_alarmed": 41,
+          "p_value": 0.0011998800119988001,
+          "beats_chance": true,
+          "permutation_seed": 42,
+          "n_permutations": 10000,
+          "corpus_id": "cap-narco2-multichannel-n3-vs-wake",
+          "captured_at": "2026-07-08T22:00:00Z",
+          "audit_content_hash": "8a579b39ebee1ad3319443ed765c8fe4bf504691fcf7508a8687802e6e0bc62e"
+        }
+      }
+    }
+  ],
+  "normalized_delta_envelope": {
+    "mean_detection_rate": 0.525456,
+    "std_detection_rate": 0.360432,
+    "mean_achieved_false_alarm": 0.092328,
+    "geometric_mean_p_value": 0.001,
+    "fraction_beats_chance": 0.75
+  },
+  "multi_channel_delta_kuramoto": {
+    "mean_detection_rate": 0.183562,
+    "std_detection_rate": 0.070159,
+    "mean_achieved_false_alarm": 0.092328,
+    "geometric_mean_p_value": 0.014856,
+    "fraction_beats_chance": 0.75
+  },
+  "snr_weighted_delta_kuramoto": {
+    "mean_detection_rate": 0.174853,
+    "std_detection_rate": 0.07498,
+    "mean_achieved_false_alarm": 0.092328,
+    "geometric_mean_p_value": 0.016141,
+    "fraction_beats_chance": 0.75
+  },
+  "recommendation": {
+    "refine_kuramoto": false,
+    "preferred_variant": "normalized_delta_envelope",
+    "rationale": "SNR-weighting does not improve over the simple mean-R Kuramoto detector on this panel; further investment in this exact spatial-R feature is not supported by the data."
+  }
+}

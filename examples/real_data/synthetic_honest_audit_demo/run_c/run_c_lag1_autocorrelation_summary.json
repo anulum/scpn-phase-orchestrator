@@ -1,0 +1,19 @@
+{
+  "detector_name": "lag1_autocorrelation",
+  "n_events": 40,
+  "n_nulls": 200,
+  "score_mean_events": 0.711116,
+  "score_mean_nulls": -0.016872,
+  "target_false_alarm": 0.1,
+  "matched_threshold": 0.12948500000000002,
+  "achieved_false_alarm": 0.1,
+  "detection_rate": 1.0,
+  "n_events_alarmed": 40,
+  "p_value": 9.999000099990002e-05,
+  "beats_chance": true,
+  "permutation_seed": 42,
+  "n_permutations": 10000,
+  "corpus_id": "synthetic-run_c",
+  "captured_at": "2026-07-09T00:00:00Z",
+  "audit_content_hash": "a675dc9068b89ad993b781872f974afa59e2e0d8f32edbfda9de5cc37e42698e"
+}

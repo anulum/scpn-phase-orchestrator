@@ -1,0 +1,28 @@
+{
+  "corpus_id": "cap-n1-multichannel-n3-vs-wake",
+  "captured_at": "2026-07-08T22:00:00Z",
+  "audit": {
+    "detector_name": "normalized_delta_envelope",
+    "target_false_alarm": 0.1,
+    "matched_threshold": 0.7791120000000001,
+    "achieved_false_alarm": 0.07692307692307693,
+    "n_events": 321,
+    "n_events_alarmed": 122,
+    "detection_rate": 0.38006230529595014,
+    "n_nulls": 39,
+    "significance": {
+      "observed_alarms": 122,
+      "n_events": 321,
+      "pooled_alarm_rate": 0.3472222222222222,
+      "expected_alarms": 111.45833333333333,
+      "p_value": 9.999000099990002e-05,
+      "n_permutations": 10000,
+      "seed": 42
+    },
+    "alpha": 0.05,
+    "beats_chance": true
+  },
+  "framework": "Matched-false-alarm calibration with a label-permutation significance test (exchangeability null), after Boettiger & Hastings 2012, J. R. Soc. Interface 9:2527.",
+  "disclaimer": "This audit record measures a detector's event-vs-null skill on the supplied corpus only: the matched-false-alarm threshold, the rate it achieved, the event detection rate, and the permutation p-value of the event alarm count. It is not a certification of field performance and does not transfer to any other corpus, detector configuration, or deployment; a low p-value means the events alarmed more than the matched false alarm on this corpus, nothing more.",
+  "content_hash": "ce4ecc10453673da472bcdc8ff508d40dcd371f8cfc03e8146764a4c58d0931a"
+}

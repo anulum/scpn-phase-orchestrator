@@ -1,0 +1,19 @@
+{
+  "detector_name": "window_mean_control",
+  "n_events": 40,
+  "n_nulls": 200,
+  "score_mean_events": 0.0,
+  "score_mean_nulls": 0.0,
+  "target_false_alarm": 0.1,
+  "matched_threshold": 5e-324,
+  "achieved_false_alarm": 0.0,
+  "detection_rate": 0.0,
+  "n_events_alarmed": 0,
+  "p_value": 1.0,
+  "beats_chance": false,
+  "permutation_seed": 42,
+  "n_permutations": 10000,
+  "corpus_id": "synthetic-run_b",
+  "captured_at": "2026-07-09T00:00:00Z",
+  "audit_content_hash": "014c54db8742e50ba30355fbafb683889b3181fb496be495626ed23c7d051ce9"
+}

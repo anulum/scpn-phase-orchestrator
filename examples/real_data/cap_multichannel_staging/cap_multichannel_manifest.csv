@@ -1,0 +1,5 @@
+recording_id,edf_path,txt_path
+n1,scratchpad/cap_data/n1.edf,scratchpad/cap_data/n1.txt
+n2,scratchpad/cap_data/n2.edf,scratchpad/cap_data/n2.txt
+brux2,scratchpad/cap_data/brux2.edf,scratchpad/cap_data/brux2.txt
+narco2,scratchpad/cap_data/narco2.edf,scratchpad/cap_data/narco2.txt

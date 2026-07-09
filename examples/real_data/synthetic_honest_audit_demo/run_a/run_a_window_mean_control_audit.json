@@ -1,0 +1,28 @@
+{
+  "corpus_id": "synthetic-run_a",
+  "captured_at": "2026-07-09T00:00:00Z",
+  "audit": {
+    "detector_name": "window_mean_control",
+    "target_false_alarm": 0.1,
+    "matched_threshold": 5e-324,
+    "achieved_false_alarm": 0.0,
+    "n_events": 40,
+    "n_events_alarmed": 0,
+    "detection_rate": 0.0,
+    "n_nulls": 200,
+    "significance": {
+      "observed_alarms": 0,
+      "n_events": 40,
+      "pooled_alarm_rate": 0.0,
+      "expected_alarms": 0.0,
+      "p_value": 1.0,
+      "n_permutations": 10000,
+      "seed": 42
+    },
+    "alpha": 0.05,
+    "beats_chance": false
+  },
+  "framework": "Matched-false-alarm calibration with a label-permutation significance test (exchangeability null), after Boettiger & Hastings 2012, J. R. Soc. Interface 9:2527.",
+  "disclaimer": "This audit record measures a detector's event-vs-null skill on the supplied corpus only: the matched-false-alarm threshold, the rate it achieved, the event detection rate, and the permutation p-value of the event alarm count. It is not a certification of field performance and does not transfer to any other corpus, detector configuration, or deployment; a low p-value means the events alarmed more than the matched false alarm on this corpus, nothing more.",
+  "content_hash": "3ff8d537f21c7447b0b4aca180a50c31c0bc3678d1c5d04867c064632fab9752"
+}

@@ -1,0 +1,170 @@
+{
+  "benchmark": "synthetic_honest_audit_demo",
+  "corpus": "Synthetic AR(1) critical-slowing-down corpus",
+  "target_false_alarm": 0.1,
+  "n_recordings": 3,
+  "recording_ids": [
+    "run_a",
+    "run_b",
+    "run_c"
+  ],
+  "per_recording": [
+    {
+      "recording_id": "run_a",
+      "metadata": {
+        "seed": 0
+      },
+      "detectors": {
+        "lag1_autocorrelation": {
+          "detector_name": "lag1_autocorrelation",
+          "n_events": 40,
+          "n_nulls": 200,
+          "score_mean_events": 0.717634,
+          "score_mean_nulls": -0.019992,
+          "target_false_alarm": 0.1,
+          "matched_threshold": 0.16195300000000004,
+          "achieved_false_alarm": 0.1,
+          "detection_rate": 1.0,
+          "n_events_alarmed": 40,
+          "p_value": 9.999000099990002e-05,
+          "beats_chance": true,
+          "permutation_seed": 42,
+          "n_permutations": 10000,
+          "corpus_id": "synthetic-run_a",
+          "captured_at": "2026-07-09T00:00:00Z",
+          "audit_content_hash": "6a430c4bead215d13f4a4b3eed4eaebc093dcbcc72d41ad0c478cb7d57b9cd34"
+        },
+        "window_mean_control": {
+          "detector_name": "window_mean_control",
+          "n_events": 40,
+          "n_nulls": 200,
+          "score_mean_events": 0.0,
+          "score_mean_nulls": 0.0,
+          "target_false_alarm": 0.1,
+          "matched_threshold": 5e-324,
+          "achieved_false_alarm": 0.0,
+          "detection_rate": 0.0,
+          "n_events_alarmed": 0,
+          "p_value": 1.0,
+          "beats_chance": false,
+          "permutation_seed": 42,
+          "n_permutations": 10000,
+          "corpus_id": "synthetic-run_a",
+          "captured_at": "2026-07-09T00:00:00Z",
+          "audit_content_hash": "3ff8d537f21c7447b0b4aca180a50c31c0bc3678d1c5d04867c064632fab9752"
+        }
+      }
+    },
+    {
+      "recording_id": "run_b",
+      "metadata": {
+        "seed": 1
+      },
+      "detectors": {
+        "lag1_autocorrelation": {
+          "detector_name": "lag1_autocorrelation",
+          "n_events": 40,
+          "n_nulls": 200,
+          "score_mean_events": 0.727441,
+          "score_mean_nulls": -0.028683,
+          "target_false_alarm": 0.1,
+          "matched_threshold": 0.11427300000000001,
+          "achieved_false_alarm": 0.1,
+          "detection_rate": 1.0,
+          "n_events_alarmed": 40,
+          "p_value": 9.999000099990002e-05,
+          "beats_chance": true,
+          "permutation_seed": 42,
+          "n_permutations": 10000,
+          "corpus_id": "synthetic-run_b",
+          "captured_at": "2026-07-09T00:00:00Z",
+          "audit_content_hash": "4f273f71afc2c442ca85ffe0d88a57bc03c7f6e9a227bff059a171725bdd8b15"
+        },
+        "window_mean_control": {
+          "detector_name": "window_mean_control",
+          "n_events": 40,
+          "n_nulls": 200,
+          "score_mean_events": 0.0,
+          "score_mean_nulls": 0.0,
+          "target_false_alarm": 0.1,
+          "matched_threshold": 5e-324,
+          "achieved_false_alarm": 0.0,
+          "detection_rate": 0.0,
+          "n_events_alarmed": 0,
+          "p_value": 1.0,
+          "beats_chance": false,
+          "permutation_seed": 42,
+          "n_permutations": 10000,
+          "corpus_id": "synthetic-run_b",
+          "captured_at": "2026-07-09T00:00:00Z",
+          "audit_content_hash": "014c54db8742e50ba30355fbafb683889b3181fb496be495626ed23c7d051ce9"
+        }
+      }
+    },
+    {
+      "recording_id": "run_c",
+      "metadata": {
+        "seed": 2
+      },
+      "detectors": {
+        "lag1_autocorrelation": {
+          "detector_name": "lag1_autocorrelation",
+          "n_events": 40,
+          "n_nulls": 200,
+          "score_mean_events": 0.711116,
+          "score_mean_nulls": -0.016872,
+          "target_false_alarm": 0.1,
+          "matched_threshold": 0.12948500000000002,
+          "achieved_false_alarm": 0.1,
+          "detection_rate": 1.0,
+          "n_events_alarmed": 40,
+          "p_value": 9.999000099990002e-05,
+          "beats_chance": true,
+          "permutation_seed": 42,
+          "n_permutations": 10000,
+          "corpus_id": "synthetic-run_c",
+          "captured_at": "2026-07-09T00:00:00Z",
+          "audit_content_hash": "a675dc9068b89ad993b781872f974afa59e2e0d8f32edbfda9de5cc37e42698e"
+        },
+        "window_mean_control": {
+          "detector_name": "window_mean_control",
+          "n_events": 40,
+          "n_nulls": 200,
+          "score_mean_events": 0.0,
+          "score_mean_nulls": 0.0,
+          "target_false_alarm": 0.1,
+          "matched_threshold": 5e-324,
+          "achieved_false_alarm": 0.0,
+          "detection_rate": 0.0,
+          "n_events_alarmed": 0,
+          "p_value": 1.0,
+          "beats_chance": false,
+          "permutation_seed": 42,
+          "n_permutations": 10000,
+          "corpus_id": "synthetic-run_c",
+          "captured_at": "2026-07-09T00:00:00Z",
+          "audit_content_hash": "8c08ae0d4af7765d1e734978ac1363122b054b1ec269ffd2e3553c73cacbc670"
+        }
+      }
+    }
+  ],
+  "lag1_autocorrelation": {
+    "mean_detection_rate": 1.0,
+    "std_detection_rate": 0.0,
+    "mean_achieved_false_alarm": 0.1,
+    "geometric_mean_p_value": 0.0001,
+    "fraction_beats_chance": 1.0
+  },
+  "window_mean_control": {
+    "mean_detection_rate": 0.0,
+    "std_detection_rate": 0.0,
+    "mean_achieved_false_alarm": 0.0,
+    "geometric_mean_p_value": 1.0,
+    "fraction_beats_chance": 0.0
+  },
+  "recommendation": {
+    "refine": true,
+    "preferred_variant": "lag1_autocorrelation",
+    "rationale": "lag1_autocorrelation has the highest mean detection rate on the panel (1.000) and is the preferred variant for further refinement."
+  }
+}
