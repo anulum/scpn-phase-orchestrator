@@ -1,0 +1,19 @@
+{
+  "detector_name": "coherent_sustained_kuramoto",
+  "n_events": 197,
+  "n_nulls": 143,
+  "score_mean_events": 2.408113,
+  "score_mean_nulls": 2.036254,
+  "target_false_alarm": 0.1,
+  "matched_threshold": 3.8821270000000005,
+  "achieved_false_alarm": 0.0979020979020979,
+  "detection_rate": 0.08121827411167512,
+  "n_events_alarmed": 16,
+  "p_value": 0.7648235176482352,
+  "beats_chance": false,
+  "permutation_seed": 42,
+  "n_permutations": 10000,
+  "corpus_id": "cap-n2-kuramoto-variants",
+  "captured_at": "2026-07-10T00:00:00Z",
+  "audit_content_hash": "70db609c2b138f2f61966c61e2493dee701c57e282a40f5c8b3191d63098fcc1"
+}

@@ -7,12 +7,12 @@
     "integration_modules": 27,
     "optional_extras": 22,
     "public_api_exports": 24,
-    "public_documentation_pages": 220,
+    "public_documentation_pages": 221,
     "python_package_modules": 704,
     "research_experimental_modules": 201,
     "runtime_serving_modules": 151,
     "rust_kernel_files": 97,
-    "test_files": 830
+    "test_files": 831
   },
   "documentation": {
     "public_pages": [
@@ -223,6 +223,7 @@
       "docs/specs/resolved_runtime_defaults.md",
       "docs/specs/upde_numerics.md",
       "docs/studies/cap_kuramoto_diagnostic.md",
+      "docs/studies/cap_kuramoto_variants.md",
       "docs/studies/cap_multichannel_n3_vs_wake.md",
       "docs/studies/detector_ranking_report.md",
       "docs/studies/early_warning_matched_false_alarm.md",
@@ -1893,6 +1894,7 @@
       "tests/test_boundary_observer_validation.py",
       "tests/test_byzantine_meta_orchestrator.py",
       "tests/test_candidate_safety_certificate.py",
+      "tests/test_cap_kuramoto_variants_evidence.py",
       "tests/test_cap_multichannel_staging_evidence.py",
       "tests/test_cardiac_causal_attribution_demo.py",
       "tests/test_cardiac_fep_hierarchy_demo.py",

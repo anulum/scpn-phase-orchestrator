@@ -1,0 +1,19 @@
+{
+  "detector_name": "amplitude_gated_delta_kuramoto",
+  "n_events": 188,
+  "n_nulls": 180,
+  "score_mean_events": 5.683291,
+  "score_mean_nulls": 2.695374,
+  "target_false_alarm": 0.1,
+  "matched_threshold": 5.0528830000000005,
+  "achieved_false_alarm": 0.1,
+  "detection_rate": 0.5585106382978723,
+  "n_events_alarmed": 105,
+  "p_value": 9.999000099990002e-05,
+  "beats_chance": true,
+  "permutation_seed": 42,
+  "n_permutations": 10000,
+  "corpus_id": "cap-narco2-kuramoto-variants",
+  "captured_at": "2026-07-10T00:00:00Z",
+  "audit_content_hash": "28179121c2b14a4c1c9d0ca446e51438ae4f3d9ec5bf8ace854664b29bddfabc"
+}

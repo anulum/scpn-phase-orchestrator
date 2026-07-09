@@ -1,0 +1,28 @@
+{
+  "corpus_id": "cap-n1-kuramoto-variants",
+  "captured_at": "2026-07-10T00:00:00Z",
+  "audit": {
+    "detector_name": "amplitude_gated_delta_kuramoto",
+    "target_false_alarm": 0.1,
+    "matched_threshold": 6.9898810000000005,
+    "achieved_false_alarm": 0.07692307692307693,
+    "n_events": 321,
+    "n_events_alarmed": 124,
+    "detection_rate": 0.3862928348909657,
+    "n_nulls": 39,
+    "significance": {
+      "observed_alarms": 124,
+      "n_events": 321,
+      "pooled_alarm_rate": 0.3527777777777778,
+      "expected_alarms": 113.24166666666667,
+      "p_value": 0.00029997000299970003,
+      "n_permutations": 10000,
+      "seed": 42
+    },
+    "alpha": 0.05,
+    "beats_chance": true
+  },
+  "framework": "Matched-false-alarm calibration with a label-permutation significance test (exchangeability null), after Boettiger & Hastings 2012, J. R. Soc. Interface 9:2527.",
+  "disclaimer": "This audit record measures a detector's event-vs-null skill on the supplied corpus only: the matched-false-alarm threshold, the rate it achieved, the event detection rate, and the permutation p-value of the event alarm count. It is not a certification of field performance and does not transfer to any other corpus, detector configuration, or deployment; a low p-value means the events alarmed more than the matched false alarm on this corpus, nothing more.",
+  "content_hash": "b9aca2c40a9af3ab621012a868fe3629882d3d4de3fcff958d0b6a654d105e48"
+}

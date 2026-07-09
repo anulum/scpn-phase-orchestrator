@@ -1,0 +1,19 @@
+{
+  "detector_name": "coherent_sustained_kuramoto",
+  "n_events": 289,
+  "n_nulls": 127,
+  "score_mean_events": 3.093806,
+  "score_mean_nulls": 1.377128,
+  "target_false_alarm": 0.1,
+  "matched_threshold": 1.8606860000000003,
+  "achieved_false_alarm": 0.09448818897637795,
+  "detection_rate": 0.8927335640138409,
+  "n_events_alarmed": 258,
+  "p_value": 9.999000099990002e-05,
+  "beats_chance": true,
+  "permutation_seed": 42,
+  "n_permutations": 10000,
+  "corpus_id": "cap-brux2-kuramoto-variants",
+  "captured_at": "2026-07-10T00:00:00Z",
+  "audit_content_hash": "26fc7ade85f1330f7b48790156fe8f3d27ac2c75de95633ba1b0ff313361c225"
+}
