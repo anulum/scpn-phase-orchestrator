@@ -381,6 +381,7 @@ class TestV93OttAntonsenDataExport:
     increasing and matches analytical prediction at extreme K.
     """
 
+    @pytest.mark.timeout(600)  # heavy CPU-JAX sim; exceeds 60s local gate
     def test_oa_data_self_consistent(self):
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,

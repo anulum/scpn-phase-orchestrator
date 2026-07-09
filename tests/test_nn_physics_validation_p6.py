@@ -136,6 +136,7 @@ class TestV63RFluctuationScaling:
     wrong — which would invalidate all our Ott-Antonsen comparisons.
     """
 
+    @pytest.mark.timeout(600)  # heavy CPU-JAX sim; exceeds 60s local gate
     def test_variance_decreases_with_N(self):
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,

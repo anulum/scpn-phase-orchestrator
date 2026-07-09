@@ -474,6 +474,7 @@ class TestV142TransitionWidthScaling:
     sharp step. For finite N, ΔK ~ N^(-1/2) (central limit).
     """
 
+    @pytest.mark.timeout(600)  # heavy CPU-JAX sim; exceeds 60s local gate
     def test_width_narrows_with_N(self):
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,

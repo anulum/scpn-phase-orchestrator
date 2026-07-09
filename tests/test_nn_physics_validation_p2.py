@@ -192,6 +192,8 @@ class TestV16LargeNConvergence:
     decrease as O(1/sqrt(N)).
     """
 
+    @pytest.mark.slow  # N=1024 scale sweep; run on CI, skip locally via -m "not slow"
+    @pytest.mark.timeout(0)  # exempt from the pytest-timeout budget (runs minutes)
     def test_error_decreases_with_N(self):
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,

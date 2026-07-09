@@ -368,6 +368,7 @@ class TestV80FIMMeanFieldValidation:
     This has NEVER been numerically validated. We do it here.
     """
 
+    @pytest.mark.timeout(600)  # heavy CPU-JAX sim; exceeds 60s local gate
     def test_mean_field_prediction(self):
         delta = 0.5
         N = 256

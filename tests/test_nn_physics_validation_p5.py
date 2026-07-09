@@ -280,6 +280,7 @@ class TestV52CriticalExponent:
     Fit R^2 vs K near K_c. If linear, β = 1/2 confirmed.
     """
 
+    @pytest.mark.timeout(600)  # heavy CPU-JAX sim; exceeds 60s local gate
     def test_half_exponent(self):
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,

@@ -47,6 +47,7 @@ class TestV109FiniteSizeScaling:
     Nobody does this for oscillator libraries. Ever.
     """
 
+    @pytest.mark.timeout(600)  # heavy CPU-JAX sim ~3 min loaded; exceeds 60s gate
     def test_data_collapse(self):
         from scpn_phase_orchestrator.nn.functional import (
             kuramoto_forward,
