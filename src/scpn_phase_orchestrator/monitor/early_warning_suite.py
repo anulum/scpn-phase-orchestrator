@@ -86,6 +86,8 @@ SYNCHRONISATION = "synchronisation"
 TRANSITION_ENTROPY = "transition_entropy"
 #: Detector label for the weighted fusion of the three members.
 ENSEMBLE_WEIGHTED = "ensemble_weighted"
+#: Detector label for the multi-scale critical-slowing-down variant.
+CRITICAL_SLOWING_DOWN_MULTISCALE = "critical_slowing_down_multiscale"
 #: Suite detector labels in report order — the three members then the fusion.
 SUITE_DETECTORS = (
     CRITICAL_SLOWING_DOWN,
@@ -93,13 +95,17 @@ SUITE_DETECTORS = (
     TRANSITION_ENTROPY,
     ENSEMBLE_WEIGHTED,
 )
+#: Suite detectors plus the optional multi-scale CSD member.
+SUITE_DETECTORS_MULTISCALE = SUITE_DETECTORS + (CRITICAL_SLOWING_DOWN_MULTISCALE,)
 
 _SCALE_FLOOR = 1.0e-12
 
 __all__ = [
     "CRITICAL_SLOWING_DOWN",
+    "CRITICAL_SLOWING_DOWN_MULTISCALE",
     "ENSEMBLE_WEIGHTED",
     "SUITE_DETECTORS",
+    "SUITE_DETECTORS_MULTISCALE",
     "SYNCHRONISATION",
     "TRANSITION_ENTROPY",
     "DomainObservableAdapter",

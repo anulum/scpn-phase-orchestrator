@@ -403,6 +403,7 @@ def seal_critical_slowing_down_alarm(
     captured_at: str,
     sampling_rate_hz: float,
     transition_onset_sample: int | None = None,
+    detector: str = "critical_slowing_down",
 ) -> EarlyWarningEvidence:
     """Seal a critical-slowing-down alarm, pinning both rising indicators.
 
@@ -420,6 +421,10 @@ def seal_critical_slowing_down_alarm(
         Sampling rate of the screened signal, in hertz.
     transition_onset_sample : int | None
         Caller-supplied ground-truth onset sample.
+    detector : str
+        Detector family label to seal; defaults to ``critical_slowing_down``.
+        Pass ``critical_slowing_down_multiscale`` when sealing the multi-scale
+        variant so audit records distinguish the two.
 
     Returns
     -------
@@ -464,7 +469,7 @@ def seal_critical_slowing_down_alarm(
         ),
     )
     return seal_early_warning(
-        detector="critical_slowing_down",
+        detector=detector,
         observable=observable,
         signal_source=signal_source,
         captured_at=captured_at,

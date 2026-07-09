@@ -40,6 +40,7 @@ References
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from numbers import Integral, Real
 from typing import TypeAlias
@@ -58,6 +59,8 @@ _SCALE_FLOOR = 1.0e-12
 __all__ = [
     "CriticalSlowingDownWarning",
     "critical_slowing_down_warning",
+    "critical_slowing_down_multiscale_warning",
+    "surrogate_score_threshold",
 ]
 
 
@@ -275,6 +278,267 @@ def critical_slowing_down_warning(
         rise_threshold=rise_threshold,
         persistence=persistence,
     )
+
+
+def critical_slowing_down_multiscale_warning(
+    signals: FloatArray,
+    *,
+    windows: Sequence[int] | None = None,
+    step: int = 16,
+    baseline_fraction: float = 0.25,
+    min_baseline_windows: int = 3,
+    z_threshold: float = 3.0,
+    rise_threshold: float = 0.1,
+    persistence: int = 2,
+    aggregation: str = "max",
+) -> CriticalSlowingDownWarning:
+    """Multi-scale critical-slowing-down warning.
+
+    Variance and lag-one autocorrelation are computed at every window start for
+    each of the supplied window lengths. The per-scale indices are then
+    aggregated across scales on the shared window grid before the robust-rise
+    alarm rule is applied. This lets the detector respond to precursors that
+    emerge at horizons shorter or longer than a single fixed window.
+
+    Parameters
+    ----------
+    signals : FloatArray
+        Per-node scalar observables, shape ``(N, T)``; a one-dimensional array
+        is treated as a single node.
+    windows : sequence of int or None
+        Window lengths to combine. Defaults to ``(64, 128, 256)``.
+    step : int
+        Hop between consecutive window starts in samples; shared by all scales.
+    baseline_fraction : float
+        Leading fraction of windows used to fit the baseline.
+    min_baseline_windows : int
+        Lower bound on the number of baseline windows.
+    z_threshold : float
+        Robust z-score gate applied to the aggregated combined score.
+    rise_threshold : float
+        Minimum fractional rise above the baseline median.
+    persistence : int
+        Number of consecutive breaching windows required to raise the alarm.
+    aggregation : str
+        How to aggregate scales: ``"max"`` (recommended) takes the strongest
+        scale per window; ``"mean"`` averages scales.
+
+    Returns
+    -------
+    CriticalSlowingDownWarning
+        The aggregated per-window fields, baseline fit, and alarm decision.
+    """
+    array = _validate_signals(signals)
+    if windows is None:
+        windows = (64, 128, 256)
+    windows_tuple = tuple(_validate_positive_int(w, "windows") for w in windows)
+    if len(set(windows_tuple)) != len(windows_tuple):
+        raise ValueError("windows must be unique")
+    step = _validate_positive_int(step, "step")
+    min_baseline_windows = _validate_positive_int(
+        min_baseline_windows, "min_baseline_windows"
+    )
+    baseline_fraction = _validate_unit_fraction(baseline_fraction, "baseline_fraction")
+    z_threshold = _validate_non_negative_real(z_threshold, "z_threshold")
+    rise_threshold = _validate_non_negative_real(rise_threshold, "rise_threshold")
+    persistence = _validate_positive_int(persistence, "persistence")
+    if aggregation not in {"max", "mean"}:
+        raise ValueError(f"aggregation must be 'max' or 'mean', got {aggregation!r}")
+
+    n_nodes, n_samples = int(array.shape[0]), int(array.shape[1])
+    max_window = max(windows_tuple)
+    if max_window < 3:
+        raise ValueError("all windows must be at least 3 for autocorrelation")
+    if max_window > n_samples:
+        raise ValueError(
+            f"largest window {max_window} exceeds the series length {n_samples}"
+        )
+
+    starts = list(range(0, n_samples - max_window + 1, step))
+    n_windows = len(starts)
+    window_starts = np.asarray(starts, dtype=np.int64)
+
+    n_scales = len(windows_tuple)
+    variance_scales = np.empty((n_scales, n_windows, n_nodes), dtype=np.float64)
+    autocorr_scales = np.empty((n_scales, n_windows, n_nodes), dtype=np.float64)
+    for scale_idx, window_len in enumerate(windows_tuple):
+        for w_idx, start in enumerate(starts):
+            segment = array[:, start : start + window_len]
+            for node in range(n_nodes):
+                (
+                    variance_scales[scale_idx, w_idx, node],
+                    autocorr_scales[scale_idx, w_idx, node],
+                ) = _window_indicators(segment[node])
+
+    n_baseline = min(
+        n_windows,
+        max(min_baseline_windows, int(np.ceil(baseline_fraction * n_windows))),
+    )
+
+    # Normalise each scale with its own robust baseline, then aggregate the
+    # oriented scores. This prevents large-window raw variance from dominating
+    # small-window autocorrelation signals.
+    combined_z_scales = np.empty((n_scales, n_windows), dtype=np.float64)
+    relative_rise_scales = np.empty((n_scales, n_windows), dtype=np.float64)
+    for scale_idx in range(n_scales):
+        variance_index = variance_scales[scale_idx].mean(axis=1)
+        autocorrelation_index = autocorr_scales[scale_idx].mean(axis=1)
+        z_var, base_var, _ = _robust_rise(variance_index, n_baseline)
+        z_ac, base_ac, _ = _robust_rise(autocorrelation_index, n_baseline)
+        combined_z_scales[scale_idx] = np.maximum(z_var, z_ac)
+        rise_var = _relative_rise(variance_index, base_var)
+        rise_ac = _relative_rise(autocorrelation_index, base_ac)
+        relative_rise_scales[scale_idx] = np.maximum(rise_var, rise_ac)
+
+    if aggregation == "max":
+        combined_z = combined_z_scales.max(axis=0)
+        relative_rise = relative_rise_scales.max(axis=0)
+    else:  # aggregation == "mean"
+        combined_z = combined_z_scales.mean(axis=0)
+        relative_rise = relative_rise_scales.mean(axis=0)
+
+    # Report the aggregated indices for introspection.
+    variance_index = variance_scales.mean(axis=0).mean(axis=1)
+    autocorrelation_index = autocorr_scales.mean(axis=0).mean(axis=1)
+    z_var, base_var, scale_var = _robust_rise(variance_index, n_baseline)
+    z_ac, base_ac, scale_ac = _robust_rise(autocorrelation_index, n_baseline)
+
+    breaches = (
+        (np.arange(n_windows) >= n_baseline)
+        & (combined_z >= z_threshold)
+        & (relative_rise >= rise_threshold)
+    )
+    warning_window = _first_sustained_breach(breaches, persistence)
+    warning_triggered = warning_window is not None
+    warning_sample = (
+        int(window_starts[warning_window]) if warning_window is not None else None
+    )
+
+    return CriticalSlowingDownWarning(
+        window_starts=window_starts,
+        variance_index=np.ascontiguousarray(variance_index, dtype=np.float64),
+        autocorrelation_index=np.ascontiguousarray(
+            autocorrelation_index, dtype=np.float64
+        ),
+        combined_z=np.ascontiguousarray(combined_z, dtype=np.float64),
+        robust_z_variance=np.ascontiguousarray(z_var, dtype=np.float64),
+        robust_z_autocorrelation=np.ascontiguousarray(z_ac, dtype=np.float64),
+        relative_rise=np.ascontiguousarray(relative_rise, dtype=np.float64),
+        baseline_variance=base_var,
+        baseline_autocorrelation=base_ac,
+        baseline_scale_variance=scale_var,
+        baseline_scale_autocorrelation=scale_ac,
+        n_baseline_windows=n_baseline,
+        warning_triggered=warning_triggered,
+        warning_window=warning_window,
+        warning_sample=warning_sample,
+        window=max_window,
+        step=step,
+        z_threshold=z_threshold,
+        rise_threshold=rise_threshold,
+        persistence=persistence,
+    )
+
+
+def surrogate_score_threshold(
+    signals: FloatArray,
+    *,
+    n_surrogates: int = 200,
+    percentile: float = 95.0,
+    block_length: int | None = None,
+    window: int = 128,
+    step: int = 16,
+    baseline_fraction: float = 0.25,
+    min_baseline_windows: int = 3,
+    persistence: int = 2,
+    rng: int | np.random.Generator | None = None,
+) -> float:
+    """Return a false-alarm threshold from a block-bootstrap null distribution.
+
+    The order-parameter series is resampled by circular block bootstrap. For each
+    surrogate, the critical-slowing-down combined score is computed with a zero
+    z-threshold and the maximum post-baseline score is recorded. The returned
+    threshold is the requested percentile of those maxima and can be passed as
+    ``z_threshold`` to :func:`critical_slowing_down_warning` to control the
+    empirical false-alarm probability.
+
+    Parameters
+    ----------
+    signals : FloatArray
+        Per-node scalar observables, shape ``(N, T)`` or one-dimensional.
+    n_surrogates : int
+        Number of bootstrap surrogates to draw.
+    percentile : float
+        Percentile of the surrogate max-score distribution to return as the
+        threshold; e.g. ``95.0`` targets roughly a 5% false-alarm rate.
+    block_length : int or None
+        Bootstrap block length in samples; defaults to ``max(1, T // 20)``.
+    window, step : int
+        Analysis window length and hop passed to the underlying warning sweep.
+    baseline_fraction : float
+        Baseline fraction passed to the underlying warning sweep.
+    min_baseline_windows : int
+        Minimum baseline windows passed to the underlying warning sweep.
+    persistence : int
+        Persistence passed to the underlying warning sweep.
+    rng : int or np.random.Generator or None
+        Seed or generator for reproducible bootstrapping.
+
+    Returns
+    -------
+    float
+        A positive threshold on the combined score.
+    """
+    array = _validate_signals(signals)
+    n_surrogates = _validate_positive_int(n_surrogates, "n_surrogates")
+    percentile = _validate_non_negative_real(percentile, "percentile")
+    if percentile > 100.0:
+        raise ValueError(f"percentile must be <= 100, got {percentile}")
+    window = _validate_positive_int(window, "window")
+    step = _validate_positive_int(step, "step")
+    persistence = _validate_positive_int(persistence, "persistence")
+    rng = np.random.default_rng(rng)
+
+    n_samples = int(array.shape[1])
+    if block_length is None:
+        block_length = max(1, n_samples // 20)
+    else:
+        block_length = _validate_positive_int(block_length, "block_length")
+
+    max_scores = np.empty(n_surrogates, dtype=np.float64)
+    for surrogate_idx in range(n_surrogates):
+        surrogate = _block_bootstrap(array, block_length, rng)
+        warning = critical_slowing_down_warning(
+            surrogate,
+            window=window,
+            step=step,
+            baseline_fraction=baseline_fraction,
+            min_baseline_windows=min_baseline_windows,
+            z_threshold=0.0,
+            rise_threshold=0.0,
+            persistence=persistence,
+        )
+        if warning.combined_z.size == 0:
+            max_scores[surrogate_idx] = 0.0
+            continue
+        post = warning.combined_z[warning.n_baseline_windows :]
+        max_scores[surrogate_idx] = float(post.max()) if post.size else 0.0
+    return float(np.percentile(max_scores, percentile))
+
+
+def _block_bootstrap(
+    array: FloatArray, block_length: int, rng: np.random.Generator
+) -> FloatArray:
+    """Return a circular block-bootstrap resample of ``array`` along time."""
+    n_samples = int(array.shape[1])
+    n_blocks = int(np.ceil(n_samples / block_length))
+    starts = rng.integers(0, n_samples, size=n_blocks)
+    blocks: list[FloatArray] = []
+    for start in starts:
+        idx = (np.arange(start, start + block_length) % n_samples).astype(np.int64)
+        blocks.append(array[:, idx])
+    surrogate = np.concatenate(blocks, axis=1)[:, :n_samples]
+    return np.ascontiguousarray(surrogate, dtype=np.float64)
 
 
 def _window_indicators(segment: FloatArray) -> tuple[float, float]:
