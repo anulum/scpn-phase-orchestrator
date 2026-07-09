@@ -86,6 +86,10 @@ CLAUDE.md
 HANDOVER_*.md
 TODO
 
+# Raw citation-only corpora and local scratch workspaces
+data/
+scratchpad/
+
 # WASM binaries (built artifacts, not source)
 *.wasm
 
