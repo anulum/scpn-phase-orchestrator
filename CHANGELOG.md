@@ -7,6 +7,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `bench/honest_dataset_audit.py` is a reusable honest-audit harness that
+  generalises the CAP/Sleep-EDF audit pattern. It accepts a dataset manifest, a
+  detector registry, and a domain-specific loader/label-extractor, then emits
+  sealed audit records, per-recording summaries, an aggregate comparison JSON,
+  and a data-driven recommendation. `bench/cap_multichannel_n3_vs_wake.py` is
+  refactored to use the harness utilities (`run_audit`, `compute_aggregate`,
+  `write_aggregate`, `file_sha256`) and still reproduces the committed CAP
+  sealed-audit hashes exactly. Guarded by
+  `tests/test_honest_dataset_audit.py`.
+- `bench/synthetic_honest_audit_demo.py`,
+  `docs/studies/synthetic_honest_audit_demo.md`, and
+  `examples/real_data/synthetic_honest_audit_demo/` demonstrate the harness on a
+  deterministic synthetic corpus (AR(1) events vs white-noise nulls). The
+  autocorrelation detector beats chance at matched false-alarm 0.10 while the
+  window-mean control does not, showing the harness generalises beyond sleep EEG.
+  Guarded by `tests/test_synthetic_honest_audit_demo_evidence.py`.
+- `bench/cap_multichannel_n3_vs_wake.py` and
+  `docs/studies/cap_multichannel_n3_vs_wake.md` extend the honest sleep-staging
+  audit to a true multi-channel EEG corpus, the PhysioNet CAP Sleep Database.
+  Three detectors — normalized delta-band Hilbert envelope (multi-channel mean),
+  multi-channel delta-phase Kuramoto order parameter, and an SNR-weighted
+  Kuramoto variant — are audited at the same matched false-alarm operating
+  point (`target_false_alarm = 0.10`) on a four-recording panel (controls
+  `n1`/`n2`, bruxism `brux2`, narcolepsy `narco2`). Sealed audit records,
+  summaries, a manifest, an aggregate comparison JSON, and a data-driven
+  detector recommendation are committed under
+  `examples/real_data/cap_multichannel_staging/` and guarded by
+  `tests/test_cap_multichannel_staging_evidence.py`.
+- `bench/cap_kuramoto_diagnostic.py` and
+  `docs/studies/cap_kuramoto_diagnostic.md` diagnose why the multi-channel
+  delta-phase Kuramoto detector wins on `n2` but under-performs on the other
+  CAP recordings. Per-epoch signal properties (delta SNR, phase circular
+  variance, artifact proxies, Kuramoto R statistics) are correlated with the
+  detector gap; the committed `cap_kuramoto_diagnostic.json` recommends an
+  SNR-weighted Kuramoto variant as the next refinement. Guarded by extended
+  tests in `tests/test_cap_multichannel_staging_evidence.py`.
+- The recommended SNR-weighted delta-phase Kuramoto detector is implemented in
+  `bench/cap_multichannel_n3_vs_wake.py` and honestly audited on the same CAP
+  panel. The sqrt-softened per-epoch SNR weights do not improve over the simple
+  mean-R Kuramoto detector (mean detection rate 0.175 vs 0.184 at matched
+  false-alarm 0.10), so the aggregate recommendation is to stop refining this
+  exact spatial-R feature and consider a different direction such as adaptive
+  channel selection or temporal-stability criteria. The new artefacts and
+  updated documentation are pinned by `tests/test_cap_multichannel_staging_evidence.py`.
+
 ## [0.12.0] - 2026-07-07
 
 ### Added
