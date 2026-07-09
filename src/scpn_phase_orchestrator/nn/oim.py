@@ -198,7 +198,10 @@ def oim_solve(
     key : jax.Array
         PRNG key.
     dt : float
-        integration timestep.
+        Requested integration timestep, used as an upper bound. The effective
+        step is reduced when ``k_max * coupling_n * max_degree * dt`` would
+        exceed the explicit-Euler stability radius, so the dynamics settle into
+        the ground state instead of overshooting it.
     k_min : float
         initial coupling strength (low = exploration).
     k_max : float
@@ -220,6 +223,16 @@ def oim_solve(
     # cluster centres), so use sin(Δθ) coupling (anti-phase at π).
     coupling_n = 1 if n_colors == 2 else n_colors
 
+    # Forward-Euler stability. The linearised gain of the sin(coupling_n·Δθ)
+    # coupling is k · coupling_n · (weighted node degree); an explicit step
+    # beyond the stability radius overshoots and stalls the dynamics well above
+    # the ground state (dt=0.05, k_max=10 on K_{3,3} stalls at E≈-0.67 instead
+    # of the optimum -9). Cap the effective step so the peak-coupling gain stays
+    # within a safe fraction of that radius, adapting to the graph's degree.
+    max_degree = jnp.maximum(jnp.max(jnp.sum(jnp.abs(adjacency), axis=1)), 1.0)
+    stable_dt = 0.5 / (k_max * coupling_n * max_degree)
+    dt_eff = jnp.minimum(dt, stable_dt)
+
     # Precompute annealing schedules
     frac = jnp.linspace(0.0, 1.0, n_anneal)
     k_schedule = k_min + (k_max - k_min) * frac
@@ -237,7 +250,7 @@ def oim_solve(
             """Return the annealing-phase loop body."""
             k, ns, nk = xs
             dphi = _oim_deriv(phases, adjacency, coupling_n, k)
-            phases = (phases + dt * dphi) % TWO_PI
+            phases = (phases + dt_eff * dphi) % TWO_PI
             noise = ns * jax.random.normal(nk, (N,))
             phases = (phases + noise) % TWO_PI
             return phases, None
@@ -252,7 +265,7 @@ def oim_solve(
         def refine_body(phases: jax.Array, _: Any) -> tuple[jax.Array, None]:
             """Return the refinement-phase loop body."""
             dphi = _oim_deriv(phases, adjacency, coupling_n, k_max)
-            return (phases + dt * dphi) % TWO_PI, None
+            return (phases + dt_eff * dphi) % TWO_PI, None
 
         phases, _ = jax.lax.scan(refine_body, phases, None, length=n_refine)
 

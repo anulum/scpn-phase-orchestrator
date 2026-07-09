@@ -186,12 +186,26 @@ class TestOIMSolve:
 
     def test_energy_lower_than_random(self, key, bipartite_graph):
         _, _, e_solved = oim_solve(bipartite_graph, 2, key=key)
-        # Random phases have ~0 expected energy
-        random_phases = jax.random.uniform(key, (N,), maxval=2.0 * jnp.pi)
-        from scpn_phase_orchestrator.nn.oim import coloring_energy
-
-        e_random = float(coloring_energy(random_phases, bipartite_graph, 2))
-        assert e_solved <= e_random
+        # Compare against the EXPECTED energy of random phase configurations under
+        # the SAME operative coupling the 2-colour solver optimises. oim_solve
+        # uses sin(Δθ) coupling for n_colors == 2 (equilibrium at anti-phase π),
+        # so its returned energy is coloring_energy(., ., coupling_n=1); the
+        # random baseline must use the same n to be comparable. Averaging over
+        # many draws keeps the check independent of a single lucky sample, whose
+        # cos(Δθ) energy has zero mean but a spread of several units.
+        coupling_n = 1
+        random_keys = jax.random.split(key, 256)
+        random_phases = jax.vmap(
+            lambda k: jax.random.uniform(k, (N,), maxval=2.0 * jnp.pi)
+        )(random_keys)
+        e_random_mean = float(
+            jnp.mean(
+                jax.vmap(lambda p: coloring_energy(p, bipartite_graph, coupling_n))(
+                    random_phases
+                )
+            )
+        )
+        assert e_solved <= e_random_mean
 
 
 class TestEndToEnd:
