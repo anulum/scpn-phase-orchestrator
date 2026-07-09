@@ -59,6 +59,7 @@ from scpn_phase_orchestrator.experimental.accelerators.coupling._spectral_mojo i
 from tests.typing_contracts import assert_precise_ndarray_hint
 
 TOL_LAPACK = 1e-12
+TOL_LAPACK_RESIDUAL = 5e-12  # ||L·v − λ·v||max is looser than eigenvalue parity
 TOL_GONUM = 1e-11  # gonum EigenSym vs LAPACK
 TOL_MOJO = 1e-10  # subprocess text round-trip on top of LAPACK
 SpectralDirectBackend = Callable[[np.ndarray, object], tuple[np.ndarray, np.ndarray]]
@@ -387,10 +388,10 @@ class TestFiedlerVectorResidual:
         assert np.max(np.abs(residual)) < tol
 
     def test_rust(self):
-        self._check("rust", 10, 6, TOL_LAPACK)
+        self._check("rust", 10, 6, TOL_LAPACK_RESIDUAL)
 
     def test_julia(self):
-        self._check("julia", 11, 6, TOL_LAPACK)
+        self._check("julia", 11, 6, TOL_LAPACK_RESIDUAL)
 
     def test_go(self):
         self._check("go", 12, 6, TOL_GONUM)

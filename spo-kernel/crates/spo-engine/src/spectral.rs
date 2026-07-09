@@ -57,21 +57,25 @@ pub fn graph_laplacian(knm: &[f64], n: usize) -> Vec<f64> {
     l
 }
 
-/// Full spectral decomposition of a symmetric matrix via cyclic Jacobi.
+/// Full spectral decomposition of a symmetric matrix.
 ///
-/// Golub & Van Loan 2013, Matrix Computations, 4th ed., Algorithm 8.4.3.
-/// Converges quadratically for distinct eigenvalues.
+/// Uses nalgebra's symmetric QR eigensolver (Householder tridiagonalisation
+/// + implicit Francis QR shifts). It is LAPACK-free, runs in O(N³) time, and
+/// reliably terminates for the dense PSD matrices produced by the Hodge and
+/// spectral monitors. The previous cyclic-Jacobi implementation did not finish
+/// in bounded time for larger dense problems (e.g. the triangle Laplacian in
+/// the Hodge decomposition), which caused the Rust backend parity tests to hang.
 ///
 /// # Arguments
 /// * `matrix` - row-major N×N symmetric matrix (copied internally)
 /// * `n` - matrix dimension
-/// * `max_sweeps` - maximum number of Jacobi sweeps (typically 20-50 suffice)
-/// * `tol` - convergence tolerance on off-diagonal Frobenius norm
+/// * `_max_sweeps` - kept for API compatibility; ignored by the QR solver
+/// * `_tol` - kept for API compatibility; ignored by the QR solver
 ///
 /// # Returns
 /// `SpectralResult` with eigenvalues sorted ascending and corresponding eigenvectors.
 #[must_use]
-pub fn symmetric_eigen(matrix: &[f64], n: usize, max_sweeps: usize, tol: f64) -> SpectralResult {
+pub fn symmetric_eigen(matrix: &[f64], n: usize, _max_sweeps: usize, _tol: f64) -> SpectralResult {
     if n == 0 {
         return SpectralResult {
             eigenvalues: vec![],
@@ -85,99 +89,23 @@ pub fn symmetric_eigen(matrix: &[f64], n: usize, max_sweeps: usize, tol: f64) ->
         };
     }
 
-    // Work on a copy (row-major)
-    let mut a = matrix.to_vec();
-    // Eigenvector accumulator (starts as identity)
-    let mut v = vec![0.0_f64; n * n];
-    for i in 0..n {
-        v[i * n + i] = 1.0;
-    }
+    let a = nalgebra::DMatrix::from_row_slice(n, n, matrix);
+    let decomp = nalgebra::linalg::SymmetricEigen::new(a);
 
-    for _sweep in 0..max_sweeps {
-        // Check convergence: off-diagonal Frobenius norm
-        let mut off_norm = 0.0_f64;
-        for i in 0..n {
-            for j in (i + 1)..n {
-                off_norm += a[i * n + j] * a[i * n + j];
-            }
-        }
-        off_norm = off_norm.sqrt();
-        if off_norm < tol {
-            break;
-        }
+    // nalgebra returns eigenvectors as columns of `decomp.eigenvectors`.
+    // Sort eigenpairs ascending to match the original contract.
+    let mut indices: Vec<usize> = (0..n).collect();
+    indices.sort_by(|i, j| {
+        decomp.eigenvalues[*i]
+            .partial_cmp(&decomp.eigenvalues[*j])
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
 
-        // Cyclic sweep over all (i, j) pairs with i < j
-        for i in 0..n {
-            for j in (i + 1)..n {
-                let a_ij = a[i * n + j];
-                if a_ij.abs() < 1e-15 {
-                    continue;
-                }
-
-                // Compute Jacobi rotation angle (Golub & Van Loan §8.4.1)
-                let a_ii = a[i * n + i];
-                let a_jj = a[j * n + j];
-                let tau = (a_jj - a_ii) / (2.0 * a_ij);
-
-                // t = sign(τ) / (|τ| + √(1 + τ²)) — Rutishauser's formula
-                let t = if tau.abs() < 1e-15 {
-                    1.0
-                } else {
-                    let sign = if tau >= 0.0 { 1.0 } else { -1.0 };
-                    sign / (tau.abs() + (1.0 + tau * tau).sqrt())
-                };
-
-                let c = 1.0 / (1.0 + t * t).sqrt(); // cos θ
-                let s = t * c; // sin θ
-
-                // Apply Jacobi rotation to A: A' = G^T A G
-                // Update rows/columns i and j
-                for k in 0..n {
-                    if k == i || k == j {
-                        continue;
-                    }
-                    let a_ki = a[k * n + i];
-                    let a_kj = a[k * n + j];
-                    a[k * n + i] = c * a_ki - s * a_kj;
-                    a[k * n + j] = s * a_ki + c * a_kj;
-                    a[i * n + k] = a[k * n + i]; // symmetric
-                    a[j * n + k] = a[k * n + j];
-                }
-
-                // Update diagonal and off-diagonal (i,j)
-                let new_ii = c * c * a_ii - 2.0 * s * c * a_ij + s * s * a_jj;
-                let new_jj = s * s * a_ii + 2.0 * s * c * a_ij + c * c * a_jj;
-                a[i * n + i] = new_ii;
-                a[j * n + j] = new_jj;
-                a[i * n + j] = 0.0;
-                a[j * n + i] = 0.0;
-
-                // Accumulate eigenvectors: V' = V G
-                for k in 0..n {
-                    let v_ki = v[k * n + i];
-                    let v_kj = v[k * n + j];
-                    v[k * n + i] = c * v_ki - s * v_kj;
-                    v[k * n + j] = s * v_ki + c * v_kj;
-                }
-            }
-        }
-    }
-
-    // Extract eigenvalues (diagonal of A) and sort ascending
-    let mut eigen_pairs: Vec<(f64, Vec<f64>)> = (0..n)
-        .map(|i| {
-            let eval = a[i * n + i];
-            let evec: Vec<f64> = (0..n).map(|k| v[k * n + i]).collect();
-            (eval, evec)
-        })
-        .collect();
-    eigen_pairs.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap_or(std::cmp::Ordering::Equal));
-
-    let eigenvalues: Vec<f64> = eigen_pairs.iter().map(|(e, _)| *e).collect();
+    let eigenvalues: Vec<f64> = indices.iter().map(|i| decomp.eigenvalues[*i]).collect();
     let mut eigenvectors = vec![0.0_f64; n * n];
-    for (col, (_, evec)) in eigen_pairs.iter().enumerate() {
-        for (row, &val) in evec.iter().enumerate() {
-            eigenvectors[row * n + col] = val;
+    for (new_col, &old_col) in indices.iter().enumerate() {
+        for row in 0..n {
+            eigenvectors[row * n + new_col] = decomp.eigenvectors[(row, old_col)];
         }
     }
 
