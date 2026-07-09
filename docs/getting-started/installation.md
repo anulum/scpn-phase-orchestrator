@@ -30,6 +30,20 @@ It reports the interpreter version, required dependencies, optional native
 backends (Rust/Julia/Go/Mojo), and feature extras, and exits non-zero only when
 a required component is missing. See [CLI Reference](../reference/cli.md#spo-doctor).
 
+## One-command smoke test
+
+After `spo doctor` reports the required dependencies as present, run the bundled
+power-grid quickstart to exercise the full validate → run → replay → report path:
+
+```bash
+spo quickstart power
+```
+
+Expected output ends with a regime summary and an audit hash-chain verification
+line. If this passes, the base install is sufficient for simulation, audit, and
+report workflows. Optional extras (`rust`, `nn`, `queuewaves`, `plot`, etc.) are
+only needed for their specific backends.
+
 ## Development Install
 
 ```bash
@@ -60,6 +74,8 @@ minimal domainpack, runs `spo run`, and reports the generated audit log.
 | `queuewaves` | `fastapi`, `uvicorn`, `httpx`, `websockets` | QueueWaves cascade detector server |
 | `nengo` | *(none -- pure-numpy LIF engine)* | Nengo-style SNN integration |
 | `lava` | *(none -- external runtime managed outside SPO)* | Lava schedule handoff and optional operator-managed runtime integration |
+| `eeg` | `pyedflib` | EDF ingestion for scalp-EEG case studies |
+| `cardiac` | `wfdb` | WFDB ingestion for cardiac-ECG case studies |
 | `otel` | `opentelemetry-api`, `opentelemetry-sdk` | OpenTelemetry tracing adapter |
 | `plot` | `matplotlib` | Coherence plots and reporting |
 | `notebook` | `jupyter`, `nbconvert`, `matplotlib` | Notebook demos |
@@ -112,7 +128,8 @@ Verify CLI:
 spo --help
 ```
 
-Expected output:
+Expected output (truncated to the first commands; run `spo --help` for the
+full current list):
 
 ```
 Usage: spo [OPTIONS] COMMAND [ARGS]...
@@ -123,12 +140,16 @@ Options:
   --help  Show this message and exit.
 
 Commands:
-  queuewaves  QueueWaves - real-time cascade failure detector.
-  replay      Replay an audit log and print summary.
-  report      Generate coherence report from audit log.
-  run         Run simulation from a binding spec.
-  scaffold    Create a domainpack directory structure with template files.
-  validate    Validate a binding specification file.
+  audit-detector    Audit a detector's event-vs-null skill.
+  demo              Run a self-contained demo.
+  doctor            Check environment readiness.
+  inspect           Inspect resolved runtime defaults.
+  quickstart        Run the validate → run → replay → report path.
+  replay            Replay an audit log and print summary.
+  report            Generate coherence report from audit log.
+  run               Run simulation from a binding spec.
+  scaffold          Create a domainpack directory structure with template files.
+  validate          Validate a binding specification file.
 ```
 
 ## Installation strategy by lane
@@ -183,6 +204,31 @@ Use this flow whenever you are preparing a new environment:
 Each environment should document its lane choice (base, queuewaves, quantum,
 WASM, or production Rust) so incident response can map a behavior change to either
 code or dependency drift.
+
+## Real-data corpora for early-warning studies
+
+The case studies under `docs/studies/` use citation-only public corpora.  A
+helper fetches the raw files into `data/` so the capstones can read them without
+redistributing protected recordings:
+
+```bash
+python tools/fetch_real_corpora.py dakos        # Early-Warning-Signals climate records
+python tools/fetch_real_corpora.py psml         # Zenodo power-system oscillation dataset (5.2 GB)
+```
+
+The EEG and cardiac corpora come from PhysioNet and require a free
+credentialed account (CITI training).  Provide credentials via environment
+variables or command-line flags:
+
+```bash
+export PHYSIONET_USER=your_user
+export PHYSIONET_PASSWORD=your_password
+python tools/fetch_real_corpora.py physionet-chbmit physionet-afdb
+```
+
+Run `python tools/fetch_real_corpora.py verify` to check which corpora are
+complete.  Only derived, sealed artefacts are committed; raw recordings stay in
+`data/` and are never added to the repository.
 
 ## Security and compliance checkpoints at install time
 
