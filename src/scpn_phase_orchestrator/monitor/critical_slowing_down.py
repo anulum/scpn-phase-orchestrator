@@ -327,6 +327,15 @@ def critical_slowing_down_multiscale_warning(
     -------
     CriticalSlowingDownWarning
         The aggregated per-window fields, baseline fit, and alarm decision.
+
+    Raises
+    ------
+    ValueError
+        If ``windows`` contains duplicate lengths, if ``aggregation`` is neither
+        ``"max"`` nor ``"mean"``, if any window is smaller than three samples,
+        or if the largest window exceeds the series length. Parameter validation
+        also raises ``ValueError`` for non-positive integers or fractions
+        outside the unit interval.
     """
     array = _validate_signals(signals)
     if windows is None:
@@ -488,6 +497,12 @@ def surrogate_score_threshold(
     -------
     float
         A positive threshold on the combined score.
+
+    Raises
+    ------
+    ValueError
+        If ``percentile`` exceeds 100, or if any count or length parameter is
+        not a positive integer.
     """
     array = _validate_signals(signals)
     n_surrogates = _validate_positive_int(n_surrogates, "n_surrogates")

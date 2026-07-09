@@ -35,6 +35,33 @@ def export_petri_net_to_prism(
     priority by blocking each command when an earlier transition is enabled.
     Guard metrics become PRISM constants so verification jobs can bind them
     explicitly for a scenario.
+
+    Parameters
+    ----------
+    net : PetriNet
+        Guard-gated Petri net to export; its transitions define the commands
+        and their first-enabled priority order.
+    initial : Marking
+        Initial token count for each place.
+    module_name : str
+        Name of the generated PRISM module; sanitised to a valid identifier.
+    max_tokens : int or None
+        Upper bound on tokens per place. When ``None``, a bound is derived from
+        the net structure and the initial marking.
+    include_idle : bool
+        When ``True``, emit an ``[idle]`` self-loop that fires only when no
+        transition is enabled, keeping the MDP deadlock-free.
+
+    Returns
+    -------
+    str
+        The PRISM MDP model source.
+
+    Raises
+    ------
+    PolicyError
+        If ``max_tokens`` is less than 1, or if an initial marking exceeds the
+        token bound.
     """
     if max_tokens is not None and max_tokens < 1:
         raise PolicyError("max_tokens must be >= 1")

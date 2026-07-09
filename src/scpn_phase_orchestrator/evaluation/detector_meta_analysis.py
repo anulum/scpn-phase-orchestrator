@@ -78,6 +78,18 @@ def discover_aggregate_jsons(root: Path) -> list[Path]:
     A file is treated as an aggregate if it is a direct child of a domain
     directory and either matches a known committed-aggregate filename or ends
     with one of the recognised aggregate suffixes.
+
+    Parameters
+    ----------
+    root : Path
+        Directory whose immediate subdirectories are domain folders; each is
+        scanned one level deep for aggregate JSON files.
+
+    Returns
+    -------
+    list of Path
+        Sorted paths of the discovered aggregate JSONs. Empty when ``root`` is
+        not a directory or holds no matching files.
     """
     paths: list[Path] = []
     if not root.is_dir():
@@ -174,7 +186,24 @@ def _extract_leadtime(
 
 
 def extract_evidence(path: Path) -> list[EvidenceRow]:
-    """Parse a single aggregate JSON into normalised evidence rows."""
+    """Parse a single aggregate JSON into normalised evidence rows.
+
+    The schema family is inferred from the payload: a ``per_recording`` key
+    selects the honest-audit extractor, a ``permutation_significance`` key
+    selects the early-warning lead-time extractor.
+
+    Parameters
+    ----------
+    path : Path
+        Aggregate JSON file to parse. Its parent directory name becomes the
+        domain label.
+
+    Returns
+    -------
+    list of EvidenceRow
+        Normalised rows, one per detector. Empty when the payload matches no
+        supported schema.
+    """
     data = json.loads(path.read_text(encoding="utf-8"))
     domain = path.parent.name
 
@@ -197,6 +226,17 @@ def rank_per_domain(
     Ranking uses competition ranking (1, 2, 2, 4, …) on detection rate
     descending, with p-value ascending as a tie-breaker and detector name as a
     final stable tie-breaker.
+
+    Parameters
+    ----------
+    rows : list of EvidenceRow
+        Normalised detector rows spanning all domains.
+
+    Returns
+    -------
+    dict
+        Mapping of domain name to a list of ``(rank, EvidenceRow)`` pairs,
+        ordered by rank within that domain.
     """
     by_domain: dict[str, list[EvidenceRow]] = {}
     for row in rows:
@@ -229,6 +269,17 @@ def rank_overall(
     The overall ordering prioritises lower mean rank, then more outright
     domain wins, then broader cross-domain presence, and finally alphabetical
     detector name for stability.
+
+    Parameters
+    ----------
+    rankings : dict
+        Per-domain rankings as returned by :func:`rank_per_domain`.
+
+    Returns
+    -------
+    list of dict
+        One entry per detector with keys ``detector``, ``mean_rank``,
+        ``domains_present``, ``wins`` and ``domain_ranks``, sorted best-first.
     """
     detector_ranks: dict[str, list[tuple[str, int]]] = {}
     detector_wins: dict[str, int] = {}
@@ -279,7 +330,26 @@ def build_report(
     source_paths: list[Path],
     unsupported_paths: list[Path],
 ) -> str:
-    """Build the Markdown cross-domain detector ranking report."""
+    """Build the Markdown cross-domain detector ranking report.
+
+    Parameters
+    ----------
+    rows : list of EvidenceRow
+        Normalised evidence rows, used to label each domain's source schema.
+    rankings : dict
+        Per-domain rankings from :func:`rank_per_domain`.
+    overall : list of dict
+        Overall detector ranking from :func:`rank_overall`.
+    source_paths : list of Path
+        Every aggregate JSON that was discovered.
+    unsupported_paths : list of Path
+        Discovered files whose schema was not recognised.
+
+    Returns
+    -------
+    str
+        The full report body rendered as Markdown.
+    """
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
     lines: list[str] = [
         "# Cross-Domain Detector Meta-Analysis Report",
@@ -549,7 +619,20 @@ def run_analysis(
     list[Path],
     list[Path],
 ]:
-    """Discover, extract, rank and return all meta-analysis artefacts."""
+    """Discover, extract, rank and return all meta-analysis artefacts.
+
+    Parameters
+    ----------
+    root : Path
+        Directory containing the per-domain aggregate JSON subdirectories.
+
+    Returns
+    -------
+    tuple
+        ``(rows, rankings, overall, source_paths, unsupported)`` — the
+        normalised rows, per-domain rankings, overall ranking, every discovered
+        source path, and the subset whose schema was unsupported.
+    """
     source_paths = discover_aggregate_jsons(root)
     rows: list[EvidenceRow] = []
     unsupported: list[Path] = []
@@ -565,13 +648,37 @@ def run_analysis(
 
 
 def generate_report(root: Path) -> str:
-    """Run the full meta-analysis and return the Markdown report body."""
+    """Run the full meta-analysis and return the Markdown report body.
+
+    Parameters
+    ----------
+    root : Path
+        Directory containing the per-domain aggregate JSON subdirectories.
+
+    Returns
+    -------
+    str
+        The rendered Markdown report.
+    """
     rows, rankings, overall, source_paths, unsupported = run_analysis(root)
     return build_report(rows, rankings, overall, source_paths, unsupported)
 
 
 def main(argv: list[str] | None = None) -> int:
-    """Command-line entry point for the cross-domain meta-analysis tool."""
+    """Command-line entry point for the cross-domain meta-analysis tool.
+
+    Parameters
+    ----------
+    argv : list of str or None
+        Command-line arguments excluding the program name. When ``None``, the
+        arguments are read from :data:`sys.argv`.
+
+    Returns
+    -------
+    int
+        Process exit code: ``0`` on success, ``1`` when the root directory does
+        not exist.
+    """
     parser = argparse.ArgumentParser(
         description="Cross-domain detector ranking and refinement backlog."
     )
