@@ -86,9 +86,10 @@ CLAUDE.md
 HANDOVER_*.md
 TODO
 
-# Raw citation-only corpora and local scratch workspaces
-data/
-scratchpad/
+# Raw citation-only corpora and local scratch workspaces (repo-root only, so
+# the unanchored pattern does not shadow tracked tests/data/ fixtures)
+/data/
+/scratchpad/
 
 # WASM binaries (built artifacts, not source)
 *.wasm
