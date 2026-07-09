@@ -74,9 +74,13 @@ from scpn_phase_orchestrator.assurance.early_warning_evidence import (
     seal_critical_slowing_down_alarm,
 )
 from scpn_phase_orchestrator.monitor.critical_slowing_down import (
+    critical_slowing_down_multiscale_warning,
     critical_slowing_down_warning,
 )
-from scpn_phase_orchestrator.monitor.early_warning_suite import CRITICAL_SLOWING_DOWN
+from scpn_phase_orchestrator.monitor.early_warning_suite import (
+    CRITICAL_SLOWING_DOWN,
+    CRITICAL_SLOWING_DOWN_MULTISCALE,
+)
 
 if TYPE_CHECKING:  # pragma: no cover - import only for static typing
     from collections.abc import Mapping, Sequence
@@ -86,6 +90,8 @@ FloatArray = NDArray[np.float64]
 #: The one detector this harness runs — the label under which its threshold, achieved
 #: false-alarm rate, and sealed evidence are keyed, matching the multi-node harness.
 DETECTOR = CRITICAL_SLOWING_DOWN
+#: Label for the multi-scale CSD variant in the single-series harness.
+DETECTOR_MULTISCALE = CRITICAL_SLOWING_DOWN_MULTISCALE
 
 __all__ = [
     "DEFAULT_BASELINE_FRACTION",
@@ -95,6 +101,7 @@ __all__ = [
     "DEFAULT_TARGET_FALSE_ALARM",
     "DEFAULT_WINDOW",
     "DETECTOR",
+    "DETECTOR_MULTISCALE",
     "SingleSeriesObservable",
     "SingleSeriesResult",
     "calibrate_single_series",
@@ -253,6 +260,7 @@ def critical_slowing_down_trajectory(
     baseline_fraction: float = DEFAULT_BASELINE_FRACTION,
     persistence: int = DEFAULT_PERSISTENCE,
     relative_gate: float = DEFAULT_RELATIVE_GATE,
+    multiscale: bool = False,
 ) -> DetectorTrajectory:
     """Run the detector once at a zero gate and return its oriented trajectory.
 
@@ -277,24 +285,43 @@ def critical_slowing_down_trajectory(
     relative_gate : float
         Fractional-change gate carried on the trajectory, applied alongside the
         calibrated threshold exactly as the detector applies its own rise gate.
+    multiscale : bool
+        If True, compute the multi-scale CSD trajectory keyed under
+        :data:`DETECTOR_MULTISCALE`.
 
     Returns
     -------
     DetectorTrajectory
         The detector's oriented score, relative rise, window grid, and baseline
-        length, keyed under :data:`DETECTOR`.
+        length, keyed under :data:`DETECTOR` or :data:`DETECTOR_MULTISCALE`.
     """
-    warning = critical_slowing_down_warning(
-        observable.series[np.newaxis, :],
-        window=window,
-        step=step,
-        baseline_fraction=baseline_fraction,
-        z_threshold=0.0,
-        rise_threshold=0.0,
-        persistence=persistence,
-    )
+    if multiscale:
+        half = max(8, window // 2)
+        double = max(window * 2, half + 1)
+        warning = critical_slowing_down_multiscale_warning(
+            observable.series[np.newaxis, :],
+            windows=(half, window, double),
+            step=step,
+            baseline_fraction=baseline_fraction,
+            z_threshold=0.0,
+            rise_threshold=0.0,
+            persistence=persistence,
+            aggregation="max",
+        )
+        name = DETECTOR_MULTISCALE
+    else:
+        warning = critical_slowing_down_warning(
+            observable.series[np.newaxis, :],
+            window=window,
+            step=step,
+            baseline_fraction=baseline_fraction,
+            z_threshold=0.0,
+            rise_threshold=0.0,
+            persistence=persistence,
+        )
+        name = DETECTOR
     return DetectorTrajectory(
-        name=DETECTOR,
+        name=name,
         score=np.asarray(warning.combined_z, dtype=np.float64),
         relative=np.asarray(warning.relative_rise, dtype=np.float64),
         relative_gate=relative_gate,
@@ -312,6 +339,7 @@ def calibrate_single_series(
     step: int = DEFAULT_STEP,
     baseline_fraction: float = DEFAULT_BASELINE_FRACTION,
     relative_gate: float = DEFAULT_RELATIVE_GATE,
+    multiscale: bool = False,
 ) -> Calibration:
     """Calibrate the detector to a matched false alarm on the no-transition null.
 
@@ -330,12 +358,14 @@ def calibrate_single_series(
         Target false-alarm rate the detector is held at or below.
     persistence, window, step, baseline_fraction, relative_gate :
         Analysis parameters forwarded to :func:`critical_slowing_down_trajectory`.
+    multiscale : bool
+        If True, calibrate the multi-scale CSD detector.
 
     Returns
     -------
     Calibration
         The matched-false-alarm threshold and achieved rate, keyed under
-        :data:`DETECTOR`.
+        :data:`DETECTOR` or :data:`DETECTOR_MULTISCALE`.
 
     Raises
     ------
@@ -344,6 +374,7 @@ def calibrate_single_series(
     """
     if not null_observables:
         raise ValueError("null_observables must not be empty")
+    detector = DETECTOR_MULTISCALE if multiscale else DETECTOR
     trajectories = [
         critical_slowing_down_trajectory(
             observable,
@@ -352,6 +383,7 @@ def calibrate_single_series(
             baseline_fraction=baseline_fraction,
             persistence=persistence,
             relative_gate=relative_gate,
+            multiscale=multiscale,
         )
         for observable in null_observables
     ]
@@ -360,8 +392,8 @@ def calibrate_single_series(
     )
     achieved = false_alarm_rate(trajectories, threshold, persistence=persistence)
     return Calibration(
-        thresholds={DETECTOR: threshold},
-        achieved_false_alarm={DETECTOR: achieved},
+        thresholds={detector: threshold},
+        achieved_false_alarm={detector: achieved},
     )
 
 
@@ -430,6 +462,7 @@ def evaluate_single_series(
     baseline_fraction: float = DEFAULT_BASELINE_FRACTION,
     persistence: int = DEFAULT_PERSISTENCE,
     relative_gate: float = DEFAULT_RELATIVE_GATE,
+    multiscale: bool = False,
 ) -> SingleSeriesResult:
     """Run the detector at its calibrated threshold and seal the alarm.
 
@@ -458,21 +491,37 @@ def evaluate_single_series(
     window, step, baseline_fraction, persistence, relative_gate :
         Analysis parameters; ``window``/``step``/``baseline_fraction``/``persistence``
         must match calibration, and ``relative_gate`` is the detector's rise gate.
+    multiscale : bool
+        If True, evaluate the multi-scale CSD detector.
 
     Returns
     -------
     SingleSeriesResult
         The sealed record and its provenance.
     """
-    warning = critical_slowing_down_warning(
-        observable.series[np.newaxis, :],
-        window=window,
-        step=step,
-        baseline_fraction=baseline_fraction,
-        z_threshold=threshold,
-        rise_threshold=relative_gate,
-        persistence=persistence,
-    )
+    if multiscale:
+        half = max(8, window // 2)
+        double = max(window * 2, half + 1)
+        warning = critical_slowing_down_multiscale_warning(
+            observable.series[np.newaxis, :],
+            windows=(half, window, double),
+            step=step,
+            baseline_fraction=baseline_fraction,
+            z_threshold=threshold,
+            rise_threshold=relative_gate,
+            persistence=persistence,
+            aggregation="max",
+        )
+    else:
+        warning = critical_slowing_down_warning(
+            observable.series[np.newaxis, :],
+            window=window,
+            step=step,
+            baseline_fraction=baseline_fraction,
+            z_threshold=threshold,
+            rise_threshold=relative_gate,
+            persistence=persistence,
+        )
     evidence = seal_critical_slowing_down_alarm(
         warning,
         observable=observable_description,
@@ -480,6 +529,7 @@ def evaluate_single_series(
         captured_at=captured_at,
         sampling_rate_hz=observable.sampling_rate_hz,
         transition_onset_sample=onset_sample,
+        detector=DETECTOR_MULTISCALE if multiscale else DETECTOR,
     )
     return SingleSeriesResult(
         record_id=record_id, onset_sample=onset_sample, evidence=evidence

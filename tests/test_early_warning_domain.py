@@ -27,6 +27,7 @@ import pytest
 from bench.early_warning_domain import (
     DEFAULT_STEP,
     DETECTORS,
+    DETECTORS_MULTISCALE,
     Calibration,
     DetectorTrajectory,
     PermutationSignificance,
@@ -50,6 +51,7 @@ from scpn_phase_orchestrator.assurance.early_warning_evidence import (
     NO_EARLY_WARNING,
 )
 from scpn_phase_orchestrator.monitor.early_warning_suite import (
+    CRITICAL_SLOWING_DOWN_MULTISCALE,
     ENSEMBLE_WEIGHTED,
     SYNCHRONISATION,
     SuiteObservables,
@@ -236,6 +238,40 @@ def test_detector_trajectories_flag_a_coherence_rise() -> None:
     # The post-baseline coherence lock drives the synchrony z-score up.
     post = synchrony.score[synchrony.n_baseline :]
     assert float(post.max()) > 3.0
+
+
+def test_detector_trajectories_include_multiscale_when_requested() -> None:
+    observables = _transition_observables(seed=7)
+    trajectories = detector_trajectories(observables, multiscale=True)
+    assert set(trajectories) == set(DETECTORS_MULTISCALE)
+    assert CRITICAL_SLOWING_DOWN_MULTISCALE in trajectories
+    ms = trajectories[CRITICAL_SLOWING_DOWN_MULTISCALE]
+    assert ms.score.shape == ms.window_starts.shape
+    assert ms.score.shape[0] > 0
+
+
+def test_calibrate_and_evaluate_multiscale() -> None:
+    nulls = [
+        _incoherent_observables(n_samples=320, seed=i) for i in range(8)
+    ]
+    transition = _transition_observables(seed=9)
+    calibration = calibrate_detectors(
+        nulls, target_fa=0.1, window=64, step=8, multiscale=True
+    )
+    assert set(calibration.thresholds) == set(DETECTORS_MULTISCALE)
+    result = evaluate_seizure(
+        transition,
+        record_id="test",
+        onset_sample=320,
+        signal_source="synthetic",
+        captured_at="test",
+        thresholds=calibration.thresholds,
+        observable_descriptions=dict.fromkeys(DETECTORS_MULTISCALE, "synthetic"),
+        window=64,
+        step=8,
+        multiscale=True,
+    )
+    assert set(result.evidences) == set(DETECTORS_MULTISCALE)
 
 
 # --------------------------------------------------------------------------- #

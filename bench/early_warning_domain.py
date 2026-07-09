@@ -62,12 +62,15 @@ from scpn_phase_orchestrator.assurance.early_warning_evidence import (
 )
 from scpn_phase_orchestrator.evaluation.skill import calibrate_score_threshold
 from scpn_phase_orchestrator.monitor.critical_slowing_down import (
+    critical_slowing_down_multiscale_warning,
     critical_slowing_down_warning,
 )
 from scpn_phase_orchestrator.monitor.early_warning_suite import (
     CRITICAL_SLOWING_DOWN,
+    CRITICAL_SLOWING_DOWN_MULTISCALE,
     ENSEMBLE_WEIGHTED,
     SUITE_DETECTORS,
+    SUITE_DETECTORS_MULTISCALE,
     SYNCHRONISATION,
     TRANSITION_ENTROPY,
     SuiteObservables,
@@ -91,6 +94,8 @@ IntArray = NDArray[np.int64]
 
 #: Detector labels in report order — the three suite members then the fusion.
 DETECTORS = SUITE_DETECTORS
+#: Detector labels when the optional multi-scale CSD member is enabled.
+DETECTORS_MULTISCALE = SUITE_DETECTORS_MULTISCALE
 
 #: Default analysis window length in samples.
 DEFAULT_WINDOW = 128
@@ -119,6 +124,7 @@ __all__ = [
     "DEFAULT_PERMUTATIONS",
     "DEFAULT_PERMUTATION_SEED",
     "DETECTORS",
+    "DETECTORS_MULTISCALE",
     "Calibration",
     "DetectorTrajectory",
     "PermutationSignificance",
@@ -261,6 +267,7 @@ def detector_trajectories(
     baseline_fraction: float = DEFAULT_BASELINE_FRACTION,
     persistence: int = DEFAULT_PERSISTENCE,
     relative_gate: float = DEFAULT_RELATIVE_GATE,
+    multiscale: bool = False,
 ) -> dict[str, DetectorTrajectory]:
     """Run the suite once at a zero gate and return each detector's trajectory.
 
@@ -282,11 +289,16 @@ def detector_trajectories(
         Echoed for symmetry; the alarm run length is applied at scoring time.
     relative_gate : float
         Fractional-change gate carried on the member trajectories.
+    multiscale : bool
+        If True, also return a multi-scale CSD trajectory keyed by
+        :data:`CRITICAL_SLOWING_DOWN_MULTISCALE`.
 
     Returns
     -------
     dict[str, DetectorTrajectory]
-        A trajectory per label in :data:`DETECTORS`, all on one window grid.
+        A trajectory per label in :data:`DETECTORS` (or
+        :data:`DETECTORS_MULTISCALE` when ``multiscale`` is True), all on one
+        window grid.
     """
     csd = critical_slowing_down_warning(
         observables.order_parameter[np.newaxis, :],
@@ -327,7 +339,7 @@ def detector_trajectories(
         persistence=persistence,
     )
     ones = np.ones(int(fused.fused_score.shape[0]), dtype=np.float64)
-    return {
+    trajectories: dict[str, DetectorTrajectory] = {
         CRITICAL_SLOWING_DOWN: DetectorTrajectory(
             name=CRITICAL_SLOWING_DOWN,
             score=np.asarray(csd.combined_z, dtype=np.float64),
@@ -361,6 +373,28 @@ def detector_trajectories(
             n_baseline=fused.n_baseline_windows,
         ),
     }
+    if multiscale:
+        half = max(8, window // 2)
+        double = max(window * 2, half + 1)
+        csd_ms = critical_slowing_down_multiscale_warning(
+            observables.order_parameter[np.newaxis, :],
+            windows=(half, window, double),
+            step=step,
+            baseline_fraction=baseline_fraction,
+            z_threshold=0.0,
+            rise_threshold=0.0,
+            persistence=persistence,
+            aggregation="max",
+        )
+        trajectories[CRITICAL_SLOWING_DOWN_MULTISCALE] = DetectorTrajectory(
+            name=CRITICAL_SLOWING_DOWN_MULTISCALE,
+            score=np.asarray(csd_ms.combined_z, dtype=np.float64),
+            relative=np.asarray(csd_ms.relative_rise, dtype=np.float64),
+            relative_gate=relative_gate,
+            window_starts=np.asarray(csd_ms.window_starts, dtype=np.int64),
+            n_baseline=csd_ms.n_baseline_windows,
+        )
+    return trajectories
 
 
 def _alarm_sample(
@@ -531,6 +565,7 @@ def calibrate_detectors(
     step: int = DEFAULT_STEP,
     baseline_fraction: float = DEFAULT_BASELINE_FRACTION,
     relative_gate: float = DEFAULT_RELATIVE_GATE,
+    multiscale: bool = False,
 ) -> Calibration:
     """Calibrate every detector to a matched false alarm on the no-transition null.
 
@@ -542,12 +577,15 @@ def calibrate_detectors(
         Target false-alarm rate each detector is held at or below.
     persistence, window, step, baseline_fraction, relative_gate :
         Suite analysis parameters, forwarded to :func:`detector_trajectories`.
+    multiscale : bool
+        If True, also calibrate the multi-scale CSD detector.
 
     Returns
     -------
     Calibration
         The matched-false-alarm threshold and the achieved rate for each label in
-        :data:`DETECTORS`.
+        :data:`DETECTORS` (or :data:`DETECTORS_MULTISCALE` when ``multiscale``
+        is True).
 
     Raises
     ------
@@ -556,7 +594,10 @@ def calibrate_detectors(
     """
     if not null_observables:
         raise ValueError("null_observables must not be empty")
-    per_detector: dict[str, list[DetectorTrajectory]] = {name: [] for name in DETECTORS}
+    detector_set = DETECTORS_MULTISCALE if multiscale else DETECTORS
+    per_detector: dict[str, list[DetectorTrajectory]] = {
+        name: [] for name in detector_set
+    }
     for observables in null_observables:
         trajectories = detector_trajectories(
             observables,
@@ -565,6 +606,7 @@ def calibrate_detectors(
             baseline_fraction=baseline_fraction,
             persistence=persistence,
             relative_gate=relative_gate,
+            multiscale=multiscale,
         )
         for name, trajectory in trajectories.items():
             per_detector[name].append(trajectory)
@@ -807,6 +849,7 @@ def permutation_significance_by_detector(
     relative_gate: float = DEFAULT_RELATIVE_GATE,
     n_permutations: int = DEFAULT_PERMUTATIONS,
     seed: int = DEFAULT_PERMUTATION_SEED,
+    multiscale: bool = False,
 ) -> dict[str, PermutationSignificance]:
     """Run the permutation significance test for every suite detector.
 
@@ -823,18 +866,22 @@ def permutation_significance_by_detector(
     null_observables : sequence of SuiteObservables
         The no-transition null trials.
     thresholds : Mapping[str, float]
-        The calibrated matched-false-alarm threshold per label in :data:`DETECTORS`.
+        The calibrated matched-false-alarm threshold per label in :data:`DETECTORS`
+        (or :data:`DETECTORS_MULTISCALE` when ``multiscale`` is True).
     persistence, window, step, baseline_fraction, relative_gate :
         Suite analysis parameters, matching the calibration.
     n_permutations : int
         Number of random relabellings per detector.
     seed : int
         Seed of the resampling, so each p-value is reproducible.
+    multiscale : bool
+        If True, also test the multi-scale CSD detector.
 
     Returns
     -------
     dict[str, PermutationSignificance]
-        The significance test per label in :data:`DETECTORS`.
+        The significance test per label in :data:`DETECTORS` (or
+        :data:`DETECTORS_MULTISCALE` when ``multiscale`` is True).
 
     Raises
     ------
@@ -847,6 +894,7 @@ def permutation_significance_by_detector(
         raise ValueError("transition_observables must not be empty")
     if not null_observables:
         raise ValueError("null_observables must not be empty")
+    detector_set = DETECTORS_MULTISCALE if multiscale else DETECTORS
     transition_trajectories = [
         detector_trajectories(
             observables,
@@ -855,6 +903,7 @@ def permutation_significance_by_detector(
             baseline_fraction=baseline_fraction,
             persistence=persistence,
             relative_gate=relative_gate,
+            multiscale=multiscale,
         )
         for observables in transition_observables
     ]
@@ -866,6 +915,7 @@ def permutation_significance_by_detector(
             baseline_fraction=baseline_fraction,
             persistence=persistence,
             relative_gate=relative_gate,
+            multiscale=multiscale,
         )
         for observables in null_observables
     ]
@@ -878,7 +928,7 @@ def permutation_significance_by_detector(
             n_permutations=n_permutations,
             seed=seed,
         )
-        for name in DETECTORS
+        for name in detector_set
     }
 
 
@@ -953,6 +1003,7 @@ def evaluate_seizure(
     baseline_fraction: float = DEFAULT_BASELINE_FRACTION,
     persistence: int = DEFAULT_PERSISTENCE,
     relative_gate: float = DEFAULT_RELATIVE_GATE,
+    multiscale: bool = False,
 ) -> SeizureLeadResult:
     """Run the suite at the calibrated thresholds and seal each detector's alarm.
 
@@ -974,17 +1025,22 @@ def evaluate_seizure(
     signal_source, captured_at : str
         Provenance forwarded into every sealed record.
     thresholds : Mapping[str, float]
-        The matched-false-alarm threshold per label in :data:`DETECTORS`.
+        The matched-false-alarm threshold per label in :data:`DETECTORS` (or
+        :data:`DETECTORS_MULTISCALE` when ``multiscale`` is True).
     observable_descriptions : Mapping[str, str]
         The domain observable description per label in :data:`DETECTORS`, sealed
-        verbatim so each record names exactly what was screened.
+        verbatim so each record names exactly what was screened. When
+        ``multiscale`` is True, an additional description keyed by
+        :data:`CRITICAL_SLOWING_DOWN_MULTISCALE` must be supplied.
     window, step, baseline_fraction, persistence, relative_gate :
         Suite analysis parameters.
+    multiscale : bool
+        If True, also evaluate and seal the multi-scale CSD detector.
 
     Returns
     -------
     SeizureLeadResult
-        The four sealed records and the recording provenance.
+        The sealed records and the recording provenance.
 
     Raises
     ------
@@ -1001,7 +1057,7 @@ def evaluate_seizure(
         persistence=persistence,
     )
     fs = observables.sampling_rate_hz
-    evidences = {
+    evidences: dict[str, EarlyWarningEvidence] = {
         CRITICAL_SLOWING_DOWN: seal_critical_slowing_down_alarm(
             warnings.critical_slowing_down,
             observable=observable_descriptions[CRITICAL_SLOWING_DOWN],
@@ -1037,6 +1093,28 @@ def evaluate_seizure(
             transition_onset_sample=onset_sample,
         ),
     }
+    if multiscale:
+        half = max(8, window // 2)
+        double = max(window * 2, half + 1)
+        csd_ms = critical_slowing_down_multiscale_warning(
+            observables.order_parameter[np.newaxis, :],
+            windows=(half, window, double),
+            step=step,
+            baseline_fraction=baseline_fraction,
+            z_threshold=thresholds[CRITICAL_SLOWING_DOWN_MULTISCALE],
+            rise_threshold=relative_gate,
+            persistence=persistence,
+            aggregation="max",
+        )
+        evidences[CRITICAL_SLOWING_DOWN_MULTISCALE] = seal_critical_slowing_down_alarm(
+            csd_ms,
+            observable=observable_descriptions[CRITICAL_SLOWING_DOWN_MULTISCALE],
+            signal_source=signal_source,
+            captured_at=captured_at,
+            sampling_rate_hz=fs,
+            transition_onset_sample=onset_sample,
+            detector=CRITICAL_SLOWING_DOWN_MULTISCALE,
+        )
     return SeizureLeadResult(
         record_id=record_id, onset_sample=onset_sample, evidences=evidences
     )
@@ -1053,6 +1131,7 @@ def domain_verdict(
     *,
     noun: str = "transitions",
     singular: str = "transition",
+    multiscale: bool = False,
 ) -> str:
     """Return the honest matched-false-alarm verdict across the transitions.
 
@@ -1074,22 +1153,25 @@ def domain_verdict(
         capstone; the verdict reads naturally in each domain.
     singular : str
         Singular of ``noun``, e.g. ``seizure``.
+    multiscale : bool
+        If True, include the multi-scale CSD detector in the verdict.
 
     Returns
     -------
     str
         A verdict sentence leading with the detection count per detector.
     """
-    led = {name: len(leads_by_detector.get(name, [])) for name in DETECTORS}
+    detector_set = DETECTORS_MULTISCALE if multiscale else DETECTORS
+    led = {name: len(leads_by_detector.get(name, [])) for name in detector_set}
     median = {
         name: (float(np.median(leads_by_detector[name])) if led[name] else None)
-        for name in DETECTORS
+        for name in detector_set
     }
-    members = {name: led[name] for name in DETECTORS if name != ENSEMBLE_WEIGHTED}
+    members = {name: led[name] for name in detector_set if name != ENSEMBLE_WEIGHTED}
     detail = "; ".join(
         f"{name} {led[name]}/{n_transitions}"
         + (f" (median lead {median[name]:.0f} s)" if median[name] is not None else "")
-        for name in DETECTORS
+        for name in detector_set
     )
     if all(count == 0 for count in led.values()):
         return (

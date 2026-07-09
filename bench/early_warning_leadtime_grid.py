@@ -74,6 +74,7 @@ from bench.analytic_phase_pipeline import analytic_phase, bandpass, validate_sig
 from bench.early_warning_domain import (
     DEFAULT_TARGET_FALSE_ALARM,
     DETECTORS,
+    DETECTORS_MULTISCALE,
     calibrate_detectors,
     domain_verdict,
     evaluate_seizure,
@@ -83,6 +84,7 @@ from bench.early_warning_domain import (
 )
 from scpn_phase_orchestrator.monitor.early_warning_suite import (
     CRITICAL_SLOWING_DOWN,
+    CRITICAL_SLOWING_DOWN_MULTISCALE,
     ENSEMBLE_WEIGHTED,
     SYNCHRONISATION,
     TRANSITION_ENTROPY,
@@ -129,6 +131,10 @@ _OBSERVABLE_CSD = (
     "cross-bus Kuramoto order parameter R(t) of 23-bus voltage analytic phase "
     "(0.2-5 Hz)"
 )
+_OBSERVABLE_CSD_MULTISCALE = (
+    "multi-scale cross-bus Kuramoto order parameter R(t) of 23-bus voltage "
+    "analytic phase (0.2-5 Hz)"
+)
 _OBSERVABLE_SYNC = "per-bus 23-bus voltage analytic phase (0.2-5 Hz)"
 _OBSERVABLE_ENTROPY = "per-bus phase projection sin(phase) of 23-bus voltage (0.2-5 Hz)"
 _OBSERVABLE_ENSEMBLE = (
@@ -140,6 +146,10 @@ _OBSERVABLE_DESCRIPTIONS = {
     SYNCHRONISATION: _OBSERVABLE_SYNC,
     TRANSITION_ENTROPY: _OBSERVABLE_ENTROPY,
     ENSEMBLE_WEIGHTED: _OBSERVABLE_ENSEMBLE,
+}
+_OBSERVABLE_DESCRIPTIONS_MULTISCALE = {
+    **_OBSERVABLE_DESCRIPTIONS,
+    CRITICAL_SLOWING_DOWN_MULTISCALE: _OBSERVABLE_CSD_MULTISCALE,
 }
 
 __all__ = [
@@ -467,6 +477,7 @@ def main(
     baseline_fraction: float = SEGMENT_BASELINE_FRACTION,
     max_transitions: int = MAX_TRANSITIONS,
     max_null_scenarios: int = MAX_NULL_SCENARIOS,
+    multiscale: bool = False,
 ) -> None:
     """Run the capstone over PSML scenarios and write the sealed derived artefacts.
 
@@ -490,6 +501,8 @@ def main(
     max_transitions, max_null_scenarios : int
         Caps on the evaluated transitions and null scenarios, so a run over the full
         corpus stays bounded; the counts used and dropped are reported.
+    multiscale : bool
+        If True, also evaluate and seal the multi-scale CSD detector.
     """
     data = Path(data_dir)
     out = Path(output_dir)
@@ -518,10 +531,15 @@ def main(
         window=window,
         step=step,
         baseline_fraction=baseline_fraction,
+        multiscale=multiscale,
     )
     thresholds = calibration.thresholds
 
-    leads_by_detector: dict[str, list[float]] = {name: [] for name in DETECTORS}
+    detector_set = DETECTORS_MULTISCALE if multiscale else DETECTORS
+    observable_descriptions = (
+        _OBSERVABLE_DESCRIPTIONS_MULTISCALE if multiscale else _OBSERVABLE_DESCRIPTIONS
+    )
+    leads_by_detector: dict[str, list[float]] = {name: [] for name in detector_set}
     transition_records: list[dict[str, object]] = []
     transition_segments: list[SuiteObservables] = []
     for scenario, onset in used_transitions:
@@ -543,10 +561,11 @@ def main(
             ),
             captured_at=f"PSML/{scenario.name}",
             thresholds=thresholds,
-            observable_descriptions=_OBSERVABLE_DESCRIPTIONS,
+            observable_descriptions=observable_descriptions,
             window=window,
             step=step,
             baseline_fraction=baseline_fraction,
+            multiscale=multiscale,
         )
         (out / f"{record_id}_early_warning_evidence.json").write_text(
             json.dumps(result.to_audit_record(), indent=2) + "\n", encoding="utf-8"
@@ -565,11 +584,18 @@ def main(
         window=window,
         step=step,
         baseline_fraction=baseline_fraction,
+        multiscale=multiscale,
     )
 
+    result_filename = (
+        "early_warning_leadtime_grid_multiscale_results.json"
+        if multiscale
+        else "early_warning_leadtime_grid_results.json"
+    )
     payload = {
         "benchmark": "early_warning_leadtime_grid",
         "corpus": "PSML 23-bus power-system co-simulation (Zheng et al. 2021)",
+        "multiscale": multiscale,
         "sampling_rate_hz": sampling_rate_hz,
         "band_hz": list(BAND_HZ),
         "window": window,
@@ -593,9 +619,10 @@ def main(
             len(used_transitions),
             noun="growing-oscillation instabilities",
             singular="instability",
+            multiscale=multiscale,
         ),
     }
-    (out / "early_warning_leadtime_grid_results.json").write_text(
+    (out / result_filename).write_text(
         json.dumps(payload, indent=2) + "\n", encoding="utf-8"
     )
     print(payload["verdict"])
@@ -612,5 +639,10 @@ if __name__ == "__main__":  # pragma: no cover - CLI shell over the tested logic
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("data_dir", help="directory holding the PSML scenarios")
     parser.add_argument("output_dir", help="directory for the sealed derived output")
+    parser.add_argument(
+        "--multiscale",
+        action="store_true",
+        help="also evaluate the multi-scale CSD detector",
+    )
     arguments = parser.parse_args()
-    main(arguments.data_dir, arguments.output_dir)
+    main(arguments.data_dir, arguments.output_dir, multiscale=arguments.multiscale)

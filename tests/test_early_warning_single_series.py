@@ -33,6 +33,7 @@ from bench.early_warning_domain import (
 )
 from bench.early_warning_single_series import (
     DETECTOR,
+    DETECTOR_MULTISCALE,
     SingleSeriesObservable,
     SingleSeriesResult,
     calibrate_single_series,
@@ -337,6 +338,31 @@ def test_single_series_result_audit_record_round_trips() -> None:
     assert record["onset_sample"] == _ramp_series(seed=6).n_samples
     assert record["detector"]["detector"] == DETECTOR
     assert record["detector"]["content_hash"] == result.evidence.content_hash
+
+
+def test_multiscale_single_series_keys_and_seal() -> None:
+    trials = null_series_trials(
+        [_flat_series(n_samples=2400, seed=seed) for seed in (40, 41)],
+        segment_samples=800,
+    )
+    calibration = calibrate_single_series(
+        trials, target_fa=0.1, window=_WINDOW, step=_STEP, multiscale=True
+    )
+    assert set(calibration.thresholds) == {DETECTOR_MULTISCALE}
+    observable = _ramp_series(seed=7)
+    result = evaluate_single_series(
+        observable,
+        record_id="ms_ramp",
+        onset_sample=observable.n_samples,
+        signal_source="synthetic",
+        captured_at="test",
+        threshold=calibration.thresholds[DETECTOR_MULTISCALE],
+        observable_description="synthetic multiscale",
+        window=_WINDOW,
+        step=_STEP,
+        multiscale=True,
+    )
+    assert result.evidence.detector == DETECTOR_MULTISCALE
 
 
 # --------------------------------------------------------------------------- #

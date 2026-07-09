@@ -122,6 +122,7 @@ from bench.analytic_phase_pipeline import (
 from bench.early_warning_domain import (
     DEFAULT_TARGET_FALSE_ALARM,
     DETECTORS,
+    DETECTORS_MULTISCALE,
     calibrate_detectors,
     domain_verdict,
     evaluate_seizure,
@@ -131,6 +132,7 @@ from bench.early_warning_domain import (
 )
 from scpn_phase_orchestrator.monitor.early_warning_suite import (
     CRITICAL_SLOWING_DOWN,
+    CRITICAL_SLOWING_DOWN_MULTISCALE,
     ENSEMBLE_WEIGHTED,
     SYNCHRONISATION,
     TRANSITION_ENTROPY,
@@ -179,6 +181,10 @@ _OBSERVABLE_CSD = (
     "cross-channel Kuramoto order parameter R(t) of scalp-EEG analytic phase "
     "(4-30 Hz, decimated to 32 Hz)"
 )
+_OBSERVABLE_CSD_MULTISCALE = (
+    "multi-scale cross-channel Kuramoto order parameter R(t) of scalp-EEG "
+    "analytic phase (4-30 Hz, decimated to 32 Hz)"
+)
 _OBSERVABLE_SYNC = "per-channel scalp-EEG analytic phase (4-30 Hz, decimated to 32 Hz)"
 _OBSERVABLE_ENTROPY = (
     "per-channel phase projection sin(phase) of scalp EEG (4-30 Hz, decimated to 32 Hz)"
@@ -193,6 +199,10 @@ _OBSERVABLE_DESCRIPTIONS = {
     SYNCHRONISATION: _OBSERVABLE_SYNC,
     TRANSITION_ENTROPY: _OBSERVABLE_ENTROPY,
     ENSEMBLE_WEIGHTED: _OBSERVABLE_ENSEMBLE,
+}
+_OBSERVABLE_DESCRIPTIONS_MULTISCALE = {
+    **_OBSERVABLE_DESCRIPTIONS,
+    CRITICAL_SLOWING_DOWN_MULTISCALE: _OBSERVABLE_CSD_MULTISCALE,
 }
 
 #: Annotated seizure onset times (seconds into each CHB-MIT chb01 record).
@@ -436,6 +446,7 @@ def main(
     seizures: Mapping[str, int] = SEIZURE_ONSETS_S,
     segment_samples: int = SEGMENT_SAMPLES,
     baseline_fraction: float = SEGMENT_BASELINE_FRACTION,
+    multiscale: bool = False,
 ) -> None:
     """Run the capstone over CHB-MIT chb01 and write the sealed derived artefacts.
 
@@ -461,6 +472,8 @@ def main(
     baseline_fraction : float
         Leading baseline fraction of each segment. Defaults to
         :data:`SEGMENT_BASELINE_FRACTION`.
+    multiscale : bool
+        If True, also evaluate and seal the multi-scale CSD detector.
     """
     data = Path(data_dir)
     out = Path(output_dir)
@@ -481,10 +494,15 @@ def main(
         window=WINDOW,
         step=STEP,
         baseline_fraction=baseline_fraction,
+        multiscale=multiscale,
     )
     thresholds = calibration.thresholds
 
-    leads_by_detector: dict[str, list[float]] = {name: [] for name in DETECTORS}
+    detector_set = DETECTORS_MULTISCALE if multiscale else DETECTORS
+    observable_descriptions = (
+        _OBSERVABLE_DESCRIPTIONS_MULTISCALE if multiscale else _OBSERVABLE_DESCRIPTIONS
+    )
+    leads_by_detector: dict[str, list[float]] = {name: [] for name in detector_set}
     seizure_records: list[dict[str, object]] = []
     excluded: list[dict[str, object]] = []
     transition_segments: list[SuiteObservables] = []
@@ -512,10 +530,11 @@ def main(
             ),
             captured_at=edf_start_datetime(path),
             thresholds=thresholds,
-            observable_descriptions=_OBSERVABLE_DESCRIPTIONS,
+            observable_descriptions=observable_descriptions,
             window=WINDOW,
             step=STEP,
             baseline_fraction=baseline_fraction,
+            multiscale=multiscale,
         )
         (out / f"{record_id}_early_warning_evidence.json").write_text(
             json.dumps(result.to_audit_record(), indent=2) + "\n", encoding="utf-8"
@@ -538,11 +557,18 @@ def main(
         window=WINDOW,
         step=STEP,
         baseline_fraction=baseline_fraction,
+        multiscale=multiscale,
     )
 
+    result_filename = (
+        "early_warning_leadtime_eeg_multiscale_results.json"
+        if multiscale
+        else "early_warning_leadtime_eeg_results.json"
+    )
     payload = {
         "benchmark": "early_warning_leadtime_eeg",
         "corpus": "CHB-MIT Scalp EEG Database, subject chb01 (Shoeb 2009)",
+        "multiscale": multiscale,
         "sampling_rate_hz": SAMPLING_RATE_HZ,
         "decimated_rate_hz": DECIMATED_RATE_HZ,
         "band_hz": list(BAND_HZ),
@@ -566,9 +592,10 @@ def main(
             len(seizure_records),
             noun="seizures",
             singular="seizure",
+            multiscale=multiscale,
         ),
     }
-    (out / "early_warning_leadtime_eeg_results.json").write_text(
+    (out / result_filename).write_text(
         json.dumps(payload, indent=2) + "\n", encoding="utf-8"
     )
     print(payload["verdict"])
@@ -582,5 +609,10 @@ if __name__ == "__main__":  # pragma: no cover - CLI shell over the tested logic
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("data_dir", help="directory holding the CHB-MIT chb01 EDFs")
     parser.add_argument("output_dir", help="directory for the sealed derived output")
+    parser.add_argument(
+        "--multiscale",
+        action="store_true",
+        help="also evaluate the multi-scale CSD detector",
+    )
     arguments = parser.parse_args()
-    main(arguments.data_dir, arguments.output_dir)
+    main(arguments.data_dir, arguments.output_dir, multiscale=arguments.multiscale)

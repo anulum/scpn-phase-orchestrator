@@ -89,6 +89,7 @@ from scipy.ndimage import gaussian_filter1d
 from bench.early_warning_domain import DetectorTrajectory, permutation_significance
 from bench.early_warning_single_series import (
     DETECTOR,
+    DETECTOR_MULTISCALE,
     SingleSeriesObservable,
     calibrate_single_series,
     critical_slowing_down_trajectory,
@@ -530,6 +531,7 @@ def main(
     records: Sequence[ClimateRecord] = CLIMATE_RECORDS,
     segment_samples: int = SEGMENT_SAMPLES,
     baseline_fraction: float = SEGMENT_BASELINE_FRACTION,
+    multiscale: bool = False,
 ) -> None:
     """Run the capstone over the palaeoclimate corpus and write the sealed artefacts.
 
@@ -552,6 +554,8 @@ def main(
         Pre-onset analysis-segment length in samples; also the null trial length.
     baseline_fraction : float
         Leading baseline fraction of each segment.
+    multiscale : bool
+        If True, evaluate the multi-scale CSD detector.
     """
     data = Path(data_dir)
     out = Path(output_dir)
@@ -581,8 +585,10 @@ def main(
         window=WINDOW,
         step=STEP,
         baseline_fraction=baseline_fraction,
+        multiscale=multiscale,
     )
-    threshold = calibration.thresholds[DETECTOR]
+    detector = DETECTOR_MULTISCALE if multiscale else DETECTOR
+    threshold = calibration.thresholds[detector]
 
     leads: dict[str, float | None] = {}
     transition_records: list[dict[str, object]] = []
@@ -602,6 +608,7 @@ def main(
             window=WINDOW,
             step=STEP,
             baseline_fraction=baseline_fraction,
+            multiscale=multiscale,
         )
         (out / f"{record.record_id}_early_warning_evidence.json").write_text(
             json.dumps(result.to_audit_record(), indent=2) + "\n", encoding="utf-8"
@@ -620,6 +627,7 @@ def main(
             window=WINDOW,
             step=STEP,
             baseline_fraction=baseline_fraction,
+            multiscale=multiscale,
         )
 
     significance = permutation_significance(
@@ -628,9 +636,15 @@ def main(
         threshold=threshold,
     )
 
+    result_filename = (
+        "early_warning_leadtime_climate_multiscale_results.json"
+        if multiscale
+        else "early_warning_leadtime_climate_results.json"
+    )
     payload = {
         "benchmark": "early_warning_leadtime_climate",
         "corpus": "Dakos et al. 2008 palaeoclimate abrupt-transition records",
+        "multiscale": multiscale,
         "detrend_bandwidth_percent": DETREND_BANDWIDTH_PERCENT,
         "window": WINDOW,
         "step": STEP,
@@ -651,7 +665,7 @@ def main(
             lead_unit="yr",
         ),
     }
-    (out / "early_warning_leadtime_climate_results.json").write_text(
+    (out / result_filename).write_text(
         json.dumps(payload, indent=2) + "\n", encoding="utf-8"
     )
     print(payload["verdict"])
@@ -674,5 +688,10 @@ if __name__ == "__main__":  # pragma: no cover - CLI shell over the tested logic
         "data_dir", help="directory holding the toolbox proxy text files"
     )
     parser.add_argument("output_dir", help="directory for the sealed derived output")
+    parser.add_argument(
+        "--multiscale",
+        action="store_true",
+        help="evaluate the multi-scale CSD detector",
+    )
     arguments = parser.parse_args()
-    main(arguments.data_dir, arguments.output_dir)
+    main(arguments.data_dir, arguments.output_dir, multiscale=arguments.multiscale)
