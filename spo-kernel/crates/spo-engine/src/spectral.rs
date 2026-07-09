@@ -60,7 +60,7 @@ pub fn graph_laplacian(knm: &[f64], n: usize) -> Vec<f64> {
 /// Full spectral decomposition of a symmetric matrix.
 ///
 /// Uses nalgebra's symmetric QR eigensolver (Householder tridiagonalisation
-/// + implicit Francis QR shifts). It is LAPACK-free, runs in O(N³) time, and
+/// with implicit Francis QR shifts). It is LAPACK-free, runs in O(N³) time, and
 /// reliably terminates for the dense PSD matrices produced by the Hodge and
 /// spectral monitors. The previous cyclic-Jacobi implementation did not finish
 /// in bounded time for larger dense problems (e.g. the triangle Laplacian in
