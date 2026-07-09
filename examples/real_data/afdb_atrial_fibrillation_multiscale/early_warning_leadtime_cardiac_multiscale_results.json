@@ -1,0 +1,153 @@
+{
+  "benchmark": "early_warning_leadtime_cardiac",
+  "corpus": "MIT-BIH Atrial Fibrillation Database (Moody & Mark 1983)",
+  "multiscale": true,
+  "sampling_rate_hz": 250.0,
+  "decimated_rate_hz": 50.0,
+  "band_hz": [
+    5.0,
+    20.0
+  ],
+  "window": 200,
+  "step": 25,
+  "baseline_seconds": 300.0,
+  "horizon_seconds": 600.0000000000001,
+  "segment_seconds": 900.0,
+  "target_false_alarm": 0.1,
+  "sinus_null_records": [
+    "04015",
+    "04126"
+  ],
+  "n_null_trials": 20,
+  "matched_false_alarm_thresholds": {
+    "critical_slowing_down": 5.696504012190101,
+    "synchronisation": 4.174308611666475,
+    "transition_entropy": 2.7431015101042653,
+    "ensemble_weighted": 2.285542170027985,
+    "critical_slowing_down_multiscale": 5.765973059827825
+  },
+  "achieved_false_alarm": {
+    "critical_slowing_down": 0.1,
+    "synchronisation": 0.1,
+    "transition_entropy": 0.1,
+    "ensemble_weighted": 0.1,
+    "critical_slowing_down_multiscale": 0.1
+  },
+  "permutation_significance": {
+    "critical_slowing_down": {
+      "observed_led": 1,
+      "n_transitions": 6,
+      "pooled_alarm_rate": 0.11538461538461539,
+      "expected_led": 0.6923076923076923,
+      "p_value": 0.5627437256274372,
+      "n_permutations": 10000,
+      "seed": 0
+    },
+    "synchronisation": {
+      "observed_led": 2,
+      "n_transitions": 6,
+      "pooled_alarm_rate": 0.15384615384615385,
+      "expected_led": 0.9230769230769231,
+      "p_value": 0.21927807219278073,
+      "n_permutations": 10000,
+      "seed": 0
+    },
+    "transition_entropy": {
+      "observed_led": 0,
+      "n_transitions": 6,
+      "pooled_alarm_rate": 0.07692307692307693,
+      "expected_led": 0.46153846153846156,
+      "p_value": 1.0,
+      "n_permutations": 10000,
+      "seed": 0
+    },
+    "ensemble_weighted": {
+      "observed_led": 2,
+      "n_transitions": 6,
+      "pooled_alarm_rate": 0.15384615384615385,
+      "expected_led": 0.9230769230769231,
+      "p_value": 0.21927807219278073,
+      "n_permutations": 10000,
+      "seed": 0
+    },
+    "critical_slowing_down_multiscale": {
+      "observed_led": 2,
+      "n_transitions": 6,
+      "pooled_alarm_rate": 0.15384615384615385,
+      "expected_led": 0.9230769230769231,
+      "p_value": 0.21927807219278073,
+      "n_permutations": 10000,
+      "seed": 0
+    }
+  },
+  "af_onsets": [
+    {
+      "record_id": "04043",
+      "onset_s": 1066.0,
+      "lead_seconds": {
+        "critical_slowing_down": null,
+        "synchronisation": 224.0,
+        "transition_entropy": null,
+        "ensemble_weighted": 224.5,
+        "critical_slowing_down_multiscale": 227.0
+      }
+    },
+    {
+      "record_id": "04048",
+      "onset_s": 2226.7,
+      "lead_seconds": {
+        "critical_slowing_down": null,
+        "synchronisation": null,
+        "transition_entropy": null,
+        "ensemble_weighted": null,
+        "critical_slowing_down_multiscale": null
+      }
+    },
+    {
+      "record_id": "04746",
+      "onset_s": 4390.0,
+      "lead_seconds": {
+        "critical_slowing_down": null,
+        "synchronisation": null,
+        "transition_entropy": null,
+        "ensemble_weighted": null,
+        "critical_slowing_down_multiscale": null
+      }
+    },
+    {
+      "record_id": "04908",
+      "onset_s": 4908.9,
+      "lead_seconds": {
+        "critical_slowing_down": 529.0,
+        "synchronisation": 45.0,
+        "transition_entropy": null,
+        "ensemble_weighted": 529.0,
+        "critical_slowing_down_multiscale": 532.0
+      }
+    },
+    {
+      "record_id": "05091",
+      "onset_s": 6532.2,
+      "lead_seconds": {
+        "critical_slowing_down": null,
+        "synchronisation": null,
+        "transition_entropy": null,
+        "ensemble_weighted": null,
+        "critical_slowing_down_multiscale": null
+      }
+    },
+    {
+      "record_id": "07879",
+      "onset_s": 7132.3,
+      "lead_seconds": {
+        "critical_slowing_down": null,
+        "synchronisation": null,
+        "transition_entropy": null,
+        "ensemble_weighted": null,
+        "critical_slowing_down_multiscale": null
+      }
+    }
+  ],
+  "excluded_records": [],
+  "verdict": "SPARSE DETECTION, NO ROBUST ADVANTAGE: at a matched false-alarm rate detection is sparse and no detector leads more AF onsets than the fusion (critical_slowing_down 1/6 (median lead 529 s); synchronisation 2/6 (median lead 134 s); transition_entropy 0/6; ensemble_weighted 2/6 (median lead 377 s); critical_slowing_down_multiscale 2/6 (median lead 380 s)). A longer lead on one AF onset is not a robust advantage; consistent with detection as a commodity, the auditable sealed evidence is the deliverable."
+}

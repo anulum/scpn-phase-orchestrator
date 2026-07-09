@@ -1,0 +1,161 @@
+{
+  "benchmark": "early_warning_leadtime_eeg",
+  "corpus": "CHB-MIT Scalp EEG Database, subject chb01 (Shoeb 2009)",
+  "multiscale": true,
+  "sampling_rate_hz": 256.0,
+  "decimated_rate_hz": 32.0,
+  "band_hz": [
+    4.0,
+    30.0
+  ],
+  "window": 128,
+  "step": 16,
+  "baseline_seconds": 300.0,
+  "horizon_seconds": 600.0000000000001,
+  "segment_seconds": 900.0,
+  "target_false_alarm": 0.1,
+  "interictal_null_records": [
+    "chb01_01",
+    "chb01_02",
+    "chb01_05",
+    "chb01_06",
+    "chb01_07"
+  ],
+  "n_null_trials": 20,
+  "matched_false_alarm_thresholds": {
+    "critical_slowing_down": 4.274048774356526,
+    "synchronisation": 3.7474762071511156,
+    "transition_entropy": 0.0,
+    "ensemble_weighted": 2.8937677491356917,
+    "critical_slowing_down_multiscale": 4.585798340798288
+  },
+  "achieved_false_alarm": {
+    "critical_slowing_down": 0.1,
+    "synchronisation": 0.1,
+    "transition_entropy": 0.0,
+    "ensemble_weighted": 0.1,
+    "critical_slowing_down_multiscale": 0.1
+  },
+  "permutation_significance": {
+    "critical_slowing_down": {
+      "observed_led": 2,
+      "n_transitions": 6,
+      "pooled_alarm_rate": 0.15384615384615385,
+      "expected_led": 0.9230769230769231,
+      "p_value": 0.21547845215478453,
+      "n_permutations": 10000,
+      "seed": 0
+    },
+    "synchronisation": {
+      "observed_led": 1,
+      "n_transitions": 6,
+      "pooled_alarm_rate": 0.11538461538461539,
+      "expected_led": 0.6923076923076923,
+      "p_value": 0.5598440155984401,
+      "n_permutations": 10000,
+      "seed": 0
+    },
+    "transition_entropy": {
+      "observed_led": 0,
+      "n_transitions": 6,
+      "pooled_alarm_rate": 0.0,
+      "expected_led": 0.0,
+      "p_value": 1.0,
+      "n_permutations": 10000,
+      "seed": 0
+    },
+    "ensemble_weighted": {
+      "observed_led": 1,
+      "n_transitions": 6,
+      "pooled_alarm_rate": 0.11538461538461539,
+      "expected_led": 0.6923076923076923,
+      "p_value": 0.5582441755824418,
+      "n_permutations": 10000,
+      "seed": 0
+    },
+    "critical_slowing_down_multiscale": {
+      "observed_led": 2,
+      "n_transitions": 6,
+      "pooled_alarm_rate": 0.15384615384615385,
+      "expected_led": 0.9230769230769231,
+      "p_value": 0.21537846215378462,
+      "n_permutations": 10000,
+      "seed": 0
+    }
+  },
+  "seizures": [
+    {
+      "record_id": "chb01_03",
+      "onset_s": 2996,
+      "lead_seconds": {
+        "critical_slowing_down": null,
+        "synchronisation": null,
+        "transition_entropy": null,
+        "ensemble_weighted": null,
+        "critical_slowing_down_multiscale": null
+      }
+    },
+    {
+      "record_id": "chb01_04",
+      "onset_s": 1467,
+      "lead_seconds": {
+        "critical_slowing_down": 412.0,
+        "synchronisation": 441.5,
+        "transition_entropy": null,
+        "ensemble_weighted": 452.0,
+        "critical_slowing_down_multiscale": 410.5
+      }
+    },
+    {
+      "record_id": "chb01_15",
+      "onset_s": 1732,
+      "lead_seconds": {
+        "critical_slowing_down": null,
+        "synchronisation": null,
+        "transition_entropy": null,
+        "ensemble_weighted": null,
+        "critical_slowing_down_multiscale": null
+      }
+    },
+    {
+      "record_id": "chb01_16",
+      "onset_s": 1015,
+      "lead_seconds": {
+        "critical_slowing_down": null,
+        "synchronisation": null,
+        "transition_entropy": null,
+        "ensemble_weighted": null,
+        "critical_slowing_down_multiscale": null
+      }
+    },
+    {
+      "record_id": "chb01_18",
+      "onset_s": 1720,
+      "lead_seconds": {
+        "critical_slowing_down": null,
+        "synchronisation": null,
+        "transition_entropy": null,
+        "ensemble_weighted": null,
+        "critical_slowing_down_multiscale": null
+      }
+    },
+    {
+      "record_id": "chb01_26",
+      "onset_s": 1862,
+      "lead_seconds": {
+        "critical_slowing_down": 405.5,
+        "synchronisation": null,
+        "transition_entropy": null,
+        "ensemble_weighted": null,
+        "critical_slowing_down_multiscale": 407.0
+      }
+    }
+  ],
+  "excluded_seizures": [
+    {
+      "record_id": "chb01_21",
+      "onset_s": 327
+    }
+  ],
+  "verdict": "SPARSE DETECTION, NO ROBUST ADVANTAGE: at a matched false-alarm rate detection is sparse and no detector leads more seizures than the fusion (critical_slowing_down 2/6 (median lead 409 s); synchronisation 1/6 (median lead 442 s); transition_entropy 0/6; ensemble_weighted 1/6 (median lead 452 s); critical_slowing_down_multiscale 2/6 (median lead 409 s)). A longer lead on one seizure is not a robust advantage; consistent with detection as a commodity, the auditable sealed evidence is the deliverable."
+}
