@@ -1,0 +1,180 @@
+{
+  "benchmark": "early_warning_leadtime_grid",
+  "corpus": "PSML 23-bus power-system co-simulation (Zheng et al. 2021)",
+  "sampling_rate_hz": 238.09523809523915,
+  "band_hz": [
+    0.2,
+    5.0
+  ],
+  "window": 119,
+  "step": 24,
+  "segment_seconds": 2.0,
+  "baseline_seconds": 0.6666666666666666,
+  "horizon_seconds": 1.3333333333333335,
+  "target_false_alarm": 0.1,
+  "n_transitions_found": 27,
+  "n_null_scenarios_found": 187,
+  "n_transitions_evaluated": 12,
+  "n_null_trials": 24,
+  "matched_false_alarm_thresholds": {
+    "critical_slowing_down": 480.2014146956326,
+    "synchronisation": 3.3214248430567874,
+    "transition_entropy": 3.6912970984519613,
+    "ensemble_weighted": 157.23192176389654
+  },
+  "achieved_false_alarm": {
+    "critical_slowing_down": 0.08333333333333333,
+    "synchronisation": 0.08333333333333333,
+    "transition_entropy": 0.08333333333333333,
+    "ensemble_weighted": 0.08333333333333333
+  },
+  "permutation_significance": {
+    "critical_slowing_down": {
+      "observed_led": 3,
+      "n_transitions": 12,
+      "pooled_alarm_rate": 0.1388888888888889,
+      "expected_led": 1.6666666666666667,
+      "p_value": 0.1952804719528047,
+      "n_permutations": 10000,
+      "seed": 0
+    },
+    "synchronisation": {
+      "observed_led": 0,
+      "n_transitions": 12,
+      "pooled_alarm_rate": 0.05555555555555555,
+      "expected_led": 0.6666666666666666,
+      "p_value": 1.0,
+      "n_permutations": 10000,
+      "seed": 0
+    },
+    "transition_entropy": {
+      "observed_led": 2,
+      "n_transitions": 12,
+      "pooled_alarm_rate": 0.1111111111111111,
+      "expected_led": 1.3333333333333333,
+      "p_value": 0.40445955404459555,
+      "n_permutations": 10000,
+      "seed": 0
+    },
+    "ensemble_weighted": {
+      "observed_led": 2,
+      "n_transitions": 12,
+      "pooled_alarm_rate": 0.1111111111111111,
+      "expected_led": 1.3333333333333333,
+      "p_value": 0.4072592740725927,
+      "n_permutations": 10000,
+      "seed": 0
+    }
+  },
+  "transitions": [
+    {
+      "record_id": "row_115",
+      "lead_seconds": {
+        "critical_slowing_down": null,
+        "synchronisation": null,
+        "transition_entropy": null,
+        "ensemble_weighted": null
+      }
+    },
+    {
+      "record_id": "row_117",
+      "lead_seconds": {
+        "critical_slowing_down": null,
+        "synchronisation": null,
+        "transition_entropy": null,
+        "ensemble_weighted": null
+      }
+    },
+    {
+      "record_id": "row_123",
+      "lead_seconds": {
+        "critical_slowing_down": null,
+        "synchronisation": null,
+        "transition_entropy": null,
+        "ensemble_weighted": null
+      }
+    },
+    {
+      "record_id": "row_148",
+      "lead_seconds": {
+        "critical_slowing_down": null,
+        "synchronisation": null,
+        "transition_entropy": null,
+        "ensemble_weighted": null
+      }
+    },
+    {
+      "record_id": "row_156",
+      "lead_seconds": {
+        "critical_slowing_down": null,
+        "synchronisation": null,
+        "transition_entropy": null,
+        "ensemble_weighted": null
+      }
+    },
+    {
+      "record_id": "row_175",
+      "lead_seconds": {
+        "critical_slowing_down": 0.688799999999997,
+        "synchronisation": null,
+        "transition_entropy": null,
+        "ensemble_weighted": 0.688799999999997
+      }
+    },
+    {
+      "record_id": "row_176",
+      "lead_seconds": {
+        "critical_slowing_down": 0.7895999999999965,
+        "synchronisation": null,
+        "transition_entropy": 1.2935999999999943,
+        "ensemble_weighted": 0.7895999999999965
+      }
+    },
+    {
+      "record_id": "row_183",
+      "lead_seconds": {
+        "critical_slowing_down": null,
+        "synchronisation": null,
+        "transition_entropy": null,
+        "ensemble_weighted": null
+      }
+    },
+    {
+      "record_id": "row_253",
+      "lead_seconds": {
+        "critical_slowing_down": null,
+        "synchronisation": null,
+        "transition_entropy": 1.2935999999999943,
+        "ensemble_weighted": null
+      }
+    },
+    {
+      "record_id": "row_288",
+      "lead_seconds": {
+        "critical_slowing_down": null,
+        "synchronisation": null,
+        "transition_entropy": null,
+        "ensemble_weighted": null
+      }
+    },
+    {
+      "record_id": "row_301",
+      "lead_seconds": {
+        "critical_slowing_down": 1.3943999999999939,
+        "synchronisation": null,
+        "transition_entropy": null,
+        "ensemble_weighted": null
+      }
+    },
+    {
+      "record_id": "row_313",
+      "lead_seconds": {
+        "critical_slowing_down": null,
+        "synchronisation": null,
+        "transition_entropy": null,
+        "ensemble_weighted": null
+      }
+    }
+  ],
+  "verdict": "SPARSE DETECTION, NO ROBUST ADVANTAGE: at a matched false-alarm rate detection is sparse and no detector leads more growing-oscillation instabilities than the fusion (critical_slowing_down 3/12 (median lead 1 s); synchronisation 0/12; transition_entropy 2/12 (median lead 1 s); ensemble_weighted 2/12 (median lead 1 s)). A longer lead on one instability is not a robust advantage; consistent with detection as a commodity, the auditable sealed evidence is the deliverable."
+}

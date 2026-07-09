@@ -1,0 +1,92 @@
+{
+  "benchmark": "csd_variant_synthetic",
+  "corpus": "vanilla Kuramoto first- and second-order synchronisation transitions",
+  "target_false_alarm": 0.1,
+  "n_recordings": 2,
+  "recording_ids": [
+    "explosive",
+    "continuous"
+  ],
+  "per_recording": [
+    {
+      "recording_id": "explosive",
+      "n_events": 8,
+      "detectors": {
+        "critical_slowing_down_baseline": {
+          "detector_name": "critical_slowing_down_baseline",
+          "detection_rate": 0.375,
+          "p_value": 0.03809179000000002,
+          "beats_chance": true,
+          "median_lead": 110.0,
+          "achieved_false_alarm": 0.125
+        },
+        "critical_slowing_down_multiscale": {
+          "detector_name": "critical_slowing_down_multiscale",
+          "detection_rate": 0.625,
+          "p_value": 0.0004316500000000002,
+          "beats_chance": true,
+          "median_lead": 423.0,
+          "achieved_false_alarm": 0.0
+        },
+        "critical_slowing_down_surrogate": {
+          "detector_name": "critical_slowing_down_surrogate",
+          "detection_rate": 0.625,
+          "p_value": 0.0004316500000000002,
+          "beats_chance": true,
+          "median_lead": 277.0,
+          "achieved_false_alarm": 0.125
+        }
+      }
+    },
+    {
+      "recording_id": "continuous",
+      "n_events": 8,
+      "detectors": {
+        "critical_slowing_down_baseline": {
+          "detector_name": "critical_slowing_down_baseline",
+          "detection_rate": 0.125,
+          "p_value": 0.56953279,
+          "beats_chance": true,
+          "median_lead": 94.0,
+          "achieved_false_alarm": 0.125
+        },
+        "critical_slowing_down_multiscale": {
+          "detector_name": "critical_slowing_down_multiscale",
+          "detection_rate": 0.375,
+          "p_value": 0.03809179000000002,
+          "beats_chance": true,
+          "median_lead": 214.0,
+          "achieved_false_alarm": 0.125
+        },
+        "critical_slowing_down_surrogate": {
+          "detector_name": "critical_slowing_down_surrogate",
+          "detection_rate": 0.0,
+          "p_value": 1.0,
+          "beats_chance": false,
+          "median_lead": 0.0,
+          "achieved_false_alarm": 0.125
+        }
+      }
+    }
+  ],
+  "critical_slowing_down_baseline": {
+    "mean_detection_rate": 0.25,
+    "geometric_mean_p_value": 0.1472906087800377,
+    "fraction_beats_chance": 1.0
+  },
+  "critical_slowing_down_multiscale": {
+    "mean_detection_rate": 0.5,
+    "geometric_mean_p_value": 0.004054913211586657,
+    "fraction_beats_chance": 1.0
+  },
+  "critical_slowing_down_surrogate": {
+    "mean_detection_rate": 0.3125,
+    "geometric_mean_p_value": 0.020776188293332356,
+    "fraction_beats_chance": 0.5
+  },
+  "recommendation": {
+    "refine": true,
+    "preferred_variant": "critical_slowing_down_multiscale",
+    "rationale": "Highest mean detection rate across both transition kinds at matched false alarm."
+  }
+}

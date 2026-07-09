@@ -1,0 +1,44 @@
+{
+  "record_id": "glaciation_II_termination",
+  "onset_sample": 60,
+  "detector": {
+    "detector": "critical_slowing_down_multiscale",
+    "observable": "Vostok ice-core deuterium (\u03b4D) across the termination of glaciation II (detrended residual of the toolbox _Y1int)",
+    "signal_source": "Vostok \u03b4D, glaciation II (earlywarningtoolbox/datasets Vostok2deut; Petit et al. 1999); analysed in Dakos et al. 2008, PNAS 105:14308 / 60-sample pre-onset segment (detrended residual)",
+    "captured_at": "Dakos2008/glaciation_II_termination",
+    "sampling_rate_hz": 0.006475445458496306,
+    "window": 60,
+    "step": 3,
+    "persistence": 2,
+    "n_baseline_windows": 1,
+    "warning_triggered": false,
+    "warning_window": null,
+    "warning_sample": null,
+    "transition_onset_sample": 60,
+    "lead_samples": null,
+    "lead_seconds": null,
+    "lead_is_early": false,
+    "indicators": [
+      {
+        "name": "variance",
+        "direction": "rise",
+        "robust_z": 0.0,
+        "baseline_median": 1.9304709924529357,
+        "z_threshold": 0.0,
+        "breached": false
+      },
+      {
+        "name": "lag1_autocorrelation",
+        "direction": "rise",
+        "robust_z": 0.0,
+        "baseline_median": 0.4953251004992145,
+        "z_threshold": 0.0,
+        "breached": false
+      }
+    ],
+    "verdict": "no_early_warning",
+    "framework": "Generic early-warning-signals framework (Scheffer et al. 2009, Nature 461:53)",
+    "disclaimer": "This early-warning evidence record is a technical evidence-mapping artefact. It seals a passive detector's alarm decision, the contributing indicators and their robust z-scores, and the provenance of the screened signal; it does not constitute a clinical, operational, or safety decision, nor a certification of compliance. Any reported lead time is measured against a caller-supplied ground-truth onset and holds only for the recorded observable and detector configuration; a non-positive lead means the alarm was coincident with or later than the transition.",
+    "content_hash": "75834a32f530bb724218f8178d6bcf3046fa89671ee5a4e958b52800e972aa88"
+  }
+}

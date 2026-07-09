@@ -1,0 +1,44 @@
+{
+  "record_id": "eocene_oligocene_greenhouse_end",
+  "onset_sample": 60,
+  "detector": {
+    "detector": "critical_slowing_down_multiscale",
+    "observable": "benthic foraminiferal \u03b4\u00b9\u2078O across the Eocene\u2013Oligocene greenhouse-to-icehouse transition (~34 Ma; detrended residual of the toolbox _Y1int)",
+    "signal_source": "Eocene\u2013Oligocene benthic \u03b4\u00b9\u2078O (earlywarningtoolbox/datasets Eo_Gl, via NOAA WDC Paleoclimatology); analysed in Dakos et al. 2008, PNAS 105:14308 / 60-sample pre-onset segment (detrended residual)",
+    "captured_at": "Dakos2008/eocene_oligocene_greenhouse_end",
+    "sampling_rate_hz": 5.813366960907945e-05,
+    "window": 60,
+    "step": 3,
+    "persistence": 2,
+    "n_baseline_windows": 1,
+    "warning_triggered": false,
+    "warning_window": null,
+    "warning_sample": null,
+    "transition_onset_sample": 60,
+    "lead_samples": null,
+    "lead_seconds": null,
+    "lead_is_early": false,
+    "indicators": [
+      {
+        "name": "variance",
+        "direction": "rise",
+        "robust_z": 0.0,
+        "baseline_median": 7.19597799303813,
+        "z_threshold": 0.0,
+        "breached": false
+      },
+      {
+        "name": "lag1_autocorrelation",
+        "direction": "rise",
+        "robust_z": 0.0,
+        "baseline_median": 0.934531804914004,
+        "z_threshold": 0.0,
+        "breached": false
+      }
+    ],
+    "verdict": "no_early_warning",
+    "framework": "Generic early-warning-signals framework (Scheffer et al. 2009, Nature 461:53)",
+    "disclaimer": "This early-warning evidence record is a technical evidence-mapping artefact. It seals a passive detector's alarm decision, the contributing indicators and their robust z-scores, and the provenance of the screened signal; it does not constitute a clinical, operational, or safety decision, nor a certification of compliance. Any reported lead time is measured against a caller-supplied ground-truth onset and holds only for the recorded observable and detector configuration; a non-positive lead means the alarm was coincident with or later than the transition.",
+    "content_hash": "3c56942bd5ba7cbeb5ae0f46148587a21c2d628ef81190dc201c905392257c54"
+  }
+}

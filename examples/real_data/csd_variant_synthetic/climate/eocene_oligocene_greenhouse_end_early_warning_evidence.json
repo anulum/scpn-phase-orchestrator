@@ -1,0 +1,44 @@
+{
+  "record_id": "eocene_oligocene_greenhouse_end",
+  "onset_sample": 60,
+  "detector": {
+    "detector": "critical_slowing_down",
+    "observable": "benthic foraminiferal \u03b4\u00b9\u2078O across the Eocene\u2013Oligocene greenhouse-to-icehouse transition (~34 Ma; detrended residual of the toolbox _Y1int)",
+    "signal_source": "Eocene\u2013Oligocene benthic \u03b4\u00b9\u2078O (earlywarningtoolbox/datasets Eo_Gl, via NOAA WDC Paleoclimatology); analysed in Dakos et al. 2008, PNAS 105:14308 / 60-sample pre-onset segment (detrended residual)",
+    "captured_at": "Dakos2008/eocene_oligocene_greenhouse_end",
+    "sampling_rate_hz": 5.813366960907945e-05,
+    "window": 30,
+    "step": 3,
+    "persistence": 2,
+    "n_baseline_windows": 6,
+    "warning_triggered": true,
+    "warning_window": 6,
+    "warning_sample": 18,
+    "transition_onset_sample": 60,
+    "lead_samples": 42,
+    "lead_seconds": 722472.885032538,
+    "lead_is_early": true,
+    "indicators": [
+      {
+        "name": "variance",
+        "direction": "rise",
+        "robust_z": 36.95965804600974,
+        "baseline_median": 4.564478185018004,
+        "z_threshold": 7.881077691219692,
+        "breached": true
+      },
+      {
+        "name": "lag1_autocorrelation",
+        "direction": "rise",
+        "robust_z": -1.3564414850766602,
+        "baseline_median": 0.9240511558185712,
+        "z_threshold": 7.881077691219692,
+        "breached": false
+      }
+    ],
+    "verdict": "early_warning_flagged",
+    "framework": "Generic early-warning-signals framework (Scheffer et al. 2009, Nature 461:53)",
+    "disclaimer": "This early-warning evidence record is a technical evidence-mapping artefact. It seals a passive detector's alarm decision, the contributing indicators and their robust z-scores, and the provenance of the screened signal; it does not constitute a clinical, operational, or safety decision, nor a certification of compliance. Any reported lead time is measured against a caller-supplied ground-truth onset and holds only for the recorded observable and detector configuration; a non-positive lead means the alarm was coincident with or later than the transition.",
+    "content_hash": "c3a310f963737c2b238b554a50df5bc8ccdbeaca180d80d192a83cf77ca0bb7a"
+  }
+}
