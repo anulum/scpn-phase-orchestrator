@@ -1,6 +1,6 @@
 # Cross-Domain Detector Meta-Analysis Report
 
-**Generated:** 2026-07-09 23:07 UTC
+**Generated:** 2026-07-09 23:39 UTC
 
 This report is produced automatically from the committed detector-evidence aggregates under ``examples/real_data/*/``. It normalises each detector's performance, ranks detectors within every domain, and derives a ranked backlog of refinement candidates.
 
@@ -19,6 +19,7 @@ This report is produced automatically from the committed detector-evidence aggre
 | dakos_climate_transitions_multiscale | `early_warning_leadtime_climate_multiscale_results.json` | early-warning lead-time |
 | psml_grid_oscillation | `early_warning_leadtime_grid_results.json` | early-warning lead-time |
 | psml_grid_oscillation_multiscale | `early_warning_leadtime_grid_multiscale_results.json` | early-warning lead-time |
+| regime_adaptive_ensemble | `regime_adaptive_ensemble.json` | early-warning lead-time |
 | sleepedf_kuramoto_variants | `sleepedf_kuramoto_variants.json` | early-warning lead-time |
 | synthetic_honest_audit_demo | `synthetic_honest_audit_demo.json` | honest-audit aggregate |
 
@@ -121,6 +122,20 @@ This report is produced automatically from the committed detector-evidence aggre
 | 4 | `ensemble_weighted` | 16.7% | 4.073e-01 | False |
 | 5 | `synchronisation` | 0.0% | 1.000e+00 | False |
 
+### regime_adaptive_ensemble
+
+| Rank | Detector | Detection rate | p-value | Beats chance |
+| --- | --- | --- | --- | --- |
+| 1 | `normalized_delta_envelope` | 61.9% | 6.310e-04 | True |
+| 2 | `regime_adaptive_full` | 61.5% | 7.250e-04 | True |
+| 2 | `regime_adaptive_montage` | 61.5% | 7.250e-04 | True |
+| 4 | `coherent_sustained_kuramoto` | 49.5% | 6.870e-04 | True |
+| 5 | `amplitude_gated_delta_kuramoto` | 42.1% | 7.830e-04 | True |
+| 6 | `adaptive_channel_kuramoto` | 16.3% | 1.795e-02 | True |
+| 7 | `multi_channel_delta_kuramoto` | 14.7% | 3.448e-02 | True |
+| 8 | `snr_weighted_delta_kuramoto` | 14.0% | 3.684e-02 | True |
+| 9 | `sustained_delta_kuramoto` | 13.9% | 4.926e-02 | True |
+
 ### sleepedf_kuramoto_variants
 
 | Rank | Detector | Detection rate | p-value | Beats chance |
@@ -146,48 +161,52 @@ This report is produced automatically from the committed detector-evidence aggre
 | --- | --- | --- | --- | --- | --- |
 | 1 | `critical_slowing_down_multiscale` | 1.00 | 5 | 5 | afdb_atrial_fibrillation_multiscale (1), chb01_seizures_multiscale (1), csd_variant_synthetic (1), dakos_climate_transitions_multiscale (1), psml_grid_oscillation_multiscale (1) |
 | 2 | `lag1_autocorrelation` | 1.00 | 1 | 1 | synthetic_honest_audit_demo (1) |
-| 3 | `normalized_delta_envelope` | 1.33 | 3 | 2 | cap_multichannel_staging (1), sleepedf_kuramoto_variants (1) |
+| 3 | `normalized_delta_envelope` | 1.25 | 4 | 3 | cap_multichannel_staging (1), regime_adaptive_ensemble (1), sleepedf_kuramoto_variants (1) |
 | 4 | `critical_slowing_down` | 2.00 | 7 | 3 | chb01_seizures (1), dakos_climate_transitions (1), psml_grid_oscillation (1) |
-| 5 | `coherent_sustained_kuramoto` | 2.00 | 2 | 1 | cap_kuramoto_variants (1) |
-| 6 | `critical_slowing_down_surrogate` | 2.00 | 1 | 0 | — |
-| 6 | `window_mean_control` | 2.00 | 1 | 0 | — |
-| 8 | `ensemble_weighted` | 2.33 | 6 | 2 | afdb_atrial_fibrillation (1), afdb_atrial_fibrillation_multiscale (1) |
-| 9 | `amplitude_gated_delta_kuramoto` | 2.50 | 2 | 0 | — |
-| 10 | `synchronisation` | 3.00 | 6 | 2 | afdb_atrial_fibrillation (1), afdb_atrial_fibrillation_multiscale (1) |
-| 11 | `critical_slowing_down_baseline` | 3.00 | 1 | 0 | — |
-| 12 | `multi_channel_delta_kuramoto` | 3.67 | 3 | 0 | — |
-| 13 | `transition_entropy` | 3.83 | 6 | 0 | — |
-| 14 | `adaptive_channel_kuramoto` | 4.00 | 2 | 0 | — |
-| 15 | `snr_weighted_delta_kuramoto` | 4.33 | 3 | 0 | — |
-| 16 | `sustained_delta_kuramoto` | 5.50 | 2 | 0 | — |
+| 5 | `critical_slowing_down_surrogate` | 2.00 | 1 | 0 | — |
+| 5 | `regime_adaptive_full` | 2.00 | 1 | 0 | — |
+| 5 | `regime_adaptive_montage` | 2.00 | 1 | 0 | — |
+| 5 | `window_mean_control` | 2.00 | 1 | 0 | — |
+| 9 | `ensemble_weighted` | 2.33 | 6 | 2 | afdb_atrial_fibrillation (1), afdb_atrial_fibrillation_multiscale (1) |
+| 10 | `coherent_sustained_kuramoto` | 2.67 | 3 | 1 | cap_kuramoto_variants (1) |
+| 11 | `synchronisation` | 3.00 | 6 | 2 | afdb_atrial_fibrillation (1), afdb_atrial_fibrillation_multiscale (1) |
+| 12 | `critical_slowing_down_baseline` | 3.00 | 1 | 0 | — |
+| 13 | `amplitude_gated_delta_kuramoto` | 3.33 | 3 | 0 | — |
+| 14 | `transition_entropy` | 3.83 | 6 | 0 | — |
+| 15 | `multi_channel_delta_kuramoto` | 4.50 | 4 | 0 | — |
+| 16 | `adaptive_channel_kuramoto` | 4.67 | 3 | 0 | — |
+| 17 | `snr_weighted_delta_kuramoto` | 5.25 | 4 | 0 | — |
+| 18 | `sustained_delta_kuramoto` | 6.67 | 3 | 0 | — |
 
 ## Cross-domain patterns
 
 Detectors that appear in more than one domain, sorted by mean rank:
 
 * **`critical_slowing_down_multiscale`** — mean rank 1.00, present in 5 domain(s), wins 5: afdb_atrial_fibrillation_multiscale (1), chb01_seizures_multiscale (1), csd_variant_synthetic (1), dakos_climate_transitions_multiscale (1), psml_grid_oscillation_multiscale (1).
-* **`normalized_delta_envelope`** — mean rank 1.33, present in 3 domain(s), wins 2: cap_kuramoto_variants (2), cap_multichannel_staging (1), sleepedf_kuramoto_variants (1).
+* **`normalized_delta_envelope`** — mean rank 1.25, present in 4 domain(s), wins 3: cap_kuramoto_variants (2), cap_multichannel_staging (1), regime_adaptive_ensemble (1), sleepedf_kuramoto_variants (1).
 * **`critical_slowing_down`** — mean rank 2.00, present in 7 domain(s), wins 3: afdb_atrial_fibrillation (3), afdb_atrial_fibrillation_multiscale (4), chb01_seizures (1), chb01_seizures_multiscale (2), dakos_climate_transitions (1), psml_grid_oscillation (1), psml_grid_oscillation_multiscale (2).
-* **`coherent_sustained_kuramoto`** — mean rank 2.00, present in 2 domain(s), wins 1: cap_kuramoto_variants (1), sleepedf_kuramoto_variants (3).
 * **`ensemble_weighted`** — mean rank 2.33, present in 6 domain(s), wins 2: afdb_atrial_fibrillation (1), afdb_atrial_fibrillation_multiscale (1), chb01_seizures (2), chb01_seizures_multiscale (3), psml_grid_oscillation (3), psml_grid_oscillation_multiscale (4).
-* **`amplitude_gated_delta_kuramoto`** — mean rank 2.50, present in 2 domain(s), wins 0: cap_kuramoto_variants (3), sleepedf_kuramoto_variants (2).
+* **`coherent_sustained_kuramoto`** — mean rank 2.67, present in 3 domain(s), wins 1: cap_kuramoto_variants (1), regime_adaptive_ensemble (4), sleepedf_kuramoto_variants (3).
 * **`synchronisation`** — mean rank 3.00, present in 6 domain(s), wins 2: afdb_atrial_fibrillation (1), afdb_atrial_fibrillation_multiscale (1), chb01_seizures (3), chb01_seizures_multiscale (4), psml_grid_oscillation (4), psml_grid_oscillation_multiscale (5).
-* **`multi_channel_delta_kuramoto`** — mean rank 3.67, present in 3 domain(s), wins 0: cap_kuramoto_variants (5), cap_multichannel_staging (2), sleepedf_kuramoto_variants (4).
+* **`amplitude_gated_delta_kuramoto`** — mean rank 3.33, present in 3 domain(s), wins 0: cap_kuramoto_variants (3), regime_adaptive_ensemble (5), sleepedf_kuramoto_variants (2).
 * **`transition_entropy`** — mean rank 3.83, present in 6 domain(s), wins 0: afdb_atrial_fibrillation (4), afdb_atrial_fibrillation_multiscale (5), chb01_seizures (4), chb01_seizures_multiscale (5), psml_grid_oscillation (2), psml_grid_oscillation_multiscale (3).
-* **`adaptive_channel_kuramoto`** — mean rank 4.00, present in 2 domain(s), wins 0: cap_kuramoto_variants (4), sleepedf_kuramoto_variants (4).
-* **`snr_weighted_delta_kuramoto`** — mean rank 4.33, present in 3 domain(s), wins 0: cap_kuramoto_variants (6), cap_multichannel_staging (3), sleepedf_kuramoto_variants (4).
-* **`sustained_delta_kuramoto`** — mean rank 5.50, present in 2 domain(s), wins 0: cap_kuramoto_variants (7), sleepedf_kuramoto_variants (4).
+* **`multi_channel_delta_kuramoto`** — mean rank 4.50, present in 4 domain(s), wins 0: cap_kuramoto_variants (5), cap_multichannel_staging (2), regime_adaptive_ensemble (7), sleepedf_kuramoto_variants (4).
+* **`adaptive_channel_kuramoto`** — mean rank 4.67, present in 3 domain(s), wins 0: cap_kuramoto_variants (4), regime_adaptive_ensemble (6), sleepedf_kuramoto_variants (4).
+* **`snr_weighted_delta_kuramoto`** — mean rank 5.25, present in 4 domain(s), wins 0: cap_kuramoto_variants (6), cap_multichannel_staging (3), regime_adaptive_ensemble (8), sleepedf_kuramoto_variants (4).
+* **`sustained_delta_kuramoto`** — mean rank 6.67, present in 3 domain(s), wins 0: cap_kuramoto_variants (7), regime_adaptive_ensemble (9), sleepedf_kuramoto_variants (4).
 
 ## Ranked refinement backlog
 
 1. **Advance the `critical_slowing_down_multiscale` variant** — it wins in 5 early-warning domain(s) (afdb_atrial_fibrillation_multiscale, chb01_seizures_multiscale, csd_variant_synthetic, dakos_climate_transitions_multiscale, psml_grid_oscillation_multiscale) and has the best mean rank (1.00) among detectors present in multiple domains. Extend it to the remaining real-data domains (EEG, cardiac) and compare it head-to-head with the baseline CSD on every corpus.
-2. **Protect and productise `normalized_delta_envelope` for CAP sleep staging** — it dominates its domain (mean rank 1.33) and should become the default reference detector there.
+2. **Protect and productise `normalized_delta_envelope` for CAP sleep staging** — it dominates its domain (mean rank 1.25) and should become the default reference detector there.
 3. **Protect and productise `lag1_autocorrelation` for synthetic critical-slowing-down corpus** — it dominates its domain (mean rank 1.00) and should become the default reference detector there.
 4. **Deprioritise SNR-weighted Kuramoto** — in the CAP multichannel panel it does not outperform the unweighted multi-channel Kuramoto detector. Reallocate effort toward channel-selection or coupling-structure variants rather than a raw SNR weighting.
 5. **Audit the `ensemble_weighted` fusion rule** — it is present in 6 early-warning domains but rarely wins (mean rank 2.33). Investigate whether the current weighting is dominated by a single indicator and whether a learned combination would help.
 6. **Re-evaluate `critical_slowing_down_surrogate`** — it appears in only one domain and never wins; consider whether the feature is under-powered or simply unsuited to that data regime.
-7. **Re-evaluate `window_mean_control`** — it appears in only one domain and never wins; consider whether the feature is under-powered or simply unsuited to that data regime.
-8. **Re-evaluate `critical_slowing_down_baseline`** — it appears in only one domain and never wins; consider whether the feature is under-powered or simply unsuited to that data regime.
+7. **Re-evaluate `regime_adaptive_full`** — it appears in only one domain and never wins; consider whether the feature is under-powered or simply unsuited to that data regime.
+8. **Re-evaluate `regime_adaptive_montage`** — it appears in only one domain and never wins; consider whether the feature is under-powered or simply unsuited to that data regime.
+9. **Re-evaluate `window_mean_control`** — it appears in only one domain and never wins; consider whether the feature is under-powered or simply unsuited to that data regime.
+10. **Re-evaluate `critical_slowing_down_baseline`** — it appears in only one domain and never wins; consider whether the feature is under-powered or simply unsuited to that data regime.
 
 ## Notes
 

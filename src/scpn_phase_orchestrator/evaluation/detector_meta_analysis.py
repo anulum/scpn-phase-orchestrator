@@ -43,6 +43,7 @@ KNOWN_AGGREGATE_NAMES: frozenset[str] = frozenset(
         "cap_multichannel_aggregate.json",
         "cap_kuramoto_variants.json",
         "sleepedf_kuramoto_variants.json",
+        "regime_adaptive_ensemble.json",
         "synthetic_honest_audit_demo.json",
         "csd_variant_synthetic_results.json",
         "early_warning_leadtime_eeg_results.json",

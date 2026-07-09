@@ -1,0 +1,28 @@
+{
+  "corpus_id": "regime-n2",
+  "captured_at": "2026-07-10T00:00:00Z",
+  "audit": {
+    "detector_name": "snr_weighted_delta_kuramoto",
+    "target_false_alarm": 0.1,
+    "matched_threshold": 0.7922010000000002,
+    "achieved_false_alarm": 0.0979020979020979,
+    "n_events": 197,
+    "n_events_alarmed": 43,
+    "detection_rate": 0.2182741116751269,
+    "n_nulls": 143,
+    "significance": {
+      "observed_alarms": 43,
+      "n_events": 197,
+      "pooled_alarm_rate": 0.1676470588235294,
+      "expected_alarms": 33.02647058823529,
+      "p_value": 0.0022997700229977,
+      "n_permutations": 10000,
+      "seed": 42
+    },
+    "alpha": 0.05,
+    "beats_chance": true
+  },
+  "framework": "Matched-false-alarm calibration with a label-permutation significance test (exchangeability null), after Boettiger & Hastings 2012, J. R. Soc. Interface 9:2527.",
+  "disclaimer": "This audit record measures a detector's event-vs-null skill on the supplied corpus only: the matched-false-alarm threshold, the rate it achieved, the event detection rate, and the permutation p-value of the event alarm count. It is not a certification of field performance and does not transfer to any other corpus, detector configuration, or deployment; a low p-value means the events alarmed more than the matched false alarm on this corpus, nothing more.",
+  "content_hash": "2360aeabd85ebeacbdc2f8c944c5c47571cd2eca2f92b58dabd73ac50d019771"
+}

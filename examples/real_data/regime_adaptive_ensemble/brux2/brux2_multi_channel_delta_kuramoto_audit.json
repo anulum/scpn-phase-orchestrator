@@ -1,0 +1,28 @@
+{
+  "corpus_id": "regime-brux2",
+  "captured_at": "2026-07-10T00:00:00Z",
+  "audit": {
+    "detector_name": "multi_channel_delta_kuramoto",
+    "target_false_alarm": 0.1,
+    "matched_threshold": 0.7324030000000001,
+    "achieved_false_alarm": 0.09448818897637795,
+    "n_events": 289,
+    "n_events_alarmed": 18,
+    "detection_rate": 0.06228373702422145,
+    "n_nulls": 127,
+    "significance": {
+      "observed_alarms": 18,
+      "n_events": 289,
+      "pooled_alarm_rate": 0.07211538461538461,
+      "expected_alarms": 20.841346153846153,
+      "p_value": 0.9133086691330867,
+      "n_permutations": 10000,
+      "seed": 42
+    },
+    "alpha": 0.05,
+    "beats_chance": false
+  },
+  "framework": "Matched-false-alarm calibration with a label-permutation significance test (exchangeability null), after Boettiger & Hastings 2012, J. R. Soc. Interface 9:2527.",
+  "disclaimer": "This audit record measures a detector's event-vs-null skill on the supplied corpus only: the matched-false-alarm threshold, the rate it achieved, the event detection rate, and the permutation p-value of the event alarm count. It is not a certification of field performance and does not transfer to any other corpus, detector configuration, or deployment; a low p-value means the events alarmed more than the matched false alarm on this corpus, nothing more.",
+  "content_hash": "bfdd5f1717698a9283dd04e38ad8e1580c6e5f39e53c43b1ead417668f46ea14"
+}

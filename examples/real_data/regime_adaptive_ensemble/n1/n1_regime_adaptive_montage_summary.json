@@ -1,0 +1,19 @@
+{
+  "detector_name": "regime_adaptive_montage",
+  "n_events": 321,
+  "n_nulls": 39,
+  "score_mean_events": 3.236038,
+  "score_mean_nulls": 2.202129,
+  "target_false_alarm": 0.1,
+  "matched_threshold": 3.5386390000000003,
+  "achieved_false_alarm": 0.07692307692307693,
+  "detection_rate": 0.37694704049844235,
+  "n_events_alarmed": 121,
+  "p_value": 0.00019998000199980003,
+  "beats_chance": true,
+  "permutation_seed": 42,
+  "n_permutations": 10000,
+  "corpus_id": "regime-n1",
+  "captured_at": "2026-07-10T00:00:00Z",
+  "audit_content_hash": "ca801963c6fc1d03d2159fc16a68e03e4b1ed80d74637bb58cabbaff8f8899fe"
+}

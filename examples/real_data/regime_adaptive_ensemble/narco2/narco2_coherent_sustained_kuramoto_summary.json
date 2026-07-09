@@ -1,0 +1,19 @@
+{
+  "detector_name": "coherent_sustained_kuramoto",
+  "n_events": 188,
+  "n_nulls": 180,
+  "score_mean_events": 2.770882,
+  "score_mean_nulls": 0.989917,
+  "target_false_alarm": 0.1,
+  "matched_threshold": 1.6564650000000003,
+  "achieved_false_alarm": 0.1,
+  "detection_rate": 0.8563829787234043,
+  "n_events_alarmed": 161,
+  "p_value": 9.999000099990002e-05,
+  "beats_chance": true,
+  "permutation_seed": 42,
+  "n_permutations": 10000,
+  "corpus_id": "regime-narco2",
+  "captured_at": "2026-07-10T00:00:00Z",
+  "audit_content_hash": "752d5480107d7f819c476d9a80e7dd85f98a4c0cb6ba732ee4a721d28dd33482"
+}

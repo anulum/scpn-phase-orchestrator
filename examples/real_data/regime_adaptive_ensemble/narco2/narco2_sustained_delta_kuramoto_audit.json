@@ -1,0 +1,28 @@
+{
+  "corpus_id": "regime-narco2",
+  "captured_at": "2026-07-10T00:00:00Z",
+  "audit": {
+    "detector_name": "sustained_delta_kuramoto",
+    "target_false_alarm": 0.1,
+    "matched_threshold": 0.5970430000000001,
+    "achieved_false_alarm": 0.1,
+    "n_events": 188,
+    "n_events_alarmed": 39,
+    "detection_rate": 0.2074468085106383,
+    "n_nulls": 180,
+    "significance": {
+      "observed_alarms": 39,
+      "n_events": 188,
+      "pooled_alarm_rate": 0.15489130434782608,
+      "expected_alarms": 29.119565217391305,
+      "p_value": 0.0027997200279972004,
+      "n_permutations": 10000,
+      "seed": 42
+    },
+    "alpha": 0.05,
+    "beats_chance": true
+  },
+  "framework": "Matched-false-alarm calibration with a label-permutation significance test (exchangeability null), after Boettiger & Hastings 2012, J. R. Soc. Interface 9:2527.",
+  "disclaimer": "This audit record measures a detector's event-vs-null skill on the supplied corpus only: the matched-false-alarm threshold, the rate it achieved, the event detection rate, and the permutation p-value of the event alarm count. It is not a certification of field performance and does not transfer to any other corpus, detector configuration, or deployment; a low p-value means the events alarmed more than the matched false alarm on this corpus, nothing more.",
+  "content_hash": "8ce8f4da064ef762355a44502586ed9880bcaa1bb562201d3ab34fd5b0d12189"
+}

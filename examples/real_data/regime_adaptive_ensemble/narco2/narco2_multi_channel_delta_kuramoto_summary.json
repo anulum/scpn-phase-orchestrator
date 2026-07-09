@@ -1,0 +1,19 @@
+{
+  "detector_name": "multi_channel_delta_kuramoto",
+  "n_events": 188,
+  "n_nulls": 180,
+  "score_mean_events": 0.60314,
+  "score_mean_nulls": 0.552752,
+  "target_false_alarm": 0.1,
+  "matched_threshold": 0.7599580000000001,
+  "achieved_false_alarm": 0.1,
+  "detection_rate": 0.21808510638297873,
+  "n_events_alarmed": 41,
+  "p_value": 0.0012998700129987,
+  "beats_chance": true,
+  "permutation_seed": 42,
+  "n_permutations": 10000,
+  "corpus_id": "regime-narco2",
+  "captured_at": "2026-07-10T00:00:00Z",
+  "audit_content_hash": "9237e7a59b478b33e1cdcf30c58e415fdbba1caab994ab955b5beaa11cafa094"
+}

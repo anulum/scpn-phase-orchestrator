@@ -1,0 +1,19 @@
+{
+  "detector_name": "amplitude_gated_delta_kuramoto",
+  "n_events": 289,
+  "n_nulls": 127,
+  "score_mean_events": 6.019557,
+  "score_mean_nulls": 2.696257,
+  "target_false_alarm": 0.1,
+  "matched_threshold": 3.9638790000000004,
+  "achieved_false_alarm": 0.09448818897637795,
+  "detection_rate": 0.8373702422145328,
+  "n_events_alarmed": 242,
+  "p_value": 9.999000099990002e-05,
+  "beats_chance": true,
+  "permutation_seed": 42,
+  "n_permutations": 10000,
+  "corpus_id": "regime-brux2",
+  "captured_at": "2026-07-10T00:00:00Z",
+  "audit_content_hash": "36bd9b2577ef09d8eb7145b4c46d8d2c1ceffaa2ab33cab4e2ce5379368acc1c"
+}

@@ -7,12 +7,12 @@
     "integration_modules": 27,
     "optional_extras": 22,
     "public_api_exports": 24,
-    "public_documentation_pages": 222,
+    "public_documentation_pages": 223,
     "python_package_modules": 704,
     "research_experimental_modules": 201,
     "runtime_serving_modules": 151,
     "rust_kernel_files": 97,
-    "test_files": 832
+    "test_files": 833
   },
   "documentation": {
     "public_pages": [
@@ -227,6 +227,7 @@
       "docs/studies/cap_multichannel_n3_vs_wake.md",
       "docs/studies/detector_ranking_report.md",
       "docs/studies/early_warning_matched_false_alarm.md",
+      "docs/studies/regime_adaptive_ensemble.md",
       "docs/studies/sleep_staging_sleepedf.md",
       "docs/studies/sleepedf_kuramoto_variants.md",
       "docs/studies/synthetic_honest_audit_demo.md",
@@ -2411,6 +2412,7 @@
       "tests/test_reference_api_visualization.py",
       "tests/test_reference_benchmark_snapshot_docs.py",
       "tests/test_reference_benchmark_suite.py",
+      "tests/test_regime_adaptive_ensemble_evidence.py",
       "tests/test_regime_events.py",
       "tests/test_regime_hysteresis.py",
       "tests/test_regressions.py",

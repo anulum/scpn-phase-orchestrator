@@ -1,0 +1,19 @@
+{
+  "detector_name": "sustained_delta_kuramoto",
+  "n_events": 321,
+  "n_nulls": 39,
+  "score_mean_events": 0.457953,
+  "score_mean_nulls": 0.427445,
+  "target_false_alarm": 0.1,
+  "matched_threshold": 0.49616400000000005,
+  "achieved_false_alarm": 0.07692307692307693,
+  "detection_rate": 0.24299065420560748,
+  "n_events_alarmed": 78,
+  "p_value": 0.0115988401159884,
+  "beats_chance": true,
+  "permutation_seed": 42,
+  "n_permutations": 10000,
+  "corpus_id": "regime-n1",
+  "captured_at": "2026-07-10T00:00:00Z",
+  "audit_content_hash": "0b9bc1c20970743111582e5c34b648be032e72015c8c3807f565b645291ee3aa"
+}

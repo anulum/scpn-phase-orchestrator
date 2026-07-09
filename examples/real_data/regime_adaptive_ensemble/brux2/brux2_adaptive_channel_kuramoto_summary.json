@@ -1,0 +1,19 @@
+{
+  "detector_name": "adaptive_channel_kuramoto",
+  "n_events": 289,
+  "n_nulls": 127,
+  "score_mean_events": 0.773906,
+  "score_mean_nulls": 0.787747,
+  "target_false_alarm": 0.1,
+  "matched_threshold": 0.8222150000000001,
+  "achieved_false_alarm": 0.09448818897637795,
+  "detection_rate": 0.03460207612456748,
+  "n_events_alarmed": 10,
+  "p_value": 0.9953004699530047,
+  "beats_chance": false,
+  "permutation_seed": 42,
+  "n_permutations": 10000,
+  "corpus_id": "regime-brux2",
+  "captured_at": "2026-07-10T00:00:00Z",
+  "audit_content_hash": "a2cce07bd01115e6cf75efb0f9e3042ac135720234caaa6591fab5115df21462"
+}
