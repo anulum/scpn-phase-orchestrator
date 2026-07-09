@@ -1,0 +1,28 @@
+{
+  "corpus_id": "sleepedf-SC4001E0-kuramoto-variants",
+  "captured_at": "2026-07-10T00:00:00Z",
+  "audit": {
+    "detector_name": "adaptive_channel_kuramoto",
+    "target_false_alarm": 0.1,
+    "matched_threshold": 0.7847700000000001,
+    "achieved_false_alarm": 0.09964947421131698,
+    "n_events": 220,
+    "n_events_alarmed": 0,
+    "detection_rate": 0.0,
+    "n_nulls": 1997,
+    "significance": {
+      "observed_alarms": 0,
+      "n_events": 220,
+      "pooled_alarm_rate": 0.08976093820478123,
+      "expected_alarms": 19.747406405051873,
+      "p_value": 1.0,
+      "n_permutations": 10000,
+      "seed": 42
+    },
+    "alpha": 0.05,
+    "beats_chance": false
+  },
+  "framework": "Matched-false-alarm calibration with a label-permutation significance test (exchangeability null), after Boettiger & Hastings 2012, J. R. Soc. Interface 9:2527.",
+  "disclaimer": "This audit record measures a detector's event-vs-null skill on the supplied corpus only: the matched-false-alarm threshold, the rate it achieved, the event detection rate, and the permutation p-value of the event alarm count. It is not a certification of field performance and does not transfer to any other corpus, detector configuration, or deployment; a low p-value means the events alarmed more than the matched false alarm on this corpus, nothing more.",
+  "content_hash": "dc3ffe3abf07dc124e13d90c68aaa5a81abbd66c367052bbe0a3c6ea26163ad5"
+}

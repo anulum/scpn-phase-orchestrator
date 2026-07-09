@@ -1,0 +1,19 @@
+{
+  "detector_name": "snr_weighted_delta_kuramoto",
+  "n_events": 220,
+  "n_nulls": 1997,
+  "score_mean_events": 0.476445,
+  "score_mean_nulls": 0.724861,
+  "target_false_alarm": 0.1,
+  "matched_threshold": 0.7944990000000001,
+  "achieved_false_alarm": 0.09964947421131698,
+  "detection_rate": 0.0,
+  "n_events_alarmed": 0,
+  "p_value": 1.0,
+  "beats_chance": false,
+  "permutation_seed": 42,
+  "n_permutations": 10000,
+  "corpus_id": "sleepedf-SC4001E0-kuramoto-variants",
+  "captured_at": "2026-07-10T00:00:00Z",
+  "audit_content_hash": "4c1b37b2beae8195416b1dfdd3f3a192f24d217e691467aa681020d41a20cba8"
+}

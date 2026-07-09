@@ -1,0 +1,206 @@
+{
+  "benchmark": "sleepedf_kuramoto_variants",
+  "corpus": "PhysioNet Sleep-EDF Expanded",
+  "target_false_alarm": 0.1,
+  "n_recordings": 1,
+  "recording_ids": [
+    "SC4001E0"
+  ],
+  "per_recording": [
+    {
+      "recording_id": "SC4001E0",
+      "metadata": {
+        "corpus": "sleepedf"
+      },
+      "detectors": {
+        "normalized_delta_envelope": {
+          "detector_name": "normalized_delta_envelope",
+          "n_events": 220,
+          "n_nulls": 1997,
+          "score_mean_events": 0.815512,
+          "score_mean_nulls": 0.587745,
+          "target_false_alarm": 0.1,
+          "matched_threshold": 0.6721510000000002,
+          "achieved_false_alarm": 0.09964947421131698,
+          "detection_rate": 0.9954545454545455,
+          "n_events_alarmed": 219,
+          "p_value": 9.999000099990002e-05,
+          "beats_chance": true,
+          "permutation_seed": 42,
+          "n_permutations": 10000,
+          "corpus_id": "sleepedf-SC4001E0-kuramoto-variants",
+          "captured_at": "2026-07-10T00:00:00Z",
+          "audit_content_hash": "57305e9e49de09a5346671c8d285cd0ad5a1c3ab5632796e5175e233491cfac5"
+        },
+        "multi_channel_delta_kuramoto": {
+          "detector_name": "multi_channel_delta_kuramoto",
+          "n_events": 220,
+          "n_nulls": 1997,
+          "score_mean_events": 0.473096,
+          "score_mean_nulls": 0.709677,
+          "target_false_alarm": 0.1,
+          "matched_threshold": 0.7847700000000001,
+          "achieved_false_alarm": 0.09964947421131698,
+          "detection_rate": 0.0,
+          "n_events_alarmed": 0,
+          "p_value": 1.0,
+          "beats_chance": false,
+          "permutation_seed": 42,
+          "n_permutations": 10000,
+          "corpus_id": "sleepedf-SC4001E0-kuramoto-variants",
+          "captured_at": "2026-07-10T00:00:00Z",
+          "audit_content_hash": "225eed8f1673de183c8869d33e0d5c6578cce0826caa09b5b8e438e597235fd7"
+        },
+        "snr_weighted_delta_kuramoto": {
+          "detector_name": "snr_weighted_delta_kuramoto",
+          "n_events": 220,
+          "n_nulls": 1997,
+          "score_mean_events": 0.476445,
+          "score_mean_nulls": 0.724861,
+          "target_false_alarm": 0.1,
+          "matched_threshold": 0.7944990000000001,
+          "achieved_false_alarm": 0.09964947421131698,
+          "detection_rate": 0.0,
+          "n_events_alarmed": 0,
+          "p_value": 1.0,
+          "beats_chance": false,
+          "permutation_seed": 42,
+          "n_permutations": 10000,
+          "corpus_id": "sleepedf-SC4001E0-kuramoto-variants",
+          "captured_at": "2026-07-10T00:00:00Z",
+          "audit_content_hash": "4c1b37b2beae8195416b1dfdd3f3a192f24d217e691467aa681020d41a20cba8"
+        },
+        "amplitude_gated_delta_kuramoto": {
+          "detector_name": "amplitude_gated_delta_kuramoto",
+          "n_events": 220,
+          "n_nulls": 1997,
+          "score_mean_events": 11.235983,
+          "score_mean_nulls": 9.693501,
+          "target_false_alarm": 0.1,
+          "matched_threshold": 13.205117000000001,
+          "achieved_false_alarm": 0.09964947421131698,
+          "detection_rate": 0.2772727272727273,
+          "n_events_alarmed": 61,
+          "p_value": 9.999000099990002e-05,
+          "beats_chance": true,
+          "permutation_seed": 42,
+          "n_permutations": 10000,
+          "corpus_id": "sleepedf-SC4001E0-kuramoto-variants",
+          "captured_at": "2026-07-10T00:00:00Z",
+          "audit_content_hash": "87d3a59d67eee105c56e98ae56296674b9937e2097ff477bc50c60ab0908dc19"
+        },
+        "sustained_delta_kuramoto": {
+          "detector_name": "sustained_delta_kuramoto",
+          "n_events": 220,
+          "n_nulls": 1997,
+          "score_mean_events": 0.202253,
+          "score_mean_nulls": 0.521052,
+          "target_false_alarm": 0.1,
+          "matched_threshold": 0.6760920000000001,
+          "achieved_false_alarm": 0.09964947421131698,
+          "detection_rate": 0.0,
+          "n_events_alarmed": 0,
+          "p_value": 1.0,
+          "beats_chance": false,
+          "permutation_seed": 42,
+          "n_permutations": 10000,
+          "corpus_id": "sleepedf-SC4001E0-kuramoto-variants",
+          "captured_at": "2026-07-10T00:00:00Z",
+          "audit_content_hash": "26ae9a8bd6ffeddfbac7a84f988ff270240da178ced854e0336e2be56baca99b"
+        },
+        "adaptive_channel_kuramoto": {
+          "detector_name": "adaptive_channel_kuramoto",
+          "n_events": 220,
+          "n_nulls": 1997,
+          "score_mean_events": 0.473096,
+          "score_mean_nulls": 0.709677,
+          "target_false_alarm": 0.1,
+          "matched_threshold": 0.7847700000000001,
+          "achieved_false_alarm": 0.09964947421131698,
+          "detection_rate": 0.0,
+          "n_events_alarmed": 0,
+          "p_value": 1.0,
+          "beats_chance": false,
+          "permutation_seed": 42,
+          "n_permutations": 10000,
+          "corpus_id": "sleepedf-SC4001E0-kuramoto-variants",
+          "captured_at": "2026-07-10T00:00:00Z",
+          "audit_content_hash": "dc3ffe3abf07dc124e13d90c68aaa5a81abbd66c367052bbe0a3c6ea26163ad5"
+        },
+        "coherent_sustained_kuramoto": {
+          "detector_name": "coherent_sustained_kuramoto",
+          "n_events": 220,
+          "n_nulls": 1997,
+          "score_mean_events": 4.821983,
+          "score_mean_nulls": 4.027024,
+          "target_false_alarm": 0.1,
+          "matched_threshold": 5.811946000000001,
+          "achieved_false_alarm": 0.09964947421131698,
+          "detection_rate": 0.2681818181818182,
+          "n_events_alarmed": 59,
+          "p_value": 9.999000099990002e-05,
+          "beats_chance": true,
+          "permutation_seed": 42,
+          "n_permutations": 10000,
+          "corpus_id": "sleepedf-SC4001E0-kuramoto-variants",
+          "captured_at": "2026-07-10T00:00:00Z",
+          "audit_content_hash": "623ec5fde13e7bc0188e055bd7f97e91eb8c2e4ae57df27fa891860a20385fdf"
+        }
+      }
+    }
+  ],
+  "normalized_delta_envelope": {
+    "mean_detection_rate": 0.995455,
+    "std_detection_rate": 0.0,
+    "mean_achieved_false_alarm": 0.099649,
+    "geometric_mean_p_value": 0.0001,
+    "fraction_beats_chance": 1.0
+  },
+  "multi_channel_delta_kuramoto": {
+    "mean_detection_rate": 0.0,
+    "std_detection_rate": 0.0,
+    "mean_achieved_false_alarm": 0.099649,
+    "geometric_mean_p_value": 1.0,
+    "fraction_beats_chance": 0.0
+  },
+  "snr_weighted_delta_kuramoto": {
+    "mean_detection_rate": 0.0,
+    "std_detection_rate": 0.0,
+    "mean_achieved_false_alarm": 0.099649,
+    "geometric_mean_p_value": 1.0,
+    "fraction_beats_chance": 0.0
+  },
+  "amplitude_gated_delta_kuramoto": {
+    "mean_detection_rate": 0.277273,
+    "std_detection_rate": 0.0,
+    "mean_achieved_false_alarm": 0.099649,
+    "geometric_mean_p_value": 0.0001,
+    "fraction_beats_chance": 1.0
+  },
+  "sustained_delta_kuramoto": {
+    "mean_detection_rate": 0.0,
+    "std_detection_rate": 0.0,
+    "mean_achieved_false_alarm": 0.099649,
+    "geometric_mean_p_value": 1.0,
+    "fraction_beats_chance": 0.0
+  },
+  "adaptive_channel_kuramoto": {
+    "mean_detection_rate": 0.0,
+    "std_detection_rate": 0.0,
+    "mean_achieved_false_alarm": 0.099649,
+    "geometric_mean_p_value": 1.0,
+    "fraction_beats_chance": 0.0
+  },
+  "coherent_sustained_kuramoto": {
+    "mean_detection_rate": 0.268182,
+    "std_detection_rate": 0.0,
+    "mean_achieved_false_alarm": 0.099649,
+    "geometric_mean_p_value": 0.0001,
+    "fraction_beats_chance": 1.0
+  },
+  "recommendation": {
+    "refine": true,
+    "preferred_variant": "normalized_delta_envelope",
+    "rationale": "normalized_delta_envelope has the highest mean detection rate on the panel (0.995) and is the preferred variant for further refinement."
+  }
+}

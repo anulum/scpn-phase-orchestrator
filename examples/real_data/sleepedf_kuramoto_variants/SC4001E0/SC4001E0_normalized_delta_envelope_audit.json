@@ -1,0 +1,28 @@
+{
+  "corpus_id": "sleepedf-SC4001E0-kuramoto-variants",
+  "captured_at": "2026-07-10T00:00:00Z",
+  "audit": {
+    "detector_name": "normalized_delta_envelope",
+    "target_false_alarm": 0.1,
+    "matched_threshold": 0.6721510000000002,
+    "achieved_false_alarm": 0.09964947421131698,
+    "n_events": 220,
+    "n_events_alarmed": 219,
+    "detection_rate": 0.9954545454545455,
+    "n_nulls": 1997,
+    "significance": {
+      "observed_alarms": 219,
+      "n_events": 220,
+      "pooled_alarm_rate": 0.18854307622913846,
+      "expected_alarms": 41.479476770410464,
+      "p_value": 9.999000099990002e-05,
+      "n_permutations": 10000,
+      "seed": 42
+    },
+    "alpha": 0.05,
+    "beats_chance": true
+  },
+  "framework": "Matched-false-alarm calibration with a label-permutation significance test (exchangeability null), after Boettiger & Hastings 2012, J. R. Soc. Interface 9:2527.",
+  "disclaimer": "This audit record measures a detector's event-vs-null skill on the supplied corpus only: the matched-false-alarm threshold, the rate it achieved, the event detection rate, and the permutation p-value of the event alarm count. It is not a certification of field performance and does not transfer to any other corpus, detector configuration, or deployment; a low p-value means the events alarmed more than the matched false alarm on this corpus, nothing more.",
+  "content_hash": "57305e9e49de09a5346671c8d285cd0ad5a1c3ab5632796e5175e233491cfac5"
+}

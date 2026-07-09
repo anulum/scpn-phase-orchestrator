@@ -261,6 +261,7 @@ nav:
       - "Real-Data Case Study: CAP Multi-Channel N3 vs Wake": studies/cap_multichannel_n3_vs_wake.md
       - "Diagnostic Study: CAP Kuramoto Detector": studies/cap_kuramoto_diagnostic.md
       - "Detector Panel: CAP Kuramoto Variants": studies/cap_kuramoto_variants.md
+      - "Transfer Test: Sleep-EDF Kuramoto Variants": studies/sleepedf_kuramoto_variants.md
       - "Harness Demo: Synthetic Critical-Slowing-Down Audit": studies/synthetic_honest_audit_demo.md
       - "Meta-Analysis: Detector Ranking & Refinement Backlog": studies/detector_ranking_report.md
       - "V&V Report": VALIDATION_REPORT.md

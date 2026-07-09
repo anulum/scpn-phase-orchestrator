@@ -7,12 +7,12 @@
     "integration_modules": 27,
     "optional_extras": 22,
     "public_api_exports": 24,
-    "public_documentation_pages": 221,
+    "public_documentation_pages": 222,
     "python_package_modules": 704,
     "research_experimental_modules": 201,
     "runtime_serving_modules": 151,
     "rust_kernel_files": 97,
-    "test_files": 831
+    "test_files": 832
   },
   "documentation": {
     "public_pages": [
@@ -228,6 +228,7 @@
       "docs/studies/detector_ranking_report.md",
       "docs/studies/early_warning_matched_false_alarm.md",
       "docs/studies/sleep_staging_sleepedf.md",
+      "docs/studies/sleepedf_kuramoto_variants.md",
       "docs/studies/synthetic_honest_audit_demo.md",
       "docs/tutorials/00_choose_a_use_case.md",
       "docs/tutorials/01_new_domain_checklist.md",
@@ -2462,6 +2463,7 @@
       "tests/test_sindy.py",
       "tests/test_sleep_architecture_domainpack.py",
       "tests/test_sleep_staging.py",
+      "tests/test_sleepedf_kuramoto_variants_evidence.py",
       "tests/test_sleepedf_staging_evidence.py",
       "tests/test_snn_bridge.py",
       "tests/test_sparse_coupling.py",
