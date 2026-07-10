@@ -19,13 +19,17 @@ from click.testing import CliRunner
 
 from scpn_phase_orchestrator.api import evaluate_binding_spec
 from scpn_phase_orchestrator.binding import load_binding_spec
+from scpn_phase_orchestrator.exceptions import AuditError
 from scpn_phase_orchestrator.monitor.twin_confidence import TwinConfidenceScore
 from scpn_phase_orchestrator.monitor.twin_conformal_gate import (
     ConformalGateConfig,
     TwinConformalGate,
 )
 from scpn_phase_orchestrator.runtime import cli
-from scpn_phase_orchestrator.runtime.audit_logger import AuditLogger
+from scpn_phase_orchestrator.runtime.audit_logger import (
+    AuditLogger,
+    AuditStreamIntegrityResult,
+)
 from scpn_phase_orchestrator.runtime.replay import ReplayEngine
 from scpn_phase_orchestrator.runtime.simulation import (
     SimulationResult,
@@ -428,6 +432,54 @@ class TestAuditLogging:
             "ok": True,
             "verified_events": integrity.verified_events,
         }
+
+    def test_simulate_fails_closed_on_broken_audit_integrity(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # SPO-T01: a run whose event-stream integrity fails to verify must not
+        # return a green result — the recorded run cannot be trusted.
+        audit = tmp_path / "run.jsonl"
+        event_stream = tmp_path / "run.spoa"
+        logger = AuditLogger(audit, event_stream=event_stream)
+        broken = AuditStreamIntegrityResult(
+            event_stream_path=str(event_stream), ok=False, verified_events=2
+        )
+        monkeypatch.setattr(logger, "verify_event_stream_integrity", lambda: broken)
+        with pytest.raises(AuditError, match="integrity verification failed"):
+            simulate(
+                _spec(KURAMOTO_SPEC),
+                steps=6,
+                seed=3,
+                audit_logger=logger,
+                binding_spec_path=Path(KURAMOTO_SPEC),
+            )
+        logger.close()
+
+    def test_simulate_attaches_failed_integrity_when_not_strict(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # Opt-out: strict_audit_integrity=False attaches the failed summary for
+        # inspection without failing the run.
+        audit = tmp_path / "run.jsonl"
+        event_stream = tmp_path / "run.spoa"
+        logger = AuditLogger(audit, event_stream=event_stream)
+        broken = AuditStreamIntegrityResult(
+            event_stream_path=str(event_stream), ok=False, verified_events=2
+        )
+        monkeypatch.setattr(logger, "verify_event_stream_integrity", lambda: broken)
+        result = simulate(
+            _spec(KURAMOTO_SPEC),
+            steps=6,
+            seed=3,
+            audit_logger=logger,
+            strict_audit_integrity=False,
+            binding_spec_path=Path(KURAMOTO_SPEC),
+        )
+        logger.close()
+        integrity = result.audit_event_stream_integrity
+        assert integrity is not None
+        assert integrity.ok is False
+        assert integrity.verified_events == 2
 
     def test_conformal_admission_decisions_are_audited(self, tmp_path: Path) -> None:
         audit = tmp_path / "run.jsonl"

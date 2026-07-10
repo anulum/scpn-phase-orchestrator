@@ -60,6 +60,7 @@ from scpn_phase_orchestrator.coupling.knm import CouplingBuilder, CouplingState
 from scpn_phase_orchestrator.drivers.psi_informational import InformationalDriver
 from scpn_phase_orchestrator.drivers.psi_physical import PhysicalDriver
 from scpn_phase_orchestrator.drivers.psi_symbolic import SymbolicDriver
+from scpn_phase_orchestrator.exceptions import AuditError
 from scpn_phase_orchestrator.imprint.state import ImprintState
 from scpn_phase_orchestrator.imprint.update import ImprintModel
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryObserver
@@ -181,7 +182,10 @@ class SimulationResult:
         last_conformal_admission: Last conformal admission decision, when the
             optional gate was active.
         audit_event_stream_integrity: Close-time protobuf audit-stream integrity
-            summary when an event stream was written, else ``None``.
+            summary when an event stream was written, else ``None``. Under the
+            default ``strict_audit_integrity`` this is always ``ok`` (a failed
+            check fails the run closed); it can carry a failed summary only when
+            :func:`simulate` was called with ``strict_audit_integrity=False``.
     """
 
     spec_name: str
@@ -364,6 +368,7 @@ def simulate(
     policy_enabled: bool = True,
     control_mode: SimulationControlMode = "supervisor_policy",
     audit_logger: AuditLogger | None = None,
+    strict_audit_integrity: bool = True,
     binding_spec_path: Path | None = None,
     scenario_hook: ScenarioCallback | None = None,
     conformal_gate: TwinConformalGate | None = None,
@@ -389,6 +394,13 @@ def simulate(
     audit_logger : AuditLogger | None
         Optional logger; when given, the header, per-step records, and events are
         written. The caller owns its lifecycle (close).
+    strict_audit_integrity : bool
+        Fail closed on a broken audit chain. When ``True`` (default) and the audit
+        logger owns a protobuf event stream whose close-time integrity check fails,
+        the run raises :class:`~scpn_phase_orchestrator.exceptions.AuditError`
+        instead of returning a result with a tamper-evident but unenforced
+        ``audit_event_stream_integrity`` field. Set ``False`` to attach the failed
+        result for inspection without failing the run.
     binding_spec_path : Path | None
         Optional path to the spec, used only to locate an adjacent ``policy.yaml``. When
         ``None``, no domainpack policy rules are loaded (the supervisor policy still
@@ -416,6 +428,9 @@ def simulate(
     ValueError
         If the spec declares no oscillators, an unsupported control mode, or an
         incomplete conformal-admission configuration.
+    AuditError
+        If ``strict_audit_integrity`` and the audit event-stream integrity check
+        fails at close time (the recorded run cannot be trusted).
     """
     if control_mode != "supervisor_policy":
         raise ValueError(
@@ -840,6 +855,19 @@ def simulate(
         for evt in event_bus.history:
             audit_logger.log_event(evt.kind, {"step": evt.step, "detail": evt.detail})
         audit_event_stream_integrity = audit_logger.verify_event_stream_integrity()
+        if (
+            strict_audit_integrity
+            and audit_event_stream_integrity is not None
+            and not audit_event_stream_integrity.ok
+        ):
+            raise AuditError(
+                "audit event-stream integrity verification failed for "
+                f"{audit_event_stream_integrity.event_stream_path!r} after "
+                f"{audit_event_stream_integrity.verified_events} verified event(s); "
+                "the recorded run cannot be trusted. Pass "
+                "strict_audit_integrity=False to attach the failed result instead "
+                "of failing closed."
+            )
     else:
         audit_event_stream_integrity = None
 

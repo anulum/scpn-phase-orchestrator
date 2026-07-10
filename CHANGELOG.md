@@ -83,6 +83,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   channel selection or temporal-stability criteria. The new artefacts and
   updated documentation are pinned by `tests/test_cap_multichannel_staging_evidence.py`.
 
+### Changed
+
+- `runtime.simulate` now **fails closed by default** on a broken audit
+  event-stream (audit finding SPO-T01). When the audit logger owns a protobuf
+  event stream whose close-time integrity check fails, `simulate` raises
+  `AuditError` instead of returning a result carrying an unenforced
+  `audit_event_stream_integrity` field — a tampered or corrupted run can no longer
+  return a green result. A normal run (whose freshly written stream always
+  verifies) is unaffected; pass the new keyword `strict_audit_integrity=False` to
+  restore the advisory-attach behaviour. Guarded by `tests/test_simulation_core.py`.
+
 ## [0.12.0] - 2026-07-07
 
 ### Added
