@@ -125,11 +125,12 @@ def _progress_bar(current: int, total: int, width: int = 40) -> str:
 
 
 def _human_size(n: int) -> str:
+    size = float(n)
     for unit in ("B", "KiB", "MiB", "GiB", "TiB"):
-        if abs(n) < 1024:
-            return f"{n:.2f} {unit}"
-        n /= 1024
-    return f"{n:.2f} PiB"
+        if abs(size) < 1024:
+            return f"{size:.2f} {unit}"
+        size /= 1024
+    return f"{size:.2f} PiB"
 
 
 def _basic_auth_header(user: str, password: str) -> dict[str, str]:
@@ -478,8 +479,9 @@ def print_report(report: dict[str, dict[str, object]]) -> None:
             line += f"  extracted={'yes' if info['extracted'] else 'no'}"
         if "scenario_count" in info:
             line += f"  scenarios={info['scenario_count']}"
-        if "size_bytes" in info:
-            line += f"  ({_human_size(int(info['size_bytes']))})"
+        size_bytes = info.get("size_bytes")
+        if isinstance(size_bytes, int):
+            line += f"  ({_human_size(size_bytes)})"
         print(line)
 
 
