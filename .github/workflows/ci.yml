@@ -42,6 +42,7 @@ jobs:
           --quiet
       - run: python tools/check_version_sync.py
       - run: python tools/capability_manifest.py --check
+      - run: python tools/build_studio_panel_data.py --check
 
   typecheck:
     runs-on: ubuntu-latest
@@ -648,8 +649,36 @@ jobs:
           name: benchmark-results
           path: bench/current.json
 
+  studio-web:
+    needs: lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: studio-web
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: "22"
+      - uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+        with:
+          version: 11.2.2
+          run_install: false
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Typecheck (TS strict)
+        run: pnpm typecheck
+      - name: Test with enforced coverage thresholds
+        run: pnpm test:coverage
+      - name: Build the portal and the federation remote
+        run: pnpm build
+      - name: Assert the ESM remote entry carries the federation name
+        run: |
+          test -f dist/remoteEntry.js
+          grep -q "scpn_phase_orchestrator" dist/remoteEntry.js
+
   ci-gate:
-    needs: [lint, typecheck, test, slow-tests, security, rust-check, cargo-audit, cargo-deny, rust-miri, rust-msrv, coverage-guard, module-linkage, ffi-test, benchmark]
+    needs: [lint, typecheck, test, slow-tests, security, rust-check, cargo-audit, cargo-deny, rust-miri, rust-msrv, coverage-guard, module-linkage, ffi-test, benchmark, studio-web]
     runs-on: ubuntu-latest
     steps:
       - run: echo "All checks passed"

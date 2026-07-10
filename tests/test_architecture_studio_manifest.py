@@ -39,7 +39,6 @@ def _schema_a_core() -> dict[str, object]:
 def test_architecture_schema_a_tracks_studio_federation_manifest() -> None:
     """The public architecture manifest mirrors the production Studio manifest."""
     core = _schema_a_core()
-    manifest = federation_manifest.build_capability_manifest(studio_version="0.0.0")
     payload = federation_manifest.manifest_dict(studio_version="0.0.0")
 
     assert core["status"] == "fleet-validator-admitted"
@@ -48,7 +47,8 @@ def test_architecture_schema_a_tracks_studio_federation_manifest() -> None:
     assert core["protocol_version"] == payload["protocol_version"]
     assert core["transport_profile"] == payload["transport_profile"]
     assert core["evidence_types"] == payload["evidence_types"]
-    assert core["ui_module"] is manifest.ui_module
+    # The architecture manifest mirrors the serialised schema-A ui_module block.
+    assert core["ui_module"] == payload["ui_module"]
     assert core["contract_era"] == payload["contract_era"]
     assert core["enumeration"] == payload["enumeration"]
     assert core["content_digest"] == payload["content_digest"]

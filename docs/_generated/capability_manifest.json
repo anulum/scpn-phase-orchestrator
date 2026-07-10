@@ -8,11 +8,11 @@
     "optional_extras": 22,
     "public_api_exports": 24,
     "public_documentation_pages": 223,
-    "python_package_modules": 705,
+    "python_package_modules": 706,
     "research_experimental_modules": 201,
-    "runtime_serving_modules": 152,
+    "runtime_serving_modules": 153,
     "rust_kernel_files": 97,
-    "test_files": 834
+    "test_files": 836
   },
   "documentation": {
     "public_pages": [
@@ -1044,6 +1044,7 @@
       "src/scpn_phase_orchestrator/studio/__init__.py",
       "src/scpn_phase_orchestrator/studio/federation_manifest.py",
       "src/scpn_phase_orchestrator/studio/live_feed.py",
+      "src/scpn_phase_orchestrator/studio/panel_data.py",
       "src/scpn_phase_orchestrator/studio/product.py",
       "src/scpn_phase_orchestrator/studio/ui_helpers/__init__.py",
       "src/scpn_phase_orchestrator/studio/ui_helpers/_shared.py",
@@ -1620,6 +1621,7 @@
     "src/scpn_phase_orchestrator/studio/__init__.py",
     "src/scpn_phase_orchestrator/studio/federation_manifest.py",
     "src/scpn_phase_orchestrator/studio/live_feed.py",
+    "src/scpn_phase_orchestrator/studio/panel_data.py",
     "src/scpn_phase_orchestrator/studio/product.py",
     "src/scpn_phase_orchestrator/studio/ui_helpers/__init__.py",
     "src/scpn_phase_orchestrator/studio/ui_helpers/_shared.py",
@@ -2521,6 +2523,7 @@
       "tests/test_studio_federation_manifest.py",
       "tests/test_studio_federation_manifest_sdk_fixture.py",
       "tests/test_studio_live_feed.py",
+      "tests/test_studio_panel_data.py",
       "tests/test_studio_panel_evolutionary.py",
       "tests/test_studio_panel_hybrid_order.py",
       "tests/test_studio_panel_information_geometry.py",
@@ -2566,6 +2569,7 @@
       "tests/test_tools/test_module_size.py",
       "tests/test_tools_benchmark_summary.py",
       "tests/test_tools_build_release_provenance_spec.py",
+      "tests/test_tools_build_studio_panel_data.py",
       "tests/test_tools_check_github_action_refs.py",
       "tests/test_tools_check_meta_distribution.py",
       "tests/test_tools_check_module_linkage.py",

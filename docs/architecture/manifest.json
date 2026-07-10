@@ -12,7 +12,13 @@
       "spo.phase-coherence.v1",
       "spo.regime-state.v1"
     ],
-    "ui_module": null,
+    "ui_module": {
+      "remote_entry": "https://www.anulum.org/studios/scpn-phase-orchestrator/remoteEntry.js",
+      "exposes": [
+        "./SpoStudioPanel"
+      ],
+      "federation": "scpn_phase_orchestrator"
+    },
     "contract_era": "v1",
     "enumeration": "language-agnostic",
     "content_digest": "sha256:bcff4ee3d707d0f4b0b3b5299a5d6546b5f2328282a994479eb255c2fa29078d",

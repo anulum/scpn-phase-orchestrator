@@ -1,0 +1,116 @@
+/*
+SPDX-License-Identifier: AGPL-3.0-or-later
+Commercial license available
+© Concepts 1996–2026 Miroslav Šotek. All rights reserved.
+© Code 2020–2026 Miroslav Šotek. All rights reserved.
+ORCID: 0009-0009-3560-0851
+Contact: www.anulum.li | protoscience@anulum.li
+scpn-phase-orchestrator — vendored floor design tokens
+*/
+
+:root {
+  --spo-bg: #ffffff;
+  --spo-fg: #1a1d21;
+  --spo-muted: #5b6470;
+  --spo-line: #d4d9df;
+  --spo-surface: #f5f7f9;
+  --spo-addressed: #1f6f43;
+  --spo-addressed-bg: #e6f4ec;
+  --spo-partial: #8a5a00;
+  --spo-partial-bg: #fff5e0;
+  --spo-fail-closed: #1f4e79;
+  --spo-fail-closed-bg: #e8f0f8;
+}
+
+.spo-panel {
+  color: var(--spo-fg);
+  background: var(--spo-bg);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  line-height: 1.5;
+  padding: 1.5rem;
+  max-width: 60rem;
+}
+
+.spo-header h2 {
+  margin: 0 0 0.25rem;
+}
+
+.spo-banner {
+  color: var(--spo-muted);
+  margin: 0 0 1rem;
+}
+
+.spo-disclaimer {
+  font-size: 0.85rem;
+  color: var(--spo-muted);
+  background: var(--spo-surface);
+  border: 1px solid var(--spo-line);
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  margin: 0 0 1.5rem;
+}
+
+.spo-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin: 0 0 1.5rem;
+  padding: 0;
+  list-style: none;
+}
+
+.spo-summary li {
+  background: var(--spo-surface);
+  border: 1px solid var(--spo-line);
+  border-radius: 6px;
+  padding: 0.5rem 0.9rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.spo-category {
+  border: 1px solid var(--spo-line);
+  border-radius: 8px;
+  margin: 0 0 1rem;
+  overflow: hidden;
+}
+
+.spo-category > h3 {
+  margin: 0;
+  padding: 0.6rem 1rem;
+  background: var(--spo-surface);
+  border-bottom: 1px solid var(--spo-line);
+}
+
+.spo-clauses {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.spo-clauses th,
+.spo-clauses td {
+  text-align: left;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid var(--spo-line);
+  vertical-align: top;
+}
+
+.spo-status {
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.spo-status[data-status="addressed"] {
+  color: var(--spo-addressed);
+}
+
+.spo-status[data-status="partially_addressed"] {
+  color: var(--spo-partial);
+}
+
+.spo-unverifiable {
+  color: var(--spo-fail-closed);
+  background: var(--spo-fail-closed-bg);
+  border: 1px solid var(--spo-fail-closed);
+  border-radius: 8px;
+  padding: 1rem;
+}

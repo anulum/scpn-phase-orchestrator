@@ -21,6 +21,13 @@ proven depth, so no verb claims a formal ``proof``; and the safety tier is
 research-grade toolkit, not a certified product. The platform SDK is an optional
 dependency (the ``studio`` extra); importing this module without it raises a
 clear error.
+
+The manifest declares the federated UI remote through ``ui_module``: the panel
+built in ``studio-web/`` and pull-deployed to the studio's own space. Its
+federation name, exposed module, and remote-entry URL
+(:data:`STUDIO_FEDERATION_NAME`, :data:`STUDIO_EXPOSED_MODULE`,
+:data:`STUDIO_REMOTE_ENTRY`) are the contract with
+``studio-web/module-federation.config.ts`` and must match it exactly.
 """
 
 from __future__ import annotations
@@ -33,6 +40,7 @@ try:
     from scpn_studio_platform.manifest import (
         CapabilityManifest,
         TransportProfile,
+        UiModule,
         content_digest,
     )
     from scpn_studio_platform.verbs import (
@@ -57,6 +65,17 @@ _PLATFORM_SDK = "0.3.0"
 _PROTOCOL_VERSION = "1"
 _POLYGLOT = ("rust", "webgpu", "mojo", "julia", "go", "python")
 _NUMPY_ONLY = ("python",)
+
+# The federated UI remote (built in ``studio-web/``). These three values are the
+# contract with the JavaScript remote and MUST match
+# ``studio-web/module-federation.config.ts``: the federation container name, the
+# exposed panel module, and the pull-deployed remote-entry URL under the studio's
+# own space (``base=/studios/scpn-phase-orchestrator/``).
+STUDIO_FEDERATION_NAME = "scpn_phase_orchestrator"
+STUDIO_EXPOSED_MODULE = "./SpoStudioPanel"
+STUDIO_REMOTE_ENTRY = (
+    "https://www.anulum.org/studios/scpn-phase-orchestrator/remoteEntry.js"
+)
 
 
 def _require_sdk() -> None:
@@ -259,7 +278,11 @@ def build_capability_manifest(*, studio_version: str) -> _CapabilityManifest:
         verbs=verbs,
         evidence_types=evidence_types,
         external_reference_datasets=(),
-        ui_module=None,
+        ui_module=UiModule(
+            remote_entry=STUDIO_REMOTE_ENTRY,
+            exposes=(STUDIO_EXPOSED_MODULE,),
+            federation=STUDIO_FEDERATION_NAME,
+        ),
         contract_era="v1",
         enumeration="language-agnostic",
     )

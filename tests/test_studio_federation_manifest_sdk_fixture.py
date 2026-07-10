@@ -99,6 +99,21 @@ class _Verb:
 
 
 @dataclass(frozen=True)
+class _UiModule:
+    remote_entry: str
+    exposes: tuple[str, ...]
+    federation: str = "module-federation-2"
+
+    def to_dict(self) -> dict[str, object]:
+        """Return the schema-A ``ui_module`` block."""
+        return {
+            "remote_entry": self.remote_entry,
+            "exposes": list(self.exposes),
+            "federation": self.federation,
+        }
+
+
+@dataclass(frozen=True)
 class _CapabilityManifest:
     studio: str
     studio_version: str
@@ -109,7 +124,7 @@ class _CapabilityManifest:
     verbs: tuple[_Verb, ...]
     evidence_types: tuple[str, ...]
     external_reference_datasets: tuple[str, ...]
-    ui_module: str | None
+    ui_module: _UiModule | None
     contract_era: str
     enumeration: str
 
@@ -137,7 +152,7 @@ class _CapabilityManifest:
             ],
             "evidence_types": list(self.evidence_types),
             "external_reference_datasets": list(self.external_reference_datasets),
-            "ui_module": self.ui_module,
+            "ui_module": None if self.ui_module is None else self.ui_module.to_dict(),
             "contract_era": self.contract_era,
             "enumeration": self.enumeration,
         }
@@ -164,6 +179,7 @@ def _install_sdk_fixture(monkeypatch: pytest.MonkeyPatch) -> None:
         {
             "CapabilityManifest": _CapabilityManifest,
             "TransportProfile": _TransportProfile,
+            "UiModule": _UiModule,
             "content_digest": _content_digest,
         }
     )
@@ -220,7 +236,13 @@ def test_manifest_builds_schema_a_contract_with_sdk_fixture() -> None:
     assert payload["protocol_version"] == "1"
     assert payload["contract_era"] == "v1"
     assert payload["enumeration"] == "language-agnostic"
-    assert payload["ui_module"] is None
+    assert payload["ui_module"] == {
+        "remote_entry": (
+            "https://www.anulum.org/studios/scpn-phase-orchestrator/remoteEntry.js"
+        ),
+        "exposes": ["./SpoStudioPanel"],
+        "federation": "scpn_phase_orchestrator",
+    }
     assert payload["evidence_types"] == list(LIVE_FEED_EVIDENCE_SCHEMAS)
     assert {verb["verb"] for verb in _manifest_verbs(payload)} == _EXPECTED_VERBS
 

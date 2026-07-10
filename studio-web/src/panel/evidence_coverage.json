@@ -1,0 +1,304 @@
+{
+  "schema": "spo.studio.evidence-coverage.v1",
+  "studio": "scpn-phase-orchestrator",
+  "disclaimer": "This assurance-case bundle is a technical evidence-mapping artifact. It links SPO runtime evidence to published clause identifiers to support review; it does not constitute legal advice, a conformity assessment, or a certification of compliance. Clause text must be confirmed against the official standard, and conformance determined by a qualified assessor.",
+  "categories": [
+    {
+      "category": "audit_logging",
+      "clause_count": 5,
+      "addressed_count": 2,
+      "partially_addressed_count": 3,
+      "clauses": [
+        {
+          "standard": "EU AI Act 2024/1689",
+          "clause_id": "Article 12",
+          "title": "Record-Keeping",
+          "status": "addressed",
+          "rationale": "Hash-chained, optionally HMAC-signed audit log captures events over the system lifetime."
+        },
+        {
+          "standard": "EU AI Act 2024/1689",
+          "clause_id": "Article 15",
+          "title": "Accuracy, Robustness and Cybersecurity",
+          "status": "partially_addressed",
+          "rationale": "Tamper-evident hash chain and signing support the integrity facet of robustness and cybersecurity."
+        },
+        {
+          "standard": "ISO/IEC 42001:2023",
+          "clause_id": "Clause 8",
+          "title": "Operation",
+          "status": "partially_addressed",
+          "rationale": "Operational records of controlled execution."
+        },
+        {
+          "standard": "ANSI/UL 4600",
+          "clause_id": "data-integrity",
+          "title": "Data integrity",
+          "status": "addressed",
+          "rationale": "Append-only chained log with payload digests evidences data integrity."
+        },
+        {
+          "standard": "ANSI/UL 4600",
+          "clause_id": "safety-case",
+          "title": "Safety case construction",
+          "status": "partially_addressed",
+          "rationale": "Audit trail forms part of the supporting evidence body."
+        }
+      ]
+    },
+    {
+      "category": "replay_determinism",
+      "clause_count": 5,
+      "addressed_count": 1,
+      "partially_addressed_count": 4,
+      "clauses": [
+        {
+          "standard": "EU AI Act 2024/1689",
+          "clause_id": "Article 15",
+          "title": "Accuracy, Robustness and Cybersecurity",
+          "status": "addressed",
+          "rationale": "Deterministic re-execution demonstrates reproducibility and robustness of recorded behaviour."
+        },
+        {
+          "standard": "EU AI Act 2024/1689",
+          "clause_id": "Article 12",
+          "title": "Record-Keeping",
+          "status": "partially_addressed",
+          "rationale": "Replay verifies the integrity of the recorded audit log."
+        },
+        {
+          "standard": "ISO/IEC 42001:2023",
+          "clause_id": "Clause 9",
+          "title": "Performance evaluation",
+          "status": "partially_addressed",
+          "rationale": "Reproducibility check contributes to performance evaluation."
+        },
+        {
+          "standard": "ANSI/UL 4600",
+          "clause_id": "autonomy-validation",
+          "title": "Autonomy validation",
+          "status": "partially_addressed",
+          "rationale": "Deterministic replay validates recorded autonomous decisions."
+        },
+        {
+          "standard": "ANSI/UL 4600",
+          "clause_id": "tool-qualification",
+          "title": "Tool qualification",
+          "status": "partially_addressed",
+          "rationale": "Deterministic engine behaviour supports tool qualification."
+        }
+      ]
+    },
+    {
+      "category": "formal_verification",
+      "clause_count": 6,
+      "addressed_count": 3,
+      "partially_addressed_count": 3,
+      "clauses": [
+        {
+          "standard": "EU AI Act 2024/1689",
+          "clause_id": "Article 15",
+          "title": "Accuracy, Robustness and Cybersecurity",
+          "status": "addressed",
+          "rationale": "Formal safety properties and the fail-closed runtime certificate evidence robustness and accuracy bounds."
+        },
+        {
+          "standard": "EU AI Act 2024/1689",
+          "clause_id": "Article 9",
+          "title": "Risk Management System",
+          "status": "partially_addressed",
+          "rationale": "Property-based checks are a risk-control measure."
+        },
+        {
+          "standard": "ISO/IEC 42001:2023",
+          "clause_id": "Clause 6",
+          "title": "Planning",
+          "status": "partially_addressed",
+          "rationale": "Formal property planning supports risk treatment."
+        },
+        {
+          "standard": "ISO/IEC 42001:2023",
+          "clause_id": "A.6",
+          "title": "AI System Life Cycle",
+          "status": "partially_addressed",
+          "rationale": "Verification artefacts are produced across the AI system life cycle."
+        },
+        {
+          "standard": "ANSI/UL 4600",
+          "clause_id": "safety-case",
+          "title": "Safety case construction",
+          "status": "addressed",
+          "rationale": "Structured formal argument with attached evidence is a safety case."
+        },
+        {
+          "standard": "ANSI/UL 4600",
+          "clause_id": "risk-analysis",
+          "title": "Risk analysis",
+          "status": "addressed",
+          "rationale": "Formal safety properties encode the analysed hazards."
+        }
+      ]
+    },
+    {
+      "category": "twin_confidence",
+      "clause_count": 6,
+      "addressed_count": 4,
+      "partially_addressed_count": 2,
+      "clauses": [
+        {
+          "standard": "EU AI Act 2024/1689",
+          "clause_id": "Article 9",
+          "title": "Risk Management System",
+          "status": "addressed",
+          "rationale": "Continuous twin divergence scoring against a calibrated baseline is a live risk-management control."
+        },
+        {
+          "standard": "EU AI Act 2024/1689",
+          "clause_id": "Article 72",
+          "title": "Post-Market Monitoring by Providers",
+          "status": "addressed",
+          "rationale": "Online drift monitoring supports post-market monitoring duties."
+        },
+        {
+          "standard": "EU AI Act 2024/1689",
+          "clause_id": "Article 15",
+          "title": "Accuracy, Robustness and Cybersecurity",
+          "status": "partially_addressed",
+          "rationale": "Divergence bands monitor robustness against the digital twin."
+        },
+        {
+          "standard": "ISO/IEC 42001:2023",
+          "clause_id": "Clause 9",
+          "title": "Performance evaluation",
+          "status": "addressed",
+          "rationale": "Quantitative confidence metrics drive performance evaluation."
+        },
+        {
+          "standard": "ISO/IEC 42001:2023",
+          "clause_id": "A.8",
+          "title": "Information for Interested Parties of AI Systems",
+          "status": "partially_addressed",
+          "rationale": "Confidence summaries inform interested parties of operating state."
+        },
+        {
+          "standard": "ANSI/UL 4600",
+          "clause_id": "metrics-conformance",
+          "title": "Metrics and conformance",
+          "status": "addressed",
+          "rationale": "Confidence scores are conformance metrics for operation."
+        }
+      ]
+    },
+    {
+      "category": "conformal_gate",
+      "clause_count": 6,
+      "addressed_count": 2,
+      "partially_addressed_count": 4,
+      "clauses": [
+        {
+          "standard": "EU AI Act 2024/1689",
+          "clause_id": "Article 9",
+          "title": "Risk Management System",
+          "status": "addressed",
+          "rationale": "Coverage-valid admission gate bounds residual risk distribution-free."
+        },
+        {
+          "standard": "EU AI Act 2024/1689",
+          "clause_id": "Article 14",
+          "title": "Human Oversight",
+          "status": "partially_addressed",
+          "rationale": "Flagged ticks and fail-closed admission route decisions to human oversight."
+        },
+        {
+          "standard": "EU AI Act 2024/1689",
+          "clause_id": "Article 72",
+          "title": "Post-Market Monitoring by Providers",
+          "status": "partially_addressed",
+          "rationale": "Empirical coverage tracking supports post-market monitoring."
+        },
+        {
+          "standard": "ISO/IEC 42001:2023",
+          "clause_id": "Clause 6",
+          "title": "Planning",
+          "status": "partially_addressed",
+          "rationale": "Target miscoverage encodes the planned risk acceptance criterion."
+        },
+        {
+          "standard": "ANSI/UL 4600",
+          "clause_id": "risk-analysis",
+          "title": "Risk analysis",
+          "status": "addressed",
+          "rationale": "Conformal threshold realises the analysed risk-acceptance bound."
+        },
+        {
+          "standard": "ANSI/UL 4600",
+          "clause_id": "metrics-conformance",
+          "title": "Metrics and conformance",
+          "status": "partially_addressed",
+          "rationale": "Empirical coverage is a conformance metric."
+        }
+      ]
+    },
+    {
+      "category": "control_envelope",
+      "clause_count": 6,
+      "addressed_count": 2,
+      "partially_addressed_count": 4,
+      "clauses": [
+        {
+          "standard": "EU AI Act 2024/1689",
+          "clause_id": "Article 9",
+          "title": "Risk Management System",
+          "status": "addressed",
+          "rationale": "Boundary-violation accounting and bounded action projection are live risk-control measures on the closed loop."
+        },
+        {
+          "standard": "EU AI Act 2024/1689",
+          "clause_id": "Article 14",
+          "title": "Human Oversight",
+          "status": "partially_addressed",
+          "rationale": "Bounded, rate-limited actions with recorded boundary violations keep the closed loop within enforced limits for human oversight."
+        },
+        {
+          "standard": "EU AI Act 2024/1689",
+          "clause_id": "Article 15",
+          "title": "Accuracy, Robustness and Cybersecurity",
+          "status": "partially_addressed",
+          "rationale": "Operating-envelope violation counts evidence the run's robustness against declared control bounds."
+        },
+        {
+          "standard": "ISO/IEC 42001:2023",
+          "clause_id": "Clause 8",
+          "title": "Operation",
+          "status": "addressed",
+          "rationale": "Control-mode, applied-action, and boundary-violation totals are operational control records for the run."
+        },
+        {
+          "standard": "ANSI/UL 4600",
+          "clause_id": "safety-case",
+          "title": "Safety case construction",
+          "status": "partially_addressed",
+          "rationale": "The recorded control-safety envelope forms part of the supporting safety-case evidence body."
+        },
+        {
+          "standard": "ANSI/UL 4600",
+          "clause_id": "risk-analysis",
+          "title": "Risk analysis",
+          "status": "partially_addressed",
+          "rationale": "Boundary-violation limits realise the analysed operational hazard bounds."
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "category_count": 6,
+    "clause_mapping_count": 34,
+    "addressed_count": 14,
+    "partially_addressed_count": 20,
+    "standards_covered": [
+      "ANSI/UL 4600",
+      "EU AI Act 2024/1689",
+      "ISO/IEC 42001:2023"
+    ]
+  }
+}

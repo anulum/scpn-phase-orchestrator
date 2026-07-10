@@ -85,6 +85,35 @@ def test_manifest_is_well_formed() -> None:
     assert manifest.evidence_types == LIVE_FEED_EVIDENCE_SCHEMAS
 
 
+def test_manifest_declares_the_federated_ui_remote() -> None:
+    manifest = fm.build_capability_manifest(studio_version="1.2.3")
+    ui_module = manifest.ui_module
+    assert ui_module is not None
+    # The three fields are the wire contract with module-federation.config.ts.
+    assert (
+        ui_module.federation == fm.STUDIO_FEDERATION_NAME == "scpn_phase_orchestrator"
+    )
+    assert ui_module.exposes == (fm.STUDIO_EXPOSED_MODULE,) == ("./SpoStudioPanel",)
+    assert ui_module.remote_entry == fm.STUDIO_REMOTE_ENTRY
+    # Pull-deployed under the studio's own federation space, stable filename.
+    assert ui_module.remote_entry.startswith(
+        "https://www.anulum.org/studios/scpn-phase-orchestrator/"
+    )
+    assert ui_module.remote_entry.endswith("/remoteEntry.js")
+
+
+def test_ui_module_matches_the_javascript_federation_config() -> None:
+    """The Python ui_module contract equals the committed TS remote config."""
+    config = (
+        Path(__file__).resolve().parents[1]
+        / "studio-web"
+        / "module-federation.config.ts"
+    ).read_text(encoding="utf-8")
+    assert f'FEDERATION_NAME = "{fm.STUDIO_FEDERATION_NAME}"' in config
+    assert f'PANEL_EXPOSE_KEY = "{fm.STUDIO_EXPOSED_MODULE}"' in config
+    assert 'filename: "remoteEntry.js"' in config
+
+
 def test_manifest_is_admitted_by_studio_platform_federation_gate() -> None:
     """The emitted schema-A wire manifest passes the Hub's platform validator."""
     assert _STUDIO_PLATFORM_SRC.is_dir()
