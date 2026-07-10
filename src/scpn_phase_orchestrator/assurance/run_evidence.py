@@ -10,10 +10,12 @@
 
 A completed run produces a JSON-safe ``SimulationResult.to_record()`` summary.
 This module maps the trust-relevant fields of that record — the close-time audit
-event-stream integrity result and the conformal twin-confidence admission-gate
-decisions — into :class:`~scpn_phase_orchestrator.assurance.evidence.EvidenceItem`
-records, so a deployment can assemble a conformity package from a run record
-without hand-authoring evidence JSON.
+event-stream integrity result, the conformal twin-confidence admission-gate
+decisions, and the closed-loop control-safety envelope (control mode, applied
+actions, and boundary-violation totals) — into
+:class:`~scpn_phase_orchestrator.assurance.evidence.EvidenceItem` records, so a
+deployment can assemble a conformity package from a run record without
+hand-authoring evidence JSON.
 
 The helper consumes the serialised record (a ``Mapping``), not the
 ``SimulationResult`` object, so the assurance package stays free of the heavy
@@ -29,6 +31,7 @@ from collections.abc import Mapping
 from scpn_phase_orchestrator.assurance.evidence import (
     AUDIT_LOGGING,
     CONFORMAL_GATE,
+    CONTROL_ENVELOPE,
     EvidenceItem,
     build_evidence_item,
 )
@@ -51,9 +54,11 @@ def build_run_evidence(run_record: Mapping[str, object]) -> tuple[EvidenceItem, 
     -------
     tuple[EvidenceItem, ...]
         Evidence for the trust surfaces the run attests: the audit event-stream
-        integrity result (``audit-chain``) when an event stream was written, and
-        the conformal admission-gate decisions (``conformal-gate``) when the gate
-        scored at least one tick. Empty if the run attests neither.
+        integrity result (``audit-chain``) when an event stream was written, the
+        conformal admission-gate decisions (``conformal-gate``) when the gate
+        scored at least one tick, and the closed-loop control-safety envelope
+        (``control-envelope``) when the policy feedback was active. Empty if the
+        run attests none of them.
     """
     items: list[EvidenceItem] = []
 
@@ -83,6 +88,24 @@ def build_run_evidence(run_record: Mapping[str, object]) -> tuple[EvidenceItem, 
                     "last_conformal_admission": run_record.get(
                         "last_conformal_admission"
                     ),
+                },
+            )
+        )
+
+    if run_record.get("policy_enabled") is True:
+        items.append(
+            build_evidence_item(
+                evidence_id="run-control-envelope",
+                category=CONTROL_ENVELOPE,
+                summary="Closed-loop control-safety envelope for the run",
+                record={
+                    "control_mode": run_record.get("control_mode"),
+                    "policy_enabled": True,
+                    "action_total": run_record.get("action_total"),
+                    "boundary_violation_total": run_record.get(
+                        "boundary_violation_total"
+                    ),
+                    "final_regime": run_record.get("final_regime"),
                 },
             )
         )

@@ -10,9 +10,9 @@
 
 An :class:`EvidenceItem` wraps the JSON-safe audit record produced by an
 existing SPO surface (audit-chain integrity, replay determinism, formal
-verification, twin-confidence, or the conformal admission gate) together with a
-content hash, so the bundle can reference evidence by a stable identifier and
-detect any later mutation.
+verification, twin-confidence, the conformal admission gate, or the closed-loop
+control envelope) together with a content hash, so the bundle can reference
+evidence by a stable identifier and detect any later mutation.
 """
 
 from __future__ import annotations
@@ -30,6 +30,7 @@ REPLAY_DETERMINISM = "replay_determinism"
 FORMAL_VERIFICATION = "formal_verification"
 TWIN_CONFIDENCE = "twin_confidence"
 CONFORMAL_GATE = "conformal_gate"
+CONTROL_ENVELOPE = "control_envelope"
 
 EVIDENCE_CATEGORIES: frozenset[str] = frozenset(
     {
@@ -38,6 +39,7 @@ EVIDENCE_CATEGORIES: frozenset[str] = frozenset(
         FORMAL_VERIFICATION,
         TWIN_CONFIDENCE,
         CONFORMAL_GATE,
+        CONTROL_ENVELOPE,
     }
 )
 

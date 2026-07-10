@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- A `control_envelope` assurance evidence category and a run-derived
+  control-safety-envelope evidence item. `assurance.build_run_evidence` now emits
+  a `run-control-envelope` item (control mode, applied-action and
+  boundary-violation totals, final regime) when a run record has the closed-loop
+  policy feedback active, mapped to EU AI Act Articles 9/14/15, ISO/IEC 42001
+  Clause 8, and UL 4600 safety-case/risk-analysis clauses. The
+  `spo assurance-case` / `certification-evidence` `--run-result` path surfaces it
+  automatically. Guarded by `tests/test_assurance_run_evidence.py` and
+  `tests/test_cli_assurance.py`.
 - `bench/honest_dataset_audit.py` is a reusable honest-audit harness that
   generalises the CAP/Sleep-EDF audit pattern. It accepts a dataset manifest, a
   detector registry, and a domain-specific loader/label-extractor, then emits

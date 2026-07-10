@@ -227,7 +227,48 @@ def test_run_result_without_trust_evidence_is_rejected(
         ["assurance-case", "--system", "Grid", "--run-result", str(run_result)],
     )
     assert result.exit_code != 0
-    assert "no audit-integrity or conformal-gate evidence" in result.output
+    assert (
+        "no audit-integrity, conformal-gate, or control-envelope evidence"
+        in result.output
+    )
+
+
+def test_build_from_run_result_with_control_envelope(
+    runner: CliRunner, tmp_path: Path
+) -> None:
+    run_result = tmp_path / "run.json"
+    run_result.write_text(
+        json.dumps(
+            {
+                "spec_name": "grid",
+                "policy_enabled": True,
+                "control_mode": "projected",
+                "action_total": 5,
+                "boundary_violation_total": 0,
+                "final_regime": "nominal",
+            }
+        ),
+        encoding="utf-8",
+    )
+    out = tmp_path / "bundle.json"
+    result = runner.invoke(
+        main,
+        [
+            "assurance-case",
+            "--system",
+            "Grid",
+            "--run-result",
+            str(run_result),
+            "--output",
+            str(out),
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    bundle = json.loads(out.read_text(encoding="utf-8"))
+    evidence = {item["evidence_id"]: item for item in bundle["evidence"]}
+    assert "run-control-envelope" in evidence
+    assert evidence["run-control-envelope"]["category"] == "control_envelope"
+    assert evidence["run-control-envelope"]["record"]["action_total"] == 5
 
 
 def _write_formal_package(path: Path) -> None:

@@ -124,7 +124,8 @@ def _run_result_evidence(path: str) -> list[EvidenceItem]:
     items = list(build_run_evidence(payload))
     if not items:
         raise click.ClickException(
-            f"{path} carries no audit-integrity or conformal-gate evidence"
+            f"{path} carries no audit-integrity, conformal-gate, or "
+            "control-envelope evidence"
         )
     return items
 

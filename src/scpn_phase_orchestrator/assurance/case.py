@@ -30,6 +30,7 @@ from scpn_phase_orchestrator.assurance._hashing import (
 from scpn_phase_orchestrator.assurance.evidence import (
     AUDIT_LOGGING,
     CONFORMAL_GATE,
+    CONTROL_ENVELOPE,
     FORMAL_VERIFICATION,
     REPLAY_DETERMINISM,
     TWIN_CONFIDENCE,
@@ -218,6 +219,43 @@ DEFAULT_EVIDENCE_CLAUSE_MAP: dict[str, tuple[tuple[str, str, str], ...]] = {
             _k(_UL, "metrics-conformance"),
             PARTIALLY_ADDRESSED,
             "Empirical coverage is a conformance metric.",
+        ),
+    ),
+    CONTROL_ENVELOPE: (
+        (
+            _k(_EU, "Article 9"),
+            ADDRESSED,
+            "Boundary-violation accounting and bounded action projection are live "
+            "risk-control measures on the closed loop.",
+        ),
+        (
+            _k(_EU, "Article 14"),
+            PARTIALLY_ADDRESSED,
+            "Bounded, rate-limited actions with recorded boundary violations keep "
+            "the closed loop within enforced limits for human oversight.",
+        ),
+        (
+            _k(_EU, "Article 15"),
+            PARTIALLY_ADDRESSED,
+            "Operating-envelope violation counts evidence the run's robustness "
+            "against declared control bounds.",
+        ),
+        (
+            _k(_ISO, "Clause 8"),
+            ADDRESSED,
+            "Control-mode, applied-action, and boundary-violation totals are "
+            "operational control records for the run.",
+        ),
+        (
+            _k(_UL, "safety-case"),
+            PARTIALLY_ADDRESSED,
+            "The recorded control-safety envelope forms part of the supporting "
+            "safety-case evidence body.",
+        ),
+        (
+            _k(_UL, "risk-analysis"),
+            PARTIALLY_ADDRESSED,
+            "Boundary-violation limits realise the analysed operational hazard bounds.",
         ),
     ),
 }

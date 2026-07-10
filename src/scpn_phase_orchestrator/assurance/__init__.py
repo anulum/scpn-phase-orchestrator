@@ -51,6 +51,7 @@ from scpn_phase_orchestrator.assurance.envelope import (
 from scpn_phase_orchestrator.assurance.evidence import (
     AUDIT_LOGGING,
     CONFORMAL_GATE,
+    CONTROL_ENVELOPE,
     EVIDENCE_CATEGORIES,
     FORMAL_VERIFICATION,
     REPLAY_DETERMINISM,
@@ -128,6 +129,7 @@ __all__ = [
     "sign_provenance_statement",
     "verify_dsse_envelope",
     "CONFORMAL_GATE",
+    "CONTROL_ENVELOPE",
     "CONFORMANCE_STATUSES",
     "CONFORMITY_REPORT_SCHEMA",
     "CERTIFICATION_EVIDENCE_PACKAGE_DISCLAIMER",
