@@ -3,7 +3,25 @@
     {
       "modules": [
         "asyncua",
-        "asyncua.*",
+        "asyncua.*"
+      ],
+      "settings": {
+        "follow_imports": "skip",
+        "ignore_missing_imports": true
+      }
+    },
+    {
+      "modules": [
+        "domainpacks",
+        "domainpacks.*"
+      ],
+      "settings": {
+        "disallow_incomplete_defs": false,
+        "disallow_untyped_defs": false
+      }
+    },
+    {
+      "modules": [
         "grpc_tools",
         "grpc_tools.*",
         "jax",
@@ -41,16 +59,6 @@
       ],
       "settings": {
         "ignore_missing_imports": true
-      }
-    },
-    {
-      "modules": [
-        "domainpacks",
-        "domainpacks.*"
-      ],
-      "settings": {
-        "disallow_incomplete_defs": false,
-        "disallow_untyped_defs": false
       }
     },
     {
