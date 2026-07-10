@@ -1,0 +1,18 @@
+{
+  "schema": "studio.project-card.v1",
+  "tagline": "A synchronisation-analysis and honest-evaluation toolkit on Kuramoto/UPDE phase dynamics — false-alarm-controlled evidence with sealed, reproducible artefacts.",
+  "summary": "SCPN Phase Orchestrator (SPO) turns the repeating signals a system already produces — waveforms, event streams, state changes — into a shared language of phase, then answers three operator questions with false-alarm-controlled evidence rather than one confident number: what is locking together, whether damping is falling toward a regime change, and which single bounded knob could steer it back as a reviewable proposal before anything touches hardware. The early-warning suite runs three complementary detectors and an ensemble, wrapping every alarm in a hash-sealed evidence record with an explicit claim boundary and an honest lead time. Where the signature is a physically deterministic mode — for example a grid oscillation checked against small-signal eigenvalues — SPO recovers it; on noisier domains generic early-warning detection is at chance at an honest operating point, and SPO is built to report that rather than overclaim. It ships bindings for 36 domains as reusable scaffolds, not validated detectors, and never actuates blindly: every proposed change is bounded, rate-limited, and audit-logged for human review.",
+  "highlights": [
+    "Three complementary early-warning detectors (critical slowing down, synchronisation, transition entropy) plus weighted and vote ensemble fusion; every alarm is wrapped in a hash-sealed evidence record with an explicit claim boundary and an honest lead time, including non-positive when late.",
+    "Real-data validation with reported verdicts: on CHB-MIT EEG (chb01) at matched false-alarm rate the result is sparse detection with no robust advantage — stated, not hidden; the ISO-NE forced-oscillation case study recovers and flags the documented 0.27 Hz inter-area mode through the shipped CLI.",
+    "Byte-reproducible sealed artefacts: derived-only evidence bundles with SHA-256 provenance chains and integrity tests that recompute the seals and reject tampering.",
+    "Multi-language compute with per-kernel parity gates: coupling primitives (Hodge decomposition, spectral, swarmalator, spatial modulator) dispatched across Rust, Julia, Go and Mojo over a Python floor.",
+    "Review-only control surface: a single bounded steering proposal is emitted as a replayable, audit-logged artefact rather than a blind actuation, with a PRISM formal-supervisor export for the orchestration layer."
+  ],
+  "links": [
+    { "label": "Executive Overview", "url": "https://anulum.github.io/scpn-phase-orchestrator/getting-started/executive_overview/" },
+    { "label": "Use Cases and Value Map", "url": "https://anulum.github.io/scpn-phase-orchestrator/getting-started/use_cases/" },
+    { "label": "Real-Data Case Study: ISO-NE Forced Oscillation", "url": "https://anulum.github.io/scpn-phase-orchestrator/validation/iso_ne_case1_forced_oscillation/" },
+    { "label": "Public Roadmap", "url": "https://anulum.github.io/scpn-phase-orchestrator/roadmap/" }
+  ]
+}
