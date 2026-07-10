@@ -66,12 +66,20 @@ docs:  ## Live docs preview
 docs-build:  ## Build docs (strict)
 	mkdocs build --strict
 
-lock-refresh:  ## Regenerate hash-pinned dependency lockfiles via pip-compile
-	pip-compile --extra=dev --extra=full --extra=nn --extra=notebook --extra=plot --extra=queuewaves --generate-hashes --no-emit-index-url --output-file=requirements/dev-lock.txt --strip-extras pyproject.toml
-	pip-compile --extra=dev --extra=full --extra=nn --extra=notebook --extra=plot --extra=queuewaves --generate-hashes --no-emit-index-url --output-file=requirements/dev-lock-py311.txt --strip-extras pyproject.toml
-	pip-compile --extra=dev --extra=full --extra=nn --extra=notebook --extra=plot --extra=queuewaves --generate-hashes --no-emit-index-url --output-file=requirements/dev-lock-py313.txt --strip-extras pyproject.toml
-	pip-compile --extra=dev --extra=full --extra=nn --extra=notebook --extra=plot --generate-hashes --no-emit-index-url --output-file=requirements/dev-lock-windows-ffi-py311.txt --strip-extras pyproject.toml
-	pip-compile --extra=dev --extra=full --extra=nn --extra=notebook --extra=plot --generate-hashes --no-emit-index-url --output-file=requirements/dev-lock-windows-ffi-py312.txt --strip-extras pyproject.toml
+# lock-refresh regenerates the hash-pinned lockfiles. pip-compile resolves for
+# the interpreter it runs under, so each dev-lock-py3XX line must be executed
+# under the matching Python (run the target once per interpreter, e.g. via
+# `uvx --python 3.11 --with pip-tools==7.5.3 pip-compile ...`). The windows-ffi
+# locks are resolved for the Windows platform with `uv pip compile
+# --python-platform windows` so Unix-only deps (e.g. uvloop) are excluded and
+# Windows-only deps (pywin32) are included; a Linux pip-compile run would emit
+# an unmarked uvloop and break the Windows ffi-test install under --require-hashes.
+lock-refresh:  ## Regenerate hash-pinned dependency lockfiles (see comment: per-interpreter)
+	pip-compile --extra=dev --extra=full --extra=nn --extra=notebook --extra=plot --extra=queuewaves --generate-hashes --no-emit-index-url --output-file=requirements/dev-lock.txt --strip-extras pyproject.toml       # run under python3.12
+	pip-compile --extra=dev --extra=full --extra=nn --extra=notebook --extra=plot --extra=queuewaves --generate-hashes --no-emit-index-url --output-file=requirements/dev-lock-py311.txt --strip-extras pyproject.toml  # run under python3.11
+	pip-compile --extra=dev --extra=full --extra=nn --extra=notebook --extra=plot --extra=queuewaves --generate-hashes --no-emit-index-url --output-file=requirements/dev-lock-py313.txt --strip-extras pyproject.toml  # run under python3.13
+	uv pip compile --python-platform windows --python-version 3.11 --extra dev --extra full --extra nn --extra notebook --extra plot --generate-hashes --no-emit-index-url --strip-extras pyproject.toml -o requirements/dev-lock-windows-ffi-py311.txt
+	uv pip compile --python-platform windows --python-version 3.12 --extra dev --extra full --extra nn --extra notebook --extra plot --generate-hashes --no-emit-index-url --strip-extras pyproject.toml -o requirements/dev-lock-windows-ffi-py312.txt
 	pip-compile --extra=queuewaves --generate-hashes --no-emit-index-url --output-file=requirements/queuewaves-lock.txt --strip-extras pyproject.toml
 	pip-compile --generate-hashes --no-emit-index-url --strip-extras -c requirements/dev-lock.txt requirements/julia.in -o requirements/julia-lock.txt
 
