@@ -59,7 +59,14 @@ queuewaves = [
     "httpx>=0.27,<1.0",
     "websockets>=12.0,<17.0",
 ]
-studio = ["streamlit>=1.36,<2.0", "scpn-studio-platform>=0.3,<0.4"]
+# scpn-studio-platform (every release >=0.2) requires Python >=3.12, so it is
+# gated behind a marker: the studio extra installs streamlit everywhere and the
+# SDK only on 3.12+. This keeps requires-python at >=3.10 (py311 dev locks intact)
+# and lets uv's universal resolution across 3.10-3.13 succeed.
+studio = [
+    "streamlit>=1.36,<2.0",
+    "scpn-studio-platform>=0.3,<0.4; python_version >= '3.12'",
+]
 nn = ["jax>=0.4,<1.0", "equinox>=0.11,<1.0", "optax>=0.2,<1.0"]
 mpc = ["osqp>=1.0,<2.0"]
 eeg = ["pyedflib>=0.1.42,<0.2"]  # EDF ingestion for the scalp-EEG early-warning capstone
