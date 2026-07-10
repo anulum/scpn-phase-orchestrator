@@ -12,7 +12,7 @@
     "research_experimental_modules": 201,
     "runtime_serving_modules": 153,
     "rust_kernel_files": 97,
-    "test_files": 836
+    "test_files": 837
   },
   "documentation": {
     "public_pages": [
@@ -2574,6 +2574,7 @@
       "tests/test_tools_check_meta_distribution.py",
       "tests/test_tools_check_module_linkage.py",
       "tests/test_tools_check_release_tag_version.py",
+      "tests/test_tools_check_spdx_headers.py",
       "tests/test_tools_check_version_sync.py",
       "tests/test_tools_coverage_guard.py",
       "tests/test_tools_normalise_spdx.py",

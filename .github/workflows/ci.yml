@@ -43,6 +43,7 @@ jobs:
       - run: python tools/check_version_sync.py
       - run: python tools/capability_manifest.py --check
       - run: python tools/build_studio_panel_data.py --check
+      - run: python tools/check_spdx_headers.py
 
   typecheck:
     runs-on: ubuntu-latest
