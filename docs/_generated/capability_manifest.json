@@ -8,11 +8,11 @@
     "optional_extras": 22,
     "public_api_exports": 24,
     "public_documentation_pages": 223,
-    "python_package_modules": 704,
+    "python_package_modules": 705,
     "research_experimental_modules": 201,
-    "runtime_serving_modules": 151,
+    "runtime_serving_modules": 152,
     "rust_kernel_files": 97,
-    "test_files": 833
+    "test_files": 834
   },
   "documentation": {
     "public_pages": [
@@ -942,6 +942,7 @@
       "src/scpn_phase_orchestrator/assurance/report.py",
       "src/scpn_phase_orchestrator/assurance/run_evidence.py",
       "src/scpn_phase_orchestrator/assurance/standards.py",
+      "src/scpn_phase_orchestrator/assurance/twin_confidence_evidence.py",
       "src/scpn_phase_orchestrator/audit/__init__.py",
       "src/scpn_phase_orchestrator/evaluation/__init__.py",
       "src/scpn_phase_orchestrator/evaluation/auditor.py",
@@ -1139,6 +1140,7 @@
     "src/scpn_phase_orchestrator/assurance/report.py",
     "src/scpn_phase_orchestrator/assurance/run_evidence.py",
     "src/scpn_phase_orchestrator/assurance/standards.py",
+    "src/scpn_phase_orchestrator/assurance/twin_confidence_evidence.py",
     "src/scpn_phase_orchestrator/audit/__init__.py",
     "src/scpn_phase_orchestrator/autotune/__init__.py",
     "src/scpn_phase_orchestrator/autotune/binding_proposal.py",
@@ -1836,6 +1838,7 @@
       "tests/test_assurance_provenance.py",
       "tests/test_assurance_report.py",
       "tests/test_assurance_run_evidence.py",
+      "tests/test_assurance_twin_confidence_evidence.py",
       "tests/test_attention_residuals.py",
       "tests/test_attention_residuals_backends.py",
       "tests/test_attention_residuals_stability.py",

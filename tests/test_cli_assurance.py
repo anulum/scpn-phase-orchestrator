@@ -271,6 +271,72 @@ def test_build_from_run_result_with_control_envelope(
     assert evidence["run-control-envelope"]["record"]["action_total"] == 5
 
 
+def test_build_from_twin_confidence_file(runner: CliRunner, tmp_path: Path) -> None:
+    score = tmp_path / "twin.json"
+    score.write_text(
+        json.dumps({"confidence": 0.91, "status": "healthy", "score_hash": "b" * 64}),
+        encoding="utf-8",
+    )
+    out = tmp_path / "bundle.json"
+    result = runner.invoke(
+        main,
+        [
+            "assurance-case",
+            "--system",
+            "Grid",
+            "--twin-confidence-file",
+            str(score),
+            "--output",
+            str(out),
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    bundle = json.loads(out.read_text(encoding="utf-8"))
+    evidence = {item["evidence_id"]: item for item in bundle["evidence"]}
+    assert "twin-confidence-score" in evidence
+    assert evidence["twin-confidence-score"]["category"] == "twin_confidence"
+    assert evidence["twin-confidence-score"]["record"]["confidence"] == 0.91
+
+
+def test_twin_confidence_file_non_object_rejected(
+    runner: CliRunner, tmp_path: Path
+) -> None:
+    score = tmp_path / "twin.json"
+    score.write_text(json.dumps(["not", "an", "object"]), encoding="utf-8")
+    result = runner.invoke(
+        main,
+        ["assurance-case", "--system", "Grid", "--twin-confidence-file", str(score)],
+    )
+    assert result.exit_code != 0
+    assert "must be a TwinConfidenceScore JSON object" in result.output
+
+
+def test_twin_confidence_file_invalid_score_rejected(
+    runner: CliRunner, tmp_path: Path
+) -> None:
+    score = tmp_path / "twin.json"
+    score.write_text(
+        json.dumps({"confidence": 5.0, "status": "healthy", "score_hash": "b" * 64}),
+        encoding="utf-8",
+    )
+    result = runner.invoke(
+        main,
+        ["assurance-case", "--system", "Grid", "--twin-confidence-file", str(score)],
+    )
+    assert result.exit_code != 0
+    assert "not a valid twin-confidence score" in result.output
+
+
+def test_run_result_non_object_rejected(runner: CliRunner, tmp_path: Path) -> None:
+    run_result = tmp_path / "run.json"
+    run_result.write_text(json.dumps(["not", "an", "object"]), encoding="utf-8")
+    result = runner.invoke(
+        main, ["assurance-case", "--system", "Grid", "--run-result", str(run_result)]
+    )
+    assert result.exit_code != 0
+    assert "must be a SimulationResult JSON object" in result.output
+
+
 def _write_formal_package(path: Path) -> None:
     package = build_formal_verification_package(
         {"safety": FormalTextArtifact("smt2", "(assert (= x x))")},

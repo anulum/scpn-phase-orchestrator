@@ -52,7 +52,10 @@ records a `replay_determinism` evidence item for the reproducibility clauses.
 `--formal-package` takes a serialised `FormalVerificationPackage` manifest (from
 the supervisor formal exporters) and adds a `formal_verification` evidence item for
 the formal-argument clauses, recording which model-checking properties were posed
-against which exported artefacts.
+against which exported artefacts. `--twin-confidence-file` takes a serialised
+`TwinConfidenceScore` and adds a `twin_confidence` evidence item for the
+drift-monitoring clauses, restating the calibrated confidence, operator status,
+divergences, and content hash of the scored tick.
 
 With `--audit-log`, `--sign-envelope` additionally writes `signed_envelope.json` —
 a deterministic binding of the package hash to the run's audit-chain tip, so the
@@ -124,6 +127,18 @@ the manifest verbatim: it records which properties were posed against which
 artefacts, never that any external checker accepted them.
 
 ::: scpn_phase_orchestrator.assurance.formal_evidence
+
+## Twin-confidence evidence
+
+`scpn_phase_orchestrator.assurance.twin_confidence_evidence` maps a serialised
+`TwinConfidenceScore.to_audit_record()` — calibrated confidence, operator status,
+raw divergences, one-sided z-scores, band flags, backend, and content hash — into
+a single `twin_confidence` evidence item, closing the one evidence category the
+clause map referenced without a producer. Like the run-derived and formal
+evidence it consumes the JSON record (not the score object) and restates it
+verbatim, rejecting a confidence outside `[0, 1]`.
+
+::: scpn_phase_orchestrator.assurance.twin_confidence_evidence
 
 ## Bundle assembly
 

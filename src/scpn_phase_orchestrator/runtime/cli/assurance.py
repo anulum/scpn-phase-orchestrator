@@ -33,6 +33,7 @@ from scpn_phase_orchestrator.assurance import (
     build_formal_verification_evidence,
     build_run_evidence,
     build_signed_certification_envelope,
+    build_twin_confidence_evidence,
     render_conformity_report,
     render_conformity_report_pdf,
 )
@@ -143,6 +144,19 @@ def _formal_package_evidence(path: str) -> EvidenceItem:
         raise click.ClickException(f"{path} is not a valid manifest: {exc}") from exc
 
 
+def _twin_confidence_evidence(path: str) -> EvidenceItem:
+    """Return twin-confidence evidence from a serialised confidence score."""
+    payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise click.ClickException(f"{path} must be a TwinConfidenceScore JSON object")
+    try:
+        return build_twin_confidence_evidence(payload)
+    except (ValueError, TypeError) as exc:
+        raise click.ClickException(
+            f"{path} is not a valid twin-confidence score: {exc}"
+        ) from exc
+
+
 def _signed_envelope_record(
     package_hash: str,
     audit_log: str,
@@ -181,6 +195,7 @@ def _collect_evidence(
     evidence_files: tuple[str, ...],
     run_results: tuple[str, ...] = (),
     formal_packages: tuple[str, ...] = (),
+    twin_confidence_files: tuple[str, ...] = (),
     *,
     verify_determinism: bool = False,
 ) -> list[EvidenceItem]:
@@ -194,12 +209,14 @@ def _collect_evidence(
         evidence.extend(_run_result_evidence(path))
     for path in formal_packages:
         evidence.append(_formal_package_evidence(path))
+    for path in twin_confidence_files:
+        evidence.append(_twin_confidence_evidence(path))
     for path in evidence_files:
         evidence.extend(_evidence_from_file(path))
     if not evidence:
         raise click.ClickException(
             "no evidence supplied; pass --audit-log, --run-result, "
-            "--formal-package, and/or "
+            "--formal-package, --twin-confidence-file, and/or "
             f"--evidence-file (categories: {sorted(EVIDENCE_CATEGORIES)})"
         )
     return evidence
@@ -241,6 +258,13 @@ def _collect_evidence(
     type=click.Path(exists=True),
     help="FormalVerificationPackage manifest JSON; adds formal evidence; repeatable",
 )
+@click.option(
+    "--twin-confidence-file",
+    "twin_confidence_files",
+    multiple=True,
+    type=click.Path(exists=True),
+    help="TwinConfidenceScore JSON; adds twin-confidence evidence; repeatable",
+)
 @click.option("--output", default=None, type=click.Path(), help="Output JSON file")
 @click.option(
     "--report-out",
@@ -262,6 +286,7 @@ def assurance_case(
     evidence_files: tuple[str, ...],
     run_results: tuple[str, ...],
     formal_packages: tuple[str, ...],
+    twin_confidence_files: tuple[str, ...],
     verify_determinism: bool,
     output: str | None,
     report_out: str | None,
@@ -284,6 +309,9 @@ def assurance_case(
     formal_packages : tuple[str, ...]
         Optional ``FormalVerificationPackage`` manifest JSON files; a
         formal-verification evidence item is derived from each.
+    twin_confidence_files : tuple[str, ...]
+        Optional ``TwinConfidenceScore`` JSON files; a twin-confidence evidence
+        item is derived from each.
     verify_determinism : bool
         When set with ``--audit-log``, re-run the determinism check and add a
         replay-determinism evidence item.
@@ -301,6 +329,7 @@ def assurance_case(
         evidence_files,
         run_results,
         formal_packages,
+        twin_confidence_files,
         verify_determinism=verify_determinism,
     )
     bundle = build_assurance_case_bundle(system_name, evidence)
@@ -357,6 +386,13 @@ def assurance_case(
     help="FormalVerificationPackage manifest JSON; adds formal evidence; repeatable",
 )
 @click.option(
+    "--twin-confidence-file",
+    "twin_confidence_files",
+    multiple=True,
+    type=click.Path(exists=True),
+    help="TwinConfidenceScore JSON; adds twin-confidence evidence; repeatable",
+)
+@click.option(
     "--sign-envelope",
     "sign_envelope",
     is_flag=True,
@@ -382,6 +418,7 @@ def certification_evidence(
     evidence_files: tuple[str, ...],
     run_results: tuple[str, ...],
     formal_packages: tuple[str, ...],
+    twin_confidence_files: tuple[str, ...],
     verify_determinism: bool,
     sign_envelope: bool,
     signing_seed_file: str | None,
@@ -404,6 +441,9 @@ def certification_evidence(
     formal_packages : tuple[str, ...]
         Optional ``FormalVerificationPackage`` manifest JSON files; a
         formal-verification evidence item is derived from each.
+    twin_confidence_files : tuple[str, ...]
+        Optional ``TwinConfidenceScore`` JSON files; a twin-confidence evidence
+        item is derived from each.
     verify_determinism : bool
         When set with ``--audit-log``, re-run the determinism check and add a
         replay-determinism evidence item.
@@ -434,6 +474,7 @@ def certification_evidence(
             evidence_files,
             run_results,
             formal_packages,
+            twin_confidence_files,
             verify_determinism=verify_determinism,
         ),
     )

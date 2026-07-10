@@ -106,6 +106,9 @@ from scpn_phase_orchestrator.assurance.standards import (
     clause_catalogue,
     clause_for_key,
 )
+from scpn_phase_orchestrator.assurance.twin_confidence_evidence import (
+    build_twin_confidence_evidence,
+)
 
 __all__ = [
     "ADDRESSED",
@@ -171,6 +174,7 @@ __all__ = [
     "build_power_grid_prc_audit_bundle",
     "build_run_evidence",
     "build_signed_certification_envelope",
+    "build_twin_confidence_evidence",
     "clause_catalogue",
     "clause_for_key",
     "render_conformity_report",
