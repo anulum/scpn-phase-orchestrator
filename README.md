@@ -7,11 +7,13 @@ in lockstep, it looks like a seizure. When fusion-plasma modes phase-lock, the
 reactor disrupts. These look like unrelated incidents, but they are one problem
 wearing different clothes: **coupled rhythms drifting into — or out of — sync.**
 
-SCPN Phase Orchestrator (SPO) is a Python library and CLI for that problem. It
-takes the repeating signals a system already produces — waveforms, event
-streams, state changes — turns them into a shared language of **phase** (where
-each rhythm sits in its cycle), and gives operators a way to ask three questions
-with *honest, false-alarm-controlled* evidence rather than one confident number:
+SCPN Phase Orchestrator (SPO) is an **auditable assurance envelope** for that
+problem — a Python library and CLI that wraps synchronisation analysis in sealed,
+replayable evidence with *honest, false-alarm-controlled* claim boundaries rather
+than one confident number. It takes the repeating signals a system already
+produces — waveforms, event streams, state changes — turns them into a shared
+language of **phase** (where each rhythm sits in its cycle), and gives operators a
+way to ask three questions, each answer bound to a reproducible record:
 
 1. **What is locking together,** and is that lock useful or dangerous?
 2. **Is the system's damping falling toward a regime change?** SPO estimates this
@@ -31,9 +33,10 @@ markets, and more) — a binding is a reusable scaffold, **not** a validated
 detector for that domain — and it never actuates blindly: every proposed change
 is bounded, rate-limited, and audit-logged for human review.
 
-*For specialists, in one line:* a domain-agnostic synchronisation-analysis and
-honest-evaluation toolkit built on Kuramoto/UPDE phase dynamics, with a
-review-only control-proposal surface. New here? Start with
+*For specialists, in one line:* an auditable synchronisation-analysis and
+honest-evaluation toolkit built on Kuramoto/UPDE phase dynamics — every alarm and
+control proposal sealed as replayable evidence — with a review-only
+control-proposal surface. New here? Start with
 [Use Cases and Value Map](docs/getting-started/use_cases.md) or the
 [Executive Overview](docs/getting-started/executive_overview.md).
 
