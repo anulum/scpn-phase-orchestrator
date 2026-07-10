@@ -7,12 +7,12 @@
     "integration_modules": 27,
     "optional_extras": 22,
     "public_api_exports": 24,
-    "public_documentation_pages": 223,
+    "public_documentation_pages": 224,
     "python_package_modules": 706,
     "research_experimental_modules": 201,
     "runtime_serving_modules": 153,
     "rust_kernel_files": 97,
-    "test_files": 837
+    "test_files": 838
   },
   "documentation": {
     "public_pages": [
@@ -76,6 +76,7 @@
       "docs/guide/backend_fallbacks.md",
       "docs/guide/backend_review_gate.md",
       "docs/guide/backend_strategy.md",
+      "docs/guide/choosing_an_engine.md",
       "docs/guide/contributor_onboarding.md",
       "docs/guide/control_systems.md",
       "docs/guide/dependency_locks.md",
@@ -2006,6 +2007,7 @@
       "tests/test_dnb_detector.py",
       "tests/test_dnb_modal_transfer.py",
       "tests/test_dnb_modal_transfer_evidence.py",
+      "tests/test_docs_choosing_an_engine.py",
       "tests/test_doctor.py",
       "tests/test_domain_detectors.py",
       "tests/test_domainpack_amplitude.py",

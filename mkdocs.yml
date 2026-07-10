@@ -73,6 +73,7 @@ nav:
       - Domain Utilisation Schemas: concepts/domain_utilisation_schemas.md
       - Kuramoto Theory: concepts/kuramoto_theory.md
   - Guides:
+      - Choosing an Engine: guide/choosing_an_engine.md
       - Stuart-Landau Amplitude Mode: guide/stuart_landau.md
       - QueueWaves Cascade Detector: guide/queuewaves.md
       - Rust FFI Acceleration: guide/rust_ffi.md
