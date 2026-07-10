@@ -332,6 +332,7 @@ def run_deterministic_loop(
     if wait_until is None:
 
         def default_wait_until_ns(target_ns: int, margin_ns: int) -> None:
+            """Busy-wait until ``target_ns`` using the loop's monotonic clock."""
             _sleep_until(target_ns, margin_ns, clock_ns=monotonic_ns)
 
         wait_until_ns = default_wait_until_ns

@@ -120,6 +120,7 @@ def export_petri_net_to_prism(
 
 
 def _guard_metric_names(transitions: list[Transition]) -> list[str]:
+    """Return the sorted, de-duplicated guard metric names in ``transitions``."""
     names = {
         transition.guard.metric
         for transition in transitions
@@ -129,6 +130,7 @@ def _guard_metric_names(transitions: list[Transition]) -> list[str]:
 
 
 def _identifier_map(names: list[str], *, prefix: str) -> dict[str, str]:
+    """Map each name to a unique PRISM-safe identifier built from ``prefix``."""
     result: dict[str, str] = {}
     used: set[str] = set()
     for name in names:
@@ -144,6 +146,7 @@ def _identifier_map(names: list[str], *, prefix: str) -> dict[str, str]:
 
 
 def _safe_identifier(name: str, prefix: str) -> str:
+    """Sanitise ``name`` into a PRISM-safe identifier, falling back to ``prefix``."""
     cleaned = _IDENT_RE.sub("_", name.strip())
     cleaned = re.sub(r"_+", "_", cleaned).strip("_")
     if not cleaned:
@@ -154,6 +157,7 @@ def _safe_identifier(name: str, prefix: str) -> str:
 
 
 def _default_token_bound(net: PetriNet, initial: Marking) -> int:
+    """Derive a per-place token bound from the net structure and initial marking."""
     initial_total = sum(initial[place] for place in net.place_names)
     max_output = max(
         (
@@ -171,6 +175,7 @@ def _enabled_expr(
     metric_ids: dict[str, str],
     max_tokens: int,
 ) -> str:
+    """Build the PRISM guard expression that enables ``transition``."""
     parts = [f"{place_ids[arc.place]} >= {arc.weight}" for arc in transition.inputs]
     for place, delta in _transition_deltas(transition).items():
         if delta > 0:
@@ -185,6 +190,7 @@ def _enabled_expr(
 
 
 def _transition_deltas(transition: Transition) -> dict[str, int]:
+    """Return the net per-place token change from firing ``transition``."""
     deltas: dict[str, int] = {}
     for arc in transition.inputs:
         deltas[arc.place] = deltas.get(arc.place, 0) - arc.weight
@@ -194,6 +200,7 @@ def _transition_deltas(transition: Transition) -> dict[str, int]:
 
 
 def _update_expr(transition: Transition, place_ids: dict[str, str]) -> str:
+    """Build the PRISM state-update expression for firing ``transition``."""
     updates = []
     for place, delta in sorted(_transition_deltas(transition).items()):
         place_id = place_ids[place]
