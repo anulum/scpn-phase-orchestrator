@@ -291,8 +291,6 @@ module = [
     "scpn_quantum_control.*",
     "jax",
     "jax.*",
-    "asyncua",
-    "asyncua.*",
     "wfdb",
     "wfdb.*",
     "yaml",
@@ -313,6 +311,17 @@ ignore_missing_imports = true
 # studio/federation_manifest.py behind a guarded import; it is not in the pinned
 # CI dev-lock, so treat it as untyped to type-check with or without it installed.
 module = ["scpn_studio_platform", "scpn_studio_platform.*"]
+follow_imports = "skip"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# asyncua (the optional ``opcua``/``full`` extra, now pinned in the dev-lock)
+# ships py.typed but re-exports its public API from asyncua/__init__.py without
+# declaring __all__, so mypy's strict re-export check rejects the documented
+# ``from asyncua import Client``. It is consumed only by adapters/opcua_bridge.py
+# behind a HAS_ASYNCUA guard, so treat it as untyped to type-check with or
+# without it installed.
+module = ["asyncua", "asyncua.*"]
 follow_imports = "skip"
 ignore_missing_imports = true
 
