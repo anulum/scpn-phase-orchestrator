@@ -17,10 +17,13 @@ from __future__ import annotations
 
 import pytest
 
+import scpn_phase_orchestrator.assurance.twin_confidence_evidence as _twin_evidence
 from scpn_phase_orchestrator.assurance import (
     TWIN_CONFIDENCE,
     build_twin_confidence_evidence,
 )
+
+assert _twin_evidence is not None
 
 
 def _score(**overrides: object) -> dict[str, object]:
