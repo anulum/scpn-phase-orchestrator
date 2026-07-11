@@ -127,6 +127,12 @@ __all__ = [
     "ultradian_phase",
     "winding_numbers",
     "winding_vector",
+    "MONITOR_VALIDATION",
+    "MonitorValidationRecord",
+    "MonitorValidationStatus",
+    "monitors_by_status",
+    "validation_record",
+    "validation_summary",
 ]
 
 _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
@@ -325,6 +331,12 @@ _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
         ".twin_conformal_gate",
         "confidence_nonconformity",
     ),
+    "MONITOR_VALIDATION": (".validation_status", "MONITOR_VALIDATION"),
+    "MonitorValidationRecord": (".validation_status", "MonitorValidationRecord"),
+    "MonitorValidationStatus": (".validation_status", "MonitorValidationStatus"),
+    "monitors_by_status": (".validation_status", "monitors_by_status"),
+    "validation_record": (".validation_status", "validation_record"),
+    "validation_summary": (".validation_status", "validation_summary"),
 }
 
 

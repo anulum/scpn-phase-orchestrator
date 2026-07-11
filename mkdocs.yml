@@ -74,6 +74,7 @@ nav:
       - Kuramoto Theory: concepts/kuramoto_theory.md
   - Guides:
       - Choosing an Engine: guide/choosing_an_engine.md
+      - Monitor Validation Status: guide/monitor_validation_status.md
       - Stuart-Landau Amplitude Mode: guide/stuart_landau.md
       - QueueWaves Cascade Detector: guide/queuewaves.md
       - Rust FFI Acceleration: guide/rust_ffi.md
@@ -191,6 +192,7 @@ nav:
       - "Monitor — Recurrence": reference/api/monitor_recurrence.md
       - "Monitor — Transfer Entropy": reference/api/monitor_transfer_entropy.md
       - "Monitor — Winding": reference/api/monitor_winding.md
+      - "Monitor — Validation Status": reference/api/monitor_validation_status.md
       - SSGF: reference/api/ssgf.md
       - "SSGF — Geometry Carrier": reference/api/ssgf_carrier.md
       - "SSGF — Ethical Cost (C15)": reference/api/ssgf_ethical.md

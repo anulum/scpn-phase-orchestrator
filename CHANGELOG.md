@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- A machine-readable monitor validation-status registry
+  (`monitor.validation_status`) recording, per monitor family, how much external
+  evidence it carries: `EXTERNALLY_VALIDATED` (`external`), `SYNTHETIC_ONLY`
+  (`synthetic-only`), or `RESEARCH` (`research`). It restates the `README`
+  §*Evidence status* verbatim in structured form — only the grid modal-growth
+  detector and its streaming form are externally validated; the generic
+  early-warning suite is synthetic-only; the remaining monitors are research. The
+  package exports `MonitorValidationStatus`, `MonitorValidationRecord`,
+  `MONITOR_VALIDATION`, `validation_record`, `monitors_by_status`, and
+  `validation_summary`, documented in the *Monitor validation status* guide and
+  API reference. A drift guard fails closed if a new public monitor module is left
+  neither classified nor explicitly excluded, so the honest posture cannot rot.
+  Guarded by `tests/test_monitor_validation_status.py` and
+  `tests/test_docs_monitor_validation_status.py`.
 - A Module Federation studio remote under `studio-web/` (Vite +
   `@module-federation/vite`) that builds `remoteEntry.js` for the SCPN Studio
   Hub. It exposes `./SpoStudioPanel`, a pure renderer of the committed
