@@ -152,6 +152,7 @@ def resolved_binding_config(spec: BindingSpec) -> dict[str, object]:
         "name": spec.name,
         "version": spec.version,
         "safety_tier": spec.safety_tier,
+        "validation_tier": spec.validation_tier,
         "sample_period_s": spec.sample_period_s,
         "control_period_s": spec.control_period_s,
         "control_interval_steps": control_interval_steps,

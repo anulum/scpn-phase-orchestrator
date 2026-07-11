@@ -9,6 +9,7 @@
 name: satellite_constellation
 version: "0.1.0"
 safety_tier: research
+validation_tier: scaffold
 sample_period_s: 0.01
 control_period_s: 0.1
 

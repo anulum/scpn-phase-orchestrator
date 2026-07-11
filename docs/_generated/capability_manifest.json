@@ -1,18 +1,18 @@
 {
   "SPDX-License-Identifier": "AGPL-3.0-or-later",
   "counts": {
-    "core_engine_modules": 323,
+    "core_engine_modules": 324,
     "domainpacks": 36,
     "github_workflows": 12,
     "integration_modules": 27,
     "optional_extras": 22,
     "public_api_exports": 24,
-    "public_documentation_pages": 226,
-    "python_package_modules": 707,
+    "public_documentation_pages": 227,
+    "python_package_modules": 708,
     "research_experimental_modules": 201,
     "runtime_serving_modules": 153,
     "rust_kernel_files": 97,
-    "test_files": 840
+    "test_files": 841
   },
   "documentation": {
     "public_pages": [
@@ -82,6 +82,7 @@
       "docs/guide/dependency_locks.md",
       "docs/guide/differentiable_kuramoto.md",
       "docs/guide/digital_twin.md",
+      "docs/guide/domainpack_validation_tiers.md",
       "docs/guide/hardware_deployment.md",
       "docs/guide/hierarchy_live_adapters.md",
       "docs/guide/install_profiles.md",
@@ -384,6 +385,7 @@
       "src/scpn_phase_orchestrator/binding/digital_twin/contract.py",
       "src/scpn_phase_orchestrator/binding/digital_twin/envelope.py",
       "src/scpn_phase_orchestrator/binding/digital_twin/evidence.py",
+      "src/scpn_phase_orchestrator/binding/gallery.py",
       "src/scpn_phase_orchestrator/binding/loader.py",
       "src/scpn_phase_orchestrator/binding/resolved.py",
       "src/scpn_phase_orchestrator/binding/security_scan.py",
@@ -1174,6 +1176,7 @@
     "src/scpn_phase_orchestrator/binding/digital_twin/contract.py",
     "src/scpn_phase_orchestrator/binding/digital_twin/envelope.py",
     "src/scpn_phase_orchestrator/binding/digital_twin/evidence.py",
+    "src/scpn_phase_orchestrator/binding/gallery.py",
     "src/scpn_phase_orchestrator/binding/loader.py",
     "src/scpn_phase_orchestrator/binding/resolved.py",
     "src/scpn_phase_orchestrator/binding/security_scan.py",
@@ -1899,6 +1902,7 @@
       "tests/test_binding_spec_studio_paths.py",
       "tests/test_binding_type_omega_validation.py",
       "tests/test_binding_types.py",
+      "tests/test_binding_validation_tier.py",
       "tests/test_binding_validator.py",
       "tests/test_bold.py",
       "tests/test_boundary_observer.py",

@@ -45,6 +45,11 @@ __all__ = [
     "VALID_SEVERITIES",
     "VALID_KNOBS",
     "VALID_SAFETY_TIERS",
+    "VALID_VALIDATION_TIERS",
+    "VALIDATION_TIER_SCAFFOLD",
+    "VALIDATION_TIER_PARTIAL",
+    "VALIDATION_TIER_EXTERNALLY_VALIDATED",
+    "DEFAULT_VALIDATION_TIER",
     "EXTRACTOR_ALIASES",
     "VALID_EXTRACTORS",
     "is_valid_channel_id",
@@ -305,6 +310,25 @@ VALID_SEVERITIES = frozenset({"soft", "hard"})
 VALID_KNOBS = frozenset({"K", "alpha", "zeta", "Psi"})
 VALID_SAFETY_TIERS = frozenset({"research", "clinical", "consumer", "production"})
 
+# Domainpack validation posture — how much external evidence a binding scaffold
+# carries, distinct from ``safety_tier`` (the deployment risk class). Grounded in
+# the README §Evidence status: a binding is a reusable scaffold, not a validated
+# detector, so ``scaffold`` is the honest default. A pack is promoted to
+# ``partial`` (some validation evidence, not fully external) or
+# ``externally_validated`` (clears an independent-reference test on real data)
+# only with a citable evidence trail.
+VALIDATION_TIER_SCAFFOLD = "scaffold"
+VALIDATION_TIER_PARTIAL = "partial"
+VALIDATION_TIER_EXTERNALLY_VALIDATED = "externally_validated"
+VALID_VALIDATION_TIERS = frozenset(
+    {
+        VALIDATION_TIER_SCAFFOLD,
+        VALIDATION_TIER_PARTIAL,
+        VALIDATION_TIER_EXTERNALLY_VALIDATED,
+    }
+)
+DEFAULT_VALIDATION_TIER = VALIDATION_TIER_SCAFFOLD
+
 # Algorithm-level extractor types
 _ALGORITHM_EXTRACTORS = frozenset(
     {
@@ -374,6 +398,11 @@ class BindingSpec:
     objectives: ObjectivePartition
     boundaries: list[BoundaryDef]
     actuators: list[ActuatorMapping]
+    #: Honest external-validation posture of this binding scaffold, one of
+    #: :data:`VALID_VALIDATION_TIERS`. Defaults to
+    #: :data:`DEFAULT_VALIDATION_TIER` (``scaffold``) so an undeclared spec is
+    #: treated as unvalidated rather than silently trusted.
+    validation_tier: str = DEFAULT_VALIDATION_TIER
     imprint_model: ImprintSpec | None = None
     geometry_prior: GeometrySpec | None = None
     protocol_net: ProtocolNetSpec | None = None

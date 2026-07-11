@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import Any
 
 from scpn_phase_orchestrator.binding.types import (
+    DEFAULT_VALIDATION_TIER,
     ActuatorMapping,
     AmplitudeSpec,
     BindingSpec,
@@ -128,6 +129,13 @@ def _optional_bool(value: object, context: str, default: bool) -> bool:
     if value is None:
         return default
     return _require_bool(value, context)
+
+
+def _str_or_default(value: object, context: str, default: str) -> str:
+    """Return ``value`` as a string, or ``default`` when absent (``None``)."""
+    if value is None:
+        return default
+    return _require_str(value, context)
 
 
 def _optional_number(value: object, context: str) -> float | None:
@@ -579,6 +587,9 @@ def load_binding_spec(path: str | Path) -> BindingSpec:
         name=_require_str(_require(data, "name", "root"), "name"),
         version=_require_str(_require(data, "version", "root"), "version"),
         safety_tier=_require_str(_require(data, "safety_tier", "root"), "safety_tier"),
+        validation_tier=_str_or_default(
+            data.get("validation_tier"), "validation_tier", DEFAULT_VALIDATION_TIER
+        ),
         sample_period_s=_require_number(
             _require(data, "sample_period_s", "root"), "sample_period_s"
         ),

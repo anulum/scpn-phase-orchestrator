@@ -14,7 +14,10 @@ import pytest
 
 from scpn_phase_orchestrator.actuation.mapper import ControlAction
 from scpn_phase_orchestrator.binding import load_binding_spec, validate_binding_spec
-from scpn_phase_orchestrator.binding.types import VALID_SAFETY_TIERS
+from scpn_phase_orchestrator.binding.types import (
+    VALID_SAFETY_TIERS,
+    VALID_VALIDATION_TIERS,
+)
 from scpn_phase_orchestrator.supervisor import (
     ValueAlignmentGuard,
     value_alignment_policy_from_binding_spec,
@@ -78,6 +81,21 @@ def test_good_bad_disjoint(spec):
 
 def test_safety_tier_valid(spec):
     assert spec.safety_tier in VALID_SAFETY_TIERS
+
+
+def test_validation_tier_valid(spec):
+    assert spec.validation_tier in VALID_VALIDATION_TIERS
+
+
+def test_pack_declares_validation_tier_explicitly(pack_name):
+    # Every shipped pack must declare its validation posture in the file rather
+    # than lean on the loader default, so the honest tier is auditable at rest.
+    spec_text = (DOMAINPACKS_DIR / pack_name / "binding_spec.yaml").read_text(
+        encoding="utf-8"
+    )
+    assert "validation_tier:" in spec_text, (
+        f"{pack_name}/binding_spec.yaml must declare validation_tier"
+    )
 
 
 def test_boundaries_have_at_least_one_limit(spec):

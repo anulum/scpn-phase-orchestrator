@@ -9,6 +9,7 @@
 name: cardiac_rhythm
 version: "0.1.0"
 safety_tier: clinical
+validation_tier: scaffold
 sample_period_s: 0.002
 control_period_s: 0.02
 

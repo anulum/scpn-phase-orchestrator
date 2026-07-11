@@ -27,6 +27,7 @@ from scpn_phase_orchestrator.binding.types import (
     VALID_KNOBS,
     VALID_SAFETY_TIERS,
     VALID_SEVERITIES,
+    VALID_VALIDATION_TIERS,
     BindingSpec,
     is_valid_channel_id,
 )
@@ -83,6 +84,12 @@ def validate_binding_spec(spec: BindingSpec) -> list[str]:
     if spec.safety_tier not in VALID_SAFETY_TIERS:
         errors.append(
             f"safety_tier must be one of {VALID_SAFETY_TIERS}, got {spec.safety_tier!r}"
+        )
+
+    if spec.validation_tier not in VALID_VALIDATION_TIERS:
+        errors.append(
+            "validation_tier must be one of "
+            f"{VALID_VALIDATION_TIERS}, got {spec.validation_tier!r}"
         )
 
     if not math.isfinite(spec.sample_period_s) or spec.sample_period_s <= 0:

@@ -9,6 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- A machine-readable `validation_tier` on every domainpack binding spec
+  (`scaffold`, `partial`, or `externally_validated`; see `VALID_VALIDATION_TIERS`
+  in `binding.types`), recording how much external evidence a binding scaffold
+  carries — distinct from `safety_tier` (the deployment risk class). A binding is
+  a reusable scaffold, not a validated detector, so `scaffold` is the honest
+  default: the loader defaults an undeclared spec to it and the validator rejects
+  any unknown tier. All 36 shipped domainpacks declare `validation_tier: scaffold`
+  — none carries an independent end-to-end validation trail. The resolved binding
+  summary surfaces the tier, and a new `binding.gallery` module
+  (`select_specs_by_validation_tier`, `group_specs_by_validation_tier`) lets a
+  Studio Hub filter or group packs by tier so a broad gallery is never mistaken
+  for a broad set of validated solutions. Documented in the *Domainpack validation
+  tiers* guide and the binding API reference; guarded by
+  `tests/test_binding_validation_tier.py` and per-pack drift guards in
+  `tests/test_domainpack_validation.py`.
 - A machine-readable monitor validation-status registry
   (`monitor.validation_status`) recording, per monitor family, how much external
   evidence it carries: `EXTERNALLY_VALIDATED` (`external`), `SYNTHETIC_ONLY`

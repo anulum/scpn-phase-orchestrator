@@ -75,6 +75,7 @@ nav:
   - Guides:
       - Choosing an Engine: guide/choosing_an_engine.md
       - Monitor Validation Status: guide/monitor_validation_status.md
+      - Domainpack Validation Tiers: guide/domainpack_validation_tiers.md
       - Stuart-Landau Amplitude Mode: guide/stuart_landau.md
       - QueueWaves Cascade Detector: guide/queuewaves.md
       - Rust FFI Acceleration: guide/rust_ffi.md

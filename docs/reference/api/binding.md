@@ -490,3 +490,17 @@ the public roadmap and direct test-linkage gates.
 Topos-oriented semantic binding helpers for categorical validation surfaces.
 
 ::: scpn_phase_orchestrator.binding.topos_semantic
+
+## Domainpack Validation-Tier Gallery
+
+Every binding spec carries a `validation_tier` (`scaffold`, `partial`, or
+`externally_validated`; see `VALID_VALIDATION_TIERS` in
+[`binding.types`](#scpn_phase_orchestrator.binding.types)) recording how much
+external evidence the scaffold carries. A binding is a reusable scaffold, not a
+validated detector, so `scaffold` is the honest default; a pack is promoted only
+with a citable evidence trail. These helpers let a Studio Hub select a single tier
+or group every pack by tier for a tiered gallery, keeping a broad gallery from
+reading as a broad set of validated solutions. See the
+[Domainpack validation tiers](../../guide/domainpack_validation_tiers.md) guide.
+
+::: scpn_phase_orchestrator.binding.gallery
