@@ -16,7 +16,7 @@ The classification is machine-readable: every monitor carries a
 [`MonitorValidationStatus`][scpn_phase_orchestrator.monitor.validation_status.MonitorValidationStatus]
 you can query with
 [`validation_record()`][scpn_phase_orchestrator.monitor.validation_status.validation_record].
-It restates the repository's own [Evidence status](../../README.md) verbatim in
+It restates the repository README's own *Evidence status* table verbatim in
 structured form, so it cannot quietly overclaim.
 
 ## The three tiers

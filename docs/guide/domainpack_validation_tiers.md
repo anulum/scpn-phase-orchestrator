@@ -27,12 +27,11 @@ reference.
 | **Partial** | `partial` | Some validation evidence, but not a full independent-reference test on real data. |
 | **Externally validated** | `externally_validated` | Clears an independent-reference test on real data end to end. |
 
-The vocabulary lives in
-[`VALID_VALIDATION_TIERS`][scpn_phase_orchestrator.binding.types.VALID_VALIDATION_TIERS];
-the loader defaults an undeclared spec to
-[`DEFAULT_VALIDATION_TIER`][scpn_phase_orchestrator.binding.types.DEFAULT_VALIDATION_TIER]
-(`scaffold`) so an unlabelled pack is treated as unvalidated rather than silently
-trusted, and the validator rejects any unknown tier.
+The vocabulary lives in `VALID_VALIDATION_TIERS`; the loader defaults an
+undeclared spec to `DEFAULT_VALIDATION_TIER` (`scaffold`) so an unlabelled pack
+is treated as unvalidated rather than silently trusted, and the validator
+rejects any unknown tier. Both are defined in
+[`binding.types`][scpn_phase_orchestrator.binding.types].
 
 ## Current posture: every shipped pack is a scaffold
 
