@@ -30,11 +30,31 @@ them as point-in-time figures, not a live total. The continuously-enforced gates
 | Total Python tests | 3,130+ (core) + 194 (nn/ physics validation) | — |
 | Total Rust tests | 211 | — |
 | nn/ physics validation | 194 tests, 183 pass, 10 xfail, 1 skip | 0 hard failures |
-| Line coverage | gated at 60% during dedicated-test-surface rebuild | 60% minimum |
+| Line / branch coverage | 94.34% line, 93.22% branch (CI-measured; see §1.1) | no-decrease per-domain ratchet |
 | Docstring coverage | 100% (0 missing) | — |
 | Domainpack coverage | 32/32 (100%) | — |
 | Property-based tests (hypothesis) | ~350 | — |
 | Mutation survivors (order_params + numerics) | 0 (32 killers) | — |
+
+### 1.1 Coverage: the measured rate and the ratchet
+
+The "60% minimum" quoted in older docs was the floor held during the
+dedicated-test-surface rebuild (generic bucket tests removed, per-module tests
+rebuilt). It is **not** the measured coverage. The authoritative gate is a
+per-domain **no-decrease ratchet** enforced by `tools/coverage_guard.py` against
+Cobertura XML from the CI coverage lanes:
+
+| Axis | CI-measured rate | Global ratchet floor | Source of truth |
+|------|------------------|----------------------|-----------------|
+| Line | 94.34% (50,787 / 53,835) | ≥ 93% global + per-domain floors | [`coverage_guard_thresholds.json`](https://github.com/anulum/scpn-phase-orchestrator/blob/main/tools/coverage_guard_thresholds.json) |
+| Branch | 93.22% (17,364 / 18,626) | ≥ 91% global + per-domain floors | [`coverage_guard_branch_thresholds.json`](https://github.com/anulum/scpn-phase-orchestrator/blob/main/tools/coverage_guard_branch_thresholds.json) |
+
+The measured rates are the baselines recorded in those threshold files (line lane
+2026-06-26, perf-isolated branch lane 2026-07-03); the floors sit just below them
+as no-regression baselines. **Raise path:** the per-domain floors ratchet
+**upward** from each green CI run and never decrease — a new module ships at 100%
+line coverage and lifts its domain's floor. The generated `grpc_gen` domain is the
+one deliberately low floor (protobuf stubs).
 
 ## 2. Numerical Validation Against Analytical Results
 

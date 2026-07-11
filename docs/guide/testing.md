@@ -1,6 +1,6 @@
 # Testing Guide
 
-SCPN Phase Orchestrator is rebuilding its Python test surface around dedicated module-owned tests. The current coverage gate is 60% while generic bucket tests are removed; each production module must regain coverage through its own focused unit, property, parity, or pipeline tests.
+SCPN Phase Orchestrator builds its Python test surface around dedicated module-owned tests. Measured coverage is **94.34% line / 93.22% branch** (CI lanes; see the [V&V Report §1.1](../VALIDATION_REPORT.md)); the authoritative gate is a per-domain **no-decrease ratchet** enforced by `tools/coverage_guard.py`, not a flat percentage. The `60%` figure in older notes was the floor held during the dedicated-test-surface rebuild and is superseded. Each production module regains coverage through its own focused unit, property, parity, or pipeline tests.
 
 ## Running Tests
 
@@ -193,7 +193,7 @@ Dedicated validation for auxiliary engines:
 
 CI runs the full suite on Python 3.10 (without Rust kernel) and Python 3.12 (with Rust kernel). The Python fallback uses pure-NumPy integrators; the Rust path uses `spo-kernel` via PyO3. Tests handle both paths — see `test_degenerate_edges.py::TestUPDEZeroDt` for the pattern.
 
-Coverage gate: **60% minimum** while generic bucket tests are removed and dedicated module-owned test surfaces are rebuilt. The target remains to raise the gate only with per-module production tests.
+Coverage gate: a per-domain **no-decrease ratchet** (`tools/coverage_guard.py`) against the CI coverage lanes, seeded from the measured baselines in `tools/coverage_guard_thresholds.json` (line, ≥93% global) and `tools/coverage_guard_branch_thresholds.json` (branch, ≥91% global). The floors ratchet upward from each green run and never decrease; new modules ship at 100% and lift their domain's floor. (The historical "60% minimum" was the rebuild floor, now superseded.)
 
 ## Convergence & Topology Tests (`test_convergence_topology.py`)
 

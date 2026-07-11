@@ -114,6 +114,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The V&V report and testing guide now publish the **measured** coverage
+  (94.34% line, 93.22% branch, from the CI coverage lanes) and the real gate — a
+  per-domain **no-decrease ratchet** enforced by `tools/coverage_guard.py` — in
+  place of the misleading "gated at 60%" framing, which was only the floor held
+  during the dedicated-test-surface rebuild (audit finding SPO-G04). A new
+  `tests/test_docs_coverage_report.py` drift guard ties the published floors to
+  `coverage_guard_thresholds.json` / `coverage_guard_branch_thresholds.json`, so a
+  raised ratchet forces the docs to be updated rather than silently going stale.
 - `runtime.simulate` now **fails closed by default** on a broken audit
   event-stream (audit finding SPO-T01). When the audit logger owns a protobuf
   event stream whose close-time integrity check fails, `simulate` raises
