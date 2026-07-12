@@ -12,7 +12,7 @@
     "research_experimental_modules": 201,
     "runtime_serving_modules": 153,
     "rust_kernel_files": 97,
-    "test_files": 842
+    "test_files": 843
   },
   "documentation": {
     "public_pages": [
@@ -2017,6 +2017,7 @@
       "tests/test_dnb_modal_transfer_evidence.py",
       "tests/test_docs_choosing_an_engine.py",
       "tests/test_docs_coverage_report.py",
+      "tests/test_docs_install_profiles.py",
       "tests/test_docs_monitor_validation_status.py",
       "tests/test_doctor.py",
       "tests/test_domain_detectors.py",
