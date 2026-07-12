@@ -324,11 +324,15 @@ instantiate adapters with sanitised defaults.
 Install extras to pull in adapter-specific packages:
 
 ```bash
-pip install scpn-phase-orchestrator[fusion]    # scpn-fusion-core
 pip install scpn-phase-orchestrator[plasma]    # scpn-control
 pip install scpn-phase-orchestrator[quantum]   # scpn-quantum-control
 pip install scpn-phase-orchestrator[otel]      # opentelemetry-api + opentelemetry-sdk
 ```
+
+The `[fusion]` extra requires `scpn-fusion-core`, a separate product that is not
+on public PyPI, so `pip install scpn-phase-orchestrator[fusion]` will not resolve
+from a public index; see the *PyPI availability boundary* section of the
+[Install Profiles](install_profiles.md) guide.
 
 All adapters work without their extras installed -- they degrade to dict-based
 operation and raise `ImportError` only when domain-specific methods are called
