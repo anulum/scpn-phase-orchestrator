@@ -147,6 +147,17 @@ class TestRustProbe:
         assert check.available is False
         assert "not importable" in check.detail
 
+    def test_unavailable_hint_is_honest_about_the_pypi_boundary(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # spo-kernel is not published on public PyPI, so the hint must not tell an
+        # outsider to install a 'rust' extra that cannot resolve (E0.1 / Option C).
+        monkeypatch.setattr(doctor, "_module_present", lambda name: False)
+        detail = doctor._check_rust().detail
+        assert "install the 'rust' extra" not in detail
+        assert "not on public PyPI" in detail
+        assert "pure-Python" in detail
+
 
 class TestRustSupervisorProbe:
     def test_rust_supervisor_contract_reported(

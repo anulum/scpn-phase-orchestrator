@@ -22,6 +22,28 @@ behaviour before production or benchmark runs.
 | QueueWaves | `pip install scpn-phase-orchestrator[queuewaves]` | `python -c "import httpx; print('httpx OK')"` | Collector/server components requiring `httpx` stay unavailable if missing. |
 | Full extras | `pip install scpn-phase-orchestrator[full]` | `python -m pytest -q tests/test_backend_module_imports.py` | Missing optional toolchains demote affected backends to fallback chain. |
 
+## PyPI availability boundary
+
+The base package and most extras install from public PyPI. Three extras pull in
+packages that are **not** on public PyPI, so they do not resolve from a bare
+`pip install` for an outsider:
+
+| Extra | Requires | Availability |
+| --- | --- | --- |
+| `rust` | `spo-kernel` | Not on public PyPI. `spo-kernel` is this project's own Rust acceleration; build it from the in-repo `spo-kernel/` workspace with maturin, or obtain the commercial wheel. |
+| `fusion` | `scpn-fusion-core` | Not on public PyPI. A separate product, obtained from its own distribution channel. |
+| `scpn-all` | the two above, plus `scpn-quantum-control` and `scpn-control` | Cannot resolve from public PyPI while `spo-kernel` and `scpn-fusion-core` are unavailable, even though its other two members are published. |
+
+Every other extra (`quantum`, `plasma`, `nn`, `mpc`, `eeg`, `cardiac`,
+`queuewaves`, `studio`, `otel`, `opcua`, `mqtt`, `pqc`, `plot`, `julia`,
+`notebook`, `full`) installs from public PyPI.
+
+The Rust acceleration is a **performance** extra, not a correctness dependency:
+when `spo_kernel` is absent the runtime uses the pure-Python path with the same
+public API, so a bare `pip install scpn-phase-orchestrator` runs the full
+analysis → review → audit pipeline end to end. `spo doctor` reports the Rust
+backend as an honest `[warn]` in that case, not a failure.
+
 ## Preflight Notes
 
 ### 1. Python-only

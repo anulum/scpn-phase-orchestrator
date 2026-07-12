@@ -381,7 +381,11 @@ def _check_rust() -> DependencyCheck:
             else "spo_kernel importable (PyO3 FFI ready)"
         )
     else:
-        detail = "spo_kernel not importable — install the 'rust' extra (spo-kernel)"
+        detail = (
+            "spo_kernel not importable — the Rust acceleration is not on public "
+            "PyPI; build it from the in-repo spo-kernel/ workspace (maturin) or "
+            "obtain the commercial wheel. The pure-Python path is used automatically."
+        )
     return DependencyCheck(
         name="rust",
         category="backend",

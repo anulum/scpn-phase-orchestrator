@@ -114,6 +114,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `spo doctor` and the install guide now describe the PyPI-availability boundary
+  honestly (external-validation finding E0.1). When the Rust backend is absent,
+  the doctor previously advised *"install the 'rust' extra (spo-kernel)"*, but
+  `spo-kernel` is not on public PyPI (it is the project's own in-repo Rust
+  acceleration), so an outsider could not follow that hint. The doctor now states
+  that the acceleration is not on public PyPI — build it from the in-repo
+  `spo-kernel/` workspace with maturin or obtain the commercial wheel — and that
+  the pure-Python path is used automatically. The *Install Profiles* guide gains a
+  *PyPI availability boundary* section listing the three extras (`rust`, `fusion`,
+  `scpn-all`) that depend on packages not on public PyPI, so the boundary is
+  explicit rather than discovered at install time. A new
+  `tests/test_docs_install_profiles.py` drift guard derives the private-backed
+  extras from `pyproject.toml` and fails if the guide stops naming any of them.
 - The V&V report and testing guide now publish the **measured** coverage
   (94.34% line, 93.22% branch, from the CI coverage lanes) and the real gate — a
   per-domain **no-decrease ratchet** enforced by `tools/coverage_guard.py` — in
