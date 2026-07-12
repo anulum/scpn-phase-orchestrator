@@ -86,3 +86,28 @@ def test_guide_states_the_boundary_honestly() -> None:
     normalised = normalised.lower()
     assert "not on public pypi" in normalised
     assert "pure-python" in normalised
+
+
+_PIP_INSTALL_SPO_KERNEL = re.compile(r"pip install[^\n`]*\bspo-kernel\b(?!/)")
+
+
+def _public_doc_paths() -> list[Path]:
+    """Return every shipped Markdown doc plus the README (excluding docs/internal)."""
+    paths = [p for p in (ROOT / "docs").rglob("*.md") if "internal" not in p.parts]
+    readme = ROOT / "README.md"
+    if readme.exists():
+        paths.append(readme)
+    return paths
+
+
+def test_no_public_doc_advertises_pip_install_spo_kernel() -> None:
+    # `spo-kernel` is 404 on public PyPI, so `pip install ... spo-kernel` is a false
+    # instruction wherever it appears in shipped docs (E0.1 / Option C). A path like
+    # `spo-kernel/` (build-from-source) is fine; a bare package argument is not.
+    offenders: list[str] = []
+    for path in _public_doc_paths():
+        text = path.read_text(encoding="utf-8")
+        for lineno, line in enumerate(text.splitlines(), 1):
+            if _PIP_INSTALL_SPO_KERNEL.search(line):
+                offenders.append(f"{path.relative_to(ROOT)}:{lineno}")
+    assert not offenders, f"public docs advertise `pip install spo-kernel`: {offenders}"

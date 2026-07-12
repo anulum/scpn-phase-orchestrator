@@ -49,7 +49,10 @@ implementation path was selected.
 | PyStuartLandauStepper | Amplitude dynamics |
 | PyPetriNet | Formal state machine |
 
-Install: `pip install spo-kernel` or build from `spo-kernel/` with maturin.
+Install: build from the in-repo `spo-kernel/` workspace with maturin —
+`python tools/install_spo_kernel.py --release` (or `make bridge
+PYTHON=.venv/bin/python`). The Rust accel is not on public PyPI; when `spo_kernel`
+is absent the pure-Python path runs automatically.
 
 ## FPGA Kernel (Sub-15μs Real-Time)
 
@@ -101,8 +104,11 @@ native GPU speed. All `nn/` functions are JIT-compiled.
 ```dockerfile
 FROM python:3.12-slim
 RUN pip install scpn-phase-orchestrator[full]
-# Or with Rust acceleration:
-RUN pip install scpn-phase-orchestrator[full] spo-kernel
+# For the Rust acceleration: spo-kernel is not on public PyPI. Add the
+# spo-kernel/ workspace to the build context, then build and install its wheel:
+#   RUN pip install maturin \
+#    && maturin build --release -m spo-kernel/crates/spo-ffi/Cargo.toml --out /dist \
+#    && pip install /dist/*.whl
 ```
 
 ## Production Monitoring
