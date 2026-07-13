@@ -624,7 +624,11 @@ def create_app(spec_path: str | Path) -> object:  # pragma: no cover
             checks["R_finite"] = "ok" if np.isfinite(r_val) else "error"
             checks["regime"] = "ok" if snap.get("regime") else "unknown"
         except HEALTH_CHECK_EXCEPTIONS as exc:
-            checks["engine"] = f"error: {exc}"
+            # Log the detail server-side; do not leak the exception text into the
+            # health response (CodeQL py/stack-trace-exposure — information
+            # exposure through an exception).
+            logger.warning("health-check engine probe failed: %s", exc)
+            checks["engine"] = "error"
 
         healthy = all(v == "ok" for v in checks.values())
         return {"status": "healthy" if healthy else "degraded", "checks": checks}

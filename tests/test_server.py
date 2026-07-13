@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import logging
 from pathlib import Path
 
 import pytest
@@ -177,7 +178,7 @@ class TestFastAPIEndpoints:
         assert "name" in data
         assert "n_oscillators" in data
 
-    def test_health_reports_known_runtime_error(self, monkeypatch):
+    def test_health_reports_known_runtime_error(self, monkeypatch, caplog):
         from scpn_phase_orchestrator.runtime.server import create_app
 
         def fail_snapshot(self):
@@ -187,12 +188,18 @@ class TestFastAPIEndpoints:
         app = create_app(DOMAINPACK_DIR / "minimal_domain" / "binding_spec.yaml")
         client = TestClient(app)
 
-        r = client.get("/api/health")
+        with caplog.at_level(logging.WARNING):
+            r = client.get("/api/health")
 
         assert r.status_code == 200
         data = r.json()
         assert data["status"] == "degraded"
-        assert data["checks"]["engine"] == "error: engine unavailable"
+        # The exception detail must NOT leak into the response (CodeQL
+        # py/stack-trace-exposure); a generic marker is returned and the detail
+        # is logged server-side instead.
+        assert data["checks"]["engine"] == "error"
+        assert "engine unavailable" not in str(data)
+        assert "engine unavailable" in caplog.text
 
     def test_health_does_not_swallow_unexpected_fault(self, monkeypatch):
         from scpn_phase_orchestrator.runtime.server import create_app
