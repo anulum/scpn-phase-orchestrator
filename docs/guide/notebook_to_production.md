@@ -41,7 +41,7 @@ plt.ylabel("R"); plt.xlabel("Step")
 plt.show()
 ```
 
-19 example notebooks ship in `notebooks/`. Start from the closest
+21 example notebooks ship in `notebooks/`. Start from the closest
 domain and modify.
 
 ## Stage 2: Validate (CLI)

@@ -52,6 +52,7 @@ jupyter lab notebooks/
 | `18_market_regime_detection.ipynb` | Finance | `dev`, `notebook`, `plot` | executed | medium | Hilbert phase extraction and market regimes |
 | `19_swarmalator_dynamics.ipynb` | Robotics | `dev`, `notebook`, `plot` | executed | medium | spatial and phase swarmalator dynamics |
 | `20_honest_early_warning_auditor.ipynb` | Evaluation | `dev`, `notebook` | executed | fast | matched-false-alarm + permutation audit of a detector |
+| `21_control_engineer_onboarding.ipynb` | Onboarding | `dev`, `notebook`, `plot` | executed | medium | 15-minute golden path: validate, coupling sweep, audit and replay |
 
 Runtime classes:
 

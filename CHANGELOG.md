@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- A canonical *Control Engineer onboarding* notebook
+  (`notebooks/21_control_engineer_onboarding.ipynb`): a ~15-minute guided golden
+  path over the public Python API — validate a shipped binding spec, sweep the
+  coupling strength to see the synchronisation transition (coherence `R` responds
+  to the control knob), then audit and replay a run and verify its SHA-256
+  hash-chain integrity and bit-exact determinism. Runs on the pure-Python path
+  from a bare `pip install scpn-phase-orchestrator`; listed in the notebook
+  execution matrix and the notebooks-and-demos gallery, and executed by the CI
+  notebook suite.
 - A machine-readable `validation_tier` on every domainpack binding spec
   (`scaffold`, `partial`, or `externally_validated`; see `VALID_VALIDATION_TIERS`
   in `binding.types`), recording how much external evidence a binding scaffold

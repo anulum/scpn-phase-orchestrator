@@ -45,6 +45,7 @@ This pattern keeps the first production adaptation conservative and reviewable.
 
 | Learning goal | Notebook or demo | Production path |
 |---------------|------------------|-----------------|
+| Guided first hour | `21_control_engineer_onboarding.ipynb` | the validate → run → audit golden path, then `spo quickstart power` |
 | First domainpack run | `02_minimal_domain.ipynb` | `spo validate` and `spo run` on a reviewed binding |
 | Queue and retry cascades | `01_queuewaves_retry_storm.ipynb` | QueueWaves guide and production deployment |
 | Geometry and topology | `03_geometry_walk.ipynb` | geometry constraints and coupling templates |
@@ -85,6 +86,7 @@ jupyter lab notebooks/
 | `18_market_regime_detection.ipynb` | Finance | Market phase extraction and regime detection |
 | `19_swarmalator_dynamics.ipynb` | Robotics | Spatial + phase swarmalator dynamics |
 | `20_honest_early_warning_auditor.ipynb` | Evaluation | Audit any detector's skill at a matched false alarm — skilful vs no-skill, sealed verdict |
+| `21_control_engineer_onboarding.ipynb` | Onboarding | 15-minute guided golden path: validate a binding, sweep coupling to see the coherence transition, audit and replay a run |
 
 CI executes the shipped notebook suite on Python 3.12 with `nbconvert`.
 See the [Notebook Execution Matrix](notebook_execution_matrix.md) for
