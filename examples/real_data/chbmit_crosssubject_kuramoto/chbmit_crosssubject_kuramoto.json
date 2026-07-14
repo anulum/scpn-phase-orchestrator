@@ -1,0 +1,98 @@
+{
+  "benchmark": "chbmit_crosssubject_kuramoto",
+  "corpus": "PhysioNet CHB-MIT Scalp EEG Database",
+  "question": "does top-k PLV Kuramoto generalise across subjects (LOSO)?",
+  "subjects": [
+    "chb01",
+    "chb02",
+    "chb03",
+    "chb04",
+    "chb05"
+  ],
+  "band_hz": [
+    4.0,
+    30.0
+  ],
+  "epoch_seconds": 30.0,
+  "preictal_seconds": 300.0,
+  "target_false_alarm": 0.1,
+  "k_grid": [
+    10,
+    13,
+    15,
+    17,
+    20,
+    23
+  ],
+  "per_subject": [
+    {
+      "subject": "chb01",
+      "calibrated_k": 23,
+      "n_preictal_epochs": 63,
+      "topk_plv": {
+        "auc": 0.907646,
+        "detection_rate": 0.698413
+      },
+      "mean_r": {
+        "auc": 0.907646,
+        "detection_rate": 0.698413
+      }
+    },
+    {
+      "subject": "chb02",
+      "calibrated_k": 15,
+      "n_preictal_epochs": 18,
+      "topk_plv": {
+        "auc": 0.113519,
+        "detection_rate": 0.0
+      },
+      "mean_r": {
+        "auc": 0.275,
+        "detection_rate": 0.0
+      }
+    },
+    {
+      "subject": "chb03",
+      "calibrated_k": 23,
+      "n_preictal_epochs": 63,
+      "topk_plv": {
+        "auc": 0.308545,
+        "detection_rate": 0.095238
+      },
+      "mean_r": {
+        "auc": 0.308545,
+        "detection_rate": 0.095238
+      }
+    },
+    {
+      "subject": "chb04",
+      "calibrated_k": 23,
+      "n_preictal_epochs": 27,
+      "topk_plv": {
+        "auc": 0.460408,
+        "detection_rate": 0.111111
+      },
+      "mean_r": {
+        "auc": 0.348062,
+        "detection_rate": 0.037037
+      }
+    },
+    {
+      "subject": "chb05",
+      "calibrated_k": 23,
+      "n_preictal_epochs": 45,
+      "topk_plv": {
+        "auc": 0.706704,
+        "detection_rate": 0.222222
+      },
+      "mean_r": {
+        "auc": 0.706704,
+        "detection_rate": 0.222222
+      }
+    }
+  ],
+  "topk_plv_beats_mean_r_subjects": 1,
+  "n_subjects": 5,
+  "mean_auc_topk_plv": 0.499364,
+  "mean_auc_mean_r": 0.509191
+}

@@ -27,6 +27,15 @@ channel selection *can* improve on the textbook mean-R detector for this corpus,
 but only when the selection is driven by cross-channel phase coherence and
 restricted to a top-k subset rather than soft-weighting all channels.
 
+**This within-subject advantage does not generalise.** A leave-one-subject-out
+audit across `chb01`–`chb05` (see *Cross-subject generalisation* below), which
+calibrates `k` only on the training subjects, finds top-k PLV beats mean-R on
+just **1 / 5** held-out subjects, with both detectors averaging ≈ 0.50 AUC
+(chance). The pre-ictal coherence signal is present only on `chb01` and, weakly,
+`chb05`. The `chb01` headline is therefore **subject-specific, not a general
+seizure detector**; the fixed-`k` advantage was an artefact of tuning `k` on the
+evaluation subject.
+
 ## Artefacts
 
 All sealed records, per-seizure summaries, and the aggregate comparison JSON are
@@ -64,27 +73,67 @@ channels with the highest mean PLV to the mean field and computing the
 unweighted mean-R over that subset improves both detection rate and AUC over
 the textbook mean-R detector. The SNR+kurtosis and soft PLV weightings are
 inferior on this corpus; the gain comes from *hard* channel selection driven by
-cross-channel phase coherence, not from continuous quality weighting.
+cross-channel phase coherence, not from continuous quality weighting. **This
+advantage is specific to `chb01` and does not transfer — see the cross-subject
+audit below.**
+
+## Cross-subject generalisation (leave-one-subject-out)
+
+The `chb01` headline tunes `k` on the same subject it scores. To test whether
+top-k PLV is a real detector rather than a per-subject artefact, we ran a
+leave-one-subject-out audit on five subjects. For each held-out subject, `k` is
+calibrated **only on the other four subjects** (the `k` maximising their mean
+top-k PLV AUC), then top-k PLV and the mean-R baseline are scored on the
+held-out subject's pre-ictal windows versus its own interictal nulls. No subject
+influences its own `k`, so each figure is a genuine out-of-sample estimate.
+
+| Held-out | Pre-ictal epochs | Calibrated `k` | top-k PLV AUC | mean-R AUC |
+|----------|-----------------:|---------------:|--------------:|-----------:|
+| chb01 | 63 | 23 | 0.908 | 0.908 |
+| chb02 | 18 | 15 | 0.114 | 0.275 |
+| chb03 | 63 | 23 | 0.309 | 0.309 |
+| chb04 | 27 | 23 | 0.460 | 0.348 |
+| chb05 | 45 | 23 | 0.707 | 0.707 |
+| **mean** | | | **0.499** | **0.509** |
+
+Out-of-sample, top-k PLV beats mean-R on **1 / 5** subjects — `chb04`, where both
+detectors are below chance, so that "win" is between two failing detectors. For
+four of five subjects the calibrated `k` is 23, which is all channels, i.e.
+exactly the mean-R baseline: the training subjects do not support a beneficial
+`k < 23`. The one time it does pick `k = 15` (`chb02`), it makes the held-out
+result **worse** (0.11 vs 0.28). Mean out-of-sample AUC is ≈ 0.50 for both
+detectors — indistinguishable from chance.
+
+The deeper finding is about the signal, not the detector: pre-ictal Kuramoto
+coherence rises only on `chb01` (AUC 0.91) and, weakly, `chb05` (0.71); on
+`chb02`/`chb03`/`chb04` it is at or below chance. **Neither mean-R nor top-k PLV
+is a viable subject-independent seizure predictor on this corpus.** The `chb01`
+top-k advantage was `k`-tuning on the evaluation subject, not generalisation.
+
+Reproduce:
+
+```bash
+python bench/chbmit_crosssubject_validation.py DATA \
+    examples/real_data/chbmit_crosssubject_kuramoto \
+    chb01 chb02 chb03 chb04 chb05
+```
+
+where `DATA/` holds each subject's `chbNN-summary.txt` and `chbNN_*.edf`.
+Sealed under `examples/real_data/chbmit_crosssubject_kuramoto/`.
 
 ## Limitations
 
-The top-k PLV result is promising but **not yet a general production default**,
-for three reasons that a reader must weigh before relying on it:
+The single-subject `chb01` headline is real **within** `chb01` but is **not a
+general seizure detector**, as the cross-subject audit above establishes:
 
-- **Single subject.** All figures are from CHB-MIT subject `chb01` only
-  (7 seizures, 600 interictal null epochs). Nothing here establishes that the
-  detector, or the optimal `k`, transfers to other subjects or montages.
-- **`k` is tuned on the evaluation corpus.** The winning `k = 15` was selected
-  on the same `chb01` seizures it is scored on. The choice is not knife-edge —
-  `k = 15` beats mean-R on all 7 seizures individually — but it is genuinely
-  sensitive: `k = 20` gives AUC ≈ 0.92 (barely above the 0.91 baseline) and
-  `k = 23` degenerates exactly to mean-R. A fixed `k` chosen this way risks
-  optimistic bias; a held-out or subject-specific `k` rule is needed for an
-  honest out-of-sample estimate.
-- **No cross-corpus validation yet.** The detector has not been run against a
-  second CHB-MIT subject panel or the CAP sleep corpus, so its generality is
-  unmeasured.
+- **Does not generalise across subjects.** Out-of-sample, top-k PLV matches or
+  loses to mean-R on 4 / 5 subjects and both average ≈ 0.50 AUC (chance).
+- **The fixed `k` advantage was tuning.** The winning `k = 15` was selected on
+  the same `chb01` seizures it scored; under honest per-subject `k` calibration
+  the advantage disappears (calibrated `k` collapses to 23 = mean-R).
+- **The pre-ictal coherence signal itself is subject-specific.** It is strong on
+  `chb01`, moderate on `chb05`, and absent (≤ chance) on `chb02`/`chb03`/`chb04`.
 
-Recommended before promotion to a production default: evaluate top-k PLV on
-additional CHB-MIT subjects and on a second corpus, and replace the fixed `k`
-with a rule calibrated on held-out data (e.g. interictal-only null calibration).
+Any use of this detector must be per-patient calibrated, not deployed as a
+subject-independent model. Cross-corpus validation (e.g. the CAP sleep database)
+would further test whether even per-patient calibration transfers across domains.
