@@ -12,14 +12,19 @@ The simple mean Kuramoto order parameter :math:`R(t)` collapses when some
 channels are noisy or when the target and null classes have similar mean
 phase coherence. This module introduces an **adaptive** variant that:
 
-1. Weights each channel by a data-driven quality score (delta-band SNR
-   penalised by excess kurtosis, a transient/artifact proxy).
+1. Weights each channel by a data-driven quality score. Two strategies are
+   provided:
+   - *SNR+kurtosis*: delta-band SNR penalised by excess kurtosis (a
+     transient/artifact proxy).
+   - *PLV-to-mean-field*: each channel's phase-locking value to the
+     instantaneous group phase, rewarding channels that track the mean field.
 2. Computes the weighted Kuramoto order parameter sample by sample.
 3. Pools each epoch with a robust statistic (median) instead of the mean,
    reducing sensitivity to brief artefacts.
 
 The result is a per-epoch score that is more stable across recordings and
-channel configurations than the unweighted mean-R detector.
+channel configurations than the unweighted mean-R detector when the chosen
+weighting matches the domain.
 """
 
 from __future__ import annotations
@@ -38,6 +43,7 @@ FloatArray = NDArray[np.float64]
 __all__ = [
     "compute_adaptive_kuramoto_scores",
     "compute_channel_quality_weights",
+    "compute_phase_locking_weights",
     "compute_weighted_kuramoto_r",
 ]
 
@@ -148,6 +154,55 @@ def compute_channel_quality_weights(
     return cast(FloatArray, raw_weights / per_epoch_sum)
 
 
+def compute_phase_locking_weights(
+    phases: FloatArray,
+    fs: float,
+    epoch_seconds: float = 30.0,
+) -> FloatArray:
+    """Return per-channel, per-epoch weights based on PLV to the mean field.
+
+    For each epoch, the mean field phase ``psi(t)`` is the phase of the average
+    complex exponential across channels. Each channel's weight is proportional
+    to its phase-locking value to that mean field:
+
+        PLV_c = | < exp(i (phi_c(t) - psi(t))) >_t |
+
+    Channels that consistently track the group phase receive higher weight;
+    noisy or independent channels are down-weighted. Weights are normalised per
+    epoch to sum to one.
+
+    Parameters
+    ----------
+    phases
+        Instantaneous phases, shape ``(n_channels, n_samples)``.
+    fs
+        Sampling rate in hertz.
+    epoch_seconds
+        Epoch length in seconds.
+
+    Returns
+    -------
+    FloatArray
+        Weights of shape ``(n_channels, n_epochs)``.
+    """
+    n_channels, n_samples = phases.shape
+    epoch_len = int(epoch_seconds * fs)
+    n_epochs = n_samples // epoch_len
+    if n_epochs == 0:
+        raise ValueError("signal shorter than one epoch")
+
+    phases_epochs = phases[:, : n_epochs * epoch_len].reshape(
+        n_channels, n_epochs, epoch_len
+    )
+    mean_field = np.angle(np.exp(1j * phases_epochs).mean(axis=0))
+    aligned = np.exp(1j * (phases_epochs - mean_field[np.newaxis, :, :]))
+    plv = np.abs(aligned.mean(axis=2))
+
+    per_epoch_sum = plv.sum(axis=0, keepdims=True)
+    per_epoch_sum = np.where(per_epoch_sum == 0, 1.0, per_epoch_sum)
+    return cast(FloatArray, plv / per_epoch_sum)
+
+
 def compute_weighted_kuramoto_r(
     phases: FloatArray,
     weights: FloatArray,
@@ -195,6 +250,7 @@ def compute_adaptive_kuramoto_scores(
     band_hz: tuple[float, float] = (0.5, 4.0),
     epoch_seconds: float = 30.0,
     kurtosis_penalty_scale: float = 0.2,
+    weight_mode: str = "snr_kurtosis",
     score_precision: int = 6,
 ) -> tuple[FloatArray, FloatArray]:
     """Return per-epoch adaptive Kuramoto scores and channel weights.
@@ -210,7 +266,12 @@ def compute_adaptive_kuramoto_scores(
     epoch_seconds
         Epoch length in seconds.
     kurtosis_penalty_scale
-        Strength of the kurtosis artefact penalty.
+        Strength of the kurtosis artefact penalty (only used when
+        ``weight_mode="snr_kurtosis"``).
+    weight_mode
+        Weighting strategy. ``"snr_kurtosis"`` uses band-limited SNR penalised
+        by excess kurtosis; ``"plv_mean_field"`` uses each channel's
+        phase-locking value to the instantaneous mean field.
     score_precision
         Decimal places to which scores are rounded.
 
@@ -232,12 +293,18 @@ def compute_adaptive_kuramoto_scores(
     filtered = _bandpass(trimmed, fs, band_hz[0], band_hz[1])
     phases = np.angle(hilbert(filtered, axis=1))
 
-    weights = compute_channel_quality_weights(
-        data[:, : n_epochs * epoch_len],
-        fs,
-        band_hz=band_hz,
-        epoch_seconds=epoch_seconds,
-        kurtosis_penalty_scale=kurtosis_penalty_scale,
-    )
+    if weight_mode == "snr_kurtosis":
+        weights = compute_channel_quality_weights(
+            data[:, : n_epochs * epoch_len],
+            fs,
+            band_hz=band_hz,
+            epoch_seconds=epoch_seconds,
+            kurtosis_penalty_scale=kurtosis_penalty_scale,
+        )
+    elif weight_mode == "plv_mean_field":
+        weights = compute_phase_locking_weights(phases, fs, epoch_seconds=epoch_seconds)
+    else:
+        raise ValueError(f"unknown weight_mode: {weight_mode!r}")
+
     scores = compute_weighted_kuramoto_r(phases, weights, epoch_seconds, fs)
     return np.round(scores, score_precision), weights

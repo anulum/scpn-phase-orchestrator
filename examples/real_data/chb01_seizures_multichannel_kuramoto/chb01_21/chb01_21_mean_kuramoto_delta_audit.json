@@ -1,6 +1,6 @@
 {
   "corpus_id": "chbmit-chb01_21-preictal-vs-interictal",
-  "captured_at": "2026-07-14T12:00:18Z",
+  "captured_at": "2026-07-14T12:54:03Z",
   "audit": {
     "detector_name": "mean_kuramoto_delta",
     "target_false_alarm": 0.1,
@@ -24,5 +24,5 @@
   },
   "framework": "Matched-false-alarm calibration with a label-permutation significance test (exchangeability null), after Boettiger & Hastings 2012, J. R. Soc. Interface 9:2527.",
   "disclaimer": "This audit record measures a detector's event-vs-null skill on the supplied corpus only: the matched-false-alarm threshold, the rate it achieved, the event detection rate, and the permutation p-value of the event alarm count. It is not a certification of field performance and does not transfer to any other corpus, detector configuration, or deployment; a low p-value means the events alarmed more than the matched false alarm on this corpus, nothing more.",
-  "content_hash": "e024c9c5c1655821870340aab118b81a368be12372814895d0563528a494f8c8"
+  "content_hash": "e72d002d764b81188ca5af6eba982831b7adbcfd5aeff21fb7edf91e5ad02d4a"
 }

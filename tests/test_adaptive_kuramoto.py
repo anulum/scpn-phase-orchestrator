@@ -14,6 +14,7 @@ import pytest
 from scpn_phase_orchestrator.monitor.adaptive_kuramoto import (
     compute_adaptive_kuramoto_scores,
     compute_channel_quality_weights,
+    compute_phase_locking_weights,
     compute_weighted_kuramoto_r,
 )
 
@@ -106,3 +107,47 @@ def test_compute_weighted_kuramoto_r_shape() -> None:
     r = compute_weighted_kuramoto_r(phases, weights, epoch_seconds=1.0, fs=100.0)
     assert r.shape == (n_epochs,)
     assert np.all((r >= 0) & (r <= 1))
+
+
+def test_phase_locking_weights_shape_and_normalisation() -> None:
+    """PLV weights have the expected shape and sum to one per epoch."""
+    fs = 100.0
+    n_samples = int(60 * fs)
+    rng = np.random.default_rng(6)
+    phases = rng.uniform(-np.pi, np.pi, (4, n_samples))
+    weights = compute_phase_locking_weights(phases, fs, epoch_seconds=30.0)
+
+    assert weights.shape == (4, 2)
+    assert np.all(weights >= 0)
+    assert np.allclose(weights.sum(axis=0), 1.0)
+
+
+def test_plv_mode_scores_detect_coherence_difference() -> None:
+    """PLV-weighted adaptive scores separate coherent from incoherent epochs."""
+    fs = 100.0
+    n_samples = int(60 * fs)
+    epoch_samples = int(30 * fs)
+    t = np.arange(n_samples) / fs
+    rng = np.random.default_rng(7)
+
+    # First epoch: four perfectly coherent channels.
+    base = np.sin(2 * np.pi * 2.0 * t)
+    epoch1 = np.tile(base[:epoch_samples], (4, 1)) + 0.01 * rng.standard_normal(
+        (4, epoch_samples)
+    )
+    # Second epoch: independent phase noise (low coherence).
+    epoch2 = np.zeros((4, epoch_samples))
+    for c in range(4):
+        phase_shift = rng.uniform(0, 2 * np.pi)
+        epoch2[c, :] = np.sin(2 * np.pi * 2.0 * t[:epoch_samples] + phase_shift)
+    epoch2 += 0.01 * rng.standard_normal((4, epoch_samples))
+
+    data = np.hstack([epoch1, epoch2]).astype(np.float64)
+    scores, _ = compute_adaptive_kuramoto_scores(
+        data, fs, epoch_seconds=30.0, weight_mode="plv_mean_field"
+    )
+
+    assert scores.shape == (2,)
+    assert scores[0] > scores[1]
+    assert 0.0 <= scores[0] <= 1.0
+    assert 0.0 <= scores[1] <= 1.0

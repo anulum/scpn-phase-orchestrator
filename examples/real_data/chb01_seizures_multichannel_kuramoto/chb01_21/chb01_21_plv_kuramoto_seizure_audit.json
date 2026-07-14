@@ -1,28 +1,28 @@
 {
-  "corpus_id": "chbmit-chb01_04-preictal-vs-interictal",
+  "corpus_id": "chbmit-chb01_21-preictal-vs-interictal",
   "captured_at": "2026-07-14T12:54:03Z",
   "audit": {
-    "detector_name": "mean_kuramoto_seizure",
+    "detector_name": "plv_kuramoto_seizure",
     "target_false_alarm": 0.1,
-    "matched_threshold": 0.32871600000000006,
+    "matched_threshold": 0.3864580000000001,
     "achieved_false_alarm": 0.1,
     "n_events": 9,
-    "n_events_alarmed": 4,
-    "detection_rate": 0.4444444444444444,
+    "n_events_alarmed": 3,
+    "detection_rate": 0.3333333333333333,
     "n_nulls": 600,
     "significance": {
-      "observed_alarms": 4,
+      "observed_alarms": 3,
       "n_events": 9,
-      "pooled_alarm_rate": 0.10509031198686371,
-      "expected_alarms": 0.9458128078817734,
-      "p_value": 0.008799120087991202,
+      "pooled_alarm_rate": 0.10344827586206896,
+      "expected_alarms": 0.9310344827586207,
+      "p_value": 0.0542945705429457,
       "n_permutations": 10000,
       "seed": 42
     },
     "alpha": 0.05,
-    "beats_chance": true
+    "beats_chance": false
   },
   "framework": "Matched-false-alarm calibration with a label-permutation significance test (exchangeability null), after Boettiger & Hastings 2012, J. R. Soc. Interface 9:2527.",
   "disclaimer": "This audit record measures a detector's event-vs-null skill on the supplied corpus only: the matched-false-alarm threshold, the rate it achieved, the event detection rate, and the permutation p-value of the event alarm count. It is not a certification of field performance and does not transfer to any other corpus, detector configuration, or deployment; a low p-value means the events alarmed more than the matched false alarm on this corpus, nothing more.",
-  "content_hash": "4377e12d1cd311cc9253448fdcba9e792e362d6413052d7efee85a82940bdcf4"
+  "content_hash": "6c778ebbecd0512ed6186036aa2993d97e393e307af02b0f8f7059e60e4c0569"
 }
