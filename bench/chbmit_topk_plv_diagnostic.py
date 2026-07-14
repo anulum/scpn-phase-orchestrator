@@ -95,9 +95,7 @@ def _topk_per_epoch_all_k(
     epoch_len = int(epoch_seconds * fs)
     n_channels, n_epochs_total = phases.shape
     n_epochs = n_epochs_total // epoch_len
-    epochs = phases[:, : n_epochs * epoch_len].reshape(
-        n_channels, n_epochs, epoch_len
-    )
+    epochs = phases[:, : n_epochs * epoch_len].reshape(n_channels, n_epochs, epoch_len)
     exp_epochs = np.exp(1j * epochs)  # (C, E, L)
 
     # Sort channels by weight per epoch (ascending).
@@ -173,7 +171,7 @@ def main() -> None:
         phases, weights = _phases_and_weights(data, fs, EPOCH_SECONDS)
         null_phases.append(phases)
         null_weights.append(weights)
-        print(f"  {fname}: {phases.shape[0]} ch, {time.time()-t0:.1f}s")
+        print(f"  {fname}: {phases.shape[0]} ch, {time.time() - t0:.1f}s")
 
     print("Loading seizure recordings and computing PLV weights...")
     seizure_phases: dict[str, FloatArray] = {}
@@ -186,7 +184,7 @@ def main() -> None:
         phases, weights = _phases_and_weights(data, fs, EPOCH_SECONDS)
         seizure_phases[fname] = phases
         seizure_weights[fname] = weights
-        print(f"  {fname}: {phases.shape[0]} ch, {time.time()-t0:.1f}s")
+        print(f"  {fname}: {phases.shape[0]} ch, {time.time() - t0:.1f}s")
 
     print("Computing null scores...")
     null_mean_r = np.concatenate(
@@ -210,9 +208,7 @@ def main() -> None:
         )
         topk_null["global"][k] = np.concatenate(
             [
-                _topk_global_all_k(
-                    p, w, TARGET_SAMPLING_RATE_HZ, EPOCH_SECONDS, [k]
-                )[k]
+                _topk_global_all_k(p, w, TARGET_SAMPLING_RATE_HZ, EPOCH_SECONDS, [k])[k]
                 for p, w in zip(null_phases, null_weights, strict=True)
             ]
         )
@@ -264,12 +260,8 @@ def main() -> None:
     for mode in ("per_epoch", "global"):
         for k in K_VALUES:
             agg[mode][k] = {
-                "mean_auc": round(
-                    float(np.mean([r[mode][k]["auc"] for r in rows])), 6
-                ),
-                "mean_dr": round(
-                    float(np.mean([r[mode][k]["dr"] for r in rows])), 6
-                ),
+                "mean_auc": round(float(np.mean([r[mode][k]["auc"] for r in rows])), 6),
+                "mean_dr": round(float(np.mean([r[mode][k]["dr"] for r in rows])), 6),
             }
 
     out = Path("examples/real_data/chb01_seizures_multichannel_kuramoto")

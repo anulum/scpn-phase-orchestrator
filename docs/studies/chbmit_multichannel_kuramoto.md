@@ -65,3 +65,26 @@ unweighted mean-R over that subset improves both detection rate and AUC over
 the textbook mean-R detector. The SNR+kurtosis and soft PLV weightings are
 inferior on this corpus; the gain comes from *hard* channel selection driven by
 cross-channel phase coherence, not from continuous quality weighting.
+
+## Limitations
+
+The top-k PLV result is promising but **not yet a general production default**,
+for three reasons that a reader must weigh before relying on it:
+
+- **Single subject.** All figures are from CHB-MIT subject `chb01` only
+  (7 seizures, 600 interictal null epochs). Nothing here establishes that the
+  detector, or the optimal `k`, transfers to other subjects or montages.
+- **`k` is tuned on the evaluation corpus.** The winning `k = 15` was selected
+  on the same `chb01` seizures it is scored on. The choice is not knife-edge —
+  `k = 15` beats mean-R on all 7 seizures individually — but it is genuinely
+  sensitive: `k = 20` gives AUC ≈ 0.92 (barely above the 0.91 baseline) and
+  `k = 23` degenerates exactly to mean-R. A fixed `k` chosen this way risks
+  optimistic bias; a held-out or subject-specific `k` rule is needed for an
+  honest out-of-sample estimate.
+- **No cross-corpus validation yet.** The detector has not been run against a
+  second CHB-MIT subject panel or the CAP sleep corpus, so its generality is
+  unmeasured.
+
+Recommended before promotion to a production default: evaluate top-k PLV on
+additional CHB-MIT subjects and on a second corpus, and replace the fixed `k`
+with a rule calibrated on held-out data (e.g. interictal-only null calibration).

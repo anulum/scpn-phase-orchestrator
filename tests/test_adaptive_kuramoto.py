@@ -12,6 +12,7 @@ import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.monitor.adaptive_kuramoto import (
+    _kurtosis_excess,
     compute_adaptive_kuramoto_scores,
     compute_channel_quality_weights,
     compute_phase_locking_weights,
@@ -159,9 +160,7 @@ def test_phase_locking_weights_top_k_shape_and_selection() -> None:
     n_samples = int(60 * fs)
     rng = np.random.default_rng(8)
     phases = rng.uniform(-np.pi, np.pi, (6, n_samples))
-    weights = compute_phase_locking_weights(
-        phases, fs, epoch_seconds=30.0, top_k=3
-    )
+    weights = compute_phase_locking_weights(phases, fs, epoch_seconds=30.0, top_k=3)
 
     assert weights.shape == (6, 2)
     assert np.all((weights == 0) | (weights == 1))
@@ -246,4 +245,38 @@ def test_top_k_only_with_plv_mode() -> None:
             epoch_seconds=30.0,
             weight_mode="snr_kurtosis",
             top_k=2,
+        )
+
+
+def test_kurtosis_excess_returns_neutral_for_short_axis() -> None:
+    """Fewer than four samples along the axis yields a neutral (zero) kurtosis."""
+    # Three samples along the reduction axis: too few for the k2 estimator.
+    excess = _kurtosis_excess(np.ones((2, 3)), axis=1)
+    assert excess.shape == (2,)
+    assert np.array_equal(excess, np.zeros(2))
+
+
+def test_quality_weights_short_signal_rejected() -> None:
+    """``compute_channel_quality_weights`` rejects a sub-epoch signal directly."""
+    with pytest.raises(ValueError, match="shorter than one epoch"):
+        compute_channel_quality_weights(
+            np.zeros((2, 5), dtype=np.float64), fs=100.0, epoch_seconds=30.0
+        )
+
+
+def test_phase_locking_weights_short_signal_rejected() -> None:
+    """``compute_phase_locking_weights`` rejects a sub-epoch signal directly."""
+    with pytest.raises(ValueError, match="shorter than one epoch"):
+        compute_phase_locking_weights(
+            np.zeros((2, 5), dtype=np.float64), fs=100.0, epoch_seconds=30.0
+        )
+
+
+def test_unknown_weight_mode_rejected() -> None:
+    """An unrecognised ``weight_mode`` is rejected."""
+    fs = 100.0
+    data = np.random.default_rng(12).standard_normal((4, int(60 * fs)))
+    with pytest.raises(ValueError, match="unknown weight_mode"):
+        compute_adaptive_kuramoto_scores(
+            data, fs, epoch_seconds=30.0, weight_mode="bogus"
         )

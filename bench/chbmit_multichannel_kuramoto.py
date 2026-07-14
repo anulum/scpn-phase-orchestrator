@@ -407,9 +407,7 @@ def main(data_dir: Path, output_dir: Path) -> None:
             _plv_kuramoto_scores(data, fs, BANDS["seizure"], EPOCH_SECONDS)
         )
         null_score_batches["topk15_plv_kuramoto_seizure"].append(
-            _plv_kuramoto_scores(
-                data, fs, BANDS["seizure"], EPOCH_SECONDS, top_k=15
-            )
+            _plv_kuramoto_scores(data, fs, BANDS["seizure"], EPOCH_SECONDS, top_k=15)
         )
         print(
             f"  {fname}: {data.shape[0]} channels, {data.shape[1] / fs:.0f}s "
@@ -455,9 +453,7 @@ def main(data_dir: Path, output_dir: Path) -> None:
                 det_name = _detector_name(kind, band_name)
                 full_scores = scorer(data, fs, band_hz, EPOCH_SECONDS)
                 event_scores = full_scores[event_indices]
-                combined_scores = np.concatenate(
-                    [event_scores, null_scores[det_name]]
-                )
+                combined_scores = np.concatenate([event_scores, null_scores[det_name]])
                 combined_labels = ["preictal"] * len(event_scores) + [
                     "interictal"
                 ] * len(null_scores[det_name])
@@ -495,12 +491,10 @@ def main(data_dir: Path, output_dir: Path) -> None:
                 data, fs, BANDS["seizure"], EPOCH_SECONDS, top_k=top_k
             )
             event_scores = full_scores[event_indices]
-            combined_scores = np.concatenate(
-                [event_scores, null_scores[det_name]]
+            combined_scores = np.concatenate([event_scores, null_scores[det_name]])
+            combined_labels = ["preictal"] * len(event_scores) + ["interictal"] * len(
+                null_scores[det_name]
             )
-            combined_labels = ["preictal"] * len(event_scores) + [
-                "interictal"
-            ] * len(null_scores[det_name])
             audit_record, summary = run_audit(
                 scores=combined_scores,
                 labels=combined_labels,
@@ -510,9 +504,7 @@ def main(data_dir: Path, output_dir: Path) -> None:
                 event_label="preictal",
                 null_label="interictal",
             )
-            summary["auc"] = round(
-                _compute_auc(event_scores, null_scores[det_name]), 6
-            )
+            summary["auc"] = round(_compute_auc(event_scores, null_scores[det_name]), 6)
             summary["preictal_score_mean"] = round(float(event_scores.mean()), 6)
             summary["interictal_score_mean"] = round(
                 float(null_scores[det_name].mean()), 6

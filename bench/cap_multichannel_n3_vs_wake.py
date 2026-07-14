@@ -650,20 +650,20 @@ def _cap_recommendation(
 
     # Rank variants by mean detection rate.
     variant_means = {
-        "normalized_delta_envelope": envelope_stats["mean_detection_rate"],  # type: ignore[index]
-        "multi_channel_delta_kuramoto": kuramoto_stats["mean_detection_rate"],  # type: ignore[index]
-        "snr_weighted_delta_kuramoto": snr_kuramoto_stats["mean_detection_rate"],  # type: ignore[index]
-        "adaptive_kuramoto": adaptive_stats["mean_detection_rate"],  # type: ignore[index]
+        "normalized_delta_envelope": envelope_stats["mean_detection_rate"],  # type: ignore[index]  # audit-record dict is dynamically typed (JSON)
+        "multi_channel_delta_kuramoto": kuramoto_stats["mean_detection_rate"],  # type: ignore[index]  # audit-record dict is dynamically typed (JSON)
+        "snr_weighted_delta_kuramoto": snr_kuramoto_stats["mean_detection_rate"],  # type: ignore[index]  # audit-record dict is dynamically typed (JSON)
+        "adaptive_kuramoto": adaptive_stats["mean_detection_rate"],  # type: ignore[index]  # audit-record dict is dynamically typed (JSON)
     }
-    best_variant = max(variant_means, key=variant_means.get)  # type: ignore[arg-type]
+    best_variant = max(variant_means, key=variant_means.get)  # type: ignore[arg-type]  # audit-record dict is dynamically typed (JSON)
 
     adaptive_improves_kuramoto = (
-        adaptive_stats["mean_detection_rate"]  # type: ignore[index]
-        >= kuramoto_stats["mean_detection_rate"]  # type: ignore[index]
+        adaptive_stats["mean_detection_rate"]  # type: ignore[index]  # audit-record dict is dynamically typed (JSON)
+        >= kuramoto_stats["mean_detection_rate"]  # type: ignore[index]  # audit-record dict is dynamically typed (JSON)
     )
     adaptive_wins_any = any(
-        r["detectors"]["adaptive_kuramoto"]["detection_rate"]  # type: ignore[index]
-        >= r["detectors"]["multi_channel_delta_kuramoto"]["detection_rate"]  # type: ignore[index]
+        r["detectors"]["adaptive_kuramoto"]["detection_rate"]  # type: ignore[index]  # audit-record dict is dynamically typed (JSON)
+        >= r["detectors"]["multi_channel_delta_kuramoto"]["detection_rate"]  # type: ignore[index]  # audit-record dict is dynamically typed (JSON)
         for r in records
     )
 
@@ -752,18 +752,16 @@ def main(
                     recording_id, Path(edf), Path(txt), out, captured_at
                 )
                 records.append(fragment)
-                env_dr = fragment["detectors"]["normalized_delta_envelope"][  # type: ignore[index]
+                env_dr = fragment["detectors"]["normalized_delta_envelope"][  # type: ignore[index]  # audit-record dict is dynamically typed (JSON)
                     "detection_rate"
                 ]
-                kur_dr = fragment["detectors"]["multi_channel_delta_kuramoto"][  # type: ignore[index]
+                kur_dr = fragment["detectors"]["multi_channel_delta_kuramoto"][  # type: ignore[index]  # audit-record dict is dynamically typed (JSON)
                     "detection_rate"
                 ]
-                snr_dr = fragment["detectors"]["snr_weighted_delta_kuramoto"][  # type: ignore[index]
+                snr_dr = fragment["detectors"]["snr_weighted_delta_kuramoto"][  # type: ignore[index]  # audit-record dict is dynamically typed (JSON)
                     "detection_rate"
                 ]
-                adapt_dr = fragment["detectors"]["adaptive_kuramoto"][
-                    "detection_rate"
-                ]
+                adapt_dr = fragment["detectors"]["adaptive_kuramoto"]["detection_rate"]
                 print(
                     f"{recording_id}: envelope DR={env_dr:.3f}, "
                     f"kuramoto DR={kur_dr:.3f}, "

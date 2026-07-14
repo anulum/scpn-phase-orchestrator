@@ -63,7 +63,11 @@ __all__ = [
     "auto_embed",
     "check_session_start",
     "classify_sleep_stage",
+    "compute_adaptive_kuramoto_scores",
+    "compute_channel_quality_weights",
+    "compute_phase_locking_weights",
     "compute_self_model_error",
+    "compute_weighted_kuramoto_r",
     "compute_hybrid_entanglement_order_parameter",
     "compute_itpc",
     "compute_npe",
@@ -136,6 +140,22 @@ __all__ = [
 ]
 
 _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
+    "compute_adaptive_kuramoto_scores": (
+        ".adaptive_kuramoto",
+        "compute_adaptive_kuramoto_scores",
+    ),
+    "compute_channel_quality_weights": (
+        ".adaptive_kuramoto",
+        "compute_channel_quality_weights",
+    ),
+    "compute_phase_locking_weights": (
+        ".adaptive_kuramoto",
+        "compute_phase_locking_weights",
+    ),
+    "compute_weighted_kuramoto_r": (
+        ".adaptive_kuramoto",
+        "compute_weighted_kuramoto_r",
+    ),
     "BoundaryObserver": (".boundaries", "BoundaryObserver"),
     "ChimeraState": (".chimera", "ChimeraState"),
     "detect_chimera": (".chimera", "detect_chimera"),

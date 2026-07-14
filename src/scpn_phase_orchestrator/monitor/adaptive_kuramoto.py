@@ -15,7 +15,7 @@ phase coherence. This module introduces an **adaptive** variant that:
 1. Weights each channel by a data-driven quality score. Two strategies are
    provided:
    - *SNR+kurtosis*: delta-band SNR penalised by excess kurtosis (a
-     transient/artifact proxy).
+     transient/artefact proxy).
    - *PLV-to-mean-field*: each channel's phase-locking value to the
      instantaneous group phase, rewarding channels that track the mean field.
 2. Computes the weighted Kuramoto order parameter sample by sample.
@@ -205,9 +205,7 @@ def compute_phase_locking_weights(
 
     if top_k is not None:
         if not 1 <= top_k <= n_channels:
-            raise ValueError(
-                f"top_k must be between 1 and {n_channels}, got {top_k}"
-            )
+            raise ValueError(f"top_k must be between 1 and {n_channels}, got {top_k}")
         mean_plv = plv.mean(axis=1)
         selected = np.argsort(mean_plv)[-top_k:]
         weights = np.zeros_like(plv)
