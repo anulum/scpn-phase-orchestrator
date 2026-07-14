@@ -45,10 +45,14 @@ __all__ = [
 def _bandpass(
     sig: FloatArray, fs: float, lo: float, hi: float, order: int = 3
 ) -> FloatArray:
-    """Return a zero-phase Butterworth band-pass filtered signal."""
+    """Return a zero-phase Butterworth band-pass filtered signal.
+
+    Works for both 1-D signals and multi-channel arrays; the filter is applied
+    along the last axis.
+    """
     nyq = fs / 2.0
     b, a = butter(order, [lo / nyq, hi / nyq], btype="band")
-    return cast(FloatArray, filtfilt(b, a, sig))
+    return cast(FloatArray, filtfilt(b, a, sig, axis=-1))
 
 
 def _kurtosis_excess(x: FloatArray, axis: int = -1) -> FloatArray:
@@ -119,12 +123,12 @@ def compute_channel_quality_weights(
         n_channels, n_epochs, epoch_len
     )
 
-    # Band-limited power per channel per epoch.
-    band_power = np.empty((n_channels, n_epochs), dtype=np.float64)
-    for c in range(n_channels):
-        filtered = _bandpass(data[c], fs, band_hz[0], band_hz[1])
-        filtered_epochs = filtered[: n_epochs * epoch_len].reshape(n_epochs, epoch_len)
-        band_power[c, :] = np.mean(filtered_epochs**2, axis=1)
+    # Band-limited power per channel per epoch (vectorised across channels).
+    filtered = _bandpass(data, fs, band_hz[0], band_hz[1])
+    filtered_epochs = filtered[:, : n_epochs * epoch_len].reshape(
+        n_channels, n_epochs, epoch_len
+    )
+    band_power = np.mean(filtered_epochs**2, axis=2)
 
     total_power = np.mean(epoch_data**2, axis=2) + 1e-12
     snr = band_power / total_power
@@ -224,10 +228,9 @@ def compute_adaptive_kuramoto_scores(
     if n_epochs == 0:
         raise ValueError("signal shorter than one epoch")
 
-    phases = np.empty((n_channels, n_epochs * epoch_len), dtype=np.float64)
-    for c in range(n_channels):
-        filtered = _bandpass(data[c], fs, band_hz[0], band_hz[1])
-        phases[c, :] = np.angle(hilbert(filtered[: n_epochs * epoch_len]))
+    trimmed = data[:, : n_epochs * epoch_len]
+    filtered = _bandpass(trimmed, fs, band_hz[0], band_hz[1])
+    phases = np.angle(hilbert(filtered, axis=1))
 
     weights = compute_channel_quality_weights(
         data[:, : n_epochs * epoch_len],
