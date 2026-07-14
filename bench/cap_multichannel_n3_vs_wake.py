@@ -59,6 +59,9 @@ from bench.honest_dataset_audit import (
     run_audit,
     write_aggregate,
 )
+from scpn_phase_orchestrator.monitor.adaptive_kuramoto import (
+    compute_adaptive_kuramoto_scores,
+)
 
 if TYPE_CHECKING:  # pragma: no cover - import only for static typing
     from collections.abc import Sequence
@@ -451,6 +454,23 @@ def _snr_weighted_kuramoto_scores(data: FloatArray, fs: float) -> FloatArray:
     return np.round(scores, SCORE_PRECISION)
 
 
+def _adaptive_kuramoto_scores(data: FloatArray, fs: float) -> FloatArray:
+    """Adaptive quality-weighted multi-channel delta-phase Kuramoto scores.
+
+    Uses the reusable ``monitor.adaptive_kuramoto`` implementation: channels
+    are weighted by delta-band SNR penalised by excess kurtosis, and each
+    epoch is pooled with the median of the weighted Kuramoto order parameter.
+    """
+    scores, _ = compute_adaptive_kuramoto_scores(
+        data,
+        fs,
+        band_hz=DELTA_BAND_HZ,
+        epoch_seconds=EPOCH_SECONDS,
+        score_precision=SCORE_PRECISION,
+    )
+    return scores
+
+
 # --------------------------------------------------------------------------- #
 # Orchestration                                                                #
 # --------------------------------------------------------------------------- #
@@ -512,6 +532,7 @@ def _process_recording(
     envelope_scores_arr = _envelope_scores(data, fs)
     kuramoto_scores_arr = _kuramoto_scores(data, fs)
     snr_kuramoto_scores_arr = _snr_weighted_kuramoto_scores(data, fs)
+    adaptive_kuramoto_scores_arr = _adaptive_kuramoto_scores(data, fs)
 
     envelope_audit, envelope_summary = _run_audit(
         envelope_scores_arr,
@@ -531,6 +552,13 @@ def _process_recording(
         snr_kuramoto_scores_arr,
         stages,
         "snr_weighted_delta_kuramoto",
+        corpus_id,
+        captured_at,
+    )
+    adaptive_kuramoto_audit, adaptive_kuramoto_summary = _run_audit(
+        adaptive_kuramoto_scores_arr,
+        stages,
+        "adaptive_kuramoto",
         corpus_id,
         captured_at,
     )
@@ -557,6 +585,12 @@ def _process_recording(
     (out / f"{prefix}_snr_weighted_kuramoto_summary.json").write_text(
         json.dumps(snr_kuramoto_summary, indent=2) + "\n", encoding="utf-8"
     )
+    (out / f"{prefix}_adaptive_kuramoto_audit.json").write_text(
+        json.dumps(adaptive_kuramoto_audit, indent=2) + "\n", encoding="utf-8"
+    )
+    (out / f"{prefix}_adaptive_kuramoto_summary.json").write_text(
+        json.dumps(adaptive_kuramoto_summary, indent=2) + "\n", encoding="utf-8"
+    )
 
     return {
         "recording_id": recording_id,
@@ -573,6 +607,7 @@ def _process_recording(
             "normalized_delta_envelope": envelope_summary,
             "multi_channel_delta_kuramoto": kuramoto_summary,
             "snr_weighted_delta_kuramoto": snr_kuramoto_summary,
+            "adaptive_kuramoto": adaptive_kuramoto_summary,
         },
     }
 
@@ -611,47 +646,52 @@ def _cap_recommendation(
     envelope_stats = stats_by_detector["normalized_delta_envelope"]
     kuramoto_stats = stats_by_detector["multi_channel_delta_kuramoto"]
     snr_kuramoto_stats = stats_by_detector["snr_weighted_delta_kuramoto"]
+    adaptive_stats = stats_by_detector["adaptive_kuramoto"]
 
-    mean_snr_improved = (
-        snr_kuramoto_stats["mean_detection_rate"]
-        > kuramoto_stats["mean_detection_rate"]
+    # Rank variants by mean detection rate.
+    variant_means = {
+        "normalized_delta_envelope": envelope_stats["mean_detection_rate"],  # type: ignore[index]
+        "multi_channel_delta_kuramoto": kuramoto_stats["mean_detection_rate"],  # type: ignore[index]
+        "snr_weighted_delta_kuramoto": snr_kuramoto_stats["mean_detection_rate"],  # type: ignore[index]
+        "adaptive_kuramoto": adaptive_stats["mean_detection_rate"],  # type: ignore[index]
+    }
+    best_variant = max(variant_means, key=variant_means.get)  # type: ignore[arg-type]
+
+    adaptive_improves_kuramoto = (
+        adaptive_stats["mean_detection_rate"]  # type: ignore[index]
+        >= kuramoto_stats["mean_detection_rate"]  # type: ignore[index]
     )
-    snr_wins_any = any(
-        r["detectors"]["snr_weighted_delta_kuramoto"]["detection_rate"]
-        > r["detectors"]["multi_channel_delta_kuramoto"]["detection_rate"]
+    adaptive_wins_any = any(
+        r["detectors"]["adaptive_kuramoto"]["detection_rate"]  # type: ignore[index]
+        >= r["detectors"]["multi_channel_delta_kuramoto"]["detection_rate"]  # type: ignore[index]
         for r in records
     )
-    snr_is_best = snr_kuramoto_stats["mean_detection_rate"] == max(
-        envelope_stats["mean_detection_rate"],
-        kuramoto_stats["mean_detection_rate"],
-        snr_kuramoto_stats["mean_detection_rate"],
-    )
 
-    if snr_is_best:
+    if best_variant == "adaptive_kuramoto":
         return {
             "refine_kuramoto": True,
-            "preferred_variant": "snr_weighted_delta_kuramoto",
+            "preferred_variant": "adaptive_kuramoto",
             "rationale": (
-                "SNR-weighted Kuramoto has the highest mean detection rate on the "
-                "panel and outperforms both the simple mean-R Kuramoto and the "
-                "normalized delta envelope; this is the variant to pursue."
+                "Adaptive quality-weighted Kuramoto has the highest mean detection "
+                "rate on the panel, validating the channel-quality and robust-"
+                "pooling refinement over the simple mean-R and SNR-weighted variants."
             ),
         }
-    if mean_snr_improved or snr_wins_any:
+    if adaptive_improves_kuramoto or adaptive_wins_any:
         return {
             "refine_kuramoto": True,
-            "preferred_variant": "snr_weighted_delta_kuramoto",
+            "preferred_variant": "adaptive_kuramoto",
             "rationale": (
-                "SNR-weighted Kuramoto improves over the simple mean-R variant, "
-                "but it has not yet caught the envelope; further refinement "
-                "(adaptive channel selection or temporal stability) is warranted."
+                "Adaptive Kuramoto improves over the simple mean-R variant, but it "
+                "has not yet caught the envelope; further refinement (more channel "
+                "configurations or multi-band fusion) is warranted."
             ),
         }
     return {
         "refine_kuramoto": False,
         "preferred_variant": "normalized_delta_envelope",
         "rationale": (
-            "SNR-weighting does not improve over the simple mean-R Kuramoto "
+            "Adaptive Kuramoto does not improve over the simple mean-R Kuramoto "
             "detector on this panel; further investment in this exact "
             "spatial-R feature is not supported by the data."
         ),
@@ -668,6 +708,7 @@ def _compute_aggregate(records: list[dict[str, object]]) -> dict[str, object]:
             "normalized_delta_envelope",
             "multi_channel_delta_kuramoto",
             "snr_weighted_delta_kuramoto",
+            "adaptive_kuramoto",
         ],
         recommendation_fn=_cap_recommendation,
     )
@@ -711,19 +752,23 @@ def main(
                     recording_id, Path(edf), Path(txt), out, captured_at
                 )
                 records.append(fragment)
-                env_dr = fragment["detectors"]["normalized_delta_envelope"][
+                env_dr = fragment["detectors"]["normalized_delta_envelope"][  # type: ignore[index]
                     "detection_rate"
-                ]  # type: ignore[index]
-                kur_dr = fragment["detectors"]["multi_channel_delta_kuramoto"][
+                ]
+                kur_dr = fragment["detectors"]["multi_channel_delta_kuramoto"][  # type: ignore[index]
                     "detection_rate"
-                ]  # type: ignore[index]
-                snr_dr = fragment["detectors"]["snr_weighted_delta_kuramoto"][
+                ]
+                snr_dr = fragment["detectors"]["snr_weighted_delta_kuramoto"][  # type: ignore[index]
                     "detection_rate"
-                ]  # type: ignore[index]
+                ]
+                adapt_dr = fragment["detectors"]["adaptive_kuramoto"][
+                    "detection_rate"
+                ]
                 print(
                     f"{recording_id}: envelope DR={env_dr:.3f}, "
                     f"kuramoto DR={kur_dr:.3f}, "
-                    f"snr-weighted DR={snr_dr:.3f}"
+                    f"snr-weighted DR={snr_dr:.3f}, "
+                    f"adaptive DR={adapt_dr:.3f}"
                 )
         aggregate = _compute_aggregate(records)
         write_aggregate(out, aggregate)
@@ -752,7 +797,10 @@ def main(
         f"p={fragment['detectors']['multi_channel_delta_kuramoto']['p_value']:.4f}\n"  # noqa: E501
         f"  snr-weighted: detection_rate={fragment['detectors']['snr_weighted_delta_kuramoto']['detection_rate']:.3f}, "  # noqa: E501
         f"achieved_fa={fragment['detectors']['snr_weighted_delta_kuramoto']['achieved_false_alarm']:.3f}, "  # noqa: E501
-        f"p={fragment['detectors']['snr_weighted_delta_kuramoto']['p_value']:.4f}"  # noqa: E501
+        f"p={fragment['detectors']['snr_weighted_delta_kuramoto']['p_value']:.4f}\n"  # noqa: E501
+        f"  adaptive: detection_rate={fragment['detectors']['adaptive_kuramoto']['detection_rate']:.3f}, "  # noqa: E501
+        f"achieved_fa={fragment['detectors']['adaptive_kuramoto']['achieved_false_alarm']:.3f}, "  # noqa: E501
+        f"p={fragment['detectors']['adaptive_kuramoto']['p_value']:.4f}"  # noqa: E501
     )
     print(f"Sealed audits and comparison written to {out}")
 

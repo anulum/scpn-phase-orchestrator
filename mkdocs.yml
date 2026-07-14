@@ -170,6 +170,7 @@ nav:
       - Supervisor: reference/api/supervisor.md
       - Studio: reference/api/studio.md
       - Monitor: reference/api/monitor.md
+      - "Monitor — Adaptive Kuramoto": reference/api/monitor_adaptive_kuramoto.md
       - "Monitor — Chimera": reference/api/monitor_chimera.md
       - "Monitor — Dimension": reference/api/monitor_dimension.md
       - "Monitor — Embedding": reference/api/monitor_embedding.md

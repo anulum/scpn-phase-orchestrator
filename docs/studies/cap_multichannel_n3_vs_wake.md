@@ -13,13 +13,15 @@ Contact: www.anulum.li | protoscience@anulum.li
 
 We extend the honest sleep-staging audit to a true multi-channel EEG corpus, the
 PhysioNet CAP Sleep Database. On a four-recording panel — two controls plus
-bruxism and narcolepsy — we compare three N3 slow-wave detectors at the same
+bruxism and narcolepsy — we compare four N3 slow-wave detectors at the same
 matched false-alarm operating point: a normalized delta-band Hilbert envelope
 averaged across channels, a multi-channel delta-phase Kuramoto order parameter,
-and an SNR-weighted variant of the Kuramoto detector. All three detectors are
-audited with label-permutation significance tests and sealed into
-content-addressed records. The comparison is guarded by an integrity test that
-needs only the committed artefacts, not the raw recordings.
+an SNR-weighted Kuramoto variant, and an **adaptive quality-weighted Kuramoto**
+variant that weights channels by delta-band SNR penalised by excess kurtosis and
+pools each epoch with the median. All four detectors are audited with
+label-permutation significance tests and sealed into content-addressed records.
+The comparison is guarded by an integrity test that needs only the committed
+artefacts, not the raw recordings.
 
 ## The question
 
@@ -29,10 +31,12 @@ Sleep Database provides multiple EEG derivations, so we can ask: when more
 channels are available, does a spatial delta-phase coherence detector separate
 N3 from Wake better than, worse than, or comparably to a simple delta-band
 amplitude envelope? Because the simple mean-R Kuramoto detector collapses on
-all recordings except `n2`, we also test a diagnostic recommendation: an
+all recordings except `n2`, we also test two diagnostic refinements: an
 SNR-weighted Kuramoto variant that weights each channel by the square root of
-its local delta-band SNR. We answer these questions honestly at a fixed
-false-alarm budget calibrated on Wake epochs.
+its local delta-band SNR, and an adaptive variant that additionally penalises
+high-kurtosis (artefact-prone) channels and uses median temporal pooling. We
+answer these questions honestly at a fixed false-alarm budget calibrated on Wake
+epochs.
 
 ## Data
 
@@ -96,6 +100,20 @@ R(t) = | sum_c w_c(t) exp(i phi_c(t)) | / sum_c w_c(t)
 where `w_c(t)` is the per-channel, per-epoch SNR weight. The epoch score is the
 mean of `R(t)` over the epoch. The sqrt softens the weighting so that a single
 high-SNR channel cannot completely dominate the average.
+
+### Detector 4 — adaptive quality-weighted Kuramoto
+
+This variant is implemented in `scpn_phase_orchestrator.monitor.adaptive_kuramoto`.
+For each channel and each epoch it computes a quality weight that rewards
+high delta-band SNR and penalises excess kurtosis (a transient / muscle-artefact
+proxy). The weighted Kuramoto order parameter
+
+```
+R(t) = | sum_c w_c(t) exp(i phi_c(t)) | / sum_c w_c(t)
+```
+
+is then pooled per epoch with the **median** instead of the mean, reducing
+sensitivity to brief artefacts within an epoch.
 
 ### Audit protocol
 

@@ -9,6 +9,7 @@ capture.
 
 Detailed module references:
 
+- [Adaptive multi-channel Kuramoto detector](monitor_adaptive_kuramoto.md)
 - [Delay embedding and phase-space reconstruction](monitor_embedding.md)
 
 ## Hybrid Classical-Quantum Order Parameter

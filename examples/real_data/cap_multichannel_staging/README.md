@@ -74,6 +74,7 @@ per-recording subdirectories and the aggregate comparison file.
 | `normalized_delta_envelope` | Per-channel delta-band Hilbert envelope divided by broadband Hilbert envelope; epoch score is the mean across channels. |
 | `multi_channel_delta_kuramoto` | Per-channel delta-band Hilbert phase; Kuramoto order parameter `R(t)` across channels at each sample; epoch score is the mean of `R(t)` over the epoch. |
 | `snr_weighted_delta_kuramoto` | Per-channel delta-band Hilbert phase; weighted Kuramoto order parameter where channel weights are sqrt(delta-band SNR); epoch score is the mean of `R(t)` over the epoch. |
+| `adaptive_kuramoto` | Quality-weighted Kuramoto order parameter. Channel weights reward delta-band SNR and penalise excess kurtosis; epoch score is the median of `R(t)` over the epoch. Implemented in `scpn_phase_orchestrator.monitor.adaptive_kuramoto`. |
 
 All three detectors are audited at the same matched false-alarm operating point
 (`target_false_alarm = 0.10`) using 10 000 label permutations (seed 42).
