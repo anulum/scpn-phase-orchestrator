@@ -1,6 +1,6 @@
 {
   "corpus_id": "chbmit-chb01_16-preictal-vs-interictal",
-  "captured_at": "2026-07-14T12:54:03Z",
+  "captured_at": "2026-07-14T15:11:17Z",
   "audit": {
     "detector_name": "adaptive_kuramoto_seizure",
     "target_false_alarm": 0.1,
@@ -24,5 +24,5 @@
   },
   "framework": "Matched-false-alarm calibration with a label-permutation significance test (exchangeability null), after Boettiger & Hastings 2012, J. R. Soc. Interface 9:2527.",
   "disclaimer": "This audit record measures a detector's event-vs-null skill on the supplied corpus only: the matched-false-alarm threshold, the rate it achieved, the event detection rate, and the permutation p-value of the event alarm count. It is not a certification of field performance and does not transfer to any other corpus, detector configuration, or deployment; a low p-value means the events alarmed more than the matched false alarm on this corpus, nothing more.",
-  "content_hash": "b5bed70dc0058be1592493911d5f0b37568e9f11e08b5f01fa9d8671b4c16465"
+  "content_hash": "dfa384fb7e2ec9ee23cc371f235a7946a838c6f2b51ff5ff5afcc0461340da3a"
 }

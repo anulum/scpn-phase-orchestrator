@@ -1,0 +1,22 @@
+{
+  "detector_name": "topk15_plv_kuramoto_seizure",
+  "n_events": 9,
+  "n_nulls": 600,
+  "score_mean_events": 0.413337,
+  "score_mean_nulls": 0.385784,
+  "target_false_alarm": 0.1,
+  "matched_threshold": 0.41882800000000003,
+  "achieved_false_alarm": 0.1,
+  "detection_rate": 0.4444444444444444,
+  "n_events_alarmed": 4,
+  "p_value": 0.008899110088991101,
+  "beats_chance": true,
+  "permutation_seed": 42,
+  "n_permutations": 10000,
+  "corpus_id": "chbmit-chb01_03-preictal-vs-interictal",
+  "captured_at": "2026-07-14T15:11:17Z",
+  "audit_content_hash": "0edd940a8ceccb260b83eafc95157a4ddd5429197d182c7058f01e3370a6e89b",
+  "auc": 0.81963,
+  "preictal_score_mean": 0.413337,
+  "interictal_score_mean": 0.385784
+}

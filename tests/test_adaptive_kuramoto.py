@@ -151,3 +151,99 @@ def test_plv_mode_scores_detect_coherence_difference() -> None:
     assert scores[0] > scores[1]
     assert 0.0 <= scores[0] <= 1.0
     assert 0.0 <= scores[1] <= 1.0
+
+
+def test_phase_locking_weights_top_k_shape_and_selection() -> None:
+    """Top-k PLV weights are binary and select exactly k channels per epoch."""
+    fs = 100.0
+    n_samples = int(60 * fs)
+    rng = np.random.default_rng(8)
+    phases = rng.uniform(-np.pi, np.pi, (6, n_samples))
+    weights = compute_phase_locking_weights(
+        phases, fs, epoch_seconds=30.0, top_k=3
+    )
+
+    assert weights.shape == (6, 2)
+    assert np.all((weights == 0) | (weights == 1))
+    assert np.allclose(weights.sum(axis=0), 3.0)
+    # Selected channels are identical across epochs (global selection).
+    assert np.array_equal(weights[:, 0], weights[:, 1])
+
+
+def test_top_k_mode_detects_coherence_difference() -> None:
+    """Global top-k PLV adaptive scores separate coherent from incoherent epochs."""
+    fs = 100.0
+    n_samples = int(60 * fs)
+    epoch_samples = int(30 * fs)
+    t = np.arange(n_samples) / fs
+    rng = np.random.default_rng(9)
+
+    # First epoch: four perfectly coherent channels.
+    base = np.sin(2 * np.pi * 2.0 * t)
+    epoch1 = np.tile(base[:epoch_samples], (4, 1)) + 0.01 * rng.standard_normal(
+        (4, epoch_samples)
+    )
+    # Second epoch: independent phase noise (low coherence).
+    epoch2 = np.zeros((4, epoch_samples))
+    for c in range(4):
+        phase_shift = rng.uniform(0, 2 * np.pi)
+        epoch2[c, :] = np.sin(2 * np.pi * 2.0 * t[:epoch_samples] + phase_shift)
+    epoch2 += 0.01 * rng.standard_normal((4, epoch_samples))
+
+    data = np.hstack([epoch1, epoch2]).astype(np.float64)
+    scores, weights = compute_adaptive_kuramoto_scores(
+        data,
+        fs,
+        epoch_seconds=30.0,
+        weight_mode="plv_mean_field",
+        top_k=2,
+    )
+
+    assert scores.shape == (2,)
+    assert weights.shape == (4, 2)
+    assert np.allclose(weights.sum(axis=0), 2.0)
+    assert scores[0] > scores[1]
+    assert 0.0 <= scores[0] <= 1.0
+    assert 0.0 <= scores[1] <= 1.0
+
+
+def test_top_k_invalid_value_raises() -> None:
+    """top_k outside [1, n_channels] is rejected."""
+    fs = 100.0
+    n_samples = int(60 * fs)
+    rng = np.random.default_rng(10)
+    data = rng.standard_normal((4, n_samples))
+
+    with pytest.raises(ValueError, match="top_k must be between"):
+        compute_adaptive_kuramoto_scores(
+            data,
+            fs,
+            epoch_seconds=30.0,
+            weight_mode="plv_mean_field",
+            top_k=0,
+        )
+    with pytest.raises(ValueError, match="top_k must be between"):
+        compute_adaptive_kuramoto_scores(
+            data,
+            fs,
+            epoch_seconds=30.0,
+            weight_mode="plv_mean_field",
+            top_k=5,
+        )
+
+
+def test_top_k_only_with_plv_mode() -> None:
+    """top_k is rejected for snr_kurtosis weight mode."""
+    fs = 100.0
+    n_samples = int(60 * fs)
+    rng = np.random.default_rng(11)
+    data = rng.standard_normal((4, n_samples))
+
+    with pytest.raises(ValueError, match="top_k is only supported"):
+        compute_adaptive_kuramoto_scores(
+            data,
+            fs,
+            epoch_seconds=30.0,
+            weight_mode="snr_kurtosis",
+            top_k=2,
+        )

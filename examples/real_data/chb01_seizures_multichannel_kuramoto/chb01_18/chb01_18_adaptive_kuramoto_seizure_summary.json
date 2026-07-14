@@ -14,8 +14,8 @@
   "permutation_seed": 42,
   "n_permutations": 10000,
   "corpus_id": "chbmit-chb01_18-preictal-vs-interictal",
-  "captured_at": "2026-07-14T12:54:03Z",
-  "audit_content_hash": "ca881a2ef8f00da5f957f30311aaff9c03e07ece44a82f2aff8a85fd124eed85",
+  "captured_at": "2026-07-14T15:11:17Z",
+  "audit_content_hash": "151dc4fe34a384c85326cf3b05edcd61ecc318ef77f6508e876f62f714ea1360",
   "auc": 0.945,
   "preictal_score_mean": 0.34208,
   "interictal_score_mean": 0.304754

@@ -11,18 +11,25 @@
 Loads the public CHB-MIT Scalp EEG recordings for subject ``chb01`` from a local
 ``DATA_DIR`` (the raw EDFs are citation-only and are not redistributed),
 extracts a 5-minute pre-ictal window before each annotated seizure, and pits it
-against seizure-free interictal recordings. Two detectors are compared:
+against seizure-free interictal recordings. The following detectors are
+compared:
 
 1. **mean_kuramoto** — unweighted mean phase coherence across all 23 bipolar
    channels (the textbook Kuramoto order parameter).
 2. **adaptive_kuramoto** — quality-weighted phase coherence where each channel's
    contribution is driven by band-limited SNR penalised by excess kurtosis,
    pooled robustly with the median.
+3. **plv_kuramoto** — phase-locking-value weighted phase coherence, rewarding
+   channels that track the instantaneous mean field.
+4. **topk15_plv_kuramoto** — unweighted mean phase coherence over the 15
+   channels with the highest mean PLV to the mean field (global top-k
+   selection).
 
-Both detectors are run in two bands: delta (0.5–4 Hz) and the seizure dynamics
-band (4–30 Hz). Every detector is audited at a matched 10 % false-alarm rate,
-with a label-permutation significance test (10 000 relabellings, seed 42), and
-the AUC is reported as a second separation metric.
+All four detectors are run in the seizure dynamics band (4–30 Hz); the first
+two are also run in the delta band (0.5–4 Hz). Every detector is audited at a
+matched 10 % false-alarm rate, with a label-permutation significance test
+(10 000 relabellings, seed 42) and the AUC is reported as a second separation
+metric.
 
 Usage:
     python bench/chbmit_multichannel_kuramoto.py \
@@ -216,6 +223,7 @@ def _adaptive_kuramoto_scores(
     band_hz: tuple[float, float],
     epoch_seconds: float = EPOCH_SECONDS,
     weight_mode: str = "snr_kurtosis",
+    top_k: int | None = None,
 ) -> FloatArray:
     """Return per-epoch adaptive quality-weighted Kuramoto scores."""
     scores, _ = compute_adaptive_kuramoto_scores(
@@ -224,6 +232,7 @@ def _adaptive_kuramoto_scores(
         band_hz=band_hz,
         epoch_seconds=epoch_seconds,
         weight_mode=weight_mode,
+        top_k=top_k,
         score_precision=SCORE_PRECISION,
     )
     return scores
@@ -234,10 +243,16 @@ def _plv_kuramoto_scores(
     fs: float,
     band_hz: tuple[float, float],
     epoch_seconds: float = EPOCH_SECONDS,
+    top_k: int | None = None,
 ) -> FloatArray:
     """Return per-epoch PLV-to-mean-field weighted Kuramoto scores."""
     return _adaptive_kuramoto_scores(
-        data, fs, band_hz, epoch_seconds, weight_mode="plv_mean_field"
+        data,
+        fs,
+        band_hz,
+        epoch_seconds,
+        weight_mode="plv_mean_field",
+        top_k=top_k,
     )
 
 
@@ -373,6 +388,7 @@ def main(data_dir: Path, output_dir: Path) -> None:
         for kind in ("mean", "adaptive")
     }
     null_score_batches["plv_kuramoto_seizure"] = []
+    null_score_batches["topk15_plv_kuramoto_seizure"] = []
     for fname in INTERICTAL_FILES:
         path = data_dir / fname
         if not path.exists():
@@ -389,6 +405,11 @@ def main(data_dir: Path, output_dir: Path) -> None:
             )
         null_score_batches["plv_kuramoto_seizure"].append(
             _plv_kuramoto_scores(data, fs, BANDS["seizure"], EPOCH_SECONDS)
+        )
+        null_score_batches["topk15_plv_kuramoto_seizure"].append(
+            _plv_kuramoto_scores(
+                data, fs, BANDS["seizure"], EPOCH_SECONDS, top_k=15
+            )
         )
         print(
             f"  {fname}: {data.shape[0]} channels, {data.shape[1] / fs:.0f}s "
@@ -465,40 +486,45 @@ def main(data_dir: Path, output_dir: Path) -> None:
                     summary=summary,
                 )
 
-        # Extra PLV-to-mean-field weighted variant for the seizure band.
-        det_name = "plv_kuramoto_seizure"
-        full_scores = _plv_kuramoto_scores(
-            data, fs, BANDS["seizure"], EPOCH_SECONDS
-        )
-        event_scores = full_scores[event_indices]
-        combined_scores = np.concatenate([event_scores, null_scores[det_name]])
-        combined_labels = ["preictal"] * len(event_scores) + [
-            "interictal"
-        ] * len(null_scores[det_name])
-        audit_record, summary = run_audit(
-            scores=combined_scores,
-            labels=combined_labels,
-            detector_name=det_name,
-            corpus_id=f"chbmit-{Path(fname).stem}-preictal-vs-interictal",
-            config=config,
-            event_label="preictal",
-            null_label="interictal",
-        )
-        summary["auc"] = round(
-            _compute_auc(event_scores, null_scores[det_name]), 6
-        )
-        summary["preictal_score_mean"] = round(float(event_scores.mean()), 6)
-        summary["interictal_score_mean"] = round(
-            float(null_scores[det_name].mean()), 6
-        )
-        per_detector[det_name] = summary
-        write_audit_files(
-            output_dir=rec_out,
-            prefix=Path(fname).stem,
-            detector_name=det_name,
-            audit_record=audit_record,
-            summary=summary,
-        )
+        # Extra PLV-to-mean-field weighted variants for the seizure band.
+        for det_name, top_k in (
+            ("plv_kuramoto_seizure", None),
+            ("topk15_plv_kuramoto_seizure", 15),
+        ):
+            full_scores = _plv_kuramoto_scores(
+                data, fs, BANDS["seizure"], EPOCH_SECONDS, top_k=top_k
+            )
+            event_scores = full_scores[event_indices]
+            combined_scores = np.concatenate(
+                [event_scores, null_scores[det_name]]
+            )
+            combined_labels = ["preictal"] * len(event_scores) + [
+                "interictal"
+            ] * len(null_scores[det_name])
+            audit_record, summary = run_audit(
+                scores=combined_scores,
+                labels=combined_labels,
+                detector_name=det_name,
+                corpus_id=f"chbmit-{Path(fname).stem}-preictal-vs-interictal",
+                config=config,
+                event_label="preictal",
+                null_label="interictal",
+            )
+            summary["auc"] = round(
+                _compute_auc(event_scores, null_scores[det_name]), 6
+            )
+            summary["preictal_score_mean"] = round(float(event_scores.mean()), 6)
+            summary["interictal_score_mean"] = round(
+                float(null_scores[det_name].mean()), 6
+            )
+            per_detector[det_name] = summary
+            write_audit_files(
+                output_dir=rec_out,
+                prefix=Path(fname).stem,
+                detector_name=det_name,
+                audit_record=audit_record,
+                summary=summary,
+            )
 
         records.append(
             {

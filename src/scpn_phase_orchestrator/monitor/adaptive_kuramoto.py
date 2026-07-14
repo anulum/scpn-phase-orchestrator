@@ -158,6 +158,7 @@ def compute_phase_locking_weights(
     phases: FloatArray,
     fs: float,
     epoch_seconds: float = 30.0,
+    top_k: int | None = None,
 ) -> FloatArray:
     """Return per-channel, per-epoch weights based on PLV to the mean field.
 
@@ -168,8 +169,7 @@ def compute_phase_locking_weights(
         PLV_c = | < exp(i (phi_c(t) - psi(t))) >_t |
 
     Channels that consistently track the group phase receive higher weight;
-    noisy or independent channels are down-weighted. Weights are normalised per
-    epoch to sum to one.
+    noisy or independent channels are down-weighted.
 
     Parameters
     ----------
@@ -179,6 +179,11 @@ def compute_phase_locking_weights(
         Sampling rate in hertz.
     epoch_seconds
         Epoch length in seconds.
+    top_k
+        If ``None``, returns per-epoch normalised PLV weights (sum to one per
+        epoch). If an integer ``k``, selects the ``k`` channels with the highest
+        mean PLV across epochs and returns binary selection weights (``1`` for
+        selected channels, ``0`` otherwise). This is the "global top-k" variant.
 
     Returns
     -------
@@ -197,6 +202,17 @@ def compute_phase_locking_weights(
     mean_field = np.angle(np.exp(1j * phases_epochs).mean(axis=0))
     aligned = np.exp(1j * (phases_epochs - mean_field[np.newaxis, :, :]))
     plv = np.abs(aligned.mean(axis=2))
+
+    if top_k is not None:
+        if not 1 <= top_k <= n_channels:
+            raise ValueError(
+                f"top_k must be between 1 and {n_channels}, got {top_k}"
+            )
+        mean_plv = plv.mean(axis=1)
+        selected = np.argsort(mean_plv)[-top_k:]
+        weights = np.zeros_like(plv)
+        weights[selected, :] = 1.0
+        return cast(FloatArray, weights)
 
     per_epoch_sum = plv.sum(axis=0, keepdims=True)
     per_epoch_sum = np.where(per_epoch_sum == 0, 1.0, per_epoch_sum)
@@ -251,6 +267,7 @@ def compute_adaptive_kuramoto_scores(
     epoch_seconds: float = 30.0,
     kurtosis_penalty_scale: float = 0.2,
     weight_mode: str = "snr_kurtosis",
+    top_k: int | None = None,
     score_precision: int = 6,
 ) -> tuple[FloatArray, FloatArray]:
     """Return per-epoch adaptive Kuramoto scores and channel weights.
@@ -272,6 +289,10 @@ def compute_adaptive_kuramoto_scores(
         Weighting strategy. ``"snr_kurtosis"`` uses band-limited SNR penalised
         by excess kurtosis; ``"plv_mean_field"`` uses each channel's
         phase-locking value to the instantaneous mean field.
+    top_k
+        Only used when ``weight_mode="plv_mean_field"``. If set, selects the
+        ``top_k`` channels with the highest mean PLV across epochs and computes
+        the unweighted mean-R over those channels (global top-k selection).
     score_precision
         Decimal places to which scores are rounded.
 
@@ -294,6 +315,10 @@ def compute_adaptive_kuramoto_scores(
     phases = np.angle(hilbert(filtered, axis=1))
 
     if weight_mode == "snr_kurtosis":
+        if top_k is not None:
+            raise ValueError(
+                "top_k is only supported with weight_mode='plv_mean_field'"
+            )
         weights = compute_channel_quality_weights(
             data[:, : n_epochs * epoch_len],
             fs,
@@ -302,7 +327,9 @@ def compute_adaptive_kuramoto_scores(
             kurtosis_penalty_scale=kurtosis_penalty_scale,
         )
     elif weight_mode == "plv_mean_field":
-        weights = compute_phase_locking_weights(phases, fs, epoch_seconds=epoch_seconds)
+        weights = compute_phase_locking_weights(
+            phases, fs, epoch_seconds=epoch_seconds, top_k=top_k
+        )
     else:
         raise ValueError(f"unknown weight_mode: {weight_mode!r}")
 

@@ -12,42 +12,45 @@ Contact: www.anulum.li | protoscience@anulum.li
 This directory holds an honest detector audit that asks: on real scalp EEG from
 subject `chb01` of the CHB-MIT database, does a multi-channel Kuramoto order
 parameter separate the 5-minute pre-ictal window from seizure-free interictal
-epochs? And does the new **adaptive quality-weighted** variant improve over the
-textbook mean-R Kuramoto?
+epochs? And can an adaptive or semi-adaptive channel-selection variant improve
+over the textbook mean-R Kuramoto?
 
 ## The result, stated honestly
 
-In the **4–30 Hz seizure dynamics band**, the simple mean-R Kuramoto detector
-across all 23 bipolar channels is the strongest performer:
+In the **4–30 Hz seizure dynamics band**, a new **global top-k PLV** detector is
+the strongest performer. It selects the 15 channels with the highest mean
+phase-locking value to the mean field and computes the unweighted mean-R over
+that subset:
 
 | Detector | Mean detection rate @ 10 % FA | Mean AUC | Geo-mean p-value | Fraction beating chance |
 |----------|------------------------------:|---------:|-----------------:|------------------------:|
 | `mean_kuramoto_delta` (0.5–4 Hz) | 0.016 | 0.379 | 0.9314 | 0.00 |
 | `adaptive_kuramoto_delta` (0.5–4 Hz) | 0.063 | 0.402 | 0.7052 | 0.00 |
-| `mean_kuramoto_seizure` (4–30 Hz) | **0.698** | **0.908** | **0.0008** | **0.86** |
+| `mean_kuramoto_seizure` (4–30 Hz) | 0.698 | 0.908 | 0.0008 | 0.86 |
 | `adaptive_kuramoto_seizure` (4–30 Hz) | 0.429 | 0.797 | 0.0118 | 0.57 |
 | `plv_kuramoto_seizure` (4–30 Hz) | 0.603 | 0.840 | 0.0035 | 0.57 |
+| `topk15_plv_kuramoto_seizure` (4–30 Hz) | **0.810** | **0.940** | **0.0003** | **1.00** |
 
-The mean-R detector alarms on 6 / 7 seizures at the matched false-alarm rate
-(calibrated to exactly 10 % on 600 interictal epochs). The original adaptive
-quality-weighted variant (SNR + kurtosis) alarms on 5 / 7 seizures but at a
-lower mean detection rate and AUC. A new **PLV-to-mean-field** weighting
-strategy improves the adaptive variant (AUC 0.797 → 0.840, DR 0.429 → 0.603),
-but it still does not beat the simple mean-R detector on this corpus.
+The top-k PLV detector alarms on **7 / 7** seizures at the matched false-alarm
+rate (calibrated to exactly 10 % on 600 interictal epochs), improving both mean
+detection rate and AUC over the simple mean-R detector. The original adaptive
+quality-weighted variant (SNR + kurtosis) and the soft PLV-to-mean-field
+weighting are inferior on this corpus; the gain comes from *hard* global
+selection of the most phase-coherent channels.
 
-The delta-band variants are essentially uninformative for pre-ictal detection
-here.
+The delta-band variants remain uninformative for pre-ictal detection here.
 
 ## What this means for the codebase
 
-The adaptive Kuramoto module is *not* universally better than the simple mean-R
-variant. The honest recommendation from this audit is:
+The adaptive Kuramoto module now has a variant that beats the simple mean-R
+detector on this corpus:
 
-- Keep both variants and add the PLV-to-mean-field weighting mode.
-- For seizure-EEG early-warning tasks in the 4–30 Hz band, prefer the simple
-  mean-R Kuramoto until a weighting strategy is found that beats it.
-- The SNR/kurtosis quality weight is not suitable here; the PLV weighting is a
-  step forward but still leaves a gap to the unweighted mean.
+- Prefer `topk15_plv_kuramoto_seizure` for seizure-EEG early-warning tasks in
+  the 4–30 Hz band on `chb01`.
+- The SNR/kurtosis quality weight and soft PLV weighting are not suitable here;
+  the improvement comes from top-k global channel selection driven by mean PLV.
+- Treat all weighting strategies as domain-specific hyperparameters, not
+  default upgrades.
 
 ## Methodology
 
@@ -70,6 +73,9 @@ variant. The honest recommendation from this audit is:
   - `plv_kuramoto`: per-channel phase-locking value to the instantaneous mean
     field used as weights, weighted Kuramoto order parameter, epoch score =
     median of `R(t)`.
+  - `topk15_plv_kuramoto`: global selection of the 15 channels with the highest
+    mean PLV to the mean field, then unweighted mean-R over that subset, epoch
+    score = mean of `R(t)`.
 - **Audit protocol.** Matched false-alarm rate = 10 %, calibrated on the pooled
   null epochs. Significance tested with 10 000 label permutations (seed 42).
   Every detector's scores, thresholds, p-values, and AUCs are sealed into
