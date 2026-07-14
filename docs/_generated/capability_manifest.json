@@ -1,18 +1,18 @@
 {
   "SPDX-License-Identifier": "AGPL-3.0-or-later",
   "counts": {
-    "core_engine_modules": 324,
+    "core_engine_modules": 325,
     "domainpacks": 36,
     "github_workflows": 12,
     "integration_modules": 27,
     "optional_extras": 23,
     "public_api_exports": 24,
-    "public_documentation_pages": 227,
-    "python_package_modules": 708,
+    "public_documentation_pages": 229,
+    "python_package_modules": 709,
     "research_experimental_modules": 201,
     "runtime_serving_modules": 153,
     "rust_kernel_files": 97,
-    "test_files": 843
+    "test_files": 844
   },
   "documentation": {
     "public_pages": [
@@ -134,6 +134,7 @@
       "docs/reference/api/index.md",
       "docs/reference/api/meta.md",
       "docs/reference/api/monitor.md",
+      "docs/reference/api/monitor_adaptive_kuramoto.md",
       "docs/reference/api/monitor_chimera.md",
       "docs/reference/api/monitor_dimension.md",
       "docs/reference/api/monitor_embedding.md",
@@ -229,6 +230,7 @@
       "docs/studies/cap_kuramoto_diagnostic.md",
       "docs/studies/cap_kuramoto_variants.md",
       "docs/studies/cap_multichannel_n3_vs_wake.md",
+      "docs/studies/chbmit_multichannel_kuramoto.md",
       "docs/studies/detector_ranking_report.md",
       "docs/studies/early_warning_matched_false_alarm.md",
       "docs/studies/regime_adaptive_ensemble.md",
@@ -484,6 +486,7 @@
       "src/scpn_phase_orchestrator/monitor/_winding_go.py",
       "src/scpn_phase_orchestrator/monitor/_winding_julia.py",
       "src/scpn_phase_orchestrator/monitor/_winding_mojo.py",
+      "src/scpn_phase_orchestrator/monitor/adaptive_kuramoto.py",
       "src/scpn_phase_orchestrator/monitor/boundaries.py",
       "src/scpn_phase_orchestrator/monitor/chimera.py",
       "src/scpn_phase_orchestrator/monitor/coherence.py",
@@ -1447,6 +1450,7 @@
     "src/scpn_phase_orchestrator/monitor/_winding_go.py",
     "src/scpn_phase_orchestrator/monitor/_winding_julia.py",
     "src/scpn_phase_orchestrator/monitor/_winding_mojo.py",
+    "src/scpn_phase_orchestrator/monitor/adaptive_kuramoto.py",
     "src/scpn_phase_orchestrator/monitor/boundaries.py",
     "src/scpn_phase_orchestrator/monitor/chimera.py",
     "src/scpn_phase_orchestrator/monitor/coherence.py",
@@ -1837,6 +1841,7 @@
       "tests/test_adapters.py",
       "tests/test_adapters_network_validation.py",
       "tests/test_adapters_slice_c.py",
+      "tests/test_adaptive_kuramoto.py",
       "tests/test_adjoint.py",
       "tests/test_afdb_af_evidence.py",
       "tests/test_analytic_phase_pipeline.py",

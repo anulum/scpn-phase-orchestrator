@@ -267,6 +267,7 @@ nav:
       - "Diagnostic Study: CAP Kuramoto Detector": studies/cap_kuramoto_diagnostic.md
       - "Detector Panel: CAP Kuramoto Variants": studies/cap_kuramoto_variants.md
       - "Transfer Test: Sleep-EDF Kuramoto Variants": studies/sleepedf_kuramoto_variants.md
+      - "Real-Data Case Study: CHB-MIT Multi-Channel Kuramoto Pre-Ictal": studies/chbmit_multichannel_kuramoto.md
       - "Ensemble: Regime-Adaptive Cross-Corpus Test": studies/regime_adaptive_ensemble.md
       - "Harness Demo: Synthetic Critical-Slowing-Down Audit": studies/synthetic_honest_audit_demo.md
       - "Meta-Analysis: Detector Ranking & Refinement Backlog": studies/detector_ranking_report.md
