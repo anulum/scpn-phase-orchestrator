@@ -18,7 +18,7 @@ behaviour before production or benchmark runs.
 | --- | --- | --- | --- |
 | Python-only | `pip install scpn-phase-orchestrator` | `python -m scpn_phase_orchestrator.runtime.cli --help` | Rust/JAX unavailable paths fall back to Python where implemented. |
 | Rust FFI | `pip install scpn-phase-orchestrator` + built `spo_kernel` | `python -c "import spo_kernel; print('spo_kernel OK')"` | If `spo_kernel` missing, modules use Python fallback (same public API). |
-| JAX | `pip install scpn-phase-orchestrator[nn]` | `python -c "from scpn_phase_orchestrator.nn import HAS_JAX; print(HAS_JAX)"` | JAX-specific modules require JAX; they do not silently switch semantics. |
+| JAX | `pip install scpn-phase-orchestrator[nn]` or `pip install scpn-phase-orchestrator[jax]` | `python -c "from scpn_phase_orchestrator.nn import HAS_JAX; print(HAS_JAX)"` | JAX-specific modules require JAX; they do not silently switch semantics. |
 | QueueWaves | `pip install scpn-phase-orchestrator[queuewaves]` | `python -c "import httpx; print('httpx OK')"` | Collector/server components requiring `httpx` stay unavailable if missing. |
 | Full extras | `pip install scpn-phase-orchestrator[full]` | `python -m pytest -q tests/test_backend_module_imports.py` | Missing optional toolchains demote affected backends to fallback chain. |
 
@@ -30,7 +30,7 @@ packages that are **not** on public PyPI, so they do not resolve from a bare
 
 | Extra | Requires | Availability |
 | --- | --- | --- |
-| `rust` | `spo-kernel` | Not on public PyPI. `spo-kernel` is this project's own Rust acceleration; build it from the in-repo `spo-kernel/` workspace with maturin, or obtain the commercial wheel. |
+| `rust` | `spo-kernel` | Not on public PyPI. `spo-kernel` is this project's own Rust acceleration; build it from the in-repo `spo-kernel/` workspace with `python tools/build_spo_kernel.py`, or obtain the commercial wheel. |
 | `fusion` | `scpn-fusion-core` | Not on public PyPI. A separate product, obtained from its own distribution channel. |
 | `scpn-all` | the two above, plus `scpn-quantum-control` and `scpn-control` | Cannot resolve from public PyPI while `spo-kernel` and `scpn-fusion-core` are unavailable, even though its other two members are published. |
 
