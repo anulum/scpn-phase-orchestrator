@@ -1,0 +1,22 @@
+{
+  "detector_name": "adaptive_kuramoto_seizure",
+  "n_events": 9,
+  "n_nulls": 600,
+  "score_mean_events": 0.325585,
+  "score_mean_nulls": 0.304754,
+  "target_false_alarm": 0.1,
+  "matched_threshold": 0.3313940000000001,
+  "achieved_false_alarm": 0.1,
+  "detection_rate": 0.4444444444444444,
+  "n_events_alarmed": 4,
+  "p_value": 0.0093990600939906,
+  "beats_chance": true,
+  "permutation_seed": 42,
+  "n_permutations": 10000,
+  "corpus_id": "chbmit-chb01_26-preictal-vs-interictal",
+  "captured_at": "2026-07-14T12:00:18Z",
+  "audit_content_hash": "c0c1fadedb686774931a4fdd249f1edb2444e4725619637a7aca488456c3fab6",
+  "auc": 0.787037,
+  "preictal_score_mean": 0.325585,
+  "interictal_score_mean": 0.304754
+}

@@ -1,0 +1,22 @@
+{
+  "detector_name": "mean_kuramoto_delta",
+  "n_events": 9,
+  "n_nulls": 600,
+  "score_mean_events": 0.350879,
+  "score_mean_nulls": 0.380418,
+  "target_false_alarm": 0.1,
+  "matched_threshold": 0.41996500000000003,
+  "achieved_false_alarm": 0.1,
+  "detection_rate": 0.0,
+  "n_events_alarmed": 0,
+  "p_value": 1.0,
+  "beats_chance": false,
+  "permutation_seed": 42,
+  "n_permutations": 10000,
+  "corpus_id": "chbmit-chb01_03-preictal-vs-interictal",
+  "captured_at": "2026-07-14T12:00:18Z",
+  "audit_content_hash": "908e6f1776951005e160a908fed1b06b3ef20b72ec536744c133275b38997dda",
+  "auc": 0.218889,
+  "preictal_score_mean": 0.350879,
+  "interictal_score_mean": 0.380418
+}
