@@ -118,6 +118,11 @@ def compute_channel_quality_weights(
     -------
     FloatArray
         Weights of shape ``(n_channels, n_epochs)``.
+
+    Raises
+    ------
+    ValueError
+        If the signal is shorter than one epoch.
     """
     n_channels, n_samples = data.shape
     epoch_len = int(epoch_seconds * fs)
@@ -189,6 +194,12 @@ def compute_phase_locking_weights(
     -------
     FloatArray
         Weights of shape ``(n_channels, n_epochs)``.
+
+    Raises
+    ------
+    ValueError
+        If the signal is shorter than one epoch, or ``top_k`` is outside the
+        range ``[1, n_channels]``.
     """
     n_channels, n_samples = phases.shape
     epoch_len = int(epoch_seconds * fs)
@@ -299,6 +310,13 @@ def compute_adaptive_kuramoto_scores(
     tuple[FloatArray, FloatArray]
         ``(scores, weights)`` where ``scores`` has shape ``(n_epochs,)`` and
         ``weights`` has shape ``(n_channels, n_epochs)``.
+
+    Raises
+    ------
+    ValueError
+        If fewer than two channels are supplied, the signal is shorter than one
+        epoch, ``top_k`` is combined with ``weight_mode="snr_kurtosis"``, or
+        ``weight_mode`` is not a recognised strategy.
     """
     n_channels, n_samples = data.shape
     epoch_len = int(epoch_seconds * fs)

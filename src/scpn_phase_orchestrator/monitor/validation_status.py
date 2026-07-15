@@ -247,6 +247,21 @@ _RECORDS: tuple[MonitorValidationRecord, ...] = (
     ),
     # --- Exploratory diagnostics: no external- or synthetic-reference record ---
     MonitorValidationRecord(
+        monitor="adaptive_kuramoto",
+        display_name="Adaptive multi-channel Kuramoto detector",
+        status=MonitorValidationStatus.RESEARCH,
+        basis=(
+            "beats the mean-R baseline within CHB-MIT chb01 but a "
+            "leave-one-subject-out audit (chb01-chb05) shows no cross-subject "
+            "generalisation: top-k PLV wins on 1/5 held-out subjects at a mean "
+            "out-of-sample AUC of ~0.50 (chance)"
+        ),
+        evidence=(
+            "docs/studies/chbmit_multichannel_kuramoto.md §Cross-subject "
+            "generalisation (leave-one-subject-out)"
+        ),
+    ),
+    MonitorValidationRecord(
         monitor="boundaries",
         display_name="Boundary observer",
         status=MonitorValidationStatus.RESEARCH,

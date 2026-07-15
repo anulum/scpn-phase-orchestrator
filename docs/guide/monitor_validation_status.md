@@ -28,7 +28,7 @@ structured form, so it cannot quietly overclaim.
 | **Research** | `research` | An exploratory diagnostic with **no** external- or synthetic-reference validation record. The conservative default. |
 
 Today the registry holds **2** externally-validated, **6** synthetic-only, and
-**28** research-tier monitors.
+**29** research-tier monitors.
 
 ## Externally validated (real-data evidence)
 
