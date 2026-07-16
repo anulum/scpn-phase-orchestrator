@@ -19,9 +19,15 @@ from typing import TypeAlias, cast
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator.autotune.discovered_dynamics import (
+    DiscoveredDynamics,
+    discovered_dynamics_from_block,
+)
 from scpn_phase_orchestrator.autotune.sindy import PhaseSINDy
 from scpn_phase_orchestrator.autotune.sindy_confidence import (
+    DEFAULT_SINDY_CONFIDENCE_POLICY,
     SindyConfidence,
+    SindyConfidencePolicy,
     classify_phase_sindy_block,
 )
 from scpn_phase_orchestrator.studio.workflow import JsonValue
@@ -166,6 +172,26 @@ class TimeSeriesDiscoveryReport:
             tier and can never be ``externally_validated``.
         """
         return classify_phase_sindy_block(self.phase_sindy)
+
+    def discovered_dynamics(
+        self,
+        *,
+        policy: SindyConfidencePolicy = DEFAULT_SINDY_CONFIDENCE_POLICY,
+    ) -> DiscoveredDynamics:
+        """Return the operator-facing discovered-dynamics record.
+
+        Parameters
+        ----------
+        policy : SindyConfidencePolicy, optional
+            Thresholds separating a credible discovery from weak evidence.
+
+        Returns
+        -------
+        DiscoveredDynamics
+            The recovered equations and coupling edges paired with the honest
+            confidence verdict and a provenance hash.
+        """
+        return discovered_dynamics_from_block(self.phase_sindy, policy=policy)
 
     def to_audit_record(self) -> dict[str, JsonValue]:
         """Return the complete JSON-safe discovery evidence record.
