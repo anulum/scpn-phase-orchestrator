@@ -17,6 +17,7 @@ otel = "otel"      # OpenTelemetry
 pac = "pac"        # Phase-Amplitude Coupling
 plv = "plv"        # Phase-Locking Value
 isi = "isi"        # Inter-Spike Interval
+iit = "iit"        # Integrated Information Theory
 rng = "rng"        # Random Number Generator
 psd = "psd"        # Positive Semi-Definite / Power Spectral Density
 ND = "ND"          # NDArray identifier fragment
