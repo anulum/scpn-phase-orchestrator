@@ -35,6 +35,10 @@ from scpn_phase_orchestrator.autotune.discovery import (
     discover_time_series_structure,
     infer_sample_rate_from_time_column,
 )
+from scpn_phase_orchestrator.autotune.sindy_options import (
+    DEFAULT_SINDY_OPTIONS,
+    SindyOptions,
+)
 from scpn_phase_orchestrator.binding import load_binding_spec, validate_binding_spec
 from scpn_phase_orchestrator.exceptions import BindingError
 from scpn_phase_orchestrator.studio.workflow import (
@@ -70,6 +74,7 @@ def propose_binding_from_time_series_csv(
     *,
     sample_rate_hz: float | None,
     project_name: str,
+    sindy_options: SindyOptions | None = None,
 ) -> StudioProjectState:
     """Propose a review-only binding for a tabular time-series replay.
 
@@ -81,6 +86,9 @@ def propose_binding_from_time_series_csv(
         Sampling rate in Hz.
     project_name : str
         Name of the project.
+    sindy_options : SindyOptions | None
+        Operator options for phase-SINDy discovery — the sparsity threshold and
+        the confidence policy. Defaults to the conservative shared options.
 
     Returns
     -------
@@ -92,6 +100,7 @@ def propose_binding_from_time_series_csv(
     ValueError
         If the inputs are invalid or inconsistent.
     """
+    options = sindy_options or DEFAULT_SINDY_OPTIONS
     payload = csv_text.encode("utf-8")
     reader = csv.DictReader(io.StringIO(csv_text))
     if not reader.fieldnames:
@@ -121,6 +130,10 @@ def propose_binding_from_time_series_csv(
         signal_table,
         columns=channels,
         sample_period_s=sample_period_s,
+        config=options.to_discovery_config(),
+    )
+    discovered_dynamics = discovery.discovered_dynamics(
+        policy=options.confidence_policy,
     )
     family_specs = _families_for_time_series(
         channels=channels,
@@ -162,6 +175,16 @@ def propose_binding_from_time_series_csv(
         "extractor_parameter_proposals": extractor_parameter_proposals,
         "initial_coupling_proposal": initial_coupling_proposal,
         "discovery_evidence": discovery.to_audit_record(),
+        "discovered_dynamics": discovered_dynamics.to_audit_record(),
+        "sindy_options": {
+            "phase_sindy_threshold": options.phase_sindy_threshold,
+            "confidence_policy": {
+                "min_r_squared": options.confidence_policy.min_r_squared,
+                "min_samples_per_parameter": (
+                    options.confidence_policy.min_samples_per_parameter
+                ),
+            },
+        },
         "validator": "load_binding_spec+validate_binding_spec",
     }
     source = ImportedSourceSummary.from_payload(

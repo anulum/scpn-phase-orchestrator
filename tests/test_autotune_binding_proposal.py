@@ -133,6 +133,86 @@ def test_time_series_csv_records_phase_sindy_evidence() -> None:
     assert "phase_sindy_sparsity" in proposal.binding.confidence_factors
 
 
+def _planted_kuramoto_csv() -> str:
+    """Return a CSV of a planted two-node Kuramoto trajectory (a simulation)."""
+    omega = (1.0, 1.3)
+    coupling = 0.8
+    dt = 0.02
+    state = np.asarray([0.0, 0.4], dtype=np.float64)
+    lines = ["theta_0,theta_1"]
+    for _ in range(260):
+        lines.append(f"{state[0]:.6f},{state[1]:.6f}")
+        drift = np.asarray(
+            [
+                omega[0] + coupling * np.sin(state[1] - state[0]),
+                omega[1] + coupling * np.sin(state[0] - state[1]),
+            ]
+        )
+        state = state + dt * drift
+    return "\n".join(lines)
+
+
+def test_time_series_csv_surfaces_discovered_dynamics_in_provenance() -> None:
+    from scpn_phase_orchestrator.autotune.sindy_options import SindyOptions
+
+    proposal = propose_binding_from_time_series_csv(
+        _planted_kuramoto_csv(),
+        sample_rate_hz=50.0,
+        project_name="kuramoto_replay",
+        sindy_options=SindyOptions(phase_sindy_threshold=0.05),
+    )
+    provenance = proposal.binding.provenance
+
+    record = provenance["discovered_dynamics"]
+    assert record["confidence"]["posture"] == "discovered"
+    assert record["confidence"]["tier"] == "partial"
+    # A self-fit can never be surfaced as externally validated.
+    assert record["confidence"]["tier"] != "externally_validated"
+    assert len(record["content_hash"]) == 64
+    assert record["equations"]
+    assert record["coupling_edges"]
+
+    options_record = provenance["sindy_options"]
+    assert options_record["phase_sindy_threshold"] == 0.05
+    assert options_record["confidence_policy"]["min_r_squared"] == 0.9
+    assert options_record["confidence_policy"]["min_samples_per_parameter"] == 5.0
+
+
+def test_time_series_csv_confidence_policy_downgrades_discovery_posture() -> None:
+    from scpn_phase_orchestrator.autotune.sindy_confidence import SindyConfidencePolicy
+    from scpn_phase_orchestrator.autotune.sindy_options import SindyOptions
+
+    csv_text = _planted_kuramoto_csv()
+    strict = SindyOptions(
+        confidence_policy=SindyConfidencePolicy(min_samples_per_parameter=10_000.0)
+    )
+
+    proposal = propose_binding_from_time_series_csv(
+        csv_text,
+        sample_rate_hz=50.0,
+        project_name="strict_replay",
+        sindy_options=strict,
+    )
+    record = proposal.binding.provenance["discovered_dynamics"]
+
+    # An unreachable determination threshold must downgrade the very same fit.
+    assert record["confidence"]["posture"] != "discovered"
+    assert record["confidence"]["tier"] == "scaffold"
+    assert record["confidence"]["reasons"]
+
+
+def test_time_series_csv_defaults_to_shared_options_when_unspecified() -> None:
+    proposal = propose_binding_from_time_series_csv(
+        _planted_kuramoto_csv(),
+        sample_rate_hz=50.0,
+        project_name="default_options_replay",
+    )
+    options_record = proposal.binding.provenance["sindy_options"]
+
+    assert options_record["phase_sindy_threshold"] == 0.05
+    assert "discovered_dynamics" in proposal.binding.provenance
+
+
 def test_time_series_csv_yaml_binds_layer_families_in_channel_order(
     tmp_path: Path,
 ) -> None:
