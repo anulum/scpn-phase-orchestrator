@@ -27,6 +27,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from scpn_phase_orchestrator._compat import TWO_PI
+from scpn_phase_orchestrator._validation import non_negative_int
 from scpn_phase_orchestrator.actuation.mapper import ControlAction
 
 __all__ = [
@@ -212,15 +213,6 @@ def _require_positive_int(value: object, field: str) -> int:
         raise ValueError(f"{field} must be a positive integer")
     if int(value) < 1 or int(value) != value:
         raise ValueError(f"{field} must be a positive integer")
-    return int(value)
-
-
-def _require_non_negative_int(value: object, field: str) -> int:
-    """Return ``value`` as a non-negative integer, else raise ``ValueError``."""
-    if isinstance(value, bool) or not isinstance(value, Integral):
-        raise ValueError(f"{field} must be a non-negative integer")
-    if int(value) < 0 or int(value) != value:
-        raise ValueError(f"{field} must be a non-negative integer")
     return int(value)
 
 
@@ -810,7 +802,7 @@ def simulate_multiverse_counterfactual_branches(
         MultiverseBranchRecord(
             branch_id=spec.branch_id,
             branch_hash=hashes[index],
-            action_count=_require_non_negative_int(len(spec.actions), "action_count"),
+            action_count=non_negative_int(len(spec.actions), name="action_count"),
             action_labels=action_labels[index],
             topology_edge_count=topology_edge_count[index],
             topology_scale=topology_scale[index],

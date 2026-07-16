@@ -18,6 +18,8 @@ from typing import TypeAlias, cast
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._validation import non_negative_real
+
 __all__ = [
     "AutotunePolicyProposal",
     "AutotuneRewardReport",
@@ -93,7 +95,7 @@ class RewardObservation:
         object.__setattr__(
             self,
             "safety_cost",
-            _require_non_negative_finite(self.safety_cost, "safety_cost"),
+            non_negative_real(self.safety_cost, name="safety_cost"),
         )
 
 
@@ -121,9 +123,9 @@ class OfflinePolicySearchConfig:
             ("channel_weight_step", self.channel_weight_step),
             ("cross_channel_gain_step", self.cross_channel_gain_step),
         ]:
-            _require_non_negative_finite(value, label)
+            non_negative_real(value, name=label)
         if self.max_abs_knob is not None:
-            _require_non_negative_finite(self.max_abs_knob, "max_abs_knob")
+            non_negative_real(self.max_abs_knob, name="max_abs_knob")
             if self.max_abs_knob == 0.0:
                 raise ValueError("max_abs_knob must be positive when provided")
 
@@ -170,7 +172,7 @@ class RewardConfig:
             ("stl_penalty", self.stl_penalty),
             ("safety_cost_penalty", self.safety_cost_penalty),
         ]:
-            _require_non_negative_finite(value, label)
+            non_negative_real(value, name=label)
         _validate_component_order(self.component_order)
 
 
@@ -702,9 +704,9 @@ def _validate_candidate(candidate: KnobPolicyCandidate) -> None:
     ]:
         _real_knob_array(value, label)
     for weight in candidate.channel_weights:
-        _require_non_negative_finite(weight, "channel weight")
+        non_negative_real(weight, name="channel weight")
     for gain in candidate.cross_channel_gains:
-        _require_non_negative_finite(gain, "cross-channel gain")
+        non_negative_real(gain, name="cross-channel gain")
 
 
 def _mutate_knob(
@@ -819,16 +821,6 @@ def _require_probability(value: float, label: str) -> None:
         raise ValueError(f"{label} must be finite and within [0, 1]")
 
 
-def _require_non_negative_finite(value: float, label: str) -> float:
-    """Return ``value`` as a non-negative finite float, else raise."""
-    if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
-        raise ValueError(f"{label} must be finite and non-negative")
-    parsed = float(value)
-    if not np.isfinite(parsed) or parsed < 0.0:
-        raise ValueError(f"{label} must be finite and non-negative")
-    return parsed
-
-
 def _optional_finite_real(value: float | None, label: str) -> float | None:
     """Return ``None`` or a validated finite real, else raise."""
     if value is None:
@@ -845,7 +837,7 @@ def _optional_non_negative_finite(value: float | None, label: str) -> float | No
     """Return ``None`` or a validated non-negative finite float."""
     if value is None:
         return None
-    return _require_non_negative_finite(value, label)
+    return non_negative_real(value, name=label)
 
 
 def _safety_constraint_reasons(

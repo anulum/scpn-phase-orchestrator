@@ -39,6 +39,7 @@ CORE_PACKAGES = frozenset(
         "supervisor",
         "upde",
         "_compat",
+        "_validation",
     }
 )
 RUNTIME_PACKAGES = frozenset(

@@ -24,6 +24,7 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._validation import non_negative_int, non_negative_real
 from scpn_phase_orchestrator.upde.hypergraph import Hyperedge
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -59,14 +60,15 @@ class TopologyMutationPolicy:
         _require_unit_interval(self.coherence_floor, "coherence_floor")
         _require_unit_interval(self.pairwise_threshold, "pairwise_threshold")
         _require_unit_interval(self.simplex_threshold, "simplex_threshold")
-        _require_non_negative(self.max_pairwise_delta, "max_pairwise_delta")
-        _require_non_negative(self.max_simplex_strength, "max_simplex_strength")
-        _require_non_negative(self.prune_threshold, "prune_threshold")
-        _require_non_negative(
-            self.simplex_pairwise_support_floor, "simplex_pairwise_support_floor"
+        non_negative_real(self.max_pairwise_delta, name="max_pairwise_delta")
+        non_negative_real(self.max_simplex_strength, name="max_simplex_strength")
+        non_negative_real(self.prune_threshold, name="prune_threshold")
+        non_negative_real(
+            self.simplex_pairwise_support_floor,
+            name="simplex_pairwise_support_floor",
         )
         _require_positive(self.max_coupling, "max_coupling")
-        _require_non_negative_int(self.max_new_simplices, "max_new_simplices")
+        non_negative_int(self.max_new_simplices, name="max_new_simplices")
 
 
 @dataclass(frozen=True)
@@ -351,23 +353,9 @@ def _require_unit_interval(value: float, name: str) -> None:
         raise ValueError(f"{name} must be finite and in [0, 1]")
 
 
-def _require_non_negative(value: float, name: str) -> None:
-    """Return ``value`` as a non-negative finite float, else raise."""
-    if isinstance(value, bool) or not isinstance(value, Real):
-        raise ValueError(f"{name} must be finite and non-negative")
-    if not np.isfinite(value) or value < 0.0:
-        raise ValueError(f"{name} must be finite and non-negative")
-
-
 def _require_positive(value: float, name: str) -> None:
     """Return ``value`` as a strictly positive finite float, else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be finite and positive")
     if not np.isfinite(value) or value <= 0.0:
         raise ValueError(f"{name} must be finite and positive")
-
-
-def _require_non_negative_int(value: object, name: str) -> None:
-    """Return ``value`` as a non-negative integer, else raise ``ValueError``."""
-    if isinstance(value, bool) or not isinstance(value, Integral) or value < 0:
-        raise ValueError(f"{name} must be a non-negative integer")

@@ -20,6 +20,7 @@ import ssl
 from numbers import Integral
 from pathlib import Path
 
+from scpn_phase_orchestrator._validation import non_negative_int
 from scpn_phase_orchestrator.adapters._schema import (
     require_non_empty_str,
     require_tcp_port,
@@ -36,13 +37,6 @@ except ImportError:
     # type ignore: None sentinel mirrors the optional pymodbus import boundary.
     ModbusTlsClient = None  # type: ignore[assignment,misc]
     HAS_PYMODBUS = False
-
-
-def _non_negative_int(value: object, *, field: str) -> int:
-    """Return ``value`` as a non-negative integer, else raise ``ValueError``."""
-    if isinstance(value, bool) or not isinstance(value, Integral) or value < 0:
-        raise ValueError(f"{field} must be a non-negative integer")
-    return int(value)
 
 
 def _int_value(value: object, *, field: str) -> int:
@@ -145,7 +139,7 @@ class SecureModbusAdapter:
         ConnectionError
             If the read fails or the device returns a Modbus error frame.
         """
-        address = _non_negative_int(address, field="address")
+        address = non_negative_int(address, name="address")
         # type ignore: optional pymodbus client is stored as object after runtime guard.
         result = self._client.read_holding_registers(  # type: ignore[attr-defined]
             address, count=1
@@ -171,7 +165,7 @@ class SecureModbusAdapter:
         ConnectionError
             If the write fails or the device returns a Modbus error frame.
         """
-        address = _non_negative_int(address, field="address")
+        address = non_negative_int(address, name="address")
         value = _int_value(value, field="value")
         # type ignore: optional pymodbus client is stored as object after runtime guard.
         result = self._client.write_register(address, value)  # type: ignore[attr-defined]

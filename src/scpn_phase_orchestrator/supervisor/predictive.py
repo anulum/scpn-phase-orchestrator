@@ -26,6 +26,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from scpn_phase_orchestrator._compat import TWO_PI
+from scpn_phase_orchestrator._validation import non_negative_real
 from scpn_phase_orchestrator.actuation.mapper import ControlAction
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryState
 from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
@@ -180,9 +181,9 @@ class PredictiveSupervisor:
         self._n = _require_positive_int(n_oscillators, "n_oscillators")
         self._dt = _require_positive_real(dt, "dt")
         self._horizon = _require_positive_int(horizon, "horizon")
-        self._divergence_threshold = _require_non_negative_real(
+        self._divergence_threshold = non_negative_real(
             divergence_threshold,
-            "divergence_threshold",
+            name="divergence_threshold",
         )
 
     def predict(
@@ -362,11 +363,11 @@ class FEPPredictiveSupervisor:
         n_oscillators = _require_positive_int(n_oscillators, "n_oscillators")
         dt = _require_positive_real(dt, "dt")
         _require_unit_interval(target_R, "target_R")
-        _require_non_negative(free_energy_threshold, "free_energy_threshold")
-        _require_non_negative(error_threshold, "error_threshold")
-        _require_non_negative(drive_gain, "drive_gain")
-        _require_non_negative(learning_rate, "learning_rate")
-        _require_non_negative(prior_precision, "prior_precision")
+        non_negative_real(free_energy_threshold, name="free_energy_threshold")
+        non_negative_real(error_threshold, name="error_threshold")
+        non_negative_real(drive_gain, name="drive_gain")
+        non_negative_real(learning_rate, name="learning_rate")
+        non_negative_real(prior_precision, name="prior_precision")
 
         self._n = n_oscillators
         self._dt = dt
@@ -721,30 +722,12 @@ def _require_positive_real(value: object, name: str) -> float:
     return float_value
 
 
-def _require_non_negative_real(value: object, name: str) -> float:
-    """Return ``value`` as a non-negative finite real, else raise."""
-    if isinstance(value, bool) or not isinstance(value, Real):
-        raise ValueError(f"{name} must be finite and non-negative")
-    float_value = float(value)
-    if not np.isfinite(float_value) or float_value < 0.0:
-        raise ValueError(f"{name} must be finite and non-negative")
-    return float_value
-
-
 def _require_unit_interval(value: float, name: str) -> None:
     """Return ``value`` as a float in [0, 1], else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be finite and in [0, 1]")
     if not np.isfinite(value) or value < 0.0 or value > 1.0:
         raise ValueError(f"{name} must be finite and in [0, 1]")
-
-
-def _require_non_negative(value: float, name: str) -> None:
-    """Return ``value`` as a non-negative finite float, else raise."""
-    if isinstance(value, bool) or not isinstance(value, Real):
-        raise ValueError(f"{name} must be finite and non-negative")
-    if not np.isfinite(value) or value < 0.0:
-        raise ValueError(f"{name} must be finite and non-negative")
 
 
 def _validate_hierarchy_inputs(
@@ -768,9 +751,9 @@ def _validate_hierarchy_inputs(
         _require_positive_real(parent_dt, "parent_dt")
     _require_unit_interval(child_target_R, "child_target_R")
     _require_unit_interval(parent_target_R, "parent_target_R")
-    _require_non_negative(free_energy_threshold, "free_energy_threshold")
-    _require_non_negative(child_drive_gain, "child_drive_gain")
-    _require_non_negative(parent_drive_gain, "parent_drive_gain")
+    non_negative_real(free_energy_threshold, name="free_energy_threshold")
+    non_negative_real(child_drive_gain, name="child_drive_gain")
+    non_negative_real(parent_drive_gain, name="parent_drive_gain")
 
 
 def _validate_child_observation(

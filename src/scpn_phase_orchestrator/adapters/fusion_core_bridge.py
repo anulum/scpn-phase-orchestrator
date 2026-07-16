@@ -24,6 +24,8 @@ from typing import Any, TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._validation import non_negative_int
+
 __all__ = ["FusionCoreBridge"]
 
 TWO_PI = 2.0 * np.pi
@@ -68,13 +70,6 @@ def _finite_non_negative_real(value: object, *, name: str) -> float:
     if result < 0.0:
         raise ValueError(f"{name} must be non-negative")
     return result
-
-
-def _non_negative_int(value: object, *, name: str) -> int:
-    """Return ``value`` as a non-negative integer, else raise ``ValueError``."""
-    if isinstance(value, bool) or not isinstance(value, Integral) or value < 0:
-        raise ValueError(f"{name} must be a non-negative integer")
-    return int(value)
 
 
 def _finite_vector(value: object, *, name: str) -> FloatArray:
@@ -158,11 +153,11 @@ class FusionCoreBridge:
         _validate_q_bounds(q_min, q_max)
         beta_n = _finite_non_negative_real(snapshot.get("beta_n", 1.0), name="beta_n")
         tau_e = _finite_non_negative_real(snapshot.get("tau_e", 1.0), name="tau_e")
-        saw_count = _non_negative_int(
+        saw_count = non_negative_int(
             snapshot.get("sawtooth_count", 0),
             name="sawtooth_count",
         )
-        elm_count = _non_negative_int(snapshot.get("elm_count", 0), name="elm_count")
+        elm_count = non_negative_int(snapshot.get("elm_count", 0), name="elm_count")
         mhd_amp = _finite_non_negative_real(
             snapshot.get("mhd_amplitude", 0.0),
             name="mhd_amplitude",
@@ -317,11 +312,11 @@ class FusionCoreBridge:
                 kernel_result.get("tau_e", 1.0),
                 name="tau_e",
             ),
-            "sawtooth_count": _non_negative_int(
+            "sawtooth_count": non_negative_int(
                 kernel_result.get("sawtooth_count", 0),
                 name="sawtooth_count",
             ),
-            "elm_count": _non_negative_int(
+            "elm_count": non_negative_int(
                 kernel_result.get("elm_count", 0),
                 name="elm_count",
             ),

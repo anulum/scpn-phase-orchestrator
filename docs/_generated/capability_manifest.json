@@ -8,11 +8,11 @@
     "optional_extras": 23,
     "public_api_exports": 24,
     "public_documentation_pages": 229,
-    "python_package_modules": 709,
+    "python_package_modules": 710,
     "research_experimental_modules": 201,
     "runtime_serving_modules": 153,
     "rust_kernel_files": 97,
-    "test_files": 844
+    "test_files": 845
   },
   "documentation": {
     "public_pages": [
@@ -1091,6 +1091,7 @@
   "python_package_modules": [
     "src/scpn_phase_orchestrator/__init__.py",
     "src/scpn_phase_orchestrator/_compat.py",
+    "src/scpn_phase_orchestrator/_validation.py",
     "src/scpn_phase_orchestrator/actuation/__init__.py",
     "src/scpn_phase_orchestrator/actuation/_qp.py",
     "src/scpn_phase_orchestrator/actuation/_qp_admm.py",
@@ -2646,6 +2647,7 @@
       "tests/test_upde_run_stability.py",
       "tests/test_upde_time_varying_omega.py",
       "tests/test_upde_webgpu_backend.py",
+      "tests/test_validation.py",
       "tests/test_visualization.py",
       "tests/test_viz_streamer.py",
       "tests/test_wasm_playground.py",

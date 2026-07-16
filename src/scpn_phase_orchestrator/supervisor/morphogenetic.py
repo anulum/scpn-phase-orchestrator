@@ -25,6 +25,8 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._validation import non_negative_real
+
 FloatArray: TypeAlias = NDArray[np.float64]
 
 __all__ = [
@@ -55,8 +57,8 @@ class MorphogeneticFieldPolicy:
         _require_unit_interval(self.shrink_rate, "shrink_rate")
         _require_unit_interval(self.diffusion_rate, "diffusion_rate")
         _require_unit_interval(self.coherence_target, "coherence_target")
-        _require_non_negative(self.max_delta, "max_delta")
-        _require_non_negative(self.max_coupling, "max_coupling")
+        non_negative_real(self.max_delta, name="max_delta")
+        non_negative_real(self.max_coupling, name="max_coupling")
 
 
 @dataclass(frozen=True)
@@ -555,17 +557,6 @@ def _require_unit_interval(value: float, name: str) -> None:
         or value > 1.0
     ):
         raise ValueError(f"{name} must be finite and in [0, 1]")
-
-
-def _require_non_negative(value: float, name: str) -> None:
-    """Return ``value`` as a non-negative finite float, else raise."""
-    if (
-        isinstance(value, (bool, np.bool_))
-        or not isinstance(value, Real)
-        or not np.isfinite(value)
-        or value < 0.0
-    ):
-        raise ValueError(f"{name} must be finite and non-negative")
 
 
 def _require_non_empty(value: str, name: str) -> None:
