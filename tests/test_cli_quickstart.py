@@ -193,3 +193,51 @@ def test_quickstart_evidence_reports_a_missing_record(
 
     assert result.exit_code != 0
     assert "sealed evidence record not found" in result.output
+
+
+def test_quickstart_auditor_bundles_a_flagged_synthetic_fixture() -> None:
+    spec = json.loads(quickstart_mod._AUDITOR_SCORES.read_text(encoding="utf-8"))
+    assert spec["event_scores"] and spec["null_scores"]
+    # The onboarding fixture must not be mistaken for real detector output.
+    assert "synthetic" in spec["description"].lower()
+    assert "not real" in spec["description"].lower()
+
+
+def test_quickstart_auditor_runs_the_detector_audit(runner: CliRunner) -> None:
+    result = runner.invoke(main, ["quickstart", "auditor"])
+    assert result.exit_code == 0, result.output
+    assert "detection_rate=" in result.output
+    assert "achieved_false_alarm=" in result.output
+    assert "permutation p=" in result.output
+    assert "beats_chance=True" in result.output
+    assert "synthetic onboarding fixture, not real detector output" in result.output
+
+
+def test_quickstart_auditor_writes_the_verdict_to_a_file(
+    runner: CliRunner, tmp_path: Path
+) -> None:
+    out = tmp_path / "auditor.txt"
+    result = runner.invoke(main, ["quickstart", "auditor", "--output", str(out)])
+    assert result.exit_code == 0, result.output
+    assert f"Auditor verdict written to {out}" in result.output
+    assert "detection_rate=" in out.read_text(encoding="utf-8")
+
+
+def test_quickstart_auditor_reports_missing_scores(
+    runner: CliRunner, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(quickstart_mod, "_AUDITOR_SCORES", tmp_path / "absent.json")
+    result = runner.invoke(main, ["quickstart", "auditor"])
+    assert result.exit_code != 0
+    assert "bundled auditor scores not found" in result.output
+
+
+def test_quickstart_auditor_reports_malformed_scores(
+    runner: CliRunner, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    malformed = tmp_path / "malformed.json"
+    malformed.write_text(json.dumps({"detector_name": "d"}), encoding="utf-8")
+    monkeypatch.setattr(quickstart_mod, "_AUDITOR_SCORES", malformed)
+    result = runner.invoke(main, ["quickstart", "auditor"])
+    assert result.exit_code != 0
+    assert "malformed" in result.output

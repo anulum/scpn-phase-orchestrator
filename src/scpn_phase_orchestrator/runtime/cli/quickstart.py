@@ -32,6 +32,7 @@ from scpn_phase_orchestrator.binding import (
     load_binding_spec,
     validate_binding_spec,
 )
+from scpn_phase_orchestrator.evaluation.auditor import audit_detector
 from scpn_phase_orchestrator.reporting.explainability import (
     build_explainability_report,
     render_markdown,
@@ -46,8 +47,15 @@ _ASSET_ROOT = Path(__file__).resolve().parent / "_quickstart_assets"
 _DOMAINS = ("power", "eeg")
 #: Positional targets the ``quickstart`` command accepts. ``power``/``eeg`` run
 #: the simulation golden path; ``evidence`` re-verifies a committed real sealed
-#: record instead of simulating anything.
-_QUICKSTART_TARGETS = (*_DOMAINS, "evidence")
+#: record; ``auditor`` runs the detector audit on bundled demonstration scores.
+_QUICKSTART_TARGETS = (*_DOMAINS, "evidence", "auditor")
+#: Bundled synthetic demonstration scores for the ``auditor`` variant.
+_AUDITOR_SCORES = _ASSET_ROOT / "auditor" / "scores.json"
+#: Reproducible audit parameters for the ``auditor`` demonstration.
+_AUDITOR_TARGET_FALSE_ALARM = 0.1
+_AUDITOR_PERMUTATIONS = 500
+_AUDITOR_SEED = 7
+_AUDITOR_ALPHA = 0.05
 #: The committed, non-synthetic sealed record the ``evidence`` variant re-checks.
 #: Located relative to the repository root (this command's onboarding target is a
 #: clone), it is the single canonical copy guarded by
@@ -78,7 +86,8 @@ def quickstart(domain: str, steps: int, seed: int, output: str | None) -> None:
     ----------
     domain : str
         The target — ``"power"`` or ``"eeg"`` runs the simulation golden path;
-        ``"evidence"`` re-verifies a committed real sealed record instead.
+        ``"evidence"`` re-verifies a committed real sealed record; ``"auditor"``
+        runs the detector audit on bundled demonstration scores.
     steps : int
         Number of simulation steps (simulation targets only).
     seed : int
@@ -96,6 +105,9 @@ def quickstart(domain: str, steps: int, seed: int, output: str | None) -> None:
     """
     if domain == "evidence":
         _run_evidence_quickstart(output)
+        return
+    if domain == "auditor":
+        _run_auditor_quickstart(output)
         return
 
     binding_path = _ASSET_ROOT / domain / "binding_spec.yaml"
@@ -258,3 +270,65 @@ def _run_evidence_quickstart(output: str | None) -> None:
     if not (top_ok and nested_ok):
         click.echo("ERROR: a committed evidence seal failed to recompute", err=True)
         raise SystemExit(1)
+
+
+def _run_auditor_quickstart(output: str | None) -> None:
+    """Audit a detector on bundled demonstration scores and print the verdict.
+
+    Runs the event-vs-null skill audit on a committed synthetic scores fixture
+    (clearly not real detector output) so the onboarding path shows the audit
+    computing a reproducible, honest verdict: the false-alarm-controlled
+    detection rate and the permutation p-value.
+
+    Parameters
+    ----------
+    output : str | None
+        Optional path for the verdict text; printed to stdout if omitted.
+
+    Raises
+    ------
+    ClickException
+        If the bundled scores fixture is missing or malformed.
+    """
+    if not _AUDITOR_SCORES.exists():
+        raise click.ClickException(
+            f"bundled auditor scores not found: {_AUDITOR_SCORES}"
+        )
+    spec: dict[str, Any] = json.loads(_AUDITOR_SCORES.read_text(encoding="utf-8"))
+    detector_name = str(spec.get("detector_name", "detector"))
+    try:
+        event_scores = [float(value) for value in spec["event_scores"]]
+        null_scores = [float(value) for value in spec["null_scores"]]
+    except (KeyError, TypeError, ValueError) as exc:
+        raise click.ClickException(
+            f"bundled auditor scores are malformed: {exc}"
+        ) from exc
+
+    audit = audit_detector(
+        event_scores=event_scores,
+        null_scores=null_scores,
+        detector_name=detector_name,
+        target_false_alarm=_AUDITOR_TARGET_FALSE_ALARM,
+        n_permutations=_AUDITOR_PERMUTATIONS,
+        seed=_AUDITOR_SEED,
+        alpha=_AUDITOR_ALPHA,
+    )
+    lines = [
+        "=== SPO quickstart: auditor ===",
+        f"scores: bundled demonstration ({detector_name}) — "
+        f"{len(event_scores)} event, {len(null_scores)} null segments",
+        f"[1/2] audit: detection_rate={audit.detection_rate:.4f}  "
+        f"achieved_false_alarm={audit.achieved_false_alarm:.4f}  "
+        f"(target ≤ {_AUDITOR_TARGET_FALSE_ALARM})",
+        f"[2/2] significance: permutation p={audit.p_value:.4f} "
+        f"({audit.significance.n_permutations} perms, seed {_AUDITOR_SEED})  "
+        f"beats_chance={audit.beats_chance} (alpha={_AUDITOR_ALPHA})",
+        "note: synthetic onboarding fixture, not real detector output",
+    ]
+    text = "\n".join(lines)
+
+    if output is not None:
+        Path(output).write_text(text + "\n", encoding="utf-8")
+        click.echo(f"Auditor verdict written to {output}")
+    else:
+        click.echo(text)

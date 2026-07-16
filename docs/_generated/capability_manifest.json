@@ -361,7 +361,8 @@
       "py.typed",
       "apps/queuewaves/static/*",
       "audit/*.proto",
-      "runtime/cli/_quickstart_assets/*/*.yaml"
+      "runtime/cli/_quickstart_assets/*/*.yaml",
+      "runtime/cli/_quickstart_assets/*/*.json"
     ]
   },
   "product_boundaries": {
