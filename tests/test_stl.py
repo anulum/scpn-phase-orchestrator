@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import sys
 from typing import get_type_hints
 
 import numpy as np
@@ -20,13 +21,25 @@ from tests.typing_contracts import assert_precise_ndarray_hint
 needs_rtamt = pytest.mark.skipif(not HAS_RTAMT, reason="rtamt not installed")
 
 
-def test_rtamt_backend_is_present_in_the_standard_environment() -> None:
-    """The rtamt backend must be installed wherever this suite runs.
+@pytest.mark.skipif(
+    sys.version_info >= (3, 13),
+    reason=(
+        "rtamt 0.3.5 pins antlr4-python3-runtime==4.7, which imports the "
+        "typing.io pseudo-module that CPython 3.13 removed, so rtamt cannot "
+        "import on 3.13; STL falls back to its internal automata backend "
+        "there (honest posture, verified in CI on the 3.13 leg)."
+    ),
+)
+def test_rtamt_backend_is_present_where_it_can_import() -> None:
+    """rtamt must be importable on every CI leg that can load it.
 
-    rtamt 0.3.5 is pure-Python BSD and pinned in ``requirements/dev-lock.txt``
-    for the whole CI matrix. Without this assertion its silent absence would
-    skip every ``needs_rtamt`` test and drop the rtamt evaluation path from
-    the honest coverage posture.
+    rtamt 0.3.5 is pure-Python BSD and pinned across the lockfiles, but its
+    ``antlr4-python3-runtime==4.7`` dependency imports the ``typing.io``
+    pseudo-module removed in CPython 3.13, so rtamt imports only on the 3.11
+    and 3.12 legs. On those legs its silent absence would skip every
+    ``needs_rtamt`` test and drop the rtamt evaluation path from the honest
+    coverage posture (coverage is gated on the 3.12 leg, where rtamt is
+    present). On 3.13 STL uses its internal automata backend by design.
     """
     assert HAS_RTAMT, "rtamt missing: the rtamt STL path would silently skip"
 

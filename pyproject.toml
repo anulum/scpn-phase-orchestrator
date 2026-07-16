@@ -352,8 +352,11 @@ omit = [
     # External-dependency adapters: require packages not in standard CI
     # (Redis, Modbus, BrainFlow, neurolib, scpn-fusion-core, sc-neurocore,
     # scpn-control). The monitor/stl package is NOT omitted: rtamt 0.3.5 is
-    # pure-Python BSD, runs in the whole CI matrix, and the package holds an
-    # explicit 100 % file floor in tools/coverage_guard_thresholds.json.
+    # pure-Python BSD and imports on the 3.11/3.12 legs (its antlr4 4.7 dep
+    # imports the typing.io module removed in CPython 3.13, so STL uses its
+    # internal automata backend there). Coverage is gated on the 3.12 leg,
+    # where rtamt is present, and the package holds an explicit 100 % file
+    # floor in tools/coverage_guard_thresholds.json.
     "*/adapters/hardware_io.py",
     "*/adapters/modbus_tls.py",
     "*/adapters/redis_store.py",
