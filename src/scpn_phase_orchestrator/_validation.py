@@ -21,6 +21,26 @@ has repeatedly masked caller bugs. NumPy scalar types need no special
 cases — ``numpy.float64`` registers as :class:`numbers.Real` and
 ``numpy.integer`` as :class:`numbers.Integral`, while ``numpy.bool_``
 registers as neither.
+
+Scope
+-----
+This module is the canonical home for the free-standing non-negative
+scalar checks: new code, and any module whose validator matches these
+semantics, should import from here rather than re-implement the pattern.
+The K-QUAL1 consolidation migrated the nine exact-match, free-standing
+defs (predictive, topology, morphogenetic, multiverse, reward,
+fusion_core_bridge, modbus_tls).
+
+Some modules deliberately keep a local validation family rather than
+delegate here, and this is by design, not oversight. Each such check is
+one leaf of a cohesive ``_positive_*`` / ``_non_negative_*`` pair sharing
+a private type-check helper, and it carries a contract these canonical
+``ValueError`` helpers do not model: ``actuation/koopman_mpc`` raises
+:class:`TypeError` on a non-real input, ``supervisor/policy_rules`` raises
+its ``PolicyRuleError``, and ``adapters/hardware_io`` emits domain text
+("address must be >= 0"). Folding those into this primitive would break
+the exception contracts their tests pin, or split a module's validation
+vocabulary, so they are retained.
 """
 
 from __future__ import annotations
