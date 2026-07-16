@@ -20,6 +20,10 @@ import numpy as np
 from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.autotune.sindy import PhaseSINDy
+from scpn_phase_orchestrator.autotune.sindy_confidence import (
+    SindyConfidence,
+    classify_phase_sindy_block,
+)
 from scpn_phase_orchestrator.studio.workflow import JsonValue
 
 __all__ = [
@@ -151,6 +155,18 @@ class TimeSeriesDiscoveryReport:
             )
         return factors
 
+    @property
+    def phase_sindy_confidence(self) -> SindyConfidence:
+        """Honest tier and discovery posture for the phase-SINDy fit.
+
+        Returns
+        -------
+        SindyConfidence
+            The confidence verdict; a self-fit is capped at the ``partial``
+            tier and can never be ``externally_validated``.
+        """
+        return classify_phase_sindy_block(self.phase_sindy)
+
     def to_audit_record(self) -> dict[str, JsonValue]:
         """Return the complete JSON-safe discovery evidence record.
 
@@ -165,6 +181,7 @@ class TimeSeriesDiscoveryReport:
             "columns": list(self.columns),
             "sindy": dict(self.sindy),
             "phase_sindy": dict(self.phase_sindy),
+            "phase_sindy_confidence": self.phase_sindy_confidence.to_audit_record(),
             "sindy_model_selection": dict(self.sindy_model_selection),
             "learned_graph": dict(self.learned_graph),
             "correlation_graph": dict(self.correlation_graph),

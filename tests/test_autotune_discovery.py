@@ -22,6 +22,15 @@ from scpn_phase_orchestrator.autotune.discovery import (
     discover_time_series_structure,
     infer_sample_rate_from_time_column,
 )
+from scpn_phase_orchestrator.autotune.sindy_confidence import (
+    POSTURE_REFUSED,
+    SindyConfidence,
+)
+from scpn_phase_orchestrator.binding.types import (
+    VALID_VALIDATION_TIERS,
+    VALIDATION_TIER_EXTERNALLY_VALIDATED,
+    VALIDATION_TIER_SCAFFOLD,
+)
 from tests.typing_contracts import assert_precise_ndarray_hint
 
 
@@ -91,6 +100,33 @@ def test_discover_time_series_structure_reports_phase_sindy_edges() -> None:
     assert phase_sindy["sample_count"] == phases.shape[0] - 1
     assert phase_sindy["node_count"] == phases.shape[1]
     assert report.confidence_evidence["phase_sindy_r_squared"] == r_squared
+
+
+def test_discover_time_series_structure_wires_phase_sindy_confidence() -> None:
+    times = np.linspace(0.0, 2.4, 25, dtype=np.float64)
+    phases = np.column_stack(
+        [
+            0.8 * times,
+            0.8 * times + 0.35 * np.sin(times),
+            -0.4 * times + 0.2 * np.cos(times),
+        ]
+    )
+
+    report = discover_time_series_structure(
+        phases,
+        columns=("theta_source", "theta_driven", "theta_aux"),
+        sample_period_s=float(times[1] - times[0]),
+    )
+
+    confidence = report.phase_sindy_confidence
+    assert isinstance(confidence, SindyConfidence)
+    # A self-fit on the operator's own data can never earn external validation.
+    assert confidence.tier in VALID_VALIDATION_TIERS
+    assert confidence.tier != VALIDATION_TIER_EXTERNALLY_VALIDATED
+
+    audit_confidence = report.to_audit_record()["phase_sindy_confidence"]
+    assert audit_confidence == confidence.to_audit_record()
+    assert audit_confidence["tier"] != VALIDATION_TIER_EXTERNALLY_VALIDATED
 
 
 def test_regression_quality_reports_perfect_fit_as_unit_r_squared() -> None:
@@ -230,6 +266,10 @@ def test_discover_time_series_structure_marks_non_phase_sindy_skipped() -> None:
     assert selection["candidate_count"] == 2
     assert "phase_sindy_sparsity" not in report.confidence_evidence
     assert "phase_sindy_r_squared" not in report.confidence_evidence
+    # A skip must surface as an honest refusal, not a low-confidence discovery.
+    confidence = report.phase_sindy_confidence
+    assert confidence.posture == POSTURE_REFUSED
+    assert confidence.tier == VALIDATION_TIER_SCAFFOLD
 
 
 def test_infer_sample_rate_from_regular_time_column() -> None:
