@@ -8,11 +8,11 @@
     "optional_extras": 23,
     "public_api_exports": 24,
     "public_documentation_pages": 229,
-    "python_package_modules": 713,
+    "python_package_modules": 714,
     "research_experimental_modules": 204,
-    "runtime_serving_modules": 153,
+    "runtime_serving_modules": 154,
     "rust_kernel_files": 97,
-    "test_files": 848
+    "test_files": 849
   },
   "documentation": {
     "public_pages": [
@@ -960,6 +960,7 @@
       "src/scpn_phase_orchestrator/audit/__init__.py",
       "src/scpn_phase_orchestrator/evaluation/__init__.py",
       "src/scpn_phase_orchestrator/evaluation/auditor.py",
+      "src/scpn_phase_orchestrator/evaluation/cross_domain_transfer.py",
       "src/scpn_phase_orchestrator/evaluation/detector_meta_analysis.py",
       "src/scpn_phase_orchestrator/evaluation/record.py",
       "src/scpn_phase_orchestrator/evaluation/skill.py",
@@ -1240,6 +1241,7 @@
     "src/scpn_phase_orchestrator/drivers/psi_symbolic.py",
     "src/scpn_phase_orchestrator/evaluation/__init__.py",
     "src/scpn_phase_orchestrator/evaluation/auditor.py",
+    "src/scpn_phase_orchestrator/evaluation/cross_domain_transfer.py",
     "src/scpn_phase_orchestrator/evaluation/detector_meta_analysis.py",
     "src/scpn_phase_orchestrator/evaluation/record.py",
     "src/scpn_phase_orchestrator/evaluation/skill.py",
@@ -2081,6 +2083,7 @@
       "tests/test_envelope_backends.py",
       "tests/test_envelope_public_backend_output_contracts.py",
       "tests/test_evaluation_auditor.py",
+      "tests/test_evaluation_cross_domain_transfer.py",
       "tests/test_evaluation_record.py",
       "tests/test_evaluation_skill.py",
       "tests/test_event_bus_validation.py",
