@@ -19,6 +19,7 @@ is invoked for that runtime path.
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Literal, cast
 
@@ -30,6 +31,8 @@ from scpn_phase_orchestrator.autotune.binding_proposal import (
     propose_binding_from_graph,
     propose_binding_from_time_series_csv,
 )
+from scpn_phase_orchestrator.autotune.sindy_confidence import SindyConfidencePolicy
+from scpn_phase_orchestrator.autotune.sindy_options import SindyOptions
 from scpn_phase_orchestrator.binding import (
     format_resolved_binding_config,
     load_binding_spec,
@@ -40,6 +43,7 @@ from scpn_phase_orchestrator.binding import (
 )
 from scpn_phase_orchestrator.coupling.infer import auto_coupling_estimation
 from scpn_phase_orchestrator.runtime.cli._app import FloatArray, main
+from scpn_phase_orchestrator.studio.workflow import StudioProjectState
 
 
 @main.command()
@@ -151,12 +155,42 @@ def inspect_binding(binding_spec: str, json_out: bool) -> None:
     default=None,
     help="Sampling rate for time-series CSV sources.",
 )
+@click.option(
+    "--sindy-threshold",
+    type=float,
+    default=0.05,
+    show_default=True,
+    help="Phase-SINDy sparsity threshold (time-series CSV only).",
+)
+@click.option(
+    "--sindy-min-r-squared",
+    type=float,
+    default=0.9,
+    show_default=True,
+    help="Minimum R² before a phase-SINDy fit is called discovered.",
+)
+@click.option(
+    "--sindy-min-samples-per-parameter",
+    type=float,
+    default=5.0,
+    show_default=True,
+    help="Minimum derivative samples per parameter for a discovered fit.",
+)
+@click.option(
+    "--emit-equations",
+    is_flag=True,
+    help="Print the discovered phase dynamics and their confidence verdict.",
+)
 @click.option("--json-out", is_flag=True, help="Output proposal audit record as JSON")
 def auto_bind(
     source_kind: str,
     source_path: str,
     project_name: str,
     sample_rate_hz: float | None,
+    sindy_threshold: float,
+    sindy_min_r_squared: float,
+    sindy_min_samples_per_parameter: float,
+    emit_equations: bool,
     json_out: bool,
 ) -> None:
     """Propose a review-only binding spec from raw local source data.
@@ -171,6 +205,14 @@ def auto_bind(
         Name for the generated project.
     sample_rate_hz : float | None
         Sampling rate in Hz, or ``None`` to infer.
+    sindy_threshold : float
+        Phase-SINDy sparsity threshold; time-series CSV sources only.
+    sindy_min_r_squared : float
+        Minimum R² before a phase-SINDy fit is called ``discovered``.
+    sindy_min_samples_per_parameter : float
+        Minimum derivative samples per parameter for a ``discovered`` fit.
+    emit_equations : bool
+        Whether to print the discovered phase dynamics and confidence verdict.
     json_out : bool
         Whether to print machine-readable JSON output.
 
@@ -182,10 +224,18 @@ def auto_bind(
     try:
         source_text = Path(source_path).read_text(encoding="utf-8")
         if source_kind == "time-series-csv":
+            sindy_options = SindyOptions(
+                phase_sindy_threshold=sindy_threshold,
+                confidence_policy=SindyConfidencePolicy(
+                    min_r_squared=sindy_min_r_squared,
+                    min_samples_per_parameter=sindy_min_samples_per_parameter,
+                ),
+            )
             proposal = propose_binding_from_time_series_csv(
                 source_text,
                 sample_rate_hz=sample_rate_hz,
                 project_name=project_name,
+                sindy_options=sindy_options,
             )
         elif source_kind == "event-log-json":
             proposal = propose_binding_from_event_log(
@@ -207,7 +257,47 @@ def auto_bind(
     if json_out:
         click.echo(json.dumps(proposal.to_audit_record(), indent=2, sort_keys=True))
         return
+    if emit_equations:
+        _echo_discovered_dynamics(proposal)
+        return
     click.echo(proposal.binding.yaml_text, nl=False)
+
+
+def _echo_discovered_dynamics(proposal: StudioProjectState) -> None:
+    """Print the discovered phase dynamics and their honest confidence verdict.
+
+    Parameters
+    ----------
+    proposal : StudioProjectState
+        The proposal whose provenance may carry a ``discovered_dynamics`` record;
+        source kinds without phase-SINDy discovery carry none.
+    """
+    record = proposal.binding.provenance.get("discovered_dynamics")
+    if not isinstance(record, Mapping):
+        click.echo("No discovered phase dynamics for this source kind.")
+        return
+    confidence = cast(Mapping[str, object], record["confidence"])
+    click.echo(f"Discovered dynamics ({record['library']})")
+    click.echo(f"  posture: {confidence['posture']}  [tier: {confidence['tier']}]")
+    click.echo(f"  content hash: {record['content_hash']}")
+    reasons = cast("Sequence[object]", confidence.get("reasons", ()))
+    if reasons:
+        click.echo("  reasons:")
+        for reason in reasons:
+            click.echo(f"    - {reason}")
+    equations = cast("Sequence[object]", record["equations"])
+    if equations:
+        click.echo("  equations:")
+        for equation in equations:
+            click.echo(f"    {equation}")
+    edges = cast("Sequence[Mapping[str, object]]", record["coupling_edges"])
+    if edges:
+        click.echo("  coupling:")
+        for edge in edges:
+            click.echo(
+                f"    {edge['source']} -> {edge['target']}  "
+                f"({float(cast(float, edge['coefficient'])):+.4f})"
+            )
 
 
 def _load_phase_series_table(source_path: Path) -> FloatArray:

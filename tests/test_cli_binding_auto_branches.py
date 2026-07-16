@@ -115,3 +115,163 @@ def test_auto_coupling_rejects_a_degenerate_series(
 
     assert result.exit_code != 0
     assert "at least 2 oscillators" in result.output
+
+
+def _planted_kuramoto_csv(tmp_path: Path) -> Path:
+    """Write a planted two-node Kuramoto trajectory CSV and return its path."""
+    omega = (1.0, 1.3)
+    coupling = 0.8
+    dt = 0.02
+    state = np.asarray([0.0, 0.4], dtype=np.float64)
+    lines = ["theta_0,theta_1"]
+    for _ in range(260):
+        lines.append(f"{state[0]:.6f},{state[1]:.6f}")
+        drift = np.asarray(
+            [
+                omega[0] + coupling * np.sin(state[1] - state[0]),
+                omega[1] + coupling * np.sin(state[0] - state[1]),
+            ]
+        )
+        state = state + dt * drift
+    source = tmp_path / "kuramoto.csv"
+    source.write_text("\n".join(lines), encoding="utf-8")
+    return source
+
+
+def test_auto_bind_emit_equations_prints_discovered_dynamics(
+    runner: CliRunner, tmp_path: Path
+) -> None:
+    source = _planted_kuramoto_csv(tmp_path)
+
+    result = runner.invoke(
+        main,
+        [
+            "auto-bind",
+            "time-series-csv",
+            str(source),
+            "--project-name",
+            "kuramoto",
+            "--sample-rate-hz",
+            "50",
+            "--emit-equations",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "Discovered dynamics (kuramoto_sine_phase_differences)" in result.output
+    assert "posture: discovered" in result.output
+    assert "tier: partial" in result.output
+    # Never advertise a self-fit as externally validated.
+    assert "externally_validated" not in result.output
+    assert "sin(theta_1 - theta_0)" in result.output
+    assert (
+        "theta_1 -> theta_0" in result.output or "theta_0 -> theta_1" in result.output
+    )
+
+
+def test_auto_bind_emit_equations_reports_absence_for_non_csv_kinds(
+    runner: CliRunner, tmp_path: Path
+) -> None:
+    events = [{"time": 0.0, "source": "a", "event": "x"}]
+    source = tmp_path / "events.json"
+    source.write_text(json.dumps(events), encoding="utf-8")
+
+    result = runner.invoke(
+        main,
+        [
+            "auto-bind",
+            "event-log-json",
+            str(source),
+            "--project-name",
+            "evt",
+            "--emit-equations",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "No discovered phase dynamics" in result.output
+
+
+def test_auto_bind_strict_confidence_flags_downgrade_the_posture(
+    runner: CliRunner, tmp_path: Path
+) -> None:
+    source = _planted_kuramoto_csv(tmp_path)
+
+    result = runner.invoke(
+        main,
+        [
+            "auto-bind",
+            "time-series-csv",
+            str(source),
+            "--project-name",
+            "kuramoto",
+            "--sample-rate-hz",
+            "50",
+            "--sindy-min-samples-per-parameter",
+            "10000",
+            "--emit-equations",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "posture: discovered" not in result.output
+    assert "tier: scaffold" in result.output
+
+
+def test_auto_bind_json_out_pins_the_discovered_dynamics_schema(
+    runner: CliRunner, tmp_path: Path
+) -> None:
+    # Golden drift guard: pin the discovered-dynamics record SHAPE (the key set
+    # and stable categorical values), not brittle float strings, so a schema
+    # change is caught while a numeric change is not a false alarm.
+    source = _planted_kuramoto_csv(tmp_path)
+
+    result = runner.invoke(
+        main,
+        [
+            "auto-bind",
+            "time-series-csv",
+            str(source),
+            "--project-name",
+            "kuramoto",
+            "--sample-rate-hz",
+            "50",
+            "--json-out",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    audit = json.loads(result.output)
+    record = audit["binding"]["provenance"]["discovered_dynamics"]
+    assert set(record) == {
+        "library",
+        "status",
+        "equations",
+        "coupling_edges",
+        "confidence",
+        "content_hash",
+    }
+    assert set(record["confidence"]) == {
+        "tier",
+        "posture",
+        "r_squared",
+        "samples_per_parameter",
+        "reasons",
+    }
+    assert record["library"] == "kuramoto_sine_phase_differences"
+    assert record["status"] == "fitted"
+    assert record["confidence"]["tier"] == "partial"
+    assert record["confidence"]["posture"] == "discovered"
+    assert len(record["content_hash"]) == 64
+    assert set(record["coupling_edges"][0]) == {
+        "source",
+        "target",
+        "coefficient",
+        "abs_coefficient",
+    }
+    options = audit["binding"]["provenance"]["sindy_options"]
+    assert options["phase_sindy_threshold"] == 0.05
+    assert set(options["confidence_policy"]) == {
+        "min_r_squared",
+        "min_samples_per_parameter",
+    }
