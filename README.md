@@ -40,6 +40,13 @@ control-proposal surface. New here? Start with
 [Use Cases and Value Map](docs/getting-started/use_cases.md) or the
 [Executive Overview](docs/getting-started/executive_overview.md).
 
+**Prefer to run something first?** `pip install scpn-phase-orchestrator && spo
+quickstart evidence` re-verifies a *real* sealed record's cryptographic seals in
+front of you and prints its honest, review-only verdict — you need not take our
+word for it. The whole honesty loop is four `spo quickstart` targets in about five
+minutes: simulate (`power`/`eeg`), re-verify real `evidence`, and `auditor`
+a detector against a null. See the [Quickstart](docs/getting-started/quickstart.md).
+
 > **Active Development** — SCPN Phase Orchestrator is under intensive development. The core UPDE engine, 3-channel oscillator extraction (P/I/S), supervisor with regime management, and Rust FFI acceleration are functional and guarded by local and CI verification gates. Public capability counts are generated from the manifest below rather than maintained by hand. APIs may evolve as this work progresses.
 
 **Version:** 0.12.0

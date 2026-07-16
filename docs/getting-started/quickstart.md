@@ -32,6 +32,46 @@ configuration integrity, bounded execution, reproducible replay, review-ready
 evidence). Each is a verification gate: if they pass, the same domain can move into
 CLI workflows, policy review, and production staging using the later pages.
 
+## Then: a real result, and an honest audit
+
+The two runs above are synthetic demonstrations. The same command has two more
+targets that show the project holding *itself* to account — a real sealed record
+and a detector audit — so you can judge the honesty of the outputs, not just the
+mechanics.
+
+```bash
+spo quickstart evidence
+```
+
+This re-verifies a committed, **non-synthetic** artefact: a real ISO-NE forced
+oscillation (documented near 0.27 Hz) that was screened through the shipped
+`pmu-ieee-adapt` → `pmu-ringdown` chain. It recomputes the record's cryptographic
+seals in front of you — so you need not take the project's word for it — and prints
+the review-only verdict:
+
+```
+[1/3] top-level seal: VERIFIED
+[2/3] nested PRC seal: VERIFIED
+[3/3] verdict: flagged_for_review — 3 mode(s) flagged, worst damping ratio -1.0000
+review-only: review_only_offline_no_live_actuation — an offline screening record,
+not a live-actuation claim
+```
+
+```bash
+spo quickstart auditor
+```
+
+This runs the event-vs-null skill audit on a bundled demonstration scores fixture
+(clearly flagged as synthetic, not real detector output) and prints a reproducible
+verdict — the false-alarm-controlled detection rate and the permutation p-value with
+its beats-chance decision. It is the same `spo audit-detector` machinery you would
+point at your own scores.
+
+Together the four targets are the whole honesty loop in five minutes: run a
+deterministic simulation, replay its audit chain, re-verify a real sealed record,
+and audit a detector's skill against a null — each stating plainly what it does and
+does **not** claim.
+
 ## 1. Install
 
 ```bash
