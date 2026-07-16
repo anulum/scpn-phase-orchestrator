@@ -21,6 +21,7 @@ actuates, signs, or reaches the network.
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any
 
@@ -113,6 +114,13 @@ def _require_scores(spec: dict[str, Any], key: str) -> list[float]:
     help="Caller-supplied audit timestamp; required to seal the verdict.",
 )
 @click.option(
+    "--sign",
+    is_flag=True,
+    default=False,
+    help="HMAC-sign the sealed record with the key in SPO_AUDIT_KEY; requires "
+    "--corpus-id and --captured-at.",
+)
+@click.option(
     "--output",
     default=None,
     type=click.Path(dir_okay=False, path_type=Path),
@@ -126,6 +134,7 @@ def audit_detector_command(
     alpha: float,
     corpus_id: str | None,
     captured_at: str | None,
+    sign: bool,
     output: Path | None,
 ) -> None:
     """Audit a detector's event-vs-null skill from a JSON scores file.
@@ -152,6 +161,8 @@ def audit_detector_command(
         Corpus provenance identifier; with ``captured_at`` seals the verdict.
     captured_at : str | None
         Caller-supplied audit timestamp; required to seal the verdict.
+    sign : bool
+        When set, HMAC-sign the sealed record with the ``SPO_AUDIT_KEY`` key.
     output : Path | None
         Optional path to also write the JSON record to.
 
@@ -159,8 +170,9 @@ def audit_detector_command(
     ------
     ClickException
         If the file is invalid, the scores are malformed, only one of
-        ``--corpus-id`` / ``--captured-at`` is given, or an audit parameter is out
-        of range.
+        ``--corpus-id`` / ``--captured-at`` is given, ``--sign`` is used without
+        sealing or without a ``SPO_AUDIT_KEY``, or an audit parameter is out of
+        range.
     """
     spec = _load_scores_spec(scores_json)
     event_scores = _require_scores(spec, "event_scores")
@@ -169,6 +181,10 @@ def audit_detector_command(
     if (corpus_id is None) != (captured_at is None):
         raise click.ClickException(
             "--corpus-id and --captured-at must be given together to seal a verdict"
+        )
+    if sign and corpus_id is None:
+        raise click.ClickException(
+            "--sign requires --corpus-id and --captured-at to seal a verdict first"
         )
     try:
         audit = audit_detector(
@@ -184,8 +200,15 @@ def audit_detector_command(
         raise click.ClickException(str(exc)) from exc
 
     if corpus_id is not None and captured_at is not None:
+        key: str | None = None
+        if sign:
+            key = os.environ.get("SPO_AUDIT_KEY")
+            if not key:
+                raise click.ClickException(
+                    "--sign requires a non-empty SPO_AUDIT_KEY environment variable"
+                )
         record = seal_detector_audit(
-            audit, corpus_id=corpus_id, captured_at=captured_at
+            audit, corpus_id=corpus_id, captured_at=captured_at, key=key
         )
         payload: dict[str, object] = record.to_record()
     else:

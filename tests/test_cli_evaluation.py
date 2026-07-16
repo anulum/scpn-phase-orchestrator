@@ -200,3 +200,53 @@ class TestAuditDetectorErrors:
         )
         assert result.exit_code != 0
         assert "target_fa must be in" in result.output
+
+
+class TestSignedSeal:
+    def test_sign_emits_a_verifiable_signature(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("SPO_AUDIT_KEY", "cli-signing-key")
+        spec = _write_spec(tmp_path / "scores.json", _skilful_spec())
+        result = CliRunner().invoke(
+            main,
+            [
+                "audit-detector",
+                str(spec),
+                "--corpus-id",
+                "demo-corpus",
+                "--captured-at",
+                "2026-07-07T15:00:00+02:00",
+                "--sign",
+            ],
+        )
+        assert result.exit_code == 0, result.output
+        payload = json.loads(result.output)
+        assert len(payload["signature"]) == 64
+        assert payload["signature_algorithm"] == "HMAC-SHA256"
+        assert "signing_key_id" in payload
+
+    def test_sign_without_key_is_reported(self, tmp_path, monkeypatch):
+        monkeypatch.delenv("SPO_AUDIT_KEY", raising=False)
+        spec = _write_spec(tmp_path / "scores.json", _skilful_spec())
+        result = CliRunner().invoke(
+            main,
+            [
+                "audit-detector",
+                str(spec),
+                "--corpus-id",
+                "demo-corpus",
+                "--captured-at",
+                "2026-07-07T15:00:00+02:00",
+                "--sign",
+            ],
+        )
+        assert result.exit_code != 0
+        assert "SPO_AUDIT_KEY" in result.output
+
+    def test_sign_without_sealing_is_reported(self, tmp_path):
+        spec = _write_spec(tmp_path / "scores.json", _skilful_spec())
+        result = CliRunner().invoke(
+            main,
+            ["audit-detector", str(spec), "--sign"],
+        )
+        assert result.exit_code != 0
+        assert "--sign requires" in result.output
