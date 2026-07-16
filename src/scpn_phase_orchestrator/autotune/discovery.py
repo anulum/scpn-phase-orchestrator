@@ -142,6 +142,9 @@ class TimeSeriesDiscoveryReport:
         }
         if self.phase_sindy.get("status") == "fitted":
             factors["phase_sindy_sparsity"] = cast(float, self.phase_sindy["sparsity"])
+            factors["phase_sindy_r_squared"] = cast(
+                float, self.phase_sindy["r_squared"]
+            )
         if self.learned_graph.get("status") == "fitted":
             factors["learned_graph_density"] = cast(
                 float, self.learned_graph["density"]
@@ -560,10 +563,13 @@ def _phase_sindy_library(
         "status": "fitted",
         "library": _PHASE_SINDY_LIBRARY,
         "threshold": threshold,
+        "sample_count": int(derivatives.shape[0]),
+        "node_count": int(table.shape[1]),
         "active_terms": active_terms,
         "total_terms": total_terms,
         "residual_rmse": quality["residual_rmse"],
         "score": quality["score"],
+        "r_squared": quality["r_squared"],
         "sparsity": float(max(0.0, min(1.0, sparsity))),
         "coupling_edge_count": len(coupling_edges),
         "coupling_edges": coupling_edges,
@@ -577,10 +583,13 @@ def _skipped_phase_sindy(reason: str, threshold: float) -> dict[str, JsonValue]:
         "status": reason,
         "library": _PHASE_SINDY_LIBRARY,
         "threshold": threshold,
+        "sample_count": 0,
+        "node_count": 0,
         "active_terms": 0,
         "total_terms": 0,
         "residual_rmse": None,
         "score": None,
+        "r_squared": None,
         "sparsity": 1.0,
         "coupling_edge_count": 0,
         "coupling_edges": [],
@@ -662,11 +671,21 @@ def _regression_quality(
     predictions: FloatArray,
     active_terms: int,
 ) -> dict[str, float]:
-    """Return the regression quality score."""
-    residual = np.asarray(observations, dtype=np.float64) - np.asarray(
-        predictions,
-        dtype=np.float64,
-    )
+    """Return the regression quality metrics.
+
+    ``score`` is a BIC-like model-selection value ``T·log(mse) + k·log(T)``:
+    smaller is better, but it is *not* scale-free, so it cannot be compared
+    across datasets of different magnitude. ``r_squared`` is the scale-free
+    coefficient of determination ``1 - SS_res / SS_tot`` with the observations
+    centred per column. It is upper-bounded at ``1.0``; a negative value (the
+    fit is worse than the per-column mean baseline) is kept verbatim as an
+    honest signal that the model explains no variance rather than being clamped
+    to zero. A degenerate target with no variance (``SS_tot == 0``) yields
+    ``0.0`` rather than an undefined ``0/0`` ratio — there is nothing to
+    explain, so no explained-variance credit is granted.
+    """
+    observed = np.asarray(observations, dtype=np.float64)
+    residual = observed - np.asarray(predictions, dtype=np.float64)
     sample_count = max(1, int(residual.size))
     residual_sum_squares = float(np.sum(residual * residual))
     residual_mse = max(residual_sum_squares / sample_count, np.finfo(float).tiny)
@@ -674,9 +693,16 @@ def _regression_quality(
     score = float(
         sample_count * np.log(residual_mse) + active_terms * np.log(sample_count)
     )
+    centred = observed - np.mean(observed, axis=0, keepdims=True)
+    total_sum_squares = float(np.sum(centred * centred))
+    if total_sum_squares <= np.finfo(float).tiny:
+        r_squared = 0.0
+    else:
+        r_squared = min(1.0, 1.0 - residual_sum_squares / total_sum_squares)
     return {
         "residual_rmse": residual_rmse,
         "score": score,
+        "r_squared": r_squared,
     }
 
 

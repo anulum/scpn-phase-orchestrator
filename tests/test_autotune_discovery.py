@@ -18,6 +18,7 @@ from scpn_phase_orchestrator.autotune.discovery import (
     TimeSeriesDiscoveryConfig,
     TimeSeriesDiscoveryReport,
     _correlation_clusters,
+    _regression_quality,
     discover_time_series_structure,
     infer_sample_rate_from_time_column,
 )
@@ -78,6 +79,74 @@ def test_discover_time_series_structure_reports_phase_sindy_edges() -> None:
     assert phase_sindy["active_terms"] > 0
     assert phase_sindy["coupling_edge_count"] >= 1
     assert "phase_sindy_sparsity" in report.confidence_evidence
+
+    # The fitted block must be self-describing for the confidence classifier:
+    # a scale-free R^2, the derivative-sample count actually regressed, and the
+    # per-node parameter count. These are the quantities an honest tier/posture
+    # rule reads to refuse "discovered" on under-determined or poor fits.
+    r_squared = phase_sindy["r_squared"]
+    assert isinstance(r_squared, float)
+    assert np.isfinite(r_squared)
+    assert r_squared <= 1.0
+    assert phase_sindy["sample_count"] == phases.shape[0] - 1
+    assert phase_sindy["node_count"] == phases.shape[1]
+    assert report.confidence_evidence["phase_sindy_r_squared"] == r_squared
+
+
+def test_regression_quality_reports_perfect_fit_as_unit_r_squared() -> None:
+    observations = np.asarray([[0.0, 1.0], [1.0, 3.0], [2.0, 5.0]], dtype=np.float64)
+
+    quality = _regression_quality(
+        observations=observations,
+        predictions=observations.copy(),
+        active_terms=2,
+    )
+
+    assert quality["r_squared"] == pytest.approx(1.0)
+    assert quality["residual_rmse"] == pytest.approx(0.0, abs=1e-9)
+
+
+def test_regression_quality_grants_no_credit_on_variance_free_target() -> None:
+    # A constant target has no variance to explain: an honest R^2 is 0.0, not
+    # an undefined 0/0 that a naive formula would surface as 1.0.
+    observations = np.full((4, 2), 7.0, dtype=np.float64)
+
+    quality = _regression_quality(
+        observations=observations,
+        predictions=observations.copy(),
+        active_terms=1,
+    )
+
+    assert quality["r_squared"] == 0.0
+
+
+def test_regression_quality_keeps_negative_r_squared_below_mean_baseline() -> None:
+    # A fit worse than simply predicting the per-column mean must not be
+    # clamped to zero — the negative value is the honest "explains nothing"
+    # signal the confidence classifier relies on to refuse "discovered".
+    observations = np.asarray([[-1.0], [0.0], [1.0]], dtype=np.float64)
+    predictions = np.asarray([[5.0], [5.0], [5.0]], dtype=np.float64)
+
+    quality = _regression_quality(
+        observations=observations,
+        predictions=predictions,
+        active_terms=1,
+    )
+
+    assert quality["r_squared"] < 0.0
+    assert np.isfinite(quality["r_squared"])
+
+
+def test_regression_quality_upper_bounds_r_squared_at_unity() -> None:
+    observations = np.asarray([[0.0], [1.0], [2.0], [3.0]], dtype=np.float64)
+
+    quality = _regression_quality(
+        observations=observations,
+        predictions=observations.copy(),
+        active_terms=1,
+    )
+
+    assert quality["r_squared"] <= 1.0
 
 
 def test_discover_time_series_structure_ranks_sindy_libraries() -> None:
@@ -149,11 +218,18 @@ def test_discover_time_series_structure_marks_non_phase_sindy_skipped() -> None:
         sample_period_s=1.0,
     )
 
-    assert report.to_audit_record()["phase_sindy"]["status"] == "skipped_non_phase_like"
+    phase_sindy = report.to_audit_record()["phase_sindy"]
+    assert phase_sindy["status"] == "skipped_non_phase_like"
+    # A skipped fit must not fabricate a quality signal: no R^2, no samples,
+    # no nodes were regressed.
+    assert phase_sindy["r_squared"] is None
+    assert phase_sindy["sample_count"] == 0
+    assert phase_sindy["node_count"] == 0
     selection = report.to_audit_record()["sindy_model_selection"]
     assert selection["selected_library"] == "affine_state_derivative"
     assert selection["candidate_count"] == 2
     assert "phase_sindy_sparsity" not in report.confidence_evidence
+    assert "phase_sindy_r_squared" not in report.confidence_evidence
 
 
 def test_infer_sample_rate_from_regular_time_column() -> None:
