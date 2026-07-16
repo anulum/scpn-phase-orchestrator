@@ -1,18 +1,20 @@
 #!/usr/bin/env bash
 # SCPN Phase Orchestrator — pre-push hook
-# Runs full CI preflight before allowing push.
+# Cheap, fast safety checks only. The heavy full preflight (test suite,
+# whole-tree mypy, bandit, cargo) runs in CI, which is the authority for
+# tests — re-running it locally on every push starves the shared workstation.
+# Opt in to the full local preflight with SPO_PREPUSH_FULL=1.
+# Skip once (heavy hook only): git push --no-verify — still verify the diff
+# carries no secrets and correct trailers, as pre-COMMIT hooks should have.
 # Install: git config core.hooksPath .githooks
-# Skip once: git push --no-verify (use only when you know what you're doing)
 # © 1998–2026 Miroslav Šotek. All rights reserved.
 
 set -euo pipefail
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 
-echo "pre-push: running preflight..."
-
-# Resolve venv Python binary (activate may not override system python3)
-# SPO_VENV overrides auto-detection (NTFS venv per disk-space rules)
+# Resolve venv Python binary (activate may not override system python3).
+# SPO_VENV overrides auto-detection (NTFS venv per disk-space rules).
 VENV_PYTHON=""
 if [ -n "${SPO_VENV:-}" ] && [ -x "$SPO_VENV/bin/python3" ]; then
     VENV_PYTHON="$SPO_VENV/bin/python3"
@@ -24,4 +26,86 @@ else
     VENV_PYTHON="python3"
 fi
 
-"$VENV_PYTHON" "$REPO_ROOT/tools/preflight.py"
+# Opt-in full local preflight (pre-directive behaviour).
+if [ "${SPO_PREPUSH_FULL:-0}" = "1" ]; then
+    echo "pre-push: running full preflight (SPO_PREPUSH_FULL=1)..."
+    exec "$VENV_PYTHON" "$REPO_ROOT/tools/preflight.py"
+fi
+
+echo "pre-push: cheap safety checks only (heavy preflight runs in CI)"
+
+ZERO="0000000000000000000000000000000000000000"
+
+# Collect the commit ranges being pushed from the pre-push stdin protocol
+# (<local ref> <local oid> <remote ref> <remote oid> per line). Deletions
+# (all-zero local oid) contribute nothing; a new branch (all-zero remote oid)
+# is bounded against the upstream default branch to avoid scanning history.
+ranges=()
+while read -r _local_ref local_oid _remote_ref remote_oid; do
+    [ "$local_oid" = "$ZERO" ] && continue
+    if [ "$remote_oid" = "$ZERO" ]; then
+        base="$(git merge-base "$local_oid" origin/main 2>/dev/null || true)"
+        if [ -n "$base" ]; then
+            ranges+=("$base..$local_oid")
+        else
+            ranges+=("$local_oid")
+        fi
+    else
+        ranges+=("$remote_oid..$local_oid")
+    fi
+done
+
+# Nothing on stdin (e.g. manual invocation) → scan @{upstream}..HEAD if set.
+if [ "${#ranges[@]}" -eq 0 ]; then
+    if upstream_range="$(git rev-parse --quiet --verify '@{upstream}' 2>/dev/null)"; then
+        ranges+=("@{upstream}..HEAD")
+    else
+        ranges+=("HEAD")
+    fi
+fi
+
+commits=()
+for range in "${ranges[@]}"; do
+    while IFS= read -r sha; do
+        [ -n "$sha" ] && commits+=("$sha")
+    done < <(git rev-list "$range" 2>/dev/null || true)
+done
+
+# 1. Authorship trailer on every outgoing commit — WARN only. Different
+#    agents on this repo carry different trailer conventions, so a shared
+#    hook must not hard-block on it; it nudges. The pre-COMMIT authorship
+#    gate is where it is enforced.
+for sha in "${commits[@]}"; do
+    msg="$(git log -1 --format='%B' "$sha")"
+    if ! grep -qF "Authored by Anulum Fortis & Arcane Sapience" <<<"$msg"; then
+        echo "pre-push: warning — commit ${sha:0:9} lacks the authorship trailer" >&2
+    fi
+done
+
+# 2. Secret heuristic over the outgoing diff (gitleaks is not assumed present).
+#    Deliberately conservative: obvious private-key blocks and assigned
+#    credential literals. Not a substitute for CI secret scanning.
+secret_pattern='-----BEGIN [A-Z ]*PRIVATE KEY-----|AKIA[0-9A-Z]{16}|ghp_[0-9A-Za-z]{36}|(password|passwd|secret|token)[[:space:]]*[:=][[:space:]]*[A-Za-z0-9/+_-]{16,}'
+for range in "${ranges[@]}"; do
+    if git diff "$range" 2>/dev/null | grep -E '^\+' \
+        | grep -Eiv -e 'x_api_key|_api_key|X-API-Key|SPO_API_KEY|SPO_AUDIT_KEY|SPO_LLM' \
+        | grep -Eiq -e "$secret_pattern"; then
+        echo "pre-push: possible secret in the outgoing diff ($range) — review before pushing" >&2
+        echo "pre-push: if this is a false positive, push with --no-verify after confirming" >&2
+        exit 1
+    fi
+done
+
+# 3. Fast lint on the working tree (sub-second; no tests, no whole-tree mypy).
+if [ -x "$REPO_ROOT/.venv/bin/ruff" ]; then
+    RUFF="$REPO_ROOT/.venv/bin/ruff"
+elif command -v ruff >/dev/null 2>&1; then
+    RUFF="ruff"
+else
+    RUFF=""
+fi
+if [ -n "$RUFF" ]; then
+    "$RUFF" check "$REPO_ROOT/src" "$REPO_ROOT/tools" "$REPO_ROOT/tests" >/dev/null
+fi
+
+echo "pre-push: cheap checks passed — CI runs the full suite"
