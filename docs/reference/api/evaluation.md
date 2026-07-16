@@ -142,3 +142,18 @@ table, ranks detectors per domain and overall, and renders a Markdown ranking
 report with a refinement backlog.
 
 ::: scpn_phase_orchestrator.evaluation.detector_meta_analysis
+
+## Cross-domain transfer audit
+
+`cross_domain_transfer` asks the harder question the meta-analysis cannot: does a
+detector *trained on one domain* carry real skill when applied to **another**?
+`audit_cross_domain_transfer` reuses `audit_detector` for three arms at the same
+matched false alarm — the transferred detector on the target, a target-trained
+detector on the target (the detectability ceiling), and a shuffled-source floor —
+and returns one of `transfer_positive`, `transfer_null`, or `transfer_negative`. A
+transfer that beats its own null but not the scrambled floor is reported
+`transfer_null`, never upgraded; a target detectable within-domain whose transfer
+arm shows no skill is a decisive `transfer_negative` — the honest verdict the
+recorded CHB-MIT cross-subject null (AUC ≈ 0.50) demands.
+
+::: scpn_phase_orchestrator.evaluation.cross_domain_transfer
