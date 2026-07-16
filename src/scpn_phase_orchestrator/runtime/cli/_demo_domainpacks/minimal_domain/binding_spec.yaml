@@ -1,0 +1,90 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Commercial license available
+# © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
+# © Code 2020–2026 Miroslav Šotek. All rights reserved.
+# ORCID: 0009-0009-3560-0851
+# Contact: www.anulum.li | protoscience@anulum.li
+# SCPN Phase Orchestrator — Minimal Domain Domain Binding Spec
+
+name: minimal_domain
+version: "0.1.0"
+safety_tier: research
+validation_tier: scaffold
+sample_period_s: 0.01
+control_period_s: 0.1
+
+layers:
+  - name: lower
+    index: 0
+    oscillator_ids: [osc_0, osc_1]
+  - name: upper
+    index: 1
+    oscillator_ids: [osc_2, osc_3]
+
+oscillator_families:
+  base:
+    channel: P
+    extractor_type: physical
+    config: {}
+  event_log:
+    channel: I
+    extractor_type: event
+    config: {}
+  # Minimal operational state machine for test coverage
+  operational_mode:
+    channel: S
+    extractor_type: ring
+    config:
+      n_states: 3
+
+coupling:
+  base_strength: 0.45
+  decay_alpha: 0.3
+  templates: {}
+
+drivers:
+  physical:
+    zeta: 0.0
+    psi: 0.0
+  informational:
+    zeta: 0.02
+  symbolic:
+    zeta: 0.02
+
+objectives:
+  good_layers: [0, 1]
+  bad_layers: []
+  good_weight: 1.0
+  bad_weight: 1.0
+
+boundaries: []
+
+actuators:
+  - name: coupling_global
+    knob: K
+    scope: global
+    limits: [0.0, 3.0]
+
+value_alignment:
+  minimum_score: 0.20
+  constraints:
+    - name: limit-minimal-coupling-step
+      knob: K
+      scope: global
+      min_value: 0.0
+      max_value: 1.2
+      weight: 1.5
+  fallback_actions:
+    - knob: K
+      scope: global
+      value: 0.3
+      ttl_s: 0.5
+      justification: minimal domain value guard baseline-coupling hold
+
+amplitude:
+  mu: 1.0
+  epsilon: 0.3
+  amp_coupling_strength: 0.2
+  amp_coupling_decay: 0.3
+
+policy: policy.yaml

@@ -288,19 +288,21 @@ def demo(domain: str, dataset: str | None, target: str, steps: int, port: int) -
         _run_real_data_demo(dataset=dataset, target=target, steps=steps, port=port)
         return
 
-    domainpack_dir = Path(__file__).parent.parent.parent / "domainpacks"
-    spec_path = _contained_domainpack_spec(domainpack_dir, domain)
-    if not spec_path.exists():
-        # Try relative to cwd.
-        spec_path = _contained_domainpack_spec(Path("domainpacks"), domain)
-    if not spec_path.exists():
-        listing_root = (
-            domainpack_dir if domainpack_dir.exists() else Path("domainpacks")
-        )
+    spec_path: Path | None = None
+    for root in _demo_domainpack_roots():
+        candidate = _contained_domainpack_spec(root, domain)
+        if candidate.exists():
+            spec_path = candidate
+            break
+    if spec_path is None:
         available = sorted(
-            d.name
-            for d in listing_root.iterdir()
-            if d.is_dir() and (d / "binding_spec.yaml").exists()
+            {
+                pack.name
+                for root in _demo_domainpack_roots()
+                if root.exists()
+                for pack in root.iterdir()
+                if pack.is_dir() and (pack / "binding_spec.yaml").exists()
+            }
         )
         click.echo(f"Domainpack '{domain}' not found.", err=True)
         click.echo(f"Available: {', '.join(available)}", err=True)
@@ -468,6 +470,32 @@ def _finite_csv_float(value: object, field: str) -> float:
     if not np.isfinite(number):
         raise click.ClickException(f"heartbeat dataset has non-finite {field}")
     return number
+
+
+#: Demo domainpacks shipped inside the wheel so ``spo demo`` works for a plain
+#: ``pip install`` (whose repository ``domainpacks/`` tree is absent).
+_BUNDLED_DEMO_DOMAINPACKS = Path(__file__).resolve().parent / "_demo_domainpacks"
+
+
+def _demo_domainpack_roots() -> tuple[Path, ...]:
+    """Return the ordered domainpack search roots for ``spo demo``.
+
+    The source-checkout ``domainpacks/`` tree (resolved from this file, so it works
+    from any working directory) and the current working directory are tried first,
+    so a repository run uses the full tree; the wheel-shipped ``_demo_domainpacks/``
+    is the final fallback so a ``pip install`` can still run the bundled demo instead
+    of crashing on the absent tree.
+
+    Returns
+    -------
+    tuple[Path, ...]
+        The ordered domainpack search roots.
+    """
+    return (
+        Path(__file__).resolve().parents[4] / "domainpacks",
+        Path("domainpacks"),
+        _BUNDLED_DEMO_DOMAINPACKS,
+    )
 
 
 def _contained_domainpack_spec(domainpack_root: Path, domain: str) -> Path:

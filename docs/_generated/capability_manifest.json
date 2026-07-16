@@ -12,7 +12,7 @@
     "research_experimental_modules": 204,
     "runtime_serving_modules": 154,
     "rust_kernel_files": 97,
-    "test_files": 850
+    "test_files": 851
   },
   "documentation": {
     "public_pages": [
@@ -362,7 +362,8 @@
       "apps/queuewaves/static/*",
       "audit/*.proto",
       "runtime/cli/_quickstart_assets/*/*.yaml",
-      "runtime/cli/_quickstart_assets/*/*.json"
+      "runtime/cli/_quickstart_assets/*/*.json",
+      "runtime/cli/_demo_domainpacks/*/*.yaml"
     ]
   },
   "product_boundaries": {
@@ -1955,6 +1956,7 @@
       "tests/test_cli_audit_guards.py",
       "tests/test_cli_auto_coupling.py",
       "tests/test_cli_binding_auto_branches.py",
+      "tests/test_cli_demo_packaging.py",
       "tests/test_cli_digital_twin_contracts.py",
       "tests/test_cli_evaluation.py",
       "tests/test_cli_evolutionary_grammar.py",
