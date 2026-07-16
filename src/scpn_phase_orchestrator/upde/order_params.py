@@ -46,9 +46,10 @@ BoolArray = NDArray[np.bool_]
 __all__ = [
     "ACTIVE_BACKEND",
     "AVAILABLE_BACKENDS",
+    "compute_layer_coherence",
     "compute_order_parameter",
     "compute_plv",
-    "compute_layer_coherence",
+    "debiased_squared_order_parameter",
 ]
 
 
@@ -283,6 +284,14 @@ def compute_order_parameter(phases: FloatArray) -> tuple[float, float]:
     -------
     tuple[float, float]
         The ``(R, ψ)`` Kuramoto order parameter and mean phase.
+
+    Notes
+    -----
+    ``R`` carries a positive small-sample bias: ``N`` uniformly random phases give
+    ``E[R²] = 1/N``, so ``R`` reads about ``1/√N`` (≈ 0.35 at ``N = 8``) even with
+    no coherence. A monitor comparing coherence across small populations should use
+    :func:`debiased_squared_order_parameter`, whose expectation is 0 under
+    uniformity, rather than reading the raw ``R`` as if it were unbiased.
     """
     phases = _validate_phases("phases", phases)
     if phases.size == 0:
@@ -298,6 +307,51 @@ def compute_order_parameter(phases: FloatArray) -> tuple[float, float]:
         )
 
     return _python_order_parameter(phases)
+
+
+def debiased_squared_order_parameter(phases: FloatArray) -> float:
+    """Return the small-N-bias-corrected squared Kuramoto order parameter.
+
+    The raw magnitude ``R = |mean(exp(iθ))|`` has a positive small-sample bias:
+    ``N`` uniformly random phases give ``E[R²] = 1/N``, so ``R`` reads about
+    ``1/√N`` (≈ 0.35 at ``N = 8``) even with no coherence. This estimator removes
+    that floor. It is the pairwise phase consistency of Vinck et al. (2010),
+
+    ``(N · R² − 1) / (N − 1)``,
+
+    whose expectation is 0 under uniform phases and 1 at perfect synchrony. It can
+    be slightly negative on a finite anti-aligned sample — that is honest, not an
+    error. Reuses the accelerated :func:`compute_order_parameter` for ``R``; the
+    debiasing itself is a scalar correction.
+
+    Parameters
+    ----------
+    phases : FloatArray
+        Oscillator phases in radians, shape ``(N,)`` with ``N ≥ 2``.
+
+    Returns
+    -------
+    float
+        The debiased squared order parameter, in ``[-1 / (N − 1), 1]``.
+
+    Raises
+    ------
+    ValueError
+        If fewer than two phases are supplied — the correction is undefined for a
+        single oscillator (``N − 1 = 0``).
+
+    References
+    ----------
+    Vinck, M., van Wingerden, M., Womelsdorf, T., Fries, P., & Pennartz, C. M. A.
+    (2010). The pairwise phase consistency: a bias-free measure of rhythmic
+    neuronal synchronization. *NeuroImage*, 51(1), 112–122.
+    """
+    validated = _validate_phases("phases", phases)
+    n = int(validated.size)
+    if n < 2:
+        raise ValueError("debiased order parameter requires at least two phases")
+    coherence, _ = compute_order_parameter(validated)
+    return float((n * coherence * coherence - 1.0) / (n - 1))
 
 
 def compute_plv(phases_a: FloatArray, phases_b: FloatArray) -> float:

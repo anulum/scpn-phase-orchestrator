@@ -32,6 +32,7 @@ from scpn_phase_orchestrator.upde.order_params import (
     compute_layer_coherence,
     compute_order_parameter,
     compute_plv,
+    debiased_squared_order_parameter,
 )
 
 TWO_PI = 2.0 * np.pi
@@ -797,3 +798,48 @@ class TestOrderParamsPythonPath:
 # ──────────────────────────────────────────────────────────────────────
 # knm.py: force Python fallback for build()
 # ──────────────────────────────────────────────────────────────────────
+
+
+class TestDebiasedSquaredOrderParameter:
+    def test_perfect_synchrony_is_one(self):
+        phases = np.full(5, 1.234)
+        assert debiased_squared_order_parameter(phases) == pytest.approx(1.0)
+
+    def test_two_antiphase_oscillators_give_minus_one(self):
+        # R = 0 for opposed phases; (2·0 − 1) / (2 − 1) = −1.
+        phases = np.array([0.0, np.pi])
+        assert debiased_squared_order_parameter(phases) == pytest.approx(-1.0)
+
+    def test_equally_spaced_phases_are_below_zero(self):
+        # Perfectly uniform (R = 0) → (N·0 − 1)/(N − 1) = −1/(N − 1), honestly < 0.
+        n = 8
+        phases = np.arange(n) * (TWO_PI / n)
+        assert debiased_squared_order_parameter(phases) == pytest.approx(-1.0 / (n - 1))
+
+    def test_never_exceeds_one(self):
+        rng = np.random.default_rng(3)
+        for _ in range(50):
+            phases = rng.uniform(0.0, TWO_PI, 16)
+            assert debiased_squared_order_parameter(phases) <= 1.0 + 1e-12
+
+    def test_removes_the_small_n_bias(self):
+        # Raw R² carries the 1/N floor; the debiased estimator averages to ~0.
+        rng = np.random.default_rng(0)
+        n = 8
+        raw_squared = []
+        debiased = []
+        for _ in range(2000):
+            phases = rng.uniform(0.0, TWO_PI, n)
+            coherence, _ = compute_order_parameter(phases)
+            raw_squared.append(coherence * coherence)
+            debiased.append(debiased_squared_order_parameter(phases))
+        assert np.mean(raw_squared) == pytest.approx(1.0 / n, abs=0.03)
+        assert abs(float(np.mean(debiased))) < 0.02
+
+    def test_single_oscillator_rejected(self):
+        with pytest.raises(ValueError, match="at least two phases"):
+            debiased_squared_order_parameter(np.array([0.5]))
+
+    def test_empty_rejected(self):
+        with pytest.raises(ValueError, match="at least two phases"):
+            debiased_squared_order_parameter(np.array([]))
