@@ -234,6 +234,34 @@ class TestFastAPIEndpoints:
 
         assert r.status_code == 401
 
+    def test_production_api_key_check_is_timing_safe(self, monkeypatch):
+        """Key comparison must route through hmac.compare_digest (no plain !=)."""
+        import hmac as hmac_module
+
+        from scpn_phase_orchestrator.runtime import server as server_module
+        from scpn_phase_orchestrator.runtime.server import create_app
+
+        compared: list[tuple[str, str]] = []
+        real_compare = hmac_module.compare_digest
+
+        def recording_compare(a, b):
+            compared.append((a, b))
+            return real_compare(a, b)
+
+        monkeypatch.setattr(server_module.hmac, "compare_digest", recording_compare)
+        monkeypatch.setenv("SPO_ENV", "production")
+        monkeypatch.setenv("SPO_API_KEY", "test-key")
+        app = create_app(DOMAINPACK_DIR / "minimal_domain" / "binding_spec.yaml")
+        client = TestClient(app)
+
+        wrong = client.post("/api/step", headers={"X-API-Key": "wrong-key"})
+        right = client.post("/api/step", headers={"X-API-Key": "test-key"})
+
+        assert wrong.status_code == 401
+        assert right.status_code == 200
+        assert ("wrong-key", "test-key") in compared
+        assert ("test-key", "test-key") in compared
+
     def test_production_rate_limits_mutations(self, monkeypatch):
         from scpn_phase_orchestrator.runtime.server import create_app
 

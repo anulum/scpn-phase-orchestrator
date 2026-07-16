@@ -368,17 +368,12 @@ jobs:
           cache: pip
       - run: pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
       - run: bandit -r src/ -c pyproject.toml
-      # PYSEC-2024-277 and PYSEC-2026-89 were reported on 2026-05-20 with
-      # no fixed release available; remove these suppressions after upstream
-      # fixed releases are available and the lockfiles are regenerated.
+      # No --ignore-vuln suppressions: both lockfiles audited clean with zero
+      # ignores on 2026-07-16. Any future suppression must carry an inline
+      # rationale plus a review-by date (SECURITY.md, Dependency Security).
       - run: >
           python -m pip install --require-hashes --no-deps -r requirements/audit-tools.txt
           && pip-audit
-          --ignore-vuln CVE-2026-4539
-          --ignore-vuln CVE-2026-39892
-          --ignore-vuln CVE-2025-71176
-          --ignore-vuln PYSEC-2024-277
-          --ignore-vuln PYSEC-2026-89
 
   rust-check:
     strategy:

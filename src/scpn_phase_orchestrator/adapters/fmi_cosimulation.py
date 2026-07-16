@@ -17,10 +17,11 @@ point, calls ``do_step``, and reads back the proposed control.
 
 The slave, the ``modelDescription.xml`` generator and the ``.fmu`` packager are
 pure NumPy and fully exercised in-process by driving the slave the way a master
-would. They emit a conformant FMI 3.0 model interface; loading the package inside
-a third-party FMI tool additionally needs the C-ABI binary shim, which is an
-optional, documented build step (the ``fmi`` extra) outside this module — the
-review-only model and its evidence are produced here.
+would. They emit a conformant FMI 3.0 model interface; a C-ABI binary shim is
+not shipped, so loading the package inside a third-party FMI tool needs a
+Python-backed FMI runtime that reconstructs the model from
+``resources/model.json`` — the review-only model and its evidence are produced
+here.
 
 The reverse, import direction is :func:`cosimulate`: a co-simulation master that
 drives the controller slave against a plant supplied as a step callable, closing
@@ -319,8 +320,8 @@ def write_fmu(slave: CoSimulationSlave, path: str | Path) -> Path:
 
     The archive carries the conformant ``modelDescription.xml`` and a
     ``resources/model.json`` describing the controller, the self-contained model
-    a Python-backed FMI runtime reconstructs. Loading it inside a third-party FMI
-    tool additionally needs the C-ABI binary shim from the optional ``fmi`` extra.
+    a Python-backed FMI runtime reconstructs. No C-ABI binary shim is shipped,
+    so a third-party FMI tool needs such a runtime to load the archive.
 
     Parameters
     ----------

@@ -111,6 +111,8 @@ class PrometheusAdapter:
         url = f"{self._endpoint}/api/v1/query_range?{params}"
         req = Request(url, headers={"Accept": "application/json"})
         try:
+            # Endpoint scheme is constrained to http/https in __init__, so
+            # B310's file://-style scheme concern does not apply here.
             with urlopen(req, timeout=self._timeout) as resp:  # nosec B310
                 body = _load_response_body(resp.read())
         except (URLError, OSError):
@@ -152,6 +154,8 @@ class PrometheusAdapter:
         url = f"{self._endpoint}/api/v1/query?{params}"
         req = Request(url, headers={"Accept": "application/json"})
         try:
+            # Endpoint scheme is constrained to http/https in __init__, so
+            # B310's file://-style scheme concern does not apply here.
             with urlopen(req, timeout=self._timeout) as resp:  # nosec B310
                 body = _load_response_body(resp.read())
         except (URLError, OSError):

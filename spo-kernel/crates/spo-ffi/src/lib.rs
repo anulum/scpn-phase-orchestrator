@@ -92,8 +92,15 @@ impl PyActiveInferenceAgent {
         dt: f64,
     ) -> (f64, f64) {
         if let Some(phases) = phases {
-            let p = phases.as_slice().unwrap_or(&[]);
-            return self.inner.control(p);
+            // Non-contiguous input must not silently degrade to an empty
+            // slice — copy it into a contiguous buffer instead.
+            return match phases.as_slice() {
+                Ok(p) => self.inner.control(p),
+                Err(_) => {
+                    let owned: Vec<f64> = phases.as_array().iter().copied().collect();
+                    self.inner.control(&owned)
+                }
+            };
         }
 
         let _ = dt;

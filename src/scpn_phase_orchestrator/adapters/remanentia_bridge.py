@@ -254,6 +254,8 @@ class RemanentiaBridge:
             raise ValueError(
                 "Refusing request: only http:// and https:// URLs are allowed"
             )
+        # Scheme is enforced to http/https just above, so B310's file://-style
+        # scheme concern does not apply here.
         with urllib.request.urlopen(req, timeout=self._timeout) as resp:  # nosec B310
             return _validated_response_payload(
                 json.loads(resp.read()),

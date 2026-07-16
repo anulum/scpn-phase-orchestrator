@@ -158,6 +158,29 @@ class TestLearningRateBehaviour:
         assert np.isfinite(psi_huge)
 
 
+class TestPhaseVectorControl:
+    def test_control_accepts_phase_vector(self):
+        agent = PyActiveInferenceAgent(n_hidden=4, target_r=0.5, lr=1.0)
+        phases = np.linspace(0.0, 2.0 * np.pi, 8, endpoint=False)
+        zeta, psi = agent.control(phases=phases)
+        assert np.isfinite(zeta)
+        assert np.isfinite(psi)
+
+    def test_non_contiguous_phases_match_contiguous(self):
+        """A strided view must not silently degrade to an empty slice."""
+        agent_strided = PyActiveInferenceAgent(n_hidden=4, target_r=0.5, lr=1.0)
+        agent_contig = PyActiveInferenceAgent(n_hidden=4, target_r=0.5, lr=1.0)
+        base = np.linspace(0.0, 2.0 * np.pi, 16, endpoint=False)
+        strided = base[::2]
+        assert not strided.flags["C_CONTIGUOUS"]
+        contiguous = np.ascontiguousarray(strided)
+
+        out_strided = agent_strided.control(phases=strided)
+        out_contig = agent_contig.control(phases=contiguous)
+
+        assert out_strided == pytest.approx(out_contig)
+
+
 class TestStepwiseAdaptation:
     def test_repeated_calls_produce_finite_output(self):
         """Agent does not diverge under repeated invocation (stability)."""

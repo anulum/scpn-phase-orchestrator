@@ -30,6 +30,7 @@ Endpoints:
 from __future__ import annotations
 
 import asyncio
+import hmac
 import json
 import logging
 import os
@@ -525,7 +526,7 @@ def create_app(spec_path: str | Path) -> object:  # pragma: no cover
         """Authorise an HTTP request, raising on failure."""
         if _api_key is None:
             identity = request.client.host if request.client is not None else "local"
-        elif x_api_key != _api_key:
+        elif x_api_key is None or not hmac.compare_digest(x_api_key, _api_key):
             raise HTTPException(status_code=401, detail="Invalid or missing X-API-Key")
         else:
             identity = x_api_key

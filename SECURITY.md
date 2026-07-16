@@ -71,6 +71,13 @@ safety-critical control systems. The threat model covers:
 - Bandit security scanner runs on every commit (pre-commit + CI).
 - Ruff linter flags common security anti-patterns.
 - No `eval()`, `exec()`, or `pickle.loads()` in the codebase.
+- **Vulnerability suppressions are temporary and tracked**: a `--ignore-vuln`
+  entry in the CI `pip-audit` step is allowed only while no fixed release
+  exists, and must carry an inline comment naming the affected package, the
+  reason, and a review-by date. A suppression is removed as soon as the fixed
+  release lands in the lockfiles — verified by auditing
+  `requirements/dev-lock.txt` and `requirements/audit-tools.txt` with no
+  ignore flags.
 
 ### Supply-chain provenance
 Released artefacts carry **SLSA build provenance**, signed keylessly through
