@@ -15,6 +15,7 @@ import pytest
 
 from scpn_phase_orchestrator.evaluation.detector_meta_analysis import (
     EvidenceRow,
+    benjamini_hochberg_by_domain,
     build_report,
     discover_aggregate_jsons,
     extract_evidence,
@@ -176,6 +177,46 @@ def test_build_report_contains_expected_sections(project_examples_dir):
     assert "critical_slowing_down" in report
     assert "normalized_delta_envelope" in report
     assert "SNR-weighted Kuramoto did not improve" in report
+
+
+def _row(domain: str, detector: str, p_value: float) -> EvidenceRow:
+    return EvidenceRow(
+        domain=domain,
+        detector=detector,
+        detection_rate=0.5,
+        p_value=p_value,
+        beats_chance=p_value < 0.05,
+        source_file=f"{domain}_aggregate.json",
+    )
+
+
+def test_benjamini_hochberg_by_domain_corrects_within_each_domain():
+    rows = [
+        _row("d1", "a", 0.001),
+        _row("d1", "b", 0.5),
+        _row("d2", "c", 0.02),
+    ]
+    adjusted = benjamini_hochberg_by_domain(rows)
+    # d1 family of two: 0.001 · 2/1 = 0.002; 0.5 unchanged.
+    assert adjusted[("d1", "a")] == pytest.approx(0.002)
+    assert adjusted[("d1", "b")] == pytest.approx(0.5)
+    # d2 is a family of one, so its correction leaves the raw value.
+    assert adjusted[("d2", "c")] == pytest.approx(0.02)
+
+
+def test_benjamini_hochberg_by_domain_handles_no_rows():
+    assert benjamini_hochberg_by_domain([]) == {}
+
+
+def test_build_report_shows_the_multiplicity_corrected_column(project_examples_dir):
+    rows, rankings, overall, source_paths, unsupported = run_analysis(
+        project_examples_dir
+    )
+    report = build_report(rows, rankings, overall, source_paths, unsupported)
+    assert "BH-adj p" in report
+    assert "Benjamini–Hochberg" in report
+    # The per-domain table header carries the raw and the adjusted p side by side.
+    assert "| Rank | Detector | Detection rate | p-value | BH-adj p " in report
 
 
 def test_main_generates_report(tmp_path, project_examples_dir):

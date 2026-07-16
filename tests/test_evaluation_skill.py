@@ -15,6 +15,7 @@ import pytest
 
 from scpn_phase_orchestrator.evaluation.skill import (
     PermutationSignificance,
+    benjamini_hochberg,
     calibrate_score_threshold,
     matched_false_alarm_rate,
     permutation_significance_from_alarms,
@@ -166,3 +167,49 @@ class TestSurrogateRankPValue:
 
     def test_never_exceeds_one(self):
         assert surrogate_rank_pvalue(-math.inf, [0.0]) == 1.0
+
+
+class TestBenjaminiHochberg:
+    def test_single_p_value_is_unchanged(self):
+        assert benjamini_hochberg([0.03]) == pytest.approx([0.03])
+
+    def test_uniform_family_all_adjust_to_the_same_value(self):
+        # p_(k) = k/100 for k=1..5 → every BH-adjusted value equals 0.05.
+        adjusted = benjamini_hochberg([0.01, 0.02, 0.03, 0.04, 0.05])
+        assert adjusted == pytest.approx([0.05, 0.05, 0.05, 0.05, 0.05])
+
+    def test_smallest_p_is_scaled_by_n(self):
+        # One clearly-significant detector among two: 0.001 · 2/1 = 0.002.
+        assert benjamini_hochberg([0.001, 0.5]) == pytest.approx([0.002, 0.5])
+
+    def test_preserves_input_order(self):
+        adjusted = benjamini_hochberg([0.5, 0.001])
+        assert adjusted == pytest.approx([0.5, 0.002])
+
+    def test_result_is_monotone_in_sorted_order(self):
+        raw = [0.001, 0.2, 0.02, 0.04]
+        adjusted = benjamini_hochberg(raw)
+        paired = sorted(zip(raw, adjusted, strict=True), key=lambda pair: pair[0])
+        sorted_adjusted = [adj for _, adj in paired]
+        assert sorted_adjusted == sorted(sorted_adjusted)
+
+    def test_adjusted_never_below_raw(self):
+        raw = [0.001, 0.2, 0.02, 0.04, 0.5]
+        for original, adjusted in zip(raw, benjamini_hochberg(raw), strict=True):
+            assert adjusted >= original - 1e-12
+
+    def test_clamped_to_one(self):
+        assert benjamini_hochberg([0.9, 0.95])[1] <= 1.0
+
+    def test_accepts_numpy_p_values(self):
+        adjusted = benjamini_hochberg(np.array([0.001, 0.5]))
+        assert adjusted == pytest.approx([0.002, 0.5])
+
+    def test_empty_rejected(self):
+        with pytest.raises(ValueError, match="p_values must not be empty"):
+            benjamini_hochberg([])
+
+    @pytest.mark.parametrize("bad", [-0.01, 1.01])
+    def test_out_of_range_rejected(self, bad):
+        with pytest.raises(ValueError, match=r"p-values must be in \[0, 1\]"):
+            benjamini_hochberg([0.5, bad])

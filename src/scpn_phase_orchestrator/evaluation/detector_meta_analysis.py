@@ -38,6 +38,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from scpn_phase_orchestrator.evaluation.skill import benjamini_hochberg
+
 KNOWN_AGGREGATE_NAMES: frozenset[str] = frozenset(
     {
         "cap_multichannel_aggregate.json",
@@ -316,6 +318,38 @@ def rank_overall(
     return overall
 
 
+def benjamini_hochberg_by_domain(
+    rows: list[EvidenceRow],
+) -> dict[tuple[str, str], float]:
+    """Return the FDR-adjusted p-value of each detector within its domain family.
+
+    The multiplicity correction is applied *per domain*: every detector scored on
+    a domain forms one family, so a raw p-value that only looks significant because
+    several detectors were tried is deflated. The raw p-value is still reported
+    beside it; this is the honest companion, not a replacement.
+
+    Parameters
+    ----------
+    rows : list of EvidenceRow
+        Normalised detector rows spanning all domains.
+
+    Returns
+    -------
+    dict
+        Mapping of ``(domain, detector)`` to its Benjamini–Hochberg-adjusted
+        p-value, corrected within the domain.
+    """
+    by_domain: dict[str, list[EvidenceRow]] = {}
+    for row in rows:
+        by_domain.setdefault(row.domain, []).append(row)
+    adjusted: dict[tuple[str, str], float] = {}
+    for domain, domain_rows in by_domain.items():
+        family = benjamini_hochberg([row.p_value for row in domain_rows])
+        for row, adjusted_p in zip(domain_rows, family, strict=True):
+            adjusted[(domain, row.detector)] = adjusted_p
+    return adjusted
+
+
 def _format_fraction(value: float) -> str:
     """Format a fraction as a percentage with one decimal place."""
     return f"{value * 100.0:.1f}%"
@@ -401,21 +435,34 @@ def build_report(
             lines.append(f"* `{path.parent.name}/{path.name}`")
         lines.append("")
 
-    lines.extend(["## Per-domain rankings", ""])
+    adjusted_p = benjamini_hochberg_by_domain(rows)
+    lines.extend(
+        [
+            "## Per-domain rankings",
+            "",
+            "`BH-adj p` is the Benjamini–Hochberg false-discovery-rate-adjusted "
+            "p-value, corrected across the detectors compared on that domain, so a "
+            "raw p-value that only looks significant because several detectors were "
+            "tried is not read as a discovery. The raw `p-value` is kept beside it.",
+            "",
+        ]
+    )
     for domain in sorted(rankings):
         lines.extend(
             [
                 f"### {domain}",
                 "",
-                "| Rank | Detector | Detection rate | p-value | Beats chance |",
-                "| --- | --- | --- | --- | --- |",
+                "| Rank | Detector | Detection rate | p-value | BH-adj p "
+                "| Beats chance |",
+                "| --- | --- | --- | --- | --- | --- |",
             ]
         )
         for rank, row in rankings[domain]:
             rate_str = _format_fraction(row.detection_rate)
             p_str = _format_p(row.p_value)
+            adj_str = _format_p(adjusted_p[(domain, row.detector)])
             lines.append(
-                f"| {rank} | `{row.detector}` | {rate_str} | {p_str} | "
+                f"| {rank} | `{row.detector}` | {rate_str} | {p_str} | {adj_str} | "
                 f"{row.beats_chance} |"
             )
         lines.append("")

@@ -1,6 +1,6 @@
 # Cross-Domain Detector Meta-Analysis Report
 
-**Generated:** 2026-07-09 23:39 UTC
+**Generated:** 2026-07-16 22:44 UTC
 
 This report is produced automatically from the committed detector-evidence aggregates under ``examples/real_data/*/``. It normalises each detector's performance, ranks detectors within every domain, and derives a ranked backlog of refinement candidates.
 
@@ -25,135 +25,137 @@ This report is produced automatically from the committed detector-evidence aggre
 
 ## Per-domain rankings
 
+`BH-adj p` is the Benjamini–Hochberg false-discovery-rate-adjusted p-value, corrected across the detectors compared on that domain, so a raw p-value that only looks significant because several detectors were tried is not read as a discovery. The raw `p-value` is kept beside it.
+
 ### afdb_atrial_fibrillation
 
-| Rank | Detector | Detection rate | p-value | Beats chance |
-| --- | --- | --- | --- | --- |
-| 1 | `ensemble_weighted` | 33.3% | 2.193e-01 | False |
-| 1 | `synchronisation` | 33.3% | 2.193e-01 | False |
-| 3 | `critical_slowing_down` | 16.7% | 5.627e-01 | False |
-| 4 | `transition_entropy` | 0.0% | 1.000e+00 | False |
+| Rank | Detector | Detection rate | p-value | BH-adj p | Beats chance |
+| --- | --- | --- | --- | --- | --- |
+| 1 | `ensemble_weighted` | 33.3% | 2.193e-01 | 4.386e-01 | False |
+| 1 | `synchronisation` | 33.3% | 2.193e-01 | 4.386e-01 | False |
+| 3 | `critical_slowing_down` | 16.7% | 5.627e-01 | 7.503e-01 | False |
+| 4 | `transition_entropy` | 0.0% | 1.000e+00 | 1.000e+00 | False |
 
 ### afdb_atrial_fibrillation_multiscale
 
-| Rank | Detector | Detection rate | p-value | Beats chance |
-| --- | --- | --- | --- | --- |
-| 1 | `critical_slowing_down_multiscale` | 33.3% | 2.193e-01 | False |
-| 1 | `ensemble_weighted` | 33.3% | 2.193e-01 | False |
-| 1 | `synchronisation` | 33.3% | 2.193e-01 | False |
-| 4 | `critical_slowing_down` | 16.7% | 5.627e-01 | False |
-| 5 | `transition_entropy` | 0.0% | 1.000e+00 | False |
+| Rank | Detector | Detection rate | p-value | BH-adj p | Beats chance |
+| --- | --- | --- | --- | --- | --- |
+| 1 | `critical_slowing_down_multiscale` | 33.3% | 2.193e-01 | 3.655e-01 | False |
+| 1 | `ensemble_weighted` | 33.3% | 2.193e-01 | 3.655e-01 | False |
+| 1 | `synchronisation` | 33.3% | 2.193e-01 | 3.655e-01 | False |
+| 4 | `critical_slowing_down` | 16.7% | 5.627e-01 | 7.034e-01 | False |
+| 5 | `transition_entropy` | 0.0% | 1.000e+00 | 1.000e+00 | False |
 
 ### cap_kuramoto_variants
 
-| Rank | Detector | Detection rate | p-value | Beats chance |
-| --- | --- | --- | --- | --- |
-| 1 | `coherent_sustained_kuramoto` | 55.2% | 1.112e-03 | True |
-| 2 | `normalized_delta_envelope` | 52.5% | 1.000e-03 | True |
-| 3 | `amplitude_gated_delta_kuramoto` | 45.7% | 1.309e-03 | True |
-| 4 | `adaptive_channel_kuramoto` | 20.4% | 6.570e-03 | True |
-| 5 | `multi_channel_delta_kuramoto` | 18.4% | 1.486e-02 | True |
-| 6 | `snr_weighted_delta_kuramoto` | 17.5% | 1.614e-02 | True |
-| 7 | `sustained_delta_kuramoto` | 17.3% | 2.320e-02 | True |
+| Rank | Detector | Detection rate | p-value | BH-adj p | Beats chance |
+| --- | --- | --- | --- | --- | --- |
+| 1 | `coherent_sustained_kuramoto` | 55.2% | 1.112e-03 | 3.054e-03 | True |
+| 2 | `normalized_delta_envelope` | 52.5% | 1.000e-03 | 3.054e-03 | True |
+| 3 | `amplitude_gated_delta_kuramoto` | 45.7% | 1.309e-03 | 3.054e-03 | True |
+| 4 | `adaptive_channel_kuramoto` | 20.4% | 6.570e-03 | 1.150e-02 | True |
+| 5 | `multi_channel_delta_kuramoto` | 18.4% | 1.486e-02 | 1.883e-02 | True |
+| 6 | `snr_weighted_delta_kuramoto` | 17.5% | 1.614e-02 | 1.883e-02 | True |
+| 7 | `sustained_delta_kuramoto` | 17.3% | 2.320e-02 | 2.320e-02 | True |
 
 ### cap_multichannel_staging
 
-| Rank | Detector | Detection rate | p-value | Beats chance |
-| --- | --- | --- | --- | --- |
-| 1 | `normalized_delta_envelope` | 52.5% | 1.000e-03 | True |
-| 2 | `multi_channel_delta_kuramoto` | 18.4% | 1.486e-02 | True |
-| 3 | `snr_weighted_delta_kuramoto` | 17.5% | 1.614e-02 | True |
+| Rank | Detector | Detection rate | p-value | BH-adj p | Beats chance |
+| --- | --- | --- | --- | --- | --- |
+| 1 | `normalized_delta_envelope` | 52.5% | 1.000e-03 | 3.000e-03 | True |
+| 2 | `multi_channel_delta_kuramoto` | 18.4% | 1.486e-02 | 1.614e-02 | True |
+| 3 | `snr_weighted_delta_kuramoto` | 17.5% | 1.614e-02 | 1.614e-02 | True |
 
 ### chb01_seizures
 
-| Rank | Detector | Detection rate | p-value | Beats chance |
-| --- | --- | --- | --- | --- |
-| 1 | `critical_slowing_down` | 33.3% | 2.155e-01 | False |
-| 2 | `ensemble_weighted` | 16.7% | 5.582e-01 | False |
-| 3 | `synchronisation` | 16.7% | 5.598e-01 | False |
-| 4 | `transition_entropy` | 0.0% | 1.000e+00 | False |
+| Rank | Detector | Detection rate | p-value | BH-adj p | Beats chance |
+| --- | --- | --- | --- | --- | --- |
+| 1 | `critical_slowing_down` | 33.3% | 2.155e-01 | 7.465e-01 | False |
+| 2 | `ensemble_weighted` | 16.7% | 5.582e-01 | 7.465e-01 | False |
+| 3 | `synchronisation` | 16.7% | 5.598e-01 | 7.465e-01 | False |
+| 4 | `transition_entropy` | 0.0% | 1.000e+00 | 1.000e+00 | False |
 
 ### chb01_seizures_multiscale
 
-| Rank | Detector | Detection rate | p-value | Beats chance |
-| --- | --- | --- | --- | --- |
-| 1 | `critical_slowing_down_multiscale` | 33.3% | 2.154e-01 | False |
-| 2 | `critical_slowing_down` | 33.3% | 2.155e-01 | False |
-| 3 | `ensemble_weighted` | 16.7% | 5.582e-01 | False |
-| 4 | `synchronisation` | 16.7% | 5.598e-01 | False |
-| 5 | `transition_entropy` | 0.0% | 1.000e+00 | False |
+| Rank | Detector | Detection rate | p-value | BH-adj p | Beats chance |
+| --- | --- | --- | --- | --- | --- |
+| 1 | `critical_slowing_down_multiscale` | 33.3% | 2.154e-01 | 5.387e-01 | False |
+| 2 | `critical_slowing_down` | 33.3% | 2.155e-01 | 5.387e-01 | False |
+| 3 | `ensemble_weighted` | 16.7% | 5.582e-01 | 6.998e-01 | False |
+| 4 | `synchronisation` | 16.7% | 5.598e-01 | 6.998e-01 | False |
+| 5 | `transition_entropy` | 0.0% | 1.000e+00 | 1.000e+00 | False |
 
 ### csd_variant_synthetic
 
-| Rank | Detector | Detection rate | p-value | Beats chance |
-| --- | --- | --- | --- | --- |
-| 1 | `critical_slowing_down_multiscale` | 50.0% | 4.055e-03 | True |
-| 2 | `critical_slowing_down_surrogate` | 31.2% | 2.078e-02 | True |
-| 3 | `critical_slowing_down_baseline` | 25.0% | 1.473e-01 | True |
+| Rank | Detector | Detection rate | p-value | BH-adj p | Beats chance |
+| --- | --- | --- | --- | --- | --- |
+| 1 | `critical_slowing_down_multiscale` | 50.0% | 4.055e-03 | 1.216e-02 | True |
+| 2 | `critical_slowing_down_surrogate` | 31.2% | 2.078e-02 | 3.116e-02 | True |
+| 3 | `critical_slowing_down_baseline` | 25.0% | 1.473e-01 | 1.473e-01 | True |
 
 ### dakos_climate_transitions
 
-| Rank | Detector | Detection rate | p-value | Beats chance |
-| --- | --- | --- | --- | --- |
-| 1 | `critical_slowing_down` | 16.7% | 5.144e-01 | False |
+| Rank | Detector | Detection rate | p-value | BH-adj p | Beats chance |
+| --- | --- | --- | --- | --- | --- |
+| 1 | `critical_slowing_down` | 16.7% | 5.144e-01 | 5.144e-01 | False |
 
 ### dakos_climate_transitions_multiscale
 
-| Rank | Detector | Detection rate | p-value | Beats chance |
-| --- | --- | --- | --- | --- |
-| 1 | `critical_slowing_down_multiscale` | 0.0% | 1.000e+00 | False |
+| Rank | Detector | Detection rate | p-value | BH-adj p | Beats chance |
+| --- | --- | --- | --- | --- | --- |
+| 1 | `critical_slowing_down_multiscale` | 0.0% | 1.000e+00 | 1.000e+00 | False |
 
 ### psml_grid_oscillation
 
-| Rank | Detector | Detection rate | p-value | Beats chance |
-| --- | --- | --- | --- | --- |
-| 1 | `critical_slowing_down` | 25.0% | 1.953e-01 | False |
-| 2 | `transition_entropy` | 16.7% | 4.045e-01 | False |
-| 3 | `ensemble_weighted` | 16.7% | 4.073e-01 | False |
-| 4 | `synchronisation` | 0.0% | 1.000e+00 | False |
+| Rank | Detector | Detection rate | p-value | BH-adj p | Beats chance |
+| --- | --- | --- | --- | --- | --- |
+| 1 | `critical_slowing_down` | 25.0% | 1.953e-01 | 5.430e-01 | False |
+| 2 | `transition_entropy` | 16.7% | 4.045e-01 | 5.430e-01 | False |
+| 3 | `ensemble_weighted` | 16.7% | 4.073e-01 | 5.430e-01 | False |
+| 4 | `synchronisation` | 0.0% | 1.000e+00 | 1.000e+00 | False |
 
 ### psml_grid_oscillation_multiscale
 
-| Rank | Detector | Detection rate | p-value | Beats chance |
-| --- | --- | --- | --- | --- |
-| 1 | `critical_slowing_down_multiscale` | 33.3% | 7.859e-02 | False |
-| 2 | `critical_slowing_down` | 25.0% | 1.953e-01 | False |
-| 3 | `transition_entropy` | 16.7% | 4.045e-01 | False |
-| 4 | `ensemble_weighted` | 16.7% | 4.073e-01 | False |
-| 5 | `synchronisation` | 0.0% | 1.000e+00 | False |
+| Rank | Detector | Detection rate | p-value | BH-adj p | Beats chance |
+| --- | --- | --- | --- | --- | --- |
+| 1 | `critical_slowing_down_multiscale` | 33.3% | 7.859e-02 | 3.930e-01 | False |
+| 2 | `critical_slowing_down` | 25.0% | 1.953e-01 | 4.882e-01 | False |
+| 3 | `transition_entropy` | 16.7% | 4.045e-01 | 5.091e-01 | False |
+| 4 | `ensemble_weighted` | 16.7% | 4.073e-01 | 5.091e-01 | False |
+| 5 | `synchronisation` | 0.0% | 1.000e+00 | 1.000e+00 | False |
 
 ### regime_adaptive_ensemble
 
-| Rank | Detector | Detection rate | p-value | Beats chance |
-| --- | --- | --- | --- | --- |
-| 1 | `normalized_delta_envelope` | 61.9% | 6.310e-04 | True |
-| 2 | `regime_adaptive_full` | 61.5% | 7.250e-04 | True |
-| 2 | `regime_adaptive_montage` | 61.5% | 7.250e-04 | True |
-| 4 | `coherent_sustained_kuramoto` | 49.5% | 6.870e-04 | True |
-| 5 | `amplitude_gated_delta_kuramoto` | 42.1% | 7.830e-04 | True |
-| 6 | `adaptive_channel_kuramoto` | 16.3% | 1.795e-02 | True |
-| 7 | `multi_channel_delta_kuramoto` | 14.7% | 3.448e-02 | True |
-| 8 | `snr_weighted_delta_kuramoto` | 14.0% | 3.684e-02 | True |
-| 9 | `sustained_delta_kuramoto` | 13.9% | 4.926e-02 | True |
+| Rank | Detector | Detection rate | p-value | BH-adj p | Beats chance |
+| --- | --- | --- | --- | --- | --- |
+| 1 | `normalized_delta_envelope` | 61.9% | 6.310e-04 | 1.409e-03 | True |
+| 2 | `regime_adaptive_full` | 61.5% | 7.250e-04 | 1.409e-03 | True |
+| 2 | `regime_adaptive_montage` | 61.5% | 7.250e-04 | 1.409e-03 | True |
+| 4 | `coherent_sustained_kuramoto` | 49.5% | 6.870e-04 | 1.409e-03 | True |
+| 5 | `amplitude_gated_delta_kuramoto` | 42.1% | 7.830e-04 | 1.409e-03 | True |
+| 6 | `adaptive_channel_kuramoto` | 16.3% | 1.795e-02 | 2.692e-02 | True |
+| 7 | `multi_channel_delta_kuramoto` | 14.7% | 3.448e-02 | 4.145e-02 | True |
+| 8 | `snr_weighted_delta_kuramoto` | 14.0% | 3.684e-02 | 4.145e-02 | True |
+| 9 | `sustained_delta_kuramoto` | 13.9% | 4.926e-02 | 4.926e-02 | True |
 
 ### sleepedf_kuramoto_variants
 
-| Rank | Detector | Detection rate | p-value | Beats chance |
-| --- | --- | --- | --- | --- |
-| 1 | `normalized_delta_envelope` | 99.5% | 1.000e-04 | True |
-| 2 | `amplitude_gated_delta_kuramoto` | 27.7% | 1.000e-04 | True |
-| 3 | `coherent_sustained_kuramoto` | 26.8% | 1.000e-04 | True |
-| 4 | `adaptive_channel_kuramoto` | 0.0% | 1.000e+00 | False |
-| 4 | `multi_channel_delta_kuramoto` | 0.0% | 1.000e+00 | False |
-| 4 | `snr_weighted_delta_kuramoto` | 0.0% | 1.000e+00 | False |
-| 4 | `sustained_delta_kuramoto` | 0.0% | 1.000e+00 | False |
+| Rank | Detector | Detection rate | p-value | BH-adj p | Beats chance |
+| --- | --- | --- | --- | --- | --- |
+| 1 | `normalized_delta_envelope` | 99.5% | 1.000e-04 | 2.333e-04 | True |
+| 2 | `amplitude_gated_delta_kuramoto` | 27.7% | 1.000e-04 | 2.333e-04 | True |
+| 3 | `coherent_sustained_kuramoto` | 26.8% | 1.000e-04 | 2.333e-04 | True |
+| 4 | `adaptive_channel_kuramoto` | 0.0% | 1.000e+00 | 1.000e+00 | False |
+| 4 | `multi_channel_delta_kuramoto` | 0.0% | 1.000e+00 | 1.000e+00 | False |
+| 4 | `snr_weighted_delta_kuramoto` | 0.0% | 1.000e+00 | 1.000e+00 | False |
+| 4 | `sustained_delta_kuramoto` | 0.0% | 1.000e+00 | 1.000e+00 | False |
 
 ### synthetic_honest_audit_demo
 
-| Rank | Detector | Detection rate | p-value | Beats chance |
-| --- | --- | --- | --- | --- |
-| 1 | `lag1_autocorrelation` | 100.0% | 1.000e-04 | True |
-| 2 | `window_mean_control` | 0.0% | 1.000e+00 | False |
+| Rank | Detector | Detection rate | p-value | BH-adj p | Beats chance |
+| --- | --- | --- | --- | --- | --- |
+| 1 | `lag1_autocorrelation` | 100.0% | 1.000e-04 | 2.000e-04 | True |
+| 2 | `window_mean_control` | 0.0% | 1.000e+00 | 1.000e+00 | False |
 
 ## Cross-domain overall ranking
 

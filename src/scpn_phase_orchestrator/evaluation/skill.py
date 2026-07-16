@@ -56,6 +56,7 @@ __all__ = [
     "DEFAULT_PERMUTATION_SEED",
     "DEFAULT_TARGET_FALSE_ALARM",
     "PermutationSignificance",
+    "benjamini_hochberg",
     "calibrate_score_threshold",
     "matched_false_alarm_rate",
     "permutation_significance_from_alarms",
@@ -307,3 +308,48 @@ def surrogate_rank_pvalue(observed: float, surrogates: Sequence[float]) -> float
         raise ValueError("surrogates must not be empty")
     reached = int(sum(1 for score in surrogates if float(score) >= observed))
     return (1 + reached) / (1 + len(surrogates))
+
+
+def benjamini_hochberg(p_values: Sequence[float]) -> list[float]:
+    """Return Benjamini–Hochberg FDR-adjusted p-values, preserving input order.
+
+    When several detectors are tested on the same corpus, the smallest raw
+    p-value across the family is optimistic — some detector beats chance by luck.
+    The Benjamini–Hochberg step-up procedure controls the *false discovery rate*:
+    the ``k``-th smallest of ``n`` p-values is scaled by ``n / k``, the resulting
+    sequence is made monotone non-decreasing from the largest downward, and every
+    value is clamped to ``[0, 1]``. Reporting the adjusted value beside the raw one
+    stops a leaderboard from turning a family of raw p-values into a cherry-picked
+    "winner".
+
+    Parameters
+    ----------
+    p_values : sequence of float
+        The raw p-values of the family being corrected together, each in
+        ``[0, 1]``. Order is preserved in the result.
+
+    Returns
+    -------
+    list of float
+        The FDR-adjusted p-values in the same order as ``p_values``.
+
+    Raises
+    ------
+    ValueError
+        If ``p_values`` is empty or any value lies outside ``[0, 1]``.
+    """
+    if len(p_values) == 0:
+        raise ValueError("p_values must not be empty")
+    values = [float(p) for p in p_values]
+    for value in values:
+        if not 0.0 <= value <= 1.0:
+            raise ValueError(f"p-values must be in [0, 1], got {value}")
+    n = len(values)
+    order = sorted(range(n), key=lambda index: values[index])
+    adjusted = [0.0] * n
+    running_min = 1.0
+    for rank in range(n, 0, -1):
+        index = order[rank - 1]
+        running_min = min(running_min, values[index] * n / rank)
+        adjusted[index] = min(1.0, running_min)
+    return adjusted
