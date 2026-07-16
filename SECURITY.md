@@ -66,6 +66,27 @@ safety-critical control systems. The threat model covers:
 - **Replay verification**: deterministic replay detects divergences
   from the audit trail, catching both tampering and non-determinism.
 
+#### Signing key management
+
+The HMAC signing key is supplied by environment, so it can be injected from any
+secrets manager (Vault, AWS/GCP KMS, a Kubernetes secret) without the library
+depending on one:
+
+- **`SPO_AUDIT_KEY`** — the current operational signing key. New records are signed
+  with it; a verifier needs it to check them.
+- **`SPO_AUDIT_KEYRING`** — an optional JSON object mapping key id → historical key
+  material, so records signed with a rotated-out key still verify. Key ids are
+  derived deterministically (`key_id_for_secret`); a keyring entry whose id does not
+  match its key material is rejected (fail-closed).
+
+To rotate: mint a new key, move the outgoing key into `SPO_AUDIT_KEYRING` under its
+derived id, and set the new key as `SPO_AUDIT_KEY`. Past records keep verifying
+against the keyring while new records use the new key — no re-signing of history and
+no verification gap. Deliver both variables from your secrets manager at process
+start; never commit key material or bake it into an image. Because the HMAC key is a
+shared secret, anyone who can verify can also sign — for third-party verifiability
+layer the post-quantum chain seal above on top.
+
 ### Dependency Security
 - All CI dependencies are **SHA-pinned** (not floating tags).
 - Bandit security scanner runs on every commit (pre-commit + CI).
