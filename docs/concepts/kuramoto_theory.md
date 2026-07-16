@@ -71,6 +71,12 @@ by the MPC supervisor for O(1) prediction.
 
 SPO extends the basic model with:
 
+In these SCPN forms the coupling enters as a per-pair matrix `K_ij` (the `K_nm`
+matrix), which absorbs the `1/N` normalisation written explicitly as `(K/N)` in the
+classic form above: to reproduce a uniform global coupling of strength `K`, set every
+`K_ij = K/N`; a heterogeneous `K_nm` encodes the network topology directly. The
+normalisation is therefore the caller's responsibility, not applied implicitly.
+
 ### Sakaguchi-Kuramoto (Phase Lags)
 ```
 dθ_i/dt = ω_i + Σ_j K_ij sin(θ_j - θ_i - α_ij)

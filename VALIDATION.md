@@ -4,7 +4,7 @@
 
 | Suite | Count | Scope |
 |-------|------:|-------|
-| Python unit/integration | 21583 | `pytest tests/` across 824 files (2026-07-07; see the capability manifest for the live count) |
+| Python unit/integration | 22282 | `pytest tests/` across 850 files (snapshot 2026-07-17; the count drifts with each change — the capability manifest holds the live file count) |
 | Detector auditor | 81 | `scpn_phase_orchestrator.evaluation` + `spo audit-detector`: matched-false-alarm calibration, permutation significance, sealed records, real-detector head-to-head (6 files) |
 | Rust unit/integration | 203 | `cargo test --workspace` across 5 crates |
 | FFI parity | 20 | Python vs Rust parity: UPDE, Stuart-Landau, Petri net, RuleEngine |
@@ -76,12 +76,14 @@ Each domainpack provides a `binding_spec.yaml` + `run.py` exercising the full
 pipeline: binding validation → oscillator instantiation → UPDE stepping →
 coherence monitoring → boundary enforcement.
 
-Domains span: autonomous_vehicles, bio_stub, cardiac_rhythm, chemical_reactor,
-circadian_biology, epidemic_sir, firefly_swarm, fusion_equilibrium, geometry_walk,
-identity_coherence, laser_array, manufacturing_spc, metaphysics_demo, minimal_domain,
-network_security, neuroscience_eeg, plasma_control, pll_clock, power_grid,
-quantum_simulation, queuewaves, rotating_machinery, satellite_constellation,
-swarm_robotics, traffic_flow.
+Domains include, among the 36 (the full set is under `domainpacks/` and in the
+[domainpack gallery](docs/galleries/domainpack_gallery.md)): autonomous_vehicles,
+bio_stub, cardiac_rhythm, chemical_reactor, circadian_biology, epidemic_sir,
+firefly_swarm, fusion_equilibrium, geometry_walk, identity_coherence, laser_array,
+manufacturing_spc, metaphysics_demo, minimal_domain, network_security,
+neuroscience_eeg, plasma_control, pll_clock, power_grid, quantum_simulation,
+queuewaves, rotating_machinery, satellite_constellation, swarm_robotics,
+traffic_flow.
 
 `tests/test_domainpack_validation.py` validates all specs parse and execute
 without error.
