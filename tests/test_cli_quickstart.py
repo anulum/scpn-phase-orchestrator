@@ -16,7 +16,9 @@ integrity failure, and the empty-report path).
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
+from typing import Any
 
 import pytest
 from click.testing import CliRunner
@@ -110,3 +112,84 @@ def test_quickstart_handles_an_empty_report_summary(
     result = runner.invoke(main, ["quickstart", "power", "--steps", "20"])
     assert result.exit_code == 0, result.output
     assert "[4/4] report: generated" in result.output
+
+
+def _committed_evidence() -> dict[str, Any]:
+    return json.loads(quickstart_mod._EVIDENCE_RECORD.read_text(encoding="utf-8"))
+
+
+def test_quickstart_evidence_reverifies_and_prints_the_verdict(
+    runner: CliRunner,
+) -> None:
+    result = runner.invoke(main, ["quickstart", "evidence"])
+    assert result.exit_code == 0, result.output
+    assert "top-level seal: VERIFIED" in result.output
+    assert "nested PRC seal: VERIFIED" in result.output
+    assert "verdict: flagged_for_review" in result.output
+    assert "real, non-synthetic" in result.output
+    # The honest boundary must be stated on the onboarding path.
+    assert "review_only=True" in result.output
+    assert "not a live-actuation claim" in result.output
+
+
+def test_quickstart_evidence_writes_the_verdict_to_a_file(
+    runner: CliRunner, tmp_path: Path
+) -> None:
+    out = tmp_path / "verdict.txt"
+    result = runner.invoke(main, ["quickstart", "evidence", "--output", str(out)])
+    assert result.exit_code == 0, result.output
+    assert f"Evidence verdict written to {out}" in result.output
+    assert "top-level seal: VERIFIED" in out.read_text(encoding="utf-8")
+
+
+def test_verify_evidence_seals_accepts_the_committed_record() -> None:
+    assert quickstart_mod._verify_evidence_seals(_committed_evidence()) == (True, True)
+
+
+def test_verify_evidence_seals_rejects_a_tampered_top_level() -> None:
+    record = _committed_evidence()
+    record["sample_count"] = int(record["sample_count"]) + 1
+    top_ok, nested_ok = quickstart_mod._verify_evidence_seals(record)
+    assert top_ok is False
+    assert nested_ok is True
+
+
+def test_verify_evidence_seals_rejects_a_tampered_nested_prc() -> None:
+    record = _committed_evidence()
+    record["prc_evidence"]["flagged_count"] = 999
+    _top_ok, nested_ok = quickstart_mod._verify_evidence_seals(record)
+    assert nested_ok is False
+
+
+def test_verify_evidence_seals_handles_a_missing_nested_prc() -> None:
+    record = _committed_evidence()
+    record["prc_evidence"] = None
+    _top_ok, nested_ok = quickstart_mod._verify_evidence_seals(record)
+    assert nested_ok is False
+
+
+def test_quickstart_evidence_fails_closed_on_a_broken_seal(
+    runner: CliRunner, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    record = _committed_evidence()
+    record["sample_count"] = int(record["sample_count"]) + 1
+    tampered = tmp_path / "tampered_evidence.json"
+    tampered.write_text(json.dumps(record), encoding="utf-8")
+    monkeypatch.setattr(quickstart_mod, "_EVIDENCE_RECORD", tampered)
+
+    result = runner.invoke(main, ["quickstart", "evidence"])
+
+    assert result.exit_code == 1
+    assert "top-level seal: FAILED" in result.output
+    assert "failed to recompute" in result.output
+
+
+def test_quickstart_evidence_reports_a_missing_record(
+    runner: CliRunner, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(quickstart_mod, "_EVIDENCE_RECORD", tmp_path / "absent.json")
+
+    result = runner.invoke(main, ["quickstart", "evidence"])
+
+    assert result.exit_code != 0
+    assert "sealed evidence record not found" in result.output

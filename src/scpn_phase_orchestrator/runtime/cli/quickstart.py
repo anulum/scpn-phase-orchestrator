@@ -19,11 +19,15 @@ and certified-controller pipeline.
 
 from __future__ import annotations
 
+import json
 import tempfile
+from collections.abc import Mapping
 from pathlib import Path
+from typing import Any
 
 import click
 
+from scpn_phase_orchestrator.assurance._hashing import canonical_record_hash
 from scpn_phase_orchestrator.binding import (
     load_binding_spec,
     validate_binding_spec,
@@ -40,10 +44,25 @@ from scpn_phase_orchestrator.runtime.simulation import simulate
 
 _ASSET_ROOT = Path(__file__).resolve().parent / "_quickstart_assets"
 _DOMAINS = ("power", "eeg")
+#: Positional targets the ``quickstart`` command accepts. ``power``/``eeg`` run
+#: the simulation golden path; ``evidence`` re-verifies a committed real sealed
+#: record instead of simulating anything.
+_QUICKSTART_TARGETS = (*_DOMAINS, "evidence")
+#: The committed, non-synthetic sealed record the ``evidence`` variant re-checks.
+#: Located relative to the repository root (this command's onboarding target is a
+#: clone), it is the single canonical copy guarded by
+#: ``tests/test_iso_ne_case1_real_evidence.py``.
+_EVIDENCE_RECORD = (
+    Path(__file__).resolve().parents[4]
+    / "examples"
+    / "real_data"
+    / "iso_ne_case1"
+    / "pmu_ringdown_prc_evidence.json"
+)
 
 
 @main.command("quickstart")
-@click.argument("domain", type=click.Choice(_DOMAINS))
+@click.argument("domain", type=click.Choice(_QUICKSTART_TARGETS))
 @click.option("--steps", default=250, type=int, help="Simulation steps")
 @click.option("--seed", default=42, type=int, help="Deterministic RNG seed")
 @click.option(
@@ -58,21 +77,27 @@ def quickstart(domain: str, steps: int, seed: int, output: str | None) -> None:
     Parameters
     ----------
     domain : str
-        The bundled demo domain — ``"power"`` or ``"eeg"``.
+        The target — ``"power"`` or ``"eeg"`` runs the simulation golden path;
+        ``"evidence"`` re-verifies a committed real sealed record instead.
     steps : int
-        Number of simulation steps.
+        Number of simulation steps (simulation targets only).
     seed : int
-        Seed for the deterministic RNG.
+        Seed for the deterministic RNG (simulation targets only).
     output : str | None
-        Optional path for the Markdown report; printed to stdout if omitted.
+        Optional path for the report; printed to stdout if omitted.
 
     Raises
     ------
     SystemExit
-        If the bundled binding fails validation or produces no step records.
+        If the bundled binding fails validation or produces no step records, or
+        if a sealed evidence record fails re-verification.
     ClickException
-        If the bundled binding asset is missing.
+        If the bundled binding asset or the sealed evidence record is missing.
     """
+    if domain == "evidence":
+        _run_evidence_quickstart(output)
+        return
+
     binding_path = _ASSET_ROOT / domain / "binding_spec.yaml"
     if not binding_path.exists():
         raise click.ClickException(f"quickstart asset not found: {binding_path}")
@@ -147,3 +172,89 @@ def quickstart(domain: str, steps: int, seed: int, output: str | None) -> None:
         click.echo(f"\nMarkdown report written to {output}")
     else:
         click.echo("\n" + markdown)
+
+
+def _verify_evidence_seals(record: Mapping[str, Any]) -> tuple[bool, bool]:
+    """Recompute the record's cryptographic seals.
+
+    Parameters
+    ----------
+    record : Mapping
+        The sealed evidence record.
+
+    Returns
+    -------
+    tuple[bool, bool]
+        ``(top_level_ok, nested_prc_ok)`` — whether the top-level content hash
+        and the nested PRC-evidence hash both recompute to their sealed values.
+    """
+    top_payload = {key: value for key, value in record.items() if key != "content_hash"}
+    top_ok = canonical_record_hash(top_payload) == record.get("content_hash")
+
+    prc = record.get("prc_evidence")
+    if not isinstance(prc, Mapping):
+        return top_ok, False
+    prc_payload = {key: value for key, value in prc.items() if key != "content_hash"}
+    nested_ok = canonical_record_hash(prc_payload) == prc.get(
+        "content_hash"
+    ) and record.get("prc_evidence_hash") == prc.get("content_hash")
+    return top_ok, nested_ok
+
+
+def _run_evidence_quickstart(output: str | None) -> None:
+    """Re-verify the committed real sealed evidence record and print the verdict.
+
+    Loads the non-synthetic ISO-NE PMU-ringdown PRC record, recomputes both its
+    seals so the reader need not take the project's word for it, and prints the
+    honest, review-only verdict. A broken seal is a hard failure.
+
+    Parameters
+    ----------
+    output : str | None
+        Optional path for the verdict text; printed to stdout if omitted.
+
+    Raises
+    ------
+    SystemExit
+        If either seal fails to recompute.
+    ClickException
+        If the sealed evidence record is missing.
+    """
+    if not _EVIDENCE_RECORD.exists():
+        raise click.ClickException(
+            f"sealed evidence record not found: {_EVIDENCE_RECORD} "
+            "(the evidence quickstart runs from a repository clone)"
+        )
+    record: dict[str, Any] = json.loads(_EVIDENCE_RECORD.read_text(encoding="utf-8"))
+    top_ok, nested_ok = _verify_evidence_seals(record)
+    prc = record.get("prc_evidence", {})
+    modes = prc.get("mode_family_counts", {})
+    worst_damping = float(prc.get("worst_damping_ratio", 0.0))
+
+    lines = [
+        "=== SPO quickstart: evidence ===",
+        f"record {_EVIDENCE_RECORD.name} (schema {record.get('schema')})",
+        f"source {record.get('source_name')} "
+        f"sha256 {str(record.get('source_sha256'))[:16]}… (real, non-synthetic)",
+        f"[1/3] top-level seal: {'VERIFIED' if top_ok else 'FAILED'}",
+        f"[2/3] nested PRC seal: {'VERIFIED' if nested_ok else 'FAILED'}",
+        f"[3/3] verdict: {prc.get('verdict')} — {prc.get('flagged_count')} mode(s) "
+        f"flagged, worst damping ratio {worst_damping:.4f}",
+        "       modes: "
+        + "  ".join(f"{name}={count}" for name, count in sorted(modes.items())),
+        f"       standard: {prc.get('standard')}",
+        f"review-only: {record.get('claim_boundary')} "
+        f"(review_only={record.get('review_only')}) — an offline screening record, "
+        "not a live-actuation claim",
+    ]
+    text = "\n".join(lines)
+
+    if output is not None:
+        Path(output).write_text(text + "\n", encoding="utf-8")
+        click.echo(f"Evidence verdict written to {output}")
+    else:
+        click.echo(text)
+
+    if not (top_ok and nested_ok):
+        click.echo("ERROR: a committed evidence seal failed to recompute", err=True)
+        raise SystemExit(1)
