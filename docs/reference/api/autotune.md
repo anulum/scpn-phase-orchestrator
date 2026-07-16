@@ -97,6 +97,37 @@ JSON-ready provenance for binding review and do not promote actuation.
 
 ::: scpn_phase_orchestrator.autotune.discovery
 
+## Phase-SINDy Discovery Confidence
+
+The confidence module classifies a phase-SINDy fit into an honest validation
+tier and a discovery posture. A fit on the operator's own data is
+self-consistency, not independent validation, so the classifier cannot award
+the `externally_validated` tier: its ceiling is `partial` and its default is
+`scaffold`. The posture is `discovered` only for a well-determined fit that
+explains the derivative variance, and otherwise `insufficient_evidence` or
+`refused`, each with human-readable reasons.
+
+::: scpn_phase_orchestrator.autotune.sindy_confidence
+
+## Operator SINDy Options
+
+The options module bundles the two knobs an operator turns when running
+phase-SINDy discovery through a binding proposal or the CLI: the sparsity
+threshold that decides which coupling coefficients survive, and the confidence
+policy that decides how strong a fit must be before it is called `discovered`.
+
+::: scpn_phase_orchestrator.autotune.sindy_options
+
+## Discovered-Dynamics Record
+
+The discovered-dynamics module presents the recovered equations and per-node
+coupling edges paired — inseparably — with the confidence verdict, so a skipped
+or weak fit still produces a record but is never mistaken for a validated model.
+Every record carries a canonical-JSON SHA-256 content hash for a tamper-evident
+provenance trail.
+
+::: scpn_phase_orchestrator.autotune.discovered_dynamics
+
 ## Replay-Only Learners
 
 The learner module exposes PPO-like, SAC-like, and hybrid-physics proposal

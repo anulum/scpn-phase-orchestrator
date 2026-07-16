@@ -192,6 +192,40 @@ def test_auto_bind_emit_equations_reports_absence_for_non_csv_kinds(
     assert "No discovered phase dynamics" in result.output
 
 
+def test_auto_bind_emit_equations_on_non_phase_csv_is_refused_without_equations(
+    runner: CliRunner, tmp_path: Path
+) -> None:
+    # Non-phase-like columns skip phase-SINDy: the record is present but refused,
+    # with no equations and no coupling to print.
+    source = tmp_path / "sensors.csv"
+    source.write_text(
+        "temperature,pressure\n0.0,10.0\n1.0,20.0\n2.0,30.0\n3.0,40.0\n",
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(
+        main,
+        [
+            "auto-bind",
+            "time-series-csv",
+            str(source),
+            "--project-name",
+            "sensors",
+            "--sample-rate-hz",
+            "1",
+            "--emit-equations",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "posture: refused" in result.output
+    assert "tier: scaffold" in result.output
+    assert "reasons:" in result.output
+    # A refused fit prints neither an equations nor a coupling section.
+    assert "equations:" not in result.output
+    assert "coupling:" not in result.output
+
+
 def test_auto_bind_strict_confidence_flags_downgrade_the_posture(
     runner: CliRunner, tmp_path: Path
 ) -> None:

@@ -280,11 +280,12 @@ def _echo_discovered_dynamics(proposal: StudioProjectState) -> None:
     click.echo(f"Discovered dynamics ({record['library']})")
     click.echo(f"  posture: {confidence['posture']}  [tier: {confidence['tier']}]")
     click.echo(f"  content hash: {record['content_hash']}")
-    reasons = cast("Sequence[object]", confidence.get("reasons", ()))
-    if reasons:
-        click.echo("  reasons:")
-        for reason in reasons:
-            click.echo(f"    - {reason}")
+    # A confidence verdict always carries at least one reason, so this block is
+    # unconditional; equations and coupling below are empty for a skipped or
+    # refused fit and stay guarded.
+    click.echo("  reasons:")
+    for reason in cast("Sequence[object]", confidence.get("reasons", ())):
+        click.echo(f"    - {reason}")
     equations = cast("Sequence[object]", record["equations"])
     if equations:
         click.echo("  equations:")
