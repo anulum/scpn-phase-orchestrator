@@ -37,16 +37,26 @@ _MONITOR_PACKAGE = Path(vs.__file__).parent
 
 
 def _public_monitor_modules() -> set[str]:
-    """Return the stems of the public monitor modules on disk.
+    """Return the names of the public monitor modules and subpackages on disk.
 
     Public means a top-level ``.py`` module under ``monitor/`` that is neither
-    ``__init__`` nor a private (underscore-prefixed) backend or helper.
+    ``__init__`` nor a private (underscore-prefixed) backend or helper, or a
+    non-private subpackage (a directory carrying ``__init__.py``) — so a
+    monitor family shipped as a package cannot escape the honesty registry.
     """
-    return {
+    modules = {
         path.stem
         for path in _MONITOR_PACKAGE.glob("*.py")
         if path.stem != "__init__" and not path.stem.startswith("_")
     }
+    packages = {
+        path.name
+        for path in _MONITOR_PACKAGE.iterdir()
+        if path.is_dir()
+        and not path.name.startswith("_")
+        and (path / "__init__.py").is_file()
+    }
+    return modules | packages
 
 
 class TestMonitorValidationStatus:

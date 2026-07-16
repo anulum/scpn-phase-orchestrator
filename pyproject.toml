@@ -351,7 +351,9 @@ omit = [
     "*/runtime/grpc_gen/*",
     # External-dependency adapters: require packages not in standard CI
     # (Redis, Modbus, BrainFlow, neurolib, scpn-fusion-core, sc-neurocore,
-    # scpn-control, rtamt/Python 3.11 only).
+    # scpn-control). The monitor/stl package is NOT omitted: rtamt 0.3.5 is
+    # pure-Python BSD, runs in the whole CI matrix, and the package holds an
+    # explicit 100 % file floor in tools/coverage_guard_thresholds.json.
     "*/adapters/hardware_io.py",
     "*/adapters/modbus_tls.py",
     "*/adapters/redis_store.py",
@@ -360,7 +362,6 @@ omit = [
     "*/adapters/fusion_core_bridge.py",
     "*/adapters/neurocore_bridge.py",
     "*/adapters/plasma_control_bridge.py",
-    "*/monitor/stl.py",
 ]
 # Optional native backend shims (``coupling|monitor|upde/_*_{go,julia,mojo}.py``
 # plus their ``experimental/accelerators`` implementations) are NOT omitted: the

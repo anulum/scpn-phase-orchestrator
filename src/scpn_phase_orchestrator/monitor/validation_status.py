@@ -83,8 +83,9 @@ class MonitorValidationRecord:
     Parameters
     ----------
     monitor:
-        The monitor module name (the stem of the ``.py`` file under
-        ``scpn_phase_orchestrator/monitor/``), used as the registry key.
+        The monitor family name — the stem of a top-level ``.py`` module or
+        the name of a subpackage under ``scpn_phase_orchestrator/monitor/`` —
+        used as the registry key.
     display_name:
         A short human-readable label for documentation and Studio surfaces.
     status:
@@ -462,6 +463,17 @@ _RECORDS: tuple[MonitorValidationRecord, ...] = (
             "the README external-validation set for early-warning detection"
         ),
         evidence=_README_EVIDENCE,
+    ),
+    MonitorValidationRecord(
+        monitor="stl",
+        display_name="STL runtime verification",
+        status=MonitorValidationStatus.RESEARCH,
+        basis=(
+            "deterministic signal-temporal-logic robustness monitoring "
+            "(builtin parser plus optional rtamt backend); formal runtime "
+            "check, not an empirical detector with a validation record"
+        ),
+        evidence="",
     ),
     MonitorValidationRecord(
         monitor="transfer_entropy",

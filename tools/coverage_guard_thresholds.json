@@ -25,5 +25,15 @@
     "supervisor": 97.0,
     "upde": 97.0,
     "visualization": 95.0
+  },
+  "_comment_stl": "2026-07-16: monitor/stl holds an explicit 100% file floor — the package previously escaped the honesty registry behind a dead coverage omit; measured 446/446 lines covered (KIMI lane K-STL0).",
+  "file_min_line_rate": {
+    "src/scpn_phase_orchestrator/monitor/stl/__init__.py": 100.0,
+    "src/scpn_phase_orchestrator/monitor/stl/actuation_gate.py": 100.0,
+    "src/scpn_phase_orchestrator/monitor/stl/automaton.py": 100.0,
+    "src/scpn_phase_orchestrator/monitor/stl/closed_loop.py": 100.0,
+    "src/scpn_phase_orchestrator/monitor/stl/controller.py": 100.0,
+    "src/scpn_phase_orchestrator/monitor/stl/monitor.py": 100.0,
+    "src/scpn_phase_orchestrator/monitor/stl/projection.py": 100.0
   }
 }

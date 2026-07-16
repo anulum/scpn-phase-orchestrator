@@ -20,6 +20,17 @@ from tests.typing_contracts import assert_precise_ndarray_hint
 needs_rtamt = pytest.mark.skipif(not HAS_RTAMT, reason="rtamt not installed")
 
 
+def test_rtamt_backend_is_present_in_the_standard_environment() -> None:
+    """The rtamt backend must be installed wherever this suite runs.
+
+    rtamt 0.3.5 is pure-Python BSD and pinned in ``requirements/dev-lock.txt``
+    for the whole CI matrix. Without this assertion its silent absence would
+    skip every ``needs_rtamt`` test and drop the rtamt evaluation path from
+    the honest coverage posture.
+    """
+    assert HAS_RTAMT, "rtamt missing: the rtamt STL path would silently skip"
+
+
 class TestSTLMonitorConstants:
     def test_sync_threshold_contains_r(self):
         assert "R" in STLMonitor.SYNC_THRESHOLD

@@ -11,6 +11,7 @@ from __future__ import annotations
 import pytest
 
 import scpn_phase_orchestrator.monitor.stl as stl_module
+import scpn_phase_orchestrator.monitor.stl.automaton as automaton_module
 from scpn_phase_orchestrator.monitor.stl import (
     STLActionProjectionTemplate,
     STLAutomatonState,
@@ -542,6 +543,21 @@ def test_stl_closed_loop_plan_rejects_invalid_horizon(bad_horizon):
             trace,
             (),
             horizon_steps=bad_horizon,
+        )
+
+
+def test_synthesis_rejects_unknown_parsed_temporal_operator(monkeypatch):
+    """The synthesis dispatch fails closed on an unsupported parsed operator."""
+    monkeypatch.setattr(
+        automaton_module,
+        "_parse_simple_spec",
+        lambda spec: ("once", (("R", ">=", 0.3),)),
+    )
+
+    with pytest.raises(ValueError, match="unsupported STL temporal operator"):
+        automaton_module.synthesise_stl_monitoring_automaton(
+            "once (R >= 0.3)",
+            {"R": [0.5]},
         )
 
 

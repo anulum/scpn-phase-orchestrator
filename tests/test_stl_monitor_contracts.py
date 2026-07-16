@@ -208,3 +208,15 @@ class TestMonitorDefensiveHelpers:
         """The shared STL non-empty validator rejects blank projection fields."""
         with pytest.raises(ValueError, match="projection action"):
             monitor_module._require_non_empty("   ", "projection action")
+
+    def test_boolean_alias_detection_covers_typed_bool_and_float_arrays(self) -> None:
+        """The boolean-alias helper handles typed bool and plain float dtypes."""
+        assert monitor_module._contains_boolean_alias(np.array([True, False])) is True
+        assert monitor_module._contains_boolean_alias(np.array([1.0, 2.0])) is False
+
+    def test_complex_alias_detection_covers_typed_complex_and_float_arrays(
+        self,
+    ) -> None:
+        """The complex-alias helper handles typed complex and plain float dtypes."""
+        assert monitor_module._contains_complex_alias(np.array([1.0 + 2.0j])) is True
+        assert monitor_module._contains_complex_alias(np.array([1.0, 2.0])) is False
