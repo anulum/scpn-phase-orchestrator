@@ -36,5 +36,8 @@ _PHYSIONET_HEARTBEAT_CITATION = (
 
 
 @click.group()
+@click.version_option(
+    package_name="scpn-phase-orchestrator", prog_name="scpn-phase-orchestrator"
+)
 def main() -> None:
     """SCPN Phase Orchestrator CLI."""

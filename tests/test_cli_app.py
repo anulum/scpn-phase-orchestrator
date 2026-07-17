@@ -16,8 +16,11 @@ the command modules have a stable anchor to register against.
 
 from __future__ import annotations
 
+from importlib.metadata import version
+
 import click
 import numpy as np
+from click.testing import CliRunner
 
 from scpn_phase_orchestrator.runtime.cli._app import (
     _PHYSIONET_HEARTBEAT_CITATION,
@@ -40,3 +43,10 @@ def test_float_array_alias_is_float64() -> None:
 def test_physionet_constants_are_well_formed() -> None:
     assert _PHYSIONET_HEARTBEAT_URL.startswith("https://physionet.org/")
     assert "doi:" in _PHYSIONET_HEARTBEAT_CITATION
+
+
+def test_main_reports_the_installed_version() -> None:
+    result = CliRunner().invoke(main, ["--version"])
+    assert result.exit_code == 0
+    assert "scpn-phase-orchestrator" in result.output
+    assert version("scpn-phase-orchestrator") in result.output
