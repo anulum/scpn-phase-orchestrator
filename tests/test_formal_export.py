@@ -1905,6 +1905,53 @@ def test_formal_export_cli_writes_policy_smt_model(tmp_path: Path) -> None:
     assert "(check-sat)" in model
 
 
+def test_formal_export_cli_echoes_policy_smt_model_to_stdout(tmp_path: Path) -> None:
+    """Without --output the policy-smt export is echoed to stdout, not a file."""
+    spec = {
+        "name": "formal-policy-smt-stdout-test",
+        "version": "1.0.0",
+        "safety_tier": "research",
+        "sample_period_s": 0.01,
+        "control_period_s": 0.01,
+        "layers": [{"name": "L1", "index": 0, "oscillator_ids": ["o0", "o1"]}],
+        "oscillator_families": {"p": {"channel": "P", "extractor_type": "hilbert"}},
+        "coupling": {"base_strength": 0.45, "decay_alpha": 0.3},
+        "drivers": {"physical": {}, "informational": {}, "symbolic": {}},
+        "objectives": {"good_layers": [0], "bad_layers": []},
+        "boundaries": [],
+        "actuators": [],
+    }
+    policy = {
+        "rules": [
+            {
+                "name": "boost",
+                "regime": ["DEGRADED"],
+                "condition": {
+                    "metric": "R_good",
+                    "layer": 0,
+                    "op": "<",
+                    "threshold": 0.7,
+                },
+                "action": {"knob": "K", "scope": "global", "value": 0.1, "ttl_s": 5.0},
+            }
+        ]
+    }
+    spec_path = tmp_path / "binding_spec.yaml"
+    policy_path = tmp_path / "policy.yaml"
+    spec_path.write_text(yaml.safe_dump(spec), encoding="utf-8")
+    policy_path.write_text(yaml.safe_dump(policy), encoding="utf-8")
+
+    result = CliRunner().invoke(
+        main,
+        ["formal-export", str(spec_path), "--export", "policy-smt"],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "SMT-LIB model written:" not in result.output
+    assert "(declare-const R_good_0 Real)" in result.output
+    assert "(check-sat)" in result.output
+
+
 def test_formal_export_cli_writes_stl_prism_model(tmp_path: Path) -> None:
     spec = {
         "name": "formal-stl-test",

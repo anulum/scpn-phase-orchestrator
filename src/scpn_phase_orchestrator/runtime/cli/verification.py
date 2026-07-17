@@ -609,6 +609,14 @@ def supervisor_baseline_experiment(
     ClickException
         If the inputs are invalid or the operation fails.
     """
+    # Validate all CLI inputs before touching the optional NN/JAX stack so a
+    # malformed invocation reports the precise contract error rather than a
+    # confusing "install the NN/JAX stack" cascade when the extra is absent.
+    dependency_lock = _parse_dependency_locks(dependency_locks)
+    if any(seed < 0 for seed in seeds):
+        raise click.ClickException("--seed values must be non-negative")
+    scenario_config = _load_supervisor_scenario_config(scenario_json)
+
     try:
         import jax
         import jax.numpy as jnp
@@ -623,16 +631,11 @@ def supervisor_baseline_experiment(
             compare_supervisor_random_baseline,
             compare_supervisor_static_baseline,
         )
-    except ImportError as exc:  # pragma: no cover - exercised only without NN deps
+    except ImportError as exc:
         raise click.ClickException(
             "supervisor baseline experiments require the optional NN/JAX stack"
         ) from exc
 
-    dependency_lock = _parse_dependency_locks(dependency_locks)
-    if any(seed < 0 for seed in seeds):
-        raise click.ClickException("--seed values must be non-negative")
-
-    scenario_config = _load_supervisor_scenario_config(scenario_json)
     n_oscillators = cast(int, scenario_config["n_oscillators"])
     phases = jnp.array(cast(list[float], scenario_config["phases"]))
     base_k = jnp.full(

@@ -11,8 +11,10 @@
 from __future__ import annotations
 
 import json
+import sys
 from collections.abc import Mapping, Sequence
 from pathlib import Path
+from unittest.mock import patch
 
 from click.testing import CliRunner, Result
 
@@ -140,6 +142,17 @@ def _invoke(args: Sequence[str]) -> Result:
     return CliRunner().invoke(main, list(args))
 
 
+def _invoke_without_nn_stack(args: Sequence[str]) -> Result:
+    """Invoke the CLI with the optional NN/JAX stack forced unavailable.
+
+    Setting the ``jax`` entries in :data:`sys.modules` to ``None`` makes the
+    command's in-body ``import jax`` raise :class:`ImportError`, reproducing an
+    installation without the optional NN extra.
+    """
+    with patch.dict(sys.modules, {"jax": None, "jax.numpy": None}):
+        return _invoke(args)
+
+
 def _assert_cli_error(result: Result, expected: str) -> None:
     """Assert that a public CLI invocation failed with ``expected`` text."""
     assert result.exit_code == 1, result.output
@@ -253,6 +266,47 @@ def test_supervisor_baseline_rejects_invalid_scenario_fields(
     for scenario_path, expected in cases:
         result = _invoke(_baseline_args(tmp_path, scenario_json=scenario_path))
         _assert_cli_error(result, expected)
+
+
+def test_supervisor_baseline_validates_inputs_before_nn_stack_gate(
+    tmp_path: Path,
+) -> None:
+    """Input-contract errors surface even when the NN/JAX stack is unavailable.
+
+    Guards the ordering fix: input validation must run before the optional
+    ``import jax`` gate so a malformed invocation reports its precise contract
+    error rather than the "install the NN/JAX stack" cascade.
+    """
+    malformed_lock = _baseline_args(tmp_path, dependency_lock="requirements-dev.txt")
+    negative_seed = _baseline_args(tmp_path, seed="-1")
+    invalid_json = tmp_path / "invalid_scenario.json"
+    invalid_json.write_text("{", encoding="utf-8")
+    invalid_scenario = _baseline_args(tmp_path, scenario_json=invalid_json)
+
+    _assert_cli_error(
+        _invoke_without_nn_stack(malformed_lock),
+        "--dependency-lock values must use '<label>:<digest>' format",
+    )
+    _assert_cli_error(
+        _invoke_without_nn_stack(negative_seed),
+        "--seed values must be non-negative",
+    )
+    _assert_cli_error(
+        _invoke_without_nn_stack(invalid_scenario),
+        "invalid scenario JSON:",
+    )
+
+
+def test_supervisor_baseline_requires_nn_stack_for_valid_inputs(
+    tmp_path: Path,
+) -> None:
+    """Valid inputs with the NN/JAX stack absent report the optional-extra error."""
+    result = _invoke_without_nn_stack(_baseline_args(tmp_path))
+
+    _assert_cli_error(
+        result,
+        "supervisor baseline experiments require the optional NN/JAX stack",
+    )
 
 
 def test_supervisor_baseline_reports_text_outputs_and_manifest(
