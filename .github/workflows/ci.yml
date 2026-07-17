@@ -260,6 +260,43 @@ jobs:
           done
           exit "$fail"
 
+  mojo-backend:
+    # The Mojo accelerator bridges compile each source to a standalone binary that
+    # the Python runtime invokes as a subprocess. This lane installs the pinned
+    # Mojo toolchain from PyPI and compiles every Mojo accelerator so a broken or
+    # bit-rotted source is caught in CI. Compile-only: the binaries are never
+    # executed, so the AVX-512/ISA runtime trap that motivates target-cpu pinning
+    # does not arise here. Mirrors julia-backend/go-backend: informational, not a
+    # ci-gate dependency.
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install the pinned Mojo toolchain
+        run: |
+          python -m venv .venv
+          . .venv/bin/activate
+          pip install mojo==0.26.2.0
+          mojo --version
+      - name: Compile every Mojo accelerator
+        run: |
+          . .venv/bin/activate
+          out="$RUNNER_TEMP/mojo_out"
+          mkdir -p "$out"
+          fail=0
+          for src in mojo/*.mojo; do
+            name="$(basename "$src" .mojo)"
+            if ! mojo build "$src" -o "$out/${name}_mojo" -Xlinker -lm; then
+              echo "::error file=${src}::mojo build failed"
+              fail=1
+            fi
+          done
+          exit "$fail"
+
   coverage-guard:
     needs: [test, ffi-test, nn-coverage]
     runs-on: ubuntu-latest
