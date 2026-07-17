@@ -1090,8 +1090,8 @@
     "license": "AGPL-3.0-or-later",
     "name": "scpn-phase-orchestrator",
     "readme": "README.md",
-    "requires_python": ">=3.10,<3.14",
-    "version": "0.12.0"
+    "requires_python": ">=3.11,<3.14",
+    "version": "1.0.0"
   },
   "project_label": "SCPN Phase Orchestrator",
   "python_package_modules": [

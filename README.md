@@ -47,10 +47,10 @@ word for it. The whole honesty loop is four `spo quickstart` targets in about fi
 minutes: simulate (`power`/`eeg`), re-verify real `evidence`, and `auditor`
 a detector against a null. See the [Quickstart](docs/getting-started/quickstart.md).
 
-> **Active Development** — SCPN Phase Orchestrator is under intensive development. The core UPDE engine, 3-channel oscillator extraction (P/I/S), supervisor with regime management, and Rust FFI acceleration are functional and guarded by local and CI verification gates. Public capability counts are generated from the manifest below rather than maintained by hand. APIs may evolve as this work progresses.
+> **Stable release (v1.0.0)** — The core UPDE engine, 3-channel oscillator extraction (P/I/S), supervisor with regime management, and Rust FFI acceleration are functional and guarded by local and CI verification gates. Public capability counts are generated from the manifest below rather than maintained by hand. The public Python API — the symbols exported from `scpn_phase_orchestrator.__all__` — is now covered by semantic-versioning guarantees; backward-incompatible changes to it will bump the major version. Internal modules outside that surface may still evolve.
 
-**Version:** 0.12.0
-**Status:** active development; public inventory is generated below.
+**Version:** 1.0.0
+**Status:** first stable release; public API under semantic versioning; public inventory is generated below.
 
 [![CI](https://github.com/anulum/scpn-phase-orchestrator/actions/workflows/ci.yml/badge.svg)](https://github.com/anulum/scpn-phase-orchestrator/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/anulum/scpn-phase-orchestrator/actions/workflows/codeql.yml/badge.svg)](https://github.com/anulum/scpn-phase-orchestrator/actions/workflows/codeql.yml)
@@ -76,15 +76,15 @@ evidence pages and GitHub run records.
 
 ## Current Release Boundary
 
-Version `0.12.0` builds on the `0.11.0` operator-surface baseline. Its headline
-addition is the **honest early-warning auditor** (`scpn_phase_orchestrator.evaluation`
-and `spo audit-detector`): score any detector's event-vs-null skill at a matched
+Version `1.0.0` is the first **stable** release: the public Python API — the
+symbols exported from `scpn_phase_orchestrator.__all__` — is now covered by
+semantic-versioning guarantees. It consolidates the operator, evaluation, and
+assurance surfaces built up to the `0.12.0` baseline — including the **honest
+early-warning auditor** (`scpn_phase_orchestrator.evaluation` and
+`spo audit-detector`): score any detector's event-vs-null skill at a matched
 false-alarm rate, with a label-permutation p-value and a hash-sealed record — the
 productised form of the matched-false-alarm methodology, judging the SCPN suite, an
-AR(1)/Kendall-τ baseline, or a black-box classifier on identical footing. It also
-renames the SSGF topological-integration observable (dropping the consciousness
-framing while keeping the H1-persistence maths), aligns the documentation with the
-shipped auditor, and clears public surfaces of self-congratulatory superlatives. The
+AR(1)/Kendall-τ baseline, or a black-box classifier on identical footing. The
 release keeps the downstream accelerator chain in a single documented review
 boundary:
 
@@ -270,7 +270,7 @@ inside a dashboard or notebook; it turns them into inspectable artefacts.
 
 | Surface | Current inventory |
 |---|---:|
-| Package version | 0.12.0 |
+| Package version | 1.0.0 |
 | Public API exports | 24 |
 | Python package modules | 714 |
 | Core Engine modules | 325 |

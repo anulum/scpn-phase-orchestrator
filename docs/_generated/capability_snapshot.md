@@ -5,7 +5,7 @@
 
 | Surface | Current inventory |
 |---|---:|
-| Package version | 0.12.0 |
+| Package version | 1.0.0 |
 | Public API exports | 24 |
 | Python package modules | 714 |
 | Core Engine modules | 325 |
