@@ -1,5 +1,10 @@
 # Metaphysics Demo Domainpack
 
+> **Broader SCPN ecosystem — experimental research domain.** Not part of the
+> validated clinical/grid product surface. A reference scaffold that exercises the
+> full P/I/S pipeline on the framework itself; it makes no empirical claim about a
+> real-world system.
+
 Exercises all three oscillator channels (P/I/S), imprint modulation,
 geometry projection, and policy-driven control in a single run.
 

@@ -5,6 +5,8 @@
 # ORCID: 0009-0009-3560-0851
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Identity Coherence Domain Binding Spec
+# Broader SCPN ecosystem — experimental research domain; not part of the validated
+# clinical/grid product surface (safety_tier: research, validation_tier: scaffold).
 
 name: identity_coherence
 version: "0.1.0"

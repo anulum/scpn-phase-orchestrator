@@ -13,6 +13,16 @@ simulations.
     it through the [`spo audit-detector`](../reference/api/evaluation.md) auditor —
     generic early-warning detection is at chance outside the grid, and SPO reports that.
 
+!!! info "Broader SCPN ecosystem — experimental research domains"
+    Two packs — **`metaphysics_demo`** and **`identity_coherence`** (marked 🔬 in the
+    catalogue below) — are **experimental research domains from the broader SCPN
+    ecosystem**, not part of the validated clinical/grid product surface.
+    `metaphysics_demo` exercises the P/I/S channels on the framework itself;
+    `identity_coherence` is a speculative self-model of the system that built SPO.
+    They parse, run, and are tested like any scaffold, but they make **no** empirical
+    claim about a real-world system — a buyer evaluating the grid or EEG product can
+    ignore them.
+
 This page is searchable — use the search box (top of the docs) to filter by
 domain, feature, or pack name. Packs marked **⭐ try first** below are the
 recommended starting points.
@@ -73,10 +83,10 @@ The full catalogue follows, organised by domain.
 | `fusion_equilibrium` | Fusion plasma | 6 | 12 | P/I |
 | `gene_oscillator` | Repressilator + quorum sensing | 3 | 6 | P/I/S |
 | `geometry_walk` | Graph systems | 2 | 8 | S |
-| `identity_coherence` | Identity-coherence model (SSGF) | 6 | 30 | P/I/S |
+| `identity_coherence` 🔬 | Identity-coherence model (SSGF) | 6 | 30 | P/I/S |
 | `laser_array` | Photonics | 3 | 8 | P/I |
 | `manufacturing_spc` | Manufacturing | 3 | 9 | P/I/S |
-| `metaphysics_demo` | P/I/S showcase | 3 | 7 | P/I/S |
+| `metaphysics_demo` 🔬 | P/I/S showcase | 3 | 7 | P/I/S |
 | `minimal_domain` ⭐ | Synthetic baseline | 2 | 4 | P |
 | `musical_acoustics` | Consonance and groove via sync | 3 | 9 | P/I/S |
 | `network_security` | Cybersecurity | 3 | 8 | I |
@@ -94,6 +104,10 @@ The full catalogue follows, organised by domain.
 | `swarm_robotics` | Robotics | 3 | 8 | P/I |
 | `traffic_flow` | Transportation | 4 | 10 | P/I |
 | `vortex_shedding` | Wake dynamics (Stuart-Landau) | 3 | 9 | P/I/S |
+
+🔬 = **broader SCPN ecosystem — experimental research domain** (see the note above);
+exercises the pipeline but makes no empirical claim, and is not part of the validated
+clinical/grid product surface.
 
 ## Benchmark Results (33-Domainpack Snapshot, Measured 2026-03-28)
 

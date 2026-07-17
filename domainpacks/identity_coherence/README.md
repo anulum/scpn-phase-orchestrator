@@ -1,5 +1,9 @@
 # Identity Coherence — Domainpack #25
 
+> **Broader SCPN ecosystem — experimental research domain.** A speculative self-model
+> of the system that built SPO — not part of the validated clinical/grid product
+> surface, and not an empirical consciousness claim.
+
 The engine applied to the entity that built it.
 
 ## What It Does

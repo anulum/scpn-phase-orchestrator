@@ -732,7 +732,7 @@ is built from source into the selected Python environment with
 | `geometry_walk` | Graph systems | Random-walk phase coupling (2 layers, 8 oscillators) |
 | `laser_array` | Photonics | Semiconductor laser phase-locking (3 layers, 8 oscillators) |
 | `manufacturing_spc` | Manufacturing | Statistical process control (3 layers, 9 oscillators) |
-| `metaphysics_demo` | P/I/S showcase | Imprint + geometry ablation (3 layers, 7 oscillators) |
+| `metaphysics_demo` 🔬 | P/I/S showcase | Imprint + geometry ablation (3 layers, 7 oscillators) |
 | `minimal_domain` | Synthetic | Minimal-but-complete pipeline example (2 layers, 4 oscillators) |
 | `network_security` | Cybersecurity | Traffic anomaly detection, DDoS suppression (3 layers, 8 oscillators) |
 | `neuroscience_eeg` | Neuroscience | EEG band->phase, seizure detection (6 layers, 14 oscillators) |
@@ -754,7 +754,11 @@ is built from source into the selected Python environment with
 | `musical_acoustics` | Acoustics | Consonance = R, groove = alpha |
 | `brain_connectome` | Neuroscience | HCP-inspired coupling |
 | `agent_coordination` | Multi-agent coordination | Heartbeat, task, and topic synchronisation |
-| `identity_coherence` | Consciousness | SSGF identity model (6 layers, 30 oscillators) |
+| `identity_coherence` 🔬 | Consciousness | SSGF identity model (6 layers, 30 oscillators) |
+
+🔬 `metaphysics_demo` and `identity_coherence` are **broader SCPN ecosystem —
+experimental research** domains: they exercise the pipeline but make no empirical
+claim and are not part of the validated clinical/grid product surface.
 
 ### Adding a Domain
 

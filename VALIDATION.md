@@ -85,6 +85,11 @@ neuroscience_eeg, plasma_control, pll_clock, power_grid, quantum_simulation,
 queuewaves, rotating_machinery, satellite_constellation, swarm_robotics,
 traffic_flow.
 
+Two of the 36 — `metaphysics_demo` and `identity_coherence` — are broader-SCPN-
+ecosystem **experimental research** domains, not part of the validated clinical/grid
+product surface. They exercise the full pipeline like any research-tier scaffold but
+make no empirical claim about a real-world system.
+
 `tests/test_domainpack_validation.py` validates all specs parse and execute
 without error.
 
