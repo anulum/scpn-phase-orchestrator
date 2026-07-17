@@ -48,18 +48,18 @@ _LED = ("chb01_04", "chb01_26")
 _PINNED = {
     "chb01_04": {
         "critical_slowing_down": (
-            "0b057ae3b7c5d89da990839095f54d70d13ac591ffa78e842a30ea47105f4895"
+            "afd7dc50b40b5806eaf8e4bd1a01a9f91ffd94211b4e6c25ec3ed09a85afb53f"
         ),
         "synchronisation": (
-            "9b2bdc39e75d2be3e7da5d5e452ae0443c9583306ae132a3fd5a1e6bdf651ad9"
+            "778400e07ea94f4fcdb610248e801e9fe22c5f2fcf7fd9d70a2bf08b3f33592e"
         ),
         "ensemble_weighted": (
-            "8a8b046038d8416d340b7058fd23e641c3ca65e9ea390d0d1716c80f68c9fe7e"
+            "31509033a2cee6a97aac26fdd988ad39e2a76d251dd5bf77c4ae5054d9b3c8dc"
         ),
     },
     "chb01_26": {
         "critical_slowing_down": (
-            "badcb6b558b929f43385168e1930bd217944c982c14e44ac19d509b1acf264cb"
+            "edb417a45708ae7f932109199e4dc35f9d9f7ad4a741138569b989489c3eba1c"
         ),
     },
 }

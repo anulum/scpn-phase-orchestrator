@@ -6,7 +6,7 @@
       "detector": "critical_slowing_down",
       "observable": "cross-channel Kuramoto order parameter R(t) of scalp-EEG analytic phase (4-30 Hz, decimated to 32 Hz)",
       "signal_source": "CHB-MIT scalp EEG chb01_03 (Shoeb 2009) / seizure onset 2996 s / 900 s pre-onset segment",
-      "captured_at": "2076-11-06T13:43:04",
+      "captured_at": "2026-11-06T13:43:04",
       "sampling_rate_hz": 32.0,
       "window": 128,
       "step": 16,
@@ -40,13 +40,13 @@
       "verdict": "no_early_warning",
       "framework": "Generic early-warning-signals framework (Scheffer et al. 2009, Nature 461:53)",
       "disclaimer": "This early-warning evidence record is a technical evidence-mapping artefact. It seals a passive detector's alarm decision, the contributing indicators and their robust z-scores, and the provenance of the screened signal; it does not constitute a clinical, operational, or safety decision, nor a certification of compliance. Any reported lead time is measured against a caller-supplied ground-truth onset and holds only for the recorded observable and detector configuration; a non-positive lead means the alarm was coincident with or later than the transition.",
-      "content_hash": "874f2bfd681469a0f7dc7c2db6487e420792a5c4dd96d846aa163f889fbd7211"
+      "content_hash": "c7cf1e6c868a92f9c559b4461b62e180c27a5c8f11697eb2936f06ac45d6ccf1"
     },
     "synchronisation": {
       "detector": "synchronisation",
       "observable": "per-channel scalp-EEG analytic phase (4-30 Hz, decimated to 32 Hz)",
       "signal_source": "CHB-MIT scalp EEG chb01_03 (Shoeb 2009) / seizure onset 2996 s / 900 s pre-onset segment",
-      "captured_at": "2076-11-06T13:43:04",
+      "captured_at": "2026-11-06T13:43:04",
       "sampling_rate_hz": 32.0,
       "window": 128,
       "step": 16,
@@ -72,13 +72,13 @@
       "verdict": "no_early_warning",
       "framework": "Generic early-warning-signals framework (Scheffer et al. 2009, Nature 461:53)",
       "disclaimer": "This early-warning evidence record is a technical evidence-mapping artefact. It seals a passive detector's alarm decision, the contributing indicators and their robust z-scores, and the provenance of the screened signal; it does not constitute a clinical, operational, or safety decision, nor a certification of compliance. Any reported lead time is measured against a caller-supplied ground-truth onset and holds only for the recorded observable and detector configuration; a non-positive lead means the alarm was coincident with or later than the transition.",
-      "content_hash": "e594f0671667a3aa41c7fb2b820ebc2c50bf2d9a10f5a1de81e78a8e89f4547b"
+      "content_hash": "dbd1b35b0e615050f1b7b9fc2a41f17131a223fd9e76d097ea7dd73ee8777984"
     },
     "transition_entropy": {
       "detector": "transition_entropy",
       "observable": "per-channel phase projection sin(phase) of scalp EEG (4-30 Hz, decimated to 32 Hz)",
       "signal_source": "CHB-MIT scalp EEG chb01_03 (Shoeb 2009) / seizure onset 2996 s / 900 s pre-onset segment",
-      "captured_at": "2076-11-06T13:43:04",
+      "captured_at": "2026-11-06T13:43:04",
       "sampling_rate_hz": 32.0,
       "window": 128,
       "step": 16,
@@ -104,13 +104,13 @@
       "verdict": "no_early_warning",
       "framework": "Generic early-warning-signals framework (Scheffer et al. 2009, Nature 461:53)",
       "disclaimer": "This early-warning evidence record is a technical evidence-mapping artefact. It seals a passive detector's alarm decision, the contributing indicators and their robust z-scores, and the provenance of the screened signal; it does not constitute a clinical, operational, or safety decision, nor a certification of compliance. Any reported lead time is measured against a caller-supplied ground-truth onset and holds only for the recorded observable and detector configuration; a non-positive lead means the alarm was coincident with or later than the transition.",
-      "content_hash": "b0f003cce77b96387ea291fb5fce6ce28040a5c4900c2ab499dea1ce40e8834f"
+      "content_hash": "ce75a487b4af3e12ac8266f2ba330fda7dc152eb36de20a903ccdfe41bcd1059"
     },
     "ensemble_weighted": {
       "detector": "ensemble_weighted",
       "observable": "fused early-warning suite over scalp-EEG analytic phase (4-30 Hz, decimated to 32 Hz)",
       "signal_source": "CHB-MIT scalp EEG chb01_03 (Shoeb 2009) / seizure onset 2996 s / 900 s pre-onset segment",
-      "captured_at": "2076-11-06T13:43:04",
+      "captured_at": "2026-11-06T13:43:04",
       "sampling_rate_hz": 32.0,
       "window": 128,
       "step": 16,
@@ -152,13 +152,13 @@
       "verdict": "no_early_warning",
       "framework": "Generic early-warning-signals framework (Scheffer et al. 2009, Nature 461:53)",
       "disclaimer": "This early-warning evidence record is a technical evidence-mapping artefact. It seals a passive detector's alarm decision, the contributing indicators and their robust z-scores, and the provenance of the screened signal; it does not constitute a clinical, operational, or safety decision, nor a certification of compliance. Any reported lead time is measured against a caller-supplied ground-truth onset and holds only for the recorded observable and detector configuration; a non-positive lead means the alarm was coincident with or later than the transition.",
-      "content_hash": "6d50e7da89b8aac5a02f807c2d697e8dd7a7ef07ea98c2dbe635f1f7e5b145f6"
+      "content_hash": "a2277482e41660b224851a359745fa25b9cc63945a04d115f613b62eade41fa3"
     },
     "critical_slowing_down_multiscale": {
       "detector": "critical_slowing_down_multiscale",
       "observable": "multi-scale cross-channel Kuramoto order parameter R(t) of scalp-EEG analytic phase (4-30 Hz, decimated to 32 Hz)",
       "signal_source": "CHB-MIT scalp EEG chb01_03 (Shoeb 2009) / seizure onset 2996 s / 900 s pre-onset segment",
-      "captured_at": "2076-11-06T13:43:04",
+      "captured_at": "2026-11-06T13:43:04",
       "sampling_rate_hz": 32.0,
       "window": 256,
       "step": 16,
@@ -192,7 +192,7 @@
       "verdict": "no_early_warning",
       "framework": "Generic early-warning-signals framework (Scheffer et al. 2009, Nature 461:53)",
       "disclaimer": "This early-warning evidence record is a technical evidence-mapping artefact. It seals a passive detector's alarm decision, the contributing indicators and their robust z-scores, and the provenance of the screened signal; it does not constitute a clinical, operational, or safety decision, nor a certification of compliance. Any reported lead time is measured against a caller-supplied ground-truth onset and holds only for the recorded observable and detector configuration; a non-positive lead means the alarm was coincident with or later than the transition.",
-      "content_hash": "24649179de0ce087d567a4b647e08b3e02a23f60a94b175c820a95290541042e"
+      "content_hash": "2c6c7b93b7f37f21a6589dee35101a8d68e97d308206d677776ec0be7b695dc9"
     }
   }
 }
