@@ -232,6 +232,34 @@ jobs:
       - name: Run native-backend parity tests without coverage
         run: pytest tests/ -k backends -m "not slow" --tb=short -p no:cacheprovider
 
+  go-backend:
+    # The Go accelerator bridges compile each source to a cgo ``c-shared``
+    # library that the Python runtime loads via ctypes; their FFI call bodies are
+    # outside the coverage matrix. This lane compiles every Go accelerator with
+    # the toolchain pinned by go/go.mod so a broken or bit-rotted source is caught
+    # in CI (the Python loader contracts themselves run in the standard matrix).
+    # Mirrors julia-backend: informational, not a ci-gate dependency.
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go/go.mod
+          cache-dependency-path: go/go.sum
+      - name: Compile every Go accelerator to a c-shared library
+        working-directory: go
+        run: |
+          go mod download
+          fail=0
+          for src in *.go; do
+            if ! go build -buildmode=c-shared -o "lib${src%.go}.so" "$src"; then
+              echo "::error file=go/${src}::go build -buildmode=c-shared failed"
+              fail=1
+            fi
+          done
+          exit "$fail"
+
   coverage-guard:
     needs: [test, ffi-test, nn-coverage]
     runs-on: ubuntu-latest

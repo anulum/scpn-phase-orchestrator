@@ -372,8 +372,9 @@ omit = [
 # run in the standard matrix (see tests/test_backend_module_imports.py) and are
 # measured. The Go/Julia/Mojo FFI call bodies execute only with their toolchains
 # and built artefacts, which the standard coverage matrix does not provide (the
-# Julia lane runs without coverage; Go/Mojo are not built in CI), so those native
-# lines surface honestly as uncovered instead of being hidden from the gate.
+# Julia and Go lanes build/exercise them without coverage; Mojo is not yet built
+# in CI), so those native lines surface honestly as uncovered, not hidden from the
+# gate.
 # Worst case (every shim body uncovered) keeps the project ~84%, well above the
 # 60% floor below.
 
