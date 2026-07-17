@@ -12,20 +12,19 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "scpn-phase-orchestrator"
-version = "0.12.0"
+version = "1.0.0"
 description = "Domain-agnostic synchronisation-analysis and honest-evaluation toolkit built on Kuramoto/UPDE phase dynamics"
 readme = "README.md"
 license = "AGPL-3.0-or-later"
-requires-python = ">=3.10,<3.14"
+requires-python = ">=3.11,<3.14"
 authors = [
     { name = "Miroslav Sotek", email = "protoscience@anulum.li" },
 ]
 keywords = ["kuramoto", "phase-dynamics", "coherence-control", "UPDE", "synchrony"]
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Science/Research",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
@@ -61,8 +60,8 @@ queuewaves = [
 ]
 # scpn-studio-platform (every release >=0.2) requires Python >=3.12, so it is
 # gated behind a marker: the studio extra installs streamlit everywhere and the
-# SDK only on 3.12+. This keeps requires-python at >=3.10 (py311 dev locks intact)
-# and lets uv's universal resolution across 3.10-3.13 succeed.
+# SDK only on 3.12+. This keeps requires-python at >=3.11 (py311 dev locks intact)
+# and lets uv's universal resolution across 3.11-3.13 succeed.
 studio = [
     "streamlit>=1.36,<2.0",
     "scpn-studio-platform>=0.3,<0.4; python_version >= '3.12'",
@@ -155,7 +154,7 @@ scpn_phase_orchestrator = ["py.typed", "apps/queuewaves/static/*", "audit/*.prot
 
 [tool.ruff]
 line-length = 88
-target-version = "py310"
+target-version = "py311"
 exclude = ["src/scpn_phase_orchestrator/runtime/grpc_gen/spo_pb2.py", "src/scpn_phase_orchestrator/runtime/grpc_gen/spo_pb2_grpc.py"]
 
 [tool.ruff.lint]

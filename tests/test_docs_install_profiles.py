@@ -19,9 +19,8 @@ back into the misleading "just install the extra" framing (E0.1 / Option C).
 from __future__ import annotations
 
 import re
-from pathlib import Path
-
 import tomllib
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 GUIDE = ROOT / "docs" / "guide" / "install_profiles.md"

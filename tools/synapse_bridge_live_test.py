@@ -121,7 +121,7 @@ async def main() -> None:
             raw = await asyncio.wait_for(ws.recv(), timeout=2.0)
             msg = json.loads(raw)
             bridge.process(msg)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             pass
 
         tick += 1

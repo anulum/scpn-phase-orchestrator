@@ -29,10 +29,9 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import tomllib
 from pathlib import Path
 from typing import Any
-
-import tomllib
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 PYPROJECT_PATH = _REPO_ROOT / "pyproject.toml"

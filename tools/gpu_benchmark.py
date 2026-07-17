@@ -34,7 +34,7 @@ import json
 import sys
 import time
 from collections.abc import Callable
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -44,7 +44,7 @@ from typing import Any
 
 RESULTS_DIR = Path("benchmarks/results")
 RESULTS_DIR.mkdir(parents=True, exist_ok=True)
-_date_str = datetime.now(tz=timezone.utc).strftime("%Y-%m-%d")
+_date_str = datetime.now(tz=UTC).strftime("%Y-%m-%d")
 RESULTS_FILE = RESULTS_DIR / f"gpu_benchmark_{_date_str}.json"
 
 
@@ -66,7 +66,7 @@ def validate_environment() -> dict[str, Any]:
     """Check GPU, JAX, imports. Returns metadata dict or exits."""
     errors = []
     metadata: dict[str, Any] = {
-        "timestamp": datetime.now(tz=timezone.utc).isoformat(),
+        "timestamp": datetime.now(tz=UTC).isoformat(),
         "python": sys.version,
     }
 

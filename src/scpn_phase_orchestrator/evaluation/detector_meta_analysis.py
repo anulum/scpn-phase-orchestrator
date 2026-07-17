@@ -34,7 +34,7 @@ import argparse
 import json
 import statistics
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -387,7 +387,7 @@ def build_report(
     str
         The full report body rendered as Markdown.
     """
-    now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    now = datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")
     lines: list[str] = [
         "# Cross-Domain Detector Meta-Analysis Report",
         "",

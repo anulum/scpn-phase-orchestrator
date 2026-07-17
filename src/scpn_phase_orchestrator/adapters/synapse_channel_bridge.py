@@ -290,7 +290,7 @@ class SynapseChannelBridge:
             raw = await asyncio.wait_for(self._ws.recv(), timeout=1.0)
             msg = _loads_hub_json(raw)
             self._process_message(msg)
-        except asyncio.TimeoutError:
+        except TimeoutError:
             return  # no message within timeout — normal
         except (json.JSONDecodeError, ValueError):
             logger.warning("synapse.listen_once_invalid_json")

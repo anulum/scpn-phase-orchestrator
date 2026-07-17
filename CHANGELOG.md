@@ -7,8 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-07-17
+
+First stable release. The public Python API — the symbols exported from
+`scpn_phase_orchestrator.__all__` — is now covered by semantic-versioning
+guarantees; future backward-incompatible changes to it will bump the major
+version.
+
 ### Added
 
+- The `spo --version` option, which reports the installed package version.
+- The full text of the GNU Affero General Public License v3
+  (`LICENSES/AGPL-3.0-or-later.txt`), so the distribution conveys its licence in
+  full alongside the grant notice in `LICENSE`.
 - A canonical *Control Engineer onboarding* notebook
   (`notebooks/21_control_engineer_onboarding.ipynb`): a ~15-minute guided golden
   path over the public Python API — validate a shipped binding spec, sweep the
@@ -123,6 +134,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Raised the supported Python floor to 3.11 — the versions CI actually exercises
+  (3.11, 3.12, 3.13). The previously advertised but untested 3.10 support was
+  removed from `requires-python` and the packaging classifiers.
+- Removed the *REUSE-compliant* README badge: the repository is not yet fully
+  REUSE-compliant (`reuse lint` still reports uncovered files), so the claim was
+  unearned. The full licence text is now shipped under `LICENSES/` regardless.
 - `spo doctor` and the install guide now describe the PyPI-availability boundary
   honestly (external-validation finding E0.1). When the Rust backend is absent,
   the doctor previously advised *"install the 'rust' extra (spo-kernel)"*, but

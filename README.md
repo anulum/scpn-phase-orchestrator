@@ -62,10 +62,9 @@ a detector against a null. See the [Quickstart](docs/getting-started/quickstart.
 [![Docs](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://anulum.github.io/scpn-phase-orchestrator/)
 [![Coverage](https://img.shields.io/badge/coverage-per--module%20gate-blue)](https://github.com/anulum/scpn-phase-orchestrator/actions/workflows/ci.yml)
 [![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-purple)](https://github.com/anulum/scpn-phase-orchestrator/blob/main/LICENSE)
-[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/)
 [![Rust FFI](https://img.shields.io/badge/Rust-spo--kernel-orange)](https://github.com/anulum/scpn-phase-orchestrator/tree/main/spo-kernel)
 [![Pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/anulum/scpn-phase-orchestrator/blob/main/.pre-commit-config.yaml)
-[![REUSE](https://img.shields.io/badge/REUSE-compliant-green)](https://reuse.software/)
 [![Polar.sh](https://img.shields.io/badge/Fund-Polar.sh-blue)](https://polar.sh/anulum)
 
 Badge notes: CI, CodeQL, Scorecard, docs, package, and coverage badges are

@@ -14,12 +14,12 @@ from __future__ import annotations
 import importlib
 import json
 import sys
+import tomllib
 from contextlib import suppress
 from pathlib import Path
 from typing import Any
 
 import click
-import tomllib
 
 ROOT = Path(__file__).resolve().parents[1]
 PYPROJECT = ROOT / "pyproject.toml"

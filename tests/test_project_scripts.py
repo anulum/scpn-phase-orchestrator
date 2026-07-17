@@ -9,11 +9,11 @@
 from __future__ import annotations
 
 import json
+import tomllib
 from importlib import import_module
 from pathlib import Path
 
 import click
-import tomllib
 from click.testing import CliRunner
 
 
