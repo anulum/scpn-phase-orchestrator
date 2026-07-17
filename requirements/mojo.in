@@ -1,0 +1,4 @@
+# Optional Mojo backend accelerators. Hash-pinned into mojo-lock.txt for the
+# no-coverage Mojo CI lane; constrained against dev-lock.txt so shared
+# dependencies stay aligned.
+mojo==0.26.2.0

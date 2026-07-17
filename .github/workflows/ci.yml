@@ -280,7 +280,7 @@ jobs:
         run: |
           python -m venv .venv
           . .venv/bin/activate
-          pip install mojo==0.26.2.0
+          pip install --require-hashes -r requirements/mojo-lock.txt
           mojo --version
       - name: Compile every Mojo accelerator
         run: |
