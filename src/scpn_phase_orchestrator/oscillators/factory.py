@@ -18,6 +18,9 @@ rather than silently degrading to a default algorithm.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+from typing import Any
+
 from scpn_phase_orchestrator.binding.types import resolve_extractor_type
 from scpn_phase_orchestrator.oscillators.base import PhaseExtractor
 from scpn_phase_orchestrator.oscillators.informational import InformationalExtractor
@@ -28,12 +31,28 @@ from scpn_phase_orchestrator.oscillators.zero_crossing import ZeroCrossingExtrac
 
 __all__ = ["build_extractor"]
 
+_PHYSICAL_CONFIG_KEYS = ("band", "filter_order", "edge_trim")
+
+
+def _physical_kwargs(config: Mapping[str, object] | None) -> dict[str, Any]:
+    """Return the `PhysicalExtractor` keyword arguments named in ``config``.
+
+    Only the recognised band-pass keys are forwarded; the extractor validates the
+    values (and rejects malformed ones) so a binding's ``config`` cannot silently
+    misconfigure the filter. Values are ``Any`` — they originate from arbitrary
+    binding YAML/JSON and are narrowed by the extractor's own runtime validators.
+    """
+    if not config:
+        return {}
+    return {key: config[key] for key in _PHYSICAL_CONFIG_KEYS if key in config}
+
 
 def build_extractor(
     extractor_type: str,
     *,
     node_id: str = "extractor",
     n_states: int = 2,
+    config: Mapping[str, object] | None = None,
 ) -> PhaseExtractor:
     """Build the `PhaseExtractor` for a binding ``extractor_type``.
 
@@ -48,6 +67,11 @@ def build_extractor(
     n_states : int
         Number of discrete states for symbolic (``ring``/``graph``) extractors;
         ignored by the continuous and event extractors.
+    config : Mapping[str, object] | None
+        Optional oscillator-family ``config`` from the binding spec. For the
+        physical/``hilbert`` extractor its ``band``/``filter_order``/``edge_trim``
+        keys select the opt-in zero-phase band-pass and edge-trim; other extractors
+        ignore it.
 
     Returns
     -------
@@ -61,7 +85,7 @@ def build_extractor(
     """
     algorithm = resolve_extractor_type(extractor_type)
     if algorithm == "hilbert":
-        return PhysicalExtractor(node_id=node_id)
+        return PhysicalExtractor(node_id=node_id, **_physical_kwargs(config))
     if algorithm == "wavelet":
         return WaveletExtractor(node_id=node_id)
     if algorithm == "zero_crossing":

@@ -55,3 +55,45 @@ def test_built_extractor_runs() -> None:
 def test_unknown_type_is_fail_closed() -> None:
     with pytest.raises(ValueError, match="unknown extractor_type"):
         build_extractor("fourier")
+
+
+def test_physical_config_forwards_bandpass_keys() -> None:
+    """A binding ``config`` selects the physical extractor's opt-in refinements."""
+    extractor = build_extractor(
+        "physical",
+        node_id="p",
+        config={"band": [8.0, 12.0], "filter_order": 6, "edge_trim": 5},
+    )
+    assert isinstance(extractor, PhysicalExtractor)
+    assert extractor._band == (8.0, 12.0)
+    assert extractor._filter_order == 6
+    assert extractor._edge_trim == 5
+
+
+def test_physical_config_absent_keeps_defaults() -> None:
+    """Without a ``config`` the physical extractor keeps its default behaviour."""
+    extractor = build_extractor("physical", node_id="p")
+    assert isinstance(extractor, PhysicalExtractor)
+    assert extractor._band is None
+    assert extractor._edge_trim is None
+
+
+def test_physical_config_ignores_unrelated_keys() -> None:
+    """Unrecognised ``config`` keys are ignored, not forwarded to the extractor."""
+    extractor = build_extractor(
+        "physical", node_id="p", config={"unrelated": 1, "band": [8.0, 12.0]}
+    )
+    assert isinstance(extractor, PhysicalExtractor)
+    assert extractor._band == (8.0, 12.0)
+
+
+def test_physical_config_rejects_invalid_band() -> None:
+    """A malformed ``config`` band fails closed through the extractor validators."""
+    with pytest.raises(ValueError, match="band must satisfy"):
+        build_extractor("physical", node_id="p", config={"band": [12.0, 8.0]})
+
+
+def test_non_physical_config_is_ignored() -> None:
+    """A ``config`` passed for a non-physical extractor is silently ignored."""
+    extractor = build_extractor("wavelet", node_id="w", config={"band": [8.0, 12.0]})
+    assert isinstance(extractor, WaveletExtractor)
