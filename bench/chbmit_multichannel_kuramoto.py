@@ -44,7 +44,7 @@ import json
 import re
 import sys
 import urllib.request
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -375,7 +375,7 @@ def main(data_dir: Path, output_dir: Path) -> None:
         seed=PERMUTATION_SEED,
         alpha=ALPHA,
         score_precision=SCORE_PRECISION,
-        captured_at=datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        captured_at=datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
     )
 
     # ------------------------------------------------------------------ #
