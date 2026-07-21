@@ -4,15 +4,15 @@
     "core_engine_modules": 325,
     "domainpacks": 36,
     "github_workflows": 12,
-    "integration_modules": 27,
+    "integration_modules": 28,
     "optional_extras": 23,
     "public_api_exports": 24,
     "public_documentation_pages": 229,
-    "python_package_modules": 714,
+    "python_package_modules": 715,
     "research_experimental_modules": 204,
     "runtime_serving_modules": 154,
     "rust_kernel_files": 97,
-    "test_files": 851
+    "test_files": 852
   },
   "documentation": {
     "public_pages": [
@@ -708,6 +708,7 @@
       "src/scpn_phase_orchestrator/adapters/mqtt_bridge.py",
       "src/scpn_phase_orchestrator/adapters/neurocore_bridge.py",
       "src/scpn_phase_orchestrator/adapters/opcua_bridge.py",
+      "src/scpn_phase_orchestrator/adapters/openqasm_conformance.py",
       "src/scpn_phase_orchestrator/adapters/opentelemetry.py",
       "src/scpn_phase_orchestrator/adapters/plasma_control_bridge.py",
       "src/scpn_phase_orchestrator/adapters/prometheus.py",
@@ -1120,6 +1121,7 @@
     "src/scpn_phase_orchestrator/adapters/mqtt_bridge.py",
     "src/scpn_phase_orchestrator/adapters/neurocore_bridge.py",
     "src/scpn_phase_orchestrator/adapters/opcua_bridge.py",
+    "src/scpn_phase_orchestrator/adapters/openqasm_conformance.py",
     "src/scpn_phase_orchestrator/adapters/opentelemetry.py",
     "src/scpn_phase_orchestrator/adapters/plasma_control_bridge.py",
     "src/scpn_phase_orchestrator/adapters/prometheus.py",
@@ -2293,6 +2295,7 @@
       "tests/test_npe_validation_guards.py",
       "tests/test_oim.py",
       "tests/test_opcua_bridge.py",
+      "tests/test_openqasm_conformance.py",
       "tests/test_opentelemetry_adapter.py",
       "tests/test_operator_copilot.py",
       "tests/test_opt_entropy.py",
