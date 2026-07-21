@@ -176,8 +176,9 @@ implementations of the standard rather than a paywalled clause reference.
 `data_frames_to_frequency_series` emits a `(time_s, frequency_hz)` series in the
 exact two-column layout the PMU ringdown screener consumes, so a decoded
 synchrophasor stream feeds the existing hash-sealed ringdown evidence path. Live
-socket ingestion behind an optional `c37118` extra is a separate follow-up; this
-codec deliberately handles only bytes already read.
+socket ingestion is provided by `C37118SessionClient` (pure-standard-library
+`asyncio`, no optional extra required); this codec deliberately handles only
+bytes already read.
 
 ### C37118PhaseBridge
 

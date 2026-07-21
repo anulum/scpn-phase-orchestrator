@@ -291,8 +291,9 @@ layout and CRC parameters were cross-checked against two independent open-source
 implementations (`iicsys/pypmu` and `marsolla/Open-C37.118`).
 `data_frames_to_frequency_series` assembles a `(time_s, frequency_hz)` series in
 the exact layout the PMU ringdown screener consumes, so a decoded stream feeds
-directly into hash-sealed ringdown evidence. The live-socket ingestion path is a
-separate follow-up; this codec handles only bytes already read.
+directly into hash-sealed ringdown evidence. The live-socket ingestion path is
+`C37118SessionClient` (pure-standard-library `asyncio`, no optional extra
+required); this codec handles only bytes already read.
 
 ```python
 from scpn_phase_orchestrator.adapters import (

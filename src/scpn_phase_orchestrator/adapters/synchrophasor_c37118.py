@@ -26,8 +26,10 @@ CRC-CCITT checksum (polynomial ``0x1021``, initial value ``0xFFFF``, no final
 mask, computed over every byte except the trailing two). The FREQ field is a
 deviation from the PMU nominal frequency: a signed 16-bit integer in millihertz
 when the FORMAT ``freq`` bit is clear, or a 32-bit float in hertz when it is
-set. The live-socket ingestion path (an optional ``c37118`` extra) is a
-separate follow-up; this module deliberately handles only bytes already read.
+set. The live-socket ingestion path is
+:class:`~scpn_phase_orchestrator.adapters.synchrophasor_client.C37118SessionClient`
+(pure-standard-library ``asyncio``, no optional extra required); this module
+deliberately handles only bytes already read.
 """
 
 from __future__ import annotations
