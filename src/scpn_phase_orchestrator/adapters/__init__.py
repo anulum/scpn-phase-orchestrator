@@ -51,15 +51,15 @@ from scpn_phase_orchestrator.adapters.mqtt_bridge import (
     MqttTag,
 )
 from scpn_phase_orchestrator.adapters.neurocore_bridge import NeurocoreBridge
+from scpn_phase_orchestrator.adapters.neuromorphic_ir_export import (
+    NeuromorphicIRGraph,
+    to_nir_graph,
+)
 from scpn_phase_orchestrator.adapters.opcua_bridge import (
     HAS_ASYNCUA,
     OpcUaBridgeConfig,
     OpcUaPhaseBridge,
     OpcUaTag,
-)
-from scpn_phase_orchestrator.adapters.neuromorphic_ir_export import (
-    NeuromorphicIRGraph,
-    to_nir_graph,
 )
 from scpn_phase_orchestrator.adapters.openqasm_conformance import (
     OpenQasm3ConformanceReport,

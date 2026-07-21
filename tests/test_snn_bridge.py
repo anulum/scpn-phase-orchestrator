@@ -301,9 +301,7 @@ def test_neuromorphic_schedule_manifest_is_deterministic_and_safe():
     assert nir["metadata"]["format"] == "scpn-neuromorphic-ir-structural"
     assert [node["id"] for node in nir["nodes"]] == ["layer_0", "layer_1"]
     assert nir["nodes"][0]["type"] == "LIF"
-    assert nir["nodes"][0]["tau_membrane_ms"] == pytest.approx(
-        bridge.tau_rc * 1000.0
-    )
+    assert nir["nodes"][0]["tau_membrane_ms"] == pytest.approx(bridge.tau_rc * 1000.0)
     assert nir["edges"] == [
         {
             "type": "Linear",
