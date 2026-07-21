@@ -4,15 +4,15 @@
     "core_engine_modules": 325,
     "domainpacks": 36,
     "github_workflows": 12,
-    "integration_modules": 29,
+    "integration_modules": 30,
     "optional_extras": 23,
     "public_api_exports": 24,
     "public_documentation_pages": 229,
-    "python_package_modules": 716,
+    "python_package_modules": 717,
     "research_experimental_modules": 204,
     "runtime_serving_modules": 154,
     "rust_kernel_files": 97,
-    "test_files": 853
+    "test_files": 854
   },
   "documentation": {
     "public_pages": [
@@ -720,6 +720,7 @@
       "src/scpn_phase_orchestrator/adapters/snn_bridge.py",
       "src/scpn_phase_orchestrator/adapters/synapse_channel_bridge.py",
       "src/scpn_phase_orchestrator/adapters/synapse_coupling_bridge.py",
+      "src/scpn_phase_orchestrator/adapters/synchrophasor_c37118.py",
       "src/scpn_phase_orchestrator/drivers/__init__.py",
       "src/scpn_phase_orchestrator/drivers/psi_informational.py",
       "src/scpn_phase_orchestrator/drivers/psi_physical.py",
@@ -1134,6 +1135,7 @@
     "src/scpn_phase_orchestrator/adapters/snn_bridge.py",
     "src/scpn_phase_orchestrator/adapters/synapse_channel_bridge.py",
     "src/scpn_phase_orchestrator/adapters/synapse_coupling_bridge.py",
+    "src/scpn_phase_orchestrator/adapters/synchrophasor_c37118.py",
     "src/scpn_phase_orchestrator/api.py",
     "src/scpn_phase_orchestrator/apps/__init__.py",
     "src/scpn_phase_orchestrator/apps/queuewaves/__init__.py",
@@ -2604,6 +2606,7 @@
       "tests/test_synapse_channel_bridge.py",
       "tests/test_synapse_coupling_bridge.py",
       "tests/test_synchronisation.py",
+      "tests/test_synchrophasor_c37118.py",
       "tests/test_synthetic_honest_audit_demo_evidence.py",
       "tests/test_te_adaptive.py",
       "tests/test_te_validation_guards.py",

@@ -277,6 +277,37 @@ phases = bridge.extract_phases(samples)
 
 ::: scpn_phase_orchestrator.adapters.mqtt_bridge
 
+### IEEE C37.118.2 Synchrophasor Codec
+
+Dependency-free decoder for IEEE C37.118.2-2011 synchrophasor CONFIG-2 and DATA
+frames from raw bytes (no network I/O). `SynchrophasorFrameCodec.decode_config2`
+recovers each PMU's measurement layout (FORMAT flags, phasor/analog/digital
+counts, nominal frequency); `decode_data` then decodes the phasor, frequency,
+and analog/digital measurements, interpreting FREQ as a deviation from nominal
+(millihertz when integer, hertz when float). Every frame is CRC-CCITT validated
+before its body is read, and malformed input raises a typed
+`SynchrophasorFrameError` subclass rather than returning partial data. The byte
+layout and CRC parameters were cross-checked against two independent open-source
+implementations (`iicsys/pypmu` and `marsolla/Open-C37.118`).
+`data_frames_to_frequency_series` assembles a `(time_s, frequency_hz)` series in
+the exact layout the PMU ringdown screener consumes, so a decoded stream feeds
+directly into hash-sealed ringdown evidence. The live-socket ingestion path is a
+separate follow-up; this codec handles only bytes already read.
+
+```python
+from scpn_phase_orchestrator.adapters import (
+    SynchrophasorFrameCodec,
+    data_frames_to_frequency_series,
+)
+
+codec = SynchrophasorFrameCodec()
+config = codec.decode_config2(config2_bytes)
+frames = tuple(codec.decode_data(data_bytes, config) for data_bytes in stream)
+time_s, frequency_hz = data_frames_to_frequency_series(config, frames, pmu_index=0)
+```
+
+::: scpn_phase_orchestrator.adapters.synchrophasor_c37118
+
 ### Hardware I/O
 
 Generic hardware I/O abstraction for digital/analogue outputs.

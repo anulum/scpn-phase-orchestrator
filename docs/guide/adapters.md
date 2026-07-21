@@ -160,6 +160,25 @@ unmodelled NIR physical parameters rather than fabricating them. The manifest
 keeps `actuation_permitted` and `hardware_write_permitted` false; it is a
 simulator-parity handoff, not a live neuromorphic target run.
 
+### SynchrophasorFrameCodec
+
+`SynchrophasorFrameCodec` decodes IEEE C37.118.2-2011 synchrophasor CONFIG-2 and
+DATA frames from raw bytes with no network dependency. A CONFIG-2 frame yields
+each PMU's measurement layout, and a DATA frame is then decoded against that
+layout into phasor, frequency, and analog/digital measurements. FREQ is reported
+as a deviation from the PMU nominal frequency (millihertz for the integer FORMAT,
+hertz for the floating-point FORMAT) and surfaced as an absolute value in hertz.
+Every frame is CRC-CCITT validated before its body is read; a truncated frame, a
+wrong SYNC word, a framesize mismatch, or a checksum mismatch raises a typed
+`SynchrophasorFrameError` subclass rather than returning partial data. The byte
+layout and CRC parameters were cross-checked against two independent open-source
+implementations of the standard rather than a paywalled clause reference.
+`data_frames_to_frequency_series` emits a `(time_s, frequency_hz)` series in the
+exact two-column layout the PMU ringdown screener consumes, so a decoded
+synchrophasor stream feeds the existing hash-sealed ringdown evidence path. Live
+socket ingestion behind an optional `c37118` extra is a separate follow-up; this
+codec deliberately handles only bytes already read.
+
 ### Hardware I/O
 
 The sample buffer and simulated hardware board provide deterministic

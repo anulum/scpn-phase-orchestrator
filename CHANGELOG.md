@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `scpn_phase_orchestrator.adapters.SynchrophasorFrameCodec` and
+  `data_frames_to_frequency_series`: a dependency-free decoder for IEEE
+  C37.118.2-2011 synchrophasor CONFIG-2 and DATA frames from raw bytes (no
+  network I/O). It recovers each PMU's measurement layout and decodes phasor,
+  frequency (deviation from nominal — millihertz for the integer FORMAT, hertz
+  for float), and analog/digital measurements, CRC-CCITT-validating every frame
+  and raising a typed `SynchrophasorFrameError` subclass on malformed input.
+  `data_frames_to_frequency_series` emits a `(time_s, frequency_hz)` series in
+  the layout the PMU ringdown screener consumes, so a decoded stream feeds the
+  existing hash-sealed ringdown evidence path. The byte layout and CRC
+  parameters were cross-checked against the `iicsys/pypmu` and
+  `marsolla/Open-C37.118` reference implementations.
 - `scpn_phase_orchestrator.adapters.to_nir_graph` and `NeuromorphicIRGraph`: a
   dependency-free, deterministic, SHA-256-hashed export of a schedule's LIF
   populations and projections into a graph shaped like the Neuromorphic
