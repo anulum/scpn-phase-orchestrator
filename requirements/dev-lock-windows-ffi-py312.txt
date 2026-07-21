@@ -1190,9 +1190,9 @@ jaxlib==0.10.0 \
     # via
     #   jax
     #   optax
-jaxtyping==0.3.9 \
-    --hash=sha256:a00557a9d616eff157491f06ed2e21ed94886fad3832399273eb912b345da378 \
-    --hash=sha256:f8c02d1b623d5f1b6665d4f3ddaec675d70004f16a792102c2fc51264190951d
+jaxtyping==0.3.11 \
+    --hash=sha256:8a4bedc4e3f963fa82df41bd13c7ebc2bad925601eb48614c65798f21329d4e3 \
+    --hash=sha256:b09c14acf6686feb9e0df5b0d8c6e7c5b6f8d36bf059ee54cd522a186c2ef050
     # via
     #   diffrax
     #   equinox
