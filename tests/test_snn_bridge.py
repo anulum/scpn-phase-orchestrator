@@ -294,6 +294,25 @@ def test_neuromorphic_schedule_manifest_is_deterministic_and_safe():
         "review neuromorphic_schedule_manifest.json",
         "run Lava or PyNN simulator parity before hardware handoff",
     ]
+    # NIR-structural export is wired into the manifest and hashed.
+    assert len(manifest["nir_sha256"]) == 64
+    nir = manifest["neuromorphic_ir"]
+    assert nir["metadata"]["conformance"] == "structural_subset"
+    assert nir["metadata"]["format"] == "scpn-neuromorphic-ir-structural"
+    assert [node["id"] for node in nir["nodes"]] == ["layer_0", "layer_1"]
+    assert nir["nodes"][0]["type"] == "LIF"
+    assert nir["nodes"][0]["tau_membrane_ms"] == pytest.approx(
+        bridge.tau_rc * 1000.0
+    )
+    assert nir["edges"] == [
+        {
+            "type": "Linear",
+            "source": "layer_0",
+            "target": "layer_1",
+            "weight": 0.4,
+            "delay_ms": 1.0,
+        }
+    ]
 
 
 def test_neuromorphic_schedule_manifest_rejects_invalid_state():

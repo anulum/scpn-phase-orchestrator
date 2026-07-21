@@ -118,6 +118,22 @@ schedule-manifest generation.
 
 ::: scpn_phase_orchestrator.adapters.snn_bridge
 
+### Neuromorphic IR Export
+
+`to_nir_graph` serialises a schedule's LIF populations and inter-population
+projections into a deterministic, SHA-256-hashed graph in the *shape* of the
+Neuromorphic Intermediate Representation (`neuromorphs/NIR`): nodes are neuron
+populations, edges are weighted `(source, target)` connections. The export is an
+honestly-labelled **structural subset** (`conformance = "structural_subset"`),
+not a spec-validated NIR export: the SCPN Abbott-rate LIF defines only the
+membrane/refractory time constants and a normalised firing threshold, so the
+NIR physical parameters it does not model (`R`, `v_leak`, `v_reset`) are listed
+in `unmodelled_nir_lif_parameters` rather than fabricated. The SNN bridge embeds
+the graph under the schedule manifest's `neuromorphic_ir` key with a `nir_sha256`
+digest.
+
+::: scpn_phase_orchestrator.adapters.neuromorphic_ir_export
+
 ### Neurocore Bridge
 
 `NeurocoreBridge` maps bounded UPDE layer coherence to stochastic LIF input

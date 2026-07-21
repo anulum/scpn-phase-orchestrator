@@ -28,6 +28,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.actuation.mapper import ControlAction
+from scpn_phase_orchestrator.adapters.neuromorphic_ir_export import to_nir_graph
 from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
 
 __all__ = ["SNNControllerBridge"]
@@ -400,6 +401,16 @@ class SNNControllerBridge:
             )
             for idx, layer in enumerate(state.layers)
         ]
+        projections = self._projection_records(
+            state.cross_layer_alignment,
+            delay_ms=projection_delay_ms,
+        )
+        nir_graph = to_nir_graph(
+            populations,
+            projections,
+            tau_membrane_ms=self.tau_rc * 1000.0,
+            tau_refractory_ms=self.tau_ref * 1000.0,
+        )
         manifest: dict[str, object] = {
             "manifest_kind": "neuromorphic_schedule_manifest",
             "schema_version": 1,
@@ -418,10 +429,7 @@ class SNNControllerBridge:
             "actuation_permitted": False,
             "hardware_write_permitted": False,
             "populations": populations,
-            "projections": self._projection_records(
-                state.cross_layer_alignment,
-                delay_ms=projection_delay_ms,
-            ),
+            "projections": projections,
             "control_actions": [
                 {
                     "knob": action.knob,
@@ -445,6 +453,8 @@ class SNNControllerBridge:
                 "review neuromorphic_schedule_manifest.json",
                 "run Lava or PyNN simulator parity before hardware handoff",
             ],
+            "neuromorphic_ir": nir_graph.to_record(),
+            "nir_sha256": nir_graph.sha256,
         }
         canonical = json.dumps(manifest, sort_keys=True, separators=(",", ":"))
         manifest["schedule_sha256"] = sha256(canonical.encode("utf-8")).hexdigest()

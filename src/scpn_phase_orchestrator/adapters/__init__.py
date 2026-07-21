@@ -57,6 +57,10 @@ from scpn_phase_orchestrator.adapters.opcua_bridge import (
     OpcUaPhaseBridge,
     OpcUaTag,
 )
+from scpn_phase_orchestrator.adapters.neuromorphic_ir_export import (
+    NeuromorphicIRGraph,
+    to_nir_graph,
+)
 from scpn_phase_orchestrator.adapters.openqasm_conformance import (
     OpenQasm3ConformanceReport,
     check_openqasm3,
@@ -99,6 +103,7 @@ __all__ = [
     "MqttPhaseBridge",
     "MqttTag",
     "NeurocoreBridge",
+    "NeuromorphicIRGraph",
     "OpcUaBridgeConfig",
     "OpcUaPhaseBridge",
     "OpcUaTag",
@@ -122,5 +127,6 @@ __all__ = [
     "check_openqasm3",
     "cosimulate",
     "generate_model_description",
+    "to_nir_graph",
     "write_fmu",
 ]

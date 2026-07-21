@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `scpn_phase_orchestrator.adapters.to_nir_graph` and `NeuromorphicIRGraph`: a
+  dependency-free, deterministic, SHA-256-hashed export of a schedule's LIF
+  populations and projections into a graph shaped like the Neuromorphic
+  Intermediate Representation (`neuromorphs/NIR`). It is an honestly-labelled
+  structural subset (`conformance = "structural_subset"`) that carries only the
+  LIF parameters the Abbott-rate model defines and lists the unmodelled NIR
+  physical parameters (`R`, `v_leak`, `v_reset`) rather than fabricating them.
 - `scpn_phase_orchestrator.adapters.check_openqasm3` and
   `OpenQasm3ConformanceReport`: a dependency-free structural conformance checker
   for OpenQASM 3 programs (version header, includes, qubit registers, custom
@@ -23,6 +30,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   emitted OpenQASM 3 text with `check_openqasm3`, adding an `openqasm_conformance`
   record to the manifest and a `qasm_parse_ok` flag to the co-simulation parity
   evidence.
+- `SNNControllerBridge.build_neuromorphic_schedule_manifest` now embeds a
+  NIR-structural graph (`neuromorphic_ir`) and its `nir_sha256` digest.
 
 ## [1.0.0] - 2026-07-17
 

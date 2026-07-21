@@ -4,15 +4,15 @@
     "core_engine_modules": 325,
     "domainpacks": 36,
     "github_workflows": 12,
-    "integration_modules": 28,
+    "integration_modules": 29,
     "optional_extras": 23,
     "public_api_exports": 24,
     "public_documentation_pages": 229,
-    "python_package_modules": 715,
+    "python_package_modules": 716,
     "research_experimental_modules": 204,
     "runtime_serving_modules": 154,
     "rust_kernel_files": 97,
-    "test_files": 852
+    "test_files": 853
   },
   "documentation": {
     "public_pages": [
@@ -707,6 +707,7 @@
       "src/scpn_phase_orchestrator/adapters/modbus_tls.py",
       "src/scpn_phase_orchestrator/adapters/mqtt_bridge.py",
       "src/scpn_phase_orchestrator/adapters/neurocore_bridge.py",
+      "src/scpn_phase_orchestrator/adapters/neuromorphic_ir_export.py",
       "src/scpn_phase_orchestrator/adapters/opcua_bridge.py",
       "src/scpn_phase_orchestrator/adapters/openqasm_conformance.py",
       "src/scpn_phase_orchestrator/adapters/opentelemetry.py",
@@ -1120,6 +1121,7 @@
     "src/scpn_phase_orchestrator/adapters/modbus_tls.py",
     "src/scpn_phase_orchestrator/adapters/mqtt_bridge.py",
     "src/scpn_phase_orchestrator/adapters/neurocore_bridge.py",
+    "src/scpn_phase_orchestrator/adapters/neuromorphic_ir_export.py",
     "src/scpn_phase_orchestrator/adapters/opcua_bridge.py",
     "src/scpn_phase_orchestrator/adapters/openqasm_conformance.py",
     "src/scpn_phase_orchestrator/adapters/opentelemetry.py",
@@ -2267,6 +2269,7 @@
       "tests/test_network_security_sheaf_obstruction_demo.py",
       "tests/test_network_security_topology_demo.py",
       "tests/test_neurocore_bridge.py",
+      "tests/test_neuromorphic_ir_export.py",
       "tests/test_neuroscience_eeg_domainpack.py",
       "tests/test_new_domainpacks.py",
       "tests/test_nn_chimera.py",

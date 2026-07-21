@@ -151,7 +151,12 @@ LIF rate estimate uses Abbott 1999, Eq. 1:
 `build_neuromorphic_schedule_manifest()` emits a deterministic review artefact
 for Lava and PyNN handoff. It records one population per UPDE layer, positive
 cross-layer projections, control-action review records, simulator parity
-evidence from the numpy LIF rate path, and a SHA-256 schedule hash. The manifest
+evidence from the numpy LIF rate path, and a SHA-256 schedule hash. It also emits
+a portable NIR-structural graph of the populations and projections via
+`to_nir_graph()` under the manifest's `neuromorphic_ir` key (with a `nir_sha256`
+digest) — an honestly-labelled structural subset of `neuromorphs/NIR` that
+carries only the LIF parameters the Abbott-rate model defines and lists the
+unmodelled NIR physical parameters rather than fabricating them. The manifest
 keeps `actuation_permitted` and `hardware_write_permitted` false; it is a
 simulator-parity handoff, not a live neuromorphic target run.
 
