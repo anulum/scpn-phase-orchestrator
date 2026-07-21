@@ -196,6 +196,22 @@ fabricated angle. Each binding names the PMU and phasor index and the target
 oscillator; the bridge is review-only (`non_actuating` / `execution_disabled`)
 and never actuates.
 
+### C37118SessionClient
+
+`C37118SessionClient` is a live asynchronous reader for a phasor data
+concentrator or PMU over TCP, built on the standard library's `asyncio` with no
+third-party dependency. It issues the standard C37.118.2 command frames to drive
+the stream — request CONFIG-2, turn data transmission on, read the requested
+number of DATA frames, then turn transmission off — and delegates decoding to
+`SynchrophasorFrameCodec`. Those command frames are a benign protocol handshake
+that controls only the measurement data stream; the client never writes device
+setpoints and cannot actuate grid equipment (`non_actuating`). The command-word
+values (`0x0001` data-off, `0x0002` data-on, `0x0005` send CONFIG-2, …) were
+verified at source against the pypmu `CommandFrame` table and the Wireshark
+synchrophasor dissector, which cites the standard's Table 15. `read_frame`
+reassembles a single frame from the stream via its SYNC/FRAMESIZE prefix, so a
+partial or malformed prefix fails closed with a typed error.
+
 ### Hardware I/O
 
 The sample buffer and simulated hardware board provide deterministic

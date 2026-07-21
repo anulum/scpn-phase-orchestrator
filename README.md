@@ -272,15 +272,15 @@ inside a dashboard or notebook; it turns them into inspectable artefacts.
 |---|---:|
 | Package version | 1.0.0 |
 | Public API exports | 24 |
-| Python package modules | 718 |
+| Python package modules | 719 |
 | Core Engine modules | 325 |
 | Runtime/Serving modules | 154 |
-| Integration modules | 31 |
+| Integration modules | 32 |
 | Research/Experimental modules | 204 |
 | Domainpack files | 36 |
 | Rust kernel files | 97 |
 | Optional extras | 23 |
-| Python test files | 855 |
+| Python test files | 856 |
 | Public documentation pages | 229 |
 | GitHub Actions workflows | 12 |
 

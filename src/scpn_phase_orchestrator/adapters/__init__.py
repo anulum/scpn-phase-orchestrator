@@ -98,6 +98,17 @@ from scpn_phase_orchestrator.adapters.synchrophasor_c37118 import (
     compute_crc_ccitt,
     data_frames_to_frequency_series,
 )
+from scpn_phase_orchestrator.adapters.synchrophasor_client import (
+    COMMAND_DATA_OFF,
+    COMMAND_DATA_ON,
+    COMMAND_SEND_CONFIG1,
+    COMMAND_SEND_CONFIG2,
+    COMMAND_SEND_CONFIG3,
+    COMMAND_SEND_HEADER,
+    C37118SessionClient,
+    build_command_frame,
+    read_frame,
+)
 from scpn_phase_orchestrator.adapters.synchrophasor_phase_bridge import (
     C37118PhaseBridge,
     PhasorBinding,
@@ -107,6 +118,13 @@ __all__ = [
     "AgentState",
     "BrainFlowAdapter",
     "C37118PhaseBridge",
+    "C37118SessionClient",
+    "COMMAND_DATA_OFF",
+    "COMMAND_DATA_ON",
+    "COMMAND_SEND_CONFIG1",
+    "COMMAND_SEND_CONFIG2",
+    "COMMAND_SEND_CONFIG3",
+    "COMMAND_SEND_HEADER",
     "CoSimulationSlave",
     "CoherenceMemorySnapshot",
     "ConfigurationFrame2",
@@ -154,6 +172,7 @@ __all__ = [
     "SynchrophasorHeader",
     "UnsupportedFrameError",
     "audit_hybrid_target_readiness",
+    "build_command_frame",
     "build_hybrid_cocompiler_manifest",
     "build_hybrid_operator_handoff_package",
     "check_openqasm3",
@@ -161,6 +180,7 @@ __all__ = [
     "cosimulate",
     "data_frames_to_frequency_series",
     "generate_model_description",
+    "read_frame",
     "to_nir_graph",
     "write_fmu",
 ]

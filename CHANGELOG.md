@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `scpn_phase_orchestrator.adapters.C37118SessionClient`, `build_command_frame`,
+  and `read_frame`: a live asynchronous IEEE C37.118.2 session client that reads
+  synchrophasor frames from a PDC/PMU over TCP using only the standard library's
+  `asyncio` (no new dependency). It issues the standard command frames (request
+  CONFIG-2, data on, data off) — a benign protocol handshake that controls only
+  the data stream and never actuates grid equipment (`non_actuating`) — and
+  delegates decoding to `SynchrophasorFrameCodec`. The command-word values were
+  verified at source against the pypmu `CommandFrame` table and the Wireshark
+  synchrophasor dissector (standard Table 15).
 - `scpn_phase_orchestrator.adapters.C37118PhaseBridge` and `PhasorBinding`: a
   review-only bridge mapping decoded IEEE C37.118.2 PMU phasors to oscillator
   `PhaseState`s. A PMU phasor is already phase-resolved, so the bridge reads the

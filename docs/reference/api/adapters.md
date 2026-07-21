@@ -338,6 +338,34 @@ phases = bridge.extract_phases(config, frames)
 
 ::: scpn_phase_orchestrator.adapters.synchrophasor_phase_bridge
 
+### IEEE C37.118.2 Live Session Client
+
+`C37118SessionClient` reads synchrophasor frames from a PDC/PMU over a TCP stream
+using only the standard library's `asyncio` (no third-party dependency). It
+issues the standard C37.118.2 command frames — request CONFIG-2, turn data on,
+turn data off — which are a benign protocol handshake that controls only the
+measurement data stream; the client writes no device setpoints and cannot
+actuate grid equipment (`non_actuating`). `build_command_frame` constructs a
+CRC-sealed COMMAND frame and `read_frame` reassembles one frame from the stream
+via its SYNC/FRAMESIZE prefix. The command-word values were verified at source
+against the pypmu `CommandFrame` table and the Wireshark synchrophasor dissector
+(which cites the standard's Table 15). Decoding is delegated to
+`SynchrophasorFrameCodec`.
+
+```python
+from scpn_phase_orchestrator.adapters import C37118SessionClient
+
+client = C37118SessionClient(id_code=7)
+reader, writer = await client.open_connection("pdc.local", 4712)
+try:
+    config = await client.request_configuration(reader, writer)
+    frames = await client.collect_data_frames(reader, writer, config, count=30)
+finally:
+    writer.close()
+```
+
+::: scpn_phase_orchestrator.adapters.synchrophasor_client
+
 ### Hardware I/O
 
 Generic hardware I/O abstraction for digital/analogue outputs.
