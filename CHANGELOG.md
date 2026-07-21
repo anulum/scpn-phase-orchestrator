@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `scpn_phase_orchestrator.adapters.C37118PhaseBridge` and `PhasorBinding`: a
+  review-only bridge mapping decoded IEEE C37.118.2 PMU phasors to oscillator
+  `PhaseState`s. A PMU phasor is already phase-resolved, so the bridge reads the
+  angle directly (`theta` = rectangular `atan2(imag, real)` or floating-point
+  polar angle) rather than running a waveform extractor; `omega` = `2*pi` times
+  the measured frequency, `amplitude` = the phasor magnitude in engineering
+  units (integer components scaled by the PHUNIT factor now decoded by the
+  codec), and `quality` derives from the STAT data-error/sync bits. Integer
+  polar phasors raise rather than emit a fabricated angle. The bridge is
+  `non_actuating` / `execution_disabled`.
+- `SynchrophasorFrameCodec` now decodes the per-phasor PHUNIT conversion factors
+  into `PmuConfiguration.phasor_units` (a tuple of `PhasorUnit`), so integer
+  phasor magnitudes can be scaled to engineering units.
 - `scpn_phase_orchestrator.adapters.SynchrophasorFrameCodec` and
   `data_frames_to_frequency_series`: a dependency-free decoder for IEEE
   C37.118.2-2011 synchrophasor CONFIG-2 and DATA frames from raw bytes (no

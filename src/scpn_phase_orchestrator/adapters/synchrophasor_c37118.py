@@ -42,6 +42,7 @@ __all__ = [
     "DataFrame",
     "FrameChecksumError",
     "FrameTruncationError",
+    "PhasorUnit",
     "PmuConfiguration",
     "PmuMeasurement",
     "SynchrophasorFrameCodec",
@@ -268,6 +269,41 @@ class SynchrophasorHeader:
 
 
 @dataclass(frozen=True)
+class PhasorUnit:
+    """Conversion factor for one phasor channel (a decoded PHUNIT word).
+
+    Attributes
+    ----------
+    is_current : bool
+        ``True`` if the channel is a current phasor, ``False`` for voltage
+        (PHUNIT most-significant byte).
+    scale : int
+        Unsigned 24-bit scale factor in ``10**-5`` volts or amperes per bit,
+        used to convert 16-bit integer phasor components to engineering units.
+        Ignored for floating-point phasors, which are already in engineering
+        units.
+    """
+
+    is_current: bool
+    scale: int
+
+    @property
+    def volts_or_amperes_per_bit(self) -> float:
+        """Return the engineering-unit scale per integer bit (``scale * 1e-5``)."""
+        return self.scale * 1.0e-5
+
+    def to_audit_record(self) -> dict[str, object]:
+        """Return a JSON-safe audit mapping of the phasor unit.
+
+        Returns
+        -------
+        dict[str, object]
+            Deterministic, JSON-safe mapping of the phasor conversion factor.
+        """
+        return {"is_current": self.is_current, "scale": self.scale}
+
+
+@dataclass(frozen=True)
 class PmuConfiguration:
     """Per-PMU measurement layout decoded from a CONFIG-2 frame.
 
@@ -292,6 +328,8 @@ class PmuConfiguration:
         Phasor, analog, and digital channel labels in declared order.
     nominal_frequency_hz : float
         Nominal line frequency (50.0 or 60.0 Hz) from the FNOM word.
+    phasor_units : tuple[PhasorUnit, ...]
+        Per-phasor conversion factors (PHUNIT), one per phasor channel.
     """
 
     station_name: str
@@ -305,6 +343,7 @@ class PmuConfiguration:
     digital_word_count: int
     channel_names: tuple[str, ...]
     nominal_frequency_hz: float
+    phasor_units: tuple[PhasorUnit, ...] = ()
 
     @property
     def phasor_size(self) -> int:
@@ -352,6 +391,7 @@ class PmuConfiguration:
             "digital_word_count": self.digital_word_count,
             "channel_names": list(self.channel_names),
             "nominal_frequency_hz": self.nominal_frequency_hz,
+            "phasor_units": [unit.to_audit_record() for unit in self.phasor_units],
         }
 
 
@@ -568,8 +608,11 @@ class SynchrophasorFrameCodec:
         digital_word_count = reader.u16()
         name_count = phasor_count + analog_count + 16 * digital_word_count
         channel_names = tuple(reader.name() for _ in range(name_count))
-        # Conversion factors (PHUNIT/ANUNIT/DIGUNIT) are 4 bytes each; skipped.
-        for _ in range(phasor_count + analog_count + digital_word_count):
+        # PHUNIT conversion factors: MSB selects voltage/current, lower 24 bits
+        # are the 10^-5 V/A per-bit scale for integer phasor components.
+        phasor_units = tuple(self._decode_phunit(reader) for _ in range(phasor_count))
+        # ANUNIT and DIGUNIT (4 bytes each) are not modelled; skip them.
+        for _ in range(analog_count + digital_word_count):
             reader.u32()
         fnom = reader.u16()
         reader.u16()  # CFGCNT — configuration change count.
@@ -586,7 +629,13 @@ class SynchrophasorFrameCodec:
             digital_word_count=digital_word_count,
             channel_names=channel_names,
             nominal_frequency_hz=nominal,
+            phasor_units=phasor_units,
         )
+
+    def _decode_phunit(self, reader: _FrameReader) -> PhasorUnit:
+        """Decode one 4-byte PHUNIT conversion factor from ``reader``."""
+        word = reader.u32()
+        return PhasorUnit(is_current=bool(word & 0xFF000000), scale=word & 0x00FFFFFF)
 
     def decode_data(self, frame: bytes, config: ConfigurationFrame2) -> DataFrame:
         """Decode a DATA frame using a previously decoded CONFIG-2 layout.

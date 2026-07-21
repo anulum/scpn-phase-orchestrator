@@ -308,6 +308,36 @@ time_s, frequency_hz = data_frames_to_frequency_series(config, frames, pmu_index
 
 ::: scpn_phase_orchestrator.adapters.synchrophasor_c37118
 
+### IEEE C37.118.2 Phase Bridge
+
+Review-only bridge mapping decoded PMU phasors to oscillator `PhaseState`s. A PMU
+phasor is already phase-resolved, so — unlike the OPC-UA/MQTT waveform bridges —
+`C37118PhaseBridge` reads the phase directly instead of running a waveform
+extractor: `theta` is the phasor angle (rectangular `atan2(imag, real)`, which is
+scale-independent, or a floating-point polar angle in radians), `omega` is
+`2*pi` times the frame's measured frequency, `amplitude` is the phasor magnitude
+in engineering units (integer components scaled by the PHUNIT `10**-5` V/A
+factor), and `quality` derives from the STAT data-error and time-sync bits.
+Integer *polar* phasors raise rather than emit a fabricated angle (the standard
+and the reference implementations disagree on the integer polar angle scale). The
+bridge never actuates (`non_actuating` / `execution_disabled`).
+
+```python
+from scpn_phase_orchestrator.adapters import (
+    C37118PhaseBridge,
+    PhasorBinding,
+    SynchrophasorFrameCodec,
+)
+
+codec = SynchrophasorFrameCodec()
+config = codec.decode_config2(config2_bytes)
+frames = [codec.decode_data(data_bytes, config) for data_bytes in stream]
+bridge = C37118PhaseBridge.from_bindings([PhasorBinding("bus1_va", phasor_index=0)])
+phases = bridge.extract_phases(config, frames)
+```
+
+::: scpn_phase_orchestrator.adapters.synchrophasor_phase_bridge
+
 ### Hardware I/O
 
 Generic hardware I/O abstraction for digital/analogue outputs.

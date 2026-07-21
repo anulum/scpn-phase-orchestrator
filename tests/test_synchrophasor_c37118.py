@@ -31,6 +31,7 @@ from scpn_phase_orchestrator.adapters.synchrophasor_c37118 import (
     DataFrame,
     FrameChecksumError,
     FrameTruncationError,
+    PhasorUnit,
     PmuConfiguration,
     PmuMeasurement,
     SynchrophasorFrameCodec,
@@ -78,10 +79,12 @@ def _pmu_config_block(
     dgnmr: int,
     fnom: int,
     id_code: int = 1,
+    phunits: list[int] | None = None,
 ) -> bytes:
     names = [f"PH{i}" for i in range(phnmr)]
     names += [f"AN{i}" for i in range(annmr)]
     names += [f"DIG{i}" for i in range(16 * dgnmr)]
+    phunit_words = phunits if phunits is not None else [0] * phnmr
     block = _name16(station)
     block += struct.pack(">H", id_code)
     block += struct.pack(">H", fmt)
@@ -90,8 +93,10 @@ def _pmu_config_block(
     block += struct.pack(">H", dgnmr)
     for name in names:
         block += _name16(name)
-    for _ in range(phnmr + annmr + dgnmr):
-        block += struct.pack(">I", 0)
+    for word in phunit_words:
+        block += struct.pack(">I", word)  # PHUNIT
+    for _ in range(annmr + dgnmr):
+        block += struct.pack(">I", 0)  # ANUNIT / DIGUNIT
     block += struct.pack(">H", fnom)
     block += struct.pack(">H", 0)  # CFGCNT
     return block
@@ -295,6 +300,32 @@ def test_decode_config2_float_polar_50hz_with_channels() -> None:
     assert pmu.digital_word_count == 1
     assert len(pmu.channel_names) == 1 + 1 + 16
     assert config.data_rate == -2
+
+
+def test_decode_config2_phunits_voltage_and_current() -> None:
+    codec = SynchrophasorFrameCodec()
+    # First phasor: voltage, scale 915527; second: current (MSB set), scale 1000.
+    block = _pmu_config_block(
+        station="U",
+        fmt=0x0000,
+        phnmr=2,
+        annmr=0,
+        dgnmr=0,
+        fnom=0x0000,
+        phunits=[915527, 0x01000000 | 1000],
+    )
+    config = codec.decode_config2(_config2_frame([block]))
+    units = config.pmus[0].phasor_units
+    assert units == (
+        PhasorUnit(is_current=False, scale=915527),
+        PhasorUnit(is_current=True, scale=1000),
+    )
+    assert units[0].volts_or_amperes_per_bit == pytest.approx(915527 * 1e-5)
+    record = config.pmus[0].to_audit_record()
+    assert record["phasor_units"] == [
+        {"is_current": False, "scale": 915527},
+        {"is_current": True, "scale": 1000},
+    ]
 
 
 def test_decode_config2_audit_record() -> None:

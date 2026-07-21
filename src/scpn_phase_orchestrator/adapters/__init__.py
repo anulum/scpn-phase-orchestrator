@@ -88,6 +88,7 @@ from scpn_phase_orchestrator.adapters.synchrophasor_c37118 import (
     DataFrame,
     FrameChecksumError,
     FrameTruncationError,
+    PhasorUnit,
     PmuConfiguration,
     PmuMeasurement,
     SynchrophasorFrameCodec,
@@ -97,10 +98,15 @@ from scpn_phase_orchestrator.adapters.synchrophasor_c37118 import (
     compute_crc_ccitt,
     data_frames_to_frequency_series,
 )
+from scpn_phase_orchestrator.adapters.synchrophasor_phase_bridge import (
+    C37118PhaseBridge,
+    PhasorBinding,
+)
 
 __all__ = [
     "AgentState",
     "BrainFlowAdapter",
+    "C37118PhaseBridge",
     "CoSimulationSlave",
     "CoherenceMemorySnapshot",
     "ConfigurationFrame2",
@@ -126,6 +132,8 @@ __all__ = [
     "OpcUaPhaseBridge",
     "OpcUaTag",
     "OpenQasm3ConformanceReport",
+    "PhasorBinding",
+    "PhasorUnit",
     "PlasmaControlBridge",
     "PmuConfiguration",
     "PmuMeasurement",

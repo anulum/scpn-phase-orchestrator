@@ -179,6 +179,23 @@ synchrophasor stream feeds the existing hash-sealed ringdown evidence path. Live
 socket ingestion behind an optional `c37118` extra is a separate follow-up; this
 codec deliberately handles only bytes already read.
 
+### C37118PhaseBridge
+
+`C37118PhaseBridge` maps decoded PMU phasors (from `SynchrophasorFrameCodec`) to
+oscillator phase states. A PMU phasor already carries a magnitude and an angle,
+so the bridge reads the phase directly rather than running a waveform extractor:
+`theta` is the phasor angle (rectangular `atan2(imag, real)` — scale-independent
+— or a floating-point polar angle in radians), `omega` is `2*pi` times the
+frame's measured line frequency, and `amplitude` is the phasor magnitude in
+engineering units (integer components scaled by the verified PHUNIT `10**-5` V/A
+per-bit factor). `quality` derives only from the STAT word's data-error and
+time-sync bits. Integer *polar* phasors are an explicit honest boundary: the
+standard scales an integer polar angle differently from its magnitude and the
+open-source references disagree, so the bridge raises rather than emit a
+fabricated angle. Each binding names the PMU and phasor index and the target
+oscillator; the bridge is review-only (`non_actuating` / `execution_disabled`)
+and never actuates.
+
 ### Hardware I/O
 
 The sample buffer and simulated hardware board provide deterministic
