@@ -57,6 +57,10 @@ from scpn_phase_orchestrator.adapters.opcua_bridge import (
     OpcUaPhaseBridge,
     OpcUaTag,
 )
+from scpn_phase_orchestrator.adapters.openqasm_conformance import (
+    OpenQasm3ConformanceReport,
+    check_openqasm3,
+)
 from scpn_phase_orchestrator.adapters.plasma_control_bridge import PlasmaControlBridge
 from scpn_phase_orchestrator.adapters.prometheus import PrometheusAdapter
 from scpn_phase_orchestrator.adapters.quantum_control_bridge import QuantumControlBridge
@@ -98,6 +102,7 @@ __all__ = [
     "OpcUaBridgeConfig",
     "OpcUaPhaseBridge",
     "OpcUaTag",
+    "OpenQasm3ConformanceReport",
     "PlasmaControlBridge",
     "PrometheusAdapter",
     "QuantumControlBridge",
@@ -114,6 +119,7 @@ __all__ = [
     "audit_hybrid_target_readiness",
     "build_hybrid_cocompiler_manifest",
     "build_hybrid_operator_handoff_package",
+    "check_openqasm3",
     "cosimulate",
     "generate_model_description",
     "write_fmu",

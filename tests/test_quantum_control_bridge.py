@@ -256,7 +256,17 @@ class TestQuantumControlBridge:
             "max_abs_frequency_error": 0.0,
             "max_abs_coupling_error": 0.0,
             "term_count": 3,
+            "qasm_parse_ok": True,
         }
+        conformance = manifest["openqasm_conformance"]
+        assert conformance["conformant"] is True
+        assert conformance["qasm_version"] == "3.0"
+        assert conformance["qubit_registers"] == [{"name": "q", "size": 2}]
+        assert conformance["stdgates_used"] == ["rz"]
+        assert conformance["extension_gates_used"] == ["rxx", "ryy"]
+        assert conformance["uses_non_stdgates_extensions"] is True
+        assert conformance["issues"] == []
+        assert conformance["gate_call_count"] == 4
         assert manifest["operator_commands"] == [
             "review quantum_compiler_manifest.json",
             "run Qiskit or PennyLane simulator parity before QPU handoff",

@@ -71,9 +71,16 @@ edge_import = bridge.import_scpn_upde_edge(quantum_edge_payload)
 `build_quantum_compiler_manifest()` emits dependency-free OpenQASM 3 review
 text for Qiskit and PennyLane handoff. It records Z-frequency terms,
 symmetrised XY coupling terms, co-simulation parity evidence from deterministic
-term reconstruction, and SHA-256 hashes for the QASM and manifest payloads. The
-manifest keeps QPU execution and live actuation disabled until an operator runs
-external simulator parity and target handoff checks.
+term reconstruction, and SHA-256 hashes for the QASM and manifest payloads. It
+also runs the emitted text through `check_openqasm3()` (a dependency-free
+structural conformance checker), embedding the result under the manifest's
+`openqasm_conformance` key and a `qasm_parse_ok` flag in the parity evidence.
+The checker distinguishes gates that `stdgates.inc` defines from the two-qubit
+Pauli-rotation extensions (`rxx`/`ryy`) that Qiskit and PennyLane provide as
+builtins, so the manifest reports its use of backend extensions honestly rather
+than overclaiming pure-standard conformance. The manifest keeps QPU execution
+and live actuation disabled until an operator runs external simulator parity and
+target handoff checks.
 
 `import_scpn_upde_edge()` accepts the QUANTUM `knm.scpn-upde.v1` payload only
 when its `scope_envelope` is `computational-agreement`, its K/omega and edge

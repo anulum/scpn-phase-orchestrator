@@ -89,6 +89,22 @@ phase-state exports from entering downstream review paths.
 
 ::: scpn_phase_orchestrator.adapters.quantum_control_bridge
 
+### OpenQASM 3 Conformance
+
+`check_openqasm3` statically validates the structural conformance of the
+OpenQASM 3 text the quantum-control bridge emits: version header, includes,
+qubit-register declarations, custom `gate` declarations, and every gate
+application's parameter/qubit arity and register bounds. Its gate registry is
+split into honestly-labelled tiers — the gates `stdgates.inc` actually defines
+versus the two-qubit Pauli-rotation extensions (`rxx`/`ryy`/`rzz`/`rzx`) that
+Qiskit and PennyLane provide as builtins — so a program using the extensions is
+recorded as portable-to-those-backends rather than mislabelled as pure-standard
+conformant. The bridge embeds the report under the manifest's
+`openqasm_conformance` key and surfaces `qasm_parse_ok` in the co-simulation
+parity evidence.
+
+::: scpn_phase_orchestrator.adapters.openqasm_conformance
+
 ### Hybrid Co-Compiler
 
 ::: scpn_phase_orchestrator.adapters.hybrid_cocompiler

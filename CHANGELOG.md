@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `scpn_phase_orchestrator.adapters.check_openqasm3` and
+  `OpenQasm3ConformanceReport`: a dependency-free structural conformance checker
+  for OpenQASM 3 programs (version header, includes, qubit registers, custom
+  `gate` declarations, and per-application parameter/qubit arity and register
+  bounds). Its gate registry honestly separates the gates `stdgates.inc` defines
+  from the two-qubit Pauli-rotation extensions (`rxx`/`ryy`/`rzz`/`rzx`) that
+  Qiskit and PennyLane provide as builtins.
+
+### Changed
+
+- `QuantumControlBridge.build_quantum_compiler_manifest` now validates its
+  emitted OpenQASM 3 text with `check_openqasm3`, adding an `openqasm_conformance`
+  record to the manifest and a `qasm_parse_ok` flag to the co-simulation parity
+  evidence.
+
 ## [1.0.0] - 2026-07-17
 
 First stable release. The public Python API — the symbols exported from

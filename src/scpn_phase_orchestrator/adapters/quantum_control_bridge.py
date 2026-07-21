@@ -26,6 +26,7 @@ from typing import Any, TypeAlias, cast
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator.adapters.openqasm_conformance import check_openqasm3
 from scpn_phase_orchestrator.coupling.knm import CouplingState
 from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
 
@@ -426,6 +427,8 @@ class QuantumControlBridge:
             knm_array,
             coupling_terms,
         )
+        conformance = check_openqasm3(openqasm)
+        parity["qasm_parse_ok"] = conformance.conformant
         manifest: dict[str, object] = {
             "manifest_kind": "quantum_compiler_manifest",
             "schema_version": 1,
@@ -445,6 +448,7 @@ class QuantumControlBridge:
             "coupling_terms": coupling_terms,
             "openqasm": openqasm,
             "qasm_sha256": qasm_hash,
+            "openqasm_conformance": conformance.to_audit_record(),
             "co_simulation_parity": parity,
             "operator_commands": [
                 "review quantum_compiler_manifest.json",
