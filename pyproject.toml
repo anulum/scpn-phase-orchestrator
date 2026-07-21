@@ -120,7 +120,7 @@ dev = [
     "types-protobuf>=6.30,<8.0",
     "types-PyYAML>=6.0,<7.0",
     "bandit==1.9.4",
-    "mistune>=3.2.1",
+    "mistune>=3.3.0",  # security floor: < 3.3.0 carries GHSA advisories (dev/docs only)
     "mkdocs-material>=9.5,<10.0",
     "mkdocstrings[python]>=0.24,<2.0",
     "pymdown-extensions>=10.21.3,<12.0",
