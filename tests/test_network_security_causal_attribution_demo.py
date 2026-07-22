@@ -26,7 +26,9 @@ def test_network_security_causal_demo_emits_stabilising_attribution() -> None:
     attribution = payload["attribution"]
     assert isinstance(attribution, dict)
     assert attribution["effect"] == "stabilising"
-    assert attribution["confidence"] == pytest.approx(1.0)
+    # Trajectory-consistency: every step after the shared initial state (delta==0
+    # at t0) holds the stabilising sign, so 35 of 36 steps agree.
+    assert attribution["trajectory_consistency"] == pytest.approx(35 / 36)
     assert attribution["delta_R_final"] > 0.0
     assert attribution["delta_R_mean"] > 0.0
 

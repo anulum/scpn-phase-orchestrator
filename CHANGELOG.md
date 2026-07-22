@@ -145,6 +145,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `CausalAttribution` now reports `trajectory_consistency` in place of the
+  misleadingly named `confidence`. The old value was `min(1, |score|/threshold)`
+  — a magnitude-over-threshold ratio that clamped to `1.0` for any clear effect
+  and implied a statistical confidence the deterministic single-trajectory
+  rollout cannot provide. The new field is the fraction of the rollout horizon
+  over which the per-step order-parameter delta holds the attributed sign (or, for
+  a `neutral` verdict, stays within the `|delta| <= threshold` band) — an honest
+  measure of how steadily the intervention acts, with no sampling-distribution or
+  p-value implied. Effect magnitude remains available in
+  `score`/`delta_R_final`/`delta_R_mean`. The `to_audit_record()` key changes from
+  `confidence` to `trajectory_consistency` accordingly; the four domainpack
+  causal-attribution demos now surface honest sub-unity consistency (e.g. the
+  cardiac weak-signal case reports ~0.42, previously masked as `1.0`).
 - `QuantumControlBridge.build_quantum_compiler_manifest` now validates its
   emitted OpenQASM 3 text with `check_openqasm3`, adding an `openqasm_conformance`
   record to the manifest and a `qasm_parse_ok` flag to the co-simulation parity

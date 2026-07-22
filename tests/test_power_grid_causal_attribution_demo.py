@@ -25,7 +25,9 @@ def test_power_grid_causal_demo_emits_stabilising_attribution() -> None:
     attribution = payload["attribution"]
     assert isinstance(attribution, dict)
     assert attribution["effect"] == "stabilising"
-    assert attribution["confidence"] == pytest.approx(1.0)
+    # Trajectory-consistency: 40 of 41 steps hold the stabilising sign (the shared
+    # initial state gives delta==0 at t0).
+    assert attribution["trajectory_consistency"] == pytest.approx(40 / 41)
     assert attribution["delta_R_final"] > 0.0
     assert attribution["delta_R_mean"] > 0.0
     counterfactual = payload["counterfactual"]

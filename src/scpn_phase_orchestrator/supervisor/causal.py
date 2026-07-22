@@ -48,10 +48,23 @@ FloatArray: TypeAlias = NDArray[np.float64]
 
 @dataclass(frozen=True)
 class CausalAttribution:
-    """Attribution summary derived from a paired counterfactual rollout."""
+    """Attribution summary derived from a paired counterfactual rollout.
+
+    ``trajectory_consistency`` reports the fraction of the rollout horizon over
+    which the per-step order-parameter delta holds the attributed effect's sign
+    (or, for a ``neutral`` verdict, stays within the neutral band ``|delta| <=
+    threshold``). It is a **deterministic** property of the single paired
+    trajectory — how steadily the intervention pushes ``R`` in the attributed
+    direction — not a statistical or frequentist confidence: the rollout draws no
+    samples, so there is no sampling distribution and no p-value to report. A
+    value near ``1.0`` means the effect is steady across the whole horizon; a
+    lower value means the sign only settles late or oscillates. Effect magnitude
+    lives in ``score``/``delta_R_final``/``delta_R_mean``, kept separate so a
+    steady-but-small effect is not confused with a large-but-transient one.
+    """
 
     effect: str
-    confidence: float
+    trajectory_consistency: float
     score: float
     delta_R_final: float
     delta_R_mean: float
@@ -67,7 +80,7 @@ class CausalAttribution:
         """
         return {
             "effect": self.effect,
-            "confidence": self.confidence,
+            "trajectory_consistency": self.trajectory_consistency,
             "score": self.score,
             "delta_R_final": self.delta_R_final,
             "delta_R_mean": self.delta_R_mean,
@@ -183,6 +196,11 @@ class CounterfactualRollout:
     def attribute(self, threshold: float = 1e-3) -> CausalAttribution:
         """Summarise whether the intervention caused a measurable R change.
 
+        The verdict is decided by the trajectory-averaged effect ``score``; its
+        steadiness across the horizon is reported separately as
+        ``trajectory_consistency`` (see :class:`CausalAttribution`), an honest
+        deterministic measure rather than a statistical confidence.
+
         Parameters
         ----------
         threshold : float
@@ -208,15 +226,39 @@ class CounterfactualRollout:
             effect = "stabilising"
         else:
             effect = "destabilising"
-        confidence = 0.0 if threshold == 0.0 else min(1.0, magnitude / threshold)
         return CausalAttribution(
             effect=effect,
-            confidence=confidence,
+            trajectory_consistency=self._trajectory_consistency(
+                score, effect, threshold
+            ),
             score=float(score),
             delta_R_final=self.delta_R_final,
             delta_R_mean=self.delta_R_mean,
             threshold=threshold,
         )
+
+    def _trajectory_consistency(
+        self, score: float, effect: str, threshold: float
+    ) -> float:
+        """Return the fraction of the horizon consistent with the verdict.
+
+        For a directional verdict this is the fraction of paired steps whose
+        order-parameter delta shares the attributed sign; for a ``neutral``
+        verdict it is the fraction of steps whose delta stays within the neutral
+        band ``|delta| <= threshold``. Deterministic; an empty rollout yields
+        ``0.0`` (no horizon offers evidence either way).
+        """
+        baseline = np.asarray(self.baseline_R, dtype=np.float64)
+        intervention = np.asarray(self.intervention_R, dtype=np.float64)
+        span = min(baseline.size, intervention.size)
+        if span == 0:
+            return 0.0
+        deltas = intervention[:span] - baseline[:span]
+        if effect == "neutral":
+            agree = np.abs(deltas) <= threshold
+        else:
+            agree = np.sign(deltas) == (1.0 if score > 0.0 else -1.0)
+        return float(np.count_nonzero(agree) / span)
 
 
 class CausalInterventionEngine:

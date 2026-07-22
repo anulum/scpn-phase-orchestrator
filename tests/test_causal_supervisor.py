@@ -88,10 +88,12 @@ def test_counterfactual_attribution_thresholds_neutral_effect() -> None:
 
     assert attribution.effect == "neutral"
     assert attribution.score == pytest.approx(0.00015)
-    assert 0.0 < attribution.confidence < 1.0
+    # Every step's delta stays inside the neutral band |delta| <= 0.001, so the
+    # neutral verdict is consistent across the whole 3-step horizon.
+    assert attribution.trajectory_consistency == pytest.approx(1.0)
     assert attribution.to_audit_record() == {
         "effect": "neutral",
-        "confidence": attribution.confidence,
+        "trajectory_consistency": attribution.trajectory_consistency,
         "score": attribution.score,
         "delta_R_final": 0.0002,
         "delta_R_mean": 0.0001,
@@ -122,7 +124,10 @@ def test_counterfactual_attribution_classifies_signed_effects() -> None:
     )
 
     assert stabilising.attribute(threshold=0.01).effect == "stabilising"
-    assert stabilising.attribute(threshold=0.01).confidence == pytest.approx(1.0)
+    # deltas [0.0, 0.08, 0.16]: 2 of 3 steps hold the stabilising sign (t0 delta==0).
+    assert stabilising.attribute(
+        threshold=0.01
+    ).trajectory_consistency == pytest.approx(2 / 3)
     assert destabilising.attribute(threshold=0.01).effect == "destabilising"
     with pytest.raises(ValueError, match="threshold must be finite and non-negative"):
         stabilising.attribute(threshold=-0.1)
@@ -892,13 +897,36 @@ def test_rollout_attribution_boundary_thresholding() -> None:
 
     tied = stabilising_tie.attribute(threshold=0.10)
     assert tied.effect == "neutral"
-    assert tied.confidence == pytest.approx(1.0)
+    # deltas [0.0, 0.0, 0.4-0.3]: the final step lands at 0.1000...09 in IEEE-754,
+    # just outside the |delta| <= 0.10 band, so 2 of 3 steps hold neutral — the
+    # honest boundary behaviour, not fudged with an epsilon.
+    assert tied.trajectory_consistency == pytest.approx(2 / 3)
 
     zero = stabilising_tie.attribute(threshold=0.0)
     assert zero.effect == "stabilising"
-    assert zero.confidence == 0.0
+    # With a zero band the verdict is stabilising, but only the single non-zero
+    # delta step (1 of 3) carries the positive sign.
+    assert zero.trajectory_consistency == pytest.approx(1 / 3)
     with pytest.raises(ValueError, match="non-negative"):
         stabilising_tie.attribute(threshold=float("nan"))
+
+
+def test_empty_rollout_attribution_has_zero_trajectory_consistency() -> None:
+    # A rollout with no recorded horizon offers no evidence either way, so the
+    # consistency floors at 0.0 rather than defaulting to a spurious 1.0.
+    empty = CounterfactualRollout(
+        baseline_R=[],
+        intervention_R=[],
+        baseline_psi=[],
+        intervention_psi=[],
+        delta_R_final=0.0002,
+        delta_R_mean=0.0001,
+        delta_psi_final=0.0,
+        actions=(),
+    )
+    attribution = empty.attribute(threshold=0.001)
+    assert attribution.effect == "neutral"
+    assert attribution.trajectory_consistency == 0.0
 
 
 def test_graph_edges_are_ranked_cycle_safe_and_intervention_nodes_deduplicate() -> None:

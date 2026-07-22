@@ -24,7 +24,10 @@ def test_cardiac_causal_demo_emits_attribution_record() -> None:
     attribution = payload["attribution"]
     assert isinstance(attribution, dict)
     assert attribution["effect"] in {"stabilising", "neutral", "destabilising"}
-    assert 0.0 <= attribution["confidence"] <= 1.0
+    # Honest weak-signal case: the verdict is driven by a small net delta, yet only
+    # 13 of 31 steps hold that sign — a low trajectory-consistency the old
+    # magnitude-over-threshold "confidence" (clamped to 1.0) masked entirely.
+    assert attribution["trajectory_consistency"] == pytest.approx(13 / 31)
     assert attribution["threshold"] == pytest.approx(1e-4)
     counterfactual = payload["counterfactual"]
     assert counterfactual["actions"][0]["knob"] == "zeta"
