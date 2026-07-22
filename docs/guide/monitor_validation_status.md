@@ -28,7 +28,7 @@ structured form, so it cannot quietly overclaim.
 | **Research** | `research` | An exploratory diagnostic with **no** external- or synthetic-reference validation record. The conservative default. |
 
 Today the registry holds **2** externally-validated, **6** synthetic-only, and
-**30** research-tier monitors.
+**31** research-tier monitors.
 
 ## Externally validated (real-data evidence)
 
@@ -58,7 +58,7 @@ overclaiming.
 
 ## Research (no validation record)
 
-The remaining **30** monitors are exploratory diagnostics. They may be useful,
+The remaining **31** monitors are exploratory diagnostics. They may be useful,
 but they carry **no** external- or synthetic-reference validation record and must
 not be treated as field-ready detectors. Query their status directly:
 

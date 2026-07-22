@@ -287,6 +287,17 @@ _RECORDS: tuple[MonitorValidationRecord, ...] = (
         evidence=_README_EVIDENCE,
     ),
     MonitorValidationRecord(
+        monitor="conformal_alarm",
+        display_name="Conformal alarm stream",
+        status=MonitorValidationStatus.RESEARCH,
+        basis=(
+            "split-conformal false-alarm control over an early-warning alarm "
+            "stream; the marginal coverage guarantee is a calibration property, "
+            "not an external- or synthetic-reference detection-power record"
+        ),
+        evidence=_README_EVIDENCE,
+    ),
+    MonitorValidationRecord(
         monitor="dimension",
         display_name="Correlation dimension",
         status=MonitorValidationStatus.RESEARCH,
