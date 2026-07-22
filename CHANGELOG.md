@@ -86,6 +86,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   evidence.
 - `SNNControllerBridge.build_neuromorphic_schedule_manifest` now embeds a
   NIR-structural graph (`neuromorphic_ir`) and its `nir_sha256` digest.
+- `upde.gradient_knm_jax` is reimplemented on a diffrax continuous adjoint. It
+  integrates the Kuramoto-Sakaguchi field with an adaptive `Tsit5` solver under a
+  `RecursiveCheckpointAdjoint` and differentiates the sync cost through it, in
+  place of the previous hand-rolled explicit-Euler `fori_loop`. The function no
+  longer mutates the process-global `jax_enable_x64` flag (the previous version
+  silently upcast every JAX array in the session), and the `# pragma: no cover`
+  is removed — the path is now exercised by a gradient-agreement test against the
+  finite-difference reference (`cos ≥ 0.999`, `O(dt)` convergence measured) plus
+  a regression lock that asserts the global x64 flag is untouched.
 
 ## [1.0.0] - 2026-07-17
 

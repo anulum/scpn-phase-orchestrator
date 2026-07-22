@@ -6,18 +6,23 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Adjoint sensitivity for SSGF gradient
 #
-# The correct implementation uses diffrax (JAX) autodiff through the ODE
-# solver for exact gradients at O(1) memory cost. This module provides a
-# numpy finite-difference fallback for environments without JAX.
+# The accelerated path integrates the Kuramoto-Sakaguchi field with a diffrax
+# adaptive solver and differentiates through it with a continuous adjoint, for
+# gradients at O(1) memory cost. The numpy finite-difference path is the
+# reference estimator and the fallback for environments without JAX.
 
 """Adjoint and finite-difference sensitivities for UPDE coupling gradients.
 
 The module defines the synchronization cost ``1 - R`` and two gradient paths:
 a deterministic NumPy finite-difference estimator over coupling entries and a
-JAX autodiff implementation when the optional JAX stack is installed. The
-finite-difference path mutates only local coupling copies for each perturbation,
-while the JAX path fails explicitly with ``ImportError`` instead of silently
-claiming accelerated gradients without the required dependency.
+diffrax continuous-adjoint implementation when the optional JAX/diffrax stack is
+installed. The finite-difference path mutates only local coupling copies for
+each perturbation; the continuous-adjoint path integrates the same
+Kuramoto-Sakaguchi field and differentiates through the solver, agreeing with
+the finite-difference reference in direction and — in the fine-``dt`` limit — in
+magnitude. It fails explicitly with ``ImportError`` when the dependency is
+absent instead of silently claiming accelerated gradients, and never mutates the
+process-global ``jax_enable_x64`` flag.
 """
 
 from __future__ import annotations
@@ -125,7 +130,7 @@ def gradient_knm_fd(
     return grad
 
 
-def gradient_knm_jax(  # pragma: no cover — requires JAX
+def gradient_knm_jax(
     phases_init: FloatArray,
     omegas: FloatArray,
     knm: FloatArray,
@@ -133,14 +138,25 @@ def gradient_knm_jax(  # pragma: no cover — requires JAX
     n_steps: int = 100,
     dt: float = 0.01,
 ) -> FloatArray:
-    """Exact gradient of cost_R w.r.t. knm via JAX autodiff.
+    """Gradient of ``cost_R`` w.r.t. ``knm`` via a diffrax continuous adjoint.
 
-    JIT-compiles a forward Kuramoto simulation and differentiates through it
-    using ``jax.grad``. Falls back to ``gradient_knm_fd`` if JAX unavailable.
+    Integrates the Kuramoto-Sakaguchi field
 
-    Raises
-    ------
-        ImportError: If JAX is not installed.
+        dθ_i/dt = ω_i + Σ_j K_ij · sin(θ_j − θ_i − α_ij)
+
+    over ``[0, n_steps·dt]`` with an adaptive solver (``diffrax.Tsit5``) and a
+    ``RecursiveCheckpointAdjoint``, then differentiates ``cost_R`` of the final
+    phases with respect to ``knm`` using reverse-mode autodiff. This is the
+    ``O(1)``-memory continuous-adjoint path the finite-difference estimator in
+    :func:`gradient_knm_fd` approximates; the two agree in direction and, in the
+    fine-``dt`` limit, in magnitude (the finite-difference reference
+    differentiates the discrete explicit-Euler map, so a fixed ``dt`` leaves an
+    ``O(dt)`` discretisation gap).
+
+    The solver runs in JAX's active default precision — it does **not** mutate
+    the process-global ``jax_enable_x64`` flag, so it does not perturb the
+    float32 default the rest of the differentiable stack relies on. Callers that
+    need float64 gradients must enable x64 at process start-up themselves.
 
     Parameters
     ----------
@@ -151,45 +167,56 @@ def gradient_knm_jax(  # pragma: no cover — requires JAX
     knm : FloatArray
         Coupling matrix ``K_nm``, shape ``(N, N)``.
     alpha : FloatArray
-        Phase-lag matrix in radians, shape ``(N, N)``, or ``None`` for no lag.
+        Phase-lag matrix in radians, shape ``(N, N)``. Use a zero matrix for no
+        lag; this is the regime in which the gradient matches the drive-free
+        (``ζ = ψ = 0``) finite-difference reference.
     n_steps : int
-        Number of integration steps to run.
+        Number of nominal steps; the integration horizon is ``n_steps · dt``.
     dt : float
-        Integration step size.
+        Nominal step size setting the integration horizon and the adaptive
+        solver's initial step.
 
     Returns
     -------
     FloatArray
-        The exact autodiff gradient of the cost with respect to ``knm``.
+        The continuous-adjoint gradient of the cost with respect to ``knm``.
+
+    Raises
+    ------
+    ImportError
+        If the optional JAX/diffrax stack is not installed.
     """
-    try:
-        import jax
-        import jax.numpy as jnp
-    except ModuleNotFoundError:
-        raise ImportError(
-            "JAX is required for autodiff gradients: pip install jax jaxlib"
-        ) from None
+    import diffrax
+    import jax
+    import jax.numpy as jnp
 
-    jax.config.update("jax_enable_x64", True)  # type: ignore[no-untyped-call]  # jax.config.update is untyped in jax
+    theta0 = jnp.asarray(phases_init)
+    om = jnp.asarray(omegas)
+    al = jnp.asarray(alpha)
+    t1 = float(n_steps) * dt
 
-    @jax.jit
-    def _forward(knm_j: Any) -> Any:
-        """Euler integration + cost, fully differentiable."""
-        theta = jnp.array(phases_init, dtype=jnp.float64)
-        om = jnp.array(omegas, dtype=jnp.float64)
-        al = jnp.array(alpha, dtype=jnp.float64)
+    def _field(_t: Any, theta: Any, coupling: Any) -> Any:
+        """Kuramoto-Sakaguchi tangent-space derivative dθ/dt."""
+        diff = theta[jnp.newaxis, :] - theta[:, jnp.newaxis] - al
+        return om + jnp.sum(coupling * jnp.sin(diff), axis=1)
 
-        def _body(_: int, th: Any) -> Any:
-            """Advance the phases one explicit-Euler Kuramoto step (loop body)."""
-            diff = th[jnp.newaxis, :] - th[:, jnp.newaxis] - al
-            coupling = jnp.sum(knm_j * jnp.sin(diff), axis=1)
-            dtheta = om + coupling
-            return th + dt * dtheta
-
-        theta = jax.lax.fori_loop(0, n_steps, _body, theta)
-        z = jnp.mean(jnp.exp(1j * theta))
+    def _cost(knm_j: Any) -> Any:
+        """Continuous-adjoint roll-out to the sync cost ``1 − R``."""
+        solution = diffrax.diffeqsolve(
+            diffrax.ODETerm(_field),
+            diffrax.Tsit5(),
+            t0=0.0,
+            t1=t1,
+            dt0=dt,
+            y0=theta0,
+            args=knm_j,
+            stepsize_controller=diffrax.PIDController(rtol=1e-6, atol=1e-6),
+            adjoint=diffrax.RecursiveCheckpointAdjoint(),
+            max_steps=16384,
+        )
+        theta_final = solution.ys[-1]
+        z = jnp.mean(jnp.exp(1j * theta_final))
         return 1.0 - jnp.abs(z)
 
-    grad_fn = jax.grad(_forward)
-    knm_j = jnp.array(knm, dtype=jnp.float64)
-    return np.asarray(grad_fn(knm_j), dtype=np.float64)
+    grad = jax.grad(_cost)(jnp.asarray(knm))
+    return np.asarray(grad, dtype=np.float64)

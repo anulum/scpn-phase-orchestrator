@@ -11,8 +11,17 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from scpn_phase_orchestrator.upde.adjoint import cost_R, gradient_knm_fd
+from scpn_phase_orchestrator.upde.adjoint import (
+    cost_R,
+    gradient_knm_fd,
+    gradient_knm_jax,
+)
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
+
+
+def _offdiag(matrix: np.ndarray) -> np.ndarray:
+    """Return the off-diagonal entries of a square matrix, flattened."""
+    return matrix[~np.eye(matrix.shape[0], dtype=bool)]
 
 
 @pytest.fixture()
@@ -86,11 +95,12 @@ class TestGradientJAX:
         from scpn_phase_orchestrator.upde.adjoint import gradient_knm_jax
 
         try:
+            import diffrax  # noqa: F401
             import jax  # noqa: F401
 
-            pytest.skip("JAX is installed")
+            pytest.skip("JAX/diffrax are installed")
         except ImportError:
-            with pytest.raises(ImportError, match="JAX is required"):
+            with pytest.raises(ImportError, match="No module named"):
                 gradient_knm_jax(
                     np.zeros(4), np.zeros(4), np.zeros((4, 4)), np.zeros((4, 4))
                 )
@@ -142,3 +152,82 @@ class TestAdjointPipelineWiring:
 
         assert 0.0 <= r_before <= 1.0
         assert 0.0 <= r_after <= 1.0
+
+
+class TestGradientKnmJax:
+    """The diffrax continuous-adjoint gradient path (KIMI B1 M3)."""
+
+    @staticmethod
+    def _system(n: int = 5):
+        rng = np.random.default_rng(0)
+        phases = rng.uniform(0.0, 2.0 * np.pi, size=n)
+        omegas = rng.normal(0.0, 0.5, size=n)
+        raw = rng.normal(0.0, 0.3, size=(n, n))
+        knm = (raw + raw.T) / 2.0
+        np.fill_diagonal(knm, 0.0)
+        alpha = np.zeros((n, n))
+        return phases, omegas, knm, alpha
+
+    def test_shape_and_finite(self):
+        pytest.importorskip("jax")
+        pytest.importorskip("diffrax")
+        phases, omegas, knm, alpha = self._system()
+        grad = gradient_knm_jax(phases, omegas, knm, alpha, n_steps=100, dt=0.01)
+        assert grad.shape == (5, 5)
+        assert np.all(np.isfinite(grad))
+
+    def test_agrees_with_finite_difference(self):
+        """Continuous adjoint tracks the discrete-Euler FD (zeta=psi=0).
+
+        Measured on the calibration seed: cos>=0.99999, rel_norm~=0.003. The
+        floors below carry margin for float32 noise across seeds.
+        """
+        pytest.importorskip("jax")
+        pytest.importorskip("diffrax")
+        phases, omegas, knm, alpha = self._system()
+        engine = UPDEEngine(5, dt=0.01, method="euler")
+        g_fd = gradient_knm_fd(engine, phases, omegas, knm, alpha, 100, 1e-4, 0.0, 0.0)
+        g_jax = gradient_knm_jax(phases, omegas, knm, alpha, n_steps=100, dt=0.01)
+        a = _offdiag(g_jax)
+        b = _offdiag(g_fd)
+        cosine = float(a @ b / (np.linalg.norm(a) * np.linalg.norm(b)))
+        rel_norm = float(np.linalg.norm(a - b) / np.linalg.norm(b))
+        assert cosine >= 0.999
+        assert rel_norm < 0.05
+
+    def test_converges_to_fd_as_dt_shrinks(self):
+        """The FD gap is O(dt): halving dt tightens the agreement.
+
+        This distinguishes a genuine continuum correspondence from a
+        coincidental single-dt match.
+        """
+        pytest.importorskip("jax")
+        pytest.importorskip("diffrax")
+        phases, omegas, knm, alpha = self._system()
+
+        def rel(dt: float, n_steps: int) -> float:
+            engine = UPDEEngine(5, dt=dt, method="euler")
+            g_fd = gradient_knm_fd(
+                engine, phases, omegas, knm, alpha, n_steps, 1e-4, 0.0, 0.0
+            )
+            g_jax = gradient_knm_jax(phases, omegas, knm, alpha, n_steps=n_steps, dt=dt)
+            a = _offdiag(g_jax)
+            b = _offdiag(g_fd)
+            return float(np.linalg.norm(a - b) / np.linalg.norm(b))
+
+        coarse = rel(0.02, 50)
+        fine = rel(0.005, 200)
+        assert fine < coarse
+
+    def test_does_not_leak_global_x64(self):
+        """Regression lock: the solver must not flip ``jax_enable_x64``.
+
+        The previous hand-rolled implementation mutated the process-global
+        flag, silently upcasting every other JAX array in the session.
+        """
+        jax = pytest.importorskip("jax")
+        pytest.importorskip("diffrax")
+        before = jax.config.jax_enable_x64
+        phases, omegas, knm, alpha = self._system()
+        gradient_knm_jax(phases, omegas, knm, alpha, n_steps=50, dt=0.02)
+        assert jax.config.jax_enable_x64 == before
