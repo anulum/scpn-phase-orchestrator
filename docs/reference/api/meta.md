@@ -94,4 +94,39 @@ The operational path is usually:
 That sequence keeps transfer evidence, not just transfer parameters, part of the
 release documentation.
 
+## Leave-one-domain-out transfer sweep
+
+Proposing knobs is one thing; claiming a detector **generalises across domains** is
+a far stronger, and more easily overstated, claim. `meta.leave_one_domain_out` runs
+the honest test: hold out each domain in turn, transfer the pooled remainder onto
+it, and aggregate the per-fold verdicts under a rule that never upgrades. A single
+domain that is detectable within-domain yet receives no transfer skill
+(`transfer_negative`) refutes generality decisively — the recorded CHB-MIT
+cross-subject negative must surface as `lodo_negative`, never a laundered aggregate
+positive. Only an unbroken sweep of positive folds earns `lodo_generalises`; a
+sweep with no detectable target at all is `lodo_untestable`; anything in between is
+`lodo_inconclusive`.
+
+```python
+from scpn_phase_orchestrator.meta import (
+    LeaveOneDomainOutFold,
+    leave_one_domain_out_transfer,
+)
+
+report = leave_one_domain_out_transfer(
+    [
+        LeaveOneDomainOutFold("grid", transfer, within, controls),
+        LeaveOneDomainOutFold("chbmit", chb_transfer, chb_within, chb_controls),
+    ]
+)
+verdict = report.verdict  # e.g. "lodo_negative"
+audit_payload = report.to_record()
+```
+
+Every arm is scored by the caller and audited through the same honest
+`audit_cross_domain_transfer` calibration, so the sweep stays a pure, deterministic
+aggregation with no hidden training step.
+
 ::: scpn_phase_orchestrator.meta.transfer
+
+::: scpn_phase_orchestrator.meta.leave_one_domain_out

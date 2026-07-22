@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `scpn_phase_orchestrator.meta.leave_one_domain_out`: a leave-one-domain-out
+  cross-domain transfer sweep. `leave_one_domain_out_transfer()` holds out each
+  domain in turn, transfers the pooled remainder onto it via the honest
+  `audit_cross_domain_transfer` calibration, and aggregates the per-fold verdicts
+  under a rule that never upgrades: a single domain that is detectable
+  within-domain yet receives no transfer skill refutes generality decisively
+  (`lodo_negative`, the shape the recorded CHB-MIT cross-subject negative must
+  produce), only an unbroken sweep of positive folds earns `lodo_generalises`, a
+  sweep with no detectable target is `lodo_untestable`, and anything in between is
+  `lodo_inconclusive`. Every arm is scored by the caller, so the sweep stays a
+  pure deterministic aggregation with no hidden training step. Any positive
+  domain-general claim from the harness remains CEO-gated.
 - `CausalInterventionEngine` now supports layer-scoped counterfactual
   interventions via an optional `layer_membership` mapping. A `do(K, layer_<name>)`
   action perturbs the within-layer coupling sub-block; `layer_<name>.incident`
