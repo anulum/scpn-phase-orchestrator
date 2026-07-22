@@ -8,11 +8,11 @@
     "optional_extras": 23,
     "public_api_exports": 24,
     "public_documentation_pages": 229,
-    "python_package_modules": 719,
-    "research_experimental_modules": 204,
+    "python_package_modules": 720,
+    "research_experimental_modules": 205,
     "runtime_serving_modules": 154,
     "rust_kernel_files": 97,
-    "test_files": 856
+    "test_files": 857
   },
   "documentation": {
     "public_pages": [
@@ -908,6 +908,7 @@
       "src/scpn_phase_orchestrator/nn/functional.py",
       "src/scpn_phase_orchestrator/nn/inverse.py",
       "src/scpn_phase_orchestrator/nn/kuramoto_layer.py",
+      "src/scpn_phase_orchestrator/nn/neural_ode.py",
       "src/scpn_phase_orchestrator/nn/oim.py",
       "src/scpn_phase_orchestrator/nn/phase_autoencoder.py",
       "src/scpn_phase_orchestrator/nn/reservoir.py",
@@ -1527,6 +1528,7 @@
     "src/scpn_phase_orchestrator/nn/functional.py",
     "src/scpn_phase_orchestrator/nn/inverse.py",
     "src/scpn_phase_orchestrator/nn/kuramoto_layer.py",
+    "src/scpn_phase_orchestrator/nn/neural_ode.py",
     "src/scpn_phase_orchestrator/nn/oim.py",
     "src/scpn_phase_orchestrator/nn/phase_autoencoder.py",
     "src/scpn_phase_orchestrator/nn/reservoir.py",
@@ -2274,6 +2276,7 @@
       "tests/test_network_security_morphogenetic_field_demo.py",
       "tests/test_network_security_sheaf_obstruction_demo.py",
       "tests/test_network_security_topology_demo.py",
+      "tests/test_neural_ode.py",
       "tests/test_neurocore_bridge.py",
       "tests/test_neuromorphic_ir_export.py",
       "tests/test_neuroscience_eeg_domainpack.py",

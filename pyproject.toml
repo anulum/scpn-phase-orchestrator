@@ -207,6 +207,7 @@ ignore = ["S101", "N802", "N803", "N806", "N815", "N816", "D105"]
 "tests/test_nn_chimera.py" = ["E402"]
 "tests/test_nn_functional.py" = ["E402"]
 "tests/test_nn_supervisor.py" = ["E402"]
+"tests/test_neural_ode.py" = ["E402"]
 "tests/test_supervisor_candidate_bridge.py" = ["E402"]
 
 [tool.ruff.lint.pydocstyle]

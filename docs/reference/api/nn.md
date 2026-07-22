@@ -340,6 +340,30 @@ UDEKuramotoLayer(n, n_steps=50, dt=0.01, K_scale=0.1, hidden=16, key=key)
 
 ---
 
+## Neural-ODE continuous adjoint (diffrax)
+
+The explicit Euler map stores every step, so reverse-mode gradients cost
+`O(n_steps)` memory. `solve_ude_adjoint` integrates the same UDE-Kuramoto
+vector field with an adaptive solver (`diffrax.Tsit5` by default) under a
+configurable adjoint — `RecursiveCheckpointAdjoint` (logarithmic checkpointing)
+or `BacksolveAdjoint` (`O(1)` memory). Integration runs on the unwrapped phase
+(the coupling is `2π`-periodic, so the field is wrap-invariant while an adaptive
+solver must not see the `% 2π` discontinuities); wrapping is applied once, to the
+returned states. The solver never mutates the global `jax_enable_x64` flag, so
+the dtype of every intermediate follows the input arrays.
+
+```python
+solve_ude_adjoint(phases, omegas, K, residual_fn, *, t1, dt0=0.01,
+                  solver=None, adjoint=None, rtol=1e-6, atol=1e-6,
+                  max_steps=4096, saveat_ts=None, wrap=True)
+```
+
+Requires the `diffrax` dependency (the `full` extra).
+
+::: scpn_phase_orchestrator.nn.neural_ode
+
+---
+
 ## Inverse Kuramoto
 
 Gradient-based inference of K and ω from observed phase trajectories.

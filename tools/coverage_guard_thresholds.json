@@ -29,7 +29,9 @@
   "_comment_stl": "2026-07-16: monitor/stl holds an explicit 100% file floor — the package previously escaped the honesty registry behind a dead coverage omit; measured 446/446 lines covered (KIMI lane K-STL0).",
   "_comment_openqasm": "2026-07-21: openqasm_conformance.py + neuromorphic_ir_export.py ship at 100% line+branch coverage (new modules, KIMI lane D3 H1-H4); pinned as no-regression floors.",
   "_comment_c37118": "2026-07-21/22: synchrophasor_c37118.py + synchrophasor_phase_bridge.py + synchrophasor_client.py ship at 100% line+branch coverage (new modules, KIMI lane D1 M1/M2/M3 — IEEE C37.118.2 frame codec + phasor->phase-state bridge + live async session client); pinned as no-regression floors.",
+  "_comment_neural_ode": "2026-07-22: nn/neural_ode.py ships at 100% line+branch coverage (new module, KIMI lane B1 M1 — diffrax continuous-adjoint UDE-Kuramoto solver); pinned as a no-regression floor.",
   "file_min_line_rate": {
+    "src/scpn_phase_orchestrator/nn/neural_ode.py": 100.0,
     "src/scpn_phase_orchestrator/adapters/neuromorphic_ir_export.py": 100.0,
     "src/scpn_phase_orchestrator/adapters/openqasm_conformance.py": 100.0,
     "src/scpn_phase_orchestrator/adapters/synchrophasor_c37118.py": 100.0,

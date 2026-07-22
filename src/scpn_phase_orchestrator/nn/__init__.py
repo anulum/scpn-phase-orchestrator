@@ -26,6 +26,10 @@ Layer API (jax + equinox):
     KuramotoLayer — phase-only, learnable K and omegas
     StuartLandauLayer — phase + amplitude, learnable K, K_r, omegas, mu
 
+Neural-ODE API (jax + equinox + diffrax):
+    solve_ude_adjoint — adaptive-solver UDE-Kuramoto integration under a
+    configurable continuous adjoint (O(1)-memory reverse-mode gradients)
+
 All imports are lazy: ``import scpn_phase_orchestrator.nn`` succeeds without
 JAX installed.  Symbols are resolved on first attribute access.
 """
@@ -53,6 +57,7 @@ __all__ = [
     "StuartLandauLayer",
     "UDEKuramotoLayer",
     "CouplingResidual",
+    "solve_ude_adjoint",
     "PhaseAutoencoder",
     "extract_phase_reduction_weights",
     "phase_autoencoder_loss",
@@ -212,6 +217,7 @@ _RESERVOIR = {
 }
 _LAYERS = {"KuramotoLayer", "SimplicialKuramotoLayer", "StuartLandauLayer"}
 _UDE = {"UDEKuramotoLayer", "CouplingResidual"}
+_NEURAL_ODE = {"solve_ude_adjoint"}
 _TRAINING = {
     "sync_loss",
     "trajectory_loss",
@@ -345,6 +351,10 @@ def _resolve(name: str) -> object:
         from .ude import CouplingResidual, UDEKuramotoLayer
 
         return UDEKuramotoLayer if name == "UDEKuramotoLayer" else CouplingResidual
+    if name in _NEURAL_ODE:
+        from .neural_ode import solve_ude_adjoint
+
+        return solve_ude_adjoint
     if name in _TRAINING:
         from . import training
 

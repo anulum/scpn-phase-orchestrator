@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `scpn_phase_orchestrator.nn.solve_ude_adjoint`: a continuous-time adjoint
+  integrator for the UDE-Kuramoto vector field built on `diffrax`. It replaces
+  the memory-heavy explicit-Euler `jax.lax.scan` roll-out (which stores every
+  step) with an adaptive solver (`diffrax.Tsit5` by default) under a
+  configurable adjoint — `RecursiveCheckpointAdjoint` for logarithmic
+  checkpointing or `BacksolveAdjoint` for `O(1)`-memory reverse-mode gradients.
+  Integration runs on the unwrapped phase (the coupling is `2*pi`-periodic so
+  the field is wrap-invariant, while an adaptive solver must not see the
+  `% 2*pi` discontinuities the Euler map introduces); wrapping is applied once,
+  to the returned states. The solver never mutates the global `jax_enable_x64`
+  flag, so callers keep the float32 default of the rest of `nn`. Requires the
+  `diffrax` dependency (currently the `full` extra).
 - `scpn_phase_orchestrator.adapters.C37118SessionClient`, `build_command_frame`,
   and `read_frame`: a live asynchronous IEEE C37.118.2 session client that reads
   synchrophasor frames from a PDC/PMU over TCP using only the standard library's
