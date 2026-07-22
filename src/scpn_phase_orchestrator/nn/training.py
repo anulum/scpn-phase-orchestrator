@@ -96,6 +96,7 @@ def trajectory_loss(
     if backend == "euler":
         _, predicted = model.forward_with_trajectory(phases)  # type: ignore[attr-defined]
     else:
+        # type ignore: the backend-aware layer forwards the integration backend.
         _, predicted = model.forward_with_trajectory(  # type: ignore[attr-defined]
             phases, backend=backend
         )
