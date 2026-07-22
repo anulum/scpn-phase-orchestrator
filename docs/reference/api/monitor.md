@@ -211,6 +211,29 @@ gate = closed_loop_plan.to_audit_record()["runtime_actuation_gate"]
 assert gate["execution_disabled"] is True
 ```
 
+### Curated phase-field specification catalogue
+
+`PHASE_FIELD_SPECIFICATIONS` is a small, curated catalogue of named
+single-signal safety properties for Kuramoto-type phase fields — an
+order-parameter floor, a coupling-gain ceiling, a chimera-index ceiling, a
+Sakaguchi phase-lag bound, and a winding-stability bound. Each
+`PhaseFieldSpecification` renders a builtin-compatible STL formula, so it
+evaluates without `rtamt`, and carries a physical rationale plus a `soft`/`hard`
+severity tier. The thresholds are documented engineering defaults, not
+empirically fitted constants: robustness measures runtime signal margin, it is
+not a formal proof of correctness. Look one up by name with
+`phase_field_specification()` and enumerate the keys with
+`phase_field_specification_names()`.
+
+```python
+from scpn_phase_orchestrator.monitor.stl import phase_field_specification
+
+spec = phase_field_specification("order_parameter_floor")
+assert spec.spec == "always (R >= 0.3)"
+result = spec.evaluate({"R": [0.9, 0.8, 0.6]})
+assert result.satisfied and result.backend == "builtin"
+```
+
 ::: scpn_phase_orchestrator.monitor.stl
 
 ## Chimera State Detection

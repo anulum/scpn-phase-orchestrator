@@ -45,6 +45,7 @@
     "src/scpn_phase_orchestrator/monitor/stl/closed_loop.py": 100.0,
     "src/scpn_phase_orchestrator/monitor/stl/controller.py": 100.0,
     "src/scpn_phase_orchestrator/monitor/stl/monitor.py": 100.0,
-    "src/scpn_phase_orchestrator/monitor/stl/projection.py": 100.0
+    "src/scpn_phase_orchestrator/monitor/stl/projection.py": 100.0,
+    "src/scpn_phase_orchestrator/monitor/stl/specifications.py": 100.0
   }
 }

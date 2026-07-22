@@ -1,18 +1,18 @@
 {
   "SPDX-License-Identifier": "AGPL-3.0-or-later",
   "counts": {
-    "core_engine_modules": 325,
+    "core_engine_modules": 326,
     "domainpacks": 36,
     "github_workflows": 12,
     "integration_modules": 32,
     "optional_extras": 23,
     "public_api_exports": 24,
     "public_documentation_pages": 229,
-    "python_package_modules": 720,
+    "python_package_modules": 721,
     "research_experimental_modules": 205,
     "runtime_serving_modules": 154,
     "rust_kernel_files": 97,
-    "test_files": 857
+    "test_files": 858
   },
   "documentation": {
     "public_pages": [
@@ -532,6 +532,7 @@
       "src/scpn_phase_orchestrator/monitor/stl/controller.py",
       "src/scpn_phase_orchestrator/monitor/stl/monitor.py",
       "src/scpn_phase_orchestrator/monitor/stl/projection.py",
+      "src/scpn_phase_orchestrator/monitor/stl/specifications.py",
       "src/scpn_phase_orchestrator/monitor/synchronisation.py",
       "src/scpn_phase_orchestrator/monitor/transfer_entropy.py",
       "src/scpn_phase_orchestrator/monitor/twin_confidence.py",
@@ -1516,6 +1517,7 @@
     "src/scpn_phase_orchestrator/monitor/stl/controller.py",
     "src/scpn_phase_orchestrator/monitor/stl/monitor.py",
     "src/scpn_phase_orchestrator/monitor/stl/projection.py",
+    "src/scpn_phase_orchestrator/monitor/stl/specifications.py",
     "src/scpn_phase_orchestrator/monitor/synchronisation.py",
     "src/scpn_phase_orchestrator/monitor/transfer_entropy.py",
     "src/scpn_phase_orchestrator/monitor/twin_confidence.py",
@@ -2556,6 +2558,7 @@
       "tests/test_stl_controller_branches.py",
       "tests/test_stl_monitor_contracts.py",
       "tests/test_stl_projection.py",
+      "tests/test_stl_specifications.py",
       "tests/test_stochastic.py",
       "tests/test_stochastic_self_consistency.py",
       "tests/test_strange_loop_supervisor.py",

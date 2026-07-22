@@ -124,6 +124,7 @@ AUTODOC_EXCLUSIONS = {
     "scpn_phase_orchestrator.monitor.stl.projection",
     "scpn_phase_orchestrator.monitor.stl.actuation_gate",
     "scpn_phase_orchestrator.monitor.stl.closed_loop",
+    "scpn_phase_orchestrator.monitor.stl.specifications",
 }
 
 

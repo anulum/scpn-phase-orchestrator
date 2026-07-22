@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `scpn_phase_orchestrator.monitor.stl.PHASE_FIELD_SPECIFICATIONS`: a curated
+  catalogue of named single-signal STL safety properties for Kuramoto-type
+  phase fields — an order-parameter floor, a coupling-gain ceiling, a
+  chimera-index ceiling, a Sakaguchi phase-lag bound, and a winding-stability
+  bound. Each `PhaseFieldSpecification` renders a builtin-compatible STL formula
+  (so it evaluates without `rtamt`) and carries a physical rationale and a
+  `soft`/`hard` severity tier; the thresholds are documented engineering
+  defaults, not empirically fitted constants. Look one up with
+  `phase_field_specification()` and list the keys with
+  `phase_field_specification_names()`.
 - `scpn_phase_orchestrator.nn.solve_ude_adjoint`: a continuous-time adjoint
   integrator for the UDE-Kuramoto vector field built on `diffrax`. It replaces
   the memory-heavy explicit-Euler `jax.lax.scan` roll-out (which stores every

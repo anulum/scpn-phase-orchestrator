@@ -51,9 +51,17 @@ from .projection import (
     STLProjectedActionPlan,
     project_stl_controller_candidates,
 )
+from .specifications import (
+    PHASE_FIELD_SPECIFICATIONS,
+    PhaseFieldSpecification,
+    phase_field_specification,
+    phase_field_specification_names,
+)
 
 __all__ = [
     "HAS_RTAMT",
+    "PHASE_FIELD_SPECIFICATIONS",
+    "PhaseFieldSpecification",
     "STLActionProjectionTemplate",
     "STLAutomatonState",
     "STLAutomatonTransition",
@@ -65,6 +73,8 @@ __all__ = [
     "STLProjectedActionPlan",
     "STLRuntimeActuationGate",
     "STLTraceResult",
+    "phase_field_specification",
+    "phase_field_specification_names",
     "project_stl_controller_candidates",
     "synthesise_stl_closed_loop_plan",
     "synthesise_stl_monitoring_automaton",

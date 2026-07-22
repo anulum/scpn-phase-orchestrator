@@ -34,11 +34,14 @@ SUBMODULES = (
     "scpn_phase_orchestrator.monitor.stl.projection",
     "scpn_phase_orchestrator.monitor.stl.actuation_gate",
     "scpn_phase_orchestrator.monitor.stl.closed_loop",
+    "scpn_phase_orchestrator.monitor.stl.specifications",
 )
 
 # Owning submodule for each public symbol re-exported by the package __init__.
 PUBLIC_SYMBOL_MODULE = {
     "HAS_RTAMT": "monitor",
+    "PHASE_FIELD_SPECIFICATIONS": "specifications",
+    "PhaseFieldSpecification": "specifications",
     "STLActionProjectionTemplate": "projection",
     "STLAutomatonState": "automaton",
     "STLAutomatonTransition": "automaton",
@@ -50,6 +53,8 @@ PUBLIC_SYMBOL_MODULE = {
     "STLProjectedActionPlan": "projection",
     "STLRuntimeActuationGate": "actuation_gate",
     "STLTraceResult": "monitor",
+    "phase_field_specification": "specifications",
+    "phase_field_specification_names": "specifications",
     "project_stl_controller_candidates": "projection",
     "synthesise_stl_closed_loop_plan": "closed_loop",
     "synthesise_stl_controller_candidates": "controller",
