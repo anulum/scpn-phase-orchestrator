@@ -987,3 +987,159 @@ def test_graph_edges_are_ranked_cycle_safe_and_intervention_nodes_deduplicate() 
     assert do_edge_weights[0] != do_edge_weights[1]
 
     assert graph.to_audit_record()["nodes"] == list(graph.nodes)
+
+
+def _layer_engine(membership=None):
+    return CausalInterventionEngine(6, dt=0.01, layer_membership=membership)
+
+
+def _uniform_knm(fill: float = 0.5) -> np.ndarray:
+    knm = np.full((6, 6), fill, dtype=np.float64)
+    np.fill_diagonal(knm, 0.0)
+    return knm
+
+
+def _k_action(scope: str, value: float = 0.1) -> ControlAction:
+    return ControlAction(
+        knob="K", scope=scope, value=value, ttl_s=1.0, justification="layer test"
+    )
+
+
+class TestLayerMembershipValidation:
+    def test_none_membership_rejects_layer_scope(self) -> None:
+        engine = _layer_engine()
+        with pytest.raises(ValueError, match="layer-scoped"):
+            engine.apply_actions(
+                _uniform_knm(), np.zeros((6, 6)), 0.0, 0.0, (_k_action("layer_x"),)
+            )
+
+    def test_empty_layer_name_rejected(self) -> None:
+        with pytest.raises(ValueError, match="layer name must be a non-empty string"):
+            _layer_engine({"  ": [1, 2]})
+
+    def test_boolean_member_rejected(self) -> None:
+        with pytest.raises(ValueError, match="membership indices must be integers"):
+            _layer_engine({"a": [True, 2]})
+
+    def test_float_member_rejected(self) -> None:
+        with pytest.raises(ValueError, match="membership indices must be integers"):
+            _layer_engine({"a": [1.5]})
+
+    def test_out_of_range_member_rejected(self) -> None:
+        with pytest.raises(ValueError, match="out of range"):
+            _layer_engine({"a": [6]})
+
+    def test_empty_member_list_rejected(self) -> None:
+        with pytest.raises(ValueError, match="at least one member"):
+            _layer_engine({"a": []})
+
+
+class TestLayerScopedIntervention:
+    def test_within_layer_perturbs_only_the_sub_block(self) -> None:
+        engine = _layer_engine({"pair": [1, 2]})
+        result = engine.apply_actions(
+            _uniform_knm(), np.zeros((6, 6)), 0.0, 0.0, (_k_action("layer_pair"),)
+        )
+        assert result.knm[1, 2] == pytest.approx(0.6)
+        assert result.knm[2, 1] == pytest.approx(0.6)
+        # An edge leaving the layer is untouched.
+        assert result.knm[1, 3] == pytest.approx(0.5)
+        assert result.knm[0, 3] == pytest.approx(0.5)
+
+    def test_explicit_within_mode_matches_default(self) -> None:
+        engine = _layer_engine({"pair": [1, 2]})
+        default = engine.apply_actions(
+            _uniform_knm(), np.zeros((6, 6)), 0.0, 0.0, (_k_action("layer_pair"),)
+        )
+        explicit = engine.apply_actions(
+            _uniform_knm(),
+            np.zeros((6, 6)),
+            0.0,
+            0.0,
+            (_k_action("layer_pair.within"),),
+        )
+        np.testing.assert_allclose(default.knm, explicit.knm)
+
+    def test_incident_mode_perturbs_every_edge_touching_a_member(self) -> None:
+        engine = _layer_engine({"pair": [1, 2]})
+        result = engine.apply_actions(
+            _uniform_knm(),
+            np.zeros((6, 6)),
+            0.0,
+            0.0,
+            (_k_action("layer_pair.incident"),),
+        )
+        # Edges incident to member 1 or 2 rise once; edges among non-members do not.
+        assert result.knm[1, 3] == pytest.approx(0.6)
+        assert result.knm[0, 2] == pytest.approx(0.6)
+        assert result.knm[1, 2] == pytest.approx(0.6)
+        assert result.knm[0, 3] == pytest.approx(0.5)
+
+    def test_single_member_incident_matches_oscillator_scope(self) -> None:
+        engine = _layer_engine({"solo": [3]})
+        via_layer = engine.apply_actions(
+            _uniform_knm(),
+            np.zeros((6, 6)),
+            0.0,
+            0.0,
+            (_k_action("layer_solo.incident"),),
+        )
+        via_oscillator = engine.apply_actions(
+            _uniform_knm(), np.zeros((6, 6)), 0.0, 0.0, (_k_action("oscillator_3"),)
+        )
+        np.testing.assert_allclose(via_layer.knm, via_oscillator.knm)
+
+    def test_layer_alpha_intervention(self) -> None:
+        engine = _layer_engine({"pair": [0, 1]})
+        result = engine.apply_actions(
+            _uniform_knm(),
+            np.zeros((6, 6)),
+            0.0,
+            0.0,
+            (
+                ControlAction(
+                    knob="alpha",
+                    scope="layer_pair",
+                    value=0.2,
+                    ttl_s=1.0,
+                    justification="a",
+                ),
+            ),
+        )
+        assert result.alpha[0, 1] == pytest.approx(0.2)
+
+    def test_unknown_layer_name_rejected(self) -> None:
+        engine = _layer_engine({"pair": [1, 2]})
+        with pytest.raises(ValueError, match="requires layer membership for 'ghost'"):
+            engine.apply_actions(
+                _uniform_knm(), np.zeros((6, 6)), 0.0, 0.0, (_k_action("layer_ghost"),)
+            )
+
+    def test_unknown_mode_rejected(self) -> None:
+        engine = _layer_engine({"pair": [1, 2]})
+        with pytest.raises(ValueError, match="mode must be 'within' or 'incident'"):
+            engine.apply_actions(
+                _uniform_knm(),
+                np.zeros((6, 6)),
+                0.0,
+                0.0,
+                (_k_action("layer_pair.diagonal"),),
+            )
+
+    def test_empty_name_with_mode_rejected(self) -> None:
+        engine = _layer_engine({"pair": [1, 2]})
+        with pytest.raises(ValueError, match="requires a layer name"):
+            engine.apply_actions(
+                _uniform_knm(),
+                np.zeros((6, 6)),
+                0.0,
+                0.0,
+                (_k_action("layer_.within"),),
+            )
+
+
+def test_non_string_scope_rejected() -> None:
+    from scpn_phase_orchestrator.supervisor.causal import _apply_matrix_delta
+
+    with pytest.raises(ValueError, match="unsupported causal intervention scope"):
+        _apply_matrix_delta(np.zeros((3, 3)), 123, 0.1, {})  # type: ignore[arg-type]

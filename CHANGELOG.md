@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `CausalInterventionEngine` now supports layer-scoped counterfactual
+  interventions via an optional `layer_membership` mapping. A `do(K, layer_<name>)`
+  action perturbs the within-layer coupling sub-block; `layer_<name>.incident`
+  perturbs every coupling incident to a layer member (the set generalisation of
+  the `oscillator_` scope). The full scope string is preserved in the audit
+  record so which semantics applied is always recoverable, and a layer-scoped
+  action is rejected when no membership is declared, the layer is unknown, or the
+  mode is not `within`/`incident`.
 - `scpn_phase_orchestrator.monitor.conformal_alarm.ConformalAlarmStream`: extends
   the split-conformal calibration of the twin-confidence gate to early-warning
   alarm streams. It learns an alarm threshold from a trusted nominal score window

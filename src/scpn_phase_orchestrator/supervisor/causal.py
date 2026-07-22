@@ -18,6 +18,7 @@ Outputs are audit-ready records and attribution summaries, not live actuation.
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from hashlib import sha256
 from numbers import Integral, Real
@@ -224,6 +225,24 @@ class CausalInterventionEngine:
     The engine answers the first causal supervision question: from the same
     state, what would the order-parameter trajectory look like with and
     without the proposed intervention?
+
+    Parameters
+    ----------
+    n_oscillators : int
+        Number of oscillators in the network.
+    dt : float
+        Integration timestep.
+    horizon : int
+        Number of rollout steps.
+    method : str
+        UPDE integration method.
+    layer_membership : Mapping[str, Sequence[int]] or None
+        Optional named layers with their member oscillator indices, enabling
+        ``do(K, layer_<name>)`` interventions. ``"layer_<name>"`` (default) or
+        ``"layer_<name>.within"`` perturbs the within-layer coupling sub-block;
+        ``"layer_<name>.incident"`` perturbs every coupling incident to a layer
+        member (the set generalisation of ``oscillator_``). Without it, any
+        layer-scoped action is rejected.
     """
 
     def __init__(
@@ -232,6 +251,8 @@ class CausalInterventionEngine:
         dt: float,
         horizon: int = 20,
         method: str = "rk4",
+        *,
+        layer_membership: Mapping[str, Sequence[int]] | None = None,
     ):
         self._n = _require_positive_int(
             n_oscillators,
@@ -248,6 +269,7 @@ class CausalInterventionEngine:
             range_message="horizon must be >= 1",
         )
         self._method = method
+        self._layer_membership = _validate_layer_membership(layer_membership, self._n)
 
     def evaluate_actions(
         self,
@@ -369,9 +391,13 @@ class CausalInterventionEngine:
         for action in actions:
             action_value = _require_finite_real(action.value, name="action.value")
             if action.knob == "K":
-                _apply_matrix_delta(next_knm, action.scope, action_value)
+                _apply_matrix_delta(
+                    next_knm, action.scope, action_value, self._layer_membership
+                )
             elif action.knob == "alpha":
-                _apply_matrix_delta(next_alpha, action.scope, action_value)
+                _apply_matrix_delta(
+                    next_alpha, action.scope, action_value, self._layer_membership
+                )
             elif action.knob == "zeta":
                 next_zeta += action_value
             elif action.knob in {"Psi", "psi"}:
@@ -640,8 +666,61 @@ def build_temporal_causal_hypergraph_experiment(
     return manifest
 
 
-def _apply_matrix_delta(matrix: FloatArray, scope: str, value: float) -> None:
-    """Return the coupling matrix with an intervention delta applied."""
+def _validate_layer_membership(
+    layer_membership: Mapping[str, Sequence[int]] | None,
+    n_oscillators: int,
+) -> dict[str, tuple[int, ...]]:
+    """Return a validated ``layer name -> oscillator indices`` mapping.
+
+    Parameters
+    ----------
+    layer_membership : Mapping[str, Sequence[int]] or None
+        Named layers with their member oscillator indices, or ``None`` for a
+        network with no declared layers.
+    n_oscillators : int
+        The oscillator count the indices must fall within.
+
+    Returns
+    -------
+    dict[str, tuple[int, ...]]
+        The validated mapping (empty when ``layer_membership`` is ``None``).
+
+    Raises
+    ------
+    ValueError
+        If a layer name is not a non-empty string, a membership list is empty,
+        or an index is not an integer in ``[0, n_oscillators)``.
+    """
+    if layer_membership is None:
+        return {}
+    validated: dict[str, tuple[int, ...]] = {}
+    for name, members in layer_membership.items():
+        if not isinstance(name, str) or not name.strip():
+            raise ValueError("layer name must be a non-empty string")
+        indices: list[int] = []
+        for member in members:
+            if isinstance(member, bool) or not isinstance(member, Integral):
+                raise ValueError(f"layer {name!r} membership indices must be integers")
+            index = int(member)
+            if not 0 <= index < n_oscillators:
+                raise ValueError(
+                    f"layer {name!r} membership index {index} out of range "
+                    f"[0, {n_oscillators})"
+                )
+            indices.append(index)
+        if not indices:
+            raise ValueError(f"layer {name!r} must have at least one member")
+        validated[name] = tuple(indices)
+    return validated
+
+
+def _apply_matrix_delta(
+    matrix: FloatArray,
+    scope: str,
+    value: float,
+    layer_membership: Mapping[str, tuple[int, ...]],
+) -> None:
+    """Apply an intervention delta to the coupling matrix in place per scope."""
     if not isinstance(scope, str):
         raise ValueError(f"unsupported causal intervention scope {scope!r}")
     if scope == "global":
@@ -658,8 +737,55 @@ def _apply_matrix_delta(matrix: FloatArray, scope: str, value: float) -> None:
         matrix[:, idx] += value
         return
     if scope.startswith("layer_"):
-        raise ValueError("layer-scoped causal interventions require layer membership")
+        _apply_layer_delta(matrix, scope, value, layer_membership)
+        return
     raise ValueError(f"unsupported causal intervention scope {scope!r}")
+
+
+def _apply_layer_delta(
+    matrix: FloatArray,
+    scope: str,
+    value: float,
+    layer_membership: Mapping[str, tuple[int, ...]],
+) -> None:
+    """Apply a layer-scoped intervention delta in place.
+
+    The scope ``"layer_<name>"`` (or ``"layer_<name>.within"``) adds *value* to
+    the within-layer coupling sub-block — the couplings between members of the
+    layer. The scope ``"layer_<name>.incident"`` instead adds *value* once to
+    every coupling incident to any layer member (the set generalisation of the
+    ``oscillator_`` scope, to which a single-member incident intervention
+    reduces). The audit record keeps the full scope string, so which semantics
+    applied is always recoverable.
+
+    Raises
+    ------
+    ValueError
+        If the mode is unknown, the layer name is empty, or the name is not a
+        declared layer.
+    """
+    remainder = scope.removeprefix("layer_")
+    name, _, mode = remainder.partition(".")
+    mode = mode or "within"
+    if mode not in {"within", "incident"}:
+        raise ValueError(
+            f"layer-scoped causal intervention mode must be 'within' or "
+            f"'incident', got {mode!r}"
+        )
+    if not name:
+        raise ValueError("layer-scoped causal intervention requires a layer name")
+    if name not in layer_membership:
+        raise ValueError(
+            f"layer-scoped causal intervention requires layer membership for {name!r}"
+        )
+    members = list(layer_membership[name])
+    if mode == "within":
+        matrix[np.ix_(members, members)] += value
+        return
+    mask = np.zeros(matrix.shape, dtype=bool)
+    mask[members, :] = True
+    mask[:, members] = True
+    matrix[mask] += value
 
 
 def _signed_phase_delta(a: float, b: float) -> float:
