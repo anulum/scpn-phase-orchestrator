@@ -20,7 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `% 2*pi` discontinuities the Euler map introduces); wrapping is applied once,
   to the returned states. The solver never mutates the global `jax_enable_x64`
   flag, so callers keep the float32 default of the rest of `nn`. Requires the
-  `diffrax` dependency (currently the `full` extra).
+  `diffrax` dependency (the `nn`, `jax`, or `full` extra).
 - `UDEKuramotoLayer.forward_with_trajectory` and `nn.trajectory_loss` now accept
   `backend="euler"|"diffrax"`. `"euler"` stays the default and calls the exact
   reproducible explicit roll-out unchanged (trajectory hashes and every existing
@@ -29,6 +29,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   trains the UDE layer through the checkpointed continuous adjoint at
   `O(1)`-memory gradient cost. The backend is validated outside the compiled
   region, so an invalid value fails fast with a plain error.
+- The `nn` and `jax` install extras now include `diffrax>=0.5,<1.0`, so the
+  advertised Neural-ODE path (`solve_ude_adjoint`, `backend="diffrax"`) is
+  installable via `pip install scpn-phase-orchestrator[nn]` rather than only the
+  `full` extra. `solve_ude_adjoint` gains a `throw` stiffness guard: a solve that
+  exhausts `max_steps` raises by default rather than returning a silent
+  non-finite result; `throw=False` recovers the incomplete solution for
+  inspection.
 - `scpn_phase_orchestrator.adapters.C37118SessionClient`, `build_command_frame`,
   and `read_frame`: a live asynchronous IEEE C37.118.2 session client that reads
   synchrophasor frames from a PDC/PMU over TCP using only the standard library's

@@ -89,6 +89,7 @@ def solve_ude_adjoint(
     max_steps: int = 4096,
     saveat_ts: jax.Array | None = None,
     wrap: bool = True,
+    throw: bool = True,
 ) -> jax.Array:
     """Integrate UDE-Kuramoto with an adaptive solver and continuous adjoint.
 
@@ -125,6 +126,14 @@ def solve_ude_adjoint(
     wrap : bool
         When ``True`` (default) the returned phases are wrapped into
         ``[0, 2π)``; when ``False`` the unwrapped phases are returned.
+    throw : bool
+        Stiffness guard. When ``True`` (default) a solve that exhausts
+        ``max_steps`` — the symptom of a stiff or blowing-up field — raises
+        instead of silently returning non-finite phases, so a diverging
+        integration can never masquerade as a valid result. Set ``False`` to
+        recover the non-finite solution for inspection (e.g. to locate the
+        offending oscillator) rather than raising; raise ``max_steps`` or soften
+        the field when this trips.
 
     Returns
     -------
@@ -170,6 +179,7 @@ def solve_ude_adjoint(
         stepsize_controller=diffrax.PIDController(rtol=rtol, atol=atol),
         adjoint=active_adjoint,
         max_steps=max_steps,
+        throw=throw,
     )
 
     saved = solution.ys

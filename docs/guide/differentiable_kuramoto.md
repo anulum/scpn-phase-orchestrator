@@ -332,6 +332,35 @@ grads = loss(layer)  # grads.K, grads.omegas, grads.residual all updated
 Rackauckas et al. 2020; Frontiers Comp. Neuro. 2025.
 First Python UDE implementation for oscillator networks.
 
+### Continuous adjoint (diffrax)
+
+The explicit-Euler roll-out stores every step, so reverse-mode gradients
+cost `O(n_steps)` memory. `solve_ude_adjoint` integrates the same field
+with an adaptive solver under a checkpointed continuous adjoint, giving
+`O(1)`-memory gradients. It requires the `diffrax` dependency, shipped in
+the `nn`, `jax`, and `full` extras.
+
+```python
+from scpn_phase_orchestrator.nn import solve_ude_adjoint
+
+# Adaptive Tsit5 forward under RecursiveCheckpointAdjoint (defaults)
+final = solve_ude_adjoint(phases, layer.omegas, layer.K, layer.residual, t1=0.5)
+
+# Train through the continuous adjoint: the layer forwards the backend
+from scpn_phase_orchestrator.nn import trajectory_loss
+
+def loss(model):
+    return trajectory_loss(model, phases, observed, backend="diffrax")
+```
+
+The integration runs on the unwrapped phase (the coupling is `2*pi`-periodic,
+so the field is wrap-invariant while an adaptive solver must not see the
+`% 2*pi` step discontinuities), and it never mutates the global
+`jax_enable_x64` flag. A stiff field that exhausts `max_steps` raises by
+default (`throw=True`) rather than returning a silent non-finite result; pass
+`throw=False` to recover the incomplete solution for inspection. The Euler
+backend stays the default everywhere, so trajectory hashes are unchanged.
+
 ## Winfree Model (Pulse-Coupled)
 
 The Winfree model (1967) uses separate pulse and phase response functions

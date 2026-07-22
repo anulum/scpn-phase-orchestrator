@@ -66,9 +66,19 @@ studio = [
     "streamlit>=1.36,<2.0",
     "scpn-studio-platform>=0.3,<0.4; python_version >= '3.12'",
 ]
-nn = ["jax>=0.4,<1.0", "equinox>=0.11,<1.0", "optax>=0.2,<1.0"]
+nn = [
+    "jax>=0.4,<1.0",
+    "equinox>=0.11,<1.0",
+    "optax>=0.2,<1.0",
+    "diffrax>=0.5,<1.0",
+]
 # ``jax`` is a discoverability alias for the differentiable-ML ``nn`` profile.
-jax = ["jax>=0.4,<1.0", "equinox>=0.11,<1.0", "optax>=0.2,<1.0"]
+jax = [
+    "jax>=0.4,<1.0",
+    "equinox>=0.11,<1.0",
+    "optax>=0.2,<1.0",
+    "diffrax>=0.5,<1.0",
+]
 mpc = ["osqp>=1.0,<2.0"]
 eeg = ["pyedflib>=0.1.42,<0.2"]  # EDF ingestion for the scalp-EEG early-warning capstone
 cardiac = ["wfdb>=4.3.1,<5"]  # WFDB ingestion for the cardiac-ECG early-warning capstone

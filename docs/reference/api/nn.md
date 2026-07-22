@@ -358,7 +358,7 @@ solve_ude_adjoint(phases, omegas, K, residual_fn, *, t1, dt0=0.01,
                   max_steps=4096, saveat_ts=None, wrap=True)
 ```
 
-Requires the `diffrax` dependency (the `full` extra).
+Requires the `diffrax` dependency (the `nn`, `jax`, or `full` extra).
 
 ::: scpn_phase_orchestrator.nn.neural_ode
 

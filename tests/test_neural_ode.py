@@ -225,6 +225,31 @@ class TestCheckpointedAdjointTrainingPath:
         assert jnp.array_equal(via_default, via_euler)
 
 
+class TestStiffnessGuard:
+    def test_max_steps_exhaustion_raises_by_default(self, setup):
+        """A solve that cannot reach ``t1`` within ``max_steps`` raises."""
+        phases, omegas, coupling, residual = setup
+        with pytest.raises(RuntimeError):
+            solve_ude_adjoint(
+                phases, omegas, coupling, residual, t1=5.0, dt0=1e-3, max_steps=1
+            )
+
+    def test_throw_false_recovers_the_solution(self, setup):
+        """``throw=False`` returns the (incomplete) solution instead of raising."""
+        phases, omegas, coupling, residual = setup
+        out = solve_ude_adjoint(
+            phases,
+            omegas,
+            coupling,
+            residual,
+            t1=5.0,
+            dt0=1e-3,
+            max_steps=1,
+            throw=False,
+        )
+        assert out.shape == (N,)
+
+
 class TestLazyExport:
     def test_symbol_resolves_through_package(self):
         from scpn_phase_orchestrator import nn
