@@ -8,11 +8,11 @@
     "optional_extras": 23,
     "public_api_exports": 24,
     "public_documentation_pages": 229,
-    "python_package_modules": 721,
+    "python_package_modules": 722,
     "research_experimental_modules": 205,
-    "runtime_serving_modules": 154,
+    "runtime_serving_modules": 155,
     "rust_kernel_files": 97,
-    "test_files": 858
+    "test_files": 859
   },
   "documentation": {
     "public_pages": [
@@ -1062,6 +1062,7 @@
       "src/scpn_phase_orchestrator/runtime/server.py",
       "src/scpn_phase_orchestrator/runtime/server_grpc.py",
       "src/scpn_phase_orchestrator/runtime/simulation.py",
+      "src/scpn_phase_orchestrator/runtime/stl_audit_chain.py",
       "src/scpn_phase_orchestrator/scaffold/__init__.py",
       "src/scpn_phase_orchestrator/scaffold/llm.py",
       "src/scpn_phase_orchestrator/studio/__init__.py",
@@ -1646,6 +1647,7 @@
     "src/scpn_phase_orchestrator/runtime/server.py",
     "src/scpn_phase_orchestrator/runtime/server_grpc.py",
     "src/scpn_phase_orchestrator/runtime/simulation.py",
+    "src/scpn_phase_orchestrator/runtime/stl_audit_chain.py",
     "src/scpn_phase_orchestrator/scaffold/__init__.py",
     "src/scpn_phase_orchestrator/scaffold/llm.py",
     "src/scpn_phase_orchestrator/ssgf/__init__.py",
@@ -2554,6 +2556,7 @@
       "tests/test_ssgf_modules.py",
       "tests/test_stl.py",
       "tests/test_stl_actuation_gate_contracts.py",
+      "tests/test_stl_audit_chain.py",
       "tests/test_stl_automata.py",
       "tests/test_stl_controller_branches.py",
       "tests/test_stl_monitor_contracts.py",

@@ -26,6 +26,7 @@ AUTODOC_EXCLUSIONS = {
     "scpn_phase_orchestrator.runtime.grid_modal_replay",
     "scpn_phase_orchestrator.runtime.audit_signing",
     "scpn_phase_orchestrator.runtime.audit_stream",
+    "scpn_phase_orchestrator.runtime.stl_audit_chain",
     "scpn_phase_orchestrator.runtime.cli",
     "scpn_phase_orchestrator.runtime.cli.binding",
     "scpn_phase_orchestrator.runtime.cli.diagnostics",

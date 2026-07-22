@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `scpn_phase_orchestrator.runtime.stl_audit_chain`: seals `STLTraceResult`
+  verdicts into the SHA-256 hash-chained audit event stream and replays them.
+  `write_stl_results()` / `append_stl_result()` write each STL verdict as a
+  `stl.trace_result` event; `read_stl_results()` verifies the stream's payload
+  digests, sequence continuity, hash chain, and signatures before reconstructing
+  the records, so STL evidence is recovered from a tamper-evident log rather than
+  trusted in memory. A bounded STL operator over a window past the trace end
+  yields a vacuous `±inf` robustness, which the JSON-backed stream cannot encode;
+  this is rejected at the sealing boundary rather than silently coerced.
 - The builtin `STLMonitor` robustness backend now evaluates the bounded
   temporal operators `always[a,b]` and `eventually[a,b]` (integer discrete step
   window, `0 <= a <= b`) over a conjunction of atomic predicates, so common
