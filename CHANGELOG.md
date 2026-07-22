@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- The builtin `STLMonitor` robustness backend now evaluates the bounded
+  temporal operators `always[a,b]` and `eventually[a,b]` (integer discrete step
+  window, `0 <= a <= b`) over a conjunction of atomic predicates, so common
+  bounded safety and liveness forms no longer require the optional `rtamt`
+  dependency. The bounded reduction restricts the pointwise robustness to the
+  window at the initial time, clamped to the trace end, and returns exactly what
+  `rtamt` reports at time zero (a window past the trace end is a vacuous
+  quantifier: `+inf` for `always`, `-inf` for `eventually`). `until`, nested
+  temporal operators, and other syntax continue to route to `rtamt` and raise a
+  clear `ImportError` when it is absent.
 - `scpn_phase_orchestrator.monitor.stl.PHASE_FIELD_SPECIFICATIONS`: a curated
   catalogue of named single-signal STL safety properties for Kuramoto-type
   phase fields — an order-parameter floor, a coupling-gain ceiling, a

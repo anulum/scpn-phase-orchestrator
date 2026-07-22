@@ -90,6 +90,17 @@ robustness evaluator for common safety forms:
 - `always (R >= 0.3)`
 - `eventually (R >= 0.8)`
 - `always (R >= 0.85 and amplitude_spread < 0.2)`
+- `always[0,20] (R >= 0.3)` — bounded, holds over the next 20 steps
+- `eventually[0,50] (R >= 0.8)` — bounded, holds within the next 50 steps
+
+The bounded operators `always[a,b]` / `eventually[a,b]` take an integer
+discrete step window (`0 <= a <= b`) and reduce the pointwise robustness over
+that window at the initial time, clamped to the trace end — the value matches
+what `rtamt` reports at time zero, so the result is identical whether or not
+`rtamt` is installed. A window that starts past the trace end is a vacuous
+quantifier: `always` yields `+inf` and `eventually` yields `-inf`. `until`,
+nested temporal operators, and other syntax still require the optional `rtamt`
+backend and raise a clear `ImportError` when it is absent.
 
 Positive robustness means the formula is satisfied; negative robustness
 means violated. `evaluate_result()` returns an audit-ready result with

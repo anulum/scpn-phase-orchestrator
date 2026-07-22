@@ -230,3 +230,126 @@ class TestSTLPipelineWiring:
         result = STLMonitor("always (R >= 0.3)").evaluate_result({"R": r_trace})
         assert result.satisfied
         assert result.backend == "builtin"
+
+
+# Signal shared by the bounded-operator suites; its pointwise robustness for
+# ``x >= 0`` is the signal itself, which keeps the expected values transparent.
+_BOUNDED_SIGNAL = [0.5, -0.2, 0.9, 0.1, -0.4, 0.8]
+
+
+class TestSTLBoundedBuiltin:
+    """Bounded ``always[a,b]`` / ``eventually[a,b]`` on the builtin backend.
+
+    These specifications never require ``rtamt``: the builtin evaluator reduces
+    the pointwise robustness over the discrete step window ``[a, b]`` at time
+    zero (clamped to the trace end), so every assertion here runs on the pure
+    Python path regardless of whether ``rtamt`` is installed.
+    """
+
+    def test_bounded_always_windowed_minimum(self):
+        # window [0, 2] over x -> min(0.5, -0.2, 0.9) = -0.2 (violated).
+        monitor = STLMonitor("always[0,2] (x >= 0)")
+        assert monitor.evaluate({"x": _BOUNDED_SIGNAL}) == pytest.approx(-0.2)
+
+    def test_bounded_always_offset_window(self):
+        # window [1, 3] over x -> min(-0.2, 0.9, 0.1) = -0.2.
+        monitor = STLMonitor("always[1,3] (x >= 0)")
+        assert monitor.evaluate({"x": _BOUNDED_SIGNAL}) == pytest.approx(-0.2)
+
+    def test_bounded_eventually_windowed_maximum(self):
+        # window [0, 2] over x -> max(0.5, -0.2, 0.9) = 0.9 (satisfied).
+        monitor = STLMonitor("eventually[0,2] (x >= 0)")
+        assert monitor.evaluate({"x": _BOUNDED_SIGNAL}) == pytest.approx(0.9)
+
+    def test_bounded_backend_is_builtin(self):
+        result = STLMonitor("always[0,1] (x >= 0)").evaluate_result(
+            {"x": _BOUNDED_SIGNAL}
+        )
+        assert result.backend == "builtin"
+        # min(0.5, -0.2) = -0.2 -> violated.
+        assert not result.satisfied
+
+    def test_bounded_conjunction_uses_worst_predicate(self):
+        # pointwise = min(x, 1 - y); window [0, 1] at t=0 -> min(0.5, 0.8, -0.2, 0.5).
+        monitor = STLMonitor("always[0,1] (x >= 0 and y <= 1)")
+        trace = {"x": _BOUNDED_SIGNAL, "y": [0.2, 0.5, 2.0, 0.1, 0.3, 0.4]}
+        assert monitor.evaluate(trace) == pytest.approx(-0.2)
+
+    def test_bounded_window_clamped_to_trace_end(self):
+        # window [2, 4] on a length-3 trace clamps to index 2 -> 0.9.
+        monitor = STLMonitor("eventually[2,4] (x >= 0)")
+        assert monitor.evaluate({"x": [0.5, -0.2, 0.9]}) == pytest.approx(0.9)
+
+    def test_bounded_always_empty_window_is_positive_infinity(self):
+        # window starts past the trace -> vacuous always -> +inf (satisfied).
+        monitor = STLMonitor("always[5,6] (x >= 0)")
+        result = monitor.evaluate_result({"x": [0.5, -0.2, 0.9]})
+        assert result.robustness == float("inf")
+        assert result.satisfied
+
+    def test_bounded_eventually_empty_window_is_negative_infinity(self):
+        # window starts past the trace -> vacuous eventually -> -inf (violated).
+        monitor = STLMonitor("eventually[5,6] (x >= 0)")
+        result = monitor.evaluate_result({"x": [0.5, -0.2, 0.9]})
+        assert result.robustness == float("-inf")
+        assert not result.satisfied
+
+    def test_bounded_whitespace_in_window_is_tolerated(self):
+        monitor = STLMonitor("always[ 0 , 2 ] (x >= 0)")
+        assert monitor.evaluate({"x": _BOUNDED_SIGNAL}) == pytest.approx(-0.2)
+
+    def test_inverted_bounds_are_not_a_builtin_spec(self):
+        # a > b is rejected by the bounded parser, so it is not builtin-evaluable
+        # and (without rtamt) routes to the rtamt-required error path.
+        assert stl_module.monitor._parse_bounded_spec("always[3,1] (x >= 0)") is None
+
+    def test_bounded_invalid_predicate_is_not_a_builtin_spec(self):
+        assert stl_module.monitor._parse_bounded_spec("always[0,2] (x ~ 1)") is None
+
+    def test_inverted_bounds_require_rtamt_when_missing(self, monkeypatch):
+        monkeypatch.setattr(stl_module.monitor, "rtamt", None)
+        monitor = STLMonitor("always[3,1] (x >= 0)")
+        with pytest.raises(ImportError, match="rtamt"):
+            monitor.evaluate({"x": [0.5, 0.6]})
+
+
+@needs_rtamt
+class TestSTLBoundedRtamtParity:
+    """Builtin bounded robustness equals rtamt's offline robustness at time 0."""
+
+    @staticmethod
+    def _rtamt_initial_robustness(spec: str, trace: dict[str, list[float]]) -> float:
+        import rtamt
+
+        rtamt_spec = rtamt.StlDiscreteTimeSpecification()
+        for name in trace:
+            rtamt_spec.declare_var(name, "float")
+        rtamt_spec.spec = spec
+        rtamt_spec.parse()
+        length = len(next(iter(trace.values())))
+        datasets: dict[str, list[float]] = {k: list(v) for k, v in trace.items()}
+        datasets["time"] = [float(t) for t in range(length)]
+        series = rtamt_spec.evaluate(datasets)
+        return float(series[0][1])
+
+    @pytest.mark.parametrize(
+        "spec",
+        [
+            "always[0,2] (x >= 0)",
+            "always[1,3] (x >= 0)",
+            "eventually[0,2] (x >= 0)",
+            "eventually[1,3] (x >= 0)",
+            "always[2,4] (x >= 0)",
+            "always[5,6] (x >= 0)",
+            "eventually[5,6] (x >= 0)",
+            "always[0,1] (x >= 0 and y <= 1)",
+        ],
+    )
+    def test_builtin_matches_rtamt_initial_robustness(self, spec: str) -> None:
+        trace = {"x": _BOUNDED_SIGNAL, "y": [0.2, 0.5, 2.0, 0.1, 0.3, 0.4]}
+        builtin = STLMonitor(spec).evaluate(trace)
+        reference = self._rtamt_initial_robustness(spec, trace)
+        if np.isinf(reference):
+            assert builtin == reference
+        else:
+            assert builtin == pytest.approx(reference)

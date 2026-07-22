@@ -35,9 +35,21 @@ except ImportError:
 _SIMPLE_SPEC_RE = re.compile(r"^(always|eventually)\s*\((.*)\)\s*$")
 
 
+_BOUNDED_SPEC_RE = re.compile(
+    r"^(always|eventually)\s*\[\s*(\d+)\s*,\s*(\d+)\s*\]\s*\((.*)\)\s*$"
+)
+
+
 _PREDICATE_RE = re.compile(
     r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*(>=|>|<=|<|==)\s*([-+]?\d+(?:\.\d+)?)\s*$"
 )
+
+
+# Parsed unbounded builtin specification: temporal operator + atomic predicates.
+_ParsedSimple: TypeAlias = tuple[str, list[tuple[str, str, float]]]
+
+# Parsed bounded builtin specification: the above plus a discrete step window.
+_ParsedBounded: TypeAlias = tuple[str, list[tuple[str, str, float]], tuple[int, int]]
 
 
 @dataclass(frozen=True)
@@ -71,8 +83,12 @@ class STLMonitor:
     Parameters
     ----------
     spec : str
-        An rtamt STL specification string, e.g.
-        ``"always (sync_error <= 0.3)"``.
+        An STL specification string, e.g. ``"always (sync_error <= 0.3)"``.
+        The builtin backend evaluates the unbounded operators
+        ``always``/``eventually`` and their bounded forms
+        ``always[a,b]``/``eventually[a,b]`` (integer discrete step window,
+        ``0 <= a <= b``) over a conjunction of atomic predicates; ``until``,
+        nesting, and other syntax require the optional ``rtamt`` backend.
     """
 
     # IEC 62443 / Kuramoto safety: order-parameter must stay above threshold
@@ -83,8 +99,14 @@ class STLMonitor:
     def __init__(self, spec: str) -> None:
         self._spec_str = spec
         self._simple = _parse_simple_spec(spec)
+        self._bounded = _parse_bounded_spec(spec) if self._simple is None else None
         self._stl = rtamt.StlDiscreteTimeSpecification() if rtamt is not None else None
         self._parsed = False
+
+    @property
+    def _is_builtin(self) -> bool:
+        """Return whether this spec evaluates on the builtin robustness backend."""
+        return self._simple is not None or self._bounded is not None
 
     def evaluate(self, trace: dict[str, list[float]]) -> float:
         """Return the robustness value of *spec* over *trace*.
@@ -112,6 +134,9 @@ class STLMonitor:
 
         if self._simple is not None:
             return _evaluate_simple(self._simple, trace)
+
+        if self._bounded is not None:
+            return _evaluate_bounded(self._bounded, trace)
 
         if self._stl is None:
             raise ImportError(
@@ -152,7 +177,7 @@ class STLMonitor:
             The robustness value plus audit metadata.
         """
         robustness = self.evaluate(trace)
-        backend = "builtin" if self._simple is not None else "rtamt"
+        backend = "builtin" if self._is_builtin else "rtamt"
         return STLTraceResult(
             spec=self._spec_str,
             robustness=robustness,
@@ -161,34 +186,85 @@ class STLMonitor:
         )
 
 
-def _parse_simple_spec(spec: str) -> tuple[str, list[tuple[str, str, float]]] | None:
-    """Parse a simple STL specification string into an evaluable form."""
-    match = _SIMPLE_SPEC_RE.match(spec.strip())
-    if match is None:
-        return None
-    temporal_op = match.group(1)
+def _parse_predicates(body: str) -> list[tuple[str, str, float]] | None:
+    """Parse a conjunction of atomic predicates, or ``None`` if unsupported."""
     predicates: list[tuple[str, str, float]] = []
-    for raw_predicate in re.split(r"\s+(?:and|&&)\s+", match.group(2)):
+    for raw_predicate in re.split(r"\s+(?:and|&&)\s+", body):
         predicate_match = _PREDICATE_RE.match(raw_predicate)
         if predicate_match is None:
             return None
         signal, op, threshold = predicate_match.groups()
         predicates.append((signal, op, float(threshold)))
-    return temporal_op, predicates
+    return predicates
+
+
+def _parse_simple_spec(spec: str) -> _ParsedSimple | None:
+    """Parse an unbounded ``always``/``eventually`` STL specification string."""
+    match = _SIMPLE_SPEC_RE.match(spec.strip())
+    if match is None:
+        return None
+    predicates = _parse_predicates(match.group(2))
+    if predicates is None:
+        return None
+    return match.group(1), predicates
+
+
+def _parse_bounded_spec(spec: str) -> _ParsedBounded | None:
+    """Parse a bounded ``always[a,b]``/``eventually[a,b]`` specification string.
+
+    Returns the temporal operator, atomic predicates, and the integer discrete
+    step window ``(a, b)`` with ``0 <= a <= b``. Any other syntax (``until``,
+    nesting, inverted bounds, unsupported predicates) returns ``None`` so
+    evaluation falls through to the ``rtamt`` backend.
+    """
+    match = _BOUNDED_SPEC_RE.match(spec.strip())
+    if match is None:
+        return None
+    lower, upper = int(match.group(2)), int(match.group(3))
+    if lower > upper:
+        return None
+    predicates = _parse_predicates(match.group(4))
+    if predicates is None:
+        return None
+    return match.group(1), predicates, (lower, upper)
+
+
+def _reduce_temporal(temporal_op: str, window: FloatArray) -> float:
+    """Reduce a robustness window by the temporal operator.
+
+    An empty window yields ``+inf`` for ``always`` and ``-inf`` for
+    ``eventually`` — the vacuous quantifier over no samples, matching the
+    ``rtamt`` offline convention for windows clamped past the trace end.
+    """
+    if temporal_op == "always":
+        return float(np.min(window)) if window.size else float("inf")
+    if temporal_op == "eventually":
+        return float(np.max(window)) if window.size else float("-inf")
+    raise ValueError(f"unsupported STL temporal operator {temporal_op!r}")
 
 
 def _evaluate_simple(
-    parsed: tuple[str, list[tuple[str, str, float]]],
+    parsed: _ParsedSimple,
     trace: dict[str, list[float]],
 ) -> float:
-    """Evaluate a parsed simple STL specification over a trace."""
+    """Evaluate a parsed unbounded STL specification over a trace."""
     temporal_op, predicates = parsed
+    return _reduce_temporal(temporal_op, _pointwise_robustness(predicates, trace))
+
+
+def _evaluate_bounded(
+    parsed: _ParsedBounded,
+    trace: dict[str, list[float]],
+) -> float:
+    """Evaluate a parsed bounded STL specification at the initial time.
+
+    The temporal reduction is restricted to the discrete step window ``[a, b]``
+    (clamped to the trace end, matching the ``rtamt`` offline convention), so
+    the returned value equals the robustness ``rtamt`` reports at time zero.
+    """
+    temporal_op, predicates, (lower, upper) = parsed
     pointwise = _pointwise_robustness(predicates, trace)
-    if temporal_op == "always":
-        return float(np.min(pointwise))
-    if temporal_op == "eventually":
-        return float(np.max(pointwise))
-    raise ValueError(f"unsupported STL temporal operator {temporal_op!r}")
+    return _reduce_temporal(temporal_op, pointwise[lower : upper + 1])
 
 
 def _validate_trace(trace: dict[str, list[float]]) -> None:
