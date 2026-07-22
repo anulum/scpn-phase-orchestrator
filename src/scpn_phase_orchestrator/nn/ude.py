@@ -199,23 +199,74 @@ class UDEKuramotoLayer(eqx.Module):
         )
         return final
 
-    @eqx.filter_jit
-    def forward_with_trajectory(self, phases: jax.Array) -> tuple[jax.Array, jax.Array]:
+    def forward_with_trajectory(
+        self, phases: jax.Array, *, backend: str = "euler"
+    ) -> tuple[jax.Array, jax.Array]:
         """Run dynamics and return (final_phases, trajectory).
+
+        The backend is validated here, outside the compiled region, so an
+        invalid value fails fast with a plain Python error rather than a
+        tracing-time exception; each backend body is a separately compiled
+        helper.
 
         Parameters
         ----------
         phases : jax.Array
             Oscillator phases in radians, shape ``(N,)``.
+        backend : str
+            Integration backend. ``"euler"`` (default) is the reproducible
+            explicit ``jax.lax.scan`` map whose fixed grid keeps trajectory
+            hashes stable; ``"diffrax"`` routes through
+            :func:`scpn_phase_orchestrator.nn.neural_ode.solve_ude_adjoint`,
+            an adaptive solver under a checkpointed continuous adjoint that
+            samples the same ``n_steps`` grid, giving ``O(1)``-memory training
+            gradients. Requires the ``diffrax`` dependency.
 
         Returns
         -------
         tuple[jax.Array, jax.Array]
-            The final phases and the trajectory.
+            The final phases (shape ``(N,)``) and the trajectory (shape
+            ``(n_steps, N)``).
+
+        Raises
+        ------
+        ValueError
+            If ``backend`` is neither ``"euler"`` nor ``"diffrax"``.
         """
+        if backend == "euler":
+            return self._forward_trajectory_euler(phases)
+        if backend == "diffrax":
+            return self._forward_trajectory_diffrax(phases)
+        raise ValueError("backend must be 'euler' or 'diffrax'")
+
+    @eqx.filter_jit
+    def _forward_trajectory_euler(
+        self, phases: jax.Array
+    ) -> tuple[jax.Array, jax.Array]:
+        """Explicit-Euler trajectory roll-out on the reproducible fixed grid."""
         return ude_kuramoto_forward(
             phases, self.omegas, self.K, self.residual, self.dt, self.n_steps
         )
+
+    @eqx.filter_jit
+    def _forward_trajectory_diffrax(
+        self, phases: jax.Array
+    ) -> tuple[jax.Array, jax.Array]:
+        """Adaptive continuous-adjoint trajectory sampled on the Euler grid."""
+        from .neural_ode import solve_ude_adjoint
+
+        grid = self.dt * jnp.arange(1, self.n_steps + 1)
+        trajectory = solve_ude_adjoint(
+            phases,
+            self.omegas,
+            self.K,
+            self.residual,
+            t1=self.dt * self.n_steps,
+            dt0=self.dt,
+            saveat_ts=grid,
+            wrap=True,
+        )
+        return trajectory[-1], trajectory
 
     @eqx.filter_jit
     def sync_score(self, phases: jax.Array) -> jax.Array:

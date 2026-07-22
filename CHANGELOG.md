@@ -21,6 +21,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   to the returned states. The solver never mutates the global `jax_enable_x64`
   flag, so callers keep the float32 default of the rest of `nn`. Requires the
   `diffrax` dependency (currently the `full` extra).
+- `UDEKuramotoLayer.forward_with_trajectory` and `nn.trajectory_loss` now accept
+  `backend="euler"|"diffrax"`. `"euler"` stays the default and calls the exact
+  reproducible explicit roll-out unchanged (trajectory hashes and every existing
+  layer keep working); `"diffrax"` routes the trajectory through
+  `solve_ude_adjoint`, sampling the same `n_steps` grid so `trajectory_loss`
+  trains the UDE layer through the checkpointed continuous adjoint at
+  `O(1)`-memory gradient cost. The backend is validated outside the compiled
+  region, so an invalid value fails fast with a plain error.
 - `scpn_phase_orchestrator.adapters.C37118SessionClient`, `build_command_frame`,
   and `read_frame`: a live asynchronous IEEE C37.118.2 session client that reads
   synchrophasor frames from a PDC/PMU over TCP using only the standard library's

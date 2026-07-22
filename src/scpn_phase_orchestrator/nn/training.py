@@ -64,6 +64,8 @@ def trajectory_loss(
     model: eqx.Module,
     phases: jax.Array,
     observed: jax.Array,
+    *,
+    backend: str = "euler",
 ) -> jax.Array:
     """Fit model trajectory to observed phase data.
 
@@ -77,6 +79,13 @@ def trajectory_loss(
         (N,) initial phases.
     observed : jax.Array
         (T, N) observed phase trajectory.
+    backend : str
+        Integration backend forwarded to the layer. ``"euler"`` (default)
+        calls ``forward_with_trajectory(phases)`` unchanged, so any
+        trajectory-capable layer works and existing hashes are preserved.
+        ``"diffrax"`` requests the checkpointed continuous-adjoint path and
+        therefore requires a backend-aware layer such as
+        :class:`~scpn_phase_orchestrator.nn.ude.UDEKuramotoLayer`.
 
     Returns
     -------
@@ -84,7 +93,12 @@ def trajectory_loss(
         Scalar mean circular distance.
     """
     # type ignore: training accepts the trajectory-capable Equinox protocol.
-    _, predicted = model.forward_with_trajectory(phases)  # type: ignore[attr-defined]
+    if backend == "euler":
+        _, predicted = model.forward_with_trajectory(phases)  # type: ignore[attr-defined]
+    else:
+        _, predicted = model.forward_with_trajectory(  # type: ignore[attr-defined]
+            phases, backend=backend
+        )
     T = min(predicted.shape[0], observed.shape[0])
     pred = predicted[:T]
     obs = observed[:T]

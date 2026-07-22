@@ -14,9 +14,19 @@ jax = pytest.importorskip("jax", reason="JAX required")
 jnp = pytest.importorskip("jax.numpy", reason="JAX required")
 eqx = pytest.importorskip("equinox", reason="equinox required")
 diffrax = pytest.importorskip("diffrax", reason="diffrax required")
+optax = pytest.importorskip("optax", reason="optax required")
 
 from scpn_phase_orchestrator.nn.neural_ode import solve_ude_adjoint
-from scpn_phase_orchestrator.nn.ude import CouplingResidual, ude_kuramoto_forward
+from scpn_phase_orchestrator.nn.training import (
+    generate_kuramoto_data,
+    train,
+    trajectory_loss,
+)
+from scpn_phase_orchestrator.nn.ude import (
+    CouplingResidual,
+    UDEKuramotoLayer,
+    ude_kuramoto_forward,
+)
 
 N = 4
 
@@ -148,6 +158,71 @@ class TestValidation:
         phases, omegas, coupling, residual = setup
         with pytest.raises(ValueError, match="max_steps must be positive"):
             solve_ude_adjoint(phases, omegas, coupling, residual, t1=0.5, max_steps=0)
+
+
+class TestBackendSwitch:
+    def test_euler_default_is_unchanged(self):
+        """The Euler default still returns the exact reproducible roll-out."""
+        key = jax.random.PRNGKey(3)
+        layer = UDEKuramotoLayer(n=4, n_steps=10, dt=0.02, hidden=8, key=key)
+        phases = jax.random.uniform(jax.random.PRNGKey(4), (4,), maxval=2.0 * jnp.pi)
+        final, traj = layer.forward_with_trajectory(phases)
+        ref_final, ref_traj = ude_kuramoto_forward(
+            phases, layer.omegas, layer.K, layer.residual, layer.dt, layer.n_steps
+        )
+        assert jnp.array_equal(final, ref_final)
+        assert jnp.array_equal(traj, ref_traj)
+
+    def test_diffrax_backend_shape_and_convergence(self):
+        """The diffrax backend samples the same grid and tracks fine Euler."""
+        key = jax.random.PRNGKey(5)
+        layer = UDEKuramotoLayer(n=4, n_steps=200, dt=1e-3, hidden=8, key=key)
+        phases = jax.random.uniform(jax.random.PRNGKey(6), (4,), maxval=2.0 * jnp.pi)
+        final, traj = layer.forward_with_trajectory(phases, backend="diffrax")
+        assert traj.shape == (200, 4)
+        euler_final, _ = layer.forward_with_trajectory(phases)
+        assert float(jnp.max(_angular_distance(final, euler_final))) < 1e-2
+
+    def test_invalid_backend_rejected(self):
+        key = jax.random.PRNGKey(7)
+        layer = UDEKuramotoLayer(n=3, n_steps=5, dt=0.02, hidden=4, key=key)
+        phases = jnp.zeros(3)
+        with pytest.raises(ValueError, match="backend must be"):
+            layer.forward_with_trajectory(phases, backend="rk4")
+
+
+class TestCheckpointedAdjointTrainingPath:
+    def test_diffrax_training_reduces_loss(self):
+        """End-to-end: the checkpointed-adjoint path trains the UDE layer down."""
+        data_key = jax.random.PRNGKey(11)
+        k_true, omegas_true, phases0, observed = generate_kuramoto_data(
+            N=4, T=12, dt=0.05, K_scale=0.3, key=data_key
+        )
+        del k_true, omegas_true
+        layer = UDEKuramotoLayer(
+            n=4, n_steps=12, dt=0.05, hidden=8, key=jax.random.PRNGKey(12)
+        )
+
+        def loss_fn(model: UDEKuramotoLayer) -> jax.Array:
+            return trajectory_loss(model, phases0, observed, backend="diffrax")
+
+        initial = float(loss_fn(layer))
+        trained, history = train(layer, loss_fn, optax.adam(5e-2), n_epochs=25)
+        assert len(history) == 25
+        assert history[-1] < initial
+
+    def test_trajectory_loss_euler_backend_matches_direct_call(self):
+        """The default backend leaves ``trajectory_loss`` byte-for-byte."""
+        data_key = jax.random.PRNGKey(21)
+        _, _, phases0, observed = generate_kuramoto_data(
+            N=4, T=10, dt=0.05, key=data_key
+        )
+        layer = UDEKuramotoLayer(
+            n=4, n_steps=10, dt=0.05, hidden=8, key=jax.random.PRNGKey(22)
+        )
+        via_default = trajectory_loss(layer, phases0, observed)
+        via_euler = trajectory_loss(layer, phases0, observed, backend="euler")
+        assert jnp.array_equal(via_default, via_euler)
 
 
 class TestLazyExport:
