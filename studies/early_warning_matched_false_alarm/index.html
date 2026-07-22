@@ -1,0 +1,9101 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Domain-agnostic synchronisation-analysis and honest-evaluation toolkit built on Kuramoto/UPDE phase dynamics">
+      
+      
+        <meta name="author" content="Miroslav Šotek">
+      
+      
+        <link rel="canonical" href="https://anulum.github.io/scpn-phase-orchestrator/studies/early_warning_matched_false_alarm/">
+      
+      
+        <link rel="prev" href="../../papers/SAFETY_CERT_DRAFT/">
+      
+      
+        <link rel="next" href="../../validation/iso_ne_case1_forced_oscillation/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/anulum_logo_company.jpg">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Early-Warning: Honest False-Alarm Evaluation - SCPN Phase Orchestrator</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="amber">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#generic-early-warning-detection-is-at-chance-across-five-modalities-a-domain-specific-detector-clears-the-bar-where-the-signature-is-deterministic" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="SCPN Phase Orchestrator" class="md-header__button md-logo" aria-label="SCPN Phase Orchestrator" data-md-component="logo">
+      
+  <img src="../../assets/anulum_logo.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            SCPN Phase Orchestrator
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Early-Warning: Honest False-Alarm Evaluation
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="amber"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="amber"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/anulum/scpn-phase-orchestrator" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    anulum/scpn-phase-orchestrator
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../getting-started/onboarding/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Getting Started
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../concepts/system_overview/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Concepts
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../guide/choosing_an_engine/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Guides
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../specs/binding_spec.schema.json" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Specifications
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../tutorials/00_choose_a_use_case/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Tutorials
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../reference/api/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  API Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../galleries/beachhead_verticals/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Gallery
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../roadmap/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../papers/JOSS_DRAFT/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Papers
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="./" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Validation
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../faq/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  FAQ
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="SCPN Phase Orchestrator" class="md-nav__button md-logo" aria-label="SCPN Phase Orchestrator" data-md-component="logo">
+      
+  <img src="../../assets/anulum_logo.png" alt="logo">
+
+    </a>
+    SCPN Phase Orchestrator
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/anulum/scpn-phase-orchestrator" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    anulum/scpn-phase-orchestrator
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/onboarding/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Onboarding Handbook
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/executive_overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Executive Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/use_cases/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Use Cases and Value Map
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quickstart
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/minimal_domainpack_5min/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Minimal Domainpack in 5 Minutes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/hello_world/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial: Hello World
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/start_here/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Start Here (Learning Path)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concepts
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Concepts
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/system_overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    System Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/pipeline_firing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How the Pipeline Fires
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/pipeline_execution/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Pipeline Execution
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/oscillators_PIS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Oscillators & PIS
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/knobs_K_alpha_zeta_Psi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Knobs: K, α, ζ, Ψ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/memory_imprint/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Memory Imprint
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/phase_control_theory/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Phase Control Theory
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/domain_utilisation_schemas/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Domain Utilisation Schemas
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/kuramoto_theory/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Kuramoto Theory
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/choosing_an_engine/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Choosing an Engine
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/monitor_validation_status/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor Validation Status
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/domainpack_validation_tiers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Domainpack Validation Tiers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/stuart_landau/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Stuart-Landau Amplitude Mode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/queuewaves/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    QueueWaves Cascade Detector
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/rust_ffi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rust FFI Acceleration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/webgpu_backend/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    WebGPU Compute Backend
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/backend_fallbacks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Backend Fallback Chain
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/backend_strategy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Backend Strategy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/adapters/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Adapter Bridges
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/performance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Performance Tuning
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/dependency_locks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dependency Locks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/production/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Production Deployment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/differentiable_kuramoto/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Differentiable Kuramoto Layer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/advanced_dynamics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Advanced Dynamics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/control_systems/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Control Systems
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/analysis_toolkit/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Analysis Toolkit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/hardware_deployment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hardware & Deployment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/digital_twin/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Digital Twin Pattern
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/notebook_to_production/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Notebook → Production
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/interactive_tools/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Interactive Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/spo_studio_operator/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SPO Studio Operator Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/auto_binding/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Auto-Binding Proposals
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/autotune_learners/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Replay-Only Autotune Learners
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/hierarchy_live_adapters/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hierarchy Adapter Boundaries
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/install_profiles/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Install Profiles
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/backend_review_gate/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Backend Review Gate
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/testing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Testing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../RELEASE_HYGIENE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release Hygiene
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guide/contributor_onboarding/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributor Onboarding
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Specifications
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Specifications
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/binding_spec.schema.json" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Binding Spec Schema
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/phase_contract/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Phase Contract
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/upde_numerics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE Numerics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/lock_metrics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Lock Metrics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/knm_semantics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Knm Semantics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/regime_manager/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Regime Manager
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/boundary_contract/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Boundary Contract
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/action_compose/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Action Compose
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/eval_protocol/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Eval Protocol
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/resolved_runtime_defaults/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Resolved Runtime Defaults
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/plugin_api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plugin API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/policy_dsl/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Policy DSL
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/imprint_dynamics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Imprint Dynamics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/geometry_constraints/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Geometry Constraints
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/knm_calibration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Knm Calibration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../specs/audit_trace/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Audit Trace
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorials
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Tutorials
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tutorials/00_choose_a_use_case/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    00 — Choose a Use Case
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tutorials/01_new_domain_checklist/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    01 — New Domain Checklist
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tutorials/02_oscillator_hunt_sheet/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    02 — Oscillator Hunt Sheet
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tutorials/03_build_knm_templates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    03 — Build Knm Templates
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tutorials/04_differentiable_kuramoto/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    04 — Differentiable Kuramoto
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tutorials/05_from_raw_sources_to_run/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    05 — End-to-End From Raw Sources
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../tutorials/06_deterministic_replay_for_debugging/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    06 — Deterministic Replay for Debugging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../../reference/api/" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_7" id="__nav_7_label" tabindex="0">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Python Facade
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/core/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core & Exceptions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/binding/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Binding
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/upde/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE Engine
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/upde_engine/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Core Integrator
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/upde_time_varying_omega/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Time-varying Omega
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/upde_doppler/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Doppler Engine
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/upde_moving_frame/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Moving Frame
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/upde_pha_c_handoff/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — PHA-C Handoff
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/upde_pha_c_timeline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — PHA-C Event Timeline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/upde_pha_c_acceptance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — PHA-C Acceptance Chain
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/upde_pha_c_formal_obligation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — PHA-C Formal Obligation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/upde_bayesian/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Bayesian Uncertainty
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/upde_simplicial/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Simplicial (3-body)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/upde_hypergraph/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Hypergraph (k-body)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/upde_geometric/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Geometric (SO(2))
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/upde_envelope/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Envelope (RMS)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/upde_reduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Ott-Antonsen Reduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/upde_splitting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Strang Splitting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/upde_basin_stability/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Basin Stability
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/upde_bifurcation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Bifurcation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/upde_delay/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Delay
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/upde_inertial/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Inertial
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/upde_market/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Market
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/upde_order_params/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Order Parameters
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/upde_pac/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — PAC
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/upde_stochastic/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Stochastic
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/upde_stuart_landau/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Stuart-Landau
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/upde_swarmalator/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Swarmalator
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/oscillators/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Oscillators
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/coupling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coupling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/coupling_spatial_modulator/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coupling - Spatial Modulator
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/coupling_infer/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coupling — Causal Inference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/coupling_attention_residuals/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coupling — Attention Residuals
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/coupling_te_adaptive/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coupling — TE Adaptive
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/coupling_prior/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coupling — Universal Prior
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/coupling_connectome/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coupling — HCP Connectome
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/supervisor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Supervisor
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/studio/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Studio
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/monitor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/monitor_adaptive_kuramoto/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor — Adaptive Kuramoto
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/monitor_chimera/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor — Chimera
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/monitor_dimension/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor — Dimension
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/monitor_embedding/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor — Embedding
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/monitor_entropy_prod/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor — Entropy Production
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/monitor_koopman_edmd/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor — Koopman EDMD
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/monitor_sleep_staging/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor — Sleep Staging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/monitor_evs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor — EVS (Entrainment)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/monitor_itpc/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor — ITPC
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/monitor_merge_window/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor — Merge Window
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/monitor_grid_modal_growth/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor — Grid Modal Growth
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/monitor_grid_modal_stream/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor — Grid Modal Stream
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/monitor_lyapunov/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor — Lyapunov
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/monitor_twin_confidence/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor — Twin Confidence
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/monitor_npe/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor — NPE
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/monitor_opt_entropy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor — OPT-Entropy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/monitor_explosive_sync/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor — Explosive Sync
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/monitor_oscillation_modes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor — Oscillation Modes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/monitor_modal_participation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor — Modal Participation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/monitor_pid/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor — PID
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/monitor_poincare/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor — Poincare
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/monitor_recurrence/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor — Recurrence
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/monitor_transfer_entropy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor — Transfer Entropy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/monitor_winding/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor — Winding
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/monitor_validation_status/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor — Validation Status
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/ssgf/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SSGF
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/ssgf_carrier/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SSGF — Geometry Carrier
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/ssgf_ethical/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SSGF — Ethical Cost (C15)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/meta/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Meta-Transfer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7_71" >
+        
+          
+          <label class="md-nav__link" for="__nav_7_71" id="__nav_7_71_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autotune
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_71_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_71">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Autotune
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/autotune/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/autotune_sindy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Phase-SINDy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/autotune_coupling_est/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coupling Estimation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/autotune_phase_extract/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Phase Extraction (Hilbert)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/autotune_freq_id/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Frequency Identification (DMD)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/autotune_reward/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reward Evaluation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/autotune_knob_attribution/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Per-Knob Attribution
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/autotune_candidate_safety_certificate/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Candidate Safety Certificate
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/autotune_supervisor_candidate/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Supervisor-Candidate Bundle
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/autotune_policy_search/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Replay Policy Search
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/actuation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Actuation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/actuation_koopman_mpc/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Actuation — Koopman MPC
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/imprint/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Imprint
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/drivers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Drivers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/audit/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Audit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/assurance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Assurance Case
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/evaluation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Honest Early-Warning Auditor
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/reporting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reporting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/artifacts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Artifacts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/distributed/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Distributed Sync
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/scaffold/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Scaffold
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/visualization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Visualization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/adapters/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Adapters
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/plugins/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plugins
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/queuewaves/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    QueueWaves
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/api/nn/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Neural Network (nn)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/nn/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    nn/ Module — Full Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/nn_physics_validation_plan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    nn/ Physics Validation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7_90" >
+        
+          
+          <label class="md-nav__link" for="__nav_7_90" id="__nav_7_90_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    nn Contracts
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_90_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_90">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    nn Contracts
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/nn_bold_contract/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    BOLD
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/nn_chimera_contract/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Chimera
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/nn_kuramoto_layer_contract/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Kuramoto Layer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/nn_reservoir_contract/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reservoir
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/nn_simplicial_layer_contract/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Simplicial Layer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/nn_spectral_contract/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Spectral
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/nn_stuart_landau_layer_contract/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Stuart-Landau Layer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/nn_xfail_skip_register/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    nn xFail/Skip Register
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/grpc_gen_fallback_aliases/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    gRPC Fallback Aliases
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/end_to_end_wiring_audit/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    End-to-End Wiring Audit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/documentation_coverage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Documentation Coverage
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Gallery
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Gallery
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../galleries/beachhead_verticals/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Beachhead Verticals
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../galleries/domainpack_gallery/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Domainpack Gallery
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../galleries/notebooks_and_demos/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Notebooks & Demos
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../galleries/notebook_execution_matrix/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Notebook Execution Matrix
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../galleries/cardiac_rhythm_benchmark/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cardiac Rhythm Benchmark
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../galleries/power_grid_benchmark/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Power Grid Benchmark
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../galleries/reference_benchmark_snapshot/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference Benchmark Snapshot
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../galleries/capabilities/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Capabilities & Use Cases
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Public Roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../FACT_BASED_OVERVIEW/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fact-Based Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture_product_boundaries/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture & Product Boundaries
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture_decisions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture Decisions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ASSUMPTIONS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Assumptions & Constants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Papers
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Papers
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../papers/JOSS_DRAFT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    JOSS: Phase Dynamics Compiler
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../papers/SAFETY_CERT_DRAFT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Safety Certification Analysis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_11" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_11" id="__nav_11_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Validation
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_11_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_11">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Validation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Early-Warning: Honest False-Alarm Evaluation
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Early-Warning: Honest False-Alarm Evaluation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#abstract" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Abstract
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1-background-and-question" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Background and question
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Methods
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Methods">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#21-the-detector-suite" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.1 The detector suite
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#22-the-matched-false-alarm-harness" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.2 The matched-false-alarm harness
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#23-the-permutation-significance-test" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.3 The permutation significance test
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#24-the-competitor-head-to-head" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.4 The competitor head-to-head
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#25-corpora-citation-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.5 Corpora (citation-only)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#26-the-molecular-fifth-modality-dnb" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.6 The molecular fifth modality (DNB)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#27-domain-specific-detectors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.7 Domain-specific detectors
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Results
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Results">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#31-scpn-suite-across-four-domains" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.1 SCPN suite across four domains
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#32-head-to-head-scpn-vs-dakos-ar1-kendall-" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.2 Head-to-head: SCPN vs Dakos AR(1)-Kendall-τ
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#33-the-honest-reading" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.3 The honest reading
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#34-the-molecular-fifth-domain-dnb" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.4 The molecular fifth domain (DNB)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#35-domain-specific-detectors-a-real-signature-beats-the-bar" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.5 Domain-specific detectors: a real signature beats the bar
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#36-the-streaming-operating-point-offline-certification-is-necessary-not-sufficient" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.6 The streaming operating point: offline certification is necessary, not sufficient
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#37-the-grid-moats-winning-form-does-not-transfer-to-eeg-a-model-mismatch-boundary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.7 The grid moat's winning form does not transfer to EEG: a model-mismatch boundary
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#38-the-moat-cannot-even-be-posed-on-dnb-a-resolution-limit-boundary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.8 The moat cannot even be posed on DNB: a resolution-limit boundary
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#39-cross-system-external-validation-against-eigenvalue-ground-truth" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.9 Cross-system external validation against eigenvalue ground truth
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#310-critical-slowing-down-external-validation-against-the-analytic-eigenvalue" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.10 Critical-slowing-down external validation against the analytic eigenvalue
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#311-the-hopf-bridge-which-family-recovers-the-eigenvalue-on-an-oscillatory-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.11 The Hopf bridge: which family recovers the eigenvalue on an oscillatory mode
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#312-the-eigenvalue-regime-map-consolidated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.12 The eigenvalue regime map, consolidated
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#313-the-regime-map-extends-to-the-collective-coordinate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.13 The regime map extends to the collective coordinate
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#314-the-collective-map-has-two-regimes-mirroring-the-whole-study" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.14 The collective map has two regimes, mirroring the whole study
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-discussion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Discussion
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Limitations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-reproduction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Reproduction
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-data-availability" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Data availability
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        References
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../validation/iso_ne_case1_forced_oscillation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Real-Data Case Study: ISO-NE Forced Oscillation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sleep_staging_sleepedf/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Real-Data Case Study: Sleep-EDF N3 vs Wake
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cap_multichannel_n3_vs_wake/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Real-Data Case Study: CAP Multi-Channel N3 vs Wake
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cap_kuramoto_diagnostic/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Diagnostic Study: CAP Kuramoto Detector
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../cap_kuramoto_variants/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Detector Panel: CAP Kuramoto Variants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../sleepedf_kuramoto_variants/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Transfer Test: Sleep-EDF Kuramoto Variants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../chbmit_multichannel_kuramoto/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Real-Data Case Study: CHB-MIT Multi-Channel Kuramoto Pre-Ictal
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../regime_adaptive_ensemble/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ensemble: Regime-Adaptive Cross-Corpus Test
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../synthetic_honest_audit_demo/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Harness Demo: Synthetic Critical-Slowing-Down Audit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../detector_ranking_report/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Meta-Analysis: Detector Ranking & Refinement Backlog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../VALIDATION_REPORT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    V&V Report
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../SAFETY_ANALYSIS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Safety Analysis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../VALIDATION_STUDY_PROTOCOL/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Clinical Study Protocol
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../formal/kinematic_safety/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Formal Kinematic Safety
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../faq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FAQ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#abstract" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Abstract
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1-background-and-question" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Background and question
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Methods
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Methods">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#21-the-detector-suite" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.1 The detector suite
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#22-the-matched-false-alarm-harness" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.2 The matched-false-alarm harness
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#23-the-permutation-significance-test" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.3 The permutation significance test
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#24-the-competitor-head-to-head" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.4 The competitor head-to-head
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#25-corpora-citation-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.5 Corpora (citation-only)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#26-the-molecular-fifth-modality-dnb" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.6 The molecular fifth modality (DNB)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#27-domain-specific-detectors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.7 Domain-specific detectors
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Results
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Results">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#31-scpn-suite-across-four-domains" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.1 SCPN suite across four domains
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#32-head-to-head-scpn-vs-dakos-ar1-kendall-" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.2 Head-to-head: SCPN vs Dakos AR(1)-Kendall-τ
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#33-the-honest-reading" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.3 The honest reading
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#34-the-molecular-fifth-domain-dnb" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.4 The molecular fifth domain (DNB)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#35-domain-specific-detectors-a-real-signature-beats-the-bar" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.5 Domain-specific detectors: a real signature beats the bar
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#36-the-streaming-operating-point-offline-certification-is-necessary-not-sufficient" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.6 The streaming operating point: offline certification is necessary, not sufficient
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#37-the-grid-moats-winning-form-does-not-transfer-to-eeg-a-model-mismatch-boundary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.7 The grid moat's winning form does not transfer to EEG: a model-mismatch boundary
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#38-the-moat-cannot-even-be-posed-on-dnb-a-resolution-limit-boundary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.8 The moat cannot even be posed on DNB: a resolution-limit boundary
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#39-cross-system-external-validation-against-eigenvalue-ground-truth" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.9 Cross-system external validation against eigenvalue ground truth
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#310-critical-slowing-down-external-validation-against-the-analytic-eigenvalue" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.10 Critical-slowing-down external validation against the analytic eigenvalue
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#311-the-hopf-bridge-which-family-recovers-the-eigenvalue-on-an-oscillatory-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.11 The Hopf bridge: which family recovers the eigenvalue on an oscillatory mode
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#312-the-eigenvalue-regime-map-consolidated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.12 The eigenvalue regime map, consolidated
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#313-the-regime-map-extends-to-the-collective-coordinate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.13 The regime map extends to the collective coordinate
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#314-the-collective-map-has-two-regimes-mirroring-the-whole-study" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.14 The collective map has two regimes, mirroring the whole study
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-discussion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Discussion
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Limitations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-reproduction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Reproduction
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-data-availability" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Data availability
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        References
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<!-- © Concepts 1996–2026 Miroslav Šotek. All rights reserved. -->
+<!-- © Code 2020–2026 Miroslav Šotek. All rights reserved. -->
+<!-- ORCID: 0009-0009-3560-0851 | Contact: www.anulum.li | protoscience@anulum.li -->
+
+<h1 id="generic-early-warning-detection-is-at-chance-across-five-modalities-a-domain-specific-detector-clears-the-bar-where-the-signature-is-deterministic">Generic early-warning detection is at chance across five modalities; a domain-specific detector clears the bar where the signature is deterministic<a class="headerlink" href="#generic-early-warning-detection-is-at-chance-across-five-modalities-a-domain-specific-detector-clears-the-bar-where-the-signature-is-deterministic" title="Permanent link">&para;</a></h1>
+<p><strong>Miroslav Šotek</strong> (ANULUM / Fortis Studio) · ORCID 0009-0009-3560-0851 · protoscience@anulum.li</p>
+<p><em>A same-protocol replication across brain, heart, power-grid and palaeoclimate data, with an AR(1)-Kendall-τ head-to-head against Dakos et al. 2008, a dynamical-network-biomarker extension to single-cell and bulk cancer/injury transcriptomics, and a domain-specific head-to-head in which a power-grid modal-growth detector beats the whole generic suite on a real corpus.</em></p>
+<hr />
+<h2 id="abstract">Abstract<a class="headerlink" href="#abstract" title="Permanent link">&para;</a></h2>
+<p>Generic early-warning signals (EWS) — the rising variance and lag-one autocorrelation of <em>critical slowing down</em>, and related synchronisation and ordinal-entropy indicators — are widely reported to precede abrupt transitions in the brain, the heart, power systems and the climate. Most of that evidence rests on a <strong>retrospective, per-record</strong> test: a rising trend measured over one pre-transition window and compared to surrogates of the <em>same</em> record. We ask a different, operational question: <strong>at a fixed false-alarm budget, does an early-warning detector fire on transitions more often than on no-transition controls?</strong> We build one domain-adaptable detector suite and one matched-false-alarm evaluation harness, apply them unchanged (through a per-domain adapter) to four independent labelled corpora — scalp-EEG seizures, cardiac atrial-fibrillation onsets, power-grid growing oscillations, and palaeoclimate abrupt transitions — and score every result with a label-permutation significance test. Across all four domains, <strong>no detector reaches significance</strong> (every best-member p ≥ 0.05): the sparse detection observed is what the matched false-alarm rate produces by chance. Running the canonical literature detector — the Dakos et al. 2008 AR(1)-Kendall-τ trend — through the <strong>same</strong> protocol on the <strong>same</strong> segments confirms it: on its own palaeoclimate records it leads 0 of 6 transitions (p = 1.00), and it beats chance in none of the four domains, though on scalp EEG it is the strongest signal anywhere (3 of 6, p = 0.067). We conclude that the operational bar — matched false alarm plus a significance test — is stricter than the retrospective per-record test the literature uses, that generic EWS <em>detection</em> behaves as a commodity at this bar, and that the defensible deliverable is not a lead but the <strong>auditable, hash-sealed, byte-reproducible evidence</strong> — including the sealed silences — that the protocol produces. Extending the same honesty to a <strong>molecular fifth modality</strong> — dynamical-network-biomarker (DNB) early warning of cell-fate and disease transitions, where the statistic is cross-sample rather than sliding-window — reaches the same conclusion: the celebrated single-cell transition index of Mojtahedi et al. 2016 clears a matched operating point on only 1 of 3 leukaemic lineages (permutation p = 0.27), and the canonical GSE2565 phosgene-injury DNB benchmark does <strong>not</strong> beat a <em>selection-controlled</em> surrogate null (surrogate-rank p = 0.39) that re-selects the biomarker module on each shuffled surrogate — showing the apparent DNB rise is largely a selection artefact. The same protocol also separates commodity detection from genuine skill. Where a domain carries a <em>deterministic, detectable</em> instability signature, a <strong>domain-specific</strong> detector clears the operational bar decisively: on the PSML power grid, a modal envelope-growth detector — the exponential growth rate σ of the most unstable bus's cross-bus voltage deviation, the canonical wide-area-monitoring instability quantity — leads 36 of 90 growing-instability transitions (permutation p = 0.0001) where every generic member is at chance (best 13 of 90, p = 0.18), on the identical non-circular disturbance-type split at a matched false alarm, and a held-out half confirms it (24 of 45, p = 0.0002). A domain-specific detector does not automatically win: a spectral detector on the murky preictal scalp EEG is itself at chance. It is the matched-false-alarm moat that certifies which — commodity where the signature is absent, genuinely skilled where it is present. We state the limitations plainly: the corpora are small (3–90 transitions; the bulk DNB case has one exposed arm), so the tests have low power, and "at chance" bounds the <em>demonstrated</em> skill rather than proving early warning impossible.</p>
+<hr />
+<h2 id="1-background-and-question">1. Background and question<a class="headerlink" href="#1-background-and-question" title="Permanent link">&para;</a></h2>
+<p>The theory of critical transitions predicts that a dynamical system approaching a bifurcation recovers more slowly from perturbations, which shows up as a rising variance and a rising lag-one autocorrelation of an observable — <em>critical slowing down</em> (Scheffer et al. 2009). The same idea motivates rising-synchronisation and ordinal-transition-entropy indicators. These generic early-warning signals have been reported before epileptic seizures, cardiac arrhythmias, power-system instability, ecological collapse and abrupt climate change.</p>
+<p>Almost all of that evidence answers a <strong>retrospective, per-record</strong> question: <em>within one pre-transition window, is there a statistically significant rising trend of the indicator, relative to surrogate time series of that same record?</em> (e.g. the Kendall-τ trend test of Dakos et al. 2008). This question is valuable but it is not the question an operator or clinician faces. The operational question is: <em>if I set an alarm threshold that fires on at most a fixed fraction of no-transition situations, does the detector then fire on genuine transitions more often than that fraction?</em> — a <strong>matched-false-alarm</strong> question, followed by <em>is the transition hit-rate above chance?</em></p>
+<p>This study builds the machinery to answer the operational question honestly, applies it across four independent physical domains with one shared suite, and runs the canonical literature detector through the identical protocol as a same-segments head-to-head.</p>
+<h2 id="2-methods">2. Methods<a class="headerlink" href="#2-methods" title="Permanent link">&para;</a></h2>
+<h3 id="21-the-detector-suite">2.1 The detector suite<a class="headerlink" href="#21-the-detector-suite" title="Permanent link">&para;</a></h3>
+<p>One suite of three passive detectors reads a neutral observable bundle and emits per-window scores:</p>
+<ul>
+<li><strong>Critical slowing down</strong> — the larger of the robust (median/MAD) z-scores of the windowed variance and lag-one autocorrelation of the observable, against a leading baseline.</li>
+<li><strong>Rising synchronisation</strong> — the robust z-score of the Kuramoto order parameter of a population of phase oscillators.</li>
+<li><strong>Ordinal-transition entropy</strong> — the robust z-score of the (negated) ordinal-pattern transition entropy of the phase field.</li>
+<li><strong>Weighted fusion</strong> — the weighted mean of the three members.</li>
+</ul>
+<p>The single-series domains (palaeoclimate) carry one scalar observable, so only critical slowing down applies; the multi-node domains (EEG, ECG, grid) carry a population of oscillators and use all four.</p>
+<h3 id="22-the-matched-false-alarm-harness">2.2 The matched-false-alarm harness<a class="headerlink" href="#22-the-matched-false-alarm-harness" title="Permanent link">&para;</a></h3>
+<p>For each domain: a per-domain adapter turns the raw recording into the neutral observable bundle. Each transition is scored on a <strong>fixed pre-onset segment ending at the annotated onset</strong>, so every window is pre-onset and any alarm is a genuine lead. A <strong>no-transition null</strong> — a stable, transition-free stretch — is cut into non-overlapping trials of the same length. Each detector's alarm threshold is set <strong>continuously</strong> to the tightest value holding the trial false-alarm rate at or below a target of 10 % (the quantile of the null alarm scores, with no grid ceiling, so a variance-heavy detector is never silently clipped). A transition is <em>led</em> when the detector alarms within its pre-onset segment. The achieved false-alarm rate is recorded alongside every threshold.</p>
+<h3 id="23-the-permutation-significance-test">2.3 The permutation significance test<a class="headerlink" href="#23-the-permutation-significance-test" title="Permanent link">&para;</a></h3>
+<p>A sealed detection count leaves one question open: does the detector lead transitions <em>more than the matched false-alarm rate explains</em>? We answer it with a <strong>label-permutation (exchangeability) test</strong>. Each segment — transition or null — alarms or not at the calibrated threshold. Under the null hypothesis that transition segments are indistinguishable from nulls, which of the pooled segments carry the "transition" label is exchangeable. We draw 10 000 random transition-sized subsets of the pooled alarm outcomes (fixed seed, so the p-value is byte-reproducible), build the null distribution of the lead count, and report the one-sided p-value with an add-one correction. A small p-value means the detector beats the matched false-alarm rate.</p>
+<h3 id="24-the-competitor-head-to-head">2.4 The competitor head-to-head<a class="headerlink" href="#24-the-competitor-head-to-head" title="Permanent link">&para;</a></h3>
+<p>The canonical literature detector is Dakos et al. 2008: the <strong>Kendall rank correlation τ of the windowed lag-one autocorrelation against time</strong> — a rising-AR(1) trend. We implement it as a per-segment score, calibrate a matched-false-alarm τ threshold on the null segments exactly as above, and run the <strong>same</strong> permutation test on the resulting alarms. Because the two detectors read the same one-dimensional signal (the detrended proxy residual for palaeoclimate, the cross-node Kuramoto order parameter for the multi-node domains), the head-to-head is a same-segments, same-budget, same-test comparison in which only the detector differs.</p>
+<h3 id="25-corpora-citation-only">2.5 Corpora (citation-only)<a class="headerlink" href="#25-corpora-citation-only" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Domain</th>
+<th>Corpus</th>
+<th style="text-align: center;">Transitions</th>
+<th>Null</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Brain (scalp EEG)</td>
+<td>CHB-MIT, subject chb01 (Shoeb 2009, PhysioNet)</td>
+<td style="text-align: center;">6 seizures</td>
+<td>interictal records</td>
+</tr>
+<tr>
+<td>Heart (ECG)</td>
+<td>MIT-BIH AFDB (Moody &amp; Mark 1983, PhysioNet)</td>
+<td style="text-align: center;">6 AF onsets</td>
+<td>sinus stretches</td>
+</tr>
+<tr>
+<td>Grid (PMU)</td>
+<td>PSML 23-bus co-simulation (Zheng et al. 2021)</td>
+<td style="text-align: center;">12 growing oscillations</td>
+<td>damped disturbances</td>
+</tr>
+<tr>
+<td>Palaeoclimate</td>
+<td>Dakos et al. 2008 records (earlywarningtoolbox/datasets)</td>
+<td style="text-align: center;">6 of 8 evaluated</td>
+<td>stable pre-approach intervals</td>
+</tr>
+</tbody>
+</table>
+<p>All raw data are public and cited; none is redistributed. Only derived, hash-sealed, byte-reproducible evidence records are committed. Each detector's alarm — or silence — is sealed into a content-addressed (canonical-JSON SHA-256) <code>EarlyWarningEvidence</code> record, so the result, including every sealed silence, is auditable and reproduces bit-for-bit from a fresh run.</p>
+<h3 id="26-the-molecular-fifth-modality-dnb">2.6 The molecular fifth modality (DNB)<a class="headerlink" href="#26-the-molecular-fifth-modality-dnb" title="Permanent link">&para;</a></h3>
+<p>Dynamical-network-biomarker early warning (Chen et al. 2012) is a <em>different modality</em>: few timepoints, many genes, and a <strong>cross-sample</strong> statistic computed over the sample population at each timepoint, so the sliding-window suite does not apply. Its index rises to a peak at the tipping point. Two published index forms are implemented and each is run through a modality-appropriate honest test that keeps the same philosophy — a controlled null and a permutation/rank p-value:</p>
+<ul>
+<li><strong>Single-cell (Mojtahedi et al. 2016).</strong> The transition index is the ratio of mean signed gene–gene to mean signed cell–cell correlation over the curated panel (which <em>is</em> the critical module, so no selection). We take the per-lineage index trajectory and its bootstrap standard error <strong>from the published supplement</strong> (not re-derived from the confounded raw qPCR); the pre-transition rising limb (Days 0, 1, 3) is scored by its least-squares slope; the matched-false-alarm null is a <strong>temporally-shuffled surrogate</strong> resampled from the published mean and SE; and the three lineages' alarms are tested by the same label-permutation core as the physical domains.</li>
+<li><strong>Bulk (GSE2565 phosgene lung injury).</strong> Here the module must be <em>selected</em>, which introduces <strong>selection freedom</strong>: the composite index <code>SD_in · PCC_in / PCC_out</code> is evaluated on a module chosen to peak at the transition, so a rise is partly guaranteed by construction. The only honest null <strong>re-selects the entire module on each surrogate</strong>: it shuffles the timepoint labels across the arm's samples and reruns module selection from scratch, so the surrogate has the same selection freedom as the real analysis. The observed rising slope is ranked against these selection-controlled surrogates for a one-sided p-value, and also thresholded to a matched false alarm.</li>
+</ul>
+<p>Both DNB paths seal a hash-addressed, byte-reproducible record exactly as the physical domains do.</p>
+<h3 id="27-domain-specific-detectors">2.7 Domain-specific detectors<a class="headerlink" href="#27-domain-specific-detectors" title="Permanent link">&para;</a></h3>
+<p>The generic suite reads a modality-neutral observable bundle, which is what makes the four-domain replication possible — but it is also why it is a commodity. A <strong>domain-specific</strong> detector instead reads the raw physical quantity whose growth <em>is</em> the instability, and is tested through the <em>same</em> matched-false-alarm and permutation moat, so its p-value is directly comparable to the generic suite on the same segments. Two are built, one for a domain with a deterministic signature and one for a murky domain, precisely to show the moat certifies the difference rather than the detector always winning:</p>
+<ul>
+<li><strong>Power-grid modal envelope-growth.</strong> When a disturbance leaves an electromechanical mode under-damped, the amplitude of the cross-bus voltage deviation grows exponentially — the real part σ of the mode's eigenvalue is positive, the canonical wide-area-monitoring early-warning quantity (Kundur 1994). The detector estimates σ directly as the slope of the log deviation envelope. Two orthogonal, physically-motivated refinements are added and selected on a development half only: a <strong>focal</strong> aggregation takes the growth rate of the <em>most unstable bus</em> (instability is localised to a mode/bus cluster, so the per-bus maximum, un-diluted, is the signal; the matched-false-alarm threshold is calibrated on that same per-bus maximum over the nulls, absorbing the multiplicity), and a <strong>recency weighting</strong> up-weights the later samples (a real instability accelerates toward the disturbance). Every variant tried is disclosed in §3.5.</li>
+<li><strong>Scalp-EEG spectral rise.</strong> The seizure-prediction literature reports a rising high-frequency to low-frequency band-power ratio before onset (e.g. Mormann et al. 2007). The detector takes the beta(13–30 Hz)/delta(0.5–4 Hz) band-power ratio per channel, its Kendall-τ rising trend over the pre-onset segment, with the same whole-head and focal aggregations. Its bands are fixed a-priori from the literature, not tuned.</li>
+</ul>
+<p>The grid labels are <strong>non-circular</strong>: a transition is any generator-trip scenario and a null any damped bus-fault or branch-trip scenario — the label is the disturbance <em>type</em>, a physical annotation independent of the growth statistic the detector measures, so a growing-oscillation detector is never scored against a growth-defined label. Three PSML scenarios carry a non-monotonic time column (a non-physical, negative inferred sampling rate) and are dropped, the count recorded in the sealed payload. The operating point (focal aggregation, recency weighting) is chosen on the even-index development half and validated on the odd-index held-out half before the full-corpus comparison, so no operating point is tuned to the reported answer.</p>
+<h2 id="3-results">3. Results<a class="headerlink" href="#3-results" title="Permanent link">&para;</a></h2>
+<h3 id="31-scpn-suite-across-four-domains">3.1 SCPN suite across four domains<a class="headerlink" href="#31-scpn-suite-across-four-domains" title="Permanent link">&para;</a></h3>
+<p>At a matched false-alarm rate (target 10 %), detection is sparse everywhere, and <strong>no detector reaches significance in any domain</strong>:</p>
+<table>
+<thead>
+<tr>
+<th>Domain</th>
+<th>Best member</th>
+<th style="text-align: center;">Led / N</th>
+<th style="text-align: center;">Permutation p</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Brain (EEG)</td>
+<td>critical slowing down</td>
+<td style="text-align: center;">2 / 6</td>
+<td style="text-align: center;">0.215</td>
+</tr>
+<tr>
+<td>Heart (ECG)</td>
+<td>synchronisation</td>
+<td style="text-align: center;">2 / 6</td>
+<td style="text-align: center;">0.219</td>
+</tr>
+<tr>
+<td>Grid (PMU)</td>
+<td>critical slowing down</td>
+<td style="text-align: center;">3 / 12</td>
+<td style="text-align: center;">0.195</td>
+</tr>
+<tr>
+<td>Palaeoclimate</td>
+<td>critical slowing down</td>
+<td style="text-align: center;">1 / 6</td>
+<td style="text-align: center;">0.514</td>
+</tr>
+</tbody>
+</table>
+<p>The fusion never leads more transitions than its best single member, so there is no robust fusion advantage. The observed lead counts are within what the matched false-alarm rate produces by chance (expected counts 0.6–1.7 across the domains).</p>
+<h3 id="32-head-to-head-scpn-vs-dakos-ar1-kendall-">3.2 Head-to-head: SCPN vs Dakos AR(1)-Kendall-τ<a class="headerlink" href="#32-head-to-head-scpn-vs-dakos-ar1-kendall-" title="Permanent link">&para;</a></h3>
+<p>Running the canonical Dakos detector through the identical protocol on the identical segments:</p>
+<table>
+<thead>
+<tr>
+<th>Domain</th>
+<th style="text-align: center;">SCPN best member (led/N, p)</th>
+<th style="text-align: center;">Dakos AR(1)-Kendall-τ (led/N, p)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Palaeoclimate</td>
+<td style="text-align: center;">CSD 1/6, p = 0.514</td>
+<td style="text-align: center;">0/6, <strong>p = 1.000</strong></td>
+</tr>
+<tr>
+<td>Grid</td>
+<td style="text-align: center;">CSD 3/12, p = 0.195</td>
+<td style="text-align: center;">1/12, <strong>p = 0.713</strong></td>
+</tr>
+<tr>
+<td>Heart</td>
+<td style="text-align: center;">sync 2/6, p = 0.219</td>
+<td style="text-align: center;">0/6, <strong>p = 1.000</strong></td>
+</tr>
+<tr>
+<td>Brain (EEG)</td>
+<td style="text-align: center;">CSD 2/6, p = 0.215</td>
+<td style="text-align: center;"><strong>3/6, p = 0.067</strong></td>
+</tr>
+</tbody>
+</table>
+<p>On its own palaeoclimate records — the data Dakos et al. analysed — the AR(1)-Kendall-τ detector, at a matched operating point, leads <strong>zero</strong> of six transitions (p = 1.00): it does not beat chance, and it does no better than the SCPN suite. The same holds for grid and heart. The one exception is scalp EEG, where the rising-AR(1) trend is the <strong>strongest signal anywhere in the study</strong> (3 of 6, p = 0.067) — marginally short of significance, and better than the SCPN detectors on that domain.</p>
+<h3 id="33-the-honest-reading">3.3 The honest reading<a class="headerlink" href="#33-the-honest-reading" title="Permanent link">&para;</a></h3>
+<p>The result is not "nothing works". It is: <strong>at a matched operating point and a permutation significance test, nothing reaches significance at these corpus sizes</strong> — neither the SCPN suite nor the canonical literature detector, in any of the four domains. The literature's positive EWS results come from a <em>retrospective per-record</em> significance test that this operational protocol is stricter than. The one place a detector comes close — the AR(1) trend on scalp EEG — is consistent with the seizure-prediction literature's use of autocorrelation features and warrants a larger, higher-power EEG corpus.</p>
+<h3 id="34-the-molecular-fifth-domain-dnb">3.4 The molecular fifth domain (DNB)<a class="headerlink" href="#34-the-molecular-fifth-domain-dnb" title="Permanent link">&para;</a></h3>
+<p>The same conclusion holds when the honesty is carried to a molecular modality:</p>
+<table>
+<thead>
+<tr>
+<th>Case</th>
+<th>Test</th>
+<th>Result</th>
+<th style="text-align: center;">p</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Single-cell (Mojtahedi 2016)</td>
+<td>matched-FA + permutation, 3 lineages</td>
+<td>1 / 3 lineages clear the 10 % operating point</td>
+<td style="text-align: center;">0.266</td>
+</tr>
+<tr>
+<td>Bulk (GSE2565 phosgene)</td>
+<td>selection-controlled surrogate rank, 1 exposed arm</td>
+<td>exposed-arm rise does not beat reselecting surrogates</td>
+<td style="text-align: center;">0.385</td>
+</tr>
+</tbody>
+</table>
+<p>The single-cell transition index rises 2.8-fold toward the erythroid bifurcation — an unmistakable effect size — yet at its published four-timepoint resolution only the strongest of three lineages clears a matched false-alarm operating point, and the corpus-level permutation test is not significant (p = 0.27); the binding constraint is the temporal resolution, not the effect size. The bulk GSE2565 case is sharper: the phosgene-exposed arm's apparent DNB rise (slope 1.15) sits <em>below</em> the 90th percentile of surrogates that were allowed to <strong>re-select the biomarker module on shuffled time</strong> (surrogate-rank p = 0.385), and it barely exceeds the air control's own selected-module rise (p = 0.414). Once the null is granted the same selection freedom as the analysis, the celebrated bulk DNB rise is largely a <strong>selection artefact</strong>. Both molecular cases are hash-sealed and byte-reproducible.</p>
+<h3 id="35-domain-specific-detectors-a-real-signature-beats-the-bar">3.5 Domain-specific detectors: a real signature beats the bar<a class="headerlink" href="#35-domain-specific-detectors-a-real-signature-beats-the-bar" title="Permanent link">&para;</a></h3>
+<p>The generic result is that <em>modality-neutral</em> detection is a commodity. The complementary result is that a <em>domain-specific</em> detector, tested through the identical moat, beats it decisively — but only where the domain carries a deterministic signature.</p>
+<p>On the PSML power grid, the non-circular disturbance-type split gives <strong>90 growing-instability (generator-trip) transitions and 88 damped (bus-fault / branch-trip) nulls</strong> — a larger and label-independent corpus than the growth-selected 12 of §3.1. Both the modal detector and the generic suite read the <em>same</em> two-second pre-onset segments of the <em>same</em> scenarios, calibrated to the <em>same</em> 10 % matched false alarm on the <em>same</em> nulls (achieved 9.1 %); only the detector differs. At its validated operating point (focal aggregation, recency weighting):</p>
+<table>
+<thead>
+<tr>
+<th>Detector</th>
+<th style="text-align: center;">Transitions led / 90</th>
+<th style="text-align: center;">Permutation p</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>generic critical slowing down</td>
+<td style="text-align: center;">13 / 90</td>
+<td style="text-align: center;">0.185</td>
+</tr>
+<tr>
+<td>generic weighted ensemble</td>
+<td style="text-align: center;">11 / 90</td>
+<td style="text-align: center;">0.324</td>
+</tr>
+<tr>
+<td>generic ordinal-transition entropy</td>
+<td style="text-align: center;">8 / 90</td>
+<td style="text-align: center;">0.629</td>
+</tr>
+<tr>
+<td>generic synchronisation</td>
+<td style="text-align: center;">3 / 90</td>
+<td style="text-align: center;">0.976</td>
+</tr>
+<tr>
+<td><strong>modal envelope-growth (focal, recency)</strong></td>
+<td style="text-align: center;"><strong>36 / 90</strong></td>
+<td style="text-align: center;"><strong>0.0001</strong></td>
+</tr>
+</tbody>
+</table>
+<p>The domain-specific detector leads <strong>36 of 90</strong> transitions (40 %) at p = 0.0001, beating every generic member — the best of which (critical slowing down, 13/90, p = 0.19) is at chance. The <strong>held-out half</strong> confirms it: 24 of 45 transitions (53 %) at p = 0.0002, the unbiased estimate, sealed in the artefact.</p>
+<p>The winning operating point was reached by an explicit, disclosed variant search on the development half (choice made on development, reported on held-out — no head-to-head data touched during selection):</p>
+<table>
+<thead>
+<tr>
+<th>Variant</th>
+<th style="text-align: center;">Development led / 45, p</th>
+<th style="text-align: center;">Held-out led / 45, p</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>whole-network log-slope σ</td>
+<td style="text-align: center;">11, 0.051</td>
+<td style="text-align: center;">14, 0.009</td>
+</tr>
+<tr>
+<td>per-bus maximum σ (focal)</td>
+<td style="text-align: center;">14, 0.008</td>
+<td style="text-align: center;">22, 0.0001</td>
+</tr>
+<tr>
+<td>matrix-pencil, PCA-dominant mode</td>
+<td style="text-align: center;">10, 0.072</td>
+<td style="text-align: center;">3, 0.80</td>
+</tr>
+<tr>
+<td>matrix-pencil, per-bus maximum</td>
+<td style="text-align: center;">8, 0.189</td>
+<td style="text-align: center;">6, 0.39</td>
+</tr>
+<tr>
+<td>Hilbert-envelope σ, per-bus</td>
+<td style="text-align: center;">2, 0.90</td>
+<td style="text-align: center;">3, 0.80</td>
+</tr>
+<tr>
+<td><strong>recency-weighted focal σ</strong></td>
+<td style="text-align: center;"><strong>16, 0.002</strong></td>
+<td style="text-align: center;"><strong>24, 0.0002</strong></td>
+</tr>
+</tbody>
+</table>
+<p>The gold-standard wide-area-monitoring estimator — <strong>matrix-pencil modal damping</strong> — recovers a planted σ exactly on synthetic data, yet on the short two-second, 238 Hz windows it is at chance (held-out p = 0.39–0.80); the robust direct log-envelope slope wins on real noisy segments. A recency-ratio sensitivity sweep (2–8) beats the unweighted per-bus detector across the whole range, so the choice is robust, not knife-edge.</p>
+<p>The counterpoint confirms this is not detector-worship. The <strong>scalp-EEG spectral</strong> detector — a beta/delta band-power rise, a-priori bands, tested through the same moat on the chb01 seizures — is itself at chance (1 of 6 led, p ≈ 0.56, in both whole-head and focal aggregations): the preictal state is murky and the corpus small, so a domain-specific detector on a domain without a clean signature fares no better than the generic suite. <strong>The moat is what certifies the difference</strong> between a genuine, physically-grounded early warning (grid modal growth) and a plausible but empty one (preictal spectral rise) — the same honest test that flags the commodity detectors as at chance flags the domain-specific one as genuinely skilled.</p>
+<h3 id="36-the-streaming-operating-point-offline-certification-is-necessary-not-sufficient">3.6 The streaming operating point: offline certification is necessary, not sufficient<a class="headerlink" href="#36-the-streaming-operating-point-offline-certification-is-necessary-not-sufficient" title="Permanent link">&para;</a></h3>
+<p>The grid head-to-head of §3.5 is a <em>per-window</em> result — it scores the pre-onset window. Run
+the same certified detector as a <strong>live stream</strong> (scoring every sliding window causally, as a
+PMU feed would deliver it) and the operating point is markedly stricter, because a damped
+bus-fault or branch-trip produces a <em>short transient growth</em> window the continuous monitor
+alarms on. At the certified per-window threshold the stream leads 82 of 90 transitions but
+false-alarms on <strong>73%</strong> of damped scenarios — operationally useless. Recalibrating for the
+stream at a matched stream-level false alarm, with a persistence debounce and an
+exponential-fit-quality gate that rejects a fault's step-like transient (a fault fits an
+exponential poorly, a genuine instability well), the fit-quality-gated detector leads <strong>11 of
+45 held-out transitions (24%)</strong> at a matched 10% stream false alarm — well below the offline
+per-window 40%. The gap is physical: distinguishing a sustained instability from a damped
+fault <em>online</em> requires observing the damping sign over several cycles, a lead-time /
+discrimination limit the pre-onset-window benchmark does not face. This sharpens the moat's
+lesson once more: even a genuinely skilled per-window detector must be re-certified for its
+deployment modality, and the honest streaming operating point — hash-sealed in
+<code>examples/real_data/psml_modal_growth/grid_modal_stream_operating_point.json</code> — is the
+auditable deliverable, not the flattering per-window figure. The final step from a live
+alarm to a <em>decision</em> is taken honestly too: a passive, review-only advisory
+(<code>assurance.grid_early_warning_advisory</code>) turns each stream alarm into a claim-bounded
+operator record that surfaces σ, the most-unstable bus, and the certified operating point,
+and seals the ~24 % recall as a first-class field — so the advisory never actuates, is a
+reason to inspect rather than a guarantee, and makes explicit that the <em>absence</em> of an
+advisory is not evidence of stability.</p>
+<h3 id="37-the-grid-moats-winning-form-does-not-transfer-to-eeg-a-model-mismatch-boundary">3.7 The grid moat's winning form does not transfer to EEG: a model-mismatch boundary<a class="headerlink" href="#37-the-grid-moats-winning-form-does-not-transfer-to-eeg-a-model-mismatch-boundary" title="Permanent link">&para;</a></h3>
+<p>A natural next question is whether the grid detector's <em>winning form</em> — the exponential
+envelope-growth rate, focal aggregation, and the fit-quality gate that lifts its streaming
+operating point (§3.6) — carries to another domain. We test it on the murky scalp EEG:
+the same a-priori seizure feature as §3.5 (the per-channel beta/delta band-power ratio
+trajectory) is scored not by a Kendall-τ rank trend but by the <strong>exponential growth rate of
+its envelope</strong>, with the identical focal aggregation, recency weighting and R²-gate the grid
+uses, through the same matched-false-alarm + permutation moat on the same six chb01 preictal
+segments. It does <strong>not</strong> transfer: the exponential-growth score leads <strong>0 of 6</strong> preictal
+segments (p = 1.00) in both aggregations, and the fit-quality gate — built to reject a
+fault's <em>non-exponential</em> step-like transient — rejects the preictal <em>signal</em> too (every
+gated score is clamped, the achieved false alarm falls to zero, 0 of 6 led), below even the
+a-priori rank trend's 1 of 6. A robustness grid over the analysis window (512/1024/2048
+samples), recency weighting (1.0/3.0) and gate (off/0.5) leaves the modal focal score at 0 of
+6 at <strong>every</strong> setting, so this is a model mismatch, not a parameter artefact. The reason is
+physical: the grid statistic presupposes a <em>linear instability's eigenvalue</em> — the deviation
+grows as a true exponential, which the fit and its quality gate are built to measure — whereas
+the preictal band-power rise, if present, is a slow, noisy, non-exponential drift the rank
+trend reads better than an exponential fit. The exponential-growth moat is therefore
+<strong>grid-specific</strong>, and this boundary is itself hash-sealed in
+<code>examples/real_data/chb01_seizures/seizure_modal_transfer.json</code>. (A shorter 600 s horizon
+does surface a spectral rank-trend lead of 3 of 6, p = 0.04; with one subject, n = 6, and a
+single horizon forking path that does not survive multiplicity, it is disclosed in the
+artefact as exploratory and explicitly <strong>not</strong> claimed — the same discipline that keeps the
+programme's positive results honest applies to its near-misses.)</p>
+<h3 id="38-the-moat-cannot-even-be-posed-on-dnb-a-resolution-limit-boundary">3.8 The moat cannot even be posed on DNB: a resolution-limit boundary<a class="headerlink" href="#38-the-moat-cannot-even-be-posed-on-dnb-a-resolution-limit-boundary" title="Permanent link">&para;</a></h3>
+<p>The second candidate for the grid moat's transfer is the molecular DNB modality of §3.4,
+and it fails for a different, structural reason. The DNB early-warning signal is a genuine
+critical-slowing-down <em>rise</em> of the transition index toward the tipping point — but it is
+measured over only a handful of pre-transition timepoints: the single-cell Mojtahedi rising
+limb is <strong>three</strong> points (Days 0, 1, 3, from the published Table S2), and the bulk GSE2565
+exposed-arm limb is <strong>four</strong> (0.5, 1, 4, 8 h). On three-to-four points the grid statistic's
+discriminating machinery has no purchase: a fit-quality gate needs enough of a trajectory to
+tell an exponential from any other monotone rise, and on so few points <em>every</em> rise fits an
+exponential well enough (R² = 0.67–0.86 across all four trajectories) to pass a 0.5 gate — so
+the gate keeps every one and rejects none, exactly the discrimination it is meant to provide,
+gone. The exponential growth rate, moreover, simply re-orders the three single-cell lineages
+in the same order as the existing linear slope (0.61 &gt; 0.48 &gt; 0.22 vs 0.128 &gt; 0.092 &gt; 0.028),
+adding no separating information. So the modal-growth transfer collapses to the linear slope
+the existing DNB detector already uses, and the moat's winning form cannot even be <em>posed</em>.
+This boundary is hash-sealed in <code>examples/real_data/mojtahedi_fate/dnb_modal_transfer.json</code>.</p>
+<p>Together, §3.7 and §3.8 bound the moat from both sides. The grid detector transfers only to a
+domain that carries <strong>both</strong> a genuine exponential instability (a linear mode's eigenvalue,
+which fits an exponential and whose fault-vs-instability contrast a fit-quality gate can read)
+<strong>and</strong> a trajectory long enough to fit and gate that form. The power grid has both; scalp EEG
+has a resolved trajectory but a non-exponential preictal rise the gate rejects (a model
+mismatch, §3.7); DNB has a genuine early-warning rise but only a three-to-four-point limb the
+gate cannot resolve (a resolution limit, §3.8). The exponential-growth moat is therefore not a
+general early-warning method but a <strong>domain-specific</strong> one whose applicability is itself an
+auditable, sealed result — the same honest boundary-drawing that separates the commodity
+generic detectors from the genuinely skilled grid detector.</p>
+<h3 id="39-cross-system-external-validation-against-eigenvalue-ground-truth">3.9 Cross-system external validation against eigenvalue ground truth<a class="headerlink" href="#39-cross-system-external-validation-against-eigenvalue-ground-truth" title="Permanent link">&para;</a></h3>
+<p>The PSML result is on one 23-bus corpus, and its held-out ceiling (≈ 50 %) proved robust
+across method classes (matrix-pencil modal identification) and aggregations (per-bus focal,
+dominant spatial mode) — none beat the ceiling at a matched false alarm, and their union of
+led transitions is unharvestable there because combining raises the null floor. To test the
+detector on <em>independent</em> systems, we run a stronger, non-circular check: on the IEEE 39-bus
+New England system and the Kundur two-area system (both in the open-source ANDES simulator),
+we sweep the operating point, take the true dominant electromechanical mode's growth rate σ
+from ANDES <strong>small-signal eigenvalue analysis</strong> — a completely different method from the
+detector's time-domain envelope slope — and score a ringdown from a small disturbance at
+each point. The detector's <strong>coherent</strong> aggregation (the cross-bus mean, or the dominant
+spatial mode) recovers the true σ trend on both systems (Spearman ρ = 0.87 on IEEE-39,
+0.60–0.66 on Kundur), so the quantity the detector estimates — the dominant mode's damping —
+generalises across systems and simulators. The <strong>focal</strong> aggregation, the PSML winner, does
+<strong>not</strong> transfer (ρ = −0.59 and −0.27): on a slow coherent inter-area mode the per-bus
+maximum locks onto spurious local excursions rather than the network mode. The
+growth-rate quantity is therefore universal, but the best <strong>aggregation is
+regime-dependent</strong> — focal for PSML's fast, localised oscillations, coherent for the slow
+inter-area modes here — a new, actionable finding hash-sealed in
+<code>examples/real_data/grid_external_validation/grid_eigenvalue_external_validation.json</code>. The
+test is honest about its limits: a simulated (not field-PMU) ground truth, stable operating
+points only (the well-damped benchmarks do not enter a clean growing-oscillation regime, so
+this is a damping-ranking test, not a stable-versus-unstable classification), and a
+fourteen-point sweep per system.</p>
+<h3 id="310-critical-slowing-down-external-validation-against-the-analytic-eigenvalue">3.10 Critical-slowing-down external validation against the analytic eigenvalue<a class="headerlink" href="#310-critical-slowing-down-external-validation-against-the-analytic-eigenvalue" title="Permanent link">&para;</a></h3>
+<p>The grid section validates the <em>oscillatory</em> detector against a simulated eigenvalue. The
+single-series <strong>critical-slowing-down</strong> detector — the one the palaeoclimate capstone runs
+on the Dakos records — admits an even harder, non-circular test, because its ground truth
+can be written in closed form rather than simulated. We sweep a control parameter
+quasi-statically toward a codimension-one bifurcation, integrate the stochastic normal form
+at each operating point, and read the shipped detector's two indicators — the lag-one
+autocorrelation and the variance. The true recovery rate λ is the normal-form <strong>Jacobian
+eigenvalue</strong> analytically (−2√μ for the fold / saddle-node, μ for the supercritical
+pitchfork). On both independent classes — one with a quadratic nonlinearity, one with a
+globally confining cubic one — the detector's autocorrelation channel recovers the true λ
+(Spearman ρ = 0.98 fold, 0.96 pitchfork), and because the lag-one autocorrelation of a
+linear-response process is exp(λ Δt), the implied rate ln(AR1)/Δt tracks λ <strong>in magnitude</strong>,
+not merely in rank (Pearson ρ = 0.98, 0.96) — a stronger statement than the rank-only grid
+test can make. The variance channel rises in step (ρ = 0.98 on both) as the stationary
+variance σ²/2|λ| diverges. So the quantity the detector estimates on the Dakos records — a
+falling recovery rate — is exactly what a bifurcation presents, confirmed against a
+first-principles reference and hash-sealed in
+<code>examples/real_data/csd_bifurcation/csd_bifurcation_external_validation.json</code>. The limits are
+stated plainly: a quasi-static per-point sweep (an independent stationary run at each control
+value, not one non-stationary approach), additive noise only, and scalar reduced normal forms
+rather than the full high-dimensional systems.</p>
+<h3 id="311-the-hopf-bridge-which-family-recovers-the-eigenvalue-on-an-oscillatory-mode">3.11 The Hopf bridge: which family recovers the eigenvalue on an oscillatory mode<a class="headerlink" href="#311-the-hopf-bridge-which-family-recovers-the-eigenvalue-on-an-oscillatory-mode" title="Permanent link">&para;</a></h3>
+<p>The grid section (§3.9) validates the <em>oscillatory</em> envelope-growth family on real systems;
+§3.10 validates the <em>single-series</em> autocorrelation family on <em>non-oscillatory</em> bifurcations.
+A <strong>Hopf</strong> bifurcation is where the two meet: it presents an <em>oscillatory</em> critical slowing
+down (eigenvalue α ± iω with α → 0⁻), so both families point at the same mode against one
+analytic ground truth. We sweep the Hopf parameter α, integrate the stochastic normal form
+(dr = (α r − r³) dt on the amplitude, dθ = ω dt on the phase), and read each family with its
+shipped detector. The <strong>envelope-growth family recovers α in rank <em>and</em> magnitude</strong> (Spearman
+ρ = 0.97, mean |σ − α| = 0.04 at an adequate ringdown SNR), and the recovery is
+<strong>frequency-invariant</strong> (identical across 0.2–1.2 Hz, because it fits the envelope, not the
+oscillation). The <strong>autocorrelation family tracks α but not its magnitude</strong> (mean
+|rate − α| = 0.69): its lag-one autocorrelation is confounded by the oscillation, pinned near
+cos(ω Δt), so ln(AR1)/Δt does not estimate α. This completes a <strong>regime map</strong>: the
+eigenvalue's real part is the universal quantity, but the magnitude-correct estimator is
+regime-dependent — envelope-growth for an oscillatory mode (here, and the grid), the
+autocorrelation for a non-oscillatory one (§3.10). Hash-sealed in
+<code>examples/real_data/hopf_bridge/hopf_bridge_external_validation.json</code>. The one honest
+sensitivity is stated as a curve, not hidden: the envelope magnitude recovery <strong>degrades with
+ringdown SNR</strong> (ρ falls from 0.97 to 0.62 as the ringdown noise rises), a physical floor — a
+decay cannot be read below the noise it sinks into.</p>
+<h3 id="312-the-eigenvalue-regime-map-consolidated">3.12 The eigenvalue regime map, consolidated<a class="headerlink" href="#312-the-eigenvalue-regime-map-consolidated" title="Permanent link">&para;</a></h3>
+<p>The three external validations above (§3.9–§3.11) are one result seen from three angles.
+Each pins a shipped detector against an <em>independent</em> ground truth for the mode's eigenvalue
+— one simulated (ANDES small-signal analysis), two analytic (normal-form Jacobian) — and
+together they map which estimator recovers that eigenvalue in which regime:</p>
+<table>
+<thead>
+<tr>
+<th>Mode (§)</th>
+<th>Systems</th>
+<th>Ground truth for the eigenvalue</th>
+<th>Estimator that recovers it</th>
+<th>Recovery</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Oscillatory, real systems (§3.9)</td>
+<td>IEEE-39, Kundur</td>
+<td>ANDES small-signal eigenvalue σ (simulated)</td>
+<td>envelope-growth, coherent aggregation</td>
+<td>rank (ρ = 0.87 / 0.60–0.66)</td>
+</tr>
+<tr>
+<td>Non-oscillatory bifurcation (§3.10)</td>
+<td>fold, supercritical pitchfork</td>
+<td>normal-form Jacobian λ (analytic)</td>
+<td>autocorrelation, ln(AR1)/Δt</td>
+<td><strong>magnitude</strong> (ρ = 0.98 / 0.96, Pearson too)</td>
+</tr>
+<tr>
+<td>Oscillatory bifurcation (§3.11)</td>
+<td>Hopf normal form</td>
+<td>normal-form eigenvalue α (analytic)</td>
+<td>envelope-growth σ</td>
+<td><strong>magnitude</strong> (ρ = 0.97, |σ − α| = 0.04)</td>
+</tr>
+</tbody>
+</table>
+<p>The <strong>eigenvalue's real part — the growth rate, or its sign-flipped damping — is the
+universal quantity</strong>, validated across three independent ground-truth methods. The
+<strong>magnitude-correct estimator is regime-dependent</strong>, and the split is not arbitrary but
+mechanical: on an <em>oscillatory</em> mode the lag-one autocorrelation is confounded by the
+oscillation (pinned near cos(ω Δt), so ln(AR1)/Δt ≠ α), while the envelope carries the decay
+cleanly — so envelope-growth wins on the grid and the Hopf mode. On a <em>non-oscillatory</em> mode
+there is no oscillation for the envelope to fit, and the linear-response autocorrelation is
+exactly exp(λ Δt) — so the autocorrelation channel wins on the fold and the pitchfork. Pick
+the estimator by whether the mode oscillates; the quantity you are estimating is the same
+eigenvalue in every case.</p>
+<h3 id="313-the-regime-map-extends-to-the-collective-coordinate">3.13 The regime map extends to the collective coordinate<a class="headerlink" href="#313-the-regime-map-extends-to-the-collective-coordinate" title="Permanent link">&para;</a></h3>
+<p>§3.9–§3.12 validate the eigenvalue on <em>scalar</em> systems (normal forms) and on a per-bus grid
+mode. The last test carries it to the model SCPN is built around, one dimension harder: the
+eigenvalue now lives on the <strong>emergent collective coordinate</strong> of a high-dimensional system,
+not a one-line normal form. For the noisy Kuramoto model of <code>N = 512</code> phase oscillators
+(Lorentzian frequencies, half-width γ, phase diffusion <code>D</code>), the incoherent state loses
+stability at the mean-field critical coupling <code>K_c = 2(γ + D)</code> — the <code>K_c = 2γ</code> of the
+Ott–Antonsen reduction, generalised for noise — and just below it the fundamental mean-field
+mode is real and non-oscillatory with the analytic eigenvalue <code>λ(K) = (K − K_c)/2</code>
+(Sakaguchi 1988). The regime map's non-oscillatory prescription therefore predicts the
+<em>autocorrelation</em> family should recover λ; sweeping <code>K</code> below <code>K_c</code> and reading the shipped
+detector on the mean field <code>Z = (1/N) Σ exp(i θ)</code> confirms it — <strong>but only through the right
+observable</strong>. Both the signed real part <code>Re(Z)</code> and the order-parameter amplitude <code>|Z|</code> track
+λ in <strong>rank</strong> (Spearman ρ = 0.97 and 0.98: the collective coordinate slows down as
+<code>K → K_c</code>), yet <strong>only the signed <code>Re(Z)</code> recovers λ in magnitude</strong>, fitting it with slope
+1.19 (≈ 1) because its lag-one autocorrelation is <code>exp(λ Δt)</code>; the folded amplitude <code>|Z|</code> a
+practitioner usually watches fits with slope 2.66 — it ranks the eigenvalue but cannot size
+it. So the map's magnitude tier survives the jump from a scalar normal form to a
+512-oscillator order parameter, with one added, actionable rule: to read the distance to the
+synchronisation threshold, monitor the signed mean-field component, not the order-parameter
+magnitude, and use a long enough autocorrelation window that the finite-window bias does not
+steepen the estimate. Hash-sealed in
+<code>examples/real_data/kuramoto_synchronization/kuramoto_synchronization_external_validation.json</code>.
+Honest limits: the eigenvalue is the <code>N → ∞</code> mean-field result while the runs are finite-<code>N</code>
+(an <code>O(1/√N)</code> correction, which is why the signed slope is near, not exactly, one), a
+quasi-static per-coupling sweep, a Lorentzian law with additive noise, and coupling below
+<code>K_c</code> only.</p>
+<h3 id="314-the-collective-map-has-two-regimes-mirroring-the-whole-study">3.14 The collective map has two regimes, mirroring the whole study<a class="headerlink" href="#314-the-collective-map-has-two-regimes-mirroring-the-whole-study" title="Permanent link">&para;</a></h3>
+<p>§3.13 recovered the eigenvalue on a <em>non-oscillatory</em> collective transition. A <strong>bimodal</strong>
+frequency law is the oscillatory counterpart, and completes a two-regime map inside the
+Kuramoto model — the collective analogue of the Hopf bridge (§3.11). For a symmetric bimodal
+Lorentzian (peaks at <code>±ω₀</code>, half-width <code>Δ</code>), the incoherent state loses stability at
+<code>K_c = 4Δ</code>, and for <code>ω₀ &gt; K/4</code> the fundamental eigenvalue is <strong>complex</strong> (Martens et al. 2009,
+via the Ott–Antonsen reduction): <code>λ_±(K) = K/4 − Δ ± √((K/4)² − ω₀²)</code>, so <code>Re(λ) = K/4 − Δ</code>
+and <code>Ω = √(ω₀² − (K/4)²)</code>. Below <code>K_c</code> the order parameter is a damped oscillation — exactly
+the regime where the Hopf bridge found the <em>envelope</em> family, not the autocorrelation, sizes
+the eigenvalue. Ringing down from a partially-coherent start (<code>N = 4000</code>, <code>ω₀ = 1.5</code>,
+<code>Δ = 0.5</code>) and reading two families confirms it: the <strong>envelope-growth family on the
+sub-population order parameter <code>|Z₊|</code> recovers <code>Re(λ)</code> in magnitude</strong> (Spearman ρ = 0.99,
+fitted slope 0.93 ≈ 1), while the <strong>autocorrelation family is confounded by the oscillation</strong>
+<code>Ω</code> (fitted slope 15.8 — it ranks the eigenvalue but cannot size it). The observable is the
+subtlety: the <em>global</em> mean field is a standing wave of two counter-rotating modes, so <code>|Z|</code>
+oscillates to zero and cannot be fit, whereas the sub-population <code>Z₊</code> is a single complex mode
+whose modulus decays smoothly as <code>exp(Re(λ) t)</code>. The measured oscillation frequency matches
+the analytic <code>Ω</code> to a mean absolute error of 0.11 (~7 %) — the analytic <code>Ω</code> is nearly constant
+across the sweep, so this is a value check, not a rank one — confirming the mode oscillates at
+the predicted frequency, i.e. the eigenvalue is genuinely complex. Hash-sealed in
+<code>examples/real_data/kuramoto_bimodal/kuramoto_bimodal_hopf_external_validation.json</code>. So the
+collective coordinate carries <strong>both</strong> regimes of the study's map: non-oscillatory →
+autocorrelation (§3.13), oscillatory → envelope-growth (here), exactly as the scalar normal
+forms (§3.10, §3.11) and the grid (§3.9) do. Honest limits: a noiseless finite-<code>N</code> ringdown
+(the <code>O(1/√N)</code> floor bounds the envelope), the oscillatory regime <code>ω₀ &gt; Δ</code> only, and coupling
+below <code>K_c</code>.</p>
+<h2 id="4-discussion">4. Discussion<a class="headerlink" href="#4-discussion" title="Permanent link">&para;</a></h2>
+<p><strong>Detection is a commodity; the moat is the evidence.</strong> Across four independent physical domains — and a fifth, molecular one — generic early-warning <em>detection</em> at an honest operating point is sparse and, by a permutation or selection-controlled test, at chance. This is not a defect of one suite: the canonical Dakos detector fares no better on its own data, and the celebrated single-cell and bulk DNB benchmarks do not clear a modality-appropriate honest null either. What is <em>not</em> a commodity is the auditable, reproducible, claim-bounded envelope the protocol produces — a matched-false-alarm operating point, a permutation p-value, and a hash-sealed <code>EarlyWarningEvidence</code> record for every transition, <strong>including the sealed silences</strong>. A positive early-warning claim should be required to clear this operational bar; most published EWS results have only cleared the retrospective per-record one.</p>
+<p><strong>A domain-specific detector wins where the signature is deterministic — and the moat certifies which.</strong> The commodity result is about <em>modality-neutral</em> detectors. When the domain carries a physically deterministic, directly-measurable instability — a growing electromechanical mode, whose exponential envelope <em>is</em> the eigenvalue crossing into instability — a detector that reads that quantity beats the whole generic suite decisively (grid modal growth, 36/90, p = 0.0001, versus every generic member at chance). But the same detector <em>idea</em> on a murky domain (the preictal spectral rise) is itself at chance. So the deliverable is not "build domain-specific detectors" as a slogan — a domain-specific detector does not automatically win — but the <strong>matched-false-alarm moat that certifies the difference</strong>: the identical honest test that flags commodity detection as at chance also licenses a genuinely-skilled detector where a real signature exists, and refuses to license a plausible-but-empty one where it does not. Value is unlocked per-domain, and only when the physics carries a detectable signal that clears the operational bar.</p>
+<p><strong>The winning detector estimates an eigenvalue, and that is externally checkable.</strong> The domain-specific grid result is not a black box that happens to correlate with trouble: the quantity it reads is the dominant mode's growth rate — the real part of a physical eigenvalue crossing toward instability — and §3.9–§3.12 confirm it against three <em>independent</em> ground truths (a power-system simulator's small-signal eigenvalues, and the closed-form Jacobian eigenvalues of two bifurcation classes). This turns the moat from a matched-false-alarm <em>ranking</em> into a claim about a named, first-principles quantity, and it yields a small operational rule (§3.12): the eigenvalue's real part is universal, but read it with the envelope-growth family on an oscillatory mode and the autocorrelation family on a non-oscillatory one — because on an oscillatory mode the lag-one autocorrelation is confounded by the oscillation, and on a non-oscillatory one there is no envelope to fit. A detector that clears the operational bar <em>and</em> estimates a quantity you can check against an eigenvalue is a stronger deliverable than either property alone.</p>
+<p><strong>Selection freedom is a hidden operating cost.</strong> The bulk-DNB case adds a specific lesson: when the detector <em>chooses</em> its own module (or feature set) to peak at the transition, an honest null must be granted the same choice. A surrogate that re-selects from scratch on shuffled time absorbs most of the apparent signal — so a fair null for a self-selecting detector is not an afterthought but the whole test.</p>
+<p><strong>The evaluation gap is the finding.</strong> The difference between "there is a detectable rising trend in this record's approach" (retrospective, per-record, vs surrogates) and "the detector fires on transitions more than on controls at a fixed false-alarm budget" (operational, matched, significance-tested) is exactly the gap between the literature's positive results and this study's null. That gap — not any single detector — is what the four-domain replication and the Dakos head-to-head expose.</p>
+<h2 id="5-limitations">5. Limitations<a class="headerlink" href="#5-limitations" title="Permanent link">&para;</a></h2>
+<p>Stated plainly, because they bound the claim:</p>
+<ul>
+<li><strong>Small corpora, low power.</strong> With 6–12 transitions per physical domain — and only 3 lineages (single-cell) or 1 exposed arm (bulk) in the molecular one — the significance tests have limited power; "at chance" bounds the <em>demonstrated</em> skill and does <strong>not</strong> prove early warning is impossible. A modestly skilled detector could remain non-significant at this n.</li>
+<li><strong>One competitor.</strong> Only the Dakos AR(1)-Kendall-τ detector was run head-to-head on the physical domains; modern approaches (e.g. deep-learning tipping-point predictors) were not tested and could behave differently.</li>
+<li><strong>Single-subject EEG; within-record climate null.</strong> The EEG corpus is one subject (chb01); the palaeoclimate null is the stable pre-approach interval of each record, which carries that record's own variability and so is conservative.</li>
+<li><strong>Parameterisation.</strong> One reasonable choice of window, step, baseline and target false alarm was used per domain; a sweep was not performed.</li>
+<li><strong>DNB caveats.</strong> The single-cell index is taken from the published supplement (its bootstrap SE drives the surrogate), not re-derived from the confounded raw qPCR; the bulk case has one exposed arm, so it is a single-transition surrogate test, not a corpus, and its module search is a greedy reimplementation of the DNB selection rather than the authors' exact procedure. These bound the molecular result to "no significance at this resolution / under a selection-controlled null", not a refutation of the DNB method.</li>
+<li><strong>Domain-specific operating point.</strong> The grid modal detector's operating point (focal aggregation, recency weighting) was chosen by a variant search on a development half and reported on a held-out half, so the held-out lead count (24/45, p = 0.0002) is the unbiased estimate and the full-corpus count (36/90) is the fitted-model deployment figure; both are sealed. The corpus is one power-system dataset at one sampling rate with two-second windows, so the strong grid result bounds <em>demonstrated</em> skill on PSML growing-oscillation transitions, not a universal grid claim. The scalp-EEG spectral counterpoint is one subject (chb01, six seizures), so its at-chance result is low-power like the generic EEG result.</li>
+</ul>
+<h2 id="6-reproduction">6. Reproduction<a class="headerlink" href="#6-reproduction" title="Permanent link">&para;</a></h2>
+<p>Every result regenerates deterministically (no randomness in the pipelines; the permutation test uses a fixed seed). With each raw corpus in a directory:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>python<span class="w"> </span>bench/early_warning_leadtime_eeg.py<span class="w">     </span>DATA<span class="w"> </span>OUT<span class="w">   </span><span class="c1"># brain</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>python<span class="w"> </span>bench/early_warning_leadtime_cardiac.py<span class="w"> </span>DATA<span class="w"> </span>OUT<span class="w">   </span><span class="c1"># heart</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>python<span class="w"> </span>bench/early_warning_leadtime_grid.py<span class="w">    </span>DATA<span class="w"> </span>OUT<span class="w">   </span><span class="c1"># grid</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>python<span class="w"> </span>bench/early_warning_leadtime_climate.py<span class="w"> </span>DATA<span class="w"> </span>OUT<span class="w">   </span><span class="c1"># palaeoclimate</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>python<span class="w"> </span>bench/head_to_head_ar1_kendall.py<span class="w"> </span>OUT<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">    </span>--climate-dir<span class="w"> </span>C<span class="w"> </span>--grid-dir<span class="w"> </span>G<span class="w"> </span>--cardiac-dir<span class="w"> </span>H<span class="w"> </span>--eeg-dir<span class="w"> </span>E<span class="w">   </span><span class="c1"># head-to-head</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>python<span class="w"> </span>-m<span class="w"> </span>bench.early_warning_dnb<span class="w">          </span>OUT<span class="w">               </span><span class="c1"># single-cell DNB (embedded summary)</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>python<span class="w"> </span>-m<span class="w"> </span>bench.early_warning_dnb_bulk<span class="w">     </span>DATA<span class="w"> </span>OUT<span class="w">          </span><span class="c1"># bulk GSE2565 DNB</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>python<span class="w"> </span>-m<span class="w"> </span>bench.grid_modal_head_to_head<span class="w">    </span>PSML<span class="w"> </span>OUT<span class="w">          </span><span class="c1"># grid modal vs generic head-to-head</span>
+</code></pre></div>
+<p>The single-cell DNB capstone reads only the embedded published summary, so it needs no external data; the bulk capstone reads the citation-only GSE2565 files; the grid modal head-to-head reads the citation-only PSML scenarios. The sealed evidence, aggregate results (with the permutation block), the head-to-head comparisons, and the sealed grid modal-vs-generic result (<code>examples/real_data/psml_modal_growth/</code>) are committed under <code>examples/real_data/</code>. A fresh run reproduces every <code>content_hash</code> bit-for-bit; the integrity tests recompute each sealed hash from the committed payload alone.</p>
+<h2 id="7-data-availability">7. Data availability<a class="headerlink" href="#7-data-availability" title="Permanent link">&para;</a></h2>
+<p>Raw corpora are public and cited, not redistributed:</p>
+<ul>
+<li>CHB-MIT Scalp EEG Database — <a href="https://physionet.org/content/chbmit/">https://physionet.org/content/chbmit/</a></li>
+<li>MIT-BIH Atrial Fibrillation Database — <a href="https://physionet.org/content/afdb/">https://physionet.org/content/afdb/</a></li>
+<li>PSML power-system dataset (Zheng et al. 2021) — the 23-bus Millisecond-level PMU measurements.</li>
+<li>Dakos et al. 2008 palaeoclimate records — <a href="https://github.com/earlywarningtoolbox/datasets">https://github.com/earlywarningtoolbox/datasets</a>.</li>
+<li>Mojtahedi et al. 2016 single-cell transition index — Table S2 of the paper (index + bootstrap SE per lineage per day).</li>
+<li>GSE2565 phosgene lung-injury expression — <a href="https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE2565">https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE2565</a>.</li>
+</ul>
+<h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h2>
+<ul>
+<li>Scheffer M, Bascompte J, Brock WA, et al. Early-warning signals for critical transitions. <em>Nature</em> 461:53 (2009).</li>
+<li>Dakos V, Scheffer M, van Nes EH, Brovkin V, Petoukhov V, Held H. Slowing down as an early warning signal for abrupt climate change. <em>PNAS</em> 105(38):14308 (2008).</li>
+<li>Dakos V, Carpenter SR, Brock WA, et al. Methods for detecting early warning signals of critical transitions in time series. <em>PLoS ONE</em> 7(7):e41010 (2012).</li>
+<li>Shoeb A. Application of machine learning to epileptic seizure onset detection and treatment. PhD thesis, MIT (2009); CHB-MIT via PhysioNet.</li>
+<li>Moody GB, Mark RG. A new method for detecting atrial fibrillation using R-R intervals. <em>Computers in Cardiology</em> 10:227 (1983).</li>
+<li>Goldberger AL, Amaral LAN, Glass L, et al. PhysioBank, PhysioToolkit, and PhysioNet. <em>Circulation</em> 101(23):e215 (2000).</li>
+<li>Zheng X, et al. A multi-scale time-series dataset with benchmark for machine learning in electricity (PSML) (2021).</li>
+<li>Kundur P. <em>Power System Stability and Control.</em> McGraw-Hill (1994) — small-signal (modal) stability; a mode's eigenvalue real part is its growth rate.</li>
+<li>Mormann F, Andrzejak RG, Elger CE, Lehnertz K. Seizure prediction: the long and winding road. <em>Brain</em> 130(2):314 (2007).</li>
+<li>Chen L, Liu R, Liu Z-P, Li M, Aihara K. Detecting early-warning signals for sudden deterioration of complex diseases by dynamical network biomarkers. <em>Scientific Reports</em> 2:342 (2012).</li>
+<li>Mojtahedi M, Skupin A, Zhou J, et al. Cell fate decision as high-dimensional critical state transition. <em>PLoS Biology</em> 14(12):e2000640 (2016).</li>
+<li>Sciuto AM, Phillips CS, Orzolek LD, Hensley JL, Chang L-Y, Nadadur SS. Genomic analysis of murine pulmonary tissue following carbonyl chloride inhalation. <em>Chemical Research in Toxicology</em> 18(11):1654 (2005); GSE2565.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      © 1996–2026 Miroslav Šotek. All rights reserved.
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/anulum/scpn-phase-orchestrator" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://pypi.org/project/scpn-phase-orchestrator/" target="_blank" rel="noopener" title="pypi.org" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.8 200.5c-7.7-30.9-22.3-54.2-53.4-54.2h-40.1v47.4c0 36.8-31.2 67.8-66.8 67.8H172.7c-29.2 0-53.4 25-53.4 54.3v101.8c0 29 25.2 46 53.4 54.3 33.8 9.9 66.3 11.7 106.8 0 26.9-7.8 53.4-23.5 53.4-54.3v-40.7H226.2v-13.6h160.2c31.1 0 42.6-21.7 53.4-54.2 11.2-33.5 10.7-65.7 0-108.6M286.2 444.7a20.4 20.4 0 1 1 0-40.7 20.4 20.4 0 1 1 0 40.7M167.8 248.1h106.8c29.7 0 53.4-24.5 53.4-54.3V91.9c0-29-24.4-50.7-53.4-55.6-35.8-5.9-74.7-5.6-106.8.1-45.2 8-53.4 24.7-53.4 55.6v40.7h106.9v13.6h-147c-31.1 0-58.3 18.7-66.8 54.2-9.8 40.7-10.2 66.1 0 108.6 7.6 31.6 25.7 54.2 56.8 54.2H101v-48.8c0-35.3 30.5-66.4 66.8-66.4m-6.6-183.4a20.4 20.4 0 1 1 0 40.8 20.4 20.4 0 1 1 0-40.8"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections", "navigation.expand", "navigation.tabs", "navigation.top", "navigation.indexes", "content.code.copy", "content.code.annotate", "search.highlight", "search.suggest", "toc.follow"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>

@@ -1,0 +1,9084 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Domain-agnostic synchronisation-analysis and honest-evaluation toolkit built on Kuramoto/UPDE phase dynamics">
+      
+      
+        <meta name="author" content="Miroslav Šotek">
+      
+      
+        <link rel="canonical" href="https://anulum.github.io/scpn-phase-orchestrator/reference/api/monitor_modal_participation/">
+      
+      
+        <link rel="prev" href="../monitor_oscillation_modes/">
+      
+      
+        <link rel="next" href="../monitor_pid/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../../assets/anulum_logo_company.jpg">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Monitor — Modal Participation - SCPN Phase Orchestrator</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="amber">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#modal-participation-damping-controllability-and-mode-shapes" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../../.." title="SCPN Phase Orchestrator" class="md-header__button md-logo" aria-label="SCPN Phase Orchestrator" data-md-component="logo">
+      
+  <img src="../../../assets/anulum_logo.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            SCPN Phase Orchestrator
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Monitor — Modal Participation
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="deep-purple" data-md-color-accent="amber"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="deep-purple" data-md-color-accent="amber"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/anulum/scpn-phase-orchestrator" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    anulum/scpn-phase-orchestrator
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../getting-started/onboarding/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Getting Started
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../concepts/system_overview/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Concepts
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../guide/choosing_an_engine/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Guides
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../specs/binding_spec.schema.json" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Specifications
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../tutorials/00_choose_a_use_case/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Tutorials
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../" class="md-tabs__link">
+          
+  
+  
+    
+  
+  API Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../galleries/beachhead_verticals/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Gallery
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../roadmap/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../papers/JOSS_DRAFT/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Papers
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../../studies/early_warning_matched_false_alarm/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Validation
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../../faq/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  FAQ
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../.." title="SCPN Phase Orchestrator" class="md-nav__button md-logo" aria-label="SCPN Phase Orchestrator" data-md-component="logo">
+      
+  <img src="../../../assets/anulum_logo.png" alt="logo">
+
+    </a>
+    SCPN Phase Orchestrator
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/anulum/scpn-phase-orchestrator" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    anulum/scpn-phase-orchestrator
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../getting-started/onboarding/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Onboarding Handbook
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../getting-started/executive_overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Executive Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../getting-started/use_cases/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Use Cases and Value Map
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../getting-started/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../getting-started/quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quickstart
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../getting-started/troubleshooting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Troubleshooting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../getting-started/minimal_domainpack_5min/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Minimal Domainpack in 5 Minutes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../getting-started/hello_world/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorial: Hello World
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../getting-started/start_here/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Start Here (Learning Path)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concepts
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Concepts
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../concepts/system_overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    System Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../concepts/pipeline_firing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    How the Pipeline Fires
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../concepts/pipeline_execution/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Pipeline Execution
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../concepts/oscillators_PIS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Oscillators & PIS
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../concepts/knobs_K_alpha_zeta_Psi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Knobs: K, α, ζ, Ψ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../concepts/memory_imprint/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Memory Imprint
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../concepts/phase_control_theory/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Phase Control Theory
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../concepts/domain_utilisation_schemas/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Domain Utilisation Schemas
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../concepts/kuramoto_theory/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Kuramoto Theory
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/choosing_an_engine/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Choosing an Engine
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/monitor_validation_status/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor Validation Status
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/domainpack_validation_tiers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Domainpack Validation Tiers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/stuart_landau/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Stuart-Landau Amplitude Mode
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/queuewaves/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    QueueWaves Cascade Detector
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/rust_ffi/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Rust FFI Acceleration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/webgpu_backend/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    WebGPU Compute Backend
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/backend_fallbacks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Backend Fallback Chain
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/backend_strategy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Backend Strategy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/adapters/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Adapter Bridges
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/performance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Performance Tuning
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/dependency_locks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dependency Locks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/production/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Production Deployment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/differentiable_kuramoto/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Differentiable Kuramoto Layer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/advanced_dynamics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Advanced Dynamics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/control_systems/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Control Systems
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/analysis_toolkit/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Analysis Toolkit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/hardware_deployment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hardware & Deployment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/digital_twin/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Digital Twin Pattern
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/notebook_to_production/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Notebook → Production
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/interactive_tools/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Interactive Tools
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/spo_studio_operator/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SPO Studio Operator Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/auto_binding/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Auto-Binding Proposals
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/autotune_learners/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Replay-Only Autotune Learners
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/hierarchy_live_adapters/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hierarchy Adapter Boundaries
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/install_profiles/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Install Profiles
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/backend_review_gate/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Backend Review Gate
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/testing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Testing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../RELEASE_HYGIENE/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Release Hygiene
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../guide/contributor_onboarding/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributor Onboarding
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Specifications
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Specifications
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../specs/binding_spec.schema.json" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Binding Spec Schema
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../specs/phase_contract/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Phase Contract
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../specs/upde_numerics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE Numerics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../specs/lock_metrics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Lock Metrics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../specs/knm_semantics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Knm Semantics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../specs/regime_manager/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Regime Manager
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../specs/boundary_contract/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Boundary Contract
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../specs/action_compose/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Action Compose
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../specs/eval_protocol/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Eval Protocol
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../specs/resolved_runtime_defaults/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Resolved Runtime Defaults
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../specs/plugin_api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plugin API
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../specs/policy_dsl/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Policy DSL
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../specs/imprint_dynamics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Imprint Dynamics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../specs/geometry_constraints/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Geometry Constraints
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../specs/knm_calibration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Knm Calibration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../specs/audit_trace/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Audit Trace
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tutorials
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Tutorials
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../tutorials/00_choose_a_use_case/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    00 — Choose a Use Case
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../tutorials/01_new_domain_checklist/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    01 — New Domain Checklist
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../tutorials/02_oscillator_hunt_sheet/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    02 — Oscillator Hunt Sheet
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../tutorials/03_build_knm_templates/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    03 — Build Knm Templates
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../tutorials/04_differentiable_kuramoto/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    04 — Differentiable Kuramoto
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../tutorials/05_from_raw_sources_to_run/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    05 — End-to-End From Raw Sources
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../tutorials/06_deterministic_replay_for_debugging/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    06 — Deterministic Replay for Debugging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+          
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" checked>
+        
+          
+          <div class="md-nav__link md-nav__container">
+            <a href="../" class="md-nav__link ">
+              
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            </a>
+            
+              
+              <label class="md-nav__link " for="__nav_7" id="__nav_7_label" tabindex="">
+                <span class="md-nav__icon md-icon"></span>
+              </label>
+            
+          </div>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Python Facade
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../core/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core & Exceptions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../binding/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Binding
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upde/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE Engine
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upde_engine/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Core Integrator
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upde_time_varying_omega/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Time-varying Omega
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upde_doppler/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Doppler Engine
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upde_moving_frame/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Moving Frame
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upde_pha_c_handoff/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — PHA-C Handoff
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upde_pha_c_timeline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — PHA-C Event Timeline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upde_pha_c_acceptance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — PHA-C Acceptance Chain
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upde_pha_c_formal_obligation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — PHA-C Formal Obligation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upde_bayesian/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Bayesian Uncertainty
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upde_simplicial/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Simplicial (3-body)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upde_hypergraph/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Hypergraph (k-body)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upde_geometric/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Geometric (SO(2))
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upde_envelope/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Envelope (RMS)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upde_reduction/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Ott-Antonsen Reduction
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upde_splitting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Strang Splitting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upde_basin_stability/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Basin Stability
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upde_bifurcation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Bifurcation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upde_delay/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Delay
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upde_inertial/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Inertial
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upde_market/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Market
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upde_order_params/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Order Parameters
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upde_pac/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — PAC
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upde_stochastic/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Stochastic
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upde_stuart_landau/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Stuart-Landau
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../upde_swarmalator/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    UPDE — Swarmalator
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../oscillators/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Oscillators
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../coupling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coupling
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../coupling_spatial_modulator/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coupling - Spatial Modulator
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../coupling_infer/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coupling — Causal Inference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../coupling_attention_residuals/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coupling — Attention Residuals
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../coupling_te_adaptive/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coupling — TE Adaptive
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../coupling_prior/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coupling — Universal Prior
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../coupling_connectome/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coupling — HCP Connectome
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../supervisor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Supervisor
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../studio/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Studio
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../monitor/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../monitor_adaptive_kuramoto/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor — Adaptive Kuramoto
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../monitor_chimera/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor — Chimera
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../monitor_dimension/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor — Dimension
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../monitor_embedding/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor — Embedding
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../monitor_entropy_prod/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor — Entropy Production
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../monitor_koopman_edmd/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor — Koopman EDMD
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../monitor_sleep_staging/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor — Sleep Staging
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../monitor_evs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor — EVS (Entrainment)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../monitor_itpc/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor — ITPC
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../monitor_merge_window/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor — Merge Window
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../monitor_grid_modal_growth/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor — Grid Modal Growth
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../monitor_grid_modal_stream/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor — Grid Modal Stream
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../monitor_lyapunov/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor — Lyapunov
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../monitor_twin_confidence/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor — Twin Confidence
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../monitor_npe/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor — NPE
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../monitor_opt_entropy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor — OPT-Entropy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../monitor_explosive_sync/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor — Explosive Sync
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../monitor_oscillation_modes/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor — Oscillation Modes
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor — Modal Participation
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor — Modal Participation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#the-small-signal-state-matrix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The small-signal state matrix
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#modal-analysis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Modal analysis
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#relationship-to-oscillation_modes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Relationship to oscillation_modes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#numpy-floor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        NumPy floor
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#review-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Review-only
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scpn_phase_orchestrator.monitor.modal_participation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        modal_participation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="modal_participation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#scpn_phase_orchestrator.monitor.modal_participation--references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        References
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scpn_phase_orchestrator.monitor.modal_participation-classes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Classes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Classes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#scpn_phase_orchestrator.monitor.modal_participation.NetworkMode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        NetworkMode
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="NetworkMode">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#scpn_phase_orchestrator.monitor.modal_participation.NetworkMode--attributes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Attributes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scpn_phase_orchestrator.monitor.modal_participation.NetworkMode-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Methods:
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Methods:">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#scpn_phase_orchestrator.monitor.modal_participation.NetworkMode.to_dict" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        to_dict
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scpn_phase_orchestrator.monitor.modal_participation.NetworkMode.to_dict--returns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Returns
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scpn_phase_orchestrator.monitor.modal_participation-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Functions:
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Functions:">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#scpn_phase_orchestrator.monitor.modal_participation.analyse_network_modes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        analyse_network_modes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="analyse_network_modes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#scpn_phase_orchestrator.monitor.modal_participation.analyse_network_modes--parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parameters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scpn_phase_orchestrator.monitor.modal_participation.analyse_network_modes--returns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Returns
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scpn_phase_orchestrator.monitor.modal_participation.analyse_network_modes--raises" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Raises
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scpn_phase_orchestrator.monitor.modal_participation.phase_network_jacobian" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        phase_network_jacobian
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="phase_network_jacobian">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#scpn_phase_orchestrator.monitor.modal_participation.phase_network_jacobian--parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parameters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scpn_phase_orchestrator.monitor.modal_participation.phase_network_jacobian--returns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Returns
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scpn_phase_orchestrator.monitor.modal_participation.phase_network_jacobian--raises" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Raises
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../monitor_pid/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor — PID
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../monitor_poincare/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor — Poincare
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../monitor_recurrence/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor — Recurrence
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../monitor_transfer_entropy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor — Transfer Entropy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../monitor_winding/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor — Winding
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../monitor_validation_status/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Monitor — Validation Status
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ssgf/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SSGF
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ssgf_carrier/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SSGF — Geometry Carrier
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ssgf_ethical/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SSGF — Ethical Cost (C15)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../meta/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Meta-Transfer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7_71" >
+        
+          
+          <label class="md-nav__link" for="__nav_7_71" id="__nav_7_71_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Autotune
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_71_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_71">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Autotune
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../autotune/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../autotune_sindy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Phase-SINDy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../autotune_coupling_est/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coupling Estimation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../autotune_phase_extract/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Phase Extraction (Hilbert)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../autotune_freq_id/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Frequency Identification (DMD)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../autotune_reward/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reward Evaluation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../autotune_knob_attribution/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Per-Knob Attribution
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../autotune_candidate_safety_certificate/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Candidate Safety Certificate
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../autotune_supervisor_candidate/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Supervisor-Candidate Bundle
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../autotune_policy_search/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Replay Policy Search
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../actuation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Actuation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../actuation_koopman_mpc/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Actuation — Koopman MPC
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../imprint/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Imprint
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../drivers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Drivers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../audit/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Audit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../assurance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Assurance Case
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../evaluation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Honest Early-Warning Auditor
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reporting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reporting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../artifacts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Artifacts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../distributed/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Distributed Sync
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../scaffold/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Scaffold
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../visualization/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Visualization
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../adapters/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Adapters
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../plugins/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Plugins
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../queuewaves/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    QueueWaves
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../nn/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Neural Network (nn)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../nn/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    nn/ Module — Full Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../nn_physics_validation_plan/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    nn/ Physics Validation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+          
+          
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7_90" >
+        
+          
+          <label class="md-nav__link" for="__nav_7_90" id="__nav_7_90_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    nn Contracts
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_7_90_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7_90">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    nn Contracts
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../nn_bold_contract/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    BOLD
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../nn_chimera_contract/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Chimera
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../nn_kuramoto_layer_contract/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Kuramoto Layer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../nn_reservoir_contract/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reservoir
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../nn_simplicial_layer_contract/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Simplicial Layer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../nn_spectral_contract/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Spectral
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../nn_stuart_landau_layer_contract/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Stuart-Landau Layer
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../nn_xfail_skip_register/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    nn xFail/Skip Register
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../grpc_gen_fallback_aliases/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    gRPC Fallback Aliases
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../end_to_end_wiring_audit/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    End-to-End Wiring Audit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../documentation_coverage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Documentation Coverage
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Gallery
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Gallery
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../galleries/beachhead_verticals/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Beachhead Verticals
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../galleries/domainpack_gallery/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Domainpack Gallery
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../galleries/notebooks_and_demos/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Notebooks & Demos
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../galleries/notebook_execution_matrix/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Notebook Execution Matrix
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../galleries/cardiac_rhythm_benchmark/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Cardiac Rhythm Benchmark
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../galleries/power_grid_benchmark/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Power Grid Benchmark
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../galleries/reference_benchmark_snapshot/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference Benchmark Snapshot
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../galleries/capabilities/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Capabilities & Use Cases
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../roadmap/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Public Roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../FACT_BASED_OVERVIEW/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Fact-Based Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../architecture_product_boundaries/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture & Product Boundaries
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../architecture_decisions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture Decisions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../ASSUMPTIONS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Assumptions & Constants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_10" >
+        
+          
+          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Papers
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_10">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Papers
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../papers/JOSS_DRAFT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    JOSS: Phase Dynamics Compiler
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../papers/SAFETY_CERT_DRAFT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Safety Certification Analysis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_11" >
+        
+          
+          <label class="md-nav__link" for="__nav_11" id="__nav_11_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Validation
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_11">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Validation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../studies/early_warning_matched_false_alarm/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Early-Warning: Honest False-Alarm Evaluation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../validation/iso_ne_case1_forced_oscillation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Real-Data Case Study: ISO-NE Forced Oscillation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../studies/sleep_staging_sleepedf/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Real-Data Case Study: Sleep-EDF N3 vs Wake
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../studies/cap_multichannel_n3_vs_wake/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Real-Data Case Study: CAP Multi-Channel N3 vs Wake
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../studies/cap_kuramoto_diagnostic/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Diagnostic Study: CAP Kuramoto Detector
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../studies/cap_kuramoto_variants/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Detector Panel: CAP Kuramoto Variants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../studies/sleepedf_kuramoto_variants/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Transfer Test: Sleep-EDF Kuramoto Variants
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../studies/chbmit_multichannel_kuramoto/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Real-Data Case Study: CHB-MIT Multi-Channel Kuramoto Pre-Ictal
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../studies/regime_adaptive_ensemble/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ensemble: Regime-Adaptive Cross-Corpus Test
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../studies/synthetic_honest_audit_demo/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Harness Demo: Synthetic Critical-Slowing-Down Audit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../studies/detector_ranking_report/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Meta-Analysis: Detector Ranking & Refinement Backlog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../VALIDATION_REPORT/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    V&V Report
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../SAFETY_ANALYSIS/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Safety Analysis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../VALIDATION_STUDY_PROTOCOL/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Clinical Study Protocol
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../formal/kinematic_safety/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Formal Kinematic Safety
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../faq/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FAQ
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#the-small-signal-state-matrix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The small-signal state matrix
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#modal-analysis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Modal analysis
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#relationship-to-oscillation_modes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Relationship to oscillation_modes
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#numpy-floor" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        NumPy floor
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#review-only" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Review-only
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#scpn_phase_orchestrator.monitor.modal_participation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        modal_participation
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="modal_participation">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#scpn_phase_orchestrator.monitor.modal_participation--references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        References
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scpn_phase_orchestrator.monitor.modal_participation-classes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Classes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Classes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#scpn_phase_orchestrator.monitor.modal_participation.NetworkMode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        NetworkMode
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="NetworkMode">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#scpn_phase_orchestrator.monitor.modal_participation.NetworkMode--attributes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Attributes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scpn_phase_orchestrator.monitor.modal_participation.NetworkMode-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Methods:
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Methods:">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#scpn_phase_orchestrator.monitor.modal_participation.NetworkMode.to_dict" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        to_dict
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scpn_phase_orchestrator.monitor.modal_participation.NetworkMode.to_dict--returns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Returns
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scpn_phase_orchestrator.monitor.modal_participation-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Functions:
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Functions:">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#scpn_phase_orchestrator.monitor.modal_participation.analyse_network_modes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        analyse_network_modes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="analyse_network_modes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#scpn_phase_orchestrator.monitor.modal_participation.analyse_network_modes--parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parameters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scpn_phase_orchestrator.monitor.modal_participation.analyse_network_modes--returns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Returns
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scpn_phase_orchestrator.monitor.modal_participation.analyse_network_modes--raises" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Raises
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scpn_phase_orchestrator.monitor.modal_participation.phase_network_jacobian" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        phase_network_jacobian
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="phase_network_jacobian">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#scpn_phase_orchestrator.monitor.modal_participation.phase_network_jacobian--parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parameters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scpn_phase_orchestrator.monitor.modal_participation.phase_network_jacobian--returns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Returns
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#scpn_phase_orchestrator.monitor.modal_participation.phase_network_jacobian--raises" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Raises
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="modal-participation-damping-controllability-and-mode-shapes">Modal Participation — Damping Controllability and Mode Shapes<a class="headerlink" href="#modal-participation-damping-controllability-and-mode-shapes" title="Permanent link">&para;</a></h1>
+<p><code>monitor.modal_participation</code> is the model-based companion to the data-driven
+<a href="../monitor_oscillation_modes/">oscillation-mode estimator</a>. The matrix-pencil
+estimator reads a measured ringdown and returns each mode's <em>damping</em>; this module
+reads the network <em>model</em> and returns the two further things a
+damping-recommendation engine needs: <strong>where</strong> an inter-area mode swings (mode
+shape and participation factors) and <strong>which actuator</strong> damps it best (modal
+controllability). A single ringdown signal cannot give those — they come from the
+eigenstructure of the small-signal state matrix.</p>
+<h2 id="the-small-signal-state-matrix">The small-signal state matrix<a class="headerlink" href="#the-small-signal-state-matrix" title="Permanent link">&para;</a></h2>
+<p><code>phase_network_jacobian</code> linearises the engine's Sakaguchi–Kuramoto coupling
+dynamics about an operating point <code>θ*</code> (typically a synchronised fixed point
+reached by running the engine):</p>
+<ul>
+<li>off-diagonal: <code>J_ik = K_ik cos(θ_k* − θ_i* − α_ik)</code></li>
+<li>diagonal: <code>J_ii = −Σ_{k≠i} K_ik cos(θ_k* − θ_i* − α_ik) − ζ cos(Ψ − θ_i*)</code></li>
+</ul>
+<p>This matches the integrator's derivative exactly. For a symmetric, lag-free
+network the Jacobian is symmetric negative-semidefinite — overdamped, with real
+eigenvalues and no oscillation. The oscillatory inter-area modes that reliability
+standards screen for appear precisely when the Sakaguchi phase lag <code>α</code> or a
+directed (asymmetric) coupling break that symmetry, which is the regime the SCPN
+engine runs in. A second-order swing/companion state matrix can be analysed
+directly too — <code>analyse_network_modes</code> accepts any continuous-time matrix.</p>
+<h2 id="modal-analysis">Modal analysis<a class="headerlink" href="#modal-analysis" title="Permanent link">&para;</a></h2>
+<p><code>analyse_network_modes</code> eigen-decomposes the state matrix <code>A</code> (LAPACK <code>geev</code> via
+NumPy) and, for each eigenvalue <code>λ = σ + jω</code>, reports:</p>
+<ol>
+<li><strong>Frequency</strong> <code>f = |ω| / 2π</code> and <strong>damping ratio</strong> <code>ζ = −σ / |λ|</code> (Kundur 1994,
+   §12). A growing (unstable) mode has a negative damping ratio; the marginal
+   global-phase mode of a Kuramoto Jacobian appears at <code>f = 0</code>, <code>ζ = 0</code>.</li>
+<li><strong>Mode shape</strong> — the right eigenvector <code>φ_i</code>, unit-norm and phase-anchored, so
+   <code>|φ_ki|</code> is oscillator <code>k</code>'s relative swing amplitude and <code>∠φ_ki</code> its relative
+   phase. Anti-phase entries identify the machines that swing against each other.</li>
+<li><strong>Participation factors</strong> <code>p_ki = φ_ki · ψ_ik</code> (Pérez-Arriaga, Verghese &amp;
+   Schweppe 1982), with <code>ψ_i</code> the matching left eigenvector — dimensionless, real,
+   non-negative, summing to one. <code>participation[k]</code> is how much oscillator <code>k</code>
+   shapes the mode; <code>dominant_state</code> is the largest.</li>
+<li><strong>Modal controllability</strong> <code>|ψ_i · b_j|</code> for each column <code>b_j</code> of an optional
+   input matrix <code>B</code> — how strongly input <code>j</code> can drive the mode. <code>dominant_input</code>
+   is the most effective actuator: where to add damping.</li>
+</ol>
+<p>Complex eigenvalues of a real matrix occur in conjugate pairs; only the
+non-negative-frequency member of each pair is reported. Modes are ordered by
+ascending damping ratio — the least-damped, most critical mode first. A defective
+(non-diagonalisable) state matrix is rejected: its left eigenvectors, and the
+participation factors built from them, do not exist.</p>
+<h2 id="relationship-to-oscillation_modes">Relationship to <code>oscillation_modes</code><a class="headerlink" href="#relationship-to-oscillation_modes" title="Permanent link">&para;</a></h2>
+<p>The two pieces describe the <em>same</em> linear modes from opposite ends. For a linear
+ringdown <code>x(t) = e^{At} x₀</code>, <code>estimate_oscillation_modes</code> recovers the eigenvalues
+of <code>A</code> from the measured signal, and <code>analyse_network_modes(A)</code> computes them from
+the model — they agree (this cross-check is part of the test suite). Use the
+estimator when you only have measurements; use this module when you have the model
+and need mode shape, participation, or controllability.</p>
+<h2 id="numpy-floor">NumPy floor<a class="headerlink" href="#numpy-floor" title="Permanent link">&para;</a></h2>
+<p>The analysis is one offline eigen-decomposition of a modest state matrix (LAPACK
+via NumPy), not a per-step hot path, so it stays on the NumPy floor — the same
+judgement as <code>oscillation_modes</code> and <code>autotune.freq_id</code>; it carries no
+multi-language acceleration chain.</p>
+<h2 id="review-only">Review-only<a class="headerlink" href="#review-only" title="Permanent link">&para;</a></h2>
+<p>Like every monitor primitive, the analysis only reads a model and reports modes;
+it never changes bindings, layers, or coupling.</p>
+
+
+<div class="doc doc-object doc-module">
+
+
+
+<h2 id="scpn_phase_orchestrator.monitor.modal_participation" class="doc doc-heading">
+            <span class="doc doc-object-name doc-module-name">modal_participation</span>
+
+
+<a href="#scpn_phase_orchestrator.monitor.modal_participation" class="headerlink" title="Permanent link">&para;</a></h2>
+
+    <div class="doc doc-contents first">
+
+        <p>Model-based modal participation and damping controllability of the phase network.</p>
+<p>Where :mod:<code>~scpn_phase_orchestrator.monitor.oscillation_modes</code> recovers modal
+<em>damping</em> from a measured ringdown (data-driven), this module answers the two
+questions a damping-recommendation engine needs from the network <em>model</em>: for a
+poorly-damped inter-area mode, <strong>which oscillators swing in it</strong> (mode shape and
+participation factors → where the mode is observable) and <strong>which actuators can
+damp it</strong> (modal controllability → where to act). A single ringdown signal cannot
+give those — they come from the eigenstructure of the small-signal state matrix.</p>
+<p>The small-signal state matrix of the Sakaguchi–Kuramoto network is the Jacobian
+of the engine's coupling dynamics <code>θ̇_i = ω_i + Σ_j K_ij sin(θ_j − θ_i − α_ij)
++ ζ sin(Ψ − θ_i)</code> linearised about an operating point <code>θ*</code>
+(:func:<code>phase_network_jacobian</code>): <code>J_ik = K_ik cos(θ_k* − θ_i* − α_ik)</code> off the
+diagonal and <code>J_ii = −Σ_{k≠i} K_ik cos(θ_k* − θ_i* − α_ik) − ζ cos(Ψ − θ_i*)</code> on
+it. For a symmetric, lag-free network the Jacobian is symmetric
+negative-semidefinite (overdamped, real eigenvalues); the oscillatory inter-area
+modes that reliability standards screen for appear precisely when the phase lag
+<code>α</code> or a directed (asymmetric) coupling break that symmetry — the regime the
+SCPN engine runs in.</p>
+<p>:func:<code>analyse_network_modes</code> performs the small-signal modal analysis of any
+continuous-time state matrix <code>A</code> (so a second-order swing/companion form can be
+fed in directly too). It eigen-decomposes <code>A</code> (LAPACK <code>geev</code> via NumPy), reads
+each eigenvalue <code>λ = σ + jω</code> as a mode of frequency <code>f = |ω| / 2π</code> and damping
+ratio <code>ζ = −σ / |λ|</code> (Kundur 1994, §12), and from the right eigenvector <code>φ_i</code>
+and the matching left eigenvector <code>ψ_i</code> (the rows of <code>A</code>'s eigenvector
+inverse) forms the dimensionless <strong>participation factor</strong> <code>p_ki = φ_ki · ψ_ik</code>
+(Pérez-Arriaga, Verghese &amp; Schweppe 1982) and the <strong>modal controllability</strong>
+<code>|ψ_i · b_j|</code> of mode <code>i</code> from input <code>j</code>. Complex eigenvalues of a real
+matrix occur in conjugate pairs; only the non-negative-frequency member of each
+pair is reported. The analysis is diagnostic only — it reads a model and reports
+modes; it never changes bindings, layers, or coupling.</p>
+<p>The whole analysis is one offline eigen-decomposition of a modest state matrix
+(LAPACK via NumPy), not a per-step hot path, so it stays on the NumPy floor — the
+same judgement as <code>oscillation_modes</code> and <code>autotune.freq_id</code>.</p>
+<h4 id="scpn_phase_orchestrator.monitor.modal_participation--references">References<a class="headerlink" href="#scpn_phase_orchestrator.monitor.modal_participation--references" title="Permanent link">&para;</a></h4>
+<ul>
+<li>Kundur, P. 1994, <em>Power System Stability and Control</em> (McGraw-Hill), §12 —
+  small-signal stability, eigenvalues, mode shapes, participation factors.</li>
+<li>Pérez-Arriaga, I. J., Verghese, G. C. &amp; Schweppe, F. C. 1982,
+  <em>IEEE Trans. Power App. Syst.</em> PAS-101(9):3117–3125 — selective modal analysis;
+  participation factors.</li>
+<li>Dörfler, F. &amp; Bullo, F. 2014, <em>Automatica</em> 50(6):1539–1564 — synchronisation in
+  networks of phase oscillators; the Kuramoto stability Jacobian.</li>
+<li>NERC PRC-028 (oscillation monitoring) — damping-ratio screening of inter-area
+  modes.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+<h3 id="scpn_phase_orchestrator.monitor.modal_participation-classes">Classes<a href="#scpn_phase_orchestrator.monitor.modal_participation-classes" class="headerlink" title="Permanent link">&para;</a></h3>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h4 id="scpn_phase_orchestrator.monitor.modal_participation.NetworkMode" class="doc doc-heading">
+            <span class="doc doc-object-name doc-class-name">NetworkMode</span>
+
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-dataclass"><code>dataclass</code></small>
+  </span>
+
+<a href="#scpn_phase_orchestrator.monitor.modal_participation.NetworkMode" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">NetworkMode</span><span class="p">(</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">eigenvalue</span><span class="p">:</span> <span class="nb">complex</span><span class="p">,</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">frequency_hz</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">damping_ratio</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">mode_shape</span><span class="p">:</span> <span class="n">ComplexArray</span><span class="p">,</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">participation</span><span class="p">:</span> <span class="n">FloatArray</span><span class="p">,</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">dominant_state</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="n">controllability</span><span class="p">:</span> <span class="n">FloatArray</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="n">dominant_input</span><span class="p">:</span> <span class="nb">int</span> <span class="o">|</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>    <span class="n">poorly_damped</span><span class="p">:</span> <span class="nb">bool</span><span class="p">,</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="p">)</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+
+
+        <p>One small-signal mode of a phase-oscillator network.</p>
+<p>Equality is identity-based (<code>eq=False</code>): the array fields make value
+equality ambiguous, and modes are compared field by field, never as wholes.</p>
+<h6 id="scpn_phase_orchestrator.monitor.modal_participation.NetworkMode--attributes">Attributes<a class="headerlink" href="#scpn_phase_orchestrator.monitor.modal_participation.NetworkMode--attributes" title="Permanent link">&para;</a></h6>
+<p>eigenvalue : complex
+    The continuous-time eigenvalue <code>σ + jω</code> (rad/s) of the state matrix,
+    taken from the non-negative-frequency member of its conjugate pair.
+frequency_hz : float
+    Modal oscillation frequency <code>|ω| / 2π</code> in hertz (<code>≥ 0</code>); <code>0</code> for a
+    non-oscillatory (real-eigenvalue) mode.
+damping_ratio : float
+    Dimensionless damping ratio <code>ζ = −σ / |λ|</code>; <code>&gt; 0</code> is stable, <code>&lt; 0</code>
+    is growing (unstable), <code>0</code> is the marginal global-phase mode.
+mode_shape : ComplexArray
+    Right eigenvector, unit Euclidean norm and phase-anchored so the
+    largest-magnitude entry is real-positive: per-oscillator relative
+    amplitude (<code>|·|</code>) and relative phase (<code>∠</code>) of the swing.
+participation : FloatArray
+    Real participation factors over oscillators, <code>≥ 0</code> and summing to <code>1</code>;
+    <code>participation[k]</code> measures how much oscillator <code>k</code> shapes the mode.
+dominant_state : int
+    Index of the oscillator with the largest participation factor.
+controllability : FloatArray | None
+    Per-input modal controllability <code>|ψ_i^{H} b_j|</code> when an input matrix is
+    supplied, otherwise <code>None</code>; larger means input <code>j</code> damps the mode more.
+dominant_input : int | None
+    Index of the most effective input, or <code>None</code> without an input matrix.
+poorly_damped : bool
+    Whether <code>damping_ratio</code> is below the screening threshold.</p>
+
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-children">
+
+
+
+
+
+
+
+
+<h5 id="scpn_phase_orchestrator.monitor.modal_participation.NetworkMode-functions">Methods:<a href="#scpn_phase_orchestrator.monitor.modal_participation.NetworkMode-functions" class="headerlink" title="Permanent link">&para;</a></h5>
+
+<div class="doc doc-object doc-function">
+
+
+<h6 id="scpn_phase_orchestrator.monitor.modal_participation.NetworkMode.to_dict" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">to_dict</span>
+
+
+<a href="#scpn_phase_orchestrator.monitor.modal_participation.NetworkMode.to_dict" class="headerlink" title="Permanent link">&para;</a></h6>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">to_dict</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">object</span><span class="p">]</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Return a JSON-serialisable mapping of the mode.</p>
+<h6 id="scpn_phase_orchestrator.monitor.modal_participation.NetworkMode.to_dict--returns">Returns<a class="headerlink" href="#scpn_phase_orchestrator.monitor.modal_participation.NetworkMode.to_dict--returns" title="Permanent link">&para;</a></h6>
+<p>dict[str, object]
+    The eigenvalue (as <code>[real, imag]</code>), frequency, damping ratio, mode
+    shape (as <code>[real, imag]</code> pairs), participation factors, dominant
+    oscillator, per-input controllability (or <code>None</code>), dominant input,
+    and the poorly-damped flag.</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>src/scpn_phase_orchestrator/monitor/modal_participation.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-132">132</a></span>
+<span class="normal"><a href="#__codelineno-0-133">133</a></span>
+<span class="normal"><a href="#__codelineno-0-134">134</a></span>
+<span class="normal"><a href="#__codelineno-0-135">135</a></span>
+<span class="normal"><a href="#__codelineno-0-136">136</a></span>
+<span class="normal"><a href="#__codelineno-0-137">137</a></span>
+<span class="normal"><a href="#__codelineno-0-138">138</a></span>
+<span class="normal"><a href="#__codelineno-0-139">139</a></span>
+<span class="normal"><a href="#__codelineno-0-140">140</a></span>
+<span class="normal"><a href="#__codelineno-0-141">141</a></span>
+<span class="normal"><a href="#__codelineno-0-142">142</a></span>
+<span class="normal"><a href="#__codelineno-0-143">143</a></span>
+<span class="normal"><a href="#__codelineno-0-144">144</a></span>
+<span class="normal"><a href="#__codelineno-0-145">145</a></span>
+<span class="normal"><a href="#__codelineno-0-146">146</a></span>
+<span class="normal"><a href="#__codelineno-0-147">147</a></span>
+<span class="normal"><a href="#__codelineno-0-148">148</a></span>
+<span class="normal"><a href="#__codelineno-0-149">149</a></span>
+<span class="normal"><a href="#__codelineno-0-150">150</a></span>
+<span class="normal"><a href="#__codelineno-0-151">151</a></span>
+<span class="normal"><a href="#__codelineno-0-152">152</a></span>
+<span class="normal"><a href="#__codelineno-0-153">153</a></span>
+<span class="normal"><a href="#__codelineno-0-154">154</a></span>
+<span class="normal"><a href="#__codelineno-0-155">155</a></span>
+<span class="normal"><a href="#__codelineno-0-156">156</a></span>
+<span class="normal"><a href="#__codelineno-0-157">157</a></span>
+<span class="normal"><a href="#__codelineno-0-158">158</a></span>
+<span class="normal"><a href="#__codelineno-0-159">159</a></span>
+<span class="normal"><a href="#__codelineno-0-160">160</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-132" name="__codelineno-0-132"></a><span class="k">def</span><span class="w"> </span><span class="nf">to_dict</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">object</span><span class="p">]:</span>
+<a id="__codelineno-0-133" name="__codelineno-0-133"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Return a JSON-serialisable mapping of the mode.</span>
+<a id="__codelineno-0-134" name="__codelineno-0-134"></a>
+<a id="__codelineno-0-135" name="__codelineno-0-135"></a><span class="sd">    Returns</span>
+<a id="__codelineno-0-136" name="__codelineno-0-136"></a><span class="sd">    -------</span>
+<a id="__codelineno-0-137" name="__codelineno-0-137"></a><span class="sd">    dict[str, object]</span>
+<a id="__codelineno-0-138" name="__codelineno-0-138"></a><span class="sd">        The eigenvalue (as ``[real, imag]``), frequency, damping ratio, mode</span>
+<a id="__codelineno-0-139" name="__codelineno-0-139"></a><span class="sd">        shape (as ``[real, imag]`` pairs), participation factors, dominant</span>
+<a id="__codelineno-0-140" name="__codelineno-0-140"></a><span class="sd">        oscillator, per-input controllability (or ``None``), dominant input,</span>
+<a id="__codelineno-0-141" name="__codelineno-0-141"></a><span class="sd">        and the poorly-damped flag.</span>
+<a id="__codelineno-0-142" name="__codelineno-0-142"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-143" name="__codelineno-0-143"></a>    <span class="n">controllability</span> <span class="o">=</span> <span class="p">(</span>
+<a id="__codelineno-0-144" name="__codelineno-0-144"></a>        <span class="kc">None</span>
+<a id="__codelineno-0-145" name="__codelineno-0-145"></a>        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">controllability</span> <span class="ow">is</span> <span class="kc">None</span>
+<a id="__codelineno-0-146" name="__codelineno-0-146"></a>        <span class="k">else</span> <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">controllability</span><span class="p">]</span>
+<a id="__codelineno-0-147" name="__codelineno-0-147"></a>    <span class="p">)</span>
+<a id="__codelineno-0-148" name="__codelineno-0-148"></a>    <span class="k">return</span> <span class="p">{</span>
+<a id="__codelineno-0-149" name="__codelineno-0-149"></a>        <span class="s2">&quot;eigenvalue&quot;</span><span class="p">:</span> <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">eigenvalue</span><span class="o">.</span><span class="n">real</span><span class="p">),</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">eigenvalue</span><span class="o">.</span><span class="n">imag</span><span class="p">)],</span>
+<a id="__codelineno-0-150" name="__codelineno-0-150"></a>        <span class="s2">&quot;frequency_hz&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">frequency_hz</span><span class="p">,</span>
+<a id="__codelineno-0-151" name="__codelineno-0-151"></a>        <span class="s2">&quot;damping_ratio&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">damping_ratio</span><span class="p">,</span>
+<a id="__codelineno-0-152" name="__codelineno-0-152"></a>        <span class="s2">&quot;mode_shape&quot;</span><span class="p">:</span> <span class="p">[</span>
+<a id="__codelineno-0-153" name="__codelineno-0-153"></a>            <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">value</span><span class="o">.</span><span class="n">real</span><span class="p">),</span> <span class="nb">float</span><span class="p">(</span><span class="n">value</span><span class="o">.</span><span class="n">imag</span><span class="p">)]</span> <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">mode_shape</span>
+<a id="__codelineno-0-154" name="__codelineno-0-154"></a>        <span class="p">],</span>
+<a id="__codelineno-0-155" name="__codelineno-0-155"></a>        <span class="s2">&quot;participation&quot;</span><span class="p">:</span> <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">participation</span><span class="p">],</span>
+<a id="__codelineno-0-156" name="__codelineno-0-156"></a>        <span class="s2">&quot;dominant_state&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">dominant_state</span><span class="p">,</span>
+<a id="__codelineno-0-157" name="__codelineno-0-157"></a>        <span class="s2">&quot;controllability&quot;</span><span class="p">:</span> <span class="n">controllability</span><span class="p">,</span>
+<a id="__codelineno-0-158" name="__codelineno-0-158"></a>        <span class="s2">&quot;dominant_input&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">dominant_input</span><span class="p">,</span>
+<a id="__codelineno-0-159" name="__codelineno-0-159"></a>        <span class="s2">&quot;poorly_damped&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">poorly_damped</span><span class="p">,</span>
+<a id="__codelineno-0-160" name="__codelineno-0-160"></a>    <span class="p">}</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+<h3 id="scpn_phase_orchestrator.monitor.modal_participation-functions">Functions:<a href="#scpn_phase_orchestrator.monitor.modal_participation-functions" class="headerlink" title="Permanent link">&para;</a></h3>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="scpn_phase_orchestrator.monitor.modal_participation.analyse_network_modes" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">analyse_network_modes</span>
+
+
+<a href="#scpn_phase_orchestrator.monitor.modal_participation.analyse_network_modes" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">analyse_network_modes</span><span class="p">(</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">state_matrix</span><span class="p">:</span> <span class="n">FloatArray</span><span class="p">,</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="o">*</span><span class="p">,</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">input_matrix</span><span class="p">:</span> <span class="n">FloatArray</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">damping_threshold</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DEFAULT_DAMPING_THRESHOLD</span><span class="p">,</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">NetworkMode</span><span class="p">,</span> <span class="o">...</span><span class="p">]</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Decompose a continuous-time state matrix into damped modes with participation.</p>
+<h6 id="scpn_phase_orchestrator.monitor.modal_participation.analyse_network_modes--parameters">Parameters<a class="headerlink" href="#scpn_phase_orchestrator.monitor.modal_participation.analyse_network_modes--parameters" title="Permanent link">&para;</a></h6>
+<p>state_matrix : FloatArray
+    Real square Jacobian <code>A = ∂ẋ/∂x</code> of the linearised dynamics, shape
+    <code>(N, N)</code>; build it from a phase network with
+    :func:<code>phase_network_jacobian</code>.
+input_matrix : FloatArray | None
+    Real input matrix <code>B</code>, shape <code>(N, M)</code>, mapping <code>M</code> actuator inputs
+    into the state derivative; when given, each mode reports per-input modal
+    controllability. <code>None</code> skips the controllability analysis.
+damping_threshold : float
+    Damping ratio below which a mode is flagged <code>poorly_damped</code>.</p>
+<h6 id="scpn_phase_orchestrator.monitor.modal_participation.analyse_network_modes--returns">Returns<a class="headerlink" href="#scpn_phase_orchestrator.monitor.modal_participation.analyse_network_modes--returns" title="Permanent link">&para;</a></h6>
+<p>tuple[NetworkMode, ...]
+    One mode per non-negative-frequency eigenvalue, ordered by ascending
+    damping ratio (least-damped, most critical first). The marginal
+    global-phase mode of a Kuramoto Jacobian appears with
+    <code>frequency_hz = 0</code> and <code>damping_ratio = 0</code>.</p>
+<h6 id="scpn_phase_orchestrator.monitor.modal_participation.analyse_network_modes--raises">Raises<a class="headerlink" href="#scpn_phase_orchestrator.monitor.modal_participation.analyse_network_modes--raises" title="Permanent link">&para;</a></h6>
+<p>ValueError
+    If the state matrix or input matrix is invalid, or the state matrix is
+    defective (not diagonalisable, so left eigenvectors do not exist).</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>src/scpn_phase_orchestrator/monitor/modal_participation.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-163">163</a></span>
+<span class="normal"><a href="#__codelineno-0-164">164</a></span>
+<span class="normal"><a href="#__codelineno-0-165">165</a></span>
+<span class="normal"><a href="#__codelineno-0-166">166</a></span>
+<span class="normal"><a href="#__codelineno-0-167">167</a></span>
+<span class="normal"><a href="#__codelineno-0-168">168</a></span>
+<span class="normal"><a href="#__codelineno-0-169">169</a></span>
+<span class="normal"><a href="#__codelineno-0-170">170</a></span>
+<span class="normal"><a href="#__codelineno-0-171">171</a></span>
+<span class="normal"><a href="#__codelineno-0-172">172</a></span>
+<span class="normal"><a href="#__codelineno-0-173">173</a></span>
+<span class="normal"><a href="#__codelineno-0-174">174</a></span>
+<span class="normal"><a href="#__codelineno-0-175">175</a></span>
+<span class="normal"><a href="#__codelineno-0-176">176</a></span>
+<span class="normal"><a href="#__codelineno-0-177">177</a></span>
+<span class="normal"><a href="#__codelineno-0-178">178</a></span>
+<span class="normal"><a href="#__codelineno-0-179">179</a></span>
+<span class="normal"><a href="#__codelineno-0-180">180</a></span>
+<span class="normal"><a href="#__codelineno-0-181">181</a></span>
+<span class="normal"><a href="#__codelineno-0-182">182</a></span>
+<span class="normal"><a href="#__codelineno-0-183">183</a></span>
+<span class="normal"><a href="#__codelineno-0-184">184</a></span>
+<span class="normal"><a href="#__codelineno-0-185">185</a></span>
+<span class="normal"><a href="#__codelineno-0-186">186</a></span>
+<span class="normal"><a href="#__codelineno-0-187">187</a></span>
+<span class="normal"><a href="#__codelineno-0-188">188</a></span>
+<span class="normal"><a href="#__codelineno-0-189">189</a></span>
+<span class="normal"><a href="#__codelineno-0-190">190</a></span>
+<span class="normal"><a href="#__codelineno-0-191">191</a></span>
+<span class="normal"><a href="#__codelineno-0-192">192</a></span>
+<span class="normal"><a href="#__codelineno-0-193">193</a></span>
+<span class="normal"><a href="#__codelineno-0-194">194</a></span>
+<span class="normal"><a href="#__codelineno-0-195">195</a></span>
+<span class="normal"><a href="#__codelineno-0-196">196</a></span>
+<span class="normal"><a href="#__codelineno-0-197">197</a></span>
+<span class="normal"><a href="#__codelineno-0-198">198</a></span>
+<span class="normal"><a href="#__codelineno-0-199">199</a></span>
+<span class="normal"><a href="#__codelineno-0-200">200</a></span>
+<span class="normal"><a href="#__codelineno-0-201">201</a></span>
+<span class="normal"><a href="#__codelineno-0-202">202</a></span>
+<span class="normal"><a href="#__codelineno-0-203">203</a></span>
+<span class="normal"><a href="#__codelineno-0-204">204</a></span>
+<span class="normal"><a href="#__codelineno-0-205">205</a></span>
+<span class="normal"><a href="#__codelineno-0-206">206</a></span>
+<span class="normal"><a href="#__codelineno-0-207">207</a></span>
+<span class="normal"><a href="#__codelineno-0-208">208</a></span>
+<span class="normal"><a href="#__codelineno-0-209">209</a></span>
+<span class="normal"><a href="#__codelineno-0-210">210</a></span>
+<span class="normal"><a href="#__codelineno-0-211">211</a></span>
+<span class="normal"><a href="#__codelineno-0-212">212</a></span>
+<span class="normal"><a href="#__codelineno-0-213">213</a></span>
+<span class="normal"><a href="#__codelineno-0-214">214</a></span>
+<span class="normal"><a href="#__codelineno-0-215">215</a></span>
+<span class="normal"><a href="#__codelineno-0-216">216</a></span>
+<span class="normal"><a href="#__codelineno-0-217">217</a></span>
+<span class="normal"><a href="#__codelineno-0-218">218</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-163" name="__codelineno-0-163"></a><span class="k">def</span><span class="w"> </span><span class="nf">analyse_network_modes</span><span class="p">(</span>
+<a id="__codelineno-0-164" name="__codelineno-0-164"></a>    <span class="n">state_matrix</span><span class="p">:</span> <span class="n">FloatArray</span><span class="p">,</span>
+<a id="__codelineno-0-165" name="__codelineno-0-165"></a>    <span class="o">*</span><span class="p">,</span>
+<a id="__codelineno-0-166" name="__codelineno-0-166"></a>    <span class="n">input_matrix</span><span class="p">:</span> <span class="n">FloatArray</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-167" name="__codelineno-0-167"></a>    <span class="n">damping_threshold</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="n">DEFAULT_DAMPING_THRESHOLD</span><span class="p">,</span>
+<a id="__codelineno-0-168" name="__codelineno-0-168"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="n">NetworkMode</span><span class="p">,</span> <span class="o">...</span><span class="p">]:</span>
+<a id="__codelineno-0-169" name="__codelineno-0-169"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Decompose a continuous-time state matrix into damped modes with participation.</span>
+<a id="__codelineno-0-170" name="__codelineno-0-170"></a>
+<a id="__codelineno-0-171" name="__codelineno-0-171"></a><span class="sd">    Parameters</span>
+<a id="__codelineno-0-172" name="__codelineno-0-172"></a><span class="sd">    ----------</span>
+<a id="__codelineno-0-173" name="__codelineno-0-173"></a><span class="sd">    state_matrix : FloatArray</span>
+<a id="__codelineno-0-174" name="__codelineno-0-174"></a><span class="sd">        Real square Jacobian ``A = ∂ẋ/∂x`` of the linearised dynamics, shape</span>
+<a id="__codelineno-0-175" name="__codelineno-0-175"></a><span class="sd">        ``(N, N)``; build it from a phase network with</span>
+<a id="__codelineno-0-176" name="__codelineno-0-176"></a><span class="sd">        :func:`phase_network_jacobian`.</span>
+<a id="__codelineno-0-177" name="__codelineno-0-177"></a><span class="sd">    input_matrix : FloatArray | None</span>
+<a id="__codelineno-0-178" name="__codelineno-0-178"></a><span class="sd">        Real input matrix ``B``, shape ``(N, M)``, mapping ``M`` actuator inputs</span>
+<a id="__codelineno-0-179" name="__codelineno-0-179"></a><span class="sd">        into the state derivative; when given, each mode reports per-input modal</span>
+<a id="__codelineno-0-180" name="__codelineno-0-180"></a><span class="sd">        controllability. ``None`` skips the controllability analysis.</span>
+<a id="__codelineno-0-181" name="__codelineno-0-181"></a><span class="sd">    damping_threshold : float</span>
+<a id="__codelineno-0-182" name="__codelineno-0-182"></a><span class="sd">        Damping ratio below which a mode is flagged ``poorly_damped``.</span>
+<a id="__codelineno-0-183" name="__codelineno-0-183"></a>
+<a id="__codelineno-0-184" name="__codelineno-0-184"></a><span class="sd">    Returns</span>
+<a id="__codelineno-0-185" name="__codelineno-0-185"></a><span class="sd">    -------</span>
+<a id="__codelineno-0-186" name="__codelineno-0-186"></a><span class="sd">    tuple[NetworkMode, ...]</span>
+<a id="__codelineno-0-187" name="__codelineno-0-187"></a><span class="sd">        One mode per non-negative-frequency eigenvalue, ordered by ascending</span>
+<a id="__codelineno-0-188" name="__codelineno-0-188"></a><span class="sd">        damping ratio (least-damped, most critical first). The marginal</span>
+<a id="__codelineno-0-189" name="__codelineno-0-189"></a><span class="sd">        global-phase mode of a Kuramoto Jacobian appears with</span>
+<a id="__codelineno-0-190" name="__codelineno-0-190"></a><span class="sd">        ``frequency_hz = 0`` and ``damping_ratio = 0``.</span>
+<a id="__codelineno-0-191" name="__codelineno-0-191"></a>
+<a id="__codelineno-0-192" name="__codelineno-0-192"></a><span class="sd">    Raises</span>
+<a id="__codelineno-0-193" name="__codelineno-0-193"></a><span class="sd">    ------</span>
+<a id="__codelineno-0-194" name="__codelineno-0-194"></a><span class="sd">    ValueError</span>
+<a id="__codelineno-0-195" name="__codelineno-0-195"></a><span class="sd">        If the state matrix or input matrix is invalid, or the state matrix is</span>
+<a id="__codelineno-0-196" name="__codelineno-0-196"></a><span class="sd">        defective (not diagonalisable, so left eigenvectors do not exist).</span>
+<a id="__codelineno-0-197" name="__codelineno-0-197"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-198" name="__codelineno-0-198"></a>    <span class="n">matrix</span> <span class="o">=</span> <span class="n">_validate_square_matrix</span><span class="p">(</span><span class="n">state_matrix</span><span class="p">,</span> <span class="s2">&quot;state_matrix&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-199" name="__codelineno-0-199"></a>    <span class="n">threshold</span> <span class="o">=</span> <span class="n">_real_scalar</span><span class="p">(</span><span class="n">damping_threshold</span><span class="p">,</span> <span class="s2">&quot;damping_threshold&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-200" name="__codelineno-0-200"></a>    <span class="n">inputs</span> <span class="o">=</span> <span class="n">_validate_input_matrix</span><span class="p">(</span><span class="n">input_matrix</span><span class="p">,</span> <span class="n">matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+<a id="__codelineno-0-201" name="__codelineno-0-201"></a>
+<a id="__codelineno-0-202" name="__codelineno-0-202"></a>    <span class="n">raw_eigenvalues</span><span class="p">,</span> <span class="n">raw_right</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">eig</span><span class="p">(</span><span class="n">matrix</span><span class="p">)</span>
+<a id="__codelineno-0-203" name="__codelineno-0-203"></a>    <span class="n">eigenvalues</span> <span class="o">=</span> <span class="n">raw_eigenvalues</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">complex128</span><span class="p">)</span>
+<a id="__codelineno-0-204" name="__codelineno-0-204"></a>    <span class="n">right</span> <span class="o">=</span> <span class="n">raw_right</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">complex128</span><span class="p">)</span>
+<a id="__codelineno-0-205" name="__codelineno-0-205"></a>    <span class="c1"># A defective (non-diagonalisable) matrix has a rank-deficient eigenvector</span>
+<a id="__codelineno-0-206" name="__codelineno-0-206"></a>    <span class="c1"># matrix, so its left eigenvectors — and the participation factors built from</span>
+<a id="__codelineno-0-207" name="__codelineno-0-207"></a>    <span class="c1"># them — do not exist.</span>
+<a id="__codelineno-0-208" name="__codelineno-0-208"></a>    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">matrix_rank</span><span class="p">(</span><span class="n">right</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">right</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]:</span>
+<a id="__codelineno-0-209" name="__codelineno-0-209"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;state_matrix is defective (not diagonalisable)&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-210" name="__codelineno-0-210"></a>    <span class="n">left</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">right</span><span class="p">)</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">complex128</span><span class="p">)</span>
+<a id="__codelineno-0-211" name="__codelineno-0-211"></a>
+<a id="__codelineno-0-212" name="__codelineno-0-212"></a>    <span class="n">modes</span> <span class="o">=</span> <span class="p">[</span>
+<a id="__codelineno-0-213" name="__codelineno-0-213"></a>        <span class="n">_build_mode</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">eigenvalues</span><span class="p">,</span> <span class="n">right</span><span class="p">,</span> <span class="n">left</span><span class="p">,</span> <span class="n">inputs</span><span class="p">,</span> <span class="n">threshold</span><span class="p">)</span>
+<a id="__codelineno-0-214" name="__codelineno-0-214"></a>        <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">eigenvalues</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+<a id="__codelineno-0-215" name="__codelineno-0-215"></a>        <span class="k">if</span> <span class="n">eigenvalues</span><span class="p">[</span><span class="n">index</span><span class="p">]</span><span class="o">.</span><span class="n">imag</span> <span class="o">&gt;=</span> <span class="mf">0.0</span>
+<a id="__codelineno-0-216" name="__codelineno-0-216"></a>    <span class="p">]</span>
+<a id="__codelineno-0-217" name="__codelineno-0-217"></a>    <span class="n">modes</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">mode</span><span class="p">:</span> <span class="n">mode</span><span class="o">.</span><span class="n">damping_ratio</span><span class="p">)</span>
+<a id="__codelineno-0-218" name="__codelineno-0-218"></a>    <span class="k">return</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">modes</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="scpn_phase_orchestrator.monitor.modal_participation.phase_network_jacobian" class="doc doc-heading">
+            <span class="doc doc-object-name doc-function-name">phase_network_jacobian</span>
+
+
+<a href="#scpn_phase_orchestrator.monitor.modal_participation.phase_network_jacobian" class="headerlink" title="Permanent link">&para;</a></h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">phase_network_jacobian</span><span class="p">(</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">coupling</span><span class="p">:</span> <span class="n">FloatArray</span><span class="p">,</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">phases</span><span class="p">:</span> <span class="n">FloatArray</span><span class="p">,</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="o">*</span><span class="p">,</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="n">phase_lag</span><span class="p">:</span> <span class="n">FloatArray</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">drive_strength</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">drive_phase</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">FloatArray</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Build the Sakaguchi–Kuramoto small-signal Jacobian at an operating point.</p>
+<p>The Jacobian is the state matrix of the engine's coupling dynamics linearised
+about <code>phases</code>; feed it to :func:<code>analyse_network_modes</code>. It matches the
+integrator's derivative exactly: <code>J_ik = K_ik cos(θ_k − θ_i − α_ik)</code> off the
+diagonal and <code>J_ii = −Σ_{k≠i} K_ik cos(θ_k − θ_i − α_ik) − ζ cos(Ψ − θ_i)</code>.</p>
+<h6 id="scpn_phase_orchestrator.monitor.modal_participation.phase_network_jacobian--parameters">Parameters<a class="headerlink" href="#scpn_phase_orchestrator.monitor.modal_participation.phase_network_jacobian--parameters" title="Permanent link">&para;</a></h6>
+<p>coupling : FloatArray
+    Coupling matrix <code>K_nm</code>, shape <code>(N, N)</code>, with a zero diagonal (no
+    self-coupling), as the integrator requires.
+phases : FloatArray
+    Operating-point phases <code>θ*</code> in radians, shape <code>(N,)</code> — typically a
+    synchronised fixed point reached by running the engine.
+phase_lag : FloatArray | None
+    Sakaguchi phase-lag matrix <code>α</code> in radians, shape <code>(N, N)</code>; <code>None</code>
+    means no lag (zeros).
+drive_strength : float
+    External-drive strength <code>ζ</code>; the default <code>0</code> gives the free-network
+    Jacobian whose modes are the inter-area oscillations.
+drive_phase : float
+    External-drive reference phase <code>Ψ</code> in radians (used only when
+    <code>drive_strength</code> is non-zero).</p>
+<h6 id="scpn_phase_orchestrator.monitor.modal_participation.phase_network_jacobian--returns">Returns<a class="headerlink" href="#scpn_phase_orchestrator.monitor.modal_participation.phase_network_jacobian--returns" title="Permanent link">&para;</a></h6>
+<p>FloatArray
+    The <code>(N, N)</code> small-signal Jacobian.</p>
+<h6 id="scpn_phase_orchestrator.monitor.modal_participation.phase_network_jacobian--raises">Raises<a class="headerlink" href="#scpn_phase_orchestrator.monitor.modal_participation.phase_network_jacobian--raises" title="Permanent link">&para;</a></h6>
+<p>ValueError
+    If the coupling matrix, phases, or phase-lag matrix are invalid, or the
+    coupling diagonal is non-zero.</p>
+
+
+            <details class="mkdocstrings-source">
+              <summary>Source code in <code>src/scpn_phase_orchestrator/monitor/modal_participation.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-221">221</a></span>
+<span class="normal"><a href="#__codelineno-0-222">222</a></span>
+<span class="normal"><a href="#__codelineno-0-223">223</a></span>
+<span class="normal"><a href="#__codelineno-0-224">224</a></span>
+<span class="normal"><a href="#__codelineno-0-225">225</a></span>
+<span class="normal"><a href="#__codelineno-0-226">226</a></span>
+<span class="normal"><a href="#__codelineno-0-227">227</a></span>
+<span class="normal"><a href="#__codelineno-0-228">228</a></span>
+<span class="normal"><a href="#__codelineno-0-229">229</a></span>
+<span class="normal"><a href="#__codelineno-0-230">230</a></span>
+<span class="normal"><a href="#__codelineno-0-231">231</a></span>
+<span class="normal"><a href="#__codelineno-0-232">232</a></span>
+<span class="normal"><a href="#__codelineno-0-233">233</a></span>
+<span class="normal"><a href="#__codelineno-0-234">234</a></span>
+<span class="normal"><a href="#__codelineno-0-235">235</a></span>
+<span class="normal"><a href="#__codelineno-0-236">236</a></span>
+<span class="normal"><a href="#__codelineno-0-237">237</a></span>
+<span class="normal"><a href="#__codelineno-0-238">238</a></span>
+<span class="normal"><a href="#__codelineno-0-239">239</a></span>
+<span class="normal"><a href="#__codelineno-0-240">240</a></span>
+<span class="normal"><a href="#__codelineno-0-241">241</a></span>
+<span class="normal"><a href="#__codelineno-0-242">242</a></span>
+<span class="normal"><a href="#__codelineno-0-243">243</a></span>
+<span class="normal"><a href="#__codelineno-0-244">244</a></span>
+<span class="normal"><a href="#__codelineno-0-245">245</a></span>
+<span class="normal"><a href="#__codelineno-0-246">246</a></span>
+<span class="normal"><a href="#__codelineno-0-247">247</a></span>
+<span class="normal"><a href="#__codelineno-0-248">248</a></span>
+<span class="normal"><a href="#__codelineno-0-249">249</a></span>
+<span class="normal"><a href="#__codelineno-0-250">250</a></span>
+<span class="normal"><a href="#__codelineno-0-251">251</a></span>
+<span class="normal"><a href="#__codelineno-0-252">252</a></span>
+<span class="normal"><a href="#__codelineno-0-253">253</a></span>
+<span class="normal"><a href="#__codelineno-0-254">254</a></span>
+<span class="normal"><a href="#__codelineno-0-255">255</a></span>
+<span class="normal"><a href="#__codelineno-0-256">256</a></span>
+<span class="normal"><a href="#__codelineno-0-257">257</a></span>
+<span class="normal"><a href="#__codelineno-0-258">258</a></span>
+<span class="normal"><a href="#__codelineno-0-259">259</a></span>
+<span class="normal"><a href="#__codelineno-0-260">260</a></span>
+<span class="normal"><a href="#__codelineno-0-261">261</a></span>
+<span class="normal"><a href="#__codelineno-0-262">262</a></span>
+<span class="normal"><a href="#__codelineno-0-263">263</a></span>
+<span class="normal"><a href="#__codelineno-0-264">264</a></span>
+<span class="normal"><a href="#__codelineno-0-265">265</a></span>
+<span class="normal"><a href="#__codelineno-0-266">266</a></span>
+<span class="normal"><a href="#__codelineno-0-267">267</a></span>
+<span class="normal"><a href="#__codelineno-0-268">268</a></span>
+<span class="normal"><a href="#__codelineno-0-269">269</a></span>
+<span class="normal"><a href="#__codelineno-0-270">270</a></span>
+<span class="normal"><a href="#__codelineno-0-271">271</a></span>
+<span class="normal"><a href="#__codelineno-0-272">272</a></span>
+<span class="normal"><a href="#__codelineno-0-273">273</a></span>
+<span class="normal"><a href="#__codelineno-0-274">274</a></span>
+<span class="normal"><a href="#__codelineno-0-275">275</a></span>
+<span class="normal"><a href="#__codelineno-0-276">276</a></span>
+<span class="normal"><a href="#__codelineno-0-277">277</a></span>
+<span class="normal"><a href="#__codelineno-0-278">278</a></span>
+<span class="normal"><a href="#__codelineno-0-279">279</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-221" name="__codelineno-0-221"></a><span class="k">def</span><span class="w"> </span><span class="nf">phase_network_jacobian</span><span class="p">(</span>
+<a id="__codelineno-0-222" name="__codelineno-0-222"></a>    <span class="n">coupling</span><span class="p">:</span> <span class="n">FloatArray</span><span class="p">,</span>
+<a id="__codelineno-0-223" name="__codelineno-0-223"></a>    <span class="n">phases</span><span class="p">:</span> <span class="n">FloatArray</span><span class="p">,</span>
+<a id="__codelineno-0-224" name="__codelineno-0-224"></a>    <span class="o">*</span><span class="p">,</span>
+<a id="__codelineno-0-225" name="__codelineno-0-225"></a>    <span class="n">phase_lag</span><span class="p">:</span> <span class="n">FloatArray</span> <span class="o">|</span> <span class="kc">None</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-226" name="__codelineno-0-226"></a>    <span class="n">drive_strength</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+<a id="__codelineno-0-227" name="__codelineno-0-227"></a>    <span class="n">drive_phase</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span><span class="p">,</span>
+<a id="__codelineno-0-228" name="__codelineno-0-228"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">FloatArray</span><span class="p">:</span>
+<a id="__codelineno-0-229" name="__codelineno-0-229"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Build the Sakaguchi–Kuramoto small-signal Jacobian at an operating point.</span>
+<a id="__codelineno-0-230" name="__codelineno-0-230"></a>
+<a id="__codelineno-0-231" name="__codelineno-0-231"></a><span class="sd">    The Jacobian is the state matrix of the engine&#39;s coupling dynamics linearised</span>
+<a id="__codelineno-0-232" name="__codelineno-0-232"></a><span class="sd">    about ``phases``; feed it to :func:`analyse_network_modes`. It matches the</span>
+<a id="__codelineno-0-233" name="__codelineno-0-233"></a><span class="sd">    integrator&#39;s derivative exactly: ``J_ik = K_ik cos(θ_k − θ_i − α_ik)`` off the</span>
+<a id="__codelineno-0-234" name="__codelineno-0-234"></a><span class="sd">    diagonal and ``J_ii = −Σ_{k≠i} K_ik cos(θ_k − θ_i − α_ik) − ζ cos(Ψ − θ_i)``.</span>
+<a id="__codelineno-0-235" name="__codelineno-0-235"></a>
+<a id="__codelineno-0-236" name="__codelineno-0-236"></a><span class="sd">    Parameters</span>
+<a id="__codelineno-0-237" name="__codelineno-0-237"></a><span class="sd">    ----------</span>
+<a id="__codelineno-0-238" name="__codelineno-0-238"></a><span class="sd">    coupling : FloatArray</span>
+<a id="__codelineno-0-239" name="__codelineno-0-239"></a><span class="sd">        Coupling matrix ``K_nm``, shape ``(N, N)``, with a zero diagonal (no</span>
+<a id="__codelineno-0-240" name="__codelineno-0-240"></a><span class="sd">        self-coupling), as the integrator requires.</span>
+<a id="__codelineno-0-241" name="__codelineno-0-241"></a><span class="sd">    phases : FloatArray</span>
+<a id="__codelineno-0-242" name="__codelineno-0-242"></a><span class="sd">        Operating-point phases ``θ*`` in radians, shape ``(N,)`` — typically a</span>
+<a id="__codelineno-0-243" name="__codelineno-0-243"></a><span class="sd">        synchronised fixed point reached by running the engine.</span>
+<a id="__codelineno-0-244" name="__codelineno-0-244"></a><span class="sd">    phase_lag : FloatArray | None</span>
+<a id="__codelineno-0-245" name="__codelineno-0-245"></a><span class="sd">        Sakaguchi phase-lag matrix ``α`` in radians, shape ``(N, N)``; ``None``</span>
+<a id="__codelineno-0-246" name="__codelineno-0-246"></a><span class="sd">        means no lag (zeros).</span>
+<a id="__codelineno-0-247" name="__codelineno-0-247"></a><span class="sd">    drive_strength : float</span>
+<a id="__codelineno-0-248" name="__codelineno-0-248"></a><span class="sd">        External-drive strength ``ζ``; the default ``0`` gives the free-network</span>
+<a id="__codelineno-0-249" name="__codelineno-0-249"></a><span class="sd">        Jacobian whose modes are the inter-area oscillations.</span>
+<a id="__codelineno-0-250" name="__codelineno-0-250"></a><span class="sd">    drive_phase : float</span>
+<a id="__codelineno-0-251" name="__codelineno-0-251"></a><span class="sd">        External-drive reference phase ``Ψ`` in radians (used only when</span>
+<a id="__codelineno-0-252" name="__codelineno-0-252"></a><span class="sd">        ``drive_strength`` is non-zero).</span>
+<a id="__codelineno-0-253" name="__codelineno-0-253"></a>
+<a id="__codelineno-0-254" name="__codelineno-0-254"></a><span class="sd">    Returns</span>
+<a id="__codelineno-0-255" name="__codelineno-0-255"></a><span class="sd">    -------</span>
+<a id="__codelineno-0-256" name="__codelineno-0-256"></a><span class="sd">    FloatArray</span>
+<a id="__codelineno-0-257" name="__codelineno-0-257"></a><span class="sd">        The ``(N, N)`` small-signal Jacobian.</span>
+<a id="__codelineno-0-258" name="__codelineno-0-258"></a>
+<a id="__codelineno-0-259" name="__codelineno-0-259"></a><span class="sd">    Raises</span>
+<a id="__codelineno-0-260" name="__codelineno-0-260"></a><span class="sd">    ------</span>
+<a id="__codelineno-0-261" name="__codelineno-0-261"></a><span class="sd">    ValueError</span>
+<a id="__codelineno-0-262" name="__codelineno-0-262"></a><span class="sd">        If the coupling matrix, phases, or phase-lag matrix are invalid, or the</span>
+<a id="__codelineno-0-263" name="__codelineno-0-263"></a><span class="sd">        coupling diagonal is non-zero.</span>
+<a id="__codelineno-0-264" name="__codelineno-0-264"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-265" name="__codelineno-0-265"></a>    <span class="n">matrix</span> <span class="o">=</span> <span class="n">_validate_square_matrix</span><span class="p">(</span><span class="n">coupling</span><span class="p">,</span> <span class="s2">&quot;coupling&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-266" name="__codelineno-0-266"></a>    <span class="n">n</span> <span class="o">=</span> <span class="n">matrix</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<a id="__codelineno-0-267" name="__codelineno-0-267"></a>    <span class="n">angles</span> <span class="o">=</span> <span class="n">_validate_vector</span><span class="p">(</span><span class="n">phases</span><span class="p">,</span> <span class="s2">&quot;phases&quot;</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
+<a id="__codelineno-0-268" name="__codelineno-0-268"></a>    <span class="n">lag</span> <span class="o">=</span> <span class="n">_validate_phase_lag</span><span class="p">(</span><span class="n">phase_lag</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
+<a id="__codelineno-0-269" name="__codelineno-0-269"></a>    <span class="n">strength</span> <span class="o">=</span> <span class="n">_real_scalar</span><span class="p">(</span><span class="n">drive_strength</span><span class="p">,</span> <span class="s2">&quot;drive_strength&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-270" name="__codelineno-0-270"></a>    <span class="n">reference</span> <span class="o">=</span> <span class="n">_real_scalar</span><span class="p">(</span><span class="n">drive_phase</span><span class="p">,</span> <span class="s2">&quot;drive_phase&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-271" name="__codelineno-0-271"></a>    <span class="k">if</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">allclose</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">matrix</span><span class="p">),</span> <span class="mf">0.0</span><span class="p">,</span> <span class="n">rtol</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">atol</span><span class="o">=</span><span class="mf">1.0e-15</span><span class="p">):</span>
+<a id="__codelineno-0-272" name="__codelineno-0-272"></a>        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;coupling self-coupling diagonal must be zero&quot;</span><span class="p">)</span>
+<a id="__codelineno-0-273" name="__codelineno-0-273"></a>
+<a id="__codelineno-0-274" name="__codelineno-0-274"></a>    <span class="n">differences</span> <span class="o">=</span> <span class="n">angles</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">,</span> <span class="p">:]</span> <span class="o">-</span> <span class="n">angles</span><span class="p">[:,</span> <span class="n">np</span><span class="o">.</span><span class="n">newaxis</span><span class="p">]</span> <span class="o">-</span> <span class="n">lag</span>
+<a id="__codelineno-0-275" name="__codelineno-0-275"></a>    <span class="n">jacobian</span> <span class="o">=</span> <span class="n">matrix</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">differences</span><span class="p">)</span>
+<a id="__codelineno-0-276" name="__codelineno-0-276"></a>    <span class="n">row_sums</span> <span class="o">=</span> <span class="n">jacobian</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<a id="__codelineno-0-277" name="__codelineno-0-277"></a>    <span class="n">drive</span> <span class="o">=</span> <span class="n">strength</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">reference</span> <span class="o">-</span> <span class="n">angles</span><span class="p">)</span>
+<a id="__codelineno-0-278" name="__codelineno-0-278"></a>    <span class="n">np</span><span class="o">.</span><span class="n">fill_diagonal</span><span class="p">(</span><span class="n">jacobian</span><span class="p">,</span> <span class="o">-</span><span class="p">(</span><span class="n">row_sums</span> <span class="o">+</span> <span class="n">drive</span><span class="p">))</span>
+<a id="__codelineno-0-279" name="__codelineno-0-279"></a>    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">ascontiguousarray</span><span class="p">(</span><span class="n">jacobian</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float64</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      © 1996–2026 Miroslav Šotek. All rights reserved.
+    </div>
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/anulum/scpn-phase-orchestrator" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://pypi.org/project/scpn-phase-orchestrator/" target="_blank" rel="noopener" title="pypi.org" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.8 200.5c-7.7-30.9-22.3-54.2-53.4-54.2h-40.1v47.4c0 36.8-31.2 67.8-66.8 67.8H172.7c-29.2 0-53.4 25-53.4 54.3v101.8c0 29 25.2 46 53.4 54.3 33.8 9.9 66.3 11.7 106.8 0 26.9-7.8 53.4-23.5 53.4-54.3v-40.7H226.2v-13.6h160.2c31.1 0 42.6-21.7 53.4-54.2 11.2-33.5 10.7-65.7 0-108.6M286.2 444.7a20.4 20.4 0 1 1 0-40.7 20.4 20.4 0 1 1 0 40.7M167.8 248.1h106.8c29.7 0 53.4-24.5 53.4-54.3V91.9c0-29-24.4-50.7-53.4-55.6-35.8-5.9-74.7-5.6-106.8.1-45.2 8-53.4 24.7-53.4 55.6v40.7h106.9v13.6h-147c-31.1 0-58.3 18.7-66.8 54.2-9.8 40.7-10.2 66.1 0 108.6 7.6 31.6 25.7 54.2 56.8 54.2H101v-48.8c0-35.3 30.5-66.4 66.8-66.4m-6.6-183.4a20.4 20.4 0 1 1 0 40.8 20.4 20.4 0 1 1 0-40.8"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.sections", "navigation.expand", "navigation.tabs", "navigation.top", "navigation.indexes", "content.code.copy", "content.code.annotate", "search.highlight", "search.suggest", "toc.follow"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>

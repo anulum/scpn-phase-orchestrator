@@ -1,0 +1,207 @@
+{
+  "$comment": "Two-block STUDIO ingestion manifest (CEO/architect lock 2026-06-23, lock-step refresh 2026-06-27): schema_a_core mirrors scpn_phase_orchestrator.studio.federation_manifest CapabilityManifest fields; architecture_map is this repo's verified superset extension the Hub ignores for federation. Public status vocabulary: wired | library-only | stub | feasibility-only; SOTA/ClaimStatus grades live only in the private audit.",
+  "schema_a_core": {
+    "status": "fleet-validator-admitted",
+    "note": "SPO's schema-A fields are sourced from studio/federation_manifest.py, locked by tests against the optional scpn-studio-platform CapabilityManifest, and admitted by the current STUDIO Platform schema-A federation gate. The live /api/studio-feed endpoint uses the sibling studio.control-feed.v1 wire envelope.",
+    "project": "scpn-phase-orchestrator",
+    "platform_sdk": "0.3.0",
+    "protocol_version": "1",
+    "transport_profile": "local-first",
+    "evidence_types": [
+      "spo.runtime-state.v1",
+      "spo.phase-coherence.v1",
+      "spo.regime-state.v1"
+    ],
+    "ui_module": {
+      "remote_entry": "https://www.anulum.org/studios/scpn-phase-orchestrator/remoteEntry.js",
+      "exposes": [
+        "./SpoStudioPanel"
+      ],
+      "federation": "scpn_phase_orchestrator"
+    },
+    "contract_era": "v1",
+    "enumeration": "language-agnostic",
+    "content_digest": "sha256:bcff4ee3d707d0f4b0b3b5299a5d6546b5f2328282a994479eb255c2fa29078d",
+    "verbs": [
+      "bind",
+      "simulate",
+      "analyse",
+      "supervise",
+      "project",
+      "forecast",
+      "certify-conformal",
+      "audit",
+      "replay",
+      "assure",
+      "autotune"
+    ]
+  },
+  "architecture_map": {
+  "id": "scpn-phase-orchestrator",
+  "schema_version": "0",
+    "generated": "2026-06-26",
+  "role": "Domain-agnostic coherence-control core (topology + solver) of the SCPN ecosystem; review-only by default.",
+  "pipeline_stages": [
+    "binding",
+    "oscillators",
+    "coupling",
+    "upde",
+    "monitor",
+    "supervisor",
+    "actuation",
+    "audit"
+  ],
+  "lanes": [
+    {
+      "name": "binding+oscillators+drivers+imprint",
+      "status": "wired",
+      "inputs": ["domainpack YAML/JSON", "raw signal + sample_rate"],
+      "outputs": ["BindingSpec", "list[PhaseState]", "driver Psi(t)"],
+      "backends": ["python", "rust(optional)"],
+      "note": "Hilbert, wavelet-ridge, and zero-crossing extractors are implemented; MQTT and OPC-UA runtime waveform tags dispatch through the declared extractor type."
+    },
+    {
+      "name": "coupling",
+      "status": "wired",
+      "inputs": ["coupling spec", "phases/time-series", "current knm"],
+      "outputs": ["CouplingState(knm,alpha)", "Hodge decomposition", "spectral metrics"],
+      "backends": ["rust", "mojo", "julia", "go", "python"],
+      "note": "coupling_est and public plasticity are intentionally Python-only; plasticity.rs remains a native reference/parity candidate because its decay+dt semantics differ from the validated integration-gated Python API. Reserved inference methods fail closed with UnsupportedInferenceMethodError."
+    },
+    {
+      "name": "ssgf",
+      "status": "library-only",
+      "inputs": ["phases", "W", "latent z", "cost weights"],
+      "outputs": ["SSGFState", "SSGFCosts", "PGBO / topological-integration snapshots"],
+      "backends": ["rust", "python"],
+      "note": "self-stabilising gauge-field closure; opt-in, not in default loop."
+    },
+    {
+      "name": "autotune",
+      "status": "library-only",
+      "inputs": ["multichannel time series", "graph", "event log"],
+      "outputs": ["AutoTuneResult", "SINDy equations", "BindingSpec proposals"],
+      "backends": ["rust(sindy)", "python"],
+      "note": "offline binding-spec inference; candidate-safety certificate does not block."
+    },
+    {
+      "name": "upde",
+      "status": "wired",
+      "inputs": ["phases(N)", "omegas(N)", "knm(NxN)", "alpha(NxN)", "zeta", "psi", "IntegrationConfig"],
+      "outputs": ["phases", "UPDEState", "order parameter (R,psi)"],
+      "backends": ["rust", "webgpu", "mojo", "julia", "go", "python"],
+      "note": "14-15 engine variants; JAX engines pragma:no cover."
+    },
+    {
+      "name": "monitor",
+      "status": "wired",
+      "inputs": ["phases", "knm", "windows", "twin model-vs-observed", "STL trace"],
+      "outputs": ["30 observer metrics", "twin-confidence + conformal gate", "STL robustness"],
+      "backends": ["rust", "mojo", "julia", "go", "python"],
+      "note": "twin_conformal_gate (CPTC) is wired as an opt-in live policy-admission gate when callers supply an observed-twin confidence stream; modal_participation/phase_koopman/koopman_edmd/oscillation_modes remain reviewed APIs used by the dVOC/Koopman review path."
+    },
+    {
+      "name": "supervisor",
+      "status": "wired",
+      "inputs": ["UPDEState", "BoundaryState", "metric mappings", "optional verified neural CBF admission gate"],
+      "outputs": ["ControlAction (proposals)", "Regime", "CBF/SMT admission audit records", "PRISM/TLA+/SMT-LIB export", "certificates"],
+      "backends": ["python", "rust-supervisor-ffi-probe"],
+      "note": "Python supervisor remains the default live-control path; optional PolicyCBFAdmissionGate admits matched actions through verified neural CBF filters and emits per-decision SMT-LIB audit artefact hashes; optional spo-supervisor PyO3 bindings are validated by supervisor.rust_backend and reported by spo doctor; several lanes offline/review-only; policy rules export to PRISM, TLA+, and SMT-LIB feasibility models."
+    },
+    {
+      "name": "nn",
+      "status": "library-only",
+      "inputs": ["jax.Array phases/omegas/K", "observed trajectory"],
+      "outputs": ["differentiable trajectory", "inferred (K,omega)", "PPO SupervisorAction"],
+      "backends": ["jax"],
+      "note": "parallel differentiable track; CLI-verification only; former 1.0-blocking validation gaps are resolved, with remaining non-blocking precision/finite-size xfails tracked in the public register."
+    },
+    {
+      "name": "runtime+actuation+assurance+audit",
+      "status": "wired",
+      "inputs": ["UPDEState", "BoundaryState", "ControlAction proposals", "audit keys"],
+      "outputs": ["projected ControlAction", "SHA-256 hash-chained JSONL + protobuf audit", "AssuranceCaseBundle"],
+      "backends": ["python"],
+      "note": "protobuf stream integrity is surfaced at simulate run end; signing is env-gated; actuation_permitted is documentary; hard-deadline loops default to miss_policy=abort; Koopman MPC is offline/review-only rather than a live simulate mode."
+    },
+    {
+      "name": "adapters+apps",
+      "status": "library-only",
+      "inputs": ["R/psi/phase state", "external protocol payloads"],
+        "outputs": ["sibling wire formats", "telemetry", "anomaly alerts"],
+        "backends": ["python"],
+        "note": "23 bridges, opt-in, not wired into the core loop; only QuantumControlBridge imports a sibling (lazy). FMI co-simulation and hybrid co-compiler review/export surfaces are shipped and reported by spo doctor adapter diagnostics."
+    },
+    {
+      "name": "studio+reporting+visualization",
+      "status": "library-only",
+      "inputs": ["project/binding state", "runtime snapshots"],
+        "outputs": ["ExportManifest (dataclass)", "studio.control-feed.v1 JSON", "Matplotlib plots", "Three.js/D3 JSON"],
+        "backends": ["python"],
+        "note": "13 review panels all execution_disabled; /api/studio-feed emits a read-only studio.control-feed.v1 envelope with spo.studio-runtime-snapshot.v1 runtime payload."
+    },
+    {
+      "name": "plugins+scaffold+domainpacks",
+      "status": "wired",
+      "inputs": ["plugin manifests", "NL description", "domainpack YAML"],
+      "outputs": ["loaded capabilities", "domainpack proposals", "BindingSpec"],
+      "backends": ["python"],
+      "note": "registry split done; entry-point discovery wired but unpopulated in base; 36 domainpacks."
+    },
+    {
+      "name": "experimental/accelerators",
+      "status": "wired",
+      "inputs": ["flat float64 arrays + scalar params"],
+      "outputs": ["float64 arrays/tuples/scalars"],
+      "backends": ["rust", "webgpu", "mojo", "julia", "go", "python"],
+      "note": "load-bearing polyglot accelerator layer (misnomer 'experimental'); 170 files; accessed indirectly via dispatchers."
+    }
+  ],
+  "backends": [
+    {"lang": "python", "role": "reference floor", "dispatch_order": 99, "build_vs_runtime": "always available"},
+    {"lang": "rust", "role": "primary accelerator", "dispatch_order": 1, "build_vs_runtime": "built (libspo_kernel.so) but not importable in every env"},
+    {"lang": "webgpu", "role": "upde engine accelerator", "dispatch_order": 2, "build_vs_runtime": "opt-in"},
+    {"lang": "mojo", "role": "accelerator", "dispatch_order": 3, "build_vs_runtime": "source+bridges, env-gated"},
+    {"lang": "julia", "role": "accelerator", "dispatch_order": 4, "build_vs_runtime": "source+bridges (juliacall), env-gated"},
+    {"lang": "go", "role": "accelerator", "dispatch_order": 5, "build_vs_runtime": "source+compiled .so (ctypes), env-gated"},
+    {"lang": "jax", "role": "differentiable track", "dispatch_order": null, "build_vs_runtime": "optional [nn] extra; parallel, not in default loop"},
+    {"lang": "wasm", "role": "browser/edge", "dispatch_order": null, "build_vs_runtime": "standalone crate, not linked to spo-engine"},
+    {"lang": "fpga(verilog)", "role": "hardware target", "dispatch_order": null, "build_vs_runtime": "feasibility-only (unsynthesised)"}
+  ],
+  "interfaces": [
+    {"kind": "library", "entry": "Orchestrator, OrchestratorState, evaluate_binding_spec (api.py)"},
+    {"kind": "cli", "entry": "spo (runtime/cli/); ~20 verbs incl run/validate/replay/formal-export/federated-transport-preflight/federated-secure-aggregation-preflight/federated-dp-noise-service-preflight/evolutionary-policy-dsl-search/evolutionary-petri-mutation/evolutionary-topology-mutation/assurance-case/certification-evidence/twin-confidence/queuewaves"},
+      {"kind": "rest", "entry": "runtime/server.py; 9 routes including /api/studio-feed; optional X-API-Key + rate limit"},
+    {"kind": "grpc", "entry": "runtime/server_grpc.py; GetState/Step/Reset/GetConfig + StreamPhases"},
+      {"kind": "studio", "entry": "studio/ ExportManifest (dataclass) + read-only studio.control-feed.v1 live feed"}
+  ],
+  "wire_formats": [
+    "K_nm handshake (NxN, zero diagonal)",
+    "phase-gossip JSON {regime,stability,layers[],cross_alignment}",
+    "quantum_compiler_manifest v1",
+    "scpn_quantum_target_readiness_v1",
+    "plasma physics-invariant violations",
+    "coherence-memory snapshot",
+    "PhaseState"
+  ],
+  "cross_repo": [
+    {"sibling": "scpn-control", "extra": "plasma", "domainpack": "plasma_control", "coupling": "wire-format"},
+    {"sibling": "scpn-quantum-control", "extra": "quantum", "domainpack": "quantum_simulation", "coupling": "lazy-import"},
+    {"sibling": "scpn-fusion-core", "extra": "fusion", "domainpack": "fusion_equilibrium", "coupling": "wire-format"},
+    {"sibling": "sc-neurocore", "extra": null, "domainpack": "neuroscience_eeg", "coupling": "http/validator"},
+    {"sibling": "remanentia", "extra": null, "domainpack": null, "coupling": "http"},
+      {"sibling": "scpn-studio", "extra": "studio", "domainpack": null, "coupling": "dataclass-manifest + studio.control-feed.v1"}
+  ],
+  "boundaries": [
+    "Rust kernel builds but is not active in every environment; dispatch falls back to Python.",
+    "nn/ differentiable track is parallel and CLI-verification only; former 1.0-blocking validation gaps are resolved, with remaining non-blocking xfails tracked.",
+    "ssgf/ and autotune/ are opt-in, not in the default loop.",
+    "experimental/ is the load-bearing accelerator layer, not research.",
+    "Hilbert, wavelet-ridge, and zero-crossing extractors are implemented; MQTT and OPC-UA runtime waveform tags dispatch through the declared extractor type.",
+    "Audit chain is real but integrity-verify/replay are opt-in CLI; signing is env-gated.",
+    "twin_conformal_gate (CPTC) is wired into live policy admission only when callers provide the observed-twin confidence source; default CLI runs do not synthesize that feed.",
+    "Formal export covers PRISM, TLA+, and generated policy SMT-LIB feasibility models; external checker execution remains non-actuating and package/readiness-gated.",
+      "studio/ emits a read-only studio.control-feed.v1 live feed at /api/studio-feed; schema-A CapabilityManifest fields are verified against studio/federation_manifest.py and admitted by the current STUDIO Platform federation gate."
+  ]
+  }
+}
