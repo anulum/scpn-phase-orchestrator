@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `scpn_phase_orchestrator.monitor.conformal_alarm.ConformalAlarmStream`: extends
+  the split-conformal calibration of the twin-confidence gate to early-warning
+  alarm streams. It learns an alarm threshold from a trusted nominal score window
+  so the false-alarm rate on exchangeable nominal operation is bounded by a
+  configured target (the conformal `alpha`), flags alarms on a live stream,
+  reports the running empirical false-alarm rate over nominal ticks, and can
+  adapt online by Adaptive Conformal Inference under drift (consuming only
+  nominal ticks). The guarantee is the marginal split-conformal one; it makes no
+  claim about detection power.
 - `scpn_phase_orchestrator.runtime.stl_audit_chain`: seals `STLTraceResult`
   verdicts into the SHA-256 hash-chained audit event stream and replays them.
   `write_stl_results()` / `append_stl_result()` write each STL verdict as a

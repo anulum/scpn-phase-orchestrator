@@ -471,6 +471,35 @@ default CLI run has no observed-twin feed, so this admission gate is opt-in.
 
 ::: scpn_phase_orchestrator.monitor.twin_conformal_gate
 
+### Conformal Alarm Streams
+
+Extends the same finite-sample split-conformal calibration to early-warning
+*alarm* streams. `ConformalAlarmStream` learns an alarm threshold from a window
+of trusted nominal (transition-free) detector scores so that, on exchangeable
+nominal operation, the probability of a false alarm is bounded by the configured
+`target_false_alarm` (the conformal `alpha`); the guarantee is the marginal
+split-conformal one and nothing more. It flags an alarm whenever a live score
+exceeds the threshold, reports the running empirical false-alarm rate over the
+ticks it is told are nominal, and can adapt the threshold online by Adaptive
+Conformal Inference (Gibbs & Candès, 2021) when the nominal distribution drifts —
+consuming only nominal ticks, because an alarm on an event tick is a detection,
+not a false alarm. It makes no claim about detection power. Review-only: an alarm
+signals the nominal false-alarm budget was exceeded at a calibrated rate.
+
+```python
+from scpn_phase_orchestrator.monitor.conformal_alarm import (
+    ConformalAlarmConfig,
+    ConformalAlarmStream,
+)
+
+stream = ConformalAlarmStream(ConformalAlarmConfig(target_false_alarm=0.1))
+stream.calibrate(nominal_scores)          # trusted transition-free window
+decision = stream.update(live_score, is_nominal=False)
+assert isinstance(decision.alarm, bool)
+```
+
+::: scpn_phase_orchestrator.monitor.conformal_alarm
+
 ## Entropy Production Rate
 
 Measures the thermodynamic irreversibility of the phase dynamics.

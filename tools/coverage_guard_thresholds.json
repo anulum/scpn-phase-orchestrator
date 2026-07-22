@@ -32,7 +32,9 @@
   "_comment_neural_ode": "2026-07-22: nn/neural_ode.py ships at 100% line+branch coverage (new module, KIMI lane B1 M1 — diffrax continuous-adjoint UDE-Kuramoto solver); pinned as a no-regression floor.",
   "_comment_upde_adjoint": "2026-07-22: upde/adjoint.py ships at 100% line+branch coverage (KIMI lane B1 M3 — gradient_knm_jax reimplemented on a diffrax continuous adjoint, pragma removed, gradient-agreement-vs-FD tests added); pinned as a no-regression floor.",
   "_comment_stl_audit_chain": "2026-07-22: runtime/stl_audit_chain.py ships at 100% line+branch coverage (new module, KIMI lane C1 M5 — STL trace-result round-trip through the SHA-256 audit event stream with integrity-verified replay); pinned as a no-regression floor.",
+  "_comment_conformal_alarm": "2026-07-22: monitor/conformal_alarm.py ships at 100% line+branch coverage (new module — split-conformal false-alarm control for early-warning detector streams with ACI drift adaptation and coverage reporting; extends the verified twin_conformal_gate core); pinned as a no-regression floor.",
   "file_min_line_rate": {
+    "src/scpn_phase_orchestrator/monitor/conformal_alarm.py": 100.0,
     "src/scpn_phase_orchestrator/runtime/stl_audit_chain.py": 100.0,
     "src/scpn_phase_orchestrator/upde/adjoint.py": 100.0,
     "src/scpn_phase_orchestrator/nn/neural_ode.py": 100.0,
