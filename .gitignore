@@ -277,3 +277,5 @@ go/libtwin_confidence.so
 go/libtwin_confidence.h
 mojo/twin_confidence_mojo
 node_modules/
+
+docs/internal/**
