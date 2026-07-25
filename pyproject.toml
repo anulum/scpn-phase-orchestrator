@@ -64,7 +64,7 @@ queuewaves = [
 # and lets uv's universal resolution across 3.11-3.13 succeed.
 studio = [
     "streamlit>=1.36,<2.0",
-    "scpn-studio-platform>=0.3,<0.4; python_version >= '3.12'",
+    "scpn-studio-platform>=0.11,<0.12; python_version >= '3.12'",
 ]
 nn = [
     "jax>=0.4,<1.0",

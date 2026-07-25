@@ -17,6 +17,7 @@ import json
 import os
 import subprocess
 import sys
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -26,6 +27,7 @@ from scpn_phase_orchestrator.studio.live_feed import LIVE_FEED_EVIDENCE_SCHEMAS
 
 pytest.importorskip("scpn_studio_platform")
 
+from scpn_studio_platform.manifest import resolve_pipeline  # noqa: E402
 from scpn_studio_platform.verbs import (  # noqa: E402  (after importorskip)
     ProofMethod,
     SafetyTier,
@@ -73,6 +75,17 @@ _EXPECTED_VERBS = {
     "assure",
     "autotune",
 }
+_EXPECTED_CONSUMES = {
+    "simulate": ("binding_spec",),
+    "analyse": ("upde_state",),
+    "supervise": ("coherence", "twin_confidence"),
+    "project": ("control_action_proposal",),
+    "forecast": ("upde_state",),
+    "certify-conformal": ("regime_forecast",),
+    "audit": ("projected_action",),
+    "replay": ("audit_record",),
+    "assure": ("audit_record", "replay_verdict"),
+}
 
 
 def test_manifest_is_well_formed() -> None:
@@ -81,8 +94,32 @@ def test_manifest_is_well_formed() -> None:
     assert manifest.studio_version == "1.2.3"
     assert manifest.transport_profile.value == "local-first"
     assert manifest.content_digest.startswith("sha256:")
+    assert manifest.platform_sdk == ">=0.11,<0.12"
     assert {v.name for v in manifest.verbs} == _EXPECTED_VERBS
     assert manifest.evidence_types == LIVE_FEED_EVIDENCE_SCHEMAS
+    assert {
+        verb.name: verb.consumes for verb in manifest.verbs if verb.consumes
+    } == _EXPECTED_CONSUMES
+
+
+def test_manifest_resolves_its_internal_hard_functional_edges() -> None:
+    """Every declared SPO input has a producer in the same schema-A manifest."""
+    manifest = fm.build_capability_manifest(studio_version="1.2.3")
+    resolution = resolve_pipeline((manifest,))
+
+    assert resolution.admitted
+    assert resolution.unresolved_upstreams == ()
+    assert resolution.era_conflicts == ()
+    edges = {
+        (edge.upstream_verb, edge.downstream_verb, edge.wire_format)
+        for edge in resolution.edges
+    }
+    assert ("bind", "simulate", "binding_spec") in edges
+    assert ("simulate", "analyse", "upde_state") in edges
+    assert ("analyse", "supervise", "coherence") in edges
+    assert ("supervise", "project", "control_action_proposal") in edges
+    assert ("audit", "replay", "audit_record") in edges
+    assert ("replay", "assure", "replay_verdict") in edges
 
 
 def test_manifest_declares_the_federated_ui_remote() -> None:
@@ -155,6 +192,24 @@ def test_digest_tracks_live_feed_evidence_schemas(
     assert changed != baseline
 
 
+def test_digest_tracks_hard_functional_inputs() -> None:
+    """A consumes-contract change alters the manifest content digest."""
+    verbs = fm._verbs()
+    baseline = fm._manifest_content_digest(verbs, LIVE_FEED_EVIDENCE_SCHEMAS)
+    changed_verbs = tuple(
+        replace(verb, consumes=(*verb.consumes, "external_state"))
+        if verb.name == "analyse"
+        else verb
+        for verb in verbs
+    )
+    changed = fm._manifest_content_digest(
+        changed_verbs,
+        LIVE_FEED_EVIDENCE_SCHEMAS,
+    )
+
+    assert changed != baseline
+
+
 def test_honesty_invariants_hold() -> None:
     manifest = fm.build_capability_manifest(studio_version="0.0.0")
     for verb in manifest.verbs:
@@ -171,6 +226,9 @@ def test_manifest_dict_round_trips() -> None:
     assert payload["studio"] == "scpn-phase-orchestrator"
     assert {v["verb"] for v in payload["verbs"]} == _EXPECTED_VERBS
     assert payload["transport_profile"] == "local-first"
+    verbs = {verb["verb"]: verb for verb in payload["verbs"]}
+    assert verbs["simulate"]["consumes"] == ["binding_spec"]
+    assert verbs["simulate"]["produces"] == ["upde_state", "order_parameter"]
 
 
 def test_fingerprint_includes_a_formal_proof_method() -> None:

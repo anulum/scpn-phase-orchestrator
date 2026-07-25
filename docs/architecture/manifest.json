@@ -4,7 +4,7 @@
     "status": "fleet-validator-admitted",
     "note": "SPO's schema-A fields are sourced from studio/federation_manifest.py, locked by tests against the optional scpn-studio-platform CapabilityManifest, and admitted by the current STUDIO Platform schema-A federation gate. The live /api/studio-feed endpoint uses the sibling studio.control-feed.v1 wire envelope.",
     "project": "scpn-phase-orchestrator",
-    "platform_sdk": "0.3.0",
+    "platform_sdk": ">=0.11,<0.12",
     "protocol_version": "1",
     "transport_profile": "local-first",
     "evidence_types": [
@@ -21,19 +21,108 @@
     },
     "contract_era": "v1",
     "enumeration": "language-agnostic",
-    "content_digest": "sha256:bcff4ee3d707d0f4b0b3b5299a5d6546b5f2328282a994479eb255c2fa29078d",
+    "content_digest": "sha256:611d965e9c07d092346fc3a7c8e0bf54d742248d620593703dee3441d9e83cac",
     "verbs": [
-      "bind",
-      "simulate",
-      "analyse",
-      "supervise",
-      "project",
-      "forecast",
-      "certify-conformal",
-      "audit",
-      "replay",
-      "assure",
-      "autotune"
+      {
+        "verb": "bind",
+        "safety_tier": "research",
+        "side_effect": "read-only",
+        "timing": {"class": "batch"},
+        "produces": ["binding_spec"],
+        "backends": ["python"]
+      },
+      {
+        "verb": "simulate",
+        "safety_tier": "research",
+        "side_effect": "simulated",
+        "timing": {"class": "batch"},
+        "fidelity": "first-principles",
+        "consumes": ["binding_spec"],
+        "produces": ["upde_state", "order_parameter"],
+        "backends": ["rust", "webgpu", "mojo", "julia", "go", "python"]
+      },
+      {
+        "verb": "analyse",
+        "safety_tier": "research",
+        "side_effect": "read-only",
+        "timing": {"class": "batch"},
+        "consumes": ["upde_state"],
+        "produces": ["coherence", "lyapunov", "transfer_entropy", "twin_confidence"],
+        "backends": ["rust", "webgpu", "mojo", "julia", "go", "python"]
+      },
+      {
+        "verb": "supervise",
+        "safety_tier": "research",
+        "side_effect": "read-only",
+        "timing": {"class": "batch"},
+        "fidelity": "reduced-order",
+        "consumes": ["coherence", "twin_confidence"],
+        "produces": ["control_action_proposal", "regime"],
+        "backends": ["python"]
+      },
+      {
+        "verb": "project",
+        "safety_tier": "research",
+        "side_effect": "simulated",
+        "timing": {"class": "batch"},
+        "consumes": ["control_action_proposal"],
+        "produces": ["projected_action"],
+        "backends": ["python"]
+      },
+      {
+        "verb": "forecast",
+        "safety_tier": "research",
+        "side_effect": "read-only",
+        "timing": {"class": "batch"},
+        "fidelity": "reduced-order",
+        "consumes": ["upde_state"],
+        "produces": ["regime_forecast"],
+        "backends": ["python"]
+      },
+      {
+        "verb": "certify-conformal",
+        "safety_tier": "research",
+        "side_effect": "read-only",
+        "timing": {"class": "batch"},
+        "consumes": ["regime_forecast"],
+        "produces": ["conformal_admission"],
+        "backends": ["python"]
+      },
+      {
+        "verb": "audit",
+        "safety_tier": "research",
+        "side_effect": "read-only",
+        "timing": {"class": "batch"},
+        "consumes": ["projected_action"],
+        "produces": ["audit_record"],
+        "backends": ["python"]
+      },
+      {
+        "verb": "replay",
+        "safety_tier": "research",
+        "side_effect": "read-only",
+        "timing": {"class": "batch"},
+        "consumes": ["audit_record"],
+        "produces": ["replay_verdict"],
+        "backends": ["python"]
+      },
+      {
+        "verb": "assure",
+        "safety_tier": "research",
+        "side_effect": "read-only",
+        "timing": {"class": "batch"},
+        "consumes": ["audit_record", "replay_verdict"],
+        "produces": ["assurance_bundle"],
+        "backends": ["python"]
+      },
+      {
+        "verb": "autotune",
+        "safety_tier": "research",
+        "side_effect": "simulated",
+        "timing": {"class": "batch"},
+        "produces": ["binding_spec"],
+        "backends": ["python"]
+      }
     ]
   },
   "architecture_map": {

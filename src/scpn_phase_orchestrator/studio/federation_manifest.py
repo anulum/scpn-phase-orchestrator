@@ -32,6 +32,7 @@ federation name, exposed module, and remote-entry URL
 
 from __future__ import annotations
 
+import json
 from typing import TYPE_CHECKING
 
 from scpn_phase_orchestrator.studio.live_feed import LIVE_FEED_EVIDENCE_SCHEMAS
@@ -61,7 +62,7 @@ if TYPE_CHECKING:
 
 __all__ = ["build_capability_manifest", "manifest_dict"]
 
-_PLATFORM_SDK = "0.3.0"
+_PLATFORM_SDK = ">=0.11,<0.12"
 _PROTOCOL_VERSION = "1"
 _POLYGLOT = ("rust", "webgpu", "mojo", "julia", "go", "python")
 _NUMPY_ONLY = ("python",)
@@ -84,7 +85,7 @@ def _require_sdk() -> None:
         raise RuntimeError(
             "the SCPN STUDIO platform SDK is required to build the federation "
             "manifest: pip install 'scpn-phase-orchestrator[studio]' "
-            "(scpn-studio-platform>=0.3)"
+            "(scpn-studio-platform>=0.11,<0.12)"
         )
 
 
@@ -115,6 +116,7 @@ def _verbs() -> tuple[Verb, ...]:
             side_effect=simulated,
             timing=batch,
             fidelity=Fidelity.FIRST_PRINCIPLES,
+            consumes=("binding_spec",),
             produces=("upde_state", "order_parameter"),
             backends=_POLYGLOT,
         ),
@@ -123,6 +125,7 @@ def _verbs() -> tuple[Verb, ...]:
             safety_tier=research,
             side_effect=read_only,
             timing=batch,
+            consumes=("upde_state",),
             produces=("coherence", "lyapunov", "transfer_entropy", "twin_confidence"),
             backends=_POLYGLOT,
         ),
@@ -132,6 +135,7 @@ def _verbs() -> tuple[Verb, ...]:
             side_effect=read_only,
             timing=batch,
             fidelity=Fidelity.REDUCED_ORDER,
+            consumes=("coherence", "twin_confidence"),
             produces=("control_action_proposal", "regime"),
             backends=_NUMPY_ONLY,
         ),
@@ -140,6 +144,7 @@ def _verbs() -> tuple[Verb, ...]:
             safety_tier=research,
             side_effect=simulated,
             timing=batch,
+            consumes=("control_action_proposal",),
             produces=("projected_action",),
             backends=_NUMPY_ONLY,
         ),
@@ -149,6 +154,7 @@ def _verbs() -> tuple[Verb, ...]:
             side_effect=read_only,
             timing=batch,
             fidelity=Fidelity.REDUCED_ORDER,
+            consumes=("upde_state",),
             produces=("regime_forecast",),
             backends=_NUMPY_ONLY,
         ),
@@ -157,6 +163,7 @@ def _verbs() -> tuple[Verb, ...]:
             safety_tier=research,
             side_effect=read_only,
             timing=batch,
+            consumes=("regime_forecast",),
             produces=("conformal_admission",),
             backends=_NUMPY_ONLY,
         ),
@@ -165,6 +172,7 @@ def _verbs() -> tuple[Verb, ...]:
             safety_tier=research,
             side_effect=read_only,
             timing=batch,
+            consumes=("projected_action",),
             produces=("audit_record",),
             backends=_NUMPY_ONLY,
         ),
@@ -173,6 +181,7 @@ def _verbs() -> tuple[Verb, ...]:
             safety_tier=research,
             side_effect=read_only,
             timing=batch,
+            consumes=("audit_record",),
             produces=("replay_verdict",),
             backends=_NUMPY_ONLY,
         ),
@@ -181,6 +190,7 @@ def _verbs() -> tuple[Verb, ...]:
             safety_tier=research,
             side_effect=read_only,
             timing=batch,
+            consumes=("audit_record", "replay_verdict"),
             produces=("assurance_bundle",),
             backends=_NUMPY_ONLY,
         ),
@@ -198,24 +208,11 @@ def _verbs() -> tuple[Verb, ...]:
 def _verb_fingerprint(verb: Verb) -> str:
     """Stable fingerprint of a verb's honesty attributes for the content digest.
 
-    Covers every attribute that distinguishes the verb's contract, so any change
-    to a tier, side effect, fidelity, timing, output, or backend changes the
-    manifest digest.
+    Canonicalising the SDK's complete wire representation avoids maintaining a
+    second attribute list here: a tier, side effect, fidelity, timing, proof,
+    input, output, or backend change necessarily changes the manifest digest.
     """
-    fidelity = verb.fidelity.value if verb.fidelity is not None else ""
-    proof = verb.proof.method.value if verb.proof is not None else ""
-    return "|".join(
-        (
-            verb.name,
-            verb.safety_tier.value,
-            verb.side_effect.value,
-            verb.timing.timing_class.value,
-            fidelity,
-            proof,
-            ",".join(verb.produces),
-            ",".join(verb.backends),
-        )
-    )
+    return json.dumps(verb.to_dict(), sort_keys=True, separators=(",", ":"))
 
 
 def _manifest_content_digest(

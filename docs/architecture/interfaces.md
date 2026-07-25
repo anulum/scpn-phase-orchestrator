@@ -82,8 +82,9 @@ are `execution_disabled=True` and `operator_review_required=True`. The surface
 emits Python-dataclass `ExportManifest` records and a read-only
 `studio.control-feed.v1` envelope for live STUDIO ingestion. The schema-A
 federation manifest is local-first, advertises the versioned live-feed evidence
-schemas, and ships no UI module while the current STUDIO Platform schema-A
-federation gate admits its wire form. See
+schemas and hard `consumes`/`produces` pipeline edges, and declares the
+pull-deployed `./SpoStudioPanel` UI module while the current STUDIO Platform
+schema-A federation gate admits its wire form. See
 [subsystems/studio-reporting.md](subsystems/studio-reporting.md).
 
 ## 6. Reporting and visualisation

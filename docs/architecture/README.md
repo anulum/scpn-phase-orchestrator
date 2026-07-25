@@ -145,8 +145,9 @@ Python-dataclass `ExportManifest` records, and exposes `/api/studio-feed` as a
 `spo.studio-runtime-snapshot.v1`. The feed lets STUDIO ingest live SPO state; it
 does not permit hardware writes, QPU execution, or policy promotion. Its
 schema-A federation manifest is local-first, advertises the versioned live-feed
-evidence schemas, ships no UI module, and passes the current STUDIO Platform
-schema-A federation gate.
+evidence schemas and hard `consumes`/`produces` pipeline edges, declares the
+pull-deployed `./SpoStudioPanel` UI module, and passes the current STUDIO
+Platform schema-A federation gate.
 See [studio-reporting.md](subsystems/studio-reporting.md).
 
 ---

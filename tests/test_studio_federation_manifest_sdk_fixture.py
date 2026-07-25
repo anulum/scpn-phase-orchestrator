@@ -76,6 +76,10 @@ class _ProofMethod:
 class _Timing:
     timing_class: _EnumValue
 
+    def to_dict(self) -> dict[str, str]:
+        """Return the current Platform timing wire form."""
+        return {"class": self.timing_class.value}
+
 
 @dataclass(frozen=True)
 class _VerbProof:
@@ -84,6 +88,16 @@ class _VerbProof:
     engine_version: str
     depth: int
     non_vacuity_checked: bool
+
+    def to_dict(self) -> dict[str, object]:
+        """Return the current Platform proof wire form."""
+        return {
+            "method": self.method.value,
+            "engine": self.engine,
+            "engine_version": self.engine_version,
+            "depth": self.depth,
+            "non_vacuity_checked": self.non_vacuity_checked,
+        }
 
 
 @dataclass(frozen=True)
@@ -94,8 +108,29 @@ class _Verb:
     timing: _Timing
     fidelity: _EnumValue | None = None
     proof: _VerbProof | None = None
+    consumes: tuple[str, ...] = ()
     produces: tuple[str, ...] = ()
     backends: tuple[str, ...] = ()
+
+    def to_dict(self) -> dict[str, object]:
+        """Return the current Platform verb wire form."""
+        result: dict[str, object] = {
+            "verb": self.name,
+            "safety_tier": self.safety_tier.value,
+            "side_effect": self.side_effect.value,
+            "timing": self.timing.to_dict(),
+        }
+        if self.fidelity is not None:
+            result["fidelity"] = self.fidelity.value
+        if self.proof is not None:
+            result["proof"] = self.proof.to_dict()
+        if self.consumes:
+            result["consumes"] = list(self.consumes)
+        if self.produces:
+            result["produces"] = list(self.produces)
+        if self.backends:
+            result["backends"] = list(self.backends)
+        return result
 
 
 @dataclass(frozen=True)
@@ -137,19 +172,7 @@ class _CapabilityManifest:
             "content_digest": self.content_digest,
             "protocol_version": self.protocol_version,
             "transport_profile": self.transport_profile.value,
-            "verbs": [
-                {
-                    "verb": verb.name,
-                    "safety_tier": verb.safety_tier.value,
-                    "side_effect": verb.side_effect.value,
-                    "timing": verb.timing.timing_class.value,
-                    "fidelity": None if verb.fidelity is None else verb.fidelity.value,
-                    "proof": None if verb.proof is None else verb.proof.method.value,
-                    "produces": list(verb.produces),
-                    "backends": list(verb.backends),
-                }
-                for verb in self.verbs
-            ],
+            "verbs": [verb.to_dict() for verb in self.verbs],
             "evidence_types": list(self.evidence_types),
             "external_reference_datasets": list(self.external_reference_datasets),
             "ui_module": None if self.ui_module is None else self.ui_module.to_dict(),
@@ -232,7 +255,7 @@ def test_manifest_builds_schema_a_contract_with_sdk_fixture() -> None:
     assert manifest.evidence_types == LIVE_FEED_EVIDENCE_SCHEMAS
     assert manifest.content_digest.startswith("sha256:")
     assert payload["studio"] == manifest.studio
-    assert payload["platform_sdk"] == "0.3.0"
+    assert payload["platform_sdk"] == ">=0.11,<0.12"
     assert payload["protocol_version"] == "1"
     assert payload["contract_era"] == "v1"
     assert payload["enumeration"] == "language-agnostic"
@@ -245,6 +268,11 @@ def test_manifest_builds_schema_a_contract_with_sdk_fixture() -> None:
     }
     assert payload["evidence_types"] == list(LIVE_FEED_EVIDENCE_SCHEMAS)
     assert {verb["verb"] for verb in _manifest_verbs(payload)} == _EXPECTED_VERBS
+    simulate = next(
+        verb for verb in _manifest_verbs(payload) if verb["verb"] == "simulate"
+    )
+    assert simulate["consumes"] == ["binding_spec"]
+    assert simulate["produces"] == ["upde_state", "order_parameter"]
 
 
 def test_manifest_sdk_fixture_preserves_review_only_honesty_contract() -> None:
@@ -255,8 +283,8 @@ def test_manifest_sdk_fixture_preserves_review_only_honesty_contract() -> None:
     for verb in _manifest_verbs(payload):
         assert verb["safety_tier"] == "research"
         assert verb["side_effect"] != "live-hardware"
-        assert verb["timing"] == "batch"
-        assert verb["proof"] is None
+        assert verb["timing"] == {"class": "batch"}
+        assert verb.get("proof") is None
         assert isinstance(verb["produces"], list)
         assert isinstance(verb["backends"], list)
 
@@ -277,6 +305,30 @@ def test_manifest_digest_changes_when_evidence_schema_changes() -> None:
         )
 
     assert changed != baseline
+
+
+def test_manifest_digest_changes_when_consumes_contract_changes() -> None:
+    """Hard functional input changes alter the advertised federation digest."""
+    plain = _Verb(
+        name="analyse",
+        safety_tier=_SafetyTier.RESEARCH,
+        side_effect=_SideEffect.READ_ONLY,
+        timing=_Timing(timing_class=_TimingClass.BATCH),
+        consumes=("upde_state",),
+    )
+    changed = _Verb(
+        name="analyse",
+        safety_tier=_SafetyTier.RESEARCH,
+        side_effect=_SideEffect.READ_ONLY,
+        timing=_Timing(timing_class=_TimingClass.BATCH),
+        consumes=("upde_state", "external_state"),
+    )
+
+    with _manifest_module_with_sdk_fixture() as federation_manifest:
+        plain_fingerprint = federation_manifest._verb_fingerprint(plain)
+        changed_fingerprint = federation_manifest._verb_fingerprint(changed)
+
+    assert plain_fingerprint != changed_fingerprint
 
 
 def test_manifest_digest_tracks_formal_proof_attributes() -> None:
@@ -306,7 +358,7 @@ def test_manifest_digest_tracks_formal_proof_attributes() -> None:
         proved_fingerprint = federation_manifest._verb_fingerprint(proved)
 
     assert proved_fingerprint != plain_fingerprint
-    assert "|bmc|" in proved_fingerprint
+    assert "bmc" in proved_fingerprint
 
 
 def test_manifest_import_guard_fails_closed_without_sdk(

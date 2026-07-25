@@ -52,7 +52,7 @@ def test_architecture_schema_a_tracks_studio_federation_manifest() -> None:
     assert core["contract_era"] == payload["contract_era"]
     assert core["enumeration"] == payload["enumeration"]
     assert core["content_digest"] == payload["content_digest"]
-    assert core["verbs"] == [verb["verb"] for verb in payload["verbs"]]
+    assert core["verbs"] == payload["verbs"]
 
 
 def test_architecture_map_names_live_studio_feed_boundary() -> None:

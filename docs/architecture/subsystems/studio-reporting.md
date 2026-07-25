@@ -25,10 +25,13 @@ charts, and connector plans.
   schema-A `CapabilityManifest` for STUDIO federation. The local fields are
   `transport_profile=local-first`,
   `evidence_types=["spo.runtime-state.v1", "spo.phase-coherence.v1",
-  "spo.regime-state.v1"]`, `ui_module=None`, `contract_era=v1`, and
-  `enumeration=language-agnostic`. The public architecture manifest mirrors
-  those fields, and the focused manifest tests run the current STUDIO Platform
-  schema-A federation gate against the emitted wire form.
+  "spo.regime-state.v1"]`, a pull-deployed `./SpoStudioPanel` `ui_module`,
+  `contract_era=v1`, and `enumeration=language-agnostic`. Verb declarations
+  include their hard functional `consumes`/`produces` edges; those edges are
+  covered by the content digest and resolve without hidden upstreams. The public
+  architecture manifest mirrors the complete wire form, and the focused
+  manifest tests run the current STUDIO Platform schema-A federation gate
+  against it.
 
 ## `reporting`
 
