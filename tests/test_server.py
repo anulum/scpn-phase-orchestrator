@@ -155,8 +155,8 @@ class TestFastAPIEndpoints:
         assert data["runtime"]["schema"] == "spo.studio-runtime-snapshot.v1"
         assert data["runtime"]["step"] == 0
         assert {claim["schema"] for claim in data["claims"]} >= {
-            "spo.runtime-state.v1",
-            "spo.phase-coherence.v1",
+            "studio.runtime-state.v1",
+            "studio.phase-coherence.v1",
         }
 
     def test_post_step(self, client):

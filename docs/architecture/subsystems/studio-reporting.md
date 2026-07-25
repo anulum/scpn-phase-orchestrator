@@ -1,6 +1,6 @@
 # Subsystem: `studio` / `reporting` / `visualization` — operator surfaces
 
-Human-facing review, explanation, and visualisation. `studio` 24 files,
+Human-facing review, explanation, and visualisation. `studio` 25 files,
 `reporting` 5, `visualization` 4.
 
 ## `studio` — review surface
@@ -24,14 +24,21 @@ charts, and connector plans.
 - **Federation manifest**: `studio/federation_manifest.py` builds the optional
   schema-A `CapabilityManifest` for STUDIO federation. The local fields are
   `transport_profile=local-first`,
-  `evidence_types=["spo.runtime-state.v1", "spo.phase-coherence.v1",
-  "spo.regime-state.v1"]`, a pull-deployed `./SpoStudioPanel` `ui_module`,
+  `evidence_types=["studio.runtime-state.v1", "studio.phase-coherence.v1",
+  "studio.regime-state.v1"]`, a pull-deployed `./SpoStudioPanel` `ui_module`,
   `contract_era=v1`, and `enumeration=language-agnostic`. Verb declarations
   include their hard functional `consumes`/`produces` edges; those edges are
   covered by the content digest and resolve without hidden upstreams. The public
   architecture manifest mirrors the complete wire form, and the focused
   manifest tests run the current STUDIO Platform schema-A federation gate
   against it.
+- **Schema-B evidence**: `studio/evidence_bundles.py` reduces a validated live
+  snapshot to immutable, content-addressed runtime-state, phase-coherence, and
+  regime-state artifacts. Each artifact is bound into a Platform
+  `EvidenceBundle`, admitted through the era-v2 federation gate only in
+  `boundary` mode, and records the `numerical-model` substrate. Numeric seal
+  fields are shortest-round-trip strings rather than JSON floats; the producer
+  recursively rejects any float before canonicalization.
 
 ## `reporting`
 

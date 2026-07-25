@@ -52,6 +52,18 @@ and adds a SPO-specific `runtime` payload with
 `runtime.schema=spo.studio-runtime-snapshot.v1`. It is read-only Studio
 ingestion data, not a command channel.
 
+`build_studio_evidence_emissions(snapshot, studio_version=...,
+activity_timestamp=...)` turns that same validated snapshot into concrete
+`studio.runtime-state.v1`, `studio.phase-coherence.v1`, and
+`studio.regime-state.v1` schema-B evidence. Each result binds immutable
+canonical artifact bytes to a Platform `EvidenceBundle`, passes the era-v2
+federation gate, and remains a `bounded-model` boundary claim on the
+`numerical-model` substrate. Runtime and coherence observations are measured;
+the unverified regime label is explicitly `producer-asserted`. Seal-bound
+numbers are decimal strings, and a recursive guard rejects any JSON float
+before canonicalization. This is evidence emission only: it does not sign,
+publish, actuate, or upgrade a claim to reference validation.
+
 `build_integrated_information_panel(records)` renders passive
 `integrated_information` monitor audit records into an operator payload with
 latest Phi proxy values, normalised-Phi and total-integration ranges,
@@ -223,6 +235,8 @@ reconciled against its source artifacts.
 ::: scpn_phase_orchestrator.studio.product
 
 ::: scpn_phase_orchestrator.studio.live_feed
+
+::: scpn_phase_orchestrator.studio.evidence_bundles
 
 ::: scpn_phase_orchestrator.studio.ui_helpers
 

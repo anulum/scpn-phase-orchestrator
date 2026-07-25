@@ -228,7 +228,13 @@ def test_manifest_dict_round_trips() -> None:
     assert payload["transport_profile"] == "local-first"
     verbs = {verb["verb"]: verb for verb in payload["verbs"]}
     assert verbs["simulate"]["consumes"] == ["binding_spec"]
-    assert verbs["simulate"]["produces"] == ["upde_state", "order_parameter"]
+    assert verbs["simulate"]["produces"] == [
+        "upde_state",
+        "order_parameter",
+        "studio.runtime-state.v1",
+    ]
+    assert verbs["analyse"]["produces"][-1] == "studio.phase-coherence.v1"
+    assert verbs["supervise"]["produces"][-1] == "studio.regime-state.v1"
 
 
 def test_fingerprint_includes_a_formal_proof_method() -> None:

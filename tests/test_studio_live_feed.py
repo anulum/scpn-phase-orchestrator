@@ -53,6 +53,14 @@ def test_build_studio_control_feed_uses_control_feed_envelope() -> None:
     assert {claim["schema"] for claim in feed["claims"]} == set(
         LIVE_FEED_EVIDENCE_SCHEMAS
     )
+    assert LIVE_FEED_EVIDENCE_SCHEMAS == (
+        "studio.runtime-state.v1",
+        "studio.phase-coherence.v1",
+        "studio.regime-state.v1",
+    )
+    claims = {claim["schema"]: claim for claim in feed["claims"]}
+    assert claims["studio.phase-coherence.v1"]["status"] == "bounded-model"
+    assert claims["studio.regime-state.v1"]["kind"] == "producer-asserted"
     assert feed["runtime"] == {
         "schema": RUNTIME_SCHEMA,
         "step": 3,

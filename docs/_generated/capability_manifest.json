@@ -8,11 +8,11 @@
     "optional_extras": 23,
     "public_api_exports": 24,
     "public_documentation_pages": 229,
-    "python_package_modules": 724,
+    "python_package_modules": 725,
     "research_experimental_modules": 205,
-    "runtime_serving_modules": 156,
+    "runtime_serving_modules": 157,
     "rust_kernel_files": 97,
-    "test_files": 861
+    "test_files": 862
   },
   "documentation": {
     "public_pages": [
@@ -1068,6 +1068,7 @@
       "src/scpn_phase_orchestrator/scaffold/__init__.py",
       "src/scpn_phase_orchestrator/scaffold/llm.py",
       "src/scpn_phase_orchestrator/studio/__init__.py",
+      "src/scpn_phase_orchestrator/studio/evidence_bundles.py",
       "src/scpn_phase_orchestrator/studio/federation_manifest.py",
       "src/scpn_phase_orchestrator/studio/live_feed.py",
       "src/scpn_phase_orchestrator/studio/panel_data.py",
@@ -1663,6 +1664,7 @@
     "src/scpn_phase_orchestrator/ssgf/pgbo.py",
     "src/scpn_phase_orchestrator/ssgf/topological_integration.py",
     "src/scpn_phase_orchestrator/studio/__init__.py",
+    "src/scpn_phase_orchestrator/studio/evidence_bundles.py",
     "src/scpn_phase_orchestrator/studio/federation_manifest.py",
     "src/scpn_phase_orchestrator/studio/live_feed.py",
     "src/scpn_phase_orchestrator/studio/panel_data.py",
@@ -2584,6 +2586,7 @@
       "tests/test_stuart_landau_replay.py",
       "tests/test_stuart_landau_validation.py",
       "tests/test_studio_charts.py",
+      "tests/test_studio_evidence_bundles.py",
       "tests/test_studio_federation_manifest.py",
       "tests/test_studio_federation_manifest_sdk_fixture.py",
       "tests/test_studio_live_feed.py",

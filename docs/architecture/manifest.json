@@ -8,9 +8,9 @@
     "protocol_version": "1",
     "transport_profile": "local-first",
     "evidence_types": [
-      "spo.runtime-state.v1",
-      "spo.phase-coherence.v1",
-      "spo.regime-state.v1"
+      "studio.runtime-state.v1",
+      "studio.phase-coherence.v1",
+      "studio.regime-state.v1"
     ],
     "ui_module": {
       "remote_entry": "https://www.anulum.org/studios/scpn-phase-orchestrator/remoteEntry.js",
@@ -21,7 +21,7 @@
     },
     "contract_era": "v1",
     "enumeration": "language-agnostic",
-    "content_digest": "sha256:611d965e9c07d092346fc3a7c8e0bf54d742248d620593703dee3441d9e83cac",
+    "content_digest": "sha256:729b252b0b29c7a0c808b0485db92022daf00f0e4edd707071ad5785352814ec",
     "verbs": [
       {
         "verb": "bind",
@@ -38,7 +38,7 @@
         "timing": {"class": "batch"},
         "fidelity": "first-principles",
         "consumes": ["binding_spec"],
-        "produces": ["upde_state", "order_parameter"],
+        "produces": ["upde_state", "order_parameter", "studio.runtime-state.v1"],
         "backends": ["rust", "webgpu", "mojo", "julia", "go", "python"]
       },
       {
@@ -47,7 +47,7 @@
         "side_effect": "read-only",
         "timing": {"class": "batch"},
         "consumes": ["upde_state"],
-        "produces": ["coherence", "lyapunov", "transfer_entropy", "twin_confidence"],
+        "produces": ["coherence", "lyapunov", "transfer_entropy", "twin_confidence", "studio.phase-coherence.v1"],
         "backends": ["rust", "webgpu", "mojo", "julia", "go", "python"]
       },
       {
@@ -57,7 +57,7 @@
         "timing": {"class": "batch"},
         "fidelity": "reduced-order",
         "consumes": ["coherence", "twin_confidence"],
-        "produces": ["control_action_proposal", "regime"],
+        "produces": ["control_action_proposal", "regime", "studio.regime-state.v1"],
         "backends": ["python"]
       },
       {

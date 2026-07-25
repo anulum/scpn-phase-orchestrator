@@ -117,7 +117,7 @@ def _verbs() -> tuple[Verb, ...]:
             timing=batch,
             fidelity=Fidelity.FIRST_PRINCIPLES,
             consumes=("binding_spec",),
-            produces=("upde_state", "order_parameter"),
+            produces=("upde_state", "order_parameter", LIVE_FEED_EVIDENCE_SCHEMAS[0]),
             backends=_POLYGLOT,
         ),
         Verb(
@@ -126,7 +126,13 @@ def _verbs() -> tuple[Verb, ...]:
             side_effect=read_only,
             timing=batch,
             consumes=("upde_state",),
-            produces=("coherence", "lyapunov", "transfer_entropy", "twin_confidence"),
+            produces=(
+                "coherence",
+                "lyapunov",
+                "transfer_entropy",
+                "twin_confidence",
+                LIVE_FEED_EVIDENCE_SCHEMAS[1],
+            ),
             backends=_POLYGLOT,
         ),
         Verb(
@@ -136,7 +142,11 @@ def _verbs() -> tuple[Verb, ...]:
             timing=batch,
             fidelity=Fidelity.REDUCED_ORDER,
             consumes=("coherence", "twin_confidence"),
-            produces=("control_action_proposal", "regime"),
+            produces=(
+                "control_action_proposal",
+                "regime",
+                LIVE_FEED_EVIDENCE_SCHEMAS[2],
+            ),
             backends=_NUMPY_ONLY,
         ),
         Verb(

@@ -272,7 +272,11 @@ def test_manifest_builds_schema_a_contract_with_sdk_fixture() -> None:
         verb for verb in _manifest_verbs(payload) if verb["verb"] == "simulate"
     )
     assert simulate["consumes"] == ["binding_spec"]
-    assert simulate["produces"] == ["upde_state", "order_parameter"]
+    assert simulate["produces"] == [
+        "upde_state",
+        "order_parameter",
+        "studio.runtime-state.v1",
+    ]
 
 
 def test_manifest_sdk_fixture_preserves_review_only_honesty_contract() -> None:
