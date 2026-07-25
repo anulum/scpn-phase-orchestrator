@@ -73,8 +73,10 @@ WORKDIR /app
 ENV PYTHONPATH=/app/src
 USER spo
 
+# Plain HTTP is deliberate: this is an in-container loopback liveness probe; it
+# crosses no trust boundary and carries no credentials or sensitive payload.
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
-    CMD ["python", "-c", "import urllib.request as u; r=u.urlopen('http://localhost:8000/api/health'); assert b'healthy' in r.read()"]
+    CMD ["python", "-c", "import urllib.request as u; r=u.urlopen('http://127.0.0.1:8000/api/health'); assert b'healthy' in r.read()"]
 
 ENTRYPOINT ["python", "-c", "from scpn_phase_orchestrator.cli import main; main()"]
 CMD ["--help"]
