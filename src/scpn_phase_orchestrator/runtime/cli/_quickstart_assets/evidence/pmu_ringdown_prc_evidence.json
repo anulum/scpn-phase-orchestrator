@@ -1,0 +1,86 @@
+{
+  "schema": "scpn_pmu_ringdown_prc_audit_v1",
+  "event_id": "iso-ne-forced-oscillation-case1",
+  "captured_at": "1900-01-01T00:00:00Z",
+  "signal_source": "ISO-NE Oscillation dataset case1 (UTK) / Sub:9:Ln:20 frequency",
+  "source_name": "iso_ne_case1_frequency_Sub9Ln20.csv",
+  "source_sha256": "2ed93167ced93d75d61fef5dc9fb7a878ceb631d74a76fa352e046f64e32f915",
+  "time_column": "time_s",
+  "frequency_column": "frequency_hz",
+  "nominal_frequency_hz": 60.0,
+  "sample_count": 5400,
+  "sampling_rate_hz": 30.00007779238546,
+  "duration_s": 179.9662,
+  "detrend": "mean",
+  "analysis_rate_hz": 5.000012965397577,
+  "analysis_sample_count": 900,
+  "prc_evidence_hash": "44a1be3651b4a83b10907c841f03113ea6345c122e3b7e1a18ff092adbd6767e",
+  "prc_evidence": {
+    "event_id": "iso-ne-forced-oscillation-case1",
+    "captured_at": "1900-01-01T00:00:00Z",
+    "signal_source": "ISO-NE Oscillation dataset case1 (UTK) / Sub:9:Ln:20 frequency/deviation",
+    "sampling_rate_hz": 5.000012965397577,
+    "poorly_damped_threshold": 0.03,
+    "undamped_threshold": 0.0,
+    "findings": [
+      {
+        "mode_index": 0,
+        "frequency_hz": 0.0,
+        "damping_ratio": 1.0,
+        "amplitude": 0.005743486624599138,
+        "mode_family": "aperiodic",
+        "classification": "acceptable",
+        "flagged": false
+      },
+      {
+        "mode_index": 1,
+        "frequency_hz": 0.27528172906111364,
+        "damping_ratio": -0.0027914409819931115,
+        "amplitude": 0.003042209980017547,
+        "mode_family": "inter_area",
+        "classification": "undamped",
+        "flagged": true
+      },
+      {
+        "mode_index": 2,
+        "frequency_hz": 0.2850618959498845,
+        "damping_ratio": 0.0025738141931348725,
+        "amplitude": 0.002885748447412887,
+        "mode_family": "inter_area",
+        "classification": "poorly_damped",
+        "flagged": true
+      },
+      {
+        "mode_index": 3,
+        "frequency_hz": 0.019623132102323942,
+        "damping_ratio": 0.0543035923302698,
+        "amplitude": 0.002621753236024391,
+        "mode_family": "inter_area",
+        "classification": "acceptable",
+        "flagged": false
+      },
+      {
+        "mode_index": 4,
+        "frequency_hz": 0.0,
+        "damping_ratio": -1.0,
+        "amplitude": 5.7700187164461385e-06,
+        "mode_family": "aperiodic",
+        "classification": "undamped",
+        "flagged": true
+      }
+    ],
+    "mode_family_counts": {
+      "aperiodic": 2,
+      "inter_area": 3
+    },
+    "flagged_count": 3,
+    "worst_damping_ratio": -1.0,
+    "verdict": "flagged_for_review",
+    "standard": "NERC PRC-028-1 / PRC-030-1 (IBR disturbance monitoring and unexpected event mitigation)",
+    "disclaimer": "This oscillation-monitoring evidence record is a technical evidence-mapping artifact. It screens measured modal damping for NERC PRC-028-1 disturbance monitoring and PRC-030-1 unexpected IBR event mitigation workflows; it does not constitute legal advice, a conformity assessment, or a certification of compliance. The exact clause identifiers, damping thresholds, and reporting obligations must be confirmed against the issued standards, and conformance determined by a qualified assessor.",
+    "content_hash": "44a1be3651b4a83b10907c841f03113ea6345c122e3b7e1a18ff092adbd6767e"
+  },
+  "claim_boundary": "review_only_offline_no_live_actuation",
+  "review_only": true,
+  "content_hash": "44b2aa69b5575cfb84dc5b18741a55af904c04a07358c28256623b09c6bd6b2f"
+}

@@ -17,6 +17,8 @@ integrity failure, and the empty-report path).
 from __future__ import annotations
 
 import json
+import shlex
+import tomllib
 from pathlib import Path
 from typing import Any
 
@@ -116,6 +118,48 @@ def test_quickstart_handles_an_empty_report_summary(
 
 def _committed_evidence() -> dict[str, Any]:
     return json.loads(quickstart_mod._EVIDENCE_RECORD.read_text(encoding="utf-8"))
+
+
+def test_quickstart_evidence_is_packaged_and_matches_the_canonical_record() -> None:
+    repository_root = Path(__file__).resolve().parents[1]
+    canonical = (
+        repository_root
+        / "examples"
+        / "real_data"
+        / "iso_ne_case1"
+        / "pmu_ringdown_prc_evidence.json"
+    )
+
+    assert quickstart_mod._EVIDENCE_RECORD.is_relative_to(quickstart_mod._ASSET_ROOT)
+    assert quickstart_mod._EVIDENCE_RECORD.read_bytes() == canonical.read_bytes()
+
+
+def test_quickstart_json_assets_are_in_the_wheel_package_data() -> None:
+    repository_root = Path(__file__).resolve().parents[1]
+    project = tomllib.loads(
+        (repository_root / "pyproject.toml").read_text(encoding="utf-8")
+    )
+    package_data = project["tool"]["setuptools"]["package-data"]
+
+    assert (
+        "runtime/cli/_quickstart_assets/*/*.json"
+        in package_data["scpn_phase_orchestrator"]
+    )
+
+
+def test_quickstart_funnel_names_only_registered_cli_commands_and_targets() -> None:
+    repository_root = Path(__file__).resolve().parents[1]
+    document = (
+        repository_root / "docs" / "getting-started" / "quickstart.md"
+    ).read_text(encoding="utf-8")
+    commands = [
+        shlex.split(line) for line in document.splitlines() if line.startswith("spo ")
+    ]
+
+    assert commands
+    assert {command[1] for command in commands} <= set(main.commands)
+    for target in quickstart_mod._QUICKSTART_TARGETS:
+        assert f"spo quickstart {target}" in document
 
 
 def test_quickstart_evidence_reverifies_and_prints_the_verdict(

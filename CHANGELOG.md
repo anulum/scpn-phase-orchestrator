@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `spo quickstart evidence` now reads its sealed ISO-NE record from package data,
+  so the README's zero-download `pip install` path works from an installed wheel
+  rather than requiring a repository checkout. A byte-for-byte drift guard keeps
+  the packaged record identical to the canonical evidence under `examples/`.
+
 ### Added
 
 - `scpn_phase_orchestrator.meta.leave_one_domain_out`: a leave-one-domain-out

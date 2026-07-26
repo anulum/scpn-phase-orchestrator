@@ -47,7 +47,9 @@ This re-verifies a committed, **non-synthetic** artefact: a real ISO-NE forced
 oscillation (documented near 0.27 Hz) that was screened through the shipped
 `pmu-ieee-adapt` → `pmu-ringdown` chain. It recomputes the record's cryptographic
 seals in front of you — so you need not take the project's word for it — and prints
-the review-only verdict:
+the review-only verdict. The wheel carries a byte-identical copy of the canonical
+record under `examples/real_data/iso_ne_case1/`, guarded against drift in tests, so
+this path works after `pip install` without a repository checkout:
 
 ```
 [1/3] top-level seal: VERIFIED

@@ -56,17 +56,10 @@ _AUDITOR_TARGET_FALSE_ALARM = 0.1
 _AUDITOR_PERMUTATIONS = 500
 _AUDITOR_SEED = 7
 _AUDITOR_ALPHA = 0.05
-#: The committed, non-synthetic sealed record the ``evidence`` variant re-checks.
-#: Located relative to the repository root (this command's onboarding target is a
-#: clone), it is the single canonical copy guarded by
-#: ``tests/test_iso_ne_case1_real_evidence.py``.
-_EVIDENCE_RECORD = (
-    Path(__file__).resolve().parents[4]
-    / "examples"
-    / "real_data"
-    / "iso_ne_case1"
-    / "pmu_ringdown_prc_evidence.json"
-)
+#: Packaged, non-synthetic sealed record the ``evidence`` variant re-checks.
+#: Its owning test keeps this distributable copy byte-identical to the canonical
+#: record under ``examples/real_data/iso_ne_case1``.
+_EVIDENCE_RECORD = _ASSET_ROOT / "evidence" / "pmu_ringdown_prc_evidence.json"
 
 
 @main.command("quickstart")
@@ -234,8 +227,7 @@ def _run_evidence_quickstart(output: str | None) -> None:
     """
     if not _EVIDENCE_RECORD.exists():
         raise click.ClickException(
-            f"sealed evidence record not found: {_EVIDENCE_RECORD} "
-            "(the evidence quickstart runs from a repository clone)"
+            f"packaged sealed evidence record not found: {_EVIDENCE_RECORD}"
         )
     record: dict[str, Any] = json.loads(_EVIDENCE_RECORD.read_text(encoding="utf-8"))
     top_ok, nested_ok = _verify_evidence_seals(record)
