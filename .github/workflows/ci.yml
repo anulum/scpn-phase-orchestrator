@@ -300,8 +300,13 @@ jobs:
   coverage-guard:
     needs: [test, ffi-test, nn-coverage]
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 2
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.12"
@@ -330,6 +335,13 @@ jobs:
         with:
           name: coverage-xml-merged
           path: coverage-python.xml
+      - name: Upload merged coverage to Codecov
+        uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
+        with:
+          disable_search: true
+          fail_ci_if_error: true
+          files: coverage-python.xml
+          use_oidc: true
       - run: python tools/coverage_guard.py --coverage-xml coverage-python.xml
 
   branch-coverage:
