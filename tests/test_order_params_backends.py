@@ -182,6 +182,7 @@ class TestDirectBackendBoundaryContracts:
             np.array([True, False]),
             np.array([0.0 + 0.0j, 1.0 + 0.0j]),
             np.array([0.0, np.nan]),
+            np.array(["0.0", "1.0"]),
             np.array([[0.0, 1.0]]),
         ],
     )
@@ -230,6 +231,16 @@ class TestDirectBackendBoundaryContracts:
                 np.zeros((1, 2), dtype=np.float64),
                 np.zeros(2, dtype=np.float64),
                 "phases_a",
+            ),
+            (
+                np.array(["0.0", "1.0"]),
+                np.zeros(2, dtype=np.float64),
+                "phases_a",
+            ),
+            (
+                np.zeros(2, dtype=np.float64),
+                np.array(["0.0", "1.0"]),
+                "phases_b",
             ),
         ],
     )
@@ -280,6 +291,7 @@ class TestDirectBackendBoundaryContracts:
                 "phases",
             ),
             (np.array([0.0, np.nan]), np.array([0], dtype=np.int64), "phases"),
+            (np.array(["0.0", "1.0"]), np.array([0], dtype=np.int64), "phases"),
             (np.zeros(2, dtype=np.float64), np.array([True]), "indices"),
             (np.zeros(2, dtype=np.float64), np.array([0.5]), "indices"),
             (np.zeros(2, dtype=np.float64), np.array([-1]), "indices"),

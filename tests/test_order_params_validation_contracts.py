@@ -91,6 +91,20 @@ def test_finite_scalar_rejects_uncoercible_unit_interval_output() -> None:
         order_params_validation.validate_unit_interval_output(object(), name="PLV")
 
 
+@pytest.mark.parametrize("value", ["0.5", b"0.5", bytearray(b"0.5")])
+def test_unit_interval_output_rejects_numeric_string_aliases(value: object) -> None:
+    """Backend coherence outputs must arrive as typed real scalars."""
+    with pytest.raises(ValueError, match="PLV must be a finite real scalar"):
+        order_params_validation.validate_unit_interval_output(value, name="PLV")
+
+
+@pytest.mark.parametrize("value", ["0.5", b"0.5", bytearray(b"0.5")])
+def test_mean_phase_output_rejects_numeric_string_aliases(value: object) -> None:
+    """Backend mean phases must not acquire provenance through text coercion."""
+    with pytest.raises(ValueError, match="mean phase must be a finite real scalar"):
+        order_params_validation.validate_mean_phase_output(value)
+
+
 @pytest.mark.parametrize("value", [True, np.bool_(False)])
 def test_unit_interval_output_rejects_boolean_aliases(value: object) -> None:
     """Backend scalar outputs must not accept boolean aliases as coherence."""
@@ -126,6 +140,17 @@ def test_compute_order_parameter_rejects_non_numeric_phase_array() -> None:
     """
     with pytest.raises(ValueError, match="phases must be numeric"):
         order_params.compute_order_parameter(np.array(["a", "b"]))
+
+
+def test_dispatch_returns_python_floor_after_exhausting_optional_backends(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A backend set without the requested kernel must fall back to NumPy."""
+    monkeypatch.setattr(order_params, "ACTIVE_BACKEND", "rust")
+    monkeypatch.setattr(order_params, "AVAILABLE_BACKENDS", ["rust"])
+    monkeypatch.setattr(order_params, "_load_backend", lambda _name: {})
+
+    assert order_params._dispatch("order_parameter") is None
 
 
 def test_public_order_parameter_rejects_boolean_backend_magnitude(

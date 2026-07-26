@@ -333,7 +333,11 @@ zero-measure calls return the neutral value without loading an optional runtime:
 `(0.0, 0.0)` for global order, `0.0` for PLV, and `0.0` for layer coherence.
 Backend outputs are accepted only when physical: `R`, PLV, and layer coherence
 must be finite values in `[0, 1]`, and mean phase must be finite before being
-canonicalised to the public `[0, 2*pi)` convention.
+canonicalised to the public `[0, 2*pi)` convention. Public phase-vector inputs
+and shared backend scalar outputs reject numeric-string aliases before float
+coercion, so text cannot acquire numeric provenance at either publication
+boundary. Mojo stdout remains an explicit text protocol and is parsed before
+the shared typed scalar validator runs.
 
 The release benchmark gate for this surface is:
 
@@ -348,7 +352,8 @@ reference-suite snapshot exposes this gate as `order_parameter_polyglot`.
 The public dispatcher applies the same scalar output contract to optional
 backend returns before publication: order-parameter magnitudes, PLV, and layer
 coherence must be finite real values in `[0, 1]`, with boolean aliases rejected
-instead of widened to synthetic `0.0` or `1.0` evidence.
+instead of widened to synthetic `0.0` or `1.0` evidence and numeric strings
+rejected instead of converted into typed backend evidence.
 
 ::: scpn_phase_orchestrator.upde.order_params
 

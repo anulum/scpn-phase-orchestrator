@@ -221,13 +221,16 @@ Both `compute_order_parameter` and `compute_plv` have Rust backends via
 when `spo-kernel` is installed. The Rust implementation uses SIMD-friendly
 sin/cos computation and avoids complex number overhead.
 
-### 4.2 Accelerator Output Contract
+### 4.2 Public and Accelerator Boundary Contract
 
 Optional Rust, Go, Julia, and Mojo returns use the same scalar output contract
 before public publication. Order-parameter magnitudes, PLV values, and layer
 coherence must be finite real scalars inside `[0, 1]`; boolean aliases are
-rejected before they can widen to `0.0` or `1.0`. Mean phase must be finite and
-is canonicalised to the public `[0, 2*pi)` convention.
+rejected before they can widen to `0.0` or `1.0`. Public phase inputs and shared
+backend scalar outputs also reject numeric strings before float coercion. Mean
+phase must be finite and is canonicalised to the public `[0, 2*pi)` convention.
+Mojo stdout remains an explicit text protocol and is parsed before the shared
+typed scalar validator runs.
 
 ### 4.3 Empty Array Handling
 
@@ -416,8 +419,10 @@ Do not rely on `ψ` when `R ≈ 0`.
 ~6.26. The order parameter handles this correctly (via $e^{i\theta}$),
 but direct phase differences need wrapping.
 
-**NaN propagation:** If any phase is NaN, `compute_order_parameter`
-returns `(NaN, NaN)` — no guard. The engine validates inputs upstream.
+**Invalid phase evidence:** Public phase vectors reject boolean, complex,
+numeric-string, and non-finite values before optional dispatch or NumPy
+computation. Invalid evidence raises `ValueError`; it does not publish a
+coerced or non-finite order parameter.
 
 **Large N numerical noise:** For N > 10,000, accumulated floating-point
 error in the sum $\sum e^{i\theta_j}$ can shift R by ~$10^{-12}$.
@@ -431,8 +436,8 @@ difference. PLV measures consistency, not alignment.
 and the Rayleigh test loses statistical power. Use T ≥ 100 for reliable
 PLV estimates.
 
-**Layer mask dtype:** `layer_mask` must be boolean. Integer masks
-(e.g., `np.array([0, 1, 1, 0])`) will select by index, not by value.
+**Layer mask dtype:** `layer_mask` may be a boolean mask or an integer index
+vector. Integer arrays select oscillator indices, not binary membership values.
 
 ---
 

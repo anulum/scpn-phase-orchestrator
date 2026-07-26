@@ -95,11 +95,18 @@ class TestOrderParameter:
             np.array([0.0, np.inf]),
             np.array([True, False]),
             np.array([0.0, True], dtype=object),
+            np.array([0.0 + 0.0j, 1.0 + 0.0j]),
+            np.array(["0.0", "1.0"]),
         ],
     )
     def test_rejects_invalid_phase_values(self, phases: np.ndarray) -> None:
         with pytest.raises(ValueError, match="phases"):
             compute_order_parameter(phases)
+
+    def test_debiased_order_parameter_rejects_numeric_string_phases(self) -> None:
+        """The bias-corrected public boundary must not launder text phases."""
+        with pytest.raises(ValueError, match="phases must be numeric"):
+            debiased_squared_order_parameter(np.array(["0.0", "1.0"]))
 
     @pytest.mark.parametrize("backend_r", [-0.1, 1.1])
     def test_backend_material_order_parameter_bound_violation_is_rejected(
@@ -209,6 +216,10 @@ class TestPLV:
             (np.zeros(2), np.array([True, False]), "phases_b"),
             (np.array([0.0, True], dtype=object), np.zeros(2), "phases_a"),
             (np.zeros(2), np.array([0.0, False], dtype=object), "phases_b"),
+            (np.array([0.0 + 0.0j, 1.0 + 0.0j]), np.zeros(2), "phases_a"),
+            (np.zeros(2), np.array([0.0 + 0.0j, 1.0 + 0.0j]), "phases_b"),
+            (np.array(["0.0", "1.0"]), np.zeros(2), "phases_a"),
+            (np.zeros(2), np.array(["0.0", "1.0"]), "phases_b"),
         ],
     )
     def test_rejects_invalid_plv_values(
@@ -337,6 +348,8 @@ class TestLayerCoherence:
             np.array([0.0, np.inf]),
             np.array([True, False]),
             np.array([0.0, True], dtype=object),
+            np.array([0.0 + 0.0j, 1.0 + 0.0j]),
+            np.array(["0.0", "1.0"]),
         ],
     )
     def test_rejects_invalid_layer_phase_values(self, phases: np.ndarray) -> None:

@@ -10,7 +10,8 @@
 
 from __future__ import annotations
 
-from typing import SupportsFloat, TypeAlias, cast
+from numbers import Real
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -113,10 +114,9 @@ def _finite_scalar(value: object, *, name: str) -> float:
     """Return ``value`` as a finite scalar, else raise ``ValueError``."""
     if _contains_boolean_alias(value):
         raise TypeError(f"{name} must be a real scalar, not boolean")
-    try:
-        scalar = float(cast("SupportsFloat | str | bytes | bytearray", value))
-    except (TypeError, ValueError) as exc:
-        raise ValueError(f"{name} must be a finite real scalar") from exc
+    if not isinstance(value, Real):
+        raise ValueError(f"{name} must be a finite real scalar")
+    scalar = float(value)
     if not np.isfinite(scalar):
         raise ValueError(f"{name} must be finite")
     return scalar

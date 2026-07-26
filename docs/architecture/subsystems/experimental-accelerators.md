@@ -29,6 +29,9 @@ modules in `coupling`/`monitor`/`upde` wrap them for type-checking and audit.
 Validation runs before dtype coercion: Python booleans, NumPy boolean scalars,
 boolean dtypes, and raw containers carrying boolean aliases are rejected rather
 than widened to `0.0`/`1.0` backend payloads.
+Public order-parameter phase vectors and shared/public backend scalar outputs
+reject numeric-string aliases before float coercion. Explicit Mojo stdout is
+parsed as protocol text before the shared typed scalar validator runs.
 Direct UPDE delay, Doppler, and moving-frame Go/Julia/Mojo adapters also replay
 the owning output validators after backend execution: delayed-Kuramoto outputs
 must be finite phase vectors in `[0, 2*pi)`, Doppler outputs must be finite

@@ -161,10 +161,11 @@ def _validate_phases(name: str, phases: FloatArray) -> FloatArray:
     raw = np.asarray(phases)
     if _contains_boolean_alias(phases):
         raise ValueError(f"{name} must not contain boolean values")
-    try:
-        values = raw.astype(np.float64, copy=True).ravel()
-    except (TypeError, ValueError) as exc:
-        raise ValueError(f"{name} must be numeric") from exc
+    if np.iscomplexobj(raw):
+        raise ValueError(f"{name} must be real-valued")
+    if not np.issubdtype(raw.dtype, np.number):
+        raise ValueError(f"{name} must be numeric")
+    values = raw.astype(np.float64, copy=True).ravel()
     if not np.all(np.isfinite(values)):
         raise ValueError(f"{name} must contain only finite values")
     return values
