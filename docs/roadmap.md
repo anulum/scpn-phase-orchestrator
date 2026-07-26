@@ -49,15 +49,14 @@ TODO queue.
 | Cross-domain meta-transfer | Replay proposals, nested corpora, package export, entry points, non-publishing evidence, and pre-publish enforcement exist. | Validate larger private or partner audit-history corpora and decide optional package publication. |
 | Plugin ecosystem | Registry, catalogue, Rust-facing metadata, approval-bound execution requests, storage, revocation, lifecycle, scheduler, retry, and dashboard artefacts exist. | Build a curated signed domainpack and extension store with reputation, audit scores, revocation, provenance, operator UX refinement, and adapter-family onboarding. |
 
-Latest U1 closure: the public spectral graph-analysis surface, public Rust
-wrapper, and direct Go, Julia, and Mojo bridge contracts now reject
-numeric-string aliases before float or integer coercion across public coupling
-matrices, frequency vectors, scalar controls, direct flattened coupling buffers,
-direct oscillator counts, backend eigensystem outputs, and Julia raw-return
-boundaries. The spectral boundary still replays finite real-valued cardinality,
-non-boolean/non-complex payload, non-negative sorted eigenvalues, and non-zero
-non-trivial Fiedler vectors before publication or parity fallback; fallback
-remains reserved for validated numerical parity mismatches.
+Latest U1 closure: the public AttnRes coupling-modulation surface, public
+optional-backend output path, and direct Go, Julia, and Mojo bridge contracts
+now reject numeric-string aliases before float coercion across public coupling,
+phase, and projection arrays, direct flattened buffers, backend coupling
+outputs, and Julia raw-return boundaries. The AttnRes boundary still replays
+finite real-valued cardinality, symmetry, zero-diagonal, and input-zero-edge
+preservation before publication; fallback remains reserved for loader or
+runtime unavailability.
 
 | Parent item | Completed evidence consolidated here | Remaining open scope |
 |-------------|--------------------------------------|----------------------|

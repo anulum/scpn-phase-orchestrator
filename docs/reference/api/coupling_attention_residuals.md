@@ -477,7 +477,7 @@ value that meets the objective.
 | `julia/attnres.jl` | Julia module `AttnRes`. |
 | `go/attnres.go` | Go c-shared library entry `AttnResModulate`. |
 | `mojo/attnres.mojo` | Mojo text-stdin executable. |
-| `src/scpn_phase_orchestrator/experimental/accelerators/coupling/_attnres_validation.py` | Shared direct input/output boundary validator. |
+| `src/scpn_phase_orchestrator/coupling/_attnres_validation.py` | Shared public/direct input/output boundary validator. |
 | `src/scpn_phase_orchestrator/experimental/accelerators/coupling/_attnres_julia.py` | `juliacall` bridge. |
 | `src/scpn_phase_orchestrator/experimental/accelerators/coupling/_attnres_go.py` | `ctypes` bridge. |
 | `src/scpn_phase_orchestrator/experimental/accelerators/coupling/_attnres_mojo.py` | Subprocess bridge. |
@@ -489,17 +489,19 @@ value that meets the objective.
 
 Direct accelerator boundary contract: Go, Julia, and Mojo AttnRes adapters use
 one shared typed `float64` validation path before loading shared-library, Julia,
-or subprocess runtimes. The contract rejects boolean aliases, complex or
-non-finite flattened coupling, phase, and projection buffers, malformed `n*n`
-coupling lengths, phase-length mismatch, incompatible flattened projection
-lengths, invalid head counts, invalid `block_size`, non-positive temperature,
-and negative modulation strength. Empty systems return an empty flattened
-coupling vector without optional runtime loading.
+or subprocess runtimes. The contract rejects boolean, complex, numeric-string,
+or non-finite flattened coupling, phase, and projection buffers before numeric
+coercion, plus malformed `n*n` coupling lengths, phase-length mismatch,
+incompatible flattened projection lengths, invalid head counts, invalid
+`block_size`, non-positive temperature, and negative modulation strength. Empty
+systems return an empty flattened coupling vector without optional runtime
+loading.
 After backend execution, the same shared validator is replayed by the direct
 Go, Julia, and Mojo adapters and by the public optional-backend path. Backend
 outputs may be flattened `N*N` vectors or `(N, N)` matrices, but must be finite
-real non-boolean values, symmetric, zero on the diagonal, and must not create
-new nonzero edges where the input `K_nm` had zero coupling. Malformed backend
+real non-boolean, non-numeric-string values, symmetric, zero on the diagonal,
+and must not create new nonzero edges where the input `K_nm` had zero coupling.
+Julia raw returns pass through the same pre-coercion check. Malformed backend
 physics raises immediately; fallback remains reserved for loader or runtime
 unavailability.
 

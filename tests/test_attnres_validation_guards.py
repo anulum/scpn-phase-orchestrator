@@ -14,6 +14,7 @@ import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.coupling._attnres_validation import (  # noqa: E501
+    contains_numeric_string_alias,
     validate_attnres_backend_inputs,
     validate_attnres_backend_output,
 )
@@ -49,6 +50,24 @@ def _inputs(**overrides: Any) -> dict[str, Any]:
     return payload
 
 
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        ("1.25", True),
+        (b"-3.5", True),
+        (b"\xff", False),
+        ("   ", False),
+        ("not-a-number", False),
+        (1.25, False),
+        (np.array(["1.0", "not-a-number"], dtype=object), True),
+        (np.array(["not-a-number"], dtype=object), False),
+        (_RejectingArray(), False),
+    ],
+)
+def test_numeric_string_alias_classifier(value: object, expected: bool) -> None:
+    assert contains_numeric_string_alias(value) is expected
+
+
 class TestAttnresInputs:
     def test_valid_round_trips(self) -> None:
         result = validate_attnres_backend_inputs(**_inputs())
@@ -81,6 +100,16 @@ class TestAttnresInputs:
     def test_rejects_corrupt_input(self, overrides: dict[str, Any], match: str) -> None:
         with pytest.raises(ValueError, match=match):
             validate_attnres_backend_inputs(**_inputs(**overrides))
+
+    @pytest.mark.parametrize(
+        "field",
+        ["knm_flat", "theta", "w_q", "w_k", "w_v", "w_o"],
+    )
+    def test_rejects_numeric_string_array_aliases(self, field: str) -> None:
+        replacement = np.asarray(_inputs()[field]).astype(str)
+
+        with pytest.raises(ValueError, match=rf"{field}.*numeric-string"):
+            validate_attnres_backend_inputs(**_inputs(**{field: replacement}))
 
 
 class TestAttnresOutput:
@@ -120,6 +149,23 @@ class TestAttnresOutput:
     ) -> None:
         with pytest.raises(ValueError, match=match):
             validate_attnres_backend_output(output, n=2)
+
+    def test_rejects_numeric_string_output_aliases(self) -> None:
+        with pytest.raises(ValueError, match="attnres output.*numeric-string"):
+            validate_attnres_backend_output(
+                np.array(["0.0", "0.25", "0.25", "0.0"]),
+                n=2,
+            )
+
+    def test_rejects_numeric_string_reference_aliases(self) -> None:
+        output = np.array([0.0, 0.25, 0.25, 0.0])
+
+        with pytest.raises(ValueError, match="knm_flat.*numeric-string"):
+            validate_attnres_backend_output(
+                output,
+                n=2,
+                knm_flat=np.array(["0.0", "0.25", "0.25", "0.0"]),
+            )
 
     def test_rejects_reference_length_mismatch_for_zero_edge_check(self) -> None:
         output = np.array([[0.0, 0.25], [0.25, 0.0]], dtype=np.float64)

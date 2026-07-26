@@ -148,6 +148,8 @@ def _as_real_array(name: str, value: object) -> FloatArray:
         raise ValueError(f"{name} must not contain boolean values")
     if _contains_complex_alias(value):
         raise ValueError(f"{name} must be real-valued")
+    if attnres_validation.contains_numeric_string_alias(value):
+        raise ValueError(f"{name} must not contain numeric-string aliases")
     try:
         parsed = np.asarray(value, dtype=np.float64)
     except (TypeError, ValueError) as exc:

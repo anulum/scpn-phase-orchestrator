@@ -99,9 +99,11 @@ The public AttnRes dispatcher, plus the direct Go, Julia, and Mojo bridges,
 apply the shared AttnRes output validator before publication: modulated
 coupling payloads may be flat `N*N` vectors or `(N, N)` matrices, but must
 contain finite real non-boolean values, remain symmetric, keep a zero diagonal,
-and preserve the input `K_nm` zero-edge topology. Malformed AttnRes physics
-payloads raise immediately, preserving fallback only for loader or runtime
-unavailability.
+and preserve the input `K_nm` zero-edge topology. Public coupling, phase, and
+projection arrays, direct flattened buffers, backend outputs, and Julia raw
+returns also reject numeric-string aliases before Python, NumPy, or accelerator
+coercion. Malformed AttnRes physics payloads raise immediately, preserving
+fallback only for loader or runtime unavailability.
 Merge-window Rust, Go, Julia, and Mojo source-contract adapters route
 `MergeReport` evidence through the shared validator before parity publication:
 numeric fields must be finite real non-boolean scalars, lock fields must be

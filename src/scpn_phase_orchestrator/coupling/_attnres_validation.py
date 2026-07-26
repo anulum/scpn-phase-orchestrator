@@ -19,6 +19,7 @@ from numpy.typing import NDArray
 FloatArray: TypeAlias = NDArray[np.float64]
 
 __all__ = [
+    "contains_numeric_string_alias",
     "validate_attnres_backend_inputs",
     "validate_attnres_backend_output",
 ]
@@ -40,6 +41,41 @@ def _contains_complex_alias(value: object) -> bool:
     except (TypeError, ValueError):
         return False
     return any(isinstance(item, (complex, np.complexfloating)) for item in raw.flat)
+
+
+def _is_numeric_string_alias(value: object) -> bool:
+    """Return whether ``value`` is a string scalar accepted by ``float``."""
+    if not isinstance(value, (str, bytes, np.str_, np.bytes_)):
+        return False
+    try:
+        if isinstance(value, (bytes, np.bytes_)):
+            text = bytes(value).decode()
+        else:
+            text = str(value)
+    except UnicodeDecodeError:
+        return False
+    if text.strip() == "":
+        return False
+    try:
+        float(text)
+    except ValueError:
+        return False
+    return True
+
+
+def contains_numeric_string_alias(value: object) -> bool:
+    """Return whether ``value`` contains a stringified numeric scalar."""
+    if _is_numeric_string_alias(value):
+        return True
+    try:
+        raw = np.asarray(value)
+    except (TypeError, ValueError):
+        return False
+    if raw.dtype.kind not in {"O", "S", "U"}:
+        return False
+    return any(
+        _is_numeric_string_alias(item) for item in raw.astype(object, copy=False).flat
+    )
 
 
 def _validate_non_negative_int(value: object, *, name: str) -> int:
@@ -98,6 +134,8 @@ def _validate_float_array(value: object, *, name: str) -> FloatArray:
         raise ValueError(f"{name} must not contain boolean values")
     if _contains_complex_alias(value):
         raise ValueError(f"{name} must be real-valued")
+    if contains_numeric_string_alias(value):
+        raise ValueError(f"{name} must not contain numeric-string aliases")
     try:
         raw = np.asarray(value)
     except (TypeError, ValueError) as exc:

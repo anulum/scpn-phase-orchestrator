@@ -665,6 +665,36 @@ def test_public_entry_rejects_boolean_and_complex_payload_aliases() -> None:
         )
 
 
+@pytest.mark.parametrize(
+    "field",
+    ["knm", "theta", "w_q", "w_k", "w_v", "w_o"],
+)
+def test_public_entry_rejects_numeric_string_array_aliases(field: str) -> None:
+    knm = _symmetric_knm(3)
+    theta = np.zeros(3, dtype=np.float64)
+    w_q, w_k, w_v, w_o = default_projections(n_heads=1)
+    payload: dict[str, object] = {
+        "knm": knm,
+        "theta": theta,
+        "w_q": w_q,
+        "w_k": w_k,
+        "w_v": w_v,
+        "w_o": w_o,
+    }
+    payload[field] = np.asarray(payload[field]).astype(str)
+
+    with pytest.raises(ValueError, match=rf"{field}.*numeric-string"):
+        attnres_modulate(
+            payload["knm"],
+            payload["theta"],
+            w_q=payload["w_q"],
+            w_k=payload["w_k"],
+            w_v=payload["w_v"],
+            w_o=payload["w_o"],
+            n_heads=1,
+        )
+
+
 def test_public_entry_rejects_non_physical_coupling_topology() -> None:
     theta = np.zeros(3, dtype=np.float64)
 
@@ -709,6 +739,18 @@ def test_backend_output_must_preserve_attnres_physics_contract(
     monkeypatch.setattr(attnres_mod, "_dispatch_backend", lambda: non_physical_backend)
 
     with pytest.raises(ValueError, match="backend output.*diagonal"):
+        attnres_modulate(_symmetric_knm(3), np.zeros(3), n_heads=1, lambda_=0.25)
+
+
+def test_backend_output_rejects_numeric_string_aliases(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def string_backend(*args: object) -> np.ndarray:
+        return np.asarray(args[0]).astype(str)
+
+    monkeypatch.setattr(attnres_mod, "_dispatch_backend", lambda: string_backend)
+
+    with pytest.raises(ValueError, match="backend output.*numeric-string"):
         attnres_modulate(_symmetric_knm(3), np.zeros(3), n_heads=1, lambda_=0.25)
 
 

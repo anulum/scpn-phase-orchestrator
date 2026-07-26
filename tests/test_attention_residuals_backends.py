@@ -52,6 +52,7 @@ from scpn_phase_orchestrator.coupling.attention_residuals import (
     attnres_modulate,
 )
 from scpn_phase_orchestrator.experimental.accelerators.coupling import (
+    _attnres_julia,
     _attnres_mojo,
 )
 from scpn_phase_orchestrator.experimental.accelerators.coupling._attnres_go import (
@@ -154,13 +155,16 @@ class TestDirectBackendBoundaryContracts:
         ("field", "replacement", "error", "match"),
         [
             ("knm", np.array([True] * 9), ValueError, "knm_flat"),
+            ("knm", np.array(["0.0"] * 9), ValueError, "numeric-string"),
             ("knm", np.array([0.0, np.nan] + [0.0] * 7), ValueError, "finite"),
             ("knm", np.zeros((3, 3)), ValueError, "one-dimensional"),
             ("knm", np.zeros(8), ValueError, "n\\*n"),
             ("theta", np.array([0.0, np.inf, 1.0]), ValueError, "finite"),
+            ("theta", np.array(["0.0", "1.0", "2.0"]), ValueError, "numeric-string"),
             ("theta", np.array([0.0, 1.0 + 0.0j, 2.0]), ValueError, "real-valued"),
             ("theta", np.zeros(2), ValueError, "theta length"),
             ("w_q", np.array([True] * 64), ValueError, "w_q"),
+            ("w_q", np.array(["0.0"] * 64), ValueError, "numeric-string"),
             ("w_k", np.array([0.0, np.inf] + [0.0] * 62), ValueError, "finite"),
             ("w_v", np.zeros(63), ValueError, "w_q, w_k, and w_v"),
             ("w_o", np.zeros(63), ValueError, "w_o"),
@@ -230,6 +234,31 @@ class TestDirectBackendBoundaryContracts:
         )
         assert out.dtype == np.float64
         assert out.shape == (0,)
+
+
+class TestDirectJuliaBoundaryContracts:
+    """Direct Julia AttnRes adapter rejects numeric-string raw returns."""
+
+    def test_julia_raw_return_rejects_numeric_string_aliases(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        class _JuliaAttnRes:
+            @staticmethod
+            def attnres_modulate(*_args: object) -> np.ndarray:
+                return np.array(
+                    ["0.0", "0.25", "0.25", "0.0"],
+                    dtype=str,
+                )
+
+        monkeypatch.setattr(
+            _attnres_julia,
+            "_ensure_julia_loaded",
+            lambda: _JuliaAttnRes(),
+        )
+
+        with pytest.raises(ValueError, match="numeric-string"):
+            _attnres_julia.attnres_modulate_julia(*_direct_payload(n=2))
 
 
 class TestDirectMojoBoundaryContracts:
