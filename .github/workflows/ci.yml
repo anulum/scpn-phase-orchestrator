@@ -78,6 +78,9 @@ jobs:
           cache: pip
       - name: Install (lockfile)
         run: pip install --require-hashes --no-deps -r ${{ matrix.lockfile }} && pip install --no-deps -e .
+      - name: Install pinned Studio SDK for the coverage lane
+        if: matrix.python-version == '3.12'
+        run: pip install --require-hashes --no-deps -r requirements/studio-sdk.txt
       - name: Run tests (with coverage on 3.12)
         run: >
           pytest tests/ -v --tb=short
