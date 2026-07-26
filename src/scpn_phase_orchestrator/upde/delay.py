@@ -11,8 +11,9 @@
 ``DelayBuffer`` stores copied finite phase snapshots in a bounded deque, and
 ``DelayedEngine`` advances phases with delayed coupling, optional external
 forcing, and Rust acceleration when available. Constructors and step inputs
-reject non-positive dimensions, non-finite scalars, and shape-mismatched arrays
-before integration so delayed history never aliases invalid caller state.
+reject non-positive dimensions, non-finite scalars, shape-mismatched arrays,
+and boolean or numeric-string aliases before integration so delayed history
+never aliases invalid caller state.
 """
 
 from __future__ import annotations
@@ -200,6 +201,8 @@ def _validate_state_array(
     shape: tuple[int, ...],
 ) -> FloatArray:
     """Return the state as a validated finite array, else raise."""
+    if _contains_numeric_string_alias(value):
+        raise ValueError(f"{name} must not contain numeric-string aliases")
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
     try:
@@ -215,6 +218,10 @@ def _validate_state_array(
 
 def _validate_phase_output(value: object, *, n_oscillators: int) -> FloatArray:
     """Return the backend phase output matching the reference, else raise."""
+    if _contains_numeric_string_alias(value):
+        raise ValueError(
+            "delayed engine output must not contain numeric-string aliases"
+        )
     try:
         arr = np.asarray(value, dtype=np.float64)
     except (TypeError, ValueError) as exc:
@@ -237,6 +244,26 @@ def _contains_boolean_alias(value: object) -> bool:
     except (TypeError, ValueError):
         return False
     return any(isinstance(item, (bool, np.bool_)) for item in arr.flat)
+
+
+def _is_numeric_string_alias(value: object) -> bool:
+    """Return whether ``value`` is a string accepted by ``float``."""
+    if not isinstance(value, str) or not value.strip():
+        return False
+    try:
+        float(value)
+    except ValueError:
+        return False
+    return True
+
+
+def _contains_numeric_string_alias(value: object) -> bool:
+    """Return whether ``value`` contains a numeric-string alias."""
+    try:
+        arr = np.asarray(value, dtype=object)
+    except (TypeError, ValueError):
+        return False
+    return any(_is_numeric_string_alias(item) for item in arr.flat)
 
 
 def _python_run(

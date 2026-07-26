@@ -49,14 +49,12 @@ TODO queue.
 | Cross-domain meta-transfer | Replay proposals, nested corpora, package export, entry points, non-publishing evidence, and pre-publish enforcement exist. | Validate larger private or partner audit-history corpora and decide optional package publication. |
 | Plugin ecosystem | Registry, catalogue, Rust-facing metadata, approval-bound execution requests, storage, revocation, lifecycle, scheduler, retry, and dashboard artefacts exist. | Build a curated signed domainpack and extension store with reputation, audit scores, revocation, provenance, operator UX refinement, and adapter-family onboarding. |
 
-Latest U1 closure: the public AttnRes coupling-modulation surface, public
-optional-backend output path, and direct Go, Julia, and Mojo bridge contracts
-now reject numeric-string aliases before float coercion across public coupling,
-phase, and projection arrays, direct flattened buffers, backend coupling
-outputs, and Julia raw-return boundaries. The AttnRes boundary still replays
-finite real-valued cardinality, symmetry, zero-diagonal, and input-zero-edge
-preservation before publication; fallback remains reserved for loader or
-runtime unavailability.
+Latest U1 closure: the public delayed-Kuramoto engine and direct Go, Julia, and
+Mojo bridge contracts now reject numeric-string aliases before float coercion
+across phase, frequency, coupling, and phase-lag arrays, shared/public backend
+outputs, and Julia raw returns. The delayed boundary still replays finite phase
+cardinality and `[0, 2*pi)` output constraints; Mojo's textual stdout protocol
+is parsed before the shared numeric output validator runs.
 
 | Parent item | Completed evidence consolidated here | Remaining open scope |
 |-------------|--------------------------------------|----------------------|

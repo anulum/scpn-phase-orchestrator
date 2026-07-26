@@ -6,7 +6,7 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Delayed Kuramoto backend boundary validation
 
-"""Shared validation for direct delayed-Kuramoto accelerator calls."""
+"""Shared fail-closed validation for delayed-Kuramoto accelerator calls."""
 
 from __future__ import annotations
 
@@ -30,6 +30,26 @@ def _contains_boolean_alias(value: object) -> bool:
     except (TypeError, ValueError):
         return False
     return any(isinstance(item, (bool, np.bool_)) for item in raw.flat)
+
+
+def _is_numeric_string_alias(value: object) -> bool:
+    """Return whether ``value`` is a string accepted by ``float``."""
+    if not isinstance(value, str) or not value.strip():
+        return False
+    try:
+        float(value)
+    except ValueError:
+        return False
+    return True
+
+
+def _contains_numeric_string_alias(value: object) -> bool:
+    """Return whether ``value`` contains a numeric-string alias."""
+    try:
+        raw = np.asarray(value, dtype=object)
+    except (TypeError, ValueError):
+        return False
+    return any(_is_numeric_string_alias(item) for item in raw.flat)
 
 
 def _count(value: object, *, name: str, minimum: int) -> int:
@@ -62,6 +82,8 @@ def _positive_float(value: object, *, name: str) -> float:
 
 def _float_vector(value: object, *, name: str, size: int) -> FloatArray:
     """Return ``value`` as a validated finite float vector, else raise."""
+    if _contains_numeric_string_alias(value):
+        raise ValueError(f"{name} must not contain numeric-string aliases")
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
     raw = np.asarray(value)
@@ -89,6 +111,8 @@ def validate_delay_backend_output(value: object, *, n: object) -> FloatArray:
     output before returning it to callers.
     """
     n_int = _count(n, name="n", minimum=1)
+    if _contains_numeric_string_alias(value):
+        raise ValueError("delay backend output must not contain numeric-string aliases")
     if _contains_boolean_alias(value):
         raise ValueError("delay backend output must not contain boolean values")
     raw = np.asarray(value)

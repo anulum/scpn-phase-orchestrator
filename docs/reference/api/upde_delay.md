@@ -271,6 +271,14 @@ runtime. If a faster backend is missing the engine silently falls through
 to the next; results are bit-identical to the NumPy reference within the
 tolerances above.
 
+Phase, frequency, coupling, and phase-lag arrays must contain numeric values,
+not stringified numbers. This check runs before NumPy float coercion on the
+public engine and direct Go/Julia/Mojo adapter boundaries. Shared backend
+outputs and Julia raw returns use the same rule before finite phase-vector,
+cardinality, and `[0, 2*pi)` checks. Mojo's stdout is intentionally textual;
+its protocol parser converts the declared output lines before applying the
+shared numeric output contract.
+
 Note: `DelayedEngine.step()` is Python-only — the polyglot backends
 delegate at the `run()` level for batch efficiency, since the ring buffer
 must persist across the full step sequence.

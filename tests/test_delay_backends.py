@@ -198,6 +198,7 @@ class TestDirectBackendBoundaryContracts:
             (np.array([0.0, np.nan], dtype=np.float64), "finite"),
             (np.array([0.0, 100.0], dtype=np.float64), "phases"),
             (np.array([0.0, 1.0 + 0j]), "real-valued"),
+            (np.array(["0.0", "1.0"]), "numeric-string"),
             (np.array(["a", "b"]), "finite phase vector"),
             (np.array([True, False]), "boolean"),
         ],
@@ -220,6 +221,10 @@ class TestDirectBackendBoundaryContracts:
         ("kwargs", "match"),
         [
             ({"phases": np.array([True, False])}, "phases"),
+            ({"phases": np.array(["0.0", "1.0"])}, "numeric-string"),
+            ({"omegas": np.array(["0.0", "1.0"])}, "numeric-string"),
+            ({"knm_flat": np.array(["0.0"] * 4)}, "numeric-string"),
+            ({"alpha_flat": np.array(["0.0"] * 4)}, "numeric-string"),
             ({"phases": np.array([0.0, np.nan])}, "finite"),
             ({"phases": np.array([0.0, 1.0 + 0j])}, "real-valued"),
             ({"phases": np.array(["a", "b"])}, "finite float array"),
@@ -320,6 +325,20 @@ class TestDirectBackendBoundaryContracts:
         monkeypatch.setattr(delay_julia, "_ensure", lambda: FakeJuliaModule())
 
         with pytest.raises(ValueError, match="phases"):
+            delayed_kuramoto_run_julia(*_direct_backend_args())
+
+    def test_julia_rejects_raw_numeric_string_output(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        class FakeJuliaModule:
+            """Julia shim returning stringified phase values."""
+
+            def delayed_kuramoto_run(self, *_args: object) -> list[str]:
+                return ["0.0", "1.0"]
+
+        monkeypatch.setattr(delay_julia, "_ensure", lambda: FakeJuliaModule())
+
+        with pytest.raises(ValueError, match="numeric-string"):
             delayed_kuramoto_run_julia(*_direct_backend_args())
 
     def test_julia_ensure_returns_cached_module(
@@ -464,6 +483,13 @@ class TestBackendLoaderDispatch:
         assert out.shape == (2,)
         assert calls[0] == (2, 1, 5)
 
+    def test_julia_loader_returns_direct_bridge(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(delay_mod, "require_juliacall_main", lambda: object())
+
+        assert delay_mod._load_julia_fn() is delayed_kuramoto_run_julia
+
     def test_resolve_backends_falls_back_to_python(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -550,6 +576,18 @@ class TestBackendOutputContract:
         assert np.all(np.isfinite(out))
         assert np.all((out >= 0.0) & (out < TWO_PI))
 
+    def test_numeric_string_backend_output_falls_back_before_publication(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def bad_backend(*_a: object, **_k: object) -> list[str]:
+            return ["0.2", "0.4"]
+
+        monkeypatch.setattr(delay_mod, "_dispatch", lambda: bad_backend)
+        phases = np.array([0.7, 1.3])
+        eng = DelayedEngine(2, dt=0.05, delay_steps=1)
+        out = eng.run(phases, np.zeros(2), np.zeros((2, 2)), n_steps=1)
+        np.testing.assert_array_equal(out, phases)
+
 
 class TestStateArrayDefensiveGuards:
     def test_step_rejects_unconvertible_object(self) -> None:
@@ -557,6 +595,85 @@ class TestStateArrayDefensiveGuards:
         with pytest.raises(ValueError, match="finite float array"):
             eng.step(_ArrayRaises(), np.zeros(2), np.zeros((2, 2)))
 
+    @pytest.mark.parametrize(
+        ("phases", "match"),
+        [
+            (np.zeros(3), "shape"),
+            (np.array([0.0, np.nan]), "finite"),
+        ],
+    )
+    def test_step_rejects_invalid_numeric_state_arrays(
+        self, phases: FloatArray, match: str
+    ) -> None:
+        eng = DelayedEngine(2, dt=0.05, delay_steps=1)
+        with pytest.raises(ValueError, match=match):
+            eng.step(phases, np.zeros(2), np.zeros((2, 2)))
+
+    @pytest.mark.parametrize(
+        ("kwargs", "match"),
+        [
+            ({"zeta": None}, "zeta"),
+            ({"psi": np.inf}, "psi"),
+        ],
+    )
+    def test_step_rejects_invalid_scalar_controls(
+        self, kwargs: dict[str, object], match: str
+    ) -> None:
+        eng = DelayedEngine(2, dt=0.05, delay_steps=1)
+        with pytest.raises(ValueError, match=match):
+            eng.step(
+                np.zeros(2),
+                np.zeros(2),
+                np.zeros((2, 2)),
+                zeta=cast(float, kwargs.get("zeta", 0.0)),
+                psi=cast(float, kwargs.get("psi", 0.0)),
+            )
+
     def test_boolean_alias_probe_handles_unconvertible(self) -> None:
         assert delay_mod._contains_boolean_alias(_ArrayRaises()) is False
         assert delay_validation._contains_boolean_alias(_ArrayRaises()) is False
+
+    def test_numeric_string_alias_probes_cover_defensive_edges(self) -> None:
+        for module in (delay_mod, delay_validation):
+            assert module._is_numeric_string_alias(1.0) is False
+            assert module._is_numeric_string_alias("") is False
+            assert module._is_numeric_string_alias("not-a-number") is False
+            assert module._contains_numeric_string_alias(_ArrayRaises()) is False
+            assert module._contains_numeric_string_alias(
+                np.array([1.0, "2.0"], dtype=object)
+            )
+
+    @pytest.mark.parametrize(
+        ("kwargs", "match"),
+        [
+            ({"phases": np.array(["0.0", "1.0"])}, "numeric-string"),
+            ({"omegas": np.array(["0.0", "1.0"])}, "numeric-string"),
+            (
+                {"knm": np.array([["0.0", "0.0"], ["0.0", "0.0"]])},
+                "numeric-string",
+            ),
+            (
+                {"alpha": np.array([["0.0", "0.0"], ["0.0", "0.0"]])},
+                "numeric-string",
+            ),
+        ],
+    )
+    def test_public_arrays_reject_numeric_string_aliases(
+        self, kwargs: dict[str, object], match: str
+    ) -> None:
+        base: dict[str, object] = {
+            "phases": np.zeros(2),
+            "omegas": np.zeros(2),
+            "knm": np.zeros((2, 2)),
+            "alpha": np.zeros((2, 2)),
+        }
+        base.update(kwargs)
+        eng = DelayedEngine(2, dt=0.05, delay_steps=1)
+        with pytest.raises(ValueError, match=match):
+            eng.run(
+                cast(FloatArray, base["phases"]),
+                cast(FloatArray, base["omegas"]),
+                cast(FloatArray, base["knm"]),
+                alpha=cast(FloatArray, base["alpha"]),
+                n_steps=1,
+            )

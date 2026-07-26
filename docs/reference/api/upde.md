@@ -261,10 +261,14 @@ coercion or optional native runtime loading.
 
 ## Time-Delayed Coupling Engine
 
-Circular buffer supports arbitrary per-pair time delays τ_ij with automatic
-fallback to instantaneous coupling when delay is zero. Time delays generate
+The circular buffer supports one fixed discrete delay for every coupling pair,
+with current-phase history used while the buffer fills. Time delays generate
 "effective higher-order interactions for free" (Ciszak et al. 2025) because
 the delayed coupling mixes information across multiple timescales.
+Public and direct phase, frequency, coupling, and phase-lag arrays reject
+numeric-string aliases before float coercion. The same pre-coercion contract
+guards optional-backend outputs and direct Julia raw returns before phase
+cardinality, finiteness, and `[0, 2*pi)` validation.
 
 ::: scpn_phase_orchestrator.upde.delay
 
