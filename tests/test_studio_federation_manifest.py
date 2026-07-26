@@ -152,10 +152,10 @@ def test_ui_module_matches_the_javascript_federation_config() -> None:
 
 
 def test_manifest_is_admitted_by_studio_platform_federation_gate() -> None:
-    """The emitted schema-A wire manifest passes the Hub's platform validator."""
-    assert _STUDIO_PLATFORM_SRC.is_dir()
+    """The emitted schema-A wire passes the sibling or locked SDK validator."""
     env = os.environ.copy()
-    env["PYTHONPATH"] = str(_STUDIO_PLATFORM_SRC)
+    if _STUDIO_PLATFORM_SRC.is_dir():
+        env["PYTHONPATH"] = str(_STUDIO_PLATFORM_SRC)
     completed = subprocess.run(
         [sys.executable, "-c", _VALIDATE_WITH_SIBLING_PLATFORM],
         input=json.dumps(fm.manifest_dict(studio_version="1.2.3")),
