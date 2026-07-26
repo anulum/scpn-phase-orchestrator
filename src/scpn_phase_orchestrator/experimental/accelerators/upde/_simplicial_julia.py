@@ -91,5 +91,4 @@ def simplicial_run_julia(
         float(dt),
         int(n_steps),
     )
-    result_array: FloatArray = np.asarray(result, dtype=np.float64)
-    return validate_simplicial_output(result_array, n=n)
+    return validate_simplicial_output(result, n=n)

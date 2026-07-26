@@ -44,7 +44,9 @@ cardinality, contain finite values, and remain in `[0, 2*pi)`.
 The public simplicial dispatcher applies the shared direct torus output
 validator to optional backend returns before publication: higher-order Kuramoto
 phase vectors must keep oscillator cardinality, contain finite values, and stay
-inside `[0, 2*pi)`.
+inside `[0, 2*pi)`. Direct inputs, shared/public backend outputs, and Julia raw
+returns also reject numeric-string aliases before Python, NumPy, or accelerator
+coercion.
 The public hypergraph dispatcher and Rust wrapper apply the shared hypergraph
 output validator to optional backend returns before publication: mixed-order
 phase vectors must keep oscillator cardinality, contain finite values, and stay

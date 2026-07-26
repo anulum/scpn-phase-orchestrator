@@ -16,6 +16,7 @@ import math
 import sys
 import types
 from collections.abc import Callable, Iterator
+from pathlib import Path
 from typing import Any, TypeAlias, cast
 
 import numpy as np
@@ -197,6 +198,60 @@ def _install_direct_output(
 
 
 class TestDirectSimplicialBoundaryContracts:
+    def test_julia_loader_returns_cached_module(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Return the cached Julia module without probing the runtime."""
+        cached = object()
+        monkeypatch.setattr(_simplicial_julia, "_JULIA_MODULE", cached)
+
+        assert _simplicial_julia._ensure() is cached
+
+    def test_julia_loader_rejects_missing_side_file(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        """Reject a missing Julia side file after runtime acquisition."""
+        missing_file = tmp_path / "missing_simplicial.jl"
+        monkeypatch.setattr(_simplicial_julia, "_JULIA_MODULE", None)
+        monkeypatch.setattr(_simplicial_julia, "_JULIA_FILE", missing_file)
+        monkeypatch.setattr(_simplicial_julia, "require_julia_main", lambda: object())
+
+        with pytest.raises(ImportError, match="julia side-file not found"):
+            _simplicial_julia._ensure()
+
+    def test_julia_loader_includes_side_file_and_caches_module(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        """Include the Julia side file and cache its exported module."""
+
+        class _FakeJuliaMain:
+            SimplicialJL = object()
+
+            def __init__(self) -> None:
+                self.included: str | None = None
+
+            def include(self, path: str) -> None:
+                self.included = path
+
+        side_file = tmp_path / "simplicial.jl"
+        side_file.write_text("module SimplicialJL\nend\n", encoding="utf-8")
+        fake_main = _FakeJuliaMain()
+        monkeypatch.setattr(_simplicial_julia, "_JULIA_MODULE", None)
+        monkeypatch.setattr(_simplicial_julia, "_JULIA_FILE", side_file)
+        monkeypatch.setattr(
+            _simplicial_julia,
+            "require_julia_main",
+            lambda: fake_main,
+        )
+
+        assert _simplicial_julia._ensure() is fake_main.SimplicialJL
+        assert fake_main.included == str(side_file)
+
     @pytest.mark.parametrize(
         "module",
         [_simplicial_go, _simplicial_julia, _simplicial_mojo],
@@ -377,6 +432,28 @@ class TestDirectSimplicialBoundaryContracts:
         with pytest.raises(ValueError, match="phases"):
             _call_direct_runner(runner, _valid_direct_args())
 
+    def test_julia_rejects_numeric_string_raw_output(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Reject raw Julia numeric strings before NumPy float coercion."""
+
+        class _NumericStringJuliaModule:
+            def simplicial_run(self, *_args: object) -> list[str]:
+                return ["0.2", "0.4"]
+
+        monkeypatch.setattr(
+            _simplicial_julia,
+            "_ensure",
+            lambda: _NumericStringJuliaModule(),
+        )
+
+        with pytest.raises(ValueError, match="numeric"):
+            _call_direct_runner(
+                _simplicial_julia.simplicial_run_julia,
+                _valid_direct_args(),
+            )
+
     @pytest.mark.parametrize(
         "module",
         [_simplicial_julia, _simplicial_mojo],
@@ -400,6 +477,22 @@ class TestDirectSimplicialBoundaryContracts:
 
 class TestPublicSimplicialBoundaryContracts:
     """Public dispatcher contract coverage for optional simplicial backends."""
+
+    def test_public_engine_rejects_numeric_string_backend_output(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Reject optional backend numeric strings before public coercion."""
+
+        def fake_backend(*_args: object) -> list[str]:
+            return ["0.2", "0.4"]
+
+        monkeypatch.setattr(s_mod, "_dispatch", lambda: fake_backend)
+        phases, omegas, knm, alpha = _problem(13, n=2)
+        engine = SimplicialEngine(2, 0.01, sigma2=0.4)
+
+        with pytest.raises(ValueError, match="numeric"):
+            engine.run(phases, omegas, knm, 0.0, 0.0, alpha, n_steps=1)
 
     @pytest.mark.parametrize("output", [(-0.1, 0.2), (0.1, TWO_PI)])
     def test_public_engine_rejects_out_of_torus_backend_outputs(

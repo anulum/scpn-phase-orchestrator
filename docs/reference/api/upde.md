@@ -141,11 +141,13 @@ pairwise graph represents interactions between distinct oscillators; `zeta`,
 `psi`, `sigma2`, `dt`, and `n_steps` must be finite non-boolean controls with
 non-negative triadic strength, positive timestep, and non-negative step count.
 Zero-step direct calls return a copy of the input phases without loading the
-optional runtime. Backend outputs must be finite torus phases in `[0, 2*pi)`.
-The public dispatcher and Rust wrapper apply that same output contract to
-optional backend returns before exposing `SimplicialEngine.run()` results, so
-backend physics-contract faults raise instead of falling through as trusted
-higher-order synchronization evidence.
+optional runtime. Direct input arrays, shared/public backend outputs, and Julia
+raw returns reject numeric-string aliases before float coercion. Backend outputs
+must be finite torus phases in `[0, 2*pi)`. The public dispatcher and Rust
+wrapper apply that same output contract to optional backend returns before
+exposing `SimplicialEngine.run()` results, so backend physics-contract faults
+raise instead of falling through as trusted higher-order synchronization
+evidence.
 
 Gambuzza et al. 2023, Nature Physics; Tang et al. 2025.
 **Detailed documentation:** [Simplicial (3-body) — detailed reference](upde_simplicial.md)
