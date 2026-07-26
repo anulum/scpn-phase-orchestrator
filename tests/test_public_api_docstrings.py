@@ -14,6 +14,7 @@ import inspect
 import shutil
 import subprocess
 from collections.abc import Callable, Iterator
+from importlib.util import find_spec
 from pathlib import Path
 from types import ModuleType
 
@@ -118,6 +119,13 @@ def _discover_enforced_modules() -> tuple[str, ...]:
 
 SECTION_ENFORCED_MODULES = _discover_enforced_modules()
 
+# Public modules backed by separately distributed optional SDKs remain in the
+# enforced inventory whenever that SDK is installed.  Minimal lockfile lanes
+# intentionally omit these extras and must not fail merely by importing them.
+OPTIONAL_MODULE_DEPENDENCIES = {
+    "scpn_phase_orchestrator.studio.evidence_bundles": "scpn_studio_platform",
+}
+
 
 def _unwrap(obj: object) -> object:
     if isinstance(obj, (classmethod, staticmethod)):
@@ -174,6 +182,9 @@ def _required_sections(func: Callable[..., object]) -> list[str]:
 def test_section_enforced_families_document_numpy_contracts() -> None:
     problems: list[str] = []
     for module_name in SECTION_ENFORCED_MODULES:
+        optional_dependency = OPTIONAL_MODULE_DEPENDENCIES.get(module_name)
+        if optional_dependency is not None and find_spec(optional_dependency) is None:
+            continue
         module = importlib.import_module(module_name)
         for qualified_name, func in _public_callables(module):
             doc = inspect.getdoc(func) or ""
