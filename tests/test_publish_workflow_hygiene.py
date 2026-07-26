@@ -10,12 +10,15 @@
 
 from __future__ import annotations
 
+import tomllib
 from pathlib import Path
 from typing import Any, cast
 
 import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
+
+_REQUIREMENTS_DEV_EXTRAS = {"juliacall>=0.9,<0.10"}
 
 
 def _publish_workflow() -> dict[str, Any]:
@@ -30,6 +33,21 @@ def _ci_workflow() -> dict[str, Any]:
         "dict[str, Any]",
         yaml.safe_load((ROOT / ".github/workflows/ci.yml").read_text()),
     )
+
+
+def test_requirements_dev_mirrors_canonical_dev_extra() -> None:
+    """The human-facing dev mirror cannot drift below security floors."""
+    project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    canonical = set(project["project"]["optional-dependencies"]["dev"])
+    mirrored = {
+        line
+        for raw_line in (ROOT / "requirements-dev.txt")
+        .read_text(encoding="utf-8")
+        .splitlines()
+        if (line := raw_line.strip()) and not line.startswith(("#", "-r "))
+    }
+
+    assert mirrored == canonical | _REQUIREMENTS_DEV_EXTRAS
 
 
 def test_linux_maturin_wheels_use_executable_python312_interpreter() -> None:
