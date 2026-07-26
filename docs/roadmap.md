@@ -49,12 +49,11 @@ TODO queue.
 | Cross-domain meta-transfer | Replay proposals, nested corpora, package export, entry points, non-publishing evidence, and pre-publish enforcement exist. | Validate larger private or partner audit-history corpora and decide optional package publication. |
 | Plugin ecosystem | Registry, catalogue, Rust-facing metadata, approval-bound execution requests, storage, revocation, lifecycle, scheduler, retry, and dashboard artefacts exist. | Build a curated signed domainpack and extension store with reputation, audit scores, revocation, provenance, operator UX refinement, and adapter-family onboarding. |
 
-Latest U1 closure: public financial-market price/return series, phase matrices,
-and `R(t)` signal boundaries now reject boolean, complex, and numeric-string
-aliases before float conversion. The Rust order-parameter and rolling-PLV
-wrappers preserve raw kernel-return dtype until the shared output validators
-replay finite cardinality, unit-interval, diagonal, and symmetry contracts.
-Direct Go, Julia, and Mojo inputs already rejected numeric-string arrays, and
+Latest U1 closure: public phase-amplitude-coupling phase/amplitude vectors and
+histories now reject boolean, complex, and numeric-string aliases before float
+conversion. The direct Julia PAC-matrix bridge preserves raw return dtype until
+the shared validator replays `N*N` cardinality and finite unit-interval
+constraints. Direct Go, Julia, and Mojo inputs were already fail-closed, and
 Mojo stdout remains an explicit strictly parsed text protocol.
 
 | Parent item | Completed evidence consolidated here | Remaining open scope |

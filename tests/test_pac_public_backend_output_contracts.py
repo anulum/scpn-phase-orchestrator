@@ -127,6 +127,24 @@ def test_public_pac_matrix_rejects_boolean_optional_output(
         pac_matrix(phases, amplitudes, n_bins=4)
 
 
+def test_public_pac_rejects_numeric_string_optional_outputs(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Reject numeric-string optional outputs before public publication."""
+    _install_optional_backend(
+        monkeypatch,
+        modulation_output="0.5",
+        matrix_output=np.array(["0.0", "0.2", "0.3", "1.0"]),
+    )
+    theta, amplitude = _signals()
+    phases, amplitudes = _histories()
+
+    with pytest.raises(TypeError, match="modulation index must be a real scalar"):
+        modulation_index(theta, amplitude, n_bins=4)
+    with pytest.raises(TypeError, match="PAC matrix must be numeric"):
+        pac_matrix(phases, amplitudes, n_bins=4)
+
+
 def test_public_pac_accepts_valid_optional_outputs(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

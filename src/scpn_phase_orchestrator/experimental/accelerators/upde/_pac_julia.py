@@ -87,14 +87,11 @@ def pac_matrix_julia(
         n_bins,
     )
     jl = _ensure_julia_loaded()
-    result = np.asarray(
-        jl.pac_matrix(
-            phases,
-            amplitudes,
-            t_i,
-            n_i,
-            bins,
-        ),
-        dtype=np.float64,
+    result = jl.pac_matrix(
+        phases,
+        amplitudes,
+        t_i,
+        n_i,
+        bins,
     )
     return validate_pac_matrix_output(result, n=n_i)

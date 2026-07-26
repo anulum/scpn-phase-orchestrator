@@ -121,7 +121,10 @@ signed-margin field must replay the Python reference within tolerance.
 The public PAC dispatcher applies the direct phase-amplitude-coupling output
 validators to optional backend returns before publication: modulation-index
 scalars must be finite values in `[0, 1]`, and PAC-matrix payloads must keep
-`N*N` cardinality with every entry inside `[0, 1]`.
+`N*N` cardinality with every entry inside `[0, 1]`. Public phase/amplitude
+vectors and histories reject boolean, complex, and numeric-string aliases
+before conversion, and the Julia matrix bridge preserves raw return dtype until
+the shared output validator runs. Mojo stdout remains a declared text protocol.
 The public basin-stability dispatcher applies the shared direct output
 validator to optional backend returns before publication: steady-state order
 parameters must be finite non-boolean, non-numeric-string scalars inside

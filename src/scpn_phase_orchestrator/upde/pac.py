@@ -133,10 +133,9 @@ def _validate_signal(name: str, value: FloatArray) -> FloatArray:
     raw = np.asarray(value)
     if raw.dtype == np.bool_:
         raise ValueError(f"{name} must not contain boolean values")
-    try:
-        array = raw.astype(np.float64, copy=True)
-    except (TypeError, ValueError) as exc:
-        raise ValueError(f"{name} must be numeric") from exc
+    if np.iscomplexobj(raw) or not np.issubdtype(raw.dtype, np.number):
+        raise ValueError(f"{name} must be numeric and real-valued")
+    array = raw.astype(np.float64, copy=True)
     if array.ndim != 1:
         raise ValueError(f"{name} must be a one-dimensional vector")
     if not np.all(np.isfinite(array)):
@@ -152,10 +151,9 @@ def _validate_history(
     raw = np.asarray(value)
     if raw.dtype == np.bool_:
         raise ValueError(f"{name} must not contain boolean values")
-    try:
-        array = raw.astype(np.float64, copy=True)
-    except (TypeError, ValueError) as exc:
-        raise ValueError(f"{name} must be numeric") from exc
+    if np.iscomplexobj(raw) or not np.issubdtype(raw.dtype, np.number):
+        raise ValueError(f"{name} must be numeric and real-valued")
+    array = raw.astype(np.float64, copy=True)
     if array.ndim != 2:
         raise ValueError("phases_history and amplitudes_history must be 2-D")
     if not np.all(np.isfinite(array)):

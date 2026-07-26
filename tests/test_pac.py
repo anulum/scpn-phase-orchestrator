@@ -51,6 +51,19 @@ def test_modulation_index_rejects_non_numeric_vector_inputs() -> None:
         modulation_index(np.array([object()], dtype=object), amplitude)
 
 
+@pytest.mark.parametrize("field", ["theta_low", "amp_high"])
+def test_modulation_index_rejects_numeric_string_vectors(field: str) -> None:
+    theta = np.linspace(0.0, 1.0, 8)
+    amplitude = np.linspace(0.1, 1.1, 8)
+    if field == "theta_low":
+        theta = theta.astype(str)
+    else:
+        amplitude = amplitude.astype(str)
+
+    with pytest.raises(ValueError, match=field):
+        modulation_index(theta, amplitude)
+
+
 def test_modulation_index_zero_amplitude_envelope_has_zero_mi(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -78,6 +91,19 @@ def test_pac_matrix_rejects_bool_and_non_numeric_histories() -> None:
         pac_matrix(np.zeros((2, 2), dtype=bool), amplitudes)
     with pytest.raises(ValueError, match="phases_history must be numeric"):
         pac_matrix(np.array([[object(), object()]], dtype=object), amplitudes[:1])
+
+
+@pytest.mark.parametrize("field", ["phases_history", "amplitudes_history"])
+def test_pac_matrix_rejects_numeric_string_histories(field: str) -> None:
+    phases = np.zeros((2, 2), dtype=np.float64)
+    amplitudes = np.ones((2, 2), dtype=np.float64)
+    if field == "phases_history":
+        phases = phases.astype(str)
+    else:
+        amplitudes = amplitudes.astype(str)
+
+    with pytest.raises(ValueError, match=field):
+        pac_matrix(phases, amplitudes)
 
 
 def test_pac_matrix_shape_and_range_for_cross_channel_history() -> None:

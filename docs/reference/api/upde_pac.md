@@ -256,6 +256,13 @@ PAC-matrix payloads must contain exactly `N*N` finite real values in `[0, 1]`.
 Malformed optional backend output raises an error instead of being clipped into
 synthetic PAC evidence.
 
+Public phase/amplitude vectors and histories reject boolean, complex, and
+numeric-string aliases before float conversion. Direct Go, Julia, and Mojo
+inputs use the same real-numeric contract. The Julia PAC-matrix bridge keeps
+raw return dtype intact until the shared `N*N` unit-interval validator runs, so
+stringified matrix entries cannot be laundered into PAC evidence. Mojo stdout
+remains an explicit strictly parsed text protocol.
+
 ### 4.3 Robustness
 
 - Empty arrays → MI = 0.0

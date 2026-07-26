@@ -16,6 +16,7 @@ follow the AttnRes reference.
 from __future__ import annotations
 
 from collections.abc import Callable
+from pathlib import Path
 from types import SimpleNamespace
 
 import numpy as np
@@ -116,6 +117,46 @@ def _forbid_runtime_load(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 class TestDirectBackendBoundaryContracts:
+    def test_julia_loader_cached_missing_and_load_paths(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        cached = SimpleNamespace(label="cached")
+        monkeypatch.setattr(pac_julia_mod, "_JULIA_MODULE", cached)
+        assert pac_julia_mod._ensure_julia_loaded() is cached
+
+        monkeypatch.setattr(pac_julia_mod, "_JULIA_MODULE", None)
+        monkeypatch.setattr(
+            pac_julia_mod, "require_julia_main", lambda: SimpleNamespace()
+        )
+        monkeypatch.setattr(pac_julia_mod, "_JULIA_FILE", Path("missing-pac.jl"))
+        with pytest.raises(ImportError, match="julia side-file not found"):
+            pac_julia_mod._ensure_julia_loaded()
+
+        loaded = SimpleNamespace(label="loaded")
+        included: list[str] = []
+        julia_main = SimpleNamespace(
+            PAC=loaded,
+            include=lambda path: included.append(path),
+        )
+        fake_file = SimpleNamespace(exists=lambda: True)
+        monkeypatch.setattr(pac_julia_mod, "require_julia_main", lambda: julia_main)
+        monkeypatch.setattr(pac_julia_mod, "_JULIA_FILE", fake_file)
+        assert pac_julia_mod._ensure_julia_loaded() is loaded
+        assert included == [str(fake_file)]
+
+    def test_julia_modulation_index_validates_runtime_result(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(
+            pac_julia_mod,
+            "_ensure_julia_loaded",
+            lambda: SimpleNamespace(modulation_index=lambda *_args: 0.25),
+        )
+
+        assert pac_julia_mod.modulation_index_julia(
+            np.zeros(4), np.ones(4), 4
+        ) == pytest.approx(0.25)
+
     @pytest.mark.parametrize("backend", DIRECT_MI_BACKENDS)
     @pytest.mark.parametrize(
         ("theta", "amp", "n_bins"),
@@ -123,10 +164,12 @@ class TestDirectBackendBoundaryContracts:
             (_mi_payload()[0].reshape(2, -1), _mi_payload()[1], 12),
             (_mi_payload()[0].astype(bool), _mi_payload()[1], 12),
             (_mi_payload()[0].astype(np.complex128) + 1j, _mi_payload()[1], 12),
+            (_mi_payload()[0].astype(str), _mi_payload()[1], 12),
             (np.array([np.nan, *_mi_payload()[0][1:]]), _mi_payload()[1], 12),
             (_mi_payload()[0], _mi_payload()[1].reshape(2, -1), 12),
             (_mi_payload()[0], _mi_payload()[1].astype(bool), 12),
             (_mi_payload()[0], _mi_payload()[1].astype(np.complex128) + 1j, 12),
+            (_mi_payload()[0], _mi_payload()[1].astype(str), 12),
             (_mi_payload()[0], np.array([np.inf, *_mi_payload()[1][1:]]), 12),
             (_mi_payload()[0], np.array([-0.1, *_mi_payload()[1][1:]]), 12),
             (_mi_payload()[0], _mi_payload()[1], True),
@@ -160,6 +203,7 @@ class TestDirectBackendBoundaryContracts:
         [
             (_matrix_payload()[0].reshape(2, -1), _matrix_payload()[1], 8, 3, 12),
             (_matrix_payload()[0].astype(bool), _matrix_payload()[1], 8, 3, 12),
+            (_matrix_payload()[0].astype(str), _matrix_payload()[1], 8, 3, 12),
             (
                 _matrix_payload()[0].astype(np.complex128) + 1j,
                 _matrix_payload()[1],
@@ -177,6 +221,7 @@ class TestDirectBackendBoundaryContracts:
             (_matrix_payload()[0][:-1], _matrix_payload()[1], 8, 3, 12),
             (_matrix_payload()[0], _matrix_payload()[1].reshape(2, -1), 8, 3, 12),
             (_matrix_payload()[0], _matrix_payload()[1].astype(bool), 8, 3, 12),
+            (_matrix_payload()[0], _matrix_payload()[1].astype(str), 8, 3, 12),
             (
                 _matrix_payload()[0],
                 _matrix_payload()[1].astype(np.complex128) + 1j,
@@ -240,6 +285,7 @@ class TestDirectBackendBoundaryContracts:
             np.array([0.1, 0.2, 0.3]),
             np.array([True, False, True, False]),
             np.array([0.1 + 0.0j, 0.2 + 0.0j, 0.3 + 0.0j, 0.4 + 0.0j]),
+            np.array(["0.1", "0.2", "0.3", "0.4"]),
         ],
     )
     def test_pac_matrix_output_rejects_non_physical_payloads(
@@ -247,6 +293,21 @@ class TestDirectBackendBoundaryContracts:
     ) -> None:
         with pytest.raises((TypeError, ValueError)):
             pac_validation.validate_pac_matrix_output(output, n=2)
+
+    def test_julia_pac_matrix_rejects_numeric_string_raw_return(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(
+            pac_julia_mod,
+            "_ensure_julia_loaded",
+            lambda: SimpleNamespace(
+                pac_matrix=lambda *_args: np.array(["0.1", "0.2", "0.3", "0.4"])
+            ),
+        )
+        phases, amps, t, n, n_bins = _matrix_payload(t=2, n=2)
+
+        with pytest.raises(TypeError, match="PAC matrix must be numeric"):
+            pac_julia_mod.pac_matrix_julia(phases, amps, t, n, n_bins)
 
 
 # ---------------------------------------------------------------------
