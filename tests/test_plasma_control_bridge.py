@@ -18,6 +18,11 @@ from scpn_phase_orchestrator.adapters.plasma_control_bridge import (
 TWO_PI = 2.0 * np.pi
 
 
+class _UncoercibleArray:
+    def __array__(self, *_args: object, **_kwargs: object) -> np.ndarray:
+        raise TypeError("not array coercible")
+
+
 class TestConstructorValidation:
     @pytest.mark.parametrize("n_layers", [True, 1.5, "2", 0, 9])
     def test_invalid_n_layers_raise(self, n_layers: object):
@@ -30,6 +35,16 @@ class TestConstructorValidation:
 
 
 class TestKnmSpecImport:
+    @pytest.mark.parametrize(
+        "matrix",
+        [_UncoercibleArray(), np.array(["not-numeric"], dtype=object)],
+    )
+    def test_rejects_non_numeric_coupling_payloads(self, matrix: object):
+        bridge = PlasmaControlBridge(n_layers=2)
+
+        with pytest.raises(ValueError, match="Layer Knm"):
+            bridge.import_knm_spec(matrix)
+
     def test_kronecker_expansion_shape(self):
         bridge = PlasmaControlBridge(n_layers=4)
         layer_knm = np.array(
@@ -99,6 +114,12 @@ class TestKnmSpecImport:
 
 
 class TestSnapshotImport:
+    def test_rejects_non_mapping_tick_result(self):
+        bridge = PlasmaControlBridge()
+
+        with pytest.raises(ValueError, match="dict"):
+            bridge.import_snapshot([])
+
     def test_snapshot_to_upde_state(self):
         bridge = PlasmaControlBridge(n_layers=4)
         phases = np.linspace(0, TWO_PI, 8, endpoint=False)

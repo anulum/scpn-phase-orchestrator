@@ -359,8 +359,9 @@ source = ["scpn_phase_orchestrator"]
 concurrency = ["thread"]
 omit = [
     "*/runtime/grpc_gen/*",
-    # External-service adapters are covered through hermetic fakes and guarded
-    # optional-import tests; they stay visible to the standard coverage gate.
+    # External-service adapters are covered through public behavioural paths and
+    # guarded optional-import tests; they stay visible to the standard coverage
+    # gate.
     # The monitor/stl package is also NOT omitted: rtamt 0.3.5 is
     # pure-Python BSD and imports on the 3.11/3.12 legs (its antlr4 4.7 dep
     # imports the typing.io module removed in CPython 3.13, so STL uses its

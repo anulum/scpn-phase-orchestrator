@@ -19,6 +19,11 @@ from scpn_phase_orchestrator.adapters.fusion_core_bridge import (
 TWO_PI = 2.0 * np.pi
 
 
+class _UncoercibleArray:
+    def __array__(self, *_args: object, **_kwargs: object) -> np.ndarray:
+        raise TypeError("not array coercible")
+
+
 class TestObservablesToPhases:
     def test_nominal_output_range(self):
         bridge = FusionCoreBridge(n_layers=6)
@@ -87,6 +92,20 @@ class TestObservablesToPhases:
 
 
 class TestPhasesToFeedback:
+    @pytest.mark.parametrize(
+        "phases",
+        [
+            _UncoercibleArray(),
+            np.array([True]),
+            np.array(["not-numeric"], dtype=object),
+        ],
+    )
+    def test_rejects_non_numeric_phase_payloads(self, phases: object):
+        bridge = FusionCoreBridge(n_layers=1)
+
+        with pytest.raises(ValueError, match="phases"):
+            bridge.phases_to_feedback(phases, np.array([1.0]))
+
     def test_output_format(self):
         bridge = FusionCoreBridge(n_layers=6)
         phases = np.zeros(6)

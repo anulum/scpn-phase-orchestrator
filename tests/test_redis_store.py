@@ -15,6 +15,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+import scpn_phase_orchestrator.adapters.redis_store as redis_store
 from scpn_phase_orchestrator.adapters.redis_store import RedisStateStore
 
 
@@ -118,6 +119,17 @@ def test_load_state_rejects_malformed_json_payload():
         store.load_state()
 
 
+def test_load_state_validates_recursive_numbers_through_public_boundary():
+    store, mock = _make_store()
+    mock.get.return_value = '{"safe": [true]}'
+
+    assert store.load_state() == {"safe": [True]}
+
+    mock.get.return_value = '{"unsafe": [1e999]}'
+    with pytest.raises(ValueError, match="finite JSON numbers"):
+        store.load_state()
+
+
 def test_constructed_client_uses_tls_auth_and_certificates(monkeypatch):
     captured: dict[str, object] = {}
     test_credential = "".join(("test", "-redis-auth-token"))
@@ -155,6 +167,13 @@ def test_constructed_client_uses_tls_auth_and_certificates(monkeypatch):
         "ssl_certfile": "/etc/redis/client.pem",
         "ssl_keyfile": "/etc/redis/client.key",
     }
+
+
+def test_missing_optional_dependency_fails_at_public_constructor(monkeypatch):
+    monkeypatch.setattr(redis_store, "_HAS_REDIS", False)
+
+    with pytest.raises(RuntimeError, match="not installed"):
+        redis_store.RedisStateStore()
 
 
 def test_plaintext_redis_is_rejected_for_non_loopback_hosts():

@@ -191,6 +191,25 @@ class TestNeurocoreBridgeNumpy:
         assert rates.shape == (3,)
         assert np.all(rates >= 0.0)
 
+    def test_seeded_noise_path_returns_finite_layer_rates(self):
+        bridge = NeurocoreBridge(
+            n_layers=1,
+            neurons_per_layer=2,
+            noise_std=0.01,
+            backend="numpy",
+            seed=7,
+        )
+
+        rates = bridge.step(_make_state([0.8]), n_substeps=1)
+
+        assert rates.shape == (1,)
+        assert np.all(np.isfinite(rates))
+
+    def test_positive_seed_is_accepted(self):
+        bridge = NeurocoreBridge(n_layers=1, backend="numpy", seed=7)
+
+        assert bridge.backend == "numpy"
+
     def test_numpy_coherence_ordering(self):
         bridge = NeurocoreBridge(
             n_layers=2, neurons_per_layer=100, current_scale=3.0, backend="numpy"

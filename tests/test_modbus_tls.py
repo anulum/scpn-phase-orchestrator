@@ -8,12 +8,35 @@
 
 from __future__ import annotations
 
+import builtins
+import importlib
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 
 class TestSecureModbusAdapterTLS:
+    def test_optional_client_import_failure_disables_tls_adapter(
+        self,
+        monkeypatch,
+    ):
+        import scpn_phase_orchestrator.adapters.modbus_tls as modbus_tls
+
+        real_import = builtins.__import__
+
+        def guarded_import(name, *args, **kwargs):
+            if name == "pymodbus.client":
+                raise ImportError("pymodbus client unavailable")
+            return real_import(name, *args, **kwargs)
+
+        with monkeypatch.context() as patcher:
+            patcher.setattr(builtins, "__import__", guarded_import)
+            reloaded = importlib.reload(modbus_tls)
+            assert reloaded.HAS_PYMODBUS is False
+
+        restored = importlib.reload(modbus_tls)
+        assert restored.HAS_PYMODBUS is True
+
     def test_missing_cert_raises(self, tmp_path):
         from scpn_phase_orchestrator.adapters.modbus_tls import SecureModbusAdapter
 

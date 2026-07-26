@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+import builtins
+import importlib
 import importlib.util
 from unittest.mock import MagicMock
 
@@ -16,6 +18,7 @@ import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
+import scpn_phase_orchestrator.adapters.hardware_io as hardware_io
 from scpn_phase_orchestrator.adapters.hardware_io import (
     HAS_BRAINFLOW,
     HAS_MODBUS,
@@ -44,6 +47,12 @@ class TestSampleBuffer:
     ):
         with pytest.raises(ValueError, match="capacity|n_channels"):
             SampleBuffer(capacity=capacity, n_channels=n_channels)  # type: ignore[arg-type]
+
+    def test_push_rejects_object_dtype_samples(self):
+        buffer = SampleBuffer(capacity=2, n_channels=1)
+
+        with pytest.raises(ValueError, match="numeric"):
+            buffer.push(np.array([["not-numeric"]], dtype=object))
 
     def test_push_and_get_exact(self):
         buf = SampleBuffer(capacity=10, n_channels=2)
@@ -276,6 +285,24 @@ class TestHardwareFlags:
     def test_has_modbus_matches_importlib(self):
         expected = importlib.util.find_spec("pymodbus") is not None
         assert expected == HAS_MODBUS
+
+    def test_modbus_import_fallback_disables_public_adapter(self, monkeypatch):
+        real_import = builtins.__import__
+
+        def guarded_import(name, *args, **kwargs):
+            if name == "pymodbus.client":
+                raise ImportError("pymodbus client unavailable")
+            return real_import(name, *args, **kwargs)
+
+        with monkeypatch.context() as patcher:
+            patcher.setattr(builtins, "__import__", guarded_import)
+            reloaded = importlib.reload(hardware_io)
+            assert reloaded.HAS_MODBUS is False
+            with pytest.raises(ImportError, match="pymodbus not installed"):
+                reloaded.ModbusAdapter("127.0.0.1")
+
+        restored = importlib.reload(hardware_io)
+        assert restored.HAS_MODBUS is HAS_MODBUS
 
 
 # ---------------------------------------------------------------------------

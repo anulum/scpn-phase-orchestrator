@@ -46,8 +46,35 @@ class TestPrometheusConfigValidation:
         adapter = PrometheusAdapter("http://localhost:9090", timeout=1)
         assert adapter._timeout == 1.0
 
+    def test_timeout_rejects_non_numeric_object(self):
+        with pytest.raises(ValueError, match="timeout"):
+            PrometheusAdapter("http://localhost:9090", timeout=object())
+
 
 class TestFetchMetric:
+    @pytest.mark.parametrize(
+        ("query", "start", "message"),
+        [(1, 0.0, "query"), ("up", object(), "start")],
+    )
+    def test_rejects_non_contract_query_inputs(self, query, start, message):
+        adapter = PrometheusAdapter("http://localhost:9090")
+
+        with pytest.raises(ValueError, match=message):
+            adapter.fetch_metric(query, start, 1.0, 0.1)
+
+    def test_rejects_malformed_range_series_through_http_boundary(self):
+        adapter = PrometheusAdapter("http://localhost:9090")
+        body = {"status": "success", "data": {"result": [[]]}}
+
+        with (
+            patch(
+                "scpn_phase_orchestrator.adapters.prometheus.urlopen",
+                return_value=_mock_response(body),
+            ),
+            pytest.raises(ValueError, match="series"),
+        ):
+            adapter.fetch_metric("up", 0.0, 1.0, 0.1)
+
     def test_public_array_contracts_are_parameterised(self):
         hint = get_type_hints(PrometheusAdapter.fetch_metric)["return"]
         assert_precise_ndarray_hint(hint)
@@ -103,6 +130,19 @@ class TestFetchMetric:
 
 
 class TestFetchInstant:
+    def test_rejects_malformed_instant_series_through_http_boundary(self):
+        adapter = PrometheusAdapter("http://localhost:9090")
+        body = {"status": "success", "data": {"result": [[]]}}
+
+        with (
+            patch(
+                "scpn_phase_orchestrator.adapters.prometheus.urlopen",
+                return_value=_mock_response(body),
+            ),
+            pytest.raises(ValueError, match="series"),
+        ):
+            adapter.fetch_instant("up")
+
     def test_returns_scalar(self):
         body = {
             "status": "success",

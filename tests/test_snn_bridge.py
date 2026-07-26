@@ -143,9 +143,21 @@ def test_spike_rates_reject_malformed_inputs():
     with pytest.raises(ValueError, match="layer_assignments"):
         bridge.spike_rates_to_actions(np.array([60.0]), [True], threshold_hz=50.0)
     with pytest.raises(ValueError, match="layer_assignments"):
+        bridge.spike_rates_to_actions(
+            np.array([60.0]),
+            (0,),  # type: ignore[arg-type]
+            threshold_hz=50.0,
+        )
+    with pytest.raises(ValueError, match="layer_assignments"):
         bridge.spike_rates_to_actions(np.array([60.0, 70.0]), [0], threshold_hz=50.0)
     with pytest.raises(ValueError, match="threshold_hz"):
         bridge.spike_rates_to_actions(np.array([60.0]), [0], threshold_hz=0.0)
+    with pytest.raises(ValueError, match="rates"):
+        bridge.spike_rates_to_actions(
+            [object()],  # type: ignore[arg-type]
+            [0],
+            threshold_hz=50.0,
+        )
 
 
 def test_lif_rate_superthreshold():
@@ -441,6 +453,91 @@ def test_neuromorphic_target_readiness_audit_rejects_invalid_manifest_or_target(
             target_backend="loihi",
             hardware_site="lab",
         )
+
+
+def test_neuromorphic_target_readiness_rejects_aliases_in_public_inputs():
+    bridge = SNNControllerBridge(n_neurons=8)
+    manifest = bridge.build_neuromorphic_schedule_manifest(_make_state([0.5]))
+
+    with pytest.raises(ValueError, match="boolean"):
+        bridge.audit_hardware_target_readiness(
+            manifest,
+            target_backend="lava",
+            hardware_site="lab",
+            credentials_configured=1,
+        )
+
+    malformed = dict(manifest)
+    malformed["target_backends"] = ["lava", 1]
+    with pytest.raises(ValueError, match="list of strings"):
+        bridge.audit_hardware_target_readiness(
+            malformed,
+            target_backend="lava",
+            hardware_site="lab",
+        )
+
+    with pytest.raises(ValueError, match="mapping"):
+        bridge.audit_hardware_target_readiness(
+            [],  # type: ignore[arg-type]
+            target_backend="lava",
+            hardware_site="lab",
+        )
+
+    for target_backend, hardware_site, message in (
+        ("", "lab", "non-empty"),
+        ("lava", "bad\nsite", "control"),
+    ):
+        with pytest.raises(ValueError, match=message):
+            bridge.audit_hardware_target_readiness(
+                manifest,
+                target_backend=target_backend,
+                hardware_site=hardware_site,
+            )
+
+
+def test_neuromorphic_target_readiness_records_manifest_safety_regressions():
+    bridge = SNNControllerBridge(n_neurons=8)
+    manifest = bridge.build_neuromorphic_schedule_manifest(_make_state([0.5]))
+    manifest["status"] = "draft"
+    manifest["hardware_write_permitted"] = True
+    manifest["actuation_permitted"] = True
+
+    record = bridge.audit_hardware_target_readiness(
+        manifest,
+        target_backend="lava",
+        hardware_site="lab",
+    )
+
+    assert record["blocked_reasons"][:3] == [
+        "simulator_parity_not_passed",
+        "hardware_write_permission_must_remain_false",
+        "actuation_permission_must_remain_false",
+    ]
+
+
+def test_neuromorphic_schedule_revalidates_mutated_bridge_state():
+    bridge = SNNControllerBridge(n_neurons=8)
+    bridge.n_neurons = 0
+    with pytest.raises(ValueError, match="n_neurons"):
+        bridge.build_neuromorphic_schedule_manifest(_make_state([0.5]))
+
+    bridge.n_neurons = 8
+    bridge.tau_rc = 0.0
+    with pytest.raises(ValueError, match="tau_rc"):
+        bridge.build_neuromorphic_schedule_manifest(_make_state([0.5]))
+
+    bridge.tau_rc = TAU_RC
+    state = UPDEState(
+        layers=[LayerState(R=0.5, psi=float("nan"))],
+        cross_layer_alignment=np.eye(1),
+        stability_proxy=0.5,
+        regime_id="nominal",
+    )
+    with pytest.raises(ValueError, match="psi"):
+        bridge.build_neuromorphic_schedule_manifest(state)
+
+    with pytest.raises(ValueError, match="seed"):
+        bridge.build_numpy_network(1, seed=-1)
 
 
 class TestSNNPipelineWiring:
