@@ -383,7 +383,9 @@ jobs:
           . .venv/bin/activate
           pip install --require-hashes --no-deps -r requirements/ci-tools.txt
           maturin develop --release -m spo-kernel/crates/spo-ffi/Cargo.toml
-          pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
+          pip install --require-hashes --no-deps -r requirements/dev-lock.txt
+          pip install --require-hashes --no-deps -r requirements/studio-sdk.txt
+          pip install --no-deps -e .
           pytest tests/ --tb=short -p no:cacheprovider \
             --ignore=tests/test_kuramoto_layer.py \
             --ignore=tests/test_stuart_landau_nn.py \

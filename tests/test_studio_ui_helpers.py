@@ -1614,6 +1614,21 @@ def test_canvas_apply_cleans_temporary_file_on_atomic_replace_failure(
     assert list(tmp_path.glob(".binding_spec.yaml.*.tmp")) == []
 
 
+def test_atomic_canvas_write_propagates_failure_before_tempfile_allocation(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def _raise_open(*_args: object, **_kwargs: object) -> object:
+        raise OSError("simulated tempfile allocation failure")
+
+    monkeypatch.setattr(ui_canvas.tempfile, "NamedTemporaryFile", _raise_open)
+
+    with pytest.raises(OSError, match="simulated tempfile allocation failure"):
+        ui_canvas._atomic_write_text(tmp_path / "binding_spec.yaml", "version: 1\n")
+
+    assert list(tmp_path.iterdir()) == []
+
+
 def test_live_connector_run_record_accepts_replay_connector_payload() -> None:
     result = _minimal_result()
 
@@ -2277,6 +2292,26 @@ def test_service_manifest_blocks_validation_errors_and_renders_compose_yaml() ->
     assert "spo-binding-validator" in ready_manifest["compose_yaml"]
     assert "spo-connector-boundary" in ready_manifest["compose_yaml"]
     assert "ports:" in ready_manifest["compose_yaml"]
+
+
+def test_service_compose_renderer_omits_empty_optional_profiles() -> None:
+    compose_yaml = ui_deployment._render_service_compose_yaml(
+        (
+            {
+                "name": "spo-review",
+                "image": "scpn-phase-orchestrator:local",
+                "command": "spo validate binding_spec.yaml",
+                "ports": (),
+                "profiles": (),
+                "healthcheck": "spo validate binding_spec.yaml",
+            },
+        )
+    )
+
+    assert "  spo-review:" in compose_yaml
+    assert "    profiles:" not in compose_yaml
+    assert "    ports:" not in compose_yaml
+    assert "    healthcheck:" in compose_yaml
 
 
 def test_build_command_table_skips_blocked_targets_from_readiness(
