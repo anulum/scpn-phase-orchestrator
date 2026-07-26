@@ -335,9 +335,20 @@ jobs:
         with:
           name: coverage-xml-merged
           path: coverage-python.xml
+      - name: Download and verify pinned Codecov CLI
+        env:
+          CODECOV_CLI_SHA256: ca1d64196d2d34771084afe76ea657d581bf628e31d993ff8e52ea09cc88a56d
+        run: |
+          curl --proto '=https' --tlsv1.2 --retry 5 --retry-all-errors \
+            --fail --location --silent --show-error \
+            --output codecov-cli \
+            https://cli.codecov.io/v11.3.1/linux/codecov
+          echo "${CODECOV_CLI_SHA256}  codecov-cli" | sha256sum --check --strict
+          chmod 0755 codecov-cli
       - name: Upload merged coverage to Codecov
         uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
         with:
+          binary: ./codecov-cli
           disable_search: true
           fail_ci_if_error: true
           files: coverage-python.xml
