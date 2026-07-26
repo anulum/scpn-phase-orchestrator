@@ -15,7 +15,10 @@ from collections.abc import Mapping, Sequence
 from dataclasses import replace
 
 import pytest
-from scpn_studio_platform.evidence import (
+
+pytest.importorskip("scpn_studio_platform")
+
+from scpn_studio_platform.evidence import (  # noqa: E402
     ClaimStatus,
     EvidenceKind,
     EvidenceLevel,
@@ -23,15 +26,17 @@ from scpn_studio_platform.evidence import (
     Substrate,
     validate_studio_bundle,
 )
-from scpn_studio_platform.seal import canonicalize, content_digest
+from scpn_studio_platform.seal import canonicalize, content_digest  # noqa: E402
 
-import scpn_phase_orchestrator.studio.evidence_bundles as evidence_bundles
-from scpn_phase_orchestrator.studio.evidence_bundles import (
+import scpn_phase_orchestrator.studio.evidence_bundles as evidence_bundles  # noqa: E402
+from scpn_phase_orchestrator.studio.evidence_bundles import (  # noqa: E402
     StudioEvidenceEmission,
     build_studio_evidence_emissions,
     render_studio_evidence_emissions_json,
 )
-from scpn_phase_orchestrator.studio.live_feed import LIVE_FEED_EVIDENCE_SCHEMAS
+from scpn_phase_orchestrator.studio.live_feed import (  # noqa: E402
+    LIVE_FEED_EVIDENCE_SCHEMAS,
+)
 
 _TIMESTAMP = "2026-07-26T12:00:00Z"
 
