@@ -41,7 +41,10 @@ text protocol and is parsed before the shared numeric output validator runs.
 The public market dispatcher replays the same market output validators for
 optional backend returns before publication: `R(t)` must be finite and bounded
 in `[0, 1]`, and rolling PLV payloads must keep the expected cardinality, unit
-diagonals, symmetry, and `[0, 1]` bounds.
+diagonals, symmetry, and `[0, 1]` bounds. Public market price/return series,
+phase matrices, and `R(t)` signals reject boolean, complex, and numeric-string
+aliases before float conversion. The Rust market wrappers also submit raw
+kernel returns to those validators without pre-coercing their source dtype.
 The public geometric dispatcher applies the direct torus output validator to
 optional backend returns before publication: phase vectors must keep oscillator
 cardinality, contain finite values, and remain in `[0, 2*pi)`.

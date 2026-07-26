@@ -181,6 +181,68 @@ class TestExtractPhase:
 
 class TestInputValidation:
     @pytest.mark.parametrize(
+        "surface",
+        [extract_phase, market_order_parameter, detect_regimes],
+    )
+    def test_market_array_surfaces_reject_ragged_sequences(
+        self,
+        surface: Any,
+    ) -> None:
+        with pytest.raises(ValueError):
+            surface([[0.0], [0.5, 1.0]])
+
+    @pytest.mark.parametrize(
+        "series",
+        [
+            np.array(["0.0", "1.0", "0.5", "-0.5"]),
+            np.array([False, True, False, True]),
+            np.array([0.0 + 1.0j, 1.0 + 0.0j, 0.5 + 0.0j, -0.5 + 0.0j]),
+        ],
+        ids=["numeric-string", "boolean", "complex"],
+    )
+    def test_extract_phase_rejects_non_real_numeric_series(
+        self, series: np.ndarray
+    ) -> None:
+        with pytest.raises(ValueError, match="series"):
+            extract_phase(series)
+
+    @pytest.mark.parametrize("surface", [market_order_parameter, market_plv])
+    @pytest.mark.parametrize(
+        "phases",
+        [
+            np.array([["0.0", "1.0"], ["0.5", "1.5"]]),
+            np.array([[False, True], [True, False]]),
+            np.array([[0.0 + 1.0j, 1.0], [0.5, 1.5]]),
+        ],
+        ids=["numeric-string", "boolean", "complex"],
+    )
+    def test_market_phase_surfaces_reject_non_real_numeric_arrays(
+        self,
+        surface: Any,
+        phases: np.ndarray,
+    ) -> None:
+        with pytest.raises(ValueError, match="phases"):
+            surface(phases, **({"window": 2} if surface is market_plv else {}))
+
+    @pytest.mark.parametrize("surface", [detect_regimes, sync_warning])
+    @pytest.mark.parametrize(
+        "signal",
+        [
+            np.array(["0.2", "0.8"]),
+            np.array([False, True]),
+            np.array([0.2 + 0.1j, 0.8 + 0.0j]),
+        ],
+        ids=["numeric-string", "boolean", "complex"],
+    )
+    def test_market_signal_surfaces_reject_non_real_numeric_arrays(
+        self,
+        surface: Any,
+        signal: np.ndarray,
+    ) -> None:
+        with pytest.raises(ValueError, match="R"):
+            surface(signal)
+
+    @pytest.mark.parametrize(
         ("series", "match"),
         [
             (np.array([], dtype=np.float64), "series"),
@@ -307,6 +369,20 @@ class TestBackendLoaderContracts:
             "order": (True, 3, 2),
             "plv": (True, 3, 2, 3),
         }
+
+    def test_rust_loader_rejects_numeric_string_raw_returns(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        fake_spo = types.ModuleType("spo_kernel")
+        fake_spo.market_order_parameter_rust = lambda *_args: np.array(["0.2", "0.8"])
+        fake_spo.market_plv_rust = lambda *_args: np.array(["1.0", "0.5", "0.5", "1.0"])
+        monkeypatch.setitem(sys.modules, "spo_kernel", fake_spo)
+
+        op_fn, plv_fn = m_mod._load_rust_fn()
+        with pytest.raises(TypeError, match="order parameter must be numeric"):
+            op_fn(np.zeros(4, dtype=np.float64), 2, 2)
+        with pytest.raises(TypeError, match="phase-locking value must be numeric"):
+            plv_fn(np.zeros(4, dtype=np.float64), 2, 2, 2)
 
     def test_optional_loader_contracts_return_order_and_plv_functions(
         self, monkeypatch: pytest.MonkeyPatch

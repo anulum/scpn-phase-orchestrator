@@ -78,6 +78,15 @@ $(T-W+1) \times N \times N$ PLV matrices with unit diagonals, symmetry, and
 unit-interval entries. Loader or runtime unavailability still falls through to
 the next backend, but malformed backend physics payloads fail closed.
 
+All public market array boundaries are typed before conversion:
+`extract_phase()` rejects non-real or numeric-string price/return series,
+`market_order_parameter()` and `market_plv()` reject those aliases in phase
+matrices, and `detect_regimes()` plus `sync_warning()` reject them in `R(t)`.
+The Rust wrappers preserve raw kernel-return dtype until the shared output
+validators run; numeric-string returns therefore cannot be laundered into
+market evidence by NumPy coercion. Mojo stdout remains an explicit text
+protocol with its own strict parser.
+
 ### 1.4 Regime Classification
 
 The `detect_regimes` function maps $R(t)$ to discrete labels:

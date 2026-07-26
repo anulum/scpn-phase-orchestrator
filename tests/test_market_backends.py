@@ -168,6 +168,7 @@ class TestDirectBackendBoundaryContracts:
             (_direct_payload().reshape(2, -1), 6, 3),
             (_direct_payload().astype(bool), 6, 3),
             (_direct_payload().astype(np.complex128) + 1j, 6, 3),
+            (_direct_payload().astype(str), 6, 3),
             (np.array([np.nan, *_direct_payload()[1:]]), 6, 3),
             (_direct_payload()[:-1], 6, 3),
             (_direct_payload(), True, 3),
@@ -196,6 +197,7 @@ class TestDirectBackendBoundaryContracts:
             (_direct_payload().reshape(2, -1), 6, 3, 2),
             (_direct_payload().astype(bool), 6, 3, 2),
             (_direct_payload().astype(np.complex128) + 1j, 6, 3, 2),
+            (_direct_payload().astype(str), 6, 3, 2),
             (np.array([np.inf, *_direct_payload()[1:]]), 6, 3, 2),
             (_direct_payload()[:-1], 6, 3, 2),
             (_direct_payload(), True, 3, 2),
@@ -227,6 +229,7 @@ class TestDirectBackendBoundaryContracts:
             np.array([0.1], dtype=np.float64),
             np.array([True, False]),
             np.array([0.1 + 0.0j, 0.2 + 0.0j]),
+            np.array(["0.1", "0.2"]),
         ],
     )
     def test_order_output_contract_rejects_non_physical_backend_payloads(
@@ -243,6 +246,7 @@ class TestDirectBackendBoundaryContracts:
             np.array([0.1, 0.2, 1.0]),
             np.array([True, False, True, False]),
             np.array([0.1 + 0.0j, 0.2 + 0.0j, 0.2 + 0.0j, 1.0 + 0.0j]),
+            np.array(["1.0", "0.2", "0.2", "1.0"]),
             np.array([0.2, 0.2, 0.2, 0.2]),
             np.array([1.0, 0.1, 0.2, 1.0]),
         ],

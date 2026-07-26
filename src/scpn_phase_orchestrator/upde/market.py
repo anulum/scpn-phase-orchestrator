@@ -38,7 +38,9 @@ from scipy.signal import hilbert
 
 from scpn_phase_orchestrator.upde._julia_runtime import require_juliacall_main
 from scpn_phase_orchestrator.upde._market_validation import (
+    validate_market_order_inputs,
     validate_market_order_output,
+    validate_market_plv_inputs,
     validate_market_plv_output,
 )
 
@@ -68,13 +70,10 @@ def _load_rust_fn() -> tuple[_MarketFn, _MarketFn]:
 
     def _rust_op(phases_flat: FloatArray, t: int, n: int) -> FloatArray:
         """Call the Rust market order-parameter kernel."""
-        return np.asarray(
-            market_order_parameter_rust(
-                np.ascontiguousarray(phases_flat, dtype=np.float64),
-                int(t),
-                int(n),
-            ),
-            dtype=np.float64,
+        phases, t_i, n_i = validate_market_order_inputs(phases_flat, t, n)
+        return validate_market_order_output(
+            market_order_parameter_rust(phases, t_i, n_i),
+            t=t_i,
         )
 
     def _rust_plv(
@@ -84,14 +83,17 @@ def _load_rust_fn() -> tuple[_MarketFn, _MarketFn]:
         window: int,
     ) -> FloatArray:
         """Call the Rust market phase-locking-value kernel."""
-        return np.asarray(
-            market_plv_rust(
-                np.ascontiguousarray(phases_flat, dtype=np.float64),
-                int(t),
-                int(n),
-                int(window),
-            ),
-            dtype=np.float64,
+        phases, t_i, n_i, window_i = validate_market_plv_inputs(
+            phases_flat,
+            t,
+            n,
+            window,
+        )
+        return validate_market_plv_output(
+            market_plv_rust(phases, t_i, n_i, window_i),
+            t=t_i,
+            n=n_i,
+            window=window_i,
         )
 
     return _rust_op, _rust_plv
@@ -210,10 +212,19 @@ def _validate_finite_float(value: object, *, name: str) -> float:
 def _validate_series(value: object) -> FloatArray:
     """Return the price/return series as a validated finite array, else raise."""
     try:
-        arr = np.asarray(value, dtype=np.float64)
+        raw = np.asarray(value)
     except (TypeError, ValueError) as exc:
         msg = "series must be a finite one- or two-dimensional array"
         raise ValueError(msg) from exc
+    if (
+        raw.dtype == np.bool_
+        or np.iscomplexobj(raw)
+        or not np.issubdtype(raw.dtype, np.number)
+    ):
+        raise ValueError(
+            "series must be a finite one- or two-dimensional real numeric array"
+        )
+    arr = np.ascontiguousarray(raw, dtype=np.float64)
     if arr.ndim not in (1, 2):
         raise ValueError(f"series shape {arr.shape} must be one- or two-dimensional")
     if arr.shape[0] < 1:
@@ -228,9 +239,16 @@ def _validate_series(value: object) -> FloatArray:
 def _validate_phase_matrix(value: object) -> FloatArray:
     """Return the phase matrix as a validated 2-D finite array, else raise."""
     try:
-        arr = np.asarray(value, dtype=np.float64)
+        raw = np.asarray(value)
     except (TypeError, ValueError) as exc:
         raise ValueError("phases must be a finite (T, N) array") from exc
+    if (
+        raw.dtype == np.bool_
+        or np.iscomplexobj(raw)
+        or not np.issubdtype(raw.dtype, np.number)
+    ):
+        raise ValueError("phases must be a finite (T, N) array of real numeric values")
+    arr = np.ascontiguousarray(raw, dtype=np.float64)
     if arr.ndim != 2:
         raise ValueError(f"phases must be (T, N), got {arr.shape}")
     if arr.shape[1] < 1:
@@ -243,9 +261,18 @@ def _validate_phase_matrix(value: object) -> FloatArray:
 def _validate_signal_vector(value: object, *, name: str) -> FloatArray:
     """Return the signal as a validated 1-D finite array, else raise."""
     try:
-        arr = np.asarray(value, dtype=np.float64)
+        raw = np.asarray(value)
     except (TypeError, ValueError) as exc:
         raise ValueError(f"{name} must be a finite one-dimensional array") from exc
+    if (
+        raw.dtype == np.bool_
+        or np.iscomplexobj(raw)
+        or not np.issubdtype(raw.dtype, np.number)
+    ):
+        raise ValueError(
+            f"{name} must be a finite one-dimensional array of real numeric values"
+        )
+    arr = np.ascontiguousarray(raw, dtype=np.float64)
     if arr.ndim != 1:
         raise ValueError(f"{name} shape {arr.shape} must be one-dimensional")
     if arr.size == 0:
