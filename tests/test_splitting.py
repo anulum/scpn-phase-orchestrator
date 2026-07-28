@@ -220,6 +220,103 @@ class TestSplittingEngine:
             )
 
     @pytest.mark.parametrize(
+        ("field", "payload", "match"),
+        [
+            ("phases", np.array([False, True]), "boolean"),
+            ("phases", np.array([0.1 + 0.2j, 0.2]), "real-valued"),
+            ("omegas", np.array([False, True]), "boolean"),
+            ("omegas", np.array([1.0 + 0.2j, 1.0]), "real-valued"),
+            ("knm", np.array([[False, True], [False, False]]), "boolean"),
+            ("knm", np.array([[0.0, 0.1j], [0.0, 0.0]]), "real-valued"),
+            ("alpha", np.array([[False, True], [False, False]]), "boolean"),
+            ("alpha", np.array([[0.0, 0.1j], [0.0, 0.0]]), "real-valued"),
+        ],
+    )
+    def test_public_state_arrays_reject_coercive_aliases(
+        self,
+        monkeypatch,
+        field: str,
+        payload: np.ndarray,
+        match: str,
+    ):
+        import scpn_phase_orchestrator.upde.splitting as split_mod
+
+        monkeypatch.setattr(split_mod, "_dispatch", lambda: None)
+        values = {
+            "phases": np.array([0.1, 0.2]),
+            "omegas": np.ones(2),
+            "knm": np.zeros((2, 2)),
+            "alpha": np.zeros((2, 2)),
+        }
+        values[field] = payload
+        eng = SplittingEngine(2, dt=0.01)
+
+        with pytest.raises(ValueError, match=match):
+            eng.step(
+                values["phases"],
+                values["omegas"],
+                values["knm"],
+                0.0,
+                0.0,
+                values["alpha"],
+            )
+
+    @pytest.mark.parametrize(
+        ("payload", "match"),
+        [
+            (np.array([False, False]), "boolean"),
+            (np.array([np.bool_(False), 0.2], dtype=object), "boolean"),
+            (np.array([0.1 + 0.2j, 0.2]), "real-valued"),
+            (
+                np.array([np.complex128(0.1 + 0.2j), 0.2], dtype=object),
+                "real-valued",
+            ),
+        ],
+    )
+    def test_public_backend_output_rejects_coercive_aliases(
+        self,
+        monkeypatch,
+        payload: np.ndarray,
+        match: str,
+    ):
+        import scpn_phase_orchestrator.upde.splitting as split_mod
+
+        monkeypatch.setattr(split_mod, "_dispatch", lambda: lambda *_args: payload)
+        eng = SplittingEngine(2, dt=0.01)
+
+        with pytest.raises(ValueError, match=match):
+            eng.step(
+                np.array([0.1, 0.2]),
+                np.ones(2),
+                np.zeros((2, 2)),
+                0.0,
+                0.0,
+                np.zeros((2, 2)),
+            )
+
+    def test_public_arrays_preserve_real_numeric_object_compatibility(
+        self,
+        monkeypatch,
+    ):
+        import scpn_phase_orchestrator.upde.splitting as split_mod
+
+        payload = np.array([np.float32(0.1), np.int64(0)], dtype=object)
+        monkeypatch.setattr(split_mod, "_dispatch", lambda: lambda *_args: payload)
+        eng = SplittingEngine(2, dt=0.01)
+
+        result = eng.step(
+            np.array([np.float32(0.1), np.int64(0)], dtype=object),
+            np.array([np.float32(1.0), np.int64(1)], dtype=object),
+            np.array([[0, 0.0], [0.0, 0]], dtype=object),
+            0.0,
+            0.0,
+            np.array([[0, 0.0], [0.0, 0]], dtype=object),
+        )
+
+        assert result.dtype == np.float64
+        np.testing.assert_allclose(result, [0.1, 0.0])
+
+    @pytest.mark.parametrize(
         ("phases", "match"),
         [
             (np.array(["", "bad"], dtype=object), "finite float array"),
@@ -498,7 +595,9 @@ class TestSplittingPipelineEndToEnd:
 def test_splitting_reference_documents_numeric_string_contract() -> None:
     doc = SPLITTING_REFERENCE.read_text(encoding="utf-8")
 
+    assert "reject boolean and complex/object-complex aliases" in doc
     assert "numeric-string aliases before float coercion" in doc
+    assert "preserving finite real numeric-object arrays" in doc
     assert "direct Go/Julia/Mojo" in doc
 
 

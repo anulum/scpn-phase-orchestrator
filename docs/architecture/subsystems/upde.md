@@ -68,6 +68,10 @@ The forward and variational prediction models apply the same source-type-aware
 contract to phase, frequency, predicted-state, observed-state, and precision
 vectors. Coercive aliases fail before prediction, free-energy arithmetic, or
 online state updates, while finite real numeric object arrays remain compatible.
+Public Strang-splitting phase, frequency, coupling, phase-lag, and optional-
+backend phase arrays reject boolean, complex/object-complex, and numeric-string
+aliases before conversion while preserving finite real numeric-object arrays.
+Existing shape, zero-self-coupling, and torus-output checks remain authoritative.
 Geometric direct Go, Julia, and Mojo bridges validate torus phase, frequency,
 coupling, lag, scalar, count, and backend-output payloads before optional native
 runtime loading; numeric-string aliases are rejected at the Python boundary.

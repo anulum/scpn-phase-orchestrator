@@ -387,7 +387,9 @@ falling back. Negative timesteps intentionally use the Python reference path for
 reversibility checks.
 
 Public state arrays, direct Go/Julia/Mojo vectors and flattened matrices, and
-backend phase outputs reject numeric-string aliases before float coercion.
+backend phase outputs reject boolean and complex/object-complex aliases. They
+also reject numeric-string aliases before float coercion. The boundary keeps
+preserving finite real numeric-object arrays.
 Nonnumeric string payloads remain ordinary numeric parse errors. Mojo stdout is
 the text transport exception: it is parsed line by line and then revalidated as
 finite torus phases with exact cardinality.

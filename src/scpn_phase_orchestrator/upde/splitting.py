@@ -281,6 +281,24 @@ def _contains_numeric_string_alias(value: object) -> bool:
     )
 
 
+def _contains_boolean_alias(value: object) -> bool:
+    """Return whether ``value`` contains a Python or NumPy boolean scalar."""
+    try:
+        array = np.asarray(value, dtype=object)
+    except (TypeError, ValueError):
+        return False
+    return any(isinstance(item, (bool, np.bool_)) for item in array.flat)
+
+
+def _contains_complex_alias(value: object) -> bool:
+    """Return whether ``value`` contains a Python or NumPy complex scalar."""
+    try:
+        array = np.asarray(value, dtype=object)
+    except (TypeError, ValueError):
+        return False
+    return any(isinstance(item, (complex, np.complexfloating)) for item in array.flat)
+
+
 def _validate_state_array(
     value: object,
     *,
@@ -288,6 +306,10 @@ def _validate_state_array(
     shape: tuple[int, ...],
 ) -> FloatArray:
     """Return the state as a validated finite array, else raise."""
+    if _contains_boolean_alias(value):
+        raise ValueError(f"{name} must not contain boolean values")
+    if _contains_complex_alias(value):
+        raise ValueError(f"{name} must be real-valued")
     if _contains_numeric_string_alias(value):
         raise ValueError(f"{name} must not contain numeric-string aliases")
     try:
@@ -303,6 +325,10 @@ def _validate_state_array(
 
 def _validate_backend_output(value: object, *, n: int) -> FloatArray:
     """Return the backend output matching the reference, else raise."""
+    if _contains_boolean_alias(value):
+        raise ValueError("backend output must not contain boolean values")
+    if _contains_complex_alias(value):
+        raise ValueError("backend output must be real-valued")
     if _contains_numeric_string_alias(value):
         raise ValueError("backend output must not contain numeric-string aliases")
     try:
