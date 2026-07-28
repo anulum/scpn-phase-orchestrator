@@ -133,7 +133,7 @@ Oscillators.extract() ──→ ω₁, ω₂, ..., ωₙ
      │                                          │
      │  Input:  z₀ (seed), n_steps             │
      │  Param:  ω₀, Δ (from g(ω)), K, dt      │
-     │  Method: RK4 on complex ODE (Rust/Py)   │
+     │  Method: RK4 (Rust/Mojo/Julia/Go/Python)│
      │  Output: OAState(z, R, ψ, K_c)          │
      │                                          │
      │  OR: predict_from_oscillators(ω, K)      │
@@ -152,10 +152,11 @@ Oscillators.extract() ──→ ω₁, ω₂, ..., ωₙ
 |-----------|------|-------|--------|
 | `omega_0` | `float` | any | Median of natural frequencies |
 | `delta` | `float` | $\geq 0$ | Half-width of Lorentzian fit |
-| `K` | `float` | $\geq 0$ | Coupling strength |
+| `K` | `float` | finite real | Coupling strength; negative values model repulsive coupling |
 | `dt` | `float` | $> 0$ | Integration time step (default 0.01) |
-| `z0` | `complex` | $|z_0| < 1$ | Seed (typically $0.01 + 0i$) |
+| `z0` | `complex` | $|z_0| \leq 1$ | Seed (typically $0.01 + 0i$) |
 | `n_steps` | `int` | $\geq 1$ | Number of RK4 steps |
+| `omegas` | real `FloatArray` | finite, non-empty, one-dimensional | Empirical sample for `predict_from_oscillators()`; boolean, complex, and numeric-string aliases are rejected before fitting |
 
 ### Output Contract
 
@@ -174,7 +175,9 @@ backend tuple must contain finite non-boolean real scalars, the complex state
 must remain inside the OA unit disk, `R` must equal `abs(z)`, and `psi` must
 match `atan2(Im(z), Re(z))` for non-zero radius. Loader or runtime
 unavailability still falls through to the Python floor, but physics-contract
-faults propagate as validation errors.
+faults propagate as validation errors. The Rust kernel runner validates its
+scalar inputs before conversion, and the optional Rust steady-state helper must
+return a finite real scalar inside `[0, 1]` before the public result is emitted.
 
 ---
 
@@ -188,6 +191,8 @@ faults propagate as validation errors.
 - **Public backend output replay** — optional backend outputs are checked for
   `R == |z|`, `psi == atan2(Im(z), Re(z))`, and non-boolean finite scalars
   before publication
+- **Typed empirical fitting boundary** — measured-frequency samples reject
+  boolean, complex, and numeric-string aliases before Lorentzian fitting
 - **Analytical steady-state** — `steady_state_R()` returns exact $R_{ss}$
 - **Automatic Lorentzian fitting** — `predict_from_oscillators()` fits
   $(\omega_0, \Delta)$ from measured frequencies

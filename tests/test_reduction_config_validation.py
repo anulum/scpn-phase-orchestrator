@@ -108,3 +108,21 @@ def test_predict_from_oscillators_rejects_boolean_frequency_aliases() -> None:
             np.array([0.9, True, 1.1], dtype=object),
             K=1.0,
         )
+
+
+@pytest.mark.parametrize(
+    ("omegas", "match"),
+    [
+        (np.array(["0.9", "1.0", "1.1"]), "numeric"),
+        (np.array([0.9, "1.0", 1.1], dtype=object), "numeric"),
+        (np.array([0.9 + 0.0j, 1.0 + 0.0j, 1.1 + 0.0j]), "not complex"),
+    ],
+)
+def test_predict_from_oscillators_rejects_coercible_frequency_aliases(
+    omegas: np.ndarray,
+    match: str,
+) -> None:
+    reducer = OttAntonsenReduction(omega_0=0.0, delta=0.1, K=1.0)
+
+    with pytest.raises((TypeError, ValueError), match=match):
+        reducer.predict_from_oscillators(omegas, K=1.0)

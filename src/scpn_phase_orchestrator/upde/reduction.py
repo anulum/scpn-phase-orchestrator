@@ -118,6 +118,17 @@ def _load_rust_fn() -> Callable[..., tuple[float, float, float, float]]:
         n_steps: int,
     ) -> tuple[float, float, float, float]:
         """Call the Rust Ott-Antonsen reduction step kernel."""
+        z_re, z_im, omega_0, delta, k_coupling, dt, n_steps = (
+            _reduction_validation.validate_oa_inputs(
+                z_re,
+                z_im,
+                omega_0,
+                delta,
+                k_coupling,
+                dt,
+                n_steps,
+            )
+        )
         re, im, r, psi = oa_run_rust(
             float(z_re),
             float(z_im),
@@ -250,32 +261,6 @@ def _validate_finite_complex(value: object, *, name: str) -> complex:
     return coerced
 
 
-def _validate_frequency_sample(value: object, *, name: str) -> FloatArray:
-    """Return the validated frequency-distribution sample, else raise."""
-    if _contains_boolean_alias(value):
-        raise ValueError(f"{name} must not contain boolean values")
-    try:
-        arr = np.asarray(value, dtype=np.float64)
-    except (TypeError, ValueError) as exc:
-        raise ValueError(f"{name} must be a finite one-dimensional array") from exc
-    if arr.ndim != 1:
-        raise ValueError(f"{name} shape {arr.shape} must be one-dimensional")
-    if arr.size == 0:
-        raise ValueError(f"{name} must contain at least one frequency")
-    if not np.all(np.isfinite(arr)):
-        raise ValueError(f"{name} must contain only finite values")
-    return np.ascontiguousarray(arr, dtype=np.float64)
-
-
-def _contains_boolean_alias(value: object) -> bool:
-    """Return whether the value contains any boolean alias."""
-    try:
-        arr = np.asarray(value, dtype=object)
-    except (TypeError, ValueError):
-        return False
-    return any(isinstance(item, (bool, np.bool_)) for item in arr.flat)
-
-
 def _validate_unit_interval(value: object, *, name: str) -> float:
     """Return ``value`` as a float in [0, 1], else raise ``ValueError``."""
     coerced = _validate_finite_real(value, name=name)
@@ -398,10 +383,12 @@ class OttAntonsenReduction:
             Return the analytical steady-state ``R_ss = √(1 − 2Δ/K)`` for ``K > K_c``.
         """
         if _HAS_RUST_SCALAR:
-            return float(_rust_steady_state_r(self._delta, self._K))
-        if self.K_c >= self._K:
-            return 0.0
-        return float((1.0 - 2.0 * self._delta / self._K) ** 0.5)
+            value = _rust_steady_state_r(self._delta, self._K)
+        elif self.K_c >= self._K:
+            value = 0.0
+        else:
+            value = (1.0 - 2.0 * self._delta / self._K) ** 0.5
+        return _reduction_validation.validate_oa_steady_state_output(value)
 
     def step(self, z: complex) -> complex:
         """Single RK4 step on the OA ODE.
@@ -490,7 +477,10 @@ class OttAntonsenReduction:
         OAState
             The relaxed ``OAState`` for the fitted Lorentzian.
         """
-        omegas64 = _validate_frequency_sample(omegas, name="omegas")
+        omegas64 = _reduction_validation.validate_oa_frequency_sample(
+            omegas,
+            name="omegas",
+        )
         K = _validate_finite_real(K, name="K")
         if _HAS_RUST_SCALAR:
             omega_0, delta = _rust_fit_lorentzian(omegas64)

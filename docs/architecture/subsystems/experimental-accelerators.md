@@ -150,7 +150,10 @@ The public Ott-Antonsen reduction dispatcher applies the shared OA output
 validator to optional backend returns before publication: returned scalar
 records must be finite non-boolean values, `z` must stay inside the OA unit
 disk, `R` must match `|z|`, and `psi` must match `atan2(Im(z), Re(z))` for
-non-zero radius.
+non-zero radius. The same core-owned contract rejects boolean, complex, and
+numeric-string empirical-frequency aliases before Lorentzian fitting, validates
+the direct Rust kernel inputs before coercion, and requires the optional Rust
+steady-state scalar output to remain a finite real value inside `[0, 1]`.
 The public envelope dispatcher now applies its direct accelerator output
 validators to optional backend returns before publication: RMS-envelope vectors
 must keep input cardinality, finite values, non-negative values, and no

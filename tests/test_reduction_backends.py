@@ -79,6 +79,12 @@ def test_reduction_validator_rejects_radius_outside_unit_interval() -> None:
         reduction_validation.validate_oa_output(0.2, 0.0, 1.2, 0.0)
 
 
+def test_reduction_validator_accepts_undefined_phase_at_zero_radius() -> None:
+    output = reduction_validation.validate_oa_output(0.0, 0.0, 0.0, 2.5)
+
+    assert output == (0.0, 0.0, 0.0, 2.5)
+
+
 @contextlib.contextmanager
 def _force_backend(name: str) -> Iterator[None]:
     prev = r_mod.ACTIVE_BACKEND
@@ -411,6 +417,34 @@ class TestPublicReductionOutputContracts:
 
         assert reducer.steady_state_R() == 0.0
 
+    @pytest.mark.parametrize(
+        ("output", "match"),
+        [
+            ("0.5", "real scalar"),
+            (True, "real scalar"),
+            (float("nan"), "finite"),
+            (-0.1, r"\[0, 1\]"),
+            (1.1, r"\[0, 1\]"),
+        ],
+    )
+    def test_steady_state_rejects_invalid_rust_scalar_output(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        output: object,
+        match: str,
+    ) -> None:
+        reducer = OttAntonsenReduction(omega_0=0.0, delta=0.1, K=1.0, dt=0.01)
+        monkeypatch.setattr(r_mod, "_HAS_RUST_SCALAR", True)
+        monkeypatch.setattr(
+            r_mod,
+            "_rust_steady_state_r",
+            lambda *_args: output,
+            raising=False,
+        )
+
+        with pytest.raises((TypeError, ValueError), match=match):
+            reducer.steady_state_R()
+
 
 class TestDirectMojoBoundaryContracts:
     @pytest.mark.parametrize(
@@ -574,6 +608,28 @@ class TestOptionalLoaderSuccessPaths:
         run = r_mod._load_rust_fn()
         with pytest.raises(ValueError, match="R must match"):
             run(0.01, 0.02, 0.5, 0.1, 1.0, 0.01, 3)
+
+    @pytest.mark.parametrize("value", ["0.01", True])
+    def test_rust_loader_rejects_coercible_input_aliases_before_kernel_call(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        value: object,
+    ) -> None:
+        calls: list[tuple[object, ...]] = []
+
+        def oa_run_rust(*args: object) -> OAOutput:
+            calls.append(args)
+            return 0.1, 0.0, 0.1, 0.0
+
+        fake_spo = types.ModuleType("spo_kernel")
+        fake_spo_dynamic = cast(Any, fake_spo)
+        fake_spo_dynamic.oa_run_rust = oa_run_rust
+        monkeypatch.setitem(sys.modules, "spo_kernel", fake_spo)
+
+        run = r_mod._load_rust_fn()
+        with pytest.raises(TypeError, match="dt must be a real scalar"):
+            run(0.01, 0.02, 0.5, 0.1, 1.0, value, 3)
+        assert calls == []
 
     def test_mojo_loader_runs_availability_probe(
         self,

@@ -301,7 +301,11 @@ mean-field state contract across the polyglot chain.
 The public dispatcher applies the same output contract to optional backend
 returns before publishing `OAState`, so inconsistent `R`, inconsistent `psi`,
 or boolean-alias scalar outputs fail closed instead of becoming mean-field
-evidence.
+evidence. Empirical frequency samples reject boolean, complex, and
+numeric-string aliases before Lorentzian fitting. The direct Rust runner uses
+the same pre-coercion scalar-input contract as Go, Julia, and Mojo, while its
+optional steady-state helper must return a finite real order parameter in
+`[0, 1]` before publication.
 
 **Detailed documentation:** [Ott-Antonsen Reduction — detailed reference](upde_reduction.md)
 
