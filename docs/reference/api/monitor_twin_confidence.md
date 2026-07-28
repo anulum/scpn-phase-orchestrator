@@ -180,8 +180,10 @@ The backend kernel computes only the raw `(js, w1)` pair from flat `float64`
 buffers; the public entry point validates inputs once, dispatches, and validates
 the returned pair (shape `(2,)`, finite, `js ∈ [0, ln 2]`, `w1 ∈ [0, 1]` within
 parity tolerance). Public and direct Go, Julia, and Mojo backend-output
-contracts reject numeric-string aliases before float coercion, so a backend
-cannot publish text-encoded divergence evidence. Force a backend for
+contracts reject boolean, complex (including object-complex), and numeric-string
+aliases before float coercion, so a backend cannot publish coerced divergence
+evidence. Real numeric object pairs remain accepted and are normalised to
+contiguous `float64`. Force a backend for
 tests/benchmarks via `twin_confidence.ACTIVE_BACKEND = "go"`.
 
 ### 3.1 Semantic equivalence

@@ -268,6 +268,12 @@ reject boolean aliases, numeric-string aliases, complex values, non-finite
 values, malformed cardinality, fractional integer evidence, out-of-bound
 winding counts, and exact-reference divergence before float or integer
 coercion or publication.
+The direct twin-confidence Go, Julia, and Mojo bridges apply one shared
+backend-output validator after execution. The `(js, w1)` evidence pair rejects
+boolean, complex (including object-complex), and numeric-string aliases before
+float coercion, then replays finite cardinality plus Jensen–Shannon and
+Wasserstein bounds before publication; finite real numeric object pairs remain
+compatible.
 The public Strang-splitting dispatcher and direct Go, Julia, and Mojo bridges
 apply shared splitting validators before optional runtime loading and after
 backend execution: phase vectors, frequency vectors, flattened coupling and

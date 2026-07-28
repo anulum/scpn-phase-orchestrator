@@ -43,6 +43,20 @@ def _contains_boolean_alias(value: object) -> bool:
     return any(isinstance(item, (bool, np.bool_)) for item in array.flat)
 
 
+def _contains_complex_alias(value: object) -> bool:
+    """Return whether the value contains any complex-number alias."""
+    try:
+        raw = np.asarray(value)
+    except (TypeError, ValueError):
+        return False
+    if np.iscomplexobj(raw):
+        return True
+    if isinstance(value, np.ndarray) and raw.dtype != object:
+        return False
+    array = raw.astype(object, copy=False)
+    return any(isinstance(item, (complex, np.complexfloating)) for item in array.flat)
+
+
 def _is_string_like(value: object) -> bool:
     """Return whether ``value`` is a Python or NumPy string scalar."""
     return isinstance(value, (str, bytes, np.str_, np.bytes_))
@@ -174,7 +188,8 @@ def validate_twin_divergence_backend_output(value: object) -> FloatArray:
     Parameters
     ----------
     value : object
-        The backend output, coercible to a two-element float array.
+        The backend output as a two-element finite real numeric pair. Boolean,
+        complex, and numeric-string aliases are rejected before float coercion.
 
     Returns
     -------
@@ -184,12 +199,20 @@ def validate_twin_divergence_backend_output(value: object) -> FloatArray:
     Raises
     ------
     ValueError
-        If the result is not a finite two-element pair in the valid ranges
-        ``[0, ln 2]`` and ``[0, 1]`` (within parity tolerance).
+        If the result contains a coercive source-type alias or is not a finite
+        two-element pair in the valid ranges ``[0, ln 2]`` and ``[0, 1]``
+        (within parity tolerance).
     """
+    if _contains_boolean_alias(value):
+        raise ValueError("backend output must not contain boolean values")
+    if _contains_complex_alias(value):
+        raise ValueError("backend output must be real-valued")
     if _contains_numeric_string_alias(value):
         raise ValueError("backend output must not contain numeric-string aliases")
-    array = np.asarray(value, dtype=np.float64).ravel()
+    try:
+        array = np.asarray(value).astype(np.float64, copy=True).ravel()
+    except (OverflowError, TypeError, ValueError) as exc:
+        raise ValueError("backend output must be a finite numeric pair") from exc
     if array.shape != (2,):
         raise ValueError(f"backend output shape {array.shape} is not (2,)")
     if not np.all(np.isfinite(array)):

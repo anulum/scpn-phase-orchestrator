@@ -68,6 +68,17 @@ class _ArrayRaises:
         raise ValueError("array coercion refused")
 
 
+class _FakeTwinJulia:
+    """Julia-module stand-in that preserves its configured raw return value."""
+
+    def __init__(self, result: object) -> None:
+        self._result = result
+
+    def twin_divergence(self, *args: object) -> object:
+        """Return the configured backend payload without source-type coercion."""
+        return self._result
+
+
 def _rust_backend(
     a: np.ndarray, b: np.ndarray, c: np.ndarray, d: np.ndarray, n: int, w: int, nb: int
 ) -> np.ndarray:
@@ -231,7 +242,9 @@ def test_validation_inputs_reject_order_length_mismatch() -> None:
 
 
 def test_validation_output_round_trip() -> None:
-    out = validation.validate_twin_divergence_backend_output([0.3, 0.4])
+    out = validation.validate_twin_divergence_backend_output(
+        np.array([0.3, 0.4], dtype=np.float64)
+    )
     assert out.tolist() == [0.3, 0.4]
 
 
@@ -248,6 +261,70 @@ def test_validation_output_rejects_non_finite() -> None:
 def test_validation_output_rejects_numeric_string_pair() -> None:
     with pytest.raises(ValueError, match="numeric-string"):
         validation.validate_twin_divergence_backend_output(["0.1", "0.2"])
+
+
+def test_validation_output_normalises_array_coercion_failure() -> None:
+    with pytest.raises(ValueError, match="finite numeric pair"):
+        validation.validate_twin_divergence_backend_output(_ArrayRaises())
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        np.array([False, False]),
+        np.array([np.bool_(False), 0.1], dtype=object),
+    ],
+)
+def test_validation_output_rejects_boolean_aliases(payload: object) -> None:
+    with pytest.raises(ValueError, match="boolean"):
+        validation.validate_twin_divergence_backend_output(payload)
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        np.array([0.1 + 0.2j, 0.2 + 0.3j]),
+        np.array([np.complex128(0.1 + 0.2j), 0.2], dtype=object),
+    ],
+)
+def test_validation_output_rejects_complex_aliases(payload: object) -> None:
+    with pytest.raises(ValueError, match="real-valued"):
+        validation.validate_twin_divergence_backend_output(payload)
+
+
+def test_validation_output_preserves_real_numeric_object_pair() -> None:
+    out = validation.validate_twin_divergence_backend_output(
+        np.array([np.float64(0.3), np.int64(0)], dtype=object)
+    )
+
+    assert out.dtype == np.float64
+    assert out.tolist() == [0.3, 0.0]
+
+
+@pytest.mark.parametrize(
+    ("payload", "message"),
+    [
+        (np.array([False, False]), "boolean"),
+        (np.array([0.1 + 0.2j, 0.2 + 0.3j]), "real-valued"),
+    ],
+)
+def test_julia_bridge_rejects_coercive_backend_outputs(
+    monkeypatch: pytest.MonkeyPatch,
+    payload: object,
+    message: str,
+) -> None:
+    monkeypatch.setattr(julia_mod, "_JULIA_MODULE", _FakeTwinJulia(payload))
+
+    with pytest.raises(ValueError, match=message):
+        julia_mod.twin_divergence_julia(
+            np.array([0.1, 0.2]),
+            np.array([0.3, 0.4]),
+            np.array([0.5]),
+            np.array([0.6]),
+            2,
+            1,
+            8,
+        )
 
 
 def test_validation_output_rejects_js_out_of_range() -> None:
