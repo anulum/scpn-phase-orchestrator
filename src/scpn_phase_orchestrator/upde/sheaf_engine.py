@@ -19,7 +19,7 @@ solver state.
 from __future__ import annotations
 
 import threading
-from numbers import Integral, Real
+from numbers import Complex, Integral, Real
 from typing import TypeAlias
 
 import numpy as np
@@ -57,6 +57,34 @@ def _validate_nonnegative_int(value: object, *, name: str) -> int:
     return int(value)
 
 
+def _as_real_numeric_array(value: object, *, name: str) -> FloatArray:
+    """Return a real numeric array without coercing string or complex aliases."""
+    try:
+        raw = np.asarray(value)
+    except (TypeError, ValueError):
+        raise ValueError(f"{name} must be a numeric array") from None
+    object_values = raw.dtype == np.object_
+    if raw.dtype == np.bool_ or (
+        object_values and any(isinstance(item, (bool, np.bool_)) for item in raw.flat)
+    ):
+        raise ValueError(f"{name} must be real-valued, not boolean")
+    if np.iscomplexobj(raw) or (
+        object_values
+        and any(
+            isinstance(item, Complex) and not isinstance(item, Real)
+            for item in raw.flat
+        )
+    ):
+        raise ValueError(f"{name} must be real-valued, not complex")
+    numeric_object = object_values and all(isinstance(item, Real) for item in raw.flat)
+    if not np.issubdtype(raw.dtype, np.number) and not numeric_object:
+        raise ValueError(f"{name} must be numeric")
+    try:
+        return np.ascontiguousarray(raw, dtype=np.float64)
+    except (OverflowError, TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a numeric array") from exc
+
+
 def _validate_finite_matrix(
     value: object,
     *,
@@ -64,15 +92,12 @@ def _validate_finite_matrix(
     shape: tuple[int, ...],
 ) -> FloatArray:
     """Return the value as a validated finite matrix, else raise."""
-    try:
-        array = np.asarray(value, dtype=np.float64)
-    except (TypeError, ValueError) as exc:
-        raise ValueError(f"{name} must be a finite float array") from exc
+    array = _as_real_numeric_array(value, name=name)
     if array.shape != shape:
         raise ValueError(f"{name}.shape={array.shape}, expected {shape}")
     if not np.all(np.isfinite(array)):
         raise ValueError(f"{name} contains NaN/Inf")
-    return np.ascontiguousarray(array, dtype=np.float64)
+    return array
 
 
 def _validate_finite_real(value: object, *, name: str) -> float:
@@ -91,8 +116,10 @@ def _reshape_rust_result(
     name: str,
     shape: tuple[int, int],
 ) -> FloatArray:
-    """Reshape the flat Rust result into the sheaf state shape."""
-    array = np.asarray(value, dtype=np.float64)
+    """Validate and reshape a flat Rust result into the sheaf state shape."""
+    array = _as_real_numeric_array(value, name=f"Rust sheaf {name} output")
+    if array.ndim != 1:
+        raise ValueError(f"Rust sheaf {name} output must be one-dimensional")
     expected_size = shape[0] * shape[1]
     if array.size != expected_size:
         raise ValueError(
@@ -100,7 +127,9 @@ def _reshape_rust_result(
         )
     if not np.all(np.isfinite(array)):
         raise ValueError(f"Rust sheaf {name} returned NaN/Inf")
-    return np.ascontiguousarray(array.reshape(shape), dtype=np.float64)
+    if np.any((array < 0.0) | (array >= TWO_PI)):
+        raise ValueError(f"Rust sheaf {name} returned phases outside [0, 2*pi)")
+    return array.reshape(shape)
 
 
 class SheafUPDEEngine:
@@ -185,12 +214,12 @@ class SheafUPDEEngine:
 
     @property
     def last_dt(self) -> float:
-        """Return the most recent timestep used by the sheaf engine.
+        """Return the most recent accepted Python or Rust timestep.
 
         Returns
         -------
         float
-            Return the most recent timestep used by the sheaf engine.
+            Positive finite timestep accepted by the sheaf engine.
         """
         return self._last_dt
 
@@ -238,11 +267,16 @@ class SheafUPDEEngine:
                     float(zeta),
                     np.ascontiguousarray(psi.ravel(), dtype=np.float64),
                 )
-                return _reshape_rust_result(
+                output = _reshape_rust_result(
                     res,
                     name="step",
                     shape=(self._n, self._d),
                 )
+                self._last_dt = _validate_positive_float(
+                    self._rust.last_dt,
+                    name="Rust last_dt",
+                )
+                return output
 
             if self._method == "euler":
                 return self._euler_step(phases, omegas, restriction_maps, zeta, psi)
@@ -264,17 +298,18 @@ class SheafUPDEEngine:
         Parameters
         ----------
         phases : FloatArray
-            Oscillator phases in radians, shape ``(N,)``.
+            Oscillator phases in radians, shape ``(N, D)``.
         omegas : FloatArray
-            Natural frequencies in rad/s, shape ``(N,)``.
+            Natural frequencies in rad/s, shape ``(N, D)``.
         restriction_maps : FloatArray
-            Sheaf restriction maps, shape ``(N, N)``.
+            Sheaf restriction maps, shape ``(N, N, D, D)``.
         zeta : float
             External drive strength ``ζ``.
         psi : FloatArray
-            External drive reference phase ``Ψ`` in radians.
+            External drive reference phase ``Ψ`` in radians, shape ``(D,)``.
         n_steps : int
-            Number of integration steps to run.
+            Number of integration steps to run. Zero returns an independent,
+            validated copy without invoking the optional backend.
 
         Returns
         -------
@@ -289,6 +324,8 @@ class SheafUPDEEngine:
             zeta,
             psi,
         )
+        if n_steps == 0:
+            return phases.copy()
         with self._lock:
             if self._rust is not None:
                 res = self._rust.run(
@@ -299,11 +336,16 @@ class SheafUPDEEngine:
                     np.ascontiguousarray(psi.ravel(), dtype=np.float64),
                     n_steps,
                 )
-                return _reshape_rust_result(
+                output = _reshape_rust_result(
                     res,
                     name="run",
                     shape=(self._n, self._d),
                 )
+                self._last_dt = _validate_positive_float(
+                    self._rust.last_dt,
+                    name="Rust last_dt",
+                )
+                return output
 
             p = phases.copy()
             for _ in range(n_steps):

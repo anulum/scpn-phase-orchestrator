@@ -596,16 +596,34 @@ where most oscillators are only coupled to local neighbours.
 
 ## Cellular Sheaf Engine
 
-The  extends the Kuramoto model from scalar phases to **multi-dimensional phase vectors**. This implements the mathematical framework of Cellular Sheaves for synchronization.
+`SheafUPDEEngine` extends the Kuramoto model from scalar phases to
+**multi-dimensional phase vectors**. This implements a cellular-sheaf model of
+synchronization.
 
-Instead of a single phase $\theta_i$, each oscillator maintains a vector $\vec{\theta}_i \in \mathbb{R}^D$. The scalar coupling {ij}$ is replaced by a restriction map—a block matrix {ij} \in \mathbb{R}^{D \times D}$ that transforms the phase space of node $ into the reference frame of node $.
+Instead of a single phase $\theta_i$, each oscillator maintains a vector
+$\vec{\theta}_i \in \mathbb{R}^D$. The scalar coupling $K_{ij}$ is replaced by
+a restriction map—a block matrix $B_{ij} \in \mathbb{R}^{D \times D}$ that
+maps the phase space of node $j$ into the reference frame of node $i$.
 
-995781 \dot{\theta}_{i,d} = \omega_{i,d} + \sum_j \sum_k B_{ij}^{dk} \sin(\theta_{j,k} - \theta_{i,d}) + \zeta \sin(\Psi_d - \theta_{i,d}) 995781
+$$
+\dot{\theta}_{i,d} = \omega_{i,d}
++ \sum_j \sum_k B_{ij}^{dk} \sin(\theta_{j,k} - \theta_{i,d})
++ \zeta \sin(\Psi_d - \theta_{i,d})
+$$
 
 ### Features
-- **Cross-Frequency Coupling:** A dimension $ on node $ (e.g., Theta wave) can directly drive dimension $ on node $ (e.g., Gamma wave) via off-diagonal elements in {ij}$.
-- **Complex Topology:** Models opinion dynamics, multi-modal synchronization, and anisotropic structural constraints natively.
-- **Rust Kernel:** Fully offloaded to the  via  for real-time multi-dimensional integration.
+
+- **Cross-frequency coupling:** Dimension $k$ on node $j$ can directly drive
+  dimension $d$ on node $i$ through off-diagonal elements of $B_{ij}$.
+- **Structured topology:** Models opinion dynamics, multimodal synchronization,
+  and anisotropic structural constraints natively.
+- **Rust parity:** Uses `PySheafUPDEStepper` when available while preserving the
+  same public state-shape, numeric-type, finiteness, and torus-domain contracts.
+- **Fail-closed arrays:** Phase, frequency, restriction-map, and drive-target
+  arrays reject boolean, complex, and numeric-string aliases before conversion.
+- **Fail-closed publication:** Rust output must be a finite real flattened
+  `N * D` torus state, and its adaptive timestep must be positive and finite.
+  A zero-step run returns a validated independent copy without backend dispatch.
 
 ::: scpn_phase_orchestrator.upde.sheaf_engine
 

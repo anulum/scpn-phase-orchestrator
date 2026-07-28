@@ -283,6 +283,7 @@ class TestSheafEngineEdgeCases:
                     1e-6,
                     1e-3,
                 )
+                self.last_dt = dt
 
             def step(self, phases, omegas, restriction_maps, zeta, psi):
                 assert phases.flags.c_contiguous
@@ -290,10 +291,12 @@ class TestSheafEngineEdgeCases:
                 assert restriction_maps.flags.c_contiguous
                 assert psi.flags.c_contiguous
                 assert zeta == 0.25
+                self.last_dt = 0.004
                 return np.array([0.1, 0.2, 0.3, 0.4], dtype=np.float64)
 
             def run(self, phases, omegas, restriction_maps, zeta, psi, n_steps):
                 assert n_steps == 5
+                self.last_dt = 0.003
                 return np.array([0.5, 0.6, 0.7, 0.8], dtype=np.float64)
 
         fake_spo = types.ModuleType("spo_kernel")
@@ -308,7 +311,9 @@ class TestSheafEngineEdgeCases:
         psi = np.array([0.0, 1.0], dtype=np.float64)
 
         step = engine.step(phases, omegas, restriction_maps, 0.25, psi)
+        assert engine.last_dt == pytest.approx(0.004)
         run = engine.run(phases, omegas, restriction_maps, 0.25, psi, 5)
+        assert engine.last_dt == pytest.approx(0.003)
         np.testing.assert_allclose(step, [[0.1, 0.2], [0.3, 0.4]], atol=1e-12)
         np.testing.assert_allclose(run, [[0.5, 0.6], [0.7, 0.8]], atol=1e-12)
 
@@ -356,6 +361,71 @@ class TestSheafEngineEdgeCases:
         )
 
         np.testing.assert_allclose(out, [[0.01], [0.12]], atol=1e-12)
+
+    @pytest.mark.parametrize(
+        "field",
+        ["phases", "omegas", "restriction_maps", "psi"],
+    )
+    @pytest.mark.parametrize(
+        ("alias", "dtype", "match"),
+        [
+            (True, None, "real-valued, not boolean"),
+            ("0.1", None, "must be numeric"),
+            (0.1 + 0.2j, None, "real-valued, not complex"),
+            (np.bool_(True), object, "real-valued, not boolean"),
+            (0.1 + 0.2j, object, "real-valued, not complex"),
+        ],
+    )
+    def test_step_rejects_coercive_array_aliases(self, field, alias, dtype, match):
+        engine = SheafUPDEEngine(2, d_dimensions=1, dt=0.01, method="euler")
+        inputs = {
+            "phases": np.array([[0.0], [0.1]], dtype=np.float64),
+            "omegas": np.array([[1.0], [2.0]], dtype=np.float64),
+            "restriction_maps": np.zeros((2, 2, 1, 1), dtype=np.float64),
+            "psi": np.array([0.0], dtype=np.float64),
+        }
+        inputs[field] = np.full(inputs[field].shape, alias, dtype=dtype)
+
+        with pytest.raises(ValueError, match=match):
+            engine.step(
+                inputs["phases"],
+                inputs["omegas"],
+                inputs["restriction_maps"],
+                0.0,
+                inputs["psi"],
+            )
+
+    def test_step_accepts_real_numeric_object_arrays(self):
+        engine = SheafUPDEEngine(2, d_dimensions=1, dt=0.01, method="euler")
+        out = engine.step(
+            np.array([[0], [0.1]], dtype=object),
+            np.array([[1], [2.0]], dtype=object),
+            np.zeros((2, 2, 1, 1), dtype=object),
+            0.0,
+            np.array([0], dtype=object),
+        )
+
+        assert out.dtype == np.float64
+        np.testing.assert_allclose(out, [[0.01], [0.12]], atol=1e-12)
+
+    @pytest.mark.parametrize(
+        "phases",
+        [
+            [[0.0], [0.1, 0.2]],
+            np.array([[10**400], [0]], dtype=object),
+        ],
+    )
+    def test_step_rejects_unrepresentable_numeric_inputs(self, phases):
+        engine = SheafUPDEEngine(2, d_dimensions=1, dt=0.01, method="euler")
+
+        with pytest.raises(ValueError, match="phases must be a numeric array"):
+            engine.step(
+                phases,
+                np.ones((2, 1)),
+                np.zeros((2, 2, 1, 1)),
+                0.0,
+                np.zeros(1),
+            )
 
     def test_run_zero_steps_returns_independent_copy(self):
         engine = SheafUPDEEngine(2, d_dimensions=2, dt=0.01, method="rk4")
@@ -417,6 +487,37 @@ class TestSheafEngineEdgeCases:
         with pytest.raises(AssertionError):
             np.testing.assert_allclose(out_rk45, out_rk4, atol=1e-12, rtol=1e-12)
 
+    def test_rk45_exhausted_retry_returns_bounded_fallback(self, monkeypatch):
+        engine = SheafUPDEEngine(
+            2,
+            d_dimensions=1,
+            dt=0.1,
+            method="rk45",
+            atol=1e-12,
+            rtol=1e-12,
+        )
+        engine._rust = None
+        calls = 0
+
+        def rejecting_stages(phases, omegas, restriction_maps, zeta, psi, dt):
+            nonlocal calls
+            calls += 1
+            return [np.full_like(phases, index + 1.0) for index in range(7)]
+
+        monkeypatch.setattr(engine, "_rk45_stage_vector", rejecting_stages)
+        out = engine.step(
+            np.zeros((2, 1)),
+            np.ones((2, 1)),
+            np.zeros((2, 2, 1, 1)),
+            0.0,
+            np.zeros(1),
+        )
+
+        assert calls == 4
+        assert engine.last_dt == pytest.approx(0.00016)
+        assert np.all(np.isfinite(out))
+        assert np.all((out >= 0.0) & (out < 2 * np.pi))
+
     def test_rust_step_rejects_malformed_flattened_output(self, monkeypatch):
         class BadSheafStepper:
             def __init__(self, *args, **kwargs):
@@ -462,6 +563,67 @@ class TestSheafEngineEdgeCases:
                 0.0,
                 np.zeros(2),
                 1,
+            )
+
+    @pytest.mark.parametrize(
+        ("payload", "match"),
+        [
+            (np.array([True, False, True, False]), "real-valued, not boolean"),
+            (np.array(["0.1", "0.2", "0.3", "0.4"]), "must be numeric"),
+            (
+                np.array([0.1 + 0.2j, 0.2, 0.3, 0.4]),
+                "real-valued, not complex",
+            ),
+            (np.zeros((2, 2)), "one-dimensional"),
+            (np.array([-0.1, 0.2, 0.3, 0.4]), "outside"),
+            (np.array([0.1, 2 * np.pi, 0.3, 0.4]), "outside"),
+        ],
+    )
+    def test_rust_step_rejects_invalid_phase_output(self, monkeypatch, payload, match):
+        class BadSheafStepper:
+            def __init__(self, *args, **kwargs):
+                self.last_dt = 0.01
+
+            def step(self, phases, omegas, restriction_maps, zeta, psi):
+                return payload
+
+        fake_spo = types.ModuleType("spo_kernel")
+        fake_spo.PySheafUPDEStepper = BadSheafStepper
+        monkeypatch.setattr(sheaf_mod, "_HAS_RUST", True)
+        monkeypatch.setitem(sys.modules, "spo_kernel", fake_spo)
+
+        engine = SheafUPDEEngine(2, d_dimensions=2, dt=0.01, method="rk4")
+        with pytest.raises(ValueError, match=match):
+            engine.step(
+                np.zeros((2, 2)),
+                np.ones((2, 2)),
+                np.zeros((2, 2, 2, 2)),
+                0.0,
+                np.zeros(2),
+            )
+
+    @pytest.mark.parametrize("last_dt", [False, "0.01", 0.0, -0.01, np.inf])
+    def test_rust_step_rejects_invalid_last_dt(self, monkeypatch, last_dt):
+        class BadSheafStepper:
+            def __init__(self, *args, **kwargs):
+                self.last_dt = last_dt
+
+            def step(self, phases, omegas, restriction_maps, zeta, psi):
+                return np.array([0.1, 0.2, 0.3, 0.4], dtype=np.float64)
+
+        fake_spo = types.ModuleType("spo_kernel")
+        fake_spo.PySheafUPDEStepper = BadSheafStepper
+        monkeypatch.setattr(sheaf_mod, "_HAS_RUST", True)
+        monkeypatch.setitem(sys.modules, "spo_kernel", fake_spo)
+
+        engine = SheafUPDEEngine(2, d_dimensions=2, dt=0.01, method="rk4")
+        with pytest.raises(ValueError, match="last_dt"):
+            engine.step(
+                np.zeros((2, 2)),
+                np.ones((2, 2)),
+                np.zeros((2, 2, 2, 2)),
+                0.0,
+                np.zeros(2),
             )
 
 

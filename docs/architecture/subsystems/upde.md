@@ -44,6 +44,10 @@ Dispatched through `upde/_run.py` with the fastest-first chain
 modules (`_engine_go.py`, `_engine_mojo.py`, …) point to
 `experimental/accelerators/upde/`. Rust paths exist for the standard, sparse,
 sheaf, geometric, inertial, and Ott–Antonsen engines.
+The sheaf boundary validates phase, frequency, restriction-map, and drive-target
+source types before conversion. Its Rust result is accepted only as a finite
+real flattened `N * D` torus state, and the positive finite Rust adaptive
+timestep is replayed into the public `last_dt` diagnostic.
 Geometric direct Go, Julia, and Mojo bridges validate torus phase, frequency,
 coupling, lag, scalar, count, and backend-output payloads before optional native
 runtime loading; numeric-string aliases are rejected at the Python boundary.
