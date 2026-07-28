@@ -227,7 +227,7 @@ class TestRunEntryPoints:
             (np.array([1.0, 2.0], dtype=np.float64), "two-dimensional"),
             (np.empty((0, 2), dtype=np.float64), "at least one step"),
             (np.array([[1.0, 2.0, 3.0]], dtype=np.float64), "column count"),
-            (np.array([[1.0, np.inf]], dtype=np.float64), "NaN/Inf"),
+            (np.array([[1.0, np.inf]], dtype=np.float64), "finite"),
         ],
     )
     def test_schedule_run_rejects_malformed_schedule_before_dispatch(
@@ -239,7 +239,7 @@ class TestRunEntryPoints:
         phases, _, knm, alpha = _arrays()
         monkeypatch.setattr(run_mod, "_dispatch_schedule", lambda: _backend_identity)
 
-        with pytest.raises(ValueError, match=match):
+        with pytest.raises((TypeError, ValueError), match=match):
             run_mod.upde_run_omega_schedule(
                 phases,
                 schedule,

@@ -27,6 +27,11 @@ from typing import TypeAlias, cast
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator.upde._engine_validation import (
+    validate_upde_backend_inputs,
+    validate_upde_backend_output,
+    validate_upde_schedule_backend_inputs,
+)
 from scpn_phase_orchestrator.upde._ref_kernel import (
     upde_run_omega_schedule_python,
     upde_run_python,
@@ -68,20 +73,17 @@ def _load_rust_fn() -> Callable[..., FloatArray]:
         stepper = PyUPDEStepper(
             n, dt, method, n_substeps=n_substeps, atol=atol, rtol=rtol
         )
-        return cast(
-            "FloatArray",
-            np.asarray(
-                stepper.run(
-                    np.ascontiguousarray(phases.ravel(), dtype=np.float64),
-                    np.ascontiguousarray(omegas.ravel(), dtype=np.float64),
-                    np.ascontiguousarray(knm.ravel(), dtype=np.float64),
-                    float(zeta),
-                    float(psi),
-                    np.ascontiguousarray(alpha.ravel(), dtype=np.float64),
-                    int(n_steps),
-                ),
-                dtype=np.float64,
+        return validate_upde_backend_output(
+            stepper.run(
+                np.ascontiguousarray(phases.ravel(), dtype=np.float64),
+                np.ascontiguousarray(omegas.ravel(), dtype=np.float64),
+                np.ascontiguousarray(knm.ravel(), dtype=np.float64),
+                float(zeta),
+                float(psi),
+                np.ascontiguousarray(alpha.ravel(), dtype=np.float64),
+                int(n_steps),
             ),
+            n=n,
         )
 
     return cast("Callable[..., FloatArray]", _rust_run)
@@ -114,20 +116,17 @@ def _load_rust_schedule_fn() -> Callable[..., FloatArray]:
                 "spo_kernel PyUPDEStepper does not expose run_omega_schedule; "
                 "rebuild spo-kernel to enable Rust omega schedule dispatch"
             )
-        return cast(
-            "FloatArray",
-            np.asarray(
-                stepper.run_omega_schedule(
-                    np.ascontiguousarray(phases.ravel(), dtype=np.float64),
-                    np.ascontiguousarray(omega_schedule.ravel(), dtype=np.float64),
-                    np.ascontiguousarray(knm.ravel(), dtype=np.float64),
-                    float(zeta),
-                    float(psi),
-                    np.ascontiguousarray(alpha.ravel(), dtype=np.float64),
-                    int(omega_schedule.shape[0]),
-                ),
-                dtype=np.float64,
+        return validate_upde_backend_output(
+            stepper.run_omega_schedule(
+                np.ascontiguousarray(phases.ravel(), dtype=np.float64),
+                np.ascontiguousarray(omega_schedule.ravel(), dtype=np.float64),
+                np.ascontiguousarray(knm.ravel(), dtype=np.float64),
+                float(zeta),
+                float(psi),
+                np.ascontiguousarray(alpha.ravel(), dtype=np.float64),
+                int(omega_schedule.shape[0]),
             ),
+            n=n,
         )
 
     return cast("Callable[..., FloatArray]", _rust_run_schedule)
@@ -315,26 +314,6 @@ def _dispatch_schedule() -> Callable[..., FloatArray] | None:
     return None
 
 
-def _validate_zero_self_coupling(knm: FloatArray) -> None:
-    """Assert the coupling matrix has a zero diagonal, else raise."""
-    if not np.allclose(np.diag(knm), 0.0, rtol=0.0, atol=1e-15):
-        raise ValueError("knm self-coupling diagonal must be zero")
-
-
-def _validate_omega_schedule(schedule: FloatArray, *, n: int) -> None:
-    """Return the validated natural-frequency schedule, else raise."""
-    if schedule.dtype == np.bool_ or np.iscomplexobj(schedule):
-        raise ValueError("omega_schedule must be real-valued")
-    if schedule.ndim != 2:
-        raise ValueError("omega_schedule must be a two-dimensional matrix")
-    if schedule.shape[0] < 1:
-        raise ValueError("omega_schedule must contain at least one step")
-    if schedule.shape[1] != n:
-        raise ValueError("omega_schedule column count must match phases")
-    if not np.all(np.isfinite(schedule)):
-        raise ValueError("omega_schedule contains NaN/Inf")
-
-
 def upde_run(
     phases: FloatArray,
     omegas: FloatArray,
@@ -358,47 +337,68 @@ def upde_run(
     adaptive with ``(atol, rtol)`` tolerances. Phases are wrapped
     to ``[0, 2π)`` after each outer step.
     """
-    p = np.ascontiguousarray(phases, dtype=np.float64)
-    o = np.ascontiguousarray(omegas, dtype=np.float64)
-    k = np.ascontiguousarray(knm, dtype=np.float64)
-    a = np.ascontiguousarray(alpha, dtype=np.float64)
-    _validate_zero_self_coupling(k)
+    (
+        p,
+        o,
+        k,
+        a,
+        zeta_f,
+        psi_f,
+        dt_f,
+        n_steps_i,
+        method_s,
+        n_substeps_i,
+        atol_f,
+        rtol_f,
+    ) = validate_upde_backend_inputs(
+        phases,
+        omegas,
+        knm,
+        alpha,
+        zeta,
+        psi,
+        dt,
+        n_steps,
+        method,
+        n_substeps,
+        atol,
+        rtol,
+    )
+    n = int(p.size)
+    k_matrix = k.reshape((n, n))
+    a_matrix = a.reshape((n, n))
     backend_fn = _dispatch()
     if backend_fn is None:
-        return upde_run_python(
+        result = upde_run_python(
             p,
             o,
-            k,
-            a,
-            float(zeta),
-            float(psi),
-            float(dt),
-            int(n_steps),
-            method,
-            int(n_substeps),
-            float(atol),
-            float(rtol),
+            k_matrix,
+            a_matrix,
+            zeta_f,
+            psi_f,
+            dt_f,
+            n_steps_i,
+            method_s,
+            n_substeps_i,
+            atol_f,
+            rtol_f,
         )
-    return cast(
-        "FloatArray",
-        np.asarray(
-            backend_fn(
-                p,
-                o,
-                k,
-                a,
-                float(zeta),
-                float(psi),
-                float(dt),
-                int(n_steps),
-                method,
-                int(n_substeps),
-                float(atol),
-                float(rtol),
-            ),
-            dtype=np.float64,
-        ),
-    )
+    else:
+        result = backend_fn(
+            p,
+            o,
+            k_matrix,
+            a_matrix,
+            zeta_f,
+            psi_f,
+            dt_f,
+            n_steps_i,
+            method_s,
+            n_substeps_i,
+            atol_f,
+            rtol_f,
+        )
+    return validate_upde_backend_output(result, n=n)
 
 
 def upde_run_omega_schedule(
@@ -415,59 +415,77 @@ def upde_run_omega_schedule(
     rtol: float = 1e-3,
 ) -> FloatArray:
     """Run UPDE with one resolved natural-frequency vector per outer step."""
-    p = np.ascontiguousarray(phases, dtype=np.float64)
-    raw_schedule = np.asarray(omega_schedule)
-    k = np.ascontiguousarray(knm, dtype=np.float64)
-    a = np.ascontiguousarray(alpha, dtype=np.float64)
-    _validate_zero_self_coupling(k)
-    _validate_omega_schedule(raw_schedule, n=int(p.size))
-    schedule = np.ascontiguousarray(raw_schedule, dtype=np.float64)
+    (
+        p,
+        schedule,
+        k,
+        a,
+        zeta_f,
+        psi_f,
+        dt_f,
+        _n_steps_i,
+        method_s,
+        n_substeps_i,
+        atol_f,
+        rtol_f,
+    ) = validate_upde_schedule_backend_inputs(
+        phases,
+        omega_schedule,
+        knm,
+        alpha,
+        zeta,
+        psi,
+        dt,
+        method,
+        n_substeps,
+        atol,
+        rtol,
+    )
+    n = int(p.size)
+    k_matrix = k.reshape((n, n))
+    a_matrix = a.reshape((n, n))
     backend_fn = _dispatch_schedule()
     if backend_fn is None:
-        return upde_run_omega_schedule_python(
+        result = upde_run_omega_schedule_python(
             p,
             schedule,
-            k,
-            a,
-            float(zeta),
-            float(psi),
-            float(dt),
-            method,
-            int(n_substeps),
-            float(atol),
-            float(rtol),
+            k_matrix,
+            a_matrix,
+            zeta_f,
+            psi_f,
+            dt_f,
+            method_s,
+            n_substeps_i,
+            atol_f,
+            rtol_f,
         )
-    try:
-        return cast(
-            "FloatArray",
-            np.asarray(
-                backend_fn(
-                    p,
-                    schedule,
-                    k,
-                    a,
-                    float(zeta),
-                    float(psi),
-                    float(dt),
-                    method,
-                    int(n_substeps),
-                    float(atol),
-                    float(rtol),
-                ),
-                dtype=np.float64,
-            ),
-        )
-    except (AttributeError, ImportError):
-        return upde_run_omega_schedule_python(
-            p,
-            schedule,
-            k,
-            a,
-            float(zeta),
-            float(psi),
-            float(dt),
-            method,
-            int(n_substeps),
-            float(atol),
-            float(rtol),
-        )
+    else:
+        try:
+            result = backend_fn(
+                p,
+                schedule,
+                k_matrix,
+                a_matrix,
+                zeta_f,
+                psi_f,
+                dt_f,
+                method_s,
+                n_substeps_i,
+                atol_f,
+                rtol_f,
+            )
+        except (AttributeError, ImportError):
+            result = upde_run_omega_schedule_python(
+                p,
+                schedule,
+                k_matrix,
+                a_matrix,
+                zeta_f,
+                psi_f,
+                dt_f,
+                method_s,
+                n_substeps_i,
+                atol_f,
+                rtol_f,
+            )
+    return validate_upde_backend_output(result, n=n)

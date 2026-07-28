@@ -26,20 +26,22 @@ import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.experimental.accelerators.upde import (
-    _engine_mojo as engine_mojo_mod,
+    _engine_julia as engine_julia_mod,
 )
 from scpn_phase_orchestrator.experimental.accelerators.upde import (
-    _engine_validation as engine_validation,
+    _engine_mojo as engine_mojo_mod,
 )
 from scpn_phase_orchestrator.experimental.accelerators.upde._engine_go import (
     upde_run_go,
 )
 from scpn_phase_orchestrator.experimental.accelerators.upde._engine_julia import (
     upde_run_julia,
+    upde_run_omega_schedule_julia,
 )
 from scpn_phase_orchestrator.experimental.accelerators.upde._engine_mojo import (
     upde_run_mojo,
 )
+from scpn_phase_orchestrator.upde import _engine_validation as engine_validation
 from scpn_phase_orchestrator.upde import engine as eng_mod
 from scpn_phase_orchestrator.upde.engine import (
     AVAILABLE_BACKENDS,
@@ -191,6 +193,52 @@ class TestDirectBackendBoundaryContracts:
         result = backend(*payload)
         np.testing.assert_allclose(result, payload[0], atol=0.0)
         assert result is not payload[0]
+
+    def test_julia_raw_numeric_string_output_fails_closed(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Preserve Julia return dtype until the shared output validator."""
+        monkeypatch.setattr(
+            engine_julia_mod,
+            "_ensure",
+            lambda: SimpleNamespace(
+                upde_run=lambda *_args: np.array(["0.1", "0.2"]),
+            ),
+        )
+
+        with pytest.raises(TypeError, match="result must be numeric"):
+            upde_run_julia(*_direct_payload())
+
+    def test_julia_schedule_raw_numeric_string_output_fails_closed(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Apply raw-return validation to the Julia schedule path too."""
+        payload = _direct_payload()
+        schedule = np.vstack([payload[1], payload[1]])
+        monkeypatch.setattr(
+            engine_julia_mod,
+            "_ensure",
+            lambda: SimpleNamespace(
+                upde_run_omega_schedule=lambda *_args: np.array(["0.1", "0.2"]),
+            ),
+        )
+
+        with pytest.raises(TypeError, match="result must be numeric"):
+            upde_run_omega_schedule_julia(
+                payload[0],
+                schedule,
+                payload[2],
+                payload[3],
+                payload[4],
+                payload[5],
+                payload[6],
+                payload[8],
+                payload[9],
+                payload[10],
+                payload[11],
+            )
 
     @pytest.mark.parametrize(
         ("stdout", "match"),

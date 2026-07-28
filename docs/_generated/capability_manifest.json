@@ -1,18 +1,18 @@
 {
   "SPDX-License-Identifier": "AGPL-3.0-or-later",
   "counts": {
-    "core_engine_modules": 327,
+    "core_engine_modules": 328,
     "domainpacks": 36,
     "github_workflows": 12,
     "integration_modules": 32,
     "optional_extras": 23,
     "public_api_exports": 24,
     "public_documentation_pages": 229,
-    "python_package_modules": 725,
+    "python_package_modules": 726,
     "research_experimental_modules": 205,
     "runtime_serving_modules": 157,
     "rust_kernel_files": 97,
-    "test_files": 862
+    "test_files": 863
   },
   "documentation": {
     "public_pages": [
@@ -616,6 +616,7 @@
       "src/scpn_phase_orchestrator/upde/_engine_go.py",
       "src/scpn_phase_orchestrator/upde/_engine_julia.py",
       "src/scpn_phase_orchestrator/upde/_engine_mojo.py",
+      "src/scpn_phase_orchestrator/upde/_engine_validation.py",
       "src/scpn_phase_orchestrator/upde/_engine_webgpu.py",
       "src/scpn_phase_orchestrator/upde/_envelope_go.py",
       "src/scpn_phase_orchestrator/upde/_envelope_julia.py",
@@ -1748,6 +1749,7 @@
     "src/scpn_phase_orchestrator/upde/_engine_go.py",
     "src/scpn_phase_orchestrator/upde/_engine_julia.py",
     "src/scpn_phase_orchestrator/upde/_engine_mojo.py",
+    "src/scpn_phase_orchestrator/upde/_engine_validation.py",
     "src/scpn_phase_orchestrator/upde/_engine_webgpu.py",
     "src/scpn_phase_orchestrator/upde/_envelope_go.py",
     "src/scpn_phase_orchestrator/upde/_envelope_julia.py",
@@ -2694,6 +2696,7 @@
       "tests/test_upde_run_loader_contracts.py",
       "tests/test_upde_run_schedule_dispatch.py",
       "tests/test_upde_run_stability.py",
+      "tests/test_upde_run_validation_contracts.py",
       "tests/test_upde_time_varying_omega.py",
       "tests/test_upde_webgpu_backend.py",
       "tests/test_validation.py",

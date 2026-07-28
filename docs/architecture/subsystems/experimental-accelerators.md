@@ -29,6 +29,12 @@ modules in `coupling`/`monitor`/`upde` wrap them for type-checking and audit.
 Validation runs before dtype coercion: Python booleans, NumPy boolean scalars,
 boolean dtypes, and raw containers carrying boolean aliases are rejected rather
 than widened to `0.0`/`1.0` backend payloads.
+The stateless UPDE engine validator is core-owned and shared by the public
+fixed-frequency and frequency-schedule dispatchers plus direct Go, Julia, and
+Mojo bridges. These paths reject boolean, complex, and numeric-string input
+aliases before backend selection, and public/direct backend phase returns must
+retain real finite oscillator cardinality before publication. Julia preserves
+raw return dtype until validation; Mojo stdout remains explicit protocol text.
 Public order-parameter phase vectors and shared/public backend scalar outputs
 reject numeric-string aliases before float coercion. Explicit Mojo stdout is
 parsed as protocol text before the shared typed scalar validator runs.

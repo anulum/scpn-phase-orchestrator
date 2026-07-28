@@ -91,6 +91,14 @@ binary or runtime. Mojo subprocess output must contain exactly one raw stdout
 line per oscillator phase; blank, truncated, or overlong output is rejected
 before final phase validation.
 
+The public stateless `upde_run()` and `upde_run_omega_schedule()` entrypoints
+use that same core-owned contract before backend selection. Boolean, complex,
+and numeric-string aliases are rejected before conversion for phase,
+frequency, coupling, phase-lag, schedule, scalar-control, and count inputs.
+Python and optional-backend results then pass through one finite real-vector
+cardinality check before publication; Julia returns retain their source dtype
+until this check, while Mojo stdout remains an explicitly parsed text protocol.
+
 ::: scpn_phase_orchestrator.upde.engine
     options:
       members: false

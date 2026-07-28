@@ -17,7 +17,7 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
-from scpn_phase_orchestrator.experimental.accelerators.upde._engine_validation import (
+from scpn_phase_orchestrator.upde._engine_validation import (
     validate_upde_backend_inputs,
     validate_upde_backend_output,
     validate_upde_schedule_backend_inputs,

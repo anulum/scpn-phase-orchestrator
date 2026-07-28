@@ -19,7 +19,7 @@ from numpy.typing import NDArray
 from scpn_phase_orchestrator.experimental.accelerators._julia_runtime import (
     require_julia_main,
 )
-from scpn_phase_orchestrator.experimental.accelerators.upde._engine_validation import (
+from scpn_phase_orchestrator.upde._engine_validation import (
     validate_upde_backend_inputs,
     validate_upde_backend_output,
     validate_upde_schedule_backend_inputs,
@@ -96,23 +96,20 @@ def upde_run_julia(
         return p.copy()
     jl = _ensure()
     return validate_upde_backend_output(
-        np.asarray(
-            jl.upde_run(
-                p,
-                o,
-                k,
-                a,
-                n,
-                zeta_f,
-                psi_f,
-                dt_f,
-                n_steps_i,
-                method_s,
-                n_substeps_i,
-                atol_f,
-                rtol_f,
-            ),
-            dtype=np.float64,
+        jl.upde_run(
+            p,
+            o,
+            k,
+            a,
+            n,
+            zeta_f,
+            psi_f,
+            dt_f,
+            n_steps_i,
+            method_s,
+            n_substeps_i,
+            atol_f,
+            rtol_f,
         ),
         n=n,
     )
@@ -161,23 +158,20 @@ def upde_run_omega_schedule_julia(
     n = int(p.size)
     jl = _ensure()
     return validate_upde_backend_output(
-        np.asarray(
-            jl.upde_run_omega_schedule(
-                p,
-                schedule,
-                k,
-                a,
-                n,
-                zeta_f,
-                psi_f,
-                dt_f,
-                n_steps_i,
-                method_s,
-                n_substeps_i,
-                atol_f,
-                rtol_f,
-            ),
-            dtype=np.float64,
+        jl.upde_run_omega_schedule(
+            p,
+            schedule,
+            k,
+            a,
+            n,
+            zeta_f,
+            psi_f,
+            dt_f,
+            n_steps_i,
+            method_s,
+            n_substeps_i,
+            atol_f,
+            rtol_f,
         ),
         n=n,
     )
