@@ -61,6 +61,10 @@ Gaussian distribution parameters, fitted posterior data, and custom
 distribution samples. Boolean, complex, and numeric-string aliases are rejected
 before `float64` conversion, and finite real drive controls are validated before
 Monte Carlo rollout.
+The forward and variational prediction models apply the same source-type-aware
+contract to phase, frequency, predicted-state, observed-state, and precision
+vectors. Coercive aliases fail before prediction, free-energy arithmetic, or
+online state updates, while finite real numeric object arrays remain compatible.
 Geometric direct Go, Julia, and Mojo bridges validate torus phase, frequency,
 coupling, lag, scalar, count, and backend-output payloads before optional native
 runtime loading; numeric-string aliases are rejected at the Python boundary.

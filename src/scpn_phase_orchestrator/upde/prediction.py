@@ -30,7 +30,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from math import isfinite
-from numbers import Integral, Real
+from numbers import Complex, Integral, Real
 from typing import TypeAlias
 
 import numpy as np
@@ -75,12 +75,39 @@ def _validate_positive_float(name: str, value: float) -> float:
     return out
 
 
+def _contains_boolean_alias(value: object) -> bool:
+    """Return whether ``value`` contains a Python or NumPy boolean."""
+    try:
+        array = np.asarray(value, dtype=object)
+    except (TypeError, ValueError):
+        return False
+    return any(isinstance(item, (bool, np.bool_)) for item in array.flat)
+
+
 def _validate_vector(name: str, value: FloatArray, n_oscillators: int) -> FloatArray:
     """Return the value as a validated 1-D finite array, else raise."""
-    raw = np.asarray(value)
-    if raw.dtype == np.bool_:
+    if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
-    array = raw.astype(np.float64, copy=True)
+    try:
+        raw = np.asarray(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a finite real numeric vector") from exc
+    object_values = raw.dtype == np.object_
+    if np.iscomplexobj(raw) or (
+        object_values
+        and any(
+            isinstance(item, Complex) and not isinstance(item, Real)
+            for item in raw.flat
+        )
+    ):
+        raise ValueError(f"{name} must not contain complex values")
+    numeric_object = object_values and all(isinstance(item, Real) for item in raw.flat)
+    if not np.issubdtype(raw.dtype, np.number) and not numeric_object:
+        raise ValueError(f"{name} must be a finite real numeric vector")
+    try:
+        array = raw.astype(np.float64, copy=True)
+    except (OverflowError, TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a finite real numeric vector") from exc
     if array.shape != (n_oscillators,):
         raise ValueError(f"{name} must have shape ({n_oscillators},)")
     if not np.all(np.isfinite(array)):

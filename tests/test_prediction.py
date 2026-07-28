@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from numbers import Real
+
 import numpy as np
 import pytest
 
@@ -17,6 +19,19 @@ from scpn_phase_orchestrator.upde.prediction import (
     VariationalPredictor,
     VariationalState,
 )
+
+
+class _Unarrayable:
+    def __array__(self, dtype=None, copy=None):
+        raise TypeError("cannot expose an array")
+
+
+class _OverflowReal:
+    def __float__(self) -> float:
+        raise OverflowError("cannot represent as float64")
+
+
+Real.register(_OverflowReal)
 
 
 class TestPredictionModel:
@@ -53,6 +68,56 @@ class TestPredictionModel:
         model = PredictionModel(4)
         with pytest.raises(ValueError, match=message):
             model.predict(phases, omegas, dt)
+
+    @pytest.mark.parametrize("method", ["predict", "update", "error_coupling"])
+    @pytest.mark.parametrize("field", ["phases", "omegas"])
+    @pytest.mark.parametrize(
+        "alias",
+        [
+            np.array(["0.0", "0.5", "1.0", "1.5"]),
+            np.array([0.0 + 0.1j, 0.5 + 0.1j, 1.0 + 0.1j, 1.5 + 0.1j]),
+            np.array([0.0, 0.5, True, 1.5], dtype=object),
+        ],
+        ids=["numeric-string", "complex", "object-boolean"],
+    )
+    def test_runtime_methods_reject_coercive_vector_aliases(
+        self,
+        method: str,
+        field: str,
+        alias: np.ndarray,
+    ) -> None:
+        model = PredictionModel(4)
+        values = {
+            "phases": np.array([0.0, 0.5, 1.0, 1.5]),
+            "omegas": np.ones(4),
+        }
+        values[field] = alias
+
+        with pytest.raises(ValueError, match=field):
+            getattr(model, method)(values["phases"], values["omegas"], 0.01)
+
+    def test_runtime_methods_preserve_real_numeric_object_vectors(self) -> None:
+        phases = np.array([0.0, 0.5, 1.0, 1.5], dtype=object)
+        omegas = np.array([1, 1.0, np.float32(1.0), np.int64(1)], dtype=object)
+        model = PredictionModel(4)
+
+        predicted = model.predict(phases, omegas, 0.01)
+        state = model.update(phases, omegas, 0.01)
+        coupling = model.error_coupling(phases, omegas, 0.01)
+
+        assert np.all(np.isfinite(predicted))
+        assert np.all(np.isfinite(state.predicted_phases))
+        assert np.all(np.isfinite(coupling))
+
+    def test_vector_validation_normalizes_array_protocol_failure(self) -> None:
+        with pytest.raises(ValueError, match="phases"):
+            PredictionModel(4).predict(_Unarrayable(), np.ones(4), 0.01)  # type: ignore[arg-type]
+
+    def test_vector_validation_normalizes_float_conversion_overflow(self) -> None:
+        phases = np.array([_OverflowReal() for _ in range(4)], dtype=object)
+
+        with pytest.raises(ValueError, match="phases"):
+            PredictionModel(4).predict(phases, np.ones(4), 0.01)
 
     def test_update_rejects_invalid_runtime_inputs(self):
         model = PredictionModel(4)
@@ -221,6 +286,66 @@ class TestVariationalPredictor:
         vp = VariationalPredictor(4)
         with pytest.raises(ValueError, match=message):
             vp.free_energy(predicted, observed, precision)
+
+    @pytest.mark.parametrize("field", ["predicted", "observed", "precision"])
+    @pytest.mark.parametrize(
+        "alias",
+        [
+            np.array(["0.1", "0.2", "0.3", "0.4"]),
+            np.array([0.1 + 0.2j, 0.2 + 0.2j, 0.3 + 0.2j, 0.4 + 0.2j]),
+            np.array([0.1, 0.2, False, 0.4], dtype=object),
+        ],
+        ids=["numeric-string", "complex", "object-boolean"],
+    )
+    def test_free_energy_rejects_coercive_vector_aliases(
+        self,
+        field: str,
+        alias: np.ndarray,
+    ) -> None:
+        values = {
+            "predicted": np.ones(4),
+            "observed": np.zeros(4),
+            "precision": np.ones(4),
+        }
+        values[field] = alias
+
+        with pytest.raises(ValueError, match=field):
+            VariationalPredictor(4).free_energy(
+                values["predicted"], values["observed"], values["precision"]
+            )
+
+    @pytest.mark.parametrize("field", ["phases", "omegas"])
+    @pytest.mark.parametrize(
+        "alias",
+        [
+            np.array(["0.1", "0.2", "0.3", "0.4"]),
+            np.array([0.1 + 0.2j, 0.2 + 0.2j, 0.3 + 0.2j, 0.4 + 0.2j]),
+            np.array([0.1, 0.2, True, 0.4], dtype=object),
+        ],
+        ids=["numeric-string", "complex", "object-boolean"],
+    )
+    def test_update_rejects_coercive_vector_aliases(
+        self,
+        field: str,
+        alias: np.ndarray,
+    ) -> None:
+        values = {"phases": np.zeros(4), "omegas": np.ones(4)}
+        values[field] = alias
+
+        with pytest.raises(ValueError, match=field):
+            VariationalPredictor(4).update(values["phases"], values["omegas"], 0.01)
+
+    def test_variational_methods_preserve_real_numeric_object_vectors(self) -> None:
+        predicted = np.array([0.1, 0.2, np.float32(0.3), np.int64(0)], dtype=object)
+        observed = np.array([0, 0.1, 0.2, 0.3], dtype=object)
+        precision = np.array([1, 1.0, np.float32(1.0), np.int64(1)], dtype=object)
+        vp = VariationalPredictor(4)
+
+        free_energy = vp.free_energy(predicted, observed, precision)
+        state = vp.update(observed, precision, 0.01)
+
+        assert np.isfinite(free_energy)
+        assert np.all(np.isfinite(state.predicted_phases))
 
     def test_update_rejects_invalid_runtime_inputs(self):
         vp = VariationalPredictor(4)

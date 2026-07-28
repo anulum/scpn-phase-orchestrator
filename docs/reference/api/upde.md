@@ -334,6 +334,11 @@ from error variance.
 
 Includes `PredictionModel` (forward prediction with error injection)
 and `VariationalPredictor` (FEP-Kuramoto correspondence).
+Their public phase, frequency, predicted-state, observed-state, and precision
+vectors reject boolean, complex, and numeric-string aliases before `float64`
+conversion. Real numeric object arrays remain supported, and malformed array
+protocol or conversion payloads are normalized to field-specific `ValueError`
+failures before predictor state can mutate.
 
 ::: scpn_phase_orchestrator.upde.prediction
 
