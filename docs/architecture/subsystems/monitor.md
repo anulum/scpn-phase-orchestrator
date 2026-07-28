@@ -48,6 +48,12 @@ Five-language fallback per kernel: **Rust → Mojo → Julia → Go → Python**
 each observer's `_load_*_fns()` forwarding to
 `experimental/accelerators/monitor/`.
 
+The public twin-confidence dispatcher validates the raw `(js, w1)` backend pair
+before float coercion. Boolean, complex/object-complex, and numeric-string
+aliases fail closed while finite real numeric-object pairs remain compatible;
+shape, finiteness, and Jensen–Shannon/Wasserstein physical bounds are replayed
+before the evidence is published.
+
 ## Wiring
 
 Fed by `upde` output; consumed by `supervisor` (regime conditions, policy DSL,

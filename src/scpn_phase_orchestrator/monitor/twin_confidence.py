@@ -585,6 +585,10 @@ def _validate_order_window(name: str, value: object) -> FloatArray:
 
 def _validate_kernel_output(value: object, *, backend: str) -> tuple[float, float]:
     """Return the backend kernel output matching the reference, else raise."""
+    if _contains_boolean_alias(value):
+        raise ValueError(f"backend {backend!r} output must not contain boolean values")
+    if _contains_complex_alias(value):
+        raise ValueError(f"backend {backend!r} output must be real-valued")
     if _contains_numeric_string_alias(value):
         raise ValueError(
             f"backend {backend!r} output must not contain numeric-string aliases"

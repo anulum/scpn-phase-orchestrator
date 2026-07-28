@@ -304,6 +304,38 @@ def test_kernel_output_numeric_string_pair_rejected() -> None:
         )
 
 
+@pytest.mark.parametrize(
+    "payload",
+    [
+        np.array([False, False]),
+        np.array([np.bool_(False), 0.2], dtype=object),
+    ],
+)
+def test_kernel_output_boolean_aliases_rejected(payload: np.ndarray) -> None:
+    with pytest.raises(ValueError, match="boolean"):
+        tc._validate_kernel_output(payload, backend="python")
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        np.array([0.1 + 0.2j, 0.2]),
+        np.array([np.complex128(0.1 + 0.2j), 0.2], dtype=object),
+    ],
+)
+def test_kernel_output_complex_aliases_rejected(payload: np.ndarray) -> None:
+    with pytest.raises(ValueError, match="real-valued"):
+        tc._validate_kernel_output(payload, backend="python")
+
+
+def test_kernel_output_accepts_real_numeric_object_pair() -> None:
+    payload = np.array([np.float32(0.1), np.int64(0)], dtype=object)
+
+    assert tc._validate_kernel_output(payload, backend="python") == pytest.approx(
+        (0.1, 0.0)
+    )
+
+
 def test_kernel_output_clamps_tiny_negatives() -> None:
     js, w1 = tc._validate_kernel_output(np.array([-1e-13, -1e-13]), backend="python")
     assert js == 0.0
@@ -391,6 +423,33 @@ def test_public_entry_rejects_numeric_string_backend_payload(
     a, b, c, d = _ok_args()
 
     with pytest.raises(ValueError, match="numeric-string"):
+        phase_order_divergence(a, b, c, d)
+
+
+@pytest.mark.parametrize(
+    ("payload", "match"),
+    [
+        (np.array([False, False]), "boolean"),
+        (np.array([0.1 + 0.2j, 0.2]), "real-valued"),
+        (np.array([np.complex128(0.1 + 0.2j), 0.2], dtype=object), "real-valued"),
+    ],
+)
+def test_public_entry_rejects_coercive_backend_payloads(
+    monkeypatch: pytest.MonkeyPatch,
+    payload: np.ndarray,
+    match: str,
+) -> None:
+    def _coercive_backend(*_args: object) -> tc.FloatArray:
+        return cast("tc.FloatArray", payload)
+
+    monkeypatch.setattr(
+        tc,
+        "_dispatch_backend",
+        lambda: ("probe", _coercive_backend),
+    )
+    a, b, c, d = _ok_args()
+
+    with pytest.raises(ValueError, match=match):
         phase_order_divergence(a, b, c, d)
 
 

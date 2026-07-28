@@ -182,8 +182,10 @@ the returned pair (shape `(2,)`, finite, `js ∈ [0, ln 2]`, `w1 ∈ [0, 1]` wit
 parity tolerance). Public and direct Go, Julia, and Mojo backend-output
 contracts reject boolean, complex (including object-complex), and numeric-string
 aliases before float coercion, so a backend cannot publish coerced divergence
-evidence. Real numeric object pairs remain accepted and are normalised to
-contiguous `float64`. Force a backend for
+evidence. The public dispatcher inspects the raw return's source types before
+normalising it, so the contract also holds for injected and future optional
+backends rather than only the current direct adapters. Real numeric object pairs
+remain accepted and are normalised to contiguous `float64`. Force a backend for
 tests/benchmarks via `twin_confidence.ACTIVE_BACKEND = "go"`.
 
 ### 3.1 Semantic equivalence
