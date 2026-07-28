@@ -19,7 +19,7 @@ for concurrent callers.
 from __future__ import annotations
 
 import threading
-from numbers import Integral, Real
+from numbers import Complex, Integral, Real
 from typing import TypeAlias
 
 import numpy as np
@@ -99,6 +99,34 @@ def _validate_phase_drive_float(value: object, *, name: str) -> float:
     return coerced
 
 
+def _as_real_numeric_array(value: object, *, name: str) -> FloatArray:
+    """Return a real numeric array without coercing string or complex aliases."""
+    try:
+        raw = np.asarray(value)
+    except (TypeError, ValueError):
+        raise ValueError(f"{name} must be a numeric array") from None
+    object_values = raw.dtype == np.object_
+    if raw.dtype == np.bool_ or (
+        object_values and any(isinstance(item, (bool, np.bool_)) for item in raw.flat)
+    ):
+        raise ValueError(f"{name} must be real-valued, not boolean")
+    if np.iscomplexobj(raw) or (
+        object_values
+        and any(
+            isinstance(item, Complex) and not isinstance(item, Real)
+            for item in raw.flat
+        )
+    ):
+        raise ValueError(f"{name} must be real-valued, not complex")
+    numeric_object = object_values and all(isinstance(item, Real) for item in raw.flat)
+    if not np.issubdtype(raw.dtype, np.number) and not numeric_object:
+        raise ValueError(f"{name} must be numeric")
+    try:
+        return np.ascontiguousarray(raw, dtype=np.float64)
+    except (OverflowError, TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a numeric array") from exc
+
+
 def _validate_state_array(
     value: object,
     *,
@@ -107,16 +135,13 @@ def _validate_state_array(
     finite_message: str,
 ) -> FloatArray:
     """Return the state as a validated finite array, else raise."""
-    try:
-        arr = np.asarray(value, dtype=np.float64)
-    except (TypeError, ValueError) as exc:
-        raise ValueError(f"{name} must be a finite float array") from exc
+    arr = _as_real_numeric_array(value, name=name)
     if arr.shape != shape:
         expected = ", ".join(str(part) for part in shape)
         raise ValueError(f"{name}.shape={arr.shape}, expected ({expected},)")
     if not np.all(np.isfinite(arr)):
         raise ValueError(finite_message)
-    return np.ascontiguousarray(arr, dtype=np.float64)
+    return arr
 
 
 class StuartLandauEngine:
@@ -229,7 +254,9 @@ class StuartLandauEngine:
         Parameters
         ----------
         state : FloatArray
-            Stuart-Landau state ``[θ; r]``, shape ``(2N,)``.
+            Finite real numeric Stuart-Landau state ``[θ; r]``, shape
+            ``(2N,)``. Boolean, complex, and numeric-string aliases are
+            rejected.
         omegas : FloatArray
             Natural frequencies in rad/s, shape ``(N,)``.
         mu : FloatArray
@@ -250,7 +277,7 @@ class StuartLandauEngine:
         Returns
         -------
         FloatArray
-            The new ``[θ; r]`` state, shape ``(2N,)``.
+            The finite real numeric ``[θ; r]`` state, shape ``(2N,)``.
         """
         (
             state,
@@ -265,7 +292,7 @@ class StuartLandauEngine:
         ) = self._validate(state, omegas, mu, knm, knm_r, zeta, psi, alpha, epsilon)
         with self._lock:
             if self._use_rust:  # pragma: no cover
-                result = np.asarray(
+                result = _validate_state_array(
                     self._rust.step(
                         state,
                         omegas,
@@ -276,9 +303,15 @@ class StuartLandauEngine:
                         psi,
                         alpha.ravel(),
                         epsilon,
-                    )
+                    ),
+                    name="Rust state output",
+                    shape=(2 * self._n,),
+                    finite_message="Rust state output contains NaN or Inf",
                 )
-                self._last_dt = self._rust.last_dt
+                self._last_dt = _validate_positive_float(
+                    self._rust.last_dt,
+                    name="Rust last_dt",
+                )
                 return result
             p: _Params = (omegas, mu, knm, knm_r, zeta, psi, alpha, epsilon)
             if self._method == "euler":
@@ -293,7 +326,8 @@ class StuartLandauEngine:
         Parameters
         ----------
         state : FloatArray
-            Stuart-Landau state ``[θ; r]``, shape ``(2N,)``.
+            Finite real numeric Stuart-Landau state ``[θ; r]``, shape
+            ``(2N,)``. Coercive aliases are rejected.
 
         Returns
         -------
@@ -316,7 +350,8 @@ class StuartLandauEngine:
         Parameters
         ----------
         state : FloatArray
-            Stuart-Landau state ``[θ; r]``, shape ``(2N,)``.
+            Finite real numeric Stuart-Landau state ``[θ; r]``, shape
+            ``(2N,)``. Coercive aliases are rejected.
 
         Returns
         -------

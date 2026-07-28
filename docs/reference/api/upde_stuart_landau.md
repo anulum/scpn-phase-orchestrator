@@ -430,6 +430,12 @@ print(f"Phase-amplitude correlation: {correlation:.4f}")
 
 ### 6.3 step() Parameters
 
+Every array must be a finite real numeric payload with its declared shape.
+Boolean, complex, and numeric-string aliases are rejected before conversion,
+including state passed to both diagnostic methods. Optional Rust state returns
+replay the same source-type, shape, and finite contract before publication;
+Rust `last_dt` must be a strictly positive finite real scalar.
+
 | Parameter | Shape | Description |
 |-----------|-------|-------------|
 | `state` | `(2N,)` | $[\theta_1, \ldots, \theta_N, r_1, \ldots, r_N]$ |
@@ -570,17 +576,21 @@ throughout.
 - `tests/test_stuart_landau_coupling.py` — 12 tests: phase coupling, amplitude
   coupling, epsilon scaling, knm_r symmetry
 - `tests/test_stuart_landau_parity.py` — 7 tests: Rust vs Python numerical parity
+- `tests/test_stuart_landau_validation.py` — public scalar/array ingress,
+  observable-state, optional Rust state-output, and adaptive-timestep contracts
 - `tests/test_stuart_landau_nn.py` — 24 tests: JAX layer integration
 - `tests/test_stuart_landau_binding.py` — 15 tests: YAML binding
 - `tests/test_stuart_landau_cli.py` — 15 tests: CLI integration
 - `tests/test_stuart_landau_imprint.py` — 7 tests: imprint feedback
 
-Total: **106 tests** across 7 test files.
+Focused engine contract slice: **92 collected, 85 passed, 7 expected optional
+Rust skips**, with exact **100% line and branch coverage** for
+`upde/stuart_landau.py`.
 
 ---
 
 ## Source
 
-- Python: `src/scpn_phase_orchestrator/upde/stuart_landau.py` (277 lines)
+- Python: `src/scpn_phase_orchestrator/upde/stuart_landau.py` (523 lines)
 - Rust: `spo-kernel/crates/spo-engine/src/stuart_landau.rs`
 - FFI: `spo-kernel/crates/spo-ffi/src/lib.rs` (PyStuartLandauStepper)

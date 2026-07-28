@@ -148,6 +148,12 @@ conversion. The composite Rust sweep replays the same source-type contract on
 raw `K` and `R` arrays before checking cardinality, monotonicity, sweep bounds,
 the physical `[0, 1]` order-parameter range, and optional critical coupling;
 malformed backend evidence is never published as a bifurcation diagram.
+The public Stuart-Landau engine validates state, frequency, growth, phase and
+amplitude coupling, and phase-lag arrays as finite real numeric payloads before
+solver selection; diagnostic state uses the same boundary. Boolean, complex,
+and numeric-string aliases fail closed before conversion. Optional Rust state
+returns replay source type, `2N` cardinality, and finiteness before publication,
+and the Rust adaptive timestep must remain a strictly positive finite real.
 The public stochastic injector validates phase arrays before both the `D=0`
 identity path and noise arithmetic: payloads must be finite, one-dimensional,
 and real numeric, while boolean, complex, and numeric-string aliases fail
