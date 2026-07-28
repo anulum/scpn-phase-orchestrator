@@ -17,7 +17,7 @@ benchmarked against this reproducible baseline.
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
-from numbers import Integral, Real
+from numbers import Complex, Integral, Real
 from typing import Literal, Protocol, TypeAlias, runtime_checkable
 
 import numpy as np
@@ -311,13 +311,29 @@ def _as_finite_array(value: object, *, name: str) -> FloatArray:
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
     try:
-        array = np.asarray(value, dtype=np.float64)
+        raw = np.asarray(value)
     except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a finite numeric array") from exc
+    object_values = raw.dtype == np.object_
+    if np.iscomplexobj(raw) or (
+        object_values
+        and any(
+            isinstance(item, Complex) and not isinstance(item, Real)
+            for item in raw.flat
+        )
+    ):
+        raise ValueError(f"{name} must not contain complex values")
+    numeric_object = object_values and all(isinstance(item, Real) for item in raw.flat)
+    if not np.issubdtype(raw.dtype, np.number) and not numeric_object:
+        raise ValueError(f"{name} must be a finite numeric array")
+    try:
+        array = np.asarray(raw, dtype=np.float64)
+    except (OverflowError, TypeError, ValueError) as exc:
         raise ValueError(f"{name} must be a finite numeric array") from exc
     if array.ndim == 0:
         raise ValueError(f"{name} must be an array, not a scalar")
     if not np.all(np.isfinite(array)):
-        raise ValueError(f"{name} must contain only finite values")
+        raise ValueError(f"{name} must be finite")
     return np.ascontiguousarray(array, dtype=np.float64)
 
 
@@ -368,6 +384,16 @@ def _validate_open_unit_interval(value: object, *, name: str) -> float:
     coerced = float(value)
     if not np.isfinite(coerced) or not (0.0 < coerced < 1.0):
         raise ValueError(f"{name} must lie in (0, 1)")
+    return coerced
+
+
+def _validate_finite_real(value: object, *, name: str) -> float:
+    """Return ``value`` as a finite real scalar, else raise ``ValueError``."""
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be finite real")
+    coerced = float(value)
+    if not np.isfinite(coerced):
+        raise ValueError(f"{name} must be finite real")
     return coerced
 
 
@@ -530,7 +556,8 @@ def audit_bayesian_backend_status(
     knm : object
         Coupling matrix ``K_nm``, shape ``(N, N)``.
     alpha : object
-        Phase-lag matrix in radians, shape ``(N, N)``, or ``None`` for no lag.
+        Phase-lag matrix in radians, shape ``(N, N)``. Use a zero matrix for no
+        lag.
     zeta : float
         External drive strength ``ζ``.
     psi : float
@@ -607,7 +634,10 @@ def _sample_array(
                 f"{name} distribution must have shape {expected_shape}, "
                 f"got {value.shape}"
             )
-        samples = value.sample(rng, n_samples)
+        samples = _as_finite_array(
+            value.sample(rng, n_samples),
+            name=f"{name} samples",
+        )
     else:
         array = _as_finite_array(value, name=name)
         if array.shape != expected_shape:
@@ -620,8 +650,6 @@ def _sample_array(
             f"{name} samples must have shape {(n_samples, *expected_shape)}, "
             f"got {samples.shape}"
         )
-    if not np.all(np.isfinite(samples)):
-        raise ValueError(f"{name} samples must be finite")
     return np.ascontiguousarray(samples, dtype=np.float64)
 
 
@@ -646,7 +674,8 @@ def bayesian_upde_run(
     knm : object
         Coupling matrix ``K_nm``, shape ``(N, N)``.
     alpha : object
-        Phase-lag matrix in radians, shape ``(N, N)``, or ``None`` for no lag.
+        Phase-lag matrix in radians, shape ``(N, N)``. Use a zero matrix for no
+        lag.
     zeta : float
         External drive strength ``ζ``.
     psi : float
@@ -683,10 +712,8 @@ def bayesian_upde_run(
             f"alpha must have shape {(n_oscillators, n_oscillators)}, "
             f"got {alpha_array.shape}"
         )
-    zeta_value = float(zeta)
-    psi_value = float(psi)
-    if not np.isfinite(zeta_value) or not np.isfinite(psi_value):
-        raise ValueError("zeta and psi must be finite real values")
+    zeta_value = _validate_finite_real(zeta, name="zeta")
+    psi_value = _validate_finite_real(psi, name="psi")
 
     rng = np.random.default_rng(resolved.seed)
     omega_samples = _sample_array(

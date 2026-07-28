@@ -56,6 +56,11 @@ Finite-difference and optional JAX adjoint paths share one pre-execution state
 contract for phase, frequency, coupling, and phase-lag arrays. Counts and
 perturbation/timestep scalars are validated before arithmetic or optional JAX
 imports, so backend availability cannot mask malformed public input.
+Bayesian UPDE uses one source-type-aware array boundary for direct inputs,
+Gaussian distribution parameters, fitted posterior data, and custom
+distribution samples. Boolean, complex, and numeric-string aliases are rejected
+before `float64` conversion, and finite real drive controls are validated before
+Monte Carlo rollout.
 Geometric direct Go, Julia, and Mojo bridges validate torus phase, frequency,
 coupling, lag, scalar, count, and backend-output payloads before optional native
 runtime loading; numeric-string aliases are rejected at the Python boundary.

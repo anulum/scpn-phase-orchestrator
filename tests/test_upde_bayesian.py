@@ -202,6 +202,11 @@ def test_gaussian_distribution_rejects_invalid_public_inputs() -> None:
         GaussianArrayDistribution(1.0, 0.1)
     with pytest.raises(ValueError, match="finite numeric array"):
         GaussianArrayDistribution(_UncastableArray(), np.ones(phases.size))
+    with pytest.raises(ValueError, match="finite numeric array"):
+        GaussianArrayDistribution(
+            np.array([10**1000], dtype=object),
+            np.ones(1, dtype=np.float64),
+        )
 
 
 def test_bayesian_backend_status_audits_reserved_fail_closed_names() -> None:
@@ -257,6 +262,16 @@ class _ContractDistribution:
         )
 
 
+class _AliasDistribution:
+    def __init__(self, shape: tuple[int, ...], value: object) -> None:
+        self.shape = shape
+        self._value = value
+
+    def sample(self, rng: np.random.Generator, n_samples: int) -> np.ndarray:
+        del rng
+        return np.full((n_samples, *self.shape), self._value)
+
+
 def test_bayesian_upde_rejects_invalid_public_run_inputs() -> None:
     phases, omegas, knm, alpha = _base_problem()
     config = BayesianUPDEConfig(n_samples=4, seed=7, n_steps=1)
@@ -281,7 +296,7 @@ def test_bayesian_upde_rejects_invalid_public_run_inputs() -> None:
             psi=0.0,
             config=config,
         )
-    with pytest.raises(ValueError, match="zeta and psi"):
+    with pytest.raises(ValueError, match="zeta"):
         bayesian_upde_run(
             phases,
             omega=omegas,
@@ -337,6 +352,114 @@ def test_bayesian_upde_rejects_invalid_distribution_contracts() -> None:
             psi=0.0,
             config=config,
         )
+
+
+@pytest.mark.parametrize("field", ["mean", "std"])
+@pytest.mark.parametrize("alias", [["0.1", "0.2"], [0.1 + 0.2j, 0.2 + 0.1j]])
+def test_gaussian_distribution_rejects_coercive_array_aliases(
+    field: str,
+    alias: list[object],
+) -> None:
+    kwargs: dict[str, object] = {
+        "mean": np.array([0.1, 0.2], dtype=np.float64),
+        "std": np.array([0.01, 0.02], dtype=np.float64),
+    }
+    kwargs[field] = alias
+
+    with pytest.raises(ValueError, match=field):
+        GaussianArrayDistribution(**kwargs)
+
+
+@pytest.mark.parametrize("field", ["phases", "omega", "knm", "alpha"])
+@pytest.mark.parametrize("alias_kind", ["string", "complex"])
+def test_bayesian_run_rejects_coercive_array_aliases(
+    field: str,
+    alias_kind: str,
+) -> None:
+    phases, omegas, knm, alpha = _base_problem()
+    payload: dict[str, object] = {
+        "phases": phases,
+        "omega": omegas,
+        "knm": knm,
+        "alpha": alpha,
+    }
+    source = np.asarray(payload[field])
+    payload[field] = (
+        source.astype(str)
+        if alias_kind == "string"
+        else source.astype(np.complex128) + 0.1j
+    )
+
+    with pytest.raises(ValueError, match=field):
+        bayesian_upde_run(
+            payload.pop("phases"),
+            omega=payload["omega"],
+            knm=payload["knm"],
+            alpha=payload["alpha"],
+            zeta=0.0,
+            psi=0.0,
+            config=BayesianUPDEConfig(n_samples=2, seed=3, n_steps=1),
+        )
+
+
+@pytest.mark.parametrize("field", ["zeta", "psi"])
+@pytest.mark.parametrize("alias", [False, "0.1", 0.1 + 0.2j])
+def test_bayesian_run_rejects_coercive_drive_scalars(
+    field: str,
+    alias: object,
+) -> None:
+    phases, omegas, knm, alpha = _base_problem()
+    controls: dict[str, object] = {"zeta": 0.0, "psi": 0.0}
+    controls[field] = alias
+
+    with pytest.raises(ValueError, match=field):
+        bayesian_upde_run(
+            phases,
+            omega=omegas,
+            knm=knm,
+            alpha=alpha,
+            zeta=controls["zeta"],
+            psi=controls["psi"],
+            config=BayesianUPDEConfig(n_samples=2, seed=3, n_steps=1),
+        )
+
+
+@pytest.mark.parametrize("field", ["omega", "knm"])
+@pytest.mark.parametrize("alias", [False, "0.1", 0.1 + 0.2j])
+def test_bayesian_run_rejects_coercive_distribution_samples(
+    field: str,
+    alias: object,
+) -> None:
+    phases, omegas, knm, alpha = _base_problem()
+    sampled: dict[str, object] = {"omega": omegas, "knm": knm}
+    sampled[field] = _AliasDistribution(np.asarray(sampled[field]).shape, alias)
+
+    with pytest.raises(ValueError, match=f"{field} samples"):
+        bayesian_upde_run(
+            phases,
+            omega=sampled["omega"],
+            knm=sampled["knm"],
+            alpha=alpha,
+            zeta=0.0,
+            psi=0.0,
+            config=BayesianUPDEConfig(n_samples=2, seed=3, n_steps=1),
+        )
+
+
+def test_bayesian_boundaries_preserve_real_numeric_object_arrays() -> None:
+    phases, omegas, knm, alpha = _base_problem()
+    result = bayesian_upde_run(
+        phases.astype(object),
+        omega=omegas.astype(object),
+        knm=knm.astype(object),
+        alpha=alpha.astype(object),
+        zeta=np.float64(0.0),
+        psi=np.float64(0.0),
+        config=BayesianUPDEConfig(n_samples=2, seed=3, n_steps=1),
+    )
+
+    assert result.sample_count == 2
+    assert np.all(np.isfinite(result.final_phase_samples))
 
 
 def _posterior_fit_trajectory(

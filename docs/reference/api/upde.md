@@ -109,6 +109,13 @@ Samples natural frequencies and coupling matrices from explicit distributions,
 runs the existing UPDE kernel for each draw, and reports posterior-predictive
 `R ± sigma` with credible intervals and audit diagnostics.
 
+Public phase, frequency, coupling, phase-lag, posterior-fit, and Gaussian
+distribution arrays reject boolean, complex, and numeric-string aliases before
+conversion while preserving real numeric-object arrays. Custom distribution
+samples replay the same source-type, shape, and finiteness checks before Monte
+Carlo execution, and drive controls must be finite real scalars. Reserved
+NumPyro and BlackJAX names remain explicitly fail-closed.
+
 ::: scpn_phase_orchestrator.upde.bayesian
 
 ## JAX-Accelerated Kuramoto Engine
