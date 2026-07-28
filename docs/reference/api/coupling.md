@@ -552,6 +552,12 @@ construction. The Python implementation is the reference; the Rust path
 is selected automatically when `spo_kernel` is importable. Parity is
 verified in `tests/test_rust_python_parity_performance.py`.
 
+Rust builder returns are inspected before numeric conversion: boolean,
+complex/object-complex, and numeric-string `K_nm` or `alpha` aliases are rejected
+and trigger the documented NumPy fallback. Finite real numeric-object matrices
+remain compatible; shape, finiteness, non-negativity, symmetry, and zero-
+diagonal checks still run before publication.
+
 ## Performance summary
 
 | Operation | Budget | Measured |

@@ -162,6 +162,25 @@ def _validate_coupling_output(
     n_layers: int,
 ) -> tuple[FloatArray, FloatArray]:
     """Return the validated coupling-matrix output, else raise."""
+    for name, value in (("K_nm", knm), ("alpha", alpha)):
+        try:
+            raw = np.asarray(value, dtype=object)
+        except (TypeError, ValueError):
+            continue
+        if any(isinstance(item, (bool, np.bool_)) for item in raw.flat):
+            raise ValueError(f"coupling builder output {name} contains boolean values")
+        if any(isinstance(item, (complex, np.complexfloating)) for item in raw.flat):
+            raise ValueError(f"coupling builder output {name} must be real-valued")
+        for item in raw.flat:
+            if not isinstance(item, (str, bytes, np.str_, np.bytes_)):
+                continue
+            try:
+                float(item)
+            except (TypeError, ValueError):
+                continue
+            raise ValueError(
+                f"coupling builder output {name} contains numeric-string aliases"
+            )
     try:
         knm_array = np.asarray(knm, dtype=np.float64).reshape(n_layers, n_layers)
         alpha_array = np.asarray(alpha, dtype=np.float64).reshape(n_layers, n_layers)
@@ -329,9 +348,8 @@ class CouplingBuilder:
                 omega_n = 2.0 * np.pi / tau_n
                 omega_m = 2.0 * np.pi / tau_m
                 omega_avg = (omega_n + omega_m) / 2.0
-                if omega_avg > 0:
-                    penalty = 1.0 + abs(omega_n - omega_m) / omega_avg * 0.1
-                    val /= penalty
+                penalty = 1.0 + abs(omega_n - omega_m) / omega_avg * 0.1
+                val /= penalty
             val = float(np.clip(val, 0.01, 0.4))
             K[n - 1, m - 1] = val
             K[m - 1, n - 1] = val

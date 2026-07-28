@@ -11,11 +11,17 @@ from __future__ import annotations
 import dataclasses
 import sys
 import types
+import warnings
 
 import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.coupling.knm import CouplingBuilder, CouplingState
+
+
+class _ArrayProtocolFailure:
+    def __array__(self, *_args, **_kwargs):
+        raise TypeError("array protocol failed")
 
 
 def test_symmetric():
@@ -104,6 +110,105 @@ def test_invalid_rust_build_output_falls_back_to_numpy(monkeypatch):
     assert np.all(np.isfinite(state.knm))
     np.testing.assert_allclose(np.diag(state.knm), 0.0, atol=1e-15)
     np.testing.assert_allclose(state.knm, state.knm.T, atol=1e-14)
+
+
+@pytest.mark.parametrize(
+    ("field", "payload"),
+    [
+        (field, payload)
+        for field in ("knm", "alpha")
+        for payload in (
+            np.zeros(16, dtype=bool),
+            np.full(16, 0.2j, dtype=np.complex128),
+            np.full(16, "0.0", dtype=object),
+            np.full(16, "bad", dtype=object),
+        )
+    ],
+)
+def test_coercive_rust_build_output_falls_back_without_publication(
+    monkeypatch,
+    field,
+    payload,
+):
+    import scpn_phase_orchestrator.coupling.knm as knm_mod
+
+    valid_knm = np.full((4, 4), 0.25, dtype=np.float64)
+    np.fill_diagonal(valid_knm, 0.0)
+    outputs = {"knm": valid_knm.ravel(), "alpha": np.zeros(16)}
+    outputs[field] = payload
+
+    class CoerciveRustBuilder:
+        def build(self, n_layers: int, _base_strength: float, _decay_alpha: float):
+            return {"n": n_layers, **outputs}
+
+    fake_spo = types.ModuleType("spo_kernel")
+    fake_spo.PyCouplingBuilder = CoerciveRustBuilder
+    monkeypatch.setitem(sys.modules, "spo_kernel", fake_spo)
+    monkeypatch.setattr(knm_mod, "_HAS_RUST", True)
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        state = CouplingBuilder().build(4, 0.5, 0.3)
+
+    assert np.any(state.knm > 0.0)
+    np.testing.assert_allclose(np.diag(state.knm), 0.0)
+
+
+def test_real_numeric_object_rust_output_remains_compatible(monkeypatch):
+    import scpn_phase_orchestrator.coupling.knm as knm_mod
+
+    knm = np.full((4, 4), np.float32(0.25), dtype=object)
+    np.fill_diagonal(knm, np.int64(0))
+    alpha = np.zeros((4, 4), dtype=object)
+
+    class ObjectRustBuilder:
+        def build(self, n_layers: int, _base_strength: float, _decay_alpha: float):
+            return {"n": n_layers, "knm": knm.ravel(), "alpha": alpha.ravel()}
+
+    fake_spo = types.ModuleType("spo_kernel")
+    fake_spo.PyCouplingBuilder = ObjectRustBuilder
+    monkeypatch.setitem(sys.modules, "spo_kernel", fake_spo)
+    monkeypatch.setattr(knm_mod, "_HAS_RUST", True)
+
+    state = CouplingBuilder().build(4, 0.5, 0.3)
+
+    assert state.knm.dtype == np.float64
+    np.testing.assert_allclose(state.knm, knm.astype(np.float64))
+
+
+@pytest.mark.parametrize(
+    ("knm", "alpha", "match"),
+    [
+        (np.zeros(4), np.array([0.0, np.nan, 0.0, 0.0]), "alpha"),
+        (np.array([0.0, -0.1, -0.1, 0.0]), np.zeros(4), "non-negative"),
+        (np.array([0.0, 0.1, 0.2, 0.0]), np.zeros(4), "symmetric"),
+        (np.array([0.1, 0.0, 0.0, 0.0]), np.zeros(4), "diagonal"),
+    ],
+)
+def test_coupling_output_physical_contract_branches(knm, alpha, match):
+    import scpn_phase_orchestrator.coupling.knm as knm_mod
+
+    with pytest.raises(ValueError, match=match):
+        knm_mod._validate_coupling_output(knm, alpha, n_layers=2)
+
+
+def test_coupling_output_array_protocol_failure_is_public_value_error():
+    import scpn_phase_orchestrator.coupling.knm as knm_mod
+
+    with pytest.raises(ValueError, match="requested shape"):
+        knm_mod._validate_coupling_output(
+            _ArrayProtocolFailure(), np.zeros(4), n_layers=2
+        )
+
+
+@pytest.mark.parametrize("payload", ["{", '{"matrix": null}', '{"matrix": [1]}'])
+def test_handshake_structural_failures(tmp_path, payload):
+    path = tmp_path / "handshakes.json"
+    path.write_text(payload, encoding="utf-8")
+    state = CouplingBuilder().build(2, 0.5, 0.3)
+
+    with pytest.raises(ValueError):
+        CouplingBuilder().apply_handshakes(state, path)
 
 
 def test_coupling_state_frozen():

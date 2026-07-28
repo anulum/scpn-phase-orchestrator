@@ -33,6 +33,10 @@ fallback.
 
 Rust paths exist for Hodge, transfer-entropy adaptation, spectral, prior, and
 connectome kernels (try/except import, validated within tolerance).
+The `CouplingBuilder` Rust seam also validates raw `K_nm` and `alpha` source
+types before conversion. Boolean, complex/object-complex, and numeric-string
+aliases fail into the deterministic NumPy fallback while finite real numeric-
+object matrices retain compatibility and all physical invariants are replayed.
 `coupling_est` is intentionally Python-only for small-N least-squares review.
 `plasticity` is also intentionally Python-only at the public API boundary:
 `spo-engine/src/plasticity.rs` includes a native model with decay and `dt`, while
