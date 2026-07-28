@@ -98,6 +98,50 @@ def test_jax_upde_rejects_invalid_step_inputs(jax_upde, field, value, match):
         )
 
 
+@pytest.mark.parametrize("field", ["phases", "omegas", "knm", "alpha"])
+@pytest.mark.parametrize("alias_kind", ["numeric-string", "complex", "object-boolean"])
+def test_jax_upde_rejects_coercive_array_aliases(jax_upde, field, alias_kind):
+    values = {
+        "phases": np.zeros(8),
+        "omegas": np.ones(8),
+        "knm": np.zeros((8, 8)),
+        "alpha": np.zeros((8, 8)),
+    }
+    source = values[field]
+    if alias_kind == "numeric-string":
+        values[field] = source.astype(str)
+    elif alias_kind == "complex":
+        values[field] = source.astype(np.complex128) + 0.1j
+    else:
+        alias = source.astype(object)
+        alias.flat[0] = True
+        values[field] = alias
+
+    with pytest.raises(ValueError, match=field):
+        jax_upde.step(
+            values["phases"],
+            values["omegas"],
+            values["knm"],
+            0.0,
+            0.0,
+            values["alpha"],
+        )
+
+
+def test_jax_upde_preserves_real_numeric_object_arrays(jax_upde):
+    result = jax_upde.step(
+        np.zeros(8, dtype=object),
+        np.ones(8, dtype=object),
+        np.zeros((8, 8), dtype=object),
+        0.0,
+        0.0,
+        np.zeros((8, 8), dtype=object),
+    )
+
+    assert result.shape == (8,)
+    assert np.all(np.isfinite(result))
+
+
 def test_jax_upde_parity_with_numpy():
     from scpn_phase_orchestrator.upde.engine import UPDEEngine
     from scpn_phase_orchestrator.upde.jax_engine import JaxUPDEEngine
@@ -213,6 +257,58 @@ def test_jax_stuart_landau_rejects_invalid_step_inputs(jax_sl, field, value, mat
             values["alpha"],
             values["epsilon"],
         )
+
+
+@pytest.mark.parametrize("field", ["state", "omegas", "mu", "knm", "knm_r", "alpha"])
+@pytest.mark.parametrize("alias_kind", ["numeric-string", "complex", "object-boolean"])
+def test_jax_stuart_landau_rejects_coercive_array_aliases(jax_sl, field, alias_kind):
+    values = {
+        "state": np.concatenate([np.zeros(4), np.ones(4)]),
+        "omegas": np.ones(4),
+        "mu": np.ones(4),
+        "knm": np.zeros((4, 4)),
+        "knm_r": np.zeros((4, 4)),
+        "alpha": np.zeros((4, 4)),
+    }
+    source = values[field]
+    if alias_kind == "numeric-string":
+        values[field] = source.astype(str)
+    elif alias_kind == "complex":
+        values[field] = source.astype(np.complex128) + 0.1j
+    else:
+        alias = source.astype(object)
+        alias.flat[0] = False
+        values[field] = alias
+
+    with pytest.raises(ValueError, match=field):
+        jax_sl.step(
+            values["state"],
+            values["omegas"],
+            values["mu"],
+            values["knm"],
+            values["knm_r"],
+            0.0,
+            0.0,
+            values["alpha"],
+            1.0,
+        )
+
+
+def test_jax_stuart_landau_preserves_real_numeric_object_arrays(jax_sl):
+    result = jax_sl.step(
+        np.concatenate([np.zeros(4), np.ones(4)]).astype(object),
+        np.ones(4, dtype=object),
+        np.ones(4, dtype=object),
+        np.zeros((4, 4), dtype=object),
+        np.zeros((4, 4), dtype=object),
+        0.0,
+        0.0,
+        np.zeros((4, 4), dtype=object),
+        1.0,
+    )
+
+    assert result.shape == (8,)
+    assert np.all(np.isfinite(result))
 
 
 def test_jax_sl_parity():

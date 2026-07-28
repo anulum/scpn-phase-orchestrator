@@ -19,7 +19,7 @@ Usage:
 from __future__ import annotations
 
 from math import isfinite
-from numbers import Integral, Real
+from numbers import Complex, Integral, Real
 from typing import TYPE_CHECKING, Any, TypeAlias
 
 import numpy as np
@@ -73,8 +73,32 @@ def _validate_finite_float(value: object, *, name: str) -> float:
 def _validate_array(value: object, *, name: str, shape: tuple[int, ...]) -> FloatArray:
     """Return the value as a validated finite array, else raise."""
     try:
-        array = np.asarray(value, dtype=np.float64)
+        object_array = np.asarray(value, dtype=object)
+    except (TypeError, ValueError):
+        object_array = None
+    if object_array is not None and any(
+        isinstance(item, (bool, np.bool_)) for item in object_array.flat
+    ):
+        raise ValueError(f"{name} must not contain boolean values")
+    try:
+        raw = np.asarray(value)
     except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a finite array with shape {shape}") from exc
+    object_values = raw.dtype == np.object_
+    if np.iscomplexobj(raw) or (
+        object_values
+        and any(
+            isinstance(item, Complex) and not isinstance(item, Real)
+            for item in raw.flat
+        )
+    ):
+        raise ValueError(f"{name} must not contain complex values")
+    numeric_object = object_values and all(isinstance(item, Real) for item in raw.flat)
+    if not np.issubdtype(raw.dtype, np.number) and not numeric_object:
+        raise ValueError(f"{name} must be a finite numeric array with shape {shape}")
+    try:
+        array = np.asarray(raw, dtype=np.float64)
+    except (OverflowError, TypeError, ValueError) as exc:
         raise ValueError(f"{name} must be a finite array with shape {shape}") from exc
     if array.shape != shape:
         raise ValueError(f"{name} shape must be {shape}, got {array.shape}")

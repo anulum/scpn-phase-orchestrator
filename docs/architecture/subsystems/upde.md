@@ -36,6 +36,9 @@ the Ott–Antonsen reduction is an O(1) mean-field predictor (Bessel `I0`, `I1`)
 (CSR), `HypergraphEngine`, `DopplerEngine`, `MovingFrameUPDEEngine`, and JAX
 `JaxUPDEEngine` / `JaxStuartLandauEngine`. Papers cited in code (unvouched):
 Acebrón 2005, Filatrella–Nielsen–Mallick 2008, and others.
+The two JAX engines validate array source types on the host before JAX device
+conversion: boolean, complex, and numeric-string aliases fail closed while
+finite real numeric-object arrays remain compatible.
 
 ## Backends
 

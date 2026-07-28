@@ -122,6 +122,10 @@ NumPyro and BlackJAX names remain explicitly fail-closed.
 
 Optional JAX implementation for GPU-oriented Kuramoto rollouts. It preserves
 the same validated inputs and phase wrapping semantics as the NumPy engine.
+Kuramoto and Stuart-Landau state, frequency, growth, coupling, amplitude-
+coupling, and phase-lag arrays reject boolean, complex, and numeric-string
+aliases before host conversion or device dispatch. Finite real numeric-object
+arrays remain supported.
 
 ::: scpn_phase_orchestrator.upde.jax_engine
 
