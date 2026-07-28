@@ -21,7 +21,6 @@ from scpn_phase_orchestrator.experimental.accelerators._julia_runtime import (
 )
 from scpn_phase_orchestrator.upde._geometric_validation import (
     TWO_PI,
-    _contains_numeric_string_alias,
     validate_torus_inputs,
     validate_torus_output,
 )
@@ -97,6 +96,4 @@ def torus_run_julia(
         dt_f,
         n_steps_i,
     )
-    if _contains_numeric_string_alias(result):
-        raise ValueError("result must not contain numeric-string aliases")
-    return validate_torus_output(np.asarray(result, dtype=np.float64), n=n_i)
+    return validate_torus_output(result, n=n_i)

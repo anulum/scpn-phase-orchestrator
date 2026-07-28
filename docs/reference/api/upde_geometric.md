@@ -180,8 +180,8 @@ CouplingBuilder.build() ──→ K_nm, α
 
 `TorusEngine` constructor values, run-step scalar controls, phase vectors,
 frequency vectors, coupling matrices, phase-lag matrices, and the
-order-parameter phase vector must arrive as real numeric values, not
-numeric-string aliases such as `"0.1"`. The direct Go, Julia, and Mojo torus
+order-parameter phase vector must arrive as real numeric values, not boolean,
+complex, or numeric-string aliases such as `"0.1"`. The direct Go, Julia, and Mojo torus
 adapters apply the same pre-runtime contract to `phases`, `omegas`,
 `knm_flat`, `alpha_flat`, `n`, `zeta`, `psi`, `dt`, and `n_steps`, so optional
 native kernels never receive stringified numeric payloads.
@@ -194,11 +194,13 @@ native kernels never receive stringified numeric payloads.
 
 The public `TorusEngine.run()` dispatcher and direct torus adapters validate
 optional backend returns before publication: each result must contain exactly
-one finite phase in `[0, 2*pi)` per oscillator and must not contain
-numeric-string aliases. Blank, truncated, overlong, non-numeric, non-finite,
-wrong-cardinality, stringified-numeric, or out-of-domain output is rejected
-before public arrays are returned; the Julia bridge checks raw return values
-before compatibility coercion.
+one finite phase in `[0, 2*pi)` per oscillator and must not contain boolean,
+complex (including object-complex), or numeric-string aliases. Finite real
+numeric-object vectors remain accepted and normalise to contiguous `float64`.
+Blank, truncated, overlong, non-numeric, non-finite, wrong-cardinality,
+stringified-numeric, or out-of-domain output is rejected before public arrays
+are returned; the Julia bridge preserves raw return dtype until shared
+validation.
 
 ---
 

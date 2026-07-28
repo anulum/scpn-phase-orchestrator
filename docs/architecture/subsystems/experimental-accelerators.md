@@ -56,7 +56,10 @@ aliases before float conversion. The Rust market wrappers also submit raw
 kernel returns to those validators without pre-coercing their source dtype.
 The public geometric dispatcher applies the direct torus output validator to
 optional backend returns before publication: phase vectors must keep oscillator
-cardinality, contain finite values, and remain in `[0, 2*pi)`.
+cardinality, contain finite values, and remain in `[0, 2*pi)`. The direct Julia
+bridge preserves raw return dtype until that shared validator rejects boolean,
+complex/object-complex, and numeric-string aliases; finite real numeric-object
+vectors remain compatible and normalise to `float64`.
 The public simplicial dispatcher applies the shared direct torus output
 validator to optional backend returns before publication: higher-order Kuramoto
 phase vectors must keep oscillator cardinality, contain finite values, and stay

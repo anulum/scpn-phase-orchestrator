@@ -71,18 +71,28 @@ def _contains_numeric_string_alias(value: object) -> bool:
     return any(_is_numeric_string_alias(item) for item in object_array.flat)
 
 
+def _contains_complex_alias(value: object) -> bool:
+    """Return whether ``value`` contains a complex-number alias."""
+    array = np.asarray(value)
+    if np.iscomplexobj(array):
+        return True
+    if array.dtype != object:
+        return False
+    return any(isinstance(item, (complex, np.complexfloating)) for item in array.flat)
+
+
 def _as_finite_vector(value: Any, *, name: str) -> FloatArray:
     """Return ``value`` as a validated finite vector, else raise."""
     if _contains_numeric_string_alias(value):
         raise ValueError(f"{name} must not contain numeric-string aliases")
     if contains_boolean_alias(value):
         raise TypeError(f"{name} must be real-valued, not boolean")
-    array = np.asarray(value)
-    if np.iscomplexobj(array):
+    if _contains_complex_alias(value):
         raise TypeError(f"{name} must be real-valued, not complex")
-    if not np.issubdtype(array.dtype, np.number):
-        raise TypeError(f"{name} must be numeric")
-    out = np.ascontiguousarray(array, dtype=np.float64)
+    try:
+        out = np.ascontiguousarray(value, dtype=np.float64)
+    except (OverflowError, TypeError, ValueError) as exc:
+        raise TypeError(f"{name} must be numeric") from exc
     if out.ndim != 1:
         raise ValueError(f"{name} must be a one-dimensional vector")
     if out.size == 0:
@@ -164,7 +174,7 @@ def validate_torus_inputs(
 
 
 def validate_torus_output(value: Any, *, n: int) -> FloatArray:
-    """Validate backend torus phases before returning them."""
+    """Validate source-aware backend torus phases before returning them."""
     out = _as_finite_vector(value, name="result")
     if out.size != n:
         raise ValueError(f"result must contain {n} values")

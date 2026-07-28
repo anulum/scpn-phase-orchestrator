@@ -243,6 +243,16 @@ class TestDirectBackendBoundaryContracts:
                 n=3,
             )
 
+    def test_validation_preserves_real_numeric_object_output(self) -> None:
+        """Preserve valid real numeric object values during normalisation."""
+        result = geometric_validation.validate_torus_output(
+            np.array([np.float64(0.1), np.int64(1)], dtype=object),
+            n=2,
+        )
+
+        assert result.dtype == np.float64
+        assert result.tolist() == [0.1, 1.0]
+
     def test_numeric_string_helper_rejects_blank_and_bad_array_aliases(self) -> None:
         """Classify only coercible string scalars as numeric-string aliases."""
 
@@ -363,6 +373,33 @@ class TestDirectBackendBoundaryContracts:
         monkeypatch.setattr(_geometric_julia, "_ensure", FakeJuliaModule)
 
         with pytest.raises(ValueError, match="numeric-string"):
+            _geometric_julia.torus_run_julia(*_direct_payload())
+
+    @pytest.mark.parametrize(
+        ("raw_result", "match"),
+        [
+            (np.array([False] * 5), "boolean"),
+            (np.array([0.1 + 0.2j] * 5), "complex"),
+        ],
+    )
+    def test_julia_output_validation_rejects_raw_coercive_aliases(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        raw_result: np.ndarray,
+        match: str,
+    ) -> None:
+        """Reject Julia source types before compatibility coercion."""
+
+        class FakeJuliaModule:
+            """Minimal Julia module stand-in returning coercive torus output."""
+
+            def torus_run(self, *_args: object) -> np.ndarray:
+                """Return the configured raw backend payload."""
+                return raw_result
+
+        monkeypatch.setattr(_geometric_julia, "_ensure", FakeJuliaModule)
+
+        with pytest.raises(TypeError, match=match):
             _geometric_julia.torus_run_julia(*_direct_payload())
 
     def test_julia_output_validation_accepts_numeric_vectors(
