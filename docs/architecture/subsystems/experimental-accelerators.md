@@ -141,6 +141,13 @@ parameters must be finite non-boolean, non-numeric-string scalars inside
 scalar-control, and count inputs also reject numeric-string aliases before
 float coercion, preserving fallback only for loader/runtime unavailability and
 not for malformed backend physics evidence.
+The public bifurcation sweep and critical-coupling search validate frequency,
+coupling-template, and phase-lag arrays as finite real numeric payloads before
+dispatch. Boolean, complex, and numeric-string aliases fail closed before
+conversion. The composite Rust sweep replays the same source-type contract on
+raw `K` and `R` arrays before checking cardinality, monotonicity, sweep bounds,
+the physical `[0, 1]` order-parameter range, and optional critical coupling;
+malformed backend evidence is never published as a bifurcation diagram.
 The public order-parameter dispatcher applies the direct scalar output
 validators to optional backend returns before publication: order-parameter
 magnitudes, PLV, and layer coherence must be finite real scalars inside

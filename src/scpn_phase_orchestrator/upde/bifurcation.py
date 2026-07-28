@@ -37,7 +37,7 @@ the N_points × dispatch-call path.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from numbers import Integral, Real
+from numbers import Complex, Integral, Real
 from typing import TypeAlias
 
 import numpy as np
@@ -68,13 +68,32 @@ __all__ = [
 FloatArray: TypeAlias = NDArray[np.float64]
 
 
-def _contains_boolean_alias(value: object) -> bool:
-    """Return whether the value contains any boolean alias."""
+def _as_real_numeric_array(value: object, *, name: str) -> FloatArray:
+    """Return a real numeric array without coercing string or complex aliases."""
     try:
-        arr = np.asarray(value, dtype=object)
+        raw = np.asarray(value)
     except (TypeError, ValueError):
-        return False
-    return any(isinstance(item, (bool, np.bool_)) for item in arr.flat)
+        raise ValueError(f"{name} must be a numeric array") from None
+    object_values = raw.dtype == np.object_
+    if raw.dtype == np.bool_ or (
+        object_values and any(isinstance(item, (bool, np.bool_)) for item in raw.flat)
+    ):
+        raise ValueError(f"{name} must be real-valued, not boolean")
+    if np.iscomplexobj(raw) or (
+        object_values
+        and any(
+            isinstance(item, Complex) and not isinstance(item, Real)
+            for item in raw.flat
+        )
+    ):
+        raise ValueError(f"{name} must be real-valued, not complex")
+    numeric_object = object_values and all(isinstance(item, Real) for item in raw.flat)
+    if not np.issubdtype(raw.dtype, np.number) and not numeric_object:
+        raise ValueError(f"{name} must be numeric")
+    try:
+        return np.ascontiguousarray(raw, dtype=np.float64)
+    except (OverflowError, TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a numeric array") from exc
 
 
 @dataclass
@@ -178,19 +197,14 @@ def _validate_unit_interval(value: object, *, name: str) -> float:
 
 def _validate_omegas(value: object) -> FloatArray:
     """Return the natural frequencies as a validated finite array, else raise."""
-    if _contains_boolean_alias(value):
-        raise ValueError("omegas must not contain boolean values")
-    try:
-        arr = np.asarray(value, dtype=np.float64)
-    except (TypeError, ValueError) as exc:
-        raise ValueError("omegas must be a finite one-dimensional array") from exc
+    arr = _as_real_numeric_array(value, name="omegas")
     if arr.ndim != 1:
         raise ValueError(f"omegas shape {arr.shape} must be one-dimensional")
     if arr.size < 1:
         raise ValueError("omegas must contain at least one oscillator")
     if not np.all(np.isfinite(arr)):
         raise ValueError("omegas must contain only finite values")
-    return np.ascontiguousarray(arr, dtype=np.float64)
+    return arr
 
 
 def _validate_matrix(
@@ -201,12 +215,7 @@ def _validate_matrix(
     require_zero_diagonal: bool = False,
 ) -> FloatArray:
     """Return the value as a validated finite matrix, else raise."""
-    if _contains_boolean_alias(value):
-        raise ValueError(f"{name} must not contain boolean values")
-    try:
-        arr = np.asarray(value, dtype=np.float64)
-    except (TypeError, ValueError) as exc:
-        raise ValueError(f"{name} must be a finite float matrix") from exc
+    arr = _as_real_numeric_array(value, name=name)
     if arr.shape != (n, n):
         raise ValueError(f"{name} shape {arr.shape} does not match ({n}, {n})")
     if not np.all(np.isfinite(arr)):
@@ -215,7 +224,7 @@ def _validate_matrix(
         raise ValueError(
             f"{name} diagonal must be zero; self-coupling K_ii is not physical"
         )
-    return np.ascontiguousarray(arr, dtype=np.float64)
+    return arr
 
 
 def _default_coupling(n: int) -> FloatArray:
@@ -247,11 +256,14 @@ def _validate_rust_trace_result(
     K_range: tuple[float, float],
 ) -> tuple[FloatArray, FloatArray]:
     """Return the Rust continuation trace matching the reference, else raise."""
-    try:
-        k_arr = np.asarray(K_values, dtype=np.float64)
-        r_arr = np.asarray(R_values, dtype=np.float64)
-    except (TypeError, ValueError) as exc:
-        raise ValueError("Rust bifurcation trace must return numeric arrays") from exc
+    k_arr = _as_real_numeric_array(
+        K_values,
+        name="Rust bifurcation trace K values",
+    )
+    r_arr = _as_real_numeric_array(
+        R_values,
+        name="Rust bifurcation trace R values",
+    )
     if k_arr.shape != (n_points,) or r_arr.shape != (n_points,):
         raise ValueError(
             "Rust bifurcation trace returned arrays with unexpected shape "
@@ -266,10 +278,7 @@ def _validate_rust_trace_result(
     start, stop = K_range
     if np.any(k_arr < start - 1e-12) or np.any(k_arr > stop + 1e-12):
         raise ValueError("Rust bifurcation trace returned K outside K_range")
-    return (
-        np.ascontiguousarray(k_arr, dtype=np.float64),
-        np.ascontiguousarray(r_arr, dtype=np.float64),
-    )
+    return k_arr, r_arr
 
 
 def _validate_optional_critical_coupling(value: object) -> float | None:
@@ -352,12 +361,14 @@ def trace_sync_transition(
     Parameters
     ----------
     omegas : FloatArray
-        Natural frequencies in rad/s, shape ``(N,)``.
+        Finite real numeric natural frequencies in rad/s, shape ``(N,)``.
+        Boolean, complex, and numeric-string aliases are rejected.
     knm_template : FloatArray | None
         Unit coupling template scaled along the continuation, or ``None`` for
-        all-to-all.
+        all-to-all. Must be finite, real numeric, and zero-diagonal.
     alpha : FloatArray | None
-        Phase-lag matrix in radians, shape ``(N, N)``, or ``None`` for no lag.
+        Finite real numeric phase-lag matrix in radians, shape ``(N, N)``, or
+        ``None`` for no lag.
     K_range : tuple[float, float]
         Inclusive ``(min, max)`` coupling-strength range to scan.
     n_points : int
@@ -467,11 +478,8 @@ def trace_sync_transition(
         idx = crossings[0]
         K_lo, K_hi = float(K_values[idx]), float(K_values[idx + 1])
         R_lo, R_hi = float(R_arr[idx]), float(R_arr[idx + 1])
-        if R_hi > R_lo:
-            frac = (threshold - R_lo) / (R_hi - R_lo)
-            diagram.K_critical = K_lo + frac * (K_hi - K_lo)
-        else:
-            diagram.K_critical = K_hi
+        frac = (threshold - R_lo) / (R_hi - R_lo)
+        diagram.K_critical = K_lo + frac * (K_hi - K_lo)
     return diagram
 
 
@@ -493,10 +501,11 @@ def find_critical_coupling(
     Parameters
     ----------
     omegas : FloatArray
-        Natural frequencies in rad/s, shape ``(N,)``.
+        Finite real numeric natural frequencies in rad/s, shape ``(N,)``.
+        Boolean, complex, and numeric-string aliases are rejected.
     knm_template : FloatArray | None
         Unit coupling template scaled along the continuation, or ``None`` for
-        all-to-all.
+        all-to-all. Must be finite, real numeric, and zero-diagonal.
     dt : float
         Integration step size.
     n_transient : int

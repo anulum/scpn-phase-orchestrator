@@ -206,12 +206,59 @@ class TestCompositeRustFastPathContracts:
         np.testing.assert_allclose(diagram.R_values, [0.01, 0.04])
 
     @pytest.mark.parametrize(
+        ("K_values", "R_values", "match"),
+        [
+            (["0.0", "1.0"], [0.1, 0.2], "numeric"),
+            ([0.0, 1.0], np.array(["0.1", "0.2"]), "numeric"),
+            (
+                np.array([0.0 + 1.0j, 1.0 - 2.0j]),
+                [0.1, 0.2],
+                "real-valued",
+            ),
+            (
+                [0.0, 1.0],
+                np.array([0.1, complex(0.2, 3.0)], dtype=object),
+                "real-valued",
+            ),
+        ],
+    )
+    def test_trace_rejects_coercive_composite_rust_arrays(
+        self,
+        monkeypatch,
+        K_values,
+        R_values,
+        match,
+    ):
+        fake_kernel = ModuleType("spo_kernel")
+
+        def _trace(*_args):
+            return K_values, R_values, 0.5
+
+        def _find(*_args):
+            raise AssertionError("trace test must not call the Kc kernel")
+
+        fake_kernel.trace_sync_transition_rust = _trace
+        fake_kernel.find_critical_coupling_bif_rust = _find
+        module = self._load_with_fake_spo_kernel(monkeypatch, fake_kernel)
+
+        with pytest.raises(ValueError, match=match):
+            module.trace_sync_transition(
+                np.array([-1.0, 1.0]),
+                K_range=(0.0, 1.0),
+                n_points=2,
+                n_transient=3,
+                n_measure=2,
+            )
+
+    @pytest.mark.parametrize(
         ("K_values", "R_values", "K_critical", "match"),
         [
             ([0.0], [0.1], 0.5, "unexpected shape"),
+            ([0.0, np.nan], [0.1, 0.2], 0.5, "non-finite"),
             ([0.0, 1.0], [0.1, 1.2], 0.5, "R outside"),
             ([1.0, 0.0], [0.1, 0.2], 0.5, "non-monotone"),
             ([0.0, 3.0], [0.1, 0.2], 0.5, "outside K_range"),
+            ([0.0, 1.0], [0.1, 0.2], False, "K_critical"),
             ([0.0, 1.0], [0.1, 0.2], float("inf"), "K_critical"),
         ],
     )

@@ -247,6 +247,10 @@ exactly `n_points` finite `K` and `R` samples, `K` must remain monotone inside
 `K_range`, every `R` must stay in `[0, 1]`, and `K_critical` must be either
 finite non-negative or `NaN` for "no transition". Invalid Rust output raises
 `ValueError` instead of entering reports, calibration, or supervisor logic.
+Trace arrays must be real numeric payloads at source: boolean, complex, and
+numeric-string aliases are rejected before `float64` conversion, so neither
+text-to-number laundering nor silent imaginary-component loss can cross the
+accelerator boundary.
 
 ### 4.3 Reproducibility
 
@@ -425,9 +429,9 @@ $N < 32$, finite-size noise is inherent and cannot be eliminated.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `omegas` | `NDArray` (N,) | — | Natural frequencies |
-| `knm_template` | `NDArray` (N,N) or None | all-to-all/N | Coupling topology |
-| `alpha` | `NDArray` (N,N) or None | zeros | Phase-lag matrix |
+| `omegas` | real numeric `NDArray` (N,) | — | Finite natural frequencies; boolean, complex, and numeric-string aliases are rejected before conversion |
+| `knm_template` | real numeric `NDArray` (N,N) or None | all-to-all/N | Finite coupling topology with zero diagonal; coercive aliases are rejected |
+| `alpha` | real numeric `NDArray` (N,N) or None | zeros | Finite phase-lag matrix; coercive aliases are rejected |
 | `K_range` | `tuple[float,float]` | `(0.0, 5.0)` | Sweep bounds |
 | `n_points` | `int` | `50` | Number of K samples |
 | `dt` | `float` | `0.01` | Integration timestep |
@@ -439,8 +443,8 @@ $N < 32$, finite-size noise is inherent and cannot be eliminated.
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `omegas` | `NDArray` (N,) | — | Natural frequencies |
-| `knm_template` | `NDArray` (N,N) or None | all-to-all/N | Coupling topology; finite with zero diagonal |
+| `omegas` | real numeric `NDArray` (N,) | — | Finite natural frequencies; boolean, complex, and numeric-string aliases are rejected before conversion |
+| `knm_template` | real numeric `NDArray` (N,N) or None | all-to-all/N | Finite coupling topology with zero diagonal; coercive aliases are rejected |
 | `dt` | `float` | `0.01` | Integration timestep |
 | `n_transient` | `int` | `3000` | Transient steps |
 | `n_measure` | `int` | `1000` | Measurement steps |
@@ -558,19 +562,20 @@ For SCPN calibration, `tol=0.1` is sufficient.
 
 ## Test Coverage
 
-- `tests/test_bifurcation.py` — 16 tests: trace with identical omegas
-  (R→1 for K>0), Lorentzian K_c within 20% of analytical, empty diagram,
-  K_range boundaries, seed reproducibility, find_critical_coupling
-  precision, custom knm_template, BifurcationPoint fields,
-  BifurcationDiagram properties
+- `tests/test_bifurcation.py` — public sweep/search behaviour, record
+  invariants, numerical edge cases, runtime controls, real numeric ingress,
+  zero-self-coupling enforcement, and deterministic threshold interpolation.
+- `tests/test_bifurcation_dispatch.py` — Python dispatcher wiring and composite
+  Rust fast-path input/output contracts, including raw alias rejection.
 
-Total: **16 tests**.
+The focused owning slice contains **103 tests** and covers
+`upde/bifurcation.py` at exact **100% line and branch coverage**.
 
 ---
 
 ## Source
 
-- Python: `src/scpn_phase_orchestrator/upde/bifurcation.py` (311 lines)
+- Python: `src/scpn_phase_orchestrator/upde/bifurcation.py` (601 lines)
 - Rust: `spo-kernel/crates/spo-engine/src/bifurcation.rs`
 - FFI: `spo-kernel/crates/spo-ffi/src/lib.rs` (steady_state_r_rust,
   trace_sync_transition_rust, find_critical_coupling_bif_rust)

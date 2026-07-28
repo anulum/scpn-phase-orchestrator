@@ -66,6 +66,12 @@ class TestBifurcationDiagram:
         np.testing.assert_array_equal(d.K_values, [0.0, 2.0])
         np.testing.assert_array_equal(d.R_values, [0.01, 0.8])
 
+    def test_valid_critical_coupling_is_normalised_to_float(self) -> None:
+        diagram = BifurcationDiagram(K_critical=np.float32(1.25))
+
+        assert diagram.K_critical == 1.25
+        assert isinstance(diagram.K_critical, float)
+
     @pytest.mark.parametrize(
         ("kwargs", "match"),
         [
@@ -241,6 +247,44 @@ class TestTraceSyncTransitionCoverage:
 
 
 class TestInputValidation:
+    def test_array_guard_rejects_failed_array_protocol(self) -> None:
+        class FailedArray:
+            def __array__(self, dtype=None, copy=None):
+                raise TypeError("unavailable array payload")
+
+        with pytest.raises(ValueError, match="probe must be a numeric array"):
+            bif._as_real_numeric_array(FailedArray(), name="probe")
+
+    def test_array_guard_rejects_float_conversion_overflow(self) -> None:
+        huge_integer = np.array([10**1000], dtype=object)
+
+        with pytest.raises(ValueError, match="probe must be a numeric array"):
+            bif._as_real_numeric_array(huge_integer, name="probe")
+
+    def test_array_guard_preserves_real_numeric_object_arrays(self) -> None:
+        values = np.array([np.float32(0.25), 2, -0.5], dtype=object)
+
+        validated = bif._as_real_numeric_array(values, name="probe")
+
+        np.testing.assert_allclose(validated, [0.25, 2.0, -0.5])
+        assert validated.dtype == np.float64
+        assert validated.flags.c_contiguous
+
+    def test_trace_rejects_empty_frequency_sample(self) -> None:
+        with pytest.raises(ValueError, match="at least one oscillator"):
+            trace_sync_transition(np.array([], dtype=np.float64))
+
+    def test_trace_rejects_non_finite_matrix(self) -> None:
+        knm = np.zeros((2, 2), dtype=np.float64)
+        knm[0, 1] = np.inf
+
+        with pytest.raises(ValueError, match="only finite values"):
+            trace_sync_transition(np.zeros(2), knm_template=knm)
+
+    def test_trace_rejects_non_tuple_k_range(self) -> None:
+        with pytest.raises(ValueError, match="exactly two finite values"):
+            trace_sync_transition(np.zeros(2), K_range=[0.0, 1.0])
+
     @pytest.mark.parametrize(
         ("field", "bad_value", "match"),
         [
@@ -265,6 +309,69 @@ class TestInputValidation:
             "alpha": np.zeros((3, 3), dtype=np.float64),
             "n_points": 2,
             "n_transient": 1,
+            "n_measure": 1,
+        }
+        kwargs[field] = bad_value
+
+        with pytest.raises(ValueError, match=match):
+            trace_sync_transition(**kwargs)
+
+    @pytest.mark.parametrize(
+        ("field", "bad_value", "match"),
+        [
+            ("omegas", np.array(["-0.2", "0.0", "0.2"]), "numeric"),
+            (
+                "omegas",
+                np.array([-0.2 + 1.0j, 0.0, 0.2 - 2.0j]),
+                "real-valued",
+            ),
+            (
+                "knm_template",
+                np.array([["0", "1", "1"], ["1", "0", "1"], ["1", "1", "0"]]),
+                "numeric",
+            ),
+            (
+                "knm_template",
+                np.array(
+                    [[0.0, 1.0j, 1.0], [1.0, 0.0, 1.0], [1.0, 1.0, 0.0]],
+                    dtype=object,
+                ),
+                "real-valued",
+            ),
+            (
+                "alpha",
+                np.array([["0", "0", "0"], ["0", "0", "0"], ["0", "0", "0"]]),
+                "numeric",
+            ),
+            (
+                "alpha",
+                np.array(
+                    [[0.0, 1.0j, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0]],
+                    dtype=object,
+                ),
+                "real-valued",
+            ),
+        ],
+    )
+    def test_trace_rejects_coercive_array_aliases_before_dispatch(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        field: str,
+        bad_value: np.ndarray,
+        match: str,
+    ) -> None:
+        monkeypatch.setattr(bif, "_HAS_COMPOSITE_RUST", False)
+        monkeypatch.setattr(
+            bif,
+            "_steady_state_R_dispatch",
+            lambda *_args, **_kwargs: pytest.fail("invalid input reached dispatch"),
+        )
+        kwargs: dict[str, object] = {
+            "omegas": np.array([-0.2, 0.0, 0.2]),
+            "knm_template": np.zeros((3, 3), dtype=np.float64),
+            "alpha": np.zeros((3, 3), dtype=np.float64),
+            "n_points": 2,
+            "n_transient": 0,
             "n_measure": 1,
         }
         kwargs[field] = bad_value
@@ -339,6 +446,55 @@ class TestInputValidation:
         omegas = kwargs.pop("omegas")
 
         with pytest.raises(ValueError, match=field):
+            find_critical_coupling(omegas, **kwargs)
+
+    @pytest.mark.parametrize(
+        ("field", "bad_value", "match"),
+        [
+            ("omegas", np.array(["-0.2", "0.0", "0.2"]), "numeric"),
+            (
+                "omegas",
+                np.array([-0.2, complex(0.0, 1.0), 0.2], dtype=object),
+                "real-valued",
+            ),
+            (
+                "knm_template",
+                np.array([["0", "1", "1"], ["1", "0", "1"], ["1", "1", "0"]]),
+                "numeric",
+            ),
+            (
+                "knm_template",
+                np.array(
+                    [[0.0, 1.0j, 1.0], [1.0, 0.0, 1.0], [1.0, 1.0, 0.0]],
+                    dtype=object,
+                ),
+                "real-valued",
+            ),
+        ],
+    )
+    def test_find_rejects_coercive_array_aliases_before_dispatch(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        field: str,
+        bad_value: np.ndarray,
+        match: str,
+    ) -> None:
+        monkeypatch.setattr(bif, "_HAS_COMPOSITE_RUST", False)
+        monkeypatch.setattr(
+            bif,
+            "_steady_state_R_dispatch",
+            lambda *_args, **_kwargs: pytest.fail("invalid input reached dispatch"),
+        )
+        kwargs: dict[str, object] = {
+            "omegas": np.array([-0.2, 0.0, 0.2]),
+            "knm_template": np.zeros((3, 3), dtype=np.float64),
+            "n_transient": 0,
+            "n_measure": 1,
+        }
+        kwargs[field] = bad_value
+        omegas = kwargs.pop("omegas")
+
+        with pytest.raises(ValueError, match=match):
             find_critical_coupling(omegas, **kwargs)
 
     def test_find_rejects_self_coupling_diagonal(self) -> None:
@@ -500,6 +656,34 @@ class TestFindCriticalCoupling:
         )
         assert calls[:3] == [20.0, 10.0, 15.0]
         assert Kc == 12.5
+
+    def test_binary_search_honours_the_iteration_cap(self, monkeypatch):
+        monkeypatch.setattr(bif, "_HAS_COMPOSITE_RUST", False)
+        calls: list[float] = []
+
+        def _always_supercritical(
+            _phases_init,
+            _omegas,
+            K_scale,
+            _knm_template,
+            _alpha,
+            _dt,
+            _n_transient,
+            _n_measure,
+        ):
+            calls.append(float(K_scale))
+            return 0.5
+
+        monkeypatch.setattr(bif, "_steady_state_R_dispatch", _always_supercritical)
+        kc = bif.find_critical_coupling(
+            np.array([-0.5, 0.5]),
+            n_transient=0,
+            n_measure=1,
+            tol=1e-20,
+        )
+
+        assert len(calls) == 31
+        assert 0.0 < kc < 2e-8
 
 
 class TestBifurcationDispatchSurface:
