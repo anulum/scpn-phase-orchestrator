@@ -32,11 +32,61 @@ from typing import Any, TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
-from scpn_phase_orchestrator.upde.engine import UPDEEngine
+from scpn_phase_orchestrator.upde.engine import (
+    UPDEEngine,
+    _validate_finite_real,
+    _validate_positive_float,
+    _validate_positive_int,
+    _validate_real_array,
+)
 from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
 __all__ = ["cost_R", "gradient_knm_fd", "gradient_knm_jax"]
 FloatArray: TypeAlias = NDArray[np.float64]
+
+
+def _validate_adjoint_arrays(
+    phases_init: object,
+    omegas: object,
+    knm: object,
+    alpha: object,
+) -> tuple[FloatArray, FloatArray, FloatArray, FloatArray]:
+    """Return finite real arrays satisfying the shared adjoint state contract."""
+    arrays = (
+        _validate_real_array(phases_init, name="phases_init"),
+        _validate_real_array(omegas, name="omegas"),
+        _validate_real_array(knm, name="knm"),
+        _validate_real_array(alpha, name="alpha"),
+    )
+    phases_array, omegas_array, knm_array, alpha_array = arrays
+    if phases_array.ndim != 1 or phases_array.size < 1:
+        raise ValueError(
+            f"phases_init.shape={phases_array.shape}, expected a non-empty vector"
+        )
+    n = phases_array.size
+    checks = (
+        ("omegas", omegas_array, (n,)),
+        ("knm", knm_array, (n, n)),
+        ("alpha", alpha_array, (n, n)),
+    )
+    for name, array, shape in checks:
+        if array.shape != shape:
+            raise ValueError(f"{name}.shape={array.shape}, expected {shape}")
+    for name, array in zip(
+        ("phases_init", "omegas", "knm", "alpha"),
+        arrays,
+        strict=True,
+    ):
+        if not np.all(np.isfinite(array)):
+            raise ValueError(f"{name} contains NaN/Inf")
+    if not np.allclose(np.diag(knm_array), 0.0, rtol=0.0, atol=1e-15):
+        raise ValueError("knm self-coupling diagonal must be zero")
+    return (
+        np.ascontiguousarray(phases_array, dtype=np.float64),
+        np.ascontiguousarray(omegas_array, dtype=np.float64),
+        np.ascontiguousarray(knm_array, dtype=np.float64),
+        np.ascontiguousarray(alpha_array, dtype=np.float64),
+    )
 
 
 def cost_R(phases: FloatArray) -> float:
@@ -88,11 +138,12 @@ def gradient_knm_fd(
     knm : FloatArray
         Coupling matrix ``K_nm``, shape ``(N, N)``.
     alpha : FloatArray
-        Phase-lag matrix in radians, shape ``(N, N)``, or ``None`` for no lag.
+        Phase-lag matrix in radians, shape ``(N, N)``. Use a zero matrix for no
+        lag.
     n_steps : int
-        Number of integration steps to run.
+        Positive number of integration steps to run.
     epsilon : float
-        Finite-difference perturbation size.
+        Strictly positive finite-difference perturbation size.
     zeta : float
         External drive strength ``ζ``.
     psi : float
@@ -103,6 +154,16 @@ def gradient_knm_fd(
     FloatArray
         The finite-difference gradient of the cost with respect to ``knm``.
     """
+    n_steps = _validate_positive_int(n_steps, name="n_steps")
+    epsilon = _validate_positive_float(epsilon, name="epsilon")
+    zeta = _validate_finite_real(zeta, name="zeta")
+    psi = _validate_finite_real(psi, name="psi")
+    phases_init, omegas, knm, alpha = _validate_adjoint_arrays(
+        phases_init,
+        omegas,
+        knm,
+        alpha,
+    )
     n = knm.shape[0]
     grad = np.zeros((n, n), dtype=np.float64)
 
@@ -171,10 +232,11 @@ def gradient_knm_jax(
         lag; this is the regime in which the gradient matches the drive-free
         (``ζ = ψ = 0``) finite-difference reference.
     n_steps : int
-        Number of nominal steps; the integration horizon is ``n_steps · dt``.
+        Positive number of nominal steps; the integration horizon is
+        ``n_steps · dt``.
     dt : float
-        Nominal step size setting the integration horizon and the adaptive
-        solver's initial step.
+        Positive finite nominal step size setting the integration horizon and
+        the adaptive solver's initial step.
 
     Returns
     -------
@@ -186,6 +248,14 @@ def gradient_knm_jax(
     ImportError
         If the optional JAX/diffrax stack is not installed.
     """
+    n_steps = _validate_positive_int(n_steps, name="n_steps")
+    dt = _validate_positive_float(dt, name="dt")
+    phases_init, omegas, knm, alpha = _validate_adjoint_arrays(
+        phases_init,
+        omegas,
+        knm,
+        alpha,
+    )
     import diffrax
     import jax
     import jax.numpy as jnp

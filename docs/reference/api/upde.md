@@ -336,6 +336,14 @@ Finite-difference and JAX-autodiff gradients of the synchronization cost
 (1 - R) with respect to the coupling matrix K_nm. Used for gradient-based
 coupling optimization without the overhead of forward-mode differentiation.
 
+Both paths validate a non-empty finite real phase vector, matching frequency
+vector, square coupling and phase-lag matrices, and a zero self-coupling
+diagonal before simulation or optional-backend import. Step counts must be
+positive non-boolean integers. The finite-difference perturbation and JAX
+timestep must be positive finite reals; finite-difference drive scalars must be
+finite real values. Boolean, complex, and numeric-string array aliases fail
+closed instead of being coerced by NumPy or JAX.
+
 ::: scpn_phase_orchestrator.upde.adjoint
 
 ## Order Parameters & Metrics

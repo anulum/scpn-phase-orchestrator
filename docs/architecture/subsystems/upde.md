@@ -52,6 +52,10 @@ The sheaf boundary validates phase, frequency, restriction-map, and drive-target
 source types before conversion. Its Rust result is accepted only as a finite
 real flattened `N * D` torus state, and the positive finite Rust adaptive
 timestep is replayed into the public `last_dt` diagnostic.
+Finite-difference and optional JAX adjoint paths share one pre-execution state
+contract for phase, frequency, coupling, and phase-lag arrays. Counts and
+perturbation/timestep scalars are validated before arithmetic or optional JAX
+imports, so backend availability cannot mask malformed public input.
 Geometric direct Go, Julia, and Mojo bridges validate torus phase, frequency,
 coupling, lag, scalar, count, and backend-output payloads before optional native
 runtime loading; numeric-string aliases are rejected at the Python boundary.

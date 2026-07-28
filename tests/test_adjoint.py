@@ -89,6 +89,180 @@ class TestGradientFD:
         grad = gradient_knm_fd(engine, phases, omegas, knm, alpha, n_steps=5)
         assert grad.shape == (N, N)
 
+    @pytest.mark.parametrize(
+        "epsilon",
+        [False, 0.0, -1e-4, float("nan"), float("inf"), "1e-4"],
+    )
+    def test_rejects_invalid_finite_difference_perturbation(
+        self,
+        small_system,
+        epsilon,
+    ):
+        engine, phases, omegas, knm, alpha = small_system
+
+        with pytest.raises(ValueError, match="epsilon"):
+            gradient_knm_fd(
+                engine,
+                phases,
+                omegas,
+                knm,
+                alpha,
+                n_steps=1,
+                epsilon=epsilon,
+            )
+
+
+def _adjoint_payload() -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Return a small valid phase/frequency/coupling/lag payload."""
+    phases = np.array([0.1, 0.4, 0.8], dtype=np.float64)
+    omegas = np.array([0.2, -0.1, 0.05], dtype=np.float64)
+    knm = np.array(
+        [[0.0, 0.2, 0.1], [0.2, 0.0, 0.3], [0.1, 0.3, 0.0]],
+        dtype=np.float64,
+    )
+    alpha = np.zeros((3, 3), dtype=np.float64)
+    return phases, omegas, knm, alpha
+
+
+def _call_adjoint_with_payload(
+    implementation: str,
+    payload: tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray],
+) -> np.ndarray:
+    """Call one adjoint implementation with a small validated payload."""
+    phases, omegas, knm, alpha = payload
+    if implementation == "fd":
+        return gradient_knm_fd(
+            UPDEEngine(3, dt=0.01),
+            phases,
+            omegas,
+            knm,
+            alpha,
+            n_steps=1,
+        )
+    return gradient_knm_jax(
+        phases,
+        omegas,
+        knm,
+        alpha,
+        n_steps=1,
+        dt=0.01,
+    )
+
+
+@pytest.mark.parametrize("implementation", ["fd", "jax"])
+@pytest.mark.parametrize("field_index", range(4))
+@pytest.mark.parametrize(
+    "alias",
+    [
+        np.array([True], dtype=np.bool_),
+        np.array([1.0 + 0.2j], dtype=np.complex128),
+        np.array(["0.1"], dtype="U3"),
+    ],
+)
+def test_adjoint_rejects_coercive_array_aliases_before_execution(
+    implementation: str,
+    field_index: int,
+    alias: np.ndarray,
+) -> None:
+    payload = list(_adjoint_payload())
+    target_shape = payload[field_index].shape
+    payload[field_index] = np.resize(alias, target_shape)
+
+    with pytest.raises(ValueError):
+        _call_adjoint_with_payload(implementation, tuple(payload))
+
+
+@pytest.mark.parametrize("implementation", ["fd", "jax"])
+@pytest.mark.parametrize("field_index", range(4))
+def test_adjoint_rejects_non_finite_arrays_before_execution(
+    implementation: str,
+    field_index: int,
+) -> None:
+    payload = list(_adjoint_payload())
+    payload[field_index] = payload[field_index].copy()
+    payload[field_index].flat[0] = np.nan
+
+    with pytest.raises(ValueError, match="NaN/Inf"):
+        _call_adjoint_with_payload(implementation, tuple(payload))
+
+
+@pytest.mark.parametrize("implementation", ["fd", "jax"])
+@pytest.mark.parametrize("field_index", range(4))
+def test_adjoint_rejects_wrong_array_shapes_before_execution(
+    implementation: str,
+    field_index: int,
+) -> None:
+    payload = list(_adjoint_payload())
+    payload[field_index] = payload[field_index].reshape(-1)
+    if field_index < 2:
+        payload[field_index] = payload[field_index][:-1]
+
+    with pytest.raises(ValueError, match="shape"):
+        _call_adjoint_with_payload(implementation, tuple(payload))
+
+
+@pytest.mark.parametrize("implementation", ["fd", "jax"])
+@pytest.mark.parametrize(
+    "phases",
+    [np.array([], dtype=np.float64), np.zeros((1, 3), dtype=np.float64)],
+)
+def test_adjoint_rejects_non_vector_or_empty_phase_state(
+    implementation: str,
+    phases: np.ndarray,
+) -> None:
+    _, omegas, knm, alpha = _adjoint_payload()
+
+    with pytest.raises(ValueError, match="phases_init.shape"):
+        _call_adjoint_with_payload(implementation, (phases, omegas, knm, alpha))
+
+
+@pytest.mark.parametrize("implementation", ["fd", "jax"])
+def test_adjoint_rejects_nonzero_self_coupling_before_execution(
+    implementation: str,
+) -> None:
+    phases, omegas, knm, alpha = _adjoint_payload()
+    knm[0, 0] = 0.1
+
+    with pytest.raises(ValueError, match="diagonal"):
+        _call_adjoint_with_payload(implementation, (phases, omegas, knm, alpha))
+
+
+@pytest.mark.parametrize("n_steps", [False, 0, -1, 1.5, "2"])
+@pytest.mark.parametrize("implementation", ["fd", "jax"])
+def test_adjoint_rejects_invalid_step_count(
+    implementation: str,
+    n_steps: object,
+) -> None:
+    phases, omegas, knm, alpha = _adjoint_payload()
+
+    with pytest.raises(ValueError, match="n_steps"):
+        if implementation == "fd":
+            gradient_knm_fd(
+                UPDEEngine(3, dt=0.01),
+                phases,
+                omegas,
+                knm,
+                alpha,
+                n_steps=n_steps,
+            )
+        else:
+            gradient_knm_jax(
+                phases,
+                omegas,
+                knm,
+                alpha,
+                n_steps=n_steps,
+                dt=0.01,
+            )
+
+
+@pytest.mark.parametrize("dt", [False, 0.0, -0.01, float("nan"), float("inf"), "0.01"])
+def test_jax_adjoint_rejects_invalid_timestep_before_backend_import(dt: object) -> None:
+    phases, omegas, knm, alpha = _adjoint_payload()
+
+    with pytest.raises(ValueError, match="dt"):
+        gradient_knm_jax(phases, omegas, knm, alpha, n_steps=1, dt=dt)
+
 
 class TestGradientJAX:
     def test_jax_import_error(self):
