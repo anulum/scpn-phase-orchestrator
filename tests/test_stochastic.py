@@ -13,6 +13,7 @@ from typing import get_type_hints
 import numpy as np
 import pytest
 
+from scpn_phase_orchestrator.upde import stochastic as stochastic_module
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
 from scpn_phase_orchestrator.upde.stochastic import (
     NoiseProfile,
@@ -24,12 +25,107 @@ from scpn_phase_orchestrator.upde.stochastic import (
 from tests.typing_contracts import assert_precise_ndarray_hint
 
 
+class TestNoiseProfile:
+    def test_valid_values_are_normalised_to_float(self) -> None:
+        profile = NoiseProfile(
+            D=np.float32(0.1),
+            R_achieved=np.float32(0.75),
+            R_deterministic=np.float32(0.5),
+        )
+
+        np.testing.assert_allclose(
+            [profile.D, profile.R_achieved, profile.R_deterministic],
+            [0.1, 0.75, 0.5],
+        )
+        assert all(
+            isinstance(value, float)
+            for value in (profile.D, profile.R_achieved, profile.R_deterministic)
+        )
+
+    @pytest.mark.parametrize(
+        ("field", "bad_value", "match"),
+        [
+            ("D", False, "D"),
+            ("D", -0.1, "D"),
+            ("D", np.nan, "D"),
+            ("R_achieved", True, "R_achieved"),
+            ("R_achieved", -0.1, "R_achieved"),
+            ("R_achieved", 1.1, "R_achieved"),
+            ("R_deterministic", np.inf, "R_deterministic"),
+            ("R_deterministic", 1.1, "R_deterministic"),
+        ],
+    )
+    def test_rejects_invalid_physical_values(
+        self,
+        field: str,
+        bad_value: object,
+        match: str,
+    ) -> None:
+        values: dict[str, object] = {
+            "D": 0.1,
+            "R_achieved": 0.75,
+            "R_deterministic": 0.5,
+        }
+        values[field] = bad_value
+
+        with pytest.raises(ValueError, match=match):
+            NoiseProfile(**values)
+
+
 class TestStochasticInjector:
+    def test_array_guard_rejects_failed_array_protocol(self) -> None:
+        class FailedArray:
+            def __array__(self, dtype=None, copy=None):
+                raise TypeError("unavailable array payload")
+
+        with pytest.raises(ValueError, match="probe must be a numeric array"):
+            stochastic_module._as_real_numeric_array(FailedArray(), name="probe")
+
+    def test_array_guard_rejects_float_conversion_overflow(self) -> None:
+        huge_integer = np.array([10**1000], dtype=object)
+
+        with pytest.raises(ValueError, match="probe must be a numeric array"):
+            stochastic_module._as_real_numeric_array(huge_integer, name="probe")
+
     def test_zero_noise_identity(self):
         inj = StochasticInjector(D=0.0)
         phases = np.array([0.0, 1.0, 2.0])
         result = inj.inject(phases, dt=0.01)
         np.testing.assert_array_equal(result, phases)
+
+    @pytest.mark.parametrize(
+        ("phases", "match"),
+        [
+            (np.array(["0.1", "0.2"]), "numeric"),
+            (np.array([True, False]), "boolean"),
+            (np.array([0.1 + 1.0j, 0.2 - 2.0j]), "complex"),
+            (
+                np.array([0.1, complex(0.2, 3.0)], dtype=object),
+                "complex",
+            ),
+            (np.array([0.1, np.nan]), "finite"),
+            (np.zeros((2, 1)), "one-dimensional"),
+        ],
+    )
+    def test_zero_noise_rejects_invalid_phase_arrays_before_return(
+        self,
+        phases: np.ndarray,
+        match: str,
+    ) -> None:
+        injector = StochasticInjector(D=0.0)
+
+        with pytest.raises(ValueError, match=match):
+            injector.inject(phases, dt=0.01)
+
+    def test_inject_preserves_real_numeric_object_arrays(self) -> None:
+        phases = np.array([0.1, np.float32(0.2), 1], dtype=object)
+        injector = StochasticInjector(D=0.0)
+
+        result = injector.inject(phases, dt=0.01)
+
+        np.testing.assert_allclose(result, [0.1, 0.2, 1.0])
+        assert result.dtype == np.float64
+        assert result.flags.c_contiguous
 
     def test_nonzero_noise_changes_phases(self):
         inj = StochasticInjector(D=1.0, seed=42)
@@ -52,6 +148,19 @@ class TestStochasticInjector:
     def test_invalid_D_raises(self, D: object):
         with pytest.raises(ValueError, match="D"):
             StochasticInjector(D=D)
+
+    @pytest.mark.parametrize("seed", [True, np.bool_(False), -1, 1.5, "7"])
+    def test_invalid_seed_raises_precise_error(self, seed: object) -> None:
+        with pytest.raises(ValueError, match="seed"):
+            StochasticInjector(D=0.1, seed=seed)
+
+    @pytest.mark.parametrize("seed", [None, 0, np.int64(7)])
+    def test_valid_seed_aliases(self, seed: object) -> None:
+        injector = StochasticInjector(D=0.1, seed=seed)
+
+        result = injector.inject(np.zeros(2), dt=0.01)
+
+        assert result.shape == (2,)
 
     def test_D_setter(self):
         inj = StochasticInjector(D=0.0)
@@ -179,6 +288,67 @@ class TestFindOptimalNoise:
                 alpha,
                 D_range=D_range,
                 n_steps=2,
+            )
+
+    @pytest.mark.parametrize(
+        ("D_range", "match"),
+        [
+            (np.array(["0.0", "0.1"]), "numeric"),
+            (np.array([True, False]), "boolean"),
+            (np.array([0.0 + 2.0j, 0.1 - 3.0j]), "complex"),
+            (
+                np.array([0.0, complex(0.1, 4.0)], dtype=object),
+                "complex",
+            ),
+        ],
+    )
+    def test_rejects_coercive_D_range_before_engine_step(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        D_range: np.ndarray,
+        match: str,
+    ) -> None:
+        engine, phases, omegas, knm, alpha = _minimal_noise_sweep_inputs()
+        monkeypatch.setattr(
+            engine,
+            "step",
+            lambda *_args, **_kwargs: pytest.fail("invalid range reached engine"),
+        )
+
+        with pytest.raises(ValueError, match=match):
+            find_optimal_noise(
+                engine,
+                phases,
+                omegas,
+                knm,
+                alpha,
+                D_range=D_range,
+                n_steps=1,
+            )
+
+    @pytest.mark.parametrize("seed", [False, np.bool_(True), -1, 1.5, "7"])
+    def test_rejects_invalid_seed_before_range_arithmetic(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        seed: object,
+    ) -> None:
+        engine, phases, omegas, knm, alpha = _minimal_noise_sweep_inputs()
+        monkeypatch.setattr(
+            engine,
+            "step",
+            lambda *_args, **_kwargs: pytest.fail("invalid seed reached engine"),
+        )
+
+        with pytest.raises(ValueError, match="seed"):
+            find_optimal_noise(
+                engine,
+                phases,
+                omegas,
+                knm,
+                alpha,
+                D_range=np.array([0.0]),
+                n_steps=1,
+                seed=seed,
             )
 
     def test_find_optimal_noise_annotations_use_float64_ndarray(self) -> None:

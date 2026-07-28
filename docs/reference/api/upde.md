@@ -248,6 +248,13 @@ Counter-intuitive: noise at D* INCREASES synchronization (stochastic
 resonance). Self-consistency solved via modified Bessel equation
 (Acebrón et al. 2005).
 
+Public injection validates phase arrays even when `D=0`: inputs must be finite,
+one-dimensional, real numeric payloads, with boolean, complex, and
+numeric-string aliases rejected before the no-op return or noise arithmetic.
+Noise sweeps apply the same source-type contract to `D_range`, validate
+non-negative integer seeds before range arithmetic, and publish only physical
+`NoiseProfile` records (`D >= 0`, both order parameters in `[0, 1]`).
+
 ::: scpn_phase_orchestrator.upde.stochastic
 
 ## Geometric (Torus-Preserving) Engine

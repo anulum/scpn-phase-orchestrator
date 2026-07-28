@@ -148,6 +148,14 @@ conversion. The composite Rust sweep replays the same source-type contract on
 raw `K` and `R` arrays before checking cardinality, monotonicity, sweep bounds,
 the physical `[0, 1]` order-parameter range, and optional critical coupling;
 malformed backend evidence is never published as a bifurcation diagram.
+The public stochastic injector validates phase arrays before both the `D=0`
+identity path and noise arithmetic: payloads must be finite, one-dimensional,
+and real numeric, while boolean, complex, and numeric-string aliases fail
+closed before conversion. Noise sweeps apply the same contract to `D_range`,
+validate seeds before index arithmetic, and publish only profiles with
+non-negative finite diffusion and order parameters inside `[0, 1]`. This lane
+has no native accelerator because its `O(N)` noise cost is dominated by the
+owning engine's coupling step.
 The public order-parameter dispatcher applies the direct scalar output
 validators to optional backend returns before publication: order-parameter
 magnitudes, PLV, and layer coherence must be finite real scalars inside

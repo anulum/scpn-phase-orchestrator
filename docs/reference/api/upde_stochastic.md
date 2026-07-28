@@ -163,9 +163,14 @@ resonance is structure-dependent:
 The `find_optimal_noise` function works for any topology — it numerically
 sweeps $D$ regardless of the coupling structure.
 
-Runtime validation rejects an empty, multi-dimensional, negative, or non-finite
-`D_range`, and rejects non-positive or non-integral `n_steps`. This keeps bad
-configuration values from entering long stochastic sweeps.
+Runtime validation rejects boolean, complex, numeric-string, empty,
+multi-dimensional, negative, or non-finite `D_range` payloads before float
+conversion. It also rejects non-positive or non-integral `n_steps` and
+negative, non-integral, or boolean seeds before range arithmetic. Injection
+validates finite one-dimensional real numeric phases even for the `D=0` no-op
+path. Published `NoiseProfile` records require `D >= 0` and both order
+parameters in `[0, 1]`. This keeps malformed configuration and evidence out of
+long stochastic sweeps and downstream reports.
 
 ### 2.5 Noise and Chimera States
 
@@ -430,8 +435,8 @@ print(f"R = {R_mean:.4f} ± {R_std:.4f} (20 realisations)")
 
 | Method/Property | Description |
 |-----------------|-------------|
-| `__init__(D, seed)` | Create with noise intensity $D$ and optional seed |
-| `inject(phases, dt) → NDArray` | Add $\sqrt{2D\,dt} \cdot N(0,1)$ noise, wrap to $[0, 2\pi)$ |
+| `__init__(D, seed)` | Create with finite non-negative noise intensity $D$ and an optional non-negative integer seed |
+| `inject(phases, dt) → NDArray` | Validate finite 1-D real numeric phases, add $\sqrt{2D\,dt} \cdot N(0,1)$ noise, and wrap to $[0, 2\pi)$ |
 | `D` (property) | Get/set noise intensity |
 
 ### 6.3 find_optimal_noise
@@ -443,18 +448,18 @@ print(f"R = {R_mean:.4f} ± {R_std:.4f} (20 realisations)")
 | `omegas` | `NDArray` (N,) | — | Natural frequencies |
 | `knm` | `NDArray` (N,N) | — | Coupling matrix |
 | `alpha` | `NDArray` (N,N) | — | Phase-lag |
-| `D_range` | `NDArray` or None | auto | Noise values to sweep |
+| `D_range` | real numeric `NDArray` or None | auto | Finite non-negative noise values; coercive aliases are rejected |
 | `n_steps` | `int` | `500` | Steps per D value |
-| `seed` | `int` | `42` | RNG seed |
+| `seed` | `int` | `42` | Non-negative non-boolean RNG seed |
 | **Returns** | `NoiseProfile` | | `.D`, `.R_achieved`, `.R_deterministic` |
 
 ### 6.4 NoiseProfile
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `D` | `float` | Optimal noise intensity |
-| `R_achieved` | `float` | $R$ at optimal $D$ |
-| `R_deterministic` | `float` | $R$ at $D = 0$ |
+| `D` | `float` | Finite non-negative optimal noise intensity |
+| `R_achieved` | `float` | Finite $R$ at optimal $D$, constrained to `[0, 1]` |
+| `R_deterministic` | `float` | Finite $R$ at $D = 0$, constrained to `[0, 1]` |
 
 ---
 
@@ -559,17 +564,17 @@ phase space but destroys deterministic dynamics.
 
 ## Test Coverage
 
-- `tests/test_stochastic_engine.py` — 21 tests: injector D validation,
-  inject shape, inject with D=0 no-op, noise scales with D, phase
-  wrapping, seed reproducibility, find_optimal_noise returns NoiseProfile,
-  optimal D > 0 for spread frequencies, self_consistency_R bounds,
-  stochastic resonance (R_achieved > R_deterministic)
+- `tests/test_stochastic.py` — injector, record, seed, phase-array, noise-range,
+  sweep, pipeline, physical-scaling, typing, and performance contracts.
+- `tests/test_stochastic_self_consistency.py` — deterministic default-range and
+  analytical self-consistency edge cases.
 
-Total: **21 tests**.
+The focused owning slice contains **85 tests** and covers
+`upde/stochastic.py` at exact **100% line and branch coverage**.
 
 ---
 
 ## Source
 
-- Python: `src/scpn_phase_orchestrator/upde/stochastic.py` (131 lines)
+- Python: `src/scpn_phase_orchestrator/upde/stochastic.py` (319 lines)
 - No Rust backend (noise is $O(N)$, negligible vs $O(N^2)$ coupling)

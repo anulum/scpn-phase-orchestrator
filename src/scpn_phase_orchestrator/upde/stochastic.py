@@ -20,7 +20,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from math import isfinite
-from numbers import Real
+from numbers import Complex, Integral, Real
 from typing import TYPE_CHECKING, TypeAlias
 
 import numpy as np
@@ -40,11 +40,50 @@ FloatArray: TypeAlias = NDArray[np.float64]
 
 @dataclass
 class NoiseProfile:
-    """Noise-sweep result linking diffusion strength to observed order."""
+    """Validated noise-sweep result linking diffusion to bounded order."""
 
     D: float
     R_achieved: float
     R_deterministic: float
+
+    def __post_init__(self) -> None:
+        self.D = _validate_finite_non_negative(self.D, name="D")
+        self.R_achieved = _validate_unit_interval(
+            self.R_achieved,
+            name="R_achieved",
+        )
+        self.R_deterministic = _validate_unit_interval(
+            self.R_deterministic,
+            name="R_deterministic",
+        )
+
+
+def _as_real_numeric_array(value: object, *, name: str) -> FloatArray:
+    """Return a real numeric array without coercing string or complex aliases."""
+    try:
+        raw = np.asarray(value)
+    except (TypeError, ValueError):
+        raise ValueError(f"{name} must be a numeric array") from None
+    object_values = raw.dtype == np.object_
+    if raw.dtype == np.bool_ or (
+        object_values and any(isinstance(item, (bool, np.bool_)) for item in raw.flat)
+    ):
+        raise ValueError(f"{name} must be real-valued, not boolean")
+    if np.iscomplexobj(raw) or (
+        object_values
+        and any(
+            isinstance(item, Complex) and not isinstance(item, Real)
+            for item in raw.flat
+        )
+    ):
+        raise ValueError(f"{name} must be real-valued, not complex")
+    numeric_object = object_values and all(isinstance(item, Real) for item in raw.flat)
+    if not np.issubdtype(raw.dtype, np.number) and not numeric_object:
+        raise ValueError(f"{name} must be numeric")
+    try:
+        return np.ascontiguousarray(raw, dtype=np.float64)
+    except (OverflowError, TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a numeric array") from exc
 
 
 def _validate_finite_non_negative(value: object, *, name: str) -> float:
@@ -67,20 +106,56 @@ def _validate_finite_positive(value: object, *, name: str) -> float:
     return value
 
 
+def _validate_unit_interval(value: object, *, name: str) -> float:
+    """Return ``value`` as a finite real in ``[0, 1]``, else raise."""
+    value = _validate_finite_non_negative(value, name=name)
+    if value > 1.0:
+        raise ValueError(f"{name} must be a finite real in [0, 1], got {value!r}")
+    return value
+
+
 def _validate_positive_int(value: object, *, name: str) -> int:
     """Return ``value`` as a positive integer, else raise ``ValueError``."""
-    if isinstance(value, bool) or not isinstance(value, int):
+    if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral):
         raise ValueError(f"{name} must be a positive integer, got {value!r}")
     if value < 1:
         raise ValueError(f"{name} must be a positive integer, got {value!r}")
-    return value
+    return int(value)
+
+
+def _validate_seed(value: object, *, name: str = "seed") -> int:
+    """Return a non-negative integer RNG seed, else raise ``ValueError``."""
+    if (
+        isinstance(value, (bool, np.bool_))
+        or not isinstance(value, Integral)
+        or value < 0
+    ):
+        raise ValueError(f"{name} must be a non-negative integer, got {value!r}")
+    return int(value)
+
+
+def _validate_optional_seed(value: object) -> int | None:
+    """Return ``None`` or a validated non-negative integer RNG seed."""
+    if value is None:
+        return None
+    return _validate_seed(value)
+
+
+def _validate_phases(value: object) -> FloatArray:
+    """Return a finite one-dimensional real numeric phase array."""
+    phases = _as_real_numeric_array(value, name="phases")
+    if phases.ndim != 1:
+        raise ValueError(f"phases shape {phases.shape} must be one-dimensional")
+    if not np.all(np.isfinite(phases)):
+        raise ValueError("phases must contain only finite values")
+    return phases
 
 
 def _validate_noise_range(value: FloatArray | None) -> FloatArray | None:
     """Return the validated ``(min, max)`` noise-level range, else raise."""
     if value is None:
         return None
-    d_range = np.asarray(value, dtype=np.float64)
+    d_range = _as_real_numeric_array(value, name="D_range")
     if d_range.ndim != 1 or d_range.size == 0:
         raise ValueError("D_range must be a non-empty 1-D array")
     if not np.all(np.isfinite(d_range)) or np.any(d_range < 0.0):
@@ -98,8 +173,9 @@ class StochasticInjector:
     """
 
     def __init__(self, D: float, seed: int | None = None):
+        """Create an injector with finite ``D`` and an optional valid seed."""
         self._D = _validate_finite_non_negative(D, name="D")
-        self._rng = np.random.default_rng(seed)
+        self._rng = np.random.default_rng(_validate_optional_seed(seed))
 
     @property
     def D(self) -> float:
@@ -129,7 +205,8 @@ class StochasticInjector:
         Parameters
         ----------
         phases : FloatArray
-            Oscillator phases in radians, shape ``(N,)``.
+            Finite real numeric oscillator phases in radians, shape ``(N,)``.
+            Boolean, complex, and numeric-string aliases are rejected.
         dt : float
             Integration step size.
 
@@ -139,6 +216,7 @@ class StochasticInjector:
             The phases with added Wiener noise.
         """
         dt = _validate_finite_positive(dt, name="dt")
+        phases = _validate_phases(phases)
         if self._D == 0.0:
             return phases
         noise = self._rng.standard_normal(len(phases))
@@ -201,11 +279,12 @@ def find_optimal_noise(
     alpha : FloatArray
         Phase-lag matrix in radians, shape ``(N, N)``, or ``None`` for no lag.
     D_range : FloatArray | None
-        Diffusion coefficients to sweep, or ``None`` for the default range.
+        Finite non-negative real numeric diffusion coefficients to sweep, or
+        ``None`` for the default range. Coercive aliases are rejected.
     n_steps : int
         Number of integration steps to run.
     seed : int
-        Seed for the deterministic RNG.
+        Non-negative non-boolean seed for the deterministic RNG.
 
     Returns
     -------
@@ -213,6 +292,7 @@ def find_optimal_noise(
         The noise profile whose diffusion ``D`` maximises ``R``.
     """
     n_steps = _validate_positive_int(n_steps, name="n_steps")
+    seed = _validate_seed(seed)
     D_range = _validate_noise_range(D_range)
     if D_range is None:
         K_mean = float(np.mean(knm[knm > 0])) if np.any(knm > 0) else 1.0
