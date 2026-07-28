@@ -649,6 +649,7 @@ class TestSparseEngineEdgeCases:
         class FakeSparseStepper:
             def __init__(self, n, dt, method, *, atol, rtol):
                 assert (n, dt, method, atol, rtol) == (3, 0.01, "rk4", 1e-6, 1e-3)
+                self.last_dt = dt
 
             def step(
                 self,
@@ -774,6 +775,141 @@ class TestSparseEngineEdgeCases:
         assert np.all(np.isfinite(out))
         assert np.all(out >= 0.0)
         assert np.all(out < 2 * np.pi)
+
+
+def _empty_sparse_inputs(
+    n: int,
+) -> tuple[
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+    np.ndarray,
+]:
+    """Return valid empty-graph inputs for optional-Rust contract tests."""
+    return (
+        np.linspace(0.1, 0.1 * n, n, dtype=np.float64),
+        np.ones(n, dtype=np.float64),
+        np.zeros(n + 1, dtype=np.int64),
+        np.array([], dtype=np.int64),
+        np.array([], dtype=np.float64),
+        np.array([], dtype=np.float64),
+    )
+
+
+def _install_fake_sparse_stepper(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    output: np.ndarray,
+    last_dt: object,
+) -> SparseUPDEEngine:
+    """Install a deterministic optional-Rust sparse stepper for one test."""
+
+    class FakeSparseStepper:
+        def __init__(self, n, dt, method, *, atol, rtol):
+            assert (n, dt, method, atol, rtol) == (3, 0.01, "rk4", 1e-6, 1e-3)
+            self.last_dt = last_dt
+
+        def step(self, *args):
+            return output
+
+        def run(self, *args):
+            return output
+
+    fake_spo = types.ModuleType("spo_kernel")
+    fake_spo.PySparseUPDEStepper = FakeSparseStepper
+    monkeypatch.setattr(sparse_mod, "_HAS_RUST", True)
+    monkeypatch.setitem(sys.modules, "spo_kernel", fake_spo)
+    return SparseUPDEEngine(3, dt=0.01, method="rk4")
+
+
+def _call_sparse_operation(engine: SparseUPDEEngine, operation: str) -> np.ndarray:
+    """Call one optional-Rust sparse operation with a valid empty graph."""
+    phases, omegas, row_ptr, col, knm_values, alpha_values = _empty_sparse_inputs(3)
+    if operation == "step":
+        return engine.step(
+            phases,
+            omegas,
+            row_ptr,
+            col,
+            knm_values,
+            0.0,
+            0.0,
+            alpha_values,
+        )
+    return engine.run(
+        phases,
+        omegas,
+        row_ptr,
+        col,
+        knm_values,
+        0.0,
+        0.0,
+        alpha_values,
+        2,
+    )
+
+
+@pytest.mark.parametrize("operation", ["step", "run"])
+@pytest.mark.parametrize(
+    "output",
+    [
+        np.array([-0.1, 0.2, 0.3], dtype=np.float64),
+        np.array([0.1, 0.2, 2 * np.pi], dtype=np.float64),
+    ],
+)
+def test_sparse_rust_output_rejects_out_of_torus_phases(
+    monkeypatch: pytest.MonkeyPatch,
+    operation: str,
+    output: np.ndarray,
+) -> None:
+    engine = _install_fake_sparse_stepper(
+        monkeypatch,
+        output=output,
+        last_dt=0.004,
+    )
+
+    with pytest.raises(ValueError, match=r"outside \[0, 2\*pi\)"):
+        _call_sparse_operation(engine, operation)
+
+
+@pytest.mark.parametrize("operation", ["step", "run"])
+@pytest.mark.parametrize(
+    "last_dt",
+    [False, 0.0, -0.01, float("nan"), float("inf"), "0.004"],
+)
+def test_sparse_rust_output_rejects_invalid_last_dt(
+    monkeypatch: pytest.MonkeyPatch,
+    operation: str,
+    last_dt: object,
+) -> None:
+    engine = _install_fake_sparse_stepper(
+        monkeypatch,
+        output=np.array([0.1, 0.2, 0.3], dtype=np.float64),
+        last_dt=last_dt,
+    )
+
+    with pytest.raises(ValueError, match="Rust last_dt"):
+        _call_sparse_operation(engine, operation)
+    assert engine.last_dt == pytest.approx(0.01)
+
+
+@pytest.mark.parametrize("operation", ["step", "run"])
+def test_sparse_rust_output_publishes_valid_last_dt(
+    monkeypatch: pytest.MonkeyPatch,
+    operation: str,
+) -> None:
+    engine = _install_fake_sparse_stepper(
+        monkeypatch,
+        output=np.array([0.1, 0.2, 0.3], dtype=np.float64),
+        last_dt=0.004,
+    )
+
+    result = _call_sparse_operation(engine, operation)
+
+    np.testing.assert_array_equal(result, [0.1, 0.2, 0.3])
+    assert engine.last_dt == pytest.approx(0.004)
 
 
 # Pipeline wiring: the sparse engine swaps in for UPDEEngine when the

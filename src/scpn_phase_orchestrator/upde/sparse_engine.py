@@ -186,12 +186,12 @@ class SparseUPDEEngine:
 
     @property
     def last_dt(self) -> float:
-        """Actual dt used on the last accepted step (relevant for rk45).
+        """Return the most recent accepted Python or Rust timestep.
 
         Returns
         -------
         float
-            Actual dt used on the last accepted step (relevant for rk45).
+            Positive finite timestep accepted by the sparse engine.
         """
         return self._last_dt
 
@@ -256,7 +256,12 @@ class SparseUPDEEngine:
                     psi,
                     np.ascontiguousarray(alpha_values.ravel(), dtype=np.float64),
                 )
-                return self._validate_rust_output(result)
+                output = self._validate_rust_output(result)
+                self._last_dt = _validate_positive_float(
+                    self._rust.last_dt,
+                    name="Rust last_dt",
+                )
+                return output
 
             if self._method == "euler":
                 return self._euler_step(
@@ -359,7 +364,12 @@ class SparseUPDEEngine:
                     np.ascontiguousarray(alpha_values.ravel(), dtype=np.float64),
                     n_steps,
                 )
-                return self._validate_rust_output(result)
+                output = self._validate_rust_output(result)
+                self._last_dt = _validate_positive_float(
+                    self._rust.last_dt,
+                    name="Rust last_dt",
+                )
+                return output
 
             p = phases.copy()
             for _ in range(n_steps):
@@ -386,6 +396,8 @@ class SparseUPDEEngine:
             )
         if not np.all(np.isfinite(out)):
             raise ValueError("Rust output contains NaN/Inf")
+        if np.any((out < 0.0) | (out >= TWO_PI)):
+            raise ValueError("Rust output contains phases outside [0, 2*pi)")
         return np.asarray(out, dtype=np.float64)
 
     def _validate_inputs(

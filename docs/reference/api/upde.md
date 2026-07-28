@@ -584,7 +584,9 @@ where most oscillators are only coupled to local neighbours.
   and phase-lag values so sparse topologies avoid dense `N x N` allocation.
 - **FFI parity:** Offloads sparse integration to the Rust backend when
   `spo_kernel` is available, with Python fallback preserving the same shape,
-  finite-value, and phase-bounds contracts.
+  finite-value, phase-bounds, and adaptive-timestep contracts. Optional-Rust
+  step/run output must remain inside `[0, 2*pi)`, and the backend `last_dt`
+  must be positive and finite before the public diagnostic is updated.
 - **Input validation:** Rejects malformed CSR row pointers, invalid oscillator
   indices, non-finite phase/frequency/coupling arrays, unsupported methods,
   and malformed optional-backend outputs before downstream workflows consume
