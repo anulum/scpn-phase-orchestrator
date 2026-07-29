@@ -128,6 +128,25 @@ AUTODOC_EXCLUSIONS = {
     "scpn_phase_orchestrator.monitor.stl.specifications",
 }
 
+ARCHITECTURE_PAGES = {
+    "architecture/README.md",
+    "architecture/backends.md",
+    "architecture/interfaces.md",
+    "architecture/subsystems/adapters.md",
+    "architecture/subsystems/autotune.md",
+    "architecture/subsystems/coupling.md",
+    "architecture/subsystems/experimental-accelerators.md",
+    "architecture/subsystems/extensibility.md",
+    "architecture/subsystems/inputs.md",
+    "architecture/subsystems/monitor.md",
+    "architecture/subsystems/nn.md",
+    "architecture/subsystems/runtime-trust.md",
+    "architecture/subsystems/ssgf.md",
+    "architecture/subsystems/studio-reporting.md",
+    "architecture/subsystems/supervisor.md",
+    "architecture/subsystems/upde.md",
+}
+
 
 def _nav_paths(nav: object) -> Iterator[str]:
     if isinstance(nav, str):
@@ -173,6 +192,20 @@ def test_all_api_reference_pages_are_in_mkdocs_nav() -> None:
     }
 
     assert api_pages <= nav_paths
+
+
+def test_all_architecture_pages_are_in_mkdocs_nav() -> None:
+    config_text = MKDOCS_CONFIG.read_text(encoding="utf-8")
+    for tag in (
+        "!!python/name:pymdownx.superfences.fence_code_format",
+        "!!python/name:material.extensions.emoji.twemoji",
+        "!!python/name:material.extensions.emoji.to_svg",
+    ):
+        config_text = config_text.replace(tag, "")
+    config = yaml.safe_load(config_text)
+    nav_paths = set(_nav_paths(config["nav"]))
+
+    assert nav_paths >= ARCHITECTURE_PAGES
 
 
 def test_public_source_modules_have_api_autodoc() -> None:

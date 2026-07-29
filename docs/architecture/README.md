@@ -11,8 +11,9 @@ Companion documents:
   JAX, Mojo, Julia, Go, WebGPU, WASM, FPGA).
 - [`interfaces.md`](interfaces.md) — public interface contracts (CLI, REST,
   gRPC, Python library API, STUDIO surface).
-- [`subsystems/`](subsystems/) — one document per subsystem with inputs,
-  outputs, processing model, backend wiring, and honest scope boundaries.
+- The [subsystem index](#3-subsystem-index) below — one linked document per
+  subsystem with inputs, outputs, processing model, backend wiring, and honest
+  scope boundaries.
 
 Scope of this document set: **architecture only** (structure, data flow,
 contracts). A maturity assessment of each component is maintained separately and

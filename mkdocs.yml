@@ -15,6 +15,7 @@ repo_name: anulum/scpn-phase-orchestrator
 exclude_docs: |
   internal/**
   superpowers/**
+  wasm-pkg/README.md
 copyright: "© 1996–2026 Miroslav Šotek. All rights reserved."
 
 theme:
@@ -72,6 +73,24 @@ nav:
       - Phase Control Theory: concepts/phase_control_theory.md
       - Domain Utilisation Schemas: concepts/domain_utilisation_schemas.md
       - Kuramoto Theory: concepts/kuramoto_theory.md
+  - Architecture:
+      - System Map: architecture/README.md
+      - Backends & Dispatch: architecture/backends.md
+      - Public Interfaces: architecture/interfaces.md
+      - Subsystems:
+          - Inputs & Binding: architecture/subsystems/inputs.md
+          - Coupling: architecture/subsystems/coupling.md
+          - SSGF: architecture/subsystems/ssgf.md
+          - Autotune: architecture/subsystems/autotune.md
+          - UPDE Engines: architecture/subsystems/upde.md
+          - Monitors: architecture/subsystems/monitor.md
+          - Supervisor: architecture/subsystems/supervisor.md
+          - Differentiable NN: architecture/subsystems/nn.md
+          - Runtime & Trust: architecture/subsystems/runtime-trust.md
+          - Adapters: architecture/subsystems/adapters.md
+          - Studio & Reporting: architecture/subsystems/studio-reporting.md
+          - Extensibility: architecture/subsystems/extensibility.md
+          - Experimental Accelerators: architecture/subsystems/experimental-accelerators.md
   - Guides:
       - Choosing an Engine: guide/choosing_an_engine.md
       - Monitor Validation Status: guide/monitor_validation_status.md
@@ -103,6 +122,7 @@ nav:
       - Testing: guide/testing.md
       - Release Hygiene: RELEASE_HYGIENE.md
       - Contributor Onboarding: guide/contributor_onboarding.md
+      - Module Size Policy: module_size_policy.md
   - Specifications:
       - Binding Spec Schema: specs/binding_spec.schema.json
       - Phase Contract: specs/phase_contract.md
@@ -250,6 +270,7 @@ nav:
       - Power Grid Benchmark: galleries/power_grid_benchmark.md
       - Reference Benchmark Snapshot: galleries/reference_benchmark_snapshot.md
       - Capabilities & Use Cases: galleries/capabilities.md
+      - Generated Capability Inventory: _generated/capability_snapshot.md
   - Reference:
       - Public Roadmap: roadmap.md
       - Fact-Based Overview: FACT_BASED_OVERVIEW.md
