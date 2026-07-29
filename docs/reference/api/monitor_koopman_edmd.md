@@ -73,6 +73,14 @@ returns a frozen `KoopmanPredictor` carrying `(A, B, C)`, the dictionary, and th
 RMS one-step lift residual. `KoopmanPredictor.predict` rolls the linear model
 forward; an empty input sequence yields the single-row reconstruction.
 
+All public state, successor-state, control, centre, lift, and rollout arrays
+must contain finite real numeric evidence before conversion. Boolean, complex,
+numeric-string, and broken array-protocol payloads fail closed. A directly
+constructed `KoopmanPredictor` independently replays the `(A, B, C)` shape and
+dictionary-dimension contracts, requires a finite non-negative fit residual,
+and owns read-only copies of all three matrices so caller mutation cannot alter
+published prediction evidence.
+
 ## 3. Multi-backend fallback chain
 
 The heavy step is the least-squares solve; it runs on the standard chain

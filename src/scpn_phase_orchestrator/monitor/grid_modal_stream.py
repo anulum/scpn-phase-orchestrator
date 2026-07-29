@@ -488,6 +488,12 @@ class GridModalStreamMonitor:
             A :class:`StreamAlarm` on the sample that fires a fresh lead event, else
             ``None`` (still warming up, between re-scorings, below threshold, or already
             latched within the same episode).
+
+        Raises
+        ------
+        ValueError
+            If ``sample`` is not a non-empty finite real one-dimensional bus vector,
+            contains coercive aliases, or changes the established bus count.
         """
         values = _validate_sample(sample)
         if self._buffer and values.shape != self._buffer[0].shape:

@@ -132,7 +132,11 @@ def test_condensed_prediction_matches_forward_roll() -> None:
         input_matrix=input_matrix,
         output_matrix=output_matrix,
         dictionary=KoopmanDictionary(
-            kind="identity", state_dim=n_state, include_constant=False
+            kind="rbf",
+            state_dim=n_state,
+            centres=np.zeros((lift_dim - n_state, n_state)),
+            width=1.0,
+            include_constant=False,
         ),
         fit_residual=0.0,
     )

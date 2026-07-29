@@ -18,9 +18,13 @@ dictionaries, the fit, and the predictor roll-out.
 
 from __future__ import annotations
 
+import sys
+import types
+
 import numpy as np
 import pytest
 
+import scpn_phase_orchestrator.monitor.koopman_edmd as koopman_module
 from scpn_phase_orchestrator.monitor.koopman_edmd import (
     ACTIVE_BACKEND,
     AVAILABLE_BACKENDS,
@@ -68,6 +72,22 @@ def test_python_backend_is_always_the_floor() -> None:
     assert "python" in AVAILABLE_BACKENDS
     assert AVAILABLE_BACKENDS[-1] == "python"
     assert ACTIVE_BACKEND in AVAILABLE_BACKENDS
+
+
+def test_julia_loader_returns_the_runtime_callable(monkeypatch) -> None:
+    module_name = (
+        "scpn_phase_orchestrator.experimental.accelerators.monitor._koopman_edmd_julia"
+    )
+    fake_module = types.ModuleType(module_name)
+
+    def fake_solver(*args):
+        return args
+
+    fake_module.koopman_edmd_solve_julia = fake_solver
+    monkeypatch.setitem(sys.modules, module_name, fake_module)
+    monkeypatch.setattr(koopman_module, "require_juliacall_main", lambda: object())
+
+    assert koopman_module._load_julia_fns() == {"edmd_solve": fake_solver}
 
 
 # --------------------------------------------------------------------------- #
@@ -309,6 +329,11 @@ def test_dictionary_rejects_invalid_configuration(kwargs, match) -> None:
         KoopmanDictionary(**kwargs)
 
 
+def test_dictionary_rejects_non_string_kind() -> None:
+    with pytest.raises(TypeError, match="kind must be a string"):
+        KoopmanDictionary(kind=1, state_dim=2)  # type: ignore[arg-type]
+
+
 def test_lift_rejects_state_dimension_mismatch() -> None:
     dictionary = KoopmanDictionary(kind="identity", state_dim=3)
     with pytest.raises(ValueError, match="states must have 3 columns"):
@@ -445,10 +470,232 @@ def test_non_rbf_dictionary_validates_supplied_centres() -> None:
 def test_fit_rejects_a_non_numeric_state_matrix() -> None:
     dictionary = KoopmanDictionary(kind="identity", state_dim=2)
     bad = np.array([["a", "b"], ["c", "d"]])
-    with pytest.raises(ValueError, match="real-valued 2-D array"):
+    with pytest.raises(ValueError, match="must contain only real numbers"):
         fit_koopman_predictor(bad, bad, np.zeros((2, 1)), dictionary=dictionary)
 
 
 def test_lift_rejects_a_non_numeric_state_vector() -> None:
-    with pytest.raises(ValueError, match="real-valued 1-D array"):
+    with pytest.raises(ValueError, match="must contain only real numbers"):
         _identity_predictor().lift(np.array(["a", "b", "c"]))
+
+
+@pytest.mark.parametrize(
+    "field",
+    ["states", "next_states", "inputs", "centres", "lift", "predict"],
+)
+def test_public_matrix_boundaries_reject_numeric_string_aliases(field: str) -> None:
+    """Numeric text must not become physical EDMD evidence by coercion."""
+    dictionary = KoopmanDictionary(kind="identity", state_dim=2)
+    text_matrix = np.full((3, 2), "0.0")
+
+    with pytest.raises(ValueError, match="must contain only real numbers"):
+        if field == "states":
+            fit_koopman_predictor(
+                text_matrix,
+                np.zeros((3, 2)),
+                np.zeros((3, 1)),
+                dictionary=dictionary,
+            )
+        elif field == "next_states":
+            fit_koopman_predictor(
+                np.zeros((3, 2)),
+                text_matrix,
+                np.zeros((3, 1)),
+                dictionary=dictionary,
+            )
+        elif field == "inputs":
+            fit_koopman_predictor(
+                np.zeros((3, 2)),
+                np.zeros((3, 2)),
+                np.full((3, 1), "0.0"),
+                dictionary=dictionary,
+            )
+        elif field == "centres":
+            KoopmanDictionary(kind="rbf", state_dim=2, centres=text_matrix, width=1.0)
+        elif field == "lift":
+            dictionary.lift(text_matrix)
+        else:
+            predictor = KoopmanPredictor(
+                state_matrix=np.eye(3),
+                input_matrix=np.zeros((3, 1)),
+                output_matrix=np.column_stack((np.zeros(2), np.eye(2))),
+                dictionary=dictionary,
+                fit_residual=0.0,
+            )
+            predictor.predict(np.zeros(2), np.full((3, 1), "0.0"))
+
+
+def test_public_vector_boundary_rejects_numeric_string_aliases() -> None:
+    with pytest.raises(ValueError, match="state must contain only real numbers"):
+        _identity_predictor().lift(np.array(["0.0", "1.0", "2.0"]))
+
+
+class _BrokenArrayProtocol:
+    """Fixture whose array conversion fails at every public probe."""
+
+    def __array__(self, dtype=None, copy=None):
+        raise TypeError("array protocol failed")
+
+
+def test_public_matrix_boundary_wraps_broken_array_protocol() -> None:
+    dictionary = KoopmanDictionary(kind="identity", state_dim=2)
+    with pytest.raises(ValueError, match="states must contain only real numbers"):
+        fit_koopman_predictor(
+            _BrokenArrayProtocol(),
+            np.zeros((2, 2)),
+            np.zeros((2, 1)),
+            dictionary=dictionary,
+        )
+
+
+def test_public_matrix_boundary_preserves_real_numeric_object_arrays() -> None:
+    dictionary = KoopmanDictionary(kind="identity", state_dim=2)
+    states = np.array([[0.0, 1], [2, 3.0]], dtype=object)
+    predictor = fit_koopman_predictor(
+        states,
+        states,
+        np.zeros((2, 1), dtype=object),
+        dictionary=dictionary,
+        regularisation=1.0e-8,
+    )
+    assert predictor.state_dim == 2
+
+
+def test_public_matrix_boundary_rejects_object_complex_aliases() -> None:
+    dictionary = KoopmanDictionary(kind="identity", state_dim=2)
+    states = np.array([[0.0, 1.0], [2.0, 3.0 + 1.0j]], dtype=object)
+    with pytest.raises(ValueError, match="states must be real-valued"):
+        fit_koopman_predictor(
+            states,
+            np.zeros((2, 2)),
+            np.zeros((2, 1)),
+            dictionary=dictionary,
+        )
+
+
+def test_public_matrix_boundary_rejects_object_numeric_string_aliases() -> None:
+    dictionary = KoopmanDictionary(kind="identity", state_dim=2)
+    states = np.full((2, 2), "0.0", dtype=object)
+    with pytest.raises(ValueError, match="states must contain only real numbers"):
+        fit_koopman_predictor(
+            states,
+            np.zeros((2, 2)),
+            np.zeros((2, 1)),
+            dictionary=dictionary,
+        )
+
+
+@pytest.mark.parametrize("include_constant", [0, 1, np.bool_(True), "yes"])
+def test_dictionary_requires_a_canonical_boolean_include_constant(
+    include_constant: object,
+) -> None:
+    with pytest.raises(TypeError, match="include_constant must be a boolean"):
+        KoopmanDictionary(
+            kind="identity",
+            state_dim=2,
+            include_constant=include_constant,  # type: ignore[arg-type]
+        )
+
+
+def _direct_predictor(**overrides: object) -> KoopmanPredictor:
+    payload: dict[str, object] = {
+        "state_matrix": np.eye(2),
+        "input_matrix": np.zeros((2, 1)),
+        "output_matrix": np.eye(2),
+        "dictionary": KoopmanDictionary(
+            kind="identity", state_dim=2, include_constant=False
+        ),
+        "fit_residual": 0.0,
+    }
+    payload.update(overrides)
+    return KoopmanPredictor(**payload)  # type: ignore[arg-type]
+
+
+class _InvalidDictionary:
+    """Configurable malformed observable-map fixture."""
+
+    state_dim = 2
+    lift: object = None
+
+
+class _BrokenLiftDictionary:
+    """Observable map whose lift cannot produce numeric evidence."""
+
+    state_dim = 2
+
+    def lift(self, states: np.ndarray) -> np.ndarray:
+        del states
+        return np.full((1, 2), "not-numeric")
+
+
+class _WrongLiftShapeDictionary:
+    """Observable map whose output dimension contradicts the matrices."""
+
+    state_dim = 2
+
+    def lift(self, states: np.ndarray) -> np.ndarray:
+        return np.zeros((states.shape[0], 3))
+
+
+@pytest.mark.parametrize(
+    ("overrides", "match"),
+    [
+        ({"state_matrix": np.ones((2, 3))}, "state_matrix must be square"),
+        ({"input_matrix": np.ones((3, 1))}, "input_matrix must have 2 rows"),
+        ({"output_matrix": np.ones((2, 3))}, "output_matrix must have 2 columns"),
+        (
+            {"output_matrix": np.ones((3, 2))},
+            "output_matrix must have 2 rows to match the dictionary",
+        ),
+        ({"state_matrix": np.full((2, 2), "1.0")}, "only real numbers"),
+        ({"input_matrix": np.ones((2, 1), dtype=bool)}, "must not contain boolean"),
+        ({"output_matrix": np.ones((2, 2), dtype=complex)}, "must be real-valued"),
+        ({"dictionary": object()}, "dictionary must implement KoopmanObservables"),
+        ({"fit_residual": True}, "fit_residual must be a real number"),
+        ({"fit_residual": "0.0"}, "fit_residual must be a real number"),
+        ({"fit_residual": -0.1}, "fit_residual must be finite and non-negative"),
+        ({"fit_residual": np.inf}, "fit_residual must be finite and non-negative"),
+    ],
+)
+def test_predictor_constructor_rejects_inconsistent_evidence(
+    overrides: dict[str, object], match: str
+) -> None:
+    with pytest.raises((TypeError, ValueError), match=match):
+        _direct_predictor(**overrides)
+
+
+def test_predictor_requires_a_callable_dictionary_lift() -> None:
+    with pytest.raises(TypeError, match="dictionary must implement KoopmanObservables"):
+        _direct_predictor(dictionary=_InvalidDictionary())
+
+
+def test_predictor_rejects_a_non_numeric_dictionary_probe() -> None:
+    with pytest.raises(ValueError, match="finite real lift matrix"):
+        _direct_predictor(dictionary=_BrokenLiftDictionary())
+
+
+def test_predictor_rejects_a_wrong_dictionary_lift_shape() -> None:
+    with pytest.raises(ValueError, match="lift output must have shape"):
+        _direct_predictor(dictionary=_WrongLiftShapeDictionary())
+
+
+def test_predictor_owns_immutable_matrix_evidence() -> None:
+    state_matrix = np.eye(2)
+    input_matrix = np.zeros((2, 1))
+    output_matrix = np.eye(2)
+    predictor = _direct_predictor(
+        state_matrix=state_matrix,
+        input_matrix=input_matrix,
+        output_matrix=output_matrix,
+    )
+
+    state_matrix[0, 0] = 99.0
+    input_matrix[0, 0] = 99.0
+    output_matrix[0, 0] = 99.0
+
+    assert predictor.state_matrix[0, 0] == 1.0
+    assert predictor.input_matrix[0, 0] == 0.0
+    assert predictor.output_matrix[0, 0] == 1.0
+    assert predictor.state_matrix.flags.writeable is False
+    assert predictor.input_matrix.flags.writeable is False
+    assert predictor.output_matrix.flags.writeable is False

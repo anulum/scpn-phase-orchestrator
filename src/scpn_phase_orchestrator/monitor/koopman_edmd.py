@@ -254,17 +254,52 @@ def _contains_boolean_alias(value: object) -> bool:
     return any(isinstance(item, (bool, np.bool_)) for item in raw.flat)
 
 
-def _validate_matrix(value: object, *, name: str) -> FloatArray:
-    """Return the value as a validated finite matrix, else raise."""
+def _contains_complex_alias(value: object) -> bool:
+    """Return whether the value contains any complex numeric alias."""
+    try:
+        raw = np.asarray(value)
+    except (TypeError, ValueError):
+        return False
+    if np.iscomplexobj(raw):
+        return True
+    if raw.dtype != object:
+        return False
+    return any(
+        isinstance(item, (complex, np.complexfloating))
+        for item in np.asarray(value, dtype=object).flat
+    )
+
+
+def _contains_only_real_numbers(value: object) -> bool:
+    """Return whether an object payload contains only non-boolean real numbers."""
+    raw = np.asarray(value, dtype=object)
+    return all(
+        isinstance(item, Real) and not isinstance(item, (bool, np.bool_))
+        for item in raw.flat
+    )
+
+
+def _as_real_numeric_array(value: object, *, name: str) -> NDArray[np.float64]:
+    """Return a copied float array after rejecting coercive source aliases."""
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
-    raw = np.asarray(value)
-    if np.iscomplexobj(raw):
+    if _contains_complex_alias(value):
         raise ValueError(f"{name} must be real-valued")
     try:
-        array = raw.astype(np.float64, copy=True)
+        raw = np.asarray(value)
     except (TypeError, ValueError) as exc:
-        raise ValueError(f"{name} must be a real-valued 2-D array") from exc
+        raise ValueError(f"{name} must contain only real numbers") from exc
+    if raw.dtype == object:
+        if not _contains_only_real_numbers(value):
+            raise ValueError(f"{name} must contain only real numbers")
+    elif raw.dtype.kind not in {"f", "i", "u"}:
+        raise ValueError(f"{name} must contain only real numbers")
+    return np.array(raw, dtype=np.float64, copy=True)
+
+
+def _validate_matrix(value: object, *, name: str) -> FloatArray:
+    """Return the value as a validated finite matrix, else raise."""
+    array = _as_real_numeric_array(value, name=name)
     if array.ndim != 2:
         raise ValueError(f"{name} must be a 2-D array, got shape {array.shape}")
     if array.size == 0:
@@ -276,15 +311,7 @@ def _validate_matrix(value: object, *, name: str) -> FloatArray:
 
 def _validate_vector(value: object, *, name: str) -> FloatArray:
     """Return the value as a validated 1-D finite array, else raise."""
-    if _contains_boolean_alias(value):
-        raise ValueError(f"{name} must not contain boolean values")
-    raw = np.asarray(value)
-    if np.iscomplexobj(raw):
-        raise ValueError(f"{name} must be real-valued")
-    try:
-        array = raw.astype(np.float64, copy=True).ravel()
-    except (TypeError, ValueError) as exc:
-        raise ValueError(f"{name} must be a real-valued 1-D array") from exc
+    array = _as_real_numeric_array(value, name=name).ravel()
     if array.size == 0:
         raise ValueError(f"{name} must be non-empty")
     if not np.all(np.isfinite(array)):
@@ -304,7 +331,7 @@ def _validate_int_at_least(value: object, *, name: str, minimum: int) -> int:
 
 def _validate_non_negative_real(value: object, *, name: str) -> float:
     """Return ``value`` as a non-negative finite real, else raise."""
-    if isinstance(value, bool) or not isinstance(value, Real):
+    if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise TypeError(f"{name} must be a real number")
     parsed = float(value)
     if not np.isfinite(parsed) or parsed < 0.0:
@@ -352,8 +379,13 @@ class KoopmanDictionary:
     output_dim: int = field(init=False, default=0)
 
     def __post_init__(self) -> None:
+        """Validate and normalise immutable dictionary configuration."""
+        if not isinstance(self.kind, str):
+            raise TypeError("kind must be a string")
         if self.kind not in _DICTIONARY_KINDS:
             raise ValueError("kind must be one of: " + ", ".join(_DICTIONARY_KINDS))
+        if not isinstance(self.include_constant, bool):
+            raise TypeError("include_constant must be a boolean")
         state_dim = _validate_int_at_least(self.state_dim, name="state_dim", minimum=1)
         object.__setattr__(self, "state_dim", state_dim)
         degree = _validate_int_at_least(self.degree, name="degree", minimum=1)
@@ -371,11 +403,12 @@ class KoopmanDictionary:
                 )
             if self.width <= 0.0:
                 raise ValueError("rbf dictionary requires a positive width")
+            centres.setflags(write=False)
             object.__setattr__(self, "centres", centres)
         elif self.centres is not None:
-            object.__setattr__(
-                self, "centres", _validate_matrix(self.centres, name="centres")
-            )
+            centres = _validate_matrix(self.centres, name="centres")
+            centres.setflags(write=False)
+            object.__setattr__(self, "centres", centres)
         object.__setattr__(self, "output_dim", self._compute_output_dim())
 
     def _compute_output_dim(self) -> int:
@@ -564,6 +597,56 @@ class KoopmanPredictor:
     output_matrix: FloatArray
     dictionary: KoopmanObservables
     fit_residual: float
+
+    def __post_init__(self) -> None:
+        """Validate, copy, and freeze the fitted predictor evidence."""
+        state_matrix = _validate_matrix(self.state_matrix, name="state_matrix")
+        input_matrix = _validate_matrix(self.input_matrix, name="input_matrix")
+        output_matrix = _validate_matrix(self.output_matrix, name="output_matrix")
+        if state_matrix.shape[0] != state_matrix.shape[1]:
+            raise ValueError("state_matrix must be square")
+        lift_dim = int(state_matrix.shape[0])
+        if input_matrix.shape[0] != lift_dim:
+            raise ValueError(f"input_matrix must have {lift_dim} rows")
+        if output_matrix.shape[1] != lift_dim:
+            raise ValueError(f"output_matrix must have {lift_dim} columns")
+
+        try:
+            dictionary_state_dim = self.dictionary.state_dim
+            dictionary_lift = self.dictionary.lift
+        except AttributeError as exc:
+            raise TypeError("dictionary must implement KoopmanObservables") from exc
+        if not callable(dictionary_lift):
+            raise TypeError("dictionary must implement KoopmanObservables")
+        state_dim = _validate_int_at_least(
+            dictionary_state_dim, name="dictionary.state_dim", minimum=1
+        )
+        if output_matrix.shape[0] != state_dim:
+            raise ValueError(
+                f"output_matrix must have {state_dim} rows to match the dictionary"
+            )
+        try:
+            probe = _validate_matrix(
+                dictionary_lift(np.zeros((1, state_dim), dtype=np.float64)),
+                name="dictionary lift output",
+            )
+        except (TypeError, ValueError) as exc:
+            raise ValueError(
+                "dictionary must produce a finite real lift matrix"
+            ) from exc
+        if probe.shape != (1, lift_dim):
+            raise ValueError(
+                "dictionary lift output must have shape "
+                f"(1, {lift_dim}), got {probe.shape}"
+            )
+
+        residual = _validate_non_negative_real(self.fit_residual, name="fit_residual")
+        for matrix in (state_matrix, input_matrix, output_matrix):
+            matrix.setflags(write=False)
+        object.__setattr__(self, "state_matrix", state_matrix)
+        object.__setattr__(self, "input_matrix", input_matrix)
+        object.__setattr__(self, "output_matrix", output_matrix)
+        object.__setattr__(self, "fit_residual", residual)
 
     @property
     def lift_dim(self) -> int:
