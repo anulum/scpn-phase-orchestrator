@@ -61,7 +61,7 @@ pub fn boltzmann_weight(u_total: f64, temperature: f64) -> f64 {
     exponent.exp()
 }
 
-/// Effective temperature from cost fluctuations: T_eff = Var(U) / (2·|<U>|).
+/// Effective temperature from cost fluctuations: `T_eff = Var(U) / (2·|<U>|)`.
 #[must_use]
 pub fn effective_temperature(costs: &[f64]) -> f64 {
     if costs.len() < 2 {

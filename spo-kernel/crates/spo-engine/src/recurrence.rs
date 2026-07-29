@@ -39,7 +39,7 @@ pub struct RqaResult {
 /// * `angular` - if true, use chord distance on S¹ per dimension
 ///
 /// # Returns
-/// Flattened (T × T) boolean matrix as Vec<u8> (1 = recurrent, 0 = not).
+/// Flattened (T × T) boolean matrix as `Vec<u8>` (1 = recurrent, 0 = not).
 ///
 /// # Errors
 /// Returns error if trajectory length ≠ T × d.

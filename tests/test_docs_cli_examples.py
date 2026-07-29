@@ -48,9 +48,7 @@ def _logical_lines(path: Path) -> Iterator[str]:
         yield pending
 
 
-def _documented_commands() -> Iterator[
-    tuple[Path, tuple[str, ...], tuple[str, ...]]
-]:
+def _documented_commands() -> Iterator[tuple[Path, tuple[str, ...], tuple[str, ...]]]:
     for path in DOC_PATHS:
         for line in _logical_lines(path):
             if not line.startswith("spo "):
@@ -68,10 +66,14 @@ def _documented_commands() -> Iterator[
                 command_path.append(tokens[cursor])
                 command = subcommand
                 cursor += 1
-            yield path, tuple(command_path), tuple(
-                token.split("=", maxsplit=1)[0]
-                for token in tokens[2:]
-                if token.startswith("--")
+            yield (
+                path,
+                tuple(command_path),
+                tuple(
+                    token.split("=", maxsplit=1)[0]
+                    for token in tokens[2:]
+                    if token.startswith("--")
+                ),
             )
 
 
@@ -124,9 +126,7 @@ def test_documented_top_level_commands_and_options_exist() -> None:
 def test_every_public_literal_spo_command_exists() -> None:
     problems: list[str] = []
     for path in DOC_PATHS:
-        for lineno, line in enumerate(
-            path.read_text(encoding="utf-8").splitlines(), 1
-        ):
+        for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
             for match in re.finditer(r"(?<![\w-])spo\s+([a-z][a-z0-9-]*)", line):
                 name = match.group(1)
                 if name not in main.commands:
