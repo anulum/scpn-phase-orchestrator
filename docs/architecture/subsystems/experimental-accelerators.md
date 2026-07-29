@@ -17,6 +17,11 @@ facades are private namespaces with explicit empty `__all__` contracts. This
 prevents import-order side effects from turning attached implementation
 subpackages into wildcard exports. Production dispatchers may still import
 named private backend modules through the allowlisted accelerator ports.
+The optional-backend import guard discovers the installed experimental package
+tree and imports every package, runtime helper, validator, and bridge, then
+checks that the resulting inventory is present in the exercised backend set.
+This prevents a newly added private module from silently escaping import-safety
+coverage or making an optional dependency eager at module import time.
 
 - `coupling/` (17 files): Hodge, spectral, attention residuals, spatial modulator.
 - `monitor/` (70 files): Koopman-EDMD, Lyapunov, transfer entropy, ITPC,

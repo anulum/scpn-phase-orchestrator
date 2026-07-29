@@ -9,10 +9,12 @@
 from __future__ import annotations
 
 import importlib
+import pkgutil
 from typing import get_type_hints
 
 import pytest
 
+import scpn_phase_orchestrator.experimental as experimental
 from scpn_phase_orchestrator.experimental.accelerators.upde import (
     _simplicial_go,
     _simplicial_julia,
@@ -36,7 +38,7 @@ swarmalator_step_go = _swarmalator_go.swarmalator_step_go
 swarmalator_step_julia = _swarmalator_julia.swarmalator_step_julia
 swarmalator_step_mojo = _swarmalator_mojo.swarmalator_step_mojo
 
-BACKEND_MODULES = (
+DECLARED_BACKEND_MODULES = (
     "scpn_phase_orchestrator.coupling._attnres_go",
     "scpn_phase_orchestrator.coupling._attnres_julia",
     "scpn_phase_orchestrator.coupling._attnres_mojo",
@@ -225,6 +227,18 @@ BACKEND_MODULES = (
     "scpn_phase_orchestrator.upde._swarmalator_mojo",
 )
 
+EXPERIMENTAL_MODULES = tuple(
+    module.name
+    for module in pkgutil.walk_packages(
+        experimental.__path__,
+        prefix=f"{experimental.__name__}.",
+    )
+)
+
+BACKEND_MODULES = tuple(
+    dict.fromkeys((*DECLARED_BACKEND_MODULES, *EXPERIMENTAL_MODULES))
+)
+
 
 RUNTIME_MODULES = (
     "scpn_phase_orchestrator.runtime.cli",
@@ -280,6 +294,11 @@ def test_presplit_runtime_import_surface_is_removed(module_name: str) -> None:
 def test_optional_backend_module_import_surface(module_name: str) -> None:
     module = importlib.import_module(module_name)
     assert module.__name__ == module_name
+
+
+def test_backend_import_inventory_covers_every_experimental_module() -> None:
+    assert set(EXPERIMENTAL_MODULES) <= set(BACKEND_MODULES)
+    assert len(BACKEND_MODULES) == len(set(BACKEND_MODULES))
 
 
 def test_optional_upde_backend_array_contracts_are_parameterised() -> None:
