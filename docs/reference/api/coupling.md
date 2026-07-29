@@ -538,6 +538,12 @@ Neuroscience-realistic coupling matrices.
 `load_neurolib_hcp(n_regions=80)` loads real HCP structural connectivity
 from the neurolib library. Supports n_regions from 2 to 80.
 
+Both loaders validate optional-backend matrices before publication. Boolean,
+complex/object-complex, and numeric-string aliases are rejected before
+`float64` conversion; finite real numeric-object matrices remain compatible.
+Shape, finiteness, non-negativity, symmetry, and zero-diagonal constraints are
+then replayed at the public Python boundary.
+
 **Performance:** `load_hcp_connectome(80)` < 10 ms (Python), ~48 µs (Rust, 17.6x speedup).
 **Detailed documentation:** [HCP Connectome — detailed reference](coupling_connectome.md)
 

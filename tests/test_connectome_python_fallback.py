@@ -84,6 +84,14 @@ def test_neurolib_hcp_loader_validates_and_slices_dataset(
         (lambda matrix: matrix.__setitem__((0, 1), -0.25), "non-negative"),
         (lambda matrix: matrix.__setitem__((0, 1), np.bool_(True)), "boolean"),
         (lambda matrix: matrix.__setitem__((0, 1), complex(0.2, 0.0)), "real-valued"),
+        (
+            lambda matrix: matrix.__setitem__((0, 1), np.str_("0.2")),
+            "numeric-string aliases",
+        ),
+        (
+            lambda matrix: matrix.__setitem__((0, 1), np.bytes_(b"0.2")),
+            "numeric-string aliases",
+        ),
     ],
 )
 def test_neurolib_hcp_loader_rejects_invalid_dataset_contract(

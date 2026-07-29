@@ -186,14 +186,22 @@ def test_optional_rust_loader_rejects_contract_violation(monkeypatch):
             ),
             "must contain real-valued weights",
         ),
+        (
+            np.asarray([["0.0", "0.2"], ["0.2", "0.0"]]),
+            "must not contain numeric-string aliases",
+        ),
+        (
+            np.asarray([[b"0.0", b"0.2"], [b"0.2", b"0.0"]]),
+            "must not contain numeric-string aliases",
+        ),
     ],
 )
-def test_optional_rust_loader_rejects_boolean_and_complex_aliases(
+def test_optional_rust_loader_rejects_coercive_source_aliases(
     monkeypatch,
     payload,
     message,
 ):
-    """Optional FFI output must not rely on float coercion for graph weights."""
+    """Optional FFI output must not rely on coercion for graph weights."""
 
     def fake_rust_load_hcp(n_regions, seed):
         return payload.ravel()

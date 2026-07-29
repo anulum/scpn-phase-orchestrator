@@ -37,6 +37,10 @@ The `CouplingBuilder` Rust seam also validates raw `K_nm` and `alpha` source
 types before conversion. Boolean, complex/object-complex, and numeric-string
 aliases fail into the deterministic NumPy fallback while finite real numeric-
 object matrices retain compatibility and all physical invariants are replayed.
+The HCP connectome seam applies the same source-aware rejection to optional
+Rust and neurolib matrices before publication, then replays shape, finiteness,
+non-negativity, symmetry, and zero-diagonal invariants. Unlike the builder,
+invalid connectome backend output fails closed rather than changing data source.
 `coupling_est` is intentionally Python-only for small-N least-squares review.
 `plasticity` is also intentionally Python-only at the public API boundary:
 `spo-engine/src/plasticity.rs` includes a native model with decay and `dt`, while

@@ -61,6 +61,17 @@ def test_coerce_accepts_clean_symmetric_matrix() -> None:
     np.testing.assert_allclose(out, value)
 
 
+def test_coerce_accepts_finite_real_numeric_object_matrix() -> None:
+    """Real numeric objects remain compatible after source-type validation."""
+    value = np.array([[0, np.float32(0.3)], [np.float32(0.3), 0]], dtype=object)
+
+    out = connectome._validate_connectome_matrix(value, n_regions=2, source="probe")
+
+    assert out.dtype == np.float64
+    assert out.flags["C_CONTIGUOUS"]
+    np.testing.assert_allclose(out, [[0.0, 0.3], [0.3, 0.0]])
+
+
 @pytest.mark.parametrize(
     ("dtype", "message"),
     [

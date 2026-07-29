@@ -93,6 +93,16 @@ def _coerce_connectome_matrix(
         raise ValueError(f"{source} connectome output must not contain boolean values")
     if any(isinstance(item, complex | np.complexfloating) for item in raw.ravel()):
         raise ValueError(f"{source} connectome output must contain real-valued weights")
+    for item in raw.ravel():
+        if not isinstance(item, str | bytes | np.str_ | np.bytes_):
+            continue
+        try:
+            float(item)
+        except (TypeError, ValueError):
+            continue
+        raise ValueError(
+            f"{source} connectome output must not contain numeric-string aliases"
+        )
     try:
         matrix = np.asarray(raw, dtype=np.float64)
     except (TypeError, ValueError) as exc:
@@ -211,6 +221,16 @@ def _load_hcp_connectome_cached(
                 raise ValueError(
                     "Rust HCP connectome output must contain real-valued weights"
                 )
+        for item in raw_array.ravel():
+            if not isinstance(item, str | bytes | np.str_ | np.bytes_):
+                continue
+            try:
+                float(item)
+            except (TypeError, ValueError):
+                continue
+            raise ValueError(
+                "Rust HCP connectome output must not contain numeric-string aliases"
+            )
         try:
             flat: FloatArray = np.asarray(raw_array, dtype=np.float64)
         except (TypeError, ValueError) as exc:
