@@ -456,7 +456,7 @@ def _valid_result_fields() -> dict[str, object]:
         ("R", float("nan"), "R"),
         ("R", 1.1, "R"),
         ("Psi", "0.0", "Psi"),
-        ("Psi", 4.0, "Psi"),
+        ("Psi", 7.0, "Psi"),
         ("entanglement_entropy", -0.1, "entanglement_entropy"),
         ("entanglement_entropy", 2.0, "bipartition maximum"),
         ("normalised_entanglement_entropy", 1.1, "normalised"),
@@ -490,6 +490,12 @@ def test_hybrid_result_rejects_contradictory_normalised_entropy() -> None:
     fields["record_hash"] = "0" * 64
     with pytest.raises(ValueError, match="normalised"):
         HybridOrderParameterResult(**fields)  # type: ignore[arg-type]
+
+
+def test_hybrid_result_accepts_canonical_upper_half_circle_phase() -> None:
+    result = _compute(phases=np.array([4.0, 4.2], dtype=np.float64))
+
+    assert np.pi < result.Psi < 2.0 * np.pi
 
 
 def test_hybrid_accepts_noncoercive_numeric_object_arrays() -> None:

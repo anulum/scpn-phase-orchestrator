@@ -67,8 +67,8 @@ class HybridOrderParameterResult:
         if not 0.0 <= r_value <= 1.0:
             raise ValueError("R must be a finite number in [0, 1]")
         psi_value = _finite_real(self.Psi, name="Psi")
-        if not -np.pi <= psi_value <= np.pi:
-            raise ValueError("Psi must be a finite phase in [-pi, pi]")
+        if not 0.0 <= psi_value < 2.0 * np.pi:
+            raise ValueError("Psi must be a canonical phase in [0, 2*pi)")
         entropy = _finite_real(self.entanglement_entropy, name="entanglement_entropy")
         if entropy < 0.0:
             raise ValueError("entanglement_entropy must be finite and non-negative")
