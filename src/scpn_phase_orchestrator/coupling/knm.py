@@ -163,6 +163,12 @@ def _validate_coupling_output(
 ) -> tuple[FloatArray, FloatArray]:
     """Return the validated coupling-matrix output, else raise."""
     for name, value in (("K_nm", knm), ("alpha", alpha)):
+        if isinstance(value, np.ndarray) and value.dtype.kind in {"f", "i", "u"}:
+            continue
+        if isinstance(value, (list, tuple)) and all(
+            type(item) is float for item in value
+        ):
+            continue
         try:
             raw = np.asarray(value, dtype=object)
         except (TypeError, ValueError):

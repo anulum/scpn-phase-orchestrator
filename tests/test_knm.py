@@ -119,6 +119,7 @@ def test_invalid_rust_build_output_falls_back_to_numpy(monkeypatch):
         for field in ("knm", "alpha")
         for payload in (
             np.zeros(16, dtype=bool),
+            [0.0, True, *([0.0] * 14)],
             np.full(16, 0.2j, dtype=np.complex128),
             np.full(16, "0.0", dtype=object),
             np.full(16, "bad", dtype=object),
