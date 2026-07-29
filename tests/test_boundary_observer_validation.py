@@ -13,6 +13,9 @@ wiring.
 
 from __future__ import annotations
 
+from typing import Any
+
+import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.binding.types import BoundaryDef
@@ -120,3 +123,113 @@ def test_u1_boundary_observer_set_event_bus_rejects_none() -> None:
     obs = BoundaryObserver([])
     with pytest.raises(TypeError, match="EventBus"):
         obs.set_event_bus(None)  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize(
+    "bound",
+    [True, np.bool_(True), "0.5", 0.5 + 0j, float("nan"), float("inf")],
+)
+def test_boundary_observer_rejects_coercive_or_non_finite_bounds(bound: Any) -> None:
+    bdef = BoundaryDef(
+        name="floor",
+        variable="x",
+        lower=bound,
+        upper=None,
+        severity="soft",
+    )
+
+    with pytest.raises(ValueError, match="lower bound must be finite real"):
+        BoundaryObserver([bdef])
+
+
+def test_boundary_observer_rejects_coercive_upper_bound() -> None:
+    bdef = BoundaryDef(
+        name="ceiling",
+        variable="x",
+        lower=None,
+        upper="1.0",  # type: ignore[arg-type]
+        severity="hard",
+    )
+
+    with pytest.raises(ValueError, match="upper bound must be finite real"):
+        BoundaryObserver([bdef])
+
+
+def test_boundary_observer_revalidates_tampered_bound_order() -> None:
+    bdef = BoundaryDef(
+        name="band",
+        variable="x",
+        lower=None,
+        upper=None,
+        severity="hard",
+    )
+    object.__setattr__(bdef, "lower", 2.0)
+    object.__setattr__(bdef, "upper", 1.0)
+
+    with pytest.raises(ValueError, match="requires lower < upper"):
+        BoundaryObserver([bdef])
+
+
+@pytest.mark.parametrize("field", ["name", "variable"])
+def test_boundary_observer_rejects_non_text_identifiers(field: str) -> None:
+    kwargs: dict[str, Any] = {
+        "name": "floor",
+        "variable": "x",
+        "lower": None,
+        "upper": None,
+        "severity": "soft",
+    }
+    kwargs[field] = 7
+
+    with pytest.raises(ValueError, match="non-empty name and variable"):
+        BoundaryObserver([BoundaryDef(**kwargs)])
+
+
+def test_boundary_observer_rejects_non_text_severity() -> None:
+    bdef = BoundaryDef(
+        name="floor",
+        variable="x",
+        lower=0.0,
+        upper=None,
+        severity=None,  # type: ignore[arg-type]
+    )
+
+    with pytest.raises(ValueError, match="severity must be a string"):
+        BoundaryObserver([bdef])
+
+
+def test_boundary_observer_snapshots_caller_owned_definitions() -> None:
+    definitions = [
+        BoundaryDef(
+            name="floor",
+            variable="x",
+            lower=0.0,
+            upper=None,
+            severity="soft",
+        )
+    ]
+    observer = BoundaryObserver(definitions)
+    definitions.clear()
+
+    state = observer.observe({"x": -1.0})
+
+    assert len(state.soft_violations) == 1
+
+
+def test_boundary_observer_accepts_numpy_real_measurements_and_step() -> None:
+    observer = BoundaryObserver(
+        [
+            BoundaryDef(
+                name="floor",
+                variable="x",
+                lower=np.float32(0.0),
+                upper=None,
+                severity="soft",
+            )
+        ]
+    )
+
+    state = observer.observe({"x": np.float32(-1.0)}, step=np.int64(3))  # type: ignore[dict-item,arg-type]
+
+    assert len(state.soft_violations) == 1
+    assert observer._step == 3

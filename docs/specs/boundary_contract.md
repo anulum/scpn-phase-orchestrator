@@ -109,6 +109,10 @@ observer = BoundaryObserver(boundary_defs=spec.boundaries)
 
 The `boundary_defs` argument is a list of `BoundaryDef` dataclasses,
 typically loaded from the binding spec via `load_binding_spec()`.
+Construction snapshots that caller-owned list and normalises valid real bounds
+to finite Python floats. Boolean, complex, text-coercible, and non-finite bounds
+are rejected, as are non-text identifiers and severities. Unknown *string*
+severities remain fail-hard at observation time, as described below.
 
 ### Observation
 
@@ -133,6 +137,11 @@ The `observe()` method:
    appropriate list in `BoundaryState`.
 6. If any violations occurred and an `EventBus` is attached, posts a
    `RegimeEvent` with `kind="boundary_breach"`.
+
+Measurement values must be finite real scalars; boolean, complex, text, and
+non-finite aliases are rejected before any comparison or event publication.
+Python and NumPy real scalars are accepted. The optional step is a non-negative
+Python or NumPy integer, excluding booleans.
 
 ### Step Tracking
 

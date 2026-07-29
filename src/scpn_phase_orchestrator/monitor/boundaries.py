@@ -21,6 +21,7 @@ from __future__ import annotations
 import logging
 from dataclasses import dataclass, field
 from math import isfinite
+from numbers import Integral, Real
 from typing import TYPE_CHECKING
 
 from scpn_phase_orchestrator.binding.types import BoundaryDef
@@ -31,6 +32,14 @@ if TYPE_CHECKING:
     from scpn_phase_orchestrator.supervisor.events import EventBus
 
 __all__ = ["BoundaryState", "BoundaryObserver"]
+
+
+def _finite_real(value: object) -> float | None:
+    """Return a finite real as ``float``, or ``None`` when invalid."""
+    if isinstance(value, bool) or not isinstance(value, Real):
+        return None
+    result = float(value)
+    return result if isfinite(result) else None
 
 
 @dataclass
@@ -48,39 +57,50 @@ class BoundaryObserver:
     def __init__(self, boundary_defs: list[BoundaryDef]):
         if not isinstance(boundary_defs, list):
             raise TypeError("boundary_defs must be a list[BoundaryDef]")
+        normalised_defs: list[BoundaryDef] = []
         for idx, bdef in enumerate(boundary_defs):
             if not isinstance(bdef, BoundaryDef):
                 raise TypeError(
                     f"boundary_defs[{idx}] must be BoundaryDef, got {bdef!r}"
                 )
-            if not bdef.name.strip() or not bdef.variable.strip():
+            if (
+                not isinstance(bdef.name, str)
+                or not bdef.name.strip()
+                or not isinstance(bdef.variable, str)
+                or not bdef.variable.strip()
+            ):
                 raise ValueError(
                     f"boundary_defs[{idx}] requires non-empty name and variable"
                 )
-            if bdef.lower is not None and (
-                isinstance(bdef.lower, bool) or not isfinite(float(bdef.lower))
-            ):
+            if not isinstance(bdef.severity, str):
+                raise ValueError(f"boundary_defs[{idx}] severity must be a string")
+            lower = None if bdef.lower is None else _finite_real(bdef.lower)
+            if bdef.lower is not None and lower is None:
                 raise ValueError(
-                    f"boundary_defs[{idx}] lower bound must be finite, "
+                    f"boundary_defs[{idx}] lower bound must be finite real, "
                     f"got {bdef.lower!r}"
                 )
-            if bdef.upper is not None and (
-                isinstance(bdef.upper, bool) or not isfinite(float(bdef.upper))
-            ):
+            upper = None if bdef.upper is None else _finite_real(bdef.upper)
+            if bdef.upper is not None and upper is None:
                 raise ValueError(
-                    f"boundary_defs[{idx}] upper bound must be finite, "
+                    f"boundary_defs[{idx}] upper bound must be finite real, "
                     f"got {bdef.upper!r}"
                 )
-            if (
-                bdef.lower is not None
-                and bdef.upper is not None
-                and float(bdef.lower) > float(bdef.upper)
-            ):
+            if lower is not None and upper is not None and lower >= upper:
                 raise ValueError(
-                    f"boundary_defs[{idx}] requires lower <= upper, "
+                    f"boundary_defs[{idx}] requires lower < upper, "
                     f"got {bdef.lower!r}>{bdef.upper!r}"
                 )
-        self._defs = boundary_defs
+            normalised_defs.append(
+                BoundaryDef(
+                    name=bdef.name,
+                    variable=bdef.variable,
+                    lower=lower,
+                    upper=upper,
+                    severity=bdef.severity,
+                )
+            )
+        self._defs = tuple(normalised_defs)
         self._event_bus: EventBus | None = None
         self._step = 0
 
@@ -139,23 +159,22 @@ class BoundaryObserver:
         if not isinstance(values, dict):
             raise TypeError(f"values must be dict[str, float], got {values!r}")
         if step is not None:
-            if isinstance(step, bool) or not isinstance(step, int) or step < 0:
+            if isinstance(step, bool) or not isinstance(step, Integral) or step < 0:
                 raise ValueError(f"step must be a non-negative integer, got {step!r}")
-            self._step = step
+            self._step = int(step)
         state = BoundaryState()
+        normalised_values: dict[str, float] = {}
         for name, value in values.items():
             if not isinstance(name, str) or not name.strip():
                 raise ValueError(f"value keys must be non-empty strings, got {name!r}")
-            if isinstance(value, bool) or not isinstance(value, (int, float)):
+            normalised = _finite_real(value)
+            if normalised is None:
                 raise ValueError(
                     f"values[{name!r}] must be finite float, got {value!r}"
                 )
-            if not isfinite(float(value)):
-                raise ValueError(
-                    f"values[{name!r}] must be finite float, got {value!r}"
-                )
+            normalised_values[name] = normalised
         for bdef in self._defs:
-            val = values.get(bdef.variable)
+            val = normalised_values.get(bdef.variable)
             if val is None:
                 continue
 
