@@ -288,12 +288,12 @@ Three-criterion battery that distinguishes genuine entrainment
 criteria must pass for `is_entrained=True`:
 
 1. **ITPC persistence:** Mean inter-trial phase coherence across time
-   points must exceed threshold (default 0.5)
+   points must exceed threshold (default 0.6)
 2. **Survival during pause:** ITPC must remain elevated after the
    stimulus stops, proving the oscillator was entrained (not just
-   responding reactively)
+   responding reactively; default threshold 0.4)
 3. **Frequency specificity:** ITPC at the target frequency divided by
-   ITPC at a control frequency must exceed threshold (default 2.0),
+   ITPC at a control frequency must exceed threshold (default 1.5),
    proving the locking is frequency-specific
 
 **Usage:**
@@ -308,8 +308,9 @@ monitor = EVSMonitor(
 )
 result = monitor.evaluate(
     phases_trials,        # (n_trials, T) phase matrix
-    pause_start=500,      # timestep where stimulus pauses
-    control_frequency=2,  # index of control frequency band
+    pause_indices=list(range(500, 600)),
+    target_freq=10.0,     # stimulus frequency in Hz
+    control_freq=7.0,     # comparison frequency in Hz
 )
 # result.is_entrained: bool
 # result.itpc_value, result.persistence_score, result.specificity_ratio
@@ -319,6 +320,10 @@ result = monitor.evaluate(
     options:
       members:
         - EVSMonitor
+
+EVS rejects coercive phase aliases before ITPC, normalises pause indices to a
+unique in-range set, and verifies every native specificity score against the
+canonical NumPy calculation before it can affect the entrainment verdict.
 
 ## Partial Information Decomposition (PID)
 

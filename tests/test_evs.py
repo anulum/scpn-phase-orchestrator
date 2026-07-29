@@ -12,6 +12,7 @@ import importlib
 import math
 import sys
 import types
+from numbers import Real
 from typing import Any, cast, get_type_hints
 
 import numpy as np
@@ -118,6 +119,47 @@ def test_evaluate_rejects_object_complex_phase_trials_as_non_real() -> None:
         EVSMonitor().evaluate(phases, [0], 10.0, 20.0)
 
 
+def test_evaluate_rejects_numeric_string_phase_aliases() -> None:
+    phases = np.asarray([["0.0", "1.0"], ["0.2", "1.2"]])
+
+    with pytest.raises(ValueError, match="phases_trials"):
+        EVSMonitor().evaluate(phases, [0], 10.0, 20.0)
+
+
+def test_evaluate_wraps_a_broken_phase_array_protocol() -> None:
+    class BrokenArray:
+        def __array__(self) -> np.ndarray:
+            raise TypeError("broken")
+
+    with pytest.raises(ValueError, match="phases_trials"):
+        EVSMonitor().evaluate(BrokenArray(), [0], 10.0, 20.0)
+
+
+def test_evaluate_accepts_real_numeric_object_phase_samples() -> None:
+    phases = np.asarray([[0, 1.0], [0.2, np.float32(1.2)]], dtype=object)
+
+    result = EVSMonitor(specificity_threshold=1.0).evaluate(
+        phases,
+        [0],
+        10.0,
+        20.0,
+    )
+
+    assert isinstance(result, EVSResult)
+
+
+def test_evaluate_wraps_a_broken_real_scalar_conversion() -> None:
+    class BrokenReal:
+        def __float__(self) -> float:
+            raise TypeError("broken")
+
+    Real.register(BrokenReal)
+    phases = np.asarray([[BrokenReal()]], dtype=object)
+
+    with pytest.raises(ValueError, match="phases_trials"):
+        EVSMonitor().evaluate(phases, [0], 10.0, 20.0)
+
+
 @pytest.mark.parametrize(
     "pause_indices",
     [[0.5], [True], [0, True], np.array([[0, 1]]), ["not-an-index"], [math.inf]],
@@ -126,6 +168,49 @@ def test_evaluate_rejects_invalid_pause_indices(pause_indices):
     phases = _entrained_phases(n_trials=4, n_time=8)
     with pytest.raises((TypeError, ValueError), match="pause_indices"):
         EVSMonitor().evaluate(phases, pause_indices, 10.0, 20.0)
+
+
+def test_pause_indices_are_bounded_and_deduplicated_before_persistence(
+    monkeypatch,
+) -> None:
+    phases = _entrained_phases(n_trials=4, n_time=3)
+    captured: dict[str, np.ndarray] = {}
+
+    monkeypatch.setattr(evs_mod, "compute_itpc", lambda _phases: np.ones(3))
+
+    def persistence(_phases: np.ndarray, pause_indices: np.ndarray) -> float:
+        captured["pause_indices"] = pause_indices
+        return 1.0
+
+    monkeypatch.setattr(evs_mod, "itpc_persistence", persistence)
+    monkeypatch.setattr(
+        EVSMonitor,
+        "_frequency_specificity",
+        staticmethod(lambda *_args: 1.0),
+    )
+
+    EVSMonitor(specificity_threshold=1.0).evaluate(
+        phases,
+        [-2, 0, 0, 1, 99],
+        10.0,
+        20.0,
+    )
+
+    np.testing.assert_array_equal(captured["pause_indices"], np.array([0, 1]))
+
+
+def test_pause_indices_reject_int64_overflow_and_broken_array_protocol() -> None:
+    phases = _entrained_phases(n_trials=4, n_time=3)
+
+    with pytest.raises(ValueError, match="pause_indices"):
+        EVSMonitor().evaluate(phases, [2**63], 10.0, 20.0)
+
+    class BrokenArray:
+        def __array__(self, *_args: object, **_kwargs: object) -> np.ndarray:
+            raise TypeError("broken")
+
+    with pytest.raises(ValueError, match="pause_indices"):
+        EVSMonitor().evaluate(phases, BrokenArray(), 10.0, 20.0)
 
 
 @pytest.mark.parametrize(
@@ -260,6 +345,7 @@ def test_specificity_zero_control_and_zero_target_returns_zero(monkeypatch):
 
 def test_rust_frequency_specificity_receives_flat_phase_trials(monkeypatch):
     phases = _entrained_phases(n_trials=3, n_time=5)
+    expected = evs_mod._frequency_specificity_reference(phases, 12.0, 18.0)
     captured: dict[str, object] = {}
 
     def rust_freq_spec(
@@ -272,14 +358,14 @@ def test_rust_frequency_specificity_receives_flat_phase_trials(monkeypatch):
         captured["flat_contiguous"] = flat.flags.c_contiguous
         captured["shape"] = (n_trials, n_tp)
         captured["frequencies"] = (target_freq, control_freq)
-        return 2.5
+        return expected
 
     monkeypatch.setattr(evs_mod, "_HAS_RUST", True)
     monkeypatch.setattr(evs_mod, "_rust_freq_spec", rust_freq_spec, raising=False)
 
     specificity = EVSMonitor._frequency_specificity(phases[:, ::-1], 12.0, 18.0)
 
-    assert specificity == 2.5
+    assert specificity == pytest.approx(expected)
     assert captured == {
         "flat_contiguous": True,
         "shape": (3, 5),
@@ -306,6 +392,17 @@ def test_rust_frequency_specificity_rejects_invalid_backend_output(
     )
 
     with pytest.raises((TypeError, ValueError), match="specificity_ratio"):
+        EVSMonitor._frequency_specificity(phases, 12.0, 18.0)
+
+
+def test_rust_frequency_specificity_rejects_plausible_wrong_output(
+    monkeypatch,
+) -> None:
+    phases = _entrained_phases(n_trials=3, n_time=5)
+    monkeypatch.setattr(evs_mod, "_HAS_RUST", True)
+    monkeypatch.setattr(evs_mod, "_rust_freq_spec", lambda *_args: 1.25)
+
+    with pytest.raises(ValueError, match="diverged from exact reference"):
         EVSMonitor._frequency_specificity(phases, 12.0, 18.0)
 
 

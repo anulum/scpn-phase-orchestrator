@@ -121,7 +121,10 @@ class EVSMonitor:
             EVSResult with all three sub-scores and the overall verdict.
         """
         phases = _validate_phase_trials(phases_trials)
-        pause_idx = _validate_pause_indices(pause_indices)
+        pause_idx = _validate_pause_indices(
+            pause_indices,
+            n_timepoints=phases.shape[1],
+        )
         target = _validate_positive_real(target_freq, name="target_freq")
         control = _validate_positive_real(control_freq, name="control_freq")
 
@@ -165,27 +168,35 @@ class EVSMonitor:
         phases = _validate_phase_trials(phases_trials)
         target = _validate_positive_real(target_freq, name="target_freq")
         control = _validate_positive_real(control_freq, name="control_freq")
+        expected = _frequency_specificity_reference(phases, target, control)
 
         if _HAS_RUST:
             p = np.ascontiguousarray(phases, dtype=np.float64)
             n_trials, n_tp = p.shape
             return _validate_specificity_ratio(
-                _rust_freq_spec(p.ravel(), n_trials, n_tp, target, control)
+                _rust_freq_spec(p.ravel(), n_trials, n_tp, target, control),
+                expected=expected,
             )
 
-        itpc_target = compute_itpc(phases)
-        target_mean = float(np.mean(itpc_target)) if itpc_target.size > 0 else 0.0
+        return _validate_specificity_ratio(expected, expected=expected)
 
-        # Phase at control frequency: rescale by freq ratio
-        ratio = control / target
-        control_phases = phases * ratio
-        itpc_control = compute_itpc(control_phases)
-        control_mean = float(np.mean(itpc_control)) if itpc_control.size > 0 else 0.0
 
-        if control_mean < 1e-12:
-            return float("inf") if target_mean > 0 else 0.0
+def _frequency_specificity_reference(
+    phases: FloatArray,
+    target_freq: float,
+    control_freq: float,
+) -> float:
+    """Return the canonical NumPy target/control ITPC ratio."""
+    itpc_target = compute_itpc(phases)
+    target_mean = float(np.mean(itpc_target)) if itpc_target.size > 0 else 0.0
 
-        return target_mean / control_mean
+    control_phases = phases * (control_freq / target_freq)
+    itpc_control = compute_itpc(control_phases)
+    control_mean = float(np.mean(itpc_control)) if itpc_control.size > 0 else 0.0
+
+    if control_mean < 1e-12:
+        return float("inf") if target_mean > 0 else 0.0
+    return target_mean / control_mean
 
 
 def _validate_unit_threshold(value: object, *, name: str) -> float:
@@ -204,13 +215,24 @@ def _validate_positive_real(value: object, *, name: str) -> float:
     return scalar
 
 
-def _validate_specificity_ratio(value: object) -> float:
-    """Return the specificity ratio as a validated value in [0, 1], else raise."""
+def _validate_specificity_ratio(
+    value: object,
+    *,
+    expected: float | None = None,
+) -> float:
+    """Return a non-negative ratio matching any exact reference, else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise TypeError("specificity_ratio must be a real value")
     scalar = float(value)
     if np.isnan(scalar) or scalar < 0.0:
         raise ValueError("specificity_ratio must be non-negative")
+    if expected is not None and not np.isclose(
+        scalar,
+        expected,
+        rtol=1e-12,
+        atol=1e-12,
+    ):
+        raise ValueError("specificity_ratio diverged from exact reference")
     return scalar
 
 
@@ -226,11 +248,21 @@ def _validate_real(value: object, *, name: str) -> float:
 
 def _validate_phase_trials(value: object) -> FloatArray:
     """Return the per-trial phase array as a validated 2-D finite array, else raise."""
-    raw = np.asarray(value)
-    if _contains_boolean_alias(raw):
-        raise ValueError("phases_trials must not contain boolean values")
-    if _contains_complex_alias(raw):
-        raise ValueError("phases_trials must contain real-valued phase samples")
+    try:
+        raw = np.asarray(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("phases_trials must be a finite 2-D phase matrix") from exc
+    if raw.dtype.kind == "O":
+        if any(
+            isinstance(item, (bool, np.bool_, complex, str, bytes, np.str_, np.bytes_))
+            or not isinstance(item, Real)
+            for item in raw.flat
+        ):
+            raise ValueError(
+                "phases_trials must contain real-valued finite phase samples"
+            )
+    elif raw.dtype.kind not in "iuf":
+        raise ValueError("phases_trials must contain real-valued finite phase samples")
     try:
         phases = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
@@ -246,43 +278,32 @@ def _validate_phase_trials(value: object) -> FloatArray:
         )
     if not np.all(np.isfinite(phases)):
         raise ValueError("phases_trials must contain only finite values")
-    return phases
+    return np.ascontiguousarray(phases)
 
 
-def _validate_pause_indices(value: list[int] | IntArray) -> IntArray:
-    """Return the validated pause/window indices, else raise ``ValueError``."""
-    if _contains_boolean_alias(value):
-        raise TypeError("pause_indices must contain integer indices, not booleans")
-    raw = np.asarray(value)
+def _validate_pause_indices(
+    value: list[int] | IntArray,
+    *,
+    n_timepoints: int,
+) -> IntArray:
+    """Return unique in-range pause/window indices, else raise ``ValueError``."""
+    try:
+        raw = np.asarray(value, dtype=object)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("pause_indices must be a 1-D integer index array") from exc
     if raw.ndim != 1:
         raise ValueError("pause_indices must be a 1-D integer index array")
-    if not all(isinstance(index, Integral) for index in raw.flat):
+    flat = tuple(raw.flat)
+    if not all(
+        isinstance(index, Integral) and not isinstance(index, (bool, np.bool_))
+        for index in flat
+    ):
         raise TypeError("pause_indices must contain integer indices")
-    numeric = np.asarray(value, dtype=np.float64)
-    if not np.all(np.isfinite(numeric)):
-        raise ValueError("pause_indices must contain finite integer indices")
-    return numeric.astype(np.int64)
-
-
-def _contains_boolean_alias(value: object) -> bool:
-    """Return whether the value contains any boolean alias."""
-    if isinstance(value, (bool, np.bool_)):
-        return True
-    if isinstance(value, (list, tuple)):
-        return any(_contains_boolean_alias(item) for item in value)
-    raw = np.asarray(value)
-    if raw.dtype == np.bool_:
-        return True
-    if raw.dtype == object:
-        return any(isinstance(item, (bool, np.bool_)) for item in raw.flat)
-    return False
-
-
-def _contains_complex_alias(value: object) -> bool:
-    """Return whether the value contains any complex-number alias."""
-    raw = np.asarray(value)
-    if np.iscomplexobj(raw):
-        return True
-    if raw.dtype == object:
-        return any(isinstance(item, (complex, np.complexfloating)) for item in raw.flat)
-    return False
+    int64_info = np.iinfo(np.int64)
+    if any(
+        int(index) < int64_info.min or int(index) > int64_info.max for index in flat
+    ):
+        raise ValueError("pause_indices must fit signed 64-bit integers")
+    indices = np.asarray([int(index) for index in flat], dtype=np.int64)
+    valid = indices[(indices >= 0) & (indices < n_timepoints)]
+    return np.ascontiguousarray(np.unique(valid), dtype=np.int64)

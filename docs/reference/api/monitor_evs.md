@@ -174,8 +174,8 @@ frequency specificity from the resulting phase dynamics.
 
 | Parameter | Type | Shape | Range | Meaning |
 |-----------|------|-------|-------|---------|
-| `phases_trials` | `NDArray[float64]` | `(N_trials, T)` | $[0, 2\pi)$ | Phase per trial per timepoint |
-| `pause_indices` | `list[int] \| NDArray` | `(P,)` | $[0, T)$ | Timepoint indices in pause window |
+| `phases_trials` | `NDArray[float64]` | `(N_trials, T)` | finite real radians | Phase per trial per timepoint; coercive text, boolean, and complex aliases are rejected |
+| `pause_indices` | `list[int] \| NDArray` | `(P,)` | normalised to unique values in $[0, T)$ | Timepoint indices in pause window; out-of-range values are ignored |
 | `target_freq` | `float` | scalar | $> 0$ | Stimulus frequency (Hz) |
 | `control_freq` | `float` | scalar | $> 0$ | Control frequency (Hz) |
 
@@ -202,8 +202,8 @@ class EVSResult:
   phase rescaling
 - **Configurable thresholds** — all three thresholds adjustable
 - **Frozen dataclass result** — immutable, hashable EVSResult
-- **Rust FFI for specificity** — native mean_itpc computation,
-  1.1-2.1x speedup
+- **Rust FFI for specificity** — native mean_itpc computation whose scalar
+  result is replayed against the canonical NumPy calculation before publication
 - **Inf handling** — returns infinity when control ITPC is zero but
   target is non-zero
 
@@ -353,9 +353,10 @@ except ImportError:
     _HAS_RUST = False
 ```
 
-Only `_frequency_specificity` uses the Rust path. `compute_itpc` and
-`itpc_persistence` are computed by the Python `itpc` module (which
-may have its own Rust path).
+Only `_frequency_specificity` invokes the dedicated Rust function. Its result
+is accepted only when it matches the canonical NumPy replay. `compute_itpc` and
+`itpc_persistence` are computed by the Python `itpc` module (which may have its
+own independently verified native path).
 
 ---
 
@@ -364,13 +365,18 @@ may have its own Rust path).
 Measured on Intel Core i5-11600K @ 3.90 GHz, 32 GB DDR4-2400.
 Median of 100-200 iterations, random phase data.
 
-### frequency_specificity
+### Isolated frequency_specificity kernel
 
 | Trials × Timepoints | Python (µs) | Rust (µs) | Speedup |
 |---------------------|-------------|-----------|---------|
 | 10 × 50 | 42.6 | 20.1 | **2.1x** |
 | 20 × 100 | 121.0 | 85.4 | **1.4x** |
 | 50 × 200 | 569.6 | 534.9 | **1.1x** |
+
+These figures compare the isolated kernels. They are not the latency of the
+current publication path: native output is now followed by a complete NumPy
+replay, so native dispatch supplies independent fault detection rather than an
+end-to-end speedup claim.
 
 ### Why Decreasing Speedup?
 
@@ -380,10 +386,11 @@ The Rust path uses scalar sin/cos loops. At small sizes, Rust wins
 via reduced Python overhead. At large sizes, NumPy's vectorisation
 catches up.
 
-### Full evaluate() Latency
+### Historical Full evaluate() Latency
 
-The full EVS battery includes ITPC computation (Python), persistence
-(Python), and specificity (Rust). For 20 × 100 phases:
+The following 20 × 100 breakdown predates exact native-output replay and is
+retained only as historical profiling evidence; it must not be treated as a
+current latency guarantee.
 
 | Component | Time (µs) | Fraction |
 |-----------|-----------|----------|
@@ -406,11 +413,10 @@ The full EVS battery includes ITPC computation (Python), persistence
   - Perfect sync high specificity, random phases low specificity,
     zero frequencies, empty input, mean_itpc synchronised,
     mean_itpc uniform
-- **Python tests:** 9 (`tests/test_evs.py`)
-  - EVSResult creation, entrained detection, not entrained random,
-    persistence measurement, specificity ratio, threshold sensitivity,
-    edge cases, pipeline wiring
-- **Source lines:** 130 (Rust) + 141 (Python) = 271 total
+- **Python owner suite:** 63 tests (`tests/test_evs.py`) with exact 100%
+  statement and branch coverage of the Python EVS module
+  - EVSResult creation, entrained detection, pause-window normalisation,
+    specificity replay, threshold sensitivity, edge cases, and pipeline wiring
 
 ---
 
@@ -485,7 +491,7 @@ Use control frequencies at least 30% different from target.
 ### Negative or Zero Frequencies
 
 Both `target_freq` and `control_freq` must be positive. If either
-is ≤ 0, `_frequency_specificity` returns 0.0.
+is ≤ 0, evaluation raises `ValueError` before backend dispatch.
 
 ---
 
