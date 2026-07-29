@@ -88,6 +88,19 @@ class IntegratedInformationResult:
             raise ValueError("total_integration must not exceed log(n_bins)")
         if phi > total_integration + 1e-12:
             raise ValueError("phi must not exceed total_integration")
+        expected_total_integration = _mean_off_diagonal(pairwise_mi)
+        expected_partition, expected_phi = _minimum_bipartition(pairwise_mi)
+        if not np.isclose(
+            total_integration,
+            expected_total_integration,
+            rtol=1e-12,
+            atol=1e-12,
+        ):
+            raise ValueError("total_integration must match pairwise_mi")
+        if partition != expected_partition:
+            raise ValueError("minimum_partition must minimize pairwise_mi")
+        if not np.isclose(phi, expected_phi, rtol=1e-12, atol=1e-12):
+            raise ValueError("phi must match the minimum cross-partition information")
         expected_normalised_phi = _normalise_phi(phi, n_bins)
         if not np.isclose(
             normalised_phi,
@@ -376,18 +389,25 @@ def benchmark_integrated_information_approximations(
 
 def _validate_phase_series(phase_series: FloatArray) -> FloatArray:
     """Return the phase series as a validated 2-D finite array, else raise."""
-    if _contains_boolean_alias(phase_series):
-        msg = "phase_series must not contain boolean values"
-        raise ValueError(msg)
-    raw = np.asarray(phase_series)
-    if _has_complex_payload(phase_series):
-        msg = "phase_series must contain real-valued phase samples"
-        raise ValueError(msg)
     try:
-        phases = raw.astype(np.float64, copy=True)
+        raw = np.asarray(phase_series)
     except (TypeError, ValueError) as exc:
         msg = "phase_series must be a finite real-valued matrix"
         raise ValueError(msg) from exc
+    if raw.dtype.kind == "O":
+        if any(isinstance(item, (bool, np.bool_)) for item in raw.flat):
+            raise ValueError("phase_series must not contain boolean values")
+        if any(isinstance(item, (complex, np.complexfloating)) for item in raw.flat):
+            raise ValueError("phase_series must contain real-valued phase samples")
+        if any(not isinstance(item, Real) for item in raw.flat):
+            raise ValueError("phase_series must be a finite real-valued matrix")
+    elif raw.dtype.kind == "b":
+        raise ValueError("phase_series must not contain boolean values")
+    elif raw.dtype.kind == "c":
+        raise ValueError("phase_series must contain real-valued phase samples")
+    elif raw.dtype.kind not in "iuf":
+        raise ValueError("phase_series must be a finite real-valued matrix")
+    phases = raw.astype(np.float64, copy=True)
     if phases.ndim != 2:
         msg = "phase_series must have shape (n_oscillators, n_samples)"
         raise ValueError(msg)
@@ -493,15 +513,24 @@ def _validate_unit_interval_scalar(value: object, *, name: str) -> float:
 
 def _validate_pairwise_mi(value: object) -> FloatArray:
     """Return the validated pairwise mutual-information matrix, else raise."""
-    if _contains_boolean_alias(value):
-        raise ValueError("pairwise_mi must not contain boolean values")
-    raw = np.asarray(value)
-    if _has_complex_payload(value):
-        raise ValueError("pairwise_mi must contain real-valued entries")
     try:
-        matrix = raw.astype(np.float64, copy=True)
+        raw = np.asarray(value)
     except (TypeError, ValueError) as exc:
         raise ValueError("pairwise_mi must be a numeric matrix") from exc
+    if raw.dtype.kind == "O":
+        if any(isinstance(item, (bool, np.bool_)) for item in raw.flat):
+            raise ValueError("pairwise_mi must not contain boolean values")
+        if any(isinstance(item, (complex, np.complexfloating)) for item in raw.flat):
+            raise ValueError("pairwise_mi must contain real-valued entries")
+        if any(not isinstance(item, Real) for item in raw.flat):
+            raise ValueError("pairwise_mi must be a numeric matrix")
+    elif raw.dtype.kind == "b":
+        raise ValueError("pairwise_mi must not contain boolean values")
+    elif raw.dtype.kind == "c":
+        raise ValueError("pairwise_mi must contain real-valued entries")
+    elif raw.dtype.kind not in "iuf":
+        raise ValueError("pairwise_mi must be a numeric matrix")
+    matrix = raw.astype(np.float64, copy=True)
     if matrix.ndim != 2 or matrix.shape[0] != matrix.shape[1]:
         raise ValueError("pairwise_mi must be a square matrix")
     if matrix.shape[0] < 2:
@@ -580,9 +609,9 @@ def _validate_benchmark_cases(
     for case in value:
         if not isinstance(case, IntegratedInformationBenchmarkCase):
             raise ValueError("cases must contain benchmark cases")
-        if not case.name.strip():
+        if not isinstance(case.name, str) or not case.name.strip():
             raise ValueError("benchmark case names must be non-empty")
-        if not case.description.strip():
+        if not isinstance(case.description, str) or not case.description.strip():
             raise ValueError("benchmark case descriptions must be non-empty")
         if case.result.n_bins != n_bins:
             raise ValueError("benchmark case n_bins must match report n_bins")

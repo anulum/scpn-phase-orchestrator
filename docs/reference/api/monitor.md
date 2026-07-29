@@ -400,7 +400,10 @@ Phase-series inputs, bin/sample counts, audit scalars, partitions, and
 pairwise mutual-information matrices are validated as finite real-valued
 contracts. Boolean aliases, complex dtypes, and object arrays carrying Python
 or NumPy complex scalar aliases are rejected before circular histogram
-estimation or audit-record acceptance.
+estimation or audit-record acceptance; numeric text and broken array protocols
+also fail at the monitor boundary. A directly constructed result independently
+recomputes total integration, the canonical minimum bipartition, and `phi` from
+its pairwise-MI matrix before it can become audit evidence.
 
 **Usage:**
 

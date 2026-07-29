@@ -144,3 +144,78 @@ def test_normalise_phi_handles_non_positive_log_scale(
     from scpn_phase_orchestrator.monitor.information_integration import _normalise_phi
 
     assert _normalise_phi(1.0, 2) == 0.0
+
+
+def test_phase_series_rejects_coercive_and_broken_array_payloads() -> None:
+    """Phase evidence must be real numeric before conversion."""
+    with pytest.raises(ValueError, match="phase_series"):
+        integrated_information(np.array([["0", "1"], ["1", "2"]]))
+    with pytest.raises(ValueError, match="phase_series"):
+        integrated_information(cast(np.ndarray, _UncoercibleArray()))
+
+
+def test_result_replays_matrix_derived_fields() -> None:
+    """Public result fields must match the matrix they summarize."""
+    result = _valid_result()
+    with pytest.raises(ValueError, match="total_integration"):
+        replace(result, total_integration=result.total_integration + 0.01)
+
+    matrix = np.array(
+        [[0.0, 0.1, 0.9], [0.1, 0.0, 0.8], [0.9, 0.8, 0.0]],
+        dtype=np.float64,
+    )
+    with pytest.raises(ValueError, match="minimum_partition"):
+        IntegratedInformationResult(
+            phi=0.5,
+            normalised_phi=0.5 / np.log(8.0),
+            total_integration=0.6,
+            minimum_partition=((0, 1), (2,)),
+            pairwise_mi=matrix,
+            n_bins=8,
+        )
+    with pytest.raises(ValueError, match="phi must match"):
+        IntegratedInformationResult(
+            phi=0.4,
+            normalised_phi=0.4 / np.log(8.0),
+            total_integration=0.6,
+            minimum_partition=((0,), (1, 2)),
+            pairwise_mi=matrix,
+            n_bins=8,
+        )
+
+
+def test_result_rejects_numeric_string_pairwise_matrix() -> None:
+    """Numeric text cannot enter the MI evidence matrix."""
+    with pytest.raises(ValueError, match="numeric matrix"):
+        replace(
+            _valid_result(),
+            pairwise_mi=cast(
+                np.ndarray,
+                np.array([["0", "0.1"], ["0.1", "0"]]),
+            ),
+            minimum_partition=((0,), (1,)),
+        )
+
+    with pytest.raises(ValueError, match="numeric matrix"):
+        replace(
+            _valid_result(),
+            pairwise_mi=cast(np.ndarray, _UncoercibleArray()),
+        )
+
+
+def test_real_numeric_object_arrays_remain_supported() -> None:
+    """Legitimate real object scalars preserve compatibility."""
+    phases = np.array([[np.float64(0.0), 1.0], [np.float64(1.0), 2.0]], dtype=object)
+    result = integrated_information(phases)
+
+    replayed = replace(result, pairwise_mi=result.pairwise_mi.astype(object))
+
+    assert replayed.phi == result.phi
+
+
+def test_benchmark_report_rejects_nontext_case_identity() -> None:
+    """Malformed case identity fails with a stable contract error."""
+    report = _valid_report()
+    malformed = replace(report.cases[0], name=cast(str, 7))
+    with pytest.raises(ValueError, match="case names"):
+        replace(report, cases=(malformed, *report.cases[1:]))
