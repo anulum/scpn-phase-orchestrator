@@ -26,10 +26,17 @@ The monitor now accepts an explicit `simulator_backend` contract:
   either statevectors or density matrices.
 - `numpy_statevector`: requires a one-dimensional statevector payload.
 - `numpy_density_matrix`: requires a square Hermitian positive-semidefinite
-  density matrix payload.
+  density matrix payload representing a pure state. Mixed-state reduced entropy
+  is not promoted as entanglement evidence.
 
 All backends are local NumPy simulators. They do not execute QPU workloads,
 apply controls, or promote simulator evidence to hardware evidence.
+
+Phase and quantum arrays are validated without text, boolean, or complex-to-real
+coercion, and malformed array protocols fail at the monitor boundary. Published
+results independently replay scalar domains, bipartition coverage, entropy
+normalisation, participation bounds, simulator/no-QPU flags, and the canonical
+record hash, so direct construction cannot fabricate contradictory audit evidence.
 
 ::: scpn_phase_orchestrator.monitor.hybrid_order
 
