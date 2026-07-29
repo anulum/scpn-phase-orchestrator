@@ -53,6 +53,8 @@ References
 
 from __future__ import annotations
 
+from numbers import Real
+
 import numpy as np
 from numpy.typing import NDArray
 
@@ -103,11 +105,7 @@ def cross_bus_deviation(voltages: FloatArray) -> FloatArray:
         If ``voltages`` is not a two-dimensional buses-by-samples array with a bus and a
         sample.
     """
-    values = np.asarray(voltages, dtype=np.float64)
-    if values.ndim != 2:
-        raise ValueError("voltages must be two-dimensional (buses × samples)")
-    if values.shape[0] < 1 or values.shape[1] < 1:
-        raise ValueError("voltages must have at least one bus and one sample")
+    values = _validate_voltage_matrix(voltages)
     centred = values - values.mean(axis=0, keepdims=True)
     return np.ascontiguousarray(np.abs(centred).mean(axis=0))
 
@@ -135,11 +133,7 @@ def per_bus_deviation(voltages: FloatArray) -> FloatArray:
         If ``voltages`` is not a two-dimensional buses-by-samples array with a bus and a
         sample.
     """
-    values = np.asarray(voltages, dtype=np.float64)
-    if values.ndim != 2:
-        raise ValueError("voltages must be two-dimensional (buses × samples)")
-    if values.shape[0] < 1 or values.shape[1] < 1:
-        raise ValueError("voltages must have at least one bus and one sample")
+    values = _validate_voltage_matrix(voltages)
     centred = values - values.mean(axis=0, keepdims=True)
     return np.ascontiguousarray(np.abs(centred))
 
@@ -160,6 +154,107 @@ def _recency_weighted_slope(
     mean_y = float((weights * logs).sum() / total)
     denom = float((weights * (times - mean_t) ** 2).sum())
     return float((weights * (times - mean_t) * (logs - mean_y)).sum() / denom)
+
+
+def _validate_real_array(value: object, name: str) -> FloatArray:
+    """Return a copied finite, non-coercive real array."""
+    try:
+        raw = np.asarray(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a finite real array") from exc
+    if raw.dtype.kind == "O":
+        if any(
+            isinstance(item, (bool, np.bool_, complex, str, bytes, np.str_, np.bytes_))
+            or not isinstance(item, Real)
+            for item in raw.flat
+        ):
+            raise ValueError(f"{name} must be a finite real array")
+    elif raw.dtype.kind not in "iuf":
+        raise ValueError(f"{name} must be a finite real array")
+    try:
+        result = np.asarray(raw, dtype=np.float64).copy()
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a finite real array") from exc
+    if not np.all(np.isfinite(result)):
+        raise ValueError(f"{name} must contain only finite values")
+    return np.ascontiguousarray(result)
+
+
+def _validate_voltage_matrix(value: object) -> FloatArray:
+    """Return a non-empty buses-by-samples voltage matrix."""
+    values = _validate_real_array(value, "voltages")
+    if values.ndim != 2:
+        raise ValueError("voltages must be two-dimensional (buses × samples)")
+    if values.shape[0] < 1 or values.shape[1] < 1:
+        raise ValueError("voltages must have at least one bus and one sample")
+    return values
+
+
+def _validate_deviation(value: object) -> FloatArray:
+    """Return a finite non-negative deviation vector with at least two samples."""
+    values = _validate_real_array(value, "deviation")
+    if values.ndim != 1:
+        raise ValueError("deviation must be one-dimensional")
+    if values.shape[0] < 2:
+        raise ValueError("deviation must have at least two samples")
+    if np.any(values < 0.0):
+        raise ValueError("deviation must contain only non-negative values")
+    return values
+
+
+def _validate_finite_real(value: object, name: str) -> float:
+    """Return a finite, non-boolean real scalar."""
+    if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be a finite real number")
+    result = float(value)
+    if not np.isfinite(result):
+        raise ValueError(f"{name} must be a finite real number")
+    return result
+
+
+def _validate_growth_inputs(
+    deviation: object,
+    rate: object,
+    recency_top: object,
+) -> tuple[FloatArray, float, float]:
+    """Return validated envelope-fit inputs."""
+    values = _validate_deviation(deviation)
+    sample_rate = _validate_finite_real(rate, "rate")
+    if sample_rate <= 0.0:
+        raise ValueError("rate must be a positive finite number")
+    recency = _validate_finite_real(recency_top, "recency_top")
+    if recency < 1.0:
+        raise ValueError("recency_top must be a finite number at least one")
+    with np.errstate(over="ignore"):
+        times = np.arange(values.shape[0], dtype=np.float64) / sample_rate
+    if not np.all(np.isfinite(times)):
+        raise ValueError("rate is too small to define a finite time axis")
+    if recency > 1.0 and recency > np.finfo(np.float64).max / values.shape[0]:
+        raise ValueError("recency_top is too large to define finite weights")
+    return values, sample_rate, recency
+
+
+def _growth_rate_from_validated(
+    values: FloatArray,
+    rate: float,
+    recency_top: float,
+) -> float:
+    """Return the log-envelope slope for validated inputs."""
+    times = np.arange(values.shape[0], dtype=np.float64) / rate
+    logs = np.log(np.maximum(values, _DEVIATION_FLOOR))
+    if recency_top == 1.0:
+        return float(np.polyfit(times, logs, 1)[0])
+    return _recency_weighted_slope(times, logs, recency_top)
+
+
+def _validate_r2_gate(value: object) -> float:
+    """Return a finite fit-quality gate in [0, 1]."""
+    if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
+        raise ValueError("r2_gate must be a finite number in [0, 1]")
+    gate = float(value)
+    if not np.isfinite(gate) or not 0.0 <= gate <= 1.0:
+        raise ValueError("r2_gate must be a finite number in [0, 1]")
+    return gate
 
 
 def envelope_growth_rate(
@@ -194,22 +289,15 @@ def envelope_growth_rate(
         If ``deviation`` is not a one-dimensional array of at least two samples,
         ``rate`` is not positive, or ``recency_top`` is not a finite number ``>= 1``.
     """
-    values = np.asarray(deviation, dtype=np.float64)
-    if values.ndim != 1:
-        raise ValueError("deviation must be one-dimensional")
-    if values.shape[0] < 2:
-        raise ValueError("deviation must have at least two samples")
-    if not np.isfinite(rate) or rate <= 0.0:
-        raise ValueError("rate must be a positive finite number")
-    if not np.isfinite(recency_top) or recency_top < 1.0:
-        raise ValueError("recency_top must be a finite number at least one")
-    times = np.arange(values.shape[0], dtype=np.float64) / rate
-    logs = np.log(np.maximum(values, _DEVIATION_FLOOR))
-    if recency_top == 1.0:
-        slope = float(np.polyfit(times, logs, 1)[0])
-    else:
-        slope = _recency_weighted_slope(times, logs, recency_top)
-    return slope if np.isfinite(slope) else 0.0
+    values, sample_rate, recency = _validate_growth_inputs(
+        deviation,
+        rate,
+        recency_top,
+    )
+    slope = _growth_rate_from_validated(values, sample_rate, recency)
+    if not np.isfinite(slope):
+        raise ValueError("deviation does not define a finite growth rate")
+    return slope
 
 
 def growth_rate_and_fit(
@@ -245,11 +333,15 @@ def growth_rate_and_fit(
         If ``deviation`` is not a one-dimensional array of at least two samples,
         ``rate`` is not positive, or ``recency_top`` is not a finite number ``>= 1``.
     """
-    slope = envelope_growth_rate(deviation, rate=rate, recency_top=recency_top)
-    values = np.asarray(deviation, dtype=np.float64)
-    times = np.arange(values.shape[0], dtype=np.float64) / rate
+    values, sample_rate, recency = _validate_growth_inputs(
+        deviation,
+        rate,
+        recency_top,
+    )
+    slope = _growth_rate_from_validated(values, sample_rate, recency)
+    times = np.arange(values.shape[0], dtype=np.float64) / sample_rate
     logs = np.log(np.maximum(values, _DEVIATION_FLOOR))
-    weights = np.linspace(1.0, recency_top, values.shape[0])
+    weights = np.linspace(1.0, recency, values.shape[0])
     total = weights.sum()
     mean_t = float((weights * times).sum() / total)
     mean_y = float((weights * logs).sum() / total)
@@ -299,12 +391,11 @@ def fit_gated_growth_rate(
         If ``r2_gate`` is not a finite number in ``[0, 1]``, or the arguments forwarded
         to :func:`envelope_growth_rate` are invalid.
     """
-    if not np.isfinite(r2_gate) or not 0.0 <= r2_gate <= 1.0:
-        raise ValueError("r2_gate must be a finite number in [0, 1]")
-    if r2_gate <= 0.0:
+    gate = _validate_r2_gate(r2_gate)
+    if gate <= 0.0:
         return envelope_growth_rate(deviation, rate=rate, recency_top=recency_top)
     sigma, r2 = growth_rate_and_fit(deviation, rate=rate, recency_top=recency_top)
-    return sigma if r2 >= r2_gate else min(sigma, 0.0)
+    return sigma if r2 >= gate else min(sigma, 0.0)
 
 
 def modal_growth_score(
@@ -349,19 +440,20 @@ def modal_growth_score(
         If ``aggregation`` is neither ``"mean"`` nor ``"focal"``, or ``r2_gate`` is
         not a finite number in ``[0, 1]``.
     """
-    if not np.isfinite(r2_gate) or not 0.0 <= r2_gate <= 1.0:
-        raise ValueError("r2_gate must be a finite number in [0, 1]")
+    gate = _validate_r2_gate(r2_gate)
+    if not isinstance(aggregation, str):
+        raise ValueError("aggregation must be 'mean' or 'focal'")
     if aggregation == "mean":
         return fit_gated_growth_rate(
             cross_bus_deviation(segment),
             rate=rate,
             recency_top=recency_top,
-            r2_gate=r2_gate,
+            r2_gate=gate,
         )
     if aggregation == "focal":
         return max(
             fit_gated_growth_rate(
-                envelope, rate=rate, recency_top=recency_top, r2_gate=r2_gate
+                envelope, rate=rate, recency_top=recency_top, r2_gate=gate
             )
             for envelope in per_bus_deviation(segment)
         )

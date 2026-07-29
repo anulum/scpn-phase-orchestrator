@@ -32,6 +32,13 @@ its operating point is fixed by the offline certification (`bench.grid_modal_hea
   `"mean"` (whole network) aggregation; the certified default is `"focal"` with a recency
   weighting.
 
+All voltage matrices and deviation envelopes are non-empty, finite, real, and
+non-coercive; text, boolean, complex, negative-amplitude, and broken-protocol
+evidence is rejected before centring or logarithms. Sampling rate, recency
+weighting, and fit-quality gates require finite non-boolean real scalars whose
+derived time/weight geometry is also representable. Undefined telemetry never
+collapses to a benign zero growth score.
+
 On the PSML 23-bus corpus, labelling transitions by disturbance type (a label independent of
 the growth statistic, so the comparison is not circular), the detector leads 36 of 90
 growing-instability transitions at a matched ten-percent false alarm where every generic

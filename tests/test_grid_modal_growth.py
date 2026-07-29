@@ -17,6 +17,8 @@ segments from damped ones — the behaviour the offline benchmark then certifies
 
 from __future__ import annotations
 
+from numbers import Real
+
 import numpy as np
 import pytest
 
@@ -101,6 +103,59 @@ def test_cross_bus_deviation_rejects_an_empty_axis() -> None:
         cross_bus_deviation(np.zeros((0, 8)))
 
 
+@pytest.mark.parametrize(
+    "voltages",
+    [
+        np.array([["1.0", "1.1"], ["0.9", "1.0"]]),
+        np.array([[1.0, True], [0.9, 1.0]], dtype=object),
+        np.array([[1.0, np.nan], [0.9, 1.0]]),
+        np.array([[1.0 + 0.0j, 1.1], [0.9, 1.0]]),
+    ],
+)
+def test_voltage_deviation_rejects_coercive_or_nonfinite_evidence(
+    voltages: np.ndarray,
+) -> None:
+    with pytest.raises(ValueError, match="voltages"):
+        cross_bus_deviation(voltages)
+    with pytest.raises(ValueError, match="voltages"):
+        per_bus_deviation(voltages)
+
+
+def test_voltage_deviation_wraps_a_broken_array_protocol() -> None:
+    class BrokenArray:
+        def __array__(self) -> np.ndarray:
+            raise TypeError("broken")
+
+    with pytest.raises(ValueError, match="voltages"):
+        cross_bus_deviation(BrokenArray())
+
+
+def test_numeric_object_arrays_remain_compatible_and_are_copied() -> None:
+    voltages = np.array([[1, 1.1], [0.9, np.float32(1.0)]], dtype=object)
+    deviation = np.array([1, np.float32(2.0)], dtype=object)
+
+    envelope = cross_bus_deviation(voltages)
+    growth = envelope_growth_rate(deviation, rate=np.float32(_RATE))
+    voltages[:] = 99
+    deviation[:] = 99
+
+    assert np.all(envelope < 1.0)
+    assert np.isfinite(growth)
+
+
+def test_array_validation_wraps_a_broken_real_scalar_conversion() -> None:
+    class BrokenReal:
+        def __float__(self) -> float:
+            raise TypeError("broken")
+
+    Real.register(BrokenReal)
+    with pytest.raises(ValueError, match="deviation"):
+        envelope_growth_rate(
+            np.array([BrokenReal(), BrokenReal()], dtype=object),
+            rate=_RATE,
+        )
+
+
 # --------------------------------------------------------------------------- #
 # per_bus_deviation                                                           #
 # --------------------------------------------------------------------------- #
@@ -152,18 +207,73 @@ def test_envelope_growth_rate_is_negative_for_a_damped_envelope() -> None:
     assert envelope_growth_rate(np.exp(-0.4 * times), rate=rate) < 0.0
 
 
-def test_envelope_growth_rate_is_zero_for_a_non_finite_envelope() -> None:
-    assert envelope_growth_rate(np.array([float("nan"), 1.0, 2.0]), rate=_RATE) == 0.0
+def test_envelope_growth_rate_rejects_a_non_finite_envelope() -> None:
+    with pytest.raises(ValueError, match="deviation"):
+        envelope_growth_rate(np.array([float("nan"), 1.0, 2.0]), rate=_RATE)
 
 
-def test_envelope_growth_rate_recency_is_zero_for_a_non_finite_envelope() -> None:
-    # the weighted path also floors an undefined fit to zero
-    assert (
+def test_envelope_growth_rate_recency_rejects_a_non_finite_envelope() -> None:
+    with pytest.raises(ValueError, match="deviation"):
         envelope_growth_rate(
             np.array([float("nan"), 1.0, 2.0]), rate=_RATE, recency_top=3.0
         )
-        == 0.0
+
+
+@pytest.mark.parametrize(
+    "deviation",
+    [
+        np.array(["1", "2"]),
+        np.array([1.0, True], dtype=object),
+        np.array([1.0 + 0.0j, 2.0]),
+        np.array([1.0, -0.1]),
+    ],
+)
+def test_envelope_growth_rate_rejects_invalid_evidence(
+    deviation: np.ndarray,
+) -> None:
+    with pytest.raises(ValueError, match="deviation"):
+        envelope_growth_rate(deviation, rate=_RATE)
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "match"),
+    [
+        ({"rate": True}, "rate"),
+        ({"rate": "238"}, "rate"),
+        ({"recency_top": True}, "recency_top"),
+        ({"recency_top": "3"}, "recency_top"),
+    ],
+)
+def test_envelope_growth_rate_rejects_coercive_controls(
+    kwargs: dict[str, object],
+    match: str,
+) -> None:
+    controls: dict[str, object] = {"rate": _RATE}
+    controls.update(kwargs)
+    with pytest.raises(ValueError, match=match):
+        envelope_growth_rate(np.ones(8), **controls)  # type: ignore[arg-type]
+
+
+def test_envelope_growth_rate_rejects_unrepresentable_fit_geometry() -> None:
+    with pytest.raises(ValueError, match="rate is too small"):
+        envelope_growth_rate(np.ones(8), rate=np.nextafter(0.0, 1.0))
+    with pytest.raises(ValueError, match="recency_top is too large"):
+        envelope_growth_rate(
+            np.ones(8),
+            rate=_RATE,
+            recency_top=np.finfo(np.float64).max,
+        )
+
+
+def test_envelope_growth_rate_rejects_a_nonfinite_fit_output(monkeypatch) -> None:
+    monkeypatch.setattr(
+        np,
+        "polyfit",
+        lambda *_args, **_kwargs: np.array([np.nan, 0.0]),
     )
+
+    with pytest.raises(ValueError, match="finite growth rate"):
+        envelope_growth_rate(np.ones(8), rate=_RATE)
 
 
 def test_envelope_growth_rate_rejects_a_non_vector() -> None:
@@ -251,6 +361,22 @@ def test_modal_growth_score_gate_clamps_a_step_segment() -> None:
 def test_modal_growth_score_rejects_a_gate_out_of_range() -> None:
     with pytest.raises(ValueError, match="r2_gate must be a finite number"):
         modal_growth_score(_monotone_growth(0.5), rate=_RATE, r2_gate=1.5)
+
+
+def test_modal_growth_score_rejects_boolean_gate_and_coercive_segment() -> None:
+    with pytest.raises(ValueError, match="r2_gate"):
+        modal_growth_score(_monotone_growth(0.5), rate=_RATE, r2_gate=True)
+    with pytest.raises(ValueError, match="voltages"):
+        modal_growth_score(
+            _monotone_growth(0.5).astype(str),
+            rate=_RATE,
+        )
+    with pytest.raises(ValueError, match="aggregation"):
+        modal_growth_score(
+            _monotone_growth(0.5),
+            rate=_RATE,
+            aggregation=1,  # type: ignore[arg-type]
+        )
 
 
 # --------------------------------------------------------------------------- #
