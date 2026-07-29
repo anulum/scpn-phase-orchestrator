@@ -12,7 +12,7 @@
     "research_experimental_modules": 205,
     "runtime_serving_modules": 157,
     "rust_kernel_files": 97,
-    "test_files": 865
+    "test_files": 866
   },
   "documentation": {
     "public_pages": [
@@ -2067,6 +2067,7 @@
       "tests/test_docs_install_profiles.py",
       "tests/test_docs_learning_inventory.py",
       "tests/test_docs_monitor_validation_status.py",
+      "tests/test_docs_public_claim_boundaries.py",
       "tests/test_docs_release_contract.py",
       "tests/test_doctor.py",
       "tests/test_domain_detectors.py",
