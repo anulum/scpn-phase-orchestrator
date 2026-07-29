@@ -139,8 +139,39 @@ def test_malformed_signals_are_rejected(signals: np.ndarray) -> None:
 
 
 def test_object_signals_are_rejected() -> None:
-    with pytest.raises(ValueError, match="real float array"):
+    with pytest.raises(ValueError, match="finite real array"):
         critical_slowing_down_warning(np.array([[object(), object()]]), window=3)
+
+
+@pytest.mark.parametrize(
+    "signals",
+    [
+        np.full((2, 4), "0.5"),
+        np.array([[0.0, True, 0.0, True]], dtype=object),
+        np.empty((0, 4)),
+        np.empty((1, 0)),
+    ],
+)
+def test_coercive_or_empty_signal_evidence_is_rejected(signals: np.ndarray) -> None:
+    with pytest.raises(ValueError, match="signals"):
+        critical_slowing_down_warning(signals, window=3, step=1)
+
+
+def test_broken_array_protocol_is_wrapped() -> None:
+    class BrokenArray:
+        def __array__(self) -> np.ndarray:
+            raise TypeError("broken")
+
+    with pytest.raises(ValueError, match="finite real array"):
+        critical_slowing_down_warning(BrokenArray(), window=3, step=1)  # type: ignore[arg-type]
+
+
+def test_real_numeric_object_signals_remain_compatible() -> None:
+    signals = np.array([[0, 0.5, 1, 0.5]], dtype=object)
+
+    warning = critical_slowing_down_warning(signals, window=3, step=1)  # type: ignore[arg-type]
+
+    assert warning.window_starts.shape == (2,)
 
 
 @pytest.mark.parametrize(

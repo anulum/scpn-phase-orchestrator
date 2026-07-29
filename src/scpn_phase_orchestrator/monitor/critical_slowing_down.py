@@ -340,7 +340,11 @@ def critical_slowing_down_multiscale_warning(
     array = _validate_signals(signals)
     if windows is None:
         windows = (64, 128, 256)
+    elif isinstance(windows, (str, bytes)) or not isinstance(windows, Sequence):
+        raise ValueError("windows must be a non-empty sequence of integers")
     windows_tuple = tuple(_validate_positive_int(w, "windows") for w in windows)
+    if not windows_tuple:
+        raise ValueError("windows must be a non-empty sequence of integers")
     if len(set(windows_tuple)) != len(windows_tuple):
         raise ValueError("windows must be unique")
     step = _validate_positive_int(step, "step")
@@ -512,6 +516,15 @@ def surrogate_score_threshold(
     window = _validate_positive_int(window, "window")
     step = _validate_positive_int(step, "step")
     persistence = _validate_positive_int(persistence, "persistence")
+    if isinstance(rng, (bool, np.bool_)) or not isinstance(
+        rng, (Integral, np.random.Generator, type(None))
+    ):
+        raise ValueError("rng must be a non-negative integer, Generator, or None")
+    if isinstance(rng, Integral):
+        seed = int(rng)
+        if seed < 0:
+            raise ValueError("rng must be a non-negative integer, Generator, or None")
+        rng = seed
     rng = np.random.default_rng(rng)
 
     n_samples = int(array.shape[1])
@@ -533,9 +546,6 @@ def surrogate_score_threshold(
             rise_threshold=0.0,
             persistence=persistence,
         )
-        if warning.combined_z.size == 0:
-            max_scores[surrogate_idx] = 0.0
-            continue
         post = warning.combined_z[warning.n_baseline_windows :]
         max_scores[surrogate_idx] = float(post.max()) if post.size else 0.0
     return float(np.percentile(max_scores, percentile))
@@ -604,19 +614,26 @@ def _first_sustained_breach(
 
 def _validate_signals(signals: object) -> FloatArray:
     """Return the signals as a validated 2-D finite array, else raise."""
-    raw = np.asarray(signals)
-    if raw.dtype == np.bool_:
-        raise ValueError("signals must not contain boolean values")
-    if np.iscomplexobj(raw):
-        raise ValueError("signals must contain real-valued samples")
     try:
-        array = raw.astype(np.float64, copy=True)
+        raw = np.asarray(signals)
     except (TypeError, ValueError) as exc:
-        raise ValueError("signals must be a real float array") from exc
+        raise ValueError("signals must be a finite real array") from exc
+    if raw.dtype.kind == "O":
+        if any(
+            isinstance(item, (bool, np.bool_, complex, str, bytes, np.str_, np.bytes_))
+            or not isinstance(item, Real)
+            for item in raw.flat
+        ):
+            raise ValueError("signals must be a finite real array")
+    elif raw.dtype.kind not in "iuf":
+        raise ValueError("signals must be a finite real array")
+    array = raw.astype(np.float64, copy=True)
     if array.ndim == 1:
         array = array.reshape(1, -1)
     if array.ndim != 2:
         raise ValueError(f"signals shape {raw.shape} must be one- or two-dimensional")
+    if 0 in array.shape:
+        raise ValueError("signals must contain at least one node and one sample")
     if not np.all(np.isfinite(array)):
         raise ValueError("signals must contain only finite values")
     return np.ascontiguousarray(array, dtype=np.float64)

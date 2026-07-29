@@ -14,6 +14,7 @@ import sys
 from pathlib import Path
 
 import numpy as np
+import pytest
 
 from scpn_phase_orchestrator.monitor.critical_slowing_down import (
     CriticalSlowingDownWarning,
@@ -94,6 +95,109 @@ def test_surrogate_threshold_is_positive_and_finite():
     )
     assert np.isfinite(threshold)
     assert threshold >= 0.0
+
+
+@pytest.mark.parametrize("windows", [[], (), "64", 64])
+def test_multiscale_requires_non_empty_window_sequence(windows):
+    with pytest.raises(ValueError, match="windows must be a non-empty sequence"):
+        critical_slowing_down_multiscale_warning(
+            np.zeros((1, 512)),
+            windows=windows,
+        )
+
+
+def test_multiscale_default_windows_are_usable() -> None:
+    warning = critical_slowing_down_multiscale_warning(
+        np.zeros((1, 300)),
+        step=16,
+    )
+
+    assert warning.window == 256
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "match"),
+    [
+        ({"windows": (8, 8)}, "windows must be unique"),
+        ({"windows": (8,), "aggregation": "median"}, "aggregation"),
+        ({"windows": (2,)}, "at least 3"),
+        ({"windows": (128,)}, "exceeds the series length"),
+    ],
+)
+def test_multiscale_rejects_invalid_scale_geometry(kwargs, match) -> None:
+    with pytest.raises(ValueError, match=match):
+        critical_slowing_down_multiscale_warning(
+            np.zeros((1, 64)),
+            step=4,
+            **kwargs,
+        )
+
+
+@pytest.mark.parametrize("rng", [True, np.bool_(True), -1, "7"])
+def test_surrogate_rng_requires_canonical_seed_or_generator(rng):
+    with pytest.raises(ValueError, match="rng must be a non-negative integer"):
+        surrogate_score_threshold(
+            np.zeros((1, 64)),
+            n_surrogates=1,
+            window=8,
+            step=4,
+            rng=rng,
+        )
+
+
+def test_surrogate_accepts_numpy_integer_seed() -> None:
+    signals = np.arange(64, dtype=np.float64).reshape(1, -1)
+
+    first = surrogate_score_threshold(
+        signals,
+        n_surrogates=2,
+        window=8,
+        step=4,
+        rng=np.int64(7),
+    )
+    second = surrogate_score_threshold(
+        signals,
+        n_surrogates=2,
+        window=8,
+        step=4,
+        rng=np.int64(7),
+    )
+
+    assert first == second
+
+
+def test_surrogate_rejects_percentile_above_one_hundred() -> None:
+    with pytest.raises(ValueError, match="percentile must be <= 100"):
+        surrogate_score_threshold(
+            np.zeros((1, 64)),
+            n_surrogates=1,
+            percentile=100.1,
+            window=8,
+            step=4,
+        )
+
+
+def test_surrogate_accepts_explicit_block_length() -> None:
+    threshold = surrogate_score_threshold(
+        np.arange(64, dtype=np.float64).reshape(1, -1),
+        n_surrogates=1,
+        block_length=4,
+        window=8,
+        step=4,
+        rng=7,
+    )
+
+    assert np.isfinite(threshold)
+
+
+def test_surrogate_rejects_empty_signals_before_bootstrap() -> None:
+    with pytest.raises(ValueError, match="at least one node and one sample"):
+        surrogate_score_threshold(
+            np.empty((1, 0)),
+            n_surrogates=1,
+            window=3,
+            step=1,
+        )
 
 
 def test_multiscale_improves_over_baseline_on_explosive_transition(tmp_path):

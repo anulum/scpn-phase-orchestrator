@@ -852,6 +852,12 @@ both understates the classical method.
 
 ::: scpn_phase_orchestrator.monitor.critical_slowing_down
 
+Critical-slowing-down signal ingress requires a non-empty finite real one- or
+two-dimensional array and rejects boolean, complex, and text-coercible aliases.
+Multiscale windows are a non-empty integer sequence. Surrogate RNG custody accepts
+only a non-negative Python/NumPy integer seed, an explicit NumPy `Generator`, or
+`None`; boolean seeds are rejected before bootstrap.
+
 ### Rising Synchronisation
 
 A sustained rise in the windowed Kuramoto order parameter
