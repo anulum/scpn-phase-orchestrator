@@ -824,7 +824,9 @@ power-grid and traffic-corridor replay corpora: sample/bin/oscillator counts are
 integer-only, metrics are finite real non-negative values, normalised Phi is
 bounded to the unit interval, and minimum partitions reject boolean aliases plus
 object-complex integer aliases before the re-synchronisation/recovery ordering
-contracts are accepted.
+contracts are accepted. The corpus is exactly four uniquely named canonical
+cases with consistent sample/bin geometry; each expected-relationship string is
+bound to its case and normalised Phi is replayed from Phi and `n_bins`.
 Cyber-industrial replay records apply the same boundary to lateral-movement and
 manufacturing SPC corpora so containment/recovery ordering claims are accepted
 only after integer-only record counts, finite real metrics, bounded normalised
