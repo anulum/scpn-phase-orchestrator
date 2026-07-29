@@ -21,6 +21,10 @@ pip install --no-deps -e .
 jupyter nbconvert --execute --to notebook notebooks/*.ipynb --ExecutePreprocessor.timeout=120
 ```
 
+All 21 committed notebooks use the `python3` kernel metadata and ship without
+stored execution counts or outputs. CI executes transient copies; generated
+notebook output is test evidence, not a tracked release artefact.
+
 For local work, install notebook extras and run from the repository root:
 
 ```bash
@@ -60,7 +64,7 @@ Runtime classes:
 |-------|--------------------------|
 | short | should complete within the CI 120-second per-notebook timeout on normal CI hardware |
 | medium | may approach the timeout on slower machines; prefer interactive execution when debugging |
-| local-only | not currently used by the 19 shipped notebooks; reserve for future GPU, quantum, or external-service notebooks |
+| local-only | not currently used by the 21 shipped notebooks; reserve for future GPU, quantum, or external-service notebooks |
 
 ## Maintenance Rules
 

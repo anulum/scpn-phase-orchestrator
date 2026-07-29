@@ -8,7 +8,7 @@
 | Detector auditor | 81 | `scpn_phase_orchestrator.evaluation` + `spo audit-detector`: matched-false-alarm calibration, permutation significance, sealed records, real-detector head-to-head (6 files) |
 | Rust unit/integration | 203 | `cargo test --workspace` across 5 crates |
 | FFI parity | 20 | Python vs Rust parity: UPDE, Stuart-Landau, Petri net, RuleEngine |
-| Notebook execution | 10 | `nbclient` runs all `.ipynb` cells under Python 3.12 |
+| Notebook execution | 21 | `nbconvert` executes every shipped `.ipynb` under Python 3.12 |
 | Domainpack validation | 36 | Each domainpack exercises `binding_spec.yaml → run.py` end-to-end |
 
 CI runs the main Python matrix on every supported interpreter, Python

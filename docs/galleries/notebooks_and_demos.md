@@ -92,6 +92,11 @@ CI executes the shipped notebook suite on Python 3.12 with `nbconvert`.
 See the [Notebook Execution Matrix](notebook_execution_matrix.md) for
 per-notebook extras, runtime class, and CI expectation.
 
+The committed notebooks are intentionally clean: code cells have no execution
+counts or stored outputs. CI executes fresh copies, so a reader sees source
+rather than host-specific output while the release gate still proves that every
+cell runs.
+
 ## Terminal Examples
 
 Run examples from the repository root with `PYTHONPATH=src` for a source
@@ -111,7 +116,10 @@ PYTHONPATH=src python examples/cross_domain_universality.py
 | Analysis methods | `hodge_decomposition.py`, `inverse_coupling_demo.py`, `inverse_kuramoto.py`, `plasticity_learning.py`, `stochastic_resonance.py`, `stuart_landau_bifurcation.py`, `swarmalator_dynamics.py` |
 | Integration surfaces | `agent_coordination.py`, `audit_replay_demo.py`, `eeg_file_ingestion.py`, `neurocore_cosimulation.py`, `prometheus_queuewaves.py`, `ssgf_closure_loop.py` |
 
-There are `27` Python example scripts in `examples/`.
+There are `28` terminal-first Python scripts directly under `examples/`.
+Three additional Python evidence producers live in nested
+`examples/real_data/` directories and are documented with their owning
+studies rather than presented as first-run terminal examples.
 
 ## Interactive Demos
 
