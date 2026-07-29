@@ -52,7 +52,7 @@ jobs:
           printf '%s  %s\n' "$ELAN_ARCHIVE_SHA256" "$archive" \
             | sha256sum --check --strict
           tar --extract --gzip --file "$archive" --directory "$RUNNER_TEMP"
-          "$RUNNER_TEMP/elan-init" --yes --default-toolchain none
+          "$RUNNER_TEMP/elan-init" -y --default-toolchain none
           printf '%s\n' "$HOME/.elan/bin" >> "$GITHUB_PATH"
 
       - name: Check Lean proofs
