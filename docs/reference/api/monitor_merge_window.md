@@ -27,6 +27,14 @@ alone is not enough evidence that the population has spatially merged.
   `required_consecutive_samples=3`.
 - Named profiles multiply the reviewed baseline: `baseline_1x`, `buffer_3x`,
   and `review_5x`.
+- Public scalar and vector inputs must contain finite real numeric evidence
+  before conversion. Boolean, complex, numeric-string, and broken array-protocol
+  payloads fail closed; real numeric object arrays remain valid.
+- A directly constructed tolerance profile must replay its reviewed name,
+  multiplier, baseline, and resolved tolerances. A directly constructed
+  `MergeReport` independently validates finite scalar fields, non-negative
+  dispersions, canonical booleans/counts, signed-margin lock semantics, and the
+  current joint-lock/count relationship before it can be serialised.
 - Evidence boundary: benchmark timings are local regression evidence unless run
   under the documented isolated-core benchmark protocol.
 

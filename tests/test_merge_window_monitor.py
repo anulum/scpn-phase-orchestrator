@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import replace
+from typing import Any, cast
 
 import numpy as np
 import pytest
@@ -230,6 +231,179 @@ def test_tolerance_profile_controls_monitor_and_function() -> None:
     assert monitor.spatial_tol_m == pytest.approx(0.006)
 
 
+@pytest.mark.parametrize(
+    "field",
+    (
+        "t",
+        "reference_phase",
+        "reference_point",
+        "phase_tol_rad",
+        "spatial_tol_m",
+    ),
+)
+def test_public_scalar_boundaries_reject_numeric_text(field: str) -> None:
+    kwargs: dict[str, object] = {field: "0.0"}
+
+    with pytest.raises(ValueError, match=field):
+        evaluate_merge_window([0.0], [0.0], **kwargs)
+
+
+@pytest.mark.parametrize("field", ("phases", "positions"))
+def test_public_vector_boundaries_reject_numeric_text(field: str) -> None:
+    kwargs: dict[str, object] = {
+        "phases": np.array([0.0, 0.001]),
+        "positions": np.array([0.0, 0.001]),
+    }
+    kwargs[field] = np.array(["0.0", "0.001"])
+
+    with pytest.raises(ValueError, match=field):
+        evaluate_merge_window(**kwargs)
+
+
+def test_public_vector_boundary_preserves_real_numeric_object_arrays() -> None:
+    report = evaluate_merge_window(
+        np.array([0, np.float64(0.001)], dtype=object),
+        np.array([0, np.float32(0.001)], dtype=object),
+        required_consecutive_samples=1,
+    )
+
+    assert report.lock_achieved
+
+
+def test_public_vector_boundary_wraps_broken_array_protocol() -> None:
+    class BrokenArray:
+        def __array__(self) -> np.ndarray:
+            raise TypeError("broken protocol")
+
+    with pytest.raises(ValueError, match="phases"):
+        evaluate_merge_window(BrokenArray(), [0.0])
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    (
+        ("name", "review_5x"),
+        ("multiplier", 5.0),
+        ("phase_tol_rad", 0.04),
+        ("spatial_tol_m", 0.008),
+    ),
+)
+def test_tolerance_profile_rejects_contradictory_named_evidence(
+    field: str,
+    value: object,
+) -> None:
+    profile = {
+        "name": "buffer_3x",
+        "phase_tol_rad": 0.03,
+        "spatial_tol_m": 0.006,
+        "multiplier": 3.0,
+        "baseline_phase_tol_rad": 0.01,
+        "baseline_spatial_tol_m": 0.002,
+    }
+    profile[field] = value
+
+    with pytest.raises(ValueError, match=field):
+        MergeWindowToleranceProfile(**cast(Any, profile))
+
+
+def test_tolerance_profile_requires_a_string_name() -> None:
+    with pytest.raises(ValueError, match="tolerance_profile"):
+        MergeWindowToleranceProfile(
+            name=cast(Any, 3),
+            phase_tol_rad=0.03,
+            spatial_tol_m=0.006,
+            multiplier=3.0,
+            baseline_phase_tol_rad=0.01,
+            baseline_spatial_tol_m=0.002,
+        )
+
+
+def test_zero_baseline_profile_rejects_absolute_tolerance_drift() -> None:
+    with pytest.raises(ValueError, match="phase_tol_rad"):
+        MergeWindowToleranceProfile(
+            name="baseline_1x",
+            phase_tol_rad=1.0e-15,
+            spatial_tol_m=0.0,
+            multiplier=1.0,
+            baseline_phase_tol_rad=0.0,
+            baseline_spatial_tol_m=0.0,
+        )
+
+
+def _valid_merge_report(**overrides: object) -> MergeReport:
+    values: dict[str, object] = {
+        "t": 1.0,
+        "phase_dispersion_rad": 0.001,
+        "spatial_dispersion_m": 0.001,
+        "phase_margin_rad": 0.009,
+        "spatial_margin_m": 0.001,
+        "phase_locked": True,
+        "spatial_locked": True,
+        "lock_achieved": True,
+        "consecutive_lock_samples": 1,
+    }
+    values.update(overrides)
+    return MergeReport(**cast(Any, values))
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    (
+        ("t", "1.0"),
+        ("phase_dispersion_rad", True),
+        ("spatial_dispersion_m", -0.1),
+        ("phase_margin_rad", np.nan),
+        ("spatial_margin_m", np.inf),
+        ("phase_locked", np.bool_(True)),
+        ("spatial_locked", 1),
+        ("lock_achieved", "yes"),
+        ("consecutive_lock_samples", True),
+        ("consecutive_lock_samples", -1),
+        ("consecutive_lock_samples", 1.0),
+    ),
+)
+def test_merge_report_rejects_malformed_direct_evidence(
+    field: str,
+    value: object,
+) -> None:
+    with pytest.raises(ValueError, match=field):
+        _valid_merge_report(**{field: value})
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    (
+        ("phase_locked", False),
+        ("spatial_locked", False),
+        ("phase_margin_rad", -0.001),
+        ("spatial_margin_m", -0.001),
+        ("consecutive_lock_samples", 0),
+    ),
+)
+def test_merge_report_rejects_contradictory_direct_evidence(
+    field: str,
+    value: object,
+) -> None:
+    with pytest.raises(ValueError, match=field):
+        _valid_merge_report(**{field: value})
+
+
+def test_merge_report_rejects_achieved_lock_without_current_joint_lock() -> None:
+    with pytest.raises(ValueError, match="lock_achieved"):
+        _valid_merge_report(
+            phase_margin_rad=-0.001,
+            phase_locked=False,
+            consecutive_lock_samples=0,
+        )
+
+
+def test_scalar_and_object_vector_overflow_fail_closed() -> None:
+    with pytest.raises(ValueError, match="t"):
+        evaluate_merge_window([0.0], [0.0], t=10**1000)
+    with pytest.raises(ValueError, match="phases"):
+        evaluate_merge_window(np.array([10**1000], dtype=object), [0.0])
+
+
 def test_invalid_inputs_fail_closed() -> None:
     invalid_cases = (
         ([], [], "phases"),
@@ -238,7 +412,7 @@ def test_invalid_inputs_fail_closed() -> None:
         ([np.nan], [0.0], "finite"),
         ([True, False], [0.0, 0.0], "real-valued"),
         ([0.0 + 1.0j], [0.0], "real-valued"),
-        (np.array([0.0], dtype=object), [0.0], "finite real-valued"),
+        (np.array(["0.0"], dtype=object), [0.0], "real numbers"),
     )
     for phases, positions, match in invalid_cases:
         with pytest.raises(ValueError, match=match):

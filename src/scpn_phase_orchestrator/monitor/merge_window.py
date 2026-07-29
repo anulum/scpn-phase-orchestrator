@@ -18,6 +18,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from math import isfinite
+from numbers import Real
 
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
@@ -46,6 +47,7 @@ class MergeWindowToleranceProfile:
     baseline_spatial_tol_m: float
 
     def __post_init__(self) -> None:
+        """Validate and normalise the resolved named-profile evidence."""
         name = _validate_profile_name(self.name)
         phase_tol = _validate_tolerance(self.phase_tol_rad, name="phase_tol_rad")
         spatial_tol = _validate_tolerance(self.spatial_tol_m, name="spatial_tol_m")
@@ -58,6 +60,31 @@ class MergeWindowToleranceProfile:
             self.baseline_spatial_tol_m,
             name="baseline_spatial_tol_m",
         )
+        expected_multiplier = MERGE_WINDOW_TOLERANCE_PROFILE_MULTIPLIERS[name]
+        if multiplier != expected_multiplier:
+            raise ValueError(
+                "name and multiplier must match the reviewed tolerance profile"
+            )
+        expected_phase_tol = baseline_phase * multiplier
+        expected_spatial_tol = baseline_spatial * multiplier
+        if not np.isclose(
+            phase_tol,
+            expected_phase_tol,
+            rtol=8.0 * np.finfo(np.float64).eps,
+            atol=0.0,
+        ):
+            raise ValueError(
+                "phase_tol_rad must equal baseline_phase_tol_rad * multiplier"
+            )
+        if not np.isclose(
+            spatial_tol,
+            expected_spatial_tol,
+            rtol=8.0 * np.finfo(np.float64).eps,
+            atol=0.0,
+        ):
+            raise ValueError(
+                "spatial_tol_m must equal baseline_spatial_tol_m * multiplier"
+            )
         object.__setattr__(self, "name", name)
         object.__setattr__(self, "phase_tol_rad", phase_tol)
         object.__setattr__(self, "spatial_tol_m", spatial_tol)
@@ -103,6 +130,60 @@ class MergeReport:
     lock_achieved: bool
     consecutive_lock_samples: int
 
+    def __post_init__(self) -> None:
+        """Validate and normalise directly constructed merge evidence."""
+        timestamp = _validate_real_scalar(self.t, name="t")
+        phase_dispersion = _validate_tolerance(
+            self.phase_dispersion_rad,
+            name="phase_dispersion_rad",
+        )
+        spatial_dispersion = _validate_tolerance(
+            self.spatial_dispersion_m,
+            name="spatial_dispersion_m",
+        )
+        phase_margin = _validate_real_scalar(
+            self.phase_margin_rad,
+            name="phase_margin_rad",
+        )
+        spatial_margin = _validate_real_scalar(
+            self.spatial_margin_m,
+            name="spatial_margin_m",
+        )
+        phase_locked = _validate_plain_bool(self.phase_locked, name="phase_locked")
+        spatial_locked = _validate_plain_bool(
+            self.spatial_locked,
+            name="spatial_locked",
+        )
+        lock_achieved = _validate_plain_bool(
+            self.lock_achieved,
+            name="lock_achieved",
+        )
+        consecutive = _validate_sample_count(
+            self.consecutive_lock_samples,
+            name="consecutive_lock_samples",
+            minimum=0,
+        )
+        if phase_locked is not (phase_margin >= 0.0):
+            raise ValueError("phase_locked must match the sign of phase_margin_rad")
+        if spatial_locked is not (spatial_margin >= 0.0):
+            raise ValueError("spatial_locked must match the sign of spatial_margin_m")
+        joint_lock = phase_locked and spatial_locked
+        if (joint_lock and consecutive == 0) or (not joint_lock and consecutive != 0):
+            raise ValueError(
+                "consecutive_lock_samples must be positive exactly when jointly locked"
+            )
+        if lock_achieved and not joint_lock:
+            raise ValueError("lock_achieved requires current phase and spatial lock")
+        object.__setattr__(self, "t", timestamp)
+        object.__setattr__(self, "phase_dispersion_rad", phase_dispersion)
+        object.__setattr__(self, "spatial_dispersion_m", spatial_dispersion)
+        object.__setattr__(self, "phase_margin_rad", phase_margin)
+        object.__setattr__(self, "spatial_margin_m", spatial_margin)
+        object.__setattr__(self, "phase_locked", phase_locked)
+        object.__setattr__(self, "spatial_locked", spatial_locked)
+        object.__setattr__(self, "lock_achieved", lock_achieved)
+        object.__setattr__(self, "consecutive_lock_samples", consecutive)
+
     def to_dict(self) -> dict[str, float | int | bool]:
         """Return a JSON-safe representation for audit and benchmark records.
 
@@ -116,11 +197,14 @@ class MergeReport:
 
 def _validate_real_scalar(value: object, *, name: str) -> float:
     """Return ``value`` as a finite real scalar, else raise ``ValueError``."""
-    if isinstance(value, (bool, np.bool_)):
+    if isinstance(value, (bool, np.bool_)) or not isinstance(
+        value,
+        (Real, np.floating, np.integer),
+    ):
         raise ValueError(f"{name} must be a finite real scalar")
     try:
-        parsed = float(value)  # type: ignore[arg-type]  # type ignore: runtime validator coerces object input
-    except (TypeError, ValueError) as exc:
+        parsed = float(value)
+    except (TypeError, ValueError, OverflowError) as exc:
         raise ValueError(f"{name} must be a finite real scalar") from exc
     if not isfinite(parsed):
         raise ValueError(f"{name} must be finite")
@@ -141,6 +225,13 @@ def _validate_positive_scalar(value: object, *, name: str) -> float:
     if parsed <= 0.0:
         raise ValueError(f"{name} must be positive")
     return parsed
+
+
+def _validate_plain_bool(value: object, *, name: str) -> bool:
+    """Return a canonical Python boolean, else raise ``ValueError``."""
+    if type(value) is not bool:
+        raise ValueError(f"{name} must be a boolean")
+    return value
 
 
 def _validate_profile_name(value: object) -> str:
@@ -166,20 +257,30 @@ def _validate_sample_count(value: object, *, name: str, minimum: int) -> int:
 
 def _as_float_vector(values: ArrayLike, *, name: str) -> FloatArray:
     """Return ``value`` as a contiguous finite float vector, else raise."""
-    array = np.asarray(values)
-    if array.dtype == np.dtype("O"):
-        raise ValueError(f"{name} must be a finite real-valued vector")
+    try:
+        array = np.asarray(values)
+    except (TypeError, ValueError, OverflowError, RuntimeError) as exc:
+        raise ValueError(f"{name} must be a finite real-valued vector") from exc
     if np.issubdtype(array.dtype, np.bool_) or np.issubdtype(
         array.dtype, np.complexfloating
     ):
         raise ValueError(f"{name} must be real-valued, not boolean or complex")
+    if array.dtype == np.dtype("O"):
+        if not all(
+            isinstance(item, (Real, np.floating, np.integer))
+            and not isinstance(item, (bool, np.bool_))
+            for item in array.flat
+        ):
+            raise ValueError(f"{name} must contain only real numbers")
+    elif array.dtype.kind not in {"f", "i", "u"}:
+        raise ValueError(f"{name} must contain only real numbers")
     if array.ndim != 1:
         raise ValueError(f"{name} must be one-dimensional")
     if array.size == 0:
         raise ValueError(f"{name} must contain at least one sample")
     try:
         out = np.ascontiguousarray(array, dtype=np.float64)
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, OverflowError) as exc:
         raise ValueError(f"{name} must be numeric") from exc
     if not np.all(np.isfinite(out)):
         raise ValueError(f"{name} must contain only finite values")
@@ -356,6 +457,24 @@ class MergeWindowMonitor:
         required_consecutive_samples: object = 3,
         tolerance_profile: object | None = None,
     ) -> None:
+        """Initialise the stateful merge gate.
+
+        Parameters
+        ----------
+        phase_tol_rad : object
+            Baseline phase tolerance in radians.
+        spatial_tol_m : object
+            Baseline spatial tolerance in metres.
+        required_consecutive_samples : object
+            Positive joint-lock sample count required for acceptance.
+        tolerance_profile : object | None
+            Reviewed named tolerance profile, or ``None`` for explicit values.
+
+        Raises
+        ------
+        ValueError
+            If a tolerance, count, or named-profile contract is invalid.
+        """
         self.tolerance_profile = None
         if tolerance_profile is None:
             self.phase_tol_rad = _validate_tolerance(
