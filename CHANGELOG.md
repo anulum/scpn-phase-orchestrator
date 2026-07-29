@@ -7,8 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-07-29
+
 ### Fixed
 
+- Public NumPy, JAX, Julia, and Rust-backed UPDE/coupling boundaries now reject
+  boolean, complex, numeric-string, malformed-cardinality, and non-finite
+  payloads before conversion or publication while preserving valid real numeric
+  object arrays.
+- Runtime twin and server metadata now preserve backend output contracts and
+  report the installed package version instead of a stale hard-coded value.
+- Public documentation now matches the installed CLI and API, distinguishes
+  simulation and review evidence from deployment validation, and removes
+  unsupported latency, lead-time, certification, novelty, and market claims.
 - `spo quickstart evidence` now reads its sealed ISO-NE record from package data,
   so the README's zero-download `pip install` path works from an installed wheel
   rather than requiring a repository checkout. A byte-for-byte drift guard keeps
@@ -16,6 +27,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Executable guards now validate the public learning inventory, documented CLI
+  commands/options, release/version statements, capability claims, and
+  evidence-boundary language.
+- The public architecture reference, role-based onboarding routes, tutorial/API
+  navigation, and notebook execution inventory now form one discoverable and
+  strictly built documentation path.
 - `scpn_phase_orchestrator.meta.leave_one_domain_out`: a leave-one-domain-out
   cross-domain transfer sweep. `leave_one_domain_out_transfer()` holds out each
   domain in turn, transfers the pooled remainder onto it via the honest

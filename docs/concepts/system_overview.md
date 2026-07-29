@@ -299,6 +299,7 @@ Rust and FFI lanes cover the platform matrix declared in
 | v0.4 | Stuart-Landau amplitude dynamics, imprint model, 24 domainpacks |
 | v0.4.1 | Sheaf UPDE, active inference controller, SSGF, Hodge decomposition |
 | v1.0.0 | First stable public baseline with guarded docs, packaging, and release metadata |
+| v1.1.0 | Hardened backend boundaries, expanded runtime and research capabilities, and evidence-bounded public documentation |
 
 The package metadata and documentation homepage name the current release. See
 the [public roadmap](../roadmap.md) for remaining evidence and productisation

@@ -120,9 +120,10 @@ review record.
 
 ## Current Release Boundary
 
-Version `1.0.0` is the first stable release. The public names exported from
-`scpn_phase_orchestrator.__all__` are covered by semantic-versioning
-guarantees. It consolidates the operator, evaluation, assurance, native-kernel,
+Version `1.1.0` is the current stable release. Version `1.0.0` established the
+stable API baseline: the public names exported from
+`scpn_phase_orchestrator.__all__` are covered by semantic-versioning guarantees.
+This release consolidates the operator, evaluation, assurance, native-kernel,
 and documentation surfaces built through the `0.12.0` line. The public docs
 route readers from use-case selection through Python APIs, tutorials, notebooks,
 benchmark snapshots, real-data validation evidence, and release hygiene without
