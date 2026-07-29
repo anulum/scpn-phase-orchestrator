@@ -138,6 +138,25 @@ class TestGenerateGrpcScript:
         assert stale.returncode == 1
         assert "stale generated stub" in stale.stderr
 
+    def test_package_import_normalisation_emits_lf_newlines(
+        self, tmp_path: Path
+    ) -> None:
+        """Rewriting the gRPC stub must not inherit Windows CRLF output."""
+        grpc_path = tmp_path / "spo_pb2_grpc.py"
+        grpc_path.write_bytes(
+            b"# generated\r\nimport spo_pb2 as spo__pb2\r\n# end\r\n"
+        )
+        spec = importlib.util.spec_from_file_location("generate_grpc", SCRIPT)
+        assert spec is not None and spec.loader is not None
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+
+        getattr(module, "_normalise_package_import")(tmp_path)
+
+        normalised = grpc_path.read_bytes()
+        assert b"\r\n" not in normalised
+        assert b"from . import spo_pb2 as spo__pb2\n" in normalised
+
 
 # Pipeline wiring: generate_grpc.py replaces a bash-only script; the
 # cross-platform tests above ensure Windows / CI runners can both execute

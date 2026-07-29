@@ -58,7 +58,7 @@ def _generate_into(output_dir: Path) -> int:
 
 
 def _normalise_package_import(output_dir: Path) -> None:
-    """Convert protoc's top-level sibling import into a package-relative one."""
+    """Convert the sibling import and emit canonical LF-only source text."""
     grpc_path = output_dir / "spo_pb2_grpc.py"
     text = grpc_path.read_text(encoding="utf-8")
     occurrences = text.count(_ABSOLUTE_SIBLING_IMPORT)
@@ -71,6 +71,7 @@ def _normalise_package_import(output_dir: Path) -> None:
     grpc_path.write_text(
         text.replace(_ABSOLUTE_SIBLING_IMPORT, _RELATIVE_SIBLING_IMPORT),
         encoding="utf-8",
+        newline="\n",
     )
 
 
