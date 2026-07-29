@@ -819,6 +819,9 @@ Physiology replay records enforce non-actuating audit boundaries, integer
 sample/bin/oscillator counts, finite non-negative metrics, unit-interval
 normalised Phi, and minimum partitions free of boolean aliases and
 object-complex integer aliases before replay corpus relationships are accepted.
+The corpus is exactly four uniquely named canonical cases with consistent
+sample/bin geometry; each expected-relationship string is bound to its case and
+normalised Phi is replayed from Phi and `n_bins`.
 Infrastructure replay records apply the same engineering-proxy boundary to
 power-grid and traffic-corridor replay corpora: sample/bin/oscillator counts are
 integer-only, metrics are finite real non-negative values, normalised Phi is

@@ -32,6 +32,23 @@ FloatArray: TypeAlias = NDArray[np.float64]
 
 _TWO_PI = 2.0 * np.pi
 
+_EXPECTED_RELATIONSHIPS = {
+    "cardiac_respiratory_lock": (
+        "cardiac_respiratory_lock > cardiac_respiratory_recovery "
+        "in engineering proxy integration."
+    ),
+    "cardiac_respiratory_recovery": (
+        "cardiac_respiratory_recovery < cardiac_respiratory_lock "
+        "in engineering proxy integration."
+    ),
+    "eeg_sleep_spindle": (
+        "eeg_sleep_spindle > eeg_sleep_baseline in engineering proxy integration."
+    ),
+    "eeg_sleep_baseline": (
+        "eeg_sleep_baseline < eeg_sleep_spindle in engineering proxy integration."
+    ),
+}
+
 
 def build_physiology_integrated_information_replays(
     *,
@@ -117,6 +134,16 @@ def _validate_replay_records(records: tuple[dict[str, Any], ...]) -> None:
             raise ValueError("invalid claim boundary value")
         if record["non_actuating"] is not True:
             raise ValueError("replay records must be non-actuating")
+        case_name = record["case_name"]
+        if not isinstance(case_name, str) or not case_name.strip():
+            raise ValueError("case_name must be non-empty text")
+        if (
+            not isinstance(record["description"], str)
+            or not record["description"].strip()
+        ):
+            raise ValueError("description must be non-empty text")
+        if record["expected_relationship"] != _EXPECTED_RELATIONSHIPS.get(case_name):
+            raise ValueError("expected_relationship must match the canonical case")
         record["n_oscillators"] = _validate_integer_field(
             record["n_oscillators"],
             name="n_oscillators",
@@ -132,29 +159,26 @@ def _validate_replay_records(records: tuple[dict[str, Any], ...]) -> None:
             name="n_bins",
             minimum=2,
         )
-        if (
-            not isinstance(record["minimum_partition"], list)
-            or len(record["minimum_partition"]) != 2
-            or any(not isinstance(part, list) for part in record["minimum_partition"])
-        ):
-            raise ValueError("minimum_partition must be a list pair")
         _validate_record_metrics(record)
         _validate_minimum_partition(
             record["minimum_partition"],
             n_oscillators=int(record["n_oscillators"]),
         )
 
-    by_name = {str(record["case_name"]): record for record in records}
+    by_name = {record["case_name"]: record for record in records}
 
-    required_names = {
-        "cardiac_respiratory_lock",
-        "cardiac_respiratory_recovery",
-        "eeg_sleep_spindle",
-        "eeg_sleep_baseline",
-    }
+    required_names = set(_EXPECTED_RELATIONSHIPS)
     if not required_names.issubset(by_name.keys()):
         missing_names = ", ".join(sorted(required_names - by_name.keys()))
         raise ValueError(f"missing replay cases: {missing_names}")
+    if len(records) != len(_EXPECTED_RELATIONSHIPS) or len(by_name) != len(
+        _EXPECTED_RELATIONSHIPS
+    ):
+        raise ValueError("replay corpus must contain exactly four unique cases")
+    if len({record["n_samples"] for record in records}) != 1:
+        raise ValueError("all replay records must use the same n_samples")
+    if len({record["n_bins"] for record in records}) != 1:
+        raise ValueError("all replay records must use the same n_bins")
 
     if not (
         by_name["cardiac_respiratory_lock"]["phi"]
@@ -182,6 +206,16 @@ def _validate_record_metrics(record: dict[str, Any]) -> None:
     )
     if phi > total_integration + 1e-12:
         raise ValueError("phi must not exceed total_integration")
+    expected_normalised_phi = float(
+        np.clip(phi / np.log(int(record["n_bins"])), 0.0, 1.0)
+    )
+    if not np.isclose(
+        normalised_phi,
+        expected_normalised_phi,
+        rtol=1e-12,
+        atol=1e-12,
+    ):
+        raise ValueError("normalised_phi must match phi/log(n_bins)")
     record["phi"] = phi
     record["normalised_phi"] = normalised_phi
     record["total_integration"] = total_integration

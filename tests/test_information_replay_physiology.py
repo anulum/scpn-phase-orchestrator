@@ -255,6 +255,7 @@ def test_validate_records_rejects_missing_required_field() -> None:
         ("claim_boundary", "theoretical_iit", "invalid claim boundary"),
         ("non_actuating", False, "must be non-actuating"),
         ("minimum_partition", "not-a-list", "minimum_partition must be a list pair"),
+        ("minimum_partition", [0, [1, 2]], "list-of-lists"),
         ("n_oscillators", 1, "n_oscillators must be an integer >= 2"),
         ("n_oscillators", complex(2.0, 0.0), "n_oscillators must be a real integer"),
     ],
@@ -295,6 +296,7 @@ def test_validate_records_rejects_incomplete_case_corpus() -> None:
 def test_validate_records_rejects_cardiac_lock_below_recovery() -> None:
     by_name = _by_name()
     by_name["cardiac_respiratory_lock"]["phi"] = 0.0
+    by_name["cardiac_respiratory_lock"]["normalised_phi"] = 0.0
     with pytest.raises(ValueError, match="cardiac-respiratory lock above recovery"):
         _validate_replay_records(tuple(by_name.values()))
 
@@ -302,5 +304,63 @@ def test_validate_records_rejects_cardiac_lock_below_recovery() -> None:
 def test_validate_records_rejects_sleep_spindle_below_baseline() -> None:
     by_name = _by_name()
     by_name["eeg_sleep_spindle"]["phi"] = 0.0
+    by_name["eeg_sleep_spindle"]["normalised_phi"] = 0.0
     with pytest.raises(ValueError, match="sleep-spindle phase coupling above baseline"):
         _validate_replay_records(tuple(by_name.values()))
+
+
+def test_validate_records_replays_normalised_phi() -> None:
+    records = _valid_records()
+    records[0]["normalised_phi"] = 0.5
+    with pytest.raises(ValueError, match="normalised_phi must match"):
+        _validate_replay_records(tuple(records))
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "match"),
+    [
+        ("case_name", 7, "case_name"),
+        ("description", "", "description"),
+        ("expected_relationship", "fabricated", "expected_relationship"),
+    ],
+)
+def test_validate_records_rejects_malformed_identity_evidence(
+    field: str, value: object, match: str
+) -> None:
+    records = _valid_records()
+    records[0][field] = value
+    with pytest.raises(ValueError, match=match):
+        _validate_replay_records(tuple(records))
+
+
+def test_validate_records_requires_exact_unique_corpus() -> None:
+    records = _valid_records()
+    with pytest.raises(ValueError, match="exactly four unique"):
+        _validate_replay_records((*records, dict(records[0])))
+
+
+@pytest.mark.parametrize("field", ["n_samples", "n_bins"])
+def test_validate_records_requires_consistent_corpus_geometry(field: str) -> None:
+    records = _valid_records()
+    records[1][field] = int(records[1][field]) + 1
+    if field == "n_bins":
+        records[1]["normalised_phi"] = float(
+            np.clip(
+                float(records[1]["phi"]) / np.log(int(records[1]["n_bins"])),
+                0.0,
+                1.0,
+            )
+        )
+    with pytest.raises(ValueError, match=field):
+        _validate_replay_records(tuple(records))
+
+
+def test_validate_records_wraps_broken_scalar_protocol() -> None:
+    class BrokenScalar:
+        def __array__(self) -> np.ndarray:
+            raise TypeError("broken")
+
+    records = _valid_records()
+    records[0]["phi"] = BrokenScalar()
+    with pytest.raises(ValueError, match="phi"):
+        _validate_replay_records(tuple(records))
