@@ -50,13 +50,18 @@ def compute_adaptive_kuramoto_scores(
     band_hz: tuple[float, float] = (0.5, 4.0),
     epoch_seconds: float = 30.0,
     kurtosis_penalty_scale: float = 0.2,
+    weight_mode: str = "snr_kurtosis",
+    top_k: int | None = None,
     score_precision: int = 6,
 ) -> tuple[NDArray[np.float64], NDArray[np.float64]]: ...
 ```
 
 Returns per-epoch scores and per-channel/per-epoch weights for a multi-channel
 signal. `data` must have shape `(n_channels, n_samples)` with `n_channels >= 2`
-and at least one full epoch of samples.
+and at least one full epoch of samples. All public array inputs must be finite,
+real, non-boolean matrices; sampling and epoch values must be positive finite
+reals; and the band must lie strictly inside Nyquist. PLV `top_k` and score
+precision use non-coercive integer contracts.
 
 ### `compute_channel_quality_weights`
 
@@ -71,6 +76,8 @@ def compute_channel_quality_weights(
 ```
 
 Returns weights of shape `(n_channels, n_epochs)` that sum to one per epoch.
+If every channel has zero band power in an epoch, the quality boundary returns
+uniform weights rather than publishing a zero-mass column.
 
 ### `compute_weighted_kuramoto_r`
 
@@ -84,6 +91,9 @@ def compute_weighted_kuramoto_r(
 ```
 
 Computes the median-pooled weighted Kuramoto R from pre-computed phases.
+The weight matrix must exactly match `(n_channels, n_epochs)`, be finite and
+non-negative, and carry positive mass in every epoch; implicit broadcasting and
+`NaN` publication are rejected.
 
 ## Design rationale
 

@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import numpy as np
 import pytest
 
@@ -279,4 +281,207 @@ def test_unknown_weight_mode_rejected() -> None:
     with pytest.raises(ValueError, match="unknown weight_mode"):
         compute_adaptive_kuramoto_scores(
             data, fs, epoch_seconds=30.0, weight_mode="bogus"
+        )
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        np.ones((2, 40), dtype=bool),
+        np.ones((2, 40), dtype=np.complex128),
+        np.full((2, 40), "0.5"),
+    ],
+)
+def test_public_signal_ingress_rejects_coercive_aliases(payload: Any) -> None:
+    with pytest.raises(ValueError, match="data must be a finite real matrix"):
+        compute_channel_quality_weights(
+            payload,
+            fs=10.0,
+            band_hz=(1.0, 4.0),
+            epoch_seconds=2.0,
+        )
+    with pytest.raises(ValueError, match="phases must be a finite real matrix"):
+        compute_phase_locking_weights(payload, fs=10.0, epoch_seconds=2.0)
+    with pytest.raises(ValueError, match="phases must be a finite real matrix"):
+        compute_weighted_kuramoto_r(
+            payload,
+            np.ones((2, 2), dtype=np.float64),
+            epoch_seconds=2.0,
+            fs=10.0,
+        )
+    with pytest.raises(ValueError, match="data must be a finite real matrix"):
+        compute_adaptive_kuramoto_scores(
+            payload,
+            fs=10.0,
+            band_hz=(1.0, 4.0),
+            epoch_seconds=2.0,
+        )
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        np.zeros(4),
+        np.empty((0, 4)),
+        np.array([[object(), object()]], dtype=object),
+        np.array([[0.0, float("nan")]], dtype=np.float64),
+    ],
+)
+def test_matrix_contract_rejects_shape_object_and_non_finite(payload: Any) -> None:
+    with pytest.raises(ValueError, match="phases must be a finite real matrix"):
+        compute_phase_locking_weights(payload, fs=10.0, epoch_seconds=1.0)
+
+
+def test_matrix_contract_wraps_array_protocol_failures() -> None:
+    class BrokenArray:
+        def __array__(self) -> np.ndarray:
+            raise TypeError("broken array protocol")
+
+    with pytest.raises(ValueError, match="phases must be a finite real matrix"):
+        compute_phase_locking_weights(BrokenArray(), fs=10.0, epoch_seconds=1.0)  # type: ignore[arg-type]
+
+
+def test_real_numeric_object_matrix_remains_compatible() -> None:
+    phases = np.array([[0, 0.5] * 20, [0.1, 0.6] * 20], dtype=object)
+    weights = compute_phase_locking_weights(phases, fs=10.0, epoch_seconds=2.0)  # type: ignore[arg-type]
+
+    assert weights.shape == (2, 2)
+    assert np.allclose(weights.sum(axis=0), 1.0)
+
+
+@pytest.mark.parametrize("value", [True, 0.0, -1.0, float("nan")])
+def test_sampling_rate_must_be_positive_finite_real(value: Any) -> None:
+    with pytest.raises(ValueError, match="fs must be a positive finite real"):
+        compute_phase_locking_weights(
+            np.zeros((2, 40), dtype=np.float64),
+            fs=value,
+            epoch_seconds=2.0,
+        )
+
+
+@pytest.mark.parametrize("value", [True, 0.0, -1.0, float("nan"), 0.01])
+def test_epoch_duration_must_define_at_least_one_sample(value: Any) -> None:
+    with pytest.raises(ValueError, match="epoch_seconds"):
+        compute_phase_locking_weights(
+            np.zeros((2, 40), dtype=np.float64),
+            fs=10.0,
+            epoch_seconds=value,
+        )
+
+
+@pytest.mark.parametrize(
+    "band_hz",
+    [
+        [1.0, 4.0],
+        (0.0, 4.0),
+        (4.0, 1.0),
+        (1.0, 5.0),
+        (True, 4.0),
+        (1.0, float("nan")),
+    ],
+)
+def test_band_must_be_ordered_inside_nyquist(band_hz: Any) -> None:
+    with pytest.raises(ValueError, match="band_hz"):
+        compute_channel_quality_weights(
+            np.zeros((2, 40), dtype=np.float64),
+            fs=10.0,
+            band_hz=band_hz,
+            epoch_seconds=2.0,
+        )
+
+
+def test_weight_matrix_contract_rejects_broadcast_and_zero_mass() -> None:
+    phases = np.zeros((2, 40), dtype=np.float64)
+
+    with pytest.raises(ValueError, match="weights shape"):
+        compute_weighted_kuramoto_r(
+            phases,
+            np.ones((2, 1), dtype=np.float64),
+            epoch_seconds=2.0,
+            fs=10.0,
+        )
+    with pytest.raises(ValueError, match="positive mass"):
+        compute_weighted_kuramoto_r(
+            phases,
+            np.zeros((2, 2), dtype=np.float64),
+            epoch_seconds=2.0,
+            fs=10.0,
+        )
+    with pytest.raises(ValueError, match="weights must be a finite real matrix"):
+        compute_weighted_kuramoto_r(
+            phases,
+            np.ones((2, 2), dtype=bool),
+            epoch_seconds=2.0,
+            fs=10.0,
+        )
+    negative = np.ones((2, 2), dtype=np.float64)
+    negative[0, 0] = -0.1
+    with pytest.raises(ValueError, match="weights must be non-negative"):
+        compute_weighted_kuramoto_r(
+            phases,
+            negative,
+            epoch_seconds=2.0,
+            fs=10.0,
+        )
+
+
+def test_weighted_score_rejects_sub_epoch_phase_signal() -> None:
+    with pytest.raises(ValueError, match="shorter than one epoch"):
+        compute_weighted_kuramoto_r(
+            np.zeros((2, 10), dtype=np.float64),
+            np.ones((2, 1), dtype=np.float64),
+            epoch_seconds=2.0,
+            fs=10.0,
+        )
+
+
+def test_filter_rejects_signal_at_or_below_padding_length() -> None:
+    with pytest.raises(ValueError, match="signal must contain more than"):
+        compute_channel_quality_weights(
+            np.zeros((2, 20), dtype=np.float64),
+            fs=10.0,
+            band_hz=(1.0, 4.0),
+            epoch_seconds=2.0,
+        )
+
+
+def test_constant_signal_quality_weights_fall_back_to_uniform() -> None:
+    weights = compute_channel_quality_weights(
+        np.zeros((2, 40), dtype=np.float64),
+        fs=10.0,
+        band_hz=(1.0, 4.0),
+        epoch_seconds=2.0,
+    )
+
+    assert np.array_equal(weights, np.full((2, 2), 0.5))
+
+
+def test_boolean_top_k_and_negative_penalty_rejected() -> None:
+    phases = np.zeros((2, 40), dtype=np.float64)
+    with pytest.raises(ValueError, match="top_k must be an integer"):
+        compute_phase_locking_weights(
+            phases,
+            fs=10.0,
+            epoch_seconds=2.0,
+            top_k=True,
+        )
+    with pytest.raises(ValueError, match="kurtosis_penalty_scale"):
+        compute_channel_quality_weights(
+            phases,
+            fs=10.0,
+            band_hz=(1.0, 4.0),
+            epoch_seconds=2.0,
+            kurtosis_penalty_scale=-1.0,
+        )
+
+
+@pytest.mark.parametrize("score_precision", [True, -1, 1.5])
+def test_score_precision_is_non_negative_integer(score_precision: Any) -> None:
+    with pytest.raises(ValueError, match="score_precision"):
+        compute_adaptive_kuramoto_scores(
+            np.zeros((2, 40), dtype=np.float64),
+            fs=10.0,
+            band_hz=(1.0, 4.0),
+            epoch_seconds=2.0,
+            score_precision=score_precision,
         )

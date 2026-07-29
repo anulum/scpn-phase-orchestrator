@@ -29,6 +29,7 @@ weighting matches the domain.
 
 from __future__ import annotations
 
+import math
 from typing import TYPE_CHECKING, cast
 
 import numpy as np
@@ -48,6 +49,92 @@ __all__ = [
 ]
 
 
+def _finite_real_matrix(value: object, name: str) -> FloatArray:
+    """Return a non-empty finite real matrix without coercive aliases."""
+    try:
+        raw = np.asarray(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a finite real matrix") from exc
+    if raw.ndim != 2 or 0 in raw.shape:
+        raise ValueError(f"{name} must be a finite real matrix")
+    if raw.dtype.kind == "O":
+        if any(
+            isinstance(item, (bool, np.bool_, complex, str, bytes, np.str_, np.bytes_))
+            or not isinstance(item, (int, float, np.integer, np.floating))
+            for item in raw.flat
+        ):
+            raise ValueError(f"{name} must be a finite real matrix")
+    elif raw.dtype.kind not in "iuf":
+        raise ValueError(f"{name} must be a finite real matrix")
+    result = np.asarray(raw, dtype=np.float64)
+    if not np.all(np.isfinite(result)):
+        raise ValueError(f"{name} must be a finite real matrix")
+    return np.ascontiguousarray(result)
+
+
+def _finite_real(value: object, name: str) -> float:
+    """Return a finite real scalar without boolean or text coercion."""
+    if isinstance(value, (bool, np.bool_)) or not isinstance(
+        value, (int, float, np.integer, np.floating)
+    ):
+        raise ValueError(f"{name} must be a finite real")
+    result = float(value)
+    if not math.isfinite(result):
+        raise ValueError(f"{name} must be a finite real")
+    return result
+
+
+def _positive_finite_real(value: object, name: str) -> float:
+    """Return a strictly positive finite real scalar."""
+    try:
+        result = _finite_real(value, name)
+    except ValueError as exc:
+        raise ValueError(f"{name} must be a positive finite real") from exc
+    if result <= 0.0:
+        raise ValueError(f"{name} must be a positive finite real")
+    return result
+
+
+def _sampling_contract(fs: object, epoch_seconds: object) -> tuple[float, float, int]:
+    """Validate sampling geometry and return normalised values plus epoch length."""
+    fs_value = _positive_finite_real(fs, "fs")
+    epoch_value = _positive_finite_real(epoch_seconds, "epoch_seconds")
+    samples = fs_value * epoch_value
+    if not math.isfinite(samples) or samples < 1.0:
+        raise ValueError("epoch_seconds must define at least one sample")
+    return fs_value, epoch_value, int(samples)
+
+
+def _validate_band(band_hz: object, fs: float) -> tuple[float, float]:
+    """Return a finite ordered band strictly inside the Nyquist interval."""
+    if not isinstance(band_hz, tuple) or len(band_hz) != 2:
+        raise ValueError("band_hz must be a (low, high) tuple")
+    low = _positive_finite_real(band_hz[0], "band_hz low")
+    high = _positive_finite_real(band_hz[1], "band_hz high")
+    if not low < high < fs / 2.0:
+        raise ValueError("band_hz must satisfy 0 < low < high < fs / 2")
+    return low, high
+
+
+def _optional_integer(value: object, name: str) -> int | None:
+    """Return ``None`` or an integer without boolean coercion."""
+    if value is None:
+        return None
+    if isinstance(value, (bool, np.bool_)) or not isinstance(value, (int, np.integer)):
+        raise ValueError(f"{name} must be an integer")
+    return int(value)
+
+
+def _non_negative_integer(value: object, name: str) -> int:
+    """Return a non-negative integer without boolean coercion."""
+    if isinstance(value, (bool, np.bool_)) or not isinstance(value, (int, np.integer)):
+        raise ValueError(f"{name} must be a non-negative integer")
+    result = int(value)
+    if result < 0:
+        raise ValueError(f"{name} must be a non-negative integer")
+    return result
+
+
 def _bandpass(
     sig: FloatArray, fs: float, lo: float, hi: float, order: int = 3
 ) -> FloatArray:
@@ -58,6 +145,9 @@ def _bandpass(
     """
     nyq = fs / 2.0
     b, a = butter(order, [lo / nyq, hi / nyq], btype="band")
+    padlen = 3 * max(len(a), len(b))
+    if sig.shape[-1] <= padlen:
+        raise ValueError(f"signal must contain more than {padlen} samples")
     return cast(FloatArray, filtfilt(b, a, sig, axis=-1))
 
 
@@ -124,8 +214,15 @@ def compute_channel_quality_weights(
     ValueError
         If the signal is shorter than one epoch.
     """
+    data = _finite_real_matrix(data, "data")
+    fs, epoch_seconds, epoch_len = _sampling_contract(fs, epoch_seconds)
+    band_hz = _validate_band(band_hz, fs)
+    kurtosis_penalty_scale = _finite_real(
+        kurtosis_penalty_scale, "kurtosis_penalty_scale"
+    )
+    if kurtosis_penalty_scale < 0.0:
+        raise ValueError("kurtosis_penalty_scale must be non-negative")
     n_channels, n_samples = data.shape
-    epoch_len = int(epoch_seconds * fs)
     n_epochs = n_samples // epoch_len
     if n_epochs == 0:
         raise ValueError("signal shorter than one epoch")
@@ -155,8 +252,16 @@ def compute_channel_quality_weights(
     # Normalise per epoch so weights sum to one (avoids dependence on channel
     # count and keeps R in [0, 1]).
     per_epoch_sum = raw_weights.sum(axis=0, keepdims=True)
-    per_epoch_sum = np.where(per_epoch_sum == 0, 1.0, per_epoch_sum)
-    return cast(FloatArray, raw_weights / per_epoch_sum)
+    uniform = np.full_like(raw_weights, 1.0 / n_channels)
+    return cast(
+        FloatArray,
+        np.divide(
+            raw_weights,
+            per_epoch_sum,
+            out=uniform,
+            where=per_epoch_sum > 0.0,
+        ),
+    )
 
 
 def compute_phase_locking_weights(
@@ -201,8 +306,10 @@ def compute_phase_locking_weights(
         If the signal is shorter than one epoch, or ``top_k`` is outside the
         range ``[1, n_channels]``.
     """
+    phases = _finite_real_matrix(phases, "phases")
+    fs, epoch_seconds, epoch_len = _sampling_contract(fs, epoch_seconds)
+    top_k = _optional_integer(top_k, "top_k")
     n_channels, n_samples = phases.shape
-    epoch_len = int(epoch_seconds * fs)
     n_epochs = n_samples // epoch_len
     if n_epochs == 0:
         raise ValueError("signal shorter than one epoch")
@@ -251,10 +358,30 @@ def compute_weighted_kuramoto_r(
     -------
     FloatArray
         Per-epoch score of shape ``(n_epochs,)``.
+
+    Raises
+    ------
+    ValueError
+        If either matrix is not finite and real, the sampling geometry is
+        invalid, the signal is shorter than one epoch, or the weights do not
+        exactly match the channel/epoch geometry with non-negative positive
+        mass in every epoch.
     """
+    phases = _finite_real_matrix(phases, "phases")
+    weights = _finite_real_matrix(weights, "weights")
+    fs, epoch_seconds, epoch_len = _sampling_contract(fs, epoch_seconds)
     n_channels, n_samples = phases.shape
-    epoch_len = int(epoch_seconds * fs)
     n_epochs = n_samples // epoch_len
+    if n_epochs == 0:
+        raise ValueError("signal shorter than one epoch")
+    expected_shape = (n_channels, n_epochs)
+    if weights.shape != expected_shape:
+        raise ValueError(f"weights shape must be {expected_shape}, got {weights.shape}")
+    if np.any(weights < 0.0):
+        raise ValueError("weights must be non-negative")
+    weight_sums = weights.sum(axis=0)
+    if np.any(weight_sums <= 0.0):
+        raise ValueError("weights must have positive mass in every epoch")
 
     phases_epochs = phases[:, : n_epochs * epoch_len].reshape(
         n_channels, n_epochs, epoch_len
@@ -263,7 +390,7 @@ def compute_weighted_kuramoto_r(
 
     with np.errstate(invalid="ignore"):
         z = weights_per_sample * np.exp(1j * phases_epochs)
-        r_t = np.abs(z.sum(axis=0) / weights.sum(axis=0)[:, np.newaxis])
+        r_t = np.abs(z.sum(axis=0) / weight_sums[:, np.newaxis])
 
     # Robust temporal pooling: median over the epoch.
     return cast(FloatArray, np.median(r_t, axis=1))
@@ -318,8 +445,11 @@ def compute_adaptive_kuramoto_scores(
         epoch, ``top_k`` is combined with ``weight_mode="snr_kurtosis"``, or
         ``weight_mode`` is not a recognised strategy.
     """
+    data = _finite_real_matrix(data, "data")
+    fs, epoch_seconds, epoch_len = _sampling_contract(fs, epoch_seconds)
+    band_hz = _validate_band(band_hz, fs)
+    score_precision = _non_negative_integer(score_precision, "score_precision")
     n_channels, n_samples = data.shape
-    epoch_len = int(epoch_seconds * fs)
     n_epochs = n_samples // epoch_len
     if n_channels < 2:
         raise ValueError("adaptive Kuramoto requires at least 2 channels")
