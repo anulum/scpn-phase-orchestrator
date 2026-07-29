@@ -877,6 +877,13 @@ members trivially raises the rate by spending the false-alarm budget.
 
 ::: scpn_phase_orchestrator.monitor.ensemble_warning
 
+Each `MemberEvidence` record owns immutable copies of one non-empty, strictly
+increasing window grid and aligned finite-real/boolean vectors. Member names are
+unique, native direction is canonical, and oriented z-scores must equal the
+native score for rising alarms or its negation for dropping alarms. Weighted
+fusion does not apply the vote-only quorum upper bound; vote fusion still
+requires `min_votes <= member_count`.
+
 ### Domain-Adaptable Suite
 
 Runs the three members and the weighted fusion over one neutral observable

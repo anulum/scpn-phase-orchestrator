@@ -126,6 +126,44 @@ class MemberEvidence:
     z_threshold: float
     n_baseline_windows: int
 
+    def __post_init__(self) -> None:
+        if not isinstance(self.name, str) or not self.name.strip():
+            raise ValueError("member name must be a non-empty string")
+        if self.native_direction not in (RISE, DROP):
+            raise ValueError("native_direction must be 'rise' or 'drop'")
+        starts = _validate_window_starts(self.window_starts)
+        oriented = _validate_real_vector(self.oriented_z, "oriented_z")
+        native = _validate_real_vector(self.native_robust_z, "native_robust_z")
+        breaches = _validate_breaches(self.breaches)
+        expected_shape = starts.shape
+        if (
+            oriented.shape != expected_shape
+            or native.shape != expected_shape
+            or breaches.shape != expected_shape
+        ):
+            raise ValueError("member evidence vectors must share one window shape")
+        expected_oriented = native if self.native_direction == RISE else -native
+        if not np.allclose(oriented, expected_oriented, rtol=0.0, atol=1e-12):
+            raise ValueError("oriented_z must match native direction and robust z")
+        baseline = _validate_finite_real(self.baseline_median, "baseline_median")
+        threshold = _validate_non_negative_real(self.z_threshold, "z_threshold")
+        if isinstance(self.n_baseline_windows, (bool, np.bool_)) or not isinstance(
+            self.n_baseline_windows, Integral
+        ):
+            raise ValueError("n_baseline_windows must be a non-negative integer")
+        n_baseline = int(self.n_baseline_windows)
+        if not 0 <= n_baseline <= starts.size:
+            raise ValueError("n_baseline_windows must lie within the window grid")
+        for array in (starts, oriented, native, breaches):
+            array.setflags(write=False)
+        object.__setattr__(self, "window_starts", starts)
+        object.__setattr__(self, "oriented_z", oriented)
+        object.__setattr__(self, "native_robust_z", native)
+        object.__setattr__(self, "breaches", breaches)
+        object.__setattr__(self, "baseline_median", baseline)
+        object.__setattr__(self, "z_threshold", threshold)
+        object.__setattr__(self, "n_baseline_windows", n_baseline)
+
 
 @dataclass(frozen=True, slots=True)
 class MemberContribution:
@@ -273,7 +311,11 @@ def ensemble_warning(
     rule = _validate_rule(rule)
     fused_threshold = _validate_non_negative_real(fused_threshold, "fused_threshold")
     persistence = _validate_positive_int(persistence, "persistence")
-    min_votes = _validate_min_votes(min_votes, len(sealed))
+    min_votes = (
+        _validate_min_votes(min_votes, len(sealed))
+        if rule == VOTE_RULE
+        else _validate_positive_int(min_votes, "min_votes")
+    )
     weight_array = _validate_weights(weights, len(sealed))
 
     window_starts = sealed[0].window_starts
@@ -542,6 +584,9 @@ def _validate_members(
     for position, member in enumerate(sealed):
         if not isinstance(member, MemberEvidence):
             raise ValueError(f"members[{position}] must be a MemberEvidence")
+    names = [member.name for member in sealed]
+    if len(set(names)) != len(names):
+        raise ValueError("member names must be unique")
     reference = sealed[0].window_starts
     for position, member in enumerate(sealed[1:], start=1):
         if not np.array_equal(member.window_starts, reference):
@@ -574,6 +619,52 @@ def _validate_weights(weights: object, n_members: int) -> FloatArray:
     return values
 
 
+def _validate_window_starts(value: object) -> IntArray:
+    """Return a strictly increasing non-negative integer window grid."""
+    try:
+        raw = np.asarray(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("window_starts must be an integer vector") from exc
+    if raw.ndim != 1 or raw.size == 0 or raw.dtype.kind not in "iu":
+        raise ValueError("window_starts must be an integer vector")
+    starts = np.asarray(raw, dtype=np.int64).copy()
+    if np.any(starts < 0) or np.any(np.diff(starts) <= 0):
+        raise ValueError("window_starts must be non-negative and strictly increasing")
+    return np.ascontiguousarray(starts)
+
+
+def _validate_real_vector(value: object, name: str) -> FloatArray:
+    """Return a non-empty finite, non-coercive real vector."""
+    try:
+        raw = np.asarray(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a finite real vector") from exc
+    if raw.dtype.kind == "O":
+        if any(
+            isinstance(item, (bool, np.bool_, complex, str, bytes, np.str_, np.bytes_))
+            or not isinstance(item, Real)
+            for item in raw.flat
+        ):
+            raise ValueError(f"{name} must be a finite real vector")
+    elif raw.dtype.kind not in "iuf":
+        raise ValueError(f"{name} must be a finite real vector")
+    result = np.asarray(raw, dtype=np.float64).copy()
+    if result.ndim != 1 or result.size == 0 or not np.all(np.isfinite(result)):
+        raise ValueError(f"{name} must be a finite real vector")
+    return np.ascontiguousarray(result)
+
+
+def _validate_breaches(value: object) -> BoolArray:
+    """Return a non-empty exact-boolean breach vector."""
+    try:
+        raw = np.asarray(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("breaches must be a boolean vector") from exc
+    if raw.ndim != 1 or raw.size == 0 or raw.dtype.kind != "b":
+        raise ValueError("breaches must be a boolean vector")
+    return np.ascontiguousarray(raw, dtype=np.bool_).copy()
+
+
 def _validate_min_votes(value: object, n_members: int) -> int:
     """Return ``value`` as a vote count in ``[1, n_members]``, else raise."""
     votes = _validate_positive_int(value, "min_votes")
@@ -597,6 +688,16 @@ def _validate_positive_real(value: object, name: str) -> float:
     result = _validate_non_negative_real(value, name)
     if result <= 0.0:
         raise ValueError(f"{name} must be positive, got {result}")
+    return result
+
+
+def _validate_finite_real(value: object, name: str) -> float:
+    """Return ``value`` as a finite real, else raise."""
+    if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be a finite real")
+    result = float(value)
+    if not np.isfinite(result):
+        raise ValueError(f"{name} must be a finite real")
     return result
 
 

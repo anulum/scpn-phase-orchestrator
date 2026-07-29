@@ -143,14 +143,13 @@ def test_untriggered_report_window_is_the_strongest_fused_approach() -> None:
     a = _member(
         name="a",
         oriented_z=[0, 0, 0, 1, 2, 1, 0, 0],
-        native_robust_z=[0, 0, 0, 1, 9, 1, 0, 0],
     )
     b = _member(name="b", oriented_z=[0, 0, 0, 1, 1, 1, 0, 0])
     result = ensemble_warning([a, b], fused_threshold=50.0)
     assert result.warning_triggered is False
     # Strongest fused window is index 4; member a's native z there is pinned.
     contribution = {c.name: c for c in result.contributions}["a"]
-    assert contribution.robust_z == 9.0
+    assert contribution.robust_z == 2.0
 
 
 def test_baseline_covering_every_window_pins_zero_contributions() -> None:
@@ -200,6 +199,124 @@ def test_misaligned_window_grids_are_rejected() -> None:
         ensemble_warning([a, b])
 
 
+def test_duplicate_member_names_are_rejected() -> None:
+    members = [
+        _member(name="same", oriented_z=[0.0] * 8),
+        _member(name="same", oriented_z=[0.0] * 8),
+    ]
+
+    with pytest.raises(ValueError, match="member names must be unique"):
+        ensemble_warning(members)
+
+
+def test_weighted_single_member_ignores_vote_quorum_upper_bound() -> None:
+    result = ensemble_warning(
+        [_member(name="only", oriented_z=[0, 0, 0, 4, 4, 4, 4, 4])],
+        rule=WEIGHTED_RULE,
+        fused_threshold=3.0,
+    )
+
+    assert result.warning_triggered is True
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "match"),
+    [
+        ("name", " ", "member name"),
+        ("native_direction", "sideways", "native_direction"),
+        ("window_starts", np.array([0.0, 1.0]), "integer vector"),
+        ("window_starts", np.array([0, 0]), "strictly increasing"),
+        ("oriented_z", np.array(["0", "1"]), "finite real vector"),
+        ("oriented_z", np.array([0.0, True], dtype=object), "finite real vector"),
+        ("native_robust_z", np.array([0.0, np.nan]), "finite real vector"),
+        ("breaches", np.array([0, 1]), "boolean vector"),
+        ("baseline_median", np.nan, "finite real"),
+        ("baseline_median", True, "finite real"),
+        ("z_threshold", -1.0, "z_threshold"),
+        ("n_baseline_windows", True, "non-negative integer"),
+        ("n_baseline_windows", 3, "within the window grid"),
+    ],
+)
+def test_member_evidence_rejects_malformed_fields(field, value, match) -> None:
+    kwargs = {
+        "name": "member",
+        "native_direction": RISE,
+        "window_starts": np.array([0, 1], dtype=np.int64),
+        "oriented_z": np.array([0.0, 1.0]),
+        "native_robust_z": np.array([0.0, 1.0]),
+        "breaches": np.array([False, True]),
+        "baseline_median": 0.2,
+        "z_threshold": 1.0,
+        "n_baseline_windows": 1,
+    }
+    kwargs[field] = value
+
+    with pytest.raises(ValueError, match=match):
+        MemberEvidence(**kwargs)
+
+
+def test_member_evidence_rejects_vector_shape_or_orientation_mismatch() -> None:
+    with pytest.raises(ValueError, match="share one window shape"):
+        _member(oriented_z=[0.0] * 8, breaches=[False] * 7)
+
+    with pytest.raises(ValueError, match="oriented_z must match native direction"):
+        _member(
+            direction=DROP,
+            oriented_z=[0.0] * 8,
+            native_robust_z=[1.0] * 8,
+        )
+
+
+def test_member_evidence_copies_and_freezes_arrays() -> None:
+    oriented = np.arange(8, dtype=np.float64)
+    member = _member(oriented_z=oriented)  # type: ignore[arg-type]
+    oriented[:] = 99.0
+
+    assert member.oriented_z[-1] == 7.0
+    with pytest.raises(ValueError):
+        member.oriented_z[0] = 99.0
+
+
+@pytest.mark.parametrize("field", ["window_starts", "oriented_z", "breaches"])
+def test_member_evidence_wraps_broken_array_protocol(field) -> None:
+    class BrokenArray:
+        def __array__(self) -> np.ndarray:
+            raise TypeError("broken")
+
+    kwargs = {
+        "name": "member",
+        "native_direction": RISE,
+        "window_starts": np.array([0, 1], dtype=np.int64),
+        "oriented_z": np.array([0.0, 1.0]),
+        "native_robust_z": np.array([0.0, 1.0]),
+        "breaches": np.array([False, True]),
+        "baseline_median": 0.2,
+        "z_threshold": 1.0,
+        "n_baseline_windows": 1,
+    }
+    kwargs[field] = BrokenArray()
+
+    with pytest.raises(ValueError):
+        MemberEvidence(**kwargs)
+
+
+def test_member_evidence_accepts_real_numeric_object_vectors() -> None:
+    member = MemberEvidence(
+        name="member",
+        native_direction=RISE,
+        window_starts=np.array([0, 1], dtype=np.int64),
+        oriented_z=np.array([0, 1.0], dtype=object),  # type: ignore[arg-type]
+        native_robust_z=np.array([0, 1.0], dtype=object),  # type: ignore[arg-type]
+        breaches=np.array([False, True]),
+        baseline_median=np.float32(0.2),
+        z_threshold=np.float32(1.0),
+        n_baseline_windows=np.int64(1),
+    )
+
+    assert member.oriented_z.dtype == np.float64
+    assert type(member.baseline_median) is float
+
+
 def test_unknown_rule_is_rejected() -> None:
     with pytest.raises(ValueError, match="rule must be"):
         ensemble_warning([_member(oriented_z=[0.0] * 8)], rule="mean")
@@ -213,7 +330,7 @@ def test_unknown_rule_is_rejected() -> None:
         ({"persistence": 0}, "persistence"),
         ({"persistence": True}, "persistence"),
         ({"min_votes": 0}, "min_votes"),
-        ({"min_votes": 3}, "exceeds the member count"),
+        ({"min_votes": 3, "rule": VOTE_RULE}, "exceeds the member count"),
     ],
 )
 def test_out_of_range_controls_are_rejected(
