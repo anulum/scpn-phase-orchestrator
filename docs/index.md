@@ -323,6 +323,7 @@ print("OK")
 | [Specifications](specs/binding_spec.schema.json) | Binding schema, UPDE numerics, policy DSL, all contracts |
 | [Tutorials](tutorials/01_new_domain_checklist.md) | New domain checklist, oscillator hunt sheet, Knm templates |
 | [API Reference](reference/api/index.md) | Full Python API docs (mkdocstrings) |
+| [Polyglot API Artifacts](reference/polyglot_api.md) | Native Rust, Go, Julia, and Mojo documentation outputs |
 | [Gallery](galleries/domainpack_gallery.md) | All 36 domainpacks, notebooks, examples, and demos |
 
 The current documentation inventory and API-reference guardrails are tracked in

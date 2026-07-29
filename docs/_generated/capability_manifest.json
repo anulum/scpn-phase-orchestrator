@@ -7,12 +7,12 @@
     "integration_modules": 32,
     "optional_extras": 23,
     "public_api_exports": 24,
-    "public_documentation_pages": 229,
+    "public_documentation_pages": 230,
     "python_package_modules": 726,
     "research_experimental_modules": 205,
     "runtime_serving_modules": 157,
     "rust_kernel_files": 97,
-    "test_files": 868
+    "test_files": 869
   },
   "documentation": {
     "public_pages": [
@@ -211,6 +211,7 @@
       "docs/reference/nn_spectral_contract.md",
       "docs/reference/nn_stuart_landau_layer_contract.md",
       "docs/reference/nn_xfail_skip_register.md",
+      "docs/reference/polyglot_api.md",
       "docs/roadmap.md",
       "docs/specs/action_compose.md",
       "docs/specs/audit_trace.md",
@@ -2411,6 +2412,7 @@
       "tests/test_policy_rules_residual.py",
       "tests/test_policy_yaml_fuzzer.py",
       "tests/test_polyglot_backend_dispatch_contract.py",
+      "tests/test_polyglot_documentation.py",
       "tests/test_power_grid_causal_attribution_demo.py",
       "tests/test_power_grid_domainpack.py",
       "tests/test_power_grid_fep_hierarchy_demo.py",

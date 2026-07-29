@@ -234,6 +234,14 @@ jobs:
           print('backends:', AVAILABLE_BACKENDS)"
       - name: Run native-backend parity tests without coverage
         run: pytest tests/ -k backends -m "not slow" --tb=short -p no:cacheprovider
+      - name: Generate Julia API documentation
+        run: python tools/generate_polyglot_docs.py julia --output build/polyglot-docs
+      - name: Upload Julia API documentation
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: polyglot-docs-julia
+          path: build/polyglot-docs/julia
+          retention-days: 14
 
   go-backend:
     # The Go accelerator bridges compile each source to a cgo ``c-shared``
@@ -250,6 +258,9 @@ jobs:
         with:
           go-version-file: go/go.mod
           cache-dependency-path: go/go.sum
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
       - name: Compile every Go accelerator to a c-shared library
         working-directory: go
         run: |
@@ -262,6 +273,14 @@ jobs:
             fi
           done
           exit "$fail"
+      - name: Generate Go API documentation
+        run: python tools/generate_polyglot_docs.py go --output build/polyglot-docs
+      - name: Upload Go API documentation
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: polyglot-docs-go
+          path: build/polyglot-docs/go
+          retention-days: 14
 
   mojo-backend:
     # The Mojo accelerator bridges compile each source to a standalone binary that
@@ -299,6 +318,14 @@ jobs:
             fi
           done
           exit "$fail"
+      - name: Generate Mojo API documentation
+        run: .venv/bin/python tools/generate_polyglot_docs.py mojo --output build/polyglot-docs
+      - name: Upload Mojo API documentation
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: polyglot-docs-mojo
+          path: build/polyglot-docs/mojo
+          retention-days: 14
 
   coverage-guard:
     needs: [test, ffi-test, nn-coverage]
@@ -492,7 +519,20 @@ jobs:
           python-version: "3.12"
       - run: cargo fmt --check
       - run: cargo clippy --workspace --exclude spo-ffi -- -D warnings
-      - run: cargo doc --no-deps --workspace --exclude spo-ffi
+      - name: Generate Rust API documentation
+        if: runner.os == 'Linux'
+        env:
+          RUSTDOCFLAGS: "-D warnings"
+        run: |
+          cargo clean --doc
+          cargo doc --locked --no-deps --workspace
+      - name: Upload Rust API documentation
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: polyglot-docs-rust
+          path: spo-kernel/target/doc
+          retention-days: 14
       - run: cargo test --workspace --exclude spo-ffi
       # spo-ffi `extension-module` is a default feature; disable it so the
       # test binary can link libpython. Ubuntu-only — macOS and Windows

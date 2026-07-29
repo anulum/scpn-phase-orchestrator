@@ -61,6 +61,7 @@ If any major path lacks onboarding/tutorial coverage, that path is treated as
 | Guides | Runtime, production, testing, adapters, backend, notebooks | [Guides](../guide/production.md) |
 | Contributor onboarding | setup, repository map, checks, documentation duties | [Contributor Onboarding](../guide/contributor_onboarding.md) |
 | API reference | 96 MkDocs API pages, all wired into navigation | [API Reference](api/index.md) |
+| Native API artifacts | rustdoc HTML, per-unit Go docs, Julia signature reference, Mojo doc JSON | [Polyglot API Documentation](polyglot_api.md) |
 | Domainpacks | 36 domainpacks documented in the gallery | [Domainpack Gallery](../galleries/domainpack_gallery.md) |
 | Notebooks | 21 notebook workflows | [Notebooks & Demos](../galleries/notebooks_and_demos.md) |
 | Notebook CI matrix | per-notebook extras and execution expectations | [Notebook Execution Matrix](../galleries/notebook_execution_matrix.md) |
@@ -111,6 +112,12 @@ CI also runs `interrogate src/scpn_phase_orchestrator --fail-under 100` in the
 lint job, with generated gRPC stubs excluded and `__init__`/dunder methods
 exempted. That ratchet keeps the maintained source tree from regressing below
 the documented 100% docstring floor.
+
+The native accelerator lanes also generate documentation in each toolchain's
+own format. Rustdoc warnings fail CI; Go units are documented independently;
+Julia modules are reflected without merging them; and Mojo docstrings are
+compiled to the pinned toolchain's JSON format. These artifacts document native
+surfaces but do not promote experimental backends to the stable Python API.
 
 ## v0.6.0 Code-to-Documentation Reconciliation
 
