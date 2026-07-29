@@ -141,7 +141,7 @@ def test_schedule_dispatch_rejects_invalid_schedule(
     _force_python(monkeypatch)
     phases, knm, alpha = _zero_problem()
 
-    with pytest.raises(ValueError, match="omega_schedule"):
+    with pytest.raises(TypeError, match="omega_schedule"):
         upde_run_omega_schedule(
             phases,
             np.array([[True, False]], dtype=bool),
