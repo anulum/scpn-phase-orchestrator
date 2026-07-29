@@ -1050,15 +1050,15 @@ realistic but untested in a coherence-feedback loop.
 synchronisation (retry storms, sensor drift correlation, cascade
 failures) in systems with coupled cyclical processes.**
 
-- **Cloud queues**: retry storm detection (R_bad on the retry layer)
-  is a natural fit — retry storms are literally pathological
-  synchronisation of request timing.  SPO detects and decouples
-  them via α (backoff) adjustment.  Confidence: HIGH.
+- **Cloud queues**: retry-storm monitoring (R_bad on the retry layer)
+  is a candidate fit because retries can synchronise request timing. SPO can
+  measure that hypothesis and propose an α/backoff adjustment; lead time,
+  false-alarm rate, and intervention benefit remain unvalidated.
 
-- **Manufacturing SPC**: sensor drift correlation detection identifies
-  systematic process shifts that single-channel SPC charts miss.
-  Confidence: MODERATE (phase extraction from slowly drifting
-  metrology signals is the weakest link).
+- **Manufacturing SPC**: phase-based sensor-drift correlation is a candidate
+  complement to single-channel SPC. Its incremental detection value and phase
+  extraction from slowly drifting metrology signals require comparative
+  validation.
 
 - **Biological oscillators**: EEG band coherence monitoring is
   well-established (functional connectivity analysis uses similar

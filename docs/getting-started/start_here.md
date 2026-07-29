@@ -119,8 +119,8 @@ synchronisation regimes, or build a brain-computer interface.
 
 ## I'm a Power Systems Engineer
 
-You want to model grid stability, test control strategies, predict
-cascading failures, or simulate generator dynamics.
+You want to model grid stability, test control strategies, study cascade
+scenarios, or simulate generator dynamics.
 
 1. **Read:** [Kuramoto Theory](../concepts/kuramoto_theory.md) — focus
    on the inertial (second-order) sections, which model generator
@@ -128,8 +128,9 @@ cascading failures, or simulate generator dynamics.
 2. **Do:** [Advanced Dynamics Guide — Power Grids](../guide/advanced_dynamics.md#second-order-inertial-kuramoto-power-grids)
    — simulates a 5-bus system with generator trip events.
 3. **Explore:** `power_grid` domainpack + `InertialKuramotoEngine`.
-4. **Try:** Generator trip scenarios, weak coupling desynchronisation
-   tests, frequency nadir prediction.
+4. **Try:** Generator trip scenarios, weak-coupling desynchronisation tests,
+   and simulated frequency-nadir estimation. Treat these as model outputs, not
+   prospective grid-event predictions.
 
 **Key concepts for you:**
 - `InertialKuramotoEngine`: second-order model with inertia constant H

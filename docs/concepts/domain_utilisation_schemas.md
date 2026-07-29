@@ -3,6 +3,13 @@
 Cross-domain comparison of the current SPO domainpack catalogue, showing how Kuramoto/UPDE
 phase dynamics map to diverse physical, biological, and engineered systems.
 
+The rows describe modelling intent and packaged configuration, not field
+validation. `Safety Tier` and `Pipeline` are binding metadata; labels such as
+`clinical`, `production`, `consumer`, and `full` do not certify a detector,
+controller, deployment, or regulatory status. See the
+[Use Cases and Value Map](../getting-started/use_cases.md) for current evidence
+boundaries.
+
 ## Master Domainpack Table
 
 | Pack | Layers | Osc | Safety Tier | Pipeline | Key Innovation |

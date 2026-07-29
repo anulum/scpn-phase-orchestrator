@@ -1,10 +1,11 @@
 # QueueWaves
 
-Real-time cascade failure detector for microservice architectures.
-QueueWaves models each service as a phase oscillator driven by its
-request queue depth. When services desynchronise (queue depths diverge),
-a cascade failure is developing. SPO detects this via R(t) drop and
-alerts before the cascade reaches user-facing services.
+Research cascade-monitoring application for microservice architectures.
+QueueWaves models each service as a phase oscillator driven by its request
+queue depth. It emits alerts when configured coherence, regime, or chimera
+thresholds are crossed. A threshold crossing is not proof that a cascade is in
+progress, and this repository does not establish prospective lead time over
+ordinary service telemetry.
 
 ## Pipeline position
 
@@ -63,9 +64,10 @@ When a cascade develops:
 2. **Downstream services** starve (queue depth falls)
 3. R drops sharply as phase coherence breaks
 
-QueueWaves detects the R drop 10-30 seconds before the cascade
-reaches user-facing latency thresholds, enabling pre-emptive
-circuit breaking or load shedding.
+QueueWaves can surface the R drop for investigation. Any lead-time, false-alarm,
+or intervention benefit must be measured on a representative service trace
+against ordinary queue, error-rate, and latency baselines before operational
+use.
 
 ## Configuration
 

@@ -83,5 +83,11 @@ def test_primary_public_docs_reject_stale_or_unsupported_performance_claims() ->
         "real-time operation to ~10³ oscillators",
         "enabling real-time spiking control loops at ~250 Hz",
         "Current: **v0.4.1**",
+        "handles N=1000+ oscillators at <1ms/step",
+        "QueueWaves detects the R drop 10-30 seconds",
+        "SPO predicts cascade failures",
+        "SPO detects mode locking precursors",
+        "This paper presents the first hazard analysis",
+        "No other project has addressed them either",
     ):
         assert unsupported not in public_text

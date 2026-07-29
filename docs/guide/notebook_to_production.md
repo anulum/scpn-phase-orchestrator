@@ -127,10 +127,14 @@ auditable deployment path.
 
 ## Stage 7: Scale
 
-- **Single instance**: handles N=1000+ oscillators at <1ms/step
-- **Rust kernel**: 3-9x faster than pure Python for large N
-- **JAX GPU**: 10k+ oscillators on GPU (nn/ module)
-- **Docker/Helm**: Kubernetes deployment with liveness/readiness probes
+- **Single instance:** benchmark the exact engine, monitors, audit mode, and
+  host at the intended oscillator count.
+- **Rust kernel:** compare the selected native hot paths with the Python
+  reference on the deployment workload; local speedups are not portable.
+- **JAX:** benchmark differentiable batches separately from the default runtime
+  loop and record device, precision, compilation, and transfer costs.
+- **Docker/Helm:** validate capacity, liveness/readiness behaviour, rollback,
+  and resource limits under representative load.
 
 ## Checklist
 

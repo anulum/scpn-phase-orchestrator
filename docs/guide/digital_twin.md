@@ -1,8 +1,10 @@
 # Digital Twin Pattern
 
-SPO fits naturally into digital twin architectures as the **coherence
-control layer** — the component that monitors synchronisation health
-and intervenes when the physical system drifts.
+SPO can be evaluated inside digital-twin architectures as a
+**coherence-analysis and control-proposal layer**. It can monitor configured
+synchronisation metrics and emit reviewable proposals when a simulated or
+measured system leaves its declared regime; it does not directly actuate the
+physical system.
 
 ## Architecture
 
@@ -26,9 +28,10 @@ Physical System ──► Sensors ──► Phase Extraction (P/I/S)
 Physical System ◄── Actuators ◄── Control Commands
 ```
 
-The digital twin runs SPO in parallel with the physical system.
-Sensor data feeds the oscillator extractors; control commands flow
-back through the actuation mapper.
+In a candidate integration, the digital twin runs SPO in parallel with the
+physical system. Sensor data feeds caller-owned oscillator extractors; proposed
+commands pass through the actuation mapper and remain behind an external
+approval and execution boundary.
 
 ## Binding Contract
 
@@ -254,21 +257,31 @@ while True:
     audit_logger.log_step(state)
 ```
 
-## Deployment Options
+## Candidate deployment surfaces
 
-| Mode | Latency | Use case |
-|------|---------|----------|
-| **Embedded** (Python library) | <1ms/step | Edge devices, PLCs |
-| **REST API** (FastAPI server) | ~10ms | Cloud dashboards |
-| **gRPC streaming** | ~5ms | High-frequency telemetry |
-| **WASM** (browser) | ~1ms | Monitoring dashboards |
-| **Docker** (full stack) | N/A | Production deployment |
+| Mode | Implemented surface | Evidence required before deployment |
+|------|---------------------|-------------------------------------|
+| **Embedded** (Python library) | in-process simulation and proposal API | target-host timing, memory, failure-mode, and actuation-boundary tests |
+| **REST API** (FastAPI server) | state, metrics, review, and bounded mutation routes | authentication, load, latency, rate-limit, and network-policy evidence |
+| **gRPC service** | servicer and message contracts | owned server lifecycle, transport security, load, and jitter evidence |
+| **WASM** (browser) | standalone educational Kuramoto stepper | browser compatibility and workload-specific timing evidence |
+| **Container** | Docker/Helm artefacts | image provenance, vulnerability review, health, rollback, and capacity evidence |
 
-## Real-World Examples
+No portable latency is claimed for these surfaces. Measure the complete
+deployment, including ingestion, scheduling, network, audit, and downstream
+approval work.
 
-- **Tokamak plasma**: MHD mode coupling → SPO detects mode locking precursors
-- **Power grid**: generator swing equations → SPO predicts cascade failures
-- **Manufacturing**: SPC quality oscillations → SPO tunes process parameters
-- **Traffic**: signal timing drift → SPO maintains green wave coherence
+## Candidate domain studies
 
-Each maps onto the same pattern: extract phases → run engine → monitor → act.
+- **Tokamak plasma:** evaluate whether MHD-mode phase features add reviewed
+  evidence; no disruption or precursor claim is established.
+- **Power grid:** compare swing-equation simulations and modal estimates with
+  trusted grid tools; no general cascade-prediction claim is established.
+- **Manufacturing:** test whether phase relationships add value beyond SPC
+  baselines before proposing any process adjustment.
+- **Traffic:** simulate signal-timing policies before hardware-in-loop and field
+  safety evaluation.
+
+Each candidate follows the same review path: extract phases → run the model →
+audit metrics → evaluate a bounded proposal. External actuation is a separate,
+unauthorised step until domain evidence and operator approval exist.

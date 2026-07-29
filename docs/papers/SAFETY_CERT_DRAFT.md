@@ -1,8 +1,8 @@
 # Toward Safety Certification of Kuramoto-Based Control Systems
 
-**Status: No published safety certification exists for oscillator-based control
-systems. This paper identifies what has been verified, what has not, and what
-would be required for certification under IEC 62443 and IEC 61508.**
+**Status: working gap-analysis draft. This is not a certification, standards
+assessment, or exhaustive literature review. It identifies implementation
+evidence, open gaps, and candidate work toward IEC 62443 and IEC 61508 review.**
 
 Miroslav Šotek (ORCID: 0009-0009-3560-0851)
 Anulum Research
@@ -11,13 +11,13 @@ Anulum Research
 
 ## Abstract
 
-Kuramoto-type coupled oscillator networks are increasingly proposed for
-control applications — power grid frequency regulation, plasma
-stabilization, neuromorphic process control. No published work addresses
-the safety certification of such systems under industrial standards.
-This paper presents the first hazard analysis, verification inventory,
-and standards mapping for a Kuramoto-based control system (the SCPN Phase
-Orchestrator). We document which safety properties have been formally
+Kuramoto-type coupled oscillator networks are proposed for control applications
+including power-grid frequency regulation, plasma stabilisation, and
+neuromorphic process control. This draft presents a hazard analysis,
+verification inventory, and standards mapping for one Kuramoto-based control
+toolkit (the SCPN Phase Orchestrator). It does not establish literature
+completeness, novelty priority, or certification. We document which safety
+properties have been formally
 verified (control-action bounding, rate limiting, FSM transition ordering
 via Kani proofs), which have been tested but not proven (Lyapunov
 stability monitoring, STL runtime checking), and which remain open
@@ -41,25 +41,25 @@ treating the Kuramoto equation as a control substrate: domain-specific
 problems are compiled into oscillator networks, and synchronization state
 drives control actions fed back to the physical process.
 
-When such a system is deployed for safety-critical control, it must
-satisfy functional safety requirements. No published work addresses
-this. The Kuramoto model's nonlinear dynamics, the potential for
-desynchronization cascades, and the coupling between the oscillator
-state and physical actuators create a hazard landscape with no precedent
-in safety certification literature.
+When such a system is evaluated for safety-critical control, it must satisfy
+functional-safety requirements. The Kuramoto model's nonlinear dynamics, the
+potential for desynchronisation cascades, and the coupling between oscillator
+state and physical actuators create hazards that require an explicit,
+deployment-specific analysis.
 
-This paper is a gap analysis, not a certification claim. We inventory
-what has been verified in SPO as of v0.4.1 and what remains.
+This paper is a gap analysis, not a certification claim. It tracks the current
+source tree; a submission must bind every statement to an exact release,
+artefact hash, and fresh literature review.
 
 ## 2. Hazard Model
 
 ### 2.1 System Boundary
 
-SPO operates as a Level 2 supervisory control component in the IEC 62443
-zone model. It receives sensor data from Level 1 basic control devices,
-computes phase dynamics, and outputs bounded control actions via an
-ActionProjector. Communication uses Modbus/TLS to Level 1 and gRPC/TLS
-to Level 3 (operations management).
+The analysed deployment concept places SPO as a Level 2 supervisory component
+in an IEC 62443-style zone model. It would receive decoded sensor data, compute
+phase dynamics, and emit bounded proposals through an `ActionProjector`.
+Modbus/TLS and gRPC/TLS are candidate integration boundaries, not evidence of a
+deployed or certified architecture.
 
 ### 2.2 Identified Hazards
 
@@ -220,8 +220,8 @@ requires:
 
 **Gaps.** (a) Continuous-time oscillator stability still needs Lyapunov or
 reachability proof beyond the discrete supervisor contracts.
-(b) Common-cause failure analysis for coupled oscillator dynamics
-has no precedent — a methodology would need to be developed.
+(b) Common-cause failure analysis for coupled oscillator dynamics has not been
+performed for SPO; a deployment-specific method must be selected and reviewed.
 (c) SIL-2 systematic capability assessment requires an accredited
 assessor.
 
@@ -261,7 +261,7 @@ For power grid deployments:
 | Desynchronization cascade propagation bounds | Graph-theoretic analysis + simulation | Medium | Domain-dependent |
 | Chimera state prevention or detection guarantees | Open research problem | Major research | Domain-dependent |
 | TLS implementation security | Penetration testing + cert rotation testing | Medium | Yes (SL-3) |
-| Common-cause failure analysis | Novel methodology development | Major | Yes (SIL-2) |
+| Common-cause failure analysis | Deployment-specific method and accredited review | Major | Yes (SIL-2) |
 | Multi-domain coupling stability | Cross-domain Lyapunov analysis | Major research | Yes (multi-domain deployments) |
 
 ### 5.3 Summary Assessment
@@ -274,8 +274,8 @@ system-level safety certification.
 The primary gaps are upstream: the stability of the Kuramoto dynamics
 themselves, the behavior under topology changes (SSGF updates W at each
 outer cycle), and the absence of WCET analysis. These are not
-engineering oversights; they are open research problems specific to
-oscillator-based control. No other project has addressed them either.
+resolved by the current implementation; some require research and all require
+deployment-specific evidence.
 
 A realistic path to SIL-2 certification would require:
 
@@ -284,13 +284,13 @@ A realistic path to SIL-2 certification would require:
    produced by each domainpack (per-domain effort).
 3. Perform WCET analysis on the Rust kernel for target hardware.
 4. Commission penetration testing of the TLS implementation.
-5. Develop a common-cause failure methodology for coupled oscillator
-   systems (novel contribution).
+5. Select, justify, and validate a common-cause failure methodology for the
+   deployed coupled-oscillator system.
 6. Engage an accredited assessor for SIL-2 systematic capability.
 
-Steps 1, 3, and 4 are straightforward engineering. Steps 2, 5, and 6
-require research or external engagement that does not yet exist in the
-literature.
+Steps 1, 3, and 4 are bounded engineering programmes but still require target
+evidence and review. Steps 2 and 5 may require new research; step 6 requires
+external accredited assessment.
 
 ## References
 
