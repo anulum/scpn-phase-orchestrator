@@ -13,6 +13,7 @@ from pathlib import Path
 
 import pytest
 
+from scpn_phase_orchestrator import __version__
 from scpn_phase_orchestrator.binding.loader import load_binding_spec
 from scpn_phase_orchestrator.runtime.server import SimulationState
 
@@ -139,6 +140,9 @@ class TestFastAPIEndpoints:
         r = client.get("/")
         assert r.status_code == 200
         assert "SPO Dashboard" in r.text
+
+    def test_application_version_matches_package(self, client):
+        assert client.app.version == __version__
 
     def test_get_state(self, client):
         r = client.get("/api/state")

@@ -139,7 +139,8 @@ After a notebook or demo works:
 1. Validate the binding spec with `spo validate`.
 2. Run a deterministic simulation with `spo run --seed`.
 3. Enable audit logging and replay it with `spo replay --verify`.
-4. Serve the model with `spo serve` or the gRPC server.
+4. Wrap `runtime.server.create_app()` in an owned ASGI module or register
+   `runtime.server_grpc.PhaseStreamServicer` with an owned gRPC server.
 5. Connect Prometheus/OpenTelemetry if the model is production-facing.
 
 See [Notebook to Production](../guide/notebook_to_production.md) for the

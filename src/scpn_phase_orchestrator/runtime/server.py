@@ -9,11 +9,14 @@
 """FastAPI server for real-time simulation monitoring.
 
 Usage:
-    spo serve binding_spec.yaml --port 8080
-    # Then open http://localhost:8080 in a browser.
+    from scpn_phase_orchestrator.runtime.server import create_app
+    app = create_app("domainpacks/minimal_domain/binding_spec.yaml")
+
+    Save that object in an ASGI module, then run it with an ASGI server such as
+    ``uvicorn app:app --host 127.0.0.1 --port 8080``.
 
     # Production profile requires API key authentication and rate limiting:
-    SPO_ENV=production SPO_API_KEY=<strong-api-key> spo serve binding_spec.yaml
+    SPO_ENV=production SPO_API_KEY=<strong-api-key> uvicorn app:app
     # Mutable endpoints (step, reset) require X-API-Key header.
     # Development mode remains local by default; do not deploy it externally.
 
@@ -481,7 +484,7 @@ def create_app(spec_path: str | Path) -> object:  # pragma: no cover
             with sim._lock:
                 sim.event_bus.clear()
 
-    app = FastAPI(title="SPO Dashboard", version="0.5.11", lifespan=_lifespan)
+    app = FastAPI(title="SPO Dashboard", version=__version__, lifespan=_lifespan)
 
     @app.middleware("http")
     async def _log_http_request(

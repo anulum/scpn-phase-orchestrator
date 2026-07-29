@@ -238,8 +238,9 @@ or orchestrate distributed systems.
 - S-channel extraction: service state (healthy/degraded/down) → phase.
 - R_bad objective: suppress retry storm synchronisation.
 - Boundary observer: queue depth (hard), p99 latency (soft).
-- gRPC server: `spo serve --grpc` for integration with existing
-  infrastructure.
+- gRPC service surface: integrate
+  `scpn_phase_orchestrator.runtime.server_grpc.PhaseStreamServicer` with an
+  owned `grpc.Server`; no top-level launcher command is shipped.
 
 **Install:** `pip install scpn-phase-orchestrator[queuewaves]`
 

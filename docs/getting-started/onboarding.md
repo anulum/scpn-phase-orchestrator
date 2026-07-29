@@ -132,7 +132,7 @@ adding production-facing automation.
 |------|------|-----|--------|
 | Domain author | [New Domain Checklist](../tutorials/01_new_domain_checklist.md) | `spo validate` | `domainpacks/<name>/binding_spec.yaml` |
 | Research user | [Kuramoto Theory](../concepts/kuramoto_theory.md) | notebooks `02`, `06`, `17`, `18`, `19` | engine parameters and monitors |
-| Platform operator | [Production Deployment](../guide/production.md) | `spo serve ...` | Prometheus, OpenTelemetry, gRPC |
+| Platform operator | [Production Deployment](../guide/production.md) | `spo queuewaves serve ...` or an integration-owned ASGI/gRPC host | Prometheus, OpenTelemetry, gRPC |
 | API integrator | [Python Facade API](../reference/api/api.md) | Python imports | adapters, server, CLI |
 | Demo presenter | [Interactive Tools](../guide/interactive_tools.md) | Streamlit, WASM, `spo demo` | domainpack gallery |
 | Contributor | [Contributor Onboarding](../guide/contributor_onboarding.md) | scoped checks | docs, tests, examples |

@@ -60,17 +60,26 @@ spo run domainpacks/my_domain/binding_spec.yaml \
 spo replay audit.jsonl --verify
 ```
 
-## Stage 3: Serve (REST/gRPC)
+## Stage 3: Integrate a service surface
 
-Deploy as a live service with real-time monitoring.
+The generic REST/WebSocket surface is a library factory rather than a `spo`
+subcommand. Create an ASGI module explicitly so the binding path is reviewable:
+
+```python title="app.py"
+from scpn_phase_orchestrator.runtime.server import create_app
+
+app = create_app("domainpacks/my_domain/binding_spec.yaml")
+```
 
 ```bash
-# REST API + WebSocket dashboard
-spo serve domainpacks/my_domain/binding_spec.yaml --port 8000
+uvicorn app:app --host 127.0.0.1 --port 8000 --workers 1
 
 # Or with full stack (Redis + Prometheus + Grafana)
 cd deploy && docker compose up
 ```
+
+The gRPC package exposes `PhaseStreamServicer` for an integration-owned
+`grpc.Server`; SPO does not currently ship a top-level gRPC launcher command.
 
 Endpoints:
 - `GET /api/state` — current R, regime, phases
@@ -96,7 +105,7 @@ R(t), regime transitions, and per-layer coherence.
 
 - **Audit logging**: SHA-256 chained JSONL for regulatory compliance
 - **Deterministic replay**: reproduce any incident from the audit trail
-- **Container scanning**: Trivy in CI blocks CRITICAL/HIGH CVEs
+- **Container scanning**: Trivy reports configured vulnerability severities in CI
 - **Health checks**: `/api/health` verifies engine + R + regime subsystems
 - **Rate limiting**: actuation projector prevents discontinuous jumps
 

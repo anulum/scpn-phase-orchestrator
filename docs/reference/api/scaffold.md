@@ -989,7 +989,7 @@ spo validate domainpacks/traffic_grid/binding_spec.yaml
 Inspect resolved binding configuration:
 
 ```bash
-spo inspect domainpacks/traffic_grid/binding_spec.yaml --json
+spo inspect domainpacks/traffic_grid/binding_spec.yaml --json-out
 ```
 
 Run only after review:

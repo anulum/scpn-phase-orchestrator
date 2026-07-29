@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+import re
 import shlex
 from collections.abc import Iterator
 from pathlib import Path
@@ -19,11 +20,18 @@ import click
 from scpn_phase_orchestrator.runtime.cli import main
 
 ROOT = Path(__file__).resolve().parents[1]
-DOC_PATHS = (
-    ROOT / "README.md",
-    *(ROOT / "docs" / "getting-started").glob("*.md"),
-    *(ROOT / "docs" / "tutorials").glob("*.md"),
-)
+
+
+def _public_doc_paths() -> tuple[Path, ...]:
+    docs = (
+        path
+        for path in (ROOT / "docs").rglob("*.md")
+        if "internal" not in path.parts and "superpowers" not in path.parts
+    )
+    return (ROOT / "README.md", *sorted(docs))
+
+
+DOC_PATHS = _public_doc_paths()
 
 
 def _logical_lines(path: Path) -> Iterator[str]:
@@ -40,7 +48,9 @@ def _logical_lines(path: Path) -> Iterator[str]:
         yield pending
 
 
-def _documented_commands() -> Iterator[tuple[Path, str, tuple[str, ...]]]:
+def _documented_commands() -> Iterator[
+    tuple[Path, tuple[str, ...], tuple[str, ...]]
+]:
     for path in DOC_PATHS:
         for line in _logical_lines(path):
             if not line.startswith("spo "):
@@ -48,14 +58,20 @@ def _documented_commands() -> Iterator[tuple[Path, str, tuple[str, ...]]]:
             tokens = tuple(shlex.split(line))
             if len(tokens) < 2 or tokens[1].startswith("-"):
                 continue
-            yield (
-                path,
-                tokens[1],
-                tuple(
-                    token.split("=", maxsplit=1)[0]
-                    for token in tokens[2:]
-                    if token.startswith("--")
-                ),
+            command_path = [tokens[1]]
+            command = main.commands.get(tokens[1])
+            cursor = 2
+            while isinstance(command, click.Group) and cursor < len(tokens):
+                subcommand = command.commands.get(tokens[cursor])
+                if subcommand is None:
+                    break
+                command_path.append(tokens[cursor])
+                command = subcommand
+                cursor += 1
+            yield path, tuple(command_path), tuple(
+                token.split("=", maxsplit=1)[0]
+                for token in tokens[2:]
+                if token.startswith("--")
             )
 
 
@@ -70,18 +86,28 @@ def _option_names(command: click.Command) -> set[str]:
 def test_documented_top_level_commands_and_options_exist() -> None:
     seen: set[str] = set()
     problems: list[str] = []
-    for path, name, options in _documented_commands():
+    for path, command_path, options in _documented_commands():
+        name = command_path[0]
+        label = " ".join(command_path)
+        relative = path.relative_to(ROOT)
         command = main.commands.get(name)
         if command is None:
-            problems.append(f"{path.relative_to(ROOT)}: unknown command {name}")
+            problems.append(f"{relative}: unknown command {name}")
             continue
         seen.add(name)
         valid_options = _option_names(command)
+        for subcommand_name in command_path[1:]:
+            if not isinstance(command, click.Group):
+                problems.append(f"{relative}: {label} is not a command")
+                break
+            command = command.commands.get(subcommand_name)
+            if command is None:
+                problems.append(f"{relative}: unknown command {label}")
+                break
+            valid_options.update(_option_names(command))
         for option in options:
             if option not in valid_options:
-                problems.append(
-                    f"{path.relative_to(ROOT)}: {name} has no option {option}"
-                )
+                problems.append(f"{relative}: {label} has no option {option}")
 
     assert not problems, problems
     assert {
@@ -93,3 +119,19 @@ def test_documented_top_level_commands_and_options_exist() -> None:
         "scaffold",
         "validate",
     } <= seen
+
+
+def test_every_public_literal_spo_command_exists() -> None:
+    problems: list[str] = []
+    for path in DOC_PATHS:
+        for lineno, line in enumerate(
+            path.read_text(encoding="utf-8").splitlines(), 1
+        ):
+            for match in re.finditer(r"(?<![\w-])spo\s+([a-z][a-z0-9-]*)", line):
+                name = match.group(1)
+                if name not in main.commands:
+                    problems.append(
+                        f"{path.relative_to(ROOT)}:{lineno}: unknown command {name}"
+                    )
+
+    assert not problems, problems
