@@ -16,12 +16,14 @@ on:
       - "mkdocs.yml"
       - "README.md"
       - "src/**/*.py"
+      - ".github/workflows/docs.yml"
   pull_request:
     paths:
       - "docs/**"
       - "mkdocs.yml"
       - "README.md"
       - "src/**/*.py"
+      - ".github/workflows/docs.yml"
 
 permissions: {}
 
