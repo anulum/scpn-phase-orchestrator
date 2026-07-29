@@ -829,7 +829,9 @@ Cyber-industrial replay records apply the same boundary to lateral-movement and
 manufacturing SPC corpora so containment/recovery ordering claims are accepted
 only after integer-only record counts, finite real metrics, bounded normalised
 Phi, and minimum partitions free of boolean aliases and object-complex integer
-aliases pass validation.
+aliases pass validation. The corpus is exactly four uniquely named canonical
+cases with consistent sample/bin geometry; each expected-relationship string is
+bound to its case and normalised Phi is replayed from Phi and `n_bins`.
 
 ::: scpn_phase_orchestrator.monitor.information_replay_cyber_industrial
 

@@ -300,6 +300,7 @@ def test_validate_records_rejects_incomplete_case_corpus() -> None:
 def test_validate_records_rejects_recontainment_below_disruption() -> None:
     by_name = _by_name()
     by_name["cyber_recontainment"]["phi"] = 0.0
+    by_name["cyber_recontainment"]["normalised_phi"] = 0.0
     with pytest.raises(ValueError, match="recontainment integration must exceed"):
         _validate_replay_records(tuple(by_name.values()))
 
@@ -307,5 +308,66 @@ def test_validate_records_rejects_recontainment_below_disruption() -> None:
 def test_validate_records_rejects_spc_recovery_below_fragmentation() -> None:
     by_name = _by_name()
     by_name["spc_recovery"]["phi"] = 0.0
+    by_name["spc_recovery"]["normalised_phi"] = 0.0
     with pytest.raises(ValueError, match="SPC recovery integration must exceed"):
         _validate_replay_records(tuple(by_name.values()))
+
+
+def test_validate_records_replays_normalised_phi() -> None:
+    records = _valid_records()
+    records[0]["normalised_phi"] = 0.5
+
+    with pytest.raises(ValueError, match="normalised_phi must match"):
+        _validate_replay_records(tuple(records))
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "match"),
+    [
+        ("case_name", 7, "case_name"),
+        ("description", "", "description"),
+        ("expected_relationship", "fabricated", "expected_relationship"),
+    ],
+)
+def test_validate_records_rejects_malformed_identity_evidence(
+    field: str, value: object, match: str
+) -> None:
+    records = _valid_records()
+    records[0][field] = value
+
+    with pytest.raises(ValueError, match=match):
+        _validate_replay_records(tuple(records))
+
+
+def test_validate_records_requires_exact_unique_corpus() -> None:
+    records = _valid_records()
+    with pytest.raises(ValueError, match="exactly four unique"):
+        _validate_replay_records((*records, dict(records[0])))
+
+
+@pytest.mark.parametrize("field", ["n_samples", "n_bins"])
+def test_validate_records_requires_consistent_corpus_geometry(field: str) -> None:
+    records = _valid_records()
+    records[1][field] = int(records[1][field]) + 1
+    if field == "n_bins":
+        records[1]["normalised_phi"] = float(
+            np.clip(
+                float(records[1]["phi"]) / np.log(int(records[1]["n_bins"])),
+                0.0,
+                1.0,
+            )
+        )
+
+    with pytest.raises(ValueError, match=field):
+        _validate_replay_records(tuple(records))
+
+
+def test_validate_records_wraps_broken_scalar_protocol() -> None:
+    class BrokenScalar:
+        def __array__(self) -> np.ndarray:
+            raise TypeError("broken")
+
+    records = _valid_records()
+    records[0]["phi"] = BrokenScalar()
+    with pytest.raises(ValueError, match="phi"):
+        _validate_replay_records(tuple(records))
