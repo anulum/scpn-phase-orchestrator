@@ -20,6 +20,8 @@ import pytest
 from scpn_phase_orchestrator.monitor.hybrid_order_examples import (
     HybridOrderScenario,
     HybridStateCandidate,
+    _compute_entanglement_entropy,
+    _compute_order_metrics,
     _compute_scenario_hash,
     _validate_scenario,
     build_hybrid_order_parameter_scenarios,
@@ -132,10 +134,12 @@ def test_numeric_summaries_are_finite() -> None:
 
 
 def _build_valid_scenario() -> HybridOrderScenario:
+    phases = np.array([0.1, 0.9], dtype=np.float64)
+    order_r, order_psi = _compute_order_metrics(phases)
     return HybridOrderScenario(
         domain="quantum_simulation",
         scenario_id="test_hybrid_quantum_validation",
-        phases=np.array([0.1, 0.9], dtype=np.float64),
+        phases=phases,
         qubit_count=2,
         bipartition=((0,), (1,)),
         state_candidates=(
@@ -144,8 +148,8 @@ def _build_valid_scenario() -> HybridOrderScenario:
                 candidate_type="product",
                 amplitudes=np.array([1.0, 0.0, 0.0, 0.0], dtype=np.complex128),
                 entanglement_entropy=0.0,
-                order_metric_r=0.55,
-                order_metric_psi=0.62,
+                order_metric_r=order_r,
+                order_metric_psi=order_psi,
                 objective_labels=("low_entanglement", "classical_sync"),
             ),
             HybridStateCandidate(
@@ -156,8 +160,8 @@ def _build_valid_scenario() -> HybridOrderScenario:
                     dtype=np.complex128,
                 ),
                 entanglement_entropy=1.0,
-                order_metric_r=0.50,
-                order_metric_psi=0.60,
+                order_metric_r=order_r * 0.9,
+                order_metric_psi=order_psi * 0.9,
                 objective_labels=("high_entanglement", "quantum_signal"),
             ),
         ),
@@ -283,6 +287,11 @@ def test_accepts_numpy_integer_qubit_scenario_contracts() -> None:
             "amplitudes",
             np.array([np.inf, 0.0, 0.0, 0.0], dtype=np.complex128),
         ),
+        lambda s: setattr(
+            s.state_candidates[0],
+            "amplitudes",
+            np.array([2.0, 0.0, 0.0, 0.0], dtype=np.complex128),
+        ),
         lambda s: setattr(s.state_candidates[0], "non_actuating", False),
         lambda s: setattr(s.state_candidates[0], "execution_disabled", False),
         lambda s: setattr(s.state_candidates[0], "claim_boundary", "bad"),
@@ -329,3 +338,70 @@ def test_rejects_invalid_candidate_type_when_product_and_entangled_present() -> 
 
     with pytest.raises(ValueError, match="type product or entangled"):
         _validate_scenario(scenario)
+
+
+def test_entanglement_entropy_uses_the_bipartition_not_basis_shannon_entropy() -> None:
+    separable_plus = np.full(4, 0.5, dtype=np.complex128)
+    bell = np.array(
+        [1 / math.sqrt(2), 0.0, 0.0, 1 / math.sqrt(2)],
+        dtype=np.complex128,
+    )
+
+    assert _compute_entanglement_entropy(separable_plus, ((0,), (1,))) == pytest.approx(
+        0.0, abs=1e-12
+    )
+    assert _compute_entanglement_entropy(bell, ((0,), (1,))) == pytest.approx(
+        1.0, abs=1e-12
+    )
+
+
+@pytest.mark.parametrize(
+    "mutator",
+    [
+        lambda s: setattr(s.state_candidates[1], "entanglement_entropy", 0.5),
+        lambda s: setattr(s.state_candidates[0], "order_metric_r", 0.5),
+        lambda s: setattr(s.state_candidates[1], "order_metric_psi", 0.5),
+        lambda s: setattr(
+            s.state_candidates[1],
+            "amplitudes",
+            np.array([1.0, 0.0, 0.0, 0.0], dtype=np.complex128),
+        ),
+        lambda s: setattr(
+            s.state_candidates[1], "state_id", s.state_candidates[0].state_id
+        ),
+    ],
+)
+def test_rejects_internally_contradictory_candidate_evidence(mutator) -> None:
+    scenario = _build_valid_scenario()
+    mutator(scenario)
+
+    with pytest.raises(ValueError):
+        _validate_scenario(scenario)
+
+
+def test_rejects_coercive_phase_aliases_and_broken_protocols() -> None:
+    scenario = _build_valid_scenario()
+    scenario.phases = np.array(["0.1", "0.9"])
+    with pytest.raises(ValueError, match="phases"):
+        _validate_scenario(scenario)
+
+    scenario = _build_valid_scenario()
+    scenario.phases = np.array([0.1 + 1.0j, 0.9])
+    with pytest.raises(ValueError, match="phases"):
+        _validate_scenario(scenario)
+
+    class BrokenArray:
+        def __array__(self) -> np.ndarray:
+            raise TypeError("broken")
+
+    scenario = _build_valid_scenario()
+    scenario.phases = BrokenArray()
+    with pytest.raises(ValueError, match="phases"):
+        _validate_scenario(scenario)
+
+
+def test_accepts_noncoercive_real_object_phases() -> None:
+    scenario = _build_valid_scenario()
+    scenario.phases = np.array([np.float64(0.1), 0.9], dtype=object)
+
+    _validate_scenario(scenario)

@@ -33,13 +33,22 @@ AllowedDomains = ("quantum_simulation", "power_grid", "cardiac_rhythm")
 
 def _ensure_float64_vector(values: object, *, label: str) -> FloatArray:
     """Return ``values`` as a non-empty 1-D finite float64 vector, else raise."""
-    raw = np.asarray(values)
-    if _contains_boolean_alias(raw):
-        raise ValueError(f"{label} must not contain boolean values")
     try:
-        arr = np.asarray(values, dtype=np.float64)
+        raw = np.asarray(values)
     except (TypeError, ValueError) as exc:
-        raise ValueError(f"{label} must be convertible to float64 array") from exc
+        raise ValueError(f"{label} must be a real numeric array") from exc
+    if raw.dtype.kind == "O":
+        if any(isinstance(value, (bool, np.bool_)) for value in raw.flat):
+            raise ValueError(f"{label} must not contain boolean values")
+        if any(not isinstance(value, Real) for value in raw.flat):
+            raise ValueError(f"{label} must be a real numeric array")
+    elif raw.dtype.kind == "b":
+        raise ValueError(f"{label} must not contain boolean values")
+    elif raw.dtype.kind == "c":
+        raise ValueError(f"{label} must be real-valued")
+    elif raw.dtype.kind not in "iuf":
+        raise ValueError(f"{label} must be a real numeric array")
+    arr = raw.astype(np.float64, copy=True)
 
     if arr.ndim != 1:
         raise ValueError(f"{label} must be a one-dimensional array")
@@ -48,16 +57,6 @@ def _ensure_float64_vector(values: object, *, label: str) -> FloatArray:
     if not np.all(np.isfinite(arr)):
         raise ValueError(f"{label} must contain only finite values")
     return arr
-
-
-def _contains_boolean_alias(values: object) -> bool:
-    """Return whether the value contains any boolean alias."""
-    arr = np.asarray(values)
-    if arr.dtype == np.bool_:
-        return True
-    if arr.dtype == object:
-        return any(isinstance(value, (bool, np.bool_)) for value in arr.flat)
-    return False
 
 
 def _ensure_finite_real(value: object, *, label: str) -> float:
@@ -131,6 +130,8 @@ def _validate_state_candidate(
     *,
     scenario_id: str,
     qubit_count: int,
+    phases: FloatArray,
+    bipartition: tuple[tuple[int, ...], tuple[int, ...]],
 ) -> None:
     """Validate a state candidate's amplitudes, metrics, and review gates."""
     if not isinstance(candidate.state_id, str) or not candidate.state_id.strip():
@@ -162,6 +163,10 @@ def _validate_state_candidate(
         raise ValueError(
             f"candidate {candidate.state_id} amplitudes must have non-zero norm"
         )
+    if not np.isclose(amplitude_norm, 1.0, rtol=1e-10, atol=1e-12):
+        raise ValueError(
+            f"candidate {candidate.state_id} amplitudes must have unit norm"
+        )
     if candidate.non_actuating is not True:
         raise ValueError(f"candidate {candidate.state_id} must set non_actuating=True")
     if candidate.execution_disabled is not True:
@@ -178,6 +183,14 @@ def _validate_state_candidate(
         raise ValueError(
             f"candidate {candidate.state_id} entanglement_entropy must be non-negative"
         )
+    expected_entropy = _compute_entanglement_entropy(
+        np.asarray(candidate.amplitudes, dtype=np.complex128), bipartition
+    )
+    if not np.isclose(entanglement_entropy, expected_entropy, rtol=1e-10, atol=1e-12):
+        raise ValueError(
+            f"candidate {candidate.state_id} entanglement_entropy "
+            "contradicts amplitudes"
+        )
     order_metric_r = _ensure_finite_real(
         candidate.order_metric_r,
         label=f"candidate {candidate.state_id} order_metric_r",
@@ -193,6 +206,16 @@ def _validate_state_candidate(
     if not 0.0 <= order_metric_psi <= 1.0:
         raise ValueError(
             f"candidate {candidate.state_id} order_metric_psi must lie in [0, 1]"
+        )
+    expected_r, expected_psi = _compute_order_metrics(phases)
+    scale = 1.0 if candidate.candidate_type == "product" else 0.9
+    if not np.isclose(order_metric_r, expected_r * scale, rtol=1e-10, atol=1e-12):
+        raise ValueError(
+            f"candidate {candidate.state_id} order_metric_r contradicts phases"
+        )
+    if not np.isclose(order_metric_psi, expected_psi * scale, rtol=1e-10, atol=1e-12):
+        raise ValueError(
+            f"candidate {candidate.state_id} order_metric_psi contradicts phases"
         )
     if not candidate.objective_labels:
         raise ValueError(f"candidate {candidate.state_id} requires objective labels")
@@ -286,6 +309,13 @@ def _validate_scenario(scenario: HybridOrderScenario) -> None:
             candidate,
             scenario_id=scenario.scenario_id,
             qubit_count=qubit_count,
+            phases=phases,
+            bipartition=scenario.bipartition,
+        )
+    candidate_ids = [candidate.state_id for candidate in scenario.state_candidates]
+    if len(candidate_ids) != len(set(candidate_ids)):
+        raise ValueError(
+            f"scenario {scenario.scenario_id} candidate IDs must be unique"
         )
 
     if not scenario.objective_labels:
@@ -386,18 +416,22 @@ def _compute_order_metrics(phases: FloatArray) -> tuple[float, float]:
     return (order_r, order_psi)
 
 
-def _normalize_probability(amplitudes: ComplexArray) -> NDArray[np.float64]:
-    """Return a normalised probability distribution, else raise ``ValueError``."""
-    probabilities = np.abs(amplitudes) ** 2
-    total = float(np.sum(probabilities))
-    return probabilities / total
-
-
-def _compute_entanglement_entropy(amplitudes: ComplexArray) -> float:
-    """Return the bipartite von Neumann entanglement entropy of a state."""
-    probs = _normalize_probability(amplitudes)
-    nz = probs > 0
-    return -float(np.sum(probs[nz] * np.log2(probs[nz])))
+def _compute_entanglement_entropy(
+    amplitudes: ComplexArray,
+    bipartition: tuple[tuple[int, ...], tuple[int, ...]],
+) -> float:
+    """Return pure-state entropy from the bipartition's Schmidt spectrum."""
+    qubit_count = len(bipartition[0]) + len(bipartition[1])
+    ordering = bipartition[0] + bipartition[1]
+    tensor = amplitudes.reshape((2,) * qubit_count)
+    matrix = np.transpose(tensor, ordering).reshape(
+        1 << len(bipartition[0]), 1 << len(bipartition[1])
+    )
+    singular_values = np.linalg.svd(matrix, compute_uv=False)
+    probabilities = np.square(singular_values)
+    probabilities = probabilities / float(np.sum(probabilities))
+    nonzero = probabilities > 0.0
+    return -float(np.sum(probabilities[nonzero] * np.log2(probabilities[nonzero])))
 
 
 def _product_state_vector(qubit_count: int) -> ComplexArray:
@@ -447,7 +481,7 @@ def _build_scenario(
         candidate_type="product",
         amplitudes=_product_state_vector(qubit_count),
         entanglement_entropy=_compute_entanglement_entropy(
-            _product_state_vector(qubit_count)
+            _product_state_vector(qubit_count), bipartition
         ),
         order_metric_r=order_r,
         order_metric_psi=order_psi,
@@ -458,7 +492,7 @@ def _build_scenario(
         candidate_type="entangled",
         amplitudes=_entangled_state_vector(qubit_count),
         entanglement_entropy=_compute_entanglement_entropy(
-            _entangled_state_vector(qubit_count)
+            _entangled_state_vector(qubit_count), bipartition
         ),
         order_metric_r=order_r * 0.9,
         order_metric_psi=order_psi * 0.9,

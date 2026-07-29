@@ -47,6 +47,11 @@ for quantum-simulation, power-grid, and cardiac-rhythm examples. Scenario and
 candidate records are JSON-safe, non-actuating, execution-disabled, and carry
 the same no-QPU claim boundary for Studio and audit use.
 
+Fixture entropy is computed from the declared bipartition's Schmidt spectrum,
+not from computational-basis probabilities. Validation replays each candidate's
+unit-normalised amplitudes, entropy, phase-derived order metrics, unique identity,
+and scenario hash; coercive phase aliases cannot enter review evidence.
+
 ::: scpn_phase_orchestrator.monitor.hybrid_order_examples
 
 ## Boundary Observer
