@@ -143,15 +143,13 @@ class TestGenerateGrpcScript:
     ) -> None:
         """Rewriting the gRPC stub must not inherit Windows CRLF output."""
         grpc_path = tmp_path / "spo_pb2_grpc.py"
-        grpc_path.write_bytes(
-            b"# generated\r\nimport spo_pb2 as spo__pb2\r\n# end\r\n"
-        )
+        grpc_path.write_bytes(b"# generated\r\nimport spo_pb2 as spo__pb2\r\n# end\r\n")
         spec = importlib.util.spec_from_file_location("generate_grpc", SCRIPT)
         assert spec is not None and spec.loader is not None
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
 
-        getattr(module, "_normalise_package_import")(tmp_path)
+        module._normalise_package_import(tmp_path)
 
         normalised = grpc_path.read_bytes()
         assert b"\r\n" not in normalised
