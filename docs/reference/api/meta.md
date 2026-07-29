@@ -57,7 +57,11 @@ count, domain count, feature keys, knob keys, and reward range. Use
 deterministic review package for proposal jobs.
 Audit JSONL ingestion and JSON package import reject non-finite constants,
 duplicate object keys, and non-object package payloads before records enter
-the nearest-neighbour proposal surface.
+the nearest-neighbour proposal surface. Domain labels must be canonical strings;
+feature, knob, action, and reward evidence must be finite real numbers, with
+booleans, complex values, and numeric strings rejected rather than coerced.
+Validated feature and knob mappings are copied into immutable snapshots, so
+later caller mutation cannot rewrite the replay corpus or proposal evidence.
 `to_package_manifest()` emits a packaging-readiness manifest for the optional
 `scpn-meta` surface: it binds the deterministic JSON package SHA-256, public
 import target, console-script name, and training summary while keeping
@@ -126,6 +130,9 @@ audit_payload = report.to_record()
 Every arm is scored by the caller and audited through the same honest
 `audit_cross_domain_transfer` calibration, so the sweep stays a pure, deterministic
 aggregation with no hidden training step.
+The public verdict classifier also rejects empty sweeps, unknown fold verdicts,
+and impossible testable-fold counts, so malformed evidence cannot accidentally
+earn `lodo_generalises`.
 
 ::: scpn_phase_orchestrator.meta.transfer
 

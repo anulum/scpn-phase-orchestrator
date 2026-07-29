@@ -11,8 +11,9 @@ from __future__ import annotations
 import json
 from hashlib import sha256
 from types import SimpleNamespace
-from typing import get_type_hints
+from typing import Any, get_type_hints
 
+import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.meta import (
@@ -70,6 +71,63 @@ class TestMetaTransferContracts:
 
         with pytest.raises(ValueError, match="features keys"):
             MetaPolicyRecord("bad_feature_key", {1: 0.5}, {"K": 0.1})
+
+    @pytest.mark.parametrize("value", [True, False, "0.5", 1.0 + 0.0j])
+    def test_record_rejects_coercive_feature_aliases(self, value: Any) -> None:
+        with pytest.raises(ValueError, match=r"features\.R"):
+            MetaPolicyRecord("bad_feature", {"R": value}, {"K": 0.1})
+
+    @pytest.mark.parametrize("value", [True, False, "0.1", 1.0 + 0.0j])
+    def test_record_rejects_coercive_knob_aliases(self, value: Any) -> None:
+        with pytest.raises(ValueError, match=r"knobs\.K"):
+            MetaPolicyRecord("bad_knob", {"R": 0.5}, {"K": value})
+
+    @pytest.mark.parametrize("value", [True, False, "0.9", 1.0 + 0.0j])
+    def test_record_rejects_coercive_reward_aliases(self, value: Any) -> None:
+        with pytest.raises(ValueError, match="reward"):
+            MetaPolicyRecord("bad_reward", {"R": 0.5}, {"K": 0.1}, reward=value)
+
+    def test_record_rejects_whitespace_domain(self) -> None:
+        for domain in ("  ", " grid", "grid "):
+            with pytest.raises(ValueError, match="domain"):
+                MetaPolicyRecord(domain, {"R": 0.5}, {"K": 0.1})
+
+    def test_record_rejects_non_mapping_and_non_canonical_keys(self) -> None:
+        with pytest.raises(ValueError, match="features must be a mapping"):
+            MetaPolicyRecord("grid", [("R", 0.5)], {"K": 0.1})  # type: ignore[arg-type]
+        with pytest.raises(ValueError, match="features key"):
+            MetaPolicyRecord("grid", {"": 0.5}, {"K": 0.1})
+        with pytest.raises(ValueError, match="knobs key"):
+            MetaPolicyRecord("grid", {"R": 0.5}, {" K": 0.1})
+
+    def test_record_copies_and_freezes_validated_mappings(self) -> None:
+        features = {"R": 0.5}
+        knobs = {"K": 0.1}
+        record = MetaPolicyRecord("grid", features, knobs)
+
+        features["R"] = 99.0
+        knobs["K"] = 99.0
+
+        assert record.features == {"R": 0.5}
+        assert record.knobs == {"K": 0.1}
+        with pytest.raises(TypeError):
+            record.features["R"] = 1.0  # type: ignore[index]
+        with pytest.raises(TypeError):
+            record.knobs["K"] = 1.0  # type: ignore[index]
+
+    def test_numpy_real_evidence_normalises_to_json_safe_floats(self) -> None:
+        record = MetaPolicyRecord(
+            "grid",
+            {"R": np.float32(0.5)},
+            {"K": np.float32(0.1)},
+            reward=np.float32(0.9),
+        )
+        package = CrossDomainMetaTransfer.fit((record,)).to_json_package()
+
+        assert isinstance(record.features["R"], float)
+        assert isinstance(record.knobs["K"], float)
+        assert isinstance(record.reward, float)
+        assert json.loads(package)["records"][0]["reward"] == pytest.approx(0.9)
 
     def test_model_requires_records(self) -> None:
         with pytest.raises(ValueError, match="at least one"):
@@ -137,6 +195,14 @@ class TestMetaTransferBehaviour:
         assert isinstance(record["neighbours"], list)
         assert isinstance(record["feature_keys"], list)
         assert "knobs" in record
+
+    def test_proposal_knobs_are_immutable_evidence(self) -> None:
+        proposal = CrossDomainMetaTransfer.fit(_records()).propose(
+            {"R_global": 0.5, "stability_proxy": 0.4}
+        )
+
+        with pytest.raises(TypeError):
+            proposal.knobs["K"] = 99.0  # type: ignore[index]
 
     def test_training_summary_describes_replay_corpus(self) -> None:
         model = CrossDomainMetaTransfer.fit(_records())
@@ -467,6 +533,18 @@ class TestMetaTransferBehaviour:
         assert proposal.knobs["K"] == pytest.approx(0.2)
         assert proposal.confidence == pytest.approx(0.5)
 
+    def test_zero_weight_unique_knob_is_not_published(self) -> None:
+        model = CrossDomainMetaTransfer.fit(
+            (
+                MetaPolicyRecord("matching", {"a": 1.0}, {"K": 0.2}),
+                MetaPolicyRecord("antagonist", {"a": -1.0}, {"zeta": 0.9}),
+            )
+        )
+
+        proposal = model.propose({"a": 1.0}, k_neighbours=2)
+
+        assert proposal.knobs == {"K": pytest.approx(0.2)}
+
     def test_zero_norm_record_is_stable_evidence_without_affecting_output(self) -> None:
         model = CrossDomainMetaTransfer.fit(
             (
@@ -575,6 +653,41 @@ class TestMetaTransferBehaviour:
         with pytest.raises(ValueError, match="canonical finite JSON"):
             records_from_audit_jsonl(audit_path)
 
+    def test_records_from_audit_jsonl_rejects_non_object_with_line_context(
+        self,
+        tmp_path,
+    ) -> None:
+        audit_path = tmp_path / "audit.jsonl"
+        audit_path.write_text("[]\n", encoding="utf-8")
+
+        with pytest.raises(ValueError, match=r"line 1:.*JSON object"):
+            records_from_audit_jsonl(audit_path)
+
+    @pytest.mark.parametrize(
+        "payload",
+        [
+            {"domain": 7, "features": {"R": 0.5}, "knobs": {"K": 0.1}},
+            {"domain": "bad", "features": {"R": True}, "knobs": {"K": 0.1}},
+            {"domain": "bad", "features": {"R": 0.5}, "knobs": {"K": False}},
+            {
+                "domain": "bad",
+                "features": {"R": 0.5},
+                "knobs": {"K": 0.1},
+                "reward": "0.9",
+            },
+        ],
+    )
+    def test_records_from_audit_jsonl_rejects_coercive_aliases(
+        self,
+        tmp_path,
+        payload: dict[str, Any],
+    ) -> None:
+        audit_path = tmp_path / "audit.jsonl"
+        audit_path.write_text(json.dumps(payload) + "\n", encoding="utf-8")
+
+        with pytest.raises(ValueError):
+            records_from_audit_jsonl(audit_path)
+
     def test_records_from_audit_directory_handles_nested_custom_pattern(
         self,
         tmp_path,
@@ -673,4 +786,23 @@ class TestMetaTransferBehaviour:
                     reward_max=0.5,
                 ),
                 execution_permitted=True,
+            )
+
+    def test_meta_package_manifest_rejects_invalid_digest(self) -> None:
+        with pytest.raises(ValueError, match="package_sha256"):
+            MetaPackageManifest(
+                package_name="scpn-meta",
+                import_target="scpn_phase_orchestrator.meta",
+                console_script="scpn-meta",
+                package_sha256="not-a-digest",
+                training_summary=MetaTrainingSummary(
+                    record_count=1,
+                    domain_count=1,
+                    domains=("alpha",),
+                    feature_keys=("R_global",),
+                    knob_keys=("K",),
+                    reward_mean=0.5,
+                    reward_min=0.5,
+                    reward_max=0.5,
+                ),
             )

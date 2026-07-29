@@ -50,6 +50,7 @@ from typing import TYPE_CHECKING
 from scpn_phase_orchestrator.evaluation.auditor import DEFAULT_ALPHA
 from scpn_phase_orchestrator.evaluation.cross_domain_transfer import (
     TRANSFER_NEGATIVE,
+    TRANSFER_NULL,
     TRANSFER_POSITIVE,
     CrossDomainTransferAudit,
     ScorePair,
@@ -117,7 +118,12 @@ class LeaveOneDomainOutFold:
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "shuffled_source", tuple(self.shuffled_source))
-        if not self.target_domain:
+        if (
+            not isinstance(self.target_domain, str)
+            or not self.target_domain.strip()
+            or self.target_domain != self.target_domain.strip()
+            or any(ord(char) < 32 for char in self.target_domain)
+        ):
             raise ValueError("target_domain must be non-empty")
         if not self.shuffled_source:
             raise ValueError("shuffled_source must provide at least one control")
@@ -211,10 +217,32 @@ def classify_lodo_verdict(
         :data:`LODO_GENERALISES` if every fold is a positive transfer;
         :data:`LODO_UNTESTABLE` if no fold was detectable within-domain;
         :data:`LODO_INCONCLUSIVE` otherwise.
+
+    Raises
+    ------
+    ValueError
+        If the verdict sequence is empty, contains an unsupported verdict, or
+        conflicts with ``n_testable``.
     """
-    if any(verdict == TRANSFER_NEGATIVE for verdict in fold_verdicts):
+    verdicts = tuple(fold_verdicts)
+    if not verdicts:
+        raise ValueError("at least one fold verdict is required")
+    allowed = {TRANSFER_NEGATIVE, TRANSFER_NULL, TRANSFER_POSITIVE}
+    unsupported = sorted(set(verdicts) - allowed)
+    if unsupported:
+        raise ValueError(f"unsupported fold verdict: {unsupported[0]!r}")
+    if (
+        isinstance(n_testable, bool)
+        or not isinstance(n_testable, int)
+        or not 0 <= n_testable <= len(verdicts)
+    ):
+        raise ValueError("n_testable must be an integer within the fold count")
+    decisive = sum(verdict != TRANSFER_NULL for verdict in verdicts)
+    if n_testable < decisive:
+        raise ValueError("n_testable is inconsistent with decisive fold verdicts")
+    if any(verdict == TRANSFER_NEGATIVE for verdict in verdicts):
         return LODO_NEGATIVE
-    if all(verdict == TRANSFER_POSITIVE for verdict in fold_verdicts):
+    if all(verdict == TRANSFER_POSITIVE for verdict in verdicts):
         return LODO_GENERALISES
     if n_testable == 0:
         return LODO_UNTESTABLE

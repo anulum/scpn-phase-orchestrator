@@ -11,10 +11,13 @@
 from __future__ import annotations
 
 import json
+import math
 import re
+from collections.abc import Mapping
 from dataclasses import dataclass
 from hashlib import sha256
 from pathlib import Path
+from types import MappingProxyType
 from typing import Any, TypeAlias
 
 import numpy as np
@@ -71,27 +74,31 @@ class MetaPolicyRecord:
     """One replay-derived domain policy example."""
 
     domain: str
-    features: dict[str, float]
-    knobs: dict[str, float]
+    features: Mapping[str, float]
+    knobs: Mapping[str, float]
     reward: float = 1.0
 
     def __post_init__(self) -> None:
-        if not self.domain:
-            raise ValueError("domain must be non-empty")
-        _validate_float_mapping(self.features, "features", allow_empty=False)
-        _validate_float_mapping(self.knobs, "knobs", allow_empty=False)
-        if not np.isfinite(self.reward):
-            raise ValueError("reward must be finite")
+        _validate_domain(self.domain)
+        features = _validate_float_mapping(self.features, "features", allow_empty=False)
+        knobs = _validate_float_mapping(self.knobs, "knobs", allow_empty=False)
+        object.__setattr__(self, "features", MappingProxyType(features))
+        object.__setattr__(self, "knobs", MappingProxyType(knobs))
+        object.__setattr__(self, "reward", _finite_real_float(self.reward, "reward"))
 
 
 @dataclass(frozen=True)
 class MetaTransferProposal:
     """Initial policy proposal for a new domain signature."""
 
-    knobs: dict[str, float]
+    knobs: Mapping[str, float]
     confidence: float
     neighbours: tuple[tuple[str, float], ...]
     feature_keys: tuple[str, ...]
+
+    def __post_init__(self) -> None:
+        knobs = _validate_float_mapping(self.knobs, "knobs", allow_empty=False)
+        object.__setattr__(self, "knobs", MappingProxyType(knobs))
 
     def to_audit_record(self) -> dict[str, object]:
         """Return a serialisable proposal record.
@@ -449,6 +456,13 @@ def records_from_audit_jsonl(path: str | Path) -> tuple[MetaPolicyRecord, ...]:
     -------
     tuple[MetaPolicyRecord, ...]
         Load meta-policy records from audit-style JSONL lines.
+
+    Raises
+    ------
+    ValueError
+        If a line is not a canonical JSON object or contains invalid evidence.
+    OSError
+        If the audit file cannot be opened or read.
     """
     records: list[MetaPolicyRecord] = []
     with Path(path).open("r", encoding="utf-8") as handle:
@@ -457,6 +471,10 @@ def records_from_audit_jsonl(path: str | Path) -> tuple[MetaPolicyRecord, ...]:
             if not stripped:
                 continue
             payload = _loads_meta_json(stripped)
+            if not isinstance(payload, dict):
+                raise ValueError(
+                    f"line {line_number}: audit record must be a JSON object"
+                )
             records.append(_record_from_payload(payload, line_number))
     return tuple(records)
 
@@ -508,7 +526,11 @@ def records_from_audit_directory(
 
 def _record_from_payload(payload: dict[str, Any], line_number: int) -> MetaPolicyRecord:
     """Return a validated transfer record from a payload, else raise."""
-    domain = str(payload.get("domain") or payload.get("domainpack") or "unknown")
+    domain = payload.get("domain")
+    if domain is None:
+        domain = payload.get("domainpack", "unknown")
+    if not isinstance(domain, str):
+        raise ValueError(f"line {line_number}: domain must be a string")
     feature_payload = payload.get("features", payload.get("metrics", {}))
     knob_payload = payload.get("knobs")
     if knob_payload is None:
@@ -517,7 +539,10 @@ def _record_from_payload(payload: dict[str, Any], line_number: int) -> MetaPolic
         raise ValueError(f"line {line_number}: features/metrics must be a mapping")
     if not isinstance(knob_payload, dict):
         raise ValueError(f"line {line_number}: knobs/actions must define a mapping")
-    reward = float(payload.get("reward", payload.get("R_global", 1.0)))
+    reward = _finite_real_float(
+        payload.get("reward", payload.get("R_global", 1.0)),
+        "reward",
+    )
     return MetaPolicyRecord(
         domain=domain,
         features=_finite_float_dict(feature_payload, "features"),
@@ -538,9 +563,11 @@ def _knobs_from_actions(actions: object) -> dict[str, float]:
         value = action.get("value")
         if not isinstance(knob, str) or knob not in _KNOB_ORDER:
             continue
-        if not isinstance(value, int | float) or not np.isfinite(value):
+        try:
+            numeric_value = _finite_real_float(value, "action value")
+        except ValueError:
             continue
-        by_knob.setdefault(knob, []).append(float(value))
+        by_knob.setdefault(knob, []).append(numeric_value)
     return {knob: float(np.mean(values)) for knob, values in by_knob.items()}
 
 
@@ -573,7 +600,7 @@ def _training_summary(
 
 
 def _feature_vector(
-    features: dict[str, float],
+    features: Mapping[str, float],
     keys: tuple[str, ...],
 ) -> FloatArray:
     """Return the feature vector for a domain summary."""
@@ -635,28 +662,29 @@ def _weighted_knobs(
     return proposal
 
 
-def _finite_float_dict(values: dict[str, Any], name: str) -> dict[str, float]:
+def _finite_float_dict(values: Mapping[str, Any], name: str) -> dict[str, float]:
     """Return a mapping with finite float values, else raise."""
     result: dict[str, float] = {}
     for key, value in values.items():
         if not isinstance(key, str):
             raise ValueError(f"{name} keys must be strings")
-        if not isinstance(value, int | float) or not np.isfinite(value):
-            raise ValueError(f"{name}.{key} must be finite")
-        result[key] = float(value)
+        _validate_non_empty_text(key, f"{name} key")
+        result[key] = _finite_real_float(value, f"{name}.{key}")
     return result
 
 
 def _validate_float_mapping(
-    values: dict[str, float],
+    values: Mapping[str, float],
     name: str,
     *,
     allow_empty: bool,
-) -> None:
+) -> dict[str, float]:
     """Return the validated float mapping, else raise."""
+    if not isinstance(values, Mapping):
+        raise ValueError(f"{name} must be a mapping")
     if not allow_empty and not values:
         raise ValueError(f"{name} must be non-empty")
-    _finite_float_dict(values, name)
+    return _finite_float_dict(values, name)
 
 
 def _validate_package_identifier(value: str, name: str) -> None:
@@ -674,3 +702,22 @@ def _validate_non_empty_text(value: str, name: str) -> None:
         raise ValueError(f"{name} must be a non-empty string")
     if any(ord(char) < 32 for char in value):
         raise ValueError(f"{name} must not contain control characters")
+    if value != value.strip():
+        raise ValueError(f"{name} must not contain leading or trailing whitespace")
+
+
+def _validate_domain(value: str) -> None:
+    """Validate one canonical, non-coercive domain label."""
+    _validate_non_empty_text(value, "domain")
+
+
+def _finite_real_float(value: object, name: str) -> float:
+    """Return one finite real value as ``float`` without coercive aliases."""
+    if isinstance(value, (bool, np.bool_)) or not isinstance(
+        value, (int, float, np.integer, np.floating)
+    ):
+        raise ValueError(f"{name} must be a finite real number")
+    result = float(value)
+    if not math.isfinite(result):
+        raise ValueError(f"{name} must be a finite real number")
+    return result

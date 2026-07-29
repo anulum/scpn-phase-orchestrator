@@ -110,6 +110,16 @@ class TestLeaveOneDomainOutFold:
                 shuffled_source=_controls(rng, 0.0, 2),
             )
 
+    def test_whitespace_target_domain_rejected(self) -> None:
+        rng = np.random.default_rng(2)
+        with pytest.raises(ValueError, match="target_domain must be non-empty"):
+            LeaveOneDomainOutFold(
+                target_domain="  ",
+                transfer=_pair(rng, 2.0),
+                within_domain=_pair(rng, 2.5),
+                shuffled_source=_controls(rng, 0.0, 2),
+            )
+
     def test_empty_shuffled_source_rejected(self) -> None:
         rng = np.random.default_rng(3)
         with pytest.raises(ValueError, match="shuffled_source must provide"):
@@ -128,6 +138,23 @@ class TestLeaveOneDomainOutFold:
 
 
 class TestClassifyLodoVerdict:
+    def test_empty_verdicts_cannot_claim_generality(self) -> None:
+        with pytest.raises(ValueError, match="at least one fold verdict"):
+            classify_lodo_verdict([], n_testable=0)
+
+    def test_unknown_verdict_rejected(self) -> None:
+        with pytest.raises(ValueError, match="unsupported fold verdict"):
+            classify_lodo_verdict(["transfer_typo"], n_testable=1)
+
+    @pytest.mark.parametrize("n_testable", [-1, 2, True])
+    def test_invalid_testable_count_rejected(self, n_testable: int) -> None:
+        with pytest.raises(ValueError, match="n_testable"):
+            classify_lodo_verdict([TRANSFER_POSITIVE], n_testable=n_testable)
+
+    def test_positive_verdict_requires_testable_fold(self) -> None:
+        with pytest.raises(ValueError, match="inconsistent"):
+            classify_lodo_verdict([TRANSFER_POSITIVE], n_testable=0)
+
     def test_any_negative_is_lodo_negative(self) -> None:
         # A decisive negative dominates even a positive on another domain.
         assert (
