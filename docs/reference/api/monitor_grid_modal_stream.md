@@ -30,6 +30,13 @@ threshold valid online — the monitor never recalibrates.
   from the certification), so the certified detector becomes the live monitor with no
   hand-set constants.
 
+Each update is transactional: a sample must be one non-empty finite real bus
+vector, free of text, boolean, complex, and broken-protocol aliases, and its bus
+count must match the established stream. The monitor copies validated samples
+before mutating its index or buffer, so a rejected PMU frame cannot poison a
+later score. Constructor controls and emitted alarm scalars are finite,
+non-coercive primitives; persistence is an exact positive integer.
+
 The honest live-deployment operating point — a stream is stricter than the pre-onset window,
 because a damped fault has a transient growth window the continuous monitor also alarms on —
 is measured and sealed in `examples/real_data/psml_modal_growth/`.

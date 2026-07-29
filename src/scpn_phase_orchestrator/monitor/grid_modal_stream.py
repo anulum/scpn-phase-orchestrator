@@ -44,8 +44,9 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
+from numbers import Integral, Real
 from pathlib import Path
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, TypeAlias, cast
 
 import numpy as np
 
@@ -60,7 +61,7 @@ from scpn_phase_orchestrator.monitor.grid_modal_growth import (
 if TYPE_CHECKING:  # pragma: no cover - import only for static typing
     from numpy.typing import NDArray
 
-    FloatArray = NDArray[np.float64]
+    FloatArray: TypeAlias = NDArray[np.float64]
 
 __all__ = ["GridModalStreamMonitor", "StreamAlarm", "WHOLE_NETWORK_BUS"]
 
@@ -132,6 +133,85 @@ class StreamAlarm:
     threshold: float
     bus: int
 
+    def __post_init__(self) -> None:
+        sample_index = _positive_or_zero_int(self.sample_index, "sample_index")
+        time_s = _finite_real(self.time_s, "time_s")
+        if time_s < 0.0:
+            raise ValueError("time_s must be finite and non-negative")
+        score = _finite_real(self.score, "score")
+        threshold = _finite_real(self.threshold, "threshold")
+        if isinstance(self.bus, (bool, np.bool_)) or not isinstance(self.bus, Integral):
+            raise ValueError("bus must be an integer at least -1")
+        bus = int(self.bus)
+        if bus < WHOLE_NETWORK_BUS:
+            raise ValueError("bus must be an integer at least -1")
+        object.__setattr__(self, "sample_index", sample_index)
+        object.__setattr__(self, "time_s", time_s)
+        object.__setattr__(self, "score", score)
+        object.__setattr__(self, "threshold", threshold)
+        object.__setattr__(self, "bus", bus)
+
+
+def _finite_real(value: object, name: str) -> float:
+    """Return a finite, non-boolean real scalar."""
+    if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be a finite real number")
+    result = float(value)
+    if not np.isfinite(result):
+        raise ValueError(f"{name} must be a finite real number")
+    return result
+
+
+def _positive_real(value: object, name: str) -> float:
+    """Return a positive finite real scalar."""
+    if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be a positive finite number")
+    result = float(value)
+    if not np.isfinite(result) or result <= 0.0:
+        raise ValueError(f"{name} must be a positive finite number")
+    return result
+
+
+def _positive_int(value: object, name: str) -> int:
+    """Return a positive, non-boolean integer."""
+    if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral):
+        raise ValueError(f"{name} must be a positive integer")
+    result = int(value)
+    if result < 1:
+        raise ValueError(f"{name} must be a positive integer")
+    return result
+
+
+def _positive_or_zero_int(value: object, name: str) -> int:
+    """Return a non-negative, non-boolean integer."""
+    if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral):
+        raise ValueError(f"{name} must be a non-negative integer")
+    result = int(value)
+    if result < 0:
+        raise ValueError(f"{name} must be a non-negative integer")
+    return result
+
+
+def _validate_sample(value: object) -> FloatArray:
+    """Return one copied finite, non-coercive bus-voltage sample."""
+    try:
+        raw = np.asarray(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("sample must be a finite real bus vector") from exc
+    if raw.dtype.kind == "O":
+        if any(
+            isinstance(item, (bool, np.bool_, complex, str, bytes, np.str_, np.bytes_))
+            or not isinstance(item, Real)
+            for item in raw.flat
+        ):
+            raise ValueError("sample must be a finite real bus vector")
+    elif raw.dtype.kind not in "iuf":
+        raise ValueError("sample must be a finite real bus vector")
+    values = np.asarray(raw, dtype=np.float64).copy()
+    if values.ndim != 1 or values.size == 0 or not np.all(np.isfinite(values)):
+        raise ValueError("sample must be a non-empty finite real bus vector")
+    return np.ascontiguousarray(values)
+
 
 class GridModalStreamMonitor:
     """A causal sliding-window monitor carrying the certified grid detector online.
@@ -182,36 +262,39 @@ class GridModalStreamMonitor:
         persistence: int = 1,
         r2_gate: float = 0.0,
     ) -> None:
-        if not np.isfinite(rate) or rate <= 0.0:
-            raise ValueError("rate must be a positive finite number")
-        if not np.isfinite(window_seconds) or window_seconds <= 0.0:
-            raise ValueError("window_seconds must be a positive finite number")
-        if not np.isfinite(step_seconds) or step_seconds <= 0.0:
-            raise ValueError("step_seconds must be a positive finite number")
+        validated_rate = _positive_real(rate, "rate")
+        validated_threshold = _finite_real(threshold, "threshold")
+        validated_window_seconds = _positive_real(window_seconds, "window_seconds")
+        validated_step_seconds = _positive_real(step_seconds, "step_seconds")
         if aggregation not in ("focal", "mean"):
             raise ValueError(
                 f"aggregation must be 'mean' or 'focal', got {aggregation!r}"
             )
-        if persistence < 1:
-            raise ValueError("persistence must be a positive integer")
-        if not np.isfinite(r2_gate) or not 0.0 <= r2_gate <= 1.0:
+        validated_persistence = _positive_int(persistence, "persistence")
+        validated_recency_top = _finite_real(recency_top, "recency_top")
+        if validated_recency_top < 1.0:
+            raise ValueError("recency_top must be a finite number at least one")
+        if isinstance(r2_gate, (bool, np.bool_)) or not isinstance(r2_gate, Real):
             raise ValueError("r2_gate must be a finite number in [0, 1]")
-        self._rate = float(rate)
-        self._threshold = float(threshold)
-        self._window = int(round(window_seconds * rate))
+        validated_r2_gate = float(r2_gate)
+        if not np.isfinite(validated_r2_gate) or not 0.0 <= validated_r2_gate <= 1.0:
+            raise ValueError("r2_gate must be a finite number in [0, 1]")
+        self._rate: float = validated_rate
+        self._threshold: float = validated_threshold
+        self._window: int = int(round(validated_window_seconds * validated_rate))
         if self._window < 2:
             raise ValueError("window_seconds is too short for the sampling rate")
-        self._step = max(1, int(round(step_seconds * rate)))
-        self._aggregation = aggregation
-        self._recency_top = float(recency_top)
-        self._persistence = int(persistence)
-        self._r2_gate = float(r2_gate)
+        self._step: int = max(1, int(round(validated_step_seconds * validated_rate)))
+        self._aggregation: str = aggregation
+        self._recency_top: float = validated_recency_top
+        self._persistence: int = validated_persistence
+        self._r2_gate: float = validated_r2_gate
         self._buffer: list[FloatArray] = []
-        self._index = 0
-        self._since_score = 0
-        self._above = 0
-        self._latched = False
-        self._latest_score = float("nan")
+        self._index: int = 0
+        self._since_score: int = 0
+        self._above: int = 0
+        self._latched: bool = False
+        self._latest_score: float = float("nan")
 
     @classmethod
     def from_evidence(
@@ -406,7 +489,9 @@ class GridModalStreamMonitor:
             ``None`` (still warming up, between re-scorings, below threshold, or already
             latched within the same episode).
         """
-        values = np.asarray(sample, dtype=np.float64)
+        values = _validate_sample(sample)
+        if self._buffer and values.shape != self._buffer[0].shape:
+            raise ValueError("sample bus count must remain constant")
         self._index += 1
         self._buffer.append(values)
         if len(self._buffer) > self._window:

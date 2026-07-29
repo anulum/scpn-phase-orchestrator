@@ -229,6 +229,81 @@ def test_reset_clears_window_and_alarm_state() -> None:
     assert len(_feed(monitor, segment)) == 1  # fires again from a clean slate
 
 
+@pytest.mark.parametrize(
+    "sample",
+    [
+        np.array(["1.0", "1.1"]),
+        np.array([1.0, True], dtype=object),
+        np.array([1.0 + 0.0j, 1.1]),
+        np.array([1.0, np.nan]),
+        np.zeros((1, 2)),
+        np.array([]),
+    ],
+)
+def test_update_rejects_invalid_samples_without_mutating_state(
+    sample: np.ndarray,
+) -> None:
+    monitor = GridModalStreamMonitor(
+        rate=10.0,
+        threshold=0.1,
+        window_seconds=0.2,
+        step_seconds=0.1,
+    )
+
+    with pytest.raises(ValueError, match="sample"):
+        monitor.update(sample)
+
+    assert monitor._index == 0
+    assert monitor._buffer == []
+
+
+def test_update_rejects_a_bus_count_change_without_mutating_state() -> None:
+    monitor = GridModalStreamMonitor(
+        rate=10.0,
+        threshold=0.1,
+        window_seconds=0.2,
+        step_seconds=0.1,
+    )
+    monitor.update(np.array([1.0, 1.1]))
+
+    with pytest.raises(ValueError, match="bus count"):
+        monitor.update(np.array([1.0, 1.1, 1.2]))
+
+    assert monitor._index == 1
+    assert len(monitor._buffer) == 1
+
+
+def test_update_copies_caller_owned_samples() -> None:
+    monitor = GridModalStreamMonitor(
+        rate=10.0,
+        threshold=0.1,
+        window_seconds=0.2,
+        step_seconds=0.1,
+    )
+    sample = np.array([1, np.float32(1.1)], dtype=object)
+    monitor.update(sample)
+    sample[:] = 99.0
+
+    np.testing.assert_allclose(monitor._buffer[0], np.array([1.0, 1.1]))
+
+
+def test_update_wraps_a_broken_sample_array_protocol() -> None:
+    monitor = GridModalStreamMonitor(
+        rate=10.0,
+        threshold=0.1,
+        window_seconds=0.2,
+        step_seconds=0.1,
+    )
+
+    class BrokenArray:
+        def __array__(self) -> np.ndarray:
+            raise TypeError("broken")
+
+    with pytest.raises(ValueError, match="sample"):
+        monitor.update(BrokenArray())
+    assert monitor._index == 0
+
+
 # --------------------------------------------------------------------------- #
 # construction from a sealed certification                                     #
 # --------------------------------------------------------------------------- #
@@ -344,11 +419,19 @@ def test_mean_aggregation_attributes_the_whole_network() -> None:
     ("kwargs", "match"),
     [
         ({"rate": 0.0}, "rate must be a positive"),
+        ({"rate": True}, "rate must be a positive"),
         ({"window_seconds": 0.0}, "window_seconds must be a positive"),
+        ({"window_seconds": True}, "window_seconds must be a positive"),
         ({"step_seconds": 0.0}, "step_seconds must be a positive"),
+        ({"threshold": float("nan")}, "threshold"),
         ({"aggregation": "median"}, "aggregation must be"),
         ({"persistence": 0}, "persistence must be a positive"),
+        ({"persistence": True}, "persistence must be a positive"),
+        ({"persistence": 1.5}, "persistence must be a positive"),
+        ({"recency_top": True}, "recency_top"),
+        ({"recency_top": 0.5}, "recency_top"),
         ({"r2_gate": 1.5}, "r2_gate must be a finite number"),
+        ({"r2_gate": True}, "r2_gate must be a finite number"),
         ({"rate": 1.0, "window_seconds": 0.001}, "too short"),
     ],
 )
@@ -357,3 +440,32 @@ def test_construction_guards(kwargs: dict[str, object], match: str) -> None:
     base.update(kwargs)
     with pytest.raises(ValueError, match=match):
         GridModalStreamMonitor(**base)  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "match"),
+    [
+        ({"sample_index": True}, "sample_index"),
+        ({"sample_index": -1}, "sample_index"),
+        ({"time_s": float("nan")}, "time_s"),
+        ({"time_s": -0.1}, "time_s"),
+        ({"score": float("inf")}, "score"),
+        ({"threshold": "0.1"}, "threshold"),
+        ({"bus": True}, "bus"),
+        ({"bus": -2}, "bus"),
+    ],
+)
+def test_stream_alarm_rejects_invalid_scalar_evidence(
+    kwargs: dict[str, object],
+    match: str,
+) -> None:
+    fields: dict[str, object] = {
+        "sample_index": 10,
+        "time_s": 0.1,
+        "score": 0.2,
+        "threshold": 0.1,
+        "bus": 0,
+    }
+    fields.update(kwargs)
+    with pytest.raises(ValueError, match=match):
+        StreamAlarm(**fields)  # type: ignore[arg-type]
