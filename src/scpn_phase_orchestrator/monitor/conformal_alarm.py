@@ -29,6 +29,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass, field
+from numbers import Integral, Real
 
 import numpy as np
 from numpy.typing import NDArray
@@ -48,7 +49,7 @@ __all__ = [
 
 def _finite_real(value: object, *, name: str) -> float:
     """Return *value* as a finite float, else raise ``ValueError``."""
-    if isinstance(value, bool) or not isinstance(value, (int, float)):
+    if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a real number")
     number = float(value)
     if not np.isfinite(number):
@@ -90,6 +91,10 @@ class ConformalAlarmConfig:
         gamma = _finite_real(self.adaptation_rate, name="adaptation_rate")
         if gamma < 0.0:
             raise ValueError("adaptation_rate must be non-negative")
+        if not isinstance(self.regime_conditioned, bool):
+            raise ValueError("regime_conditioned must be a boolean")
+        object.__setattr__(self, "target_false_alarm", alpha)
+        object.__setattr__(self, "adaptation_rate", gamma)
 
     def to_audit_record(self) -> dict[str, object]:
         """Return a JSON-safe mapping of the configuration.
@@ -137,6 +142,43 @@ class ConformalAlarmDecision:
     empirical_false_alarm: float
     regime: str
     nominal_ticks: int
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.alarm, bool):
+            raise ValueError("alarm must be a boolean")
+        score = _finite_real(self.score, name="score")
+        if isinstance(self.threshold, bool) or not isinstance(self.threshold, Real):
+            raise ValueError("threshold must be finite real or positive infinity")
+        threshold = float(self.threshold)
+        if np.isnan(threshold) or threshold == float("-inf"):
+            raise ValueError("threshold must be finite real or positive infinity")
+        effective = _finite_real(
+            self.effective_false_alarm,
+            name="effective_false_alarm",
+        )
+        empirical = _finite_real(
+            self.empirical_false_alarm,
+            name="empirical_false_alarm",
+        )
+        if not 0.0 <= effective <= 1.0:
+            raise ValueError("effective_false_alarm must be in [0, 1]")
+        if not 0.0 <= empirical <= 1.0:
+            raise ValueError("empirical_false_alarm must be in [0, 1]")
+        if not isinstance(self.regime, str) or not self.regime.strip():
+            raise ValueError("regime must be a non-empty string")
+        if (
+            isinstance(self.nominal_ticks, bool)
+            or not isinstance(self.nominal_ticks, Integral)
+            or self.nominal_ticks < 0
+        ):
+            raise ValueError("nominal_ticks must be a non-negative integer")
+        if self.nominal_ticks == 0 and empirical != 0.0:
+            raise ValueError("empirical_false_alarm must be zero with no nominal ticks")
+        object.__setattr__(self, "score", score)
+        object.__setattr__(self, "threshold", threshold)
+        object.__setattr__(self, "effective_false_alarm", effective)
+        object.__setattr__(self, "empirical_false_alarm", empirical)
+        object.__setattr__(self, "nominal_ticks", int(self.nominal_ticks))
 
     def to_audit_record(self) -> dict[str, object]:
         """Return a JSON-safe mapping of the decision.
@@ -188,6 +230,8 @@ class ConformalAlarmStream:
     _regimes: dict[str, _RegimeState] = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
+        if not isinstance(self.config, ConformalAlarmConfig):
+            raise TypeError("config must be ConformalAlarmConfig")
         self._regimes = {}
 
     def calibrate(
@@ -258,6 +302,8 @@ class ConformalAlarmStream:
         ValueError
             If the score is non-finite or no applicable regime has been calibrated.
         """
+        if is_nominal is not None and not isinstance(is_nominal, bool):
+            raise ValueError("is_nominal must be a boolean or None")
         value = _finite_real(score, name="score")
         key = self._resolve_regime(regime)
         state = self._regimes[key]
@@ -345,11 +391,14 @@ class ConformalAlarmStream:
 
     def _resolve_regime(self, regime: str | None) -> str:
         """Return the regime label to score a tick under."""
-        if self.config.regime_conditioned and regime is not None:
-            if not isinstance(regime, str) or not regime.strip():
-                raise ValueError("regime must be a non-empty string")
-            if regime in self._regimes:
-                return regime
+        if regime is not None and (not isinstance(regime, str) or not regime.strip()):
+            raise ValueError("regime must be a non-empty string")
+        if (
+            self.config.regime_conditioned
+            and regime is not None
+            and regime in self._regimes
+        ):
+            return regime
         if _DEFAULT_REGIME in self._regimes:
             return _DEFAULT_REGIME
         if regime is not None and regime in self._regimes:

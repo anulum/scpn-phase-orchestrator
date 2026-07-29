@@ -486,6 +486,12 @@ consuming only nominal ticks, because an alarm on an event tick is a detection,
 not a false alarm. It makes no claim about detection power. Review-only: an alarm
 signals the nominal false-alarm budget was exceeded at a calibrated rate.
 
+Configuration and decision records normalise valid Python/NumPy real scalars to
+JSON-safe floats and reject boolean or non-finite numeric aliases. Nominal labels
+must be exact booleans (or `None` for an unlabelled tick), regime keys must be
+non-empty text, and direct decision records enforce unit-interval rates,
+non-negative tick counts, and finite scores before audit serialisation.
+
 ```python
 from scpn_phase_orchestrator.monitor.conformal_alarm import (
     ConformalAlarmConfig,
