@@ -8,7 +8,8 @@ first principles. By the end you will understand:
 3. How to optimize coupling matrices via gradient descent
 4. How to use the inverse pipeline to infer coupling from data
 
-**Prerequisites:** Python 3.10+, `pip install scpn-phase-orchestrator[nn]`
+**Prerequisites:** Python 3.11–3.13,
+`pip install "scpn-phase-orchestrator[nn]"`
 
 ---
 

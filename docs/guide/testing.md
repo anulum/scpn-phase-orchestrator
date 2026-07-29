@@ -191,7 +191,11 @@ Dedicated validation for auxiliary engines:
 
 ## CI Integration
 
-CI runs the full suite on Python 3.10 (without Rust kernel) and Python 3.12 (with Rust kernel). The Python fallback uses pure-NumPy integrators; the Rust path uses `spo-kernel` via PyO3. Tests handle both paths — see `test_degenerate_edges.py::TestUPDEZeroDt` for the pattern.
+CI runs the main suite on Python 3.11–3.13 and collects main-line coverage on
+Python 3.12. Separate FFI jobs exercise supported interpreter/OS combinations.
+The Python fallback uses pure-NumPy integrators; the Rust path uses `spo-kernel`
+via PyO3. Tests handle both paths — see
+`test_degenerate_edges.py::TestUPDEZeroDt` for the pattern.
 
 Coverage gate: a per-domain **no-decrease ratchet** (`tools/coverage_guard.py`) against the CI coverage lanes, seeded from the measured baselines in `tools/coverage_guard_thresholds.json` (line, ≥93% global) and `tools/coverage_guard_branch_thresholds.json` (branch, ≥91% global). The floors ratchet upward from each green run and never decrease; new modules ship at 100% and lift their domain's floor. (The historical "60% minimum" was the rebuild floor, now superseded.)
 

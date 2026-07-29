@@ -178,7 +178,8 @@ SPO has 1305+ tests covering:
 - Lyapunov guard basin detection
 - Current domainpack compilation
 
-Tests are executed in CI on Python 3.10-3.13 with full coverage.
+Tests are executed in CI on supported Python 3.11–3.13 with coverage ratchets
+defined by the repository's line- and branch-coverage threshold files.
 
 ## 4. Standards Mapping
 

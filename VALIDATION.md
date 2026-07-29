@@ -11,7 +11,9 @@
 | Notebook execution | 10 | `nbclient` runs all `.ipynb` cells under Python 3.12 |
 | Domainpack validation | 36 | Each domainpack exercises `binding_spec.yaml → run.py` end-to-end |
 
-CI runs tests on Python 3.10–3.13 and Rust on Linux, macOS, Windows.
+CI runs the main Python matrix on every supported interpreter, Python
+3.11–3.13. Rust and FFI lanes cover the operating-system and interpreter
+combinations declared in `.github/workflows/ci.yml`.
 
 ## CI Validation Gates
 
@@ -21,7 +23,7 @@ All gates must pass before `ci-gate` allows merge.
 |------|------|------------------|
 | lint | `ruff check` + `ruff format` + `check_version_sync.py` | Style, formatting, version parity |
 | typecheck | `mypy src/` | Static type safety on public API |
-| test | `pytest --cov` (4 Python versions) | Functional correctness + coverage XML |
+| test | `pytest` (Python 3.11–3.13; coverage on 3.12) | Functional correctness + coverage XML |
 | coverage-guard | `tools/coverage_guard.py` | Per-module thresholds from `coverage_guard_thresholds.json` |
 | module-linkage | `tools/check_test_module_linkage.py` | Every source module has ≥1 test reference |
 | security | `bandit -r src/` + `pip-audit` | OWASP + supply-chain vulnerabilities |

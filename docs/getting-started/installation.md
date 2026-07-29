@@ -18,7 +18,8 @@ Every optional dependency adds operational risk if added before evidence gates p
 pip install scpn-phase-orchestrator
 ```
 
-Requires Python 3.10+. Core dependencies: `numpy`, `scipy`, `pyyaml`, `click`.
+Requires Python 3.11–3.13. Core dependencies: `numpy`, `scipy`, `pyyaml`,
+`click`, `protobuf`, and `urllib3`.
 
 After installing, confirm the environment is ready:
 

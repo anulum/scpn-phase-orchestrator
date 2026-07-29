@@ -51,6 +51,7 @@ a detector against a null. See the [Quickstart](docs/getting-started/quickstart.
 
 **Version:** 1.0.0
 **Status:** first stable release; public API under semantic versioning; public inventory is generated below.
+**Supported Python:** Python 3.11–3.13.
 
 [![CI](https://github.com/anulum/scpn-phase-orchestrator/actions/workflows/ci.yml/badge.svg)](https://github.com/anulum/scpn-phase-orchestrator/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/anulum/scpn-phase-orchestrator/actions/workflows/codeql.yml/badge.svg)](https://github.com/anulum/scpn-phase-orchestrator/actions/workflows/codeql.yml)

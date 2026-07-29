@@ -265,8 +265,9 @@ in tiers:
 | Rust parity tests | ~50 | Python vs Rust output equivalence |
 | Physics validation | ~50 | Mathematical correctness (Kuramoto theory) |
 
-CI runs the full suite on every push across Python 3.10-3.13 and
-Rust stable on Linux, macOS, and Windows.
+CI runs the main suite on every push across supported Python 3.11–3.13.
+Rust and FFI lanes cover the platform matrix declared in
+`.github/workflows/ci.yml`.
 
 ## What This System Is NOT
 

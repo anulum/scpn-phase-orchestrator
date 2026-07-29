@@ -34,7 +34,7 @@ Expected baseline:
 
 | Check | Expected result |
 |-------|-----------------|
-| `python --version` | Python 3.10 or newer |
+| `python --version` | Python 3.11–3.13 |
 | editable import | `scpn_phase_orchestrator` imports without `ModuleNotFoundError` |
 | `spo --help` | CLI command list prints |
 | `PYTHONPATH=src` | required when running from a source checkout without editable install |

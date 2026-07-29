@@ -16,7 +16,7 @@ hide:
 [![PyPI](https://img.shields.io/pypi/v/scpn-phase-orchestrator)](https://pypi.org/project/scpn-phase-orchestrator/)
 [![Coverage](https://img.shields.io/badge/coverage-per--module%20gate-blue)](https://github.com/anulum/scpn-phase-orchestrator/actions/workflows/ci.yml)
 [![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-purple)](https://github.com/anulum/scpn-phase-orchestrator/blob/main/LICENSE)
-[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/)
 [![Rust FFI](https://img.shields.io/badge/Rust-spo--kernel-orange)](https://github.com/anulum/scpn-phase-orchestrator/tree/main/spo-kernel)
 [![Pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/anulum/scpn-phase-orchestrator/blob/main/.pre-commit-config.yaml)
 [![REUSE](https://img.shields.io/badge/REUSE-compliant-green)](https://reuse.software/)
@@ -120,15 +120,13 @@ review record.
 
 ## Current Release Boundary
 
-Version `0.11.0` builds on the `0.10.0` governance and operator-surface baseline
-and adds real-data PMU ringdown evidence, IEEE multi-header PMU adaptation,
-deterministic certification and conformity-report packaging, formal-export
-evidence mapping, perf-isolated branch-coverage gates, hardened release
-provenance, and stricter pre-coercion input contracts across public and direct
-polyglot surfaces. The public docs route readers from use-case selection through
-Python APIs, tutorials, notebooks, benchmark snapshots, real-data validation
-evidence, and release hygiene without requiring them to reverse-engineer the
-source tree.
+Version `1.0.0` is the first stable release. The public names exported from
+`scpn_phase_orchestrator.__all__` are covered by semantic-versioning
+guarantees. It consolidates the operator, evaluation, assurance, native-kernel,
+and documentation surfaces built through the `0.12.0` line. The public docs
+route readers from use-case selection through Python APIs, tutorials, notebooks,
+benchmark snapshots, real-data validation evidence, and release hygiene without
+requiring them to reverse-engineer the source tree.
 
 | Reader concern | Where the release answers it |
 |----------------|------------------------------|
