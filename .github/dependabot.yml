@@ -11,11 +11,21 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    rebase-strategy: "disabled"
+    groups:
+      codeql:
+        patterns:
+          - "github/codeql-action/*"
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
       interval: "weekly"
+    # Python locks span three interpreters and two cross-platform FFI targets;
+    # regenerate them atomically with ``make lock-refresh`` instead.
+    open-pull-requests-limit: 0
+    rebase-strategy: "disabled"
   - package-ecosystem: "cargo"
     directory: "/spo-kernel"
     schedule:
       interval: "weekly"
+    rebase-strategy: "disabled"
