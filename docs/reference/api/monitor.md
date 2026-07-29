@@ -847,6 +847,19 @@ bound to its case and normalised Phi is replayed from Phi and `n_bins`.
 ## Self-Model Reconfiguration
 
 Self-model error records and review-only reconfiguration examples.
+Phase, order-signal, and channel-weight evidence must be finite, real, and
+non-coercive: boolean, complex, numeric-text, arbitrary conversion objects, and
+broken array protocols fail before discrepancy arithmetic. Channel labels and
+domain/scenario identifiers are canonical non-empty strings; labels are also
+unique. Optional order-specific RMSE and max-absolute thresholds are applied
+independently and retained in the audit record, falling back to the phase
+thresholds only when omitted.
+
+Frozen `SelfModelErrorResult` construction is itself an evidence boundary. It
+replays channel lengths, aggregate and weighted metric equations, threshold
+decisions, optional order evidence, non-actuation flags, backend/claim identity,
+and the canonical record hash. A directly constructed contradictory result
+therefore cannot be serialised as monitor evidence.
 
 ::: scpn_phase_orchestrator.monitor.self_model
 

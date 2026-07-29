@@ -206,6 +206,32 @@ def test_self_model_error_optional_order_metrics() -> None:
         )
 
 
+def test_self_model_error_uses_and_records_order_specific_thresholds() -> None:
+    observed = np.zeros((2, 3), dtype=np.float64)
+    predicted = np.zeros((2, 3), dtype=np.float64)
+
+    result = compute_self_model_error(
+        observed,
+        predicted,
+        observed_order=np.array([0.0, 0.0]),
+        predicted_order=np.array([0.2, 0.2]),
+        tolerance=1.0,
+        max_abs_tolerance=1.0,
+        order_tolerance=0.1,
+        order_max_abs_tolerance=0.1,
+    )
+
+    assert result.overall_rmse == 0.0
+    assert result.order_rmse == pytest.approx(0.2)
+    assert result.order_tolerance == 0.1
+    assert result.order_max_abs_tolerance == 0.1
+    assert result.order_breached is True
+    assert result.breached is True
+    record = result.to_audit_record()
+    assert record["order_tolerance"] == 0.1
+    assert record["order_max_abs_tolerance"] == 0.1
+
+
 def test_self_model_error_threshold_config_and_audit_serialisation() -> None:
     thresholds = SelfModelErrorThresholdConfig(
         tolerance=0.1,
