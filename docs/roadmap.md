@@ -63,12 +63,13 @@ TODO queue.
 | Cross-domain meta-transfer | Replay proposals, nested corpora, package export, entry points, non-publishing evidence, and pre-publish enforcement exist. | Validate larger private or partner audit-history corpora and decide optional package publication. |
 | Plugin ecosystem | Registry, catalogue, Rust-facing metadata, approval-bound execution requests, storage, revocation, lifecycle, scheduler, retry, and dashboard artefacts exist. | Build a curated signed domainpack and extension store with reputation, audit scores, revocation, provenance, operator UX refinement, and adapter-family onboarding. |
 
-Latest U1 closure: public phase-amplitude-coupling phase/amplitude vectors and
-histories now reject boolean, complex, and numeric-string aliases before float
-conversion. The direct Julia PAC-matrix bridge preserves raw return dtype until
-the shared validator replays `N*N` cardinality and finite unit-interval
-constraints. Direct Go, Julia, and Mojo inputs were already fail-closed, and
-Mojo stdout remains an explicit strictly parsed text protocol.
+Latest U1 closure: replay-backed self-model reconfiguration proposals now reject
+boolean, complex, numeric-text, arbitrary-conversion, and broken-protocol phase
+evidence before circular-error arithmetic. Directly constructed proposals
+canonicalise read-only finite vectors, identifiers, review gates, positive
+thresholds, strict-JSON evidence, and stored SHA-256 hashes. Record replay admits
+only the declared schema and independently verifies the derived unsafe decision and
+phase-error summary before publication.
 
 | Parent item | Completed evidence consolidated here | Remaining open scope |
 |-------------|--------------------------------------|----------------------|

@@ -861,6 +861,20 @@ decisions, optional order evidence, non-actuation flags, backend/claim identity,
 and the canonical record hash. A directly constructed contradictory result
 therefore cannot be serialised as monitor evidence.
 
+Replay-backed reconfiguration proposals preserve the same custody boundary.
+Direct construction canonicalises phase vectors to read-only finite real arrays
+and rejects boolean, complex, numeric-text, arbitrary conversion, and broken
+array-protocol inputs before circular-error arithmetic. Domain, scenario,
+proposed-action, blocked-field, boolean safety-gate, positive-threshold, and
+lowercase SHA-256 identities fail closed. Nested proposal evidence must be strict
+JSON with string keys and finite values.
+
+Replayed scenario records admit exactly the documented schema. Validation
+recomputes the canonical scenario hash and independently verifies the derived
+threshold-safety decision and phase-error summary, so an extra unsigned field or
+tampering with either derived record cannot survive as review evidence. The
+records remain operator-review-only and execution-disabled.
+
 ::: scpn_phase_orchestrator.monitor.self_model
 
 ::: scpn_phase_orchestrator.monitor.self_model_examples

@@ -19,6 +19,7 @@ import hashlib
 import json
 import math
 from dataclasses import dataclass
+from numbers import Real
 from typing import Any, Final, TypeAlias, cast
 
 import numpy as np
@@ -62,7 +63,7 @@ def _compute_self_model_error(
 
 def _coerce_scalar(value: object, *, label: str) -> float:
     """Return ``value`` as a numeric float, rejecting booleans, else raise."""
-    if isinstance(value, bool):
+    if isinstance(value, (bool, np.bool_)):
         raise ValueError(f"{label} must be numeric, got bool")
     if isinstance(value, (np.floating, np.integer)):
         return float(value.item())
@@ -74,16 +75,77 @@ def _coerce_scalar(value: object, *, label: str) -> float:
 def _coerce_vector(values: object, *, label: str) -> FloatArray:
     """Return ``values`` as a non-empty 1-D finite float64 vector, else raise."""
     try:
-        arr = np.asarray(values, dtype=np.float64)
-    except (TypeError, ValueError) as exc:
-        raise ValueError(f"{label} must be a float-convertible vector") from exc
+        raw = np.asarray(values)
+    except (TypeError, ValueError, OverflowError, RuntimeError) as exc:
+        raise ValueError(f"{label} must be a real numeric vector") from exc
+    if np.issubdtype(raw.dtype, np.bool_) or np.iscomplexobj(raw):
+        raise ValueError(f"{label} must be a real numeric vector")
+    if raw.dtype == np.dtype("O"):
+        if not all(
+            isinstance(item, (Real, np.integer, np.floating))
+            and not isinstance(item, (bool, np.bool_))
+            for item in raw.flat
+        ):
+            raise ValueError(f"{label} must be a real numeric vector")
+    elif raw.dtype.kind not in {"f", "i", "u"}:
+        raise ValueError(f"{label} must be a real numeric vector")
+    try:
+        arr = np.array(raw, dtype=np.float64, copy=True)
+    except (  # pragma: no cover - defensive after dtype-kind validation
+        TypeError,
+        ValueError,
+        OverflowError,
+    ) as exc:
+        raise ValueError(f"{label} must be a real numeric vector") from exc
     if arr.ndim != 1:
         raise ValueError(f"{label} must be one-dimensional")
     if arr.size < 1:
         raise ValueError(f"{label} must contain at least one value")
     if not np.isfinite(arr).all():
         raise ValueError(f"{label} must contain only finite values")
-    return np.asarray(arr, dtype=np.float64)
+    result = np.ascontiguousarray(arr, dtype=np.float64)
+    result.setflags(write=False)
+    return result
+
+
+def _coerce_canonical_string(value: object, *, label: str) -> str:
+    """Return a non-empty, trimmed string suitable for canonical evidence."""
+    if type(value) is not str or not value.strip() or value != value.strip():
+        raise ValueError(f"{label} must be a non-empty canonical string")
+    return value
+
+
+def _require_string_json_keys(value: object, *, label: str) -> None:
+    """Reject mappings with keys that canonical JSON would silently stringify."""
+    if isinstance(value, dict):
+        if any(type(key) is not str for key in value):
+            raise ValueError(f"{label} must contain only string keys")
+        for item in value.values():
+            _require_string_json_keys(item, label=label)
+    elif isinstance(value, (tuple, list)):
+        for item in value:
+            _require_string_json_keys(item, label=label)
+
+
+def _canonicalise_json_evidence(value: object, *, label: str) -> dict[str, Any]:
+    """Return a detached strict-JSON evidence mapping with canonical key order."""
+    if not isinstance(value, dict):
+        raise ValueError(f"{label} must be a dict")
+    _require_string_json_keys(value, label=label)
+    try:
+        payload = json.dumps(
+            value,
+            allow_nan=False,
+            ensure_ascii=False,
+            separators=(",", ":"),
+            sort_keys=True,
+        )
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise ValueError(f"{label} must be JSON-serialisable") from exc
+    decoded = json.loads(payload)
+    if not isinstance(decoded, dict):  # pragma: no cover - guarded before encoding
+        raise ValueError(f"{label} must be a dict")
+    return cast(dict[str, Any], decoded)
 
 
 def _coerce_bool(value: object, *, label: str) -> bool:
@@ -111,6 +173,14 @@ def _coerce_error_payload(
     fallback_norm = float(np.linalg.norm(diff) / math.sqrt(diff.size))
     fallback_max = float(np.max(diff))
     fallback_mean = float(np.mean(diff))
+    default_within = (
+        fallback_norm <= error_threshold and fallback_max <= error_threshold
+    )
+    if hasattr(error_result, "breached"):
+        default_within = not _coerce_bool(
+            cast(Any, error_result).breached,
+            label="breached",
+        )
 
     def _from_obj(
         obj: object, names: tuple[str, ...], default: float | None = None
@@ -149,16 +219,6 @@ def _coerce_error_payload(
             f"missing error boolean field(s): {', '.join(names)}"
         )
 
-    threshold = _from_obj(
-        error_result,
-        ("threshold", "error_threshold"),
-        default=error_threshold,
-    )
-    if math.isfinite(threshold) and threshold > 0.0:
-        pass
-    else:
-        threshold = error_threshold
-
     result: dict[str, Any] = {
         "error_norm": _from_obj(
             error_result,
@@ -183,30 +243,38 @@ def _coerce_error_payload(
         "within_threshold": _from_obj_bool(
             error_result,
             ("within_threshold", "passes_threshold", "safe"),
-            default=(
-                not bool(getattr(error_result, "breached", fallback_norm > threshold))
-            ),
+            default=default_within,
         ),
     }
 
     metric = "circular_rms_error"
     if isinstance(error_result, dict):
-        if "metric" in error_result and isinstance(error_result["metric"], str):
-            metric = error_result["metric"]
-    elif hasattr(error_result, "metric") and isinstance(error_result.metric, str):
-        metric = error_result.metric
+        if "metric" in error_result:
+            metric = _coerce_canonical_string(error_result["metric"], label="metric")
+    elif hasattr(error_result, "metric"):
+        metric = _coerce_canonical_string(error_result.metric, label="metric")
     result["metric"] = metric
 
-    if not math.isfinite(result["error_norm"]):
-        raise ValueError("error_norm must be finite")
-    if not math.isfinite(result["max_abs_error"]):
-        raise ValueError("max_abs_error must be finite")
-    if not math.isfinite(result["mean_abs_error"]):
-        raise ValueError("mean_abs_error must be finite")
+    for name in ("error_norm", "max_abs_error", "mean_abs_error"):
+        if not math.isfinite(result[name]):
+            raise ValueError(f"{name} must be finite")
+        if result[name] < 0.0:
+            raise ValueError(f"{name} must be non-negative")
     if not math.isfinite(result["threshold"]) or result["threshold"] <= 0.0:
         raise ValueError("threshold must be finite and positive")
+    if result["threshold"] != error_threshold:
+        raise ValueError("self-model error threshold contradicts error_threshold")
+    if result["mean_abs_error"] > result["error_norm"]:
+        raise ValueError("mean_abs_error must not exceed error_norm")
+    if result["error_norm"] > result["max_abs_error"]:
+        raise ValueError("error_norm must not exceed max_abs_error")
 
-    result["within_threshold"] = bool(result["within_threshold"])
+    expected_within = (
+        result["error_norm"] <= result["threshold"]
+        and result["max_abs_error"] <= result["threshold"]
+    )
+    if result["within_threshold"] is not expected_within:
+        raise ValueError("within_threshold contradicts the error metrics")
     return result
 
 
@@ -249,7 +317,7 @@ def _compute_scenario_hash(
     return hashlib.sha256(payload).hexdigest()
 
 
-@dataclass
+@dataclass(frozen=True)
 class SelfModelReconfigurationProposal:
     """Single replay-backed, review-only self-model reconfiguration scenario."""
 
@@ -258,7 +326,7 @@ class SelfModelReconfigurationProposal:
     predicted_phase: FloatArray
     observed_phase: FloatArray
     error_threshold: float
-    self_model_error: SelfModelErrorResult
+    self_model_error: SelfModelErrorResult | dict[str, object]
     proposed_reconfiguration_action: str
     serialisable_evidence: dict[str, Any]
     blocked_live_execution_fields: tuple[str, ...]
@@ -266,6 +334,93 @@ class SelfModelReconfigurationProposal:
     execution_disabled: bool = True
     claim_boundary: str = SelfModelBoundary
     scenario_hash: str = ""
+
+    def __post_init__(self) -> None:
+        """Validate and canonicalise directly constructed proposal evidence."""
+        domain = _coerce_canonical_string(self.domain, label="domain")
+        if domain not in SupportedDomains:
+            raise ValueError(f"invalid domain '{domain}'")
+        object.__setattr__(self, "domain", domain)
+        object.__setattr__(
+            self,
+            "scenario_id",
+            _coerce_canonical_string(self.scenario_id, label="scenario_id"),
+        )
+
+        predicted = _coerce_vector(self.predicted_phase, label="predicted_phase")
+        observed = _coerce_vector(self.observed_phase, label="observed_phase")
+        if predicted.shape != observed.shape:
+            raise ValueError("predicted and observed phase vectors must match")
+        object.__setattr__(self, "predicted_phase", predicted)
+        object.__setattr__(self, "observed_phase", observed)
+
+        threshold = _coerce_scalar(self.error_threshold, label="error_threshold")
+        if not math.isfinite(threshold) or threshold <= 0.0:
+            raise ValueError("error_threshold must be finite and positive")
+        object.__setattr__(self, "error_threshold", threshold)
+        object.__setattr__(
+            self,
+            "proposed_reconfiguration_action",
+            _coerce_canonical_string(
+                self.proposed_reconfiguration_action,
+                label="proposed_reconfiguration_action",
+            ),
+        )
+        object.__setattr__(
+            self,
+            "serialisable_evidence",
+            _canonicalise_json_evidence(
+                self.serialisable_evidence,
+                label="serialisable_evidence",
+            ),
+        )
+
+        if not isinstance(self.blocked_live_execution_fields, tuple) or not (
+            self.blocked_live_execution_fields
+        ):
+            raise ValueError("blocked_live_execution_fields must be a non-empty tuple")
+        blocked = tuple(
+            _coerce_canonical_string(field, label="blocked_live_execution_fields")
+            for field in self.blocked_live_execution_fields
+        )
+        if len(set(blocked)) != len(blocked):
+            raise ValueError("blocked_live_execution_fields must be unique")
+        object.__setattr__(self, "blocked_live_execution_fields", blocked)
+
+        if (
+            _coerce_bool(
+                self.operator_review_required,
+                label="operator_review_required",
+            )
+            is not True
+        ):
+            raise ValueError("operator_review_required must be true")
+        if (
+            _coerce_bool(self.execution_disabled, label="execution_disabled")
+            is not True
+        ):
+            raise ValueError("execution_disabled must be true")
+        if self.claim_boundary != SelfModelBoundary:
+            raise ValueError("claim_boundary must preserve the review-only boundary")
+        if type(self.scenario_hash) is not str:
+            raise ValueError("scenario_hash must be a string")
+        if self.scenario_hash and (
+            len(self.scenario_hash) != 64
+            or self.scenario_hash != self.scenario_hash.lower()
+            or any(char not in "0123456789abcdef" for char in self.scenario_hash)
+        ):
+            raise ValueError(
+                "scenario_hash must be 64 lowercase hexadecimal characters"
+            )
+
+        _coerce_error_payload(
+            self.self_model_error,
+            predicted_phase=predicted,
+            observed_phase=observed,
+            error_threshold=threshold,
+        )
+        if self.scenario_hash:
+            _validate_self_model_reconfiguration_proposal(self)
 
     def to_audit_record(self) -> dict[str, Any]:
         """Return a deterministic JSON-safe audit record.
@@ -309,81 +464,18 @@ class SelfModelReconfigurationProposal:
         record["scenario_hash"] = _compute_scenario_hash(
             proposal=self, error_payload=error_payload
         )
-        # _validate_self_model_reconfiguration_proposal above already rejects a
-        # mismatched stored hash, so a surviving proposal's hash is empty or equal
-        # to this digest; this guard is unreachable.
-        if self.scenario_hash and self.scenario_hash != record["scenario_hash"]:
-            raise ValueError(  # pragma: no cover
-                f"scenario {self.scenario_id} has mismatched scenario_hash"
-            )
         return record
 
 
 def _validate_self_model_reconfiguration_proposal(
     scenario: SelfModelReconfigurationProposal,
 ) -> None:
-    """Validate a reconfiguration proposal's fields and review gates."""
-    if scenario.domain not in SupportedDomains:
-        raise ValueError(f"invalid domain '{scenario.domain}'")
-    if not scenario.scenario_id or not scenario.scenario_id.strip():
-        raise ValueError("scenario_id must be a non-empty string")
-
-    predicted = _coerce_vector(
-        scenario.predicted_phase,
-        label=f"{scenario.scenario_id}.predicted_phase",
-    )
-    observed = _coerce_vector(
-        scenario.observed_phase,
-        label=f"{scenario.scenario_id}.observed_phase",
-    )
-    if predicted.shape != observed.shape:
-        raise ValueError(
-            f"{scenario.scenario_id} predicted and observed phase vectors must match"
-        )
-    if (
-        not math.isfinite(float(scenario.error_threshold))
-        or scenario.error_threshold <= 0.0
-    ):
-        raise ValueError(f"{scenario.scenario_id}.error_threshold must be positive")
-
-    if not scenario.proposed_reconfiguration_action.strip():
-        raise ValueError(f"{scenario.scenario_id} needs non-empty proposed action")
-    if (
-        _coerce_bool(
-            scenario.operator_review_required, label="operator_review_required"
-        )
-        is not True
-    ):
-        raise ValueError(
-            f"{scenario.scenario_id} requires operator_review_required=True"
-        )
-    if (
-        _coerce_bool(scenario.execution_disabled, label="execution_disabled")
-        is not True
-    ):
-        raise ValueError(f"{scenario.scenario_id} requires execution_disabled=True")
-    if scenario.claim_boundary != SelfModelBoundary:
-        raise ValueError(f"{scenario.scenario_id} has invalid claim boundary")
-    if not isinstance(scenario.blocked_live_execution_fields, tuple) or not (
-        scenario.blocked_live_execution_fields
-    ):
-        raise ValueError(f"{scenario.scenario_id} requires blocked fields")
-    if not all(
-        isinstance(field, str) and field.strip()
-        for field in scenario.blocked_live_execution_fields
-    ):
-        raise ValueError(
-            f"{scenario.scenario_id} blocked fields must be non-empty strings"
-        )
-
-    if not isinstance(scenario.serialisable_evidence, dict):
-        raise ValueError(f"{scenario.scenario_id}.serialisable_evidence must be a dict")
-
+    """Validate a frozen proposal's optional stored hash against current evidence."""
     if scenario.scenario_hash:
         error_payload = _coerce_error_payload(
             scenario.self_model_error,
-            predicted_phase=predicted,
-            observed_phase=observed,
+            predicted_phase=scenario.predicted_phase,
+            observed_phase=scenario.observed_phase,
             error_threshold=scenario.error_threshold,
         )
         expected = _compute_scenario_hash(
@@ -392,12 +484,6 @@ def _validate_self_model_reconfiguration_proposal(
         )
         if scenario.scenario_hash != expected:
             raise ValueError(f"{scenario.scenario_id} has mismatched scenario_hash")
-        # reaching here means the hash equals the freshly computed digest, which is
-        # always 64 hex chars, so this length guard is unreachable.
-        if len(scenario.scenario_hash) != 64:  # pragma: no cover
-            raise ValueError(
-                f"{scenario.scenario_id} scenario_hash must be 64 hex chars"
-            )
 
 
 def _validate_scenario_record(record: dict[str, Any]) -> None:
@@ -422,9 +508,20 @@ def _validate_scenario_record(record: dict[str, Any]) -> None:
     missing = required_fields - set(record.keys())
     if missing:
         raise ValueError(f"record missing required fields: {sorted(missing)}")
+    unexpected = set(record.keys()) - required_fields
+    if unexpected:
+        raise ValueError(f"record has unexpected fields: {sorted(unexpected)}")
 
     if not isinstance(record["scenario_hash"], str):
         raise ValueError("record scenario_hash must be a string")
+    if not isinstance(record["predicted_phase"], list) or not isinstance(
+        record["observed_phase"], list
+    ):
+        raise ValueError("record phase vectors must be JSON arrays")
+    if not isinstance(record["self_model_error"], dict):
+        raise ValueError("record self_model_error must be a JSON object")
+    if not isinstance(record["phase_error_summary"], dict):
+        raise ValueError("record phase_error_summary must be a JSON object")
 
     predicted = _coerce_vector(
         record["predicted_phase"], label="record.predicted_phase"
@@ -436,6 +533,11 @@ def _validate_scenario_record(record: dict[str, Any]) -> None:
         record["error_threshold"],
         label="record.error_threshold",
     )
+    if not math.isfinite(error_threshold) or error_threshold <= 0.0:
+        raise ValueError("record.error_threshold must be finite and positive")
+    if not isinstance(record["blocked_live_execution_fields"], list):
+        raise ValueError("record blocked_live_execution_fields must be a list")
+
     preview = SelfModelReconfigurationProposal(
         domain=record["domain"],
         scenario_id=record["scenario_id"],
@@ -443,9 +545,9 @@ def _validate_scenario_record(record: dict[str, Any]) -> None:
         observed_phase=observed,
         error_threshold=error_threshold,
         self_model_error=cast(
-            SelfModelErrorResult,
+            dict[str, object],
             _coerce_error_payload(
-                cast(SelfModelErrorResult, record["self_model_error"]),
+                cast(dict[str, object], record["self_model_error"]),
                 predicted_phase=predicted,
                 observed_phase=observed,
                 error_threshold=error_threshold,
@@ -467,14 +569,25 @@ def _validate_scenario_record(record: dict[str, Any]) -> None:
     )
 
     _validate_self_model_reconfiguration_proposal(preview)
+    error_payload = _coerce_error_payload(
+        cast(dict[str, object], record["self_model_error"]),
+        predicted_phase=preview.predicted_phase,
+        observed_phase=preview.observed_phase,
+        error_threshold=preview.error_threshold,
+    )
+    expected_unsafe = not error_payload["within_threshold"]
+    if type(record["unsafe_due_to_threshold"]) is not bool or (
+        record["unsafe_due_to_threshold"] is not expected_unsafe
+    ):
+        raise ValueError("record unsafe_due_to_threshold contradicts error evidence")
+    expected_summary = _error_summary(
+        np.abs(_circular_error(preview.predicted_phase, preview.observed_phase))
+    )
+    if record["phase_error_summary"] != expected_summary:
+        raise ValueError("record phase_error_summary contradicts phase evidence")
     _hash = _compute_scenario_hash(
         proposal=preview,
-        error_payload=_coerce_error_payload(
-            cast(SelfModelErrorResult, record["self_model_error"]),
-            predicted_phase=preview.predicted_phase,
-            observed_phase=preview.observed_phase,
-            error_threshold=preview.error_threshold,
-        ),
+        error_payload=error_payload,
     )
     if record["scenario_hash"] != _hash:
         raise ValueError(f"record {record['scenario_id']} has invalid scenario_hash")
