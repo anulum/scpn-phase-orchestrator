@@ -8,6 +8,9 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
+from typing import Any, cast
+
 import numpy as np
 import pytest
 from numpy.typing import NDArray
@@ -63,11 +66,14 @@ def _kuramoto_derivative(
 
 class TestNetworkMode:
     def _mode(self, controllability: FloatArray | None) -> NetworkMode:
+        eigenvalue = complex(-0.3, 2.0)
+        mode_shape = np.array([1.0 + 0.0j, -0.5 + 0.2j])
+        mode_shape /= np.linalg.norm(mode_shape)
         return NetworkMode(
-            eigenvalue=complex(-0.3, 2.0),
-            frequency_hz=0.318,
-            damping_ratio=0.148,
-            mode_shape=np.array([1.0 + 0.0j, -0.5 + 0.2j]),
+            eigenvalue=eigenvalue,
+            frequency_hz=abs(eigenvalue.imag) / (2.0 * np.pi),
+            damping_ratio=-eigenvalue.real / abs(eigenvalue),
+            mode_shape=mode_shape,
             participation=np.array([0.7, 0.3]),
             dominant_state=0,
             controllability=controllability,
@@ -81,7 +87,10 @@ class TestNetworkMode:
         assert payload["eigenvalue"] == [-0.3, 2.0]
         assert payload["controllability"] is None
         assert payload["dominant_input"] is None
-        assert payload["mode_shape"] == [[1.0, 0.0], [-0.5, 0.2]]
+        assert payload["mode_shape"] == [
+            [float(value.real), float(value.imag)]
+            for value in self._mode(None).mode_shape
+        ]
         assert payload["participation"] == [0.7, 0.3]
         assert payload["poorly_damped"] is False
 
@@ -96,6 +105,103 @@ class TestNetworkMode:
 
         assert mode == mode
         assert mode != self._mode(None)
+
+    @pytest.mark.parametrize(
+        ("field", "value"),
+        (
+            ("eigenvalue", "-0.3+2j"),
+            ("eigenvalue", complex(np.inf, 0.0)),
+            ("eigenvalue", 10**1000),
+            ("frequency_hz", "0.318"),
+            ("frequency_hz", -0.1),
+            ("damping_ratio", np.nan),
+            ("mode_shape", np.array([1.0, "0.0"])),
+            ("mode_shape", np.array([True, False])),
+            ("mode_shape", np.array([1.0, "x"], dtype=object)),
+            ("mode_shape", np.array([10**1000, 0], dtype=object)),
+            ("mode_shape", np.array([[1.0, 0.0]])),
+            ("mode_shape", np.array([np.nan + 0.0j, 0.0 + 0.0j])),
+            ("mode_shape", np.array([2.0 + 0.0j, 0.0 + 0.0j])),
+            ("participation", np.array([0.7, True], dtype=object)),
+            ("participation", np.array([0.7, -0.3])),
+            ("participation", np.array([0.7, 0.4])),
+            ("participation", np.array([[0.7, 0.3]])),
+            ("participation", np.array([1.0])),
+            ("dominant_state", True),
+            ("dominant_state", 1),
+            ("dominant_state", 3),
+            ("controllability", np.array([0.2, -0.1])),
+            ("controllability", np.array([[0.2, 0.9]])),
+            ("controllability", np.array([])),
+            ("dominant_input", 0),
+            ("poorly_damped", np.bool_(False)),
+        ),
+    )
+    def test_direct_mode_rejects_malformed_evidence(
+        self,
+        field: str,
+        value: object,
+    ) -> None:
+        with pytest.raises(ValueError, match=field):
+            replace(self._mode(np.array([0.2, 0.9])), **{field: value})
+
+    @pytest.mark.parametrize(
+        ("field", "value"),
+        (
+            ("frequency_hz", 0.4),
+            ("damping_ratio", 0.4),
+            ("mode_shape", np.array([0.0 + 1.0j, 0.0 + 0.0j])),
+        ),
+    )
+    def test_direct_mode_rejects_contradictory_derived_evidence(
+        self,
+        field: str,
+        value: object,
+    ) -> None:
+        with pytest.raises(ValueError, match=field):
+            replace(self._mode(None), **{field: value})
+
+    def test_direct_mode_requires_controllability_pairing(self) -> None:
+        with pytest.raises(ValueError, match="dominant_input"):
+            replace(self._mode(None), dominant_input=0)
+        with pytest.raises(ValueError, match="dominant_input"):
+            replace(self._mode(np.array([0.2, 0.9])), dominant_input=None)
+
+    def test_direct_mode_owns_immutable_array_evidence(self) -> None:
+        shape = np.array([1.0 + 0.0j, 0.0 + 0.0j], dtype=object)
+        participation = np.array([0.7, 0.3])
+        controllability = np.array([0.2, 0.9])
+        mode = NetworkMode(
+            eigenvalue=-1.0 + 0.0j,
+            frequency_hz=0.0,
+            damping_ratio=1.0,
+            mode_shape=shape,
+            participation=participation,
+            dominant_state=0,
+            controllability=controllability,
+            dominant_input=1,
+            poorly_damped=False,
+        )
+
+        shape[0] = 0.0
+        participation[0] = 0.0
+        controllability[1] = 0.0
+
+        assert mode.mode_shape[0] == 1.0
+        assert mode.participation[0] == 0.7
+        assert mode.controllability is not None
+        assert mode.controllability[1] == 0.9
+        assert not mode.mode_shape.flags.writeable
+        assert not mode.participation.flags.writeable
+        assert not mode.controllability.flags.writeable
+
+    def test_direct_mode_wraps_broken_shape_array_protocol(self) -> None:
+        class BrokenArray:
+            def __array__(self) -> np.ndarray:
+                raise TypeError("broken protocol")
+
+        with pytest.raises(ValueError, match="mode_shape"):
+            replace(self._mode(None), mode_shape=cast(Any, BrokenArray()))
 
 
 class TestCompanionOscillator:
@@ -368,6 +474,58 @@ class TestValidation:
         coupling = np.zeros((3, 3))
         with pytest.raises(ValueError, match="drive_phase"):
             phase_network_jacobian(coupling, np.zeros(3), drive_phase=float("inf"))
+
+    @pytest.mark.parametrize(
+        "field",
+        ("state_matrix", "input_matrix", "coupling", "phases", "phase_lag"),
+    )
+    def test_public_array_boundaries_reject_numeric_text(self, field: str) -> None:
+        if field == "state_matrix":
+            with pytest.raises(ValueError, match=field):
+                analyse_network_modes(np.array([["-1.0"]]))
+        elif field == "input_matrix":
+            with pytest.raises(ValueError, match=field):
+                analyse_network_modes(
+                    np.array([[-1.0]]), input_matrix=np.array([["1"]])
+                )
+        else:
+            kwargs: dict[str, object] = {
+                "coupling": np.zeros((1, 1)),
+                "phases": np.zeros(1),
+                "phase_lag": np.zeros((1, 1)),
+            }
+            kwargs[field] = (
+                np.array([["0.0"]]) if field != "phases" else np.array(["0.0"])
+            )
+            with pytest.raises(ValueError, match=field):
+                phase_network_jacobian(**cast(Any, kwargs))
+
+    def test_public_array_boundary_rejects_object_boolean_aliases(self) -> None:
+        with pytest.raises(ValueError, match="state_matrix"):
+            analyse_network_modes(np.array([[-1.0, True], [0.0, -2.0]], dtype=object))
+
+    def test_public_array_boundary_preserves_real_numeric_objects(self) -> None:
+        modes = analyse_network_modes(
+            np.array([[-1, np.float32(0.0)], [0, np.float64(-2.0)]], dtype=object)
+        )
+
+        assert len(modes) == 2
+
+    def test_public_array_boundary_wraps_broken_protocol(self) -> None:
+        class BrokenArray:
+            def __array__(self) -> np.ndarray:
+                raise TypeError("broken protocol")
+
+        with pytest.raises(ValueError, match="state_matrix"):
+            analyse_network_modes(cast(Any, BrokenArray()))
+
+    def test_public_scalar_overflow_fails_closed(self) -> None:
+        with pytest.raises(ValueError, match="damping_threshold"):
+            analyse_network_modes(np.array([[-1.0]]), damping_threshold=10**1000)
+
+    def test_public_real_array_overflow_fails_closed(self) -> None:
+        with pytest.raises(ValueError, match="state_matrix"):
+            analyse_network_modes(np.array([[10**1000]], dtype=object))
 
 
 class TestPipelineWiring:

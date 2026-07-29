@@ -51,6 +51,16 @@ ascending damping ratio — the least-damped, most critical mode first. A defect
 (non-diagonalisable) state matrix is rejected: its left eigenvectors, and the
 participation factors built from them, do not exist.
 
+All public state, input, coupling, phase, and phase-lag arrays must contain
+finite real numeric evidence before conversion. Boolean, complex,
+numeric-string, overflow, and broken array-protocol payloads fail closed; real
+numeric object arrays remain valid. A directly constructed `NetworkMode`
+independently replays eigenvalue-derived frequency and damping, canonical
+unit/phase anchoring of its mode shape, normalised participation and dominant
+state, controllability/dominant-input pairing, and primitive field types. It
+owns read-only copies of all array evidence, so later caller mutation cannot
+alter a published modal record.
+
 ## Relationship to `oscillation_modes`
 
 The two pieces describe the *same* linear modes from opposite ends. For a linear

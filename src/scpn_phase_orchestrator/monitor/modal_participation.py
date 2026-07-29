@@ -60,7 +60,7 @@ References
 from __future__ import annotations
 
 from dataclasses import dataclass
-from numbers import Real
+from numbers import Complex, Integral, Real
 from typing import TypeAlias
 
 import numpy as np
@@ -128,6 +128,97 @@ class NetworkMode:
     controllability: FloatArray | None
     dominant_input: int | None
     poorly_damped: bool
+
+    def __post_init__(self) -> None:
+        """Validate, normalise, and own the published modal evidence."""
+        eigenvalue = _complex_scalar(self.eigenvalue, "eigenvalue")
+        frequency = _nonnegative_scalar(self.frequency_hz, "frequency_hz")
+        damping = _real_scalar(self.damping_ratio, "damping_ratio")
+        expected_frequency = abs(eigenvalue.imag) / (2.0 * np.pi)
+        magnitude = abs(eigenvalue)
+        expected_damping = (
+            -eigenvalue.real / magnitude if magnitude > _ZERO_EIGENVALUE else 0.0
+        )
+        if not np.isclose(
+            frequency,
+            expected_frequency,
+            rtol=8.0 * np.finfo(np.float64).eps,
+            atol=8.0 * np.finfo(np.float64).eps,
+        ):
+            raise ValueError("frequency_hz must match the eigenvalue")
+        if not np.isclose(
+            damping,
+            expected_damping,
+            rtol=8.0 * np.finfo(np.float64).eps,
+            atol=8.0 * np.finfo(np.float64).eps,
+        ):
+            raise ValueError("damping_ratio must match the eigenvalue")
+
+        mode_shape = _validate_complex_vector(self.mode_shape, "mode_shape")
+        norm = float(np.linalg.norm(mode_shape))
+        if not np.isclose(norm, 1.0, rtol=0.0, atol=1.0e-12):
+            raise ValueError("mode_shape must have unit Euclidean norm")
+        anchor = mode_shape[int(np.argmax(np.abs(mode_shape)))]
+        if abs(float(anchor.imag)) > 1.0e-12 or float(anchor.real) <= 0.0:
+            raise ValueError("mode_shape must be anchored real-positive")
+
+        participation = _validate_real_array(self.participation, "participation")
+        if participation.ndim != 1 or participation.shape != mode_shape.shape:
+            raise ValueError("participation must match the one-dimensional mode_shape")
+        if np.any(participation < 0.0) or not np.isclose(
+            float(participation.sum()),
+            1.0,
+            rtol=0.0,
+            atol=1.0e-12,
+        ):
+            raise ValueError("participation must be non-negative and sum to one")
+        dominant_state = _validate_index(
+            self.dominant_state,
+            "dominant_state",
+            participation.size,
+        )
+        if dominant_state != int(np.argmax(participation)):
+            raise ValueError("dominant_state must identify maximum participation")
+
+        controllability: FloatArray | None
+        dominant_input: int | None
+        if self.controllability is None:
+            controllability = None
+            if self.dominant_input is not None:
+                raise ValueError("dominant_input must be None without controllability")
+            dominant_input = None
+        else:
+            controllability = _validate_real_array(
+                self.controllability,
+                "controllability",
+            )
+            if controllability.ndim != 1 or controllability.size == 0:
+                raise ValueError("controllability must be a non-empty vector")
+            if np.any(controllability < 0.0):
+                raise ValueError("controllability must be non-negative")
+            if self.dominant_input is None:
+                raise ValueError("dominant_input is required with controllability")
+            dominant_input = _validate_index(
+                self.dominant_input,
+                "dominant_input",
+                controllability.size,
+            )
+            if dominant_input != int(np.argmax(controllability)):
+                raise ValueError("dominant_input must identify maximum controllability")
+        poorly_damped = _plain_bool(self.poorly_damped, "poorly_damped")
+        mode_shape.setflags(write=False)
+        participation.setflags(write=False)
+        if controllability is not None:
+            controllability.setflags(write=False)
+        object.__setattr__(self, "eigenvalue", eigenvalue)
+        object.__setattr__(self, "frequency_hz", frequency)
+        object.__setattr__(self, "damping_ratio", damping)
+        object.__setattr__(self, "mode_shape", mode_shape)
+        object.__setattr__(self, "participation", participation)
+        object.__setattr__(self, "dominant_state", dominant_state)
+        object.__setattr__(self, "controllability", controllability)
+        object.__setattr__(self, "dominant_input", dominant_input)
+        object.__setattr__(self, "poorly_damped", poorly_damped)
 
     def to_dict(self) -> dict[str, object]:
         """Return a JSON-serialisable mapping of the mode.
@@ -375,25 +466,112 @@ def _validate_phase_lag(value: object | None, n: int) -> FloatArray:
 
 def _validate_real_array(value: object, name: str) -> FloatArray:
     """Return the value as a validated finite real array, else raise."""
-    raw = np.asarray(value)
-    if raw.dtype == np.bool_:
+    try:
+        raw = np.asarray(value)
+    except (TypeError, ValueError, OverflowError, RuntimeError) as exc:
+        raise ValueError(f"{name} must be a real float array") from exc
+    if np.issubdtype(raw.dtype, np.bool_):
         raise ValueError(f"{name} must not contain boolean values")
     if np.iscomplexobj(raw):
         raise ValueError(f"{name} must be real-valued")
+    if raw.dtype == np.dtype("O"):
+        if not all(
+            isinstance(item, (Real, np.floating, np.integer))
+            and not isinstance(item, (bool, np.bool_))
+            for item in raw.flat
+        ):
+            raise ValueError(f"{name} must be a real float array")
+    elif raw.dtype.kind not in {"f", "i", "u"}:
+        raise ValueError(f"{name} must be a real float array")
     try:
-        array = raw.astype(np.float64, copy=True)
-    except (TypeError, ValueError) as exc:
+        array = np.array(raw, dtype=np.float64, copy=True)
+    except (TypeError, ValueError, OverflowError) as exc:
         raise ValueError(f"{name} must be a real float array") from exc
     if not np.all(np.isfinite(array)):
         raise ValueError(f"{name} must contain only finite values")
     return np.ascontiguousarray(array, dtype=np.float64)
 
 
+def _validate_complex_vector(value: object, name: str) -> ComplexArray:
+    """Return a copied finite complex vector, else raise ``ValueError``."""
+    try:
+        raw = np.asarray(value)
+    except (TypeError, ValueError, OverflowError, RuntimeError) as exc:
+        raise ValueError(f"{name} must be a finite numeric vector") from exc
+    if np.issubdtype(raw.dtype, np.bool_):
+        raise ValueError(f"{name} must not contain boolean values")
+    if raw.dtype == np.dtype("O"):
+        if not all(
+            isinstance(item, (Complex, np.number))
+            and not isinstance(item, (bool, np.bool_))
+            for item in raw.flat
+        ):
+            raise ValueError(f"{name} must be a finite numeric vector")
+    elif raw.dtype.kind not in {"f", "i", "u", "c"}:
+        raise ValueError(f"{name} must be a finite numeric vector")
+    try:
+        vector = np.array(raw, dtype=np.complex128, copy=True)
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise ValueError(f"{name} must be a finite numeric vector") from exc
+    if vector.ndim != 1 or vector.size == 0:
+        raise ValueError(f"{name} must be a non-empty one-dimensional vector")
+    if not np.all(np.isfinite(vector)):
+        raise ValueError(f"{name} must contain only finite values")
+    return np.ascontiguousarray(vector, dtype=np.complex128)
+
+
+def _complex_scalar(value: object, name: str) -> complex:
+    """Return ``value`` as a finite complex scalar, else raise ``ValueError``."""
+    if isinstance(value, (bool, np.bool_)) or not isinstance(
+        value,
+        (Complex, np.number),
+    ):
+        raise ValueError(f"{name} must be a finite numeric scalar")
+    try:
+        scalar = complex(value)
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise ValueError(f"{name} must be a finite numeric scalar") from exc
+    if not np.isfinite(scalar.real) or not np.isfinite(scalar.imag):
+        raise ValueError(f"{name} must be finite")
+    return scalar
+
+
+def _nonnegative_scalar(value: object, name: str) -> float:
+    """Return a finite non-negative real scalar, else raise ``ValueError``."""
+    scalar = _real_scalar(value, name)
+    if scalar < 0.0:
+        raise ValueError(f"{name} must be non-negative")
+    return scalar
+
+
+def _validate_index(value: object, name: str, size: int) -> int:
+    """Return a canonical in-range index, else raise ``ValueError``."""
+    if isinstance(value, (bool, np.bool_)) or not isinstance(
+        value,
+        (Integral, np.integer),
+    ):
+        raise ValueError(f"{name} must be an integer index")
+    index = int(value)
+    if not 0 <= index < size:
+        raise ValueError(f"{name} is outside the evidence vector")
+    return index
+
+
+def _plain_bool(value: object, name: str) -> bool:
+    """Return a canonical Python boolean, else raise ``ValueError``."""
+    if type(value) is not bool:
+        raise ValueError(f"{name} must be a boolean")
+    return value
+
+
 def _real_scalar(value: object, name: str) -> float:
     """Return ``value`` as a finite real scalar, else raise ``ValueError``."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite real, got {value!r}")
-    scalar = float(value)
+    try:
+        scalar = float(value)
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise ValueError(f"{name} must be a finite real, got {value!r}") from exc
     if not np.isfinite(scalar):
         raise ValueError(f"{name} must be finite, got {value!r}")
     return scalar
