@@ -847,6 +847,11 @@ commodity, so the value is the auditable, sealed
 [early-warning evidence](assurance.md#early-warning-assurance-evidence) around
 the alarm, not a claim that any one detector warns earlier.
 
+Explosive-sync signals are non-empty, finite, real, and non-coercive. Its
+published warning record owns read-only array copies and replays the entropy
+mean, baseline median/MAD, derived scores, window grid, and sustained-breach
+decision before summary or metric export.
+
 ### Critical Slowing Down
 
 Rising variance and lag-one autocorrelation of an observable ahead of a critical

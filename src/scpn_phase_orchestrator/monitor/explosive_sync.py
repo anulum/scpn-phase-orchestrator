@@ -119,6 +119,140 @@ class ExplosiveSyncWarning:
     drop_threshold: float
     persistence: int
 
+    def __post_init__(self) -> None:
+        starts = _validate_window_starts(self.window_starts)
+        if starts[0] != 0 or np.any(starts < 0) or np.any(np.diff(starts) <= 0):
+            raise ValueError(
+                "window_starts must start at zero and be strictly increasing"
+            )
+
+        entropy = _validate_result_array(self.entropy_index, "entropy_index", ndim=1)
+        per_node = _validate_result_array(
+            self.per_node_entropy,
+            "per_node_entropy",
+            ndim=2,
+        )
+        robust_z = _validate_result_array(self.robust_z, "robust_z", ndim=1)
+        relative_drop = _validate_result_array(
+            self.relative_drop,
+            "relative_drop",
+            ndim=1,
+        )
+        n_windows = starts.size
+        if (
+            entropy.shape != (n_windows,)
+            or robust_z.shape != (n_windows,)
+            or relative_drop.shape != (n_windows,)
+            or per_node.shape[0] != n_windows
+        ):
+            raise ValueError("warning arrays must share one non-empty window axis")
+        tolerance = 1e-12
+        if np.any(entropy < -tolerance) or np.any(entropy > 1.0 + tolerance):
+            raise ValueError("entropy_index must lie in [0, 1]")
+        if np.any(per_node < -tolerance) or np.any(per_node > 1.0 + tolerance):
+            raise ValueError("per_node_entropy must lie in [0, 1]")
+        entropy = np.clip(entropy, 0.0, 1.0)
+        per_node = np.clip(per_node, 0.0, 1.0)
+        if not np.allclose(
+            entropy,
+            per_node.mean(axis=1),
+            rtol=0.0,
+            atol=tolerance,
+        ):
+            raise ValueError("entropy_index must equal the per-node mean")
+
+        baseline_median = _validate_unit_real(
+            self.baseline_median,
+            "baseline_median",
+        )
+        baseline_scale = _validate_non_negative_real(
+            self.baseline_scale,
+            "baseline_scale",
+        )
+        n_baseline = _validate_positive_int(
+            self.n_baseline_windows,
+            "n_baseline_windows",
+        )
+        if n_baseline > n_windows:
+            raise ValueError("n_baseline_windows exceeds the window count")
+        expected_median = float(np.median(entropy[:n_baseline]))
+        expected_scale = _MAD_TO_STD * float(
+            np.median(np.abs(entropy[:n_baseline] - expected_median))
+        )
+        if not np.isclose(baseline_median, expected_median, rtol=0.0, atol=tolerance):
+            raise ValueError("baseline_median does not match baseline evidence")
+        if not np.isclose(baseline_scale, expected_scale, rtol=0.0, atol=tolerance):
+            raise ValueError("baseline_scale does not match baseline evidence")
+
+        expected_z = (entropy - expected_median) / max(expected_scale, _SCALE_FLOOR)
+        expected_drop = (
+            (expected_median - entropy) / expected_median
+            if expected_median > 0.0
+            else np.zeros_like(entropy)
+        )
+        if not np.allclose(robust_z, expected_z, rtol=0.0, atol=tolerance):
+            raise ValueError("robust_z does not match baseline evidence")
+        if not np.allclose(
+            relative_drop,
+            expected_drop,
+            rtol=0.0,
+            atol=tolerance,
+        ):
+            raise ValueError("relative_drop does not match baseline evidence")
+
+        dimension, delay = _validate_ordinal_params(self.dimension, self.delay)
+        window = _validate_positive_int(self.window, "window")
+        step = _validate_positive_int(self.step, "step")
+        persistence = _validate_positive_int(self.persistence, "persistence")
+        z_threshold = _validate_non_negative_real(self.z_threshold, "z_threshold")
+        drop_threshold = _validate_non_negative_real(
+            self.drop_threshold,
+            "drop_threshold",
+        )
+        if starts.size > 1 and not np.all(np.diff(starts) == step):
+            raise ValueError("window_starts must advance by step")
+        if not isinstance(self.warning_triggered, (bool, np.bool_)):
+            raise ValueError("warning_triggered must be a boolean")
+        warning_window = _validate_optional_index(self.warning_window, "warning_window")
+        warning_sample = _validate_optional_index(self.warning_sample, "warning_sample")
+        breaches = (
+            (np.arange(n_windows) >= n_baseline)
+            & (robust_z <= -z_threshold)
+            & (relative_drop >= drop_threshold)
+        )
+        expected_window = _first_sustained_breach(breaches, persistence)
+        expected_sample = (
+            int(starts[expected_window]) if expected_window is not None else None
+        )
+        if (
+            bool(self.warning_triggered) != (expected_window is not None)
+            or warning_window != expected_window
+            or warning_sample != expected_sample
+        ):
+            raise ValueError("warning fields do not match threshold evidence")
+
+        arrays = (starts, entropy, per_node, robust_z, relative_drop)
+        for array in arrays:
+            array.setflags(write=False)
+        object.__setattr__(self, "window_starts", starts)
+        object.__setattr__(self, "entropy_index", entropy)
+        object.__setattr__(self, "per_node_entropy", per_node)
+        object.__setattr__(self, "robust_z", robust_z)
+        object.__setattr__(self, "relative_drop", relative_drop)
+        object.__setattr__(self, "baseline_median", baseline_median)
+        object.__setattr__(self, "baseline_scale", baseline_scale)
+        object.__setattr__(self, "n_baseline_windows", n_baseline)
+        object.__setattr__(self, "warning_triggered", bool(self.warning_triggered))
+        object.__setattr__(self, "warning_window", warning_window)
+        object.__setattr__(self, "warning_sample", warning_sample)
+        object.__setattr__(self, "dimension", dimension)
+        object.__setattr__(self, "delay", delay)
+        object.__setattr__(self, "window", window)
+        object.__setattr__(self, "step", step)
+        object.__setattr__(self, "z_threshold", z_threshold)
+        object.__setattr__(self, "drop_threshold", drop_threshold)
+        object.__setattr__(self, "persistence", persistence)
+
     def summary(self) -> dict[str, float | int | bool | None]:
         """Return a flat scalar summary for logging or metric export.
 
@@ -148,11 +282,25 @@ class ExplosiveSyncWarning:
 
 def _validate_signals(signals: object) -> FloatArray:
     """Return the signals as a validated 2-D finite array, else raise."""
-    raw = np.asarray(signals)
-    if raw.dtype == np.bool_:
+    try:
+        raw = np.asarray(signals)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("signals must be a real float array") from exc
+    object_values = tuple(raw.flat) if raw.dtype.kind == "O" else ()
+    if raw.dtype.kind == "b" or any(
+        isinstance(value, (bool, np.bool_)) for value in object_values
+    ):
         raise ValueError("signals must not contain boolean values")
-    if np.iscomplexobj(raw):
+    if raw.dtype.kind == "c" or any(
+        isinstance(value, (complex, np.complexfloating)) for value in object_values
+    ):
         raise ValueError("signals must contain real-valued samples")
+    if raw.dtype.kind not in "iufO" or any(
+        isinstance(value, (str, bytes, np.str_, np.bytes_))
+        or not isinstance(value, Real)
+        for value in object_values
+    ):
+        raise ValueError("signals must be a real float array")
     try:
         array = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
@@ -161,9 +309,59 @@ def _validate_signals(signals: object) -> FloatArray:
         array = array.reshape(1, -1)
     if array.ndim != 2:
         raise ValueError(f"signals shape {raw.shape} must be one- or two-dimensional")
+    if array.shape[0] == 0:
+        raise ValueError("signals must contain at least one node")
+    if array.shape[1] == 0:
+        raise ValueError("signals must contain at least one sample")
     if not np.all(np.isfinite(array)):
         raise ValueError("signals must contain only finite values")
     return np.ascontiguousarray(array, dtype=np.float64)
+
+
+def _validate_result_array(value: object, name: str, *, ndim: int) -> FloatArray:
+    """Return a copied non-empty finite real result array."""
+    try:
+        raw = np.asarray(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a finite real array") from exc
+    if raw.dtype.kind == "O":
+        if any(
+            isinstance(item, (bool, np.bool_, complex, str, bytes, np.str_, np.bytes_))
+            or not isinstance(item, Real)
+            for item in raw.flat
+        ):
+            raise ValueError(f"{name} must be a finite real array")
+    elif raw.dtype.kind not in "iuf":
+        raise ValueError(f"{name} must be a finite real array")
+    result = np.asarray(raw, dtype=np.float64).copy()
+    if result.ndim != ndim or result.size == 0 or not np.all(np.isfinite(result)):
+        raise ValueError(f"{name} must be a non-empty finite {ndim}-D array")
+    return np.ascontiguousarray(result)
+
+
+def _validate_window_starts(value: object) -> IntArray:
+    """Return a copied non-empty signed-64 integer window vector."""
+    try:
+        raw = np.asarray(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("window_starts must be an integer vector") from exc
+    if raw.ndim != 1 or raw.size == 0 or raw.dtype.kind not in "iu":
+        raise ValueError("window_starts must be an integer vector")
+    if raw.dtype.kind == "u" and np.any(raw > np.iinfo(np.int64).max):
+        raise ValueError("window_starts must fit signed 64-bit integers")
+    return np.ascontiguousarray(raw, dtype=np.int64).copy()
+
+
+def _validate_optional_index(value: object, name: str) -> int | None:
+    """Return an optional non-negative integer index."""
+    if value is None:
+        return None
+    if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral):
+        raise ValueError(f"{name} must be a non-negative integer or None")
+    result = int(value)
+    if result < 0:
+        raise ValueError(f"{name} must be a non-negative integer or None")
+    return result
 
 
 def _validate_positive_int(value: object, name: str) -> int:
@@ -193,6 +391,14 @@ def _validate_non_negative_real(value: object, name: str) -> float:
     result = float(value)
     if not np.isfinite(result) or result < 0.0:
         raise ValueError(f"{name} must be finite and non-negative, got {result}")
+    return result
+
+
+def _validate_unit_real(value: object, name: str) -> float:
+    """Return ``value`` as a finite real in [0, 1], else raise."""
+    result = _validate_non_negative_real(value, name)
+    if result > 1.0:
+        raise ValueError(f"{name} must lie in [0, 1], got {result}")
     return result
 
 

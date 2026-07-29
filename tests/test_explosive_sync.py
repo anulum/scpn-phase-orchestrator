@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import dataclasses
+from numbers import Real
 from typing import Any
 
 import numpy as np
@@ -143,6 +144,122 @@ class TestResultStructure:
         with pytest.raises(dataclasses.FrozenInstanceError):
             result.baseline_median = 0.0  # type: ignore[misc]
 
+    def test_result_arrays_are_read_only(self) -> None:
+        signals, _ = _transition_signals(length=1000)
+        result = explosive_sync_warning(signals, window=100, step=50)
+
+        for array in (
+            result.window_starts,
+            result.entropy_index,
+            result.per_node_entropy,
+            result.robust_z,
+            result.relative_drop,
+        ):
+            with pytest.raises(ValueError):
+                array.flat[0] = 0
+
+    @pytest.mark.parametrize(
+        ("field", "replacement", "match"),
+        [
+            ("entropy_index", np.full(5, 0.25), "node mean"),
+            ("baseline_median", 0.25, "baseline_median"),
+            ("baseline_median", 1.1, "baseline_median"),
+            ("baseline_scale", 0.25, "baseline_scale"),
+            ("n_baseline_windows", 6, "window count"),
+            ("robust_z", np.ones(5), "robust_z"),
+            ("relative_drop", np.ones(5), "relative_drop"),
+            ("warning_triggered", True, "warning"),
+            ("warning_triggered", 1, "boolean"),
+            ("warning_window", True, "warning_window"),
+            ("warning_sample", -1, "warning_sample"),
+            ("window_starts", np.array([0, 2, 1, 6, 8]), "strictly increasing"),
+            ("window_starts", np.array([0, 3, 6, 9, 12]), "advance by step"),
+            ("window_starts", np.arange(5, dtype=np.float64), "integer vector"),
+            (
+                "window_starts",
+                np.array([0, 2**63], dtype=np.uint64),
+                "signed 64-bit",
+            ),
+            ("entropy_index", np.zeros(4), "window axis"),
+            ("robust_z", np.zeros(4), "window axis"),
+            ("relative_drop", np.zeros(4), "window axis"),
+            ("per_node_entropy", np.zeros((4, 2)), "window axis"),
+            ("entropy_index", np.full(5, -0.1), "entropy_index"),
+            ("per_node_entropy", np.full((5, 2), 1.1), "per_node_entropy"),
+            (
+                "entropy_index",
+                np.array(["0", "0", "0", "0", "0"], dtype=object),
+                "finite real array",
+            ),
+            ("entropy_index", np.zeros(5, dtype=np.complex128), "finite real array"),
+            ("entropy_index", np.array([]), "non-empty"),
+            ("entropy_index", np.full(5, np.nan), "non-empty"),
+        ],
+    )
+    def test_direct_result_rejects_contradictory_evidence(
+        self,
+        field: str,
+        replacement: object,
+        match: str,
+    ) -> None:
+        result = explosive_sync_warning(
+            np.tile(np.arange(13, dtype=np.float64), (2, 1)),
+            dimension=2,
+            window=5,
+            step=2,
+            min_baseline_windows=2,
+        )
+        assert result.entropy_index.shape == (5,)
+
+        with pytest.raises(ValueError, match=match):
+            dataclasses.replace(result, **{field: replacement})
+
+    def test_direct_result_wraps_broken_array_protocols(self) -> None:
+        result = explosive_sync_warning(
+            np.tile(np.arange(13, dtype=np.float64), (2, 1)),
+            dimension=2,
+            window=5,
+            step=2,
+            min_baseline_windows=2,
+        )
+
+        class BrokenArray:
+            def __array__(self) -> np.ndarray:
+                raise TypeError("broken")
+
+        with pytest.raises(ValueError, match="entropy_index"):
+            dataclasses.replace(result, entropy_index=BrokenArray())
+        with pytest.raises(ValueError, match="window_starts"):
+            dataclasses.replace(result, window_starts=BrokenArray())
+
+    def test_direct_result_accepts_and_copies_real_numeric_object_arrays(
+        self,
+    ) -> None:
+        result = explosive_sync_warning(
+            np.tile(np.arange(13, dtype=np.float64), (2, 1)),
+            dimension=2,
+            window=5,
+            step=2,
+            min_baseline_windows=2,
+        )
+        entropy = result.entropy_index.astype(object)
+
+        replaced = dataclasses.replace(result, entropy_index=entropy)
+        entropy[:] = 1.0
+
+        np.testing.assert_array_equal(replaced.entropy_index, result.entropy_index)
+
+    def test_single_window_result_is_valid(self) -> None:
+        result = explosive_sync_warning(
+            np.arange(5, dtype=np.float64),
+            dimension=2,
+            window=5,
+            step=2,
+            min_baseline_windows=1,
+        )
+
+        assert result.window_starts.tolist() == [0]
+
     def test_baseline_window_count(self) -> None:
         signals, _ = _transition_signals(n_nodes=3, length=3000)
         result = explosive_sync_warning(
@@ -191,11 +308,35 @@ class TestValidation:
             (np.array([[True, False, True, False]]), "boolean"),
             (np.array([[0.0 + 1.0j, 1.0, 2.0, 3.0]]), "real-valued"),
             (np.array(["a", "b", "c", "d"], dtype=object), "real float array"),
+            (np.array([["0", "1", "2", "3"]]), "real"),
+            (np.array([[0.0, True, 2.0, 3.0]], dtype=object), "boolean"),
+            (np.empty((0, 8)), "node"),
         ],
     )
     def test_rejects_invalid_signals(self, signals: np.ndarray, match: str) -> None:
         with pytest.raises(ValueError, match=match):
             explosive_sync_warning(signals, window=4, step=1)
+
+    def test_rejects_a_broken_signal_array_protocol(self) -> None:
+        class BrokenArray:
+            def __array__(self) -> np.ndarray:
+                raise TypeError("broken")
+
+        with pytest.raises(ValueError, match="signals"):
+            explosive_sync_warning(BrokenArray(), window=5, step=1)
+
+    def test_rejects_empty_samples_and_wraps_broken_real_conversion(self) -> None:
+        with pytest.raises(ValueError, match="sample"):
+            explosive_sync_warning(np.empty((2, 0)), window=5, step=1)
+
+        class BrokenReal:
+            def __float__(self) -> float:
+                raise TypeError("broken")
+
+        Real.register(BrokenReal)
+        signals = np.asarray([[BrokenReal()] * 5], dtype=object)
+        with pytest.raises(ValueError, match="signals"):
+            explosive_sync_warning(signals, dimension=2, window=5, step=1)
 
 
 class TestFirstSustainedBreach:

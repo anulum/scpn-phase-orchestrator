@@ -441,16 +441,23 @@ def test_seal_synchronisation_alarm_rejects_a_foreign_object() -> None:
 def _entropy_warning(*, triggered: bool) -> ExplosiveSyncWarning:
     """Return a transition-entropy warning with a clear regularisation drop."""
     window_starts = np.arange(8, dtype=np.int64) * 16
-    robust_z = np.array([0.0, 0.1, -0.1, 0.0, -1.0, -8.0, -2.0, -1.0])
-    entropy_index = np.linspace(0.9, 0.4, 8)
+    baseline = np.array([0.80255362, 0.83, 0.87, 0.89744638])
+    baseline_median = float(np.median(baseline))
+    baseline_scale = 1.4826 * float(np.median(np.abs(baseline - baseline_median)))
+    post_baseline_z = np.array([-1.0, -8.0, -4.0, -1.0])
+    entropy_index = np.concatenate(
+        [baseline, baseline_median + baseline_scale * post_baseline_z]
+    )
+    robust_z = (entropy_index - baseline_median) / baseline_scale
+    relative_drop = (baseline_median - entropy_index) / baseline_median
     return ExplosiveSyncWarning(
         window_starts=window_starts,
         entropy_index=entropy_index,
-        per_node_entropy=np.zeros((8, 3), dtype=np.float64),
+        per_node_entropy=np.repeat(entropy_index[:, None], 3, axis=1),
         robust_z=robust_z,
-        relative_drop=np.zeros(8, dtype=np.float64),
-        baseline_median=0.85,
-        baseline_scale=0.05,
+        relative_drop=relative_drop,
+        baseline_median=baseline_median,
+        baseline_scale=baseline_scale,
         n_baseline_windows=4,
         warning_triggered=triggered,
         warning_window=5 if triggered else None,
@@ -461,7 +468,7 @@ def _entropy_warning(*, triggered: bool) -> ExplosiveSyncWarning:
         step=16,
         z_threshold=3.0,
         drop_threshold=0.1,
-        persistence=2,
+        persistence=2 if triggered else 3,
     )
 
 
