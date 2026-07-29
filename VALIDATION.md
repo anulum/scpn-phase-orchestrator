@@ -30,7 +30,7 @@ All gates must pass before `ci-gate` allows merge.
 | rust-check | `cargo fmt/clippy/doc/test` (3 OS) | Formatting, lints, docs, correctness |
 | ffi-test | `maturin develop` + `pytest` (3 OS × 2 Python) | Rust↔Python binding correctness |
 | cargo-audit | `cargo audit` | Rust dependency CVEs |
-| rust-msrv | Rust 1.75.0 build | Minimum supported Rust version |
+| rust-msrv | Rust 1.83.0 build | Minimum supported Rust version |
 | benchmark | `bench/run_benchmarks.py` → `bench/compare_baseline.py` | ≤20% regression vs baseline |
 
 ## Phase Dynamics Correctness

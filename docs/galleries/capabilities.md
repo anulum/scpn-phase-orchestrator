@@ -1,129 +1,154 @@
-# Capabilities & Use Cases
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<!-- Commercial license available -->
+<!-- © Concepts 1996–2026 Miroslav Šotek. All rights reserved. -->
+<!-- © Code 2020–2026 Miroslav Šotek. All rights reserved. -->
+<!-- ORCID: 0009-0009-3560-0851 -->
+<!-- Contact: www.anulum.li | protoscience@anulum.li -->
+<!-- SCPN Phase Orchestrator — Capabilities and application boundaries -->
 
-## 1. Core Architecture: The Universal Phase Dynamics Engine
+# Capabilities & Applications
 
-`scpn-phase-orchestrator` is the central topology manager and mathematical
-solver for the SCPN ecosystem. It operates on a single mathematical axiom:
-**the dynamics of synchronization are universal.** Whether stabilizing tearing
-modes in a 100-million-degree plasma or aligning EEG gamma waves in a human
-brain, the orchestrator solves the system using the Universal Phase Dynamics
-Equation (UPDE):
+This page answers three separate questions:
 
-$$
-\frac{d\theta_i}{dt} = \omega_i + \frac{K}{N}
-    \sum_{j=1}^{N} A_{ij} \sin(\theta_j - \theta_i) + \zeta
-$$
+1. What can the software execute now?
+2. What evidence supports those capabilities?
+3. Where could the platform create operational or commercial value after
+   domain validation?
 
-### Technical specifications
+Keeping those questions separate prevents a working API, a simulation
+scaffold, or a benchmark from being mistaken for a field-proven product.
 
-- **`spo-kernel` (Rust PyO3 backend):** 53 engine modules compiled to native
-  code via PyO3, covering UPDE integration (12 variants), coupling estimation
-  (plasticity, TE, prior, connectome), monitors (sleep staging, EVS, chimera),
-  SSGF geometry (carrier, ethical cost), and autotune (SINDy, frequency ID).
-  Speedups range from 2x to 96x depending on the module.
+## Capability maturity at a glance
 
-| Scenario | $N$ | Step time | Throughput |
-|----------|-----|-----------|------------|
-| High-frequency control | 16 | 7.3 us | ~137 kHz |
-| Massive swarms | 1,024 | 8.6 ms | ~120 Hz |
-| City-scale networks | 10,000 | ~850 ms | ~1.2 Hz |
+| Maturity | Current SPO surface | What the label permits |
+|---|---|---|
+| Stable software contract | 24 top-level Python exports, CLI, binding validation, simulation, audit/replay | downstream integration under semantic versioning |
+| Externally checked scientific niche | grid modal-damping estimation against ANDES small-signal eigenvalues | a bounded grid-modal claim under the documented study protocol |
+| Reproducible evaluation method | matched-false-alarm detector audit, permutation significance, sealed record | honest comparison of a detector with event/null data |
+| Tested engineering capability | phase extraction, coupled dynamics, monitors, policy projection, deterministic replay, optional Rust parity | local R&D and pre-deployment evaluation |
+| Domain scaffold | 36 binding specs spanning engineering, physical, biological, and digital systems | a starting model whose assumptions still require domain evidence |
+| Review-only integration | PLC, PMU, quantum, neuromorphic, clinical, fusion, and other hardware-adjacent bridges | artefact generation or bounded dry runs, not autonomous actuation |
+| Experimental research | broad transfer, metaphysical/identity models, frontier formal and accelerator tracks | hypothesis generation only |
 
----
+The [fact-based overview](../FACT_BASED_OVERVIEW.md) and
+[validation report](../VALIDATION_REPORT.md) provide the evidence history. The
+[public roadmap](../roadmap.md) separates stable, active, deferred, and research
+work.
 
-## 2. The Domainpack Abstraction
+## What SPO can do now
 
-The orchestrator separates *topology* from *physics* via dynamic
-`binding_spec.yaml` configurations that shape the $K_{nm}$ coupling matrix on
-the fly.
+### Turn timing data into a common model
 
-!!! example "Plasma Physics (`plasma_control`)"
+SPO maps continuous waves, event timing, and discrete state transitions into
+physical, informational, and symbolic phase channels. A versioned
+`binding_spec.yaml` records what each oscillator represents, how oscillators
+couple, which synchrony is useful or harmful, and where safety boundaries sit.
 
-    8-layer hierarchy with exponential distance decay, mapping frequencies from
-    micro-turbulence (500 kHz) down to wall equilibrium (1 Hz).
+This makes assumptions reviewable before they become controller logic.
 
-!!! example "Biological Networks (`bio_stub`)"
+### Execute coupled-dynamics hypotheses
 
-    The same memory space reconfigured into 4 macro-physiological layers
-    (Cellular -> Systemic), with Sakaguchi phase-lags and biological clock
-    frequencies.
+The Python engine implements Kuramoto/UPDE, Stuart-Landau, inertial, delay,
+stochastic, simplicial, hypergraph, geometric, swarmalator, and related model
+families. A researcher can compare coupling, phase-lag, forcing, topology, and
+integration choices on deterministic seeded runs.
 
-!!! example "QueueWaves (`queuewaves`)"
+These are executable models, not proof that a selected model represents a
+particular plant, patient, market, or network.
 
-    Microservice queue depths and latencies mapped to Kuramoto oscillators.
-    Cascade failures detected via R_global collapse before individual service
-    alerts fire.
+### Measure more than one coherence number
 
-### Adapter bridges
+The monitor surface includes order parameters, PLV, PAC, chimera indices,
+Lyapunov and recurrence measures, transfer entropy, Hodge decomposition,
+spectral metrics, winding, STL traces, and domain-specific observers. This
+supports competing explanations instead of hiding a decision behind one score.
 
-Specialized Python modules translate raw phase states ($R$, $\Psi$) into
-domain-specific telemetry:
+### Produce reviewable proposals and evidence
 
-| Adapter | Target domain |
-|---------|---------------|
-| `scpn_control_bridge` | SCPN-Control $H_\infty$ coil vectors |
-| `fusion_core_bridge` | SCPN-Fusion-Core equilibrium solver |
-| `plasma_control_bridge` | Tokamak real-time PCS |
-| `quantum_control_bridge` | Qiskit circuit parameters |
-| `snn_bridge` | sc-neurocore SNN spike rates |
-| `runtime.observability` | Default runtime Prometheus text metrics and optional OTel export |
-| `opentelemetry` | Compatibility alias for runtime OTel spans and metrics |
-| `prometheus` | Prometheus query client for external metric sources |
+The supervisor can classify regimes and produce rate-limited, projected
+control candidates. Audit records are hash-linked and can be replayed
+deterministically. Hardware and external-service writes remain behind separate
+adapter, policy, credential, and operator gates.
 
----
+### Audit early-warning claims honestly
 
-## 3. Use-Case Scenarios
+`spo audit-detector` and `scpn_phase_orchestrator.evaluation` compare
+event and null scores at a matched false-alarm rate, compute a permutation
+p-value, and seal the result. The method can evaluate an SPO detector, a
+classical baseline, or a black-box model on the same footing.
 
-### Disruption prediction via topological collapse
+Negative results remain results: the current real-data studies do not support a
+general tipping-point prediction claim.
 
-By monitoring the cross-layer alignment matrix and the global order parameter
-$R$, the orchestrator predicts systemic phase transitions -- a tokamak plasma
-disruption or an epileptic seizure -- milliseconds before macroscopic failure.
+### Accelerate selected local workloads
 
-### Decentralized swarm synchronization
+The optional `spo-kernel` Rust workspace accelerates selected numerical,
+monitor, supervisor, and extraction paths through PyO3. Backend choice,
+fallback, validation, and parity are explicit. Timing tables in the
+[performance guide](../guide/performance.md) are dated local regression
+snapshots, not portable real-time guarantees.
 
-Provides the mathematical backbone for thousands of autonomous agents (drones,
-robots) reaching collective consensus without a centralized command server,
-using only local Kuramoto coupling.
+## Application and value map
 
-### Ising-model social physics
+| Area | Candidate problem | SPO contribution | Evidence still required |
+|---|---|---|---|
+| Power systems | oscillatory-mode tracking and damping review | inertial dynamics, PMU ingestion, modal evidence, replay | utility data, operating-envelope validation, operator acceptance |
+| Cloud platforms | retry or queue synchronisation that amplifies incidents | event-phase mapping, harmful-coherence metrics, QueueWaves | service-specific baselines, false-alarm study, production load tests |
+| Industrial systems | interacting machine, process, or controller cycles | binding contract, delay/coupling hypotheses, bounded proposals | plant model, hazard analysis, deterministic timing evidence |
+| Robotics and swarms | alignment, dephasing, hand-off, or collective motion | swarmalator/coupling simulation and regime traces | hardware-in-loop tests and fleet safety case |
+| Neuroscience and physiology research | reproducible phase relationships across channels | extraction, phase metrics, honest detector evaluation | cohort protocol, clinical statistics, ethics and regulatory review |
+| Fusion and plasma research | cross-scale mode-locking hypotheses | multi-channel bindings, phase/coupling analysis, review artefacts | device data, physics validation, control-room approval |
+| ML and inverse modelling | learn coupling or topology through dynamics | differentiable JAX layers, inverse Kuramoto, SAF loss | held-out benchmarks and task-specific generalisation |
+| Assurance-heavy R&D | reconstruct how a model produced a proposal | sealed audit, replay, explicit claim and adapter boundaries | organisation-specific governance and deployment controls |
 
-The $K_{nm}$ matrix models social-media echo chambers, predicting how
-information avalanches and societal polarization emerge from individual
-stochastic interactions (aligned with the Noospheric modelling of Layer 11).
+## Where the market value can come from
 
-### Closed-loop neurofeedback
+SPO's defensible value proposition is **integration and evidence discipline**,
+not universal prediction.
 
-Stuart-Landau amplitude mode tracks EEG oscillation power in real time. The
-supervisor adjusts entrainment coupling $K$ to maintain target gamma coherence,
-verified per-session by the EVS (Entrainment Verification Score).
+- **Shorter model-integration cycles:** phase-bearing signals, coupling
+  assumptions, solver settings, and review boundaries use one contract.
+- **Lower model-risk ambiguity:** implemented, benchmarked, externally checked,
+  scaffold, and research surfaces are labelled separately.
+- **Reproducible technical review:** a buyer, regulator, scientist, or operator
+  can inspect the binding, replay the run, and reject an unsupported proposal.
+- **Cross-domain reuse:** the engine and assurance workflow can be reused while
+  each domain keeps its own validation burden.
+- **Deployment optionality:** pure Python supports evaluation; optional Rust,
+  service, telemetry, and hardware adapters can be promoted only when their
+  evidence exists.
 
----
+Potential commercial forms include an engineering library, an evaluation and
+assurance toolkit, domain-specific integration work, controlled operator
+services, and commercial licensing. No revenue, market-size, adoption, or
+return-on-investment figure is claimed without external evidence.
 
-## 4. High-Performance Computing (HPC) Projections
+## What SPO does not establish
 
-The `spo-kernel` Rust backend is engineered for bare-metal multi-threading and
-SIMD vectorization. While it scales on a laptop, it targets cluster deployment.
+SPO does not, by itself:
 
-### Massive agent-based modelling ($N = 10^6$)
+- predict plasma disruptions, seizures, market crashes, or infrastructure
+  failures;
+- provide clinical diagnosis or treatment;
+- certify functional safety, cybersecurity, or regulatory compliance;
+- guarantee hard real-time deadlines on Python, Rust, FPGA, or network paths;
+- validate all 36 domainpacks as deployable detectors or controllers;
+- show that a local benchmark transfers to another host or workload;
+- authorise autonomous writes to PLCs, medical devices, robots, grids, fusion
+  equipment, quantum systems, or neuromorphic hardware.
 
-!!! info "Scenario"
+Those outcomes need exact domain data, preregistered success criteria,
+independent review, deployment evidence, and operator authority.
 
-    Real-time modelling of national-level traffic grids or epidemiological
-    transmission vectors. Every node is a human agent interacting via the
-    Kuramoto equation.
+## Choose the next evidence path
 
-- **Hardware:** 128-core AMD EPYC cluster, `rayon` data-parallel iterators.
-- **Memory:** Dense $K_{nm}$ at $N=10^6$ requires ~8 TB RAM (distributed MPI)
-  or sparse-matrix representations. With neighbor-only sparsity, integration
-  remains sub-second per step.
-
-### Digital Earth synchronization
-
-!!! info "Scenario"
-
-    SCPN Layer 12 (Gaian) climate/oceanic phase models.
-
-- **Hardware:** GPU clusters via JAX/CuPy bridges inside the orchestrator.
-- **Performance:** Sub-millisecond sparse UPDE integrations of global oceanic
-  currents, orders of magnitude faster than traditional Monte Carlo fluid
-  dynamics.
+| Goal | Next page |
+|---|---|
+| decide whether the problem has real phase structure | [Use Cases and Value Map](../getting-started/use_cases.md) |
+| run a sealed result | [Quickstart](../getting-started/quickstart.md) |
+| understand scientific claim boundaries | [Fact-Based Overview](../FACT_BASED_OVERVIEW.md) |
+| select an engine | [Choosing an Engine](../guide/choosing_an_engine.md) |
+| inspect the API | [API Reference](../reference/api/index.md) |
+| move a notebook toward production | [Notebook to Production](../guide/notebook_to_production.md) |
+| review benchmarks and release evidence | [Release Hygiene](../RELEASE_HYGIENE.md) |
+| inspect what remains open | [Public Roadmap](../roadmap.md) |

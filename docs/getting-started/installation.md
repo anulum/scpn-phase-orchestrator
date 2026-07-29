@@ -68,7 +68,7 @@ minimal domainpack, runs `spo run`, and reports the generated audit log.
 
 | Extra | Installs | Purpose |
 |-------|----------|---------|
-| `rust` | `spo-kernel` | Rust FFI acceleration (7.3 us/step for N=16) |
+| `rust` | `spo-kernel` | Optional Rust FFI acceleration; build from this repository |
 | `quantum` | `scpn-quantum-control` | Quantum simulation adapter |
 | `plasma` | `scpn-control` | Plasma/tokamak control adapter |
 | `fusion` | `scpn-fusion-core` | Fusion equilibrium adapter |
@@ -90,26 +90,27 @@ pip install "scpn-phase-orchestrator[queuewaves,plot,otel]"
 
 ## Rust FFI Build (Optional)
 
-The Rust kernel `spo-kernel` provides a 10--50x speedup over the pure-Python engine. Building from source requires:
+The Rust kernel `spo-kernel` accelerates selected hot paths. Speedup depends
+on the operation, problem size, build, and host; dated local measurements live
+in the [Rust FFI guide](../guide/rust_ffi.md) and are not real-time guarantees.
+Building from source requires:
 
-- Rust 1.75+ (`rustup update stable`)
+- Rust 1.83+ (the workspace MSRV)
 - maturin (`pip install maturin`)
 
 ```bash
-cd spo-kernel
-maturin develop --release -m crates/spo-ffi/Cargo.toml
+python tools/install_spo_kernel.py --release
 ```
 
 The Python engine auto-detects the Rust FFI at import time. If `spo-kernel` is not installed, the pure-NumPy fallback is used transparently.
 
 ## Platform Support
 
-| Platform | Python | Rust FFI | Status |
-|----------|--------|----------|--------|
-| Linux x86_64 | 3.10--3.13 | Yes | Primary CI target |
-| macOS arm64 | 3.10--3.13 | Yes | Tested |
-| macOS x86_64 | 3.10--3.13 | Yes | Tested |
-| Windows x86_64 | 3.10--3.13 | Yes | Tested |
+| Platform | Python | Rust FFI | Hosted evidence |
+|----------|--------|----------|-----------------|
+| Linux | 3.11–3.13 | Yes | Python matrix plus Rust/FFI lanes |
+| macOS | 3.11–3.13 | Yes | Rust/FFI hosted runner |
+| Windows | 3.11–3.13 | Yes | Rust/FFI hosted runner |
 
 ## Verify Installation
 

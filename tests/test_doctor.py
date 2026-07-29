@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import json
+import tomllib
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -227,7 +228,7 @@ class TestPythonCheck:
 
     def test_below_range(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(
-            doctor.sys, "version_info", SimpleNamespace(major=3, minor=9, micro=18)
+            doctor.sys, "version_info", SimpleNamespace(major=3, minor=10, micro=18)
         )
         check = doctor._check_python()
         assert check.available is False
@@ -241,7 +242,13 @@ class TestPythonCheck:
         assert check.available is False
 
     def test_required_window_matches_pyproject(self) -> None:
-        assert REQUIRED_PYTHON == ((3, 10), (3, 14))
+        pyproject = tomllib.loads(
+            (Path(__file__).resolve().parents[1] / "pyproject.toml").read_text(
+                encoding="utf-8"
+            )
+        )
+        assert pyproject["project"]["requires-python"] == ">=3.11,<3.14"
+        assert REQUIRED_PYTHON == ((3, 11), (3, 14))
 
 
 class TestGoProbe:
@@ -309,6 +316,24 @@ class TestAdapterSurfaceProbe:
         assert check.category == "adapter"
         assert check.status == "warn"
         assert "missing_export" in check.detail
+
+    def test_adapter_surface_import_failure_is_warning(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def fail_import(module_name: str) -> None:
+            raise RuntimeError(module_name)
+
+        monkeypatch.setattr(doctor.importlib, "import_module", fail_import)
+        check = doctor._check_adapter_surface(
+            name="unavailable-adapter",
+            module_name="example.unavailable",
+            symbols=("Surface",),
+            detail="unavailable adapter",
+        )
+        assert check.available is False
+        assert check.required is False
+        assert check.status == "warn"
+        assert "RuntimeError" in check.detail
 
 
 class TestRunDiagnostics:

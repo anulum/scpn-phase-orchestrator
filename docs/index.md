@@ -217,7 +217,9 @@ binding_spec.yaml   3-channel          Kuramoto, Stuart-Landau,     Policy DSL  
 
     ---
 
-    `spo-kernel` FFI via PyO3/maturin. 7.3 us/step for N=16 oscillators. Pure-Python fallback ships by default.
+    `spo-kernel` FFI via PyO3/maturin, with dated local benchmark and parity
+    evidence. Pure-Python fallback ships by default; timings are not deployment
+    guarantees.
 
     [:octicons-arrow-right-24: Rust FFI Guide](guide/rust_ffi.md)
 

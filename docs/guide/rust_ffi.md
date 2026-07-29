@@ -1,17 +1,17 @@
 # Rust FFI Acceleration
 
-The `spo-kernel` Rust workspace provides 2-96x speedup across 53 engine
-modules spanning UPDE integration, coupling construction, imprint modulation,
-supervisor logic, SSGF geometry control, monitor observers, and autotune
-pipelines. Python classes auto-detect the compiled `spo_kernel` module and
-delegate transparently — no code changes needed.
+The `spo-kernel` Rust workspace accelerates selected paths across the engine,
+coupling, supervisor, SSGF, monitor, extraction, and autotune surfaces. Recorded
+local speedups vary substantially by operation, size, build, and host. Python
+classes auto-detect the compiled `spo_kernel` module and delegate
+transparently—no application-code change is needed.
 
 For runtime selection across Rust, Python, JAX, and auxiliary research
 backends, see [Backend Fallback Chain](backend_fallbacks.md).
 
 ## Prerequisites
 
-- Rust 1.75+ (MSRV)
+- Rust 1.83+ (workspace MSRV)
 - maturin (`pip install maturin`)
 
 ## Building
@@ -118,7 +118,9 @@ in benchmarks to force the Python path.
 ## Benchmark Comparison
 
 `bench/run_benchmarks.py` measures `UPDEEngine.step()` with RK4, averaged
-over 1000 steps after 50 warmup iterations.
+over 1000 steps after 50 warmup iterations. The table is a historical local
+snapshot. Re-run the benchmark and record host/build metadata before using a
+number for capacity planning.
 
 | N | Python (numpy) | Rust (spo_kernel) | Speedup |
 |---|---------------|-------------------|---------|
@@ -143,8 +145,9 @@ N=10000 neurons (10 layers × 1000), 100 substeps:
 | NumPy (vectorised) | 0.014 s | 14 ns | 93× |
 | Scalar (sc-neurocore per-neuron) | 1.306 s | 1,306 ns | 1× |
 
-At 4ms per 100 substeps, the Rust backend enables ~250 Hz real-time spiking
-control loops at N=10000 neurons.
+The recorded 4 ms per 100-substep result is local throughput evidence. It does
+not establish a 250 Hz control-loop deadline: end-to-end sensing, scheduling,
+transport, actuation, jitter, and worst-case latency were not measured.
 
 ## Crate Structure
 

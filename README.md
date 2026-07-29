@@ -281,7 +281,7 @@ inside a dashboard or notebook; it turns them into inspectable artefacts.
 | Domainpack files | 36 |
 | Rust kernel files | 97 |
 | Optional extras | 23 |
-| Python test files | 863 |
+| Python test files | 865 |
 | Public documentation pages | 229 |
 | GitHub Actions workflows | 12 |
 
@@ -431,7 +431,7 @@ black-box classifier on identical footing. See the
 | Target | Status |
 |--------|--------|
 | Rust FFI | 12 PyO3 bindings for native-speed core modules |
-| FPGA | 16-oscillator Zynq-7020 kernel, sub-15μs latency |
+| FPGA | 16-oscillator Verilog research artefact; no field latency guarantee |
 | WebAssembly | Browser-based Kuramoto visualization, no server needed |
 | JAX GPU | Transparent GPU acceleration via XLA |
 

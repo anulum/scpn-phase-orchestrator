@@ -352,6 +352,7 @@ phases, knm ──► Monitor Array             ▼
 - **QueueWaves**: `spo queuewaves serve` (FastAPI + WebSocket)
 - **Docker**: `docker build -t spo .` / Helm chart for Kubernetes
 - **JAX GPU**: `pip install scpn-phase-orchestrator[nn]` + `jax[cuda12]`
-- **FPGA**: Verilog `kuramoto_core.v` targeting Zynq-7020 (16 oscillators, sub-15μs)
+- **FPGA**: Verilog `kuramoto_core.v` targeting Zynq-7020 (16-oscillator
+  research artefact; no field latency guarantee)
 - **WebAssembly**: Browser-based Kuramoto visualization via `spo-wasm` crate
 - **gRPC**: Async streaming service for real-time phase telemetry

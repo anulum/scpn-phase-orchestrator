@@ -70,7 +70,7 @@ Example output (truncated):
 SCPN Phase Orchestrator environment diagnostics — PASS
   python   3.12.3  (Linux x86_64)
 
-  [ ok ] python    Python 3.12.3 satisfies >=3.10,<3.14
+  [ ok ] python    Python 3.12.3 satisfies >=3.11,<3.14
   [ ok ] numpy     numpy 2.4.6
   [ ok ] rust      spo_kernel 0.5.10 importable (PyO3 FFI ready)
   [ ok ] go        prebuilt shared libraries: libhodge.so, libnpe.so, ...

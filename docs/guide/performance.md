@@ -9,8 +9,9 @@
 | `rk45` | 6 derivative evals (adaptive) | O(dt^5) | Oscillator frequencies vary by >10x or coupling transients create short stiff intervals |
 
 For most applications, `rk4` with a dt satisfying the CFL bound is the right
-choice. `euler` is acceptable for real-time applications where latency budgets
-are tight and dt is small enough.
+choice. `euler` can be evaluated for latency-constrained applications when
+the timestep is small enough, but solver choice alone does not establish a
+real-time deadline.
 
 ## Practical method selection by rollout risk
 
@@ -57,17 +58,17 @@ are copied since the scratch buffer is reused across stages.
 
 ## Rust FFI
 
-When `spo_kernel` is installed, 53 engine modules delegate hot paths to
-Rust automatically. Speedups range from 2x to 96x depending on the module
-and N. See [Rust FFI Acceleration](rust_ffi.md) for build instructions
-and the full module table. For backend support tiers and fallback rules, see
+When `spo_kernel` is installed, selected hot paths delegate to Rust
+automatically. Recorded speedups vary by module, size, build, and host. See
+[Rust FFI Acceleration](rust_ffi.md) for build instructions and the module
+table. For backend support tiers and fallback rules, see
 [Backend Strategy](backend_strategy.md).
 
 **Note:** Two modules (coupling_est, phase_extract) have Rust auto-select
 disabled because LAPACK lstsq and SciPy FFT respectively outperform the
 current Rust implementations.
 
-Benchmark numbers (RK4, 1000 steps, averaged):
+Historical local benchmark snapshot (RK4, 1000 steps, averaged):
 
 | N | Python (numpy) | Rust (spo_kernel) | Speedup |
 |---|---------------|-------------------|---------|
@@ -77,7 +78,8 @@ Benchmark numbers (RK4, 1000 steps, averaged):
 | 256 | ~2.8 ms/step | ~320 us/step | 8.7x |
 | 1024 | ~45 ms/step | ~8.6 ms/step | 5.2x |
 
-Both paths are O(N^2) due to the coupling matrix. The Rust advantage comes
+These numbers are regression context, not portable throughput or real-time
+guarantees. Both paths are O(N^2) due to the coupling matrix. The Rust advantage comes
 from eliminating Python interpreter overhead and numpy dispatch per operation.
 
 ## Coupling Matrix Sparsity
@@ -87,14 +89,16 @@ For large N, many entries are negligible. The current implementation stores
 the full dense (N, N) matrix. Sparse representations are planned but not
 yet implemented.
 
-For now, keep N manageable. Typical domain sizes:
+For now, keep N manageable. Illustrative modelling configurations:
 
-| Domain | N | dt | Method | Budget per step |
-|--------|---|-----|--------|----------------|
-| EEG (8 channels) | 8 | 0.01s | rk4 | <10 us |
-| Microservices (20 services) | 20 | 15s | euler | <50 us |
-| Tokamak (16 SCPN layers) | 16 | 0.001s | rk4 | <10 us |
-| Power grid (100 nodes) | 100 | 0.01s | rk4 | <100 us |
+| Illustrative model | N | Example dt | Candidate method |
+|--------------------|---|------------|------------------|
+| EEG channels | 8 | 0.01s | rk4 |
+| Microservice queues | 20 | 15s | euler |
+| Plasma-mode scaffold | 16 | 0.001s | rk4 |
+| Power-grid scaffold | 100 | 0.01s | rk4 |
+
+These are modelling examples, not measured deployment deadlines.
 
 ## Memory Footprint
 

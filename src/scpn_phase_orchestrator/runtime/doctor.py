@@ -55,10 +55,10 @@ __all__ = [
     "run_environment_diagnostics",
 ]
 
-# Mirrors ``requires-python = ">=3.10,<3.14"`` in ``pyproject.toml``. Kept as a
+# Mirrors ``requires-python = ">=3.11,<3.14"`` in ``pyproject.toml``. Kept as a
 # pair of (major, minor) bounds so the check stays exact without parsing the
 # packaging metadata at runtime.
-REQUIRED_PYTHON: tuple[tuple[int, int], tuple[int, int]] = ((3, 10), (3, 14))
+REQUIRED_PYTHON: tuple[tuple[int, int], tuple[int, int]] = ((3, 11), (3, 14))
 
 _STATUS_OK = "ok"
 _STATUS_MISSING = "missing"

@@ -44,7 +44,10 @@ def test_docs_home_names_the_package_release() -> None:
 
 
 def test_public_docs_do_not_advertise_unsupported_python_310() -> None:
-    unsupported = re.compile(r"Python\s+3\.10|python-3\.10", re.IGNORECASE)
+    unsupported = re.compile(
+        r"Python\s+3\.10|python-3\.10|>=3\.10|3\.10(?:--|–|-)3\.13",
+        re.IGNORECASE,
+    )
     offenders: list[str] = []
     for path in _public_markdown_paths():
         for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):

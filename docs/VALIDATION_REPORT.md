@@ -191,10 +191,14 @@ invariants. 350+ hypothesis tests across 14 files prove:
 
 ## 9. Known Limitations
 
-- **JAX nn/ module**: not tested in CI (requires GPU). Validated locally on GTX 1060 (9 GPU benchmark suites) and L40S (cloud). 194 automated physics validation tests across 13 phases (183 pass, 10 xfail, 1 skip). See `docs/reference/nn_physics_validation_plan.md`.
-- **Rust FFI**: CI exercises the governed OS/interpreter matrix in
-  `.github/workflows/ci.yml`; pure-Python fallback and native-kernel paths are
-  separate evidence lanes.
+- **JAX nn/ module (snapshot boundary)**: at the 2026-05-13 snapshot, the 194
+  physics-validation results came from local GTX 1060/L40S runs rather than
+  hosted GPU CI. Current CI has separate CPU JAX coverage shards, but those do
+  not retroactively turn this historical snapshot into hosted accelerator
+  evidence. See `docs/reference/nn_physics_validation_plan.md`.
+- **Rust FFI (snapshot boundary)**: the historical fallback and native-kernel
+  results were separate evidence lanes. Consult the current workflow for the
+  live OS/interpreter matrix.
 - **Quantum bridge**: requires IBM Quantum credentials. Tested locally, not in CI.
 - **FPGA/WASM**: mentioned in architecture, not yet validated.
 - **Single maintainer**: all validation by one author team.
