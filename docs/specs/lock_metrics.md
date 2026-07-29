@@ -41,7 +41,17 @@ Used by the supervisor to detect unwanted cross-layer locking (R_bad objective).
 
 ## Lock Detection
 
-`CoherenceMonitor.detect_phase_lock(upde_state, threshold=0.9)` returns pairs `(i, j)` where PLV exceeds the threshold.
+`CoherenceMonitor.detect_phase_lock(upde_state, threshold=0.9)` returns pairs
+`(i, j)` where PLV meets or exceeds the threshold. The cross-layer matrix must
+be a finite, real, symmetric `(L x L)` matrix with every entry in `[0, 1]`;
+boolean, complex, and text-coercible matrices are rejected before lock
+classification. The diagonal may be either `0` (pairwise-only producers) or `1`
+(self-alignment producers) because it is not used for pair detection.
+
+Good and bad layer groups are disjoint, duplicate-free lists of non-negative
+integer indices. Manually supplied fallback signatures must be `LockSignature`
+records whose source and target exactly match the canonical `"{i}_{j}"` lookup,
+with finite unit-interval PLV and finite real mean lag.
 
 ## Thresholds
 

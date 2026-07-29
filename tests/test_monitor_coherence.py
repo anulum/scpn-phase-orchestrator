@@ -169,6 +169,109 @@ def test_detect_phase_lock_deterministic_and_sorted():
     assert second == first
 
 
+@pytest.mark.parametrize(
+    "cla",
+    [
+        np.array([["0", "0.95"], ["0.95", "0"]]),
+        np.array([[0.0, True], [True, 0.0]], dtype=object),
+        np.array([[0.0, 0.95 + 2j], [0.95 - 2j, 0.0]]),
+    ],
+)
+def test_detect_phase_lock_rejects_coercive_alignment_aliases(cla):
+    monitor = CoherenceMonitor(good_layers=[0], bad_layers=[1])
+
+    with pytest.raises(ValueError, match="finite real matrix"):
+        monitor.detect_phase_lock(_make_state([0.9, 0.8], cla=cla))
+
+
+@pytest.mark.parametrize(
+    "cla",
+    [
+        np.array([[0.0, -0.1], [-0.1, 0.0]]),
+        np.array([[0.0, 1.1], [1.1, 0.0]]),
+    ],
+)
+def test_detect_phase_lock_rejects_alignment_outside_unit_interval(cla):
+    monitor = CoherenceMonitor(good_layers=[0], bad_layers=[1])
+
+    with pytest.raises(ValueError, match=r"values in \[0, 1\]"):
+        monitor.detect_phase_lock(_make_state([0.9, 0.8], cla=cla))
+
+
+def test_detect_phase_lock_rejects_asymmetric_alignment() -> None:
+    cla = np.array([[0.0, 0.95], [0.1, 0.0]])
+    monitor = CoherenceMonitor(good_layers=[0], bad_layers=[1])
+
+    with pytest.raises(ValueError, match="symmetric"):
+        monitor.detect_phase_lock(_make_state([0.9, 0.8], cla=cla))
+
+
+@pytest.mark.parametrize(
+    "signature",
+    [
+        LockSignature(source_layer=0, target_layer=1, plv=True, mean_lag=0.0),
+        LockSignature(source_layer=1, target_layer=0, plv=0.95, mean_lag=0.0),
+        LockSignature(source_layer=0, target_layer=1, plv=0.95, mean_lag=True),
+        LockSignature(source_layer=0, target_layer=1, plv=0.95, mean_lag=np.nan),
+        object(),
+    ],
+)
+def test_detect_phase_lock_rejects_malformed_fallback_signature(signature) -> None:
+    state = _make_state([0.9, 0.8], cla=np.zeros((2, 2)))
+    state.layers[0].lock_signatures["0_1"] = signature  # type: ignore[assignment]
+    monitor = CoherenceMonitor(good_layers=[0], bad_layers=[1])
+
+    with pytest.raises(ValueError, match="lock signature"):
+        monitor.detect_phase_lock(state)
+
+
+def test_monitor_rejects_wrong_state_type() -> None:
+    monitor = CoherenceMonitor(good_layers=[0], bad_layers=[])
+
+    with pytest.raises(TypeError, match="UPDEState"):
+        monitor.compute_r_good(object())  # type: ignore[arg-type]
+    with pytest.raises(TypeError, match="UPDEState"):
+        monitor.detect_phase_lock(object())  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize("layers", [(LayerState(R=0.5, psi=0.0),), [object()]])
+def test_monitor_rejects_malformed_state_layers(layers) -> None:
+    state = _make_state([0.5])
+    object.__setattr__(state, "layers", layers)
+    monitor = CoherenceMonitor(good_layers=[0], bad_layers=[])
+
+    with pytest.raises(ValueError, match="list of LayerState"):
+        monitor.compute_r_good(state)
+
+
+def test_detect_phase_lock_rejects_non_mapping_signatures() -> None:
+    state = _make_state([0.9, 0.8], cla=np.zeros((2, 2)))
+    object.__setattr__(state.layers[0], "lock_signatures", [])
+    monitor = CoherenceMonitor(good_layers=[0], bad_layers=[1])
+
+    with pytest.raises(ValueError, match="lock signatures must be a dictionary"):
+        monitor.detect_phase_lock(state)
+
+
+def test_detect_phase_lock_accepts_real_numeric_object_alignment() -> None:
+    cla = np.array([[0, 0.95], [0.95, 0]], dtype=object)
+    monitor = CoherenceMonitor(good_layers=[0], bad_layers=[1])
+
+    assert monitor.detect_phase_lock(_make_state([0.9, 0.8], cla=cla)) == [(0, 1)]
+
+
+def test_detect_phase_lock_wraps_broken_array_protocol() -> None:
+    class BrokenArray:
+        def __array__(self) -> np.ndarray:
+            raise TypeError("broken")
+
+    monitor = CoherenceMonitor(good_layers=[0], bad_layers=[1])
+    state = _make_state([0.9, 0.8], cla=BrokenArray())
+
+    with pytest.raises(ValueError, match="finite real matrix"):
+        monitor.detect_phase_lock(state)
+
+
 class TestCoherenceMonitorPipelineWiring:
     """Pipeline: engine → per-layer R → CoherenceMonitor → R_good/R_bad."""
 
