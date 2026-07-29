@@ -45,9 +45,10 @@ References
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from numbers import Real
-from typing import TYPE_CHECKING, Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable
 
 import numpy as np
 from numpy.typing import NDArray
@@ -72,9 +73,6 @@ from scpn_phase_orchestrator.monitor.synchronisation import (
     SynchronisationWarning,
     synchronisation_warning,
 )
-
-if TYPE_CHECKING:  # pragma: no cover - import only for static typing
-    from collections.abc import Mapping
 
 FloatArray = NDArray[np.float64]
 
@@ -154,11 +152,17 @@ class SuiteObservables:
             raise ValueError("order_parameter length must match the phase length")
         if np.any(order < -_SCALE_FLOOR) or np.any(order > 1.0 + _SCALE_FLOOR):
             raise ValueError("order_parameter must lie in [0, 1]")
-        _positive_real(self.sampling_rate_hz, "sampling_rate_hz")
+        expected_field = np.sin(phases)
+        if not np.allclose(field_, expected_field, rtol=0.0, atol=1e-12):
+            raise ValueError("phase_field must equal sin(phases)")
+        expected_order = np.abs(np.mean(np.exp(1j * phases), axis=0))
+        if not np.allclose(order, expected_order, rtol=0.0, atol=1e-12):
+            raise ValueError("order_parameter must match phases")
+        sampling_rate = _positive_real(self.sampling_rate_hz, "sampling_rate_hz")
         object.__setattr__(self, "phases", phases)
         object.__setattr__(self, "phase_field", field_)
-        object.__setattr__(self, "order_parameter", order)
-        object.__setattr__(self, "sampling_rate_hz", float(self.sampling_rate_hz))
+        object.__setattr__(self, "order_parameter", np.clip(order, 0.0, 1.0))
+        object.__setattr__(self, "sampling_rate_hz", sampling_rate)
 
     @property
     def n_nodes(self) -> int:
@@ -326,12 +330,23 @@ def run_early_warning_suite(
     ValueError
         If an analysis control is out of range for a detector.
     """
+    if not isinstance(observables, SuiteObservables):
+        raise TypeError("observables must be SuiteObservables")
+    if not isinstance(thresholds, Mapping):
+        raise TypeError("thresholds must be a mapping")
+    missing = [label for label in SUITE_DETECTORS if label not in thresholds]
+    if missing:
+        raise KeyError(f"thresholds missing detector labels: {missing!r}")
+    validated_thresholds = {
+        label: _non_negative_real(thresholds[label], f"thresholds[{label!r}]")
+        for label in SUITE_DETECTORS
+    }
     critical = critical_slowing_down_warning(
         observables.order_parameter[np.newaxis, :],
         window=window,
         step=step,
         baseline_fraction=baseline_fraction,
-        z_threshold=thresholds[CRITICAL_SLOWING_DOWN],
+        z_threshold=validated_thresholds[CRITICAL_SLOWING_DOWN],
         rise_threshold=relative_gate,
         persistence=persistence,
     )
@@ -340,7 +355,7 @@ def run_early_warning_suite(
         window=window,
         step=step,
         baseline_fraction=baseline_fraction,
-        z_threshold=thresholds[SYNCHRONISATION],
+        z_threshold=validated_thresholds[SYNCHRONISATION],
         rise_threshold=relative_gate,
         persistence=persistence,
     )
@@ -349,7 +364,7 @@ def run_early_warning_suite(
         window=window,
         step=step,
         baseline_fraction=baseline_fraction,
-        z_threshold=thresholds[TRANSITION_ENTROPY],
+        z_threshold=validated_thresholds[TRANSITION_ENTROPY],
         drop_threshold=relative_gate,
         persistence=persistence,
     )
@@ -360,7 +375,7 @@ def run_early_warning_suite(
             member_from_transition_entropy(entropy),
         ],
         rule=WEIGHTED_RULE,
-        fused_threshold=thresholds[ENSEMBLE_WEIGHTED],
+        fused_threshold=validated_thresholds[ENSEMBLE_WEIGHTED],
         persistence=persistence,
     )
     return SuiteWarnings(
@@ -373,15 +388,20 @@ def run_early_warning_suite(
 
 def _validate_field(value: object, name: str) -> FloatArray:
     """Return ``value`` as a validated 2-D finite float field, else raise."""
-    raw = np.asarray(value)
-    if raw.dtype == np.bool_:
-        raise ValueError(f"{name} must not contain boolean values")
-    if np.iscomplexobj(raw):
-        raise ValueError(f"{name} must be real-valued")
     try:
-        array = raw.astype(np.float64, copy=True)
+        raw = np.asarray(value)
     except (TypeError, ValueError) as exc:
-        raise ValueError(f"{name} must be a real float array") from exc
+        raise ValueError(f"{name} must be a finite real array") from exc
+    if raw.dtype.kind == "O":
+        if any(
+            isinstance(item, (bool, np.bool_, complex, str, bytes, np.str_, np.bytes_))
+            or not isinstance(item, Real)
+            for item in raw.flat
+        ):
+            raise ValueError(f"{name} must be a finite real array")
+    elif raw.dtype.kind not in "iuf":
+        raise ValueError(f"{name} must be a finite real array")
+    array = raw.astype(np.float64, copy=True)
     if array.ndim != 2:
         raise ValueError(f"{name} shape {raw.shape} must be two-dimensional (N, T)")
     if array.shape[1] == 0:
@@ -393,15 +413,20 @@ def _validate_field(value: object, name: str) -> FloatArray:
 
 def _validate_series(value: object, name: str) -> FloatArray:
     """Return ``value`` as a validated 1-D finite float series, else raise."""
-    raw = np.asarray(value)
-    if raw.dtype == np.bool_:
-        raise ValueError(f"{name} must not contain boolean values")
-    if np.iscomplexobj(raw):
-        raise ValueError(f"{name} must be real-valued")
     try:
-        array = raw.astype(np.float64, copy=True)
+        raw = np.asarray(value)
     except (TypeError, ValueError) as exc:
-        raise ValueError(f"{name} must be a real float array") from exc
+        raise ValueError(f"{name} must be a finite real array") from exc
+    if raw.dtype.kind == "O":
+        if any(
+            isinstance(item, (bool, np.bool_, complex, str, bytes, np.str_, np.bytes_))
+            or not isinstance(item, Real)
+            for item in raw.flat
+        ):
+            raise ValueError(f"{name} must be a finite real array")
+    elif raw.dtype.kind not in "iuf":
+        raise ValueError(f"{name} must be a finite real array")
+    array = raw.astype(np.float64, copy=True)
     if array.ndim != 1:
         raise ValueError(f"{name} shape {raw.shape} must be one-dimensional (T,)")
     if array.shape[0] == 0:
@@ -418,4 +443,14 @@ def _positive_real(value: object, name: str) -> float:
     result = float(value)
     if not np.isfinite(result) or result <= 0.0:
         raise ValueError(f"{name} must be finite and positive, got {result}")
+    return result
+
+
+def _non_negative_real(value: object, name: str) -> float:
+    """Return ``value`` as a non-negative finite real, else raise."""
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be a non-negative finite real")
+    result = float(value)
+    if not np.isfinite(result) or result < 0.0:
+        raise ValueError(f"{name} must be a non-negative finite real")
     return result

@@ -889,3 +889,10 @@ signals into the bundle. The suite itself is domain-neutral — it never learns
 where the observables came from.
 
 ::: scpn_phase_orchestrator.monitor.early_warning_suite
+
+`SuiteObservables` is a coherent evidence bundle, not three independent arrays:
+`phase_field` must equal `sin(phases)` and `order_parameter` must equal the
+cross-node Kuramoto magnitude derived from those same phases. Arrays must be
+finite real and non-coercive; valid numeric-object inputs normalise to contiguous
+`float64`. Suite thresholds are prevalidated as a complete mapping of
+non-negative finite real values before any detector executes.
