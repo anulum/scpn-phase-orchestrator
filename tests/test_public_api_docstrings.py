@@ -26,6 +26,12 @@ from scpn_phase_orchestrator.upde.engine import UPDEEngine
 from scpn_phase_orchestrator.upde.swarmalator import SwarmalatorEngine
 
 SOURCE_ROOT = Path("src/scpn_phase_orchestrator")
+PROTOC_GENERATED_SOURCES = frozenset(
+    {
+        Path("runtime/grpc_gen/spo_pb2.py"),
+        Path("runtime/grpc_gen/spo_pb2_grpc.py"),
+    }
+)
 
 
 def _tracked_python_sources() -> tuple[Path, ...]:
@@ -44,9 +50,25 @@ def _tracked_python_sources() -> tuple[Path, ...]:
     )
 
 
+def _is_protoc_generated(path: Path) -> bool:
+    """Return whether ``path`` is one of the two compiler-owned protobuf stubs."""
+    return path.relative_to(SOURCE_ROOT) in PROTOC_GENERATED_SOURCES
+
+
+def test_protoc_generated_docstring_boundary_is_exact() -> None:
+    generated_dir = SOURCE_ROOT / "runtime/grpc_gen"
+
+    assert _is_protoc_generated(generated_dir / "spo_pb2.py")
+    assert _is_protoc_generated(generated_dir / "spo_pb2_grpc.py")
+    assert not _is_protoc_generated(generated_dir / "_spo_pb2_fallback.py")
+    assert not _is_protoc_generated(generated_dir / "__init__.py")
+
+
 def test_source_public_python_surfaces_have_docstrings() -> None:
     missing: list[str] = []
     for path in _tracked_python_sources():
+        if _is_protoc_generated(path):
+            continue
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
         if not ast.get_docstring(tree):
             missing.append(f"{path}:1 module")
@@ -109,7 +131,7 @@ def _discover_enforced_modules() -> tuple[str, ...]:
         parts = path.relative_to(SOURCE_ROOT).with_suffix("").parts
         if any(part.startswith("_") for part in parts):
             continue
-        if "grpc_gen" in parts:
+        if _is_protoc_generated(path):
             continue
         if "sys.modules[__name__]" in path.read_text(encoding="utf-8"):
             continue
