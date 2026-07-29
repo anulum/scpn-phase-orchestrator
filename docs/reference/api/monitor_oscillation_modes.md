@@ -32,6 +32,23 @@ descending amplitude, and any mode whose damping ratio is below the screening
 threshold (`DEFAULT_DAMPING_THRESHOLD = 0.03`) is flagged `poorly_damped`; a
 growing (unstable) mode has a negative damping ratio.
 
+## Evidence boundary
+
+The public estimator validates the ringdown before NumPy conversion: samples
+must be a one-dimensional finite real sequence with at least four values.
+Boolean, complex, numeric-text, coercive object, overflowing, and broken array-
+protocol inputs fail closed with `ValueError`; legitimate Python and NumPy real
+numeric object scalars remain supported.
+
+`OscillationMode` applies the same custody rule to direct construction, not only
+to records emitted by the estimator. Frequency and amplitude must be finite and
+non-negative, damping ratio must lie in `[-1, 1]`, phase must lie in
+`[-π, π]`, and `poorly_damped` must be a canonical boolean. Accepted real scalar
+types are normalised to plain JSON-safe `float` values before `to_dict()` can
+publish the record. The flag itself is threshold-dependent, so a directly
+constructed record can validate its type but cannot replay a caller-specific
+threshold that is not stored in the record.
+
 ## Mode-family Screen
 
 Each `OscillationMode.to_dict()` record now carries `mode_family`, computed by

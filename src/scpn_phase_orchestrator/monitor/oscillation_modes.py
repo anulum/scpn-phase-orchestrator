@@ -178,6 +178,23 @@ class OscillationMode:
     phase_rad: float
     poorly_damped: bool
 
+    def __post_init__(self) -> None:
+        """Validate and normalise directly constructed modal evidence."""
+        frequency = _non_negative_real(self.frequency_hz, "frequency_hz")
+        damping = _real_scalar(self.damping_ratio, "damping_ratio")
+        if not -1.0 <= damping <= 1.0:
+            raise ValueError("damping_ratio must lie in [-1, 1]")
+        amplitude = _non_negative_real(self.amplitude, "amplitude")
+        phase = _real_scalar(self.phase_rad, "phase_rad")
+        if not -np.pi <= phase <= np.pi:
+            raise ValueError("phase_rad must lie in [-pi, pi]")
+        poorly_damped = _plain_bool(self.poorly_damped, "poorly_damped")
+        object.__setattr__(self, "frequency_hz", frequency)
+        object.__setattr__(self, "damping_ratio", damping)
+        object.__setattr__(self, "amplitude", amplitude)
+        object.__setattr__(self, "phase_rad", phase)
+        object.__setattr__(self, "poorly_damped", poorly_damped)
+
     def to_dict(self) -> dict[str, bool | float | str]:
         """Return a JSON-serialisable mapping of the mode.
 
@@ -292,7 +309,7 @@ def _effective_order(singular: FloatArray, order: int | None, pencil: int) -> in
 def _modal_residues(
     samples: FloatArray, poles: ComplexArray
 ) -> tuple[FloatArray, FloatArray]:
-    """Least-squares Vandermonde fit of complex residues, returned as |R|·2 and ∠R."""
+    """Least-squares Vandermonde fit of residues, returned as ``|R|`` and ``∠R``."""
     n = samples.shape[0]
     exponents = np.arange(n, dtype=np.float64)
     vander = poles[np.newaxis, :] ** exponents[:, np.newaxis]  # n x order
@@ -381,14 +398,26 @@ def _prune_and_sort(
 
 def _validate_signal(signal: object) -> FloatArray:
     """Return the signal as a validated finite array, else raise."""
-    raw = np.asarray(signal)
-    if raw.dtype == np.bool_:
+    try:
+        raw = np.asarray(signal)
+    except (TypeError, ValueError, OverflowError, RuntimeError) as exc:
+        raise ValueError("signal must be a real float array") from exc
+    if np.issubdtype(raw.dtype, np.bool_):
         raise ValueError("signal must not contain boolean values")
     if np.iscomplexobj(raw):
         raise ValueError("signal must be real-valued")
+    if raw.dtype == np.dtype("O"):
+        if not all(
+            isinstance(item, (Real, np.floating, np.integer))
+            and not isinstance(item, (bool, np.bool_))
+            for item in raw.flat
+        ):
+            raise ValueError("signal must be a real float array")
+    elif raw.dtype.kind not in {"f", "i", "u"}:
+        raise ValueError("signal must be a real float array")
     try:
-        array = raw.astype(np.float64, copy=True)
-    except (TypeError, ValueError) as exc:
+        array = np.array(raw, dtype=np.float64, copy=True)
+    except (TypeError, ValueError, OverflowError) as exc:
         raise ValueError("signal must be a real float array") from exc
     if array.ndim != 1:
         raise ValueError(f"signal must be one-dimensional, got shape {array.shape}")
@@ -438,8 +467,18 @@ def _non_negative_real(value: object, name: str) -> float:
 def _real_scalar(value: object, name: str) -> float:
     """Return ``value`` as a finite real scalar, else raise ``ValueError``."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
-        raise ValueError(f"{name} must be a finite real, got {value!r}")
-    scalar = float(value)
+        raise ValueError(f"{name} must be a finite real")
+    try:
+        scalar = float(value)
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise ValueError(f"{name} must be a finite real") from exc
     if not np.isfinite(scalar):
-        raise ValueError(f"{name} must be finite, got {value!r}")
+        raise ValueError(f"{name} must be finite")
     return scalar
+
+
+def _plain_bool(value: object, name: str) -> bool:
+    """Return a canonical Python boolean, else raise ``ValueError``."""
+    if type(value) is not bool:
+        raise ValueError(f"{name} must be a boolean")
+    return value

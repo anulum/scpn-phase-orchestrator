@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+from fractions import Fraction
 from typing import Any
 
 import numpy as np
@@ -25,6 +26,16 @@ from scpn_phase_orchestrator.monitor.oscillation_modes import (
 
 _FS = 50.0
 _N = 500
+
+
+class _BrokenArray:
+    def __array__(self, dtype: object = None) -> np.ndarray:
+        raise RuntimeError("broken array protocol")
+
+
+class _CoerciveFloat:
+    def __float__(self) -> float:
+        return 1.0
 
 
 def _damped(
@@ -56,6 +67,47 @@ class TestOscillationMode:
             "poorly_damped": False,
             "mode_family": INTER_AREA_MODE,
         }
+
+    @pytest.mark.parametrize(
+        "kwargs",
+        [
+            {"frequency_hz": -0.1},
+            {"frequency_hz": "0.5"},
+            {"damping_ratio": float("nan")},
+            {"damping_ratio": -1.01},
+            {"damping_ratio": 1.01},
+            {"amplitude": -0.1},
+            {"phase_rad": -np.pi - 1.0e-6},
+            {"phase_rad": np.pi + 1.0e-6},
+            {"poorly_damped": 1},
+        ],
+    )
+    def test_direct_record_rejects_malformed_evidence(
+        self, kwargs: dict[str, object]
+    ) -> None:
+        values: dict[str, object] = {
+            "frequency_hz": 0.5,
+            "damping_ratio": 0.04,
+            "amplitude": 1.0,
+            "phase_rad": 0.1,
+            "poorly_damped": False,
+        }
+        values.update(kwargs)
+        with pytest.raises(ValueError):
+            OscillationMode(**values)  # type: ignore[arg-type]
+
+    def test_direct_record_normalises_real_scalars(self) -> None:
+        mode = OscillationMode(
+            frequency_hz=np.float64(0.5),
+            damping_ratio=np.float32(0.04),
+            amplitude=Fraction(1, 2),
+            phase_rad=np.float64(-np.pi),
+            poorly_damped=False,
+        )
+        assert type(mode.frequency_hz) is float
+        assert type(mode.damping_ratio) is float
+        assert type(mode.amplitude) is float
+        assert type(mode.phase_rad) is float
 
 
 class TestModeFamilyClassification:
@@ -224,11 +276,34 @@ class TestValidation:
             (np.array([1.0, np.nan, 2.0, 3.0]), "finite"),
             (np.ones(3), "at least 4"),
             (np.array(["a", "b", "c", "d"], dtype=object), "real float array"),
+            (np.array(["1", "2", "3", "4"]), "real float array"),
         ],
     )
     def test_rejects_bad_signal(self, signal: Any, match: str) -> None:
         with pytest.raises(ValueError, match=match):
             estimate_oscillation_modes(signal, _FS)
+
+    @pytest.mark.parametrize(
+        "signal",
+        [
+            np.array(["0.0", "1.0", "0.0", "-1.0"], dtype=object),
+            np.array([0.0, True, 0.0, -1.0], dtype=object),
+            np.array([_CoerciveFloat()] * 4, dtype=object),
+            _BrokenArray(),
+            np.array([10**10000, 0, 1, 2], dtype=object),
+        ],
+    )
+    def test_signal_rejects_coercive_or_broken_evidence(self, signal: object) -> None:
+        with pytest.raises(ValueError):
+            estimate_oscillation_modes(signal, _FS)
+
+    def test_signal_preserves_real_numeric_object_scalars(self) -> None:
+        signal = np.array(
+            [Fraction(0), np.float64(1.0), Fraction(0), np.float32(-1.0)],
+            dtype=object,
+        )
+        modes = estimate_oscillation_modes(signal, _FS)
+        assert modes
 
     @pytest.mark.parametrize(
         ("fs", "match"),
@@ -242,6 +317,12 @@ class TestValidation:
     def test_rejects_bad_fs(self, fs: Any, match: str) -> None:
         with pytest.raises(ValueError, match=match):
             estimate_oscillation_modes(_damped(0.5, 0.05, 1.0, 0.0), fs)
+
+    def test_scalar_overflow_fails_through_value_error_contract(self) -> None:
+        with pytest.raises(ValueError, match="fs must be a finite real"):
+            estimate_oscillation_modes(
+                _damped(0.5, 0.05, 1.0, 0.0), Fraction(10**10000)
+            )
 
     @pytest.mark.parametrize(
         ("kwargs", "match"),
