@@ -13,3 +13,5 @@ called by validated dispatcher surfaces in ``coupling``, ``monitor``, and
 ``upde`` so backend absence can fall through safely while validation failures
 remain visible.
 """
+
+__all__: tuple[str, ...] = ()

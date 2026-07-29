@@ -12,6 +12,12 @@ Each accelerated kernel has, per theme, a set of backend modules
 `ctypes`, Julia by `juliacall`, Mojo and WebGPU by their bridges; a Python
 `_validation` module guards types, shapes, and finiteness for each theme.
 
+The `experimental`, `experimental.accelerators`, and three theme package
+facades are private namespaces with explicit empty `__all__` contracts. This
+prevents import-order side effects from turning attached implementation
+subpackages into wildcard exports. Production dispatchers may still import
+named private backend modules through the allowlisted accelerator ports.
+
 - `coupling/` (17 files): Hodge, spectral, attention residuals, spatial modulator.
 - `monitor/` (70 files): Koopman-EDMD, Lyapunov, transfer entropy, ITPC,
   recurrence, chimera, Poincaré, winding, dimension, embedding, twin-confidence,

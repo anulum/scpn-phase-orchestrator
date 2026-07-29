@@ -12,3 +12,5 @@ Coupling modules own public validation, audit records, and fallback behaviour.
 These backend bridges are load-bearing implementation details for optional
 polyglot parity paths and are not standalone user-facing APIs.
 """
+
+__all__: tuple[str, ...] = ()
