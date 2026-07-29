@@ -91,8 +91,10 @@ configuration.
 
 # Key Features
 
-- **3-tier acceleration.** Pure Python (development), Rust via PyO3
-  (production, 53 engine modules, 2-96x speedup), and JAX (GPU batches).
+- **Three compute tracks.** Pure Python is the correctness floor, selected hot
+  paths can dispatch to Rust via PyO3, and JAX supports differentiable batches.
+  Dated local benchmarks are regression evidence, not portable throughput or
+  production-deadline claims.
 - **36 domainpacks** covering physical, biological, engineering, and
   financial systems.
 - **Topological integration index (`p_h1`).** H1 persistent homology of
@@ -110,8 +112,10 @@ configuration.
 - **Kani formal safety harnesses.** Verify control bound correctness,
   rate-limit enforcement, and supervisor classification invariants in the
   Rust kernel.
-- **15 000+ Python tests** across 587 test files plus the Rust kernel suite,
-  at ~94% line coverage.
+- **Module-owned verification.** Python, Rust, formal, reference, and
+  documentation gates are inventoried in the generated capability manifest;
+  CI artefacts, not this draft, are authoritative for live test and coverage
+  counts.
 
 # Measured Evidence
 

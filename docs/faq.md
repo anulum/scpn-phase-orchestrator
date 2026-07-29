@@ -15,15 +15,17 @@ neural coherence, or microservice health.
 
 ### Do I need Rust?
 
-No. Pure Python works out of the box. When `spo_kernel` is installed (compiled
-via `maturin develop -m spo-kernel/crates/spo-ffi/Cargo.toml --release`),
-53 engine modules auto-delegate to Rust for 2-96x acceleration across UPDE
-integration, coupling, monitors, SSGF, and autotune. The public API is
-identical in both backends.
+No. Pure Python works out of the box. Build the optional `spo_kernel` extension
+for the active interpreter with `python tools/install_spo_kernel.py --release`.
+Selected UPDE, coupling, monitor, oscillator, and supervisor hot paths delegate
+to Rust when their bindings are available; unsupported paths retain the Python
+implementation. Performance varies by operation, size, build, and host, so use
+the dated measurements in the [Rust FFI guide](guide/rust_ffi.md) as local
+regression evidence rather than a deployment guarantee.
 
 ### What Python versions are supported?
 
-3.10, 3.11, 3.12, and 3.13. CI tests all four.
+Python 3.11–3.13. The package metadata and CI matrix enforce that range.
 
 ### How do I add a new domain?
 
@@ -67,10 +69,11 @@ integrity — a single tampered byte breaks the chain.
 
 ### What is QueueWaves?
 
-A cascade failure detector that maps microservice queue-depth and latency
-metrics onto Kuramoto oscillators. When inter-service phase coherence drops
-(measured via R_global), it signals an impending cascade before individual
-service alerts trigger. See the
+A research cascade-monitoring application that maps microservice queue depth
+and latency metrics onto Kuramoto oscillators. It emits a phase-coherence alert
+when configured metrics cross their thresholds. The repository does not yet
+establish prospective lead time or superiority over ordinary service alerts.
+See the
 [QueueWaves guide](guide/queuewaves.md).
 
 ### How do I integrate with Prometheus?
@@ -160,12 +163,12 @@ See the [Advanced Dynamics guide](guide/advanced_dynamics.md).
 
 ### Can SPO detect market crashes?
 
-The `upde.market` module extracts instantaneous phase from price/return
-time series via Hilbert transform, computes the Kuramoto order parameter
-R(t) across assets, and classifies synchronization regimes. R(t) → 1
-preceding crashes is documented for Black Monday 1987 and the 2008
-financial crisis (arXiv:1109.1167). The `sync_warning()` function flags
-when R crosses a threshold from below.
+The `upde.market` module extracts instantaneous phase from price/return time
+series via Hilbert transform, computes the Kuramoto order parameter R(t) across
+assets, and classifies synchronisation regimes. `sync_warning()` flags a
+configured threshold crossing. This is retrospective diagnostic machinery:
+SPO has not established out-of-sample crash prediction, trading utility, or
+lead time, and the literature examples are not validation of this package.
 
 ### What is the SSGF?
 
@@ -178,11 +181,14 @@ SSGF module.
 
 ### Can SPO solve combinatorial optimization problems?
 
-Yes. The `nn.oim` module implements an Oscillator Ising Machine that maps
+It can generate heuristic candidates. The `nn.oim` module implements an
+Oscillator Ising Machine that maps
 graph coloring, max-cut, and QUBO problems to Kuramoto phase clustering.
 Oscillators connected by graph edges repel from the same phase cluster.
-The dynamics settle into valid colorings. Differentiable via JAX for
-gradient-based energy minimisation.
+The dynamics can settle into candidate colourings, which callers must validate;
+hard instances can remain in local minima and no optimality guarantee is made.
+The implementation is differentiable via JAX for gradient-based energy
+minimisation.
 
 ### What is inverse Kuramoto?
 

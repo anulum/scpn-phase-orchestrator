@@ -360,8 +360,10 @@ The cost is dominated by:
 2. Eigendecomposition of $\tilde{A}$ (r × r): $O(r^3)$
 3. Per-channel Hilbert extraction: $O(n_{\text{ch}} \cdot T \log T)$
 
-For typical use ($n_{\text{ch}} = 16$, $T = 1000$), the total is
-~2 ms — well within real-time budgets.
+A historical local run for $n_{\text{ch}} = 16$, $T = 1000$ recorded about
+2 ms. Treat that number as dated algorithm-level regression context; it does
+not include ingestion, scheduling, downstream control, jitter, or worst-case
+execution time and therefore establishes no real-time budget.
 
 ### Memory Usage
 

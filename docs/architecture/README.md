@@ -37,11 +37,12 @@ per domain) from *physics* (the integrator and observers), so the same engine
 serves power-grid, rotating-machinery, neural, swarm, plasma, and other domains
 by swapping a domainpack rather than code.
 
-### Scale (verified 2026-06-23)
+### Scale (verified 2026-07-29)
 
-- ~655 Python modules, ~155k LOC under `src/scpn_phase_orchestrator/`.
-- 25 subsystems; largest by LOC: `supervisor` (21.8k), `monitor` (18.5k),
-  `experimental` accelerators (18.3k), `upde` (18.3k), `runtime` (17.4k).
+- 726 Python files and 184,668 lines under `src/scpn_phase_orchestrator/`.
+- 27 top-level source subpackages; largest by Python LOC: `monitor` (23,861),
+  `supervisor` (23,474), `runtime` (22,887), `upde` (21,417), and
+  `experimental` accelerators (17,739).
 - Rust kernel `spo-kernel/` — 6 crates. Differentiable JAX backend `nn/`.
   Polyglot accelerators in Mojo, Julia, Go (35 source files each), plus WebGPU,
   a WASM crate, and an FPGA Verilog core.

@@ -45,7 +45,8 @@ def test_docs_home_names_the_package_release() -> None:
 
 def test_public_docs_do_not_advertise_unsupported_python_310() -> None:
     unsupported = re.compile(
-        r"Python\s+3\.10|python-3\.10|>=3\.10|3\.10(?:--|–|-)3\.13",
+        r"Python\s+3\.10|python-3\.10|>=3\.10|3\.10(?:--|–|-)3\.13|"
+        r"3\.10,\s+3\.11",
         re.IGNORECASE,
     )
     offenders: list[str] = []

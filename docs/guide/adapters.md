@@ -296,8 +296,10 @@ bridge_np = NeurocoreBridge(n_layers=10, neurons_per_layer=1000, backend="numpy"
 bridge_sc = NeurocoreBridge(n_layers=10, neurons_per_layer=100, backend="scalar")
 ```
 
-At N=10000 the Rust backend completes 100 substeps in 4ms, enabling real-time
-spiking control loops at ~250 Hz update rate.
+A historical local benchmark recorded about 4 ms for 100 substeps at N=10,000
+on one Rust build. That is kernel-throughput evidence only: transport,
+actuation, scheduling jitter, and worst-case latency were not measured, so it
+does not establish a 250 Hz control-loop deadline.
 
 ### OTelExporter
 

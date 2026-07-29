@@ -132,8 +132,9 @@ This page spans multiple environments that differ in deployment constraints:
 - **Performance-sensitive services:** Rust/FFI path for lower-latency control loops.
 - **GPU-rich workloads:** JAX path where batch throughput and differentiable backends
   are prioritized.
-- **Deterministic industrial I/O:** FPGA path where fixed-latency closed-loop behaviour
-  is required.
+- **Candidate deterministic I/O:** FPGA research path for deployments that need
+  fixed-latency behaviour, pending synthesis, target-hardware validation, and
+  worst-case timing evidence.
 
 Use these lanes as a routing choice, not a replacement order. The same binding and
 supervisor contracts are the baseline regardless of backend shape.

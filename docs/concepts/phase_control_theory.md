@@ -1130,9 +1130,10 @@ defined (§10.5).  What remains is the experiment.
    `phases_to_feedback` method recovers aggregate statistics (R, mean
    phase) but cannot reconstruct the original observables.
 
-4. **Computational limits**: the N² coupling computation limits
-   real-time operation to ~10³ oscillators at ~1 kHz on current
-   hardware.  The Rust FFI backend extends this to ~10⁴.
+4. **Computational limits**: dense coupling has O(N²) compute and storage
+   costs. Feasible oscillator count and update rate depend on the selected
+   monitors, backend, host, and required latency envelope; no portable
+   real-time limit is established here.
 
 5. **Validation**: the framework is demonstrated on synthetic
    simulations.  Validation against real tokamak data (DIII-D,

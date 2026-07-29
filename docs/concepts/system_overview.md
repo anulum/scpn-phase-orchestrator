@@ -4,16 +4,16 @@
 
 ## Core Thesis
 
-Any system with coupled cycles maps onto Kuramoto phase dynamics. The
-orchestrator treats synchrony as a universal state-space: extract
-phases, integrate coupling, measure coherence, act on knobs. This
-works because the mathematics of coupled oscillators — the Kuramoto
-model and its extensions — are structurally universal: they describe
-neural rhythms, power grid generators, chemical reactions, financial
-cycles, and distributed systems with the same equations.
+Systems with meaningful cyclic observables and defensible coupling assumptions
+can sometimes be modelled with Kuramoto-family phase dynamics. The orchestrator
+provides a shared workflow: extract phases, integrate a declared coupling model,
+measure coherence, and produce bounded control proposals. Reusing the equations
+across domains does not make their semantics or evidence interchangeable; each
+binding still needs domain-specific calibration and validation.
 
-The only thing that changes between domains is the binding spec: which
-signals are oscillators, how they couple, and what "healthy" looks like.
+The binding spec carries the reusable model contract—signals, topology,
+coupling, and objectives—while domain-specific data preparation, calibration,
+acceptance thresholds, and deployment evidence remain outside that abstraction.
 
 ## Pipeline
 
@@ -62,8 +62,8 @@ Supervisor (RegimeManager + SupervisorPolicy + PolicyEngine)
     |  RegimeManager: R thresholds + hysteresis -> regime transitions
     |  SupervisorPolicy: default regime-driven actions
     |  PolicyEngine: YAML-declared domain-specific rules (policy.yaml)
-    |  ActiveInferenceAgent: FEP-based autonomous zeta/Psi control
-    |  PredictiveSupervisor: forecast-driven preemptive action
+    |  ActiveInferenceAgent: FEP-based zeta/Psi proposal generation
+    |  PredictiveSupervisor: model-based candidate action generation
     |  PetriNet: protocol sequencing FSM
     |  Decides: ControlActions on {K, alpha, zeta, Psi}
     |  Regime: NOMINAL / DEGRADED / CRITICAL / RECOVERY
@@ -92,12 +92,11 @@ Each integration step follows this sequence:
 7. **Actuate**: map actions to domain commands, apply rate limits.
 8. **Audit**: log step to JSONL trace.
 
-The UPDE step alone takes ~0.1ms for N=64 on the pure Python path
-(measured 2026-04-04, i5-11600K). Full pipeline latency (extract +
-integrate + monitor + supervise) depends on which monitors are active.
-Rust FFI latency is not yet measured on this host (spo_kernel not
-installed). For real-time applications (EEG at 256 Hz = 3.9ms budget),
-the Python path is sufficient for N<=64 with minimal monitoring.
+A historical local snapshot measured the UPDE step at about 0.1 ms for N=64 on
+one pure-Python configuration (2026-04-04, i5-11600K). Full-pipeline latency
+depends on enabled extractors, monitors, audit work, backend, and host. This
+measurement is regression context only; it does not establish a sampling-rate
+or control-loop deadline.
 
 ## Dual Objective: R_good / R_bad
 
@@ -187,9 +186,11 @@ Performance-critical components have Rust implementations in
 | `spo-oscillators` | P/I/S extractors, quality scorer |
 | `spo-supervisor` | Boundary observer, coherence monitor, regime manager, policy |
 | `spo-types` | Shared types, config, errors |
-| `spo-ffi` | PyO3 bindings (17 classes, 11 functions) |
-| `spo-fpga` | Verilog generation for FPGA deployment |
+| `spo-ffi` | PyO3 bindings for the supported native surface |
 | `spo-wasm` | WebAssembly build for browser |
+
+The FPGA Verilog core is a separate research artefact, not a Rust workspace
+crate and not a validated deployment target.
 
 The Python code auto-detects `spo_kernel` availability and uses the
 Rust path when present. Fallback to pure Python is always available.
@@ -224,12 +225,12 @@ of regime transitions, control actions, and boundary events.
 
 | Target | Method | Latency |
 |--------|--------|---------|
-| Python process | `pip install` | ~0.1ms/step (N=64, measured 2026-04-04) |
-| Rust FFI | `maturin develop` | not yet measured (FFI not installed on this host) |
+| Python process | `pip install` | historical local ~0.1 ms/step at N=64; remeasure |
+| Rust FFI | `python tools/install_spo_kernel.py --release` | measure on the deployment target |
 | Docker | `docker compose up` | not yet measured |
-| FPGA (PYNQ-Z2) | `KuramotoVerilogCompiler` | not yet measured |
+| FPGA research artefact | Verilog core and compiler output | no synthesis, WCET, or hardware validation yet |
 | Browser | WASM bundle | not yet measured |
-| gRPC server | `spo serve --grpc` | not yet measured |
+| gRPC service surface | `runtime.server_grpc.PhaseStreamServicer` | integration-owned server startup; not measured |
 
 ## Stochastic Synthesis of Geometric Fields (SSGF)
 
@@ -244,26 +245,31 @@ theory concepts from the SCPN framework:
 - **PGBO (Probabilistic-Geometric Boundary Observer)**: monitors
   geometric constraints — closure, consistency of curvature with
   coupling topology.
-- **Ethical Cost**: computes ethical cost of control actions for
-  safety-critical applications (medical, nuclear).
+- **Ethical Cost**: computes a configurable optimisation penalty named
+  “ethical cost”; it is not an ethical assessment, certification, or authority
+  for medical, nuclear, or other safety-critical actuation.
 
-SSGF is optional and domain-specific. Enable it in the binding spec
-for systems where geometric field coupling is physically meaningful
-(plasma control, gravitational wave detection, cosmological models).
+SSGF is an optional research construction. Enable it only for simulation or
+review where its cost terms and coupling decoder are explicitly part of the
+experiment. The implementation does not establish physical validity for
+plasma, gravitational, cosmological, clinical, or other target domains.
 
 ## Testing and Validation
 
-The system includes 3921 collected tests (as of 2026-04-04) organised
-in tiers:
+The repository maintains module-owned unit, integration, property, performance,
+native-parity, and physics-validation tests. The
+[generated capability inventory](../_generated/capability_snapshot.md) reports
+the current test-file count; CI collection is the authority for the executable
+test count.
 
-| Tier | Count | Scope |
-|------|-------|-------|
-| Unit tests | ~1500 | Individual functions and classes |
-| Integration tests | ~400 | Cross-module pipelines |
-| Property tests | ~200 | Hypothesis-based invariant verification |
-| Performance benchmarks | ~100 | Latency and throughput thresholds |
-| Rust parity tests | ~50 | Python vs Rust output equivalence |
-| Physics validation | ~50 | Mathematical correctness (Kuramoto theory) |
+| Tier | Scope |
+|------|-------|
+| Unit tests | Individual functions and classes |
+| Integration tests | Cross-module pipelines |
+| Property tests | Hypothesis-based invariant verification |
+| Performance benchmarks | Local regression thresholds and snapshots |
+| Rust parity tests | Python versus Rust output equivalence |
+| Physics validation | Mathematical and reference-case acceptance |
 
 CI runs the main suite on every push across supported Python 3.11–3.13.
 Rust and FFI lanes cover the platform matrix declared in
@@ -279,8 +285,9 @@ Rust and FFI lanes cover the platform matrix declared in
   or librosa.
 - **Not a replacement for domain expertise.** The binding spec encodes
   domain knowledge. The engine is only as good as the spec.
-- **Not real-time guaranteed.** The Python path has GC pauses. For
-  hard real-time, use the FPGA path or the Rust library directly.
+- **Not real-time guaranteed.** No Python, Rust, FPGA, or network path in this
+  repository has a published worst-case execution-time and target-hardware
+  evidence package. Qualify the complete deployment independently.
 
 ## Version History
 
@@ -291,10 +298,11 @@ Rust and FFI lanes cover the platform matrix declared in
 | v0.3 | Petri net supervisor, event bus, boundary observer, Rust FFI |
 | v0.4 | Stuart-Landau amplitude dynamics, imprint model, 24 domainpacks |
 | v0.4.1 | Sheaf UPDE, active inference controller, SSGF, Hodge decomposition |
+| v1.0.0 | First stable public baseline with guarded docs, packaging, and release metadata |
 
-Current: **v0.4.1**. The next milestone (v0.5.0) targets full module
-wiring validation, expanded Rust FFI coverage, and 300+ line
-documentation for all core specs and concepts.
+The package metadata and documentation homepage name the current release. See
+the [public roadmap](../roadmap.md) for remaining evidence and productisation
+work instead of treating historical 0.x milestones as current scope.
 
 ## Further Reading
 

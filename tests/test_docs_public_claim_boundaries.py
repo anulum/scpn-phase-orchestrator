@@ -21,6 +21,7 @@ PERFORMANCE = ROOT / "docs" / "guide" / "performance.md"
 VALIDATION = ROOT / "VALIDATION.md"
 README = ROOT / "README.md"
 ARCHITECTURE = ROOT / "ARCHITECTURE.md"
+PUBLIC_DOCS = ROOT / "docs"
 
 
 def _rust_msrv() -> str:
@@ -68,3 +69,19 @@ def test_hardware_and_performance_docs_deny_portable_deadline_claims() -> None:
     rust = RUST_GUIDE.read_text(encoding="utf-8")
     assert "not portable throughput or real-time" in performance
     assert "not establish a 250 Hz control-loop deadline" in rust
+
+
+def test_primary_public_docs_reject_stale_or_unsupported_performance_claims() -> None:
+    public_text = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in PUBLIC_DOCS.rglob("*.md")
+        if "internal" not in path.parts and "superpowers" not in path.parts
+    )
+    for unsupported in (
+        "53 engine modules, 2-96x speedup",
+        "Sub-microsecond Control",
+        "real-time operation to ~10³ oscillators",
+        "enabling real-time spiking control loops at ~250 Hz",
+        "Current: **v0.4.1**",
+    ):
+        assert unsupported not in public_text

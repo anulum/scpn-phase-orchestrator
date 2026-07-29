@@ -1,10 +1,9 @@
 # Supervisor
 
 The supervisor subsystem adds a regime-classification and control-*proposal*
-layer over oscillator dynamics, which simulate-and-observe libraries (TVB,
-neurolib, Brian2, NEST) do not provide. It predicts and detects synchronisation
-problems and *proposes* bounded corrections for review — it does not close a
-control loop on hardware.
+layer over oscillator dynamics. It classifies configured regimes, can generate
+model-based risk estimates, and *proposes* bounded corrections for review—it
+does not establish domain-event prediction or close a control loop on hardware.
 
 ## Pipeline position
 
@@ -1183,26 +1182,33 @@ Domainpack hierarchy proofs:
 
 ## Active Inference Agent
 
-The `ActiveInferenceAgent` provides a **predictive control framework** based on
-Karl Friston's Variational Free Energy Principle. It moves beyond static YAML
-rules into self-adaptive state-space models.
+The `ActiveInferenceAgent` provides a **predictive candidate-generation
+framework** based on a Variational Free Energy objective. It is an optional
+Rust-backed research surface; its outputs still require the normal policy,
+projection, audit, and operator-review boundaries.
 
 ### Mathematical Model
 
-The agent maintains a low-dimensional internal state $ and minimizes the
-**Variational Free Energy** $ between its prediction $\hat{R}$ and the
-observed coherence {obs}$:
+The agent maintains a low-dimensional internal state $x$ and minimises a
+Variational Free Energy objective $F$ between its prediction $\hat{R}$ and the
+observed coherence $R_{\mathrm{obs}}$:
 
-936875 F \approx \int q(x) \ln \frac{q(x)}{p(R_{obs}, x)} dx 936875
+$$
+F \approx \int q(x) \ln \frac{q(x)}{p(R_{\mathrm{obs}}, x)}\,dx
+$$
 
-The controller outputs the optimal forcing strength $\zeta$ and reference phase
-$\Psi$ to drive the network toward a target coherence level {target}$
-(often set to the **metastability threshold**  \approx 0.6$).
+The agent proposes a forcing strength $\zeta$ and reference phase $\Psi$ for a
+configured target coherence $R_{\mathrm{target}}$. “Optimal” is relative to
+the implemented local objective and does not establish domain-level optimality
+or safe actuation.
 
 ### Features
-- **Adaptive Suppression:** Spontaneously discovers anti-phase driving ($\Psi = \psi + \pi$) to break harmful phase-locking.
-- **Sub-microsecond Control:** Fully implemented in the `spo-kernel` Rust backend for real-time high-frequency response.
-- **Emergent Resilientness:** Naturally handles non-stationary frequency drifts by integrating prediction errors into the internal state.
+- **Candidate suppression:** can propose anti-phase driving
+  ($\Psi = \psi + \pi$) against a configured coherence objective.
+- **Rust implementation:** available through the optional `spo_kernel` FFI;
+  no portable latency or hard-real-time guarantee is claimed.
+- **Prediction-error adaptation:** updates its internal state in response to
+  observed divergence; robustness to domain drift requires separate evidence.
 
 !!! note "Rust-only module"
     `ActiveInferenceAgent` is implemented in `spo-kernel` (Rust crate `spo-supervisor::active_inference`).
