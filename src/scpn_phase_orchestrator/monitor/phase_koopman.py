@@ -26,6 +26,7 @@ identity block while the learned block sharpens the linear evolution ``A``.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from numbers import Integral, Real
 from typing import TypeAlias
 
 import numpy as np
@@ -58,6 +59,20 @@ class LearnedKoopmanDictionary:
 
     reducer: PhaseReducer
     include_constant: bool = False
+
+    def __post_init__(self) -> None:
+        """Validate the frozen reducer and dictionary configuration."""
+        if not isinstance(self.reducer, PhaseReducer):
+            raise ValueError("reducer must be a PhaseReducer")
+        state_dim = self.reducer.weights.state_dim
+        if isinstance(state_dim, (bool, np.bool_)) or not isinstance(
+            state_dim, (Integral, np.integer)
+        ):
+            raise ValueError("reducer state_dim must be a positive integer")
+        if int(state_dim) < 1:
+            raise ValueError("reducer state_dim must be a positive integer")
+        if type(self.include_constant) is not bool:
+            raise ValueError("include_constant must be a boolean")
 
     @property
     def state_dim(self) -> int:
@@ -100,8 +115,11 @@ class LearnedKoopmanDictionary:
         ValueError
             If ``states`` is not a finite ``(K, state_dim)`` array.
         """
-        latent = self.reducer.encode_observables(states)
-        features = np.hstack((np.asarray(states, dtype=np.float64), latent))
+        matrix = _validate_state_batch(states, self.state_dim)
+        latent = _validate_latent(
+            self.reducer.encode_observables(matrix), matrix.shape[0]
+        )
+        features = np.hstack((matrix, latent))
         if self.include_constant:
             constant = np.ones((features.shape[0], 1), dtype=np.float64)
             features = np.hstack((constant, features))
@@ -145,3 +163,49 @@ def fit_phase_koopman_predictor(
         dictionary=dictionary,
         regularisation=regularisation,
     )
+
+
+def _validate_state_batch(value: object, state_dim: int) -> FloatArray:
+    """Return a finite non-coercive state batch of shape ``(K, state_dim)``."""
+    array = _validate_real_array(value, "states")
+    if array.ndim != 2 or array.shape[1] != state_dim:
+        raise ValueError(f"states must be a (K, {state_dim}) array")
+    return array
+
+
+def _validate_latent(value: object, rows: int) -> FloatArray:
+    """Return a validated reducer latent batch of shape ``(K, 3)``."""
+    latent = _validate_real_array(value, "reducer latent")
+    if latent.shape != (rows, _LATENT_DIM):
+        raise ValueError(
+            f"reducer latent must have shape {(rows, _LATENT_DIM)}, got {latent.shape}"
+        )
+    return latent
+
+
+def _validate_real_array(value: object, name: str) -> FloatArray:
+    """Return a copied finite non-coercive real array, else raise."""
+    try:
+        raw = np.asarray(value)
+    except (TypeError, ValueError, OverflowError, RuntimeError) as exc:
+        raise ValueError(f"{name} must be a real float array") from exc
+    if np.issubdtype(raw.dtype, np.bool_):
+        raise ValueError(f"{name} must not contain boolean values")
+    if np.iscomplexobj(raw):
+        raise ValueError(f"{name} must be real-valued")
+    if raw.dtype == np.dtype("O"):
+        if not all(
+            isinstance(item, (Real, np.floating, np.integer))
+            and not isinstance(item, (bool, np.bool_))
+            for item in raw.flat
+        ):
+            raise ValueError(f"{name} must be a real float array")
+    elif raw.dtype.kind not in {"f", "i", "u"}:
+        raise ValueError(f"{name} must be a real float array")
+    try:
+        array = np.array(raw, dtype=np.float64, copy=True)
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise ValueError(f"{name} must be a real float array") from exc
+    if not np.all(np.isfinite(array)):
+        raise ValueError(f"{name} must contain only finite values")
+    return np.ascontiguousarray(array, dtype=np.float64)

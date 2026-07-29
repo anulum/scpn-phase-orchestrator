@@ -16,6 +16,10 @@ trained phase autoencoder.
 
 from __future__ import annotations
 
+from dataclasses import replace
+from fractions import Fraction
+from typing import Any
+
 import numpy as np
 import pytest
 
@@ -48,6 +52,16 @@ def _hand_reducer(seed: int = 0) -> PhaseReducer:
     return PhaseReducer(weights)
 
 
+class _BrokenArray:
+    def __array__(self, dtype: object = None) -> np.ndarray:
+        raise RuntimeError("broken array protocol")
+
+
+class _CoerciveFloat:
+    def __float__(self) -> float:
+        return 1.0
+
+
 # --------------------------------------------------------------------------- #
 # Dictionary surface                                                          #
 # --------------------------------------------------------------------------- #
@@ -58,6 +72,35 @@ def test_learned_dictionary_dimensions() -> None:
     assert (
         LearnedKoopmanDictionary(_hand_reducer(), include_constant=True).output_dim == 6
     )
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"reducer": object()},
+        {"include_constant": 1},
+        {"include_constant": np.bool_(True)},
+    ],
+)
+def test_learned_dictionary_rejects_malformed_configuration(
+    kwargs: dict[str, object],
+) -> None:
+    values: dict[str, object] = {"reducer": _hand_reducer()}
+    values.update(kwargs)
+    with pytest.raises(ValueError):
+        LearnedKoopmanDictionary(**values)  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize("state_dim", [0, True])
+def test_learned_dictionary_rejects_invalid_reducer_state_dimension(
+    state_dim: object,
+) -> None:
+    reducer = _hand_reducer()
+    malformed = PhaseReducer(
+        replace(reducer.weights, state_dim=state_dim)  # type: ignore[arg-type]
+    )
+    with pytest.raises(ValueError, match="positive integer"):
+        LearnedKoopmanDictionary(malformed)
 
 
 def test_learned_dictionary_lift_is_state_inclusive() -> None:
@@ -82,6 +125,56 @@ def test_learned_dictionary_rejects_a_wrong_width() -> None:
     dictionary = LearnedKoopmanDictionary(_hand_reducer())
     with pytest.raises(ValueError, match=r"\(K, 2\) array"):
         dictionary.lift(np.zeros((3, 4)))
+
+
+@pytest.mark.parametrize(
+    "states",
+    [
+        np.array([["0.1", "0.2"]], dtype=object),
+        np.array([["0.1", "0.2"]]),
+        np.array([[True, 0.2]], dtype=object),
+        np.array([[True, False]]),
+        np.array([[0.1 + 0.0j, 0.2 + 0.0j]]),
+        np.array([[_CoerciveFloat(), 0.2]], dtype=object),
+        _BrokenArray(),
+        np.array([[10**10000, 0]], dtype=object),
+    ],
+)
+def test_learned_dictionary_rejects_coercive_or_broken_states(
+    states: object,
+) -> None:
+    with pytest.raises(ValueError):
+        LearnedKoopmanDictionary(_hand_reducer()).lift(states)  # type: ignore[arg-type]
+
+
+def test_learned_dictionary_preserves_real_numeric_object_states() -> None:
+    states = np.array(
+        [[Fraction(1, 2), np.float32(-0.25)], [np.int64(1), Fraction(1, 4)]],
+        dtype=object,
+    )
+    lifted = LearnedKoopmanDictionary(_hand_reducer()).lift(states)
+    np.testing.assert_allclose(lifted[:, :2], [[0.5, -0.25], [1.0, 0.25]])
+
+
+@pytest.mark.parametrize(
+    "latent",
+    [
+        np.array([["1.0", "2.0", "3.0"]], dtype=object),
+        np.array([[1.0, np.nan, 3.0]]),
+        np.ones((1, 4)),
+        _BrokenArray(),
+    ],
+)
+def test_learned_dictionary_rejects_malformed_reducer_output(
+    monkeypatch: pytest.MonkeyPatch, latent: Any
+) -> None:
+    def malformed_output(_self: PhaseReducer, _states: np.ndarray) -> Any:
+        return latent
+
+    monkeypatch.setattr(PhaseReducer, "encode_observables", malformed_output)
+    dictionary = LearnedKoopmanDictionary(_hand_reducer())
+    with pytest.raises(ValueError, match="latent"):
+        dictionary.lift(np.array([[0.1, 0.2]]))
 
 
 # --------------------------------------------------------------------------- #

@@ -154,4 +154,14 @@ state-inclusive (`ψ(x) = [x, g(x)]`) so the output map reconstructs the state
 exactly while the learned block sharpens the linear evolution. There is no JAX on
 the control path.
 
+The learned dictionary is also an explicit evidence boundary. Construction
+requires a real `PhaseReducer`, a positive integer reducer state dimension, and a
+canonical boolean constant flag. `lift()` rejects boolean, complex,
+numeric-text, coercive-object, overflowing, and broken array-protocol state
+batches before the reducer runs while preserving legitimate Python and NumPy
+real numeric objects. The reducer's returned latent is independently required to
+be a finite, non-coercive `(K, 3)` array before it can be joined to the state-
+inclusive lift. This keeps malformed or contradictory learned-observable output
+from entering EDMD fitting or a downstream review path.
+
 ::: scpn_phase_orchestrator.monitor.phase_koopman
