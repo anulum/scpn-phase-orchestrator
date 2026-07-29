@@ -65,3 +65,11 @@ FMI surface is a co-simulation slave/export package, and the hybrid surface is a
 deterministic manifest builder with execution permissions forced false.
 `grpc_gen` and the OpenTelemetry/metrics modules are forwarding aliases to the
 `runtime` layer.
+
+The canonical protobuf modules under `runtime/grpc_gen/` are generated only by
+`python tools/generate_grpc.py`. The tool emits into a temporary directory,
+normalises protoc's sibling import for package-relative use, and publishes the
+complete two-file set only after successful generation, without manual
+formatting or patching. Release and CI verification can run
+`python tools/generate_grpc.py --check`; any byte-level drift from the locked
+`grpcio-tools` output fails closed.

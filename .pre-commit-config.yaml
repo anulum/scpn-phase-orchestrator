@@ -25,8 +25,10 @@ repos:
     hooks:
       - id: ruff
         args: [--fix, --no-cache]
+        exclude: '^src/scpn_phase_orchestrator/runtime/grpc_gen/spo_pb2(_grpc)?\.py$'
       - id: ruff-format
         args: [--no-cache]
+        exclude: '^src/scpn_phase_orchestrator/runtime/grpc_gen/spo_pb2(_grpc)?\.py$'
 
   - repo: https://github.com/PyCQA/bandit
     rev: 1.9.4
@@ -34,6 +36,7 @@ repos:
       - id: bandit
         args: ["-c", "pyproject.toml", "--quiet"]
         files: ^(src|tests)/
+        exclude: '^src/scpn_phase_orchestrator/runtime/grpc_gen/spo_pb2(_grpc)?\.py$'
         additional_dependencies: ["bandit[toml]"]
 
   - repo: local

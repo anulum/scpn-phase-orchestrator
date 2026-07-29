@@ -79,6 +79,65 @@ class TestGenerateGrpcScript:
             result.stdout.lower()
         )
 
+    @pytest.mark.skipif(not _HAS_GRPC_TOOLS, reason="grpcio-tools not installed")
+    def test_committed_stubs_match_deterministic_regeneration(self) -> None:
+        result = subprocess.run(
+            [sys.executable, str(SCRIPT), "--check"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        assert result.returncode == 0, result.stdout + result.stderr
+
+    @pytest.mark.skipif(not _HAS_GRPC_TOOLS, reason="grpcio-tools not installed")
+    def test_script_generates_package_relative_repeatable_stubs(
+        self, tmp_path: Path
+    ) -> None:
+        out = tmp_path / "grpc_gen"
+        generate = subprocess.run(
+            [sys.executable, str(SCRIPT), "--output-dir", str(out)],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        assert generate.returncode == 0, generate.stdout + generate.stderr
+        assert (out / "spo_pb2.py").is_file()
+        grpc_text = (out / "spo_pb2_grpc.py").read_text(encoding="utf-8")
+        assert "from . import spo_pb2 as spo__pb2" in grpc_text
+        assert "\nimport spo_pb2 as spo__pb2\n" not in grpc_text
+
+        check = subprocess.run(
+            [
+                sys.executable,
+                str(SCRIPT),
+                "--check",
+                "--output-dir",
+                str(out),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert check.returncode == 0, check.stdout + check.stderr
+
+        (out / "spo_pb2.py").write_text("# stale\n", encoding="utf-8")
+        stale = subprocess.run(
+            [
+                sys.executable,
+                str(SCRIPT),
+                "--check",
+                "--output-dir",
+                str(out),
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert stale.returncode == 1
+        assert "stale generated stub" in stale.stderr
+
 
 # Pipeline wiring: generate_grpc.py replaces a bash-only script; the
 # cross-platform tests above ensure Windows / CI runners can both execute

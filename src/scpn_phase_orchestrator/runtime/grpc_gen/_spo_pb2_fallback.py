@@ -7,7 +7,7 @@
 # SCPN Phase Orchestrator — Hand-written protobuf message stubs
 #
 # Mirrors proto/spo.proto. Re-generate real stubs with:
-#     bash tools/generate_grpc.sh
+#     python tools/generate_grpc.py
 
 """Dataclass fallback messages mirroring the Phase Orchestrator protobuf API.
 
