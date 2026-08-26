@@ -47,9 +47,9 @@ word for it. The whole honesty loop is four `spo quickstart` targets in about fi
 minutes: simulate (`power`/`eeg`), re-verify real `evidence`, and `auditor`
 a detector against a null. See the [Quickstart](docs/getting-started/quickstart.md).
 
-> **Stable release (v1.1.0)** — The core UPDE engine, 3-channel oscillator extraction (P/I/S), supervisor with regime management, and Rust FFI acceleration are functional and guarded by local and CI verification gates. Public capability counts are generated from the manifest below rather than maintained by hand. The public Python API — the symbols exported from `scpn_phase_orchestrator.__all__` — is now covered by semantic-versioning guarantees; backward-incompatible changes to it will bump the major version. Internal modules outside that surface may still evolve.
+> **Stable release (v1.2.0)** — The core UPDE engine, 3-channel oscillator extraction (P/I/S), supervisor with regime management, and Rust FFI acceleration are functional and guarded by local and CI verification gates. Public capability counts are generated from the manifest below rather than maintained by hand. The public Python API — the symbols exported from `scpn_phase_orchestrator.__all__` — is now covered by semantic-versioning guarantees; backward-incompatible changes to it will bump the major version. Internal modules outside that surface may still evolve.
 
-**Version:** 1.1.0
+**Version:** 1.2.0
 **Status:** stable release; public API under semantic versioning; public inventory is generated below.
 **Supported Python:** Python 3.11–3.13.
 
@@ -271,7 +271,7 @@ inside a dashboard or notebook; it turns them into inspectable artefacts.
 
 | Surface | Current inventory |
 |---|---:|
-| Package version | 1.1.0 |
+| Package version | 1.2.0 |
 | Public API exports | 24 |
 | Python package modules | 727 |
 | Core Engine modules | 328 |

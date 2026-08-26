@@ -120,7 +120,7 @@ review record.
 
 ## Current Release Boundary
 
-Version `1.1.0` is the current stable release. Version `1.0.0` established the
+Version `1.2.0` is the current stable release. Version `1.0.0` established the
 stable API baseline: the public names exported from
 `scpn_phase_orchestrator.__all__` are covered by semantic-versioning guarantees.
 This release consolidates the operator, evaluation, assurance, native-kernel,
