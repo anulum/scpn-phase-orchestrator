@@ -77,6 +77,12 @@ Verifies that the oscillator network reaches a minimum coherence
 threshold before the main control loop engages. Prevents the supervisor
 from acting on transient startup dynamics.
 
+The gate is fail-closed on malformed evidence: phase and imprint vectors
+must be one-dimensional real numeric arrays with finite entries and the
+expected oscillator count, and extractor quality values must be finite
+floats in `[0, 1]`. Any violation is recorded as a report error and fails
+the gate; an invalid `n_osc` raises instead of reporting.
+
 ::: scpn_phase_orchestrator.monitor.session_start
 
 ## Merge Window Monitor
