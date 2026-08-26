@@ -1,0 +1,113 @@
+{
+  "benchmark": "iso_ne_modal_growth_cross_dataset",
+  "caveats": [
+    "n=3 transition corpus: a case study, not a powered significance leg; WECC 240-bus remains the statistical leg",
+    "observable is per-substation frequency (PSML certified on bus voltages); disclosed mapping",
+    "onsets are estimated in-band, not operator-annotated"
+  ],
+  "content_hash": "66edc9e10e81b2a51d2fedf87d5e12f6175810b0b083559a761481342c1f51ba",
+  "corpus": {
+    "excluded": {
+      "ISO-NE_case4": "no separable in-band onset (<=10 MW event, flat envelope)",
+      "ISO-NE_case5": "no separable in-band onset (15 MW event, flat envelope)",
+      "ISO-NE_case6": "all four frequency channels are duplicates of one substation measurement; no per-bus structure and no in-band onset"
+    },
+    "source": "UTK oscillation test-case library, actual ISO-NE PMU events (Maslennikov et al. 2016); raw citation-only, never committed",
+    "transitions": [
+      {
+        "case": "ISO-NE_case1",
+        "mode_hz": 0.27,
+        "n_channels": 31,
+        "n_null_windows": 0,
+        "n_transition_windows": 4,
+        "onset_seconds": 35.57400000000135,
+        "rate_hz": 30.303030303029153,
+        "source_sha256": "ca5001bb64cfecced20ea71a6a007a5db8ad96acdcfa13cb021358f0f2575de0",
+        "window_seconds": 18.51851851851852
+      },
+      {
+        "case": "ISO-NE_case2",
+        "mode_hz": 0.15,
+        "n_channels": 25,
+        "n_null_windows": 6,
+        "n_transition_windows": 7,
+        "onset_seconds": 172.32600000008074,
+        "rate_hz": 30.303030303016104,
+        "source_sha256": "e503003f2df7e02262a9412700ed3be6833bb9f95e120ceea21596b4a6f53f1f",
+        "window_seconds": 33.333333333333336
+      },
+      {
+        "case": "ISO-NE_case3",
+        "mode_hz": 1.13,
+        "n_channels": 34,
+        "n_null_windows": 0,
+        "n_transition_windows": 54,
+        "onset_seconds": 62.634000000002374,
+        "rate_hz": 30.303030303029153,
+        "source_sha256": "f30d399b017aeee04987dadbf9cec0117444b4372456c93aa367e86ccba3772f",
+        "window_seconds": 4.424778761061948
+      }
+    ]
+  },
+  "detector": {
+    "aggregation": "focal",
+    "certified_on": "PSML 23-bus (Zheng et al. 2021)",
+    "recency_top": 3.0,
+    "shape": "modal envelope growth, focal per-bus deviation"
+  },
+  "frozen_transfer": [
+    {
+      "case": "ISO-NE_case1",
+      "n_null": 0,
+      "n_transition": 68,
+      "null_crossings": 0,
+      "threshold": 1.3203407954771857,
+      "transition_crossings": 29,
+      "window_seconds": 2.0
+    },
+    {
+      "case": "ISO-NE_case2",
+      "n_null": 219,
+      "n_transition": 122,
+      "null_crossings": 71,
+      "threshold": 1.3203407954771857,
+      "transition_crossings": 53,
+      "window_seconds": 2.0
+    },
+    {
+      "case": "ISO-NE_case3",
+      "n_null": 0,
+      "n_transition": 121,
+      "null_crossings": 0,
+      "threshold": 1.3203407954771857,
+      "transition_crossings": 41,
+      "window_seconds": 2.0
+    }
+  ],
+  "local_calibration": {
+    "achieved_false_alarm": 0.0,
+    "lead_seconds": [
+      null,
+      null,
+      57.123000000002165
+    ],
+    "led": [
+      false,
+      false,
+      true
+    ],
+    "n_null": 6,
+    "significance": {
+      "expected_led": 0.3333333333333333,
+      "n_permutations": 10000,
+      "n_transitions": 3,
+      "observed_led": 1,
+      "p_value": 0.3317668233176682,
+      "pooled_alarm_rate": 0.1111111111111111,
+      "seed": 0
+    },
+    "target_false_alarm": 0.1,
+    "threshold": 0.06728273574465118
+  },
+  "program": "E2.G"
+}
