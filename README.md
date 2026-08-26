@@ -282,7 +282,7 @@ inside a dashboard or notebook; it turns them into inspectable artefacts.
 | Rust kernel files | 97 |
 | Optional extras | 23 |
 | Python test files | 873 |
-| Public documentation pages | 230 |
+| Public documentation pages | 231 |
 | GitHub Actions workflows | 12 |
 
 Evidence boundary: this snapshot is a static inventory. Performance, coverage, hardware, and scientific-fidelity claims require their own committed evidence artifacts.
