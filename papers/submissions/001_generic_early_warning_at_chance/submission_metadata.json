@@ -1,0 +1,29 @@
+{
+  "manuscript": "001_generic_early_warning_at_chance",
+  "title": "Generic early-warning signals are at chance under a matched false-alarm protocol across brain, heart, grid, climate and molecular data",
+  "authors": [
+    {
+      "name": "Miroslav Šotek",
+      "affiliation": "Anulum Institute",
+      "orcid": "0009-0009-3560-0851"
+    }
+  ],
+  "status": "preprint published",
+  "preprint": {
+    "venue": "Zenodo",
+    "doi": "10.5281/zenodo.22113062",
+    "license": "CC-BY-4.0",
+    "published": "2026-08-26",
+    "pdf_md5": "28f7c9000563cd3788c2d4ce06f06ff2"
+  },
+  "copies": [
+    {
+      "venue": "Academia.edu",
+      "profile": "https://independent.academia.edu/fortisstudio",
+      "uploaded": "2026-08-26"
+    }
+  ],
+  "companion": "002_grid_modal_growth_regime_map (doi:10.5281/zenodo.22113116)",
+  "evidence_binding": "all quantitative claims bind to hash-sealed artefacts under examples/real_data/ in this repository",
+  "journal_submission": "none yet; requires explicit owner authority"
+}

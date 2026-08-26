@@ -1,0 +1,22 @@
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<!-- Commercial license available -->
+<!-- © Concepts 1996–2026 Miroslav Šotek. All rights reserved. -->
+<!-- © Code 2020–2026 Miroslav Šotek. All rights reserved. -->
+<!-- ORCID: 0009-0009-3560-0851 -->
+<!-- Contact: www.anulum.li | protoscience@anulum.li -->
+
+# Build
+
+Plain TeX Live, no packages beyond the standard set, bibliography
+inline (no BibTeX pass needed):
+
+```bash
+pdflatex -jobname=manuscript manuscript.tex
+pdflatex -jobname=manuscript manuscript.tex
+```
+
+Two passes resolve cross-references. Output: `manuscript.pdf`
+(8 pages, letter). The tracked `manuscript.pdf` is the inspected
+review artefact rebuilt from this exact source; the Zenodo record
+carries the published PDF of the same source (md5
+`28f7c9000563cd3788c2d4ce06f06ff2`).

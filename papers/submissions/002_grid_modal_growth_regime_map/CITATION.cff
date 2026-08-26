@@ -1,0 +1,16 @@
+cff-version: 1.2.0
+message: "If you use or cite this manuscript, cite the Zenodo preprint."
+title: >-
+  A domain-specific modal-growth detector clears a matched false-alarm
+  bar on power-grid instability, and an eigenvalue regime map shows
+  when its form transfers
+type: generic
+authors:
+  - family-names: "Šotek"
+    given-names: "Miroslav"
+    affiliation: "Anulum Institute"
+    orcid: "https://orcid.org/0009-0009-3560-0851"
+doi: 10.5281/zenodo.22113116
+date-released: "2026-08-26"
+license: CC-BY-4.0
+url: "https://doi.org/10.5281/zenodo.22113116"

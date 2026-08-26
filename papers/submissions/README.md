@@ -7,25 +7,18 @@
 
 # Submissions
 
-Owner-ordered numbering; one directory per manuscript, the TeX source
-carries the same `NN_` prefix. Submission of anything here is
-OWNER-GATED. The original combined draft (superseded by the 01/02
-split after external review; review + triage in
-`docs/internal/reviews/`) lives in git history at commit `3b176559`
-(`papers/submissions/01_early_warning_matched_false_alarm/`).
+One numbered, self-contained directory per manuscript; the primary
+source is `manuscript.tex`, the tracked `manuscript.pdf` is the
+inspected review artefact, and `submission_metadata.json` carries the
+verified publication metadata.
 
 | # | Manuscript | Story | Preprint DOI |
 |---|------------|-------|--------------|
-| 01 | `01_generic_early_warning_at_chance` | operational matched-FA protocol; generic EWS + Dakos + DNB at chance | [10.5281/zenodo.22113062](https://doi.org/10.5281/zenodo.22113062) |
-| 02 | `02_grid_modal_growth_regime_map` | grid modal-growth detector clears the bar; streaming/cross-dataset bounds; eigenvalue regime map | [10.5281/zenodo.22113116](https://doi.org/10.5281/zenodo.22113116) |
+| 001 | `001_generic_early_warning_at_chance` | operational matched-false-alarm protocol; generic early-warning detectors, the Dakos baseline and DNB indices at chance | [10.5281/zenodo.22113062](https://doi.org/10.5281/zenodo.22113062) |
+| 002 | `002_grid_modal_growth_regime_map` | grid modal-growth detector clears the bar; streaming and cross-dataset bounds; eigenvalue regime map | [10.5281/zenodo.22113116](https://doi.org/10.5281/zenodo.22113116) |
 
-**PUBLISHED 2026-08-26 as Zenodo preprints (CC-BY 4.0, DataCite DOIs).**
-The arXiv route stalled on the endorsement gate (submission 7997231
-parked with code BBQGZP; resumable if an endorser appears — DIII-D
-collaboration contacts are candidates). Journal submission needs no
-preprint and proceeds independently per the venue shortlists.
-
-Each directory's README carries the proposed metadata and the
-submission checklist. Submit 01 first (02 cites it as the companion);
-after 01 has an arXiv id, add it to 02's companion reference before
-submitting 02.
+Both are published as Zenodo preprints (CC-BY 4.0, DataCite DOIs,
+2026-08-26); 002 is the companion of 001. Build instructions per paper
+in `BUILD.md`; venue submission material under each paper's
+`venue_packages/`. Uploads to any further venue require explicit owner
+authority.

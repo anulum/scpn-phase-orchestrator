@@ -1,0 +1,29 @@
+{
+  "manuscript": "002_grid_modal_growth_regime_map",
+  "title": "A domain-specific modal-growth detector clears a matched false-alarm bar on power-grid instability, and an eigenvalue regime map shows when its form transfers",
+  "authors": [
+    {
+      "name": "Miroslav Šotek",
+      "affiliation": "Anulum Institute",
+      "orcid": "0009-0009-3560-0851"
+    }
+  ],
+  "status": "preprint published",
+  "preprint": {
+    "venue": "Zenodo",
+    "doi": "10.5281/zenodo.22113116",
+    "license": "CC-BY-4.0",
+    "published": "2026-08-26",
+    "pdf_md5": "6027788713f79ee72b8079d8a4190605"
+  },
+  "copies": [
+    {
+      "venue": "Academia.edu",
+      "profile": "https://independent.academia.edu/fortisstudio",
+      "uploaded": "2026-08-26"
+    }
+  ],
+  "companion": "001_generic_early_warning_at_chance (doi:10.5281/zenodo.22113062)",
+  "evidence_binding": "all quantitative claims bind to hash-sealed artefacts under examples/real_data/ in this repository",
+  "journal_submission": "none yet; requires explicit owner authority"
+}
