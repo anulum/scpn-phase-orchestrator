@@ -6,15 +6,13 @@
 % Companion: papers/submissions/01_generic_early_warning_at_chance/.
 % Every number binds to the hash-sealed artefacts under examples/real_data/.
 
-\documentclass[11pt]{article}
+\documentclass[journal]{IEEEtran}
 
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
-\usepackage{lmodern}
 \usepackage{microtype}
 \usepackage{amsmath}
 \usepackage{booktabs}
-\usepackage[margin=1.05in]{geometry}
 \usepackage[hidelinks]{hyperref}
 \usepackage{url}
 \urlstyle{same}
@@ -22,13 +20,16 @@
 
 \newcommand{\code}[1]{\texttt{#1}}
 
-\title{A domain-specific modal-growth detector clears a matched
-false-alarm bar on power-grid instability, and an eigenvalue regime map
-shows when its form transfers}
-\author{Miroslav \v{S}otek\\
-  Anulum Institute\\
-  ORCID 0009-0009-3560-0851 \quad \href{mailto:protoscience@anulum.li}{protoscience@anulum.li}}
-\date{August 2026}
+\title{A Domain-Specific Modal-Growth Detector Clears a Matched
+False-Alarm Bar on Power-Grid Instability, and an Eigenvalue Regime Map
+Shows When Its Form Transfers}
+\author{Miroslav~\v{S}otek%
+\thanks{M.~\v{S}otek is with the Anulum Institute, Marbach,
+Switzerland (e-mail: protoscience@anulum.li; ORCID
+0009-0009-3560-0851).}}
+\markboth{Submitted to IEEE Transactions on Power Systems, August
+2026}{\v{S}otek: A Domain-Specific Modal-Growth Detector and an
+Eigenvalue Regime Map}
 
 \begin{document}
 \maketitle
@@ -66,6 +67,14 @@ regime map: the envelope-growth family sizes the eigenvalue on
 oscillatory modes, the autocorrelation family on non-oscillatory ones.
 All evidence records are content-addressed and byte-reproducible.
 \end{abstract}
+
+\begin{IEEEkeywords}
+Power system stability, small-signal stability, wide-area monitoring,
+phasor measurement units, early warning, oscillation detection,
+eigenvalues, false-alarm rate.
+\end{IEEEkeywords}
+
+\IEEEpeerreviewmaketitle
 
 \section{Background}\label{sec:background}
 
@@ -140,9 +149,11 @@ aggregations) on the six chb01 preictal segments.
 
 \begin{table}[h!]
 \centering
+\small
+\setlength{\tabcolsep}{3.5pt}
 \begin{tabular}{lcc}
 \toprule
-Detector & Transitions led / 90 & Permutation $p$ \\
+Detector & led / 90 & Perm.\ $p$ \\
 \midrule
 generic critical slowing down & 13 / 90 & 0.185 \\
 generic weighted ensemble & 11 / 90 & 0.324 \\
@@ -166,10 +177,11 @@ estimate.
 
 \begin{table}[h!]
 \centering
-\small
+\scriptsize
+\setlength{\tabcolsep}{3pt}
 \begin{tabular}{lcc}
 \toprule
-Variant & Development led / 45, $p$ & Held-out led / 45, $p$ \\
+Variant & Dev.\ led / 45, $p$ & Held-out led / 45, $p$ \\
 \midrule
 whole-network log-slope $\sigma$ & 11, 0.051 & 14, 0.009 \\
 per-bus maximum $\sigma$ (focal) & 14, 0.008 & 22, 0.0001 \\
@@ -357,7 +369,7 @@ Records:
 
 \subsection{The regime map}\label{sec:regimemap}
 
-\begin{table}[h!]
+\begin{table*}[t]
 \centering
 \scriptsize
 \setlength{\tabcolsep}{3pt}
@@ -375,7 +387,7 @@ Collective, complex $\lambda$ (\S\ref{sec:kuramoto}) & Kuramoto bimodal & mean-f
 \caption{The eigenvalue's real part is the common quantity; the
 magnitude-correct estimator depends on whether the mode oscillates.}
 \label{tab:regimemap}
-\end{table}
+\end{table*}
 
 The split is mechanical, not empirical accident: on an oscillatory mode
 the lag-one autocorrelation is confounded by the oscillation while the
@@ -438,13 +450,15 @@ files in the repository); the PSML head-to-head and the external
 validations each complete in minutes on a workstation, the ANDES sweeps
 in tens of minutes. Entry points:
 
-\begin{verbatim}
+{\scriptsize\begin{verbatim}
 python -m bench.grid_modal_head_to_head        PSML OUT
-python -m bench.early_warning_leadtime_isone   --data-dir ISONE --output OUT
-python -m bench.early_warning_leadtime_wecc    --data-dir WECC  --output OUT
+python -m bench.early_warning_leadtime_isone \
+    --data-dir ISONE --output OUT
+python -m bench.early_warning_leadtime_wecc \
+    --data-dir WECC --output OUT
 python -m bench.csd_bifurcation_external_validation   OUT
 python -m bench.dnb_modal_transfer                    OUT
-\end{verbatim}
+\end{verbatim}}
 
 Sealed records and integrity tests are committed under
 \code{examples/real\_data/} in the source repository
@@ -456,22 +470,17 @@ ISO-NE and WECC 240-bus cases of the UTK oscillation test-cases library
 al.\ 2016; NREL reduced 240-bus model, credit DOE/NREL/Alliance), and
 CHB-MIT via PhysioNet.
 
-\section*{Declaration of AI use}
+\section*{Acknowledgments}
 
-AI-assisted technologies (Anthropic Claude large-language-model
-tooling) were used to assist with software development, analysis
-tooling and manuscript drafting. The author specified, verified and
+AI-assisted technologies (Anthropic Claude, a large-language-model
+system) were used to assist with software development, analysis
+tooling and manuscript drafting; this disclosure follows the IEEE
+guidelines for AI-generated text. The author specified, verified and
 approved all methods, analyses and claims, and takes full
-responsibility for the content of this work.
-
-\section*{Competing interests}
-
-The author develops the open-source SCPN Phase Orchestrator software
-used in this study, which is also offered under a commercial licence.
-
-\section*{Funding}
-
-This work received no external funding.
+responsibility for the content of this work. Competing interests: the
+author develops the open-source SCPN Phase Orchestrator software used
+in this study, which is also offered under a commercial licence. This
+work received no external funding.
 
 \begin{thebibliography}{9}
 
