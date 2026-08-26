@@ -7,7 +7,7 @@
     "integration_modules": 32,
     "optional_extras": 23,
     "public_api_exports": 24,
-    "public_documentation_pages": 231,
+    "public_documentation_pages": 232,
     "python_package_modules": 727,
     "research_experimental_modules": 205,
     "runtime_serving_modules": 158,
@@ -245,6 +245,7 @@
       "docs/tutorials/04_differentiable_kuramoto.md",
       "docs/tutorials/05_from_raw_sources_to_run.md",
       "docs/tutorials/06_deterministic_replay_for_debugging.md",
+      "docs/validation/grid_modal_head_to_head_demo.md",
       "docs/validation/grid_sentinel_replay_demo.md",
       "docs/validation/iso_ne_case1_forced_oscillation.md"
     ]
