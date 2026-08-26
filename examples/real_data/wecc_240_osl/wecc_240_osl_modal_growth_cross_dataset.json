@@ -1,0 +1,474 @@
+{
+  "benchmark": "wecc_240_osl_modal_growth_cross_dataset",
+  "caveats": [
+    "synthetic corpus: TSAT time-domain simulation of the WECC 240-bus model, not field PMU; the real-data leg of E2.G is the ISO-NE case study",
+    "the secondary detection branch is descriptive only: at a 10% window false alarm a 60 s region alarms by chance with high probability, so the detection COUNT carries no significance claim (disclosure A.16.3); the latency distribution is the informative quantity",
+    "forcing start is exact by simulation design (t=30 s); the early-warning onset is estimated in-band with an ambient-only baseline",
+    "observable is per-bus voltage magnitude \u2014 the same observable family the detector was certified on"
+  ],
+  "content_hash": "f77be580e06b532e2471b452ac72856f87a5df0444c2d38b782b4be306982b66",
+  "corpus": {
+    "source": "2021 IEEE-NASPI Oscillation Source Location Contest, WECC 240-bus synthetic PMU (NREL reduced model, OSL Committee scenarios; Maslennikov et al.), UTK oscillation library mirror; raw citation-only, never committed",
+    "transitions": [
+      {
+        "case": "WECC_case1",
+        "mode_hz": 0.82,
+        "n_channels": 58,
+        "n_detection_windows": 40,
+        "n_null_windows": 13,
+        "n_transition_windows": 4,
+        "onset_resolved": true,
+        "onset_seconds": 35.43297899999888,
+        "rate_hz": 30.000300003000977,
+        "source_sha256": "94a5f89ef6d051c81b313b758b8736dc87f7086cfa101b58b9e6fa519de0b7b8",
+        "window_seconds": 6.097560975609756
+      },
+      {
+        "case": "WECC_case2",
+        "mode_hz": 1.19,
+        "n_channels": 58,
+        "n_detection_windows": 59,
+        "n_null_windows": 21,
+        "n_transition_windows": 0,
+        "onset_resolved": true,
+        "onset_seconds": 29.999699999999052,
+        "rate_hz": 30.000300003000977,
+        "source_sha256": "e3b4e1e6918a2e4ac92d48cf86df927256ed0be080c634dfa61ffea4db6a398c",
+        "window_seconds": 4.201680672268908
+      },
+      {
+        "case": "WECC_case3",
+        "mode_hz": 0.379,
+        "n_channels": 58,
+        "n_detection_windows": 18,
+        "n_null_windows": 4,
+        "n_transition_windows": 0,
+        "onset_resolved": true,
+        "onset_seconds": 29.999699999999052,
+        "rate_hz": 30.000300003000977,
+        "source_sha256": "d9a9988de751cec90c98dffa72baeab21961da59ec37ab41409889f41d614fdf",
+        "window_seconds": 13.192612137203167
+      },
+      {
+        "case": "WECC_case4",
+        "mode_hz": 0.379,
+        "n_channels": 58,
+        "n_detection_windows": 18,
+        "n_null_windows": 4,
+        "n_transition_windows": 3,
+        "onset_resolved": true,
+        "onset_seconds": 40.16626499999873,
+        "rate_hz": 30.000300003000977,
+        "source_sha256": "b2d455485f920bfd589691447f9affe879922130b734c2700b7f301c3ceeebf5",
+        "window_seconds": 13.192612137203167
+      },
+      {
+        "case": "WECC_case5",
+        "mode_hz": 0.68,
+        "n_channels": 58,
+        "n_detection_windows": 33,
+        "n_null_windows": 10,
+        "n_transition_windows": 2,
+        "onset_resolved": true,
+        "onset_seconds": 33.366332999998946,
+        "rate_hz": 30.000300003000977,
+        "source_sha256": "2f30dc65dd9c94bf602897e07edf4c933a70880d27d7ae865127bd37fe927712",
+        "window_seconds": 7.352941176470588
+      },
+      {
+        "case": "WECC_case6",
+        "mode_hz": 1.27,
+        "n_channels": 58,
+        "n_detection_windows": 63,
+        "n_null_windows": 22,
+        "n_transition_windows": 0,
+        "onset_resolved": true,
+        "onset_seconds": 29.999699999999052,
+        "rate_hz": 30.000300003000977,
+        "source_sha256": "8239bcf4e85e3e3594250406ab5622b09fe254316a2b264607eac721315fd1a1",
+        "window_seconds": 3.937007874015748
+      },
+      {
+        "case": "WECC_case7",
+        "mode_hz": 0.379,
+        "n_channels": 58,
+        "n_detection_windows": 18,
+        "n_null_windows": 4,
+        "n_transition_windows": 0,
+        "onset_resolved": true,
+        "onset_seconds": 29.999699999999052,
+        "rate_hz": 30.000300003000977,
+        "source_sha256": "fc4ec6c05b6bb416372288c4df7def5bfaeaa685783c20005a577568a58936d6",
+        "window_seconds": 13.192612137203167
+      },
+      {
+        "case": "WECC_case8",
+        "mode_hz": 0.614,
+        "n_channels": 58,
+        "n_detection_windows": 30,
+        "n_null_windows": 9,
+        "n_transition_windows": 0,
+        "onset_resolved": true,
+        "onset_seconds": 29.999699999999052,
+        "rate_hz": 30.000300003000977,
+        "source_sha256": "c735189b15db55fedc45eaf660971da7a08a7ea74e46919a0d9f61fc94dff192",
+        "window_seconds": 8.143322475570033
+      },
+      {
+        "case": "WECC_case9",
+        "mode_hz": 0.762,
+        "n_channels": 58,
+        "n_detection_windows": 37,
+        "n_null_windows": 12,
+        "n_transition_windows": 0,
+        "onset_resolved": true,
+        "onset_seconds": 29.999699999999052,
+        "rate_hz": 30.000300003000977,
+        "source_sha256": "76b048ed88c27a2c29ce3b8473d68f10a8168f663d285792d13973e68df0c3c8",
+        "window_seconds": 6.561679790026247
+      },
+      {
+        "case": "WECC_case10",
+        "mode_hz": 0.614,
+        "n_channels": 58,
+        "n_detection_windows": 30,
+        "n_null_windows": 9,
+        "n_transition_windows": 0,
+        "onset_resolved": true,
+        "onset_seconds": 29.999699999999052,
+        "rate_hz": 30.000300003000977,
+        "source_sha256": "32d321534729b90917753a67bae54e25485bcd98bca61bb531eb7187aa2b8d8a",
+        "window_seconds": 8.143322475570033
+      },
+      {
+        "case": "WECC_case11",
+        "mode_hz": 0.614,
+        "n_channels": 58,
+        "n_detection_windows": 30,
+        "n_null_windows": 9,
+        "n_transition_windows": 0,
+        "onset_resolved": true,
+        "onset_seconds": 29.999699999999052,
+        "rate_hz": 30.000300003000977,
+        "source_sha256": "00478d9adc42bb5e2b4415e60c091b88038b1c250d4c433ccda9201fe8163e0f",
+        "window_seconds": 8.143322475570033
+      },
+      {
+        "case": "WECC_case12",
+        "mode_hz": 0.37,
+        "n_channels": 58,
+        "n_detection_windows": 18,
+        "n_null_windows": 4,
+        "n_transition_windows": 0,
+        "onset_resolved": true,
+        "onset_seconds": 29.999699999999052,
+        "rate_hz": 30.000300003000977,
+        "source_sha256": "25396a74f7bd9fb0c77327709e4964b7628f2a4cfd03b710ec44d2b64ddecb40",
+        "window_seconds": 13.513513513513514
+      },
+      {
+        "case": "WECC_case13",
+        "mode_hz": 0.614,
+        "n_channels": 58,
+        "n_detection_windows": 30,
+        "n_null_windows": 9,
+        "n_transition_windows": 3,
+        "onset_resolved": true,
+        "onset_seconds": 36.29963699999885,
+        "rate_hz": 30.000300003000977,
+        "source_sha256": "b5fde906e1742246aec530819a9fdeae8c1e5d4c4d767d42ea690942365e8d07",
+        "window_seconds": 8.143322475570033
+      }
+    ]
+  },
+  "detection_secondary": {
+    "chance_detection_upper_bound": [
+      {
+        "case": "WECC_case1",
+        "n_windows": 40,
+        "p_chance_upper": 0.9852191170585654
+      },
+      {
+        "case": "WECC_case2",
+        "n_windows": 59,
+        "p_chance_upper": 0.998003321888984
+      },
+      {
+        "case": "WECC_case3",
+        "n_windows": 18,
+        "p_chance_upper": 0.8499053647030008
+      },
+      {
+        "case": "WECC_case4",
+        "n_windows": 18,
+        "p_chance_upper": 0.8499053647030008
+      },
+      {
+        "case": "WECC_case5",
+        "n_windows": 33,
+        "p_chance_upper": 0.9690968456173674
+      },
+      {
+        "case": "WECC_case6",
+        "n_windows": 63,
+        "p_chance_upper": 0.9986899794913624
+      },
+      {
+        "case": "WECC_case7",
+        "n_windows": 18,
+        "p_chance_upper": 0.8499053647030008
+      },
+      {
+        "case": "WECC_case8",
+        "n_windows": 30,
+        "p_chance_upper": 0.9576088417247838
+      },
+      {
+        "case": "WECC_case9",
+        "n_windows": 37,
+        "p_chance_upper": 0.9797244404095548
+      },
+      {
+        "case": "WECC_case10",
+        "n_windows": 30,
+        "p_chance_upper": 0.9576088417247838
+      },
+      {
+        "case": "WECC_case11",
+        "n_windows": 30,
+        "p_chance_upper": 0.9576088417247838
+      },
+      {
+        "case": "WECC_case12",
+        "n_windows": 18,
+        "p_chance_upper": 0.8499053647030008
+      },
+      {
+        "case": "WECC_case13",
+        "n_windows": 30,
+        "p_chance_upper": 0.9576088417247838
+      }
+    ],
+    "detected": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false
+    ],
+    "latency_seconds": [
+      0.06636599999905002,
+      0.03303299999905107,
+      38.69931299999783,
+      6.0329729999988615,
+      12.166244999998668,
+      0.9996899999990205,
+      35.43267899999793,
+      0.4996949999990363,
+      1.0330229999990195,
+      0.4996949999990363,
+      0.4996949999990363,
+      3.699662999998935,
+      null
+    ],
+    "note": "secondary branch, amendment A.16.1: detection power after the exact forcing start at the same matched-FA operating point; does not replace the primary early-warning metric",
+    "significance": {
+      "expected_led": 2.2727272727272725,
+      "n_permutations": 10000,
+      "n_transitions": 13,
+      "observed_led": 12,
+      "p_value": 9.999000099990002e-05,
+      "pooled_alarm_rate": 0.17482517482517482,
+      "seed": 0
+    },
+    "significance_caveat": "DESCRIPTIVE ONLY (disclosure A.16.3): the permutation core treats a whole multi-window detection region as one unit against single-window nulls, which is anti-conservative for long regions \u2014 the permutation p-value below must not be read as significance. Under the independence upper bound, per-case chance detection is 1-(1-FA)^n_windows (see chance_detection_upper_bound); the informative quantity is the first-alarm latency, reported per case.",
+    "threshold": 0.015693720910358703
+  },
+  "detector": {
+    "aggregation": "focal",
+    "certified_on": "PSML 23-bus (Zheng et al. 2021)",
+    "recency_top": 3.0,
+    "shape": "modal envelope growth, focal per-bus deviation"
+  },
+  "frozen_transfer": [
+    {
+      "case": "WECC_case1",
+      "n_null": 47,
+      "n_transition": 10,
+      "null_crossings": 0,
+      "threshold": 1.3203407954771857,
+      "transition_crossings": 0,
+      "window_seconds": 2.0
+    },
+    {
+      "case": "WECC_case2",
+      "n_null": 47,
+      "n_transition": 0,
+      "null_crossings": 0,
+      "threshold": 1.3203407954771857,
+      "transition_crossings": 0,
+      "window_seconds": 2.0
+    },
+    {
+      "case": "WECC_case3",
+      "n_null": 47,
+      "n_transition": 0,
+      "null_crossings": 0,
+      "threshold": 1.3203407954771857,
+      "transition_crossings": 0,
+      "window_seconds": 2.0
+    },
+    {
+      "case": "WECC_case4",
+      "n_null": 47,
+      "n_transition": 20,
+      "null_crossings": 0,
+      "threshold": 1.3203407954771857,
+      "transition_crossings": 0,
+      "window_seconds": 2.0
+    },
+    {
+      "case": "WECC_case5",
+      "n_null": 47,
+      "n_transition": 6,
+      "null_crossings": 0,
+      "threshold": 1.3203407954771857,
+      "transition_crossings": 0,
+      "window_seconds": 2.0
+    },
+    {
+      "case": "WECC_case6",
+      "n_null": 47,
+      "n_transition": 0,
+      "null_crossings": 0,
+      "threshold": 1.3203407954771857,
+      "transition_crossings": 0,
+      "window_seconds": 2.0
+    },
+    {
+      "case": "WECC_case7",
+      "n_null": 47,
+      "n_transition": 0,
+      "null_crossings": 0,
+      "threshold": 1.3203407954771857,
+      "transition_crossings": 0,
+      "window_seconds": 2.0
+    },
+    {
+      "case": "WECC_case8",
+      "n_null": 47,
+      "n_transition": 0,
+      "null_crossings": 0,
+      "threshold": 1.3203407954771857,
+      "transition_crossings": 0,
+      "window_seconds": 2.0
+    },
+    {
+      "case": "WECC_case9",
+      "n_null": 47,
+      "n_transition": 0,
+      "null_crossings": 0,
+      "threshold": 1.3203407954771857,
+      "transition_crossings": 0,
+      "window_seconds": 2.0
+    },
+    {
+      "case": "WECC_case10",
+      "n_null": 47,
+      "n_transition": 0,
+      "null_crossings": 0,
+      "threshold": 1.3203407954771857,
+      "transition_crossings": 0,
+      "window_seconds": 2.0
+    },
+    {
+      "case": "WECC_case11",
+      "n_null": 47,
+      "n_transition": 0,
+      "null_crossings": 0,
+      "threshold": 1.3203407954771857,
+      "transition_crossings": 0,
+      "window_seconds": 2.0
+    },
+    {
+      "case": "WECC_case12",
+      "n_null": 47,
+      "n_transition": 0,
+      "null_crossings": 0,
+      "threshold": 1.3203407954771857,
+      "transition_crossings": 0,
+      "window_seconds": 2.0
+    },
+    {
+      "case": "WECC_case13",
+      "n_null": 47,
+      "n_transition": 12,
+      "null_crossings": 0,
+      "threshold": 1.3203407954771857,
+      "transition_crossings": 0,
+      "window_seconds": 2.0
+    }
+  ],
+  "local_calibration": {
+    "achieved_false_alarm": 0.1,
+    "lead_seconds": [
+      5.36661299999983,
+      null,
+      null,
+      4.133291999999869,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
+    ],
+    "led": [
+      true,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ],
+    "n_null": 130,
+    "significance": {
+      "expected_led": 1.3636363636363638,
+      "n_permutations": 10000,
+      "n_transitions": 13,
+      "observed_led": 2,
+      "p_value": 0.41025897410258977,
+      "pooled_alarm_rate": 0.1048951048951049,
+      "seed": 0
+    },
+    "target_false_alarm": 0.1,
+    "threshold": 0.015693720910358703
+  },
+  "program": "E2.G",
+  "protocol": {
+    "baseline_seconds": 25.0,
+    "cycles_per_window": 5.0,
+    "forcing_seconds": 30.0,
+    "null_end_seconds": 25.0,
+    "pre_registered": "internal plan appendix A.16, fixed before the first detector run on this corpus",
+    "step_fraction": 0.25
+  }
+}

@@ -169,6 +169,36 @@ class TestEstimateOnset:
         with pytest.raises(ValueError, match="collapses"):
             estimate_onset(matrix, rate=rate, mode_hz=40.0)
 
+    @pytest.mark.parametrize("bad", [-1.0, float("nan"), float("inf"), True, "x"])
+    def test_rejects_invalid_search_start(
+        self, capture_path: Path, bad: object
+    ) -> None:
+        rate, matrix = frequency_matrix(capture_path)
+        with pytest.raises(ValueError, match="search_start_seconds"):
+            estimate_onset(
+                matrix,
+                rate=rate,
+                mode_hz=0.27,
+                search_start_seconds=bad,  # type: ignore[arg-type]
+            )
+
+    def test_search_start_floors_the_estimate(self, capture_path: Path) -> None:
+        rate, matrix = frequency_matrix(capture_path)
+        unpinned = estimate_onset(matrix, rate=rate, mode_hz=0.27)
+        pinned = estimate_onset(
+            matrix, rate=rate, mode_hz=0.27, search_start_seconds=unpinned + 5.0
+        )
+        assert pinned >= unpinned + 5.0 - 1.0 / rate
+
+    def test_search_start_beyond_capture_fails_closed(
+        self, capture_path: Path
+    ) -> None:
+        rate, matrix = frequency_matrix(capture_path)
+        with pytest.raises(ValueError, match="no separable onset"):
+            estimate_onset(
+                matrix, rate=rate, mode_hz=0.27, search_start_seconds=1.0e6
+            )
+
 
 class TestWindowScores:
     def test_scores_and_end_times(self, capture_path: Path) -> None:

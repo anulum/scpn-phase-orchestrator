@@ -210,6 +210,7 @@ def estimate_onset(
     factor: float = ONSET_FACTOR,
     sustain_seconds: float = ONSET_SUSTAIN_SECONDS,
     smooth_seconds: float = SMOOTH_SECONDS,
+    search_start_seconds: float = 0.0,
 ) -> float:
     """Estimate the oscillation onset from the in-band envelope, fail-closed.
 
@@ -234,6 +235,12 @@ def estimate_onset(
         How long the exceedance must hold without interruption.
     smooth_seconds : float
         Moving-average length applied to the envelope before thresholding.
+    search_start_seconds : float
+        Earliest time (seconds) the sustained-crossing search may report.
+        The default of zero keeps the original whole-capture behaviour;
+        a corpus with an exactly known event start (WECC E2.G) pins the
+        search there so acausal smoothing smear cannot pull the estimate
+        before the true start.
 
     Returns
     -------
@@ -243,7 +250,8 @@ def estimate_onset(
     Raises
     ------
     ValueError
-        If the controls are not positive finite numbers, or no sustained
+        If the controls are not positive finite numbers,
+        ``search_start_seconds`` is negative or not finite, or no sustained
         exceedance exists (a capture without a separable onset cannot be a
         transition — fail closed, never a silent zero).
     """
@@ -257,6 +265,12 @@ def estimate_onset(
             raise ValueError(f"{name} must be a positive finite number")
         if not np.isfinite(value) or value <= 0.0:
             raise ValueError(f"{name} must be a positive finite number")
+    if isinstance(search_start_seconds, bool) or not isinstance(
+        search_start_seconds, (int, float)
+    ):
+        raise ValueError("search_start_seconds must be a finite number >= 0")
+    if not np.isfinite(search_start_seconds) or search_start_seconds < 0.0:
+        raise ValueError("search_start_seconds must be a finite number >= 0")
     band = _mode_band(mode_hz, rate)
     centred = np.asarray(matrix, dtype=np.float64)
     centred = centred - centred.mean(axis=1, keepdims=True)
@@ -269,7 +283,8 @@ def estimate_onset(
     baseline = float(np.median(envelope[: max(baseline_n, 1)]))
     above = smoothed > factor * baseline
     run = max(int(sustain_seconds * rate), 1)
-    for start in range(above.size - run + 1):
+    first_start = int(search_start_seconds * rate)
+    for start in range(first_start, above.size - run + 1):
         if bool(above[start : start + run].all()):
             return float(start) / rate
     raise ValueError(
