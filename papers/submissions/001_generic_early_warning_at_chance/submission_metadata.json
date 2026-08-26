@@ -8,7 +8,7 @@
       "orcid": "0009-0009-3560-0851"
     }
   ],
-  "status": "preprint published",
+  "status": "preprint published; under review",
   "preprint": {
     "venue": "Zenodo",
     "doi": "10.5281/zenodo.22113062",
@@ -25,5 +25,11 @@
   ],
   "companion": "002_grid_modal_growth_regime_map (doi:10.5281/zenodo.22113116)",
   "evidence_binding": "all quantitative claims bind to hash-sealed artefacts under examples/real_data/ in this repository",
-  "journal_submission": "none yet; requires explicit owner authority"
+  "journal_submission": {
+    "venue": "Journal of the Royal Society Interface",
+    "manuscript_id": "RSIF-2026-0987",
+    "submitted": "2026-08-26",
+    "submitted_by": "owner (final submit click); agent prepared the submission",
+    "open_access": "Subscribe-to-Open 2026 — CC-BY at no cost if the S2O threshold holds"
+  }
 }
