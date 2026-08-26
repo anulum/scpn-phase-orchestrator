@@ -63,3 +63,15 @@ twice (PDF not committed).
    companion reference.
 2. Owner reviews the locally built PDF and the metadata above.
 3. Upload the single `.tex` as source (bibliography is inline).
+
+## Suggested journal venues (external-review shortlist, owner picks)
+
+1. IEEE Transactions on Power Systems (grid modal detection, streaming,
+   cross-dataset)
+2. Electric Power Systems Research (PMU / wide-area monitoring)
+3. International Journal of Electrical Power & Energy Systems
+4. Chaos / Physical Review E (if the regime map is foregrounded)
+5. IEEE Transactions on Smart Grid
+
+`cover_letter.txt` is the journal cover letter draft ([Journal Name]
+placeholder; single-author wording).

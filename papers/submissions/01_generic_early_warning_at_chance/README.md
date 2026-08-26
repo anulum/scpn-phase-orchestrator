@@ -62,3 +62,15 @@ build with `pdflatex` twice (PDF not committed).
 2. Upload the single `.tex` as source (bibliography is inline).
 3. Submit 01 BEFORE 02; after the arXiv id exists, update 02's
    companion reference, CITATION.cff, .zenodo.json, and the study page.
+
+## Suggested journal venues (external-review shortlist, owner picks)
+
+1. Journal of the Royal Society Interface (complex systems,
+   multi-domain, open to methodological and null results)
+2. Chaos (early-warning / critical-transitions home turf)
+3. Physical Review E
+4. Scientific Reports (fast, open access)
+5. PLoS Computational Biology / PLoS ONE
+
+`cover_letter.txt` is the journal cover letter draft ([Journal Name]
+placeholder; single-author wording).

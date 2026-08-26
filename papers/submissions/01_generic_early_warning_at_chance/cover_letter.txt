@@ -1,0 +1,47 @@
+Dear Editor,
+
+Please find enclosed my manuscript entitled:
+
+"Generic early-warning signals are at chance under a matched
+false-alarm protocol across brain, heart, grid, climate and molecular
+data"
+
+Most published early-warning signal (EWS) evidence answers a
+retrospective, per-record question: is there a statistically
+significant rising trend of an indicator within one pre-transition
+window relative to surrogates of the same record. This manuscript
+addresses the operational question instead: at a fixed false-alarm
+budget, does a detector fire on transitions more often than on matched
+no-transition controls?
+
+Using one domain-adaptable detector suite and one matched-false-alarm
+plus label-permutation protocol, I evaluate four independent labelled
+corpora (scalp-EEG seizures, cardiac AF onsets, power-grid growing
+oscillations, palaeoclimate abrupt transitions) and a molecular fifth
+modality (dynamical-network biomarkers). No detector reaches
+significance in any domain. The canonical Dakos et al. (2008)
+AR(1)-Kendall-tau detector, run on the identical segments, fares no
+better (0 of 6 on its own palaeoclimate records). Because the corpora
+are small, the nulls bound demonstrated skill rather than proving
+early warning impossible; what they establish is that the operational
+bar is materially stricter than the retrospective test on which most
+published EWS evidence rests.
+
+All alarms and non-detections are sealed in content-addressed,
+byte-reproducible evidence records. A companion manuscript shows that
+a domain-specific detector can clear the identical bar where a
+deterministic instability signature is present.
+
+I believe the manuscript is of interest to the readership of
+[Journal Name] because it supplies a transparent, reusable evaluation
+protocol and a multi-domain negative baseline that is currently rare
+in the EWS literature.
+
+The work is original, has not been published elsewhere, and is not
+under consideration by another journal.
+
+Yours sincerely,
+Miroslav Sotek
+Anulum Institute
+ORCID 0009-0009-3560-0851
+protoscience@anulum.li

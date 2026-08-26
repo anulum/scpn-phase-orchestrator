@@ -1,0 +1,48 @@
+Dear Editor,
+
+Please find enclosed my manuscript entitled:
+
+"A domain-specific modal-growth detector clears a matched false-alarm
+bar on power-grid instability, and an eigenvalue regime map shows when
+its form transfers"
+
+A companion manuscript establishes that generic early-warning
+detectors are statistically at chance under a matched-false-alarm,
+permutation-tested protocol on power-grid data (as on brain, heart and
+climate corpora). This paper reports the complementary positive result
+and bounds it.
+
+A detector that reads the canonical wide-area-monitoring quantity ---
+the exponential growth rate sigma of the most unstable bus's cross-bus
+voltage-deviation envelope --- leads 36 of 90 generator-trip
+transitions of the PSML 23-bus corpus at a matched 10% false alarm
+(p = 0.0001; held-out 24 of 45, p = 0.0002), while every generic
+detector remains at chance on the identical non-circular split. The
+operating point was selected on a development half via a disclosed
+variant search and validated on the held-out half.
+
+The result is then stress-tested in four directions: causal streaming
+(the deployable operating point recovers 11 of 45 held-out transitions
+at a matched stream false alarm), cross-dataset transfer (ISO-NE and
+WECC 240-bus; the numeric threshold does not travel on either corpus),
+transfer to domains without an exponential signature (scalp EEG and
+few-timepoint molecular indices fail), and external validation against
+independent ground truths (ANDES small-signal eigenvalues, analytic
+normal-form Jacobians, and mean-field Kuramoto eigenvalues). The
+validations confirm that the detector estimates the eigenvalue's real
+part and yield a regime map: envelope growth on oscillatory modes,
+autocorrelation on non-oscillatory ones.
+
+All evidence is content-addressed and byte-reproducible. I believe the
+combination of an operational positive result, honest deployment
+bounds, and a first-principles regime map will be of interest to the
+power-systems and applied-dynamics readership of [Journal Name].
+
+The work is original, has not been published elsewhere, and is not
+under consideration by another journal.
+
+Yours sincerely,
+Miroslav Sotek
+Anulum Institute
+ORCID 0009-0009-3560-0851
+protoscience@anulum.li

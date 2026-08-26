@@ -47,30 +47,22 @@ transitions of the PSML 23-bus corpus at a matched 10\,\% false alarm
 on a non-circular disturbance-type split where the best generic
 detector is at chance (13 of 90, $p = 0.19$). The operating point was
 selected on a development half through a disclosed variant search and
-validated on the held-out half. The result is then stress-tested in
-four directions. (i) Run as a causal stream, the certified per-window
-operating point degrades sharply --- damped faults produce transient
-growth windows --- and an honest stream-level recalibration with a
-persistence debounce and an exponential-fit-quality gate recovers 11 of
-45 held-out transitions at a matched 10\,\% stream false alarm; the
-streaming operating point, not the per-window figure, is the deployable
-one. (ii) On two independent cross-dataset corpora (three real ISO-NE
-PMU captures; the 13 synthetic WECC 240-bus cases of the 2021
-IEEE-NASPI contest), the certified numeric threshold does not transfer
-in either direction ($\sim$32\,\% ambient false alarm on ISO-NE; zero
-crossings on WECC), while the frozen detector shape with per-system
-matched-false-alarm calibration remains usable; on these short records
-most WECC forced oscillations switch on effectively instantaneously and
-offer no early-warning window at all. (iii) The detector's form does
-not transfer to scalp EEG (0 of 6 preictal segments; the preictal rise,
-if present, is not exponential) nor to few-timepoint molecular indices
-(the fit cannot be posed on 3--4 points). (iv) Against three
-independent ground truths --- ANDES small-signal eigenvalues of the
-IEEE-39 and Kundur systems, the analytic Jacobians of the fold,
-pitchfork and Hopf normal forms, and the mean-field eigenvalues of
-unimodal and bimodal Kuramoto models --- the quantity the detector
-estimates is confirmed to be the eigenvalue's real part, and a regime
-map emerges: the envelope-growth family sizes the eigenvalue on
+validated on the held-out half. Stress tests then bound the result.
+Run as a causal stream, the certified per-window operating point is
+not deployable, and an honest recalibration with a persistence
+debounce and an exponential-fit-quality gate recovers 11 of 45
+held-out transitions at a matched 10\,\% stream false alarm. On two
+cross-dataset corpora (three real ISO-NE PMU captures; the 13
+synthetic WECC 240-bus cases of the 2021 IEEE-NASPI contest), the
+certified numeric threshold does not transfer in either direction,
+while the frozen shape with per-system matched-false-alarm calibration
+remains usable. The form does not transfer to scalp EEG or to
+few-timepoint molecular indices. Finally, against ANDES small-signal
+eigenvalues of the IEEE-39 and Kundur systems, the analytic Jacobians
+of the fold, pitchfork and Hopf normal forms, and the mean-field
+eigenvalues of unimodal and bimodal Kuramoto models, the estimated
+quantity is confirmed to be the eigenvalue's real part, yielding a
+regime map: the envelope-growth family sizes the eigenvalue on
 oscillatory modes, the autocorrelation family on non-oscillatory ones.
 All evidence records are content-addressed and byte-reproducible.
 \end{abstract}
@@ -322,23 +314,20 @@ Record:
 \subsection{Analytic normal forms: fold, pitchfork, Hopf}\label{sec:normalforms}
 
 For non-oscillatory codimension-one bifurcations the ground truth is
-closed-form: sweeping the control parameter quasi-statically and
-integrating the stochastic normal form, the autocorrelation channel of
-the critical-slowing-down detector recovers the Jacobian eigenvalue
-$\lambda$ ($-2\sqrt{\mu}$ fold, $\mu$ pitchfork) in rank and in
-magnitude (Spearman $\rho = 0.98$/0.96; Pearson of
-$\ln(\mathrm{AR1})/\Delta t$ against $\lambda$ 0.98/0.96), because the
-lag-one autocorrelation of a linear-response process is
-$\exp(\lambda\,\Delta t)$. The variance channel rises in step
-($\rho = 0.98$). On the Hopf normal form --- an oscillatory mode,
-eigenvalue $\alpha \pm i\omega$ --- the roles reverse: the
-envelope-growth family recovers $\alpha$ in rank and magnitude
-($\rho = 0.97$, mean $|\sigma - \alpha| = 0.04$ at adequate ringdown
-SNR, frequency-invariant across 0.2--1.2\,Hz), while the
-autocorrelation family tracks $\alpha$ only in rank (mean
-$|\mathrm{rate} - \alpha| = 0.69$; the lag-one autocorrelation is
-pinned near $\cos(\omega\,\Delta t)$). The envelope recovery degrades
-with ringdown SNR ($\rho$ 0.97 $\to$ 0.62), a physical floor. Records:
+closed-form: sweeping the control parameter quasi-statically through
+the stochastic normal form, the autocorrelation channel recovers the
+Jacobian eigenvalue $\lambda$ ($-2\sqrt{\mu}$ fold, $\mu$ pitchfork)
+in rank and magnitude (Spearman and Pearson $\rho = 0.98$/0.96),
+because the lag-one autocorrelation of a linear-response process is
+$\exp(\lambda\,\Delta t)$; the variance channel rises in step
+($\rho = 0.98$). On the Hopf normal form (oscillatory, eigenvalue
+$\alpha \pm i\omega$) the roles reverse: the envelope-growth family
+recovers $\alpha$ in rank and magnitude ($\rho = 0.97$, mean
+$|\sigma - \alpha| = 0.04$, frequency-invariant across 0.2--1.2\,Hz),
+while the autocorrelation family tracks $\alpha$ only in rank (its
+lag-one autocorrelation is pinned near $\cos(\omega\,\Delta t)$). The
+envelope recovery degrades with ringdown SNR ($\rho$ 0.97 $\to$ 0.62),
+a physical floor. Records:
 \path{examples/real_data/csd_bifurcation/csd_bifurcation_external_validation.json},
 \path{examples/real_data/hopf_bridge/hopf_bridge_external_validation.json}.
 
@@ -350,21 +339,19 @@ coordinate of a high-dimensional system. For the noisy Kuramoto model
 incoherent state loses stability at $K_c = 2(\gamma + D)$ with a real
 mean-field eigenvalue $\lambda(K) = (K - K_c)/2$ (Sakaguchi 1988): the
 autocorrelation family recovers $\lambda$ --- but only through the
-signed mean-field component $\mathrm{Re}(Z)$, which fits the magnitude
-with slope 1.19 $\approx$ 1, while the folded amplitude $|Z|$ a
-practitioner usually watches ranks it ($\rho = 0.98$) but cannot size
-it (slope 2.66). For a symmetric bimodal frequency law (Martens et al.\
-2009), the sub-critical eigenvalue is complex
-($\mathrm{Re}(\lambda) = K/4 - \Delta$,
-$\Omega = \sqrt{\omega_0^2 - (K/4)^2}$) and the roles reverse exactly
-as the Hopf bridge predicts: the envelope-growth family on the
-sub-population order parameter $|Z_+|$ recovers $\mathrm{Re}(\lambda)$
-in magnitude ($\rho = 0.99$, slope 0.93; $N = 4000$ ringdown), the
-autocorrelation family is confounded by $\Omega$ (slope 15.8), the
-global $|Z|$ is a standing wave that cannot be fit, and the measured
-oscillation frequency matches the analytic $\Omega$ to $\sim$7\,\%.
-Limits: finite-$N$ ($O(1/\sqrt{N})$), quasi-static or noiseless
-ringdown sweeps, coupling below $K_c$. Records:
+signed mean-field component $\mathrm{Re}(Z)$ (magnitude slope 1.19
+$\approx$ 1); the folded amplitude $|Z|$ ranks it ($\rho = 0.98$) but
+cannot size it (slope 2.66). For a symmetric bimodal frequency law
+(Martens et al.\ 2009) the sub-critical eigenvalue is complex and the
+roles reverse exactly as the Hopf bridge predicts: the envelope-growth
+family on the sub-population order parameter $|Z_+|$ recovers
+$\mathrm{Re}(\lambda)$ in magnitude ($\rho = 0.99$, slope 0.93;
+$N = 4000$ ringdown), the autocorrelation family is confounded by the
+oscillation $\Omega$ (slope 15.8), the global $|Z|$ is a standing wave
+that cannot be fit, and the measured $\Omega$ matches the analytic
+value to $\sim$7\,\%. Limits: finite-$N$ ($O(1/\sqrt{N})$),
+quasi-static or noiseless ringdown sweeps, coupling below $K_c$.
+Records:
 \path{examples/real_data/kuramoto_synchronization/kuramoto_synchronization_external_validation.json},
 \path{examples/real_data/kuramoto_bimodal/kuramoto_bimodal_hopf_external_validation.json}.
 
