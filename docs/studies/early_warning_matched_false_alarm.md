@@ -13,7 +13,7 @@
 
 ## Abstract
 
-Generic early-warning signals (EWS) — the rising variance and lag-one autocorrelation of *critical slowing down*, and related synchronisation and ordinal-entropy indicators — are widely reported to precede abrupt transitions in the brain, the heart, power systems and the climate. Most of that evidence rests on a **retrospective, per-record** test: a rising trend measured over one pre-transition window and compared to surrogates of the *same* record. We ask a different, operational question: **at a fixed false-alarm budget, does an early-warning detector fire on transitions more often than on no-transition controls?** We build one domain-adaptable detector suite and one matched-false-alarm evaluation harness, apply them unchanged (through a per-domain adapter) to four independent labelled corpora — scalp-EEG seizures, cardiac atrial-fibrillation onsets, power-grid growing oscillations, and palaeoclimate abrupt transitions — and score every result with a label-permutation significance test. Across all four domains, **no detector reaches significance** (every best-member p ≥ 0.05): the sparse detection observed is what the matched false-alarm rate produces by chance. Running the canonical literature detector — the Dakos et al. 2008 AR(1)-Kendall-τ trend — through the **same** protocol on the **same** segments confirms it: on its own palaeoclimate records it leads 0 of 6 transitions (p = 1.00), and it beats chance in none of the four domains, though on scalp EEG it is the strongest signal anywhere (3 of 6, p = 0.067). We conclude that the operational bar — matched false alarm plus a significance test — is stricter than the retrospective per-record test the literature uses, that generic EWS *detection* behaves as a commodity at this bar, and that the defensible deliverable is not a lead but the **auditable, hash-sealed, byte-reproducible evidence** — including the sealed silences — that the protocol produces. Extending the same honesty to a **molecular fifth modality** — dynamical-network-biomarker (DNB) early warning of cell-fate and disease transitions, where the statistic is cross-sample rather than sliding-window — reaches the same conclusion: the celebrated single-cell transition index of Mojtahedi et al. 2016 clears a matched operating point on only 1 of 3 leukaemic lineages (permutation p = 0.27), and the canonical GSE2565 phosgene-injury DNB benchmark does **not** beat a *selection-controlled* surrogate null (surrogate-rank p = 0.39) that re-selects the biomarker module on each shuffled surrogate — showing the apparent DNB rise is largely a selection artefact. The same protocol also separates commodity detection from genuine skill. Where a domain carries a *deterministic, detectable* instability signature, a **domain-specific** detector clears the operational bar decisively: on the PSML power grid, a modal envelope-growth detector — the exponential growth rate σ of the most unstable bus's cross-bus voltage deviation, the canonical wide-area-monitoring instability quantity — leads 36 of 90 growing-instability transitions (permutation p = 0.0001) where every generic member is at chance (best 13 of 90, p = 0.18), on the identical non-circular disturbance-type split at a matched false alarm, and a held-out half confirms it (24 of 45, p = 0.0002). A domain-specific detector does not automatically win: a spectral detector on the murky preictal scalp EEG is itself at chance. It is the matched-false-alarm moat that certifies which — commodity where the signature is absent, genuinely skilled where it is present. We state the limitations plainly: the corpora are small (3–90 transitions; the bulk DNB case has one exposed arm), so the tests have low power, and "at chance" bounds the *demonstrated* skill rather than proving early warning impossible.
+Generic early-warning signals (EWS) — the rising variance and lag-one autocorrelation of *critical slowing down*, and related synchronisation and ordinal-entropy indicators — are widely reported to precede abrupt transitions in the brain, the heart, power systems and the climate. Most of that evidence rests on a **retrospective, per-record** test: a rising trend measured over one pre-transition window and compared to surrogates of the *same* record. We ask a different, operational question: **at a fixed false-alarm budget, does an early-warning detector fire on transitions more often than on no-transition controls?** We build one domain-adaptable detector suite and one matched-false-alarm evaluation harness, apply them unchanged (through a per-domain adapter) to four independent labelled corpora — scalp-EEG seizures, cardiac atrial-fibrillation onsets, power-grid growing oscillations, and palaeoclimate abrupt transitions — and score every result with a label-permutation significance test. Across all four domains, **no detector reaches significance** (every best-member p ≥ 0.05): the sparse detection observed is what the matched false-alarm rate produces by chance. Running the canonical literature detector — the Dakos et al. 2008 AR(1)-Kendall-τ trend — through the **same** protocol on the **same** segments confirms it: on its own palaeoclimate records it leads 0 of 6 transitions (p = 1.00), and it beats chance in none of the four domains, though on scalp EEG it is the strongest signal anywhere (3 of 6, p = 0.067). We conclude that the operational bar — matched false alarm plus a significance test — is stricter than the retrospective per-record test the literature uses, that generic EWS *detection* behaves as a commodity at this bar, and that the defensible deliverable is not a lead but the **auditable, hash-sealed, byte-reproducible evidence** — including the sealed silences — that the protocol produces. Extending the same honesty to a **molecular fifth modality** — dynamical-network-biomarker (DNB) early warning of cell-fate and disease transitions, where the statistic is cross-sample rather than sliding-window — reaches the same conclusion: the celebrated single-cell transition index of Mojtahedi et al. 2016 clears a matched operating point on only 1 of 3 leukaemic lineages (permutation p = 0.27), and the canonical GSE2565 phosgene-injury DNB benchmark does **not** beat a *selection-controlled* surrogate null (surrogate-rank p = 0.39) that re-selects the biomarker module on each shuffled surrogate — showing the apparent DNB rise is largely a selection artefact. The same protocol also separates commodity detection from genuine skill. Where a domain carries a *deterministic, detectable* instability signature, a **domain-specific** detector clears the operational bar decisively: on the PSML power grid, a modal envelope-growth detector — the exponential growth rate σ of the most unstable bus's cross-bus voltage deviation, the canonical wide-area-monitoring instability quantity — leads 36 of 90 growing-instability transitions (permutation p = 0.0001) where every generic member is at chance (best 13 of 90, p = 0.18), on the identical non-circular disturbance-type split at a matched false alarm, and a held-out half confirms it (24 of 45, p = 0.0002). Two pre-registered cross-dataset legs (real ISO-NE captures and the WECC 240-bus OSL contest corpus) then show the certified **numeric operating point does not port in either direction** — ~32 % ambient false alarm on ISO-NE, zero crossings anywhere on WECC — so the deployable unit is the frozen shape plus per-system matched-false-alarm calibration, and forced oscillations that switch on effectively instantaneously offer no early-warning window at these record lengths. A domain-specific detector does not automatically win: a spectral detector on the murky preictal scalp EEG is itself at chance. It is the matched-false-alarm moat that certifies which — commodity where the signature is absent, genuinely skilled where it is present. We state the limitations plainly: the corpora are small (3–90 transitions; the bulk DNB case has one exposed arm), so the tests have low power, and "at chance" bounds the *demonstrated* skill rather than proving early warning impossible.
 
 ---
 
@@ -388,6 +388,58 @@ forms (§3.10, §3.11) and the grid (§3.9) do. Honest limits: a noiseless finit
 (the `O(1/√N)` floor bounds the envelope), the oscillatory regime `ω₀ > Δ` only, and coupling
 below `K_c`.
 
+### 3.15 Cross-dataset portability: the operating point does not travel, in either direction
+
+The strong grid result (§3.5–§3.6) is certified on one corpus. The External
+Validation Program's cross-dataset leg (E2.G) asks the deployment question
+directly: does the certified detector — its **shape frozen**, no variant
+search permitted — survive a dataset change? Two independent corpora answer
+it, one real and one synthetic, under protocols pre-registered before the
+first detector run and sealed with every amendment disclosed.
+
+**The frozen numeric operating point does not port — measured in both
+directions.** On three real ISO-NE PMU captures of documented sustained
+oscillations (UTK test-cases library), the PSML per-window threshold
+(1.3203 σ/s, two-second windows) fires on ~32 % of pre-onset ambient
+frequency windows — against the certified 9.09 % — so the certified
+constant is far too *hot* there. On the 13 forced-oscillation cases of the
+2021 IEEE-NASPI OSL contest (WECC 240-bus synthetic PMU, bus-voltage
+observable — the certified observable family), the same frozen threshold
+crosses **nothing**: 0 of 611 pooled ambient windows and 0 transition
+windows — far too *conservative*. A threshold certified on 238 Hz
+fault-transient voltage envelopes is a corpus-specific quantity, which is
+why the product's deployment step calibrates per system on the target
+system's own ambient data and re-seals.
+
+**The frozen shape with local matched-false-alarm calibration is honest
+about what remains.** On ISO-NE (window = five cycles of the documented
+mode, threshold at a matched 10 % false alarm on pooled pre-onset ambient
+windows only), the detector catches 1 of 3 events — the 1.13 Hz regional
+mode, 57.1 s before the estimated onset — with permutation p = 0.332 at
+n = 3: a case study, no significance claim. On WECC, the corpus structure
+itself becomes the finding: with the onset search pinned at the exact
+forcing start (t = 30 s, known by simulation design), 9 of 13 cases are
+already past three times the ambient in-band envelope at the forcing
+start — an effectively **instantaneous onset with no early-warning window
+at all** — and of the 4 cases with a resolvable window the calibrated
+shape leads 2 (+5.4 s, +4.1 s; p = 0.41, not significant). A secondary,
+descriptive branch shows the same operating point *detects* the oscillation
+after onset in 12 of 13 cases with ~1 s median latency — but its count is
+chance-compatible on 60 s regions at a 10 % window false alarm (the
+per-case chance bound is sealed alongside), so it is reported without any
+significance claim.
+
+The two legs close the loop the moat opened: the certified quantity (the
+growth rate σ) and the certified *procedure* (matched-false-alarm
+calibration plus sealed evidence) travel across datasets; the certified
+*number* does not, and forced oscillations that switch on instantaneously
+offer no early-warning window for any detector at these record lengths.
+Both records are hash-sealed and byte-reproducible —
+`examples/real_data/iso_ne_forced_oscillation/` and
+`examples/real_data/wecc_240_osl/` — with pre-registration appendices,
+disclosed protocol amendments, and integrity tests that pin the honest
+headlines, including the negatives.
+
 ## 4. Discussion
 
 **Detection is a commodity; the moat is the evidence.** Across four independent physical domains — and a fifth, molecular one — generic early-warning *detection* at an honest operating point is sparse and, by a permutation or selection-controlled test, at chance. This is not a defect of one suite: the canonical Dakos detector fares no better on its own data, and the celebrated single-cell and bulk DNB benchmarks do not clear a modality-appropriate honest null either. What is *not* a commodity is the auditable, reproducible, claim-bounded envelope the protocol produces — a matched-false-alarm operating point, a permutation p-value, and a hash-sealed `EarlyWarningEvidence` record for every transition, **including the sealed silences**. A positive early-warning claim should be required to clear this operational bar; most published EWS results have only cleared the retrospective per-record one.
@@ -410,6 +462,7 @@ Stated plainly, because they bound the claim:
 - **Parameterisation.** One reasonable choice of window, step, baseline and target false alarm was used per domain; a sweep was not performed.
 - **DNB caveats.** The single-cell index is taken from the published supplement (its bootstrap SE drives the surrogate), not re-derived from the confounded raw qPCR; the bulk case has one exposed arm, so it is a single-transition surrogate test, not a corpus, and its module search is a greedy reimplementation of the DNB selection rather than the authors' exact procedure. These bound the molecular result to "no significance at this resolution / under a selection-controlled null", not a refutation of the DNB method.
 - **Domain-specific operating point.** The grid modal detector's operating point (focal aggregation, recency weighting) was chosen by a variant search on a development half and reported on a held-out half, so the held-out lead count (24/45, p = 0.0002) is the unbiased estimate and the full-corpus count (36/90) is the fitted-model deployment figure; both are sealed. The corpus is one power-system dataset at one sampling rate with two-second windows, so the strong grid result bounds *demonstrated* skill on PSML growing-oscillation transitions, not a universal grid claim. The scalp-EEG spectral counterpoint is one subject (chb01, six seizures), so its at-chance result is low-power like the generic EEG result.
+- **Cross-dataset legs (§3.15).** The ISO-NE corpus is three usable events with a thin pooled-null base (six windows), so its 1-of-3 lead is a case study, not a powered test. The WECC corpus is synthetic (TSAT time-domain simulation, not field PMU), its records are 90 s, and its forced oscillations mostly switch on effectively instantaneously — so its early-warning null result partly reflects the corpus structure (no pre-onset growth to detect) rather than detector skill alone; the detection branch is descriptive because a 10 % window false alarm on 60 s regions alarms by chance with high probability, a units mismatch the sealed record discloses explicitly.
 
 ## 6. Reproduction
 
@@ -425,6 +478,8 @@ python bench/head_to_head_ar1_kendall.py OUT \
 python -m bench.early_warning_dnb          OUT               # single-cell DNB (embedded summary)
 python -m bench.early_warning_dnb_bulk     DATA OUT          # bulk GSE2565 DNB
 python -m bench.grid_modal_head_to_head    PSML OUT          # grid modal vs generic head-to-head
+python -m bench.early_warning_leadtime_isone --data-dir ISONE --output OUT  # E2.G real ISO-NE leg
+python -m bench.early_warning_leadtime_wecc  --data-dir WECC  --output OUT  # E2.G WECC 240-bus leg
 ```
 
 The single-cell DNB capstone reads only the embedded published summary, so it needs no external data; the bulk capstone reads the citation-only GSE2565 files; the grid modal head-to-head reads the citation-only PSML scenarios. The sealed evidence, aggregate results (with the permutation block), the head-to-head comparisons, and the sealed grid modal-vs-generic result (`examples/real_data/psml_modal_growth/`) are committed under `examples/real_data/`. A fresh run reproduces every `content_hash` bit-for-bit; the integrity tests recompute each sealed hash from the committed payload alone.
@@ -439,6 +494,8 @@ Raw corpora are public and cited, not redistributed:
 - Dakos et al. 2008 palaeoclimate records — <https://github.com/earlywarningtoolbox/datasets>.
 - Mojtahedi et al. 2016 single-cell transition index — Table S2 of the paper (index + bootstrap SE per lineage per day).
 - GSE2565 phosgene lung-injury expression — <https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE2565>.
+- ISO-NE sustained-oscillation PMU captures — UTK oscillation test-cases library, <https://web.eecs.utk.edu/~kaisun/Oscillation/actualcases.html> (Maslennikov et al. 2016).
+- WECC 240-bus forced-oscillation cases — 2021 IEEE-NASPI OSL contest via the same library, <https://web.eecs.utk.edu/~kaisun/Oscillation/contestcases.html> (NREL reduced 240-bus model; credit DOE/NREL/Alliance).
 
 ## References
 
