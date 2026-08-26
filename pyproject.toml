@@ -134,10 +134,11 @@ dev = [
     "mistune>=3.3.0",  # security floor: < 3.3.0 carries GHSA advisories (dev/docs only)
     "mkdocs-material>=9.5,<10.0",
     "mkdocstrings[python]>=0.24,<2.0",
-    "pymdown-extensions>=11.0.0,<12.0",  # CVE-2026-61632 fixed in 11.0.0
+    "pymdown-extensions>=11.0.1,<12.0",  # security floors: CVE-2026-61632 + GHSA 2026-08-18 fixed in 11.0.1
     "pygments>=2.20,<2.21",
     "pre-commit>=3.5,<5.0",
     "twine>=6.2,<7.0",
+    "cryptography>=50,<51",  # security floor (dev transitive via twine -> keyring -> SecretStorage)
     "pytest-benchmark>=5.0,<6.0",
     "msgpack>=1.2.1",  # security floor (dev/test transitive)
 ]

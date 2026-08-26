@@ -20,10 +20,11 @@ bandit==1.9.4
 mistune>=3.3.0
 mkdocs-material>=9.5,<10.0
 mkdocstrings[python]>=0.24,<2.0
-pymdown-extensions>=11.0.0,<12.0
+pymdown-extensions>=11.0.1,<12.0
 pygments>=2.20,<2.21
 pre-commit>=3.5,<5.0
 twine>=6.2,<7.0
+cryptography>=50,<51
 pytest-benchmark>=5.0,<6.0
 msgpack>=1.2.1
 # Legacy Julia convenience retained outside the canonical dev extra.
