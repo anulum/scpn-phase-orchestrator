@@ -7,14 +7,14 @@
 
 # arXiv submission package — the matched-false-alarm study
 
-`main.tex` is the arXiv manuscript of
+`01_early_warning_matched_false_alarm.tex` is the arXiv manuscript of
 `docs/studies/early_warning_matched_false_alarm.md` (the canonical text;
 the two must stay in sync — regenerate this manuscript when the study
 changes). Every number binds to the hash-sealed artefacts under
 `examples/real_data/`; the manuscript adds no claim the sealed records do
 not carry.
 
-Build: `pdflatex main.tex` twice (plain TeX Live, no external packages
+Build: `pdflatex 01_early_warning_matched_false_alarm.tex` twice (plain TeX Live, no external packages
 beyond the standard set; 17 pages letter).
 
 ## Proposed metadata (OWNER approves before submission)
@@ -66,10 +66,10 @@ beyond the standard set; 17 pages letter).
 
 ## Submission checklist (submission itself is OWNER-GATED)
 
-1. Owner reviews `main.pdf` (build locally; the PDF is not committed).
+1. Owner reviews the built PDF (build locally; the PDF is not committed).
 2. Owner approves metadata above (title / categories / license /
    abstract / comments).
-3. Upload `main.tex` as the source (arXiv compiles it; no figures, no
+3. Upload `01_early_warning_matched_false_alarm.tex` as the source (arXiv compiles it; no figures, no
    .bbl needed — the bibliography is inline).
 4. First-time `physics.data-an` submissions may require endorsement —
    arXiv states it during submission if so.
