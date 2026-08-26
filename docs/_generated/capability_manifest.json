@@ -8,11 +8,11 @@
     "optional_extras": 23,
     "public_api_exports": 24,
     "public_documentation_pages": 230,
-    "python_package_modules": 726,
+    "python_package_modules": 727,
     "research_experimental_modules": 205,
-    "runtime_serving_modules": 157,
+    "runtime_serving_modules": 158,
     "rust_kernel_files": 97,
-    "test_files": 872
+    "test_files": 873
   },
   "documentation": {
     "public_pages": [
@@ -1058,6 +1058,7 @@
       "src/scpn_phase_orchestrator/runtime/grpc_gen/spo_pb2.py",
       "src/scpn_phase_orchestrator/runtime/grpc_gen/spo_pb2_grpc.py",
       "src/scpn_phase_orchestrator/runtime/ibr_ride_through.py",
+      "src/scpn_phase_orchestrator/runtime/modal_sentinel.py",
       "src/scpn_phase_orchestrator/runtime/network_security.py",
       "src/scpn_phase_orchestrator/runtime/observability.py",
       "src/scpn_phase_orchestrator/runtime/pmu_ieee_adapter.py",
@@ -1646,6 +1647,7 @@
     "src/scpn_phase_orchestrator/runtime/grpc_gen/spo_pb2.py",
     "src/scpn_phase_orchestrator/runtime/grpc_gen/spo_pb2_grpc.py",
     "src/scpn_phase_orchestrator/runtime/ibr_ride_through.py",
+    "src/scpn_phase_orchestrator/runtime/modal_sentinel.py",
     "src/scpn_phase_orchestrator/runtime/network_security.py",
     "src/scpn_phase_orchestrator/runtime/observability.py",
     "src/scpn_phase_orchestrator/runtime/pmu_ieee_adapter.py",
@@ -2509,6 +2511,7 @@
       "tests/test_rotating_machinery_domainpack.py",
       "tests/test_roundtrip_consistency.py",
       "tests/test_rule_engine_parity.py",
+      "tests/test_runtime_modal_sentinel.py",
       "tests/test_runtime_observability.py",
       "tests/test_runtime_observability_contracts.py",
       "tests/test_runtime_server_grpc_contract.py",

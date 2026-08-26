@@ -42,3 +42,16 @@ because a damped fault has a transient growth window the continuous monitor also
 is measured and sealed in `examples/real_data/psml_modal_growth/`.
 
 ::: scpn_phase_orchestrator.monitor.grid_modal_stream
+
+## Modal Sentinel
+
+`ModalSentinel` is the bridge-agnostic live wiring for the stream monitor: any
+runtime bridge that yields one mapping of channel name to a real reading per
+frame plugs in, the operating point is read only from a sealed evidence
+artefact (verified before any value is trusted; a tampered artefact is
+rejected), and every alarm is sealed into a hash-addressed, review-only record
+carrying the operating-point provenance. Frames are fail-closed: a missing
+channel, an unknown channel, or a non-finite reading rejects the frame
+explicitly rather than silently degrading the monitored vector.
+
+::: scpn_phase_orchestrator.runtime.modal_sentinel
