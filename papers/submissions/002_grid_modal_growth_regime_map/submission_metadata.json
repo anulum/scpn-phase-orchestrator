@@ -8,7 +8,7 @@
       "orcid": "0009-0009-3560-0851"
     }
   ],
-  "status": "preprint published",
+  "status": "preprint published; under review",
   "preprint": {
     "venue": "Zenodo",
     "doi": "10.5281/zenodo.22113116",
@@ -25,5 +25,12 @@
   ],
   "companion": "001_generic_early_warning_at_chance (doi:10.5281/zenodo.22113062)",
   "evidence_binding": "all quantitative claims bind to hash-sealed artefacts under examples/real_data/ in this repository",
-  "journal_submission": "none yet; requires explicit owner authority"
+  "journal_submission": {
+    "venue": "IEEE Transactions on Power Systems",
+    "portal": "IEEE Author Portal (Research Exchange), site tpwrs-pes",
+    "manuscript_id": "pending editorial confirmation e-mail",
+    "submitted": "2026-08-26",
+    "submitted_by": "owner (final submit click); agent prepared the submission",
+    "format": "IEEEtran journal two-column, 5 pages (limit 10), traditional (non-OA) route — no fee"
+  }
 }
