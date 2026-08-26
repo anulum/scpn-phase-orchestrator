@@ -285,6 +285,7 @@ nav:
       - "Early-Warning: Honest False-Alarm Evaluation": studies/early_warning_matched_false_alarm.md
       - "Live Demo: Grid Sentinel Replay": validation/grid_sentinel_replay_demo.md
       - "Live Demo: Modal Head-to-Head": validation/grid_modal_head_to_head_demo.md
+      - "Live Demo: The Honest Test": validation/honest_test_demo.md
       - "Real-Data Case Study: ISO-NE Forced Oscillation": validation/iso_ne_case1_forced_oscillation.md
       - "Real-Data Case Study: Sleep-EDF N3 vs Wake": studies/sleep_staging_sleepedf.md
       - "Real-Data Case Study: CAP Multi-Channel N3 vs Wake": studies/cap_multichannel_n3_vs_wake.md
