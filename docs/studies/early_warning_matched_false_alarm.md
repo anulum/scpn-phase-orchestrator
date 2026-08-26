@@ -497,6 +497,22 @@ Raw corpora are public and cited, not redistributed:
 - ISO-NE sustained-oscillation PMU captures — UTK oscillation test-cases library, <https://web.eecs.utk.edu/~kaisun/Oscillation/actualcases.html> (Maslennikov et al. 2016).
 - WECC 240-bus forced-oscillation cases — 2021 IEEE-NASPI OSL contest via the same library, <https://web.eecs.utk.edu/~kaisun/Oscillation/contestcases.html> (NREL reduced 240-bus model; credit DOE/NREL/Alliance).
 
+## Preprints of record
+
+The study is split into two published preprints (the canonical citable
+forms of this work):
+
+- Šotek M. *Generic early-warning signals are at chance under a matched
+  false-alarm protocol across brain, heart, grid, climate and molecular
+  data.* Zenodo preprint (2026). DOI:
+  [10.5281/zenodo.22113062](https://doi.org/10.5281/zenodo.22113062).
+- Šotek M. *A domain-specific modal-growth detector clears a matched
+  false-alarm bar on power-grid instability, and an eigenvalue regime
+  map shows when its form transfers.* Zenodo preprint (2026). DOI:
+  [10.5281/zenodo.22113116](https://doi.org/10.5281/zenodo.22113116).
+
+Manuscript sources: `papers/submissions/`.
+
 ## References
 
 - Scheffer M, Bascompte J, Brock WA, et al. Early-warning signals for critical transitions. *Nature* 461:53 (2009).
