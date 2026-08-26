@@ -23,12 +23,12 @@ from typing import Any
 import numpy as np
 import pytest
 
+from scpn_phase_orchestrator.assurance._hashing import canonical_record_hash
+from scpn_phase_orchestrator.monitor.grid_modal_stream import GridModalStreamMonitor
 from scpn_phase_orchestrator.runtime.modal_sentinel import (
     ModalSentinel,
     load_verified_evidence,
 )
-from scpn_phase_orchestrator.assurance._hashing import canonical_record_hash
-from scpn_phase_orchestrator.monitor.grid_modal_stream import GridModalStreamMonitor
 
 CASE = "ISO-NE_case1"
 RATE_HZ = 30.0
