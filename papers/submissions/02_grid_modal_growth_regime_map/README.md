@@ -18,7 +18,7 @@ twice (PDF not committed).
 - **Title:** A domain-specific modal-growth detector clears a matched
   false-alarm bar on power-grid instability, and an eigenvalue regime
   map shows when its form transfers
-- **Authors:** Miroslav Šotek (ANULUM / Fortis Studio)
+- **Authors:** Miroslav Šotek (Anulum Institute)
 - **Primary category:** `eess.SY`
 - **Cross-lists (proposal):** `physics.data-an`, `nlin.AO` (Kuramoto
   collective-coordinate results)

@@ -26,7 +26,7 @@
 false-alarm bar on power-grid instability, and an eigenvalue regime map
 shows when its form transfers}
 \author{Miroslav \v{S}otek\\
-  ANULUM / Fortis Studio\\
+  Anulum Institute\\
   ORCID 0009-0009-3560-0851 \quad \href{mailto:protoscience@anulum.li}{protoscience@anulum.li}}
 \date{August 2026}
 
@@ -241,37 +241,33 @@ conclusions are scoped to these corpora.
 
 \textbf{The certified numeric threshold did not transfer on either
 corpus.} On three real ISO-NE PMU captures of documented sustained
-oscillations (UTK test-cases library), the frozen PSML per-window
-threshold ($1.3203\,\sigma/\mathrm{s}$, two-second windows) fires on
+oscillations (UTK test-cases library), the frozen PSML threshold
+($1.3203\,\sigma/\mathrm{s}$, two-second windows) fires on
 $\sim$32\,\% of pre-onset ambient windows against the certified
-9.09\,\% --- too permissive there. On the 13 synthetic WECC 240-bus
-forced-oscillation cases of the 2021 IEEE-NASPI Oscillation Source
-Location contest (bus-voltage observable, the certified observable
-family), the same threshold crosses nothing --- 0 of 611 pooled ambient
-windows and 0 transition windows --- too conservative there. A
-threshold certified on 238\,Hz fault-transient envelopes behaved as a
-corpus-specific quantity on both corpora tested; the deployment
-procedure therefore calibrates per system on the target system's own
-ambient data and re-seals.
+9.09\,\%. On the 13 synthetic WECC 240-bus forced-oscillation cases of
+the 2021 IEEE-NASPI contest (bus-voltage observable, the certified
+observable family), the same threshold crosses nothing: 0 of 611 pooled
+ambient windows and 0 transition windows. On both corpora tested, the
+certified threshold behaved as a corpus-specific quantity; deployment
+therefore calibrates per system on the target system's own ambient data
+and re-seals.
 
 \textbf{The frozen shape with local calibration, stated
 conservatively.} On ISO-NE (window scaled to five cycles of the
 documented mode, threshold at a matched 10\,\% false alarm on pooled
-pre-onset ambient windows), the detector catches 1 of 3 events --- the
-1.13\,Hz regional mode, 57.1\,s before the estimated onset ---
-permutation $p = 0.332$ at $n = 3$: a case study, no significance
-claim. On WECC, the corpus structure dominates: with the onset search
-pinned at the exact forcing start ($t = 30$\,s, known by simulation
-design), 9 of 13 cases are already past three times the ambient in-band
-envelope at the forcing start --- an effectively instantaneous onset
-with no early-warning window for any detector at these 90\,s record
-lengths --- and of the 4 cases with a resolvable window the locally
+pre-onset ambient windows), the detector catches 1 of 3 events, the
+1.13\,Hz regional mode, 57.1\,s before the estimated onset
+($p = 0.332$ at $n = 3$): a case study, no significance claim. On WECC
+the corpus structure dominates: 9 of 13 cases are already past three
+times the ambient in-band envelope at the exact forcing start
+($t = 30$\,s, known by simulation design) --- an effectively
+instantaneous onset with no early-warning window for any detector at
+these 90\,s records --- and of the 4 resolvable cases the locally
 calibrated shape leads 2 ($+5.4$\,s, $+4.1$\,s; $p = 0.41$, not
-significant). A secondary branch of the sealed record reports
-post-onset detection descriptively (12 of 13 cases, median latency
-$\sim$1\,s) together with an explicit per-case chance bound showing the
-detection count is chance-compatible at this false-alarm budget on
-60\,s regions; no significance is claimed for it. Records:
+significant). A secondary branch reports post-onset detection
+descriptively (12 of 13, median latency $\sim$1\,s) with an explicit
+per-case chance bound showing the count is chance-compatible at this
+budget on 60\,s regions; no significance is claimed. Records:
 \path{examples/real_data/iso_ne_forced_oscillation/} and
 \path{examples/real_data/wecc_240_osl/}.
 
@@ -279,27 +275,24 @@ detection count is chance-compatible at this false-alarm budget on
 
 \textbf{Scalp EEG: a model mismatch.} Scoring the same a-priori
 beta/delta band-power trajectory by the exponential growth rate of its
-envelope --- with the identical focal aggregation, recency weighting
-and $R^2$ gate --- leads 0 of 6 preictal segments ($p = 1.00$) in both
-aggregations, below the rank trend's 1 of 6; the fit-quality gate,
-built to reject non-exponential fault transients, rejects the preictal
-signal too. A robustness grid over window length, recency weighting and
-gate leaves the score at 0 of 6 at every setting, so this is a model
-mismatch, not a parameter artefact: the grid statistic presupposes a
-linear instability's eigenvalue, and the preictal band-power rise, if
-present, is a slow non-exponential drift. (A shorter 600\,s horizon
-surfaces a spectral rank-trend lead of 3 of 6, $p = 0.04$; with one
-subject and a single-horizon forking path it is disclosed in the sealed
-record as exploratory and not claimed.) Record:
+envelope --- identical focal aggregation, recency weighting and $R^2$
+gate --- leads 0 of 6 preictal segments ($p = 1.00$) in both
+aggregations, below the rank trend's 1 of 6; the gate, built to reject
+non-exponential fault transients, rejects the preictal signal too. A
+robustness grid over window length, recency and gate stays at 0 of 6 at
+every setting: a model mismatch, not a parameter artefact --- the
+statistic presupposes a linear instability's eigenvalue, and the
+preictal rise, if present, is a slow non-exponential drift. (A 600\,s
+horizon surfaces a rank-trend lead of 3 of 6, $p = 0.04$; one subject,
+one forking path --- disclosed as exploratory, not claimed.) Record:
 \path{examples/real_data/chb01_seizures/seizure_modal_transfer.json}.
 
 \textbf{Few-timepoint molecular indices: a resolution limit.} On the
 dynamical-network-biomarker rising limbs (three points single-cell,
-four points bulk), the discriminating machinery has no purchase: every
-monotone rise fits an exponential well enough ($R^2 = 0.67$--$0.86$) to
-pass the gate, and the growth rate re-orders the lineages exactly as
-the existing linear slope does. The transfer collapses to the detector
-DNB already uses, so the form cannot even be posed. Record:
+four points bulk), every monotone rise fits an exponential well enough
+($R^2 = 0.67$--$0.86$) to pass the gate, and the growth rate re-orders
+the lineages exactly as the existing linear slope does: the transfer
+collapses to the detector DNB already uses. Record:
 \path{examples/real_data/mojtahedi_fate/dnb_modal_transfer.json}.
 
 Together these bound the transfer: the form needs both a genuine
@@ -314,18 +307,16 @@ On the IEEE 39-bus New England system and the Kundur two-area system
 (open-source ANDES simulator; Cui et al.\ 2021), we sweep the operating
 point, take the dominant electromechanical mode's growth rate $\sigma$
 from small-signal eigenvalue analysis --- an independent method --- and
-score a ringdown from a small disturbance at each point. The detector's
+score a ringdown from a small disturbance at each point. The
 \emph{coherent} aggregation (cross-bus mean or dominant spatial mode)
 recovers the true $\sigma$ trend on both systems (Spearman
-$\rho = 0.87$ on IEEE-39, 0.60--0.66 on Kundur). The \emph{focal}
-aggregation --- the PSML winner --- does not transfer here
-($\rho = -0.59$ and $-0.27$): on a slow coherent inter-area mode the
-per-bus maximum locks onto local excursions. The growth-rate quantity
-generalises; the best aggregation is regime-dependent (focal for fast
-localised oscillations, coherent for slow inter-area modes). Limits: a
-simulated ground truth, stable operating points only (a damping-ranking
-test, not a stable-versus-unstable classification), fourteen points per
-system. Record:
+$\rho = 0.87$ on IEEE-39, 0.60--0.66 on Kundur); the \emph{focal}
+aggregation --- the PSML winner --- does not ($\rho = -0.59$, $-0.27$):
+on a slow coherent inter-area mode the per-bus maximum locks onto local
+excursions. The quantity generalises; the best aggregation is
+regime-dependent. Limits: simulated ground truth, stable operating
+points only (a damping-ranking test), fourteen points per system.
+Record:
 \path{examples/real_data/grid_external_validation/grid_eigenvalue_external_validation.json}.
 
 \subsection{Analytic normal forms: fold, pitchfork, Hopf}\label{sec:normalforms}
@@ -408,26 +399,30 @@ oscillates; the estimated quantity is the same eigenvalue throughout.
 
 \section{Discussion}\label{sec:discussion}
 
-The grid result shows that a detector reading a deterministic,
-directly-measurable instability quantity can clear an operational
-evaluation bar that generic early-warning detectors do not clear ---
-and the counterpoint shows domain specificity alone is not sufficient:
-the same idea on a domain without such a signature stays at chance. The
-stress tests bound the claim in deployment-relevant ways: the streaming
-recalibration replaces the flattering per-window figure with an honest
+The regime map of Table~\ref{tab:regimemap} is the paper's main
+theoretical output. Across five independent ground truths --- a power
+system simulator's small-signal analysis, three analytic normal forms,
+and two mean-field Kuramoto reductions --- the quantity the detector
+estimates is the eigenvalue's real part, and which estimator recovers
+its magnitude is set mechanically by whether the mode oscillates: the
+envelope-growth family on oscillatory modes, the autocorrelation family
+on non-oscillatory ones, and on collective coordinates the signed mean
+field rather than the folded order-parameter amplitude. This turns the
+empirical grid result into a claim about a named first-principles
+quantity with a stated domain of applicability.
+
+The empirical results bound that claim in deployment-relevant ways. A
+detector reading the instability quantity directly clears an
+operational bar that generic detectors do not, while the counterpoint
+shows domain specificity alone is not sufficient --- the same idea on a
+domain without the signature stays at chance. The streaming
+recalibration replaces the per-window figure with an honest
 $\sim$24\,\% held-out recall at a held false alarm; the two
 cross-dataset corpora show the certified numeric threshold behaving as
 corpus-specific in both directions, leaving the frozen shape plus
 per-system calibration as the transferable unit; and the transfer
 boundaries on EEG and molecular data delimit where the exponential
-form applies at all. The external validations tie the detector to a
-named first-principles quantity --- the eigenvalue's real part ---
-confirmed against a simulator's small-signal analysis, three analytic
-normal forms, and two mean-field Kuramoto reductions, yielding one
-operational rule: use the envelope-growth family on oscillatory modes
-and the autocorrelation family on non-oscillatory ones, and on
-collective coordinates read the signed mean field rather than the
-folded order-parameter amplitude.
+form applies at all.
 
 \section{Limitations}\label{sec:limitations}
 

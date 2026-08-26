@@ -19,7 +19,7 @@ build with `pdflatex` twice (PDF not committed).
 - **Title:** Generic early-warning signals are at chance under a matched
   false-alarm protocol across brain, heart, grid, climate and molecular
   data
-- **Authors:** Miroslav Šotek (ANULUM / Fortis Studio)
+- **Authors:** Miroslav Šotek (Anulum Institute)
 - **Primary category:** `physics.data-an`
 - **Cross-lists (proposal):** `stat.ME` (the evaluation protocol),
   `q-bio.QM` (the DNB modality)
