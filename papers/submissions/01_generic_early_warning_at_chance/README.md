@@ -74,3 +74,22 @@ build with `pdflatex` twice (PDF not committed).
 
 `cover_letter.txt` is the journal cover letter draft ([Journal Name]
 placeholder; single-author wording).
+
+## Submission state (2026-08-26)
+
+- arXiv submission **7997231** created and saved (resume at
+  arxiv.org/user): contact certified, submission agreement accepted,
+  author declaration set, license = arXiv non-exclusive, primary
+  category = physics.data-an. Continue blocked by ENDORSEMENT.
+- Endorsement code for physics.data-an: **BBQGZP** (also emailed to the
+  account address). A qualified endorser = an arXiv author with >=2
+  physics.data-an submissions between 3 months and 5 years old; on any
+  related paper's abstract page the link "Which of the authors of this
+  article can endorse?" identifies qualified endorsers. Owner forwards
+  the endorsement email/code to a chosen endorser; once endorsed, the
+  submission resumes at Add Files (upload the single .tex).
+
+## PUBLISHED PREPRINT
+
+**DOI: [10.5281/zenodo.22113062](https://doi.org/10.5281/zenodo.22113062)**
+(Zenodo, CC-BY 4.0, published 2026-08-26; PDF md5 28f7c9000563cd3788c2d4ce06f06ff2).

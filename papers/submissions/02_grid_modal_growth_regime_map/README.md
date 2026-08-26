@@ -75,3 +75,9 @@ twice (PDF not committed).
 
 `cover_letter.txt` is the journal cover letter draft ([Journal Name]
 placeholder; single-author wording).
+
+## PUBLISHED PREPRINT
+
+**DOI: [10.5281/zenodo.22113116](https://doi.org/10.5281/zenodo.22113116)**
+(Zenodo, CC-BY 4.0, published 2026-08-26; PDF md5 6027788713f79ee72b8079d8a4190605;
+companion links doi:10.5281/zenodo.22113062).

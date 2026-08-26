@@ -14,10 +14,16 @@ split after external review; review + triage in
 `docs/internal/reviews/`) lives in git history at commit `3b176559`
 (`papers/submissions/01_early_warning_matched_false_alarm/`).
 
-| # | Manuscript | Story | Target |
-|---|------------|-------|--------|
-| 01 | `01_generic_early_warning_at_chance` | operational matched-FA protocol; generic EWS + Dakos + DNB at chance | arXiv `physics.data-an` |
-| 02 | `02_grid_modal_growth_regime_map` | grid modal-growth detector clears the bar; streaming/cross-dataset bounds; eigenvalue regime map | arXiv `eess.SY` |
+| # | Manuscript | Story | Preprint DOI |
+|---|------------|-------|--------------|
+| 01 | `01_generic_early_warning_at_chance` | operational matched-FA protocol; generic EWS + Dakos + DNB at chance | [10.5281/zenodo.22113062](https://doi.org/10.5281/zenodo.22113062) |
+| 02 | `02_grid_modal_growth_regime_map` | grid modal-growth detector clears the bar; streaming/cross-dataset bounds; eigenvalue regime map | [10.5281/zenodo.22113116](https://doi.org/10.5281/zenodo.22113116) |
+
+**PUBLISHED 2026-08-26 as Zenodo preprints (CC-BY 4.0, DataCite DOIs).**
+The arXiv route stalled on the endorsement gate (submission 7997231
+parked with code BBQGZP; resumable if an endorser appears — DIII-D
+collaboration contacts are candidates). Journal submission needs no
+preprint and proceeds independently per the venue shortlists.
 
 Each directory's README carries the proposed metadata and the
 submission checklist. Submit 01 first (02 cites it as the companion);
