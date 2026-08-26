@@ -99,7 +99,7 @@ jobs:
       - name: Upload wheel
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: wheel-${{ matrix.os }}-${{ matrix.target }}
+          name: kernel-wheel-${{ matrix.os }}-${{ matrix.target }}
           path: dist/*.whl
 
   build-sdist:
@@ -245,5 +245,41 @@ jobs:
           DIGEST: ${{ steps.push.outputs.digest }}
         run: cosign sign --yes "ghcr.io/anulum/scpn-phase-orchestrator@${DIGEST}"
 
-  # spo-kernel Rust wheels are built and verified but published separately.
-  # The spo-kernel package has its own trusted publisher configuration.
+  build-kernel-sdist:
+    name: Build spo-kernel sdist
+    needs: preflight
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Build sdist via maturin
+        uses: PyO3/maturin-action@e83996d129638aa358a18fbd1dfb82f0b0fb5d3b # v1.51.0
+        with:
+          command: sdist
+          args: -m spo-kernel/crates/spo-ffi/Cargo.toml --out dist
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: kernel-sdist
+          path: dist/*.tar.gz
+
+  publish-spo-kernel:
+    name: Publish spo-kernel to PyPI
+    needs: [preflight, build-wheels, build-kernel-sdist]
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi-spo-kernel
+      url: https://pypi.org/p/spo-kernel
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          pattern: kernel-wheel-*
+          merge-multiple: true
+          path: dist/
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: kernel-sdist
+          path: dist/
+      # skip-existing: the kernel keeps its own version; a main-package tag
+      # that does not bump spo-kernel must not fail on the duplicate upload.
+      - uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
+        with:
+          skip-existing: true
