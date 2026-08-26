@@ -25,6 +25,7 @@ actuation, or make safety-critical decisions by itself.
 
 from __future__ import annotations
 
+import warnings
 from dataclasses import dataclass
 from math import isfinite
 from numbers import Real
@@ -168,7 +169,25 @@ class TopologicalIntegrationObserver:
     def _observe_ripser(self) -> TopologicalIntegrationState:
         """Return the Ripser persistence observation, if available."""
         cloud = self._delay_embed()
-        result = _ripser(cloud, maxdim=1)
+        # The embedding is a point cloud with rows = delay vectors, so ripser's
+        # two shape heuristics (columns > rows for short windows over many
+        # channels; an incidentally square cloud mistaken for a distance
+        # matrix) do not apply — the orientation is intended.
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message="The input point cloud has more columns than rows",
+                category=UserWarning,
+                module="ripser.ripser",
+            )
+            warnings.filterwarnings(
+                "ignore",
+                message="The input matrix is square, but the distance_matrix "
+                "flag is off",
+                category=UserWarning,
+                module="ripser.ripser",
+            )
+            result = _ripser(cloud, maxdim=1)
         h1 = result["dgms"][1]
         if len(h1) == 0:
             return TopologicalIntegrationState(

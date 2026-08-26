@@ -74,7 +74,10 @@ def _solve_qp_osqp(
         max_iter=max_iter,
         verbose=False,
     )
-    result = problem.solve()
+    # raise_error pinned: the QPSolution contract reports non-convergence via
+    # ``converged`` instead of an exception, and osqp>=1.1 warns that the
+    # default will flip to True.
+    result = problem.solve(raise_error=False)
     x = np.ascontiguousarray(np.asarray(result.x, dtype=np.float64))
     hessian = np.asarray(objective_matrix, dtype=np.float64)
     linear = np.asarray(objective_vector, dtype=np.float64)
