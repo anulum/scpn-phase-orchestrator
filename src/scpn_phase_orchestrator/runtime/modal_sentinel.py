@@ -63,11 +63,13 @@ def load_verified_evidence(evidence_path: str | Path) -> dict[str, object]:
     Raises
     ------
     ValueError
-        If the payload carries no ``content_hash`` or the hash does not
-        recompute from the record — a tampered artefact must never configure a
-        live sentinel.
+        If the payload is not a JSON object, carries no ``content_hash``, or
+        the hash does not recompute from the record — a tampered artefact
+        must never configure a live sentinel.
     """
     payload = json.loads(Path(evidence_path).read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError("evidence must be a JSON object; refusing to trust it")
     record = copy.deepcopy(payload)
     sealed = record.pop("content_hash", None)
     if not isinstance(sealed, str):
@@ -77,7 +79,7 @@ def load_verified_evidence(evidence_path: str | Path) -> dict[str, object]:
             "evidence content_hash does not recompute from the record; "
             "refusing to configure a live sentinel from a tampered artefact"
         )
-    return payload  # type: ignore[no-any-return]
+    return payload
 
 
 @dataclass

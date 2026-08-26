@@ -111,6 +111,12 @@ class TestLoadVerifiedEvidence:
         with pytest.raises(ValueError, match="no content_hash"):
             load_verified_evidence(path)
 
+    def test_rejects_non_object_payload(self, tmp_path: Path) -> None:
+        path = tmp_path / "array.json"
+        path.write_text('["not", "an", "object"]\n', encoding="utf-8")
+        with pytest.raises(ValueError, match="JSON object"):
+            load_verified_evidence(path)
+
     def test_rejects_tampered_record(self, tmp_path: Path) -> None:
         path = _sealed_evidence(tmp_path / "tampered.json", tamper=True)
         with pytest.raises(ValueError, match="tampered"):
