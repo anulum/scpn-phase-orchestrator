@@ -4,11 +4,11 @@
 # © Code 2020–2026 Miroslav Šotek. All rights reserved.
 # ORCID: 0009-0009-3560-0851
 # Contact: www.anulum.li | protoscience@anulum.li
-# SCPN Phase Orchestrator — committed ISO-NE E2.G evidence tests
+# SCPN Phase Orchestrator — committed ISO-NE cross-dataset evidence tests
 
-"""Integrity tests for the committed ISO-NE E2.G cross-dataset evidence.
+"""Integrity tests for the committed ISO-NE cross-dataset evidence.
 
-`examples/real_data/iso_ne_forced_oscillation/` seals the E2.G portability test
+`examples/real_data/iso_ne_forced_oscillation/` seals the cross-dataset portability test
 of the PSML-certified modal-growth detector on real ISO-NE captures. These
 tests guard the committed derived artefact without the citation-only raw data:
 they recompute the content hash to prove the record was not hand-edited, pin
@@ -41,7 +41,7 @@ _DIR = (
 )
 
 #: Raw-source digests; case 1 is the SAME bytes the E1 artefact sealed in July
-#: 2026 (`examples/real_data/iso_ne_case1/README.md`), chaining the two legs.
+#: 2026 (`examples/real_data/iso_ne_case1/README.md`), chaining the two acquisitions.
 _SOURCE_SHA256 = {
     "ISO-NE_case1": (
         "ca5001bb64cfecced20ea71a6a007a5db8ad96acdcfa13cb021358f0f2575de0"
@@ -54,7 +54,7 @@ _SOURCE_SHA256 = {
     ),
 }
 
-_CONTENT_HASH = "66edc9e10e81b2a51d2fedf87d5e12f6175810b0b083559a761481342c1f51ba"
+_CONTENT_HASH = "fd6285fc341a5884aab0d806e54a912c90eec1024e95ee269f71b0db4bd461b7"
 
 
 @pytest.fixture(scope="module")
@@ -88,13 +88,21 @@ def test_source_digests_chain_to_the_raw_captures(payload: dict[str, Any]) -> No
         assert transitions[case]["source_sha256"] == digest
 
 
+def test_descriptive_schema_replaces_the_stale_program_field(
+    payload: dict[str, Any],
+) -> None:
+    """The stale coded contract is rejected exactly (no 'program' key)."""
+    assert payload["evaluation"] == "cross-dataset generalisation"
+    assert "program" not in payload
+
+
 def test_exclusions_are_sealed(payload: dict[str, Any]) -> None:
     """The pre-registered corpus exclusions are part of the sealed record."""
     assert payload["corpus"]["excluded"] == EXCLUDED_CASES
 
 
 def test_frozen_transfer_headline_is_honest(payload: dict[str, Any]) -> None:
-    """G-a seals the non-portability: ambient FA far above the certified rate."""
+    """Frozen transfer seals non-portability: ambient FA above certified."""
     by_case = {entry["case"]: entry for entry in payload["frozen_transfer"]}
     assert by_case["ISO-NE_case2"]["threshold"] == FROZEN_PSML_THRESHOLD
     assert by_case["ISO-NE_case2"]["n_null"] == 219
@@ -104,7 +112,7 @@ def test_frozen_transfer_headline_is_honest(payload: dict[str, Any]) -> None:
 
 
 def test_local_calibration_headline_is_honest(payload: dict[str, Any]) -> None:
-    """G-b seals one led event, a positive lead, held FA, and p above 0.05."""
+    """Local calibration seals one led event, held FA, and p above 0.05."""
     calibration = payload["local_calibration"]
     assert calibration["led"] == [False, False, True]
     leads = calibration["lead_seconds"]

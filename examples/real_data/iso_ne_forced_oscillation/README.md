@@ -5,10 +5,10 @@
 <!-- ORCID: 0009-0009-3560-0851 -->
 <!-- Contact: www.anulum.li | protoscience@anulum.li -->
 
-# ISO-NE cross-dataset evaluation — the E2.G portability test
+# ISO-NE cross-dataset evaluation — the operating-point portability test
 
 This directory holds the sealed record of the External Validation Program's
-**E2.G leg**: the PSML-certified grid modal-growth detector
+**cross-dataset generalisation leg**: the PSML-certified grid modal-growth detector
 (`../psml_modal_growth/`), with its shape **frozen**, evaluated on real ISO-NE
 PMU captures of documented sustained oscillations it never saw. The question is
 not "does the detector win here" but "what survives a dataset change" — and the
@@ -16,14 +16,14 @@ answer is sealed either way.
 
 ## Honest headline
 
-* **The PSML operating point does not port.** Run verbatim (G-a branch:
+* **The PSML operating point does not port.** Run verbatim (frozen-transfer branch:
   threshold `1.3203 σ/s`, two-second windows), ambient ISO-NE frequency noise
   alone crosses the frozen threshold in 71 of 219 case-2 pre-onset windows
   (~32 % per-window false alarm against the certified 9.09 %), and transition
   windows cross at the same rate. An operating point certified on 238 Hz
   fault-transient voltage envelopes is **not a portable constant** — which is
   why the product's deployment step calibrates per system.
-* **The locally calibrated frozen shape detects 1 of 3 events** (G-b branch:
+* **The locally calibrated frozen shape detects 1 of 3 events** (local-calibration branch:
   window = five cycles of the documented mode, threshold matched to a 10 %
   false alarm on pooled pre-onset ambient windows only): the 1.13 Hz regional
   mode of case 3 is caught **57.1 s before the estimated onset**; cases 1-2
@@ -73,8 +73,8 @@ python -m bench.early_warning_leadtime_isone \
 The run is deterministic (fixed permutation seed 0): regenerating reproduces
 `iso_ne_modal_growth_cross_dataset.json` byte for byte, and the committed
 `content_hash`
-`66edc9e10e81b2a51d2fedf87d5e12f6175810b0b083559a761481342c1f51ba` recomputes
-from the payload alone. `tests/test_iso_ne_e2g_evidence.py` guards both without
+`fd6285fc341a5884aab0d806e54a912c90eec1024e95ee269f71b0db4bd461b7` recomputes
+from the payload alone. `tests/test_iso_ne_cross_dataset_evidence.py` guards both without
 the raw data.
 
 ## What this record does and does not claim
@@ -84,5 +84,5 @@ frozen shape with per-system ambient calibration catches one of three real
 events with a positive lead at a held false alarm, and the corpus is too small
 for significance. It does **not** claim cross-dataset generalisation is
 established, and it does not revise the detector — any variant search on this
-data would disqualify the leg as E2.G and restart it as a disclosed
+data would disqualify the leg as a frozen-shape cross-dataset evaluation and restart it as a disclosed
 maximisation round.

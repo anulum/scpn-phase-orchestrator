@@ -4,7 +4,7 @@
 # © Code 2020–2026 Miroslav Šotek. All rights reserved.
 # ORCID: 0009-0009-3560-0851
 # Contact: www.anulum.li | protoscience@anulum.li
-# SCPN Phase Orchestrator — WECC 240-bus E2.G evaluation tests
+# SCPN Phase Orchestrator — WECC 240-bus cross-dataset evaluation tests
 
 """Owner tests for :mod:`bench.early_warning_leadtime_wecc`.
 
@@ -320,7 +320,7 @@ class TestCaseScores:
 
 
 class TestFrozenTransfer:
-    """G-a branch counts and validations."""
+    """Frozen-transfer branch counts and validations."""
 
     def test_unknown_case_id(self, forced_export: Path) -> None:
         with pytest.raises(ValueError, match="case_id must be one of"):

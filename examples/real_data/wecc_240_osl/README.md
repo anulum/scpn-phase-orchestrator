@@ -5,10 +5,10 @@
 <!-- ORCID: 0009-0009-3560-0851 -->
 <!-- Contact: www.anulum.li | protoscience@anulum.li -->
 
-# WECC 240-bus cross-dataset evaluation — the E2.G statistical leg
+# WECC 240-bus cross-dataset evaluation — the statistical leg
 
 This directory holds the sealed record of the External Validation Program's
-**E2.G statistical leg**: the PSML-certified grid modal-growth detector
+**statistical leg of the cross-dataset generalisation evaluation**: the PSML-certified grid modal-growth detector
 (`../psml_modal_growth/`), with its shape **frozen**, evaluated on all 13
 forced-oscillation cases of the 2021 IEEE-NASPI Oscillation Source Location
 Contest — synthetic PMU exports of the reduced WECC 240-bus system it never
@@ -18,7 +18,7 @@ amendment is disclosed in the payload; the outcome is sealed either way.
 ## Honest headline
 
 * **The PSML operating point does not port — now measured in BOTH
-  directions.** Run verbatim (G-a branch: threshold `1.3203 σ/s`, two-second
+  directions.** Run verbatim (frozen-transfer branch: threshold `1.3203 σ/s`, two-second
   windows), the frozen threshold crosses **nothing** on WECC: 0 of 611 pooled
   ambient windows (0 % false alarm against the certified 9.09 % on PSML) and
   0 transition windows in any case — the operating point is far too
@@ -30,7 +30,7 @@ amendment is disclosed in the payload; the outcome is sealed either way.
   simulation design), 9 of 13 cases are already above three times the ambient
   in-band envelope at the forcing start — an effectively instantaneous onset
   with an empty early-warning region. Of the 4 cases with a resolvable
-  region, the locally calibrated frozen shape (G-b: window = five cycles of
+  region, the locally calibrated frozen shape (local calibration: window = five cycles of
   the documented forcing fundamental, threshold matched to a 10 % false alarm
   on 130 pooled pre-disturbance ambient windows) **leads 2** (case 1:
   +5.4 s; case 4: +4.1 s). Permutation p = 0.41 — **no significance claim**
@@ -113,8 +113,8 @@ python -m bench.early_warning_leadtime_wecc \
 The run is deterministic (fixed permutation seed 0): regenerating reproduces
 `wecc_240_osl_modal_growth_cross_dataset.json` byte for byte, and the
 committed `content_hash`
-`f77be580e06b532e2471b452ac72856f87a5df0444c2d38b782b4be306982b66` recomputes
-from the payload alone. `tests/test_wecc_e2g_evidence.py` guards both without
+`922167d3ecceee1b1e122ff3ea039e9475b885e472fb194183391ef8a1d94a77` recomputes
+from the payload alone. `tests/test_wecc_cross_dataset_evidence.py` guards both without
 the raw data.
 
 ## What this record does and does not claim
@@ -127,5 +127,5 @@ not significant), and post-onset detection at a locally matched false alarm
 is fast (median ~1 s) but its count is chance-compatible and claimed only
 descriptively. It does **not** claim cross-dataset early-warning
 generalisation, and it does not revise the detector — any variant search on
-this data would disqualify the leg as E2.G and restart it as a disclosed
+this data would disqualify the leg as a frozen-shape cross-dataset evaluation and restart it as a disclosed
 maximisation round.

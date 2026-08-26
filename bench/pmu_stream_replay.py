@@ -4,11 +4,11 @@
 # © Code 2020–2026 Miroslav Šotek. All rights reserved.
 # ORCID: 0009-0009-3560-0851
 # Contact: www.anulum.li | protoscience@anulum.li
-# SCPN Phase Orchestrator — real-time PMU capture replay (R1 sentinel demo)
+# SCPN Phase Orchestrator — real-time PMU capture replay (sentinel demo)
 
 """Causal real-time replay of a recorded PMU capture through the live monitor.
 
-The R1 demo of record: a real recorded oscillation event is replayed sample by
+The demo of record: a real recorded oscillation event is replayed sample by
 sample — optionally paced at wall-clock speed — through the certified
 :class:`~scpn_phase_orchestrator.monitor.grid_modal_stream.GridModalStreamMonitor`,
 whose operating point is read from a SEALED evidence artefact, never hand-set.
@@ -21,7 +21,7 @@ absent when it never fired.
 
 The monitor sees only past samples (its own causality guarantee); this module
 adds no lookahead. The observable is the capture's clean per-substation
-frequency channels — the same disclosed mapping the E2.G evaluation sealed.
+frequency channels — the same disclosed mapping the cross-dataset evaluation sealed.
 """
 
 from __future__ import annotations
@@ -93,12 +93,12 @@ def load_sealed_evidence(evidence_path: str | Path) -> dict[str, object]:
 
 
 def _case_entry(payload: dict[str, object], case_id: str) -> dict[str, object]:
-    """Return one corpus transition entry of a sealed E2.G payload.
+    """Return one corpus transition entry of a sealed cross-dataset evidence payload.
 
     Parameters
     ----------
     payload : dict[str, object]
-        A verified E2.G payload.
+        A verified cross-dataset evidence payload.
     case_id : str
         The corpus case to configure for.
 
@@ -110,7 +110,8 @@ def _case_entry(payload: dict[str, object], case_id: str) -> dict[str, object]:
     Raises
     ------
     ValueError
-        If the payload structure is not an E2.G record or the case is not in
+        If the payload structure is not a cross-dataset evidence record or
+        the case is not in
         its sealed corpus.
     """
     corpus = payload.get("corpus")
@@ -129,9 +130,9 @@ def monitor_from_e2g(
     rate: float,
     persistence: int = DEFAULT_PERSISTENCE,
 ) -> GridModalStreamMonitor:
-    """Build the live monitor from a sealed E2.G artefact, no hand-set constants.
+    """Build the live monitor from sealed evidence, no hand-set constants.
 
-    The threshold comes from the sealed G-b local calibration, the aggregation
+    The threshold comes from the sealed local calibration, the aggregation
     and recency weighting from the sealed detector block, and the window from
     the case's sealed per-mode configuration; the step is a quarter window, as
     evaluated.
@@ -155,7 +156,8 @@ def monitor_from_e2g(
     Raises
     ------
     ValueError
-        If the seal fails to verify, the payload is not an E2.G record, or the
+        If the seal fails to verify, the payload is not a cross-dataset
+        evidence record, or the
         case is not in its sealed corpus.
     """
     payload = load_sealed_evidence(evidence_path)
@@ -278,7 +280,7 @@ def replay_case(
     csv_path : str | Path
         The case's IEEE PMU CSV.
     evidence_path : str | Path
-        The sealed E2.G artefact carrying the operating point.
+        The sealed cross-dataset evidence artefact carrying the operating point.
     mode_hz : float
         Documented oscillation mode, hertz, for the onset estimate.
     pace_seconds : float | None
@@ -357,7 +359,7 @@ def sealed_replay_record(
         raise ValueError("evidence carries no calibration significance block")
     record: dict[str, object] = {
         "benchmark": "pmu_stream_replay",
-        "program": "R1",
+        "record": "causal stream replay of sealed evidence",
         "case": result.case_id,
         "operating_point_provenance": {
             "evidence_content_hash": payload["content_hash"],

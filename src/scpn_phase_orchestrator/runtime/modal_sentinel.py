@@ -8,7 +8,7 @@
 
 """Bridge-agnostic wiring from live channel observations to sealed alarms.
 
-The R1 sentinel contract: any runtime bridge that yields one ``Mapping`` of
+The sentinel contract: any runtime bridge that yields one ``Mapping`` of
 channel name to a real reading per frame — the MQTT and OPC-UA tag bridges, the
 C37118 synchrophasor bridge, or a replayed capture — plugs into
 :class:`ModalSentinel`, which assembles the fixed channel vector, drives the
@@ -134,7 +134,7 @@ class ModalSentinel:
         Parameters
         ----------
         evidence_path : str | Path
-            Path to a sealed E2.G evidence artefact.
+            Path to a sealed cross-dataset evidence artefact.
         case_id : str
             The sealed corpus case whose window configuration to carry.
         rate : float
@@ -152,7 +152,8 @@ class ModalSentinel:
         Raises
         ------
         ValueError
-            If the seal fails to verify, the payload is not an E2.G record,
+            If the seal fails to verify, the payload is not a cross-dataset
+            evidence record,
             the case is not in the sealed corpus, or its window is not
             numeric.
         """

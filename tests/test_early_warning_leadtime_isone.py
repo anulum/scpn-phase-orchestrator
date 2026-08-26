@@ -4,7 +4,7 @@
 # © Code 2020–2026 Miroslav Šotek. All rights reserved.
 # ORCID: 0009-0009-3560-0851
 # Contact: www.anulum.li | protoscience@anulum.li
-# SCPN Phase Orchestrator — ISO-NE E2.G evaluation tests
+# SCPN Phase Orchestrator — ISO-NE cross-dataset evaluation tests
 
 """Owner tests for :mod:`bench.early_warning_leadtime_isone`.
 
@@ -350,7 +350,8 @@ class TestPayload:
         payload = local_calibration_payload(
             prepared, frozen, result, source_digests=digests
         )
-        assert payload["program"] == "E2.G"
+        assert payload["evaluation"] == "cross-dataset generalisation"
+        assert "program" not in payload
         assert payload["corpus"]["excluded"] == EXCLUDED_CASES  # type: ignore[index]
         assert payload["frozen_transfer"][0]["threshold"] == FROZEN_PSML_THRESHOLD  # type: ignore[index]
         again = local_calibration_payload(

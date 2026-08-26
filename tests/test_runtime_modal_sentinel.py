@@ -8,8 +8,8 @@
 
 """Owner tests for :mod:`scpn_phase_orchestrator.runtime.modal_sentinel`.
 
-Synthetic fixtures only: a sealed E2.G-shaped payload (hashed with the real
-canonical hasher) configures the sentinel, and synthetic frames exercise the
+Synthetic fixtures only: a sealed evidence-shaped payload (hashed with the
+real canonical hasher) configures the sentinel, and synthetic frames exercise the
 fail-closed observation contract, the alarm sealing, and the review-only
 posture without any raw data or live bridge.
 """
@@ -47,7 +47,7 @@ def _sealed_evidence(
     bad_window: bool = False,
     unknown_case: bool = False,
 ) -> Path:
-    """Write a minimal E2.G-shaped payload sealed with the real hasher."""
+    """Write a minimal evidence-shaped payload sealed with the real hasher."""
     record: dict[str, Any] = {
         "benchmark": "iso_ne_modal_growth_cross_dataset",
         "detector": {"aggregation": "focal", "recency_top": 3.0},

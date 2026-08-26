@@ -5,7 +5,7 @@
 
 # Generic early-warning detection is at chance across five modalities; a domain-specific detector clears the bar where the signature is deterministic
 
-**Miroslav Šotek** (ANULUM / Fortis Studio) · ORCID 0009-0009-3560-0851 · protoscience@anulum.li
+**Miroslav Šotek** (Anulum Institute) · ORCID 0009-0009-3560-0851 · protoscience@anulum.li
 
 *A same-protocol replication across brain, heart, power-grid and palaeoclimate data, with an AR(1)-Kendall-τ head-to-head against Dakos et al. 2008, a dynamical-network-biomarker extension to single-cell and bulk cancer/injury transcriptomics, and a domain-specific head-to-head in which a power-grid modal-growth detector beats the whole generic suite on a real corpus.*
 
@@ -391,7 +391,7 @@ below `K_c`.
 ### 3.15 Cross-dataset portability: the operating point does not travel, in either direction
 
 The strong grid result (§3.5–§3.6) is certified on one corpus. The External
-Validation Program's cross-dataset leg (E2.G) asks the deployment question
+validation programme's cross-dataset generalisation leg asks the deployment question
 directly: does the certified detector — its **shape frozen**, no variant
 search permitted — survive a dataset change? Two independent corpora answer
 it, one real and one synthetic, under protocols pre-registered before the
@@ -478,8 +478,8 @@ python bench/head_to_head_ar1_kendall.py OUT \
 python -m bench.early_warning_dnb          OUT               # single-cell DNB (embedded summary)
 python -m bench.early_warning_dnb_bulk     DATA OUT          # bulk GSE2565 DNB
 python -m bench.grid_modal_head_to_head    PSML OUT          # grid modal vs generic head-to-head
-python -m bench.early_warning_leadtime_isone --data-dir ISONE --output OUT  # E2.G real ISO-NE leg
-python -m bench.early_warning_leadtime_wecc  --data-dir WECC  --output OUT  # E2.G WECC 240-bus leg
+python -m bench.early_warning_leadtime_isone --data-dir ISONE --output OUT  # cross-dataset real ISO-NE leg
+python -m bench.early_warning_leadtime_wecc  --data-dir WECC  --output OUT  # cross-dataset WECC 240-bus leg
 ```
 
 The single-cell DNB capstone reads only the embedded published summary, so it needs no external data; the bulk capstone reads the citation-only GSE2565 files; the grid modal head-to-head reads the citation-only PSML scenarios. The sealed evidence, aggregate results (with the permutation block), the head-to-head comparisons, and the sealed grid modal-vs-generic result (`examples/real_data/psml_modal_growth/`) are committed under `examples/real_data/`. A fresh run reproduces every `content_hash` bit-for-bit; the integrity tests recompute each sealed hash from the committed payload alone.

@@ -1,12 +1,12 @@
 {
   "benchmark": "wecc_240_osl_modal_growth_cross_dataset",
   "caveats": [
-    "synthetic corpus: TSAT time-domain simulation of the WECC 240-bus model, not field PMU; the real-data leg of E2.G is the ISO-NE case study",
+    "synthetic corpus: TSAT time-domain simulation of the WECC 240-bus model, not field PMU; the real-data leg of the cross-dataset evaluation is the ISO-NE case study",
     "the secondary detection branch is descriptive only: at a 10% window false alarm a 60 s region alarms by chance with high probability, so the detection COUNT carries no significance claim (disclosure A.16.3); the latency distribution is the informative quantity",
     "forcing start is exact by simulation design (t=30 s); the early-warning onset is estimated in-band with an ambient-only baseline",
     "observable is per-bus voltage magnitude \u2014 the same observable family the detector was certified on"
   ],
-  "content_hash": "f77be580e06b532e2471b452ac72856f87a5df0444c2d38b782b4be306982b66",
+  "content_hash": "922167d3ecceee1b1e122ff3ea039e9475b885e472fb194183391ef8a1d94a77",
   "corpus": {
     "source": "2021 IEEE-NASPI Oscillation Source Location Contest, WECC 240-bus synthetic PMU (NREL reduced model, OSL Committee scenarios; Maslennikov et al.), UTK oscillation library mirror; raw citation-only, never committed",
     "transitions": [
@@ -298,6 +298,7 @@
     "recency_top": 3.0,
     "shape": "modal envelope growth, focal per-bus deviation"
   },
+  "evaluation": "cross-dataset generalisation",
   "frozen_transfer": [
     {
       "case": "WECC_case1",
@@ -462,7 +463,6 @@
     "target_false_alarm": 0.1,
     "threshold": 0.015693720910358703
   },
-  "program": "E2.G",
   "protocol": {
     "baseline_seconds": 25.0,
     "cycles_per_window": 5.0,

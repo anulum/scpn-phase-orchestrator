@@ -4,11 +4,12 @@
 # © Code 2020–2026 Miroslav Šotek. All rights reserved.
 # ORCID: 0009-0009-3560-0851
 # Contact: www.anulum.li | protoscience@anulum.li
-# SCPN Phase Orchestrator — committed WECC 240-bus E2.G evidence tests
+# SCPN Phase Orchestrator — committed WECC 240-bus cross-dataset evidence tests
 
-"""Integrity tests for the committed WECC 240-bus E2.G cross-dataset evidence.
+"""Integrity tests for the committed WECC 240-bus cross-dataset evidence.
 
-`examples/real_data/wecc_240_osl/` seals the E2.G statistical leg of the
+`examples/real_data/wecc_240_osl/` seals the statistical leg of the
+cross-dataset evaluation of the
 PSML-certified modal-growth detector on the 13 forced-oscillation cases of
 the 2021 IEEE-NASPI OSL contest (WECC 240-bus synthetic PMU). These tests
 guard the committed derived artefact without the citation-only raw data:
@@ -51,7 +52,7 @@ _SOURCE_SHA256 = {
     "WECC_case13": ("b5fde906e1742246aec530819a9fdeae8c1e5d4c4d767d42ea690942365e8d07"),
 }
 
-_CONTENT_HASH = "f77be580e06b532e2471b452ac72856f87a5df0444c2d38b782b4be306982b66"
+_CONTENT_HASH = "922167d3ecceee1b1e122ff3ea039e9475b885e472fb194183391ef8a1d94a77"
 
 
 @pytest.fixture(scope="module")
@@ -87,8 +88,16 @@ def test_source_digests_chain_to_the_raw_exports(payload: dict[str, Any]) -> Non
         assert transitions[case]["source_sha256"] == digest
 
 
+def test_descriptive_schema_replaces_the_stale_program_field(
+    payload: dict[str, Any],
+) -> None:
+    """The stale coded contract is rejected exactly (no 'program' key)."""
+    assert payload["evaluation"] == "cross-dataset generalisation"
+    assert "program" not in payload
+
+
 def test_frozen_transfer_headline_is_honest(payload: dict[str, Any]) -> None:
-    """G-a seals the conservative-direction non-portability: zero crossings."""
+    """The frozen transfer seals conservative-direction non-portability."""
     assert len(payload["frozen_transfer"]) == 13
     for entry in payload["frozen_transfer"]:
         assert entry["null_crossings"] == 0
@@ -98,7 +107,7 @@ def test_frozen_transfer_headline_is_honest(payload: dict[str, Any]) -> None:
 
 
 def test_early_warning_headline_is_honest(payload: dict[str, Any]) -> None:
-    """G-b seals two led cases, positive leads, held FA, and p above 0.05."""
+    """Local calibration seals two led cases, held FA, and p above 0.05."""
     calibration = payload["local_calibration"]
     assert calibration["led"].count(True) == 2
     leads = [value for value in calibration["lead_seconds"] if value is not None]

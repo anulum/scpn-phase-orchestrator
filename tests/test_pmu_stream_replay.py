@@ -91,7 +91,7 @@ def _sealed_evidence(
     drop_significance: bool = False,
     bad_window: bool = False,
 ) -> Path:
-    """Write a minimal E2.G-shaped payload sealed with the real hasher."""
+    """Write a minimal evidence-shaped payload sealed with the real hasher."""
     record: dict[str, Any] = {
         "benchmark": "iso_ne_modal_growth_cross_dataset",
         "detector": {"aggregation": "focal", "recency_top": 3.0},

@@ -4,11 +4,12 @@
 # © Code 2020–2026 Miroslav Šotek. All rights reserved.
 # ORCID: 0009-0009-3560-0851
 # Contact: www.anulum.li | protoscience@anulum.li
-# SCPN Phase Orchestrator — WECC 240-bus cross-dataset modal-growth evaluation (E2.G)
+# SCPN Phase Orchestrator — WECC 240-bus cross-dataset modal-growth evaluation
 
 """Cross-dataset evaluation of the certified modal-growth detector on WECC 240-bus.
 
-This module runs the statistical leg of E2.G: the *frozen* detector shape from
+This module runs the statistical leg of the cross-dataset generalisation
+evaluation: the *frozen* detector shape from
 the PSML certification (:mod:`bench.grid_modal_head_to_head`) against the 13
 forced-oscillation cases of the 2021 IEEE-NASPI Oscillation Source Location
 Contest — synthetic PMU exports of the reduced WECC 240-bus system (NREL model,
@@ -31,8 +32,8 @@ first detector run on this corpus:
   an ambient-only baseline of :data:`BASELINE_SECONDS`. Alarms at or before the
   forcing start can never count as detections; a case whose transition region
   holds no window reports ``led=False`` with the reason on the record.
-* **G-a frozen transfer** re-uses the PSML operating point verbatim;
-  **G-b local calibration** re-uses the frozen shape with the threshold
+* **Frozen transfer** re-uses the PSML operating point verbatim;
+  **local calibration** re-uses the frozen shape with the threshold
   calibrated at a matched false alarm on pooled null windows only. Both
   branches are reported whatever the outcome; no variant search runs here.
 """
@@ -349,7 +350,7 @@ def case_records(
 ) -> tuple[CaseScores, CaseDetection]:
     """Prepare one contest case: load, estimate the onset, score, and split.
 
-    The G-b configuration is derived a priori from the documented forcing
+    The local-calibration configuration is derived a priori from the documented forcing
     fundamental: the window is :data:`CYCLES_PER_WINDOW` cycles of ``f0`` and
     the step is :data:`STEP_FRACTION` of the window. Nothing here reads the
     scores before fixing the segmentation. The onset search is pinned at
@@ -370,7 +371,7 @@ def case_records(
     Returns
     -------
     tuple[CaseScores, CaseDetection]
-        The shared E2.G case record (primary early-warning branch) and the
+        The shared cross-dataset case record (primary early-warning branch) and the
         post-forcing windows of the same scoring pass (secondary detection
         branch).
 
@@ -426,7 +427,7 @@ def case_scores(
     """Prepare the primary early-warning record of one contest case.
 
     A convenience wrapper over :func:`case_records` returning only the shared
-    E2.G case record.
+    cross-dataset case record.
 
     Parameters
     ----------
@@ -440,7 +441,7 @@ def case_scores(
     Returns
     -------
     CaseScores
-        The prepared case (the shared E2.G case record).
+        The prepared case (the shared cross-dataset case record).
 
     Raises
     ------
@@ -454,7 +455,7 @@ def case_scores(
 def frozen_transfer_case(
     case_id: str, path: str | Path, *, allow_unresolved_onset: bool = False
 ) -> FrozenTransferCase:
-    """Run the G-a branch on one case: frozen PSML operating point verbatim.
+    """Run the frozen-transfer branch on one case: frozen PSML operating point verbatim.
 
     Parameters
     ----------
@@ -512,7 +513,7 @@ class DetectionResult:
     Attributes
     ----------
     threshold : float
-        The G-b matched-false-alarm threshold the branch re-uses.
+        The matched-false-alarm threshold the branch re-uses.
     detected : tuple of bool
         Per-case flags: any post-forcing window at or above the threshold.
     latency_seconds : tuple of float
@@ -536,7 +537,7 @@ def evaluate_detection(
     n_permutations: int = DEFAULT_PERMUTATIONS,
     seed: int = DEFAULT_PERMUTATION_SEED,
 ) -> DetectionResult:
-    """Run the secondary detection branch at the G-b operating point.
+    """Run the secondary detection branch at the locally calibrated operating point.
 
     Parameters
     ----------
@@ -546,7 +547,7 @@ def evaluate_detection(
     detections : sequence of CaseDetection
         Post-forcing windows of the same cases, in the same order.
     threshold : float
-        The matched-false-alarm threshold from the G-b calibration.
+        The matched-false-alarm threshold from the local calibration.
     n_permutations : int
         Permutations for the significance test.
     seed : int
@@ -605,20 +606,20 @@ def local_calibration_payload(
     detection_result: DetectionResult,
     source_digests: dict[str, str],
 ) -> dict[str, object]:
-    """Assemble the sealed JSON-safe payload for the WECC E2.G artefact.
+    """Assemble the sealed JSON-safe payload for the WECC cross-dataset artefact.
 
     Parameters
     ----------
     cases : sequence of CaseScores
         Prepared corpus cases, in evaluation order.
     frozen : sequence of FrozenTransferCase
-        G-a frozen-transfer outcomes, in the same order.
+        frozen-transfer frozen-transfer outcomes, in the same order.
     result : LocalCalibrationResult
-        G-b outcome over the same corpus.
+        local-calibration outcome over the same corpus.
     detections : sequence of CaseDetection
         Post-forcing windows of the same cases, in the same order.
     detection_result : DetectionResult
-        Secondary detection-branch outcome at the G-b operating point.
+        Secondary detection-branch outcome at the locally calibrated operating point.
     source_digests : dict[str, str]
         SHA-256 of each case's raw ``BusVolMag.txt``, keyed by case id
         (provenance chain; the raw files themselves stay citation-only).
@@ -644,7 +645,7 @@ def local_calibration_payload(
         raise ValueError("cases and detections must align one-to-one")
     payload: dict[str, object] = {
         "benchmark": "wecc_240_osl_modal_growth_cross_dataset",
-        "program": "E2.G",
+        "evaluation": "cross-dataset generalisation",
         "detector": {
             "shape": "modal envelope growth, focal per-bus deviation",
             "aggregation": DEFAULT_AGGREGATION,
@@ -763,8 +764,8 @@ def local_calibration_payload(
         },
         "caveats": [
             "synthetic corpus: TSAT time-domain simulation of the WECC "
-            "240-bus model, not field PMU; the real-data leg of E2.G is the "
-            "ISO-NE case study",
+            "240-bus model, not field PMU; the real-data leg of the "
+            "cross-dataset evaluation is the ISO-NE case study",
             "the secondary detection branch is descriptive only: at a 10% "
             "window false alarm a 60 s region alarms by chance with high "
             "probability, so the detection COUNT carries no significance "

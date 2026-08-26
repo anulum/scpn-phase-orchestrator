@@ -4,13 +4,14 @@
 # © Code 2020–2026 Miroslav Šotek. All rights reserved.
 # ORCID: 0009-0009-3560-0851
 # Contact: www.anulum.li | protoscience@anulum.li
-# SCPN Phase Orchestrator — ISO-NE cross-dataset modal-growth evaluation (E2.G)
+# SCPN Phase Orchestrator — ISO-NE cross-dataset modal-growth evaluation
 
 """Cross-dataset evaluation of the certified grid modal-growth detector on ISO-NE.
 
 The PSML head-to-head certified the modal envelope-growth detector inside one
-dataset (:mod:`bench.grid_modal_head_to_head`). This module runs the E2.G leg of
-the External Validation Program: the *frozen* detector shape — focal per-bus
+dataset (:mod:`bench.grid_modal_head_to_head`). This module runs the
+cross-dataset generalisation leg of the external validation programme: the
+*frozen* detector shape — focal per-bus
 deviation envelope, recency weighting, growth rate ``σ`` in inverse seconds —
 against real ISO-NE PMU captures of documented sustained oscillations from the
 UTK oscillation test-case library (Maslennikov et al. 2016, citation-only, never
@@ -18,10 +19,10 @@ committed).
 
 Two pre-registered branches, both reported:
 
-* **G-a frozen transfer** — the PSML offline operating point verbatim (threshold
+* **Frozen transfer** — the PSML offline operating point verbatim (threshold
   and two-second windows). A negative is a finding about operating-point
   portability, not a failure to hide.
-* **G-b frozen shape, local calibration** — the window scaled to the documented
+* **Frozen shape, local calibration** — the window scaled to the documented
   mode a priori (:data:`CYCLES_PER_WINDOW` cycles of ``f0``), the threshold
   calibrated at a matched false alarm ONLY on pre-onset ambient (null) windows —
   the product's own per-system calibration step. Lead time is reported honestly
@@ -31,7 +32,8 @@ Two pre-registered branches, both reported:
 The corpus is fixed before any detector run (recon 2026-08-26, plan Appendix A):
 cases 1-3 carry separable in-capture onsets and form the transitions; cases 4-6
 are excluded for disclosed reasons (:data:`EXCLUDED_CASES`). No variant search
-runs here — any change to the detector shape disqualifies the run as E2.G.
+runs here — any change to the detector shape disqualifies the run as a
+frozen-shape cross-dataset evaluation.
 """
 
 from __future__ import annotations
@@ -101,14 +103,14 @@ EXCLUDED_CASES: dict[str, str] = {
     ),
 }
 
-#: PSML offline per-window operating point, frozen for the G-a transfer branch.
+#: PSML offline per-window operating point, frozen for the transfer branch.
 FROZEN_PSML_THRESHOLD = 1.3203407954771857
 FROZEN_PSML_WINDOW_SECONDS = 2.0
 FROZEN_PSML_STEP_SECONDS = 0.5
 
-#: G-b window scaling: cycles of the documented mode per scoring window.
+#: Local-calibration window scaling: cycles of the documented mode per window.
 CYCLES_PER_WINDOW = 5.0
-#: G-b step, as a fraction of the window.
+#: Local-calibration step, as a fraction of the window.
 STEP_FRACTION = 0.25
 
 #: Onset estimation controls (formalising the reconnaissance rule).
@@ -238,7 +240,7 @@ def estimate_onset(
     search_start_seconds : float
         Earliest time (seconds) the sustained-crossing search may report.
         The default of zero keeps the original whole-capture behaviour;
-        a corpus with an exactly known event start (WECC E2.G) pins the
+        a corpus with an exactly known event start (the WECC corpus) pins the
         search there so acausal smoothing smear cannot pull the estimate
         before the true start.
 
@@ -446,7 +448,8 @@ class CaseScores:
 def case_scores(case_id: str, path: str | Path) -> CaseScores:
     """Prepare one corpus case: load, estimate the onset, score, and split.
 
-    The G-b configuration is derived a priori from the documented mode: the
+    The local-calibration configuration is derived a priori from the
+    documented mode: the
     window is :data:`CYCLES_PER_WINDOW` cycles of ``f0`` and the step is
     :data:`STEP_FRACTION` of the window. Nothing here reads the scores before
     fixing the segmentation.
@@ -501,7 +504,7 @@ def case_scores(case_id: str, path: str | Path) -> CaseScores:
 
 @dataclass(frozen=True)
 class FrozenTransferCase:
-    """G-a frozen-transfer outcome for one case.
+    """frozen-transfer frozen-transfer outcome for one case.
 
     Attributes
     ----------
@@ -525,7 +528,7 @@ class FrozenTransferCase:
 
 
 def frozen_transfer_case(case_id: str, path: str | Path) -> FrozenTransferCase:
-    """Run the G-a branch on one case: frozen PSML operating point verbatim.
+    """Run the frozen-transfer branch on one case: frozen PSML operating point verbatim.
 
     Parameters
     ----------
@@ -575,7 +578,7 @@ def frozen_transfer_case(case_id: str, path: str | Path) -> FrozenTransferCase:
 
 @dataclass(frozen=True)
 class LocalCalibrationResult:
-    """G-b outcome: frozen shape, locally calibrated threshold, honest leads.
+    """Local-calibration outcome: frozen shape, local threshold, honest leads.
 
     Attributes
     ----------
@@ -612,7 +615,7 @@ def evaluate_local_calibration(
     n_permutations: int = DEFAULT_PERMUTATIONS,
     seed: int = DEFAULT_PERMUTATION_SEED,
 ) -> LocalCalibrationResult:
-    """Run the G-b branch over the prepared corpus.
+    """Run the local-calibration branch over the prepared corpus.
 
     The threshold is calibrated on the POOLED null scores of every case — the
     growth rate ``σ`` is in inverse seconds, so scores are physically
@@ -688,16 +691,16 @@ def local_calibration_payload(
     *,
     source_digests: dict[str, str],
 ) -> dict[str, object]:
-    """Assemble the sealed JSON-safe payload for the ISO-NE E2.G artefact.
+    """Assemble the sealed JSON-safe payload for the ISO-NE cross-dataset artefact.
 
     Parameters
     ----------
     cases : sequence of CaseScores
         Prepared corpus cases, in evaluation order.
     frozen : sequence of FrozenTransferCase
-        G-a frozen-transfer outcomes, in the same order.
+        frozen-transfer outcomes, in the same order.
     result : LocalCalibrationResult
-        G-b outcome over the same corpus.
+        local-calibration outcome over the same corpus.
     source_digests : dict[str, str]
         SHA-256 of each case's raw CSV, keyed by case id (provenance chain;
         the raw files themselves stay citation-only).
@@ -718,7 +721,7 @@ def local_calibration_payload(
         raise ValueError("cases and frozen outcomes must align one-to-one")
     payload: dict[str, object] = {
         "benchmark": "iso_ne_modal_growth_cross_dataset",
-        "program": "E2.G",
+        "evaluation": "cross-dataset generalisation",
         "detector": {
             "shape": "modal envelope growth, focal per-bus deviation",
             "aggregation": DEFAULT_AGGREGATION,
