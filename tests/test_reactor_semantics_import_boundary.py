@@ -6,7 +6,7 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Lightweight reactor-semantics import tests
 
-"""Prove that the portable semantic codec has no accelerator import side effects."""
+"""Prove reactor-semantic imports avoid optional runtime side effects."""
 
 from __future__ import annotations
 
@@ -33,21 +33,56 @@ def _run_isolated(source: str) -> dict[str, object]:
     return json.loads(completed.stdout)
 
 
-def test_reactor_semantics_import_does_not_resolve_optional_runtime_graph() -> None:
+def test_every_reactor_semantics_submodule_avoids_optional_runtime_graph() -> None:
     payload = _run_isolated(
         """
         import json
         import sys
 
-        import scpn_phase_orchestrator.reactor_semantics as semantics
+        import scpn_phase_orchestrator.reactor_semantics.contracts
+        import scpn_phase_orchestrator.reactor_semantics.control_intent
+        import scpn_phase_orchestrator.reactor_semantics.coupled_transport
+        import scpn_phase_orchestrator.reactor_semantics.evidence
+        import scpn_phase_orchestrator.reactor_semantics.handoff
+        import scpn_phase_orchestrator.reactor_semantics.mif_merge_compression
+        import scpn_phase_orchestrator.reactor_semantics.observability_profiles
+        import scpn_phase_orchestrator.reactor_semantics.reference_portfolio
+        import scpn_phase_orchestrator.reactor_semantics.regime_assessment
+        import scpn_phase_orchestrator.reactor_semantics.regime_ontology
+        import scpn_phase_orchestrator.reactor_semantics.registry
+        import scpn_phase_orchestrator.reactor_semantics.semantic_profiles
+        import scpn_phase_orchestrator.reactor_semantics.serialization
+        import scpn_phase_orchestrator.reactor_semantics.vocabulary
+
+        expected = (
+            "scpn_phase_orchestrator.reactor_semantics.contracts",
+            "scpn_phase_orchestrator.reactor_semantics.control_intent",
+            "scpn_phase_orchestrator.reactor_semantics.coupled_transport",
+            "scpn_phase_orchestrator.reactor_semantics.evidence",
+            "scpn_phase_orchestrator.reactor_semantics.handoff",
+            "scpn_phase_orchestrator.reactor_semantics.mif_merge_compression",
+            "scpn_phase_orchestrator.reactor_semantics.observability_profiles",
+            "scpn_phase_orchestrator.reactor_semantics.reference_portfolio",
+            "scpn_phase_orchestrator.reactor_semantics.regime_assessment",
+            "scpn_phase_orchestrator.reactor_semantics.regime_ontology",
+            "scpn_phase_orchestrator.reactor_semantics.registry",
+            "scpn_phase_orchestrator.reactor_semantics.semantic_profiles",
+            "scpn_phase_orchestrator.reactor_semantics.serialization",
+            "scpn_phase_orchestrator.reactor_semantics.vocabulary",
+        )
 
         forbidden = (
             "juliacall",
             "juliapkg",
+            "scpn_phase_orchestrator.actuation",
+            "scpn_phase_orchestrator.adapters",
             "scpn_phase_orchestrator.api",
+            "scpn_phase_orchestrator.coupling",
+            "scpn_phase_orchestrator.experimental",
+            "scpn_phase_orchestrator.monitor",
+            "scpn_phase_orchestrator.runtime",
             "scpn_phase_orchestrator.supervisor",
-            "scpn_phase_orchestrator.upde._run",
-            "scpn_phase_orchestrator.experimental.accelerators",
+            "scpn_phase_orchestrator.upde",
         )
         loaded = sorted(
             name
@@ -55,13 +90,33 @@ def test_reactor_semantics_import_does_not_resolve_optional_runtime_graph() -> N
             if any(name == item or name.startswith(f"{item}.") for item in forbidden)
         )
         print(json.dumps({
-            "codec_callable": callable(semantics.handoff_from_bytes),
+            "imported_modules": sorted(
+                name for name in expected if name in sys.modules
+            ),
             "forbidden_modules": loaded,
         }, sort_keys=True))
         """
     )
 
-    assert payload == {"codec_callable": True, "forbidden_modules": []}
+    assert payload == {
+        "imported_modules": [
+            "scpn_phase_orchestrator.reactor_semantics.contracts",
+            "scpn_phase_orchestrator.reactor_semantics.control_intent",
+            "scpn_phase_orchestrator.reactor_semantics.coupled_transport",
+            "scpn_phase_orchestrator.reactor_semantics.evidence",
+            "scpn_phase_orchestrator.reactor_semantics.handoff",
+            "scpn_phase_orchestrator.reactor_semantics.mif_merge_compression",
+            "scpn_phase_orchestrator.reactor_semantics.observability_profiles",
+            "scpn_phase_orchestrator.reactor_semantics.reference_portfolio",
+            "scpn_phase_orchestrator.reactor_semantics.regime_assessment",
+            "scpn_phase_orchestrator.reactor_semantics.regime_ontology",
+            "scpn_phase_orchestrator.reactor_semantics.registry",
+            "scpn_phase_orchestrator.reactor_semantics.semantic_profiles",
+            "scpn_phase_orchestrator.reactor_semantics.serialization",
+            "scpn_phase_orchestrator.reactor_semantics.vocabulary",
+        ],
+        "forbidden_modules": [],
+    }
 
 
 def test_package_root_resolves_and_caches_only_requested_compatibility_export() -> None:

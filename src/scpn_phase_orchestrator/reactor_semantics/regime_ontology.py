@@ -77,6 +77,7 @@ class ReactorRegimeAxisDefinition:
     actionable: bool = False
 
     def __post_init__(self) -> None:
+        """Validate axis vocabulary, evidence requirements, and authority."""
         require_identifier(self.axis_id, field="axis_id")
         require_text(self.meaning, field="axis meaning")
         labels = tuple(
@@ -137,6 +138,7 @@ class ReactorRegimeAxisAssignment:
     actionable: bool = False
 
     def __post_init__(self) -> None:
+        """Validate applicability, label, confidence, evidence, and authority."""
         applicability = require_enum(
             self.applicability,
             AxisApplicability,
@@ -213,6 +215,7 @@ class ReactorModeDefinition:
     actionable: bool = False
 
     def __post_init__(self) -> None:
+        """Validate mode identity, applicability, evidence, and domain rules."""
         require_identifier(self.mode_id, field="mode_id")
         require_text(self.meaning, field="mode meaning")
         domain = require_enum(self.domain, ModeDomain, field="mode domain")
@@ -305,6 +308,7 @@ class ReactorModeBinding:
     actionable: bool = False
 
     def __post_init__(self) -> None:
+        """Validate binding identity, evidence, and domain-specific fields."""
         configuration = DEFAULT_REACTOR_REGISTRY.resolve(self.configuration).identifier
         if configuration not in self.definition.configurations:
             raise ValueError("mode is not defined for this reactor configuration")
@@ -408,6 +412,7 @@ class ReactorRegimeModeOntologyRegistry:
     modes: Mapping[str, ReactorModeDefinition]
 
     def __post_init__(self) -> None:
+        """Validate exact registry bindings, ontology entries, and coverage."""
         version = require_semver(self.version, field="ontology version")
         reactor_version = require_semver(
             self.reactor_registry_version,
@@ -480,6 +485,7 @@ class ReactorRegimeModeOntologyRegistry:
 
     @staticmethod
     def _validate_candidates(candidate_ids: tuple[str, ...]) -> None:
+        """Require every candidate identifier to resolve in the registry."""
         observability = DEFAULT_REACTOR_OBSERVABILITY_PROFILE_REGISTRY
         for candidate_id in candidate_ids:
             observability.resolve(candidate_id)
@@ -562,6 +568,7 @@ def _axis(
     policy: AxisApplicabilityPolicy,
     required_evidence: tuple[str, ...],
 ) -> ReactorRegimeAxisDefinition:
+    """Build an axis definition with canonical label and candidate ordering."""
     return ReactorRegimeAxisDefinition(
         axis_id=axis_id,
         meaning=meaning,
@@ -599,6 +606,7 @@ def _mode(
     candidate_id: str,
     harmonic_basis: str,
 ) -> ReactorModeDefinition:
+    """Build a physical mode definition from its observability candidate."""
     candidate = DEFAULT_REACTOR_OBSERVABILITY_PROFILE_REGISTRY.resolve(candidate_id)
     return ReactorModeDefinition(
         mode_id=mode_id,

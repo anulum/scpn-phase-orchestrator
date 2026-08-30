@@ -66,6 +66,8 @@ _T = TypeVar("_T")
 
 @dataclass(frozen=True, slots=True)
 class _ObservableSpec:
+    """Static metadata for one supported TORAX observable."""
+
     category: str
     name: str
     physical_quantity: str
@@ -74,6 +76,7 @@ class _ObservableSpec:
 
     @property
     def observable_id(self) -> str:
+        """Return the namespaced observable identifier."""
         return f"fusion.torax.{self.category}.{self.name}"
 
 
@@ -228,6 +231,7 @@ def _build_handoff(
     event_id: str,
     registry: ReactorConfigurationRegistry,
 ) -> ReactorSemanticHandoff:
+    """Build a review-only U0 handoff from validated FUSION payload fields."""
     _exact_keys(
         payload,
         "payload",
@@ -358,6 +362,7 @@ def _build_context(
     event_id: str,
     registry: ReactorConfigurationRegistry,
 ) -> ReactorContext:
+    """Validate and construct the TORAX reactor context."""
     reactor = _object(value, "payload.reactor")
     _exact_keys(
         reactor,
@@ -450,6 +455,7 @@ def _build_context(
 
 
 def _validate_clock(value: object) -> Mapping[str, object]:
+    """Validate the fixed-cadence simulation clock and return normalized fields."""
     clock = _object(value, "payload.clock")
     _exact_keys(
         clock,
@@ -506,6 +512,7 @@ def _validate_clock(value: object) -> Mapping[str, object]:
 
 
 def _validate_completion(value: object, *, timestamp_ns: int) -> None:
+    """Require a successful run completed at the final clock sample."""
     completion = _object(value, "payload.completion")
     _exact_keys(
         completion, "payload.completion", {"complete", "reached_final_ns", "sim_error"}
@@ -520,6 +527,7 @@ def _validate_completion(value: object, *, timestamp_ns: int) -> None:
 
 
 def _validate_validity(value: object) -> None:
+    """Require the exact in-distribution review-only validity declaration."""
     validity = _object(value, "payload.validity")
     _exact_keys(validity, "payload.validity", {"authority", "ood", "quality", "state"})
     expected = {
@@ -535,6 +543,7 @@ def _validate_validity(value: object) -> None:
 
 
 def _validate_rho(value: object, *, context: ReactorContext) -> tuple[float, ...]:
+    """Validate normalized radial support against the reactor coordinate frame."""
     rho = _object(value, "observables.rho")
     _exact_keys(rho, "observables.rho", {"frame", "name", "samples", "unit"})
     if (
@@ -554,6 +563,7 @@ def _validate_rho(value: object, *, context: ReactorContext) -> tuple[float, ...
 
 
 def _validate_numerics(value: object, *, sample_count: int) -> None:
+    """Validate per-sample solver status and iteration evidence."""
     numerics = _object(value, "observables.numerics")
     _exact_keys(
         numerics,
@@ -584,6 +594,7 @@ def _validate_numerics(value: object, *, sample_count: int) -> None:
 
 
 def _validate_uncertainty(value: object) -> Mapping[str, object]:
+    """Validate the timestep-refinement uncertainty inventory."""
     uncertainty = _object(value, "payload.uncertainty")
     _exact_keys(
         uncertainty,
@@ -611,6 +622,7 @@ def _validate_observable_item(
     sample_ns: tuple[int, ...],
     rho_count: int,
 ) -> tuple[JsonValue, CalibrationReference]:
+    """Validate one observable series and return its final value and calibration."""
     _exact_keys(
         item, f"{spec.category}.{spec.name}", {"calibration", "samples", "unit"}
     )
@@ -658,6 +670,7 @@ def _validate_observable_item(
 
 
 def _validate_metric(value: object, *, spec: _ObservableSpec) -> Mapping[str, object]:
+    """Validate nonnegative refinement metrics for one observable."""
     metric = _object(value, f"uncertainty.{spec.category}.{spec.name}")
     _exact_keys(
         metric,
@@ -676,6 +689,7 @@ def _validate_metric(value: object, *, spec: _ObservableSpec) -> Mapping[str, ob
 
 
 def _validate_provenance(value: object) -> Mapping[str, str]:
+    """Validate the complete FUSION revision and digest inventory."""
     provenance = _object(value, "provenance")
     _exact_keys(provenance, "provenance", set(_PROVENANCE_KEYS))
     result: dict[str, str] = {}
@@ -697,6 +711,7 @@ def _observable_provenance(
     event_id: str,
     metric: Mapping[str, object],
 ) -> ProvenanceRecord:
+    """Build custody metadata for one projected FUSION observable."""
     attributes = {
         "calibration_basis": "simulation_declared_units",
         "calibration_empirical": "false",
@@ -725,6 +740,7 @@ def _observable_provenance(
 
 
 def _bounded_semantic(observable: ObservableDescriptor) -> PhaseSemanticRecord:
+    """Represent a noncyclic transport observable as a bounded-feature semantic."""
     timestamp_ns = observable.clock.timestamp_ns
     return PhaseSemanticRecord(
         phase_id=f"spo.transport.{observable.observable_id.removeprefix('fusion.torax.')}.bounded_feature",
@@ -772,6 +788,7 @@ def _decode_source(
     *,
     expected_sha256: str | None,
 ) -> tuple[Mapping[str, object], str, str]:
+    """Decode and authenticate a canonical FUSION source envelope."""
     if not isinstance(payload, bytes) or not payload:
         raise ValueError("FUSION source envelope must be non-empty bytes")
     if len(payload) > MAX_SOURCE_ENVELOPE_BYTES:
@@ -796,6 +813,7 @@ def _decode_source(
 
 
 def _canonical_json(value: object) -> str:
+    """Return the adapter's canonical compact JSON representation."""
     return json.dumps(
         value,
         ensure_ascii=False,
@@ -806,10 +824,12 @@ def _canonical_json(value: object) -> str:
 
 
 def _canonical_digest(value: object) -> str:
+    """Return SHA-256 of the canonical compact JSON representation."""
     return hashlib.sha256(_canonical_json(value).encode()).hexdigest()
 
 
 def _unique_object(pairs: Iterable[tuple[str, object]]) -> dict[str, object]:
+    """Build a JSON object while rejecting duplicate keys."""
     result: dict[str, object] = {}
     for key, value in pairs:
         if key in result:
@@ -819,12 +839,14 @@ def _unique_object(pairs: Iterable[tuple[str, object]]) -> dict[str, object]:
 
 
 def _object(value: object, label: str) -> Mapping[str, object]:
+    """Return a string-keyed mapping or reject the value."""
     if not isinstance(value, Mapping) or any(not isinstance(key, str) for key in value):
         raise ValueError(f"{label} must be an object with string keys")
     return cast(Mapping[str, object], value)
 
 
 def _exact_keys(value: Mapping[str, object], label: str, expected: set[str]) -> None:
+    """Require an exact object field set."""
     if set(value) != expected:
         raise ValueError(
             f"{label} fields differ; missing={sorted(expected - set(value))}, "
@@ -833,12 +855,14 @@ def _exact_keys(value: Mapping[str, object], label: str, expected: set[str]) -> 
 
 
 def _list(value: object, label: str) -> list[object]:
+    """Return a non-empty list or reject the value."""
     if not isinstance(value, list) or not value:
         raise ValueError(f"{label} must be a non-empty list")
     return value
 
 
 def _typed_list(value: object, label: str, expected: type[_T]) -> tuple[_T, ...]:
+    """Return a non-empty tuple whose items match the expected runtime type."""
     items = _list(value, label)
     if any(not isinstance(item, expected) for item in items):
         raise ValueError(f"{label} contains an invalid item type")
@@ -846,32 +870,38 @@ def _typed_list(value: object, label: str, expected: type[_T]) -> tuple[_T, ...]
 
 
 def _string_list(value: object, label: str) -> tuple[str, ...]:
+    """Return a validated non-empty tuple of strings."""
     return _typed_list(value, label, str)
 
 
 def _integer_list(value: object, label: str) -> tuple[int, ...]:
+    """Return a validated non-empty tuple of non-boolean integers."""
     items = _list(value, label)
     return tuple(_integer(item, label) for item in items)
 
 
 def _number_list(value: object, label: str) -> tuple[float, ...]:
+    """Return a validated non-empty tuple of finite numbers."""
     items = _list(value, label)
     return tuple(_number(item, label) for item in items)
 
 
 def _text(value: object, label: str) -> str:
+    """Return a non-empty string or reject the value."""
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{label} must be a non-empty string")
     return value
 
 
 def _integer(value: object, label: str) -> int:
+    """Return a non-boolean integer or reject the value."""
     if isinstance(value, bool) or not isinstance(value, int):
         raise ValueError(f"{label} must be an integer")
     return value
 
 
 def _number(value: object, label: str) -> float:
+    """Return a finite non-boolean number as a float."""
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise ValueError(f"{label} must be a finite number")
     result = float(value)
@@ -881,12 +911,14 @@ def _number(value: object, label: str) -> float:
 
 
 def _digest(value: object, label: str) -> str:
+    """Return a lowercase SHA-256 digest or reject the value."""
     if not isinstance(value, str) or _HEX_64.fullmatch(value) is None:
         raise ValueError(f"{label} must be a lowercase SHA-256")
     return value
 
 
 def _commit(value: object, label: str) -> str:
+    """Return a lowercase 40-character Git revision or reject the value."""
     if not isinstance(value, str) or _HEX_40.fullmatch(value) is None:
         raise ValueError(f"{label} must be a lowercase Git revision")
     return value

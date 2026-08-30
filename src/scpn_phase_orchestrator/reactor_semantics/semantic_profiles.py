@@ -62,6 +62,7 @@ class ReactorSemanticProfile:
     machine_protection_final_veto: bool = True
 
     def __post_init__(self) -> None:
+        """Validate ownership, ingress completeness, and review authority."""
         require_identifier(self.configuration, field="configuration")
         require_identifier(self.device_project, field="device_project")
         require_enum(
@@ -139,6 +140,7 @@ class ReactorSemanticProfileRegistry:
     profiles: Mapping[str, ReactorSemanticProfile]
 
     def __post_init__(self) -> None:
+        """Validate complete coverage and exact reactor-registry binding."""
         version = require_semver(self.version, field="profile registry version")
         reactor_version = require_semver(
             self.reactor_registry_version,
@@ -245,6 +247,7 @@ _DEVICE_ASSIGNMENTS = {
 
 
 def _unallocated_profile(configuration: str, project: str) -> ReactorSemanticProfile:
+    """Build a profile with no declared semantic ingress."""
     return ReactorSemanticProfile(
         configuration=configuration,
         device_project=project,

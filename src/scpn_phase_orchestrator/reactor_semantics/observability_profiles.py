@@ -114,6 +114,7 @@ class ReactorSignalCandidateProfile:
     evidence_claimed: bool = False
 
     def __post_init__(self) -> None:
+        """Validate applicability, carrier, evidence, and authority invariants."""
         require_identifier(self.candidate_id, field="candidate_id")
         require_text(self.phenomenon, field="phenomenon")
         observability_class = require_enum(
@@ -208,6 +209,7 @@ class ReactorObservabilityProfileRegistry:
     candidates: Mapping[str, ReactorSignalCandidateProfile]
 
     def __post_init__(self) -> None:
+        """Validate registry identity, coverage, and reactor-registry binding."""
         version = require_semver(self.version, field="observability registry version")
         reactor_version = require_semver(
             self.reactor_registry_version,
@@ -409,6 +411,7 @@ def _candidate(
     configurations: tuple[str, ...],
     observability_class: ObservabilityClass,
 ) -> ReactorSignalCandidateProfile:
+    """Build a candidate with evidence rules derived from its class."""
     carriers = tuple(sorted(_ALLOWED_CARRIERS[observability_class], key=str))
     evidence = {
         ObservabilityClass.DIRECT_CYCLIC: _COMMON_DIRECT,

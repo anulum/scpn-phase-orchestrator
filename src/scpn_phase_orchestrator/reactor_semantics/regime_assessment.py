@@ -87,6 +87,7 @@ class ReactorRegimeEvidenceBinding:
     reference_id: str
 
     def __post_init__(self) -> None:
+        """Validate and normalise the evidence binding identifiers."""
         object.__setattr__(
             self,
             "role_id",
@@ -152,6 +153,7 @@ class ReactorRegimeAxisAssessment:
     actionable: bool = False
 
     def __post_init__(self) -> None:
+        """Validate and normalise one ontology-bound axis assessment."""
         axis_id = require_identifier(self.axis_id, field="axis_id")
         definition = DEFAULT_REACTOR_REGIME_MODE_ONTOLOGY.resolve_axis(axis_id)
         static_applicability = require_enum(
@@ -248,6 +250,7 @@ class ReactorRegimeAxisAssessment:
         observability: float,
         bindings: tuple[ReactorRegimeEvidenceBinding, ...],
     ) -> None:
+        """Validate evidence and policy identity for a classified axis."""
         if self.label is None or self.label == "unknown":
             raise ValueError("classified assessment requires a classified label")
         label = require_identifier(self.label, field="axis label")
@@ -297,6 +300,7 @@ class ReactorRegimeAxisAssessment:
         needs_classifier: bool,
         needs_threshold: bool,
     ) -> None:
+        """Require only the classifier policies mandated by the ontology."""
         required_names: tuple[str, ...] = ()
         if needs_classifier:
             required_names += _CLASSIFIER_IDENTITY_FIELDS
@@ -339,6 +343,7 @@ class ReactorRegimeAxisAssessment:
         uncertainty: float,
         bindings: tuple[ReactorRegimeEvidenceBinding, ...],
     ) -> None:
+        """Validate uncertainty and evidence state for an unknown axis."""
         if self.label is not None:
             raise ValueError("unknown assessment forbids a physics label")
         if confidence != 0.0:
@@ -391,6 +396,7 @@ class ReactorRegimeAxisAssessment:
         basis: tuple[str, ...],
         bindings: tuple[ReactorRegimeEvidenceBinding, ...],
     ) -> None:
+        """Validate an ontology-supported not-applicable axis."""
         if self.label is not None:
             raise ValueError("not-applicable assessment forbids a physics label")
         if confidence != 0.0 or observability != 0.0 or uncertainty != 0.0:
@@ -416,6 +422,7 @@ class ReactorRegimeAxisAssessment:
         self._forbid_classifier_result("not-applicable")
 
     def _forbid_classifier_result(self, disposition: str) -> None:
+        """Reject classifier outputs on an unclassified axis."""
         has_classifier_field = any(
             getattr(self, field_name) is not None for field_name in _CLASSIFIER_FIELDS
         )
@@ -614,6 +621,7 @@ class ReactorRegimeAssessment:
     schema_version: str = REACTOR_REGIME_ASSESSMENT_VERSION
 
     def __post_init__(self) -> None:
+        """Validate and normalise a complete review-only assessment."""
         if self.schema != REACTOR_REGIME_ASSESSMENT_SCHEMA:
             raise ValueError("unsupported reactor regime assessment schema")
         if (
@@ -676,6 +684,7 @@ class ReactorRegimeAssessment:
             raise ValueError("reactor regime assessment must remain review-only")
 
     def _validate_clock(self) -> None:
+        """Validate clock kind, time ordering, rate, latency, and offset."""
         clock_kind = require_enum(self.clock_kind, ClockKind, field="clock_kind")
         if clock_kind is ClockKind.UNKNOWN:
             raise ValueError("assessment requires a known clock kind")
@@ -707,6 +716,7 @@ class ReactorRegimeAssessment:
         object.__setattr__(self, "timestamp_offset_ps", offset)
 
     def _validate_axes(self, configuration: str) -> None:
+        """Require eight canonical axes with configuration-bound applicability."""
         axes = tuple(self.axes)
         expected_ids = tuple(sorted(DEFAULT_REACTOR_REGIME_MODE_ONTOLOGY.axes))
         supplied_ids = tuple(axis.axis_id for axis in axes)
@@ -722,6 +732,7 @@ class ReactorRegimeAssessment:
         object.__setattr__(self, "axes", axes)
 
     def _validate_registry_bindings(self) -> None:
+        """Require exact bindings to the installed semantic registries."""
         bindings = (
             (
                 self.reactor_registry_version,
@@ -965,12 +976,14 @@ def regime_assessment_digest(assessment: ReactorRegimeAssessment) -> str:
 
 
 def _git_revision(value: object, *, field: str) -> str:
+    """Validate and return a lowercase 40-character Git revision."""
     if not isinstance(value, str) or _GIT_REVISION.fullmatch(value) is None:
         raise ValueError(f"{field} must be a 40-character Git revision")
     return value
 
 
 def _identifiers(values: Iterable[object], *, field: str) -> tuple[str, ...]:
+    """Validate a canonically sorted tuple of unique identifiers."""
     result = tuple(require_identifier(value, field=field) for value in values)
     if tuple(sorted(set(result))) != result:
         raise ValueError(f"{field} values must be unique and sorted")
@@ -978,18 +991,21 @@ def _identifiers(values: Iterable[object], *, field: str) -> tuple[str, ...]:
 
 
 def _string_tuple(raw: object, *, field: str) -> tuple[str, ...]:
+    """Decode a list of strings without coercion."""
     if not isinstance(raw, list) or any(not isinstance(item, str) for item in raw):
         raise ValueError(f"{field} must be a list of strings")
     return tuple(raw)
 
 
 def _binding_tuple(raw: object) -> tuple[ReactorRegimeEvidenceBinding, ...]:
+    """Decode a list of strict evidence-role bindings."""
     if not isinstance(raw, list):
         raise ValueError("evidence_bindings must be a list")
     return tuple(ReactorRegimeEvidenceBinding.from_record(item) for item in raw)
 
 
 def _canonical_bytes(value: object) -> bytes:
+    """Encode a value as canonical UTF-8 JSON bytes."""
     return json.dumps(
         value,
         ensure_ascii=False,
@@ -1000,10 +1016,12 @@ def _canonical_bytes(value: object) -> bytes:
 
 
 def _canonical_digest(value: object) -> str:
+    """Return SHA-256 of canonical JSON bytes."""
     return hashlib.sha256(_canonical_bytes(value)).hexdigest()
 
 
 def _reject_duplicate_keys(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    """Build a JSON object while rejecting duplicate keys."""
     result: dict[str, object] = {}
     for key, value in pairs:
         if key in result:

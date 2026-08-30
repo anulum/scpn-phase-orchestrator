@@ -102,6 +102,7 @@ class ControlVariableEnvelope:
     direction: ControlVariableDirection
 
     def __post_init__(self) -> None:
+        """Validate and normalise the bounded variable proposal."""
         object.__setattr__(
             self,
             "variable_id",
@@ -309,6 +310,7 @@ class ReactorResearchControlIntent:
     schema_version: str = REACTOR_CONTROL_INTENT_VERSION
 
     def __post_init__(self) -> None:
+        """Validate and normalise the review-only intent contract."""
         if self.schema != REACTOR_CONTROL_INTENT_SCHEMA:
             raise ValueError("unsupported reactor ControlIntent schema")
         if (
@@ -518,6 +520,7 @@ class ReactorResearchControlIntent:
             raise ValueError("reactor ControlIntent must remain review-only")
 
     def _validate_registry_bindings(self) -> None:
+        """Require exact bindings to the installed semantic registries."""
         if (
             self.reactor_registry_version != DEFAULT_REACTOR_REGISTRY.version
             or self.reactor_registry_digest != DEFAULT_REACTOR_REGISTRY.digest
@@ -826,6 +829,7 @@ def control_intent_digest(intent: ReactorResearchControlIntent) -> str:
 
 
 def _identifiers(values: tuple[str, ...], *, field: str) -> tuple[str, ...]:
+    """Validate a canonically sorted tuple of unique identifiers."""
     parsed = tuple(require_identifier(item, field=field) for item in values)
     if tuple(sorted(set(parsed))) != parsed:
         raise ValueError(f"{field} values must be unique and sorted")
@@ -833,6 +837,7 @@ def _identifiers(values: tuple[str, ...], *, field: str) -> tuple[str, ...]:
 
 
 def _git_revision(value: object, *, field: str) -> str:
+    """Validate and return a lowercase 40-character Git revision."""
     revision = require_text(value, field=field)
     if _GIT_REVISION.fullmatch(revision) is None:
         raise ValueError(f"{field} must be a lowercase 40-character Git revision")
@@ -840,12 +845,14 @@ def _git_revision(value: object, *, field: str) -> str:
 
 
 def _string_tuple(raw: object, *, field: str) -> tuple[str, ...]:
+    """Decode an array of strings without coercion."""
     if not isinstance(raw, list) or any(not isinstance(item, str) for item in raw):
         raise ValueError(f"{field} must be an array of strings")
     return tuple(raw)
 
 
 def _canonical_json(payload: object) -> str:
+    """Encode a value as canonical JSON text."""
     return json.dumps(
         payload,
         ensure_ascii=False,
@@ -856,15 +863,18 @@ def _canonical_json(payload: object) -> str:
 
 
 def _canonical_digest(payload: object) -> str:
+    """Return SHA-256 of canonical JSON text."""
     return hashlib.sha256(_canonical_json(payload).encode("utf-8")).hexdigest()
 
 
 def _close(left: float, right: float) -> bool:
+    """Compare finite values with a scale-aware relative tolerance."""
     scale = max(1.0, abs(left), abs(right))
     return abs(left - right) <= 1e-12 * scale
 
 
 def _unique_object(pairs: Iterable[tuple[str, object]]) -> dict[str, object]:
+    """Build a JSON object while rejecting duplicate keys."""
     record: dict[str, object] = {}
     for key, value in pairs:
         if key in record:

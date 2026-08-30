@@ -172,6 +172,7 @@ class MIFMergeCompressionHandoff:
         return hashlib.sha256(self.source_envelope_json.encode("utf-8")).hexdigest()
 
     def _validate_contract_graph(self) -> None:
+        """Validate context, clock, semantic coverage, and regime consistency."""
         self.context.validate_registry()
         if self.context.configuration != _CONFIGURATION:
             raise ValueError("MIF handoff requires frc_compression_mif context")
@@ -252,6 +253,8 @@ class MIFMergeCompressionHandoff:
 
 @dataclass(frozen=True, slots=True)
 class _ObservableSpec:
+    """Static metadata and value for one projected MIF observable."""
+
     observable_id: str
     channel: str
     physical_quantity: str
@@ -525,6 +528,7 @@ def mif_merge_compression_handoff_digest(
 
 
 def _observable_specs(body: Mapping[str, object]) -> tuple[_ObservableSpec, ...]:
+    """Enumerate phase, kinematic, merge, and trigger observables."""
     kinematics = cast(Mapping[str, object], body["kinematics"])
     merge = cast(Mapping[str, object], body["merge_window"])
     trigger = cast(Mapping[str, object], body["trigger"])
@@ -717,6 +721,7 @@ def _build_observable(
     evidence: Mapping[str, object],
     source_digest: str,
 ) -> ObservableDescriptor:
+    """Build an evidence-bearing observable from one validated MIF atom."""
     quality_name = cast(str, evidence["quality"])
     quality_state = QualityState(quality_name)
     flags = tuple(cast(list[str], evidence["quality_flags"]))
@@ -779,6 +784,7 @@ def _build_observable(
 def _build_semantic(
     observable: ObservableDescriptor, *, spec: _ObservableSpec
 ) -> PhaseSemanticRecord:
+    """Assign numerical-phase or explicit nonphase semantics to an observable."""
     numerical = spec.carrier is SemanticCarrier.NUMERICAL_PHASE
     usable = numerical and observable.validity.state in {
         ValidityState.VALID,
@@ -851,6 +857,7 @@ def _build_semantic(
 
 
 def _validate_numerical_semantic(semantic: PhaseSemanticRecord) -> None:
+    """Require the fixed simulation evidence and numerical phase references."""
     if semantic.evidence_class is not EvidenceClass.SIMULATION:
         raise ValueError("MIF numerical phases must retain simulation evidence")
     required = (
@@ -865,6 +872,7 @@ def _validate_numerical_semantic(semantic: PhaseSemanticRecord) -> None:
 
 
 def _validate_nonphase_semantic(semantic: PhaseSemanticRecord) -> None:
+    """Require nonphase evidence to omit angular claims."""
     if any(
         value is not None
         for value in (
@@ -891,6 +899,7 @@ def _validate_nonphase_semantic(semantic: PhaseSemanticRecord) -> None:
 def _decode_source(
     payload: bytes, *, expected_sha256: str | None
 ) -> tuple[Mapping[str, object], str, str]:
+    """Decode, authenticate, and validate a canonical MIF source envelope."""
     if not isinstance(payload, bytes) or not payload:
         raise ValueError("MIF source envelope must be non-empty bytes")
     if len(payload) > MAX_SOURCE_ENVELOPE_BYTES:
@@ -932,6 +941,7 @@ def _decode_source(
 
 
 def _validate_source_payload(body: Mapping[str, object]) -> None:
+    """Validate source authority, reactor identity, evidence, and event state."""
     authority = _object(body["authority"], "authority")
     _exact(authority, frozenset({"actionable", "review_only"}), "authority")
     if authority != {"actionable": False, "review_only": True}:
@@ -981,6 +991,7 @@ def _validate_source_payload(body: Mapping[str, object]) -> None:
 
 
 def _validate_source_clock(value: object) -> Mapping[str, object]:
+    """Validate the simulation clock and its exact sample cadence."""
     clock = _object(value, "clock")
     _exact(
         clock,
@@ -1018,6 +1029,7 @@ def _validate_source_clock(value: object) -> Mapping[str, object]:
 def _validate_source_evidence(
     value: object, *, timestamp_ns: int
 ) -> Mapping[str, object]:
+    """Validate calibration, validity, quality, and input digest evidence."""
     evidence = _object(value, "evidence")
     _exact(
         evidence,
@@ -1070,6 +1082,7 @@ def _validate_source_evidence(
 
 
 def _validate_source_kinematics(value: object) -> None:
+    """Validate oscillator vectors and recompute derived kinematic values."""
     kinematics = _object(value, "kinematics")
     _exact(
         kinematics,
@@ -1129,6 +1142,7 @@ def _validate_source_kinematics(value: object) -> None:
 def _validate_source_merge_and_trigger(
     body: Mapping[str, object], *, timestamp_ns: int
 ) -> None:
+    """Recompute merge predicates and validate trigger prerequisites."""
     kinematics = _object(body["kinematics"], "kinematics")
     merge = _object(body["merge_window"], "merge_window")
     _exact(
@@ -1215,6 +1229,7 @@ def _validate_source_merge_and_trigger(
 
 
 def _phase_lock_error(phases: tuple[float, ...]) -> float:
+    """Return the maximum pairwise circular phase separation."""
     maximum = 0.0
     for index, left in enumerate(phases):
         for right in phases[index + 1 :]:
@@ -1225,6 +1240,7 @@ def _phase_lock_error(phases: tuple[float, ...]) -> float:
 
 
 def _source_json(value: object) -> str:
+    """Return canonical newline-terminated JSON for a JCS-safe source value."""
     _assert_jcs_safe(value)
     return (
         json.dumps(value, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
@@ -1233,6 +1249,7 @@ def _source_json(value: object) -> str:
 
 
 def _handoff_json(value: object) -> str:
+    """Return canonical compact JSON for a handoff value."""
     return json.dumps(
         value,
         ensure_ascii=False,
@@ -1243,15 +1260,18 @@ def _handoff_json(value: object) -> str:
 
 
 def _digest_record(value: object, *, trailing_newline: bool = False) -> str:
+    """Return SHA-256 of a canonical source or handoff record."""
     text = _source_json(value) if trailing_newline else _handoff_json(value)
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
 def _float_decimal(value: float) -> str:
+    """Return the exact decimal expansion of a binary float."""
     return str(Decimal.from_float(float(value)))
 
 
 def _decimal(value: object, field: str) -> Decimal:
+    """Parse a finite exact decimal string."""
     if not isinstance(value, str):
         raise ValueError(f"{field} must be an exact decimal string")
     try:
@@ -1264,6 +1284,7 @@ def _decimal(value: object, field: str) -> Decimal:
 
 
 def _decimals(value: object, field: str) -> tuple[Decimal, ...]:
+    """Parse a non-empty list of finite exact decimal strings."""
     if not isinstance(value, list) or not value:
         raise ValueError(f"{field} must be a non-empty decimal-string list")
     return tuple(_decimal(item, field) for item in value)
@@ -1276,6 +1297,7 @@ def _safe_int(
     minimum: int = -_MAX_SAFE_INTEGER,
     maximum: int = _MAX_SAFE_INTEGER,
 ) -> int:
+    """Return a non-boolean integer within the declared JCS-safe bounds."""
     if (
         isinstance(value, bool)
         or not isinstance(value, int)
@@ -1286,10 +1308,12 @@ def _safe_int(
 
 
 def _optional_int(value: object, field: str, *, minimum: int) -> int | None:
+    """Validate an optional JCS-safe integer with a lower bound."""
     return None if value is None else _safe_int(value, field, minimum=minimum)
 
 
 def _assert_jcs_safe(value: object, *, path: str = "$") -> None:
+    """Recursively reject floats and out-of-range integers before encoding."""
     if value is None or isinstance(value, (str, bool)):
         return
     if isinstance(value, float):
@@ -1307,29 +1331,34 @@ def _assert_jcs_safe(value: object, *, path: str = "$") -> None:
 
 
 def _object(value: object, field: str) -> Mapping[str, object]:
+    """Return a string-keyed mapping or reject the value."""
     if not isinstance(value, Mapping) or any(not isinstance(key, str) for key in value):
         raise ValueError(f"{field} must be an object")
     return cast(Mapping[str, object], value)
 
 
 def _list(value: object, field: str) -> list[object]:
+    """Return a list or reject the value."""
     if not isinstance(value, list):
         raise ValueError(f"{field} must be a list")
     return value
 
 
 def _strings(value: object, field: str) -> tuple[str, ...]:
+    """Return a tuple converted from a list containing only strings."""
     if not isinstance(value, list) or any(not isinstance(item, str) for item in value):
         raise ValueError(f"{field} must be a list of strings")
     return tuple(value)
 
 
 def _exact(value: Mapping[str, object], keys: frozenset[str], field: str) -> None:
+    """Require an exact object field set."""
     if set(value) != keys:
         raise ValueError(f"{field} fields differ")
 
 
 def _unique_object(pairs: Iterable[tuple[str, object]]) -> dict[str, object]:
+    """Build a JSON object while rejecting duplicate keys."""
     result: dict[str, object] = {}
     for key, value in pairs:
         if key in result:
@@ -1339,6 +1368,7 @@ def _unique_object(pairs: Iterable[tuple[str, object]]) -> dict[str, object]:
 
 
 def _contract_type(value: object, expected: type[_T]) -> _T:
+    """Return a contract of the expected runtime type."""
     if not isinstance(value, expected):
         raise ValueError(f"expected {expected.__name__} contract")
     return value
