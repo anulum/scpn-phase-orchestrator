@@ -259,6 +259,43 @@ source and handoff are fixed to `review_only` and `actionable=false`, and the
 module has no control-action dependency. The portable shape is published as
 [`mif_merge_compression_handoff.schema.json`](../../specs/mif_merge_compression_handoff.schema.json).
 
+## Portable reactor regime assessment
+
+`ReactorRegimeAssessment` is the digest-sealed portable identity for one
+complete eight-axis regime vector. It binds the exact source handoff, event,
+reactor context, producer and source revisions, clock and validity window, and
+the exact reactor, semantic-profile, observability, and regime-ontology
+registries. Axis rows are always serialized in lexicographic `axis_id` order.
+
+Each `ReactorRegimeAxisAssessment` separates ontology-derived static
+applicability from the result disposition: `classified`, `unknown`, or
+`not_applicable`. A classified row requires a closed ontology label, positive
+confidence and observability, probability uncertainty with a named basis,
+usable validity and quality, provenance, evidence IDs, and a typed binding for
+every evidence role required by that axis definition. Classifier identity is
+therefore required for confinement/assembly, while owner declaration,
+diagnostic inventory, clock/reference, reaction-model, boundary, or maturity
+roles remain distinct rather than being mislabeled as classifiers.
+
+`unknown` is the correct result when a statically applicable axis lacks enough
+qualified evidence. It has no physics label, zero confidence, unit uncertainty
+probability, and an explicit reason; its evidence list may be empty.
+`not_applicable` is accepted only when the pinned ontology computes that result
+for the exact configuration. It cannot be used to hide missing evidence.
+
+`classification_performed=false` states that this codec validates supplied
+results but never runs a classifier. The complete envelope and every axis are
+permanently `review_only` and non-actionable. No collapsed nominal/critical
+verdict, control target, actuator, CODAC, or interlock field exists. Consumers
+must independently retrieve the referenced artifacts; a syntactically valid
+digest is not proof of their contents. The current MIF handoff still supports
+only an all-unknown applicable vector plus ontology-derived non-applicability;
+the assessment contract does not upgrade numerical model state into measured
+physical evidence.
+
+The transport shape is published as
+[`reactor_regime_assessment.schema.json`](../../specs/reactor_regime_assessment.schema.json).
+
 ## Reactor research ControlIntent hypothesis
 
 `ReactorResearchControlIntent` is a digest-sealed SPO research hypothesis for
