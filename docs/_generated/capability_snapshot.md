@@ -5,9 +5,9 @@
 
 | Surface | Current inventory |
 |---|---:|
-| Package version | 1.2.0 |
-| Public API exports | 24 |
-| Python package modules | 727 |
+| Package version | 1.3.0 |
+| Public API exports | 29 |
+| Python package modules | 736 |
 | Core Engine modules | 328 |
 | Runtime/Serving modules | 158 |
 | Integration modules | 32 |
@@ -15,8 +15,8 @@
 | Domainpack files | 36 |
 | Rust kernel files | 97 |
 | Optional extras | 23 |
-| Python test files | 875 |
-| Public documentation pages | 233 |
+| Python test files | 884 |
+| Public documentation pages | 234 |
 | GitHub Actions workflows | 12 |
 
 Evidence boundary: this snapshot is a static inventory. Performance, coverage, hardware, and scientific-fidelity claims require their own committed evidence artifacts.
