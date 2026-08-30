@@ -157,6 +157,39 @@ calibration timestamps only against an explicitly supplied reference clock in
 the same domain and epoch; it must not compare simulation-monotonic evidence to
 wall time implicitly.
 
+## MIF merge-compression review handoff
+
+`mif_merge_compression_handoff_from_mif_bytes()` is the dedicated adapter for
+`scpn-mif-core.merge-compression-observation.v1`. It accepts exact canonical
+SCPN-MIF-CORE bytes without importing or executing that sibling package. The
+adapter independently verifies source and payload digests, source revision,
+event identity, review-only authority, reactor vocabulary, complete simulation
+clock, model-evidence validity, kinematic vector shape, derived geometry,
+merge predicates, and trigger prerequisites.
+
+The configuration is the registry's `frc_compression_mif`, whose family is
+`magneto_inertial` and whose topology is a compressed field-reversed
+configuration. The shorter `frc` alias is intentionally rejected because it
+resolves to an uncompressed magnetic-closed FRC.
+
+Each serialized oscillator angle becomes one `numerical_phase` record. Its
+meaning is limited to the MIF model state: `[0,2pi)` wrap, positive model
+evolution, event-start origin and reference, identity model-state observation
+operator, simulation-monotonic clock, and simulation evidence. Position,
+velocity, phase-lock error, Kuramoto order parameter, tolerances, streaks,
+safety margin, and integrator error remain `bounded_feature`. Lock, trigger,
+and gate values remain `categorical_state`. Their phase observability is zero;
+none acquires an angle. V1 emits no phase relation and leaves the reactor regime
+`unknown` because MIF supplies no versioned regime classifier.
+
+`MIFMergeCompressionHandoff` embeds the exact source JSON and its SHA-256 beside
+the complete U0 graph. `mif_merge_compression_handoff_to_bytes()` seals that
+graph in a second canonical envelope;
+`mif_merge_compression_handoff_from_bytes()` verifies the full chain. Both
+source and handoff are fixed to `review_only` and `actionable=false`, and the
+module has no control-action dependency. The portable shape is published as
+[`mif_merge_compression_handoff.schema.json`](../../specs/mif_merge_compression_handoff.schema.json).
+
 ```python
 from scpn_phase_orchestrator import (
     ObservableDescriptor,
