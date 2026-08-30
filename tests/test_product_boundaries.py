@@ -123,6 +123,16 @@ def test_runtime_namespace_is_runtime_boundary() -> None:
     )
 
 
+def test_reactor_semantics_is_a_core_boundary() -> None:
+    assert mod.classify_module("scpn_phase_orchestrator.reactor_semantics") == "core"
+    assert (
+        mod.classify_module(
+            "scpn_phase_orchestrator.reactor_semantics.regime_assessment"
+        )
+        == "core"
+    )
+
+
 def test_core_package_cannot_import_integration_surface(tmp_path: Path) -> None:
     core = _write_module(
         tmp_path,

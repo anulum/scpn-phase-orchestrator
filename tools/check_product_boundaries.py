@@ -35,6 +35,7 @@ CORE_PACKAGES = frozenset(
         "imprint",
         "monitor",
         "oscillators",
+        "reactor_semantics",
         "ssgf",
         "supervisor",
         "upde",

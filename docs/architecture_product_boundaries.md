@@ -19,8 +19,16 @@ maintained and tested as production surfaces.
 
 Core Engine contains the deterministic mathematical and phase-control substrate:
 binding, oscillators, coupling, UPDE engines, monitors, core actuation models,
-imprint state, SSGF primitives, and the minimal supervisor types required to run
-phase-control decisions.
+imprint state, SSGF primitives, reactor-semantic contracts and codecs, and the
+minimal supervisor types required to run phase-control decisions.
+
+Reactor Semantics belongs to Core Engine because its canonical records,
+registries, validation, and serialization are dependency-light deterministic
+contracts. Producer-specific adapters decode supplied review envelopes without
+importing or executing sibling projects. This classification does not promote
+the records to control authority: reactor-semantic outputs remain review-only
+and non-actionable, and CONTROL admission and machine protection stay outside
+this package.
 
 Core Engine must remain free of serving, tenancy, external system, notebook,
 bridge, and experimental runtime dependencies. Runtime, integrations, and

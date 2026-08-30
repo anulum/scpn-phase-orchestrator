@@ -29,6 +29,7 @@ core_engine = [
     "imprint",
     "monitor",
     "oscillators",
+    "reactor_semantics",
     "ssgf",
     "supervisor",
     "upde",
