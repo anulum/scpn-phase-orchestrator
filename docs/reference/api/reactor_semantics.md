@@ -22,6 +22,24 @@ require an opaque plant- or integrator-supplied `event_id`; U0 never invents a
 The built-in registry includes 32 concrete configurations and an immutable,
 namespaced extension path.
 
+The separate `DEFAULT_REACTOR_SEMANTIC_PROFILE_REGISTRY` binds every one of
+those 32 configurations to its device-family project without claiming that a
+project assignment is already a semantic producer. Its versioned canonical
+record is sealed to the reactor-registry digest and the cross-project
+assignment-map SHA-256. Only `conventional_tokamak` through the exercised
+FUSION/TORAX adapter and `frc_compression_mif` through the exercised MIF
+adapter currently have `verified_review_adapter` ingress. The other thirty
+records are explicitly `not_declared`: they advertise no producer, source
+schema, adapter API, handoff schema, or semantic profile.
+
+The profile registry is a descriptive SPO binding for producer and consumer
+contract discovery. It does not replace device-owned `reactor-domain.json`,
+declare capability evidence maturity, or determine Studio federation state.
+It never supplies an implicit generic adapter. CONTROL adapter contracts and a
+future supervisory `ControlIntent` remain separately versioned fields and are
+currently absent. All profiles are `review_only`, `actionable=false`, and
+preserve independent machine protection as the final veto.
+
 The deterministic reference portfolio exercises nine non-exclusive design
 slices:
 

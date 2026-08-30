@@ -76,6 +76,14 @@ from .registry import (
     ReactorConfiguration,
     ReactorConfigurationRegistry,
 )
+from .semantic_profiles import (
+    DEFAULT_REACTOR_SEMANTIC_PROFILE_REGISTRY,
+    REACTOR_FAMILY_ASSIGNMENT_MAP_SHA256,
+    REACTOR_SEMANTIC_PROFILE_REGISTRY_VERSION,
+    ReactorSemanticProfile,
+    ReactorSemanticProfileRegistry,
+    SemanticIngressState,
+)
 from .serialization import (
     ReactorSemanticContract,
     canonical_json,
@@ -108,6 +116,7 @@ from .vocabulary import (
 __all__ = [
     "ACTION_OWNER",
     "DEFAULT_REACTOR_REGISTRY",
+    "DEFAULT_REACTOR_SEMANTIC_PROFILE_REGISTRY",
     "HANDOFF_SCHEMA",
     "HANDOFF_SCHEMA_VERSION",
     "MAX_HANDOFF_JSON_BYTES",
@@ -115,6 +124,8 @@ __all__ = [
     "MAX_SOURCE_ENVELOPE_BYTES",
     "PLANT_TRUTH_OWNERS",
     "REACTOR_REGISTRY_VERSION",
+    "REACTOR_FAMILY_ASSIGNMENT_MAP_SHA256",
+    "REACTOR_SEMANTIC_PROFILE_REGISTRY_VERSION",
     "REVIEW_ONLY_AUTHORITY",
     "SEMANTIC_OWNER",
     "U0_SCHEMA_VERSION",
@@ -149,11 +160,14 @@ __all__ = [
     "ReactorReferenceSlice",
     "ReactorSemanticContract",
     "ReactorSemanticHandoff",
+    "ReactorSemanticProfile",
+    "ReactorSemanticProfileRegistry",
     "RegimeAxis",
     "RegimeEstimate",
     "RegimeState",
     "RelationInterpretation",
     "SemanticCarrier",
+    "SemanticIngressState",
     "Uncertainty",
     "ValidityState",
     "ValidityWindow",

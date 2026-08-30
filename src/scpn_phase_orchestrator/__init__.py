@@ -118,6 +118,7 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
     ),
 }
 
+
 def __getattr__(name: str) -> _Any:
     """Resolve one compatibility export only when it is explicitly requested."""
     try:
