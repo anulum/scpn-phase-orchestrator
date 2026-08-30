@@ -179,10 +179,9 @@ class ReactorRegimeAxisAssessment:
         bindings = tuple(self.evidence_bindings)
         binding_keys = tuple((item.role_id, item.reference_id) for item in bindings)
         binding_roles = tuple(item.role_id for item in bindings)
-        if (
-            tuple(sorted(set(binding_keys))) != binding_keys
-            or len(set(binding_roles)) != len(binding_roles)
-        ):
+        if tuple(sorted(set(binding_keys))) != binding_keys or len(
+            set(binding_roles)
+        ) != len(binding_roles):
             raise ValueError("evidence bindings must be unique and sorted")
         basis = _identifiers(
             self.applicability_basis,
@@ -310,8 +309,14 @@ class ReactorRegimeAxisAssessment:
             value = getattr(self, field_name)
             if value is None:
                 raise ValueError("classified assessment requires classifier policies")
-            validator = require_sha256 if field_name.endswith("sha256") else (
-                require_semver if field_name.endswith("version") else require_identifier
+            validator = (
+                require_sha256
+                if field_name.endswith("sha256")
+                else (
+                    require_semver
+                    if field_name.endswith("version")
+                    else require_identifier
+                )
             )
             object.__setattr__(self, field_name, validator(value, field=field_name))
         if any(getattr(self, name) is not None for name in forbidden_names):
@@ -412,8 +417,7 @@ class ReactorRegimeAxisAssessment:
 
     def _forbid_classifier_result(self, disposition: str) -> None:
         has_classifier_field = any(
-            getattr(self, field_name) is not None
-            for field_name in _CLASSIFIER_FIELDS
+            getattr(self, field_name) is not None for field_name in _CLASSIFIER_FIELDS
         )
         if has_classifier_field:
             raise ValueError(f"{disposition} assessment forbids classifier policies")
@@ -467,9 +471,7 @@ class ReactorRegimeAxisAssessment:
             static_applicability = AxisApplicability(
                 cast(str, record["static_applicability"])
             )
-            disposition = ReactorRegimeAxisDisposition(
-                cast(str, record["disposition"])
-            )
+            disposition = ReactorRegimeAxisDisposition(cast(str, record["disposition"]))
             evidence_class = EvidenceClass(cast(str, record["evidence_class"]))
             validity = ValidityState(cast(str, record["validity"]))
             quality = QualityState(cast(str, record["quality"]))
@@ -782,9 +784,7 @@ class ReactorRegimeAssessment:
             "reactor_registry_digest": self.reactor_registry_digest,
             "reactor_registry_version": self.reactor_registry_version,
             "sample_rate_hz": self.sample_rate_hz,
-            "semantic_profile_registry_digest": (
-                self.semantic_profile_registry_digest
-            ),
+            "semantic_profile_registry_digest": (self.semantic_profile_registry_digest),
             "semantic_profile_registry_version": (
                 self.semantic_profile_registry_version
             ),
