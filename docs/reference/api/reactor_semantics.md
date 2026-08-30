@@ -57,6 +57,38 @@ event references for drive and shot timing; and confines synthetic oscillator
 coordinates to `numerical_phase`. It therefore provides a deterministic gap
 map without allowing architecture-only projects to advertise observations.
 
+`DEFAULT_REACTOR_REGIME_MODE_ONTOLOGY` closes the remaining open-text meaning
+above U0 without changing the U0 `1.0.0` wire format. It defines eight
+independent axes: plant readiness, diagnostic observability, confinement or
+assembly, stability or symmetry, driver synchronization, power or burn,
+exhaust or boundary, and evidence maturity. Every axis has a closed label
+vocabulary and explicit universal or context-dependent applicability.
+
+`ReactorRegimeAxisAssignment` keeps three cases distinct. An `applicable` axis
+requires a defined non-unknown label and classification evidence;
+`not_applicable` requires a context basis and forbids a physics label; and
+`unknown` reports that applicability or classification is unresolved. The
+last two project into U0 as literal `not_applicable` and `unknown` labels with
+zero confidence. Neither can silently become `nominal`.
+
+The same ontology names six physical mode families for closed-field MHD,
+open-field interchange, self-magnetic pinch instability, inertial asymmetry,
+magneto-inertial asymmetry, and IEC bunching. A physical
+`ReactorModeBinding` is valid only with an exact reactor configuration,
+compatible observability candidate and carrier, physical harmonic basis,
+operator, frame, reference, orientation, origin, wrap convention,
+observability threshold, validity, quality, provenance, and admissible
+evidence class. The separate all-configuration synthetic-oscillator definition
+admits only `numerical_phase` with simulation evidence and no physical
+harmonic. It is an explicit fallback, not a claim of equivalence to a plasma
+mode.
+
+The ontology record is sealed to the exact reactor and observability registry
+versions and SHA-256 digests. It remains `review_only` and
+`actionable=false`; it validates identity and refusal rules but performs no
+classification, extraction, CONTROL admission, machine-protection decision,
+or actuation.
+
 The deterministic reference portfolio exercises nine non-exclusive design
 slices:
 
