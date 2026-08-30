@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- A strict public coupled-transport adapter that accepts canonical FUSION TORAX
+  review bytes, validates the complete clock, reactor, shape, unit,
+  calibration, numerical-refinement, provenance, and digest contract, and maps
+  exactly four profiles, five source totals, and three state budgets to
+  noncyclic U0 review evidence. It never infers phase, regime, or action.
 - A digest-sealed, review-only reactor semantic handoff that preserves exact
   FUSION producer bytes, registry-validated U0 contracts, simulation clock and
   event identity, bounded-feature semantics, and an explicitly unknown regime.
@@ -20,6 +25,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   semantic carriers, spans nine reference reactor families, serializes
   deterministically, and fails closed on missing, stale, OOD, incompatible, or
   below-threshold evidence without granting SPO actuation authority.
+
+### Changed
+
+- Package-root compatibility exports now resolve lazily, so importing the
+  portable reactor-semantic byte codec does not initialise UPDE, supervisor,
+  native accelerator, or Julia runtimes. The frozen root `__all__` contract is
+  unchanged.
 
 ## [1.2.0] - 2026-08-26
 

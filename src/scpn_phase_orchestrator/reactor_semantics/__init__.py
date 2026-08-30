@@ -23,6 +23,12 @@ from .contracts import (
     build_phase_relation,
     validate_observable_sequence,
 )
+from .coupled_transport import (
+    FUSION_COUPLED_TRANSPORT_SCHEMA,
+    FUSION_TORAX_OUTCOME_SCHEMA,
+    FUSION_TORAX_REVIEW_SCHEMA,
+    coupled_transport_handoff_from_fusion_bytes,
+)
 from .evidence import (
     CalibrationReference,
     ClockReference,
@@ -104,6 +110,9 @@ __all__ = [
     "ConversionKind",
     "DriverKind",
     "EvidenceClass",
+    "FUSION_COUPLED_TRANSPORT_SCHEMA",
+    "FUSION_TORAX_OUTCOME_SCHEMA",
+    "FUSION_TORAX_REVIEW_SCHEMA",
     "JsonValue",
     "ObservableDescriptor",
     "OperatingCadence",
@@ -136,6 +145,7 @@ __all__ = [
     "contract_from_json",
     "contract_from_record",
     "contract_to_record",
+    "coupled_transport_handoff_from_fusion_bytes",
     "handoff_digest",
     "handoff_from_bytes",
     "handoff_from_json",

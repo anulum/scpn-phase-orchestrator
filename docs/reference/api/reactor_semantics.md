@@ -98,6 +98,32 @@ enforces registry identity and the cross-field physics/epistemic invariants.
 
 ## Coupled-transport review handoff
 
+`coupled_transport_handoff_from_fusion_bytes()` is the public producer adapter.
+It accepts only canonical
+`scpn-fusion-core.torax-runtime-review-envelope.v1` bytes and independently
+checks the byte digest, nested payload digest, exact source and
+model-intersection schemas, Git revision, event identity, provenance digests,
+simulation clock, completion, solver numerics, U0 registry identity, and the
+declared non-empirical calibration. It has no runtime dependency on FUSION,
+TORAX, NumPy, Julia, or an accelerator.
+
+The accepted evidence set is closed: four radial profiles (electron density,
+electron temperature, ion temperature, and poloidal flux), five global source
+totals (driven current, electron heat, ion-electron exchange, ion heat, and
+particles), and three state budgets (particle inventory, poloidal-flux L2, and
+thermal energy). The normalised `rho` axis is spatial support, not a thirteenth
+observable. Profile rows and scalar series must match every clock sample before
+the adapter selects the final sample. Each quantity has one exact unit and a
+category-matched `absolute_rms_difference` plus `relative_l2`; the absolute RMS
+is carried in U0's standard-deviation field with confidence fixed to zero and
+provenance stating that it is numerical, not statistical or empirical.
+
+The frozen TORAX deck contains deuterium main ions and neon impurity but models
+no fusion reaction, burn, or fusion power. `deuterium_deuterium` therefore
+identifies only the evidence-supported fuel class. The producer must retain the
+explicit `deuterium_only_input_no_fusion_power_or_burn_model` qualifier; SPO
+refuses an unqualified reaction label.
+
 `ReactorSemanticHandoff` carries one exact canonical FUSION producer envelope
 alongside its U0 interpretation. The source bytes and the complete handoff
 payload have independent SHA-256 seals, so a downstream reviewer can verify the
@@ -117,11 +143,13 @@ confidence. The handoff fixes `authority="review_only"` and
 
 Cross-project consumers pass the exact serialized bytes to
 `handoff_from_bytes()`. It admits only the unique canonical UTF-8 encoding;
-`handoff_from_json()` remains the Python string surface for local composition. The decoder
-refuses duplicate keys, unknown or extra fields, digest drift, registry or U0
-version drift, mixed clocks, missing event identity, FUSION ownership loss,
-phase relabeling, relations, regime inference, and authority escalation. The
-portable shape is published as
+`handoff_from_json()` remains the Python string surface for local composition.
+Importing `scpn_phase_orchestrator.reactor_semantics` does not initialise UPDE,
+supervisor, native accelerator, or Julia runtimes. The decoder refuses
+duplicate keys, unknown or extra fields, digest drift, registry or U0 version
+drift, mixed clocks, missing event identity, FUSION ownership loss, phase
+relabeling, relations, regime inference, and authority escalation. The portable
+shape is published as
 [`reactor_semantic_handoff.schema.json`](../../specs/reactor_semantic_handoff.schema.json).
 
 Freshness is a consumer-owned admission policy. A consumer compares sample and
@@ -140,12 +168,20 @@ from scpn_phase_orchestrator import (
 from scpn_phase_orchestrator.reactor_semantics import (
     build_reactor_reference_portfolio,
     canonical_json,
+    coupled_transport_handoff_from_fusion_bytes,
     handoff_from_bytes,
+    handoff_to_bytes,
 )
 
 reference = build_reactor_reference_portfolio()
 tokamak_context: ReactorContext = reference[0].context
 payload = canonical_json(tokamak_context)
+
+# Cross-project path: exact FUSION bytes -> SPO semantic bytes.
+fusion_bytes = open("torax_runtime_review_envelope_v1.json", "rb").read()
+semantic_bytes = handoff_to_bytes(
+    coupled_transport_handoff_from_fusion_bytes(fusion_bytes)
+)
 ```
 
 The root package exports only the five stable contracts. Registry, evidence,
