@@ -1,0 +1,120 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://anulum.li/schemas/scpn-phase-orchestrator/reactor-semantic-handoff-1.0.0.schema.json",
+  "title": "SCPN Phase Orchestrator review-only reactor semantic handoff",
+  "description": "Digest-sealed FUSION evidence and U0 semantic contracts. This envelope is never actionable.",
+  "type": "object",
+  "required": ["payload", "payload_sha256", "schema", "schema_version"],
+  "additionalProperties": false,
+  "properties": {
+    "payload": {"$ref": "#/$defs/HandoffPayload"},
+    "payload_sha256": {"$ref": "#/$defs/Sha256"},
+    "schema": {
+      "const": "scpn-phase-orchestrator.reactor-semantic-handoff.v1"
+    },
+    "schema_version": {"const": "1.0.0"}
+  },
+  "$defs": {
+    "Sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "GitRevision": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "Identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9_.:\\-]{0,127}$"
+    },
+    "U0Envelope": {
+      "$ref": "https://anulum.li/schemas/scpn-phase-orchestrator/reactor-semantics-u0-1.0.0.schema.json"
+    },
+    "HandoffPayload": {
+      "type": "object",
+      "required": [
+        "actionable",
+        "authority",
+        "event_id",
+        "observables",
+        "phase_relations",
+        "reactor_context",
+        "regime",
+        "registry_digest",
+        "registry_version",
+        "semantics",
+        "source_envelope_json",
+        "source_envelope_sha256",
+        "source_project",
+        "source_revision",
+        "source_schema",
+        "u0_schema_version"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "actionable": {"const": false},
+        "authority": {"const": "review_only"},
+        "event_id": {"$ref": "#/$defs/Identifier"},
+        "observables": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "allOf": [
+              {"$ref": "#/$defs/U0Envelope"},
+              {
+                "type": "object",
+                "properties": {"contract_type": {"const": "observable_descriptor"}}
+              }
+            ]
+          }
+        },
+        "phase_relations": {
+          "type": "array",
+          "maxItems": 0
+        },
+        "reactor_context": {
+          "allOf": [
+            {"$ref": "#/$defs/U0Envelope"},
+            {
+              "type": "object",
+              "properties": {"contract_type": {"const": "reactor_context"}}
+            }
+          ]
+        },
+        "regime": {
+          "allOf": [
+            {"$ref": "#/$defs/U0Envelope"},
+            {
+              "type": "object",
+              "properties": {"contract_type": {"const": "regime_estimate"}}
+            }
+          ]
+        },
+        "registry_digest": {"$ref": "#/$defs/Sha256"},
+        "registry_version": {"const": "1.0.0"},
+        "semantics": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "allOf": [
+              {"$ref": "#/$defs/U0Envelope"},
+              {
+                "type": "object",
+                "properties": {"contract_type": {"const": "phase_semantic_record"}}
+              }
+            ]
+          }
+        },
+        "source_envelope_json": {"type": "string", "minLength": 2},
+        "source_envelope_sha256": {"$ref": "#/$defs/Sha256"},
+        "source_project": {"const": "SCPN-FUSION-CORE"},
+        "source_revision": {"$ref": "#/$defs/GitRevision"},
+        "source_schema": {
+          "type": "string",
+          "pattern": "^scpn-fusion-core\\.[A-Za-z0-9_.:\\-]+$"
+        },
+        "u0_schema_version": {"const": "1.0.0"}
+      }
+    }
+  }
+}

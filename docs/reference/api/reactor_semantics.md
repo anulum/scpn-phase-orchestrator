@@ -96,6 +96,39 @@ The portable exchange shape is published as
 JSON Schema validates transport structure; the Python runtime additionally
 enforces registry identity and the cross-field physics/epistemic invariants.
 
+## Coupled-transport review handoff
+
+`ReactorSemanticHandoff` carries one exact canonical FUSION producer envelope
+alongside its U0 interpretation. The source bytes and the complete handoff
+payload have independent SHA-256 seals, so a downstream reviewer can verify the
+producer-to-semantics chain without trusting a live Python object graph.
+
+The coupled-transport profile is deliberately narrow. Every observable retains
+FUSION provenance and shares one simulation-monotonic clock domain and epoch.
+SPO emits exactly one `bounded_feature` record per observable, with zero phase
+confidence and observability, `unobservable` phase validity, and explicit
+unknown phase quality. This expected phase-extraction state does not invalidate
+an otherwise usable nonphase observable or prevent review admission. Amplitude,
+angle, frequency, bandwidth, mode,
+harmonic, origin, orientation, wrap, reference signal, observation operator,
+and phase relations are forbidden. The regime remains `unknown` with zero
+confidence. The handoff fixes `authority="review_only"` and
+`actionable=false`; it has no path to `ControlAction`.
+
+Cross-project consumers pass the exact serialized bytes to
+`handoff_from_bytes()`. It admits only the unique canonical UTF-8 encoding;
+`handoff_from_json()` remains the Python string surface for local composition. The decoder
+refuses duplicate keys, unknown or extra fields, digest drift, registry or U0
+version drift, mixed clocks, missing event identity, FUSION ownership loss,
+phase relabeling, relations, regime inference, and authority escalation. The
+portable shape is published as
+[`reactor_semantic_handoff.schema.json`](../../specs/reactor_semantic_handoff.schema.json).
+
+Freshness is a consumer-owned admission policy. A consumer compares sample and
+calibration timestamps only against an explicitly supplied reference clock in
+the same domain and epoch; it must not compare simulation-monotonic evidence to
+wall time implicitly.
+
 ```python
 from scpn_phase_orchestrator import (
     ObservableDescriptor,
@@ -107,6 +140,7 @@ from scpn_phase_orchestrator import (
 from scpn_phase_orchestrator.reactor_semantics import (
     build_reactor_reference_portfolio,
     canonical_json,
+    handoff_from_bytes,
 )
 
 reference = build_reactor_reference_portfolio()

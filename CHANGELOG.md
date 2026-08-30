@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- A digest-sealed, review-only reactor semantic handoff that preserves exact
+  FUSION producer bytes, registry-validated U0 contracts, simulation clock and
+  event identity, bounded-feature semantics, and an explicitly unknown regime.
+  It rejects phase relabeling, relations, digest/version drift, mixed clocks,
+  and any authority or action escalation.
 - U0 reactor-family-neutral semantic contracts for context, calibrated
   observables, typed phase meaning, compatible phase relations, and
   compositional review-only regime estimates. The contract distinguishes eight

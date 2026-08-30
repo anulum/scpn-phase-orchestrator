@@ -33,6 +33,12 @@ def test_reactor_semantics_reference_preserves_u0_boundaries() -> None:
         "duplicate JSON keys",
         "schema `1.0.0`",
         "reactor_semantics_u0.schema.json",
+        "ReactorSemanticHandoff",
+        "handoff_from_bytes()",
+        "zero phase confidence and observability",
+        "actionable=false",
+        "reactor_semantic_handoff.schema.json",
+        "simulation-monotonic evidence to wall time implicitly",
     )
 
     for marker in required:
