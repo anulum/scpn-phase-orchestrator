@@ -26,7 +26,18 @@ python tools/check_github_action_refs.py .github/workflows/publish.yml
 python tools/check_version_sync.py
 GITHUB_REF_NAME=vX.Y.Z python tools/check_release_tag_version.py
 python tools/check_meta_distribution.py
+python tools/build_reproducible_release.py --outdir dist
+twine check dist/*
 ```
+
+The reproducible builder derives `SOURCE_DATE_EPOCH` from the exact Git HEAD
+unless the caller supplies it explicitly. Wheels are built through the declared
+PEP 517 backend. Source distributions are then rewritten without changing
+package file names or bytes: member order, ownership, permissions, timestamps,
+PAX metadata, and the gzip header are canonicalized. Unsafe paths, links,
+unexpected artifact sets, invalid epochs, and destination collisions fail
+closed. A release candidate is reproducible only when two clean builds from the
+same commit produce identical SHA-256 values for both wheel and sdist.
 
 The action-reference guard checks every remote `owner/repo@ref` action in the
 workflow, requires full 40-character commit SHAs, and verifies each ref resolves
@@ -40,6 +51,7 @@ publishing remains disabled unless an explicit future publication step is added.
 Download-and-run installer steps must also be pinned to explicit tool versions.
 
 ## Release control outcome
+
 - This page defines the operational boundary for what gets published, and it is used as a hard gate before any version movement.
 - Treat release hygiene evidence as mandatory evidence for runtime assumptions, action compatibility, and package metadata integrity.
 - Keep all tooling references current so a tag cannot depend on stale action revisions or unverified metadata.

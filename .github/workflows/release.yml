@@ -39,7 +39,9 @@ jobs:
       - name: Build sdist
         run: |
           pip install --require-hashes -r requirements/release-tools.txt
-          python -m build --sdist
+          python tools/build_reproducible_release.py --sdist-only --outdir dist
+          python tools/build_reproducible_release.py --sdist-only --outdir dist-recheck
+          cmp dist/*.tar.gz dist-recheck/*.tar.gz
 
       - name: Generate SBOM
         run: |

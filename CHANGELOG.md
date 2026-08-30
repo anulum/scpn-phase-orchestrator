@@ -11,6 +11,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- A strict, digest-sealed MIF merge-compression adapter that accepts canonical
+  SCPN-MIF-CORE observation bytes, validates exact reactor identity, event and
+  simulation clock, source revision, kinematics, geometry, lock/trigger/gate
+  predicates, and provenance, and preserves oscillator coordinates as
+  simulation-only `numerical_phase`. Translation, compression, lock, trigger,
+  and gate values remain bounded or categorical; no control action is created.
+- Versioned cross-reactor semantic-ingress, observability, regime-axis, and
+  mode-identity registries covering all 32 built-in configurations. They keep
+  undeclared producers, non-applicable axes, unknown state, physical modes,
+  and numerical oscillator coordinates distinct and review-only.
 - A strict public coupled-transport adapter that accepts canonical FUSION TORAX
   review bytes, validates the complete clock, reactor, shape, unit,
   calibration, numerical-refinement, provenance, and digest contract, and maps
@@ -30,6 +40,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Tag-triggered Python package and GitHub release workflows now use one
+  fail-closed reproducible artifact builder. It derives a fixed epoch from the
+  exact source commit and canonicalizes sdist archive metadata so repeated
+  wheel and sdist builds have stable SHA-256 values.
 - Package-root compatibility exports now resolve lazily, so importing the
   portable reactor-semantic byte codec does not initialise UPDE, supervisor,
   native accelerator, or Julia runtimes. The frozen root `__all__` contract is

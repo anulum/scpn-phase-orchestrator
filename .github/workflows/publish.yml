@@ -112,7 +112,11 @@ jobs:
         with:
           python-version: "3.12"
       - run: python -m pip install --require-hashes -r requirements/publish-tools.txt
-      - run: python -m build --sdist
+      - run: python tools/build_reproducible_release.py --sdist-only --outdir dist
+      - name: Rebuild and compare sdist bytes
+        run: |
+          python tools/build_reproducible_release.py --sdist-only --outdir dist-recheck
+          cmp dist/*.tar.gz dist-recheck/*.tar.gz
       - run: twine check dist/*
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
@@ -129,7 +133,11 @@ jobs:
         with:
           python-version: "3.12"
       - run: python -m pip install --require-hashes -r requirements/publish-tools.txt
-      - run: python -m build --wheel
+      - run: python tools/build_reproducible_release.py --wheel-only --outdir dist
+      - name: Rebuild and compare wheel bytes
+        run: |
+          python tools/build_reproducible_release.py --wheel-only --outdir dist-recheck
+          cmp dist/*.whl dist-recheck/*.whl
       - run: twine check dist/*
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
