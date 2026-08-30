@@ -40,6 +40,23 @@ future supervisory `ControlIntent` remain separately versioned fields and are
 currently absent. All profiles are `review_only`, `actionable=false`, and
 preserve independent machine protection as the final veto.
 
+`DEFAULT_REACTOR_OBSERVABILITY_PROFILE_REGISTRY` adds the machine-readable
+candidate layer. It covers every built-in configuration with explicit
+`direct_cyclic`, `derived_cyclic`, `event_relative`, `noncyclic_feature`, and
+`numerical_only` routes plus a fail-closed `unobservable` result. Each
+candidate fixes its admissible carrier set, reference/repetition/operator
+requirements, minimum evidence fields, and the disposition when evidence is
+missing. These records always carry `evidence_claimed=false`: applicability is
+a research and schema requirement, never proof that the diagnostic or signal
+exists.
+
+The catalogue keeps equilibrium profiles, trajectories, yields, and blanket
+response noncyclic; requires validated modal operators for MHD, pinch,
+implosion, liner, and electrostatic oscillation phase; requires facility or
+event references for drive and shot timing; and confines synthetic oscillator
+coordinates to `numerical_phase`. It therefore provides a deterministic gap
+map without allowing architecture-only projects to advertise observations.
+
 The deterministic reference portfolio exercises nine non-exclusive design
 slices:
 

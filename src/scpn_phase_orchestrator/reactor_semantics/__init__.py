@@ -66,6 +66,14 @@ from .mif_merge_compression import (
     mif_merge_compression_handoff_to_bytes,
     mif_merge_compression_handoff_to_record,
 )
+from .observability_profiles import (
+    DEFAULT_REACTOR_OBSERVABILITY_PROFILE_REGISTRY,
+    REACTOR_OBSERVABILITY_PROFILE_REGISTRY_VERSION,
+    ObservabilityClass,
+    ReactorObservabilityProfileRegistry,
+    ReactorSignalCandidateProfile,
+    UnmetEvidenceDisposition,
+)
 from .reference_portfolio import (
     ReactorReferenceSlice,
     build_reactor_reference_portfolio,
@@ -115,6 +123,7 @@ from .vocabulary import (
 
 __all__ = [
     "ACTION_OWNER",
+    "DEFAULT_REACTOR_OBSERVABILITY_PROFILE_REGISTRY",
     "DEFAULT_REACTOR_REGISTRY",
     "DEFAULT_REACTOR_SEMANTIC_PROFILE_REGISTRY",
     "HANDOFF_SCHEMA",
@@ -123,6 +132,7 @@ __all__ = [
     "MAX_MIF_MERGE_COMPRESSION_HANDOFF_BYTES",
     "MAX_SOURCE_ENVELOPE_BYTES",
     "PLANT_TRUTH_OWNERS",
+    "REACTOR_OBSERVABILITY_PROFILE_REGISTRY_VERSION",
     "REACTOR_REGISTRY_VERSION",
     "REACTOR_FAMILY_ASSIGNMENT_MAP_SHA256",
     "REACTOR_SEMANTIC_PROFILE_REGISTRY_VERSION",
@@ -146,6 +156,7 @@ __all__ = [
     "MIF_MERGE_COMPRESSION_SOURCE_SCHEMA",
     "MIF_MERGE_COMPRESSION_SOURCE_VERSION",
     "ObservableDescriptor",
+    "ObservabilityClass",
     "OperatingCadence",
     "PhaseRelation",
     "PhaseRelationType",
@@ -157,11 +168,13 @@ __all__ = [
     "ReactorConfiguration",
     "ReactorConfigurationRegistry",
     "ReactorContext",
+    "ReactorObservabilityProfileRegistry",
     "ReactorReferenceSlice",
     "ReactorSemanticContract",
     "ReactorSemanticHandoff",
     "ReactorSemanticProfile",
     "ReactorSemanticProfileRegistry",
+    "ReactorSignalCandidateProfile",
     "RegimeAxis",
     "RegimeEstimate",
     "RegimeState",
@@ -169,6 +182,7 @@ __all__ = [
     "SemanticCarrier",
     "SemanticIngressState",
     "Uncertainty",
+    "UnmetEvidenceDisposition",
     "ValidityState",
     "ValidityWindow",
     "build_phase_relation",
