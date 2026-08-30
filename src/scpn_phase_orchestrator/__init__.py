@@ -20,7 +20,6 @@ __version__ = "1.2.0"
 
 import os as _os
 from importlib import import_module as _import_module
-from typing import TYPE_CHECKING as _TYPE_CHECKING
 from typing import Any as _Any
 
 # juliacall 0.9.34's init() references an undefined ``Base`` in its
@@ -118,42 +117,6 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
         "validate_qpu_data_artifact",
     ),
 }
-
-if _TYPE_CHECKING:  # pragma: no cover - static-analysis imports only
-    from scpn_phase_orchestrator.api import Orchestrator, OrchestratorState
-    from scpn_phase_orchestrator.artifacts.qpu_data import (
-        QPUDataArtifact,
-        compile_domain_to_qpu_artifact,
-        emit_qpu_data_artifact,
-        validate_qpu_data_artifact,
-    )
-    from scpn_phase_orchestrator.binding.types import BindingSpec
-    from scpn_phase_orchestrator.coupling.knm import CouplingBuilder
-    from scpn_phase_orchestrator.exceptions import SPOError
-    from scpn_phase_orchestrator.monitor.boundaries import BoundaryObserver
-    from scpn_phase_orchestrator.monitor.lyapunov import lyapunov_spectrum
-    from scpn_phase_orchestrator.oscillators.base import PhaseExtractor, PhaseState
-    from scpn_phase_orchestrator.reactor_semantics import (
-        ObservableDescriptor,
-        PhaseRelation,
-        PhaseSemanticRecord,
-        ReactorContext,
-        RegimeEstimate,
-    )
-    from scpn_phase_orchestrator.runtime.audit_logger import AuditLogger
-    from scpn_phase_orchestrator.supervisor import ControlAction
-    from scpn_phase_orchestrator.supervisor.policy import SupervisorPolicy
-    from scpn_phase_orchestrator.supervisor.regimes import RegimeManager
-    from scpn_phase_orchestrator.upde.bifurcation import (
-        BifurcationDiagram,
-        find_critical_coupling,
-        trace_sync_transition,
-    )
-    from scpn_phase_orchestrator.upde.engine import UPDEEngine
-    from scpn_phase_orchestrator.upde.sheaf_engine import SheafUPDEEngine
-    from scpn_phase_orchestrator.upde.sparse_engine import SparseUPDEEngine
-    from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
-
 
 def __getattr__(name: str) -> _Any:
     """Resolve one compatibility export only when it is explicitly requested."""
