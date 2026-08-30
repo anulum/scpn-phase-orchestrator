@@ -35,10 +35,12 @@ schema, adapter API, handoff schema, or semantic profile.
 The profile registry is a descriptive SPO binding for producer and consumer
 contract discovery. It does not replace device-owned `reactor-domain.json`,
 declare capability evidence maturity, or determine Studio federation state.
-It never supplies an implicit generic adapter. CONTROL adapter contracts and a
-future supervisory `ControlIntent` remain separately versioned fields and are
-currently absent. All profiles are `review_only`, `actionable=false`, and
-preserve independent machine protection as the final veto.
+It never supplies an implicit generic adapter. CONTROL adapter contracts remain
+separately versioned fields and are currently absent. The public
+`ReactorResearchControlIntent` research-hypothesis schema exists, but no profile
+advertises it because no producer-to-CONTROL path has exercised it. All
+profiles are `review_only`, `actionable=false`, and preserve independent
+machine protection as the final veto.
 
 `DEFAULT_REACTOR_OBSERVABILITY_PROFILE_REGISTRY` adds the machine-readable
 candidate layer. It covers every built-in configuration with explicit
@@ -256,6 +258,45 @@ graph in a second canonical envelope;
 source and handoff are fixed to `review_only` and `actionable=false`, and the
 module has no control-action dependency. The portable shape is published as
 [`mif_merge_compression_handoff.schema.json`](../../specs/mif_merge_compression_handoff.schema.json).
+
+## Reactor research ControlIntent hypothesis
+
+`ReactorResearchControlIntent` is a digest-sealed SPO research hypothesis for
+possible later CONTROL review. Its name does not confer CONTROL authority. The
+contract permanently fixes `authority="review_only"`, `actionable=false`, and
+`execution_permitted=false`; it imports no supervisor, actuation, device
+adapter, or SCPN-CONTROL runtime.
+
+Each hypothesis binds the exact SPO producer revision and artifact, source
+semantic handoff and producer revision, a prior CONTROL review-admission
+decision, a classified regime-axis assignment, semantic and evidence sets,
+registry/observability/ontology identities, and a device-owner control-contract
+schema and digest. Its candidate variable includes units, device bounds,
+evidence-bound baseline, proposed value and delta, direction, maximum delta and
+rate, proposed rate, and rate horizon. Complete clock identity, validity,
+evidence class, quality, confidence subject, observability, and unit-aware
+uncertainty remain explicit.
+
+The objective vocabulary is restricted to five physical axes. The target
+vocabulary is narrower still: it refuses harmful and ambiguous targets and
+permits only established confinement/assembly, symmetric or quiescent
+stability, synchronized drivers, rising or sustained power/burn, and
+conditioned or regulated boundary/exhaust hypotheses. CONTROL must still apply
+its own objective/target/variable/direction allowlists.
+
+The JSON Schema validates transport shape; the Python decoder additionally
+enforces sorted identifiers, ontology applicability, source and target labels,
+registry digests, baseline/delta/value equality, delta/rate/horizon equality,
+clock ordering, evidence quality, and non-actuation invariants. Neither proves
+an external digest merely by receiving it. A future consumer must independently
+decode or retrieve the exact source handoff, prior CONTROL decision, regime
+assignment, and device contract.
+
+No current semantic profile declares this surface. In particular, the current
+MIF handoff has an unknown regime, while this contract requires a classified,
+valid, quality-qualified source assignment. CONTROL has no ControlIntent
+consumer or action edge. The portable shape is published as
+[`reactor_control_intent.schema.json`](../../specs/reactor_control_intent.schema.json).
 
 ```python
 from scpn_phase_orchestrator import (
