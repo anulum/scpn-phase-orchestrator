@@ -1,14 +1,14 @@
 {
   "SPDX-License-Identifier": "AGPL-3.0-or-later",
   "counts": {
-    "core_engine_modules": 343,
+    "core_engine_modules": 344,
     "domainpacks": 36,
     "github_workflows": 12,
     "integration_modules": 32,
     "optional_extras": 23,
     "public_api_exports": 29,
     "public_documentation_pages": 234,
-    "python_package_modules": 742,
+    "python_package_modules": 743,
     "research_experimental_modules": 205,
     "runtime_serving_modules": 158,
     "rust_kernel_files": 97,
@@ -562,6 +562,7 @@
       "src/scpn_phase_orchestrator/oscillators/wavelet.py",
       "src/scpn_phase_orchestrator/oscillators/zero_crossing.py",
       "src/scpn_phase_orchestrator/reactor_semantics/__init__.py",
+      "src/scpn_phase_orchestrator/reactor_semantics/abstaining_assessment.py",
       "src/scpn_phase_orchestrator/reactor_semantics/contracts.py",
       "src/scpn_phase_orchestrator/reactor_semantics/control_intent.py",
       "src/scpn_phase_orchestrator/reactor_semantics/coupled_transport.py",
@@ -1129,7 +1130,7 @@
     "name": "scpn-phase-orchestrator",
     "readme": "README.md",
     "requires_python": ">=3.11,<3.14",
-    "version": "1.3.0"
+    "version": "1.3.1"
   },
   "project_label": "SCPN Phase Orchestrator",
   "python_package_modules": [
@@ -1608,6 +1609,7 @@
     "src/scpn_phase_orchestrator/plugins/registry/rust_handoff.py",
     "src/scpn_phase_orchestrator/plugins/registry/storage.py",
     "src/scpn_phase_orchestrator/reactor_semantics/__init__.py",
+    "src/scpn_phase_orchestrator/reactor_semantics/abstaining_assessment.py",
     "src/scpn_phase_orchestrator/reactor_semantics/contracts.py",
     "src/scpn_phase_orchestrator/reactor_semantics/control_intent.py",
     "src/scpn_phase_orchestrator/reactor_semantics/coupled_transport.py",

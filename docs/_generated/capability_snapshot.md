@@ -5,10 +5,10 @@
 
 | Surface | Current inventory |
 |---|---:|
-| Package version | 1.3.0 |
+| Package version | 1.3.1 |
 | Public API exports | 29 |
-| Python package modules | 742 |
-| Core Engine modules | 343 |
+| Python package modules | 743 |
+| Core Engine modules | 344 |
 | Runtime/Serving modules | 158 |
 | Integration modules | 32 |
 | Research/Experimental modules | 205 |

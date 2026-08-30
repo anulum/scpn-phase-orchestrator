@@ -47,7 +47,25 @@ def contract_to_record(
     *,
     registry: ReactorConfigurationRegistry = DEFAULT_REACTOR_REGISTRY,
 ) -> dict[str, object]:
-    """Return a typed envelope for a U0 contract."""
+    """Return a typed envelope for a U0 contract.
+
+    Parameters
+    ----------
+    contract : ReactorSemanticContract
+        Contract to serialize.
+    registry : ReactorConfigurationRegistry
+        Registry used to validate embedded reactor identities.
+
+    Returns
+    -------
+    dict[str, object]
+        Typed U0 contract envelope.
+
+    Raises
+    ------
+    TypeError
+        If ``contract`` is not a supported concrete contract type.
+    """
     try:
         contract_type = _CONTRACT_TYPES[type(contract)]
     except KeyError as exc:
@@ -69,7 +87,25 @@ def contract_from_record(
     *,
     registry: ReactorConfigurationRegistry = DEFAULT_REACTOR_REGISTRY,
 ) -> ReactorSemanticContract:
-    """Load one contract and refuse unknown fields, kinds, or schema versions."""
+    """Load one contract and refuse unknown fields, kinds, or schema versions.
+
+    Parameters
+    ----------
+    raw : object
+        Candidate contract envelope.
+    registry : ReactorConfigurationRegistry
+        Registry used to validate embedded reactor identities.
+
+    Returns
+    -------
+    ReactorSemanticContract
+        Validated concrete contract.
+
+    Raises
+    ------
+    ValueError
+        If the envelope, payload, schema, or contract type is invalid.
+    """
     envelope = require_exact_keys(
         raw,
         required=frozenset({"contract_type", "payload", "schema_version"}),
@@ -100,7 +136,20 @@ def canonical_json(
     *,
     registry: ReactorConfigurationRegistry = DEFAULT_REACTOR_REGISTRY,
 ) -> str:
-    """Serialize a contract to byte-stable canonical JSON."""
+    """Serialize a contract to byte-stable canonical JSON.
+
+    Parameters
+    ----------
+    contract : ReactorSemanticContract
+        Contract to serialize.
+    registry : ReactorConfigurationRegistry
+        Registry used to validate embedded reactor identities.
+
+    Returns
+    -------
+    str
+        Canonical JSON text with sorted keys and compact separators.
+    """
     return json.dumps(
         contract_to_record(contract, registry=registry),
         ensure_ascii=False,
@@ -115,7 +164,25 @@ def contract_from_json(
     *,
     registry: ReactorConfigurationRegistry = DEFAULT_REACTOR_REGISTRY,
 ) -> ReactorSemanticContract:
-    """Deserialize canonical or ordinary JSON with duplicate-key refusal."""
+    """Deserialize canonical or ordinary JSON with duplicate-key refusal.
+
+    Parameters
+    ----------
+    payload : str
+        JSON contract envelope.
+    registry : ReactorConfigurationRegistry
+        Registry used to validate embedded reactor identities.
+
+    Returns
+    -------
+    ReactorSemanticContract
+        Validated concrete contract.
+
+    Raises
+    ------
+    ValueError
+        If the JSON is empty, malformed, duplicated, or contract-invalid.
+    """
     if not isinstance(payload, str) or not payload:
         raise ValueError("contract JSON must be a non-empty string")
     try:
@@ -130,7 +197,20 @@ def contract_digest(
     *,
     registry: ReactorConfigurationRegistry = DEFAULT_REACTOR_REGISTRY,
 ) -> str:
-    """Return the SHA-256 digest of canonical contract JSON."""
+    """Return the SHA-256 digest of canonical contract JSON.
+
+    Parameters
+    ----------
+    contract : ReactorSemanticContract
+        Contract to digest.
+    registry : ReactorConfigurationRegistry
+        Registry used to validate embedded reactor identities.
+
+    Returns
+    -------
+    str
+        Lowercase hexadecimal SHA-256 digest.
+    """
     return hashlib.sha256(
         canonical_json(contract, registry=registry).encode("utf-8")
     ).hexdigest()

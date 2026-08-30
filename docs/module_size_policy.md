@@ -81,14 +81,15 @@ a silence switch.
 File size in this repository is an actively audited design decision, not an
 oversight. Two facts establish that:
 
-1. **The god-file campaign is complete.** Every module that exceeded the split
+1. **The original god-file campaign is complete.** Every earlier module that exceeded the split
    threshold was decomposed into a responsibility-scoped package — `runtime/cli`,
    `studio/ui_helpers`, `nn/supervisor`, `plugins/registry`,
    `binding/digital_twin`, `supervisor/formal_export`, `supervisor/hierarchy`,
    `runtime/cli/_payloads`, `binding/semantic`, and `monitor/stl`. Each split was
    derived from an AST call-graph, produced a clean acyclic module graph, and
    relocated every node byte-identically at the AST level (proven per node). The
-   commits are in the git history. No module above the split threshold remains.
+   commits are in the git history. Later modules crossing the threshold require
+   a fresh review and an explicit allowlist decision below.
 
 2. **The largest remaining modules were reviewed and kept by responsibility.**
    The figures below were current at the last review; run
@@ -104,6 +105,8 @@ oversight. Two facts establish that:
    | `monitor/twin_confidence` | ~1080 | One twin-confidence pipeline: divergence → calibration → scoring → summary → Prometheus export, tightly coupled. |
    | `runtime/cli/plugins/scheduler_control` | ~1050 | One CLI command group — the scheduler-control sub-commands over shared payload loaders. |
    | `nn/functional` | ~1015 | The flat `nn.functional` namespace of integrator and metric primitives (Kuramoto / Winfree / simplicial / Stuart–Landau steps, order parameter, PLV, …), kept flat by the conventional functional-namespace contract. |
+   | `reactor_semantics/contracts` | ≥1200 | One stable U0 public contract namespace. Its context, observable, semantic, relation, and regime records share validation and serialization vocabulary; relocating public classes would change documented module and pickle identities. The AST review found a 15-symbol core component plus the two mutually coupled regime-record symbols, not independent runtime subsystems. |
+   | `reactor_semantics/mif_merge_compression` | ≥1200 | One strict source-bytes-to-canonical-handoff pipeline. The AST review found all 35 top-level symbols in one connected component with 66 edges across decoding, validation, projection, and serialization. |
 
    Modules in the 900–1000 band (`supervisor/evolutionary_petri_grammar`,
    `supervisor/causal`, `upde/pha_c_acceptance`, `autotune/reward`) were assessed

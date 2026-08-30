@@ -270,7 +270,22 @@ def mif_merge_compression_handoff_from_mif_bytes(
     expected_sha256: str | None = None,
     registry: ReactorConfigurationRegistry = DEFAULT_REACTOR_REGISTRY,
 ) -> MIFMergeCompressionHandoff:
-    """Validate canonical MIF bytes and assign strict U0 semantic carriers."""
+    """Validate canonical MIF bytes and assign strict U0 semantic carriers.
+
+    Parameters
+    ----------
+    source_envelope : bytes
+        Canonical producer envelope to validate and project.
+    expected_sha256 : str | None
+        Optional expected SHA-256 digest of ``source_envelope``.
+    registry : ReactorConfigurationRegistry
+        Reactor registry against which the projected context is validated.
+
+    Returns
+    -------
+    MIFMergeCompressionHandoff
+        Validated review-only merge-and-compression handoff.
+    """
     source, source_json, source_digest = _decode_source(
         source_envelope, expected_sha256=expected_sha256
     )
@@ -376,7 +391,20 @@ def mif_merge_compression_handoff_to_record(
     *,
     registry: ReactorConfigurationRegistry = DEFAULT_REACTOR_REGISTRY,
 ) -> dict[str, object]:
-    """Return the digest-sealed portable MIF handoff record."""
+    """Return the digest-sealed portable MIF handoff record.
+
+    Parameters
+    ----------
+    handoff : MIFMergeCompressionHandoff
+        Validated handoff to encode as a record.
+    registry : ReactorConfigurationRegistry
+        Reactor registry used to validate and encode nested contracts.
+
+    Returns
+    -------
+    dict[str, object]
+        Portable envelope containing the payload and its SHA-256 digest.
+    """
     handoff.context.validate_registry(registry)
     payload: dict[str, object] = {
         "actionable": handoff.actionable,
@@ -413,7 +441,25 @@ def mif_merge_compression_handoff_from_record(
     *,
     registry: ReactorConfigurationRegistry = DEFAULT_REACTOR_REGISTRY,
 ) -> MIFMergeCompressionHandoff:
-    """Decode a strict MIF handoff record and verify its digest chain."""
+    """Decode a strict MIF handoff record and verify its digest chain.
+
+    Parameters
+    ----------
+    raw : object
+        Candidate portable MIF handoff record.
+    registry : ReactorConfigurationRegistry
+        Reactor registry required by the encoded identity binding.
+
+    Returns
+    -------
+    MIFMergeCompressionHandoff
+        Validated handoff reconstructed from the record.
+
+    Raises
+    ------
+    ValueError
+        If schema, version, digest, registry, U0, or contract invariants fail.
+    """
     envelope = require_exact_keys(
         raw,
         required=frozenset({"payload", "payload_sha256", "schema", "schema_version"}),
@@ -490,7 +536,20 @@ def mif_merge_compression_handoff_to_bytes(
     *,
     registry: ReactorConfigurationRegistry = DEFAULT_REACTOR_REGISTRY,
 ) -> bytes:
-    """Serialize a MIF handoff to unique canonical UTF-8 bytes."""
+    """Serialize a MIF handoff to unique canonical UTF-8 bytes.
+
+    Parameters
+    ----------
+    handoff : MIFMergeCompressionHandoff
+        Validated handoff to serialize.
+    registry : ReactorConfigurationRegistry
+        Reactor registry used to validate and encode nested contracts.
+
+    Returns
+    -------
+    bytes
+        Canonical compact JSON representation of the handoff.
+    """
     return _handoff_json(
         mif_merge_compression_handoff_to_record(handoff, registry=registry)
     ).encode("utf-8")
@@ -501,7 +560,25 @@ def mif_merge_compression_handoff_from_bytes(
     *,
     registry: ReactorConfigurationRegistry = DEFAULT_REACTOR_REGISTRY,
 ) -> MIFMergeCompressionHandoff:
-    """Decode only the unique canonical MIF handoff byte representation."""
+    """Decode only the unique canonical MIF handoff byte representation.
+
+    Parameters
+    ----------
+    payload : bytes
+        Candidate canonical MIF handoff bytes.
+    registry : ReactorConfigurationRegistry
+        Reactor registry required by the encoded identity binding.
+
+    Returns
+    -------
+    MIFMergeCompressionHandoff
+        Validated handoff reconstructed from the bytes.
+
+    Raises
+    ------
+    ValueError
+        If bytes are empty, oversized, malformed, noncanonical, or invalid.
+    """
     if not isinstance(payload, bytes) or not payload:
         raise ValueError("MIF handoff must be non-empty bytes")
     if len(payload) > MAX_MIF_MERGE_COMPRESSION_HANDOFF_BYTES:
@@ -521,7 +598,20 @@ def mif_merge_compression_handoff_digest(
     *,
     registry: ReactorConfigurationRegistry = DEFAULT_REACTOR_REGISTRY,
 ) -> str:
-    """Return SHA-256 of the canonical MIF handoff bytes."""
+    """Return SHA-256 of the canonical MIF handoff bytes.
+
+    Parameters
+    ----------
+    handoff : MIFMergeCompressionHandoff
+        Validated handoff whose canonical bytes are hashed.
+    registry : ReactorConfigurationRegistry
+        Reactor registry used when producing the canonical bytes.
+
+    Returns
+    -------
+    str
+        Lowercase hexadecimal SHA-256 digest.
+    """
     return hashlib.sha256(
         mif_merge_compression_handoff_to_bytes(handoff, registry=registry)
     ).hexdigest()

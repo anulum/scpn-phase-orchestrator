@@ -239,7 +239,20 @@ def handoff_to_record(
     *,
     registry: ReactorConfigurationRegistry = DEFAULT_REACTOR_REGISTRY,
 ) -> dict[str, object]:
-    """Return the digest-sealed portable handoff record."""
+    """Return the digest-sealed portable handoff record.
+
+    Parameters
+    ----------
+    handoff : ReactorSemanticHandoff
+        Validated semantic handoff to serialize.
+    registry : ReactorConfigurationRegistry
+        Reactor registry used to validate embedded contracts.
+
+    Returns
+    -------
+    dict[str, object]
+        Envelope containing the handoff payload and payload digest.
+    """
     handoff.context.validate_registry(registry)
     payload: dict[str, object] = {
         "actionable": handoff.actionable,
@@ -279,7 +292,25 @@ def handoff_from_record(
     *,
     registry: ReactorConfigurationRegistry = DEFAULT_REACTOR_REGISTRY,
 ) -> ReactorSemanticHandoff:
-    """Decode a strict handoff record and verify its complete digest chain."""
+    """Decode a strict handoff record and verify its complete digest chain.
+
+    Parameters
+    ----------
+    raw : object
+        Candidate serialized handoff envelope.
+    registry : ReactorConfigurationRegistry
+        Reactor registry required by embedded U0 contracts.
+
+    Returns
+    -------
+    ReactorSemanticHandoff
+        Validated review-only semantic handoff.
+
+    Raises
+    ------
+    ValueError
+        If schema, digest, registry, source, or contract-graph checks fail.
+    """
     envelope = require_exact_keys(
         raw,
         required=frozenset({"payload", "payload_sha256", "schema", "schema_version"}),
@@ -378,7 +409,20 @@ def handoff_to_json(
     *,
     registry: ReactorConfigurationRegistry = DEFAULT_REACTOR_REGISTRY,
 ) -> str:
-    """Serialize a handoff to byte-stable canonical JSON."""
+    """Serialize a handoff to byte-stable canonical JSON.
+
+    Parameters
+    ----------
+    handoff : ReactorSemanticHandoff
+        Validated semantic handoff to serialize.
+    registry : ReactorConfigurationRegistry
+        Reactor registry used to validate embedded contracts.
+
+    Returns
+    -------
+    str
+        Canonical compact JSON text.
+    """
     return _canonical_json(handoff_to_record(handoff, registry=registry))
 
 
@@ -387,7 +431,20 @@ def handoff_to_bytes(
     *,
     registry: ReactorConfigurationRegistry = DEFAULT_REACTOR_REGISTRY,
 ) -> bytes:
-    """Serialize a handoff to its unique canonical UTF-8 bytes."""
+    """Serialize a handoff to its unique canonical UTF-8 bytes.
+
+    Parameters
+    ----------
+    handoff : ReactorSemanticHandoff
+        Validated semantic handoff to encode.
+    registry : ReactorConfigurationRegistry
+        Reactor registry used to validate embedded contracts.
+
+    Returns
+    -------
+    bytes
+        Canonical compact JSON bytes.
+    """
     return handoff_to_json(handoff, registry=registry).encode("utf-8")
 
 
@@ -396,7 +453,25 @@ def handoff_from_json(
     *,
     registry: ReactorConfigurationRegistry = DEFAULT_REACTOR_REGISTRY,
 ) -> ReactorSemanticHandoff:
-    """Deserialize handoff JSON while refusing duplicate object keys."""
+    """Deserialize handoff JSON while refusing duplicate object keys.
+
+    Parameters
+    ----------
+    payload : str
+        Candidate JSON handoff text.
+    registry : ReactorConfigurationRegistry
+        Reactor registry required by embedded U0 contracts.
+
+    Returns
+    -------
+    ReactorSemanticHandoff
+        Validated review-only semantic handoff.
+
+    Raises
+    ------
+    ValueError
+        If JSON is empty, oversized, malformed, duplicated, or semantically invalid.
+    """
     if not isinstance(payload, str) or not payload:
         raise ValueError("handoff JSON must be a non-empty string")
     if len(payload.encode("utf-8")) > MAX_HANDOFF_JSON_BYTES:
@@ -418,6 +493,23 @@ def handoff_from_bytes(
     This is the cross-project admission surface. Unlike ``handoff_from_json``,
     it rejects alternate whitespace, key ordering, a trailing newline, and any
     other byte representation of the same JSON value.
+
+    Parameters
+    ----------
+    payload : bytes
+        Candidate canonical handoff bytes.
+    registry : ReactorConfigurationRegistry
+        Reactor registry required by embedded U0 contracts.
+
+    Returns
+    -------
+    ReactorSemanticHandoff
+        Validated handoff reconstructed from the canonical bytes.
+
+    Raises
+    ------
+    ValueError
+        If the input is empty, oversized, malformed, or not canonical JSON.
     """
     if not isinstance(payload, bytes) or not payload:
         raise ValueError("handoff bytes must be non-empty bytes")
@@ -438,12 +530,41 @@ def handoff_digest(
     *,
     registry: ReactorConfigurationRegistry = DEFAULT_REACTOR_REGISTRY,
 ) -> str:
-    """Return the SHA-256 digest of canonical handoff JSON."""
+    """Return the SHA-256 digest of canonical handoff JSON.
+
+    Parameters
+    ----------
+    handoff : ReactorSemanticHandoff
+        Validated handoff whose canonical bytes are hashed.
+    registry : ReactorConfigurationRegistry
+        Reactor registry used to validate embedded contracts.
+
+    Returns
+    -------
+    str
+        Lowercase hexadecimal SHA-256 digest.
+    """
     return hashlib.sha256(handoff_to_bytes(handoff, registry=registry)).hexdigest()
 
 
 def canonicalize_source_envelope(payload: str) -> str:
-    """Canonicalize strict producer JSON for embedding in a handoff."""
+    """Canonicalize strict producer JSON for embedding in a handoff.
+
+    Parameters
+    ----------
+    payload : str
+        Candidate producer-envelope JSON text.
+
+    Returns
+    -------
+    str
+        Canonical compact JSON object text.
+
+    Raises
+    ------
+    ValueError
+        If the input is empty, oversized, malformed, duplicated, or not an object.
+    """
     if not isinstance(payload, str) or not payload:
         raise ValueError("source envelope JSON must be a non-empty string")
     if len(payload.encode("utf-8")) > MAX_SOURCE_ENVELOPE_BYTES:

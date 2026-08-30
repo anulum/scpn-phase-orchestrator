@@ -179,7 +179,13 @@ class ReactorSignalCandidateProfile:
             raise ValueError("candidate profiles are non-actuating design requirements")
 
     def to_record(self) -> dict[str, object]:
-        """Return a complete deterministic candidate record."""
+        """Return a complete deterministic candidate record.
+
+        Returns
+        -------
+        dict[str, object]
+            JSON-compatible candidate profile fields.
+        """
         return {
             "actionable": self.actionable,
             "admissible_carriers": sorted(
@@ -253,7 +259,18 @@ class ReactorObservabilityProfileRegistry:
     def for_configuration(
         self, configuration: str
     ) -> tuple[ReactorSignalCandidateProfile, ...]:
-        """Return sorted candidates applicable to a configuration or alias."""
+        """Return sorted candidates applicable to a configuration or alias.
+
+        Parameters
+        ----------
+        configuration : str
+            Canonical reactor configuration identifier or registered alias.
+
+        Returns
+        -------
+        tuple[ReactorSignalCandidateProfile, ...]
+            Applicable candidates ordered by candidate identifier.
+        """
         canonical = DEFAULT_REACTOR_REGISTRY.resolve(configuration).identifier
         return tuple(
             self.candidates[key]
@@ -262,7 +279,23 @@ class ReactorObservabilityProfileRegistry:
         )
 
     def resolve(self, candidate_id: str) -> ReactorSignalCandidateProfile:
-        """Resolve one exact candidate identifier."""
+        """Resolve one exact candidate identifier.
+
+        Parameters
+        ----------
+        candidate_id : str
+            Exact observability candidate identifier.
+
+        Returns
+        -------
+        ReactorSignalCandidateProfile
+            Registered candidate profile.
+
+        Raises
+        ------
+        ValueError
+            If the identifier is invalid or is not registered.
+        """
         key = require_identifier(candidate_id, field="candidate_id")
         try:
             return self.candidates[key]
@@ -270,7 +303,13 @@ class ReactorObservabilityProfileRegistry:
             raise ValueError(f"unknown signal candidate: {key}") from exc
 
     def to_record(self) -> dict[str, object]:
-        """Return the canonical registry record."""
+        """Return the canonical registry record.
+
+        Returns
+        -------
+        dict[str, object]
+            JSON-compatible registry identity and candidate records.
+        """
         return {
             "candidates": [
                 self.candidates[key].to_record() for key in sorted(self.candidates)

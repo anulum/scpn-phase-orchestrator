@@ -60,7 +60,7 @@ If any major path lacks onboarding/tutorial coverage, that path is treated as
 | Tutorials | Seven task-oriented tutorials | [New Domain Checklist](../tutorials/01_new_domain_checklist.md) |
 | Guides | Runtime, production, testing, adapters, backend, notebooks | [Guides](../guide/production.md) |
 | Contributor onboarding | setup, repository map, checks, documentation duties | [Contributor Onboarding](../guide/contributor_onboarding.md) |
-| API reference | 96 MkDocs API pages, all wired into navigation | [API Reference](api/index.md) |
+| API reference | 97 MkDocs API pages, all wired into navigation | [API Reference](api/index.md) |
 | Native API artifacts | rustdoc HTML, per-unit Go docs, Julia signature reference, Mojo doc JSON | [Polyglot API Documentation](polyglot_api.md) |
 | Domainpacks | 36 domainpacks documented in the gallery | [Domainpack Gallery](../galleries/domainpack_gallery.md) |
 | Notebooks | 21 notebook workflows | [Notebooks & Demos](../galleries/notebooks_and_demos.md) |
@@ -72,7 +72,7 @@ If any major path lacks onboarding/tutorial coverage, that path is treated as
 
 Counts above are derived from the repository tree: `36` domainpack
 directories, `28` top-level `examples/*.py` scripts, `21` notebooks, and
-`96` Markdown files under `docs/reference/api/`.
+`97` Markdown files under `docs/reference/api/`.
 `tests/test_api_docs_navigation.py` guards that every API reference page is
 listed in `mkdocs.yml` and that every maintained public source module has a
 mkdocstrings directive in the API reference. Generated protobuf stubs are

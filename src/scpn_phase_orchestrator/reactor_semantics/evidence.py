@@ -81,7 +81,13 @@ class ClockReference:
             )
 
     def to_record(self) -> dict[str, object]:
-        """Return a JSON-compatible clock record."""
+        """Return a JSON-compatible clock record.
+
+        Returns
+        -------
+        dict[str, object]
+            Complete clock fields for serialization.
+        """
         return {
             "domain": self.domain,
             "epoch": self.epoch,
@@ -95,7 +101,23 @@ class ClockReference:
 
     @classmethod
     def from_record(cls, payload: object) -> ClockReference:
-        """Construct a clock record from strict serialized input."""
+        """Construct a clock record from strict serialized input.
+
+        Parameters
+        ----------
+        payload : object
+            Candidate clock mapping.
+
+        Returns
+        -------
+        ClockReference
+            Validated clock reference.
+
+        Raises
+        ------
+        ValueError
+            If the mapping or synchronization identity is invalid.
+        """
         record = require_exact_keys(
             payload,
             required=frozenset(
@@ -153,7 +175,13 @@ class CalibrationReference:
         )
 
     def to_record(self) -> dict[str, object]:
-        """Return a JSON-compatible calibration record."""
+        """Return a JSON-compatible calibration record.
+
+        Returns
+        -------
+        dict[str, object]
+            Complete calibration fields for serialization.
+        """
         return {
             "calibrated_at_ns": self.calibrated_at_ns,
             "calibration_id": self.calibration_id,
@@ -162,7 +190,18 @@ class CalibrationReference:
 
     @classmethod
     def from_record(cls, payload: object) -> CalibrationReference:
-        """Construct a calibration reference from strict serialized input."""
+        """Construct a calibration reference from strict serialized input.
+
+        Parameters
+        ----------
+        payload : object
+            Candidate calibration mapping.
+
+        Returns
+        -------
+        CalibrationReference
+            Validated calibration reference.
+        """
         record = require_exact_keys(
             payload,
             required=frozenset(
@@ -224,7 +263,13 @@ class Uncertainty:
             )
 
     def to_record(self) -> dict[str, object]:
-        """Return a JSON-compatible uncertainty record."""
+        """Return a JSON-compatible uncertainty record.
+
+        Returns
+        -------
+        dict[str, object]
+            Complete uncertainty fields for serialization.
+        """
         return {
             "circular_std_rad": self.circular_std_rad,
             "confidence_level": self.confidence_level,
@@ -235,7 +280,18 @@ class Uncertainty:
 
     @classmethod
     def from_record(cls, payload: object) -> Uncertainty:
-        """Construct uncertainty from strict serialized input."""
+        """Construct uncertainty from strict serialized input.
+
+        Parameters
+        ----------
+        payload : object
+            Candidate uncertainty mapping.
+
+        Returns
+        -------
+        Uncertainty
+            Validated uncertainty bounds.
+        """
         record = require_exact_keys(
             payload,
             required=frozenset(
@@ -294,7 +350,13 @@ class QualityAssessment:
             raise ValueError("valid quality cannot carry fault flags")
 
     def to_record(self) -> dict[str, object]:
-        """Return a JSON-compatible quality record."""
+        """Return a JSON-compatible quality record.
+
+        Returns
+        -------
+        dict[str, object]
+            Complete quality fields for serialization.
+        """
         return {
             "flags": list(self.flags),
             "signal_to_noise": self.signal_to_noise,
@@ -303,7 +365,23 @@ class QualityAssessment:
 
     @classmethod
     def from_record(cls, payload: object) -> QualityAssessment:
-        """Construct a quality assessment from strict serialized input."""
+        """Construct a quality assessment from strict serialized input.
+
+        Parameters
+        ----------
+        payload : object
+            Candidate quality mapping.
+
+        Returns
+        -------
+        QualityAssessment
+            Validated signal-quality assessment.
+
+        Raises
+        ------
+        ValueError
+            If the mapping or quality flag list is invalid.
+        """
         record = require_exact_keys(
             payload,
             required=frozenset({"flags", "signal_to_noise", "state"}),
@@ -364,7 +442,13 @@ class ValidityWindow:
             raise ValueError("non-valid state requires at least one reason")
 
     def to_record(self) -> dict[str, object]:
-        """Return a JSON-compatible validity record."""
+        """Return a JSON-compatible validity record.
+
+        Returns
+        -------
+        dict[str, object]
+            Complete validity fields for serialization.
+        """
         return {
             "reasons": list(self.reasons),
             "state": self.state.value,
@@ -374,7 +458,23 @@ class ValidityWindow:
 
     @classmethod
     def from_record(cls, payload: object) -> ValidityWindow:
-        """Construct validity from strict serialized input."""
+        """Construct validity from strict serialized input.
+
+        Parameters
+        ----------
+        payload : object
+            Candidate validity mapping.
+
+        Returns
+        -------
+        ValidityWindow
+            Validated validity interval and state.
+
+        Raises
+        ------
+        ValueError
+            If the mapping or reason list is invalid.
+        """
         record = require_exact_keys(
             payload,
             required=frozenset({"reasons", "state", "valid_from_ns", "valid_until_ns"}),
@@ -442,7 +542,13 @@ class ProvenanceRecord:
         object.__setattr__(self, "attributes", attributes)
 
     def to_record(self) -> dict[str, object]:
-        """Return a JSON-compatible provenance record."""
+        """Return a JSON-compatible provenance record.
+
+        Returns
+        -------
+        dict[str, object]
+            Complete provenance fields for serialization.
+        """
         return {
             "artifact_uri": self.artifact_uri,
             "attributes": dict(self.attributes),
@@ -454,7 +560,23 @@ class ProvenanceRecord:
 
     @classmethod
     def from_record(cls, payload: object) -> ProvenanceRecord:
-        """Construct provenance from strict serialized input."""
+        """Construct provenance from strict serialized input.
+
+        Parameters
+        ----------
+        payload : object
+            Candidate provenance mapping.
+
+        Returns
+        -------
+        ProvenanceRecord
+            Validated immutable source identity.
+
+        Raises
+        ------
+        ValueError
+            If the mapping or provenance attributes are invalid.
+        """
         record = require_exact_keys(
             payload,
             required=frozenset(

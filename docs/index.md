@@ -120,7 +120,7 @@ review record.
 
 ## Current Release Boundary
 
-Version `1.3.0` is the current prepared release line. Public availability must
+Version `1.3.1` is the current prepared release candidate. Public availability must
 be verified through PyPI and an exact-head release receipt; a source-tree
 version alone is not publication evidence. Version `1.0.0` established the
 stable API baseline: the public names exported from

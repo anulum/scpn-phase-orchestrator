@@ -43,7 +43,7 @@ def test_public_inventory_counts_are_derived_from_the_tree() -> None:
 
     assert notebook_count == 21
     assert example_count == 28
-    assert api_count == 96
+    assert api_count == 97
 
     gallery = GALLERY.read_text(encoding="utf-8")
     matrix = MATRIX.read_text(encoding="utf-8")

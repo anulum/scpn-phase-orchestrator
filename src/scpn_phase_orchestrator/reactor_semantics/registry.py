@@ -56,7 +56,13 @@ class ReactorConfiguration:
         )
 
     def to_record(self) -> dict[str, str]:
-        """Return a deterministic JSON-compatible record."""
+        """Return a deterministic JSON-compatible record.
+
+        Returns
+        -------
+        dict[str, str]
+            Configuration identifier, family, and topology fields.
+        """
         return {
             "confinement_family": self.confinement_family.value,
             "identifier": self.identifier,
@@ -96,6 +102,16 @@ class ReactorConfigurationRegistry:
     def resolve(self, identifier: str) -> ReactorConfiguration:
         """Resolve a canonical identifier or alias.
 
+        Parameters
+        ----------
+        identifier : str
+            Canonical reactor configuration identifier or registered alias.
+
+        Returns
+        -------
+        ReactorConfiguration
+            Registered canonical configuration.
+
         Raises
         ------
         ValueError
@@ -118,6 +134,23 @@ class ReactorConfigurationRegistry:
 
         Built-in identifiers cannot be shadowed. Extensions must contain a
         namespace separator so local names cannot silently acquire new meaning.
+
+        Parameters
+        ----------
+        configuration : ReactorConfiguration
+            Namespaced configuration to add.
+        aliases : tuple[str, ...]
+            Optional namespaced aliases for the new configuration.
+
+        Returns
+        -------
+        ReactorConfigurationRegistry
+            New immutable registry containing the extension.
+
+        Raises
+        ------
+        ValueError
+            If identifiers are not namespaced, collide, or are invalid.
         """
         if ":" not in configuration.identifier:
             raise ValueError("extension configuration must use a namespaced identifier")
@@ -144,7 +177,13 @@ class ReactorConfigurationRegistry:
         )
 
     def to_record(self) -> dict[str, object]:
-        """Return the sorted deterministic registry record."""
+        """Return the sorted deterministic registry record.
+
+        Returns
+        -------
+        dict[str, object]
+            JSON-compatible registry version, aliases, and configurations.
+        """
         return {
             "aliases": dict(sorted(self.aliases.items())),
             "configurations": [

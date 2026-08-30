@@ -181,7 +181,13 @@ class ControlVariableEnvelope:
         object.__setattr__(self, "baseline_timestamp_ns", baseline_timestamp)
 
     def to_record(self) -> dict[str, object]:
-        """Return a complete JSON-compatible variable envelope."""
+        """Return a complete JSON-compatible variable envelope.
+
+        Returns
+        -------
+        dict[str, object]
+            Deterministic control-variable fields suitable for serialization.
+        """
         return {
             "baseline_evidence_id": self.baseline_evidence_id,
             "baseline_timestamp_ns": self.baseline_timestamp_ns,
@@ -201,7 +207,23 @@ class ControlVariableEnvelope:
 
     @classmethod
     def from_record(cls, raw: object) -> ControlVariableEnvelope:
-        """Decode one strict variable envelope."""
+        """Decode one strict variable envelope.
+
+        Parameters
+        ----------
+        raw : object
+            Candidate serialized control-variable mapping.
+
+        Returns
+        -------
+        ControlVariableEnvelope
+            Validated immutable control-variable envelope.
+
+        Raises
+        ------
+        ValueError
+            If fields, direction, bounds, rates, or baseline evidence are invalid.
+        """
         record = require_exact_keys(
             raw,
             required=frozenset(
@@ -540,7 +562,13 @@ class ReactorResearchControlIntent:
             raise ValueError("ControlIntent ontology binding mismatch")
 
     def to_record(self) -> dict[str, object]:
-        """Return the complete deterministic ControlIntent payload."""
+        """Return the complete deterministic ControlIntent payload.
+
+        Returns
+        -------
+        dict[str, object]
+            JSON-compatible review-only intent payload.
+        """
         return {
             "actionable": self.actionable,
             "authority": self.authority,
@@ -666,7 +694,18 @@ _INTENT_PAYLOAD_FIELDS = frozenset(
 
 
 def control_intent_to_record(intent: ReactorResearchControlIntent) -> dict[str, object]:
-    """Return a digest-sealed portable ControlIntent envelope."""
+    """Return a digest-sealed portable ControlIntent envelope.
+
+    Parameters
+    ----------
+    intent : ReactorResearchControlIntent
+        Validated review-only intent to serialize.
+
+    Returns
+    -------
+    dict[str, object]
+        Envelope containing the intent payload and its SHA-256 digest.
+    """
     payload = intent.to_record()
     return {
         "payload": payload,
@@ -677,7 +716,23 @@ def control_intent_to_record(intent: ReactorResearchControlIntent) -> dict[str, 
 
 
 def control_intent_from_record(raw: object) -> ReactorResearchControlIntent:
-    """Decode a strict record and verify its complete identity bindings."""
+    """Decode a strict record and verify its complete identity bindings.
+
+    Parameters
+    ----------
+    raw : object
+        Candidate serialized ControlIntent envelope.
+
+    Returns
+    -------
+    ReactorResearchControlIntent
+        Validated review-only intent.
+
+    Raises
+    ------
+    ValueError
+        If schema, digest, enum, registry, or intent invariants are invalid.
+    """
     envelope = require_exact_keys(
         raw,
         required=frozenset({"payload", "payload_sha256", "schema", "schema_version"}),
@@ -799,12 +854,39 @@ def control_intent_from_record(raw: object) -> ReactorResearchControlIntent:
 
 
 def control_intent_to_bytes(intent: ReactorResearchControlIntent) -> bytes:
-    """Serialize an intent to its unique canonical UTF-8 representation."""
+    """Serialize an intent to its unique canonical UTF-8 representation.
+
+    Parameters
+    ----------
+    intent : ReactorResearchControlIntent
+        Validated review-only intent to encode.
+
+    Returns
+    -------
+    bytes
+        Canonical compact JSON bytes.
+    """
     return _canonical_json(control_intent_to_record(intent)).encode("utf-8")
 
 
 def control_intent_from_bytes(payload: bytes) -> ReactorResearchControlIntent:
-    """Decode only the canonical, duplicate-free, size-bounded representation."""
+    """Decode only the canonical, duplicate-free, size-bounded representation.
+
+    Parameters
+    ----------
+    payload : bytes
+        Candidate canonical ControlIntent bytes.
+
+    Returns
+    -------
+    ReactorResearchControlIntent
+        Validated intent reconstructed from the bytes.
+
+    Raises
+    ------
+    ValueError
+        If the bytes are empty, oversized, malformed, duplicated, or noncanonical.
+    """
     if not isinstance(payload, bytes) or not payload:
         raise ValueError("ControlIntent bytes must be non-empty bytes")
     if len(payload) > MAX_REACTOR_CONTROL_INTENT_BYTES:
@@ -824,7 +906,18 @@ def control_intent_from_bytes(payload: bytes) -> ReactorResearchControlIntent:
 
 
 def control_intent_digest(intent: ReactorResearchControlIntent) -> str:
-    """Return SHA-256 of canonical ControlIntent bytes."""
+    """Return SHA-256 of canonical ControlIntent bytes.
+
+    Parameters
+    ----------
+    intent : ReactorResearchControlIntent
+        Validated intent whose canonical bytes are hashed.
+
+    Returns
+    -------
+    str
+        Lowercase hexadecimal SHA-256 digest.
+    """
     return hashlib.sha256(control_intent_to_bytes(intent)).hexdigest()
 
 

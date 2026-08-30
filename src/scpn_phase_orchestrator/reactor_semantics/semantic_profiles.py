@@ -110,7 +110,13 @@ class ReactorSemanticProfile:
             )
 
     def to_record(self) -> dict[str, object]:
-        """Return the complete deterministic profile record."""
+        """Return the complete deterministic profile record.
+
+        Returns
+        -------
+        dict[str, object]
+            JSON-compatible ownership, ingress, and authority fields.
+        """
         return {
             "actionable": self.actionable,
             "adapter_api": self.adapter_api,
@@ -180,12 +186,29 @@ class ReactorSemanticProfileRegistry:
         object.__setattr__(self, "profiles", MappingProxyType(profiles))
 
     def resolve(self, configuration: str) -> ReactorSemanticProfile:
-        """Resolve a canonical configuration or registry alias."""
+        """Resolve a canonical configuration or registry alias.
+
+        Parameters
+        ----------
+        configuration : str
+            Canonical reactor configuration identifier or registered alias.
+
+        Returns
+        -------
+        ReactorSemanticProfile
+            Semantic ownership and ingress profile for the configuration.
+        """
         canonical = DEFAULT_REACTOR_REGISTRY.resolve(configuration).identifier
         return self.profiles[canonical]
 
     def to_record(self) -> dict[str, object]:
-        """Return a canonical JSON-compatible registry record."""
+        """Return a canonical JSON-compatible registry record.
+
+        Returns
+        -------
+        dict[str, object]
+            Registry identity and all configuration profiles.
+        """
         return {
             "assignment_map_sha256": self.assignment_map_sha256,
             "assignment_standard": REACTOR_FAMILY_ASSIGNMENT_STANDARD,

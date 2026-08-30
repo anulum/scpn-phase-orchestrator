@@ -176,7 +176,27 @@ def coupled_transport_handoff_from_fusion_bytes(
     expected_sha256: str | None = None,
     registry: ReactorConfigurationRegistry = DEFAULT_REACTOR_REGISTRY,
 ) -> ReactorSemanticHandoff:
-    """Validate canonical FUSION bytes and map twelve noncyclic quantities."""
+    """Validate canonical FUSION bytes and map twelve noncyclic quantities.
+
+    Parameters
+    ----------
+    source_envelope : bytes
+        Canonical FUSION TORAX review-envelope bytes.
+    expected_sha256 : str | None
+        Optional expected digest of the exact source bytes.
+    registry : ReactorConfigurationRegistry
+        Reactor registry used to validate the projected context.
+
+    Returns
+    -------
+    ReactorSemanticHandoff
+        Review-only handoff containing bounded-feature semantics.
+
+    Raises
+    ------
+    ValueError
+        If source custody, schema, payload, evidence, or context validation fails.
+    """
     source, source_json, source_digest = _decode_source(
         source_envelope,
         expected_sha256=expected_sha256,

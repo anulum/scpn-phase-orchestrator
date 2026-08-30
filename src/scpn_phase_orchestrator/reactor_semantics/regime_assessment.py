@@ -100,12 +100,29 @@ class ReactorRegimeEvidenceBinding:
         )
 
     def to_record(self) -> dict[str, str]:
-        """Return one deterministic evidence-role binding."""
+        """Return one deterministic evidence-role binding.
+
+        Returns
+        -------
+        dict[str, str]
+            JSON-compatible role and reference identifiers.
+        """
         return {"reference_id": self.reference_id, "role_id": self.role_id}
 
     @classmethod
     def from_record(cls, raw: object) -> ReactorRegimeEvidenceBinding:
-        """Decode one strict evidence-role binding."""
+        """Decode one strict evidence-role binding.
+
+        Parameters
+        ----------
+        raw : object
+            Candidate serialized evidence binding.
+
+        Returns
+        -------
+        ReactorRegimeEvidenceBinding
+            Validated immutable role-to-reference binding.
+        """
         record = require_exact_keys(
             raw,
             required=frozenset({"reference_id", "role_id"}),
@@ -432,7 +449,13 @@ class ReactorRegimeAxisAssessment:
             raise ValueError(f"{disposition} assessment forbids dwell_samples")
 
     def to_record(self) -> dict[str, object]:
-        """Return a complete deterministic axis row."""
+        """Return a complete deterministic axis row.
+
+        Returns
+        -------
+        dict[str, object]
+            JSON-compatible axis disposition and evidence fields.
+        """
         return {
             "actionable": self.actionable,
             "disposition": self.disposition.value,
@@ -468,7 +491,23 @@ class ReactorRegimeAxisAssessment:
 
     @classmethod
     def from_record(cls, raw: object) -> ReactorRegimeAxisAssessment:
-        """Decode one strict axis row."""
+        """Decode one strict axis row.
+
+        Parameters
+        ----------
+        raw : object
+            Candidate serialized axis-assessment mapping.
+
+        Returns
+        -------
+        ReactorRegimeAxisAssessment
+            Validated immutable axis assessment.
+
+        Raises
+        ------
+        ValueError
+            If fields, enums, evidence bindings, or disposition invariants fail.
+        """
         record = require_exact_keys(
             raw,
             required=_AXIS_FIELDS,
@@ -768,7 +807,13 @@ class ReactorRegimeAssessment:
                 raise ValueError(f"assessment {name} binding mismatch")
 
     def to_record(self) -> dict[str, object]:
-        """Return the complete deterministic assessment payload."""
+        """Return the complete deterministic assessment payload.
+
+        Returns
+        -------
+        dict[str, object]
+            JSON-compatible eight-axis assessment fields.
+        """
         return {
             "actionable": self.actionable,
             "assessed_at_ns": self.assessed_at_ns,
@@ -854,7 +899,18 @@ _ASSESSMENT_FIELDS = frozenset(
 def regime_assessment_to_record(
     assessment: ReactorRegimeAssessment,
 ) -> dict[str, object]:
-    """Return a digest-sealed portable assessment envelope."""
+    """Return a digest-sealed portable assessment envelope.
+
+    Parameters
+    ----------
+    assessment : ReactorRegimeAssessment
+        Validated eight-axis assessment to serialize.
+
+    Returns
+    -------
+    dict[str, object]
+        Envelope containing the assessment payload and payload digest.
+    """
     payload = assessment.to_record()
     return {
         "payload": payload,
@@ -865,7 +921,23 @@ def regime_assessment_to_record(
 
 
 def regime_assessment_from_record(raw: object) -> ReactorRegimeAssessment:
-    """Decode and verify one strict assessment record."""
+    """Decode and verify one strict assessment record.
+
+    Parameters
+    ----------
+    raw : object
+        Candidate serialized assessment envelope.
+
+    Returns
+    -------
+    ReactorRegimeAssessment
+        Validated review-only eight-axis assessment.
+
+    Raises
+    ------
+    ValueError
+        If schema, digest, enum, axis, clock, or registry validation fails.
+    """
     envelope = require_exact_keys(
         raw,
         required=frozenset({"payload", "payload_sha256", "schema", "schema_version"}),
@@ -949,12 +1021,39 @@ def regime_assessment_from_record(raw: object) -> ReactorRegimeAssessment:
 
 
 def regime_assessment_to_bytes(assessment: ReactorRegimeAssessment) -> bytes:
-    """Encode canonical UTF-8 JSON bytes."""
+    """Encode canonical UTF-8 JSON bytes.
+
+    Parameters
+    ----------
+    assessment : ReactorRegimeAssessment
+        Validated assessment to encode.
+
+    Returns
+    -------
+    bytes
+        Canonical compact JSON bytes.
+    """
     return _canonical_bytes(regime_assessment_to_record(assessment))
 
 
 def regime_assessment_from_bytes(data: bytes) -> ReactorRegimeAssessment:
-    """Decode bounded canonical bytes with duplicate-key refusal."""
+    """Decode bounded canonical bytes with duplicate-key refusal.
+
+    Parameters
+    ----------
+    data : bytes
+        Candidate canonical assessment bytes.
+
+    Returns
+    -------
+    ReactorRegimeAssessment
+        Validated assessment reconstructed from the bytes.
+
+    Raises
+    ------
+    ValueError
+        If the input is malformed, duplicated, oversized, or noncanonical.
+    """
     if not isinstance(data, bytes):
         raise ValueError("reactor regime assessment input must be bytes")
     if not data or len(data) > MAX_REACTOR_REGIME_ASSESSMENT_BYTES:
@@ -971,7 +1070,18 @@ def regime_assessment_from_bytes(data: bytes) -> ReactorRegimeAssessment:
 
 
 def regime_assessment_digest(assessment: ReactorRegimeAssessment) -> str:
-    """Return SHA-256 of the complete canonical envelope bytes."""
+    """Return SHA-256 of the complete canonical envelope bytes.
+
+    Parameters
+    ----------
+    assessment : ReactorRegimeAssessment
+        Validated assessment whose canonical bytes are hashed.
+
+    Returns
+    -------
+    str
+        Lowercase hexadecimal SHA-256 digest.
+    """
     return hashlib.sha256(regime_assessment_to_bytes(assessment)).hexdigest()
 
 

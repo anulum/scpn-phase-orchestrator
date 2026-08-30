@@ -1,3 +1,12 @@
 {
-  "reviewed_large_modules": []
+  "reviewed_large_modules": [
+    {
+      "module": "scpn_phase_orchestrator.reactor_semantics.contracts",
+      "reason": "reviewed U0 public contract namespace; keeping class identities co-located preserves documented module and pickle compatibility, while private validation helpers form the shared contract graph"
+    },
+    {
+      "module": "scpn_phase_orchestrator.reactor_semantics.mif_merge_compression",
+      "reason": "reviewed single strict MIF merge-compression decode, validation, projection, and canonical handoff pipeline; AST top-level call graph is one 35-symbol, 66-edge connected component"
+    }
+  ]
 }

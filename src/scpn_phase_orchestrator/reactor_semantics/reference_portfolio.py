@@ -183,6 +183,11 @@ def build_reactor_reference_portfolio() -> tuple[ReactorReferenceSlice, ...]:
 
     These records verify semantic breadth. They are scaffold evidence and make
     no experimental-validation or reactor-readiness claim.
+
+    Returns
+    -------
+    tuple[ReactorReferenceSlice, ...]
+        One deterministic review-only reference record per defined family slice.
     """
     return tuple(_build_slice(definition) for definition in _DEFINITIONS)
 

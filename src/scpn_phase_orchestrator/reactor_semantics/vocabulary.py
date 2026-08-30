@@ -217,7 +217,27 @@ def require_enum(
     *,
     field: str,
 ) -> EnumType:
-    """Return an enum member without coercing untyped public input."""
+    """Return an enum member without coercing untyped public input.
+
+    Parameters
+    ----------
+    value : object
+        Candidate enum member.
+    enum_type : type[EnumType]
+        Required enum class.
+    field : str
+        Field name used in diagnostics.
+
+    Returns
+    -------
+    EnumType
+        The validated enum member.
+
+    Raises
+    ------
+    ValueError
+        If ``value`` is not a member of ``enum_type``.
+    """
     if not isinstance(value, enum_type):
         raise ValueError(f"{field} must be a {enum_type.__name__} member")
     return value
@@ -228,6 +248,23 @@ def require_identifier(value: object, *, field: str) -> str:
 
     Identifiers support namespaces separated by a colon, allowing extension
     registries without changing the core configuration vocabulary.
+
+    Parameters
+    ----------
+    value : object
+        Candidate identifier.
+    field : str
+        Field name used in diagnostics.
+
+    Returns
+    -------
+    str
+        The validated identifier.
+
+    Raises
+    ------
+    ValueError
+        If ``value`` is empty, not text, or violates identifier syntax.
     """
     text = require_text(value, field=field)
     if _IDENTIFIER_RE.fullmatch(text) is None:
@@ -236,7 +273,25 @@ def require_identifier(value: object, *, field: str) -> str:
 
 
 def require_semver(value: object, *, field: str) -> str:
-    """Return a strict MAJOR.MINOR.PATCH version."""
+    """Return a strict MAJOR.MINOR.PATCH version.
+
+    Parameters
+    ----------
+    value : object
+        Candidate semantic version.
+    field : str
+        Field name used in diagnostics.
+
+    Returns
+    -------
+    str
+        The validated semantic version.
+
+    Raises
+    ------
+    ValueError
+        If ``value`` is not non-empty text in MAJOR.MINOR.PATCH form.
+    """
     text = require_text(value, field=field)
     if _SEMVER_RE.fullmatch(text) is None:
         raise ValueError(f"{field} must use MAJOR.MINOR.PATCH")
@@ -244,7 +299,23 @@ def require_semver(value: object, *, field: str) -> str:
 
 
 def require_u0_schema(value: object) -> str:
-    """Return the supported U0 schema version or refuse compatibility."""
+    """Return the supported U0 schema version or refuse compatibility.
+
+    Parameters
+    ----------
+    value : object
+        Candidate U0 schema version.
+
+    Returns
+    -------
+    str
+        The exact supported U0 schema version.
+
+    Raises
+    ------
+    ValueError
+        If the version is malformed, historical, or forward-incompatible.
+    """
     version = require_semver(value, field="schema_version")
     supported_major, supported_minor, _ = _version_parts(U0_SCHEMA_VERSION)
     major, minor, _ = _version_parts(version)
@@ -264,7 +335,25 @@ def require_u0_schema(value: object) -> str:
 
 
 def require_sha256(value: object, *, field: str) -> str:
-    """Return one lowercase hexadecimal SHA-256 digest."""
+    """Return one lowercase hexadecimal SHA-256 digest.
+
+    Parameters
+    ----------
+    value : object
+        Candidate digest.
+    field : str
+        Field name used in diagnostics.
+
+    Returns
+    -------
+    str
+        The validated 64-character digest.
+
+    Raises
+    ------
+    ValueError
+        If ``value`` is not a lowercase hexadecimal SHA-256 digest.
+    """
     text = require_text(value, field=field)
     if _SHA256_RE.fullmatch(text) is None:
         raise ValueError(f"{field} must contain 64 lowercase hexadecimal characters")
@@ -272,7 +361,25 @@ def require_sha256(value: object, *, field: str) -> str:
 
 
 def finite_real(value: object, *, field: str) -> float:
-    """Return a finite real scalar while rejecting booleans."""
+    """Return a finite real scalar while rejecting booleans.
+
+    Parameters
+    ----------
+    value : object
+        Candidate scalar.
+    field : str
+        Field name used in diagnostics.
+
+    Returns
+    -------
+    float
+        The validated finite scalar.
+
+    Raises
+    ------
+    ValueError
+        If ``value`` is boolean, non-real, or non-finite.
+    """
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{field} must be a finite real")
     parsed = float(value)
@@ -282,7 +389,25 @@ def finite_real(value: object, *, field: str) -> float:
 
 
 def non_negative_real(value: object, *, field: str) -> float:
-    """Return a finite non-negative real scalar."""
+    """Return a finite non-negative real scalar.
+
+    Parameters
+    ----------
+    value : object
+        Candidate scalar.
+    field : str
+        Field name used in diagnostics.
+
+    Returns
+    -------
+    float
+        The validated non-negative scalar.
+
+    Raises
+    ------
+    ValueError
+        If ``value`` is not finite and real or is negative.
+    """
     parsed = finite_real(value, field=field)
     if parsed < 0.0:
         raise ValueError(f"{field} must be non-negative")
@@ -290,7 +415,25 @@ def non_negative_real(value: object, *, field: str) -> float:
 
 
 def probability(value: object, *, field: str) -> float:
-    """Return a probability in the closed interval zero to one."""
+    """Return a probability in the closed interval zero to one.
+
+    Parameters
+    ----------
+    value : object
+        Candidate probability.
+    field : str
+        Field name used in diagnostics.
+
+    Returns
+    -------
+    float
+        The validated probability.
+
+    Raises
+    ------
+    ValueError
+        If ``value`` is not finite and real or lies outside ``[0, 1]``.
+    """
     parsed = finite_real(value, field=field)
     if not 0.0 <= parsed <= 1.0:
         raise ValueError(f"{field} must be in [0, 1]")
@@ -298,7 +441,25 @@ def probability(value: object, *, field: str) -> float:
 
 
 def non_negative_integer(value: object, *, field: str) -> int:
-    """Return a non-negative integer while rejecting booleans."""
+    """Return a non-negative integer while rejecting booleans.
+
+    Parameters
+    ----------
+    value : object
+        Candidate integer.
+    field : str
+        Field name used in diagnostics.
+
+    Returns
+    -------
+    int
+        The validated non-negative integer.
+
+    Raises
+    ------
+    ValueError
+        If ``value`` is boolean, non-integral, or negative.
+    """
     if isinstance(value, bool) or not isinstance(value, int) or value < 0:
         raise ValueError(f"{field} must be a non-negative integer")
     return value
@@ -311,7 +472,29 @@ def require_exact_keys(
     optional: frozenset[str] = frozenset(),
     field: str,
 ) -> dict[str, object]:
-    """Return a mapping only when its key set matches the contract."""
+    """Return a mapping only when its key set matches the contract.
+
+    Parameters
+    ----------
+    payload : object
+        Candidate mapping.
+    required : frozenset[str]
+        Keys that must be present.
+    optional : frozenset[str]
+        Additional permitted keys.
+    field : str
+        Field name used in diagnostics.
+
+    Returns
+    -------
+    dict[str, object]
+        The validated input mapping.
+
+    Raises
+    ------
+    ValueError
+        If the input is not a string-keyed mapping or its key set differs.
+    """
     if not isinstance(payload, dict) or any(
         not isinstance(key, str) for key in payload
     ):

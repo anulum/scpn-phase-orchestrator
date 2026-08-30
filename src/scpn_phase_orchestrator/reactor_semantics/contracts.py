@@ -210,7 +210,23 @@ class ReactorContext:
         self,
         registry: ReactorConfigurationRegistry = DEFAULT_REACTOR_REGISTRY,
     ) -> ReactorContext:
-        """Validate configuration identity and family against a registry."""
+        """Validate configuration identity and family against a registry.
+
+        Parameters
+        ----------
+        registry : ReactorConfigurationRegistry
+            Registry that owns the expected configuration identity.
+
+        Returns
+        -------
+        ReactorContext
+            This context after successful validation.
+
+        Raises
+        ------
+        ValueError
+            If registry identity, family, or topology differs.
+        """
         if self.registry_version != registry.version:
             raise ValueError(
                 "reactor context registry_version does not match the active registry"
@@ -229,7 +245,13 @@ class ReactorContext:
         return self
 
     def to_record(self) -> dict[str, object]:
-        """Return a deterministic JSON-compatible context record."""
+        """Return a deterministic JSON-compatible context record.
+
+        Returns
+        -------
+        dict[str, object]
+            Complete reactor-context fields for serialization.
+        """
         return {
             "cadence": self.cadence.value,
             "configuration": self.configuration,
@@ -257,7 +279,25 @@ class ReactorContext:
         *,
         registry: ReactorConfigurationRegistry = DEFAULT_REACTOR_REGISTRY,
     ) -> ReactorContext:
-        """Construct and registry-validate a context from serialized input."""
+        """Construct and registry-validate a context from serialized input.
+
+        Parameters
+        ----------
+        payload : object
+            Candidate reactor-context mapping.
+        registry : ReactorConfigurationRegistry
+            Registry used to validate the decoded configuration.
+
+        Returns
+        -------
+        ReactorContext
+            Validated reactor context.
+
+        Raises
+        ------
+        ValueError
+            If list, operating-point, or registry fields are invalid.
+        """
         record = require_exact_keys(
             payload,
             required=frozenset(
@@ -385,7 +425,13 @@ class ObservableDescriptor:
             raise ValueError("unknown or invalid quality cannot have usable validity")
 
     def to_record(self) -> dict[str, object]:
-        """Return a deterministic JSON-compatible observable record."""
+        """Return a deterministic JSON-compatible observable record.
+
+        Returns
+        -------
+        dict[str, object]
+            Complete observable fields for serialization.
+        """
         return {
             "calibration": self.calibration.to_record(),
             "channel": self.channel,
@@ -412,7 +458,20 @@ class ObservableDescriptor:
         *,
         registry: ReactorConfigurationRegistry = DEFAULT_REACTOR_REGISTRY,
     ) -> ObservableDescriptor:
-        """Construct an observable from strict serialized input."""
+        """Construct an observable from strict serialized input.
+
+        Parameters
+        ----------
+        payload : object
+            Candidate observable mapping.
+        registry : ReactorConfigurationRegistry
+            Registry used to validate the embedded reactor context.
+
+        Returns
+        -------
+        ObservableDescriptor
+            Validated observable descriptor.
+        """
         record = require_exact_keys(
             payload,
             required=frozenset(
@@ -608,7 +667,13 @@ class PhaseSemanticRecord:
         )
 
     def to_record(self) -> dict[str, object]:
-        """Return a deterministic JSON-compatible phase record."""
+        """Return a deterministic JSON-compatible phase record.
+
+        Returns
+        -------
+        dict[str, object]
+            Complete phase-semantic fields for serialization.
+        """
         return {
             "amplitude": self.amplitude,
             "bandwidth_hz": self.bandwidth_hz,
@@ -646,7 +711,23 @@ class PhaseSemanticRecord:
 
     @classmethod
     def from_record(cls, payload: object) -> PhaseSemanticRecord:
-        """Construct a phase semantic record from strict serialized input."""
+        """Construct a phase semantic record from strict serialized input.
+
+        Parameters
+        ----------
+        payload : object
+            Candidate phase-semantic mapping.
+
+        Returns
+        -------
+        PhaseSemanticRecord
+            Validated phase-semantic record.
+
+        Raises
+        ------
+        ValueError
+            If the observable identifier collection is not a list.
+        """
         required = frozenset(
             {
                 "amplitude",
@@ -810,7 +891,13 @@ class PhaseRelation:
                 )
 
     def to_record(self) -> dict[str, object]:
-        """Return a deterministic JSON-compatible relation record."""
+        """Return a deterministic JSON-compatible relation record.
+
+        Returns
+        -------
+        dict[str, object]
+            Complete phase-relation fields for serialization.
+        """
         return {
             "causal_direction": self.causal_direction,
             "clock_transform_id": self.clock_transform_id,
@@ -829,7 +916,18 @@ class PhaseRelation:
 
     @classmethod
     def from_record(cls, payload: object) -> PhaseRelation:
-        """Construct a relation from strict serialized input."""
+        """Construct a relation from strict serialized input.
+
+        Parameters
+        ----------
+        payload : object
+            Candidate phase-relation mapping.
+
+        Returns
+        -------
+        PhaseRelation
+            Validated phase relation.
+        """
         required = frozenset(
             {
                 "causal_direction",
@@ -897,7 +995,13 @@ class RegimeAxis:
         )
 
     def to_record(self) -> dict[str, object]:
-        """Return a JSON-compatible regime-axis record."""
+        """Return a JSON-compatible regime-axis record.
+
+        Returns
+        -------
+        dict[str, object]
+            Complete regime-axis fields for serialization.
+        """
         return {
             "confidence": self.confidence,
             "label": self.label,
@@ -906,7 +1010,18 @@ class RegimeAxis:
 
     @classmethod
     def from_record(cls, payload: object) -> RegimeAxis:
-        """Construct a regime axis from strict serialized input."""
+        """Construct a regime axis from strict serialized input.
+
+        Parameters
+        ----------
+        payload : object
+            Candidate regime-axis mapping.
+
+        Returns
+        -------
+        RegimeAxis
+            Validated regime axis.
+        """
         record = require_exact_keys(
             payload,
             required=frozenset({"confidence", "label", "name"}),
@@ -1024,7 +1139,13 @@ class RegimeEstimate:
             raise ValueError("non-usable validity requires UNKNOWN regime state")
 
     def to_record(self) -> dict[str, object]:
-        """Return a deterministic JSON-compatible regime record."""
+        """Return a deterministic JSON-compatible regime record.
+
+        Returns
+        -------
+        dict[str, object]
+            Complete regime-estimate fields for serialization.
+        """
         return {
             "action_owner": self.action_owner,
             "authority": self.authority,
@@ -1048,7 +1169,23 @@ class RegimeEstimate:
 
     @classmethod
     def from_record(cls, payload: object) -> RegimeEstimate:
-        """Construct a compositional regime estimate from strict input."""
+        """Construct a compositional regime estimate from strict input.
+
+        Parameters
+        ----------
+        payload : object
+            Candidate regime-estimate mapping.
+
+        Returns
+        -------
+        RegimeEstimate
+            Validated compositional regime estimate.
+
+        Raises
+        ------
+        ValueError
+            If axes, evidence identifiers, or threshold provenance are not lists.
+        """
         required = frozenset(
             {
                 "action_owner",
@@ -1122,6 +1259,43 @@ def build_phase_relation(
 
     Different frames, clock domains, or harmonics require explicit transforms.
     Non-phase carriers and unusable records are rejected.
+
+    Parameters
+    ----------
+    source : PhaseSemanticRecord
+        Source phase record.
+    target : PhaseSemanticRecord
+        Target phase record.
+    relation_id : str
+        Identifier for the relation.
+    relation_type : PhaseRelationType
+        Declared relationship type.
+    interpretation : RelationInterpretation
+        Operational interpretation of the relation.
+    identification_method : str
+        Method used to identify the relation.
+    evidence_class : EvidenceClass
+        Evidence maturity supporting the relation.
+    reference_transform : str or None
+        Explicit transform between reference frames, when required.
+    clock_transform_id : str or None
+        Explicit transform between clock identities, when required.
+    harmonic_ratio : tuple[int, int]
+        Positive source-to-target harmonic ratio.
+    lag_s : float
+        Signed relation lag in seconds.
+    causal_direction : str or None
+        Optional declared causal direction.
+
+    Returns
+    -------
+    PhaseRelation
+        Validated relation between the supplied phase records.
+
+    Raises
+    ------
+    ValueError
+        If records are unusable or their semantic identities are incompatible.
     """
     if source.carrier_type not in _PHASE_CARRIERS:
         raise ValueError("source carrier is not phase-comparable")
@@ -1161,7 +1335,23 @@ def build_phase_relation(
 def validate_observable_sequence(
     observables: tuple[ObservableDescriptor, ...],
 ) -> tuple[ObservableDescriptor, ...]:
-    """Return one usable, strictly monotonic observable stream or fail closed."""
+    """Return one usable, strictly monotonic observable stream or fail closed.
+
+    Parameters
+    ----------
+    observables : tuple[ObservableDescriptor, ...]
+        Candidate samples from one observable stream.
+
+    Returns
+    -------
+    tuple[ObservableDescriptor, ...]
+        The unchanged validated sequence.
+
+    Raises
+    ------
+    ValueError
+        If the sequence is empty, mixed, non-monotonic, or unusable.
+    """
     if not observables:
         raise ValueError("observable sequence must not be empty")
     first = observables[0]

@@ -111,7 +111,13 @@ class ReactorRegimeAxisDefinition:
         object.__setattr__(self, "required_evidence", requirements)
 
     def to_record(self) -> dict[str, object]:
-        """Return a deterministic definition record."""
+        """Return a deterministic definition record.
+
+        Returns
+        -------
+        dict[str, object]
+            JSON-compatible axis definition fields.
+        """
         return {
             "actionable": self.actionable,
             "applicability_policy": self.applicability_policy.value,
@@ -176,7 +182,13 @@ class ReactorRegimeAxisAssignment:
         object.__setattr__(self, "applicability_basis", basis)
 
     def to_regime_axis(self) -> RegimeAxis:
-        """Project into U0 without collapsing absence into a nominal label."""
+        """Project into U0 without collapsing absence into a nominal label.
+
+        Returns
+        -------
+        RegimeAxis
+            U0 regime axis preserving applicability or classification state.
+        """
         label = self.label if self.label is not None else self.applicability.value
         return RegimeAxis(
             name=self.definition.axis_id,
@@ -185,7 +197,13 @@ class ReactorRegimeAxisAssignment:
         )
 
     def to_record(self) -> dict[str, object]:
-        """Return a deterministic assignment record."""
+        """Return a deterministic assignment record.
+
+        Returns
+        -------
+        dict[str, object]
+            JSON-compatible axis assignment fields.
+        """
         return {
             "actionable": self.actionable,
             "applicability": self.applicability.value,
@@ -268,7 +286,13 @@ class ReactorModeDefinition:
         object.__setattr__(self, "required_semantic_fields", fields)
 
     def to_record(self) -> dict[str, object]:
-        """Return a deterministic mode-family definition."""
+        """Return a deterministic mode-family definition.
+
+        Returns
+        -------
+        dict[str, object]
+            JSON-compatible mode definition fields.
+        """
         return {
             "actionable": self.actionable,
             "admissible_carriers": [item.value for item in self.admissible_carriers],
@@ -369,7 +393,13 @@ class ReactorModeBinding:
         object.__setattr__(self, "configuration", configuration)
 
     def to_record(self) -> dict[str, object]:
-        """Return the complete deterministic mode binding."""
+        """Return the complete deterministic mode binding.
+
+        Returns
+        -------
+        dict[str, object]
+            JSON-compatible physical or numerical mode binding fields.
+        """
         harmonic = (
             list(self.harmonic_coordinates)
             if self.harmonic_coordinates is not None
@@ -491,7 +521,23 @@ class ReactorRegimeModeOntologyRegistry:
             observability.resolve(candidate_id)
 
     def resolve_axis(self, axis_id: str) -> ReactorRegimeAxisDefinition:
-        """Resolve one exact cross-family axis identifier."""
+        """Resolve one exact cross-family axis identifier.
+
+        Parameters
+        ----------
+        axis_id : str
+            Exact regime-axis identifier.
+
+        Returns
+        -------
+        ReactorRegimeAxisDefinition
+            Registered cross-family axis definition.
+
+        Raises
+        ------
+        ValueError
+            If the identifier is invalid or is not registered.
+        """
         key = require_identifier(axis_id, field="axis_id")
         try:
             return self.axes[key]
@@ -499,7 +545,23 @@ class ReactorRegimeModeOntologyRegistry:
             raise ValueError(f"unknown regime axis: {key}") from exc
 
     def resolve_mode(self, mode_id: str) -> ReactorModeDefinition:
-        """Resolve one exact namespaced mode-family identifier."""
+        """Resolve one exact namespaced mode-family identifier.
+
+        Parameters
+        ----------
+        mode_id : str
+            Exact namespaced mode-family identifier.
+
+        Returns
+        -------
+        ReactorModeDefinition
+            Registered mode-family definition.
+
+        Raises
+        ------
+        ValueError
+            If the identifier is invalid or is not registered.
+        """
         key = require_identifier(mode_id, field="mode_id")
         try:
             return self.modes[key]
@@ -509,7 +571,18 @@ class ReactorRegimeModeOntologyRegistry:
     def modes_for_configuration(
         self, configuration: str
     ) -> tuple[ReactorModeDefinition, ...]:
-        """Return physical definitions plus the explicit numerical fallback."""
+        """Return physical definitions plus the explicit numerical fallback.
+
+        Parameters
+        ----------
+        configuration : str
+            Canonical reactor configuration identifier or registered alias.
+
+        Returns
+        -------
+        tuple[ReactorModeDefinition, ...]
+            Mode definitions applicable to the resolved configuration.
+        """
         canonical = DEFAULT_REACTOR_REGISTRY.resolve(configuration).identifier
         return tuple(
             mode for mode in self.modes.values() if canonical in mode.configurations
@@ -520,7 +593,20 @@ class ReactorRegimeModeOntologyRegistry:
         axis_id: str,
         configuration: str,
     ) -> AxisApplicability:
-        """Return static semantic applicability, never a measured regime state."""
+        """Return static semantic applicability, never a measured regime state.
+
+        Parameters
+        ----------
+        axis_id : str
+            Exact regime-axis identifier.
+        configuration : str
+            Canonical reactor configuration identifier or registered alias.
+
+        Returns
+        -------
+        AxisApplicability
+            Static applicability derived from ontology and observability scope.
+        """
         axis = self.resolve_axis(axis_id)
         canonical = DEFAULT_REACTOR_REGISTRY.resolve(configuration).identifier
         if axis.applicability_policy is AxisApplicabilityPolicy.UNIVERSAL:
@@ -534,7 +620,13 @@ class ReactorRegimeModeOntologyRegistry:
         return AxisApplicability.NOT_APPLICABLE
 
     def to_record(self) -> dict[str, object]:
-        """Return the canonical JSON-compatible ontology record."""
+        """Return the canonical JSON-compatible ontology record.
+
+        Returns
+        -------
+        dict[str, object]
+            Ontology identity, axis definitions, and mode definitions.
+        """
         return {
             "actionable": False,
             "authority": "review_only",
