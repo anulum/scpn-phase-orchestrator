@@ -39,6 +39,7 @@ def test_every_reactor_semantics_submodule_avoids_optional_runtime_graph() -> No
         import json
         import sys
 
+        import scpn_phase_orchestrator.reactor_semantics.abstaining_assessment
         import scpn_phase_orchestrator.reactor_semantics.contracts
         import scpn_phase_orchestrator.reactor_semantics.control_intent
         import scpn_phase_orchestrator.reactor_semantics.coupled_transport
@@ -55,6 +56,7 @@ def test_every_reactor_semantics_submodule_avoids_optional_runtime_graph() -> No
         import scpn_phase_orchestrator.reactor_semantics.vocabulary
 
         expected = (
+            "scpn_phase_orchestrator.reactor_semantics.abstaining_assessment",
             "scpn_phase_orchestrator.reactor_semantics.contracts",
             "scpn_phase_orchestrator.reactor_semantics.control_intent",
             "scpn_phase_orchestrator.reactor_semantics.coupled_transport",
@@ -100,6 +102,7 @@ def test_every_reactor_semantics_submodule_avoids_optional_runtime_graph() -> No
 
     assert payload == {
         "imported_modules": [
+            "scpn_phase_orchestrator.reactor_semantics.abstaining_assessment",
             "scpn_phase_orchestrator.reactor_semantics.contracts",
             "scpn_phase_orchestrator.reactor_semantics.control_intent",
             "scpn_phase_orchestrator.reactor_semantics.coupled_transport",

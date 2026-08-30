@@ -12,6 +12,7 @@ This facade is non-actuating. It describes reactor context, observations,
 semantic carriers, compatible relations, and review-only regime estimates.
 """
 
+from .abstaining_assessment import build_abstaining_regime_assessment
 from .contracts import (
     JsonValue,
     ObservableDescriptor,
@@ -249,6 +250,7 @@ __all__ = [
     "UnmetEvidenceDisposition",
     "ValidityState",
     "ValidityWindow",
+    "build_abstaining_regime_assessment",
     "build_phase_relation",
     "build_reactor_reference_portfolio",
     "canonical_json",

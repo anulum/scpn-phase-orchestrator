@@ -36,6 +36,9 @@ from scpn_phase_orchestrator.reactor_semantics import (
     ReactorRegimeAxisDisposition,
     ReactorRegimeEvidenceBinding,
     ValidityState,
+    build_abstaining_regime_assessment,
+    mif_merge_compression_handoff_from_mif_bytes,
+    mif_merge_compression_handoff_to_bytes,
     regime_assessment_digest,
     regime_assessment_from_bytes,
     regime_assessment_from_record,
@@ -224,6 +227,10 @@ def test_public_round_trip_digest_schema_and_authority() -> None:
     assert record["schema"] == REACTOR_REGIME_ASSESSMENT_SCHEMA
     assert record["schema_version"] == REACTOR_REGIME_ASSESSMENT_VERSION
     assert assessment.authority == REVIEW_ONLY_AUTHORITY
+    assert {axis.disposition for axis in assessment.axes} == {
+        ReactorRegimeAxisDisposition.UNKNOWN,
+        ReactorRegimeAxisDisposition.NOT_APPLICABLE,
+    }
     assert assessment.actionable is False
     assert assessment.classification_performed is False
     assert len(assessment.axes) == 8
@@ -231,6 +238,90 @@ def test_public_round_trip_digest_schema_and_authority() -> None:
     schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
     Draft202012Validator.check_schema(schema)
     Draft202012Validator(schema).validate(record)
+
+
+def test_abstaining_builder_projects_verified_mif_handoff_without_labels() -> None:
+    source = Path(
+        "tests/fixtures/mif_merge_compression/mif_merge_compression_observation_v1.json"
+    ).read_bytes()
+    handoff = mif_merge_compression_handoff_from_mif_bytes(source)
+
+    assessment = build_abstaining_regime_assessment(
+        handoff,
+        producer_revision="a" * 40,
+        producer_artifact_sha256="b" * 64,
+    )
+
+    expected_handoff_bytes = mif_merge_compression_handoff_to_bytes(handoff)
+    assert (
+        assessment.source_handoff_sha256
+        == hashlib.sha256(expected_handoff_bytes).hexdigest()
+    )
+    assert assessment.source_handoff_schema == handoff.schema
+    assert assessment.source_project == "SCPN-MIF-CORE"
+    assert assessment.source_revision == handoff.source_revision
+    assert assessment.source_semantic_ids == tuple(
+        sorted(item.phase_id for item in handoff.semantics)
+    )
+    assert assessment.classification_performed is False
+    assert assessment.actionable is False
+    assert assessment.authority == REVIEW_ONLY_AUTHORITY
+    assert (
+        regime_assessment_from_bytes(regime_assessment_to_bytes(assessment))
+        == assessment
+    )
+
+    for axis in assessment.axes:
+        expected = DEFAULT_REACTOR_REGIME_MODE_ONTOLOGY.applicability_for(
+            axis.axis_id,
+            handoff.context.configuration,
+        )
+        assert axis.static_applicability is expected
+        assert axis.label is None
+        assert axis.confidence == 0.0
+        assert axis.observability == 0.0
+        assert axis.evidence_ids == ()
+        assert axis.evidence_bindings == ()
+        assert axis.classifier_id is None
+        assert axis.threshold_policy_id is None
+        assert axis.hysteresis_policy_id is None
+        assert axis.dwell_samples is None
+        if expected is AxisApplicability.NOT_APPLICABLE:
+            assert axis.disposition is ReactorRegimeAxisDisposition.NOT_APPLICABLE
+            assert axis.applicability_basis
+            assert axis.unknown_reason_id is None
+        else:
+            assert axis.disposition is ReactorRegimeAxisDisposition.UNKNOWN
+            assert axis.uncertainty_probability == 1.0
+            assert axis.unknown_reason_id is not None
+
+
+def test_abstaining_builder_is_byte_deterministic() -> None:
+    source = Path(
+        "tests/fixtures/mif_merge_compression/mif_merge_compression_observation_v1.json"
+    ).read_bytes()
+    handoff = mif_merge_compression_handoff_from_mif_bytes(source)
+    first = build_abstaining_regime_assessment(
+        handoff,
+        producer_revision="a" * 40,
+        producer_artifact_sha256="b" * 64,
+    )
+    second = build_abstaining_regime_assessment(
+        handoff,
+        producer_revision="a" * 40,
+        producer_artifact_sha256="b" * 64,
+    )
+
+    assert regime_assessment_to_bytes(first) == regime_assessment_to_bytes(second)
+
+
+def test_abstaining_builder_refuses_an_unverified_handoff_type() -> None:
+    with pytest.raises(ValueError, match="unsupported reactor semantic handoff type"):
+        build_abstaining_regime_assessment(
+            object(),  # type: ignore[arg-type]
+            producer_revision="a" * 40,
+            producer_artifact_sha256="b" * 64,
+        )
 
 
 def test_axis_construction_distinguishes_all_three_dispositions() -> None:
