@@ -21,6 +21,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   mode-identity registries covering all 32 built-in configurations. They keep
   undeclared producers, non-applicable axes, unknown state, physical modes,
   and numerical oscillator coordinates distinct and review-only.
+- A portable, digest-sealed eight-axis `ReactorRegimeAssessment` contract that
+  separates ontology-derived static applicability from classified, unknown,
+  and not-applicable results. It binds exact source, clock, validity, registry,
+  typed evidence-role, classifier, threshold, uncertainty, quality, and
+  provenance identities while remaining review-only and non-actionable.
+- A digest-sealed `ReactorResearchControlIntent` hypothesis contract with
+  evidence-bound candidate envelopes, device-contract limits, complete clock
+  identity, restricted research-safe target vocabulary, and mandatory future
+  CONTROL, adapter, operator, and machine-protection review. It cannot execute
+  or grant actuation authority.
 - A strict public coupled-transport adapter that accepts canonical FUSION TORAX
   review bytes, validates the complete clock, reactor, shape, unit,
   calibration, numerical-refinement, provenance, and digest contract, and maps
