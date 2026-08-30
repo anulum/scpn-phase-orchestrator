@@ -58,6 +58,7 @@ assumption" before changing imports, defaults, or policy rules.
 | Run a reviewed binding from Python | [Python Facade](api.md) | [Quickstart](../../getting-started/quickstart.md) | `OrchestratorState` with phases, coupling, frequencies, and order parameter |
 | Validate and resolve domain assumptions | [Binding](binding.md) | [New Domain Checklist](../../tutorials/01_new_domain_checklist.md) | accepted binding spec or explicit diagnostics |
 | Extract phase from data | [Oscillators](oscillators.md) | [From Raw Sources to Run](../../tutorials/05_from_raw_sources_to_run.md) | physical, informational, or symbolic phase series |
+| Describe reactor phase meaning | [Reactor Semantics](reactor_semantics.md) | [New Domain Checklist](../../tutorials/01_new_domain_checklist.md) | versioned context, observable, phase, relation, and review-only regime records |
 | Simulate coupled dynamics | [UPDE](upde.md) | [UPDE Numerics](../../specs/upde_numerics.md) | phase trajectory, order parameters, and backend evidence |
 | Infer or build coupling | [Coupling](coupling.md) | [Build K_nm Templates](../../tutorials/03_build_knm_templates.md) | `K_nm`, lag, topology, or causal-coupling evidence |
 | Detect coherence and instability | [Monitor](monitor.md) | [Analysis Toolkit](../../guide/analysis_toolkit.md) | R, PLV, PAC, Lyapunov, entropy, recurrence, and safety signals |
@@ -79,6 +80,7 @@ assumption" before changing imports, defaults, or policy rules.
 | Build a domainpack | `load_binding_spec`, `validate_binding_spec` | you need auto-binding proposals or generated scaffolds |
 | Optimise coupling | `scpn_phase_orchestrator.nn.functional` | you need Equinox layers, SAF loss, or inverse coupling |
 | Review evidence | `AuditLogger` and replay APIs | you need deterministic comparison across environments |
+| Exchange reactor semantics | `ReactorContext`, `ObservableDescriptor`, `PhaseSemanticRecord` | you need compatible relations or review-only regime estimates |
 
 ## API by Reader
 
@@ -122,9 +124,14 @@ from scpn_phase_orchestrator import (
     CouplingBuilder,
     Orchestrator,
     OrchestratorState,
+    ObservableDescriptor,
+    PhaseRelation,
     PhaseExtractor,
+    PhaseSemanticRecord,
     PhaseState,
     QPUDataArtifact,
+    ReactorContext,
+    RegimeEstimate,
     RegimeManager,
     SPOError,
     SparseUPDEEngine,
@@ -154,6 +161,7 @@ the compatibility impact.
 | [Python Facade](api.md) | High-level local simulation API for notebooks and applications |
 | [Core & Exceptions](core.md) | Exception hierarchy, Rust/Python compat constants |
 | [Binding](binding.md) | Configuration loading and validation for binding specs |
+| [Reactor Semantics](reactor_semantics.md) | Reactor-family-neutral context, observables, typed phase meaning, compatible relations, and review-only regimes |
 | [UPDE Engine](upde.md) | Kuramoto ODE, Stuart-Landau amplitude ODE, metrics, PAC |
 | [UPDE — PHA-C Handoff](upde_pha_c_handoff.md) | Review-only event/state bridge from moving-frame samples and merge-window evidence |
 | [UPDE — PHA-C Event Timeline](upde_pha_c_timeline.md) | Review-only trajectory evidence for first lock, lock loss, resets, and timeline hashes |

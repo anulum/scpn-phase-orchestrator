@@ -1,0 +1,584 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://anulum.li/schemas/scpn-phase-orchestrator/reactor-semantics-u0-1.0.0.schema.json",
+  "title": "SCPN Phase Orchestrator U0 reactor semantic contract",
+  "description": "Non-actuating, reactor-family-neutral semantic exchange envelope.",
+  "type": "object",
+  "required": ["contract_type", "payload", "schema_version"],
+  "additionalProperties": false,
+  "properties": {
+    "contract_type": {
+      "enum": [
+        "reactor_context",
+        "observable_descriptor",
+        "phase_semantic_record",
+        "phase_relation",
+        "regime_estimate"
+      ]
+    },
+    "payload": {"type": "object"},
+    "schema_version": {"const": "1.0.0"}
+  },
+  "oneOf": [
+    {
+      "properties": {
+        "contract_type": {"const": "reactor_context"},
+        "payload": {"$ref": "#/$defs/ReactorContext"}
+      }
+    },
+    {
+      "properties": {
+        "contract_type": {"const": "observable_descriptor"},
+        "payload": {"$ref": "#/$defs/ObservableDescriptor"}
+      }
+    },
+    {
+      "properties": {
+        "contract_type": {"const": "phase_semantic_record"},
+        "payload": {"$ref": "#/$defs/PhaseSemanticRecord"}
+      }
+    },
+    {
+      "properties": {
+        "contract_type": {"const": "phase_relation"},
+        "payload": {"$ref": "#/$defs/PhaseRelation"}
+      }
+    },
+    {
+      "properties": {
+        "contract_type": {"const": "regime_estimate"},
+        "payload": {"$ref": "#/$defs/RegimeEstimate"}
+      }
+    }
+  ],
+  "$defs": {
+    "Identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9_.:\\-]{0,127}$"
+    },
+    "NonEmptyString": {"type": "string", "minLength": 1},
+    "Semver": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+    },
+    "Sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "Probability": {"type": "number", "minimum": 0, "maximum": 1},
+    "NonNegative": {"type": "number", "minimum": 0},
+    "NonNegativeInteger": {"type": "integer", "minimum": 0},
+    "NullableIdentifier": {
+      "oneOf": [{"$ref": "#/$defs/Identifier"}, {"type": "null"}]
+    },
+    "NullableString": {
+      "oneOf": [{"$ref": "#/$defs/NonEmptyString"}, {"type": "null"}]
+    },
+    "NullableNumber": {"type": ["number", "null"]},
+    "JsonValue": {
+      "oneOf": [
+        {"type": "null"},
+        {"type": "boolean"},
+        {"type": "number"},
+        {"type": "string"},
+        {"type": "array", "items": {"$ref": "#/$defs/JsonValue"}},
+        {
+          "type": "object",
+          "propertyNames": {"minLength": 1},
+          "additionalProperties": {"$ref": "#/$defs/JsonValue"}
+        }
+      ]
+    },
+    "EvidenceClass": {"enum": ["O", "X", "S", "D", "C", "G", "R", "U"]},
+    "ValidityState": {
+      "enum": [
+        "valid",
+        "degraded",
+        "unknown",
+        "stale",
+        "out_of_distribution",
+        "unobservable",
+        "invalid"
+      ]
+    },
+    "QualityState": {"enum": ["valid", "degraded", "unknown", "invalid"]},
+    "ClockKind": {
+      "enum": [
+        "plant_monotonic",
+        "simulation_monotonic",
+        "shot_relative",
+        "facility_synchronized",
+        "wall_clock",
+        "model_tick",
+        "unknown"
+      ]
+    },
+    "ClockReference": {
+      "type": "object",
+      "required": [
+        "domain",
+        "epoch",
+        "kind",
+        "latency_s",
+        "picosecond_offset",
+        "sample_rate_hz",
+        "synchronized_to",
+        "timestamp_ns"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "domain": {"$ref": "#/$defs/Identifier"},
+        "epoch": {"$ref": "#/$defs/Identifier"},
+        "kind": {"$ref": "#/$defs/ClockKind"},
+        "latency_s": {"$ref": "#/$defs/NonNegative"},
+        "picosecond_offset": {"type": "integer", "minimum": 0, "maximum": 999},
+        "sample_rate_hz": {"type": "number", "exclusiveMinimum": 0},
+        "synchronized_to": {"$ref": "#/$defs/NullableIdentifier"},
+        "timestamp_ns": {"$ref": "#/$defs/NonNegativeInteger"}
+      }
+    },
+    "CalibrationReference": {
+      "type": "object",
+      "required": ["calibrated_at_ns", "calibration_id", "transfer_function_id"],
+      "additionalProperties": false,
+      "properties": {
+        "calibrated_at_ns": {"$ref": "#/$defs/NonNegativeInteger"},
+        "calibration_id": {"$ref": "#/$defs/Identifier"},
+        "transfer_function_id": {"$ref": "#/$defs/Identifier"}
+      }
+    },
+    "Uncertainty": {
+      "type": "object",
+      "required": [
+        "circular_std_rad",
+        "confidence_level",
+        "lower_bound",
+        "standard_deviation",
+        "upper_bound"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "circular_std_rad": {
+          "oneOf": [{"$ref": "#/$defs/NonNegative"}, {"type": "null"}]
+        },
+        "confidence_level": {"$ref": "#/$defs/Probability"},
+        "lower_bound": {"$ref": "#/$defs/NullableNumber"},
+        "standard_deviation": {"$ref": "#/$defs/NonNegative"},
+        "upper_bound": {"$ref": "#/$defs/NullableNumber"}
+      }
+    },
+    "QualityAssessment": {
+      "type": "object",
+      "required": ["flags", "signal_to_noise", "state"],
+      "additionalProperties": false,
+      "properties": {
+        "flags": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/Identifier"},
+          "uniqueItems": true
+        },
+        "signal_to_noise": {
+          "oneOf": [{"$ref": "#/$defs/NonNegative"}, {"type": "null"}]
+        },
+        "state": {"$ref": "#/$defs/QualityState"}
+      }
+    },
+    "ValidityWindow": {
+      "type": "object",
+      "required": ["reasons", "state", "valid_from_ns", "valid_until_ns"],
+      "additionalProperties": false,
+      "properties": {
+        "reasons": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/NonEmptyString"}
+        },
+        "state": {"$ref": "#/$defs/ValidityState"},
+        "valid_from_ns": {"$ref": "#/$defs/NonNegativeInteger"},
+        "valid_until_ns": {"$ref": "#/$defs/NonNegativeInteger"}
+      }
+    },
+    "ProvenanceRecord": {
+      "type": "object",
+      "required": [
+        "artifact_uri",
+        "attributes",
+        "component",
+        "sha256",
+        "source_project",
+        "symbol"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "artifact_uri": {"$ref": "#/$defs/NonEmptyString"},
+        "attributes": {
+          "type": "object",
+          "propertyNames": {"$ref": "#/$defs/Identifier"},
+          "additionalProperties": {"$ref": "#/$defs/NonEmptyString"}
+        },
+        "component": {"$ref": "#/$defs/Identifier"},
+        "sha256": {"$ref": "#/$defs/Sha256"},
+        "source_project": {"$ref": "#/$defs/Identifier"},
+        "symbol": {"$ref": "#/$defs/Identifier"}
+      }
+    },
+    "ReactorContext": {
+      "type": "object",
+      "required": [
+        "cadence",
+        "configuration",
+        "configuration_version",
+        "confinement_family",
+        "context_id",
+        "conversion",
+        "coordinate_frame",
+        "drivers",
+        "evidence_class",
+        "event_id",
+        "facility",
+        "operating_point",
+        "reaction",
+        "registry_digest",
+        "registry_version",
+        "schema_version",
+        "topology"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "cadence": {
+          "enum": [
+            "steady",
+            "quasi_steady",
+            "long_pulse",
+            "pulsed_shot",
+            "repetitive_target",
+            "single_experiment"
+          ]
+        },
+        "configuration": {"$ref": "#/$defs/Identifier"},
+        "configuration_version": {"$ref": "#/$defs/Semver"},
+        "confinement_family": {
+          "enum": [
+            "magnetic_closed",
+            "magnetic_open",
+            "self_magnetic",
+            "inertial",
+            "magneto_inertial",
+            "electrostatic",
+            "beam_target",
+            "hybrid",
+            "extension"
+          ]
+        },
+        "context_id": {"$ref": "#/$defs/Identifier"},
+        "conversion": {
+          "enum": [
+            "thermal_blanket",
+            "direct_conversion",
+            "subcritical_fission_blanket",
+            "experimental_no_power_conversion",
+            "extension"
+          ]
+        },
+        "coordinate_frame": {"$ref": "#/$defs/Identifier"},
+        "drivers": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "external_magnetic_coils",
+              "plasma_current",
+              "neutral_beam",
+              "radiofrequency_or_microwave",
+              "laser",
+              "ion_beam",
+              "electron_beam",
+              "pulsed_power",
+              "solid_or_liquid_liner",
+              "projectile",
+              "plasma_jet",
+              "electrostatic_potential",
+              "combined"
+            ]
+          }
+        },
+        "evidence_class": {"$ref": "#/$defs/EvidenceClass"},
+        "event_id": {"$ref": "#/$defs/NullableIdentifier"},
+        "facility": {"$ref": "#/$defs/Identifier"},
+        "operating_point": {
+          "type": "object",
+          "propertyNames": {"minLength": 1},
+          "additionalProperties": {"$ref": "#/$defs/JsonValue"}
+        },
+        "reaction": {
+          "enum": [
+            "deuterium_tritium",
+            "deuterium_deuterium",
+            "deuterium_helium3",
+            "proton_boron11",
+            "advanced_or_extension"
+          ]
+        },
+        "registry_digest": {"$ref": "#/$defs/Sha256"},
+        "registry_version": {"$ref": "#/$defs/Semver"},
+        "schema_version": {"const": "1.0.0"},
+        "topology": {"$ref": "#/$defs/NonEmptyString"}
+      }
+    },
+    "ObservableDescriptor": {
+      "type": "object",
+      "required": [
+        "calibration",
+        "channel",
+        "clock",
+        "coordinate_frame",
+        "diagnostic",
+        "observable_id",
+        "physical_quantity",
+        "provenance",
+        "quality",
+        "reactor_context",
+        "schema_version",
+        "spatial_support",
+        "uncertainty",
+        "units",
+        "validity",
+        "value"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "calibration": {"$ref": "#/$defs/CalibrationReference"},
+        "channel": {"$ref": "#/$defs/NonEmptyString"},
+        "clock": {"$ref": "#/$defs/ClockReference"},
+        "coordinate_frame": {"$ref": "#/$defs/Identifier"},
+        "diagnostic": {"$ref": "#/$defs/NonEmptyString"},
+        "observable_id": {"$ref": "#/$defs/Identifier"},
+        "physical_quantity": {"$ref": "#/$defs/NonEmptyString"},
+        "provenance": {"$ref": "#/$defs/ProvenanceRecord"},
+        "quality": {"$ref": "#/$defs/QualityAssessment"},
+        "reactor_context": {"$ref": "#/$defs/ReactorContext"},
+        "schema_version": {"const": "1.0.0"},
+        "spatial_support": {"$ref": "#/$defs/NonEmptyString"},
+        "uncertainty": {"$ref": "#/$defs/Uncertainty"},
+        "units": {"$ref": "#/$defs/NonEmptyString"},
+        "validity": {"$ref": "#/$defs/ValidityWindow"},
+        "value": {"$ref": "#/$defs/JsonValue"}
+      }
+    },
+    "PhaseSemanticRecord": {
+      "type": "object",
+      "required": [
+        "amplitude",
+        "bandwidth_hz",
+        "carrier_type",
+        "clock_domain",
+        "clock_epoch",
+        "clock_kind",
+        "confidence",
+        "evidence_class",
+        "extractor",
+        "extractor_version",
+        "frequency_hz",
+        "mode_harmonic",
+        "mode_identity",
+        "observability",
+        "observability_threshold",
+        "observable_ids",
+        "observation_operator",
+        "orientation",
+        "phase_id",
+        "phase_origin",
+        "phase_rad",
+        "phenomenon",
+        "quality",
+        "reactor_context_id",
+        "reference_frame",
+        "reference_signal",
+        "schema_version",
+        "uncertainty",
+        "validity",
+        "wrap_convention"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "amplitude": {"$ref": "#/$defs/NullableNumber"},
+        "bandwidth_hz": {"$ref": "#/$defs/NullableNumber"},
+        "carrier_type": {
+          "enum": [
+            "cyclic_phase",
+            "complex_mode",
+            "field_phase",
+            "event_cycle",
+            "bounded_feature",
+            "categorical_state",
+            "protocol_phase",
+            "numerical_phase"
+          ]
+        },
+        "clock_domain": {"$ref": "#/$defs/Identifier"},
+        "clock_epoch": {"$ref": "#/$defs/Identifier"},
+        "clock_kind": {"$ref": "#/$defs/ClockKind"},
+        "confidence": {"$ref": "#/$defs/Probability"},
+        "evidence_class": {"$ref": "#/$defs/EvidenceClass"},
+        "extractor": {"$ref": "#/$defs/Identifier"},
+        "extractor_version": {"$ref": "#/$defs/Semver"},
+        "frequency_hz": {"$ref": "#/$defs/NullableNumber"},
+        "mode_harmonic": {
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {"type": "integer"},
+              "minItems": 2,
+              "maxItems": 2
+            },
+            {"type": "null"}
+          ]
+        },
+        "mode_identity": {"$ref": "#/$defs/NullableString"},
+        "observability": {"$ref": "#/$defs/Probability"},
+        "observability_threshold": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 1
+        },
+        "observable_ids": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/Identifier"}
+        },
+        "observation_operator": {"$ref": "#/$defs/NullableString"},
+        "orientation": {"$ref": "#/$defs/NullableString"},
+        "phase_id": {"$ref": "#/$defs/Identifier"},
+        "phase_origin": {"$ref": "#/$defs/NullableString"},
+        "phase_rad": {
+          "oneOf": [
+            {"type": "number", "minimum": 0, "exclusiveMaximum": 6.283185307179586},
+            {"type": "null"}
+          ]
+        },
+        "phenomenon": {"$ref": "#/$defs/NonEmptyString"},
+        "quality": {"$ref": "#/$defs/QualityAssessment"},
+        "reactor_context_id": {"$ref": "#/$defs/Identifier"},
+        "reference_frame": {"$ref": "#/$defs/Identifier"},
+        "reference_signal": {"$ref": "#/$defs/NullableString"},
+        "schema_version": {"const": "1.0.0"},
+        "uncertainty": {"$ref": "#/$defs/Uncertainty"},
+        "validity": {"$ref": "#/$defs/ValidityWindow"},
+        "wrap_convention": {"$ref": "#/$defs/NullableString"}
+      }
+    },
+    "PhaseRelation": {
+      "type": "object",
+      "required": [
+        "causal_direction",
+        "clock_transform_id",
+        "evidence_class",
+        "harmonic_ratio",
+        "identification_method",
+        "interpretation",
+        "lag_s",
+        "reference_transform",
+        "relation_id",
+        "relation_type",
+        "schema_version",
+        "source_phase_id",
+        "target_phase_id"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "causal_direction": {"$ref": "#/$defs/NullableIdentifier"},
+        "clock_transform_id": {"$ref": "#/$defs/NullableIdentifier"},
+        "evidence_class": {"$ref": "#/$defs/EvidenceClass"},
+        "harmonic_ratio": {
+          "type": "array",
+          "items": {"type": "integer", "minimum": 1},
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "identification_method": {"$ref": "#/$defs/NonEmptyString"},
+        "interpretation": {
+          "enum": ["healthy", "pathological", "ambiguous", "context_dependent"]
+        },
+        "lag_s": {"type": "number"},
+        "reference_transform": {"$ref": "#/$defs/NullableIdentifier"},
+        "relation_id": {"$ref": "#/$defs/Identifier"},
+        "relation_type": {
+          "enum": [
+            "same_mode",
+            "harmonic",
+            "driven",
+            "event_locked",
+            "causal_candidate",
+            "review_hypothesis"
+          ]
+        },
+        "schema_version": {"const": "1.0.0"},
+        "source_phase_id": {"$ref": "#/$defs/Identifier"},
+        "target_phase_id": {"$ref": "#/$defs/Identifier"}
+      }
+    },
+    "RegimeAxis": {
+      "type": "object",
+      "required": ["confidence", "label", "name"],
+      "additionalProperties": false,
+      "properties": {
+        "confidence": {"$ref": "#/$defs/Probability"},
+        "label": {"$ref": "#/$defs/Identifier"},
+        "name": {"$ref": "#/$defs/Identifier"}
+      }
+    },
+    "RegimeEstimate": {
+      "type": "object",
+      "required": [
+        "action_owner",
+        "authority",
+        "axes",
+        "classifier",
+        "classifier_version",
+        "confidence",
+        "dwell_time_s",
+        "evidence_ids",
+        "hysteresis",
+        "reactor_context_id",
+        "regime_id",
+        "safety_effect",
+        "schema_version",
+        "semantic_owner",
+        "state",
+        "threshold_provenance",
+        "transition_reason",
+        "validity"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "action_owner": {"const": "SCPN-CONTROL"},
+        "authority": {"const": "review_only"},
+        "axes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/RegimeAxis"}
+        },
+        "classifier": {"$ref": "#/$defs/Identifier"},
+        "classifier_version": {"$ref": "#/$defs/Semver"},
+        "confidence": {"$ref": "#/$defs/Probability"},
+        "dwell_time_s": {"$ref": "#/$defs/NonNegative"},
+        "evidence_ids": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/Identifier"}
+        },
+        "hysteresis": {"$ref": "#/$defs/NonNegative"},
+        "reactor_context_id": {"$ref": "#/$defs/Identifier"},
+        "regime_id": {"$ref": "#/$defs/Identifier"},
+        "safety_effect": {"$ref": "#/$defs/NonEmptyString"},
+        "schema_version": {"const": "1.0.0"},
+        "semantic_owner": {"const": "SCPN-PHASE-ORCHESTRATOR"},
+        "state": {"enum": ["nominal", "degraded", "critical", "recovery", "unknown"]},
+        "threshold_provenance": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/Identifier"}
+        },
+        "transition_reason": {"$ref": "#/$defs/NonEmptyString"},
+        "validity": {"$ref": "#/$defs/ValidityWindow"}
+      }
+    }
+  }
+}

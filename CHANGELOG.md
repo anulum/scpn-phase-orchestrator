@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- U0 reactor-family-neutral semantic contracts for context, calibrated
+  observables, typed phase meaning, compatible phase relations, and
+  compositional review-only regime estimates. The contract distinguishes eight
+  semantic carriers, spans nine reference reactor families, serializes
+  deterministically, and fails closed on missing, stale, OOD, incompatible, or
+  below-threshold evidence without granting SPO actuation authority.
+
 ## [1.2.0] - 2026-08-26
 
 ### Added

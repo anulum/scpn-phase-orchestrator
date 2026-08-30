@@ -43,6 +43,13 @@ from scpn_phase_orchestrator.exceptions import SPOError
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryObserver
 from scpn_phase_orchestrator.monitor.lyapunov import lyapunov_spectrum
 from scpn_phase_orchestrator.oscillators.base import PhaseExtractor, PhaseState
+from scpn_phase_orchestrator.reactor_semantics import (
+    ObservableDescriptor,
+    PhaseRelation,
+    PhaseSemanticRecord,
+    ReactorContext,
+    RegimeEstimate,
+)
 from scpn_phase_orchestrator.runtime.audit_logger import AuditLogger
 from scpn_phase_orchestrator.supervisor import ControlAction
 from scpn_phase_orchestrator.supervisor.policy import SupervisorPolicy
@@ -68,7 +75,12 @@ __all__ = [
     "PhaseState",
     "Orchestrator",
     "OrchestratorState",
+    "ObservableDescriptor",
+    "PhaseRelation",
+    "PhaseSemanticRecord",
     "QPUDataArtifact",
+    "ReactorContext",
+    "RegimeEstimate",
     "RegimeManager",
     "SPOError",
     "SparseUPDEEngine",

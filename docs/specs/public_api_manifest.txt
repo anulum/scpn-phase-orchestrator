@@ -30,7 +30,12 @@ PhaseExtractor
 PhaseState
 Orchestrator
 OrchestratorState
+ObservableDescriptor
+PhaseRelation
+PhaseSemanticRecord
 QPUDataArtifact
+ReactorContext
+RegimeEstimate
 RegimeManager
 SPOError
 SparseUPDEEngine
