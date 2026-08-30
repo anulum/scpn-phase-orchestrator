@@ -152,6 +152,7 @@ def _handoff() -> ReactorSemanticHandoff:
                 "profiles": {"ion_temperature_kev": [9.1, 8.2, 7.0]},
                 "schema": SOURCE_SCHEMA,
                 "simulation_time_ns": 20_000_000,
+                "source_revision": SOURCE_REVISION,
             }
         )
     )
@@ -217,6 +218,38 @@ def test_public_handoff_refuses_payload_and_source_tampering() -> None:
     payload["source_envelope_json"] = "{}"
     record["payload_sha256"] = _record_payload_digest(payload)
     with pytest.raises(ValueError, match="source envelope digest mismatch"):
+        handoff_from_record(record)
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    [
+        ("schema", "scpn-fusion-core.other-envelope.v1"),
+        ("source_revision", "f" * 40),
+        ("event_id", "fusion.torax.event.other"),
+    ],
+)
+def test_public_handoff_refuses_resealed_source_identity_drift(
+    field: str,
+    value: str,
+) -> None:
+    record = handoff_to_record(_handoff())
+    payload = record["payload"]
+    assert isinstance(payload, dict)
+    source = json.loads(payload["source_envelope_json"])
+    source[field] = value
+    source_json = json.dumps(
+        source,
+        ensure_ascii=False,
+        allow_nan=False,
+        separators=(",", ":"),
+        sort_keys=True,
+    )
+    payload["source_envelope_json"] = source_json
+    payload["source_envelope_sha256"] = hashlib.sha256(source_json.encode()).hexdigest()
+    record["payload_sha256"] = _record_payload_digest(payload)
+
+    with pytest.raises(ValueError, match=rf"source {field} does not match"):
         handoff_from_record(record)
 
 
@@ -290,7 +323,7 @@ def test_handoff_graph_refuses_semantic_and_authority_escalation(
         (lambda item: replace(item, schema_version="1.1.0"), "unsupported.*version"),
         (
             lambda item: replace(item, event_id="fusion.torax.event.other"),
-            "event_id must match",
+            "event_id.*match",
         ),
         (lambda item: replace(item, observables=()), "requires observables"),
         (

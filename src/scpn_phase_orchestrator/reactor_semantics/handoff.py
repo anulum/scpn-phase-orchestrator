@@ -119,6 +119,12 @@ class ReactorSemanticHandoff:
             require_identifier(self.event_id, field="event_id"),
         )
         _validate_canonical_source_json(self.source_envelope_json)
+        _validate_source_crosslinks(
+            self.source_envelope_json,
+            source_schema=self.source_schema,
+            source_revision=self.source_revision,
+            event_id=self.event_id,
+        )
         if self.authority != REVIEW_ONLY_AUTHORITY:
             raise ValueError("reactor semantic handoff authority must be review_only")
         if self.actionable is not False:
@@ -458,6 +464,32 @@ def _validate_canonical_source_json(payload: object) -> None:
     canonical = canonicalize_source_envelope(payload)
     if canonical != payload:
         raise ValueError("source_envelope_json must use canonical JSON")
+
+
+def _validate_source_crosslinks(
+    payload: str,
+    *,
+    source_schema: str,
+    source_revision: str,
+    event_id: str,
+) -> None:
+    """Bind handoff identity fields to the embedded producer envelope."""
+    source = cast(
+        dict[str, object],
+        json.loads(payload, object_pairs_hook=_unique_object),
+    )
+    expected = {
+        "schema": source_schema,
+        "source_revision": source_revision,
+        "event_id": event_id,
+    }
+    for field, value in expected.items():
+        if field not in source:
+            raise ValueError(f"embedded FUSION source envelope lacks {field}")
+        if source[field] != value:
+            raise ValueError(
+                f"embedded FUSION source {field} does not match the handoff"
+            )
 
 
 def _canonical_json(payload: object) -> str:
