@@ -371,3 +371,80 @@ serialization, relation-building, enums, and portfolio helpers live under
       show_root_heading: true
       show_source: false
       members_order: source
+
+## Module reference
+
+The package facade above is the supported discovery surface. The references
+below document the modules that define and validate each part of the wire
+contract, including the producer-specific adapters and the review-only
+assessment and research-intent envelopes.
+
+::: scpn_phase_orchestrator.reactor_semantics.contracts
+    options:
+      show_root_heading: true
+      show_source: false
+
+::: scpn_phase_orchestrator.reactor_semantics.control_intent
+    options:
+      show_root_heading: true
+      show_source: false
+
+::: scpn_phase_orchestrator.reactor_semantics.coupled_transport
+    options:
+      show_root_heading: true
+      show_source: false
+
+::: scpn_phase_orchestrator.reactor_semantics.evidence
+    options:
+      show_root_heading: true
+      show_source: false
+
+::: scpn_phase_orchestrator.reactor_semantics.handoff
+    options:
+      show_root_heading: true
+      show_source: false
+
+::: scpn_phase_orchestrator.reactor_semantics.mif_merge_compression
+    options:
+      show_root_heading: true
+      show_source: false
+
+::: scpn_phase_orchestrator.reactor_semantics.observability_profiles
+    options:
+      show_root_heading: true
+      show_source: false
+
+::: scpn_phase_orchestrator.reactor_semantics.reference_portfolio
+    options:
+      show_root_heading: true
+      show_source: false
+
+::: scpn_phase_orchestrator.reactor_semantics.regime_assessment
+    options:
+      show_root_heading: true
+      show_source: false
+
+::: scpn_phase_orchestrator.reactor_semantics.regime_ontology
+    options:
+      show_root_heading: true
+      show_source: false
+
+::: scpn_phase_orchestrator.reactor_semantics.registry
+    options:
+      show_root_heading: true
+      show_source: false
+
+::: scpn_phase_orchestrator.reactor_semantics.semantic_profiles
+    options:
+      show_root_heading: true
+      show_source: false
+
+::: scpn_phase_orchestrator.reactor_semantics.serialization
+    options:
+      show_root_heading: true
+      show_source: false
+
+::: scpn_phase_orchestrator.reactor_semantics.vocabulary
+    options:
+      show_root_heading: true
+      show_source: false
