@@ -379,6 +379,11 @@ below document the modules that define and validate each part of the wire
 contract, including the producer-specific adapters and the review-only
 assessment and research-intent envelopes.
 
+::: scpn_phase_orchestrator.reactor_semantics.abstaining_assessment
+    options:
+      show_root_heading: true
+      show_source: false
+
 ::: scpn_phase_orchestrator.reactor_semantics.contracts
     options:
       show_root_heading: true
