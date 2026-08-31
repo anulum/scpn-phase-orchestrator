@@ -16,6 +16,11 @@ from typing import Any, cast
 
 import yaml
 
+from tools.ci_workflow_inventory import (
+    load_ci_workflow_policy,
+    read_ci_workflow_source,
+)
+
 ROOT = Path(__file__).resolve().parents[1]
 
 _REQUIREMENTS_DEV_EXTRAS = {"juliacall>=0.9,<0.10"}
@@ -31,7 +36,7 @@ def _publish_workflow() -> dict[str, Any]:
 def _ci_workflow() -> dict[str, Any]:
     return cast(
         "dict[str, Any]",
-        yaml.safe_load((ROOT / ".github/workflows/ci.yml").read_text()),
+        yaml.safe_load(read_ci_workflow_source()),
     )
 
 
@@ -163,8 +168,14 @@ def test_ci_slow_tests_run_once_outside_python_matrix() -> None:
     slow_command = slow_job["steps"][-1]["run"]
     assert "-m slow" in slow_command
 
-    gate_needs = jobs["ci-gate"]["needs"]
-    assert "slow-tests" in gate_needs
+    policy = load_ci_workflow_policy()
+    python_category = next(
+        category
+        for category in policy["categories"]
+        if category["id"] == "python-quality"
+    )
+    assert "slow-tests" in python_category["jobs"]
+    assert "python-quality" in jobs["ci-gate"]["needs"]
 
 
 def test_ci_lint_job_ratchets_source_docstring_coverage() -> None:

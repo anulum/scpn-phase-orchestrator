@@ -1,0 +1,87 @@
+{
+  "schema_version": 1,
+  "coordinator": ".github/workflows/ci.yml",
+  "required_gate": "ci-gate",
+  "limits": {
+    "coordinator_max_lines": 120,
+    "coordinator_max_bytes": 16384,
+    "reusable_max_lines": 1000,
+    "reusable_max_bytes": 102400,
+    "max_reusable_workflows": 16
+  },
+  "categories": [
+    {
+      "id": "static-analysis",
+      "workflow": ".github/workflows/ci-static-analysis.yml",
+      "caller_needs": [],
+      "jobs": ["lint", "typecheck", "module-linkage"]
+    },
+    {
+      "id": "python-quality",
+      "workflow": ".github/workflows/ci-python-quality.yml",
+      "caller_needs": [],
+      "jobs": ["test", "slow-tests", "nn-coverage", "branch-coverage"]
+    },
+    {
+      "id": "integration",
+      "workflow": ".github/workflows/ci-integration.yml",
+      "caller_needs": [],
+      "jobs": [
+        "julia-backend",
+        "go-backend",
+        "mojo-backend",
+        "hierarchy-transport-smoke",
+        "rust-check",
+        "ffi-test"
+      ]
+    },
+    {
+      "id": "coverage-assurance",
+      "workflow": ".github/workflows/ci-coverage-assurance.yml",
+      "caller_needs": ["python-quality", "integration"],
+      "jobs": ["coverage-guard"]
+    },
+    {
+      "id": "security-assurance",
+      "workflow": ".github/workflows/ci-security-assurance.yml",
+      "caller_needs": [],
+      "jobs": ["security", "cargo-audit", "cargo-deny", "rust-miri", "rust-msrv"]
+    },
+    {
+      "id": "performance-evidence",
+      "workflow": ".github/workflows/ci-performance-evidence.yml",
+      "caller_needs": [],
+      "jobs": ["benchmark"]
+    },
+    {
+      "id": "studio-frontend",
+      "workflow": ".github/workflows/ci-studio-frontend.yml",
+      "caller_needs": ["static-analysis"],
+      "jobs": ["studio-web"]
+    }
+  ],
+  "job_order": [
+    "lint",
+    "typecheck",
+    "test",
+    "slow-tests",
+    "nn-coverage",
+    "julia-backend",
+    "go-backend",
+    "mojo-backend",
+    "coverage-guard",
+    "branch-coverage",
+    "module-linkage",
+    "hierarchy-transport-smoke",
+    "security",
+    "rust-check",
+    "ffi-test",
+    "cargo-audit",
+    "cargo-deny",
+    "rust-miri",
+    "rust-msrv",
+    "benchmark",
+    "studio-web"
+  ],
+  "optional_jobs": []
+}

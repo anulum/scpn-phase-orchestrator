@@ -1,0 +1,61 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Commercial license available
+# © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
+# © Code 2020–2026 Miroslav Šotek. All rights reserved.
+# ORCID: 0009-0009-3560-0851
+# Contact: www.anulum.li | protoscience@anulum.li
+# SCPN Phase Orchestrator — Static analysis
+
+name: CI · Static analysis
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
+      - run: ruff check src/ tests/
+      - run: ruff format --check src/ tests/
+      - run: >
+          interrogate src/scpn_phase_orchestrator
+          --fail-under 100
+          --ignore-init-method
+          --ignore-magic
+          --exclude src/scpn_phase_orchestrator/runtime/grpc_gen
+          --quiet
+      - run: python tools/check_version_sync.py
+      - run: python tools/capability_manifest.py --check
+      - run: python tools/build_studio_panel_data.py --check
+      - run: python tools/check_spdx_headers.py
+      - run: python tools/audit_ci_workflow_modularity.py
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
+      - run: mypy src/scpn_phase_orchestrator/ tools/
+  module-linkage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
+      - run: python tools/check_product_boundaries.py
+      - run: python tools/check_test_module_linkage.py

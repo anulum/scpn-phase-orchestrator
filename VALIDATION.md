@@ -13,7 +13,8 @@
 
 CI runs the main Python matrix on every supported interpreter, Python
 3.11–3.13. Rust and FFI lanes cover the operating-system and interpreter
-combinations declared in `.github/workflows/ci.yml`.
+combinations declared by the versioned distributed inventory in
+`tools/ci_workflow_policy.json`.
 
 ## CI Validation Gates
 

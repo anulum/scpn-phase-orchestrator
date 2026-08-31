@@ -82,6 +82,11 @@ PYTHON_GATES: list[tuple[str, list[str], Path]] = [
         ROOT,
     ),
     (
+        "ci-workflow-modularity",
+        [_PY, "tools/audit_ci_workflow_modularity.py"],
+        ROOT,
+    ),
+    (
         "pytest",
         [
             _PY,

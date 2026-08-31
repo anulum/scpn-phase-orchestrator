@@ -1,0 +1,317 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Commercial license available
+# © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
+# © Code 2020–2026 Miroslav Šotek. All rights reserved.
+# ORCID: 0009-0009-3560-0851
+# Contact: www.anulum.li | protoscience@anulum.li
+# SCPN Phase Orchestrator — Backend and transport integration
+
+name: CI · Backend and transport integration
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  julia-backend:
+    # The Julia backend cannot be exercised under the main coverage matrix:
+    # coverage's thread tracer stops juliacall/PythonCall from injecting
+    # ``juliacall.Main`` during its C-level ``using PythonCall``, so the Julia
+    # path is correctly skipped there. This lane installs juliacall and runs the
+    # native-backend parity tests WITHOUT coverage, so the Julia path is
+    # actually verified end to end. juliacall is an optional experimental extra
+    # and is installed outside the hashed lock; juliapkg fetches the Julia
+    # runtime on demand (cached in ~/.julia).
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      HYPOTHESIS_PROFILE: ci
+      PYTHON_JULIACALL_HANDLE_SIGNALS: "yes"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Cache Julia depot
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.julia
+          key: julia-depot-${{ hashFiles('pyproject.toml') }}
+          restore-keys: julia-depot-
+      - name: Install base + optional Julia backend
+        run: |
+          pip install --require-hashes --no-deps -r requirements/dev-lock.txt
+          pip install --no-deps -e .
+          pip install --require-hashes -r requirements/julia-lock.txt
+      - name: Warm up Julia runtime (juliapkg resolves Julia + precompiles PythonCall)
+        run: python -c "from juliacall import Main; print('Julia ready:', Main is not None)"
+      - name: Assert Julia backend is available without coverage
+        run: >
+          python -c "from scpn_phase_orchestrator.upde._run import AVAILABLE_BACKENDS;
+          assert 'julia' in AVAILABLE_BACKENDS, AVAILABLE_BACKENDS;
+          print('backends:', AVAILABLE_BACKENDS)"
+      - name: Run native-backend parity tests without coverage
+        run: pytest tests/ -k backends -m "not slow" --tb=short -p no:cacheprovider
+      - name: Generate Julia API documentation
+        run: python tools/generate_polyglot_docs.py julia --output build/polyglot-docs
+      - name: Upload Julia API documentation
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: polyglot-docs-julia
+          path: build/polyglot-docs/julia
+          retention-days: 14
+  go-backend:
+    # The Go accelerator bridges compile each source to a cgo ``c-shared``
+    # library that the Python runtime loads via ctypes; their FFI call bodies are
+    # outside the coverage matrix. This lane compiles every Go accelerator with
+    # the toolchain pinned by go/go.mod so a broken or bit-rotted source is caught
+    # in CI (the Python loader contracts themselves run in the standard matrix).
+    # Owned by the backend-integration category aggregated by ``ci-gate``.
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go/go.mod
+          cache-dependency-path: go/go.sum
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Compile every Go accelerator to a c-shared library
+        working-directory: go
+        run: |
+          go mod download
+          fail=0
+          for src in *.go; do
+            if ! go build -buildmode=c-shared -o "lib${src%.go}.so" "$src"; then
+              echo "::error file=go/${src}::go build -buildmode=c-shared failed"
+              fail=1
+            fi
+          done
+          exit "$fail"
+      - name: Generate Go API documentation
+        run: python tools/generate_polyglot_docs.py go --output build/polyglot-docs
+      - name: Upload Go API documentation
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: polyglot-docs-go
+          path: build/polyglot-docs/go
+          retention-days: 14
+  mojo-backend:
+    # The Mojo accelerator bridges compile each source to a standalone binary that
+    # the Python runtime invokes as a subprocess. This lane installs the pinned
+    # Mojo toolchain from PyPI and compiles every Mojo accelerator so a broken or
+    # bit-rotted source is caught in CI. Compile-only: the binaries are never
+    # executed, so the AVX-512/ISA runtime trap that motivates target-cpu pinning
+    # does not arise here. The lane is owned by the backend-integration category
+    # aggregated by ``ci-gate``.
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install the pinned Mojo toolchain
+        run: |
+          python -m venv .venv
+          . .venv/bin/activate
+          pip install --require-hashes -r requirements/mojo-lock.txt
+          mojo --version
+      - name: Compile every Mojo accelerator
+        run: |
+          . .venv/bin/activate
+          out="$RUNNER_TEMP/mojo_out"
+          mkdir -p "$out"
+          fail=0
+          for src in mojo/*.mojo; do
+            name="$(basename "$src" .mojo)"
+            if ! mojo build "$src" -o "$out/${name}_mojo" -Xlinker -lm; then
+              echo "::error file=${src}::mojo build failed"
+              fail=1
+            fi
+          done
+          exit "$fail"
+      - name: Generate Mojo API documentation
+        run: .venv/bin/python tools/generate_polyglot_docs.py mojo --output build/polyglot-docs
+      - name: Upload Mojo API documentation
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: polyglot-docs-mojo
+          path: build/polyglot-docs/mojo
+          retention-days: 14
+  hierarchy-transport-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
+      - name: Run hierarchy transport boundary smoke tests
+        run: |
+          pytest tests/test_hierarchy_transport_demos.py tests/test_hierarchy_transport_domainpack_workflow.py \
+            --maxfail=1 --tb=short
+  rust-check:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: spo-kernel
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dtolnay/rust-toolchain@631a55b12751854ce901bb631d5902ceb48146f7 # stable
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            spo-kernel/target
+          key: cargo-${{ runner.os }}-stable-${{ hashFiles('spo-kernel/Cargo.lock') }}
+          restore-keys: cargo-${{ runner.os }}-stable-
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - run: cargo fmt --check
+      - run: cargo clippy --workspace --exclude spo-ffi -- -D warnings
+      - name: Generate Rust API documentation
+        if: runner.os == 'Linux'
+        env:
+          RUSTDOCFLAGS: "-D warnings"
+        run: |
+          cargo clean --doc
+          cargo doc --locked --no-deps --workspace
+      - name: Upload Rust API documentation
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: polyglot-docs-rust
+          path: spo-kernel/target/doc
+          retention-days: 14
+      - run: cargo test --workspace --exclude spo-ffi
+      # spo-ffi `extension-module` is a default feature; disable it so the
+      # test binary can link libpython. Ubuntu-only — macOS and Windows
+      # runners exercise the FFI path via the maturin wheel build in
+      # ``ffi-test`` instead.
+      - if: runner.os == 'Linux'
+        run: cargo test -p spo-ffi --no-default-features --lib
+  ffi-test:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            python-version: "3.11"
+            lockfile: requirements/dev-lock-py311.txt
+          - os: ubuntu-latest
+            python-version: "3.12"
+            lockfile: requirements/dev-lock.txt
+          - os: macos-latest
+            python-version: "3.11"
+            lockfile: requirements/dev-lock-py311.txt
+          - os: macos-latest
+            python-version: "3.12"
+            lockfile: requirements/dev-lock.txt
+          - os: windows-latest
+            python-version: "3.11"
+            lockfile: requirements/dev-lock-windows-ffi-py311.txt
+          - os: windows-latest
+            python-version: "3.12"
+            lockfile: requirements/dev-lock-windows-ffi-py312.txt
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - uses: dtolnay/rust-toolchain@631a55b12751854ce901bb631d5902ceb48146f7 # stable
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            spo-kernel/target
+          key: cargo-ffi-${{ runner.os }}-py${{ matrix.python-version }}-${{ hashFiles('spo-kernel/Cargo.lock') }}
+          restore-keys: cargo-ffi-${{ runner.os }}-
+      - name: Build and test (Unix, lockfile)
+        if: runner.os != 'Windows' && matrix.python-version == '3.12'
+        run: |
+          python -m venv .venv
+          . .venv/bin/activate
+          pip install --require-hashes --no-deps -r requirements/ci-tools.txt
+          maturin develop --release -m spo-kernel/crates/spo-ffi/Cargo.toml
+          pip install --require-hashes --no-deps -r ${{ matrix.lockfile }} && pip install --no-deps -e .
+          pytest tests/ -v --tb=short \
+            --ignore=tests/test_kuramoto_layer.py \
+            --ignore=tests/test_stuart_landau_nn.py \
+            --ignore=tests/test_bold.py \
+            --ignore=tests/test_reservoir.py \
+            --ignore=tests/test_ude_kuramoto.py \
+            --ignore=tests/test_inverse.py \
+            --ignore=tests/test_oim.py \
+            --ignore=tests/test_quantum_bridge_live.py \
+            --ignore=tests/test_geometry_walk.py \
+            --ignore-glob=tests/test_nn_physics_validation*.py \
+            -m "not slow and not performance" \
+            -k "not performance" \
+            --cov=scpn_phase_orchestrator --cov-report= --cov-fail-under=0
+          mv .coverage .coverage.ffi
+      - name: Upload coverage data (ffi, ubuntu only)
+        if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: coverage-data-ffi
+          path: .coverage.ffi
+          include-hidden-files: true
+      - name: Build and test (Unix, lockfile)
+        if: runner.os != 'Windows' && matrix.python-version != '3.12'
+        run: |
+          python -m venv .venv
+          . .venv/bin/activate
+          pip install --require-hashes --no-deps -r requirements/ci-tools.txt
+          maturin develop --release -m spo-kernel/crates/spo-ffi/Cargo.toml
+          pip install --require-hashes --no-deps -r ${{ matrix.lockfile }} && pip install --no-deps -e .
+          pytest tests/ -v --tb=short \
+            --ignore=tests/test_kuramoto_layer.py \
+            --ignore=tests/test_stuart_landau_nn.py \
+            --ignore=tests/test_bold.py \
+            --ignore=tests/test_reservoir.py \
+            --ignore=tests/test_ude_kuramoto.py \
+            --ignore=tests/test_inverse.py \
+            --ignore=tests/test_oim.py \
+            --ignore=tests/test_quantum_bridge_live.py \
+            --ignore=tests/test_geometry_walk.py \
+            --ignore-glob=tests/test_nn_physics_validation*.py \
+            -m "not slow and not performance" \
+            -k "not performance"
+      - name: Build and test (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          python -m venv .venv
+          source .venv/Scripts/activate
+          pip install --require-hashes --no-deps -r requirements/ci-tools.txt
+          maturin develop --release -m spo-kernel/crates/spo-ffi/Cargo.toml
+          pip install --require-hashes --no-deps -r ${{ matrix.lockfile }} && pip install --no-deps -e .
+          pytest tests/ -v --tb=short \
+            --ignore=tests/test_kuramoto_layer.py \
+            --ignore=tests/test_stuart_landau_nn.py \
+            --ignore=tests/test_bold.py \
+            --ignore=tests/test_reservoir.py \
+            --ignore=tests/test_ude_kuramoto.py \
+            --ignore=tests/test_inverse.py \
+            --ignore=tests/test_oim.py \
+            --ignore=tests/test_quantum_bridge_live.py \
+            --ignore=tests/test_geometry_walk.py \
+            --ignore-glob=tests/test_nn_physics_validation*.py \
+            -m "not slow and not performance" \
+            -k "not performance"

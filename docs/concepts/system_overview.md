@@ -273,7 +273,7 @@ test count.
 
 CI runs the main suite on every push across supported Python 3.11–3.13.
 Rust and FFI lanes cover the platform matrix declared in
-`.github/workflows/ci.yml`.
+the versioned distributed inventory at `tools/ci_workflow_policy.json`.
 
 ## What This System Is NOT
 

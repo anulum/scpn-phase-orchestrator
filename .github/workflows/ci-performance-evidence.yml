@@ -1,0 +1,48 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Commercial license available
+# © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
+# © Code 2020–2026 Miroslav Šotek. All rights reserved.
+# ORCID: 0009-0009-3560-0851
+# Contact: www.anulum.li | protoscience@anulum.li
+# SCPN Phase Orchestrator — Performance evidence
+
+name: CI · Performance evidence
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+      - uses: dtolnay/rust-toolchain@631a55b12751854ce901bb631d5902ceb48146f7 # stable
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            spo-kernel/target
+          key: cargo-benchmark-${{ hashFiles('spo-kernel/Cargo.lock') }}
+          restore-keys: cargo-benchmark-
+      - run: |
+          python -m venv .venv
+          . .venv/bin/activate
+          pip install --require-hashes --no-deps -r requirements/ci-tools.txt
+          maturin develop --release -m spo-kernel/crates/spo-ffi/Cargo.toml
+          pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
+      - run: . .venv/bin/activate && python bench/run_benchmarks.py --json > bench/current.json
+      - name: Compare against baseline
+        run: . .venv/bin/activate && python bench/compare_baseline.py bench/baseline.json bench/current.json
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        if: always()
+        with:
+          name: benchmark-results
+          path: bench/current.json

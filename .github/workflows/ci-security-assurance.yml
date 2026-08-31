@@ -1,0 +1,121 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Commercial license available
+# © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
+# © Code 2020–2026 Miroslav Šotek. All rights reserved.
+# ORCID: 0009-0009-3560-0851
+# Contact: www.anulum.li | protoscience@anulum.li
+# SCPN Phase Orchestrator — Security assurance
+
+name: CI · Security assurance
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
+      - run: bandit -r src/ -c pyproject.toml
+      # No --ignore-vuln suppressions: both lockfiles audited clean with zero
+      # ignores on 2026-07-16. Any future suppression must carry an inline
+      # rationale plus a review-by date (SECURITY.md, Dependency Security).
+      - run: >
+          python -m pip install --require-hashes --no-deps -r requirements/audit-tools.txt
+          && pip-audit
+  cargo-audit:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: spo-kernel
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dtolnay/rust-toolchain@631a55b12751854ce901bb631d5902ceb48146f7 # stable
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin/cargo-audit
+          key: cargo-audit-0.22.1-${{ hashFiles('spo-kernel/Cargo.lock') }}
+          restore-keys: cargo-audit-0.22.1-
+      - name: Install cargo-audit
+        run: |
+          if ! cargo audit --version | grep -q '0\.22\.1'; then
+            cargo install cargo-audit --version 0.22.1 --locked --force
+          fi
+      - name: Audit Cargo.lock
+        run: cargo audit --file Cargo.lock
+  cargo-deny:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: spo-kernel
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dtolnay/rust-toolchain@631a55b12751854ce901bb631d5902ceb48146f7 # stable
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin/cargo-deny
+          key: cargo-deny-0.18.7-${{ hashFiles('spo-kernel/Cargo.lock', 'spo-kernel/deny.toml') }}
+          restore-keys: cargo-deny-0.18.7-
+      - name: Install cargo-deny
+        run: |
+          if ! cargo deny --version | grep -q '0\.18\.7'; then
+            cargo install cargo-deny --version 0.18.7 --locked --force
+          fi
+      - name: Check Rust advisories, bans, and sources
+        run: cargo deny check advisories bans sources
+  rust-miri:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: spo-kernel
+    env:
+      MIRIFLAGS: -Zmiri-strict-provenance
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dtolnay/rust-toolchain@631a55b12751854ce901bb631d5902ceb48146f7 # nightly with miri
+        with:
+          toolchain: nightly
+          components: miri
+      - name: Prepare Miri sysroot
+        run: cargo miri setup
+      - name: Miri pure-Rust boundary smoke
+        run: |
+          cargo miri test -p spo-types --lib
+          cargo miri test -p spo-supervisor --lib
+  rust-msrv:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: spo-kernel
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dtolnay/rust-toolchain@631a55b12751854ce901bb631d5902ceb48146f7 # 1.83.0
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            spo-kernel/target
+          key: cargo-msrv-${{ hashFiles('spo-kernel/Cargo.lock') }}
+          restore-keys: cargo-msrv-
+      - run: cargo check --workspace --lib --exclude spo-ffi

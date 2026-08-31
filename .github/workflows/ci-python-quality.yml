@@ -1,0 +1,218 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Commercial license available
+# © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
+# © Code 2020–2026 Miroslav Šotek. All rights reserved.
+# ORCID: 0009-0009-3560-0851
+# Contact: www.anulum.li | protoscience@anulum.li
+# SCPN Phase Orchestrator — Python quality
+
+name: CI · Python quality
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      matrix:
+        include:
+          - python-version: "3.11"
+            lockfile: requirements/dev-lock-py311.txt
+          - python-version: "3.12"
+            lockfile: requirements/dev-lock.txt
+          - python-version: "3.13"
+            lockfile: requirements/dev-lock-py313.txt
+    env:
+      HYPOTHESIS_PROFILE: ci
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - name: Install (lockfile)
+        run: pip install --require-hashes --no-deps -r ${{ matrix.lockfile }} && pip install --no-deps -e .
+      - name: Install pinned Studio SDK for the coverage lane
+        if: matrix.python-version == '3.12'
+        run: pip install --require-hashes --no-deps -r requirements/studio-sdk.txt
+      - name: Run tests (with coverage on 3.12)
+        run: >
+          pytest tests/ -v --tb=short
+          --ignore=tests/test_kuramoto_layer.py
+          --ignore=tests/test_stuart_landau_nn.py
+          --ignore=tests/test_bold.py
+          --ignore=tests/test_reservoir.py
+          --ignore=tests/test_ude_kuramoto.py
+          --ignore=tests/test_inverse.py
+          --ignore=tests/test_oim.py
+          --ignore=tests/test_quantum_bridge_live.py
+          --ignore=tests/test_geometry_walk.py
+          --ignore-glob=tests/test_nn_physics_validation*.py
+          -m "not slow and not performance"
+          -k "not performance"
+          ${{ matrix.python-version == '3.12' && '--cov=scpn_phase_orchestrator --cov-report=term-missing --cov-fail-under=0' || '' }}
+      - name: Rename coverage data (test)
+        if: matrix.python-version == '3.12'
+        run: mv .coverage .coverage.test
+      - name: Upload coverage data (test)
+        if: matrix.python-version == '3.12'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: coverage-data-test
+          path: .coverage.test
+          include-hidden-files: true
+      - name: Validate notebooks
+        if: matrix.python-version == '3.12'
+        run: |
+          pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
+          jupyter nbconvert --execute --to notebook notebooks/*.ipynb --ExecutePreprocessor.timeout=120
+  slow-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      HYPOTHESIS_PROFILE: ci
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
+      - name: Run slow stability tests once
+        run: >
+          pytest tests/ -v --tb=short
+          --ignore=tests/test_kuramoto_layer.py
+          --ignore=tests/test_stuart_landau_nn.py
+          --ignore=tests/test_bold.py
+          --ignore=tests/test_reservoir.py
+          --ignore=tests/test_ude_kuramoto.py
+          --ignore=tests/test_inverse.py
+          --ignore=tests/test_oim.py
+          --ignore=tests/test_quantum_bridge_live.py
+          --ignore=tests/test_geometry_walk.py
+          --ignore-glob=tests/test_nn_physics_validation*.py
+          -m slow
+  nn-coverage:
+    # The slow nn/physics-validation test files are --ignore'd in both the main
+    # ``test`` job (``-m "not slow"``) and the ``slow-tests`` job (``-m slow``)
+    # because they are slow-running but not slow-MARKED, so they fall through both
+    # filters. They fully exercise the nn modules (e.g. test_inverse.py drives
+    # nn/inverse.py to 100%), but their coverage was never collected, leaving the
+    # nn subsystem artificially low in the merged report. This lane runs exactly
+    # those files WITH coverage so the merged coverage reflects reality. The set is
+    # split into shards because the whole set under coverage exceeds a single job's
+    # wall-clock budget; each shard's coverage data is merged in ``coverage-guard``.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - shard: a
+            files: tests/test_inverse.py tests/test_oim.py tests/test_bold.py
+          - shard: b
+            files: tests/test_reservoir.py tests/test_ude_kuramoto.py tests/test_kuramoto_layer.py tests/test_stuart_landau_nn.py
+          - shard: c
+            files: tests/test_nn_physics_validation.py
+          - shard: d
+            files: tests/test_nn_physics_validation_p7.py tests/test_nn_physics_validation_p8.py tests/test_nn_physics_validation_p9.py tests/test_nn_physics_validation_p10.py tests/test_nn_physics_validation_p11.py tests/test_nn_physics_validation_p12.py tests/test_nn_physics_validation_p13.py
+          - shard: e
+            files: tests/test_nn_physics_validation_p2.py
+          - shard: f
+            files: tests/test_nn_physics_validation_p3.py tests/test_nn_physics_validation_p4.py
+          - shard: g
+            files: tests/test_nn_physics_validation_p5.py tests/test_nn_physics_validation_p6.py
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      HYPOTHESIS_PROFILE: ci
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
+      - name: Run nn/physics tests (shard ${{ matrix.shard }}) with coverage
+        run: >
+          pytest ${{ matrix.files }}
+          --tb=short -p no:cacheprovider
+          -k "not performance"
+          --cov=scpn_phase_orchestrator --cov-report= --cov-fail-under=0
+      - name: Rename coverage data (nn shard)
+        run: mv .coverage .coverage.nn-${{ matrix.shard }}
+      - name: Upload coverage data (nn shard)
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: coverage-data-nn-${{ matrix.shard }}
+          path: .coverage.nn-${{ matrix.shard }}
+          include-hidden-files: true
+  branch-coverage:
+    # Branch instrumentation is heavier than line instrumentation and flips
+    # host-sensitive wall-clock performance tests, which is why the main
+    # coverage matrix stays line-only. This lane runs the ffi-test selection
+    # with performance tests deselected and --cov-branch enabled, then gates
+    # the branch rate through tools/coverage_guard_branch_thresholds.json
+    # (no-decrease ratchet, fail-closed if the XML carries no branch data).
+    # Wider timeout than ffi-test: on CPython 3.12 branch measurement runs on
+    # the C tracer (sys.monitoring branch support needs 3.14+), so the suite
+    # is markedly slower under branch instrumentation. The dev Hypothesis
+    # profile (50 examples) is deliberate: this lane measures coverage, not
+    # property-based correctness — the main lanes already run the ci profile
+    # (500 examples) — and 500-example properties under the C tracer would
+    # dominate the lane's wall clock.
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      HYPOTHESIS_PROFILE: dev
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+      - uses: dtolnay/rust-toolchain@631a55b12751854ce901bb631d5902ceb48146f7 # stable
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            spo-kernel/target
+          key: cargo-ffi-${{ runner.os }}-py3.12-${{ hashFiles('spo-kernel/Cargo.lock') }}
+          restore-keys: cargo-ffi-${{ runner.os }}-
+      - name: Build kernel and run tests with branch coverage
+        run: |
+          python -m venv .venv
+          . .venv/bin/activate
+          pip install --require-hashes --no-deps -r requirements/ci-tools.txt
+          maturin develop --release -m spo-kernel/crates/spo-ffi/Cargo.toml
+          pip install --require-hashes --no-deps -r requirements/dev-lock.txt
+          pip install --require-hashes --no-deps -r requirements/studio-sdk.txt
+          pip install --no-deps -e .
+          pytest tests/ --tb=short -p no:cacheprovider \
+            --ignore=tests/test_kuramoto_layer.py \
+            --ignore=tests/test_stuart_landau_nn.py \
+            --ignore=tests/test_bold.py \
+            --ignore=tests/test_reservoir.py \
+            --ignore=tests/test_ude_kuramoto.py \
+            --ignore=tests/test_inverse.py \
+            --ignore=tests/test_oim.py \
+            --ignore=tests/test_quantum_bridge_live.py \
+            --ignore=tests/test_geometry_walk.py \
+            --ignore-glob=tests/test_nn_physics_validation*.py \
+            -m "not slow and not performance" \
+            -k "not performance" \
+            --cov=scpn_phase_orchestrator --cov-branch --cov-report= --cov-fail-under=0
+          coverage xml -o coverage-branch.xml
+      - name: Upload branch coverage XML
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: coverage-xml-branch
+          path: coverage-branch.xml
+      - run: >
+          python tools/coverage_guard.py
+          --coverage-xml coverage-branch.xml
+          --thresholds tools/coverage_guard_branch_thresholds.json

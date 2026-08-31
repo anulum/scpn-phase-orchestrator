@@ -18,6 +18,8 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
+from tools.ci_workflow_inventory import ci_workflow_paths
+
 
 def _repo_root() -> Path:
     return Path(__file__).resolve().parents[2]
@@ -60,7 +62,10 @@ def test_manifest_scans_spo_capability_surfaces() -> None:
     assert manifest["counts"]["domainpacks"] == len(manifest["domainpacks"])
     assert manifest["counts"]["rust_kernel_files"] == len(manifest["rust_kernel_files"])
     assert "nn" in manifest["packaging"]["optional_extras"]
-    assert ".github/workflows/ci.yml" in manifest["quality_gates"]["github_workflows"]
+    expected_ci_workflows = {
+        path.relative_to(_repo_root()).as_posix() for path in ci_workflow_paths()
+    }
+    assert expected_ci_workflows.issubset(manifest["quality_gates"]["github_workflows"])
     assert "tests/test_cli.py" in manifest["quality_gates"]["test_files"]
     assert "domainpacks/minimal_domain/binding_spec.yaml" in manifest["domainpacks"]
     assert (
@@ -249,7 +254,8 @@ def _write_portable_fixture(repo: Path) -> None:
         repo / "tests/test_portable.py",
         "def test_portable() -> None:\n    assert True\n",
     )
-    _write_file(repo / ".github/workflows/ci.yml", "name: CI\non: [push]\njobs: {}\n")
+    workflow = repo / ".github" / "workflows" / "ci.yml"
+    _write_file(workflow, "name: CI\non: [push]\njobs: {}\n")
     _write_file(repo / "spo-kernel/src/lib.rs", "pub fn demo() {}\n")
     _write_file(
         repo / "tools/capability_manifest.toml",
