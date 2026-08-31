@@ -91,6 +91,39 @@ def test_validate_refs_reports_non_sha_ref(monkeypatch) -> None:
     assert non_sha == [action_ref]
 
 
+def test_validate_refs_retries_and_caches_duplicate_remote_refs(monkeypatch) -> None:
+    refs = [
+        mod.ActionRef(
+            path=Path(f".github/workflows/workflow-{index}.yml"),
+            line=10,
+            repo="actions/upload-artifact",
+            ref="a" * 40,
+        )
+        for index in range(2)
+    ]
+    calls: list[str] = []
+
+    def fake_gh_api(path: str) -> subprocess.CompletedProcess[str]:
+        calls.append(path)
+        return subprocess.CompletedProcess(
+            ["gh", "api", path],
+            int(len(calls) == 1),
+            "{}",
+            "transient" if len(calls) == 1 else "",
+        )
+
+    monkeypatch.setattr(mod, "_gh_api", fake_gh_api)
+
+    missing, non_sha = mod.validate_refs(refs)
+
+    assert missing == []
+    assert non_sha == []
+    assert calls == [
+        "repos/actions/upload-artifact/git/commits/" + "a" * 40,
+        "repos/actions/upload-artifact/git/commits/" + "a" * 40,
+    ]
+
+
 def test_main_returns_zero_for_resolving_sha(tmp_path: Path, monkeypatch) -> None:
     workflow = tmp_path / "workflow.yml"
     workflow.write_text(
