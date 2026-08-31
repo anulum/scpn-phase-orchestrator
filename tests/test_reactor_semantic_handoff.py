@@ -253,6 +253,26 @@ def test_public_handoff_refuses_resealed_source_identity_drift(
         handoff_from_record(record)
 
 
+def test_public_handoff_refuses_missing_embedded_source_identity() -> None:
+    record = handoff_to_record(_handoff())
+    payload = record["payload"]
+    assert isinstance(payload, dict)
+    source = json.loads(payload["source_envelope_json"])
+    del source["event_id"]
+    source_json = canonicalize_source_envelope(json.dumps(source))
+    payload["source_envelope_json"] = source_json
+    payload["source_envelope_sha256"] = hashlib.sha256(
+        source_json.encode("utf-8")
+    ).hexdigest()
+    record["payload_sha256"] = _record_payload_digest(payload)
+
+    with pytest.raises(
+        ValueError,
+        match="embedded FUSION source envelope lacks event_id",
+    ):
+        handoff_from_record(record)
+
+
 def test_public_handoff_refuses_duplicate_keys_and_noncanonical_source() -> None:
     with pytest.raises(ValueError, match="duplicate JSON key"):
         handoff_from_json('{"schema":"first","schema":"second"}')
@@ -322,8 +342,14 @@ def test_handoff_graph_refuses_semantic_and_authority_escalation(
         (lambda item: replace(item, schema="unknown.v1"), "unsupported.*schema"),
         (lambda item: replace(item, schema_version="1.1.0"), "unsupported.*version"),
         (
-            lambda item: replace(item, event_id="fusion.torax.event.other"),
-            "event_id.*match",
+            lambda item: replace(
+                item,
+                context=replace(
+                    item.context,
+                    event_id="fusion.torax.event.other",
+                ),
+            ),
+            "handoff and reactor context event_id must match",
         ),
         (lambda item: replace(item, observables=()), "requires observables"),
         (

@@ -16,9 +16,20 @@ records after policy, value, and safety validation have already run.
 
 from __future__ import annotations
 
-from scpn_phase_orchestrator.actuation.constraints import ActionProjector
-from scpn_phase_orchestrator.actuation.hdl_compiler import KuramotoVerilogCompiler
-from scpn_phase_orchestrator.actuation.mapper import ActuationMapper, ControlAction
+from importlib import import_module
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from scpn_phase_orchestrator.actuation.constraints import (
+        ActionProjector as ActionProjector,
+    )
+    from scpn_phase_orchestrator.actuation.hdl_compiler import (
+        KuramotoVerilogCompiler as KuramotoVerilogCompiler,
+    )
+    from scpn_phase_orchestrator.actuation.mapper import (
+        ActuationMapper as ActuationMapper,
+    )
+    from scpn_phase_orchestrator.actuation.mapper import ControlAction as ControlAction
 
 __all__ = [
     "ActionProjector",
@@ -26,3 +37,38 @@ __all__ = [
     "ControlAction",
     "KuramotoVerilogCompiler",
 ]
+
+_EXPORTS = {
+    "ActionProjector": (
+        "scpn_phase_orchestrator.actuation.constraints",
+        "ActionProjector",
+    ),
+    "ActuationMapper": (
+        "scpn_phase_orchestrator.actuation.mapper",
+        "ActuationMapper",
+    ),
+    "ControlAction": (
+        "scpn_phase_orchestrator.actuation.mapper",
+        "ControlAction",
+    ),
+    "KuramotoVerilogCompiler": (
+        "scpn_phase_orchestrator.actuation.hdl_compiler",
+        "KuramotoVerilogCompiler",
+    ),
+}
+
+
+def __getattr__(name: str) -> object:
+    """Load a public actuation symbol without importing unrelated subsystems."""
+    export = _EXPORTS.get(name)
+    if export is None:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    module_name, attribute_name = export
+    value = getattr(import_module(module_name), attribute_name)
+    globals()[name] = value
+    return value
+
+
+def __dir__() -> list[str]:
+    """Return module globals and lazily exported public symbols."""
+    return sorted({*globals(), *__all__})

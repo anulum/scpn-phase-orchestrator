@@ -27,6 +27,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 USES_RE = re.compile(r"^\s*-\s*uses:\s*([^\s#]+)", re.MULTILINE)
 FULL_SHA_RE = re.compile(r"^[0-9a-f]{40}$")
+API_ATTEMPTS = 3
 
 
 @dataclass(frozen=True)
@@ -86,25 +87,32 @@ def _gh_api(path: str) -> subprocess.CompletedProcess[str]:
     )
 
 
+def _api_path_resolves(path: str) -> bool:
+    """Return true when a GitHub API path resolves within bounded retries."""
+    return any(_gh_api(path).returncode == 0 for _ in range(API_ATTEMPTS))
+
+
 def ref_resolves(repo: str, ref: str) -> bool:
     """Return true when ``ref`` resolves as a commit or tag in ``repo``."""
-    commit = _gh_api(f"repos/{repo}/commits/{ref}")
-    if commit.returncode == 0:
+    if _api_path_resolves(f"repos/{repo}/git/commits/{ref}"):
         return True
 
-    tag = _gh_api(f"repos/{repo}/git/ref/tags/{ref}")
-    return tag.returncode == 0
+    return _api_path_resolves(f"repos/{repo}/git/ref/tags/{ref}")
 
 
 def validate_refs(refs: Sequence[ActionRef]) -> tuple[list[ActionRef], list[ActionRef]]:
     """Split refs into missing refs and non-SHA refs."""
     missing: list[ActionRef] = []
     non_sha: list[ActionRef] = []
+    resolutions: dict[tuple[str, str], bool] = {}
 
     for action_ref in refs:
         if not FULL_SHA_RE.fullmatch(action_ref.ref):
             non_sha.append(action_ref)
-        if not ref_resolves(action_ref.repo, action_ref.ref):
+        key = (action_ref.repo, action_ref.ref)
+        if key not in resolutions:
+            resolutions[key] = ref_resolves(*key)
+        if not resolutions[key]:
             missing.append(action_ref)
 
     return missing, non_sha

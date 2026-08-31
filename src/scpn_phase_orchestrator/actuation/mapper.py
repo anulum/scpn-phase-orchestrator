@@ -20,9 +20,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from math import isfinite
 from numbers import Real
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from scpn_phase_orchestrator.binding.types import VALID_KNOBS, ActuatorMapping
+if TYPE_CHECKING:
+    from scpn_phase_orchestrator.binding.types import ActuatorMapping
 
 __all__ = ["ControlAction", "ActuationMapper"]
 
@@ -42,6 +43,8 @@ class ActuationMapper:
     """Convert ControlActions to actuator-specific command dicts."""
 
     def __init__(self, actuator_mappings: list[ActuatorMapping]):
+        from scpn_phase_orchestrator.binding.types import ActuatorMapping
+
         self._by_knob: dict[str, list[ActuatorMapping]] = {}
         for am in actuator_mappings:
             if not isinstance(am, ActuatorMapping):
@@ -95,6 +98,8 @@ class ActuationMapper:
         bool
             True if knob is valid and value is within limits.
         """
+        from scpn_phase_orchestrator.binding.types import VALID_KNOBS
+
         if action.knob not in VALID_KNOBS:
             return False
         if not _finite_real(action.value):
@@ -110,6 +115,8 @@ class ActuationMapper:
 
 def _validate_mapping(mapping: ActuatorMapping) -> None:
     """Validate an actuator mapping in place, raising ``ValueError`` if malformed."""
+    from scpn_phase_orchestrator.binding.types import VALID_KNOBS
+
     if mapping.knob not in VALID_KNOBS:
         raise ValueError("actuator mapping knob must be a valid control knob")
     if not isinstance(mapping.scope, str) or not mapping.scope.strip():

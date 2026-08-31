@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.3.1] - 2026-08-30
+## [1.3.1] - 2026-08-31
 
 ### Added
 
@@ -23,9 +23,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   inventory, enforce NumPy-style contracts across reactor-semantic callables,
   and record responsibility reviews for cohesive modules above the size-review
   threshold.
-- The prepared `1.3.1` package metadata retains Python `>=3.11,<3.14` and
+- The `1.3.1` package metadata retains Python `>=3.11,<3.14` and
   index-compatible dependency declarations so downstream projects can consume
-  a future owner-authorised PyPI release without direct-URL `Requires-Dist`.
+  the index-published package without direct-URL `Requires-Dist`.
 
 ## [1.3.0] - 2026-08-30
 

@@ -20,9 +20,12 @@ from collections.abc import Iterable
 from dataclasses import replace
 from math import isfinite
 from numbers import Real
+from typing import TYPE_CHECKING
 
 from scpn_phase_orchestrator.actuation.mapper import ControlAction
-from scpn_phase_orchestrator.binding.types import ActuatorMapping
+
+if TYPE_CHECKING:
+    from scpn_phase_orchestrator.binding.types import ActuatorMapping
 
 __all__ = ["ActionProjector"]
 
@@ -112,6 +115,8 @@ class ActionProjector:
         ValueError
             If the inputs are invalid or inconsistent.
         """
+        from scpn_phase_orchestrator.binding.types import ActuatorMapping
+
         rate_limits: dict[str, float] = {}
         value_bounds: dict[str, tuple[float, float]] = {}
         for actuator in actuators:

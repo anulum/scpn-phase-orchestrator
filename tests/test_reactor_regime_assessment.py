@@ -675,6 +675,7 @@ def test_record_decoder_refuses_shape_enum_and_digest_drift(
         (b"{", "invalid.*JSON"),
         (b'{"schema":"a","schema":"b"}', "duplicate JSON key"),
     ],
+    ids=["empty", "oversized", "invalid-utf8", "invalid-json", "duplicate-key"],
 )
 def test_bytes_decoder_refuses_invalid_transport(data: bytes, match: str) -> None:
     with pytest.raises(ValueError, match=match):

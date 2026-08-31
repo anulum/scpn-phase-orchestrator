@@ -120,8 +120,8 @@ review record.
 
 ## Current Release Boundary
 
-Version `1.3.1` is the current prepared release candidate. Public availability must
-be verified through PyPI and an exact-head release receipt; a source-tree
+Version `1.3.1` is the current release source. Public availability must be
+verified through PyPI and an immutable exact-tag release receipt; a source-tree
 version alone is not publication evidence. Version `1.0.0` established the
 stable API baseline: the public names exported from
 `scpn_phase_orchestrator.__all__` are covered by semantic-versioning guarantees.

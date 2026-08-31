@@ -13,6 +13,7 @@ from __future__ import annotations
 import hashlib
 import json
 from copy import deepcopy
+from dataclasses import replace
 from typing import Any
 
 import pytest
@@ -26,6 +27,7 @@ from scpn_phase_orchestrator.reactor_semantics import (
     RegimeState,
     SemanticCarrier,
     ValidityState,
+    build_abstaining_regime_assessment,
     coupled_transport_handoff_from_fusion_bytes,
     handoff_from_bytes,
     handoff_to_bytes,
@@ -278,6 +280,57 @@ def test_public_adapter_maps_exactly_twelve_nonphase_review_observables() -> Non
     assert handoff_to_bytes(_decode()) == encoded
 
 
+def test_abstaining_builder_enforces_fusion_clock_and_validity_boundary() -> None:
+    handoff = _decode()
+    assessment = build_abstaining_regime_assessment(
+        handoff,
+        producer_revision="a" * 40,
+        producer_artifact_sha256="b" * 64,
+    )
+
+    assert assessment.source_handoff_schema == handoff.schema
+    assert (
+        assessment.source_handoff_sha256
+        == hashlib.sha256(handoff_to_bytes(handoff)).hexdigest()
+    )
+    assert assessment.actionable is False
+
+    final = handoff.observables[-1]
+    shifted_timestamp = final.clock.timestamp_ns + 1
+    shifted = replace(
+        final,
+        clock=replace(final.clock, timestamp_ns=shifted_timestamp),
+        validity=replace(
+            final.validity,
+            valid_from_ns=shifted_timestamp,
+            valid_until_ns=shifted_timestamp,
+        ),
+    )
+    with pytest.raises(ValueError, match="no common validity"):
+        build_abstaining_regime_assessment(
+            replace(
+                handoff,
+                observables=(*handoff.observables[:-1], shifted),
+            ),
+            producer_revision="a" * 40,
+            producer_artifact_sha256="b" * 64,
+        )
+
+    mismatched_clock = replace(
+        final,
+        clock=replace(final.clock, sample_rate_hz=final.clock.sample_rate_hz * 2.0),
+    )
+    with pytest.raises(ValueError, match="identical assessment clock metadata"):
+        build_abstaining_regime_assessment(
+            replace(
+                handoff,
+                observables=(*handoff.observables[:-1], mismatched_clock),
+            ),
+            producer_revision="a" * 40,
+            producer_artifact_sha256="b" * 64,
+        )
+
+
 @pytest.mark.parametrize(
     ("field", "value", "match"),
     [
@@ -345,6 +398,7 @@ def test_adapter_refuses_source_above_the_public_size_bound(
         (("payload", "clock", "requested_final_ns"), 10_000_000, "requested final"),
         (("payload", "clock", "timestamp_ns"), True, "must be an integer"),
         (("payload", "clock", "sample_rate_hz"), 99.0, "does not match"),
+        (("payload", "clock", "latency_s"), 10**400, "finite number"),
         (("payload", "clock", "latency_s"), 0.1, "latency must be zero"),
         (("payload", "clock", "picosecond_offset"), 1, "picosecond offset"),
         (("payload", "clock", "synchronized_to"), "wall", "cannot imply"),
