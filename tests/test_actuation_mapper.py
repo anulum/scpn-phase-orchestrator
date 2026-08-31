@@ -8,10 +8,42 @@
 
 from __future__ import annotations
 
+import subprocess
+import sys
+
 import pytest
 
 from scpn_phase_orchestrator.actuation.mapper import ActuationMapper, ControlAction
 from scpn_phase_orchestrator.binding.types import ActuatorMapping
+
+
+def test_audit_logger_import_is_independent_of_mapper_import_order() -> None:
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "-I",
+            "-c",
+            (
+                "from scpn_phase_orchestrator.runtime.audit_logger "
+                "import AuditLogger; "
+                "from scpn_phase_orchestrator.actuation import "
+                "ActionProjector, ActuationMapper, ControlAction, "
+                "KuramotoVerilogCompiler; "
+                "print(AuditLogger.__name__, ActionProjector.__name__, "
+                "ActuationMapper.__name__, ControlAction.__name__, "
+                "KuramotoVerilogCompiler.__name__)"
+            ),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+        timeout=30.0,
+    )
+
+    assert completed.stdout.strip() == (
+        "AuditLogger ActionProjector ActuationMapper ControlAction "
+        "KuramotoVerilogCompiler"
+    )
 
 
 def _action(knob, scope, value):
