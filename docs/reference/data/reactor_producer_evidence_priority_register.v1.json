@@ -804,6 +804,13 @@
             "physical_uncertainty_validity_quality_and_provenance",
             "physical_observability_gate_result"
           ],
+          "materialized_request": {
+            "api": "scpn_phase_orchestrator.reactor_semantics.frc_compression_mif_physical_payload_request",
+            "envelope_sha256": "abbfdf0c80773e9c8f8d0d59afd02419b24f7befbef15754a87e3f1676c8989f",
+            "request_id": "f4b600a12e1fa0f3f56bbccf410d4fbf5a7d2dce47a4cef001a4e35e3625fa98",
+            "schema": "scpn-phase-orchestrator.frc-compression-mif-physical-payload-request.v1",
+            "schema_version": "1.0.0"
+          },
           "source_revision_required": true,
           "package_identity_required": true,
           "canonical_bytes_required": true,
@@ -3078,5 +3085,5 @@
     "direct_actuation_authorized": false,
     "machine_protection_final_veto": true
   },
-  "payload_sha256": "99862ee8331afad0a0709166b96ef2e4b198903f7302f1c7b08662946034e1a2"
+  "payload_sha256": "decc965232ed6ea38ffc92a41b421cd6a21d90aa58d7744a2d1ccce22c107e24"
 }

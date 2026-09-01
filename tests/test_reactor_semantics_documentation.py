@@ -29,6 +29,9 @@ PRODUCER_EVIDENCE_PRIORITY_REGISTER = Path(
 CONVENTIONAL_TOKAMAK_PHYSICAL_PAYLOAD_REQUEST = Path(
     "docs/reference/conventional_tokamak_physical_payload_request.md"
 )
+FRC_COMPRESSION_MIF_PHYSICAL_PAYLOAD_REQUEST = Path(
+    "docs/reference/frc_compression_mif_physical_payload_request.md"
+)
 
 
 def test_reactor_semantics_reference_preserves_u0_boundaries() -> None:
@@ -88,8 +91,8 @@ def test_reactor_semantics_reference_preserves_u0_boundaries() -> None:
         "Passing a design review does not add source evidence",
         "reactor diagnostic-plan portfolio status",
         "all 20 Reactor Systems device producers",
-        "Ten current fixtures are accepted with byte-identical SPO custody",
-        "A missing member is not an explicit `null`",
+        "All 20 exact producer objects are structurally accepted",
+        "11 have byte-identical SPO fixture custody",
         "simulation-monotonic evidence to wall time implicitly",
         "FAIR-MAST magnetic physical-source review",
         "mast_magnetic_source_review_from_producer_bytes()",
@@ -108,6 +111,11 @@ def test_reactor_semantics_reference_preserves_u0_boundaries() -> None:
         "reusable_as_physical_evidence=false",
         "allocate a new configuration-specific canonical physical payload",
         "conventional_tokamak_physical_payload_request.schema.json",
+        "FRC-compression MIF L1 physical-payload request",
+        "frc_compression_mif_physical_payload_request()",
+        "simulation-monotonic clock",
+        "four unselected FRC-compression-MIF candidates",
+        "frc_compression_mif_physical_payload_request.schema.json",
     )
 
     for marker in required:
@@ -118,14 +126,12 @@ def test_reactor_diagnostic_plan_portfolio_status_is_fail_closed() -> None:
     text = " ".join(PLAN_PORTFOLIO_STATUS.read_text(encoding="utf-8").split())
     required = (
         "**20 producers** were examined",
-        "**10 fixtures** are structurally accepted",
-        "**10 fixtures** fail closed",
+        "**20 fixtures** are structurally accepted",
+        "**11 fixtures** have byte-identical SPO custody",
+        "**9 fixtures** remain digest-pinned public producer objects",
         "**0 fixtures** constitute a qualified physical observation",
-        "omits the required `timing_uncertainty_s` member",
-        "omission and a declared non-applicable timing bound are different "
-        "source claims",
-        "SPO must then replay the new bytes",
-        "must not relax the schema or infer defaults",
+        "previously missing `timing_uncertainty_s` member is now explicit",
+        "producer bytes were not changed for that consumer defect",
         "reactor_diagnostic_plan_portfolio_status.v1.json",
         "reactor_diagnostic_plan_portfolio_status.schema.json",
     )
@@ -176,11 +182,12 @@ def test_reactor_producer_evidence_priority_is_non_scalar_and_fail_closed() -> N
         "reproducible source-ingestion state",
         "mast_phase_qualification_request_from_source_review()",
         "conventional_tokamak_physical_payload_request()",
+        "frc_compression_mif_physical_payload_request()",
         "forbidding reuse as physical evidence",
-        "normative request reference",
+        "Both L1 requests additionally make immutable source/package identity",
         "`SCPN-MIF-CORE` is the registry's 21st distinct `device_project` owner",
-        "Each current producer fixture omits the mandatory "
-        "`timing_uncertainty_s` member",
+        "L3 is empty",
+        "conformance repairs now emit explicit `timing_uncertainty_s`",
         "zero complete physical evidence chains",
         "zero qualified physical observations",
         "zero qualified physical phases",
@@ -213,6 +220,31 @@ def test_conventional_tokamak_physical_request_is_exact_and_fail_closed() -> Non
         "`control_admission_requested=false`",
         "`direct_actuation=false`",
         "conventional_tokamak_physical_payload_request.schema.json",
+    )
+
+    for marker in required:
+        assert marker in text
+
+
+def test_frc_compression_mif_physical_request_is_exact_and_fail_closed() -> None:
+    text = " ".join(
+        FRC_COMPRESSION_MIF_PHYSICAL_PAYLOAD_REQUEST.read_text(encoding="utf-8").split()
+    )
+    required = (
+        "`L1_extend_exercised_review_adapter`",
+        "`frc_compression_mif_physical_payload_request()`",
+        "SCPN-MIF-CORE merge-compression adapter",
+        "`source_kind=simulation`",
+        "`reusable_as_physical_evidence=false`",
+        "all twelve prerequisites",
+        "FRC-compression-MIF-specific diagnostic",
+        "driver arrival",
+        "simulation-only synthetic oscillator coordinate",
+        "New peer discoveries enter the atlas as gaps or provisional candidates",
+        "`selected_candidate_id=null`",
+        "`control_admission_requested=false`",
+        "`direct_actuation=false`",
+        "frc_compression_mif_physical_payload_request.schema.json",
     )
 
     for marker in required:

@@ -161,6 +161,7 @@ nav:
       - Reactor Technology and Diagnostic Atlas: reference/reactor_technology_diagnostic_atlas.md
       - Reactor Producer-Evidence Priority Register: reference/reactor_producer_evidence_priority_register.md
       - Conventional-Tokamak Physical-Payload Request: reference/conventional_tokamak_physical_payload_request.md
+      - FRC-Compression MIF Physical-Payload Request: reference/frc_compression_mif_physical_payload_request.md
       - UPDE Engine: reference/api/upde.md
       - "UPDE — Core Integrator": reference/api/upde_engine.md
       - "UPDE — Time-varying Omega": reference/api/upde_time_varying_omega.md

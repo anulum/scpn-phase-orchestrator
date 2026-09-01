@@ -141,12 +141,13 @@ reactor configuration evidence matrix.
 The companion
 [reactor diagnostic-plan portfolio status](../reactor_diagnostic_plan_portfolio_status.md)
 records the exact structural-review result for all 20 Reactor Systems device
-producers. Ten current fixtures are accepted with byte-identical SPO custody;
-ten are refused because each channel omits the required
-`timing_uncertainty_s` member. A missing member is not an explicit `null`, so
-SPO neither supplies the value nor weakens the `1.1.0` contract. The register
-is review-only and creates no physical observation, physical phase, CONTROL
-intent, action, execution, actuation, or machine-protection authority.
+producers. All 20 exact producer objects are structurally accepted: 11 have
+byte-identical SPO fixture custody and nine are digest-pinned exact public
+producer objects. Every channel now declares `timing_uncertainty_s`; SPO also
+repairs its own direct-cyclic facility-clock compatibility without changing
+producer bytes. The register is review-only and creates no physical
+observation, physical phase, CONTROL intent, action, execution, actuation, or
+machine-protection authority.
 
 ## External reactor technology and diagnostic atlas
 
@@ -208,6 +209,32 @@ source presence, candidate selection, observation admission, phase inference,
 semantic-ingress extension, CONTROL admission, action, execution, and
 actuation to their fail-closed states. Its canonical envelope is defined by
 [`conventional_tokamak_physical_payload_request.schema.json`](../../specs/conventional_tokamak_physical_payload_request.schema.json).
+
+### FRC-compression MIF L1 physical-payload request
+
+`frc_compression_mif_physical_payload_request()` materialises the L1 request
+to SCPN-MIF-CORE. It binds the exact verified merge-compression source schema,
+adapter API, review-only handoff schema, semantic profile,
+semantic-profile registry, and observability registry. The bound adapter is
+fixed as simulation-only: its `mif_model` facility, simulation-monotonic clock,
+model coordinates, merge predicates, and trigger decision are not physical
+diagnostic evidence.
+
+The request carries four unselected FRC-compression-MIF candidates: driver
+arrival, resolved asymmetry, translation and compression, and the
+simulation-only synthetic oscillator coordinate. It names twelve missing
+producer obligations: physical samples, configuration-specific diagnostic
+identity, phenomenon, reference, physical clocks, observation operator or
+calibration, uncertainty, validity, quality, immutable provenance and
+reproducibility, a predeclared observability gate, and independent validation.
+SCPN-MIF-CORE must allocate a new configuration-specific canonical physical
+payload rather than place physical claims into the simulation schema.
+
+`FRCCompressionMIFPhysicalPayloadRequest` fixes schema allocation, physical
+source presence, candidate selection, observation admission, phase inference,
+semantic-ingress extension, CONTROL admission, action, execution, and
+actuation to their fail-closed states. Its canonical envelope is defined by
+[`frc_compression_mif_physical_payload_request.schema.json`](../../specs/frc_compression_mif_physical_payload_request.schema.json).
 
 ## FAIR-MAST magnetic physical-source review
 
@@ -620,6 +647,11 @@ assessment and research-intent envelopes.
       show_source: false
 
 ::: scpn_phase_orchestrator.reactor_semantics.evidence
+    options:
+      show_root_heading: true
+      show_source: false
+
+::: scpn_phase_orchestrator.reactor_semantics.frc_compression_mif_physical_payload_request
     options:
       show_root_heading: true
       show_source: false

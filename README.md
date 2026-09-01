@@ -110,10 +110,10 @@ The follow-on
 joins the atlas to current occurrence, observability, semantic-ingress, and
 diagnostic-plan custody across 22 upstream reactor projects plus the
 SCPN-CONTROL boundary. Its four non-scalar lanes identify one existing
-physical-source qualification, two exercised-adapter extensions, 13 accepted-
-plan physical intakes, and 16 plan repairs. Rows within a lane are unordered,
-and no lane or external rank creates signal, phase, CONTROL, or actuation
-authority.
+physical-source qualification, two exercised-adapter extensions, 29 accepted-
+plan physical intakes, and no remaining plan repair. Rows within a lane are
+unordered, and no lane or external rank creates signal, phase, CONTROL, or
+actuation authority.
 
 For the L0 FAIR-MAST row, SPO now emits a digest-sealed
 phase-qualification prerequisite request from the existing physical-source
@@ -131,6 +131,14 @@ evidence, carries four unselected observability candidates, and names twelve
 producer-owned physical evidence obligations. Schema allocation, observation,
 phase inference, semantic-ingress extension, CONTROL admission, action,
 execution, and actuation all remain fail closed.
+
+The L1 `frc_compression_mif` row has the same explicit boundary through its own
+byte-canonical physical-payload prerequisite request to SCPN-MIF-CORE. It binds
+the merge-compression v1 adapter as simulation-only: model time, numerical
+oscillator coordinates, merge predicates, and trigger decisions cannot become
+physical evidence. Four unselected magneto-inertial candidates and twelve
+producer obligations are carried without selecting a phase or extending
+semantic ingress, CONTROL, execution, or actuation authority.
 
 ![Synchronization Manifold](docs/assets/synchronization_manifold.png)
 
@@ -332,16 +340,16 @@ inside a dashboard or notebook; it turns them into inspectable artefacts.
 |---|---:|
 | Package version | 1.3.1 |
 | Public API exports | 29 |
-| Python package modules | 747 |
-| Core Engine modules | 348 |
+| Python package modules | 748 |
+| Core Engine modules | 349 |
 | Runtime/Serving modules | 158 |
 | Integration modules | 32 |
 | Research/Experimental modules | 205 |
 | Domainpack files | 36 |
 | Rust kernel files | 97 |
 | Optional extras | 23 |
-| Python test files | 912 |
-| Public documentation pages | 240 |
+| Python test files | 913 |
+| Public documentation pages | 241 |
 | GitHub Actions workflows | 19 |
 
 Evidence boundary: this snapshot is a static inventory. Performance, coverage, hardware, and scientific-fidelity claims require their own committed evidence artifacts.

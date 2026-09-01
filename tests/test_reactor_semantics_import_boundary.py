@@ -48,6 +48,9 @@ def test_every_reactor_semantics_submodule_avoids_optional_runtime_graph() -> No
         import scpn_phase_orchestrator.reactor_semantics.coupled_transport
         import scpn_phase_orchestrator.reactor_semantics.diagnostic_plan_review
         import scpn_phase_orchestrator.reactor_semantics.evidence
+        from scpn_phase_orchestrator.reactor_semantics import (
+            frc_compression_mif_physical_payload_request,
+        )
         import scpn_phase_orchestrator.reactor_semantics.handoff
         import scpn_phase_orchestrator.reactor_semantics.mast_magnetic_review
         from scpn_phase_orchestrator.reactor_semantics import (
@@ -71,6 +74,7 @@ def test_every_reactor_semantics_submodule_avoids_optional_runtime_graph() -> No
             "scpn_phase_orchestrator.reactor_semantics.coupled_transport",
             "scpn_phase_orchestrator.reactor_semantics.diagnostic_plan_review",
             "scpn_phase_orchestrator.reactor_semantics.evidence",
+            "scpn_phase_orchestrator.reactor_semantics.frc_compression_mif_physical_payload_request",
             "scpn_phase_orchestrator.reactor_semantics.handoff",
             "scpn_phase_orchestrator.reactor_semantics.mast_magnetic_review",
             "scpn_phase_orchestrator.reactor_semantics.mast_phase_qualification_request",
@@ -121,6 +125,7 @@ def test_every_reactor_semantics_submodule_avoids_optional_runtime_graph() -> No
             "scpn_phase_orchestrator.reactor_semantics.coupled_transport",
             "scpn_phase_orchestrator.reactor_semantics.diagnostic_plan_review",
             "scpn_phase_orchestrator.reactor_semantics.evidence",
+            "scpn_phase_orchestrator.reactor_semantics.frc_compression_mif_physical_payload_request",
             "scpn_phase_orchestrator.reactor_semantics.handoff",
             "scpn_phase_orchestrator.reactor_semantics.mast_magnetic_review",
             "scpn_phase_orchestrator.reactor_semantics.mast_phase_qualification_request",

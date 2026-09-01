@@ -24,8 +24,12 @@ from scpn_phase_orchestrator.reactor_semantics import (
     DEFAULT_REACTOR_OBSERVABILITY_PROFILE_REGISTRY,
     DEFAULT_REACTOR_REGISTRY,
     DEFAULT_REACTOR_SEMANTIC_PROFILE_REGISTRY,
+    FRC_COMPRESSION_MIF_PHYSICAL_PAYLOAD_REQUEST_SCHEMA,
+    FRC_COMPRESSION_MIF_PHYSICAL_PAYLOAD_REQUEST_VERSION,
     conventional_tokamak_physical_payload_request,
     conventional_tokamak_physical_payload_request_digest,
+    frc_compression_mif_physical_payload_request,
+    frc_compression_mif_physical_payload_request_digest,
 )
 
 REGISTER = Path(
@@ -285,12 +289,24 @@ def test_priority_register_requests_evidence_without_granting_authority() -> Non
         "schema": CONVENTIONAL_TOKAMAK_PHYSICAL_PAYLOAD_REQUEST_SCHEMA,
         "schema_version": CONVENTIONAL_TOKAMAK_PHYSICAL_PAYLOAD_REQUEST_VERSION,
     }
-    assert (
-        by_configuration["frc_compression_mif"]["producer_request"][
-            "requested_owner_project"
-        ]
-        == "SCPN-MIF-CORE"
-    )
+    mif_request = by_configuration["frc_compression_mif"]["producer_request"]
+    assert isinstance(mif_request, dict)
+    assert mif_request["requested_owner_project"] == "SCPN-MIF-CORE"
+    mif_materialized = mif_request["materialized_request"]
+    assert isinstance(mif_materialized, dict)
+    runtime_mif_request = frc_compression_mif_physical_payload_request()
+    assert mif_materialized == {
+        "api": (
+            "scpn_phase_orchestrator.reactor_semantics."
+            "frc_compression_mif_physical_payload_request"
+        ),
+        "envelope_sha256": frc_compression_mif_physical_payload_request_digest(
+            runtime_mif_request
+        ),
+        "request_id": runtime_mif_request.request_id,
+        "schema": FRC_COMPRESSION_MIF_PHYSICAL_PAYLOAD_REQUEST_SCHEMA,
+        "schema_version": FRC_COMPRESSION_MIF_PHYSICAL_PAYLOAD_REQUEST_VERSION,
+    }
 
     for row in rows:
         context = row["external_context"]

@@ -1,18 +1,18 @@
 {
   "SPDX-License-Identifier": "AGPL-3.0-or-later",
   "counts": {
-    "core_engine_modules": 348,
+    "core_engine_modules": 349,
     "domainpacks": 36,
     "github_workflows": 19,
     "integration_modules": 32,
     "optional_extras": 23,
     "public_api_exports": 29,
-    "public_documentation_pages": 240,
-    "python_package_modules": 747,
+    "public_documentation_pages": 241,
+    "python_package_modules": 748,
     "research_experimental_modules": 205,
     "runtime_serving_modules": 158,
     "rust_kernel_files": 97,
-    "test_files": 912
+    "test_files": 913
   },
   "documentation": {
     "public_pages": [
@@ -202,6 +202,7 @@
       "docs/reference/conventional_tokamak_physical_payload_request.md",
       "docs/reference/documentation_coverage.md",
       "docs/reference/end_to_end_wiring_audit.md",
+      "docs/reference/frc_compression_mif_physical_payload_request.md",
       "docs/reference/grpc_gen_fallback_aliases.md",
       "docs/reference/nn.md",
       "docs/reference/nn_bold_contract.md",
@@ -575,6 +576,7 @@
       "src/scpn_phase_orchestrator/reactor_semantics/coupled_transport.py",
       "src/scpn_phase_orchestrator/reactor_semantics/diagnostic_plan_review.py",
       "src/scpn_phase_orchestrator/reactor_semantics/evidence.py",
+      "src/scpn_phase_orchestrator/reactor_semantics/frc_compression_mif_physical_payload_request.py",
       "src/scpn_phase_orchestrator/reactor_semantics/handoff.py",
       "src/scpn_phase_orchestrator/reactor_semantics/mast_magnetic_review.py",
       "src/scpn_phase_orchestrator/reactor_semantics/mast_phase_qualification_request.py",
@@ -1626,6 +1628,7 @@
     "src/scpn_phase_orchestrator/reactor_semantics/coupled_transport.py",
     "src/scpn_phase_orchestrator/reactor_semantics/diagnostic_plan_review.py",
     "src/scpn_phase_orchestrator/reactor_semantics/evidence.py",
+    "src/scpn_phase_orchestrator/reactor_semantics/frc_compression_mif_physical_payload_request.py",
     "src/scpn_phase_orchestrator/reactor_semantics/handoff.py",
     "src/scpn_phase_orchestrator/reactor_semantics/mast_magnetic_review.py",
     "src/scpn_phase_orchestrator/reactor_semantics/mast_phase_qualification_request.py",
@@ -2224,6 +2227,7 @@
       "tests/test_formal_export_validators.py",
       "tests/test_formal_model_checker_ci.py",
       "tests/test_foundation_model_governor.py",
+      "tests/test_frc_compression_mif_physical_payload_request.py",
       "tests/test_free_energy.py",
       "tests/test_freq_id.py",
       "tests/test_fusion_core_bridge.py",

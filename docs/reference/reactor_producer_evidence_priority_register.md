@@ -80,7 +80,12 @@ actuation authority.
   contract. It binds the exercised TORAX adapter while fixing that adapter's
   source kind to simulation and forbidding reuse as physical evidence.
 - `frc_compression_mif` routes its next exact producer request to
-  SCPN-MIF-CORE.
+  SCPN-MIF-CORE. SPO materialises it through
+  `frc_compression_mif_physical_payload_request()` as the digest-sealed
+  `scpn-phase-orchestrator.frc-compression-mif-physical-payload-request.v1`
+  contract. It binds the exercised merge-compression adapter while preserving
+  its model evidence, numerical coordinates, clock, and trigger as simulation
+  only and forbidding their reuse as physical evidence.
 
 Both configurations have exercised byte-canonical review adapters, but those
 adapters carry simulation evidence only. The next input must be a physical
@@ -88,10 +93,12 @@ sample envelope with configuration-specific diagnostic identity, clock and
 reference binding, physical observation operator or calibration, uncertainty,
 validity, quality, provenance, and an evaluated observability gate.
 
-The conventional-tokamak request additionally makes immutable source/package
-identity, reproducibility, independent validation, candidate non-selection,
-and all no-CONTROL/no-actuation authority fields machine-checkable. See the
-[normative request reference](conventional_tokamak_physical_payload_request.md).
+Both L1 requests additionally make immutable source/package identity,
+reproducibility, independent validation, candidate non-selection, and all
+no-CONTROL/no-actuation authority fields machine-checkable. See the normative
+[conventional-tokamak](conventional_tokamak_physical_payload_request.md) and
+[FRC-compression MIF](frc_compression_mif_physical_payload_request.md)
+request references.
 
 `SCPN-MIF-CORE` is the registry's 21st distinct `device_project` owner and is
 not one of the 20 projects in the diagnostic-plan portfolio. Together with

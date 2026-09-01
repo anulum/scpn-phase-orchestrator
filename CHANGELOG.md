@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- A byte-canonical L1 FRC-compression-MIF physical-payload request binds the
+  existing SCPN-MIF-CORE merge-compression adapter as simulation-only, pins
+  the semantic and observability registries, carries four unselected
+  magneto-inertial candidates, and names twelve missing physical-evidence
+  obligations. Its sealed request identity is linked from the producer-
+  evidence priority register, while schema allocation, observation, phase,
+  CONTROL, execution, and actuation remain fail closed.
 - A byte-canonical L1 conventional-tokamak physical-payload request binds the
   existing SCPN-FUSION-CORE TORAX adapter as simulation-only, pins the semantic
   and observability registries, carries four unselected candidates, and names
