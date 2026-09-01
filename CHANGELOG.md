@@ -81,6 +81,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Device diagnostic-plan review now accepts catalogue-declared direct cyclic
+  channels on facility-monotonic clocks. A byte-exact BEAM-TARGET producer
+  fixture guards the public intake while preserving synthetic, review-only,
+  non-observational, non-phase, non-CONTROL, and non-actuating authority.
 - Single-node algebraic connectivity now returns its exact zero boundary
   before invoking optional eigensolver backends, avoiding an invalid Mojo
   LAPACK call. Generated correlation-dimension radii now remain below the

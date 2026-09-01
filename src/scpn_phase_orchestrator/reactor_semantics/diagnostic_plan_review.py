@@ -863,6 +863,7 @@ def _validate_channel(
         _clock_refusal("channel references an undeclared clock")
     class_name = profile.observability_class.value
     compatible = {
+        "direct_cyclic": {"facility_monotonic"},
         "derived_cyclic": {"facility_monotonic"},
         "event_relative": {"shot_event_epoch"},
         "noncyclic_feature": {"facility_monotonic", "shot_event_epoch"},

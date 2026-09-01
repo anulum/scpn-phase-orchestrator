@@ -22,6 +22,7 @@ from jsonschema import Draft202012Validator
 import scpn_phase_orchestrator.reactor_semantics as rs
 
 FIXTURES = Path("tests/fixtures/tokamak_diagnostic_plan")
+BEAM_TARGET_FIXTURES = Path("tests/fixtures/beam_target_diagnostic_plan")
 SOURCE_REVISION = "ea2159d1607ebe0cce3059c3a6a8500968cc6f42"
 ARTIFACT_SHA256 = "a" * 64
 
@@ -129,6 +130,47 @@ def test_exact_tokamak_fixture_produces_full_design_review() -> None:
         and item.evidence_slots
         for item in review.signal_reviews
     )
+
+
+def test_exact_beam_target_fixture_accepts_direct_cyclic_facility_clock() -> None:
+    fixture_bytes = (BEAM_TARGET_FIXTURES / "plan_envelope_fixture.json").read_bytes()
+    manifest_bytes = (BEAM_TARGET_FIXTURES / "reactor-domain.json").read_bytes()
+    fixture = json.loads(fixture_bytes)
+
+    assert (
+        hashlib.sha256(manifest_bytes).hexdigest()
+        == "29b45eb736ad4e2594ee2f9d00dfdf24517cfa67e66d62d7c4fb5669140d1c67"
+    )
+    assert (
+        hashlib.sha256(fixture_bytes).hexdigest()
+        == "2a26c05646ace804fe87cf15e530d13784d45977ae51af48e29af8add920c766"
+    )
+    review = rs.device_diagnostic_plan_review_from_producer_bytes(
+        source_revision="a09ff304e74a3acc14b167820f4a5f6fd619a8c2",
+        source_artifact_sha256=(
+            "a10e34420c991ed751d1294bb93980c270e53f34d479f683d169c7945eec7cfb"
+        ),
+        manifest_bytes=manifest_bytes,
+        envelope_bytes=_compact(fixture["envelope"]),
+        plan_bytes=_compact(fixture["plan"]),
+    )
+    direct = next(
+        item
+        for item in review.signal_reviews
+        if item.observability_class is rs.ObservabilityClass.DIRECT_CYCLIC
+    )
+
+    assert direct.carrier is rs.SemanticCarrier.CYCLIC_PHASE
+    assert direct.clock_identifier == "clk_facility"
+    assert direct.synthetic
+    assert not direct.evidence_claimed
+    assert not direct.observation_claimed
+    assert review.accepted_as_design_declaration
+    assert not review.observation_claimed
+    assert not review.classification_performed
+    assert not review.semantic_ingress_declared
+    assert not review.control_intent_created
+    assert not review.actionable
 
 
 def test_clock_meanings_remain_nonisomorphic_and_unmapped() -> None:
