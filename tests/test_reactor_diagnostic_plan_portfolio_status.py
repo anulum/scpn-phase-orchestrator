@@ -24,6 +24,7 @@ SCHEMA_PATH = Path("docs/specs/reactor_diagnostic_plan_portfolio_status.schema.j
 REFERENCE_PATH = Path("docs/reference/reactor_diagnostic_plan_portfolio_status.md")
 
 EXPECTED_ACCEPTED = {
+    "SCPN-BEAM-TARGET-CORE",
     "SCPN-DENSE-PLASMA-FOCUS-CORE",
     "SCPN-ICF-BEAM-CORE",
     "SCPN-ICF-IMPACT-CORE",
@@ -34,9 +35,18 @@ EXPECTED_ACCEPTED = {
     "SCPN-THETA-PINCH-CORE",
     "SCPN-TOKAMAK-CORE",
     "SCPN-Z-PINCH-CORE",
+    "SCPN-FRC-CORE",
+    "SCPN-FUSION-FISSION-HYBRID-CORE",
+    "SCPN-IEC-CORE",
+    "SCPN-LEVITATED-DIPOLE-CORE",
+    "SCPN-MAGNETIC-CUSP-CORE",
+    "SCPN-MIRROR-CORE",
+    "SCPN-RFP-CORE",
+    "SCPN-SPHEROMAK-CORE",
+    "SCPN-STELLARATOR-CORE",
 }
-EXPECTED_REFUSED = {
-    "SCPN-BEAM-TARGET-CORE",
+EXPECTED_REFUSED: set[str] = set()
+EXPECTED_VERIFIED_PUBLIC = {
     "SCPN-FRC-CORE",
     "SCPN-FUSION-FISSION-HYBRID-CORE",
     "SCPN-IEC-CORE",
@@ -111,6 +121,9 @@ def test_summary_counts_are_derived_from_rows() -> None:
         "structurally_accepted": status_counts["accepted"],
         "structurally_refused": status_counts["refused"],
         "exact_fixture_custody": custody_counts["exact_fixture_custody"],
+        "verified_public_producer_object": custody_counts[
+            "verified_public_producer_object"
+        ],
         "producer_fix_required": custody_counts["producer_fix_required"],
         "qualified_physical_observations": 0,
         "qualified_physical_phases": 0,
@@ -121,37 +134,30 @@ def test_accepted_rows_bind_existing_byte_identical_custody() -> None:
     for row in _rows():
         if row["structural_status"] != "accepted":
             continue
-
-        custody_path = row["custody_fixture_path"]
-        assert isinstance(custody_path, str)
-        fixture = Path(custody_path)
-        assert fixture.is_file()
-        assert hashlib.sha256(fixture.read_bytes()).hexdigest() == row["fixture_sha256"]
-        assert row["custody_state"] == "exact_fixture_custody"
-        assert row["custody_bytes_equal"] is True
         assert row["refusal_code"] is None
         assert row["refusal_detail"] is None
         assert row["missing_required_members"] == []
         assert row["affected_channel_ids"] == []
 
+        if row["project"] in EXPECTED_VERIFIED_PUBLIC:
+            assert row["custody_state"] == "verified_public_producer_object"
+            assert row["custody_fixture_path"] is None
+            assert row["custody_bytes_equal"] is False
+        else:
+            custody_path = row["custody_fixture_path"]
+            assert isinstance(custody_path, str)
+            fixture = Path(custody_path)
+            assert fixture.is_file()
+            assert (
+                hashlib.sha256(fixture.read_bytes()).hexdigest()
+                == row["fixture_sha256"]
+            )
+            assert row["custody_state"] == "exact_fixture_custody"
+            assert row["custody_bytes_equal"] is True
+
 
 def test_refused_rows_preserve_the_exact_producer_owned_gap() -> None:
-    detail = "channels[] key mismatch: missing=['timing_uncertainty_s'], unknown=[]"
-
-    for row in _rows():
-        if row["structural_status"] != "refused":
-            continue
-
-        assert row["custody_state"] == "producer_fix_required"
-        assert row["custody_fixture_path"] is None
-        assert row["custody_bytes_equal"] is False
-        assert row["refusal_code"] == "plan_structure_mismatch"
-        assert row["refusal_detail"] == detail
-        assert row["missing_required_members"] == ["timing_uncertainty_s"]
-        affected = row["affected_channel_ids"]
-        assert isinstance(affected, list)
-        assert affected
-        assert len(affected) == len(set(affected))
+    assert not [row for row in _rows() if row["structural_status"] == "refused"]
 
 
 def test_no_portfolio_status_row_escalates_epistemic_or_control_authority() -> None:
@@ -172,14 +178,11 @@ def test_public_reference_explains_acceptance_refusal_and_fix_forward() -> None:
 
     for marker in (
         "**20 producers** were examined",
-        "**10 fixtures** are structurally accepted",
-        "**10 fixtures** fail closed",
+        "**20 fixtures** are structurally accepted",
+        "**11 fixtures** have byte-identical SPO custody",
+        "**9 fixtures** remain digest-pinned public producer objects",
         "**0 fixtures** constitute a qualified physical observation",
-        "omits the required `timing_uncertainty_s` member",
-        "omission and a declared non-applicable timing bound are different "
-        "source claims",
-        "SPO must then replay the new bytes",
-        "must not relax the schema or infer defaults",
+        "20 accepted / 0 refused",
         "reactor_diagnostic_plan_portfolio_status.v1.json",
         "reactor_diagnostic_plan_portfolio_status.schema.json",
     ):

@@ -115,7 +115,7 @@
                   "minLength": 1
                 },
                 "schema_version": {
-                  "const": "1.0.0"
+                  "const": "1.1.0"
                 },
                 "payload_sha256": {
                   "type": "string",
@@ -385,10 +385,10 @@
               "const": 2
             },
             "L2_build_from_accepted_plan": {
-              "const": 13
+              "const": 29
             },
             "L3_repair_refused_plan_before_intake": {
-              "const": 16
+              "const": 0
             },
             "qualified_physical_observations": {
               "const": 0

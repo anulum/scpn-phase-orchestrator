@@ -20,9 +20,6 @@
           "then": {
             "properties": {
               "affected_channel_ids": {"maxItems": 0},
-              "custody_bytes_equal": {"const": true},
-              "custody_fixture_path": {"minLength": 1, "type": "string"},
-              "custody_state": {"const": "exact_fixture_custody"},
               "missing_required_members": {"maxItems": 0},
               "refusal_code": {"type": "null"},
               "refusal_detail": {"type": "null"}
@@ -65,7 +62,7 @@
         "fixture_sha256": {"$ref": "#/$defs/sha256"},
         "structural_status": {"enum": ["accepted", "refused"], "type": "string"},
         "custody_state": {
-          "enum": ["exact_fixture_custody", "producer_fix_required"],
+          "enum": ["exact_fixture_custody", "verified_public_producer_object", "producer_fix_required"],
           "type": "string"
         },
         "custody_fixture_path": {"$ref": "#/$defs/nullable_string"},
@@ -115,10 +112,10 @@
   "$id": "https://www.anulum.li/schemas/spo/reactor-diagnostic-plan-portfolio-status/v1",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
-  "description": "Digest-sealed, review-only structural status of the 20 Reactor Systems diagnostic-plan producers and their exact SPO custody or producer-side gaps.",
+  "description": "Digest-sealed, review-only structural status of the 20 Reactor Systems diagnostic-plan producers, separating exact SPO fixture custody from digest-pinned public producer objects and producer-side gaps.",
   "properties": {
     "schema": {"const": "scpn-phase-orchestrator.reactor-diagnostic-plan-portfolio-status.v1"},
-    "schema_version": {"const": "1.0.0"},
+    "schema_version": {"const": "1.1.0"},
     "payload": {
       "additionalProperties": false,
       "properties": {
@@ -138,10 +135,11 @@
           "additionalProperties": false,
           "properties": {
             "producers": {"const": 20},
-            "structurally_accepted": {"const": 10},
-            "structurally_refused": {"const": 10},
-            "exact_fixture_custody": {"const": 10},
-            "producer_fix_required": {"const": 10},
+            "structurally_accepted": {"const": 20},
+            "structurally_refused": {"const": 0},
+            "exact_fixture_custody": {"const": 11},
+            "verified_public_producer_object": {"const": 9},
+            "producer_fix_required": {"const": 0},
             "qualified_physical_observations": {"const": 0},
             "qualified_physical_phases": {"const": 0}
           },
@@ -150,6 +148,7 @@
             "structurally_accepted",
             "structurally_refused",
             "exact_fixture_custody",
+            "verified_public_producer_object",
             "producer_fix_required",
             "qualified_physical_observations",
             "qualified_physical_phases"

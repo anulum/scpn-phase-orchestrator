@@ -190,21 +190,26 @@ def test_priority_lanes_follow_custody_precedence_not_external_rank() -> None:
     assert Counter(row["intake_lane"] for row in rows) == {
         LANES[0]: 1,
         LANES[1]: 2,
-        LANES[2]: 13,
-        LANES[3]: 16,
+        LANES[2]: 29,
     }
+    assert all(row["intake_lane"] != LANES[3] for row in rows)
     assert all(row["priority_score"] is None for row in rows)
+    assert all(
+        row["next_gate"] == "supply_physical_sample_envelope"
+        for row in rows
+        if row["intake_lane"] == LANES[2]
+    )
 
     assert by_configuration["spherical_tokamak"]["intake_lane"] == LANES[0]
     assert by_configuration["conventional_tokamak"]["intake_lane"] == LANES[1]
     assert by_configuration["frc_compression_mif"]["intake_lane"] == LANES[1]
     assert by_configuration["dense_plasma_focus"]["intake_lane"] == LANES[2]
-    assert by_configuration["field_reversed_configuration"]["intake_lane"] == (LANES[3])
+    assert by_configuration["field_reversed_configuration"]["intake_lane"] == (LANES[2])
 
-    # E5 context cannot bypass a refused plan, and E1 does not demote the same
-    # device project into a different readiness lane.
-    assert by_configuration["beam_target"]["intake_lane"] == LANES[3]
-    assert by_configuration["colliding_beam"]["intake_lane"] == LANES[3]
+    # External rank does not split configurations whose exact plans are both
+    # structurally accepted.
+    assert by_configuration["beam_target"]["intake_lane"] == LANES[2]
+    assert by_configuration["colliding_beam"]["intake_lane"] == LANES[2]
     beam_context = by_configuration["beam_target"]["external_context"]
     colliding_context = by_configuration["colliding_beam"]["external_context"]
     assert isinstance(beam_context, dict)
@@ -232,8 +237,8 @@ def test_priority_register_requests_evidence_without_granting_authority() -> Non
         "upstream_plus_control_projects": 23,
         LANES[0]: 1,
         LANES[1]: 2,
-        LANES[2]: 13,
-        LANES[3]: 16,
+        LANES[2]: 29,
+        LANES[3]: 0,
         "qualified_physical_observations": 0,
         "qualified_physical_phases": 0,
         "control_admitted": 0,

@@ -29,7 +29,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   all 22 upstream reactor projects plus CONTROL, producer ownership, and
   physical-evidence gaps. Four non-scalar readiness
   lanes distinguish one existing physical-source qualification, two exercised-
-  adapter extensions, 13 accepted-plan physical intakes, and 16 plan repairs.
+  adapter extensions and 29 accepted-plan physical intakes; the plan-repair
+  lane is empty after the exact 20-producer envelope-1.1.0 replay.
   External evidence rank never changes the lane or creates physical signal,
   phase, CONTROL, action, actuation, or machine-protection authority.
 - An evidence-ranked reactor technology and diagnostic atlas maps all 32
@@ -42,10 +43,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A digest-sealed reactor diagnostic-plan portfolio status register records
   exact revisions, manifest and fixture hashes, configurations, plans, custody,
   and fail-closed review results for all 20 Reactor Systems device producers.
-  Ten fixtures are accepted with byte-identical SPO custody; ten remain
-  producer-owned gaps because every channel omits the mandatory
-  `timing_uncertainty_s` member. The schema and tests prohibit inference,
-  physical-evidence promotion, CONTROL authority, or actuation.
+  All twenty fixtures are structurally accepted: eleven have byte-identical
+  SPO custody and nine remain digest-pinned exact public producer objects.
+  The schema and tests prohibit custody overclaim, inference, physical-evidence
+  promotion, CONTROL authority, or actuation.
 - An exhaustive, digest-sealed reactor configuration evidence matrix joins all
   32 built-in configurations across eight confinement families to their exact
   observability candidates, semantic-ingress profiles, and occurrence-ledger

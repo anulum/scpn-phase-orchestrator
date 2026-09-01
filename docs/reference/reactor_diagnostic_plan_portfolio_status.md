@@ -1,94 +1,69 @@
 # Reactor diagnostic-plan portfolio status
 
-This snapshot answers one narrow interoperability question: which exact
-diagnostic-plan fixtures from the 20 Reactor Systems device repositories can
-SPO parse at its public, review-only boundary, and which fixtures are refused
-before any semantic interpretation?
-
-The observation was made at `2026-09-01T20:08:41+02:00` against each producer's
-committed `reactor-domain.json` and
-`tests/data/plan_envelope_fixture.json`. Each pair was passed to
+This snapshot records whether exact diagnostic-plan objects from the 20 Reactor
+Systems device repositories pass SPO's public review-only intake. Each observed
+local head was independently matched to public `origin/main`, and each exact
+manifest/fixture pair was passed to
 `device_diagnostic_plan_review_from_producer_bytes()` without importing or
 executing producer source.
 
 ## Result
 
-- **20 producers** were examined.
-- **10 fixtures** are structurally accepted and have byte-identical fixture
-  custody in SPO.
-- **10 fixtures** fail closed with `plan_structure_mismatch` because every
-  channel omits the required `timing_uncertainty_s` member.
+- **20 producers** were examined at `2026-09-01T23:02:00+02:00`.
+- **20 fixtures** are structurally accepted; the partition is **20 accepted / 0 refused**.
+- **11 fixtures** have byte-identical SPO custody.
+- **9 fixtures** remain digest-pinned public producer objects rather than local custody.
 - **0 fixtures** constitute a qualified physical observation or physical phase.
-- **0 fixtures** create CONTROL intent, action, execution, actuation, or
-  machine-protection authority.
+- **0 fixtures** create CONTROL intent, action, execution, actuation, or machine-protection authority.
 
-Structural acceptance means only that the synthetic design declaration obeys
-the exact exchange contract. It does not validate hardware, calibration,
-geometry, clocks, observability, measurements, regimes, or operation. Exact
-custody means SPO holds identical fixture bytes; it does not make a historical
-producer commit equivalent to the newer observed commit when unrelated files
-have changed.
+Structural acceptance means only that a synthetic design declaration obeys the
+exact envelope `1.1.0` exchange contract. It does not validate hardware,
+calibration, geometry, clocks, observability, measurements, regimes, or
+operation. A public-object row pins exact revision, manifest and fixture
+digests but deliberately does not claim SPO holds identical fixture bytes.
 
-## Accepted and held byte-identically
+## Byte-identical SPO fixture custody
 
-| Producer | Configurations | Plan | Observed revision |
-|---|---|---|---|
-| `SCPN-DENSE-PLASMA-FOCUS-CORE` | `dense_plasma_focus` | `dpf_reference_plan` | `32c843c85e59` |
-| `SCPN-ICF-BEAM-CORE` | `ion_beam_icf`, `pulsed_electron_beam_icf` | `icf_beam_reference_plan` | `3ee15a5bf56b` |
-| `SCPN-ICF-IMPACT-CORE` | `projectile_or_impact_icf` | `icf_impact_reference_plan` | `397f1f2a5fb2` |
-| `SCPN-ICF-LASER-CORE` | `laser_icf_direct_drive`, `laser_icf_fast_or_shock_ignition`, `laser_icf_indirect_drive` | `icf_laser_reference_plan` | `bc041638eefc` |
-| `SCPN-MIF-LINER-CORE` | `mechanical_or_liquid_liner_mif` | `mif_liner_reference_plan` | `8b1ee018a8c8` |
-| `SCPN-MIF-MAGLIF-CORE` | `maglif` | `maglif_reference_plan` | `d3b6230e9b77` |
-| `SCPN-MIF-PLASMA-JET-CORE` | `plasma_jet_mif` | `plasma_jet_reference_plan` | `418b5cce6fb8` |
-| `SCPN-THETA-PINCH-CORE` | `theta_pinch` | `theta_pinch_reference_plan` | `df38049bf4e6` |
-| `SCPN-TOKAMAK-CORE` | `conventional_tokamak`, `spherical_tokamak` | `tokamak_reference_plan` | `9eef91eb9086` |
-| `SCPN-Z-PINCH-CORE` | `sheared_flow_z_pinch`, `z_pinch` | `z_pinch_reference_plan` | `acf5dfe49de1` |
+SPO holds exact fixtures for `SCPN-BEAM-TARGET-CORE`,
+`SCPN-DENSE-PLASMA-FOCUS-CORE`, `SCPN-ICF-BEAM-CORE`,
+`SCPN-ICF-IMPACT-CORE`, `SCPN-ICF-LASER-CORE`, `SCPN-MIF-LINER-CORE`,
+`SCPN-MIF-MAGLIF-CORE`, `SCPN-MIF-PLASMA-JET-CORE`,
+`SCPN-THETA-PINCH-CORE`, `SCPN-TOKAMAK-CORE`, and `SCPN-Z-PINCH-CORE`.
+Their `custody_fixture_path` values are hash-checked by the repository test
+surface.
 
-These shared plans do not equate their listed configurations and do not
-transfer evidence within or between reactor families.
+## Digest-pinned public producer objects
 
-## Refused producer fixtures
+The following exact public heads passed intake but are not described as local
+SPO custody:
 
-Every listed channel omits the member; none contains an explicit JSON `null`.
-All affected channels are currently non-event carriers, so producer-side
-regeneration is expected to emit explicit `null`. SPO does not write that value
-for a producer, because omission and a declared non-applicable timing bound are
-different source claims.
-
-| Producer | Configurations | Affected channel: carrier@clock |
+| Producer | Exact public head | Fixture SHA-256 |
 |---|---|---|
-| `SCPN-BEAM-TARGET-CORE` | `beam_target`, `colliding_beam` | `ch_rf_bunch_phase: cyclic_phase@clk_facility`<br>`ch_synthetic_oscillator: numerical_phase@clk_sim`<br>`ch_target_outcome_set: bounded_feature@clk_shot` |
-| `SCPN-FRC-CORE` | `field_reversed_configuration` | `ch_excluded_flux_set: bounded_feature@clk_shot`<br>`ch_interferometer: bounded_feature@clk_shot`<br>`ch_mirnov_array: complex_mode@clk_facility`<br>`ch_synthetic_oscillator: numerical_phase@clk_sim` |
-| `SCPN-FUSION-FISSION-HYBRID-CORE` | `fusion_fission_hybrid` | `ch_blanket_thermal_set: bounded_feature@clk_shot`<br>`ch_neutron_flux_set: bounded_feature@clk_shot`<br>`ch_synthetic_oscillator: numerical_phase@clk_sim` |
-| `SCPN-IEC-CORE` | `gridded_iec`, `polywell` | `ch_bunching_probe: complex_mode@clk_facility`<br>`ch_drive_reference: cyclic_phase@clk_facility`<br>`ch_interchange_probe_array: complex_mode@clk_facility`<br>`ch_loss_profile_set: bounded_feature@clk_shot`<br>`ch_steady_state_set: bounded_feature@clk_shot`<br>`ch_synthetic_oscillator: numerical_phase@clk_sim` |
-| `SCPN-LEVITATED-DIPOLE-CORE` | `levitated_dipole` | `ch_drive_reference: cyclic_phase@clk_facility`<br>`ch_flux_loop_set: bounded_feature@clk_shot`<br>`ch_interchange_probe_array: complex_mode@clk_facility`<br>`ch_interferometer: bounded_feature@clk_shot`<br>`ch_synthetic_oscillator: numerical_phase@clk_sim` |
-| `SCPN-MAGNETIC-CUSP-CORE` | `cusp` | `ch_cusp_loss_probes: bounded_feature@clk_shot`<br>`ch_diamagnetic_loop: bounded_feature@clk_shot`<br>`ch_drive_reference: cyclic_phase@clk_facility`<br>`ch_flute_probe_array: complex_mode@clk_facility`<br>`ch_synthetic_oscillator: numerical_phase@clk_sim` |
-| `SCPN-MIRROR-CORE` | `gas_dynamic_mirror`, `simple_magnetic_mirror`, `tandem_mirror` | `ch_diamagnetic_loop: bounded_feature@clk_shot`<br>`ch_drive_reference: cyclic_phase@clk_facility`<br>`ch_end_loss_array: bounded_feature@clk_shot`<br>`ch_flute_probe_array: complex_mode@clk_facility`<br>`ch_synthetic_oscillator: numerical_phase@clk_sim` |
-| `SCPN-RFP-CORE` | `reversed_field_pinch` | `ch_flux_loop_set: bounded_feature@clk_shot`<br>`ch_rogowski_coil: bounded_feature@clk_shot`<br>`ch_synthetic_oscillator: numerical_phase@clk_sim`<br>`ch_toroidal_probe_array: complex_mode@clk_facility` |
-| `SCPN-SPHEROMAK-CORE` | `spheromak` | `ch_flux_loop_set: bounded_feature@clk_shot`<br>`ch_surface_probe_array: complex_mode@clk_facility`<br>`ch_synthetic_oscillator: numerical_phase@clk_sim`<br>`ch_thomson_profiles: bounded_feature@clk_shot` |
-| `SCPN-STELLARATOR-CORE` | `heliotron`, `stellarator`, `torsatron` | `ch_flux_loop_set: bounded_feature@clk_shot`<br>`ch_interferometer: bounded_feature@clk_shot`<br>`ch_mirnov_array: complex_mode@clk_facility`<br>`ch_synthetic_oscillator: numerical_phase@clk_sim`<br>`ch_thomson_profiles: bounded_feature@clk_shot` |
+| `SCPN-FRC-CORE` | `d05913d3219cf9c7e2f5ae3b148d3d183530f33f` | `ad4ba517069cf41e64fdbd7e4156a981cb2d6726878ead7a5abe56cb3676da05` |
+| `SCPN-FUSION-FISSION-HYBRID-CORE` | `66f3975995334c0e92ece68d221b90d9a081d00c` | `d9b57391c37114f98d73b160a2f18060dd928b1542001e460bf407ab6f6008de` |
+| `SCPN-IEC-CORE` | `02f1cdfe947336de5fb5cfebe982b4a426431cf7` | `486b410afbed0aa2e3fcad4d43533b54cd3784d5552a20f9500d6d4eff54000b` |
+| `SCPN-LEVITATED-DIPOLE-CORE` | `2b3c687a4062497891a5a8ad800bdc18bd5941cc` | `48778cb069b2835291adce635041d30511447939ef84c44855a137627399f9e2` |
+| `SCPN-MAGNETIC-CUSP-CORE` | `725044ae7622afbd081ae30bbb87c4c72bcf3d91` | `b9a1f9a46a4d034b25d2cebd89b97e3729696f7e67910e6549c37057cf479b07` |
+| `SCPN-MIRROR-CORE` | `4fe976e4fd3438ce008ce964c44e9c47bd61cc70` | `257cedfee5f7b061ea6b8368e46d1b229bac8dc24f1391d88315462bc4457ba6` |
+| `SCPN-RFP-CORE` | `360b9d7d2ac951a9c4e9dd83c102a773d9ff6a6f` | `bea1f321ea800dc1f31d8cfba4c327ad5fd46f8986b1e33684055527c26723a2` |
+| `SCPN-SPHEROMAK-CORE` | `46dcd71680a2ac7a63ea26370d0054818d5b6b4d` | `325a7a196c279a6ea3c0954678611d07a583acee4d41cc5e47a81ddcc2d2a8f5` |
+| `SCPN-STELLARATOR-CORE` | `8d5c57eb23435a445772837ad0a69f57896a8692` | `789b27619f17678e61b31db7cfa45147661bbd33ef97e6e94af1dc734a5629e9` |
 
-The exact refusal detail is:
+The previously missing `timing_uncertainty_s` member is now explicit in every
+producer channel. A separately repaired SPO compatibility-table omission for
+`direct_cyclic` facility-clock channels was required before the final 20/20
+replay; producer bytes were not changed for that consumer defect.
 
-```text
-channels[] key mismatch: missing=['timing_uncertainty_s'], unknown=[]
-```
-
-Producer fix-forward must add the member to every channel, regenerate the
-canonical plan and envelope digests, update the combined fixture and pinned
-tests, and provide a new exact revision and reproducible package identity. SPO
-must then replay the new bytes; it must not relax the schema or infer defaults.
-
-## Machine-readable custody
+## Machine-readable status
 
 The [digest-sealed status data](data/reactor_diagnostic_plan_portfolio_status.v1.json)
-records all 20 full revisions, manifest and fixture SHA-256 values,
-configurations, plans, custody paths, refusal codes, and affected channel IDs.
-Its [Draft 2020-12 schema](../specs/reactor_diagnostic_plan_portfolio_status.schema.json)
-enforces the 10/10 split and the review-only, non-actionable boundary.
+records all 20 revisions, manifest and fixture hashes, configurations, plans,
+custody states, and fail-closed authority fields. Its
+[Draft 2020-12 schema](../specs/reactor_diagnostic_plan_portfolio_status.schema.json)
+enforces schema version `1.1.0`, the 20/0 structural split, the 11/9 custody
+split, and zero physical or control authority.
 
-This structural register complements the
+This register complements the
 [reactor configuration evidence coverage](reactor_configuration_evidence_coverage.md):
-the latter tracks actual evidence and semantic ingress. A row can therefore
-have an accepted diagnostic design plan while correctly remaining
-`not_declared` and producerless for physical evidence.
+an accepted design plan can still correctly remain producerless for physical
+evidence and `not_declared` for semantic ingress.

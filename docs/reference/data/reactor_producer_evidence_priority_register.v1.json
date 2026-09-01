@@ -2,8 +2,8 @@
   "schema": "scpn-phase-orchestrator.reactor-producer-evidence-priority-register.v1",
   "schema_version": "1.0.0",
   "payload": {
-    "observed_at": "2026-09-01T21:10:00+02:00",
-    "method": "Deterministic readiness precedence over exact current SPO custody: reviewed physical source, then exercised byte-canonical review adapter, then accepted exact-custody diagnostic plan, then refused plan requiring repair. External evidence rank is carried as context and never changes the lane.",
+    "observed_at": "2026-09-01T23:02:00+02:00",
+    "method": "Deterministic readiness precedence over exact current SPO evidence state: reviewed physical source, then exercised byte-canonical review adapter, then a structurally accepted exact producer diagnostic plan, then a refused plan requiring repair. Exact local fixture custody is a separate readiness axis. External evidence rank is context and never changes the lane.",
     "non_scalar_priority_policy": "No opaque or additive score is emitted. Rows within one lane are deliberately unordered. Selection within a lane requires explicit review of safety value, calibrated machine-readable data availability, clock/reference/operator completeness, uncertainty, validity, quality, provenance, observability gates, independent validation, and producer capacity.",
     "source_bindings": {
       "configuration_evidence_coverage": {
@@ -16,9 +16,9 @@
       "diagnostic_plan_portfolio_status": {
         "path": "docs/reference/data/reactor_diagnostic_plan_portfolio_status.v1.json",
         "schema": "scpn-phase-orchestrator.reactor-diagnostic-plan-portfolio-status.v1",
-        "schema_version": "1.0.0",
-        "payload_sha256": "5b02e7fb2302c2e66bf0fc4a25dae82de673b00c5921e14bb0c8a73a8ecaa1dd",
-        "file_sha256": "fc3712936c35e9b913bf1e4e609b47a0bba4a6cd164eba445ed3f6b05689aac3"
+        "schema_version": "1.1.0",
+        "payload_sha256": "ceb01c4818a2282aed61bcbaa458a8ba6a0b56bd6569f702c6aee0f266f73e7a",
+        "file_sha256": "12eee1255e569d3dcfbc921b2320c17185c81eff8ab070c27a8df8443d1406c6"
       },
       "signal_occurrence_ledger": {
         "path": "docs/reference/data/reactor_signal_occurrence_ledger.v1.json",
@@ -56,7 +56,7 @@
       },
       {
         "lane": "L2_build_from_accepted_plan",
-        "selection_rule": "Device project has a structurally accepted exact-custody diagnostic-plan fixture, but no exercised configuration-specific physical producer intake.",
+        "selection_rule": "Device project has an exact, structurally accepted diagnostic-plan fixture, but no exercised configuration-specific physical producer intake; local SPO fixture custody is recorded separately.",
         "next_gate": "supply_physical_sample_envelope",
         "ordered_within_lane": false
       },
@@ -162,8 +162,8 @@
       "upstream_plus_control_projects": 23,
       "L0_qualify_existing_physical_source": 1,
       "L1_extend_exercised_review_adapter": 2,
-      "L2_build_from_accepted_plan": 13,
-      "L3_repair_refused_plan_before_intake": 16,
+      "L2_build_from_accepted_plan": 29,
+      "L3_repair_refused_plan_before_intake": 0,
       "qualified_physical_observations": 0,
       "qualified_physical_phases": 0,
       "control_admitted": 0
@@ -174,8 +174,8 @@
         "confinement_family": "beam_target",
         "topology": "energetic beam on target",
         "device_project": "SCPN-BEAM-TARGET-CORE",
-        "intake_lane": "L3_repair_refused_plan_before_intake",
-        "next_gate": "repair_plan_schema_then_supply_physical_sample_envelope",
+        "intake_lane": "L2_build_from_accepted_plan",
+        "next_gate": "supply_physical_sample_envelope",
         "external_context": {
           "evidence_rank": "E5_integrated_fusion_observation",
           "source_ids": [
@@ -217,8 +217,8 @@
           "external_context_present": true,
           "physical_source_present": false,
           "portable_review_adapter_present": false,
-          "structural_plan_accepted": false,
-          "exact_plan_fixture_custody": false,
+          "structural_plan_accepted": true,
+          "exact_plan_fixture_custody": true,
           "complete_physical_evidence": false,
           "control_admission": false
         },
@@ -243,9 +243,7 @@
             "observability_gate"
           ],
           "lane_blockers": [
-            "timing_uncertainty_s_member_missing",
-            "regenerated_canonical_plan_and_envelope_required",
-            "refreshed_fixture_digest_required",
+            "sampled_values_absent_from_design_plan",
             "physical_sample_envelope",
             "physical_clock_reference_and_operator_binding",
             "physical_uncertainty_validity_quality_and_provenance",
@@ -267,8 +265,8 @@
         "confinement_family": "beam_target",
         "topology": "counter-propagating particle beams",
         "device_project": "SCPN-BEAM-TARGET-CORE",
-        "intake_lane": "L3_repair_refused_plan_before_intake",
-        "next_gate": "repair_plan_schema_then_supply_physical_sample_envelope",
+        "intake_lane": "L2_build_from_accepted_plan",
+        "next_gate": "supply_physical_sample_envelope",
         "external_context": {
           "evidence_rank": "E1_concept_or_simulation",
           "source_ids": [
@@ -310,8 +308,8 @@
           "external_context_present": true,
           "physical_source_present": false,
           "portable_review_adapter_present": false,
-          "structural_plan_accepted": false,
-          "exact_plan_fixture_custody": false,
+          "structural_plan_accepted": true,
+          "exact_plan_fixture_custody": true,
           "complete_physical_evidence": false,
           "control_admission": false
         },
@@ -336,9 +334,7 @@
             "observability_gate"
           ],
           "lane_blockers": [
-            "timing_uncertainty_s_member_missing",
-            "regenerated_canonical_plan_and_envelope_required",
-            "refreshed_fixture_digest_required",
+            "sampled_values_absent_from_design_plan",
             "physical_sample_envelope",
             "physical_clock_reference_and_operator_binding",
             "physical_uncertainty_validity_quality_and_provenance",
@@ -459,8 +455,8 @@
         "confinement_family": "magnetic_open",
         "topology": "magnetic cusp",
         "device_project": "SCPN-MAGNETIC-CUSP-CORE",
-        "intake_lane": "L3_repair_refused_plan_before_intake",
-        "next_gate": "repair_plan_schema_then_supply_physical_sample_envelope",
+        "intake_lane": "L2_build_from_accepted_plan",
+        "next_gate": "supply_physical_sample_envelope",
         "external_context": {
           "evidence_rank": "E4_integrated_plasma_experiment",
           "source_ids": [
@@ -504,7 +500,7 @@
           "external_context_present": true,
           "physical_source_present": false,
           "portable_review_adapter_present": false,
-          "structural_plan_accepted": false,
+          "structural_plan_accepted": true,
           "exact_plan_fixture_custody": false,
           "complete_physical_evidence": false,
           "control_admission": false
@@ -531,9 +527,7 @@
             "observability_gate"
           ],
           "lane_blockers": [
-            "timing_uncertainty_s_member_missing",
-            "regenerated_canonical_plan_and_envelope_required",
-            "refreshed_fixture_digest_required",
+            "sampled_values_absent_from_design_plan",
             "physical_sample_envelope",
             "physical_clock_reference_and_operator_binding",
             "physical_uncertainty_validity_quality_and_provenance",
@@ -640,8 +634,8 @@
         "confinement_family": "magnetic_closed",
         "topology": "field-reversed compact toroid",
         "device_project": "SCPN-FRC-CORE",
-        "intake_lane": "L3_repair_refused_plan_before_intake",
-        "next_gate": "repair_plan_schema_then_supply_physical_sample_envelope",
+        "intake_lane": "L2_build_from_accepted_plan",
+        "next_gate": "supply_physical_sample_envelope",
         "external_context": {
           "evidence_rank": "E4_integrated_plasma_experiment",
           "source_ids": [
@@ -687,7 +681,7 @@
           "external_context_present": true,
           "physical_source_present": false,
           "portable_review_adapter_present": false,
-          "structural_plan_accepted": false,
+          "structural_plan_accepted": true,
           "exact_plan_fixture_custody": false,
           "complete_physical_evidence": false,
           "control_admission": false
@@ -713,9 +707,7 @@
             "observability_gate"
           ],
           "lane_blockers": [
-            "timing_uncertainty_s_member_missing",
-            "regenerated_canonical_plan_and_envelope_required",
-            "refreshed_fixture_digest_required",
+            "sampled_values_absent_from_design_plan",
             "physical_sample_envelope",
             "physical_clock_reference_and_operator_binding",
             "physical_uncertainty_validity_quality_and_provenance",
@@ -828,8 +820,8 @@
         "confinement_family": "hybrid",
         "topology": "fusion source with subcritical blanket",
         "device_project": "SCPN-FUSION-FISSION-HYBRID-CORE",
-        "intake_lane": "L3_repair_refused_plan_before_intake",
-        "next_gate": "repair_plan_schema_then_supply_physical_sample_envelope",
+        "intake_lane": "L2_build_from_accepted_plan",
+        "next_gate": "supply_physical_sample_envelope",
         "external_context": {
           "evidence_rank": "E1_concept_or_simulation",
           "source_ids": [
@@ -871,7 +863,7 @@
           "external_context_present": true,
           "physical_source_present": false,
           "portable_review_adapter_present": false,
-          "structural_plan_accepted": false,
+          "structural_plan_accepted": true,
           "exact_plan_fixture_custody": false,
           "complete_physical_evidence": false,
           "control_admission": false
@@ -896,9 +888,7 @@
             "observability_gate"
           ],
           "lane_blockers": [
-            "timing_uncertainty_s_member_missing",
-            "regenerated_canonical_plan_and_envelope_required",
-            "refreshed_fixture_digest_required",
+            "sampled_values_absent_from_design_plan",
             "physical_sample_envelope",
             "physical_clock_reference_and_operator_binding",
             "physical_uncertainty_validity_quality_and_provenance",
@@ -920,8 +910,8 @@
         "confinement_family": "magnetic_open",
         "topology": "collisional linear mirror",
         "device_project": "SCPN-MIRROR-CORE",
-        "intake_lane": "L3_repair_refused_plan_before_intake",
-        "next_gate": "repair_plan_schema_then_supply_physical_sample_envelope",
+        "intake_lane": "L2_build_from_accepted_plan",
+        "next_gate": "supply_physical_sample_envelope",
         "external_context": {
           "evidence_rank": "E4_integrated_plasma_experiment",
           "source_ids": [
@@ -965,7 +955,7 @@
           "external_context_present": true,
           "physical_source_present": false,
           "portable_review_adapter_present": false,
-          "structural_plan_accepted": false,
+          "structural_plan_accepted": true,
           "exact_plan_fixture_custody": false,
           "complete_physical_evidence": false,
           "control_admission": false
@@ -992,9 +982,7 @@
             "observability_gate"
           ],
           "lane_blockers": [
-            "timing_uncertainty_s_member_missing",
-            "regenerated_canonical_plan_and_envelope_required",
-            "refreshed_fixture_digest_required",
+            "sampled_values_absent_from_design_plan",
             "physical_sample_envelope",
             "physical_clock_reference_and_operator_binding",
             "physical_uncertainty_validity_quality_and_provenance",
@@ -1016,8 +1004,8 @@
         "confinement_family": "electrostatic",
         "topology": "gridded electrostatic potential well",
         "device_project": "SCPN-IEC-CORE",
-        "intake_lane": "L3_repair_refused_plan_before_intake",
-        "next_gate": "repair_plan_schema_then_supply_physical_sample_envelope",
+        "intake_lane": "L2_build_from_accepted_plan",
+        "next_gate": "supply_physical_sample_envelope",
         "external_context": {
           "evidence_rank": "E5_integrated_fusion_observation",
           "source_ids": [
@@ -1062,7 +1050,7 @@
           "external_context_present": true,
           "physical_source_present": false,
           "portable_review_adapter_present": false,
-          "structural_plan_accepted": false,
+          "structural_plan_accepted": true,
           "exact_plan_fixture_custody": false,
           "complete_physical_evidence": false,
           "control_admission": false
@@ -1088,9 +1076,7 @@
             "observability_gate"
           ],
           "lane_blockers": [
-            "timing_uncertainty_s_member_missing",
-            "regenerated_canonical_plan_and_envelope_required",
-            "refreshed_fixture_digest_required",
+            "sampled_values_absent_from_design_plan",
             "physical_sample_envelope",
             "physical_clock_reference_and_operator_binding",
             "physical_uncertainty_validity_quality_and_provenance",
@@ -1112,8 +1098,8 @@
         "confinement_family": "magnetic_closed",
         "topology": "helical-coil torus",
         "device_project": "SCPN-STELLARATOR-CORE",
-        "intake_lane": "L3_repair_refused_plan_before_intake",
-        "next_gate": "repair_plan_schema_then_supply_physical_sample_envelope",
+        "intake_lane": "L2_build_from_accepted_plan",
+        "next_gate": "supply_physical_sample_envelope",
         "external_context": {
           "evidence_rank": "E4_integrated_plasma_experiment",
           "source_ids": [
@@ -1157,7 +1143,7 @@
           "external_context_present": true,
           "physical_source_present": false,
           "portable_review_adapter_present": false,
-          "structural_plan_accepted": false,
+          "structural_plan_accepted": true,
           "exact_plan_fixture_custody": false,
           "complete_physical_evidence": false,
           "control_admission": false
@@ -1183,9 +1169,7 @@
             "observability_gate"
           ],
           "lane_blockers": [
-            "timing_uncertainty_s_member_missing",
-            "regenerated_canonical_plan_and_envelope_required",
-            "refreshed_fixture_digest_required",
+            "sampled_values_absent_from_design_plan",
             "physical_sample_envelope",
             "physical_clock_reference_and_operator_binding",
             "physical_uncertainty_validity_quality_and_provenance",
@@ -1556,8 +1540,8 @@
         "confinement_family": "magnetic_open",
         "topology": "closed dipole field",
         "device_project": "SCPN-LEVITATED-DIPOLE-CORE",
-        "intake_lane": "L3_repair_refused_plan_before_intake",
-        "next_gate": "repair_plan_schema_then_supply_physical_sample_envelope",
+        "intake_lane": "L2_build_from_accepted_plan",
+        "next_gate": "supply_physical_sample_envelope",
         "external_context": {
           "evidence_rank": "E4_integrated_plasma_experiment",
           "source_ids": [
@@ -1601,7 +1585,7 @@
           "external_context_present": true,
           "physical_source_present": false,
           "portable_review_adapter_present": false,
-          "structural_plan_accepted": false,
+          "structural_plan_accepted": true,
           "exact_plan_fixture_custody": false,
           "complete_physical_evidence": false,
           "control_admission": false
@@ -1628,9 +1612,7 @@
             "observability_gate"
           ],
           "lane_blockers": [
-            "timing_uncertainty_s_member_missing",
-            "regenerated_canonical_plan_and_envelope_required",
-            "refreshed_fixture_digest_required",
+            "sampled_values_absent_from_design_plan",
             "physical_sample_envelope",
             "physical_clock_reference_and_operator_binding",
             "physical_uncertainty_validity_quality_and_provenance",
@@ -1910,8 +1892,8 @@
         "confinement_family": "magnetic_open",
         "topology": "electrostatically biased magnetic cusp",
         "device_project": "SCPN-IEC-CORE",
-        "intake_lane": "L3_repair_refused_plan_before_intake",
-        "next_gate": "repair_plan_schema_then_supply_physical_sample_envelope",
+        "intake_lane": "L2_build_from_accepted_plan",
+        "next_gate": "supply_physical_sample_envelope",
         "external_context": {
           "evidence_rank": "E4_integrated_plasma_experiment",
           "source_ids": [
@@ -1956,7 +1938,7 @@
           "external_context_present": true,
           "physical_source_present": false,
           "portable_review_adapter_present": false,
-          "structural_plan_accepted": false,
+          "structural_plan_accepted": true,
           "exact_plan_fixture_custody": false,
           "complete_physical_evidence": false,
           "control_admission": false
@@ -1985,9 +1967,7 @@
             "observability_gate"
           ],
           "lane_blockers": [
-            "timing_uncertainty_s_member_missing",
-            "regenerated_canonical_plan_and_envelope_required",
-            "refreshed_fixture_digest_required",
+            "sampled_values_absent_from_design_plan",
             "physical_sample_envelope",
             "physical_clock_reference_and_operator_binding",
             "physical_uncertainty_validity_quality_and_provenance",
@@ -2184,8 +2164,8 @@
         "confinement_family": "magnetic_closed",
         "topology": "relaxed-current torus",
         "device_project": "SCPN-RFP-CORE",
-        "intake_lane": "L3_repair_refused_plan_before_intake",
-        "next_gate": "repair_plan_schema_then_supply_physical_sample_envelope",
+        "intake_lane": "L2_build_from_accepted_plan",
+        "next_gate": "supply_physical_sample_envelope",
         "external_context": {
           "evidence_rank": "E4_integrated_plasma_experiment",
           "source_ids": [
@@ -2228,7 +2208,7 @@
           "external_context_present": true,
           "physical_source_present": false,
           "portable_review_adapter_present": false,
-          "structural_plan_accepted": false,
+          "structural_plan_accepted": true,
           "exact_plan_fixture_custody": false,
           "complete_physical_evidence": false,
           "control_admission": false
@@ -2254,9 +2234,7 @@
             "observability_gate"
           ],
           "lane_blockers": [
-            "timing_uncertainty_s_member_missing",
-            "regenerated_canonical_plan_and_envelope_required",
-            "refreshed_fixture_digest_required",
+            "sampled_values_absent_from_design_plan",
             "physical_sample_envelope",
             "physical_clock_reference_and_operator_binding",
             "physical_uncertainty_validity_quality_and_provenance",
@@ -2364,8 +2342,8 @@
         "confinement_family": "magnetic_open",
         "topology": "linear magnetic mirror",
         "device_project": "SCPN-MIRROR-CORE",
-        "intake_lane": "L3_repair_refused_plan_before_intake",
-        "next_gate": "repair_plan_schema_then_supply_physical_sample_envelope",
+        "intake_lane": "L2_build_from_accepted_plan",
+        "next_gate": "supply_physical_sample_envelope",
         "external_context": {
           "evidence_rank": "E4_integrated_plasma_experiment",
           "source_ids": [
@@ -2409,7 +2387,7 @@
           "external_context_present": true,
           "physical_source_present": false,
           "portable_review_adapter_present": false,
-          "structural_plan_accepted": false,
+          "structural_plan_accepted": true,
           "exact_plan_fixture_custody": false,
           "complete_physical_evidence": false,
           "control_admission": false
@@ -2436,9 +2414,7 @@
             "observability_gate"
           ],
           "lane_blockers": [
-            "timing_uncertainty_s_member_missing",
-            "regenerated_canonical_plan_and_envelope_required",
-            "refreshed_fixture_digest_required",
+            "sampled_values_absent_from_design_plan",
             "physical_sample_envelope",
             "physical_clock_reference_and_operator_binding",
             "physical_uncertainty_validity_quality_and_provenance",
@@ -2513,7 +2489,7 @@
           "model.synthetic_oscillator_coordinate"
         ],
         "producer_request": {
-        "requested_owner_project": "SCPN-FUSION-CORE",
+          "requested_owner_project": "SCPN-FUSION-CORE",
           "artifact_kind": "configuration_specific_canonical_evidence_envelope",
           "required_evidence": [
             "physical_sample",
@@ -2557,8 +2533,8 @@
         "confinement_family": "magnetic_closed",
         "topology": "compact toroid",
         "device_project": "SCPN-SPHEROMAK-CORE",
-        "intake_lane": "L3_repair_refused_plan_before_intake",
-        "next_gate": "repair_plan_schema_then_supply_physical_sample_envelope",
+        "intake_lane": "L2_build_from_accepted_plan",
+        "next_gate": "supply_physical_sample_envelope",
         "external_context": {
           "evidence_rank": "E4_integrated_plasma_experiment",
           "source_ids": [
@@ -2601,7 +2577,7 @@
           "external_context_present": true,
           "physical_source_present": false,
           "portable_review_adapter_present": false,
-          "structural_plan_accepted": false,
+          "structural_plan_accepted": true,
           "exact_plan_fixture_custody": false,
           "complete_physical_evidence": false,
           "control_admission": false
@@ -2627,9 +2603,7 @@
             "observability_gate"
           ],
           "lane_blockers": [
-            "timing_uncertainty_s_member_missing",
-            "regenerated_canonical_plan_and_envelope_required",
-            "refreshed_fixture_digest_required",
+            "sampled_values_absent_from_design_plan",
             "physical_sample_envelope",
             "physical_clock_reference_and_operator_binding",
             "physical_uncertainty_validity_quality_and_provenance",
@@ -2651,8 +2625,8 @@
         "confinement_family": "magnetic_closed",
         "topology": "three-dimensional torus",
         "device_project": "SCPN-STELLARATOR-CORE",
-        "intake_lane": "L3_repair_refused_plan_before_intake",
-        "next_gate": "repair_plan_schema_then_supply_physical_sample_envelope",
+        "intake_lane": "L2_build_from_accepted_plan",
+        "next_gate": "supply_physical_sample_envelope",
         "external_context": {
           "evidence_rank": "E4_integrated_plasma_experiment",
           "source_ids": [
@@ -2698,7 +2672,7 @@
           "external_context_present": true,
           "physical_source_present": false,
           "portable_review_adapter_present": false,
-          "structural_plan_accepted": false,
+          "structural_plan_accepted": true,
           "exact_plan_fixture_custody": false,
           "complete_physical_evidence": false,
           "control_admission": false
@@ -2724,9 +2698,7 @@
             "observability_gate"
           ],
           "lane_blockers": [
-            "timing_uncertainty_s_member_missing",
-            "regenerated_canonical_plan_and_envelope_required",
-            "refreshed_fixture_digest_required",
+            "sampled_values_absent_from_design_plan",
             "physical_sample_envelope",
             "physical_clock_reference_and_operator_binding",
             "physical_uncertainty_validity_quality_and_provenance",
@@ -2748,8 +2720,8 @@
         "confinement_family": "magnetic_open",
         "topology": "multi-cell linear mirror",
         "device_project": "SCPN-MIRROR-CORE",
-        "intake_lane": "L3_repair_refused_plan_before_intake",
-        "next_gate": "repair_plan_schema_then_supply_physical_sample_envelope",
+        "intake_lane": "L2_build_from_accepted_plan",
+        "next_gate": "supply_physical_sample_envelope",
         "external_context": {
           "evidence_rank": "E4_integrated_plasma_experiment",
           "source_ids": [
@@ -2793,7 +2765,7 @@
           "external_context_present": true,
           "physical_source_present": false,
           "portable_review_adapter_present": false,
-          "structural_plan_accepted": false,
+          "structural_plan_accepted": true,
           "exact_plan_fixture_custody": false,
           "complete_physical_evidence": false,
           "control_admission": false
@@ -2820,9 +2792,7 @@
             "observability_gate"
           ],
           "lane_blockers": [
-            "timing_uncertainty_s_member_missing",
-            "regenerated_canonical_plan_and_envelope_required",
-            "refreshed_fixture_digest_required",
+            "sampled_values_absent_from_design_plan",
             "physical_sample_envelope",
             "physical_clock_reference_and_operator_binding",
             "physical_uncertainty_validity_quality_and_provenance",
@@ -2929,8 +2899,8 @@
         "confinement_family": "magnetic_closed",
         "topology": "continuous-helical-coil torus",
         "device_project": "SCPN-STELLARATOR-CORE",
-        "intake_lane": "L3_repair_refused_plan_before_intake",
-        "next_gate": "repair_plan_schema_then_supply_physical_sample_envelope",
+        "intake_lane": "L2_build_from_accepted_plan",
+        "next_gate": "supply_physical_sample_envelope",
         "external_context": {
           "evidence_rank": "E4_integrated_plasma_experiment",
           "source_ids": [
@@ -2974,7 +2944,7 @@
           "external_context_present": true,
           "physical_source_present": false,
           "portable_review_adapter_present": false,
-          "structural_plan_accepted": false,
+          "structural_plan_accepted": true,
           "exact_plan_fixture_custody": false,
           "complete_physical_evidence": false,
           "control_admission": false
@@ -3000,9 +2970,7 @@
             "observability_gate"
           ],
           "lane_blockers": [
-            "timing_uncertainty_s_member_missing",
-            "regenerated_canonical_plan_and_envelope_required",
-            "refreshed_fixture_digest_required",
+            "sampled_values_absent_from_design_plan",
             "physical_sample_envelope",
             "physical_clock_reference_and_operator_binding",
             "physical_uncertainty_validity_quality_and_provenance",
@@ -3110,5 +3078,5 @@
     "direct_actuation_authorized": false,
     "machine_protection_final_veto": true
   },
-  "payload_sha256": "0755c6a10efb10ebbd45abc8775833c65b5fb66efc9390c46ce761b279703ad4"
+  "payload_sha256": "99862ee8331afad0a0709166b96ef2e4b198903f7302f1c7b08662946034e1a2"
 }

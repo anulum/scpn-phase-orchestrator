@@ -25,11 +25,11 @@ Every row is an exact join of four sealed SPO artifacts:
 - the signal occurrence ledger; and
 - the external technology and diagnostic atlas.
 
-The register applies deterministic custody precedence:
+The register applies deterministic evidence-state precedence:
 
 1. reviewed physical-source custody already exists;
 2. an exercised byte-canonical review adapter already exists;
-3. an exact-custody diagnostic-plan fixture is structurally accepted; or
+3. an exact producer diagnostic-plan fixture is structurally accepted; or
 4. the diagnostic plan is structurally refused and must be repaired first.
 
 This order describes **integration readiness**, not research importance. No
@@ -40,10 +40,9 @@ clock/reference/operator completeness, uncertainty, validity, quality,
 provenance, observability gates, independent validation, and producer capacity.
 
 External `E5` through `E0` evidence ranks remain context only. They never alter
-the intake lane. For example, the `beam_target` row carries `E5` external
-context but stays in L3 because its current diagnostic plan is structurally
-refused. The `colliding_beam` row carries `E1` and stays in the same L3 lane for
-the same exact producer-custody reason.
+the intake lane. For example, `beam_target` carries `E5` and `colliding_beam`
+carries `E1`, but both are in L2 because their exact producer plan is now
+structurally accepted. Local SPO fixture custody remains a separate axis.
 
 ## Lane result
 
@@ -51,8 +50,8 @@ the same exact producer-custody reason.
 |---|---|---:|
 | `L0_qualify_existing_physical_source` | Complete qualification of already-reviewed physical-source custody | 1 |
 | `L1_extend_exercised_review_adapter` | Supply a physical producer payload through an existing byte-canonical adapter boundary | 2 |
-| `L2_build_from_accepted_plan` | Convert an accepted design declaration into a configuration-specific physical sample envelope | 13 |
-| `L3_repair_refused_plan_before_intake` | Repair and regenerate canonical plan bytes, then supply a physical sample envelope | 16 |
+| `L2_build_from_accepted_plan` | Convert an accepted design declaration into a configuration-specific physical sample envelope | 29 |
+| `L3_repair_refused_plan_before_intake` | Repair and regenerate canonical plan bytes, then supply a physical sample envelope | 0 |
 
 ### L0 — qualify existing physical source
 
@@ -102,7 +101,8 @@ not from an absent plan row.
 
 ### L2 — build from accepted plans
 
-The 13 L2 configurations are:
+The 29 L2 configurations are every built-in configuration except the one L0
+row and two L1 rows. They include:
 
 - `dense_plasma_focus`;
 - `ion_beam_icf` and `pulsed_electron_beam_icf`;
@@ -111,9 +111,15 @@ The 13 L2 configurations are:
 - `projectile_or_impact_icf`;
 - `maglif`, `mechanical_or_liquid_liner_mif`, and `plasma_jet_mif`;
 - `sheared_flow_z_pinch`, `theta_pinch`, and `z_pinch`.
+- `beam_target`, `colliding_beam`, `cusp`, `field_reversed_configuration`,
+  `fusion_fission_hybrid`, `gas_dynamic_mirror`, `simple_magnetic_mirror`,
+  `tandem_mirror`, `gridded_iec`, `polywell`, `heliotron`, `stellarator`,
+  `torsatron`, `levitated_dipole`, `reversed_field_pinch`, and `spheromak`.
 
-Their exact-custody plans define intended channels, clocks, carriers, and
-evidence slots. They contain no sampled physical values. The next gate is a
+Their exact plans define intended channels, clocks, carriers, and evidence
+slots. Eleven producer fixtures have byte-identical SPO custody; nine more are
+digest-pinned exact public producer objects. Neither custody state contains
+sampled physical values. The next gate is a
 configuration-specific canonical evidence envelope owned by the named device
 project, with immutable source revision and package identity. Shared plans do
 not equate configurations: the three laser-ICF rows, two beam-ICF rows, two
@@ -121,25 +127,10 @@ Z-pinch rows, and three separate MIF device projects remain independent.
 
 ### L3 — repair refused plans before intake
 
-The 16 L3 configurations are:
-
-- `beam_target` and `colliding_beam`;
-- `cusp`;
-- `field_reversed_configuration`;
-- `fusion_fission_hybrid`;
-- `gas_dynamic_mirror`, `simple_magnetic_mirror`, and `tandem_mirror`;
-- `gridded_iec` and `polywell`;
-- `heliotron`, `stellarator`, and `torsatron`;
-- `levitated_dipole`;
-- `reversed_field_pinch`; and
-- `spheromak`.
-
-Each current producer fixture omits the mandatory
-`timing_uncertainty_s` member. The producer must emit the member explicitly,
-regenerate the canonical plan and envelope, refresh its fixture digest and
-package identity, and let SPO replay the new bytes. Only then can a separate
-physical sample envelope be designed. SPO must not infer JSON `null`, relax the
-schema, or use external technology evidence to bypass this gate.
+L3 is empty. The ten producer conformance repairs now emit explicit
+`timing_uncertainty_s`, and the exact twenty-head replay accepted every
+envelope-1.1.0 fixture. A future refusal would re-enter L3 without changing
+external evidence rank or granting physical/control authority.
 
 ## Required physical evidence
 
@@ -186,11 +177,11 @@ and sealed over canonical JSON payload bytes.
 
 - Schema: `scpn-phase-orchestrator.reactor-producer-evidence-priority-register.v1`
 - Schema version: `1.0.0`
-- Payload SHA-256: `f4d931b7b6f6c619c349c394b5a64936080d61f8b6f6f90abee042e737133c0f`
+- Payload SHA-256: `99862ee8331afad0a0709166b96ef2e4b198903f7302f1c7b08662946034e1a2`
 - Configuration evidence payload:
   `a41d53e9c0dce5482a131ecaf996442f56c02e8b1f0737067c2d3cccb677f7d8`
 - Diagnostic-plan portfolio payload:
-  `5b02e7fb2302c2e66bf0fc4a25dae82de673b00c5921e14bb0c8a73a8ecaa1dd`
+  `ceb01c4818a2282aed61bcbaa458a8ba6a0b56bd6569f702c6aee0f266f73e7a`
 - Signal occurrence payload:
   `b7bffc61956dc32ee5ee1c1c9d399ee3546af9e374cd52d18f7c85602ba32c22`
 - Technology atlas payload:
