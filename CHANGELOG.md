@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- A reactor-family-neutral, byte-canonical and digest-sealed device diagnostic-
+  plan review intake validates exact producer source, wheel, manifest,
+  envelope, plan, registry, candidate, carrier, evidence-slot, frame, and clock
+  identities without importing sibling source. Its typed signal and clock rows
+  remain synthetic design declarations and cannot create observation,
+  classification, semantic ingress, CONTROL intent, action, or actuation.
+
 ## [1.3.1] - 2026-08-31
 
 ### Added

@@ -1,18 +1,18 @@
 {
   "SPDX-License-Identifier": "AGPL-3.0-or-later",
   "counts": {
-    "core_engine_modules": 344,
+    "core_engine_modules": 345,
     "domainpacks": 36,
     "github_workflows": 19,
     "integration_modules": 32,
     "optional_extras": 23,
     "public_api_exports": 29,
     "public_documentation_pages": 234,
-    "python_package_modules": 743,
+    "python_package_modules": 744,
     "research_experimental_modules": 205,
     "runtime_serving_modules": 158,
     "rust_kernel_files": 97,
-    "test_files": 894
+    "test_files": 895
   },
   "documentation": {
     "public_pages": [
@@ -566,6 +566,7 @@
       "src/scpn_phase_orchestrator/reactor_semantics/contracts.py",
       "src/scpn_phase_orchestrator/reactor_semantics/control_intent.py",
       "src/scpn_phase_orchestrator/reactor_semantics/coupled_transport.py",
+      "src/scpn_phase_orchestrator/reactor_semantics/diagnostic_plan_review.py",
       "src/scpn_phase_orchestrator/reactor_semantics/evidence.py",
       "src/scpn_phase_orchestrator/reactor_semantics/handoff.py",
       "src/scpn_phase_orchestrator/reactor_semantics/mif_merge_compression.py",
@@ -1613,6 +1614,7 @@
     "src/scpn_phase_orchestrator/reactor_semantics/contracts.py",
     "src/scpn_phase_orchestrator/reactor_semantics/control_intent.py",
     "src/scpn_phase_orchestrator/reactor_semantics/coupled_transport.py",
+    "src/scpn_phase_orchestrator/reactor_semantics/diagnostic_plan_review.py",
     "src/scpn_phase_orchestrator/reactor_semantics/evidence.py",
     "src/scpn_phase_orchestrator/reactor_semantics/handoff.py",
     "src/scpn_phase_orchestrator/reactor_semantics/mif_merge_compression.py",
@@ -2105,6 +2107,7 @@
       "tests/test_delayed_engine_workflow.py",
       "tests/test_detector_meta_analysis.py",
       "tests/test_deterministic.py",
+      "tests/test_diagnostic_plan_review.py",
       "tests/test_dimension.py",
       "tests/test_dimension_algorithm.py",
       "tests/test_dimension_backends.py",

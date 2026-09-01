@@ -59,6 +59,45 @@ event references for drive and shot timing; and confines synthetic oscillator
 coordinates to `numerical_phase`. It therefore provides a deterministic gap
 map without allowing architecture-only projects to advertise observations.
 
+## Device diagnostic-plan design review
+
+`device_diagnostic_plan_review_from_producer_bytes()` is the reactor-family-
+neutral intake for a device owner's portable diagnostic and clock plan. It
+accepts exact manifest, envelope, and plan bytes plus two identities that the
+current producer envelope cannot supply uniquely: a 40-character source Git
+revision and the SHA-256 of the exact installed wheel artefact. The producer's
+package revision remains a separate field. SPO never imports or executes the
+device package while interpreting these bytes.
+
+The v1 intake accepts only canonical `scpn.reactor-domain.v1` manifest bytes
+and canonical `scpn.reactor-diagnostic-plan-envelope.v1` version `1.1.0`
+bytes. It recomputes the raw manifest and plan digests, rejects recursive key
+drift, and resolves project ownership, configurations, candidate IDs,
+observability classes, carriers, evidence slots, and registry pins against
+SPO's installed frozen registries. Planned and explicitly deferred candidates
+must cover the applicable catalogue exactly.
+
+Each `DeviceDiagnosticSignalReview` preserves the candidate, its
+`derived_cyclic`, `event_relative`, `noncyclic_feature`, or `numerical_only`
+class, the admissible carrier, clock identity, and exact required evidence-slot
+names. It does not claim that the slots contain observations. A bounded feature
+therefore remains bounded, an event cycle remains event-relative, and a model
+oscillator remains numerical phase.
+
+Producer clock vocabulary is not coerced into SPO vocabulary.
+`simulation` is only a `simulation_monotonic` candidate,
+`shot_event_epoch` is only shot-relative compatible, and
+`facility_monotonic` remains explicitly unmapped. A declared offset bound is
+not facility synchronisation, wall time, or correlation evidence.
+
+`DeviceDiagnosticPlanReview` embeds the exact three source documents and seals
+their digests, source commit, artefact digest, registry identities, typed signal
+rows, clock rows, candidate coverage, and reference frames. Its fixed verdict
+is design-declaration-only: no measurement, physical observation, facility
+binding, classification, semantic ingress, control intent, action, or actuation
+is created. The portable envelope is defined by
+[`device_diagnostic_plan_review.schema.json`](../../specs/device_diagnostic_plan_review.schema.json).
+
 `DEFAULT_REACTOR_REGIME_MODE_ONTOLOGY` closes the remaining open-text meaning
 above U0 without changing the U0 `1.0.0` wire format. It defines eight
 independent axes: plant readiness, diagnostic observability, confinement or
@@ -395,6 +434,11 @@ assessment and research-intent envelopes.
       show_source: false
 
 ::: scpn_phase_orchestrator.reactor_semantics.coupled_transport
+    options:
+      show_root_heading: true
+      show_source: false
+
+::: scpn_phase_orchestrator.reactor_semantics.diagnostic_plan_review
     options:
       show_root_heading: true
       show_source: false

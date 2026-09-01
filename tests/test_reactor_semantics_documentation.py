@@ -38,6 +38,9 @@ def test_reactor_semantics_reference_preserves_u0_boundaries() -> None:
         "zero phase confidence and observability",
         "actionable=false",
         "reactor_semantic_handoff.schema.json",
+        "Device diagnostic-plan design review",
+        "device_diagnostic_plan_review_from_producer_bytes()",
+        "device_diagnostic_plan_review.schema.json",
         "simulation-monotonic evidence to wall time implicitly",
     )
 

@@ -43,6 +43,7 @@ def test_every_reactor_semantics_submodule_avoids_optional_runtime_graph() -> No
         import scpn_phase_orchestrator.reactor_semantics.contracts
         import scpn_phase_orchestrator.reactor_semantics.control_intent
         import scpn_phase_orchestrator.reactor_semantics.coupled_transport
+        import scpn_phase_orchestrator.reactor_semantics.diagnostic_plan_review
         import scpn_phase_orchestrator.reactor_semantics.evidence
         import scpn_phase_orchestrator.reactor_semantics.handoff
         import scpn_phase_orchestrator.reactor_semantics.mif_merge_compression
@@ -60,6 +61,7 @@ def test_every_reactor_semantics_submodule_avoids_optional_runtime_graph() -> No
             "scpn_phase_orchestrator.reactor_semantics.contracts",
             "scpn_phase_orchestrator.reactor_semantics.control_intent",
             "scpn_phase_orchestrator.reactor_semantics.coupled_transport",
+            "scpn_phase_orchestrator.reactor_semantics.diagnostic_plan_review",
             "scpn_phase_orchestrator.reactor_semantics.evidence",
             "scpn_phase_orchestrator.reactor_semantics.handoff",
             "scpn_phase_orchestrator.reactor_semantics.mif_merge_compression",
@@ -106,6 +108,7 @@ def test_every_reactor_semantics_submodule_avoids_optional_runtime_graph() -> No
             "scpn_phase_orchestrator.reactor_semantics.contracts",
             "scpn_phase_orchestrator.reactor_semantics.control_intent",
             "scpn_phase_orchestrator.reactor_semantics.coupled_transport",
+            "scpn_phase_orchestrator.reactor_semantics.diagnostic_plan_review",
             "scpn_phase_orchestrator.reactor_semantics.evidence",
             "scpn_phase_orchestrator.reactor_semantics.handoff",
             "scpn_phase_orchestrator.reactor_semantics.mif_merge_compression",
