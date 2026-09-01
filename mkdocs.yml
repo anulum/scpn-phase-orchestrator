@@ -155,6 +155,7 @@ nav:
       - Core & Exceptions: reference/api/core.md
       - Binding: reference/api/binding.md
       - Reactor Semantics: reference/api/reactor_semantics.md
+      - Reactor Signal Occurrence Ledger: reference/reactor_signal_occurrence_ledger.md
       - UPDE Engine: reference/api/upde.md
       - "UPDE — Core Integrator": reference/api/upde_engine.md
       - "UPDE — Time-varying Omega": reference/api/upde_time_varying_omega.md

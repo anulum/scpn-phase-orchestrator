@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- A canonical reactor signal occurrence ledger binds 39 externally meaningful
+  phase, mode, regime, event, clock, and semantic-boundary groups across exact
+  SPO, SCPN-FUSION-CORE, SCPN-MIF-CORE, and SCPN-CONTROL revisions to source
+  symbols and Git-blob SHA-256 values. Its strict schema and tests separate
+  direct source occurrence from SPO interpretation, retire superseded atlas
+  statements, preserve unresolved gaps, and forbid physical-observation,
+  physical-phase, action, or actuation escalation.
 - A full-fidelity FAIR-MAST magnetic physical-source review intake verifies
   exact SCPN-FUSION-CORE archive, qualification, source revision, and producer-
   wheel identities; replays all 72 arrays, 11 measurement families, 132

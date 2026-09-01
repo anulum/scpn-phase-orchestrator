@@ -13,6 +13,7 @@ from __future__ import annotations
 from pathlib import Path
 
 REFERENCE = Path("docs/reference/api/reactor_semantics.md")
+OCCURRENCE_LEDGER = Path("docs/reference/reactor_signal_occurrence_ledger.md")
 
 
 def test_reactor_semantics_reference_preserves_u0_boundaries() -> None:
@@ -49,6 +50,26 @@ def test_reactor_semantics_reference_preserves_u0_boundaries() -> None:
         "observation_admitted=false",
         "qualified_phase_evidence=false",
         "mast_magnetic_source_review.schema.json",
+    )
+
+    for marker in required:
+        assert marker in text
+
+
+def test_reactor_signal_occurrence_ledger_preserves_epistemic_boundaries() -> None:
+    text = " ".join(OCCURRENCE_LEDGER.read_text(encoding="utf-8").split())
+    required = (
+        "39 stable public or cross-project occurrence groups",
+        "An occurrence is evidence that a concept or value exists in source",
+        "It is not by itself evidence that the concept was measured in a reactor",
+        "physical_observation_admitted=false",
+        "physical_phase_eligible=false",
+        "owns MIF facts only",
+        "admitted_for_review` is not an actuation decision",
+        "no path that turns an SPO semantic or regime-assessment record",
+        "The physical-observation gap remains open",
+        "reactor_signal_occurrence_ledger.v1.json",
+        "reactor_signal_occurrence_ledger.schema.json",
     )
 
     for marker in required:
