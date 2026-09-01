@@ -46,6 +46,7 @@ def test_every_reactor_semantics_submodule_avoids_optional_runtime_graph() -> No
             conventional_tokamak_physical_payload_request,
         )
         import scpn_phase_orchestrator.reactor_semantics.coupled_transport
+        import scpn_phase_orchestrator.reactor_semantics.diagnostic_plan_depth
         import scpn_phase_orchestrator.reactor_semantics.diagnostic_plan_review
         import scpn_phase_orchestrator.reactor_semantics.evidence
         from scpn_phase_orchestrator.reactor_semantics import (
@@ -72,6 +73,7 @@ def test_every_reactor_semantics_submodule_avoids_optional_runtime_graph() -> No
             "scpn_phase_orchestrator.reactor_semantics.control_intent",
             "scpn_phase_orchestrator.reactor_semantics.conventional_tokamak_physical_payload_request",
             "scpn_phase_orchestrator.reactor_semantics.coupled_transport",
+            "scpn_phase_orchestrator.reactor_semantics.diagnostic_plan_depth",
             "scpn_phase_orchestrator.reactor_semantics.diagnostic_plan_review",
             "scpn_phase_orchestrator.reactor_semantics.evidence",
             "scpn_phase_orchestrator.reactor_semantics.frc_compression_mif_physical_payload_request",
@@ -123,6 +125,7 @@ def test_every_reactor_semantics_submodule_avoids_optional_runtime_graph() -> No
             "scpn_phase_orchestrator.reactor_semantics.control_intent",
             "scpn_phase_orchestrator.reactor_semantics.conventional_tokamak_physical_payload_request",
             "scpn_phase_orchestrator.reactor_semantics.coupled_transport",
+            "scpn_phase_orchestrator.reactor_semantics.diagnostic_plan_depth",
             "scpn_phase_orchestrator.reactor_semantics.diagnostic_plan_review",
             "scpn_phase_orchestrator.reactor_semantics.evidence",
             "scpn_phase_orchestrator.reactor_semantics.frc_compression_mif_physical_payload_request",

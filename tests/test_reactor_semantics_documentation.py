@@ -60,6 +60,9 @@ def test_reactor_semantics_reference_preserves_u0_boundaries() -> None:
         "Device diagnostic-plan design review",
         "device_diagnostic_plan_review_from_producer_bytes()",
         "device_diagnostic_plan_review.schema.json",
+        "versions `1.1.0` and `1.2.0` to separate exact plan and channel shapes",
+        "Signal quantity and unit text cannot override the registered candidate",
+        "embedded byte-for-byte in the review output",
         "tokamak, dense- plasma-focus, theta-pinch, Z-pinch, MagLIF, "
         "mechanical-or-liquid-liner MIF, plasma-jet MIF, laser-ICF, ICF-beam, "
         "and ICF-impact device plans",

@@ -11,6 +11,10 @@
     {
       "module": "scpn_phase_orchestrator.reactor_semantics.mast_magnetic_review",
       "reason": "reviewed single strict paired FAIR-MAST archive and qualification decode, cross-source validation, review projection, and canonical sealing pipeline; splitting would create a second internal contract across one atomic custody check"
+    },
+    {
+      "module": "scpn_phase_orchestrator.reactor_semantics.diagnostic_plan_review",
+      "reason": "reviewed single strict diagnostic-plan decode, version dispatch, registry validation, review projection, and canonical sealing pipeline; declaration-depth validation is already separate and the remaining AST top-level call graph is one 41-symbol, 103-edge connected component"
     }
   ]
 }

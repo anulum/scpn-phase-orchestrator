@@ -91,10 +91,10 @@ or MIF evidence by similarity.
 The
 [reactor diagnostic-plan portfolio status](docs/reference/reactor_diagnostic_plan_portfolio_status.md)
 replays the exact fixtures from all 20 Reactor Systems device producers at
-SPO's public review boundary. Ten are structurally accepted with byte-identical
-SPO custody; ten fail closed because their channels omit the required
-`timing_uncertainty_s` member. Structural acceptance remains a synthetic design
-result, not physical evidence or CONTROL authority.
+SPO's public review boundary. All 20 are structurally accepted; 11 have byte-
+identical SPO custody and nine remain digest-pinned exact public producer
+objects. Structural acceptance remains a synthetic design result, not physical
+evidence or CONTROL authority.
 
 The evidence-ranked
 [reactor technology and diagnostic atlas](docs/reference/reactor_technology_diagnostic_atlas.md)
@@ -340,15 +340,15 @@ inside a dashboard or notebook; it turns them into inspectable artefacts.
 |---|---:|
 | Package version | 1.3.1 |
 | Public API exports | 29 |
-| Python package modules | 748 |
-| Core Engine modules | 349 |
+| Python package modules | 749 |
+| Core Engine modules | 350 |
 | Runtime/Serving modules | 158 |
 | Integration modules | 32 |
 | Research/Experimental modules | 205 |
 | Domainpack files | 36 |
 | Rust kernel files | 97 |
 | Optional extras | 23 |
-| Python test files | 913 |
+| Python test files | 914 |
 | Public documentation pages | 241 |
 | GitHub Actions workflows | 19 |
 

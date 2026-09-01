@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Exact diagnostic-plan envelope dispatch now preserves historical `1.1.0`
+  while admitting `1.2.0` only through its distinct signal, frame-
+  transformation, and clock-topology shapes. The exact TOKAMAK pilot fixture
+  exercises declaration-depth validation without allowing signal text,
+  coordinate mappings, or clock declarations to create physical evidence,
+  phase, CONTROL authority, action, or actuation.
 - A byte-canonical L1 FRC-compression-MIF physical-payload request binds the
   existing SCPN-MIF-CORE merge-compression adapter as simulation-only, pins
   the semantic and observability registries, carries four unselected

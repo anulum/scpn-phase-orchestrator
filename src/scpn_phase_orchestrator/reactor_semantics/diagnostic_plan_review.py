@@ -23,6 +23,11 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import Final, NoReturn, TypeGuard
 
+from .diagnostic_plan_depth import (
+    DiagnosticPlanDepthError,
+    DiagnosticPlanDepthRefusalKind,
+    validate_diagnostic_plan_depth,
+)
 from .observability_profiles import (
     DEFAULT_REACTOR_OBSERVABILITY_PROFILE_REGISTRY,
     ObservabilityClass,
@@ -40,7 +45,9 @@ MAX_DEVICE_DIAGNOSTIC_SOURCE_BYTES: Final = 2 * 1024 * 1024
 MAX_DEVICE_DIAGNOSTIC_PLAN_REVIEW_BYTES: Final = 8 * 1024 * 1024
 
 _ENVELOPE_SCHEMA: Final = "scpn.reactor-diagnostic-plan-envelope.v1"
-_ENVELOPE_VERSION: Final = "1.1.0"
+_ENVELOPE_VERSION_1_1: Final = "1.1.0"
+_ENVELOPE_VERSION_1_2: Final = "1.2.0"
+_ENVELOPE_VERSIONS: Final = frozenset({_ENVELOPE_VERSION_1_1, _ENVELOPE_VERSION_1_2})
 _MANIFEST_SCHEMA: Final = "scpn.reactor-domain.v1"
 _MANIFEST_VERSION: Final = "1.0.0"
 _CAPABILITY: Final = "diagnostic_clock_semantics"
@@ -63,7 +70,7 @@ _ENVELOPE_KEYS = (
     | {"plan_identifier", "plan_sha256", "producer_revision", "project"}
     | {"schema", "schema_version", "synthetic"}
 )
-_PLAN_KEYS = {
+_PLAN_KEYS_1_1 = {
     "binding",
     "channels",
     "clock_relations",
@@ -72,13 +79,23 @@ _PLAN_KEYS = {
     "frames",
     "identifier",
 }
+_PLAN_KEYS_1_2 = _PLAN_KEYS_1_1 | {"clock_topology", "frame_transformations"}
+_PLAN_KEYS_BY_VERSION = {
+    _ENVELOPE_VERSION_1_1: _PLAN_KEYS_1_1,
+    _ENVELOPE_VERSION_1_2: _PLAN_KEYS_1_2,
+}
 _CLOCK_KEYS = {"epoch", "identifier", "kind", "resolution_s", "uncertainty_s"}
-_CHANNEL_KEYS = (
+_CHANNEL_KEYS_1_1 = (
     {"acquisition_duration_s", "acquisition_start_s", "candidate_id"}
     | {"carrier", "clock_identifier", "element_count", "evidence_bindings"}
     | {"identifier", "max_signal_frequency_hz", "sample_rate_hz"}
     | {"synthetic", "timing_uncertainty_s"}
 )
+_CHANNEL_KEYS_1_2 = _CHANNEL_KEYS_1_1 | {"signals"}
+_CHANNEL_KEYS_BY_VERSION = {
+    _ENVELOPE_VERSION_1_1: _CHANNEL_KEYS_1_1,
+    _ENVELOPE_VERSION_1_2: _CHANNEL_KEYS_1_2,
+}
 _FRAME_KEYS = {"description", "identifier", "kind"}
 _DEFERRAL_KEYS = {"candidate_id", "reason"}
 _RELATION_KEYS = {
@@ -541,8 +558,11 @@ def _validate_sources(
     envelope = _validate_envelope(
         _decode_source(envelope_bytes, "envelope", pretty=False)
     )
+    envelope_version = _text(envelope, "schema_version")
     plan = _object(
-        _decode_source(plan_bytes, "plan", pretty=False), _PLAN_KEYS, "source plan"
+        _decode_source(plan_bytes, "plan", pretty=False),
+        _PLAN_KEYS_BY_VERSION[envelope_version],
+        "source plan",
     )
     manifest_digest = _sha256(manifest_bytes)
     envelope_digest = _sha256(envelope_bytes)
@@ -562,7 +582,9 @@ def _validate_sources(
     _validate_manifest_alignment(manifest, envelope, configurations)
     _validate_binding(envelope["binding"], "envelope binding")
     _validate_binding(plan["binding"], "plan binding")
-    planned, deferred, frames, clocks, signals = _validate_plan(plan, configurations)
+    planned, deferred, frames, clocks, signals = _validate_plan(
+        plan, configurations, envelope_version=envelope_version
+    )
     return _ValidatedSources(
         project=project,
         producer_revision=_text(envelope, "producer_revision"),
@@ -570,7 +592,7 @@ def _validate_sources(
         capability=_text(envelope, "capability"),
         maturity=_text(envelope, "evidence_maturity"),
         envelope_schema=_text(envelope, "schema"),
-        envelope_version=_text(envelope, "schema_version"),
+        envelope_version=envelope_version,
         plan_identifier=_text(plan, "identifier"),
         manifest_sha256=manifest_digest,
         envelope_sha256=envelope_digest,
@@ -585,9 +607,11 @@ def _validate_sources(
 
 def _validate_envelope(value: object) -> dict[str, object]:
     envelope = _object(value, _ENVELOPE_KEYS, "source envelope")
+    schema_version = envelope["schema_version"]
     if (
         envelope["schema"] != _ENVELOPE_SCHEMA
-        or envelope["schema_version"] != _ENVELOPE_VERSION
+        or not isinstance(schema_version, str)
+        or schema_version not in _ENVELOPE_VERSIONS
     ):
         _refuse(
             DeviceDiagnosticPlanRefusalCode.UNSUPPORTED_SOURCE_SCHEMA,
@@ -741,7 +765,10 @@ def _validate_binding(value: object, name: str) -> None:
 
 
 def _validate_plan(
-    plan: dict[str, object], configurations: tuple[str, ...]
+    plan: dict[str, object],
+    configurations: tuple[str, ...],
+    *,
+    envelope_version: str,
 ) -> tuple[
     tuple[str, ...],
     tuple[str, ...],
@@ -767,7 +794,9 @@ def _validate_plan(
             configuration
         )
     }
-    channels = _object_array(plan, "channels", _CHANNEL_KEYS)
+    channels = _object_array(
+        plan, "channels", _CHANNEL_KEYS_BY_VERSION[envelope_version]
+    )
     channel_ids = tuple(_text(item, "identifier") for item in channels)
     _sorted_identifiers(channel_ids, "channels")
     planned_ids: list[str] = []
@@ -791,9 +820,26 @@ def _validate_plan(
         _candidate_refusal("candidate is both planned and deferred")
     if set(planned) | set(deferred) != set(profiles):
         _candidate_refusal("candidate coverage differs from the SPO catalogue")
-    _validate_relations(
-        _object_array(plan, "clock_relations", _RELATION_KEYS), clock_index
-    )
+    relation_records = _object_array(plan, "clock_relations", _RELATION_KEYS)
+    _validate_relations(relation_records, clock_index)
+    if envelope_version == _ENVELOPE_VERSION_1_2:
+        try:
+            validate_diagnostic_plan_depth(
+                plan,
+                candidate_classes={
+                    identifier: profile.observability_class.value
+                    for identifier, profile in profiles.items()
+                },
+                clock_kinds={
+                    identifier: review.plan_clock_kind
+                    for identifier, review in clock_index.items()
+                },
+                frame_kinds={
+                    _text(frame, "identifier"): _text(frame, "kind") for frame in frames
+                },
+            )
+        except DiagnosticPlanDepthError as exc:
+            _depth_refusal(exc)
     return planned, deferred, frame_ids, clocks, tuple(signal_reviews)
 
 
@@ -1137,6 +1183,16 @@ def _pretty(value: object) -> bytes:
 
 def _sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
+
+
+def _depth_refusal(error: DiagnosticPlanDepthError) -> NoReturn:
+    if error.kind is DiagnosticPlanDepthRefusalKind.AUTHORITY:
+        _authority_refusal(error.detail)
+    if error.kind is DiagnosticPlanDepthRefusalKind.CARRIER:
+        _carrier_refusal(error.detail)
+    if error.kind is DiagnosticPlanDepthRefusalKind.CLOCK:
+        _clock_refusal(error.detail)
+    _plan_refusal(error.detail)
 
 
 def _refuse(code: DeviceDiagnosticPlanRefusalCode, detail: str) -> NoReturn:

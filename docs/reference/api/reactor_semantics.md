@@ -70,12 +70,23 @@ package revision remains a separate field. SPO never imports or executes the
 device package while interpreting these bytes.
 
 The v1 intake accepts only canonical `scpn.reactor-domain.v1` manifest bytes
-and canonical `scpn.reactor-diagnostic-plan-envelope.v1` version `1.1.0`
-bytes. It recomputes the raw manifest and plan digests, rejects recursive key
-drift, and resolves project ownership, configurations, candidate IDs,
-observability classes, carriers, evidence slots, and registry pins against
-SPO's installed frozen registries. Planned and explicitly deferred candidates
-must cover the applicable catalogue exactly.
+and canonical `scpn.reactor-diagnostic-plan-envelope.v1` bytes. It dispatches
+versions `1.1.0` and `1.2.0` to separate exact plan and channel shapes; fields
+cannot be omitted, defaulted, or moved between versions. It recomputes the raw
+manifest and plan digests, rejects recursive key drift, and resolves project
+ownership, configurations, candidate IDs, observability classes, carriers,
+evidence slots, and registry pins against SPO's installed frozen registries.
+Planned and explicitly deferred candidates must cover the applicable catalogue
+exactly.
+
+Version `1.2.0` adds declaration-only signal inventories, frame
+transformations, and physical-clock topology. SPO checks exact signal roles,
+event-marker units, numerical-only phase declarations, admissible frame-kind
+transformations, connected frames, non-overlapping clock domains, rooted
+relations, and an acyclic reference topology. Signal quantity and unit text
+cannot override the registered candidate, carrier, observation state, or phase
+meaning. Mapping declarations cannot claim evidence, and every accepted 1.2
+source document remains embedded byte-for-byte in the review output.
 
 Each `DeviceDiagnosticSignalReview` preserves the candidate, its
 `derived_cyclic`, `event_relative`, `noncyclic_feature`, or `numerical_only`
