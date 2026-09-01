@@ -7,6 +7,148 @@
       ]
     },
     "sha256": {"pattern": "^[0-9a-f]{64}$", "type": "string"},
+    "git_revision": {"pattern": "^[0-9a-f]{40}$", "type": "string"},
+    "semver": {
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$",
+      "type": "string"
+    },
+    "review_chain_source": {
+      "additionalProperties": false,
+      "properties": {
+        "project": {
+          "enum": ["SCPN-CONTROL", "SCPN-MIF-CORE", "SCPN-PHASE-ORCHESTRATOR"],
+          "type": "string"
+        },
+        "repository_revision": {"$ref": "#/$defs/git_revision"},
+        "path": {"minLength": 1, "type": "string"},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      },
+      "required": ["project", "repository_revision", "path", "sha256"],
+      "type": "object"
+    },
+    "review_chain_receipt": {
+      "additionalProperties": false,
+      "properties": {
+        "receipt_id": {"pattern": "^[a-z][a-z0-9_.-]+$", "type": "string"},
+        "configuration": {"$ref": "#/$defs/configuration"},
+        "evidence_class": {
+          "enum": ["experimental", "observed", "simulation"],
+          "type": "string"
+        },
+        "producer": {
+          "additionalProperties": false,
+          "properties": {
+            "project": {"pattern": "^SCPN-[A-Z0-9-]+$", "type": "string"},
+            "package_version": {"$ref": "#/$defs/semver"},
+            "envelope_source_revision": {"$ref": "#/$defs/git_revision"},
+            "schema": {"minLength": 1, "type": "string"},
+            "schema_version": {"$ref": "#/$defs/semver"},
+            "api": {"minLength": 1, "type": "string"},
+            "byte_length": {"minimum": 1, "type": "integer"},
+            "envelope_sha256": {"$ref": "#/$defs/sha256"}
+          },
+          "required": [
+            "project",
+            "package_version",
+            "envelope_source_revision",
+            "schema",
+            "schema_version",
+            "api",
+            "byte_length",
+            "envelope_sha256"
+          ],
+          "type": "object"
+        },
+        "semantic_handoff": {
+          "additionalProperties": false,
+          "properties": {
+            "project": {"const": "SCPN-PHASE-ORCHESTRATOR"},
+            "package_version": {"$ref": "#/$defs/semver"},
+            "package_source_revision": {"$ref": "#/$defs/git_revision"},
+            "package_wheel_sha256": {"$ref": "#/$defs/sha256"},
+            "schema": {"minLength": 1, "type": "string"},
+            "schema_version": {"$ref": "#/$defs/semver"},
+            "api": {"minLength": 1, "type": "string"},
+            "byte_length": {"minimum": 1, "type": "integer"},
+            "envelope_sha256": {"$ref": "#/$defs/sha256"}
+          },
+          "required": [
+            "project",
+            "package_version",
+            "package_source_revision",
+            "package_wheel_sha256",
+            "schema",
+            "schema_version",
+            "api",
+            "byte_length",
+            "envelope_sha256"
+          ],
+          "type": "object"
+        },
+        "control_review": {
+          "additionalProperties": false,
+          "properties": {
+            "project": {"const": "SCPN-CONTROL"},
+            "package_version": {"$ref": "#/$defs/semver"},
+            "receiver_api": {"minLength": 1, "type": "string"},
+            "schema": {"minLength": 1, "type": "string"},
+            "schema_version": {"$ref": "#/$defs/semver"},
+            "decision": {"const": "admitted_for_review"},
+            "byte_length": {"minimum": 1, "type": "integer"},
+            "decision_digest": {"$ref": "#/$defs/sha256"},
+            "envelope_sha256": {"$ref": "#/$defs/sha256"},
+            "review_only": {"const": true},
+            "actionable": {"const": false}
+          },
+          "required": [
+            "project",
+            "package_version",
+            "receiver_api",
+            "schema",
+            "schema_version",
+            "decision",
+            "byte_length",
+            "decision_digest",
+            "envelope_sha256",
+            "review_only",
+            "actionable"
+          ],
+          "type": "object"
+        },
+        "verification_sources": {
+          "items": {"$ref": "#/$defs/review_chain_source"},
+          "minItems": 3,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "host_independent": {"const": true},
+        "sibling_source_execution": {"const": false},
+        "physical_source_present": {"const": false},
+        "physical_observation_admitted": {"const": false},
+        "qualified_physical_phase": {"const": false},
+        "control_action_created": {"const": false},
+        "authority": {"const": "review_only"},
+        "actionable": {"const": false}
+      },
+      "required": [
+        "receipt_id",
+        "configuration",
+        "evidence_class",
+        "producer",
+        "semantic_handoff",
+        "control_review",
+        "verification_sources",
+        "host_independent",
+        "sibling_source_execution",
+        "physical_source_present",
+        "physical_observation_admitted",
+        "qualified_physical_phase",
+        "control_action_created",
+        "authority",
+        "actionable"
+      ],
+      "type": "object"
+    },
     "configuration": {
       "enum": [
         "beam_target",
@@ -113,6 +255,12 @@
         },
         "evidence_source_present": {"type": "boolean"},
         "portable_review_adapter_present": {"type": "boolean"},
+        "review_chain_receipts": {
+          "items": {"$ref": "#/$defs/review_chain_receipt"},
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
         "physical_source_present": {"type": "boolean"},
         "qualified_observation": {"const": false},
         "qualified_physical_phase": {"const": false},

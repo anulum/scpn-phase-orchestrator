@@ -302,6 +302,105 @@
         ],
         "evidence_source_present": true,
         "portable_review_adapter_present": true,
+        "review_chain_receipts": [
+          {
+            "receipt_id": "frc_compression_mif.simulation_review.v1",
+            "configuration": "frc_compression_mif",
+            "evidence_class": "simulation",
+            "producer": {
+              "project": "SCPN-MIF-CORE",
+              "package_version": "0.1.1",
+              "envelope_source_revision": "f60dbae4b2ea3344ac0cb086a3b7d248d65cf92f",
+              "schema": "scpn-mif-core.merge-compression-observation.v1",
+              "schema_version": "1.0.0",
+              "api": "scpn_mif_core.interop.merge_compression_observation_to_bytes",
+              "byte_length": 2475,
+              "envelope_sha256": "c780706abd5a0b185a95e85767e623248388664da61126d196fcb3d528b0c0ca"
+            },
+            "semantic_handoff": {
+              "project": "SCPN-PHASE-ORCHESTRATOR",
+              "package_version": "1.3.1",
+              "package_source_revision": "c2a7581d58819060806c6f173da941c822103695",
+              "package_wheel_sha256": "c2d7c0a5c0ad47f420fee02e54ccc28122bf8d128eb3b80ca51ba5f034320274",
+              "schema": "scpn-phase-orchestrator.mif-merge-compression-handoff.v1",
+              "schema_version": "1.0.0",
+              "api": "scpn_phase_orchestrator.reactor_semantics.mif_merge_compression_handoff_from_mif_bytes",
+              "byte_length": 101652,
+              "envelope_sha256": "c0f03b7c49346c39342598275556e8ac28c93138ba14f6e21d6739400e0edeb2"
+            },
+            "control_review": {
+              "project": "SCPN-CONTROL",
+              "package_version": "0.23.0",
+              "receiver_api": "scpn_control.reactor_semantic_admission.admit_mif_reactor_semantic_handoff",
+              "schema": "scpn-control.reactor-semantic-admission.v1",
+              "schema_version": "1.0.0",
+              "decision": "admitted_for_review",
+              "byte_length": 964,
+              "decision_digest": "d1900dacb70893d080bd6c6902a00a68e08920d39457a4240ce89f0db0bac8c9",
+              "envelope_sha256": "50be73641cc6b4f59cc95403c6421d9442e6a19219a0ecce160cd1646385da75",
+              "review_only": true,
+              "actionable": false
+            },
+            "verification_sources": [
+              {
+                "project": "SCPN-CONTROL",
+                "repository_revision": "2b52fa6dbd888ada3456d385abdc789964b8d5cb",
+                "path": "src/scpn_control/reactor_semantic_admission/decision.py",
+                "sha256": "77108cc59b3e2d8f6c9e264607c4ccec2f32cf0625a56e359b61679fba48a25a"
+              },
+              {
+                "project": "SCPN-CONTROL",
+                "repository_revision": "2b52fa6dbd888ada3456d385abdc789964b8d5cb",
+                "path": "src/scpn_control/reactor_semantic_admission/mif_admission.py",
+                "sha256": "70fba225a498a18ec819ef82e521bca65b9f4a1924a092211c2e7e1566f98d96"
+              },
+              {
+                "project": "SCPN-CONTROL",
+                "repository_revision": "2b52fa6dbd888ada3456d385abdc789964b8d5cb",
+                "path": "tests/test_mif_reactor_semantic_admission_e2e.py",
+                "sha256": "b81d7522a815eaaaff8642321e2c9626fd84a6b28e607d376c92c1e1ceeaac02"
+              },
+              {
+                "project": "SCPN-MIF-CORE",
+                "repository_revision": "f3132574b0d4f45b29e2c27cfc2c830ee868c13e",
+                "path": "src/scpn_mif_core/interop/merge_compression_observation.py",
+                "sha256": "7ee845dd2566aebbd0324210b372900475a2f6122ef30147c16becfd9afee32e"
+              },
+              {
+                "project": "SCPN-MIF-CORE",
+                "repository_revision": "f3132574b0d4f45b29e2c27cfc2c830ee868c13e",
+                "path": "tests/fixtures/observability/mif_merge_compression_observation_v1.json",
+                "sha256": "c780706abd5a0b185a95e85767e623248388664da61126d196fcb3d528b0c0ca"
+              },
+              {
+                "project": "SCPN-MIF-CORE",
+                "repository_revision": "f3132574b0d4f45b29e2c27cfc2c830ee868c13e",
+                "path": "tests/unit/interop/test_merge_compression_observation.py",
+                "sha256": "7f7c843ae4dd988cea8d846102c9e185114e88b252650e4ff7deed7a74ab76c8"
+              },
+              {
+                "project": "SCPN-PHASE-ORCHESTRATOR",
+                "repository_revision": "e79c47c1573d18fb46202a7913dca748c55b34b1",
+                "path": "src/scpn_phase_orchestrator/reactor_semantics/mif_merge_compression.py",
+                "sha256": "a251f8290a3f5037ac5e4c4ddcd361810796919b476eff399d5d178e4317f25e"
+              },
+              {
+                "project": "SCPN-PHASE-ORCHESTRATOR",
+                "repository_revision": "e79c47c1573d18fb46202a7913dca748c55b34b1",
+                "path": "tests/test_mif_merge_compression_semantic_exchange.py",
+                "sha256": "8366dd1d3c1d7026c4d41581c079bc9fdc46768b89d9a939526263336eb99ec5"
+              }
+            ],
+            "host_independent": true,
+            "sibling_source_execution": false,
+            "physical_source_present": false,
+            "physical_observation_admitted": false,
+            "qualified_physical_phase": false,
+            "control_action_created": false,
+            "authority": "review_only",
+            "actionable": false
+          }
+        ],
         "physical_source_present": false,
         "qualified_observation": false,
         "qualified_physical_phase": false,
@@ -1224,5 +1323,5 @@
       }
     ]
   },
-  "payload_sha256": "a41d53e9c0dce5482a131ecaf996442f56c02e8b1f0737067c2d3cccb677f7d8"
+  "payload_sha256": "2ab9d4cf92c4d17fd47bad4cc5bf1778f456336ee6798943f5fd26dd3e1dba8a"
 }

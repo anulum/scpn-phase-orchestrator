@@ -32,6 +32,36 @@ it is not a claim that no implementation or experiment exists elsewhere. Likewis
 “physical source, unqualified” records custody of physical-source material without
 promoting derived time grids, channel arrays, or source labels into observations.
 
+## Sealed FRC-compression MIF review slice
+
+The `frc_compression_mif` row carries the first complete three-stage review
+receipt. It binds exact SCPN-MIF-CORE simulation envelope bytes
+`c780706abd5a0b185a95e85767e623248388664da61126d196fcb3d528b0c0ca`
+to the installed SPO `1.3.1` wheel
+`c2d7c0a5c0ad47f420fee02e54ccc28122bf8d128eb3b80ca51ba5f034320274`,
+whose MIF handoff bytes are
+`c0f03b7c49346c39342598275556e8ac28c93138ba14f6e21d6739400e0edeb2`.
+SCPN-CONTROL `0.23.0` admits those exact bytes only for review and emits the
+canonical decision envelope
+`50be73641cc6b4f59cc95403c6421d9442e6a19219a0ecce160cd1646385da75`
+with decision digest
+`d1900dacb70893d080bd6c6902a00a68e08920d39457a4240ce89f0db0bac8c9`.
+The receipt pins the exact source, test, package, and repository identities for
+all three projects and uses no sibling source execution.
+Each configuration's `review_chain_receipts` array preserves accepted exact
+receipts as distinct identities. A peer-discovered chain is added only after
+its producer, SPO handoff, CONTROL decision, byte seals, revisions, evidence
+class, and authority boundary pass the same review; an unsupported discovery
+remains a candidate or gap elsewhere in the atlas rather than a receipt.
+
+This closes the host-independent simulation-review custody chain, not the
+physical-evidence lane. The producer envelope identifies `mif_model` and
+`evidence_class=simulation`; the receipt therefore fixes
+`physical_source_present=false`, `physical_observation_admitted=false`,
+`qualified_physical_phase=false`, `control_action_created=false`,
+`authority=review_only`, and `actionable=false`. The separate physical-payload
+request and all twelve physical qualification obligations remain open.
+
 ## Design declarations are not evidence ingress
 
 Separate byte-canonical diagnostic-plan reviews exercise exact tokamak, dense-
@@ -124,7 +154,7 @@ and sealed over canonical JSON payload bytes.
 
 - Schema: `scpn-phase-orchestrator.reactor-configuration-evidence-coverage.v1`
 - Schema version: `1.0.0`
-- Payload SHA-256: `a41d53e9c0dce5482a131ecaf996442f56c02e8b1f0737067c2d3cccb677f7d8`
+- Payload SHA-256: `2ab9d4cf92c4d17fd47bad4cc5bf1778f456336ee6798943f5fd26dd3e1dba8a`
 - Configuration registry: `1.0.0` / `786d9542ce76c56dd7748fa948b17efed6c073525e527ce90e6d5e29a2d00090`
 - Observability registry: `1.0.0` / `d70c0de696534e5a77066ef8420cf7ca17bc4d7321984b0ac83523dbc1dce609`
 - Semantic-profile registry: `1.0.0` / `6ac7f3863e1a5f50af297c572ec0b80b60820a23de1a769fda6bb0a831243ec3`

@@ -21,6 +21,8 @@ from scpn_phase_orchestrator.reactor_semantics import (
     DEFAULT_REACTOR_OBSERVABILITY_PROFILE_REGISTRY,
     DEFAULT_REACTOR_REGISTRY,
     DEFAULT_REACTOR_SEMANTIC_PROFILE_REGISTRY,
+    mif_merge_compression_handoff_from_mif_bytes,
+    mif_merge_compression_handoff_to_bytes,
 )
 
 COVERAGE_PATH = Path(
@@ -28,6 +30,9 @@ COVERAGE_PATH = Path(
 )
 SCHEMA_PATH = Path("docs/specs/reactor_configuration_evidence_coverage.schema.json")
 OCCURRENCE_PATH = Path("docs/reference/data/reactor_signal_occurrence_ledger.v1.json")
+MIF_FIXTURE_PATH = Path(
+    "tests/fixtures/mif_merge_compression/mif_merge_compression_observation_v1.json"
+)
 
 EXPECTED_SOURCE_MAP = {
     "conventional_tokamak": (
@@ -243,6 +248,101 @@ def test_only_two_exact_portable_adapters_are_present() -> None:
         else:
             assert row["semantic_producerless"] is True
             assert row["semantic_producerless_reason"]
+
+
+def test_frc_mif_review_chain_receipt_seals_all_three_non_actuating_stages() -> None:
+    rows = {row["configuration"]: row for row in _rows()}
+    receipt_rows = {
+        identifier: row["review_chain_receipts"]
+        for identifier, row in rows.items()
+        if "review_chain_receipts" in row
+    }
+    receipt_ids = [
+        receipt["receipt_id"]
+        for configuration, receipts in receipt_rows.items()
+        for receipt in receipts
+        if receipt["configuration"] == configuration
+    ]
+
+    assert set(receipt_rows) == {"frc_compression_mif"}
+    assert len(receipt_ids) == sum(len(receipts) for receipts in receipt_rows.values())
+    assert len(receipt_ids) == len(set(receipt_ids))
+    assert len(receipt_rows["frc_compression_mif"]) == 1
+    receipt = receipt_rows["frc_compression_mif"][0]
+    assert receipt["receipt_id"] == "frc_compression_mif.simulation_review.v1"
+    assert receipt["configuration"] == "frc_compression_mif"
+    assert receipt["evidence_class"] == "simulation"
+
+    source_bytes = MIF_FIXTURE_PATH.read_bytes()
+    assert len(source_bytes) == receipt["producer"]["byte_length"] == 2_475
+    assert (
+        hashlib.sha256(source_bytes).hexdigest()
+        == receipt["producer"]["envelope_sha256"]
+    )
+    assert receipt["producer"]["envelope_sha256"] == (
+        "c780706abd5a0b185a95e85767e623248388664da61126d196fcb3d528b0c0ca"
+    )
+    handoff = mif_merge_compression_handoff_from_mif_bytes(
+        source_bytes,
+        expected_sha256=receipt["producer"]["envelope_sha256"],
+    )
+    handoff_bytes = mif_merge_compression_handoff_to_bytes(handoff)
+    assert len(handoff_bytes) == receipt["semantic_handoff"]["byte_length"] == 101_652
+    assert (
+        hashlib.sha256(handoff_bytes).hexdigest()
+        == receipt["semantic_handoff"]["envelope_sha256"]
+    )
+    assert receipt["semantic_handoff"]["envelope_sha256"] == (
+        "c0f03b7c49346c39342598275556e8ac28c93138ba14f6e21d6739400e0edeb2"
+    )
+
+    assert receipt["semantic_handoff"]["package_version"] == "1.3.1"
+    assert receipt["semantic_handoff"]["package_source_revision"] == (
+        "c2a7581d58819060806c6f173da941c822103695"
+    )
+    assert receipt["semantic_handoff"]["package_wheel_sha256"] == (
+        "c2d7c0a5c0ad47f420fee02e54ccc28122bf8d128eb3b80ca51ba5f034320274"
+    )
+    assert receipt["control_review"] == {
+        "project": "SCPN-CONTROL",
+        "package_version": "0.23.0",
+        "receiver_api": (
+            "scpn_control.reactor_semantic_admission.admit_mif_reactor_semantic_handoff"
+        ),
+        "schema": "scpn-control.reactor-semantic-admission.v1",
+        "schema_version": "1.0.0",
+        "decision": "admitted_for_review",
+        "byte_length": 964,
+        "decision_digest": (
+            "d1900dacb70893d080bd6c6902a00a68e08920d39457a4240ce89f0db0bac8c9"
+        ),
+        "envelope_sha256": (
+            "50be73641cc6b4f59cc95403c6421d9442e6a19219a0ecce160cd1646385da75"
+        ),
+        "review_only": True,
+        "actionable": False,
+    }
+    assert {source["project"] for source in receipt["verification_sources"]} == {
+        "SCPN-MIF-CORE",
+        "SCPN-PHASE-ORCHESTRATOR",
+        "SCPN-CONTROL",
+    }
+    assert len(receipt["verification_sources"]) == 8
+    assert [
+        (source["project"], source["path"])
+        for source in receipt["verification_sources"]
+    ] == sorted(
+        (source["project"], source["path"])
+        for source in receipt["verification_sources"]
+    )
+    assert receipt["host_independent"] is True
+    assert receipt["sibling_source_execution"] is False
+    assert receipt["physical_source_present"] is False
+    assert receipt["physical_observation_admitted"] is False
+    assert receipt["qualified_physical_phase"] is False
+    assert receipt["control_action_created"] is False
+    assert receipt["authority"] == "review_only"
+    assert receipt["actionable"] is False
 
 
 def test_no_row_inherits_observation_phase_or_actuation_authority() -> None:
