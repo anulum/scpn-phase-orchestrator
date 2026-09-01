@@ -32,6 +32,15 @@ it is not a claim that no implementation or experiment exists elsewhere. Likewis
 “physical source, unqualified” records custody of physical-source material without
 promoting derived time grids, channel arrays, or source labels into observations.
 
+## Design declarations are not evidence ingress
+
+Separate byte-canonical diagnostic-plan reviews exercise exact tokamak and
+dense-plasma-focus producer fixtures. These are design declarations about
+intended channels, clocks, carriers, and evidence slots; they contain no sampled
+signal values. Consequently, the dense-plasma-focus fixture does not change its
+matrix row: it still has no configuration-specific source evidence, no semantic
+producer, and `semantic_ingress_state=not_declared`.
+
 ## Exact matrix
 
 Occurrence IDs resolve into the [reactor signal occurrence ledger](reactor_signal_occurrence_ledger.md).

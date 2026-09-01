@@ -98,6 +98,14 @@ binding, classification, semantic ingress, control intent, action, or actuation
 is created. The portable envelope is defined by
 [`device_diagnostic_plan_review.schema.json`](../../specs/device_diagnostic_plan_review.schema.json).
 
+Exact producer fixtures currently exercise this intake for tokamak and dense-
+plasma-focus device plans. The dense-plasma-focus review keeps a shot-relative
+discharge-current `event_cycle`, a facility-clocked neck-mode `complex_mode`,
+and a simulation-clocked `numerical_phase` distinct. Its facility clock remains
+unmapped, its event timing uncertainty remains explicit, and its semantic-
+ingress profile remains `not_declared`. Passing this design review does not add
+source evidence to the reactor configuration evidence matrix.
+
 ## FAIR-MAST magnetic physical-source review
 
 `mast_magnetic_source_review_from_producer_bytes()` accepts the exact canonical

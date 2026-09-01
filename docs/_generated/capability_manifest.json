@@ -12,7 +12,7 @@
     "research_experimental_modules": 205,
     "runtime_serving_modules": 158,
     "rust_kernel_files": 97,
-    "test_files": 898
+    "test_files": 899
   },
   "documentation": {
     "public_pages": [
@@ -2109,6 +2109,7 @@
       "tests/test_delay_benchmark.py",
       "tests/test_delay_config_validation.py",
       "tests/test_delayed_engine_workflow.py",
+      "tests/test_dense_plasma_focus_diagnostic_plan_review.py",
       "tests/test_detector_meta_analysis.py",
       "tests/test_deterministic.py",
       "tests/test_diagnostic_plan_review.py",
