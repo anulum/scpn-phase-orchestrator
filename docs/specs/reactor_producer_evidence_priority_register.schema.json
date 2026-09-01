@@ -115,7 +115,7 @@
                   "minLength": 1
                 },
                 "schema_version": {
-                  "const": "1.1.0"
+                  "const": "1.2.0"
                 },
                 "payload_sha256": {
                   "type": "string",

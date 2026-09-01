@@ -130,8 +130,9 @@ def test_reactor_diagnostic_plan_portfolio_status_is_fail_closed() -> None:
     required = (
         "**20 producers** were examined",
         "**20 fixtures** are structurally accepted",
-        "**11 fixtures** have byte-identical SPO custody",
-        "**9 fixtures** remain digest-pinned public producer objects",
+        "**0 current fixtures** have byte-identical SPO custody",
+        "**20 fixtures** are digest-pinned public producer objects",
+        "**140/140 hosted workflows** completed successfully",
         "**0 fixtures** constitute a qualified physical observation",
         "previously missing `timing_uncertainty_s` member is now explicit",
         "producer bytes were not changed for that consumer defect",

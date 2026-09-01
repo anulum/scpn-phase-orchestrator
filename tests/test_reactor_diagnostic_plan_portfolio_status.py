@@ -46,17 +46,16 @@ EXPECTED_ACCEPTED = {
     "SCPN-STELLARATOR-CORE",
 }
 EXPECTED_REFUSED: set[str] = set()
-EXPECTED_VERIFIED_PUBLIC = {
-    "SCPN-FRC-CORE",
-    "SCPN-FUSION-FISSION-HYBRID-CORE",
-    "SCPN-IEC-CORE",
-    "SCPN-LEVITATED-DIPOLE-CORE",
-    "SCPN-MAGNETIC-CUSP-CORE",
-    "SCPN-MIRROR-CORE",
-    "SCPN-RFP-CORE",
-    "SCPN-SPHEROMAK-CORE",
-    "SCPN-STELLARATOR-CORE",
-}
+EXPECTED_VERIFIED_PUBLIC = EXPECTED_ACCEPTED
+EXPECTED_WORKFLOWS = (
+    "CI",
+    "CodeQL",
+    "Docs",
+    "Pre-commit",
+    "SBOM",
+    "Scorecard",
+    "Security audit",
+)
 
 
 def _load(path: Path) -> dict[str, object]:
@@ -86,6 +85,8 @@ def test_status_matches_strict_schema_and_payload_seal() -> None:
 
     Draft202012Validator.check_schema(schema)
     Draft202012Validator(schema).validate(status)
+    assert status["schema_version"] == "1.2.0"
+    assert status["payload"]["review_contract"].endswith("@1.2.0")
     assert (
         status["payload_sha256"]
         == hashlib.sha256(_canonical(status["payload"])).hexdigest()
@@ -130,7 +131,7 @@ def test_summary_counts_are_derived_from_rows() -> None:
     }
 
 
-def test_accepted_rows_bind_existing_byte_identical_custody() -> None:
+def test_accepted_rows_bind_verified_public_objects_and_hosted_runs() -> None:
     for row in _rows():
         if row["structural_status"] != "accepted":
             continue
@@ -139,21 +140,34 @@ def test_accepted_rows_bind_existing_byte_identical_custody() -> None:
         assert row["missing_required_members"] == []
         assert row["affected_channel_ids"] == []
 
-        if row["project"] in EXPECTED_VERIFIED_PUBLIC:
-            assert row["custody_state"] == "verified_public_producer_object"
-            assert row["custody_fixture_path"] is None
-            assert row["custody_bytes_equal"] is False
-        else:
-            custody_path = row["custody_fixture_path"]
-            assert isinstance(custody_path, str)
-            fixture = Path(custody_path)
-            assert fixture.is_file()
-            assert (
-                hashlib.sha256(fixture.read_bytes()).hexdigest()
-                == row["fixture_sha256"]
-            )
-            assert row["custody_state"] == "exact_fixture_custody"
-            assert row["custody_bytes_equal"] is True
+        assert row["project"] in EXPECTED_VERIFIED_PUBLIC
+        assert row["custody_state"] == "verified_public_producer_object"
+        assert row["custody_fixture_path"] is None
+        assert row["custody_bytes_equal"] is False
+        assert row["remote_head_verified"] is True
+        run_ids = row["hosted_ci_run_ids"]
+        assert len(run_ids) == len(EXPECTED_WORKFLOWS)
+        assert len(set(run_ids)) == len(run_ids)
+        assert all(isinstance(run_id, int) and run_id > 0 for run_id in run_ids)
+
+
+def test_remote_verification_is_exact_and_non_scientific() -> None:
+    payload = _load(STATUS_PATH)["payload"]
+    assert isinstance(payload, dict)
+    verification = payload["remote_verification"]
+    run_ids = [run_id for row in _rows() for run_id in row["hosted_ci_run_ids"]]
+    assert verification["default_branch"] == "main"
+    assert verification["remote_head_matches"] == 20
+    assert verification["remote_head_mismatches"] == 0
+    assert tuple(verification["workflow_names"]) == EXPECTED_WORKFLOWS
+    assert verification["hosted_workflows_expected"] == 140
+    assert verification["hosted_workflows_successful"] == 140
+    assert verification["hosted_workflows_failed"] == 0
+    assert verification["hosted_workflows_cancelled"] == 0
+    assert verification["run_attempt"] == 1
+    assert len(run_ids) == 140
+    assert len(set(run_ids)) == len(run_ids)
+    assert "not physical or operational evidence" in verification["evidence_boundary"]
 
 
 def test_refused_rows_preserve_the_exact_producer_owned_gap() -> None:
@@ -179,8 +193,9 @@ def test_public_reference_explains_acceptance_refusal_and_fix_forward() -> None:
     for marker in (
         "**20 producers** were examined",
         "**20 fixtures** are structurally accepted",
-        "**11 fixtures** have byte-identical SPO custody",
-        "**9 fixtures** remain digest-pinned public producer objects",
+        "**0 current fixtures** have byte-identical SPO custody",
+        "**20 fixtures** are digest-pinned public producer objects",
+        "**140/140 hosted workflows** completed successfully",
         "**0 fixtures** constitute a qualified physical observation",
         "20 accepted / 0 refused",
         "reactor_diagnostic_plan_portfolio_status.v1.json",

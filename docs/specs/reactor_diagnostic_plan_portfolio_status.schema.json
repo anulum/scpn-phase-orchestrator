@@ -60,6 +60,13 @@
         "observed_revision": {"$ref": "#/$defs/sha1"},
         "manifest_sha256": {"$ref": "#/$defs/sha256"},
         "fixture_sha256": {"$ref": "#/$defs/sha256"},
+        "hosted_ci_run_ids": {
+          "items": {"minimum": 1, "type": "integer"},
+          "maxItems": 7,
+          "minItems": 7,
+          "type": "array",
+          "uniqueItems": true
+        },
         "structural_status": {"enum": ["accepted", "refused"], "type": "string"},
         "custody_state": {
           "enum": ["exact_fixture_custody", "verified_public_producer_object", "producer_fix_required"],
@@ -83,7 +90,8 @@
         "physical_phase_qualified": {"const": false},
         "authority": {"const": "review_only"},
         "actionable": {"const": false},
-        "direct_actuation_authorized": {"const": false}
+        "direct_actuation_authorized": {"const": false},
+        "remote_head_verified": {"const": true}
       },
       "required": [
         "project",
@@ -92,6 +100,7 @@
         "observed_revision",
         "manifest_sha256",
         "fixture_sha256",
+        "hosted_ci_run_ids",
         "structural_status",
         "custody_state",
         "custody_fixture_path",
@@ -104,7 +113,8 @@
         "physical_phase_qualified",
         "authority",
         "actionable",
-        "direct_actuation_authorized"
+        "direct_actuation_authorized",
+        "remote_head_verified"
       ],
       "type": "object"
     }
@@ -115,7 +125,7 @@
   "description": "Digest-sealed, review-only structural status of the 20 Reactor Systems diagnostic-plan producers, separating exact SPO fixture custody from digest-pinned public producer objects and producer-side gaps.",
   "properties": {
     "schema": {"const": "scpn-phase-orchestrator.reactor-diagnostic-plan-portfolio-status.v1"},
-    "schema_version": {"const": "1.1.0"},
+    "schema_version": {"const": "1.2.0"},
     "payload": {
       "additionalProperties": false,
       "properties": {
@@ -124,7 +134,7 @@
         "producer_fixture_path": {"const": "tests/data/plan_envelope_fixture.json"},
         "producer_manifest_path": {"const": "reactor-domain.json"},
         "review_api": {"const": "scpn_phase_orchestrator.reactor_semantics.device_diagnostic_plan_review_from_producer_bytes"},
-        "review_contract": {"const": "scpn.reactor-diagnostic-plan-envelope.v1@1.1.0"},
+        "review_contract": {"const": "scpn.reactor-diagnostic-plan-envelope.v1@1.2.0"},
         "classification_rule": {"minLength": 1, "type": "string"},
         "authority": {"const": "review_only"},
         "actionable": {"const": false},
@@ -137,8 +147,8 @@
             "producers": {"const": 20},
             "structurally_accepted": {"const": 20},
             "structurally_refused": {"const": 0},
-            "exact_fixture_custody": {"const": 11},
-            "verified_public_producer_object": {"const": 9},
+            "exact_fixture_custody": {"const": 0},
+            "verified_public_producer_object": {"const": 20},
             "producer_fix_required": {"const": 0},
             "qualified_physical_observations": {"const": 0},
             "qualified_physical_phases": {"const": 0}
@@ -152,6 +162,41 @@
             "producer_fix_required",
             "qualified_physical_observations",
             "qualified_physical_phases"
+          ],
+          "type": "object"
+        },
+        "remote_verification": {
+          "additionalProperties": false,
+          "properties": {
+            "verified_at": {"format": "date-time", "type": "string"},
+            "default_branch": {"const": "main"},
+            "remote_head_matches": {"const": 20},
+            "remote_head_mismatches": {"const": 0},
+            "workflow_names": {
+              "const": ["CI", "CodeQL", "Docs", "Pre-commit", "SBOM", "Scorecard", "Security audit"],
+              "type": "array"
+            },
+            "hosted_workflows_expected": {"const": 140},
+            "hosted_workflows_successful": {"const": 140},
+            "hosted_workflows_failed": {"const": 0},
+            "hosted_workflows_cancelled": {"const": 0},
+            "run_attempt": {"const": 1},
+            "receipt_payload_sha256": {"$ref": "#/$defs/sha256"},
+            "evidence_boundary": {"minLength": 1, "type": "string"}
+          },
+          "required": [
+            "verified_at",
+            "default_branch",
+            "remote_head_matches",
+            "remote_head_mismatches",
+            "workflow_names",
+            "hosted_workflows_expected",
+            "hosted_workflows_successful",
+            "hosted_workflows_failed",
+            "hosted_workflows_cancelled",
+            "run_attempt",
+            "receipt_payload_sha256",
+            "evidence_boundary"
           ],
           "type": "object"
         },
@@ -176,6 +221,7 @@
         "physical_phase_qualified",
         "direct_actuation_authorized",
         "counts",
+        "remote_verification",
         "producers"
       ],
       "type": "object"

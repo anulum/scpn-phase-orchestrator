@@ -2,7 +2,7 @@
   "schema": "scpn-phase-orchestrator.reactor-producer-evidence-priority-register.v1",
   "schema_version": "1.0.0",
   "payload": {
-    "observed_at": "2026-09-02T00:49:00+02:00",
+    "observed_at": "2026-09-02T01:11:19+02:00",
     "method": "Deterministic readiness precedence over exact current SPO evidence state: reviewed physical source, then exercised byte-canonical review adapter, then a structurally accepted exact producer diagnostic plan, then a refused plan requiring repair. Exact local fixture custody is a separate readiness axis. External evidence rank is context and never changes the lane.",
     "non_scalar_priority_policy": "No opaque or additive score is emitted. Rows within one lane are deliberately unordered. Selection within a lane requires explicit review of safety value, calibrated machine-readable data availability, clock/reference/operator completeness, uncertainty, validity, quality, provenance, observability gates, independent validation, and producer capacity.",
     "source_bindings": {
@@ -16,9 +16,9 @@
       "diagnostic_plan_portfolio_status": {
         "path": "docs/reference/data/reactor_diagnostic_plan_portfolio_status.v1.json",
         "schema": "scpn-phase-orchestrator.reactor-diagnostic-plan-portfolio-status.v1",
-        "schema_version": "1.1.0",
-        "payload_sha256": "ceb01c4818a2282aed61bcbaa458a8ba6a0b56bd6569f702c6aee0f266f73e7a",
-        "file_sha256": "12eee1255e569d3dcfbc921b2320c17185c81eff8ab070c27a8df8443d1406c6"
+        "schema_version": "1.2.0",
+        "payload_sha256": "33a4609e1f45de3d9e5c7522cbfa8b16227014205f066fd60855971ca41859da",
+        "file_sha256": "0c1e4f3c294efd6b0466cc68ace72c222b18aebbda575153baf62aa60c6b6ac0"
       },
       "signal_occurrence_ledger": {
         "path": "docs/reference/data/reactor_signal_occurrence_ledger.v1.json",
@@ -3085,5 +3085,5 @@
     "direct_actuation_authorized": false,
     "machine_protection_final_veto": true
   },
-  "payload_sha256": "eb4f4d476581ed9490417fca10fa7cefcd859354ddd3e660f03cf24b158c5bbb"
+  "payload_sha256": "9ac5978b86d8610eafa5810db40b07c33c21ab0dc56df2014d57872965186962"
 }
