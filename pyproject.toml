@@ -229,6 +229,8 @@ convention = "numpy"
 
 [tool.mypy]
 strict = true
+explicit_package_bases = true
+mypy_path = ["$MYPY_CONFIG_FILE_DIR/src", "$MYPY_CONFIG_FILE_DIR"]
 
 [[tool.mypy.overrides]]
 module = ["scpn_phase_orchestrator.runtime.grpc_gen.spo_pb2", "scpn_phase_orchestrator.runtime.grpc_gen.spo_pb2_grpc"]

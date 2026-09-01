@@ -1,4 +1,9 @@
 {
+  "explicit_package_bases": true,
+  "mypy_path": [
+    "$MYPY_CONFIG_FILE_DIR/src",
+    "$MYPY_CONFIG_FILE_DIR"
+  ],
   "overrides": [
     {
       "modules": [

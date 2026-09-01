@@ -14,8 +14,9 @@ base strictness plus every ``[[tool.mypy.overrides]]`` block and the exact
 settings it relaxes. A committed snapshot plus the companion test
 (``tests/test_mypy_strict_surface.py``) means any new relaxation — a fresh
 ``ignore_errors``, a widened ``follow_imports`` — fails CI until the snapshot is
-updated on purpose, so strict-coverage erosion is visible in review rather than
-silent.
+updated on purpose. The snapshot also seals explicit package-base resolution
+and config-relative import roots so the gate cannot silently lose files through
+ambiguous module discovery.
 
 Usage::
 
@@ -49,8 +50,9 @@ def compute_strict_surface(pyproject_path: Path) -> dict[str, Any]:
     Returns
     -------
     dict[str, Any]
-        A mapping with ``strict`` (the base flag) and ``overrides`` (a sorted
-        list of ``{"modules": [...], "settings": {...}}`` entries, one per
+        A mapping with the base strictness and package-resolution settings plus
+        ``overrides`` (a sorted list of
+        ``{"modules": [...], "settings": {...}}`` entries, one per
         ``[[tool.mypy.overrides]]`` block, with every key except ``module``).
     """
     data = tomllib.loads(pyproject_path.read_text(encoding="utf-8"))
@@ -65,7 +67,12 @@ def compute_strict_surface(pyproject_path: Path) -> dict[str, Any]:
         }
         overrides.append({"modules": modules, "settings": settings})
     overrides.sort(key=lambda entry: (entry["modules"], sorted(entry["settings"])))
-    return {"strict": bool(mypy.get("strict", False)), "overrides": overrides}
+    return {
+        "explicit_package_bases": bool(mypy.get("explicit_package_bases", False)),
+        "mypy_path": mypy.get("mypy_path", []),
+        "overrides": overrides,
+        "strict": bool(mypy.get("strict", False)),
+    }
 
 
 def render_snapshot(surface: dict[str, Any]) -> str:

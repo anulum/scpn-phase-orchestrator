@@ -8,9 +8,9 @@
 
 """Guard the committed mypy strict-surface snapshot against silent drift.
 
-The snapshot enumerates the base ``strict`` flag and every
-``[[tool.mypy.overrides]]`` relaxation. If a future change adds, widens, or
-removes a relaxation without updating the snapshot, this test fails — making
+The snapshot enumerates the base ``strict`` flag, package-root resolution, and
+every ``[[tool.mypy.overrides]]`` relaxation. If a future change adds, widens,
+or removes a relaxation without updating the snapshot, this test fails — making
 strict-coverage changes a deliberate, reviewed act instead of a silent one.
 """
 
@@ -22,6 +22,12 @@ from types import ModuleType
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 _TOOL_PATH = _REPO_ROOT / "tools" / "mypy_strict_surface.py"
+_STATIC_ANALYSIS_WORKFLOW = (
+    _REPO_ROOT / ".github" / "workflows" / "ci-static-analysis.yml"
+)
+_STRICT_COMMAND = (
+    "mypy --strict --explicit-package-bases src/scpn_phase_orchestrator/ tools/"
+)
 
 
 def _load_tool() -> ModuleType:
@@ -49,6 +55,30 @@ def test_base_strict_flag_is_enabled() -> None:
     tool = _load_tool()
     surface = tool.compute_strict_surface(tool.PYPROJECT_PATH)
     assert surface["strict"] is True
+
+
+def test_package_roots_are_explicit_and_config_relative() -> None:
+    """Keep source and tool module identities stable across runner hosts."""
+    tool = _load_tool()
+    surface = tool.compute_strict_surface(tool.PYPROJECT_PATH)
+
+    assert surface["explicit_package_bases"] is True
+    assert surface["mypy_path"] == [
+        "$MYPY_CONFIG_FILE_DIR/src",
+        "$MYPY_CONFIG_FILE_DIR",
+    ]
+
+
+def test_static_analysis_workflow_invokes_strict_surface_explicitly() -> None:
+    """Make both strictness and package-base resolution visible in CI."""
+    source = _STATIC_ANALYSIS_WORKFLOW.read_text(encoding="utf-8")
+    mypy_steps = [
+        line.removeprefix("      - run: ")
+        for line in source.splitlines()
+        if line.startswith("      - run: ") and "mypy" in line
+    ]
+
+    assert mypy_steps == [_STRICT_COMMAND]
 
 
 def test_no_first_party_module_disables_type_checking() -> None:
