@@ -7,6 +7,10 @@
     {
       "module": "scpn_phase_orchestrator.reactor_semantics.mif_merge_compression",
       "reason": "reviewed single strict MIF merge-compression decode, validation, projection, and canonical handoff pipeline; AST top-level call graph is one 35-symbol, 66-edge connected component"
+    },
+    {
+      "module": "scpn_phase_orchestrator.reactor_semantics.mast_magnetic_review",
+      "reason": "reviewed single strict paired FAIR-MAST archive and qualification decode, cross-source validation, review projection, and canonical sealing pipeline; splitting would create a second internal contract across one atomic custody check"
     }
   ]
 }

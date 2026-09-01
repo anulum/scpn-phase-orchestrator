@@ -98,6 +98,40 @@ binding, classification, semantic ingress, control intent, action, or actuation
 is created. The portable envelope is defined by
 [`device_diagnostic_plan_review.schema.json`](../../specs/device_diagnostic_plan_review.schema.json).
 
+## FAIR-MAST magnetic physical-source review
+
+`mast_magnetic_source_review_from_producer_bytes()` accepts the exact canonical
+complete-magnetic archive envelope and diagnostic-qualification bytes emitted
+by SCPN-FUSION-CORE. The intake imports no sibling package. Its caller must pin
+the full producer Git revision and the SHA-256 of the exact producer wheel;
+the review separately preserves both source documents, their outer and payload
+digests, the FAIR-MAST ingestion revision, and the source tree state.
+
+The v1 contract is deliberately specific to the complete shot-27707 FAIR-MAST
+inventory: 72 arrays, 11 measurement families, 132 qualified channel records,
+and four reproduced archive grids. Every array, clock, measurement, empirical-
+quality row, channel-quality row, identifier-only geometry row, completeness
+claim, event limitation, and archive-to-qualification binding is replayed from
+the embedded bytes. SCPN-FUSION-CORE is the physical-evidence producer;
+SCPN-TOKAMAK-CORE remains the spherical-tokamak device owner. This review does
+not alter the semantic-profile registry's `not_declared` producer state.
+
+The producer qualification records applied transforms, but it supplies no
+calibration lineage or transfer functions. It also supplies no physical
+geometry join, provider quality flags, uncertainty, instrument-clock relation,
+or resolved facility event identity. The four clock rows are therefore only
+shot-relative candidates for derived archive grids. They are not instrument
+clocks and are not mapped to facility, plant-monotonic, simulation-monotonic,
+or wall time.
+
+`MastMagneticSourceReview` records authentic physical-source custody while
+fixing `observation_admitted=false`, `qualified_phase_evidence=false`,
+`phase_inference_performed=false`, `semantic_ingress_declared=false`, and
+`classification_performed=false`. It cannot create CONTROL intent, execution
+permission, direct actuation, or actionability; independent machine protection
+retains the final veto. The canonical review envelope is defined by
+[`mast_magnetic_source_review.schema.json`](../../specs/mast_magnetic_source_review.schema.json).
+
 `DEFAULT_REACTOR_REGIME_MODE_ONTOLOGY` closes the remaining open-text meaning
 above U0 without changing the U0 `1.0.0` wire format. It defines eight
 independent axes: plant readiness, diagnostic observability, confinement or
@@ -449,6 +483,11 @@ assessment and research-intent envelopes.
       show_source: false
 
 ::: scpn_phase_orchestrator.reactor_semantics.handoff
+    options:
+      show_root_heading: true
+      show_source: false
+
+::: scpn_phase_orchestrator.reactor_semantics.mast_magnetic_review
     options:
       show_root_heading: true
       show_source: false

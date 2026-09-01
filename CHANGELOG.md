@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- A full-fidelity FAIR-MAST magnetic physical-source review intake verifies
+  exact SCPN-FUSION-CORE archive, qualification, source revision, and producer-
+  wheel identities; replays all 72 arrays, 11 measurement families, 132
+  channel records, and four derived clock grids; and preserves unresolved
+  calibration, geometry, event, observation-operator, quality, clock,
+  uncertainty, and validity boundaries without admitting a phase observation,
+  semantic ingress, classification, CONTROL intent, action, or actuation.
 - A reactor-family-neutral, byte-canonical and digest-sealed device diagnostic-
   plan review intake validates exact producer source, wheel, manifest,
   envelope, plan, registry, candidate, carrier, evidence-slot, frame, and clock

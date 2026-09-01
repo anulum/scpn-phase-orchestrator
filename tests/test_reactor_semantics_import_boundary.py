@@ -46,6 +46,7 @@ def test_every_reactor_semantics_submodule_avoids_optional_runtime_graph() -> No
         import scpn_phase_orchestrator.reactor_semantics.diagnostic_plan_review
         import scpn_phase_orchestrator.reactor_semantics.evidence
         import scpn_phase_orchestrator.reactor_semantics.handoff
+        import scpn_phase_orchestrator.reactor_semantics.mast_magnetic_review
         import scpn_phase_orchestrator.reactor_semantics.mif_merge_compression
         import scpn_phase_orchestrator.reactor_semantics.observability_profiles
         import scpn_phase_orchestrator.reactor_semantics.reference_portfolio
@@ -64,6 +65,7 @@ def test_every_reactor_semantics_submodule_avoids_optional_runtime_graph() -> No
             "scpn_phase_orchestrator.reactor_semantics.diagnostic_plan_review",
             "scpn_phase_orchestrator.reactor_semantics.evidence",
             "scpn_phase_orchestrator.reactor_semantics.handoff",
+            "scpn_phase_orchestrator.reactor_semantics.mast_magnetic_review",
             "scpn_phase_orchestrator.reactor_semantics.mif_merge_compression",
             "scpn_phase_orchestrator.reactor_semantics.observability_profiles",
             "scpn_phase_orchestrator.reactor_semantics.reference_portfolio",
@@ -111,6 +113,7 @@ def test_every_reactor_semantics_submodule_avoids_optional_runtime_graph() -> No
             "scpn_phase_orchestrator.reactor_semantics.diagnostic_plan_review",
             "scpn_phase_orchestrator.reactor_semantics.evidence",
             "scpn_phase_orchestrator.reactor_semantics.handoff",
+            "scpn_phase_orchestrator.reactor_semantics.mast_magnetic_review",
             "scpn_phase_orchestrator.reactor_semantics.mif_merge_compression",
             "scpn_phase_orchestrator.reactor_semantics.observability_profiles",
             "scpn_phase_orchestrator.reactor_semantics.reference_portfolio",

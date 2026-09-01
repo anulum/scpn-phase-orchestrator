@@ -42,6 +42,13 @@ def test_reactor_semantics_reference_preserves_u0_boundaries() -> None:
         "device_diagnostic_plan_review_from_producer_bytes()",
         "device_diagnostic_plan_review.schema.json",
         "simulation-monotonic evidence to wall time implicitly",
+        "FAIR-MAST magnetic physical-source review",
+        "mast_magnetic_source_review_from_producer_bytes()",
+        "72 arrays, 11 measurement families, 132 qualified channel records",
+        "not instrument clocks",
+        "observation_admitted=false",
+        "qualified_phase_evidence=false",
+        "mast_magnetic_source_review.schema.json",
     )
 
     for marker in required:
