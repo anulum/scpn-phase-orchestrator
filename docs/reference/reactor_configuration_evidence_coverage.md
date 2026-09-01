@@ -35,15 +35,15 @@ promoting derived time grids, channel arrays, or source labels into observations
 ## Design declarations are not evidence ingress
 
 Separate byte-canonical diagnostic-plan reviews exercise exact tokamak, dense-
-plasma-focus, theta-pinch, MagLIF, mechanical-or-liquid-liner MIF, plasma-jet
-MIF, laser-ICF, ICF-beam, and ICF-impact producer fixtures. These are design
+plasma-focus, theta-pinch, Z-pinch, MagLIF, mechanical-or-liquid-liner MIF,
+plasma-jet MIF, laser-ICF, ICF-beam, and ICF-impact producer fixtures. These are design
 declarations about intended channels, clocks, carriers, and evidence slots;
 they contain no sampled signal values. Consequently, dense plasma focus, the
-theta pinch, the three MIF configurations, the three laser-ICF configurations,
-the two ICF-beam configurations, and the ICF-impact configuration do not change
-their eleven matrix rows: each still has no configuration-specific source
-evidence, no semantic
-producer, and `semantic_ingress_state=not_declared`. Neither MagLIF,
+theta pinch, the two Z-pinch configurations, the three MIF configurations, the
+three laser-ICF configurations, the two ICF-beam configurations, and the
+ICF-impact configuration do not change their thirteen matrix rows: each still
+has no configuration-specific source evidence, no semantic producer, and
+`semantic_ingress_state=not_declared`. Neither MagLIF,
 mechanical-or-liquid-liner MIF, nor plasma-jet MIF inherits the verified
 `frc_compression_mif` adapter merely because they are magneto-inertial
 configurations; the three MIF design reviews also do not provide evidence for
@@ -54,7 +54,9 @@ provide evidence for one another or inherit evidence from laser, projectile,
 impact, or generic beam-target configurations. Projectile-or-impact ICF does
 not inherit evidence from any laser or beam-driven ICF design review. Theta
 pinch likewise inherits no evidence from dense plasma focus, z-pinch, or any
-other self-magnetic configuration.
+other self-magnetic configuration. The shared Z-pinch design review does not
+equate `z_pinch` with `sheared_flow_z_pinch`, provide evidence to either, or
+inherit evidence from theta pinch or dense plasma focus.
 
 ## Exact matrix
 

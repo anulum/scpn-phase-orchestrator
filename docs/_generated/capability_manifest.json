@@ -12,7 +12,7 @@
     "research_experimental_modules": 205,
     "runtime_serving_modules": 158,
     "rust_kernel_files": 97,
-    "test_files": 906
+    "test_files": 907
   },
   "documentation": {
     "public_pages": [
@@ -2812,6 +2812,7 @@
       "tests/test_winding_stability.py",
       "tests/test_winding_validation_guards.py",
       "tests/test_winfree.py",
+      "tests/test_z_pinch_diagnostic_plan_review.py",
       "tests/typing_contracts.py"
     ]
   },
