@@ -12,7 +12,7 @@
     "research_experimental_modules": 205,
     "runtime_serving_modules": 158,
     "rust_kernel_files": 97,
-    "test_files": 903
+    "test_files": 904
   },
   "documentation": {
     "public_pages": [
@@ -2267,6 +2267,7 @@
       "tests/test_hypergraph_stability.py",
       "tests/test_hypergraph_validation_guards.py",
       "tests/test_ibr_ride_through.py",
+      "tests/test_icf_beam_diagnostic_plan_review.py",
       "tests/test_icf_laser_diagnostic_plan_review.py",
       "tests/test_identity_coherence.py",
       "tests/test_imprint_actuation.py",
