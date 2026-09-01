@@ -776,42 +776,37 @@
               "const": "configuration_specific_canonical_evidence_envelope"
             },
             "required_evidence": {
-              "type": "array",
-              "prefixItems": [
+              "oneOf": [
                 {
-                  "const": "physical_sample"
+                  "const": [
+                    "physical_sample",
+                    "phenomenon_identity",
+                    "reference",
+                    "clock_epoch",
+                    "observation_operator_or_calibration",
+                    "uncertainty",
+                    "validity",
+                    "quality",
+                    "provenance",
+                    "observability_gate"
+                  ]
                 },
                 {
-                  "const": "phenomenon_identity"
-                },
-                {
-                  "const": "reference"
-                },
-                {
-                  "const": "clock_epoch"
-                },
-                {
-                  "const": "observation_operator_or_calibration"
-                },
-                {
-                  "const": "uncertainty"
-                },
-                {
-                  "const": "validity"
-                },
-                {
-                  "const": "quality"
-                },
-                {
-                  "const": "provenance"
-                },
-                {
-                  "const": "observability_gate"
+                  "const": [
+                    "physical_sample",
+                    "phenomenon_identity",
+                    "reference",
+                    "clock_epoch",
+                    "observation_operator_or_calibration",
+                    "uncertainty",
+                    "validity",
+                    "plant_truth_state_semantics",
+                    "quality",
+                    "provenance",
+                    "observability_gate"
+                  ]
                 }
-              ],
-              "items": false,
-              "minItems": 10,
-              "maxItems": 10
+              ]
             },
             "lane_blockers": {
               "$ref": "#/$defs/stringArray"
@@ -844,7 +839,7 @@
                   "minLength": 1
                 },
                 "schema_version": {
-                  "const": "1.0.0"
+                  "enum": ["1.0.0", "1.1.0"]
                 }
               }
             },

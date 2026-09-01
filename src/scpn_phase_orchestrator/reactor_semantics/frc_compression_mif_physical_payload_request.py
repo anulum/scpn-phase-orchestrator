@@ -30,7 +30,7 @@ from .semantic_profiles import DEFAULT_REACTOR_SEMANTIC_PROFILE_REGISTRY
 FRC_COMPRESSION_MIF_PHYSICAL_PAYLOAD_REQUEST_SCHEMA: Final = (
     "scpn-phase-orchestrator.frc-compression-mif-physical-payload-request.v1"
 )
-FRC_COMPRESSION_MIF_PHYSICAL_PAYLOAD_REQUEST_VERSION: Final = "1.0.0"
+FRC_COMPRESSION_MIF_PHYSICAL_PAYLOAD_REQUEST_VERSION: Final = "1.1.0"
 MAX_FRC_COMPRESSION_MIF_PHYSICAL_PAYLOAD_REQUEST_BYTES: Final = 1024 * 1024
 
 _CONFIGURATION: Final = "frc_compression_mif"
@@ -38,6 +38,12 @@ _DEVICE_PROJECT: Final = "SCPN-MIF-CORE"
 _PRODUCER_PROJECT: Final = "SCPN-MIF-CORE"
 _INTAKE_LANE: Final = "L1_extend_exercised_review_adapter"
 _CURRENT_EVIDENCE_STATE: Final = "verified_review_adapter_simulation"
+_REQUIRED_DISTINCT_PLANT_TRUTH_STATES: Final = (
+    "unknown",
+    "out_of_distribution",
+    "low_observability",
+    "stale",
+)
 
 
 class FRCCompressionMIFPhysicalPayloadRequirementId(StrEnum):
@@ -53,6 +59,7 @@ class FRCCompressionMIFPhysicalPayloadRequirementId(StrEnum):
     OBSERVATION_OPERATOR_OR_CALIBRATION = "observation_operator_or_calibration"
     UNCERTAINTY = "uncertainty"
     VALIDITY = "validity"
+    PLANT_TRUTH_STATE_SEMANTICS = "plant_truth_state_semantics"
     QUALITY = "quality"
     PROVENANCE_AND_REPRODUCIBILITY = "provenance_and_reproducibility"
     OBSERVABILITY_GATE = "observability_gate"
@@ -161,6 +168,17 @@ _REQUIREMENTS: Final = (
         "missing-channel and stale-calibration refusal conditions.",
     ),
     FRCCompressionMIFPhysicalPayloadRequirement(
+        FRCCompressionMIFPhysicalPayloadRequirementId.PLANT_TRUTH_STATE_SEMANTICS,
+        "producer-owned plant-truth state vocabulary and transition semantics",
+        "Supply a versioned producer-owned vocabulary with distinct, non-overlapping "
+        "unknown, out_of_distribution, low_observability and stale states; define "
+        "classification criteria, precedence, transitions and interval semantics, and "
+        "bind every state to physical sample identity, clock correlation, validity, "
+        "calibration or observation-operator revision and observability-gate result. "
+        "Accepted, degraded and rejected quality labels are orthogonal and cannot "
+        "substitute for or erase the plant-truth cause.",
+    ),
+    FRCCompressionMIFPhysicalPayloadRequirement(
         FRCCompressionMIFPhysicalPayloadRequirementId.QUALITY,
         "provider and derived quality semantics",
         "Supply versioned sample, channel and interval quality flags and a fail-closed "
@@ -234,6 +252,14 @@ class FRCCompressionMIFPhysicalPayloadRequest:
     ] = field(init=False)
     requirements: tuple[FRCCompressionMIFPhysicalPayloadRequirement, ...] = field(
         init=False, default=_REQUIREMENTS
+    )
+    required_distinct_plant_truth_states: tuple[str, ...] = field(
+        init=False, default=_REQUIRED_DISTINCT_PLANT_TRUTH_STATES
+    )
+    plant_truth_state_contract_required: bool = field(init=False, default=True)
+    plant_truth_state_contract_present: bool = field(init=False, default=False)
+    quality_state_may_substitute_for_plant_truth_state: bool = field(
+        init=False, default=False
     )
     selected_candidate_id: None = field(init=False, default=None)
     physical_payload_schema_allocated: bool = field(init=False, default=False)
@@ -313,6 +339,9 @@ class FRCCompressionMIFPhysicalPayloadRequest:
             "configuration": _CONFIGURATION,
             "observability_registry_sha256": observability_registry.digest,
             "requirement_ids": [item.requirement_id.value for item in _REQUIREMENTS],
+            "required_distinct_plant_truth_states": list(
+                _REQUIRED_DISTINCT_PLANT_TRUTH_STATES
+            ),
             "semantic_profile_registry_sha256": semantic_registry.digest,
         }
         object.__setattr__(self, "request_id", _sha256(_canonical(identity)))
@@ -350,9 +379,21 @@ def frc_compression_mif_physical_payload_request_to_record(
         "phase_inference_performed": request.phase_inference_performed,
         "physical_payload_schema_allocated": request.physical_payload_schema_allocated,
         "physical_source_present": request.physical_source_present,
+        "plant_truth_state_contract_present": (
+            request.plant_truth_state_contract_present
+        ),
+        "plant_truth_state_contract_required": (
+            request.plant_truth_state_contract_required
+        ),
         "qualification_state": request.qualification_state,
+        "quality_state_may_substitute_for_plant_truth_state": (
+            request.quality_state_may_substitute_for_plant_truth_state
+        ),
         "request_id": request.request_id,
         "requested_owner_project": request.requested_owner_project,
+        "required_distinct_plant_truth_states": list(
+            request.required_distinct_plant_truth_states
+        ),
         "requirements": [_requirement_record(item) for item in request.requirements],
         "review_only": request.review_only,
         "selected_candidate_id": request.selected_candidate_id,
@@ -383,9 +424,13 @@ _PAYLOAD_KEYS: Final = {
     "phase_inference_performed",
     "physical_payload_schema_allocated",
     "physical_source_present",
+    "plant_truth_state_contract_present",
+    "plant_truth_state_contract_required",
     "qualification_state",
+    "quality_state_may_substitute_for_plant_truth_state",
     "request_id",
     "requested_owner_project",
+    "required_distinct_plant_truth_states",
     "requirements",
     "review_only",
     "selected_candidate_id",

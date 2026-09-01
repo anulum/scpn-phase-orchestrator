@@ -197,6 +197,7 @@ def test_reactor_producer_evidence_priority_is_non_scalar_and_fail_closed() -> N
         "zero qualified physical phases",
         "zero CONTROL admissions",
         "`machine_protection_final_veto=true`",
+        "`b4d0791d65d7bb213ef813d40b3584dc0107a3c70bfedf58db7b70c9c0cb59bc`",
         "reactor_producer_evidence_priority_register.v1.json",
         "reactor_producer_evidence_priority_register.schema.json",
     )
@@ -240,8 +241,11 @@ def test_frc_compression_mif_physical_request_is_exact_and_fail_closed() -> None
         "SCPN-MIF-CORE merge-compression adapter",
         "`source_kind=simulation`",
         "`reusable_as_physical_evidence=false`",
-        "all twelve prerequisites",
+        "all thirteen prerequisites",
         "FRC-compression-MIF-specific diagnostic",
+        "`unknown`, `out_of_distribution`, `low_observability`, and `stale`",
+        "does not close the gap",
+        "`plant_truth_state_contract_present=false`",
         "driver arrival",
         "simulation-only synthetic oscillator coordinate",
         "New peer discoveries enter the atlas as gaps or provisional candidates",
@@ -312,6 +316,8 @@ def test_reactor_configuration_coverage_is_exhaustive_and_fail_closed() -> None:
         "The shared Z-pinch design review does not equate `z_pinch` with "
         "`sheared_flow_z_pinch`",
         "`machine_protection_final_veto=true`",
+        "`0e20fad3d336c622abe611aa71a914a937b7cc3ef8626b65cf2c0790dc0f83d5`",
+        "`11ccb4cafcb12c7b5e977df3159e4d02570d06c224406d5750627c81428facfd`",
         "reactor_configuration_evidence_coverage.v1.json",
         "reactor_configuration_evidence_coverage.schema.json",
     )

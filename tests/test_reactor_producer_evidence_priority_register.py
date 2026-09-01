@@ -68,6 +68,11 @@ REQUIRED_EVIDENCE = (
     "provenance",
     "observability_gate",
 )
+MIF_REQUIRED_EVIDENCE = (
+    *REQUIRED_EVIDENCE[:7],
+    "plant_truth_state_semantics",
+    *REQUIRED_EVIDENCE[7:],
+)
 MAST_L0_REQUIREMENTS = (
     "phenomenon_identity",
     "reproducible_source_ingestion_state",
@@ -348,6 +353,8 @@ def test_priority_register_requests_evidence_without_granting_authority() -> Non
     mif_request = by_configuration["frc_compression_mif"]["producer_request"]
     assert isinstance(mif_request, dict)
     assert mif_request["requested_owner_project"] == "SCPN-MIF-CORE"
+    assert tuple(mif_request["required_evidence"]) == MIF_REQUIRED_EVIDENCE
+    assert "producer_owned_plant_truth_state_contract" in mif_request["lane_blockers"]
     mif_materialized = mif_request["materialized_request"]
     assert isinstance(mif_materialized, dict)
     runtime_mif_request = frc_compression_mif_physical_payload_request()
@@ -380,7 +387,12 @@ def test_priority_register_requests_evidence_without_granting_authority() -> Non
         assert current["qualified_physical_phase"] is False
         assert readiness["complete_physical_evidence"] is False
         assert readiness["control_admission"] is False
-        assert tuple(request["required_evidence"]) == REQUIRED_EVIDENCE
+        expected_evidence = (
+            MIF_REQUIRED_EVIDENCE
+            if row["configuration"] == "frc_compression_mif"
+            else REQUIRED_EVIDENCE
+        )
+        assert tuple(request["required_evidence"]) == expected_evidence
         assert request["canonical_bytes_required"] is True
         assert request["independent_validation_required"] is True
         assert row["authority"] == "review_only"

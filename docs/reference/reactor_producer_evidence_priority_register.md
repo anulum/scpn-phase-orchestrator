@@ -85,13 +85,21 @@ actuation authority.
   `scpn-phase-orchestrator.frc-compression-mif-physical-payload-request.v1`
   contract. It binds the exercised merge-compression adapter while preserving
   its model evidence, numerical coordinates, clock, and trigger as simulation
-  only and forbidding their reuse as physical evidence.
+  only and forbidding their reuse as physical evidence. Version `1.1.0`
+  additionally requires distinct producer-owned `unknown`,
+  `out_of_distribution`, `low_observability`, and `stale` plant-truth states;
+  the contract remains absent and the request remains blocked.
 
 Both configurations have exercised byte-canonical review adapters, but those
 adapters carry simulation evidence only. The next input must be a physical
 sample envelope with configuration-specific diagnostic identity, clock and
 reference binding, physical observation operator or calibration, uncertainty,
 validity, quality, provenance, and an evaluated observability gate.
+
+The FRC-compression MIF request additionally requires producer-owned
+plant-truth state semantics. Generic accepted/degraded/rejected quality labels
+cannot substitute for the physical cause, and adding the obligation does not
+close `STATE-01` without immutable producer evidence.
 
 Both L1 requests additionally make immutable source/package identity,
 reproducibility, independent validation, candidate non-selection, and all
@@ -186,13 +194,13 @@ and sealed over canonical JSON payload bytes.
 
 - Schema: `scpn-phase-orchestrator.reactor-producer-evidence-priority-register.v1`
 - Schema version: `1.0.0`
-- Payload SHA-256: `99862ee8331afad0a0709166b96ef2e4b198903f7302f1c7b08662946034e1a2`
+- Payload SHA-256: `b4d0791d65d7bb213ef813d40b3584dc0107a3c70bfedf58db7b70c9c0cb59bc`
 - Configuration evidence payload:
-  `a41d53e9c0dce5482a131ecaf996442f56c02e8b1f0737067c2d3cccb677f7d8`
+  `0e20fad3d336c622abe611aa71a914a937b7cc3ef8626b65cf2c0790dc0f83d5`
 - Diagnostic-plan portfolio payload:
-  `ceb01c4818a2282aed61bcbaa458a8ba6a0b56bd6569f702c6aee0f266f73e7a`
+  `33a4609e1f45de3d9e5c7522cbfa8b16227014205f066fd60855971ca41859da`
 - Signal occurrence payload:
-  `b7bffc61956dc32ee5ee1c1c9d399ee3546af9e374cd52d18f7c85602ba32c22`
+  `11ccb4cafcb12c7b5e977df3159e4d02570d06c224406d5750627c81428facfd`
 - Technology atlas payload:
   `eb8e2ffbbc98241ac2458044455bcec425860f33ab3ba9d5ea4fa3b86870d3d3`
 

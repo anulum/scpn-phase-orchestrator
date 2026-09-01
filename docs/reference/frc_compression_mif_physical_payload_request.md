@@ -3,7 +3,7 @@
 SPO materialises the `L1_extend_exercised_review_adapter` next boundary as the
 digest-sealed schema
 `scpn-phase-orchestrator.frc-compression-mif-physical-payload-request.v1`
-version `1.0.0`. The public builder is
+version `1.1.0`. The public builder is
 `frc_compression_mif_physical_payload_request()`.
 
 The request binds the existing SCPN-MIF-CORE merge-compression adapter, source
@@ -17,7 +17,7 @@ merge-compression output into a physical sample:
 ## Producer obligations
 
 SCPN-MIF-CORE must allocate a configuration-specific canonical physical
-payload and satisfy all twelve prerequisites:
+payload and satisfy all thirteen prerequisites:
 
 1. immutable physical sample identity and sampled values;
 2. FRC-compression-MIF-specific diagnostic, channel, geometry, and frame
@@ -28,11 +28,22 @@ payload and satisfy all twelve prerequisites:
 6. a validated observation operator or calibration lineage;
 7. uncertainty;
 8. validity;
-9. provider and derived quality semantics;
-10. immutable provenance and reproducibility, including source and package
+9. a producer-owned plant-truth state vocabulary that distinctly represents
+   `unknown`, `out_of_distribution`, `low_observability`, and `stale`;
+10. provider and derived quality semantics, orthogonal to plant-truth cause;
+11. immutable provenance and reproducibility, including source and package
     identity;
-11. a predeclared and evaluated observability gate; and
-12. independent validation without same-shot circularity.
+12. a predeclared and evaluated observability gate; and
+13. independent validation without same-shot circularity.
+
+The plant-truth state contract must define classification criteria,
+precedence, transitions, and interval semantics and bind each state to the
+physical sample, correlated clock, validity, calibration or observation
+operator, and observability-gate result. Generic `accepted`, `degraded`, or
+`rejected` quality labels cannot replace or erase the physical cause. This
+makes the `STATE-01` producer obligation explicit; it does not close the gap.
+`plant_truth_state_contract_present=false` remains fixed until an immutable
+SCPN-MIF-CORE physical payload supplies and validates that evidence.
 
 The four applicable catalogue entries are carried as unselected candidate
 requirements: driver arrival, a resolved asymmetry mode, translation and
@@ -45,6 +56,7 @@ change before this request can reference them canonically.
 
 The request fixes `selected_candidate_id=null`,
 `physical_payload_schema_allocated=false`, `physical_source_present=false`,
+`plant_truth_state_contract_present=false`,
 `observation_admitted=false`, `phase_inference_eligible=false`,
 `semantic_ingress_extended=false`, `control_admission_requested=false`,
 `actionable=false`, `execution_permitted=false`, and

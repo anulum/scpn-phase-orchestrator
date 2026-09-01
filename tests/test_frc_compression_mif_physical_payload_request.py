@@ -20,8 +20,8 @@ import pytest
 
 from scpn_phase_orchestrator import reactor_semantics as rs
 
-REQUEST_ID = "f4b600a12e1fa0f3f56bbccf410d4fbf5a7d2dce47a4cef001a4e35e3625fa98"
-REQUEST_SHA256 = "abbfdf0c80773e9c8f8d0d59afd02419b24f7befbef15754a87e3f1676c8989f"
+REQUEST_ID = "f37e7516cbf5bd008ef87332c457acd31fa0a2922819e2b92c371124558e99eb"
+REQUEST_SHA256 = "6549e4aa8cd66c8e045f705f16dfa136f452ebe9e2bde80b7c14c0f182d7dd57"
 SEMANTIC_REGISTRY_SHA256 = (
     "6ac7f3863e1a5f50af297c572ec0b80b60820a23de1a769fda6bb0a831243ec3"
 )
@@ -101,6 +101,7 @@ def test_request_names_every_missing_physical_evidence_obligation() -> None:
         "observation_operator_or_calibration",
         "uncertainty",
         "validity",
+        "plant_truth_state_semantics",
         "quality",
         "provenance_and_reproducibility",
         "observability_gate",
@@ -112,12 +113,37 @@ def test_request_names_every_missing_physical_evidence_obligation() -> None:
     )
 
 
+def test_request_requires_distinct_producer_owned_plant_truth_states() -> None:
+    request = rs.frc_compression_mif_physical_payload_request()
+
+    assert request.required_distinct_plant_truth_states == (
+        "unknown",
+        "out_of_distribution",
+        "low_observability",
+        "stale",
+    )
+    assert request.plant_truth_state_contract_required is True
+    assert request.plant_truth_state_contract_present is False
+    assert request.quality_state_may_substitute_for_plant_truth_state is False
+
+    obligation = next(
+        item
+        for item in request.requirements
+        if item.requirement_id.value == "plant_truth_state_semantics"
+    )
+    for required_state in request.required_distinct_plant_truth_states:
+        assert required_state in obligation.acceptance_condition
+    assert "orthogonal" in obligation.acceptance_condition
+    assert obligation.missing is True
+
+
 def test_request_authority_is_exhaustively_fail_closed() -> None:
     request = rs.frc_compression_mif_physical_payload_request()
 
     assert request.selected_candidate_id is None
     assert request.physical_payload_schema_allocated is False
     assert request.physical_source_present is False
+    assert request.plant_truth_state_contract_present is False
     assert request.observation_admitted is False
     assert request.phase_inference_eligible is False
     assert request.phase_inference_performed is False
@@ -137,7 +163,7 @@ def test_request_bytes_are_canonical_sealed_replayable_and_schema_valid() -> Non
     encoded = rs.frc_compression_mif_physical_payload_request_to_bytes(request)
 
     assert encoded.endswith(b"\n")
-    assert len(encoded) == 8726
+    assert len(encoded) == 9691
     assert hashlib.sha256(encoded).hexdigest() == REQUEST_SHA256
     assert rs.frc_compression_mif_physical_payload_request_digest(request) == (
         REQUEST_SHA256

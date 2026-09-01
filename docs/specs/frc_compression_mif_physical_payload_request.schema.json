@@ -99,6 +99,7 @@
             "observation_operator_or_calibration",
             "uncertainty",
             "validity",
+            "plant_truth_state_semantics",
             "quality",
             "provenance_and_reproducibility",
             "observability_gate",
@@ -152,13 +153,24 @@
         "phase_inference_performed": {"const": false},
         "physical_payload_schema_allocated": {"const": false},
         "physical_source_present": {"const": false},
+        "plant_truth_state_contract_present": {"const": false},
+        "plant_truth_state_contract_required": {"const": true},
         "qualification_state": {"const": "blocked_missing_physical_producer_payload"},
+        "quality_state_may_substitute_for_plant_truth_state": {"const": false},
         "request_id": {"$ref": "#/$defs/sha256"},
         "requested_owner_project": {"const": "SCPN-MIF-CORE"},
+        "required_distinct_plant_truth_states": {
+          "const": [
+            "unknown",
+            "out_of_distribution",
+            "low_observability",
+            "stale"
+          ]
+        },
         "requirements": {
           "items": {"$ref": "#/$defs/requirement"},
-          "maxItems": 12,
-          "minItems": 12,
+          "maxItems": 13,
+          "minItems": 13,
           "type": "array",
           "uniqueItems": true
         },
@@ -187,9 +199,13 @@
         "phase_inference_performed",
         "physical_payload_schema_allocated",
         "physical_source_present",
+        "plant_truth_state_contract_present",
+        "plant_truth_state_contract_required",
         "qualification_state",
+        "quality_state_may_substitute_for_plant_truth_state",
         "request_id",
         "requested_owner_project",
+        "required_distinct_plant_truth_states",
         "requirements",
         "review_only",
         "selected_candidate_id",
@@ -201,7 +217,7 @@
     },
     "payload_sha256": {"$ref": "#/$defs/sha256"},
     "schema": {"const": "scpn-phase-orchestrator.frc-compression-mif-physical-payload-request.v1"},
-    "schema_version": {"const": "1.0.0"}
+    "schema_version": {"const": "1.1.0"}
   },
   "required": ["payload", "payload_sha256", "schema", "schema_version"],
   "title": "SCPN Phase Orchestrator FRC-compression MIF physical payload request v1",
