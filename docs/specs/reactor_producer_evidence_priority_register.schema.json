@@ -815,6 +815,38 @@
             "lane_blockers": {
               "$ref": "#/$defs/stringArray"
             },
+            "materialized_request": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "api",
+                "envelope_sha256",
+                "request_id",
+                "schema",
+                "schema_version"
+              ],
+              "properties": {
+                "api": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "envelope_sha256": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                },
+                "request_id": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                },
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "schema_version": {
+                  "const": "1.0.0"
+                }
+              }
+            },
             "source_revision_required": {
               "const": true
             },

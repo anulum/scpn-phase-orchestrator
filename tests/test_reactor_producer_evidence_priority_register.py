@@ -19,9 +19,13 @@ from typing import cast
 from jsonschema import Draft202012Validator
 
 from scpn_phase_orchestrator.reactor_semantics import (
+    CONVENTIONAL_TOKAMAK_PHYSICAL_PAYLOAD_REQUEST_SCHEMA,
+    CONVENTIONAL_TOKAMAK_PHYSICAL_PAYLOAD_REQUEST_VERSION,
     DEFAULT_REACTOR_OBSERVABILITY_PROFILE_REGISTRY,
     DEFAULT_REACTOR_REGISTRY,
     DEFAULT_REACTOR_SEMANTIC_PROFILE_REGISTRY,
+    conventional_tokamak_physical_payload_request,
+    conventional_tokamak_physical_payload_request_digest,
 )
 
 REGISTER = Path(
@@ -259,6 +263,23 @@ def test_priority_register_requests_evidence_without_granting_authority() -> Non
     assert mast_evidence["portable_review_adapter_present"] is True
     assert mast_readiness["portable_review_adapter_present"] is True
     assert tuple(mast_request["lane_blockers"]) == MAST_L0_REQUIREMENTS
+    conventional_request = by_configuration["conventional_tokamak"]["producer_request"]
+    assert isinstance(conventional_request, dict)
+    materialized = conventional_request["materialized_request"]
+    assert isinstance(materialized, dict)
+    runtime_request = conventional_tokamak_physical_payload_request()
+    assert materialized == {
+        "api": (
+            "scpn_phase_orchestrator.reactor_semantics."
+            "conventional_tokamak_physical_payload_request"
+        ),
+        "envelope_sha256": conventional_tokamak_physical_payload_request_digest(
+            runtime_request
+        ),
+        "request_id": runtime_request.request_id,
+        "schema": CONVENTIONAL_TOKAMAK_PHYSICAL_PAYLOAD_REQUEST_SCHEMA,
+        "schema_version": CONVENTIONAL_TOKAMAK_PHYSICAL_PAYLOAD_REQUEST_VERSION,
+    }
     assert (
         by_configuration["frc_compression_mif"]["producer_request"][
             "requested_owner_project"

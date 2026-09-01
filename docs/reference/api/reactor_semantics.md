@@ -185,6 +185,30 @@ reproducible package identity, canonical bytes, and independent validation.
 The register is review-only, non-actionable, non-actuating, and preserves
 independent machine protection as the final veto.
 
+### Conventional-tokamak L1 physical-payload request
+
+`conventional_tokamak_physical_payload_request()` materialises the L1 request
+to SCPN-FUSION-CORE. It binds the exact verified TORAX source schema, adapter
+API, review-only handoff schema, semantic profile, semantic-profile registry,
+and observability registry. The bound adapter is fixed as simulation-only,
+with `physical_source_present=false` and
+`reusable_as_physical_evidence=false`; its twelve noncyclic TORAX observables
+cannot be relabelled as diagnostic samples or phase evidence.
+
+The request carries four unselected conventional-tokamak candidates and twelve
+missing producer obligations: physical samples, configuration-specific
+diagnostic identity, phenomenon, reference, physical clocks, observation
+operator or calibration, uncertainty, validity, quality, immutable provenance
+and reproducibility, a predeclared observability gate, and independent
+validation. A producer must allocate a new configuration-specific canonical
+physical payload rather than place physical claims into the simulation schema.
+
+`ConventionalTokamakPhysicalPayloadRequest` fixes schema allocation, physical
+source presence, candidate selection, observation admission, phase inference,
+semantic-ingress extension, CONTROL admission, action, execution, and
+actuation to their fail-closed states. Its canonical envelope is defined by
+[`conventional_tokamak_physical_payload_request.schema.json`](../../specs/conventional_tokamak_physical_payload_request.schema.json).
+
 ## FAIR-MAST magnetic physical-source review
 
 `mast_magnetic_source_review_from_producer_bytes()` accepts the exact canonical
@@ -571,6 +595,11 @@ assessment and research-intent envelopes.
       show_source: false
 
 ::: scpn_phase_orchestrator.reactor_semantics.contracts
+    options:
+      show_root_heading: true
+      show_source: false
+
+::: scpn_phase_orchestrator.reactor_semantics.conventional_tokamak_physical_payload_request
     options:
       show_root_heading: true
       show_source: false

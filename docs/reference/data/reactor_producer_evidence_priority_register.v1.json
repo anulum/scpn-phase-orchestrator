@@ -436,6 +436,13 @@
             "physical_uncertainty_validity_quality_and_provenance",
             "physical_observability_gate_result"
           ],
+          "materialized_request": {
+            "api": "scpn_phase_orchestrator.reactor_semantics.conventional_tokamak_physical_payload_request",
+            "envelope_sha256": "4fa48cecbb4bc39bec49fd0411e71ac9219c4e033044878fc90f5a23823a0ad5",
+            "request_id": "2102de134b9326a1c5eb280d3ac1bffd487ba55342a03f664550bf5afd4d24fd",
+            "schema": "scpn-phase-orchestrator.conventional-tokamak-physical-payload-request.v1",
+            "schema_version": "1.0.0"
+          },
           "source_revision_required": true,
           "package_identity_required": true,
           "canonical_bytes_required": true,
@@ -3103,5 +3110,5 @@
     "direct_actuation_authorized": false,
     "machine_protection_final_veto": true
   },
-  "payload_sha256": "f4d931b7b6f6c619c349c394b5a64936080d61f8b6f6f90abee042e737133c0f"
+  "payload_sha256": "0755c6a10efb10ebbd45abc8775833c65b5fb66efc9390c46ce761b279703ad4"
 }

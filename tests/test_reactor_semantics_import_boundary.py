@@ -42,6 +42,9 @@ def test_every_reactor_semantics_submodule_avoids_optional_runtime_graph() -> No
         import scpn_phase_orchestrator.reactor_semantics.abstaining_assessment
         import scpn_phase_orchestrator.reactor_semantics.contracts
         import scpn_phase_orchestrator.reactor_semantics.control_intent
+        from scpn_phase_orchestrator.reactor_semantics import (
+            conventional_tokamak_physical_payload_request,
+        )
         import scpn_phase_orchestrator.reactor_semantics.coupled_transport
         import scpn_phase_orchestrator.reactor_semantics.diagnostic_plan_review
         import scpn_phase_orchestrator.reactor_semantics.evidence
@@ -64,6 +67,7 @@ def test_every_reactor_semantics_submodule_avoids_optional_runtime_graph() -> No
             "scpn_phase_orchestrator.reactor_semantics.abstaining_assessment",
             "scpn_phase_orchestrator.reactor_semantics.contracts",
             "scpn_phase_orchestrator.reactor_semantics.control_intent",
+            "scpn_phase_orchestrator.reactor_semantics.conventional_tokamak_physical_payload_request",
             "scpn_phase_orchestrator.reactor_semantics.coupled_transport",
             "scpn_phase_orchestrator.reactor_semantics.diagnostic_plan_review",
             "scpn_phase_orchestrator.reactor_semantics.evidence",
@@ -113,6 +117,7 @@ def test_every_reactor_semantics_submodule_avoids_optional_runtime_graph() -> No
             "scpn_phase_orchestrator.reactor_semantics.abstaining_assessment",
             "scpn_phase_orchestrator.reactor_semantics.contracts",
             "scpn_phase_orchestrator.reactor_semantics.control_intent",
+            "scpn_phase_orchestrator.reactor_semantics.conventional_tokamak_physical_payload_request",
             "scpn_phase_orchestrator.reactor_semantics.coupled_transport",
             "scpn_phase_orchestrator.reactor_semantics.diagnostic_plan_review",
             "scpn_phase_orchestrator.reactor_semantics.evidence",

@@ -124,6 +124,14 @@ clock, uncertainty, validity, quality, observability, and independent-
 validation boundaries. The request is blocked and review-only; it cannot admit
 a physical observation or phase.
 
+For the L1 `conventional_tokamak` row, SPO now exposes a separate
+byte-canonical physical-payload prerequisite request. It pins the existing
+FUSION/TORAX review adapter as simulation-only and not reusable as physical
+evidence, carries four unselected observability candidates, and names twelve
+producer-owned physical evidence obligations. Schema allocation, observation,
+phase inference, semantic-ingress extension, CONTROL admission, action,
+execution, and actuation all remain fail closed.
+
 ![Synchronization Manifold](docs/assets/synchronization_manifold.png)
 
 ## Current Release Boundary
@@ -324,16 +332,16 @@ inside a dashboard or notebook; it turns them into inspectable artefacts.
 |---|---:|
 | Package version | 1.3.1 |
 | Public API exports | 29 |
-| Python package modules | 746 |
-| Core Engine modules | 347 |
+| Python package modules | 747 |
+| Core Engine modules | 348 |
 | Runtime/Serving modules | 158 |
 | Integration modules | 32 |
 | Research/Experimental modules | 205 |
 | Domainpack files | 36 |
 | Rust kernel files | 97 |
 | Optional extras | 23 |
-| Python test files | 911 |
-| Public documentation pages | 239 |
+| Python test files | 912 |
+| Public documentation pages | 240 |
 | GitHub Actions workflows | 19 |
 
 Evidence boundary: this snapshot is a static inventory. Performance, coverage, hardware, and scientific-fidelity claims require their own committed evidence artifacts.

@@ -26,6 +26,9 @@ TECHNOLOGY_DIAGNOSTIC_ATLAS = Path(
 PRODUCER_EVIDENCE_PRIORITY_REGISTER = Path(
     "docs/reference/reactor_producer_evidence_priority_register.md"
 )
+CONVENTIONAL_TOKAMAK_PHYSICAL_PAYLOAD_REQUEST = Path(
+    "docs/reference/conventional_tokamak_physical_payload_request.md"
+)
 
 
 def test_reactor_semantics_reference_preserves_u0_boundaries() -> None:
@@ -100,6 +103,11 @@ def test_reactor_semantics_reference_preserves_u0_boundaries() -> None:
         "twelve missing evidence obligations",
         "blocked_missing_producer_evidence",
         "mast_phase_qualification_request.schema.json",
+        "Conventional-tokamak L1 physical-payload request",
+        "conventional_tokamak_physical_payload_request()",
+        "reusable_as_physical_evidence=false",
+        "allocate a new configuration-specific canonical physical payload",
+        "conventional_tokamak_physical_payload_request.schema.json",
     )
 
     for marker in required:
@@ -167,6 +175,9 @@ def test_reactor_producer_evidence_priority_is_non_scalar_and_fail_closed() -> N
         "controlled phenomenon identity",
         "reproducible source-ingestion state",
         "mast_phase_qualification_request_from_source_review()",
+        "conventional_tokamak_physical_payload_request()",
+        "forbidding reuse as physical evidence",
+        "normative request reference",
         "`SCPN-MIF-CORE` is the registry's 21st distinct `device_project` owner",
         "Each current producer fixture omits the mandatory "
         "`timing_uncertainty_s` member",
@@ -177,6 +188,31 @@ def test_reactor_producer_evidence_priority_is_non_scalar_and_fail_closed() -> N
         "`machine_protection_final_veto=true`",
         "reactor_producer_evidence_priority_register.v1.json",
         "reactor_producer_evidence_priority_register.schema.json",
+    )
+
+    for marker in required:
+        assert marker in text
+
+
+def test_conventional_tokamak_physical_request_is_exact_and_fail_closed() -> None:
+    text = " ".join(
+        CONVENTIONAL_TOKAMAK_PHYSICAL_PAYLOAD_REQUEST.read_text(
+            encoding="utf-8"
+        ).split()
+    )
+    required = (
+        "`L1_extend_exercised_review_adapter`",
+        "`conventional_tokamak_physical_payload_request()`",
+        "`source_kind=simulation`",
+        "`reusable_as_physical_evidence=false`",
+        "all twelve prerequisites",
+        "conventional-tokamak-specific diagnostic",
+        "independent validation without same-shot circularity",
+        "New peer discoveries enter the atlas as gaps or provisional candidates",
+        "`selected_candidate_id=null`",
+        "`control_admission_requested=false`",
+        "`direct_actuation=false`",
+        "conventional_tokamak_physical_payload_request.schema.json",
     )
 
     for marker in required:

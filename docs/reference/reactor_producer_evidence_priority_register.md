@@ -75,7 +75,11 @@ actuation authority.
 ### L1 — extend exercised review adapters
 
 - `conventional_tokamak` routes its next exact producer request to
-  SCPN-FUSION-CORE.
+  SCPN-FUSION-CORE. SPO materialises that request through
+  `conventional_tokamak_physical_payload_request()` as the digest-sealed
+  `scpn-phase-orchestrator.conventional-tokamak-physical-payload-request.v1`
+  contract. It binds the exercised TORAX adapter while fixing that adapter's
+  source kind to simulation and forbidding reuse as physical evidence.
 - `frc_compression_mif` routes its next exact producer request to
   SCPN-MIF-CORE.
 
@@ -84,6 +88,11 @@ adapters carry simulation evidence only. The next input must be a physical
 sample envelope with configuration-specific diagnostic identity, clock and
 reference binding, physical observation operator or calibration, uncertainty,
 validity, quality, provenance, and an evaluated observability gate.
+
+The conventional-tokamak request additionally makes immutable source/package
+identity, reproducibility, independent validation, candidate non-selection,
+and all no-CONTROL/no-actuation authority fields machine-checkable. See the
+[normative request reference](conventional_tokamak_physical_payload_request.md).
 
 `SCPN-MIF-CORE` is the registry's 21st distinct `device_project` owner and is
 not one of the 20 projects in the diagnostic-plan portfolio. Together with
