@@ -159,6 +159,7 @@ nav:
       - Reactor Configuration Evidence Coverage: reference/reactor_configuration_evidence_coverage.md
       - Reactor Diagnostic-Plan Portfolio Status: reference/reactor_diagnostic_plan_portfolio_status.md
       - Reactor Technology and Diagnostic Atlas: reference/reactor_technology_diagnostic_atlas.md
+      - Reactor Producer-Evidence Priority Register: reference/reactor_producer_evidence_priority_register.md
       - UPDE Engine: reference/api/upde.md
       - "UPDE — Core Integrator": reference/api/upde_engine.md
       - "UPDE — Time-varying Omega": reference/api/upde_time_varying_omega.md

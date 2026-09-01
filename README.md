@@ -105,6 +105,16 @@ and diagnostic context only: every row still fails closed for physical signal,
 phase, CONTROL admission, action, and actuation without an exact producer
 payload.
 
+The follow-on
+[reactor producer-evidence priority register](docs/reference/reactor_producer_evidence_priority_register.md)
+joins the atlas to current occurrence, observability, semantic-ingress, and
+diagnostic-plan custody across 22 upstream reactor projects plus the
+SCPN-CONTROL boundary. Its four non-scalar lanes identify one existing
+physical-source qualification, two exercised-adapter extensions, 13 accepted-
+plan physical intakes, and 16 plan repairs. Rows within a lane are unordered,
+and no lane or external rank creates signal, phase, CONTROL, or actuation
+authority.
+
 ![Synchronization Manifold](docs/assets/synchronization_manifold.png)
 
 ## Current Release Boundary
@@ -313,8 +323,8 @@ inside a dashboard or notebook; it turns them into inspectable artefacts.
 | Domainpack files | 36 |
 | Rust kernel files | 97 |
 | Optional extras | 23 |
-| Python test files | 909 |
-| Public documentation pages | 238 |
+| Python test files | 910 |
+| Public documentation pages | 239 |
 | GitHub Actions workflows | 19 |
 
 Evidence boundary: this snapshot is a static inventory. Performance, coverage, hardware, and scientific-fidelity claims require their own committed evidence artifacts.

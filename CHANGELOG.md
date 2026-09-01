@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- A digest-sealed reactor producer-evidence priority register joins all 32
+  configurations to exact external context, occurrence evidence,
+  observability candidates, semantic-ingress state, diagnostic-plan custody,
+  all 22 upstream reactor projects plus CONTROL, producer ownership, and
+  physical-evidence gaps. Four non-scalar readiness
+  lanes distinguish one existing physical-source qualification, two exercised-
+  adapter extensions, 13 accepted-plan physical intakes, and 16 plan repairs.
+  External evidence rank never changes the lane or creates physical signal,
+  phase, CONTROL, action, actuation, or machine-protection authority.
 - An evidence-ranked reactor technology and diagnostic atlas maps all 32
   built-in configurations across eight confinement families to 34 exact,
   configuration-specific primary sources. It distinguishes integrated fusion,

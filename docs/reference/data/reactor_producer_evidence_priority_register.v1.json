@@ -1,0 +1,3105 @@
+{
+  "schema": "scpn-phase-orchestrator.reactor-producer-evidence-priority-register.v1",
+  "schema_version": "1.0.0",
+  "payload": {
+    "observed_at": "2026-09-01T21:10:00+02:00",
+    "method": "Deterministic readiness precedence over exact current SPO custody: reviewed physical source, then exercised byte-canonical review adapter, then accepted exact-custody diagnostic plan, then refused plan requiring repair. External evidence rank is carried as context and never changes the lane.",
+    "non_scalar_priority_policy": "No opaque or additive score is emitted. Rows within one lane are deliberately unordered. Selection within a lane requires explicit review of safety value, calibrated machine-readable data availability, clock/reference/operator completeness, uncertainty, validity, quality, provenance, observability gates, independent validation, and producer capacity.",
+    "source_bindings": {
+      "configuration_evidence_coverage": {
+        "path": "docs/reference/data/reactor_configuration_evidence_coverage.v1.json",
+        "schema": "scpn-phase-orchestrator.reactor-configuration-evidence-coverage.v1",
+        "schema_version": "1.0.0",
+        "payload_sha256": "a41d53e9c0dce5482a131ecaf996442f56c02e8b1f0737067c2d3cccb677f7d8",
+        "file_sha256": "2604a01ef06722b4e65f2923d45b56210fc87c86285bb88df56782410a2626fc"
+      },
+      "diagnostic_plan_portfolio_status": {
+        "path": "docs/reference/data/reactor_diagnostic_plan_portfolio_status.v1.json",
+        "schema": "scpn-phase-orchestrator.reactor-diagnostic-plan-portfolio-status.v1",
+        "schema_version": "1.0.0",
+        "payload_sha256": "5b02e7fb2302c2e66bf0fc4a25dae82de673b00c5921e14bb0c8a73a8ecaa1dd",
+        "file_sha256": "fc3712936c35e9b913bf1e4e609b47a0bba4a6cd164eba445ed3f6b05689aac3"
+      },
+      "signal_occurrence_ledger": {
+        "path": "docs/reference/data/reactor_signal_occurrence_ledger.v1.json",
+        "schema": "scpn-phase-orchestrator.reactor-signal-occurrence-ledger.v1",
+        "schema_version": "1.0.0",
+        "payload_sha256": "b7bffc61956dc32ee5ee1c1c9d399ee3546af9e374cd52d18f7c85602ba32c22",
+        "file_sha256": "d6637c377267d74b1463bb1c688547a3a75e069c21353152159487b0c74bdbc2"
+      },
+      "technology_diagnostic_atlas": {
+        "path": "docs/reference/data/reactor_technology_diagnostic_atlas.v1.json",
+        "schema": "scpn-phase-orchestrator.reactor-technology-diagnostic-atlas.v1",
+        "schema_version": "1.0.0",
+        "payload_sha256": "eb8e2ffbbc98241ac2458044455bcec425860f33ab3ba9d5ea4fa3b86870d3d3",
+        "file_sha256": "f958bb1dc129705f0060a5802e308494214d4466e6e4537944cc40fa52c0b7d5"
+      }
+    },
+    "lane_order": [
+      "L0_qualify_existing_physical_source",
+      "L1_extend_exercised_review_adapter",
+      "L2_build_from_accepted_plan",
+      "L3_repair_refused_plan_before_intake"
+    ],
+    "lane_definitions": [
+      {
+        "lane": "L0_qualify_existing_physical_source",
+        "selection_rule": "Exact configuration already has reviewed physical-source custody but no qualified observation or physical phase.",
+        "next_gate": "complete_physical_source_qualification",
+        "ordered_within_lane": false
+      },
+      {
+        "lane": "L1_extend_exercised_review_adapter",
+        "selection_rule": "Exact configuration has an exercised byte-canonical review adapter, but its admitted evidence is simulation-only and no physical source is qualified.",
+        "next_gate": "supply_physical_producer_payload",
+        "ordered_within_lane": false
+      },
+      {
+        "lane": "L2_build_from_accepted_plan",
+        "selection_rule": "Device project has a structurally accepted exact-custody diagnostic-plan fixture, but no exercised configuration-specific physical producer intake.",
+        "next_gate": "supply_physical_sample_envelope",
+        "ordered_within_lane": false
+      },
+      {
+        "lane": "L3_repair_refused_plan_before_intake",
+        "selection_rule": "Device project's diagnostic-plan fixture is structurally refused; repair and regenerate the exact plan bytes before a physical producer intake can be designed.",
+        "next_gate": "repair_plan_schema_then_supply_physical_sample_envelope",
+        "ordered_within_lane": false
+      }
+    ],
+    "required_physical_evidence": [
+      "physical_sample",
+      "phenomenon_identity",
+      "reference",
+      "clock_epoch",
+      "observation_operator_or_calibration",
+      "uncertainty",
+      "validity",
+      "quality",
+      "provenance",
+      "observability_gate"
+    ],
+    "project_scope": {
+      "diagnostic_plan_portfolio_projects": [
+        "SCPN-BEAM-TARGET-CORE",
+        "SCPN-DENSE-PLASMA-FOCUS-CORE",
+        "SCPN-FRC-CORE",
+        "SCPN-FUSION-FISSION-HYBRID-CORE",
+        "SCPN-ICF-BEAM-CORE",
+        "SCPN-ICF-IMPACT-CORE",
+        "SCPN-ICF-LASER-CORE",
+        "SCPN-IEC-CORE",
+        "SCPN-LEVITATED-DIPOLE-CORE",
+        "SCPN-MAGNETIC-CUSP-CORE",
+        "SCPN-MIF-LINER-CORE",
+        "SCPN-MIF-MAGLIF-CORE",
+        "SCPN-MIF-PLASMA-JET-CORE",
+        "SCPN-MIRROR-CORE",
+        "SCPN-RFP-CORE",
+        "SCPN-SPHEROMAK-CORE",
+        "SCPN-STELLARATOR-CORE",
+        "SCPN-THETA-PINCH-CORE",
+        "SCPN-TOKAMAK-CORE",
+        "SCPN-Z-PINCH-CORE"
+      ],
+      "registry_device_owner_projects": [
+        "SCPN-BEAM-TARGET-CORE",
+        "SCPN-DENSE-PLASMA-FOCUS-CORE",
+        "SCPN-FRC-CORE",
+        "SCPN-FUSION-FISSION-HYBRID-CORE",
+        "SCPN-ICF-BEAM-CORE",
+        "SCPN-ICF-IMPACT-CORE",
+        "SCPN-ICF-LASER-CORE",
+        "SCPN-IEC-CORE",
+        "SCPN-LEVITATED-DIPOLE-CORE",
+        "SCPN-MAGNETIC-CUSP-CORE",
+        "SCPN-MIF-CORE",
+        "SCPN-MIF-LINER-CORE",
+        "SCPN-MIF-MAGLIF-CORE",
+        "SCPN-MIF-PLASMA-JET-CORE",
+        "SCPN-MIRROR-CORE",
+        "SCPN-RFP-CORE",
+        "SCPN-SPHEROMAK-CORE",
+        "SCPN-STELLARATOR-CORE",
+        "SCPN-THETA-PINCH-CORE",
+        "SCPN-TOKAMAK-CORE",
+        "SCPN-Z-PINCH-CORE"
+      ],
+      "upstream_reactor_projects": [
+        "SCPN-BEAM-TARGET-CORE",
+        "SCPN-DENSE-PLASMA-FOCUS-CORE",
+        "SCPN-FRC-CORE",
+        "SCPN-FUSION-CORE",
+        "SCPN-FUSION-FISSION-HYBRID-CORE",
+        "SCPN-ICF-BEAM-CORE",
+        "SCPN-ICF-IMPACT-CORE",
+        "SCPN-ICF-LASER-CORE",
+        "SCPN-IEC-CORE",
+        "SCPN-LEVITATED-DIPOLE-CORE",
+        "SCPN-MAGNETIC-CUSP-CORE",
+        "SCPN-MIF-CORE",
+        "SCPN-MIF-LINER-CORE",
+        "SCPN-MIF-MAGLIF-CORE",
+        "SCPN-MIF-PLASMA-JET-CORE",
+        "SCPN-MIRROR-CORE",
+        "SCPN-RFP-CORE",
+        "SCPN-SPHEROMAK-CORE",
+        "SCPN-STELLARATOR-CORE",
+        "SCPN-THETA-PINCH-CORE",
+        "SCPN-TOKAMAK-CORE",
+        "SCPN-Z-PINCH-CORE"
+      ],
+      "control_project": "SCPN-CONTROL",
+      "orchestration_authority_project": "SCPN-PHASE-ORCHESTRATOR"
+    },
+    "counts": {
+      "built_in_configurations": 32,
+      "built_in_confinement_families": 8,
+      "registry_device_owner_projects": 21,
+      "upstream_reactor_projects": 22,
+      "diagnostic_plan_portfolio_projects": 20,
+      "control_projects": 1,
+      "upstream_plus_control_projects": 23,
+      "L0_qualify_existing_physical_source": 1,
+      "L1_extend_exercised_review_adapter": 2,
+      "L2_build_from_accepted_plan": 13,
+      "L3_repair_refused_plan_before_intake": 16,
+      "qualified_physical_observations": 0,
+      "qualified_physical_phases": 0,
+      "control_admitted": 0
+    },
+    "configurations": [
+      {
+        "configuration": "beam_target",
+        "confinement_family": "beam_target",
+        "topology": "energetic beam on target",
+        "device_project": "SCPN-BEAM-TARGET-CORE",
+        "intake_lane": "L3_repair_refused_plan_before_intake",
+        "next_gate": "repair_plan_schema_then_supply_physical_sample_envelope",
+        "external_context": {
+          "evidence_rank": "E5_integrated_fusion_observation",
+          "source_ids": [
+            "SRC-031"
+          ],
+          "diagnostic_evidence_state": "documented_integrated_device",
+          "technology_is_priority_score": false,
+          "technology_is_signal_evidence": false,
+          "technology_is_control_evidence": false
+        },
+        "current_spo_evidence": {
+          "evidence_state": "producerless",
+          "semantic_ingress_state": "not_declared",
+          "producer_project": null,
+          "source_schema": null,
+          "adapter_api": null,
+          "occurrence_ids": [],
+          "physical_source_present": false,
+          "portable_review_adapter_present": false,
+          "qualified_observation": false,
+          "qualified_physical_phase": false
+        },
+        "diagnostic_plan": {
+          "structural_status": "refused",
+          "custody_state": "producer_fix_required",
+          "observed_revision": "4834f94bd8cfd872ac16ff140c6f8a4be2c75656",
+          "fixture_sha256": "62d5cf2d94154f18b83fec6db036550ec58a4777d14da7bef27a94f5e3b969b9",
+          "missing_required_members": [
+            "timing_uncertainty_s"
+          ],
+          "affected_channel_ids": [
+            "ch_rf_bunch_phase",
+            "ch_synthetic_oscillator",
+            "ch_target_outcome_set"
+          ]
+        },
+        "readiness_axes": {
+          "exact_configuration_identity": true,
+          "external_context_present": true,
+          "physical_source_present": false,
+          "portable_review_adapter_present": false,
+          "structural_plan_accepted": false,
+          "exact_plan_fixture_custody": false,
+          "complete_physical_evidence": false,
+          "control_admission": false
+        },
+        "observability_candidate_ids": [
+          "beam.rf_bunch_phase",
+          "beam.target_outcome",
+          "model.synthetic_oscillator_coordinate"
+        ],
+        "producer_request": {
+          "requested_owner_project": "SCPN-BEAM-TARGET-CORE",
+          "artifact_kind": "configuration_specific_canonical_evidence_envelope",
+          "required_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "lane_blockers": [
+            "timing_uncertainty_s_member_missing",
+            "regenerated_canonical_plan_and_envelope_required",
+            "refreshed_fixture_digest_required",
+            "physical_sample_envelope",
+            "physical_clock_reference_and_operator_binding",
+            "physical_uncertainty_validity_quality_and_provenance",
+            "physical_observability_gate_result"
+          ],
+          "source_revision_required": true,
+          "package_identity_required": true,
+          "canonical_bytes_required": true,
+          "independent_validation_required": true
+        },
+        "priority_score": null,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      },
+      {
+        "configuration": "colliding_beam",
+        "confinement_family": "beam_target",
+        "topology": "counter-propagating particle beams",
+        "device_project": "SCPN-BEAM-TARGET-CORE",
+        "intake_lane": "L3_repair_refused_plan_before_intake",
+        "next_gate": "repair_plan_schema_then_supply_physical_sample_envelope",
+        "external_context": {
+          "evidence_rank": "E1_concept_or_simulation",
+          "source_ids": [
+            "SRC-032"
+          ],
+          "diagnostic_evidence_state": "no_integrated_diagnostic_evidence",
+          "technology_is_priority_score": false,
+          "technology_is_signal_evidence": false,
+          "technology_is_control_evidence": false
+        },
+        "current_spo_evidence": {
+          "evidence_state": "producerless",
+          "semantic_ingress_state": "not_declared",
+          "producer_project": null,
+          "source_schema": null,
+          "adapter_api": null,
+          "occurrence_ids": [],
+          "physical_source_present": false,
+          "portable_review_adapter_present": false,
+          "qualified_observation": false,
+          "qualified_physical_phase": false
+        },
+        "diagnostic_plan": {
+          "structural_status": "refused",
+          "custody_state": "producer_fix_required",
+          "observed_revision": "4834f94bd8cfd872ac16ff140c6f8a4be2c75656",
+          "fixture_sha256": "62d5cf2d94154f18b83fec6db036550ec58a4777d14da7bef27a94f5e3b969b9",
+          "missing_required_members": [
+            "timing_uncertainty_s"
+          ],
+          "affected_channel_ids": [
+            "ch_rf_bunch_phase",
+            "ch_synthetic_oscillator",
+            "ch_target_outcome_set"
+          ]
+        },
+        "readiness_axes": {
+          "exact_configuration_identity": true,
+          "external_context_present": true,
+          "physical_source_present": false,
+          "portable_review_adapter_present": false,
+          "structural_plan_accepted": false,
+          "exact_plan_fixture_custody": false,
+          "complete_physical_evidence": false,
+          "control_admission": false
+        },
+        "observability_candidate_ids": [
+          "beam.rf_bunch_phase",
+          "beam.target_outcome",
+          "model.synthetic_oscillator_coordinate"
+        ],
+        "producer_request": {
+          "requested_owner_project": "SCPN-BEAM-TARGET-CORE",
+          "artifact_kind": "configuration_specific_canonical_evidence_envelope",
+          "required_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "lane_blockers": [
+            "timing_uncertainty_s_member_missing",
+            "regenerated_canonical_plan_and_envelope_required",
+            "refreshed_fixture_digest_required",
+            "physical_sample_envelope",
+            "physical_clock_reference_and_operator_binding",
+            "physical_uncertainty_validity_quality_and_provenance",
+            "physical_observability_gate_result"
+          ],
+          "source_revision_required": true,
+          "package_identity_required": true,
+          "canonical_bytes_required": true,
+          "independent_validation_required": true
+        },
+        "priority_score": null,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      },
+      {
+        "configuration": "conventional_tokamak",
+        "confinement_family": "magnetic_closed",
+        "topology": "axisymmetric torus",
+        "device_project": "SCPN-TOKAMAK-CORE",
+        "intake_lane": "L1_extend_exercised_review_adapter",
+        "next_gate": "supply_physical_producer_payload",
+        "external_context": {
+          "evidence_rank": "E5_integrated_fusion_observation",
+          "source_ids": [
+            "SRC-001",
+            "SRC-002"
+          ],
+          "diagnostic_evidence_state": "documented_integrated_device",
+          "technology_is_priority_score": false,
+          "technology_is_signal_evidence": false,
+          "technology_is_control_evidence": false
+        },
+        "current_spo_evidence": {
+          "evidence_state": "verified_review_adapter_simulation",
+          "semantic_ingress_state": "verified_review_adapter",
+          "producer_project": "SCPN-FUSION-CORE",
+          "source_schema": "scpn-fusion-core.torax-runtime-review-envelope.v1",
+          "adapter_api": "scpn_phase_orchestrator.reactor_semantics.coupled_transport_handoff_from_fusion_bytes",
+          "occurrence_ids": [
+            "FUS-008",
+            "SPO-006",
+            "CTRL-001"
+          ],
+          "physical_source_present": false,
+          "portable_review_adapter_present": true,
+          "qualified_observation": false,
+          "qualified_physical_phase": false
+        },
+        "diagnostic_plan": {
+          "structural_status": "accepted",
+          "custody_state": "exact_fixture_custody",
+          "observed_revision": "9eef91eb9086e13d23962fe18c6211f2f3ee2673",
+          "fixture_sha256": "5d4edf2c550908f2752dafba02da73171b0fea12ff74e3e0fc7db9a5d72c8eb9",
+          "missing_required_members": [],
+          "affected_channel_ids": []
+        },
+        "readiness_axes": {
+          "exact_configuration_identity": true,
+          "external_context_present": true,
+          "physical_source_present": false,
+          "portable_review_adapter_present": true,
+          "structural_plan_accepted": true,
+          "exact_plan_fixture_custody": true,
+          "complete_physical_evidence": false,
+          "control_admission": false
+        },
+        "observability_candidate_ids": [
+          "closed.equilibrium_profiles",
+          "closed.recurrent_transient",
+          "closed.resolved_mhd_mode",
+          "model.synthetic_oscillator_coordinate"
+        ],
+        "producer_request": {
+          "requested_owner_project": "SCPN-FUSION-CORE",
+          "artifact_kind": "configuration_specific_canonical_evidence_envelope",
+          "required_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "lane_blockers": [
+            "physical_sample_envelope",
+            "configuration_specific_diagnostic_binding",
+            "physical_clock_and_reference_binding",
+            "physical_observation_operator_or_calibration",
+            "physical_uncertainty_validity_quality_and_provenance",
+            "physical_observability_gate_result"
+          ],
+          "source_revision_required": true,
+          "package_identity_required": true,
+          "canonical_bytes_required": true,
+          "independent_validation_required": true
+        },
+        "priority_score": null,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      },
+      {
+        "configuration": "cusp",
+        "confinement_family": "magnetic_open",
+        "topology": "magnetic cusp",
+        "device_project": "SCPN-MAGNETIC-CUSP-CORE",
+        "intake_lane": "L3_repair_refused_plan_before_intake",
+        "next_gate": "repair_plan_schema_then_supply_physical_sample_envelope",
+        "external_context": {
+          "evidence_rank": "E4_integrated_plasma_experiment",
+          "source_ids": [
+            "SRC-013"
+          ],
+          "diagnostic_evidence_state": "historical_documented_device",
+          "technology_is_priority_score": false,
+          "technology_is_signal_evidence": false,
+          "technology_is_control_evidence": false
+        },
+        "current_spo_evidence": {
+          "evidence_state": "producerless",
+          "semantic_ingress_state": "not_declared",
+          "producer_project": null,
+          "source_schema": null,
+          "adapter_api": null,
+          "occurrence_ids": [],
+          "physical_source_present": false,
+          "portable_review_adapter_present": false,
+          "qualified_observation": false,
+          "qualified_physical_phase": false
+        },
+        "diagnostic_plan": {
+          "structural_status": "refused",
+          "custody_state": "producer_fix_required",
+          "observed_revision": "105861cffa2853347eed9fb4e1c7ff4a9fca3f52",
+          "fixture_sha256": "0c3a995eaf75b96cbc5d32e673a74c5a89f65011a752b82fb0746864ef304520",
+          "missing_required_members": [
+            "timing_uncertainty_s"
+          ],
+          "affected_channel_ids": [
+            "ch_cusp_loss_probes",
+            "ch_diamagnetic_loop",
+            "ch_drive_reference",
+            "ch_flute_probe_array",
+            "ch_synthetic_oscillator"
+          ]
+        },
+        "readiness_axes": {
+          "exact_configuration_identity": true,
+          "external_context_present": true,
+          "physical_source_present": false,
+          "portable_review_adapter_present": false,
+          "structural_plan_accepted": false,
+          "exact_plan_fixture_custody": false,
+          "complete_physical_evidence": false,
+          "control_admission": false
+        },
+        "observability_candidate_ids": [
+          "model.synthetic_oscillator_coordinate",
+          "open.drive_reference",
+          "open.equilibrium_and_loss",
+          "open.resolved_interchange_mode"
+        ],
+        "producer_request": {
+          "requested_owner_project": "SCPN-MAGNETIC-CUSP-CORE",
+          "artifact_kind": "configuration_specific_canonical_evidence_envelope",
+          "required_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "lane_blockers": [
+            "timing_uncertainty_s_member_missing",
+            "regenerated_canonical_plan_and_envelope_required",
+            "refreshed_fixture_digest_required",
+            "physical_sample_envelope",
+            "physical_clock_reference_and_operator_binding",
+            "physical_uncertainty_validity_quality_and_provenance",
+            "physical_observability_gate_result"
+          ],
+          "source_revision_required": true,
+          "package_identity_required": true,
+          "canonical_bytes_required": true,
+          "independent_validation_required": true
+        },
+        "priority_score": null,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      },
+      {
+        "configuration": "dense_plasma_focus",
+        "confinement_family": "self_magnetic",
+        "topology": "coaxial plasma-focus pinch",
+        "device_project": "SCPN-DENSE-PLASMA-FOCUS-CORE",
+        "intake_lane": "L2_build_from_accepted_plan",
+        "next_gate": "supply_physical_sample_envelope",
+        "external_context": {
+          "evidence_rank": "E5_integrated_fusion_observation",
+          "source_ids": [
+            "SRC-018"
+          ],
+          "diagnostic_evidence_state": "documented_integrated_device",
+          "technology_is_priority_score": false,
+          "technology_is_signal_evidence": false,
+          "technology_is_control_evidence": false
+        },
+        "current_spo_evidence": {
+          "evidence_state": "producerless",
+          "semantic_ingress_state": "not_declared",
+          "producer_project": null,
+          "source_schema": null,
+          "adapter_api": null,
+          "occurrence_ids": [],
+          "physical_source_present": false,
+          "portable_review_adapter_present": false,
+          "qualified_observation": false,
+          "qualified_physical_phase": false
+        },
+        "diagnostic_plan": {
+          "structural_status": "accepted",
+          "custody_state": "exact_fixture_custody",
+          "observed_revision": "32c843c85e59380a66b6a5ee6f40c651b1fcd93c",
+          "fixture_sha256": "21abf14f74639c78a973e3d97c6f0a1bbc50affee5b42a8502c6ea60bcf26b27",
+          "missing_required_members": [],
+          "affected_channel_ids": []
+        },
+        "readiness_axes": {
+          "exact_configuration_identity": true,
+          "external_context_present": true,
+          "physical_source_present": false,
+          "portable_review_adapter_present": false,
+          "structural_plan_accepted": true,
+          "exact_plan_fixture_custody": true,
+          "complete_physical_evidence": false,
+          "control_admission": false
+        },
+        "observability_candidate_ids": [
+          "model.synthetic_oscillator_coordinate",
+          "self_magnetic.drive_waveform",
+          "self_magnetic.resolved_instability_mode"
+        ],
+        "producer_request": {
+          "requested_owner_project": "SCPN-DENSE-PLASMA-FOCUS-CORE",
+          "artifact_kind": "configuration_specific_canonical_evidence_envelope",
+          "required_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "lane_blockers": [
+            "sampled_values_absent_from_design_plan",
+            "physical_sample_envelope",
+            "physical_clock_reference_and_operator_binding",
+            "physical_uncertainty_validity_quality_and_provenance",
+            "physical_observability_gate_result"
+          ],
+          "source_revision_required": true,
+          "package_identity_required": true,
+          "canonical_bytes_required": true,
+          "independent_validation_required": true
+        },
+        "priority_score": null,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      },
+      {
+        "configuration": "field_reversed_configuration",
+        "confinement_family": "magnetic_closed",
+        "topology": "field-reversed compact toroid",
+        "device_project": "SCPN-FRC-CORE",
+        "intake_lane": "L3_repair_refused_plan_before_intake",
+        "next_gate": "repair_plan_schema_then_supply_physical_sample_envelope",
+        "external_context": {
+          "evidence_rank": "E4_integrated_plasma_experiment",
+          "source_ids": [
+            "SRC-009"
+          ],
+          "diagnostic_evidence_state": "documented_integrated_device",
+          "technology_is_priority_score": false,
+          "technology_is_signal_evidence": false,
+          "technology_is_control_evidence": false
+        },
+        "current_spo_evidence": {
+          "evidence_state": "local_model_only",
+          "semantic_ingress_state": "not_declared",
+          "producer_project": null,
+          "source_schema": null,
+          "adapter_api": null,
+          "occurrence_ids": [
+            "FUS-004",
+            "FUS-005"
+          ],
+          "physical_source_present": false,
+          "portable_review_adapter_present": false,
+          "qualified_observation": false,
+          "qualified_physical_phase": false
+        },
+        "diagnostic_plan": {
+          "structural_status": "refused",
+          "custody_state": "producer_fix_required",
+          "observed_revision": "7c39c1b53f9d0c4724a1dc73a7ddb9152367bc01",
+          "fixture_sha256": "3740a62e5e1c020838792ae99eddfa897718a85b2bb27920196f73f6cfd178ff",
+          "missing_required_members": [
+            "timing_uncertainty_s"
+          ],
+          "affected_channel_ids": [
+            "ch_excluded_flux_set",
+            "ch_interferometer",
+            "ch_mirnov_array",
+            "ch_synthetic_oscillator"
+          ]
+        },
+        "readiness_axes": {
+          "exact_configuration_identity": true,
+          "external_context_present": true,
+          "physical_source_present": false,
+          "portable_review_adapter_present": false,
+          "structural_plan_accepted": false,
+          "exact_plan_fixture_custody": false,
+          "complete_physical_evidence": false,
+          "control_admission": false
+        },
+        "observability_candidate_ids": [
+          "closed.equilibrium_profiles",
+          "closed.resolved_mhd_mode",
+          "model.synthetic_oscillator_coordinate"
+        ],
+        "producer_request": {
+          "requested_owner_project": "SCPN-FRC-CORE",
+          "artifact_kind": "configuration_specific_canonical_evidence_envelope",
+          "required_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "lane_blockers": [
+            "timing_uncertainty_s_member_missing",
+            "regenerated_canonical_plan_and_envelope_required",
+            "refreshed_fixture_digest_required",
+            "physical_sample_envelope",
+            "physical_clock_reference_and_operator_binding",
+            "physical_uncertainty_validity_quality_and_provenance",
+            "physical_observability_gate_result"
+          ],
+          "source_revision_required": true,
+          "package_identity_required": true,
+          "canonical_bytes_required": true,
+          "independent_validation_required": true
+        },
+        "priority_score": null,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      },
+      {
+        "configuration": "frc_compression_mif",
+        "confinement_family": "magneto_inertial",
+        "topology": "compressed field-reversed configuration",
+        "device_project": "SCPN-MIF-CORE",
+        "intake_lane": "L1_extend_exercised_review_adapter",
+        "next_gate": "supply_physical_producer_payload",
+        "external_context": {
+          "evidence_rank": "E3_component_or_driver_experiment",
+          "source_ids": [
+            "SRC-029"
+          ],
+          "diagnostic_evidence_state": "documented_component_or_driver",
+          "technology_is_priority_score": false,
+          "technology_is_signal_evidence": false,
+          "technology_is_control_evidence": false
+        },
+        "current_spo_evidence": {
+          "evidence_state": "verified_review_adapter_simulation",
+          "semantic_ingress_state": "verified_review_adapter",
+          "producer_project": "SCPN-MIF-CORE",
+          "source_schema": "scpn-mif-core.merge-compression-observation.v1",
+          "adapter_api": "scpn_phase_orchestrator.reactor_semantics.mif_merge_compression_handoff_from_mif_bytes",
+          "occurrence_ids": [
+            "MIF-001",
+            "SPO-007",
+            "CTRL-002"
+          ],
+          "physical_source_present": false,
+          "portable_review_adapter_present": true,
+          "qualified_observation": false,
+          "qualified_physical_phase": false
+        },
+        "diagnostic_plan": {
+          "structural_status": "not_in_portfolio",
+          "custody_state": "not_in_portfolio",
+          "observed_revision": null,
+          "fixture_sha256": null,
+          "missing_required_members": [],
+          "affected_channel_ids": []
+        },
+        "readiness_axes": {
+          "exact_configuration_identity": true,
+          "external_context_present": true,
+          "physical_source_present": false,
+          "portable_review_adapter_present": true,
+          "structural_plan_accepted": false,
+          "exact_plan_fixture_custody": false,
+          "complete_physical_evidence": false,
+          "control_admission": false
+        },
+        "observability_candidate_ids": [
+          "magneto_inertial.driver_arrival",
+          "magneto_inertial.resolved_asymmetry_mode",
+          "magneto_inertial.translation_and_compression",
+          "model.synthetic_oscillator_coordinate"
+        ],
+        "producer_request": {
+          "requested_owner_project": "SCPN-MIF-CORE",
+          "artifact_kind": "configuration_specific_canonical_evidence_envelope",
+          "required_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "lane_blockers": [
+            "physical_sample_envelope",
+            "configuration_specific_diagnostic_binding",
+            "physical_clock_and_reference_binding",
+            "physical_observation_operator_or_calibration",
+            "physical_uncertainty_validity_quality_and_provenance",
+            "physical_observability_gate_result"
+          ],
+          "source_revision_required": true,
+          "package_identity_required": true,
+          "canonical_bytes_required": true,
+          "independent_validation_required": true
+        },
+        "priority_score": null,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      },
+      {
+        "configuration": "fusion_fission_hybrid",
+        "confinement_family": "hybrid",
+        "topology": "fusion source with subcritical blanket",
+        "device_project": "SCPN-FUSION-FISSION-HYBRID-CORE",
+        "intake_lane": "L3_repair_refused_plan_before_intake",
+        "next_gate": "repair_plan_schema_then_supply_physical_sample_envelope",
+        "external_context": {
+          "evidence_rank": "E1_concept_or_simulation",
+          "source_ids": [
+            "SRC-033"
+          ],
+          "diagnostic_evidence_state": "no_integrated_diagnostic_evidence",
+          "technology_is_priority_score": false,
+          "technology_is_signal_evidence": false,
+          "technology_is_control_evidence": false
+        },
+        "current_spo_evidence": {
+          "evidence_state": "producerless",
+          "semantic_ingress_state": "not_declared",
+          "producer_project": null,
+          "source_schema": null,
+          "adapter_api": null,
+          "occurrence_ids": [],
+          "physical_source_present": false,
+          "portable_review_adapter_present": false,
+          "qualified_observation": false,
+          "qualified_physical_phase": false
+        },
+        "diagnostic_plan": {
+          "structural_status": "refused",
+          "custody_state": "producer_fix_required",
+          "observed_revision": "46a563ff1eb3e2d275f4f6d2fc0528efd026cd39",
+          "fixture_sha256": "a6b6e29fd34cea7f543e781eb32f13216ea80dec1a48780207b207fb8bcef02a",
+          "missing_required_members": [
+            "timing_uncertainty_s"
+          ],
+          "affected_channel_ids": [
+            "ch_blanket_thermal_set",
+            "ch_neutron_flux_set",
+            "ch_synthetic_oscillator"
+          ]
+        },
+        "readiness_axes": {
+          "exact_configuration_identity": true,
+          "external_context_present": true,
+          "physical_source_present": false,
+          "portable_review_adapter_present": false,
+          "structural_plan_accepted": false,
+          "exact_plan_fixture_custody": false,
+          "complete_physical_evidence": false,
+          "control_admission": false
+        },
+        "observability_candidate_ids": [
+          "hybrid.source_blanket_response",
+          "model.synthetic_oscillator_coordinate"
+        ],
+        "producer_request": {
+          "requested_owner_project": "SCPN-FUSION-FISSION-HYBRID-CORE",
+          "artifact_kind": "configuration_specific_canonical_evidence_envelope",
+          "required_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "lane_blockers": [
+            "timing_uncertainty_s_member_missing",
+            "regenerated_canonical_plan_and_envelope_required",
+            "refreshed_fixture_digest_required",
+            "physical_sample_envelope",
+            "physical_clock_reference_and_operator_binding",
+            "physical_uncertainty_validity_quality_and_provenance",
+            "physical_observability_gate_result"
+          ],
+          "source_revision_required": true,
+          "package_identity_required": true,
+          "canonical_bytes_required": true,
+          "independent_validation_required": true
+        },
+        "priority_score": null,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      },
+      {
+        "configuration": "gas_dynamic_mirror",
+        "confinement_family": "magnetic_open",
+        "topology": "collisional linear mirror",
+        "device_project": "SCPN-MIRROR-CORE",
+        "intake_lane": "L3_repair_refused_plan_before_intake",
+        "next_gate": "repair_plan_schema_then_supply_physical_sample_envelope",
+        "external_context": {
+          "evidence_rank": "E4_integrated_plasma_experiment",
+          "source_ids": [
+            "SRC-011"
+          ],
+          "diagnostic_evidence_state": "documented_integrated_device",
+          "technology_is_priority_score": false,
+          "technology_is_signal_evidence": false,
+          "technology_is_control_evidence": false
+        },
+        "current_spo_evidence": {
+          "evidence_state": "producerless",
+          "semantic_ingress_state": "not_declared",
+          "producer_project": null,
+          "source_schema": null,
+          "adapter_api": null,
+          "occurrence_ids": [],
+          "physical_source_present": false,
+          "portable_review_adapter_present": false,
+          "qualified_observation": false,
+          "qualified_physical_phase": false
+        },
+        "diagnostic_plan": {
+          "structural_status": "refused",
+          "custody_state": "producer_fix_required",
+          "observed_revision": "348db236d1e19c8303754205b410a1f9d17135cf",
+          "fixture_sha256": "0b74b090ac6194174920bda0a455c2571287eff917475cfaf0fbac70a3c70009",
+          "missing_required_members": [
+            "timing_uncertainty_s"
+          ],
+          "affected_channel_ids": [
+            "ch_diamagnetic_loop",
+            "ch_drive_reference",
+            "ch_end_loss_array",
+            "ch_flute_probe_array",
+            "ch_synthetic_oscillator"
+          ]
+        },
+        "readiness_axes": {
+          "exact_configuration_identity": true,
+          "external_context_present": true,
+          "physical_source_present": false,
+          "portable_review_adapter_present": false,
+          "structural_plan_accepted": false,
+          "exact_plan_fixture_custody": false,
+          "complete_physical_evidence": false,
+          "control_admission": false
+        },
+        "observability_candidate_ids": [
+          "model.synthetic_oscillator_coordinate",
+          "open.drive_reference",
+          "open.equilibrium_and_loss",
+          "open.resolved_interchange_mode"
+        ],
+        "producer_request": {
+          "requested_owner_project": "SCPN-MIRROR-CORE",
+          "artifact_kind": "configuration_specific_canonical_evidence_envelope",
+          "required_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "lane_blockers": [
+            "timing_uncertainty_s_member_missing",
+            "regenerated_canonical_plan_and_envelope_required",
+            "refreshed_fixture_digest_required",
+            "physical_sample_envelope",
+            "physical_clock_reference_and_operator_binding",
+            "physical_uncertainty_validity_quality_and_provenance",
+            "physical_observability_gate_result"
+          ],
+          "source_revision_required": true,
+          "package_identity_required": true,
+          "canonical_bytes_required": true,
+          "independent_validation_required": true
+        },
+        "priority_score": null,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      },
+      {
+        "configuration": "gridded_iec",
+        "confinement_family": "electrostatic",
+        "topology": "gridded electrostatic potential well",
+        "device_project": "SCPN-IEC-CORE",
+        "intake_lane": "L3_repair_refused_plan_before_intake",
+        "next_gate": "repair_plan_schema_then_supply_physical_sample_envelope",
+        "external_context": {
+          "evidence_rank": "E5_integrated_fusion_observation",
+          "source_ids": [
+            "SRC-030"
+          ],
+          "diagnostic_evidence_state": "documented_integrated_device",
+          "technology_is_priority_score": false,
+          "technology_is_signal_evidence": false,
+          "technology_is_control_evidence": false
+        },
+        "current_spo_evidence": {
+          "evidence_state": "producerless",
+          "semantic_ingress_state": "not_declared",
+          "producer_project": null,
+          "source_schema": null,
+          "adapter_api": null,
+          "occurrence_ids": [],
+          "physical_source_present": false,
+          "portable_review_adapter_present": false,
+          "qualified_observation": false,
+          "qualified_physical_phase": false
+        },
+        "diagnostic_plan": {
+          "structural_status": "refused",
+          "custody_state": "producer_fix_required",
+          "observed_revision": "5551c413b578051d6466ccf3847f5d4ea27f1d4b",
+          "fixture_sha256": "c65309556867001b15965d93ba333ee0d14f6fcebe1295c83bfdb521abf061d6",
+          "missing_required_members": [
+            "timing_uncertainty_s"
+          ],
+          "affected_channel_ids": [
+            "ch_bunching_probe",
+            "ch_drive_reference",
+            "ch_interchange_probe_array",
+            "ch_loss_profile_set",
+            "ch_steady_state_set",
+            "ch_synthetic_oscillator"
+          ]
+        },
+        "readiness_axes": {
+          "exact_configuration_identity": true,
+          "external_context_present": true,
+          "physical_source_present": false,
+          "portable_review_adapter_present": false,
+          "structural_plan_accepted": false,
+          "exact_plan_fixture_custody": false,
+          "complete_physical_evidence": false,
+          "control_admission": false
+        },
+        "observability_candidate_ids": [
+          "iec.resolved_bunching",
+          "iec.steady_state",
+          "model.synthetic_oscillator_coordinate"
+        ],
+        "producer_request": {
+          "requested_owner_project": "SCPN-IEC-CORE",
+          "artifact_kind": "configuration_specific_canonical_evidence_envelope",
+          "required_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "lane_blockers": [
+            "timing_uncertainty_s_member_missing",
+            "regenerated_canonical_plan_and_envelope_required",
+            "refreshed_fixture_digest_required",
+            "physical_sample_envelope",
+            "physical_clock_reference_and_operator_binding",
+            "physical_uncertainty_validity_quality_and_provenance",
+            "physical_observability_gate_result"
+          ],
+          "source_revision_required": true,
+          "package_identity_required": true,
+          "canonical_bytes_required": true,
+          "independent_validation_required": true
+        },
+        "priority_score": null,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      },
+      {
+        "configuration": "heliotron",
+        "confinement_family": "magnetic_closed",
+        "topology": "helical-coil torus",
+        "device_project": "SCPN-STELLARATOR-CORE",
+        "intake_lane": "L3_repair_refused_plan_before_intake",
+        "next_gate": "repair_plan_schema_then_supply_physical_sample_envelope",
+        "external_context": {
+          "evidence_rank": "E4_integrated_plasma_experiment",
+          "source_ids": [
+            "SRC-005"
+          ],
+          "diagnostic_evidence_state": "documented_integrated_device",
+          "technology_is_priority_score": false,
+          "technology_is_signal_evidence": false,
+          "technology_is_control_evidence": false
+        },
+        "current_spo_evidence": {
+          "evidence_state": "producerless",
+          "semantic_ingress_state": "not_declared",
+          "producer_project": null,
+          "source_schema": null,
+          "adapter_api": null,
+          "occurrence_ids": [],
+          "physical_source_present": false,
+          "portable_review_adapter_present": false,
+          "qualified_observation": false,
+          "qualified_physical_phase": false
+        },
+        "diagnostic_plan": {
+          "structural_status": "refused",
+          "custody_state": "producer_fix_required",
+          "observed_revision": "cc26682849bcb35a89ca07539d23ec843a5af92a",
+          "fixture_sha256": "8df3515a35978d0e518ba75749421052a399d9d8e77e8c176cf4231b259b0af1",
+          "missing_required_members": [
+            "timing_uncertainty_s"
+          ],
+          "affected_channel_ids": [
+            "ch_flux_loop_set",
+            "ch_interferometer",
+            "ch_mirnov_array",
+            "ch_synthetic_oscillator",
+            "ch_thomson_profiles"
+          ]
+        },
+        "readiness_axes": {
+          "exact_configuration_identity": true,
+          "external_context_present": true,
+          "physical_source_present": false,
+          "portable_review_adapter_present": false,
+          "structural_plan_accepted": false,
+          "exact_plan_fixture_custody": false,
+          "complete_physical_evidence": false,
+          "control_admission": false
+        },
+        "observability_candidate_ids": [
+          "closed.equilibrium_profiles",
+          "closed.resolved_mhd_mode",
+          "model.synthetic_oscillator_coordinate"
+        ],
+        "producer_request": {
+          "requested_owner_project": "SCPN-STELLARATOR-CORE",
+          "artifact_kind": "configuration_specific_canonical_evidence_envelope",
+          "required_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "lane_blockers": [
+            "timing_uncertainty_s_member_missing",
+            "regenerated_canonical_plan_and_envelope_required",
+            "refreshed_fixture_digest_required",
+            "physical_sample_envelope",
+            "physical_clock_reference_and_operator_binding",
+            "physical_uncertainty_validity_quality_and_provenance",
+            "physical_observability_gate_result"
+          ],
+          "source_revision_required": true,
+          "package_identity_required": true,
+          "canonical_bytes_required": true,
+          "independent_validation_required": true
+        },
+        "priority_score": null,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      },
+      {
+        "configuration": "ion_beam_icf",
+        "confinement_family": "inertial",
+        "topology": "particle-beam-driven target",
+        "device_project": "SCPN-ICF-BEAM-CORE",
+        "intake_lane": "L2_build_from_accepted_plan",
+        "next_gate": "supply_physical_sample_envelope",
+        "external_context": {
+          "evidence_rank": "E3_component_or_driver_experiment",
+          "source_ids": [
+            "SRC-022"
+          ],
+          "diagnostic_evidence_state": "documented_component_or_driver",
+          "technology_is_priority_score": false,
+          "technology_is_signal_evidence": false,
+          "technology_is_control_evidence": false
+        },
+        "current_spo_evidence": {
+          "evidence_state": "producerless",
+          "semantic_ingress_state": "not_declared",
+          "producer_project": null,
+          "source_schema": null,
+          "adapter_api": null,
+          "occurrence_ids": [],
+          "physical_source_present": false,
+          "portable_review_adapter_present": false,
+          "qualified_observation": false,
+          "qualified_physical_phase": false
+        },
+        "diagnostic_plan": {
+          "structural_status": "accepted",
+          "custody_state": "exact_fixture_custody",
+          "observed_revision": "3ee15a5bf56b38614770351caa1112a4832d5254",
+          "fixture_sha256": "1a6d03f3d0e67b67f2abbf8064900ab2e23a803b3c29b65ec9158d06f9842a5d",
+          "missing_required_members": [],
+          "affected_channel_ids": []
+        },
+        "readiness_axes": {
+          "exact_configuration_identity": true,
+          "external_context_present": true,
+          "physical_source_present": false,
+          "portable_review_adapter_present": false,
+          "structural_plan_accepted": true,
+          "exact_plan_fixture_custody": true,
+          "complete_physical_evidence": false,
+          "control_admission": false
+        },
+        "observability_candidate_ids": [
+          "inertial.driver_timing",
+          "inertial.implosion_trajectory",
+          "inertial.resolved_asymmetry_mode",
+          "inertial.shot_outcome",
+          "model.synthetic_oscillator_coordinate"
+        ],
+        "producer_request": {
+          "requested_owner_project": "SCPN-ICF-BEAM-CORE",
+          "artifact_kind": "configuration_specific_canonical_evidence_envelope",
+          "required_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "lane_blockers": [
+            "sampled_values_absent_from_design_plan",
+            "physical_sample_envelope",
+            "physical_clock_reference_and_operator_binding",
+            "physical_uncertainty_validity_quality_and_provenance",
+            "physical_observability_gate_result"
+          ],
+          "source_revision_required": true,
+          "package_identity_required": true,
+          "canonical_bytes_required": true,
+          "independent_validation_required": true
+        },
+        "priority_score": null,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      },
+      {
+        "configuration": "laser_icf_direct_drive",
+        "confinement_family": "inertial",
+        "topology": "spherical direct-drive target",
+        "device_project": "SCPN-ICF-LASER-CORE",
+        "intake_lane": "L2_build_from_accepted_plan",
+        "next_gate": "supply_physical_sample_envelope",
+        "external_context": {
+          "evidence_rank": "E4_integrated_plasma_experiment",
+          "source_ids": [
+            "SRC-020"
+          ],
+          "diagnostic_evidence_state": "documented_integrated_device",
+          "technology_is_priority_score": false,
+          "technology_is_signal_evidence": false,
+          "technology_is_control_evidence": false
+        },
+        "current_spo_evidence": {
+          "evidence_state": "producerless",
+          "semantic_ingress_state": "not_declared",
+          "producer_project": null,
+          "source_schema": null,
+          "adapter_api": null,
+          "occurrence_ids": [],
+          "physical_source_present": false,
+          "portable_review_adapter_present": false,
+          "qualified_observation": false,
+          "qualified_physical_phase": false
+        },
+        "diagnostic_plan": {
+          "structural_status": "accepted",
+          "custody_state": "exact_fixture_custody",
+          "observed_revision": "bc041638eefc729747759ce4f8d6d6e1db053e80",
+          "fixture_sha256": "7e8cc1e3b72a15c5df1f4a890571284d5f4c872f9ec73cbda6e567a42b93bceb",
+          "missing_required_members": [],
+          "affected_channel_ids": []
+        },
+        "readiness_axes": {
+          "exact_configuration_identity": true,
+          "external_context_present": true,
+          "physical_source_present": false,
+          "portable_review_adapter_present": false,
+          "structural_plan_accepted": true,
+          "exact_plan_fixture_custody": true,
+          "complete_physical_evidence": false,
+          "control_admission": false
+        },
+        "observability_candidate_ids": [
+          "inertial.driver_timing",
+          "inertial.implosion_trajectory",
+          "inertial.resolved_asymmetry_mode",
+          "inertial.shot_outcome",
+          "model.synthetic_oscillator_coordinate"
+        ],
+        "producer_request": {
+          "requested_owner_project": "SCPN-ICF-LASER-CORE",
+          "artifact_kind": "configuration_specific_canonical_evidence_envelope",
+          "required_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "lane_blockers": [
+            "sampled_values_absent_from_design_plan",
+            "physical_sample_envelope",
+            "physical_clock_reference_and_operator_binding",
+            "physical_uncertainty_validity_quality_and_provenance",
+            "physical_observability_gate_result"
+          ],
+          "source_revision_required": true,
+          "package_identity_required": true,
+          "canonical_bytes_required": true,
+          "independent_validation_required": true
+        },
+        "priority_score": null,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      },
+      {
+        "configuration": "laser_icf_fast_or_shock_ignition",
+        "confinement_family": "inertial",
+        "topology": "staged laser-driven target",
+        "device_project": "SCPN-ICF-LASER-CORE",
+        "intake_lane": "L2_build_from_accepted_plan",
+        "next_gate": "supply_physical_sample_envelope",
+        "external_context": {
+          "evidence_rank": "E4_integrated_plasma_experiment",
+          "source_ids": [
+            "SRC-020",
+            "SRC-021"
+          ],
+          "diagnostic_evidence_state": "documented_integrated_device",
+          "technology_is_priority_score": false,
+          "technology_is_signal_evidence": false,
+          "technology_is_control_evidence": false
+        },
+        "current_spo_evidence": {
+          "evidence_state": "producerless",
+          "semantic_ingress_state": "not_declared",
+          "producer_project": null,
+          "source_schema": null,
+          "adapter_api": null,
+          "occurrence_ids": [],
+          "physical_source_present": false,
+          "portable_review_adapter_present": false,
+          "qualified_observation": false,
+          "qualified_physical_phase": false
+        },
+        "diagnostic_plan": {
+          "structural_status": "accepted",
+          "custody_state": "exact_fixture_custody",
+          "observed_revision": "bc041638eefc729747759ce4f8d6d6e1db053e80",
+          "fixture_sha256": "7e8cc1e3b72a15c5df1f4a890571284d5f4c872f9ec73cbda6e567a42b93bceb",
+          "missing_required_members": [],
+          "affected_channel_ids": []
+        },
+        "readiness_axes": {
+          "exact_configuration_identity": true,
+          "external_context_present": true,
+          "physical_source_present": false,
+          "portable_review_adapter_present": false,
+          "structural_plan_accepted": true,
+          "exact_plan_fixture_custody": true,
+          "complete_physical_evidence": false,
+          "control_admission": false
+        },
+        "observability_candidate_ids": [
+          "inertial.driver_timing",
+          "inertial.implosion_trajectory",
+          "inertial.resolved_asymmetry_mode",
+          "inertial.shot_outcome",
+          "model.synthetic_oscillator_coordinate"
+        ],
+        "producer_request": {
+          "requested_owner_project": "SCPN-ICF-LASER-CORE",
+          "artifact_kind": "configuration_specific_canonical_evidence_envelope",
+          "required_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "lane_blockers": [
+            "sampled_values_absent_from_design_plan",
+            "physical_sample_envelope",
+            "physical_clock_reference_and_operator_binding",
+            "physical_uncertainty_validity_quality_and_provenance",
+            "physical_observability_gate_result"
+          ],
+          "source_revision_required": true,
+          "package_identity_required": true,
+          "canonical_bytes_required": true,
+          "independent_validation_required": true
+        },
+        "priority_score": null,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      },
+      {
+        "configuration": "laser_icf_indirect_drive",
+        "confinement_family": "inertial",
+        "topology": "hohlraum indirect-drive target",
+        "device_project": "SCPN-ICF-LASER-CORE",
+        "intake_lane": "L2_build_from_accepted_plan",
+        "next_gate": "supply_physical_sample_envelope",
+        "external_context": {
+          "evidence_rank": "E5_integrated_fusion_observation",
+          "source_ids": [
+            "SRC-019"
+          ],
+          "diagnostic_evidence_state": "documented_integrated_device",
+          "technology_is_priority_score": false,
+          "technology_is_signal_evidence": false,
+          "technology_is_control_evidence": false
+        },
+        "current_spo_evidence": {
+          "evidence_state": "producerless",
+          "semantic_ingress_state": "not_declared",
+          "producer_project": null,
+          "source_schema": null,
+          "adapter_api": null,
+          "occurrence_ids": [],
+          "physical_source_present": false,
+          "portable_review_adapter_present": false,
+          "qualified_observation": false,
+          "qualified_physical_phase": false
+        },
+        "diagnostic_plan": {
+          "structural_status": "accepted",
+          "custody_state": "exact_fixture_custody",
+          "observed_revision": "bc041638eefc729747759ce4f8d6d6e1db053e80",
+          "fixture_sha256": "7e8cc1e3b72a15c5df1f4a890571284d5f4c872f9ec73cbda6e567a42b93bceb",
+          "missing_required_members": [],
+          "affected_channel_ids": []
+        },
+        "readiness_axes": {
+          "exact_configuration_identity": true,
+          "external_context_present": true,
+          "physical_source_present": false,
+          "portable_review_adapter_present": false,
+          "structural_plan_accepted": true,
+          "exact_plan_fixture_custody": true,
+          "complete_physical_evidence": false,
+          "control_admission": false
+        },
+        "observability_candidate_ids": [
+          "inertial.driver_timing",
+          "inertial.implosion_trajectory",
+          "inertial.resolved_asymmetry_mode",
+          "inertial.shot_outcome",
+          "model.synthetic_oscillator_coordinate"
+        ],
+        "producer_request": {
+          "requested_owner_project": "SCPN-ICF-LASER-CORE",
+          "artifact_kind": "configuration_specific_canonical_evidence_envelope",
+          "required_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "lane_blockers": [
+            "sampled_values_absent_from_design_plan",
+            "physical_sample_envelope",
+            "physical_clock_reference_and_operator_binding",
+            "physical_uncertainty_validity_quality_and_provenance",
+            "physical_observability_gate_result"
+          ],
+          "source_revision_required": true,
+          "package_identity_required": true,
+          "canonical_bytes_required": true,
+          "independent_validation_required": true
+        },
+        "priority_score": null,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      },
+      {
+        "configuration": "levitated_dipole",
+        "confinement_family": "magnetic_open",
+        "topology": "closed dipole field",
+        "device_project": "SCPN-LEVITATED-DIPOLE-CORE",
+        "intake_lane": "L3_repair_refused_plan_before_intake",
+        "next_gate": "repair_plan_schema_then_supply_physical_sample_envelope",
+        "external_context": {
+          "evidence_rank": "E4_integrated_plasma_experiment",
+          "source_ids": [
+            "SRC-014"
+          ],
+          "diagnostic_evidence_state": "historical_documented_device",
+          "technology_is_priority_score": false,
+          "technology_is_signal_evidence": false,
+          "technology_is_control_evidence": false
+        },
+        "current_spo_evidence": {
+          "evidence_state": "producerless",
+          "semantic_ingress_state": "not_declared",
+          "producer_project": null,
+          "source_schema": null,
+          "adapter_api": null,
+          "occurrence_ids": [],
+          "physical_source_present": false,
+          "portable_review_adapter_present": false,
+          "qualified_observation": false,
+          "qualified_physical_phase": false
+        },
+        "diagnostic_plan": {
+          "structural_status": "refused",
+          "custody_state": "producer_fix_required",
+          "observed_revision": "9d1b0cf9b8baf2e71a5e633f6d9568bc15436237",
+          "fixture_sha256": "4101ad18bae4ea8e907455494a0be2ffbe8c5978f6253237f8c91c0e46fd6991",
+          "missing_required_members": [
+            "timing_uncertainty_s"
+          ],
+          "affected_channel_ids": [
+            "ch_drive_reference",
+            "ch_flux_loop_set",
+            "ch_interchange_probe_array",
+            "ch_interferometer",
+            "ch_synthetic_oscillator"
+          ]
+        },
+        "readiness_axes": {
+          "exact_configuration_identity": true,
+          "external_context_present": true,
+          "physical_source_present": false,
+          "portable_review_adapter_present": false,
+          "structural_plan_accepted": false,
+          "exact_plan_fixture_custody": false,
+          "complete_physical_evidence": false,
+          "control_admission": false
+        },
+        "observability_candidate_ids": [
+          "model.synthetic_oscillator_coordinate",
+          "open.drive_reference",
+          "open.equilibrium_and_loss",
+          "open.resolved_interchange_mode"
+        ],
+        "producer_request": {
+          "requested_owner_project": "SCPN-LEVITATED-DIPOLE-CORE",
+          "artifact_kind": "configuration_specific_canonical_evidence_envelope",
+          "required_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "lane_blockers": [
+            "timing_uncertainty_s_member_missing",
+            "regenerated_canonical_plan_and_envelope_required",
+            "refreshed_fixture_digest_required",
+            "physical_sample_envelope",
+            "physical_clock_reference_and_operator_binding",
+            "physical_uncertainty_validity_quality_and_provenance",
+            "physical_observability_gate_result"
+          ],
+          "source_revision_required": true,
+          "package_identity_required": true,
+          "canonical_bytes_required": true,
+          "independent_validation_required": true
+        },
+        "priority_score": null,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      },
+      {
+        "configuration": "maglif",
+        "confinement_family": "magneto_inertial",
+        "topology": "magnetized cylindrical liner",
+        "device_project": "SCPN-MIF-MAGLIF-CORE",
+        "intake_lane": "L2_build_from_accepted_plan",
+        "next_gate": "supply_physical_sample_envelope",
+        "external_context": {
+          "evidence_rank": "E5_integrated_fusion_observation",
+          "source_ids": [
+            "SRC-026"
+          ],
+          "diagnostic_evidence_state": "documented_integrated_device",
+          "technology_is_priority_score": false,
+          "technology_is_signal_evidence": false,
+          "technology_is_control_evidence": false
+        },
+        "current_spo_evidence": {
+          "evidence_state": "producerless",
+          "semantic_ingress_state": "not_declared",
+          "producer_project": null,
+          "source_schema": null,
+          "adapter_api": null,
+          "occurrence_ids": [],
+          "physical_source_present": false,
+          "portable_review_adapter_present": false,
+          "qualified_observation": false,
+          "qualified_physical_phase": false
+        },
+        "diagnostic_plan": {
+          "structural_status": "accepted",
+          "custody_state": "exact_fixture_custody",
+          "observed_revision": "d3b6230e9b77763bfeb7cb767c8b9a979c6ed0cf",
+          "fixture_sha256": "81ff0f7bb2390736a91dec078b3032da7efc963369301f6c92e7123776621c57",
+          "missing_required_members": [],
+          "affected_channel_ids": []
+        },
+        "readiness_axes": {
+          "exact_configuration_identity": true,
+          "external_context_present": true,
+          "physical_source_present": false,
+          "portable_review_adapter_present": false,
+          "structural_plan_accepted": true,
+          "exact_plan_fixture_custody": true,
+          "complete_physical_evidence": false,
+          "control_admission": false
+        },
+        "observability_candidate_ids": [
+          "magneto_inertial.driver_arrival",
+          "magneto_inertial.resolved_asymmetry_mode",
+          "magneto_inertial.translation_and_compression",
+          "model.synthetic_oscillator_coordinate"
+        ],
+        "producer_request": {
+          "requested_owner_project": "SCPN-MIF-MAGLIF-CORE",
+          "artifact_kind": "configuration_specific_canonical_evidence_envelope",
+          "required_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "lane_blockers": [
+            "sampled_values_absent_from_design_plan",
+            "physical_sample_envelope",
+            "physical_clock_reference_and_operator_binding",
+            "physical_uncertainty_validity_quality_and_provenance",
+            "physical_observability_gate_result"
+          ],
+          "source_revision_required": true,
+          "package_identity_required": true,
+          "canonical_bytes_required": true,
+          "independent_validation_required": true
+        },
+        "priority_score": null,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      },
+      {
+        "configuration": "mechanical_or_liquid_liner_mif",
+        "confinement_family": "magneto_inertial",
+        "topology": "material-liner compression",
+        "device_project": "SCPN-MIF-LINER-CORE",
+        "intake_lane": "L2_build_from_accepted_plan",
+        "next_gate": "supply_physical_sample_envelope",
+        "external_context": {
+          "evidence_rank": "E3_component_or_driver_experiment",
+          "source_ids": [
+            "SRC-028"
+          ],
+          "diagnostic_evidence_state": "documented_component_or_driver",
+          "technology_is_priority_score": false,
+          "technology_is_signal_evidence": false,
+          "technology_is_control_evidence": false
+        },
+        "current_spo_evidence": {
+          "evidence_state": "producerless",
+          "semantic_ingress_state": "not_declared",
+          "producer_project": null,
+          "source_schema": null,
+          "adapter_api": null,
+          "occurrence_ids": [],
+          "physical_source_present": false,
+          "portable_review_adapter_present": false,
+          "qualified_observation": false,
+          "qualified_physical_phase": false
+        },
+        "diagnostic_plan": {
+          "structural_status": "accepted",
+          "custody_state": "exact_fixture_custody",
+          "observed_revision": "8b1ee018a8c842cc87541f4d2526c8b7271b6b86",
+          "fixture_sha256": "e3e8cb2f26e6c25e4a6a57eb7cc3a52e3f398e6e04a460a24e87ea9026ea7950",
+          "missing_required_members": [],
+          "affected_channel_ids": []
+        },
+        "readiness_axes": {
+          "exact_configuration_identity": true,
+          "external_context_present": true,
+          "physical_source_present": false,
+          "portable_review_adapter_present": false,
+          "structural_plan_accepted": true,
+          "exact_plan_fixture_custody": true,
+          "complete_physical_evidence": false,
+          "control_admission": false
+        },
+        "observability_candidate_ids": [
+          "magneto_inertial.driver_arrival",
+          "magneto_inertial.resolved_asymmetry_mode",
+          "magneto_inertial.translation_and_compression",
+          "model.synthetic_oscillator_coordinate"
+        ],
+        "producer_request": {
+          "requested_owner_project": "SCPN-MIF-LINER-CORE",
+          "artifact_kind": "configuration_specific_canonical_evidence_envelope",
+          "required_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "lane_blockers": [
+            "sampled_values_absent_from_design_plan",
+            "physical_sample_envelope",
+            "physical_clock_reference_and_operator_binding",
+            "physical_uncertainty_validity_quality_and_provenance",
+            "physical_observability_gate_result"
+          ],
+          "source_revision_required": true,
+          "package_identity_required": true,
+          "canonical_bytes_required": true,
+          "independent_validation_required": true
+        },
+        "priority_score": null,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      },
+      {
+        "configuration": "plasma_jet_mif",
+        "confinement_family": "magneto_inertial",
+        "topology": "converging plasma-jet liner",
+        "device_project": "SCPN-MIF-PLASMA-JET-CORE",
+        "intake_lane": "L2_build_from_accepted_plan",
+        "next_gate": "supply_physical_sample_envelope",
+        "external_context": {
+          "evidence_rank": "E3_component_or_driver_experiment",
+          "source_ids": [
+            "SRC-027"
+          ],
+          "diagnostic_evidence_state": "documented_component_or_driver",
+          "technology_is_priority_score": false,
+          "technology_is_signal_evidence": false,
+          "technology_is_control_evidence": false
+        },
+        "current_spo_evidence": {
+          "evidence_state": "producerless",
+          "semantic_ingress_state": "not_declared",
+          "producer_project": null,
+          "source_schema": null,
+          "adapter_api": null,
+          "occurrence_ids": [],
+          "physical_source_present": false,
+          "portable_review_adapter_present": false,
+          "qualified_observation": false,
+          "qualified_physical_phase": false
+        },
+        "diagnostic_plan": {
+          "structural_status": "accepted",
+          "custody_state": "exact_fixture_custody",
+          "observed_revision": "418b5cce6fb8b10155777cf51891828c3a7646b3",
+          "fixture_sha256": "9e7b053a91495645163ba40bd5eb05872b679a6694548b35e07ac96f3088ffe2",
+          "missing_required_members": [],
+          "affected_channel_ids": []
+        },
+        "readiness_axes": {
+          "exact_configuration_identity": true,
+          "external_context_present": true,
+          "physical_source_present": false,
+          "portable_review_adapter_present": false,
+          "structural_plan_accepted": true,
+          "exact_plan_fixture_custody": true,
+          "complete_physical_evidence": false,
+          "control_admission": false
+        },
+        "observability_candidate_ids": [
+          "magneto_inertial.driver_arrival",
+          "magneto_inertial.resolved_asymmetry_mode",
+          "magneto_inertial.translation_and_compression",
+          "model.synthetic_oscillator_coordinate"
+        ],
+        "producer_request": {
+          "requested_owner_project": "SCPN-MIF-PLASMA-JET-CORE",
+          "artifact_kind": "configuration_specific_canonical_evidence_envelope",
+          "required_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "lane_blockers": [
+            "sampled_values_absent_from_design_plan",
+            "physical_sample_envelope",
+            "physical_clock_reference_and_operator_binding",
+            "physical_uncertainty_validity_quality_and_provenance",
+            "physical_observability_gate_result"
+          ],
+          "source_revision_required": true,
+          "package_identity_required": true,
+          "canonical_bytes_required": true,
+          "independent_validation_required": true
+        },
+        "priority_score": null,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      },
+      {
+        "configuration": "polywell",
+        "confinement_family": "magnetic_open",
+        "topology": "electrostatically biased magnetic cusp",
+        "device_project": "SCPN-IEC-CORE",
+        "intake_lane": "L3_repair_refused_plan_before_intake",
+        "next_gate": "repair_plan_schema_then_supply_physical_sample_envelope",
+        "external_context": {
+          "evidence_rank": "E4_integrated_plasma_experiment",
+          "source_ids": [
+            "SRC-013"
+          ],
+          "diagnostic_evidence_state": "historical_documented_device",
+          "technology_is_priority_score": false,
+          "technology_is_signal_evidence": false,
+          "technology_is_control_evidence": false
+        },
+        "current_spo_evidence": {
+          "evidence_state": "producerless",
+          "semantic_ingress_state": "not_declared",
+          "producer_project": null,
+          "source_schema": null,
+          "adapter_api": null,
+          "occurrence_ids": [],
+          "physical_source_present": false,
+          "portable_review_adapter_present": false,
+          "qualified_observation": false,
+          "qualified_physical_phase": false
+        },
+        "diagnostic_plan": {
+          "structural_status": "refused",
+          "custody_state": "producer_fix_required",
+          "observed_revision": "5551c413b578051d6466ccf3847f5d4ea27f1d4b",
+          "fixture_sha256": "c65309556867001b15965d93ba333ee0d14f6fcebe1295c83bfdb521abf061d6",
+          "missing_required_members": [
+            "timing_uncertainty_s"
+          ],
+          "affected_channel_ids": [
+            "ch_bunching_probe",
+            "ch_drive_reference",
+            "ch_interchange_probe_array",
+            "ch_loss_profile_set",
+            "ch_steady_state_set",
+            "ch_synthetic_oscillator"
+          ]
+        },
+        "readiness_axes": {
+          "exact_configuration_identity": true,
+          "external_context_present": true,
+          "physical_source_present": false,
+          "portable_review_adapter_present": false,
+          "structural_plan_accepted": false,
+          "exact_plan_fixture_custody": false,
+          "complete_physical_evidence": false,
+          "control_admission": false
+        },
+        "observability_candidate_ids": [
+          "iec.resolved_bunching",
+          "iec.steady_state",
+          "model.synthetic_oscillator_coordinate",
+          "open.drive_reference",
+          "open.equilibrium_and_loss",
+          "open.resolved_interchange_mode"
+        ],
+        "producer_request": {
+          "requested_owner_project": "SCPN-IEC-CORE",
+          "artifact_kind": "configuration_specific_canonical_evidence_envelope",
+          "required_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "lane_blockers": [
+            "timing_uncertainty_s_member_missing",
+            "regenerated_canonical_plan_and_envelope_required",
+            "refreshed_fixture_digest_required",
+            "physical_sample_envelope",
+            "physical_clock_reference_and_operator_binding",
+            "physical_uncertainty_validity_quality_and_provenance",
+            "physical_observability_gate_result"
+          ],
+          "source_revision_required": true,
+          "package_identity_required": true,
+          "canonical_bytes_required": true,
+          "independent_validation_required": true
+        },
+        "priority_score": null,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      },
+      {
+        "configuration": "projectile_or_impact_icf",
+        "confinement_family": "inertial",
+        "topology": "impact-driven target",
+        "device_project": "SCPN-ICF-IMPACT-CORE",
+        "intake_lane": "L2_build_from_accepted_plan",
+        "next_gate": "supply_physical_sample_envelope",
+        "external_context": {
+          "evidence_rank": "E4_integrated_plasma_experiment",
+          "source_ids": [
+            "SRC-024",
+            "SRC-025"
+          ],
+          "diagnostic_evidence_state": "documented_integrated_device",
+          "technology_is_priority_score": false,
+          "technology_is_signal_evidence": false,
+          "technology_is_control_evidence": false
+        },
+        "current_spo_evidence": {
+          "evidence_state": "producerless",
+          "semantic_ingress_state": "not_declared",
+          "producer_project": null,
+          "source_schema": null,
+          "adapter_api": null,
+          "occurrence_ids": [],
+          "physical_source_present": false,
+          "portable_review_adapter_present": false,
+          "qualified_observation": false,
+          "qualified_physical_phase": false
+        },
+        "diagnostic_plan": {
+          "structural_status": "accepted",
+          "custody_state": "exact_fixture_custody",
+          "observed_revision": "397f1f2a5fb2af1ad620174a43720eb1c7b5de5f",
+          "fixture_sha256": "33fdafa9716ab7436a245ddba48dee6e9a1ed97397315bd010aed7dff9cd16ff",
+          "missing_required_members": [],
+          "affected_channel_ids": []
+        },
+        "readiness_axes": {
+          "exact_configuration_identity": true,
+          "external_context_present": true,
+          "physical_source_present": false,
+          "portable_review_adapter_present": false,
+          "structural_plan_accepted": true,
+          "exact_plan_fixture_custody": true,
+          "complete_physical_evidence": false,
+          "control_admission": false
+        },
+        "observability_candidate_ids": [
+          "inertial.driver_timing",
+          "inertial.implosion_trajectory",
+          "inertial.resolved_asymmetry_mode",
+          "inertial.shot_outcome",
+          "model.synthetic_oscillator_coordinate"
+        ],
+        "producer_request": {
+          "requested_owner_project": "SCPN-ICF-IMPACT-CORE",
+          "artifact_kind": "configuration_specific_canonical_evidence_envelope",
+          "required_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "lane_blockers": [
+            "sampled_values_absent_from_design_plan",
+            "physical_sample_envelope",
+            "physical_clock_reference_and_operator_binding",
+            "physical_uncertainty_validity_quality_and_provenance",
+            "physical_observability_gate_result"
+          ],
+          "source_revision_required": true,
+          "package_identity_required": true,
+          "canonical_bytes_required": true,
+          "independent_validation_required": true
+        },
+        "priority_score": null,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      },
+      {
+        "configuration": "pulsed_electron_beam_icf",
+        "confinement_family": "inertial",
+        "topology": "electron-beam-driven target",
+        "device_project": "SCPN-ICF-BEAM-CORE",
+        "intake_lane": "L2_build_from_accepted_plan",
+        "next_gate": "supply_physical_sample_envelope",
+        "external_context": {
+          "evidence_rank": "E3_component_or_driver_experiment",
+          "source_ids": [
+            "SRC-023"
+          ],
+          "diagnostic_evidence_state": "historical_documented_device",
+          "technology_is_priority_score": false,
+          "technology_is_signal_evidence": false,
+          "technology_is_control_evidence": false
+        },
+        "current_spo_evidence": {
+          "evidence_state": "producerless",
+          "semantic_ingress_state": "not_declared",
+          "producer_project": null,
+          "source_schema": null,
+          "adapter_api": null,
+          "occurrence_ids": [],
+          "physical_source_present": false,
+          "portable_review_adapter_present": false,
+          "qualified_observation": false,
+          "qualified_physical_phase": false
+        },
+        "diagnostic_plan": {
+          "structural_status": "accepted",
+          "custody_state": "exact_fixture_custody",
+          "observed_revision": "3ee15a5bf56b38614770351caa1112a4832d5254",
+          "fixture_sha256": "1a6d03f3d0e67b67f2abbf8064900ab2e23a803b3c29b65ec9158d06f9842a5d",
+          "missing_required_members": [],
+          "affected_channel_ids": []
+        },
+        "readiness_axes": {
+          "exact_configuration_identity": true,
+          "external_context_present": true,
+          "physical_source_present": false,
+          "portable_review_adapter_present": false,
+          "structural_plan_accepted": true,
+          "exact_plan_fixture_custody": true,
+          "complete_physical_evidence": false,
+          "control_admission": false
+        },
+        "observability_candidate_ids": [
+          "inertial.driver_timing",
+          "inertial.implosion_trajectory",
+          "inertial.resolved_asymmetry_mode",
+          "inertial.shot_outcome",
+          "model.synthetic_oscillator_coordinate"
+        ],
+        "producer_request": {
+          "requested_owner_project": "SCPN-ICF-BEAM-CORE",
+          "artifact_kind": "configuration_specific_canonical_evidence_envelope",
+          "required_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "lane_blockers": [
+            "sampled_values_absent_from_design_plan",
+            "physical_sample_envelope",
+            "physical_clock_reference_and_operator_binding",
+            "physical_uncertainty_validity_quality_and_provenance",
+            "physical_observability_gate_result"
+          ],
+          "source_revision_required": true,
+          "package_identity_required": true,
+          "canonical_bytes_required": true,
+          "independent_validation_required": true
+        },
+        "priority_score": null,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      },
+      {
+        "configuration": "reversed_field_pinch",
+        "confinement_family": "magnetic_closed",
+        "topology": "relaxed-current torus",
+        "device_project": "SCPN-RFP-CORE",
+        "intake_lane": "L3_repair_refused_plan_before_intake",
+        "next_gate": "repair_plan_schema_then_supply_physical_sample_envelope",
+        "external_context": {
+          "evidence_rank": "E4_integrated_plasma_experiment",
+          "source_ids": [
+            "SRC-007"
+          ],
+          "diagnostic_evidence_state": "planned_or_developing",
+          "technology_is_priority_score": false,
+          "technology_is_signal_evidence": false,
+          "technology_is_control_evidence": false
+        },
+        "current_spo_evidence": {
+          "evidence_state": "producerless",
+          "semantic_ingress_state": "not_declared",
+          "producer_project": null,
+          "source_schema": null,
+          "adapter_api": null,
+          "occurrence_ids": [],
+          "physical_source_present": false,
+          "portable_review_adapter_present": false,
+          "qualified_observation": false,
+          "qualified_physical_phase": false
+        },
+        "diagnostic_plan": {
+          "structural_status": "refused",
+          "custody_state": "producer_fix_required",
+          "observed_revision": "1bdbac1f3f453e4f694dfd92802511e430cc1c97",
+          "fixture_sha256": "7b0544fbb69295686737043fed56bc8db4bac4c78c2c684cd818620e23732210",
+          "missing_required_members": [
+            "timing_uncertainty_s"
+          ],
+          "affected_channel_ids": [
+            "ch_flux_loop_set",
+            "ch_rogowski_coil",
+            "ch_synthetic_oscillator",
+            "ch_toroidal_probe_array"
+          ]
+        },
+        "readiness_axes": {
+          "exact_configuration_identity": true,
+          "external_context_present": true,
+          "physical_source_present": false,
+          "portable_review_adapter_present": false,
+          "structural_plan_accepted": false,
+          "exact_plan_fixture_custody": false,
+          "complete_physical_evidence": false,
+          "control_admission": false
+        },
+        "observability_candidate_ids": [
+          "closed.equilibrium_profiles",
+          "closed.resolved_mhd_mode",
+          "model.synthetic_oscillator_coordinate"
+        ],
+        "producer_request": {
+          "requested_owner_project": "SCPN-RFP-CORE",
+          "artifact_kind": "configuration_specific_canonical_evidence_envelope",
+          "required_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "lane_blockers": [
+            "timing_uncertainty_s_member_missing",
+            "regenerated_canonical_plan_and_envelope_required",
+            "refreshed_fixture_digest_required",
+            "physical_sample_envelope",
+            "physical_clock_reference_and_operator_binding",
+            "physical_uncertainty_validity_quality_and_provenance",
+            "physical_observability_gate_result"
+          ],
+          "source_revision_required": true,
+          "package_identity_required": true,
+          "canonical_bytes_required": true,
+          "independent_validation_required": true
+        },
+        "priority_score": null,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      },
+      {
+        "configuration": "sheared_flow_z_pinch",
+        "confinement_family": "self_magnetic",
+        "topology": "flow-stabilized axial-current pinch",
+        "device_project": "SCPN-Z-PINCH-CORE",
+        "intake_lane": "L2_build_from_accepted_plan",
+        "next_gate": "supply_physical_sample_envelope",
+        "external_context": {
+          "evidence_rank": "E5_integrated_fusion_observation",
+          "source_ids": [
+            "SRC-015",
+            "SRC-016"
+          ],
+          "diagnostic_evidence_state": "documented_integrated_device",
+          "technology_is_priority_score": false,
+          "technology_is_signal_evidence": false,
+          "technology_is_control_evidence": false
+        },
+        "current_spo_evidence": {
+          "evidence_state": "producerless",
+          "semantic_ingress_state": "not_declared",
+          "producer_project": null,
+          "source_schema": null,
+          "adapter_api": null,
+          "occurrence_ids": [],
+          "physical_source_present": false,
+          "portable_review_adapter_present": false,
+          "qualified_observation": false,
+          "qualified_physical_phase": false
+        },
+        "diagnostic_plan": {
+          "structural_status": "accepted",
+          "custody_state": "exact_fixture_custody",
+          "observed_revision": "acf5dfe49de175e856c3d575bcfd11dead60d0fd",
+          "fixture_sha256": "69a068ded2d3db9b9c64080547cedd204893637996b9fab91638ba3491b940a0",
+          "missing_required_members": [],
+          "affected_channel_ids": []
+        },
+        "readiness_axes": {
+          "exact_configuration_identity": true,
+          "external_context_present": true,
+          "physical_source_present": false,
+          "portable_review_adapter_present": false,
+          "structural_plan_accepted": true,
+          "exact_plan_fixture_custody": true,
+          "complete_physical_evidence": false,
+          "control_admission": false
+        },
+        "observability_candidate_ids": [
+          "model.synthetic_oscillator_coordinate",
+          "self_magnetic.drive_waveform",
+          "self_magnetic.resolved_instability_mode"
+        ],
+        "producer_request": {
+          "requested_owner_project": "SCPN-Z-PINCH-CORE",
+          "artifact_kind": "configuration_specific_canonical_evidence_envelope",
+          "required_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "lane_blockers": [
+            "sampled_values_absent_from_design_plan",
+            "physical_sample_envelope",
+            "physical_clock_reference_and_operator_binding",
+            "physical_uncertainty_validity_quality_and_provenance",
+            "physical_observability_gate_result"
+          ],
+          "source_revision_required": true,
+          "package_identity_required": true,
+          "canonical_bytes_required": true,
+          "independent_validation_required": true
+        },
+        "priority_score": null,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      },
+      {
+        "configuration": "simple_magnetic_mirror",
+        "confinement_family": "magnetic_open",
+        "topology": "linear magnetic mirror",
+        "device_project": "SCPN-MIRROR-CORE",
+        "intake_lane": "L3_repair_refused_plan_before_intake",
+        "next_gate": "repair_plan_schema_then_supply_physical_sample_envelope",
+        "external_context": {
+          "evidence_rank": "E4_integrated_plasma_experiment",
+          "source_ids": [
+            "SRC-010"
+          ],
+          "diagnostic_evidence_state": "planned_or_developing",
+          "technology_is_priority_score": false,
+          "technology_is_signal_evidence": false,
+          "technology_is_control_evidence": false
+        },
+        "current_spo_evidence": {
+          "evidence_state": "producerless",
+          "semantic_ingress_state": "not_declared",
+          "producer_project": null,
+          "source_schema": null,
+          "adapter_api": null,
+          "occurrence_ids": [],
+          "physical_source_present": false,
+          "portable_review_adapter_present": false,
+          "qualified_observation": false,
+          "qualified_physical_phase": false
+        },
+        "diagnostic_plan": {
+          "structural_status": "refused",
+          "custody_state": "producer_fix_required",
+          "observed_revision": "348db236d1e19c8303754205b410a1f9d17135cf",
+          "fixture_sha256": "0b74b090ac6194174920bda0a455c2571287eff917475cfaf0fbac70a3c70009",
+          "missing_required_members": [
+            "timing_uncertainty_s"
+          ],
+          "affected_channel_ids": [
+            "ch_diamagnetic_loop",
+            "ch_drive_reference",
+            "ch_end_loss_array",
+            "ch_flute_probe_array",
+            "ch_synthetic_oscillator"
+          ]
+        },
+        "readiness_axes": {
+          "exact_configuration_identity": true,
+          "external_context_present": true,
+          "physical_source_present": false,
+          "portable_review_adapter_present": false,
+          "structural_plan_accepted": false,
+          "exact_plan_fixture_custody": false,
+          "complete_physical_evidence": false,
+          "control_admission": false
+        },
+        "observability_candidate_ids": [
+          "model.synthetic_oscillator_coordinate",
+          "open.drive_reference",
+          "open.equilibrium_and_loss",
+          "open.resolved_interchange_mode"
+        ],
+        "producer_request": {
+          "requested_owner_project": "SCPN-MIRROR-CORE",
+          "artifact_kind": "configuration_specific_canonical_evidence_envelope",
+          "required_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "lane_blockers": [
+            "timing_uncertainty_s_member_missing",
+            "regenerated_canonical_plan_and_envelope_required",
+            "refreshed_fixture_digest_required",
+            "physical_sample_envelope",
+            "physical_clock_reference_and_operator_binding",
+            "physical_uncertainty_validity_quality_and_provenance",
+            "physical_observability_gate_result"
+          ],
+          "source_revision_required": true,
+          "package_identity_required": true,
+          "canonical_bytes_required": true,
+          "independent_validation_required": true
+        },
+        "priority_score": null,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      },
+      {
+        "configuration": "spherical_tokamak",
+        "confinement_family": "magnetic_closed",
+        "topology": "low-aspect-ratio axisymmetric torus",
+        "device_project": "SCPN-TOKAMAK-CORE",
+        "intake_lane": "L0_qualify_existing_physical_source",
+        "next_gate": "complete_physical_source_qualification",
+        "external_context": {
+          "evidence_rank": "E4_integrated_plasma_experiment",
+          "source_ids": [
+            "SRC-003"
+          ],
+          "diagnostic_evidence_state": "documented_integrated_device",
+          "technology_is_priority_score": false,
+          "technology_is_signal_evidence": false,
+          "technology_is_control_evidence": false
+        },
+        "current_spo_evidence": {
+          "evidence_state": "physical_source_unqualified",
+          "semantic_ingress_state": "not_declared",
+          "producer_project": null,
+          "source_schema": null,
+          "adapter_api": null,
+          "occurrence_ids": [
+            "FUS-009",
+            "FUS-010",
+            "SPO-009"
+          ],
+          "physical_source_present": true,
+          "portable_review_adapter_present": false,
+          "qualified_observation": false,
+          "qualified_physical_phase": false
+        },
+        "diagnostic_plan": {
+          "structural_status": "accepted",
+          "custody_state": "exact_fixture_custody",
+          "observed_revision": "9eef91eb9086e13d23962fe18c6211f2f3ee2673",
+          "fixture_sha256": "5d4edf2c550908f2752dafba02da73171b0fea12ff74e3e0fc7db9a5d72c8eb9",
+          "missing_required_members": [],
+          "affected_channel_ids": []
+        },
+        "readiness_axes": {
+          "exact_configuration_identity": true,
+          "external_context_present": true,
+          "physical_source_present": true,
+          "portable_review_adapter_present": false,
+          "structural_plan_accepted": true,
+          "exact_plan_fixture_custody": true,
+          "complete_physical_evidence": false,
+          "control_admission": false
+        },
+        "observability_candidate_ids": [
+          "closed.equilibrium_profiles",
+          "closed.recurrent_transient",
+          "closed.resolved_mhd_mode",
+          "model.synthetic_oscillator_coordinate"
+        ],
+        "producer_request": {
+        "requested_owner_project": "SCPN-FUSION-CORE",
+          "artifact_kind": "configuration_specific_canonical_evidence_envelope",
+          "required_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "lane_blockers": [
+            "calibration_lineage",
+            "physical_geometry_and_frame_join",
+            "modal_observation_operator_and_harmonic_basis",
+            "provider_quality",
+            "uncertainty",
+            "validity",
+            "instrument_facility_clock_correlation",
+            "resolved_event_identity",
+            "observability_threshold",
+            "independent_multi_shot_or_classifier_evidence"
+          ],
+          "source_revision_required": true,
+          "package_identity_required": true,
+          "canonical_bytes_required": true,
+          "independent_validation_required": true
+        },
+        "priority_score": null,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      },
+      {
+        "configuration": "spheromak",
+        "confinement_family": "magnetic_closed",
+        "topology": "compact toroid",
+        "device_project": "SCPN-SPHEROMAK-CORE",
+        "intake_lane": "L3_repair_refused_plan_before_intake",
+        "next_gate": "repair_plan_schema_then_supply_physical_sample_envelope",
+        "external_context": {
+          "evidence_rank": "E4_integrated_plasma_experiment",
+          "source_ids": [
+            "SRC-008"
+          ],
+          "diagnostic_evidence_state": "historical_documented_device",
+          "technology_is_priority_score": false,
+          "technology_is_signal_evidence": false,
+          "technology_is_control_evidence": false
+        },
+        "current_spo_evidence": {
+          "evidence_state": "producerless",
+          "semantic_ingress_state": "not_declared",
+          "producer_project": null,
+          "source_schema": null,
+          "adapter_api": null,
+          "occurrence_ids": [],
+          "physical_source_present": false,
+          "portable_review_adapter_present": false,
+          "qualified_observation": false,
+          "qualified_physical_phase": false
+        },
+        "diagnostic_plan": {
+          "structural_status": "refused",
+          "custody_state": "producer_fix_required",
+          "observed_revision": "43fe4aff941f3f531f709b1711ffe524e480e40a",
+          "fixture_sha256": "91ef7ec0aee62de4726b0f0260e91fad227f51f7df475e24fed5d55b413499f7",
+          "missing_required_members": [
+            "timing_uncertainty_s"
+          ],
+          "affected_channel_ids": [
+            "ch_flux_loop_set",
+            "ch_surface_probe_array",
+            "ch_synthetic_oscillator",
+            "ch_thomson_profiles"
+          ]
+        },
+        "readiness_axes": {
+          "exact_configuration_identity": true,
+          "external_context_present": true,
+          "physical_source_present": false,
+          "portable_review_adapter_present": false,
+          "structural_plan_accepted": false,
+          "exact_plan_fixture_custody": false,
+          "complete_physical_evidence": false,
+          "control_admission": false
+        },
+        "observability_candidate_ids": [
+          "closed.equilibrium_profiles",
+          "closed.resolved_mhd_mode",
+          "model.synthetic_oscillator_coordinate"
+        ],
+        "producer_request": {
+          "requested_owner_project": "SCPN-SPHEROMAK-CORE",
+          "artifact_kind": "configuration_specific_canonical_evidence_envelope",
+          "required_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "lane_blockers": [
+            "timing_uncertainty_s_member_missing",
+            "regenerated_canonical_plan_and_envelope_required",
+            "refreshed_fixture_digest_required",
+            "physical_sample_envelope",
+            "physical_clock_reference_and_operator_binding",
+            "physical_uncertainty_validity_quality_and_provenance",
+            "physical_observability_gate_result"
+          ],
+          "source_revision_required": true,
+          "package_identity_required": true,
+          "canonical_bytes_required": true,
+          "independent_validation_required": true
+        },
+        "priority_score": null,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      },
+      {
+        "configuration": "stellarator",
+        "confinement_family": "magnetic_closed",
+        "topology": "three-dimensional torus",
+        "device_project": "SCPN-STELLARATOR-CORE",
+        "intake_lane": "L3_repair_refused_plan_before_intake",
+        "next_gate": "repair_plan_schema_then_supply_physical_sample_envelope",
+        "external_context": {
+          "evidence_rank": "E4_integrated_plasma_experiment",
+          "source_ids": [
+            "SRC-004"
+          ],
+          "diagnostic_evidence_state": "documented_integrated_device",
+          "technology_is_priority_score": false,
+          "technology_is_signal_evidence": false,
+          "technology_is_control_evidence": false
+        },
+        "current_spo_evidence": {
+          "evidence_state": "synthetic_replay_only",
+          "semantic_ingress_state": "not_declared",
+          "producer_project": null,
+          "source_schema": null,
+          "adapter_api": null,
+          "occurrence_ids": [
+            "FUS-011"
+          ],
+          "physical_source_present": false,
+          "portable_review_adapter_present": false,
+          "qualified_observation": false,
+          "qualified_physical_phase": false
+        },
+        "diagnostic_plan": {
+          "structural_status": "refused",
+          "custody_state": "producer_fix_required",
+          "observed_revision": "cc26682849bcb35a89ca07539d23ec843a5af92a",
+          "fixture_sha256": "8df3515a35978d0e518ba75749421052a399d9d8e77e8c176cf4231b259b0af1",
+          "missing_required_members": [
+            "timing_uncertainty_s"
+          ],
+          "affected_channel_ids": [
+            "ch_flux_loop_set",
+            "ch_interferometer",
+            "ch_mirnov_array",
+            "ch_synthetic_oscillator",
+            "ch_thomson_profiles"
+          ]
+        },
+        "readiness_axes": {
+          "exact_configuration_identity": true,
+          "external_context_present": true,
+          "physical_source_present": false,
+          "portable_review_adapter_present": false,
+          "structural_plan_accepted": false,
+          "exact_plan_fixture_custody": false,
+          "complete_physical_evidence": false,
+          "control_admission": false
+        },
+        "observability_candidate_ids": [
+          "closed.equilibrium_profiles",
+          "closed.resolved_mhd_mode",
+          "model.synthetic_oscillator_coordinate"
+        ],
+        "producer_request": {
+          "requested_owner_project": "SCPN-STELLARATOR-CORE",
+          "artifact_kind": "configuration_specific_canonical_evidence_envelope",
+          "required_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "lane_blockers": [
+            "timing_uncertainty_s_member_missing",
+            "regenerated_canonical_plan_and_envelope_required",
+            "refreshed_fixture_digest_required",
+            "physical_sample_envelope",
+            "physical_clock_reference_and_operator_binding",
+            "physical_uncertainty_validity_quality_and_provenance",
+            "physical_observability_gate_result"
+          ],
+          "source_revision_required": true,
+          "package_identity_required": true,
+          "canonical_bytes_required": true,
+          "independent_validation_required": true
+        },
+        "priority_score": null,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      },
+      {
+        "configuration": "tandem_mirror",
+        "confinement_family": "magnetic_open",
+        "topology": "multi-cell linear mirror",
+        "device_project": "SCPN-MIRROR-CORE",
+        "intake_lane": "L3_repair_refused_plan_before_intake",
+        "next_gate": "repair_plan_schema_then_supply_physical_sample_envelope",
+        "external_context": {
+          "evidence_rank": "E4_integrated_plasma_experiment",
+          "source_ids": [
+            "SRC-012"
+          ],
+          "diagnostic_evidence_state": "documented_integrated_device",
+          "technology_is_priority_score": false,
+          "technology_is_signal_evidence": false,
+          "technology_is_control_evidence": false
+        },
+        "current_spo_evidence": {
+          "evidence_state": "producerless",
+          "semantic_ingress_state": "not_declared",
+          "producer_project": null,
+          "source_schema": null,
+          "adapter_api": null,
+          "occurrence_ids": [],
+          "physical_source_present": false,
+          "portable_review_adapter_present": false,
+          "qualified_observation": false,
+          "qualified_physical_phase": false
+        },
+        "diagnostic_plan": {
+          "structural_status": "refused",
+          "custody_state": "producer_fix_required",
+          "observed_revision": "348db236d1e19c8303754205b410a1f9d17135cf",
+          "fixture_sha256": "0b74b090ac6194174920bda0a455c2571287eff917475cfaf0fbac70a3c70009",
+          "missing_required_members": [
+            "timing_uncertainty_s"
+          ],
+          "affected_channel_ids": [
+            "ch_diamagnetic_loop",
+            "ch_drive_reference",
+            "ch_end_loss_array",
+            "ch_flute_probe_array",
+            "ch_synthetic_oscillator"
+          ]
+        },
+        "readiness_axes": {
+          "exact_configuration_identity": true,
+          "external_context_present": true,
+          "physical_source_present": false,
+          "portable_review_adapter_present": false,
+          "structural_plan_accepted": false,
+          "exact_plan_fixture_custody": false,
+          "complete_physical_evidence": false,
+          "control_admission": false
+        },
+        "observability_candidate_ids": [
+          "model.synthetic_oscillator_coordinate",
+          "open.drive_reference",
+          "open.equilibrium_and_loss",
+          "open.resolved_interchange_mode"
+        ],
+        "producer_request": {
+          "requested_owner_project": "SCPN-MIRROR-CORE",
+          "artifact_kind": "configuration_specific_canonical_evidence_envelope",
+          "required_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "lane_blockers": [
+            "timing_uncertainty_s_member_missing",
+            "regenerated_canonical_plan_and_envelope_required",
+            "refreshed_fixture_digest_required",
+            "physical_sample_envelope",
+            "physical_clock_reference_and_operator_binding",
+            "physical_uncertainty_validity_quality_and_provenance",
+            "physical_observability_gate_result"
+          ],
+          "source_revision_required": true,
+          "package_identity_required": true,
+          "canonical_bytes_required": true,
+          "independent_validation_required": true
+        },
+        "priority_score": null,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      },
+      {
+        "configuration": "theta_pinch",
+        "confinement_family": "self_magnetic",
+        "topology": "azimuthal-current pinch",
+        "device_project": "SCPN-THETA-PINCH-CORE",
+        "intake_lane": "L2_build_from_accepted_plan",
+        "next_gate": "supply_physical_sample_envelope",
+        "external_context": {
+          "evidence_rank": "E4_integrated_plasma_experiment",
+          "source_ids": [
+            "SRC-017"
+          ],
+          "diagnostic_evidence_state": "historical_documented_device",
+          "technology_is_priority_score": false,
+          "technology_is_signal_evidence": false,
+          "technology_is_control_evidence": false
+        },
+        "current_spo_evidence": {
+          "evidence_state": "producerless",
+          "semantic_ingress_state": "not_declared",
+          "producer_project": null,
+          "source_schema": null,
+          "adapter_api": null,
+          "occurrence_ids": [],
+          "physical_source_present": false,
+          "portable_review_adapter_present": false,
+          "qualified_observation": false,
+          "qualified_physical_phase": false
+        },
+        "diagnostic_plan": {
+          "structural_status": "accepted",
+          "custody_state": "exact_fixture_custody",
+          "observed_revision": "df38049bf4e615a76c50d07593183ad87653cf96",
+          "fixture_sha256": "bddf90cddaa232482344f8d5fb5c84c6c6acb9f60532c09c7200344184279fcd",
+          "missing_required_members": [],
+          "affected_channel_ids": []
+        },
+        "readiness_axes": {
+          "exact_configuration_identity": true,
+          "external_context_present": true,
+          "physical_source_present": false,
+          "portable_review_adapter_present": false,
+          "structural_plan_accepted": true,
+          "exact_plan_fixture_custody": true,
+          "complete_physical_evidence": false,
+          "control_admission": false
+        },
+        "observability_candidate_ids": [
+          "model.synthetic_oscillator_coordinate",
+          "self_magnetic.drive_waveform",
+          "self_magnetic.resolved_instability_mode"
+        ],
+        "producer_request": {
+          "requested_owner_project": "SCPN-THETA-PINCH-CORE",
+          "artifact_kind": "configuration_specific_canonical_evidence_envelope",
+          "required_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "lane_blockers": [
+            "sampled_values_absent_from_design_plan",
+            "physical_sample_envelope",
+            "physical_clock_reference_and_operator_binding",
+            "physical_uncertainty_validity_quality_and_provenance",
+            "physical_observability_gate_result"
+          ],
+          "source_revision_required": true,
+          "package_identity_required": true,
+          "canonical_bytes_required": true,
+          "independent_validation_required": true
+        },
+        "priority_score": null,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      },
+      {
+        "configuration": "torsatron",
+        "confinement_family": "magnetic_closed",
+        "topology": "continuous-helical-coil torus",
+        "device_project": "SCPN-STELLARATOR-CORE",
+        "intake_lane": "L3_repair_refused_plan_before_intake",
+        "next_gate": "repair_plan_schema_then_supply_physical_sample_envelope",
+        "external_context": {
+          "evidence_rank": "E4_integrated_plasma_experiment",
+          "source_ids": [
+            "SRC-006"
+          ],
+          "diagnostic_evidence_state": "historical_documented_device",
+          "technology_is_priority_score": false,
+          "technology_is_signal_evidence": false,
+          "technology_is_control_evidence": false
+        },
+        "current_spo_evidence": {
+          "evidence_state": "producerless",
+          "semantic_ingress_state": "not_declared",
+          "producer_project": null,
+          "source_schema": null,
+          "adapter_api": null,
+          "occurrence_ids": [],
+          "physical_source_present": false,
+          "portable_review_adapter_present": false,
+          "qualified_observation": false,
+          "qualified_physical_phase": false
+        },
+        "diagnostic_plan": {
+          "structural_status": "refused",
+          "custody_state": "producer_fix_required",
+          "observed_revision": "cc26682849bcb35a89ca07539d23ec843a5af92a",
+          "fixture_sha256": "8df3515a35978d0e518ba75749421052a399d9d8e77e8c176cf4231b259b0af1",
+          "missing_required_members": [
+            "timing_uncertainty_s"
+          ],
+          "affected_channel_ids": [
+            "ch_flux_loop_set",
+            "ch_interferometer",
+            "ch_mirnov_array",
+            "ch_synthetic_oscillator",
+            "ch_thomson_profiles"
+          ]
+        },
+        "readiness_axes": {
+          "exact_configuration_identity": true,
+          "external_context_present": true,
+          "physical_source_present": false,
+          "portable_review_adapter_present": false,
+          "structural_plan_accepted": false,
+          "exact_plan_fixture_custody": false,
+          "complete_physical_evidence": false,
+          "control_admission": false
+        },
+        "observability_candidate_ids": [
+          "closed.equilibrium_profiles",
+          "closed.resolved_mhd_mode",
+          "model.synthetic_oscillator_coordinate"
+        ],
+        "producer_request": {
+          "requested_owner_project": "SCPN-STELLARATOR-CORE",
+          "artifact_kind": "configuration_specific_canonical_evidence_envelope",
+          "required_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "lane_blockers": [
+            "timing_uncertainty_s_member_missing",
+            "regenerated_canonical_plan_and_envelope_required",
+            "refreshed_fixture_digest_required",
+            "physical_sample_envelope",
+            "physical_clock_reference_and_operator_binding",
+            "physical_uncertainty_validity_quality_and_provenance",
+            "physical_observability_gate_result"
+          ],
+          "source_revision_required": true,
+          "package_identity_required": true,
+          "canonical_bytes_required": true,
+          "independent_validation_required": true
+        },
+        "priority_score": null,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      },
+      {
+        "configuration": "z_pinch",
+        "confinement_family": "self_magnetic",
+        "topology": "axial-current pinch",
+        "device_project": "SCPN-Z-PINCH-CORE",
+        "intake_lane": "L2_build_from_accepted_plan",
+        "next_gate": "supply_physical_sample_envelope",
+        "external_context": {
+          "evidence_rank": "E4_integrated_plasma_experiment",
+          "source_ids": [
+            "SRC-034"
+          ],
+          "diagnostic_evidence_state": "documented_integrated_device",
+          "technology_is_priority_score": false,
+          "technology_is_signal_evidence": false,
+          "technology_is_control_evidence": false
+        },
+        "current_spo_evidence": {
+          "evidence_state": "producerless",
+          "semantic_ingress_state": "not_declared",
+          "producer_project": null,
+          "source_schema": null,
+          "adapter_api": null,
+          "occurrence_ids": [],
+          "physical_source_present": false,
+          "portable_review_adapter_present": false,
+          "qualified_observation": false,
+          "qualified_physical_phase": false
+        },
+        "diagnostic_plan": {
+          "structural_status": "accepted",
+          "custody_state": "exact_fixture_custody",
+          "observed_revision": "acf5dfe49de175e856c3d575bcfd11dead60d0fd",
+          "fixture_sha256": "69a068ded2d3db9b9c64080547cedd204893637996b9fab91638ba3491b940a0",
+          "missing_required_members": [],
+          "affected_channel_ids": []
+        },
+        "readiness_axes": {
+          "exact_configuration_identity": true,
+          "external_context_present": true,
+          "physical_source_present": false,
+          "portable_review_adapter_present": false,
+          "structural_plan_accepted": true,
+          "exact_plan_fixture_custody": true,
+          "complete_physical_evidence": false,
+          "control_admission": false
+        },
+        "observability_candidate_ids": [
+          "model.synthetic_oscillator_coordinate",
+          "self_magnetic.drive_waveform",
+          "self_magnetic.resolved_instability_mode"
+        ],
+        "producer_request": {
+          "requested_owner_project": "SCPN-Z-PINCH-CORE",
+          "artifact_kind": "configuration_specific_canonical_evidence_envelope",
+          "required_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "lane_blockers": [
+            "sampled_values_absent_from_design_plan",
+            "physical_sample_envelope",
+            "physical_clock_reference_and_operator_binding",
+            "physical_uncertainty_validity_quality_and_provenance",
+            "physical_observability_gate_result"
+          ],
+          "source_revision_required": true,
+          "package_identity_required": true,
+          "canonical_bytes_required": true,
+          "independent_validation_required": true
+        },
+        "priority_score": null,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      }
+    ],
+    "authority": "review_only",
+    "actionable": false,
+    "direct_actuation_authorized": false,
+    "machine_protection_final_veto": true
+  },
+  "payload_sha256": "e287c4160d7c070b0b22aca3cd0d53c54946421357438cc99de0f60549c3966c"
+}

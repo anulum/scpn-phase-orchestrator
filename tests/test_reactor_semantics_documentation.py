@@ -23,6 +23,9 @@ PLAN_PORTFOLIO_STATUS = Path(
 TECHNOLOGY_DIAGNOSTIC_ATLAS = Path(
     "docs/reference/reactor_technology_diagnostic_atlas.md"
 )
+PRODUCER_EVIDENCE_PRIORITY_REGISTER = Path(
+    "docs/reference/reactor_producer_evidence_priority_register.md"
+)
 
 
 def test_reactor_semantics_reference_preserves_u0_boundaries() -> None:
@@ -135,6 +138,35 @@ def test_reactor_technology_diagnostic_atlas_is_exhaustive_and_fail_closed() -> 
         "`machine_protection_final_veto=true`",
         "reactor_technology_diagnostic_atlas.v1.json",
         "reactor_technology_diagnostic_atlas.schema.json",
+    )
+
+    for marker in required:
+        assert marker in text
+
+
+def test_reactor_producer_evidence_priority_is_non_scalar_and_fail_closed() -> None:
+    text = " ".join(
+        PRODUCER_EVIDENCE_PRIORITY_REGISTER.read_text(encoding="utf-8").split()
+    )
+    required = (
+        "all **32 built-in configurations** across **8 confinement families**",
+        "**22 upstream reactor projects plus SCPN-CONTROL**",
+        "registry has 21 distinct `device_project` owners",
+        "20 Reactor Systems projects",
+        "No opaque or additive priority score is emitted",
+        "rows within one lane are deliberately unordered",
+        "External `E5` through `E0` evidence ranks remain context only",
+        "`spherical_tokamak` is the only L0 row",
+        "`SCPN-MIF-CORE` is the registry's 21st distinct `device_project` owner",
+        "Each current producer fixture omits the mandatory "
+        "`timing_uncertainty_s` member",
+        "zero complete physical evidence chains",
+        "zero qualified physical observations",
+        "zero qualified physical phases",
+        "zero CONTROL admissions",
+        "`machine_protection_final_veto=true`",
+        "reactor_producer_evidence_priority_register.v1.json",
+        "reactor_producer_evidence_priority_register.schema.json",
     )
 
     for marker in required:

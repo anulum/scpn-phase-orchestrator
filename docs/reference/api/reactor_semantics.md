@@ -166,6 +166,25 @@ calibration, uncertainty, validity, quality, provenance, and observability-gate
 chain. Every result is `review_only`, `actionable=false`, and preserves
 independent machine protection as the final veto.
 
+## Producer-evidence intake priority
+
+The
+[reactor producer-evidence priority register](../reactor_producer_evidence_priority_register.md)
+joins all 32 configurations to exact atlas, occurrence, observability,
+semantic-ingress, and diagnostic-plan custody across 22 upstream reactor
+projects plus the CONTROL boundary. Its four readiness lanes contain
+one reviewed physical-source qualification, two exercised-adapter extensions,
+13 accepted-plan physical intakes, and 16 plan repairs.
+
+The register emits no scalar score and deliberately leaves rows within one lane
+unordered. External evidence rank never changes the lane. Every producer
+request still requires a physical sample, phenomenon identity, reference,
+clock epoch, observation operator or calibration, uncertainty, validity,
+quality, provenance, observability gate, immutable source revision,
+reproducible package identity, canonical bytes, and independent validation.
+The register is review-only, non-actionable, non-actuating, and preserves
+independent machine protection as the final veto.
+
 ## FAIR-MAST magnetic physical-source review
 
 `mast_magnetic_source_review_from_producer_bytes()` accepts the exact canonical
