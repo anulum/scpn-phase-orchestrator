@@ -2468,16 +2468,16 @@
         "current_spo_evidence": {
           "evidence_state": "physical_source_unqualified",
           "semantic_ingress_state": "not_declared",
-          "producer_project": null,
-          "source_schema": null,
-          "adapter_api": null,
+          "producer_project": "SCPN-FUSION-CORE",
+          "source_schema": "scpn-fusion-core.mast-complete-magnetic-archive-envelope.v1",
+          "adapter_api": "scpn_phase_orchestrator.reactor_semantics.mast_magnetic_source_review_from_producer_bytes",
           "occurrence_ids": [
             "FUS-009",
             "FUS-010",
             "SPO-009"
           ],
           "physical_source_present": true,
-          "portable_review_adapter_present": false,
+          "portable_review_adapter_present": true,
           "qualified_observation": false,
           "qualified_physical_phase": false
         },
@@ -2493,7 +2493,7 @@
           "exact_configuration_identity": true,
           "external_context_present": true,
           "physical_source_present": true,
-          "portable_review_adapter_present": false,
+          "portable_review_adapter_present": true,
           "structural_plan_accepted": true,
           "exact_plan_fixture_custody": true,
           "complete_physical_evidence": false,
@@ -2521,6 +2521,8 @@
             "observability_gate"
           ],
           "lane_blockers": [
+            "phenomenon_identity",
+            "reproducible_source_ingestion_state",
             "calibration_lineage",
             "physical_geometry_and_frame_join",
             "modal_observation_operator_and_harmonic_basis",
@@ -3101,5 +3103,5 @@
     "direct_actuation_authorized": false,
     "machine_protection_final_veto": true
   },
-  "payload_sha256": "e287c4160d7c070b0b22aca3cd0d53c54946421357438cc99de0f60549c3966c"
+  "payload_sha256": "f4d931b7b6f6c619c349c394b5a64936080d61f8b6f6f90abee042e737133c0f"
 }

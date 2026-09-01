@@ -1,0 +1,213 @@
+{
+  "$defs": {
+    "candidate_requirement": {
+      "additionalProperties": false,
+      "properties": {
+        "admissible_carriers": {
+          "items": {"minLength": 1, "type": "string"},
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "candidate_id": {"minLength": 1, "type": "string"},
+        "evidence_claimed": {"const": false},
+        "observation_operator_required": {"type": "boolean"},
+        "observability_class": {
+          "enum": [
+            "derived_cyclic",
+            "event_relative",
+            "noncyclic_feature",
+            "numerical_only"
+          ]
+        },
+        "phenomenon": {"minLength": 1, "type": "string"},
+        "reference_required": {"type": "boolean"},
+        "repeated_cycle_required": {"type": "boolean"},
+        "required_evidence": {
+          "items": {"minLength": 1, "type": "string"},
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "unmet_evidence": {"minLength": 1, "type": "string"}
+      },
+      "required": [
+        "admissible_carriers",
+        "candidate_id",
+        "evidence_claimed",
+        "observation_operator_required",
+        "observability_class",
+        "phenomenon",
+        "reference_required",
+        "repeated_cycle_required",
+        "required_evidence",
+        "unmet_evidence"
+      ],
+      "type": "object"
+    },
+    "requirement": {
+      "additionalProperties": false,
+      "properties": {
+        "acceptance_condition": {"minLength": 1, "type": "string"},
+        "evidence_subject": {"minLength": 1, "type": "string"},
+        "immutable_artifact_binding_required": {"const": true},
+        "missing": {"const": true},
+        "requirement_id": {
+          "enum": [
+            "phenomenon_identity",
+            "reproducible_source_ingestion_state",
+            "calibration_lineage",
+            "physical_geometry_and_frame_join",
+            "modal_observation_operator_and_harmonic_basis",
+            "provider_quality",
+            "uncertainty",
+            "validity",
+            "instrument_facility_clock_correlation",
+            "resolved_event_identity",
+            "observability_threshold",
+            "independent_multi_shot_or_classifier_evidence"
+          ]
+        }
+      },
+      "required": [
+        "acceptance_condition",
+        "evidence_subject",
+        "immutable_artifact_binding_required",
+        "missing",
+        "requirement_id"
+      ],
+      "type": "object"
+    },
+    "sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    }
+  },
+  "$id": "https://www.anulum.li/schemas/spo/mast-phase-qualification-request/v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Digest-sealed SPO producer request for evidence absent from the reviewed FAIR-MAST physical source. It cannot admit an observation, infer phase, request CONTROL admission, or authorise execution or actuation.",
+  "properties": {
+    "payload": {
+      "additionalProperties": false,
+      "properties": {
+        "actionable": {"const": false},
+        "archive_payload_sha256": {"$ref": "#/$defs/sha256"},
+        "candidate_requirements": {
+          "items": {"$ref": "#/$defs/candidate_requirement"},
+          "maxItems": 4,
+          "minItems": 4,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "configuration": {"const": "spherical_tokamak"},
+        "control_admission_requested": {"const": false},
+        "control_intent_created": {"const": false},
+        "device_project": {"const": "SCPN-TOKAMAK-CORE"},
+        "direct_actuation": {"const": false},
+        "execution_permitted": {"const": false},
+        "facility": {"const": "MAST"},
+        "machine_protection_final_veto": {"const": true},
+        "observation_admitted": {"const": false},
+        "observability_registry_sha256": {"$ref": "#/$defs/sha256"},
+        "observability_registry_version": {"const": "1.0.0"},
+        "phase_inference_eligible": {"const": false},
+        "phase_inference_performed": {"const": false},
+        "phenomenon_identity_state": {
+          "const": "unresolved_producer_evidence_required"
+        },
+        "qualification_state": {
+          "const": "blocked_missing_producer_evidence"
+        },
+        "qualification_payload_sha256": {"$ref": "#/$defs/sha256"},
+        "request_id": {"$ref": "#/$defs/sha256"},
+        "requested_owner_project": {"const": "SCPN-FUSION-CORE"},
+        "requirements": {
+          "items": {"$ref": "#/$defs/requirement"},
+          "maxItems": 12,
+          "minItems": 12,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "review_only": {"const": true},
+        "selected_candidate_id": {"type": "null"},
+        "semantic_ingress_declared": {"const": false},
+        "shot_id": {"const": 27707},
+        "source_archive": {"const": "FAIR-MAST"},
+        "source_archive_sha256": {"$ref": "#/$defs/sha256"},
+        "source_artifact_sha256": {"$ref": "#/$defs/sha256"},
+        "source_ingestion_revision": {
+          "pattern": "^[0-9a-f]{40}$",
+          "type": "string"
+        },
+        "source_ingestion_tree_state": {"enum": ["clean", "dirty"]},
+        "source_qualification_sha256": {"$ref": "#/$defs/sha256"},
+        "source_review_id": {"$ref": "#/$defs/sha256"},
+        "source_review_json": {
+          "contentMediaType": "application/json",
+          "minLength": 1,
+          "type": "string"
+        },
+        "source_review_sha256": {"$ref": "#/$defs/sha256"},
+        "source_review_unresolved_fields": {
+          "items": {"minLength": 1, "type": "string"},
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "source_revision": {
+          "pattern": "^[0-9a-f]{40}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "actionable",
+        "archive_payload_sha256",
+        "candidate_requirements",
+        "configuration",
+        "control_admission_requested",
+        "control_intent_created",
+        "device_project",
+        "direct_actuation",
+        "execution_permitted",
+        "facility",
+        "machine_protection_final_veto",
+        "observation_admitted",
+        "observability_registry_sha256",
+        "observability_registry_version",
+        "phase_inference_eligible",
+        "phase_inference_performed",
+        "phenomenon_identity_state",
+        "qualification_state",
+        "qualification_payload_sha256",
+        "request_id",
+        "requested_owner_project",
+        "requirements",
+        "review_only",
+        "selected_candidate_id",
+        "semantic_ingress_declared",
+        "shot_id",
+        "source_archive",
+        "source_archive_sha256",
+        "source_artifact_sha256",
+        "source_ingestion_revision",
+        "source_ingestion_tree_state",
+        "source_qualification_sha256",
+        "source_review_id",
+        "source_review_json",
+        "source_review_sha256",
+        "source_review_unresolved_fields",
+        "source_revision"
+      ],
+      "type": "object"
+    },
+    "payload_sha256": {"$ref": "#/$defs/sha256"},
+    "schema": {
+      "const": "scpn-phase-orchestrator.mast-phase-qualification-request.v1"
+    },
+    "schema_version": {"const": "1.0.0"}
+  },
+  "required": ["payload", "payload_sha256", "schema", "schema_version"],
+  "title": "SCPN Phase Orchestrator FAIR-MAST phase qualification request v1",
+  "type": "object"
+}

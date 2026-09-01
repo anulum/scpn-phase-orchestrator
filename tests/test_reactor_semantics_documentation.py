@@ -95,6 +95,11 @@ def test_reactor_semantics_reference_preserves_u0_boundaries() -> None:
         "observation_admitted=false",
         "qualified_phase_evidence=false",
         "mast_magnetic_source_review.schema.json",
+        "FAIR-MAST phase-qualification prerequisite request",
+        "mast_phase_qualification_request_from_source_review()",
+        "twelve missing evidence obligations",
+        "blocked_missing_producer_evidence",
+        "mast_phase_qualification_request.schema.json",
     )
 
     for marker in required:
@@ -157,6 +162,11 @@ def test_reactor_producer_evidence_priority_is_non_scalar_and_fail_closed() -> N
         "rows within one lane are deliberately unordered",
         "External `E5` through `E0` evidence ranks remain context only",
         "`spherical_tokamak` is the only L0 row",
+        "reviewed FAIR-MAST physical source through an exercised byte-canonical "
+        "adapter",
+        "controlled phenomenon identity",
+        "reproducible source-ingestion state",
+        "mast_phase_qualification_request_from_source_review()",
         "`SCPN-MIF-CORE` is the registry's 21st distinct `device_project` owner",
         "Each current producer fixture omits the mandatory "
         "`timing_uncertainty_s` member",

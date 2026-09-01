@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- A byte-canonical FAIR-MAST phase-qualification request binds the existing
+  physical-source review, exact FUSION source/package identity, observability
+  registry, four unselected spherical-tokamak candidates, and twelve explicit
+  missing producer-evidence obligations. It remains blocked, review-only, and
+  unable to select a phenomenon, admit an observation, infer phase, request
+  CONTROL admission, permit execution, or authorise actuation. The companion
+  priority-register correction now records the already-existing FAIR-MAST
+  portable review adapter instead of routing producer work toward a duplicate.
 - A digest-sealed reactor producer-evidence priority register joins all 32
   configurations to exact external context, occurrence evidence,
   observability candidates, semantic-ingress state, diagnostic-plan custody,

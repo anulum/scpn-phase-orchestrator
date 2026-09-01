@@ -115,6 +115,15 @@ plan physical intakes, and 16 plan repairs. Rows within a lane are unordered,
 and no lane or external rank creates signal, phase, CONTROL, or actuation
 authority.
 
+For the L0 FAIR-MAST row, SPO now emits a digest-sealed
+phase-qualification prerequisite request from the existing physical-source
+review. It binds all four unselected spherical-tokamak observability candidates
+and twelve missing producer-evidence obligations, including phenomenon,
+reproducible source ingestion, calibration, geometry/frame, modal operator,
+clock, uncertainty, validity, quality, observability, and independent-
+validation boundaries. The request is blocked and review-only; it cannot admit
+a physical observation or phase.
+
 ![Synchronization Manifold](docs/assets/synchronization_manifold.png)
 
 ## Current Release Boundary
@@ -315,15 +324,15 @@ inside a dashboard or notebook; it turns them into inspectable artefacts.
 |---|---:|
 | Package version | 1.3.1 |
 | Public API exports | 29 |
-| Python package modules | 745 |
-| Core Engine modules | 346 |
+| Python package modules | 746 |
+| Core Engine modules | 347 |
 | Runtime/Serving modules | 158 |
 | Integration modules | 32 |
 | Research/Experimental modules | 205 |
 | Domainpack files | 36 |
 | Rust kernel files | 97 |
 | Optional extras | 23 |
-| Python test files | 910 |
+| Python test files | 911 |
 | Public documentation pages | 239 |
 | GitHub Actions workflows | 19 |
 

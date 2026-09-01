@@ -219,6 +219,32 @@ permission, direct actuation, or actionability; independent machine protection
 retains the final veto. The canonical review envelope is defined by
 [`mast_magnetic_source_review.schema.json`](../../specs/mast_magnetic_source_review.schema.json).
 
+### FAIR-MAST phase-qualification prerequisite request
+
+`mast_phase_qualification_request_from_source_review()` converts the complete
+source review into a self-contained, byte-canonical producer request. It binds
+the source review ID and digest, exact FUSION revision and wheel digest, archive
+and qualification file/payload digests, ingestion revision and tree state,
+source-review unresolved fields, shot identity, and the exact observability-
+registry version and digest. Four spherical-tokamak candidate profiles are
+embedded as unselected design requirements; none is reported as the observed
+phenomenon.
+
+The request keeps twelve missing evidence obligations separate: controlled
+phenomenon identity; reproducible source-ingestion state; calibration lineage;
+physical geometry and frame join; modal observation operator and harmonic
+basis; provider quality; uncertainty; validity; instrument-to-facility clock
+correlation; resolved event identity; predeclared observability threshold; and
+independent multi-shot or classifier validation. Each obligation has a
+producer-facing acceptance condition and requires immutable artifact binding.
+
+`MastPhaseQualificationRequest` fixes the qualification state to
+`blocked_missing_producer_evidence`. It cannot select a phenomenon, admit an
+observation, make phase inference eligible, declare semantic ingress, request
+CONTROL admission, create control intent, permit execution, or authorise
+actuation. Its canonical envelope is defined by
+[`mast_phase_qualification_request.schema.json`](../../specs/mast_phase_qualification_request.schema.json).
+
 `DEFAULT_REACTOR_REGIME_MODE_ONTOLOGY` closes the remaining open-text meaning
 above U0 without changing the U0 `1.0.0` wire format. It defines eight
 independent axes: plant readiness, diagnostic observability, confinement or

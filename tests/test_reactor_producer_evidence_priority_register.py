@@ -60,6 +60,20 @@ REQUIRED_EVIDENCE = (
     "provenance",
     "observability_gate",
 )
+MAST_L0_REQUIREMENTS = (
+    "phenomenon_identity",
+    "reproducible_source_ingestion_state",
+    "calibration_lineage",
+    "physical_geometry_and_frame_join",
+    "modal_observation_operator_and_harmonic_basis",
+    "provider_quality",
+    "uncertainty",
+    "validity",
+    "instrument_facility_clock_correlation",
+    "resolved_event_identity",
+    "observability_threshold",
+    "independent_multi_shot_or_classifier_evidence",
+)
 
 
 def _load(path: Path) -> dict[str, object]:
@@ -228,6 +242,23 @@ def test_priority_register_requests_evidence_without_granting_authority() -> Non
         ]
         == "SCPN-FUSION-CORE"
     )
+    mast_evidence = by_configuration["spherical_tokamak"]["current_spo_evidence"]
+    mast_readiness = by_configuration["spherical_tokamak"]["readiness_axes"]
+    mast_request = by_configuration["spherical_tokamak"]["producer_request"]
+    assert isinstance(mast_evidence, dict)
+    assert isinstance(mast_readiness, dict)
+    assert isinstance(mast_request, dict)
+    assert mast_evidence["producer_project"] == "SCPN-FUSION-CORE"
+    assert mast_evidence["source_schema"] == (
+        "scpn-fusion-core.mast-complete-magnetic-archive-envelope.v1"
+    )
+    assert mast_evidence["adapter_api"] == (
+        "scpn_phase_orchestrator.reactor_semantics."
+        "mast_magnetic_source_review_from_producer_bytes"
+    )
+    assert mast_evidence["portable_review_adapter_present"] is True
+    assert mast_readiness["portable_review_adapter_present"] is True
+    assert tuple(mast_request["lane_blockers"]) == MAST_L0_REQUIREMENTS
     assert (
         by_configuration["frc_compression_mif"]["producer_request"][
             "requested_owner_project"
