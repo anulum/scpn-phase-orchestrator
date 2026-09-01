@@ -34,11 +34,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   plan review intake validates exact producer source, wheel, manifest,
   envelope, plan, registry, candidate, carrier, evidence-slot, frame, and clock
   identities without importing sibling source. Exact tokamak, dense-plasma-
-  focus, and MagLIF fixtures exercise distinct event-cycle, complex-mode,
-  bounded-feature, and numerical-phase declarations. Their typed signal and
-  clock rows remain synthetic design declarations and cannot create
-  observation, classification, semantic ingress, CONTROL intent, action, or
-  actuation.
+  focus, MagLIF, and mechanical-or-liquid-liner MIF fixtures exercise distinct
+  event-cycle, complex-mode, bounded-feature, and numerical-phase declarations.
+  Their typed signal and clock rows remain synthetic design declarations and
+  cannot create observation, classification, semantic ingress, CONTROL intent,
+  action, or actuation.
 
 ### Fixed
 

@@ -1,0 +1,115 @@
+{
+  "capabilities": [
+    {
+      "evidence_maturity": "computational_prototype",
+      "evidence_pointer": "VALIDATION.md#device-configuration-model",
+      "identifier": "device_configuration_model"
+    },
+    {
+      "evidence_maturity": "computational_prototype",
+      "evidence_pointer": "VALIDATION.md#diagnostic-and-clock-semantics",
+      "identifier": "diagnostic_clock_semantics"
+    }
+  ],
+  "claims": [],
+  "configurations": [
+    "mechanical_or_liquid_liner_mif"
+  ],
+  "confinement_family": "magneto_inertial",
+  "control_adapter": {
+    "contract_version": "0.1.0-spec",
+    "direct_actuation": false,
+    "identifier": "scpn-mif-liner-core.control-adapter",
+    "implementation": null,
+    "specification": "docs/CONTROL_ADAPTER_SPECIFICATION.md"
+  },
+  "device_family": "mif_material_liner",
+  "evidence_maturity": "computational_prototype",
+  "excluded_domains": [
+    {
+      "domain": "solver_mathematics_and_validation_evidence",
+      "owner": "SCPN-FUSION-CORE"
+    },
+    {
+      "domain": "typed_signal_semantics_and_comparability",
+      "owner": "SCPN-PHASE-ORCHESTRATOR"
+    },
+    {
+      "domain": "control_admission_and_action_formation",
+      "owner": "SCPN-CONTROL"
+    },
+    {
+      "domain": "machine_protection_final_veto",
+      "owner": "independent_machine_protection"
+    },
+    {
+      "domain": "portfolio_presentation_identity_entitlement_execution_gating",
+      "owner": "SCPN-STUDIO"
+    },
+    {
+      "domain": "magnetised_liner_inertial_fusion",
+      "owner": "SCPN-MIF-MAGLIF-CORE"
+    },
+    {
+      "domain": "plasma_jet_liner_compression",
+      "owner": "SCPN-MIF-PLASMA-JET-CORE"
+    },
+    {
+      "domain": "frc_equilibrium_transport_stability_physics",
+      "owner": "SCPN-FRC-CORE"
+    },
+    {
+      "domain": "pulsed_frc_mif_merge_compression_workflow_trigger_and_rtl",
+      "owner": "SCPN-MIF-CORE"
+    }
+  ],
+  "fusion_solver_seams": {
+    "active": [],
+    "policy": "Versioned seams from SCPN-FUSION-CORE may be consumed only after the reactor family migration gate proves exact replacement; no solver code is copied into this repository."
+  },
+  "license": "AGPL-3.0-or-later",
+  "machine_protection": {
+    "final_veto": "independent",
+    "statement": "Independent machine-protection systems retain the final veto before any plant actuator path; nothing in this repository participates in, or substitutes for, that path."
+  },
+  "non_claims": [
+    "not machine-ready",
+    "not safety-certified",
+    "not autonomous-plant-ready",
+    "not commercially reactor-ready",
+    "no implemented solver, controller, benchmark, dataset, or published artefact",
+    "no experimental correlation",
+    "no parameter set describes or validates any real machine"
+  ],
+  "owned_domains": [
+    "material_liner_mif_configuration_policy",
+    "shot_lifecycle_definition",
+    "diagnostic_semantics_and_reference_frames",
+    "clock_identity_declarations",
+    "actuator_response_model_boundaries",
+    "safety_envelope_declaration",
+    "control_adapter_specification"
+  ],
+  "project": "SCPN-MIF-LINER-CORE",
+  "research_group": {
+    "coordination_identity": "SCPN-REACTOR-SYSTEMS",
+    "display_name": "SCPN Reactor Systems Research Group"
+  },
+  "schema": "scpn.reactor-domain.v1",
+  "schema_version": "1.0.0",
+  "spo_registry": {
+    "digest_sha256": "786d9542ce76c56dd7748fa948b17efed6c073525e527ce90e6d5e29a2d00090",
+    "source_path": "03_CODE/SCPN-PHASE-ORCHESTRATOR/src/scpn_phase_orchestrator/reactor_semantics/registry.py",
+    "version": "1.0.0"
+  },
+  "spo_semantic_profile": {
+    "actionable": false,
+    "control_intent_contract": null,
+    "mode": "review_only"
+  },
+  "studio_integration": {
+    "descriptor": "studio/portfolio-descriptor.json",
+    "reason": "federation gates have not run; capabilities remain repository-local",
+    "state": "not_federated"
+  }
+}

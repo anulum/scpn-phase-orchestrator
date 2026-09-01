@@ -35,13 +35,15 @@ promoting derived time grids, channel arrays, or source labels into observations
 ## Design declarations are not evidence ingress
 
 Separate byte-canonical diagnostic-plan reviews exercise exact tokamak, dense-
-plasma-focus, and MagLIF producer fixtures. These are design declarations about
-intended channels, clocks, carriers, and evidence slots; they contain no sampled
-signal values. Consequently, the dense-plasma-focus and MagLIF fixtures do not
-change their matrix rows: both still have no configuration-specific source
-evidence, no semantic producer, and `semantic_ingress_state=not_declared`.
-MagLIF does not inherit the verified `frc_compression_mif` adapter merely because
-both configurations are magneto-inertial.
+plasma-focus, MagLIF, and mechanical-or-liquid-liner MIF producer fixtures.
+These are design declarations about intended channels, clocks, carriers, and
+evidence slots; they contain no sampled signal values. Consequently, the latter
+three fixtures do not change their matrix rows: each still has no configuration-
+specific source evidence, no semantic producer, and
+`semantic_ingress_state=not_declared`. Neither MagLIF nor mechanical-or-liquid-
+liner MIF inherits the verified `frc_compression_mif` adapter merely because the
+configurations are magneto-inertial; the two liner design reviews also do not
+provide evidence for each other.
 
 ## Exact matrix
 
