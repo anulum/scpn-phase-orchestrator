@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- An evidence-ranked reactor technology and diagnostic atlas maps all 32
+  built-in configurations across eight confinement families to 34 exact,
+  configuration-specific primary sources. It distinguishes integrated fusion,
+  integrated plasma, component or driver, engineering, and concept evidence
+  from diagnostic capability and SCPN evidence admission. Every row remains
+  review-only and fail-closed for physical observation, physical phase,
+  CONTROL admission, action, actuation, and machine-protection bypass.
 - A digest-sealed reactor diagnostic-plan portfolio status register records
   exact revisions, manifest and fixture hashes, configurations, plans, custody,
   and fail-closed review results for all 20 Reactor Systems device producers.

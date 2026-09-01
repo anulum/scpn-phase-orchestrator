@@ -20,6 +20,9 @@ CONFIGURATION_COVERAGE = Path(
 PLAN_PORTFOLIO_STATUS = Path(
     "docs/reference/reactor_diagnostic_plan_portfolio_status.md"
 )
+TECHNOLOGY_DIAGNOSTIC_ATLAS = Path(
+    "docs/reference/reactor_technology_diagnostic_atlas.md"
+)
 
 
 def test_reactor_semantics_reference_preserves_u0_boundaries() -> None:
@@ -109,6 +112,29 @@ def test_reactor_diagnostic_plan_portfolio_status_is_fail_closed() -> None:
         "must not relax the schema or infer defaults",
         "reactor_diagnostic_plan_portfolio_status.v1.json",
         "reactor_diagnostic_plan_portfolio_status.schema.json",
+    )
+
+    for marker in required:
+        assert marker in text
+
+
+def test_reactor_technology_diagnostic_atlas_is_exhaustive_and_fail_closed() -> None:
+    text = " ".join(TECHNOLOGY_DIAGNOSTIC_ATLAS.read_text(encoding="utf-8").split())
+    required = (
+        "all **32 configurations** across **8 confinement families**",
+        "**34 primary sources**",
+        "broader than tokamaks",
+        "technology-readiness levels",
+        "related topologies never inherit evidence",
+        "`admission_state=refused_no_producer_evidence`",
+        "a paper or facility page is not a producer payload",
+        "SCPN-FUSION-CORE and SCPN-MIF-CORE remain owners",
+        "zero admitted physical observations",
+        "zero qualified physical phases",
+        "zero CONTROL admissions",
+        "`machine_protection_final_veto=true`",
+        "reactor_technology_diagnostic_atlas.v1.json",
+        "reactor_technology_diagnostic_atlas.schema.json",
     )
 
     for marker in required:

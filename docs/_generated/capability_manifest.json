@@ -7,12 +7,12 @@
     "integration_modules": 32,
     "optional_extras": 23,
     "public_api_exports": 29,
-    "public_documentation_pages": 237,
+    "public_documentation_pages": 238,
     "python_package_modules": 745,
     "research_experimental_modules": 205,
     "runtime_serving_modules": 158,
     "rust_kernel_files": 97,
-    "test_files": 908
+    "test_files": 909
   },
   "documentation": {
     "public_pages": [
@@ -216,6 +216,7 @@
       "docs/reference/reactor_configuration_evidence_coverage.md",
       "docs/reference/reactor_diagnostic_plan_portfolio_status.md",
       "docs/reference/reactor_signal_occurrence_ledger.md",
+      "docs/reference/reactor_technology_diagnostic_atlas.md",
       "docs/roadmap.md",
       "docs/specs/action_compose.md",
       "docs/specs/audit_trace.md",
@@ -2558,6 +2559,7 @@
       "tests/test_reactor_semantics_registry.py",
       "tests/test_reactor_semantics_serialization.py",
       "tests/test_reactor_signal_occurrence_ledger.py",
+      "tests/test_reactor_technology_diagnostic_atlas.py",
       "tests/test_recurrence.py",
       "tests/test_recurrence_algorithm.py",
       "tests/test_recurrence_backends.py",

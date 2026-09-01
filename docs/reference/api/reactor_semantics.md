@@ -148,6 +148,24 @@ SPO neither supplies the value nor weakens the `1.1.0` contract. The register
 is review-only and creates no physical observation, physical phase, CONTROL
 intent, action, execution, actuation, or machine-protection authority.
 
+## External reactor technology and diagnostic atlas
+
+The
+[reactor technology and diagnostic atlas](../reactor_technology_diagnostic_atlas.md)
+maps all 32 built-in configurations across eight confinement families to 34
+configuration-specific facility, government-programme, and peer-reviewed
+sources. Its `E5` through `E0` ranks describe only the strongest cited external
+technology evidence. They are not readiness, economics, SCPN implementation,
+signal admissibility, physical-phase qualification, or CONTROL authority.
+
+The atlas makes external availability, development, and missing capability
+explicit while refusing every row at the SPO physical-observation boundary.
+Literature and facility pages are not producer payloads: all rows still lack
+the complete phenomenon, reference, clock, observation operator or
+calibration, uncertainty, validity, quality, provenance, and observability-gate
+chain. Every result is `review_only`, `actionable=false`, and preserves
+independent machine protection as the final veto.
+
 ## FAIR-MAST magnetic physical-source review
 
 `mast_magnetic_source_review_from_producer_bytes()` accepts the exact canonical

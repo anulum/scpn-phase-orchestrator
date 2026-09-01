@@ -1,0 +1,3280 @@
+{
+  "schema": "scpn-phase-orchestrator.reactor-technology-diagnostic-atlas.v1",
+  "schema_version": "1.0.0",
+  "payload": {
+    "observed_at": "2026-09-01T20:42:00+02:00",
+    "research_cutoff": "2026-09-01",
+    "classification_rule": "Ranks describe the strongest cited external evidence for the exact configuration, not technology readiness, economic viability, SCPN implementation maturity, signal admissibility, physical-phase qualification, CONTROL admission, actuation authority, or machine-protection authority. Facility-owner claims remain labelled by source kind; adjacent configurations never inherit evidence.",
+    "rank_order": [
+      "E5_integrated_fusion_observation",
+      "E4_integrated_plasma_experiment",
+      "E3_component_or_driver_experiment",
+      "E2_engineering_or_facility_development",
+      "E1_concept_or_simulation",
+      "E0_no_qualifying_source"
+    ],
+    "source_bindings": {
+      "reactor_configuration_registry": {
+        "version": "1.0.0",
+        "digest_sha256": "786d9542ce76c56dd7748fa948b17efed6c073525e527ce90e6d5e29a2d00090",
+        "source_path": "src/scpn_phase_orchestrator/reactor_semantics/registry.py",
+        "source_sha256": "b117e3b976839db12b40788a330d7c51237f3d81898522699570a89d4432da17"
+      },
+      "reactor_observability_registry": {
+        "version": "1.0.0",
+        "digest_sha256": "d70c0de696534e5a77066ef8420cf7ca17bc4d7321984b0ac83523dbc1dce609",
+        "source_path": "src/scpn_phase_orchestrator/reactor_semantics/observability_profiles.py",
+        "source_sha256": "7f947644f91162b97ad450d28ec3c0b84dbabf3f6c0b40baef1ada2f8504a8a9"
+      }
+    },
+    "counts": {
+      "built_in_configurations": 32,
+      "built_in_confinement_families": 8,
+      "primary_sources": 34,
+      "physical_observations_qualified": 0,
+      "physical_phases_qualified": 0,
+      "control_admitted": 0
+    },
+    "sources": [
+      {
+        "id": "SRC-001",
+        "title": "Insights of the JET high fusion power scenario in the final DT campaign",
+        "publisher": "UK Atomic Energy Authority",
+        "year": 2025,
+        "kind": "government_programme",
+        "url": "https://scientific-publications.ukaea.uk/papers/insights-of-the-jet-high-fusion-power-scenario-in-the-final-dt-campaign/",
+        "configurations": [
+          "conventional_tokamak"
+        ]
+      },
+      {
+        "id": "SRC-002",
+        "title": "ITER diagnostics",
+        "publisher": "ITER Organization",
+        "year": 2023,
+        "kind": "facility_owner",
+        "url": "https://www.iter.org/machine/supporting-systems/diagnostics",
+        "configurations": [
+          "conventional_tokamak"
+        ]
+      },
+      {
+        "id": "SRC-003",
+        "title": "MAST Upgrade Research Plan",
+        "publisher": "UK Atomic Energy Authority",
+        "year": 2019,
+        "kind": "government_programme",
+        "url": "https://ccfe.ukaea.uk/wp-content/uploads/2019/12/MAST-U_RP_2019_v1.pdf",
+        "configurations": [
+          "spherical_tokamak"
+        ]
+      },
+      {
+        "id": "SRC-004",
+        "title": "Plasma diagnostics for Wendelstein 7-X",
+        "publisher": "Max Planck Institute for Plasma Physics",
+        "year": 2024,
+        "kind": "facility_owner",
+        "url": "https://www.ipp.mpg.de/3812950/diagnostik",
+        "configurations": [
+          "stellarator"
+        ]
+      },
+      {
+        "id": "SRC-005",
+        "title": "Overview of LHD diagnostics and data acquisition system",
+        "publisher": "Fusion Engineering and Design",
+        "year": 2000,
+        "kind": "peer_reviewed",
+        "url": "https://doi.org/10.1016/S0920-3796(00)00121-6",
+        "configurations": [
+          "heliotron"
+        ]
+      },
+      {
+        "id": "SRC-006",
+        "title": "Igniting Innovation: ORNL Fusion History",
+        "publisher": "Oak Ridge National Laboratory",
+        "year": 2025,
+        "kind": "government_programme",
+        "url": "https://www.ornl.gov/igniting-innovation-ornl-fusion-history",
+        "configurations": [
+          "torsatron"
+        ]
+      },
+      {
+        "id": "SRC-007",
+        "title": "RFX-mod2 diagnostic capability enhancements for the exploration of multi-magnetic-configurations",
+        "publisher": "Nuclear Fusion",
+        "year": 2024,
+        "kind": "peer_reviewed",
+        "url": "https://doi.org/10.1088/1741-4326/ad490a",
+        "configurations": [
+          "reversed_field_pinch"
+        ]
+      },
+      {
+        "id": "SRC-008",
+        "title": "Neutral particle analyzer measurements on the SSPX spheromak",
+        "publisher": "Review of Scientific Instruments",
+        "year": 2007,
+        "kind": "peer_reviewed",
+        "url": "https://doi.org/10.1063/1.2737756",
+        "configurations": [
+          "spheromak"
+        ]
+      },
+      {
+        "id": "SRC-009",
+        "title": "The integrated diagnostic suite of the C-2W experimental field-reversed configuration device and its applications",
+        "publisher": "Review of Scientific Instruments",
+        "year": 2021,
+        "kind": "peer_reviewed",
+        "url": "https://doi.org/10.1063/5.0043807",
+        "configurations": [
+          "field_reversed_configuration"
+        ]
+      },
+      {
+        "id": "SRC-010",
+        "title": "Wisconsin HTS Axisymmetric Mirror",
+        "publisher": "University of Wisconsin-Madison",
+        "year": 2024,
+        "kind": "facility_owner",
+        "url": "https://wham.physics.wisc.edu/",
+        "configurations": [
+          "simple_magnetic_mirror"
+        ]
+      },
+      {
+        "id": "SRC-011",
+        "title": "Studies of Plasma Confinement and Stability in a Gas Dynamic Trap: Results of 2016-2018",
+        "publisher": "Plasma and Fusion Research",
+        "year": 2019,
+        "kind": "peer_reviewed",
+        "url": "https://doi.org/10.1585/pfr.14.2402030",
+        "configurations": [
+          "gas_dynamic_mirror"
+        ]
+      },
+      {
+        "id": "SRC-012",
+        "title": "Plasma diagnostics using vacuum ultraviolet radiation and soft X-rays in the GAMMA 10 tandem mirror device",
+        "publisher": "Journal of Electron Spectroscopy and Related Phenomena",
+        "year": 1996,
+        "kind": "peer_reviewed",
+        "url": "https://doi.org/10.1016/0368-2048(96)02974-X",
+        "configurations": [
+          "tandem_mirror"
+        ]
+      },
+      {
+        "id": "SRC-013",
+        "title": "High-Energy Electron Confinement in a Magnetic Cusp Configuration",
+        "publisher": "Physical Review X",
+        "year": 2015,
+        "kind": "peer_reviewed",
+        "url": "https://doi.org/10.1103/PhysRevX.5.021024",
+        "configurations": [
+          "cusp",
+          "polywell"
+        ]
+      },
+      {
+        "id": "SRC-014",
+        "title": "Multichannel microwave interferometer for the levitated dipole experiment",
+        "publisher": "Review of Scientific Instruments",
+        "year": 2009,
+        "kind": "peer_reviewed",
+        "url": "https://doi.org/10.1063/1.3095684",
+        "configurations": [
+          "levitated_dipole"
+        ]
+      },
+      {
+        "id": "SRC-015",
+        "title": "Sustained Neutron Production from a Sheared-Flow Stabilized Z Pinch",
+        "publisher": "Physical Review Letters",
+        "year": 2019,
+        "kind": "peer_reviewed",
+        "url": "https://doi.org/10.1103/PhysRevLett.122.135001",
+        "configurations": [
+          "sheared_flow_z_pinch"
+        ]
+      },
+      {
+        "id": "SRC-016",
+        "title": "Implementation of extreme ultraviolet spectroscopy on a sheared-flow-stabilized Z pinch",
+        "publisher": "Review of Scientific Instruments",
+        "year": 2023,
+        "kind": "peer_reviewed",
+        "url": "https://pubmed.ncbi.nlm.nih.gov/38065162/",
+        "configurations": [
+          "sheared_flow_z_pinch"
+        ]
+      },
+      {
+        "id": "SRC-017",
+        "title": "X-Ray Crystal Spectroscopy of a Theta-Pinch Plasma in the Region 15-25 Angstrom",
+        "publisher": "Physical Review",
+        "year": 1963,
+        "kind": "peer_reviewed",
+        "url": "https://doi.org/10.1103/PhysRev.131.1891",
+        "configurations": [
+          "theta_pinch"
+        ]
+      },
+      {
+        "id": "SRC-018",
+        "title": "The dense plasma focus - A high intensity neutron source",
+        "publisher": "Nuclear Instruments and Methods",
+        "year": 1977,
+        "kind": "peer_reviewed",
+        "url": "https://doi.org/10.1016/0029-554X(77)90569-9",
+        "configurations": [
+          "dense_plasma_focus"
+        ]
+      },
+      {
+        "id": "SRC-019",
+        "title": "Diagnosing inertial confinement fusion ignition",
+        "publisher": "Nuclear Fusion",
+        "year": 2024,
+        "kind": "peer_reviewed",
+        "url": "https://doi.org/10.1088/1741-4326/ad703b",
+        "configurations": [
+          "laser_icf_indirect_drive"
+        ]
+      },
+      {
+        "id": "SRC-020",
+        "title": "Diagnostics at the Omega Laser Facility",
+        "publisher": "Laboratory for Laser Energetics",
+        "year": 2026,
+        "kind": "facility_owner",
+        "url": "https://www.lle.rochester.edu/diagnostics/",
+        "configurations": [
+          "laser_icf_direct_drive",
+          "laser_icf_fast_or_shock_ignition"
+        ]
+      },
+      {
+        "id": "SRC-021",
+        "title": "Diagnostics for fast ignition science",
+        "publisher": "Review of Scientific Instruments",
+        "year": 2008,
+        "kind": "peer_reviewed",
+        "url": "https://doi.org/10.1063/1.2978199",
+        "configurations": [
+          "laser_icf_fast_or_shock_ignition"
+        ]
+      },
+      {
+        "id": "SRC-022",
+        "title": "Diagnostics for ion beam driven high energy density physics experiments",
+        "publisher": "Review of Scientific Instruments",
+        "year": 2010,
+        "kind": "peer_reviewed",
+        "url": "https://doi.org/10.1063/1.3479112",
+        "configurations": [
+          "ion_beam_icf"
+        ]
+      },
+      {
+        "id": "SRC-023",
+        "title": "Particle beam fusion research at Sandia National Laboratories",
+        "publisher": "Sandia National Laboratories",
+        "year": 1978,
+        "kind": "government_programme",
+        "url": "https://www.sandia.gov/research/publications/details/particle-beam-fusion-research-at-sandia-national-laboratories-1978-12-31/",
+        "configurations": [
+          "pulsed_electron_beam_icf"
+        ]
+      },
+      {
+        "id": "SRC-024",
+        "title": "A hypervelocity impact facility optimised for the dynamic study of high pressure shock compression",
+        "publisher": "Procedia Engineering",
+        "year": 2017,
+        "kind": "peer_reviewed",
+        "url": "https://doi.org/10.1016/j.proeng.2017.09.756",
+        "configurations": [
+          "projectile_or_impact_icf"
+        ]
+      },
+      {
+        "id": "SRC-025",
+        "title": "Review of First Light Fusion experimental report on gas-gun driven targets",
+        "publisher": "UK Atomic Energy Authority",
+        "year": 2022,
+        "kind": "government_programme",
+        "url": "https://firstlightfusion.com/science-hub/review-of-first-light-fusion-ltds-experimental-report-validate-production-of-neutrons-from-gas-gun-driven-targets/",
+        "configurations": [
+          "projectile_or_impact_icf"
+        ]
+      },
+      {
+        "id": "SRC-026",
+        "title": "Performance Scaling in Magnetized Liner Inertial Fusion Experiments",
+        "publisher": "Physical Review Letters",
+        "year": 2020,
+        "kind": "peer_reviewed",
+        "url": "https://doi.org/10.1103/PhysRevLett.125.155002",
+        "configurations": [
+          "maglif"
+        ]
+      },
+      {
+        "id": "SRC-027",
+        "title": "Formation of a spherical plasma liner for plasma-jet-driven magneto-inertial fusion",
+        "publisher": "Physics of Plasmas",
+        "year": 2024,
+        "kind": "peer_reviewed",
+        "url": "https://doi.org/10.1063/5.0204213",
+        "configurations": [
+          "plasma_jet_mif"
+        ]
+      },
+      {
+        "id": "SRC-028",
+        "title": "Shape manipulation of a rotating liquid liner imploded by arrays of pneumatic pistons",
+        "publisher": "Fusion Engineering and Design",
+        "year": 2024,
+        "kind": "peer_reviewed",
+        "url": "https://doi.org/10.1016/j.fusengdes.2023.114087",
+        "configurations": [
+          "mechanical_or_liquid_liner_mif"
+        ]
+      },
+      {
+        "id": "SRC-029",
+        "title": "Thermonuclear Field Reversed Configuration plasmas in the Trenta prototype",
+        "publisher": "Helion Energy",
+        "year": 2021,
+        "kind": "facility_owner",
+        "url": "https://www.helionenergy.com/wordpress/uploads/2021/06/fusion-scientific-breakthroughts-helion-62221-converted.pdf",
+        "configurations": [
+          "frc_compression_mif"
+        ]
+      },
+      {
+        "id": "SRC-030",
+        "title": "Neutron imaging with an inertial electrostatic confinement fusion neutron source",
+        "publisher": "Applied Optics",
+        "year": 2022,
+        "kind": "peer_reviewed",
+        "url": "https://doi.org/10.1364/AO.447180",
+        "configurations": [
+          "gridded_iec"
+        ]
+      },
+      {
+        "id": "SRC-031",
+        "title": "Installation, commissioning and testing of a low energy accelerator based 14-MeV neutron generator",
+        "publisher": "Fusion Engineering and Design",
+        "year": 2025,
+        "kind": "peer_reviewed",
+        "url": "https://doi.org/10.1016/j.fusengdes.2025.115158",
+        "configurations": [
+          "beam_target"
+        ]
+      },
+      {
+        "id": "SRC-032",
+        "title": "Colliding beam fusion reactor",
+        "publisher": "Science",
+        "year": 1997,
+        "kind": "peer_reviewed",
+        "url": "https://doi.org/10.1126/science.278.5342.1419",
+        "configurations": [
+          "colliding_beam"
+        ]
+      },
+      {
+        "id": "SRC-033",
+        "title": "The Fusion-Fission Hybrid Reactor for Energy Production: A Practical Path to Fusion Application",
+        "publisher": "International Atomic Energy Agency",
+        "year": 2008,
+        "kind": "government_programme",
+        "url": "https://www-pub.iaea.org/MTCD/Meetings/FEC2008/ft_p3-21.pdf",
+        "configurations": [
+          "fusion_fission_hybrid"
+        ]
+      },
+      {
+        "id": "SRC-034",
+        "title": "Z machine turns 25",
+        "publisher": "Sandia National Laboratories",
+        "year": 2021,
+        "kind": "facility_owner",
+        "url": "https://www.sandia.gov/labnews/2021/09/24/look-whos-turning-25/",
+        "configurations": [
+          "z_pinch"
+        ]
+      }
+    ],
+    "configurations": [
+      {
+        "configuration": "beam_target",
+        "confinement_family": "beam_target",
+        "topology": "energetic beam on target",
+        "device_project": "SCPN-BEAM-TARGET-CORE",
+        "external_evidence_rank": "E5_integrated_fusion_observation",
+        "rank_basis": "A commissioned accelerator-driven D-T neutron source documents beam and neutron diagnostics; this is laboratory fusion output, not a power-reactor demonstration.",
+        "reference_systems": [
+          {
+            "name": "Institute for Plasma Research 14 MeV neutron generator",
+            "lifecycle_state": "operating_at_source_date",
+            "source_ids": [
+              "SRC-031"
+            ]
+          }
+        ],
+        "source_ids": [
+          "SRC-031"
+        ],
+        "diagnostic_evidence_state": "documented_integrated_device",
+        "capability_claims": [
+          {
+            "capability_id": "integrated_plasma_operation",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-031"
+            ]
+          },
+          {
+            "capability_id": "beam_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-031"
+            ]
+          },
+          {
+            "capability_id": "neutron_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-031"
+            ]
+          },
+          {
+            "capability_id": "fusion_product_measurement",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-031"
+            ]
+          }
+        ],
+        "observability_candidate_ids": [
+          "beam.rf_bunch_phase",
+          "beam.target_outcome",
+          "model.synthetic_oscillator_coordinate"
+        ],
+        "missing_capabilities": [
+          "control_admission",
+          "power_conversion_demonstration",
+          "public_machine_readable_calibrated_data",
+          "reactor_environment_diagnostic_qualification",
+          "spo_producer_adapter"
+        ],
+        "spo_qualification": {
+          "admission_state": "refused_no_producer_evidence",
+          "missing_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "physical_observation_qualified": false,
+          "physical_phase_qualified": false,
+          "control_admitted": false
+        },
+        "technology_is_control_evidence": false,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      },
+      {
+        "configuration": "colliding_beam",
+        "confinement_family": "beam_target",
+        "topology": "counter-propagating particle beams",
+        "device_project": "SCPN-BEAM-TARGET-CORE",
+        "external_evidence_rank": "E1_concept_or_simulation",
+        "rank_basis": "The cited reactor proposal analyses colliding energetic populations in an FRC but does not document an exact integrated colliding-beam reactor experiment.",
+        "reference_systems": [
+          {
+            "name": "Colliding Beam Fusion Reactor proposal",
+            "lifecycle_state": "concept_only",
+            "source_ids": [
+              "SRC-032"
+            ]
+          }
+        ],
+        "source_ids": [
+          "SRC-032"
+        ],
+        "diagnostic_evidence_state": "no_integrated_diagnostic_evidence",
+        "capability_claims": [
+          {
+            "capability_id": "integrated_plasma_operation",
+            "status": "concept_only",
+            "source_ids": [
+              "SRC-032"
+            ]
+          }
+        ],
+        "observability_candidate_ids": [
+          "beam.rf_bunch_phase",
+          "beam.target_outcome",
+          "model.synthetic_oscillator_coordinate"
+        ],
+        "missing_capabilities": [
+          "control_admission",
+          "current_integrated_device",
+          "integrated_fusion_output",
+          "power_conversion_demonstration",
+          "public_machine_readable_calibrated_data",
+          "reactor_environment_diagnostic_qualification",
+          "spo_producer_adapter"
+        ],
+        "spo_qualification": {
+          "admission_state": "refused_no_producer_evidence",
+          "missing_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "physical_observation_qualified": false,
+          "physical_phase_qualified": false,
+          "control_admitted": false
+        },
+        "technology_is_control_evidence": false,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      },
+      {
+        "configuration": "conventional_tokamak",
+        "confinement_family": "magnetic_closed",
+        "topology": "axisymmetric torus",
+        "device_project": "SCPN-TOKAMAK-CORE",
+        "external_evidence_rank": "E5_integrated_fusion_observation",
+        "rank_basis": "JET documents integrated D-T fusion observations; ITER separately documents diagnostics under development for reactor-like conditions.",
+        "reference_systems": [
+          {
+            "name": "Joint European Torus",
+            "lifecycle_state": "historical",
+            "source_ids": [
+              "SRC-001"
+            ]
+          },
+          {
+            "name": "ITER",
+            "lifecycle_state": "under_construction_or_development",
+            "source_ids": [
+              "SRC-002"
+            ]
+          }
+        ],
+        "source_ids": [
+          "SRC-001",
+          "SRC-002"
+        ],
+        "diagnostic_evidence_state": "documented_integrated_device",
+        "capability_claims": [
+          {
+            "capability_id": "integrated_plasma_operation",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-001"
+            ]
+          },
+          {
+            "capability_id": "fusion_product_measurement",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-001"
+            ]
+          },
+          {
+            "capability_id": "magnetic_diagnostics",
+            "status": "planned_or_developing",
+            "source_ids": [
+              "SRC-002"
+            ]
+          },
+          {
+            "capability_id": "density_diagnostics",
+            "status": "planned_or_developing",
+            "source_ids": [
+              "SRC-002"
+            ]
+          },
+          {
+            "capability_id": "temperature_diagnostics",
+            "status": "planned_or_developing",
+            "source_ids": [
+              "SRC-002"
+            ]
+          },
+          {
+            "capability_id": "neutron_diagnostics",
+            "status": "planned_or_developing",
+            "source_ids": [
+              "SRC-002"
+            ]
+          }
+        ],
+        "observability_candidate_ids": [
+          "closed.equilibrium_profiles",
+          "closed.recurrent_transient",
+          "closed.resolved_mhd_mode",
+          "model.synthetic_oscillator_coordinate"
+        ],
+        "missing_capabilities": [
+          "control_admission",
+          "power_conversion_demonstration",
+          "public_machine_readable_calibrated_data",
+          "reactor_environment_diagnostic_qualification",
+          "spo_producer_adapter"
+        ],
+        "spo_qualification": {
+          "admission_state": "refused_no_producer_evidence",
+          "missing_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "physical_observation_qualified": false,
+          "physical_phase_qualified": false,
+          "control_admitted": false
+        },
+        "technology_is_control_evidence": false,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      },
+      {
+        "configuration": "cusp",
+        "confinement_family": "magnetic_open",
+        "topology": "magnetic cusp",
+        "device_project": "SCPN-MAGNETIC-CUSP-CORE",
+        "external_evidence_rank": "E4_integrated_plasma_experiment",
+        "rank_basis": "A high-beta magnetic-cusp experiment reports time-resolved energetic-electron confinement using hard-x-ray diagnostics; no integrated fusion-power device is established.",
+        "reference_systems": [
+          {
+            "name": "WB-8 high-beta cusp experiment",
+            "lifecycle_state": "historical",
+            "source_ids": [
+              "SRC-013"
+            ]
+          }
+        ],
+        "source_ids": [
+          "SRC-013"
+        ],
+        "diagnostic_evidence_state": "historical_documented_device",
+        "capability_claims": [
+          {
+            "capability_id": "integrated_plasma_operation",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-013"
+            ]
+          },
+          {
+            "capability_id": "charged_particle_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-013"
+            ]
+          },
+          {
+            "capability_id": "imaging_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-013"
+            ]
+          }
+        ],
+        "observability_candidate_ids": [
+          "model.synthetic_oscillator_coordinate",
+          "open.drive_reference",
+          "open.equilibrium_and_loss",
+          "open.resolved_interchange_mode"
+        ],
+        "missing_capabilities": [
+          "control_admission",
+          "current_integrated_device",
+          "integrated_fusion_output",
+          "power_conversion_demonstration",
+          "public_machine_readable_calibrated_data",
+          "reactor_environment_diagnostic_qualification",
+          "spo_producer_adapter"
+        ],
+        "spo_qualification": {
+          "admission_state": "refused_no_producer_evidence",
+          "missing_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "physical_observation_qualified": false,
+          "physical_phase_qualified": false,
+          "control_admitted": false
+        },
+        "technology_is_control_evidence": false,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      },
+      {
+        "configuration": "dense_plasma_focus",
+        "confinement_family": "self_magnetic",
+        "topology": "coaxial plasma-focus pinch",
+        "device_project": "SCPN-DENSE-PLASMA-FOCUS-CORE",
+        "external_evidence_rank": "E5_integrated_fusion_observation",
+        "rank_basis": "Experimental dense-plasma-focus devices document pulsed fusion-neutron output and associated diagnostics, without demonstrating power conversion.",
+        "reference_systems": [
+          {
+            "name": "Dense plasma focus neutron-source experiments",
+            "lifecycle_state": "operating_at_source_date",
+            "source_ids": [
+              "SRC-018"
+            ]
+          }
+        ],
+        "source_ids": [
+          "SRC-018"
+        ],
+        "diagnostic_evidence_state": "documented_integrated_device",
+        "capability_claims": [
+          {
+            "capability_id": "integrated_plasma_operation",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-018"
+            ]
+          },
+          {
+            "capability_id": "electrical_waveform_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-018"
+            ]
+          },
+          {
+            "capability_id": "neutron_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-018"
+            ]
+          },
+          {
+            "capability_id": "fusion_product_measurement",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-018"
+            ]
+          }
+        ],
+        "observability_candidate_ids": [
+          "model.synthetic_oscillator_coordinate",
+          "self_magnetic.drive_waveform",
+          "self_magnetic.resolved_instability_mode"
+        ],
+        "missing_capabilities": [
+          "control_admission",
+          "power_conversion_demonstration",
+          "public_machine_readable_calibrated_data",
+          "reactor_environment_diagnostic_qualification",
+          "spo_producer_adapter"
+        ],
+        "spo_qualification": {
+          "admission_state": "refused_no_producer_evidence",
+          "missing_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "physical_observation_qualified": false,
+          "physical_phase_qualified": false,
+          "control_admitted": false
+        },
+        "technology_is_control_evidence": false,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      },
+      {
+        "configuration": "field_reversed_configuration",
+        "confinement_family": "magnetic_closed",
+        "topology": "field-reversed compact toroid",
+        "device_project": "SCPN-FRC-CORE",
+        "external_evidence_rank": "E4_integrated_plasma_experiment",
+        "rank_basis": "C-2W documents an integrated FRC experiment with a broad diagnostic suite and real-time control inputs, but not a power-conversion demonstration.",
+        "reference_systems": [
+          {
+            "name": "C-2W Norman",
+            "lifecycle_state": "operating_at_source_date",
+            "source_ids": [
+              "SRC-009"
+            ]
+          }
+        ],
+        "source_ids": [
+          "SRC-009"
+        ],
+        "diagnostic_evidence_state": "documented_integrated_device",
+        "capability_claims": [
+          {
+            "capability_id": "integrated_plasma_operation",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-009"
+            ]
+          },
+          {
+            "capability_id": "magnetic_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-009"
+            ]
+          },
+          {
+            "capability_id": "density_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-009"
+            ]
+          },
+          {
+            "capability_id": "temperature_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-009"
+            ]
+          },
+          {
+            "capability_id": "spectroscopic_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-009"
+            ]
+          },
+          {
+            "capability_id": "equilibrium_reconstruction",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-009"
+            ]
+          }
+        ],
+        "observability_candidate_ids": [
+          "closed.equilibrium_profiles",
+          "closed.resolved_mhd_mode",
+          "model.synthetic_oscillator_coordinate"
+        ],
+        "missing_capabilities": [
+          "control_admission",
+          "integrated_fusion_output",
+          "power_conversion_demonstration",
+          "public_machine_readable_calibrated_data",
+          "reactor_environment_diagnostic_qualification",
+          "spo_producer_adapter"
+        ],
+        "spo_qualification": {
+          "admission_state": "refused_no_producer_evidence",
+          "missing_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "physical_observation_qualified": false,
+          "physical_phase_qualified": false,
+          "control_admitted": false
+        },
+        "technology_is_control_evidence": false,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      },
+      {
+        "configuration": "frc_compression_mif",
+        "confinement_family": "magneto_inertial",
+        "topology": "compressed field-reversed configuration",
+        "device_project": "SCPN-MIF-CORE",
+        "external_evidence_rank": "E3_component_or_driver_experiment",
+        "rank_basis": "The facility-owner report describes integrated FRC merging, compression and diagnostic observations, but lacks peer-reviewed reactor-level qualification and portable public data.",
+        "reference_systems": [
+          {
+            "name": "Trenta FRC compression prototype",
+            "lifecycle_state": "historical",
+            "source_ids": [
+              "SRC-029"
+            ]
+          }
+        ],
+        "source_ids": [
+          "SRC-029"
+        ],
+        "diagnostic_evidence_state": "documented_component_or_driver",
+        "capability_claims": [
+          {
+            "capability_id": "integrated_plasma_operation",
+            "status": "observed_component",
+            "source_ids": [
+              "SRC-029"
+            ]
+          },
+          {
+            "capability_id": "compression_trajectory_diagnostics",
+            "status": "observed_component",
+            "source_ids": [
+              "SRC-029"
+            ]
+          },
+          {
+            "capability_id": "magnetic_diagnostics",
+            "status": "observed_component",
+            "source_ids": [
+              "SRC-029"
+            ]
+          },
+          {
+            "capability_id": "density_diagnostics",
+            "status": "observed_component",
+            "source_ids": [
+              "SRC-029"
+            ]
+          },
+          {
+            "capability_id": "spectroscopic_diagnostics",
+            "status": "observed_component",
+            "source_ids": [
+              "SRC-029"
+            ]
+          },
+          {
+            "capability_id": "neutron_diagnostics",
+            "status": "observed_component",
+            "source_ids": [
+              "SRC-029"
+            ]
+          }
+        ],
+        "observability_candidate_ids": [
+          "magneto_inertial.driver_arrival",
+          "magneto_inertial.resolved_asymmetry_mode",
+          "magneto_inertial.translation_and_compression",
+          "model.synthetic_oscillator_coordinate"
+        ],
+        "missing_capabilities": [
+          "control_admission",
+          "current_integrated_device",
+          "integrated_fusion_output",
+          "power_conversion_demonstration",
+          "public_machine_readable_calibrated_data",
+          "reactor_environment_diagnostic_qualification",
+          "spo_producer_adapter"
+        ],
+        "spo_qualification": {
+          "admission_state": "refused_no_producer_evidence",
+          "missing_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "physical_observation_qualified": false,
+          "physical_phase_qualified": false,
+          "control_admitted": false
+        },
+        "technology_is_control_evidence": false,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      },
+      {
+        "configuration": "fusion_fission_hybrid",
+        "confinement_family": "hybrid",
+        "topology": "fusion source with subcritical blanket",
+        "device_project": "SCPN-FUSION-FISSION-HYBRID-CORE",
+        "external_evidence_rank": "E1_concept_or_simulation",
+        "rank_basis": "The IAEA source describes conceptual plasma-core, blanket and neutronics analyses rather than an integrated fusion-fission hybrid experiment.",
+        "reference_systems": [
+          {
+            "name": "FDS-EM conceptual design",
+            "lifecycle_state": "concept_only",
+            "source_ids": [
+              "SRC-033"
+            ]
+          }
+        ],
+        "source_ids": [
+          "SRC-033"
+        ],
+        "diagnostic_evidence_state": "no_integrated_diagnostic_evidence",
+        "capability_claims": [
+          {
+            "capability_id": "blanket_neutronics",
+            "status": "concept_only",
+            "source_ids": [
+              "SRC-033"
+            ]
+          }
+        ],
+        "observability_candidate_ids": [
+          "hybrid.source_blanket_response",
+          "model.synthetic_oscillator_coordinate"
+        ],
+        "missing_capabilities": [
+          "control_admission",
+          "current_integrated_device",
+          "integrated_fusion_output",
+          "power_conversion_demonstration",
+          "public_machine_readable_calibrated_data",
+          "reactor_environment_diagnostic_qualification",
+          "spo_producer_adapter"
+        ],
+        "spo_qualification": {
+          "admission_state": "refused_no_producer_evidence",
+          "missing_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "physical_observation_qualified": false,
+          "physical_phase_qualified": false,
+          "control_admitted": false
+        },
+        "technology_is_control_evidence": false,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      },
+      {
+        "configuration": "gas_dynamic_mirror",
+        "confinement_family": "magnetic_open",
+        "topology": "collisional linear mirror",
+        "device_project": "SCPN-MIRROR-CORE",
+        "external_evidence_rank": "E4_integrated_plasma_experiment",
+        "rank_basis": "Published GDT experiments document confinement and stability studies on an integrated gas-dynamic mirror, without fusion-power conversion.",
+        "reference_systems": [
+          {
+            "name": "Gas Dynamic Trap",
+            "lifecycle_state": "operating_at_source_date",
+            "source_ids": [
+              "SRC-011"
+            ]
+          }
+        ],
+        "source_ids": [
+          "SRC-011"
+        ],
+        "diagnostic_evidence_state": "documented_integrated_device",
+        "capability_claims": [
+          {
+            "capability_id": "integrated_plasma_operation",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-011"
+            ]
+          },
+          {
+            "capability_id": "density_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-011"
+            ]
+          },
+          {
+            "capability_id": "temperature_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-011"
+            ]
+          },
+          {
+            "capability_id": "instability_mode_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-011"
+            ]
+          }
+        ],
+        "observability_candidate_ids": [
+          "model.synthetic_oscillator_coordinate",
+          "open.drive_reference",
+          "open.equilibrium_and_loss",
+          "open.resolved_interchange_mode"
+        ],
+        "missing_capabilities": [
+          "control_admission",
+          "integrated_fusion_output",
+          "power_conversion_demonstration",
+          "public_machine_readable_calibrated_data",
+          "reactor_environment_diagnostic_qualification",
+          "spo_producer_adapter"
+        ],
+        "spo_qualification": {
+          "admission_state": "refused_no_producer_evidence",
+          "missing_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "physical_observation_qualified": false,
+          "physical_phase_qualified": false,
+          "control_admitted": false
+        },
+        "technology_is_control_evidence": false,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      },
+      {
+        "configuration": "gridded_iec",
+        "confinement_family": "electrostatic",
+        "topology": "gridded electrostatic potential well",
+        "device_project": "SCPN-IEC-CORE",
+        "external_evidence_rank": "E5_integrated_fusion_observation",
+        "rank_basis": "A gridded IEC neutron source documents stable neutron production and calibrated imaging use; this is a neutron-source result, not net-energy evidence.",
+        "reference_systems": [
+          {
+            "name": "Cylindrical IEC neutron source",
+            "lifecycle_state": "operating_at_source_date",
+            "source_ids": [
+              "SRC-030"
+            ]
+          }
+        ],
+        "source_ids": [
+          "SRC-030"
+        ],
+        "diagnostic_evidence_state": "documented_integrated_device",
+        "capability_claims": [
+          {
+            "capability_id": "integrated_plasma_operation",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-030"
+            ]
+          },
+          {
+            "capability_id": "neutron_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-030"
+            ]
+          },
+          {
+            "capability_id": "fusion_product_measurement",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-030"
+            ]
+          },
+          {
+            "capability_id": "imaging_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-030"
+            ]
+          }
+        ],
+        "observability_candidate_ids": [
+          "iec.resolved_bunching",
+          "iec.steady_state",
+          "model.synthetic_oscillator_coordinate"
+        ],
+        "missing_capabilities": [
+          "control_admission",
+          "power_conversion_demonstration",
+          "public_machine_readable_calibrated_data",
+          "reactor_environment_diagnostic_qualification",
+          "spo_producer_adapter"
+        ],
+        "spo_qualification": {
+          "admission_state": "refused_no_producer_evidence",
+          "missing_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "physical_observation_qualified": false,
+          "physical_phase_qualified": false,
+          "control_admitted": false
+        },
+        "technology_is_control_evidence": false,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      },
+      {
+        "configuration": "heliotron",
+        "confinement_family": "magnetic_closed",
+        "topology": "helical-coil torus",
+        "device_project": "SCPN-STELLARATOR-CORE",
+        "external_evidence_rank": "E4_integrated_plasma_experiment",
+        "rank_basis": "LHD provides an integrated superconducting heliotron experiment with documented diagnostics and data acquisition.",
+        "reference_systems": [
+          {
+            "name": "Large Helical Device",
+            "lifecycle_state": "operating_at_source_date",
+            "source_ids": [
+              "SRC-005"
+            ]
+          }
+        ],
+        "source_ids": [
+          "SRC-005"
+        ],
+        "diagnostic_evidence_state": "documented_integrated_device",
+        "capability_claims": [
+          {
+            "capability_id": "integrated_plasma_operation",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-005"
+            ]
+          },
+          {
+            "capability_id": "magnetic_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-005"
+            ]
+          },
+          {
+            "capability_id": "density_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-005"
+            ]
+          },
+          {
+            "capability_id": "temperature_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-005"
+            ]
+          },
+          {
+            "capability_id": "spectroscopic_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-005"
+            ]
+          }
+        ],
+        "observability_candidate_ids": [
+          "closed.equilibrium_profiles",
+          "closed.resolved_mhd_mode",
+          "model.synthetic_oscillator_coordinate"
+        ],
+        "missing_capabilities": [
+          "control_admission",
+          "integrated_fusion_output",
+          "power_conversion_demonstration",
+          "public_machine_readable_calibrated_data",
+          "reactor_environment_diagnostic_qualification",
+          "spo_producer_adapter"
+        ],
+        "spo_qualification": {
+          "admission_state": "refused_no_producer_evidence",
+          "missing_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "physical_observation_qualified": false,
+          "physical_phase_qualified": false,
+          "control_admitted": false
+        },
+        "technology_is_control_evidence": false,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      },
+      {
+        "configuration": "ion_beam_icf",
+        "confinement_family": "inertial",
+        "topology": "particle-beam-driven target",
+        "device_project": "SCPN-ICF-BEAM-CORE",
+        "external_evidence_rank": "E3_component_or_driver_experiment",
+        "rank_basis": "NDCX documents compressed ion-beam and warm-dense-matter target diagnostics relevant to ion-driven ICF, not an integrated igniting target experiment.",
+        "reference_systems": [
+          {
+            "name": "NDCX ion-beam target platform",
+            "lifecycle_state": "historical",
+            "source_ids": [
+              "SRC-022"
+            ]
+          }
+        ],
+        "source_ids": [
+          "SRC-022"
+        ],
+        "diagnostic_evidence_state": "documented_component_or_driver",
+        "capability_claims": [
+          {
+            "capability_id": "beam_diagnostics",
+            "status": "observed_component",
+            "source_ids": [
+              "SRC-022"
+            ]
+          },
+          {
+            "capability_id": "shock_timing_diagnostics",
+            "status": "observed_component",
+            "source_ids": [
+              "SRC-022"
+            ]
+          },
+          {
+            "capability_id": "imaging_diagnostics",
+            "status": "observed_component",
+            "source_ids": [
+              "SRC-022"
+            ]
+          },
+          {
+            "capability_id": "temperature_diagnostics",
+            "status": "observed_component",
+            "source_ids": [
+              "SRC-022"
+            ]
+          }
+        ],
+        "observability_candidate_ids": [
+          "inertial.driver_timing",
+          "inertial.implosion_trajectory",
+          "inertial.resolved_asymmetry_mode",
+          "inertial.shot_outcome",
+          "model.synthetic_oscillator_coordinate"
+        ],
+        "missing_capabilities": [
+          "control_admission",
+          "current_integrated_device",
+          "integrated_fusion_output",
+          "power_conversion_demonstration",
+          "public_machine_readable_calibrated_data",
+          "reactor_environment_diagnostic_qualification",
+          "spo_producer_adapter"
+        ],
+        "spo_qualification": {
+          "admission_state": "refused_no_producer_evidence",
+          "missing_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "physical_observation_qualified": false,
+          "physical_phase_qualified": false,
+          "control_admitted": false
+        },
+        "technology_is_control_evidence": false,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      },
+      {
+        "configuration": "laser_icf_direct_drive",
+        "confinement_family": "inertial",
+        "topology": "spherical direct-drive target",
+        "device_project": "SCPN-ICF-LASER-CORE",
+        "external_evidence_rank": "E4_integrated_plasma_experiment",
+        "rank_basis": "OMEGA operates a direct-drive experimental platform and a broad calibrated diagnostic programme, without a cited direct-drive ignition observation.",
+        "reference_systems": [
+          {
+            "name": "OMEGA Laser Facility",
+            "lifecycle_state": "operating_at_source_date",
+            "source_ids": [
+              "SRC-020"
+            ]
+          }
+        ],
+        "source_ids": [
+          "SRC-020"
+        ],
+        "diagnostic_evidence_state": "documented_integrated_device",
+        "capability_claims": [
+          {
+            "capability_id": "integrated_plasma_operation",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-020"
+            ]
+          },
+          {
+            "capability_id": "shock_timing_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-020"
+            ]
+          },
+          {
+            "capability_id": "imaging_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-020"
+            ]
+          },
+          {
+            "capability_id": "neutron_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-020"
+            ]
+          },
+          {
+            "capability_id": "spectroscopic_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-020"
+            ]
+          }
+        ],
+        "observability_candidate_ids": [
+          "inertial.driver_timing",
+          "inertial.implosion_trajectory",
+          "inertial.resolved_asymmetry_mode",
+          "inertial.shot_outcome",
+          "model.synthetic_oscillator_coordinate"
+        ],
+        "missing_capabilities": [
+          "control_admission",
+          "integrated_fusion_output",
+          "power_conversion_demonstration",
+          "public_machine_readable_calibrated_data",
+          "reactor_environment_diagnostic_qualification",
+          "spo_producer_adapter"
+        ],
+        "spo_qualification": {
+          "admission_state": "refused_no_producer_evidence",
+          "missing_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "physical_observation_qualified": false,
+          "physical_phase_qualified": false,
+          "control_admitted": false
+        },
+        "technology_is_control_evidence": false,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      },
+      {
+        "configuration": "laser_icf_fast_or_shock_ignition",
+        "confinement_family": "inertial",
+        "topology": "staged laser-driven target",
+        "device_project": "SCPN-ICF-LASER-CORE",
+        "external_evidence_rank": "E4_integrated_plasma_experiment",
+        "rank_basis": "Fast- and shock-ignition research documents integrated target experiments and dedicated diagnostics, but no cited ignition-scale energy-gain demonstration for this branch.",
+        "reference_systems": [
+          {
+            "name": "OMEGA and fast-ignition diagnostic campaigns",
+            "lifecycle_state": "operating_at_source_date",
+            "source_ids": [
+              "SRC-020",
+              "SRC-021"
+            ]
+          }
+        ],
+        "source_ids": [
+          "SRC-020",
+          "SRC-021"
+        ],
+        "diagnostic_evidence_state": "documented_integrated_device",
+        "capability_claims": [
+          {
+            "capability_id": "integrated_plasma_operation",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-020"
+            ]
+          },
+          {
+            "capability_id": "shock_timing_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-020"
+            ]
+          },
+          {
+            "capability_id": "imaging_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-021"
+            ]
+          },
+          {
+            "capability_id": "charged_particle_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-021"
+            ]
+          },
+          {
+            "capability_id": "spectroscopic_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-021"
+            ]
+          }
+        ],
+        "observability_candidate_ids": [
+          "inertial.driver_timing",
+          "inertial.implosion_trajectory",
+          "inertial.resolved_asymmetry_mode",
+          "inertial.shot_outcome",
+          "model.synthetic_oscillator_coordinate"
+        ],
+        "missing_capabilities": [
+          "control_admission",
+          "integrated_fusion_output",
+          "power_conversion_demonstration",
+          "public_machine_readable_calibrated_data",
+          "reactor_environment_diagnostic_qualification",
+          "spo_producer_adapter"
+        ],
+        "spo_qualification": {
+          "admission_state": "refused_no_producer_evidence",
+          "missing_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "physical_observation_qualified": false,
+          "physical_phase_qualified": false,
+          "control_admitted": false
+        },
+        "technology_is_control_evidence": false,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      },
+      {
+        "configuration": "laser_icf_indirect_drive",
+        "confinement_family": "inertial",
+        "topology": "hohlraum indirect-drive target",
+        "device_project": "SCPN-ICF-LASER-CORE",
+        "external_evidence_rank": "E5_integrated_fusion_observation",
+        "rank_basis": "NIF ignition experiments provide peer-reviewed integrated fusion observations supported by x-ray, neutron, gamma and imaging diagnostics.",
+        "reference_systems": [
+          {
+            "name": "National Ignition Facility",
+            "lifecycle_state": "operating_at_source_date",
+            "source_ids": [
+              "SRC-019"
+            ]
+          }
+        ],
+        "source_ids": [
+          "SRC-019"
+        ],
+        "diagnostic_evidence_state": "documented_integrated_device",
+        "capability_claims": [
+          {
+            "capability_id": "integrated_plasma_operation",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-019"
+            ]
+          },
+          {
+            "capability_id": "fusion_product_measurement",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-019"
+            ]
+          },
+          {
+            "capability_id": "neutron_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-019"
+            ]
+          },
+          {
+            "capability_id": "imaging_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-019"
+            ]
+          },
+          {
+            "capability_id": "spectroscopic_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-019"
+            ]
+          }
+        ],
+        "observability_candidate_ids": [
+          "inertial.driver_timing",
+          "inertial.implosion_trajectory",
+          "inertial.resolved_asymmetry_mode",
+          "inertial.shot_outcome",
+          "model.synthetic_oscillator_coordinate"
+        ],
+        "missing_capabilities": [
+          "control_admission",
+          "power_conversion_demonstration",
+          "public_machine_readable_calibrated_data",
+          "reactor_environment_diagnostic_qualification",
+          "spo_producer_adapter"
+        ],
+        "spo_qualification": {
+          "admission_state": "refused_no_producer_evidence",
+          "missing_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "physical_observation_qualified": false,
+          "physical_phase_qualified": false,
+          "control_admitted": false
+        },
+        "technology_is_control_evidence": false,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      },
+      {
+        "configuration": "levitated_dipole",
+        "confinement_family": "magnetic_open",
+        "topology": "closed dipole field",
+        "device_project": "SCPN-LEVITATED-DIPOLE-CORE",
+        "external_evidence_rank": "E4_integrated_plasma_experiment",
+        "rank_basis": "LDX documents integrated high-beta dipole plasmas and a calibrated multichannel density interferometer; the cited facility is historical.",
+        "reference_systems": [
+          {
+            "name": "Levitated Dipole Experiment",
+            "lifecycle_state": "historical",
+            "source_ids": [
+              "SRC-014"
+            ]
+          }
+        ],
+        "source_ids": [
+          "SRC-014"
+        ],
+        "diagnostic_evidence_state": "historical_documented_device",
+        "capability_claims": [
+          {
+            "capability_id": "integrated_plasma_operation",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-014"
+            ]
+          },
+          {
+            "capability_id": "density_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-014"
+            ]
+          },
+          {
+            "capability_id": "equilibrium_reconstruction",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-014"
+            ]
+          }
+        ],
+        "observability_candidate_ids": [
+          "model.synthetic_oscillator_coordinate",
+          "open.drive_reference",
+          "open.equilibrium_and_loss",
+          "open.resolved_interchange_mode"
+        ],
+        "missing_capabilities": [
+          "control_admission",
+          "current_integrated_device",
+          "integrated_fusion_output",
+          "power_conversion_demonstration",
+          "public_machine_readable_calibrated_data",
+          "reactor_environment_diagnostic_qualification",
+          "spo_producer_adapter"
+        ],
+        "spo_qualification": {
+          "admission_state": "refused_no_producer_evidence",
+          "missing_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "physical_observation_qualified": false,
+          "physical_phase_qualified": false,
+          "control_admitted": false
+        },
+        "technology_is_control_evidence": false,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      },
+      {
+        "configuration": "maglif",
+        "confinement_family": "magneto_inertial",
+        "topology": "magnetized cylindrical liner",
+        "device_project": "SCPN-MIF-MAGLIF-CORE",
+        "external_evidence_rank": "E5_integrated_fusion_observation",
+        "rank_basis": "MagLIF experiments on Z document thermonuclear fusion observations and multi-diagnostic stagnation measurements, without power conversion.",
+        "reference_systems": [
+          {
+            "name": "MagLIF on the Z facility",
+            "lifecycle_state": "operating_at_source_date",
+            "source_ids": [
+              "SRC-026"
+            ]
+          }
+        ],
+        "source_ids": [
+          "SRC-026"
+        ],
+        "diagnostic_evidence_state": "documented_integrated_device",
+        "capability_claims": [
+          {
+            "capability_id": "integrated_plasma_operation",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-026"
+            ]
+          },
+          {
+            "capability_id": "fusion_product_measurement",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-026"
+            ]
+          },
+          {
+            "capability_id": "compression_trajectory_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-026"
+            ]
+          },
+          {
+            "capability_id": "neutron_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-026"
+            ]
+          },
+          {
+            "capability_id": "imaging_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-026"
+            ]
+          }
+        ],
+        "observability_candidate_ids": [
+          "magneto_inertial.driver_arrival",
+          "magneto_inertial.resolved_asymmetry_mode",
+          "magneto_inertial.translation_and_compression",
+          "model.synthetic_oscillator_coordinate"
+        ],
+        "missing_capabilities": [
+          "control_admission",
+          "power_conversion_demonstration",
+          "public_machine_readable_calibrated_data",
+          "reactor_environment_diagnostic_qualification",
+          "spo_producer_adapter"
+        ],
+        "spo_qualification": {
+          "admission_state": "refused_no_producer_evidence",
+          "missing_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "physical_observation_qualified": false,
+          "physical_phase_qualified": false,
+          "control_admitted": false
+        },
+        "technology_is_control_evidence": false,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      },
+      {
+        "configuration": "mechanical_or_liquid_liner_mif",
+        "confinement_family": "magneto_inertial",
+        "topology": "material-liner compression",
+        "device_project": "SCPN-MIF-LINER-CORE",
+        "external_evidence_rank": "E3_component_or_driver_experiment",
+        "rank_basis": "Peer-reviewed liquid-liner experiments demonstrate controlled liner shaping and compression, not an integrated fusion-output system.",
+        "reference_systems": [
+          {
+            "name": "General Fusion liquid-liner test beds",
+            "lifecycle_state": "under_construction_or_development",
+            "source_ids": [
+              "SRC-028"
+            ]
+          }
+        ],
+        "source_ids": [
+          "SRC-028"
+        ],
+        "diagnostic_evidence_state": "documented_component_or_driver",
+        "capability_claims": [
+          {
+            "capability_id": "compression_trajectory_diagnostics",
+            "status": "observed_component",
+            "source_ids": [
+              "SRC-028"
+            ]
+          },
+          {
+            "capability_id": "imaging_diagnostics",
+            "status": "observed_component",
+            "source_ids": [
+              "SRC-028"
+            ]
+          },
+          {
+            "capability_id": "integrated_plasma_operation",
+            "status": "planned_or_developing",
+            "source_ids": [
+              "SRC-028"
+            ]
+          }
+        ],
+        "observability_candidate_ids": [
+          "magneto_inertial.driver_arrival",
+          "magneto_inertial.resolved_asymmetry_mode",
+          "magneto_inertial.translation_and_compression",
+          "model.synthetic_oscillator_coordinate"
+        ],
+        "missing_capabilities": [
+          "control_admission",
+          "integrated_fusion_output",
+          "power_conversion_demonstration",
+          "public_machine_readable_calibrated_data",
+          "reactor_environment_diagnostic_qualification",
+          "spo_producer_adapter"
+        ],
+        "spo_qualification": {
+          "admission_state": "refused_no_producer_evidence",
+          "missing_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "physical_observation_qualified": false,
+          "physical_phase_qualified": false,
+          "control_admitted": false
+        },
+        "technology_is_control_evidence": false,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      },
+      {
+        "configuration": "plasma_jet_mif",
+        "confinement_family": "magneto_inertial",
+        "topology": "converging plasma-jet liner",
+        "device_project": "SCPN-MIF-PLASMA-JET-CORE",
+        "external_evidence_rank": "E3_component_or_driver_experiment",
+        "rank_basis": "PLX documents formation and diagnostics of a spherical liner from 36 plasma jets; an integrated magnetized target and fusion output are not established by the cited result.",
+        "reference_systems": [
+          {
+            "name": "Plasma Liner Experiment",
+            "lifecycle_state": "operating_at_source_date",
+            "source_ids": [
+              "SRC-027"
+            ]
+          }
+        ],
+        "source_ids": [
+          "SRC-027"
+        ],
+        "diagnostic_evidence_state": "documented_component_or_driver",
+        "capability_claims": [
+          {
+            "capability_id": "compression_trajectory_diagnostics",
+            "status": "observed_component",
+            "source_ids": [
+              "SRC-027"
+            ]
+          },
+          {
+            "capability_id": "density_diagnostics",
+            "status": "observed_component",
+            "source_ids": [
+              "SRC-027"
+            ]
+          },
+          {
+            "capability_id": "imaging_diagnostics",
+            "status": "observed_component",
+            "source_ids": [
+              "SRC-027"
+            ]
+          },
+          {
+            "capability_id": "integrated_plasma_operation",
+            "status": "planned_or_developing",
+            "source_ids": [
+              "SRC-027"
+            ]
+          }
+        ],
+        "observability_candidate_ids": [
+          "magneto_inertial.driver_arrival",
+          "magneto_inertial.resolved_asymmetry_mode",
+          "magneto_inertial.translation_and_compression",
+          "model.synthetic_oscillator_coordinate"
+        ],
+        "missing_capabilities": [
+          "control_admission",
+          "integrated_fusion_output",
+          "power_conversion_demonstration",
+          "public_machine_readable_calibrated_data",
+          "reactor_environment_diagnostic_qualification",
+          "spo_producer_adapter"
+        ],
+        "spo_qualification": {
+          "admission_state": "refused_no_producer_evidence",
+          "missing_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "physical_observation_qualified": false,
+          "physical_phase_qualified": false,
+          "control_admitted": false
+        },
+        "technology_is_control_evidence": false,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      },
+      {
+        "configuration": "polywell",
+        "confinement_family": "magnetic_open",
+        "topology": "electrostatically biased magnetic cusp",
+        "device_project": "SCPN-IEC-CORE",
+        "external_evidence_rank": "E4_integrated_plasma_experiment",
+        "rank_basis": "The WB-8 experiment documents improved energetic-electron confinement in a high-beta cusp supporting one Polywell premise, not an integrated fusion-output device.",
+        "reference_systems": [
+          {
+            "name": "WB-8 Polywell experiment",
+            "lifecycle_state": "historical",
+            "source_ids": [
+              "SRC-013"
+            ]
+          }
+        ],
+        "source_ids": [
+          "SRC-013"
+        ],
+        "diagnostic_evidence_state": "historical_documented_device",
+        "capability_claims": [
+          {
+            "capability_id": "integrated_plasma_operation",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-013"
+            ]
+          },
+          {
+            "capability_id": "charged_particle_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-013"
+            ]
+          },
+          {
+            "capability_id": "imaging_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-013"
+            ]
+          }
+        ],
+        "observability_candidate_ids": [
+          "iec.resolved_bunching",
+          "iec.steady_state",
+          "model.synthetic_oscillator_coordinate",
+          "open.drive_reference",
+          "open.equilibrium_and_loss",
+          "open.resolved_interchange_mode"
+        ],
+        "missing_capabilities": [
+          "control_admission",
+          "current_integrated_device",
+          "integrated_fusion_output",
+          "power_conversion_demonstration",
+          "public_machine_readable_calibrated_data",
+          "reactor_environment_diagnostic_qualification",
+          "spo_producer_adapter"
+        ],
+        "spo_qualification": {
+          "admission_state": "refused_no_producer_evidence",
+          "missing_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "physical_observation_qualified": false,
+          "physical_phase_qualified": false,
+          "control_admitted": false
+        },
+        "technology_is_control_evidence": false,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      },
+      {
+        "configuration": "projectile_or_impact_icf",
+        "confinement_family": "inertial",
+        "topology": "impact-driven target",
+        "device_project": "SCPN-ICF-IMPACT-CORE",
+        "external_evidence_rank": "E4_integrated_plasma_experiment",
+        "rank_basis": "A commissioned impact platform and UKAEA-reviewed target campaign document shock diagnostics and fusion-compatible particle detections, but not reactor-level gain.",
+        "reference_systems": [
+          {
+            "name": "First Light Fusion gas-gun target platform",
+            "lifecycle_state": "operating_at_source_date",
+            "source_ids": [
+              "SRC-024",
+              "SRC-025"
+            ]
+          }
+        ],
+        "source_ids": [
+          "SRC-024",
+          "SRC-025"
+        ],
+        "diagnostic_evidence_state": "documented_integrated_device",
+        "capability_claims": [
+          {
+            "capability_id": "integrated_plasma_operation",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-024",
+              "SRC-025"
+            ]
+          },
+          {
+            "capability_id": "shock_timing_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-024"
+            ]
+          },
+          {
+            "capability_id": "imaging_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-024"
+            ]
+          },
+          {
+            "capability_id": "neutron_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-025"
+            ]
+          }
+        ],
+        "observability_candidate_ids": [
+          "inertial.driver_timing",
+          "inertial.implosion_trajectory",
+          "inertial.resolved_asymmetry_mode",
+          "inertial.shot_outcome",
+          "model.synthetic_oscillator_coordinate"
+        ],
+        "missing_capabilities": [
+          "control_admission",
+          "integrated_fusion_output",
+          "power_conversion_demonstration",
+          "public_machine_readable_calibrated_data",
+          "reactor_environment_diagnostic_qualification",
+          "spo_producer_adapter"
+        ],
+        "spo_qualification": {
+          "admission_state": "refused_no_producer_evidence",
+          "missing_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "physical_observation_qualified": false,
+          "physical_phase_qualified": false,
+          "control_admitted": false
+        },
+        "technology_is_control_evidence": false,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      },
+      {
+        "configuration": "pulsed_electron_beam_icf",
+        "confinement_family": "inertial",
+        "topology": "electron-beam-driven target",
+        "device_project": "SCPN-ICF-BEAM-CORE",
+        "external_evidence_rank": "E3_component_or_driver_experiment",
+        "rank_basis": "Sandia records an electron-beam ICF programme and accelerator development that pivoted to particle beams before an integrated ignition demonstration.",
+        "reference_systems": [
+          {
+            "name": "Electron Beam Fusion Accelerator programme",
+            "lifecycle_state": "historical",
+            "source_ids": [
+              "SRC-023"
+            ]
+          }
+        ],
+        "source_ids": [
+          "SRC-023"
+        ],
+        "diagnostic_evidence_state": "historical_documented_device",
+        "capability_claims": [
+          {
+            "capability_id": "beam_diagnostics",
+            "status": "observed_component",
+            "source_ids": [
+              "SRC-023"
+            ]
+          },
+          {
+            "capability_id": "integrated_plasma_operation",
+            "status": "planned_or_developing",
+            "source_ids": [
+              "SRC-023"
+            ]
+          }
+        ],
+        "observability_candidate_ids": [
+          "inertial.driver_timing",
+          "inertial.implosion_trajectory",
+          "inertial.resolved_asymmetry_mode",
+          "inertial.shot_outcome",
+          "model.synthetic_oscillator_coordinate"
+        ],
+        "missing_capabilities": [
+          "control_admission",
+          "current_integrated_device",
+          "integrated_fusion_output",
+          "power_conversion_demonstration",
+          "public_machine_readable_calibrated_data",
+          "reactor_environment_diagnostic_qualification",
+          "spo_producer_adapter"
+        ],
+        "spo_qualification": {
+          "admission_state": "refused_no_producer_evidence",
+          "missing_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "physical_observation_qualified": false,
+          "physical_phase_qualified": false,
+          "control_admitted": false
+        },
+        "technology_is_control_evidence": false,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      },
+      {
+        "configuration": "reversed_field_pinch",
+        "confinement_family": "magnetic_closed",
+        "topology": "relaxed-current torus",
+        "device_project": "SCPN-RFP-CORE",
+        "external_evidence_rank": "E4_integrated_plasma_experiment",
+        "rank_basis": "RFX-mod2 builds on integrated RFP operation and documents upgraded magnetic, electrostatic, Thomson, x-ray, neutron and imaging diagnostics under development.",
+        "reference_systems": [
+          {
+            "name": "RFX-mod2",
+            "lifecycle_state": "under_construction_or_development",
+            "source_ids": [
+              "SRC-007"
+            ]
+          }
+        ],
+        "source_ids": [
+          "SRC-007"
+        ],
+        "diagnostic_evidence_state": "planned_or_developing",
+        "capability_claims": [
+          {
+            "capability_id": "integrated_plasma_operation",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-007"
+            ]
+          },
+          {
+            "capability_id": "magnetic_diagnostics",
+            "status": "planned_or_developing",
+            "source_ids": [
+              "SRC-007"
+            ]
+          },
+          {
+            "capability_id": "temperature_diagnostics",
+            "status": "planned_or_developing",
+            "source_ids": [
+              "SRC-007"
+            ]
+          },
+          {
+            "capability_id": "spectroscopic_diagnostics",
+            "status": "planned_or_developing",
+            "source_ids": [
+              "SRC-007"
+            ]
+          },
+          {
+            "capability_id": "neutron_diagnostics",
+            "status": "planned_or_developing",
+            "source_ids": [
+              "SRC-007"
+            ]
+          },
+          {
+            "capability_id": "instability_mode_diagnostics",
+            "status": "planned_or_developing",
+            "source_ids": [
+              "SRC-007"
+            ]
+          }
+        ],
+        "observability_candidate_ids": [
+          "closed.equilibrium_profiles",
+          "closed.resolved_mhd_mode",
+          "model.synthetic_oscillator_coordinate"
+        ],
+        "missing_capabilities": [
+          "control_admission",
+          "integrated_fusion_output",
+          "power_conversion_demonstration",
+          "public_machine_readable_calibrated_data",
+          "reactor_environment_diagnostic_qualification",
+          "spo_producer_adapter"
+        ],
+        "spo_qualification": {
+          "admission_state": "refused_no_producer_evidence",
+          "missing_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "physical_observation_qualified": false,
+          "physical_phase_qualified": false,
+          "control_admitted": false
+        },
+        "technology_is_control_evidence": false,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      },
+      {
+        "configuration": "sheared_flow_z_pinch",
+        "confinement_family": "self_magnetic",
+        "topology": "flow-stabilized axial-current pinch",
+        "device_project": "SCPN-Z-PINCH-CORE",
+        "external_evidence_rank": "E5_integrated_fusion_observation",
+        "rank_basis": "FuZE reports sustained neutron production coincident with diagnosed plasma conditions and later dedicated EUV spectroscopy.",
+        "reference_systems": [
+          {
+            "name": "FuZE and FuZE-Q",
+            "lifecycle_state": "operating_at_source_date",
+            "source_ids": [
+              "SRC-015",
+              "SRC-016"
+            ]
+          }
+        ],
+        "source_ids": [
+          "SRC-015",
+          "SRC-016"
+        ],
+        "diagnostic_evidence_state": "documented_integrated_device",
+        "capability_claims": [
+          {
+            "capability_id": "integrated_plasma_operation",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-015"
+            ]
+          },
+          {
+            "capability_id": "fusion_product_measurement",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-015"
+            ]
+          },
+          {
+            "capability_id": "neutron_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-015"
+            ]
+          },
+          {
+            "capability_id": "spectroscopic_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-016"
+            ]
+          },
+          {
+            "capability_id": "density_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-015"
+            ]
+          },
+          {
+            "capability_id": "temperature_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-015"
+            ]
+          }
+        ],
+        "observability_candidate_ids": [
+          "model.synthetic_oscillator_coordinate",
+          "self_magnetic.drive_waveform",
+          "self_magnetic.resolved_instability_mode"
+        ],
+        "missing_capabilities": [
+          "control_admission",
+          "power_conversion_demonstration",
+          "public_machine_readable_calibrated_data",
+          "reactor_environment_diagnostic_qualification",
+          "spo_producer_adapter"
+        ],
+        "spo_qualification": {
+          "admission_state": "refused_no_producer_evidence",
+          "missing_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "physical_observation_qualified": false,
+          "physical_phase_qualified": false,
+          "control_admitted": false
+        },
+        "technology_is_control_evidence": false,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      },
+      {
+        "configuration": "simple_magnetic_mirror",
+        "confinement_family": "magnetic_open",
+        "topology": "linear magnetic mirror",
+        "device_project": "SCPN-MIRROR-CORE",
+        "external_evidence_rank": "E4_integrated_plasma_experiment",
+        "rank_basis": "WHAM reached first plasma and entered scientific operation with high-field mirror magnets and reactor-relevant heating development.",
+        "reference_systems": [
+          {
+            "name": "Wisconsin HTS Axisymmetric Mirror",
+            "lifecycle_state": "commissioning_or_scientific_operation",
+            "source_ids": [
+              "SRC-010"
+            ]
+          }
+        ],
+        "source_ids": [
+          "SRC-010"
+        ],
+        "diagnostic_evidence_state": "planned_or_developing",
+        "capability_claims": [
+          {
+            "capability_id": "integrated_plasma_operation",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-010"
+            ]
+          },
+          {
+            "capability_id": "magnetic_diagnostics",
+            "status": "planned_or_developing",
+            "source_ids": [
+              "SRC-010"
+            ]
+          },
+          {
+            "capability_id": "density_diagnostics",
+            "status": "planned_or_developing",
+            "source_ids": [
+              "SRC-010"
+            ]
+          },
+          {
+            "capability_id": "temperature_diagnostics",
+            "status": "planned_or_developing",
+            "source_ids": [
+              "SRC-010"
+            ]
+          }
+        ],
+        "observability_candidate_ids": [
+          "model.synthetic_oscillator_coordinate",
+          "open.drive_reference",
+          "open.equilibrium_and_loss",
+          "open.resolved_interchange_mode"
+        ],
+        "missing_capabilities": [
+          "control_admission",
+          "integrated_fusion_output",
+          "power_conversion_demonstration",
+          "public_machine_readable_calibrated_data",
+          "reactor_environment_diagnostic_qualification",
+          "spo_producer_adapter"
+        ],
+        "spo_qualification": {
+          "admission_state": "refused_no_producer_evidence",
+          "missing_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "physical_observation_qualified": false,
+          "physical_phase_qualified": false,
+          "control_admitted": false
+        },
+        "technology_is_control_evidence": false,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      },
+      {
+        "configuration": "spherical_tokamak",
+        "confinement_family": "magnetic_closed",
+        "topology": "low-aspect-ratio axisymmetric torus",
+        "device_project": "SCPN-TOKAMAK-CORE",
+        "external_evidence_rank": "E4_integrated_plasma_experiment",
+        "rank_basis": "MAST Upgrade is an integrated spherical-tokamak experimental programme with a documented diagnostic suite; no cited D-T fusion-output result applies to this configuration.",
+        "reference_systems": [
+          {
+            "name": "MAST Upgrade",
+            "lifecycle_state": "operating_at_source_date",
+            "source_ids": [
+              "SRC-003"
+            ]
+          }
+        ],
+        "source_ids": [
+          "SRC-003"
+        ],
+        "diagnostic_evidence_state": "documented_integrated_device",
+        "capability_claims": [
+          {
+            "capability_id": "integrated_plasma_operation",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-003"
+            ]
+          },
+          {
+            "capability_id": "magnetic_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-003"
+            ]
+          },
+          {
+            "capability_id": "density_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-003"
+            ]
+          },
+          {
+            "capability_id": "temperature_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-003"
+            ]
+          },
+          {
+            "capability_id": "imaging_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-003"
+            ]
+          }
+        ],
+        "observability_candidate_ids": [
+          "closed.equilibrium_profiles",
+          "closed.recurrent_transient",
+          "closed.resolved_mhd_mode",
+          "model.synthetic_oscillator_coordinate"
+        ],
+        "missing_capabilities": [
+          "control_admission",
+          "integrated_fusion_output",
+          "power_conversion_demonstration",
+          "public_machine_readable_calibrated_data",
+          "reactor_environment_diagnostic_qualification",
+          "spo_producer_adapter"
+        ],
+        "spo_qualification": {
+          "admission_state": "refused_no_producer_evidence",
+          "missing_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "physical_observation_qualified": false,
+          "physical_phase_qualified": false,
+          "control_admitted": false
+        },
+        "technology_is_control_evidence": false,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      },
+      {
+        "configuration": "spheromak",
+        "confinement_family": "magnetic_closed",
+        "topology": "compact toroid",
+        "device_project": "SCPN-SPHEROMAK-CORE",
+        "external_evidence_rank": "E4_integrated_plasma_experiment",
+        "rank_basis": "SSPX documents sustained spheromak operation and time-resolved particle diagnostics; the cited programme is historical and did not demonstrate power conversion.",
+        "reference_systems": [
+          {
+            "name": "Sustained Spheromak Physics Experiment",
+            "lifecycle_state": "historical",
+            "source_ids": [
+              "SRC-008"
+            ]
+          }
+        ],
+        "source_ids": [
+          "SRC-008"
+        ],
+        "diagnostic_evidence_state": "historical_documented_device",
+        "capability_claims": [
+          {
+            "capability_id": "integrated_plasma_operation",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-008"
+            ]
+          },
+          {
+            "capability_id": "charged_particle_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-008"
+            ]
+          },
+          {
+            "capability_id": "temperature_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-008"
+            ]
+          }
+        ],
+        "observability_candidate_ids": [
+          "closed.equilibrium_profiles",
+          "closed.resolved_mhd_mode",
+          "model.synthetic_oscillator_coordinate"
+        ],
+        "missing_capabilities": [
+          "control_admission",
+          "current_integrated_device",
+          "integrated_fusion_output",
+          "power_conversion_demonstration",
+          "public_machine_readable_calibrated_data",
+          "reactor_environment_diagnostic_qualification",
+          "spo_producer_adapter"
+        ],
+        "spo_qualification": {
+          "admission_state": "refused_no_producer_evidence",
+          "missing_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "physical_observation_qualified": false,
+          "physical_phase_qualified": false,
+          "control_admitted": false
+        },
+        "technology_is_control_evidence": false,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      },
+      {
+        "configuration": "stellarator",
+        "confinement_family": "magnetic_closed",
+        "topology": "three-dimensional torus",
+        "device_project": "SCPN-STELLARATOR-CORE",
+        "external_evidence_rank": "E4_integrated_plasma_experiment",
+        "rank_basis": "Wendelstein 7-X is an operating integrated stellarator with approximately 45 documented diagnostics and long-pulse diagnostic engineering.",
+        "reference_systems": [
+          {
+            "name": "Wendelstein 7-X",
+            "lifecycle_state": "operating_at_source_date",
+            "source_ids": [
+              "SRC-004"
+            ]
+          }
+        ],
+        "source_ids": [
+          "SRC-004"
+        ],
+        "diagnostic_evidence_state": "documented_integrated_device",
+        "capability_claims": [
+          {
+            "capability_id": "integrated_plasma_operation",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-004"
+            ]
+          },
+          {
+            "capability_id": "magnetic_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-004"
+            ]
+          },
+          {
+            "capability_id": "density_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-004"
+            ]
+          },
+          {
+            "capability_id": "temperature_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-004"
+            ]
+          },
+          {
+            "capability_id": "spectroscopic_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-004"
+            ]
+          },
+          {
+            "capability_id": "imaging_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-004"
+            ]
+          }
+        ],
+        "observability_candidate_ids": [
+          "closed.equilibrium_profiles",
+          "closed.resolved_mhd_mode",
+          "model.synthetic_oscillator_coordinate"
+        ],
+        "missing_capabilities": [
+          "control_admission",
+          "integrated_fusion_output",
+          "power_conversion_demonstration",
+          "public_machine_readable_calibrated_data",
+          "reactor_environment_diagnostic_qualification",
+          "spo_producer_adapter"
+        ],
+        "spo_qualification": {
+          "admission_state": "refused_no_producer_evidence",
+          "missing_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "physical_observation_qualified": false,
+          "physical_phase_qualified": false,
+          "control_admitted": false
+        },
+        "technology_is_control_evidence": false,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      },
+      {
+        "configuration": "tandem_mirror",
+        "confinement_family": "magnetic_open",
+        "topology": "multi-cell linear mirror",
+        "device_project": "SCPN-MIRROR-CORE",
+        "external_evidence_rank": "E4_integrated_plasma_experiment",
+        "rank_basis": "GAMMA 10 documents an integrated tandem-mirror plasma and calibrated VUV/x-ray diagnostics, without a fusion-power demonstration.",
+        "reference_systems": [
+          {
+            "name": "GAMMA 10 tandem mirror",
+            "lifecycle_state": "operating_at_source_date",
+            "source_ids": [
+              "SRC-012"
+            ]
+          }
+        ],
+        "source_ids": [
+          "SRC-012"
+        ],
+        "diagnostic_evidence_state": "documented_integrated_device",
+        "capability_claims": [
+          {
+            "capability_id": "integrated_plasma_operation",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-012"
+            ]
+          },
+          {
+            "capability_id": "spectroscopic_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-012"
+            ]
+          },
+          {
+            "capability_id": "imaging_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-012"
+            ]
+          },
+          {
+            "capability_id": "charged_particle_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-012"
+            ]
+          }
+        ],
+        "observability_candidate_ids": [
+          "model.synthetic_oscillator_coordinate",
+          "open.drive_reference",
+          "open.equilibrium_and_loss",
+          "open.resolved_interchange_mode"
+        ],
+        "missing_capabilities": [
+          "control_admission",
+          "integrated_fusion_output",
+          "power_conversion_demonstration",
+          "public_machine_readable_calibrated_data",
+          "reactor_environment_diagnostic_qualification",
+          "spo_producer_adapter"
+        ],
+        "spo_qualification": {
+          "admission_state": "refused_no_producer_evidence",
+          "missing_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "physical_observation_qualified": false,
+          "physical_phase_qualified": false,
+          "control_admitted": false
+        },
+        "technology_is_control_evidence": false,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      },
+      {
+        "configuration": "theta_pinch",
+        "confinement_family": "self_magnetic",
+        "topology": "azimuthal-current pinch",
+        "device_project": "SCPN-THETA-PINCH-CORE",
+        "external_evidence_rank": "E4_integrated_plasma_experiment",
+        "rank_basis": "Scylla theta-pinch experiments document integrated plasma operation and calibrated x-ray spectroscopy; the cited platform is historical.",
+        "reference_systems": [
+          {
+            "name": "Scylla theta-pinch programme",
+            "lifecycle_state": "historical",
+            "source_ids": [
+              "SRC-017"
+            ]
+          }
+        ],
+        "source_ids": [
+          "SRC-017"
+        ],
+        "diagnostic_evidence_state": "historical_documented_device",
+        "capability_claims": [
+          {
+            "capability_id": "integrated_plasma_operation",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-017"
+            ]
+          },
+          {
+            "capability_id": "spectroscopic_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-017"
+            ]
+          },
+          {
+            "capability_id": "temperature_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-017"
+            ]
+          }
+        ],
+        "observability_candidate_ids": [
+          "model.synthetic_oscillator_coordinate",
+          "self_magnetic.drive_waveform",
+          "self_magnetic.resolved_instability_mode"
+        ],
+        "missing_capabilities": [
+          "control_admission",
+          "current_integrated_device",
+          "integrated_fusion_output",
+          "power_conversion_demonstration",
+          "public_machine_readable_calibrated_data",
+          "reactor_environment_diagnostic_qualification",
+          "spo_producer_adapter"
+        ],
+        "spo_qualification": {
+          "admission_state": "refused_no_producer_evidence",
+          "missing_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "physical_observation_qualified": false,
+          "physical_phase_qualified": false,
+          "control_admitted": false
+        },
+        "technology_is_control_evidence": false,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      },
+      {
+        "configuration": "torsatron",
+        "confinement_family": "magnetic_closed",
+        "topology": "continuous-helical-coil torus",
+        "device_project": "SCPN-STELLARATOR-CORE",
+        "external_evidence_rank": "E4_integrated_plasma_experiment",
+        "rank_basis": "ORNL records integrated ATF torsatron operation and diagnostic development; the programme ended in 1991.",
+        "reference_systems": [
+          {
+            "name": "Advanced Toroidal Facility",
+            "lifecycle_state": "historical",
+            "source_ids": [
+              "SRC-006"
+            ]
+          }
+        ],
+        "source_ids": [
+          "SRC-006"
+        ],
+        "diagnostic_evidence_state": "historical_documented_device",
+        "capability_claims": [
+          {
+            "capability_id": "integrated_plasma_operation",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-006"
+            ]
+          },
+          {
+            "capability_id": "magnetic_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-006"
+            ]
+          },
+          {
+            "capability_id": "density_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-006"
+            ]
+          },
+          {
+            "capability_id": "temperature_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-006"
+            ]
+          }
+        ],
+        "observability_candidate_ids": [
+          "closed.equilibrium_profiles",
+          "closed.resolved_mhd_mode",
+          "model.synthetic_oscillator_coordinate"
+        ],
+        "missing_capabilities": [
+          "control_admission",
+          "current_integrated_device",
+          "integrated_fusion_output",
+          "power_conversion_demonstration",
+          "public_machine_readable_calibrated_data",
+          "reactor_environment_diagnostic_qualification",
+          "spo_producer_adapter"
+        ],
+        "spo_qualification": {
+          "admission_state": "refused_no_producer_evidence",
+          "missing_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "physical_observation_qualified": false,
+          "physical_phase_qualified": false,
+          "control_admitted": false
+        },
+        "technology_is_control_evidence": false,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      },
+      {
+        "configuration": "z_pinch",
+        "confinement_family": "self_magnetic",
+        "topology": "axial-current pinch",
+        "device_project": "SCPN-Z-PINCH-CORE",
+        "external_evidence_rank": "E4_integrated_plasma_experiment",
+        "rank_basis": "Sandia documents long-running integrated Z-pinch experiments and fusion-oriented high-energy-density operation, but this source is not an exact fusion-output qualification for generic Z-pinch.",
+        "reference_systems": [
+          {
+            "name": "Sandia Z machine",
+            "lifecycle_state": "operating_at_source_date",
+            "source_ids": [
+              "SRC-034"
+            ]
+          }
+        ],
+        "source_ids": [
+          "SRC-034"
+        ],
+        "diagnostic_evidence_state": "documented_integrated_device",
+        "capability_claims": [
+          {
+            "capability_id": "integrated_plasma_operation",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-034"
+            ]
+          },
+          {
+            "capability_id": "electrical_waveform_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-034"
+            ]
+          },
+          {
+            "capability_id": "imaging_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-034"
+            ]
+          },
+          {
+            "capability_id": "shock_timing_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-034"
+            ]
+          }
+        ],
+        "observability_candidate_ids": [
+          "model.synthetic_oscillator_coordinate",
+          "self_magnetic.drive_waveform",
+          "self_magnetic.resolved_instability_mode"
+        ],
+        "missing_capabilities": [
+          "control_admission",
+          "integrated_fusion_output",
+          "power_conversion_demonstration",
+          "public_machine_readable_calibrated_data",
+          "reactor_environment_diagnostic_qualification",
+          "spo_producer_adapter"
+        ],
+        "spo_qualification": {
+          "admission_state": "refused_no_producer_evidence",
+          "missing_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "physical_observation_qualified": false,
+          "physical_phase_qualified": false,
+          "control_admitted": false
+        },
+        "technology_is_control_evidence": false,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      }
+    ],
+    "authority": "review_only",
+    "actionable": false,
+    "direct_actuation_authorized": false,
+    "machine_protection_final_veto": true
+  },
+  "payload_sha256": "eb8e2ffbbc98241ac2458044455bcec425860f33ab3ba9d5ea4fa3b86870d3d3"
+}

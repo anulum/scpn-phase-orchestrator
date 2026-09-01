@@ -96,6 +96,15 @@ SPO custody; ten fail closed because their channels omit the required
 `timing_uncertainty_s` member. Structural acceptance remains a synthetic design
 result, not physical evidence or CONTROL authority.
 
+The evidence-ranked
+[reactor technology and diagnostic atlas](docs/reference/reactor_technology_diagnostic_atlas.md)
+maps current and historical primary-source evidence for all 32 configurations,
+including non-tokamak magnetic, inertial, magneto-inertial, electrostatic,
+beam-target, and hybrid systems. Its 34 external sources describe technology
+and diagnostic context only: every row still fails closed for physical signal,
+phase, CONTROL admission, action, and actuation without an exact producer
+payload.
+
 ![Synchronization Manifold](docs/assets/synchronization_manifold.png)
 
 ## Current Release Boundary
@@ -304,8 +313,8 @@ inside a dashboard or notebook; it turns them into inspectable artefacts.
 | Domainpack files | 36 |
 | Rust kernel files | 97 |
 | Optional extras | 23 |
-| Python test files | 908 |
-| Public documentation pages | 237 |
+| Python test files | 909 |
+| Public documentation pages | 238 |
 | GitHub Actions workflows | 19 |
 
 Evidence boundary: this snapshot is a static inventory. Performance, coverage, hardware, and scientific-fidelity claims require their own committed evidence artifacts.
