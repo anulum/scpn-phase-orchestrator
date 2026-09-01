@@ -28,9 +28,9 @@
       },
       "reactor_signal_occurrence_ledger": {
         "schema_version": "1.0.0",
-        "payload_sha256": "b7bffc61956dc32ee5ee1c1c9d399ee3546af9e374cd52d18f7c85602ba32c22",
+        "payload_sha256": "11ccb4cafcb12c7b5e977df3159e4d02570d06c224406d5750627c81428facfd",
         "source_path": "docs/reference/data/reactor_signal_occurrence_ledger.v1.json",
-        "source_sha256": "d6637c377267d74b1463bb1c688547a3a75e069c21353152159487b0c74bdbc2"
+        "source_sha256": "3d887e29278e275f971e8222dd820ba5fc7f1403870597965de2ce690a6b8c7d"
       }
     },
     "coverage": {
@@ -1323,5 +1323,5 @@
       }
     ]
   },
-  "payload_sha256": "2ab9d4cf92c4d17fd47bad4cc5bf1778f456336ee6798943f5fd26dd3e1dba8a"
+  "payload_sha256": "0e20fad3d336c622abe611aa71a914a937b7cc3ef8626b65cf2c0790dc0f83d5"
 }

@@ -1,6 +1,6 @@
 # Reactor signal occurrence ledger
 
-- **Snapshot:** 2026-09-01
+- **Snapshot:** 2026-09-02
 - **Authority:** `review_only`; `actionable=false`; direct actuation not authorized
 - **Machine record:** [reactor_signal_occurrence_ledger.v1.json](data/reactor_signal_occurrence_ledger.v1.json)
 - **Schema:** [reactor_signal_occurrence_ledger.schema.json](../specs/reactor_signal_occurrence_ledger.schema.json)
@@ -11,8 +11,8 @@ mode, regime, event, and clock concepts actually occur today in
 SCPN-PHASE-ORCHESTRATOR (SPO), SCPN-FUSION-CORE, SCPN-MIF-CORE, and
 SCPN-CONTROL, and what can each occurrence honestly mean?
 
-The snapshot contains 39 stable public or cross-project occurrence groups:
-12 SPO, 11 FUSION, 7 MIF, and 9 CONTROL. Every group is bound to an exact Git
+The snapshot contains 43 stable public or cross-project occurrence groups:
+12 SPO, 11 FUSION, 11 MIF, and 9 CONTROL. Every group is bound to an exact Git
 revision, source path, public or boundary symbol, and SHA-256 of the exact Git
 blob. The payload itself is canonical-JSON sealed. No occurrence in this
 snapshot admits a physical phase observation or authorizes direct actuation.
@@ -45,7 +45,7 @@ calls are grouped under the stable outward symbol.
 |---|---|---:|
 | SCPN-PHASE-ORCHESTRATOR | `386c6537b22a3e36fd10402dbe68cffc8721a360` | 12 |
 | SCPN-FUSION-CORE | `c30fb3932b47a812dc26d5846761030cdd0bc94c` | 11 |
-| SCPN-MIF-CORE | `f3132574b0d4f45b29e2c27cfc2c830ee868c13e` | 7 |
+| SCPN-MIF-CORE | `f3132574b0d4f45b29e2c27cfc2c830ee868c13e` | 11 |
 | SCPN-CONTROL | `a3b39652f8d97cbdd057afb4e9e5e2859369ab79` | 9 |
 
 The audit read exact tracked Git objects. Uncommitted sibling work was neither
@@ -115,6 +115,10 @@ FUS-009, FUS-010, and SPO-009 all keep
 | MIF-005 | pulsed-shot FSM | protocol phase | eight named stages, not an angle |
 | MIF-006 | named DAQ profiles | bounded fixture features | synthetic facility-shaped mock |
 | MIF-007 | AER spike buffer | event timestamps | unbound event clock, not event-cycle phase |
+| MIF-008 | White Rabbit trigger I/O | event timestamp contract | integer TAI/ns/ps seam, not runtime capture or firing evidence |
+| MIF-009 | plasmoid-merger Petri net | protocol phase | one-safe model places, not plant-truth regime or physical phase |
+| MIF-010 | diagnostic normalisation | bounded feature/calibration contract | declared mapping and clip masks, not admitted facility calibration |
+| MIF-011 | stress and trigger probability models | bounded uncertainty features | seeded/modelled uncertainty, not OOD/stale state or trigger authority |
 
 The MIF producer states that it “owns MIF facts only” and does not assign
 portable reactor phase meaning. SPO preserves that boundary: only the
@@ -122,6 +126,17 @@ Doppler-Kuramoto oscillator coordinates become `numerical_phase`; translation,
 compression, lock, trigger, and gate results remain bounded or categorical.
 `fire` is an implemented software decision, not evidence that a physical bank
 fired and not permission for SPO to command one.
+
+MIF-008 also prevents clock collapse: White Rabbit TAI seconds, nanoseconds and
+picoseconds are a different contract from local DAQ/AER nanosecond counters and
+model time. No transform or event identity may be inferred between them.
+MIF-009's `phase_locked` place is a protocol state guarded partly by numerical
+`phase_lock_error_rad`; it is not an angular value or an observed plant regime.
+MIF-010 materially improves the calibration vocabulary but does not supply an
+immutable facility source or calibration lineage. MIF-011 states its additive
+Gaussian and independence assumptions, so its probabilities remain simulation
+evidence. None of these surfaces defines plant-truth `UNKNOWN`, OOD,
+low-observability, or stale states; that absence is recorded as `STATE-01`.
 
 ## CONTROL consumer and local-model surfaces
 
@@ -144,7 +159,7 @@ into a hardware command, interlock, or machine-protection override.
 
 ## Changes from the 2026-08-30 atlas
 
-Four former statements need explicit revision:
+Five former statements need explicit revision:
 
 1. The “no U0 MIF producer handoff” architecture gap is closed by MIF-001 and
    SPO-007. The physical-observation gap remains open.
@@ -155,6 +170,9 @@ Four former statements need explicit revision:
    FUS-010, and SPO-009. It does not yet provide phase observability.
 4. CTRL-003 adds regime-assessment admission while intentionally requiring an
    abstaining assessment and retaining `review_only=true`, `actionable=false`.
+5. MIF-008 through MIF-011 add exact trigger timing, protocol-state,
+   calibration, and uncertainty-model boundaries. They expose the missing
+   plant-truth state vocabulary instead of filling it with software states.
 
 These are source-state deltas, not claims about remote publication, reactor
 operation, or technology readiness.
@@ -171,6 +189,7 @@ operation, or technology readiness.
 | `ACT-01` | semantic review remains intentionally disconnected from actuation and machine protection |
 | `PROD-01` | mirror, ICF, IEC, beam-target, Z-pinch, spheromak, and other families remain architecture-only in this four-project ledger until a producer exists |
 | `LEG-01` | callers must not treat normalized legacy angles as U0 reactor phase |
+| `STATE-01` | software hold/abort, Petri places, missing data, and model probabilities cannot substitute for producer-owned UNKNOWN/OOD/low-observability/stale plant truth |
 
 The highest-value next physical slice remains a diagnostic-specific tokamak
 complex-mode observation operator over the MAST magnetic source, but only after

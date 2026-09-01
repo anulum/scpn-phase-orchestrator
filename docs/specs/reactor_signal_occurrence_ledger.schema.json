@@ -197,9 +197,9 @@
           "properties": {
             "SCPN-CONTROL": {"const": 9},
             "SCPN-FUSION-CORE": {"const": 11},
-            "SCPN-MIF-CORE": {"const": 7},
+            "SCPN-MIF-CORE": {"const": 11},
             "SCPN-PHASE-ORCHESTRATOR": {"const": 12},
-            "total_occurrence_groups": {"const": 39}
+            "total_occurrence_groups": {"const": 43}
           },
           "required": [
             "SCPN-CONTROL",
@@ -219,8 +219,8 @@
         "inclusion_rule": {"minLength": 1, "type": "string"},
         "occurrences": {
           "items": {"$ref": "#/$defs/occurrence"},
-          "maxItems": 39,
-          "minItems": 39,
+          "maxItems": 43,
+          "minItems": 43,
           "type": "array"
         },
         "prior_atlas_deltas": {
@@ -243,7 +243,7 @@
           "type": "array"
         },
         "raw_scan_note": {"minLength": 1, "type": "string"},
-        "scan_date": {"const": "2026-09-01"},
+        "scan_date": {"const": "2026-09-02"},
         "scope": {
           "const": ["phase", "mode", "regime", "event", "clock"],
           "type": "array"

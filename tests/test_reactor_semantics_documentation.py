@@ -257,11 +257,14 @@ def test_frc_compression_mif_physical_request_is_exact_and_fail_closed() -> None
 def test_reactor_signal_occurrence_ledger_preserves_epistemic_boundaries() -> None:
     text = " ".join(OCCURRENCE_LEDGER.read_text(encoding="utf-8").split())
     required = (
-        "39 stable public or cross-project occurrence groups",
+        "43 stable public or cross-project occurrence groups",
         "An occurrence is evidence that a concept or value exists in source",
         "It is not by itself evidence that the concept was measured in a reactor",
         "physical_observation_admitted=false",
         "physical_phase_eligible=false",
+        "White Rabbit TAI seconds",
+        "`phase_locked` place is a protocol state",
+        "`STATE-01`",
         "owns MIF facts only",
         "admitted_for_review` is not an actuation decision",
         "no path that turns an SPO semantic or regime-assessment record",

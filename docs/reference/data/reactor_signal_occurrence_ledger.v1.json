@@ -5,9 +5,9 @@
     "coverage": {
       "SCPN-CONTROL": 9,
       "SCPN-FUSION-CORE": 11,
-      "SCPN-MIF-CORE": 7,
+      "SCPN-MIF-CORE": 11,
       "SCPN-PHASE-ORCHESTRATOR": 12,
-      "total_occurrence_groups": 39
+      "total_occurrence_groups": 43
     },
     "direct_actuation_authorized": false,
     "gap_definitions": [
@@ -42,6 +42,10 @@
       {
         "gap_id": "PROD-01",
         "meaning": "No producer-owned implementation or evidence boundary exists in the four-project scope for one or more reactor families."
+      },
+      {
+        "gap_id": "STATE-01",
+        "meaning": "No producer plant-truth contract distinguishes UNKNOWN, out-of-distribution, low-observability, and stale states; software hold, abort, missing-data, or model states must not be promoted into that absent regime vocabulary."
       }
     ],
     "inclusion_rule": "One row represents one externally meaningful public or cross-project phase, mode, regime, event, clock, or semantic-boundary symbol group. Duplicate internal calls and language mirrors are grouped under that stable boundary.",
@@ -681,7 +685,7 @@
         "direct_actuation_authorized": false,
         "evidence_maturity": "software_decision_model",
         "externally_actionable": false,
-        "gap_ids": ["DATA-01", "ACT-01"],
+        "gap_ids": ["DATA-01", "STATE-01", "ACT-01"],
         "occurrence_id": "MIF-004",
         "occurrence_kind": "trigger_decision",
         "phase_value_present": true,
@@ -705,7 +709,7 @@
         "direct_actuation_authorized": false,
         "evidence_maturity": "software_state_machine",
         "externally_actionable": false,
-        "gap_ids": ["DATA-01", "ACT-01"],
+        "gap_ids": ["DATA-01", "STATE-01", "ACT-01"],
         "occurrence_id": "MIF-005",
         "occurrence_kind": "protocol_state_machine",
         "phase_value_present": false,
@@ -769,6 +773,103 @@
           {"path": "src/scpn_mif_core/aer/spike_buffer.py", "sha256": "987f54cfa178b704f1350e46c7b8383b49b9e86a769d79060da39aa8f1ec7d41"}
         ],
         "symbols": ["AERSpikeEvent", "AERDecodedObservation", "decode_spike_observation"]
+      },
+      {
+        "assessment_basis": "explicit_source_boundary",
+        "authority_boundary": "White Rabbit timestamps and EPICS names define an integration seam, not a runtime capture, cross-clock transform, resolved event identity, physical trigger edge, or firing authority.",
+        "clock_state": "contract_defined",
+        "direct_actuation_authorized": false,
+        "evidence_maturity": "semantic_contract",
+        "externally_actionable": false,
+        "gap_ids": ["CLK-01", "EVT-01", "DATA-01", "ACT-01"],
+        "occurrence_id": "MIF-008",
+        "occurrence_kind": "trigger_timing_contract",
+        "phase_value_present": false,
+        "phenomenon": "Integer White Rabbit TAI-second, nanosecond, and picosecond trigger ingress/egress timing with named EPICS channels.",
+        "physical_observation_admitted": false,
+        "physical_phase_eligible": false,
+        "physical_source_present": false,
+        "project": "SCPN-MIF-CORE",
+        "regime_classification_performed": false,
+        "semantic_carrier": "event_timestamp",
+        "source_markers": ["WhiteRabbitTimestamp", "TAI seconds", "picoseconds", "egress timestamp precedes ingress timestamp"],
+        "sources": [
+          {"path": "src/scpn_mif_core/interop/trigger_io.py", "sha256": "42b3e41527311685e32ff1b7eb938adb2e67088a24aef39d8e47be2bf083d999"}
+        ],
+        "symbols": ["WhiteRabbitTimestamp", "TriggerIngress", "TriggerEgress", "egress_latency_ps", "epics_channels"]
+      },
+      {
+        "assessment_basis": "explicit_source_boundary",
+        "authority_boundary": "Approach through phase_locked and abort are one-safe Petri-net control places over sampled model inputs; they are not a plant-truth regime, a physical phase observation, or an execution command.",
+        "clock_state": "protocol_time",
+        "direct_actuation_authorized": false,
+        "evidence_maturity": "software_state_machine",
+        "externally_actionable": false,
+        "gap_ids": ["DATA-01", "OBS-01", "STATE-01", "ACT-01"],
+        "occurrence_id": "MIF-009",
+        "occurrence_kind": "protocol_state_machine",
+        "phase_value_present": true,
+        "phenomenon": "One-safe FRC plasmoid-merger progression through approach, contact, reconnection, coalescence, phase-locked, and abort places.",
+        "physical_observation_admitted": false,
+        "physical_phase_eligible": false,
+        "physical_source_present": false,
+        "project": "SCPN-MIF-CORE",
+        "regime_classification_performed": false,
+        "semantic_carrier": "protocol_phase",
+        "source_markers": ["MergerPlace", "phase_lock_error_rad", "PHASE_LOCKED", "ABORT", "one-safe stochastic Petri net"],
+        "sources": [
+          {"path": "src/scpn_mif_core/lifecycle/plasmoid_merger_petri_net.py", "sha256": "90f8bd8457557d714a29a245b710b62aedccfef514e86eb5e38ee9379971bb11"}
+        ],
+        "symbols": ["MergerPlace", "MergerObservation", "MergerStep", "PlasmoidMergerPetriNet"]
+      },
+      {
+        "assessment_basis": "inferred_by_spo_audit",
+        "authority_boundary": "Normalisation manifests preserve declared channel ranges, units, provenance, clip policy, affine mapping, and clip masks; without immutable facility source and calibration lineage they do not admit a physical observation.",
+        "clock_state": "contract_defined",
+        "direct_actuation_authorized": false,
+        "evidence_maturity": "semantic_contract",
+        "externally_actionable": false,
+        "gap_ids": ["CLK-01", "DATA-01", "OBS-01"],
+        "occurrence_id": "MIF-010",
+        "occurrence_kind": "diagnostic_calibration_contract",
+        "phase_value_present": false,
+        "phenomenon": "Per-channel physical-range calibration and deterministic bounded normalisation with explicit clip or reject policy.",
+        "physical_observation_admitted": false,
+        "physical_phase_eligible": false,
+        "physical_source_present": false,
+        "project": "SCPN-MIF-CORE",
+        "regime_classification_performed": false,
+        "semantic_carrier": "bounded_feature",
+        "source_markers": ["DiagnosticChannelCalibration", "calibration_manifest", "physical_unit_range", "clip_mask", "provenance"],
+        "sources": [
+          {"path": "src/scpn_mif_core/diagnostics/normalisation.py", "sha256": "9a24a1d2c8d4cbbebaa0722eca5db3e52fcd8eeb3b28192e298f086bdf7b63bb"}
+        ],
+        "symbols": ["DiagnosticChannelCalibration", "NormalisedDiagnosticSample", "DiagnosticNormalisationState", "fit_diagnostic_calibrations"]
+      },
+      {
+        "assessment_basis": "explicit_source_boundary",
+        "authority_boundary": "Seeded stress injection and Gaussian probability propagation quantify model sensitivity under declared independence assumptions; they do not create calibrated plant uncertainty, OOD/stale state, observation, or trigger authority.",
+        "clock_state": "model_time",
+        "direct_actuation_authorized": false,
+        "evidence_maturity": "simulation_model",
+        "externally_actionable": false,
+        "gap_ids": ["CLK-01", "DATA-01", "OBS-01", "STATE-01", "ACT-01"],
+        "occurrence_id": "MIF-011",
+        "occurrence_kind": "diagnostic_uncertainty_model",
+        "phase_value_present": true,
+        "phenomenon": "Seeded noise, dropout, timestamp jitter, and additive-Gaussian lock/violation/fire probability propagation over model observables.",
+        "physical_observation_admitted": false,
+        "physical_phase_eligible": false,
+        "physical_source_present": false,
+        "project": "SCPN-MIF-CORE",
+        "regime_classification_performed": false,
+        "semantic_carrier": "bounded_feature",
+        "source_markers": ["StressInjectionRecord", "phase_lock_error_rad", "MeasurementNoiseSpec", "independence approximation", "fire_probability"],
+        "sources": [
+          {"path": "src/scpn_mif_core/diagnostics/stress_inject.py", "sha256": "0d1ea66a0a518dce568a3e1009c8378b9ee01878fcc0b8257e637a2c6e26b2b8"},
+          {"path": "src/scpn_mif_core/kinematic/trigger_probability.py", "sha256": "928cb839f456b8de15ec969bf4951ad98c3f56c0ac0ee22a5767136bacd5afa3"}
+        ],
+        "symbols": ["StressInjectionRecord", "DegradedSensorStream", "MeasurementNoiseSpec", "TriggerProbabilityTrace", "propagate_trigger_probabilities"]
       },
       {
         "assessment_basis": "explicit_source_boundary",
@@ -1007,6 +1108,10 @@
       {
         "change": "CTRL-003 adds exact regime-assessment admission while preserving abstention, review-only authority, and no action path.",
         "status": "new_control_review_boundary"
+      },
+      {
+        "change": "MIF-008 through MIF-011 add exact trigger-clock, protocol-state, diagnostic-calibration, and uncertainty-model boundaries; they expose STATE-01 rather than inventing plant-truth UNKNOWN, OOD, low-observability, or stale states.",
+        "status": "new_mif_contract_boundaries_state_gap"
       }
     ],
     "projects": [
@@ -1016,11 +1121,11 @@
       {"project": "SCPN-PHASE-ORCHESTRATOR", "revision": "386c6537b22a3e36fd10402dbe68cffc8721a360", "source_state": "exact_tracked_git_object"}
     ],
     "raw_scan_note": "Substring searches are discovery aids only. Plain words such as mode in backend or delivery-mode APIs, duplicate internal references, docs, tests, and fixtures do not become semantic occurrence rows.",
-    "scan_date": "2026-09-01",
+    "scan_date": "2026-09-02",
     "scope": ["phase", "mode", "regime", "event", "clock"],
     "source_evidence_rule": "Source markers and blob digests are direct occurrence evidence. Every carrier, observability, and authority interpretation is separately labelled by assessment_basis and cannot upgrade source maturity."
   },
-  "payload_sha256": "b7bffc61956dc32ee5ee1c1c9d399ee3546af9e374cd52d18f7c85602ba32c22",
+  "payload_sha256": "11ccb4cafcb12c7b5e977df3159e4d02570d06c224406d5750627c81428facfd",
   "schema": "scpn-phase-orchestrator.reactor-signal-occurrence-ledger.v1",
   "schema_version": "1.0.0"
 }
