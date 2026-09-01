@@ -99,16 +99,20 @@ is created. The portable envelope is defined by
 [`device_diagnostic_plan_review.schema.json`](../../specs/device_diagnostic_plan_review.schema.json).
 
 Exact producer fixtures currently exercise this intake for tokamak, dense-
-plasma-focus, MagLIF, and mechanical-or-liquid-liner MIF device plans. The
-dense-plasma-focus review keeps a shot-relative discharge-current `event_cycle`,
-a facility-clocked neck-mode `complex_mode`, and a simulation-clocked
-`numerical_phase` distinct. Both liner-MIF reviews keep compression-trajectory
-`bounded_feature`, liner-arrival `event_cycle`, resolved-asymmetry
-`complex_mode`, and model `numerical_phase` distinct without equating their
-device identities or timescales. Facility clocks remain unmapped, event timing
-uncertainties remain explicit, and all three device-plan-only semantic-ingress
-profiles remain `not_declared`. Passing a design review does not add source
-evidence to the reactor configuration evidence matrix.
+plasma-focus, MagLIF, mechanical-or-liquid-liner MIF, and plasma-jet MIF device
+plans. The dense-plasma-focus review keeps a shot-relative discharge-current
+`event_cycle`, a facility-clocked neck-mode `complex_mode`, and a
+simulation-clocked `numerical_phase` distinct. The two liner-MIF reviews keep
+compression-trajectory `bounded_feature`, liner-arrival `event_cycle`,
+resolved-asymmetry `complex_mode`, and model `numerical_phase` distinct.
+Plasma-jet MIF separately keeps convergence trajectory `bounded_feature`,
+jet-arrival `event_cycle`, merge-asymmetry `complex_mode`, and model
+`numerical_phase` distinct. None of these similarities equates device
+identities, frames, timing bounds, or
+timescales. Facility clocks remain unmapped, event timing uncertainties remain
+explicit, and all four device-plan-only semantic-ingress profiles remain
+`not_declared`. Passing a design review does not add source evidence to the
+reactor configuration evidence matrix.
 
 ## FAIR-MAST magnetic physical-source review
 
