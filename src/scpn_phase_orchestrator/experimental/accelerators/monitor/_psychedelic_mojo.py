@@ -62,4 +62,8 @@ def entropy_from_phases_mojo(phases: FloatArray, n_bins: int) -> float:
         raise ValueError(
             f"Mojo entropy emitted a non-scalar psychedelic value: {lines[0]!r}"
         ) from exc
-    return validate_psychedelic_entropy_backend_output(value, bin_count)
+    return validate_psychedelic_entropy_backend_output(
+        value,
+        bin_count,
+        atol=1e-9,
+    )

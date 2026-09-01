@@ -99,6 +99,8 @@ fn torus_run(
         var v = raw - Float64(Int(raw / two_pi)) * two_pi
         if v < 0.0:
             v += two_pi
+        if v >= two_pi:
+            v -= two_pi
         out[i] = v
 
 

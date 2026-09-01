@@ -452,13 +452,15 @@ def fiedler_value(knm: FloatArray) -> float:
     """
     knm = _validate_coupling_matrix(knm)
     n = knm.shape[0]
+    if n < 2:
+        return 0.0
     flat = np.ascontiguousarray(knm.ravel(), dtype=np.float64)
     if ACTIVE_BACKEND == "rust":
         return _validate_non_negative_scalar(
             _rust_bundle()["fv"](flat, n), name="Fiedler value"
         )
     eigvals, _ = _spectral_eig_checked(flat, n)
-    return float(eigvals[1]) if n > 1 else 0.0
+    return float(eigvals[1])
 
 
 def fiedler_vector(knm: FloatArray) -> FloatArray:

@@ -14,6 +14,9 @@ from pathlib import Path
 
 REFERENCE = Path("docs/reference/api/reactor_semantics.md")
 OCCURRENCE_LEDGER = Path("docs/reference/reactor_signal_occurrence_ledger.md")
+CONFIGURATION_COVERAGE = Path(
+    "docs/reference/reactor_configuration_evidence_coverage.md"
+)
 
 
 def test_reactor_semantics_reference_preserves_u0_boundaries() -> None:
@@ -70,6 +73,28 @@ def test_reactor_signal_occurrence_ledger_preserves_epistemic_boundaries() -> No
         "The physical-observation gap remains open",
         "reactor_signal_occurrence_ledger.v1.json",
         "reactor_signal_occurrence_ledger.schema.json",
+    )
+
+    for marker in required:
+        assert marker in text
+
+
+def test_reactor_configuration_coverage_is_exhaustive_and_fail_closed() -> None:
+    text = " ".join(CONFIGURATION_COVERAGE.read_text(encoding="utf-8").split())
+    required = (
+        "All **32 built-in configurations** across **8 confinement families**",
+        "**2 configurations** have an exercised, byte-canonical, review-only "
+        "producer adapter",
+        "**27 configurations** have no configuration-specific source occurrence",
+        "**30 configurations** have no portable producer-to-SPO semantic ingress "
+        "profile",
+        "**0 configurations** have a qualified physical observation",
+        "No row inherits evidence from another configuration",
+        "`spherical_tokamak` has an exact physical-source review",
+        "`semantic_ingress_state=not_declared`",
+        "`machine_protection_final_veto=true`",
+        "reactor_configuration_evidence_coverage.v1.json",
+        "reactor_configuration_evidence_coverage.schema.json",
     )
 
     for marker in required:

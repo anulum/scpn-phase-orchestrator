@@ -454,6 +454,31 @@ class TestAlphaZero:
         got = _run_backend("mojo", 3, n=5)
         assert np.max(np.abs(got - ref)) < TOL_ATAN2
 
+    def test_mojo_wraps_negative_zero_roundoff_to_zero(self):
+        if "mojo" not in g_mod.AVAILABLE_BACKENDS:
+            pytest.skip("backend 'mojo' unavailable")
+        phases = np.array([0.5, 2.0, 5.0])
+        omegas = np.array([1.0, -2.0, 10.0])
+        zeros = np.zeros(9)
+
+        got = _geometric_mojo.torus_run_mojo(
+            phases,
+            omegas,
+            zeros,
+            zeros,
+            3,
+            0.0,
+            0.0,
+            0.005,
+            200,
+        )
+        expected = (phases + omegas) % TWO_PI
+        circular_error = np.abs(got - expected)
+        circular_error = np.minimum(circular_error, TWO_PI - circular_error)
+
+        assert np.all((got >= 0.0) & (got < TWO_PI))
+        np.testing.assert_allclose(circular_error, 0.0, atol=TOL_ATAN2)
+
 
 class TestAlphaNonZero:
     def test_rust(self):

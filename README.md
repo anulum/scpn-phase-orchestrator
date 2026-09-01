@@ -80,6 +80,14 @@ Its 39 source groups are revision- and blob-digest-pinned; occurrence never
 upgrades a simulation, fixture, physical archive, or review record into a
 qualified physical phase or control authority.
 
+The companion
+[reactor configuration evidence coverage matrix](docs/reference/reactor_configuration_evidence_coverage.md)
+joins every one of the 32 built-in configurations to its observability
+candidates, semantic-ingress state, and exact occurrence evidence. It records
+27 configurations with no source evidence and 30 without portable semantic
+ingress explicitly, preventing related reactor types from inheriting tokamak
+or MIF evidence by similarity.
+
 ![Synchronization Manifold](docs/assets/synchronization_manifold.png)
 
 ## Current Release Boundary
@@ -288,8 +296,8 @@ inside a dashboard or notebook; it turns them into inspectable artefacts.
 | Domainpack files | 36 |
 | Rust kernel files | 97 |
 | Optional extras | 23 |
-| Python test files | 897 |
-| Public documentation pages | 235 |
+| Python test files | 898 |
+| Public documentation pages | 236 |
 | GitHub Actions workflows | 19 |
 
 Evidence boundary: this snapshot is a static inventory. Performance, coverage, hardware, and scientific-fidelity claims require their own committed evidence artifacts.

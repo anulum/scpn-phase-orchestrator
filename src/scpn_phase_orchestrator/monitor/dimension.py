@@ -628,7 +628,12 @@ def correlation_dimension(
             slope=np.array([0.0]),
             scaling_range=(1.0, 1.0),
         )
-    epsilons = np.logspace(np.log10(diam * 0.01), np.log10(diam), n_epsilons)
+    upper_epsilon = diam * (1.0 - 8.0 * np.finfo(np.float64).eps)
+    epsilons = np.logspace(
+        np.log10(diam * 0.01),
+        np.log10(upper_epsilon),
+        n_epsilons,
+    )
     C_eps = correlation_integral(traj, epsilons, max_pairs, seed)
 
     valid = C_eps > 0

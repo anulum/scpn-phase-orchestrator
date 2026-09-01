@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- An exhaustive, digest-sealed reactor configuration evidence matrix joins all
+  32 built-in configurations across eight confinement families to their exact
+  observability candidates, semantic-ingress profiles, and occurrence-ledger
+  evidence. It distinguishes five configurations with source evidence from 27
+  explicit producerless rows, records only two verified simulation review
+  adapters, and forbids topology-based evidence inheritance, physical-phase
+  promotion, action, or actuation.
 - A canonical reactor signal occurrence ledger binds 39 externally meaningful
   phase, mode, regime, event, clock, and semantic-boundary groups across exact
   SPO, SCPN-FUSION-CORE, SCPN-MIF-CORE, and SCPN-CONTROL revisions to source
@@ -29,6 +36,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   identities without importing sibling source. Its typed signal and clock rows
   remain synthetic design declarations and cannot create observation,
   classification, semantic ingress, CONTROL intent, action, or actuation.
+
+### Fixed
+
+- Single-node algebraic connectivity now returns its exact zero boundary
+  before invoking optional eigensolver backends, avoiding an invalid Mojo
+  LAPACK call. Generated correlation-dimension radii now remain below the
+  estimated attractor diameter, preserving strict-threshold parity across
+  NumPy and Mojo round-off. Obsolete protobuf typing suppressions that failed
+  the current strict mypy gate were also removed, and the polyglot
+  documentation guard now follows the reusable integration workflow where the
+  native documentation jobs are defined. Mojo phase entropy now uses its
+  documented `1e-9` boundary tolerance and clamps only accepted round-off to
+  the exact Shannon-entropy range. Mojo torus output also canonicalises a
+  post-wrap `2π` round-off value to zero while retaining the strict `[0, 2π)`
+  output contract.
 
 ## [1.3.1] - 2026-08-31
 

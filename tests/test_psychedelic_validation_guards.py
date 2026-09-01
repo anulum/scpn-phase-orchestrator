@@ -74,6 +74,24 @@ class TestPsychedelicEntropyOutput:
     def test_valid_round_trips(self) -> None:
         assert validate_psychedelic_entropy_backend_output(0.5, 4) == pytest.approx(0.5)
 
+    def test_backend_tolerance_clamps_only_roundoff_at_the_entropy_bound(self) -> None:
+        upper = float(np.log(4.0))
+
+        assert (
+            validate_psychedelic_entropy_backend_output(
+                upper + 5e-10,
+                4,
+                atol=1e-9,
+            )
+            == upper
+        )
+        with pytest.raises(ValueError, match=r"must lie in \[0, log\(n_bins\)\]"):
+            validate_psychedelic_entropy_backend_output(
+                upper + 2e-9,
+                4,
+                atol=1e-9,
+            )
+
     @pytest.mark.parametrize(
         ("value", "match"),
         [

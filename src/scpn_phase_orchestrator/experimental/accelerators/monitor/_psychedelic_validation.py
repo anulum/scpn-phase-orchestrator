@@ -126,6 +126,8 @@ def validate_psychedelic_backend_inputs(
 def validate_psychedelic_entropy_backend_output(
     value: object,
     n_bins: int,
+    *,
+    atol: float = 1e-12,
 ) -> float:
     """Validate direct backend circular-entropy outputs."""
     if _contains_boolean_alias(value):
@@ -146,7 +148,9 @@ def validate_psychedelic_entropy_backend_output(
     scalar = float(entropy)
     if not np.isfinite(scalar):
         raise ValueError("entropy backend output must be finite")
-    tolerance = 1e-12
+    tolerance = float(atol)
+    if not np.isfinite(tolerance) or tolerance < 0.0:
+        raise ValueError("entropy backend tolerance must be finite and non-negative")
     upper = float(np.log(float(n_bins)))
     if scalar < -tolerance or scalar > upper + tolerance:
         raise ValueError("entropy backend output must lie in [0, log(n_bins)]")

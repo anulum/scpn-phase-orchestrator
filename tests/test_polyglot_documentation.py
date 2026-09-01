@@ -20,7 +20,7 @@ import pytest
 import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
-WORKFLOW = ROOT / ".github" / "workflows" / "ci.yml"
+WORKFLOW = ROOT / ".github" / "workflows" / "ci-integration.yml"
 DOC_PAGE = ROOT / "docs" / "reference" / "polyglot_api.md"
 
 
