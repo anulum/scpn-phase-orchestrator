@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- A digest-sealed reactor diagnostic-plan portfolio status register records
+  exact revisions, manifest and fixture hashes, configurations, plans, custody,
+  and fail-closed review results for all 20 Reactor Systems device producers.
+  Ten fixtures are accepted with byte-identical SPO custody; ten remain
+  producer-owned gaps because every channel omits the mandatory
+  `timing_uncertainty_s` member. The schema and tests prohibit inference,
+  physical-evidence promotion, CONTROL authority, or actuation.
 - An exhaustive, digest-sealed reactor configuration evidence matrix joins all
   32 built-in configurations across eight confinement families to their exact
   observability candidates, semantic-ingress profiles, and occurrence-ledger

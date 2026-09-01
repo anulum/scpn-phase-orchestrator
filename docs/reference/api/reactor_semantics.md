@@ -138,6 +138,16 @@ device-plan-only semantic-ingress profiles remain `not_declared`. Passing
 a design review does not add source evidence to the
 reactor configuration evidence matrix.
 
+The companion
+[reactor diagnostic-plan portfolio status](../reactor_diagnostic_plan_portfolio_status.md)
+records the exact structural-review result for all 20 Reactor Systems device
+producers. Ten current fixtures are accepted with byte-identical SPO custody;
+ten are refused because each channel omits the required
+`timing_uncertainty_s` member. A missing member is not an explicit `null`, so
+SPO neither supplies the value nor weakens the `1.1.0` contract. The register
+is review-only and creates no physical observation, physical phase, CONTROL
+intent, action, execution, actuation, or machine-protection authority.
+
 ## FAIR-MAST magnetic physical-source review
 
 `mast_magnetic_source_review_from_producer_bytes()` accepts the exact canonical

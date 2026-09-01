@@ -17,6 +17,9 @@ OCCURRENCE_LEDGER = Path("docs/reference/reactor_signal_occurrence_ledger.md")
 CONFIGURATION_COVERAGE = Path(
     "docs/reference/reactor_configuration_evidence_coverage.md"
 )
+PLAN_PORTFOLIO_STATUS = Path(
+    "docs/reference/reactor_diagnostic_plan_portfolio_status.md"
+)
 
 
 def test_reactor_semantics_reference_preserves_u0_boundaries() -> None:
@@ -74,6 +77,10 @@ def test_reactor_semantics_reference_preserves_u0_boundaries() -> None:
         "One shared Z-pinch plan does not equate the `z_pinch` and "
         "`sheared_flow_z_pinch` configurations",
         "Passing a design review does not add source evidence",
+        "reactor diagnostic-plan portfolio status",
+        "all 20 Reactor Systems device producers",
+        "Ten current fixtures are accepted with byte-identical SPO custody",
+        "A missing member is not an explicit `null`",
         "simulation-monotonic evidence to wall time implicitly",
         "FAIR-MAST magnetic physical-source review",
         "mast_magnetic_source_review_from_producer_bytes()",
@@ -82,6 +89,26 @@ def test_reactor_semantics_reference_preserves_u0_boundaries() -> None:
         "observation_admitted=false",
         "qualified_phase_evidence=false",
         "mast_magnetic_source_review.schema.json",
+    )
+
+    for marker in required:
+        assert marker in text
+
+
+def test_reactor_diagnostic_plan_portfolio_status_is_fail_closed() -> None:
+    text = " ".join(PLAN_PORTFOLIO_STATUS.read_text(encoding="utf-8").split())
+    required = (
+        "**20 producers** were examined",
+        "**10 fixtures** are structurally accepted",
+        "**10 fixtures** fail closed",
+        "**0 fixtures** constitute a qualified physical observation",
+        "omits the required `timing_uncertainty_s` member",
+        "omission and a declared non-applicable timing bound are different "
+        "source claims",
+        "SPO must then replay the new bytes",
+        "must not relax the schema or infer defaults",
+        "reactor_diagnostic_plan_portfolio_status.v1.json",
+        "reactor_diagnostic_plan_portfolio_status.schema.json",
     )
 
     for marker in required:

@@ -88,6 +88,14 @@ candidates, semantic-ingress state, and exact occurrence evidence. It records
 ingress explicitly, preventing related reactor types from inheriting tokamak
 or MIF evidence by similarity.
 
+The
+[reactor diagnostic-plan portfolio status](docs/reference/reactor_diagnostic_plan_portfolio_status.md)
+replays the exact fixtures from all 20 Reactor Systems device producers at
+SPO's public review boundary. Ten are structurally accepted with byte-identical
+SPO custody; ten fail closed because their channels omit the required
+`timing_uncertainty_s` member. Structural acceptance remains a synthetic design
+result, not physical evidence or CONTROL authority.
+
 ![Synchronization Manifold](docs/assets/synchronization_manifold.png)
 
 ## Current Release Boundary
@@ -296,8 +304,8 @@ inside a dashboard or notebook; it turns them into inspectable artefacts.
 | Domainpack files | 36 |
 | Rust kernel files | 97 |
 | Optional extras | 23 |
-| Python test files | 907 |
-| Public documentation pages | 236 |
+| Python test files | 908 |
+| Public documentation pages | 237 |
 | GitHub Actions workflows | 19 |
 
 Evidence boundary: this snapshot is a static inventory. Performance, coverage, hardware, and scientific-fidelity claims require their own committed evidence artifacts.

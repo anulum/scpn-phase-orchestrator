@@ -1,0 +1,188 @@
+{
+  "$defs": {
+    "nullable_string": {
+      "oneOf": [
+        {"minLength": 1, "type": "string"},
+        {"type": "null"}
+      ]
+    },
+    "project": {"pattern": "^SCPN-[A-Z0-9-]+-CORE$", "type": "string"},
+    "sha1": {"pattern": "^[0-9a-f]{40}$", "type": "string"},
+    "sha256": {"pattern": "^[0-9a-f]{64}$", "type": "string"},
+    "producer": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {"structural_status": {"const": "accepted"}},
+            "required": ["structural_status"]
+          },
+          "then": {
+            "properties": {
+              "affected_channel_ids": {"maxItems": 0},
+              "custody_bytes_equal": {"const": true},
+              "custody_fixture_path": {"minLength": 1, "type": "string"},
+              "custody_state": {"const": "exact_fixture_custody"},
+              "missing_required_members": {"maxItems": 0},
+              "refusal_code": {"type": "null"},
+              "refusal_detail": {"type": "null"}
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {"structural_status": {"const": "refused"}},
+            "required": ["structural_status"]
+          },
+          "then": {
+            "properties": {
+              "affected_channel_ids": {"minItems": 1},
+              "custody_bytes_equal": {"const": false},
+              "custody_fixture_path": {"type": "null"},
+              "custody_state": {"const": "producer_fix_required"},
+              "missing_required_members": {
+                "const": ["timing_uncertainty_s"]
+              },
+              "refusal_code": {"const": "plan_structure_mismatch"},
+              "refusal_detail": {
+                "const": "channels[] key mismatch: missing=['timing_uncertainty_s'], unknown=[]"
+              }
+            }
+          }
+        }
+      ],
+      "properties": {
+        "project": {"$ref": "#/$defs/project"},
+        "configurations": {
+          "items": {"minLength": 1, "type": "string"},
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "plan_identifier": {"pattern": "^[a-z][a-z0-9_]*$", "type": "string"},
+        "observed_revision": {"$ref": "#/$defs/sha1"},
+        "manifest_sha256": {"$ref": "#/$defs/sha256"},
+        "fixture_sha256": {"$ref": "#/$defs/sha256"},
+        "structural_status": {"enum": ["accepted", "refused"], "type": "string"},
+        "custody_state": {
+          "enum": ["exact_fixture_custody", "producer_fix_required"],
+          "type": "string"
+        },
+        "custody_fixture_path": {"$ref": "#/$defs/nullable_string"},
+        "custody_bytes_equal": {"type": "boolean"},
+        "refusal_code": {"$ref": "#/$defs/nullable_string"},
+        "refusal_detail": {"$ref": "#/$defs/nullable_string"},
+        "missing_required_members": {
+          "items": {"minLength": 1, "type": "string"},
+          "type": "array",
+          "uniqueItems": true
+        },
+        "affected_channel_ids": {
+          "items": {"pattern": "^ch_[a-z0-9_]+$", "type": "string"},
+          "type": "array",
+          "uniqueItems": true
+        },
+        "physical_observation_claimed": {"const": false},
+        "physical_phase_qualified": {"const": false},
+        "authority": {"const": "review_only"},
+        "actionable": {"const": false},
+        "direct_actuation_authorized": {"const": false}
+      },
+      "required": [
+        "project",
+        "configurations",
+        "plan_identifier",
+        "observed_revision",
+        "manifest_sha256",
+        "fixture_sha256",
+        "structural_status",
+        "custody_state",
+        "custody_fixture_path",
+        "custody_bytes_equal",
+        "refusal_code",
+        "refusal_detail",
+        "missing_required_members",
+        "affected_channel_ids",
+        "physical_observation_claimed",
+        "physical_phase_qualified",
+        "authority",
+        "actionable",
+        "direct_actuation_authorized"
+      ],
+      "type": "object"
+    }
+  },
+  "$id": "https://www.anulum.li/schemas/spo/reactor-diagnostic-plan-portfolio-status/v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Digest-sealed, review-only structural status of the 20 Reactor Systems diagnostic-plan producers and their exact SPO custody or producer-side gaps.",
+  "properties": {
+    "schema": {"const": "scpn-phase-orchestrator.reactor-diagnostic-plan-portfolio-status.v1"},
+    "schema_version": {"const": "1.0.0"},
+    "payload": {
+      "additionalProperties": false,
+      "properties": {
+        "observed_at": {"format": "date-time", "type": "string"},
+        "portfolio_root": {"const": "03_CODE/SCPN-REACTOR-SYSTEMS/repositories"},
+        "producer_fixture_path": {"const": "tests/data/plan_envelope_fixture.json"},
+        "producer_manifest_path": {"const": "reactor-domain.json"},
+        "review_api": {"const": "scpn_phase_orchestrator.reactor_semantics.device_diagnostic_plan_review_from_producer_bytes"},
+        "review_contract": {"const": "scpn.reactor-diagnostic-plan-envelope.v1@1.1.0"},
+        "classification_rule": {"minLength": 1, "type": "string"},
+        "authority": {"const": "review_only"},
+        "actionable": {"const": false},
+        "physical_observation_claimed": {"const": false},
+        "physical_phase_qualified": {"const": false},
+        "direct_actuation_authorized": {"const": false},
+        "counts": {
+          "additionalProperties": false,
+          "properties": {
+            "producers": {"const": 20},
+            "structurally_accepted": {"const": 10},
+            "structurally_refused": {"const": 10},
+            "exact_fixture_custody": {"const": 10},
+            "producer_fix_required": {"const": 10},
+            "qualified_physical_observations": {"const": 0},
+            "qualified_physical_phases": {"const": 0}
+          },
+          "required": [
+            "producers",
+            "structurally_accepted",
+            "structurally_refused",
+            "exact_fixture_custody",
+            "producer_fix_required",
+            "qualified_physical_observations",
+            "qualified_physical_phases"
+          ],
+          "type": "object"
+        },
+        "producers": {
+          "items": {"$ref": "#/$defs/producer"},
+          "maxItems": 20,
+          "minItems": 20,
+          "type": "array"
+        }
+      },
+      "required": [
+        "observed_at",
+        "portfolio_root",
+        "producer_fixture_path",
+        "producer_manifest_path",
+        "review_api",
+        "review_contract",
+        "classification_rule",
+        "authority",
+        "actionable",
+        "physical_observation_claimed",
+        "physical_phase_qualified",
+        "direct_actuation_authorized",
+        "counts",
+        "producers"
+      ],
+      "type": "object"
+    },
+    "payload_sha256": {"$ref": "#/$defs/sha256"}
+  },
+  "required": ["schema", "schema_version", "payload", "payload_sha256"],
+  "type": "object"
+}
