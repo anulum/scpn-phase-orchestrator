@@ -46,7 +46,7 @@ def test_reactor_semantics_reference_preserves_u0_boundaries() -> None:
         "device_diagnostic_plan_review_from_producer_bytes()",
         "device_diagnostic_plan_review.schema.json",
         "tokamak, dense- plasma-focus, MagLIF, mechanical-or-liquid-liner MIF, "
-        "plasma-jet MIF, laser-ICF, and ICF-beam device plans",
+        "plasma-jet MIF, laser-ICF, ICF-beam, and ICF-impact device plans",
         "discharge-current `event_cycle`",
         "neck-mode `complex_mode`",
         "simulation-clocked `numerical_phase`",
@@ -63,7 +63,9 @@ def test_reactor_semantics_reference_preserves_u0_boundaries() -> None:
         "Beam ICF separately keeps bunch timing `event_cycle`",
         "The ICF-beam plan does not equate its ion-beam and pulsed-electron-beam "
         "configurations",
-        "all nine device-plan-only semantic-ingress profiles remain `not_declared`",
+        "Impact ICF separately keeps impact timing `event_cycle`",
+        "The ICF-impact plan does not inherit either plan's evidence",
+        "all ten device-plan-only semantic-ingress profiles remain `not_declared`",
         "Passing a design review does not add source evidence",
         "simulation-monotonic evidence to wall time implicitly",
         "FAIR-MAST magnetic physical-source review",
@@ -114,9 +116,9 @@ def test_reactor_configuration_coverage_is_exhaustive_and_fail_closed() -> None:
         "`semantic_ingress_state=not_declared`",
         "Design declarations are not evidence ingress",
         "dense- plasma-focus, MagLIF, mechanical-or-liquid-liner MIF, plasma-jet "
-        "MIF, laser-ICF, and ICF-beam producer fixtures",
-        "the three laser-ICF plus two ICF-beam configurations do not change "
-        "their nine matrix rows",
+        "MIF, laser-ICF, ICF-beam, and ICF-impact producer fixtures",
+        "the two ICF-beam configurations, and the ICF-impact configuration do "
+        "not change their ten matrix rows",
         "Neither MagLIF, mechanical-or-liquid-liner MIF, nor plasma-jet MIF "
         "inherits the verified `frc_compression_mif` adapter",
         "the three MIF design reviews also do not provide evidence for one another",
@@ -125,6 +127,8 @@ def test_reactor_configuration_coverage_is_exhaustive_and_fail_closed() -> None:
         "ion/electron-beam, projectile, or impact ICF evidence",
         "Ion-beam and pulsed-electron-beam ICF likewise do not provide evidence",
         "generic beam-target configurations",
+        "Projectile-or-impact ICF does not inherit evidence from any laser or "
+        "beam-driven ICF design review",
         "`machine_protection_final_veto=true`",
         "reactor_configuration_evidence_coverage.v1.json",
         "reactor_configuration_evidence_coverage.schema.json",
