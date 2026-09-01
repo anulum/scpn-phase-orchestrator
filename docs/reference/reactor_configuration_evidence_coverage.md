@@ -35,13 +35,14 @@ promoting derived time grids, channel arrays, or source labels into observations
 ## Design declarations are not evidence ingress
 
 Separate byte-canonical diagnostic-plan reviews exercise exact tokamak, dense-
-plasma-focus, MagLIF, mechanical-or-liquid-liner MIF, plasma-jet MIF,
-laser-ICF, ICF-beam, and ICF-impact producer fixtures. These are design
+plasma-focus, theta-pinch, MagLIF, mechanical-or-liquid-liner MIF, plasma-jet
+MIF, laser-ICF, ICF-beam, and ICF-impact producer fixtures. These are design
 declarations about intended channels, clocks, carriers, and evidence slots;
 they contain no sampled signal values. Consequently, dense plasma focus, the
-three MIF configurations, the three laser-ICF configurations, the two ICF-beam
-configurations, and the ICF-impact configuration do not change their ten matrix
-rows: each still has no configuration-specific source evidence, no semantic
+theta pinch, the three MIF configurations, the three laser-ICF configurations,
+the two ICF-beam configurations, and the ICF-impact configuration do not change
+their eleven matrix rows: each still has no configuration-specific source
+evidence, no semantic
 producer, and `semantic_ingress_state=not_declared`. Neither MagLIF,
 mechanical-or-liquid-liner MIF, nor plasma-jet MIF inherits the verified
 `frc_compression_mif` adapter merely because they are magneto-inertial
@@ -51,7 +52,9 @@ not provide evidence for one another or inherit ion/electron-beam, projectile,
 or impact ICF evidence. Ion-beam and pulsed-electron-beam ICF likewise do not
 provide evidence for one another or inherit evidence from laser, projectile,
 impact, or generic beam-target configurations. Projectile-or-impact ICF does
-not inherit evidence from any laser or beam-driven ICF design review.
+not inherit evidence from any laser or beam-driven ICF design review. Theta
+pinch likewise inherits no evidence from dense plasma focus, z-pinch, or any
+other self-magnetic configuration.
 
 ## Exact matrix
 

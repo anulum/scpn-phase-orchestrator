@@ -45,11 +45,14 @@ def test_reactor_semantics_reference_preserves_u0_boundaries() -> None:
         "Device diagnostic-plan design review",
         "device_diagnostic_plan_review_from_producer_bytes()",
         "device_diagnostic_plan_review.schema.json",
-        "tokamak, dense- plasma-focus, MagLIF, mechanical-or-liquid-liner MIF, "
-        "plasma-jet MIF, laser-ICF, ICF-beam, and ICF-impact device plans",
+        "tokamak, dense- plasma-focus, theta-pinch, MagLIF, "
+        "mechanical-or-liquid-liner MIF, plasma-jet MIF, laser-ICF, ICF-beam, "
+        "and ICF-impact device plans",
         "discharge-current `event_cycle`",
         "neck-mode `complex_mode`",
         "simulation-clocked `numerical_phase`",
+        "theta-pinch review separately keeps a shot-relative bank-waveform",
+        "rotation-probe `complex_mode`",
         "compression-trajectory `bounded_feature`",
         "liner-arrival `event_cycle`",
         "resolved-asymmetry `complex_mode`",
@@ -65,7 +68,7 @@ def test_reactor_semantics_reference_preserves_u0_boundaries() -> None:
         "configurations",
         "Impact ICF separately keeps impact timing `event_cycle`",
         "The ICF-impact plan does not inherit either plan's evidence",
-        "all ten device-plan-only semantic-ingress profiles remain `not_declared`",
+        "all eleven device-plan-only semantic-ingress profiles remain `not_declared`",
         "Passing a design review does not add source evidence",
         "simulation-monotonic evidence to wall time implicitly",
         "FAIR-MAST magnetic physical-source review",
@@ -115,10 +118,10 @@ def test_reactor_configuration_coverage_is_exhaustive_and_fail_closed() -> None:
         "`spherical_tokamak` has an exact physical-source review",
         "`semantic_ingress_state=not_declared`",
         "Design declarations are not evidence ingress",
-        "dense- plasma-focus, MagLIF, mechanical-or-liquid-liner MIF, plasma-jet "
-        "MIF, laser-ICF, ICF-beam, and ICF-impact producer fixtures",
+        "dense- plasma-focus, theta-pinch, MagLIF, mechanical-or-liquid-liner "
+        "MIF, plasma-jet MIF, laser-ICF, ICF-beam, and ICF-impact producer fixtures",
         "the two ICF-beam configurations, and the ICF-impact configuration do "
-        "not change their ten matrix rows",
+        "not change their eleven matrix rows",
         "Neither MagLIF, mechanical-or-liquid-liner MIF, nor plasma-jet MIF "
         "inherits the verified `frc_compression_mif` adapter",
         "the three MIF design reviews also do not provide evidence for one another",
@@ -129,6 +132,8 @@ def test_reactor_configuration_coverage_is_exhaustive_and_fail_closed() -> None:
         "generic beam-target configurations",
         "Projectile-or-impact ICF does not inherit evidence from any laser or "
         "beam-driven ICF design review",
+        "Theta pinch likewise inherits no evidence from dense plasma focus, "
+        "z-pinch, or any other self-magnetic configuration",
         "`machine_protection_final_veto=true`",
         "reactor_configuration_evidence_coverage.v1.json",
         "reactor_configuration_evidence_coverage.schema.json",

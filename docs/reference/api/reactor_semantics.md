@@ -99,10 +99,13 @@ is created. The portable envelope is defined by
 [`device_diagnostic_plan_review.schema.json`](../../specs/device_diagnostic_plan_review.schema.json).
 
 Exact producer fixtures currently exercise this intake for tokamak, dense-
-plasma-focus, MagLIF, mechanical-or-liquid-liner MIF, plasma-jet MIF,
-laser-ICF, ICF-beam, and ICF-impact device plans. The dense-plasma-focus review
+plasma-focus, theta-pinch, MagLIF, mechanical-or-liquid-liner MIF, plasma-jet
+MIF, laser-ICF, ICF-beam, and ICF-impact device plans. The dense-plasma-focus review
 keeps a shot-relative discharge-current `event_cycle`, a facility-clocked
 neck-mode `complex_mode`, and a simulation-clocked `numerical_phase` distinct.
+The theta-pinch review separately keeps a shot-relative bank-waveform
+`event_cycle`, a facility-clocked rotation-probe `complex_mode`, and a
+simulation-clocked `numerical_phase` distinct.
 The two liner-MIF reviews keep compression-trajectory `bounded_feature`,
 liner-arrival `event_cycle`, resolved-asymmetry `complex_mode`, and model `numerical_phase`
 distinct.
@@ -121,8 +124,10 @@ these similarities equates device or configuration identities, frames,
 timing bounds, or timescales. In particular, one shared laser-ICF plan does not
 equate direct drive, indirect drive, and fast/shock ignition. The ICF-beam plan
 does not equate its ion-beam and pulsed-electron-beam configurations. The
-ICF-impact plan does not inherit either plan's evidence. Facility clocks remain
-unmapped, event timing uncertainties remain explicit, and all ten
+ICF-impact plan does not inherit either plan's evidence. The theta-pinch plan
+does not inherit dense-plasma-focus or z-pinch evidence merely because all
+three configurations are self-magnetic. Facility clocks remain unmapped,
+event timing uncertainties remain explicit, and all eleven
 device-plan-only semantic-ingress profiles remain `not_declared`. Passing
 a design review does not add source evidence to the
 reactor configuration evidence matrix.
