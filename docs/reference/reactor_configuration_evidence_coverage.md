@@ -34,12 +34,14 @@ promoting derived time grids, channel arrays, or source labels into observations
 
 ## Design declarations are not evidence ingress
 
-Separate byte-canonical diagnostic-plan reviews exercise exact tokamak and
-dense-plasma-focus producer fixtures. These are design declarations about
+Separate byte-canonical diagnostic-plan reviews exercise exact tokamak, dense-
+plasma-focus, and MagLIF producer fixtures. These are design declarations about
 intended channels, clocks, carriers, and evidence slots; they contain no sampled
-signal values. Consequently, the dense-plasma-focus fixture does not change its
-matrix row: it still has no configuration-specific source evidence, no semantic
-producer, and `semantic_ingress_state=not_declared`.
+signal values. Consequently, the dense-plasma-focus and MagLIF fixtures do not
+change their matrix rows: both still have no configuration-specific source
+evidence, no semantic producer, and `semantic_ingress_state=not_declared`.
+MagLIF does not inherit the verified `frc_compression_mif` adapter merely because
+both configurations are magneto-inertial.
 
 ## Exact matrix
 
