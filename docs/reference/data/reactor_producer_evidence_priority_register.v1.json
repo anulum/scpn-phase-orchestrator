@@ -2,7 +2,7 @@
   "schema": "scpn-phase-orchestrator.reactor-producer-evidence-priority-register.v1",
   "schema_version": "1.0.0",
   "payload": {
-    "observed_at": "2026-09-02T01:11:19+02:00",
+    "observed_at": "2026-09-02T01:24:27+02:00",
     "method": "Deterministic readiness precedence over exact current SPO evidence state: reviewed physical source, then exercised byte-canonical review adapter, then a structurally accepted exact producer diagnostic plan, then a refused plan requiring repair. Exact local fixture custody is a separate readiness axis. External evidence rank is context and never changes the lane.",
     "non_scalar_priority_policy": "No opaque or additive score is emitted. Rows within one lane are deliberately unordered. Selection within a lane requires explicit review of safety value, calibrated machine-readable data availability, clock/reference/operator completeness, uncertainty, validity, quality, provenance, observability gates, independent validation, and producer capacity.",
     "source_bindings": {
@@ -199,18 +199,12 @@
           "qualified_physical_phase": false
         },
         "diagnostic_plan": {
-          "structural_status": "refused",
-          "custody_state": "producer_fix_required",
-          "observed_revision": "4834f94bd8cfd872ac16ff140c6f8a4be2c75656",
-          "fixture_sha256": "62d5cf2d94154f18b83fec6db036550ec58a4777d14da7bef27a94f5e3b969b9",
-          "missing_required_members": [
-            "timing_uncertainty_s"
-          ],
-          "affected_channel_ids": [
-            "ch_rf_bunch_phase",
-            "ch_synthetic_oscillator",
-            "ch_target_outcome_set"
-          ]
+          "structural_status": "accepted",
+          "custody_state": "verified_public_producer_object",
+          "observed_revision": "30c62db23565c5e57bc5f7df9f28f5d700399384",
+          "fixture_sha256": "6318fee21c7395945f82f5920b09545982fb7a50c1284a053656d5a2f43ac6e9",
+          "missing_required_members": [],
+          "affected_channel_ids": []
         },
         "readiness_axes": {
           "exact_configuration_identity": true,
@@ -218,7 +212,7 @@
           "physical_source_present": false,
           "portable_review_adapter_present": false,
           "structural_plan_accepted": true,
-          "exact_plan_fixture_custody": true,
+          "exact_plan_fixture_custody": false,
           "complete_physical_evidence": false,
           "control_admission": false
         },
@@ -290,18 +284,12 @@
           "qualified_physical_phase": false
         },
         "diagnostic_plan": {
-          "structural_status": "refused",
-          "custody_state": "producer_fix_required",
-          "observed_revision": "4834f94bd8cfd872ac16ff140c6f8a4be2c75656",
-          "fixture_sha256": "62d5cf2d94154f18b83fec6db036550ec58a4777d14da7bef27a94f5e3b969b9",
-          "missing_required_members": [
-            "timing_uncertainty_s"
-          ],
-          "affected_channel_ids": [
-            "ch_rf_bunch_phase",
-            "ch_synthetic_oscillator",
-            "ch_target_outcome_set"
-          ]
+          "structural_status": "accepted",
+          "custody_state": "verified_public_producer_object",
+          "observed_revision": "30c62db23565c5e57bc5f7df9f28f5d700399384",
+          "fixture_sha256": "6318fee21c7395945f82f5920b09545982fb7a50c1284a053656d5a2f43ac6e9",
+          "missing_required_members": [],
+          "affected_channel_ids": []
         },
         "readiness_axes": {
           "exact_configuration_identity": true,
@@ -309,7 +297,7 @@
           "physical_source_present": false,
           "portable_review_adapter_present": false,
           "structural_plan_accepted": true,
-          "exact_plan_fixture_custody": true,
+          "exact_plan_fixture_custody": false,
           "complete_physical_evidence": false,
           "control_admission": false
         },
@@ -387,9 +375,9 @@
         },
         "diagnostic_plan": {
           "structural_status": "accepted",
-          "custody_state": "exact_fixture_custody",
-          "observed_revision": "9eef91eb9086e13d23962fe18c6211f2f3ee2673",
-          "fixture_sha256": "5d4edf2c550908f2752dafba02da73171b0fea12ff74e3e0fc7db9a5d72c8eb9",
+          "custody_state": "verified_public_producer_object",
+          "observed_revision": "7402191c43e8fe57cffda1dd5b3cf4319d6d398d",
+          "fixture_sha256": "8e0c0d51f6c7aece428a6e761adf20f820f44aa6946b05921912cc4c87790253",
           "missing_required_members": [],
           "affected_channel_ids": []
         },
@@ -399,7 +387,7 @@
           "physical_source_present": false,
           "portable_review_adapter_present": true,
           "structural_plan_accepted": true,
-          "exact_plan_fixture_custody": true,
+          "exact_plan_fixture_custody": false,
           "complete_physical_evidence": false,
           "control_admission": false
         },
@@ -480,20 +468,12 @@
           "qualified_physical_phase": false
         },
         "diagnostic_plan": {
-          "structural_status": "refused",
-          "custody_state": "producer_fix_required",
-          "observed_revision": "105861cffa2853347eed9fb4e1c7ff4a9fca3f52",
-          "fixture_sha256": "0c3a995eaf75b96cbc5d32e673a74c5a89f65011a752b82fb0746864ef304520",
-          "missing_required_members": [
-            "timing_uncertainty_s"
-          ],
-          "affected_channel_ids": [
-            "ch_cusp_loss_probes",
-            "ch_diamagnetic_loop",
-            "ch_drive_reference",
-            "ch_flute_probe_array",
-            "ch_synthetic_oscillator"
-          ]
+          "structural_status": "accepted",
+          "custody_state": "verified_public_producer_object",
+          "observed_revision": "afa7c32e62c652e6d655a4699a846c55ecc4a6db",
+          "fixture_sha256": "eb4a3ea6d8213872686aa1ad5a148f5855dd43c43408376970953b3c836ad61a",
+          "missing_required_members": [],
+          "affected_channel_ids": []
         },
         "readiness_axes": {
           "exact_configuration_identity": true,
@@ -575,9 +555,9 @@
         },
         "diagnostic_plan": {
           "structural_status": "accepted",
-          "custody_state": "exact_fixture_custody",
-          "observed_revision": "32c843c85e59380a66b6a5ee6f40c651b1fcd93c",
-          "fixture_sha256": "21abf14f74639c78a973e3d97c6f0a1bbc50affee5b42a8502c6ea60bcf26b27",
+          "custody_state": "verified_public_producer_object",
+          "observed_revision": "45db7b7d294be857719143b150a0ed3a00643a5f",
+          "fixture_sha256": "2f2b708854f2f507fb5fc0f9a68aeaf928f393e1ef58d256338957e8f8762929",
           "missing_required_members": [],
           "affected_channel_ids": []
         },
@@ -587,7 +567,7 @@
           "physical_source_present": false,
           "portable_review_adapter_present": false,
           "structural_plan_accepted": true,
-          "exact_plan_fixture_custody": true,
+          "exact_plan_fixture_custody": false,
           "complete_physical_evidence": false,
           "control_admission": false
         },
@@ -662,19 +642,12 @@
           "qualified_physical_phase": false
         },
         "diagnostic_plan": {
-          "structural_status": "refused",
-          "custody_state": "producer_fix_required",
-          "observed_revision": "7c39c1b53f9d0c4724a1dc73a7ddb9152367bc01",
-          "fixture_sha256": "3740a62e5e1c020838792ae99eddfa897718a85b2bb27920196f73f6cfd178ff",
-          "missing_required_members": [
-            "timing_uncertainty_s"
-          ],
-          "affected_channel_ids": [
-            "ch_excluded_flux_set",
-            "ch_interferometer",
-            "ch_mirnov_array",
-            "ch_synthetic_oscillator"
-          ]
+          "structural_status": "accepted",
+          "custody_state": "verified_public_producer_object",
+          "observed_revision": "be5ecd333712e18ed4021f3b5e27b55a32668e68",
+          "fixture_sha256": "7b38f13e56d8da075ab1f24b91d1d5fb4a8c478f5fad4a9af8544f0363c13234",
+          "missing_required_members": [],
+          "affected_channel_ids": []
         },
         "readiness_axes": {
           "exact_configuration_identity": true,
@@ -852,18 +825,12 @@
           "qualified_physical_phase": false
         },
         "diagnostic_plan": {
-          "structural_status": "refused",
-          "custody_state": "producer_fix_required",
-          "observed_revision": "46a563ff1eb3e2d275f4f6d2fc0528efd026cd39",
-          "fixture_sha256": "a6b6e29fd34cea7f543e781eb32f13216ea80dec1a48780207b207fb8bcef02a",
-          "missing_required_members": [
-            "timing_uncertainty_s"
-          ],
-          "affected_channel_ids": [
-            "ch_blanket_thermal_set",
-            "ch_neutron_flux_set",
-            "ch_synthetic_oscillator"
-          ]
+          "structural_status": "accepted",
+          "custody_state": "verified_public_producer_object",
+          "observed_revision": "e2deab2501fdb4f1ee3ee98928c63541dc81e2ee",
+          "fixture_sha256": "e79737b73b783ba467fcfe42a3c2f3851fa4519d55b91769bb5e0cb55426f359",
+          "missing_required_members": [],
+          "affected_channel_ids": []
         },
         "readiness_axes": {
           "exact_configuration_identity": true,
@@ -942,20 +909,12 @@
           "qualified_physical_phase": false
         },
         "diagnostic_plan": {
-          "structural_status": "refused",
-          "custody_state": "producer_fix_required",
-          "observed_revision": "348db236d1e19c8303754205b410a1f9d17135cf",
-          "fixture_sha256": "0b74b090ac6194174920bda0a455c2571287eff917475cfaf0fbac70a3c70009",
-          "missing_required_members": [
-            "timing_uncertainty_s"
-          ],
-          "affected_channel_ids": [
-            "ch_diamagnetic_loop",
-            "ch_drive_reference",
-            "ch_end_loss_array",
-            "ch_flute_probe_array",
-            "ch_synthetic_oscillator"
-          ]
+          "structural_status": "accepted",
+          "custody_state": "verified_public_producer_object",
+          "observed_revision": "75a5b624a833c84d3100aa79f488f2e841bbf20a",
+          "fixture_sha256": "efb5634818a256a9ab5d68c2cdb346503f2c581326f23d7a06c8a0d2da724d48",
+          "missing_required_members": [],
+          "affected_channel_ids": []
         },
         "readiness_axes": {
           "exact_configuration_identity": true,
@@ -1036,21 +995,12 @@
           "qualified_physical_phase": false
         },
         "diagnostic_plan": {
-          "structural_status": "refused",
-          "custody_state": "producer_fix_required",
-          "observed_revision": "5551c413b578051d6466ccf3847f5d4ea27f1d4b",
-          "fixture_sha256": "c65309556867001b15965d93ba333ee0d14f6fcebe1295c83bfdb521abf061d6",
-          "missing_required_members": [
-            "timing_uncertainty_s"
-          ],
-          "affected_channel_ids": [
-            "ch_bunching_probe",
-            "ch_drive_reference",
-            "ch_interchange_probe_array",
-            "ch_loss_profile_set",
-            "ch_steady_state_set",
-            "ch_synthetic_oscillator"
-          ]
+          "structural_status": "accepted",
+          "custody_state": "verified_public_producer_object",
+          "observed_revision": "3b9dbf6cc3bbf5defd35bf81d146de3a30f66e09",
+          "fixture_sha256": "87492cb79c32aa496bcca12ebd92f8d4eec767a53e7da64fee0f498ed1197f9b",
+          "missing_required_members": [],
+          "affected_channel_ids": []
         },
         "readiness_axes": {
           "exact_configuration_identity": true,
@@ -1130,20 +1080,12 @@
           "qualified_physical_phase": false
         },
         "diagnostic_plan": {
-          "structural_status": "refused",
-          "custody_state": "producer_fix_required",
-          "observed_revision": "cc26682849bcb35a89ca07539d23ec843a5af92a",
-          "fixture_sha256": "8df3515a35978d0e518ba75749421052a399d9d8e77e8c176cf4231b259b0af1",
-          "missing_required_members": [
-            "timing_uncertainty_s"
-          ],
-          "affected_channel_ids": [
-            "ch_flux_loop_set",
-            "ch_interferometer",
-            "ch_mirnov_array",
-            "ch_synthetic_oscillator",
-            "ch_thomson_profiles"
-          ]
+          "structural_status": "accepted",
+          "custody_state": "verified_public_producer_object",
+          "observed_revision": "afe989f3683380de144468ceae4531b758e9b11e",
+          "fixture_sha256": "4cc94911b526d1220a3bd123d91a48603e9e134b9f7ef7b9e311fc65a38c6ba7",
+          "missing_required_members": [],
+          "affected_channel_ids": []
         },
         "readiness_axes": {
           "exact_configuration_identity": true,
@@ -1224,9 +1166,9 @@
         },
         "diagnostic_plan": {
           "structural_status": "accepted",
-          "custody_state": "exact_fixture_custody",
-          "observed_revision": "3ee15a5bf56b38614770351caa1112a4832d5254",
-          "fixture_sha256": "1a6d03f3d0e67b67f2abbf8064900ab2e23a803b3c29b65ec9158d06f9842a5d",
+          "custody_state": "verified_public_producer_object",
+          "observed_revision": "69d55ebf703773a24e64e5a8be5676d3c214ee8a",
+          "fixture_sha256": "01048901561c9dab00efedc01cf5eb56a2b4199736aa0a1c251fe15293aff9f1",
           "missing_required_members": [],
           "affected_channel_ids": []
         },
@@ -1236,7 +1178,7 @@
           "physical_source_present": false,
           "portable_review_adapter_present": false,
           "structural_plan_accepted": true,
-          "exact_plan_fixture_custody": true,
+          "exact_plan_fixture_custody": false,
           "complete_physical_evidence": false,
           "control_admission": false
         },
@@ -1311,9 +1253,9 @@
         },
         "diagnostic_plan": {
           "structural_status": "accepted",
-          "custody_state": "exact_fixture_custody",
-          "observed_revision": "bc041638eefc729747759ce4f8d6d6e1db053e80",
-          "fixture_sha256": "7e8cc1e3b72a15c5df1f4a890571284d5f4c872f9ec73cbda6e567a42b93bceb",
+          "custody_state": "verified_public_producer_object",
+          "observed_revision": "3ff396d6d69d891f53fb0210053d259bd42ccc6e",
+          "fixture_sha256": "bc2edd2c12f7f5b9da4fc09c1d0747850fbb29ab76170db0d43ab1ad92be0f7c",
           "missing_required_members": [],
           "affected_channel_ids": []
         },
@@ -1323,7 +1265,7 @@
           "physical_source_present": false,
           "portable_review_adapter_present": false,
           "structural_plan_accepted": true,
-          "exact_plan_fixture_custody": true,
+          "exact_plan_fixture_custody": false,
           "complete_physical_evidence": false,
           "control_admission": false
         },
@@ -1399,9 +1341,9 @@
         },
         "diagnostic_plan": {
           "structural_status": "accepted",
-          "custody_state": "exact_fixture_custody",
-          "observed_revision": "bc041638eefc729747759ce4f8d6d6e1db053e80",
-          "fixture_sha256": "7e8cc1e3b72a15c5df1f4a890571284d5f4c872f9ec73cbda6e567a42b93bceb",
+          "custody_state": "verified_public_producer_object",
+          "observed_revision": "3ff396d6d69d891f53fb0210053d259bd42ccc6e",
+          "fixture_sha256": "bc2edd2c12f7f5b9da4fc09c1d0747850fbb29ab76170db0d43ab1ad92be0f7c",
           "missing_required_members": [],
           "affected_channel_ids": []
         },
@@ -1411,7 +1353,7 @@
           "physical_source_present": false,
           "portable_review_adapter_present": false,
           "structural_plan_accepted": true,
-          "exact_plan_fixture_custody": true,
+          "exact_plan_fixture_custody": false,
           "complete_physical_evidence": false,
           "control_admission": false
         },
@@ -1486,9 +1428,9 @@
         },
         "diagnostic_plan": {
           "structural_status": "accepted",
-          "custody_state": "exact_fixture_custody",
-          "observed_revision": "bc041638eefc729747759ce4f8d6d6e1db053e80",
-          "fixture_sha256": "7e8cc1e3b72a15c5df1f4a890571284d5f4c872f9ec73cbda6e567a42b93bceb",
+          "custody_state": "verified_public_producer_object",
+          "observed_revision": "3ff396d6d69d891f53fb0210053d259bd42ccc6e",
+          "fixture_sha256": "bc2edd2c12f7f5b9da4fc09c1d0747850fbb29ab76170db0d43ab1ad92be0f7c",
           "missing_required_members": [],
           "affected_channel_ids": []
         },
@@ -1498,7 +1440,7 @@
           "physical_source_present": false,
           "portable_review_adapter_present": false,
           "structural_plan_accepted": true,
-          "exact_plan_fixture_custody": true,
+          "exact_plan_fixture_custody": false,
           "complete_physical_evidence": false,
           "control_admission": false
         },
@@ -1572,20 +1514,12 @@
           "qualified_physical_phase": false
         },
         "diagnostic_plan": {
-          "structural_status": "refused",
-          "custody_state": "producer_fix_required",
-          "observed_revision": "9d1b0cf9b8baf2e71a5e633f6d9568bc15436237",
-          "fixture_sha256": "4101ad18bae4ea8e907455494a0be2ffbe8c5978f6253237f8c91c0e46fd6991",
-          "missing_required_members": [
-            "timing_uncertainty_s"
-          ],
-          "affected_channel_ids": [
-            "ch_drive_reference",
-            "ch_flux_loop_set",
-            "ch_interchange_probe_array",
-            "ch_interferometer",
-            "ch_synthetic_oscillator"
-          ]
+          "structural_status": "accepted",
+          "custody_state": "verified_public_producer_object",
+          "observed_revision": "8b286c031b1e9dbfd1b037f2406aaba9781a3548",
+          "fixture_sha256": "abd1345cbd38e343a092bbdd166f0abbc235ed8218c3893f1b1ece09ab7050f5",
+          "missing_required_members": [],
+          "affected_channel_ids": []
         },
         "readiness_axes": {
           "exact_configuration_identity": true,
@@ -1667,9 +1601,9 @@
         },
         "diagnostic_plan": {
           "structural_status": "accepted",
-          "custody_state": "exact_fixture_custody",
-          "observed_revision": "d3b6230e9b77763bfeb7cb767c8b9a979c6ed0cf",
-          "fixture_sha256": "81ff0f7bb2390736a91dec078b3032da7efc963369301f6c92e7123776621c57",
+          "custody_state": "verified_public_producer_object",
+          "observed_revision": "90c8503db3eeacd3ef86b54d852a70b887773df2",
+          "fixture_sha256": "46dfcd0f1c417b3a3ba876fb735a578cd2118bfe739d0316d7510a82c43bac2a",
           "missing_required_members": [],
           "affected_channel_ids": []
         },
@@ -1679,7 +1613,7 @@
           "physical_source_present": false,
           "portable_review_adapter_present": false,
           "structural_plan_accepted": true,
-          "exact_plan_fixture_custody": true,
+          "exact_plan_fixture_custody": false,
           "complete_physical_evidence": false,
           "control_admission": false
         },
@@ -1753,9 +1687,9 @@
         },
         "diagnostic_plan": {
           "structural_status": "accepted",
-          "custody_state": "exact_fixture_custody",
-          "observed_revision": "8b1ee018a8c842cc87541f4d2526c8b7271b6b86",
-          "fixture_sha256": "e3e8cb2f26e6c25e4a6a57eb7cc3a52e3f398e6e04a460a24e87ea9026ea7950",
+          "custody_state": "verified_public_producer_object",
+          "observed_revision": "7e4b6dbc2c1d174b584cec568f78c339498c6a52",
+          "fixture_sha256": "754514c545f52932c430684cdc4c6b31270fc40b005c65c7461146dfab59f8d3",
           "missing_required_members": [],
           "affected_channel_ids": []
         },
@@ -1765,7 +1699,7 @@
           "physical_source_present": false,
           "portable_review_adapter_present": false,
           "structural_plan_accepted": true,
-          "exact_plan_fixture_custody": true,
+          "exact_plan_fixture_custody": false,
           "complete_physical_evidence": false,
           "control_admission": false
         },
@@ -1839,9 +1773,9 @@
         },
         "diagnostic_plan": {
           "structural_status": "accepted",
-          "custody_state": "exact_fixture_custody",
-          "observed_revision": "418b5cce6fb8b10155777cf51891828c3a7646b3",
-          "fixture_sha256": "9e7b053a91495645163ba40bd5eb05872b679a6694548b35e07ac96f3088ffe2",
+          "custody_state": "verified_public_producer_object",
+          "observed_revision": "43cea01a5f663fcd1f4d0f3413809229666439ff",
+          "fixture_sha256": "d9ac83a603c3b5b63c54a60b04379638c904836c3ac38df70996007823e0c7f8",
           "missing_required_members": [],
           "affected_channel_ids": []
         },
@@ -1851,7 +1785,7 @@
           "physical_source_present": false,
           "portable_review_adapter_present": false,
           "structural_plan_accepted": true,
-          "exact_plan_fixture_custody": true,
+          "exact_plan_fixture_custody": false,
           "complete_physical_evidence": false,
           "control_admission": false
         },
@@ -1924,21 +1858,12 @@
           "qualified_physical_phase": false
         },
         "diagnostic_plan": {
-          "structural_status": "refused",
-          "custody_state": "producer_fix_required",
-          "observed_revision": "5551c413b578051d6466ccf3847f5d4ea27f1d4b",
-          "fixture_sha256": "c65309556867001b15965d93ba333ee0d14f6fcebe1295c83bfdb521abf061d6",
-          "missing_required_members": [
-            "timing_uncertainty_s"
-          ],
-          "affected_channel_ids": [
-            "ch_bunching_probe",
-            "ch_drive_reference",
-            "ch_interchange_probe_array",
-            "ch_loss_profile_set",
-            "ch_steady_state_set",
-            "ch_synthetic_oscillator"
-          ]
+          "structural_status": "accepted",
+          "custody_state": "verified_public_producer_object",
+          "observed_revision": "3b9dbf6cc3bbf5defd35bf81d146de3a30f66e09",
+          "fixture_sha256": "87492cb79c32aa496bcca12ebd92f8d4eec767a53e7da64fee0f498ed1197f9b",
+          "missing_required_members": [],
+          "affected_channel_ids": []
         },
         "readiness_axes": {
           "exact_configuration_identity": true,
@@ -2023,9 +1948,9 @@
         },
         "diagnostic_plan": {
           "structural_status": "accepted",
-          "custody_state": "exact_fixture_custody",
-          "observed_revision": "397f1f2a5fb2af1ad620174a43720eb1c7b5de5f",
-          "fixture_sha256": "33fdafa9716ab7436a245ddba48dee6e9a1ed97397315bd010aed7dff9cd16ff",
+          "custody_state": "verified_public_producer_object",
+          "observed_revision": "ceb0eafa26b30e24d516a0a56103926ee5cd9dc8",
+          "fixture_sha256": "bfc2fbb31b0c172b4acb5554d5ead8324153454cceae214f062d599c2ec62e39",
           "missing_required_members": [],
           "affected_channel_ids": []
         },
@@ -2035,7 +1960,7 @@
           "physical_source_present": false,
           "portable_review_adapter_present": false,
           "structural_plan_accepted": true,
-          "exact_plan_fixture_custody": true,
+          "exact_plan_fixture_custody": false,
           "complete_physical_evidence": false,
           "control_admission": false
         },
@@ -2110,9 +2035,9 @@
         },
         "diagnostic_plan": {
           "structural_status": "accepted",
-          "custody_state": "exact_fixture_custody",
-          "observed_revision": "3ee15a5bf56b38614770351caa1112a4832d5254",
-          "fixture_sha256": "1a6d03f3d0e67b67f2abbf8064900ab2e23a803b3c29b65ec9158d06f9842a5d",
+          "custody_state": "verified_public_producer_object",
+          "observed_revision": "69d55ebf703773a24e64e5a8be5676d3c214ee8a",
+          "fixture_sha256": "01048901561c9dab00efedc01cf5eb56a2b4199736aa0a1c251fe15293aff9f1",
           "missing_required_members": [],
           "affected_channel_ids": []
         },
@@ -2122,7 +2047,7 @@
           "physical_source_present": false,
           "portable_review_adapter_present": false,
           "structural_plan_accepted": true,
-          "exact_plan_fixture_custody": true,
+          "exact_plan_fixture_custody": false,
           "complete_physical_evidence": false,
           "control_admission": false
         },
@@ -2196,19 +2121,12 @@
           "qualified_physical_phase": false
         },
         "diagnostic_plan": {
-          "structural_status": "refused",
-          "custody_state": "producer_fix_required",
-          "observed_revision": "1bdbac1f3f453e4f694dfd92802511e430cc1c97",
-          "fixture_sha256": "7b0544fbb69295686737043fed56bc8db4bac4c78c2c684cd818620e23732210",
-          "missing_required_members": [
-            "timing_uncertainty_s"
-          ],
-          "affected_channel_ids": [
-            "ch_flux_loop_set",
-            "ch_rogowski_coil",
-            "ch_synthetic_oscillator",
-            "ch_toroidal_probe_array"
-          ]
+          "structural_status": "accepted",
+          "custody_state": "verified_public_producer_object",
+          "observed_revision": "f5a35424b05531399e2759cc3713bc25b647c59d",
+          "fixture_sha256": "5f88e694faf5b73e0e0ce3000fb643a6b0b5c84993cd373a917f9d633aa35d42",
+          "missing_required_members": [],
+          "affected_channel_ids": []
         },
         "readiness_axes": {
           "exact_configuration_identity": true,
@@ -2290,9 +2208,9 @@
         },
         "diagnostic_plan": {
           "structural_status": "accepted",
-          "custody_state": "exact_fixture_custody",
-          "observed_revision": "acf5dfe49de175e856c3d575bcfd11dead60d0fd",
-          "fixture_sha256": "69a068ded2d3db9b9c64080547cedd204893637996b9fab91638ba3491b940a0",
+          "custody_state": "verified_public_producer_object",
+          "observed_revision": "fb050319f5397f85f2e19844b4f2e40ad1aa29a9",
+          "fixture_sha256": "cfe64254564245f064bada4ca91dbc1debf11e6d75e29b2cbe073492207c89a1",
           "missing_required_members": [],
           "affected_channel_ids": []
         },
@@ -2302,7 +2220,7 @@
           "physical_source_present": false,
           "portable_review_adapter_present": false,
           "structural_plan_accepted": true,
-          "exact_plan_fixture_custody": true,
+          "exact_plan_fixture_custody": false,
           "complete_physical_evidence": false,
           "control_admission": false
         },
@@ -2374,20 +2292,12 @@
           "qualified_physical_phase": false
         },
         "diagnostic_plan": {
-          "structural_status": "refused",
-          "custody_state": "producer_fix_required",
-          "observed_revision": "348db236d1e19c8303754205b410a1f9d17135cf",
-          "fixture_sha256": "0b74b090ac6194174920bda0a455c2571287eff917475cfaf0fbac70a3c70009",
-          "missing_required_members": [
-            "timing_uncertainty_s"
-          ],
-          "affected_channel_ids": [
-            "ch_diamagnetic_loop",
-            "ch_drive_reference",
-            "ch_end_loss_array",
-            "ch_flute_probe_array",
-            "ch_synthetic_oscillator"
-          ]
+          "structural_status": "accepted",
+          "custody_state": "verified_public_producer_object",
+          "observed_revision": "75a5b624a833c84d3100aa79f488f2e841bbf20a",
+          "fixture_sha256": "efb5634818a256a9ab5d68c2cdb346503f2c581326f23d7a06c8a0d2da724d48",
+          "missing_required_members": [],
+          "affected_channel_ids": []
         },
         "readiness_axes": {
           "exact_configuration_identity": true,
@@ -2473,9 +2383,9 @@
         },
         "diagnostic_plan": {
           "structural_status": "accepted",
-          "custody_state": "exact_fixture_custody",
-          "observed_revision": "9eef91eb9086e13d23962fe18c6211f2f3ee2673",
-          "fixture_sha256": "5d4edf2c550908f2752dafba02da73171b0fea12ff74e3e0fc7db9a5d72c8eb9",
+          "custody_state": "verified_public_producer_object",
+          "observed_revision": "7402191c43e8fe57cffda1dd5b3cf4319d6d398d",
+          "fixture_sha256": "8e0c0d51f6c7aece428a6e761adf20f820f44aa6946b05921912cc4c87790253",
           "missing_required_members": [],
           "affected_channel_ids": []
         },
@@ -2485,7 +2395,7 @@
           "physical_source_present": true,
           "portable_review_adapter_present": true,
           "structural_plan_accepted": true,
-          "exact_plan_fixture_custody": true,
+          "exact_plan_fixture_custody": false,
           "complete_physical_evidence": false,
           "control_admission": false
         },
@@ -2565,19 +2475,12 @@
           "qualified_physical_phase": false
         },
         "diagnostic_plan": {
-          "structural_status": "refused",
-          "custody_state": "producer_fix_required",
-          "observed_revision": "43fe4aff941f3f531f709b1711ffe524e480e40a",
-          "fixture_sha256": "91ef7ec0aee62de4726b0f0260e91fad227f51f7df475e24fed5d55b413499f7",
-          "missing_required_members": [
-            "timing_uncertainty_s"
-          ],
-          "affected_channel_ids": [
-            "ch_flux_loop_set",
-            "ch_surface_probe_array",
-            "ch_synthetic_oscillator",
-            "ch_thomson_profiles"
-          ]
+          "structural_status": "accepted",
+          "custody_state": "verified_public_producer_object",
+          "observed_revision": "5712e5d9535477033c83a3d6e1586bcef288eb25",
+          "fixture_sha256": "21232f9966169dee29798171f71faef825732ac1df30fca97dd10bf5752fefd3",
+          "missing_required_members": [],
+          "affected_channel_ids": []
         },
         "readiness_axes": {
           "exact_configuration_identity": true,
@@ -2659,20 +2562,12 @@
           "qualified_physical_phase": false
         },
         "diagnostic_plan": {
-          "structural_status": "refused",
-          "custody_state": "producer_fix_required",
-          "observed_revision": "cc26682849bcb35a89ca07539d23ec843a5af92a",
-          "fixture_sha256": "8df3515a35978d0e518ba75749421052a399d9d8e77e8c176cf4231b259b0af1",
-          "missing_required_members": [
-            "timing_uncertainty_s"
-          ],
-          "affected_channel_ids": [
-            "ch_flux_loop_set",
-            "ch_interferometer",
-            "ch_mirnov_array",
-            "ch_synthetic_oscillator",
-            "ch_thomson_profiles"
-          ]
+          "structural_status": "accepted",
+          "custody_state": "verified_public_producer_object",
+          "observed_revision": "afe989f3683380de144468ceae4531b758e9b11e",
+          "fixture_sha256": "4cc94911b526d1220a3bd123d91a48603e9e134b9f7ef7b9e311fc65a38c6ba7",
+          "missing_required_members": [],
+          "affected_channel_ids": []
         },
         "readiness_axes": {
           "exact_configuration_identity": true,
@@ -2752,20 +2647,12 @@
           "qualified_physical_phase": false
         },
         "diagnostic_plan": {
-          "structural_status": "refused",
-          "custody_state": "producer_fix_required",
-          "observed_revision": "348db236d1e19c8303754205b410a1f9d17135cf",
-          "fixture_sha256": "0b74b090ac6194174920bda0a455c2571287eff917475cfaf0fbac70a3c70009",
-          "missing_required_members": [
-            "timing_uncertainty_s"
-          ],
-          "affected_channel_ids": [
-            "ch_diamagnetic_loop",
-            "ch_drive_reference",
-            "ch_end_loss_array",
-            "ch_flute_probe_array",
-            "ch_synthetic_oscillator"
-          ]
+          "structural_status": "accepted",
+          "custody_state": "verified_public_producer_object",
+          "observed_revision": "75a5b624a833c84d3100aa79f488f2e841bbf20a",
+          "fixture_sha256": "efb5634818a256a9ab5d68c2cdb346503f2c581326f23d7a06c8a0d2da724d48",
+          "missing_required_members": [],
+          "affected_channel_ids": []
         },
         "readiness_axes": {
           "exact_configuration_identity": true,
@@ -2847,9 +2734,9 @@
         },
         "diagnostic_plan": {
           "structural_status": "accepted",
-          "custody_state": "exact_fixture_custody",
-          "observed_revision": "df38049bf4e615a76c50d07593183ad87653cf96",
-          "fixture_sha256": "bddf90cddaa232482344f8d5fb5c84c6c6acb9f60532c09c7200344184279fcd",
+          "custody_state": "verified_public_producer_object",
+          "observed_revision": "2221f9043efb20193cb69842daa45ea2b5658127",
+          "fixture_sha256": "5f8fe33fa4ce7c1fe591a6aefee852e91c74cdff0424c19b3592c0b0604f0611",
           "missing_required_members": [],
           "affected_channel_ids": []
         },
@@ -2859,7 +2746,7 @@
           "physical_source_present": false,
           "portable_review_adapter_present": false,
           "structural_plan_accepted": true,
-          "exact_plan_fixture_custody": true,
+          "exact_plan_fixture_custody": false,
           "complete_physical_evidence": false,
           "control_admission": false
         },
@@ -2931,20 +2818,12 @@
           "qualified_physical_phase": false
         },
         "diagnostic_plan": {
-          "structural_status": "refused",
-          "custody_state": "producer_fix_required",
-          "observed_revision": "cc26682849bcb35a89ca07539d23ec843a5af92a",
-          "fixture_sha256": "8df3515a35978d0e518ba75749421052a399d9d8e77e8c176cf4231b259b0af1",
-          "missing_required_members": [
-            "timing_uncertainty_s"
-          ],
-          "affected_channel_ids": [
-            "ch_flux_loop_set",
-            "ch_interferometer",
-            "ch_mirnov_array",
-            "ch_synthetic_oscillator",
-            "ch_thomson_profiles"
-          ]
+          "structural_status": "accepted",
+          "custody_state": "verified_public_producer_object",
+          "observed_revision": "afe989f3683380de144468ceae4531b758e9b11e",
+          "fixture_sha256": "4cc94911b526d1220a3bd123d91a48603e9e134b9f7ef7b9e311fc65a38c6ba7",
+          "missing_required_members": [],
+          "affected_channel_ids": []
         },
         "readiness_axes": {
           "exact_configuration_identity": true,
@@ -3025,9 +2904,9 @@
         },
         "diagnostic_plan": {
           "structural_status": "accepted",
-          "custody_state": "exact_fixture_custody",
-          "observed_revision": "acf5dfe49de175e856c3d575bcfd11dead60d0fd",
-          "fixture_sha256": "69a068ded2d3db9b9c64080547cedd204893637996b9fab91638ba3491b940a0",
+          "custody_state": "verified_public_producer_object",
+          "observed_revision": "fb050319f5397f85f2e19844b4f2e40ad1aa29a9",
+          "fixture_sha256": "cfe64254564245f064bada4ca91dbc1debf11e6d75e29b2cbe073492207c89a1",
           "missing_required_members": [],
           "affected_channel_ids": []
         },
@@ -3037,7 +2916,7 @@
           "physical_source_present": false,
           "portable_review_adapter_present": false,
           "structural_plan_accepted": true,
-          "exact_plan_fixture_custody": true,
+          "exact_plan_fixture_custody": false,
           "complete_physical_evidence": false,
           "control_admission": false
         },
@@ -3085,5 +2964,5 @@
     "direct_actuation_authorized": false,
     "machine_protection_final_veto": true
   },
-  "payload_sha256": "9ac5978b86d8610eafa5810db40b07c33c21ab0dc56df2014d57872965186962"
+  "payload_sha256": "5d057366d77ae755b71b4636ed05bfab4c0ac81125f8be794154113647abfaa9"
 }

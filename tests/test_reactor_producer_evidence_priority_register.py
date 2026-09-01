@@ -185,6 +185,62 @@ def test_priority_register_joins_every_exact_configuration_and_candidate() -> No
         )
 
 
+def test_priority_register_joins_exact_current_plan_status() -> None:
+    rows = _rows()
+    plan_payload = _load(SOURCE_PATHS["diagnostic_plan_portfolio_status"])["payload"]
+    assert isinstance(plan_payload, dict)
+    producers = plan_payload["producers"]
+    assert isinstance(producers, list)
+    assert all(isinstance(producer, dict) for producer in producers)
+    producers_by_project = {
+        cast(str, producer["project"]): cast(dict[str, object], producer)
+        for producer in producers
+    }
+
+    joined_configurations = 0
+    for row in rows:
+        project = cast(str, row["device_project"])
+        diagnostic_plan = row["diagnostic_plan"]
+        readiness = row["readiness_axes"]
+        assert isinstance(diagnostic_plan, dict)
+        assert isinstance(readiness, dict)
+        producer = producers_by_project.get(project)
+        if producer is None:
+            assert row["configuration"] == "frc_compression_mif"
+            assert diagnostic_plan == {
+                "structural_status": "not_in_portfolio",
+                "custody_state": "not_in_portfolio",
+                "observed_revision": None,
+                "fixture_sha256": None,
+                "missing_required_members": [],
+                "affected_channel_ids": [],
+            }
+            assert readiness["structural_plan_accepted"] is False
+            assert readiness["exact_plan_fixture_custody"] is False
+            continue
+
+        joined_configurations += 1
+        assert diagnostic_plan == {
+            "structural_status": producer["structural_status"],
+            "custody_state": producer["custody_state"],
+            "observed_revision": producer["observed_revision"],
+            "fixture_sha256": producer["fixture_sha256"],
+            "missing_required_members": producer["missing_required_members"],
+            "affected_channel_ids": producer["affected_channel_ids"],
+        }
+        assert readiness["structural_plan_accepted"] == (
+            producer["structural_status"] == "accepted"
+        )
+        assert readiness["exact_plan_fixture_custody"] == (
+            producer["custody_state"] == "exact_fixture_custody"
+        )
+
+    assert joined_configurations == 31
+    assert all(
+        row["readiness_axes"]["exact_plan_fixture_custody"] is False for row in rows
+    )
+
+
 def test_priority_lanes_follow_custody_precedence_not_external_rank() -> None:
     payload = _payload()
     rows = _rows()

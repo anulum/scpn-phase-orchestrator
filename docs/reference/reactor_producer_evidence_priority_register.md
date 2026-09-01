@@ -124,9 +124,11 @@ row and two L1 rows. They include:
   `torsatron`, `levitated_dipole`, `reversed_field_pinch`, and `spheromak`.
 
 Their exact plans define intended channels, clocks, carriers, and evidence
-slots. Eleven producer fixtures have byte-identical SPO custody; nine more are
-digest-pinned exact public producer objects. Neither custody state contains
-sampled physical values. The next gate is a
+slots. All twenty current envelope `1.2.0` producer objects are digest-pinned
+and verified public; SPO has zero byte-identical custody copies of those current
+objects. Legacy local `1.1.0` fixtures remain compatibility evidence, not
+current-object custody. None of these software states contains sampled physical
+values. The next gate is a
 configuration-specific canonical evidence envelope owned by the named device
 project, with immutable source revision and package identity. Shared plans do
 not equate configurations: the three laser-ICF rows, two beam-ICF rows, two
@@ -136,7 +138,7 @@ Z-pinch rows, and three separate MIF device projects remain independent.
 
 L3 is empty. The ten producer conformance repairs now emit explicit
 `timing_uncertainty_s`, and the exact twenty-head replay accepted every
-envelope-1.1.0 fixture. A future refusal would re-enter L3 without changing
+envelope `1.2.0` fixture. A future refusal would re-enter L3 without changing
 external evidence rank or granting physical/control authority.
 
 ## Required physical evidence

@@ -486,6 +486,7 @@
         "custody_state": {
           "enum": [
             "exact_fixture_custody",
+            "verified_public_producer_object",
             "producer_fix_required",
             "not_in_portfolio"
           ]
