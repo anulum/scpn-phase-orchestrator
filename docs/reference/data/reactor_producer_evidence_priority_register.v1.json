@@ -2418,6 +2418,7 @@
             "observation_operator_or_calibration",
             "uncertainty",
             "validity",
+            "producer_evidence_state_semantics",
             "quality",
             "provenance",
             "observability_gate"
@@ -2431,11 +2432,19 @@
             "provider_quality",
             "uncertainty",
             "validity",
+            "producer_owned_plant_truth_state_contract",
             "instrument_facility_clock_correlation",
             "resolved_event_identity",
             "observability_threshold",
             "independent_multi_shot_or_classifier_evidence"
           ],
+          "materialized_request": {
+            "api": "scpn_phase_orchestrator.reactor_semantics.mast_phase_qualification_request_from_source_review",
+            "envelope_sha256": "b5a3472bee27ac3873f16711978e796162cc8b82846a5a014fcdd20b802840c8",
+            "request_id": "ef25956437cb4a75e841133de23ca89f71c738380996374298fd3ff0077ac4d2",
+            "schema": "scpn-phase-orchestrator.mast-phase-qualification-request.v1",
+            "schema_version": "1.1.0"
+          },
           "source_revision_required": true,
           "package_identity_required": true,
           "canonical_bytes_required": true,
@@ -2966,5 +2975,5 @@
     "direct_actuation_authorized": false,
     "machine_protection_final_veto": true
   },
-  "payload_sha256": "cff2e886485b354e2834cdcccc142638cdb6d7709ca7dc60742b91bd393a042b"
+  "payload_sha256": "5a540b57382f4f03d2e7b4264ca22008ce0a4ea8eb23fdd919645abbe90692a5"
 }

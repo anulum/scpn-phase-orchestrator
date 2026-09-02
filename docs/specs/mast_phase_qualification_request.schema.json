@@ -45,6 +45,40 @@
       ],
       "type": "object"
     },
+    "producer_evidence_state_policy": {
+      "additionalProperties": false,
+      "properties": {
+        "disposition": {
+          "enum": [
+            "unknown",
+            "out_of_distribution",
+            "low_observability",
+            "stale"
+          ]
+        },
+        "meaning": {"minLength": 1, "type": "string"},
+        "physical_regime_classified": {"const": false},
+        "quality_may_substitute": {"const": false},
+        "regime_state": {"const": "unknown"},
+        "validity_state": {
+          "enum": [
+            "unknown",
+            "out_of_distribution",
+            "unobservable",
+            "stale"
+          ]
+        }
+      },
+      "required": [
+        "disposition",
+        "meaning",
+        "physical_regime_classified",
+        "quality_may_substitute",
+        "regime_state",
+        "validity_state"
+      ],
+      "type": "object"
+    },
     "requirement": {
       "additionalProperties": false,
       "properties": {
@@ -62,6 +96,7 @@
             "provider_quality",
             "uncertainty",
             "validity",
+            "producer_evidence_state_semantics",
             "instrument_facility_clock_correlation",
             "resolved_event_identity",
             "observability_threshold",
@@ -116,6 +151,61 @@
         "phenomenon_identity_state": {
           "const": "unresolved_producer_evidence_required"
         },
+        "producer_evidence_state_contract_present": {"const": false},
+        "producer_evidence_state_contract_required": {"const": true},
+        "producer_evidence_state_policies": {
+          "prefixItems": [
+            {
+              "allOf": [
+                {"$ref": "#/$defs/producer_evidence_state_policy"},
+                {
+                  "properties": {
+                    "disposition": {"const": "unknown"},
+                    "validity_state": {"const": "unknown"}
+                  }
+                }
+              ]
+            },
+            {
+              "allOf": [
+                {"$ref": "#/$defs/producer_evidence_state_policy"},
+                {
+                  "properties": {
+                    "disposition": {"const": "out_of_distribution"},
+                    "validity_state": {"const": "out_of_distribution"}
+                  }
+                }
+              ]
+            },
+            {
+              "allOf": [
+                {"$ref": "#/$defs/producer_evidence_state_policy"},
+                {
+                  "properties": {
+                    "disposition": {"const": "low_observability"},
+                    "validity_state": {"const": "unobservable"}
+                  }
+                }
+              ]
+            },
+            {
+              "allOf": [
+                {"$ref": "#/$defs/producer_evidence_state_policy"},
+                {
+                  "properties": {
+                    "disposition": {"const": "stale"},
+                    "validity_state": {"const": "stale"}
+                  }
+                }
+              ]
+            }
+          ],
+          "items": false,
+          "maxItems": 4,
+          "minItems": 4,
+          "type": "array",
+          "uniqueItems": true
+        },
         "qualification_state": {
           "const": "blocked_missing_producer_evidence"
         },
@@ -124,12 +214,13 @@
         "requested_owner_project": {"const": "SCPN-FUSION-CORE"},
         "requirements": {
           "items": {"$ref": "#/$defs/requirement"},
-          "maxItems": 12,
-          "minItems": 12,
+          "maxItems": 13,
+          "minItems": 13,
           "type": "array",
           "uniqueItems": true
         },
         "review_only": {"const": true},
+        "quality_state_may_substitute_for_evidence_state": {"const": false},
         "selected_candidate_id": {"type": "null"},
         "semantic_ingress_declared": {"const": false},
         "shot_id": {"const": 27707},
@@ -178,12 +269,16 @@
         "phase_inference_eligible",
         "phase_inference_performed",
         "phenomenon_identity_state",
+        "producer_evidence_state_contract_present",
+        "producer_evidence_state_contract_required",
+        "producer_evidence_state_policies",
         "qualification_state",
         "qualification_payload_sha256",
         "request_id",
         "requested_owner_project",
         "requirements",
         "review_only",
+        "quality_state_may_substitute_for_evidence_state",
         "selected_candidate_id",
         "semantic_ingress_declared",
         "shot_id",
@@ -205,7 +300,7 @@
     "schema": {
       "const": "scpn-phase-orchestrator.mast-phase-qualification-request.v1"
     },
-    "schema_version": {"const": "1.0.0"}
+    "schema_version": {"const": "1.1.0"}
   },
   "required": ["payload", "payload_sha256", "schema", "schema_version"],
   "title": "SCPN Phase Orchestrator FAIR-MAST phase qualification request v1",

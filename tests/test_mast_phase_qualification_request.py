@@ -32,6 +32,7 @@ EXPECTED_REQUIREMENTS = (
     "provider_quality",
     "uncertainty",
     "validity",
+    "producer_evidence_state_semantics",
     "instrument_facility_clock_correlation",
     "resolved_event_identity",
     "observability_threshold",
@@ -133,6 +134,48 @@ def test_request_names_every_missing_qualification_requirement() -> None:
     )
 
 
+def test_request_pins_distinct_producer_evidence_states_and_regime_abstention() -> None:
+    request = _request()
+
+    assert request.producer_evidence_state_contract_required is True
+    assert request.producer_evidence_state_contract_present is False
+    assert request.quality_state_may_substitute_for_evidence_state is False
+    assert request.producer_evidence_state_policies == (
+        rs.PRODUCER_EVIDENCE_STATE_POLICIES
+    )
+    assert tuple(
+        (policy.disposition.value, policy.validity_state.value)
+        for policy in request.producer_evidence_state_policies
+    ) == (
+        ("unknown", "unknown"),
+        ("out_of_distribution", "out_of_distribution"),
+        ("low_observability", "unobservable"),
+        ("stale", "stale"),
+    )
+    assert all(
+        policy.regime_state.value == "unknown"
+        and not policy.physical_regime_classified
+        and not policy.quality_may_substitute
+        for policy in request.producer_evidence_state_policies
+    )
+
+    requirement = next(
+        item
+        for item in request.requirements
+        if item.requirement_id.value == "producer_evidence_state_semantics"
+    )
+    for marker in (
+        "unknown",
+        "out_of_distribution",
+        "low_observability",
+        "stale",
+        "quality",
+        "U0 validity",
+        "UNKNOWN physical regime",
+    ):
+        assert marker in requirement.acceptance_condition
+
+
 def test_request_never_promotes_phase_semantic_or_control_authority() -> None:
     request = _request()
 
@@ -189,6 +232,9 @@ def test_portable_request_matches_its_published_json_schema() -> None:
         ("direct_actuation", True),
         ("review_only", False),
         ("machine_protection_final_veto", False),
+        ("producer_evidence_state_contract_required", False),
+        ("producer_evidence_state_contract_present", True),
+        ("quality_state_may_substitute_for_evidence_state", True),
     ],
 )
 def test_reconstruction_refuses_stored_authority_or_scientific_promotion(
@@ -211,6 +257,19 @@ def test_reconstruction_refuses_missing_requirement_or_candidate() -> None:
         cast(list[object], record[field]).pop()
         with pytest.raises(rs.MastPhaseQualificationRequestRefusalError):
             rs.mast_phase_qualification_request_from_record(record)
+
+
+def test_reconstruction_refuses_producer_evidence_state_policy_drift() -> None:
+    record = rs.mast_phase_qualification_request_to_record(_request())
+    policies = cast(list[dict[str, object]], record["producer_evidence_state_policies"])
+    policies[2]["validity_state"] = "unknown"
+
+    with pytest.raises(rs.MastPhaseQualificationRequestRefusalError) as caught:
+        rs.mast_phase_qualification_request_from_record(record)
+
+    assert caught.value.code is (
+        rs.MastPhaseQualificationRequestRefusalCode.REQUEST_CONTRACT_MISMATCH
+    )
 
 
 def test_envelope_refuses_digest_schema_and_noncanonical_drift() -> None:

@@ -30,11 +30,15 @@ from .observability_profiles import (
     DEFAULT_REACTOR_OBSERVABILITY_PROFILE_REGISTRY,
     ReactorSignalCandidateProfile,
 )
+from .producer_evidence_state import (
+    PRODUCER_EVIDENCE_STATE_POLICIES,
+    ProducerEvidenceStatePolicy,
+)
 
 MAST_PHASE_QUALIFICATION_REQUEST_SCHEMA: Final = (
     "scpn-phase-orchestrator.mast-phase-qualification-request.v1"
 )
-MAST_PHASE_QUALIFICATION_REQUEST_VERSION: Final = "1.0.0"
+MAST_PHASE_QUALIFICATION_REQUEST_VERSION: Final = "1.1.0"
 MAX_MAST_PHASE_QUALIFICATION_REQUEST_BYTES: Final = 20 * 1024 * 1024
 
 _PRODUCER_PROJECT: Final = "SCPN-FUSION-CORE"
@@ -57,6 +61,7 @@ class MastPhaseQualificationRequirementId(StrEnum):
     PROVIDER_QUALITY = "provider_quality"
     UNCERTAINTY = "uncertainty"
     VALIDITY = "validity"
+    PRODUCER_EVIDENCE_STATE_SEMANTICS = "producer_evidence_state_semantics"
     INSTRUMENT_FACILITY_CLOCK_CORRELATION = "instrument_facility_clock_correlation"
     RESOLVED_EVENT_IDENTITY = "resolved_event_identity"
     OBSERVABILITY_THRESHOLD = "observability_threshold"
@@ -149,6 +154,19 @@ _REQUIREMENTS: Final = (
         "out-of-domain refusal rules.",
     ),
     MastPhaseQualificationRequirement(
+        MastPhaseQualificationRequirementId.PRODUCER_EVIDENCE_STATE_SEMANTICS,
+        "producer-owned evidence disposition about current plant truth",
+        "Supply distinct, non-overlapping unknown, out_of_distribution, "
+        "low_observability, and stale dispositions with versioned classification "
+        "criteria, precedence, transitions, and interval semantics. Bind every "
+        "disposition to physical sample identity, qualified clock correlation, "
+        "calibration or observation-operator revision, validity domain, and the "
+        "predeclared observability-gate result. Provider quality is orthogonal and "
+        "cannot replace or erase the evidence cause. Each disposition must use the "
+        "shared U0 validity mapping and force an unclassified UNKNOWN physical "
+        "regime; none is a plasma or reactor-regime label.",
+    ),
+    MastPhaseQualificationRequirement(
         MastPhaseQualificationRequirementId.INSTRUMENT_FACILITY_CLOCK_CORRELATION,
         "instrument acquisition clock to facility reference",
         "Bind acquisition time to an identified facility epoch with offset, drift, "
@@ -238,6 +256,14 @@ class MastPhaseQualificationRequest:
     requirements: tuple[MastPhaseQualificationRequirement, ...] = field(
         init=False, default=_REQUIREMENTS
     )
+    producer_evidence_state_policies: tuple[ProducerEvidenceStatePolicy, ...] = field(
+        init=False, default=PRODUCER_EVIDENCE_STATE_POLICIES
+    )
+    producer_evidence_state_contract_required: bool = field(init=False, default=True)
+    producer_evidence_state_contract_present: bool = field(init=False, default=False)
+    quality_state_may_substitute_for_evidence_state: bool = field(
+        init=False, default=False
+    )
     qualification_state: str = field(
         init=False, default="blocked_missing_producer_evidence"
     )
@@ -308,6 +334,9 @@ class MastPhaseQualificationRequest:
         identity = {
             "candidate_ids": [item.candidate_id for item in candidates],
             "observability_registry_sha256": registry.digest,
+            "producer_evidence_state_policies": [
+                item.to_record() for item in PRODUCER_EVIDENCE_STATE_POLICIES
+            ],
             "requirement_ids": [item.requirement_id.value for item in _REQUIREMENTS],
             "source_review_sha256": source_digest,
         }
@@ -369,12 +398,24 @@ def mast_phase_qualification_request_to_record(
         "phase_inference_eligible": request.phase_inference_eligible,
         "phase_inference_performed": request.phase_inference_performed,
         "phenomenon_identity_state": request.phenomenon_identity_state,
+        "producer_evidence_state_contract_present": (
+            request.producer_evidence_state_contract_present
+        ),
+        "producer_evidence_state_contract_required": (
+            request.producer_evidence_state_contract_required
+        ),
+        "producer_evidence_state_policies": [
+            item.to_record() for item in request.producer_evidence_state_policies
+        ],
         "qualification_state": request.qualification_state,
         "qualification_payload_sha256": request.qualification_payload_sha256,
         "request_id": request.request_id,
         "requested_owner_project": request.requested_owner_project,
         "requirements": [_requirement_record(item) for item in request.requirements],
         "review_only": request.review_only,
+        "quality_state_may_substitute_for_evidence_state": (
+            request.quality_state_may_substitute_for_evidence_state
+        ),
         "selected_candidate_id": request.selected_candidate_id,
         "semantic_ingress_declared": request.semantic_ingress_declared,
         "shot_id": request.shot_id,
@@ -412,12 +453,16 @@ _PAYLOAD_KEYS: Final = {
     "phase_inference_eligible",
     "phase_inference_performed",
     "phenomenon_identity_state",
+    "producer_evidence_state_contract_present",
+    "producer_evidence_state_contract_required",
+    "producer_evidence_state_policies",
     "qualification_state",
     "qualification_payload_sha256",
     "request_id",
     "requested_owner_project",
     "requirements",
     "review_only",
+    "quality_state_may_substitute_for_evidence_state",
     "selected_candidate_id",
     "semantic_ingress_declared",
     "shot_id",

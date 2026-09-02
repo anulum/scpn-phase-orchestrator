@@ -805,6 +805,21 @@
                     "provenance",
                     "observability_gate"
                   ]
+                },
+                {
+                  "const": [
+                    "physical_sample",
+                    "phenomenon_identity",
+                    "reference",
+                    "clock_epoch",
+                    "observation_operator_or_calibration",
+                    "uncertainty",
+                    "validity",
+                    "producer_evidence_state_semantics",
+                    "quality",
+                    "provenance",
+                    "observability_gate"
+                  ]
                 }
               ]
             },

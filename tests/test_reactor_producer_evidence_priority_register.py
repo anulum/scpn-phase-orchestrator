@@ -26,10 +26,15 @@ from scpn_phase_orchestrator.reactor_semantics import (
     DEFAULT_REACTOR_SEMANTIC_PROFILE_REGISTRY,
     FRC_COMPRESSION_MIF_PHYSICAL_PAYLOAD_REQUEST_SCHEMA,
     FRC_COMPRESSION_MIF_PHYSICAL_PAYLOAD_REQUEST_VERSION,
+    MAST_PHASE_QUALIFICATION_REQUEST_SCHEMA,
+    MAST_PHASE_QUALIFICATION_REQUEST_VERSION,
     conventional_tokamak_physical_payload_request,
     conventional_tokamak_physical_payload_request_digest,
     frc_compression_mif_physical_payload_request,
     frc_compression_mif_physical_payload_request_digest,
+    mast_magnetic_source_review_from_producer_bytes,
+    mast_phase_qualification_request_digest,
+    mast_phase_qualification_request_from_source_review,
 )
 
 REGISTER = Path(
@@ -50,6 +55,11 @@ SOURCE_PATHS = {
         "docs/reference/data/reactor_technology_diagnostic_atlas.v1.json"
     ),
 }
+MAST_FIXTURES = Path("tests/fixtures/mast_magnetic_source_review")
+MAST_SOURCE_REVISION = "c30fb3932b47a812dc26d5846761030cdd0bc94c"
+MAST_SOURCE_WHEEL_SHA256 = (
+    "a709b8aeecbd9483254bc3df1b29b87bf9df59ada92255af41631d861db430c9"
+)
 LANES = (
     "L0_qualify_existing_physical_source",
     "L1_extend_exercised_review_adapter",
@@ -73,6 +83,11 @@ MIF_REQUIRED_EVIDENCE = (
     "plant_truth_state_semantics",
     *REQUIRED_EVIDENCE[7:],
 )
+MAST_REQUIRED_EVIDENCE = (
+    *REQUIRED_EVIDENCE[:7],
+    "producer_evidence_state_semantics",
+    *REQUIRED_EVIDENCE[7:],
+)
 MAST_L0_REQUIREMENTS = (
     "phenomenon_identity",
     "reproducible_source_ingestion_state",
@@ -82,6 +97,7 @@ MAST_L0_REQUIREMENTS = (
     "provider_quality",
     "uncertainty",
     "validity",
+    "producer_owned_plant_truth_state_contract",
     "instrument_facility_clock_correlation",
     "resolved_event_identity",
     "observability_threshold",
@@ -333,6 +349,32 @@ def test_priority_register_requests_evidence_without_granting_authority() -> Non
     assert mast_evidence["portable_review_adapter_present"] is True
     assert mast_readiness["portable_review_adapter_present"] is True
     assert tuple(mast_request["lane_blockers"]) == MAST_L0_REQUIREMENTS
+    assert tuple(mast_request["required_evidence"]) == MAST_REQUIRED_EVIDENCE
+    mast_materialized = mast_request["materialized_request"]
+    assert isinstance(mast_materialized, dict)
+    mast_review = mast_magnetic_source_review_from_producer_bytes(
+        source_revision=MAST_SOURCE_REVISION,
+        source_artifact_sha256=MAST_SOURCE_WHEEL_SHA256,
+        archive_bytes=(MAST_FIXTURES / "MAGNETIC_ARCHIVE_ENVELOPE.json").read_bytes(),
+        qualification_bytes=(
+            MAST_FIXTURES / "MAGNETIC_DIAGNOSTIC_QUALIFICATION.json"
+        ).read_bytes(),
+    )
+    runtime_mast_request = mast_phase_qualification_request_from_source_review(
+        mast_review
+    )
+    assert mast_materialized == {
+        "api": (
+            "scpn_phase_orchestrator.reactor_semantics."
+            "mast_phase_qualification_request_from_source_review"
+        ),
+        "envelope_sha256": mast_phase_qualification_request_digest(
+            runtime_mast_request
+        ),
+        "request_id": runtime_mast_request.request_id,
+        "schema": MAST_PHASE_QUALIFICATION_REQUEST_SCHEMA,
+        "schema_version": MAST_PHASE_QUALIFICATION_REQUEST_VERSION,
+    }
     conventional_request = by_configuration["conventional_tokamak"]["producer_request"]
     assert isinstance(conventional_request, dict)
     materialized = conventional_request["materialized_request"]
@@ -387,11 +429,12 @@ def test_priority_register_requests_evidence_without_granting_authority() -> Non
         assert current["qualified_physical_phase"] is False
         assert readiness["complete_physical_evidence"] is False
         assert readiness["control_admission"] is False
-        expected_evidence = (
-            MIF_REQUIRED_EVIDENCE
-            if row["configuration"] == "frc_compression_mif"
-            else REQUIRED_EVIDENCE
-        )
+        if row["configuration"] == "frc_compression_mif":
+            expected_evidence = MIF_REQUIRED_EVIDENCE
+        elif row["configuration"] == "spherical_tokamak":
+            expected_evidence = MAST_REQUIRED_EVIDENCE
+        else:
+            expected_evidence = REQUIRED_EVIDENCE
         assert tuple(request["required_evidence"]) == expected_evidence
         assert request["canonical_bytes_required"] is True
         assert request["independent_validation_required"] is True

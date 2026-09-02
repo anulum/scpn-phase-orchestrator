@@ -292,13 +292,22 @@ registry version and digest. Four spherical-tokamak candidate profiles are
 embedded as unselected design requirements; none is reported as the observed
 phenomenon.
 
-The request keeps twelve missing evidence obligations separate: controlled
+Version `1.1.0` also embeds the shared producer evidence-state policy. It
+requires distinct `unknown`, `out_of_distribution`, `low_observability`, and
+`stale` dispositions about current plant truth. These map respectively to U0
+validity `unknown`, `out_of_distribution`, `unobservable`, and `stale`; every
+mapping forces an unclassified `RegimeState.UNKNOWN` result. Provider quality
+is orthogonal and cannot substitute for the disposition. A small score above a
+predeclared observability gate is not `low_observability`.
+
+The request keeps thirteen missing evidence obligations separate: controlled
 phenomenon identity; reproducible source-ingestion state; calibration lineage;
 physical geometry and frame join; modal observation operator and harmonic
-basis; provider quality; uncertainty; validity; instrument-to-facility clock
-correlation; resolved event identity; predeclared observability threshold; and
-independent multi-shot or classifier validation. Each obligation has a
-producer-facing acceptance condition and requires immutable artifact binding.
+basis; provider quality; uncertainty; validity; producer evidence-state
+semantics; instrument-to-facility clock correlation; resolved event identity;
+predeclared observability threshold; and independent multi-shot or classifier
+validation. Each obligation has a producer-facing acceptance condition and
+requires immutable artifact binding.
 
 `MastPhaseQualificationRequest` fixes the qualification state to
 `blocked_missing_producer_evidence`. It cannot select a phenomenon, admit an
