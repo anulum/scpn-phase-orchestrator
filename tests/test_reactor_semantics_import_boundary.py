@@ -59,6 +59,7 @@ def test_every_reactor_semantics_submodule_avoids_optional_runtime_graph() -> No
         )
         import scpn_phase_orchestrator.reactor_semantics.mif_merge_compression
         import scpn_phase_orchestrator.reactor_semantics.observability_profiles
+        import scpn_phase_orchestrator.reactor_semantics.producer_evidence_state
         import scpn_phase_orchestrator.reactor_semantics.reference_portfolio
         import scpn_phase_orchestrator.reactor_semantics.regime_assessment
         import scpn_phase_orchestrator.reactor_semantics.regime_ontology
@@ -82,6 +83,7 @@ def test_every_reactor_semantics_submodule_avoids_optional_runtime_graph() -> No
             "scpn_phase_orchestrator.reactor_semantics.mast_phase_qualification_request",
             "scpn_phase_orchestrator.reactor_semantics.mif_merge_compression",
             "scpn_phase_orchestrator.reactor_semantics.observability_profiles",
+            "scpn_phase_orchestrator.reactor_semantics.producer_evidence_state",
             "scpn_phase_orchestrator.reactor_semantics.reference_portfolio",
             "scpn_phase_orchestrator.reactor_semantics.regime_assessment",
             "scpn_phase_orchestrator.reactor_semantics.regime_ontology",
@@ -134,6 +136,7 @@ def test_every_reactor_semantics_submodule_avoids_optional_runtime_graph() -> No
             "scpn_phase_orchestrator.reactor_semantics.mast_phase_qualification_request",
             "scpn_phase_orchestrator.reactor_semantics.mif_merge_compression",
             "scpn_phase_orchestrator.reactor_semantics.observability_profiles",
+            "scpn_phase_orchestrator.reactor_semantics.producer_evidence_state",
             "scpn_phase_orchestrator.reactor_semantics.reference_portfolio",
             "scpn_phase_orchestrator.reactor_semantics.regime_assessment",
             "scpn_phase_orchestrator.reactor_semantics.regime_ontology",

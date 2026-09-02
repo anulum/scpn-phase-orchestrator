@@ -154,11 +154,11 @@ and sealed over canonical JSON payload bytes.
 
 - Schema: `scpn-phase-orchestrator.reactor-configuration-evidence-coverage.v1`
 - Schema version: `1.0.0`
-- Payload SHA-256: `0e20fad3d336c622abe611aa71a914a937b7cc3ef8626b65cf2c0790dc0f83d5`
+- Payload SHA-256: `b71c857153a290fa76fbac5637d104beb1c87cd77c5cc9b44bbbdcb7c299f601`
 - Configuration registry: `1.0.0` / `786d9542ce76c56dd7748fa948b17efed6c073525e527ce90e6d5e29a2d00090`
 - Observability registry: `1.0.0` / `d70c0de696534e5a77066ef8420cf7ca17bc4d7321984b0ac83523dbc1dce609`
 - Semantic-profile registry: `1.0.0` / `6ac7f3863e1a5f50af297c572ec0b80b60820a23de1a769fda6bb0a831243ec3`
-- Occurrence-ledger payload: `11ccb4cafcb12c7b5e977df3159e4d02570d06c224406d5750627c81428facfd`
+- Occurrence-ledger payload: `8210dc2310a7031ccad1a1675677e3e92007a2dd82e696c39d25202d2f9f022f`
 
 Any change to a registry, source digest, occurrence binding, evidence state, or
 authority field changes the payload seal and requires deliberate review.

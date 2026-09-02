@@ -153,13 +153,20 @@
         "phase_inference_performed": {"const": false},
         "physical_payload_schema_allocated": {"const": false},
         "physical_source_present": {"const": false},
-        "plant_truth_state_contract_present": {"const": false},
-        "plant_truth_state_contract_required": {"const": true},
+        "plant_truth_state_contract_present": {
+          "const": false,
+          "description": "No producer-owned evidence-disposition contract about current plant truth is present."
+        },
+        "plant_truth_state_contract_required": {
+          "const": true,
+          "description": "A producer-owned evidence-disposition contract is required; it is not a physical regime vocabulary."
+        },
         "qualification_state": {"const": "blocked_missing_physical_producer_payload"},
         "quality_state_may_substitute_for_plant_truth_state": {"const": false},
         "request_id": {"$ref": "#/$defs/sha256"},
         "requested_owner_project": {"const": "SCPN-MIF-CORE"},
         "required_distinct_plant_truth_states": {
+          "description": "Evidence dispositions about whether current plant truth is classifiable. They map to U0 validity and cannot be used as physical regime labels.",
           "const": [
             "unknown",
             "out_of_distribution",

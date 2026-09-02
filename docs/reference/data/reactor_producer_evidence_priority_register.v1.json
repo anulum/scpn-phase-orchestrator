@@ -2,7 +2,7 @@
   "schema": "scpn-phase-orchestrator.reactor-producer-evidence-priority-register.v1",
   "schema_version": "1.0.0",
   "payload": {
-    "observed_at": "2026-09-02T01:41:01+02:00",
+    "observed_at": "2026-09-02T02:02:30+02:00",
     "method": "Deterministic readiness precedence over exact current SPO evidence state: reviewed physical source, then exercised byte-canonical review adapter, then a structurally accepted exact producer diagnostic plan, then a refused plan requiring repair. Exact local fixture custody is a separate readiness axis. External evidence rank is context and never changes the lane.",
     "non_scalar_priority_policy": "No opaque or additive score is emitted. Rows within one lane are deliberately unordered. Selection within a lane requires explicit review of safety value, calibrated machine-readable data availability, clock/reference/operator completeness, uncertainty, validity, quality, provenance, observability gates, independent validation, and producer capacity.",
     "source_bindings": {
@@ -10,8 +10,8 @@
         "path": "docs/reference/data/reactor_configuration_evidence_coverage.v1.json",
         "schema": "scpn-phase-orchestrator.reactor-configuration-evidence-coverage.v1",
         "schema_version": "1.0.0",
-        "payload_sha256": "0e20fad3d336c622abe611aa71a914a937b7cc3ef8626b65cf2c0790dc0f83d5",
-        "file_sha256": "f9ef90112f7c5e4a5aace8c02a7fb8a0fb95cedc261166bbc3981fc0360d132a"
+        "payload_sha256": "b71c857153a290fa76fbac5637d104beb1c87cd77c5cc9b44bbbdcb7c299f601",
+        "file_sha256": "5c2e889b694caab99d349aa1ca0195ac0530afeb64ddb0fb6da3c9a5f2943cab"
       },
       "diagnostic_plan_portfolio_status": {
         "path": "docs/reference/data/reactor_diagnostic_plan_portfolio_status.v1.json",
@@ -24,8 +24,8 @@
         "path": "docs/reference/data/reactor_signal_occurrence_ledger.v1.json",
         "schema": "scpn-phase-orchestrator.reactor-signal-occurrence-ledger.v1",
         "schema_version": "1.0.0",
-        "payload_sha256": "11ccb4cafcb12c7b5e977df3159e4d02570d06c224406d5750627c81428facfd",
-        "file_sha256": "3d887e29278e275f971e8222dd820ba5fc7f1403870597965de2ce690a6b8c7d"
+        "payload_sha256": "8210dc2310a7031ccad1a1675677e3e92007a2dd82e696c39d25202d2f9f022f",
+        "file_sha256": "72215aa858d5bc2258da131b519e2f817016908823010309d3ba64ae29182a0c"
       },
       "technology_diagnostic_atlas": {
         "path": "docs/reference/data/reactor_technology_diagnostic_atlas.v1.json",
@@ -781,7 +781,7 @@
           ],
           "materialized_request": {
             "api": "scpn_phase_orchestrator.reactor_semantics.frc_compression_mif_physical_payload_request",
-            "envelope_sha256": "6549e4aa8cd66c8e045f705f16dfa136f452ebe9e2bde80b7c14c0f182d7dd57",
+            "envelope_sha256": "fa991a56010e53f2d945fd2dcc6dcfb672ca1f3abd14b7d4553c295eb117a639",
             "request_id": "f37e7516cbf5bd008ef87332c457acd31fa0a2922819e2b92c371124558e99eb",
             "schema": "scpn-phase-orchestrator.frc-compression-mif-physical-payload-request.v1",
             "schema_version": "1.1.0"
@@ -2966,5 +2966,5 @@
     "direct_actuation_authorized": false,
     "machine_protection_final_veto": true
   },
-  "payload_sha256": "b4d0791d65d7bb213ef813d40b3584dc0107a3c70bfedf58db7b70c9c0cb59bc"
+  "payload_sha256": "cff2e886485b354e2834cdcccc142638cdb6d7709ca7dc60742b91bd393a042b"
 }

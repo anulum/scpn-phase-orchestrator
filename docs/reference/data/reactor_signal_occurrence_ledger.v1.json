@@ -45,7 +45,7 @@
       },
       {
         "gap_id": "STATE-01",
-        "meaning": "No producer plant-truth contract distinguishes UNKNOWN, out-of-distribution, low-observability, and stale states; software hold, abort, missing-data, or model states must not be promoted into that absent regime vocabulary."
+        "meaning": "No producer-owned evidence-disposition contract about current plant truth distinguishes unknown, out-of-distribution, low-observability, and stale. These dispositions map to U0 validity and require physical-regime abstention; software hold, abort, missing-data, or model states must not substitute for them."
       }
     ],
     "inclusion_rule": "One row represents one externally meaningful public or cross-project phase, mode, regime, event, clock, or semantic-boundary symbol group. Duplicate internal calls and language mirrors are grouped under that stable boundary.",
@@ -1110,7 +1110,7 @@
         "status": "new_control_review_boundary"
       },
       {
-        "change": "MIF-008 through MIF-011 add exact trigger-clock, protocol-state, diagnostic-calibration, and uncertainty-model boundaries; they expose STATE-01 rather than inventing plant-truth UNKNOWN, OOD, low-observability, or stale states.",
+        "change": "MIF-008 through MIF-011 add exact trigger-clock, protocol-state, diagnostic-calibration, and uncertainty-model boundaries; they expose STATE-01 rather than inventing producer evidence dispositions or promoting those dispositions into physical reactor regimes.",
         "status": "new_mif_contract_boundaries_state_gap"
       }
     ],
@@ -1125,7 +1125,7 @@
     "scope": ["phase", "mode", "regime", "event", "clock"],
     "source_evidence_rule": "Source markers and blob digests are direct occurrence evidence. Every carrier, observability, and authority interpretation is separately labelled by assessment_basis and cannot upgrade source maturity."
   },
-  "payload_sha256": "11ccb4cafcb12c7b5e977df3159e4d02570d06c224406d5750627c81428facfd",
+  "payload_sha256": "8210dc2310a7031ccad1a1675677e3e92007a2dd82e696c39d25202d2f9f022f",
   "schema": "scpn-phase-orchestrator.reactor-signal-occurrence-ledger.v1",
   "schema_version": "1.0.0"
 }

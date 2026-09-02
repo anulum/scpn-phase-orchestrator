@@ -21,7 +21,7 @@ import pytest
 from scpn_phase_orchestrator import reactor_semantics as rs
 
 REQUEST_ID = "f37e7516cbf5bd008ef87332c457acd31fa0a2922819e2b92c371124558e99eb"
-REQUEST_SHA256 = "6549e4aa8cd66c8e045f705f16dfa136f452ebe9e2bde80b7c14c0f182d7dd57"
+REQUEST_SHA256 = "fa991a56010e53f2d945fd2dcc6dcfb672ca1f3abd14b7d4553c295eb117a639"
 SEMANTIC_REGISTRY_SHA256 = (
     "6ac7f3863e1a5f50af297c572ec0b80b60820a23de1a769fda6bb0a831243ec3"
 )
@@ -117,10 +117,7 @@ def test_request_requires_distinct_producer_owned_plant_truth_states() -> None:
     request = rs.frc_compression_mif_physical_payload_request()
 
     assert request.required_distinct_plant_truth_states == (
-        "unknown",
-        "out_of_distribution",
-        "low_observability",
-        "stale",
+        *(item.value for item in rs.ProducerEvidenceDisposition),
     )
     assert request.plant_truth_state_contract_required is True
     assert request.plant_truth_state_contract_present is False
@@ -134,6 +131,8 @@ def test_request_requires_distinct_producer_owned_plant_truth_states() -> None:
     for required_state in request.required_distinct_plant_truth_states:
         assert required_state in obligation.acceptance_condition
     assert "orthogonal" in obligation.acceptance_condition
+    assert "unclassified UNKNOWN regime" in obligation.acceptance_condition
+    assert "none is a physical reactor-regime label" in obligation.acceptance_condition
     assert obligation.missing is True
 
 
@@ -163,7 +162,7 @@ def test_request_bytes_are_canonical_sealed_replayable_and_schema_valid() -> Non
     encoded = rs.frc_compression_mif_physical_payload_request_to_bytes(request)
 
     assert encoded.endswith(b"\n")
-    assert len(encoded) == 9691
+    assert len(encoded) == 9807
     assert hashlib.sha256(encoded).hexdigest() == REQUEST_SHA256
     assert rs.frc_compression_mif_physical_payload_request_digest(request) == (
         REQUEST_SHA256

@@ -178,6 +178,12 @@ from .observability_profiles import (
     ReactorSignalCandidateProfile,
     UnmetEvidenceDisposition,
 )
+from .producer_evidence_state import (
+    PRODUCER_EVIDENCE_STATE_POLICIES,
+    ProducerEvidenceDisposition,
+    ProducerEvidenceStatePolicy,
+    producer_evidence_state_policy,
+)
 from .reference_portfolio import (
     ReactorReferenceSlice,
     build_reactor_reference_portfolio,
@@ -388,6 +394,9 @@ __all__ = [
     "UnmetEvidenceDisposition",
     "ValidityState",
     "ValidityWindow",
+    "PRODUCER_EVIDENCE_STATE_POLICIES",
+    "ProducerEvidenceDisposition",
+    "ProducerEvidenceStatePolicy",
     "build_abstaining_regime_assessment",
     "build_phase_relation",
     "build_reactor_reference_portfolio",
@@ -402,6 +411,7 @@ __all__ = [
     "control_intent_from_record",
     "control_intent_to_bytes",
     "control_intent_to_record",
+    "producer_evidence_state_policy",
     "conventional_tokamak_physical_payload_request",
     "conventional_tokamak_physical_payload_request_digest",
     "conventional_tokamak_physical_payload_request_from_bytes",

@@ -202,6 +202,13 @@ def test_occurrence_gap_references_resolve_and_prior_deltas_do_not_overclaim() -
     assert isinstance(occurrences, list)
 
     assert all(set(item["gap_ids"]) <= gap_ids for item in occurrences)
+    state_gap = next(
+        item for item in payload["gap_definitions"] if item["gap_id"] == "STATE-01"
+    )
+    assert "evidence-disposition contract" in state_gap["meaning"]
+    assert "map to U0 validity" in state_gap["meaning"]
+    assert "require physical-regime abstention" in state_gap["meaning"]
+    assert "regime vocabulary" not in state_gap["meaning"]
     statuses = {item["status"] for item in payload["prior_atlas_deltas"]}
     assert statuses == {
         "closed_architecture_gap_physical_evidence_still_open",

@@ -135,8 +135,10 @@ MIF-009's `phase_locked` place is a protocol state guarded partly by numerical
 MIF-010 materially improves the calibration vocabulary but does not supply an
 immutable facility source or calibration lineage. MIF-011 states its additive
 Gaussian and independence assumptions, so its probabilities remain simulation
-evidence. None of these surfaces defines plant-truth `UNKNOWN`, OOD,
-low-observability, or stale states; that absence is recorded as `STATE-01`.
+evidence. None of these surfaces defines producer-owned evidence dispositions
+about current plant truth for `unknown`, OOD, low observability, or stale
+evidence; that absence is recorded as `STATE-01`. These are epistemic/validity
+states, not physical plasma or reactor regimes.
 
 ## CONTROL consumer and local-model surfaces
 
@@ -172,7 +174,8 @@ Five former statements need explicit revision:
    abstaining assessment and retaining `review_only=true`, `actionable=false`.
 5. MIF-008 through MIF-011 add exact trigger timing, protocol-state,
    calibration, and uncertainty-model boundaries. They expose the missing
-   plant-truth state vocabulary instead of filling it with software states.
+   producer evidence-disposition contract instead of filling it with software
+   states or relabelling an evidence failure as a physical regime.
 
 These are source-state deltas, not claims about remote publication, reactor
 operation, or technology readiness.
@@ -189,7 +192,7 @@ operation, or technology readiness.
 | `ACT-01` | semantic review remains intentionally disconnected from actuation and machine protection |
 | `PROD-01` | mirror, ICF, IEC, beam-target, Z-pinch, spheromak, and other families remain architecture-only in this four-project ledger until a producer exists |
 | `LEG-01` | callers must not treat normalized legacy angles as U0 reactor phase |
-| `STATE-01` | software hold/abort, Petri places, missing data, and model probabilities cannot substitute for producer-owned UNKNOWN/OOD/low-observability/stale plant truth |
+| `STATE-01` | software hold/abort, Petri places, missing data, and model probabilities cannot substitute for producer-owned unknown/OOD/low-observability/stale evidence dispositions about current plant truth; all four require physical-regime abstention |
 
 The highest-value next physical slice remains a diagnostic-specific tokamak
 complex-mode observation operator over the MAST magnetic source, but only after

@@ -28,7 +28,8 @@ payload and satisfy all thirteen prerequisites:
 6. a validated observation operator or calibration lineage;
 7. uncertainty;
 8. validity;
-9. a producer-owned plant-truth state vocabulary that distinctly represents
+9. a producer-owned evidence-disposition vocabulary about current plant truth
+   that distinctly represents
    `unknown`, `out_of_distribution`, `low_observability`, and `stale`;
 10. provider and derived quality semantics, orthogonal to plant-truth cause;
 11. immutable provenance and reproducibility, including source and package
@@ -36,11 +37,14 @@ payload and satisfy all thirteen prerequisites:
 12. a predeclared and evaluated observability gate; and
 13. independent validation without same-shot circularity.
 
-The plant-truth state contract must define classification criteria,
+The plant-truth evidence-state contract must define classification criteria,
 precedence, transitions, and interval semantics and bind each state to the
 physical sample, correlated clock, validity, calibration or observation
 operator, and observability-gate result. Generic `accepted`, `degraded`, or
-`rejected` quality labels cannot replace or erase the physical cause. This
+`rejected` quality labels cannot replace or erase the evidence cause. These
+four values map to U0 validity as `unknown`, `out_of_distribution`,
+`unobservable`, and `stale`; every mapping forces an unclassified
+`RegimeState.UNKNOWN`. They are not physical reactor-regime labels. This
 makes the `STATE-01` producer obligation explicit; it does not close the gap.
 `plant_truth_state_contract_present=false` remains fixed until an immutable
 SCPN-MIF-CORE physical payload supplies and validates that evidence.

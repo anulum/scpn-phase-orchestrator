@@ -395,6 +395,26 @@ be `unobservable` and `phase_rad` must be absent. `unknown`, `stale`,
 as usable phases. Non-usable regime evidence can only publish the top-level
 state `unknown`.
 
+`ProducerEvidenceDisposition` makes the producer-side reason explicit without
+inventing a physical plasma state. Its exhaustive policy is:
+
+| Producer disposition | U0 `ValidityState` | Physical-regime result |
+|---|---|---|
+| `unknown` | `unknown` | unclassified `RegimeState.UNKNOWN` |
+| `out_of_distribution` | `out_of_distribution` | unclassified `RegimeState.UNKNOWN` |
+| `low_observability` | `unobservable` | unclassified `RegimeState.UNKNOWN` |
+| `stale` | `stale` | unclassified `RegimeState.UNKNOWN` |
+
+These values describe evidence disposition about current plant truth. They are
+not physical regime labels, protocol states, quality grades, or action states.
+`producer_evidence_state_policy()` rejects untyped string aliases, always sets
+`physical_regime_classified=false`, and fixes
+`quality_may_substitute=false`. `low_observability` means below the
+predeclared observability or minimum-evidence gate; a merely small score above
+that gate does not qualify. OOD is outside a versioned validated applicability
+domain, while stale is outside the declared freshness or validity window for
+the current classification time.
+
 Clock records distinguish plant-monotonic, simulation-monotonic,
 shot-relative, facility-synchronised, wall-clock, model-tick, and unknown time
 bases. They carry an explicit epoch and preserve a 0–999 picosecond offset in

@@ -25,6 +25,7 @@ from .observability_profiles import (
     DEFAULT_REACTOR_OBSERVABILITY_PROFILE_REGISTRY,
     ReactorSignalCandidateProfile,
 )
+from .producer_evidence_state import ProducerEvidenceDisposition
 from .semantic_profiles import DEFAULT_REACTOR_SEMANTIC_PROFILE_REGISTRY
 
 FRC_COMPRESSION_MIF_PHYSICAL_PAYLOAD_REQUEST_SCHEMA: Final = (
@@ -38,11 +39,8 @@ _DEVICE_PROJECT: Final = "SCPN-MIF-CORE"
 _PRODUCER_PROJECT: Final = "SCPN-MIF-CORE"
 _INTAKE_LANE: Final = "L1_extend_exercised_review_adapter"
 _CURRENT_EVIDENCE_STATE: Final = "verified_review_adapter_simulation"
-_REQUIRED_DISTINCT_PLANT_TRUTH_STATES: Final = (
-    "unknown",
-    "out_of_distribution",
-    "low_observability",
-    "stale",
+_REQUIRED_DISTINCT_PLANT_TRUTH_STATES: Final = tuple(
+    disposition.value for disposition in ProducerEvidenceDisposition
 )
 
 
@@ -169,14 +167,16 @@ _REQUIREMENTS: Final = (
     ),
     FRCCompressionMIFPhysicalPayloadRequirement(
         FRCCompressionMIFPhysicalPayloadRequirementId.PLANT_TRUTH_STATE_SEMANTICS,
-        "producer-owned plant-truth state vocabulary and transition semantics",
+        "producer-owned evidence disposition about current plant truth",
         "Supply a versioned producer-owned vocabulary with distinct, non-overlapping "
         "unknown, out_of_distribution, low_observability and stale states; define "
         "classification criteria, precedence, transitions and interval semantics, and "
         "bind every state to physical sample identity, clock correlation, validity, "
         "calibration or observation-operator revision and observability-gate result. "
         "Accepted, degraded and rejected quality labels are orthogonal and cannot "
-        "substitute for or erase the plant-truth cause.",
+        "substitute for or erase the evidence cause. These dispositions must map to "
+        "U0 validity and force an unclassified UNKNOWN regime; none is a physical "
+        "reactor-regime label.",
     ),
     FRCCompressionMIFPhysicalPayloadRequirement(
         FRCCompressionMIFPhysicalPayloadRequirementId.QUALITY,

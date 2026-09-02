@@ -87,8 +87,10 @@ actuation authority.
   its model evidence, numerical coordinates, clock, and trigger as simulation
   only and forbidding their reuse as physical evidence. Version `1.1.0`
   additionally requires distinct producer-owned `unknown`,
-  `out_of_distribution`, `low_observability`, and `stale` plant-truth states;
-  the contract remains absent and the request remains blocked.
+  `out_of_distribution`, `low_observability`, and `stale` evidence
+  dispositions about current plant truth. They map to U0 validity and force
+  physical-regime abstention; the contract remains absent and the request
+  remains blocked.
 
 Both configurations have exercised byte-canonical review adapters, but those
 adapters carry simulation evidence only. The next input must be a physical
@@ -96,10 +98,11 @@ sample envelope with configuration-specific diagnostic identity, clock and
 reference binding, physical observation operator or calibration, uncertainty,
 validity, quality, provenance, and an evaluated observability gate.
 
-The FRC-compression MIF request additionally requires producer-owned
-plant-truth state semantics. Generic accepted/degraded/rejected quality labels
-cannot substitute for the physical cause, and adding the obligation does not
-close `STATE-01` without immutable producer evidence.
+The FRC-compression MIF request additionally requires producer-owned evidence
+dispositions about current plant truth. Generic accepted/degraded/rejected
+quality labels cannot substitute for the evidence cause. These are not
+physical reactor-regime labels, and adding the obligation does not close
+`STATE-01` without immutable producer evidence.
 
 Both L1 requests additionally make immutable source/package identity,
 reproducibility, independent validation, candidate non-selection, and all
@@ -194,13 +197,13 @@ and sealed over canonical JSON payload bytes.
 
 - Schema: `scpn-phase-orchestrator.reactor-producer-evidence-priority-register.v1`
 - Schema version: `1.0.0`
-- Payload SHA-256: `b4d0791d65d7bb213ef813d40b3584dc0107a3c70bfedf58db7b70c9c0cb59bc`
+- Payload SHA-256: `cff2e886485b354e2834cdcccc142638cdb6d7709ca7dc60742b91bd393a042b`
 - Configuration evidence payload:
-  `0e20fad3d336c622abe611aa71a914a937b7cc3ef8626b65cf2c0790dc0f83d5`
+  `b71c857153a290fa76fbac5637d104beb1c87cd77c5cc9b44bbbdcb7c299f601`
 - Diagnostic-plan portfolio payload:
   `33a4609e1f45de3d9e5c7522cbfa8b16227014205f066fd60855971ca41859da`
 - Signal occurrence payload:
-  `11ccb4cafcb12c7b5e977df3159e4d02570d06c224406d5750627c81428facfd`
+  `8210dc2310a7031ccad1a1675677e3e92007a2dd82e696c39d25202d2f9f022f`
 - Technology atlas payload:
   `eb8e2ffbbc98241ac2458044455bcec425860f33ab3ba9d5ea4fa3b86870d3d3`
 
