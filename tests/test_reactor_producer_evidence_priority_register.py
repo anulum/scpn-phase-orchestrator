@@ -63,6 +63,10 @@ MAST_FIXTURES = Path("tests/fixtures/mast_magnetic_source_review")
 LASER_ICF_DIRECT_DRIVE_REQUEST = Path(
     "docs/reference/data/laser_icf_direct_drive_physical_evidence_request.v1.json"
 )
+LASER_ICF_FAST_OR_SHOCK_IGNITION_REQUEST = Path(
+    "docs/reference/data/"
+    "laser_icf_fast_or_shock_ignition_physical_evidence_request.v1.json"
+)
 ION_BEAM_ICF_REQUEST = Path(
     "docs/reference/data/ion_beam_icf_physical_evidence_request.v1.json"
 )
@@ -315,6 +319,7 @@ def test_priority_lanes_follow_custody_precedence_not_external_rank() -> None:
     assert materialized_l3 == {
         "ion_beam_icf",
         "laser_icf_direct_drive",
+        "laser_icf_fast_or_shock_ignition",
         "projectile_or_impact_icf",
         "pulsed_electron_beam_icf",
     }
@@ -490,6 +495,37 @@ def test_priority_register_requests_evidence_without_granting_authority() -> Non
         "source_review_id": runtime_laser_request.source_review_id,
         "source_review_sha256": runtime_laser_request.source_review_sha256,
     }
+    fast_shock_request = by_configuration["laser_icf_fast_or_shock_ignition"][
+        "producer_request"
+    ]
+    assert isinstance(fast_shock_request, dict)
+    fast_shock_materialized = fast_shock_request["materialized_request"]
+    assert isinstance(fast_shock_materialized, dict)
+    runtime_fast_shock_request = device_physical_evidence_request_from_bytes(
+        LASER_ICF_FAST_OR_SHOCK_IGNITION_REQUEST.read_bytes()
+    )
+    assert fast_shock_materialized == {
+        "api": (
+            "scpn_phase_orchestrator.reactor_semantics."
+            "device_physical_evidence_request_from_plan_review"
+        ),
+        "envelope_sha256": device_physical_evidence_request_digest(
+            runtime_fast_shock_request
+        ),
+        "path": LASER_ICF_FAST_OR_SHOCK_IGNITION_REQUEST.as_posix(),
+        "request_id": runtime_fast_shock_request.request_id,
+        "schema": DEVICE_PHYSICAL_EVIDENCE_REQUEST_SCHEMA,
+        "schema_version": DEVICE_PHYSICAL_EVIDENCE_REQUEST_VERSION,
+        "source_review_id": runtime_fast_shock_request.source_review_id,
+        "source_review_sha256": runtime_fast_shock_request.source_review_sha256,
+    }
+    assert runtime_fast_shock_request.source_review_id == (
+        runtime_laser_request.source_review_id
+    )
+    assert runtime_fast_shock_request.request_id != runtime_laser_request.request_id
+    assert (
+        runtime_fast_shock_request.configuration != runtime_laser_request.configuration
+    )
     ion_request = by_configuration["ion_beam_icf"]["producer_request"]
     assert isinstance(ion_request, dict)
     ion_materialized = ion_request["materialized_request"]

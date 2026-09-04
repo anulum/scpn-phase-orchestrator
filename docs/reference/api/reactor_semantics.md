@@ -186,6 +186,12 @@ deriving a different request ID. This proves that review custody can be shared
 without transferring a physical sample, phase, validity, regime,
 semantic-ingress state, CONTROL admission, or authority between configurations.
 
+The fifth instance targets only `laser_icf_fast_or_shock_ignition`. It shares
+the exact sealed SCPN-ICF-LASER-CORE review with direct drive while deriving a
+configuration-specific request ID. Beam timing, derived asymmetry, noncyclic
+trajectory and outcome, and numerical-only model phase retain their distinct
+meanings; direct-drive evidence or authority is never inherited.
+
 All thirteen physical-evidence obligations remain missing, including physical
 sample and diagnostic identity, reference and clock correlation, calibration
 or observation operator, uncertainty, validity, producer evidence-state

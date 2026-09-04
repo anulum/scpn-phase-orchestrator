@@ -81,6 +81,21 @@ request retains thirteen missing prerequisites, no selected candidate, no
 physical source, no admitted observation or phase, no declared semantic
 ingress, no CONTROL request or intent, and no execution or actuation authority.
 
+## Laser-ICF fast/shock-ignition instance
+
+The fifth materialised request selects only
+`laser_icf_fast_or_shock_ignition` from the same exact
+SCPN-ICF-LASER-CORE fixture, source revision, and reproducible wheel digest
+used by the direct-drive request. Configuration identity produces a distinct
+request ID while the shared review retains beam timing as event-relative,
+resolved asymmetry as derived-cyclic, trajectory and outcome as noncyclic, and
+model phase as numerical-only.
+
+The fast/shock request inherits no direct-drive physical sample, selected
+candidate, observation, phase, validity, semantic ingress, CONTROL admission,
+execution, or actuation authority. All thirteen producer prerequisites remain
+missing.
+
 ## Producer obligations
 
 All thirteen prerequisites are explicitly missing: physical sample identity,
@@ -144,6 +159,14 @@ The canonical pulsed-electron-beam request is
 - Canonical envelope SHA-256: `9461ddbc89f623bb0f6d2584e6734eef66e5c9abc1c94f4b18ca131acc9fa15a`
 - Embedded review ID: `5da4be074476c8b3bd4a16c199d5f9f359e11f4e1fa36554765a1c880bf41719`
 - Embedded review SHA-256: `6200379b8ec7284f05c2f271a0a3fda72c1e0efe3fbfaa97aef49a01a7700b3d`
+
+The canonical laser fast/shock-ignition request is
+[`laser_icf_fast_or_shock_ignition_physical_evidence_request.v1.json`](data/laser_icf_fast_or_shock_ignition_physical_evidence_request.v1.json).
+
+- Request ID: `b3c6dc4c666b2af38833f8f506ea79ba6efe838c6fa4d0d48ea68e20f1f57691`
+- Canonical envelope SHA-256: `d4cdd8b0ea88397807457e24aff511ab3dc262266b02295d4540cc8fb7d3103d`
+- Embedded review ID: `0dac2e7bf5043eab60f5979b1fbf73a5331928816b2a7152c6ad41b27151d083`
+- Embedded review SHA-256: `5cb5824bd6058a148d8ab71ead7a0d35939a30b8ddd8d40c1f68cad3caaf0467`
 
 Any source byte, registry binding, candidate meaning, clock boundary,
 obligation, or authority change alters the seal and requires deliberate

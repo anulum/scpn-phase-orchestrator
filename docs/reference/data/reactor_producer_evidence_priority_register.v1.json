@@ -1436,6 +1436,16 @@
             "physical_uncertainty_validity_quality_and_provenance",
             "physical_observability_gate_result"
           ],
+          "materialized_request": {
+            "api": "scpn_phase_orchestrator.reactor_semantics.device_physical_evidence_request_from_plan_review",
+            "envelope_sha256": "d4cdd8b0ea88397807457e24aff511ab3dc262266b02295d4540cc8fb7d3103d",
+            "path": "docs/reference/data/laser_icf_fast_or_shock_ignition_physical_evidence_request.v1.json",
+            "request_id": "b3c6dc4c666b2af38833f8f506ea79ba6efe838c6fa4d0d48ea68e20f1f57691",
+            "schema": "scpn-phase-orchestrator.device-physical-evidence-request.v1",
+            "schema_version": "1.0.0",
+            "source_review_id": "0dac2e7bf5043eab60f5979b1fbf73a5331928816b2a7152c6ad41b27151d083",
+            "source_review_sha256": "5cb5824bd6058a148d8ab71ead7a0d35939a30b8ddd8d40c1f68cad3caaf0467"
+          },
           "source_revision_required": true,
           "package_identity_required": true,
           "canonical_bytes_required": true,
@@ -3234,5 +3244,5 @@
     "direct_actuation_authorized": false,
     "machine_protection_final_veto": true
   },
-  "payload_sha256": "629c04b00cce05d835e8d4dd1d0cb8ee586cb725a363a49aebed3294da61615d"
+  "payload_sha256": "ff719ec3be8ed329287a9fccb837c4244c05fc6eb3b9c43be27b562da911da03"
 }

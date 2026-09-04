@@ -122,6 +122,15 @@ request ID is
 and canonical envelope SHA-256 is
 `9461ddbc89f623bb0f6d2584e6734eef66e5c9abc1c94f4b18ca131acc9fa15a`.
 
+The fifth materialised L3 boundary is specific to
+`laser_icf_fast_or_shock_ignition`. It shares exact SCPN-ICF-LASER-CORE review
+custody with direct drive while preserving a distinct configuration and
+request identity. Neither configuration inherits physical evidence or
+authority from the other. Its request ID is
+`b3c6dc4c666b2af38833f8f506ea79ba6efe838c6fa4d0d48ea68e20f1f57691`
+and canonical envelope SHA-256 is
+`d4cdd8b0ea88397807457e24aff511ab3dc262266b02295d4540cc8fb7d3103d`.
+
 ### L4 — refused plans
 
 Sixteen configurations map to thirteen refused producer objects. Seven
@@ -167,7 +176,7 @@ is validated by
 [`reactor_producer_evidence_priority_register.schema.json`](../specs/reactor_producer_evidence_priority_register.schema.json).
 
 - Schema version: `1.2.0`
-- Payload SHA-256: `629c04b00cce05d835e8d4dd1d0cb8ee586cb725a363a49aebed3294da61615d`
+- Payload SHA-256: `ff719ec3be8ed329287a9fccb837c4244c05fc6eb3b9c43be27b562da911da03`
 - Configuration evidence payload: `7d56f34fdb5c0863813c954d5ad38bb0c1f1dd129ebfc5d93635dfdc47daf5f2`
 - Diagnostic-plan portfolio payload: `13bdcfd794cab002903d4861a378056536e0fcb98beca64863a9b36cc71558a5`
 - Signal occurrence payload: `8210dc2310a7031ccad1a1675677e3e92007a2dd82e696c39d25202d2f9f022f`

@@ -13,6 +13,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   exact SCPN-ICF-BEAM-CORE review. The shared ion/electron design-plan custody
   yields distinct request identities and transfers no physical sample, phase,
   validity, CONTROL admission, execution, or actuation authority.
+- A fifth sealed L3 request now binds only
+  `laser_icf_fast_or_shock_ignition` to the exact SCPN-ICF-LASER-CORE review.
+  Shared laser-plan custody produces a request identity distinct from direct
+  drive and transfers no physical evidence, phase, validity, CONTROL
+  admission, execution, or actuation authority.
 
 ## [1.4.1] - 2026-09-04
 
