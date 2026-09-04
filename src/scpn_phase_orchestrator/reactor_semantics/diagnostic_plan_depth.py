@@ -68,6 +68,17 @@ def validate_diagnostic_plan_depth(
 ) -> None:
     """Validate all members added by producer envelope version 1.2.0.
 
+    Parameters
+    ----------
+    plan : Mapping[str, object]
+        Decoded diagnostic plan.
+    candidate_classes : Mapping[str, str]
+        Governed observability class for each candidate identifier.
+    clock_kinds : Mapping[str, str]
+        Declared clock kind for each clock identifier.
+    frame_kinds : Mapping[str, str]
+        Declared frame kind for each reference-frame identifier.
+
     The declarations remain synthetic design metadata. In particular, signal
     quantity and unit text never select a candidate, change its registered
     carrier, create an observation, or establish a physical phase.

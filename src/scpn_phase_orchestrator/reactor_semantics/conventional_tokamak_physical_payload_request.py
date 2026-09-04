@@ -349,14 +349,31 @@ class ConventionalTokamakPhysicalPayloadRequest:
 def conventional_tokamak_physical_payload_request() -> (
     ConventionalTokamakPhysicalPayloadRequest
 ):
-    """Build the current exact L1 producer prerequisite request."""
+    """Build the current exact L1 producer prerequisite request.
+
+    Returns
+    -------
+    ConventionalTokamakPhysicalPayloadRequest
+        Registry-derived, review-only request for conventional tokamak evidence.
+    """
     return ConventionalTokamakPhysicalPayloadRequest()
 
 
 def conventional_tokamak_physical_payload_request_to_record(
     request: ConventionalTokamakPhysicalPayloadRequest,
 ) -> dict[str, object]:
-    """Return the complete deterministic request payload."""
+    """Return the complete deterministic request payload.
+
+    Parameters
+    ----------
+    request : ConventionalTokamakPhysicalPayloadRequest
+        Request whose governed fields are serialized.
+
+    Returns
+    -------
+    dict[str, object]
+        Canonically ordered request payload.
+    """
     return {
         "actionable": request.actionable,
         "candidate_requirements": [
@@ -443,7 +460,18 @@ _OUTER_KEYS: Final = {"payload", "payload_sha256", "schema", "schema_version"}
 def conventional_tokamak_physical_payload_request_from_record(
     record: object,
 ) -> ConventionalTokamakPhysicalPayloadRequest:
-    """Rebuild the static request and compare every registry-derived field."""
+    """Rebuild the static request and compare every registry-derived field.
+
+    Parameters
+    ----------
+    record : object
+        Decoded request payload to validate.
+
+    Returns
+    -------
+    ConventionalTokamakPhysicalPayloadRequest
+        Reconstructed request after exact contract replay.
+    """
     payload = _object(record, _PAYLOAD_KEYS, "request payload")
     request = ConventionalTokamakPhysicalPayloadRequest()
     if conventional_tokamak_physical_payload_request_to_record(request) != payload:
@@ -457,7 +485,18 @@ def conventional_tokamak_physical_payload_request_from_record(
 def conventional_tokamak_physical_payload_request_to_bytes(
     request: ConventionalTokamakPhysicalPayloadRequest,
 ) -> bytes:
-    """Serialize the request as unique canonical digest-sealed JSON."""
+    """Serialize the request as unique canonical digest-sealed JSON.
+
+    Parameters
+    ----------
+    request : ConventionalTokamakPhysicalPayloadRequest
+        Request to encode.
+
+    Returns
+    -------
+    bytes
+        Canonical digest-sealed request envelope.
+    """
     payload = conventional_tokamak_physical_payload_request_to_record(request)
     return _canonical(
         {
@@ -474,7 +513,20 @@ def conventional_tokamak_physical_payload_request_from_bytes(
     *,
     expected_sha256: str | None = None,
 ) -> ConventionalTokamakPhysicalPayloadRequest:
-    """Decode canonical bytes, verify their digest, and replay all bindings."""
+    """Decode canonical bytes, verify their digest, and replay all bindings.
+
+    Parameters
+    ----------
+    data : bytes
+        Canonical request envelope.
+    expected_sha256 : str | None, optional
+        Expected digest of the complete envelope.
+
+    Returns
+    -------
+    ConventionalTokamakPhysicalPayloadRequest
+        Reconstructed request after digest and contract validation.
+    """
     if expected_sha256 is not None and (
         not isinstance(expected_sha256, str)
         or len(expected_sha256) != 64
@@ -511,7 +563,18 @@ def conventional_tokamak_physical_payload_request_from_bytes(
 def conventional_tokamak_physical_payload_request_digest(
     request: ConventionalTokamakPhysicalPayloadRequest,
 ) -> str:
-    """Return the SHA-256 of the complete canonical request envelope."""
+    """Return the SHA-256 of the complete canonical request envelope.
+
+    Parameters
+    ----------
+    request : ConventionalTokamakPhysicalPayloadRequest
+        Request to digest.
+
+    Returns
+    -------
+    str
+        Lowercase SHA-256 digest.
+    """
     return _sha256(conventional_tokamak_physical_payload_request_to_bytes(request))
 
 

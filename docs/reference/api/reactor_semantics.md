@@ -736,6 +736,16 @@ assessment and research-intent envelopes.
       show_root_heading: true
       show_source: false
 
+::: scpn_phase_orchestrator.reactor_semantics.diagnostic_plan_depth
+    options:
+      show_root_heading: true
+      show_source: false
+
+::: scpn_phase_orchestrator.reactor_semantics.diagnostic_plan_physical_evidence_request
+    options:
+      show_root_heading: true
+      show_source: false
+
 ::: scpn_phase_orchestrator.reactor_semantics.diagnostic_plan_review
     options:
       show_root_heading: true
@@ -761,12 +771,22 @@ assessment and research-intent envelopes.
       show_root_heading: true
       show_source: false
 
+::: scpn_phase_orchestrator.reactor_semantics.mast_phase_qualification_request
+    options:
+      show_root_heading: true
+      show_source: false
+
 ::: scpn_phase_orchestrator.reactor_semantics.mif_merge_compression
     options:
       show_root_heading: true
       show_source: false
 
 ::: scpn_phase_orchestrator.reactor_semantics.observability_profiles
+    options:
+      show_root_heading: true
+      show_source: false
+
+::: scpn_phase_orchestrator.reactor_semantics.producer_evidence_state
     options:
       show_root_heading: true
       show_source: false

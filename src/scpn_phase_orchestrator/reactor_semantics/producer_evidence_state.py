@@ -63,7 +63,13 @@ class ProducerEvidenceStatePolicy:
             )
 
     def to_record(self) -> dict[str, object]:
-        """Return the deterministic public policy record."""
+        """Return the deterministic public policy record.
+
+        Returns
+        -------
+        dict[str, object]
+            Canonical policy fields for portable serialization.
+        """
         return {
             "disposition": self.disposition.value,
             "meaning": self.meaning,
@@ -109,7 +115,23 @@ _POLICY_BY_DISPOSITION: Final = {
 def producer_evidence_state_policy(
     disposition: ProducerEvidenceDisposition,
 ) -> ProducerEvidenceStatePolicy:
-    """Resolve one typed producer disposition without accepting string aliases."""
+    """Resolve one typed producer disposition without string coercion.
+
+    Parameters
+    ----------
+    disposition : ProducerEvidenceDisposition
+        Exact typed producer evidence disposition.
+
+    Returns
+    -------
+    ProducerEvidenceStatePolicy
+        Immutable policy assigned to the disposition.
+
+    Raises
+    ------
+    TypeError
+        If disposition is not the declared enum type.
+    """
     if not isinstance(disposition, ProducerEvidenceDisposition):
         raise TypeError("disposition must be ProducerEvidenceDisposition")
     return _POLICY_BY_DISPOSITION[disposition]

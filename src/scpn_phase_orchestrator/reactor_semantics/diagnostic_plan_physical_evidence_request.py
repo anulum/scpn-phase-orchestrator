@@ -438,7 +438,18 @@ def device_physical_evidence_request_from_plan_review(
 def device_physical_evidence_request_to_record(
     request: DevicePhysicalEvidenceRequest,
 ) -> dict[str, object]:
-    """Return the complete deterministic request payload."""
+    """Return the complete deterministic request payload.
+
+    Parameters
+    ----------
+    request : DevicePhysicalEvidenceRequest
+        Request whose source and registry bindings are serialized.
+
+    Returns
+    -------
+    dict[str, object]
+        Canonically ordered request payload.
+    """
     return {
         "actionable": request.actionable,
         "authority": request.authority,
@@ -567,7 +578,18 @@ _OUTER_KEYS: Final = {"payload", "payload_sha256", "schema", "schema_version"}
 def device_physical_evidence_request_from_record(
     record: object,
 ) -> DevicePhysicalEvidenceRequest:
-    """Rebuild a request and replay every source and registry-derived field."""
+    """Rebuild a request and replay every source and registry-derived field.
+
+    Parameters
+    ----------
+    record : object
+        Decoded request payload to validate.
+
+    Returns
+    -------
+    DevicePhysicalEvidenceRequest
+        Reconstructed request after exact source and registry replay.
+    """
     payload = _object(record, _PAYLOAD_KEYS, "request payload")
     configuration = payload["configuration"]
     source_review_json = payload["source_review_json"]
@@ -591,7 +613,18 @@ def device_physical_evidence_request_from_record(
 def device_physical_evidence_request_to_bytes(
     request: DevicePhysicalEvidenceRequest,
 ) -> bytes:
-    """Serialise a request as unique canonical digest-sealed JSON."""
+    """Serialise a request as unique canonical digest-sealed JSON.
+
+    Parameters
+    ----------
+    request : DevicePhysicalEvidenceRequest
+        Request to encode.
+
+    Returns
+    -------
+    bytes
+        Canonical digest-sealed request envelope.
+    """
     payload = device_physical_evidence_request_to_record(request)
     return _canonical(
         {
@@ -608,7 +641,20 @@ def device_physical_evidence_request_from_bytes(
     *,
     expected_sha256: str | None = None,
 ) -> DevicePhysicalEvidenceRequest:
-    """Decode canonical bytes, verify their digest, and replay all bindings."""
+    """Decode canonical bytes, verify their digest, and replay all bindings.
+
+    Parameters
+    ----------
+    data : bytes
+        Canonical request envelope.
+    expected_sha256 : str | None, optional
+        Expected digest of the complete envelope.
+
+    Returns
+    -------
+    DevicePhysicalEvidenceRequest
+        Reconstructed request after digest and contract validation.
+    """
     if not isinstance(data, bytes):
         _refuse(
             DevicePhysicalEvidenceRequestRefusalCode.INVALID_INPUT,
@@ -649,7 +695,18 @@ def device_physical_evidence_request_from_bytes(
 def device_physical_evidence_request_digest(
     request: DevicePhysicalEvidenceRequest,
 ) -> str:
-    """Return the SHA-256 of the complete canonical request envelope."""
+    """Return the SHA-256 of the complete canonical request envelope.
+
+    Parameters
+    ----------
+    request : DevicePhysicalEvidenceRequest
+        Request to digest.
+
+    Returns
+    -------
+    str
+        Lowercase SHA-256 digest.
+    """
     return _sha256(device_physical_evidence_request_to_bytes(request))
 
 

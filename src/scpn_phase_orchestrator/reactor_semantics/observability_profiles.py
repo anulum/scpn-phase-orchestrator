@@ -699,7 +699,25 @@ def resolve_reactor_observability_profile_registry_release(
     version: str,
     digest: str,
 ) -> ReactorObservabilityProfileRegistry:
-    """Resolve one exact immutable observability-catalogue release."""
+    """Resolve one exact immutable observability-catalogue release.
+
+    Parameters
+    ----------
+    version : str
+        Semantic version of the requested registry.
+    digest : str
+        Lowercase SHA-256 digest of the requested registry.
+
+    Returns
+    -------
+    ReactorObservabilityProfileRegistry
+        Exact immutable registry matching both identifiers.
+
+    Raises
+    ------
+    ValueError
+        If either identifier is invalid or the release is unknown.
+    """
     key = (
         require_semver(version, field="observability registry version"),
         require_sha256(digest, field="observability registry digest"),

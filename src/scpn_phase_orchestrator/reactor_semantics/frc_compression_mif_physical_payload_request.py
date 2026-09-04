@@ -350,14 +350,31 @@ class FRCCompressionMIFPhysicalPayloadRequest:
 def frc_compression_mif_physical_payload_request() -> (
     FRCCompressionMIFPhysicalPayloadRequest
 ):
-    """Build the current exact L1 producer prerequisite request."""
+    """Build the current exact L1 producer prerequisite request.
+
+    Returns
+    -------
+    FRCCompressionMIFPhysicalPayloadRequest
+        Registry-derived, review-only request for FRC-compression MIF evidence.
+    """
     return FRCCompressionMIFPhysicalPayloadRequest()
 
 
 def frc_compression_mif_physical_payload_request_to_record(
     request: FRCCompressionMIFPhysicalPayloadRequest,
 ) -> dict[str, object]:
-    """Return the complete deterministic request payload."""
+    """Return the complete deterministic request payload.
+
+    Parameters
+    ----------
+    request : FRCCompressionMIFPhysicalPayloadRequest
+        Request whose governed fields are serialized.
+
+    Returns
+    -------
+    dict[str, object]
+        Canonically ordered request payload.
+    """
     return {
         "actionable": request.actionable,
         "candidate_requirements": [
@@ -444,7 +461,18 @@ _OUTER_KEYS: Final = {"payload", "payload_sha256", "schema", "schema_version"}
 def frc_compression_mif_physical_payload_request_from_record(
     record: object,
 ) -> FRCCompressionMIFPhysicalPayloadRequest:
-    """Rebuild the static request and compare every registry-derived field."""
+    """Rebuild the static request and compare every registry-derived field.
+
+    Parameters
+    ----------
+    record : object
+        Decoded request payload to validate.
+
+    Returns
+    -------
+    FRCCompressionMIFPhysicalPayloadRequest
+        Reconstructed request after exact contract replay.
+    """
     payload = _object(record, _PAYLOAD_KEYS, "request payload")
     request = FRCCompressionMIFPhysicalPayloadRequest()
     if frc_compression_mif_physical_payload_request_to_record(request) != payload:
@@ -458,7 +486,18 @@ def frc_compression_mif_physical_payload_request_from_record(
 def frc_compression_mif_physical_payload_request_to_bytes(
     request: FRCCompressionMIFPhysicalPayloadRequest,
 ) -> bytes:
-    """Serialize the request as unique canonical digest-sealed JSON."""
+    """Serialize the request as unique canonical digest-sealed JSON.
+
+    Parameters
+    ----------
+    request : FRCCompressionMIFPhysicalPayloadRequest
+        Request to encode.
+
+    Returns
+    -------
+    bytes
+        Canonical digest-sealed request envelope.
+    """
     payload = frc_compression_mif_physical_payload_request_to_record(request)
     return _canonical(
         {
@@ -475,7 +514,20 @@ def frc_compression_mif_physical_payload_request_from_bytes(
     *,
     expected_sha256: str | None = None,
 ) -> FRCCompressionMIFPhysicalPayloadRequest:
-    """Decode canonical bytes, verify their digest, and replay all bindings."""
+    """Decode canonical bytes, verify their digest, and replay all bindings.
+
+    Parameters
+    ----------
+    data : bytes
+        Canonical request envelope.
+    expected_sha256 : str | None, optional
+        Expected digest of the complete envelope.
+
+    Returns
+    -------
+    FRCCompressionMIFPhysicalPayloadRequest
+        Reconstructed request after digest and contract validation.
+    """
     if expected_sha256 is not None and (
         not isinstance(expected_sha256, str)
         or len(expected_sha256) != 64
@@ -512,7 +564,18 @@ def frc_compression_mif_physical_payload_request_from_bytes(
 def frc_compression_mif_physical_payload_request_digest(
     request: FRCCompressionMIFPhysicalPayloadRequest,
 ) -> str:
-    """Return the SHA-256 of the complete canonical request envelope."""
+    """Return the SHA-256 of the complete canonical request envelope.
+
+    Parameters
+    ----------
+    request : FRCCompressionMIFPhysicalPayloadRequest
+        Request to digest.
+
+    Returns
+    -------
+    str
+        Lowercase SHA-256 digest.
+    """
     return _sha256(frc_compression_mif_physical_payload_request_to_bytes(request))
 
 
