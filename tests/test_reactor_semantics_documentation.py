@@ -26,6 +26,9 @@ TECHNOLOGY_DIAGNOSTIC_ATLAS = Path(
 PRODUCER_EVIDENCE_PRIORITY_REGISTER = Path(
     "docs/reference/reactor_producer_evidence_priority_register.md"
 )
+DEVICE_PHYSICAL_EVIDENCE_REQUEST = Path(
+    "docs/reference/device_physical_evidence_request.md"
+)
 CONVENTIONAL_TOKAMAK_PHYSICAL_PAYLOAD_REQUEST = Path(
     "docs/reference/conventional_tokamak_physical_payload_request.md"
 )
@@ -68,6 +71,11 @@ def test_reactor_semantics_reference_preserves_u0_boundaries() -> None:
         "Device diagnostic-plan design review",
         "device_diagnostic_plan_review_from_producer_bytes()",
         "device_diagnostic_plan_review.schema.json",
+        "Accepted-plan to physical-evidence request",
+        "device_physical_evidence_request_from_plan_review()",
+        "The first materialised instance targets only `laser_icf_direct_drive`",
+        "source-bound gaps or provisional candidates",
+        "device_physical_evidence_request.schema.json",
         "versions `1.1.0` and `1.2.0` to separate exact plan and channel shapes",
         "Signal quantity and unit text cannot override the registered candidate",
         "embedded byte-for-byte in the review output",
@@ -208,9 +216,39 @@ def test_reactor_producer_evidence_priority_is_non_scalar_and_fail_closed() -> N
         "zero qualified physical phases",
         "zero CONTROL admissions",
         "`machine_protection_final_veto=true`",
-        "`1e2cb5e9b82cd89f56bb8681fab115e7893b7524dfdb7ef11c57c52f782ee13f`",
+        "`ba09efdf2bfc9b36b92aeabb2c0b1f306d10a735d5ed989204dea6ddaa38929b`",
+        "direct-drive laser-ICF",
+        "`device_physical_evidence_request_from_plan_review()`",
         "reactor_producer_evidence_priority_register.v1.json",
         "reactor_producer_evidence_priority_register.schema.json",
+    )
+
+    for marker in required:
+        assert marker in text
+
+
+def test_device_physical_evidence_request_is_exact_and_fail_closed() -> None:
+    text = " ".join(
+        DEVICE_PHYSICAL_EVIDENCE_REQUEST.read_text(encoding="utf-8").split()
+    )
+    required = (
+        "common L3 boundary",
+        "scoped only to `laser_icf_direct_drive`",
+        "event-relative `event_cycle`",
+        "`derived_cyclic`",
+        "`noncyclic_feature`",
+        "`numerical_only`",
+        "All thirteen prerequisites are explicitly missing",
+        "producer evidence-state contract",
+        "New peer discoveries enter the atlas as explicit gaps or provisional",
+        "A peer report alone is not physical evidence",
+        "`selected_candidate_id=null`",
+        "`control_admission_requested=false`",
+        "`direct_actuation=false`",
+        "`machine_protection_final_veto=true`",
+        "`3f273e5ef1fb68e7a928913a7f7a8c9b5e6055a7649c722598911fa39458111a`",
+        "`f42a9817dcef628caefab5ba5681853327bae9b21ba72459eb9588e14c2ed6a9`",
+        "device_physical_evidence_request.schema.json",
     )
 
     for marker in required:

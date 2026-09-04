@@ -36,6 +36,7 @@ def _run_isolated(source: str) -> dict[str, object]:
 def test_every_reactor_semantics_submodule_avoids_optional_runtime_graph() -> None:
     payload = _run_isolated(
         """
+        import importlib
         import json
         import sys
 
@@ -47,6 +48,10 @@ def test_every_reactor_semantics_submodule_avoids_optional_runtime_graph() -> No
         )
         import scpn_phase_orchestrator.reactor_semantics.coupled_transport
         import scpn_phase_orchestrator.reactor_semantics.diagnostic_plan_depth
+        importlib.import_module(
+            "scpn_phase_orchestrator.reactor_semantics."
+            "diagnostic_plan_physical_evidence_request"
+        )
         import scpn_phase_orchestrator.reactor_semantics.diagnostic_plan_review
         import scpn_phase_orchestrator.reactor_semantics.evidence
         from scpn_phase_orchestrator.reactor_semantics import (
@@ -75,6 +80,7 @@ def test_every_reactor_semantics_submodule_avoids_optional_runtime_graph() -> No
             "scpn_phase_orchestrator.reactor_semantics.conventional_tokamak_physical_payload_request",
             "scpn_phase_orchestrator.reactor_semantics.coupled_transport",
             "scpn_phase_orchestrator.reactor_semantics.diagnostic_plan_depth",
+            "scpn_phase_orchestrator.reactor_semantics.diagnostic_plan_physical_evidence_request",
             "scpn_phase_orchestrator.reactor_semantics.diagnostic_plan_review",
             "scpn_phase_orchestrator.reactor_semantics.evidence",
             "scpn_phase_orchestrator.reactor_semantics.frc_compression_mif_physical_payload_request",
@@ -128,6 +134,7 @@ def test_every_reactor_semantics_submodule_avoids_optional_runtime_graph() -> No
             "scpn_phase_orchestrator.reactor_semantics.conventional_tokamak_physical_payload_request",
             "scpn_phase_orchestrator.reactor_semantics.coupled_transport",
             "scpn_phase_orchestrator.reactor_semantics.diagnostic_plan_depth",
+            "scpn_phase_orchestrator.reactor_semantics.diagnostic_plan_physical_evidence_request",
             "scpn_phase_orchestrator.reactor_semantics.diagnostic_plan_review",
             "scpn_phase_orchestrator.reactor_semantics.evidence",
             "scpn_phase_orchestrator.reactor_semantics.frc_compression_mif_physical_payload_request",

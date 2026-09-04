@@ -1,0 +1,436 @@
+{
+  "$defs": {
+    "candidate_requirement": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "observability_class": {"const": "numerical_only"}
+            },
+            "required": ["observability_class"]
+          },
+          "then": {
+            "properties": {
+              "physical_selection_eligible": {"const": false}
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "plan_disposition": {"const": "deferred"}
+            },
+            "required": ["plan_disposition"]
+          },
+          "then": {
+            "properties": {
+              "channel_identifiers": {"maxItems": 0},
+              "clock_identifiers": {"maxItems": 0},
+              "declared_carriers": {"maxItems": 0},
+              "evidence_slots": {"maxItems": 0},
+              "physical_selection_eligible": {"const": false},
+              "plan_revision_required": {"const": true}
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "plan_disposition": {"const": "planned"}
+            },
+            "required": ["plan_disposition"]
+          },
+          "then": {
+            "properties": {
+              "channel_identifiers": {"minItems": 1},
+              "plan_revision_required": {"const": false}
+            }
+          }
+        }
+      ],
+      "properties": {
+        "candidate_id": {"$ref": "#/$defs/identifier"},
+        "channel_identifiers": {
+          "items": {"$ref": "#/$defs/identifier"},
+          "type": "array",
+          "uniqueItems": true
+        },
+        "clock_identifiers": {
+          "items": {"$ref": "#/$defs/identifier"},
+          "type": "array",
+          "uniqueItems": true
+        },
+        "declared_carriers": {
+          "items": {
+            "enum": [
+              "bounded_feature",
+              "categorical_state",
+              "complex_mode",
+              "cyclic_phase",
+              "event_cycle",
+              "field_phase",
+              "numerical_phase",
+              "protocol_phase"
+            ]
+          },
+          "type": "array",
+          "uniqueItems": true
+        },
+        "evidence_claimed": {"const": false},
+        "evidence_slots": {
+          "items": {"$ref": "#/$defs/identifier"},
+          "type": "array",
+          "uniqueItems": true
+        },
+        "observation_claimed": {"const": false},
+        "observation_operator_required": {"type": "boolean"},
+        "observability_class": {
+          "enum": [
+            "derived_cyclic",
+            "direct_cyclic",
+            "event_relative",
+            "noncyclic_feature",
+            "numerical_only",
+            "unobservable"
+          ]
+        },
+        "phenomenon": {"minLength": 1, "type": "string"},
+        "physical_sample_present": {"const": false},
+        "physical_selection_eligible": {"type": "boolean"},
+        "plan_disposition": {"enum": ["deferred", "planned"]},
+        "plan_revision_required": {"type": "boolean"},
+        "reference_required": {"type": "boolean"},
+        "repeated_cycle_required": {"type": "boolean"},
+        "required_physical_evidence": {
+          "items": {"$ref": "#/$defs/identifier"},
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "synthetic_declaration_only": {"const": true},
+        "unmet_evidence": {
+          "enum": [
+            "event_timestamps_or_protocol",
+            "no_usable_phase",
+            "preserve_noncyclic",
+            "retain_simulation_class",
+            "unobservable_phase"
+          ]
+        }
+      },
+      "required": [
+        "candidate_id",
+        "channel_identifiers",
+        "clock_identifiers",
+        "declared_carriers",
+        "evidence_claimed",
+        "evidence_slots",
+        "observation_claimed",
+        "observation_operator_required",
+        "observability_class",
+        "phenomenon",
+        "physical_sample_present",
+        "physical_selection_eligible",
+        "plan_disposition",
+        "plan_revision_required",
+        "reference_required",
+        "repeated_cycle_required",
+        "required_physical_evidence",
+        "synthetic_declaration_only",
+        "unmet_evidence"
+      ],
+      "type": "object"
+    },
+    "clock_requirement": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "plan_clock_kind": {"const": "simulation"}
+            },
+            "required": ["plan_clock_kind"]
+          },
+          "then": {
+            "properties": {
+              "eligible_for_physical_reference": {"const": false},
+              "physical_correlation_required": {"const": false}
+            }
+          },
+          "else": {
+            "properties": {
+              "eligible_for_physical_reference": {"const": true},
+              "physical_correlation_required": {"const": true}
+            }
+          }
+        }
+      ],
+      "properties": {
+        "compatibility": {
+          "enum": [
+            "event_relative_compatible",
+            "synthetic_compatible",
+            "unmapped"
+          ]
+        },
+        "eligible_for_physical_reference": {"type": "boolean"},
+        "epoch": {"minLength": 1, "type": "string"},
+        "mapping_evidence_claimed": {"const": false},
+        "physical_correlation_required": {"type": "boolean"},
+        "plan_clock_identifier": {"$ref": "#/$defs/identifier"},
+        "plan_clock_kind": {
+          "enum": ["facility_monotonic", "shot_event_epoch", "simulation"]
+        },
+        "resolution_s": {"exclusiveMinimum": 0, "type": "number"},
+        "uncertainty_s": {"minimum": 0, "type": "number"}
+      },
+      "required": [
+        "compatibility",
+        "eligible_for_physical_reference",
+        "epoch",
+        "mapping_evidence_claimed",
+        "physical_correlation_required",
+        "plan_clock_identifier",
+        "plan_clock_kind",
+        "resolution_s",
+        "uncertainty_s"
+      ],
+      "type": "object"
+    },
+    "git_sha": {
+      "pattern": "^[0-9a-f]{40}$",
+      "type": "string"
+    },
+    "identifier": {
+      "pattern": "^[a-z][a-z0-9_.]*$",
+      "type": "string"
+    },
+    "producer_evidence_state_policy": {
+      "additionalProperties": false,
+      "properties": {
+        "disposition": {
+          "enum": [
+            "unknown",
+            "out_of_distribution",
+            "low_observability",
+            "stale"
+          ]
+        },
+        "meaning": {"minLength": 1, "type": "string"},
+        "physical_regime_classified": {"const": false},
+        "quality_may_substitute": {"const": false},
+        "regime_state": {"const": "unknown"},
+        "validity_state": {
+          "enum": [
+            "out_of_distribution",
+            "stale",
+            "unknown",
+            "unobservable"
+          ]
+        }
+      },
+      "required": [
+        "disposition",
+        "meaning",
+        "physical_regime_classified",
+        "quality_may_substitute",
+        "regime_state",
+        "validity_state"
+      ],
+      "type": "object"
+    },
+    "requirement": {
+      "additionalProperties": false,
+      "properties": {
+        "acceptance_condition": {"minLength": 1, "type": "string"},
+        "evidence_subject": {"minLength": 1, "type": "string"},
+        "immutable_artifact_binding_required": {"const": true},
+        "missing": {"const": true},
+        "requirement_id": {
+          "enum": [
+            "physical_sample_identity",
+            "configuration_specific_diagnostic_identity",
+            "phenomenon_identity",
+            "physical_reference_identity",
+            "physical_clock_epoch_correlation",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "producer_evidence_state_semantics",
+            "quality",
+            "provenance_and_reproducibility",
+            "observability_gate",
+            "independent_validation"
+          ]
+        }
+      },
+      "required": [
+        "acceptance_condition",
+        "evidence_subject",
+        "immutable_artifact_binding_required",
+        "missing",
+        "requirement_id"
+      ],
+      "type": "object"
+    },
+    "semver": {
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:[+-][0-9A-Za-z.-]+)?$",
+      "type": "string"
+    },
+    "sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    }
+  },
+  "$id": "https://www.anulum.li/schemas/spo/device-physical-evidence-request/v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "A configuration-specific, digest-sealed request derived from an accepted synthetic diagnostic-plan review. It records missing physical evidence and grants no observation, phase, CONTROL, execution or actuation authority.",
+  "properties": {
+    "payload": {
+      "additionalProperties": false,
+      "properties": {
+        "actionable": {"const": false},
+        "authority": {"const": "review_only"},
+        "candidate_requirements": {
+          "items": {"$ref": "#/$defs/candidate_requirement"},
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "clock_requirements": {
+          "items": {"$ref": "#/$defs/clock_requirement"},
+          "type": "array",
+          "uniqueItems": true
+        },
+        "configuration": {
+          "pattern": "^[a-z][a-z0-9_.]*(?::[a-z][a-z0-9_.]*)?$",
+          "type": "string"
+        },
+        "control_admission_requested": {"const": false},
+        "control_intent_created": {"const": false},
+        "device_project": {
+          "pattern": "^SCPN-[A-Z0-9-]+$",
+          "type": "string"
+        },
+        "diagnostic_plan_accepted": {"const": true},
+        "diagnostic_plan_is_physical_evidence": {"const": false},
+        "direct_actuation": {"const": false},
+        "execution_permitted": {"const": false},
+        "machine_protection_final_veto": {"const": true},
+        "observability_registry_digest": {"$ref": "#/$defs/sha256"},
+        "observability_registry_version": {"$ref": "#/$defs/semver"},
+        "observation_admitted": {"const": false},
+        "phase_inference_eligible": {"const": false},
+        "phase_inference_performed": {"const": false},
+        "physical_payload_schema_allocated": {"const": false},
+        "physical_source_present": {"const": false},
+        "plan_identifier": {"$ref": "#/$defs/identifier"},
+        "producer_evidence_state_contract_present": {"const": false},
+        "producer_evidence_state_contract_required": {"const": true},
+        "producer_evidence_state_policies": {
+          "items": {"$ref": "#/$defs/producer_evidence_state_policy"},
+          "maxItems": 4,
+          "minItems": 4,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "producer_package_revision": {"minLength": 1, "type": "string"},
+        "qualification_state": {
+          "const": "blocked_missing_physical_producer_evidence"
+        },
+        "quality_state_may_substitute_for_evidence_state": {"const": false},
+        "reactor_registry_digest": {"$ref": "#/$defs/sha256"},
+        "reactor_registry_version": {"$ref": "#/$defs/semver"},
+        "request_id": {"$ref": "#/$defs/sha256"},
+        "requested_owner_project": {
+          "pattern": "^SCPN-[A-Z0-9-]+$",
+          "type": "string"
+        },
+        "requirements": {
+          "items": {"$ref": "#/$defs/requirement"},
+          "maxItems": 13,
+          "minItems": 13,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "selected_candidate_id": {"type": "null"},
+        "semantic_ingress_declared": {"const": false},
+        "semantic_profile_registry_digest": {"$ref": "#/$defs/sha256"},
+        "semantic_profile_registry_version": {"$ref": "#/$defs/semver"},
+        "source_artifact_sha256": {"$ref": "#/$defs/sha256"},
+        "source_envelope_sha256": {"$ref": "#/$defs/sha256"},
+        "source_manifest_sha256": {"$ref": "#/$defs/sha256"},
+        "source_observability_registry_digest": {"$ref": "#/$defs/sha256"},
+        "source_observability_registry_version": {"$ref": "#/$defs/semver"},
+        "source_plan_sha256": {"$ref": "#/$defs/sha256"},
+        "source_reactor_registry_digest": {"$ref": "#/$defs/sha256"},
+        "source_reactor_registry_version": {"$ref": "#/$defs/semver"},
+        "source_review_id": {"$ref": "#/$defs/sha256"},
+        "source_review_json": {"minLength": 1, "type": "string"},
+        "source_review_sha256": {"$ref": "#/$defs/sha256"},
+        "source_revision": {"$ref": "#/$defs/git_sha"}
+      },
+      "required": [
+        "actionable",
+        "authority",
+        "candidate_requirements",
+        "clock_requirements",
+        "configuration",
+        "control_admission_requested",
+        "control_intent_created",
+        "device_project",
+        "diagnostic_plan_accepted",
+        "diagnostic_plan_is_physical_evidence",
+        "direct_actuation",
+        "execution_permitted",
+        "machine_protection_final_veto",
+        "observability_registry_digest",
+        "observability_registry_version",
+        "observation_admitted",
+        "phase_inference_eligible",
+        "phase_inference_performed",
+        "physical_payload_schema_allocated",
+        "physical_source_present",
+        "plan_identifier",
+        "producer_evidence_state_contract_present",
+        "producer_evidence_state_contract_required",
+        "producer_evidence_state_policies",
+        "producer_package_revision",
+        "qualification_state",
+        "quality_state_may_substitute_for_evidence_state",
+        "reactor_registry_digest",
+        "reactor_registry_version",
+        "request_id",
+        "requested_owner_project",
+        "requirements",
+        "selected_candidate_id",
+        "semantic_ingress_declared",
+        "semantic_profile_registry_digest",
+        "semantic_profile_registry_version",
+        "source_artifact_sha256",
+        "source_envelope_sha256",
+        "source_manifest_sha256",
+        "source_observability_registry_digest",
+        "source_observability_registry_version",
+        "source_plan_sha256",
+        "source_reactor_registry_digest",
+        "source_reactor_registry_version",
+        "source_review_id",
+        "source_review_json",
+        "source_review_sha256",
+        "source_revision"
+      ],
+      "type": "object"
+    },
+    "payload_sha256": {"$ref": "#/$defs/sha256"},
+    "schema": {
+      "const": "scpn-phase-orchestrator.device-physical-evidence-request.v1"
+    },
+    "schema_version": {"const": "1.0.0"}
+  },
+  "required": ["payload", "payload_sha256", "schema", "schema_version"],
+  "title": "SCPN Phase Orchestrator device physical-evidence request v1",
+  "type": "object"
+}

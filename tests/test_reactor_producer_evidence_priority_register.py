@@ -24,12 +24,16 @@ from scpn_phase_orchestrator.reactor_semantics import (
     DEFAULT_REACTOR_OBSERVABILITY_PROFILE_REGISTRY,
     DEFAULT_REACTOR_REGISTRY,
     DEFAULT_REACTOR_SEMANTIC_PROFILE_REGISTRY,
+    DEVICE_PHYSICAL_EVIDENCE_REQUEST_SCHEMA,
+    DEVICE_PHYSICAL_EVIDENCE_REQUEST_VERSION,
     FRC_COMPRESSION_MIF_PHYSICAL_PAYLOAD_REQUEST_SCHEMA,
     FRC_COMPRESSION_MIF_PHYSICAL_PAYLOAD_REQUEST_VERSION,
     MAST_PHASE_QUALIFICATION_REQUEST_SCHEMA,
     MAST_PHASE_QUALIFICATION_REQUEST_VERSION,
     conventional_tokamak_physical_payload_request,
     conventional_tokamak_physical_payload_request_digest,
+    device_physical_evidence_request_digest,
+    device_physical_evidence_request_from_bytes,
     frc_compression_mif_physical_payload_request,
     frc_compression_mif_physical_payload_request_digest,
     mast_magnetic_source_review_from_producer_bytes,
@@ -56,6 +60,9 @@ SOURCE_PATHS = {
     ),
 }
 MAST_FIXTURES = Path("tests/fixtures/mast_magnetic_source_review")
+LASER_ICF_DIRECT_DRIVE_REQUEST = Path(
+    "docs/reference/data/laser_icf_direct_drive_physical_evidence_request.v1.json"
+)
 MAST_SOURCE_REVISION = "c30fb3932b47a812dc26d5846761030cdd0bc94c"
 MAST_SOURCE_WHEEL_SHA256 = (
     "a709b8aeecbd9483254bc3df1b29b87bf9df59ada92255af41631d861db430c9"
@@ -145,6 +152,18 @@ def test_priority_register_matches_schema_and_payload_seal() -> None:
         register["payload_sha256"]
         == hashlib.sha256(_canonical(register["payload"])).hexdigest()
     )
+
+
+def test_materialized_source_review_binding_is_atomic() -> None:
+    schema = _load(SCHEMA)
+    register = json.loads(json.dumps(_load(REGISTER)))
+    rows = register["payload"]["configurations"]
+    row = next(
+        item for item in rows if item["configuration"] == "laser_icf_direct_drive"
+    )
+    del row["producer_request"]["materialized_request"]["source_review_sha256"]
+
+    assert list(Draft202012Validator(schema).iter_errors(register))
 
 
 def test_priority_register_binds_exact_current_source_artifacts() -> None:
@@ -427,6 +446,28 @@ def test_priority_register_requests_evidence_without_granting_authority() -> Non
         "request_id": runtime_mif_request.request_id,
         "schema": FRC_COMPRESSION_MIF_PHYSICAL_PAYLOAD_REQUEST_SCHEMA,
         "schema_version": FRC_COMPRESSION_MIF_PHYSICAL_PAYLOAD_REQUEST_VERSION,
+    }
+    laser_request = by_configuration["laser_icf_direct_drive"]["producer_request"]
+    assert isinstance(laser_request, dict)
+    laser_materialized = laser_request["materialized_request"]
+    assert isinstance(laser_materialized, dict)
+    runtime_laser_request = device_physical_evidence_request_from_bytes(
+        LASER_ICF_DIRECT_DRIVE_REQUEST.read_bytes()
+    )
+    assert laser_materialized == {
+        "api": (
+            "scpn_phase_orchestrator.reactor_semantics."
+            "device_physical_evidence_request_from_plan_review"
+        ),
+        "envelope_sha256": device_physical_evidence_request_digest(
+            runtime_laser_request
+        ),
+        "path": LASER_ICF_DIRECT_DRIVE_REQUEST.as_posix(),
+        "request_id": runtime_laser_request.request_id,
+        "schema": DEVICE_PHYSICAL_EVIDENCE_REQUEST_SCHEMA,
+        "schema_version": DEVICE_PHYSICAL_EVIDENCE_REQUEST_VERSION,
+        "source_review_id": runtime_laser_request.source_review_id,
+        "source_review_sha256": runtime_laser_request.source_review_sha256,
     }
 
     for row in rows:

@@ -9,13 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Registry release `1.1.0` preserves the immutable 32-configuration `1.0.0`
-  corpus and adds namespaced lattice-confinement and muon-catalysed-fusion
-  identities, configuration-specific observability candidates, evidence-ranked
-  primary sources, and version-aware review of historical producer pins. The
-  refreshed 22-project portfolio refuses stale digest and ownership contracts,
-  keeps both new architecture projects planless, and grants no physical,
-  CONTROL, execution, or actuation authority.
+- A family-neutral, byte-canonical physical-evidence request now derives one
+  configuration-specific producer boundary from an accepted diagnostic-plan
+  review. The first materialised request covers direct-drive laser ICF,
+  preserves event-relative, derived-cyclic, noncyclic, and numerical-only
+  meanings, names thirteen missing evidence obligations, and grants no
+  observation, phase, CONTROL, execution, or actuation authority.
 - Registry release `1.1.0` preserves the immutable 32-configuration `1.0.0`
   corpus and adds namespaced lattice-confinement and muon-catalysed-fusion
   identities, configuration-specific observability candidates, evidence-ranked

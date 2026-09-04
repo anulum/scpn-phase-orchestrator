@@ -1,6 +1,6 @@
 {
   "schema": "scpn-phase-orchestrator.reactor-producer-evidence-priority-register.v1",
-  "schema_version": "1.1.0",
+  "schema_version": "1.2.0",
   "payload": {
     "observed_at": "2026-09-04T07:28:06Z",
     "method": "Deterministic readiness precedence over exact current SPO evidence state: reviewed physical source, exercised byte-canonical review adapter, missing diagnostic plan, accepted plan, then refused plan requiring repair. External evidence rank is context and never changes the lane.",
@@ -1328,6 +1328,16 @@
             "physical_uncertainty_validity_quality_and_provenance",
             "physical_observability_gate_result"
           ],
+          "materialized_request": {
+            "api": "scpn_phase_orchestrator.reactor_semantics.device_physical_evidence_request_from_plan_review",
+            "envelope_sha256": "f42a9817dcef628caefab5ba5681853327bae9b21ba72459eb9588e14c2ed6a9",
+            "path": "docs/reference/data/laser_icf_direct_drive_physical_evidence_request.v1.json",
+            "request_id": "3f273e5ef1fb68e7a928913a7f7a8c9b5e6055a7649c722598911fa39458111a",
+            "schema": "scpn-phase-orchestrator.device-physical-evidence-request.v1",
+            "schema_version": "1.0.0",
+            "source_review_id": "0dac2e7bf5043eab60f5979b1fbf73a5331928816b2a7152c6ad41b27151d083",
+            "source_review_sha256": "5cb5824bd6058a148d8ab71ead7a0d35939a30b8ddd8d40c1f68cad3caaf0467"
+          },
           "source_revision_required": true,
           "package_identity_required": true,
           "canonical_bytes_required": true,
@@ -3194,5 +3204,5 @@
     "direct_actuation_authorized": false,
     "machine_protection_final_veto": true
   },
-  "payload_sha256": "1e2cb5e9b82cd89f56bb8681fab115e7893b7524dfdb7ef11c57c52f782ee13f"
+  "payload_sha256": "ba09efdf2bfc9b36b92aeabb2c0b1f306d10a735d5ed989204dea6ddaa38929b"
 }

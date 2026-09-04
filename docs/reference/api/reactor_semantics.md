@@ -150,6 +150,37 @@ device-plan-only semantic-ingress profiles remain `not_declared`. Passing
 a design review does not add source evidence to the
 reactor configuration evidence matrix.
 
+### Accepted-plan to physical-evidence request
+
+`device_physical_evidence_request_from_plan_review()` converts one accepted
+device-plan review into a request for one exact configuration. It embeds and
+replays the complete review, pins current reactor, observability, and semantic-
+profile registries, preserves every planned or deferred candidate, and lists
+the plan clocks that still require physical correlation. It never executes the
+producer package.
+
+The first materialised instance targets only `laser_icf_direct_drive`. Beam
+timing remains event-relative, resolved implosion asymmetry remains a derived
+cyclic quantity requiring a validated observation operator, trajectory and
+shot outcome remain noncyclic, and the synthetic oscillator remains
+`numerical_only` and physically ineligible. Sharing an ICF-laser plan does not
+transfer evidence to indirect-drive or fast/shock-ignition configurations.
+
+All thirteen physical-evidence obligations remain missing, including physical
+sample and diagnostic identity, reference and clock correlation, calibration
+or observation operator, uncertainty, validity, producer evidence-state
+semantics, quality, reproducibility, observability, and independent
+validation. New peer discoveries enter as source-bound gaps or provisional
+candidates; they do not become physical evidence or silently rewrite released
+meaning.
+
+The request is `review_only`, non-actionable, non-executing, non-actuating, and
+cannot request CONTROL admission. Its portable envelope is defined by
+[`device_physical_evidence_request.schema.json`](../../specs/device_physical_evidence_request.schema.json),
+with the first sealed instance documented in the
+[device physical-evidence request](../device_physical_evidence_request.md)
+reference.
+
 The companion
 [reactor diagnostic-plan portfolio status](../reactor_diagnostic_plan_portfolio_status.md)
 records the exact structural-review result for all 22 Reactor Systems device

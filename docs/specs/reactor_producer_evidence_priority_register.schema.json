@@ -15,7 +15,7 @@
       "const": "scpn-phase-orchestrator.reactor-producer-evidence-priority-register.v1"
     },
     "schema_version": {
-      "const": "1.1.0"
+      "const": "1.2.0"
     },
     "payload_sha256": {
       "type": "string",
@@ -869,6 +869,11 @@
             "materialized_request": {
               "type": "object",
               "additionalProperties": false,
+              "dependentRequired": {
+                "path": ["source_review_id", "source_review_sha256"],
+                "source_review_id": ["path", "source_review_sha256"],
+                "source_review_sha256": ["path", "source_review_id"]
+              },
               "required": [
                 "api",
                 "envelope_sha256",
@@ -889,6 +894,10 @@
                   "type": "string",
                   "pattern": "^[0-9a-f]{64}$"
                 },
+                "path": {
+                  "type": "string",
+                  "minLength": 1
+                },
                 "schema": {
                   "type": "string",
                   "minLength": 1
@@ -898,6 +907,14 @@
                     "1.0.0",
                     "1.1.0"
                   ]
+                },
+                "source_review_id": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                },
+                "source_review_sha256": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
                 }
               }
             },

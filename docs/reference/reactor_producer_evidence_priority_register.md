@@ -90,6 +90,15 @@ SCPN-LEVITATED-DIPOLE-CORE, SCPN-MAGNETIC-CUSP-CORE, and
 SCPN-STELLARATOR-CORE. Their plans declare intended channels, carriers, frames,
 clocks, and evidence slots; they do not contain physical samples.
 
+The first materialised L3 boundary is the direct-drive laser-ICF
+`device_physical_evidence_request_from_plan_review()` request. It embeds the
+accepted SCPN-ICF-LASER-CORE review while remaining specific to
+`laser_icf_direct_drive`; the other two laser-ICF configurations inherit no
+evidence. Its request ID is
+`3f273e5ef1fb68e7a928913a7f7a8c9b5e6055a7649c722598911fa39458111a`
+and canonical envelope SHA-256 is
+`f42a9817dcef628caefab5ba5681853327bae9b21ba72459eb9588e14c2ed6a9`.
+
 ### L4 — refused plans
 
 Sixteen configurations map to thirteen refused producer objects. Seven
@@ -134,8 +143,8 @@ The canonical
 is validated by
 [`reactor_producer_evidence_priority_register.schema.json`](../specs/reactor_producer_evidence_priority_register.schema.json).
 
-- Schema version: `1.1.0`
-- Payload SHA-256: `1e2cb5e9b82cd89f56bb8681fab115e7893b7524dfdb7ef11c57c52f782ee13f`
+- Schema version: `1.2.0`
+- Payload SHA-256: `ba09efdf2bfc9b36b92aeabb2c0b1f306d10a735d5ed989204dea6ddaa38929b`
 - Configuration evidence payload: `4ee797e9bd03d646d538b30ecbf468a90e70be4bdada922b09eb84e483f3b730`
 - Diagnostic-plan portfolio payload: `13bdcfd794cab002903d4861a378056536e0fcb98beca64863a9b36cc71558a5`
 - Signal occurrence payload: `8210dc2310a7031ccad1a1675677e3e92007a2dd82e696c39d25202d2f9f022f`
