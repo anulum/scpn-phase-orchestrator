@@ -116,6 +116,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   cannot create observation, classification, semantic ingress, CONTROL intent,
   action, or actuation.
 
+### Security
+
+- Raise the Tornado development/notebook floor to 6.5.8 and the Material for
+  MkDocs floor to 9.7.7, closing the current request-parsing denial-of-service,
+  cookie-validation, and documentation-search DOM XSS advisories across every
+  canonical interpreter and platform lock.
+
 ### Fixed
 
 - Device diagnostic-plan review now accepts catalogue-declared direct cyclic

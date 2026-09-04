@@ -99,7 +99,7 @@ notebook = [
     "matplotlib>=3.7,<4.0",
     # Security floors for the transitive Jupyter stack (dev/notebook scope only).
     "jupyter-server>=2.20.0",
-    "tornado>=6.5.7",
+    "tornado>=6.5.8",
     "bleach>=6.4.0",
 ]
 full = [
@@ -134,7 +134,7 @@ dev = [
     "types-PyYAML>=6.0,<7.0",
     "bandit==1.9.4",
     "mistune>=3.3.0",  # security floor: < 3.3.0 carries GHSA advisories (dev/docs only)
-    "mkdocs-material>=9.5,<10.0",
+    "mkdocs-material>=9.7.7,<10.0",
     "mkdocstrings[python]>=0.24,<2.0",
     "pymdown-extensions>=11.0.1,<12.0",  # security floors: CVE-2026-61632 + GHSA 2026-08-18 fixed in 11.0.1
     "pygments>=2.20,<2.21",
