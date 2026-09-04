@@ -193,6 +193,18 @@ def test_request_never_promotes_phase_semantic_or_control_authority() -> None:
     assert request.machine_protection_final_veto
 
 
+def test_public_factory_refuses_promoted_source_review() -> None:
+    promoted = _review()
+    object.__setattr__(promoted, "observation_admitted", True)
+
+    with pytest.raises(rs.MastPhaseQualificationRequestRefusalError) as caught:
+        rs.mast_phase_qualification_request_from_source_review(promoted)
+
+    assert caught.value.code is (
+        rs.MastPhaseQualificationRequestRefusalCode.SOURCE_REVIEW_MISMATCH
+    )
+
+
 def test_request_is_byte_canonical_digest_sealed_and_round_trips() -> None:
     request = _request()
     record = rs.mast_phase_qualification_request_to_record(request)
@@ -272,6 +284,30 @@ def test_reconstruction_refuses_producer_evidence_state_policy_drift() -> None:
     )
 
 
+def test_record_replay_refuses_invalid_embedded_source_review_text() -> None:
+    for source_review_json, code in (
+        ("", rs.MastPhaseQualificationRequestRefusalCode.INVALID_INPUT),
+        (None, rs.MastPhaseQualificationRequestRefusalCode.REQUEST_CONTRACT_MISMATCH),
+    ):
+        record = rs.mast_phase_qualification_request_to_record(_request())
+        record["source_review_json"] = source_review_json
+
+        with pytest.raises(rs.MastPhaseQualificationRequestRefusalError) as caught:
+            rs.mast_phase_qualification_request_from_record(record)
+
+        assert caught.value.code is code
+
+
+def test_request_record_boundary_requires_exact_object_shape() -> None:
+    for record in (None, {}):
+        with pytest.raises(rs.MastPhaseQualificationRequestRefusalError) as caught:
+            rs.mast_phase_qualification_request_from_record(record)
+
+        assert caught.value.code is (
+            rs.MastPhaseQualificationRequestRefusalCode.REQUEST_CONTRACT_MISMATCH
+        )
+
+
 def test_envelope_refuses_digest_schema_and_noncanonical_drift() -> None:
     document = json.loads(rs.mast_phase_qualification_request_to_bytes(_request()))
 
@@ -307,6 +343,7 @@ def test_envelope_refuses_digest_schema_and_noncanonical_drift() -> None:
         (b"", "invalid_input"),
         (b"\xff", "invalid_json"),
         (b"{", "invalid_json"),
+        (b'{"payload":NaN}\n', "invalid_json"),
         (b'{"payload":1,"payload":2}\n', "duplicate_json_key"),
     ],
 )

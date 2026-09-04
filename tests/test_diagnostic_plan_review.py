@@ -98,6 +98,24 @@ def _assert_plan_mutation(
     _assert_refusal(code, manifest, envelope, plan)
 
 
+def _manifest_with_kernel_library() -> dict[str, Any]:
+    manifest, _, _ = _records()
+    manifest["kernel_library"] = {
+        "distribution": "scpn-reactor-kernels",
+        "inventory_sha256": "b" * 64,
+        "kernels": ["geometry.axisymmetric", "physics.equilibrium"],
+        "source_commit": "c" * 40,
+        "version": "1.0.0",
+    }
+    manifest["excluded_domains"].append(
+        {
+            "domain": "shared_physics_geometry_and_numerics_kernels",
+            "owner": "SCPN-REACTOR-KERNELS",
+        }
+    )
+    return manifest
+
+
 def test_exact_tokamak_fixture_produces_full_design_review() -> None:
     review = _review()
 
@@ -636,6 +654,132 @@ def test_additional_manifest_contract_refusals() -> None:
 
     manifest, envelope, plan = _records()
     manifest["capabilities"][1]["identifier"] = "not_the_capability"
+    _assert_refusal(
+        rs.DeviceDiagnosticPlanRefusalCode.MANIFEST_CONTRACT_MISMATCH,
+        manifest,
+        envelope,
+        plan,
+    )
+
+
+def test_manifest_must_be_an_exact_object_at_public_intake() -> None:
+    _, envelope, plan = _records()
+    manifest_bytes = _pretty([])
+    plan_bytes = _compact(plan)
+    envelope["manifest_sha256"] = hashlib.sha256(manifest_bytes).hexdigest()
+    envelope["plan_sha256"] = hashlib.sha256(plan_bytes).hexdigest()
+    envelope["plan_identifier"] = plan["identifier"]
+
+    with pytest.raises(rs.DeviceDiagnosticPlanRefusal) as caught:
+        rs.device_diagnostic_plan_review_from_producer_bytes(
+            source_revision=SOURCE_REVISION,
+            source_artifact_sha256=ARTIFACT_SHA256,
+            manifest_bytes=manifest_bytes,
+            envelope_bytes=_compact(envelope),
+            plan_bytes=plan_bytes,
+        )
+
+    assert (
+        caught.value.code is rs.DeviceDiagnosticPlanRefusalCode.PLAN_STRUCTURE_MISMATCH
+    )
+
+
+def test_manifest_refuses_unknown_top_level_keys() -> None:
+    manifest, envelope, plan = _records()
+    manifest["unknown"] = None
+
+    _assert_refusal(
+        rs.DeviceDiagnosticPlanRefusalCode.PLAN_STRUCTURE_MISMATCH,
+        manifest,
+        envelope,
+        plan,
+    )
+
+
+def test_plan_and_envelope_must_bind_the_same_registry_release() -> None:
+    manifest, envelope, plan = _records()
+    plan["binding"].update(
+        {
+            "catalogue_digest_sha256": (
+                rs.DEFAULT_REACTOR_OBSERVABILITY_PROFILE_REGISTRY.digest
+            ),
+            "catalogue_version": (
+                rs.DEFAULT_REACTOR_OBSERVABILITY_PROFILE_REGISTRY.version
+            ),
+            "reactor_registry_digest_sha256": rs.DEFAULT_REACTOR_REGISTRY.digest,
+            "reactor_registry_version": rs.DEFAULT_REACTOR_REGISTRY.version,
+        }
+    )
+
+    _assert_refusal(
+        rs.DeviceDiagnosticPlanRefusalCode.REGISTRY_BINDING_MISMATCH,
+        manifest,
+        envelope,
+        plan,
+    )
+
+
+def test_binding_refuses_individually_known_but_incompatible_releases() -> None:
+    manifest, envelope, plan = _records()
+    envelope["binding"].update(
+        {
+            "reactor_registry_digest_sha256": rs.DEFAULT_REACTOR_REGISTRY.digest,
+            "reactor_registry_version": rs.DEFAULT_REACTOR_REGISTRY.version,
+        }
+    )
+
+    _assert_refusal(
+        rs.DeviceDiagnosticPlanRefusalCode.REGISTRY_BINDING_MISMATCH,
+        manifest,
+        envelope,
+        plan,
+    )
+
+
+def test_valid_shared_kernel_library_is_reviewed_without_importing_it() -> None:
+    _, envelope, plan = _records()
+    review = _review(_manifest_with_kernel_library(), envelope, plan)
+
+    assert review.accepted_as_design_declaration
+    assert not review.observation_claimed
+    assert review.authority == "review_only"
+    assert not review.actionable
+
+
+@pytest.mark.parametrize(
+    ("field", "value"),
+    (
+        ("distribution", "another-distribution"),
+        ("version", ""),
+        ("source_commit", "not-a-git-sha"),
+        ("inventory_sha256", "not-a-sha256"),
+        ("kernels", []),
+    ),
+)
+def test_shared_kernel_library_refuses_invalid_provenance(
+    field: str, value: object
+) -> None:
+    manifest = _manifest_with_kernel_library()
+    manifest["kernel_library"][field] = value
+    _, envelope, plan = _records()
+
+    _assert_refusal(
+        rs.DeviceDiagnosticPlanRefusalCode.MANIFEST_CONTRACT_MISMATCH,
+        manifest,
+        envelope,
+        plan,
+    )
+
+
+def test_shared_kernel_library_requires_canonical_owner_exclusion() -> None:
+    manifest = _manifest_with_kernel_library()
+    manifest["excluded_domains"] = [
+        item
+        for item in manifest["excluded_domains"]
+        if item["domain"] != "shared_physics_geometry_and_numerics_kernels"
+    ]
+    _, envelope, plan = _records()
+
     _assert_refusal(
         rs.DeviceDiagnosticPlanRefusalCode.MANIFEST_CONTRACT_MISMATCH,
         manifest,

@@ -13,6 +13,8 @@ from __future__ import annotations
 import hashlib
 import json
 from copy import deepcopy
+from dataclasses import replace
+from importlib import import_module
 from pathlib import Path
 
 import jsonschema
@@ -87,6 +89,34 @@ def test_request_binds_exact_l1_adapter_and_registered_candidates() -> None:
         "model.synthetic_oscillator_coordinate",
     ]
     assert all(not item.evidence_claimed for item in request.candidate_requirements)
+
+
+def test_registry_contract_drift_is_refused_through_public_factory(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    module = import_module(
+        "scpn_phase_orchestrator.reactor_semantics."
+        "frc_compression_mif_physical_payload_request"
+    )
+    registry = rs.DEFAULT_REACTOR_SEMANTIC_PROFILE_REGISTRY
+    profiles = dict(registry.profiles)
+    profiles["frc_compression_mif"] = replace(
+        profiles["frc_compression_mif"], semantic_profile_version="9.9.9"
+    )
+    drifted = rs.ReactorSemanticProfileRegistry(
+        version=registry.version,
+        reactor_registry_version=registry.reactor_registry_version,
+        reactor_registry_digest=registry.reactor_registry_digest,
+        assignment_map_sha256=registry.assignment_map_sha256,
+        profiles=profiles,
+    )
+    monkeypatch.setattr(module, "DEFAULT_REACTOR_SEMANTIC_PROFILE_REGISTRY", drifted)
+
+    with pytest.raises(
+        rs.FRCCompressionMIFPhysicalPayloadRequestRefusalError,
+        match="semantic adapter binding changed",
+    ):
+        rs.frc_compression_mif_physical_payload_request()
 
 
 def test_request_names_every_missing_physical_evidence_obligation() -> None:
@@ -181,6 +211,31 @@ def test_request_bytes_are_canonical_sealed_replayable_and_schema_valid() -> Non
     jsonschema.validate(document, json.loads(SCHEMA.read_text()))
 
 
+def test_expected_digest_requires_lowercase_sha256_text() -> None:
+    encoded = rs.frc_compression_mif_physical_payload_request_to_bytes(
+        rs.frc_compression_mif_physical_payload_request()
+    )
+
+    with pytest.raises(
+        rs.FRCCompressionMIFPhysicalPayloadRequestRefusalError,
+        match="expected_sha256 must be lowercase SHA-256 text",
+    ):
+        rs.frc_compression_mif_physical_payload_request_from_bytes(
+            encoded, expected_sha256="A" * 64
+        )
+
+
+def test_payload_digest_mismatch_is_refused() -> None:
+    document = _document()
+    document["payload_sha256"] = "0" * 64
+
+    with pytest.raises(
+        rs.FRCCompressionMIFPhysicalPayloadRequestRefusalError,
+        match="request payload digest mismatch",
+    ):
+        rs.frc_compression_mif_physical_payload_request_from_bytes(_canonical(document))
+
+
 @pytest.mark.parametrize(
     ("mutate", "detail"),
     [
@@ -248,3 +303,33 @@ def test_noncanonical_duplicate_unsupported_and_wrong_digest_inputs_are_refused(
         rs.frc_compression_mif_physical_payload_request_from_bytes(
             encoded, expected_sha256="0" * 64
         )
+
+
+@pytest.mark.parametrize(
+    ("data", "detail"),
+    (
+        (b"", "request byte input invalid"),
+        (b"\xff", "request JSON invalid"),
+        (b'{"payload":NaN}\n', "nonfinite constant NaN"),
+    ),
+)
+def test_request_byte_decoder_refuses_invalid_transport(
+    data: bytes, detail: str
+) -> None:
+    with pytest.raises(
+        rs.FRCCompressionMIFPhysicalPayloadRequestRefusalError,
+        match=detail,
+    ):
+        rs.frc_compression_mif_physical_payload_request_from_bytes(data)
+
+
+def test_request_record_boundary_requires_exact_object_shape() -> None:
+    for record, detail in (
+        (None, "request payload must be an object"),
+        ({}, "request payload keys differ from contract"),
+    ):
+        with pytest.raises(
+            rs.FRCCompressionMIFPhysicalPayloadRequestRefusalError,
+            match=detail,
+        ):
+            rs.frc_compression_mif_physical_payload_request_from_record(record)

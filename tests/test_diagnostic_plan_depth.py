@@ -157,6 +157,111 @@ def _make_frame_transformations_unsorted(plan: dict[str, Any]) -> None:
     )
 
 
+def _depth_inputs(
+    plan: dict[str, Any], envelope: dict[str, Any]
+) -> tuple[dict[str, str], dict[str, str], dict[str, str]]:
+    binding = envelope["binding"]
+    registry = rs.resolve_reactor_observability_profile_registry_release(
+        binding["catalogue_version"], binding["catalogue_digest_sha256"]
+    )
+    candidates = {
+        profile.candidate_id: profile.observability_class.value
+        for configuration in envelope["configurations"]
+        for profile in registry.for_configuration(configuration)
+    }
+    clocks = {item["identifier"]: item["kind"] for item in plan["clocks"]}
+    frames = {item["identifier"]: item["kind"] for item in plan["frames"]}
+    return candidates, clocks, frames
+
+
+def _add_intermediate_facility_clock(plan: dict[str, Any]) -> None:
+    auxiliary = deepcopy(plan["clocks"][0])
+    auxiliary["identifier"] = "clk_facility_aux"
+    auxiliary["epoch"] = "auxiliary facility oscillator zero"
+    plan["clocks"].append(auxiliary)
+    plan["clocks"].sort(key=lambda item: item["identifier"])
+
+    template = plan["clock_relations"][0]
+    plan["clock_relations"] = []
+    for child, parent in (
+        ("clk_facility_aux", "clk_facility"),
+        ("clk_shot", "clk_facility_aux"),
+    ):
+        relation = deepcopy(template)
+        relation["child_identifier"] = child
+        relation["parent_identifier"] = parent
+        plan["clock_relations"].append(relation)
+
+
+def test_depth_validator_refuses_unknown_signal_candidate() -> None:
+    _, envelope, plan = _records()
+    candidates, clocks, frames = _depth_inputs(plan, envelope)
+    candidates.pop(plan["channels"][0]["candidate_id"])
+
+    with pytest.raises(depth.DiagnosticPlanDepthError) as caught:
+        depth.validate_diagnostic_plan_depth(
+            plan,
+            candidate_classes=candidates,
+            clock_kinds=clocks,
+            frame_kinds=frames,
+        )
+
+    assert caught.value.kind is depth.DiagnosticPlanDepthRefusalKind.CARRIER
+
+
+def test_depth_validator_requires_direct_member_to_domain_root_relation() -> None:
+    _, envelope, plan = _records()
+    _add_intermediate_facility_clock(plan)
+    plan["clock_topology"]["domains"][0]["member_clock_identifiers"] = [
+        "clk_facility",
+        "clk_facility_aux",
+        "clk_shot",
+    ]
+    candidates, clocks, frames = _depth_inputs(plan, envelope)
+
+    with pytest.raises(depth.DiagnosticPlanDepthError) as caught:
+        depth.validate_diagnostic_plan_depth(
+            plan,
+            candidate_classes=candidates,
+            clock_kinds=clocks,
+            frame_kinds=frames,
+        )
+
+    assert caught.value.kind is depth.DiagnosticPlanDepthRefusalKind.CLOCK
+    assert "lacks a relation to domain root" in caught.value.detail
+
+
+def test_depth_validator_requires_domain_root_to_reference_root_relation() -> None:
+    _, envelope, plan = _records()
+    _add_intermediate_facility_clock(plan)
+    plan["clock_topology"]["domains"] = [
+        {
+            "identifier": "dom_facility",
+            "member_clock_identifiers": ["clk_facility", "clk_facility_aux"],
+            "root_clock_identifier": "clk_facility",
+            "scope": "facility reference",
+        },
+        {
+            "identifier": "dom_shot",
+            "member_clock_identifiers": ["clk_shot"],
+            "root_clock_identifier": "clk_shot",
+            "scope": "shot domain",
+        },
+    ]
+    candidates, clocks, frames = _depth_inputs(plan, envelope)
+
+    with pytest.raises(depth.DiagnosticPlanDepthError) as caught:
+        depth.validate_diagnostic_plan_depth(
+            plan,
+            candidate_classes=candidates,
+            clock_kinds=clocks,
+            frame_kinds=frames,
+        )
+
+    assert caught.value.kind is depth.DiagnosticPlanDepthRefusalKind.CLOCK
+    assert "lacks a relation to reference root" in caught.value.detail
+
+
 def test_exact_tokamak_1_2_fixture_is_byte_identical_and_accepted() -> None:
     fixture_bytes = (FIXTURES / "plan_envelope_fixture.json").read_bytes()
     manifest_bytes = (FIXTURES / "reactor-domain.json").read_bytes()

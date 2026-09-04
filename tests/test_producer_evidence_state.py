@@ -10,6 +10,8 @@
 
 from __future__ import annotations
 
+from typing import cast
+
 import pytest
 
 from scpn_phase_orchestrator.reactor_semantics import (
@@ -74,6 +76,27 @@ def test_policy_constructor_refuses_inconsistent_u0_mapping() -> None:
             ProducerEvidenceDisposition.LOW_OBSERVABILITY,
             ValidityState.DEGRADED,
             "below the predeclared gate",
+        )
+
+
+def test_policy_constructor_refuses_untyped_fields_and_blank_meaning() -> None:
+    with pytest.raises(TypeError, match="disposition must be"):
+        ProducerEvidenceStatePolicy(
+            cast(ProducerEvidenceDisposition, "unknown"),
+            ValidityState.UNKNOWN,
+            "unknown state",
+        )
+    with pytest.raises(TypeError, match="validity_state must be"):
+        ProducerEvidenceStatePolicy(
+            ProducerEvidenceDisposition.UNKNOWN,
+            cast(ValidityState, "unknown"),
+            "unknown state",
+        )
+    with pytest.raises(ValueError, match="meaning must be non-empty"):
+        ProducerEvidenceStatePolicy(
+            ProducerEvidenceDisposition.UNKNOWN,
+            ValidityState.UNKNOWN,
+            "   ",
         )
 
 

@@ -294,18 +294,7 @@ class MastPhaseQualificationRequest:
                 MastPhaseQualificationRequestRefusalCode.SOURCE_REVIEW_MISMATCH,
                 f"embedded source review refused: {exc}",
             )
-        if (
-            not review.accepted_as_physical_source_review
-            or not review.physical_source_recorded
-            or review.observation_admitted
-            or review.qualified_phase_evidence
-            or review.semantic_ingress_declared
-            or not review.review_only
-        ):
-            _refuse(
-                MastPhaseQualificationRequestRefusalCode.SOURCE_REVIEW_MISMATCH,
-                "source review is not the expected unqualified physical custody",
-            )
+        _require_unqualified_source_review(review)
         source_digest = mast_magnetic_source_review_digest(review)
         registry = DEFAULT_REACTOR_OBSERVABILITY_PROFILE_REGISTRY
         candidates = tuple(
@@ -358,9 +347,26 @@ def mast_phase_qualification_request_from_source_review(
     MastPhaseQualificationRequest
         Self-contained review-only producer request.
     """
+    _require_unqualified_source_review(review)
     return MastPhaseQualificationRequest(
         source_review_json=mast_magnetic_source_review_to_bytes(review).decode("utf-8")
     )
+
+
+def _require_unqualified_source_review(review: MastMagneticSourceReview) -> None:
+    """Require physical custody that has not acquired semantic authority."""
+    if (
+        not review.accepted_as_physical_source_review
+        or not review.physical_source_recorded
+        or review.observation_admitted
+        or review.qualified_phase_evidence
+        or review.semantic_ingress_declared
+        or not review.review_only
+    ):
+        _refuse(
+            MastPhaseQualificationRequestRefusalCode.SOURCE_REVIEW_MISMATCH,
+            "source review is not the expected unqualified physical custody",
+        )
 
 
 def mast_phase_qualification_request_to_record(
