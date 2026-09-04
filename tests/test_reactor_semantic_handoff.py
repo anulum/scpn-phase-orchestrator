@@ -224,6 +224,17 @@ def test_public_handoff_bytes_resolve_exact_historical_registry_release() -> Non
     with pytest.raises(ValueError, match="registry version mismatch"):
         handoff_from_bytes(encoded, registry=DEFAULT_REACTOR_REGISTRY)
 
+    digest_mismatch_registry = ReactorConfigurationRegistry(
+        version=REACTOR_REGISTRY_V1_0_0.version,
+        configurations=REACTOR_REGISTRY_V1_0_0.configurations,
+        aliases={
+            **REACTOR_REGISTRY_V1_0_0.aliases,
+            "historical_digest_mismatch": "conventional_tokamak",
+        },
+    )
+    with pytest.raises(ValueError, match="registry digest mismatch"):
+        handoff_from_bytes(encoded, registry=digest_mismatch_registry)
+
 
 def test_portable_schema_accepts_the_public_handoff_record() -> None:
     schema = json.loads(HANDOFF_SCHEMA_PATH.read_text(encoding="utf-8"))
