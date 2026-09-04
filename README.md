@@ -47,10 +47,10 @@ word for it. The whole honesty loop is four `spo quickstart` targets in about fi
 minutes: simulate (`power`/`eeg`), re-verify real `evidence`, and `auditor`
 a detector against a null. See the [Quickstart](docs/getting-started/quickstart.md).
 
-> **Release source v1.3.1** — The core UPDE engine, 3-channel oscillator extraction (P/I/S), supervisor with regime management, Rust FFI acceleration, and review-only reactor-semantic decoders are guarded by local and CI verification gates. Public artifact availability is reported by the PyPI badge and immutable exact-tag release receipts; a source-tree version alone is not publication evidence. Public capability counts are generated from the manifest below rather than maintained by hand. The public Python API — the symbols exported from `scpn_phase_orchestrator.__all__` — is covered by semantic-versioning guarantees; backward-incompatible changes to it will bump the major version. Internal modules outside that surface may still evolve.
+> **Release candidate v1.4.0** — The core UPDE engine, 3-channel oscillator extraction (P/I/S), supervisor with regime management, Rust FFI acceleration, and review-only reactor-semantic decoders are guarded by local and CI verification gates. Public artifact availability is reported by the PyPI badge and immutable exact-tag release receipts; a source-tree version alone is not publication evidence. Public capability counts are generated from the manifest below rather than maintained by hand. The public Python API — the symbols exported from `scpn_phase_orchestrator.__all__` — is covered by semantic-versioning guarantees; backward-incompatible changes to it will bump the major version. Internal modules outside that surface may still evolve.
 
-**Version:** 1.3.1
-**Status:** release source; public availability is independently verified through PyPI and immutable exact-tag release receipts; public API under semantic versioning; public inventory is generated below.
+**Version:** 1.4.0
+**Status:** release candidate; public availability requires the green exact-tag workflows, PyPI publication, and an immutable release receipt; public API under semantic versioning; public inventory is generated below.
 **Supported Python:** Python 3.11–3.13.
 
 [![CI](https://github.com/anulum/scpn-phase-orchestrator/actions/workflows/ci.yml/badge.svg)](https://github.com/anulum/scpn-phase-orchestrator/actions/workflows/ci.yml)
@@ -340,7 +340,7 @@ inside a dashboard or notebook; it turns them into inspectable artefacts.
 
 | Surface | Current inventory |
 |---|---:|
-| Package version | 1.3.1 |
+| Package version | 1.4.0 |
 | Public API exports | 29 |
 | Python package modules | 751 |
 | Core Engine modules | 352 |

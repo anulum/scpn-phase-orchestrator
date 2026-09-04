@@ -936,7 +936,7 @@ dependencies = [
 
 [[package]]
 name = "spo-engine"
-version = "1.3.1"
+version = "1.4.0"
 dependencies = [
  "criterion",
  "nalgebra",
@@ -948,7 +948,7 @@ dependencies = [
 
 [[package]]
 name = "spo-ffi"
-version = "1.3.1"
+version = "1.4.0"
 dependencies = [
  "numpy",
  "pyo3",
@@ -960,14 +960,14 @@ dependencies = [
 
 [[package]]
 name = "spo-oscillators"
-version = "1.3.1"
+version = "1.4.0"
 dependencies = [
  "spo-types",
 ]
 
 [[package]]
 name = "spo-supervisor"
-version = "1.3.1"
+version = "1.4.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -977,7 +977,7 @@ dependencies = [
 
 [[package]]
 name = "spo-types"
-version = "1.3.1"
+version = "1.4.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -986,7 +986,7 @@ dependencies = [
 
 [[package]]
 name = "spo-wasm"
-version = "1.3.1"
+version = "1.4.0"
 dependencies = [
  "js-sys",
  "serde",
