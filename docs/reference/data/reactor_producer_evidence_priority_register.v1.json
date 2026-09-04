@@ -408,6 +408,7 @@
             "observation_operator_or_calibration",
             "uncertainty",
             "validity",
+            "producer_evidence_state_semantics",
             "quality",
             "provenance",
             "observability_gate"
@@ -418,14 +419,15 @@
             "physical_clock_and_reference_binding",
             "physical_observation_operator_or_calibration",
             "physical_uncertainty_validity_quality_and_provenance",
+            "producer_owned_plant_truth_state_contract",
             "physical_observability_gate_result"
           ],
           "materialized_request": {
             "api": "scpn_phase_orchestrator.reactor_semantics.conventional_tokamak_physical_payload_request",
-            "envelope_sha256": "4fa48cecbb4bc39bec49fd0411e71ac9219c4e033044878fc90f5a23823a0ad5",
-            "request_id": "2102de134b9326a1c5eb280d3ac1bffd487ba55342a03f664550bf5afd4d24fd",
+            "envelope_sha256": "ed3515b4c41ba911ba6172d4a1d22b76f1c9e9aa5bb6627e02d6975bcd65945f",
+            "request_id": "3f01f59e422421bdb98bfa51aff7f3f5378d96e3b5c8ffbdc80ae4899f027aba",
             "schema": "scpn-phase-orchestrator.conventional-tokamak-physical-payload-request.v1",
-            "schema_version": "1.0.0"
+            "schema_version": "1.1.0"
           },
           "source_revision_required": true,
           "package_identity_required": true,
@@ -2975,5 +2977,5 @@
     "direct_actuation_authorized": false,
     "machine_protection_final_veto": true
   },
-  "payload_sha256": "5a540b57382f4f03d2e7b4264ca22008ce0a4ea8eb23fdd919645abbe90692a5"
+  "payload_sha256": "3ce9f8f98f8dc6d39d36fc60bb47d171193722f266531db5e55ebe02c52f3d55"
 }

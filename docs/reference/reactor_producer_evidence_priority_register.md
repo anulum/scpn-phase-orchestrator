@@ -89,7 +89,13 @@ actuation authority.
   `conventional_tokamak_physical_payload_request()` as the digest-sealed
   `scpn-phase-orchestrator.conventional-tokamak-physical-payload-request.v1`
   contract. It binds the exercised TORAX adapter while fixing that adapter's
-  source kind to simulation and forbidding reuse as physical evidence.
+  source kind to simulation and forbidding reuse as physical evidence. Version
+  `1.1.0` embeds the shared producer evidence-state policy and requires a
+  producer-owned contract for distinct `unknown`, `out_of_distribution`,
+  `low_observability`, and `stale` dispositions. Its materialized request ID is
+  `3f01f59e422421bdb98bfa51aff7f3f5378d96e3b5c8ffbdc80ae4899f027aba`
+  and its canonical envelope SHA-256 is
+  `ed3515b4c41ba911ba6172d4a1d22b76f1c9e9aa5bb6627e02d6975bcd65945f`.
 - `frc_compression_mif` routes its next exact producer request to
   SCPN-MIF-CORE. SPO materialises it through
   `frc_compression_mif_physical_payload_request()` as the digest-sealed
@@ -109,11 +115,11 @@ sample envelope with configuration-specific diagnostic identity, clock and
 reference binding, physical observation operator or calibration, uncertainty,
 validity, quality, provenance, and an evaluated observability gate.
 
-The FRC-compression MIF request additionally requires producer-owned evidence
-dispositions about current plant truth. Generic accepted/degraded/rejected
-quality labels cannot substitute for the evidence cause. These are not
-physical reactor-regime labels, and adding the obligation does not close
-`STATE-01` without immutable producer evidence.
+Both L1 requests additionally require producer-owned evidence dispositions
+about current plant truth. Generic accepted/degraded/rejected quality labels
+cannot substitute for the evidence cause. These are not physical
+reactor-regime labels, and adding the obligation does not close `STATE-01`
+without immutable producer evidence.
 
 Both L1 requests additionally make immutable source/package identity,
 reproducibility, independent validation, candidate non-selection, and all
@@ -208,7 +214,7 @@ and sealed over canonical JSON payload bytes.
 
 - Schema: `scpn-phase-orchestrator.reactor-producer-evidence-priority-register.v1`
 - Schema version: `1.0.0`
-- Payload SHA-256: `5a540b57382f4f03d2e7b4264ca22008ce0a4ea8eb23fdd919645abbe90692a5`
+- Payload SHA-256: `3ce9f8f98f8dc6d39d36fc60bb47d171193722f266531db5e55ebe02c52f3d55`
 - Configuration evidence payload:
   `b71c857153a290fa76fbac5637d104beb1c87cd77c5cc9b44bbbdcb7c299f601`
 - Diagnostic-plan portfolio payload:

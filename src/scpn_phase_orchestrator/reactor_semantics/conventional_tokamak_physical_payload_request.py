@@ -24,12 +24,16 @@ from .observability_profiles import (
     DEFAULT_REACTOR_OBSERVABILITY_PROFILE_REGISTRY,
     ReactorSignalCandidateProfile,
 )
+from .producer_evidence_state import (
+    PRODUCER_EVIDENCE_STATE_POLICIES,
+    ProducerEvidenceStatePolicy,
+)
 from .semantic_profiles import DEFAULT_REACTOR_SEMANTIC_PROFILE_REGISTRY
 
 CONVENTIONAL_TOKAMAK_PHYSICAL_PAYLOAD_REQUEST_SCHEMA: Final = (
     "scpn-phase-orchestrator.conventional-tokamak-physical-payload-request.v1"
 )
-CONVENTIONAL_TOKAMAK_PHYSICAL_PAYLOAD_REQUEST_VERSION: Final = "1.0.0"
+CONVENTIONAL_TOKAMAK_PHYSICAL_PAYLOAD_REQUEST_VERSION: Final = "1.1.0"
 MAX_CONVENTIONAL_TOKAMAK_PHYSICAL_PAYLOAD_REQUEST_BYTES: Final = 1024 * 1024
 
 _CONFIGURATION: Final = "conventional_tokamak"
@@ -52,6 +56,7 @@ class ConventionalTokamakPhysicalPayloadRequirementId(StrEnum):
     OBSERVATION_OPERATOR_OR_CALIBRATION = "observation_operator_or_calibration"
     UNCERTAINTY = "uncertainty"
     VALIDITY = "validity"
+    PRODUCER_EVIDENCE_STATE_SEMANTICS = "producer_evidence_state_semantics"
     QUALITY = "quality"
     PROVENANCE_AND_REPRODUCIBILITY = "provenance_and_reproducibility"
     OBSERVABILITY_GATE = "observability_gate"
@@ -160,6 +165,19 @@ _REQUIREMENTS: Final = (
         "missing-channel and stale-calibration refusal conditions.",
     ),
     ConventionalTokamakPhysicalPayloadRequirement(
+        ConventionalTokamakPhysicalPayloadRequirementId.PRODUCER_EVIDENCE_STATE_SEMANTICS,
+        "producer-owned evidence disposition about current plant truth",
+        "Supply distinct, non-overlapping unknown, out_of_distribution, "
+        "low_observability, and stale dispositions with versioned classification "
+        "criteria, precedence, transitions, and interval semantics. Bind every "
+        "disposition to physical sample identity, qualified clock correlation, "
+        "calibration or observation-operator revision, validity domain, and the "
+        "predeclared observability-gate result. Provider quality is orthogonal and "
+        "cannot replace or erase the evidence cause. Each disposition must use the "
+        "shared U0 validity mapping and force an unclassified UNKNOWN physical "
+        "regime; none is a plasma or reactor-regime label.",
+    ),
+    ConventionalTokamakPhysicalPayloadRequirement(
         ConventionalTokamakPhysicalPayloadRequirementId.QUALITY,
         "provider and derived quality semantics",
         "Supply versioned sample, channel and interval quality flags and a fail-closed "
@@ -233,6 +251,14 @@ class ConventionalTokamakPhysicalPayloadRequest:
     ] = field(init=False)
     requirements: tuple[ConventionalTokamakPhysicalPayloadRequirement, ...] = field(
         init=False, default=_REQUIREMENTS
+    )
+    producer_evidence_state_policies: tuple[ProducerEvidenceStatePolicy, ...] = field(
+        init=False, default=PRODUCER_EVIDENCE_STATE_POLICIES
+    )
+    producer_evidence_state_contract_required: bool = field(init=False, default=True)
+    producer_evidence_state_contract_present: bool = field(init=False, default=False)
+    quality_state_may_substitute_for_evidence_state: bool = field(
+        init=False, default=False
     )
     selected_candidate_id: None = field(init=False, default=None)
     physical_payload_schema_allocated: bool = field(init=False, default=False)
@@ -311,6 +337,9 @@ class ConventionalTokamakPhysicalPayloadRequest:
             "candidate_ids": [item.candidate_id for item in candidates],
             "configuration": _CONFIGURATION,
             "observability_registry_sha256": observability_registry.digest,
+            "producer_evidence_state_policies": [
+                item.to_record() for item in PRODUCER_EVIDENCE_STATE_POLICIES
+            ],
             "requirement_ids": [item.requirement_id.value for item in _REQUIREMENTS],
             "semantic_profile_registry_sha256": semantic_registry.digest,
         }
@@ -349,11 +378,23 @@ def conventional_tokamak_physical_payload_request_to_record(
         "phase_inference_performed": request.phase_inference_performed,
         "physical_payload_schema_allocated": request.physical_payload_schema_allocated,
         "physical_source_present": request.physical_source_present,
+        "producer_evidence_state_contract_present": (
+            request.producer_evidence_state_contract_present
+        ),
+        "producer_evidence_state_contract_required": (
+            request.producer_evidence_state_contract_required
+        ),
+        "producer_evidence_state_policies": [
+            item.to_record() for item in request.producer_evidence_state_policies
+        ],
         "qualification_state": request.qualification_state,
         "request_id": request.request_id,
         "requested_owner_project": request.requested_owner_project,
         "requirements": [_requirement_record(item) for item in request.requirements],
         "review_only": request.review_only,
+        "quality_state_may_substitute_for_evidence_state": (
+            request.quality_state_may_substitute_for_evidence_state
+        ),
         "selected_candidate_id": request.selected_candidate_id,
         "semantic_ingress_extended": request.semantic_ingress_extended,
         "semantic_profile_registry_sha256": (request.semantic_profile_registry_sha256),
@@ -382,11 +423,15 @@ _PAYLOAD_KEYS: Final = {
     "phase_inference_performed",
     "physical_payload_schema_allocated",
     "physical_source_present",
+    "producer_evidence_state_contract_present",
+    "producer_evidence_state_contract_required",
+    "producer_evidence_state_policies",
     "qualification_state",
     "request_id",
     "requested_owner_project",
     "requirements",
     "review_only",
+    "quality_state_may_substitute_for_evidence_state",
     "selected_candidate_id",
     "semantic_ingress_extended",
     "semantic_profile_registry_sha256",

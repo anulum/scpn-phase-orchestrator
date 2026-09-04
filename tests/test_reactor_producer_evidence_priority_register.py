@@ -88,6 +88,7 @@ MAST_REQUIRED_EVIDENCE = (
     "producer_evidence_state_semantics",
     *REQUIRED_EVIDENCE[7:],
 )
+CONVENTIONAL_REQUIRED_EVIDENCE = MAST_REQUIRED_EVIDENCE
 MAST_L0_REQUIREMENTS = (
     "phenomenon_identity",
     "reproducible_source_ingestion_state",
@@ -377,6 +378,13 @@ def test_priority_register_requests_evidence_without_granting_authority() -> Non
     }
     conventional_request = by_configuration["conventional_tokamak"]["producer_request"]
     assert isinstance(conventional_request, dict)
+    assert tuple(conventional_request["required_evidence"]) == (
+        CONVENTIONAL_REQUIRED_EVIDENCE
+    )
+    assert (
+        "producer_owned_plant_truth_state_contract"
+        in (conventional_request["lane_blockers"])
+    )
     materialized = conventional_request["materialized_request"]
     assert isinstance(materialized, dict)
     runtime_request = conventional_tokamak_physical_payload_request()
@@ -431,7 +439,10 @@ def test_priority_register_requests_evidence_without_granting_authority() -> Non
         assert readiness["control_admission"] is False
         if row["configuration"] == "frc_compression_mif":
             expected_evidence = MIF_REQUIRED_EVIDENCE
-        elif row["configuration"] == "spherical_tokamak":
+        elif row["configuration"] in {
+            "conventional_tokamak",
+            "spherical_tokamak",
+        }:
             expected_evidence = MAST_REQUIRED_EVIDENCE
         else:
             expected_evidence = REQUIRED_EVIDENCE

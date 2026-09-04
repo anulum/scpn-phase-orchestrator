@@ -82,6 +82,40 @@
       ],
       "type": "object"
     },
+    "producer_evidence_state_policy": {
+      "additionalProperties": false,
+      "properties": {
+        "disposition": {
+          "enum": [
+            "unknown",
+            "out_of_distribution",
+            "low_observability",
+            "stale"
+          ]
+        },
+        "meaning": {"minLength": 1, "type": "string"},
+        "physical_regime_classified": {"const": false},
+        "quality_may_substitute": {"const": false},
+        "regime_state": {"const": "unknown"},
+        "validity_state": {
+          "enum": [
+            "unknown",
+            "out_of_distribution",
+            "unobservable",
+            "stale"
+          ]
+        }
+      },
+      "required": [
+        "disposition",
+        "meaning",
+        "physical_regime_classified",
+        "quality_may_substitute",
+        "regime_state",
+        "validity_state"
+      ],
+      "type": "object"
+    },
     "requirement": {
       "additionalProperties": false,
       "properties": {
@@ -99,6 +133,7 @@
             "observation_operator_or_calibration",
             "uncertainty",
             "validity",
+            "producer_evidence_state_semantics",
             "quality",
             "provenance_and_reproducibility",
             "observability_gate",
@@ -152,17 +187,73 @@
         "phase_inference_performed": {"const": false},
         "physical_payload_schema_allocated": {"const": false},
         "physical_source_present": {"const": false},
+        "producer_evidence_state_contract_present": {"const": false},
+        "producer_evidence_state_contract_required": {"const": true},
+        "producer_evidence_state_policies": {
+          "prefixItems": [
+            {
+              "allOf": [
+                {"$ref": "#/$defs/producer_evidence_state_policy"},
+                {
+                  "properties": {
+                    "disposition": {"const": "unknown"},
+                    "validity_state": {"const": "unknown"}
+                  }
+                }
+              ]
+            },
+            {
+              "allOf": [
+                {"$ref": "#/$defs/producer_evidence_state_policy"},
+                {
+                  "properties": {
+                    "disposition": {"const": "out_of_distribution"},
+                    "validity_state": {"const": "out_of_distribution"}
+                  }
+                }
+              ]
+            },
+            {
+              "allOf": [
+                {"$ref": "#/$defs/producer_evidence_state_policy"},
+                {
+                  "properties": {
+                    "disposition": {"const": "low_observability"},
+                    "validity_state": {"const": "unobservable"}
+                  }
+                }
+              ]
+            },
+            {
+              "allOf": [
+                {"$ref": "#/$defs/producer_evidence_state_policy"},
+                {
+                  "properties": {
+                    "disposition": {"const": "stale"},
+                    "validity_state": {"const": "stale"}
+                  }
+                }
+              ]
+            }
+          ],
+          "items": false,
+          "maxItems": 4,
+          "minItems": 4,
+          "type": "array",
+          "uniqueItems": true
+        },
         "qualification_state": {"const": "blocked_missing_physical_producer_payload"},
         "request_id": {"$ref": "#/$defs/sha256"},
         "requested_owner_project": {"const": "SCPN-FUSION-CORE"},
         "requirements": {
           "items": {"$ref": "#/$defs/requirement"},
-          "maxItems": 12,
-          "minItems": 12,
+          "maxItems": 13,
+          "minItems": 13,
           "type": "array",
           "uniqueItems": true
         },
         "review_only": {"const": true},
+        "quality_state_may_substitute_for_evidence_state": {"const": false},
         "selected_candidate_id": {"type": "null"},
         "semantic_ingress_extended": {"const": false},
         "semantic_profile_registry_sha256": {"$ref": "#/$defs/sha256"},
@@ -187,11 +278,15 @@
         "phase_inference_performed",
         "physical_payload_schema_allocated",
         "physical_source_present",
+        "producer_evidence_state_contract_present",
+        "producer_evidence_state_contract_required",
+        "producer_evidence_state_policies",
         "qualification_state",
         "request_id",
         "requested_owner_project",
         "requirements",
         "review_only",
+        "quality_state_may_substitute_for_evidence_state",
         "selected_candidate_id",
         "semantic_ingress_extended",
         "semantic_profile_registry_sha256",
@@ -201,7 +296,7 @@
     },
     "payload_sha256": {"$ref": "#/$defs/sha256"},
     "schema": {"const": "scpn-phase-orchestrator.conventional-tokamak-physical-payload-request.v1"},
-    "schema_version": {"const": "1.0.0"}
+    "schema_version": {"const": "1.1.0"}
   },
   "required": ["payload", "payload_sha256", "schema", "schema_version"],
   "title": "SCPN Phase Orchestrator conventional-tokamak physical payload request v1",

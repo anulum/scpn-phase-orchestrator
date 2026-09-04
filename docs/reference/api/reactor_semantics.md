@@ -207,13 +207,20 @@ with `physical_source_present=false` and
 `reusable_as_physical_evidence=false`; its twelve noncyclic TORAX observables
 cannot be relabelled as diagnostic samples or phase evidence.
 
-The request carries four unselected conventional-tokamak candidates and twelve
+Request version `1.1.0` embeds the shared producer evidence-state policy. It
+requires distinct `unknown`, `out_of_distribution`, `low_observability`, and
+`stale` dispositions about current plant truth, maps them exactly to U0
+validity, and forces physical-regime abstention. Quality cannot substitute for
+the evidence cause.
+
+The request carries four unselected conventional-tokamak candidates and thirteen
 missing producer obligations: physical samples, configuration-specific
 diagnostic identity, phenomenon, reference, physical clocks, observation
-operator or calibration, uncertainty, validity, quality, immutable provenance
-and reproducibility, a predeclared observability gate, and independent
-validation. A producer must allocate a new configuration-specific canonical
-physical payload rather than place physical claims into the simulation schema.
+operator or calibration, uncertainty, validity, producer evidence-state
+semantics, quality, immutable provenance and reproducibility, a predeclared
+observability gate, and independent validation. A producer must allocate a new
+configuration-specific canonical physical payload rather than place physical
+claims into the simulation schema.
 
 `ConventionalTokamakPhysicalPayloadRequest` fixes schema allocation, physical
 source presence, candidate selection, observation admission, phase inference,

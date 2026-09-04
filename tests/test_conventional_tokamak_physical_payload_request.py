@@ -20,8 +20,8 @@ import pytest
 
 from scpn_phase_orchestrator import reactor_semantics as rs
 
-REQUEST_ID = "2102de134b9326a1c5eb280d3ac1bffd487ba55342a03f664550bf5afd4d24fd"
-REQUEST_SHA256 = "4fa48cecbb4bc39bec49fd0411e71ac9219c4e033044878fc90f5a23823a0ad5"
+REQUEST_ID = "3f01f59e422421bdb98bfa51aff7f3f5378d96e3b5c8ffbdc80ae4899f027aba"
+REQUEST_SHA256 = "ed3515b4c41ba911ba6172d4a1d22b76f1c9e9aa5bb6627e02d6975bcd65945f"
 SEMANTIC_REGISTRY_SHA256 = (
     "6ac7f3863e1a5f50af297c572ec0b80b60820a23de1a769fda6bb0a831243ec3"
 )
@@ -105,6 +105,7 @@ def test_request_names_every_missing_physical_evidence_obligation() -> None:
         "observation_operator_or_calibration",
         "uncertainty",
         "validity",
+        "producer_evidence_state_semantics",
         "quality",
         "provenance_and_reproducibility",
         "observability_gate",
@@ -116,12 +117,55 @@ def test_request_names_every_missing_physical_evidence_obligation() -> None:
     )
 
 
+def test_request_pins_distinct_producer_evidence_states_and_regime_abstention() -> None:
+    request = rs.conventional_tokamak_physical_payload_request()
+
+    assert request.producer_evidence_state_contract_required is True
+    assert request.producer_evidence_state_contract_present is False
+    assert request.quality_state_may_substitute_for_evidence_state is False
+    assert request.producer_evidence_state_policies == (
+        rs.PRODUCER_EVIDENCE_STATE_POLICIES
+    )
+    assert tuple(
+        (policy.disposition.value, policy.validity_state.value)
+        for policy in request.producer_evidence_state_policies
+    ) == (
+        ("unknown", "unknown"),
+        ("out_of_distribution", "out_of_distribution"),
+        ("low_observability", "unobservable"),
+        ("stale", "stale"),
+    )
+    assert all(
+        policy.regime_state.value == "unknown"
+        and not policy.physical_regime_classified
+        and not policy.quality_may_substitute
+        for policy in request.producer_evidence_state_policies
+    )
+
+    requirement = next(
+        item
+        for item in request.requirements
+        if item.requirement_id.value == "producer_evidence_state_semantics"
+    )
+    for marker in (
+        "unknown",
+        "out_of_distribution",
+        "low_observability",
+        "stale",
+        "quality",
+        "U0 validity",
+        "UNKNOWN physical regime",
+    ):
+        assert marker in requirement.acceptance_condition
+
+
 def test_request_authority_is_exhaustively_fail_closed() -> None:
     request = rs.conventional_tokamak_physical_payload_request()
 
     assert request.selected_candidate_id is None
     assert request.physical_payload_schema_allocated is False
     assert request.physical_source_present is False
+    assert request.producer_evidence_state_contract_present is False
     assert request.observation_admitted is False
     assert request.phase_inference_eligible is False
     assert request.phase_inference_performed is False
@@ -141,7 +185,7 @@ def test_request_bytes_are_canonical_sealed_replayable_and_schema_valid() -> Non
     encoded = rs.conventional_tokamak_physical_payload_request_to_bytes(request)
 
     assert encoded.endswith(b"\n")
-    assert len(encoded) == 8648
+    assert len(encoded) == 10767
     assert hashlib.sha256(encoded).hexdigest() == REQUEST_SHA256
     assert rs.conventional_tokamak_physical_payload_request_digest(request) == (
         REQUEST_SHA256
@@ -175,6 +219,24 @@ def test_request_bytes_are_canonical_sealed_replayable_and_schema_valid() -> Non
         ),
         (
             lambda payload: payload["requirements"][0].__setitem__("missing", False),
+            "stored request differs",
+        ),
+        (
+            lambda payload: payload.__setitem__(
+                "producer_evidence_state_contract_present", True
+            ),
+            "stored request differs",
+        ),
+        (
+            lambda payload: payload.__setitem__(
+                "quality_state_may_substitute_for_evidence_state", True
+            ),
+            "stored request differs",
+        ),
+        (
+            lambda payload: payload["producer_evidence_state_policies"][2].__setitem__(
+                "validity_state", "unknown"
+            ),
             "stored request differs",
         ),
     ],
