@@ -15,13 +15,14 @@ import hmac
 import json
 import os
 import time
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, BinaryIO, TypeAlias, cast
 
 from google.protobuf import descriptor_pb2, descriptor_pool, message_factory
 from google.protobuf import timestamp_pb2 as _timestamp_pb2
+from google.protobuf.descriptor import Descriptor, FileDescriptor
 from google.protobuf.message import Message
 
 from scpn_phase_orchestrator.runtime.audit_signing import (
@@ -212,10 +213,12 @@ def _audit_envelope_class() -> type[Message]:
     """Return the dynamically-built audit envelope protobuf class."""
     _ = _timestamp_pb2.DESCRIPTOR
     pool = descriptor_pool.DescriptorPool()
+    add_serialized_file: Callable[[bytes], FileDescriptor] = pool.AddSerializedFile
+    find_message_type: Callable[[str], Descriptor] = pool.FindMessageTypeByName
     try:
-        pool.AddSerializedFile(_timestamp_pb2.DESCRIPTOR.serialized_pb)
-        pool.AddSerializedFile(_AUDIT_ENVELOPE_FILE_PROTO_BYTES)
-        descriptor = pool.FindMessageTypeByName("spo.audit.AuditEnvelope")
+        add_serialized_file(_timestamp_pb2.DESCRIPTOR.serialized_pb)
+        add_serialized_file(_AUDIT_ENVELOPE_FILE_PROTO_BYTES)
+        descriptor = find_message_type("spo.audit.AuditEnvelope")
     except Exception as exc:  # pragma: no cover - defensive fail-closed path
         raise RuntimeError(
             "failed to initialise audit envelope protobuf schema"

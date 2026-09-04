@@ -654,6 +654,7 @@ def device_physical_evidence_request_digest(
 
 
 def _validate_review(review: DeviceDiagnosticPlanReview, configuration: str) -> None:
+    """Validate review identity and authority for the selected configuration."""
     if (
         not review.accepted_as_design_declaration
         or review.evidence_claimed
@@ -716,6 +717,7 @@ def _candidate_requirement(
     profile: ReactorSignalCandidateProfile,
     review: DeviceDiagnosticPlanReview,
 ) -> DevicePhysicalCandidateRequirement:
+    """Build a physical-evidence requirement from one diagnostic profile."""
     signals = tuple(
         signal
         for signal in review.signal_reviews
@@ -765,6 +767,7 @@ def _signal_matches_profile(
     signal: DeviceDiagnosticSignalReview,
     profile: ReactorSignalCandidateProfile,
 ) -> bool:
+    """Report whether a reviewed signal matches the diagnostic profile."""
     return (
         signal.synthetic
         and not signal.evidence_claimed
@@ -778,6 +781,7 @@ def _signal_matches_profile(
 def _clock_requirement(
     clock: DeviceDiagnosticClockReview,
 ) -> DevicePhysicalClockRequirement:
+    """Build one physical clock requirement from its review."""
     physical = clock.plan_clock_kind != "simulation"
     return DevicePhysicalClockRequirement(
         plan_clock_identifier=clock.plan_clock_identifier,
@@ -795,6 +799,7 @@ def _clock_requirement(
 def _candidate_record(
     item: DevicePhysicalCandidateRequirement,
 ) -> dict[str, object]:
+    """Serialize one candidate requirement into its canonical record."""
     return {
         "candidate_id": item.candidate_id,
         "channel_identifiers": list(item.channel_identifiers),
@@ -819,6 +824,7 @@ def _candidate_record(
 
 
 def _clock_record(item: DevicePhysicalClockRequirement) -> dict[str, object]:
+    """Serialize one reviewed clock into its canonical record."""
     return {
         "compatibility": item.compatibility,
         "eligible_for_physical_reference": item.eligible_for_physical_reference,
@@ -835,6 +841,7 @@ def _clock_record(item: DevicePhysicalClockRequirement) -> dict[str, object]:
 def _requirement_record(
     item: DevicePhysicalEvidenceRequirement,
 ) -> dict[str, object]:
+    """Serialize one physical-evidence requirement into its canonical record."""
     return {
         "acceptance_condition": item.acceptance_condition,
         "evidence_subject": item.evidence_subject,
@@ -847,6 +854,7 @@ def _requirement_record(
 
 
 def _decode_document(data: bytes) -> dict[str, object]:
+    """Decode and validate one canonical JSON document."""
     if not data or len(data) > MAX_DEVICE_PHYSICAL_EVIDENCE_REQUEST_BYTES:
         _refuse(
             DevicePhysicalEvidenceRequestRefusalCode.INVALID_INPUT,
@@ -876,6 +884,7 @@ def _decode_document(data: bytes) -> dict[str, object]:
 
 
 def _object(value: object, keys: set[str], name: str) -> dict[str, object]:
+    """Require an object with exactly the expected keys."""
     if not isinstance(value, dict) or not all(isinstance(key, str) for key in value):
         _refuse(
             DevicePhysicalEvidenceRequestRefusalCode.REQUEST_CONTRACT_MISMATCH,
@@ -891,6 +900,7 @@ def _object(value: object, keys: set[str], name: str) -> dict[str, object]:
 
 
 def _reject_duplicates(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    """Reject duplicate keys while decoding JSON."""
     result: dict[str, object] = {}
     for key, value in pairs:
         if key in result:
@@ -903,6 +913,7 @@ def _reject_duplicates(pairs: list[tuple[str, object]]) -> dict[str, object]:
 
 
 def _reject_constant(value: str) -> NoReturn:
+    """Reject non-finite numeric constants while decoding JSON."""
     _refuse(
         DevicePhysicalEvidenceRequestRefusalCode.INVALID_JSON,
         f"nonfinite constant {value}",
@@ -910,6 +921,7 @@ def _reject_constant(value: str) -> NoReturn:
 
 
 def _canonical(value: object) -> bytes:
+    """Encode a value as byte-canonical JSON."""
     return (
         json.dumps(
             value,
@@ -923,6 +935,7 @@ def _canonical(value: object) -> bytes:
 
 
 def _sha256(value: bytes) -> str:
+    """Return the SHA-256 digest of the supplied bytes."""
     return hashlib.sha256(value).hexdigest()
 
 
@@ -930,6 +943,7 @@ def _refuse(
     code: DevicePhysicalEvidenceRequestRefusalCode,
     detail: str,
 ) -> NoReturn:
+    """Raise the typed refusal for this contract."""
     raise DevicePhysicalEvidenceRequestRefusalError(code, detail)
 
 

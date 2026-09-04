@@ -142,6 +142,7 @@ class _FrameReader:
         self._end = end
 
     def _take(self, size: int) -> bytes:
+        """Consume exactly ``size`` bytes or report a truncated frame."""
         stop = self._offset + size
         if stop > self._end:
             raise FrameTruncationError(

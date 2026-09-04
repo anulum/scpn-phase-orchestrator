@@ -213,6 +213,8 @@ class DeviceDiagnosticSignalReview:
 
 @dataclass(frozen=True, slots=True)
 class _ValidatedSources:
+    """Hold producer artifacts after cross-source validation."""
+
     project: str
     producer_revision: str
     configurations: tuple[str, ...]
@@ -592,6 +594,7 @@ def device_diagnostic_plan_review_digest(review: DeviceDiagnosticPlanReview) -> 
 def _validate_sources(
     manifest_bytes: bytes, envelope_bytes: bytes, plan_bytes: bytes
 ) -> _ValidatedSources:
+    """Decode and cross-check the pinned producer source artifacts."""
     manifest = _validate_manifest(
         _decode_source(manifest_bytes, "manifest", pretty=True)
     )
@@ -670,6 +673,7 @@ def _validate_sources(
 
 
 def _validate_envelope(value: object) -> dict[str, object]:
+    """Validate the producer envelope and its non-authority contract."""
     envelope = _object(value, _ENVELOPE_KEYS, "source envelope")
     schema_version = envelope["schema_version"]
     if (
@@ -705,6 +709,7 @@ def _validate_envelope(value: object) -> dict[str, object]:
 
 
 def _validate_manifest(value: object) -> dict[str, object]:
+    """Validate the reactor manifest and return its governed mappings."""
     if not isinstance(value, dict):
         _plan_refusal("source manifest must be an object")
     manifest_keys = set(value)
@@ -801,6 +806,7 @@ def _validate_manifest_alignment(
     configurations: tuple[str, ...],
     reactor_registry: ReactorConfigurationRegistry,
 ) -> None:
+    """Validate envelope, manifest, configuration, and registry alignment."""
     if (
         manifest["project"] != envelope["project"]
         or _strings(manifest, "configurations") != configurations
@@ -840,6 +846,7 @@ def _validate_assignment(
     configurations: tuple[str, ...],
     reactor_registry: ReactorConfigurationRegistry,
 ) -> None:
+    """Validate the project assignment for the reviewed device."""
     _sorted_identifiers(configurations, "configurations")
     if not configurations:
         _assignment_refusal("configurations are empty")
@@ -860,6 +867,7 @@ def _validate_binding(
     value: object,
     name: str,
 ) -> tuple[ReactorConfigurationRegistry, ReactorObservabilityProfileRegistry]:
+    """Validate one bound manifest object."""
     binding = _object(value, _BINDING_KEYS, name)
     try:
         reactor_registry = resolve_reactor_registry_release(
@@ -899,6 +907,7 @@ def _validate_plan(
     tuple[DeviceDiagnosticClockReview, ...],
     tuple[DeviceDiagnosticSignalReview, ...],
 ]:
+    """Validate the diagnostic plan against the selected configuration."""
     if _IDENTIFIER.fullmatch(_text(plan, "identifier")) is None:
         _plan_refusal("plan identifier is malformed")
     clocks = _validate_clocks(_object_array(plan, "clocks", _CLOCK_KEYS))
@@ -967,6 +976,7 @@ def _validate_plan(
 def _validate_clocks(
     records: list[dict[str, object]],
 ) -> tuple[DeviceDiagnosticClockReview, ...]:
+    """Validate clocks and derive their compatibility reviews."""
     mapping = {
         "simulation": (
             ClockKind.SIMULATION_MONOTONIC,
@@ -1009,6 +1019,7 @@ def _validate_channel(
     clocks: dict[str, DeviceDiagnosticClockReview],
     frame_ids: set[str],
 ) -> DeviceDiagnosticSignalReview:
+    """Validate one diagnostic channel against its profile and clocks."""
     try:
         carrier = SemanticCarrier(_text(channel, "carrier"))
     except ValueError:
@@ -1079,6 +1090,7 @@ def _validate_relations(
     records: list[dict[str, object]],
     clocks: dict[str, DeviceDiagnosticClockReview],
 ) -> None:
+    """Validate clock relation references and acyclicity."""
     keys: list[tuple[str, str]] = []
     related_children: set[str] = set()
     for relation in records:
@@ -1117,6 +1129,7 @@ def _validate_relations(
 
 
 def _decode_source(data: bytes, name: str, *, pretty: bool) -> object:
+    """Decode one pinned producer source document."""
     record = _decode_json(data, name, maximum=MAX_DEVICE_DIAGNOSTIC_SOURCE_BYTES)
     expected = _pretty(record) if pretty else _canonical(record)
     if expected != data:
@@ -1128,6 +1141,7 @@ def _decode_source(data: bytes, name: str, *, pretty: bool) -> object:
 
 
 def _decode_json(data: bytes, name: str, *, maximum: int) -> object:
+    """Decode strict JSON within the configured size limit."""
     if not isinstance(data, bytes):
         _refuse(
             DeviceDiagnosticPlanRefusalCode.INVALID_INPUT_TYPE,
@@ -1140,12 +1154,14 @@ def _decode_json(data: bytes, name: str, *, maximum: int) -> object:
         )
 
     def reject_constant(literal: str) -> NoReturn:
+        """Reject non-finite constants in the nested JSON decoder."""
         _refuse(
             DeviceDiagnosticPlanRefusalCode.INVALID_JSON,
             f"{name} contains non-finite literal {literal!r}",
         )
 
     def reject_duplicates(pairs: list[tuple[str, object]]) -> dict[str, object]:
+        """Reject duplicate keys in the nested JSON decoder."""
         result: dict[str, object] = {}
         for key, value in pairs:
             if key in result:
@@ -1170,6 +1186,7 @@ def _decode_json(data: bytes, name: str, *, maximum: int) -> object:
 
 
 def _object(value: object, keys: set[str], name: str) -> dict[str, object]:
+    """Require an object with exactly the expected keys."""
     if not isinstance(value, dict) or any(not isinstance(key, str) for key in value):
         _plan_refusal(f"{name} must be an object")
     if set(value) != keys:
@@ -1183,6 +1200,7 @@ def _object(value: object, keys: set[str], name: str) -> dict[str, object]:
 def _object_array(
     parent: dict[str, object], name: str, keys: set[str]
 ) -> list[dict[str, object]]:
+    """Require an array of objects with the expected keys."""
     value = parent[name]
     if not isinstance(value, list):
         _plan_refusal(f"{name} must be an array")
@@ -1190,6 +1208,7 @@ def _object_array(
 
 
 def _text(parent: dict[str, object], name: str) -> str:
+    """Require a text field from the supplied record."""
     value = parent.get(name)
     if not isinstance(value, str):
         _plan_refusal(f"{name} must be a string")
@@ -1197,6 +1216,7 @@ def _text(parent: dict[str, object], name: str) -> str:
 
 
 def _strings(parent: dict[str, object], name: str) -> tuple[str, ...]:
+    """Require a sequence of non-empty text values."""
     value = parent.get(name)
     if not isinstance(value, list) or any(not isinstance(item, str) for item in value):
         _plan_refusal(f"{name} must be an array of strings")
@@ -1204,6 +1224,7 @@ def _strings(parent: dict[str, object], name: str) -> tuple[str, ...]:
 
 
 def _is_number(value: object) -> TypeGuard[int | float]:
+    """Report whether a value is a finite real number."""
     return (
         not isinstance(value, bool)
         and isinstance(value, (int, float))
@@ -1218,6 +1239,7 @@ def _number(
     positive: bool = False,
     nonnegative: bool = False,
 ) -> float:
+    """Require a finite real-valued field."""
     value = parent.get(name)
     if not _is_number(value):
         _plan_refusal(f"{name} must be finite numeric data")
@@ -1230,6 +1252,7 @@ def _number(
 
 
 def _sorted_identifiers(values: tuple[str, ...], name: str) -> None:
+    """Require identifiers in canonical sorted order."""
     if tuple(sorted(set(values))) != values:
         _plan_refusal(f"{name} must be unique and sorted")
     if any(_IDENTIFIER.fullmatch(value) is None for value in values):
@@ -1237,6 +1260,7 @@ def _sorted_identifiers(values: tuple[str, ...], name: str) -> None:
 
 
 def _require_source_identity(source_revision: str, artifact_digest: str) -> None:
+    """Require an immutable source revision and artifact digest."""
     if not isinstance(source_revision, str) or not isinstance(artifact_digest, str):
         _refuse(
             DeviceDiagnosticPlanRefusalCode.INVALID_INPUT_TYPE,
@@ -1252,6 +1276,7 @@ def _require_source_identity(source_revision: str, artifact_digest: str) -> None
 
 
 def _clock_record(review: DeviceDiagnosticClockReview) -> dict[str, object]:
+    """Serialize one reviewed clock into its canonical record."""
     return {
         "compatibility": review.compatibility.value,
         "epoch": review.epoch,
@@ -1269,6 +1294,7 @@ def _clock_record(review: DeviceDiagnosticClockReview) -> dict[str, object]:
 
 
 def _signal_record(review: DeviceDiagnosticSignalReview) -> dict[str, object]:
+    """Serialize one reviewed signal into its canonical record."""
     return {
         "candidate_id": review.candidate_id,
         "carrier": review.carrier.value,
@@ -1283,6 +1309,7 @@ def _signal_record(review: DeviceDiagnosticSignalReview) -> dict[str, object]:
 
 
 def _canonical(value: object) -> bytes:
+    """Encode a value as byte-canonical JSON."""
     return (
         json.dumps(
             value,
@@ -1296,6 +1323,7 @@ def _canonical(value: object) -> bytes:
 
 
 def _pretty(value: object) -> bytes:
+    """Encode stable human-readable JSON."""
     return (
         json.dumps(value, allow_nan=False, ensure_ascii=False, indent=2, sort_keys=True)
         + "\n"
@@ -1303,10 +1331,12 @@ def _pretty(value: object) -> bytes:
 
 
 def _sha256(data: bytes) -> str:
+    """Return the SHA-256 digest of the supplied bytes."""
     return hashlib.sha256(data).hexdigest()
 
 
 def _depth_refusal(error: DiagnosticPlanDepthError) -> NoReturn:
+    """Translate a depth-validation error into a review refusal."""
     if error.kind is DiagnosticPlanDepthRefusalKind.AUTHORITY:
         _authority_refusal(error.detail)
     if error.kind is DiagnosticPlanDepthRefusalKind.CARRIER:
@@ -1317,38 +1347,47 @@ def _depth_refusal(error: DiagnosticPlanDepthError) -> NoReturn:
 
 
 def _refuse(code: DeviceDiagnosticPlanRefusalCode, detail: str) -> NoReturn:
+    """Raise the typed refusal for this contract."""
     raise DeviceDiagnosticPlanRefusal(code, detail)
 
 
 def _identity_refusal(detail: str) -> NoReturn:
+    """Raise a source-identity refusal."""
     _refuse(DeviceDiagnosticPlanRefusalCode.INVALID_SOURCE_IDENTITY, detail)
 
 
 def _manifest_refusal(detail: str) -> NoReturn:
+    """Raise a reactor-manifest refusal."""
     _refuse(DeviceDiagnosticPlanRefusalCode.MANIFEST_CONTRACT_MISMATCH, detail)
 
 
 def _assignment_refusal(detail: str) -> NoReturn:
+    """Raise a project-assignment refusal."""
     _refuse(DeviceDiagnosticPlanRefusalCode.PROJECT_ASSIGNMENT_MISMATCH, detail)
 
 
 def _plan_refusal(detail: str) -> NoReturn:
+    """Raise a diagnostic-plan refusal."""
     _refuse(DeviceDiagnosticPlanRefusalCode.PLAN_STRUCTURE_MISMATCH, detail)
 
 
 def _candidate_refusal(detail: str) -> NoReturn:
+    """Raise a candidate-profile refusal."""
     _refuse(DeviceDiagnosticPlanRefusalCode.CANDIDATE_COVERAGE_MISMATCH, detail)
 
 
 def _carrier_refusal(detail: str) -> NoReturn:
+    """Raise a carrier-frame refusal."""
     _refuse(DeviceDiagnosticPlanRefusalCode.CARRIER_EVIDENCE_MISMATCH, detail)
 
 
 def _clock_refusal(detail: str) -> NoReturn:
+    """Raise a clock-topology refusal."""
     _refuse(DeviceDiagnosticPlanRefusalCode.CLOCK_SEMANTICS_MISMATCH, detail)
 
 
 def _authority_refusal(detail: str) -> NoReturn:
+    """Raise an authority-boundary refusal."""
     _refuse(DeviceDiagnosticPlanRefusalCode.AUTHORITY_ESCALATION, detail)
 
 

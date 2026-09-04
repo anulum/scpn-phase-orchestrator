@@ -593,6 +593,7 @@ def mast_phase_qualification_request_digest(
 def _candidate_requirement(
     profile: ReactorSignalCandidateProfile,
 ) -> MastPhaseCandidateRequirement:
+    """Build a physical-evidence requirement from one diagnostic profile."""
     return MastPhaseCandidateRequirement(
         candidate_id=profile.candidate_id,
         phenomenon=profile.phenomenon,
@@ -607,6 +608,7 @@ def _candidate_requirement(
 
 
 def _candidate_record(item: MastPhaseCandidateRequirement) -> dict[str, object]:
+    """Serialize one candidate requirement into its canonical record."""
     return {
         "admissible_carriers": list(item.admissible_carriers),
         "candidate_id": item.candidate_id,
@@ -624,6 +626,7 @@ def _candidate_record(item: MastPhaseCandidateRequirement) -> dict[str, object]:
 def _requirement_record(
     item: MastPhaseQualificationRequirement,
 ) -> dict[str, object]:
+    """Serialize one physical-evidence requirement into its canonical record."""
     return {
         "acceptance_condition": item.acceptance_condition,
         "evidence_subject": item.evidence_subject,
@@ -636,6 +639,7 @@ def _requirement_record(
 
 
 def _decode_document(data: bytes) -> dict[str, object]:
+    """Decode and validate one canonical JSON document."""
     if (
         not isinstance(data, bytes)
         or not data
@@ -669,6 +673,7 @@ def _decode_document(data: bytes) -> dict[str, object]:
 
 
 def _object(value: object, keys: set[str], name: str) -> dict[str, object]:
+    """Require an object with exactly the expected keys."""
     if not isinstance(value, dict) or not all(isinstance(key, str) for key in value):
         _refuse(
             MastPhaseQualificationRequestRefusalCode.REQUEST_CONTRACT_MISMATCH,
@@ -684,6 +689,7 @@ def _object(value: object, keys: set[str], name: str) -> dict[str, object]:
 
 
 def _reject_duplicates(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    """Reject duplicate keys while decoding JSON."""
     result: dict[str, object] = {}
     for key, value in pairs:
         if key in result:
@@ -696,6 +702,7 @@ def _reject_duplicates(pairs: list[tuple[str, object]]) -> dict[str, object]:
 
 
 def _reject_constant(value: str) -> NoReturn:
+    """Reject non-finite numeric constants while decoding JSON."""
     _refuse(
         MastPhaseQualificationRequestRefusalCode.INVALID_JSON,
         f"nonfinite constant {value}",
@@ -703,6 +710,7 @@ def _reject_constant(value: str) -> NoReturn:
 
 
 def _canonical(value: object) -> bytes:
+    """Encode a value as byte-canonical JSON."""
     return (
         json.dumps(
             value,
@@ -716,10 +724,12 @@ def _canonical(value: object) -> bytes:
 
 
 def _sha256(value: bytes) -> str:
+    """Return the SHA-256 digest of the supplied bytes."""
     return hashlib.sha256(value).hexdigest()
 
 
 def _refuse(code: MastPhaseQualificationRequestRefusalCode, detail: str) -> NoReturn:
+    """Raise the typed refusal for this contract."""
     raise MastPhaseQualificationRequestRefusalError(code, detail)
 
 

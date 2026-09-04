@@ -125,6 +125,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Restore the exact strict-mypy audit-envelope boundary across both legacy and
+  current protobuf stub surfaces, and document every reactor-semantics helper
+  so the source-wide 100 percent documentation gate remains fail closed.
 - Device diagnostic-plan review now accepts catalogue-declared direct cyclic
   channels on facility-monotonic clocks. A byte-exact BEAM-TARGET producer
   fixture guards the public intake while preserving synthetic, review-only,

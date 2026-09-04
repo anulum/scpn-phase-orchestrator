@@ -80,6 +80,7 @@ def validate_diagnostic_plan_depth(
 def _validate_signal_inventories(
     plan: Mapping[str, object], candidate_classes: Mapping[str, str]
 ) -> None:
+    """Validate plan signal inventories against candidate classes."""
     for channel in _objects(plan, "channels"):
         channel_id = _identifier(channel, "identifier")
         candidate_id = _identifier(channel, "candidate_id")
@@ -147,6 +148,7 @@ def _validate_signal_inventories(
 def _validate_frame_transformations(
     plan: Mapping[str, object], frame_kinds: Mapping[str, str]
 ) -> None:
+    """Validate every declared frame transformation."""
     transformations = _objects(
         plan, "frame_transformations", exact_keys=_TRANSFORMATION_KEYS
     )
@@ -226,6 +228,7 @@ def _validate_frame_transformations(
 def _validate_clock_topology(
     plan: Mapping[str, object], clock_kinds: Mapping[str, str]
 ) -> None:
+    """Validate clock identities, relations, and timing topology."""
     topology = _mapping(plan, "clock_topology", exact_keys=_TOPOLOGY_KEYS)
     domains = _objects(topology, "domains", exact_keys=_DOMAIN_KEYS)
     if not domains:
@@ -327,10 +330,12 @@ def _validate_clock_topology(
 def _refuse_relation_cycles(
     parents: Mapping[str, set[str]], clock_kinds: Mapping[str, str]
 ) -> None:
+    """Reject cycles in the declared clock relations."""
     visiting: set[str] = set()
     finished: set[str] = set()
 
     def visit(identifier: str) -> None:
+        """Visit one clock relation while detecting dependency cycles."""
         if identifier in finished:
             return
         if identifier in visiting:
@@ -354,6 +359,7 @@ def _objects(
     *,
     exact_keys: frozenset[str] | None = None,
 ) -> list[Mapping[str, object]]:
+    """Require an array of object records from the parent mapping."""
     value = parent.get(name)
     if not isinstance(value, list):
         _fail(DiagnosticPlanDepthRefusalKind.PLAN, f"{name} must be an array")
@@ -373,6 +379,7 @@ def _objects(
 def _mapping(
     parent: Mapping[str, object], name: str, *, exact_keys: frozenset[str]
 ) -> Mapping[str, object]:
+    """Require a mapping field from the parent mapping."""
     value = parent.get(name)
     if not _is_string_mapping(value) or set(value) != exact_keys:
         _fail(
@@ -383,6 +390,7 @@ def _mapping(
 
 
 def _identifier(parent: Mapping[str, object], name: str) -> str:
+    """Require a canonical identifier field."""
     value = parent.get(name)
     if not isinstance(value, str) or _IDENTIFIER.fullmatch(value) is None:
         _fail(
@@ -393,6 +401,7 @@ def _identifier(parent: Mapping[str, object], name: str) -> str:
 
 
 def _nonempty_text(parent: Mapping[str, object], name: str) -> str:
+    """Require a non-empty text field."""
     value = parent.get(name)
     if not isinstance(value, str) or not value:
         _fail(DiagnosticPlanDepthRefusalKind.PLAN, f"{name} must be non-empty text")
@@ -400,6 +409,7 @@ def _nonempty_text(parent: Mapping[str, object], name: str) -> str:
 
 
 def _boolean(parent: Mapping[str, object], name: str) -> bool:
+    """Require a strict boolean field."""
     value = parent.get(name)
     if not isinstance(value, bool):
         _fail(DiagnosticPlanDepthRefusalKind.PLAN, f"{name} must be a boolean")
@@ -407,6 +417,7 @@ def _boolean(parent: Mapping[str, object], name: str) -> bool:
 
 
 def _string_tuple(parent: Mapping[str, object], name: str) -> tuple[str, ...]:
+    """Require a tuple of text values."""
     value = parent.get(name)
     if not isinstance(value, list) or any(not isinstance(item, str) for item in value):
         _fail(
@@ -417,6 +428,7 @@ def _string_tuple(parent: Mapping[str, object], name: str) -> tuple[str, ...]:
 
 
 def _sorted_unique_identifiers(values: list[str] | tuple[str, ...], name: str) -> None:
+    """Require sorted unique canonical identifiers."""
     if tuple(sorted(set(values))) != tuple(values) or any(
         _IDENTIFIER.fullmatch(value) is None for value in values
     ):
@@ -427,8 +439,10 @@ def _sorted_unique_identifiers(values: list[str] | tuple[str, ...], name: str) -
 
 
 def _is_string_mapping(value: object) -> TypeGuard[Mapping[str, object]]:
+    """Report whether a value is a string-keyed mapping."""
     return isinstance(value, dict) and all(isinstance(key, str) for key in value)
 
 
 def _fail(kind: DiagnosticPlanDepthRefusalKind, detail: str) -> NoReturn:
+    """Raise a typed diagnostic-plan-depth refusal."""
     raise DiagnosticPlanDepthError(kind, detail)

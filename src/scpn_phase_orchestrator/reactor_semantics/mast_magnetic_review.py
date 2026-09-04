@@ -307,6 +307,8 @@ class MastMagneticMeasurementReview:
 
 @dataclass(frozen=True, slots=True)
 class _ValidatedSources:
+    """Hold producer artifacts after cross-source validation."""
+
     shot_id: int
     observation_id: str
     archive_sha256: str
@@ -638,6 +640,7 @@ def mast_magnetic_source_review_digest(review: MastMagneticSourceReview) -> str:
 def _validate_sources(
     archive_bytes: bytes, qualification_bytes: bytes
 ) -> _ValidatedSources:
+    """Decode and cross-check the pinned producer source artifacts."""
     archive = _decode_document(archive_bytes, "archive")
     qualification = _decode_document(qualification_bytes, "qualification")
     _require_schema(archive, _ARCHIVE_SCHEMA, _ARCHIVE_VERSION, "archive")
@@ -677,6 +680,8 @@ def _validate_sources(
 
 @dataclass(frozen=True, slots=True)
 class _ArchiveValues:
+    """Hold validated MAST archive values for cross-document checks."""
+
     shot_id: int
     observation_id: str
     source_revision: str
@@ -687,12 +692,15 @@ class _ArchiveValues:
 
 @dataclass(frozen=True, slots=True)
 class _QualificationValues:
+    """Hold validated MAST qualification values for review checks."""
+
     clocks: tuple[MastMagneticClockReview, ...]
     measurements: tuple[MastMagneticMeasurementReview, ...]
     channel_count: int
 
 
 def _validate_archive(payload: dict[str, object]) -> _ArchiveValues:
+    """Validate the MAST archive document and return bound values."""
     _require_equal(payload["producer_project"], _PRODUCER_PROJECT, "producer")
     _require_equal(payload["facility"], _FACILITY, "facility")
     _require_equal(payload["reactor_configuration"], _CONFIGURATION, "configuration")
@@ -748,6 +756,7 @@ def _validate_archive(payload: dict[str, object]) -> _ArchiveValues:
 
 
 def _validate_archive_arrays(values: list[object]) -> dict[str, dict[str, object]]:
+    """Validate archive array geometry and numeric evidence."""
     arrays: dict[str, dict[str, object]] = {}
     for index, raw in enumerate(values):
         item = _object(raw, _ARCHIVE_ARRAY_KEYS, f"archive array {index}")
@@ -766,6 +775,7 @@ def _validate_archive_arrays(values: list[object]) -> dict[str, dict[str, object
 
 
 def _validate_archive_clocks(values: list[object]) -> dict[str, dict[str, object]]:
+    """Validate archive clock declarations."""
     clocks: dict[str, dict[str, object]] = {}
     for index, raw in enumerate(values):
         item = _object(raw, _ARCHIVE_CLOCK_KEYS, f"archive clock {index}")
@@ -801,6 +811,7 @@ def _validate_qualification(
     archive_payload: dict[str, object],
     archive_values: _ArchiveValues,
 ) -> _QualificationValues:
+    """Validate qualification evidence against the archive."""
     _require_equal(payload["producer_project"], _PRODUCER_PROJECT, "producer")
     _require_equal(payload["facility"], _FACILITY, "facility")
     _require_equal(payload["reactor_configuration"], _CONFIGURATION, "configuration")
@@ -903,6 +914,7 @@ def _validate_qualification(
 def _validate_qualification_arrays(
     values: list[object], archive: dict[str, dict[str, object]]
 ) -> dict[str, dict[str, object]]:
+    """Validate qualification arrays against archive geometry."""
     if len(values) != 72:
         _qualification_refusal("qualification must classify all 72 arrays")
     arrays: dict[str, dict[str, object]] = {}
@@ -935,6 +947,7 @@ def _validate_qualification_arrays(
 def _validate_qualification_clocks(
     values: list[object], archive: dict[str, dict[str, object]]
 ) -> tuple[MastMagneticClockReview, ...]:
+    """Validate qualification clocks against archive clocks."""
     reviews: list[MastMagneticClockReview] = []
     for index, raw in enumerate(values):
         item = _object(raw, _QUALIFICATION_CLOCK_KEYS, f"qualification clock {index}")
@@ -980,6 +993,7 @@ def _validate_measurements(
     arrays: dict[str, dict[str, object]],
     clocks: set[str],
 ) -> tuple[MastMagneticMeasurementReview, ...]:
+    """Validate measurements against arrays and clock definitions."""
     reviews: list[MastMagneticMeasurementReview] = []
     for index, raw in enumerate(values):
         item = _object(raw, _MEASUREMENT_KEYS, f"measurement {index}")
@@ -1030,6 +1044,7 @@ def _validate_measurements(
 
 
 def _validate_quality(value: object, name: str) -> None:
+    """Validate one measurement-quality value."""
     quality = _object(value, _QUALITY_KEYS, name)
     for key in (
         "finite_count",
@@ -1051,6 +1066,7 @@ def _validate_quality(value: object, name: str) -> None:
 def _validate_geometry(
     values: list[object], measurements: set[str]
 ) -> list[dict[str, object]]:
+    """Validate cross-measurement geometry invariants."""
     rows: list[dict[str, object]] = []
     for index, raw in enumerate(values):
         item = _object(raw, _GEOMETRY_KEYS, f"geometry row {index}")
@@ -1065,6 +1081,7 @@ def _validate_geometry(
 
 
 def _validate_registry_boundary() -> None:
+    """Validate the governed MAST registry boundary."""
     profile = DEFAULT_REACTOR_SEMANTIC_PROFILE_REGISTRY.resolve(_CONFIGURATION)
     if (
         profile.device_project != _DEVICE_PROJECT
@@ -1082,6 +1099,7 @@ def _validate_registry_boundary() -> None:
 def _decode_document(
     data: bytes, name: str, *, maximum: int = MAX_MAST_MAGNETIC_SOURCE_BYTES
 ) -> dict[str, object]:
+    """Decode and validate one canonical JSON document."""
     if not isinstance(data, bytes) or not data or len(data) > maximum:
         _refuse(
             MastMagneticSourceRefusalCode.INVALID_INPUT, f"{name} byte input invalid"
@@ -1114,6 +1132,7 @@ def _decode_document(
 
 
 def _reject_duplicates(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    """Reject duplicate keys while decoding JSON."""
     result: dict[str, object] = {}
     for key, value in pairs:
         if key in result:
@@ -1125,12 +1144,14 @@ def _reject_duplicates(pairs: list[tuple[str, object]]) -> dict[str, object]:
 
 
 def _reject_constant(value: str) -> NoReturn:
+    """Reject non-finite numeric constants while decoding JSON."""
     _refuse(MastMagneticSourceRefusalCode.INVALID_JSON, f"nonfinite constant {value}")
 
 
 def _require_schema(
     document: dict[str, object], schema: str, version: str, name: str
 ) -> None:
+    """Require the expected document schema and version."""
     if document["schema"] != schema or document["schema_version"] != version:
         _refuse(
             MastMagneticSourceRefusalCode.UNSUPPORTED_SCHEMA,
@@ -1141,6 +1162,7 @@ def _require_schema(
 def _validate_payload_digest(
     document: dict[str, object], payload: dict[str, object], name: str
 ) -> str:
+    """Validate a document digest against its canonical payload."""
     digest = _matching_text(
         document["payload_sha256"], _SHA256, f"{name} payload digest"
     )
@@ -1153,6 +1175,7 @@ def _validate_payload_digest(
 
 
 def _canonical_document(payload: dict[str, object], schema: str, version: str) -> bytes:
+    """Encode a schema-bound document as byte-canonical JSON."""
     return _canonical(
         {
             "payload": payload,
@@ -1164,6 +1187,7 @@ def _canonical_document(payload: dict[str, object], schema: str, version: str) -
 
 
 def _require_source_identity(revision: str, digest: str) -> None:
+    """Require an immutable source revision and artifact digest."""
     if not isinstance(revision, str) or _GIT_SHA.fullmatch(revision) is None:
         _refuse(
             MastMagneticSourceRefusalCode.SOURCE_IDENTITY_MISMATCH,
@@ -1177,6 +1201,7 @@ def _require_source_identity(revision: str, digest: str) -> None:
 
 
 def _object(value: object, keys: set[str], name: str) -> dict[str, object]:
+    """Require an object with exactly the expected keys."""
     if not isinstance(value, dict) or not all(isinstance(key, str) for key in value):
         _qualification_refusal(f"{name} must be an object")
     result = cast(dict[str, object], value)
@@ -1186,12 +1211,14 @@ def _object(value: object, keys: set[str], name: str) -> dict[str, object]:
 
 
 def _array(value: object, name: str) -> list[object]:
+    """Require an array value."""
     if not isinstance(value, list):
         _qualification_refusal(f"{name} must be an array")
     return cast(list[object], value)
 
 
 def _text(parent: dict[str, object], key: str) -> str:
+    """Require a text field from the supplied record."""
     value = parent[key]
     if not isinstance(value, str) or not value:
         _qualification_refusal(f"{key} must be non-empty text")
@@ -1199,12 +1226,14 @@ def _text(parent: dict[str, object], key: str) -> str:
 
 
 def _matching_text(value: object, pattern: re.Pattern[str], name: str) -> str:
+    """Require text matching the supplied pattern."""
     if not isinstance(value, str) or pattern.fullmatch(value) is None:
         _qualification_refusal(f"{name} has invalid syntax")
     return value
 
 
 def _strings(value: object, name: str) -> tuple[str, ...]:
+    """Require a sequence of non-empty text values."""
     raw = _array(value, name)
     if not all(isinstance(item, str) and item for item in raw):
         _qualification_refusal(f"{name} must contain non-empty strings")
@@ -1212,6 +1241,7 @@ def _strings(value: object, name: str) -> tuple[str, ...]:
 
 
 def _shape(value: object, name: str) -> tuple[int, ...]:
+    """Require a positive integer array shape."""
     raw = _array(value, name)
     if not all(
         isinstance(item, int) and not isinstance(item, bool) and item >= 0
@@ -1222,16 +1252,19 @@ def _shape(value: object, name: str) -> tuple[int, ...]:
 
 
 def _is_number(value: object) -> TypeGuard[int | float]:
+    """Report whether a value is a finite real number."""
     return isinstance(value, (int, float)) and not isinstance(value, bool)
 
 
 def _finite_number(value: object, name: str) -> float:
+    """Require a finite real number."""
     if not _is_number(value) or not math.isfinite(float(value)):
         _qualification_refusal(f"{name} must be finite")
     return float(value)
 
 
 def _positive_number(value: object, name: str) -> float:
+    """Require a strictly positive finite number."""
     result = _finite_number(value, name)
     if result <= 0.0:
         _qualification_refusal(f"{name} must be positive")
@@ -1239,23 +1272,27 @@ def _positive_number(value: object, name: str) -> float:
 
 
 def _positive_int(value: object, name: str) -> int:
+    """Require a strictly positive integer."""
     if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
         _qualification_refusal(f"{name} must be a positive integer")
     return value
 
 
 def _nonnegative_int(value: object, name: str) -> int:
+    """Require a non-negative integer."""
     if not isinstance(value, int) or isinstance(value, bool) or value < 0:
         _qualification_refusal(f"{name} must be a non-negative integer")
     return value
 
 
 def _require_equal(value: object, expected: object, name: str) -> None:
+    """Require exact equality with the governed value."""
     if value != expected:
         _qualification_refusal(f"{name} differs from contract")
 
 
 def _clock_record(review: MastMagneticClockReview) -> dict[str, object]:
+    """Serialize one reviewed clock into its canonical record."""
     return {
         "archive_grid_reproduced": review.archive_grid_reproduced,
         "first_value_s": review.first_value_s,
@@ -1270,6 +1307,7 @@ def _clock_record(review: MastMagneticClockReview) -> dict[str, object]:
 
 
 def _measurement_record(review: MastMagneticMeasurementReview) -> dict[str, object]:
+    """Serialize one reviewed measurement into its canonical record."""
     return {
         "applied_transform_recorded": review.applied_transform_recorded,
         "array_name": review.array_name,
@@ -1286,6 +1324,7 @@ def _measurement_record(review: MastMagneticMeasurementReview) -> dict[str, obje
 
 
 def _canonical(value: object) -> bytes:
+    """Encode a value as byte-canonical JSON."""
     return (
         json.dumps(
             value,
@@ -1299,26 +1338,32 @@ def _canonical(value: object) -> bytes:
 
 
 def _sha256(value: bytes) -> str:
+    """Return the SHA-256 digest of the supplied bytes."""
     return hashlib.sha256(value).hexdigest()
 
 
 def _refuse(code: MastMagneticSourceRefusalCode, detail: str) -> NoReturn:
+    """Raise the typed refusal for this contract."""
     raise MastMagneticSourceRefusalError(code, detail)
 
 
 def _archive_refusal(detail: str) -> NoReturn:
+    """Raise a MAST archive refusal."""
     _refuse(MastMagneticSourceRefusalCode.ARCHIVE_CONTRACT_MISMATCH, detail)
 
 
 def _qualification_refusal(detail: str) -> NoReturn:
+    """Raise a MAST qualification refusal."""
     _refuse(MastMagneticSourceRefusalCode.QUALIFICATION_CONTRACT_MISMATCH, detail)
 
 
 def _cross_refusal(detail: str) -> NoReturn:
+    """Raise a cross-document consistency refusal."""
     _refuse(MastMagneticSourceRefusalCode.CROSS_SOURCE_MISMATCH, detail)
 
 
 def _authority_refusal(detail: str) -> NoReturn:
+    """Raise an authority-boundary refusal."""
     _refuse(MastMagneticSourceRefusalCode.AUTHORITY_ESCALATION, detail)
 
 
