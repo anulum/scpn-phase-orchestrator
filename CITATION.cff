@@ -7,7 +7,7 @@ authors:
     given-names: Miroslav
     orcid: "https://orcid.org/0009-0009-3560-0851"
     email: protoscience@anulum.li
-version: 1.4.1
+version: 1.4.2
 date-released: "2026-09-04"
 license: AGPL-3.0-or-later
 url: "https://github.com/anulum/scpn-phase-orchestrator"

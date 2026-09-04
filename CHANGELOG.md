@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.2] - 2026-09-04
+
 ### Added
 
 - A fourth sealed L3 request now binds only `pulsed_electron_beam_icf` to the
@@ -3357,7 +3359,8 @@ proxy to the full arXiv:2603.15031 Transformer architecture:
 - Module linkage guard (`tools/check_test_module_linkage.py`) requiring test files for all source modules
 - Rust kernel (`spo-kernel/`) with PyO3 bindings for UPDEEngine, RegimeManager, CoherenceMonitor
 
-[Unreleased]: https://github.com/anulum/scpn-phase-orchestrator/compare/v1.4.1...HEAD
+[Unreleased]: https://github.com/anulum/scpn-phase-orchestrator/compare/v1.4.2...HEAD
+[1.4.2]: https://github.com/anulum/scpn-phase-orchestrator/compare/v1.4.1...v1.4.2
 [1.4.1]: https://github.com/anulum/scpn-phase-orchestrator/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/anulum/scpn-phase-orchestrator/compare/v1.3.1...v1.4.0
 [1.3.1]: https://github.com/anulum/scpn-phase-orchestrator/compare/v1.3.0...v1.3.1

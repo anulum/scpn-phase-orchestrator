@@ -120,7 +120,7 @@ review record.
 
 ## Current Release Boundary
 
-Version `1.4.1` is the current release candidate. Public availability must be
+Version `1.4.2` is the current release candidate. Public availability must be
 verified through PyPI and an immutable exact-tag release receipt; a source-tree
 version alone is not publication evidence. Version `1.0.0` established the
 stable API baseline: the public names exported from
