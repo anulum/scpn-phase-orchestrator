@@ -10,10 +10,11 @@
 # the same CPython minor as the runtime image so the extracted extension imports.
 FROM python:3.13-slim@sha256:e544a7fcbdf8555eceda66bf86cafb006c736339f76141918bcb812f3174c00a AS rust-builder
 
+# rustup 1.29.1 installer; digest published beside rustup-init upstream.
 ENV CARGO_HOME=/usr/local/cargo \
     RUSTUP_HOME=/usr/local/rustup \
     PATH=/usr/local/cargo/bin:$PATH \
-    RUSTUP_INIT_SHA256=4acc9acc76d5079515b46346a485974457b5a79893cfb01112423c89aeb5aa10
+    RUSTUP_INIT_SHA256=dda7234360b7f578ca8b0ddcb80145646fa61a67c1720a5abc7051b35c9fcb71
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential ca-certificates curl && \

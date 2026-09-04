@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.1] - 2026-09-04
+
+### Fixed
+
+- Refresh the fail-closed `rustup-init` checksum to the official `1.29.1`
+  release digest so the release container can be built, scanned, attested,
+  signed, and published after the upstream installer changed. Python and Rust
+  reactor-semantics APIs are unchanged from `1.4.0`.
+
 ## [1.4.0] - 2026-09-04
 
 ### Added
@@ -3328,7 +3337,8 @@ proxy to the full arXiv:2603.15031 Transformer architecture:
 - Module linkage guard (`tools/check_test_module_linkage.py`) requiring test files for all source modules
 - Rust kernel (`spo-kernel/`) with PyO3 bindings for UPDEEngine, RegimeManager, CoherenceMonitor
 
-[Unreleased]: https://github.com/anulum/scpn-phase-orchestrator/compare/v1.4.0...HEAD
+[Unreleased]: https://github.com/anulum/scpn-phase-orchestrator/compare/v1.4.1...HEAD
+[1.4.1]: https://github.com/anulum/scpn-phase-orchestrator/compare/v1.4.0...v1.4.1
 [1.4.0]: https://github.com/anulum/scpn-phase-orchestrator/compare/v1.3.1...v1.4.0
 [1.3.1]: https://github.com/anulum/scpn-phase-orchestrator/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/anulum/scpn-phase-orchestrator/compare/v1.2.0...v1.3.0

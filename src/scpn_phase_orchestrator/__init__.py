@@ -16,7 +16,7 @@ managed because downstream code imports these names directly.
 
 from __future__ import annotations
 
-__version__ = "1.4.0"
+__version__ = "1.4.1"
 
 import os as _os
 from importlib import import_module as _import_module
