@@ -168,11 +168,9 @@ transfer evidence to indirect-drive or fast/shock-ignition configurations.
 
 The second instance targets only `ion_beam_icf` from the independently pinned
 SCPN-ICF-BEAM-CORE review. Bunch timing remains event-relative and the same
-cyclic/noncyclic/numerical distinctions stay explicit. Although that producer
-review also covers `pulsed_electron_beam_icf`, the two configurations derive
-different request IDs and inherit no physical evidence from one another. The
-host-independent materialisation CLI reads only exact local fixture bytes and
-never imports or executes producer source.
+cyclic/noncyclic/numerical distinctions stay explicit. The host-independent
+materialisation CLI reads only exact local fixture bytes and never imports or
+executes producer source.
 
 The third instance targets only `projectile_or_impact_icf` from exact
 SCPN-ICF-IMPACT-CORE fixture and wheel custody. Impact timing remains event-
@@ -181,6 +179,12 @@ noncyclic, and model phase remains numerical-only. The review owns no other
 configuration, so the public factory refuses laser, ion-beam, pulsed-electron-
 beam, and generic beam-target request construction instead of transferring
 evidence by topology.
+
+The fourth instance targets only `pulsed_electron_beam_icf`. It deliberately
+shares the sealed SCPN-ICF-BEAM-CORE review with the ion-beam instance while
+deriving a different request ID. This proves that review custody can be shared
+without transferring a physical sample, phase, validity, regime,
+semantic-ingress state, CONTROL admission, or authority between configurations.
 
 All thirteen physical-evidence obligations remain missing, including physical
 sample and diagnostic identity, reference and clock correlation, calibration

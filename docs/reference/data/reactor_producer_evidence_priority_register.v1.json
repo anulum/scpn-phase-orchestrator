@@ -2146,6 +2146,16 @@
             "physical_uncertainty_validity_quality_and_provenance",
             "physical_observability_gate_result"
           ],
+          "materialized_request": {
+            "api": "scpn_phase_orchestrator.reactor_semantics.device_physical_evidence_request_from_plan_review",
+            "envelope_sha256": "9461ddbc89f623bb0f6d2584e6734eef66e5c9abc1c94f4b18ca131acc9fa15a",
+            "path": "docs/reference/data/pulsed_electron_beam_icf_physical_evidence_request.v1.json",
+            "request_id": "bbe0825d5aeb893089a10bb6ec6d94decf76dbc2b5f93b735ff704885f63c2e7",
+            "schema": "scpn-phase-orchestrator.device-physical-evidence-request.v1",
+            "schema_version": "1.0.0",
+            "source_review_id": "5da4be074476c8b3bd4a16c199d5f9f359e11f4e1fa36554765a1c880bf41719",
+            "source_review_sha256": "6200379b8ec7284f05c2f271a0a3fda72c1e0efe3fbfaa97aef49a01a7700b3d"
+          },
           "source_revision_required": true,
           "package_identity_required": true,
           "canonical_bytes_required": true,
@@ -3224,5 +3234,5 @@
     "direct_actuation_authorized": false,
     "machine_protection_final_veto": true
   },
-  "payload_sha256": "1dbcc560381a4b88bca3004c97a1a384e7e5b4746bbc3a77ae61bed3c21c9417"
+  "payload_sha256": "629c04b00cce05d835e8d4dd1d0cb8ee586cb725a363a49aebed3294da61615d"
 }

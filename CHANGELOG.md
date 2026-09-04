@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- A fourth sealed L3 request now binds only `pulsed_electron_beam_icf` to the
+  exact SCPN-ICF-BEAM-CORE review. The shared ion/electron design-plan custody
+  yields distinct request identities and transfers no physical sample, phase,
+  validity, CONTROL admission, execution, or actuation authority.
+
 ## [1.4.1] - 2026-09-04
 
 ### Fixed

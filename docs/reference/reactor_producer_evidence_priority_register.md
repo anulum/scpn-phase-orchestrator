@@ -100,9 +100,7 @@ and canonical envelope SHA-256 is
 `f42a9817dcef628caefab5ba5681853327bae9b21ba72459eb9588e14c2ed6a9`.
 
 The second materialised L3 boundary is specific to `ion_beam_icf` and binds
-the independently pinned SCPN-ICF-BEAM-CORE review. The sibling
-`pulsed_electron_beam_icf` configuration remains unmaterialised and inherits
-no evidence. The ion-beam request ID is
+the independently pinned SCPN-ICF-BEAM-CORE review. The ion-beam request ID is
 `b381e5d5dc8aaff311da8f7d0453ed458f154f3930dd1a3297df07d366d93854`
 and canonical envelope SHA-256 is
 `c36256af2280a5caf786953c0c1e293b552f128acb02704123ea8073c5153b9b`.
@@ -114,6 +112,15 @@ inherits its evidence or authority. Its request ID is
 `27a576dd67b149069bd4eefa1ef343c570a0084688acd3370721e6a34023ac62`
 and canonical envelope SHA-256 is
 `ccdda701953cdec025d3b7f63f026bbaf92efed54ecebddfbb510eb83eab64e1`.
+
+The fourth materialised L3 boundary is specific to
+`pulsed_electron_beam_icf`. It shares the exact SCPN-ICF-BEAM-CORE review
+custody with `ion_beam_icf` but has a distinct request identity, and neither
+configuration inherits physical evidence or authority from the other. Its
+request ID is
+`bbe0825d5aeb893089a10bb6ec6d94decf76dbc2b5f93b735ff704885f63c2e7`
+and canonical envelope SHA-256 is
+`9461ddbc89f623bb0f6d2584e6734eef66e5c9abc1c94f4b18ca131acc9fa15a`.
 
 ### L4 — refused plans
 
@@ -160,7 +167,7 @@ is validated by
 [`reactor_producer_evidence_priority_register.schema.json`](../specs/reactor_producer_evidence_priority_register.schema.json).
 
 - Schema version: `1.2.0`
-- Payload SHA-256: `1dbcc560381a4b88bca3004c97a1a384e7e5b4746bbc3a77ae61bed3c21c9417`
+- Payload SHA-256: `629c04b00cce05d835e8d4dd1d0cb8ee586cb725a363a49aebed3294da61615d`
 - Configuration evidence payload: `7d56f34fdb5c0863813c954d5ad38bb0c1f1dd129ebfc5d93635dfdc47daf5f2`
 - Diagnostic-plan portfolio payload: `13bdcfd794cab002903d4861a378056536e0fcb98beca64863a9b36cc71558a5`
 - Signal occurrence payload: `8210dc2310a7031ccad1a1675677e3e92007a2dd82e696c39d25202d2f9f022f`

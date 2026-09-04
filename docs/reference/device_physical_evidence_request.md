@@ -44,9 +44,8 @@ remain noncyclic, and its model oscillator remains numerical-only.
 
 The accepted producer review also names `pulsed_electron_beam_icf`. That shared
 review identity does not merge the configurations: constructing each request
-produces a distinct request ID, and only the ion-beam request is materialised
-here. Neither request inherits a physical sample, phase, validity, or CONTROL
-admission from the other.
+produces a distinct request ID. Neither request inherits a physical sample,
+phase, validity, or CONTROL admission from the other.
 
 The host-independent
 `tools/materialize_device_physical_evidence_request.py` reconstructs the review
@@ -69,6 +68,18 @@ used to construct requests for laser, ion-beam, pulsed-electron-beam, or
 generic beam-target configurations: the public factory refuses each as a
 configuration mismatch. No topology resemblance transfers a physical sample,
 phase, validity, CONTROL admission, or authority.
+
+## Pulsed-electron-beam ICF instance
+
+The fourth materialised request selects only `pulsed_electron_beam_icf` from
+the same exact SCPN-ICF-BEAM-CORE fixture, source revision, and reproducible
+wheel digest used to review the ion-beam configuration. Its request ID is
+different because configuration identity is part of the sealed payload.
+
+Shared plan-review custody is not shared physical evidence. The electron-beam
+request retains thirteen missing prerequisites, no selected candidate, no
+physical source, no admitted observation or phase, no declared semantic
+ingress, no CONTROL request or intent, and no execution or actuation authority.
 
 ## Producer obligations
 
@@ -125,6 +136,14 @@ The canonical projectile/impact request is
 - Canonical envelope SHA-256: `ccdda701953cdec025d3b7f63f026bbaf92efed54ecebddfbb510eb83eab64e1`
 - Embedded review ID: `eeefac32254f871dc94ce655353b60327f2aa1e7dde566bd92c89c86cb8eaa84`
 - Embedded review SHA-256: `5035b44a327b916f662125cc452777fb30bc43c6ee37642d354d2c46c2ff60e3`
+
+The canonical pulsed-electron-beam request is
+[`pulsed_electron_beam_icf_physical_evidence_request.v1.json`](data/pulsed_electron_beam_icf_physical_evidence_request.v1.json).
+
+- Request ID: `bbe0825d5aeb893089a10bb6ec6d94decf76dbc2b5f93b735ff704885f63c2e7`
+- Canonical envelope SHA-256: `9461ddbc89f623bb0f6d2584e6734eef66e5c9abc1c94f4b18ca131acc9fa15a`
+- Embedded review ID: `5da4be074476c8b3bd4a16c199d5f9f359e11f4e1fa36554765a1c880bf41719`
+- Embedded review SHA-256: `6200379b8ec7284f05c2f271a0a3fda72c1e0efe3fbfaa97aef49a01a7700b3d`
 
 Any source byte, registry binding, candidate meaning, clock boundary,
 obligation, or authority change alters the seal and requires deliberate

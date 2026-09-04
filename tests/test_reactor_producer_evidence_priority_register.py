@@ -66,6 +66,9 @@ LASER_ICF_DIRECT_DRIVE_REQUEST = Path(
 ION_BEAM_ICF_REQUEST = Path(
     "docs/reference/data/ion_beam_icf_physical_evidence_request.v1.json"
 )
+PULSED_ELECTRON_BEAM_ICF_REQUEST = Path(
+    "docs/reference/data/pulsed_electron_beam_icf_physical_evidence_request.v1.json"
+)
 PROJECTILE_OR_IMPACT_ICF_REQUEST = Path(
     "docs/reference/data/projectile_or_impact_icf_physical_evidence_request.v1.json"
 )
@@ -313,6 +316,7 @@ def test_priority_lanes_follow_custody_precedence_not_external_rank() -> None:
         "ion_beam_icf",
         "laser_icf_direct_drive",
         "projectile_or_impact_icf",
+        "pulsed_electron_beam_icf",
     }
     assert all(
         row["next_gate"] == "supply_physical_sample_envelope"
@@ -506,6 +510,33 @@ def test_priority_register_requests_evidence_without_granting_authority() -> Non
         "source_review_id": runtime_ion_request.source_review_id,
         "source_review_sha256": runtime_ion_request.source_review_sha256,
     }
+    electron_request = by_configuration["pulsed_electron_beam_icf"]["producer_request"]
+    assert isinstance(electron_request, dict)
+    electron_materialized = electron_request["materialized_request"]
+    assert isinstance(electron_materialized, dict)
+    runtime_electron_request = device_physical_evidence_request_from_bytes(
+        PULSED_ELECTRON_BEAM_ICF_REQUEST.read_bytes()
+    )
+    assert electron_materialized == {
+        "api": (
+            "scpn_phase_orchestrator.reactor_semantics."
+            "device_physical_evidence_request_from_plan_review"
+        ),
+        "envelope_sha256": device_physical_evidence_request_digest(
+            runtime_electron_request
+        ),
+        "path": PULSED_ELECTRON_BEAM_ICF_REQUEST.as_posix(),
+        "request_id": runtime_electron_request.request_id,
+        "schema": DEVICE_PHYSICAL_EVIDENCE_REQUEST_SCHEMA,
+        "schema_version": DEVICE_PHYSICAL_EVIDENCE_REQUEST_VERSION,
+        "source_review_id": runtime_electron_request.source_review_id,
+        "source_review_sha256": runtime_electron_request.source_review_sha256,
+    }
+    assert runtime_electron_request.source_review_id == (
+        runtime_ion_request.source_review_id
+    )
+    assert runtime_electron_request.request_id != runtime_ion_request.request_id
+    assert runtime_electron_request.configuration != runtime_ion_request.configuration
     impact_request = by_configuration["projectile_or_impact_icf"]["producer_request"]
     assert isinstance(impact_request, dict)
     impact_materialized = impact_request["materialized_request"]

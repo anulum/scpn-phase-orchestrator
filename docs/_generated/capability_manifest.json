@@ -12,7 +12,7 @@
     "research_experimental_modules": 205,
     "runtime_serving_modules": 158,
     "rust_kernel_files": 97,
-    "test_files": 918
+    "test_files": 919
   },
   "documentation": {
     "public_pages": [
@@ -2559,6 +2559,7 @@
       "tests/test_public_boundary_validation_adapters.py",
       "tests/test_public_roadmap_status.py",
       "tests/test_publish_workflow_hygiene.py",
+      "tests/test_pulsed_electron_beam_icf_physical_evidence_request.py",
       "tests/test_qp_solver.py",
       "tests/test_qpu_data_artifact.py",
       "tests/test_quality_scorer.py",
