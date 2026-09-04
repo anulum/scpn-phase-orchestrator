@@ -34,6 +34,28 @@ simulation clock remains synthetic and is ineligible as a physical reference.
 A declared clock topology or timing uncertainty is not clock-correlation
 evidence.
 
+## Ion-beam ICF instance
+
+The second materialised request uses exact `SCPN-ICF-BEAM-CORE` fixture bytes,
+source revision, and reproducible wheel digest, but selects only
+`ion_beam_icf`. Its bunch timing remains an event-relative `event_cycle`, its
+resolved asymmetry remains `derived_cyclic`, its trajectory and shot outcome
+remain noncyclic, and its model oscillator remains numerical-only.
+
+The accepted producer review also names `pulsed_electron_beam_icf`. That shared
+review identity does not merge the configurations: constructing each request
+produces a distinct request ID, and only the ion-beam request is materialised
+here. Neither request inherits a physical sample, phase, validity, or CONTROL
+admission from the other.
+
+The host-independent
+`tools/materialize_device_physical_evidence_request.py` reconstructs the review
+from exact local manifest and plan-envelope fixture bytes. It accepts the
+immutable source revision and package-artifact digest explicitly, imports no
+producer module, writes canonical bytes atomically, and has a fail-closed
+`--check` mode. Absolute input/output paths make the command independent of the
+caller's working directory.
+
 ## Producer obligations
 
 All thirteen prerequisites are explicitly missing: physical sample identity,
@@ -64,7 +86,7 @@ The request fixes `selected_candidate_id=null`,
 `execution_permitted=false`, and `direct_actuation=false`. Authority remains
 `review_only`, and `machine_protection_final_veto=true`.
 
-The canonical request is
+The canonical direct-drive request is
 [`laser_icf_direct_drive_physical_evidence_request.v1.json`](data/laser_icf_direct_drive_physical_evidence_request.v1.json),
 validated by
 [`device_physical_evidence_request.schema.json`](../specs/device_physical_evidence_request.schema.json).
@@ -73,6 +95,14 @@ validated by
 - Canonical envelope SHA-256: `f42a9817dcef628caefab5ba5681853327bae9b21ba72459eb9588e14c2ed6a9`
 - Embedded review ID: `0dac2e7bf5043eab60f5979b1fbf73a5331928816b2a7152c6ad41b27151d083`
 - Embedded review SHA-256: `5cb5824bd6058a148d8ab71ead7a0d35939a30b8ddd8d40c1f68cad3caaf0467`
+
+The canonical ion-beam request is
+[`ion_beam_icf_physical_evidence_request.v1.json`](data/ion_beam_icf_physical_evidence_request.v1.json).
+
+- Request ID: `b381e5d5dc8aaff311da8f7d0453ed458f154f3930dd1a3297df07d366d93854`
+- Canonical envelope SHA-256: `c36256af2280a5caf786953c0c1e293b552f128acb02704123ea8073c5153b9b`
+- Embedded review ID: `5da4be074476c8b3bd4a16c199d5f9f359e11f4e1fa36554765a1c880bf41719`
+- Embedded review SHA-256: `6200379b8ec7284f05c2f271a0a3fda72c1e0efe3fbfaa97aef49a01a7700b3d`
 
 Any source byte, registry binding, candidate meaning, clock boundary,
 obligation, or authority change alters the seal and requires deliberate

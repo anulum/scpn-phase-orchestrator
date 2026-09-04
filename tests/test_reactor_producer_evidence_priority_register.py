@@ -63,6 +63,9 @@ MAST_FIXTURES = Path("tests/fixtures/mast_magnetic_source_review")
 LASER_ICF_DIRECT_DRIVE_REQUEST = Path(
     "docs/reference/data/laser_icf_direct_drive_physical_evidence_request.v1.json"
 )
+ION_BEAM_ICF_REQUEST = Path(
+    "docs/reference/data/ion_beam_icf_physical_evidence_request.v1.json"
+)
 MAST_SOURCE_REVISION = "c30fb3932b47a812dc26d5846761030cdd0bc94c"
 MAST_SOURCE_WHEEL_SHA256 = (
     "a709b8aeecbd9483254bc3df1b29b87bf9df59ada92255af41631d861db430c9"
@@ -297,6 +300,13 @@ def test_priority_lanes_follow_custody_precedence_not_external_rank() -> None:
         LANES[4]: 16,
     }
     assert all(row["priority_score"] is None for row in rows)
+    materialized_l3: set[object] = set()
+    for row in rows:
+        request = row["producer_request"]
+        assert isinstance(request, dict)
+        if "materialized_request" in request and row["intake_lane"] == LANES[3]:
+            materialized_l3.add(row["configuration"])
+    assert materialized_l3 == {"ion_beam_icf", "laser_icf_direct_drive"}
     assert all(
         row["next_gate"] == "supply_physical_sample_envelope"
         for row in rows
@@ -468,6 +478,26 @@ def test_priority_register_requests_evidence_without_granting_authority() -> Non
         "schema_version": DEVICE_PHYSICAL_EVIDENCE_REQUEST_VERSION,
         "source_review_id": runtime_laser_request.source_review_id,
         "source_review_sha256": runtime_laser_request.source_review_sha256,
+    }
+    ion_request = by_configuration["ion_beam_icf"]["producer_request"]
+    assert isinstance(ion_request, dict)
+    ion_materialized = ion_request["materialized_request"]
+    assert isinstance(ion_materialized, dict)
+    runtime_ion_request = device_physical_evidence_request_from_bytes(
+        ION_BEAM_ICF_REQUEST.read_bytes()
+    )
+    assert ion_materialized == {
+        "api": (
+            "scpn_phase_orchestrator.reactor_semantics."
+            "device_physical_evidence_request_from_plan_review"
+        ),
+        "envelope_sha256": device_physical_evidence_request_digest(runtime_ion_request),
+        "path": ION_BEAM_ICF_REQUEST.as_posix(),
+        "request_id": runtime_ion_request.request_id,
+        "schema": DEVICE_PHYSICAL_EVIDENCE_REQUEST_SCHEMA,
+        "schema_version": DEVICE_PHYSICAL_EVIDENCE_REQUEST_VERSION,
+        "source_review_id": runtime_ion_request.source_review_id,
+        "source_review_sha256": runtime_ion_request.source_review_sha256,
     }
 
     for row in rows:

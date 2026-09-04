@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- A host-independent materialisation CLI now reconstructs sealed device
+  physical-evidence requests from exact local producer fixtures without
+  importing producer code. The second L3 instance binds only `ion_beam_icf`
+  from SCPN-ICF-BEAM-CORE and proves that its shared plan transfers no evidence
+  or authority to pulsed-electron-beam ICF.
 - A family-neutral, byte-canonical physical-evidence request now derives one
   configuration-specific producer boundary from an accepted diagnostic-plan
   review. The first materialised request covers direct-drive laser ICF,

@@ -99,6 +99,14 @@ evidence. Its request ID is
 and canonical envelope SHA-256 is
 `f42a9817dcef628caefab5ba5681853327bae9b21ba72459eb9588e14c2ed6a9`.
 
+The second materialised L3 boundary is specific to `ion_beam_icf` and binds
+the independently pinned SCPN-ICF-BEAM-CORE review. The sibling
+`pulsed_electron_beam_icf` configuration remains unmaterialised and inherits
+no evidence. The ion-beam request ID is
+`b381e5d5dc8aaff311da8f7d0453ed458f154f3930dd1a3297df07d366d93854`
+and canonical envelope SHA-256 is
+`c36256af2280a5caf786953c0c1e293b552f128acb02704123ea8073c5153b9b`.
+
 ### L4 — refused plans
 
 Sixteen configurations map to thirteen refused producer objects. Seven
@@ -144,7 +152,7 @@ is validated by
 [`reactor_producer_evidence_priority_register.schema.json`](../specs/reactor_producer_evidence_priority_register.schema.json).
 
 - Schema version: `1.2.0`
-- Payload SHA-256: `ba09efdf2bfc9b36b92aeabb2c0b1f306d10a735d5ed989204dea6ddaa38929b`
+- Payload SHA-256: `8c095951564222633ac8f7397e0ff0c4ef8cd79460d90767888a565adccf234b`
 - Configuration evidence payload: `4ee797e9bd03d646d538b30ecbf468a90e70be4bdada922b09eb84e483f3b730`
 - Diagnostic-plan portfolio payload: `13bdcfd794cab002903d4861a378056536e0fcb98beca64863a9b36cc71558a5`
 - Signal occurrence payload: `8210dc2310a7031ccad1a1675677e3e92007a2dd82e696c39d25202d2f9f022f`

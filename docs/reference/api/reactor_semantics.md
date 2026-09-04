@@ -166,6 +166,14 @@ shot outcome remain noncyclic, and the synthetic oscillator remains
 `numerical_only` and physically ineligible. Sharing an ICF-laser plan does not
 transfer evidence to indirect-drive or fast/shock-ignition configurations.
 
+The second instance targets only `ion_beam_icf` from the independently pinned
+SCPN-ICF-BEAM-CORE review. Bunch timing remains event-relative and the same
+cyclic/noncyclic/numerical distinctions stay explicit. Although that producer
+review also covers `pulsed_electron_beam_icf`, the two configurations derive
+different request IDs and inherit no physical evidence from one another. The
+host-independent materialisation CLI reads only exact local fixture bytes and
+never imports or executes producer source.
+
 All thirteen physical-evidence obligations remain missing, including physical
 sample and diagnostic identity, reference and clock correlation, calibration
 or observation operator, uncertainty, validity, producer evidence-state
@@ -177,7 +185,7 @@ meaning.
 The request is `review_only`, non-actionable, non-executing, non-actuating, and
 cannot request CONTROL admission. Its portable envelope is defined by
 [`device_physical_evidence_request.schema.json`](../../specs/device_physical_evidence_request.schema.json),
-with the first sealed instance documented in the
+with the sealed instances documented in the
 [device physical-evidence request](../device_physical_evidence_request.md)
 reference.
 

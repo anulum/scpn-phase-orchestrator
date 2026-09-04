@@ -74,6 +74,8 @@ def test_reactor_semantics_reference_preserves_u0_boundaries() -> None:
         "Accepted-plan to physical-evidence request",
         "device_physical_evidence_request_from_plan_review()",
         "The first materialised instance targets only `laser_icf_direct_drive`",
+        "The second instance targets only `ion_beam_icf`",
+        "host-independent materialisation CLI reads only exact local fixture bytes",
         "source-bound gaps or provisional candidates",
         "device_physical_evidence_request.schema.json",
         "versions `1.1.0` and `1.2.0` to separate exact plan and channel shapes",
@@ -216,9 +218,11 @@ def test_reactor_producer_evidence_priority_is_non_scalar_and_fail_closed() -> N
         "zero qualified physical phases",
         "zero CONTROL admissions",
         "`machine_protection_final_veto=true`",
-        "`ba09efdf2bfc9b36b92aeabb2c0b1f306d10a735d5ed989204dea6ddaa38929b`",
+        "`8c095951564222633ac8f7397e0ff0c4ef8cd79460d90767888a565adccf234b`",
         "direct-drive laser-ICF",
         "`device_physical_evidence_request_from_plan_review()`",
+        "specific to `ion_beam_icf`",
+        "`pulsed_electron_beam_icf` configuration remains unmaterialised",
         "reactor_producer_evidence_priority_register.v1.json",
         "reactor_producer_evidence_priority_register.schema.json",
     )
@@ -234,6 +238,11 @@ def test_device_physical_evidence_request_is_exact_and_fail_closed() -> None:
     required = (
         "common L3 boundary",
         "scoped only to `laser_icf_direct_drive`",
+        "second materialised request uses exact `SCPN-ICF-BEAM-CORE` fixture bytes",
+        "selects only `ion_beam_icf`",
+        "produces a distinct request ID",
+        "host-independent",
+        "imports no producer module",
         "event-relative `event_cycle`",
         "`derived_cyclic`",
         "`noncyclic_feature`",
@@ -248,6 +257,8 @@ def test_device_physical_evidence_request_is_exact_and_fail_closed() -> None:
         "`machine_protection_final_veto=true`",
         "`3f273e5ef1fb68e7a928913a7f7a8c9b5e6055a7649c722598911fa39458111a`",
         "`f42a9817dcef628caefab5ba5681853327bae9b21ba72459eb9588e14c2ed6a9`",
+        "`b381e5d5dc8aaff311da8f7d0453ed458f154f3930dd1a3297df07d366d93854`",
+        "`c36256af2280a5caf786953c0c1e293b552f128acb02704123ea8073c5153b9b`",
         "device_physical_evidence_request.schema.json",
     )
 
