@@ -192,7 +192,7 @@ def test_rank_semantics_do_not_promote_component_or_concept_evidence() -> None:
     assert tuple(payload["rank_order"]) == RANK_ORDER
     ranks = Counter(row["external_evidence_rank"] for row in rows)
     assert ranks == {
-        "E5_integrated_fusion_observation": 7,
+        "E5_integrated_fusion_observation": 9,
         "E4_integrated_plasma_experiment": 18,
         "E3_component_or_driver_experiment": 5,
         "E1_concept_or_simulation": 2,
@@ -228,9 +228,9 @@ def test_external_technology_evidence_never_qualifies_spo_signals() -> None:
     assert payload["direct_actuation_authorized"] is False
     assert payload["machine_protection_final_veto"] is True
     assert payload["counts"] == {
-        "built_in_configurations": 32,
-        "built_in_confinement_families": 8,
-        "primary_sources": 34,
+        "registered_configurations": 34,
+        "confinement_families": 9,
+        "primary_sources": 37,
         "physical_observations_qualified": 0,
         "physical_phases_qualified": 0,
         "control_admitted": 0,
@@ -254,3 +254,21 @@ def test_external_technology_evidence_never_qualifies_spo_signals() -> None:
         assert "public_machine_readable_calibrated_data" in row["missing_capabilities"]
         assert "spo_producer_adapter" in row["missing_capabilities"]
         assert "control_admission" in row["missing_capabilities"]
+
+
+def test_extension_evidence_does_not_claim_reactor_or_energy_gain() -> None:
+    """Keep observed reactions distinct from a reactor or gain demonstration."""
+    rows = {row["configuration"]: row for row in _rows()}
+    extension_ids = {
+        "scpn.reactor_systems:lattice_confinement_fusion",
+        "scpn.reactor_systems:muon_catalysed_fusion",
+    }
+
+    assert extension_ids <= rows.keys()
+    for identifier in extension_ids:
+        row = rows[identifier]
+        assert row["confinement_family"] == "extension"
+        assert row["external_evidence_rank"] == "E5_integrated_fusion_observation"
+        assert "current_integrated_device" in row["missing_capabilities"]
+        assert "power_conversion_demonstration" in row["missing_capabilities"]
+        assert row["technology_is_control_evidence"] is False

@@ -1,74 +1,87 @@
 # Reactor diagnostic-plan portfolio status
 
-This snapshot records whether exact diagnostic-plan objects from the 20 Reactor
-Systems device repositories pass SPO's public review-only intake. Each observed
-local head was independently matched to public `origin/main`, and each exact
-manifest/fixture pair was passed to
-`device_diagnostic_plan_review_from_producer_bytes()` without importing or
-executing producer source.
+This snapshot applies SPO's public, review-only diagnostic-plan validator to
+immutable `origin/main` bytes from all 22 Reactor Systems device projects. It
+reads each exact `reactor-domain.json` and
+`tests/data/plan_envelope_fixture.json` object without importing or executing
+producer code. Local worktree state is not used as remote evidence.
 
 ## Result
 
-- **20 producers** were examined at `2026-09-02T01:11:19+02:00`.
-- **20 fixtures** are structurally accepted; the partition is **20 accepted / 0 refused**.
-- **0 current fixtures** have byte-identical SPO custody; retained `1.1.0` fixtures remain a compatibility corpus.
-- **20 fixtures** are digest-pinned public producer objects rather than current local custody.
-- **140/140 hosted workflows** completed successfully at the exact 20 public heads.
+- **22 device projects** were examined at `2026-09-04T07:27:40Z`.
+- **7 producer objects** are structurally accepted, **13 are refused**, and
+  **2 architecture-only projects** have no declared diagnostic plan.
+- **0 current fixtures** have byte-identical SPO custody.
+- **7 fixtures** are digest-pinned public producer objects.
+- **148/154 hosted workflows** completed successfully at the exact 22 public
+  heads; six `CI` workflows failed and no workflow was cancelled.
 - **0 fixtures** constitute a qualified physical observation or physical phase.
-- **0 fixtures** create CONTROL intent, action, execution, actuation, or machine-protection authority.
+- No row creates CONTROL intent, action, execution, actuation, or
+  machine-protection authority.
 
-Structural acceptance means only that a synthetic design declaration obeys the
-exact envelope `1.2.0` exchange contract. It does not validate hardware,
+Structural acceptance proves only that a design declaration satisfies an
+exact versioned manifest/envelope/plan contract. It does not validate hardware,
 calibration, geometry, clocks, observability, measurements, regimes, or
-operation. A public-object row pins exact revision, manifest and fixture
-digests but deliberately does not claim SPO holds identical fixture bytes.
+operation. A failed hosted workflow is engineering evidence and stays visible;
+it is never converted into scientific evidence.
 
-## Current 1.2 public-object evidence
+## Exact project partition
 
-Every current envelope `1.2.0` object is verified at its public `main`
-HEAD. SPO retains older `1.1.0` fixtures as compatibility inputs, but those
-bytes are not classified as custody of the current object. Each row below
-pins the current fixture and the seven successful hosted run IDs
-(`CI`, `CodeQL`, `Docs`, `Pre-commit`, `SBOM`, `Scorecard`, and
-`Security audit`). Hosted success corroborates repository gates only; it
-does not upgrade scientific or operational evidence.
-
-| Producer | Exact public head | Fixture SHA-256 | Hosted run IDs |
+| Project | Status | Exact public head | Current boundary |
 |---|---|---|---|
-| `SCPN-BEAM-TARGET-CORE` | `30c62db23565c5e57bc5f7df9f28f5d700399384` | `6318fee21c7395945f82f5920b09545982fb7a50c1284a053656d5a2f43ac6e9` | `33568210643, 33568210646, 33568210650, 33568210658, 33568210700, 33568210713, 33568210923` |
-| `SCPN-DENSE-PLASMA-FOCUS-CORE` | `45db7b7d294be857719143b150a0ed3a00643a5f` | `2f2b708854f2f507fb5fc0f9a68aeaf928f393e1ef58d256338957e8f8762929` | `33568168490, 33568168494, 33568168501, 33568168512, 33568168535, 33568168629, 33568168894` |
-| `SCPN-FRC-CORE` | `be5ecd333712e18ed4021f3b5e27b55a32668e68` | `7b38f13e56d8da075ab1f24b91d1d5fb4a8c478f5fad4a9af8544f0363c13234` | `33568141949, 33568141955, 33568141966, 33568141971, 33568141985, 33568142008, 33568142291` |
-| `SCPN-FUSION-FISSION-HYBRID-CORE` | `e2deab2501fdb4f1ee3ee98928c63541dc81e2ee` | `e79737b73b783ba467fcfe42a3c2f3851fa4519d55b91769bb5e0cb55426f359` | `33568215410, 33568215449, 33568215462, 33568215546, 33568215566, 33568215574, 33568215711` |
-| `SCPN-ICF-BEAM-CORE` | `69d55ebf703773a24e64e5a8be5676d3c214ee8a` | `01048901561c9dab00efedc01cf5eb56a2b4199736aa0a1c251fe15293aff9f1` | `33568178765, 33568178769, 33568178770, 33568178779, 33568178790, 33568178814, 33568178826` |
-| `SCPN-ICF-IMPACT-CORE` | `ceb0eafa26b30e24d516a0a56103926ee5cd9dc8` | `bfc2fbb31b0c172b4acb5554d5ead8324153454cceae214f062d599c2ec62e39` | `33568183812, 33568183820, 33568183908, 33568183990, 33568184065, 33568184085, 33568184254` |
-| `SCPN-ICF-LASER-CORE` | `3ff396d6d69d891f53fb0210053d259bd42ccc6e` | `bc2edd2c12f7f5b9da4fc09c1d0747850fbb29ab76170db0d43ab1ad92be0f7c` | `33568178530, 33568178647, 33568178648, 33568178729, 33568178760, 33568178811, 33568179462` |
-| `SCPN-IEC-CORE` | `3b9dbf6cc3bbf5defd35bf81d146de3a30f66e09` | `87492cb79c32aa496bcca12ebd92f8d4eec767a53e7da64fee0f498ed1197f9b` | `33568206585, 33568206606, 33568206609, 33568206624, 33568206631, 33568206644, 33568207050` |
-| `SCPN-LEVITATED-DIPOLE-CORE` | `8b286c031b1e9dbfd1b037f2406aaba9781a3548` | `abd1345cbd38e343a092bbdd166f0abbc235ed8218c3893f1b1ece09ab7050f5` | `33568154917, 33568154926, 33568154934, 33568154940, 33568154976, 33568154988, 33568155128` |
-| `SCPN-MAGNETIC-CUSP-CORE` | `afa7c32e62c652e6d655a4699a846c55ecc4a6db` | `eb4a3ea6d8213872686aa1ad5a148f5855dd43c43408376970953b3c836ad61a` | `33568150866, 33568150883, 33568150886, 33568150915, 33568150922, 33568150953, 33568151071` |
-| `SCPN-MIF-LINER-CORE` | `7e4b6dbc2c1d174b584cec568f78c339498c6a52` | `754514c545f52932c430684cdc4c6b31270fc40b005c65c7461146dfab59f8d3` | `33568211003, 33568211004, 33568211028, 33568211055, 33568211092, 33568211093, 33568211280` |
-| `SCPN-MIF-MAGLIF-CORE` | `90c8503db3eeacd3ef86b54d852a70b887773df2` | `46dfcd0f1c417b3a3ba876fb735a578cd2118bfe739d0316d7510a82c43bac2a` | `33568194083, 33568194113, 33568194160, 33568194532, 33568194574, 33568194588, 33568194741` |
-| `SCPN-MIF-PLASMA-JET-CORE` | `43cea01a5f663fcd1f4d0f3413809229666439ff` | `d9ac83a603c3b5b63c54a60b04379638c904836c3ac38df70996007823e0c7f8` | `33568194790, 33568194810, 33568194813, 33568194868, 33568194893, 33568194973, 33568195086` |
-| `SCPN-MIRROR-CORE` | `75a5b624a833c84d3100aa79f488f2e841bbf20a` | `efb5634818a256a9ab5d68c2cdb346503f2c581326f23d7a06c8a0d2da724d48` | `33568145289, 33568145293, 33568145297, 33568145298, 33568145369, 33568145447, 33568145747` |
-| `SCPN-RFP-CORE` | `f5a35424b05531399e2759cc3713bc25b647c59d` | `5f88e694faf5b73e0e0ce3000fb643a6b0b5c84993cd373a917f9d633aa35d42` | `33568127967, 33568127988, 33568127995, 33568127997, 33568128022, 33568128025, 33568128270` |
-| `SCPN-SPHEROMAK-CORE` | `5712e5d9535477033c83a3d6e1586bcef288eb25` | `21232f9966169dee29798171f71faef825732ac1df30fca97dd10bf5752fefd3` | `33568137201, 33568137202, 33568137219, 33568137275, 33568137289, 33568137326, 33568137722` |
-| `SCPN-STELLARATOR-CORE` | `afe989f3683380de144468ceae4531b758e9b11e` | `4cc94911b526d1220a3bd123d91a48603e9e134b9f7ef7b9e311fc65a38c6ba7` | `33568122776, 33568122777, 33568122797, 33568122802, 33568122826, 33568122829, 33568122883` |
-| `SCPN-THETA-PINCH-CORE` | `2221f9043efb20193cb69842daa45ea2b5658127` | `5f8fe33fa4ce7c1fe591a6aefee852e91c74cdff0424c19b3592c0b0604f0611` | `33568167933, 33568167964, 33568167969, 33568167975, 33568168025, 33568168028, 33568168056` |
-| `SCPN-TOKAMAK-CORE` | `7402191c43e8fe57cffda1dd5b3cf4319d6d398d` | `8e0c0d51f6c7aece428a6e761adf20f820f44aa6946b05921912cc4c87790253` | `33568117723, 33568117746, 33568117753, 33568117801, 33568117806, 33568117808, 33568117848` |
-| `SCPN-Z-PINCH-CORE` | `fb050319f5397f85f2e19844b4f2e40ad1aa29a9` | `cfe64254564245f064bada4ca91dbc1debf11e6d75e29b2cbe073492207c89a1` | `33568159756, 33568159764, 33568159766, 33568159772, 33568159798, 33568159804, 33568159881` |
+| `SCPN-BEAM-TARGET-CORE` | refused | `de78bbdbb8e2e25465348cc11914c2b76f61a0ff` | canonical kernel-owner exclusion missing |
+| `SCPN-DENSE-PLASMA-FOCUS-CORE` | refused | `35448d2627774e824013f4f61a7c5cffc1783fab` | source digest mismatch; CI failed |
+| `SCPN-FRC-CORE` | refused | `2f59d99ab61b1111fe5bdaa676696be2b2d13fe3` | canonical kernel-owner exclusion missing |
+| `SCPN-FUSION-FISSION-HYBRID-CORE` | refused | `9ed313551a52c0aceda206abeb4161522c1d01ce` | canonical kernel-owner exclusion missing |
+| `SCPN-ICF-BEAM-CORE` | accepted | `8cea19a51f0aed7b47c7b475e631fac236ef79b8` | supply physical sample envelope |
+| `SCPN-ICF-IMPACT-CORE` | accepted | `0c20361ced162f0e89e254aafbe9fbd0c182ef65` | supply physical sample envelope |
+| `SCPN-ICF-LASER-CORE` | accepted | `6ef0faf241980cfc101af89fd35ac3cc7979f11f` | supply physical sample envelope |
+| `SCPN-IEC-CORE` | accepted | `c32d4a06a3c9c0c0b8914916ee7d825df6961779` | supply physical sample envelope |
+| `SCPN-LATTICE-FUSION-CORE` | not declared | `269e0b7c8f750f4d681b4bb1c6e9cbaf4e201722` | publish a versioned diagnostic plan |
+| `SCPN-LEVITATED-DIPOLE-CORE` | accepted | `429b71be5c4aab72ce2974186b08863fb8a8e2a8` | supply physical sample envelope |
+| `SCPN-MAGNETIC-CUSP-CORE` | accepted | `e0eb35b0df9d8c035b70c04d4ee00ff9b142ac20` | supply physical sample envelope |
+| `SCPN-MIF-LINER-CORE` | refused | `d587bfadb81530a4da1626349b0af0c0788f0019` | canonical kernel-owner exclusion missing |
+| `SCPN-MIF-MAGLIF-CORE` | refused | `638854a8f0c59bec5c950ef44a27c8d541d64d23` | canonical kernel-owner exclusion missing |
+| `SCPN-MIF-PLASMA-JET-CORE` | refused | `f6ab528ca639b74081cb4d6ba1dac32c8420353c` | canonical kernel-owner exclusion missing |
+| `SCPN-MIRROR-CORE` | refused | `b481450136ea65f7ddbd3127d4ee762757051cb5` | source digest mismatch; CI failed |
+| `SCPN-MUON-FUSION-CORE` | not declared | `1dbbb283996f0b2771d62949410dec6290915202` | publish a versioned diagnostic plan |
+| `SCPN-RFP-CORE` | refused | `e34ea503145c6e39cae5aed5c7a03325b4f0c825` | source digest mismatch; CI failed |
+| `SCPN-SPHEROMAK-CORE` | refused | `b9f3fb14a731625ab941e2420f781c157a656f63` | source digest mismatch; CI failed |
+| `SCPN-STELLARATOR-CORE` | accepted | `53455eee60fae820622b0568cd1af9c5d86cb093` | supply physical sample envelope |
+| `SCPN-THETA-PINCH-CORE` | refused | `a5083ff1f3507636280df2b166eb06d0b7c6d82b` | source digest mismatch; CI failed |
+| `SCPN-TOKAMAK-CORE` | refused | `8b40cdd943127da00017f61b1b02cef713299a50` | canonical kernel-owner exclusion missing |
+| `SCPN-Z-PINCH-CORE` | refused | `80adc66392d6083ac8bc16a4d8bfc5d9bb40b652` | source digest mismatch; CI failed |
 
-The previously missing `timing_uncertainty_s` member is now explicit in every
-producer channel. A separately repaired SPO compatibility-table omission for
-`direct_cyclic` facility-clock channels was required before the final 20/20
-replay; producer bytes were not changed for that consumer defect.
+The seven ownership refusals have a `kernel_library` declaration but do not
+exclude `shared_physics_geometry_and_numerics_kernels` in favour of the
+canonical `SCPN-REACTOR-KERNELS` owner. The six digest refusals contain an
+envelope that does not pin the supplied current manifest and plan bytes. Both
+classes are producer-owned fix-forward work and remain refused until exact new
+objects pass review.
 
-## Machine-readable status
+The lattice and muon projects are intentionally architecture-only in this
+snapshot. Registry membership and green repository workflows do not invent a
+diagnostic plan, signal, observation, phase, or control path.
 
-The [digest-sealed status data](data/reactor_diagnostic_plan_portfolio_status.v1.json)
-records all 20 revisions, manifest and fixture hashes, configurations, plans,
-custody states, and fail-closed authority fields. Its
-[Draft 2020-12 schema](../specs/reactor_diagnostic_plan_portfolio_status.schema.json)
-enforces schema version `1.2.0`, the 20/0 structural split, the 0/20 current-custody/public-object
-split, exact 140-run evidence, and zero physical or control authority.
+## Hosted verification boundary
+
+Every row pins seven run IDs for `CI`, `CodeQL`, `Docs`, `Pre-commit`, `SBOM`,
+`Scorecard`, and `Security audit`. The exact-head totals are 154 expected, 148
+successful, 6 failed, and 0 cancelled. The six failed `CI` runs correspond to
+the six stale digest objects above; all sibling workflows at those heads are
+green. These failures were reported to the Reactor Systems owner and must not
+be purged while unresolved.
+
+## Machine-readable custody
+
+The canonical
+[`reactor_diagnostic_plan_portfolio_status.v1.json`](data/reactor_diagnostic_plan_portfolio_status.v1.json)
+is validated by
+[`reactor_diagnostic_plan_portfolio_status.schema.json`](../specs/reactor_diagnostic_plan_portfolio_status.schema.json).
+Schema version `1.3.0` binds the 22-project partition, review contract `1.1.0`,
+exact source revisions, artifact digests, hosted-run receipts, and fail-closed
+authority fields. Full hashes and run IDs live in the sealed JSON rather than
+being duplicated here.
 
 This register complements the
 [reactor configuration evidence coverage](reactor_configuration_evidence_coverage.md):

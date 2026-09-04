@@ -185,22 +185,22 @@
         },
         "observability": {"type": "number", "exclusiveMinimum": 0, "maximum": 1},
         "observability_registry_digest": {
-          "const": "d70c0de696534e5a77066ef8420cf7ca17bc4d7321984b0ac83523dbc1dce609"
+          "const": "0aaf9bc7234113bedb98de51f2acd124a21da579e4d1ab1234e5b30ebc7880e0"
         },
-        "observability_registry_version": {"const": "1.0.0"},
+        "observability_registry_version": {"const": "1.1.0"},
         "ontology_digest": {
-          "const": "80904c238a363ed4fe557ee5bb5c74f3376cd85adf7f8578ac94fe2a82000ffc"
+          "const": "8297b1cad3e2b1a6fcd3a4de2ef143e6bfcf8f07a26324cc97ec5eb2f81eccc9"
         },
-        "ontology_version": {"const": "1.0.0"},
+        "ontology_version": {"const": "1.1.0"},
         "operator_approval_required": {"const": true},
         "producer_artifact_sha256": {"$ref": "#/$defs/Sha256"},
         "producer_project": {"const": "SCPN-PHASE-ORCHESTRATOR"},
         "producer_revision": {"$ref": "#/$defs/GitRevision"},
         "reactor_context_id": {"$ref": "#/$defs/Identifier"},
         "reactor_registry_digest": {
-          "const": "786d9542ce76c56dd7748fa948b17efed6c073525e527ce90e6d5e29a2d00090"
+          "const": "6741f25892d81b24aa621ee4f56b5e785e8323eca6ccf9d9009ce2c8e53f4912"
         },
-        "reactor_registry_version": {"const": "1.0.0"},
+        "reactor_registry_version": {"const": "1.1.0"},
         "sample_rate_hz": {"type": "number", "exclusiveMinimum": 0},
         "source_admission_decision_digest": {"$ref": "#/$defs/Sha256"},
         "source_admission_schema": {"$ref": "#/$defs/Identifier"},

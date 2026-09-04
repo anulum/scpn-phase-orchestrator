@@ -1,6 +1,6 @@
 # Reactor configuration evidence coverage
 
-This matrix answers a deliberately narrow question: for each built-in reactor
+This matrix answers a deliberately narrow question: for each registered reactor
 configuration known to SPO, what evidence source and portable semantic ingress
 exist in the exact SCPN-PHASE-ORCHESTRATOR, SCPN-FUSION-CORE, SCPN-MIF-CORE,
 and SCPN-CONTROL snapshot represented by the occurrence ledger?
@@ -13,7 +13,7 @@ confinement family, device class, or similar topology.
 
 ## Coverage result
 
-- All **32 built-in configurations** across **8 confinement families** have an
+- All **34 registered configurations** across **9 confinement families** have an
   explicit row.
 - **2 configurations** have an exercised, byte-canonical, review-only producer
   adapter: `conventional_tokamak` and `frc_compression_mif`.
@@ -21,9 +21,9 @@ confinement family, device class, or similar topology.
   observation or physical phase: `spherical_tokamak`.
 - **2 configurations** have only local-model or synthetic-replay source evidence:
   `field_reversed_configuration` and `stellarator`.
-- **27 configurations** have no configuration-specific source occurrence in the
+- **29 configurations** have no configuration-specific source occurrence in the
   exact four-project snapshot.
-- **30 configurations** have no portable producer-to-SPO semantic ingress profile.
+- **32 configurations** have no portable producer-to-SPO semantic ingress profile.
 - **0 configurations** have a qualified physical observation, qualified physical
   phase, direct actuation authority, or permission to bypass machine protection.
 
@@ -128,6 +128,8 @@ no complete, exercised producer-to-SPO adapter is advertised for that configurat
 | `beam_target` | `colliding_beam` | `beam.rf_bunch_phase`<br>`beam.target_outcome`<br>`model.synthetic_oscillator_coordinate` | no source evidence | — | `not_declared` |
 | `electrostatic` | `gridded_iec` | `iec.resolved_bunching`<br>`iec.steady_state`<br>`model.synthetic_oscillator_coordinate` | no source evidence | — | `not_declared` |
 | `hybrid` | `fusion_fission_hybrid` | `hybrid.source_blanket_response`<br>`model.synthetic_oscillator_coordinate` | no source evidence | — | `not_declared` |
+| `extension` | `scpn.reactor_systems:lattice_confinement_fusion` | `lattice.external_driver_timing`<br>`lattice.material_and_nuclear_response`<br>`model.synthetic_oscillator_coordinate` | no source evidence | — | `not_declared` |
+| `extension` | `scpn.reactor_systems:muon_catalysed_fusion` | `model.synthetic_oscillator_coordinate`<br>`muon.beam_and_target_timing`<br>`muon.catalysis_kinetics_and_outcome` | no source evidence | — | `not_declared` |
 
 ## Evidence and authority boundaries
 
@@ -153,11 +155,11 @@ It is validated by
 and sealed over canonical JSON payload bytes.
 
 - Schema: `scpn-phase-orchestrator.reactor-configuration-evidence-coverage.v1`
-- Schema version: `1.0.0`
-- Payload SHA-256: `b71c857153a290fa76fbac5637d104beb1c87cd77c5cc9b44bbbdcb7c299f601`
-- Configuration registry: `1.0.0` / `786d9542ce76c56dd7748fa948b17efed6c073525e527ce90e6d5e29a2d00090`
-- Observability registry: `1.0.0` / `d70c0de696534e5a77066ef8420cf7ca17bc4d7321984b0ac83523dbc1dce609`
-- Semantic-profile registry: `1.0.0` / `6ac7f3863e1a5f50af297c572ec0b80b60820a23de1a769fda6bb0a831243ec3`
+- Schema version: `1.1.0`
+- Payload SHA-256: `4ee797e9bd03d646d538b30ecbf468a90e70be4bdada922b09eb84e483f3b730`
+- Configuration registry: `1.1.0` / `6741f25892d81b24aa621ee4f56b5e785e8323eca6ccf9d9009ce2c8e53f4912`
+- Observability registry: `1.1.0` / `0aaf9bc7234113bedb98de51f2acd124a21da579e4d1ab1234e5b30ebc7880e0`
+- Semantic-profile registry: `1.1.0` / `270ed1ecbabe09cc45b078504c575ce8a77f0f6416378640140d2dc281951063`
 - Occurrence-ledger payload: `8210dc2310a7031ccad1a1675677e3e92007a2dd82e696c39d25202d2f9f022f`
 
 Any change to a registry, source digest, occurrence binding, evidence state, or

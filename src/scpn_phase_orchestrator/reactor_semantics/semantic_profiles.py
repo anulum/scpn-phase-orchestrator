@@ -20,9 +20,9 @@ from types import MappingProxyType
 from .registry import DEFAULT_REACTOR_REGISTRY
 from .vocabulary import require_enum, require_identifier, require_semver, require_sha256
 
-REACTOR_SEMANTIC_PROFILE_REGISTRY_VERSION = "1.0.0"
+REACTOR_SEMANTIC_PROFILE_REGISTRY_VERSION = "1.1.0"
 REACTOR_FAMILY_ASSIGNMENT_MAP_SHA256 = (
-    "fee9bbece259f26d7a1792f1072d5c92249366f1cecf377061b6fcb68db4e730"
+    "a1bb9756e7744ae596c04e8058ce483e04b20ab726fe18338ff595b1698ed614"
 )
 REACTOR_FAMILY_ASSIGNMENT_STANDARD = (
     "agentic-shared/SCPN_REACTOR_FAMILY_REPOSITORY_STANDARD.md"
@@ -137,7 +137,7 @@ class ReactorSemanticProfile:
 
 @dataclass(frozen=True, slots=True)
 class ReactorSemanticProfileRegistry:
-    """Immutable 32-configuration semantic ownership and ingress registry."""
+    """Immutable semantic ownership and verified-ingress registry."""
 
     version: str
     reactor_registry_version: str
@@ -257,6 +257,8 @@ _DEVICE_ASSIGNMENTS = {
     "projectile_or_impact_icf": "SCPN-ICF-IMPACT-CORE",
     "pulsed_electron_beam_icf": "SCPN-ICF-BEAM-CORE",
     "reversed_field_pinch": "SCPN-RFP-CORE",
+    "scpn.reactor_systems:lattice_confinement_fusion": ("SCPN-LATTICE-FUSION-CORE"),
+    "scpn.reactor_systems:muon_catalysed_fusion": "SCPN-MUON-FUSION-CORE",
     "sheared_flow_z_pinch": "SCPN-Z-PINCH-CORE",
     "simple_magnetic_mirror": "SCPN-MIRROR-CORE",
     "spheromak": "SCPN-SPHEROMAK-CORE",

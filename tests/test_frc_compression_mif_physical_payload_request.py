@@ -20,13 +20,13 @@ import pytest
 
 from scpn_phase_orchestrator import reactor_semantics as rs
 
-REQUEST_ID = "f37e7516cbf5bd008ef87332c457acd31fa0a2922819e2b92c371124558e99eb"
-REQUEST_SHA256 = "fa991a56010e53f2d945fd2dcc6dcfb672ca1f3abd14b7d4553c295eb117a639"
+REQUEST_ID = "c7002da6adee357f85b16bae94f1feee97804e58d15d8e57923821f39886e925"
+REQUEST_SHA256 = "fe47d835b83ba0838222f5218967ef81a815add916b0ea81729cb491cc2eec41"
 SEMANTIC_REGISTRY_SHA256 = (
-    "6ac7f3863e1a5f50af297c572ec0b80b60820a23de1a769fda6bb0a831243ec3"
+    "270ed1ecbabe09cc45b078504c575ce8a77f0f6416378640140d2dc281951063"
 )
 OBSERVABILITY_REGISTRY_SHA256 = (
-    "d70c0de696534e5a77066ef8420cf7ca17bc4d7321984b0ac83523dbc1dce609"
+    "0aaf9bc7234113bedb98de51f2acd124a21da579e4d1ab1234e5b30ebc7880e0"
 )
 SCHEMA = Path("docs/specs/frc_compression_mif_physical_payload_request.schema.json")
 

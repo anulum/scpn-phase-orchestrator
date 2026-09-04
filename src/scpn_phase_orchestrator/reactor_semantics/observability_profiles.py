@@ -22,7 +22,11 @@ from dataclasses import dataclass
 from enum import StrEnum
 from types import MappingProxyType
 
-from .registry import DEFAULT_REACTOR_REGISTRY
+from .registry import (
+    DEFAULT_REACTOR_REGISTRY,
+    REACTOR_REGISTRY_V1_0_0,
+    resolve_reactor_registry_release,
+)
 from .vocabulary import (
     SemanticCarrier,
     require_enum,
@@ -32,7 +36,8 @@ from .vocabulary import (
     require_text,
 )
 
-REACTOR_OBSERVABILITY_PROFILE_REGISTRY_VERSION = "1.0.0"
+REACTOR_OBSERVABILITY_PROFILE_REGISTRY_VERSION = "1.1.0"
+REACTOR_OBSERVABILITY_PROFILE_REGISTRY_V1_0_0_VERSION = "1.0.0"
 
 
 class ObservabilityClass(StrEnum):
@@ -231,25 +236,27 @@ class ReactorObservabilityProfileRegistry:
         for candidate_id, candidate in candidates.items():
             if candidate_id != candidate.candidate_id:
                 raise ValueError("candidate key must equal candidate_id")
+        try:
+            reactor_registry = resolve_reactor_registry_release(
+                reactor_version,
+                reactor_digest,
+            )
+        except ValueError as exc:
+            raise ValueError(
+                "observability profiles require a recognised exact reactor registry"
+            ) from exc
         covered = {
             configuration
             for candidate in candidates.values()
             for configuration in candidate.configurations
         }
-        expected = set(DEFAULT_REACTOR_REGISTRY.configurations)
+        expected = set(reactor_registry.configurations)
         if covered != expected:
             missing = sorted(expected - covered)
             extra = sorted(covered - expected)
             raise ValueError(
                 "observability configuration coverage mismatch: "
                 f"missing={missing}, extra={extra}"
-            )
-        if (
-            reactor_version != DEFAULT_REACTOR_REGISTRY.version
-            or reactor_digest != DEFAULT_REACTOR_REGISTRY.digest
-        ):
-            raise ValueError(
-                "observability profiles require the exact reactor registry"
             )
         object.__setattr__(self, "version", version)
         object.__setattr__(self, "reactor_registry_version", reactor_version)
@@ -271,7 +278,11 @@ class ReactorObservabilityProfileRegistry:
         tuple[ReactorSignalCandidateProfile, ...]
             Applicable candidates ordered by candidate identifier.
         """
-        canonical = DEFAULT_REACTOR_REGISTRY.resolve(configuration).identifier
+        reactor_registry = resolve_reactor_registry_release(
+            self.reactor_registry_version,
+            self.reactor_registry_digest,
+        )
+        canonical = reactor_registry.resolve(configuration).identifier
         return tuple(
             self.candidates[key]
             for key in sorted(self.candidates)
@@ -441,6 +452,7 @@ _MAGNETO_INERTIAL = tuple(
 )
 _IEC = ("gridded_iec", "polywell")
 _BEAM = ("beam_target", "colliding_beam")
+_ALL_V1_0_0 = tuple(sorted(REACTOR_REGISTRY_V1_0_0.configurations))
 _ALL = tuple(sorted(DEFAULT_REACTOR_REGISTRY.configurations))
 
 
@@ -483,7 +495,7 @@ def _candidate(
     )
 
 
-_CANDIDATES = (
+_COMMON_CANDIDATES = (
     _candidate(
         "closed.equilibrium_profiles",
         "magnetic equilibrium, geometry, and transport profiles",
@@ -604,12 +616,62 @@ _CANDIDATES = (
         ("fusion_fission_hybrid",),
         ObservabilityClass.NONCYCLIC_FEATURE,
     ),
+)
+
+_EXTENSION_CANDIDATES = (
     _candidate(
-        "model.synthetic_oscillator_coordinate",
-        "model-owned synthetic oscillator coordinate",
-        _ALL,
-        ObservabilityClass.NUMERICAL_ONLY,
+        "lattice.external_driver_timing",
+        "external-driver exposure timing within a declared material run",
+        ("scpn.reactor_systems:lattice_confinement_fusion",),
+        ObservabilityClass.EVENT_RELATIVE,
     ),
+    _candidate(
+        "lattice.material_and_nuclear_response",
+        (
+            "target loading, material state, calibrated nuclear signatures, "
+            "and calorimetric outcome"
+        ),
+        ("scpn.reactor_systems:lattice_confinement_fusion",),
+        ObservabilityClass.NONCYCLIC_FEATURE,
+    ),
+    _candidate(
+        "muon.beam_and_target_timing",
+        "muon delivery and target interaction timing within an experimental run",
+        ("scpn.reactor_systems:muon_catalysed_fusion",),
+        ObservabilityClass.EVENT_RELATIVE,
+    ),
+    _candidate(
+        "muon.catalysis_kinetics_and_outcome",
+        (
+            "muon stopping, molecular formation, fusion, sticking, decay, "
+            "and neutron-yield outcome"
+        ),
+        ("scpn.reactor_systems:muon_catalysed_fusion",),
+        ObservabilityClass.NONCYCLIC_FEATURE,
+    ),
+)
+
+_NUMERICAL_CANDIDATE_V1_0_0 = _candidate(
+    "model.synthetic_oscillator_coordinate",
+    "model-owned synthetic oscillator coordinate",
+    _ALL_V1_0_0,
+    ObservabilityClass.NUMERICAL_ONLY,
+)
+_NUMERICAL_CANDIDATE = _candidate(
+    "model.synthetic_oscillator_coordinate",
+    "model-owned synthetic oscillator coordinate",
+    _ALL,
+    ObservabilityClass.NUMERICAL_ONLY,
+)
+
+_CANDIDATES_V1_0_0 = (*_COMMON_CANDIDATES, _NUMERICAL_CANDIDATE_V1_0_0)
+_CANDIDATES = (*_COMMON_CANDIDATES, *_EXTENSION_CANDIDATES, _NUMERICAL_CANDIDATE)
+
+REACTOR_OBSERVABILITY_PROFILE_REGISTRY_V1_0_0 = ReactorObservabilityProfileRegistry(
+    version=REACTOR_OBSERVABILITY_PROFILE_REGISTRY_V1_0_0_VERSION,
+    reactor_registry_version=REACTOR_REGISTRY_V1_0_0.version,
+    reactor_registry_digest=REACTOR_REGISTRY_V1_0_0.digest,
+    candidates={candidate.candidate_id: candidate for candidate in _CANDIDATES_V1_0_0},
 )
 
 DEFAULT_REACTOR_OBSERVABILITY_PROFILE_REGISTRY = ReactorObservabilityProfileRegistry(
@@ -618,3 +680,31 @@ DEFAULT_REACTOR_OBSERVABILITY_PROFILE_REGISTRY = ReactorObservabilityProfileRegi
     reactor_registry_digest=DEFAULT_REACTOR_REGISTRY.digest,
     candidates={candidate.candidate_id: candidate for candidate in _CANDIDATES},
 )
+
+_REACTOR_OBSERVABILITY_PROFILE_REGISTRY_RELEASES = MappingProxyType(
+    {
+        (
+            REACTOR_OBSERVABILITY_PROFILE_REGISTRY_V1_0_0.version,
+            REACTOR_OBSERVABILITY_PROFILE_REGISTRY_V1_0_0.digest,
+        ): REACTOR_OBSERVABILITY_PROFILE_REGISTRY_V1_0_0,
+        (
+            DEFAULT_REACTOR_OBSERVABILITY_PROFILE_REGISTRY.version,
+            DEFAULT_REACTOR_OBSERVABILITY_PROFILE_REGISTRY.digest,
+        ): DEFAULT_REACTOR_OBSERVABILITY_PROFILE_REGISTRY,
+    }
+)
+
+
+def resolve_reactor_observability_profile_registry_release(
+    version: str,
+    digest: str,
+) -> ReactorObservabilityProfileRegistry:
+    """Resolve one exact immutable observability-catalogue release."""
+    key = (
+        require_semver(version, field="observability registry version"),
+        require_sha256(digest, field="observability registry digest"),
+    )
+    try:
+        return _REACTOR_OBSERVABILITY_PROFILE_REGISTRY_RELEASES[key]
+    except KeyError as exc:
+        raise ValueError("unrecognised observability registry release") from exc

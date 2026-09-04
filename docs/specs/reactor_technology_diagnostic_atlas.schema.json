@@ -3,9 +3,14 @@
     "capability_claim": {
       "additionalProperties": false,
       "properties": {
-        "capability_id": {"$ref": "#/$defs/capability_id"},
+        "capability_id": {
+          "$ref": "#/$defs/capability_id"
+        },
         "source_ids": {
-          "items": {"pattern": "^SRC-[0-9]{3}$", "type": "string"},
+          "items": {
+            "pattern": "^SRC-[0-9]{3}$",
+            "type": "string"
+          },
           "minItems": 1,
           "type": "array",
           "uniqueItems": true
@@ -20,7 +25,11 @@
           "type": "string"
         }
       },
-      "required": ["capability_id", "status", "source_ids"],
+      "required": [
+        "capability_id",
+        "status",
+        "source_ids"
+      ],
       "type": "object"
     },
     "capability_id": {
@@ -69,6 +78,8 @@
         "projectile_or_impact_icf",
         "pulsed_electron_beam_icf",
         "reversed_field_pinch",
+        "scpn.reactor_systems:lattice_confinement_fusion",
+        "scpn.reactor_systems:muon_catalysed_fusion",
         "sheared_flow_z_pinch",
         "simple_magnetic_mirror",
         "spherical_tokamak",
@@ -107,18 +118,27 @@
     "reactor_row": {
       "additionalProperties": false,
       "properties": {
-        "actionable": {"const": false},
-        "authority": {"const": "review_only"},
+        "actionable": {
+          "const": false
+        },
+        "authority": {
+          "const": "review_only"
+        },
         "capability_claims": {
-          "items": {"$ref": "#/$defs/capability_claim"},
+          "items": {
+            "$ref": "#/$defs/capability_claim"
+          },
           "minItems": 1,
           "type": "array"
         },
-        "configuration": {"$ref": "#/$defs/configuration"},
+        "configuration": {
+          "$ref": "#/$defs/configuration"
+        },
         "confinement_family": {
           "enum": [
             "beam_target",
             "electrostatic",
+            "extension",
             "hybrid",
             "inertial",
             "magnetic_closed",
@@ -128,7 +148,10 @@
           ],
           "type": "string"
         },
-        "device_project": {"pattern": "^SCPN-[A-Z0-9-]+$", "type": "string"},
+        "device_project": {
+          "pattern": "^SCPN-[A-Z0-9-]+$",
+          "type": "string"
+        },
         "diagnostic_evidence_state": {
           "enum": [
             "documented_component_or_driver",
@@ -139,36 +162,62 @@
           ],
           "type": "string"
         },
-        "direct_actuation_authorized": {"const": false},
-        "external_evidence_rank": {"$ref": "#/$defs/rank"},
-        "machine_protection_final_veto": {"const": true},
+        "direct_actuation_authorized": {
+          "const": false
+        },
+        "external_evidence_rank": {
+          "$ref": "#/$defs/rank"
+        },
+        "machine_protection_final_veto": {
+          "const": true
+        },
         "missing_capabilities": {
-          "items": {"$ref": "#/$defs/missing_capability"},
+          "items": {
+            "$ref": "#/$defs/missing_capability"
+          },
           "minItems": 1,
           "type": "array",
           "uniqueItems": true
         },
         "observability_candidate_ids": {
-          "items": {"pattern": "^[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*$", "type": "string"},
+          "items": {
+            "pattern": "^[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*$",
+            "type": "string"
+          },
           "minItems": 1,
           "type": "array",
           "uniqueItems": true
         },
-        "rank_basis": {"minLength": 1, "type": "string"},
+        "rank_basis": {
+          "minLength": 1,
+          "type": "string"
+        },
         "reference_systems": {
-          "items": {"$ref": "#/$defs/reference_system"},
+          "items": {
+            "$ref": "#/$defs/reference_system"
+          },
           "minItems": 1,
           "type": "array"
         },
         "source_ids": {
-          "items": {"pattern": "^SRC-[0-9]{3}$", "type": "string"},
+          "items": {
+            "pattern": "^SRC-[0-9]{3}$",
+            "type": "string"
+          },
           "minItems": 1,
           "type": "array",
           "uniqueItems": true
         },
-        "spo_qualification": {"$ref": "#/$defs/spo_qualification"},
-        "technology_is_control_evidence": {"const": false},
-        "topology": {"minLength": 1, "type": "string"}
+        "spo_qualification": {
+          "$ref": "#/$defs/spo_qualification"
+        },
+        "technology_is_control_evidence": {
+          "const": false
+        },
+        "topology": {
+          "minLength": 1,
+          "type": "string"
+        }
       },
       "required": [
         "configuration",
@@ -205,56 +254,118 @@
           ],
           "type": "string"
         },
-        "name": {"minLength": 1, "type": "string"},
+        "name": {
+          "minLength": 1,
+          "type": "string"
+        },
         "source_ids": {
-          "items": {"pattern": "^SRC-[0-9]{3}$", "type": "string"},
+          "items": {
+            "pattern": "^SRC-[0-9]{3}$",
+            "type": "string"
+          },
           "minItems": 1,
           "type": "array",
           "uniqueItems": true
         }
       },
-      "required": ["name", "lifecycle_state", "source_ids"],
+      "required": [
+        "name",
+        "lifecycle_state",
+        "source_ids"
+      ],
       "type": "object"
     },
     "registry_binding": {
       "additionalProperties": false,
       "properties": {
-        "digest_sha256": {"$ref": "#/$defs/sha256"},
-        "source_path": {"pattern": "^src/.+\\.py$", "type": "string"},
-        "source_sha256": {"$ref": "#/$defs/sha256"},
-        "version": {"const": "1.0.0"}
+        "digest_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "source_path": {
+          "pattern": "^src/.+\\.py$",
+          "type": "string"
+        },
+        "source_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "version": {
+          "const": "1.1.0"
+        }
       },
-      "required": ["version", "digest_sha256", "source_path", "source_sha256"],
+      "required": [
+        "version",
+        "digest_sha256",
+        "source_path",
+        "source_sha256"
+      ],
       "type": "object"
     },
-    "sha256": {"pattern": "^[0-9a-f]{64}$", "type": "string"},
+    "sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
     "source": {
       "additionalProperties": false,
       "properties": {
         "configurations": {
-          "items": {"$ref": "#/$defs/configuration"},
+          "items": {
+            "$ref": "#/$defs/configuration"
+          },
           "minItems": 1,
           "type": "array",
           "uniqueItems": true
         },
-        "id": {"pattern": "^SRC-[0-9]{3}$", "type": "string"},
-        "kind": {
-          "enum": ["facility_owner", "government_programme", "peer_reviewed"],
+        "id": {
+          "pattern": "^SRC-[0-9]{3}$",
           "type": "string"
         },
-        "publisher": {"minLength": 1, "type": "string"},
-        "title": {"minLength": 1, "type": "string"},
-        "url": {"format": "uri", "pattern": "^https://", "type": "string"},
-        "year": {"maximum": 2026, "minimum": 1950, "type": "integer"}
+        "kind": {
+          "enum": [
+            "facility_owner",
+            "government_programme",
+            "peer_reviewed"
+          ],
+          "type": "string"
+        },
+        "publisher": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "title": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "url": {
+          "format": "uri",
+          "pattern": "^https://",
+          "type": "string"
+        },
+        "year": {
+          "maximum": 2026,
+          "minimum": 1950,
+          "type": "integer"
+        }
       },
-      "required": ["id", "title", "publisher", "year", "kind", "url", "configurations"],
+      "required": [
+        "id",
+        "title",
+        "publisher",
+        "year",
+        "kind",
+        "url",
+        "configurations"
+      ],
       "type": "object"
     },
     "spo_qualification": {
       "additionalProperties": false,
       "properties": {
-        "admission_state": {"const": "refused_no_producer_evidence"},
-        "control_admitted": {"const": false},
+        "admission_state": {
+          "const": "refused_no_producer_evidence"
+        },
+        "control_admitted": {
+          "const": false
+        },
         "missing_evidence": {
           "const": [
             "physical_sample",
@@ -270,8 +381,12 @@
           ],
           "type": "array"
         },
-        "physical_observation_qualified": {"const": false},
-        "physical_phase_qualified": {"const": false}
+        "physical_observation_qualified": {
+          "const": false
+        },
+        "physical_phase_qualified": {
+          "const": false
+        }
       },
       "required": [
         "admission_state",
@@ -286,33 +401,55 @@
   "$id": "https://www.anulum.li/schemas/spo/reactor-technology-diagnostic-atlas/v1",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
-  "description": "Evidence-ranked, review-only external technology and diagnostic atlas for every built-in SPO reactor configuration.",
+  "description": "Evidence-ranked, review-only external technology and diagnostic atlas for every registered SPO reactor configuration.",
   "properties": {
     "payload": {
       "additionalProperties": false,
       "properties": {
-        "actionable": {"const": false},
-        "authority": {"const": "review_only"},
-        "classification_rule": {"minLength": 1, "type": "string"},
+        "actionable": {
+          "const": false
+        },
+        "authority": {
+          "const": "review_only"
+        },
+        "classification_rule": {
+          "minLength": 1,
+          "type": "string"
+        },
         "configurations": {
-          "items": {"$ref": "#/$defs/reactor_row"},
-          "minItems": 32,
-          "maxItems": 32,
+          "items": {
+            "$ref": "#/$defs/reactor_row"
+          },
+          "minItems": 34,
+          "maxItems": 34,
           "type": "array"
         },
         "counts": {
           "additionalProperties": false,
           "properties": {
-            "built_in_configurations": {"const": 32},
-            "built_in_confinement_families": {"const": 8},
-            "control_admitted": {"const": 0},
-            "physical_observations_qualified": {"const": 0},
-            "physical_phases_qualified": {"const": 0},
-            "primary_sources": {"minimum": 1, "type": "integer"}
+            "control_admitted": {
+              "const": 0
+            },
+            "physical_observations_qualified": {
+              "const": 0
+            },
+            "physical_phases_qualified": {
+              "const": 0
+            },
+            "primary_sources": {
+              "minimum": 1,
+              "type": "integer"
+            },
+            "registered_configurations": {
+              "const": 34
+            },
+            "confinement_families": {
+              "const": 9
+            }
           },
           "required": [
-            "built_in_configurations",
-            "built_in_confinement_families",
+            "registered_configurations",
+            "confinement_families",
             "primary_sources",
             "physical_observations_qualified",
             "physical_phases_qualified",
@@ -320,9 +457,16 @@
           ],
           "type": "object"
         },
-        "direct_actuation_authorized": {"const": false},
-        "machine_protection_final_veto": {"const": true},
-        "observed_at": {"format": "date-time", "type": "string"},
+        "direct_actuation_authorized": {
+          "const": false
+        },
+        "machine_protection_final_veto": {
+          "const": true
+        },
+        "observed_at": {
+          "format": "date-time",
+          "type": "string"
+        },
         "rank_order": {
           "const": [
             "E5_integrated_fusion_observation",
@@ -334,18 +478,29 @@
           ],
           "type": "array"
         },
-        "research_cutoff": {"const": "2026-09-01"},
+        "research_cutoff": {
+          "const": "2026-09-04"
+        },
         "source_bindings": {
           "additionalProperties": false,
           "properties": {
-            "reactor_configuration_registry": {"$ref": "#/$defs/registry_binding"},
-            "reactor_observability_registry": {"$ref": "#/$defs/registry_binding"}
+            "reactor_configuration_registry": {
+              "$ref": "#/$defs/registry_binding"
+            },
+            "reactor_observability_registry": {
+              "$ref": "#/$defs/registry_binding"
+            }
           },
-          "required": ["reactor_configuration_registry", "reactor_observability_registry"],
+          "required": [
+            "reactor_configuration_registry",
+            "reactor_observability_registry"
+          ],
           "type": "object"
         },
         "sources": {
-          "items": {"$ref": "#/$defs/source"},
+          "items": {
+            "$ref": "#/$defs/source"
+          },
           "minItems": 1,
           "type": "array"
         }
@@ -366,10 +521,21 @@
       ],
       "type": "object"
     },
-    "payload_sha256": {"$ref": "#/$defs/sha256"},
-    "schema": {"const": "scpn-phase-orchestrator.reactor-technology-diagnostic-atlas.v1"},
-    "schema_version": {"const": "1.0.0"}
+    "payload_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "schema": {
+      "const": "scpn-phase-orchestrator.reactor-technology-diagnostic-atlas.v1"
+    },
+    "schema_version": {
+      "const": "1.1.0"
+    }
   },
-  "required": ["schema", "schema_version", "payload", "payload_sha256"],
+  "required": [
+    "schema",
+    "schema_version",
+    "payload",
+    "payload_sha256"
+  ],
   "type": "object"
 }

@@ -15,7 +15,7 @@
       "const": "scpn-phase-orchestrator.reactor-producer-evidence-priority-register.v1"
     },
     "schema_version": {
-      "const": "1.0.0"
+      "const": "1.1.0"
     },
     "payload_sha256": {
       "type": "string",
@@ -83,7 +83,7 @@
                   "minLength": 1
                 },
                 "schema_version": {
-                  "const": "1.0.0"
+                  "const": "1.1.0"
                 },
                 "payload_sha256": {
                   "type": "string",
@@ -115,7 +115,7 @@
                   "minLength": 1
                 },
                 "schema_version": {
-                  "const": "1.2.0"
+                  "const": "1.3.0"
                 },
                 "payload_sha256": {
                   "type": "string",
@@ -179,7 +179,7 @@
                   "minLength": 1
                 },
                 "schema_version": {
-                  "const": "1.0.0"
+                  "const": "1.1.0"
                 },
                 "payload_sha256": {
                   "type": "string",
@@ -203,20 +203,23 @@
               "const": "L1_extend_exercised_review_adapter"
             },
             {
-              "const": "L2_build_from_accepted_plan"
+              "const": "L2_build_missing_diagnostic_plan"
             },
             {
-              "const": "L3_repair_refused_plan_before_intake"
+              "const": "L3_build_from_accepted_plan"
+            },
+            {
+              "const": "L4_repair_refused_plan_before_intake"
             }
           ],
           "items": false,
-          "minItems": 4,
-          "maxItems": 4
+          "minItems": 5,
+          "maxItems": 5
         },
         "lane_definitions": {
           "type": "array",
-          "minItems": 4,
-          "maxItems": 4,
+          "minItems": 5,
+          "maxItems": 5,
           "items": {
             "type": "object",
             "additionalProperties": false,
@@ -231,8 +234,9 @@
                 "enum": [
                   "L0_qualify_existing_physical_source",
                   "L1_extend_exercised_review_adapter",
-                  "L2_build_from_accepted_plan",
-                  "L3_repair_refused_plan_before_intake"
+                  "L2_build_missing_diagnostic_plan",
+                  "L3_build_from_accepted_plan",
+                  "L4_repair_refused_plan_before_intake"
                 ]
               },
               "selection_rule": {
@@ -242,9 +246,10 @@
               "next_gate": {
                 "enum": [
                   "complete_physical_source_qualification",
+                  "publish_versioned_diagnostic_plan",
                   "supply_physical_producer_payload",
                   "supply_physical_sample_envelope",
-                  "repair_plan_schema_then_supply_physical_sample_envelope"
+                  "repair_plan_contract_then_supply_physical_sample_envelope"
                 ]
               },
               "ordered_within_lane": {
@@ -308,8 +313,8 @@
                 "$ref": "#/$defs/upstreamProjectId"
               },
               "uniqueItems": true,
-              "minItems": 20,
-              "maxItems": 20
+              "minItems": 22,
+              "maxItems": 22
             },
             "registry_device_owner_projects": {
               "type": "array",
@@ -317,8 +322,8 @@
                 "$ref": "#/$defs/upstreamProjectId"
               },
               "uniqueItems": true,
-              "minItems": 21,
-              "maxItems": 21
+              "minItems": 23,
+              "maxItems": 23
             },
             "upstream_reactor_projects": {
               "type": "array",
@@ -326,8 +331,8 @@
                 "$ref": "#/$defs/upstreamProjectId"
               },
               "uniqueItems": true,
-              "minItems": 22,
-              "maxItems": 22
+              "minItems": 24,
+              "maxItems": 24
             },
             "control_project": {
               "const": "SCPN-CONTROL"
@@ -341,8 +346,8 @@
           "type": "object",
           "additionalProperties": false,
           "required": [
-            "built_in_configurations",
-            "built_in_confinement_families",
+            "registered_configurations",
+            "confinement_families",
             "registry_device_owner_projects",
             "upstream_reactor_projects",
             "diagnostic_plan_portfolio_projects",
@@ -350,45 +355,54 @@
             "upstream_plus_control_projects",
             "L0_qualify_existing_physical_source",
             "L1_extend_exercised_review_adapter",
-            "L2_build_from_accepted_plan",
-            "L3_repair_refused_plan_before_intake",
+            "L2_build_missing_diagnostic_plan",
+            "L3_build_from_accepted_plan",
+            "L4_repair_refused_plan_before_intake",
             "qualified_physical_observations",
             "qualified_physical_phases",
             "control_admitted"
           ],
           "properties": {
-            "built_in_configurations": {
-              "const": 32
+            "registered_configurations": {
+              "const": 34
             },
-            "built_in_confinement_families": {
-              "const": 8
+            "confinement_families": {
+              "const": 9
             },
             "registry_device_owner_projects": {
-              "const": 21
+              "const": 23
             },
             "upstream_reactor_projects": {
-              "const": 22
+              "const": 24
             },
             "diagnostic_plan_portfolio_projects": {
-              "const": 20
+              "const": 22
             },
             "control_projects": {
               "const": 1
             },
             "upstream_plus_control_projects": {
-              "const": 23
+              "const": 25
             },
             "L0_qualify_existing_physical_source": {
-              "const": 1
+              "type": "integer",
+              "minimum": 0
             },
             "L1_extend_exercised_review_adapter": {
-              "const": 2
+              "type": "integer",
+              "minimum": 0
             },
-            "L2_build_from_accepted_plan": {
-              "const": 29
+            "L2_build_missing_diagnostic_plan": {
+              "type": "integer",
+              "minimum": 0
             },
-            "L3_repair_refused_plan_before_intake": {
-              "const": 0
+            "L3_build_from_accepted_plan": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "L4_repair_refused_plan_before_intake": {
+              "type": "integer",
+              "minimum": 0
             },
             "qualified_physical_observations": {
               "const": 0
@@ -403,8 +417,8 @@
         },
         "configurations": {
           "type": "array",
-          "minItems": 32,
-          "maxItems": 32,
+          "minItems": 34,
+          "maxItems": 34,
           "items": {
             "$ref": "#/$defs/configuration"
           }
@@ -436,6 +450,7 @@
         "SCPN-ICF-IMPACT-CORE",
         "SCPN-ICF-LASER-CORE",
         "SCPN-IEC-CORE",
+        "SCPN-LATTICE-FUSION-CORE",
         "SCPN-LEVITATED-DIPOLE-CORE",
         "SCPN-MAGNETIC-CUSP-CORE",
         "SCPN-MIF-CORE",
@@ -443,6 +458,7 @@
         "SCPN-MIF-MAGLIF-CORE",
         "SCPN-MIF-PLASMA-JET-CORE",
         "SCPN-MIRROR-CORE",
+        "SCPN-MUON-FUSION-CORE",
         "SCPN-RFP-CORE",
         "SCPN-SPHEROMAK-CORE",
         "SCPN-STELLARATOR-CORE",
@@ -479,23 +495,31 @@
         "structural_status": {
           "enum": [
             "accepted",
-            "refused",
-            "not_in_portfolio"
+            "not_declared",
+            "not_in_portfolio",
+            "refused"
           ]
         },
         "custody_state": {
           "enum": [
-            "exact_fixture_custody",
-            "verified_public_producer_object",
+            "architecture_only_no_plan",
+            "not_in_portfolio",
             "producer_fix_required",
-            "not_in_portfolio"
+            "verified_public_producer_object"
           ]
         },
         "observed_revision": {
           "anyOf": [
             {
-              "type": "string",
-              "pattern": "^[0-9a-f]{40}$"
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{40}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             },
             {
               "type": "null"
@@ -505,8 +529,15 @@
         "fixture_sha256": {
           "anyOf": [
             {
-              "type": "string",
-              "pattern": "^[0-9a-f]{64}$"
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             },
             {
               "type": "null"
@@ -569,6 +600,8 @@
             "projectile_or_impact_icf",
             "pulsed_electron_beam_icf",
             "reversed_field_pinch",
+            "scpn.reactor_systems:lattice_confinement_fusion",
+            "scpn.reactor_systems:muon_catalysed_fusion",
             "sheared_flow_z_pinch",
             "simple_magnetic_mirror",
             "spherical_tokamak",
@@ -584,6 +617,7 @@
           "enum": [
             "beam_target",
             "electrostatic",
+            "extension",
             "hybrid",
             "inertial",
             "magnetic_closed",
@@ -604,16 +638,18 @@
           "enum": [
             "L0_qualify_existing_physical_source",
             "L1_extend_exercised_review_adapter",
-            "L2_build_from_accepted_plan",
-            "L3_repair_refused_plan_before_intake"
+            "L2_build_missing_diagnostic_plan",
+            "L3_build_from_accepted_plan",
+            "L4_repair_refused_plan_before_intake"
           ]
         },
         "next_gate": {
           "enum": [
             "complete_physical_source_qualification",
+            "publish_versioned_diagnostic_plan",
+            "repair_plan_contract_then_supply_physical_sample_envelope",
             "supply_physical_producer_payload",
-            "supply_physical_sample_envelope",
-            "repair_plan_schema_then_supply_physical_sample_envelope"
+            "supply_physical_sample_envelope"
           ]
         },
         "external_context": {
@@ -773,7 +809,11 @@
               "pattern": "^SCPN-[A-Z0-9-]+$"
             },
             "artifact_kind": {
-              "const": "configuration_specific_canonical_evidence_envelope"
+              "enum": [
+                "configuration_specific_canonical_evidence_envelope",
+                "configuration_specific_diagnostic_plan",
+                "configuration_specific_diagnostic_plan_repair"
+              ]
             },
             "required_evidence": {
               "oneOf": [
@@ -854,7 +894,10 @@
                   "minLength": 1
                 },
                 "schema_version": {
-                  "enum": ["1.0.0", "1.1.0"]
+                  "enum": [
+                    "1.0.0",
+                    "1.1.0"
+                  ]
                 }
               }
             },

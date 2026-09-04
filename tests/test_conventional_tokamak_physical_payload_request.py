@@ -20,13 +20,13 @@ import pytest
 
 from scpn_phase_orchestrator import reactor_semantics as rs
 
-REQUEST_ID = "3f01f59e422421bdb98bfa51aff7f3f5378d96e3b5c8ffbdc80ae4899f027aba"
-REQUEST_SHA256 = "ed3515b4c41ba911ba6172d4a1d22b76f1c9e9aa5bb6627e02d6975bcd65945f"
+REQUEST_ID = "fec4e93971190c7183410f200c60a9ef0ffcfeaf01fa69f9fc3514e9e352603c"
+REQUEST_SHA256 = "a506c0ad7c37ee53719b3f2194906b39585e4293e1c5f9d25245f987c0b08945"
 SEMANTIC_REGISTRY_SHA256 = (
-    "6ac7f3863e1a5f50af297c572ec0b80b60820a23de1a769fda6bb0a831243ec3"
+    "270ed1ecbabe09cc45b078504c575ce8a77f0f6416378640140d2dc281951063"
 )
 OBSERVABILITY_REGISTRY_SHA256 = (
-    "d70c0de696534e5a77066ef8420cf7ca17bc4d7321984b0ac83523dbc1dce609"
+    "0aaf9bc7234113bedb98de51f2acd124a21da579e4d1ab1234e5b30ebc7880e0"
 )
 SCHEMA = Path("docs/specs/conventional_tokamak_physical_payload_request.schema.json")
 

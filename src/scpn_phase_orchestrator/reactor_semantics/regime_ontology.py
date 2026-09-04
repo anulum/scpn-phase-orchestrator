@@ -38,7 +38,7 @@ from .vocabulary import (
     require_text,
 )
 
-REACTOR_REGIME_MODE_ONTOLOGY_VERSION = "1.0.0"
+REACTOR_REGIME_MODE_ONTOLOGY_VERSION = "1.1.0"
 
 
 class AxisApplicability(StrEnum):
@@ -740,7 +740,9 @@ _AXES = (
             "hybrid.source_blanket_response",
             "iec.steady_state",
             "inertial.implosion_trajectory",
+            "lattice.material_and_nuclear_response",
             "magneto_inertial.translation_and_compression",
+            "muon.catalysis_kinetics_and_outcome",
             "open.equilibrium_and_loss",
             "self_magnetic.drive_waveform",
         ),
@@ -775,7 +777,9 @@ _AXES = (
         (
             "beam.rf_bunch_phase",
             "inertial.driver_timing",
+            "lattice.external_driver_timing",
             "magneto_inertial.driver_arrival",
+            "muon.beam_and_target_timing",
             "open.drive_reference",
             "self_magnetic.drive_waveform",
         ),
@@ -792,6 +796,8 @@ _AXES = (
             "hybrid.source_blanket_response",
             "iec.steady_state",
             "inertial.shot_outcome",
+            "lattice.material_and_nuclear_response",
+            "muon.catalysis_kinetics_and_outcome",
         ),
         AxisApplicabilityPolicy.UNIVERSAL,
         ("reaction_model", "measurement_or_model", "uncertainty", "validity"),

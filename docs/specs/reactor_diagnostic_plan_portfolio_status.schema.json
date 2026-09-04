@@ -2,96 +2,147 @@
   "$defs": {
     "nullable_string": {
       "oneOf": [
-        {"minLength": 1, "type": "string"},
-        {"type": "null"}
-      ]
-    },
-    "project": {"pattern": "^SCPN-[A-Z0-9-]+-CORE$", "type": "string"},
-    "sha1": {"pattern": "^[0-9a-f]{40}$", "type": "string"},
-    "sha256": {"pattern": "^[0-9a-f]{64}$", "type": "string"},
-    "producer": {
-      "additionalProperties": false,
-      "allOf": [
         {
-          "if": {
-            "properties": {"structural_status": {"const": "accepted"}},
-            "required": ["structural_status"]
-          },
-          "then": {
-            "properties": {
-              "affected_channel_ids": {"maxItems": 0},
-              "missing_required_members": {"maxItems": 0},
-              "refusal_code": {"type": "null"},
-              "refusal_detail": {"type": "null"}
-            }
-          }
+          "minLength": 1,
+          "type": "string"
         },
         {
-          "if": {
-            "properties": {"structural_status": {"const": "refused"}},
-            "required": ["structural_status"]
-          },
-          "then": {
-            "properties": {
-              "affected_channel_ids": {"minItems": 1},
-              "custody_bytes_equal": {"const": false},
-              "custody_fixture_path": {"type": "null"},
-              "custody_state": {"const": "producer_fix_required"},
-              "missing_required_members": {
-                "const": ["timing_uncertainty_s"]
-              },
-              "refusal_code": {"const": "plan_structure_mismatch"},
-              "refusal_detail": {
-                "const": "channels[] key mismatch: missing=['timing_uncertainty_s'], unknown=[]"
-              }
-            }
-          }
+          "type": "null"
         }
-      ],
+      ]
+    },
+    "project": {
+      "pattern": "^SCPN-[A-Z0-9-]+-CORE$",
+      "type": "string"
+    },
+    "sha1": {
+      "pattern": "^[0-9a-f]{40}$",
+      "type": "string"
+    },
+    "sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "producer": {
+      "additionalProperties": false,
       "properties": {
-        "project": {"$ref": "#/$defs/project"},
+        "project": {
+          "$ref": "#/$defs/project"
+        },
         "configurations": {
-          "items": {"minLength": 1, "type": "string"},
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
           "minItems": 1,
           "type": "array",
           "uniqueItems": true
         },
-        "plan_identifier": {"pattern": "^[a-z][a-z0-9_]*$", "type": "string"},
-        "observed_revision": {"$ref": "#/$defs/sha1"},
-        "manifest_sha256": {"$ref": "#/$defs/sha256"},
-        "fixture_sha256": {"$ref": "#/$defs/sha256"},
+        "plan_identifier": {
+          "anyOf": [
+            {
+              "pattern": "^[a-z][a-z0-9_]*$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "observed_revision": {
+          "$ref": "#/$defs/sha1"
+        },
+        "manifest_sha256": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/sha256"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "fixture_sha256": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/sha256"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "hosted_ci_run_ids": {
-          "items": {"minimum": 1, "type": "integer"},
-          "maxItems": 7,
-          "minItems": 7,
+          "items": {
+            "minimum": 1,
+            "type": "integer"
+          },
           "type": "array",
           "uniqueItems": true
         },
-        "structural_status": {"enum": ["accepted", "refused"], "type": "string"},
-        "custody_state": {
-          "enum": ["exact_fixture_custody", "verified_public_producer_object", "producer_fix_required"],
+        "structural_status": {
+          "enum": [
+            "accepted",
+            "not_declared",
+            "refused"
+          ],
           "type": "string"
         },
-        "custody_fixture_path": {"$ref": "#/$defs/nullable_string"},
-        "custody_bytes_equal": {"type": "boolean"},
-        "refusal_code": {"$ref": "#/$defs/nullable_string"},
-        "refusal_detail": {"$ref": "#/$defs/nullable_string"},
+        "custody_state": {
+          "enum": [
+            "architecture_only_no_plan",
+            "exact_fixture_custody",
+            "producer_fix_required",
+            "verified_public_producer_object"
+          ],
+          "type": "string"
+        },
+        "custody_fixture_path": {
+          "$ref": "#/$defs/nullable_string"
+        },
+        "custody_bytes_equal": {
+          "type": "boolean"
+        },
+        "refusal_code": {
+          "$ref": "#/$defs/nullable_string"
+        },
+        "refusal_detail": {
+          "$ref": "#/$defs/nullable_string"
+        },
         "missing_required_members": {
-          "items": {"minLength": 1, "type": "string"},
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
           "type": "array",
           "uniqueItems": true
         },
         "affected_channel_ids": {
-          "items": {"pattern": "^ch_[a-z0-9_]+$", "type": "string"},
+          "items": {
+            "pattern": "^ch_[a-z0-9_]+$",
+            "type": "string"
+          },
           "type": "array",
           "uniqueItems": true
         },
-        "physical_observation_claimed": {"const": false},
-        "physical_phase_qualified": {"const": false},
-        "authority": {"const": "review_only"},
-        "actionable": {"const": false},
-        "direct_actuation_authorized": {"const": false},
-        "remote_head_verified": {"const": true}
+        "physical_observation_claimed": {
+          "const": false
+        },
+        "physical_phase_qualified": {
+          "const": false
+        },
+        "authority": {
+          "const": "review_only"
+        },
+        "actionable": {
+          "const": false
+        },
+        "direct_actuation_authorized": {
+          "const": false
+        },
+        "remote_head_verified": {
+          "const": true
+        }
       },
       "required": [
         "project",
@@ -122,44 +173,105 @@
   "$id": "https://www.anulum.li/schemas/spo/reactor-diagnostic-plan-portfolio-status/v1",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
-  "description": "Digest-sealed, review-only structural status of the 20 Reactor Systems diagnostic-plan producers, separating exact SPO fixture custody from digest-pinned public producer objects and producer-side gaps.",
+  "description": "Digest-sealed, review-only structural status of the 22 Reactor Systems device projects, separating exact SPO fixture custody from digest-pinned public producer objects, undeclared plans, and producer-side gaps.",
   "properties": {
-    "schema": {"const": "scpn-phase-orchestrator.reactor-diagnostic-plan-portfolio-status.v1"},
-    "schema_version": {"const": "1.2.0"},
+    "schema": {
+      "const": "scpn-phase-orchestrator.reactor-diagnostic-plan-portfolio-status.v1"
+    },
+    "schema_version": {
+      "const": "1.3.0"
+    },
     "payload": {
       "additionalProperties": false,
       "properties": {
-        "observed_at": {"format": "date-time", "type": "string"},
-        "portfolio_root": {"const": "03_CODE/SCPN-REACTOR-SYSTEMS/repositories"},
-        "producer_fixture_path": {"const": "tests/data/plan_envelope_fixture.json"},
-        "producer_manifest_path": {"const": "reactor-domain.json"},
-        "review_api": {"const": "scpn_phase_orchestrator.reactor_semantics.device_diagnostic_plan_review_from_producer_bytes"},
-        "review_contract": {"const": "scpn.reactor-diagnostic-plan-envelope.v1@1.2.0"},
-        "classification_rule": {"minLength": 1, "type": "string"},
-        "authority": {"const": "review_only"},
-        "actionable": {"const": false},
-        "physical_observation_claimed": {"const": false},
-        "physical_phase_qualified": {"const": false},
-        "direct_actuation_authorized": {"const": false},
+        "observed_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "portfolio_root": {
+          "const": "03_CODE/SCPN-REACTOR-SYSTEMS/repositories"
+        },
+        "producer_fixture_path": {
+          "const": "tests/data/plan_envelope_fixture.json"
+        },
+        "producer_manifest_path": {
+          "const": "reactor-domain.json"
+        },
+        "review_api": {
+          "const": "scpn_phase_orchestrator.reactor_semantics.device_diagnostic_plan_review_from_producer_bytes"
+        },
+        "review_contract": {
+          "const": "scpn-phase-orchestrator.device-diagnostic-plan-review.v1@1.1.0"
+        },
+        "classification_rule": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "authority": {
+          "const": "review_only"
+        },
+        "actionable": {
+          "const": false
+        },
+        "physical_observation_claimed": {
+          "const": false
+        },
+        "physical_phase_qualified": {
+          "const": false
+        },
+        "direct_actuation_authorized": {
+          "const": false
+        },
         "counts": {
           "additionalProperties": false,
           "properties": {
-            "producers": {"const": 20},
-            "structurally_accepted": {"const": 20},
-            "structurally_refused": {"const": 0},
-            "exact_fixture_custody": {"const": 0},
-            "verified_public_producer_object": {"const": 20},
-            "producer_fix_required": {"const": 0},
-            "qualified_physical_observations": {"const": 0},
-            "qualified_physical_phases": {"const": 0}
+            "device_projects": {
+              "const": 22
+            },
+            "structurally_accepted": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "structurally_refused": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "diagnostic_plan_not_declared": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "exact_fixture_custody": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "verified_public_producer_object": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "producer_fix_required": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "architecture_only_no_plan": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "qualified_physical_observations": {
+              "const": 0
+            },
+            "qualified_physical_phases": {
+              "const": 0
+            }
           },
           "required": [
-            "producers",
+            "device_projects",
             "structurally_accepted",
             "structurally_refused",
+            "diagnostic_plan_not_declared",
             "exact_fixture_custody",
             "verified_public_producer_object",
             "producer_fix_required",
+            "architecture_only_no_plan",
             "qualified_physical_observations",
             "qualified_physical_phases"
           ],
@@ -168,21 +280,60 @@
         "remote_verification": {
           "additionalProperties": false,
           "properties": {
-            "verified_at": {"format": "date-time", "type": "string"},
-            "default_branch": {"const": "main"},
-            "remote_head_matches": {"const": 20},
-            "remote_head_mismatches": {"const": 0},
+            "verified_at": {
+              "format": "date-time",
+              "type": "string"
+            },
+            "default_branch": {
+              "const": "main"
+            },
+            "remote_head_matches": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "remote_head_mismatches": {
+              "type": "integer",
+              "minimum": 0
+            },
             "workflow_names": {
-              "const": ["CI", "CodeQL", "Docs", "Pre-commit", "SBOM", "Scorecard", "Security audit"],
+              "const": [
+                "CI",
+                "CodeQL",
+                "Docs",
+                "Pre-commit",
+                "SBOM",
+                "Scorecard",
+                "Security audit"
+              ],
               "type": "array"
             },
-            "hosted_workflows_expected": {"const": 140},
-            "hosted_workflows_successful": {"const": 140},
-            "hosted_workflows_failed": {"const": 0},
-            "hosted_workflows_cancelled": {"const": 0},
-            "run_attempt": {"const": 1},
-            "receipt_payload_sha256": {"$ref": "#/$defs/sha256"},
-            "evidence_boundary": {"minLength": 1, "type": "string"}
+            "hosted_workflows_expected": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "hosted_workflows_successful": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "hosted_workflows_failed": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "hosted_workflows_cancelled": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "run_attempt": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "receipt_payload_sha256": {
+              "$ref": "#/$defs/sha256"
+            },
+            "evidence_boundary": {
+              "minLength": 1,
+              "type": "string"
+            }
           },
           "required": [
             "verified_at",
@@ -201,9 +352,11 @@
           "type": "object"
         },
         "producers": {
-          "items": {"$ref": "#/$defs/producer"},
-          "maxItems": 20,
-          "minItems": 20,
+          "items": {
+            "$ref": "#/$defs/producer"
+          },
+          "maxItems": 22,
+          "minItems": 22,
           "type": "array"
         }
       },
@@ -226,8 +379,15 @@
       ],
       "type": "object"
     },
-    "payload_sha256": {"$ref": "#/$defs/sha256"}
+    "payload_sha256": {
+      "$ref": "#/$defs/sha256"
+    }
   },
-  "required": ["schema", "schema_version", "payload", "payload_sha256"],
+  "required": [
+    "schema",
+    "schema_version",
+    "payload",
+    "payload_sha256"
+  ],
   "type": "object"
 }

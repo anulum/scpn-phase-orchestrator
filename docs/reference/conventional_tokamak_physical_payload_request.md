@@ -70,6 +70,6 @@ actuation authority.
 The normative JSON Schema is
 [`conventional_tokamak_physical_payload_request.schema.json`](../specs/conventional_tokamak_physical_payload_request.schema.json).
 The canonical producer-priority register pins request ID
-`3f01f59e422421bdb98bfa51aff7f3f5378d96e3b5c8ffbdc80ae4899f027aba`
+`fec4e93971190c7183410f200c60a9ef0ffcfeaf01fa69f9fc3514e9e352603c`
 and complete envelope SHA-256
-`ed3515b4c41ba911ba6172d4a1d22b76f1c9e9aa5bb6627e02d6975bcd65945f`.
+`a506c0ad7c37ee53719b3f2194906b39585e4293e1c5f9d25245f987c0b08945`.

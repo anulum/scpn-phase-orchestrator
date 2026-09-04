@@ -26,7 +26,7 @@ from scpn_phase_orchestrator.reactor_semantics import (
 )
 
 
-def test_profiles_cover_all_32_configurations_and_exact_device_assignments() -> None:
+def test_profiles_cover_all_34_configurations_and_exact_device_assignments() -> None:
     registry = DEFAULT_REACTOR_SEMANTIC_PROFILE_REGISTRY
     expected = {
         "beam_target": "SCPN-BEAM-TARGET-CORE",
@@ -52,6 +52,8 @@ def test_profiles_cover_all_32_configurations_and_exact_device_assignments() -> 
         "projectile_or_impact_icf": "SCPN-ICF-IMPACT-CORE",
         "pulsed_electron_beam_icf": "SCPN-ICF-BEAM-CORE",
         "reversed_field_pinch": "SCPN-RFP-CORE",
+        "scpn.reactor_systems:lattice_confinement_fusion": ("SCPN-LATTICE-FUSION-CORE"),
+        "scpn.reactor_systems:muon_catalysed_fusion": "SCPN-MUON-FUSION-CORE",
         "sheared_flow_z_pinch": "SCPN-Z-PINCH-CORE",
         "simple_magnetic_mirror": "SCPN-MIRROR-CORE",
         "spheromak": "SCPN-SPHEROMAK-CORE",
@@ -95,7 +97,7 @@ def test_only_exercised_adapters_are_advertised() -> None:
         assert profile.machine_protection_final_veto is True
 
     unavailable = set(registry.profiles) - set(verified)
-    assert len(unavailable) == 30
+    assert len(unavailable) == 32
     for configuration in unavailable:
         profile = registry.profiles[configuration]
         assert profile.ingress_state is SemanticIngressState.NOT_DECLARED

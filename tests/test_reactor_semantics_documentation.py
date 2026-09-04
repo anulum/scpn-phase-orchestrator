@@ -101,9 +101,10 @@ def test_reactor_semantics_reference_preserves_u0_boundaries() -> None:
         "`sheared_flow_z_pinch` configurations",
         "Passing a design review does not add source evidence",
         "reactor diagnostic-plan portfolio status",
-        "all 20 Reactor Systems device producers",
-        "All 20 exact producer objects are structurally accepted",
-        "11 have byte-identical SPO fixture custody",
+        "all 22 Reactor Systems device projects",
+        "Seven exact producer objects are accepted",
+        "thirteen are refused",
+        "lattice and muon architecture projects have no declared diagnostic plan",
         "simulation-monotonic evidence to wall time implicitly",
         "FAIR-MAST magnetic physical-source review",
         "mast_magnetic_source_review_from_producer_bytes()",
@@ -138,14 +139,15 @@ def test_reactor_semantics_reference_preserves_u0_boundaries() -> None:
 def test_reactor_diagnostic_plan_portfolio_status_is_fail_closed() -> None:
     text = " ".join(PLAN_PORTFOLIO_STATUS.read_text(encoding="utf-8").split())
     required = (
-        "**20 producers** were examined",
-        "**20 fixtures** are structurally accepted",
+        "**22 device projects** were examined",
+        "**7 producer objects** are structurally accepted",
+        "**13 are refused**",
+        "**2 architecture-only projects** have no declared diagnostic plan",
         "**0 current fixtures** have byte-identical SPO custody",
-        "**20 fixtures** are digest-pinned public producer objects",
-        "**140/140 hosted workflows** completed successfully",
+        "**7 fixtures** are digest-pinned public producer objects",
+        "**148/154 hosted workflows** completed successfully",
         "**0 fixtures** constitute a qualified physical observation",
-        "previously missing `timing_uncertainty_s` member is now explicit",
-        "producer bytes were not changed for that consumer defect",
+        "must not be purged while unresolved",
         "reactor_diagnostic_plan_portfolio_status.v1.json",
         "reactor_diagnostic_plan_portfolio_status.schema.json",
     )
@@ -157,8 +159,8 @@ def test_reactor_diagnostic_plan_portfolio_status_is_fail_closed() -> None:
 def test_reactor_technology_diagnostic_atlas_is_exhaustive_and_fail_closed() -> None:
     text = " ".join(TECHNOLOGY_DIAGNOSTIC_ATLAS.read_text(encoding="utf-8").split())
     required = (
-        "all **32 configurations** across **8 confinement families**",
-        "**34 primary sources**",
+        "all **34 registered configurations** across **9 confinement families**",
+        "**37 primary sources**",
         "broader than tokamaks",
         "technology-readiness levels",
         "related topologies never inherit evidence",
@@ -168,6 +170,7 @@ def test_reactor_technology_diagnostic_atlas_is_exhaustive_and_fail_closed() -> 
         "zero admitted physical observations",
         "zero qualified physical phases",
         "zero CONTROL admissions",
+        "do not establish net energy gain",
         "`machine_protection_final_veto=true`",
         "reactor_technology_diagnostic_atlas.v1.json",
         "reactor_technology_diagnostic_atlas.schema.json",
@@ -182,32 +185,30 @@ def test_reactor_producer_evidence_priority_is_non_scalar_and_fail_closed() -> N
         PRODUCER_EVIDENCE_PRIORITY_REGISTER.read_text(encoding="utf-8").split()
     )
     required = (
-        "all **32 built-in configurations** across **8 confinement families**",
-        "**22 upstream reactor projects plus SCPN-CONTROL**",
-        "registry has 21 distinct `device_project` owners",
-        "20 Reactor Systems projects",
+        "all **34 registered configurations** across **9 confinement families**",
+        "**24 upstream reactor projects**",
+        "**23 distinct `device_project` owners**",
+        "**22 Reactor Systems device repositories**",
         "No opaque or additive priority score is emitted",
         "rows within one lane are deliberately unordered",
         "External `E5` through `E0` evidence ranks remain context only",
         "`spherical_tokamak` is the only L0 row",
-        "reviewed FAIR-MAST physical source through an exercised byte-canonical "
-        "adapter",
+        "reviewed FAIR-MAST physical-source bytes",
         "controlled phenomenon identity",
         "reproducible source-ingestion state",
         "mast_phase_qualification_request_from_source_review()",
         "conventional_tokamak_physical_payload_request()",
         "frc_compression_mif_physical_payload_request()",
         "forbidding reuse as physical evidence",
-        "Both L1 requests additionally make immutable source/package identity",
-        "`SCPN-MIF-CORE` is the registry's 21st distinct `device_project` owner",
-        "L3 is empty",
-        "conformance repairs now emit explicit `timing_uncertainty_s`",
+        "Both current adapters are simulation-only",
+        "The two namespaced extensions",
+        "Sixteen configurations map to thirteen refused producer objects",
         "zero complete physical evidence chains",
         "zero qualified physical observations",
         "zero qualified physical phases",
         "zero CONTROL admissions",
         "`machine_protection_final_veto=true`",
-        "`3ce9f8f98f8dc6d39d36fc60bb47d171193722f266531db5e55ebe02c52f3d55`",
+        "`1e2cb5e9b82cd89f56bb8681fab115e7893b7524dfdb7ef11c57c52f782ee13f`",
         "reactor_producer_evidence_priority_register.v1.json",
         "reactor_producer_evidence_priority_register.schema.json",
     )
@@ -230,8 +231,8 @@ def test_conventional_tokamak_physical_request_is_exact_and_fail_closed() -> Non
         "all thirteen prerequisites",
         "`low_observability`",
         "`quality_state_may_substitute_for_evidence_state=false`",
-        "`3f01f59e422421bdb98bfa51aff7f3f5378d96e3b5c8ffbdc80ae4899f027aba`",
-        "`ed3515b4c41ba911ba6172d4a1d22b76f1c9e9aa5bb6627e02d6975bcd65945f`",
+        "`fec4e93971190c7183410f200c60a9ef0ffcfeaf01fa69f9fc3514e9e352603c`",
+        "`a506c0ad7c37ee53719b3f2194906b39585e4293e1c5f9d25245f987c0b08945`",
         "conventional-tokamak-specific diagnostic",
         "independent validation without same-shot circularity",
         "New peer discoveries enter the atlas as gaps or provisional candidates",
@@ -299,11 +300,11 @@ def test_reactor_signal_occurrence_ledger_preserves_epistemic_boundaries() -> No
 def test_reactor_configuration_coverage_is_exhaustive_and_fail_closed() -> None:
     text = " ".join(CONFIGURATION_COVERAGE.read_text(encoding="utf-8").split())
     required = (
-        "All **32 built-in configurations** across **8 confinement families**",
+        "All **34 registered configurations** across **9 confinement families**",
         "**2 configurations** have an exercised, byte-canonical, review-only "
         "producer adapter",
-        "**27 configurations** have no configuration-specific source occurrence",
-        "**30 configurations** have no portable producer-to-SPO semantic ingress "
+        "**29 configurations** have no configuration-specific source occurrence",
+        "**32 configurations** have no portable producer-to-SPO semantic ingress "
         "profile",
         "**0 configurations** have a qualified physical observation",
         "No row inherits evidence from another configuration",
@@ -330,7 +331,7 @@ def test_reactor_configuration_coverage_is_exhaustive_and_fail_closed() -> None:
         "The shared Z-pinch design review does not equate `z_pinch` with "
         "`sheared_flow_z_pinch`",
         "`machine_protection_final_veto=true`",
-        "`b71c857153a290fa76fbac5637d104beb1c87cd77c5cc9b44bbbdcb7c299f601`",
+        "`4ee797e9bd03d646d538b30ecbf468a90e70be4bdada922b09eb84e483f3b730`",
         "`8210dc2310a7031ccad1a1675677e3e92007a2dd82e696c39d25202d2f9f022f`",
         "reactor_configuration_evidence_coverage.v1.json",
         "reactor_configuration_evidence_coverage.schema.json",

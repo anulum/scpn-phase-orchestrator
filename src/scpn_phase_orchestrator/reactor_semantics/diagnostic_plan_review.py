@@ -31,16 +31,22 @@ from .diagnostic_plan_depth import (
 from .observability_profiles import (
     DEFAULT_REACTOR_OBSERVABILITY_PROFILE_REGISTRY,
     ObservabilityClass,
+    ReactorObservabilityProfileRegistry,
     ReactorSignalCandidateProfile,
+    resolve_reactor_observability_profile_registry_release,
 )
-from .registry import DEFAULT_REACTOR_REGISTRY
+from .registry import (
+    DEFAULT_REACTOR_REGISTRY,
+    ReactorConfigurationRegistry,
+    resolve_reactor_registry_release,
+)
 from .semantic_profiles import DEFAULT_REACTOR_SEMANTIC_PROFILE_REGISTRY
 from .vocabulary import ClockKind, SemanticCarrier
 
 DEVICE_DIAGNOSTIC_PLAN_REVIEW_SCHEMA: Final = (
     "scpn-phase-orchestrator.device-diagnostic-plan-review.v1"
 )
-DEVICE_DIAGNOSTIC_PLAN_REVIEW_VERSION: Final = "1.0.0"
+DEVICE_DIAGNOSTIC_PLAN_REVIEW_VERSION: Final = "1.1.0"
 MAX_DEVICE_DIAGNOSTIC_SOURCE_BYTES: Final = 2 * 1024 * 1024
 MAX_DEVICE_DIAGNOSTIC_PLAN_REVIEW_BYTES: Final = 8 * 1024 * 1024
 
@@ -111,6 +117,13 @@ _MANIFEST_KEYS = (
     | {"owned_domains", "project", "research_group", "schema", "schema_version"}
     | {"spo_registry", "spo_semantic_profile", "studio_integration"}
 )
+_KERNEL_LIBRARY_KEYS: Final = {
+    "distribution",
+    "inventory_sha256",
+    "kernels",
+    "source_commit",
+    "version",
+}
 
 
 class DeviceDiagnosticPlanRefusalCode(StrEnum):
@@ -211,6 +224,10 @@ class _ValidatedSources:
     manifest_sha256: str
     envelope_sha256: str
     plan_sha256: str
+    reactor_registry_version: str
+    reactor_registry_digest: str
+    observability_registry_version: str
+    observability_registry_digest: str
     planned: tuple[str, ...]
     deferred: tuple[str, ...]
     frames: tuple[str, ...]
@@ -239,6 +256,10 @@ class DeviceDiagnosticPlanReview:
     source_manifest_sha256: str = field(init=False)
     source_envelope_sha256: str = field(init=False)
     source_plan_sha256: str = field(init=False)
+    source_reactor_registry_version: str = field(init=False)
+    source_reactor_registry_digest: str = field(init=False)
+    source_observability_registry_version: str = field(init=False)
+    source_observability_registry_digest: str = field(init=False)
     planned_candidate_ids: tuple[str, ...] = field(init=False)
     deferred_candidate_ids: tuple[str, ...] = field(init=False)
     frame_ids: tuple[str, ...] = field(init=False)
@@ -281,6 +302,14 @@ class DeviceDiagnosticPlanReview:
             "source_manifest_sha256": validated.manifest_sha256,
             "source_envelope_sha256": validated.envelope_sha256,
             "source_plan_sha256": validated.plan_sha256,
+            "source_reactor_registry_version": validated.reactor_registry_version,
+            "source_reactor_registry_digest": validated.reactor_registry_digest,
+            "source_observability_registry_version": (
+                validated.observability_registry_version
+            ),
+            "source_observability_registry_digest": (
+                validated.observability_registry_digest
+            ),
             "planned_candidate_ids": validated.planned,
             "deferred_candidate_ids": validated.deferred,
             "frame_ids": validated.frames,
@@ -411,6 +440,14 @@ def device_diagnostic_plan_review_to_record(
         "source_plan_json": review.source_plan_json,
         "source_plan_sha256": review.source_plan_sha256,
         "source_project": review.source_project,
+        "source_reactor_registry_digest": review.source_reactor_registry_digest,
+        "source_reactor_registry_version": review.source_reactor_registry_version,
+        "source_observability_registry_digest": (
+            review.source_observability_registry_digest
+        ),
+        "source_observability_registry_version": (
+            review.source_observability_registry_version
+        ),
         "source_revision": review.source_revision,
     }
 
@@ -430,6 +467,9 @@ _REVIEW_KEYS = (
     | {"source_envelope_schema_version", "source_envelope_sha256"}
     | {"source_manifest_json", "source_manifest_sha256", "source_plan_json"}
     | {"source_plan_sha256", "source_project", "source_revision"}
+    | {"source_reactor_registry_digest", "source_reactor_registry_version"}
+    | {"source_observability_registry_digest"}
+    | {"source_observability_registry_version"}
 )
 
 
@@ -578,12 +618,32 @@ def _validate_sources(
         )
     project = _text(envelope, "project")
     configurations = _strings(envelope, "configurations")
-    _validate_assignment(project, configurations)
-    _validate_manifest_alignment(manifest, envelope, configurations)
-    _validate_binding(envelope["binding"], "envelope binding")
-    _validate_binding(plan["binding"], "plan binding")
+    source_registry, source_observability = _validate_binding(
+        envelope["binding"], "envelope binding"
+    )
+    plan_registry, plan_observability = _validate_binding(
+        plan["binding"], "plan binding"
+    )
+    if (
+        plan_registry is not source_registry
+        or plan_observability is not source_observability
+    ):
+        _refuse(
+            DeviceDiagnosticPlanRefusalCode.REGISTRY_BINDING_MISMATCH,
+            "plan and envelope bind different registry releases",
+        )
+    _validate_assignment(project, configurations, source_registry)
+    _validate_manifest_alignment(
+        manifest,
+        envelope,
+        configurations,
+        source_registry,
+    )
     planned, deferred, frames, clocks, signals = _validate_plan(
-        plan, configurations, envelope_version=envelope_version
+        plan,
+        configurations,
+        observability_registry=source_observability,
+        envelope_version=envelope_version,
     )
     return _ValidatedSources(
         project=project,
@@ -597,6 +657,10 @@ def _validate_sources(
         manifest_sha256=manifest_digest,
         envelope_sha256=envelope_digest,
         plan_sha256=plan_digest,
+        reactor_registry_version=source_registry.version,
+        reactor_registry_digest=source_registry.digest,
+        observability_registry_version=source_observability.version,
+        observability_registry_digest=source_observability.digest,
         planned=planned,
         deferred=deferred,
         frames=frames,
@@ -641,7 +705,17 @@ def _validate_envelope(value: object) -> dict[str, object]:
 
 
 def _validate_manifest(value: object) -> dict[str, object]:
-    manifest = _object(value, _MANIFEST_KEYS, "source manifest")
+    if not isinstance(value, dict):
+        _plan_refusal("source manifest must be an object")
+    manifest_keys = set(value)
+    allowed_keys = _MANIFEST_KEYS | {"kernel_library"}
+    if manifest_keys != _MANIFEST_KEYS and manifest_keys != allowed_keys:
+        _plan_refusal(
+            "source manifest key mismatch: "
+            f"missing={sorted(_MANIFEST_KEYS - manifest_keys)}, "
+            f"unknown={sorted(manifest_keys - allowed_keys)}"
+        )
+    manifest = value
     if (
         manifest["schema"] != _MANIFEST_SCHEMA
         or manifest["schema_version"] != _MANIFEST_VERSION
@@ -690,13 +764,42 @@ def _validate_manifest(value: object) -> dict[str, object]:
     }
     if not required <= actual:
         _manifest_refusal("required ownership exclusions are missing")
+    if "kernel_library" in manifest:
+        _validate_kernel_library(manifest["kernel_library"], actual)
     return manifest
+
+
+def _validate_kernel_library(
+    value: object,
+    exclusions: set[tuple[object, object]],
+) -> None:
+    """Validate an optional shared-kernel provenance pin without importing it."""
+    kernel = _object(value, _KERNEL_LIBRARY_KEYS, "kernel_library")
+    if kernel["distribution"] != "scpn-reactor-kernels":
+        _manifest_refusal("kernel_library distribution is not canonical")
+    if not isinstance(kernel["version"], str) or not kernel["version"]:
+        _manifest_refusal("kernel_library version is empty")
+    if _GIT_SHA.fullmatch(_text(kernel, "source_commit")) is None:
+        _manifest_refusal("kernel_library source_commit is not an exact Git SHA")
+    if _SHA256.fullmatch(_text(kernel, "inventory_sha256")) is None:
+        _manifest_refusal("kernel_library inventory_sha256 is invalid")
+    kernels = _strings(kernel, "kernels")
+    _sorted_identifiers(kernels, "kernel_library kernels")
+    if not kernels:
+        _manifest_refusal("kernel_library kernels are empty")
+    owner_exclusion = (
+        "shared_physics_geometry_and_numerics_kernels",
+        "SCPN-REACTOR-KERNELS",
+    )
+    if owner_exclusion not in exclusions:
+        _manifest_refusal("kernel_library requires the canonical owner exclusion")
 
 
 def _validate_manifest_alignment(
     manifest: dict[str, object],
     envelope: dict[str, object],
     configurations: tuple[str, ...],
+    reactor_registry: ReactorConfigurationRegistry,
 ) -> None:
     if (
         manifest["project"] != envelope["project"]
@@ -723,8 +826,8 @@ def _validate_manifest_alignment(
         "spo_registry",
     )
     if (
-        pin["version"] != DEFAULT_REACTOR_REGISTRY.version
-        or pin["digest_sha256"] != DEFAULT_REACTOR_REGISTRY.digest
+        pin["version"] != reactor_registry.version
+        or pin["digest_sha256"] != reactor_registry.digest
     ):
         _refuse(
             DeviceDiagnosticPlanRefusalCode.REGISTRY_BINDING_MISMATCH,
@@ -732,11 +835,17 @@ def _validate_manifest_alignment(
         )
 
 
-def _validate_assignment(project: str, configurations: tuple[str, ...]) -> None:
+def _validate_assignment(
+    project: str,
+    configurations: tuple[str, ...],
+    reactor_registry: ReactorConfigurationRegistry,
+) -> None:
     _sorted_identifiers(configurations, "configurations")
     if not configurations:
         _assignment_refusal("configurations are empty")
     try:
+        for item in configurations:
+            reactor_registry.resolve(item)
         profiles = tuple(
             DEFAULT_REACTOR_SEMANTIC_PROFILE_REGISTRY.resolve(item)
             for item in configurations
@@ -747,27 +856,41 @@ def _validate_assignment(project: str, configurations: tuple[str, ...]) -> None:
         _assignment_refusal("project does not own every declared configuration")
 
 
-def _validate_binding(value: object, name: str) -> None:
+def _validate_binding(
+    value: object,
+    name: str,
+) -> tuple[ReactorConfigurationRegistry, ReactorObservabilityProfileRegistry]:
     binding = _object(value, _BINDING_KEYS, name)
-    expected = {
-        "catalogue_digest_sha256": (
-            DEFAULT_REACTOR_OBSERVABILITY_PROFILE_REGISTRY.digest
-        ),
-        "catalogue_version": DEFAULT_REACTOR_OBSERVABILITY_PROFILE_REGISTRY.version,
-        "reactor_registry_digest_sha256": DEFAULT_REACTOR_REGISTRY.digest,
-        "reactor_registry_version": DEFAULT_REACTOR_REGISTRY.version,
-    }
-    if binding != expected:
+    try:
+        reactor_registry = resolve_reactor_registry_release(
+            _text(binding, "reactor_registry_version"),
+            _text(binding, "reactor_registry_digest_sha256"),
+        )
+        observability_registry = resolve_reactor_observability_profile_registry_release(
+            _text(binding, "catalogue_version"),
+            _text(binding, "catalogue_digest_sha256"),
+        )
+    except ValueError as exc:
         _refuse(
             DeviceDiagnosticPlanRefusalCode.REGISTRY_BINDING_MISMATCH,
-            f"{name} differs from installed SPO",
+            f"{name} is not a recognised SPO release pair: {exc}",
         )
+    if (
+        observability_registry.reactor_registry_version != reactor_registry.version
+        or observability_registry.reactor_registry_digest != reactor_registry.digest
+    ):
+        _refuse(
+            DeviceDiagnosticPlanRefusalCode.REGISTRY_BINDING_MISMATCH,
+            f"{name} combines incompatible reactor and observability releases",
+        )
+    return reactor_registry, observability_registry
 
 
 def _validate_plan(
     plan: dict[str, object],
     configurations: tuple[str, ...],
     *,
+    observability_registry: ReactorObservabilityProfileRegistry,
     envelope_version: str,
 ) -> tuple[
     tuple[str, ...],
@@ -790,9 +913,7 @@ def _validate_plan(
     profiles = {
         profile.candidate_id: profile
         for configuration in configurations
-        for profile in DEFAULT_REACTOR_OBSERVABILITY_PROFILE_REGISTRY.for_configuration(
-            configuration
-        )
+        for profile in observability_registry.for_configuration(configuration)
     }
     channels = _object_array(
         plan, "channels", _CHANNEL_KEYS_BY_VERSION[envelope_version]

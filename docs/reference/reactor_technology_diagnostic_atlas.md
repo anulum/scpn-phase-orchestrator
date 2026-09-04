@@ -1,11 +1,12 @@
 # Reactor technology and diagnostic atlas
 
 This atlas maps the strongest cited external technology and diagnostic evidence
-for every reactor configuration in SPO's built-in registry. It covers all **32
-configurations** across **8 confinement families**; it is deliberately broader
+for every reactor configuration in SPO's current registry. It covers all **34
+registered configurations** across **9 confinement families**; it is deliberately broader
 than tokamaks and includes closed- and open-field magnetic confinement,
 self-magnetic pinches, inertial fusion, magneto-inertial fusion,
-electrostatic systems, beam-target systems, and fusion-fission hybrids.
+electrostatic systems, beam-target systems, fusion-fission hybrids,
+lattice-confinement experiments, and muon-catalysed fusion.
 
 The atlas answers two questions without conflating them:
 
@@ -15,9 +16,9 @@ The atlas answers two questions without conflating them:
    observation, give a phase-bearing signal physical meaning, or expose a
    review result to CONTROL?
 
-The research cutoff is **2026-09-01**. The machine-readable artifact contains
-**34 primary sources** and exact source-to-configuration bindings. It is a
-representative evidence map for the built-in configurations, not an exhaustive
+The research cutoff is **2026-09-04**. The machine-readable artifact contains
+**37 primary sources** and exact source-to-configuration bindings. It is a
+representative evidence map for the registered configurations, not an exhaustive
 directory of every facility, diagnostic, experiment, company, or publication.
 
 ## Methodology
@@ -51,14 +52,14 @@ does not cite stronger exact-configuration evidence.
 
 | Strongest external evidence | Configurations |
 |---|---:|
-| Integrated fusion observation (`E5`) | 7 |
+| Integrated fusion observation (`E5`) | 9 |
 | Integrated plasma experiment (`E4`) | 18 |
 | Component or driver experiment (`E3`) | 5 |
 | Concept or simulation (`E1`) | 2 |
 | Engineering-only (`E2`) or no qualifying source (`E0`) | 0 |
 
 The distribution shows why a single label such as "fusion reactor" is too
-coarse for phase orchestration. The 32 configurations have different drivers,
+coarse for phase orchestration. The 34 configurations have different drivers,
 clocks, observables, physical carriers, diagnostic operators, and reference
 events. Even two configurations at the same external evidence rank can require
 incompatible phase semantics.
@@ -104,6 +105,13 @@ boundary.
 | `beam_target` | `beam_target` | E5 | Accelerator-based 14 MeV neutron generator | SRC-031 |
 | `beam_target` | `colliding_beam` | E1 | Colliding Beam Fusion Reactor proposal | SRC-032 |
 | `hybrid` | `fusion_fission_hybrid` | E1 | FDS-EM conceptual design | SRC-033 |
+| `extension` | `scpn.reactor_systems:lattice_confinement_fusion` | E5 | Bremsstrahlung-irradiated deuterated-metal experiment | SRC-035 |
+| `extension` | `scpn.reactor_systems:muon_catalysed_fusion` | E5 | Muon-catalysed D-T experiments | SRC-036, SRC-037 |
+
+The two extension rows report measured fusion-product observations only. The
+lattice source does not establish a self-sustaining lattice reactor, and the
+muon sources do not establish net energy gain. Both rows explicitly retain
+`current_integrated_device` and `power_conversion_demonstration` as gaps.
 
 ## Diagnostic capability and gaps
 
@@ -136,8 +144,11 @@ SPO design declaration.
 
 ## Relation to SCPN projects
 
-The registry assigns the 32 configurations to 20 Reactor Systems device
-projects. External sources establish context for those identities; they do not
+The registry assigns the 34 configurations to 23 device-owner projects. The
+diagnostic-plan portfolio covers 22 Reactor Systems device repositories; the
+additional registry owner is SCPN-MIF-CORE. Adding SCPN-FUSION-CORE yields 24
+upstream reactor projects, and SCPN-CONTROL is the separate 25th system
+boundary. External sources establish context for those identities; they do not
 change the exact-project [occurrence ledger](reactor_signal_occurrence_ledger.md),
 the [configuration evidence coverage](reactor_configuration_evidence_coverage.md),
 or the [diagnostic-plan portfolio status](reactor_diagnostic_plan_portfolio_status.md).
@@ -149,9 +160,9 @@ convert this literature atlas into a measurement, regime decision, or command.
 
 ## Safety and authority boundary
 
-All 32 rows are `review_only`, `actionable=false`,
+All 34 rows are `review_only`, `actionable=false`,
 `direct_actuation_authorized=false`, and
-`machine_protection_final_veto=true`. All 32 have zero admitted physical
+`machine_protection_final_veto=true`. All 34 have zero admitted physical
 observations, zero qualified physical phases, and zero CONTROL admissions.
 External technology evidence therefore cannot authorize an action, bypass an
 independent protection system, or weaken a device-owner interlock.
@@ -165,10 +176,10 @@ It is validated by
 and sealed over canonical JSON payload bytes.
 
 - Schema: `scpn-phase-orchestrator.reactor-technology-diagnostic-atlas.v1`
-- Schema version: `1.0.0`
-- Payload SHA-256: `eb8e2ffbbc98241ac2458044455bcec425860f33ab3ba9d5ea4fa3b86870d3d3`
-- Configuration registry: `1.0.0` / `786d9542ce76c56dd7748fa948b17efed6c073525e527ce90e6d5e29a2d00090`
-- Observability registry: `1.0.0` / `d70c0de696534e5a77066ef8420cf7ca17bc4d7321984b0ac83523dbc1dce609`
+- Schema version: `1.1.0`
+- Payload SHA-256: `21dcfa1b4c54e09e6b860101bed5df927655d887e974460a105f5e97cb4138ed`
+- Configuration registry: `1.1.0` / `6741f25892d81b24aa621ee4f56b5e785e8323eca6ccf9d9009ce2c8e53f4912`
+- Observability registry: `1.1.0` / `0aaf9bc7234113bedb98de51f2acd124a21da579e4d1ab1234e5b30ebc7880e0`
 
 Any source, rank, configuration binding, capability status, missing-evidence
 field, or authority change alters the payload seal and requires deliberate
@@ -210,3 +221,6 @@ review.
 32. **SRC-032:** [Colliding Beam Fusion Reactor](https://doi.org/10.1126/science.278.5342.1419) (1997).
 33. **SRC-033:** IAEA, [fusion-fission hybrid reactor design study](https://www-pub.iaea.org/MTCD/Meetings/FEC2008/ft_p3-21.pdf) (2008).
 34. **SRC-034:** Sandia National Laboratories, [Z machine history](https://www.sandia.gov/labnews/2021/09/24/look-whos-turning-25/) (2021).
+35. **SRC-035:** [Novel nuclear reactions observed in bremsstrahlung-irradiated deuterated metals](https://doi.org/10.1103/PhysRevC.101.044610) (2020).
+36. **SRC-036:** [Experimental investigation of muon-catalyzed fusion](https://doi.org/10.1103/PhysRevLett.51.1757) (1983).
+37. **SRC-037:** [Temperature-dependent muon-catalyzed fusion in solid deuterium-tritium mixtures](https://doi.org/10.1103/PhysRevLett.90.043401) (2003).

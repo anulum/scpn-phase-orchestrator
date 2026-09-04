@@ -1,9 +1,9 @@
 {
   "schema": "scpn-phase-orchestrator.reactor-technology-diagnostic-atlas.v1",
-  "schema_version": "1.0.0",
+  "schema_version": "1.1.0",
   "payload": {
-    "observed_at": "2026-09-01T20:42:00+02:00",
-    "research_cutoff": "2026-09-01",
+    "observed_at": "2026-09-04T09:50:00Z",
+    "research_cutoff": "2026-09-04",
     "classification_rule": "Ranks describe the strongest cited external evidence for the exact configuration, not technology readiness, economic viability, SCPN implementation maturity, signal admissibility, physical-phase qualification, CONTROL admission, actuation authority, or machine-protection authority. Facility-owner claims remain labelled by source kind; adjacent configurations never inherit evidence.",
     "rank_order": [
       "E5_integrated_fusion_observation",
@@ -15,22 +15,22 @@
     ],
     "source_bindings": {
       "reactor_configuration_registry": {
-        "version": "1.0.0",
-        "digest_sha256": "786d9542ce76c56dd7748fa948b17efed6c073525e527ce90e6d5e29a2d00090",
+        "version": "1.1.0",
+        "digest_sha256": "6741f25892d81b24aa621ee4f56b5e785e8323eca6ccf9d9009ce2c8e53f4912",
         "source_path": "src/scpn_phase_orchestrator/reactor_semantics/registry.py",
-        "source_sha256": "b117e3b976839db12b40788a330d7c51237f3d81898522699570a89d4432da17"
+        "source_sha256": "0dbc8ea9a45e3bd3ea68e27df2a32b26ba8f4875beb29749c5e917a274face3b"
       },
       "reactor_observability_registry": {
-        "version": "1.0.0",
-        "digest_sha256": "d70c0de696534e5a77066ef8420cf7ca17bc4d7321984b0ac83523dbc1dce609",
+        "version": "1.1.0",
+        "digest_sha256": "0aaf9bc7234113bedb98de51f2acd124a21da579e4d1ab1234e5b30ebc7880e0",
         "source_path": "src/scpn_phase_orchestrator/reactor_semantics/observability_profiles.py",
-        "source_sha256": "7f947644f91162b97ad450d28ec3c0b84dbabf3f6c0b40baef1ada2f8504a8a9"
+        "source_sha256": "c3ae4c211de47a46bdf911c5cb340dcf227c86053b3f1576b6d6729f3c693d9f"
       }
     },
     "counts": {
-      "built_in_configurations": 32,
-      "built_in_confinement_families": 8,
-      "primary_sources": 34,
+      "registered_configurations": 34,
+      "confinement_families": 9,
+      "primary_sources": 37,
       "physical_observations_qualified": 0,
       "physical_phases_qualified": 0,
       "control_admitted": 0
@@ -410,6 +410,39 @@
         "url": "https://www.sandia.gov/labnews/2021/09/24/look-whos-turning-25/",
         "configurations": [
           "z_pinch"
+        ]
+      },
+      {
+        "id": "SRC-035",
+        "title": "Novel Nuclear Reactions Observed in Bremsstrahlung-Irradiated Deuterated Metals",
+        "publisher": "Physical Review C",
+        "year": 2020,
+        "kind": "peer_reviewed",
+        "url": "https://doi.org/10.1103/PhysRevC.101.044610",
+        "configurations": [
+          "scpn.reactor_systems:lattice_confinement_fusion"
+        ]
+      },
+      {
+        "id": "SRC-036",
+        "title": "Experimental Investigation of Muon-Catalyzed Fusion",
+        "publisher": "Physical Review Letters",
+        "year": 1983,
+        "kind": "peer_reviewed",
+        "url": "https://doi.org/10.1103/PhysRevLett.51.1757",
+        "configurations": [
+          "scpn.reactor_systems:muon_catalysed_fusion"
+        ]
+      },
+      {
+        "id": "SRC-037",
+        "title": "Discovery of temperature-dependent phenomena of muon-catalyzed fusion in solid deuterium and tritium mixtures",
+        "publisher": "Physical Review Letters",
+        "year": 2003,
+        "kind": "peer_reviewed",
+        "url": "https://doi.org/10.1103/PhysRevLett.90.043401",
+        "configurations": [
+          "scpn.reactor_systems:muon_catalysed_fusion"
         ]
       }
     ],
@@ -2460,6 +2493,184 @@
         "machine_protection_final_veto": true
       },
       {
+        "configuration": "scpn.reactor_systems:lattice_confinement_fusion",
+        "confinement_family": "extension",
+        "topology": "deuterated metal lattice under external driver",
+        "device_project": "SCPN-LATTICE-FUSION-CORE",
+        "external_evidence_rank": "E5_integrated_fusion_observation",
+        "rank_basis": "A calibrated neutron-spectroscopy experiment reported neutron energies consistent with d-D fusion in externally driven deuterated Er and Ti lattices; this is not evidence of energy gain or a reactor.",
+        "reference_systems": [
+          {
+            "name": "NASA GRC bremsstrahlung-irradiated deuterated-metal experiment",
+            "lifecycle_state": "historical",
+            "source_ids": [
+              "SRC-035"
+            ]
+          }
+        ],
+        "source_ids": [
+          "SRC-035"
+        ],
+        "diagnostic_evidence_state": "historical_documented_device",
+        "capability_claims": [
+          {
+            "capability_id": "beam_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-035"
+            ]
+          },
+          {
+            "capability_id": "fusion_product_measurement",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-035"
+            ]
+          },
+          {
+            "capability_id": "neutron_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-035"
+            ]
+          }
+        ],
+        "observability_candidate_ids": [
+          "lattice.external_driver_timing",
+          "lattice.material_and_nuclear_response",
+          "model.synthetic_oscillator_coordinate"
+        ],
+        "missing_capabilities": [
+          "control_admission",
+          "current_integrated_device",
+          "power_conversion_demonstration",
+          "public_machine_readable_calibrated_data",
+          "reactor_environment_diagnostic_qualification",
+          "spo_producer_adapter"
+        ],
+        "spo_qualification": {
+          "admission_state": "refused_no_producer_evidence",
+          "missing_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "physical_observation_qualified": false,
+          "physical_phase_qualified": false,
+          "control_admitted": false
+        },
+        "technology_is_control_evidence": false,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      },
+      {
+        "configuration": "scpn.reactor_systems:muon_catalysed_fusion",
+        "confinement_family": "extension",
+        "topology": "muon-catalysed hydrogen-isotope target",
+        "device_project": "SCPN-MUON-FUSION-CORE",
+        "external_evidence_rank": "E5_integrated_fusion_observation",
+        "rank_basis": "Primary experiments measured absolute neutron yield, reaction timing, temperature-dependent cycling, and sticking or loss parameters in D-T targets; these observations do not establish energy gain or reactor readiness.",
+        "reference_systems": [
+          {
+            "name": "Los Alamos and Idaho high-density D-T muon-catalysis experiment",
+            "lifecycle_state": "historical",
+            "source_ids": [
+              "SRC-036"
+            ]
+          },
+          {
+            "name": "RIKEN solid D-T muon-catalysis experiment",
+            "lifecycle_state": "historical",
+            "source_ids": [
+              "SRC-037"
+            ]
+          }
+        ],
+        "source_ids": [
+          "SRC-036",
+          "SRC-037"
+        ],
+        "diagnostic_evidence_state": "historical_documented_device",
+        "capability_claims": [
+          {
+            "capability_id": "beam_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-036"
+            ]
+          },
+          {
+            "capability_id": "fusion_product_measurement",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-036",
+              "SRC-037"
+            ]
+          },
+          {
+            "capability_id": "neutron_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-036",
+              "SRC-037"
+            ]
+          },
+          {
+            "capability_id": "temperature_diagnostics",
+            "status": "observed_integrated",
+            "source_ids": [
+              "SRC-036",
+              "SRC-037"
+            ]
+          }
+        ],
+        "observability_candidate_ids": [
+          "model.synthetic_oscillator_coordinate",
+          "muon.beam_and_target_timing",
+          "muon.catalysis_kinetics_and_outcome"
+        ],
+        "missing_capabilities": [
+          "control_admission",
+          "current_integrated_device",
+          "power_conversion_demonstration",
+          "public_machine_readable_calibrated_data",
+          "reactor_environment_diagnostic_qualification",
+          "spo_producer_adapter"
+        ],
+        "spo_qualification": {
+          "admission_state": "refused_no_producer_evidence",
+          "missing_evidence": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "physical_observation_qualified": false,
+          "physical_phase_qualified": false,
+          "control_admitted": false
+        },
+        "technology_is_control_evidence": false,
+        "authority": "review_only",
+        "actionable": false,
+        "direct_actuation_authorized": false,
+        "machine_protection_final_veto": true
+      },
+      {
         "configuration": "sheared_flow_z_pinch",
         "confinement_family": "self_magnetic",
         "topology": "flow-stabilized axial-current pinch",
@@ -3276,5 +3487,5 @@
     "direct_actuation_authorized": false,
     "machine_protection_final_veto": true
   },
-  "payload_sha256": "eb8e2ffbbc98241ac2458044455bcec425860f33ab3ba9d5ea4fa3b86870d3d3"
+  "payload_sha256": "21dcfa1b4c54e09e6b860101bed5df927655d887e974460a105f5e97cb4138ed"
 }

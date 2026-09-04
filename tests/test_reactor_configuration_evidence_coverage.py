@@ -21,6 +21,7 @@ from scpn_phase_orchestrator.reactor_semantics import (
     DEFAULT_REACTOR_OBSERVABILITY_PROFILE_REGISTRY,
     DEFAULT_REACTOR_REGISTRY,
     DEFAULT_REACTOR_SEMANTIC_PROFILE_REGISTRY,
+    REACTOR_REGISTRY_V1_0_0,
     mif_merge_compression_handoff_from_mif_bytes,
     mif_merge_compression_handoff_to_bytes,
 )
@@ -146,10 +147,8 @@ def test_coverage_counts_distinguish_source_evidence_from_semantic_ingress() -> 
     assert isinstance(payload, dict)
 
     counts = {
-        "built_in_configurations": len(rows),
-        "built_in_confinement_families": len(
-            {row["confinement_family"] for row in rows}
-        ),
+        "registered_configurations": len(rows),
+        "confinement_families": len({row["confinement_family"] for row in rows}),
         "evidence_source_present": sum(
             row["evidence_source_present"] is True for row in rows
         ),
@@ -174,7 +173,7 @@ def test_coverage_counts_distinguish_source_evidence_from_semantic_ingress() -> 
     }
     assert payload["coverage"] == counts
     assert Counter(row["evidence_state"] for row in rows) == {
-        "producerless": 27,
+        "producerless": 29,
         "verified_review_adapter_simulation": 2,
         "local_model_only": 1,
         "physical_source_unqualified": 1,
@@ -285,8 +284,12 @@ def test_frc_mif_review_chain_receipt_seals_all_three_non_actuating_stages() -> 
     handoff = mif_merge_compression_handoff_from_mif_bytes(
         source_bytes,
         expected_sha256=receipt["producer"]["envelope_sha256"],
+        registry=REACTOR_REGISTRY_V1_0_0,
     )
-    handoff_bytes = mif_merge_compression_handoff_to_bytes(handoff)
+    handoff_bytes = mif_merge_compression_handoff_to_bytes(
+        handoff,
+        registry=REACTOR_REGISTRY_V1_0_0,
+    )
     assert len(handoff_bytes) == receipt["semantic_handoff"]["byte_length"] == 101_652
     assert (
         hashlib.sha256(handoff_bytes).hexdigest()

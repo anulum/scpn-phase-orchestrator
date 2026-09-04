@@ -104,7 +104,7 @@ def test_request_binds_exact_source_review_and_registry_candidates() -> None:
     assert request.source_review_unresolved_fields == (
         review.unresolved_qualification_fields
     )
-    assert request.observability_registry_version == "1.0.0"
+    assert request.observability_registry_version == "1.1.0"
     assert (
         request.observability_registry_sha256
         == rs.DEFAULT_REACTOR_OBSERVABILITY_PROFILE_REGISTRY.digest

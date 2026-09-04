@@ -1,229 +1,146 @@
 # Reactor producer-evidence priority register
 
-This register turns the reactor technology atlas and current SCPN evidence map
-into a conservative sequence of producer-to-SPO intake lanes. It covers all
-**32 built-in configurations** across **8 confinement families** and the full
-system scope of **22 upstream reactor projects plus SCPN-CONTROL**. The exact
-identity model keeps three related counts distinct: 20 Reactor Systems projects
-are present in the diagnostic-plan portfolio; the registry has 21 distinct
-`device_project` owners because it additionally assigns `frc_compression_mif`
-to SCPN-MIF-CORE; and the 22-project upstream set additionally includes
-SCPN-FUSION-CORE as a physical/simulation evidence producer for configurations
-whose device owner is another project.
+This register turns the evidence atlas and exact SCPN custody map into a
+conservative sequence of producer-to-SPO intake lanes. It covers all **34
+registered configurations** across **9 confinement families**.
 
-The register answers one bounded question: what exact evidence boundary must
-be closed next before a configuration can move toward a qualified physical
-observation? It does not decide which reactor technology is scientifically,
-economically, strategically, or commercially preferable.
+The project counts are intentionally distinct:
 
-## Methodology
+- **22 Reactor Systems device repositories** are in the diagnostic-plan
+  portfolio;
+- the registry has **23 distinct `device_project` owners** after adding
+  SCPN-MIF-CORE;
+- adding SCPN-FUSION-CORE yields **24 upstream reactor projects**; and
+- SCPN-CONTROL is the separate 25th project boundary.
 
-Every row is an exact join of four sealed SPO artifacts:
+The register asks which exact evidence boundary closes next. It does not rank
+reactor technologies scientifically, economically, strategically, or
+commercially.
 
-- the configuration evidence coverage matrix;
-- the diagnostic-plan portfolio status;
-- the signal occurrence ledger; and
-- the external technology and diagnostic atlas.
+## Method and precedence
 
-The register applies deterministic evidence-state precedence:
+Every row is an exact join of the sealed configuration-coverage,
+diagnostic-plan, occurrence-ledger, and technology-atlas artifacts. Intake
+precedence is deterministic:
 
-1. reviewed physical-source custody already exists;
-2. an exercised byte-canonical review adapter already exists;
-3. an exact producer diagnostic-plan fixture is structurally accepted; or
-4. the diagnostic plan is structurally refused and must be repaired first.
+1. qualify reviewed physical-source custody;
+2. extend an exercised byte-canonical review adapter;
+3. create a missing versioned diagnostic plan;
+4. build physical evidence from an accepted plan; or
+5. repair a refused plan before physical intake.
 
-This order describes **integration readiness**, not research importance. No
-opaque or additive priority score is emitted, and rows within one lane are
-deliberately unordered. Selecting one row within a lane requires an explicit
-review of safety value, calibrated machine-readable data availability,
-clock/reference/operator completeness, uncertainty, validity, quality,
-provenance, observability gates, independent validation, and producer capacity.
-
-External `E5` through `E0` evidence ranks remain context only. They never alter
-the intake lane. For example, `beam_target` carries `E5` and `colliding_beam`
-carries `E1`, but both are in L2 because their exact producer plan is now
-structurally accepted. Local SPO fixture custody remains a separate axis.
+No opaque or additive priority score is emitted, and rows within one lane are
+deliberately unordered. External `E5` through `E0` evidence ranks remain
+context only and never alter the lane or grant authority.
 
 ## Lane result
 
 | Lane | Exact next boundary | Configurations |
 |---|---|---:|
-| `L0_qualify_existing_physical_source` | Complete qualification of already-reviewed physical-source custody | 1 |
-| `L1_extend_exercised_review_adapter` | Supply a physical producer payload through an existing byte-canonical adapter boundary | 2 |
-| `L2_build_from_accepted_plan` | Convert an accepted design declaration into a configuration-specific physical sample envelope | 29 |
-| `L3_repair_refused_plan_before_intake` | Repair and regenerate canonical plan bytes, then supply a physical sample envelope | 0 |
+| `L0_qualify_existing_physical_source` | Complete qualification of reviewed physical-source custody | 1 |
+| `L1_extend_exercised_review_adapter` | Supply a physical producer payload through an existing review boundary | 2 |
+| `L2_build_missing_diagnostic_plan` | Publish a versioned, configuration-specific diagnostic plan | 2 |
+| `L3_build_from_accepted_plan` | Supply a configuration-specific physical sample envelope | 13 |
+| `L4_repair_refused_plan_before_intake` | Repair the exact plan contract, then supply physical evidence | 16 |
 
-### L0 — qualify existing physical source
+### L0 — physical-source qualification
 
-`spherical_tokamak` is the only L0 row. SCPN-FUSION-CORE already supplies the
-reviewed FAIR-MAST physical source through an exercised byte-canonical adapter,
-while SCPN-TOKAMAK-CORE remains the device owner. The next gate is not another
-literature review, adapter, or generic tokamak plan. It is completion of a
-controlled phenomenon identity, reproducible source-ingestion state,
-calibration lineage, physical geometry/frame binding, modal observation
-operator and harmonic basis, provider quality, uncertainty, validity,
-producer-owned evidence-state semantics, instrument-to-facility clock
-correlation, resolved event identity,
-observability threshold, and independent multi-shot or classifier evidence.
-The exact request is generated by
-`mast_phase_qualification_request_from_source_review()` from the complete
-physical-source review bytes.
+`spherical_tokamak` is the only L0 row. SCPN-FUSION-CORE supplies reviewed
+FAIR-MAST physical-source bytes, while SCPN-TOKAMAK-CORE remains the device
+owner. The source has no declared portable semantic-ingress profile. The
+materialized `mast_phase_qualification_request_from_source_review()` request
+therefore remains blocked on controlled phenomenon identity, reproducible
+source-ingestion state, calibration, geometry/frame and modal observation operators,
+clock correlation, uncertainty, validity, producer-owned plant-truth-state
+semantics, observability, and independent evidence.
 
-Request version `1.1.0` pins the shared `unknown`,
-`out_of_distribution`, `low_observability`, and `stale` dispositions. They are
-validity causes about current plant truth, never physical plasma regimes;
-quality cannot replace them, and every disposition forces regime abstention.
-The request remains blocked because no producer-owned contract is present.
-The materialized request ID is
-`ef25956437cb4a75e841133de23ca89f71c738380996374298fd3ff0077ac4d2` and its
+Its request ID is
+`3aae1686abf2b3854d2136079118c7f68e6c75e769906d4c45f0f4adda7bc722` and
 canonical envelope SHA-256 is
-`b5a3472bee27ac3873f16711978e796162cc8b82846a5a014fcdd20b802840c8`.
+`33156dd1759a4c1e3209f3cf166ef69270bb82150ccadb71bbf9bdfb962bf006`.
 
-L0 still has no qualified observation, physical phase, CONTROL admission, or
-actuation authority.
+### L1 — exercised review adapters
 
-### L1 — extend exercised review adapters
+`conventional_tokamak` routes to SCPN-FUSION-CORE through
+`conventional_tokamak_physical_payload_request()`. `frc_compression_mif`
+routes to SCPN-MIF-CORE through
+`frc_compression_mif_physical_payload_request()`. Both current adapters are
+simulation-only, forbidding reuse as physical evidence.
 
-- `conventional_tokamak` routes its next exact producer request to
-  SCPN-FUSION-CORE. SPO materialises that request through
-  `conventional_tokamak_physical_payload_request()` as the digest-sealed
-  `scpn-phase-orchestrator.conventional-tokamak-physical-payload-request.v1`
-  contract. It binds the exercised TORAX adapter while fixing that adapter's
-  source kind to simulation and forbidding reuse as physical evidence. Version
-  `1.1.0` embeds the shared producer evidence-state policy and requires a
-  producer-owned contract for distinct `unknown`, `out_of_distribution`,
-  `low_observability`, and `stale` dispositions. Its materialized request ID is
-  `3f01f59e422421bdb98bfa51aff7f3f5378d96e3b5c8ffbdc80ae4899f027aba`
-  and its canonical envelope SHA-256 is
-  `ed3515b4c41ba911ba6172d4a1d22b76f1c9e9aa5bb6627e02d6975bcd65945f`.
-- `frc_compression_mif` routes its next exact producer request to
-  SCPN-MIF-CORE. SPO materialises it through
-  `frc_compression_mif_physical_payload_request()` as the digest-sealed
-  `scpn-phase-orchestrator.frc-compression-mif-physical-payload-request.v1`
-  contract. It binds the exercised merge-compression adapter while preserving
-  its model evidence, numerical coordinates, clock, and trigger as simulation
-  only and forbidding their reuse as physical evidence. Version `1.1.0`
-  additionally requires distinct producer-owned `unknown`,
-  `out_of_distribution`, `low_observability`, and `stale` evidence
-  dispositions about current plant truth. They map to U0 validity and force
-  physical-regime abstention; the contract remains absent and the request
-  remains blocked.
+The requests require immutable source/package identity, canonical bytes,
+independent validation, and distinct `unknown`, `out_of_distribution`,
+`low_observability`, and `stale` producer dispositions about current plant
+truth. Those are validity causes, not physical reactor regimes; quality labels
+cannot substitute for them.
 
-Both configurations have exercised byte-canonical review adapters, but those
-adapters carry simulation evidence only. The next input must be a physical
-sample envelope with configuration-specific diagnostic identity, clock and
-reference binding, physical observation operator or calibration, uncertainty,
-validity, quality, provenance, and an evaluated observability gate.
+### L2 — missing diagnostic plans
 
-Both L1 requests additionally require producer-owned evidence dispositions
-about current plant truth. Generic accepted/degraded/rejected quality labels
-cannot substitute for the evidence cause. These are not physical
-reactor-regime labels, and adding the obligation does not close `STATE-01`
-without immutable producer evidence.
+The two namespaced extensions
+`scpn.reactor_systems:lattice_confinement_fusion` and
+`scpn.reactor_systems:muon_catalysed_fusion` are architecture-only projects.
+Their next boundary is a producer-owned, versioned diagnostic plan. Literature
+evidence, registry identity, or green software workflows do not create such a
+plan.
 
-Both L1 requests additionally make immutable source/package identity,
-reproducibility, independent validation, candidate non-selection, and all
-no-CONTROL/no-actuation authority fields machine-checkable. See the normative
-[conventional-tokamak](conventional_tokamak_physical_payload_request.md) and
-[FRC-compression MIF](frc_compression_mif_physical_payload_request.md)
-request references.
+### L3 — accepted plans
 
-`SCPN-MIF-CORE` is the registry's 21st distinct `device_project` owner and is
-not one of the 20 projects in the diagnostic-plan portfolio. Together with
-SCPN-FUSION-CORE, it completes the two upstream physics cores above those 20
-device-plan producers. Its L1 classification comes from its existing adapter,
-not from an absent plan row.
+Thirteen configurations map to the seven accepted producer objects:
+SCPN-ICF-BEAM-CORE, SCPN-ICF-IMPACT-CORE, SCPN-ICF-LASER-CORE, SCPN-IEC-CORE,
+SCPN-LEVITATED-DIPOLE-CORE, SCPN-MAGNETIC-CUSP-CORE, and
+SCPN-STELLARATOR-CORE. Their plans declare intended channels, carriers, frames,
+clocks, and evidence slots; they do not contain physical samples.
 
-### L2 — build from accepted plans
+### L4 — refused plans
 
-The 29 L2 configurations are every built-in configuration except the one L0
-row and two L1 rows. They include:
-
-- `dense_plasma_focus`;
-- `ion_beam_icf` and `pulsed_electron_beam_icf`;
-- `laser_icf_direct_drive`, `laser_icf_indirect_drive`, and
-  `laser_icf_fast_or_shock_ignition`;
-- `projectile_or_impact_icf`;
-- `maglif`, `mechanical_or_liquid_liner_mif`, and `plasma_jet_mif`;
-- `sheared_flow_z_pinch`, `theta_pinch`, and `z_pinch`.
-- `beam_target`, `colliding_beam`, `cusp`, `field_reversed_configuration`,
-  `fusion_fission_hybrid`, `gas_dynamic_mirror`, `simple_magnetic_mirror`,
-  `tandem_mirror`, `gridded_iec`, `polywell`, `heliotron`, `stellarator`,
-  `torsatron`, `levitated_dipole`, `reversed_field_pinch`, and `spheromak`.
-
-Their exact plans define intended channels, clocks, carriers, and evidence
-slots. All twenty current envelope `1.2.0` producer objects are digest-pinned
-and verified public; SPO has zero byte-identical custody copies of those current
-objects. Legacy local `1.1.0` fixtures remain compatibility evidence, not
-current-object custody. None of these software states contains sampled physical
-values. The next gate is a
-configuration-specific canonical evidence envelope owned by the named device
-project, with immutable source revision and package identity. Shared plans do
-not equate configurations: the three laser-ICF rows, two beam-ICF rows, two
-Z-pinch rows, and three separate MIF device projects remain independent.
-
-### L3 — repair refused plans before intake
-
-L3 is empty. The ten producer conformance repairs now emit explicit
-`timing_uncertainty_s`, and the exact twenty-head replay accepted every
-envelope `1.2.0` fixture. A future refusal would re-enter L3 without changing
-external evidence rank or granting physical/control authority.
+Sixteen configurations map to thirteen refused producer objects. Seven
+projects lack the canonical shared-kernel owner exclusion. Six have plan
+envelopes whose source digests do not match the current manifest and plan
+bytes; their exact-head `CI` runs also fail. The owner must publish corrected
+canonical objects before SPO can review physical evidence. Refusal is not
+silently bypassed by a related topology or a previously accepted version.
 
 ## Required physical evidence
 
-Every configuration-specific producer request carries the same minimum field
-vector:
+Every configuration-specific evidence request requires at least:
 
-1. physical sample;
-2. phenomenon identity;
-3. reference;
-4. clock epoch;
-5. observation operator or calibration;
-6. uncertainty;
-7. validity;
-8. quality;
-9. provenance; and
-10. observability gate.
+1. a physical sample and phenomenon identity;
+2. reference and clock epoch;
+3. observation operator or calibration;
+4. uncertainty and validity;
+5. quality and provenance; and
+6. an evaluated observability gate.
 
-The artifact must also bind the exact source revision, reproducible package
+The artifact must bind the exact source revision, reproducible package
 identity, and canonical producer bytes. Independent validation is mandatory.
-A diagnostic name, facility page, source abstract, design plan, model output,
-or topology resemblance is not a substitute.
+A diagnostic name, facility page, abstract, design plan, model output, or
+topology resemblance is not a substitute.
 
 ## CONTROL and machine-safety boundary
 
-All 32 rows remain `review_only`, `actionable=false`,
+All 34 rows remain `review_only`, `actionable=false`,
 `direct_actuation_authorized=false`, and
 `machine_protection_final_veto=true`. The register reports zero complete
 physical evidence chains, zero qualified physical observations, zero qualified
 physical phases, and zero CONTROL admissions.
 
-The lane name is not a command or an admission decision. CONTROL must not
-consume a lane, external evidence rank, plan status, occurrence ID, candidate
-ID, or producer request as signal, regime, intent, execution, or actuation
-evidence. A future byte-canonical SPO review remains a separate fail-closed
-boundary.
+CONTROL must not consume a lane, external evidence rank, plan status,
+occurrence ID, candidate ID, or producer request as signal, regime, intent,
+execution, or actuation evidence.
 
 ## Machine-readable custody
 
-The canonical artifact is
-[`reactor_producer_evidence_priority_register.v1.json`](data/reactor_producer_evidence_priority_register.v1.json).
-It is validated by
-[`reactor_producer_evidence_priority_register.schema.json`](../specs/reactor_producer_evidence_priority_register.schema.json)
-and sealed over canonical JSON payload bytes.
+The canonical
+[`reactor_producer_evidence_priority_register.v1.json`](data/reactor_producer_evidence_priority_register.v1.json)
+is validated by
+[`reactor_producer_evidence_priority_register.schema.json`](../specs/reactor_producer_evidence_priority_register.schema.json).
 
-- Schema: `scpn-phase-orchestrator.reactor-producer-evidence-priority-register.v1`
-- Schema version: `1.0.0`
-- Payload SHA-256: `3ce9f8f98f8dc6d39d36fc60bb47d171193722f266531db5e55ebe02c52f3d55`
-- Configuration evidence payload:
-  `b71c857153a290fa76fbac5637d104beb1c87cd77c5cc9b44bbbdcb7c299f601`
-- Diagnostic-plan portfolio payload:
-  `33a4609e1f45de3d9e5c7522cbfa8b16227014205f066fd60855971ca41859da`
-- Signal occurrence payload:
-  `8210dc2310a7031ccad1a1675677e3e92007a2dd82e696c39d25202d2f9f022f`
-- Technology atlas payload:
-  `eb8e2ffbbc98241ac2458044455bcec425860f33ab3ba9d5ea4fa3b86870d3d3`
+- Schema version: `1.1.0`
+- Payload SHA-256: `1e2cb5e9b82cd89f56bb8681fab115e7893b7524dfdb7ef11c57c52f782ee13f`
+- Configuration evidence payload: `4ee797e9bd03d646d538b30ecbf468a90e70be4bdada922b09eb84e483f3b730`
+- Diagnostic-plan portfolio payload: `13bdcfd794cab002903d4861a378056536e0fcb98beca64863a9b36cc71558a5`
+- Signal occurrence payload: `8210dc2310a7031ccad1a1675677e3e92007a2dd82e696c39d25202d2f9f022f`
+- Technology atlas payload: `21dcfa1b4c54e09e6b860101bed5df927655d887e974460a105f5e97cb4138ed`
 
 Any input artifact, custody state, plan result, lane, blocker, producer route,
-readiness axis, or authority change alters the payload seal and requires
-deliberate review.
+readiness axis, or authority change alters the seal and requires deliberate
+review.

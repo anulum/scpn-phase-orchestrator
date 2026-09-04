@@ -20,10 +20,12 @@ from .vocabulary import (
     ConfinementFamily,
     require_identifier,
     require_semver,
+    require_sha256,
     require_text,
 )
 
-REACTOR_REGISTRY_VERSION = "1.0.0"
+REACTOR_REGISTRY_VERSION = "1.1.0"
+REACTOR_REGISTRY_V1_0_0_VERSION = "1.0.0"
 
 
 @dataclass(frozen=True, slots=True)
@@ -344,23 +346,99 @@ _BUILTIN_CONFIGURATIONS = (
     ),
 )
 
-DEFAULT_REACTOR_REGISTRY = ReactorConfigurationRegistry(
-    version=REACTOR_REGISTRY_VERSION,
+_EXTENSION_CONFIGURATIONS = (
+    _configuration(
+        "scpn.reactor_systems:lattice_confinement_fusion",
+        ConfinementFamily.EXTENSION,
+        "deuterated metal lattice under external driver",
+    ),
+    _configuration(
+        "scpn.reactor_systems:muon_catalysed_fusion",
+        ConfinementFamily.EXTENSION,
+        "muon-catalysed hydrogen-isotope target",
+    ),
+)
+
+_REGISTRY_ALIASES = {
+    "frc": "field_reversed_configuration",
+    "iec": "gridded_iec",
+    "mif_maglif": "maglif",
+    "rfx": "reversed_field_pinch",
+}
+
+REACTOR_REGISTRY_V1_0_0 = ReactorConfigurationRegistry(
+    version=REACTOR_REGISTRY_V1_0_0_VERSION,
     configurations={
         configuration.identifier: configuration
         for configuration in _BUILTIN_CONFIGURATIONS
     },
-    aliases={
-        "frc": "field_reversed_configuration",
-        "iec": "gridded_iec",
-        "mif_maglif": "maglif",
-        "rfx": "reversed_field_pinch",
-    },
+    aliases=_REGISTRY_ALIASES,
 )
+
+DEFAULT_REACTOR_REGISTRY = ReactorConfigurationRegistry(
+    version=REACTOR_REGISTRY_VERSION,
+    configurations={
+        configuration.identifier: configuration
+        for configuration in (*_BUILTIN_CONFIGURATIONS, *_EXTENSION_CONFIGURATIONS)
+    },
+    aliases=_REGISTRY_ALIASES,
+)
+
+_REACTOR_REGISTRY_RELEASES = MappingProxyType(
+    {
+        (REACTOR_REGISTRY_V1_0_0.version, REACTOR_REGISTRY_V1_0_0.digest): (
+            REACTOR_REGISTRY_V1_0_0
+        ),
+        (DEFAULT_REACTOR_REGISTRY.version, DEFAULT_REACTOR_REGISTRY.digest): (
+            DEFAULT_REACTOR_REGISTRY
+        ),
+    }
+)
+
+
+def resolve_reactor_registry_release(
+    version: str,
+    digest: str,
+) -> ReactorConfigurationRegistry:
+    """Resolve one exact immutable registry release.
+
+    Producer objects remain bound to the release under which their bytes were
+    authored. Recognising that release preserves custody; it does not silently
+    upgrade or reinterpret the producer object against the current registry.
+
+    Parameters
+    ----------
+    version : str
+        Exact semantic version declared by the producer.
+    digest : str
+        Exact SHA-256 digest of the canonical registry record.
+
+    Returns
+    -------
+    ReactorConfigurationRegistry
+        Recognised immutable release.
+
+    Raises
+    ------
+    ValueError
+        If the version and digest pair is not a recognised release.
+    """
+    key = (
+        require_semver(version, field="registry version"),
+        require_sha256(digest, field="registry digest"),
+    )
+    try:
+        return _REACTOR_REGISTRY_RELEASES[key]
+    except KeyError as exc:
+        raise ValueError("unrecognised reactor registry release") from exc
+
 
 __all__ = [
     "DEFAULT_REACTOR_REGISTRY",
     "REACTOR_REGISTRY_VERSION",
+    "REACTOR_REGISTRY_V1_0_0",
+    "REACTOR_REGISTRY_V1_0_0_VERSION",
     "ReactorConfiguration",
     "ReactorConfigurationRegistry",
+    "resolve_reactor_registry_release",
 ]

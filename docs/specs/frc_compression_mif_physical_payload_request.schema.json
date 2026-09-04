@@ -147,7 +147,7 @@
         "intake_lane": {"const": "L1_extend_exercised_review_adapter"},
         "machine_protection_final_veto": {"const": true},
         "observability_registry_sha256": {"$ref": "#/$defs/sha256"},
-        "observability_registry_version": {"const": "1.0.0"},
+        "observability_registry_version": {"const": "1.1.0"},
         "observation_admitted": {"const": false},
         "phase_inference_eligible": {"const": false},
         "phase_inference_performed": {"const": false},
@@ -185,7 +185,7 @@
         "selected_candidate_id": {"type": "null"},
         "semantic_ingress_extended": {"const": false},
         "semantic_profile_registry_sha256": {"$ref": "#/$defs/sha256"},
-        "semantic_profile_registry_version": {"const": "1.0.0"}
+        "semantic_profile_registry_version": {"const": "1.1.0"}
       },
       "required": [
         "actionable",

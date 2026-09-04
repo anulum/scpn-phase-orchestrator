@@ -6,7 +6,7 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Reactor diagnostic-plan portfolio status guards
 
-"""Verify the digest-sealed, fail-closed 20-producer plan status snapshot."""
+"""Verify the digest-sealed, fail-closed 22-project plan status snapshot."""
 
 from __future__ import annotations
 
@@ -24,28 +24,33 @@ SCHEMA_PATH = Path("docs/specs/reactor_diagnostic_plan_portfolio_status.schema.j
 REFERENCE_PATH = Path("docs/reference/reactor_diagnostic_plan_portfolio_status.md")
 
 EXPECTED_ACCEPTED = {
-    "SCPN-BEAM-TARGET-CORE",
-    "SCPN-DENSE-PLASMA-FOCUS-CORE",
     "SCPN-ICF-BEAM-CORE",
     "SCPN-ICF-IMPACT-CORE",
     "SCPN-ICF-LASER-CORE",
-    "SCPN-MIF-LINER-CORE",
-    "SCPN-MIF-MAGLIF-CORE",
-    "SCPN-MIF-PLASMA-JET-CORE",
-    "SCPN-THETA-PINCH-CORE",
-    "SCPN-TOKAMAK-CORE",
-    "SCPN-Z-PINCH-CORE",
-    "SCPN-FRC-CORE",
-    "SCPN-FUSION-FISSION-HYBRID-CORE",
     "SCPN-IEC-CORE",
     "SCPN-LEVITATED-DIPOLE-CORE",
     "SCPN-MAGNETIC-CUSP-CORE",
+    "SCPN-STELLARATOR-CORE",
+}
+EXPECTED_REFUSED = {
+    "SCPN-BEAM-TARGET-CORE",
+    "SCPN-DENSE-PLASMA-FOCUS-CORE",
+    "SCPN-FRC-CORE",
+    "SCPN-FUSION-FISSION-HYBRID-CORE",
+    "SCPN-MIF-LINER-CORE",
+    "SCPN-MIF-MAGLIF-CORE",
+    "SCPN-MIF-PLASMA-JET-CORE",
     "SCPN-MIRROR-CORE",
     "SCPN-RFP-CORE",
     "SCPN-SPHEROMAK-CORE",
-    "SCPN-STELLARATOR-CORE",
+    "SCPN-THETA-PINCH-CORE",
+    "SCPN-TOKAMAK-CORE",
+    "SCPN-Z-PINCH-CORE",
 }
-EXPECTED_REFUSED: set[str] = set()
+EXPECTED_NOT_DECLARED = {
+    "SCPN-LATTICE-FUSION-CORE",
+    "SCPN-MUON-FUSION-CORE",
+}
 EXPECTED_VERIFIED_PUBLIC = EXPECTED_ACCEPTED
 EXPECTED_WORKFLOWS = (
     "CI",
@@ -85,28 +90,33 @@ def test_status_matches_strict_schema_and_payload_seal() -> None:
 
     Draft202012Validator.check_schema(schema)
     Draft202012Validator(schema).validate(status)
-    assert status["schema_version"] == "1.2.0"
-    assert status["payload"]["review_contract"].endswith("@1.2.0")
+    assert status["schema_version"] == "1.3.0"
+    assert status["payload"]["review_contract"].endswith("@1.1.0")
     assert (
         status["payload_sha256"]
         == hashlib.sha256(_canonical(status["payload"])).hexdigest()
     )
 
 
-def test_status_is_an_exact_sorted_twenty_producer_partition() -> None:
+def test_status_is_an_exact_sorted_twenty_two_project_partition() -> None:
     rows = _rows()
     projects = [row["project"] for row in rows]
     accepted = {
         row["project"] for row in rows if row["structural_status"] == "accepted"
     }
     refused = {row["project"] for row in rows if row["structural_status"] == "refused"}
+    not_declared = {
+        row["project"] for row in rows if row["structural_status"] == "not_declared"
+    }
 
-    assert len(rows) == 20
+    assert len(rows) == 22
     assert projects == sorted(projects)
     assert len(projects) == len(set(projects))
     assert accepted == EXPECTED_ACCEPTED
     assert refused == EXPECTED_REFUSED
-    assert accepted.isdisjoint(refused)
+    assert not_declared == EXPECTED_NOT_DECLARED
+    assert accepted.isdisjoint(refused | not_declared)
+    assert refused.isdisjoint(not_declared)
 
 
 def test_summary_counts_are_derived_from_rows() -> None:
@@ -118,14 +128,16 @@ def test_summary_counts_are_derived_from_rows() -> None:
     custody_counts = Counter(row["custody_state"] for row in rows)
 
     assert payload["counts"] == {
-        "producers": len(rows),
+        "device_projects": len(rows),
         "structurally_accepted": status_counts["accepted"],
         "structurally_refused": status_counts["refused"],
+        "diagnostic_plan_not_declared": status_counts["not_declared"],
         "exact_fixture_custody": custody_counts["exact_fixture_custody"],
         "verified_public_producer_object": custody_counts[
             "verified_public_producer_object"
         ],
         "producer_fix_required": custody_counts["producer_fix_required"],
+        "architecture_only_no_plan": custody_counts["architecture_only_no_plan"],
         "qualified_physical_observations": 0,
         "qualified_physical_phases": 0,
     }
@@ -157,21 +169,41 @@ def test_remote_verification_is_exact_and_non_scientific() -> None:
     verification = payload["remote_verification"]
     run_ids = [run_id for row in _rows() for run_id in row["hosted_ci_run_ids"]]
     assert verification["default_branch"] == "main"
-    assert verification["remote_head_matches"] == 20
+    assert verification["remote_head_matches"] == 22
     assert verification["remote_head_mismatches"] == 0
     assert tuple(verification["workflow_names"]) == EXPECTED_WORKFLOWS
-    assert verification["hosted_workflows_expected"] == 140
-    assert verification["hosted_workflows_successful"] == 140
-    assert verification["hosted_workflows_failed"] == 0
+    assert verification["hosted_workflows_expected"] == 154
+    assert verification["hosted_workflows_successful"] == 148
+    assert verification["hosted_workflows_failed"] == 6
     assert verification["hosted_workflows_cancelled"] == 0
     assert verification["run_attempt"] == 1
-    assert len(run_ids) == 140
+    assert len(run_ids) == 154
     assert len(set(run_ids)) == len(run_ids)
     assert "not physical or operational evidence" in verification["evidence_boundary"]
 
 
 def test_refused_rows_preserve_the_exact_producer_owned_gap() -> None:
-    assert not [row for row in _rows() if row["structural_status"] == "refused"]
+    refused = [row for row in _rows() if row["structural_status"] == "refused"]
+    codes = Counter(row["refusal_code"] for row in refused)
+
+    assert len(refused) == 13
+    assert codes == {
+        "manifest_contract_mismatch": 7,
+        "source_digest_mismatch": 6,
+    }
+    for row in refused:
+        assert row["custody_state"] == "producer_fix_required"
+        assert row["refusal_detail"]
+        assert row["missing_required_members"] == []
+        assert row["affected_channel_ids"] == []
+
+
+def test_architecture_only_projects_remain_planless_and_nonphysical() -> None:
+    planless = [row for row in _rows() if row["structural_status"] == "not_declared"]
+
+    assert {row["project"] for row in planless} == EXPECTED_NOT_DECLARED
+    assert all(row["custody_state"] == "architecture_only_no_plan" for row in planless)
+    assert all(row["physical_observation_claimed"] is False for row in planless)
 
 
 def test_no_portfolio_status_row_escalates_epistemic_or_control_authority() -> None:
@@ -191,17 +223,19 @@ def test_public_reference_explains_acceptance_refusal_and_fix_forward() -> None:
     text = " ".join(REFERENCE_PATH.read_text(encoding="utf-8").split())
 
     for marker in (
-        "**20 producers** were examined",
-        "**20 fixtures** are structurally accepted",
+        "**22 device projects** were examined",
+        "**7 producer objects** are structurally accepted",
+        "**13 are refused**",
+        "**2 architecture-only projects** have no declared diagnostic plan",
         "**0 current fixtures** have byte-identical SPO custody",
-        "**20 fixtures** are digest-pinned public producer objects",
-        "**140/140 hosted workflows** completed successfully",
+        "**7 fixtures** are digest-pinned public producer objects",
+        "**148/154 hosted workflows** completed successfully",
         "**0 fixtures** constitute a qualified physical observation",
-        "20 accepted / 0 refused",
+        "must not be purged while unresolved",
         "reactor_diagnostic_plan_portfolio_status.v1.json",
         "reactor_diagnostic_plan_portfolio_status.schema.json",
     ):
         assert marker in text
 
-    for project in EXPECTED_ACCEPTED | EXPECTED_REFUSED:
+    for project in EXPECTED_ACCEPTED | EXPECTED_REFUSED | EXPECTED_NOT_DECLARED:
         assert project in text

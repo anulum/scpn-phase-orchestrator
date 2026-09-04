@@ -17,11 +17,13 @@ import pytest
 from scpn_phase_orchestrator.reactor_semantics import (
     DEFAULT_REACTOR_OBSERVABILITY_PROFILE_REGISTRY,
     DEFAULT_REACTOR_REGISTRY,
+    REACTOR_OBSERVABILITY_PROFILE_REGISTRY_V1_0_0,
     REACTOR_OBSERVABILITY_PROFILE_REGISTRY_VERSION,
     ObservabilityClass,
     ReactorObservabilityProfileRegistry,
     SemanticCarrier,
     UnmetEvidenceDisposition,
+    resolve_reactor_observability_profile_registry_release,
 )
 
 
@@ -29,7 +31,7 @@ def test_catalogue_covers_every_configuration_without_claiming_evidence() -> Non
     registry = DEFAULT_REACTOR_OBSERVABILITY_PROFILE_REGISTRY
 
     assert registry.version == REACTOR_OBSERVABILITY_PROFILE_REGISTRY_VERSION
-    assert len(registry.candidates) == 21
+    assert len(registry.candidates) == 25
     assert len(registry.digest) == 64
     for configuration in DEFAULT_REACTOR_REGISTRY.configurations:
         candidates = registry.for_configuration(configuration)
@@ -69,6 +71,57 @@ def test_catalogue_preserves_distinct_reactor_meanings() -> None:
     ).admissible_carriers == (SemanticCarrier.NUMERICAL_PHASE,)
     with pytest.raises(ValueError, match="unknown signal candidate"):
         registry.resolve("reactor.generic_phase")
+
+
+def test_extensions_have_distinct_nonphase_and_event_relative_meanings() -> None:
+    registry = DEFAULT_REACTOR_OBSERVABILITY_PROFILE_REGISTRY
+    lattice = {
+        item.candidate_id
+        for item in registry.for_configuration(
+            "scpn.reactor_systems:lattice_confinement_fusion"
+        )
+    }
+    muon = {
+        item.candidate_id
+        for item in registry.for_configuration(
+            "scpn.reactor_systems:muon_catalysed_fusion"
+        )
+    }
+
+    assert lattice == {
+        "lattice.external_driver_timing",
+        "lattice.material_and_nuclear_response",
+        "model.synthetic_oscillator_coordinate",
+    }
+    assert muon == {
+        "model.synthetic_oscillator_coordinate",
+        "muon.beam_and_target_timing",
+        "muon.catalysis_kinetics_and_outcome",
+    }
+    assert registry.resolve("lattice.external_driver_timing").observability_class is (
+        ObservabilityClass.EVENT_RELATIVE
+    )
+    assert (
+        registry.resolve("muon.catalysis_kinetics_and_outcome").observability_class
+        is ObservabilityClass.NONCYCLIC_FEATURE
+    )
+
+
+def test_observability_1_0_remains_resolvable_for_producer_custody() -> None:
+    historical = REACTOR_OBSERVABILITY_PROFILE_REGISTRY_V1_0_0
+
+    assert historical.version == "1.0.0"
+    assert len(historical.candidates) == 21
+    assert historical.digest == (
+        "d70c0de696534e5a77066ef8420cf7ca17bc4d7321984b0ac83523dbc1dce609"
+    )
+    assert (
+        resolve_reactor_observability_profile_registry_release(
+            historical.version,
+            historical.digest,
+        )
+        is historical
+    )
 
 
 def test_alias_resolution_does_not_collapse_frc_and_mif() -> None:

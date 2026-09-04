@@ -16,18 +16,20 @@ import pytest
 
 from scpn_phase_orchestrator.reactor_semantics import (
     DEFAULT_REACTOR_REGISTRY,
+    REACTOR_REGISTRY_V1_0_0,
     ConfinementFamily,
     ReactorConfiguration,
     ReactorConfigurationRegistry,
     build_reactor_reference_portfolio,
     canonical_json,
+    resolve_reactor_registry_release,
 )
 
 
-def test_builtin_registry_spans_reactor_families_without_tokamak_default() -> None:
+def test_current_registry_spans_reactor_families_without_tokamak_default() -> None:
     registry = DEFAULT_REACTOR_REGISTRY
 
-    assert len(registry.configurations) == 32
+    assert len(registry.configurations) == 34
     assert registry.resolve("conventional_tokamak").confinement_family is (
         ConfinementFamily.MAGNETIC_CLOSED
     )
@@ -51,8 +53,35 @@ def test_builtin_registry_spans_reactor_families_without_tokamak_default() -> No
     assert registry.resolve("fusion_fission_hybrid").confinement_family is (
         ConfinementFamily.HYBRID
     )
+    assert (
+        registry.resolve(
+            "scpn.reactor_systems:lattice_confinement_fusion"
+        ).confinement_family
+        is ConfinementFamily.EXTENSION
+    )
+    assert (
+        registry.resolve(
+            "scpn.reactor_systems:muon_catalysed_fusion"
+        ).confinement_family
+        is ConfinementFamily.EXTENSION
+    )
     assert len(registry.digest) == 64
     assert registry.to_record()["configurations"][0]["identifier"] == "beam_target"
+
+
+def test_registry_1_0_remains_exactly_resolvable_for_producer_custody() -> None:
+    assert REACTOR_REGISTRY_V1_0_0.version == "1.0.0"
+    assert len(REACTOR_REGISTRY_V1_0_0.configurations) == 32
+    assert REACTOR_REGISTRY_V1_0_0.digest == (
+        "786d9542ce76c56dd7748fa948b17efed6c073525e527ce90e6d5e29a2d00090"
+    )
+    assert (
+        resolve_reactor_registry_release(
+            REACTOR_REGISTRY_V1_0_0.version,
+            REACTOR_REGISTRY_V1_0_0.digest,
+        )
+        is REACTOR_REGISTRY_V1_0_0
+    )
 
 
 def test_registry_extensions_are_namespaced_immutable_and_deterministic() -> None:

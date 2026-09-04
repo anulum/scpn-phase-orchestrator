@@ -35,7 +35,11 @@ from .evidence import (
     ValidityWindow,
 )
 from .handoff import MAX_SOURCE_ENVELOPE_BYTES
-from .registry import DEFAULT_REACTOR_REGISTRY, ReactorConfigurationRegistry
+from .registry import (
+    DEFAULT_REACTOR_REGISTRY,
+    ReactorConfigurationRegistry,
+    resolve_reactor_registry_release,
+)
 from .serialization import contract_from_record, contract_to_record
 from .vocabulary import (
     ACTION_OWNER,
@@ -173,7 +177,11 @@ class MIFMergeCompressionHandoff:
 
     def _validate_contract_graph(self) -> None:
         """Validate context, clock, semantic coverage, and regime consistency."""
-        self.context.validate_registry()
+        registry = resolve_reactor_registry_release(
+            self.context.registry_version,
+            self.context.registry_digest,
+        )
+        self.context.validate_registry(registry)
         if self.context.configuration != _CONFIGURATION:
             raise ValueError("MIF handoff requires frc_compression_mif context")
         if self.context.event_id != self.event_id:

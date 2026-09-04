@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Registry release `1.1.0` preserves the immutable 32-configuration `1.0.0`
+  corpus and adds namespaced lattice-confinement and muon-catalysed-fusion
+  identities, configuration-specific observability candidates, evidence-ranked
+  primary sources, and version-aware review of historical producer pins. The
+  refreshed 22-project portfolio refuses stale digest and ownership contracts,
+  keeps both new architecture projects planless, and grants no physical,
+  CONTROL, execution, or actuation authority.
+- Registry release `1.1.0` preserves the immutable 32-configuration `1.0.0`
+  corpus and adds namespaced lattice-confinement and muon-catalysed-fusion
+  identities, configuration-specific observability candidates, evidence-ranked
+  primary sources, and version-aware review of historical producer pins. The
+  refreshed 22-project portfolio refuses stale digest and ownership contracts,
+  keeps both new architecture projects planless, and grants no physical,
+  CONTROL, execution, or actuation authority.
 - Exact diagnostic-plan envelope dispatch now preserves historical `1.1.0`
   while admitting `1.2.0` only through its distinct signal, frame-
   transformation, and clock-topology shapes. The exact TOKAMAK pilot fixture
@@ -36,18 +50,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   CONTROL admission, permit execution, or authorise actuation. The companion
   priority-register correction now records the already-existing FAIR-MAST
   portable review adapter instead of routing producer work toward a duplicate.
-- A digest-sealed reactor producer-evidence priority register joins all 32
+- A digest-sealed reactor producer-evidence priority register joins all 34
   configurations to exact external context, occurrence evidence,
   observability candidates, semantic-ingress state, diagnostic-plan custody,
-  all 22 upstream reactor projects plus CONTROL, producer ownership, and
-  physical-evidence gaps. Four non-scalar readiness
-  lanes distinguish one existing physical-source qualification, two exercised-
-  adapter extensions and 29 accepted-plan physical intakes; the plan-repair
-  lane is empty after the exact 20-producer envelope-1.1.0 replay.
+  all 24 upstream reactor projects plus CONTROL, producer ownership, and
+  physical-evidence gaps. Five non-scalar readiness lanes distinguish one
+  existing physical-source qualification, two exercised-adapter extensions,
+  two missing plans, 13 accepted-plan physical intakes, and 16 configuration
+  rows blocked on refused plans.
   External evidence rank never changes the lane or creates physical signal,
   phase, CONTROL, action, actuation, or machine-protection authority.
-- An evidence-ranked reactor technology and diagnostic atlas maps all 32
-  built-in configurations across eight confinement families to 34 exact,
+- An evidence-ranked reactor technology and diagnostic atlas maps all 34
+  registered configurations across nine confinement families to 37 exact,
   configuration-specific primary sources. It distinguishes integrated fusion,
   integrated plasma, component or driver, engineering, and concept evidence
   from diagnostic capability and SCPN evidence admission. Every row remains
@@ -55,15 +69,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   CONTROL admission, action, actuation, and machine-protection bypass.
 - A digest-sealed reactor diagnostic-plan portfolio status register records
   exact revisions, manifest and fixture hashes, configurations, plans, custody,
-  and fail-closed review results for all 20 Reactor Systems device producers.
-  All twenty fixtures are structurally accepted: eleven have byte-identical
-  SPO custody and nine remain digest-pinned exact public producer objects.
+  and fail-closed review results for all 22 Reactor Systems device projects.
+  Seven objects are accepted, thirteen are refused, two architecture projects
+  have no plan, and zero current objects have byte-identical SPO custody.
   The schema and tests prohibit custody overclaim, inference, physical-evidence
   promotion, CONTROL authority, or actuation.
 - An exhaustive, digest-sealed reactor configuration evidence matrix joins all
-  32 built-in configurations across eight confinement families to their exact
+  34 registered configurations across nine confinement families to their exact
   observability candidates, semantic-ingress profiles, and occurrence-ledger
-  evidence. It distinguishes five configurations with source evidence from 27
+  evidence. It distinguishes five configurations with source evidence from 29
   explicit producerless rows, records only two verified simulation review
   adapters, and forbids topology-based evidence inheritance, physical-phase
   promotion, action, or actuation.

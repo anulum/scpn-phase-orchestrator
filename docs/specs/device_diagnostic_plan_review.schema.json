@@ -66,9 +66,13 @@
         "source_envelope_sha256": { "$ref": "#/$defs/sha256" },
         "source_manifest_json": { "minLength": 2, "type": "string" },
         "source_manifest_sha256": { "$ref": "#/$defs/sha256" },
+        "source_observability_registry_digest": { "$ref": "#/$defs/sha256" },
+        "source_observability_registry_version": { "$ref": "#/$defs/semver" },
         "source_plan_json": { "minLength": 2, "type": "string" },
         "source_plan_sha256": { "$ref": "#/$defs/sha256" },
         "source_project": { "minLength": 1, "type": "string" },
+        "source_reactor_registry_digest": { "$ref": "#/$defs/sha256" },
+        "source_reactor_registry_version": { "$ref": "#/$defs/semver" },
         "source_revision": { "pattern": "^[0-9a-f]{40}$", "type": "string" }
       },
       "required": [
@@ -107,9 +111,13 @@
         "source_envelope_sha256",
         "source_manifest_json",
         "source_manifest_sha256",
+        "source_observability_registry_digest",
+        "source_observability_registry_version",
         "source_plan_json",
         "source_plan_sha256",
         "source_project",
+        "source_reactor_registry_digest",
+        "source_reactor_registry_version",
         "source_revision"
       ],
       "type": "object"
@@ -118,7 +126,7 @@
     "schema": {
       "const": "scpn-phase-orchestrator.device-diagnostic-plan-review.v1"
     },
-    "schema_version": { "const": "1.0.0" }
+    "schema_version": { "const": "1.1.0" }
   },
   "required": ["payload", "payload_sha256", "schema", "schema_version"],
   "title": "SCPN Phase Orchestrator device diagnostic-plan review",
@@ -155,7 +163,7 @@
       "type": "object"
     },
     "identifier": {
-      "pattern": "^[a-z][a-z0-9_.]*$",
+      "pattern": "^[A-Za-z][A-Za-z0-9_.:\\-]{0,127}$",
       "type": "string"
     },
     "semver": {

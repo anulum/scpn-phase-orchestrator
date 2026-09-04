@@ -106,6 +106,16 @@ def test_exact_tokamak_fixture_produces_full_design_review() -> None:
     assert review.source_artifact_sha256 == ARTIFACT_SHA256
     assert review.producer_package_revision == "0.1.0.dev0"
     assert review.configurations == ("conventional_tokamak", "spherical_tokamak")
+    assert review.source_reactor_registry_version == "1.0.0"
+    assert review.source_reactor_registry_digest == (
+        "786d9542ce76c56dd7748fa948b17efed6c073525e527ce90e6d5e29a2d00090"
+    )
+    assert review.source_observability_registry_version == "1.0.0"
+    assert review.source_observability_registry_digest == (
+        "d70c0de696534e5a77066ef8420cf7ca17bc4d7321984b0ac83523dbc1dce609"
+    )
+    assert review.reactor_registry_version == "1.1.0"
+    assert review.reactor_registry_digest == rs.DEFAULT_REACTOR_REGISTRY.digest
     assert review.planned_candidate_ids == (
         "closed.equilibrium_profiles",
         "closed.recurrent_transient",

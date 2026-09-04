@@ -172,11 +172,14 @@ from .mif_merge_compression import (
 )
 from .observability_profiles import (
     DEFAULT_REACTOR_OBSERVABILITY_PROFILE_REGISTRY,
+    REACTOR_OBSERVABILITY_PROFILE_REGISTRY_V1_0_0,
+    REACTOR_OBSERVABILITY_PROFILE_REGISTRY_V1_0_0_VERSION,
     REACTOR_OBSERVABILITY_PROFILE_REGISTRY_VERSION,
     ObservabilityClass,
     ReactorObservabilityProfileRegistry,
     ReactorSignalCandidateProfile,
     UnmetEvidenceDisposition,
+    resolve_reactor_observability_profile_registry_release,
 )
 from .producer_evidence_state import (
     PRODUCER_EVIDENCE_STATE_POLICIES,
@@ -216,9 +219,12 @@ from .regime_ontology import (
 )
 from .registry import (
     DEFAULT_REACTOR_REGISTRY,
+    REACTOR_REGISTRY_V1_0_0,
+    REACTOR_REGISTRY_V1_0_0_VERSION,
     REACTOR_REGISTRY_VERSION,
     ReactorConfiguration,
     ReactorConfigurationRegistry,
+    resolve_reactor_registry_release,
 )
 from .semantic_profiles import (
     DEFAULT_REACTOR_SEMANTIC_PROFILE_REGISTRY,
@@ -285,12 +291,16 @@ __all__ = [
     "MAX_SOURCE_ENVELOPE_BYTES",
     "PLANT_TRUTH_OWNERS",
     "REACTOR_OBSERVABILITY_PROFILE_REGISTRY_VERSION",
+    "REACTOR_OBSERVABILITY_PROFILE_REGISTRY_V1_0_0",
+    "REACTOR_OBSERVABILITY_PROFILE_REGISTRY_V1_0_0_VERSION",
     "REACTOR_CONTROL_INTENT_SCHEMA",
     "REACTOR_CONTROL_INTENT_VERSION",
     "REACTOR_REGIME_MODE_ONTOLOGY_VERSION",
     "REACTOR_REGIME_ASSESSMENT_SCHEMA",
     "REACTOR_REGIME_ASSESSMENT_VERSION",
     "REACTOR_REGISTRY_VERSION",
+    "REACTOR_REGISTRY_V1_0_0",
+    "REACTOR_REGISTRY_V1_0_0_VERSION",
     "REACTOR_FAMILY_ASSIGNMENT_MAP_SHA256",
     "REACTOR_SEMANTIC_PROFILE_REGISTRY_VERSION",
     "REVIEW_ONLY_AUTHORITY",
@@ -461,5 +471,7 @@ __all__ = [
     "regime_assessment_from_record",
     "regime_assessment_to_bytes",
     "regime_assessment_to_record",
+    "resolve_reactor_observability_profile_registry_release",
+    "resolve_reactor_registry_release",
     "validate_observable_sequence",
 ]

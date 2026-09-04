@@ -32,6 +32,16 @@
     },
     "HandoffPayload": {
       "type": "object",
+      "allOf": [
+        {
+          "if": {"properties": {"registry_version": {"const": "1.0.0"}}},
+          "then": {"properties": {"registry_digest": {"const": "786d9542ce76c56dd7748fa948b17efed6c073525e527ce90e6d5e29a2d00090"}}}
+        },
+        {
+          "if": {"properties": {"registry_version": {"const": "1.1.0"}}},
+          "then": {"properties": {"registry_digest": {"const": "6741f25892d81b24aa621ee4f56b5e785e8323eca6ccf9d9009ce2c8e53f4912"}}}
+        }
+      ],
       "required": [
         "actionable",
         "authority",
@@ -91,7 +101,7 @@
           ]
         },
         "registry_digest": {"$ref": "#/$defs/Sha256"},
-        "registry_version": {"const": "1.0.0"},
+        "registry_version": {"enum": ["1.0.0", "1.1.0"]},
         "semantics": {
           "type": "array",
           "minItems": 1,

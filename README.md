@@ -82,25 +82,26 @@ qualified physical phase or control authority.
 
 The companion
 [reactor configuration evidence coverage matrix](docs/reference/reactor_configuration_evidence_coverage.md)
-joins every one of the 32 built-in configurations to its observability
+joins every one of the 34 registered configurations to its observability
 candidates, semantic-ingress state, and exact occurrence evidence. It records
-27 configurations with no source evidence and 30 without portable semantic
+29 configurations with no source evidence and 32 without portable semantic
 ingress explicitly, preventing related reactor types from inheriting tokamak
 or MIF evidence by similarity.
 
 The
 [reactor diagnostic-plan portfolio status](docs/reference/reactor_diagnostic_plan_portfolio_status.md)
-replays the exact fixtures from all 20 Reactor Systems device producers at
-SPO's public review boundary. All 20 are structurally accepted; 11 have byte-
-identical SPO custody and nine remain digest-pinned exact public producer
-objects. Structural acceptance remains a synthetic design result, not physical
-evidence or CONTROL authority.
+reviews all 22 Reactor Systems device projects at SPO's public boundary. Seven
+current producer objects are structurally accepted, thirteen are refused until
+their owner repairs an exact manifest or source-digest mismatch, and the two
+new architecture-only projects have not declared plans. Structural acceptance
+remains a design result, not physical evidence or CONTROL authority.
 
 The evidence-ranked
 [reactor technology and diagnostic atlas](docs/reference/reactor_technology_diagnostic_atlas.md)
-maps current and historical primary-source evidence for all 32 configurations,
+maps current and historical primary-source evidence for all 34 configurations,
 including non-tokamak magnetic, inertial, magneto-inertial, electrostatic,
-beam-target, and hybrid systems. Its 34 external sources describe technology
+beam-target, hybrid, lattice-confinement, and muon-catalysed systems. Its 37
+external sources describe technology
 and diagnostic context only: every row still fails closed for physical signal,
 phase, CONTROL admission, action, and actuation without an exact producer
 payload.
@@ -108,10 +109,11 @@ payload.
 The follow-on
 [reactor producer-evidence priority register](docs/reference/reactor_producer_evidence_priority_register.md)
 joins the atlas to current occurrence, observability, semantic-ingress, and
-diagnostic-plan custody across 22 upstream reactor projects plus the
-SCPN-CONTROL boundary. Its four non-scalar lanes identify one existing
-physical-source qualification, two exercised-adapter extensions, 29 accepted-
-plan physical intakes, and no remaining plan repair. Rows within a lane are
+diagnostic-plan custody across 24 upstream reactor projects plus the
+SCPN-CONTROL boundary. Its five non-scalar lanes identify one existing
+physical-source qualification, two exercised-adapter extensions, two missing
+diagnostic plans, thirteen accepted-plan physical intakes, and sixteen
+configuration rows blocked by refused plans. Rows within a lane are
 unordered, and no lane or external rank creates signal, phase, CONTROL, or
 actuation authority.
 

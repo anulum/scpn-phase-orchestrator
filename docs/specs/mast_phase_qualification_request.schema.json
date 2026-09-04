@@ -145,7 +145,7 @@
         "machine_protection_final_veto": {"const": true},
         "observation_admitted": {"const": false},
         "observability_registry_sha256": {"$ref": "#/$defs/sha256"},
-        "observability_registry_version": {"const": "1.0.0"},
+        "observability_registry_version": {"const": "1.1.0"},
         "phase_inference_eligible": {"const": false},
         "phase_inference_performed": {"const": false},
         "phenomenon_identity_state": {

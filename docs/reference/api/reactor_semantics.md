@@ -19,16 +19,17 @@ coordinate frame, evidence class, event identity, and operating point are
 independent fields. Pulsed, repetitive-target, and single-experiment contexts
 require an opaque plant- or integrator-supplied `event_id`; U0 never invents a
 `shot_id`.
-The built-in registry includes 32 concrete configurations and an immutable,
-namespaced extension path.
+Registry release `1.1.0` includes 34 configurations: the immutable 32-entry
+`1.0.0` built-in release plus namespaced lattice-confinement and
+muon-catalysed-fusion extensions.
 
 The separate `DEFAULT_REACTOR_SEMANTIC_PROFILE_REGISTRY` binds every one of
-those 32 configurations to its device-family project without claiming that a
+those 34 configurations to its device-family project without claiming that a
 project assignment is already a semantic producer. Its versioned canonical
 record is sealed to the reactor-registry digest and the cross-project
 assignment-map SHA-256. Only `conventional_tokamak` through the exercised
 FUSION/TORAX adapter and `frc_compression_mif` through the exercised MIF
-adapter currently have `verified_review_adapter` ingress. The other thirty
+adapter currently have `verified_review_adapter` ingress. The other thirty-two
 records are explicitly `not_declared`: they advertise no producer, source
 schema, adapter API, handoff schema, or semantic profile.
 
@@ -43,7 +44,7 @@ profiles are `review_only`, `actionable=false`, and preserve independent
 machine protection as the final veto.
 
 `DEFAULT_REACTOR_OBSERVABILITY_PROFILE_REGISTRY` adds the machine-readable
-candidate layer. It covers every built-in configuration with explicit
+candidate layer. It covers every registered configuration with explicit
 `direct_cyclic`, `derived_cyclic`, `event_relative`, `noncyclic_feature`, and
 `numerical_only` routes plus a fail-closed `unobservable` result. Each
 candidate fixes its admissible carrier set, reference/repetition/operator
@@ -151,12 +152,11 @@ reactor configuration evidence matrix.
 
 The companion
 [reactor diagnostic-plan portfolio status](../reactor_diagnostic_plan_portfolio_status.md)
-records the exact structural-review result for all 20 Reactor Systems device
-producers. All 20 exact producer objects are structurally accepted: 11 have
-byte-identical SPO fixture custody and nine are digest-pinned exact public
-producer objects. Every channel now declares `timing_uncertainty_s`; SPO also
-repairs its own direct-cyclic facility-clock compatibility without changing
-producer bytes. The register is review-only and creates no physical
+records the exact structural-review result for all 22 Reactor Systems device
+projects. Seven exact producer objects are accepted, thirteen are refused on
+current owner-side manifest or digest mismatches, and the lattice and muon
+architecture projects have no declared diagnostic plan. The register is
+review-only and creates no physical
 observation, physical phase, CONTROL intent, action, execution, actuation, or
 machine-protection authority.
 
@@ -164,7 +164,7 @@ machine-protection authority.
 
 The
 [reactor technology and diagnostic atlas](../reactor_technology_diagnostic_atlas.md)
-maps all 32 built-in configurations across eight confinement families to 34
+maps all 34 registered configurations across nine confinement families to 37
 configuration-specific facility, government-programme, and peer-reviewed
 sources. Its `E5` through `E0` ranks describe only the strongest cited external
 technology evidence. They are not readiness, economics, SCPN implementation,
@@ -182,11 +182,12 @@ independent machine protection as the final veto.
 
 The
 [reactor producer-evidence priority register](../reactor_producer_evidence_priority_register.md)
-joins all 32 configurations to exact atlas, occurrence, observability,
-semantic-ingress, and diagnostic-plan custody across 22 upstream reactor
-projects plus the CONTROL boundary. Its four readiness lanes contain
+joins all 34 configurations to exact atlas, occurrence, observability,
+semantic-ingress, and diagnostic-plan custody across 24 upstream reactor
+projects plus the CONTROL boundary. Its five readiness lanes contain
 one reviewed physical-source qualification, two exercised-adapter extensions,
-13 accepted-plan physical intakes, and 16 plan repairs.
+two missing diagnostic plans, 13 accepted-plan physical intakes, and 16
+configuration rows blocked by refused plans.
 
 The register emits no scalar score and deliberately leaves rows within one lane
 unordered. External evidence rank never changes the lane. Every producer

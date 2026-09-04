@@ -63,8 +63,9 @@ MAST_SOURCE_WHEEL_SHA256 = (
 LANES = (
     "L0_qualify_existing_physical_source",
     "L1_extend_exercised_review_adapter",
-    "L2_build_from_accepted_plan",
-    "L3_repair_refused_plan_before_intake",
+    "L2_build_missing_diagnostic_plan",
+    "L3_build_from_accepted_plan",
+    "L4_repair_refused_plan_before_intake",
 )
 REQUIRED_EVIDENCE = (
     "physical_sample",
@@ -173,7 +174,7 @@ def test_priority_register_joins_every_exact_configuration_and_candidate() -> No
     assert [row["configuration"] for row in rows] == [
         record["identifier"] for record in reactor_records
     ]
-    assert len({row["device_project"] for row in rows}) == 21
+    assert len({row["device_project"] for row in rows}) == 23
 
     scope = payload["project_scope"]
     assert isinstance(scope, dict)
@@ -189,7 +190,7 @@ def test_priority_register_joins_every_exact_configuration_and_candidate() -> No
     assert set(scope["diagnostic_plan_portfolio_projects"]) == plan_projects
     assert set(scope["registry_device_owner_projects"]) == registry_projects
     assert set(scope["upstream_reactor_projects"]) == upstream_projects
-    assert len(upstream_projects) == 22
+    assert len(upstream_projects) == 24
     assert scope["control_project"] == "SCPN-CONTROL"
     assert scope["orchestration_authority_project"] == ("SCPN-PHASE-ORCHESTRATOR")
 
@@ -257,7 +258,7 @@ def test_priority_register_joins_exact_current_plan_status() -> None:
             producer["custody_state"] == "exact_fixture_custody"
         )
 
-    assert joined_configurations == 31
+    assert joined_configurations == 33
     assert all(
         row["readiness_axes"]["exact_plan_fixture_custody"] is False for row in rows
     )
@@ -272,26 +273,37 @@ def test_priority_lanes_follow_custody_precedence_not_external_rank() -> None:
     assert Counter(row["intake_lane"] for row in rows) == {
         LANES[0]: 1,
         LANES[1]: 2,
-        LANES[2]: 29,
+        LANES[2]: 2,
+        LANES[3]: 13,
+        LANES[4]: 16,
     }
-    assert all(row["intake_lane"] != LANES[3] for row in rows)
     assert all(row["priority_score"] is None for row in rows)
     assert all(
         row["next_gate"] == "supply_physical_sample_envelope"
         for row in rows
-        if row["intake_lane"] == LANES[2]
+        if row["intake_lane"] == LANES[3]
     )
 
     assert by_configuration["spherical_tokamak"]["intake_lane"] == LANES[0]
     assert by_configuration["conventional_tokamak"]["intake_lane"] == LANES[1]
     assert by_configuration["frc_compression_mif"]["intake_lane"] == LANES[1]
-    assert by_configuration["dense_plasma_focus"]["intake_lane"] == LANES[2]
-    assert by_configuration["field_reversed_configuration"]["intake_lane"] == (LANES[2])
+    assert by_configuration["dense_plasma_focus"]["intake_lane"] == LANES[4]
+    assert by_configuration["field_reversed_configuration"]["intake_lane"] == (LANES[4])
+    assert (
+        by_configuration["scpn.reactor_systems:lattice_confinement_fusion"][
+            "intake_lane"
+        ]
+        == LANES[2]
+    )
+    assert (
+        by_configuration["scpn.reactor_systems:muon_catalysed_fusion"]["intake_lane"]
+        == LANES[2]
+    )
 
     # External rank does not split configurations whose exact plans are both
     # structurally accepted.
-    assert by_configuration["beam_target"]["intake_lane"] == LANES[2]
-    assert by_configuration["colliding_beam"]["intake_lane"] == LANES[2]
+    assert by_configuration["beam_target"]["intake_lane"] == LANES[4]
+    assert by_configuration["colliding_beam"]["intake_lane"] == LANES[4]
     beam_context = by_configuration["beam_target"]["external_context"]
     colliding_context = by_configuration["colliding_beam"]["external_context"]
     assert isinstance(beam_context, dict)
@@ -310,17 +322,18 @@ def test_priority_register_requests_evidence_without_granting_authority() -> Non
     assert payload["direct_actuation_authorized"] is False
     assert payload["machine_protection_final_veto"] is True
     assert payload["counts"] == {
-        "built_in_configurations": 32,
-        "built_in_confinement_families": 8,
-        "registry_device_owner_projects": 21,
-        "upstream_reactor_projects": 22,
-        "diagnostic_plan_portfolio_projects": 20,
+        "registered_configurations": 34,
+        "confinement_families": 9,
+        "registry_device_owner_projects": 23,
+        "upstream_reactor_projects": 24,
+        "diagnostic_plan_portfolio_projects": 22,
         "control_projects": 1,
-        "upstream_plus_control_projects": 23,
+        "upstream_plus_control_projects": 25,
         LANES[0]: 1,
         LANES[1]: 2,
-        LANES[2]: 29,
-        LANES[3]: 0,
+        LANES[2]: 2,
+        LANES[3]: 13,
+        LANES[4]: 16,
         "qualified_physical_observations": 0,
         "qualified_physical_phases": 0,
         "control_admitted": 0,
@@ -339,16 +352,11 @@ def test_priority_register_requests_evidence_without_granting_authority() -> Non
     assert isinstance(mast_evidence, dict)
     assert isinstance(mast_readiness, dict)
     assert isinstance(mast_request, dict)
-    assert mast_evidence["producer_project"] == "SCPN-FUSION-CORE"
-    assert mast_evidence["source_schema"] == (
-        "scpn-fusion-core.mast-complete-magnetic-archive-envelope.v1"
-    )
-    assert mast_evidence["adapter_api"] == (
-        "scpn_phase_orchestrator.reactor_semantics."
-        "mast_magnetic_source_review_from_producer_bytes"
-    )
-    assert mast_evidence["portable_review_adapter_present"] is True
-    assert mast_readiness["portable_review_adapter_present"] is True
+    assert mast_evidence["producer_project"] is None
+    assert mast_evidence["source_schema"] is None
+    assert mast_evidence["adapter_api"] is None
+    assert mast_evidence["portable_review_adapter_present"] is False
+    assert mast_readiness["portable_review_adapter_present"] is False
     assert tuple(mast_request["lane_blockers"]) == MAST_L0_REQUIREMENTS
     assert tuple(mast_request["required_evidence"]) == MAST_REQUIRED_EVIDENCE
     mast_materialized = mast_request["materialized_request"]
