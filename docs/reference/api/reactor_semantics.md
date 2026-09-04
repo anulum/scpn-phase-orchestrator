@@ -555,6 +555,12 @@ confidence. The handoff fixes `authority="review_only"` and
 Cross-project consumers pass the exact serialized bytes to
 `handoff_from_bytes()`. It admits only the unique canonical UTF-8 encoding;
 `handoff_from_json()` remains the Python string surface for local composition.
+When no registry is supplied, the decoder resolves only the exact immutable
+registry release declared by the sealed payload's version-and-digest pair.
+This preserves recognised historical 1.0.0 bytes without requiring a consumer
+to preparse untrusted JSON. An explicitly supplied mismatched registry or an
+unknown release remains an error; serializers still require an explicit
+historical registry and never silently rewrite the object to the current one.
 Importing `scpn_phase_orchestrator.reactor_semantics` does not initialise UPDE,
 supervisor, native accelerator, or Julia runtimes. The decoder refuses
 duplicate keys, unknown or extra fields, digest drift, registry or U0 version
@@ -596,7 +602,10 @@ none acquires an angle. V1 emits no phase relation and leaves the reactor regime
 `MIFMergeCompressionHandoff` embeds the exact source JSON and its SHA-256 beside
 the complete U0 graph. `mif_merge_compression_handoff_to_bytes()` seals that
 graph in a second canonical envelope;
-`mif_merge_compression_handoff_from_bytes()` verifies the full chain. Both
+`mif_merge_compression_handoff_from_bytes()` verifies the full chain and, when
+the caller omits a registry, resolves only the allowlisted exact release named
+by the sealed payload. Historical 1.0.0 and current 1.1.0 bytes therefore share
+one public admission surface without losing their distinct identities. Both
 source and handoff are fixed to `review_only` and `actionable=false`, and the
 module has no control-action dependency. The portable shape is published as
 [`mif_merge_compression_handoff.schema.json`](../../specs/mif_merge_compression_handoff.schema.json).

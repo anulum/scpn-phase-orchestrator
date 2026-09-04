@@ -24,7 +24,11 @@ from .contracts import (
     ReactorContext,
     RegimeEstimate,
 )
-from .registry import DEFAULT_REACTOR_REGISTRY, ReactorConfigurationRegistry
+from .registry import (
+    DEFAULT_REACTOR_REGISTRY,
+    ReactorConfigurationRegistry,
+    resolve_reactor_registry_release,
+)
 from .serialization import contract_from_record, contract_to_record
 from .vocabulary import (
     ACTION_OWNER,
@@ -138,7 +142,11 @@ class ReactorSemanticHandoff:
 
     def _validate_contract_graph(self) -> None:
         """Enforce ownership, identity, clock, and nonphase invariants."""
-        self.context.validate_registry()
+        registry = resolve_reactor_registry_release(
+            self.context.registry_version,
+            self.context.registry_digest,
+        )
+        self.context.validate_registry(registry)
         if self.context.event_id != self.event_id:
             raise ValueError("handoff and reactor context event_id must match")
         if not self.observables:
@@ -290,7 +298,7 @@ def handoff_to_record(
 def handoff_from_record(
     raw: object,
     *,
-    registry: ReactorConfigurationRegistry = DEFAULT_REACTOR_REGISTRY,
+    registry: ReactorConfigurationRegistry | None = None,
 ) -> ReactorSemanticHandoff:
     """Decode a strict handoff record and verify its complete digest chain.
 
@@ -298,8 +306,10 @@ def handoff_from_record(
     ----------
     raw : object
         Candidate serialized handoff envelope.
-    registry : ReactorConfigurationRegistry
-        Reactor registry required by embedded U0 contracts.
+    registry : ReactorConfigurationRegistry or None
+        Explicit reactor registry required by embedded U0 contracts. When
+        omitted, resolve only the exact allowlisted release declared by the
+        digest-sealed payload.
 
     Returns
     -------
@@ -349,6 +359,11 @@ def handoff_from_record(
     )
     if supplied_payload_digest != _canonical_digest(payload):
         raise ValueError("reactor semantic handoff payload digest mismatch")
+    if registry is None:
+        registry = resolve_reactor_registry_release(
+            cast(str, payload["registry_version"]),
+            cast(str, payload["registry_digest"]),
+        )
     if payload["registry_version"] != registry.version:
         raise ValueError("reactor semantic handoff registry version mismatch")
     if payload["registry_digest"] != registry.digest:
@@ -451,7 +466,7 @@ def handoff_to_bytes(
 def handoff_from_json(
     payload: str,
     *,
-    registry: ReactorConfigurationRegistry = DEFAULT_REACTOR_REGISTRY,
+    registry: ReactorConfigurationRegistry | None = None,
 ) -> ReactorSemanticHandoff:
     """Deserialize handoff JSON while refusing duplicate object keys.
 
@@ -459,8 +474,10 @@ def handoff_from_json(
     ----------
     payload : str
         Candidate JSON handoff text.
-    registry : ReactorConfigurationRegistry
-        Reactor registry required by embedded U0 contracts.
+    registry : ReactorConfigurationRegistry or None
+        Explicit reactor registry required by embedded U0 contracts. When
+        omitted, resolve only the exact allowlisted release declared by the
+        digest-sealed payload.
 
     Returns
     -------
@@ -486,7 +503,7 @@ def handoff_from_json(
 def handoff_from_bytes(
     payload: bytes,
     *,
-    registry: ReactorConfigurationRegistry = DEFAULT_REACTOR_REGISTRY,
+    registry: ReactorConfigurationRegistry | None = None,
 ) -> ReactorSemanticHandoff:
     """Decode the unique canonical UTF-8 handoff representation.
 
@@ -498,8 +515,10 @@ def handoff_from_bytes(
     ----------
     payload : bytes
         Candidate canonical handoff bytes.
-    registry : ReactorConfigurationRegistry
-        Reactor registry required by embedded U0 contracts.
+    registry : ReactorConfigurationRegistry or None
+        Explicit reactor registry required by embedded U0 contracts. When
+        omitted, resolve only the exact allowlisted release declared by the
+        digest-sealed payload.
 
     Returns
     -------
@@ -520,7 +539,11 @@ def handoff_from_bytes(
     except UnicodeDecodeError as exc:
         raise ValueError("handoff bytes must be strict UTF-8") from exc
     handoff = handoff_from_json(text, registry=registry)
-    if handoff_to_bytes(handoff, registry=registry) != payload:
+    resolved_registry = registry or resolve_reactor_registry_release(
+        handoff.context.registry_version,
+        handoff.context.registry_digest,
+    )
+    if handoff_to_bytes(handoff, registry=resolved_registry) != payload:
         raise ValueError("handoff bytes must use canonical JSON")
     return handoff
 

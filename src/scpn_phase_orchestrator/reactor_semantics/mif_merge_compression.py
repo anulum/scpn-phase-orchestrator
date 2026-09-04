@@ -447,7 +447,7 @@ def mif_merge_compression_handoff_to_record(
 def mif_merge_compression_handoff_from_record(
     raw: object,
     *,
-    registry: ReactorConfigurationRegistry = DEFAULT_REACTOR_REGISTRY,
+    registry: ReactorConfigurationRegistry | None = None,
 ) -> MIFMergeCompressionHandoff:
     """Decode a strict MIF handoff record and verify its digest chain.
 
@@ -455,8 +455,10 @@ def mif_merge_compression_handoff_from_record(
     ----------
     raw : object
         Candidate portable MIF handoff record.
-    registry : ReactorConfigurationRegistry
-        Reactor registry required by the encoded identity binding.
+    registry : ReactorConfigurationRegistry or None
+        Explicit reactor registry required by the encoded identity binding.
+        When omitted, resolve only the exact allowlisted release declared by
+        the digest-sealed payload.
 
     Returns
     -------
@@ -484,6 +486,11 @@ def mif_merge_compression_handoff_from_record(
         envelope["payload_sha256"], field="payload_sha256"
     ) != _digest_record(payload):
         raise ValueError("MIF handoff payload digest mismatch")
+    if registry is None:
+        registry = resolve_reactor_registry_release(
+            cast(str, payload["registry_version"]),
+            cast(str, payload["registry_digest"]),
+        )
     if (
         payload["registry_version"] != registry.version
         or payload["registry_digest"] != registry.digest
@@ -566,7 +573,7 @@ def mif_merge_compression_handoff_to_bytes(
 def mif_merge_compression_handoff_from_bytes(
     payload: bytes,
     *,
-    registry: ReactorConfigurationRegistry = DEFAULT_REACTOR_REGISTRY,
+    registry: ReactorConfigurationRegistry | None = None,
 ) -> MIFMergeCompressionHandoff:
     """Decode only the unique canonical MIF handoff byte representation.
 
@@ -574,8 +581,10 @@ def mif_merge_compression_handoff_from_bytes(
     ----------
     payload : bytes
         Candidate canonical MIF handoff bytes.
-    registry : ReactorConfigurationRegistry
-        Reactor registry required by the encoded identity binding.
+    registry : ReactorConfigurationRegistry or None
+        Explicit reactor registry required by the encoded identity binding.
+        When omitted, resolve only the exact allowlisted release declared by
+        the digest-sealed payload.
 
     Returns
     -------

@@ -68,6 +68,36 @@ def test_handoff_round_trip_is_canonical_and_digest_sealed() -> None:
     assert record["payload"]["actionable"] is False  # type: ignore[index]
 
 
+def test_historical_handoff_bytes_resolve_declared_registry_without_preparse() -> None:
+    handoff = rs.mif_merge_compression_handoff_from_mif_bytes(
+        SOURCE_BYTES,
+        registry=rs.REACTOR_REGISTRY_V1_0_0,
+    )
+    encoded = rs.mif_merge_compression_handoff_to_bytes(
+        handoff,
+        registry=rs.REACTOR_REGISTRY_V1_0_0,
+    )
+
+    decoded = rs.mif_merge_compression_handoff_from_bytes(encoded)
+
+    assert hashlib.sha256(encoded).hexdigest() == (
+        "c0f03b7c49346c39342598275556e8ac28c93138ba14f6e21d6739400e0edeb2"
+    )
+    assert decoded == handoff
+    assert (
+        rs.mif_merge_compression_handoff_to_bytes(
+            decoded,
+            registry=rs.REACTOR_REGISTRY_V1_0_0,
+        )
+        == encoded
+    )
+    with pytest.raises(ValueError, match="registry identity mismatch"):
+        rs.mif_merge_compression_handoff_from_bytes(
+            encoded,
+            registry=rs.DEFAULT_REACTOR_REGISTRY,
+        )
+
+
 @pytest.mark.parametrize(
     ("path", "value"),
     [

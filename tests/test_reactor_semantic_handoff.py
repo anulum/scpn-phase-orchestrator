@@ -20,8 +20,10 @@ from jsonschema import Draft202012Validator
 from referencing import Registry, Resource
 
 from scpn_phase_orchestrator.reactor_semantics import (
+    DEFAULT_REACTOR_REGISTRY,
     HANDOFF_SCHEMA,
     HANDOFF_SCHEMA_VERSION,
+    REACTOR_REGISTRY_V1_0_0,
     ClockKind,
     ClockReference,
     EvidenceClass,
@@ -29,6 +31,7 @@ from scpn_phase_orchestrator.reactor_semantics import (
     PhaseSemanticRecord,
     QualityAssessment,
     QualityState,
+    ReactorConfigurationRegistry,
     ReactorSemanticHandoff,
     RegimeState,
     RelationInterpretation,
@@ -169,6 +172,25 @@ def _handoff() -> ReactorSemanticHandoff:
     )
 
 
+def _handoff_for_registry(
+    registry: ReactorConfigurationRegistry,
+) -> ReactorSemanticHandoff:
+    handoff = _handoff()
+    context = replace(
+        handoff.context,
+        registry_version=registry.version,
+        registry_digest=registry.digest,
+    )
+    return replace(
+        handoff,
+        context=context,
+        observables=tuple(
+            replace(observable, reactor_context=context)
+            for observable in handoff.observables
+        ),
+    )
+
+
 def test_public_handoff_round_trip_is_byte_stable_and_non_actuating() -> None:
     handoff = _handoff()
     encoded = handoff_to_json(handoff)
@@ -189,6 +211,18 @@ def test_public_handoff_round_trip_is_byte_stable_and_non_actuating() -> None:
         semantic.carrier_type is SemanticCarrier.BOUNDED_FEATURE
         for semantic in decoded.semantics
     )
+
+
+def test_public_handoff_bytes_resolve_exact_historical_registry_release() -> None:
+    handoff = _handoff_for_registry(REACTOR_REGISTRY_V1_0_0)
+    encoded = handoff_to_bytes(handoff, registry=REACTOR_REGISTRY_V1_0_0)
+
+    decoded = handoff_from_bytes(encoded)
+
+    assert decoded == handoff
+    assert handoff_to_bytes(decoded, registry=REACTOR_REGISTRY_V1_0_0) == encoded
+    with pytest.raises(ValueError, match="registry version mismatch"):
+        handoff_from_bytes(encoded, registry=DEFAULT_REACTOR_REGISTRY)
 
 
 def test_portable_schema_accepts_the_public_handoff_record() -> None:
@@ -656,8 +690,8 @@ def test_handoff_defensively_refuses_tampered_regime_owner_and_authority() -> No
     [
         ("schema", "unknown.v1", "unsupported.*schema"),
         ("schema_version", "2.0.0", "unsupported.*version"),
-        ("registry_version", "2.0.0", "registry version mismatch"),
-        ("registry_digest", "0" * 64, "registry digest mismatch"),
+        ("registry_version", "2.0.0", "unrecognised reactor registry release"),
+        ("registry_digest", "0" * 64, "unrecognised reactor registry release"),
         ("u0_schema_version", "2.0.0", "U0 schema mismatch"),
     ],
 )

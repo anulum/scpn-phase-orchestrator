@@ -65,6 +65,10 @@ def test_reactor_semantics_reference_preserves_u0_boundaries() -> None:
         "declared freshness or validity window",
         "ReactorSemanticHandoff",
         "handoff_from_bytes()",
+        "resolves only the exact immutable registry release declared by the "
+        "sealed payload",
+        "serializers still require an explicit historical registry",
+        "Historical 1.0.0 and current 1.1.0 bytes",
         "zero phase confidence and observability",
         "actionable=false",
         "reactor_semantic_handoff.schema.json",

@@ -19,6 +19,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   drive and transfers no physical evidence, phase, validity, CONTROL
   admission, execution, or actuation authority.
 
+### Fixed
+
+- Public generic and MIF semantic-handoff byte decoders now resolve an omitted
+  reactor registry only from the exact allowlisted version-and-digest pair in
+  the sealed payload. Historical 1.0.0 bytes remain readable alongside current
+  1.1.0 bytes without consumer-side JSON parsing, while explicit mismatches and
+  unknown releases still fail closed.
+
 ## [1.4.1] - 2026-09-04
 
 ### Fixed
