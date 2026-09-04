@@ -156,7 +156,7 @@ and sealed over canonical JSON payload bytes.
 
 - Schema: `scpn-phase-orchestrator.reactor-configuration-evidence-coverage.v1`
 - Schema version: `1.1.0`
-- Payload SHA-256: `4ee797e9bd03d646d538b30ecbf468a90e70be4bdada922b09eb84e483f3b730`
+- Payload SHA-256: `7d56f34fdb5c0863813c954d5ad38bb0c1f1dd129ebfc5d93635dfdc47daf5f2`
 - Configuration registry: `1.1.0` / `6741f25892d81b24aa621ee4f56b5e785e8323eca6ccf9d9009ce2c8e53f4912`
 - Observability registry: `1.1.0` / `0aaf9bc7234113bedb98de51f2acd124a21da579e4d1ab1234e5b30ebc7880e0`
 - Semantic-profile registry: `1.1.0` / `270ed1ecbabe09cc45b078504c575ce8a77f0f6416378640140d2dc281951063`

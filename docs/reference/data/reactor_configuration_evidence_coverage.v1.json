@@ -18,7 +18,7 @@
         "version": "1.1.0",
         "digest_sha256": "0aaf9bc7234113bedb98de51f2acd124a21da579e4d1ab1234e5b30ebc7880e0",
         "source_path": "src/scpn_phase_orchestrator/reactor_semantics/observability_profiles.py",
-        "source_sha256": "c3ae4c211de47a46bdf911c5cb340dcf227c86053b3f1576b6d6729f3c693d9f"
+        "source_sha256": "87e437d8b8139e0a77b861e449933cd15d251aedbd4dfedea6a0379c731b9670"
       },
       "reactor_semantic_profile_registry": {
         "version": "1.1.0",
@@ -1393,5 +1393,5 @@
       }
     ]
   },
-  "payload_sha256": "4ee797e9bd03d646d538b30ecbf468a90e70be4bdada922b09eb84e483f3b730"
+  "payload_sha256": "7d56f34fdb5c0863813c954d5ad38bb0c1f1dd129ebfc5d93635dfdc47daf5f2"
 }

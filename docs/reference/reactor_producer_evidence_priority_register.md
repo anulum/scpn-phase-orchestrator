@@ -160,11 +160,11 @@ is validated by
 [`reactor_producer_evidence_priority_register.schema.json`](../specs/reactor_producer_evidence_priority_register.schema.json).
 
 - Schema version: `1.2.0`
-- Payload SHA-256: `a937908a615a7ea847b0e8085e8c02569123932a47d60f4d525a29f3eaa3bb8c`
-- Configuration evidence payload: `4ee797e9bd03d646d538b30ecbf468a90e70be4bdada922b09eb84e483f3b730`
+- Payload SHA-256: `1dbcc560381a4b88bca3004c97a1a384e7e5b4746bbc3a77ae61bed3c21c9417`
+- Configuration evidence payload: `7d56f34fdb5c0863813c954d5ad38bb0c1f1dd129ebfc5d93635dfdc47daf5f2`
 - Diagnostic-plan portfolio payload: `13bdcfd794cab002903d4861a378056536e0fcb98beca64863a9b36cc71558a5`
 - Signal occurrence payload: `8210dc2310a7031ccad1a1675677e3e92007a2dd82e696c39d25202d2f9f022f`
-- Technology atlas payload: `21dcfa1b4c54e09e6b860101bed5df927655d887e974460a105f5e97cb4138ed`
+- Technology atlas payload: `2b239e1a3a81fde2091886d68e84894d46458c1a7be8155ce796a05479572da9`
 
 Any input artifact, custody state, plan result, lane, blocker, producer route,
 readiness axis, or authority change alters the seal and requires deliberate

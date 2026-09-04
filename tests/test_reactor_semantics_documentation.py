@@ -220,7 +220,7 @@ def test_reactor_producer_evidence_priority_is_non_scalar_and_fail_closed() -> N
         "zero qualified physical phases",
         "zero CONTROL admissions",
         "`machine_protection_final_veto=true`",
-        "`a937908a615a7ea847b0e8085e8c02569123932a47d60f4d525a29f3eaa3bb8c`",
+        "`1dbcc560381a4b88bca3004c97a1a384e7e5b4746bbc3a77ae61bed3c21c9417`",
         "direct-drive laser-ICF",
         "`device_physical_evidence_request_from_plan_review()`",
         "specific to `ion_beam_icf`",
@@ -388,7 +388,7 @@ def test_reactor_configuration_coverage_is_exhaustive_and_fail_closed() -> None:
         "The shared Z-pinch design review does not equate `z_pinch` with "
         "`sheared_flow_z_pinch`",
         "`machine_protection_final_veto=true`",
-        "`4ee797e9bd03d646d538b30ecbf468a90e70be4bdada922b09eb84e483f3b730`",
+        "`7d56f34fdb5c0863813c954d5ad38bb0c1f1dd129ebfc5d93635dfdc47daf5f2`",
         "`8210dc2310a7031ccad1a1675677e3e92007a2dd82e696c39d25202d2f9f022f`",
         "reactor_configuration_evidence_coverage.v1.json",
         "reactor_configuration_evidence_coverage.schema.json",

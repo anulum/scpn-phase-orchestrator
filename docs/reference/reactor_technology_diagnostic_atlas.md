@@ -177,7 +177,7 @@ and sealed over canonical JSON payload bytes.
 
 - Schema: `scpn-phase-orchestrator.reactor-technology-diagnostic-atlas.v1`
 - Schema version: `1.1.0`
-- Payload SHA-256: `21dcfa1b4c54e09e6b860101bed5df927655d887e974460a105f5e97cb4138ed`
+- Payload SHA-256: `2b239e1a3a81fde2091886d68e84894d46458c1a7be8155ce796a05479572da9`
 - Configuration registry: `1.1.0` / `6741f25892d81b24aa621ee4f56b5e785e8323eca6ccf9d9009ce2c8e53f4912`
 - Observability registry: `1.1.0` / `0aaf9bc7234113bedb98de51f2acd124a21da579e4d1ab1234e5b30ebc7880e0`
 
