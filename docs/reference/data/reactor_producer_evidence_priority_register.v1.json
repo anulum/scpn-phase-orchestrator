@@ -2049,6 +2049,16 @@
             "physical_uncertainty_validity_quality_and_provenance",
             "physical_observability_gate_result"
           ],
+          "materialized_request": {
+            "api": "scpn_phase_orchestrator.reactor_semantics.device_physical_evidence_request_from_plan_review",
+            "envelope_sha256": "ccdda701953cdec025d3b7f63f026bbaf92efed54ecebddfbb510eb83eab64e1",
+            "path": "docs/reference/data/projectile_or_impact_icf_physical_evidence_request.v1.json",
+            "request_id": "27a576dd67b149069bd4eefa1ef343c570a0084688acd3370721e6a34023ac62",
+            "schema": "scpn-phase-orchestrator.device-physical-evidence-request.v1",
+            "schema_version": "1.0.0",
+            "source_review_id": "eeefac32254f871dc94ce655353b60327f2aa1e7dde566bd92c89c86cb8eaa84",
+            "source_review_sha256": "5035b44a327b916f662125cc452777fb30bc43c6ee37642d354d2c46c2ff60e3"
+          },
           "source_revision_required": true,
           "package_identity_required": true,
           "canonical_bytes_required": true,
@@ -3214,5 +3224,5 @@
     "direct_actuation_authorized": false,
     "machine_protection_final_veto": true
   },
-  "payload_sha256": "8c095951564222633ac8f7397e0ff0c4ef8cd79460d90767888a565adccf234b"
+  "payload_sha256": "a937908a615a7ea847b0e8085e8c02569123932a47d60f4d525a29f3eaa3bb8c"
 }

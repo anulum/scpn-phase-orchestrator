@@ -56,6 +56,20 @@ producer module, writes canonical bytes atomically, and has a fail-closed
 `--check` mode. Absolute input/output paths make the command independent of the
 caller's working directory.
 
+## Projectile/impact ICF instance
+
+The third materialised request selects only `projectile_or_impact_icf` from
+exact `SCPN-ICF-IMPACT-CORE` fixture bytes, source revision, and reproducible
+wheel digest. Impact timing remains an event-relative `event_cycle`; resolved
+asymmetry remains `derived_cyclic`; trajectory and shot outcome remain
+noncyclic bounded features; and the model oscillator remains numerical-only.
+
+The producer review owns exactly this combined configuration. It cannot be
+used to construct requests for laser, ion-beam, pulsed-electron-beam, or
+generic beam-target configurations: the public factory refuses each as a
+configuration mismatch. No topology resemblance transfers a physical sample,
+phase, validity, CONTROL admission, or authority.
+
 ## Producer obligations
 
 All thirteen prerequisites are explicitly missing: physical sample identity,
@@ -103,6 +117,14 @@ The canonical ion-beam request is
 - Canonical envelope SHA-256: `c36256af2280a5caf786953c0c1e293b552f128acb02704123ea8073c5153b9b`
 - Embedded review ID: `5da4be074476c8b3bd4a16c199d5f9f359e11f4e1fa36554765a1c880bf41719`
 - Embedded review SHA-256: `6200379b8ec7284f05c2f271a0a3fda72c1e0efe3fbfaa97aef49a01a7700b3d`
+
+The canonical projectile/impact request is
+[`projectile_or_impact_icf_physical_evidence_request.v1.json`](data/projectile_or_impact_icf_physical_evidence_request.v1.json).
+
+- Request ID: `27a576dd67b149069bd4eefa1ef343c570a0084688acd3370721e6a34023ac62`
+- Canonical envelope SHA-256: `ccdda701953cdec025d3b7f63f026bbaf92efed54ecebddfbb510eb83eab64e1`
+- Embedded review ID: `eeefac32254f871dc94ce655353b60327f2aa1e7dde566bd92c89c86cb8eaa84`
+- Embedded review SHA-256: `5035b44a327b916f662125cc452777fb30bc43c6ee37642d354d2c46c2ff60e3`
 
 Any source byte, registry binding, candidate meaning, clock boundary,
 obligation, or authority change alters the seal and requires deliberate

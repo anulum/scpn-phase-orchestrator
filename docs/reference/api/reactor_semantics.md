@@ -174,6 +174,14 @@ different request IDs and inherit no physical evidence from one another. The
 host-independent materialisation CLI reads only exact local fixture bytes and
 never imports or executes producer source.
 
+The third instance targets only `projectile_or_impact_icf` from exact
+SCPN-ICF-IMPACT-CORE fixture and wheel custody. Impact timing remains event-
+relative, asymmetry remains derived-cyclic, trajectory and outcome remain
+noncyclic, and model phase remains numerical-only. The review owns no other
+configuration, so the public factory refuses laser, ion-beam, pulsed-electron-
+beam, and generic beam-target request construction instead of transferring
+evidence by topology.
+
 All thirteen physical-evidence obligations remain missing, including physical
 sample and diagnostic identity, reference and clock correlation, calibration
 or observation operator, uncertainty, validity, producer evidence-state

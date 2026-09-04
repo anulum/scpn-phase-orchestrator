@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- A third sealed L3 request now binds only `projectile_or_impact_icf` to exact
+  SCPN-ICF-IMPACT-CORE fixture and reproducible wheel custody. Impact timing,
+  derived asymmetry, noncyclic trajectory/outcome, and numerical model phase
+  remain distinct, while every other ICF configuration inherits no evidence or
+  authority.
 - A host-independent materialisation CLI now reconstructs sealed device
   physical-evidence requests from exact local producer fixtures without
   importing producer code. The second L3 instance binds only `ion_beam_icf`
