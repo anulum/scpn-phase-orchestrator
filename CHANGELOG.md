@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Abstaining regime assessments preserve the source handoff's exact registry
+  release when computing its digest. Historical MIF and FUSION handoffs remain
+  readable without rewriting their bytes; new assessments retain the current
+  assessment registries and review-only authority.
+
 ## [1.4.2] - 2026-09-04
 
 ### Added

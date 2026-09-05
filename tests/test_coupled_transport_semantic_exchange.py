@@ -23,7 +23,9 @@ from scpn_phase_orchestrator.reactor_semantics import (
     FUSION_COUPLED_TRANSPORT_SCHEMA,
     FUSION_TORAX_OUTCOME_SCHEMA,
     FUSION_TORAX_REVIEW_SCHEMA,
+    REACTOR_REGISTRY_V1_0_0,
     QualityState,
+    ReactorConfigurationRegistry,
     RegimeState,
     SemanticCarrier,
     ValidityState,
@@ -280,8 +282,21 @@ def test_public_adapter_maps_exactly_twelve_nonphase_review_observables() -> Non
     assert handoff_to_bytes(_decode()) == encoded
 
 
-def test_abstaining_builder_enforces_fusion_clock_and_validity_boundary() -> None:
-    handoff = _decode()
+@pytest.mark.parametrize(
+    "registry", [REACTOR_REGISTRY_V1_0_0, DEFAULT_REACTOR_REGISTRY]
+)
+def test_abstaining_builder_enforces_fusion_clock_and_validity_boundary(
+    registry: ReactorConfigurationRegistry,
+) -> None:
+    record = _record()
+    record["payload"]["reactor"]["registry_version"] = registry.version
+    record["payload"]["reactor"]["registry_digest"] = registry.digest
+    source = _encode(record)
+    handoff = coupled_transport_handoff_from_fusion_bytes(
+        source, expected_sha256=hashlib.sha256(source).hexdigest(), registry=registry
+    )
+    source_bytes = handoff_to_bytes(handoff, registry=registry)
+    handoff = handoff_from_bytes(source_bytes)
     assessment = build_abstaining_regime_assessment(
         handoff,
         producer_revision="a" * 40,
@@ -289,10 +304,10 @@ def test_abstaining_builder_enforces_fusion_clock_and_validity_boundary() -> Non
     )
 
     assert assessment.source_handoff_schema == handoff.schema
-    assert (
-        assessment.source_handoff_sha256
-        == hashlib.sha256(handoff_to_bytes(handoff)).hexdigest()
-    )
+    assert assessment.source_handoff_sha256 == hashlib.sha256(source_bytes).hexdigest()
+    assert handoff_to_bytes(handoff, registry=registry) == source_bytes
+    assert handoff.context.registry_digest == registry.digest
+    assert assessment.reactor_registry_digest == DEFAULT_REACTOR_REGISTRY.digest
     assert assessment.actionable is False
 
     final = handoff.observables[-1]

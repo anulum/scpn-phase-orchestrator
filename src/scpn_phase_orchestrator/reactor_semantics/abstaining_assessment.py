@@ -29,7 +29,7 @@ from .regime_ontology import (
     DEFAULT_REACTOR_REGIME_MODE_ONTOLOGY,
     AxisApplicability,
 )
-from .registry import DEFAULT_REACTOR_REGISTRY
+from .registry import DEFAULT_REACTOR_REGISTRY, resolve_reactor_registry_release
 from .semantic_profiles import DEFAULT_REACTOR_SEMANTIC_PROFILE_REGISTRY
 from .vocabulary import EvidenceClass, QualityState, ValidityState
 
@@ -45,6 +45,8 @@ def build_abstaining_regime_assessment(
     The builder derives static applicability from the installed ontology. It
     emits only ``not_applicable`` or explicit ``unknown`` axis dispositions;
     no handoff value is interpreted as classifier evidence or a physics label.
+    Source bytes retain the handoff's exact allowlisted registry release;
+    the new assessment uses the installed assessment registries and ontology.
 
     Parameters
     ----------
@@ -63,7 +65,8 @@ def build_abstaining_regime_assessment(
     Raises
     ------
     ValueError
-        If the handoff type, clocks, common validity, or identities are invalid.
+        If the handoff type, registry release, clocks, common validity, or
+        identities are invalid.
     """
     handoff_bytes = _canonical_handoff_bytes(handoff)
     handoff_digest = hashlib.sha256(handoff_bytes).hexdigest()
@@ -138,14 +141,15 @@ def _canonical_handoff_bytes(
     handoff: ReactorSemanticHandoff | MIFMergeCompressionHandoff,
 ) -> bytes:
     """Encode one supported, already-validated handoff canonically."""
-    encoded: bytes
-    if isinstance(handoff, MIFMergeCompressionHandoff):
-        encoded = mif_merge_compression_handoff_to_bytes(handoff)
-    elif isinstance(handoff, ReactorSemanticHandoff):
-        encoded = handoff_to_bytes(handoff)
-    else:
+    if not isinstance(handoff, (MIFMergeCompressionHandoff, ReactorSemanticHandoff)):
         raise ValueError("unsupported reactor semantic handoff type")
-    return encoded
+    registry = resolve_reactor_registry_release(
+        handoff.context.registry_version,
+        handoff.context.registry_digest,
+    )
+    if isinstance(handoff, MIFMergeCompressionHandoff):
+        return mif_merge_compression_handoff_to_bytes(handoff, registry=registry)
+    return handoff_to_bytes(handoff, registry=registry)
 
 
 def _common_handoff_clock(

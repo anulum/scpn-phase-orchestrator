@@ -26,17 +26,20 @@ from scpn_phase_orchestrator.reactor_semantics import (
     MAX_REACTOR_REGIME_ASSESSMENT_BYTES,
     REACTOR_REGIME_ASSESSMENT_SCHEMA,
     REACTOR_REGIME_ASSESSMENT_VERSION,
+    REACTOR_REGISTRY_V1_0_0,
     REVIEW_ONLY_AUTHORITY,
     AxisApplicability,
     ClockKind,
     EvidenceClass,
     QualityState,
+    ReactorConfigurationRegistry,
     ReactorRegimeAssessment,
     ReactorRegimeAxisAssessment,
     ReactorRegimeAxisDisposition,
     ReactorRegimeEvidenceBinding,
     ValidityState,
     build_abstaining_regime_assessment,
+    mif_merge_compression_handoff_from_bytes,
     mif_merge_compression_handoff_from_mif_bytes,
     mif_merge_compression_handoff_to_bytes,
     regime_assessment_digest,
@@ -240,11 +243,24 @@ def test_public_round_trip_digest_schema_and_authority() -> None:
     Draft202012Validator(schema).validate(record)
 
 
-def test_abstaining_builder_projects_verified_mif_handoff_without_labels() -> None:
+@pytest.mark.parametrize(
+    "registry", [REACTOR_REGISTRY_V1_0_0, DEFAULT_REACTOR_REGISTRY]
+)
+def test_abstaining_builder_projects_verified_mif_handoff_without_labels(
+    registry: ReactorConfigurationRegistry,
+) -> None:
     source = Path(
         "tests/fixtures/mif_merge_compression/mif_merge_compression_observation_v1.json"
     ).read_bytes()
-    handoff = mif_merge_compression_handoff_from_mif_bytes(source)
+    handoff = mif_merge_compression_handoff_from_mif_bytes(source, registry=registry)
+    expected_handoff_bytes = mif_merge_compression_handoff_to_bytes(
+        handoff, registry=registry
+    )
+    handoff = mif_merge_compression_handoff_from_bytes(expected_handoff_bytes)
+    if registry is REACTOR_REGISTRY_V1_0_0:
+        assert hashlib.sha256(expected_handoff_bytes).hexdigest() == (
+            "c0f03b7c49346c39342598275556e8ac28c93138ba14f6e21d6739400e0edeb2"
+        )
 
     assessment = build_abstaining_regime_assessment(
         handoff,
@@ -252,7 +268,12 @@ def test_abstaining_builder_projects_verified_mif_handoff_without_labels() -> No
         producer_artifact_sha256="b" * 64,
     )
 
-    expected_handoff_bytes = mif_merge_compression_handoff_to_bytes(handoff)
+    assert (
+        mif_merge_compression_handoff_to_bytes(handoff, registry=registry)
+        == expected_handoff_bytes
+    )
+    assert handoff.context.registry_digest == registry.digest
+    assert assessment.reactor_registry_digest == DEFAULT_REACTOR_REGISTRY.digest
     assert (
         assessment.source_handoff_sha256
         == hashlib.sha256(expected_handoff_bytes).hexdigest()
