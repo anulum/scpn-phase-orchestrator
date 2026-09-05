@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Generate identical capability inventory ordering from Git checkouts and
+  exported source trees.
 - Abstaining regime assessments preserve the source handoff's exact registry
   release when computing its digest. Historical MIF and FUSION handoffs remain
   readable without rewriting their bytes; new assessments retain the current

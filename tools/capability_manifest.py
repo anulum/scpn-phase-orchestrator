@@ -521,7 +521,7 @@ def _domainpack_files(root: Path, *, repo: Path) -> list[str]:
     tracked = _tracked_files(root, repo=repo)
     if tracked is not None:
         return sorted(path for path in tracked if path.endswith("/binding_spec.yaml"))
-    return [_rel(path, repo) for path in sorted(root.rglob("binding_spec.yaml"))]
+    return sorted(_rel(path, repo) for path in root.rglob("binding_spec.yaml"))
 
 
 def _product_boundary_modules(
@@ -553,7 +553,7 @@ def _rust_files(root: Path, *, repo: Path) -> list[str]:
             if path.endswith(".rs") or path.endswith("/Cargo.toml")
         )
     files = list(root.rglob("*.rs")) + list(root.rglob("Cargo.toml"))
-    return [_rel(path, repo) for path in sorted(files)]
+    return sorted(_rel(path, repo) for path in files)
 
 
 def _workflow_files(root: Path, *, repo: Path) -> list[str]:
@@ -563,7 +563,7 @@ def _workflow_files(root: Path, *, repo: Path) -> list[str]:
     if tracked is not None:
         return sorted(path for path in tracked if path.endswith((".yml", ".yaml")))
     files = list(root.glob("*.yml")) + list(root.glob("*.yaml"))
-    return [_rel(path, repo) for path in sorted(files)]
+    return sorted(_rel(path, repo) for path in files)
 
 
 def _python_files(root: Path, *, repo: Path) -> list[str]:
@@ -572,7 +572,7 @@ def _python_files(root: Path, *, repo: Path) -> list[str]:
     tracked = _tracked_files(root, repo=repo)
     if tracked is not None:
         return sorted(path for path in tracked if path.endswith(".py"))
-    return [_rel(path, repo) for path in sorted(root.rglob("*.py"))]
+    return sorted(_rel(path, repo) for path in root.rglob("*.py"))
 
 
 def _markdown_docs(
@@ -593,11 +593,11 @@ def _markdown_docs(
                 exclude_parts
             )
         )
-    return [
+    return sorted(
         _rel(path, repo)
-        for path in sorted(root.rglob("*.md"))
+        for path in root.rglob("*.md")
         if not set(path.relative_to(root).parts).intersection(exclude_parts)
-    ]
+    )
 
 
 def _tracked_files(root: Path, *, repo: Path) -> list[str] | None:

@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -292,3 +294,64 @@ def _write_portable_fixture(repo: Path) -> None:
             ]
         ),
     )
+
+
+def test_cli_manifest_is_identical_in_git_and_exported_source(tmp_path: Path) -> None:
+    """The same source inventory has identical bytes with or without Git metadata."""
+    checkout = tmp_path / "checkout"
+    checkout.mkdir()
+    files = {
+        "pyproject.toml": (
+            '[project]\nname = "inventory-fixture"\nversion = "1.0.0"\n'
+            'requires-python = ">=3.11"\nreadme = "README.md"\nlicense = "MIT"\n'
+        ),
+        "README.md": "# Inventory fixture\n",
+        "src/scpn_phase_orchestrator/__init__.py": "__all__ = []\n",
+        "src/scpn_phase_orchestrator/a.py": "",
+        "src/scpn_phase_orchestrator/a/child.py": "",
+        "spo-kernel/src/a.rs": "",
+        "spo-kernel/src/a/child.rs": "",
+        "tests/a.py": "",
+        "tests/a/child.py": "",
+        "docs/a.md": "",
+        "docs/a/child.md": "",
+        "domainpacks/a/binding_spec.yaml": "",
+        "domainpacks/a.child/binding_spec.yaml": "",
+        ".github/workflows/a.yml": "",
+        ".github/workflows/a-child.yaml": "",
+    }
+    for relative, content in files.items():
+        path = checkout / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding="utf-8")
+    environment = {
+        key: value for key, value in os.environ.items() if not key.startswith("GIT_")
+    }
+    for command in (["git", "init", "-q"], ["git", "add", "."]):
+        subprocess.run(
+            command, cwd=checkout, env=environment, check=True, capture_output=True
+        )
+    exported = tmp_path / "exported"
+    shutil.copytree(checkout, exported, ignore=shutil.ignore_patterns(".git"))
+    outputs = []
+    for source in (checkout, exported):
+        output = tmp_path / f"{source.name}.json"
+        subprocess.run(
+            [
+                sys.executable,
+                str(_repo_root() / "tools/capability_manifest.py"),
+                "--repo",
+                str(source),
+                "--output",
+                str(output),
+                "--markdown-output",
+                str(output.with_suffix(".md")),
+                "--no-readme",
+            ],
+            cwd=source,
+            env=environment,
+            check=True,
+            capture_output=True,
+        )
+        outputs.append((output.read_bytes(), output.with_suffix(".md").read_bytes()))
+    assert outputs[0] == outputs[1]
