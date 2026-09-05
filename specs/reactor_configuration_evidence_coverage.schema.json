@@ -1,0 +1,682 @@
+{
+  "$defs": {
+    "nullable_string": {
+      "oneOf": [
+        {
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "git_revision": {
+      "pattern": "^[0-9a-f]{40}$",
+      "type": "string"
+    },
+    "semver": {
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(?:[-+][0-9A-Za-z.-]+)?$",
+      "type": "string"
+    },
+    "review_chain_source": {
+      "additionalProperties": false,
+      "properties": {
+        "project": {
+          "enum": [
+            "SCPN-CONTROL",
+            "SCPN-MIF-CORE",
+            "SCPN-PHASE-ORCHESTRATOR"
+          ],
+          "type": "string"
+        },
+        "repository_revision": {
+          "$ref": "#/$defs/git_revision"
+        },
+        "path": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      },
+      "required": [
+        "project",
+        "repository_revision",
+        "path",
+        "sha256"
+      ],
+      "type": "object"
+    },
+    "review_chain_receipt": {
+      "additionalProperties": false,
+      "properties": {
+        "receipt_id": {
+          "pattern": "^[a-z][a-z0-9_.-]+$",
+          "type": "string"
+        },
+        "configuration": {
+          "$ref": "#/$defs/configuration"
+        },
+        "evidence_class": {
+          "enum": [
+            "experimental",
+            "observed",
+            "simulation"
+          ],
+          "type": "string"
+        },
+        "producer": {
+          "additionalProperties": false,
+          "properties": {
+            "project": {
+              "pattern": "^SCPN-[A-Z0-9-]+$",
+              "type": "string"
+            },
+            "package_version": {
+              "$ref": "#/$defs/semver"
+            },
+            "envelope_source_revision": {
+              "$ref": "#/$defs/git_revision"
+            },
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "schema_version": {
+              "$ref": "#/$defs/semver"
+            },
+            "api": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "byte_length": {
+              "minimum": 1,
+              "type": "integer"
+            },
+            "envelope_sha256": {
+              "$ref": "#/$defs/sha256"
+            }
+          },
+          "required": [
+            "project",
+            "package_version",
+            "envelope_source_revision",
+            "schema",
+            "schema_version",
+            "api",
+            "byte_length",
+            "envelope_sha256"
+          ],
+          "type": "object"
+        },
+        "semantic_handoff": {
+          "additionalProperties": false,
+          "properties": {
+            "project": {
+              "const": "SCPN-PHASE-ORCHESTRATOR"
+            },
+            "package_version": {
+              "$ref": "#/$defs/semver"
+            },
+            "package_source_revision": {
+              "$ref": "#/$defs/git_revision"
+            },
+            "package_wheel_sha256": {
+              "$ref": "#/$defs/sha256"
+            },
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "schema_version": {
+              "$ref": "#/$defs/semver"
+            },
+            "api": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "byte_length": {
+              "minimum": 1,
+              "type": "integer"
+            },
+            "envelope_sha256": {
+              "$ref": "#/$defs/sha256"
+            }
+          },
+          "required": [
+            "project",
+            "package_version",
+            "package_source_revision",
+            "package_wheel_sha256",
+            "schema",
+            "schema_version",
+            "api",
+            "byte_length",
+            "envelope_sha256"
+          ],
+          "type": "object"
+        },
+        "control_review": {
+          "additionalProperties": false,
+          "properties": {
+            "project": {
+              "const": "SCPN-CONTROL"
+            },
+            "package_version": {
+              "$ref": "#/$defs/semver"
+            },
+            "receiver_api": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "schema": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "schema_version": {
+              "$ref": "#/$defs/semver"
+            },
+            "decision": {
+              "const": "admitted_for_review"
+            },
+            "byte_length": {
+              "minimum": 1,
+              "type": "integer"
+            },
+            "decision_digest": {
+              "$ref": "#/$defs/sha256"
+            },
+            "envelope_sha256": {
+              "$ref": "#/$defs/sha256"
+            },
+            "review_only": {
+              "const": true
+            },
+            "actionable": {
+              "const": false
+            }
+          },
+          "required": [
+            "project",
+            "package_version",
+            "receiver_api",
+            "schema",
+            "schema_version",
+            "decision",
+            "byte_length",
+            "decision_digest",
+            "envelope_sha256",
+            "review_only",
+            "actionable"
+          ],
+          "type": "object"
+        },
+        "verification_sources": {
+          "items": {
+            "$ref": "#/$defs/review_chain_source"
+          },
+          "minItems": 3,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "host_independent": {
+          "const": true
+        },
+        "sibling_source_execution": {
+          "const": false
+        },
+        "physical_source_present": {
+          "const": false
+        },
+        "physical_observation_admitted": {
+          "const": false
+        },
+        "qualified_physical_phase": {
+          "const": false
+        },
+        "control_action_created": {
+          "const": false
+        },
+        "authority": {
+          "const": "review_only"
+        },
+        "actionable": {
+          "const": false
+        }
+      },
+      "required": [
+        "receipt_id",
+        "configuration",
+        "evidence_class",
+        "producer",
+        "semantic_handoff",
+        "control_review",
+        "verification_sources",
+        "host_independent",
+        "sibling_source_execution",
+        "physical_source_present",
+        "physical_observation_admitted",
+        "qualified_physical_phase",
+        "control_action_created",
+        "authority",
+        "actionable"
+      ],
+      "type": "object"
+    },
+    "configuration": {
+      "enum": [
+        "beam_target",
+        "colliding_beam",
+        "conventional_tokamak",
+        "cusp",
+        "dense_plasma_focus",
+        "field_reversed_configuration",
+        "frc_compression_mif",
+        "fusion_fission_hybrid",
+        "gas_dynamic_mirror",
+        "gridded_iec",
+        "heliotron",
+        "ion_beam_icf",
+        "laser_icf_direct_drive",
+        "laser_icf_fast_or_shock_ignition",
+        "laser_icf_indirect_drive",
+        "levitated_dipole",
+        "maglif",
+        "mechanical_or_liquid_liner_mif",
+        "plasma_jet_mif",
+        "polywell",
+        "projectile_or_impact_icf",
+        "pulsed_electron_beam_icf",
+        "reversed_field_pinch",
+        "scpn.reactor_systems:lattice_confinement_fusion",
+        "scpn.reactor_systems:muon_catalysed_fusion",
+        "sheared_flow_z_pinch",
+        "simple_magnetic_mirror",
+        "spherical_tokamak",
+        "spheromak",
+        "stellarator",
+        "tandem_mirror",
+        "theta_pinch",
+        "torsatron",
+        "z_pinch"
+      ],
+      "type": "string"
+    },
+    "row": {
+      "additionalProperties": false,
+      "properties": {
+        "configuration": {
+          "$ref": "#/$defs/configuration"
+        },
+        "confinement_family": {
+          "enum": [
+            "beam_target",
+            "electrostatic",
+            "extension",
+            "hybrid",
+            "inertial",
+            "magnetic_closed",
+            "magnetic_open",
+            "magneto_inertial",
+            "self_magnetic"
+          ],
+          "type": "string"
+        },
+        "topology": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "device_project": {
+          "pattern": "^SCPN-[A-Z0-9-]+$",
+          "type": "string"
+        },
+        "observability_candidate_ids": {
+          "items": {
+            "pattern": "^[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*$",
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "semantic_ingress_state": {
+          "enum": [
+            "not_declared",
+            "verified_review_adapter"
+          ],
+          "type": "string"
+        },
+        "semantic_profile": {
+          "$ref": "#/$defs/nullable_string"
+        },
+        "semantic_profile_version": {
+          "$ref": "#/$defs/nullable_string"
+        },
+        "producer_project": {
+          "oneOf": [
+            {
+              "enum": [
+                "SCPN-FUSION-CORE",
+                "SCPN-MIF-CORE"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "source_schema": {
+          "$ref": "#/$defs/nullable_string"
+        },
+        "handoff_schema": {
+          "$ref": "#/$defs/nullable_string"
+        },
+        "adapter_api": {
+          "$ref": "#/$defs/nullable_string"
+        },
+        "evidence_state": {
+          "enum": [
+            "local_model_only",
+            "physical_source_unqualified",
+            "producerless",
+            "synthetic_replay_only",
+            "verified_review_adapter_simulation"
+          ],
+          "type": "string"
+        },
+        "evidence_binding": {
+          "enum": [
+            "exact_contract_identity",
+            "exact_source_review",
+            "explicit_source_domain",
+            "none"
+          ],
+          "type": "string"
+        },
+        "evidence_source_projects": {
+          "items": {
+            "enum": [
+              "SCPN-CONTROL",
+              "SCPN-FUSION-CORE",
+              "SCPN-MIF-CORE",
+              "SCPN-PHASE-ORCHESTRATOR"
+            ],
+            "type": "string"
+          },
+          "type": "array",
+          "uniqueItems": true
+        },
+        "occurrence_ids": {
+          "items": {
+            "pattern": "^(SPO|FUS|MIF|CTRL)-[0-9]{3}$",
+            "type": "string"
+          },
+          "type": "array",
+          "uniqueItems": true
+        },
+        "evidence_source_present": {
+          "type": "boolean"
+        },
+        "portable_review_adapter_present": {
+          "type": "boolean"
+        },
+        "review_chain_receipts": {
+          "items": {
+            "$ref": "#/$defs/review_chain_receipt"
+          },
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "physical_source_present": {
+          "type": "boolean"
+        },
+        "qualified_observation": {
+          "const": false
+        },
+        "qualified_physical_phase": {
+          "const": false
+        },
+        "semantic_producerless": {
+          "type": "boolean"
+        },
+        "semantic_producerless_reason": {
+          "$ref": "#/$defs/nullable_string"
+        },
+        "evidence_producerless": {
+          "type": "boolean"
+        },
+        "evidence_producerless_reason": {
+          "$ref": "#/$defs/nullable_string"
+        },
+        "authority": {
+          "const": "review_only"
+        },
+        "actionable": {
+          "const": false
+        },
+        "machine_protection_final_veto": {
+          "const": true
+        },
+        "direct_actuation_authorized": {
+          "const": false
+        }
+      },
+      "required": [
+        "configuration",
+        "confinement_family",
+        "topology",
+        "device_project",
+        "observability_candidate_ids",
+        "semantic_ingress_state",
+        "semantic_profile",
+        "semantic_profile_version",
+        "producer_project",
+        "source_schema",
+        "handoff_schema",
+        "adapter_api",
+        "evidence_state",
+        "evidence_binding",
+        "evidence_source_projects",
+        "occurrence_ids",
+        "evidence_source_present",
+        "portable_review_adapter_present",
+        "physical_source_present",
+        "qualified_observation",
+        "qualified_physical_phase",
+        "semantic_producerless",
+        "semantic_producerless_reason",
+        "evidence_producerless",
+        "evidence_producerless_reason",
+        "authority",
+        "actionable",
+        "machine_protection_final_veto",
+        "direct_actuation_authorized"
+      ],
+      "type": "object"
+    },
+    "registry_binding": {
+      "additionalProperties": false,
+      "properties": {
+        "version": {
+          "const": "1.1.0"
+        },
+        "digest_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "source_path": {
+          "pattern": "^src/.+\\.py$",
+          "type": "string"
+        },
+        "source_sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      },
+      "required": [
+        "version",
+        "digest_sha256",
+        "source_path",
+        "source_sha256"
+      ],
+      "type": "object"
+    }
+  },
+  "$id": "https://www.anulum.li/schemas/spo/reactor-configuration-evidence-coverage/v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Review-only, digest-sealed coverage matrix joining all registered reactor configurations to observability candidates, semantic ingress, and exact occurrence evidence without topology inheritance.",
+  "properties": {
+    "schema": {
+      "const": "scpn-phase-orchestrator.reactor-configuration-evidence-coverage.v1"
+    },
+    "schema_version": {
+      "const": "1.1.0"
+    },
+    "payload": {
+      "additionalProperties": false,
+      "properties": {
+        "authority": {
+          "const": "review_only"
+        },
+        "actionable": {
+          "const": false
+        },
+        "direct_actuation_authorized": {
+          "const": false
+        },
+        "machine_protection_final_veto": {
+          "const": true
+        },
+        "classification_rule": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "source_bindings": {
+          "additionalProperties": false,
+          "properties": {
+            "reactor_configuration_registry": {
+              "$ref": "#/$defs/registry_binding"
+            },
+            "reactor_observability_registry": {
+              "$ref": "#/$defs/registry_binding"
+            },
+            "reactor_semantic_profile_registry": {
+              "$ref": "#/$defs/registry_binding"
+            },
+            "reactor_signal_occurrence_ledger": {
+              "additionalProperties": false,
+              "properties": {
+                "schema_version": {
+                  "const": "1.0.0"
+                },
+                "payload_sha256": {
+                  "$ref": "#/$defs/sha256"
+                },
+                "source_path": {
+                  "const": "docs/reference/data/reactor_signal_occurrence_ledger.v1.json"
+                },
+                "source_sha256": {
+                  "$ref": "#/$defs/sha256"
+                }
+              },
+              "required": [
+                "schema_version",
+                "payload_sha256",
+                "source_path",
+                "source_sha256"
+              ],
+              "type": "object"
+            }
+          },
+          "required": [
+            "reactor_configuration_registry",
+            "reactor_observability_registry",
+            "reactor_semantic_profile_registry",
+            "reactor_signal_occurrence_ledger"
+          ],
+          "type": "object"
+        },
+        "coverage": {
+          "additionalProperties": false,
+          "properties": {
+            "evidence_source_present": {
+              "const": 5
+            },
+            "evidence_source_absent": {
+              "const": 29
+            },
+            "verified_review_adapters": {
+              "const": 2
+            },
+            "semantic_producerless": {
+              "const": 32
+            },
+            "physical_source_unqualified": {
+              "const": 1
+            },
+            "qualified_observations": {
+              "const": 0
+            },
+            "qualified_physical_phases": {
+              "const": 0
+            },
+            "registered_configurations": {
+              "const": 34
+            },
+            "confinement_families": {
+              "const": 9
+            }
+          },
+          "required": [
+            "registered_configurations",
+            "confinement_families",
+            "evidence_source_present",
+            "evidence_source_absent",
+            "verified_review_adapters",
+            "semantic_producerless",
+            "physical_source_unqualified",
+            "qualified_observations",
+            "qualified_physical_phases"
+          ],
+          "type": "object"
+        },
+        "configurations": {
+          "items": {
+            "$ref": "#/$defs/row"
+          },
+          "maxItems": 34,
+          "minItems": 34,
+          "type": "array"
+        }
+      },
+      "required": [
+        "authority",
+        "actionable",
+        "direct_actuation_authorized",
+        "machine_protection_final_veto",
+        "classification_rule",
+        "source_bindings",
+        "coverage",
+        "configurations"
+      ],
+      "type": "object"
+    },
+    "payload_sha256": {
+      "$ref": "#/$defs/sha256"
+    }
+  },
+  "required": [
+    "schema",
+    "schema_version",
+    "payload",
+    "payload_sha256"
+  ],
+  "type": "object"
+}

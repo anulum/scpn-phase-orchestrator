@@ -1,0 +1,182 @@
+<title>Modal Head-to-Head</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --ground:#F7F8F6; --panel:#FFFFFF; --ink:#1A2330; --muted:#5B6672;
+    --line:#D9DEDA; --grid:#E7EBE7;
+    --score:#12A594; --score-soft:#E2F3F0; --alarm:#B4552D; --alarm-soft:#F6E9E2;
+    --dim:#B9C2C6; --mono-bg:#EEF1EE;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:#10161D; --panel:#171F28; --ink:#E5EAE8; --muted:#93A0A8;
+      --line:#2A3540; --grid:#212B36;
+      --score:#2FA093; --score-soft:#143029; --alarm:#C97B50; --alarm-soft:#392318;
+      --dim:#3A4652; --mono-bg:#1D2732;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:#10161D; --panel:#171F28; --ink:#E5EAE8; --muted:#93A0A8;
+    --line:#2A3540; --grid:#212B36;
+    --score:#2FA093; --score-soft:#143029; --alarm:#C97B50; --alarm-soft:#392318;
+    --dim:#3A4652; --mono-bg:#1D2732;
+  }
+  * { box-sizing:border-box; }
+  body {
+    background:var(--ground); color:var(--ink);
+    font-family:"Public Sans","Segoe UI",system-ui,sans-serif;
+    font-size:16px; line-height:1.55; margin:0; padding:0 20px 90px;
+  }
+  main { max-width:56rem; margin:0 auto; }
+  header.masthead { border-bottom:2px solid var(--ink); padding:48px 0 18px; margin-bottom:26px; }
+  .eyebrow { font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--score); font-weight:600; margin:0 0 10px; }
+  h1 { font-family:"Newsreader",Georgia,serif; font-weight:500; font-size:clamp(28px,4.6vw,40px); line-height:1.12; margin:0 0 10px; text-wrap:balance; }
+  .standfirst { color:var(--muted); margin:0; max-width:44rem; }
+  h2 { font-family:"Newsreader",Georgia,serif; font-weight:600; font-size:22px; margin:40px 0 10px; text-wrap:balance; }
+  p { max-width:44rem; margin:0 0 12px; }
+  ul { margin:0 0 12px; padding-left:1.15rem; }
+  li { margin-bottom:7px; max-width:43rem; }
+  .tiles { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; margin:22px 0 6px; }
+  .tile { background:var(--panel); border:1px solid var(--line); padding:14px 16px; }
+  .tile .k { font-size:11px; letter-spacing:.12em; text-transform:uppercase; font-weight:600; color:var(--muted); margin-bottom:6px; }
+  .tile .v { font-family:"IBM Plex Mono",monospace; font-size:22px; font-weight:500; font-variant-numeric:tabular-nums; }
+  .tile .v small { font-size:12px; color:var(--muted); font-weight:400; }
+  .tile.lead .v { color:var(--score); }
+  .chartcard { background:var(--panel); border:1px solid var(--line); padding:18px 18px 12px; margin:16px 0; }
+  .chartcard h3 { font-size:14px; font-weight:700; margin:0 0 2px; }
+  .chartcard .sub { font-size:12.5px; color:var(--muted); margin:0 0 12px; max-width:none; }
+  .chartwrap { overflow-x:auto; }
+  svg text { font-family:"Public Sans",system-ui,sans-serif; }
+  .legend { display:flex; gap:18px; font-size:12px; color:var(--muted); margin:8px 0 0; flex-wrap:wrap; }
+  .legend span { display:inline-flex; align-items:center; gap:6px; }
+  .sw { width:12px; height:12px; border-radius:2px; display:inline-block; }
+  code { font-family:"IBM Plex Mono",monospace; font-size:.85em; background:var(--mono-bg); padding:1px 5px; border-radius:3px; word-break:break-all; }
+  .seal { background:var(--panel); border:1px solid var(--line); border-left:3px solid var(--score); padding:14px 18px; margin:10px 0; }
+  .seal .k { font-size:11px; letter-spacing:.12em; text-transform:uppercase; font-weight:600; color:var(--muted); }
+  .caveats { border-left:3px solid var(--alarm); background:var(--panel); border-top:1px solid var(--line); border-right:1px solid var(--line); border-bottom:1px solid var(--line); padding:14px 18px; margin:14px 0; }
+  .footer-note { margin-top:44px; padding-top:14px; border-top:1px solid var(--line); font:12px "IBM Plex Mono",monospace; color:var(--muted); }
+  .tooltip { position:fixed; pointer-events:none; background:var(--ink); color:var(--ground); font:12px "IBM Plex Mono",monospace; padding:5px 9px; border-radius:3px; display:none; z-index:9; white-space:nowrap; }
+</style>
+
+<main>
+<header class="masthead">
+  <p class="eyebrow">SCPN Phase Orchestrator &middot; certified head-to-head &middot; real grid corpus</p>
+  <h1>One detector clears the bar. The rest sit at chance.</h1>
+  <p class="standfirst">On 90 real generator-trip instabilities of the PSML 23-bus corpus, the
+  domain-specific modal envelope-growth detector leads 36 at a matched 10% false alarm
+  (p&nbsp;=&nbsp;0.0001) &mdash; while every generic early-warning detector, including the
+  classical critical-slowing-down baseline, stays statistically at chance on the identical
+  split. Both facts are sealed in the same record.</p>
+</header>
+
+<div class="tiles">
+  <div class="tile lead"><div class="k">Modal detector</div><div class="v">36/90 <small>led &middot; p = 0.0001</small></div></div>
+  <div class="tile"><div class="k">Held-out half</div><div class="v">24/45 <small>led &middot; p = 0.0002</small></div></div>
+  <div class="tile"><div class="k">Best generic</div><div class="v">13/90 <small>led &middot; p = 0.185</small></div></div>
+  <div class="tile"><div class="k">False alarm held</div><div class="v">9.1% <small>of 10% target</small></div></div>
+</div>
+
+<div class="chartcard">
+  <h3>Transitions led at a matched 10% false alarm &mdash; 90 real instabilities</h3>
+  <p class="sub">Every detector reads the same two-second pre-onset segments of the same
+  scenarios, calibrated on the same damped nulls. The tick on each bar is the count expected
+  by chance at that detector&#8217;s own alarm rate; the p-value is the label-permutation
+  probability of reaching the observed count.</p>
+  <div class="chartwrap"><svg id="h2h" width="820" height="300" role="img" aria-label="Bar chart of transitions led by each detector out of ninety, with expected-by-chance ticks and p-values"></svg></div>
+  <div class="legend">
+    <span><span class="sw" style="background:var(--score)"></span>domain-specific modal detector</span>
+    <span><span class="sw" style="background:var(--dim)"></span>generic early-warning suite</span>
+    <span><span class="sw" style="border-left:2px dashed var(--ink);width:0;height:12px;border-radius:0"></span>expected by chance</span>
+  </div>
+</div>
+
+<h2>Why the comparison is fair</h2>
+<ul>
+  <li><strong>Identical split.</strong> Same segments, same labels, same matched false alarm on
+  the same damped null scenarios &mdash; only the detector differs.</li>
+  <li><strong>Non-circular labels.</strong> A transition is a <em>generator-trip</em> scenario,
+  a null a damped bus-fault or branch-trip: the label is the disturbance type, a physical
+  annotation independent of the growth statistic being scored.</li>
+  <li><strong>Disclosed data-quality gate.</strong> Three scenarios with a non-physical time
+  column are dropped and counted in the sealed record, never silently.</li>
+  <li><strong>Pre-registered operating point.</strong> The aggregation and recency weighting
+  were selected on a development half and validated on the held-out half (24/45,
+  p&nbsp;=&nbsp;0.0002) before this full-corpus comparison.</li>
+</ul>
+
+<h2>The sealed record</h2>
+<p>The whole comparison &mdash; corpus, operating point, every detector&#8217;s count and
+p-value, the drops, the verdict &mdash; is one content-addressed artefact in the public
+repository (<code>examples/real_data/psml_modal_growth/</code>), guarded by an integrity
+test that recomputes the hash from the committed payload.</p>
+<div class="seal"><div class="k">Sealed head-to-head record</div>
+<code>bc6895879088b31b&hellip;</code></div>
+
+<div class="caveats">
+  <strong>Claim boundary (read before quoting)</strong>
+  <ul>
+    <li>This certifies the detector <em>on this corpus</em>. The certified numeric operating
+    point is dataset-specific: our own cross-dataset test on ISO-NE PMU captures showed the
+    frozen threshold does not port &mdash; deployment calibrates per system on its own
+    ambient data, and that step is part of the product, not a caveat hidden in a footnote.</li>
+    <li>&ldquo;Generic detectors at chance&rdquo; is a statement about this task and operating
+    point, sealed with p-values &mdash; not a blanket dismissal of those methods elsewhere.</li>
+    <li>Streaming deployment is stricter than per-window scoring: the sealed stream operating
+    point holds 11/45 held-out at a 10% stream false alarm, measured and sealed separately.</li>
+  </ul>
+</div>
+
+<p class="footer-note">SCPN Phase Orchestrator &middot; data: PSML 23-bus corpus (Zheng et&nbsp;al.
+2021, citation-only) &middot; protocol: matched false alarm + label permutation (10&nbsp;000
+draws, seed 0) &middot; &copy; 1996&ndash;2026 Miroslav &Scaron;otek</p>
+</main>
+<div class="tooltip" id="tip"></div>
+
+<script>
+const ROWS = [
+  {name:"Modal envelope growth", led:36, expected:22.2, p:"0.0001", modal:true},
+  {name:"Critical slowing down", led:13, expected:10.6, p:"0.185", modal:false},
+  {name:"Ensemble (weighted)",   led:11, expected:9.6,  p:"0.324", modal:false},
+  {name:"Transition entropy",    led:8,  expected:8.1,  p:"0.629", modal:false},
+  {name:"Synchronisation",       led:3,  expected:5.6,  p:"0.976", modal:false},
+];
+const N = 90;
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+(function(){
+  const svg = document.getElementById('h2h');
+  const W=820,H=300,m={t:14,r:150,b:30,l:190};
+  const iw=W-m.l-m.r, ih=H-m.t-m.b;
+  const rowH = ih/ROWS.length, barH = Math.min(26, rowH-14);
+  const X = v => m.l + iw*v/N;
+  const NS='http://www.w3.org/2000/svg';
+  const el=(n,a)=>{const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);return e;};
+  for(let v=0; v<=90; v+=30){
+    svg.appendChild(el('line',{x1:X(v),x2:X(v),y1:m.t,y2:m.t+ih,stroke:css('--grid'),'stroke-width':1}));
+    const t=el('text',{x:X(v),y:H-8,'text-anchor':'middle','font-size':11,fill:css('--muted')});
+    t.textContent=v; svg.appendChild(t);
+  }
+  const xl=el('text',{x:X(45),y:H-8,'text-anchor':'middle','font-size':11,fill:css('--muted')});
+  const tip=document.getElementById('tip');
+  ROWS.forEach((r,i)=>{
+    const y = m.t + i*rowH + (rowH-barH)/2;
+    const name=el('text',{x:m.l-10,y:y+barH/2+4,'text-anchor':'end','font-size':13,fill:css('--ink'),'font-weight':r.modal?700:400});
+    name.textContent=r.name; svg.appendChild(name);
+    const bar=el('rect',{x:m.l,y:y,width:Math.max(X(r.led)-m.l,2),height:barH,rx:3,
+      fill:r.modal?css('--score'):css('--dim')});
+    svg.appendChild(bar);
+    svg.appendChild(el('line',{x1:X(r.expected),x2:X(r.expected),y1:y-4,y2:y+barH+4,
+      stroke:css('--ink'),'stroke-width':1.6,'stroke-dasharray':'3 3'}));
+    const lab=el('text',{x:X(r.led)+8,y:y+barH/2+4,'font-size':12.5,'font-family':'IBM Plex Mono,monospace',
+      fill:r.modal?css('--score'):css('--muted'),'font-weight':r.modal?700:400});
+    lab.textContent=r.led+'/90 \u00B7 p '+(r.modal?'= ':'= ')+r.p; svg.appendChild(lab);
+    const hit=el('rect',{x:m.l-185,y:m.t+i*rowH,width:iw+m.r+180,height:rowH,fill:'transparent'});
+    hit.addEventListener('pointermove',e=>{
+      tip.style.display='block';
+      tip.style.left=(e.clientX+14)+'px'; tip.style.top=(e.clientY-10)+'px';
+      tip.textContent=r.name+': led '+r.led+'/90, expected '+r.expected+' by chance, p='+r.p;
+    });
+    hit.addEventListener('pointerleave',()=>{tip.style.display='none';});
+    svg.appendChild(hit);
+  });
+})();
+</script>

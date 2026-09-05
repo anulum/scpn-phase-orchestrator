@@ -1,0 +1,541 @@
+{
+  "$defs": {
+    "capability_claim": {
+      "additionalProperties": false,
+      "properties": {
+        "capability_id": {
+          "$ref": "#/$defs/capability_id"
+        },
+        "source_ids": {
+          "items": {
+            "pattern": "^SRC-[0-9]{3}$",
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "status": {
+          "enum": [
+            "concept_only",
+            "observed_component",
+            "observed_integrated",
+            "planned_or_developing"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "capability_id",
+        "status",
+        "source_ids"
+      ],
+      "type": "object"
+    },
+    "capability_id": {
+      "enum": [
+        "beam_diagnostics",
+        "blanket_neutronics",
+        "charged_particle_diagnostics",
+        "compression_trajectory_diagnostics",
+        "density_diagnostics",
+        "electrical_waveform_diagnostics",
+        "equilibrium_reconstruction",
+        "fusion_product_measurement",
+        "imaging_diagnostics",
+        "instability_mode_diagnostics",
+        "integrated_plasma_operation",
+        "magnetic_diagnostics",
+        "neutron_diagnostics",
+        "shock_timing_diagnostics",
+        "spectroscopic_diagnostics",
+        "temperature_diagnostics"
+      ],
+      "type": "string"
+    },
+    "configuration": {
+      "enum": [
+        "beam_target",
+        "colliding_beam",
+        "conventional_tokamak",
+        "cusp",
+        "dense_plasma_focus",
+        "field_reversed_configuration",
+        "frc_compression_mif",
+        "fusion_fission_hybrid",
+        "gas_dynamic_mirror",
+        "gridded_iec",
+        "heliotron",
+        "ion_beam_icf",
+        "laser_icf_direct_drive",
+        "laser_icf_fast_or_shock_ignition",
+        "laser_icf_indirect_drive",
+        "levitated_dipole",
+        "maglif",
+        "mechanical_or_liquid_liner_mif",
+        "plasma_jet_mif",
+        "polywell",
+        "projectile_or_impact_icf",
+        "pulsed_electron_beam_icf",
+        "reversed_field_pinch",
+        "scpn.reactor_systems:lattice_confinement_fusion",
+        "scpn.reactor_systems:muon_catalysed_fusion",
+        "sheared_flow_z_pinch",
+        "simple_magnetic_mirror",
+        "spherical_tokamak",
+        "spheromak",
+        "stellarator",
+        "tandem_mirror",
+        "theta_pinch",
+        "torsatron",
+        "z_pinch"
+      ],
+      "type": "string"
+    },
+    "missing_capability": {
+      "enum": [
+        "control_admission",
+        "current_integrated_device",
+        "integrated_fusion_output",
+        "power_conversion_demonstration",
+        "public_machine_readable_calibrated_data",
+        "reactor_environment_diagnostic_qualification",
+        "spo_producer_adapter"
+      ],
+      "type": "string"
+    },
+    "rank": {
+      "enum": [
+        "E0_no_qualifying_source",
+        "E1_concept_or_simulation",
+        "E2_engineering_or_facility_development",
+        "E3_component_or_driver_experiment",
+        "E4_integrated_plasma_experiment",
+        "E5_integrated_fusion_observation"
+      ],
+      "type": "string"
+    },
+    "reactor_row": {
+      "additionalProperties": false,
+      "properties": {
+        "actionable": {
+          "const": false
+        },
+        "authority": {
+          "const": "review_only"
+        },
+        "capability_claims": {
+          "items": {
+            "$ref": "#/$defs/capability_claim"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "configuration": {
+          "$ref": "#/$defs/configuration"
+        },
+        "confinement_family": {
+          "enum": [
+            "beam_target",
+            "electrostatic",
+            "extension",
+            "hybrid",
+            "inertial",
+            "magnetic_closed",
+            "magnetic_open",
+            "magneto_inertial",
+            "self_magnetic"
+          ],
+          "type": "string"
+        },
+        "device_project": {
+          "pattern": "^SCPN-[A-Z0-9-]+$",
+          "type": "string"
+        },
+        "diagnostic_evidence_state": {
+          "enum": [
+            "documented_component_or_driver",
+            "documented_integrated_device",
+            "historical_documented_device",
+            "no_integrated_diagnostic_evidence",
+            "planned_or_developing"
+          ],
+          "type": "string"
+        },
+        "direct_actuation_authorized": {
+          "const": false
+        },
+        "external_evidence_rank": {
+          "$ref": "#/$defs/rank"
+        },
+        "machine_protection_final_veto": {
+          "const": true
+        },
+        "missing_capabilities": {
+          "items": {
+            "$ref": "#/$defs/missing_capability"
+          },
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "observability_candidate_ids": {
+          "items": {
+            "pattern": "^[a-z][a-z0-9_]*\\.[a-z][a-z0-9_]*$",
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "rank_basis": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "reference_systems": {
+          "items": {
+            "$ref": "#/$defs/reference_system"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "source_ids": {
+          "items": {
+            "pattern": "^SRC-[0-9]{3}$",
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "spo_qualification": {
+          "$ref": "#/$defs/spo_qualification"
+        },
+        "technology_is_control_evidence": {
+          "const": false
+        },
+        "topology": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "configuration",
+        "confinement_family",
+        "topology",
+        "device_project",
+        "external_evidence_rank",
+        "rank_basis",
+        "reference_systems",
+        "source_ids",
+        "diagnostic_evidence_state",
+        "capability_claims",
+        "observability_candidate_ids",
+        "missing_capabilities",
+        "spo_qualification",
+        "technology_is_control_evidence",
+        "authority",
+        "actionable",
+        "direct_actuation_authorized",
+        "machine_protection_final_veto"
+      ],
+      "type": "object"
+    },
+    "reference_system": {
+      "additionalProperties": false,
+      "properties": {
+        "lifecycle_state": {
+          "enum": [
+            "commissioning_or_scientific_operation",
+            "concept_only",
+            "historical",
+            "operating_at_source_date",
+            "under_construction_or_development"
+          ],
+          "type": "string"
+        },
+        "name": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "source_ids": {
+          "items": {
+            "pattern": "^SRC-[0-9]{3}$",
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "name",
+        "lifecycle_state",
+        "source_ids"
+      ],
+      "type": "object"
+    },
+    "registry_binding": {
+      "additionalProperties": false,
+      "properties": {
+        "digest_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "source_path": {
+          "pattern": "^src/.+\\.py$",
+          "type": "string"
+        },
+        "source_sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "version": {
+          "const": "1.1.0"
+        }
+      },
+      "required": [
+        "version",
+        "digest_sha256",
+        "source_path",
+        "source_sha256"
+      ],
+      "type": "object"
+    },
+    "sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "source": {
+      "additionalProperties": false,
+      "properties": {
+        "configurations": {
+          "items": {
+            "$ref": "#/$defs/configuration"
+          },
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "id": {
+          "pattern": "^SRC-[0-9]{3}$",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "facility_owner",
+            "government_programme",
+            "peer_reviewed"
+          ],
+          "type": "string"
+        },
+        "publisher": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "title": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "url": {
+          "format": "uri",
+          "pattern": "^https://",
+          "type": "string"
+        },
+        "year": {
+          "maximum": 2026,
+          "minimum": 1950,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "publisher",
+        "year",
+        "kind",
+        "url",
+        "configurations"
+      ],
+      "type": "object"
+    },
+    "spo_qualification": {
+      "additionalProperties": false,
+      "properties": {
+        "admission_state": {
+          "const": "refused_no_producer_evidence"
+        },
+        "control_admitted": {
+          "const": false
+        },
+        "missing_evidence": {
+          "const": [
+            "physical_sample",
+            "phenomenon_identity",
+            "reference",
+            "clock_epoch",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "quality",
+            "provenance",
+            "observability_gate"
+          ],
+          "type": "array"
+        },
+        "physical_observation_qualified": {
+          "const": false
+        },
+        "physical_phase_qualified": {
+          "const": false
+        }
+      },
+      "required": [
+        "admission_state",
+        "missing_evidence",
+        "physical_observation_qualified",
+        "physical_phase_qualified",
+        "control_admitted"
+      ],
+      "type": "object"
+    }
+  },
+  "$id": "https://www.anulum.li/schemas/spo/reactor-technology-diagnostic-atlas/v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Evidence-ranked, review-only external technology and diagnostic atlas for every registered SPO reactor configuration.",
+  "properties": {
+    "payload": {
+      "additionalProperties": false,
+      "properties": {
+        "actionable": {
+          "const": false
+        },
+        "authority": {
+          "const": "review_only"
+        },
+        "classification_rule": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "configurations": {
+          "items": {
+            "$ref": "#/$defs/reactor_row"
+          },
+          "minItems": 34,
+          "maxItems": 34,
+          "type": "array"
+        },
+        "counts": {
+          "additionalProperties": false,
+          "properties": {
+            "control_admitted": {
+              "const": 0
+            },
+            "physical_observations_qualified": {
+              "const": 0
+            },
+            "physical_phases_qualified": {
+              "const": 0
+            },
+            "primary_sources": {
+              "minimum": 1,
+              "type": "integer"
+            },
+            "registered_configurations": {
+              "const": 34
+            },
+            "confinement_families": {
+              "const": 9
+            }
+          },
+          "required": [
+            "registered_configurations",
+            "confinement_families",
+            "primary_sources",
+            "physical_observations_qualified",
+            "physical_phases_qualified",
+            "control_admitted"
+          ],
+          "type": "object"
+        },
+        "direct_actuation_authorized": {
+          "const": false
+        },
+        "machine_protection_final_veto": {
+          "const": true
+        },
+        "observed_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "rank_order": {
+          "const": [
+            "E5_integrated_fusion_observation",
+            "E4_integrated_plasma_experiment",
+            "E3_component_or_driver_experiment",
+            "E2_engineering_or_facility_development",
+            "E1_concept_or_simulation",
+            "E0_no_qualifying_source"
+          ],
+          "type": "array"
+        },
+        "research_cutoff": {
+          "const": "2026-09-04"
+        },
+        "source_bindings": {
+          "additionalProperties": false,
+          "properties": {
+            "reactor_configuration_registry": {
+              "$ref": "#/$defs/registry_binding"
+            },
+            "reactor_observability_registry": {
+              "$ref": "#/$defs/registry_binding"
+            }
+          },
+          "required": [
+            "reactor_configuration_registry",
+            "reactor_observability_registry"
+          ],
+          "type": "object"
+        },
+        "sources": {
+          "items": {
+            "$ref": "#/$defs/source"
+          },
+          "minItems": 1,
+          "type": "array"
+        }
+      },
+      "required": [
+        "observed_at",
+        "research_cutoff",
+        "classification_rule",
+        "rank_order",
+        "source_bindings",
+        "counts",
+        "sources",
+        "configurations",
+        "authority",
+        "actionable",
+        "direct_actuation_authorized",
+        "machine_protection_final_veto"
+      ],
+      "type": "object"
+    },
+    "payload_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "schema": {
+      "const": "scpn-phase-orchestrator.reactor-technology-diagnostic-atlas.v1"
+    },
+    "schema_version": {
+      "const": "1.1.0"
+    }
+  },
+  "required": [
+    "schema",
+    "schema_version",
+    "payload",
+    "payload_sha256"
+  ],
+  "type": "object"
+}

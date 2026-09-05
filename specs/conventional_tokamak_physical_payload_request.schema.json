@@ -1,0 +1,304 @@
+{
+  "$defs": {
+    "adapter_binding": {
+      "additionalProperties": false,
+      "properties": {
+        "adapter_api": {"const": "scpn_phase_orchestrator.reactor_semantics.coupled_transport_handoff_from_fusion_bytes"},
+        "evidence_state": {"const": "verified_review_adapter_simulation"},
+        "handoff_schema": {"const": "scpn-phase-orchestrator.reactor-semantic-handoff.v1"},
+        "ingress_state": {"const": "verified_review_adapter"},
+        "physical_source_present": {"const": false},
+        "producer_project": {"const": "SCPN-FUSION-CORE"},
+        "reusable_as_physical_evidence": {"const": false},
+        "semantic_profile": {"const": "spo.reactor.conventional_tokamak.coupled_transport.nonphase_review.v1"},
+        "semantic_profile_version": {"const": "1.0.0"},
+        "source_kind": {"const": "simulation"},
+        "source_schema": {"const": "scpn-fusion-core.torax-runtime-review-envelope.v1"}
+      },
+      "required": [
+        "adapter_api",
+        "evidence_state",
+        "handoff_schema",
+        "ingress_state",
+        "physical_source_present",
+        "producer_project",
+        "reusable_as_physical_evidence",
+        "semantic_profile",
+        "semantic_profile_version",
+        "source_kind",
+        "source_schema"
+      ],
+      "type": "object"
+    },
+    "candidate_requirement": {
+      "additionalProperties": false,
+      "properties": {
+        "admissible_carriers": {
+          "items": {"minLength": 1, "type": "string"},
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "candidate_id": {
+          "enum": [
+            "closed.equilibrium_profiles",
+            "closed.recurrent_transient",
+            "closed.resolved_mhd_mode",
+            "model.synthetic_oscillator_coordinate"
+          ]
+        },
+        "evidence_claimed": {"const": false},
+        "observation_operator_required": {"type": "boolean"},
+        "observability_class": {
+          "enum": [
+            "derived_cyclic",
+            "event_relative",
+            "noncyclic_feature",
+            "numerical_only"
+          ]
+        },
+        "phenomenon": {"minLength": 1, "type": "string"},
+        "reference_required": {"type": "boolean"},
+        "repeated_cycle_required": {"type": "boolean"},
+        "required_evidence": {
+          "items": {"minLength": 1, "type": "string"},
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "unmet_evidence": {"minLength": 1, "type": "string"}
+      },
+      "required": [
+        "admissible_carriers",
+        "candidate_id",
+        "evidence_claimed",
+        "observation_operator_required",
+        "observability_class",
+        "phenomenon",
+        "reference_required",
+        "repeated_cycle_required",
+        "required_evidence",
+        "unmet_evidence"
+      ],
+      "type": "object"
+    },
+    "producer_evidence_state_policy": {
+      "additionalProperties": false,
+      "properties": {
+        "disposition": {
+          "enum": [
+            "unknown",
+            "out_of_distribution",
+            "low_observability",
+            "stale"
+          ]
+        },
+        "meaning": {"minLength": 1, "type": "string"},
+        "physical_regime_classified": {"const": false},
+        "quality_may_substitute": {"const": false},
+        "regime_state": {"const": "unknown"},
+        "validity_state": {
+          "enum": [
+            "unknown",
+            "out_of_distribution",
+            "unobservable",
+            "stale"
+          ]
+        }
+      },
+      "required": [
+        "disposition",
+        "meaning",
+        "physical_regime_classified",
+        "quality_may_substitute",
+        "regime_state",
+        "validity_state"
+      ],
+      "type": "object"
+    },
+    "requirement": {
+      "additionalProperties": false,
+      "properties": {
+        "acceptance_condition": {"minLength": 1, "type": "string"},
+        "evidence_subject": {"minLength": 1, "type": "string"},
+        "immutable_artifact_binding_required": {"const": true},
+        "missing": {"const": true},
+        "requirement_id": {
+          "enum": [
+            "physical_sample_identity",
+            "configuration_specific_diagnostic_identity",
+            "phenomenon_identity",
+            "physical_reference_identity",
+            "physical_clock_epoch_correlation",
+            "observation_operator_or_calibration",
+            "uncertainty",
+            "validity",
+            "producer_evidence_state_semantics",
+            "quality",
+            "provenance_and_reproducibility",
+            "observability_gate",
+            "independent_validation"
+          ]
+        }
+      },
+      "required": [
+        "acceptance_condition",
+        "evidence_subject",
+        "immutable_artifact_binding_required",
+        "missing",
+        "requirement_id"
+      ],
+      "type": "object"
+    },
+    "sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    }
+  },
+  "$id": "https://www.anulum.li/schemas/spo/conventional-tokamak-physical-payload-request/v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Digest-sealed SPO L1 request for a new conventional-tokamak physical producer payload. The bound TORAX adapter remains simulation-only and the request grants no observation, phase, CONTROL, execution or actuation authority.",
+  "properties": {
+    "payload": {
+      "additionalProperties": false,
+      "properties": {
+        "actionable": {"const": false},
+        "candidate_requirements": {
+          "items": {"$ref": "#/$defs/candidate_requirement"},
+          "maxItems": 4,
+          "minItems": 4,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "configuration": {"const": "conventional_tokamak"},
+        "control_admission_requested": {"const": false},
+        "control_intent_created": {"const": false},
+        "current_adapter": {"$ref": "#/$defs/adapter_binding"},
+        "device_project": {"const": "SCPN-TOKAMAK-CORE"},
+        "direct_actuation": {"const": false},
+        "execution_permitted": {"const": false},
+        "intake_lane": {"const": "L1_extend_exercised_review_adapter"},
+        "machine_protection_final_veto": {"const": true},
+        "observability_registry_sha256": {"$ref": "#/$defs/sha256"},
+        "observability_registry_version": {"const": "1.1.0"},
+        "observation_admitted": {"const": false},
+        "phase_inference_eligible": {"const": false},
+        "phase_inference_performed": {"const": false},
+        "physical_payload_schema_allocated": {"const": false},
+        "physical_source_present": {"const": false},
+        "producer_evidence_state_contract_present": {"const": false},
+        "producer_evidence_state_contract_required": {"const": true},
+        "producer_evidence_state_policies": {
+          "prefixItems": [
+            {
+              "allOf": [
+                {"$ref": "#/$defs/producer_evidence_state_policy"},
+                {
+                  "properties": {
+                    "disposition": {"const": "unknown"},
+                    "validity_state": {"const": "unknown"}
+                  }
+                }
+              ]
+            },
+            {
+              "allOf": [
+                {"$ref": "#/$defs/producer_evidence_state_policy"},
+                {
+                  "properties": {
+                    "disposition": {"const": "out_of_distribution"},
+                    "validity_state": {"const": "out_of_distribution"}
+                  }
+                }
+              ]
+            },
+            {
+              "allOf": [
+                {"$ref": "#/$defs/producer_evidence_state_policy"},
+                {
+                  "properties": {
+                    "disposition": {"const": "low_observability"},
+                    "validity_state": {"const": "unobservable"}
+                  }
+                }
+              ]
+            },
+            {
+              "allOf": [
+                {"$ref": "#/$defs/producer_evidence_state_policy"},
+                {
+                  "properties": {
+                    "disposition": {"const": "stale"},
+                    "validity_state": {"const": "stale"}
+                  }
+                }
+              ]
+            }
+          ],
+          "items": false,
+          "maxItems": 4,
+          "minItems": 4,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "qualification_state": {"const": "blocked_missing_physical_producer_payload"},
+        "request_id": {"$ref": "#/$defs/sha256"},
+        "requested_owner_project": {"const": "SCPN-FUSION-CORE"},
+        "requirements": {
+          "items": {"$ref": "#/$defs/requirement"},
+          "maxItems": 13,
+          "minItems": 13,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "review_only": {"const": true},
+        "quality_state_may_substitute_for_evidence_state": {"const": false},
+        "selected_candidate_id": {"type": "null"},
+        "semantic_ingress_extended": {"const": false},
+        "semantic_profile_registry_sha256": {"$ref": "#/$defs/sha256"},
+        "semantic_profile_registry_version": {"const": "1.1.0"}
+      },
+      "required": [
+        "actionable",
+        "candidate_requirements",
+        "configuration",
+        "control_admission_requested",
+        "control_intent_created",
+        "current_adapter",
+        "device_project",
+        "direct_actuation",
+        "execution_permitted",
+        "intake_lane",
+        "machine_protection_final_veto",
+        "observability_registry_sha256",
+        "observability_registry_version",
+        "observation_admitted",
+        "phase_inference_eligible",
+        "phase_inference_performed",
+        "physical_payload_schema_allocated",
+        "physical_source_present",
+        "producer_evidence_state_contract_present",
+        "producer_evidence_state_contract_required",
+        "producer_evidence_state_policies",
+        "qualification_state",
+        "request_id",
+        "requested_owner_project",
+        "requirements",
+        "review_only",
+        "quality_state_may_substitute_for_evidence_state",
+        "selected_candidate_id",
+        "semantic_ingress_extended",
+        "semantic_profile_registry_sha256",
+        "semantic_profile_registry_version"
+      ],
+      "type": "object"
+    },
+    "payload_sha256": {"$ref": "#/$defs/sha256"},
+    "schema": {"const": "scpn-phase-orchestrator.conventional-tokamak-physical-payload-request.v1"},
+    "schema_version": {"const": "1.1.0"}
+  },
+  "required": ["payload", "payload_sha256", "schema", "schema_version"],
+  "title": "SCPN Phase Orchestrator conventional-tokamak physical payload request v1",
+  "type": "object"
+}

@@ -1,0 +1,227 @@
+{
+  "$id": "https://anulum.li/schemas/scpn-phase-orchestrator/device-diagnostic-plan-review-v1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "payload": {
+      "additionalProperties": false,
+      "properties": {
+        "accepted_as_design_declaration": { "const": true },
+        "actionable": { "const": false },
+        "assignment_map_sha256": { "$ref": "#/$defs/sha256" },
+        "authority": { "const": "review_only" },
+        "capability": { "const": "diagnostic_clock_semantics" },
+        "classification_performed": { "const": false },
+        "clock_reviews": {
+          "items": { "$ref": "#/$defs/clockReview" },
+          "type": "array"
+        },
+        "configurations": {
+          "items": { "$ref": "#/$defs/identifier" },
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "control_intent_created": { "const": false },
+        "deferred_candidate_ids": {
+          "items": { "$ref": "#/$defs/identifier" },
+          "type": "array",
+          "uniqueItems": true
+        },
+        "evidence_claimed": { "const": false },
+        "evidence_maturity": { "const": "computational_prototype" },
+        "facility_binding_claimed": { "const": false },
+        "frame_ids": {
+          "items": { "$ref": "#/$defs/identifier" },
+          "type": "array",
+          "uniqueItems": true
+        },
+        "measurement_claimed": { "const": false },
+        "observation_claimed": { "const": false },
+        "observability_registry_digest": { "$ref": "#/$defs/sha256" },
+        "observability_registry_version": { "$ref": "#/$defs/semver" },
+        "plan_identifier": { "$ref": "#/$defs/identifier" },
+        "planned_candidate_ids": {
+          "items": { "$ref": "#/$defs/identifier" },
+          "type": "array",
+          "uniqueItems": true
+        },
+        "producer_package_revision": { "minLength": 1, "type": "string" },
+        "reactor_registry_digest": { "$ref": "#/$defs/sha256" },
+        "reactor_registry_version": { "$ref": "#/$defs/semver" },
+        "review_id": { "$ref": "#/$defs/sha256" },
+        "semantic_ingress_declared": { "const": false },
+        "semantic_profile_registry_digest": { "$ref": "#/$defs/sha256" },
+        "semantic_profile_registry_version": { "$ref": "#/$defs/semver" },
+        "signal_reviews": {
+          "items": { "$ref": "#/$defs/signalReview" },
+          "type": "array"
+        },
+        "source_artifact_sha256": { "$ref": "#/$defs/sha256" },
+        "source_envelope_json": { "minLength": 2, "type": "string" },
+        "source_envelope_schema": {
+          "const": "scpn.reactor-diagnostic-plan-envelope.v1"
+        },
+        "source_envelope_schema_version": { "const": "1.1.0" },
+        "source_envelope_sha256": { "$ref": "#/$defs/sha256" },
+        "source_manifest_json": { "minLength": 2, "type": "string" },
+        "source_manifest_sha256": { "$ref": "#/$defs/sha256" },
+        "source_observability_registry_digest": { "$ref": "#/$defs/sha256" },
+        "source_observability_registry_version": { "$ref": "#/$defs/semver" },
+        "source_plan_json": { "minLength": 2, "type": "string" },
+        "source_plan_sha256": { "$ref": "#/$defs/sha256" },
+        "source_project": { "minLength": 1, "type": "string" },
+        "source_reactor_registry_digest": { "$ref": "#/$defs/sha256" },
+        "source_reactor_registry_version": { "$ref": "#/$defs/semver" },
+        "source_revision": { "pattern": "^[0-9a-f]{40}$", "type": "string" }
+      },
+      "required": [
+        "accepted_as_design_declaration",
+        "actionable",
+        "assignment_map_sha256",
+        "authority",
+        "capability",
+        "classification_performed",
+        "clock_reviews",
+        "configurations",
+        "control_intent_created",
+        "deferred_candidate_ids",
+        "evidence_claimed",
+        "evidence_maturity",
+        "facility_binding_claimed",
+        "frame_ids",
+        "measurement_claimed",
+        "observation_claimed",
+        "observability_registry_digest",
+        "observability_registry_version",
+        "plan_identifier",
+        "planned_candidate_ids",
+        "producer_package_revision",
+        "reactor_registry_digest",
+        "reactor_registry_version",
+        "review_id",
+        "semantic_ingress_declared",
+        "semantic_profile_registry_digest",
+        "semantic_profile_registry_version",
+        "signal_reviews",
+        "source_artifact_sha256",
+        "source_envelope_json",
+        "source_envelope_schema",
+        "source_envelope_schema_version",
+        "source_envelope_sha256",
+        "source_manifest_json",
+        "source_manifest_sha256",
+        "source_observability_registry_digest",
+        "source_observability_registry_version",
+        "source_plan_json",
+        "source_plan_sha256",
+        "source_project",
+        "source_reactor_registry_digest",
+        "source_reactor_registry_version",
+        "source_revision"
+      ],
+      "type": "object"
+    },
+    "payload_sha256": { "$ref": "#/$defs/sha256" },
+    "schema": {
+      "const": "scpn-phase-orchestrator.device-diagnostic-plan-review.v1"
+    },
+    "schema_version": { "const": "1.1.0" }
+  },
+  "required": ["payload", "payload_sha256", "schema", "schema_version"],
+  "title": "SCPN Phase Orchestrator device diagnostic-plan review",
+  "type": "object",
+  "$defs": {
+    "clockReview": {
+      "additionalProperties": false,
+      "properties": {
+        "compatibility": {
+          "enum": ["synthetic_compatible", "event_relative_compatible", "unmapped"]
+        },
+        "epoch": { "minLength": 1, "type": "string" },
+        "mapping_evidence_claimed": { "const": false },
+        "plan_clock_identifier": { "$ref": "#/$defs/identifier" },
+        "plan_clock_kind": {
+          "enum": ["facility_monotonic", "shot_event_epoch", "simulation"]
+        },
+        "resolution_s": { "exclusiveMinimum": 0, "type": "number" },
+        "spo_clock_kind_candidate": {
+          "enum": [null, "shot_relative", "simulation_monotonic"]
+        },
+        "uncertainty_s": { "minimum": 0, "type": "number" }
+      },
+      "required": [
+        "compatibility",
+        "epoch",
+        "mapping_evidence_claimed",
+        "plan_clock_identifier",
+        "plan_clock_kind",
+        "resolution_s",
+        "spo_clock_kind_candidate",
+        "uncertainty_s"
+      ],
+      "type": "object"
+    },
+    "identifier": {
+      "pattern": "^[A-Za-z][A-Za-z0-9_.:\\-]{0,127}$",
+      "type": "string"
+    },
+    "semver": {
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+      "type": "string"
+    },
+    "sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    },
+    "signalReview": {
+      "additionalProperties": false,
+      "properties": {
+        "candidate_id": { "$ref": "#/$defs/identifier" },
+        "carrier": {
+          "enum": [
+            "bounded_feature",
+            "categorical_state",
+            "complex_mode",
+            "cyclic_phase",
+            "event_cycle",
+            "field_phase",
+            "numerical_phase",
+            "protocol_phase"
+          ]
+        },
+        "channel_identifier": { "$ref": "#/$defs/identifier" },
+        "clock_identifier": { "$ref": "#/$defs/identifier" },
+        "evidence_claimed": { "const": false },
+        "evidence_slots": {
+          "items": { "$ref": "#/$defs/identifier" },
+          "minItems": 1,
+          "type": "array",
+          "uniqueItems": true
+        },
+        "observability_class": {
+          "enum": [
+            "derived_cyclic",
+            "event_relative",
+            "noncyclic_feature",
+            "numerical_only"
+          ]
+        },
+        "observation_claimed": { "const": false },
+        "synthetic": { "const": true }
+      },
+      "required": [
+        "candidate_id",
+        "carrier",
+        "channel_identifier",
+        "clock_identifier",
+        "evidence_claimed",
+        "evidence_slots",
+        "observability_class",
+        "observation_claimed",
+        "synthetic"
+      ],
+      "type": "object"
+    }
+  }
+}
