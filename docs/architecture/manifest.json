@@ -227,7 +227,7 @@
       "inputs": ["project/binding state", "runtime snapshots"],
         "outputs": ["ExportManifest (dataclass)", "studio.control-feed.v1 JSON", "Matplotlib plots", "Three.js/D3 JSON"],
         "backends": ["python"],
-        "note": "13 review panels all execution_disabled; /api/studio-feed emits a read-only studio.control-feed.v1 envelope with spo.studio-runtime-snapshot.v1 runtime payload."
+        "note": "12 review panels all execution_disabled; /api/studio-feed emits a read-only studio.control-feed.v1 envelope with spo.studio-runtime-snapshot.v1 runtime payload."
     },
     {
       "name": "plugins+scaffold+domainpacks",

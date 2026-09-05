@@ -77,7 +77,7 @@ dataclass message layer when `protobuf` is absent.
 
 `studio/` exposes builder functions (`build_canvas_graph`,
 `build_runtime_snapshot`, `build_deployment_readiness`, `run_binding_spec_replay`,
-`build_studio_control_feed`, …) and a registry of 13 review panels. All panels
+`build_studio_control_feed`, …) and a registry of 12 review panels. All panels
 are `execution_disabled=True` and `operator_review_required=True`. The surface
 emits Python-dataclass `ExportManifest` records and a read-only
 `studio.control-feed.v1` envelope for live STUDIO ingestion. The schema-A

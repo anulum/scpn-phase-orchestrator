@@ -7,7 +7,7 @@ Human-facing review, explanation, and visualisation. `studio` 25 files,
 
 Builder functions (`build_canvas_graph`, `build_runtime_snapshot`,
 `build_deployment_readiness`, `build_export_manifests`, `run_binding_spec_replay`,
-…) and a registry of 13 review panels (information geometry, sheaf cohomology,
+…) and a registry of 12 review panels (information geometry, sheaf cohomology,
 morphogenetic field, multiverse, strange-loop, evolutionary policy, lineage, …).
 A `ui_helpers/` package (21 modules) provides canvas layout, deployment plans,
 charts, and connector plans.
