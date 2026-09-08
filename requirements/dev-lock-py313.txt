@@ -1090,9 +1090,9 @@ httpx==0.28.1 \
     # via
     #   jupyterlab
     #   scpn-phase-orchestrator (pyproject.toml)
-httpx2==2.3.0 \
-    --hash=sha256:227e7c41d95a76d4077a52640564132777215fc3394e07b66a3116c33d668fa9 \
-    --hash=sha256:6f393663bdf6dbe7fe90118e3eb5b2bd024a675cae0390ac08cec9198812d8b7
+httpx2==2.12.0 \
+    --hash=sha256:7631fe9887a8a2275f4a2540e053aa670fcc50742864a9ae7c66e609fdcf12cf \
+    --hash=sha256:cc8b6eecb8661c146b8f89a60e97456ee086e91a784ed31ac450c3a9e613dd36
     # via scpn-phase-orchestrator (pyproject.toml)
 hypothesis==6.152.4 \
     --hash=sha256:31c8f9ce619716f543e2710b489b1633c833586641d9e6c94cee03f109a5afc4 \
