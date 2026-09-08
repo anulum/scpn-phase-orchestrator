@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from jsonschema import Draft202012Validator
 
 import scpn_phase_orchestrator.reactor_semantics as rs
 import scpn_phase_orchestrator.reactor_semantics.diagnostic_plan_depth as depth
@@ -623,3 +624,22 @@ def test_reverse_frame_pair_and_clock_relation_cycle_are_refused() -> None:
         )
 
     _assert_refusal(rs.DeviceDiagnosticPlanRefusalCode.CLOCK_SEMANTICS_MISMATCH, cycle)
+
+
+@pytest.mark.parametrize("fixture_root", [HISTORICAL_FIXTURES, FIXTURES])
+def test_supported_envelope_reviews_match_published_schema(fixture_root: Path) -> None:
+    """Validate historical and current producer reviews against the public schema."""
+    review = _review(*_records(fixture_root))
+    wire = rs.device_diagnostic_plan_review_to_bytes(review)
+    schema = json.loads(
+        Path("docs/specs/device_diagnostic_plan_review.schema.json").read_text()
+    )
+    Draft202012Validator.check_schema(schema)
+    validator = Draft202012Validator(schema)
+    record = json.loads(wire)
+    validator.validate(record)
+    assert rs.device_diagnostic_plan_review_from_bytes(wire) == review
+    for version in ("1.0.0", "1.3.0", "2.0.0", None):
+        changed = deepcopy(record)
+        changed["payload"]["source_envelope_schema_version"] = version
+        assert not validator.is_valid(changed)

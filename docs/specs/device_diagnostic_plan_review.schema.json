@@ -62,7 +62,7 @@
         "source_envelope_schema": {
           "const": "scpn.reactor-diagnostic-plan-envelope.v1"
         },
-        "source_envelope_schema_version": { "const": "1.1.0" },
+        "source_envelope_schema_version": { "enum": ["1.1.0", "1.2.0"] },
         "source_envelope_sha256": { "$ref": "#/$defs/sha256" },
         "source_manifest_json": { "minLength": 2, "type": "string" },
         "source_manifest_sha256": { "$ref": "#/$defs/sha256" },
