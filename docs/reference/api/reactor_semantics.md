@@ -744,6 +744,11 @@ assessment and research-intent envelopes.
       show_root_heading: true
       show_source: false
 
+::: scpn_phase_orchestrator.reactor_semantics.atlas_ingress
+    options:
+      show_root_heading: true
+      show_source: false
+
 ::: scpn_phase_orchestrator.reactor_semantics.contracts
     options:
       show_root_heading: true

@@ -24,6 +24,7 @@ from scpn_phase_orchestrator.reactor_semantics import (
     MAX_ATLAS_JSON_DEPTH,
     AtlasIngressError,
     atlas_format_checker,
+    atlas_ingress,
     reactor_technology_atlas_from_json,
 )
 
@@ -64,7 +65,7 @@ def _refusal(data: bytes, code: str, *, limit: int | None = None) -> None:
 def test_real_atlas_is_sealed_and_does_not_expose_mutable_state() -> None:
     """Preserve exact source provenance and independent validated records."""
     data = ATLAS_PATH.read_bytes()
-    atlas = reactor_technology_atlas_from_json(data)
+    atlas = atlas_ingress.reactor_technology_atlas_from_json(data)
     assert atlas.observed_at_utc == "2026-09-04T09:50:00Z"
     assert atlas.source_sha256 == hashlib.sha256(data).hexdigest()
     record = atlas.to_record()
