@@ -1,18 +1,18 @@
 {
   "SPDX-License-Identifier": "AGPL-3.0-or-later",
   "counts": {
-    "core_engine_modules": 356,
+    "core_engine_modules": 357,
     "domainpacks": 36,
     "github_workflows": 19,
     "integration_modules": 32,
     "optional_extras": 23,
     "public_api_exports": 29,
     "public_documentation_pages": 242,
-    "python_package_modules": 755,
+    "python_package_modules": 756,
     "research_experimental_modules": 205,
     "runtime_serving_modules": 158,
     "rust_kernel_files": 97,
-    "test_files": 924
+    "test_files": 925
   },
   "documentation": {
     "public_pages": [
@@ -572,6 +572,7 @@
       "src/scpn_phase_orchestrator/oscillators/zero_crossing.py",
       "src/scpn_phase_orchestrator/reactor_semantics/__init__.py",
       "src/scpn_phase_orchestrator/reactor_semantics/abstaining_assessment.py",
+      "src/scpn_phase_orchestrator/reactor_semantics/atlas_ingress.py",
       "src/scpn_phase_orchestrator/reactor_semantics/contracts.py",
       "src/scpn_phase_orchestrator/reactor_semantics/control_intent.py",
       "src/scpn_phase_orchestrator/reactor_semantics/conventional_tokamak_physical_payload_request.py",
@@ -1631,6 +1632,7 @@
     "src/scpn_phase_orchestrator/plugins/registry/storage.py",
     "src/scpn_phase_orchestrator/reactor_semantics/__init__.py",
     "src/scpn_phase_orchestrator/reactor_semantics/abstaining_assessment.py",
+    "src/scpn_phase_orchestrator/reactor_semantics/atlas_ingress.py",
     "src/scpn_phase_orchestrator/reactor_semantics/contracts.py",
     "src/scpn_phase_orchestrator/reactor_semantics/control_intent.py",
     "src/scpn_phase_orchestrator/reactor_semantics/conventional_tokamak_physical_payload_request.py",
@@ -2580,6 +2582,7 @@
       "tests/test_queuewaves_domainpack.py",
       "tests/test_queuewaves_pipeline.py",
       "tests/test_queuewaves_server.py",
+      "tests/test_reactor_atlas_ingress.py",
       "tests/test_reactor_configuration_evidence_coverage.py",
       "tests/test_reactor_control_intent.py",
       "tests/test_reactor_diagnostic_plan_portfolio_status.py",

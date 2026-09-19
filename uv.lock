@@ -4530,6 +4530,7 @@ version = "1.4.3"
 source = { editable = "." }
 dependencies = [
     { name = "click" },
+    { name = "jsonschema" },
     { name = "numpy" },
     { name = "protobuf" },
     { name = "pyyaml" },
@@ -4565,6 +4566,7 @@ dev = [
     { name = "ruff" },
     { name = "starlette" },
     { name = "twine" },
+    { name = "types-jsonschema" },
     { name = "types-protobuf" },
     { name = "types-pyyaml" },
     { name = "uvicorn", extra = ["standard"] },
@@ -4686,6 +4688,7 @@ requires-dist = [
     { name = "jax", marker = "extra == 'full'", specifier = ">=0.4,<1.0" },
     { name = "jax", marker = "extra == 'jax'", specifier = ">=0.4,<1.0" },
     { name = "jax", marker = "extra == 'nn'", specifier = ">=0.4,<1.0" },
+    { name = "jsonschema", specifier = ">=4.26,<5.0" },
     { name = "juliacall", marker = "extra == 'julia'", specifier = ">=0.9,<0.10" },
     { name = "jupyter", marker = "extra == 'notebook'", specifier = ">=1.0,<2.0" },
     { name = "jupyter-server", marker = "extra == 'notebook'", specifier = ">=2.21.1" },
@@ -4737,6 +4740,7 @@ requires-dist = [
     { name = "streamlit", marker = "extra == 'studio'", specifier = ">=1.36,<2.0" },
     { name = "tornado", marker = "extra == 'notebook'", specifier = ">=6.5.8" },
     { name = "twine", marker = "extra == 'dev'", specifier = ">=6.2,<7.0" },
+    { name = "types-jsonschema", marker = "extra == 'dev'", specifier = "==4.26.0.20260518" },
     { name = "types-protobuf", marker = "extra == 'dev'", specifier = ">=6.30,<8.0" },
     { name = "types-pyyaml", marker = "extra == 'dev'", specifier = ">=6.0,<7.0" },
     { name = "urllib3", specifier = ">=2.7,<3.0" },
@@ -5179,6 +5183,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/e0/a8/949edebe3a82774c1ec34f637f5dd82d1cf22c25e963b7d63771083bbee5/twine-6.2.0.tar.gz", hash = "sha256:e5ed0d2fd70c9959770dce51c8f39c8945c574e18173a7b81802dab51b4b75cf", size = 172262, upload-time = "2025-09-04T15:43:17.255Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/3a/7a/882d99539b19b1490cac5d77c67338d126e4122c8276bf640e411650c830/twine-6.2.0-py3-none-any.whl", hash = "sha256:418ebf08ccda9a8caaebe414433b0ba5e25eb5e4a927667122fbe8f829f985d8", size = 42727, upload-time = "2025-09-04T15:43:15.994Z" },
+]
+
+[[package]]
+name = "types-jsonschema"
+version = "4.26.0.20260518"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "referencing" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/dd/46/73b6a5d61a61015c4248030a8cb07e5bdddb4041430fae9e585a68692578/types_jsonschema-4.26.0.20260518.tar.gz", hash = "sha256:e1dd53dc97a64f5eccdd6fa9839666e09bb500a8ebba2db6fdaf1789faea81a6", size = 16638, upload-time = "2026-05-18T06:06:44.106Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/07/d5/134f8a147dcecda10db7f60cfc6af0578a25a5c53c87b3907a64385e0184/types_jsonschema-4.26.0.20260518-py3-none-any.whl", hash = "sha256:30b30a518c7fe335df85c919fcbcc631b69c03d4a4b5b632fa916bea03065307", size = 16072, upload-time = "2026-05-18T06:06:43.264Z" },
 ]
 
 [[package]]

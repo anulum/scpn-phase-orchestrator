@@ -13,6 +13,15 @@ semantic carriers, compatible relations, and review-only regime estimates.
 """
 
 from .abstaining_assessment import build_abstaining_regime_assessment
+from .atlas_ingress import (
+    MAX_ATLAS_CONTAINER_ITEMS,
+    MAX_ATLAS_JSON_BYTES,
+    MAX_ATLAS_JSON_DEPTH,
+    AtlasIngressError,
+    ReactorTechnologyAtlas,
+    atlas_format_checker,
+    reactor_technology_atlas_from_json,
+)
 from .contracts import (
     JsonValue,
     ObservableDescriptor,
@@ -284,6 +293,7 @@ from .vocabulary import (
 
 __all__ = [
     "ACTION_OWNER",
+    "AtlasIngressError",
     "CONVENTIONAL_TOKAMAK_PHYSICAL_PAYLOAD_REQUEST_SCHEMA",
     "CONVENTIONAL_TOKAMAK_PHYSICAL_PAYLOAD_REQUEST_VERSION",
     "FRC_COMPRESSION_MIF_PHYSICAL_PAYLOAD_REQUEST_SCHEMA",
@@ -299,6 +309,9 @@ __all__ = [
     "HANDOFF_SCHEMA",
     "HANDOFF_SCHEMA_VERSION",
     "MAX_HANDOFF_JSON_BYTES",
+    "MAX_ATLAS_CONTAINER_ITEMS",
+    "MAX_ATLAS_JSON_BYTES",
+    "MAX_ATLAS_JSON_DEPTH",
     "MAX_CONVENTIONAL_TOKAMAK_PHYSICAL_PAYLOAD_REQUEST_BYTES",
     "MAX_FRC_COMPRESSION_MIF_PHYSICAL_PAYLOAD_REQUEST_BYTES",
     "MAX_DEVICE_DIAGNOSTIC_PLAN_REVIEW_BYTES",
@@ -412,6 +425,7 @@ __all__ = [
     "ReactorObservabilityProfileRegistry",
     "ReactorReferenceSlice",
     "ReactorResearchControlIntent",
+    "ReactorTechnologyAtlas",
     "ReactorSemanticContract",
     "ReactorSemanticHandoff",
     "ReactorSemanticProfile",
@@ -438,6 +452,7 @@ __all__ = [
     "ProducerEvidenceDisposition",
     "ProducerEvidenceStatePolicy",
     "build_abstaining_regime_assessment",
+    "atlas_format_checker",
     "build_phase_relation",
     "build_reactor_reference_portfolio",
     "canonical_json",
@@ -452,6 +467,7 @@ __all__ = [
     "control_intent_to_bytes",
     "control_intent_to_record",
     "producer_evidence_state_policy",
+    "reactor_technology_atlas_from_json",
     "conventional_tokamak_physical_payload_request",
     "conventional_tokamak_physical_payload_request_digest",
     "conventional_tokamak_physical_payload_request_from_bytes",
