@@ -18,13 +18,13 @@ from typing import cast
 import pytest
 from jsonschema import Draft202012Validator
 
+import scpn_phase_orchestrator.reactor_semantics.atlas_ingress as atlas_ingress
 from scpn_phase_orchestrator.reactor_semantics import (
     MAX_ATLAS_CONTAINER_ITEMS,
     MAX_ATLAS_JSON_BYTES,
     MAX_ATLAS_JSON_DEPTH,
     AtlasIngressError,
     atlas_format_checker,
-    atlas_ingress,
     reactor_technology_atlas_from_json,
 )
 
