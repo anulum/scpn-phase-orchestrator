@@ -19,7 +19,7 @@
 
 export const FEDERATION_NAME = "scpn_phase_orchestrator";
 export const PANEL_EXPOSE_KEY = "./SpoStudioPanel";
-export const REACT_VERSION = "19.2.7";
+export const REACT_VERSION = "19.3.0";
 
 export const moduleFederationConfig = {
   name: FEDERATION_NAME,
