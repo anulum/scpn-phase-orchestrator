@@ -157,6 +157,20 @@ def test_duplicate_keys_nonfinite_numbers_and_malformed_utf8_are_refused() -> No
     _refusal(b"[]", "invalid_schema")
 
 
+def test_structural_scanner_and_numeric_decoder_refuse_unsealed_documents() -> None:
+    """Exercise escaped JSON strings, stray closers and finite decimals at ingress."""
+    _refusal(b'{"escaped":"quote: \\" and slash: \\\\"}', "invalid_schema")
+    _refusal(b"]", "invalid_json")
+    _refusal(b'{"decimal":1.25}', "invalid_schema")
+
+
+def test_empty_wrong_type_and_missing_payload_are_classified() -> None:
+    """Keep malformed root input separate from schema and missing-payload refusal."""
+    _refusal(b"", "invalid_input")
+    _refusal(cast(bytes, "not bytes"), "invalid_input")
+    _refusal(b"{}", "invalid_schema")
+
+
 def test_payload_hash_and_full_schema_remain_authoritative() -> None:
     """Reject a changed seal or an otherwise sealed unknown authority field."""
     data = ATLAS_PATH.read_bytes()
