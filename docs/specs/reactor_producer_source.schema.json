@@ -1,0 +1,192 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "oneOf": [
+    {
+      "additionalProperties": false,
+      "properties": {
+        "actionable": {
+          "const": false
+        },
+        "adapter_api": {
+          "const": "scpn_phase_orchestrator.reactor_semantics.coupled_transport_handoff_from_fusion_bytes"
+        },
+        "authority": {
+          "const": "review_only"
+        },
+        "configuration": {
+          "const": "conventional_tokamak"
+        },
+        "device_project": {
+          "const": "SCPN-TOKAMAK-CORE"
+        },
+        "handoff_schema": {
+          "const": "scpn-phase-orchestrator.reactor-semantic-handoff.v1"
+        },
+        "producer_project": {
+          "const": "SCPN-FUSION-CORE"
+        },
+        "producer_registry_digest": {
+          "const": "5e5b0a7e1b1bccb13123087213d4cdd3c506a7eaf20f01dc6e842c81f8882faa"
+        },
+        "producer_registry_version": {
+          "const": "1.0.0"
+        },
+        "reactor_registry_digest": {
+          "const": "6741f25892d81b24aa621ee4f56b5e785e8323eca6ccf9d9009ce2c8e53f4912"
+        },
+        "reactor_registry_version": {
+          "const": "1.1.0"
+        },
+        "schema": {
+          "const": "scpn-phase-orchestrator.producer-bound-source-review.v1"
+        },
+        "schema_version": {
+          "const": "1.0.0"
+        },
+        "semantic_profile": {
+          "const": "spo.reactor.conventional_tokamak.coupled_transport.nonphase_review.v1"
+        },
+        "semantic_profile_registry_digest": {
+          "const": "270ed1ecbabe09cc45b078504c575ce8a77f0f6416378640140d2dc281951063"
+        },
+        "semantic_profile_registry_version": {
+          "const": "1.1.0"
+        },
+        "semantic_profile_version": {
+          "const": "1.0.0"
+        },
+        "source_json": {
+          "type": "string"
+        },
+        "source_role": {
+          "const": "verified_review_adapter"
+        },
+        "source_schema": {
+          "const": "scpn-fusion-core.torax-runtime-review-envelope.v1"
+        },
+        "source_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "actionable",
+        "adapter_api",
+        "authority",
+        "configuration",
+        "device_project",
+        "handoff_schema",
+        "producer_project",
+        "producer_registry_digest",
+        "producer_registry_version",
+        "reactor_registry_digest",
+        "reactor_registry_version",
+        "schema",
+        "schema_version",
+        "semantic_profile",
+        "semantic_profile_registry_digest",
+        "semantic_profile_registry_version",
+        "semantic_profile_version",
+        "source_json",
+        "source_role",
+        "source_schema",
+        "source_sha256"
+      ],
+      "type": "object"
+    },
+    {
+      "additionalProperties": false,
+      "properties": {
+        "actionable": {
+          "const": false
+        },
+        "adapter_api": {
+          "const": "scpn_phase_orchestrator.reactor_semantics.mif_merge_compression_handoff_from_mif_bytes"
+        },
+        "authority": {
+          "const": "review_only"
+        },
+        "configuration": {
+          "const": "frc_compression_mif"
+        },
+        "device_project": {
+          "const": "SCPN-MIF-CORE"
+        },
+        "handoff_schema": {
+          "const": "scpn-phase-orchestrator.mif-merge-compression-handoff.v1"
+        },
+        "producer_project": {
+          "const": "SCPN-MIF-CORE"
+        },
+        "producer_registry_digest": {
+          "const": "5e5b0a7e1b1bccb13123087213d4cdd3c506a7eaf20f01dc6e842c81f8882faa"
+        },
+        "producer_registry_version": {
+          "const": "1.0.0"
+        },
+        "reactor_registry_digest": {
+          "const": "6741f25892d81b24aa621ee4f56b5e785e8323eca6ccf9d9009ce2c8e53f4912"
+        },
+        "reactor_registry_version": {
+          "const": "1.1.0"
+        },
+        "schema": {
+          "const": "scpn-phase-orchestrator.producer-bound-source-review.v1"
+        },
+        "schema_version": {
+          "const": "1.0.0"
+        },
+        "semantic_profile": {
+          "const": "spo.reactor.frc_compression_mif.merge_compression_review.v1"
+        },
+        "semantic_profile_registry_digest": {
+          "const": "270ed1ecbabe09cc45b078504c575ce8a77f0f6416378640140d2dc281951063"
+        },
+        "semantic_profile_registry_version": {
+          "const": "1.1.0"
+        },
+        "semantic_profile_version": {
+          "const": "1.0.0"
+        },
+        "source_json": {
+          "type": "string"
+        },
+        "source_role": {
+          "const": "verified_review_adapter"
+        },
+        "source_schema": {
+          "const": "scpn-mif-core.merge-compression-observation.v1"
+        },
+        "source_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "actionable",
+        "adapter_api",
+        "authority",
+        "configuration",
+        "device_project",
+        "handoff_schema",
+        "producer_project",
+        "producer_registry_digest",
+        "producer_registry_version",
+        "reactor_registry_digest",
+        "reactor_registry_version",
+        "schema",
+        "schema_version",
+        "semantic_profile",
+        "semantic_profile_registry_digest",
+        "semantic_profile_registry_version",
+        "semantic_profile_version",
+        "source_json",
+        "source_role",
+        "source_schema",
+        "source_sha256"
+      ],
+      "type": "object"
+    }
+  ],
+  "title": "Registry-bound historical source review"
+}
