@@ -57,6 +57,13 @@ repos:
         pass_filenames: false
         files: (pyproject\.toml|CITATION\.cff|Cargo\.toml)
 
+      - id: capability-manifest
+        name: capability manifest consistency
+        entry: python tools/capability_manifest.py --check
+        language: system
+        pass_filenames: false
+        always_run: true
+
       - id: tracked-ignored
         name: tracked ignored file guard
         entry: python tools/check_tracked_ignored.py
