@@ -185,6 +185,27 @@ Any source, rank, configuration binding, capability status, missing-evidence
 field, or authority change alters the payload seal and requires deliberate
 review.
 
+### Validated byte ingress
+
+`reactor_technology_atlas_from_json(data)` accepts UTF-8 JSON bytes through the
+public `scpn_phase_orchestrator.reactor_semantics` API. It checks the installed
+schema, refuses duplicate keys and non-finite numbers, verifies the sealed
+payload digest, and returns an immutable `ReactorTechnologyAtlas` snapshot.
+`to_record()` gives an independent copy; `source_sha256` identifies the exact
+input bytes. Accepted input is limited to 256 KiB, 32 nested containers, and
+4096 items per array or object. A refusal raises `AtlasIngressError` with a
+stable `code` and an optional `limit`, without echoing untrusted content.
+
+`payload.observed_at` is metadata for the literature snapshot, not a physical
+measurement timestamp or validity interval. It must be an RFC 3339 date-time
+with seconds, `T`, an explicit known offset or `Z`, and at most six fractional
+digits. Impossible calendar dates, leap seconds, timezone-free values,
+`-00:00` (unknown offset), and UTC overflow are refused. The snapshot exposes
+`observed_at_utc` separately, normalized to `Z`; the sealed payload retains
+its original offset and bytes. Schema clients should use the exported
+`atlas_format_checker` with `Draft202012Validator` to apply the same date-time
+policy. This validation grants no physical-observation or CONTROL authority.
+
 ## Primary-source register
 
 1. **SRC-001:** UKAEA, [JET final DT high-fusion-power scenario](https://scientific-publications.ukaea.uk/papers/insights-of-the-jet-high-fusion-power-scenario-in-the-final-dt-campaign/) (2025).

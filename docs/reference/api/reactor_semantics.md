@@ -235,6 +235,15 @@ calibration, uncertainty, validity, quality, provenance, and observability-gate
 chain. Every result is `review_only`, `actionable=false`, and preserves
 independent machine protection as the final veto.
 
+The public `reactor_technology_atlas_from_json(bytes)` validates bounded
+UTF-8 input against the installed atlas schema and payload seal. It returns a
+`ReactorTechnologyAtlas` with exact-input SHA-256, canonical JSON, a copied
+record view, and a separate UTC-normalized literature observation time.
+`AtlasIngressError.code` classifies refusals without reflecting untrusted
+content. The [atlas reference](../reactor_technology_diagnostic_atlas.md#validated-byte-ingress)
+specifies the timestamp and resource-boundary policy; validation does not
+admit a physical signal or confer CONTROL authority.
+
 ## Producer-evidence intake priority
 
 The

@@ -23,6 +23,7 @@ anyio==4.14.2 \
     --hash=sha256:9f505dda5ac9f0c8309b5e8bd445a8c2bf7246f3ce950121e45ea15bc41d1494 \
     --hash=sha256:cfa139f3ed1a23ee8f88a145ddb5ac7605b8bbfd8592baacd7ce3d8bb4313c7f
     # via
+    #   scpn-phase-orchestrator (pyproject.toml)
     #   asyncua
     #   httpx
     #   httpx2
@@ -1333,6 +1334,7 @@ jsonschema==4.26.0 \
     --hash=sha256:0c26707e2efad8aa1bfc5b7ce170f3fccc2e4918ff85989ba9ffa9facb2be326 \
     --hash=sha256:d489f15263b8d200f8387e64b4c3a75f06629559fb73deb8fdfb525f2dab50ce
     # via
+    #   scpn-phase-orchestrator (pyproject.toml)
     #   jupyter-events
     #   jupyterlab-server
     #   nbformat
@@ -3120,6 +3122,7 @@ referencing==0.37.0 \
     #   jsonschema
     #   jsonschema-specifications
     #   jupyter-events
+    #   types-jsonschema
 requests==2.33.1 \
     --hash=sha256:18817f8c57c6263968bc123d237e3b8b08ac046f5456bd1e307ee8f4250d3517 \
     --hash=sha256:4e6d1ef462f3626a1f0a0a9c42dd93c63bad33f9f1c1937509b8c5c8718ab56a
@@ -3708,6 +3711,10 @@ truststore==0.10.4 \
 twine==6.2.0 \
     --hash=sha256:418ebf08ccda9a8caaebe414433b0ba5e25eb5e4a927667122fbe8f829f985d8 \
     --hash=sha256:e5ed0d2fd70c9959770dce51c8f39c8945c574e18173a7b81802dab51b4b75cf
+    # via scpn-phase-orchestrator (pyproject.toml)
+types-jsonschema==4.26.0.20260518 \
+    --hash=sha256:30b30a518c7fe335df85c919fcbcc631b69c03d4a4b5b632fa916bea03065307 \
+    --hash=sha256:e1dd53dc97a64f5eccdd6fa9839666e09bb500a8ebba2db6fdaf1789faea81a6
     # via scpn-phase-orchestrator (pyproject.toml)
 types-protobuf==6.32.1.20260221 \
     --hash=sha256:da7cdd947975964a93c30bfbcc2c6841ee646b318d3816b033adc2c4eb6448e4

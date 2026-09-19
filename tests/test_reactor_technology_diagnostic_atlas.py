@@ -22,6 +22,8 @@ from scpn_phase_orchestrator.reactor_semantics import (
     DEFAULT_REACTOR_OBSERVABILITY_PROFILE_REGISTRY,
     DEFAULT_REACTOR_REGISTRY,
     DEFAULT_REACTOR_SEMANTIC_PROFILE_REGISTRY,
+    atlas_format_checker,
+    reactor_technology_atlas_from_json,
 )
 
 ATLAS_PATH = Path("docs/reference/data/reactor_technology_diagnostic_atlas.v1.json")
@@ -51,6 +53,8 @@ QUALIFICATION_GAPS = (
 
 def _load(path: Path) -> dict[str, object]:
     """Load one repository-owned JSON object."""
+    if path == ATLAS_PATH:
+        return reactor_technology_atlas_from_json(path.read_bytes()).to_record()
     value = json.loads(path.read_text(encoding="utf-8"))
     assert isinstance(value, dict)
     return value
@@ -87,7 +91,7 @@ def test_atlas_matches_strict_schema_and_payload_seal() -> None:
     schema = _load(SCHEMA_PATH)
 
     Draft202012Validator.check_schema(schema)
-    Draft202012Validator(schema).validate(atlas)
+    Draft202012Validator(schema, format_checker=atlas_format_checker).validate(atlas)
     assert (
         atlas["payload_sha256"]
         == hashlib.sha256(_canonical(atlas["payload"])).hexdigest()
