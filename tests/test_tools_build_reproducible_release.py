@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import importlib.util
 import io
+import os
 import subprocess
 import sys
 import tarfile
@@ -161,6 +162,30 @@ def test_source_date_epoch_precedence_and_git_fallback(
         mod.resolve_source_date_epoch(None, environment={}, root=tmp_path)
 
 
+@pytest.mark.skipif(os.name != "posix", reason="POSIX umask has no Windows equivalent")
+def test_build_command_normalizes_child_file_mode_without_mutating_parent(
+    tmp_path: Path,
+) -> None:
+    output = tmp_path / "child-created"
+    before = os.umask(0o077)
+    try:
+        command = mod._build_command(
+            [
+                sys.executable,
+                "-c",
+                "from pathlib import Path; import sys; "
+                "Path(sys.argv[1]).write_text('wheel')",
+                str(output),
+            ]
+        )
+        subprocess.run(command, check=True)
+        assert output.stat().st_mode & 0o777 == 0o644
+        observed = os.umask(0o077)
+        assert observed == 0o077
+    finally:
+        os.umask(before)
+
+
 def test_canonical_sdist_refuses_unreadable_regular_member(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -203,6 +228,8 @@ def _fake_build_run(
     assert cwd.is_dir()
     assert env["SOURCE_DATE_EPOCH"] == "123"
     assert check is True
+    if os.name == "posix":
+        assert command[1:4] == ["-c", 'umask 022; exec "$@"', "sh"]
     output = Path(command[command.index("--outdir") + 1])
     if "--sdist" in command:
         _raw_sdist(output / "package-1.0.0.tar.gz")

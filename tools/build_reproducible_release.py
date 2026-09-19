@@ -156,6 +156,16 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def _build_command(command: Sequence[str]) -> list[str]:
+    """Run the build with a fixed POSIX creation mask without changing the caller."""
+    if os.name != "posix":
+        return list(command)
+    shell = shutil.which("sh", path=os.defpath)
+    if shell is None:
+        raise RuntimeError("POSIX shell is required for reproducible wheel modes")
+    return [shell, "-c", 'umask 022; exec "$@"', "sh", *command]
+
+
 def build_release_artifacts(
     output_directory: Path,
     *,
@@ -179,7 +189,7 @@ def build_release_artifacts(
         environment = dict(os.environ)
         environment["SOURCE_DATE_EPOCH"] = str(epoch)
         environment.setdefault("PYTHONHASHSEED", "0")
-        subprocess.run(command, cwd=root, env=environment, check=True)
+        subprocess.run(_build_command(command), cwd=root, env=environment, check=True)
 
         raw_artifacts = sorted(
             path
