@@ -1,10 +1,15 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-# © 1996–2026 Miroslav Šotek. All rights reserved.
+# Commercial license available
+# © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
+# © Code 2020–2026 Miroslav Šotek. All rights reserved.
+# ORCID: 0009-0009-3560-0851
+# Contact: www.anulum.li | protoscience@anulum.li
+# SCPN Phase Orchestrator — REUSE licensing annotations
 
 version = 1
 
 [[annotations]]
-path = ["*.md", "*.yml", "*.yaml", "*.json", "*.toml", "*.cfg", "*.txt", "*.rst"]
+path = ["*", "**/*"]
 SPDX-FileCopyrightText = "1996-2026 Miroslav Šotek"
 SPDX-License-Identifier = "AGPL-3.0-or-later"
 
@@ -21,4 +26,22 @@ SPDX-License-Identifier = "AGPL-3.0-or-later"
 [[annotations]]
 path = ["spo-kernel/**/*.rs"]
 SPDX-FileCopyrightText = "2026 Miroslav Šotek"
+SPDX-License-Identifier = "AGPL-3.0-or-later"
+
+# These files intentionally contain example SPDX declarations as test data or
+# generated output templates. Their canonical headers are AGPL-3.0-or-later;
+# override prevents the example strings from being parsed as file metadata.
+[[annotations]]
+path = [
+    "CHANGELOG.md",
+    "tests/test_generate_grpc_tool.py",
+    "tests/test_tools_check_spdx_headers.py",
+    "tests/test_tools_normalise_spdx.py",
+    "tests/test_tools_normalise_spdx_io.py",
+    "tools/capability_manifest.py",
+    "tools/generate_julia_docs.jl",
+    "tools/normalise_spdx_headers.py",
+]
+precedence = "override"
+SPDX-FileCopyrightText = "1996-2026 Miroslav Šotek"
 SPDX-License-Identifier = "AGPL-3.0-or-later"
