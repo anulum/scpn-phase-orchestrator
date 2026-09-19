@@ -1,18 +1,18 @@
 {
   "SPDX-License-Identifier": "AGPL-3.0-or-later",
   "counts": {
-    "core_engine_modules": 352,
+    "core_engine_modules": 356,
     "domainpacks": 36,
     "github_workflows": 19,
     "integration_modules": 32,
     "optional_extras": 23,
     "public_api_exports": 29,
     "public_documentation_pages": 242,
-    "python_package_modules": 751,
+    "python_package_modules": 755,
     "research_experimental_modules": 205,
     "runtime_serving_modules": 158,
     "rust_kernel_files": 97,
-    "test_files": 920
+    "test_files": 924
   },
   "documentation": {
     "public_pages": [
@@ -381,7 +381,8 @@
       "audit/*.proto",
       "runtime/cli/_quickstart_assets/*/*.yaml",
       "runtime/cli/_quickstart_assets/*/*.json",
-      "runtime/cli/_demo_domainpacks/*/*.yaml"
+      "runtime/cli/_demo_domainpacks/*/*.yaml",
+      "reactor_semantics/data/*.json"
     ]
   },
   "product_boundaries": {
@@ -585,7 +586,11 @@
       "src/scpn_phase_orchestrator/reactor_semantics/mast_phase_qualification_request.py",
       "src/scpn_phase_orchestrator/reactor_semantics/mif_merge_compression.py",
       "src/scpn_phase_orchestrator/reactor_semantics/observability_profiles.py",
+      "src/scpn_phase_orchestrator/reactor_semantics/producer_binding.py",
+      "src/scpn_phase_orchestrator/reactor_semantics/producer_bound_assessment.py",
       "src/scpn_phase_orchestrator/reactor_semantics/producer_evidence_state.py",
+      "src/scpn_phase_orchestrator/reactor_semantics/producer_registry.py",
+      "src/scpn_phase_orchestrator/reactor_semantics/producer_source.py",
       "src/scpn_phase_orchestrator/reactor_semantics/reference_portfolio.py",
       "src/scpn_phase_orchestrator/reactor_semantics/regime_assessment.py",
       "src/scpn_phase_orchestrator/reactor_semantics/regime_ontology.py",
@@ -1640,7 +1645,11 @@
     "src/scpn_phase_orchestrator/reactor_semantics/mast_phase_qualification_request.py",
     "src/scpn_phase_orchestrator/reactor_semantics/mif_merge_compression.py",
     "src/scpn_phase_orchestrator/reactor_semantics/observability_profiles.py",
+    "src/scpn_phase_orchestrator/reactor_semantics/producer_binding.py",
+    "src/scpn_phase_orchestrator/reactor_semantics/producer_bound_assessment.py",
     "src/scpn_phase_orchestrator/reactor_semantics/producer_evidence_state.py",
+    "src/scpn_phase_orchestrator/reactor_semantics/producer_registry.py",
+    "src/scpn_phase_orchestrator/reactor_semantics/producer_source.py",
     "src/scpn_phase_orchestrator/reactor_semantics/reference_portfolio.py",
     "src/scpn_phase_orchestrator/reactor_semantics/regime_assessment.py",
     "src/scpn_phase_orchestrator/reactor_semantics/regime_ontology.py",
@@ -2525,6 +2534,7 @@
       "tests/test_prediction.py",
       "tests/test_prediction_model_contracts.py",
       "tests/test_predictive_supervisor.py",
+      "tests/test_producer_bound_assessment.py",
       "tests/test_producer_evidence_state.py",
       "tests/test_product_boundaries.py",
       "tests/test_project_scripts.py",
@@ -2574,7 +2584,10 @@
       "tests/test_reactor_control_intent.py",
       "tests/test_reactor_diagnostic_plan_portfolio_status.py",
       "tests/test_reactor_observability_profiles.py",
+      "tests/test_reactor_producer_binding.py",
       "tests/test_reactor_producer_evidence_priority_register.py",
+      "tests/test_reactor_producer_registry.py",
+      "tests/test_reactor_producer_source.py",
       "tests/test_reactor_regime_assessment.py",
       "tests/test_reactor_regime_ontology.py",
       "tests/test_reactor_semantic_handoff.py",
