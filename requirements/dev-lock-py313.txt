@@ -23,9 +23,9 @@ annotated-types==0.7.0 \
 antlr4-python3-runtime==4.7 \
     --hash=sha256:df12103a041553807e510f315542d36f48e43bdb9c444c5195ae4247cde799c7
     # via rtamt
-anyio==4.13.0 \
-    --hash=sha256:08b310f9e24a9594186fd75b4f73f4a4152069e3853f1ed8bfbf58369f4ad708 \
-    --hash=sha256:334b70e641fd2221c1505b3890c69882fe4a2df910cba14d97019b90b24439dc
+anyio==4.14.2 \
+    --hash=sha256:9f505dda5ac9f0c8309b5e8bd445a8c2bf7246f3ce950121e45ea15bc41d1494 \
+    --hash=sha256:cfa139f3ed1a23ee8f88a145ddb5ac7605b8bbfd8592baacd7ce3d8bb4313c7f
     # via
     #   asyncua
     #   httpx
@@ -1035,9 +1035,9 @@ httpcore==1.0.9 \
     --hash=sha256:2d400746a40668fc9dec9810239072b40b4484b640a8c38fd654a024c7a1bf55 \
     --hash=sha256:6e34463af53fd2ab5d807f399a9b45ea31c3dfa2276f15a2c3f00afff6e176e8
     # via httpx
-httpcore2==2.3.0 \
-    --hash=sha256:07327e251560960eea8e969d92d4c6a325feb13cca39e25340731336c3baf924 \
-    --hash=sha256:477e9e334f74e5240dcac002e890580f36a57d40ff0fb14cc9655731d23b8415
+httpcore2==2.12.0 \
+    --hash=sha256:7e04258ce01013d7d615e5b910a3b27fac937d7a95038227e79652b4ba3b4ceb \
+    --hash=sha256:9293522bba0aa7c4c8e9e3f040c16575bd8868e155a77fa30c7a9085a5eae648
     # via httpx2
 httptools==0.7.1 \
     --hash=sha256:04c6c0e6c5fb0739c5b8a9eb046d298650a0ff38cf42537fc372b28dc7e4472c \
@@ -1090,9 +1090,9 @@ httpx==0.28.1 \
     # via
     #   jupyterlab
     #   scpn-phase-orchestrator (pyproject.toml)
-httpx2==2.3.0 \
-    --hash=sha256:227e7c41d95a76d4077a52640564132777215fc3394e07b66a3116c33d668fa9 \
-    --hash=sha256:6f393663bdf6dbe7fe90118e3eb5b2bd024a675cae0390ac08cec9198812d8b7
+httpx2==2.12.0 \
+    --hash=sha256:7631fe9887a8a2275f4a2540e053aa670fcc50742864a9ae7c66e609fdcf12cf \
+    --hash=sha256:cc8b6eecb8661c146b8f89a60e97456ee086e91a784ed31ac450c3a9e613dd36
     # via scpn-phase-orchestrator (pyproject.toml)
 hypothesis==6.152.4 \
     --hash=sha256:31c8f9ce619716f543e2710b489b1633c833586641d9e6c94cee03f109a5afc4 \
@@ -1303,9 +1303,9 @@ jupyter-lsp==2.3.1 \
     --hash=sha256:71b954d834e85ff3096400554f2eefaf7fe37053036f9a782b0f7c5e42dadb81 \
     --hash=sha256:fdf8a4aa7d85813976d6e29e95e6a2c8f752701f926f2715305249a3829805a6
     # via jupyterlab
-jupyter-server==2.20.0 \
-    --hash=sha256:b5778ba337d8015a3dc2b80803ecdd5ac18d3797fddf61a50ea5fb472b4ebe14 \
-    --hash=sha256:c3b67c93c471e947c18b5026f04f21614218adb706df8f48227d3ee8e0a7cdcc
+jupyter-server==2.21.1 \
+    --hash=sha256:2a6467606af7dbae2e7e31640030025969e15db6a649eae334af90415dc71dca \
+    --hash=sha256:a8960aa29263f6041283e97d4756b099fb49b767baab6371891ecb1bd40a63df
     # via
     #   jupyter-lsp
     #   jupyterlab
@@ -3401,9 +3401,9 @@ sortedcontainers==2.4.0 \
     # via
     #   asyncua
     #   hypothesis
-soupsieve==2.8.4 \
-    --hash=sha256:e121fd02e975c695e4e9e8774a5ee35d74714b59307868dcc5319ad2d9e3328e \
-    --hash=sha256:e7e6b0769c8f51ed59acab6e994b00621096cfb1c640a7509295987388fbaf65
+soupsieve==2.9.2 \
+    --hash=sha256:4a55d8cf158a9c2e587fa4922f1bbb91d68ac829e2d6f25403a85747c71daf74 \
+    --hash=sha256:8089a26fd974ca7a1f30276d3d8492ab266ab15af581642dfe8aa162e0c1c823
     # via beautifulsoup4
 stack-data==0.6.3 \
     --hash=sha256:836a778de4fec4dcd1dcd89ed8abff8a221f58308462e1c4aa2a3cf30148f0b9 \
