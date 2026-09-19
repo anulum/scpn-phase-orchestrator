@@ -82,6 +82,7 @@ class ReactorTechnologyAtlas:
 
 
 def _parse_observed_at(value: object) -> datetime:
+    """Parse a known-offset RFC3339 observation timestamp as UTC."""
     if not isinstance(value, str) or not _RFC3339_TIMESTAMP.fullmatch(value):
         raise AtlasIngressError("invalid_observed_at")
     if value.endswith("-00:00"):
@@ -150,6 +151,7 @@ def _check_structure(data: bytes) -> None:
 
 
 def _unique_object(pairs: list[tuple[str, object]]) -> dict[str, object]:
+    """Build a JSON object while refusing ambiguous duplicate keys."""
     record: dict[str, object] = {}
     for key, value in pairs:
         if key in record:
@@ -159,6 +161,7 @@ def _unique_object(pairs: list[tuple[str, object]]) -> dict[str, object]:
 
 
 def _finite_float(value: str) -> float:
+    """Parse a JSON decimal without admitting infinity or NaN."""
     parsed = float(value)
     if not math.isfinite(parsed):
         raise AtlasIngressError("non_finite_number")
@@ -166,6 +169,7 @@ def _finite_float(value: str) -> float:
 
 
 def _reject_constant(_value: str) -> float:
+    """Refuse non-standard JSON numeric constants."""
     raise AtlasIngressError("non_finite_number")
 
 
