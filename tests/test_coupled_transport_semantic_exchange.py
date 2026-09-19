@@ -17,6 +17,7 @@ from dataclasses import replace
 from typing import Any
 
 import pytest
+from jsonschema import Draft202012Validator
 
 from scpn_phase_orchestrator.reactor_semantics import (
     DEFAULT_REACTOR_REGISTRY,
@@ -33,9 +34,22 @@ from scpn_phase_orchestrator.reactor_semantics import (
     coupled_transport_handoff_from_fusion_bytes,
     handoff_from_bytes,
     handoff_to_bytes,
+    regime_assessment_to_bytes,
 )
 from scpn_phase_orchestrator.reactor_semantics import (
     coupled_transport as adapter_module,
+)
+from scpn_phase_orchestrator.reactor_semantics.producer_binding import (
+    review_historical_producer_binding,
+)
+from scpn_phase_orchestrator.reactor_semantics.producer_bound_assessment import (
+    producer_bound_assessment_from_bytes,
+    producer_bound_assessment_schema,
+    producer_bound_assessment_to_bytes,
+)
+from scpn_phase_orchestrator.reactor_semantics.producer_registry import (
+    REACTOR_PRODUCER_REGISTRY_SHA256,
+    REACTOR_PRODUCER_REGISTRY_VERSION,
 )
 
 SOURCE_REVISION = "1" * 40
@@ -309,6 +323,64 @@ def test_abstaining_builder_enforces_fusion_clock_and_validity_boundary(
     assert handoff.context.registry_digest == registry.digest
     assert assessment.reactor_registry_digest == DEFAULT_REACTOR_REGISTRY.digest
     assert assessment.actionable is False
+
+    binding = review_historical_producer_binding(
+        source_bytes,
+        expected_sha256=hashlib.sha256(source_bytes).hexdigest(),
+        configuration="conventional_tokamak",
+        handoff_schema=handoff.schema,
+        producer_registry_version=REACTOR_PRODUCER_REGISTRY_VERSION,
+        producer_registry_digest=REACTOR_PRODUCER_REGISTRY_SHA256,
+    )
+    assert binding.source_project == "SCPN-FUSION-CORE"
+    assert binding.device_project == "SCPN-TOKAMAK-CORE"
+    assert binding.source_registry_digest == registry.digest
+    assert binding.source_registry_version == registry.version
+    assert binding.source_revision == handoff.source_revision
+    assert binding.actionable is False
+
+    policy = {
+        "configuration": "conventional_tokamak",
+        "producer_registry_version": REACTOR_PRODUCER_REGISTRY_VERSION,
+        "producer_registry_digest": REACTOR_PRODUCER_REGISTRY_SHA256,
+    }
+    assessment_bytes = regime_assessment_to_bytes(assessment)
+    carrier = producer_bound_assessment_to_bytes(
+        source_bytes,
+        assessment_bytes,
+        source_handoff_schema=handoff.schema,
+        expected_source_sha256=binding.handoff_sha256,
+        expected_assessment_sha256=hashlib.sha256(assessment_bytes).hexdigest(),
+        **policy,
+    )
+    decoded = producer_bound_assessment_from_bytes(
+        carrier, expected_sha256=hashlib.sha256(carrier).hexdigest(), **policy
+    )
+    assert decoded.source_bytes == source_bytes
+    assert decoded.assessment_bytes == assessment_bytes
+    assert decoded.binding == binding
+    assert decoded.assessment == assessment
+    validator = Draft202012Validator(
+        producer_bound_assessment_schema(
+            producer_registry_version=REACTOR_PRODUCER_REGISTRY_VERSION,
+            producer_registry_digest=REACTOR_PRODUCER_REGISTRY_SHA256,
+        )
+    )
+    record = json.loads(carrier)
+    for configuration in DEFAULT_REACTOR_REGISTRY.configurations:
+        candidate_record = {**record, "configuration": configuration}
+        candidate = json.dumps(
+            candidate_record, sort_keys=True, separators=(",", ":")
+        ).encode()
+        expected = configuration == "conventional_tokamak"
+        assert validator.is_valid(candidate_record) is expected
+        if not expected:
+            with pytest.raises(ValueError):
+                producer_bound_assessment_from_bytes(
+                    candidate,
+                    expected_sha256=hashlib.sha256(candidate).hexdigest(),
+                    **{**policy, "configuration": configuration},
+                )
 
     final = handoff.observables[-1]
     shifted_timestamp = final.clock.timestamp_ns + 1
@@ -625,3 +697,43 @@ def test_adapter_defensively_copies_input_before_semantic_use() -> None:
 
     assert record == original
     assert handoff.source_revision == SOURCE_REVISION
+
+
+def test_source_review_preserves_fusion_producer_and_tokamak_device() -> None:
+    """Preserve the real coupled-transport review through the versioned source wire."""
+    from scpn_phase_orchestrator.reactor_semantics.producer_source import (
+        ProducerSourcePolicy,
+        producer_source_from_bytes,
+        producer_source_schema,
+        producer_source_to_bytes,
+    )
+
+    handoff = _decode()
+    source = handoff_to_bytes(handoff)
+    policy = ProducerSourcePolicy(
+        handoff.context.configuration,
+        handoff.source_project,
+        "verified_review_adapter",
+        handoff.source_schema,
+        handoff.schema,
+        REACTOR_PRODUCER_REGISTRY_VERSION,
+        REACTOR_PRODUCER_REGISTRY_SHA256,
+    )
+    data = producer_source_to_bytes(
+        source, expected_source_sha256=hashlib.sha256(source).hexdigest(), policy=policy
+    )
+    result = producer_source_from_bytes(
+        data, expected_sha256=hashlib.sha256(data).hexdigest(), policy=policy
+    )
+    assert result.source_bytes == source
+    assert result.binding.source_project == "SCPN-FUSION-CORE"
+    assert result.binding.device_project == "SCPN-TOKAMAK-CORE"
+    assert result.binding.actionable is False
+    Draft202012Validator(
+        producer_source_schema(
+            producer_registry_version=policy.producer_registry_version,
+            producer_registry_digest=policy.producer_registry_digest,
+        )
+    ).validate(json.loads(data))
+    with pytest.raises(ValueError):
+        handoff_from_bytes(data)

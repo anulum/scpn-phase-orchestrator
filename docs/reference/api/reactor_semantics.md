@@ -840,7 +840,162 @@ assessment and research-intent envelopes.
       show_root_heading: true
       show_source: false
 
+## Producer ownership snapshots
+
+The producer registry describes device ownership and historical review adapters;
+it does not admit observations. Version `1.0.0` has 34 configuration entries,
+23 device-owner identities (including the separate MIF owner), and no direct
+source allocations. CONTROL telemetry is not plant evidence. Historical adapter
+metadata does not grant a new simulated or physical source role.
+
+```python
+from scpn_phase_orchestrator.reactor_semantics.producer_registry import (
+    REACTOR_PRODUCER_REGISTRY_SHA256,
+    REACTOR_PRODUCER_REGISTRY_VERSION,
+    reactor_producer_identity,
+)
+
+identity = reactor_producer_identity(
+    "conventional_tokamak",
+    version=REACTOR_PRODUCER_REGISTRY_VERSION,
+    digest=REACTOR_PRODUCER_REGISTRY_SHA256,
+)
+assert identity["device_project"] == "SCPN-TOKAMAK-CORE"
+assert identity["direct_allocations"] == []
+```
+
+Production consumers must pin the required release pair in their own policy;
+importing the installed version constants, as this discovery example does,
+is not a substitute for an independently accepted consumer policy.
+The digest covers the complete canonical UTF-8 JSON document including its final
+newline. Loading checks the packaged bytes against an explicit release pin.
+The byte decoder accepts only that exact snapshot (maximum 65,536 bytes), so
+alternate formatting, duplicate members, non-finite values, additional nesting,
+changed entries and unknown releases refuse before untrusted JSON parsing.
+Returned records are detached copies; callers cannot mutate the packaged registry.
+
+The [generated registry schema](../../specs/reactor_producer_registry.schema.json)
+describes that finite snapshot's JSON content. It is not a schema for a new
+source or assessment envelope and does not verify canonical encoding, evidence,
+calibration, CONTROL admission or actuation permission. Existing U0, FUSION/MIF
+handoff and assessment wire versions are unchanged. Their legacy decoders do not
+gain new source roles from this registry.
+
+::: scpn_phase_orchestrator.reactor_semantics.producer_registry
+    options:
+      show_root_heading: true
+      show_source: false
+
+### Historical handoff ownership review
+
+`review_historical_producer_binding` consumes canonical FUSION/MIF handoff bytes
+through their existing public decoders. Callers supply the exact handoff SHA-256,
+configuration, handoff schema and independently required producer-registry pair.
+An absent historical adapter, mismatched schema, invalid legacy contract or
+changed bytes refuse. A successful result preserves the source producer separately
+from the device owner: conventional tokamak data remains FUSION-produced, not
+TOKAMAK-produced. The original source configuration-registry pin is retained;
+it is not replaced by the producer registry's configuration-registry version.
+
+This is a local read-only ownership check, not a new wire format or an assessment
+validator. It grants no direct source role, evidence qualification, classifier
+result, CONTROL admission or actuation permission.
+
+::: scpn_phase_orchestrator.reactor_semantics.producer_binding
+    options:
+      show_root_heading: true
+      show_source: false
+
+### Producer-bound historical assessment carrier
+
+The distinct wire identifier
+`scpn-phase-orchestrator.producer-bound-historical-assessment.v1` (version
+`1.0.0`) binds an existing canonical FUSION/MIF handoff and existing canonical
+regime assessment to an explicitly selected producer registry. It does not
+allocate a new direct device-source role or reinterpret either legacy wire.
+
+The outer UTF-8 JSON object has sorted keys, compact separators, ASCII escaping
+and no trailing newline. Its maximum encoded size is 8 MiB, checked before
+hashing/parsing; this is narrower than the standalone historical handoff limit.
+It is flat: `source_handoff_json` and `assessment_json` contain the original
+documents as strings, not recursively embedded carriers. Each inner document is
+decoded exactly once as its existing wire format; there is no recursive carrier
+dispatch. Duplicate keys, non-finite values, unknown keys and alternate outer
+encoding refuse. Each SHA-256 covers the complete corresponding document bytes,
+not merely a payload; the outer digest is supplied by the caller, not embedded
+as a self-referential field. Inner array order remains governed by the legacy
+canonical codecs; source semantic IDs must match the complete sorted source set.
+
+The decoder checks configuration, context, event, producer identity/revision,
+source schema, whole-source digest and source semantic IDs against the decoded
+source. Source configuration-registry identity remains historical when declared;
+assessment registries/ontology and producer-registry assignments are separately
+validated in their own scopes. They are not required to share a release number.
+Clocks/freshness, calibration, evidence qualification and downstream CONTROL
+admission still require independent consumer policy; this carrier checks lineage,
+not operational suitability. Both inner contracts remain review-only/non-actionable.
+
+| Input | Legacy handoff/assessment decoders | Producer-bound carrier decoder |
+| --- | --- | --- |
+| Original FUSION or MIF handoff | Accepted by its matching decoder | Refused as outer input; supported as exact source document |
+| Original regime assessment | Accepted by assessment decoder | Refused as outer input; supported as exact assessment document |
+| Producer-bound historical assessment | Refused | Validated with caller configuration, outer digest and producer-registry pins |
+| Unknown carrier version or undeclared device source | Refused | Refused; no latest-version fallback |
+
+The [generated outer schema](../../specs/producer_bound_historical_assessment.schema.json)
+constrains historical configuration/schema pairs from the same pinned producer
+snapshot. It does not validate embedded document content, byte encoding, digest
+custody or semantic crosslinks. Use the public byte decoder for those checks.
+No CONTROL consumer compatibility or public release acceptance is implied.
+
+::: scpn_phase_orchestrator.reactor_semantics.producer_bound_assessment
+    options:
+      show_root_heading: true
+      show_source: false
+
 ::: scpn_phase_orchestrator.reactor_semantics.vocabulary
     options:
       show_root_heading: true
       show_source: false
+
+## Registry-bound source review
+
+The explicit wire `scpn-phase-orchestrator.producer-bound-source-review.v1`
+(version `1.0.0`) preserves a complete historical FUSION or MIF handoff as an
+unchanged UTF-8 JSON string. It binds configuration, producer, device, upstream
+source schema, handoff schema, historical adapter/profile identity and the exact
+producer/configuration/profile registry snapshots. The historical handoff's own
+configuration registry remains independently validated and may be older.
+
+The caller supplies `ProducerSourcePolicy` and the complete outer SHA-256 to
+`producer_source_from_bytes`. `producer_source_to_bytes` additionally requires
+the original handoff digest. Encoding uses sorted keys, compact separators and
+ASCII escaping, without a trailing newline, with an 8 MiB outer bound. Duplicate
+keys, noncanonical bytes, changed caller bindings and unsupported wires refuse.
+An independently recomputed outer digest cannot legitimise changed ownership or
+an invalid inner handoff.
+
+The first snapshot supports only its two existing `verified_review_adapter`
+tuples. That name identifies historical review, not an allocation of simulated,
+physical or control-telemetry ingress. All direct roles remain unallocated and
+refused. A registry record or a successful source review does not qualify a
+signal, validate physics, approve an intent, issue a CONTROL decision or replace
+independent machine protection. Adapter/profile identifiers describe the existing
+mapping; they are not new physical qualification receipts.
+
+The [generated source-review schema](../../specs/reactor_producer_source.schema.json)
+uses the same finite mapping as runtime policy resolution. Its scope is outer
+structural ownership, not canonical byte validation, inner lineage or signal
+qualification. The schema and runtime both refuse unallocated direct roles.
+Legacy handoff and regime-assessment readers reject this new envelope; callers
+must explicitly select the new public decoder. Historical assessment carriers
+remain separate byte-preserving contracts, not direct-source assessment ingress.
+
+::: scpn_phase_orchestrator.reactor_semantics.producer_source
+    options:
+      members:
+        - ProducerSourcePolicy
+        - ProducerSourceReview
+        - producer_source_from_bytes
+        - producer_source_to_bytes
+        - producer_source_schema
