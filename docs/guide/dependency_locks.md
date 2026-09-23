@@ -100,10 +100,18 @@ python tools/refresh_dependency_locks.py --list
 python tools/refresh_dependency_locks.py --dry-run
 ```
 
-The tool never passes `--upgrade`, so existing pins act as resolver
-preferences and every pin that still satisfies the inputs is kept. A version
-move is made deliberately, in `pyproject.toml` or the `requirements/*.in`
-input, and then refreshed. Run the lock verification checks:
+Without `--upgrade`, existing pins act as resolver preferences and every pin
+that still satisfies the inputs is kept. `--upgrade` re-resolves every selected
+lock to the newest versions its inputs allow; neither generator records the flag
+in the lock header. A full upgrade downloads many large wheels, so point the
+resolver caches at a disk with room first:
+
+```bash
+PIP_TOOLS_CACHE_DIR=/path/with/space UV_CACHE_DIR=/path/with/space \
+  python tools/refresh_dependency_locks.py --upgrade
+```
+
+Run the lock verification checks:
 
 ```bash
 make lock-check
