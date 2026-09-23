@@ -64,12 +64,12 @@ pub fn torus_run(
                 let k_row = &knm[offset..offset + n];
 
                 if alpha_zero {
-                    let mut k_iter = k_row.chunks_exact(8);
-                    let mut re_iter = re_slice.chunks_exact(8);
-                    let mut im_iter = im_slice.chunks_exact(8);
+                    let (k_chunks, k_tail) = k_row.as_chunks::<8>();
+                    let (re_chunks, re_tail) = re_slice.as_chunks::<8>();
+                    let (im_chunks, im_tail) = im_slice.as_chunks::<8>();
                     let mut acc = 0.0;
                     for ((kc, rec), imc) in
-                        k_iter.by_ref().zip(re_iter.by_ref()).zip(im_iter.by_ref())
+                        k_chunks.iter().zip(re_chunks.iter()).zip(im_chunks.iter())
                     {
                         // sin(tj - ti) = sj*ci - cj*si
                         acc += kc[0] * (imc[0] * re_slice[i] - rec[0] * im_slice[i]);
@@ -82,12 +82,7 @@ pub fn torus_run(
                         acc += kc[7] * (imc[7] * re_slice[i] - rec[7] * im_slice[i]);
                     }
                     coupling = acc;
-                    for ((&kj, &rej), &imj) in k_iter
-                        .remainder()
-                        .iter()
-                        .zip(re_iter.remainder())
-                        .zip(im_iter.remainder())
-                    {
+                    for ((&kj, &rej), &imj) in k_tail.iter().zip(re_tail).zip(im_tail) {
                         coupling += kj * (imj * re_slice[i] - rej * im_slice[i]);
                     }
                 } else {

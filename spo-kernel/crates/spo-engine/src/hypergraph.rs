@@ -179,12 +179,12 @@ impl HypergraphStepper {
                     let ci = ct[i];
                     let si = st[i];
                     if alpha_zero {
-                        let mut k_iter = k_row.chunks_exact(8);
-                        let mut s_iter = st.chunks_exact(8);
-                        let mut c_iter = ct.chunks_exact(8);
+                        let (k_chunks, k_tail) = k_row.as_chunks::<8>();
+                        let (s_chunks, s_tail) = st.as_chunks::<8>();
+                        let (c_chunks, c_tail) = ct.as_chunks::<8>();
                         let mut acc = 0.0;
                         for ((kc, sc), cc) in
-                            k_iter.by_ref().zip(s_iter.by_ref()).zip(c_iter.by_ref())
+                            k_chunks.iter().zip(s_chunks.iter()).zip(c_chunks.iter())
                         {
                             acc += kc[0] * (sc[0] * ci - cc[0] * si)
                                 + kc[1] * (sc[1] * ci - cc[1] * si)
@@ -196,12 +196,7 @@ impl HypergraphStepper {
                                 + kc[7] * (sc[7] * ci - cc[7] * si);
                         }
                         pw = acc;
-                        for ((&kj, &sj), &cj) in k_iter
-                            .remainder()
-                            .iter()
-                            .zip(s_iter.remainder())
-                            .zip(c_iter.remainder())
-                        {
+                        for ((&kj, &sj), &cj) in k_tail.iter().zip(s_tail).zip(c_tail) {
                             pw += kj * (sj * ci - cj * si);
                         }
                     } else {

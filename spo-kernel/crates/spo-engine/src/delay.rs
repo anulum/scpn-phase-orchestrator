@@ -135,10 +135,10 @@ impl DelayedStepper {
                     let si = st[i];
                     let mut coupling = 0.0;
                     if alpha_zero {
-                        let mut k_iter = k_row.chunks_exact(8);
-                        let mut d_sc_iter = d_sc.chunks_exact(16);
+                        let (k_chunks, k_tail) = k_row.as_chunks::<8>();
+                        let (d_sc_chunks, d_sc_tail) = d_sc.as_chunks::<16>();
                         let mut acc = 0.0;
-                        for (kc, dsc8) in k_iter.by_ref().zip(d_sc_iter.by_ref()) {
+                        for (kc, dsc8) in k_chunks.iter().zip(d_sc_chunks.iter()) {
                             acc += kc[0] * (dsc8[0] * ci - dsc8[1] * si)
                                 + kc[1] * (dsc8[2] * ci - dsc8[3] * si)
                                 + kc[2] * (dsc8[4] * ci - dsc8[5] * si)
@@ -149,11 +149,7 @@ impl DelayedStepper {
                                 + kc[7] * (dsc8[14] * ci - dsc8[15] * si);
                         }
                         coupling = acc;
-                        for (&kj, dsc2) in k_iter
-                            .remainder()
-                            .iter()
-                            .zip(d_sc_iter.remainder().chunks_exact(2))
-                        {
+                        for (&kj, dsc2) in k_tail.iter().zip(d_sc_tail.as_chunks::<2>().0) {
                             coupling += kj * (dsc2[0] * ci - dsc2[1] * si);
                         }
                     } else {

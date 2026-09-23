@@ -43,7 +43,7 @@ pub fn event_phase(timestamps: &[f64]) -> (f64, f64, f64) {
     // Median instantaneous frequency → angular velocity
     let mut sorted_freq = inst_freq.clone();
     sorted_freq.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
-    let omega_median = if sorted_freq.len() % 2 == 0 {
+    let omega_median = if sorted_freq.len().is_multiple_of(2) {
         let mid = sorted_freq.len() / 2;
         (sorted_freq[mid - 1] + sorted_freq[mid]) / 2.0
     } else {
