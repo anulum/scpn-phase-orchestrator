@@ -390,13 +390,54 @@ class TestCli:
     def test_main_refreshes_selected_locks_in_order(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        calls: list[str] = []
+        calls: list[tuple[str, bool]] = []
         monkeypatch.setattr(mod, "_executable", lambda name: f"/opt/{name}")
 
-        def record(spec: object, root: Path, *, uvx: str, uv: str) -> None:
+        def record(
+            spec: object, root: Path, *, uvx: str, uv: str, upgrade: bool
+        ) -> None:
             assert (root, uvx, uv) == (mod.ROOT, "/opt/uvx", "/opt/uv")
-            calls.append(spec.name)
+            calls.append((spec.name, upgrade))
 
         monkeypatch.setattr(mod, "refresh_lock", record)
         assert mod.main(["--only", "julia-lock.txt", "--only", "dev-lock.txt"]) == 0
-        assert calls == ["dev-lock.txt", "julia-lock.txt"]
+        assert calls == [("dev-lock.txt", False), ("julia-lock.txt", False)]
+        calls.clear()
+        assert mod.main(["--upgrade", "--only", "pqc-lock.txt"]) == 0
+        assert calls == [("pqc-lock.txt", True)]
+
+
+class TestUpgrade:
+    @pytest.mark.parametrize("spec", mod.LOCKS, ids=lambda spec: spec.name)
+    def test_upgrade_adds_only_the_flag_before_the_recorded_arguments(
+        self, spec: object
+    ) -> None:
+        plain = mod.build_command(spec, uvx="uvx", uv="uv")
+        upgraded = mod.build_command(spec, uvx="uvx", uv="uv", upgrade=True)
+        index = len(plain) - len(spec.arguments)
+        assert upgraded == [*plain[:index], "--upgrade", *plain[index:]]
+
+    def test_dry_run_shows_the_upgrade_flag(
+        self, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        assert mod.main(["--dry-run", "--upgrade", "--only", "pqc-lock.txt"]) == 0
+        printed = capsys.readouterr().out.split()
+        assert printed[printed.index("pip-compile") + 1] == "--upgrade"
+
+    def test_refresh_lock_forwards_upgrade_to_the_generator(
+        self, tmp_path: Path
+    ) -> None:
+        spec = mod.select_locks(["runtime-lock.txt"])[0]
+        target, original = _copy_lock(tmp_path, spec.name)
+        prefix = mod.preserved_prefix(original, "pip-compile")
+        commands: list[list[str]] = []
+
+        def rewrite(command: list[str], root: Path) -> None:
+            commands.append(command)
+            target.write_text(original[len(prefix) :], encoding="utf-8")
+
+        mod.refresh_lock(
+            spec, tmp_path, uvx="uvx", uv="uv", upgrade=True, runner=rewrite
+        )
+        assert "--upgrade" in commands[0]
+        assert target.read_text(encoding="utf-8") == original

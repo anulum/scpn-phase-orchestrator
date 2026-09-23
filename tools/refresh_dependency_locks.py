@@ -21,9 +21,11 @@ its generated header is therefore captured before the run and restored
 byte-for-byte afterwards; the tool refuses to overwrite a lock whose regenerated
 text does not start with the generator header it expects.
 
-The tool never passes ``--upgrade``: existing pins are resolver preferences,
-so a refresh keeps every pin that still satisfies the declared inputs, and a
-version move is made in ``pyproject.toml`` or the matching ``.in`` input.
+Without ``--upgrade`` existing pins are resolver preferences, so a refresh keeps
+every pin that still satisfies the declared inputs. ``--upgrade`` re-resolves
+every lock to the newest versions its inputs allow; neither generator records
+that flag in the lock header, so the header contract is unchanged. Resolver
+caches follow ``PIP_TOOLS_CACHE_DIR`` and ``UV_CACHE_DIR`` from the environment.
 """
 
 from __future__ import annotations
@@ -316,7 +318,9 @@ def restore_prefix(prefix: str, regenerated: str, generator: Generator) -> str:
     return prefix + regenerated
 
 
-def build_command(spec: LockSpec, *, uvx: str, uv: str) -> list[str]:
+def build_command(
+    spec: LockSpec, *, uvx: str, uv: str, upgrade: bool = False
+) -> list[str]:
     """Return the argument vector that regenerates ``spec``.
 
     Parameters
@@ -327,6 +331,9 @@ def build_command(spec: LockSpec, *, uvx: str, uv: str) -> list[str]:
         Absolute path of the ``uvx`` executable.
     uv : str
         Absolute path of the ``uv`` executable.
+    upgrade : bool, optional
+        Re-resolve every package to the newest version the inputs allow
+        instead of keeping existing pins.
 
     Returns
     -------
@@ -334,8 +341,9 @@ def build_command(spec: LockSpec, *, uvx: str, uv: str) -> list[str]:
         Command suitable for :func:`subprocess.run` with ``cwd`` at the
         repository root.
     """
+    upgrade_flag = ["--upgrade"] if upgrade else []
     if spec.generator == "uv":
-        return [uv, "pip", "compile", *spec.arguments]
+        return [uv, "pip", "compile", *upgrade_flag, *spec.arguments]
     return [
         uvx,
         "--python",
@@ -343,6 +351,7 @@ def build_command(spec: LockSpec, *, uvx: str, uv: str) -> list[str]:
         "--from",
         f"pip-tools=={PIP_TOOLS_VERSION}",
         "pip-compile",
+        *upgrade_flag,
         *spec.arguments,
     ]
 
@@ -388,6 +397,7 @@ def refresh_lock(
     *,
     uvx: str,
     uv: str,
+    upgrade: bool = False,
     runner: Runner = _run,
 ) -> None:
     """Regenerate one lockfile in place and restore its preserved block.
@@ -400,6 +410,8 @@ def refresh_lock(
         Repository root; commands run with this working directory.
     uvx, uv : str
         Absolute executable paths.
+    upgrade : bool, optional
+        Pass ``--upgrade`` to the generator.
     runner : callable, optional
         Executes a command in ``root``; defaults to :func:`subprocess.run`
         with ``check=True``.
@@ -416,7 +428,7 @@ def refresh_lock(
     original = path.read_text(encoding="utf-8")
     prefix = preserved_prefix(original, spec.generator)
     try:
-        runner(build_command(spec, uvx=uvx, uv=uv), root)
+        runner(build_command(spec, uvx=uvx, uv=uv, upgrade=upgrade), root)
         regenerated = path.read_text(encoding="utf-8")
         path.write_text(
             restore_prefix(prefix, regenerated, spec.generator), encoding="utf-8"
@@ -460,6 +472,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         help="print the commands without running them",
     )
     parser.add_argument(
+        "--upgrade",
+        action="store_true",
+        help="re-resolve every package to the newest version the inputs allow",
+    )
+    parser.add_argument(
         "--list",
         action="store_true",
         help="print the generated lockfiles and their interpreters",
@@ -476,13 +493,15 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
     if args.dry_run:
         for spec in selected:
-            print(" ".join(build_command(spec, uvx="uvx", uv="uv")))
+            print(
+                " ".join(build_command(spec, uvx="uvx", uv="uv", upgrade=args.upgrade))
+            )
         return 0
     uvx = _executable("uvx")
     uv = _executable("uv")
     for spec in selected:
         print(f"refreshing {spec.output} (python {spec.python})", flush=True)
-        refresh_lock(spec, ROOT, uvx=uvx, uv=uv)
+        refresh_lock(spec, ROOT, uvx=uvx, uv=uv, upgrade=args.upgrade)
     return 0
 
 
