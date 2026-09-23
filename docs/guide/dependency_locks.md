@@ -43,10 +43,16 @@ All lockfiles are hash-pinned and committed under `requirements/`:
 - `dev-lock-py313.txt` — CI matrix profile for Python 3.13.
 - `dev-lock-windows-ffi-py311.txt` — Windows FFI CI profile (Python 3.11).
 - `dev-lock-windows-ffi-py312.txt` — Windows FFI CI profile (Python 3.12).
-- `audit-tools.txt` / `docs-tools.txt` / `ci-tools.txt` / `publish-tools.txt`
-  / `release-tools.txt` — focused tooling lock sets. Publish tooling is
-  installed with dependencies from the hashed lock because `build` and `twine`
-  need their runtime dependency graphs during isolated artifact checks.
+- `julia-lock.txt` / `mojo-lock.txt` / `studio-sdk.txt` — optional backend
+  and Studio SDK sets, constrained by `dev-lock.txt`.
+- `pqc-lock.txt` — post-quantum signing backend.
+- `audit-tools.txt` / `release-tools.txt` / `precommit-tools.txt` /
+  `publish-tools.txt` — focused tooling lock sets compiled from the matching
+  `requirements/*.in` inputs. Publish tooling is installed with dependencies
+  from the hashed lock because `build` and `twine` need their runtime
+  dependency graphs during isolated artifact checks.
+- `ci-tools.txt` / `docs-tools.txt` — hand-maintained hash-pinned lists without
+  a generator header; `make lock-refresh` does not rewrite them.
 
 ## Operational impact of lock hygiene
 
@@ -62,19 +68,42 @@ This keeps dependency posture and behavior traceability part of the same review 
 
 ## Refresh workflow
 
-Prerequisites:
+Prerequisite: [`uv`](https://docs.astral.sh/uv/) with `uvx` on `PATH`. The
+refresh does not use a `pip-compile` from the active environment.
 
-```bash
-python -m pip install --upgrade pip pip-tools
-```
-
-Regenerate the lockfiles from `pyproject.toml`:
+Regenerate every generated lockfile:
 
 ```bash
 make lock-refresh
 ```
 
-Run the lock verification checks:
+The target runs `tools/refresh_dependency_locks.py`, which:
+
+- runs each `pip-compile` lock with pip-tools 7.6.1 through
+  `uvx --python <version> --from pip-tools==7.6.1 pip-compile`, so the 3.11,
+  3.12 and 3.13 locks are resolved by the interpreter their headers name;
+- resolves the two Windows FFI locks with
+  `uv pip compile --python-platform windows`;
+- refreshes `dev-lock.txt` before the locks that use it as a `--constraint`;
+- restores the licence block that precedes a generated header, and restores
+  the committed bytes if a generator fails.
+
+pip-tools 7.5.3 fails against the pip pinned in the development locks
+(`ImportError: cannot import name 'stdlib_pkgs'`), which is why the release is
+pinned in the tool rather than taken from the environment.
+
+Refresh one lock, list the table, or print the commands without running them:
+
+```bash
+python tools/refresh_dependency_locks.py --only dev-lock-py311.txt
+python tools/refresh_dependency_locks.py --list
+python tools/refresh_dependency_locks.py --dry-run
+```
+
+The tool never passes `--upgrade`, so existing pins act as resolver
+preferences and every pin that still satisfies the inputs is kept. A version
+move is made deliberately, in `pyproject.toml` or the `requirements/*.in`
+input, and then refreshed. Run the lock verification checks:
 
 ```bash
 make lock-check
@@ -82,9 +111,12 @@ make lock-check
 
 ## Manual compile commands
 
-The `make lock-refresh` target runs the same `pip-compile` invocations recorded
-in lockfile headers. Use it by default. Manual invocation is only needed when
-debugging resolver drift.
+`tests/test_tools_refresh_dependency_locks.py` asserts that the command the tool
+runs for each lock equals the command recorded in that lock's committed header
+(pip-tools 7.6.1 also records `--no-index` next to `--no-emit-index-url`,
+although the tool does not pass it), and that every lock with a generator header
+is in the tool's table. Use the
+target by default; call a generator by hand only when debugging resolver drift.
 
 ## CI contract
 
