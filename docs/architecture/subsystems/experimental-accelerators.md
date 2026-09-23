@@ -314,7 +314,12 @@ missing shared library. Direct Mojo executable probes now reject present but
 non-executable compiled backend artefacts as optional-backend unavailability,
 and direct Mojo subprocess launch failures such as host file-format rejection
 are demoted to the same `ImportError` contract, while each bridge keeps its
-module-specific missing-file build command.
+module-specific missing-file build command. A Mojo executable the host's dynamic
+loader cannot link (exit status 127 with a glibc `ld.so` diagnostic, for example
+a Mojo 0.26 build under a Mojo 1.0 runtime) is likewise unavailable: admission
+runs each compiled executable once with empty input, caches the verdict per
+build, and the same demotion applies if a later request hits the loader
+failure.
 Nothing here is re-exported in the public API — access is always indirect
 through a production subsystem's dispatcher.
 
@@ -324,9 +329,9 @@ through a production subsystem's dispatcher.
   sandbox.
 - The polyglot backends are environment-gated — Go/Julia/Mojo require their
   toolchains; absent or unloadable Go shared libraries, partially initialised
-  Julia runtimes, non-executable Mojo backend artefacts, and host-rejected Mojo
-  executable formats fail before backend execution and fall through to Python
-  through the owning dispatcher.
+  Julia runtimes, non-executable Mojo backend artefacts, host-rejected Mojo
+  executable formats and Mojo builds the dynamic loader cannot link fail before
+  backend execution and fall through to Python through the owning dispatcher.
 - `monitor/psychedelic` is a heuristic with no cited reference; the PHA-C
   acceptance lane is a deterministic evidence-binding chain (distinct from the
   conformal twin-confidence gate, which lives in `monitor/twin_conformal_gate.py`).
