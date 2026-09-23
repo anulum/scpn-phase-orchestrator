@@ -610,11 +610,12 @@ fn compute_derivative(
                 let mut p_fs = 0.0;
                 let mut a_fs = 0.0;
                 if alpha_zero {
-                    let mut k_iter = k_row.chunks_exact(8);
-                    let mut kr_iter = kr_row.chunks_exact(8);
-                    let mut s_iter = st.chunks_exact(8);
-                    let mut c_iter = ct.chunks_exact(8);
-                    let mut r_iter = r.chunks_exact(8);
+                    let (k_chunks, k_tail) = k_row.as_chunks::<8>();
+                    let (kr_chunks, kr_tail) = kr_row.as_chunks::<8>();
+                    let (s_chunks, s_tail) = st.as_chunks::<8>();
+                    let (c_chunks, c_tail) = ct.as_chunks::<8>();
+                    let (r_chunks, r_tail) = r.as_chunks::<8>();
+                    let mut r_rows = r_chunks.iter();
                     let mut p_acc0 = 0.0;
                     let mut p_acc1 = 0.0;
                     let mut p_acc2 = 0.0;
@@ -631,13 +632,13 @@ fn compute_derivative(
                     let mut a_acc5 = 0.0;
                     let mut a_acc6 = 0.0;
                     let mut a_acc7 = 0.0;
-                    for (((kc, krc), sc), cc) in k_iter
-                        .by_ref()
-                        .zip(kr_iter.by_ref())
-                        .zip(s_iter.by_ref())
-                        .zip(c_iter.by_ref())
+                    for (((kc, krc), sc), cc) in k_chunks
+                        .iter()
+                        .zip(kr_chunks.iter())
+                        .zip(s_chunks.iter())
+                        .zip(c_chunks.iter())
                     {
-                        let rc = r_iter.next().expect("value expected");
+                        let rc = r_rows.next().expect("value expected");
                         p_acc0 += kc[0] * (sc[0] * ct[i] - cc[0] * st[i]);
                         p_acc1 += kc[1] * (sc[1] * ct[i] - cc[1] * st[i]);
                         p_acc2 += kc[2] * (sc[2] * ct[i] - cc[2] * st[i]);
@@ -657,13 +658,12 @@ fn compute_derivative(
                     }
                     p_fs = p_acc0 + p_acc1 + p_acc2 + p_acc3 + p_acc4 + p_acc5 + p_acc6 + p_acc7;
                     a_fs = a_acc0 + a_acc1 + a_acc2 + a_acc3 + a_acc4 + a_acc5 + a_acc6 + a_acc7;
-                    for ((((&kj, &krj), &sj), &cj), &rj) in k_iter
-                        .remainder()
+                    for ((((&kj, &krj), &sj), &cj), &rj) in k_tail
                         .iter()
-                        .zip(kr_iter.remainder())
-                        .zip(s_iter.remainder())
-                        .zip(c_iter.remainder())
-                        .zip(r_iter.remainder())
+                        .zip(kr_tail)
+                        .zip(s_tail)
+                        .zip(c_tail)
+                        .zip(r_tail)
                     {
                         p_fs += kj * (sj * ct[i] - cj * st[i]);
                         a_fs += krj * rj.max(0.0) * (cj * ct[i] + sj * st[i]);

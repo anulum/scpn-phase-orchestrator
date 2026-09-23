@@ -67,7 +67,7 @@ pub fn attnres_modulate(
         return Err("lambda_ must be ≥ 0".into());
     }
     // Infer d_model and d_head from w_q length.
-    if w_q.len() % n_heads != 0 {
+    if !w_q.len().is_multiple_of(n_heads) {
         return Err(format!(
             "w_q length {} not divisible by n_heads {}",
             w_q.len(),

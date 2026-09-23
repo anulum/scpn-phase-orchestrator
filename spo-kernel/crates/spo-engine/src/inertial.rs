@@ -225,10 +225,10 @@ fn compute_derivative(
         let ci = ct[i];
         let si = st[i];
         let mut acc = 0.0;
-        let mut k_iter = k_row.chunks_exact(8);
-        let mut s_iter = st.chunks_exact(8);
-        let mut c_iter = ct.chunks_exact(8);
-        for ((kc, sc), cc) in k_iter.by_ref().zip(s_iter.by_ref()).zip(c_iter.by_ref()) {
+        let (k_chunks, k_tail) = k_row.as_chunks::<8>();
+        let (s_chunks, s_tail) = st.as_chunks::<8>();
+        let (c_chunks, c_tail) = ct.as_chunks::<8>();
+        for ((kc, sc), cc) in k_chunks.iter().zip(s_chunks.iter()).zip(c_chunks.iter()) {
             acc += kc[0] * (sc[0] * ci - cc[0] * si)
                 + kc[1] * (sc[1] * ci - cc[1] * si)
                 + kc[2] * (sc[2] * ci - cc[2] * si)
@@ -239,12 +239,7 @@ fn compute_derivative(
                 + kc[7] * (sc[7] * ci - cc[7] * si);
         }
         let mut coupling = acc;
-        for ((&kj, &sj), &cj) in k_iter
-            .remainder()
-            .iter()
-            .zip(s_iter.remainder())
-            .zip(c_iter.remainder())
-        {
+        for ((&kj, &sj), &cj) in k_tail.iter().zip(s_tail).zip(c_tail) {
             coupling += kj * (sj * ci - cj * si);
         }
         *val = (power[i] + coupling - damping[i] * omega_dot[i]) / inertia[i];

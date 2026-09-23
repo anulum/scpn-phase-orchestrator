@@ -974,11 +974,11 @@ fn compute_derivative(
                         let mut c_acc5 = 0.0;
                         let mut c_acc6 = 0.0;
                         let mut c_acc7 = 0.0;
-                        let mut k_iter = k_row.chunks_exact(8);
-                        let mut s_iter = st.chunks_exact(8);
-                        let mut c_iter = ct.chunks_exact(8);
+                        let (k_chunks, k_tail) = k_row.as_chunks::<8>();
+                        let (s_chunks, s_tail) = st.as_chunks::<8>();
+                        let (c_chunks, c_tail) = ct.as_chunks::<8>();
                         for ((kc, sc), cc) in
-                            k_iter.by_ref().zip(s_iter.by_ref()).zip(c_iter.by_ref())
+                            k_chunks.iter().zip(s_chunks.iter()).zip(c_chunks.iter())
                         {
                             s_acc0 += kc[0] * sc[0];
                             s_acc1 += kc[1] * sc[1];
@@ -1001,12 +1001,7 @@ fn compute_derivative(
                             s_acc0 + s_acc1 + s_acc2 + s_acc3 + s_acc4 + s_acc5 + s_acc6 + s_acc7;
                         let mut fc =
                             c_acc0 + c_acc1 + c_acc2 + c_acc3 + c_acc4 + c_acc5 + c_acc6 + c_acc7;
-                        for ((&kj, &sj), &cj) in k_iter
-                            .remainder()
-                            .iter()
-                            .zip(s_iter.remainder())
-                            .zip(c_iter.remainder())
-                        {
+                        for ((&kj, &sj), &cj) in k_tail.iter().zip(s_tail).zip(c_tail) {
                             fs += kj * sj;
                             fc += kj * cj;
                         }
