@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- A compiled Mojo accelerator that the host's dynamic loader cannot link, such
+  as a Mojo 0.26 build started under a Mojo 1.0 runtime (`undefined symbol:
+  KGEN_CompilerRT_AsyncRT_ReleaseRuntime`), is now treated as an unavailable
+  backend. Previously it was admitted because the file existed, and its exit
+  status 127 surfaced as a `ValueError` that stopped `import
+  scpn_phase_orchestrator` or a public call instead of falling back to the next
+  backend. Admission runs each compiled Mojo executable once with empty input
+  and caches the verdict per build; on a loaded workstation one launch took
+  0.06–0.23 s.
+
 ## [1.4.3] - 2026-09-05
 
 ### Fixed

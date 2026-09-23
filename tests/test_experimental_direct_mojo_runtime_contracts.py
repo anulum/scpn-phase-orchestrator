@@ -191,3 +191,186 @@ def test_direct_mojo_runtime_runner_demotes_host_execution_error(
 
     with pytest.raises(ImportError, match="could not be executed"):
         launcher(executable, "RUN\n", runner=cast(MojoProcessRunner, fail_process))
+
+
+def _loader_failure_executable(tmp_path: Path, diagnostic: str, status: int) -> Path:
+    """Write a real executable that ends like a program ld.so cannot link."""
+    message = tmp_path / "loader_diagnostic.txt"
+    message.write_text(diagnostic + "\n", encoding="utf-8")
+    executable = tmp_path / "stale_mojo_backend"
+    executable.write_text(
+        f"#!/bin/sh\ncat >/dev/null\ncat '{message}' >&2\nexit {status}\n",
+        encoding="utf-8",
+    )
+    executable.chmod(0o700)
+    return executable
+
+
+_SYMBOL_LOOKUP_ERROR = (
+    "./mojo/order_params_mojo: symbol lookup error: ./mojo/order_params_mojo: "
+    "undefined symbol: KGEN_CompilerRT_AsyncRT_ReleaseRuntime"
+)
+
+
+@pytest.mark.parametrize(
+    "diagnostic",
+    [
+        _SYMBOL_LOOKUP_ERROR,
+        "./mojo/pac_mojo: error while loading shared libraries: "
+        "libKGENCompilerRTShared.so: cannot open shared object file: "
+        "No such file or directory",
+        "./mojo/pac_mojo: /lib/x86_64-linux-gnu/libc.so.6: "
+        "version `GLIBC_2.99' not found (required by ./mojo/pac_mojo)",
+    ],
+    ids=["undefined-symbol", "missing-shared-library", "missing-symbol-version"],
+)
+def test_direct_mojo_runtime_runner_demotes_dynamic_loader_failure(
+    tmp_path: Path, diagnostic: str
+) -> None:
+    """A program the dynamic loader cannot start is an unavailable backend."""
+    executable = _loader_failure_executable(tmp_path, diagnostic, 127)
+
+    with pytest.raises(ImportError, match="cannot be loaded by this host") as excinfo:
+        mojo_runtime.run_mojo_executable(executable, "R 1 0.0\n", runner=subprocess.run)
+    assert diagnostic in str(excinfo.value)
+
+
+@pytest.mark.parametrize(
+    ("diagnostic", "status"),
+    [
+        ("backend rejected the payload", 127),
+        (_SYMBOL_LOOKUP_ERROR, 1),
+    ],
+    ids=["status-127-without-loader-text", "loader-text-with-other-status"],
+)
+def test_direct_mojo_runtime_runner_keeps_backend_failures(
+    tmp_path: Path, diagnostic: str, status: int
+) -> None:
+    """Only the loader signature is demoted; other exits reach the bridge."""
+    executable = _loader_failure_executable(tmp_path, diagnostic, status)
+
+    process = mojo_runtime.run_mojo_executable(
+        executable, "R 1 0.0\n", runner=subprocess.run
+    )
+    assert process.returncode == status
+    assert diagnostic in process.stderr
+
+
+def test_unloadable_mojo_order_parameter_backend_is_excluded_from_probe(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """The import-time timing probe must not fail on an unloadable Mojo build."""
+    bridge = importlib.import_module(
+        "scpn_phase_orchestrator.experimental.accelerators.upde._order_params_mojo"
+    )
+    order_params = importlib.import_module("scpn_phase_orchestrator.upde.order_params")
+    executable = _loader_failure_executable(tmp_path, _SYMBOL_LOOKUP_ERROR, 127)
+    monkeypatch.setattr(bridge, "_EXE_PATH", executable)
+
+    with pytest.raises(ImportError, match="cannot be loaded by this host"):
+        bridge.order_parameter_mojo(order_params.np.array([0.0, 1.0, 2.0]))
+    probe = vars(order_params)["_order_parameter_probe_seconds"]
+    assert probe("mojo") == float("inf")
+
+
+def test_public_winding_falls_back_when_the_mojo_build_cannot_load(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """A stale Mojo build selected as active backend degrades to the reference."""
+    bridge = importlib.import_module(
+        "scpn_phase_orchestrator.experimental.accelerators.monitor._winding_mojo"
+    )
+    winding = importlib.import_module("scpn_phase_orchestrator.monitor.winding")
+    executable = _loader_failure_executable(tmp_path, _SYMBOL_LOOKUP_ERROR, 127)
+    monkeypatch.setattr(bridge, "_EXE_PATH", executable)
+    monkeypatch.setattr(winding, "ACTIVE_BACKEND", "mojo")
+    monkeypatch.setattr(winding, "AVAILABLE_BACKENDS", ["mojo", "python"])
+    monkeypatch.setattr(winding, "_BACKEND_CACHE", {})
+    history = winding.np.linspace(0.0, 20.0, 50)[:, None] * winding.np.ones((1, 3))
+
+    result = winding.winding_numbers(history)
+
+    reference = vars(winding)["_winding_reference"](history)
+    assert result.tolist() == reference.tolist()
+
+
+def test_executable_guard_rejects_a_build_the_loader_cannot_link(
+    tmp_path: Path,
+) -> None:
+    """Backend admission fails closed on a stale build before any request."""
+    executable = _loader_failure_executable(tmp_path, _SYMBOL_LOOKUP_ERROR, 127)
+
+    with pytest.raises(ImportError, match="cannot be loaded by this host"):
+        mojo_runtime.require_mojo_executable(executable)
+
+
+def _counting_executable(tmp_path: Path, body: str) -> tuple[Path, Path]:
+    """Write a real executable that records each launch in a counter file."""
+    counter = tmp_path / "launches.txt"
+    executable = tmp_path / "mojo_backend"
+    executable.write_text(
+        f"#!/bin/sh\necho launch >> '{counter}'\ncat >/dev/null\n{body}\n",
+        encoding="utf-8",
+    )
+    executable.chmod(0o700)
+    return executable, counter
+
+
+def _launches(counter: Path) -> int:
+    return len(counter.read_text(encoding="utf-8").splitlines())
+
+
+def test_executable_guard_checks_each_build_once(tmp_path: Path) -> None:
+    """A loadable build is launched once; a rebuilt artefact is checked again."""
+    executable, counter = _counting_executable(tmp_path, "exit 1")
+
+    assert mojo_runtime.require_mojo_executable(executable) == executable
+    assert mojo_runtime.require_mojo_executable(executable) == executable
+    assert _launches(counter) == 1
+
+    executable.write_text(
+        executable.read_text(encoding="utf-8") + "# rebuilt\n", encoding="utf-8"
+    )
+    assert mojo_runtime.require_mojo_executable(executable) == executable
+    assert _launches(counter) == 2
+
+
+def test_executable_guard_accepts_a_build_that_outlives_the_probe(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """A program still running at the probe deadline has been linked."""
+    executable, counter = _counting_executable(tmp_path, "sleep 5")
+    monkeypatch.setattr(mojo_runtime, "_LOADER_PROBE_TIMEOUT_SECONDS", 0.2)
+
+    assert mojo_runtime.require_mojo_executable(executable) == executable
+    assert mojo_runtime.require_mojo_executable(executable) == executable
+    assert _launches(counter) == 1
+
+
+def test_executable_guard_demotes_launch_errors(tmp_path: Path) -> None:
+    """An artefact the kernel refuses to start is an unavailable backend."""
+    executable = tmp_path / "mojo_backend"
+    executable.write_text("#!/nonexistent/interpreter\n", encoding="utf-8")
+    executable.chmod(0o700)
+
+    with pytest.raises(ImportError, match="could not be executed"):
+        mojo_runtime.require_mojo_executable(executable)
+
+
+def test_backend_resolution_excludes_a_build_the_loader_cannot_link(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Module backend resolution must not admit a stale Mojo build."""
+    bridge = importlib.import_module(
+        "scpn_phase_orchestrator.experimental.accelerators.monitor._winding_mojo"
+    )
+    winding = importlib.import_module("scpn_phase_orchestrator.monitor.winding")
+    executable = _loader_failure_executable(tmp_path, _SYMBOL_LOOKUP_ERROR, 127)
+    monkeypatch.setattr(bridge, "_EXE_PATH", executable)
+    monkeypatch.setattr(winding, "_BACKEND_CACHE", {})
+
+    active, available = vars(winding)["_resolve_backends"]()
+
+    assert "mojo" not in available
+    assert active != "mojo"
+    assert available[-1] == "python"
