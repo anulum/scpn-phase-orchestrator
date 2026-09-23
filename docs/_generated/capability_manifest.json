@@ -12,7 +12,7 @@
     "research_experimental_modules": 205,
     "runtime_serving_modules": 158,
     "rust_kernel_files": 97,
-    "test_files": 925
+    "test_files": 926
   },
   "documentation": {
     "public_pages": [
@@ -2798,6 +2798,7 @@
       "tests/test_tools_normalise_spdx.py",
       "tests/test_tools_normalise_spdx_io.py",
       "tests/test_tools_preflight.py",
+      "tests/test_tools_refresh_dependency_locks.py",
       "tests/test_topological_integration.py",
       "tests/test_topological_integration_validation.py",
       "tests/test_topology_lyapunov_workflow.py",
