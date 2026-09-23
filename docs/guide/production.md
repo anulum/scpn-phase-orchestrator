@@ -32,9 +32,10 @@ operational.
 
 The repository includes a production-ready `Dockerfile` with three stages:
 
-1. **Rust builder** (`rust:1.83-slim`) — builds spo-kernel via maturin
-2. **Python builder** (`python:3.12-slim`) — installs SPO + Rust wheel
-3. **Production** (`python:3.12-slim`) — minimal image, non-root user
+1. **Rust builder** (`python:3.13-slim`, digest-pinned, Rust 1.95.0 from a
+   checksum-verified rustup installer) — builds spo-kernel via maturin
+2. **Python builder** (`python:3.13-slim`, same digest) — installs SPO + Rust wheel
+3. **Production** (`python:3.13-slim`, same digest) — minimal image, non-root user
 
 ```bash
 docker build -t spo .
