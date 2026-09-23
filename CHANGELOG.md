@@ -7,8 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- The Rust workspace MSRV is 1.89.0. The `nalgebra` 0.35 dependency already
+  required Rust 1.89, so the declared 1.83.0 could not build the kernel.
+
 ### Fixed
 
+- The `rust-msrv` CI job installs its toolchain explicitly. The toolchain action
+  is pinned by commit, so without the input it installed stable and the job
+  never checked the declared minimum.
 - A compiled Mojo accelerator that the host's dynamic loader cannot link, such
   as a Mojo 0.26 build started under a Mojo 1.0 runtime (`undefined symbol:
   KGEN_CompilerRT_AsyncRT_ReleaseRuntime`), is now treated as an unavailable

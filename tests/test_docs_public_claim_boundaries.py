@@ -13,6 +13,8 @@ from __future__ import annotations
 import tomllib
 from pathlib import Path
 
+import yaml
+
 ROOT = Path(__file__).resolve().parents[1]
 CAPABILITIES = ROOT / "docs" / "galleries" / "capabilities.md"
 INSTALLATION = ROOT / "docs" / "getting-started" / "installation.md"
@@ -33,10 +35,28 @@ def _rust_msrv() -> str:
 
 def test_public_rust_prerequisites_match_workspace_msrv() -> None:
     msrv = _rust_msrv()
-    assert msrv == "1.83.0"
+    assert msrv == "1.89.0"
+    major_minor = ".".join(msrv.split(".")[:2])
     assert f"Rust {msrv} build" in VALIDATION.read_text(encoding="utf-8")
     for path in (INSTALLATION, RUST_GUIDE):
-        assert "Rust 1.83+" in path.read_text(encoding="utf-8")
+        assert f"Rust {major_minor}+" in path.read_text(encoding="utf-8")
+
+
+def test_msrv_job_installs_the_declared_toolchain() -> None:
+    """The commit-pinned toolchain action installs stable unless told otherwise."""
+    workflow = yaml.safe_load(
+        (ROOT / ".github" / "workflows" / "ci-security-assurance.yml").read_text(
+            encoding="utf-8"
+        )
+    )
+    steps = workflow["jobs"]["rust-msrv"]["steps"]
+    toolchain_steps = [
+        step
+        for step in steps
+        if str(step.get("uses", "")).startswith("dtolnay/rust-toolchain@")
+    ]
+    assert len(toolchain_steps) == 1
+    assert toolchain_steps[0].get("with", {}).get("toolchain") == _rust_msrv()
 
 
 def test_capability_page_separates_implementation_from_claims() -> None:

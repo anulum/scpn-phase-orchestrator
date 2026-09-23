@@ -11,7 +11,7 @@ backends, see [Backend Fallback Chain](backend_fallbacks.md).
 
 ## Prerequisites
 
-- Rust 1.83+ (workspace MSRV)
+- Rust 1.89+ (workspace MSRV; `nalgebra` 0.35 requires 1.89)
 - maturin (`pip install maturin`)
 
 ## Building
@@ -204,7 +204,7 @@ The CI pipeline runs:
 | `cargo-audit` | Linux | `cargo audit` for known vulnerabilities |
 | `cargo-deny` | Linux | RustSec advisories, banned wildcard dependencies, and source registry policy |
 | `rust-miri` | Linux nightly | Miri smoke tests for pure-Rust type/supervisor crates |
-| `rust-msrv` | Linux | Verify builds on Rust 1.83.0 |
+| `rust-msrv` | Linux | Verify builds on Rust 1.89.0 |
 
 ## Numerical Parity
 

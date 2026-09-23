@@ -95,7 +95,7 @@ on the operation, problem size, build, and host; dated local measurements live
 in the [Rust FFI guide](../guide/rust_ffi.md) and are not real-time guarantees.
 Building from source requires:
 
-- Rust 1.83+ (the workspace MSRV)
+- Rust 1.89+ (the workspace MSRV)
 - maturin (`pip install maturin`)
 
 ```bash
