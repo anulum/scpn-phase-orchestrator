@@ -36,6 +36,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   backend. Admission runs each compiled Mojo executable once with empty input
   and caches the verdict per build; on a loaded workstation one launch took
   0.06–0.23 s.
+- The IEEE C37.118 decoder now requires a frame to match its configuration
+  byte for byte. A DATA frame carrying two phasors decoded against a
+  one-phasor CONFIG-2 used to read the second phasor's real part as the
+  frequency (67.5 Hz) and ignore the rest; trailing bytes after a CONFIG-2 or
+  DATA frame were ignored; a DATA frame whose IDCODE differs from the
+  configuration's was decoded with that configuration. All three raise
+  `UnsupportedFrameError`. NaN, which PMUs send in floating-point fields when
+  they have no value, is still decoded, but `data_frames_to_frequency_series()`
+  and `C37118PhaseBridge.extract_phases()` now refuse a non-finite frequency or
+  phasor instead of passing it on as a measurement.
 - `winding_numbers()` rejects a one-dimensional or scalar history instead of
   returning an empty array; a single oscillator's two full turns gave `[]`.
   `datetime64` / `timedelta64` histories are rejected. The winding reference
