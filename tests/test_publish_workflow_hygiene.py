@@ -55,6 +55,28 @@ def test_requirements_dev_mirrors_canonical_dev_extra() -> None:
     assert mirrored == canonical | _REQUIREMENTS_DEV_EXTRAS
 
 
+def test_requirements_runtime_mirrors_canonical_dependencies() -> None:
+    """The runtime mirror carries every declared dependency and floor."""
+    project = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    canonical = set(project["project"]["dependencies"])
+    mirrored = {
+        line
+        for raw_line in (ROOT / "requirements.txt")
+        .read_text(encoding="utf-8")
+        .splitlines()
+        if (line := raw_line.strip()) and not line.startswith("#")
+    }
+
+    assert canonical <= mirrored
+    names = {line.split(">")[0].split("=")[0].split("<")[0] for line in canonical}
+    stale = {
+        line
+        for line in mirrored - canonical
+        if line.split(">")[0].split("=")[0].split("<")[0] in names
+    }
+    assert not stale
+
+
 def test_linux_maturin_wheels_use_executable_python312_interpreter() -> None:
     workflow = _publish_workflow()
     matrix = workflow["jobs"]["build-wheels"]["strategy"]["matrix"]["include"]
