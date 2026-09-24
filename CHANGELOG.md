@@ -24,6 +24,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The detector meta-analysis read an honest-audit aggregate's
+  `fraction_beats_chance` (the share of recordings that beat chance) as a
+  yes/no verdict, so any non-zero share was reported as beating chance. The
+  regenerated `docs/studies/detector_ranking_report.md` now shows
+  `critical_slowing_down_baseline` (p = 0.147) as not beating chance; the
+  verdict is p < 0.05 for every row, as the report's notes state. Committed
+  rates, p-values and lead-time counts are validated (a number in [0, 1];
+  integers with 0 ≤ observed ≤ transitions and at least one transition) instead
+  of coerced, and only a literal `true` selects the multiscale detector name.
+- The early-warning evaluation primitives refuse NaN and non-numeric scores.
+  A NaN statistic reached no surrogate and got the smallest possible p-value
+  from `surrogate_rank_pvalue`. NaN null scores never alarmed, so
+  `audit_detector` reported a NaN threshold and a 0.0 false-alarm rate.
+  Text was parsed as a score and `bool("False")` counted as an alarm.
+  `ScorePair`, `calibrate_score_threshold`, `matched_false_alarm_rate`,
+  `permutation_significance_from_alarms` and `benjamini_hochberg` now take
+  only real numbers (infinities keep their order) or actual booleans. The
+  permutation seed must be a non-negative integer (`None` drew fresh entropy
+  that the recorded seed could not reproduce). Transfer-verdict gates must be
+  booleans and domain and detector labels non-blank strings. `AuditRecord`
+  checks its provenance fields itself. A `+inf` matched threshold is written as
+  `"inf"`, so sealing it no longer fails.
 - `tools/install_spo_kernel.py` (and `make bridge`) installs the kernel it
   built into the environment it was given. `maturin develop` installs into
   `VIRTUAL_ENV` or a `.venv` above the working directory, so `--python` for

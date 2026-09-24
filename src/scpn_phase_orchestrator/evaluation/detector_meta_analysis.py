@@ -32,9 +32,11 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import statistics
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from numbers import Integral, Real
 from pathlib import Path
 from typing import Any
 
@@ -63,6 +65,10 @@ AGGREGATE_SUFFIXES: tuple[str, ...] = (
     "_results.json",
     "_demo.json",
 )
+
+
+#: Significance level below which a detector row is marked as beating chance.
+BEATS_CHANCE_ALPHA = 0.05
 
 
 @dataclass(frozen=True)
@@ -112,31 +118,84 @@ def discover_aggregate_jsons(root: Path) -> list[Path]:
     return sorted(paths)
 
 
+def _unit_interval(value: object, where: str) -> float:
+    """Return a committed rate or p-value as a float in ``[0, 1]``, else raise.
+
+    JSON parsing accepts ``NaN`` and ``Infinity``, and a value may be text or a
+    boolean; none of those is a rate or a p-value, so each is refused instead of
+    being coerced into a ranking.
+    """
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{where} must be a number, got {value!r}")
+    result = float(value)
+    if not (math.isfinite(result) and 0.0 <= result <= 1.0):
+        raise ValueError(f"{where} must be in [0, 1], got {value!r}")
+    return result
+
+
+def _count(value: object, where: str) -> int:
+    """Return a committed count as a non-negative integer, else raise."""
+    if isinstance(value, bool) or not isinstance(value, Integral) or value < 0:
+        raise ValueError(f"{where} must be a non-negative integer, got {value!r}")
+    return int(value)
+
+
 def _extract_honest_audit(
     path: Path, data: dict[str, Any], domain: str
 ) -> list[EvidenceRow]:
-    """Extract rows from an honest-audit aggregate schema."""
+    """Extract rows from an honest-audit aggregate schema.
+
+    ``fraction_beats_chance`` is the share of recordings on which the detector beat
+    chance, not a verdict, so it does not decide ``beats_chance``; the row beats
+    chance when its geometric-mean p-value is below :data:`BEATS_CHANCE_ALPHA`.
+    """
     rows: list[EvidenceRow] = []
     for key, value in data.items():
         if key in {"per_recording", "recommendation"}:
             continue
         if not isinstance(value, dict) or "mean_detection_rate" not in value:
             continue
-        p_value = float(value.get("geometric_mean_p_value", 1.0))
-        beats_chance = value.get("fraction_beats_chance")
-        if beats_chance is None:
-            beats_chance = p_value < 0.05
+        where = f"{path.name}: {key}"
+        p_value = _unit_interval(
+            value.get("geometric_mean_p_value", 1.0),
+            f"{where}.geometric_mean_p_value",
+        )
         rows.append(
             EvidenceRow(
                 domain=domain,
                 detector=key,
-                detection_rate=float(value["mean_detection_rate"]),
+                detection_rate=_unit_interval(
+                    value["mean_detection_rate"], f"{where}.mean_detection_rate"
+                ),
                 p_value=p_value,
-                beats_chance=bool(beats_chance),
+                beats_chance=p_value < BEATS_CHANCE_ALPHA,
                 source_file=path.name,
             )
         )
     return rows
+
+
+def _leadtime_row(
+    path: Path, stats: dict[str, Any], domain: str, detector: str
+) -> EvidenceRow:
+    """Return one lead-time row, validating its committed counts and p-value."""
+    where = f"{path.name}: {detector}"
+    observed = _count(stats.get("observed_led"), f"{where}.observed_led")
+    n_transitions = _count(stats.get("n_transitions"), f"{where}.n_transitions")
+    if n_transitions == 0 or observed > n_transitions:
+        raise ValueError(
+            f"{where} needs 0 <= observed_led <= n_transitions with at least one "
+            f"transition, got {observed} of {n_transitions}"
+        )
+    p_value = _unit_interval(stats.get("p_value"), f"{where}.p_value")
+    return EvidenceRow(
+        domain=domain,
+        detector=detector,
+        detection_rate=observed / n_transitions,
+        p_value=p_value,
+        beats_chance=p_value < BEATS_CHANCE_ALPHA,
+        source_file=path.name,
+    )
 
 
 def _extract_leadtime(
@@ -149,45 +208,20 @@ def _extract_leadtime(
 
     # Single-series climate aggregate stores a single flat significance record.
     if "p_value" in perm and "observed_led" in perm:
-        observed = int(perm["observed_led"])
-        n_transitions = int(perm["n_transitions"])
-        rate = observed / n_transitions if n_transitions else 0.0
-        p_value = float(perm["p_value"])
+        # Only a literal ``true`` names the multiscale variant; the string
+        # "false" is truthy.
         detector = (
             "critical_slowing_down_multiscale"
-            if data.get("multiscale")
+            if data.get("multiscale") is True
             else "critical_slowing_down"
         )
-        return [
-            EvidenceRow(
-                domain=domain,
-                detector=detector,
-                detection_rate=rate,
-                p_value=p_value,
-                beats_chance=p_value < 0.05,
-                source_file=path.name,
-            )
-        ]
+        return [_leadtime_row(path, perm, domain, detector)]
 
-    rows: list[EvidenceRow] = []
-    for detector, stats in perm.items():
-        if not isinstance(stats, dict):
-            continue
-        observed = int(stats.get("observed_led", 0))
-        n_transitions = int(stats.get("n_transitions", 0))
-        rate = observed / n_transitions if n_transitions else 0.0
-        p_value = float(stats.get("p_value", 1.0))
-        rows.append(
-            EvidenceRow(
-                domain=domain,
-                detector=detector,
-                detection_rate=rate,
-                p_value=p_value,
-                beats_chance=p_value < 0.05,
-                source_file=path.name,
-            )
-        )
-    return rows
+    return [
+        _leadtime_row(path, stats, domain, detector)
+        for detector, stats in perm.items()
+        if isinstance(stats, dict)
+    ]
 
 
 def extract_evidence(path: Path) -> list[EvidenceRow]:
@@ -208,8 +242,17 @@ def extract_evidence(path: Path) -> list[EvidenceRow]:
     list of EvidenceRow
         Normalised rows, one per detector. Empty when the payload matches no
         supported schema.
+
+    Raises
+    ------
+    ValueError
+        If a supported schema holds a rate or p-value that is not a number in
+        ``[0, 1]``, or lead-time counts that are not integers with
+        ``0 <= observed_led <= n_transitions`` and at least one transition.
     """
     data = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        return []
     domain = path.parent.name
 
     if "per_recording" in data:
@@ -532,8 +575,10 @@ def build_report(
             "``observed_led / n_transitions`` — the fraction of transitions "
             "for which the detector produced a statistically meaningful lead.",
             "* A detector is marked as *beating chance* when its reported "
-            "p-value is below 0.05; honest-audit aggregates additionally "
-            "report the committed ``fraction_beats_chance`` value.",
+            "p-value (the geometric-mean p-value for honest-audit aggregates) "
+            "is below 0.05. The committed ``fraction_beats_chance`` of "
+            "honest-audit aggregates is the share of recordings that beat "
+            "chance; it is not used as this verdict.",
             "* The CAP multichannel finding that **SNR-weighted Kuramoto did "
             "not improve** over the simple mean-R Kuramoto detector is "
             "carried forward explicitly; further investment in that exact "

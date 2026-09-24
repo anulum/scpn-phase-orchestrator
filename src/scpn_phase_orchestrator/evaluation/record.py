@@ -105,7 +105,33 @@ class AuditRecord:
     content_hash: str = field(default="", init=False)
 
     def __post_init__(self) -> None:
-        """Compute the content hash from the canonical audit payload."""
+        """Validate the provenance fields and compute the content hash.
+
+        Raises
+        ------
+        ValueError
+            If ``corpus_id``, ``captured_at``, ``framework`` or ``disclaimer`` is
+            not a non-blank string, ``audit`` is not a mapping, or only one of
+            ``signature`` and ``signing_key_id`` is given, or either is not a
+            string.
+        """
+        for name in ("corpus_id", "captured_at", "framework", "disclaimer"):
+            value = getattr(self, name)
+            if not isinstance(value, str) or not value.strip():
+                raise ValueError(
+                    f"{name} must not be empty: expected a non-blank string, "
+                    f"got {value!r}"
+                )
+        if not isinstance(self.audit, dict):
+            raise ValueError(
+                f"audit must be the verdict mapping, got {type(self.audit).__name__}"
+            )
+        if (self.signature is None) != (self.signing_key_id is None):
+            raise ValueError("signature and signing_key_id must be given together")
+        for name in ("signature", "signing_key_id"):
+            value = getattr(self, name)
+            if value is not None and not isinstance(value, str):
+                raise ValueError(f"{name} must be a string, got {value!r}")
         object.__setattr__(
             self, "content_hash", canonical_record_hash(self._canonical_payload())
         )
@@ -229,9 +255,9 @@ def seal_detector_audit(
     audit : DetectorAudit
         The audit verdict to seal.
     corpus_id : str
-        Provenance identifier of the corpus the audit ran on; must be non-empty.
+        Provenance identifier of the corpus the audit ran on; a non-blank string.
     captured_at : str
-        Caller-supplied timestamp of the audit; must be non-empty.
+        Caller-supplied timestamp of the audit; a non-blank string.
     key : str | None
         An HMAC signing key. When given, the sealed record is signed
         (:meth:`AuditRecord.sign`); when ``None`` the record is left unsigned with
@@ -245,12 +271,9 @@ def seal_detector_audit(
     Raises
     ------
     ValueError
-        If ``corpus_id`` or ``captured_at`` is empty, or ``key`` is an empty string.
+        If ``corpus_id`` or ``captured_at`` is not a non-blank string, or ``key``
+        is an empty string.
     """
-    if not corpus_id:
-        raise ValueError("corpus_id must not be empty")
-    if not captured_at:
-        raise ValueError("captured_at must not be empty")
     record = AuditRecord(
         corpus_id=corpus_id,
         captured_at=captured_at,

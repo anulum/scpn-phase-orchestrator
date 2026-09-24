@@ -42,8 +42,9 @@ References
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
-from numbers import Integral
+from numbers import Integral, Real
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -73,12 +74,72 @@ DEFAULT_PERMUTATION_SEED = 0
 
 def _positive_int(value: object, name: str) -> int:
     """Return ``value`` as a positive integer, else raise ``ValueError``."""
-    if isinstance(value, bool) or not isinstance(value, Integral):
+    if isinstance(value, bool | np.bool_) or not isinstance(value, Integral):
         raise ValueError(f"{name} must be a positive integer, got {value!r}")
     result = int(value)
     if result < 1:
         raise ValueError(f"{name} must be a positive integer, got {result}")
     return result
+
+
+def _seed(value: object) -> int:
+    """Return ``value`` as a non-negative integer seed, else raise ``ValueError``.
+
+    ``None`` is refused: it would draw fresh OS entropy, so the p-value could not
+    be reproduced from the reported seed.
+    """
+    if isinstance(value, bool | np.bool_) or not isinstance(value, Integral):
+        raise ValueError(f"seed must be a non-negative integer, got {value!r}")
+    result = int(value)
+    if result < 0:
+        raise ValueError(f"seed must be a non-negative integer, got {result}")
+    return result
+
+
+def _real(value: object, name: str) -> float:
+    """Return ``value`` as a float if it is a real number that is not NaN.
+
+    Booleans and text are refused rather than coerced to ``1.0`` or parsed.
+    """
+    if isinstance(value, bool | np.bool_) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be a real number, got {value!r}")
+    result = float(value)
+    if math.isnan(result):
+        raise ValueError(f"{name} must not be NaN")
+    return result
+
+
+def _probability(value: object, name: str) -> float:
+    """Return ``value`` as a float in ``[0, 1]``, else raise ``ValueError``."""
+    result = _real(value, name)
+    if not 0.0 <= result <= 1.0:
+        raise ValueError(f"{name} must be in [0, 1], got {result}")
+    return result
+
+
+def _ordered_scores(values: Sequence[object], name: str) -> list[float]:
+    """Return ``values`` as floats if each is a real number that is not NaN.
+
+    A NaN score compares false with everything, so it never reaches a threshold
+    and counts as a quiet segment: a NaN null lowers the reported false-alarm
+    rate and a NaN statistic ranks below every surrogate. Infinities are ordered
+    and keep their meaning (``-inf`` is the weakest possible evidence).
+    """
+    return [_real(value, f"{name}[{index}]") for index, value in enumerate(values)]
+
+
+def _alarm_flags(values: Sequence[object], name: str) -> list[bool]:
+    """Return ``values`` as booleans if each already is one, else raise.
+
+    ``bool("False")`` and ``bool(nan)`` are both ``True``; an alarm outcome is
+    only accepted as an actual boolean.
+    """
+    flags: list[bool] = []
+    for index, value in enumerate(values):
+        if not isinstance(value, bool | np.bool_):
+            raise ValueError(f"{name}[{index}] must be a boolean, got {value!r}")
+        flags.append(bool(value))
+    return flags
 
 
 def calibrate_score_threshold(
@@ -109,13 +170,13 @@ def calibrate_score_threshold(
     Raises
     ------
     ValueError
-        If ``null_scores`` is empty or ``target_fa`` is not in ``[0, 1]``.
+        If ``null_scores`` is empty or holds NaN or a value that is not a real
+        number, or ``target_fa`` is not a real number in ``[0, 1]``.
     """
     if len(null_scores) == 0:
         raise ValueError("null_scores must not be empty")
-    if not 0.0 <= target_fa <= 1.0:
-        raise ValueError(f"target_fa must be in [0, 1], got {target_fa}")
-    scores = sorted((float(score) for score in null_scores), reverse=True)
+    target_fa = _probability(target_fa, "target_fa")
+    scores = sorted(_ordered_scores(null_scores, "null_scores"), reverse=True)
     allowed = int(np.floor(target_fa * len(scores)))
     if allowed >= len(scores):
         return float(-np.inf)
@@ -144,12 +205,16 @@ def matched_false_alarm_rate(null_scores: Sequence[float], threshold: float) -> 
     Raises
     ------
     ValueError
-        If ``null_scores`` is empty.
+        If ``null_scores`` is empty or holds NaN or a value that is not a real
+        number, or ``threshold`` is NaN or not a real number. An infinite
+        threshold is accepted: ``-inf`` is the fully open gate.
     """
     if len(null_scores) == 0:
         raise ValueError("null_scores must not be empty")
-    alarms = sum(float(score) >= threshold for score in null_scores)
-    return alarms / len(null_scores)
+    gate = _real(threshold, "threshold")
+    scores = _ordered_scores(null_scores, "null_scores")
+    alarms = sum(score >= gate for score in scores)
+    return alarms / len(scores)
 
 
 @dataclass(frozen=True)
@@ -246,15 +311,18 @@ def permutation_significance_from_alarms(
     Raises
     ------
     ValueError
-        If either alarm set is empty or ``n_permutations`` is not positive.
+        If either alarm set is empty or holds a value that is not a boolean,
+        ``n_permutations`` is not a positive integer, or ``seed`` is not a
+        non-negative integer.
     """
     if len(event_alarms) == 0:
         raise ValueError("event_alarms must not be empty")
     if len(null_alarms) == 0:
         raise ValueError("null_alarms must not be empty")
     draws = _positive_int(n_permutations, "n_permutations")
-    events = [bool(alarm) for alarm in event_alarms]
-    nulls = [bool(alarm) for alarm in null_alarms]
+    seed = _seed(seed)
+    events = _alarm_flags(event_alarms, "event_alarms")
+    nulls = _alarm_flags(null_alarms, "null_alarms")
     observed = int(sum(events))
     n_events = len(events)
     pool = np.array(events + nulls, dtype=bool)
@@ -274,7 +342,7 @@ def permutation_significance_from_alarms(
         expected_alarms=n_events * pooled_rate,
         p_value=p_value,
         n_permutations=draws,
-        seed=int(seed),
+        seed=seed,
     )
 
 
@@ -302,12 +370,16 @@ def surrogate_rank_pvalue(observed: float, surrogates: Sequence[float]) -> float
     Raises
     ------
     ValueError
-        If ``surrogates`` is empty.
+        If ``surrogates`` is empty, or ``observed`` or any surrogate is NaN or not
+        a real number. A NaN statistic reaches no surrogate, so it would
+        otherwise earn the smallest possible p-value.
     """
     if len(surrogates) == 0:
         raise ValueError("surrogates must not be empty")
-    reached = int(sum(1 for score in surrogates if float(score) >= observed))
-    return (1 + reached) / (1 + len(surrogates))
+    statistic = _ordered_scores([observed], "observed")[0]
+    ensemble = _ordered_scores(surrogates, "surrogates")
+    reached = sum(1 for score in ensemble if score >= statistic)
+    return (1 + reached) / (1 + len(ensemble))
 
 
 def benjamini_hochberg(p_values: Sequence[float]) -> list[float]:
@@ -336,14 +408,11 @@ def benjamini_hochberg(p_values: Sequence[float]) -> list[float]:
     Raises
     ------
     ValueError
-        If ``p_values`` is empty or any value lies outside ``[0, 1]``.
+        If ``p_values`` is empty or any value is not a real number in ``[0, 1]``.
     """
     if len(p_values) == 0:
         raise ValueError("p_values must not be empty")
-    values = [float(p) for p in p_values]
-    for value in values:
-        if not 0.0 <= value <= 1.0:
-            raise ValueError(f"p-values must be in [0, 1], got {value}")
+    values = [_probability(p, f"p_values[{index}]") for index, p in enumerate(p_values)]
     n = len(values)
     order = sorted(range(n), key=lambda index: values[index])
     adjusted = [0.0] * n
