@@ -36,6 +36,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   backend. Admission runs each compiled Mojo executable once with empty input
   and caches the verdict per build; on a loaded workstation one launch took
   0.06–0.23 s.
+- `to_nir_graph()` rejects two populations with the same name, which produced
+  two graph nodes with one id, and a zero membrane time constant or firing
+  threshold, which leave the LIF undefined; a zero refractory period is still
+  valid. NumPy integers are accepted as numeric fields instead of being
+  rejected as "not a real number".
 - `check_openqasm3()` now reports syntax it used to absorb: a final statement
   without its `;`, a `}` with no open block, and a block left open at the end
   of the program were all reported conformant (the stray `}` only as an
