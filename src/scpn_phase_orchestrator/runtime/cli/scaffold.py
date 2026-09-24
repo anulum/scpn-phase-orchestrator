@@ -95,7 +95,8 @@ def scaffold(
     ClickException
         If the inputs are invalid or the operation fails.
     """
-    if not re.match(r"^[a-zA-Z0-9_-]+$", domain_name):
+    # fullmatch: "$" in re.match also matches before a trailing newline.
+    if not re.fullmatch(r"[a-zA-Z0-9_-]+", domain_name):
         raise click.BadParameter(
             f"domain_name must match [a-zA-Z0-9_-]+, got {domain_name!r}"
         )
@@ -103,6 +104,13 @@ def scaffold(
     if use_llm:
         if not description:
             raise click.BadParameter("--description is required with --llm")
+        if (base / "binding_spec.yaml").exists():
+            # The plain scaffold keeps an existing spec; the LLM scaffold would
+            # replace it wholesale, so refuse rather than discard a tuned pack.
+            raise click.ClickException(
+                f"{base / 'binding_spec.yaml'} already exists; choose another "
+                "domain name or move the existing pack before an LLM scaffold"
+            )
         provider: LLMScaffoldProvider
         if llm_response_json:
             provider = StaticJSONScaffoldProvider(
