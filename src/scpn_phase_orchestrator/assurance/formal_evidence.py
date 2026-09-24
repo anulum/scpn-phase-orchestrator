@@ -31,6 +31,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 
+from scpn_phase_orchestrator.assurance._hashing import canonical_record_hash
 from scpn_phase_orchestrator.assurance.evidence import (
     FORMAL_VERIFICATION,
     EvidenceItem,
@@ -71,13 +72,14 @@ def build_formal_verification_evidence(
     Raises
     ------
     ValueError
-        If the manifest is missing a required field or a field has the wrong type.
+        If the manifest is missing a required field, a field has the wrong type,
+        or ``package_hash`` does not match the manifest content.
     """
     if not isinstance(package_record, Mapping):
         raise ValueError("formal verification package manifest must be a mapping")
 
     package_name = _require_non_empty_str(package_record, "package_name")
-    _require_non_empty_str(package_record, "package_hash")
+    package_hash = _require_non_empty_str(package_record, "package_hash")
 
     properties = package_record.get("properties")
     if not isinstance(properties, Sequence) or isinstance(properties, str | bytes):
@@ -89,6 +91,18 @@ def build_formal_verification_evidence(
         raise ValueError(
             "formal verification package manifest field 'artifact_hashes' "
             "must be a mapping"
+        )
+
+    # FormalVerificationPackage seals its manifest as the canonical SHA-256 of
+    # every other field; an edited manifest must not be cited as evidence
+    # under the hash of the one that was actually exported.
+    body = {
+        key: value for key, value in package_record.items() if key != "package_hash"
+    }
+    if canonical_record_hash(body) != package_hash:
+        raise ValueError(
+            "formal verification package manifest package_hash does not match "
+            "its content"
         )
 
     summary = (
