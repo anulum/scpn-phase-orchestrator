@@ -24,6 +24,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Studio's `zeta` and `Psi` replay knobs drive the oscillators as SPO defines
+  them.
+  - Elsewhere in SPO `zeta` is the driver strength and `Psi` the target phase
+    of `zeta * sin(Psi - theta)`. The Studio replay added `zeta * Psi` to the
+    natural frequencies instead: `zeta = 2, Psi = 0` left the replay
+    unchanged (R 0.937), where the driven runtime reaches R 1.0.
+  - A positive `zeta` now sets the simulation's driver strength and a
+    constant `Psi` target. `zeta = 0` keeps the spec's own drive.
+
 - Studio deployment packages state the replay gate from the replay status.
   - The operator checklist marks "Run local replay" as blocked until the
     replay status is `completed`. The deployment package and the package
