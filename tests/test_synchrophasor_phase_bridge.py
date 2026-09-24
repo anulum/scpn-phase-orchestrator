@@ -337,3 +337,13 @@ def test_missing_values_do_not_become_phase_states(phasors, frequency_hz) -> Non
     frame = _frame(_measurement(phasors=phasors, frequency_hz=frequency_hz))
     with pytest.raises(ValueError, match="no finite phasor or frequency"):
         bridge.extract_phases(_config(pmu), [frame])
+
+
+def test_negative_polar_magnitude_is_the_same_phasor_turned_by_pi() -> None:
+    """Amplitude stays non-negative; the angle absorbs the sign."""
+    pmu = _pmu(phasor_polar=True, phasor_float=True)
+    bridge = C37118PhaseBridge.from_bindings([PhasorBinding("gen1")])
+    frame = _frame(_measurement(phasors=((-2.0, 0.25),)))
+    state = bridge.extract_phases(_config(pmu), [frame])["gen1"]
+    assert state.amplitude == pytest.approx(2.0)
+    assert state.theta == pytest.approx(0.25 + math.pi)

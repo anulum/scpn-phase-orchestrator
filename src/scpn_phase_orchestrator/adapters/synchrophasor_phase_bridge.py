@@ -165,6 +165,10 @@ def _phasor_theta_amplitude(
                 "use a rectangular or floating-point PMU stream"
             )
         magnitude, angle = first, second
+        if magnitude < 0.0:
+            # A negative polar magnitude is the same phasor turned by pi; keep
+            # the amplitude non-negative, as phase states require.
+            magnitude, angle = -magnitude, angle + math.pi
     else:
         angle = math.atan2(second, first)
         magnitude = math.hypot(first, second)
