@@ -88,13 +88,21 @@ def test_advisory_lead_is_early_when_onset_follows_the_alarm() -> None:
 
 
 def test_advisory_lead_is_not_early_when_alarm_is_late() -> None:
-    advisory = _seal(warning_sample=800, transition_onset_sample=760)
+    advisory = _seal(
+        warning_sample=800,
+        warning_time_s=800 / 238.0,
+        transition_onset_sample=760,
+    )
     assert advisory.lead_samples == 760 - 800
     assert advisory.lead_is_early is False  # a non-positive lead is reported honestly
 
 
 def test_advisory_lead_is_not_early_when_coincident() -> None:
-    advisory = _seal(warning_sample=760, transition_onset_sample=760)
+    advisory = _seal(
+        warning_sample=760,
+        warning_time_s=760 / 238.0,
+        transition_onset_sample=760,
+    )
     assert advisory.lead_samples == 0
     assert advisory.lead_is_early is False
 
@@ -187,3 +195,28 @@ def test_advise_from_stream_alarm_reads_the_monitor_and_alarm() -> None:
     assert advisory.r2_gate == monitor.r2_gate
     assert advisory.non_actuating is True
     assert advisory.lead_is_early is True
+
+
+@pytest.mark.parametrize(
+    ("overrides", "match"),
+    [
+        ({"aggregation": "mean"}, "does not fit the 'mean' aggregation"),
+        ({"most_unstable_bus": -1}, "does not fit the 'focal' aggregation"),
+        ({"growth_rate": 0.2}, "below growth_rate_threshold"),
+        ({"warning_time_s": 3.0}, "does not equal warning_sample / sampling_rate_hz"),
+    ],
+)
+def test_advisory_for_an_alarm_that_did_not_fire_is_rejected(overrides, match) -> None:
+    """The sealed advisory must carry the relations of a real stream alarm."""
+    with pytest.raises(ValueError, match=match):
+        _seal(**overrides)
+
+
+def test_growth_rate_at_the_threshold_is_an_alarm() -> None:
+    """The monitor fires at score >= threshold, so equality is an alarm."""
+    assert _seal(growth_rate=0.3).growth_rate == 0.3
+
+
+def test_whole_network_advisory_under_the_mean_aggregation() -> None:
+    advisory = _seal(aggregation="mean", most_unstable_bus=-1)
+    assert advisory.most_unstable_bus == -1

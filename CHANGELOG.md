@@ -36,6 +36,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   backend. Admission runs each compiled Mojo executable once with empty input
   and caches the verdict per build; on a loaded workstation one launch took
   0.06–0.23 s.
+- `seal_grid_early_warning_advisory()` no longer seals an advisory for an alarm
+  the stream monitor could not have raised: a growth rate below its threshold,
+  a bus index that does not fit the aggregation (`mean` reports the whole
+  network as `-1`, `focal` a bus index), or an alarm time other than
+  `warning_sample / sampling_rate_hz`. The verdict is always "advisory raised",
+  so such a record claimed an alarm that did not happen.
 - `seal_early_warning()` no longer seals an indicator marked breached whose own
   robust z-score does not cross its gate in the alarm direction, nor a
   negative `z_threshold` or a non-boolean `breached` flag. An indicator may
