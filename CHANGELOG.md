@@ -24,6 +24,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- A NaN per-node privacy spend can no longer bypass the federated DP-noise
+  budget. `epsilon_spent = NaN` made the summed spend NaN, so the check
+  `spent > epsilon` never fired and the request was admitted whatever the
+  other nodes had spent. `spo federated-dp-noise-service-preflight` accepts
+  the `NaN` literal in its JSON input and issued a review bundle for such a
+  request. Each node's spend must now be a finite non-negative real; a
+  boolean or text value is refused.
 - The plugin lifecycle, remediation and scheduler commands verify the seal
   of every review artefact they consume. Each artefact is sealed last with
   `payload[field] = _record_hash(payload)`, but the consumers checked only
