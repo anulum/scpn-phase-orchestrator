@@ -18,6 +18,7 @@ with a mocked context.
 
 from __future__ import annotations
 
+import hmac
 import logging
 import os
 import time
@@ -70,6 +71,12 @@ def _snap_to_response(snap: dict[str, Any]) -> StateResponse:
         mean_amplitude=snap.get("mean_amplitude", 0.0),
         layers=layers,
     )
+
+
+def _peer_identity(context: Any) -> str:
+    """Return the caller's transport address, or ``"local"`` without one."""
+    peer = context.peer() if context is not None and hasattr(context, "peer") else ""
+    return peer if isinstance(peer, str) and peer else "local"
 
 
 def _normalise_metadata(raw_metadata: Any) -> dict[str, str]:
@@ -194,10 +201,19 @@ class PhaseStreamServicer(PhaseOrchestratorServicer):
         if context is not None and hasattr(context, "invocation_metadata"):
             metadata = _normalise_metadata(context.invocation_metadata())
         supplied = metadata.get("x-api-key")
-        if self._api_key is not None and supplied != self._api_key:
+        if self._api_key is not None and (
+            supplied is None or not hmac.compare_digest(supplied, self._api_key)
+        ):
             code = grpc.StatusCode.UNAUTHENTICATED if grpc is not None else None
             self._abort(context, code, "Invalid or missing x-api-key")
-        identity = supplied or "anonymous"
+        # Without a configured key the metadata value is whatever the client
+        # sends, so keying the limiter on it let every request pick a fresh
+        # bucket. Rate-limit an unauthenticated caller by its peer address, as
+        # the HTTP server does with the client host.
+        if self._api_key is not None and supplied is not None:
+            identity = supplied
+        else:
+            identity = _peer_identity(context)
         if self._limiter is not None and not self._limiter.allow(identity):
             code = grpc.StatusCode.RESOURCE_EXHAUSTED if grpc is not None else None
             self._abort(context, code, "Rate limit exceeded")

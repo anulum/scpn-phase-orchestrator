@@ -24,6 +24,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The gRPC server rate-limits an unauthenticated caller by its peer address.
+  With no API key configured, it keyed the limiter on the `x-api-key`
+  metadata the client sends, so a new value on each request dodged the limit.
+  The configured key is now compared in constant time
+  (`hmac.compare_digest`), as the HTTP server already did. The token-bucket
+  limiter drops buckets that have refilled to capacity once more than 10,000
+  identities are tracked, so a stream of distinct identities cannot grow it
+  without bound.
 - Audit-chain verification no longer accepts records without `_hash` inside a
   hash-chained log. Without `SPO_AUDIT_KEY`, `ReplayEngine.verify_integrity`
   skipped every such record. A forged step appended to, or inserted into, a
