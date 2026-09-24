@@ -36,6 +36,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   backend. Admission runs each compiled Mojo executable once with empty input
   and caches the verdict per build; on a loaded workstation one launch took
   0.06–0.23 s.
+- `ActuationMapper.validate_action()` now rejects, and `map_actions()` drops,
+  an action whose `ttl_s` is not a finite, non-negative real. A NaN or infinite
+  TTL used to pass into the mapped command; through an STL projection template
+  it reached the runtime actuation gate as an accepted command with
+  `ttl_s=nan`. `STLActionProjectionTemplate` now requires every numeric field
+  to be a finite real (booleans excluded) and `value_bounds` to be a pair,
+  instead of failing later in the projector with a `TypeError` or accepting
+  `step=True`. The actuation reference no longer lists an infinite TTL as a
+  permanent override, and it now says the mapper does not expire commands: the
+  simulation runtime expires `zeta` actions only.
 - STL monitors no longer report a strict predicate as satisfied at its
   boundary. `always (R > 0.3)` over `R = [0.3, 0.5]` has robustness 0 and was
   reported `satisfied=True`; the builtin monitor, the monitoring automaton and

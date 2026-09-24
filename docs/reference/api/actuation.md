@@ -243,17 +243,23 @@ any serialisation overhead.
 
 ## TTL (time-to-live) semantics
 
-Each `ControlAction` carries a `ttl_s` field. The actuation layer
-tracks active actions and expires them after TTL elapses. This
-prevents stale control commands from persisting indefinitely if
-the supervisor stops producing updates.
+Each `ControlAction` carries a `ttl_s` field: how long, in seconds, the
+command is meant to stay in force. `ActuationMapper.validate_action()` rejects
+an action whose TTL is not a finite, non-negative real number, and
+`map_actions()` drops it, the same rule the policy validators apply; an
+infinite TTL is therefore not accepted.
 
-| TTL | Meaning |
+`ActuationMapper` only carries the TTL into each command; it does not track or
+expire commands. Expiry is the consumer's job. The bundled simulation runtime
+(`runtime/simulation.py`) expires `zeta` actions after `ttl_s` has elapsed and
+resets `zeta` to 0. Its `K` and `Psi` actions have no expiry and stay applied,
+and it records `alpha` actions without applying them.
+
+| TTL | Typical use |
 |-----|---------|
 | 1.0 s | Short-lived corrective action |
 | 5.0 s | Standard policy action |
 | 30.0 s | Sustained regime response |
-| ∞ | Permanent override (not recommended) |
 
 ## Safety invariants
 
