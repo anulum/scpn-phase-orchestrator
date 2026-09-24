@@ -38,8 +38,10 @@ Postures
 
 from __future__ import annotations
 
+import math
 from collections.abc import Mapping
 from dataclasses import dataclass, field
+from numbers import Integral, Real
 from typing import Any, cast
 
 from scpn_phase_orchestrator.binding.types import (
@@ -52,6 +54,26 @@ POSTURE_INSUFFICIENT_EVIDENCE = "insufficient_evidence"
 POSTURE_REFUSED = "refused"
 
 FITTED_STATUS = "fitted"
+
+
+def _finite_real(value: object, name: str) -> float:
+    """Return ``value`` as a finite real float, else raise ``ValueError``."""
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be a finite real number, got {value!r}")
+    number = float(value)
+    if not math.isfinite(number):
+        raise ValueError(f"{name} must be finite, got {number}")
+    return number
+
+
+def _non_negative_int(value: object, name: str) -> int:
+    """Return ``value`` as a non-negative integer, else raise ``ValueError``."""
+    if isinstance(value, bool) or not isinstance(value, Integral):
+        raise ValueError(f"{name} must be a non-negative integer, got {value!r}")
+    result = int(value)
+    if result < 0:
+        raise ValueError(f"{name} must be non-negative, got {result}")
+    return result
 
 
 @dataclass(frozen=True)
@@ -73,6 +95,23 @@ class SindyConfidencePolicy:
 
     min_r_squared: float = 0.9
     min_samples_per_parameter: float = 5.0
+
+    def __post_init__(self) -> None:
+        """Reject thresholds that would let every fit through.
+
+        A NaN threshold makes every comparison false, so no fit would ever be
+        held back; an R² threshold above one could never be met.
+        """
+        r2 = _finite_real(self.min_r_squared, "min_r_squared")
+        if r2 > 1.0:
+            raise ValueError("min_r_squared must be <= 1")
+        samples = _finite_real(
+            self.min_samples_per_parameter, "min_samples_per_parameter"
+        )
+        if samples <= 0.0:
+            raise ValueError("min_samples_per_parameter must be > 0")
+        object.__setattr__(self, "min_r_squared", r2)
+        object.__setattr__(self, "min_samples_per_parameter", samples)
 
 
 DEFAULT_SINDY_CONFIDENCE_POLICY = SindyConfidencePolicy()
@@ -174,6 +213,14 @@ def classify_phase_sindy_confidence(
             reasons=(f"no phase-SINDy fit was performed (status={status!r})",),
         )
 
+    sample_count = _non_negative_int(sample_count, "sample_count")
+    node_count = _non_negative_int(node_count, "node_count")
+    active_terms = _non_negative_int(active_terms, "active_terms")
+    total_terms = _non_negative_int(total_terms, "total_terms")
+    if active_terms > total_terms:
+        raise ValueError(
+            f"active_terms {active_terms} exceeds total_terms {total_terms}"
+        )
     samples_per_parameter = (
         None if node_count <= 0 else float(sample_count) / float(node_count)
     )
@@ -183,6 +230,15 @@ def classify_phase_sindy_confidence(
         reasons.append("the fit selected no active terms above the sparsity threshold")
     if r_squared is None:
         reasons.append("the fit reported no R² to judge explanatory power")
+    elif (
+        isinstance(r_squared, bool)
+        or not isinstance(r_squared, Real)
+        or not math.isfinite(r_squared)
+        or r_squared > 1.0
+    ):
+        # NaN fails every comparison, so without this branch a failed fit
+        # reporting NaN would pass the R² gate; R² cannot exceed one.
+        reasons.append(f"the fit reported an invalid R² ({r_squared!r})")
     elif r_squared < policy.min_r_squared:
         reasons.append(
             f"R² {r_squared:.4f} is below the discovery threshold "
@@ -251,14 +307,17 @@ def classify_phase_sindy_block(
     """
     status = str(block.get("status", ""))
     raw_r_squared = block.get("r_squared")
-    r_squared = None if raw_r_squared is None else float(raw_r_squared)
+    if raw_r_squared is not None and (
+        isinstance(raw_r_squared, bool) or not isinstance(raw_r_squared, Real)
+    ):
+        raise ValueError(f"r_squared must be a real number, got {raw_r_squared!r}")
     return classify_phase_sindy_confidence(
         status=status,
-        r_squared=r_squared,
-        sample_count=int(block.get("sample_count", 0)),
-        node_count=int(block.get("node_count", 0)),
-        active_terms=int(block.get("active_terms", 0)),
-        total_terms=int(block.get("total_terms", 0)),
-        sparsity=float(block.get("sparsity", 1.0)),
+        r_squared=None if raw_r_squared is None else float(raw_r_squared),
+        sample_count=cast(int, block.get("sample_count", 0)),
+        node_count=cast(int, block.get("node_count", 0)),
+        active_terms=cast(int, block.get("active_terms", 0)),
+        total_terms=cast(int, block.get("total_terms", 0)),
+        sparsity=_finite_real(block.get("sparsity", 1.0), "sparsity"),
         policy=policy,
     )
