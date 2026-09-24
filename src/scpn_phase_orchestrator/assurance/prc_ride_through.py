@@ -15,6 +15,12 @@ AC-connected wind IBRs and all other IBRs, plus the Attachment 2 frequency
 ride-through table, then records only technical screening findings. It does not
 assert conformance, evaluate real/reactive-current performance, apply hardware
 limitation exemptions, or replace qualified assessor review.
+
+The voltage tables apply only while frequency is inside the frequency "must
+Ride-through zone" (Attachment 1, note 6), that is ``57.0 <= f <= 61.8`` Hz.
+Voltage samples taken while frequency is outside that zone are therefore not
+screened against Tables 1 and 2; the frequency finding for the same interval
+already records the excursion.
 """
 
 from __future__ import annotations
@@ -85,6 +91,9 @@ PRC_RIDE_THROUGH_DISCLAIMER = (
 
 _VOLTAGE_WINDOW_S = 10.0
 _FREQUENCY_WINDOW_S = 600.0
+#: Frequency "must Ride-through zone" of Attachment 2 (Hz); the voltage tables
+#: of Attachment 1 apply only inside it (Attachment 1, note 6).
+_FREQUENCY_MUST_RIDE_THROUGH_HZ = (57.0, 61.8)
 
 
 @dataclass(frozen=True, slots=True)
@@ -322,10 +331,15 @@ def screen_ride_through_samples(
     frequency = _as_real_array(frequency_hz, "frequency_hz")
     _validate_shapes(times, voltage, frequency)
 
-    voltage_findings = _collect_channel_findings(
-        "voltage",
-        _segments(times, voltage, lambda value: _voltage_band(value, category)),
+    low_hz, high_hz = _FREQUENCY_MUST_RIDE_THROUGH_HZ
+    voltage_segments = tuple(
+        segment
+        for index, segment in enumerate(
+            _segments(times, voltage, lambda value: _voltage_band(value, category))
+        )
+        if low_hz <= frequency[index] <= high_hz
     )
+    voltage_findings = _collect_channel_findings("voltage", voltage_segments)
     frequency_findings = _collect_channel_findings(
         "frequency",
         _segments(times, frequency, _frequency_band),
