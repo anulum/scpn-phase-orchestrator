@@ -80,5 +80,5 @@ USER spo
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
     CMD ["python", "-c", "import urllib.request as u; r=u.urlopen('http://127.0.0.1:8000/api/health'); assert b'healthy' in r.read()"]
 
-ENTRYPOINT ["python", "-c", "from scpn_phase_orchestrator.cli import main; main()"]
+ENTRYPOINT ["python", "-c", "from scpn_phase_orchestrator.runtime.cli import main; main()"]
 CMD ["--help"]
