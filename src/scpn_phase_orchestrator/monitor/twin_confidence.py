@@ -228,8 +228,8 @@ class TwinConfidenceScore:
     Attributes
     ----------
     confidence : float
-        Calibrated confidence in ``[0, 1]``; ``1.0`` while the twin tracks
-        inside its nominal band, decaying as it diverges.
+        Calibrated confidence in ``[0, 1]``; ``1.0`` while both divergences
+        sit at or below their nominal means, decaying as the twin drifts.
     status : str
         Operator status: ``"healthy"``, ``"warning"``, or ``"critical"``.
     phase_js_divergence, order_wasserstein : float

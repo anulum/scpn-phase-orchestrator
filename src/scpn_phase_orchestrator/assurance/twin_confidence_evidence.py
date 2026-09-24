@@ -28,10 +28,19 @@ the assurance package stays free of the monitor's numeric import chain and can
 attest a score persisted to disk. It restates the score verbatim and never
 fabricates a confidence value — a record missing a required field or carrying a
 confidence outside ``[0, 1]`` is rejected rather than coerced.
+
+The record is not trusted as sent. Its ``status`` must be one of the scorer's
+three labels, and its ``score_hash`` must equal the SHA-256 of the record's
+canonical JSON without that field, the digest the scorer computes. A record
+edited after scoring (a critical tick relabelled ``"healthy"``, say) no longer
+matches its hash and is rejected. The hash detects edits, not forgery: anyone
+able to rewrite the record can recompute it.
 """
 
 from __future__ import annotations
 
+import hashlib
+import json
 from collections.abc import Mapping
 from math import isfinite
 
@@ -40,6 +49,23 @@ from scpn_phase_orchestrator.assurance.evidence import (
     EvidenceItem,
     build_evidence_item,
 )
+
+_STATUSES = frozenset({"healthy", "warning", "critical"})
+
+
+def _require_matching_hash(record: Mapping[str, object]) -> None:
+    """Require ``score_hash`` to be the scorer's digest of the rest of the record."""
+    claimed = _require_non_empty_str(record, "score_hash")
+    content = {key: value for key, value in record.items() if key != "score_hash"}
+    try:
+        serialised = json.dumps(content, sort_keys=True, separators=(",", ":"))
+    except (TypeError, ValueError) as exc:
+        raise ValueError("twin-confidence score must be JSON-serialisable") from exc
+    if hashlib.sha256(serialised.encode("utf-8")).hexdigest() != claimed:
+        raise ValueError(
+            "twin-confidence score_hash does not match the record; the record was "
+            "changed after scoring"
+        )
 
 
 def _require_non_empty_str(record: Mapping[str, object], key: str) -> str:
@@ -91,8 +117,9 @@ def build_twin_confidence_evidence(
     ----------
     score_record:
         A JSON-safe ``TwinConfidenceScore.to_audit_record()`` mapping. It must
-        carry a ``confidence`` in ``[0, 1]``, a non-empty ``status``, and a
-        non-empty ``score_hash``.
+        carry a ``confidence`` in ``[0, 1]``, a ``status`` of ``"healthy"``,
+        ``"warning"`` or ``"critical"``, and the ``score_hash`` the scorer
+        computed over the rest of the record.
 
     Returns
     -------
@@ -103,15 +130,20 @@ def build_twin_confidence_evidence(
     Raises
     ------
     ValueError
-        If the score is not a mapping, a required field is missing, or a field has
-        the wrong type or an out-of-range value.
+        If the score is not a mapping, a required field is missing, a field has
+        the wrong type or an out-of-range value, or the hash does not match.
     """
     if not isinstance(score_record, Mapping):
         raise ValueError("twin-confidence score must be a mapping")
 
     confidence = _require_unit_confidence(score_record)
     status = _require_non_empty_str(score_record, "status")
-    _require_non_empty_str(score_record, "score_hash")
+    if status not in _STATUSES:
+        raise ValueError(
+            f"twin-confidence score field 'status' must be one of "
+            f"{sorted(_STATUSES)}, got {status!r}"
+        )
+    _require_matching_hash(score_record)
 
     summary = (
         f"Twin-confidence score {status!r} at calibrated confidence {confidence:.3f}"
