@@ -34,6 +34,23 @@ from scpn_phase_orchestrator.runtime.cli._payloads import (
 from scpn_phase_orchestrator.runtime.observability import RuntimeObservability
 
 
+def _require_sealed(
+    record: dict[str, object], hash_field: str, *, artifact: str
+) -> None:
+    """Refuse an artefact whose own hash does not cover its content.
+
+    The scheduler writes ``<hash_field> = _record_hash(record without it)``;
+    the bundle copies that hash as linkage and counts the rows, so an edited
+    row under a stale hash would be bundled as if it were the sealed one.
+    """
+    body = {key: value for key, value in record.items() if key != hash_field}
+    if _record_hash(body) != record.get(hash_field):
+        raise click.ClickException(
+            "digital-twin observability bundle schema mismatch: "
+            f"{artifact} {hash_field} does not match its content"
+        )
+
+
 @main.command("digital-twin-observability-bundle")
 @click.argument(
     "operator_evidence_json",
@@ -155,12 +172,21 @@ def digital_twin_observability_bundle(
                 blocked_count += 1
             if state == "completed":
                 completed_count += 1
-            if bool(row.get("overdue", False)):
+            overdue = row.get("overdue", False)
+            if not isinstance(overdue, bool):
+                # bool("false") is True: a text flag would count as overdue.
+                raise click.ClickException(
+                    "digital-twin observability bundle schema mismatch: "
+                    "scheduler dashboard row overdue must be a boolean, "
+                    f"got {overdue!r}"
+                )
+            if overdue:
                 overdue_count += 1
         replay_linkage["scheduler_row_count"] = len(rows)
         replay_linkage["scheduler_overdue_count"] = overdue_count
         replay_linkage["scheduler_blocked_count"] = blocked_count
         replay_linkage["scheduler_completed_count"] = completed_count
+        _require_sealed(dashboard, "dashboard_hash", artifact="scheduler dashboard")
         replay_linkage["scheduler_dashboard_hash"] = dashboard_hash
 
     if scheduler_replay_json is not None:
@@ -198,6 +224,7 @@ def digital_twin_observability_bundle(
         replay_linkage["scheduler_replay_count"] = len(replay_rows)
         replay_linkage["scheduler_replay_blocked_count"] = replay_blocked
         replay_linkage["scheduler_replay_completed_count"] = replay_completed
+        _require_sealed(replay, "replay_hash", artifact="scheduler replay")
         replay_linkage["scheduler_replay_hash"] = replay_hash
 
     # digital_twin_prometheus_text above has already validated accepted_count

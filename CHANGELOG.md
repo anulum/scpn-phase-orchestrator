@@ -24,6 +24,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `spo digital-twin-observability-bundle` now bundles only scheduler records
+  whose own hash covers their content. It copied the dashboard and replay
+  hashes as linkage and counted their rows without checking them, so an
+  edited row under a stale hash was bundled as if it were the sealed record.
+  Both hashes are now recomputed with the scheduler's canonical record hash.
+  A row's `overdue` must be a boolean: `bool("false")` is true, so a text
+  flag counted as overdue.
 - `spo chaos` scores resilience under the pack's own closed loop.
   `run_resilience_experiment` called `simulate` without the spec path, so a
   domainpack's `policy.yaml` never loaded. For 18 of the 35 packs that ship a

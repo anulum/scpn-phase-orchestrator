@@ -6249,7 +6249,9 @@ def test_digital_twin_observability_bundle_outputs_prometheus_and_replay_linkage
         "created_by": "deployment_scheduler",
     }
     replay_payload["replay_hash"] = hashlib.sha256(
-        json.dumps(replay_payload, sort_keys=True).encode("utf-8")
+        json.dumps(replay_payload, sort_keys=True, separators=(",", ":")).encode(
+            "utf-8"
+        )
     ).hexdigest()
     replay_path = tmp_path / "replay.json"
     replay_path.write_text(
@@ -6282,7 +6284,9 @@ def test_digital_twin_observability_bundle_outputs_prometheus_and_replay_linkage
         "created_by": "deployment_scheduler",
     }
     dashboard_payload["dashboard_hash"] = hashlib.sha256(
-        json.dumps(dashboard_payload, sort_keys=True).encode("utf-8")
+        json.dumps(dashboard_payload, sort_keys=True, separators=(",", ":")).encode(
+            "utf-8"
+        )
     ).hexdigest()
     dashboard_path = tmp_path / "dashboard.json"
     dashboard_path.write_text(

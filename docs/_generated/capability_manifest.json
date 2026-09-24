@@ -12,7 +12,7 @@
     "research_experimental_modules": 205,
     "runtime_serving_modules": 158,
     "rust_kernel_files": 97,
-    "test_files": 959
+    "test_files": 960
   },
   "documentation": {
     "public_pages": [
@@ -2078,6 +2078,7 @@
       "tests/test_cli_auto_coupling.py",
       "tests/test_cli_binding_auto_branches.py",
       "tests/test_cli_demo_packaging.py",
+      "tests/test_cli_digital_twin_bundle_seals.py",
       "tests/test_cli_digital_twin_contracts.py",
       "tests/test_cli_evaluation.py",
       "tests/test_cli_evolutionary_grammar.py",
