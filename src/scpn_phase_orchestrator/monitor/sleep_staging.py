@@ -13,6 +13,14 @@ an AASM-like heuristic stage timeline for diagnostics and simulation review.
 R values, timestamps, and stage labels are validated before use, and the Rust
 accelerator mirrors the deterministic Python fallback rather than changing
 classification semantics.
+
+Validation is fail-closed. ``R`` must be a real number in ``[0, 1]`` and the
+desynchronisation flag a Python or NumPy boolean. Timestamps must be a
+one-dimensional array of finite real seconds that never decreases. Text,
+boolean, complex, ``datetime64`` and ``timedelta64`` samples are rejected
+rather than coerced: a text sample would be parsed as a number and a
+``timedelta64`` sample would be read in its own unit, not in seconds. Stage
+labels must be one of ``"Wake"``, ``"N1"``, ``"N2"``, ``"N3"``, ``"REM"``.
 """
 
 from __future__ import annotations
@@ -44,9 +52,10 @@ __all__ = ["classify_sleep_stage", "ultradian_phase"]
 # N3 (slow-wave): highly synchronised cortical oscillations (R > 0.7).
 # N2 (spindle):   moderate synchrony with K-complex bursts (R ~ 0.4–0.7).
 # N1 (drowsy):    partial desynchronisation (R ~ 0.3–0.4).
-# REM:            low R (~0.2–0.35) plus functional desynchronisation flag
-#                 (distinguishes REM from light wakefulness).
-# Wake:           desynchronised cortex (R < 0.3, no functional_desync).
+# REM:            R in [0.2, 0.4) plus the functional desynchronisation flag
+#                 (distinguishes REM from light wakefulness and from N1).
+# Wake:           desynchronised cortex (R < 0.3 without the flag, or
+#                 R < 0.2 with it).
 _STAGE_THRESHOLDS = {
     "N3": 0.70,
     "N2": 0.40,
@@ -67,12 +76,20 @@ def classify_sleep_stage(R: float, functional_desync: bool = False) -> str:
         order parameter in [0, 1].
     functional_desync : bool
         True when EEG shows desynchronisation pattern characteristic of REM (low-voltage
-        mixed-frequency), as opposed to wakeful desynchronisation.
+        mixed-frequency), as opposed to wakeful desynchronisation. A NumPy boolean
+        is accepted and normalised to ``bool``.
 
     Returns
     -------
     str
         One of ``"N3"``, ``"N2"``, ``"N1"``, ``"REM"``, ``"Wake"``.
+
+    Raises
+    ------
+    TypeError
+        If ``R`` is not a real number or ``functional_desync`` is not a boolean.
+    ValueError
+        If ``R`` is not finite or lies outside ``[0, 1]``.
     """
     r_value = _validate_order_parameter(R)
     desync = _validate_functional_desync(functional_desync)
@@ -112,7 +129,7 @@ def ultradian_phase(
     Parameters
     ----------
     timestamps : FloatArray
-        monotonic epoch times in seconds, shape (n_epochs,).
+        non-decreasing epoch times in seconds, shape (n_epochs,).
     stage_history : list[str]
         sleep stage label per epoch, same length as timestamps.
 
@@ -121,6 +138,12 @@ def ultradian_phase(
     float
         Phase in [0, 1) where 0 = cycle start (N3 onset), 0.5 ≈ mid-cycle (REM),
         wrapping back toward 0. Returns 0.0 if no N3 epoch is found.
+
+    Raises
+    ------
+    ValueError
+        If the timestamps are not finite, real, one-dimensional seconds in
+        non-decreasing order, or the stage history does not match them.
     """
     ts = _validate_timestamps(timestamps)
     stages = _validate_stage_history(stage_history, expected_n=int(ts.size))
@@ -149,7 +172,7 @@ def ultradian_phase(
 
 
 def _validate_order_parameter(value: object) -> float:
-    """Return the order-parameter series as a validated array in [0, 1], else raise."""
+    """Return the order parameter as a float in ``[0, 1]``, else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise TypeError("R must be a finite real value in [0, 1]")
     r_value = float(value)
@@ -159,23 +182,30 @@ def _validate_order_parameter(value: object) -> float:
 
 
 def _validate_functional_desync(value: object) -> bool:
-    """Return the functional-desynchronisation series as a validated array."""
-    if not isinstance(value, bool):
+    """Return the functional-desynchronisation flag as ``bool``, else raise."""
+    if not isinstance(value, (bool, np.bool_)):
         raise TypeError("functional_desync must be a bool")
-    return value
+    return bool(value)
 
 
 def _validate_timestamps(value: object) -> FloatArray:
-    """Return strictly increasing finite timestamps, else raise ``ValueError``."""
-    raw = np.asarray(value)
+    """Return finite, non-decreasing timestamps in seconds, else raise."""
+    try:
+        raw = np.asarray(value)
+    except ValueError as exc:
+        raise ValueError("timestamps must be a finite 1-D array") from exc
     if raw.dtype == np.bool_:
         raise ValueError("timestamps must not contain boolean values")
-    if _contains_complex_alias(raw):
+    if raw.dtype.kind in "mM":
+        raise ValueError(
+            "timestamps must be plain seconds; convert datetime64 or "
+            "timedelta64 values explicitly"
+        )
+    if raw.dtype.kind == "O":
+        _require_real_object_samples(raw)
+    elif raw.dtype.kind not in "fiu":
         raise ValueError("timestamps must contain real-valued samples")
-    try:
-        timestamps = raw.astype(np.float64, copy=True)
-    except (TypeError, ValueError) as exc:
-        raise ValueError("timestamps must be a finite 1-D array") from exc
+    timestamps = raw.astype(np.float64, copy=True)
     if timestamps.ndim != 1:
         raise ValueError("timestamps must be a finite 1-D array")
     if not np.all(np.isfinite(timestamps)):
@@ -185,6 +215,15 @@ def _validate_timestamps(value: object) -> FloatArray:
     return timestamps
 
 
+def _require_real_object_samples(raw: NDArray[np.object_]) -> None:
+    """Reject object-array timestamps that hold booleans or non-numeric items."""
+    for item in raw.flat:
+        if isinstance(item, (bool, np.bool_)):
+            raise ValueError("timestamps must not contain boolean values")
+        if not isinstance(item, Real):
+            raise ValueError("timestamps must contain real-valued samples")
+
+
 def _validate_stage_history(stage_history: list[str], *, expected_n: int) -> list[str]:
     """Return the validated sleep-stage history, else raise ``ValueError``."""
     if len(stage_history) != expected_n:
@@ -192,20 +231,14 @@ def _validate_stage_history(stage_history: list[str], *, expected_n: int) -> lis
             "stage_history must have the same length as timestamps, "
             f"got {len(stage_history)} and {expected_n}"
         )
-    invalid = [stage for stage in stage_history if stage not in _STAGE_CODES]
+    invalid = [
+        stage
+        for stage in stage_history
+        if not isinstance(stage, str) or stage not in _STAGE_CODES
+    ]
     if invalid:
         raise ValueError(f"stage_history contains unknown sleep stage {invalid[0]!r}")
-    return stage_history
-
-
-def _contains_complex_alias(value: object) -> bool:
-    """Return whether the value contains any complex-number alias."""
-    raw = np.asarray(value)
-    if np.iscomplexobj(raw):
-        return True
-    if raw.dtype == object:
-        return any(isinstance(item, (complex, np.complexfloating)) for item in raw.flat)
-    return False
+    return [str(stage) for stage in stage_history]
 
 
 def _validate_stage_code(value: object) -> str:
