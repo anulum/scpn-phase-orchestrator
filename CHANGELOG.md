@@ -24,6 +24,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Chaos faults now end when their window ends and hold a constant strength
+  inside it. The simulation keeps whatever a scenario hook writes, and the
+  chaos hook re-applied each fault to the already-faulted values every step.
+  A 0.5 rad/s `frequency_drift` over 4 steps ramped the natural frequencies by
+  2.0 rad/s and left them there. A 0.5 `drive_dropout` cut `zeta` to 1/16 for
+  the rest of the run, and a `coupling_drop` kept the coupling down after its
+  window. The `coupling_drop` was also taken from the step-0 coupling, which
+  discarded the supervisor's adjustments. `run_resilience_experiment`
+  therefore measured recovery from a fault that never ended. The hook now
+  removes its previous-step perturbation before applying the faults active on
+  the current step. Overlapping faults combine (offsets add, factors
+  multiply), and supervisor changes to the coupling or `zeta` made during a
+  window are carried into the restored values.
 - The deterministic step loop no longer thaws a garbage-collector generation
   the caller froze. `run_deterministic_loop` called `gc.unfreeze()` on exit,
   which thaws the whole permanent generation, so a process that had frozen
