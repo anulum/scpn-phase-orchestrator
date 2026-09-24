@@ -114,7 +114,9 @@ actuators:
   - name: relationship_boost
     knob: K
     scope: layer_2
-    limits: [0.0, 3.0]
+    # One K bound per knob: the runtime projector is knob-indexed, so this
+    # matches coupling_global (was [0.0, 3.0], which made the pack unrunnable).
+    limits: [0.0, 2.0]
   - name: relationship_lag
     knob: alpha
     scope: layer_2

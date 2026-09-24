@@ -24,6 +24,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Two shipped domainpacks now run, and `validate_binding_spec` refuses what
+  `simulate` refuses. Both `agent_coordination` and `identity_coherence`
+  validated cleanly and then failed on the first `spo run`.
+  - **`agent_coordination`** had three layered protocol-net defects:
+    string arcs instead of `{place, weight}`, guards on place token counts
+    (`"idle > 0"`, `"claimed > 0 and merging == 0"`, where guards read context
+    metrics), and an empty `place_regime`. Its arcs now use the documented
+    form, the place-count guards are gone (input arcs already require the
+    tokens), and every place maps to `NOMINAL`, so the net still leaves the
+    regime unchanged.
+  - **`identity_coherence`** gave knob `K` two bounds, [0, 2] globally and
+    [0, 3] on `layer_2`. The runtime projector holds one bound per knob and
+    refuses that. The layer bound is now the narrower [0, 2].
+  - **The validator** checks protocol-net arcs, places, initial tokens and
+    guard grammar. It refuses a guard on a place name and builds the net with
+    the runtime's own builders. Actuators sharing a knob must agree on limits
+    and on any rate limit. Its docstring already claimed protocol-net checks
+    that did not exist.
 - A phase-gossip peer counts as active only while its timestamp lies within
   `peer_timeout_s` of the local time, on either side. `synchronise` checked
   only `now - wall_time_s <= timeout`, so one message from a peer whose clock
