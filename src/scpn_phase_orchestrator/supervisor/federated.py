@@ -13,6 +13,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from numbers import Integral, Real
@@ -23,6 +24,9 @@ __all__ = [
     "FederatedPolicyAggregationReport",
     "build_federated_meta_orchestrator_manifest",
 ]
+
+
+_SHA256_HEX = re.compile(r"[0-9a-fA-F]{64}")
 
 
 @dataclass(frozen=True)
@@ -423,12 +427,10 @@ def _positive_int(value: object, label: str) -> int:
 
 def _hash(value: object, label: str) -> str:
     """Return the SHA-256 hash of the payload."""
-    if not isinstance(value, str) or len(value) != 64:
+    # int(value, 16) also accepts a sign, a 0x prefix, underscores and
+    # surrounding whitespace, so a 64-character non-digest passed as a hash.
+    if not isinstance(value, str) or _SHA256_HEX.fullmatch(value) is None:
         raise ValueError(f"{label} must be a 64-character SHA-256 hex string")
-    try:
-        int(value, 16)
-    except ValueError as exc:
-        raise ValueError(f"{label} must be a 64-character SHA-256 hex string") from exc
     return value
 
 

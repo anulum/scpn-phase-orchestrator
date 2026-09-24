@@ -294,7 +294,9 @@ def _validate_tip_hash(tip_hash: object) -> str:
         decoded = bytes.fromhex(tip_hash)
     except ValueError as exc:
         raise ValueError("tip_hash must be valid hex") from exc
-    if len(decoded) != 32:
+    # bytes.fromhex skips whitespace between bytes; a spaced string decodes to
+    # 32 bytes but is not the chain's tip digest text.
+    if len(decoded) != 32 or len(tip_hash) != 64:
         raise ValueError("tip_hash must be a 32-byte SHA-256 digest")
     return tip_hash
 

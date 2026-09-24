@@ -13,6 +13,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from numbers import Integral, Real
@@ -26,6 +27,9 @@ __all__ = [
     "build_dp_noise_service_manifest",
     "build_dp_noise_service_deployment_preflight_manifest",
 ]
+
+
+_SHA256_HEX = re.compile(r"[0-9a-fA-F]{64}")
 
 
 @dataclass(frozen=True)
@@ -116,10 +120,10 @@ class DpNoiseServiceRequestManifest:
             raise ValueError("seed_hash is required")
         if len(self.seed_hash) != 64:
             raise ValueError("seed_hash must be 64 hex characters")
-        try:
-            bytes.fromhex(self.seed_hash)
-        except ValueError as exc:
-            raise ValueError("seed_hash must be a hex string") from exc
+        # bytes.fromhex skips whitespace between bytes, so it cannot prove a
+        # 64-character string is a digest.
+        if _SHA256_HEX.fullmatch(self.seed_hash) is None:
+            raise ValueError("seed_hash must be a hex string")
 
         if not isinstance(self.policy_keys, tuple):
             raise ValueError("policy_keys must be a tuple of strings")
@@ -281,14 +285,10 @@ class DpNoiseServiceDeploymentPreflightManifest:
             raise ValueError("delta must be a finite float")
         if not 0.0 < self.delta < 1.0:
             raise ValueError("delta must be in (0, 1)")
-        try:
-            bytes.fromhex(self.request_hash)
-        except ValueError as exc:
-            raise ValueError("request_hash must be hexadecimal") from exc
-        try:
-            bytes.fromhex(self.response_hash)
-        except ValueError as exc:
-            raise ValueError("response_hash must be hexadecimal") from exc
+        if _SHA256_HEX.fullmatch(self.request_hash) is None:
+            raise ValueError("request_hash must be hexadecimal")
+        if _SHA256_HEX.fullmatch(self.response_hash) is None:
+            raise ValueError("response_hash must be hexadecimal")
 
     def to_audit_record(self) -> dict[str, object]:
         """Return a deterministic JSON-safe audit record.
