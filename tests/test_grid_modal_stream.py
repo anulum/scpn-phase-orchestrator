@@ -24,6 +24,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from scpn_phase_orchestrator.assurance._hashing import canonical_record_hash
 from scpn_phase_orchestrator.monitor.grid_modal_growth import modal_growth_score
 from scpn_phase_orchestrator.monitor.grid_modal_stream import (
     WHOLE_NETWORK_BUS,
@@ -351,10 +352,23 @@ def test_from_stream_evidence_deploys_the_gated_winner() -> None:
     assert monitor.r2_gate == 0.5  # the gated winner turns the fit gate on
 
 
-def test_from_stream_evidence_leaves_the_gate_off_for_a_focal_winner() -> None:
+def _resealed_stream_evidence(tmp_path: Path, target_false_alarm: float) -> Path:
+    """Return the sealed stream artefact resealed at another matched target."""
+    payload = json.loads(_STREAM_EVIDENCE.read_text(encoding="utf-8"))
+    payload.pop("content_hash")
+    payload["target_stream_false_alarm"] = target_false_alarm
+    payload["content_hash"] = canonical_record_hash(payload)
+    path = tmp_path / "stream_operating_point.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+    return path
+
+
+def test_from_stream_evidence_leaves_the_gate_off_for_a_focal_winner(
+    tmp_path: Path,
+) -> None:
     # a lax false-alarm target lets a plain focal configuration win, so no gate is set
     monitor = GridModalStreamMonitor.from_stream_evidence(
-        _STREAM_EVIDENCE, rate=238.0, target_false_alarm=0.20
+        _resealed_stream_evidence(tmp_path, 0.20), rate=238.0, target_false_alarm=0.20
     )
     winner = _winning_row(0.20)
     assert winner["feature"] == "focal"
@@ -362,10 +376,12 @@ def test_from_stream_evidence_leaves_the_gate_off_for_a_focal_winner() -> None:
     assert monitor.threshold == pytest.approx(winner["threshold"])
 
 
-def test_from_stream_evidence_falls_back_when_no_row_holds_the_target() -> None:
+def test_from_stream_evidence_falls_back_when_no_row_holds_the_target(
+    tmp_path: Path,
+) -> None:
     # an impossible target leaves no holder, so selection falls back to all rows
     monitor = GridModalStreamMonitor.from_stream_evidence(
-        _STREAM_EVIDENCE, rate=238.0, target_false_alarm=0.0
+        _resealed_stream_evidence(tmp_path, 0.0), rate=238.0, target_false_alarm=0.0
     )
     best = _winning_row(0.0)
     assert monitor.threshold == pytest.approx(best["threshold"])

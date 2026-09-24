@@ -27,15 +27,16 @@ monitored vector.
 
 from __future__ import annotations
 
-import copy
-import json
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
 
-from scpn_phase_orchestrator.assurance._hashing import canonical_record_hash
+from scpn_phase_orchestrator.assurance._hashing import (
+    canonical_record_hash,
+    load_sealed_json,
+)
 from scpn_phase_orchestrator.monitor.grid_modal_stream import (
     WHOLE_NETWORK_BUS,
     GridModalStreamMonitor,
@@ -67,19 +68,7 @@ def load_verified_evidence(evidence_path: str | Path) -> dict[str, object]:
         the hash does not recompute from the record — a tampered artefact
         must never configure a live sentinel.
     """
-    payload = json.loads(Path(evidence_path).read_text(encoding="utf-8"))
-    if not isinstance(payload, dict):
-        raise ValueError("evidence must be a JSON object; refusing to trust it")
-    record = copy.deepcopy(payload)
-    sealed = record.pop("content_hash", None)
-    if not isinstance(sealed, str):
-        raise ValueError("evidence carries no content_hash; refusing to trust it")
-    if canonical_record_hash(record) != sealed:
-        raise ValueError(
-            "evidence content_hash does not recompute from the record; "
-            "refusing to configure a live sentinel from a tampered artefact"
-        )
-    return payload
+    return load_sealed_json(evidence_path)
 
 
 @dataclass
@@ -176,13 +165,15 @@ class ModalSentinel:
         if isinstance(window_value, bool) or not isinstance(window_value, (int, float)):
             raise ValueError("sealed case entry carries no numeric window_seconds")
         window_seconds = float(window_value)
+        # Pass the sealed values through unconverted: the monitor refuses a
+        # bool, a string, or a non-finite number instead of coercing it.
         monitor = GridModalStreamMonitor(
             rate=rate,
-            threshold=float(calibration["threshold"]),
+            threshold=calibration["threshold"],
             window_seconds=window_seconds,
             step_seconds=window_seconds / 4.0,
-            aggregation=str(detector["aggregation"]),
-            recency_top=float(detector["recency_top"]),
+            aggregation=detector["aggregation"],
+            recency_top=detector["recency_top"],
             persistence=persistence,
         )
         provenance: dict[str, object] = {

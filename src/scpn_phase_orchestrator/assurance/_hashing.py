@@ -10,9 +10,11 @@
 
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
 from collections.abc import Mapping
+from pathlib import Path
 
 _SHA256_LENGTH = 64
 _SHA256_ALPHABET = set("0123456789abcdef")
@@ -52,6 +54,41 @@ def canonical_record_hash(record: Mapping[str, object]) -> str:
             raise ValueError("record must contain only finite JSON numbers") from exc
         raise
     return hashlib.sha256(serialised.encode("utf-8")).hexdigest()
+
+
+def load_sealed_json(path: str | Path) -> dict[str, object]:
+    """Load a sealed JSON artefact and verify its ``content_hash``, fail-closed.
+
+    Parameters
+    ----------
+    path : str | Path
+        Path to a JSON object carrying a ``content_hash`` field computed by
+        :func:`canonical_record_hash` over the rest of the object.
+
+    Returns
+    -------
+    dict[str, object]
+        The verified payload, ``content_hash`` included.
+
+    Raises
+    ------
+    ValueError
+        If the payload is not a JSON object, carries no ``content_hash``, or
+        the hash does not recompute from the record.
+    """
+    payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError("evidence must be a JSON object; refusing to trust it")
+    record = copy.deepcopy(payload)
+    sealed = record.pop("content_hash", None)
+    if not isinstance(sealed, str):
+        raise ValueError("evidence carries no content_hash; refusing to trust it")
+    if canonical_record_hash(record) != sealed:
+        raise ValueError(
+            "evidence content_hash does not recompute from the record; "
+            "refusing to configure a monitor from a tampered artefact"
+        )
+    return payload
 
 
 def require_sha256(value: object, field_name: str) -> str:
