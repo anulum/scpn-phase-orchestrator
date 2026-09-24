@@ -16,9 +16,17 @@ its windowed level is a first-moment early-warning signal complementary to the
 second-moment critical-slowing-down indicators (``monitor/critical_slowing_down.py``,
 which read a variance/autocorrelation *rise*) and to the ordinal-transition-
 entropy detector (``monitor/explosive_sync.py``, which reads a regularisation
-*drop*). On a real scalp-EEG seizure the order parameter is the signal that
-carries the leading precursor, which is why it is a first-class member of the
-early-warning detector suite.
+*drop*).
+
+Evidence is limited. On one CHB-MIT scalp-EEG subject (``chb01``) the mean
+order parameter separates the pre-ictal window from interictal epochs (AUC
+0.91), but a leave-one-subject-out audit over ``chb01``–``chb05`` finds chance
+(AUC about 0.50), and at a matched false-alarm rate with a permutation test the
+detector is at chance in every domain studied. Sources: the studies
+``chbmit_multichannel_kuramoto.md`` and
+``early_warning_matched_false_alarm.md`` (§2.1, §3.1) under ``docs/studies/``.
+The validation registry (``monitor/validation_status.py``) classifies it
+``synthetic-only``.
 
 ``synchronisation_warning`` computes the instantaneous order parameter across the
 per-node phases, averages it within each sliding window, and raises a fail-early
