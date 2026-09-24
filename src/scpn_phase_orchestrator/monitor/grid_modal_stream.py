@@ -42,7 +42,6 @@ from a sealed streaming operating-point artefact.
 
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass
 from numbers import Integral, Real
 from pathlib import Path
@@ -50,6 +49,7 @@ from typing import TYPE_CHECKING, TypeAlias, cast
 
 import numpy as np
 
+from scpn_phase_orchestrator.assurance._hashing import load_sealed_json
 from scpn_phase_orchestrator.monitor.grid_modal_growth import (
     DEFAULT_AGGREGATION,
     DEFAULT_RECENCY_TOP,
@@ -320,14 +320,24 @@ class GridModalStreamMonitor:
         -------
         GridModalStreamMonitor
             A monitor at the certified operating point.
+
+        Raises
+        ------
+        ValueError
+            If the artefact's ``content_hash`` does not verify, it carries no
+            ``modal`` block, or a certified value is not of the expected type.
         """
-        payload = json.loads(Path(evidence_path).read_text(encoding="utf-8"))
-        modal = payload["modal"]
+        payload = load_sealed_json(evidence_path)
+        modal = payload.get("modal")
+        if not isinstance(modal, dict):
+            raise ValueError("evidence carries no modal operating-point block")
+        # Sealed values pass through unconverted so the constructor refuses a
+        # bool or string rather than float()/str() coercing it.
         return cls(
             rate=rate,
-            threshold=float(modal["score_threshold"]),
-            aggregation=str(modal["aggregation"]),
-            recency_top=float(modal["recency_top"]),
+            threshold=modal["score_threshold"],
+            aggregation=modal["aggregation"],
+            recency_top=modal["recency_top"],
             **kwargs,  # type: ignore[arg-type]  # keys checked by __init__ signature
         )
 
@@ -374,21 +384,42 @@ class GridModalStreamMonitor:
         -------
         GridModalStreamMonitor
             A monitor at the certified streaming operating point.
+
+        Raises
+        ------
+        ValueError
+            If the artefact's ``content_hash`` does not verify, ``target_false_alarm``
+            differs from the sealed target, or the winning row's values are not of
+            the expected types.
         """
-        payload = json.loads(Path(evidence_path).read_text(encoding="utf-8"))
-        rows = cast("list[dict[str, object]]", payload["search"])
+        payload = load_sealed_json(evidence_path)
+        sealed_target = payload.get("target_stream_false_alarm")
+        if isinstance(sealed_target, bool) or not isinstance(sealed_target, Real):
+            raise ValueError("evidence carries no numeric target_stream_false_alarm")
+        target = _finite_real(target_false_alarm, "target_false_alarm")
+        if target != float(sealed_target):
+            raise ValueError(
+                f"target_false_alarm {target!r} does not match the sealed "
+                f"target_stream_false_alarm {sealed_target!r}; the winner would not "
+                "be the sealed verdict's configuration"
+            )
+        search = payload.get("search")
+        if not isinstance(search, list) or not all(
+            isinstance(row, dict) for row in search
+        ):
+            raise ValueError("evidence carries no search rows")
         winner = _select_stream_operating_point(
-            rows, target_false_alarm=target_false_alarm
+            cast("list[dict[str, object]]", search), target_false_alarm=target
         )
-        gated = str(winner["feature"]) == "r2gate"
+        gated = winner["feature"] == "r2gate"
         return cls(
             rate=rate,
-            threshold=float(cast("float", winner["threshold"])),
-            window_seconds=float(cast("float", winner["window_seconds"])),
-            step_seconds=float(cast("float", winner["step_seconds"])),
+            threshold=cast("float", winner["threshold"]),
+            window_seconds=cast("float", winner["window_seconds"]),
+            step_seconds=cast("float", winner["step_seconds"]),
             aggregation="focal",
             recency_top=recency_top,
-            persistence=int(cast("int", winner["persistence"])),
+            persistence=cast("int", winner["persistence"]),
             r2_gate=gate_r2 if gated else 0.0,
         )
 

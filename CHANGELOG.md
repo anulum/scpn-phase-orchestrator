@@ -24,6 +24,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `GridModalStreamMonitor.from_evidence` and `from_stream_evidence` verify
+  the `content_hash` of the artefact they are documented to read as sealed.
+  Before, an edited artefact configured the monitor. Raising the certified
+  threshold to 1e9 produced a monitor that never alarms, and a `true`
+  threshold was coerced to 1.0. Certified values now pass to the constructor
+  unconverted, so a bool, a string, or a fractional persistence is refused.
+  `from_stream_evidence` now enforces its documented rule that
+  `target_false_alarm` matches the sealed `target_stream_false_alarm`; a
+  different target selected a configuration the sealed verdict never chose.
+  The check shares one loader with `ModalSentinel`, whose sealed values also
+  pass through unconverted.
 - The PMU ringdown and IBR ride-through CSV screens parse the bytes their
   `source_sha256` digest covers. Before, they hashed one read of the file and
   parsed a second, so a file replaced in between was screened under another
