@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import numpy as np
+import pytest
 
 from scpn_phase_orchestrator.imprint.state import ImprintState
 from scpn_phase_orchestrator.monitor.session_start import (
@@ -335,6 +336,99 @@ def test_empty_phase_states_does_not_block_shape_validation():
     assert not report.passed
     assert report.quality_scores == {}
     assert any("Signal collapse" in message for message in report.errors)
+    assert any("no extractor phase states" in message for message in report.errors)
+
+
+def test_non_finite_amplitude_cannot_hide_low_quality():
+    """Amplitudes weight the channel score; NaN/inf must fail, not mute warnings."""
+    n = 4
+    phases = np.zeros(n)
+    imprint = ImprintState(m_k=np.zeros(n), last_update=0.0)
+    baseline = check_session_start(_make_states(n, quality=0.2), phases, imprint, n)
+    assert any("low quality" in w for w in baseline.warnings)
+
+    for bad in (float("nan"), float("inf"), -1.0, True, "1.0", None):
+        states = _make_states(n, quality=0.2)
+        states[0].amplitude = bad  # type: ignore[assignment]
+        report = check_session_start(states, phases, imprint, n)
+        assert not report.passed
+        assert report.quality_scores == {}
+        assert any("amplitude" in e for e in report.errors)
+
+
+def test_zero_amplitude_is_admissible_evidence():
+    n = 4
+    states = _make_states(n, quality=0.9)
+    states[0].amplitude = 0.0
+    report = check_session_start(
+        states, np.zeros(n), ImprintState(m_k=np.zeros(n), last_update=0.0), n
+    )
+    assert report.passed
+    assert np.isfinite(report.quality_scores["P"])
+
+
+def test_numpy_real_quality_and_amplitude_are_accepted():
+    n = 4
+    phases = np.zeros(n)
+    imprint = ImprintState(m_k=np.zeros(n), last_update=0.0)
+    for quality, amplitude in (
+        (np.float32(0.9), np.float32(1.0)),
+        (np.float64(0.9), np.int64(2)),
+        (np.int64(1), 1),
+    ):
+        states = _make_states(n, quality=0.9)
+        for state in states:
+            state.quality = quality  # type: ignore[assignment]
+            state.amplitude = amplitude  # type: ignore[assignment]
+        report = check_session_start(states, phases, imprint, n)
+        assert report.passed, report.errors
+        assert report.quality_scores["P"] == pytest.approx(float(quality))
+
+
+def test_numpy_boolean_quality_is_rejected():
+    n = 4
+    states = _make_states(n, quality=0.9)
+    states[1].quality = np.bool_(True)  # type: ignore[assignment]
+    report = check_session_start(
+        states, np.zeros(n), ImprintState(m_k=np.zeros(n), last_update=0.0), n
+    )
+    assert not report.passed
+    assert any("quality" in e for e in report.errors)
+
+
+def test_non_phase_state_record_is_reported_not_raised():
+    n = 4
+    states: list[object] = list(_make_states(n, quality=0.9))
+    states.append({"quality": 0.9})
+    report = check_session_start(
+        states,  # type: ignore[arg-type]
+        np.zeros(n),
+        ImprintState(m_k=np.zeros(n), last_update=0.0),
+        n,
+    )
+    assert not report.passed
+    assert report.quality_scores == {}
+    assert any("expected PhaseState, got dict" in e for e in report.errors)
+
+
+def test_negative_imprint_accumulation_fails():
+    """The imprint model rejects negative m_k, so the gate must not admit it."""
+    n = 4
+    imprint = ImprintState(m_k=np.array([0.2, -0.1, 0.0, 0.3]), last_update=0.0)
+    report = check_session_start(_make_states(n, quality=0.9), np.zeros(n), imprint, n)
+    assert not report.passed
+    assert report.imprint_level == 0.0
+    assert any("negative" in e for e in report.errors)
+
+
+def test_numpy_integer_n_osc_is_accepted_and_numpy_bool_rejected():
+    n = 4
+    imprint = ImprintState(m_k=np.zeros(n), last_update=0.0)
+    states = _make_states(n, quality=0.9)
+    report = check_session_start(states, np.zeros(n), imprint, np.int64(n))  # type: ignore[arg-type]
+    assert report.passed
+    with pytest.raises(TypeError):
+        check_session_start(states, np.zeros(n), imprint, np.bool_(True))  # type: ignore[arg-type]
 
 
 class TestSessionStartPipelineWiring:

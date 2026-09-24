@@ -79,9 +79,16 @@ from acting on transient startup dynamics.
 
 The gate is fail-closed on malformed evidence: phase and imprint vectors
 must be one-dimensional real numeric arrays with finite entries and the
-expected oscillator count, and extractor quality values must be finite
-floats in `[0, 1]`. Any violation is recorded as a report error and fails
-the gate; an invalid `n_osc` raises instead of reporting.
+expected oscillator count, the imprint vector must be non-negative, and
+every extractor record must be a `PhaseState` whose quality is a finite
+real in `[0, 1]` and whose amplitude is a finite, non-negative real.
+Amplitudes weight the per-channel quality score, so a non-finite amplitude
+would otherwise make the score NaN and silently drop the low-quality
+warning. Python and NumPy reals are accepted; booleans, complex values,
+text and other objects are not. A session with no extractor records fails
+as a signal collapse. Any violation is recorded as a report error and
+fails the gate; an invalid `n_osc` (a Python or NumPy integer, not a
+boolean) raises instead of reporting.
 
 ::: scpn_phase_orchestrator.monitor.session_start
 
