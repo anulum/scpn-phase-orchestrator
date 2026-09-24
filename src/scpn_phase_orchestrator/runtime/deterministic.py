@@ -22,7 +22,9 @@ a plain ``for`` loop cannot give:
   ``miss_policy='observe'`` to record and continue.
 * **No-GC hot path** — the cyclic garbage collector is frozen and disabled for
   the duration of the loop, removing GC pauses from the jitter budget, and
-  restored to its prior state afterwards.
+  restored to its prior state afterwards. A permanent generation the caller
+  had already frozen (``gc.freeze`` before forking workers, for instance) stays
+  frozen: the loop thaws only when nothing was frozen before it started.
 
 The loop is non-actuating and timing-only: it never inspects or mutates the
 step's state. The caller closes over its own state in the ``step`` callable, so
@@ -90,6 +92,7 @@ class DeadlineBudget:
     ----------
     period_s : float
         Target wall-clock period between consecutive step starts, in seconds.
+        Must be at least one nanosecond, the resolution of the loop's clock.
     wcet_s : float
         Worst-case execution-time budget for a single step, in seconds. A step
         whose measured latency exceeds this is a deadline miss. Defaults to the
@@ -101,7 +104,8 @@ class DeadlineBudget:
     freeze_gc : bool
         Freeze (``gc.freeze``) and disable the cyclic garbage collector for the
         loop, restoring the prior state afterwards. Removes GC pauses from the
-        jitter budget.
+        jitter budget. Must be a ``bool``: a string such as ``"False"`` is
+        refused rather than read as true.
     busy_wait_margin_s : float
         Spin (busy-wait) for the final ``busy_wait_margin_s`` before each
         scheduled boundary instead of sleeping, trading CPU for lower jitter.
@@ -121,6 +125,11 @@ class DeadlineBudget:
             raise ValueError(
                 f"period_s must be positive and finite, got {self.period_s}"
             )
+        if round(float(self.period_s) * 1e9) < 1:
+            raise ValueError(
+                "period_s must be at least 1 ns, the loop clock's resolution; "
+                f"got {self.period_s!r}, which rounds to a zero-length period"
+            )
         if self.wcet_s is not None:
             if isinstance(self.wcet_s, bool) or not isinstance(self.wcet_s, Real):
                 raise ValueError(f"wcet_s must be a positive real, got {self.wcet_s!r}")
@@ -128,6 +137,8 @@ class DeadlineBudget:
                 raise ValueError(
                     f"wcet_s must be positive and finite, got {self.wcet_s}"
                 )
+        if not isinstance(self.freeze_gc, bool | np.bool_):
+            raise ValueError(f"freeze_gc must be a bool, got {self.freeze_gc!r}")
         if self.miss_policy not in ("observe", "abort"):
             raise ValueError(
                 f"miss_policy must be 'observe' or 'abort', got {self.miss_policy!r}"
@@ -346,6 +357,9 @@ def run_deterministic_loop(
     deadline_misses = 0
 
     gc_was_enabled = gc.isenabled()
+    # gc.unfreeze() thaws the whole permanent generation; it cannot tell the
+    # loop's objects from ones the caller froze, so thaw only if none were.
+    caller_had_frozen = gc.get_freeze_count() > 0
     if budget.freeze_gc:
         gc.collect()
         gc.freeze()
@@ -368,7 +382,8 @@ def run_deterministic_loop(
         wall_time_s = (monotonic_ns() - loop_start_ns) / 1e9
     finally:
         if budget.freeze_gc:
-            gc.unfreeze()
+            if not caller_had_frozen:
+                gc.unfreeze()
             if gc_was_enabled:
                 gc.enable()
 
@@ -378,6 +393,6 @@ def run_deterministic_loop(
         period_s=float(budget.period_s),
         wcet_s=wcet_s,
         deadline_misses=deadline_misses,
-        gc_frozen=budget.freeze_gc,
+        gc_frozen=bool(budget.freeze_gc),
         wall_time_s=wall_time_s,
     )

@@ -24,6 +24,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The deterministic step loop no longer thaws a garbage-collector generation
+  the caller froze. `run_deterministic_loop` called `gc.unfreeze()` on exit,
+  which thaws the whole permanent generation, so a process that had frozen
+  its heap before forking workers lost that state (19,604 frozen objects
+  became 0). The loop now thaws only when nothing was frozen before it
+  started. `DeadlineBudget` refuses a non-bool `freeze_gc`: the string
+  `"False"` used to freeze the collector and appear as `'False'` in the timing
+  summary. It also refuses a `period_s` below 1 ns, which rounded to a
+  zero-length period.
 - The protobuf audit stream writer refuses events its own reader would reject.
   `EventStreamWriter.write` accepted an event type longer than 128 characters
   or containing control characters, including one derived from a payload's
