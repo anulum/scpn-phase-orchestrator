@@ -93,8 +93,18 @@ def env_int(name: str, default: int) -> int:
     return value
 
 
+#: Tracked identities above which buckets that have refilled completely are
+#: dropped; a full bucket is indistinguishable from an identity never seen.
+_MAX_TRACKED_IDENTITIES = 10_000
+
+
 class TokenBucketRateLimiter:
-    """Thread-safe per-identity token-bucket rate limiter."""
+    """Thread-safe per-identity token-bucket rate limiter.
+
+    Buckets are kept per identity; once more than ``_MAX_TRACKED_IDENTITIES``
+    are tracked, the ones that have refilled to capacity are dropped, so a
+    stream of distinct identities cannot grow the table without bound.
+    """
 
     def __init__(
         self,
@@ -165,7 +175,23 @@ class TokenBucketRateLimiter:
                 self._buckets[key] = (tokens, timestamp)
                 return False
             self._buckets[key] = (tokens - 1.0, timestamp)
+            if len(self._buckets) > _MAX_TRACKED_IDENTITIES:
+                self._drop_refilled_buckets(timestamp)
             return True
+
+    def _drop_refilled_buckets(self, timestamp: float) -> None:
+        """Drop buckets that have refilled to capacity by ``timestamp``.
+
+        Called with the lock held. A dropped identity starts again from a full
+        bucket, which is exactly the state it had refilled to.
+        """
+        capacity = float(self._capacity)
+        self._buckets = {
+            identity: (tokens, updated_at)
+            for identity, (tokens, updated_at) in self._buckets.items()
+            if tokens + max(0.0, timestamp - updated_at) * self._refill_per_second
+            < capacity
+        }
 
 
 class FixedWindowRateLimiter(TokenBucketRateLimiter):
