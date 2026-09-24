@@ -88,8 +88,8 @@ class DifferentiableSupervisorConfig:
             if (
                 isinstance(value, bool)
                 or not isinstance(value, Integral)
-                or value < minimum
-                or (maximum is not None and value > maximum)
+                or int(value) < minimum
+                or (maximum is not None and int(value) > maximum)
             ):
                 allowed = (
                     f">= {minimum}" if maximum is None else f"in [{minimum}, {maximum}]"
