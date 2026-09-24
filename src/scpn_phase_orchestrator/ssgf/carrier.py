@@ -216,7 +216,6 @@ class GeometryCarrier:
             raise ValueError(f"epsilon must be a finite positive real, got {epsilon!r}")
         if cost_fn is not None and not callable(cost_fn):
             raise TypeError(f"cost_fn must be callable or None, got {cost_fn!r}")
-        self._step += 1
         grad: FloatArray = np.zeros(self._z_dim)
 
         if cost_fn is not None:
@@ -229,7 +228,16 @@ class GeometryCarrier:
                     cost_fn(self.decode(z_plus)) - cost_fn(self.decode(z_minus))
                 ) / (2 * epsilon)
 
-        self._z -= self._lr * grad
+        step_z = self._z - self._lr * grad
+        # Check before committing: a NaN cost used to write NaN into z, after
+        # which every decode() failed and the carrier could not recover.
+        if not np.all(np.isfinite(step_z)):
+            raise ValueError(
+                "cost_fn produced a non-finite gradient; the carrier state is "
+                "left unchanged"
+            )
+        self._z = step_z
+        self._step += 1
         W = self.decode()
         return SSGFState(
             z=self._z.copy(),

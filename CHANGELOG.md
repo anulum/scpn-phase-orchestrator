@@ -24,6 +24,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `GeometryCarrier.update` no longer corrupts its state on a non-finite
+  gradient. It subtracted the finite-difference gradient from z before
+  checking it, so a single NaN from the cost callback wrote NaN into z. The
+  post-update decode then raised, and every later decode failed, so the
+  carrier could not recover. The step is now checked before it is committed;
+  on failure z and the step counter are left unchanged.
 - SSGF Langevin noise is fresh on every call, and non-finite inputs are
   refused. With the Rust kernel and no generator, `add_langevin_noise`
   passed the fixed seed 42, so every step added the same "noise" (the NumPy
