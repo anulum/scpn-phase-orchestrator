@@ -36,6 +36,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   backend. Admission runs each compiled Mojo executable once with empty input
   and caches the verdict per build; on a loaded workstation one launch took
   0.06–0.23 s.
+- `import scpn_phase_orchestrator.supervisor`, `from
+  scpn_phase_orchestrator.monitor.stl import STLMonitor` and 58 other modules
+  failed with a circular `ImportError` when imported first in a fresh
+  interpreter (present in 1.4.3). `scpn_phase_orchestrator.binding` imported its
+  topos obligation examples eagerly; those examples use supervisor policy rules,
+  and the supervisor and monitor packages import binding types. The three topos
+  names are now loaded on first access and stay exported from
+  `scpn_phase_orchestrator.binding`. A new test imports every package first in
+  its own interpreter.
 - `ultradian_phase` no longer accepts time axes that are not plain seconds.
   Numeric text such as `"30"` was parsed as a number, a boolean inside an
   object array was read as one second, and a `timedelta64[ms]` array was read
