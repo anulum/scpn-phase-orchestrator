@@ -34,6 +34,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the result unknown: exit 2, never "healthy". The guide and the CLI
   reference document exit codes 0/1/2. The tests run the real HTTP path
   against a local server speaking the Prometheus range API.
+  The server's `POST /api/v1/check` likewise answers 503 until every
+  configured service has data. It had analysed whatever subset was ready,
+  and the pipeline kept a missing service's last phase, so a partial scrape
+  could read as healthy.
 - `spo assurance-case` refuses an evidence row whose id, category or summary
   is not a non-empty string, or whose record is not a JSON object.
   `str(row["evidence_id"])` turned `null` into `"None"`, and

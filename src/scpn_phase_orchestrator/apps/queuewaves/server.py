@@ -295,7 +295,9 @@ def create_app(cfg: QueueWavesConfig) -> object:
         """One-shot: scrape, analyze, return result."""
         await collector.scrape()
         signals = collector.get_signal_arrays()
-        if not signals:
+        # Every service must have data: the pipeline skips a missing one and
+        # keeps its last phase, so a partial scrape would read as healthy.
+        if any(svc.name not in signals for svc in cfg.services):
             return JSONResponse({"error": "not enough data"}, status_code=503)
         snap = pipeline.tick(signals)
         anoms = detector.detect(snap)

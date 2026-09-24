@@ -21,8 +21,11 @@ from pathlib import Path
 
 import yaml
 from click.testing import CliRunner
+from fastapi.testclient import TestClient
 
 from scpn_phase_orchestrator.apps.queuewaves.collector import PrometheusCollector
+from scpn_phase_orchestrator.apps.queuewaves.config import load_config
+from scpn_phase_orchestrator.apps.queuewaves.server import create_app
 from scpn_phase_orchestrator.runtime.cli import main
 from tests.prometheus_range_server import prometheus_range_server
 
@@ -94,3 +97,23 @@ def test_backfill_fills_each_buffer_with_the_requested_history() -> None:
     arrays = collector.get_signal_arrays()
     assert sorted(arrays) == ["a", "b"]
     assert all(len(values) == 16 for values in arrays.values())
+
+
+def _server_client(tmp_path: Path, url: str) -> TestClient:
+    config = load_config(_config(tmp_path, url, thresholds=_PERMISSIVE))
+    return TestClient(create_app(config))
+
+
+def test_server_check_refuses_a_partial_scrape(tmp_path: Path) -> None:
+    with prometheus_range_server(empty_queries=frozenset({"rate_b"})) as url:
+        client = _server_client(tmp_path, url)
+        statuses = [client.post("/api/v1/check").status_code for _ in range(5)]
+    # svc-a has 5 instant samples (ready after 4); svc-b has none: never healthy
+    assert statuses == [503] * 5
+
+
+def test_server_check_analyses_once_every_service_is_ready(tmp_path: Path) -> None:
+    with prometheus_range_server() as url:
+        client = _server_client(tmp_path, url)
+        statuses = [client.post("/api/v1/check").status_code for _ in range(4)]
+    assert statuses == [503, 503, 503, 200]
