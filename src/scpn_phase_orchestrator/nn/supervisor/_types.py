@@ -10,7 +10,9 @@
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
+from numbers import Integral, Real
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, NamedTuple
 
@@ -49,6 +51,18 @@ class DifferentiableSupervisorConfig:
         Penalty for synchronising the bad partition.
     smoothness_weight : object
         Quadratic penalty on action changes over rollout.
+
+    Raises
+    ------
+    ValueError
+        If a count is not an integer (``n_oscillators`` and ``hidden_width`` at
+        least 1, ``hidden_depth`` at least 0, ``n_layer_controls`` 1 or 2), an
+        action bound is not a finite positive number, or a loss weight is not a
+        finite non-negative number. A negative or NaN bound inverts or voids the
+        audit projection's clip, and a zero bound makes the action log-probability
+        0/0. ``KuramotoSupervisorScenario`` has two partitions (good and bad), so a
+        third layer control would be emitted but never act in the trained dynamics,
+        and zero layer controls make the control energy a mean of nothing.
     """
 
     n_oscillators: int
@@ -61,6 +75,48 @@ class DifferentiableSupervisorConfig:
     control_energy_weight: float = 1.0e-2
     bad_sync_weight: float = 0.25
     smoothness_weight: float = 1.0e-3
+
+    def __post_init__(self) -> None:
+        """Validate and normalise every field (see the class ``Raises``)."""
+        for name, minimum, maximum in (
+            ("n_oscillators", 1, None),
+            ("hidden_width", 1, None),
+            ("hidden_depth", 0, None),
+            ("n_layer_controls", 1, 2),
+        ):
+            value = getattr(self, name)
+            if (
+                isinstance(value, bool)
+                or not isinstance(value, Integral)
+                or value < minimum
+                or (maximum is not None and value > maximum)
+            ):
+                allowed = (
+                    f">= {minimum}" if maximum is None else f"in [{minimum}, {maximum}]"
+                )
+                raise ValueError(f"{name} must be an integer {allowed}, got {value!r}")
+            object.__setattr__(self, name, int(value))
+        for name, strictly_positive in (
+            ("max_global_delta_K", True),
+            ("max_global_delta_zeta", True),
+            ("max_layer_delta_K", True),
+            ("control_energy_weight", False),
+            ("bad_sync_weight", False),
+            ("smoothness_weight", False),
+        ):
+            value = getattr(self, name)
+            if (
+                isinstance(value, bool)
+                or not isinstance(value, Real)
+                or not math.isfinite(value)
+                or value < 0
+                or (strictly_positive and value == 0)
+            ):
+                kind = "positive" if strictly_positive else "non-negative"
+                raise ValueError(
+                    f"{name} must be a finite {kind} number, got {value!r}"
+                )
+            object.__setattr__(self, name, float(value))
 
 
 class SupervisorAction(NamedTuple):
