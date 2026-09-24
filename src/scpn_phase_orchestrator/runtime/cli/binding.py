@@ -44,6 +44,7 @@ from scpn_phase_orchestrator.binding import (
 from scpn_phase_orchestrator.coupling.infer import auto_coupling_estimation
 from scpn_phase_orchestrator.runtime.cli._app import FloatArray, main
 from scpn_phase_orchestrator.studio.workflow import StudioProjectState
+from scpn_phase_orchestrator.supervisor.policy_rules import load_policy_rules
 
 
 @main.command()
@@ -80,6 +81,14 @@ def validate(binding_spec: str, security_checks: bool, hard_scan: bool) -> None:
     """
     spec = load_binding_spec(Path(binding_spec))
     errors = validate_binding_spec(spec)
+    # `spo run` loads the policy.yaml next to the spec; validate it the same
+    # way so a spec that validates is one `spo run` accepts.
+    policy_path = Path(binding_spec).parent / "policy.yaml"
+    if policy_path.exists():
+        try:
+            load_policy_rules(policy_path)
+        except ValueError as exc:
+            errors.append(f"policy.yaml: {exc}")
     run_security = security_checks or hard_scan
     if run_security:
         errors.extend(validate_binding_spec_security(spec))
