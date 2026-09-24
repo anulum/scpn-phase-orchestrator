@@ -23,6 +23,7 @@ from ._shared import (
     _normalise_text_sequence,
     _positive_float,
     _require_non_empty_text,
+    _require_self_hash,
     _require_sha256_hex,
 )
 
@@ -222,43 +223,41 @@ def _normalise_information_geometry_records(
         )
         if abs(geodesic_length - fisher_rao) > 1e-12:
             raise ValueError(f"{label} geodesic_length must match Fisher-Rao distance")
-        normalised.append(
-            {
-                "step": index + 1,
-                "backend": backend,
-                "claim_boundary": claim_boundary,
-                "non_actuating": True,
-                "execution_disabled": True,
-                "proposal_hash": _require_sha256_hex(
-                    record.get("proposal_hash"),
-                    f"{label} proposal_hash",
-                ),
-                "knob": _single_information_geometry_action(record, label)["knob"],
-                "scope": _single_information_geometry_action(record, label)["scope"],
-                "action_value": _single_information_geometry_action(record, label)[
-                    "value"
-                ],
-                "ttl_s": _single_information_geometry_action(record, label)["ttl_s"],
-                "justification": _single_information_geometry_action(record, label)[
-                    "justification"
-                ],
-                "fisher_rao_distance": fisher_rao,
-                "wasserstein_distance": _non_negative_float(
-                    record.get("wasserstein_distance"),
-                    f"{label} wasserstein_distance",
-                ),
-                "natural_gradient_norm": _non_negative_float(
-                    record.get("natural_gradient_norm"),
-                    f"{label} natural_gradient_norm",
-                ),
-                "curvature_proxy": curvature_proxy,
-                "simplex_coordinates": list(simplex),
-                "target_coordinates": list(target),
-                "metric_tensor": metric_tensor,
-                "tangent_vector": list(tangent_vector),
-                "geodesic_length": geodesic_length,
-            }
+        entry: dict[str, object] = {
+            "step": index + 1,
+            "backend": backend,
+            "claim_boundary": claim_boundary,
+            "non_actuating": True,
+            "execution_disabled": True,
+            "knob": _single_information_geometry_action(record, label)["knob"],
+            "scope": _single_information_geometry_action(record, label)["scope"],
+            "action_value": _single_information_geometry_action(record, label)["value"],
+            "ttl_s": _single_information_geometry_action(record, label)["ttl_s"],
+            "justification": _single_information_geometry_action(record, label)[
+                "justification"
+            ],
+            "fisher_rao_distance": fisher_rao,
+            "wasserstein_distance": _non_negative_float(
+                record.get("wasserstein_distance"),
+                f"{label} wasserstein_distance",
+            ),
+            "natural_gradient_norm": _non_negative_float(
+                record.get("natural_gradient_norm"),
+                f"{label} natural_gradient_norm",
+            ),
+            "curvature_proxy": curvature_proxy,
+            "simplex_coordinates": list(simplex),
+            "target_coordinates": list(target),
+            "metric_tensor": metric_tensor,
+            "tangent_vector": list(tangent_vector),
+            "geodesic_length": geodesic_length,
+        }
+        # The seal is checked after every field, so a malformed field is
+        # reported by name rather than as a seal mismatch.
+        entry["proposal_hash"] = _require_self_hash(
+            record, "proposal_hash", f"{label} proposal_hash"
         )
+        normalised.append(entry)
     return tuple(normalised)
 
 

@@ -24,6 +24,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The Studio strange-loop and information-geometry panels verify record seals.
+  - Each strange-loop result record and information-geometry proposal record
+    carries a SHA-256 of its own canonical JSON (`result_hash`,
+    `proposal_hash`). The panels checked only that the digest was 64 hex
+    characters. An edited record, with lowered drift scores, a flipped
+    trigger verdict or a zeroed Wasserstein distance, rendered under its
+    original seal.
+  - Both panels now recompute the seal after validating the fields and
+    refuse a record that no longer matches it.
+
 - A Studio owned-connector record no longer mixes two binding contracts.
   - `build_owned_live_connector_runtime_record` names the `contract_hash` of
     the replay's connector plan but built the sync envelope from the binding

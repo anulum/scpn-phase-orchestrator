@@ -18,6 +18,7 @@ import pytest
 
 import scpn_phase_orchestrator.studio as studio
 from scpn_phase_orchestrator.supervisor import evaluate_strange_loop_drift_scenarios
+from tests.sealing import seal
 
 
 def _records() -> list[dict[str, object]]:
@@ -80,6 +81,7 @@ def test_strange_loop_panel_reports_failed_expected_trigger_evidence() -> None:
     """Failed trigger checks remain visible as passive review evidence."""
     failed_record = _copy_mapping(_record())
     failed_record["passed_expected_trigger"] = False
+    failed_record = seal(failed_record, "result_hash")
 
     panel = studio.build_strange_loop_studio_panel([failed_record])
 
