@@ -26,6 +26,8 @@ Requires: jax>=0.4
 
 from __future__ import annotations
 
+import math
+
 import jax
 import jax.numpy as jnp
 
@@ -141,6 +143,55 @@ def _build_windows(
     return starts, targets
 
 
+def _require_observed(observed: jax.Array, *, min_steps: int) -> int:
+    """Return ``T`` of a finite ``(T, N)`` trajectory with ``T >= min_steps``."""
+    if observed.ndim != 2 or observed.shape[1] < 1:
+        raise ValueError(f"observed must be a (T, N) array, got shape {observed.shape}")
+    if observed.shape[0] < min_steps:
+        raise ValueError(
+            f"observed needs at least {min_steps} time steps, got {observed.shape[0]}"
+        )
+    if not bool(jnp.all(jnp.isfinite(observed))):
+        raise ValueError("observed must contain only finite phases")
+    return int(observed.shape[0])
+
+
+def _require_real(value: object, name: str, *, positive: bool) -> float:
+    """Return a finite real ``value`` that is positive (or non-negative)."""
+    if (
+        isinstance(value, bool)
+        or not isinstance(value, int | float)
+        or not math.isfinite(value)
+        or value < 0
+        or (positive and value == 0)
+    ):
+        kind = "positive" if positive else "non-negative"
+        raise ValueError(f"{name} must be a finite {kind} number, got {value!r}")
+    return float(value)
+
+
+def _require_count(value: object, name: str, *, minimum: int) -> int:
+    """Return an integer ``value`` of at least ``minimum``."""
+    if isinstance(value, bool) or not isinstance(value, int) or value < minimum:
+        raise ValueError(f"{name} must be an integer >= {minimum}, got {value!r}")
+    return value
+
+
+def _require_window(window_size: object, n_steps: int, *, minimum: int) -> int:
+    """Return a shooting window that fits at least once into ``n_steps``.
+
+    A window longer than ``n_steps - 1`` yields no window at all, so the shooting
+    loss is a mean over nothing (NaN) and the optimiser returns its random start.
+    """
+    window = _require_count(window_size, "window_size", minimum=minimum)
+    if window > n_steps - 1:
+        raise ValueError(
+            f"window_size {window} leaves no complete window in {n_steps} steps "
+            f"(at most {n_steps - 1})"
+        )
+    return window
+
+
 def _symmetrise_K(K: jax.Array) -> jax.Array:
     """Enforce symmetric coupling with zero diagonal."""
     N = K.shape[0]
@@ -174,7 +225,18 @@ def analytical_inverse(
     -------
     tuple[jax.Array, jax.Array]
         (K, omegas): inferred (N, N) coupling and (N,) frequencies.
+
+    Raises
+    ------
+    ValueError
+        If ``observed`` is not a finite ``(T, N)`` array with ``T >= 3``, ``dt``
+        is not finite and positive, or ``alpha`` is not finite and non-negative.
+        With fewer than three steps there is no central difference and the
+        regression used to return an all-zero coupling.
     """
+    _require_observed(observed, min_steps=3)
+    dt = _require_real(dt, "dt", positive=True)
+    alpha = _require_real(alpha, "alpha", positive=False)
     T, N = observed.shape
     # Phase-aware central finite differences: unwrap Δθ via atan2
     # to handle 2π boundary crossings correctly
@@ -257,11 +319,21 @@ def hybrid_inverse(
     -------
     tuple[jax.Array, jax.Array, list[float]]
         (K, omegas, losses): inferred params + refinement loss history.
+
+    Raises
+    ------
+    ValueError
+        As :func:`analytical_inverse`, or if ``n_refine`` is not a non-negative
+        integer, ``lr`` is not finite and positive, or (when refining)
+        ``window_size`` does not fit at least once into the trajectory.
     """
     K, omegas = analytical_inverse(observed, dt, alpha=alpha)
+    n_refine = _require_count(n_refine, "n_refine", minimum=0)
 
-    if n_refine <= 0:
+    if n_refine == 0:
         return K, omegas, []
+    lr = _require_real(lr, "lr", positive=True)
+    window_size = _require_window(window_size, int(observed.shape[0]), minimum=1)
 
     starts, targets = _build_windows(observed, window_size)
 
@@ -340,7 +412,24 @@ def infer_coupling(
     tuple[jax.Array, jax.Array, list[float]]
         (K, omegas, losses) where: K: (N, N) inferred coupling matrix omegas: (N,)
         inferred natural frequencies losses: list of loss values per epoch.
+
+    Raises
+    ------
+    ValueError
+        If ``observed`` is not a finite ``(T, N)`` array with ``T >= 2``; ``dt``
+        or ``lr`` is not finite and positive; ``l1_weight`` or ``grad_clip`` is
+        not finite and non-negative; ``n_epochs`` or ``seed`` is not a
+        non-negative integer; or ``window_size`` is negative or leaves no
+        complete window (the loss was NaN and the random start was returned).
     """
+    n_steps = _require_observed(observed, min_steps=2)
+    dt = _require_real(dt, "dt", positive=True)
+    lr = _require_real(lr, "lr", positive=True)
+    l1_weight = _require_real(l1_weight, "l1_weight", positive=False)
+    grad_clip = _require_real(grad_clip, "grad_clip", positive=False)
+    n_epochs = _require_count(n_epochs, "n_epochs", minimum=0)
+    seed = _require_count(seed, "seed", minimum=0)
+    window_size = _require_window(window_size, n_steps, minimum=0)
     N = observed.shape[1]
     key = jax.random.PRNGKey(seed)
     k1, _ = jax.random.split(key)
