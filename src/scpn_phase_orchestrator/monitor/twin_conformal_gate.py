@@ -298,7 +298,7 @@ class TwinConformalGate:
         key = self._resolve_regime(regime)
         state = self._regimes[key]
 
-        threshold = _conformal_threshold(state.calibration, state.alpha_t)
+        threshold = _admission_threshold(state.calibration, state.alpha_t)
         admitted = score <= threshold
         alpha_used = state.alpha_t
 
@@ -396,16 +396,29 @@ class TwinConformalGate:
 
 
 def _conformal_threshold(sorted_scores: FloatArray, alpha_t: float) -> float:
-    """Return the conformal admit/flag threshold for the regime.
+    """Return the split-conformal quantile, ``+inf`` when it cannot be bounded.
 
-    The split-conformal rank is clamped to ``[1, n]``: below one it selects the
-    smallest nominal score, and above ``n`` (too few calibration scores for the
-    level, or ``alpha_t`` driven to zero) it selects the largest instead of an
-    infinite band, so the gate stays closed to ticks beyond every nominal one.
+    This is the textbook quantile. The alarm stream (``conformal_alarm``) uses it
+    as is: an unbounded threshold never alarms, which keeps its false-alarm bound.
     """
     n = int(sorted_scores.size)
-    rank = ceil((1.0 - alpha_t) * (n + 1))
-    return float(sorted_scores[min(max(rank, 1), n) - 1])
+    level = 1.0 - alpha_t
+    rank = ceil(level * (n + 1))
+    if rank <= 0:
+        return float(sorted_scores[0])
+    if rank > n:
+        return float("inf")
+    return float(sorted_scores[rank - 1])
+
+
+def _admission_threshold(sorted_scores: FloatArray, alpha_t: float) -> float:
+    """Return the admission band bound, never above the largest nominal score.
+
+    Where the conformal quantile is unbounded (too few calibration scores for the
+    level, or ``alpha_t`` driven to zero) the gate uses the largest nominal
+    score, so it stays closed to ticks beyond every nominal one.
+    """
+    return min(_conformal_threshold(sorted_scores, alpha_t), float(sorted_scores[-1]))
 
 
 def _with_decision_hash(decision: ConformalDecision) -> ConformalDecision:
