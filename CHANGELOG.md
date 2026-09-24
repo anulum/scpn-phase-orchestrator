@@ -24,6 +24,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `replay_lead_time` measures lead time only on whole samples against a fresh
+  monitor. A float onset gave fractional lead times, a NaN onset silently
+  discarded a real lead, and `True` was taken as sample 1. A monitor that had
+  already consumed a stream numbered its alarms from where it stopped, so a
+  real 0.5 s lead (alarm 100, onset 150) came out as "not led" (alarm 250).
+  The onset must now be a positive integer, and a used monitor is refused
+  until `reset()`. `GridModalStreamMonitor.samples_seen` exposes the count
+  this check reads.
 - `GridModalStreamMonitor.from_evidence` and `from_stream_evidence` verify
   the `content_hash` of the artefact they are documented to read as sealed.
   Before, an edited artefact configured the monitor. Raising the certified

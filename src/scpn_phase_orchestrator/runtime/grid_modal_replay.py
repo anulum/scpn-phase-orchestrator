@@ -115,9 +115,12 @@ def replay_lead_time(
     voltages : FloatArray
         The recorded per-bus voltages, shape ``(buses, samples)``.
     monitor : GridModalStreamMonitor
-        The causal monitor to drive.
+        The causal monitor to drive. It must be fresh (no samples consumed since
+        construction or :meth:`~GridModalStreamMonitor.reset`): a used monitor
+        numbers samples from where it stopped and may still be latched, so its
+        alarms would not line up with ``onset_sample``.
     onset_sample : int
-        The stream sample count at the disturbance onset; must be positive.
+        The stream sample count at the disturbance onset; a positive integer.
 
     Returns
     -------
@@ -127,10 +130,24 @@ def replay_lead_time(
     Raises
     ------
     ValueError
-        If ``onset_sample`` is not positive.
+        If ``onset_sample`` is not a positive integer, or the monitor has
+        already consumed samples.
     """
-    if onset_sample <= 0:
-        raise ValueError("onset_sample must be a positive sample count")
+    if (
+        isinstance(onset_sample, bool | np.bool_)
+        or not isinstance(onset_sample, int | np.integer)
+        or onset_sample <= 0
+    ):
+        raise ValueError(
+            "onset_sample must be a positive integer sample count, "
+            f"got {onset_sample!r}"
+        )
+    if monitor.samples_seen:
+        raise ValueError(
+            f"monitor has already consumed {monitor.samples_seen} samples; "
+            "call reset() or pass a fresh monitor so alarms line up with the onset"
+        )
+    onset_sample = int(onset_sample)
     alarms = replay(voltages, monitor)
     leading = [alarm for alarm in alarms if alarm.sample_index <= onset_sample]
     if not leading:
