@@ -24,6 +24,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The plugin lifecycle, remediation and scheduler commands verify the seal
+  of every review artefact they consume. Each artefact is sealed last with
+  `payload[field] = _record_hash(payload)`, but the consumers checked only
+  that the field held 64 hex characters. An edited artefact therefore went
+  down the chain under its stale hash: a scheduler dashboard row changed
+  from `blocked` to `completed` became a `no_op` in the next control plan.
+  This affected nine payload loaders (drilldown, remediation plan, action
+  status, execution dashboard, deployment handoff, scheduler queue,
+  telemetry, adapter handoff, acknowledgement) and seven direct loads
+  (replay, dashboard, control plan, runbook, automation profile ×2, retry
+  profile, capture). The seal is checked after the structural checks, so
+  specific schema errors keep their messages. `overdue` flags must be
+  booleans in the dashboard and control plan: `bool("false")` is true.
+  Test fixtures that built these artefacts by hand now seal them with the
+  CLI's own record hash (`tests/sealing.py`).
 - `spo supervisor-candidate` no longer coerces flags and labels before the
   autotune dataclasses validate them. The dataclasses refuse a non-boolean
   flag, but the CLI applied `bool()` first, so `"require_stl": ""` silently

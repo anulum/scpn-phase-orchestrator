@@ -21,6 +21,7 @@ from scpn_phase_orchestrator.runtime.cli._payloads import (
     _load_lifecycle_remediation_scheduler_queue_payload,
     _load_lifecycle_remediation_scheduler_telemetry_payload,
 )
+from tests.sealing import seal
 
 _HEX = "a" * 64
 _PREFIX = "scpn_plugin_execution_request_lifecycle_remediation"
@@ -43,7 +44,8 @@ def _dashboard(**overrides: Any) -> dict[str, Any]:
         ],
     }
     payload.update(overrides)
-    return payload
+    # sealed like the CLI output, unless a test sets the seal itself
+    return payload if "execution_hash" in overrides else seal(payload, "execution_hash")
 
 
 class TestExecutionDashboardLoader:
@@ -97,7 +99,8 @@ def _handoff(**overrides: Any) -> dict[str, Any]:
         ],
     }
     payload.update(overrides)
-    return payload
+    # sealed like the CLI output, unless a test sets the seal itself
+    return payload if "handoff_hash" in overrides else seal(payload, "handoff_hash")
 
 
 class TestDeploymentHandoffLoader:
@@ -151,7 +154,8 @@ def _queue(**overrides: Any) -> dict[str, Any]:
         ],
     }
     payload.update(overrides)
-    return payload
+    # sealed like the CLI output, unless a test sets the seal itself
+    return payload if "scheduler_hash" in overrides else seal(payload, "scheduler_hash")
 
 
 class TestSchedulerQueueLoader:
@@ -187,7 +191,8 @@ def _telemetry(**overrides: Any) -> dict[str, Any]:
         "rows": [],
     }
     payload.update(overrides)
-    return payload
+    # sealed like the CLI output, unless a test sets the seal itself
+    return payload if "telemetry_hash" in overrides else seal(payload, "telemetry_hash")
 
 
 class TestSchedulerTelemetryLoader:
@@ -230,7 +235,12 @@ def _adapter_handoff(**overrides: Any) -> dict[str, Any]:
         ],
     }
     payload.update(overrides)
-    return payload
+    # sealed like the CLI output, unless a test sets the seal itself
+    return (
+        payload
+        if "adapter_handoff_hash" in overrides
+        else seal(payload, "adapter_handoff_hash")
+    )
 
 
 class TestSchedulerAdapterHandoffLoader:
@@ -278,7 +288,12 @@ def _acknowledgement(**overrides: Any) -> dict[str, Any]:
         "external_reference": "EXT-1",
     }
     payload.update(overrides)
-    return payload
+    # sealed like the CLI output, unless a test sets the seal itself
+    return (
+        payload
+        if "acknowledgement_hash" in overrides
+        else seal(payload, "acknowledgement_hash")
+    )
 
 
 class TestSchedulerAcknowledgementLoader:

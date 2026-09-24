@@ -28,6 +28,7 @@ from scpn_phase_orchestrator.runtime.cli._payloads import (
     _load_json_file,
     _load_lifecycle_remediation_scheduler_adapter_handoff_payload,
     _record_hash,
+    _require_self_seal,
     _require_sha256,
 )
 from scpn_phase_orchestrator.runtime.cli.plugins._group import (
@@ -80,6 +81,9 @@ def plugins_lifecycle_remediation_scheduler_control_plan(
             "unexpected scheduler execution dashboard schema"
         )
     dashboard_hash = _require_sha256(dashboard.get("dashboard_hash"), "dashboard_hash")
+    _require_self_seal(
+        dashboard, "dashboard_hash", context="remediation scheduler control plan"
+    )
     rows = dashboard.get("rows")
     if not isinstance(rows, list):
         raise click.ClickException(
@@ -98,7 +102,12 @@ def plugins_lifecycle_remediation_scheduler_control_plan(
                 "remediation scheduler control plan schema mismatch: "
                 "unsupported effective_state"
             )
-        overdue = bool(row.get("overdue", False))
+        overdue = row.get("overdue", False)
+        if not isinstance(overdue, bool):
+            raise click.ClickException(
+                "remediation scheduler control plan schema mismatch: "
+                "row overdue must be a boolean"
+            )
         if effective_state == "completed":
             action = "no_op"
             reason = "already_completed"
@@ -218,6 +227,9 @@ def plugins_lifecycle_remediation_scheduler_runbook(
             "unexpected scheduler control plan schema"
         )
     _require_sha256(control_plan.get("control_plan_hash"), "control_plan_hash")
+    _require_self_seal(
+        control_plan, "control_plan_hash", context="remediation scheduler runbook"
+    )
     adapter_handoff = _load_lifecycle_remediation_scheduler_adapter_handoff_payload(
         _load_json_file(
             scheduler_adapter_handoff_json,
@@ -414,6 +426,9 @@ def plugins_lifecycle_remediation_scheduler_automation_profile(
             "unexpected scheduler runbook schema"
         )
     _require_sha256(runbook.get("runbook_hash"), "runbook_hash")
+    _require_self_seal(
+        runbook, "runbook_hash", context="remediation scheduler automation profile"
+    )
     groups = runbook.get("groups")
     if not isinstance(groups, list):
         raise click.ClickException(
@@ -608,6 +623,11 @@ def plugins_lifecycle_remediation_scheduler_acknowledgement_capture(
             "unexpected automation profile schema"
         )
     _require_sha256(profile.get("automation_profile_hash"), "automation_profile_hash")
+    _require_self_seal(
+        profile,
+        "automation_profile_hash",
+        context="remediation scheduler acknowledgement capture",
+    )
     normalized_action_hash = _require_sha256(action_hash, "action_hash")
     rules = profile.get("automation_rules")
     if not isinstance(rules, list):
@@ -794,6 +814,11 @@ def plugins_lifecycle_remediation_scheduler_retry_profile(
         profile.get("automation_profile_hash"),
         "automation_profile_hash",
     )
+    _require_self_seal(
+        profile,
+        "automation_profile_hash",
+        context="remediation scheduler retry profile",
+    )
     rules = profile.get("automation_rules")
     if not isinstance(rules, list):
         raise click.ClickException(
@@ -930,6 +955,11 @@ def plugins_lifecycle_remediation_scheduler_retry_orchestration(
         retry_profile.get("retry_profile_hash"),
         "retry_profile_hash",
     )
+    _require_self_seal(
+        retry_profile,
+        "retry_profile_hash",
+        context="remediation scheduler retry orchestration",
+    )
     retry_rules = retry_profile.get("retry_rules")
     if not isinstance(retry_rules, list):
         raise click.ClickException(
@@ -964,6 +994,11 @@ def plugins_lifecycle_remediation_scheduler_retry_orchestration(
                 "remediation scheduler retry orchestration schema mismatch: "
                 "unexpected acknowledgement capture schema"
             )
+        _require_self_seal(
+            capture,
+            "capture_hash",
+            context="remediation scheduler retry orchestration",
+        )
         action_hash = _require_sha256(capture.get("action_hash"), "action_hash")
         if action_hash in capture_by_action_hash:
             raise click.ClickException(

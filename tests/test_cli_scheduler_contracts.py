@@ -20,6 +20,7 @@ from click.testing import CliRunner, Result
 
 from scpn_phase_orchestrator.runtime.cli import main
 from scpn_phase_orchestrator.runtime.cli._payloads import _record_hash
+from tests.sealing import seal
 
 Payload = dict[str, object]
 _F = TypeVar("_F", bound=Callable[..., object])
@@ -151,7 +152,7 @@ def _scheduler_queue_payload() -> Payload:
 
 def _scheduler_telemetry_payload(
     *,
-    telemetry_hash: str = _TELEMETRY_HASH,
+    telemetry_hash: str | None = None,
     row_state: str = "pending",
 ) -> Payload:
     """Return a scheduler telemetry payload with one row."""
@@ -188,9 +189,10 @@ def _scheduler_telemetry_payload(
         "overdue_action_hashes": [_ACTION_HASH],
         "rows": [row],
         "created_by": "deployment_scheduler",
-        "telemetry_hash": telemetry_hash,
     }
-    return payload
+    if telemetry_hash is not None:
+        return {**payload, "telemetry_hash": telemetry_hash}
+    return seal(payload, "telemetry_hash")
 
 
 def _adapter_handoff_payload() -> Payload:
@@ -220,28 +222,28 @@ def _adapter_handoff_payload() -> Payload:
         "version": "1.0.0",
         "plan_hash": _PLAN_HASH,
         "execution_hash": _EXECUTION_HASH,
-        "telemetry_hash": _TELEMETRY_HASH,
+        "telemetry_hash": _scheduler_telemetry_payload()["telemetry_hash"],
         "adapter_name": "airflow",
         "adapter_endpoint": "airflow://cluster-a",
         "entry_count": 1,
         "entries": [entry],
         "created_by": "deployment_scheduler",
-        "adapter_handoff_hash": _ADAPTER_HANDOFF_HASH,
     }
-    return payload
+    return seal(payload, "adapter_handoff_hash")
 
 
 def _acknowledgement_payload(
     *,
     adapter_entry_hash: str = _ADAPTER_ENTRY_HASH,
-    acknowledgement_hash: str = _ACKNOWLEDGEMENT_HASH,
+    external_reference: str = "airflow-run-1",
 ) -> Payload:
-    """Return a scheduler acknowledgement payload."""
-    return {
+    """Return a sealed scheduler acknowledgement linked to the adapter handoff."""
+    handoff = _adapter_handoff_payload()
+    payload: Payload = {
         "schema": f"{_PREFIX}_scheduler_acknowledgement_v1",
         "version": "1.0.0",
-        "adapter_handoff_hash": _ADAPTER_HANDOFF_HASH,
-        "telemetry_hash": _TELEMETRY_HASH,
+        "adapter_handoff_hash": handoff["adapter_handoff_hash"],
+        "telemetry_hash": handoff["telemetry_hash"],
         "plan_hash": _PLAN_HASH,
         "execution_hash": _EXECUTION_HASH,
         "adapter_entry_hash": adapter_entry_hash,
@@ -250,33 +252,37 @@ def _acknowledgement_payload(
         "request_hash": _REQUEST_HASH,
         "state": "completed",
         "acknowledged_by": "airflow_worker",
-        "external_reference": "airflow-run-1",
+        "external_reference": external_reference,
         "note": "",
-        "acknowledgement_hash": acknowledgement_hash,
     }
+    return seal(payload, "acknowledgement_hash")
 
 
 def _replay_payload(
     *,
-    telemetry_hash: str = _TELEMETRY_HASH,
+    telemetry_hash: str | None = None,
     rows: list[Payload] | None = None,
     schema: str | None = None,
 ) -> Payload:
     """Return a scheduler acknowledgement replay payload."""
     replay_rows = rows if rows is not None else []
-    return {
+    payload: Payload = {
         "schema": schema or f"{_PREFIX}_scheduler_acknowledgement_replay_v1",
         "version": "1.0.0",
-        "adapter_handoff_hash": _ADAPTER_HANDOFF_HASH,
+        "adapter_handoff_hash": _adapter_handoff_payload()["adapter_handoff_hash"],
         "plan_hash": _PLAN_HASH,
         "execution_hash": _EXECUTION_HASH,
-        "telemetry_hash": telemetry_hash,
+        "telemetry_hash": (
+            telemetry_hash
+            if telemetry_hash is not None
+            else _scheduler_telemetry_payload()["telemetry_hash"]
+        ),
         "acknowledgement_count": len(replay_rows),
         "state_counts": {"in_progress": 0, "completed": 0, "blocked": 0},
         "rows": replay_rows,
         "created_by": "deployment_scheduler",
-        "replay_hash": _REPLAY_HASH,
     }
+    return seal(payload, "replay_hash")
 
 
 def _replay_row(
@@ -483,11 +489,11 @@ def test_scheduler_acknowledgement_replay_rejects_duplicate_acknowledgements(
     )
     ack_a_path = _write_payload(
         tmp_path / "ack-a.json",
-        _acknowledgement_payload(acknowledgement_hash=_ACKNOWLEDGEMENT_HASH),
+        _acknowledgement_payload(),
     )
     ack_b_path = _write_payload(
         tmp_path / "ack-b.json",
-        _acknowledgement_payload(acknowledgement_hash="e" * 64),
+        _acknowledgement_payload(external_reference="airflow-run-2"),
     )
 
     result = _invoke(
@@ -554,18 +560,25 @@ def test_scheduler_execution_dashboard_rejects_corrupt_replay_contracts(
     telemetry_payload = _scheduler_telemetry_payload(
         row_state="deferred" if case_name == "bad_effective_state" else "pending"
     )
-    replay_payload = _replay_payload()
+    linked = str(telemetry_payload["telemetry_hash"])
+    replay_payload = _replay_payload(telemetry_hash=linked)
     created_by = "deployment_scheduler"
     if case_name == "empty_creator":
         created_by = ""
     elif case_name == "bad_schema":
-        replay_payload = _replay_payload(schema="not-a-scheduler-replay")
+        replay_payload = _replay_payload(
+            telemetry_hash=linked, schema="not-a-scheduler-replay"
+        )
     elif case_name == "hash_mismatch":
         replay_payload = _replay_payload(telemetry_hash="e" * 64)
     elif case_name == "bad_replay_state":
-        replay_payload = _replay_payload(rows=[_replay_row(state="cancelled")])
+        replay_payload = _replay_payload(
+            telemetry_hash=linked, rows=[_replay_row(state="cancelled")]
+        )
     elif case_name == "duplicate_action":
-        replay_payload = _replay_payload(rows=[_replay_row(), _replay_row()])
+        replay_payload = _replay_payload(
+            telemetry_hash=linked, rows=[_replay_row(), _replay_row()]
+        )
 
     telemetry_path = _write_payload(
         tmp_path / "telemetry.json",

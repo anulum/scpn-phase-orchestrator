@@ -117,7 +117,11 @@ def _dashboard_payload(**overrides: Any) -> dict[str, Any]:
         ],
     }
     payload.update(overrides)
-    return payload
+    # sealed like the CLI output, unless a test sets the seal itself
+    if "dashboard_hash" in overrides:
+        return payload
+    payload.pop("dashboard_hash")
+    return _with_hash(payload, "dashboard_hash")
 
 
 def _control_action(

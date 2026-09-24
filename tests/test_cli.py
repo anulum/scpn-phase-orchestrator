@@ -36,6 +36,7 @@ from tests.plugin_execution_fixtures import (
     write_plan_payload as _write_plan_payload,
 )
 from tests.prometheus_range_server import prometheus_range_server
+from tests.sealing import seal
 
 
 @pytest.fixture
@@ -3838,6 +3839,7 @@ def test_plugins_lifecycle_remediation_execution_dashboard_rejects_plan_mismatch
     assert status.exit_code == 0
     status_payload = json.loads(status.output)
     status_payload["plan_hash"] = "0" * 64
+    status_payload = seal(status_payload, "status_hash")  # sealed, wrong plan
     status_path = tmp_path / "status.json"
     status_path.write_text(
         json.dumps(status_payload, indent=2, sort_keys=True),
@@ -3976,6 +3978,7 @@ def test_plugins_lifecycle_remediation_execution_dashboard_rejects_foreign_statu
     )
     foreign = json.loads(status_path.read_text(encoding="utf-8"))
     foreign["action_hash"] = "b" * 64
+    foreign = seal(foreign, "status_hash")  # sealed, but outside the plan
     foreign_path = tmp_path / "foreign-status.json"
     foreign_path.write_text(json.dumps(foreign, sort_keys=True), encoding="utf-8")
 
@@ -4405,9 +4408,9 @@ def test_plugins_lifecycle_remediation_scheduler_queue_rejects_window_overflow(
             ),
         }
         handoff_payload["handoff_actions"].append(action)
-    handoff_payload["handoff_hash"] = hashlib.sha256(
-        json.dumps(handoff_payload, sort_keys=True).encode("utf-8")
-    ).hexdigest()
+    handoff_payload["handoff_hash"] = seal(handoff_payload, "handoff_hash")[
+        "handoff_hash"
+    ]
     handoff_path = tmp_path / "handoff-overflow.json"
     handoff_path.write_text(
         json.dumps(handoff_payload, indent=2, sort_keys=True),
@@ -4642,9 +4645,9 @@ def test_plugins_lifecycle_remediation_scheduler_telemetry_rejects_duplicate_sta
         "queue_entry_count": 1,
         "created_by": "deployment_scheduler",
     }
-    queue_payload["scheduler_hash"] = hashlib.sha256(
-        json.dumps(queue_payload, sort_keys=True).encode("utf-8")
-    ).hexdigest()
+    queue_payload["scheduler_hash"] = seal(queue_payload, "scheduler_hash")[
+        "scheduler_hash"
+    ]
     queue_path = tmp_path / "queue.json"
     queue_path.write_text(
         json.dumps(queue_payload, indent=2, sort_keys=True),
@@ -4662,9 +4665,7 @@ def test_plugins_lifecycle_remediation_scheduler_telemetry_rejects_duplicate_sta
         "updated_by": "deployment_scheduler",
         "note": "",
     }
-    status_payload["status_hash"] = hashlib.sha256(
-        json.dumps(status_payload, sort_keys=True).encode("utf-8")
-    ).hexdigest()
+    status_payload["status_hash"] = seal(status_payload, "status_hash")["status_hash"]
     status_path_a = tmp_path / "status-a.json"
     status_path_b = tmp_path / "status-b.json"
     status_blob = json.dumps(status_payload, indent=2, sort_keys=True)
@@ -4911,9 +4912,9 @@ def test_plugins_lifecycle_scheduler_ack_rejects_unknown_entry_hash(
         "entries": [],
         "created_by": "deployment_scheduler",
     }
-    adapter_payload["adapter_handoff_hash"] = hashlib.sha256(
-        json.dumps(adapter_payload, sort_keys=True).encode("utf-8")
-    ).hexdigest()
+    adapter_payload["adapter_handoff_hash"] = seal(
+        adapter_payload, "adapter_handoff_hash"
+    )["adapter_handoff_hash"]
     adapter_path = tmp_path / "adapter-handoff-empty.json"
     adapter_path.write_text(
         json.dumps(adapter_payload, indent=2, sort_keys=True),
@@ -5216,9 +5217,9 @@ def test_plugins_lifecycle_scheduler_replay_rejects_hash_mismatch(
         ],
         "created_by": "deployment_scheduler",
     }
-    adapter_payload["adapter_handoff_hash"] = hashlib.sha256(
-        json.dumps(adapter_payload, sort_keys=True).encode("utf-8")
-    ).hexdigest()
+    adapter_payload["adapter_handoff_hash"] = seal(
+        adapter_payload, "adapter_handoff_hash"
+    )["adapter_handoff_hash"]
     adapter_path = tmp_path / "adapter.json"
     adapter_path.write_text(
         json.dumps(adapter_payload, indent=2, sort_keys=True),
@@ -5243,9 +5244,9 @@ def test_plugins_lifecycle_scheduler_replay_rejects_hash_mismatch(
         "external_reference": "ref-1",
         "note": "",
     }
-    ack_payload["acknowledgement_hash"] = hashlib.sha256(
-        json.dumps(ack_payload, sort_keys=True).encode("utf-8")
-    ).hexdigest()
+    ack_payload["acknowledgement_hash"] = seal(ack_payload, "acknowledgement_hash")[
+        "acknowledgement_hash"
+    ]
     ack_path = tmp_path / "ack.json"
     ack_path.write_text(
         json.dumps(ack_payload, indent=2, sort_keys=True),
@@ -5546,9 +5547,9 @@ def test_plugins_lifecycle_remediation_scheduler_runbook_rejects_plan_hash_misma
         "control_actions": [],
         "created_by": "operator_console",
     }
-    control_payload["control_plan_hash"] = hashlib.sha256(
-        json.dumps(control_payload, sort_keys=True).encode("utf-8")
-    ).hexdigest()
+    control_payload["control_plan_hash"] = seal(control_payload, "control_plan_hash")[
+        "control_plan_hash"
+    ]
     control_path = tmp_path / "control-plan.json"
     control_path.write_text(
         json.dumps(control_payload, indent=2, sort_keys=True),
@@ -5568,9 +5569,9 @@ def test_plugins_lifecycle_remediation_scheduler_runbook_rejects_plan_hash_misma
         "entries": [],
         "created_by": "deployment_scheduler",
     }
-    adapter_payload["adapter_handoff_hash"] = hashlib.sha256(
-        json.dumps(adapter_payload, sort_keys=True).encode("utf-8")
-    ).hexdigest()
+    adapter_payload["adapter_handoff_hash"] = seal(
+        adapter_payload, "adapter_handoff_hash"
+    )["adapter_handoff_hash"]
     adapter_path = tmp_path / "adapter-handoff.json"
     adapter_path.write_text(
         json.dumps(adapter_payload, indent=2, sort_keys=True),
@@ -5915,9 +5916,9 @@ def test_plugins_lifecycle_scheduler_capture_rejects_auto_state_mismatch(
         ],
         "created_by": "operator_console",
     }
-    profile_payload["automation_profile_hash"] = hashlib.sha256(
-        json.dumps(profile_payload, sort_keys=True).encode("utf-8")
-    ).hexdigest()
+    profile_payload["automation_profile_hash"] = seal(
+        profile_payload, "automation_profile_hash"
+    )["automation_profile_hash"]
     profile_path = tmp_path / "profile.json"
     profile_path.write_text(
         json.dumps(profile_payload, indent=2, sort_keys=True),
@@ -5944,9 +5945,9 @@ def test_plugins_lifecycle_scheduler_capture_rejects_auto_state_mismatch(
         ],
         "created_by": "deployment_scheduler",
     }
-    adapter_payload["adapter_handoff_hash"] = hashlib.sha256(
-        json.dumps(adapter_payload, sort_keys=True).encode("utf-8")
-    ).hexdigest()
+    adapter_payload["adapter_handoff_hash"] = seal(
+        adapter_payload, "adapter_handoff_hash"
+    )["adapter_handoff_hash"]
     adapter_path = tmp_path / "adapter.json"
     adapter_path.write_text(
         json.dumps(adapter_payload, indent=2, sort_keys=True),
@@ -6015,9 +6016,9 @@ def test_plugins_lifecycle_remediation_scheduler_retry_profile_and_orchestration
         ],
         "created_by": "operator_console",
     }
-    profile_payload["automation_profile_hash"] = hashlib.sha256(
-        json.dumps(profile_payload, sort_keys=True).encode("utf-8")
-    ).hexdigest()
+    profile_payload["automation_profile_hash"] = seal(
+        profile_payload, "automation_profile_hash"
+    )["automation_profile_hash"]
     profile_path = tmp_path / "profile.json"
     profile_path.write_text(
         json.dumps(profile_payload, indent=2, sort_keys=True),
@@ -6069,9 +6070,7 @@ def test_plugins_lifecycle_remediation_scheduler_retry_profile_and_orchestration
         "acknowledged_by": "operator",
         "note": "",
     }
-    capture_a["capture_hash"] = hashlib.sha256(
-        json.dumps(capture_a, sort_keys=True).encode("utf-8")
-    ).hexdigest()
+    capture_a["capture_hash"] = seal(capture_a, "capture_hash")["capture_hash"]
     capture_a_path = tmp_path / "capture-a.json"
     capture_a_path.write_text(
         json.dumps(capture_a, indent=2, sort_keys=True),
@@ -6096,9 +6095,7 @@ def test_plugins_lifecycle_remediation_scheduler_retry_profile_and_orchestration
         "acknowledged_by": "operator",
         "note": "",
     }
-    capture_b["capture_hash"] = hashlib.sha256(
-        json.dumps(capture_b, sort_keys=True).encode("utf-8")
-    ).hexdigest()
+    capture_b["capture_hash"] = seal(capture_b, "capture_hash")["capture_hash"]
     capture_b_path = tmp_path / "capture-b.json"
     capture_b_path.write_text(
         json.dumps(capture_b, indent=2, sort_keys=True),
@@ -6157,9 +6154,9 @@ def test_plugins_lifecycle_scheduler_retry_rejects_duplicate_capture(
         ],
         "created_by": "operator_console",
     }
-    retry_profile_payload["retry_profile_hash"] = hashlib.sha256(
-        json.dumps(retry_profile_payload, sort_keys=True).encode("utf-8")
-    ).hexdigest()
+    retry_profile_payload["retry_profile_hash"] = seal(
+        retry_profile_payload, "retry_profile_hash"
+    )["retry_profile_hash"]
     retry_profile_path = tmp_path / "retry-profile.json"
     retry_profile_path.write_text(
         json.dumps(retry_profile_payload, indent=2, sort_keys=True),
@@ -6184,9 +6181,9 @@ def test_plugins_lifecycle_scheduler_retry_rejects_duplicate_capture(
         "acknowledged_by": "operator",
         "note": "",
     }
-    capture_payload["capture_hash"] = hashlib.sha256(
-        json.dumps(capture_payload, sort_keys=True).encode("utf-8")
-    ).hexdigest()
+    capture_payload["capture_hash"] = seal(capture_payload, "capture_hash")[
+        "capture_hash"
+    ]
     capture_a = tmp_path / "capture-a.json"
     capture_b = tmp_path / "capture-b.json"
     capture_blob = json.dumps(capture_payload, indent=2, sort_keys=True)

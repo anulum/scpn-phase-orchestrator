@@ -31,6 +31,7 @@ from ._shared import (
     _load_json_file,
     _normalize_approved_target_hashes,
     _record_hash,
+    _require_self_seal,
     _require_sha256,
 )
 from .lifecycle import (
@@ -69,6 +70,7 @@ __all__ = [
     "_find_discovered_plugin",
     "_find_capability",
     "_normalize_approved_target_hashes",
+    "_require_self_seal",
     "_require_sha256",
     "_load_json_file",
     "_record_hash",
