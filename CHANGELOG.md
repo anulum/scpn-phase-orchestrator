@@ -36,6 +36,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   backend. Admission runs each compiled Mojo executable once with empty input
   and caches the verdict per build; on a loaded workstation one launch took
   0.06–0.23 s.
+- `export_stl_specs_prism()` reads the STL monitor's own predicate grammar
+  instead of a separate copy, so every formula the builtin monitor evaluates
+  also exports; thresholds such as `.5` or `5e-1` were refused, and one that
+  overflows to infinity is a `PolicyError`. STL automaton guards and
+  controller rationales write thresholds in full rather than to six digits,
+  so a guard reads `R >= 0.30000001`, not `R >= 0.3`.
 - `PhaseFieldSpecification` formulas now carry the stored threshold exactly.
   Thresholds were written with 16 significant digits, so the catalogue's
   `phase_lag_bound` read `phase_lag <= 1.570796326794897`, above π/2, and

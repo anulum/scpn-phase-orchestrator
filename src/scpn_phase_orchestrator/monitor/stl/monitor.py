@@ -448,10 +448,15 @@ def _predicate_robustness(
 
 
 def _format_threshold(threshold: float) -> str:
-    """Return a stable string rendering of a predicate threshold."""
+    """Return a stable, lossless string rendering of a predicate threshold.
+
+    Integral thresholds render without a decimal point (``"10"``); others as
+    the shortest decimal that reads back as the same float, so an audit guard
+    such as ``R >= 0.30000001`` is not shortened to ``R >= 0.3``.
+    """
     if threshold.is_integer():
         return str(int(threshold))
-    return f"{threshold:g}"
+    return repr(float(threshold))
 
 
 def _require_non_empty(value: str, name: str) -> None:
