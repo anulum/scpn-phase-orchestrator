@@ -266,7 +266,7 @@ def read_ieee_pmu_recording(path: str | Path) -> IEEEPMURecording:
     """
     csv_path = Path(path)
     source_bytes = csv_path.read_bytes()
-    rows = list(csv.reader(io.StringIO(source_bytes.decode("utf-8"))))
+    rows = list(csv.reader(io.StringIO(source_bytes.decode("utf-8-sig"))))
 
     quantity_index = _quantity_row_index(rows)
     quantity = rows[quantity_index]

@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import csv
 import hashlib
+import io
 import math
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -185,8 +186,11 @@ def screen_ibr_ride_through_csv(
     frequency_field = _non_empty_str(frequency_column, "frequency_column")
 
     source_bytes = csv_path.read_bytes()
+    # Parse the digested bytes, not a second read of the path, so
+    # source_sha256 covers exactly the samples screened; utf-8-sig drops the
+    # byte-order mark spreadsheet exports prepend to the first column name.
     times, voltage, frequency = _read_ibr_csv(
-        csv_path, time_field, voltage_field, frequency_field
+        source_bytes.decode("utf-8-sig"), time_field, voltage_field, frequency_field
     )
     prc029_evidence = screen_ride_through_samples(
         times,
@@ -215,13 +219,13 @@ def screen_ibr_ride_through_csv(
 
 
 def _read_ibr_csv(
-    path: Path,
+    text: str,
     time_column: str,
     voltage_column: str,
     frequency_column: str,
 ) -> tuple[tuple[float, ...], tuple[float, ...], tuple[float, ...]]:
-    """Return finite timestamp, voltage, and frequency tuples from a CSV."""
-    with path.open("r", encoding="utf-8", newline="") as handle:
+    """Return finite timestamp, voltage, and frequency tuples from CSV text."""
+    with io.StringIO(text, newline="") as handle:
         reader = csv.DictReader(handle)
         fieldnames = set(reader.fieldnames or ())
         for column in (time_column, voltage_column, frequency_column):
