@@ -32,7 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   from `blocked` to `completed` became a `no_op` in the next control plan.
   This affected nine payload loaders (drilldown, remediation plan, action
   status, execution dashboard, deployment handoff, scheduler queue,
-  telemetry, adapter handoff, acknowledgement) and seven direct loads
+  telemetry, adapter handoff, acknowledgement) and eight direct loads
   (replay, dashboard, control plan, runbook, automation profile ×2, retry
   profile, capture). The seal is checked after the structural checks, so
   specific schema errors keep their messages. `overdue` flags must be
