@@ -202,7 +202,10 @@ class SymbolicExtractor(PhaseExtractor):
 
         states = []
         rust_qualities: FloatArray | None = None
-        if _HAS_RUST_SYMBOLIC:
+        # The kernel scores the linear index distance, which is the graph-walk
+        # step. On a ring the wrap from N-1 to 0 is a single step (omega above
+        # already treats it so), so ring mode scores the circular distance here.
+        if _HAS_RUST_SYMBOLIC and self._mode == "graph":
             rust_qualities = np.asarray(
                 _rust_transition_qualities(
                     indices,
@@ -246,10 +249,16 @@ class SymbolicExtractor(PhaseExtractor):
         return float(np.mean([ps.quality for ps in phase_states]))
 
     def _transition_quality(self, indices: IntArray, i: int) -> float:
-        """Quality based on transition regularity: penalise repeated or large jumps."""
+        """Quality based on transition regularity: penalise repeated or large jumps.
+
+        The jump is the linear index distance in graph mode and the circular
+        distance ``min(d, N - d)`` in ring mode, where ``N - 1 -> 0`` is one step.
+        """
         if i == 0 or len(indices) < 2:
             return self._initial_transition_quality
         step = abs(int(indices[i]) - int(indices[i - 1]))
+        if self._mode == "ring":
+            step = min(step, self._n_states - step)
         if step == 0:
             return 0.2  # stalled
         if step == 1:
