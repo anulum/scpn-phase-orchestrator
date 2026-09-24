@@ -328,6 +328,10 @@ class ReplayEngine:
 
         Returns (all_valid, n_verified).  Legacy logs without ``_hash``
         fields return (True, 0) unless ``SPO_AUDIT_KEY`` is configured.
+        Unhashed records are accepted only before the first hashed one, which
+        is the shape an ``AuditLogger`` leaves when it appends to a legacy log;
+        an unhashed record after it is an insertion the chain cannot cover and
+        fails verification.
 
         Parameters
         ----------
@@ -350,7 +354,7 @@ class ReplayEngine:
         for entry in entries:
             stored = entry.get("_hash")
             if stored is None:
-                if require_signature:
+                if require_signature or verified > 0:
                     return False, verified
                 continue
             without_hash = {k: v for k, v in entry.items() if k != "_hash"}
