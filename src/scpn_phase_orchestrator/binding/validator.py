@@ -33,7 +33,6 @@ from scpn_phase_orchestrator.binding.types import (
     is_valid_channel_id,
 )
 from scpn_phase_orchestrator.exceptions import PolicyError
-from scpn_phase_orchestrator.supervisor.petri_net import parse_guard
 
 __all__ = ["validate_binding_spec", "validate_binding_spec_security"]
 
@@ -350,6 +349,11 @@ def _protocol_net_errors(spec: BindingSpec) -> list[str]:
     net = spec.protocol_net
     if net is None:
         return []
+    # Imported here: the supervisor package's import chain reaches back into
+    # this package through monitor.boundaries, so a module-level import makes
+    # ``import scpn_phase_orchestrator.monitor.boundaries`` fail when first.
+    from scpn_phase_orchestrator.supervisor.petri_net import parse_guard
+
     errors: list[str] = []
     places = set(net.places)
     if not all(isinstance(place, str) and place for place in net.places):
@@ -413,10 +417,9 @@ def _protocol_net_build_errors(net: ProtocolNetSpec) -> list[str]:
     remaining rule of the runtime builders (for example an empty or unknown
     ``place_regime``), so a spec that validates is one ``simulate`` accepts.
     """
-    # Imported here: the runtime builder pulls in the simulation stack, which
-    # itself imports this package.
-    from scpn_phase_orchestrator.runtime.simulation import petri_net_from_protocol
+    # Imported here for the same import-cycle reason as in _protocol_net_errors.
     from scpn_phase_orchestrator.supervisor.petri_adapter import PetriNetAdapter
+    from scpn_phase_orchestrator.supervisor.petri_net import petri_net_from_protocol
 
     try:
         built, marking = petri_net_from_protocol(net)
