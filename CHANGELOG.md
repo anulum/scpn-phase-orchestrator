@@ -24,6 +24,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `underdamped_oscillator` refuses non-finite and non-real parameters. Its
+  sign checks (`frequency_hz <= 0`) are false for NaN, so a NaN frequency,
+  damping ratio or step, or an infinite step, returned a plant made of NaN
+  matrices, and `True` was taken as 1 Hz.
 - `replay_lead_time` measures lead time only on whole samples against a fresh
   monitor. A float onset gave fractional lead times, a NaN onset silently
   discarded a real lead, and `True` was taken as sample 1. A monitor that had
