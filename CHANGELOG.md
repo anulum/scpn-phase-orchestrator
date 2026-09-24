@@ -36,6 +36,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   backend. Admission runs each compiled Mojo executable once with empty input
   and caches the verdict per build; on a loaded workstation one launch took
   0.06–0.23 s.
+- Digital-twin confidence no longer scores a NaN divergence or a NaN baseline
+  as a healthy twin. The one-sided z-score uses `max(0, ·)`, which maps NaN to
+  zero, so `TwinDivergence(nan, nan, …)` scored confidence 1.0 "healthy", and
+  a baseline with NaN statistics scored a fully diverged twin (JS 0.6, W1 0.9)
+  as 1.0 "healthy". `TwinDivergence` and `TwinConfidenceBaseline` now reject
+  non-finite and out-of-range values, a negative deviation and a zero sample
+  count; `TwinConfidenceCalibrator.observe()` accepts only `TwinDivergence`
+  records; `datetime64` / `timedelta64` phase arrays are rejected.
 - `phase_transfer_entropy()` now raises `ValueError` when source and target
   differ in length, as its documentation always required; it used to cut both
   to the shorter length silently. Both transfer-entropy entry points reject

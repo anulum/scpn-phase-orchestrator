@@ -33,8 +33,10 @@ nominal-operation ``(js, w1)`` samples fixes per-divergence operating means and
 standard deviations together with a normal-quantile operating band. At runtime,
 each new divergence is converted to a one-sided z-score against its baseline,
 the two z-scores are combined into a composite deviation, and the confidence is
-``exp(-z_composite / sensitivity)`` — exactly ``1.0`` while the twin tracks
-inside its calibrated band, decaying smoothly as it drifts away.
+``exp(-z_composite / sensitivity)`` — exactly ``1.0`` while both divergences
+sit at or below their nominal means, decaying smoothly as the twin drifts
+above them. The operating band (``mean + band_z · std``) is reported
+separately; inside it the confidence is already below ``1.0``.
 
 The scorer is review-only: it never proposes or applies actuation. It is a
 health observable consumed by the digital-twin operator evidence summary and
@@ -110,6 +112,18 @@ class TwinDivergence:
     n_bins: int
     backend: str
 
+    def __post_init__(self) -> None:
+        """Reject a pair that no kernel can produce.
+
+        The scorer turns each divergence into a one-sided z-score with
+        ``max(0, ·)``, which maps NaN to zero; a non-finite or out-of-range pair
+        would therefore score as a perfectly healthy twin.
+        """
+        _validate_bounded_real("phase_js_divergence", self.phase_js_divergence, _JS_MAX)
+        _validate_bounded_real("order_wasserstein", self.order_wasserstein, 1.0)
+        _validate_positive_int("n_bins", self.n_bins)
+        _require_non_empty(self.backend, "backend")
+
     def to_audit_record(self) -> dict[str, object]:
         """Return a JSON-safe audit mapping of the divergence pair.
 
@@ -151,6 +165,19 @@ class TwinConfidenceBaseline:
     order_w1_std: float
     sample_count: int
     band_z: float
+
+    def __post_init__(self) -> None:
+        """Reject a baseline that cannot come from nominal divergences.
+
+        A NaN mean or deviation would make every one-sided z-score zero and
+        score any twin, however far it drifts, as healthy.
+        """
+        _validate_bounded_real("phase_js_mean", self.phase_js_mean, _JS_MAX)
+        _validate_bounded_real("phase_js_std", self.phase_js_std, _JS_MAX)
+        _validate_bounded_real("order_w1_mean", self.order_w1_mean, 1.0)
+        _validate_bounded_real("order_w1_std", self.order_w1_std, 1.0)
+        _validate_positive_int("sample_count", self.sample_count)
+        _validate_finite_real("band_z", self.band_z, minimum=0.0)
 
     @property
     def phase_js_upper_band(self) -> float:
@@ -491,9 +518,15 @@ def _as_real_vector(name: str, value: object) -> FloatArray:
     if _contains_numeric_string_alias(value):
         raise ValueError(f"{name} must not contain numeric-string aliases")
     try:
-        parsed = np.asarray(value, dtype=np.float64)
+        raw = np.asarray(value)
+        parsed = raw.astype(np.float64)
     except (TypeError, ValueError) as exc:
         raise ValueError(f"{name} must be a finite real array") from exc
+    if raw.dtype.kind in "mM":
+        raise ValueError(
+            f"{name} must be plain numbers; datetime64 and timedelta64 values "
+            "are rejected"
+        )
     if parsed.ndim != 1:
         raise ValueError(f"{name} must be one-dimensional, got shape {parsed.shape}")
     if not np.all(np.isfinite(parsed)):
@@ -572,6 +605,14 @@ def _validate_finite_real(name: str, value: object, *, minimum: float) -> float:
         raise ValueError(f"{name} must be finite, got {number}")
     if number < minimum:
         raise ValueError(f"{name} must be >= {minimum}, got {number}")
+    return number
+
+
+def _validate_bounded_real(name: str, value: object, upper: float) -> float:
+    """Return ``value`` as a finite real in ``[0, upper]``, else raise."""
+    number = _validate_finite_real(name, value, minimum=0.0)
+    if number > upper + _PARITY_TOL:
+        raise ValueError(f"{name} must be <= {upper}, got {number}")
     return number
 
 
@@ -749,7 +790,16 @@ class TwinConfidenceCalibrator:
         ----------
         divergence : TwinDivergence
             A divergence pair measured during trusted nominal operation.
+
+        Raises
+        ------
+        TypeError
+            If ``divergence`` is not a :class:`TwinDivergence`.
         """
+        if not isinstance(divergence, TwinDivergence):
+            raise TypeError(
+                f"divergence must be a TwinDivergence, got {type(divergence).__name__}"
+            )
         self._phase_js.append(divergence.phase_js_divergence)
         self._order_w1.append(divergence.order_wasserstein)
 
