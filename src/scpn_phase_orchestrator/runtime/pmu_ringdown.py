@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import csv
 import hashlib
+import io
 import math
 from dataclasses import dataclass, field
 from numbers import Real
@@ -262,7 +263,9 @@ def screen_pmu_ringdown_csv(
     )
 
     source_bytes = csv_path.read_bytes()
-    times, frequencies = _read_pmu_csv(csv_path, time_field, frequency_field)
+    times, frequencies = _read_pmu_csv(
+        _decode_csv(source_bytes), time_field, frequency_field
+    )
     if times.shape[0] < sample_floor:
         raise ValueError(
             f"PMU ringdown CSV must contain at least {sample_floor} samples"
@@ -309,11 +312,22 @@ def screen_pmu_ringdown_csv(
     )
 
 
+def _decode_csv(source_bytes: bytes) -> str:
+    """Return CSV text decoded from the exact bytes the digest covers.
+
+    Parsing the digested bytes, rather than reopening the path, binds
+    ``source_sha256`` to the samples actually screened. ``utf-8-sig`` drops the
+    byte-order mark spreadsheet exports prepend, which would otherwise glue
+    itself to the first column name.
+    """
+    return source_bytes.decode("utf-8-sig")
+
+
 def _read_pmu_csv(
-    path: Path, time_column: str, frequency_column: str
+    text: str, time_column: str, frequency_column: str
 ) -> tuple[FloatArray, FloatArray]:
-    """Return finite timestamp and frequency arrays from a PMU CSV."""
-    with path.open("r", encoding="utf-8", newline="") as handle:
+    """Return finite timestamp and frequency arrays from PMU CSV text."""
+    with io.StringIO(text, newline="") as handle:
         reader = csv.DictReader(handle)
         fieldnames = set(reader.fieldnames or ())
         for column in (time_column, frequency_column):

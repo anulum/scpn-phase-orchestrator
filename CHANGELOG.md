@@ -24,6 +24,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The PMU ringdown and IBR ride-through CSV screens parse the bytes their
+  `source_sha256` digest covers. Before, they hashed one read of the file and
+  parsed a second, so a file replaced in between was screened under another
+  file's digest. They now decode with `utf-8-sig`: a spreadsheet "CSV UTF-8"
+  export, whose byte-order mark had glued itself to the first column name,
+  used to fail with "missing required column time_s" and now screens like
+  the plain file. The IEEE PMU adapter uses the same decoding.
 - `compute_resilience` refuses a non-finite order-parameter history. One NaN
   sample turned the largest coherence drop into NaN, which `max(0.0, nan)`
   reported as 0.0. A real 0.8 drop therefore scored as no drop at all, and a
