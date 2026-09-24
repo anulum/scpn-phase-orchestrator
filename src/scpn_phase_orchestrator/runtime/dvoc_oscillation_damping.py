@@ -26,7 +26,9 @@ live actuation.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
+from numbers import Real
 from typing import TypeAlias
 
 import numpy as np
@@ -64,6 +66,20 @@ DVOC_OSCILLATION_AUDIT_SCHEMA = "scpn_dvoc_oscillation_damping_audit_v1"
 DVOC_OSCILLATION_CLAIM_BOUNDARY = "review_only_offline_no_live_actuation"
 
 
+def _finite_real(value: object, name: str) -> float:
+    """Return ``value`` as a finite float, refusing bools and non-reals.
+
+    ``nan <= 0`` is false, so without this a NaN frequency or step passed the
+    sign checks and the plant came back as a matrix of NaNs.
+    """
+    if isinstance(value, bool | np.bool_) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be a finite real number, got {value!r}")
+    result = float(value)
+    if not math.isfinite(result):
+        raise ValueError(f"{name} must be a finite real number, got {value!r}")
+    return result
+
+
 def underdamped_oscillator(
     *, frequency_hz: float, damping_ratio: float, dt: float
 ) -> tuple[FloatArray, FloatArray]:
@@ -90,9 +106,13 @@ def underdamped_oscillator(
     Raises
     ------
     ValueError
-        If ``frequency_hz``, ``dt`` are not positive or ``damping_ratio`` is
+        If any argument is not a finite real number (a bool is refused), or
+        ``frequency_hz``, ``dt`` are not positive or ``damping_ratio`` is
         negative.
     """
+    frequency_hz = _finite_real(frequency_hz, "frequency_hz")
+    damping_ratio = _finite_real(damping_ratio, "damping_ratio")
+    dt = _finite_real(dt, "dt")
     if frequency_hz <= 0.0 or dt <= 0.0:
         raise ValueError("frequency_hz and dt must be positive")
     if damping_ratio < 0.0:
