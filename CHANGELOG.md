@@ -24,6 +24,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `spo scaffold --llm` no longer overwrites an existing pack's
+  `binding_spec.yaml`. The plain scaffold keeps an existing spec, but the
+  LLM scaffold replaced it wholesale and discarded a hand-tuned pack; it now
+  refuses and names the file. The domain-name check uses a full match: `^...$`
+  with `re.match` accepted a name ending in a newline and created a
+  directory with that name.
 - `spo validate` now checks the `policy.yaml` next to the binding spec, the
   file `spo run` loads. A pack with a malformed or unparseable policy used to
   print "Valid" and then fail on `spo run` with "invalid policy rules".
