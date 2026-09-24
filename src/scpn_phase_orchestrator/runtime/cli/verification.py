@@ -443,14 +443,10 @@ def _supervisor_float_list(record: dict[str, object], field: str) -> list[float]
         raise click.ClickException(f"scenario {field} must be a non-empty list")
     values: list[float] = []
     for index, item in enumerate(value):
-        if (
-            isinstance(item, bool)
-            or not isinstance(item, int | float)
-            or not math.isfinite(item)
-        ):
-            raise click.ClickException(
-                f"scenario {field}[{index}] must be a finite number"
-            )
+        if isinstance(item, bool) or not isinstance(item, int | float):
+            raise click.ClickException(f"scenario {field}[{index}] must be numeric")
+        if not math.isfinite(item):
+            raise click.ClickException(f"scenario {field}[{index}] must be finite")
         values.append(float(item))
     return values
 
@@ -458,13 +454,12 @@ def _supervisor_float_list(record: dict[str, object], field: str) -> list[float]
 def _supervisor_positive_float(record: dict[str, object], field: str) -> float:
     """Return ``value`` as a strictly positive float, else raise."""
     value = record.get(field)
-    if (
-        isinstance(value, bool)
-        or not isinstance(value, int | float)
-        or not math.isfinite(value)
-        or value <= 0
-    ):
-        raise click.ClickException(f"scenario {field} must be a positive finite number")
+    if isinstance(value, bool) or not isinstance(value, int | float):
+        raise click.ClickException(f"scenario {field} must be a positive number")
+    if not math.isfinite(value):
+        raise click.ClickException(f"scenario {field} must be finite")
+    if value <= 0:
+        raise click.ClickException(f"scenario {field} must be a positive number")
     return float(value)
 
 
