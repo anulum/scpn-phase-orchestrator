@@ -43,6 +43,16 @@ __all__ = ["add_langevin_noise", "boltzmann_weight", "effective_temperature"]
 FloatArray: TypeAlias = NDArray[np.float64]
 
 
+def _require_finite(value: float, name: str) -> None:
+    """Raise ``ValueError`` unless ``value`` is a finite real, not a bool."""
+    if (
+        isinstance(value, bool)
+        or not isinstance(value, int | float | np.floating | np.integer)
+        or not np.isfinite(value)
+    ):
+        raise ValueError(f"{name} must be a finite real number, got {value!r}")
+
+
 def add_langevin_noise(
     z: FloatArray,
     temperature: float,
@@ -73,14 +83,24 @@ def add_langevin_noise(
     -------
     FloatArray
         Add Langevin stochastic noise to a z-space vector.
+
+    Raises
+    ------
+    ValueError
+        If ``temperature`` or ``dt`` is not finite.
     """
+    _require_finite(temperature, "temperature")
+    _require_finite(dt, "dt")
     if temperature <= 0.0 or dt <= 0.0:
         return z.copy()
 
     if _HAS_RUST and rng is None:
         flat: FloatArray = np.ascontiguousarray(z.ravel(), dtype=np.float64)
+        # A fresh seed per call: a fixed seed returned the same "noise" on
+        # every step, while the NumPy path drew new noise each time.
+        seed = int(np.random.default_rng().integers(0, 2**63 - 1))
         rust_result: FloatArray = np.asarray(
-            _rust_langevin(flat, temperature, dt, 42)
+            _rust_langevin(flat, temperature, dt, seed)
         ).reshape(
             z.shape,
         )
@@ -111,7 +131,15 @@ def boltzmann_weight(u_total: float, temperature: float) -> float:
     -------
     float
         Boltzmann factor exp(-U/T) for a given total energy and temperature.
+
+    Raises
+    ------
+    ValueError
+        If ``u_total`` or ``temperature`` is not finite. With NaN the NumPy
+        path clamped the exponent to +700 and returned the largest weight.
     """
+    _require_finite(u_total, "u_total")
+    _require_finite(temperature, "temperature")
     if _HAS_RUST:
         return float(_rust_boltzmann(u_total, temperature))
     if temperature <= 0.0:

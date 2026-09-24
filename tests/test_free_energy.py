@@ -85,11 +85,13 @@ class TestAddLangevinNoise:
         result = add_langevin_noise(z, temperature=0.5, dt=0.25, rng=None)
 
         np.testing.assert_allclose(result, [[3.0, 4.0], [5.0, 6.0]])
+        seed = calls.pop("seed")
+        # a fresh seed per call (a fixed 42 repeated the same "noise" every step)
+        assert isinstance(seed, int) and 0 <= seed < 2**63
         assert calls == {
             "flat": (1.0, 2.0, 2.5, 3.5),
             "temperature": 0.5,
             "dt": 0.25,
-            "seed": 42,
         }
 
 

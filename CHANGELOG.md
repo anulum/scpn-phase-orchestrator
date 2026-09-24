@@ -24,6 +24,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- SSGF Langevin noise is fresh on every call, and non-finite inputs are
+  refused. With the Rust kernel and no generator, `add_langevin_noise`
+  passed the fixed seed 42, so every step added the same "noise" (the NumPy
+  path drew new noise each time). A NaN temperature or step silently
+  returned NaN. In `boltzmann_weight`, a NaN energy or temperature made the
+  NumPy path clamp the exponent to +700 and return the largest possible
+  weight, while the Rust path returned NaN. Both functions now require
+  finite inputs, and the Rust path gets a fresh seed per call.
 - Formal-verification evidence cites only the package it was sealed as.
   `FormalVerificationPackage` seals its manifest as the canonical SHA-256 of
   every other field, but `build_formal_verification_evidence` (used by
