@@ -31,7 +31,17 @@ def require_julia_main() -> Any:
         Raised when ``juliacall`` is unavailable, or when it imports without
         the ``Main`` symbol required by direct Julia bridge loaders.
     """
-    juliacall = importlib.import_module("juliacall")
+    try:
+        juliacall = importlib.import_module("juliacall")
+    except ImportError:
+        raise
+    except Exception as exc:
+        # juliacall and juliapkg report a broken Julia set-up (a missing
+        # executable, an inconsistent environment) with ValueError or a bare
+        # Exception; the backend is then unavailable, not the package.
+        raise ImportError(
+            f"juliacall could not start Julia: {type(exc).__name__}: {exc}"
+        ) from exc
     main = getattr(juliacall, "Main", None)
     if main is None:
         raise ImportError("juliacall.Main unavailable; Julia runtime not initialised")

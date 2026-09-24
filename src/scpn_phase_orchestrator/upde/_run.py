@@ -20,7 +20,6 @@ Exports:
 
 from __future__ import annotations
 
-import importlib
 from collections.abc import Callable
 from typing import TypeAlias, cast
 
@@ -32,6 +31,7 @@ from scpn_phase_orchestrator.upde._engine_validation import (
     validate_upde_backend_output,
     validate_upde_schedule_backend_inputs,
 )
+from scpn_phase_orchestrator.upde._julia_runtime import require_juliacall_main
 from scpn_phase_orchestrator.upde._ref_kernel import (
     upde_run_omega_schedule_python,
     upde_run_python,
@@ -167,15 +167,13 @@ def _load_webgpu_fn() -> Callable[..., FloatArray]:
 
 def _require_juliacall_runtime() -> None:
     # pragma: no cover — toolchain
-    """Import and return the juliacall runtime, else raise."""
-    juliacall = importlib.import_module("juliacall")
-    # The engine needs ``juliacall.Main``. When juliacall cannot finish
-    # initialising the Julia runtime (for example a partial init under a
-    # coverage thread tracer) the module imports but ``Main`` is absent; treat
-    # that as an unavailable backend rather than letting the later engine call
-    # crash with ImportError after dispatch.
-    if not hasattr(juliacall, "Main"):
-        raise ImportError("juliacall.Main unavailable; Julia runtime not initialised")
+    """Import the juliacall runtime, else raise ``ImportError``.
+
+    Delegates to the shared UPDE probe, which treats a missing ``Main`` (a
+    partial runtime init, for example under a coverage thread tracer) and a
+    broken Julia set-up alike as an unavailable backend.
+    """
+    require_juliacall_main()
 
 
 def _load_julia_fn() -> Callable[..., FloatArray]:

@@ -10,9 +10,8 @@
 
 from __future__ import annotations
 
-import importlib
 import sys
-from types import ModuleType, SimpleNamespace
+from types import ModuleType
 
 import numpy as np
 import pytest
@@ -208,32 +207,14 @@ class TestOptionalBackendLoaders:
         assert run_mod._load_mojo_schedule_fn() is _backend_identity
         assert calls["ensure"] == 1
 
-    def test_julia_runtime_requires_main_symbol(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        monkeypatch.setattr(
-            run_mod.importlib,
-            "import_module",
-            lambda _name: SimpleNamespace(),
-        )
+    def test_julia_loaders_return_backend_functions(self) -> None:
+        """With a working Julia install the loaders return real callables.
 
-        with pytest.raises(ImportError, match="juliacall.Main unavailable"):
-            run_mod._require_juliacall_runtime()
-
-    def test_julia_loaders_return_backend_functions(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        real_import = importlib.import_module
-
-        def _import_module(name: str) -> object:
-            if name == "juliacall":
-                return SimpleNamespace(Main=object())
-            return real_import(name)
-
-        monkeypatch.setattr(run_mod.importlib, "import_module", _import_module)
-
+        The missing-``Main`` and broken-set-up cases belong to the shared probe
+        ``upde._julia_runtime.require_juliacall_main``, which ``_run`` delegates
+        to; they are exercised in ``test_julia_runtime_broken_setup.py``.
+        """
+        pytest.importorskip("juliacall")
         assert callable(run_mod._load_julia_fn())
         assert callable(run_mod._load_julia_schedule_fn())
 
