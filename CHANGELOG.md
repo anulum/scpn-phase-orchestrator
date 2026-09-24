@@ -36,6 +36,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   backend. Admission runs each compiled Mojo executable once with empty input
   and caches the verdict per build; on a loaded workstation one launch took
   0.06–0.23 s.
+- `check_openqasm3()` now reports syntax it used to absorb: a final statement
+  without its `;`, a `}` with no open block, and a block left open at the end
+  of the program were all reported conformant (the stray `}` only as an
+  unchecked statement). A version header declaring anything other than
+  OpenQASM 3 (for example `OPENQASM 9.0` or `2.0`) is now an issue. The
+  quantum-control bridge reports this verdict as `qasm_parse_ok`. The
+  docstring now states that requiring the header is this checker's policy;
+  the OpenQASM 3 specification makes it optional.
 - `C37118SessionClient` no longer waits forever for a peer that never sends
   the frame it asked for. It skipped frames of other types without limit, so a
   peer streaming only DATA frames held `request_configuration()` indefinitely;

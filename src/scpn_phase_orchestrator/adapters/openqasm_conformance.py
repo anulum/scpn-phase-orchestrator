@@ -147,8 +147,8 @@ def _strip_comments(program: str) -> str:
     return _LINE_COMMENT_RE.sub("", without_block)
 
 
-def _split_statements(program: str) -> list[str]:
-    """Split *program* into trimmed top-level statements.
+def _split_statements(program: str) -> tuple[list[str], list[str]]:
+    """Split *program* into trimmed top-level statements and syntax issues.
 
     Simple statements terminate at a ``;`` at brace depth zero; a ``gate``
     declaration terminates at the ``}`` that returns brace depth to zero.
@@ -160,11 +160,15 @@ def _split_statements(program: str) -> list[str]:
 
     Returns
     -------
-    list[str]
-        The non-empty, whitespace-collapsed statements in source order. A
-        ``gate`` declaration retains its ``{ ... }`` body as one statement.
+    tuple[list[str], list[str]]
+        The non-empty, whitespace-collapsed statements in source order (a
+        ``gate`` declaration retains its ``{ ... }`` body as one statement),
+        and the syntax issues found while splitting: a ``}`` with no open
+        block, a block left open at the end, or a final statement without its
+        terminating ``;``.
     """
     statements: list[str] = []
+    issues: list[str] = []
     buffer: list[str] = []
     depth = 0
     for char in program:
@@ -172,7 +176,10 @@ def _split_statements(program: str) -> list[str]:
             depth += 1
             buffer.append(char)
         elif char == "}":
-            depth = max(0, depth - 1)
+            if depth == 0:
+                issues.append("unbalanced '}' with no open block")
+                continue
+            depth -= 1
             buffer.append(char)
             if depth == 0:
                 statements.append("".join(buffer))
@@ -184,8 +191,13 @@ def _split_statements(program: str) -> list[str]:
             buffer.append(char)
     trailing = "".join(buffer).strip()
     if trailing:
+        if depth > 0:
+            issues.append("block opened with '{' is never closed")
+        else:
+            issues.append("final statement is not terminated by ';'")
         statements.append(trailing)
-    return [collapsed for stmt in statements if (collapsed := _collapse(stmt))]
+    collapsed = [text for stmt in statements if (text := _collapse(stmt))]
+    return collapsed, issues
 
 
 def _collapse(text: str) -> str:
@@ -452,6 +464,11 @@ def _process_statement(state: _ConformanceState, statement: str, index: int) -> 
                 "OPENQASM version statement must be the first statement"
             )
         state.version = version.group(1)
+        if version.group(1).split(".")[0] != "3":
+            state.issues.append(
+                f"declares OPENQASM {version.group(1)}; this checker validates "
+                "OpenQASM 3 programs"
+            )
         return
     include = _INCLUDE_RE.match(statement)
     if include is not None:
@@ -499,7 +516,9 @@ def check_openqasm3(program: str) -> OpenQasm3ConformanceReport:
     -------
     OpenQasm3ConformanceReport
         The structural conformance report. ``conformant`` is ``True`` only when
-        a version header is present and no structural issue was found.
+        a version header declaring OpenQASM 3 is present and no structural or
+        syntax issue was found. The header requirement is this checker's
+        policy: the OpenQASM 3 specification makes the header optional.
 
     Raises
     ------
@@ -509,7 +528,8 @@ def check_openqasm3(program: str) -> OpenQasm3ConformanceReport:
     if not isinstance(program, str):
         raise TypeError("program must be a string")
     state = _ConformanceState()
-    statements = _split_statements(_strip_comments(program))
+    statements, syntax_issues = _split_statements(_strip_comments(program))
+    state.issues.extend(syntax_issues)
     for index, statement in enumerate(statements):
         _process_statement(state, statement, index)
     if state.version is None:

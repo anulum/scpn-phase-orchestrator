@@ -215,7 +215,7 @@ class TestStructuralViolations:
         assert any('without include "stdgates.inc"' in issue for issue in report.issues)
 
     def test_non_gate_statement_is_unchecked_not_failed(self):
-        report = check_openqasm3("OPENQASM 3.0;\nqubit[1] q;\n2 + 2\n")
+        report = check_openqasm3("OPENQASM 3.0;\nqubit[1] q;\n2 + 2;\n")
         assert "2 + 2" in report.unchecked_statements
         # An unchecked statement alone does not flip conformance.
         assert report.conformant is True
@@ -261,3 +261,34 @@ class TestReportContract:
         assert report.conformant is False
         assert report.qasm_version is None
         assert report.gate_call_count == 0
+
+
+_BASE = 'OPENQASM 3.0;\ninclude "stdgates.inc";\nqubit[2] q;\n'
+
+
+class TestSyntaxIssues:
+    """Syntax errors the splitter used to absorb silently are now issues."""
+
+    @pytest.mark.parametrize(
+        ("program", "issue"),
+        [
+            (_BASE + "h q[0]\n", "final statement is not terminated by ';'"),
+            (_BASE + "} h q[0];\n", "unbalanced '}' with no open block"),
+            (_BASE + "gate g a { h a;\nh q[0];\n", "block opened with '{' is never"),
+            ("OPENQASM 9.0;\nqubit[1] q;\nU(0, 0, 0) q[0];\n", "declares OPENQASM 9.0"),
+            ("OPENQASM 2.0;\nqreg q[1];\nU(0, 0, 0) q[0];\n", "declares OPENQASM 2.0"),
+        ],
+    )
+    def test_syntax_issue_makes_the_program_non_conformant(self, program, issue):
+        report = check_openqasm3(program)
+        assert report.conformant is False
+        assert any(issue in text for text in report.issues)
+
+    @pytest.mark.parametrize(
+        "header", ["OPENQASM 3;", "OPENQASM 3.0;", "OPENQASM 3.1;"]
+    )
+    def test_every_openqasm_3_version_is_accepted(self, header):
+        report = check_openqasm3(
+            header + '\ninclude "stdgates.inc";\nqubit[1] q;\nh q[0];\n'
+        )
+        assert report.conformant is True
