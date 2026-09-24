@@ -24,6 +24,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The container image runs the `spo` CLI again.
+  - The `Dockerfile` entrypoint imported `scpn_phase_orchestrator.cli`, a
+    module that was removed when the CLI moved to
+    `scpn_phase_orchestrator.runtime.cli`. Every `docker run` of the image,
+    including the default `--help`, stopped with `ModuleNotFoundError`.
+  - The entrypoint now imports the same callable as the `spo` console script.
+    A new test runs the entrypoint argv from the `Dockerfile` with its
+    `PYTHONPATH`, for `--help` and for the documented
+    `run domainpacks/...` command.
+
 - The Studio product manifest refuses a panel that enables a gate it declares.
   - The manifest states for the whole product that QPU execution, hardware
     writes, and network access are not permitted. It checked only five fixed
