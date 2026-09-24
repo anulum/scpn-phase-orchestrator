@@ -20,6 +20,7 @@ from scpn_phase_orchestrator.runtime.cli._payloads import (
     _load_lifecycle_remediation_plan_payload,
     _load_storage_adapter_from_payload,
 )
+from tests.sealing import seal
 
 _HEX = "a" * 64
 
@@ -131,7 +132,8 @@ def _drilldown(**overrides: Any) -> dict[str, Any]:
         "global_flagged_request_hashes": [],
     }
     payload.update(overrides)
-    return payload
+    # sealed like the CLI output, unless a test sets the seal itself
+    return payload if "drilldown_hash" in overrides else seal(payload, "drilldown_hash")
 
 
 class TestMultistoreDrilldownLoader:
@@ -219,7 +221,8 @@ def _remediation_plan(**overrides: Any) -> dict[str, Any]:
         "actions": [_action()],
     }
     payload.update(overrides)
-    return payload
+    # sealed like the CLI output, unless a test sets the seal itself
+    return payload if "plan_hash" in overrides else seal(payload, "plan_hash")
 
 
 class TestRemediationPlanLoader:
@@ -275,7 +278,8 @@ def _action_status(**overrides: Any) -> dict[str, Any]:
         "state": "pending",
     }
     payload.update(overrides)
-    return payload
+    # sealed like the CLI output, unless a test sets the seal itself
+    return payload if "status_hash" in overrides else seal(payload, "status_hash")
 
 
 class TestRemediationActionStatusLoader:

@@ -20,6 +20,8 @@ from typing import TypeAlias, cast
 import click
 import pytest
 
+from tests.sealing import seal
+
 Payload: TypeAlias = dict[str, object]
 Loader: TypeAlias = Callable[[Payload], Payload]
 
@@ -164,18 +166,21 @@ def _acknowledgement_payload() -> Payload:
 @pytest.mark.parametrize(
     ("loader_name", "payload"),
     (
-        ("_load_lifecycle_remediation_scheduler_queue_payload", _queue_payload()),
+        (
+            "_load_lifecycle_remediation_scheduler_queue_payload",
+            seal(_queue_payload(), "scheduler_hash"),
+        ),
         (
             "_load_lifecycle_remediation_scheduler_telemetry_payload",
-            _telemetry_payload(),
+            seal(_telemetry_payload(), "telemetry_hash"),
         ),
         (
             "_load_lifecycle_remediation_scheduler_adapter_handoff_payload",
-            _adapter_handoff_payload(),
+            seal(_adapter_handoff_payload(), "adapter_handoff_hash"),
         ),
         (
             "_load_lifecycle_remediation_scheduler_acknowledgement_payload",
-            _acknowledgement_payload(),
+            seal(_acknowledgement_payload(), "acknowledgement_hash"),
         ),
     ),
 )

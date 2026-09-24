@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import click
 
-from ._shared import _require_sha256
+from ._shared import _require_self_seal, _require_sha256
 
 
 def _load_lifecycle_remediation_scheduler_queue_payload(
@@ -84,6 +84,9 @@ def _load_lifecycle_remediation_scheduler_queue_payload(
                 "remediation scheduler queue schema mismatch: "
                 "scheduler_command_template must be non-empty"
             )
+    _require_self_seal(
+        queue_payload, "scheduler_hash", context="remediation scheduler queue"
+    )
     return queue_payload
 
 
@@ -120,6 +123,9 @@ def _load_lifecycle_remediation_scheduler_telemetry_payload(
             "remediation scheduler telemetry schema mismatch: "
             "queue_entry_count does not match rows"
         )
+    _require_self_seal(
+        telemetry_payload, "telemetry_hash", context="remediation scheduler telemetry"
+    )
     return telemetry_payload
 
 
@@ -165,6 +171,11 @@ def _load_lifecycle_remediation_scheduler_adapter_handoff_payload(
         _require_sha256(entry.get("entry_hash"), "entry_hash")
         _require_sha256(entry.get("action_hash"), "action_hash")
         _require_sha256(entry.get("request_hash"), "request_hash")
+    _require_self_seal(
+        handoff_payload,
+        "adapter_handoff_hash",
+        context="remediation scheduler adapter handoff",
+    )
     return handoff_payload
 
 
@@ -209,4 +220,9 @@ def _load_lifecycle_remediation_scheduler_acknowledgement_payload(
                 "remediation scheduler acknowledgement schema mismatch: "
                 f"{field_name} must be non-empty"
             )
+    _require_self_seal(
+        acknowledgement_payload,
+        "acknowledgement_hash",
+        context="remediation scheduler acknowledgement",
+    )
     return acknowledgement_payload

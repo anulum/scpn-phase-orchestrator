@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import click
 
-from ._shared import _require_sha256
+from ._shared import _require_self_seal, _require_sha256
 
 
 def _load_lifecycle_remediation_plan_payload(
@@ -68,6 +68,7 @@ def _load_lifecycle_remediation_plan_payload(
             raise click.ClickException(
                 "remediation plan schema mismatch: priority must be a positive integer"
             )
+    _require_self_seal(plan_payload, "plan_hash", context="remediation plan")
     return plan_payload
 
 
@@ -91,6 +92,9 @@ def _load_lifecycle_remediation_action_status_payload(
         raise click.ClickException(
             "remediation action status schema mismatch: unsupported state"
         )
+    _require_self_seal(
+        status_payload, "status_hash", context="remediation action status"
+    )
     return status_payload
 
 
@@ -153,6 +157,9 @@ def _load_lifecycle_remediation_execution_dashboard_payload(
                 "remediation execution dashboard schema mismatch: "
                 "priority must be a positive integer"
             )
+    _require_self_seal(
+        dashboard_payload, "execution_hash", context="remediation execution dashboard"
+    )
     return dashboard_payload
 
 
@@ -219,4 +226,7 @@ def _load_lifecycle_remediation_deployment_handoff_payload(
                 "remediation deployment handoff schema mismatch: "
                 "deployment_command_template must be non-empty"
             )
+    _require_self_seal(
+        handoff_payload, "handoff_hash", context="remediation deployment handoff"
+    )
     return handoff_payload

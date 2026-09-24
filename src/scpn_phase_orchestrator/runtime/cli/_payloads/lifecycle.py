@@ -19,7 +19,7 @@ from scpn_phase_orchestrator.plugins import (
     PluginExecutionRequestLifecycleSummary,
 )
 
-from ._shared import _PLUGIN_KIND_OPTIONS, _require_sha256
+from ._shared import _PLUGIN_KIND_OPTIONS, _require_self_seal, _require_sha256
 
 
 def _load_lifecycle_from_payload(
@@ -285,4 +285,7 @@ def _load_lifecycle_multistore_drilldown_payload(
                 )
             for item in value:
                 _require_sha256(item, field_name)
+    _require_self_seal(
+        drilldown_payload, "drilldown_hash", context="lifecycle multi-store drilldown"
+    )
     return drilldown_payload

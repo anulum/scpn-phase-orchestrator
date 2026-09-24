@@ -34,6 +34,7 @@ from scpn_phase_orchestrator.runtime.cli._payloads import (
     _load_lifecycle_remediation_scheduler_queue_payload,
     _load_lifecycle_remediation_scheduler_telemetry_payload,
     _record_hash,
+    _require_self_seal,
     _require_sha256,
 )
 from scpn_phase_orchestrator.runtime.cli.plugins._group import (
@@ -769,6 +770,9 @@ def plugins_lifecycle_remediation_scheduler_execution_dashboard(
             "unexpected acknowledgement replay schema"
         )
     _require_sha256(replay.get("replay_hash"), "replay_hash")
+    _require_self_seal(
+        replay, "replay_hash", context="remediation scheduler execution dashboard"
+    )
     telemetry_hash = _require_sha256(telemetry.get("telemetry_hash"), "telemetry_hash")
     replay_telemetry_hash = _require_sha256(
         replay.get("telemetry_hash"), "telemetry_hash"
@@ -825,7 +829,14 @@ def plugins_lifecycle_remediation_scheduler_execution_dashboard(
                 "remediation scheduler execution dashboard schema mismatch: "
                 "unsupported effective state"
             )
-        overdue = bool(row["overdue"]) and effective_state != "completed"
+        raw_overdue = row["overdue"]
+        if not isinstance(raw_overdue, bool):
+            # bool("false") is True: a text flag would count as overdue.
+            raise click.ClickException(
+                "remediation scheduler execution dashboard schema mismatch: "
+                "telemetry row overdue must be a boolean"
+            )
+        overdue = raw_overdue and effective_state != "completed"
         dashboard_counts[effective_state] += 1
         if overdue:
             dashboard_counts["overdue"] += 1

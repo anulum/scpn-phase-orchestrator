@@ -121,6 +121,37 @@ def _record_hash(record: Mapping[str, object]) -> str:
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
+def _require_self_seal(
+    payload: Mapping[str, object], hash_field: str, *, context: str
+) -> None:
+    """Refuse a CLI-produced artefact whose own hash does not cover it.
+
+    Every review artefact these commands emit is sealed last with
+    ``payload[hash_field] = _record_hash(payload)``. Checking only that the
+    hash is 64 hex characters let an edited artefact travel down the
+    lifecycle, remediation and scheduler chain under its stale hash.
+
+    Parameters
+    ----------
+    payload : Mapping[str, object]
+        The loaded artefact.
+    hash_field : str
+        The field holding the artefact's own seal.
+    context : str
+        Error-message prefix naming the artefact.
+
+    Raises
+    ------
+    click.ClickException
+        If the recomputed seal differs from the stored one.
+    """
+    body = {key: value for key, value in payload.items() if key != hash_field}
+    if _record_hash(body) != payload.get(hash_field):
+        raise click.ClickException(
+            f"{context} schema mismatch: {hash_field} does not match its content"
+        )
+
+
 def _build_plan_payload_for_hash(plan_payload: dict[str, object]) -> dict[str, object]:
     """Build the plan payload for a target hash."""
     if "plan_hash" not in plan_payload:
