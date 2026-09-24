@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import importlib
 import subprocess
+import sys
 from collections.abc import Callable
 from pathlib import Path
 from types import ModuleType
@@ -20,6 +21,15 @@ from typing import cast
 import pytest
 
 import scpn_phase_orchestrator.experimental.accelerators._mojo_runtime as mojo_runtime
+
+requires_posix_shell = pytest.mark.skipif(
+    sys.platform == "win32",
+    reason=(
+        "the fixtures are POSIX shell scripts run as executables, and the "
+        "glibc loader diagnostics they emulate do not exist on Windows, where "
+        "Mojo has no toolchain"
+    ),
+)
 
 MojoExecutableProbe = Callable[[], Path]
 MojoExecutableValidator = Callable[[Path], Path]
@@ -115,6 +125,7 @@ def test_direct_mojo_runtime_probe_rejects_non_executable_artefact(
         mojo_runtime.require_mojo_executable(executable)
 
 
+@requires_posix_shell
 def test_direct_mojo_runtime_probe_accepts_executable_artefact(
     tmp_path: Path,
 ) -> None:
@@ -224,6 +235,7 @@ _SYMBOL_LOOKUP_ERROR = (
     ],
     ids=["undefined-symbol", "missing-shared-library", "missing-symbol-version"],
 )
+@requires_posix_shell
 def test_direct_mojo_runtime_runner_demotes_dynamic_loader_failure(
     tmp_path: Path, diagnostic: str
 ) -> None:
@@ -235,6 +247,7 @@ def test_direct_mojo_runtime_runner_demotes_dynamic_loader_failure(
     assert diagnostic in str(excinfo.value)
 
 
+@requires_posix_shell
 @pytest.mark.parametrize(
     ("diagnostic", "status"),
     [
@@ -256,6 +269,7 @@ def test_direct_mojo_runtime_runner_keeps_backend_failures(
     assert diagnostic in process.stderr
 
 
+@requires_posix_shell
 def test_unloadable_mojo_order_parameter_backend_is_excluded_from_probe(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
@@ -294,6 +308,7 @@ def test_public_winding_falls_back_when_the_mojo_build_cannot_load(
     assert result.tolist() == reference.tolist()
 
 
+@requires_posix_shell
 def test_executable_guard_rejects_a_build_the_loader_cannot_link(
     tmp_path: Path,
 ) -> None:
@@ -320,6 +335,7 @@ def _launches(counter: Path) -> int:
     return len(counter.read_text(encoding="utf-8").splitlines())
 
 
+@requires_posix_shell
 def test_executable_guard_checks_each_build_once(tmp_path: Path) -> None:
     """A loadable build is launched once; a rebuilt artefact is checked again."""
     executable, counter = _counting_executable(tmp_path, "exit 1")
@@ -335,6 +351,7 @@ def test_executable_guard_checks_each_build_once(tmp_path: Path) -> None:
     assert _launches(counter) == 2
 
 
+@requires_posix_shell
 def test_executable_guard_accepts_a_build_that_outlives_the_probe(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
