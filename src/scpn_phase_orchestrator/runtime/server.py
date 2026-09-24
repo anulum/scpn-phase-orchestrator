@@ -64,6 +64,7 @@ from scpn_phase_orchestrator.runtime.observability import (
     RuntimeMetricSnapshot,
     RuntimeObservability,
 )
+from scpn_phase_orchestrator.runtime.simulation import _driver_psi, _spec_drive
 from scpn_phase_orchestrator.studio.live_feed import build_studio_control_feed
 from scpn_phase_orchestrator.supervisor.events import EventBus
 from scpn_phase_orchestrator.supervisor.regimes import RegimeManager
@@ -127,6 +128,9 @@ class SimulationState:
         self.boundary_observer.set_event_bus(self.event_bus)
         self.regime_manager = RegimeManager(event_bus=self.event_bus)
         self.step_count = 0
+        # The spec's drive, resolved exactly as simulate() does, so this live
+        # loop integrates the same driven dynamics as ``spo run``.
+        self.zeta, self.psi_target, self.psi_driver = _spec_drive(spec)
         self.amplitude_mode = spec.amplitude is not None
         self.sl_engine: StuartLandauEngine | None = None
         self.sl_state: FloatArray | None = None
@@ -184,6 +188,11 @@ class SimulationState:
             eff_alpha = self.imprint_model.modulate_lag(eff_alpha, self.imprint_state)
         if self.geo_constraints:
             eff_knm = project_knm(eff_knm, self.geo_constraints)
+        psi = (
+            _driver_psi(self.psi_driver, self.step_count, self.spec.sample_period_s)
+            if self.psi_driver is not None
+            else self.psi_target
+        )
 
         if (
             self.amplitude_mode
@@ -199,8 +208,8 @@ class SimulationState:
                 self.mu,
                 eff_knm,
                 self.coupling.knm_r,
-                0.0,
-                0.0,
+                self.zeta,
+                psi,
                 eff_alpha,
                 epsilon=self.spec.amplitude.epsilon,
             )
@@ -210,8 +219,8 @@ class SimulationState:
                 self.phases,
                 self.omegas,
                 eff_knm,
-                0.0,
-                0.0,
+                self.zeta,
+                psi,
                 eff_alpha,
             )
         self.step_count += 1

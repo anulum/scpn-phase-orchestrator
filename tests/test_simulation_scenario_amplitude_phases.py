@@ -54,12 +54,10 @@ def test_hook_phase_edit_is_integrated_like_an_initial_state() -> None:
     def hook(context: SimulationScenarioContext) -> None:
         if context.step == 0:
             context.phases = start.copy()
-        context.zeta = 0.0
-        context.psi_target = 0.0
         seen[context.step] = context.phases.copy()
 
     simulate(spec, steps=2, seed=0, policy_enabled=False, scenario_hook=hook)
-    reference.step()  # the same Stuart-Landau step from the same phases, no drive
+    reference.step()  # the same driven Stuart-Landau step from the same phases
     np.testing.assert_allclose(seen[1], reference.phases, atol=1e-12)
 
 
