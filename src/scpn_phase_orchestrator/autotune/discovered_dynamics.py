@@ -118,10 +118,27 @@ def discovered_dynamics_from_block(
     DiscoveredDynamics
         The recovered equations and coupling edges paired with the honest
         confidence verdict.
+
+    Raises
+    ------
+    ValueError
+        If ``equations`` is not a list or tuple of strings, or
+        ``coupling_edges`` is not a list or tuple of mappings. A bare string
+        would otherwise be split into one "equation" per character.
     """
     confidence = classify_phase_sindy_block(block, policy=policy)
-    equations = tuple(str(equation) for equation in block.get("equations", ()))
-    coupling_edges = tuple(dict(edge) for edge in block.get("coupling_edges", ()))
+    raw_equations = block.get("equations", ())
+    if not isinstance(raw_equations, (list, tuple)) or not all(
+        isinstance(equation, str) for equation in raw_equations
+    ):
+        raise ValueError("equations must be a list or tuple of strings")
+    raw_edges = block.get("coupling_edges", ())
+    if not isinstance(raw_edges, (list, tuple)) or not all(
+        isinstance(edge, Mapping) for edge in raw_edges
+    ):
+        raise ValueError("coupling_edges must be a list or tuple of mappings")
+    equations = tuple(raw_equations)
+    coupling_edges = tuple(dict(edge) for edge in raw_edges)
     return DiscoveredDynamics(
         library=str(block.get("library", "")),
         status=str(block.get("status", "")),
