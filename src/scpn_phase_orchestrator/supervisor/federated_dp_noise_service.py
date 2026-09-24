@@ -149,7 +149,19 @@ class DpNoiseServiceRequestManifest:
                 raise ValueError("node_id is required")
             if budget.node_id in node_ids:
                 raise ValueError("node_id values must be unique")
-            if budget.epsilon_spent < 0.0:
+            spent = budget.epsilon_spent
+            # NaN compares false: a NaN spend made the summed budget NaN and
+            # "spent > epsilon" never fired, admitting any request.
+            if (
+                isinstance(spent, bool)
+                or not isinstance(spent, int | float)
+                or not math.isfinite(spent)
+            ):
+                raise ValueError(
+                    "node epsilon spent must be a finite non-negative real, "
+                    f"got {spent!r}"
+                )
+            if spent < 0.0:
                 raise ValueError("node epsilon spent must be non-negative")
             node_ids.add(budget.node_id)
 
