@@ -24,6 +24,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The explainability PDF writes its text in the font's encoding. The content
+  stream held UTF-8 bytes for a standard Helvetica font, so every event line's
+  em dash, and any non-ASCII text in reasons or regimes, rendered as several
+  wrong glyphs. The font now declares WinAnsiEncoding and the text is encoded
+  as cp1252. Arrows and comparison signs outside cp1252 become `->`, `>=`,
+  `<=`; other characters become `?`.
 - SHA-256 digest checks in the plugin registry, the federated and Byzantine
   policy manifests, the DP noise-service manifests and the audit-chain seal
   refuse strings that are not 64 hex digits. They used `int(value, 16)` or
