@@ -23,6 +23,7 @@ from ._shared import (
     _positive_float,
     _positive_int,
     _require_non_empty_text,
+    _require_self_hash,
     _require_sha256_hex,
     _required_bool,
 )
@@ -241,8 +242,8 @@ def _normalise_evolutionary_search_reports(
                 "hot_patch_permitted": False,
                 "live_merge_permitted": False,
                 "operator_review_required": True,
-                "report_hash": _require_sha256_hex(
-                    report.get("report_hash"), f"{label} report_hash"
+                "report_hash": _require_self_hash(
+                    report, "report_hash", f"{label} report_hash"
                 ),
             }
         )
@@ -552,8 +553,9 @@ def _normalise_evolutionary_dsl_reports(
                 "actuation_permitted": False,
                 "operator_review_required": True,
                 "non_actuating": True,
-                "report_hash": _require_sha256_hex(
-                    report.get("report_hash"), f"{label} report_hash"
+                # The DSL search hashes its report with the seal field blank.
+                "report_hash": _require_self_hash(
+                    report, "report_hash", f"{label} report_hash", blanked=True
                 ),
             }
         )

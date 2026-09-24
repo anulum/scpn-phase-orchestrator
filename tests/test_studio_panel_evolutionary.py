@@ -17,6 +17,7 @@ import pytest
 from scpn_phase_orchestrator.studio import (
     build_evolutionary_supervisor_policy_search_studio_panel,
 )
+from tests.sealing import seal
 
 HEX_A = "a" * 64
 HEX_B = "b" * 64
@@ -52,6 +53,11 @@ def _candidate(candidate_id: str, *, accepted: bool) -> dict[str, object]:
 
 
 def _search_report() -> dict[str, object]:
+    """Return a sealed search report; the seal covers it without ``report_hash``."""
+    return seal(_search_report_body(), "report_hash")
+
+
+def _search_report_body() -> dict[str, object]:
     return {
         "schema_name": "evolutionary_supervisor_policy_search",
         "schema_version": "1.0",
@@ -112,6 +118,11 @@ def _dsl_candidate(candidate_id: str, *, status: str = "accepted") -> dict[str, 
 
 
 def _dsl_report() -> dict[str, object]:
+    """Return a sealed DSL report; the seal covers it with ``report_hash`` blank."""
+    return seal(_dsl_report_body(), "report_hash", blanked=True)
+
+
+def _dsl_report_body() -> dict[str, object]:
     return {
         "schema_name": "policy_dsl_evolution",
         "schema_version": "1.0",

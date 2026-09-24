@@ -32,6 +32,7 @@ from scpn_phase_orchestrator.supervisor.policy_rules import (
 from scpn_phase_orchestrator.supervisor.topos_policy import (
     validate_policy_composition_category,
 )
+from tests.sealing import seal
 
 ToposPayload = tuple[dict[str, object], dict[str, object], dict[str, object]]
 
@@ -129,6 +130,8 @@ def test_topos_panel_reports_failed_validation_hashes(
     failed_policy = _copy_mapping(policy_report)
     failed_symbolic["passed"] = False
     failed_policy["passed"] = False
+    failed_symbolic = seal(failed_symbolic, "report_hash")
+    failed_policy = seal(failed_policy, "report_hash")
 
     panel = studio.build_topos_semantic_binding_studio_panel(
         [failed_symbolic],
@@ -137,8 +140,8 @@ def test_topos_panel_reports_failed_validation_hashes(
 
     assert panel["passed_symbolic_report_count"] == 0
     assert panel["passed_policy_report_count"] == 0
-    assert panel["failed_symbolic_report_hashes"] == [symbolic_report["report_hash"]]
-    assert panel["failed_policy_report_hashes"] == [policy_report["report_hash"]]
+    assert panel["failed_symbolic_report_hashes"] == [failed_symbolic["report_hash"]]
+    assert panel["failed_policy_report_hashes"] == [failed_policy["report_hash"]]
 
 
 @pytest.mark.parametrize(

@@ -24,6 +24,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The Studio Topos, evolutionary and lineage panels verify report seals.
+  - The Topos symbolic and policy reports, the evolutionary search and
+    policy-DSL reports, and the autopoietic lineage manifest each carry a
+    SHA-256 of their own canonical JSON. The panels checked only the digest
+    format, so a report edited after sealing, for example a failed Topos
+    validation turned into a passed one, rendered under its original seal.
+  - Each panel now recomputes the seal with its producer's rule: the
+    policy-DSL report is hashed with `report_hash` blank, the others without
+    the seal field. Topos domain-example hashes also cover rules held outside
+    the example record, so they cannot be recomputed from it and stay
+    format-checked.
+
 - The Studio multiverse panel verifies the rollout and risk-report seals.
   - A risk report whose rejected branches were rewritten as approved
     rendered as "2/2 branches approved" under its original `report_hash`,

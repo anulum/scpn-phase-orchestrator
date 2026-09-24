@@ -24,6 +24,7 @@ from scpn_phase_orchestrator.supervisor import (
     build_intergenerational_policy_inheritance,
     build_intergenerational_policy_inheritance_history,
 )
+from tests.sealing import seal
 
 
 def _lineage() -> dict[str, object]:
@@ -80,6 +81,7 @@ def _bad_history(path: Sequence[str | int], value: object) -> dict[str, object]:
 
 def test_lineage_panel_accepts_null_blocked_reasons_as_empty_review_evidence() -> None:
     lineage = _with_path(_lineage(), ("child_candidates", 0, "blocked_reasons"), None)
+    lineage = seal(lineage, "lineage_sha256")
 
     panel = studio.build_autopoietic_lineage_studio_panel([lineage])
 
