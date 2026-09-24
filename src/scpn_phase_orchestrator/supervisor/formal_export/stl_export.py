@@ -10,22 +10,16 @@
 
 from __future__ import annotations
 
-import re
-
 from scpn_phase_orchestrator.exceptions import PolicyError
+from scpn_phase_orchestrator.monitor.stl.monitor import (
+    _SIMPLE_SPEC_RE,
+    _parse_predicates,
+)
 from scpn_phase_orchestrator.supervisor.policy_rules import (
     PolicySTLSpec,
 )
 
 from ._shared import PrismExport, _identifier, _unique_identifier
-
-_SIMPLE_STL_RE = re.compile(r"^(always|eventually)\s*\((.*)\)\s*$")
-
-
-_STL_PREDICATE_RE = re.compile(
-    r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*(>=|>|<=|<|==)\s*"
-    r"([-+]?\d+(?:\.\d+)?)\s*$"
-)
 
 
 def _stl_mapping(specs: list[PolicySTLSpec]) -> dict[str, str]:
@@ -38,21 +32,23 @@ def _stl_mapping(specs: list[PolicySTLSpec]) -> dict[str, str]:
 
 
 def _stl_predicates(spec: PolicySTLSpec) -> tuple[str, list[tuple[str, str, float]]]:
-    """Return the validated STL predicates for a spec."""
-    match = _SIMPLE_STL_RE.match(spec.spec.strip())
+    """Return the validated STL predicates for a spec.
+
+    The grammar is the builtin monitor's own (``monitor.stl.monitor``), so a
+    formula the monitor evaluates is one the exporter accepts.
+    """
+    match = _SIMPLE_SPEC_RE.match(spec.spec.strip())
     if match is None:
         raise PolicyError(f"STL monitor {spec.name!r} uses unsupported export syntax")
-    temporal_op = match.group(1)
-    predicates: list[tuple[str, str, float]] = []
-    for raw_predicate in re.split(r"\s+(?:and|&&)\s+", match.group(2)):
-        predicate_match = _STL_PREDICATE_RE.match(raw_predicate)
-        if predicate_match is None:
-            raise PolicyError(
-                f"STL monitor {spec.name!r} uses unsupported predicate syntax"
-            )
-        signal, op, threshold = predicate_match.groups()
-        predicates.append((signal, op, float(threshold)))
-    return temporal_op, predicates
+    try:
+        predicates = _parse_predicates(match.group(2))
+    except ValueError as exc:
+        raise PolicyError(f"STL monitor {spec.name!r}: {exc}") from exc
+    if predicates is None:
+        raise PolicyError(
+            f"STL monitor {spec.name!r} uses unsupported predicate syntax"
+        )
+    return match.group(1), predicates
 
 
 def _stl_signal_mapping(
@@ -78,11 +74,11 @@ def _stl_expr(
     signal_names: dict[str, str],
 ) -> str:
     """Return the PRISM expression for an STL formula."""
-    parts = [
+    # A parsed formula always has at least one predicate.
+    return " & ".join(
         f"{signal_names[signal]} {op} {threshold:.17g}"
         for signal, op, threshold in predicates
-    ]
-    return " & ".join(parts) if parts else "true"
+    )
 
 
 def export_stl_specs_prism(
@@ -132,10 +128,11 @@ def export_stl_specs_prism(
         "// Generated from SCPN policy STL monitors for PRISM model checking.",
         "// Signal constants represent one sampled trace point or scenario bound.",
     ]
-    if signal_names:
-        lines.append("// STL signal constants:")
-        lines.extend(f"//   {raw} -> {mapped}" for raw, mapped in signal_names.items())
-        lines.extend(f"const double {mapped};" for mapped in signal_names.values())
+    # specs is non-empty and every parsed formula has at least one predicate,
+    # so there is always at least one signal constant to declare.
+    lines.append("// STL signal constants:")
+    lines.extend(f"//   {raw} -> {mapped}" for raw, mapped in signal_names.items())
+    lines.extend(f"const double {mapped};" for mapped in signal_names.values())
     lines.extend(
         [
             "",
