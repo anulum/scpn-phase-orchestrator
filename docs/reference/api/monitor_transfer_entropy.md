@@ -97,11 +97,13 @@ M = transfer_entropy_matrix(series, n_bins=16)            # (N, N)
 
 Key parameters:
 
-* ``source`` / ``target`` — 1-D phase arrays, equal length. Radians,
+* ``source`` / ``target`` — 1-D phase arrays of equal length; unequal
+  lengths raise ``ValueError`` rather than being truncated. Radians,
   any finite real value; wrapping is applied internally. Complex
-  samples, boolean aliases, and numeric-string aliases are rejected at
-  the public boundary because oscillator phase is a real-valued angle,
-  not a stringly-typed transport field.
+  samples, boolean aliases, numeric-string aliases, and ``datetime64`` /
+  ``timedelta64`` arrays are rejected at the public boundary because
+  oscillator phase is a real-valued angle, not a stringly-typed or
+  unit-carrying transport field.
 * ``phase_series`` — ``(n_oscillators, n_timesteps)`` array with
   finite real-valued entries. Boolean and numeric-string aliases are
   rejected before float coercion. The matrix API enforces a zero

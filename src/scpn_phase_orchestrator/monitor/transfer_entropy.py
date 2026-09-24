@@ -204,6 +204,11 @@ def _validate_phase_vector(value: object, *, name: str) -> FloatArray:
         raise ValueError(f"{name} must not contain numeric-string aliases")
     if np.iscomplexobj(raw):
         raise ValueError(f"{name} must be a finite real-valued 1-D phase vector")
+    if raw.dtype.kind in "mM":
+        raise ValueError(
+            f"{name} must be plain radians; datetime64 and timedelta64 values "
+            "are rejected"
+        )
     try:
         phases = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
@@ -224,6 +229,11 @@ def _validate_phase_series(value: object, *, name: str) -> FloatArray:
         raise ValueError(f"{name} must not contain numeric-string aliases")
     if np.iscomplexobj(raw):
         raise ValueError(f"{name} must be a finite real-valued 2-D phase series")
+    if raw.dtype.kind in "mM":
+        raise ValueError(
+            f"{name} must be plain radians; datetime64 and timedelta64 values "
+            "are rejected"
+        )
     try:
         series = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
@@ -278,7 +288,7 @@ def _validate_te_matrix(
     *,
     n_osc: int,
     max_entropy: float,
-    expected: FloatArray | None = None,
+    expected: FloatArray,
     atol: float = 1e-12,
 ) -> FloatArray:
     """Return a backend transfer-entropy matrix matching the reference, else raise."""
@@ -307,10 +317,9 @@ def _validate_te_matrix(
         raise ValueError("transfer entropy matrix diagonal must be zero")
     matrix = np.maximum(matrix, 0.0)
     np.fill_diagonal(matrix, 0.0)
-    if expected is not None:
-        reference = np.asarray(expected, dtype=np.float64).reshape(n_osc, n_osc)
-        if not np.allclose(matrix, reference, rtol=0.0, atol=atol):
-            raise ValueError("transfer entropy matrix diverged from exact reference")
+    reference = np.asarray(expected, dtype=np.float64).reshape(n_osc, n_osc)
+    if not np.allclose(matrix, reference, rtol=0.0, atol=atol):
+        raise ValueError("transfer entropy matrix diverged from exact reference")
     return np.ascontiguousarray(matrix, dtype=np.float64)
 
 
@@ -403,16 +412,19 @@ def phase_transfer_entropy(
     ------
     ValueError
         If the source or target series contain boolean aliases, numeric-string
-        aliases, complex values, non-finite values, or non-vector shapes.
+        aliases, complex values, time-unit values, non-finite values, or
+        non-vector shapes, or if their lengths differ.
     """
     bin_count = _validate_n_bins(n_bins)
     source_values = _validate_phase_vector(source, name="source")
     target_values = _validate_phase_vector(target, name="target")
-    n_samples = min(len(source_values), len(target_values))
-    if n_samples < 3:
+    if len(source_values) != len(target_values):
+        raise ValueError(
+            "source and target must have the same length, got "
+            f"{len(source_values)} and {len(target_values)}"
+        )
+    if len(source_values) < 3:
         return 0.0
-    source_values = source_values[:n_samples]
-    target_values = target_values[:n_samples]
     expected = _phase_te_reference(source_values, target_values, bin_count)
     backend_fn = _dispatch("phase_te")
     if backend_fn is not None:
@@ -450,7 +462,7 @@ def transfer_entropy_matrix(phase_series: FloatArray, n_bins: int = 16) -> Float
     Parameters
     ----------
     phase_series : FloatArray
-        Phase time series, shape ``(T, N)``.
+        Phase time series, shape ``(N, T)``: one row per oscillator.
     n_bins : int
         Number of histogram bins.
 
@@ -463,7 +475,8 @@ def transfer_entropy_matrix(phase_series: FloatArray, n_bins: int = 16) -> Float
     ------
     ValueError
         If ``phase_series`` contains boolean aliases, numeric-string aliases,
-        complex values, non-finite values, or a non-matrix shape.
+        complex values, time-unit values, non-finite values, or a non-matrix
+        shape.
     """
     bin_count = _validate_n_bins(n_bins)
     series = _validate_phase_series(phase_series, name="phase_series")
