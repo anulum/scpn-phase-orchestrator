@@ -24,6 +24,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `spo supervisor-baseline-experiment` refuses non-finite scenario values
+  and conflicting dependency locks before running. `json.loads` accepts
+  `NaN` and `Infinity`, and `nan <= 0` is false, so a non-finite `dt`,
+  coupling, phase or frequency passed validation and failed later with an
+  unrelated serialisation error. A `--dependency-lock` label given twice with
+  different digests silently kept only the last digest in the provenance
+  output. Repeating an identical lock is still accepted.
 - `spo watch` verifies a live tail correctly. A tail that started mid-stream
   began at sequence N + 1, which the integrity check (expecting sequence 1
   and the zero hash) always refused. Every valid stream watched without

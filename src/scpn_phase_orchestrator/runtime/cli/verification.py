@@ -19,6 +19,7 @@ is invoked for that runtime path.
 from __future__ import annotations
 
 import json
+import math
 from collections.abc import Callable
 from pathlib import Path
 from typing import Protocol, TypeVar, cast
@@ -401,6 +402,12 @@ def _parse_dependency_locks(values: tuple[str, ...]) -> dict[str, str]:
             raise click.ClickException(
                 "--dependency-lock values must use '<label>:<digest>' format"
             )
+        if label in locks and locks[label] != digest:
+            raise click.ClickException(
+                f"--dependency-lock label {label!r} given twice with different "
+                f"digests ({locks[label]!r} and {digest!r}); the provenance "
+                "manifest would silently keep only the last one"
+            )
         locks[label] = digest
     return locks
 
@@ -436,8 +443,14 @@ def _supervisor_float_list(record: dict[str, object], field: str) -> list[float]
         raise click.ClickException(f"scenario {field} must be a non-empty list")
     values: list[float] = []
     for index, item in enumerate(value):
-        if isinstance(item, bool) or not isinstance(item, int | float):
-            raise click.ClickException(f"scenario {field}[{index}] must be numeric")
+        if (
+            isinstance(item, bool)
+            or not isinstance(item, int | float)
+            or not math.isfinite(item)
+        ):
+            raise click.ClickException(
+                f"scenario {field}[{index}] must be a finite number"
+            )
         values.append(float(item))
     return values
 
@@ -445,8 +458,13 @@ def _supervisor_float_list(record: dict[str, object], field: str) -> list[float]
 def _supervisor_positive_float(record: dict[str, object], field: str) -> float:
     """Return ``value`` as a strictly positive float, else raise."""
     value = record.get(field)
-    if isinstance(value, bool) or not isinstance(value, int | float) or value <= 0:
-        raise click.ClickException(f"scenario {field} must be a positive number")
+    if (
+        isinstance(value, bool)
+        or not isinstance(value, int | float)
+        or not math.isfinite(value)
+        or value <= 0
+    ):
+        raise click.ClickException(f"scenario {field} must be a positive finite number")
     return float(value)
 
 
