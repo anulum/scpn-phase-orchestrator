@@ -203,6 +203,13 @@ def classify_phase_sindy_confidence(
     SindyConfidence
         The tier, posture, the quantities the verdict rested on, and the
         ordered reasons.
+
+    Raises
+    ------
+    ValueError
+        For a fitted status, if a count is not a non-negative integer or
+        ``active_terms`` exceeds ``total_terms``. An invalid R² is not raised;
+        it is reported as a reason with the ``insufficient_evidence`` posture.
     """
     if status != FITTED_STATUS:
         return SindyConfidence(
@@ -304,6 +311,13 @@ def classify_phase_sindy_block(
     -------
     SindyConfidence
         The honest confidence verdict for the block.
+
+    Raises
+    ------
+    ValueError
+        If ``r_squared`` is present but not a real number, ``sparsity`` is not a
+        finite real number, or a count is invalid (see
+        :func:`classify_phase_sindy_confidence`).
     """
     status = str(block.get("status", ""))
     raw_r_squared = block.get("r_squared")
