@@ -35,11 +35,15 @@ N = 3
 PHASES = jnp.array([0.0, 1.0, 2.0])
 OMEGAS = jnp.array([0.1, 0.2, 0.3])
 K = jnp.full((N, N), 0.1) - jnp.eye(N) * 0.1
+# Built with the phases' dtype at import: a later test in the session may turn
+# on jax_enable_x64, and a mask created at call time would then be float64
+# while the phases stay float32, which scan rejects as a carry type change.
+MASK = jnp.ones((N, N), dtype=PHASES.dtype)
 
 RUNNERS: dict[str, Callable[[str], object]] = {
     "kuramoto": lambda m: kuramoto_forward(PHASES, OMEGAS, K, 0.01, 2, method=m),
     "kuramoto_masked": lambda m: kuramoto_forward_masked(
-        PHASES, OMEGAS, K, jnp.ones((N, N)), 0.01, 2, method=m
+        PHASES, OMEGAS, K, MASK, 0.01, 2, method=m
     ),
     "winfree": lambda m: winfree_forward(PHASES, OMEGAS, 0.1, 0.01, 2, method=m),
     "simplicial": lambda m: simplicial_forward(PHASES, OMEGAS, K, 0.01, 2, method=m),
