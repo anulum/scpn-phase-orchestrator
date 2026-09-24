@@ -22,6 +22,7 @@ from click.testing import CliRunner
 
 from scpn_phase_orchestrator.runtime.cli import main
 from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
+from tests.prometheus_range_server import prometheus_range_server
 
 
 class TestCLIRun:
@@ -180,7 +181,10 @@ class TestCLIQueuewavesCheck:
         path = tmp_path / "qw.yaml"
         path.write_text(yaml.dump(cfg), encoding="utf-8")
         runner = CliRunner()
-        result = runner.invoke(main, ["queuewaves", "check", "--config", str(path)])
+        with prometheus_range_server() as url:
+            cfg["prometheus_url"] = url
+            path.write_text(yaml.dump(cfg), encoding="utf-8")
+            result = runner.invoke(main, ["queuewaves", "check", "--config", str(path)])
         assert result.exit_code in (0, 1)
         assert "R_good" in result.output
 
@@ -203,7 +207,10 @@ class TestCLIQueuewavesCheck:
         path = tmp_path / "qw.yaml"
         path.write_text(yaml.dump(cfg), encoding="utf-8")
         runner = CliRunner()
-        result = runner.invoke(main, ["queuewaves", "check", "--config", str(path)])
+        with prometheus_range_server() as url:
+            cfg["prometheus_url"] = url
+            path.write_text(yaml.dump(cfg), encoding="utf-8")
+            result = runner.invoke(main, ["queuewaves", "check", "--config", str(path)])
         assert result.exit_code == 0
         assert "No anomalies detected" in result.output
 

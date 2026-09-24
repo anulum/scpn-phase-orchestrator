@@ -135,9 +135,12 @@ When `security.mode: production` is set, REST and WebSocket clients must send
 spo queuewaves check --config queuewaves.yaml
 ```
 
-Scrapes once, runs the pipeline, prints `R_good`/`R_bad`/regime. Exits 0 if
-no anomalies, 1 if anomalies detected. Use in CI or cron for periodic health
-checks.
+Fetches each service's recent history from Prometheus in one range query
+(`buffer_length` points spaced `scrape_interval_s` apart), runs the pipeline,
+and prints `R_good`/`R_bad`/regime. Exits 0 if no anomalies, 1 if anomalies
+are detected, and 2 if any service returned too little data to analyse (for
+example Prometheus is unreachable) — a 2 is "unknown", never "healthy". Use in
+CI or cron for periodic health checks.
 
 ## REST API
 

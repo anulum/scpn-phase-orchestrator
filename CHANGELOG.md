@@ -24,6 +24,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `spo queuewaves check` analyses the services it monitors. The command was
+  documented as "scrapes once, runs the pipeline … use in CI or cron", but it
+  never contacted Prometheus. It fed seeded random noise to every service and
+  printed "No anomalies detected." with exit 0, even when the configured
+  Prometheus did not exist. It now fetches each service's recent history with
+  one PromQL range query (the new `PrometheusCollector.backfill`). A service
+  with too little data, for example because Prometheus is unreachable, makes
+  the result unknown: exit 2, never "healthy". The guide and the CLI
+  reference document exit codes 0/1/2. The tests run the real HTTP path
+  against a local server speaking the Prometheus range API.
 - `spo assurance-case` refuses an evidence row whose id, category or summary
   is not a non-empty string, or whose record is not a JSON object.
   `str(row["evidence_id"])` turned `null` into `"None"`, and
