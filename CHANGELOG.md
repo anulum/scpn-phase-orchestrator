@@ -24,6 +24,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `compute_resilience` refuses a non-finite order-parameter history. One NaN
+  sample turned the largest coherence drop into NaN, which `max(0.0, nan)`
+  reported as 0.0. A real 0.8 drop therefore scored as no drop at all, and a
+  run whose final order parameter was NaN still came out `recovered=True`
+  with a hash taken over non-standard JSON. A diverged run now raises
+  `ValueError` instead of scoring as resilient.
 - Chaos faults now end when their window ends and hold a constant strength
   inside it. The simulation keeps whatever a scenario hook writes, and the
   chaos hook re-applied each fault to the already-faulted values every step.
