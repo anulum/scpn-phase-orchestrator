@@ -14,6 +14,7 @@ from collections.abc import Mapping
 
 from ._shared import (
     _connector_by_transport,
+    _deployment_blocked_reasons,
     _is_sha256_digest,
     _require_non_empty_text,
     _require_sequence,
@@ -79,6 +80,11 @@ def build_verified_hardware_target_package(
 ) -> dict[str, object]:
     """Return a verified hardware package only when evidence is complete.
 
+    The package is ``review_ready`` only when the evidence is complete, the
+    local replay completed, and no export warning blocks deployment. A binding
+    with validation errors blocks the hardware handoff as it blocks Docker and
+    WASM packaging; the blocking reasons are listed in ``blocked_reasons``.
+
     Parameters
     ----------
     result : StudioReplayResult
@@ -104,10 +110,23 @@ def build_verified_hardware_target_package(
     base_package = build_hardware_target_package(result)
     normalised, invalid_evidence = _normalise_hardware_evidence(evidence)
     verified = not invalid_evidence
+    # The same export warnings that block Docker and WASM packaging block the
+    # hardware handoff: hardware evidence does not stand in for a valid binding.
+    blocked_reasons = list(_deployment_blocked_reasons(result.project_state.exports))
+    replay_completed = result.project_state.runtime.replay_status == "completed"
+    if not replay_completed:
+        blocked_reasons.append("local replay has not completed")
+    if blocked_reasons:
+        overall_status = "blocked"
+    elif verified:
+        overall_status = "review_ready"
+    else:
+        overall_status = "evidence_required"
     return {
         "package_kind": "studio_verified_hardware_target_package",
         "project_name": result.project_state.project_name,
-        "overall_status": "review_ready" if verified else "evidence_required",
+        "overall_status": overall_status,
+        "blocked_reasons": blocked_reasons,
         "evidence_status": "verified" if verified else "blocked",
         "contract_hash": base_package["contract_hash"],
         "hardware_write_permitted": False,
@@ -128,12 +147,16 @@ def build_verified_hardware_target_package(
                 "compare generated artefact hash before handoff",
                 "archive simulator parity report with package",
             ]
-            if verified
+            if overall_status == "review_ready"
             else []
         ),
         "safety_gates": [
-            "local replay completed",
-            "binding validation passed",
+            "local replay completed" if replay_completed else "local replay incomplete",
+            (
+                "binding validation blocked"
+                if _deployment_blocked_reasons(result.project_state.exports)
+                else "binding validation passed"
+            ),
             "hardware evidence verified" if verified else "hardware evidence blocked",
             "hardware output remains operator-controlled",
         ],
