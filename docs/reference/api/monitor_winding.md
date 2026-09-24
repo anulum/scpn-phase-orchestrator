@@ -10,8 +10,9 @@ w_i \;=\; \Bigl\lfloor \frac{1}{2\pi} \sum_{t=1}^{T-1} \operatorname{wrap}\bigl(
 \qquad \operatorname{wrap}(x) = \pi - ((\pi - x) \bmod 2\pi).
 $$
 
-Positive ``w_i`` = counterclockwise, negative = clockwise, zero =
-no net rotation. The ``wrap`` operator handles the ``θ = 2π → 0``
+Positive ``w_i`` = counterclockwise, negative = clockwise. Because of the
+``floor``, zero means a net rotation in ``[0, 2π)``: any net clockwise drift,
+however small, gives ``-1``. The ``wrap`` operator handles the ``θ = 2π → 0``
 jump at each step so the cumulative increment reflects true
 rotation rather than storage discontinuities.
 
@@ -26,8 +27,9 @@ multi-backend benchmark, and ``pytest.mark.slow`` stability tests.
 ### 1.1 Winding number
 
 For a phase trajectory ``θ_i(t)`` wrapped to ``[0, 2π)``, the
-winding number is the integer number of complete counterclockwise
-revolutions the oscillator has performed. It is a **topological
+winding number counts its net ``2π`` turns, rounded toward ``-∞`` by the
+``floor`` (so a net clockwise drift of any size counts at least ``-1``; see
+§1.3). It is a **topological
 invariant**: continuous deformations of the trajectory cannot
 change it.
 
@@ -44,7 +46,10 @@ the true cumulative angular displacement.
 * ``|w_i| ≤ T`` — at most one full rotation per timestep.
 * Global shift: adding ``φ`` to every phase leaves every ``w_i``
   unchanged.
-* Time reversal: reversing the trajectory negates every ``w_i``.
+* Time reversal: reversing the trajectory gives ``-w_i`` when the net
+  rotation is a whole number of turns and ``-w_i - 1`` otherwise (the
+  ``floor`` rounds toward ``-∞``). A drift of ``+0.01`` rad counts ``0``; the
+  reversed ``-0.01`` rad counts ``-1``.
 * Sign: positive ω → positive ``w_i`` (for long enough ``T``).
 * Empty / single-step: ``T < 2`` → zero vector.
 * Exact wrapped-increment preservation: public and direct accelerator
@@ -70,7 +75,9 @@ def winding_numbers(phases_history: NDArray) -> NDArray: ...
 ```
 
 Takes a ``(T, N)`` phase history; returns ``(N,)`` int64 array.
-``T < 2`` short-circuits to a zero vector.
+``T < 2`` short-circuits to a zero vector. A one-dimensional array is
+rejected: it could be one oscillator over time or one time step of ``N``
+oscillators. ``datetime64`` / ``timedelta64`` arrays are rejected.
 The public boundary rejects boolean aliases, numeric-string aliases, complex
 dtypes, and object arrays containing complex scalar aliases before any float
 coercion, preserving the real-valued wrapped-increment topology contract.

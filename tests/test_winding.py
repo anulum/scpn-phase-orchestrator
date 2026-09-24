@@ -143,7 +143,7 @@ class TestWindingNumbers:
             winding_numbers(history)
 
     def test_rejects_rank_three_history(self) -> None:
-        with pytest.raises(ValueError, match="phases_history must be 1D or 2D"):
+        with pytest.raises(ValueError, match=r"must be two-dimensional \(T, N\)"):
             winding_numbers(np.zeros((2, 2, 2), dtype=np.float64))
 
     def test_accepts_array_like_history(self) -> None:

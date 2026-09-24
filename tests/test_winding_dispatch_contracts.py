@@ -104,7 +104,9 @@ def test_julia_backend_loader_returns_winding_callable(
 def test_backend_winding_rejects_uncoercible_array_like_output() -> None:
     """Backend output must be array-like before shape and numeric checks."""
     with pytest.raises(ValueError, match="array-like"):
-        winding_module._validate_backend_winding(_ArrayRaises(), n=1, t=2)
+        winding_module._validate_backend_winding(
+            _ArrayRaises(), n=1, t=2, expected=np.zeros(1, dtype=np.int64)
+        )
 
 
 def test_backend_winding_rejects_non_numeric_object_output() -> None:
@@ -114,6 +116,7 @@ def test_backend_winding_rejects_non_numeric_object_output() -> None:
             np.array([object()], dtype=object),
             n=1,
             t=2,
+            expected=np.zeros(1, dtype=np.int64),
         )
 
 

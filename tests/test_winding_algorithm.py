@@ -128,10 +128,35 @@ class TestEdgeCases:
         assert w.shape == (5,)
         assert np.all(w == 0)
 
-    @_python
-    def test_non_2d_returns_zeros(self):
-        w = winding_numbers(np.zeros(5))
-        assert w.shape == (0,)
+    @pytest.mark.parametrize("history", [np.zeros(5), np.linspace(0, 4 * np.pi, 50)])
+    def test_non_2d_history_is_rejected(self, history):
+        """A 1-D history is ambiguous and used to return an empty result."""
+        with pytest.raises(ValueError, match=r"two-dimensional \(T, N\)"):
+            winding_numbers(history)
+
+    def test_zero_dimensional_history_is_rejected(self):
+        with pytest.raises(ValueError, match=r"two-dimensional \(T, N\)"):
+            winding_numbers(np.array(1.0))
+
+    @pytest.mark.parametrize(
+        "history",
+        [
+            np.array([[0, 1], [60_000, 2]], dtype="timedelta64[ms]"),
+            np.array([["2026-09-24"], ["2026-09-25"]], dtype="datetime64[D]"),
+        ],
+    )
+    def test_time_unit_history_is_rejected(self, history):
+        with pytest.raises(ValueError, match="plain radians"):
+            winding_numbers(history)
+
+    def test_floor_convention_is_asymmetric_under_reversal(self):
+        """Documented behaviour: floor counts any net negative drift as -1."""
+        forward = np.column_stack(
+            [np.linspace(0.0, 0.01, 100), np.linspace(0.0, 2 * np.pi - 0.01, 100)]
+        )
+        backward = forward[::-1].copy()
+        np.testing.assert_array_equal(winding_numbers(forward), [0, 0])
+        np.testing.assert_array_equal(winding_numbers(backward), [-1, -1])
 
     @_python
     def test_winding_vector_alias(self):
