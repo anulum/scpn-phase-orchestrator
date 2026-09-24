@@ -24,6 +24,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `ppo_supervisor_loss` now validates its objective parameters. `clip_epsilon`
+  must be finite and positive, and `value_weight` and `entropy_weight` finite
+  and non-negative. A negative epsilon had inverted the ratio clip and trained
+  silently, and a negative weight rewarded value error or penalised
+  exploration. The entropy schedule was already validated as non-negative; its
+  default weight was not.
 - The neural supervisor's audit projection passed a NaN proposal (or a NaN
   previous action) through `jnp.clip` and reported it as projected and not
   rejected. A non-finite proposal or previous action is now rejected
