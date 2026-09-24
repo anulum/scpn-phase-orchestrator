@@ -24,6 +24,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Audit-chain verification no longer accepts records without `_hash` inside a
+  hash-chained log. Without `SPO_AUDIT_KEY`, `ReplayEngine.verify_integrity`
+  skipped every such record. A forged step appended to, or inserted into, a
+  genuine log therefore verified as intact, and the explainability report
+  showed the forged final regime under "hash chain OK". Unhashed records are
+  now accepted only before the first hashed one, which is the shape
+  `AuditLogger` leaves when it appends to a legacy log. A fully legacy log
+  still verifies as `(True, 0)`, meaning "nothing to verify".
 - The explainability PDF writes its text in the font's encoding. The content
   stream held UTF-8 bytes for a standard Helvetica font, so every event line's
   em dash, and any non-ASCII text in reasons or regimes, rendered as several
