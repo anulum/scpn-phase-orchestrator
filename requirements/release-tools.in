@@ -10,5 +10,5 @@
 # uncommitted input; these are the packages its "via -r" annotations name as
 # direct, pinned to the versions that lock already carried.
 
-build==1.4.2
-cyclonedx-bom==7.3.0
+build==1.6.1
+cyclonedx-bom==7.4.0

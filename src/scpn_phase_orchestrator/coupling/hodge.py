@@ -461,7 +461,7 @@ def _psd_pinv_apply(matrix: FloatArray, vector: FloatArray) -> FloatArray:
         where=keep,
     )
     projected = eigenvectors.T @ vector
-    return cast("FloatArray", eigenvectors @ (inv_eigenvalues * projected))
+    return eigenvectors @ (inv_eigenvalues * projected)
 
 
 def _hodge_components(

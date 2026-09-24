@@ -501,7 +501,7 @@ def _initial_tangent_basis(n: int, zeta: float) -> FloatArray:
     Q: FloatArray = np.eye(n, dtype=np.float64)
     if zeta == 0.0:
         Q[:, 0] = 1.0 / np.sqrt(float(n))
-        Q = cast("FloatArray", np.linalg.qr(Q)[0])
+        Q = np.linalg.qr(Q)[0]
     return Q
 
 

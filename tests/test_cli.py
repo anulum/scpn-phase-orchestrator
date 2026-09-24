@@ -258,32 +258,32 @@ def test_auto_bind_rejects_malformed_sample_rate_option(runner, tmp_path):
     assert "Invalid value for '--sample-rate-hz'" in result.output
 
 
-def test_auto_bind_json_out_is_read_only(runner, tmp_path):
-    csv_path = tmp_path / "grid.csv"
-    csv_path.write_text(
+def test_auto_bind_json_out_is_read_only(runner, tmp_path, monkeypatch):
+    # Click 9 removes CliRunner.isolated_filesystem; run from a private working
+    # directory instead so any file written relative to it would be visible.
+    work_dir = tmp_path / "work"
+    work_dir.mkdir()
+    input_path = work_dir / "grid.csv"
+    input_path.write_text(
         "time,grid,load\n0.00,0.0,1.0\n0.01,0.2,0.9\n0.02,0.4,0.7\n",
         encoding="utf-8",
     )
+    monkeypatch.chdir(work_dir)
+    before = set(work_dir.iterdir())
 
-    with runner.isolated_filesystem() as fs_root:
-        input_path = Path(fs_root) / "grid.csv"
-        input_path.write_text(csv_path.read_text(encoding="utf-8"), encoding="utf-8")
-        before = set(Path(fs_root).iterdir())
+    result = runner.invoke(
+        main,
+        [
+            "auto-bind",
+            "time-series-csv",
+            str(input_path),
+            "--project-name",
+            "grid_replay",
+            "--json-out",
+        ],
+    )
 
-        result = runner.invoke(
-            main,
-            [
-                "auto-bind",
-                "time-series-csv",
-                str(input_path),
-                "--project-name",
-                "grid_replay",
-                "--json-out",
-            ],
-        )
-
-        after = set(Path(fs_root).iterdir())
-
+    after = set(work_dir.iterdir())
     assert result.exit_code == 0
     assert before == after
 

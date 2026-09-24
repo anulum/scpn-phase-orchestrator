@@ -234,7 +234,7 @@ def graph_laplacian(knm: FloatArray) -> FloatArray:
     adjacency = 0.5 * (w + w.T)
     np.fill_diagonal(adjacency, 0.0)
     degrees = adjacency.sum(axis=1)
-    return cast("FloatArray", np.diag(degrees) - adjacency)
+    return np.diag(degrees) - adjacency
 
 
 def _python_spectral_eig(

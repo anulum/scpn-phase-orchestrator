@@ -11,4 +11,4 @@
 # direct, pinned to the versions that lock already carried.
 
 pip==26.2.1
-pip-audit==2.10.0
+pip-audit==2.10.1

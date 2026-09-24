@@ -802,10 +802,7 @@ def _lagged_learned_graph(
     predictors = features[:-1, :]
     targets = features[1:, :]
     library = np.column_stack([np.ones(predictors.shape[0]), predictors])
-    coefficients = cast(
-        FloatArray,
-        np.linalg.lstsq(library, targets, rcond=None)[0],
-    )
+    coefficients = np.linalg.lstsq(library, targets, rcond=None)[0]
     predictions = library @ coefficients
     active_mask = np.abs(coefficients) >= threshold
     active_terms = int(np.count_nonzero(active_mask))
@@ -910,7 +907,7 @@ def _standardise(table: FloatArray) -> FloatArray:
     centre = np.mean(table, axis=0)
     scale = np.std(table, axis=0)
     scale = np.where(scale > 0.0, scale, 1.0)
-    return cast(FloatArray, (table - centre) / scale)
+    return (table - centre) / scale
 
 
 def _equation_for_target(

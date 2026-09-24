@@ -8,7 +8,7 @@
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: v6.0.0
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
@@ -23,13 +23,17 @@ repos:
         args: ["--maxkb=500"]
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.20
+    rev: v0.16.8
     hooks:
       - id: ruff
         args: [--fix, --no-cache]
         exclude: '^src/scpn_phase_orchestrator/runtime/grpc_gen/spo_pb2(_grpc)?\.py$'
       - id: ruff-format
         args: [--no-cache]
+        # ruff 0.16 formats Python code blocks in Markdown and its hook now
+        # selects Markdown files. Keep the hook on Python sources, the scope CI
+        # formats, so documentation is not rewritten outside a reviewed change.
+        types_or: [python, pyi, jupyter]
         exclude: '^src/scpn_phase_orchestrator/runtime/grpc_gen/spo_pb2(_grpc)?\.py$'
 
   - repo: https://github.com/PyCQA/bandit

@@ -332,7 +332,7 @@ def compute_phase_locking_weights(
 
     per_epoch_sum = plv.sum(axis=0, keepdims=True)
     per_epoch_sum = np.where(per_epoch_sum == 0, 1.0, per_epoch_sum)
-    return cast(FloatArray, plv / per_epoch_sum)
+    return plv / per_epoch_sum
 
 
 def compute_weighted_kuramoto_r(
