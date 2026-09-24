@@ -326,7 +326,7 @@ def _bin_series(series: FloatArray, n_bins: int) -> IntArray:
 def _group_phase_series(history: FloatArray, group: IntArray) -> FloatArray:
     """Order-parameter phase of a group at each timestep."""
     z = np.exp(1j * history[:, group]).mean(axis=1)
-    return cast("FloatArray", np.angle(z))
+    return np.angle(z)
 
 
 def _mutual_information(

@@ -33,7 +33,6 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from numbers import Integral, Real
-from typing import cast
 
 import numpy as np
 from numpy.typing import NDArray
@@ -482,4 +481,4 @@ class TorusEngine:
         result = omegas + coupling
         if zeta != 0.0:
             result = result + zeta * np.sin(psi - theta)
-        return cast("FloatArray", result)
+        return result

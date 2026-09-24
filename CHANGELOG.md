@@ -9,8 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The minimum `protobuf` is now 7.35.1 and the `full` extra's `grpcio` and
+  `grpcio-tools` minimum is 1.84.0. The committed gRPC stubs are regenerated
+  with grpcio-tools 1.84.0 and check both versions at import, so the earlier
+  floors (`protobuf>=6.33.5`, `grpcio>=1.60`) no longer described a working
+  install.
 - The Rust workspace MSRV is 1.89.0. The `nalgebra` 0.35 dependency already
   required Rust 1.89, so the declared 1.83.0 could not build the kernel.
+- The hash-pinned dependency locks and `uv.lock` are regenerated to the newest
+  versions the declared ranges allow, and the upper bounds on `websockets`,
+  `pymdown-extensions`, `pygments` and `twine` admit their current releases.
+  Python 3.11 keeps numpy 2.4, SciPy 1.17 and JAX 0.10, the last releases that
+  support it.
 
 ### Fixed
 

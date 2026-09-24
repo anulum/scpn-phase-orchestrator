@@ -5,7 +5,7 @@ import warnings
 
 from . import spo_pb2 as spo__pb2
 
-GRPC_GENERATED_VERSION = '1.80.0'
+GRPC_GENERATED_VERSION = '1.84.0'
 GRPC_VERSION = grpc.__version__
 _version_not_supported = False
 
@@ -25,7 +25,7 @@ if _version_not_supported:
     )
 
 
-class PhaseOrchestratorStub(object):
+class PhaseOrchestratorStub:
     """Missing associated documentation comment in .proto file."""
 
     def __init__(self, channel):
@@ -61,7 +61,7 @@ class PhaseOrchestratorStub(object):
                 _registered_method=True)
 
 
-class PhaseOrchestratorServicer(object):
+class PhaseOrchestratorServicer:
     """Missing associated documentation comment in .proto file."""
 
     def GetState(self, request, context):
@@ -130,7 +130,7 @@ def add_PhaseOrchestratorServicer_to_server(servicer, server):
 
 
  # This class is part of an EXPERIMENTAL API.
-class PhaseOrchestrator(object):
+class PhaseOrchestrator:
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod

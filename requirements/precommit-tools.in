@@ -6,4 +6,4 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Pre-commit CI tool inputs
 
-pre-commit==4.6.0
+pre-commit==4.6.2

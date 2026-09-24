@@ -653,7 +653,7 @@ class QuantumControlBridge:
         layer_phases = {
             f"layer_{i}": ls["psi"] for i, ls in enumerate(payload["layers"])
         }
-        return cast("FloatArray", orchestrator_to_quantum_phases(layer_phases))
+        return orchestrator_to_quantum_phases(layer_phases)
 
     def quantum_to_orchestrator(
         self,

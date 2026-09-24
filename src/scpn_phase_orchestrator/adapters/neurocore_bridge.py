@@ -276,7 +276,7 @@ class NeurocoreBridge:
             return np.zeros(self._n_layers)
 
         spikes_2d = self._spike_counts.reshape(self._n_layers, self._n_per)
-        layer_spikes: FloatArray = spikes_2d.sum(axis=1)
+        layer_spikes: FloatArray = spikes_2d.sum(axis=1, dtype=np.float64)
         return layer_spikes / (self._n_per * duration_s)
 
     def _step_rust(self, layer_currents: FloatArray, n_substeps: int) -> FloatArray:
