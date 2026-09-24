@@ -101,10 +101,11 @@ class MonitorValidationRecord:
     Raises
     ------
     ValueError
-        If ``monitor``, ``display_name`` or ``basis`` is empty or blank, so a
-        record can never be silently underspecified.
+        If ``monitor``, ``display_name`` or ``basis`` is not a non-empty,
+        non-blank string, so a record can never be silently underspecified.
     TypeError
-        If ``status`` is not a :class:`MonitorValidationStatus`.
+        If ``status`` is not a :class:`MonitorValidationStatus`, or
+        ``evidence`` is not a string.
     """
 
     monitor: str
@@ -123,9 +124,12 @@ class MonitorValidationRecord:
             raise TypeError(msg)
         for field_name in ("monitor", "display_name", "basis"):
             value = getattr(self, field_name)
-            if not value or not value.strip():
+            if not isinstance(value, str) or not value.strip():
                 msg = f"{field_name} must be a non-empty string"
                 raise ValueError(msg)
+        if not isinstance(self.evidence, str):
+            msg = f"evidence must be a string, got {type(self.evidence).__name__}"
+            raise TypeError(msg)
 
 
 # Public ``monitor/`` modules that are not detector/monitor families and so are

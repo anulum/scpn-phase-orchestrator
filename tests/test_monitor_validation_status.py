@@ -278,3 +278,18 @@ class TestValidationSummary:
         summary = validation_summary()
         for status in MonitorValidationStatus:
             assert summary[status] == len(monitors_by_status(status))
+
+
+def test_record_rejects_non_string_text_fields() -> None:
+    """A non-string field is rejected with the documented error, not AttributeError."""
+    base = {
+        "monitor": "probe",
+        "display_name": "Probe",
+        "status": MonitorValidationStatus.RESEARCH,
+        "basis": "no validation record",
+        "evidence": "",
+    }
+    with pytest.raises(ValueError, match="basis must be a non-empty string"):
+        MonitorValidationRecord(**{**base, "basis": 3})
+    with pytest.raises(TypeError, match="evidence must be a string"):
+        MonitorValidationRecord(**{**base, "evidence": None})
