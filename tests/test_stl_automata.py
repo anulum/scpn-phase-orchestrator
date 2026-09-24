@@ -566,3 +566,48 @@ def _state_by_name(
     name: str,
 ) -> STLAutomatonState:
     return next(state for state in states if state.name == name)
+
+
+@pytest.mark.parametrize(
+    ("spec", "trace", "targets", "satisfied"),
+    [
+        (
+            "always (R > 0.3)",
+            {"R": [0.5, 0.3, 0.6]},
+            ["holding", "violated", "violated"],
+            False,
+        ),
+        (
+            "always (R >= 0.3)",
+            {"R": [0.5, 0.3, 0.6]},
+            ["holding", "holding", "holding"],
+            True,
+        ),
+        (
+            "eventually (R > 0.9)",
+            {"R": [0.1, 0.9, 0.2]},
+            ["pending", "pending", "pending"],
+            False,
+        ),
+        (
+            "eventually (R >= 0.9)",
+            {"R": [0.1, 0.9, 0.2]},
+            ["pending", "satisfied", "satisfied"],
+            True,
+        ),
+    ],
+)
+def test_automaton_follows_the_predicate_operator_at_zero_robustness(
+    spec: str,
+    trace: dict[str, list[float]],
+    targets: list[str],
+    satisfied: bool,
+) -> None:
+    """A strict predicate at zero robustness does not hold for the automaton."""
+    automaton = synthesise_stl_monitoring_automaton(spec, trace)
+    assert [transition.target for transition in automaton.transitions] == targets
+    assert automaton.satisfied is satisfied
+    assert (
+        automaton.satisfied
+        is stl_module.STLMonitor(spec).evaluate_result(trace).satisfied
+    )

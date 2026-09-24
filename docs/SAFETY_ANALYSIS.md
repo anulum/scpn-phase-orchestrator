@@ -42,7 +42,7 @@ Applicable standards:
 
 | Hazard | Mitigation | Implementation |
 |--------|------------|----------------|
-| H-1 | STL runtime monitor: `always (R >= 0.3)` | `monitor/stl.py` with rtamt |
+| H-1 | STL runtime monitor: `always (R >= 0.3)` | `monitor/stl/` (builtin backend; rtamt for other syntax) |
 | H-2 | ActionProjector value clamping | `spo-supervisor/projector.rs` |
 | H-2 | Kani formal proof of clamp correctness | `spo-supervisor/src/formal_safety.rs` |
 | H-3 | Hysteresis and hold-step filtering | `spo-supervisor/regime.rs` |
@@ -144,7 +144,7 @@ Deployed systems shall run continuous STL monitoring of the order parameter R
 and coupling gain K against their safety specifications. Violation (negative
 robustness) shall trigger an immediate regime transition to Critical.
 
-**Status: Implemented** (`monitor/stl.py`), integration with supervisor pending
+**Status: Implemented** (`monitor/stl/`), integration with supervisor pending
 
 ---
 

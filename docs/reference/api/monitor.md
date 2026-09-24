@@ -128,8 +128,23 @@ nested temporal operators, and other syntax still require the optional `rtamt`
 backend and raise a clear `ImportError` when it is absent.
 
 Positive robustness means the formula is satisfied; negative robustness
-means violated. `evaluate_result()` returns an audit-ready result with
-the formula, robustness, satisfaction boolean, and backend name.
+means violated. Zero robustness does not decide a strict predicate, so the
+builtin backend reports `satisfied` from the predicates with their own
+operators: `always (R > 0.3)` over `R = [0.3, 0.5]` has robustness 0 and is not
+satisfied, while `always (R >= 0.3)` over the same trace is. The automaton and
+controller synthesis use the same reading. The `rtamt` backend returns
+robustness only, so an `rtamt` result is satisfied only when its robustness is
+strictly positive. For syntax that goes to `rtamt`, the reported robustness is
+the minimum of the robustness `rtamt` returns at every time step, so the
+formula must hold from every step, not only from time zero.
+`evaluate_result()` returns an audit-ready result with the formula,
+robustness, satisfaction boolean, and backend name.
+
+Predicate thresholds may be written as integers, decimals (`0.5`, `.5`, `5.`)
+or in exponent form (`5e-1`); a threshold that overflows to infinity, such as
+`1e999`, is rejected when the monitor is built. Parse and evaluation failures
+inside `rtamt` (syntax errors, a signal missing from the trace, unknown
+functions) are raised as `ValueError`.
 
 Trace signals are validated at the public boundary before builtin evaluation,
 `rtamt` handoff, automaton synthesis, controller synthesis, or closed-loop

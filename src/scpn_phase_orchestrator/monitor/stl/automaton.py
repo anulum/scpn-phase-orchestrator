@@ -13,11 +13,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 import numpy as np
+from numpy.typing import NDArray
 
 from .monitor import (
     FloatArray,
     _format_threshold,
     _parse_simple_spec,
+    _pointwise_holds,
     _pointwise_robustness,
     _validate_trace,
 )
@@ -147,6 +149,7 @@ def synthesise_stl_monitoring_automaton(
 
     temporal_op, predicates = parsed
     pointwise = _pointwise_robustness(predicates, trace)
+    holds = _pointwise_holds(predicates, trace)
     guard = _format_predicate_guard(predicates)
     signals = tuple(dict.fromkeys(signal for signal, _, _ in predicates))
 
@@ -156,6 +159,7 @@ def synthesise_stl_monitoring_automaton(
             spec=spec,
             signals=signals,
             pointwise=pointwise,
+            holds=holds,
             guard=guard,
             robustness=robustness,
         )
@@ -165,6 +169,7 @@ def synthesise_stl_monitoring_automaton(
             spec=spec,
             signals=signals,
             pointwise=pointwise,
+            holds=holds,
             guard=guard,
             robustness=robustness,
         )
@@ -197,15 +202,20 @@ def _synthesise_always_automaton(
     spec: str,
     signals: tuple[str, ...],
     pointwise: FloatArray,
+    holds: NDArray[np.bool_],
     guard: str,
     robustness: float,
 ) -> STLMonitoringAutomaton:
-    """Build the monitoring automaton for an 'always' STL operator."""
+    """Build the monitoring automaton for an 'always' STL operator.
+
+    Transitions follow where the guard holds with its own comparison operators,
+    so a strict predicate at zero robustness moves the automaton to violated.
+    """
     transitions: list[STLAutomatonTransition] = []
     state = "holding"
     first_violation_index: int | None = None
-    for time_index, value in enumerate(pointwise):
-        target = "violated" if value < 0.0 else state
+    for time_index, (value, held) in enumerate(zip(pointwise, holds, strict=True)):
+        target = state if held else "violated"
         if target == "violated" and first_violation_index is None:
             first_violation_index = time_index
         transitions.append(
@@ -239,7 +249,7 @@ def _synthesise_always_automaton(
         states=states,
         transitions=tuple(transitions),
         robustness=robustness,
-        satisfied=robustness >= 0.0,
+        satisfied=first_violation_index is None,
     )
 
 
@@ -248,15 +258,20 @@ def _synthesise_eventually_automaton(
     spec: str,
     signals: tuple[str, ...],
     pointwise: FloatArray,
+    holds: NDArray[np.bool_],
     guard: str,
     robustness: float,
 ) -> STLMonitoringAutomaton:
-    """Build the monitoring automaton for an 'eventually' STL operator."""
+    """Build the monitoring automaton for an 'eventually' STL operator.
+
+    Transitions follow where the guard holds with its own comparison operators,
+    so a strict predicate at zero robustness does not satisfy the automaton.
+    """
     transitions: list[STLAutomatonTransition] = []
     state = "pending"
     first_satisfaction_index: int | None = None
-    for time_index, value in enumerate(pointwise):
-        target = "satisfied" if value >= 0.0 else state
+    for time_index, (value, held) in enumerate(zip(pointwise, holds, strict=True)):
+        target = "satisfied" if held else state
         if target == "satisfied" and first_satisfaction_index is None:
             first_satisfaction_index = time_index
         transitions.append(
@@ -290,5 +305,5 @@ def _synthesise_eventually_automaton(
         states=states,
         transitions=tuple(transitions),
         robustness=robustness,
-        satisfied=robustness >= 0.0,
+        satisfied=first_satisfaction_index is not None,
     )

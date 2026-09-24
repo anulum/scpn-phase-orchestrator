@@ -19,6 +19,7 @@ from .monitor import (
     _format_threshold,
     _parse_simple_spec,
     _pointwise_robustness,
+    _predicate_holds,
     _predicate_robustness,
     _validate_trace,
 )
@@ -174,9 +175,9 @@ def _candidate_for_predicate(
 ) -> STLControllerCandidate | None:
     """Build a controller candidate that satisfies an STL predicate."""
     signal, op, threshold = predicate
-    robustness = float(_predicate_robustness(signal, op, threshold, trace)[time_index])
-    if robustness >= 0.0:
+    if _predicate_holds(signal, op, threshold, trace)[time_index]:
         return None
+    robustness = float(_predicate_robustness(signal, op, threshold, trace)[time_index])
     direction = _controller_direction(op)
     action = action_map.get(signal, f"{direction}_{signal}")
     rationale = (

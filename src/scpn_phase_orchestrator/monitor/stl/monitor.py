@@ -6,10 +6,21 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Runtime STL monitor and trace evaluation
 
-"""rtamt-backed STL monitor, trace results, and predicate robustness evaluation."""
+"""rtamt-backed STL monitor, trace results, and predicate robustness evaluation.
+
+Robustness follows the quantitative STL semantics: ``x - c`` for ``x >= c`` and
+``x > c``, ``c - x`` for ``x <= c`` and ``x < c``, ``-|x - c|`` for ``x == c``.
+A robustness of exactly zero does not decide a strict predicate, so the
+builtin backend reports ``satisfied`` from the predicates themselves with their
+own comparison operators: ``always (R > 0.3)`` over ``R = [0.3, 0.5]`` has
+robustness 0 and is not satisfied. The ``rtamt`` backend returns robustness
+only, so its results are reported as satisfied only when the robustness is
+strictly positive.
+"""
 
 from __future__ import annotations
 
+import math
 import re
 import warnings
 from dataclasses import dataclass
@@ -41,9 +52,22 @@ _BOUNDED_SPEC_RE = re.compile(
 
 
 _PREDICATE_RE = re.compile(
-    r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*(>=|>|<=|<|==)\s*([-+]?\d+(?:\.\d+)?)\s*$"
+    r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*(>=|>|<=|<|==)\s*"
+    r"([-+]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][-+]?\d+)?)\s*$"
 )
 
+
+# Qualitative truth of a predicate, by comparison operator.
+_COMPARISONS = {
+    ">=": np.greater_equal,
+    ">": np.greater,
+    "<=": np.less_equal,
+    "<": np.less,
+    "==": np.equal,
+}
+
+# Qualitative reduction of pointwise truth over a window, by temporal operator.
+_WINDOW_TRUTH = {"always": np.all, "eventually": np.any}
 
 # Parsed unbounded builtin specification: temporal operator + atomic predicates.
 _ParsedSimple: TypeAlias = tuple[str, list[tuple[str, str, float]]]
@@ -143,21 +167,30 @@ class STLMonitor:
                 "rtamt is required for this STL syntax. Install: pip install rtamt"
             )
 
-        if not self._parsed:
+        # rtamt raises its own exception types, KeyError for a signal the trace
+        # lacks and UnboundLocalError on some numeric literals; report every
+        # parse or evaluation failure as an invalid spec/trace pair.
+        try:
+            if not self._parsed:
+                for name in trace:
+                    self._stl.declare_var(name, "float")
+                self._stl.spec = self._spec_str
+                self._stl.parse()
+                self._parsed = True
+
+            # rtamt discrete-time offline: flat lists per signal + 'time' key
+            datasets: dict[str, list[float]] = {}
             for name in trace:
-                self._stl.declare_var(name, "float")
-            self._stl.spec = self._spec_str
-            self._stl.parse()
-            self._parsed = True
+                datasets[name] = _trace_signal_array(name, trace).tolist()
+            if "time" not in datasets:
+                datasets["time"] = [float(t) for t in range(length)]
 
-        # rtamt discrete-time offline: flat lists per signal + 'time' key
-        datasets: dict[str, list[float]] = {}
-        for name in trace:
-            datasets[name] = _trace_signal_array(name, trace).tolist()
-        if "time" not in datasets:
-            datasets["time"] = [float(t) for t in range(length)]
-
-        robustness = self._stl.evaluate(datasets)
+            robustness = self._stl.evaluate(datasets)
+        except Exception as exc:
+            raise ValueError(
+                f"rtamt could not evaluate STL spec {self._spec_str!r}: "
+                f"{type(exc).__name__}: {exc}"
+            ) from exc
         # rtamt returns [[time, robustness], ...]; min is worst-case
         if isinstance(robustness, list) and robustness:
             return float(min(r[1] for r in robustness))
@@ -177,12 +210,23 @@ class STLMonitor:
             The robustness value plus audit metadata.
         """
         robustness = self.evaluate(trace)
-        backend = "builtin" if self._is_builtin else "rtamt"
+        if self._simple is not None:
+            temporal_op, predicates = self._simple
+            satisfied = _holds_over_window(
+                temporal_op, _pointwise_holds(predicates, trace)
+            )
+        elif self._bounded is not None:
+            temporal_op, predicates, (lower, upper) = self._bounded
+            satisfied = _holds_over_window(
+                temporal_op, _pointwise_holds(predicates, trace)[lower : upper + 1]
+            )
+        else:
+            satisfied = robustness > 0.0
         return STLTraceResult(
             spec=self._spec_str,
             robustness=robustness,
-            satisfied=robustness >= 0.0,
-            backend=backend,
+            satisfied=satisfied,
+            backend="builtin" if self._is_builtin else "rtamt",
         )
 
 
@@ -193,8 +237,13 @@ def _parse_predicates(body: str) -> list[tuple[str, str, float]] | None:
         predicate_match = _PREDICATE_RE.match(raw_predicate)
         if predicate_match is None:
             return None
-        signal, op, threshold = predicate_match.groups()
-        predicates.append((signal, op, float(threshold)))
+        signal, op, threshold_text = predicate_match.groups()
+        threshold = float(threshold_text)
+        if not math.isfinite(threshold):
+            raise ValueError(
+                f"STL predicate threshold must be finite, got {threshold_text!r}"
+            )
+        predicates.append((signal, op, threshold))
     return predicates
 
 
@@ -241,6 +290,16 @@ def _reduce_temporal(temporal_op: str, window: FloatArray) -> float:
     if temporal_op == "eventually":
         return float(np.max(window)) if window.size else float("-inf")
     raise ValueError(f"unsupported STL temporal operator {temporal_op!r}")
+
+
+def _holds_over_window(temporal_op: str, window: NDArray[np.bool_]) -> bool:
+    """Reduce pointwise predicate truth by the temporal operator.
+
+    An empty window is the vacuous quantifier, as for robustness: ``always``
+    holds and ``eventually`` does not. The parser admits only these two
+    operators, so the lookup cannot miss.
+    """
+    return bool(_WINDOW_TRUTH[temporal_op](window))
 
 
 def _evaluate_simple(
@@ -338,6 +397,37 @@ def _pointwise_robustness(
         dtype=np.float64,
     )
     return pointwise
+
+
+def _pointwise_holds(
+    predicates: list[tuple[str, str, float]],
+    trace: dict[str, list[float]],
+) -> NDArray[np.bool_]:
+    """Return where every predicate of the conjunction holds over the trace."""
+    holds: NDArray[np.bool_] = np.logical_and.reduce(
+        [
+            _predicate_holds(signal, op, threshold, trace)
+            for signal, op, threshold in predicates
+        ]
+    )
+    return holds
+
+
+def _predicate_holds(
+    signal: str,
+    op: str,
+    threshold: float,
+    trace: dict[str, list[float]],
+) -> NDArray[np.bool_]:
+    """Return where an STL predicate holds, using its own comparison operator.
+
+    The predicate grammar admits only the five operators in the table, so the
+    lookup cannot miss.
+    """
+    holds: NDArray[np.bool_] = _COMPARISONS[op](
+        _trace_signal_array(signal, trace), threshold
+    )
+    return holds
 
 
 def _predicate_robustness(

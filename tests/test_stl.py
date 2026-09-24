@@ -353,3 +353,111 @@ class TestSTLBoundedRtamtParity:
             assert builtin == reference
         else:
             assert builtin == pytest.approx(reference)
+
+
+class TestSTLSatisfactionAtTheBoundary:
+    """Zero robustness does not decide a strict predicate."""
+
+    @pytest.mark.parametrize(
+        ("spec", "trace", "expected"),
+        [
+            ("always (R > 0.3)", {"R": [0.3, 0.5]}, False),
+            ("always (R >= 0.3)", {"R": [0.3, 0.5]}, True),
+            ("always (x < 1.0)", {"x": [0.2, 1.0]}, False),
+            ("always (x <= 1.0)", {"x": [0.2, 1.0]}, True),
+            ("eventually (R > 0.9)", {"R": [0.9, 0.1]}, False),
+            ("eventually (R >= 0.9)", {"R": [0.9, 0.1]}, True),
+            ("always (R == 0.5)", {"R": [0.5, 0.5]}, True),
+            ("always (R > 0.3 and x <= 1.0)", {"R": [0.4, 0.3], "x": [0, 0]}, False),
+            ("always[0,1] (R > 0.3)", {"R": [0.4, 0.3, 0.9]}, False),
+            ("always[0,0] (R > 0.3)", {"R": [0.4, 0.3, 0.9]}, True),
+            ("eventually[1,2] (R > 0.3)", {"R": [0.9, 0.3, 0.3]}, False),
+        ],
+    )
+    def test_builtin_satisfaction_uses_the_predicate_operator(
+        self, spec: str, trace: dict[str, list[float]], expected: bool
+    ) -> None:
+        result = STLMonitor(spec).evaluate_result(trace)
+        assert result.backend == "builtin"
+        assert result.satisfied is expected
+
+    def test_strict_boundary_keeps_the_quantitative_robustness(self) -> None:
+        result = STLMonitor("always (R > 0.3)").evaluate_result({"R": [0.3, 0.5]})
+        assert result.robustness == 0.0
+        assert not result.satisfied
+
+    def test_satisfaction_agrees_with_robustness_sign_off_the_boundary(self) -> None:
+        rng = np.random.default_rng(20260924)
+        for _ in range(200):
+            trace = {"R": rng.uniform(0.0, 1.0, size=int(rng.integers(1, 20))).tolist()}
+            for spec in ("always (R > 0.5)", "eventually (R < 0.2)"):
+                result = STLMonitor(spec).evaluate_result(trace)
+                if result.robustness != 0.0:
+                    assert result.satisfied is (result.robustness > 0.0)
+
+    @needs_rtamt
+    def test_rtamt_result_at_zero_robustness_is_not_satisfied(self) -> None:
+        # x holds with robustness 0 at the step where y is reached.
+        result = STLMonitor("x until y").evaluate_result(
+            {"x": [0.0, 0.0], "y": [-1.0, 0.0]}
+        )
+        assert result.backend == "rtamt"
+        assert result.robustness == 0.0
+        assert not result.satisfied
+
+
+class TestSTLPredicateGrammar:
+    """Thresholds in common numeric notations use the builtin backend."""
+
+    @pytest.mark.parametrize(
+        ("spec", "expected"),
+        [
+            ("always (R >= .5)", -0.1),
+            ("always (R >= 5.e-1)", -0.1),
+            ("always (R >= 5E-1)", -0.1),
+            ("always (R >= +0.5)", -0.1),
+            ("always (R >= 4.)", -3.6),
+        ],
+    )
+    def test_numeric_notations_evaluate_on_the_builtin_backend(
+        self, spec: str, expected: float
+    ) -> None:
+        result = STLMonitor(spec).evaluate_result({"R": [0.4, 0.9]})
+        assert result.backend == "builtin"
+        assert result.robustness == pytest.approx(expected)
+
+    @pytest.mark.parametrize("threshold", ["1e999", "-1e999"])
+    def test_non_finite_threshold_is_rejected_at_construction(
+        self, threshold: str
+    ) -> None:
+        with pytest.raises(ValueError, match="threshold must be finite"):
+            STLMonitor(f"always (x <= {threshold})")
+
+
+@needs_rtamt
+class TestSTLRtamtFailuresAreValueErrors:
+    """rtamt parse and evaluation failures surface as ValueError."""
+
+    @pytest.mark.parametrize(
+        ("spec", "trace"),
+        [
+            ("always (((", {"x": [1.0]}),
+            ("x until y", {"x": [1.0, 1.0]}),
+            ("foo(x) >= 0", {"x": [1.0]}),
+        ],
+    )
+    def test_rtamt_failure_is_reported_as_value_error(
+        self, spec: str, trace: dict[str, list[float]]
+    ) -> None:
+        with pytest.raises(ValueError, match="rtamt could not evaluate STL spec"):
+            STLMonitor(spec).evaluate(trace)
+
+
+@needs_rtamt
+def test_rtamt_uses_a_supplied_time_signal() -> None:
+    """A trace that carries its own ``time`` signal is passed to rtamt as is."""
+    trace = {"x": [1.0, 1.0], "y": [-1.0, 1.0], "time": [0.0, 1.0]}
+    result = STLMonitor("x until y").evaluate_result(trace)
+    assert result.backend == "rtamt"
+    assert result.robustness == pytest.approx(1.0)
+    assert result.satisfied
