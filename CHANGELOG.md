@@ -24,6 +24,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `spo validate` now checks the `policy.yaml` next to the binding spec, the
+  file `spo run` loads. A pack with a malformed or unparseable policy used to
+  print "Valid" and then fail on `spo run` with "invalid policy rules".
 - `spo supervisor-baseline-experiment` refuses non-finite scenario values
   and conflicting dependency locks before running. `json.loads` accepts
   `NaN` and `Infinity`, and `nan <= 0` is false, so a non-finite `dt`,
