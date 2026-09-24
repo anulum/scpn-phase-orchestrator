@@ -24,6 +24,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `InformationalExtractor` gives the same phase state for a repeated event
+  timestamp with and without the Rust kernel. The Python path drops zero
+  inter-event intervals. The kernel received the raw train and returned
+  omega 0 and quality 0, beside an amplitude computed from the de-duplicated
+  intervals. The kernel now receives the de-duplicated train.
 - `PhaseQualityScorer` gives the Rust kernel's answer on the Python path. The
   Python path is used without the kernel or with a non-default threshold. It
   compared NaN directly, so five NaN-quality states were reported as not

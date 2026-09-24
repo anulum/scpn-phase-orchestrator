@@ -119,8 +119,12 @@ class InformationalExtractor(PhaseExtractor):
             ]
 
         if _rust_event_phase is not None:
+            # Repeated timestamps are dropped on both paths: the kernel treats a
+            # zero interval as a degenerate train and returned omega 0 and
+            # quality 0 where the Python path ignores the duplicate.
+            distinct = signal[np.concatenate(([True], raw_intervals > 0))]
             try:
-                theta, omega_median, quality = _rust_event_phase(signal)
+                theta, omega_median, quality = _rust_event_phase(distinct)
                 inst_freq = 1.0 / intervals  # Hz (amplitude is mean frequency)
                 amplitude = float(np.mean(inst_freq))
                 return [
