@@ -122,9 +122,13 @@ def oim_forward(
 
 
 def extract_coloring(phases: jax.Array, n_colors: int) -> jax.Array:
-    """Extract integer color assignment from oscillator phases.
+    """Extract integer color assignment from oscillator phases by floor buckets.
 
-    Maps each phase to the nearest cluster center at 2πk/n_colors.
+    Colour ``k`` is the bucket ``[2πk/n_colors, 2π(k+1)/n_colors)``. This is not
+    a nearest-centre assignment: a cluster centred on a bucket edge (for example
+    near 2πk/n_colors) is split between two colours by small phase noise. Use
+    :func:`extract_coloring_soft` to assign each phase to the nearest of the
+    centres 2πk/n_colors.
 
     Parameters
     ----------
@@ -138,7 +142,6 @@ def extract_coloring(phases: jax.Array, n_colors: int) -> jax.Array:
     jax.Array
         (N,) integer colour labels in {0, 1, ..., n_colors-1}.
     """
-    # Cluster centers at 2πk/n_colors
     bucket_size = TWO_PI / n_colors
     result: jax.Array = jnp.floor(phases / bucket_size).astype(jnp.int32) % n_colors
     return result
