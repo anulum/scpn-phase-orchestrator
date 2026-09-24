@@ -17,6 +17,7 @@ from ._shared import (
     _normalise_text_sequence,
     _positive_int,
     _require_non_empty_text,
+    _require_self_hash,
     _require_sha256_hex,
     _required_bool,
 )
@@ -187,9 +188,8 @@ def _normalise_topos_validation_reports(
                 "objects": objects,
                 "morphisms": morphisms,
                 "passed": _required_bool(report.get("passed"), f"{item_label} passed"),
-                "report_hash": _require_sha256_hex(
-                    report.get("report_hash"),
-                    f"{item_label} report_hash",
+                "report_hash": _require_self_hash(
+                    report, "report_hash", f"{item_label} report_hash"
                 ),
                 "proof_boundary": _TOPOS_PROOF_BOUNDARY,
                 "non_actuating": True,

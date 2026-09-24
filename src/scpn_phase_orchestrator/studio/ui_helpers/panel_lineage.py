@@ -19,6 +19,8 @@ from typing import cast
 
 import numpy as np
 
+from ._shared import _require_self_hash
+
 _AUTOPOIETIC_LINEAGE_SCHEMA = "scpn_autopoietic_lineage_sandbox_v1"
 
 
@@ -268,6 +270,9 @@ def _normalise_autopoietic_lineage_manifests(
                 else "",
             }
         )
+        # The seal is checked after every field, so a malformed field is
+        # reported by name rather than as a seal mismatch.
+        _require_self_hash(manifest, "lineage_sha256", f"{name} lineage_sha256")
     return tuple(normalised)
 
 
