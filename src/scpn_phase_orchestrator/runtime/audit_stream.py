@@ -89,22 +89,8 @@ class AuditStreamEvent:
             or self.recorded_at_unix_ns < 0
         ):
             raise ValueError("recorded_at_unix_ns must be a non-negative integer")
-        if not isinstance(self.event_type, str) or not self.event_type:
-            raise ValueError("event_type must be a non-empty string")
-        if len(self.event_type) > _AUDIT_LABEL_MAX_LEN:
-            raise ValueError(
-                f"event_type must be at most {_AUDIT_LABEL_MAX_LEN} characters"
-            )
-        if any(ord(char) < 32 for char in self.event_type):
-            raise ValueError("event_type must not contain control characters")
-        if not isinstance(self.source, str) or not self.source:
-            raise ValueError("source must be a non-empty string")
-        if len(self.source) > _AUDIT_LABEL_MAX_LEN:
-            raise ValueError(
-                f"source must be at most {_AUDIT_LABEL_MAX_LEN} characters"
-            )
-        if any(ord(char) < 32 for char in self.source):
-            raise ValueError("source must not contain control characters")
+        _validate_audit_label("event_type", self.event_type)
+        _validate_audit_label("source", self.source)
         for field_name in ("previous_hash", "payload_sha256", "event_hash"):
             value = getattr(self, field_name)
             if (
@@ -240,6 +226,38 @@ def _canonical_json(payload: Payload) -> str:
         )
     except ValueError as exc:
         raise ValueError("payload must contain only finite JSON numbers") from exc
+
+
+def _validate_audit_label(field_name: str, value: object) -> str:
+    """Return an envelope label the stream reader accepts, else raise.
+
+    Parameters
+    ----------
+    field_name : str
+        Envelope field the label is written to, used in the error message.
+    value : object
+        Candidate label.
+
+    Returns
+    -------
+    str
+        The label, unchanged.
+
+    Raises
+    ------
+    ValueError
+        If the label is not a non-empty string of at most
+        ``_AUDIT_LABEL_MAX_LEN`` characters free of control characters.
+    """
+    if not isinstance(value, str) or not value:
+        raise ValueError(f"{field_name} must be a non-empty string")
+    if len(value) > _AUDIT_LABEL_MAX_LEN:
+        raise ValueError(
+            f"{field_name} must be at most {_AUDIT_LABEL_MAX_LEN} characters"
+        )
+    if any(ord(char) < 32 for char in value):
+        raise ValueError(f"{field_name} must not contain control characters")
+    return value
 
 
 def _reject_json_constant(value: str) -> None:
@@ -406,13 +424,19 @@ class EventStreamWriter:
         payload : Payload
             The event or wire payload.
         event_type : str | None
-            Named event type, or ``None``.
+            Named event type, or ``None`` to derive it from the payload.
+
+        Raises
+        ------
+        ValueError
+            If the stream reader would refuse the event (see
+            :meth:`resolve_event_type`); nothing is written and the writer's
+            sequence and chain state are left unchanged.
         """
-        canonical_payload = _canonical_json(payload)
+        canonical_payload, resolved_type = self._prepare(payload, event_type)
         payload_sha256 = hashlib.sha256(canonical_payload.encode()).hexdigest()
         self._sequence += 1
         now_ns = time.time_ns()
-        resolved_type = event_type or _event_type_for_payload(payload)
         event_hash = _event_hash(
             stream_id=self._stream_id,
             sequence=self._sequence,
@@ -469,6 +493,49 @@ class EventStreamWriter:
         self._fh.write(_encode_varint(len(raw)))
         self._fh.write(raw)
         self._previous_hash = event_hash
+
+    def resolve_event_type(
+        self, payload: Payload, *, event_type: str | None = None
+    ) -> str:
+        """Return the event type :meth:`write` would record, else raise.
+
+        Every envelope the writer emits must be one :func:`read_event_stream`
+        accepts: a single unreadable envelope makes the whole stream, including
+        the events before it, unreadable and blocks reopening it for append.
+        Callers that write the same record elsewhere first can call this to
+        refuse the record before any sink is touched.
+
+        Parameters
+        ----------
+        payload : Payload
+            The event or wire payload.
+        event_type : str | None
+            Named event type, or ``None`` to derive it from the payload.
+
+        Returns
+        -------
+        str
+            The event type that would be recorded.
+
+        Raises
+        ------
+        ValueError
+            If the payload is not a JSON object mapping of finite JSON values,
+            or the event type is not a non-empty string of at most 128
+            characters free of control characters.
+        """
+        return self._prepare(payload, event_type)[1]
+
+    @staticmethod
+    def _prepare(payload: object, event_type: str | None) -> tuple[str, str]:
+        """Return the canonical payload and validated event type, else raise."""
+        if not isinstance(payload, dict):
+            raise ValueError("payload must be a JSON object mapping")
+        canonical_payload = _canonical_json(payload)
+        resolved_type = (
+            _event_type_for_payload(payload) if event_type is None else event_type
+        )
+        return canonical_payload, _validate_audit_label("event_type", resolved_type)
 
     @property
     def path(self) -> Path:
