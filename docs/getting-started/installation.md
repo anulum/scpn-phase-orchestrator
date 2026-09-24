@@ -146,7 +146,7 @@ Commands:
   demo              Run a self-contained demo.
   doctor            Check environment readiness.
   inspect           Inspect resolved runtime defaults.
-  quickstart        Run the validate → run → replay → report path.
+  quickstart        Run the validate, run, replay, and report path.
   replay            Replay an audit log and print summary.
   report            Generate coherence report from audit log.
   run               Run simulation from a binding spec.
