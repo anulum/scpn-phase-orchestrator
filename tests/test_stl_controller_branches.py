@@ -68,3 +68,24 @@ def test_non_strict_predicate_at_zero_robustness_needs_no_candidate() -> None:
     synthesis = synthesise_stl_controller_candidates(automaton, trace)
     assert synthesis.satisfied
     assert synthesis.candidates == ()
+
+
+def test_synthesis_rejects_an_automaton_from_another_trace() -> None:
+    """A satisfied automaton cannot clear candidates for a violating trace."""
+    satisfied = synthesise_stl_monitoring_automaton(
+        "always (R >= 0.3)", {"R": [0.9, 0.9, 0.9]}
+    )
+    assert satisfied.satisfied
+    with pytest.raises(ValueError, match="not synthesised from this trace"):
+        synthesise_stl_controller_candidates(satisfied, {"R": [0.5, 0.1, 0.6]})
+
+
+def test_closed_loop_plan_rejects_an_automaton_from_another_trace() -> None:
+    """The closed-loop plan inherits the trace binding of controller synthesis."""
+    from scpn_phase_orchestrator.monitor.stl import synthesise_stl_closed_loop_plan
+
+    satisfied = synthesise_stl_monitoring_automaton(
+        "always (R >= 0.3)", {"R": [0.9, 0.9, 0.9]}
+    )
+    with pytest.raises(ValueError, match="not synthesised from this trace"):
+        synthesise_stl_closed_loop_plan(satisfied, {"R": [0.5, 0.1, 0.6]}, ())

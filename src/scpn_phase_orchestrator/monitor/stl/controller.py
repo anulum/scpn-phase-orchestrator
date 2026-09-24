@@ -14,7 +14,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from .automaton import STLMonitoringAutomaton
+from .automaton import STLMonitoringAutomaton, synthesise_stl_monitoring_automaton
 from .monitor import (
     _format_threshold,
     _parse_simple_spec,
@@ -23,6 +23,19 @@ from .monitor import (
     _predicate_robustness,
     _validate_trace,
 )
+
+# Where a controller candidate focuses: the worst step for ``always``, the best
+# for ``eventually``. The parser admits only these two operators.
+_FOCUS_INDEX = {"always": np.argmin, "eventually": np.argmax}
+
+# Control direction by comparison operator; the grammar admits only these five.
+_DIRECTIONS = {
+    ">=": "increase",
+    ">": "increase",
+    "<=": "decrease",
+    "<": "decrease",
+    "==": "restore",
+}
 
 
 @dataclass(frozen=True)
@@ -122,6 +135,14 @@ def synthesise_stl_controller_candidates(
     temporal_op, predicates = parsed
     if temporal_op != automaton.temporal_op:
         raise ValueError("automaton temporal operator does not match its STL spec")
+    # The automaton's verdict decides whether candidates are cleared, so it must
+    # describe this trace; one synthesised from another trace would report a
+    # stale satisfaction.
+    if synthesise_stl_monitoring_automaton(automaton.spec, trace) != automaton:
+        raise ValueError(
+            "automaton was not synthesised from this trace; synthesise it from "
+            "the trace passed to controller synthesis"
+        )
     index = _controller_focus_index(automaton, predicates, trace)
     candidates = tuple(
         candidate
@@ -157,13 +178,7 @@ def _controller_focus_index(
 ) -> int:
     """Return the oscillator index the controller candidate focuses on."""
     pointwise = _pointwise_robustness(predicates, trace)
-    if automaton.temporal_op == "always":
-        return int(np.argmin(pointwise))
-    if automaton.temporal_op == "eventually":
-        return int(np.argmax(pointwise))
-    raise ValueError(  # pragma: no cover - parser yields only always/eventually
-        f"unsupported STL temporal operator {automaton.temporal_op!r}"
-    )
+    return int(_FOCUS_INDEX[automaton.temporal_op](pointwise))
 
 
 def _candidate_for_predicate(
@@ -196,12 +211,4 @@ def _candidate_for_predicate(
 
 def _controller_direction(op: str) -> str:
     """Return the control direction (sign) for a predicate."""
-    if op in {">=", ">"}:
-        return "increase"
-    if op in {"<=", "<"}:
-        return "decrease"
-    if op == "==":
-        return "restore"
-    raise ValueError(  # pragma: no cover - parser yields only the five known operators
-        f"unsupported STL comparison operator {op!r}"
-    )
+    return _DIRECTIONS[op]

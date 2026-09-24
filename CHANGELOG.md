@@ -36,6 +36,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   backend. Admission runs each compiled Mojo executable once with empty input
   and caches the verdict per build; on a loaded workstation one launch took
   0.06–0.23 s.
+- `synthesise_stl_controller_candidates()` and
+  `synthesise_stl_closed_loop_plan()` now require the automaton to have been
+  synthesised from the trace they receive, and raise `ValueError` otherwise.
+  They used the automaton's `satisfied` flag to decide whether control was
+  needed, so an automaton built from a satisfying trace made a violating trace
+  report "satisfied, no control needed" with no candidates.
 - `ActuationMapper.validate_action()` now rejects, and `map_actions()` drops,
   an action whose `ttl_s` is not a finite, non-negative real. A NaN or infinite
   TTL used to pass into the mapped command; through an STL projection template
