@@ -27,6 +27,7 @@ import hashlib
 import json
 from dataclasses import dataclass
 from numbers import Integral, Real
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -534,6 +535,7 @@ def run_resilience_experiment(
     steps: int = 200,
     seed: int = 42,
     recovery_tolerance: float = 0.05,
+    binding_spec_path: Path | None = None,
 ) -> ChaosExperimentResult:
     """Run a nominal and a fault-injected simulation and score resilience.
 
@@ -554,6 +556,11 @@ def run_resilience_experiment(
         Shared RNG seed (default ``42``).
     recovery_tolerance : float, optional
         Recovery tolerance passed to :func:`compute_resilience` (default ``0.05``).
+    binding_spec_path : Path | None, optional
+        Path of the spec file. When given, both runs load the domainpack's
+        adjacent ``policy.yaml`` exactly as ``spo run`` does, so resilience is
+        scored under the same closed loop the pack actually runs; without it
+        only the built-in supervisor reacts.
 
     Returns
     -------
@@ -570,12 +577,19 @@ def run_resilience_experiment(
     if steps <= schedule.last_fault_end:
         raise ValueError("steps must exceed the schedule's last fault end")
 
-    nominal = simulate(spec, steps=steps, seed=seed, policy_enabled=True)
+    nominal = simulate(
+        spec,
+        steps=steps,
+        seed=seed,
+        policy_enabled=True,
+        binding_spec_path=binding_spec_path,
+    )
     perturbed = simulate(
         spec,
         steps=steps,
         seed=seed,
         policy_enabled=True,
+        binding_spec_path=binding_spec_path,
         scenario_hook=make_chaos_hook(schedule),
     )
     fault_onset = min(fault.start_step for fault in schedule.faults)

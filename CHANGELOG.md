@@ -24,6 +24,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `spo chaos` scores resilience under the pack's own closed loop.
+  `run_resilience_experiment` called `simulate` without the spec path, so a
+  domainpack's `policy.yaml` never loaded. For 18 of the 35 packs that ship a
+  policy, `spo run` fires actions the chaos runs never saw (`epidemic_sir`:
+  32 actions against 0 over 200 steps). `run_resilience_experiment` takes
+  `binding_spec_path`, and `spo chaos` passes it.
 - `spo provenance-attest` refuses a spec entry without a real string field.
   `str(entry.get("name"))` turned a missing subject name into the text
   `"None"`, and a number into its digits. The ML-DSA-signed SLSA statement
