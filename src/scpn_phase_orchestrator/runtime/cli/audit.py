@@ -18,6 +18,9 @@ is invoked for that runtime path.
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from pathlib import Path
+
 import click
 
 from scpn_phase_orchestrator.reporting.summary import build_audit_report_summary
@@ -53,7 +56,9 @@ def replay(log_path: str, output: str | None, verify: bool) -> None:
     log_path : str
         Filesystem path to the audit log.
     output : str | None
-        Destination path, or ``None`` for stdout.
+        File that receives the summary instead of stdout, or ``None``.
+        Error messages still go to stderr; the file is written even when
+        verification fails, so it records how far replay got.
     verify : bool
         Whether to verify hash-chain integrity.
 
@@ -62,16 +67,36 @@ def replay(log_path: str, output: str | None, verify: bool) -> None:
     SystemExit
         If the command fails; the error is reported and the process exits non-zero.
     """
+    lines: list[str] = []
+
+    def emit(line: str) -> None:
+        """Send one summary line to the output file or stdout."""
+        lines.append(line)
+        if output is None:
+            click.echo(line)
+
+    try:
+        _replay_summary(log_path, verify, emit)
+    finally:
+        if output is not None:
+            Path(output).write_text(
+                "".join(f"{line}\n" for line in lines), encoding="utf-8"
+            )
+            click.echo(f"Replay summary written: {output}")
+
+
+def _replay_summary(log_path: str, verify: bool, emit: Callable[[str], None]) -> None:
+    """Emit the replay summary and, with ``verify``, the verification result."""
     replay_engine = ReplayEngine(log_path)
     entries = replay_engine.load()
     step_data = [e for e in entries if "step" in e]
     event_data = [e for e in entries if "event" in e]
-    click.echo(f"Steps logged: {len(step_data)}")
-    click.echo(f"Events logged: {len(event_data)}")
+    emit(f"Steps logged: {len(step_data)}")
+    emit(f"Events logged: {len(event_data)}")
     if step_data:
         last = step_data[-1]
-        click.echo(f"Final regime: {last.get('regime', 'unknown')}")
-        click.echo(f"Final stability: {last.get('stability', 0.0):.4f}")
+        emit(f"Final regime: {last.get('regime', 'unknown')}")
+        emit(f"Final stability: {last.get('stability', 0.0):.4f}")
     if verify:
         integrity_ok, n_integrity = ReplayEngine.verify_integrity(entries)
         if not integrity_ok:
@@ -90,10 +115,29 @@ def replay(log_path: str, output: str | None, verify: bool) -> None:
         else:
             passed, n = replay_engine.verify_determinism_chained(engine, entries)
         if passed:
-            click.echo(f"Determinism verified: {n} transitions OK")
+            emit(f"Determinism verified: {n} transitions OK")
         else:
             click.echo(f"Determinism FAILED at transition {n}", err=True)
             raise SystemExit(1)
+
+
+def _verify_watched_events(
+    stream_path: str, events: list[AuditStreamEvent], from_start: bool
+) -> tuple[bool, int]:
+    """Verify the chain that ends at the last watched event.
+
+    A tail that started mid-stream begins at sequence N + 1 with a previous
+    hash the verifier cannot anchor, so the chain is re-read from the start
+    of the file up to the last watched event, and the watched events must be
+    exactly that chain's tail.
+    """
+    if from_start or not events:
+        return verify_event_stream_integrity(events)
+    last_sequence = events[-1].sequence
+    chain = [e for e in read_event_stream(stream_path) if e.sequence <= last_sequence]
+    if [e.event_hash for e in chain[-len(events) :]] != [e.event_hash for e in events]:
+        return False, 0
+    return verify_event_stream_integrity(chain)
 
 
 def _watch_line(event: AuditStreamEvent) -> str:
@@ -193,7 +237,7 @@ def watch(
         click.echo(f"ERROR: {exc}", err=True)
         raise SystemExit(1) from exc
 
-    ok, verified = verify_event_stream_integrity(events)
+    ok, verified = _verify_watched_events(stream_path, events, from_start)
     status = "OK" if ok else "FAILED"
     click.echo(f"stream integrity: {status} ({verified} events)")
     if not ok:
