@@ -91,6 +91,24 @@ def _require_str(spec: dict[str, Any], key: str) -> str:
     return value
 
 
+def _entry_str(
+    entry: dict[str, Any], field: str, where: str, *, required: bool = True
+) -> str:
+    """Return a string field of a spec entry, else raise ``ClickException``.
+
+    ``str(entry.get(field))`` turned a missing field into the text ``"None"``
+    and a number into its digits, which then went into a signed attestation.
+    """
+    value = entry.get(field)
+    if not required and value in (None, ""):
+        return ""
+    if not isinstance(value, str) or not value:
+        raise click.ClickException(
+            f"each {where} entry needs a non-empty string '{field}', got {value!r}"
+        )
+    return value
+
+
 def _subjects(spec: dict[str, Any]) -> tuple[ArtifactSubject, ...]:
     """Build the artefact subjects from the spec, else raise ``ClickException``."""
     entries = _require_list(spec, "subjects", required=True)
@@ -101,7 +119,8 @@ def _subjects(spec: dict[str, Any]) -> tuple[ArtifactSubject, ...]:
         try:
             subjects.append(
                 ArtifactSubject(
-                    name=str(entry.get("name")), sha256=str(entry.get("sha256"))
+                    name=_entry_str(entry, "name", "subject"),
+                    sha256=_entry_str(entry, "sha256", "subject"),
                 )
             )
         except ValueError as exc:
@@ -125,9 +144,9 @@ def _descriptors(spec: dict[str, Any], key: str) -> tuple[ResourceDescriptor, ..
         try:
             descriptors.append(
                 ResourceDescriptor(
-                    uri=str(entry.get("uri")),
-                    sha256=str(entry.get("sha256")),
-                    name=str(entry.get("name", "")),
+                    uri=_entry_str(entry, "uri", key),
+                    sha256=_entry_str(entry, "sha256", key),
+                    name=_entry_str(entry, "name", key, required=False),
                 )
             )
         except ValueError as exc:

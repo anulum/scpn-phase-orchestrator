@@ -24,6 +24,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `spo provenance-attest` refuses a spec entry without a real string field.
+  `str(entry.get("name"))` turned a missing subject name into the text
+  `"None"`, and a number into its digits. The ML-DSA-signed SLSA statement
+  then attested an artefact literally named "None", and a dependency whose
+  URI was "None". Subject `name` and `sha256` and descriptor `uri` and
+  `sha256` must now be non-empty strings. A descriptor's `name` stays
+  optional.
 - `spo scaffold --llm` no longer overwrites an existing pack's
   `binding_spec.yaml`. The plain scaffold keeps an existing spec, but the
   LLM scaffold replaced it wholesale and discarded a hand-tuned pack; it now
