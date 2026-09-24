@@ -340,3 +340,19 @@ def test_private_aggregation_helpers_define_empty_input_contracts() -> None:
     assert b"/Type /Pages" in pdf
     assert b"/Count 1" in pdf
     assert pdf.endswith(b"%%EOF\n")
+
+
+def test_pdf_text_uses_the_font_encoding_not_utf8() -> None:
+    """Helvetica reads WinAnsi bytes; UTF-8 turned an em dash into three glyphs."""
+    pdf = explainability.markdown_to_pdf_bytes(
+        "event — detail, NOMINAL → DEGRADED, R ≥ 0.8, Šotek"
+    )
+
+    assert b"/Encoding /WinAnsiEncoding" in pdf
+    assert b"\xe2\x80\x94" not in pdf
+    assert b"(event \x97 detail, NOMINAL -> DEGRADED, R >= 0.8, \x8aotek) Tj" in pdf
+
+
+def test_pdf_text_outside_winansi_is_replaced() -> None:
+    pdf = explainability.markdown_to_pdf_bytes("label 漢")
+    assert b"(label ?) Tj" in pdf

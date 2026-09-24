@@ -370,6 +370,22 @@ def _pdf_escape(text: str) -> str:
     return text.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
 
 
+#: Symbols the report text uses that WinAnsiEncoding (cp1252) cannot encode.
+_PDF_ASCII_FALLBACKS = str.maketrans(
+    {"→": "->", "←": "<-", "≥": ">=", "≤": "<=", "≠": "!=", "≈": "~", "−": "-"}
+)
+
+
+def _pdf_text_bytes(text: str) -> bytes:
+    """Return content-stream bytes in the font's WinAnsiEncoding.
+
+    The standard Helvetica font reads single-byte WinAnsi (cp1252) text. UTF-8
+    bytes were written before, so an em dash rendered as three glyphs.
+    Characters outside cp1252 are mapped to an ASCII fallback, or to ``?``.
+    """
+    return text.translate(_PDF_ASCII_FALLBACKS).encode("cp1252", errors="replace")
+
+
 def _wrap_pdf_lines(markdown: str, width: int = 92) -> list[str]:
     """Return the text wrapped to PDF page-width lines."""
     lines: list[str] = []
@@ -398,7 +414,10 @@ def _make_pdf_bytes(lines: list[str]) -> bytes:
 
     objects.append(b"<< /Type /Catalog /Pages 2 0 R >>")
     objects.append(b"")
-    objects.append(b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>")
+    objects.append(
+        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica "
+        b"/Encoding /WinAnsiEncoding >>"
+    )
 
     next_id = 4
     for page_lines in pages:
@@ -418,7 +437,7 @@ def _make_pdf_bytes(lines: list[str]) -> bytes:
             stream_lines.append(f"({_pdf_escape(line)}) Tj")
             stream_lines.append("T*")
         stream_lines.append("ET")
-        stream = "\n".join(stream_lines).encode()
+        stream = _pdf_text_bytes("\n".join(stream_lines))
         objects.append(
             b"<< /Length "
             + str(len(stream)).encode()
