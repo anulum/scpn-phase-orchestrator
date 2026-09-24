@@ -167,7 +167,16 @@ class AuditLogger:
                     raise AuditError(msg)
 
     def _write_record(self, record: dict[str, Any]) -> None:
-        """Append an audit record to the JSONL log."""
+        """Append an audit record to the JSONL log, else raise."""
+        if self._event_stream is not None:
+            # Refuse before the JSONL line or the signing sequence advances,
+            # so the two sinks never diverge on a record the stream rejects.
+            try:
+                self._event_stream.resolve_event_type(record)
+            except ValueError as exc:
+                raise AuditError(
+                    f"record cannot be sealed into the event stream: {exc}"
+                ) from exc
         clean = {k: v for k, v in record.items() if k != "_hash"}
         if self._audit_key is not None:
             clean = self._attach_signature_metadata(clean)

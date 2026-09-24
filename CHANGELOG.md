@@ -24,6 +24,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The protobuf audit stream writer refuses events its own reader would reject.
+  `EventStreamWriter.write` accepted an event type longer than 128 characters
+  or containing control characters, including one derived from a payload's
+  `event` field. The reader refused that envelope, so one such write made the
+  whole stream unreadable, earlier events included, and blocked reopening it
+  for append. A non-mapping payload was refused only after the sequence had
+  advanced, so the next valid event opened a gap that failed integrity
+  verification. The writer now validates the payload and event type before
+  touching any state, an explicit empty event type is refused instead of
+  silently replaced, and `EventStreamWriter.resolve_event_type` exposes the
+  same check. `AuditLogger` with an event stream runs it before writing the
+  JSONL line, so the two logs no longer diverge on a record the stream refuses.
 - The gRPC server rate-limits an unauthenticated caller by its peer address.
   With no API key configured, it keyed the limiter on the `x-api-key`
   metadata the client sends, so a new value on each request dodged the limit.
