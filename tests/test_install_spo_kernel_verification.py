@@ -18,6 +18,7 @@ environments, a real cargo, and real files; nothing is substituted.
 from __future__ import annotations
 
 import hashlib
+import importlib.machinery
 import importlib.util
 import json
 import re
@@ -34,6 +35,9 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = REPO_ROOT / "spo-kernel" / "crates" / "spo-ffi" / "Cargo.toml"
 
 UV = shutil.which("uv")
+
+#: Extension suffix the venv interpreter (the same Python as this one) loads.
+EXT = importlib.machinery.EXTENSION_SUFFIXES[0]
 
 requires_cargo = pytest.mark.skipif(
     shutil.which("cargo") is None, reason="cargo is not installed"
@@ -63,12 +67,19 @@ def _plan(manifest: Path, *, release: bool = True) -> object:
     )
 
 
+def _venv_python(root: Path) -> Path:
+    """Return the interpreter of the virtual environment at ``root``."""
+    if sys.platform == "win32":
+        return root / "Scripts" / "python.exe"
+    return root / "bin" / "python"
+
+
 def _environment(root: Path) -> tuple[Path, Path]:
     """Create a real environment and return its interpreter and site-packages."""
     subprocess.run(
         [sys.executable, "-m", "venv", "--without-pip", str(root)], check=True
     )
-    python = root / ("Scripts" if sys.platform == "win32" else "bin") / "python"
+    python = _venv_python(root)
     purelib = subprocess.run(
         [str(python), "-c", "import sysconfig; print(sysconfig.get_path('purelib'))"],
         check=True,
@@ -128,7 +139,7 @@ def test_verify_accepts_the_package_extension_that_was_built(tmp_path: Path) -> 
     package = site / "kernelpkg"
     package.mkdir()
     (package / "__init__.py").write_text("", encoding="utf-8")
-    installed = package / "kernelpkg.abi3.so"
+    installed = package / f"kernelpkg{EXT}"
     installed.write_bytes(b"new build")
     library = tmp_path / "libkernelpkg.so"
     library.write_bytes(b"new build")
@@ -141,7 +152,7 @@ def test_verify_accepts_the_package_extension_that_was_built(tmp_path: Path) -> 
 
 def test_verify_accepts_a_single_file_extension_module(tmp_path: Path) -> None:
     python, site = _environment(tmp_path / "env")
-    installed = site / "kernelmod.abi3.so"
+    installed = site / f"kernelmod{EXT}"
     installed.write_bytes(b"new build")
     library = tmp_path / "libkernelmod.so"
     library.write_bytes(b"new build")
@@ -157,11 +168,11 @@ def test_verify_rejects_a_stale_extension(tmp_path: Path) -> None:
     package = site / "kernelpkg"
     package.mkdir()
     (package / "__init__.py").write_text("", encoding="utf-8")
-    (package / "kernelpkg.abi3.so").write_bytes(b"old build")
+    (package / f"kernelpkg{EXT}").write_bytes(b"old build")
     library = tmp_path / "libkernelpkg.so"
     library.write_bytes(b"new build")
 
-    with pytest.raises(tool.KernelInstallError, match=r"kernelpkg\.abi3\.so"):
+    with pytest.raises(tool.KernelInstallError, match=re.escape(f"kernelpkg{EXT}")):
         tool.verify_installed_extension(python, "kernelpkg", library)
 
 
@@ -211,7 +222,7 @@ def test_installer_run_from_the_checkout_installs_into_a_uv_environment(
         check=True,
         cwd=tmp_path,
     )
-    python = env / ("Scripts" if sys.platform == "win32" else "bin") / "python"
+    python = _venv_python(env)
     provisioned = subprocess.run(
         [UV, "pip", "install", "--offline", "--python", str(python), _pinned_maturin()],
         check=False,
