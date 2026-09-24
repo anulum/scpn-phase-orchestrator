@@ -30,7 +30,11 @@ streamlit run tools/spo_studio.py
 ## Workflow
 
 1. Select a domainpack from the sidebar.
-2. Set the replay-only knobs: `K`, `alpha`, `zeta`, and `Psi`.
+2. Set the replay-only knobs: `K`, `alpha`, `zeta`, and `Psi`. `K` scales the
+   coupling and `alpha` adds a phase lag. `zeta` and `Psi` are the driver
+   strength and target phase of `zeta * sin(Psi - theta)`: a positive `zeta`
+   replaces the spec's drive with a constant `Psi` target, and `zeta = 0` keeps
+   the spec's own drive.
 3. Run replay. Studio builds a `StudioProjectState` with source, binding,
    runtime, and export records.
 4. Review the tabs:

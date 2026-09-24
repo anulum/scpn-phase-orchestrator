@@ -28,6 +28,8 @@ from .guidance import binding_spec_project_state, build_runtime_snapshot
 from .tables import build_layer_table, build_oscillator_table
 
 if TYPE_CHECKING:
+    from scpn_phase_orchestrator.runtime.simulation import PsiDriver
+
     from ._state import StudioKnobState
 
 
@@ -36,6 +38,9 @@ class _ReplaySimulationState(Protocol):
 
     coupling: CouplingState
     omegas: NDArray[np.float64]
+    zeta: float
+    psi_target: float
+    psi_driver: PsiDriver | None
 
     def step(self) -> dict[str, object]:
         """Advance the replay and return a JSON-like runtime snapshot."""
@@ -114,11 +119,14 @@ def _apply_replay_knobs(
     sim: _ReplaySimulationState,
     knobs: StudioKnobState,
 ) -> None:
-    """Apply the Studio knobs to a simulation's coupling and natural frequencies.
+    """Apply the Studio knobs to a simulation's coupling and drive.
 
-    Scales the coupling matrix (and its reverse partner) by ``K``, adds the
-    ``alpha`` phase lag off-diagonal, and shifts the natural frequencies by
-    ``zeta * Psi``, replacing ``sim.coupling`` with the studio-replay variant.
+    Scales the coupling matrix (and its reverse partner) by ``K`` and adds the
+    ``alpha`` phase lag off-diagonal, replacing ``sim.coupling`` with the
+    studio-replay variant. ``zeta`` and ``Psi`` have their SPO meaning, the
+    driver strength and target phase of ``zeta * sin(Psi - theta)``: a positive
+    ``zeta`` replaces the spec's drive with a constant ``Psi`` target, and
+    ``zeta == 0`` leaves the spec's own drive in place.
     """
     scaled_knm = np.asarray(sim.coupling.knm, dtype=np.float64) * knobs.K
     alpha = np.asarray(sim.coupling.alpha, dtype=np.float64).copy()
@@ -134,5 +142,7 @@ def _apply_replay_knobs(
         active_template=f"{sim.coupling.active_template}:studio_replay",
         knm_r=knm_r,
     )
-    if knobs.zeta or knobs.Psi:
-        sim.omegas = np.asarray(sim.omegas, dtype=np.float64) + knobs.zeta * knobs.Psi
+    if knobs.zeta > 0.0:
+        sim.zeta = float(knobs.zeta)
+        sim.psi_target = float(knobs.Psi)
+        sim.psi_driver = None
