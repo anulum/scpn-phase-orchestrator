@@ -24,6 +24,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The C15 ethical cost gives the same result on the Rust and NumPy paths.
+  - The Rust kernel computed the algebraic connectivity λ₂ from the raw
+    Laplacian `D − |W|`, which counts self-loops and is not symmetric, with
+    a solver that assumes a symmetric matrix. NumPy uses the symmetrised
+    graph `(|W| + |Wᵀ|)/2` without self-loops. For an asymmetric coupling
+    the two backends therefore returned different costs (0.935 against
+    0.912 in a 6-node case). The Rust Laplacian now matches NumPy.
+  - `compute_ethical_cost` validates its inputs once, before choosing a
+    backend. Rust had returned a NaN or finite cost for NaN phases or
+    couplings that NumPy refused, and both accepted a coupling matrix whose
+    size did not match the phases.
 - `GeometryCarrier.update` no longer corrupts its state on a non-finite
   gradient. It subtracted the finite-difference gradient from z before
   checking it, so a single NaN from the cost callback wrote NaN into z. The
