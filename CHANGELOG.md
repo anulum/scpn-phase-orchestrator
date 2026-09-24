@@ -24,6 +24,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- An audit log and its protobuf event stream can no longer share a file.
+  `spo run --audit-stream audit.jsonl` derived the JSONL log path by swapping
+  the suffix to `.jsonl`, which gave the stream path itself, and `--audit X
+  --audit-stream X` did the same explicitly. Both writers appended to one
+  file, the run died on a protobuf `DecodeError`, and neither `spo replay` nor
+  the stream reader could parse what remained. `AuditLogger` now refuses an
+  `event_stream` that is the same file as its log, including under another
+  spelling or through a symlink. `spo run` reports the clash before writing
+  anything.
 - The live server loop (`runtime.server.SimulationState`) now integrates the
   drive the binding spec declares: baseline `zeta`, `Psi`, and the physical,
   informational or symbolic `Psi` driver. The dashboard, the gRPC phase

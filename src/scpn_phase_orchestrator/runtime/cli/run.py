@@ -28,6 +28,7 @@ from scpn_phase_orchestrator.binding import (
     resolved_binding_config,
     validate_binding_spec,
 )
+from scpn_phase_orchestrator.exceptions import AuditError
 from scpn_phase_orchestrator.runtime.audit_logger import AuditLogger
 from scpn_phase_orchestrator.runtime.cli._app import (
     main,
@@ -93,16 +94,27 @@ def run(
         click.echo(line)
 
     spec_path = Path(binding_spec)
-    audit_logger = (
-        AuditLogger(audit, event_stream=audit_stream)
-        if audit
-        else AuditLogger(
-            Path(audit_stream).with_suffix(".jsonl"),
-            event_stream=audit_stream,
+    if audit is None and audit_stream is not None:
+        implied = Path(audit_stream).with_suffix(".jsonl")
+        if implied.resolve() == Path(audit_stream).resolve():
+            raise click.ClickException(
+                f"--audit-stream {audit_stream!r} already ends in .jsonl, the name the "
+                "JSONL audit log would take; pass --audit with a different path or "
+                "give the protobuf stream another suffix"
+            )
+    try:
+        audit_logger = (
+            AuditLogger(audit, event_stream=audit_stream)
+            if audit
+            else AuditLogger(
+                Path(audit_stream).with_suffix(".jsonl"),
+                event_stream=audit_stream,
+            )
+            if audit_stream
+            else None
         )
-        if audit_stream
-        else None
-    )
+    except AuditError as exc:
+        raise click.ClickException(str(exc)) from exc
     try:
         result = simulate(
             spec,
