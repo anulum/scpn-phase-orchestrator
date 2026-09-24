@@ -24,6 +24,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- SHA-256 digest checks in the plugin registry, the federated and Byzantine
+  policy manifests, the DP noise-service manifests and the audit-chain seal
+  refuse strings that are not 64 hex digits. They used `int(value, 16)` or
+  `bytes.fromhex`, which accept a sign, a `0x` prefix, underscores or spaces,
+  so such a string passed as a digest. A revocation or approved-target entry
+  written that way can never match a real digest, so it was accepted and had no
+  effect.
 - `SymbolicExtractor` in ring mode scores the circular step. The wrap from
   state N-1 to 0 was scored as a jump of N-1 (quality 0.33 for six states),
   while the omega written beside it treated the same transition as one step.

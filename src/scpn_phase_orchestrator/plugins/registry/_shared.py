@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from typing import Literal, TypeAlias
 
 PluginKind: TypeAlias = Literal[
@@ -22,6 +23,8 @@ PluginKind: TypeAlias = Literal[
     "bridge",
 ]
 
+
+_SHA256_HEX = re.compile(r"[0-9a-fA-F]{64}")
 
 _VALID_KINDS = {"domainpack", "extractor", "monitor", "actuator", "bridge"}
 
@@ -41,12 +44,10 @@ def _require_non_empty(value: str, label: str) -> None:
 
 def _validate_sha256(value: str, label: str) -> None:
     """Validate that ``value`` is a SHA-256 hex digest."""
-    if not isinstance(value, str) or len(value) != 64:
+    # int(value, 16) also accepts a sign, a 0x prefix, underscores and
+    # surrounding whitespace, so a 64-character non-digest passed as a hash.
+    if not isinstance(value, str) or _SHA256_HEX.fullmatch(value) is None:
         raise ValueError(f"{label} must be a 64-character SHA-256 hex digest")
-    try:
-        int(value, 16)
-    except ValueError as exc:
-        raise ValueError(f"{label} must be a SHA-256 hex digest") from exc
 
 
 def _record_hash(record: dict[str, object]) -> str:

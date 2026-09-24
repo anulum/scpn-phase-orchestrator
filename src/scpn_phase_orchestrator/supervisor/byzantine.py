@@ -12,10 +12,14 @@ from __future__ import annotations
 
 import hmac
 import json
+import re
 from collections.abc import Mapping, Sequence
 from hashlib import sha256
 
 __all__ = ["build_bft_meta_orchestrator_manifest", "sign_policy_proposal"]
+
+
+_SHA256_HEX = re.compile(r"[0-9a-fA-F]{64}")
 
 
 def sign_policy_proposal(
@@ -293,12 +297,10 @@ def _require_text(value: object, label: str) -> str:
 
 def _require_hash(value: object, label: str) -> str:
     """Return ``value`` as a SHA-256 hex digest, else raise."""
-    if not isinstance(value, str) or len(value) != 64:
+    # int(value, 16) also accepts a sign, a 0x prefix, underscores and
+    # surrounding whitespace, so a 64-character non-digest passed as a hash.
+    if not isinstance(value, str) or _SHA256_HEX.fullmatch(value) is None:
         raise ValueError(f"{label} must be a 64-character SHA-256 hex string")
-    try:
-        int(value, 16)
-    except ValueError as exc:
-        raise ValueError(f"{label} must be a 64-character SHA-256 hex string") from exc
     return value
 
 
