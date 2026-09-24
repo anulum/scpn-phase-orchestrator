@@ -24,6 +24,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- A phase-gossip peer counts as active only while its timestamp lies within
+  `peer_timeout_s` of the local time, on either side. `synchronise` checked
+  only `now - wall_time_s <= timeout`, so one message from a peer whose clock
+  ran an hour ahead steered the local phases for that hour, long after the
+  peer stopped sending. Expired peer states were also never dropped. They are
+  now removed from the peer table, and their sequence watermarks are kept so
+  a replayed message is still refused.
 - The OpenTelemetry exporter publishes `spo.r_global` as the mean layer order
   parameter, the value Prometheus publishes under `r_global`. It used to set
   the gauge from `stability_proxy`, which some producers define differently

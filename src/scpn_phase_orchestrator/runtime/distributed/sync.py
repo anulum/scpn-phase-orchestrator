@@ -469,6 +469,14 @@ class PhaseGossipNode:
     ) -> FloatArray:
         """Return phases nudged toward active peer circular means.
 
+        A peer state is active while its timestamp lies within
+        ``peer_timeout_s`` of ``now_s`` on either side. A state dated further
+        in the future (a peer clock running ahead) would otherwise count as
+        fresh until the local clock caught up, steering the phases long after
+        the peer stopped sending. Inactive states are dropped from the peer
+        table; the sequence watermarks are kept, so a replayed older message
+        is still refused.
+
         Parameters
         ----------
         local_phases : FloatArray
@@ -494,11 +502,15 @@ class PhaseGossipNode:
         timestamp = time.time() if now_s is None else float(now_s)
         if not math.isfinite(timestamp):
             raise ValueError("now_s must be finite")
-        active = [
-            message
-            for message in self._peers.values()
-            if timestamp - message.wall_time_s <= self.config.peer_timeout_s
+        timeout = self.config.peer_timeout_s
+        expired = [
+            peer_id
+            for peer_id, message in self._peers.items()
+            if abs(timestamp - message.wall_time_s) > timeout
         ]
+        for peer_id in expired:
+            del self._peers[peer_id]
+        active = list(self._peers.values())
         if not active:
             return local.copy()
         peer_stack = np.asarray([message.phases for message in active], dtype=float)
