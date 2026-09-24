@@ -591,7 +591,7 @@ End-to-end training loop for equinox layers with optax optimisers.
 |---|---|
 | `sync_loss(model, phases, target_R=1.0)` | $(R - R_{\text{target}})^2$ |
 | `trajectory_loss(model, phases, observed)` | Mean circular distance to observed data |
-| `coupling_sparsity_loss(K, target_density=0.1)` | L1 penalty toward target sparsity |
+| `coupling_sparsity_loss(K, target_density=0.1)` | $(1 - \text{target\_density})\,\overline{\lvert K\rvert}$, an L1 shrinkage (not a density measure) |
 
 ### Training loop
 
