@@ -24,6 +24,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The coupling inverse problem (`infer_coupling`, `hybrid_inverse`,
+  `analytical_inverse`) validates its inputs. A shooting `window_size` longer
+  than the trajectory left no window: every loss was NaN and the random
+  starting coupling was returned as the inferred one. Fewer than three steps
+  gave `analytical_inverse` no central difference, and it returned an all-zero
+  coupling. `dt = 0` produced infinities. The trajectory must now be a finite
+  `(T, N)` array; `dt` and `lr` finite and positive; regularisation weights
+  and `grad_clip` finite and non-negative; epoch counts and the seed
+  non-negative integers; and the window must fit at least once.
 - `nn.training.trajectory_loss` refuses observed and predicted trajectories
   of different shape. It used to compare only the shorter prefix, so a model
   was fitted to part of the data without notice.

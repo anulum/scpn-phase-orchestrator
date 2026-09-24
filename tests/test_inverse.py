@@ -21,6 +21,7 @@ from scpn_phase_orchestrator.nn.inverse import (
     infer_coupling,
     inverse_loss,
 )
+from scpn_phase_orchestrator.nn.training import generate_kuramoto_data
 
 N = 4
 DT = 0.02
@@ -279,3 +280,63 @@ class TestInversePipelineWiring:
         )
         r = float(order_parameter(final))
         assert 0.0 <= r <= 1.0
+
+
+class TestInverseInputContracts:
+    """Inputs that used to return a plausible-looking but meaningless answer."""
+
+    @staticmethod
+    def _observed(steps: int = 12) -> jax.Array:
+        _, _, _, observed = generate_kuramoto_data(
+            4, steps, dt=DT, key=jax.random.PRNGKey(0)
+        )
+        return observed
+
+    def test_window_longer_than_the_trajectory_is_refused(self):
+        """No window fitted: the loss was NaN and the random start was returned."""
+        with pytest.raises(ValueError, match="leaves no complete window"):
+            infer_coupling(self._observed(), DT, n_epochs=2, window_size=50)
+
+    def test_hybrid_refinement_window_must_fit(self):
+        with pytest.raises(ValueError, match="leaves no complete window"):
+            hybrid_inverse(self._observed(), DT, n_refine=1, window_size=12)
+
+    def test_analytical_inverse_needs_three_steps(self):
+        """Two steps have no central difference; the result was an all-zero K."""
+        with pytest.raises(ValueError, match="at least 3 time steps"):
+            analytical_inverse(self._observed()[:2], DT)
+
+    @pytest.mark.parametrize("dt", [0.0, -0.01, float("nan"), True])
+    def test_timestep_must_be_finite_positive(self, dt):
+        with pytest.raises(ValueError, match="dt must be a finite positive"):
+            analytical_inverse(self._observed(), dt)
+
+    def test_non_finite_phases_are_refused(self):
+        observed = self._observed().at[3, 1].set(jnp.nan)
+        with pytest.raises(ValueError, match="only finite phases"):
+            infer_coupling(observed, DT, n_epochs=1)
+
+    @pytest.mark.parametrize(
+        ("kwargs", "message"),
+        [
+            ({"n_epochs": -1}, "n_epochs must be an integer"),
+            ({"lr": 0.0}, "lr must be a finite positive"),
+            ({"l1_weight": -0.1}, "l1_weight must be a finite non-negative"),
+            ({"grad_clip": float("inf")}, "grad_clip must be a finite"),
+            ({"window_size": -3}, "window_size must be an integer"),
+            ({"seed": 1.5}, "seed must be an integer"),
+        ],
+    )
+    def test_optimiser_settings_are_validated(self, kwargs, message):
+        with pytest.raises(ValueError, match=message):
+            infer_coupling(self._observed(), DT, **kwargs)
+
+    def test_hybrid_settings_are_validated(self):
+        with pytest.raises(ValueError, match="n_refine must be an integer"):
+            hybrid_inverse(self._observed(), DT, n_refine=-1)
+        with pytest.raises(ValueError, match="alpha must be a finite non-negative"):
+            analytical_inverse(self._observed(), DT, alpha=-1.0)
+
+    def test_observed_must_be_two_dimensional(self):
+        with pytest.raises(ValueError, match=r"must be a \(T, N\) array"):
+            analytical_inverse(jnp.zeros(10), DT)
