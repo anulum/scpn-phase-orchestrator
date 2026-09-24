@@ -626,3 +626,72 @@ def test_decoded_stream_feeds_ringdown_screener(tmp_path: Path) -> None:
     assert isinstance(evidence, PMURingdownEvidence)
     assert evidence.sample_count == n_samples
     assert evidence.sampling_rate_hz == pytest.approx(float(rate_hz), rel=1e-3)
+
+
+# --- Layout and stream custody --------------------------------------------
+
+
+def _one_phasor_float_config() -> tuple[SynchrophasorFrameCodec, ConfigurationFrame2]:
+    codec = SynchrophasorFrameCodec()
+    block = _pmu_config_block(
+        station="A", fmt=0x000F, phnmr=1, annmr=0, dgnmr=0, fnom=0
+    )
+    return codec, codec.decode_config2(_config2_frame([block]))
+
+
+def _float_data(phasors, freq_hz_dev=0.02, *, id_code=7, extra=b""):
+    body = _float_data_block(
+        phasors=phasors, freq_hz_dev=freq_hz_dev, df_dt=0.0, analogs=[], digitals=[]
+    )
+    return _wrap(FRAME_TYPE_DATA, body + extra, id_code=id_code)
+
+
+def test_data_frame_with_more_phasors_than_configured_is_rejected() -> None:
+    """The second phasor's real part used to be read as the frequency (67.5 Hz)."""
+    codec, config = _one_phasor_float_config()
+    frame = _float_data([(1.0, 0.0), (7.5, 3.0)])
+    with pytest.raises(UnsupportedFrameError, match="bytes left after decoding"):
+        codec.decode_data(frame, config)
+
+
+def test_data_frame_with_trailing_bytes_is_rejected() -> None:
+    codec, config = _one_phasor_float_config()
+    frame = _float_data([(1.0, 0.0)], extra=b"\x00\x01\x02\x03")
+    with pytest.raises(UnsupportedFrameError, match="4 bytes left"):
+        codec.decode_data(frame, config)
+
+
+def test_config2_frame_with_trailing_bytes_is_rejected() -> None:
+    codec = SynchrophasorFrameCodec()
+    block = _pmu_config_block(
+        station="A", fmt=0x000F, phnmr=1, annmr=0, dgnmr=0, fnom=0
+    )
+    body = struct.pack(">I", TIME_BASE) + struct.pack(">H", 1) + block
+    body += struct.pack(">h", 30) + b"\xff\xff"
+    with pytest.raises(UnsupportedFrameError, match="CONFIG-2 frame has 2 bytes"):
+        codec.decode_config2(_wrap(FRAME_TYPE_CONFIG2, body))
+
+
+def test_data_frame_from_another_stream_is_rejected() -> None:
+    codec, config = _one_phasor_float_config()
+    frame = _float_data([(1.0, 0.0)], id_code=999)
+    with pytest.raises(UnsupportedFrameError, match="IDCODE 999 does not match"):
+        codec.decode_data(frame, config)
+
+
+def test_matching_frame_still_decodes() -> None:
+    codec, config = _one_phasor_float_config()
+    measurement = codec.decode_data(_float_data([(1.0, 0.0)]), config).measurements[0]
+    assert measurement.frequency_hz == pytest.approx(60.02, abs=1e-6)
+
+
+def test_nan_frequency_is_decoded_but_not_turned_into_a_series() -> None:
+    """NaN is how a PMU says "no value"; the decoder keeps it, the series refuses it."""
+    codec, config = _one_phasor_float_config()
+    frames = (
+        codec.decode_data(_float_data([(1.0, 0.0)]), config),
+        codec.decode_data(_float_data([(1.0, 0.0)], freq_hz_dev=math.nan), config),
+    )
+    assert math.isnan(frames[1].measurements[0].frequency_hz)
+    with pytest.raises(SynchrophasorFrameError, match="frame 1: PMU 0 frequency"):
+        data_frames_to_frequency_series(config, frames)

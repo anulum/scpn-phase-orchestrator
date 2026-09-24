@@ -34,6 +34,7 @@ deliberately handles only bytes already read.
 
 from __future__ import annotations
 
+import math
 import struct
 from dataclasses import dataclass
 
@@ -151,6 +152,14 @@ class _FrameReader:
         chunk = self._buffer[self._offset : stop]
         self._offset = stop
         return chunk
+
+    def expect_end(self, what: str) -> None:
+        """Require the body to be fully consumed; leftover bytes mean a mismatch."""
+        if self._offset != self._end:
+            raise UnsupportedFrameError(
+                f"{what} has {self._end - self._offset} bytes left after decoding; "
+                "the frame does not match the expected layout"
+            )
 
     def u16(self) -> int:
         """Read an unsigned big-endian 16-bit integer."""
@@ -594,6 +603,7 @@ class SynchrophasorFrameCodec:
         pmu_count = reader.u16()
         pmus = tuple(self._decode_pmu_config(reader) for _ in range(pmu_count))
         data_rate = reader.i16()
+        reader.expect_end("CONFIG-2 frame")
         return ConfigurationFrame2(
             header=header,
             time_base=time_base,
@@ -658,13 +668,21 @@ class SynchrophasorFrameCodec:
         Raises
         ------
         SynchrophasorFrameError
-            If the frame is truncated, has the wrong SYNC/type, or fails CRC.
+            If the frame is truncated, has the wrong SYNC/type, fails CRC,
+            carries a different IDCODE from the configuration, or does not match
+            the configured measurement layout byte for byte.
         """
         header = self._validate_common(frame, expected_type=FRAME_TYPE_DATA)
+        if header.id_code != config.header.id_code:
+            raise UnsupportedFrameError(
+                f"DATA frame IDCODE {header.id_code} does not match the "
+                f"configuration IDCODE {config.header.id_code}"
+            )
         reader = _FrameReader(frame, start=_HEADER_SIZE, end=len(frame) - _CRC_SIZE)
         measurements = tuple(
             self._decode_pmu_measurement(reader, pmu) for pmu in config.pmus
         )
+        reader.expect_end("DATA frame")
         return DataFrame(header=header, measurements=measurements)
 
     def _decode_pmu_measurement(
@@ -748,7 +766,10 @@ def data_frames_to_frequency_series(
     Raises
     ------
     SynchrophasorFrameError
-        If ``frames`` is empty or ``pmu_index`` is out of range for a frame.
+        If ``frames`` is empty, ``pmu_index`` is out of range for a frame, or a
+        frame's frequency is not finite. PMUs send NaN in floating-point fields
+        when they have no value, so such a frame is reported rather than passed
+        on as a measurement.
     """
     if not frames:
         raise SynchrophasorFrameError("at least one DATA frame is required")
@@ -766,7 +787,13 @@ def data_frames_to_frequency_series(
                 f"pmu_index {pmu_index} out of range for a frame with "
                 f"{len(frame.measurements)} measurements"
             )
+        frequency = frame.measurements[pmu_index].frequency_hz
+        if not math.isfinite(frequency):
+            raise SynchrophasorFrameError(
+                f"frame {len(times)}: PMU {pmu_index} frequency is not finite "
+                f"({frequency!r}); the PMU sent no value for this frame"
+            )
         absolute = frame.header.soc + frame.header.seconds_of_second(config.time_base)
         times.append(absolute - base_seconds)
-        frequencies.append(frame.measurements[pmu_index].frequency_hz)
+        frequencies.append(frequency)
     return tuple(times), tuple(frequencies)

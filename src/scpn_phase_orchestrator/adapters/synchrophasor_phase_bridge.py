@@ -244,8 +244,9 @@ class C37118PhaseBridge:
         Raises
         ------
         ValueError
-            If ``frames`` is empty, a binding's PMU index is out of range, or a
-            bound phasor cannot be interpreted (integer polar angle).
+            If ``frames`` is empty, a binding's PMU index is out of range, a
+            bound phasor cannot be interpreted (integer polar angle), or the
+            phasor or frequency is not finite (PMUs send NaN for "no value").
         """
         if not frames:
             raise ValueError("at least one DATA frame is required")
@@ -267,9 +268,15 @@ class C37118PhaseBridge:
             theta, amplitude = _phasor_theta_amplitude(
                 pmu, measurement, binding.phasor_index
             )
+            omega = _TWO_PI * measurement.frequency_hz
+            if not all(math.isfinite(value) for value in (theta, amplitude, omega)):
+                raise ValueError(
+                    f"oscillator {binding.oscillator!r}: the latest frame has no "
+                    "finite phasor or frequency value (the PMU sent NaN or inf)"
+                )
             phases[binding.oscillator] = PhaseState(
                 theta=theta,
-                omega=_TWO_PI * measurement.frequency_hz,
+                omega=omega,
                 amplitude=amplitude,
                 quality=_stat_quality(measurement.stat),
                 channel="P",

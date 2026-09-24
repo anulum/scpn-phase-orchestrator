@@ -324,3 +324,16 @@ def test_bytes_through_codec_into_bridge() -> None:
     assert state.amplitude == pytest.approx(200.0)  # 200 counts * 1.0 V/bit
     assert state.omega == pytest.approx(2 * math.pi * 60.1)
     assert state.quality == 1.0
+
+
+@pytest.mark.parametrize(
+    ("phasors", "frequency_hz"),
+    [(((math.nan, 0.0),), 60.0), (((1.0, 0.0),), math.nan), (((math.inf, 1.0),), 60.0)],
+)
+def test_missing_values_do_not_become_phase_states(phasors, frequency_hz) -> None:
+    """A NaN phasor or frequency is the PMU's "no value", not a phase."""
+    pmu = _pmu(phasor_float=True)
+    bridge = C37118PhaseBridge.from_bindings([PhasorBinding("gen1")])
+    frame = _frame(_measurement(phasors=phasors, frequency_hz=frequency_hz))
+    with pytest.raises(ValueError, match="no finite phasor or frequency"):
+        bridge.extract_phases(_config(pmu), [frame])
