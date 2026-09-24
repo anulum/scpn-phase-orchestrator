@@ -463,8 +463,8 @@ def compute_resilience(
     Raises
     ------
     ValueError
-        If the histories are empty, length-mismatched, or the parameters are
-        out of range.
+        If the histories are empty, length-mismatched, or non-finite, or the
+        parameters are out of range.
     """
     nominal = np.asarray(nominal_history, dtype=np.float64)
     perturbed = np.asarray(perturbed_history, dtype=np.float64)
@@ -472,6 +472,13 @@ def compute_resilience(
         raise ValueError("nominal_history must not be empty")
     if nominal.shape != perturbed.shape:
         raise ValueError("nominal_history and perturbed_history must share length")
+    if not (np.all(np.isfinite(nominal)) and np.all(np.isfinite(perturbed))):
+        # NaN compares false: np.max(drop) turns NaN and max(0.0, nan) reports
+        # "no drop", while |NaN| <= tol fails and hides the non-recovery.
+        raise ValueError(
+            "nominal_history and perturbed_history must be finite; a non-finite "
+            "order parameter means the run diverged"
+        )
     steps = int(nominal.size)
     onset = _positive_int(fault_onset_step, name="fault_onset_step", minimum=0)
     end = _positive_int(last_fault_end, name="last_fault_end", minimum=0)
@@ -556,7 +563,8 @@ def run_resilience_experiment(
     Raises
     ------
     ValueError
-        If ``steps`` does not exceed the last fault end.
+        If ``steps`` does not exceed the last fault end, or either run produced
+        a non-finite order parameter.
     """
     steps = _positive_int(steps, name="steps", minimum=1)
     if steps <= schedule.last_fault_end:
