@@ -67,16 +67,22 @@ class PhaseQualityScorer:
         Returns
         -------
         float
-            Weighted average quality across all phase states.
+            Weighted average quality across all phase states. States whose quality
+            or amplitude is not finite are skipped, quality is clamped to
+            ``[0, 1]``, and ``0.0`` is returned when no state remains; the Rust
+            and Python paths give the same result.
         """
         if not phase_states:
             return 0.0
-        qualities = np.array([ps.quality for ps in phase_states])
-        amplitudes = np.array([ps.amplitude for ps in phase_states])
+        qualities = np.array([ps.quality for ps in phase_states], dtype=np.float64)
+        amplitudes = np.array([ps.amplitude for ps in phase_states], dtype=np.float64)
         if self._rust is not None:
             return float(self._rust.score(qualities.tolist(), amplitudes.tolist()))
-        weights = np.maximum(amplitudes, 1e-12)
-        return float(np.average(qualities, weights=weights))
+        usable = np.isfinite(qualities) & np.isfinite(amplitudes)
+        if not bool(np.any(usable)):
+            return 0.0
+        weights = np.maximum(amplitudes[usable], 1e-12)
+        return float(np.average(np.clip(qualities[usable], 0.0, 1.0), weights=weights))
 
     # Thresholds: see docs/ASSUMPTIONS.md § Quality Gating
     def detect_collapse(
@@ -94,7 +100,9 @@ class PhaseQualityScorer:
         Returns
         -------
         bool
-            True if quality is below threshold for the majority of states.
+            True if quality is below threshold for the majority of states. A
+            state whose quality is not finite counts as below the threshold,
+            on both the Rust and the Python path.
 
         Raises
         ------
@@ -111,7 +119,11 @@ class PhaseQualityScorer:
         if self._rust is not None and threshold == self._collapse_threshold:
             qualities = [ps.quality for ps in phase_states]
             return bool(self._rust.is_collapsed(qualities))
-        below = sum(1 for ps in phase_states if ps.quality < threshold)
+        below = sum(
+            1
+            for ps in phase_states
+            if not np.isfinite(ps.quality) or ps.quality < threshold
+        )
         return below > len(phase_states) / 2
 
     def downweight_mask(
@@ -129,7 +141,8 @@ class PhaseQualityScorer:
         Returns
         -------
         FloatArray
-            Weight array in [0,1], zeros below min_quality.
+            Weight array in [0,1], zeros below min_quality and for qualities that
+            are not finite; passing qualities are clamped to ``[0, 1]``.
 
         Raises
         ------
@@ -143,11 +156,12 @@ class PhaseQualityScorer:
         min_quality = float(min_quality)
         if not 0.0 <= min_quality <= 1.0:
             raise ValueError("min_quality must be in [0, 1]")
-        qualities = np.array([ps.quality for ps in phase_states])
+        qualities = np.array([ps.quality for ps in phase_states], dtype=np.float64)
         if self._rust is not None and min_quality == self._min_quality:
             return np.asarray(
                 self._rust.downweight_mask(qualities.tolist()),
                 dtype=np.float64,
             )
-        mask = np.where(qualities >= min_quality, qualities, 0.0)
+        passing = np.isfinite(qualities) & (qualities >= min_quality)
+        mask = np.where(passing, np.clip(qualities, 0.0, 1.0), 0.0)
         return mask.astype(np.float64)

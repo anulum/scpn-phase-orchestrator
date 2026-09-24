@@ -24,6 +24,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `PhaseQualityScorer` gives the Rust kernel's answer on the Python path. The
+  Python path is used without the kernel or with a non-default threshold. It
+  compared NaN directly, so five NaN-quality states were reported as not
+  collapsed, a fail-open collapse gate. `score` also returned NaN or a value
+  outside [0, 1]. The Python path now counts a non-finite quality as
+  collapsed, skips non-finite qualities and amplitudes when scoring, and
+  clamps quality to [0, 1], as the kernel does.
 - The nn forward integrators (`kuramoto_forward`, `kuramoto_forward_masked`,
   `winfree_forward`, `simplicial_forward`, `stuart_landau_forward`,
   `theta_neuron_forward`) refuse an unknown `method`. Every value other than
