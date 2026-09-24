@@ -64,6 +64,7 @@ SYMBOL_MODULE = {
     "_load_storage_manifest_from_payload": "storage",
     "_normalize_approved_target_hashes": "_shared",
     "_record_hash": "_shared",
+    "_require_self_seal": "_shared",
     "_require_sha256": "_shared",
 }
 
