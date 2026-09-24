@@ -123,7 +123,7 @@ def test_docs_workflow_generates_hosted_wasm_bundle() -> None:
     workflow = DOCS_WORKFLOW.read_text(encoding="utf-8")
     assert "dtolnay/rust-toolchain@631a55b12751854ce901bb631d5902ceb48146f7" in workflow
     assert "rustup target add wasm32-unknown-unknown" in workflow
-    assert "cargo install wasm-pack --version 0.14.0 --locked" in workflow
+    assert "cargo install wasm-pack --version 0.15.0 --locked" in workflow
     assert (
         "wasm-pack build crates/spo-wasm --target web --out-dir ../../../docs/wasm-pkg"
     ) in workflow
