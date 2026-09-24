@@ -211,5 +211,5 @@ class TestBenjaminiHochberg:
 
     @pytest.mark.parametrize("bad", [-0.01, 1.01])
     def test_out_of_range_rejected(self, bad):
-        with pytest.raises(ValueError, match=r"p-values must be in \[0, 1\]"):
+        with pytest.raises(ValueError, match=r"p_values\[1\] must be in \[0, 1\]"):
             benjamini_hochberg([0.5, bad])

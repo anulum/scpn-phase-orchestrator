@@ -65,6 +65,7 @@ from scpn_phase_orchestrator.evaluation.skill import (
     DEFAULT_PERMUTATION_SEED,
     DEFAULT_PERMUTATIONS,
     DEFAULT_TARGET_FALSE_ALARM,
+    _ordered_scores,
     surrogate_rank_pvalue,
 )
 
@@ -103,19 +104,33 @@ class ScorePair:
     null_scores : tuple[float, ...]
         One score per transition-free null segment.
 
-    Any finite-float sequence is accepted at construction and normalised to a
-    tuple, so the pair is hashable and its serialisation is deterministic.
+    Any sequence of real numbers other than NaN is accepted at construction and
+    normalised to a tuple of floats, so the pair is hashable and its
+    serialisation is deterministic.
     """
 
     event_scores: tuple[float, ...]
     null_scores: tuple[float, ...]
 
     def __post_init__(self) -> None:
+        """Normalise both score sequences to tuples of floats.
+
+        Raises
+        ------
+        ValueError
+            If either sequence is empty or holds NaN or a value that is not a real
+            number. A NaN null never alarms, so it would lower the arm's false
+            alarm and could upgrade the verdict.
+        """
         object.__setattr__(
-            self, "event_scores", tuple(float(score) for score in self.event_scores)
+            self,
+            "event_scores",
+            tuple(_ordered_scores(tuple(self.event_scores), "event_scores")),
         )
         object.__setattr__(
-            self, "null_scores", tuple(float(score) for score in self.null_scores)
+            self,
+            "null_scores",
+            tuple(_ordered_scores(tuple(self.null_scores), "null_scores")),
         )
         if not self.event_scores:
             raise ValueError("event_scores must not be empty")
@@ -229,7 +244,20 @@ def classify_transfer_verdict(
         floor (a possible pipeline artefact) or the target is undetectable
         within-domain (untestable); :data:`TRANSFER_NEGATIVE` when the target is
         detectable within-domain yet transfer does not beat its own null.
+
+    Raises
+    ------
+    ValueError
+        If any gate is not a boolean; ``bool("False")`` is ``True``, so a gate read
+        from text or a number is refused rather than coerced.
     """
+    for name, gate in (
+        ("transfer_beats_own_null", transfer_beats_own_null),
+        ("transfer_above_floor", transfer_above_floor),
+        ("within_domain_detectable", within_domain_detectable),
+    ):
+        if not isinstance(gate, bool):
+            raise ValueError(f"{name} must be a boolean, got {gate!r}")
     if transfer_beats_own_null and transfer_above_floor:
         return TRANSFER_POSITIVE
     if transfer_beats_own_null:
@@ -304,10 +332,17 @@ def audit_cross_domain_transfer(
     Raises
     ------
     ValueError
-        If ``shuffled_source`` is empty.
+        If ``shuffled_source`` is empty, or ``source_domain`` or
+        ``target_domain`` is not a non-blank string.
     """
     if len(shuffled_source) == 0:
         raise ValueError("shuffled_source must provide at least one control")
+    for name, label in (
+        ("source_domain", source_domain),
+        ("target_domain", target_domain),
+    ):
+        if not isinstance(label, str) or not label.strip():
+            raise ValueError(f"{name} must be a non-blank string, got {label!r}")
     transfer_audit = audit_detector(
         event_scores=transfer.event_scores,
         null_scores=transfer.null_scores,

@@ -30,6 +30,7 @@ to make the corpus, scores, and verdict tamper-evident.
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, TypeVar
 
@@ -38,6 +39,8 @@ from scpn_phase_orchestrator.evaluation.skill import (
     DEFAULT_PERMUTATIONS,
     DEFAULT_TARGET_FALSE_ALARM,
     PermutationSignificance,
+    _ordered_scores,
+    _probability,
     calibrate_score_threshold,
     matched_false_alarm_rate,
     permutation_significance_from_alarms,
@@ -72,7 +75,9 @@ class DetectorAudit:
         The false-alarm rate the threshold was calibrated to hold at or below.
     matched_threshold : float
         The calibrated alarm threshold; ``-inf`` means the gate is fully open
-        because the target permitted every null to alarm.
+        because the target permitted every null to alarm, and ``inf`` (when a
+        null that must stay quiet scored ``+inf`` or the largest finite float)
+        means only a ``+inf`` score can alarm.
     achieved_false_alarm : float
         The false-alarm rate the threshold actually held on the null scores.
     n_events : int
@@ -113,8 +118,8 @@ class DetectorAudit:
         """Return a JSON-safe mapping of the audit verdict.
 
         The ``matched_threshold`` is emitted as the string ``"-inf"`` when the
-        gate is fully open, so the record stays strict JSON (a hash of it rejects
-        non-finite numbers).
+        gate is fully open, and ``"inf"`` when only a ``+inf`` score can alarm,
+        so the record stays strict JSON (a hash of it rejects non-finite numbers).
 
         Returns
         -------
@@ -124,8 +129,8 @@ class DetectorAudit:
             ``beats_chance`` decision.
         """
         threshold: object = self.matched_threshold
-        if self.matched_threshold == float("-inf"):
-            threshold = "-inf"
+        if not math.isfinite(self.matched_threshold):
+            threshold = str(self.matched_threshold)
         return {
             "detector_name": self.detector_name,
             "target_false_alarm": self.target_false_alarm,
@@ -185,18 +190,25 @@ def audit_detector(
     Raises
     ------
     ValueError
-        If ``event_scores`` is empty or ``alpha`` is not in ``[0, 1]``. (Empty
-        ``null_scores`` and an out-of-range ``target_false_alarm`` are rejected by
+        If ``event_scores`` is empty or holds NaN or a value that is not a real
+        number, ``detector_name`` is not a non-blank string, or ``alpha`` is not a
+        real number in ``[0, 1]``. (Empty or NaN ``null_scores`` and an
+        out-of-range ``target_false_alarm`` are rejected by
         :func:`~scpn_phase_orchestrator.evaluation.skill.calibrate_score_threshold`.)
     """
     if len(event_scores) == 0:
         raise ValueError("event_scores must not be empty")
-    if not 0.0 <= alpha <= 1.0:
-        raise ValueError(f"alpha must be in [0, 1], got {alpha}")
+    if not isinstance(detector_name, str) or not detector_name.strip():
+        raise ValueError(
+            f"detector_name must be a non-blank string, got {detector_name!r}"
+        )
+    alpha = _probability(alpha, "alpha")
+    events = _ordered_scores(event_scores, "event_scores")
     threshold = calibrate_score_threshold(null_scores, target_fa=target_false_alarm)
-    achieved = matched_false_alarm_rate(null_scores, threshold)
-    event_alarms = [float(score) >= threshold for score in event_scores]
-    null_alarms = [float(score) >= threshold for score in null_scores]
+    nulls = _ordered_scores(null_scores, "null_scores")
+    achieved = matched_false_alarm_rate(nulls, threshold)
+    event_alarms = [score >= threshold for score in events]
+    null_alarms = [score >= threshold for score in nulls]
     significance = permutation_significance_from_alarms(
         event_alarms, null_alarms, n_permutations=n_permutations, seed=seed
     )
@@ -204,7 +216,7 @@ def audit_detector(
     n_alarmed = int(sum(event_alarms))
     return DetectorAudit(
         detector_name=detector_name,
-        target_false_alarm=target_false_alarm,
+        target_false_alarm=float(target_false_alarm),
         matched_threshold=threshold,
         achieved_false_alarm=achieved,
         n_events=n_events,
@@ -255,14 +267,16 @@ def audit_scoring_detector(
     Raises
     ------
     ValueError
-        If ``event_series`` or ``null_series`` is empty.
+        If ``event_series`` or ``null_series`` is empty, or ``score`` returns NaN
+        or a value that is not a real number (text is not parsed and a boolean
+        is not read as ``1.0``).
     """
     if len(event_series) == 0:
         raise ValueError("event_series must not be empty")
     if len(null_series) == 0:
         raise ValueError("null_series must not be empty")
-    event_scores = [float(score(series)) for series in event_series]
-    null_scores = [float(score(series)) for series in null_series]
+    event_scores = [score(series) for series in event_series]
+    null_scores = [score(series) for series in null_series]
     return audit_detector(
         event_scores=event_scores,
         null_scores=null_scores,

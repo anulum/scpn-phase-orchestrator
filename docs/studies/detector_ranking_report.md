@@ -1,6 +1,6 @@
 # Cross-Domain Detector Meta-Analysis Report
 
-**Generated:** 2026-07-16 22:44 UTC
+**Generated:** 2026-09-24 11:58 UTC
 
 This report is produced automatically from the committed detector-evidence aggregates under ``examples/real_data/*/``. It normalises each detector's performance, ranks detectors within every domain, and derives a ranked backlog of refinement candidates.
 
@@ -91,7 +91,7 @@ This report is produced automatically from the committed detector-evidence aggre
 | --- | --- | --- | --- | --- | --- |
 | 1 | `critical_slowing_down_multiscale` | 50.0% | 4.055e-03 | 1.216e-02 | True |
 | 2 | `critical_slowing_down_surrogate` | 31.2% | 2.078e-02 | 3.116e-02 | True |
-| 3 | `critical_slowing_down_baseline` | 25.0% | 1.473e-01 | 1.473e-01 | True |
+| 3 | `critical_slowing_down_baseline` | 25.0% | 1.473e-01 | 1.473e-01 | False |
 
 ### dakos_climate_transitions
 
@@ -213,5 +213,5 @@ Detectors that appear in more than one domain, sorted by mean rank:
 ## Notes
 
 * Detection rate for early-warning aggregates is approximated by ``observed_led / n_transitions`` — the fraction of transitions for which the detector produced a statistically meaningful lead.
-* A detector is marked as *beating chance* when its reported p-value is below 0.05; honest-audit aggregates additionally report the committed ``fraction_beats_chance`` value.
+* A detector is marked as *beating chance* when its reported p-value (the geometric-mean p-value for honest-audit aggregates) is below 0.05. The committed ``fraction_beats_chance`` of honest-audit aggregates is the share of recordings that beat chance; it is not used as this verdict.
 * The CAP multichannel finding that **SNR-weighted Kuramoto did not improve** over the simple mean-R Kuramoto detector is carried forward explicitly; further investment in that exact spatial-R feature is not supported by the current evidence.
