@@ -89,6 +89,13 @@ class AuditStreamIntegrityResult:
         }
 
 
+def _same_file(left: Path, right: Path) -> bool:
+    """Return whether two paths name the same file, existing or not."""
+    if left.exists() and right.exists():
+        return left.samefile(right)
+    return left.resolve() == right.resolve()
+
+
 class AuditLogger:
     """Append-only JSONL audit log for UPDE simulation steps."""
 
@@ -104,6 +111,12 @@ class AuditLogger:
         if event_stream is not None and not str(event_stream).strip():
             raise AuditError("event_stream path must be non-empty when provided")
         self._path = Path(path)
+        if event_stream is not None and _same_file(self._path, Path(event_stream)):
+            raise AuditError(
+                "audit path and event_stream must be different files: the JSONL "
+                "log and the protobuf stream would interleave into one file that "
+                f"neither reader can parse ({self._path})"
+            )
         if self._path.exists() and self._path.is_dir():
             raise AuditError(
                 f"audit path must be a file path, got directory {self._path}"
