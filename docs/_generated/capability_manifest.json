@@ -12,7 +12,7 @@
     "research_experimental_modules": 205,
     "runtime_serving_modules": 158,
     "rust_kernel_files": 97,
-    "test_files": 968
+    "test_files": 969
   },
   "documentation": {
     "public_pages": [
@@ -2273,6 +2273,7 @@
       "tests/test_formal_export_stl_grammar.py",
       "tests/test_formal_export_validators.py",
       "tests/test_formal_model_checker_ci.py",
+      "tests/test_formal_package_seal.py",
       "tests/test_foundation_model_governor.py",
       "tests/test_frc_compression_mif_physical_payload_request.py",
       "tests/test_free_energy.py",

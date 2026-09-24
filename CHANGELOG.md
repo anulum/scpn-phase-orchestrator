@@ -24,6 +24,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Formal-verification evidence cites only the package it was sealed as.
+  `FormalVerificationPackage` seals its manifest as the canonical SHA-256 of
+  every other field, but `build_formal_verification_evidence` (used by
+  `spo assurance-case` and `spo certification-evidence`) only required
+  `package_hash` to be a non-empty string. A manifest with an added
+  property, a new name or a changed artefact hash was therefore cited under
+  the original package's hash. The hash is now recomputed.
 - `spo audit-detector` refuses a `detector_name` that is not a non-empty
   string. `str(spec.get("detector_name"))` turned `null` into `"None"` and a
   number into its digits, and the sealed audit record then named that as the
