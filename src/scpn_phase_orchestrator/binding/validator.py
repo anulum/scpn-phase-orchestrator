@@ -29,8 +29,11 @@ from scpn_phase_orchestrator.binding.types import (
     VALID_SEVERITIES,
     VALID_VALIDATION_TIERS,
     BindingSpec,
+    ProtocolNetSpec,
     is_valid_channel_id,
 )
+from scpn_phase_orchestrator.exceptions import PolicyError
+from scpn_phase_orchestrator.supervisor.petri_net import parse_guard
 
 __all__ = ["validate_binding_spec", "validate_binding_spec_security"]
 
@@ -276,6 +279,8 @@ def validate_binding_spec(spec: BindingSpec) -> list[str]:
                 f"actuator {act.name!r}: scope {act.scope!r} does not match any "
                 f"layer index; valid scopes: {sorted(valid_scopes)}"
             )
+    errors.extend(_actuator_knob_consistency_errors(spec))
+    errors.extend(_protocol_net_errors(spec))
 
     if spec.imprint_model is not None:
         if (
@@ -305,6 +310,120 @@ def validate_binding_spec(spec: BindingSpec) -> list[str]:
             )
 
     return errors
+
+
+def _actuator_knob_consistency_errors(spec: BindingSpec) -> list[str]:
+    """Return errors for actuators that give one knob different bounds.
+
+    The runtime ``ActionProjector`` holds one value bound and one rate limit per
+    knob and refuses a binding whose actuator records disagree (records without
+    a ``rate_limit_per_step`` do not take part in the rate check), so such a
+    spec would pass validation and then fail on the first ``simulate`` call.
+    """
+    errors: list[str] = []
+    bounds_by_knob: dict[str, tuple[str, tuple[float, ...]]] = {}
+    rate_by_knob: dict[str, tuple[str, float]] = {}
+    for act in spec.actuators:
+        limits = tuple(float(limit) for limit in act.limits)
+        seen_bounds = bounds_by_knob.setdefault(act.knob, (act.name, limits))
+        if seen_bounds[1] != limits:
+            errors.append(
+                f"actuator {act.name!r}: knob {act.knob!r} limits {list(limits)} "
+                f"differ from actuator {seen_bounds[0]!r} {list(seen_bounds[1])}; "
+                "the runtime projector holds one bound per knob"
+            )
+        if act.rate_limit_per_step is None:
+            continue
+        rate = float(act.rate_limit_per_step)
+        seen_rate = rate_by_knob.setdefault(act.knob, (act.name, rate))
+        if seen_rate[1] != rate:
+            errors.append(
+                f"actuator {act.name!r}: knob {act.knob!r} rate_limit_per_step "
+                f"{rate!r} differs from actuator {seen_rate[0]!r} {seen_rate[1]!r}; "
+                "the runtime projector holds one rate limit per knob"
+            )
+    return errors
+
+
+def _protocol_net_errors(spec: BindingSpec) -> list[str]:
+    """Return protocol-net errors the runtime Petri-net builder would hit."""
+    net = spec.protocol_net
+    if net is None:
+        return []
+    errors: list[str] = []
+    places = set(net.places)
+    if not all(isinstance(place, str) and place for place in net.places):
+        errors.append("protocol_net.places must be non-empty strings")
+    for place, tokens in net.initial.items():
+        if place not in places:
+            errors.append(f"protocol_net.initial: unknown place {place!r}")
+        if isinstance(tokens, bool) or not isinstance(tokens, int) or tokens < 0:
+            errors.append(
+                f"protocol_net.initial[{place!r}] must be a non-negative integer"
+            )
+    for place in net.place_regime:
+        if place not in places:
+            errors.append(f"protocol_net.place_regime: unknown place {place!r}")
+    for transition in net.transitions:
+        if transition.guard is not None:
+            try:
+                guard = parse_guard(transition.guard)
+            except (PolicyError, TypeError, ValueError) as exc:
+                errors.append(
+                    f"protocol_net.transition {transition.name!r}: guard "
+                    f"{transition.guard!r} is not 'metric op threshold': {exc}"
+                )
+            else:
+                if guard.metric in places:
+                    errors.append(
+                        f"protocol_net.transition {transition.name!r}: guard metric "
+                        f"{guard.metric!r} is a place name; guards read context "
+                        "metrics, and token availability is set by input arcs"
+                    )
+        for side, arcs in (
+            ("inputs", transition.inputs),
+            ("outputs", transition.outputs),
+        ):
+            for index, arc in enumerate(arcs):
+                where = f"protocol_net.transition {transition.name!r} {side}[{index}]"
+                if not isinstance(arc, Mapping) or "place" not in arc:
+                    errors.append(
+                        f"{where} must be a mapping {{place: <name>, weight: <int>}}, "
+                        f"got {arc!r}"
+                    )
+                    continue
+                if arc["place"] not in places:
+                    errors.append(f"{where}: unknown place {arc['place']!r}")
+                weight = arc.get("weight", 1)
+                if (
+                    isinstance(weight, bool)
+                    or not isinstance(weight, int)
+                    or weight < 1
+                ):
+                    errors.append(f"{where}: weight must be a positive integer")
+    if errors:
+        return errors
+    return _protocol_net_build_errors(net)
+
+
+def _protocol_net_build_errors(net: ProtocolNetSpec) -> list[str]:
+    """Build the protocol net exactly as ``simulate`` does and report refusals.
+
+    The structural checks above give precise messages; this catches every
+    remaining rule of the runtime builders (for example an empty or unknown
+    ``place_regime``), so a spec that validates is one ``simulate`` accepts.
+    """
+    # Imported here: the runtime builder pulls in the simulation stack, which
+    # itself imports this package.
+    from scpn_phase_orchestrator.runtime.simulation import petri_net_from_protocol
+    from scpn_phase_orchestrator.supervisor.petri_adapter import PetriNetAdapter
+
+    try:
+        built, marking = petri_net_from_protocol(net)
+        PetriNetAdapter(built, marking, net.place_regime)
+    except (PolicyError, TypeError, ValueError) as exc:
+        return [f"protocol_net is refused by the runtime: {exc}"]
+    return []
 
 
 def validate_binding_spec_security(spec: BindingSpec) -> list[str]:

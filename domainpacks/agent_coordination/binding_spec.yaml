@@ -192,24 +192,26 @@ imprint_model:
   saturation: 5.0
   modulates: ["K"]
 
+# Guards read context metrics (for example "stability_proxy > 0.6"), not token
+# counts: a transition already needs a token on each input arc to fire, so the
+# former place-count guards ("idle > 0", ...) were redundant and not parseable.
+# The net cannot express "at most one merge at a time" (no inhibitor arcs), and
+# every place maps to NOMINAL, so the net sequences tokens without changing
+# the regime (the runtime refuses an empty place_regime).
 protocol_net:
   places: [idle, claimed, merging]
   initial: {idle: 4, claimed: 0, merging: 0}
-  place_regime: {}
+  place_regime: {idle: NOMINAL, claimed: NOMINAL, merging: NOMINAL}
   transitions:
     - name: claim_task
-      inputs: [idle]
-      outputs: [claimed]
-      guard: "idle > 0"
+      inputs: [{place: idle, weight: 1}]
+      outputs: [{place: claimed, weight: 1}]
     - name: release_task
-      inputs: [claimed]
-      outputs: [idle]
-      guard: "claimed > 0"
+      inputs: [{place: claimed, weight: 1}]
+      outputs: [{place: idle, weight: 1}]
     - name: start_merge
-      inputs: [claimed]
-      outputs: [merging]
-      guard: "claimed > 0 and merging == 0"
+      inputs: [{place: claimed, weight: 1}]
+      outputs: [{place: merging, weight: 1}]
     - name: finish_merge
-      inputs: [merging]
-      outputs: [idle]
-      guard: "merging > 0"
+      inputs: [{place: merging, weight: 1}]
+      outputs: [{place: idle, weight: 1}]
