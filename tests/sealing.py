@@ -22,7 +22,15 @@ from typing import Any
 from scpn_phase_orchestrator.runtime.cli._payloads import _record_hash
 
 
-def seal(payload: Mapping[str, Any], field: str) -> dict[str, Any]:
-    """Return ``payload`` with ``field`` set to its canonical self-seal."""
+def seal(
+    payload: Mapping[str, Any], field: str, *, blanked: bool = False
+) -> dict[str, Any]:
+    """Return ``payload`` with ``field`` set to its canonical self-seal.
+
+    By default the seal covers the payload without ``field``. With
+    ``blanked=True`` it covers the payload with ``field`` set to ``""``, the
+    rule of producers that hash the record before filling its seal field.
+    """
     body = {key: value for key, value in payload.items() if key != field}
-    return {**body, field: _record_hash(body)}
+    covered = {**body, field: ""} if blanked else body
+    return {**body, field: _record_hash(covered)}

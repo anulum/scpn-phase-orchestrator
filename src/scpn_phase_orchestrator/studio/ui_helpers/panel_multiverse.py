@@ -22,6 +22,7 @@ from ._shared import (
     _optional_sha256_hex,
     _positive_int,
     _require_non_empty_text,
+    _require_self_hash,
     _require_sha256_hex,
     _required_bool,
     _unit_interval_number,
@@ -62,6 +63,12 @@ def build_multiverse_counterfactual_studio_panel(
     rollout = _normalise_multiverse_manifest(manifest)
     risk = _normalise_multiverse_risk_report(risk_report)
     branch_rows = _join_multiverse_branch_rows(rollout, risk)
+    # The seals are checked after the structural checks, so a malformed field or
+    # a broken join is reported by name rather than as a seal mismatch. The
+    # rollout manifest is hashed with its seal field blank, the risk report
+    # without it.
+    _require_self_hash(manifest, "manifest_hash", "manifest_hash", blanked=True)
+    _require_self_hash(risk_report, "report_hash", "report_hash")
     final_values = [cast("float", row["final_R"]) for row in branch_rows]
     mean_values = [cast("float", row["mean_R"]) for row in branch_rows]
     min_values = [cast("float", row["min_R"]) for row in branch_rows]
