@@ -24,6 +24,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Studio deployment packages state the replay gate from the replay status.
+  - The operator checklist marks "Run local replay" as blocked until the
+    replay status is `completed`. The deployment package and the package
+    materialisation plan listed "local replay completed" for the same
+    project state regardless.
+  - The gate now reads "local replay not completed" unless the recorded
+    replay completed.
+
 - A Studio verified hardware package no longer reports an invalid binding as
   passed.
   - Studio replays a binding spec even when validation reports errors, and

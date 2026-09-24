@@ -250,7 +250,11 @@ def build_deployment_package(
         ],
         "commands": list(build_command_table(project_state)),
         "safety_gates": [
-            "local replay completed",
+            (
+                "local replay completed"
+                if project_state.runtime.replay_status == "completed"
+                else "local replay not completed"
+            ),
             (
                 "binding validation blocked"
                 if blocked_reasons
