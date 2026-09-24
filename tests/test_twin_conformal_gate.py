@@ -96,9 +96,38 @@ def test_calibrate_rejects_blank_regime() -> None:
 # ---------------------------------------------------------------------
 
 
-def test_threshold_small_calibration_is_infinite() -> None:
-    # n=3, level=0.9 -> rank = ceil(0.9*4)=4 > n -> inf (admit all).
-    assert math.isinf(_conformal_threshold(np.array([0.1, 0.2, 0.3]), 0.1))
+def test_small_calibration_does_not_open_the_gate() -> None:
+    """n=3 cannot bound the 90% level; the band stops at the largest nominal score."""
+    gate = TwinConformalGate()
+    gate.calibrate([0.1, 0.2, 0.3])
+    anomalous = gate.update(1.0e6)
+    assert anomalous.admitted is False
+    assert anomalous.threshold == pytest.approx(0.3)
+    assert gate.update(0.25).admitted is True
+
+
+def test_persistent_drift_is_never_admitted() -> None:
+    """ACI's widening after misses must not admit ticks beyond every nominal one.
+
+    Before the clamp, a z=50 stream was admitted from the sixth tick onward
+    because the misses drove alpha_t to zero and the band to infinity.
+    """
+    rng = np.random.default_rng(20260924)
+    gate = TwinConformalGate()
+    gate.calibrate(np.abs(rng.normal(0.0, 1.0, 200)).tolist())
+    decisions = [gate.update(50.0) for _ in range(200)]
+    assert not any(decision.admitted for decision in decisions)
+    assert all(math.isfinite(decision.threshold) for decision in decisions)
+
+
+def test_nominal_stream_keeps_the_target_coverage() -> None:
+    """Inside the nominal range ACI still tracks the 90% coverage target."""
+    rng = np.random.default_rng(7)
+    gate = TwinConformalGate()
+    gate.calibrate(np.abs(rng.normal(0.0, 1.0, 500)).tolist())
+    for value in np.abs(rng.normal(0.0, 1.0, 4000)):
+        gate.update(float(value))
+    assert 0.87 <= gate.empirical_coverage() <= 0.93
 
 
 def test_threshold_normal_quantile() -> None:

@@ -510,8 +510,13 @@ z-deviation such that nominal ticks stay inside the band with probability
 band. The threshold adapts online by Adaptive Conformal Inference (Gibbs &
 Candès, 2021) so the long-run empirical miscoverage tracks the target under
 non-stationarity, and it can be regime-conditioned (a separate band per detected
-sync / chimera / chaotic regime). Review-only: a flagged tick signals the twin
-has drifted beyond its calibrated band and autonomy should narrow. In the
+sync / chimera / chaotic regime). The band never extends past the largest
+nominal calibration score: when the calibration set is too small for the
+requested level, or a run of misses drives the adaptive miscoverage to zero,
+the gate uses that score instead of an infinite band, so a tick beyond every
+nominal sample is always flagged and the coverage guarantee is given up rather
+than the gate opened. Review-only: a flagged tick signals the twin has drifted
+beyond its calibrated band and autonomy should narrow. In the
 generic simulation loop, callers can supply a calibrated gate and
 deployment-specific twin-confidence source; rejected conformal ticks suppress
 the current policy action set and are recorded in result/audit surfaces. The

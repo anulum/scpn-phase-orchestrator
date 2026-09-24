@@ -24,6 +24,16 @@ the long-run empirical miscoverage tracks the target. The gate is optionally
 detected regime (sync / chimera / chaotic), which SPO already classifies — so the
 band is appropriate to the current dynamical regime rather than a global average.
 
+The band never extends past the largest nominal calibration score. The split
+conformal rank ``ceil((1 - alpha_t)(n + 1))`` exceeds ``n`` when the calibration
+set is too small for the requested level, and ACI drives ``alpha_t`` to zero
+after a run of misses; the textbook answer is then an infinite band that admits
+every tick. For an admission gate that would open exactly when the twin drifts
+persistently, so the gate uses the largest nominal score instead: a tick more
+anomalous than every nominal sample is always flagged. In that state the
+finite-sample coverage guarantee does not hold, and the gate fails closed
+rather than open.
+
 This is a review-only safety observable: a flagged tick signals the twin has
 drifted beyond its calibrated nominal band and that autonomy should narrow; it
 never actuates. The computation is lightweight online statistics (one sorted
@@ -151,8 +161,8 @@ class ConformalDecision:
     nonconformity_score : float
         The scored tick's nonconformity value.
     threshold : float
-        The conformal band upper bound used for this decision (may be infinite
-        when the calibration set is too small to bound at the current level).
+        The conformal band upper bound used for this decision. The gate never
+        sets it above the largest nominal calibration score.
     effective_miscoverage : float
         The adaptive miscoverage ``alpha_t`` in force for this decision.
     empirical_coverage : float
@@ -386,15 +396,16 @@ class TwinConformalGate:
 
 
 def _conformal_threshold(sorted_scores: FloatArray, alpha_t: float) -> float:
-    """Return the conformal admit/flag threshold for the regime."""
+    """Return the conformal admit/flag threshold for the regime.
+
+    The split-conformal rank is clamped to ``[1, n]``: below one it selects the
+    smallest nominal score, and above ``n`` (too few calibration scores for the
+    level, or ``alpha_t`` driven to zero) it selects the largest instead of an
+    infinite band, so the gate stays closed to ticks beyond every nominal one.
+    """
     n = int(sorted_scores.size)
-    level = 1.0 - alpha_t
-    rank = ceil(level * (n + 1))
-    if rank <= 0:
-        return float(sorted_scores[0])
-    if rank > n:
-        return float("inf")
-    return float(sorted_scores[rank - 1])
+    rank = ceil((1.0 - alpha_t) * (n + 1))
+    return float(sorted_scores[min(max(rank, 1), n) - 1])
 
 
 def _with_decision_hash(decision: ConformalDecision) -> ConformalDecision:

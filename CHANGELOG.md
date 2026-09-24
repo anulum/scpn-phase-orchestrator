@@ -36,6 +36,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   backend. Admission runs each compiled Mojo executable once with empty input
   and caches the verdict per build; on a loaded workstation one launch took
   0.06–0.23 s.
+- `TwinConformalGate` no longer opens under persistent drift. Adaptive
+  conformal inference lowers the miscoverage after each flagged tick; at zero,
+  or with fewer calibration scores than the level needs, the band became
+  infinite and admitted every tick. A twin at composite z = 50 against a
+  200-sample nominal calibration was admitted from the sixth tick onward, and a
+  three-sample calibration admitted a score of 10⁶. The band now stops at the
+  largest nominal calibration score, so such ticks are always flagged; in the
+  simulation runtime a flagged tick suppresses that step's policy actions.
 - Digital-twin confidence no longer scores a NaN divergence or a NaN baseline
   as a healthy twin. The one-sided z-score uses `max(0, ·)`, which maps NaN to
   zero, so `TwinDivergence(nan, nan, …)` scored confidence 1.0 "healthy", and
