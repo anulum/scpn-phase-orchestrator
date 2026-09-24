@@ -208,14 +208,23 @@ def _validate_phase_history(phases_history: object) -> FloatArray:
         raise ValueError("phases_history must contain real-valued samples")
     if _contains_numeric_string_alias(phases_history):
         raise ValueError("phases_history must not contain numeric-string aliases")
+    if raw.dtype.kind in "mM":
+        raise ValueError(
+            "phases_history must be plain radians; datetime64 and timedelta64 "
+            "values are rejected"
+        )
     try:
         array = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError("phases_history must be a numeric array") from exc
     if not np.all(np.isfinite(array)):
         raise ValueError("phases_history must contain only finite values")
-    if array.ndim > 2:
-        raise ValueError(f"phases_history must be 1D or 2D, got shape {array.shape}")
+    if array.ndim != 2:
+        # A 1-D array is ambiguous (one oscillator over time, or one time step
+        # of N oscillators) and used to return an empty result.
+        raise ValueError(
+            f"phases_history must be two-dimensional (T, N), got shape {array.shape}"
+        )
     return np.ascontiguousarray(array, dtype=np.float64)
 
 
@@ -234,7 +243,7 @@ def _validate_backend_winding(
     *,
     n: int,
     t: int,
-    expected: IntArray | None = None,
+    expected: IntArray,
 ) -> IntArray:
     """Return backend winding numbers matching the reference, else raise."""
     if _contains_boolean_alias(value):
@@ -263,14 +272,11 @@ def _validate_backend_winding(
     if np.any(np.abs(numeric) > max_abs_winding):
         raise ValueError("backend winding output exceeds wrapped-increment bound")
     winding = np.ascontiguousarray(numeric.astype(np.int64), dtype=np.int64)
-    if expected is not None:
-        reference = np.asarray(expected, dtype=np.int64)
-        if reference.shape != winding.shape:
-            raise ValueError("exact winding reference shape must match backend output")
-        if not np.array_equal(winding, reference):
-            raise ValueError(
-                "backend winding output diverged from exact winding reference"
-            )
+    reference = np.asarray(expected, dtype=np.int64)
+    if reference.shape != winding.shape:
+        raise ValueError("exact winding reference shape must match backend output")
+    if not np.array_equal(winding, reference):
+        raise ValueError("backend winding output diverged from exact winding reference")
     return winding
 
 
@@ -280,20 +286,29 @@ def winding_numbers(phases_history: FloatArray) -> IntArray:
     ``w_i = floor(Σ_t wrap(Δθ_{i,t}) / 2π)`` with
     ``wrap(x) ∈ (−π, π]``.
 
+    The ``floor`` makes the count asymmetric: a net rotation of ``-0.01`` rad
+    gives ``-1`` while ``+0.01`` rad gives ``0``, so reversing a trajectory
+    negates the winding only when its net rotation is a whole number of turns.
+
     Parameters
     ----------
     phases_history : FloatArray
-        ``(T, N)`` phases in radians.
+        ``(T, N)`` phases in radians; ``T < 2`` gives a zero vector.
 
     Returns
     -------
     IntArray
         ``(N,)`` int64 array of winding numbers.
+
+    Raises
+    ------
+    ValueError
+        If the history is not a finite, real, two-dimensional ``(T, N)`` array
+        of radians.
     """
     phases_history = _validate_phase_history(phases_history)
-    if phases_history.ndim != 2 or phases_history.shape[0] < 2:
-        n = phases_history.shape[-1] if phases_history.ndim == 2 else 0
-        return np.zeros(n, dtype=np.int64)
+    if phases_history.shape[0] < 2:
+        return np.zeros(phases_history.shape[1], dtype=np.int64)
 
     t, n = int(phases_history.shape[0]), int(phases_history.shape[1])
     flat: FloatArray = np.ascontiguousarray(phases_history.ravel(), dtype=np.float64)

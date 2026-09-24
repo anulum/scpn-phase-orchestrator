@@ -36,6 +36,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   backend. Admission runs each compiled Mojo executable once with empty input
   and caches the verdict per build; on a loaded workstation one launch took
   0.06–0.23 s.
+- `winding_numbers()` rejects a one-dimensional or scalar history instead of
+  returning an empty array; a single oscillator's two full turns gave `[]`.
+  `datetime64` / `timedelta64` histories are rejected. The winding reference
+  page no longer lists time-reversal antisymmetry as an invariant: the `floor`
+  counts a net drift of `-0.01` rad as `-1` and `+0.01` rad as `0`.
 - `TwinConformalGate` no longer opens under persistent drift. Adaptive
   conformal inference lowers the miscoverage after each flagged tick; at zero,
   or with fewer calibration scores than the level needs, the band became
