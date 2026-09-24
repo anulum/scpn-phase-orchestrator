@@ -57,64 +57,38 @@ class TestTransferEntropy:
         assert te_fwd >= 0.0
 
     def test_short_signals(self):
-        previous = te_mod.ACTIVE_BACKEND
-        te_mod.ACTIVE_BACKEND = "python"
-        try:
-            assert phase_transfer_entropy(np.array([1.0, 2.0]), np.array([1.0])) == 0.0
-        finally:
-            te_mod.ACTIVE_BACKEND = previous
+        """Equal-length series shorter than three samples carry no estimate."""
+        assert phase_transfer_entropy(np.array([1.0, 2.0]), np.array([1.0, 0.5])) == 0.0
 
-    def test_length_mismatch_shortens_to_shortest_series(self) -> None:
-        previous = te_mod.ACTIVE_BACKEND
-        te_mod.ACTIVE_BACKEND = "python"
-        try:
-            source = np.array([0.0, 0.4, 0.8, 1.2, 1.6], dtype=np.float64)
-            target = np.array([0.0, 0.25, 0.5], dtype=np.float64)
-            result = phase_transfer_entropy(source, target, n_bins=12)
-            expected = phase_transfer_entropy(source[:3], target, n_bins=12)
-            assert result == pytest.approx(expected, rel=0.0, abs=1e-12)
-        finally:
-            te_mod.ACTIVE_BACKEND = previous
-
-    def test_backend_receives_shortest_equal_length_series_for_mismatch(
-        self, monkeypatch: pytest.MonkeyPatch
+    @pytest.mark.parametrize(
+        ("source_length", "target_length"), [(5, 3), (2, 4), (2, 1), (400, 399)]
+    )
+    def test_length_mismatch_is_rejected_before_any_backend_runs(
+        self, source_length: int, target_length: int
     ) -> None:
-        calls: list[tuple[tuple[int, ...], tuple[int, ...]]] = []
+        """Series of different lengths are misaligned input, not a shorter pair.
 
-        def fake_phase_te(src: np.ndarray, tgt: np.ndarray, _bins: int) -> float:
-            calls.append((src.shape, tgt.shape))
-            return te_mod._phase_te_reference(src, tgt, _bins)
+        The dispatcher is not replaced: the active backend (Rust when the kernel
+        is installed) is never reached because validation fails first.
+        """
+        source = np.linspace(0.0, 1.6, source_length)
+        target = np.linspace(0.0, 0.5, target_length)
+        with pytest.raises(ValueError, match="same length"):
+            phase_transfer_entropy(source, target, n_bins=12)
 
-        monkeypatch.setattr(
-            te_mod,
-            "_dispatch",
-            lambda fn_name: fake_phase_te if fn_name == "phase_te" else None,
-        )
-
-        source = np.array([0.0, 0.4, 0.8, 1.2, 1.6], dtype=np.float64)
-        target = np.array([0.0, 0.25, 0.5], dtype=np.float64)
-        result = phase_transfer_entropy(source, target, n_bins=12)
-
-        assert result == pytest.approx(
-            te_mod._phase_te_reference(source[:3], target, 12),
-            abs=1e-12,
-        )
-        assert calls == [((3,), (3,))]
-
-    def test_short_signal_source_is_rejected_as_zero_regardless_of_target(self) -> None:
-        previous = te_mod.ACTIVE_BACKEND
-        te_mod.ACTIVE_BACKEND = "python"
-        try:
-            assert (
-                phase_transfer_entropy(
-                    np.array([0.1, 0.2], dtype=np.float64),
-                    np.array([0.3, 0.4, 0.5, 0.6], dtype=np.float64),
-                    n_bins=10,
-                )
-                == 0.0
-            )
-        finally:
-            te_mod.ACTIVE_BACKEND = previous
+    @pytest.mark.parametrize(
+        "phases",
+        [
+            np.array([0, 60_000, 120_000], dtype="timedelta64[ms]"),
+            np.array(["2026-09-24", "2026-09-25", "2026-09-26"], dtype="datetime64[D]"),
+        ],
+    )
+    def test_time_unit_arrays_are_rejected(self, phases: np.ndarray) -> None:
+        """Unit-carrying arrays would be read in their own unit, not radians."""
+        with pytest.raises(ValueError, match="plain radians"):
+            phase_transfer_entropy(phases, phases)
+        with pytest.raises(ValueError, match="plain radians"):
+            transfer_entropy_matrix(np.vstack([phases, phases]))
 
     @pytest.mark.parametrize("n_bins", [0, 1, True, 4.5])
     def test_phase_te_rejects_invalid_bin_counts(self, n_bins):

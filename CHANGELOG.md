@@ -36,6 +36,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   backend. Admission runs each compiled Mojo executable once with empty input
   and caches the verdict per build; on a loaded workstation one launch took
   0.06–0.23 s.
+- `phase_transfer_entropy()` now raises `ValueError` when source and target
+  differ in length, as its documentation always required; it used to cut both
+  to the shorter length silently. Both transfer-entropy entry points reject
+  `datetime64` and `timedelta64` arrays, which they had read as numbers in
+  their own unit. The `transfer_entropy_matrix` docstring gave the shape as
+  `(T, N)`; it is `(N, T)`, one row per oscillator.
 - `synchronisation_warning()` no longer coerces non-numeric phases. Text such
   as `"1"`, booleans inside object arrays and `timedelta64` values were
   converted to floats and analysed as radians; they now raise `ValueError`.
