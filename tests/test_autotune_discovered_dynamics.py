@@ -186,3 +186,19 @@ def test_discovered_dynamics_is_frozen() -> None:
 
     with pytest.raises(AttributeError):
         record.status = "mutated"  # type: ignore[misc]
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "match"),
+    [
+        ("equations", "dtheta0/dt = 1.0", "equations must be a list or tuple"),
+        ("equations", ["ok", 3], "equations must be a list or tuple"),
+        ("coupling_edges", [("0", "1", 0.5)], "coupling_edges must be a list"),
+        ("coupling_edges", {"source": 0}, "coupling_edges must be a list"),
+    ],
+)
+def test_malformed_equation_and_edge_shapes_are_rejected(field, value, match) -> None:
+    """A bare string used to become one 'equation' per character."""
+    block = {"status": "skipped_non_phase_like", field: value}
+    with pytest.raises(ValueError, match=match):
+        discovered_dynamics_from_block(block)

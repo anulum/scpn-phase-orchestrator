@@ -36,6 +36,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   backend. Admission runs each compiled Mojo executable once with empty input
   and caches the verdict per build; on a loaded workstation one launch took
   0.06–0.23 s.
+- `discovered_dynamics_from_block()` rejects an `equations` field that is not a
+  list or tuple of strings; a bare string was split into one "equation" per
+  character. `coupling_edges` must be a list or tuple of mappings.
 - Phase-SINDy confidence no longer calls a failed fit a discovery. An R² of
   NaN fails every comparison, so it passed the R² gate and the fit was
   classified `discovered` (tier `partial`); so did +inf and impossible values
