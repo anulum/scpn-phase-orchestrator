@@ -24,6 +24,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- A `zeta` control action in `simulate` now lasts exactly its TTL, and then
+  the spec's baseline drive returns. At expiry the drive used to be set to
+  0.0, dropping a non-zero baseline (0.02 in `minimal_domain`) for the rest
+  of the run. `int(ttl_s / sample_period_s)` also meant a TTL of 0, or one
+  shorter than a step, never expired, and every other TTL ran one step short
+  (0.05 s at 0.01 s gave 4 steps). A partial step now rounds up, and a zero
+  TTL has no lasting effect.
 - Two shipped domainpacks now run, and `validate_binding_spec` refuses what
   `simulate` refuses. Both `agent_coordination` and `identity_coherence`
   validated cleanly and then failed on the first `spo run`.
