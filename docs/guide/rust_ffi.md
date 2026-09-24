@@ -36,15 +36,22 @@ Verify the selected environment:
 python tools/install_spo_kernel.py --check-only
 ```
 
-The equivalent raw maturin command is:
+The helper runs `python -m maturin develop --release` for the selected
+interpreter, but not in the way a bare command would:
 
-```bash
-python -m maturin develop --release -m spo-kernel/crates/spo-ffi/Cargo.toml
-```
-
-Using `python -m maturin` is intentional: it prevents a globally installed
-`maturin` executable from building into a different interpreter than the one
-used by `spo run`, tests, or notebooks.
+- `maturin develop` installs into the environment named by `VIRTUAL_ENV` (or
+  `CONDA_PREFIX`, or a `.venv` found above the working directory), not into the
+  interpreter that runs it. The helper sets `VIRTUAL_ENV` to the prefix of the
+  interpreter given by `--python`.
+- In an environment created by uv, maturin installs through uv, and uv applies
+  the configuration of the project it runs in. This repository's
+  `[tool.uv] exclude-dependencies` lists `spo-kernel`, so a bare
+  `maturin develop` run from the checkout reports the kernel as installed while
+  leaving the previous build (or none) in place. The helper runs maturin from an
+  empty directory outside any project.
+- After installing, the helper compares the SHA-256 of the extension the
+  environment would load with the library cargo built, and fails if they
+  differ. The JSON record reports both as `extension` and `extension_sha256`.
 
 You can inspect the command without compiling Rust:
 
