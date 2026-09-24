@@ -178,6 +178,11 @@ def build_owned_live_connector_runtime_record(
 ) -> dict[str, object]:
     """Validate an owned live connector boundary without opening transport.
 
+    The envelope is built from the binding spec on disk. If that spec no longer
+    yields the contract the replay's connector plan recorded, the record is
+    blocked: the record names the replay's ``contract_hash``, so an envelope
+    built from an edited spec would not match it.
+
     Parameters
     ----------
     result : StudioReplayResult
@@ -243,6 +248,17 @@ def build_owned_live_connector_runtime_record(
     spec_path = _result_binding_spec_path(result)
     spec = load_binding_spec(spec_path)
     contract = build_digital_twin_binding_contract(spec)
+    if contract.contract_hash != base["contract_hash"]:
+        return {
+            **base,
+            "status": "blocked",
+            "blocked_reasons": [
+                "binding spec changed since the replay; replay it again"
+            ],
+            "response": {},
+            "adapter": {},
+            "queued_count": 0,
+        }
     envelope = build_digital_twin_sync_envelope(
         contract,
         capability=_require_non_empty_text(capability, "capability"),
