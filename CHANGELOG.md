@@ -24,6 +24,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `spo audit-detector` refuses a `detector_name` that is not a non-empty
+  string. `str(spec.get("detector_name"))` turned `null` into `"None"` and a
+  number into its digits, and the sealed audit record then named that as the
+  audited detector.
 - A NaN per-node privacy spend can no longer bypass the federated DP-noise
   budget. `epsilon_spent = NaN` made the summed spend NaN, so the check
   `spent > epsilon` never fired and the request was admitted whatever the
