@@ -404,8 +404,9 @@ class TestPayload:
     """Sealed payload assembly, alignment, and JSON safety."""
 
     @pytest.fixture(scope="class")
+    @classmethod
     def corpus(
-        self, forced_export: Path, ambient_export: Path
+        cls, forced_export: Path, ambient_export: Path
     ) -> tuple[list, list, list, object, object]:
         records = [
             case_records("WECC_case1", forced_export),
