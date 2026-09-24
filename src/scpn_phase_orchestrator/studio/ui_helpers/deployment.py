@@ -26,6 +26,24 @@ from ._shared import (
     _require_sequence,
 )
 
+# The container image's entrypoint runs the ``spo`` CLI (see ``Dockerfile``), so a
+# ``docker run`` or compose ``command`` passes CLI arguments without ``spo``, and
+# the image's working directory is ``/app`` unless ``-w`` selects the mount. A
+# compose ``CMD-SHELL`` healthcheck bypasses the entrypoint and calls the same
+# callable directly; the image installs no ``spo`` console script.
+_IMAGE_TAG = "scpn-phase-orchestrator:local"
+_IMAGE_CLI = 'python -c "from scpn_phase_orchestrator.runtime.cli import main; main()"'
+_DOCKER_BUILD_COMMAND = f"docker build -t {_IMAGE_TAG} ."
+_DOCKER_RUN_COMMAND = (
+    f'docker run --rm -v "$PWD":/workspace -w /workspace {_IMAGE_TAG} '
+    "run binding_spec.yaml --audit audit.jsonl"
+)
+_WASM_BUILD_COMMAND = (
+    "cd spo-kernel && wasm-pack build crates/spo-wasm "
+    "--target web --out-dir ../../../docs/wasm-pkg"
+)
+_AUDIT_REVIEW_COMMAND = "python -m json.tool spo_studio_audit.json"
+
 
 def build_export_manifests(
     *,
@@ -62,7 +80,7 @@ def build_export_manifests(
     docker_payload = json.dumps(
         {
             "project_name": project_name,
-            "image": "scpn-phase-orchestrator:local",
+            "image": _IMAGE_TAG,
             "command": "spo run binding_spec.yaml --audit audit.jsonl",
             "enabled": not deploy_warnings,
             "disabled_reasons": list(deploy_warnings),
@@ -92,21 +110,21 @@ def build_export_manifests(
             target_kind="audit_summary",
             file_name="spo_studio_audit.json",
             payload=audit_json,
-            command="spo audit summary spo_studio_audit.json",
+            command=_AUDIT_REVIEW_COMMAND,
             warnings=deploy_warnings,
         ),
         ExportManifest.review_artifact(
             target_kind="docker_manifest",
             file_name="docker_manifest.json",
             payload=docker_payload,
-            command="docker compose config",
+            command=_DOCKER_BUILD_COMMAND,
             warnings=deploy_warnings,
         ),
         ExportManifest.review_artifact(
             target_kind="wasm_manifest",
             file_name="wasm_manifest.json",
             payload=wasm_payload,
-            command="spo export wasm --manifest wasm_manifest.json",
+            command=_WASM_BUILD_COMMAND,
             warnings=deploy_warnings,
         ),
     )
@@ -154,11 +172,8 @@ def build_deployment_readiness(
                     "docker_manifest.json",
                 ],
                 "commands": [
-                    "docker compose config",
-                    "docker build -t scpn-phase-orchestrator:local .",
-                    "docker run --rm -v $PWD:/workspace "
-                    "scpn-phase-orchestrator:local "
-                    "spo run binding_spec.yaml --audit audit.jsonl",
+                    _DOCKER_BUILD_COMMAND,
+                    _DOCKER_RUN_COMMAND,
                 ],
                 "operator_action": "run docker manifest review before packaging",
             },
@@ -171,8 +186,7 @@ def build_deployment_readiness(
                     "wasm_manifest.json",
                 ],
                 "commands": [
-                    "cd spo-kernel && wasm-pack build crates/spo-wasm "
-                    "--target web --out-dir ../../../docs/wasm-pkg",
+                    _WASM_BUILD_COMMAND,
                 ],
                 "operator_action": "review browser-safe replay constraints",
             },
@@ -553,40 +567,39 @@ def _unique_artifacts(targets: Sequence[Mapping[str, object]]) -> list[str]:
 
 def _studio_service_processes() -> list[dict[str, object]]:
     """Return the review-only studio service definitions (no network, no actuation)."""
-    validate_binding_command = (
-        "python -m scpn_phase_orchestrator.runtime.cli validate binding_spec.yaml"
-    )
+    validate_binding_command = "validate binding_spec.yaml"
+    validate_binding_healthcheck = f"{_IMAGE_CLI} {validate_binding_command}"
     return [
         {
             "name": "spo-studio-ui",
-            "image": "scpn-phase-orchestrator:local",
+            "image": _IMAGE_TAG,
             "command": (
                 "streamlit run tools/spo_studio.py "
                 "--server.address 127.0.0.1 --server.port 8501"
             ),
             "ports": ["127.0.0.1:8501:8501"],
             "profiles": ["studio"],
-            "healthcheck": validate_binding_command,
+            "healthcheck": validate_binding_healthcheck,
             "network_opened": False,
             "actuation_permitted": False,
         },
         {
             "name": "spo-binding-validator",
-            "image": "scpn-phase-orchestrator:local",
+            "image": _IMAGE_TAG,
             "command": validate_binding_command,
             "ports": [],
             "profiles": ["validation"],
-            "healthcheck": validate_binding_command,
+            "healthcheck": validate_binding_healthcheck,
             "network_opened": False,
             "actuation_permitted": False,
         },
         {
             "name": "spo-connector-boundary",
-            "image": "scpn-phase-orchestrator:local",
+            "image": _IMAGE_TAG,
             "command": validate_binding_command,
             "ports": [],
             "profiles": ["connector-boundary-review"],
-            "healthcheck": validate_binding_command,
+            "healthcheck": validate_binding_healthcheck,
             "network_opened": False,
             "actuation_permitted": False,
         },
