@@ -13,9 +13,18 @@ validation, resolved runtime summaries, N-channel algebra, symbolic generation,
 and digital-twin handoff records. Loader and validator paths fail closed on
 malformed structure while resolved summaries intentionally expose only
 structural choices and configuration key names, not deployment-local secrets.
+
+The topos obligation examples are loaded on first attribute access. They are
+built from supervisor policy rules, and the supervisor and monitor packages
+import binding types; an eager import here closed that loop, so importing
+``scpn_phase_orchestrator.supervisor`` or ``scpn_phase_orchestrator.monitor.stl``
+first in a fresh interpreter failed with a circular ``ImportError``.
 """
 
 from __future__ import annotations
+
+import importlib
+from typing import TYPE_CHECKING, Any
 
 from scpn_phase_orchestrator.binding.channel_algebra import (
     ChannelAlgebraReport,
@@ -70,11 +79,6 @@ from scpn_phase_orchestrator.binding.semantic import (
     SemanticDomainCompiler,
     compile_symbolic_binding,
 )
-from scpn_phase_orchestrator.binding.topos_examples import (
-    ToposDomainObligation,
-    ToposProofObligation,
-    build_topos_domain_obligation_examples,
-)
 from scpn_phase_orchestrator.binding.topos_semantic import (
     SymbolicBindingMorphism,
     SymbolicBindingObject,
@@ -87,6 +91,22 @@ from scpn_phase_orchestrator.binding.validator import (
     validate_binding_spec,
     validate_binding_spec_security,
 )
+
+if TYPE_CHECKING:
+    from scpn_phase_orchestrator.binding.topos_examples import (
+        ToposDomainObligation,
+        ToposProofObligation,
+        build_topos_domain_obligation_examples,
+    )
+
+_LAZY_IMPORTS: dict[str, tuple[str, str]] = {
+    "ToposDomainObligation": (".topos_examples", "ToposDomainObligation"),
+    "ToposProofObligation": (".topos_examples", "ToposProofObligation"),
+    "build_topos_domain_obligation_examples": (
+        ".topos_examples",
+        "build_topos_domain_obligation_examples",
+    ),
+}
 
 __all__ = [
     "BindingLoadError",
@@ -143,3 +163,18 @@ __all__ = [
     "validate_symbolic_binding_functor",
     "write_digital_twin_sync_jsonl",
 ]
+
+
+def __getattr__(name: str) -> Any:
+    """Load a lazily exported topos example name on first access."""
+    if name in _LAZY_IMPORTS:
+        module_path, attr_name = _LAZY_IMPORTS[name]
+        module = importlib.import_module(module_path, __package__)
+        return getattr(module, attr_name)
+    msg = f"module {__name__!r} has no attribute {name!r}"
+    raise AttributeError(msg)
+
+
+def __dir__() -> list[str]:
+    """Return the public names, including the lazily loaded ones."""
+    return sorted(set(globals()) | set(__all__))
