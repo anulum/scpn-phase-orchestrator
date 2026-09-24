@@ -271,16 +271,29 @@ def _first_sustained_breach(
 
 
 def _validate_phases(phases: object) -> FloatArray:
-    """Return the phases as a validated 2-D finite array with ≥ 2 nodes."""
-    raw = np.asarray(phases)
+    """Return the phases as a validated 2-D finite array with ≥ 2 nodes.
+
+    Only real numeric samples are phases: text that happens to parse as a
+    number, booleans (also inside object arrays) and complex values are
+    rejected rather than coerced.
+    """
+    try:
+        raw = np.asarray(phases)
+    except ValueError as exc:
+        raise ValueError("phases must be a real float array") from exc
     if raw.dtype == np.bool_:
         raise ValueError("phases must not contain boolean values")
     if np.iscomplexobj(raw):
         raise ValueError("phases must be real-valued radians")
-    try:
-        array = raw.astype(np.float64, copy=True)
-    except (TypeError, ValueError) as exc:
-        raise ValueError("phases must be a real float array") from exc
+    if raw.dtype.kind == "O":
+        for item in raw.flat:
+            if isinstance(item, (bool, np.bool_)):
+                raise ValueError("phases must not contain boolean values")
+            if not isinstance(item, Real):
+                raise ValueError("phases must be a real float array")
+    elif raw.dtype.kind not in "fiu":
+        raise ValueError("phases must be a real float array")
+    array = raw.astype(np.float64, copy=True)
     if array.ndim != 2:
         raise ValueError(f"phases shape {raw.shape} must be two-dimensional (N, T)")
     if array.shape[0] < 2:

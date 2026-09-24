@@ -187,3 +187,31 @@ def test_summary_handles_an_empty_result() -> None:
     assert summary["max_synchrony_index"] == 0.0
     assert summary["max_robust_z"] == 0.0
     assert summary["max_relative_rise"] == 0.0
+
+
+@pytest.mark.parametrize(
+    ("phases", "match"),
+    [
+        (np.array([["0", "1"], ["1", "0"]]), "real float array"),
+        (np.array([[b"0", b"1"], [b"1", b"0"]]), "real float array"),
+        (np.array([["0.0", 1.0], [1.0, 0.0]], dtype=object), "real float array"),
+        (np.array([[0.0, True], [1.0, 0.0]], dtype=object), "boolean"),
+        (np.array([[0.0, 1.0j], [1.0, 0.0]], dtype=object), "real float array"),
+        (
+            np.array([[0, 60_000], [0, 1]], dtype="timedelta64[ms]"),
+            "real float array",
+        ),
+        ([[0.0, 1.0], [1.0]], "real float array"),
+    ],
+)
+def test_non_numeric_phases_are_rejected_not_coerced(phases, match) -> None:
+    """Text, booleans hidden in object arrays and time units are not radians."""
+    with pytest.raises(ValueError, match=match):
+        synchronisation_warning(phases, window=1, step=1)
+
+
+def test_object_array_of_reals_is_accepted_as_phases() -> None:
+    """Python and NumPy reals in an object array are valid phases."""
+    phases = np.array([[0.0, np.float32(0.5), 1], [0.0, 0.5, 1.0]], dtype=object)
+    result = synchronisation_warning(phases, window=1, step=1)
+    np.testing.assert_allclose(result.synchrony_index, [1.0, 1.0, 1.0])
