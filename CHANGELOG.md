@@ -36,6 +36,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   backend. Admission runs each compiled Mojo executable once with empty input
   and caches the verdict per build; on a loaded workstation one launch took
   0.06–0.23 s.
+- A broken Julia set-up no longer stops the package from importing.
+  `juliacall` reports an unusable installation (for example
+  `PYTHON_JULIACALL_EXE` pointing at a missing executable) with `ValueError` or
+  a bare `Exception`, which the backend resolvers did not treat as "backend
+  unavailable", so importing `monitor.transfer_entropy`, `coupling.spectral`,
+  `upde.order_params` and every other module with a Julia backend failed. The
+  Julia runtime probes now report such failures as `ImportError`; with the fix
+  all 757 modules import under that configuration and the Julia backend is
+  simply left out.
 - `discovered_dynamics_from_block()` rejects an `equations` field that is not a
   list or tuple of strings; a bare string was split into one "equation" per
   character. `coupling_edges` must be a list or tuple of mappings.
