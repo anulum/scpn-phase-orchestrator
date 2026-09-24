@@ -26,6 +26,8 @@ import equinox as eqx
 import jax
 import jax.numpy as jnp
 
+from .functional import _require_method
+
 TWO_PI = 2.0 * jnp.pi
 
 
@@ -134,7 +136,13 @@ def theta_neuron_forward(
     -------
     tuple[jax.Array, jax.Array]
         (final, trajectory) where trajectory is (n_steps, N).
+
+    Raises
+    ------
+    ValueError
+        If ``method`` is not ``"rk4"`` or ``"euler"``.
     """
+    method = _require_method(method)
     step_fn = theta_neuron_rk4_step if method == "rk4" else theta_neuron_step
 
     def body(carry: jax.Array, _: None) -> tuple[jax.Array, jax.Array]:

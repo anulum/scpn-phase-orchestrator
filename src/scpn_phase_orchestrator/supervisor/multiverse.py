@@ -678,7 +678,7 @@ def simulate_multiverse_counterfactual_branches(
     dt : float
         Integration step size.
     method : str
-        Integration method (``euler``, ``rk4``, or ``rk45``).
+        Integration method, ``euler`` or ``rk4``.
     backend : str
         Name of the compute backend to use.
 

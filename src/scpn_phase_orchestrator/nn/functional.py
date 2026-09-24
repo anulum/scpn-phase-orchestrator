@@ -106,6 +106,17 @@ def _require_positive_int_or_none(value: object, name: str) -> int | None:
     return result
 
 
+def _require_method(method: object) -> str:
+    """Return ``method`` if it names an integrator, else raise ``ValueError``.
+
+    Every non-``"rk4"`` value used to select explicit Euler, so a typo such as
+    ``"RK4"`` or an unsupported ``"rk45"`` silently changed the integrator.
+    """
+    if method not in ("rk4", "euler"):
+        raise ValueError(f"method must be 'rk4' or 'euler', got {method!r}")
+    return str(method)
+
+
 def kuramoto_step(
     phases: jax.Array,
     omegas: jax.Array,
@@ -205,7 +216,13 @@ def kuramoto_forward(
     tuple[jax.Array, jax.Array]
         : final: (N,) phases after n_steps trajectory: (n_steps, N) full phase
         trajectory.
+
+    Raises
+    ------
+    ValueError
+        If ``method`` is not ``"rk4"`` or ``"euler"``.
     """
+    method = _require_method(method)
     step_fn = kuramoto_rk4_step if method == "rk4" else kuramoto_step
 
     def body(carry: jax.Array, _: None) -> tuple[jax.Array, jax.Array]:
@@ -336,7 +353,13 @@ def kuramoto_forward_masked(
     -------
     tuple[jax.Array, jax.Array]
         (final, trajectory) — same as kuramoto_forward.
+
+    Raises
+    ------
+    ValueError
+        If ``method`` is not ``"rk4"`` or ``"euler"``.
     """
+    method = _require_method(method)
     step_fn = kuramoto_rk4_step_masked if method == "rk4" else kuramoto_step_masked
 
     def body(carry: jax.Array, _: None) -> tuple[jax.Array, jax.Array]:
@@ -462,7 +485,13 @@ def winfree_forward(
     -------
     tuple[jax.Array, jax.Array]
         (final, trajectory).
+
+    Raises
+    ------
+    ValueError
+        If ``method`` is not ``"rk4"`` or ``"euler"``.
     """
+    method = _require_method(method)
     step_fn = winfree_rk4_step if method == "rk4" else winfree_step
 
     def body(carry: jax.Array, _: None) -> tuple[jax.Array, jax.Array]:
@@ -603,7 +632,13 @@ def simplicial_forward(
     -------
     tuple[jax.Array, jax.Array]
         (final, trajectory) where trajectory is (n_steps, N).
+
+    Raises
+    ------
+    ValueError
+        If ``method`` is not ``"rk4"`` or ``"euler"``.
     """
+    method = _require_method(method)
     step_fn = simplicial_rk4_step if method == "rk4" else simplicial_step
 
     def body(carry: jax.Array, _: None) -> tuple[jax.Array, jax.Array]:
@@ -774,7 +809,13 @@ def stuart_landau_forward(
     tuple[jax.Array, jax.Array, jax.Array, jax.Array]
         (final_phases, final_amplitudes, phase_traj, amp_traj) where trajectories are
         (n_steps, N).
+
+    Raises
+    ------
+    ValueError
+        If ``method`` is not ``"rk4"`` or ``"euler"``.
     """
+    method = _require_method(method)
     step_fn = stuart_landau_rk4_step if method == "rk4" else stuart_landau_step
 
     def body(
