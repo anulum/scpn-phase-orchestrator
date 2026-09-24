@@ -69,8 +69,13 @@ evidence. A wrong-sized engine seed fails the gate instead of silently skipping
 the coherence check; phase and imprint vectors must be one-dimensional real
 numeric arrays with finite entries (boolean, complex, text, object, non-finite,
 and wrong-dimensional evidence is rejected); extractor quality values must be
-finite floats in the unit interval before any scoring or collapse decision; and
-an invalid oscillator count raises instead of reporting.
+finite reals in the unit interval and extractor amplitudes, which weight the
+channel quality score, finite and non-negative before any scoring or collapse
+decision, so a non-finite amplitude can no longer turn the score into NaN and
+hide a low-quality warning; the imprint vector must be non-negative as the
+imprint model requires; NumPy reals and integers are accepted where Python ones
+are; a session with no extractor records fails as a signal collapse; and an
+invalid oscillator count raises instead of reporting.
 
 | Parent item | Completed evidence consolidated here | Remaining open scope |
 |-------------|--------------------------------------|----------------------|

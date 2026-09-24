@@ -16,11 +16,19 @@ operator review, and fail-closed orchestration handoffs.
 
 The gate is fail-closed on malformed evidence: phase and imprint vectors must
 be one-dimensional real numeric arrays with finite entries and the expected
-oscillator count, and extractor quality values must be finite floats in
-``[0, 1]``. Any violation is recorded as an error and fails the gate rather
-than being silently skipped; quality scoring and coherence metrics are only
-computed from evidence that passed validation. ``n_osc`` is a caller-supplied
-structural parameter, so an invalid ``n_osc`` raises instead of reporting.
+oscillator count, the imprint vector must be non-negative (the imprint model
+rejects negative accumulation), every extractor record must be a
+:class:`PhaseState` whose quality is a finite real in ``[0, 1]`` and whose
+amplitude is a finite, non-negative real. Amplitudes are the weights of the
+per-channel quality score, so a non-finite amplitude would otherwise turn the
+score into NaN and silently suppress the low-quality warning. Python and NumPy
+reals are accepted; booleans, complex values, text and other objects are not.
+Any violation is recorded as an error and fails the gate rather than being
+silently skipped; quality scoring and coherence metrics are only computed from
+evidence that passed validation. A session with no extractor records fails as
+a signal collapse. ``n_osc`` is a caller-supplied structural parameter (a
+Python or NumPy integer, not a boolean), so an invalid ``n_osc`` raises instead
+of reporting.
 """
 
 from __future__ import annotations
@@ -59,8 +67,19 @@ class SessionCoherenceReport:
     passed: bool = True
 
 
+def _is_real_scalar(value: object) -> bool:
+    """Return whether ``value`` is a Python or NumPy real number, not a boolean."""
+    if isinstance(value, (bool, np.bool_)):
+        return False
+    return isinstance(value, (int, float, np.integer, np.floating))
+
+
 def _validate_real_vector(
-    name: str, candidate: object, report: SessionCoherenceReport
+    name: str,
+    candidate: object,
+    report: SessionCoherenceReport,
+    *,
+    non_negative: bool = False,
 ) -> FloatArray | None:
     """Validate one evidence vector; record an error and return None on failure.
 
@@ -72,6 +91,8 @@ def _validate_real_vector(
         Value supplied as the evidence vector.
     report : SessionCoherenceReport
         Report collecting validation errors.
+    non_negative : bool, optional
+        Also reject negative entries.
 
     Returns
     -------
@@ -102,38 +123,71 @@ def _validate_real_vector(
         report.errors.append(f"{name} contains non-finite entries")
         report.passed = False
         return None
+    if non_negative and np.any(vector < 0.0):
+        report.errors.append(f"{name} contains negative entries")
+        report.passed = False
+        return None
     return vector
 
 
-def _validate_quality_evidence(
+def _validate_extractor_evidence(
     phase_states: list[PhaseState], report: SessionCoherenceReport
 ) -> bool:
-    """Check every extractor quality value is a finite float in ``[0, 1]``.
+    """Check the extractor records the quality scorer consumes.
+
+    Every record must be a :class:`PhaseState`; its quality must be a finite
+    real in ``[0, 1]`` and its amplitude, the scorer's weight, a finite real
+    that is not negative.
 
     Parameters
     ----------
     phase_states : list[PhaseState]
-        Extracted states whose quality fields feed the scorer.
+        Extracted states whose quality and amplitude fields feed the scorer.
     report : SessionCoherenceReport
         Report collecting validation errors.
 
     Returns
     -------
     bool
-        True when all quality values are admissible.
+        True when there is at least one record and all are admissible.
     """
+    if not phase_states:
+        report.errors.append(
+            "Signal collapse: no extractor phase states supplied; the session "
+            "has no extraction evidence"
+        )
+        report.passed = False
+        return False
     valid = True
-    for ps in phase_states:
+    for index, ps in enumerate(phase_states):
+        if not isinstance(ps, PhaseState):
+            report.errors.append(
+                f"Phase state {index}: expected PhaseState, got {type(ps).__name__}"
+            )
+            report.passed = False
+            valid = False
+            continue
         quality = ps.quality
         if (
-            isinstance(quality, bool)
-            or not isinstance(quality, (int, float))
+            not _is_real_scalar(quality)
             or not np.isfinite(quality)
             or not 0.0 <= float(quality) <= 1.0
         ):
             report.errors.append(
                 f"Phase state {ps.node_id}: quality must be a finite float "
                 f"in [0, 1], got {quality!r}"
+            )
+            report.passed = False
+            valid = False
+        amplitude = ps.amplitude
+        if (
+            not _is_real_scalar(amplitude)
+            or not np.isfinite(amplitude)
+            or float(amplitude) < 0.0
+        ):
+            report.errors.append(
+                f"Phase state {ps.node_id}: amplitude must be a finite, "
+                f"non-negative float, got {amplitude!r}"
             )
             report.passed = False
             valid = False
@@ -157,7 +211,7 @@ def check_session_start(
     imprint_state : ImprintState
         loaded (or fresh) imprint state.
     n_osc : int
-        expected oscillator count; must be a positive int.
+        expected oscillator count; a positive Python or NumPy integer.
 
     Returns
     -------
@@ -167,21 +221,22 @@ def check_session_start(
     Raises
     ------
     TypeError
-        If ``n_osc`` is not an int (bool excluded).
+        If ``n_osc`` is not an integer (booleans excluded).
     ValueError
         If ``n_osc`` is not positive.
     """
-    if isinstance(n_osc, bool) or not isinstance(n_osc, int):
+    if isinstance(n_osc, (bool, np.bool_)) or not isinstance(n_osc, (int, np.integer)):
         raise TypeError(f"n_osc must be an int, got {type(n_osc).__name__}")
+    n_osc = int(n_osc)
     if n_osc < 1:
         raise ValueError(f"n_osc must be positive, got {n_osc}")
 
     report = SessionCoherenceReport()
     scorer = PhaseQualityScorer()
 
-    # Quality per channel — only scored when every quality value is admissible;
-    # a poisoned quality would silently disable the thresholds below.
-    if _validate_quality_evidence(phase_states, report):
+    # Quality per channel — only scored when every quality and amplitude is
+    # admissible; a poisoned value would silently disable the thresholds below.
+    if _validate_extractor_evidence(phase_states, report):
         by_channel: dict[str, list[PhaseState]] = {}
         for ps in phase_states:
             by_channel.setdefault(ps.channel, []).append(ps)
@@ -201,7 +256,9 @@ def check_session_start(
             report.passed = False
 
     # Imprint consistency
-    m_k = _validate_real_vector("Imprint vector m_k", imprint_state.m_k, report)
+    m_k = _validate_real_vector(
+        "Imprint vector m_k", imprint_state.m_k, report, non_negative=True
+    )
     if m_k is not None:
         if m_k.shape[0] != n_osc:
             report.errors.append(f"Imprint size mismatch: {m_k.shape[0]} != {n_osc}")
