@@ -45,6 +45,26 @@ def _require_number(value: object) -> float:
     return float(value)
 
 
+def _flag(payload: Mapping[str, object], key: str) -> bool:
+    """Return a JSON boolean field, defaulting to ``False`` when absent.
+
+    ``bool("false")`` is ``True`` and ``bool("")`` is ``False``, so a text flag
+    must be refused here rather than coerced before the dataclass checks it.
+    """
+    value = payload.get(key, False)
+    if not isinstance(value, bool):
+        raise ValueError(f"{key} must be a JSON boolean, got {value!r}")
+    return value
+
+
+def _text(payload: Mapping[str, object], key: str) -> str:
+    """Return a required non-empty JSON string field (``str(None)`` is "None")."""
+    value = payload[key]
+    if not isinstance(value, str) or not value:
+        raise ValueError(f"{key} must be a non-empty string, got {value!r}")
+    return value
+
+
 def _scalar_or_array(value: object) -> float | NDArray[np.float64]:
     """Coerce a JSON number or list into a float or a float array."""
     if isinstance(value, list):
@@ -83,8 +103,8 @@ def _observation(payload: Mapping[str, object]) -> RewardObservation:
     return RewardObservation(
         coherence=_require_number(payload["coherence"]),
         previous_coherence=_optional_float(payload, "previous_coherence"),
-        unsafe=bool(payload.get("unsafe", False)),
-        regime_changed=bool(payload.get("regime_changed", False)),
+        unsafe=_flag(payload, "unsafe"),
+        regime_changed=_flag(payload, "regime_changed"),
         lyapunov_exponent=_optional_float(payload, "lyapunov_exponent"),
         stl_robustness=_optional_float(payload, "stl_robustness"),
         safety_cost=_require_number(payload.get("safety_cost", 0.0)),
@@ -97,16 +117,16 @@ def _constraints(payload: Mapping[str, object]) -> SafetyConstraintConfig:
         max_lyapunov_exponent=_optional_float(payload, "max_lyapunov_exponent"),
         min_stl_robustness=_optional_float(payload, "min_stl_robustness"),
         max_safety_cost=_optional_float(payload, "max_safety_cost"),
-        require_lyapunov=bool(payload.get("require_lyapunov", False)),
-        require_stl=bool(payload.get("require_stl", False)),
-        require_safety_cost=bool(payload.get("require_safety_cost", False)),
+        require_lyapunov=_flag(payload, "require_lyapunov"),
+        require_stl=_flag(payload, "require_stl"),
+        require_safety_cost=_flag(payload, "require_safety_cost"),
     )
 
 
 def _provenance(payload: Mapping[str, object]) -> NumericProvenance:
     """Build the numeric provenance from a scenario mapping."""
     return NumericProvenance(
-        active_backend=str(payload["active_backend"]),
+        active_backend=_text(payload, "active_backend"),
         parity_tolerance=_require_number(payload["parity_tolerance"]),
     )
 
@@ -144,7 +164,7 @@ def supervisor_candidate(scenario: str, output: str | None) -> None:
         observations = [_observation(item) for item in payload["observations"]]
         constraints = _constraints(payload.get("constraints", {}))
         provenance = _provenance(payload["numeric_provenance"])
-        safety_tier = str(payload["safety_tier"])
+        safety_tier = _text(payload, "safety_tier")
     except (OSError, KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
         raise click.ClickException(str(exc)) from exc
 

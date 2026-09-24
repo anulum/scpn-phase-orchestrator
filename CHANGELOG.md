@@ -24,6 +24,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `spo supervisor-candidate` no longer coerces flags and labels before the
+  autotune dataclasses validate them. The dataclasses refuse a non-boolean
+  flag, but the CLI applied `bool()` first, so `"require_stl": ""` silently
+  disabled a safety requirement and `"unsafe": "false"` marked a safe tick
+  unsafe. `str(None)` also put a backend named "None" into the sealed
+  provenance. Flags must now be JSON booleans, and `active_backend` and
+  `safety_tier` must be non-empty strings.
 - `spo queuewaves check` analyses the services it monitors. The command was
   documented as "scrapes once, runs the pipeline … use in CI or cron", but it
   never contacted Prometheus. It fed seeded random noise to every service and
