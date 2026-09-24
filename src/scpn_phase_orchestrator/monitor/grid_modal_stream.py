@@ -49,7 +49,7 @@ from typing import TYPE_CHECKING, TypeAlias, cast
 
 import numpy as np
 
-from scpn_phase_orchestrator.assurance._hashing import load_sealed_json
+from scpn_phase_orchestrator.monitor._sealed_record import load_sealed_json
 from scpn_phase_orchestrator.monitor.grid_modal_growth import (
     DEFAULT_AGGREGATION,
     DEFAULT_RECENCY_TOP,

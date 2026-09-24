@@ -22,7 +22,11 @@ from pathlib import Path
 
 import pytest
 
-from scpn_phase_orchestrator.assurance._hashing import canonical_record_hash
+from scpn_phase_orchestrator.assurance import _hashing as assurance_hashing
+from scpn_phase_orchestrator.monitor._sealed_record import (
+    canonical_record_hash,
+    load_sealed_json,
+)
 from scpn_phase_orchestrator.monitor.grid_modal_stream import GridModalStreamMonitor
 
 _DIR = Path(__file__).resolve().parents[1] / "examples/real_data/psml_modal_growth"
@@ -113,3 +117,25 @@ def test_shipped_artefacts_still_configure_monitors() -> None:
         _load(_HEAD_TO_HEAD)["modal"]["score_threshold"]
     )
     assert streaming.r2_gate == 0.5
+
+
+def test_core_loader_is_the_one_assurance_re_exports() -> None:
+    # One implementation: the runtime assurance package re-exports the core one.
+    assert assurance_hashing.canonical_record_hash is canonical_record_hash
+    assert assurance_hashing.load_sealed_json is load_sealed_json
+
+
+@pytest.mark.parametrize("path", [_HEAD_TO_HEAD, _STREAM])
+def test_core_loader_verifies_the_shipped_artefacts(path: Path) -> None:
+    payload = load_sealed_json(path)
+    body = {k: v for k, v in payload.items() if k != "content_hash"}
+    assert payload["content_hash"] == canonical_record_hash(body)
+
+
+def test_core_loader_refuses_non_object_and_non_finite(tmp_path: Path) -> None:
+    array = tmp_path / "array.json"
+    array.write_text("[1, 2]", encoding="utf-8")
+    with pytest.raises(ValueError, match="JSON object"):
+        load_sealed_json(array)
+    with pytest.raises(ValueError, match="finite"):
+        canonical_record_hash({"x": float("nan")})
