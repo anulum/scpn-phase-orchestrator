@@ -587,6 +587,10 @@ def simulate(
                 context,
                 n_osc=n_osc,
             )
+            if amplitude_mode:
+                # The Stuart-Landau engine integrates sl_state, not phases, so a
+                # hook's phase edit must be written into it or it is dropped.
+                sl_state = np.concatenate([phases, sl_state[n_osc:]])
 
         eff_knm = coupling.knm
         eff_alpha = coupling.alpha
