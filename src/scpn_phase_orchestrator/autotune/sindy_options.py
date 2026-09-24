@@ -20,6 +20,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from math import isfinite
+from numbers import Real
 
 from scpn_phase_orchestrator.autotune.discovery import TimeSeriesDiscoveryConfig
 from scpn_phase_orchestrator.autotune.sindy_confidence import (
@@ -47,10 +48,17 @@ class SindyOptions:
     confidence_policy: SindyConfidencePolicy = DEFAULT_SINDY_CONFIDENCE_POLICY
 
     def __post_init__(self) -> None:
-        """Validate the threshold is finite and non-negative."""
-        threshold = float(self.phase_sindy_threshold)
+        """Validate the threshold and the confidence policy."""
+        value = self.phase_sindy_threshold
+        if isinstance(value, bool) or not isinstance(value, Real):
+            raise ValueError(
+                "phase_sindy_threshold must be a finite, non-negative real"
+            )
+        threshold = float(value)
         if not isfinite(threshold) or threshold < 0.0:
             raise ValueError("phase_sindy_threshold must be finite and non-negative")
+        if not isinstance(self.confidence_policy, SindyConfidencePolicy):
+            raise TypeError("confidence_policy must be a SindyConfidencePolicy")
         object.__setattr__(self, "phase_sindy_threshold", threshold)
 
     def to_discovery_config(self) -> TimeSeriesDiscoveryConfig:

@@ -36,6 +36,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   backend. Admission runs each compiled Mojo executable once with empty input
   and caches the verdict per build; on a loaded workstation one launch took
   0.06–0.23 s.
+- Phase-SINDy confidence no longer calls a failed fit a discovery. An R² of
+  NaN fails every comparison, so it passed the R² gate and the fit was
+  classified `discovered` (tier `partial`); so did +inf and impossible values
+  above 1, and a policy with a NaN threshold let every fit through. Invalid R²
+  is now a reason for `insufficient_evidence`; `SindyConfidencePolicy` requires
+  a finite `min_r_squared` ≤ 1 and a positive `min_samples_per_parameter`; fit
+  counts must be non-negative integers with `active_terms` ≤ `total_terms`;
+  the block adapter and `SindyOptions` no longer parse text as numbers.
 - `seal_grid_early_warning_advisory()` no longer seals an advisory for an alarm
   the stream monitor could not have raised: a growth rate below its threshold,
   a bus index that does not fit the aggregation (`mean` reports the whole

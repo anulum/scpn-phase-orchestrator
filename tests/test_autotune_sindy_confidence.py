@@ -9,10 +9,11 @@
 from __future__ import annotations
 
 import json
+import math
 
 import numpy as np
 import pytest
-from hypothesis import given
+from hypothesis import assume, given
 from hypothesis import strategies as st
 
 from scpn_phase_orchestrator.autotune.discovery import discover_time_series_structure
@@ -235,6 +236,7 @@ def test_classifier_never_awards_external_validation(
     total_terms: int,
     sparsity: float,
 ) -> None:
+    assume(active_terms <= total_terms)
     verdict = classify_phase_sindy_confidence(
         status=status,
         r_squared=r_squared,
@@ -325,3 +327,60 @@ def test_confidence_dataclass_is_frozen() -> None:
 
     with pytest.raises(AttributeError):
         verdict.tier = VALIDATION_TIER_PARTIAL  # type: ignore[misc]
+
+
+_FITTED = {
+    "status": "fitted",
+    "sample_count": 1000,
+    "node_count": 4,
+    "active_terms": 6,
+    "total_terms": 12,
+    "sparsity": 0.5,
+}
+
+
+@pytest.mark.parametrize("r_squared", [math.nan, math.inf, -math.inf, 1.5, 5.0])
+def test_invalid_r_squared_is_not_a_discovery(r_squared: float) -> None:
+    """NaN fails every comparison, so it used to pass the R² gate as discovered."""
+    verdict = classify_phase_sindy_confidence(r_squared=r_squared, **_FITTED)
+    assert verdict.posture == POSTURE_INSUFFICIENT_EVIDENCE
+    assert any("invalid R²" in reason for reason in verdict.reasons)
+
+
+def test_r_squared_of_exactly_one_is_still_a_discovery() -> None:
+    verdict = classify_phase_sindy_confidence(r_squared=1.0, **_FITTED)
+    assert verdict.posture == POSTURE_DISCOVERED
+
+
+@pytest.mark.parametrize(
+    ("fields", "match"),
+    [
+        ({"min_r_squared": math.nan}, "min_r_squared must be finite"),
+        ({"min_r_squared": 1.5}, "min_r_squared must be <= 1"),
+        ({"min_samples_per_parameter": math.nan}, "min_samples_per_parameter must"),
+        ({"min_samples_per_parameter": 0.0}, "min_samples_per_parameter must be > 0"),
+        ({"min_r_squared": True}, "min_r_squared must be a finite real"),
+    ],
+)
+def test_policy_that_lets_every_fit_through_is_rejected(fields, match) -> None:
+    with pytest.raises(ValueError, match=match):
+        SindyConfidencePolicy(**fields)
+
+
+@pytest.mark.parametrize(
+    ("fields", "match"),
+    [
+        ({"active_terms": 13}, "active_terms 13 exceeds total_terms 12"),
+        ({"sample_count": -1}, "sample_count must be non-negative"),
+        ({"node_count": 2.5}, "node_count must be a non-negative integer"),
+    ],
+)
+def test_impossible_fit_counts_are_rejected(fields, match) -> None:
+    with pytest.raises(ValueError, match=match):
+        classify_phase_sindy_confidence(r_squared=0.95, **{**_FITTED, **fields})
+
+
+def test_block_does_not_coerce_text_r_squared() -> None:
+    block = {**_FITTED, "r_squared": "0.95"}
+    with pytest.raises(ValueError, match="r_squared must be a real number"):
+        classify_phase_sindy_block(block)

@@ -71,3 +71,15 @@ def test_options_are_frozen() -> None:
 
     with pytest.raises(AttributeError):
         options.phase_sindy_threshold = 0.1  # type: ignore[misc]
+
+
+@pytest.mark.parametrize("threshold", ["0.05", True, None])
+def test_threshold_must_be_a_real_number(threshold) -> None:
+    """Text used to be parsed by float() and a bool read as 1.0."""
+    with pytest.raises(ValueError, match="phase_sindy_threshold must be"):
+        SindyOptions(phase_sindy_threshold=threshold)
+
+
+def test_confidence_policy_must_be_a_policy() -> None:
+    with pytest.raises(TypeError, match="confidence_policy must be"):
+        SindyOptions(confidence_policy={"min_r_squared": 0.9})
