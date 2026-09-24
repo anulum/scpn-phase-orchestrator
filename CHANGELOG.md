@@ -24,6 +24,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `spo assurance-case` refuses an evidence row whose id, category or summary
+  is not a non-empty string, or whose record is not a JSON object.
+  `str(row["evidence_id"])` turned `null` into `"None"`, and
+  `dict(row["record"])` reshaped a list of pairs, so malformed evidence
+  entered the assurance case under invented identifiers. A malformed
+  evidence file is now a clean error, not a traceback.
 - `spo digital-twin-observability-bundle` now bundles only scheduler records
   whose own hash covers their content. It copied the dashboard and replay
   hashes as linkage and counted their rows without checking them, so an
