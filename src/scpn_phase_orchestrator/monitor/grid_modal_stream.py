@@ -468,6 +468,11 @@ class GridModalStreamMonitor:
         """The recency weighting the growth rate is fitted under."""
         return self._recency_top
 
+    @property
+    def samples_seen(self) -> int:
+        """Samples consumed since construction or the last :meth:`reset`."""
+        return self._index
+
     def reset(self) -> None:
         """Clear the window and alarm state, as if freshly constructed."""
         self._buffer.clear()
