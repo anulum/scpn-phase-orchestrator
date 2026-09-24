@@ -22,13 +22,17 @@ measures runtime signal margin; it is **not** a formal proof of correctness.
 from __future__ import annotations
 
 import math
+import re
 from dataclasses import dataclass
+from numbers import Real
 
 from .monitor import STLMonitor, STLTraceResult
 
 _TEMPORAL_OPERATORS = frozenset({"always", "eventually"})
 _COMPARISON_OPERATORS = frozenset({">=", ">", "<=", "<", "=="})
 _SEVERITIES = frozenset({"soft", "hard"})
+# Signal names the builtin predicate grammar accepts.
+_SIGNAL_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 
 
 def _render_threshold(threshold: float) -> str:
@@ -42,12 +46,12 @@ def _render_threshold(threshold: float) -> str:
     Returns
     -------
     str
-        ``"10.0"`` for integral values, otherwise a ``:.16g`` decimal
-        rendering; both forms are accepted by the builtin predicate grammar.
+        The shortest decimal that reads back as the same float (``repr``),
+        e.g. ``"10.0"``, ``"1.5707963267948966"`` or ``"1e-20"``; every form is
+        accepted by the builtin predicate grammar, so the formula carries the
+        stored threshold exactly.
     """
-    if threshold.is_integer():
-        return f"{int(threshold)}.0"
-    return f"{threshold:.16g}"
+    return repr(float(threshold))
 
 
 @dataclass(frozen=True)
@@ -59,14 +63,16 @@ class PhaseFieldSpecification:
     name : str
         Stable catalogue key, e.g. ``"order_parameter_floor"``.
     signal : str
-        Trace key the property constrains, e.g. ``"R"``.
+        Trace key the property constrains, e.g. ``"R"``; an identifier
+        (letters, digits, underscores, not starting with a digit), as the
+        builtin predicate grammar requires.
     temporal_op : str
         Temporal operator, ``"always"`` or ``"eventually"``.
     comparison : str
         Predicate comparison operator: one of ``>=``, ``>``, ``<=``, ``<``,
         ``==``.
     threshold : float
-        Finite predicate threshold.
+        Finite real predicate threshold; booleans are rejected.
     rationale : str
         Physical or engineering justification for the property and threshold.
     severity : str
@@ -75,8 +81,8 @@ class PhaseFieldSpecification:
     Raises
     ------
     ValueError
-        If any field is empty or outside its permitted set, or if the
-        threshold is not finite.
+        If any field is empty or outside its permitted set, the signal is not
+        an identifier, or the threshold is not a finite real number.
     """
 
     name: str
@@ -91,6 +97,11 @@ class PhaseFieldSpecification:
         _require_non_empty(self.name, "name")
         _require_non_empty(self.signal, "signal")
         _require_non_empty(self.rationale, "rationale")
+        if _SIGNAL_RE.fullmatch(self.signal) is None:
+            raise ValueError(
+                "signal must be an identifier (letters, digits, underscores, "
+                f"not starting with a digit), got {self.signal!r}"
+            )
         if self.temporal_op not in _TEMPORAL_OPERATORS:
             raise ValueError(
                 f"temporal_op must be one of {sorted(_TEMPORAL_OPERATORS)}, "
@@ -105,8 +116,14 @@ class PhaseFieldSpecification:
             raise ValueError(
                 f"severity must be one of {sorted(_SEVERITIES)}, got {self.severity!r}"
             )
-        if not math.isfinite(self.threshold):
-            raise ValueError(f"threshold must be finite, got {self.threshold!r}")
+        if (
+            isinstance(self.threshold, bool)
+            or not isinstance(self.threshold, Real)
+            or not math.isfinite(self.threshold)
+        ):
+            raise ValueError(
+                f"threshold must be finite and a real number, got {self.threshold!r}"
+            )
 
     @property
     def spec(self) -> str:

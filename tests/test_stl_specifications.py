@@ -35,9 +35,10 @@ class TestRenderThreshold:
         assert _render_threshold(0.3) == "0.3"
         assert _render_threshold(0.5) == "0.5"
 
-    def test_irrational_threshold_renders_finite_decimal(self) -> None:
+    def test_irrational_threshold_renders_the_exact_float(self) -> None:
         rendered = _render_threshold(math.pi / 2.0)
-        assert rendered == "1.570796326794897"
+        assert rendered == "1.5707963267948966"
+        assert float(rendered) == math.pi / 2.0
         # The rendering must remain parseable by the builtin predicate grammar.
         assert (
             STLMonitor(f"always (phase_lag <= {rendered})").evaluate(
@@ -199,3 +200,68 @@ class TestCatalogue:
     def test_phase_lag_bound_uses_sakaguchi_frustration_limit(self) -> None:
         spec = phase_field_specification("phase_lag_bound")
         assert spec.threshold == pytest.approx(math.pi / 2.0)
+
+
+class TestSpecificationCarriesTheStoredThreshold:
+    """The rendered formula evaluates exactly the threshold the object holds."""
+
+    @pytest.mark.parametrize("name", phase_field_specification_names())
+    def test_catalogue_formula_round_trips_its_threshold(self, name: str) -> None:
+        from scpn_phase_orchestrator.monitor.stl.monitor import _parse_simple_spec
+
+        spec = phase_field_specification(name)
+        parsed = _parse_simple_spec(spec.spec)
+        assert parsed is not None
+        assert parsed[1] == [(spec.signal, spec.comparison, spec.threshold)]
+
+    @pytest.mark.parametrize(
+        "threshold", [0.1 + 0.2, 1e-20, 1e22, -2.5e-7, 10, math.pi]
+    )
+    def test_threshold_round_trips_through_the_formula(self, threshold: float) -> None:
+        spec = PhaseFieldSpecification(
+            name="probe",
+            signal="R",
+            temporal_op="always",
+            comparison="<=",
+            threshold=threshold,
+            rationale="round-trip probe",
+        )
+        result = spec.evaluate({"R": [threshold]})
+        assert result.backend == "builtin"
+        assert result.robustness == 0.0
+        assert result.satisfied
+
+    def test_phase_lag_bound_is_exactly_half_pi(self) -> None:
+        spec = phase_field_specification("phase_lag_bound")
+        assert spec.spec == "always (phase_lag <= 1.5707963267948966)"
+        assert spec.evaluate({"phase_lag": [math.pi / 2.0]}).satisfied
+
+
+class TestSpecificationFieldValidation:
+    @pytest.mark.parametrize("signal", ["R value", "R)", "1R", "R-1", "R.x"])
+    def test_signal_must_be_a_predicate_identifier(self, signal: str) -> None:
+        with pytest.raises(ValueError, match="signal must be an identifier"):
+            PhaseFieldSpecification(
+                name="probe",
+                signal=signal,
+                temporal_op="always",
+                comparison=">=",
+                threshold=0.3,
+                rationale="probe",
+            )
+
+    @pytest.mark.parametrize(
+        "threshold", [True, False, "0.3", None, float("nan"), float("inf")]
+    )
+    def test_threshold_must_be_a_finite_real(self, threshold: object) -> None:
+        with pytest.raises(
+            ValueError, match="threshold must be finite and a real number"
+        ):
+            PhaseFieldSpecification(
+                name="probe",
+                signal="R",
+                temporal_op="always",
+                comparison=">=",
+                threshold=threshold,  # type: ignore[arg-type]
+                rationale="probe",
+            )
