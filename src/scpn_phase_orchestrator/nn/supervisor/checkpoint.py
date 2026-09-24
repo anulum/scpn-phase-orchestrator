@@ -6,11 +6,23 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — supervisor PPO checkpoint IO
 
-"""Serialisation and restoration of supervisor PPO checkpoints."""
+"""Serialisation and restoration of supervisor PPO checkpoints.
+
+A checkpoint is two files, ``state.eqx`` and ``metadata.json``, replaced one after
+the other, so a crash between the two replacements leaves a new payload beside the
+previous metadata. Schema version 2 records the SHA-256 of the payload in the
+metadata, and loading refuses a payload whose digest differs; version 1
+checkpoints carry no digest and are loaded unverified. Typed PRNG keys
+(``jax.random.key``) are stored as their raw key data with the implementation
+name and re-wrapped on load.
+"""
 
 from __future__ import annotations
 
+import hashlib
+import io
 import json
+import re
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -30,7 +42,12 @@ _SUPERVISOR_PPO_CHECKPOINT_FORMAT = (
 )
 
 
-_SUPERVISOR_PPO_CHECKPOINT_SCHEMA_VERSION = 1
+_SUPERVISOR_PPO_CHECKPOINT_SCHEMA_VERSION = 2
+
+#: Schema versions ``load_supervisor_ppo_checkpoint`` reads; 1 has no payload digest.
+_SUPPORTED_SCHEMA_VERSIONS = (1, 2)
+
+_SHA256_HEX = re.compile(r"[0-9a-f]{64}")
 
 
 def save_supervisor_ppo_checkpoint(
@@ -91,6 +108,12 @@ def save_supervisor_ppo_checkpoint(
 
     n_updates = _non_negative_int(n_updates, "n_updates")
     key = jnp.asarray(key)
+    key_impl: str | None = None
+    if jnp.issubdtype(key.dtype, jax.dtypes.prng_key):
+        # Equinox serialises arrays, not typed keys: keep the raw key data and
+        # the implementation name needed to wrap it again.
+        key_impl = str(jax.random.key_impl(key))
+        key = jax.random.key_data(key)
     loss_history = jnp.asarray(loss_history)
     user_metadata = _json_object(metadata, "metadata")
     payload = _SupervisorPPOCheckpointPayload(
@@ -105,6 +128,7 @@ def save_supervisor_ppo_checkpoint(
         "n_updates": n_updates,
         "key_shape": list(key.shape),
         "key_dtype": str(key.dtype),
+        "key_impl": key_impl,
         "loss_history_shape": list(loss_history.shape),
         "loss_history_dtype": str(loss_history.dtype),
         "metadata": user_metadata,
@@ -113,6 +137,9 @@ def save_supervisor_ppo_checkpoint(
     state_tmp = checkpoint_path / "state.eqx.tmp"
     metadata_tmp = checkpoint_path / "metadata.json.tmp"
     eqx.tree_serialise_leaves(state_tmp, payload)
+    checkpoint_metadata["state_sha256"] = hashlib.sha256(
+        state_tmp.read_bytes()
+    ).hexdigest()
     metadata_tmp.write_text(
         json.dumps(checkpoint_metadata, sort_keys=True, indent=2, allow_nan=False)
         + "\n",
@@ -149,6 +176,9 @@ def load_supervisor_ppo_checkpoint(
     ------
     FileNotFoundError
         If the checkpoint cannot be found.
+    ValueError
+        If the metadata is malformed, or (schema version 2) the payload's SHA-256
+        differs from the digest recorded in the metadata.
     """
     checkpoint_path = Path(checkpoint_dir)
     metadata_path = checkpoint_path / "metadata.json"
@@ -156,6 +186,20 @@ def load_supervisor_ppo_checkpoint(
     metadata = _load_checkpoint_metadata(metadata_path)
     if not state_path.exists():
         raise FileNotFoundError(f"missing checkpoint payload: {state_path}")
+    state_bytes = state_path.read_bytes()
+    if metadata["schema_version"] >= 2:
+        expected = metadata.get("state_sha256")
+        if not isinstance(expected, str) or _SHA256_HEX.fullmatch(expected) is None:
+            raise ValueError("state_sha256 must be a lowercase SHA-256 hex digest")
+        if hashlib.sha256(state_bytes).hexdigest() != expected:
+            raise ValueError(
+                "checkpoint payload does not match its metadata (state_sha256); "
+                "the pair was not written together"
+            )
+    key_impl = metadata.get("key_impl")
+    if key_impl is not None and not isinstance(key_impl, str):
+        raise ValueError("key_impl must be a PRNG implementation name or null")
+    n_updates = _non_negative_int(metadata.get("n_updates"), "n_updates")
 
     key_shape = _metadata_shape(metadata, "key_shape")
     loss_history_shape = _metadata_shape(metadata, "loss_history_shape")
@@ -167,13 +211,20 @@ def load_supervisor_ppo_checkpoint(
         key=jnp.zeros(key_shape, dtype=key_dtype),
         loss_history=jnp.zeros(loss_history_shape, dtype=loss_history_dtype),
     )
-    loaded = eqx.tree_deserialise_leaves(state_path, template_payload)
+    # Deserialise the bytes that were verified, not a second read of the file.
+    loaded = eqx.tree_deserialise_leaves(io.BytesIO(state_bytes), template_payload)
+    key = loaded.key
+    if key_impl is not None:
+        try:
+            key = jax.random.wrap_key_data(key, impl=key_impl)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"key_impl {key_impl!r} cannot wrap the key") from exc
     return SupervisorPPOCheckpoint(
         policy=loaded.policy,
         opt_state=loaded.opt_state,
-        key=loaded.key,
+        key=key,
         loss_history=loaded.loss_history,
-        n_updates=_non_negative_int(metadata["n_updates"], "n_updates"),
+        n_updates=n_updates,
         metadata=_json_object(metadata.get("metadata"), "checkpoint metadata"),
     )
 
@@ -188,9 +239,11 @@ def _load_checkpoint_metadata(path: Path) -> dict[str, Any]:
         raise ValueError("checkpoint metadata is not valid JSON") from exc
     if not isinstance(raw, dict):
         raise ValueError("checkpoint metadata must be a JSON object")
+    version = raw.get("schema_version")
     if (
         raw.get("format") != _SUPERVISOR_PPO_CHECKPOINT_FORMAT
-        or raw.get("schema_version") != _SUPERVISOR_PPO_CHECKPOINT_SCHEMA_VERSION
+        or isinstance(version, bool)
+        or version not in _SUPPORTED_SCHEMA_VERSIONS
     ):
         raise ValueError("checkpoint schema is not supported")
     return raw

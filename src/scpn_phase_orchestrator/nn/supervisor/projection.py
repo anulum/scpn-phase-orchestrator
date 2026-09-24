@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import jax
 import jax.numpy as jnp
 
 from ._shared import (
@@ -70,7 +71,17 @@ def project_supervisor_action_for_audit(
     Returns
     -------
     SupervisorActionProjection
-        The replay-safe action projection with audit metadata.
+        The replay-safe action projection with audit metadata. A proposal or
+        previous action with a NaN or infinite component is rejected
+        (``non_finite_proposal`` / ``non_finite_previous_action``) and projected
+        to the zero action: ``jnp.clip`` passes NaN through, so clipping alone
+        would hand on a NaN control marked as projected.
+
+    Raises
+    ------
+    ValueError
+        If a scalar constraint is out of range, or the action (or previous
+        action) does not have the component count the config's bounds define.
     """
     ttl_s = _positive_float(ttl_s, "ttl_s")
     max_ttl_s = _positive_float(max_ttl_s, "max_ttl_s")
@@ -88,11 +99,18 @@ def project_supervisor_action_for_audit(
     projected_ttl = min(ttl_s, max_ttl_s)
     bounds = _action_bounds(config)
     proposed_values = pack_supervisor_action(action)
+    _require_matching_shape(proposed_values, bounds, "action")
+    rejection_reasons: list[str] = []
+    if not bool(jnp.all(jnp.isfinite(proposed_values))):
+        rejection_reasons.append("non_finite_proposal")
     bounded_values = jnp.clip(proposed_values, -bounds, bounds)
     rate_limited_values = bounded_values
 
     if previous_action is not None:
         previous_values = pack_supervisor_action(previous_action)
+        _require_matching_shape(previous_values, bounds, "previous_action")
+        if not bool(jnp.all(jnp.isfinite(previous_values))):
+            rejection_reasons.append("non_finite_previous_action")
         max_delta = bounds * rate_limit_fraction
         lower = previous_values - max_delta
         upper = previous_values + max_delta
@@ -101,13 +119,13 @@ def project_supervisor_action_for_audit(
     if not include_layer_actions:
         rate_limited_values = rate_limited_values.at[2:].set(0.0)
 
-    rejection_reasons: list[str] = []
     if (
         regime_churn_score is not None
         and max_regime_churn is not None
         and regime_churn_score > max_regime_churn
     ):
         rejection_reasons.append("regime_churn")
+    if rejection_reasons:
         rate_limited_values = jnp.zeros_like(rate_limited_values)
 
     projected_action = unpack_supervisor_action(
@@ -146,3 +164,12 @@ def project_supervisor_action_for_audit(
         ttl_s=projected_ttl,
         audit_record=audit_record,
     )
+
+
+def _require_matching_shape(values: jax.Array, bounds: jax.Array, field: str) -> None:
+    """Raise ``ValueError`` unless ``values`` has one component per bound."""
+    if values.shape != bounds.shape:
+        raise ValueError(
+            f"{field} has {values.shape[0]} components but the config bounds "
+            f"{bounds.shape[0]} (2 global + n_layer_controls)"
+        )

@@ -24,6 +24,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The neural supervisor's audit projection passed a NaN proposal (or a NaN
+  previous action) through `jnp.clip` and reported it as projected and not
+  rejected. A non-finite proposal or previous action is now rejected
+  (`non_finite_proposal`, `non_finite_previous_action`) and projected to the
+  zero action. An action with the wrong component count raises `ValueError`.
+  `DifferentiableSupervisorConfig` validates its fields:
+  - counts must be integers, with `n_layer_controls` 1 or 2 to match the
+    scenario's two partitions;
+  - action bounds must be finite and positive. A negative bound had inverted
+    the clip and produced a control from a zero proposal, and a zero bound made
+    the PPO log-probability 0/0;
+  - loss weights must be finite and non-negative.
+- Supervisor PPO checkpoints (schema version 2) record the SHA-256 of
+  `state.eqx`, and loading refuses a payload that does not match. A crash
+  between the two file replacements used to leave a new payload beside older
+  metadata, which loaded silently with the wrong update count. Version 1
+  checkpoints still load. Typed PRNG keys (`jax.random.key`) can now be saved
+  and restored, and a missing `n_updates` raises `ValueError`.
+- `supervisor_action_to_candidate` keeps base channel weights beyond the
+  supervisor's layer deltas instead of dropping them. A NaN or infinite action
+  now raises instead of becoming a NaN candidate.
 - The detector meta-analysis read an honest-audit aggregate's
   `fraction_beats_chance` (the share of recordings that beat chance) as a
   yes/no verdict, so any non-zero share was reported as beating chance. The

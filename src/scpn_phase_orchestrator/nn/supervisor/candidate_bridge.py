@@ -18,8 +18,9 @@ review-only evidence pipeline as an offline replay search.
 
 The mapping is by control meaning, not by position: the supervisor's global
 coupling delta moves the candidate's ``K`` knob, its damping delta moves ``zeta``,
-and its per-layer coupling deltas become the candidate's ``channel_weights``. The
-knobs the supervisor does not control — ``alpha``, ``Psi`` and
+and its per-layer coupling deltas advance the candidate's ``channel_weights`` by
+index; base channel weights beyond the last layer delta are carried through
+unchanged. The knobs the supervisor does not control — ``alpha``, ``Psi`` and
 ``cross_channel_gains`` — are carried through unchanged from a caller-supplied
 base candidate. The deltas are applied relative to that base, which defaults to
 the zero candidate. The bridge runs the policy deterministically (its mean action)
@@ -76,17 +77,30 @@ def supervisor_action_to_candidate(
     -------
     KnobPolicyCandidate
         A candidate with ``K`` and ``zeta`` advanced by the global deltas and
-        ``channel_weights`` advanced by the per-layer coupling deltas.
+        ``channel_weights`` advanced by the per-layer coupling deltas; a base
+        channel with no matching layer delta keeps its weight.
+
+    Raises
+    ------
+    ValueError
+        If any action component is NaN or infinite; a diverged policy must not
+        become a scored candidate.
     """
     reference = base if base is not None else KnobPolicyCandidate()
     delta_coupling = float(action.delta_K_global)
     delta_damping = float(action.delta_zeta_global)
     layer_deltas = np.asarray(action.delta_K_layers, dtype=float).ravel()
+    if not (
+        np.isfinite(delta_coupling)
+        and np.isfinite(delta_damping)
+        and np.all(np.isfinite(layer_deltas))
+    ):
+        raise ValueError("supervisor action has a NaN or infinite component")
     base_weights = reference.channel_weights
     channel_weights = tuple(
         (base_weights[index] if index < len(base_weights) else 0.0)
-        + float(layer_deltas[index])
-        for index in range(len(layer_deltas))
+        + (float(layer_deltas[index]) if index < len(layer_deltas) else 0.0)
+        for index in range(max(len(base_weights), len(layer_deltas)))
     )
     return KnobPolicyCandidate(
         K=_add_global(reference.K, delta_coupling),
