@@ -98,7 +98,7 @@ def build_audit_report_summary(
 
 
 def _record_entries(entries: list[dict[str, object]]) -> list[dict[str, object]]:
-    """Return the audit record entries from a report payload, else raise."""
+    """Return the entries that are mappings; other payload lines are skipped."""
     return [entry for entry in entries if isinstance(entry, dict)]
 
 
@@ -179,7 +179,13 @@ def _integrated_information_summary(
 
 
 def _numeric_value(record: dict[str, object], key: str) -> float:
-    """Return a named numeric field from a mapping, else raise."""
+    """Return a named finite numeric field, or ``0.0`` when it is not one.
+
+    A missing, boolean, non-numeric or non-finite value is reported as ``0.0``
+    so the summary stays strict JSON; it does not raise. Note that ``0.0`` is
+    also a genuine reading (for example ``R = 0``), so a substituted value is
+    not distinguishable from a measured one in the summary.
+    """
     value = record.get(key, 0.0)
     if isinstance(value, Real) and not isinstance(value, bool):
         parsed = float(value)
