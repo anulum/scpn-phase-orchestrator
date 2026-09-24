@@ -6391,7 +6391,9 @@ def test_digital_twin_grafana_dashboard_pack_and_live_playbook(
         "created_by": "operator_console",
     }
     bundle_payload["bundle_hash"] = hashlib.sha256(
-        json.dumps(bundle_payload, sort_keys=True).encode("utf-8")
+        json.dumps(bundle_payload, sort_keys=True, separators=(",", ":")).encode(
+            "utf-8"
+        )
     ).hexdigest()
     bundle_path = tmp_path / "bundle.json"
     bundle_path.write_text(

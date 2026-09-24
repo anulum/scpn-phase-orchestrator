@@ -19,6 +19,7 @@ is invoked for that runtime path.
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 import click
@@ -33,9 +34,15 @@ from scpn_phase_orchestrator.runtime.cli._payloads import (
 )
 from scpn_phase_orchestrator.runtime.observability import RuntimeObservability
 
+_PROMETHEUS_PREFIX_RE = re.compile(r"[A-Za-z_:][A-Za-z0-9_:]*")
+
 
 def _require_sealed(
-    record: dict[str, object], hash_field: str, *, artifact: str
+    record: dict[str, object],
+    hash_field: str,
+    *,
+    artifact: str,
+    context: str = "digital-twin observability bundle",
 ) -> None:
     """Refuse an artefact whose own hash does not cover its content.
 
@@ -46,7 +53,7 @@ def _require_sealed(
     body = {key: value for key, value in record.items() if key != hash_field}
     if _record_hash(body) != record.get(hash_field):
         raise click.ClickException(
-            "digital-twin observability bundle schema mismatch: "
+            f"{context} schema mismatch: "
             f"{artifact} {hash_field} does not match its content"
         )
 
@@ -309,11 +316,23 @@ def digital_twin_grafana_dashboard_pack(
         )
     bundle_hash = _require_sha256(bundle.get("bundle_hash"), "bundle_hash")
     contract_hash = _require_sha256(bundle.get("contract_hash"), "contract_hash")
+    _require_sealed(
+        bundle,
+        "bundle_hash",
+        artifact="observability bundle",
+        context="digital-twin grafana dashboard pack",
+    )
     metric_prefix = bundle.get("prometheus_metric_prefix")
     if not isinstance(metric_prefix, str) or not metric_prefix:
         raise click.ClickException(
             "digital-twin grafana dashboard pack schema mismatch: "
             "prometheus_metric_prefix must be non-empty string"
+        )
+    if not _PROMETHEUS_PREFIX_RE.fullmatch(metric_prefix):
+        # The prefix is spliced into PromQL panel queries.
+        raise click.ClickException(
+            "digital-twin grafana dashboard pack schema mismatch: "
+            "prometheus_metric_prefix must match [A-Za-z_:][A-Za-z0-9_:]*"
         )
     panels = [
         {
@@ -467,16 +486,28 @@ def digital_twin_live_deployment_playbook(
         )
     overdue = replay_linkage.get("scheduler_overdue_count")
     blocked = replay_linkage.get("scheduler_blocked_count")
-    if not isinstance(overdue, int) or overdue < 0:
+    if isinstance(overdue, bool) or not isinstance(overdue, int) or overdue < 0:
         raise click.ClickException(
             "digital-twin live deployment playbook schema mismatch: "
             "scheduler_overdue_count must be non-negative integer"
         )
-    if not isinstance(blocked, int) or blocked < 0:
+    if isinstance(blocked, bool) or not isinstance(blocked, int) or blocked < 0:
         raise click.ClickException(
             "digital-twin live deployment playbook schema mismatch: "
             "scheduler_blocked_count must be non-negative integer"
         )
+    _require_sealed(
+        bundle,
+        "bundle_hash",
+        artifact="observability bundle",
+        context="digital-twin live deployment playbook",
+    )
+    _require_sealed(
+        dashboard_pack,
+        "dashboard_pack_hash",
+        artifact="grafana dashboard pack",
+        context="digital-twin live deployment playbook",
+    )
     rollout_gate = (
         "blocked" if blocked > 0 else ("degraded" if overdue > 0 else "ready")
     )
