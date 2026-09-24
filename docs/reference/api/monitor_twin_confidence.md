@@ -278,6 +278,11 @@ pytest tests/test_twin_confidence_stability.py -m slow
 * **Calibration trust.** The baseline is only as good as the window it was
   fitted on; a baseline gathered while the twin already drifts will read the
   drift as nominal. Fit during commissioning or a trusted healthy replay.
+* **Record validation.** `TwinDivergence` and `TwinConfidenceBaseline` refuse
+  values no kernel or calibration can produce: non-finite numbers, a
+  divergence outside `[0, ln 2]` or `[0, 1]`, a negative deviation, or a zero
+  sample count. The one-sided z-score uses `max(0, ·)`, which turns NaN into
+  zero, so an unvalidated NaN record would have scored any twin as healthy.
 * **Degenerate baseline variance.** When a divergence is constant during
   calibration its `σ` is floored by `ε = 1e-12`, so a tiny runtime increase
   registers a large z-score. This is intentional fail-sensitive behaviour;

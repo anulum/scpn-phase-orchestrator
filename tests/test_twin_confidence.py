@@ -746,3 +746,103 @@ def test_twin_confidence_api_reference_documents_numeric_string_contracts() -> N
     assert "numeric-string aliases" in doc
     assert "before float coercion" in doc
     assert "backend-output" in doc
+
+
+_NAN = float("nan")
+
+
+@pytest.mark.parametrize(
+    ("fields", "match"),
+    [
+        ({"phase_js_divergence": _NAN}, "phase_js_divergence must be finite"),
+        ({"order_wasserstein": _NAN}, "order_wasserstein must be finite"),
+        ({"phase_js_divergence": float("inf")}, "phase_js_divergence must be finite"),
+        ({"phase_js_divergence": -0.1}, "phase_js_divergence must be >= 0"),
+        ({"phase_js_divergence": 0.9}, "phase_js_divergence must be <="),
+        ({"order_wasserstein": 1.5}, "order_wasserstein must be <="),
+        ({"n_bins": 0}, "n_bins must be a positive integer"),
+        ({"backend": ""}, "backend must be a non-empty string"),
+    ],
+)
+def test_divergence_pair_outside_the_kernel_range_is_rejected(fields, match) -> None:
+    """A pair no kernel can produce cannot be built, so it cannot score healthy."""
+    values = {
+        "phase_js_divergence": 0.1,
+        "order_wasserstein": 0.1,
+        "n_bins": 36,
+        "backend": "python",
+    }
+    values.update(fields)
+    with pytest.raises(ValueError, match=match):
+        TwinDivergence(**values)
+
+
+@pytest.mark.parametrize(
+    ("fields", "match"),
+    [
+        ({"phase_js_mean": _NAN}, "phase_js_mean must be finite"),
+        ({"phase_js_std": _NAN}, "phase_js_std must be finite"),
+        ({"order_w1_mean": _NAN}, "order_w1_mean must be finite"),
+        ({"order_w1_std": _NAN}, "order_w1_std must be finite"),
+        ({"phase_js_std": -0.01}, "phase_js_std must be >= 0"),
+        ({"order_w1_mean": 2.0}, "order_w1_mean must be <="),
+        ({"sample_count": 0}, "sample_count must be a positive integer"),
+        ({"band_z": _NAN}, "band_z must be finite"),
+    ],
+)
+def test_baseline_that_nominal_samples_cannot_produce_is_rejected(
+    fields, match
+) -> None:
+    """A NaN baseline used to score a fully diverged twin as healthy."""
+    values = {
+        "phase_js_mean": 0.01,
+        "phase_js_std": 0.005,
+        "order_w1_mean": 0.02,
+        "order_w1_std": 0.01,
+        "sample_count": 50,
+        "band_z": 3.0,
+    }
+    values.update(fields)
+    with pytest.raises(ValueError, match=match):
+        TwinConfidenceBaseline(**values)
+
+
+def test_calibrated_chain_scores_a_diverged_twin_as_critical() -> None:
+    """End to end: real divergences calibrate, a drifted twin is not healthy."""
+    rng = np.random.default_rng(20260924)
+    calibrator = TwinConfidenceCalibrator()
+    for _ in range(40):
+        model = rng.uniform(0.0, 2.0 * np.pi, 64)
+        observed = model + rng.normal(0.0, 0.02, 64)
+        order = rng.uniform(0.6, 0.7, 16)
+        calibrator.observe(
+            phase_order_divergence(model, observed, order, order + 0.001)
+        )
+    baseline = calibrator.baseline()
+    model = rng.uniform(0.0, 2.0 * np.pi, 64)
+    drifted = phase_order_divergence(
+        model, np.zeros(64), np.full(16, 0.9), np.full(16, 0.1)
+    )
+    score = score_twin_confidence(drifted, baseline)
+    assert score.status == "critical"
+    assert score.confidence < 0.3
+
+
+def test_calibrator_only_accepts_divergence_records() -> None:
+    """A plain tuple or mapping is not calibration evidence."""
+    calibrator = TwinConfidenceCalibrator()
+    with pytest.raises(TypeError, match="must be a TwinDivergence"):
+        calibrator.observe((0.1, 0.1))  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize(
+    "phases",
+    [
+        np.array([0, 60_000], dtype="timedelta64[ms]"),
+        np.array(["2026-09-24", "2026-09-25"], dtype="datetime64[D]"),
+    ],
+)
+def test_time_unit_phases_are_rejected(phases) -> None:
+    """A unit-carrying array is not radians."""
+    with pytest.raises(ValueError, match="plain numbers"):
+        phase_order_divergence(phases, phases, [0.5, 0.5], [0.5, 0.5])
