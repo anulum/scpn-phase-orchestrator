@@ -24,6 +24,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- A Studio verified hardware package no longer reports an invalid binding as
+  passed.
+  - Studio replays a binding spec even when validation reports errors, and
+    blocks Docker and WASM packaging for it. With complete hardware evidence
+    the verified hardware package still returned `review_ready`, listed the
+    safety gate "binding validation passed" and offered handoff commands for
+    the same spec.
+  - The package now takes the export warnings that block deployment. With
+    any of them, or an incomplete replay, it is `blocked`, lists
+    `blocked_reasons`, shows "binding validation blocked" and offers no
+    commands.
+
 - The Studio Topos, evolutionary and lineage panels verify report seals.
   - The Topos symbolic and policy reports, the evolutionary search and
     policy-DSL reports, and the autopoietic lineage manifest each carry a
