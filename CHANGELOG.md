@@ -36,6 +36,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   backend. Admission runs each compiled Mojo executable once with empty input
   and caches the verdict per build; on a loaded workstation one launch took
   0.06–0.23 s.
+- `C37118SessionClient` no longer waits forever for a peer that never sends
+  the frame it asked for. It skipped frames of other types without limit, so a
+  peer streaming only DATA frames held `request_configuration()` indefinitely;
+  after `max_skipped_frames` (default 1000) other frames it now raises
+  `UnsupportedFrameError`. A CONFIG-2 frame for a different IDCODE than the
+  requested stream is rejected, and a boolean `id_code` is no longer read as 1.
 - The IEEE C37.118 decoder now requires a frame to match its configuration
   byte for byte. A DATA frame carrying two phasors decoded against a
   one-phasor CONFIG-2 used to read the second phasor's real part as the

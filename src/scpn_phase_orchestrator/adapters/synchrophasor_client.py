@@ -86,6 +86,18 @@ _CRC_SIZE = 2
 _FRAME_TYPE_COMMAND = 4
 _PREFIX_SIZE = 4  # SYNC (2) + FRAMESIZE (2)
 _UINT16_MAX = 0xFFFF
+#: Frames of another type the client skips while waiting for the one it asked
+#: for, before it gives up; a peer that never sends it cannot hold the session.
+_DEFAULT_MAX_SKIPPED_FRAMES = 1000
+
+
+def _require_id_code(value: object) -> int:
+    """Return ``value`` as a 16-bit IDCODE, else raise ``ValueError``."""
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise ValueError("id_code must be an integer in the range 0..65535")
+    if not 0 <= value <= _UINT16_MAX:
+        raise ValueError("id_code must be in the range 0..65535")
+    return value
 
 
 def build_command_frame(
@@ -121,8 +133,7 @@ def build_command_frame(
     ValueError
         If ``id_code`` is out of range or ``command`` is not a known command.
     """
-    if not 0 <= id_code <= _UINT16_MAX:
-        raise ValueError("id_code must be in the range 0..65535")
+    _require_id_code(id_code)
     if command not in _VALID_COMMANDS:
         raise ValueError(f"unknown command word 0x{command:04X}")
     framesize = _HEADER_SIZE + 2 + _CRC_SIZE
@@ -199,21 +210,42 @@ class C37118SessionClient:
     Attributes
     ----------
     id_code : int
-        The destination data-stream identification code (0..65535).
+        The destination data-stream identification code (0..65535). The
+        CONFIG-2 frame the peer returns must carry the same IDCODE.
+    max_skipped_frames : int
+        Frames of other types skipped while waiting for a CONFIG-2 or DATA
+        frame before the client raises (default ``1000``). The client sets no
+        time limit; wrap calls in :func:`asyncio.wait_for` for one.
     non_actuating : bool
         Always ``True`` — the client issues only stream-control command frames
         and never writes device setpoints.
     """
 
     id_code: int
+    max_skipped_frames: int = _DEFAULT_MAX_SKIPPED_FRAMES
     non_actuating: bool = field(default=True, init=False)
     _codec: SynchrophasorFrameCodec = field(
         default_factory=SynchrophasorFrameCodec, init=False, repr=False
     )
 
     def __post_init__(self) -> None:
-        if not 0 <= self.id_code <= _UINT16_MAX:
-            raise ValueError("id_code must be in the range 0..65535")
+        _require_id_code(self.id_code)
+        if (
+            isinstance(self.max_skipped_frames, bool)
+            or not isinstance(self.max_skipped_frames, int)
+            or self.max_skipped_frames < 0
+        ):
+            raise ValueError("max_skipped_frames must be a non-negative integer")
+
+    def _count_skipped(self, skipped: int, wanted: str) -> int:
+        """Count one skipped frame, raising once the skip budget is spent."""
+        skipped += 1
+        if skipped > self.max_skipped_frames:
+            raise UnsupportedFrameError(
+                f"no {wanted} frame after skipping {self.max_skipped_frames} "
+                "frames of other types"
+            )
+        return skipped
 
     async def _send(self, writer: asyncio.StreamWriter, command: int) -> None:
         """Send one command frame and flush the writer."""
@@ -243,12 +275,23 @@ class C37118SessionClient:
         ------
         FrameTruncationError
             If the stream ends before a CONFIG-2 frame arrives.
+        UnsupportedFrameError
+            If more than ``max_skipped_frames`` frames of other types arrive
+            first, or the CONFIG-2 frame carries a different IDCODE.
         """
         await self._send(writer, COMMAND_SEND_CONFIG2)
+        skipped = 0
         while True:
             frame = await read_frame(reader)
             if _frame_type(frame) == FRAME_TYPE_CONFIG2:
-                return self._codec.decode_config2(frame)
+                config = self._codec.decode_config2(frame)
+                if config.header.id_code != self.id_code:
+                    raise UnsupportedFrameError(
+                        f"CONFIG-2 frame IDCODE {config.header.id_code} does not "
+                        f"match the requested stream {self.id_code}"
+                    )
+                return config
+            skipped = self._count_skipped(skipped, "CONFIG-2")
 
     async def collect_data_frames(
         self,
@@ -282,16 +325,22 @@ class C37118SessionClient:
             If ``count`` is not a positive integer.
         FrameTruncationError
             If the stream ends before ``count`` DATA frames arrive.
+        UnsupportedFrameError
+            If more than ``max_skipped_frames`` frames of other types arrive
+            while waiting for DATA frames.
         """
         if isinstance(count, bool) or not isinstance(count, int) or count <= 0:
             raise ValueError("count must be a positive integer")
         await self._send(writer, COMMAND_DATA_ON)
         frames: list[DataFrame] = []
+        skipped = 0
         try:
             while len(frames) < count:
                 frame = await read_frame(reader)
                 if _frame_type(frame) == FRAME_TYPE_DATA:
                     frames.append(self._codec.decode_data(frame, config))
+                else:
+                    skipped = self._count_skipped(skipped, "DATA")
         finally:
             await self._send(writer, COMMAND_DATA_OFF)
         return frames

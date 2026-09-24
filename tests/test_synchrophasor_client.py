@@ -255,3 +255,88 @@ async def test_end_to_end_against_in_process_server(unused_tcp_port: int) -> Non
     assert len(frames) == 3
     assert frames[0].measurements[0].frequency_hz == pytest.approx(60.1)
     assert frames[2].measurements[0].frequency_hz == pytest.approx(60.2)
+
+
+# --- hostile or mismatched peers (real in-process server) -----------------
+
+
+@asynccontextmanager
+async def _scripted_server(port: int, replies: list[bytes]) -> AsyncIterator[None]:
+    """Serve ``replies`` after the first command, then keep the socket open."""
+
+    async def handle(
+        reader: asyncio.StreamReader, writer: asyncio.StreamWriter
+    ) -> None:
+        await read_frame(reader)
+        for reply in replies:
+            writer.write(reply)
+        await writer.drain()
+        try:
+            while True:
+                await read_frame(reader)
+        except Exception:  # the client closing the socket ends the peer
+            writer.close()
+
+    server = await asyncio.start_server(handle, "127.0.0.1", port)
+    async with server:
+        await server.start_serving()
+        yield
+
+
+async def _run_against(port: int, replies: list[bytes], call) -> object:
+    async with _scripted_server(port, replies):
+        client = C37118SessionClient(7, max_skipped_frames=3)
+        reader, writer = await client.open_connection("127.0.0.1", port)
+        try:
+            return await asyncio.wait_for(call(client, reader, writer), timeout=10.0)
+        finally:
+            writer.close()
+
+
+async def test_peer_that_never_sends_config_cannot_hold_the_session(
+    unused_tcp_port: int,
+) -> None:
+    """Before the skip budget a DATA-only peer kept the client waiting forever."""
+    replies = [_data_bytes(100)] * 10
+    with pytest.raises(UnsupportedFrameError, match="no CONFIG-2 frame after"):
+        await _run_against(
+            unused_tcp_port,
+            replies,
+            lambda client, reader, writer: client.request_configuration(reader, writer),
+        )
+
+
+async def test_config_for_another_stream_is_rejected(unused_tcp_port: int) -> None:
+    other_stream = _wrap(3, _config2_bytes()[14:-2], id_code=8)
+    with pytest.raises(UnsupportedFrameError, match="IDCODE 8 does not match"):
+        await _run_against(
+            unused_tcp_port,
+            [other_stream],
+            lambda client, reader, writer: client.request_configuration(reader, writer),
+        )
+
+
+async def test_peer_that_never_sends_data_cannot_hold_the_session(
+    unused_tcp_port: int,
+) -> None:
+    replies = [_config2_bytes()] + [_header_frame()] * 10
+
+    async def call(client, reader, writer):
+        config = await client.request_configuration(reader, writer)
+        return await client.collect_data_frames(reader, writer, config, count=1)
+
+    with pytest.raises(UnsupportedFrameError, match="no DATA frame after"):
+        await _run_against(unused_tcp_port, replies, call)
+
+
+@pytest.mark.parametrize("value", [True, -1, 1.5])
+def test_skip_budget_must_be_a_non_negative_integer(value) -> None:
+    with pytest.raises(ValueError, match="max_skipped_frames"):
+        C37118SessionClient(7, max_skipped_frames=value)
+
+
+def test_boolean_id_code_is_rejected() -> None:
+    with pytest.raises(ValueError, match="id_code"):
+        C37118SessionClient(True)
+    with pytest.raises(ValueError, match="id_code"):
+        build_command_frame(True, COMMAND_DATA_ON)
