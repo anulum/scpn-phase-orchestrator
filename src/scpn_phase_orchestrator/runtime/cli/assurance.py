@@ -93,19 +93,34 @@ def _replay_determinism_evidence(log_path: str) -> EvidenceItem:
 
 def _evidence_from_file(path: str) -> list[EvidenceItem]:
     """Load assurance evidence from a file, else raise."""
-    payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    try:
+        payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise click.ClickException(f"{path} is not valid JSON: {exc}") from exc
     rows = payload if isinstance(payload, list) else [payload]
     items: list[EvidenceItem] = []
     for index, row in enumerate(rows):
         if not isinstance(row, dict):
             raise click.ClickException(f"{path}[{index}] must be a JSON object")
+        # str(None) is "None" and dict([["k", 1]]) is {"k": 1}: coercion would
+        # put a fabricated id or summary, or a reshaped record, into the case.
+        for field in ("evidence_id", "category", "summary"):
+            if field in row and (not isinstance(row[field], str) or not row[field]):
+                raise click.ClickException(
+                    f"{path}[{index}] field {field!r} must be a non-empty string, "
+                    f"got {row[field]!r}"
+                )
+        if "record" in row and not isinstance(row["record"], dict):
+            raise click.ClickException(
+                f"{path}[{index}] field 'record' must be a JSON object"
+            )
         try:
             items.append(
                 build_evidence_item(
-                    evidence_id=str(row["evidence_id"]),
-                    category=str(row["category"]),
-                    summary=str(row["summary"]),
-                    record=dict(row["record"]),
+                    evidence_id=row["evidence_id"],
+                    category=row["category"],
+                    summary=row["summary"],
+                    record=row["record"],
                 )
             )
         except KeyError as exc:
