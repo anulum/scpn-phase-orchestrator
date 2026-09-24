@@ -33,8 +33,11 @@ and lists the unmodelled NIR parameters explicitly in
 from __future__ import annotations
 
 import json
+import math
+from collections import Counter
 from dataclasses import dataclass
 from hashlib import sha256
+from numbers import Real
 
 __all__ = [
     "NIR_STRUCTURAL_FORMAT",
@@ -80,13 +83,21 @@ def _require_finite_non_negative(value: object, *, field: str) -> float:
     ValueError
         If *value* is boolean, non-real, non-finite, or negative.
     """
-    if isinstance(value, bool) or not isinstance(value, (int, float)):
+    if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{field} must be a real number")
     parsed = float(value)
-    if parsed != parsed or parsed in (float("inf"), float("-inf")):
+    if not math.isfinite(parsed):
         raise ValueError(f"{field} must be finite")
     if parsed < 0.0:
         raise ValueError(f"{field} must be >= 0")
+    return parsed
+
+
+def _require_finite_positive(value: object, *, field: str) -> float:
+    """Return *value* as a finite, positive float, else raise ``ValueError``."""
+    parsed = _require_finite_non_negative(value, field=field)
+    if parsed == 0.0:
+        raise ValueError(f"{field} must be > 0")
     return parsed
 
 
@@ -222,15 +233,16 @@ def to_nir_graph(
     Raises
     ------
     ValueError
-        If a record is malformed, or an edge references an undeclared node.
+        If a record is malformed, two populations share a name, an edge
+        references an undeclared node, or ``tau_membrane_ms`` or
+        ``v_threshold_normalised`` is not positive (a zero membrane time
+        constant or threshold leaves the LIF undefined).
     """
-    tau_membrane_ms = _require_finite_non_negative(
-        tau_membrane_ms, field="tau_membrane_ms"
-    )
+    tau_membrane_ms = _require_finite_positive(tau_membrane_ms, field="tau_membrane_ms")
     tau_refractory_ms = _require_finite_non_negative(
         tau_refractory_ms, field="tau_refractory_ms"
     )
-    v_threshold_normalised = _require_finite_non_negative(
+    v_threshold_normalised = _require_finite_positive(
         v_threshold_normalised, field="v_threshold_normalised"
     )
     nodes = tuple(
@@ -243,6 +255,10 @@ def to_nir_graph(
         for population in populations
     )
     node_ids = {node["id"] for node in nodes}
+    if len(node_ids) != len(nodes):
+        counts = Counter(node["id"] for node in nodes)
+        duplicate = next(name for name, count in counts.items() if count > 1)
+        raise ValueError(f"population name {duplicate!r} is declared more than once")
     edges = tuple(_edge_from_projection(projection) for projection in projections)
     for edge in edges:
         for endpoint in ("source", "target"):

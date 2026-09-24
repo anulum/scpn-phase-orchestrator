@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import json
 
+import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.adapters.neuromorphic_ir_export import (
@@ -231,3 +232,52 @@ class TestValidation:
                 tau_refractory_ms=1.0,
                 v_threshold_normalised="high",
             )
+
+
+def test_duplicate_population_names_are_rejected() -> None:
+    """Two nodes with one id made every edge to that name ambiguous."""
+    populations = [
+        {"name": "A", "estimated_rate_hz": 5.0},
+        {"name": "A", "estimated_rate_hz": 40.0},
+    ]
+    with pytest.raises(ValueError, match="'A' is declared more than once"):
+        to_nir_graph(populations, [], tau_membrane_ms=20.0, tau_refractory_ms=2.0)
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "match"),
+    [
+        (
+            {"tau_membrane_ms": 0.0, "tau_refractory_ms": 2.0},
+            "tau_membrane_ms must be > 0",
+        ),
+        (
+            {
+                "tau_membrane_ms": 20.0,
+                "tau_refractory_ms": 2.0,
+                "v_threshold_normalised": 0.0,
+            },
+            "v_threshold_normalised must be > 0",
+        ),
+    ],
+)
+def test_degenerate_lif_parameters_are_rejected(kwargs, match) -> None:
+    with pytest.raises(ValueError, match=match):
+        to_nir_graph([{"name": "A"}], [], **kwargs)
+
+
+def test_zero_refractory_period_is_valid() -> None:
+    graph = to_nir_graph(
+        [{"name": "A"}], [], tau_membrane_ms=20.0, tau_refractory_ms=0.0
+    )
+    assert graph.nodes[0]["tau_refractory_ms"] == 0.0
+
+
+def test_numpy_reals_are_accepted() -> None:
+    graph = to_nir_graph(
+        [{"name": "A", "estimated_rate_hz": np.int64(3)}],
+        [],
+        tau_membrane_ms=np.float32(20.0),
+        tau_refractory_ms=np.int64(2),
+    )
+    assert graph.nodes[0]["estimated_rate_hz"] == 3.0
