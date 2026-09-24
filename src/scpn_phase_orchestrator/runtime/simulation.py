@@ -49,7 +49,6 @@ from scpn_phase_orchestrator.binding import (
     ChannelRuntimeExecutor,
     resolved_binding_config,
 )
-from scpn_phase_orchestrator.binding.types import ProtocolNetSpec
 from scpn_phase_orchestrator.coupling.geometry_constraints import (
     GeometryConstraint,
     NonNegativeConstraint,
@@ -70,14 +69,7 @@ from scpn_phase_orchestrator.monitor.twin_conformal_gate import (
 )
 from scpn_phase_orchestrator.supervisor.events import EventBus
 from scpn_phase_orchestrator.supervisor.petri_adapter import PetriNetAdapter
-from scpn_phase_orchestrator.supervisor.petri_net import (
-    Arc,
-    Marking,
-    PetriNet,
-    Place,
-    Transition,
-    parse_guard,
-)
+from scpn_phase_orchestrator.supervisor.petri_net import petri_net_from_protocol
 from scpn_phase_orchestrator.supervisor.policy import SupervisorPolicy
 from scpn_phase_orchestrator.supervisor.policy_rules import (
     PolicyEngine,
@@ -123,34 +115,6 @@ __all__ = [
     "simulate",
     "petri_net_from_protocol",
 ]
-
-
-def petri_net_from_protocol(protocol: ProtocolNetSpec) -> tuple[PetriNet, Marking]:
-    """Build a Petri net and initial marking from a protocol-net spec.
-
-    Parameters
-    ----------
-    protocol : ProtocolNetSpec
-        The protocol-net specification.
-
-    Returns
-    -------
-    tuple[PetriNet, Marking]
-        The Petri net and its initial marking.
-    """
-    places = [Place(name) for name in protocol.places]
-    transitions = []
-    for ts in protocol.transitions:
-        guard = parse_guard(ts.guard) if ts.guard else None
-        transitions.append(
-            Transition(
-                name=ts.name,
-                inputs=[Arc(a["place"], a.get("weight", 1)) for a in ts.inputs],
-                outputs=[Arc(a["place"], a.get("weight", 1)) for a in ts.outputs],
-                guard=guard,
-            )
-        )
-    return PetriNet(places, transitions), Marking(tokens=dict(protocol.initial))
 
 
 @dataclass(frozen=True)

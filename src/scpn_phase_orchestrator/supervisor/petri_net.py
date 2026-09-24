@@ -22,10 +22,21 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from math import isfinite
 from numbers import Integral, Real
+from typing import TYPE_CHECKING
 
 from scpn_phase_orchestrator.exceptions import PolicyError
 
-__all__ = ["Place", "Arc", "Transition", "Marking", "PetriNet"]
+if TYPE_CHECKING:
+    from scpn_phase_orchestrator.binding.types import ProtocolNetSpec
+
+__all__ = [
+    "Place",
+    "Arc",
+    "Transition",
+    "Marking",
+    "PetriNet",
+    "petri_net_from_protocol",
+]
 
 _OPS = {
     ">": operator.gt,
@@ -343,3 +354,34 @@ class PetriNet:
             if all(marking[arc.place] >= arc.weight for arc in t.inputs):
                 return self.fire(marking, t), t
         return marking, None
+
+
+def petri_net_from_protocol(protocol: ProtocolNetSpec) -> tuple[PetriNet, Marking]:
+    """Build a Petri net and initial marking from a protocol-net spec.
+
+    This is the builder ``simulate`` uses; the binding validator calls it too,
+    so a spec that validates is one the runtime can build.
+
+    Parameters
+    ----------
+    protocol : ProtocolNetSpec
+        The protocol-net specification.
+
+    Returns
+    -------
+    tuple[PetriNet, Marking]
+        The Petri net and its initial marking.
+    """
+    places = [Place(name) for name in protocol.places]
+    transitions = []
+    for ts in protocol.transitions:
+        guard = parse_guard(ts.guard) if ts.guard else None
+        transitions.append(
+            Transition(
+                name=ts.name,
+                inputs=[Arc(a["place"], a.get("weight", 1)) for a in ts.inputs],
+                outputs=[Arc(a["place"], a.get("weight", 1)) for a in ts.outputs],
+                guard=guard,
+            )
+        )
+    return PetriNet(places, transitions), Marking(tokens=dict(protocol.initial))
