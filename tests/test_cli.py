@@ -35,6 +35,7 @@ from tests.plugin_execution_fixtures import (
 from tests.plugin_execution_fixtures import (
     write_plan_payload as _write_plan_payload,
 )
+from tests.prometheus_range_server import prometheus_range_server
 
 
 @pytest.fixture
@@ -6980,7 +6981,7 @@ def test_queuewaves_check_runs_pipeline_and_reports_status(runner, tmp_path):
     config_path = tmp_path / "queuewaves.yaml"
     config_path.write_text(
         """
-prometheus_url: "http://localhost:9090"
+prometheus_url: "PROMETHEUS_URL"
 scrape_interval_s: 1
 buffer_length: 16
 services:
@@ -6997,7 +6998,15 @@ thresholds:
         encoding="utf-8",
     )
 
-    result = runner.invoke(main, ["queuewaves", "check", "--config", str(config_path)])
+    # check now queries Prometheus; serve the range API on a local socket
+    with prometheus_range_server() as url:
+        config_path.write_text(
+            config_path.read_text(encoding="utf-8").replace("PROMETHEUS_URL", url),
+            encoding="utf-8",
+        )
+        result = runner.invoke(
+            main, ["queuewaves", "check", "--config", str(config_path)]
+        )
 
     assert result.exit_code in (0, 1)
     assert "R_good=" in result.output
@@ -7582,7 +7591,7 @@ def test_queuewaves_check_reports_clean_status_for_high_thresholds(runner, tmp_p
     config_path = tmp_path / "queuewaves_clean.yaml"
     config_path.write_text(
         """
-prometheus_url: "http://localhost:9090"
+prometheus_url: "PROMETHEUS_URL"
 scrape_interval_s: 1
 buffer_length: 16
 services:
@@ -7601,7 +7610,15 @@ thresholds:
         encoding="utf-8",
     )
 
-    result = runner.invoke(main, ["queuewaves", "check", "--config", str(config_path)])
+    # check now queries Prometheus; serve the range API on a local socket
+    with prometheus_range_server() as url:
+        config_path.write_text(
+            config_path.read_text(encoding="utf-8").replace("PROMETHEUS_URL", url),
+            encoding="utf-8",
+        )
+        result = runner.invoke(
+            main, ["queuewaves", "check", "--config", str(config_path)]
+        )
 
     assert result.exit_code == 0
     assert "No anomalies detected." in result.output

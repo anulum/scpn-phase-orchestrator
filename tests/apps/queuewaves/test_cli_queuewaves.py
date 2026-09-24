@@ -9,18 +9,26 @@
 from __future__ import annotations
 
 import textwrap
+from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
 from click.testing import CliRunner
 
 from scpn_phase_orchestrator.runtime.cli import main
+from tests.prometheus_range_server import prometheus_range_server
 
 
 @pytest.fixture()
-def config_file(tmp_path: Path) -> Path:
-    yaml_text = textwrap.dedent("""\
-        prometheus_url: "http://localhost:9090"
+def config_file(tmp_path: Path) -> Iterator[Path]:
+    # check queries Prometheus; serve the range API on a local socket
+    with prometheus_range_server() as url:
+        yield _write_config(tmp_path, url)
+
+
+def _write_config(tmp_path: Path, url: str) -> Path:
+    yaml_text = textwrap.dedent(f"""\
+        prometheus_url: "{url}"
         scrape_interval_s: 1
         buffer_length: 16
         services:

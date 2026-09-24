@@ -788,7 +788,9 @@ spo queuewaves serve --config qw_config.yaml --port 9090
 
 ## `spo queuewaves check`
 
-Run a one-shot health check against configured QueueWaves endpoints.
+Run a one-shot health check: fetch each configured service's recent history
+from Prometheus with one range query, run the phase pipeline, and report
+anomalies.
 
 ```
 spo queuewaves check [OPTIONS]
@@ -804,8 +806,9 @@ spo queuewaves check [OPTIONS]
 
 | Code | Meaning |
 |------|---------|
-| 0 | All endpoints healthy |
-| 1 | One or more endpoints degraded or unreachable |
+| 0 | Every service analysed; no anomalies |
+| 1 | Anomalies detected |
+| 2 | Unknown: a service returned too little data (for example Prometheus is unreachable); nothing was analysed |
 
 **Example:**
 

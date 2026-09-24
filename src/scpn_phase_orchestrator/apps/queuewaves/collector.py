@@ -173,6 +173,65 @@ class PrometheusCollector:
                 )
         return self._buffers
 
+    async def backfill(
+        self, *, end: float, samples: int, step_s: float
+    ) -> dict[str, MetricBuffer]:
+        """Fill each buffer from one PromQL range query per service.
+
+        A one-shot health check needs a phase history, not a single instant
+        sample, so it asks Prometheus for the last ``samples`` points spaced
+        ``step_s`` apart ending at ``end``. Failures are logged per service and
+        leave that buffer unfilled, as :meth:`scrape` does.
+
+        Parameters
+        ----------
+        end : float
+            Unix timestamp of the most recent sample to request.
+        samples : int
+            Number of points to request per service (at least 1).
+        step_s : float
+            Spacing between points in seconds (positive).
+
+        Returns
+        -------
+        dict[str, MetricBuffer]
+            The per-service buffers after the range queries.
+
+        Raises
+        ------
+        ValueError
+            If ``samples`` is below 1 or ``step_s`` is not positive.
+        """
+        if samples < 1:
+            raise ValueError("samples must be at least 1")
+        if not step_s > 0.0:
+            raise ValueError("step_s must be positive")
+        client = await self._get_client()
+        start = end - (samples - 1) * step_s
+        for name, promql in self._queries.items():
+            try:
+                resp = await client.get(
+                    f"{self._base_url}/api/v1/query_range",
+                    params={
+                        "query": promql,
+                        "start": start,
+                        "end": end,
+                        "step": step_s,
+                    },
+                )
+                resp.raise_for_status()
+                results = resp.json().get("data", {}).get("result", [])
+                if results:
+                    for ts, val in results[0]["values"]:
+                        self._buffers[name].push(float(ts), float(val))
+            except _SCRAPE_ERRORS:
+                logger.warning("range query failed for %s", name, exc_info=True)
+            except (KeyError, IndexError, TypeError, ValueError):
+                logger.warning(
+                    "malformed Prometheus range response for %s", name, exc_info=True
+                )
+        return self._buffers
+
     def scrape_sync(
         self,
         values: dict[str, tuple[float, float]],
