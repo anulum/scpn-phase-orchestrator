@@ -309,7 +309,10 @@ def seal_grid_early_warning_advisory(
         If an identifier is empty, a rate or window is not positive, ``persistence`` is
         not a positive integer, ``aggregation`` is unknown, a bounded rate leaves
         ``[0, 1]``, ``recency_top`` is below one, a sample index is negative, the bus is
-        below the whole-network sentinel, or a reported real is not finite.
+        below the whole-network sentinel, or a reported real is not finite; or
+        if the alarm is not self-consistent: the bus does not fit the
+        aggregation, the growth rate is below its threshold, or the alarm time
+        is not ``warning_sample / sampling_rate_hz``.
     """
     fs = _positive_real(sampling_rate_hz, "sampling_rate_hz")
     onset = _optional_non_negative_int(
@@ -321,6 +324,28 @@ def seal_grid_early_warning_advisory(
     bus = _finite_int(most_unstable_bus, "most_unstable_bus")
     if bus < WHOLE_NETWORK_BUS:
         raise ValueError(f"most_unstable_bus must be >= {WHOLE_NETWORK_BUS}, got {bus}")
+    # The advisory records an alarm the stream monitor raised, so it must carry
+    # that alarm's own relations: the mean aggregation scores the whole network
+    # and the focal one a bus, the growth rate is at or above its threshold, and
+    # the alarm time is the sample index over the rate.
+    if (aggregation == "mean") != (bus == WHOLE_NETWORK_BUS):
+        raise ValueError(
+            f"most_unstable_bus {bus} does not fit the {aggregation!r} aggregation; "
+            f"'mean' reports {WHOLE_NETWORK_BUS} and 'focal' a bus index >= 0"
+        )
+    rate = _finite_real(growth_rate, "growth_rate")
+    rate_threshold = _finite_real(growth_rate_threshold, "growth_rate_threshold")
+    if rate < rate_threshold:
+        raise ValueError(
+            f"growth_rate {rate} is below growth_rate_threshold {rate_threshold}; "
+            "no alarm was raised"
+        )
+    time_s = _finite_real(warning_time_s, "warning_time_s")
+    if not math.isclose(time_s, sample_idx / fs, rel_tol=1e-9, abs_tol=1e-12):
+        raise ValueError(
+            f"warning_time_s {time_s} does not equal warning_sample / "
+            f"sampling_rate_hz = {sample_idx / fs}"
+        )
     lead_samples = None if onset is None else onset - sample_idx
     lead_seconds = None if lead_samples is None else lead_samples / fs
     lead_is_early = lead_samples is not None and lead_samples > 0
@@ -338,11 +363,9 @@ def seal_grid_early_warning_advisory(
         recency_top=_recency(recency_top),
         r2_gate=_unit_interval(r2_gate, "r2_gate"),
         warning_sample=sample_idx,
-        warning_time_s=_finite_real(warning_time_s, "warning_time_s"),
-        growth_rate=_finite_real(growth_rate, "growth_rate"),
-        growth_rate_threshold=_finite_real(
-            growth_rate_threshold, "growth_rate_threshold"
-        ),
+        warning_time_s=time_s,
+        growth_rate=rate,
+        growth_rate_threshold=rate_threshold,
         most_unstable_bus=bus,
         transition_onset_sample=onset,
         lead_samples=lead_samples,
