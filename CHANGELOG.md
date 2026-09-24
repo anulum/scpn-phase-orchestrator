@@ -36,6 +36,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   backend. Admission runs each compiled Mojo executable once with empty input
   and caches the verdict per build; on a loaded workstation one launch took
   0.06–0.23 s.
+- `PhaseFieldSpecification` formulas now carry the stored threshold exactly.
+  Thresholds were written with 16 significant digits, so the catalogue's
+  `phase_lag_bound` read `phase_lag <= 1.570796326794897`, above π/2, and
+  `0.1 + 0.2` became `0.3`. Thresholds are written as the shortest decimal that
+  reads back as the same float. An integer threshold no longer fails on
+  Python 3.11, which has no `int.is_integer`. Boolean and non-numeric
+  thresholds now raise `ValueError` instead of being read as 1.0 or raising
+  `TypeError`. A signal name must be an identifier, so the formula stays on
+  the builtin backend.
 - `synthesise_stl_controller_candidates()` and
   `synthesise_stl_closed_loop_plan()` now require the automaton to have been
   synthesised from the trace they receive, and raise `ValueError` otherwise.
