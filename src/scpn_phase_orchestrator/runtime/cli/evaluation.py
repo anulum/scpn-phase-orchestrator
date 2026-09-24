@@ -177,7 +177,12 @@ def audit_detector_command(
     spec = _load_scores_spec(scores_json)
     event_scores = _require_scores(spec, "event_scores")
     null_scores = _require_scores(spec, "null_scores")
-    detector_name = str(spec.get("detector_name", "detector"))
+    detector_name = spec.get("detector_name", "detector")
+    if not isinstance(detector_name, str) or not detector_name:
+        # str(None) is "None": it would be sealed as the audited detector.
+        raise click.ClickException(
+            f"'detector_name' must be a non-empty string, got {detector_name!r}"
+        )
     if (corpus_id is None) != (captured_at is None):
         raise click.ClickException(
             "--corpus-id and --captured-at must be given together to seal a verdict"
