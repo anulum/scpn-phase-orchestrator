@@ -24,6 +24,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The nn forward integrators (`kuramoto_forward`, `kuramoto_forward_masked`,
+  `winfree_forward`, `simplicial_forward`, `stuart_landau_forward`,
+  `theta_neuron_forward`) refuse an unknown `method`. Every value other than
+  `"rk4"` used to select explicit Euler, so `"RK4"` or an unsupported `"rk45"`
+  silently changed the integrator. The multiverse docstring no longer lists
+  `rk45`, which it already refused.
 - The coupling inverse problem (`infer_coupling`, `hybrid_inverse`,
   `analytical_inverse`) validates its inputs. A shooting `window_size` longer
   than the trajectory left no window: every loss was NaN and the random
