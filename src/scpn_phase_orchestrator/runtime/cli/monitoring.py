@@ -315,6 +315,7 @@ def chaos(
             steps=steps,
             seed=seed,
             recovery_tolerance=recovery_tolerance,
+            binding_spec_path=Path(binding_spec),
         )
     except ValueError as exc:
         raise click.ClickException(str(exc)) from exc
