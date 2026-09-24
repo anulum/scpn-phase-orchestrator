@@ -24,6 +24,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The live server loop (`runtime.server.SimulationState`) now integrates the
+  drive the binding spec declares: baseline `zeta`, `Psi`, and the physical,
+  informational or symbolic `Psi` driver. The dashboard, the gRPC phase
+  stream and the Studio replay all run through this loop, and it passed
+  `zeta = 0` and `Psi = 0` to the engines. That dropped the drive every
+  shipped domainpack declares, so the dynamics they served differed from
+  `spo run` for the same spec (`swarm_robotics`: R 0.72 against 0.53 after
+  300 steps). Both loops now resolve the drive through one function, and the
+  open-loop trajectories match `simulate` on all 36 shipped packs.
 - A scenario hook's phase edit now reaches the amplitude-mode (Stuart-Landau)
   integrator. `simulate` integrates a combined phase-and-amplitude state that
   it builds once before the loop, and it never wrote a hook's

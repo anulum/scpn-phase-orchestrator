@@ -276,6 +276,45 @@ class SimulationTwinConfidenceContext:
     layer_order_parameters: tuple[float, ...]
 
 
+PsiDriver = PhysicalDriver | InformationalDriver | SymbolicDriver
+
+
+def _spec_drive(spec: BindingSpec) -> tuple[float, float, PsiDriver | None]:
+    """Return the drive a binding spec declares: baseline zeta, Psi, Psi driver.
+
+    Shared by :func:`simulate` and the live ``runtime.server.SimulationState``
+    so the dashboard, gRPC stream and Studio replay integrate the same driven
+    dynamics as ``spo run``.
+    """
+    zeta = max(
+        (cfg.get("zeta", 0.0) for cfg in spec.drivers.all_channel_configs().values()),
+        default=0.0,
+    )
+    psi_target = spec.drivers.physical.get("psi", 0.0)
+    psi_driver: PsiDriver | None = None
+    if "frequency" in spec.drivers.physical:
+        psi_driver = PhysicalDriver(
+            frequency=spec.drivers.physical["frequency"],
+            amplitude=spec.drivers.physical.get("amplitude", 1.0),
+        )
+    elif "cadence_hz" in spec.drivers.informational:
+        psi_driver = InformationalDriver(
+            cadence_hz=spec.drivers.informational["cadence_hz"],
+        )
+    elif "sequence" in spec.drivers.symbolic:
+        psi_driver = SymbolicDriver(
+            sequence=spec.drivers.symbolic["sequence"],
+        )
+    return float(zeta), float(psi_target), psi_driver
+
+
+def _driver_psi(driver: PsiDriver, step_idx: int, sample_period_s: float) -> float:
+    """Return the Psi target a driver sets for zero-based step ``step_idx``."""
+    if isinstance(driver, SymbolicDriver):
+        return float(driver.compute(step_idx))
+    return float(driver.compute(step_idx * sample_period_s))
+
+
 def _ttl_steps(ttl_s: float, sample_period_s: float) -> int:
     """Return the integration steps a TTL covers, rounding a partial step up.
 
@@ -512,31 +551,12 @@ def simulate(
         layer_osc_ranges[layer.index] = list(range(osc_idx, osc_idx + n_layer))
         osc_idx += n_layer
 
-    zeta = max(
-        (cfg.get("zeta", 0.0) for cfg in spec.drivers.all_channel_configs().values()),
-        default=0.0,
-    )
+    zeta, psi_target, psi_driver = _spec_drive(spec)
     # A zeta action is an offset on the spec's baseline drive that lasts a whole
     # number of integration steps; at expiry the baseline returns (resetting to
     # 0.0 dropped a non-zero baseline for the rest of the run).
     zeta_baseline = zeta
     zeta_expires_at: int | None = None
-    psi_target = spec.drivers.physical.get("psi", 0.0)
-
-    psi_driver: PhysicalDriver | InformationalDriver | SymbolicDriver | None = None
-    if "frequency" in spec.drivers.physical:
-        psi_driver = PhysicalDriver(
-            frequency=spec.drivers.physical["frequency"],
-            amplitude=spec.drivers.physical.get("amplitude", 1.0),
-        )
-    elif "cadence_hz" in spec.drivers.informational:
-        psi_driver = InformationalDriver(
-            cadence_hz=spec.drivers.informational["cadence_hz"],
-        )
-    elif "sequence" in spec.drivers.symbolic:
-        psi_driver = SymbolicDriver(
-            sequence=spec.drivers.symbolic["sequence"],
-        )
 
     control_interval = max(1, round(spec.control_period_s / spec.sample_period_s))
 
@@ -563,11 +583,7 @@ def simulate(
             zeta_expires_at = None
 
         if psi_driver is not None:
-            t = step_idx * spec.sample_period_s
-            if isinstance(psi_driver, SymbolicDriver):
-                psi_target = psi_driver.compute(step_idx)
-            else:
-                psi_target = psi_driver.compute(t)
+            psi_target = _driver_psi(psi_driver, step_idx, spec.sample_period_s)
 
         if scenario_hook is not None:
             context = SimulationScenarioContext(
