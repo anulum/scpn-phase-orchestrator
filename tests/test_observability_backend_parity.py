@@ -87,8 +87,17 @@ _OTEL_SCRIPT = textwrap.dedent(
 )
 
 
+def _otel_sdk_installed() -> bool:
+    # find_spec on a dotted name imports the parents and raises
+    # ModuleNotFoundError when "opentelemetry" itself is absent (as in CI).
+    try:
+        return importlib.util.find_spec("opentelemetry.sdk.metrics") is not None
+    except ModuleNotFoundError:
+        return False
+
+
 @pytest.mark.skipif(
-    importlib.util.find_spec("opentelemetry.sdk.metrics") is None,
+    not _otel_sdk_installed(),
     reason="opentelemetry-sdk not installed; the OTel export path is inactive",
 )
 def test_otel_r_global_gauge_is_the_mean_layer_r() -> None:
