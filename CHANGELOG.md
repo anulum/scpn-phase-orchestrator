@@ -24,6 +24,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `spo watch` verifies a live tail correctly. A tail that started mid-stream
+  began at sequence N + 1, which the integrity check (expecting sequence 1
+  and the zero hash) always refused. Every valid stream watched without
+  `--from-start` ended with "stream integrity: FAILED (0 events)" and exit
+  code 1. The chain is now re-read from the start of the file up to the last
+  watched event, and the watched events must match its tail.
+- `spo replay --output` writes the summary to the file. The option was
+  declared and documented but never used, so nothing was written.
 - An audit log and its protobuf event stream can no longer share a file.
   `spo run --audit-stream audit.jsonl` derived the JSONL log path by swapping
   the suffix to `.jsonl`, which gave the stream path itself, and `--audit X
