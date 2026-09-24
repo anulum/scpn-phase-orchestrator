@@ -36,6 +36,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   backend. Admission runs each compiled Mojo executable once with empty input
   and caches the verdict per build; on a loaded workstation one launch took
   0.06–0.23 s.
+- `build_twin_confidence_evidence()` no longer attests a score record as sent.
+  It checked only that `score_hash` was non-empty, so a critical tick edited
+  to read `"healthy"` was attested as healthy. The hash must now equal the
+  SHA-256 the scorer computes over the rest of the record, and `status` must be
+  `healthy`, `warning` or `critical`. The hash detects edits, not forgery.
 - `to_nir_graph()` rejects two populations with the same name, which produced
   two graph nodes with one id, and a zero membrane time constant or firing
   threshold, which leave the LIF undefined; a zero refractory period is still

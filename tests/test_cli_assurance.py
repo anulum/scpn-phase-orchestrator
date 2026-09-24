@@ -272,11 +272,30 @@ def test_build_from_run_result_with_control_envelope(
 
 
 def test_build_from_twin_confidence_file(runner: CliRunner, tmp_path: Path) -> None:
-    score = tmp_path / "twin.json"
-    score.write_text(
-        json.dumps({"confidence": 0.91, "status": "healthy", "score_hash": "b" * 64}),
-        encoding="utf-8",
+    from scpn_phase_orchestrator.monitor.twin_confidence import (
+        TwinConfidenceBaseline,
+        TwinDivergence,
+        score_twin_confidence,
     )
+
+    record = score_twin_confidence(
+        TwinDivergence(
+            phase_js_divergence=0.012,
+            order_wasserstein=0.022,
+            n_bins=36,
+            backend="python",
+        ),
+        TwinConfidenceBaseline(
+            phase_js_mean=0.01,
+            phase_js_std=0.005,
+            order_w1_mean=0.02,
+            order_w1_std=0.01,
+            sample_count=50,
+            band_z=3.0,
+        ),
+    ).to_audit_record()
+    score = tmp_path / "twin.json"
+    score.write_text(json.dumps(record), encoding="utf-8")
     out = tmp_path / "bundle.json"
     result = runner.invoke(
         main,
@@ -295,7 +314,7 @@ def test_build_from_twin_confidence_file(runner: CliRunner, tmp_path: Path) -> N
     evidence = {item["evidence_id"]: item for item in bundle["evidence"]}
     assert "twin-confidence-score" in evidence
     assert evidence["twin-confidence-score"]["category"] == "twin_confidence"
-    assert evidence["twin-confidence-score"]["record"]["confidence"] == 0.91
+    assert evidence["twin-confidence-score"]["record"] == record
 
 
 def test_twin_confidence_file_non_object_rejected(
