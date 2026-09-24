@@ -24,6 +24,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- A Studio owned-connector record no longer mixes two binding contracts.
+  - `build_owned_live_connector_runtime_record` names the `contract_hash` of
+    the replay's connector plan but built the sync envelope from the binding
+    spec on disk. When the spec was edited after the replay, the record was
+    `accepted` under the replay's contract while the adapter had run on the
+    edited one.
+  - A spec that no longer yields the replay's contract now blocks the record
+    with "binding spec changed since the replay; replay it again".
+
 - The deployment commands Studio gives the operator now run.
   - The audit and WASM exports listed `spo audit summary` and
     `spo export wasm`, which are not CLI commands. The audit export now lists
