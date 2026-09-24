@@ -24,6 +24,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `tools/install_spo_kernel.py` (and `make bridge`) installs the kernel it
+  built into the environment it was given. `maturin develop` installs into
+  `VIRTUAL_ENV` or a `.venv` above the working directory, so `--python` for
+  another environment was ignored. In a uv-created environment it installs
+  through uv, which applied this repository's `exclude-dependencies` entry for
+  `spo-kernel` and skipped the install while maturin reported success. The
+  import check then passed on the previous build. The helper now sets
+  `VIRTUAL_ENV`, runs maturin outside the checkout, and fails unless the
+  extension the environment loads has the SHA-256 of the library cargo built.
 - The `rust-msrv` CI job installs its toolchain explicitly. The toolchain action
   is pinned by commit, so without the input it installed stable and the job
   never checked the declared minimum.
