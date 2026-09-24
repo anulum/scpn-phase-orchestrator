@@ -47,12 +47,12 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             ~/.cargo/bin/cargo-audit
-          key: cargo-audit-0.22.1-${{ hashFiles('spo-kernel/Cargo.lock') }}
-          restore-keys: cargo-audit-0.22.1-
+          key: cargo-audit-0.22.2-${{ hashFiles('spo-kernel/Cargo.lock') }}
+          restore-keys: cargo-audit-0.22.2-
       - name: Install cargo-audit
         run: |
-          if ! cargo audit --version | grep -q '0\.22\.1'; then
-            cargo install cargo-audit --version 0.22.1 --locked --force
+          if ! cargo audit --version | grep -q '0\.22\.2'; then
+            cargo install cargo-audit --version 0.22.2 --locked --force
           fi
       - name: Audit Cargo.lock
         run: cargo audit --file Cargo.lock
@@ -72,12 +72,12 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             ~/.cargo/bin/cargo-deny
-          key: cargo-deny-0.18.7-${{ hashFiles('spo-kernel/Cargo.lock', 'spo-kernel/deny.toml') }}
-          restore-keys: cargo-deny-0.18.7-
+          key: cargo-deny-0.20.2-${{ hashFiles('spo-kernel/Cargo.lock', 'spo-kernel/deny.toml') }}
+          restore-keys: cargo-deny-0.20.2-
       - name: Install cargo-deny
         run: |
-          if ! cargo deny --version | grep -q '0\.18\.7'; then
-            cargo install cargo-deny --version 0.18.7 --locked --force
+          if ! cargo deny --version | grep -q '0\.20\.2'; then
+            cargo install cargo-deny --version 0.20.2 --locked --force
           fi
       - name: Check Rust advisories, bans, and sources
         run: cargo deny check advisories bans sources
