@@ -96,6 +96,12 @@ def test_calibrate_rejects_blank_regime() -> None:
 # ---------------------------------------------------------------------
 
 
+def test_threshold_small_calibration_is_infinite() -> None:
+    # The textbook quantile, kept for the alarm stream: n=3, level=0.9 ->
+    # rank = ceil(0.9*4) = 4 > n -> inf. The admission gate clamps it below.
+    assert math.isinf(_conformal_threshold(np.array([0.1, 0.2, 0.3]), 0.1))
+
+
 def test_small_calibration_does_not_open_the_gate() -> None:
     """n=3 cannot bound the 90% level; the band stops at the largest nominal score."""
     gate = TwinConformalGate()
