@@ -24,6 +24,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `nn.training.trajectory_loss` refuses observed and predicted trajectories
+  of different shape. It used to compare only the shorter prefix, so a model
+  was fitted to part of the data without notice.
+  `coupling_sparsity_loss` is now documented as what it computes,
+  `(1 - target_density) * mean(|K|)` (an L1 shrinkage, not a density
+  measure), and requires `target_density` in [0, 1]; above 1 the penalty was
+  negative and rewarded larger couplings. `train` requires a non-negative
+  integer `n_epochs`.
 - `ppo_supervisor_loss` now validates its objective parameters. `clip_epsilon`
   must be finite and positive, and `value_weight` and `entropy_weight` finite
   and non-negative. A negative epsilon had inverted the ratio clip and trained

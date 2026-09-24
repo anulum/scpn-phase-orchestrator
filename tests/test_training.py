@@ -224,3 +224,34 @@ class TestTrainingPipelineWiring:
         traj_mod = traj % (2 * jnp.pi)
         assert jnp.all(traj_mod >= 0.0)
         assert jnp.all(traj_mod < 2 * jnp.pi + 1e-6)
+
+
+class TestTrainingContracts:
+    """Inputs that used to be accepted and silently change the objective."""
+
+    def test_trajectory_loss_refuses_a_shorter_observation(self):
+        layer = KuramotoLayer(4, n_steps=10, dt=0.01, key=jax.random.PRNGKey(0))
+        phases = jnp.zeros(4)
+        _, traj = layer.forward_with_trajectory(phases)
+        with pytest.raises(ValueError, match="must match"):
+            trajectory_loss(layer, phases, traj[:5])
+
+    @pytest.mark.parametrize("density", [1.5, -0.1, float("nan"), True, "0.1"])
+    def test_sparsity_target_must_lie_in_the_unit_interval(self, density):
+        """Above 1 the penalty was negative and rewarded larger couplings."""
+        with pytest.raises(ValueError, match="target_density must be in"):
+            coupling_sparsity_loss(jnp.ones((3, 3)), target_density=density)
+
+    def test_full_density_switches_the_penalty_off(self):
+        assert float(coupling_sparsity_loss(jnp.ones((3, 3)), 1.0)) == 0.0
+
+    @pytest.mark.parametrize("epochs", [-1, 2.0, True])
+    def test_epoch_count_must_be_a_non_negative_integer(self, epochs):
+        layer = KuramotoLayer(4, n_steps=2, dt=0.01, key=jax.random.PRNGKey(0))
+        with pytest.raises(ValueError, match="n_epochs must be"):
+            train(
+                layer,
+                lambda model: sync_loss(model, jnp.zeros(4)),
+                optax.adam(1e-3),
+                epochs,
+            )

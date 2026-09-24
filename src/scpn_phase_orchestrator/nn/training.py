@@ -91,6 +91,13 @@ def trajectory_loss(
     -------
     jax.Array
         Scalar mean circular distance.
+
+    Raises
+    ------
+    ValueError
+        If the predicted and observed trajectories differ in shape. The loss
+        used to compare only the shorter prefix, so a model was fitted to part of
+        the data without notice.
     """
     # type ignore: training accepts the trajectory-capable Equinox protocol.
     if backend == "euler":
@@ -100,31 +107,51 @@ def trajectory_loss(
         _, predicted = model.forward_with_trajectory(  # type: ignore[attr-defined]
             phases, backend=backend
         )
-    T = min(predicted.shape[0], observed.shape[0])
-    pred = predicted[:T]
-    obs = observed[:T]
-    return jnp.mean(1.0 - jnp.cos(pred - obs))
+    if predicted.shape != observed.shape:
+        raise ValueError(
+            f"observed trajectory has shape {observed.shape} but the model "
+            f"produced {predicted.shape}; they must match"
+        )
+    return jnp.mean(1.0 - jnp.cos(predicted - observed))
 
 
 def coupling_sparsity_loss(
     K: jax.Array,
     target_density: float = 0.1,
 ) -> jax.Array:
-    """L1 penalty driving K toward target density.
+    """Scaled L1 penalty on the coupling magnitudes.
+
+    The penalty is ``(1 - target_density) * mean(|K|)``: an L1 shrinkage whose
+    weight falls as the allowed density rises. It does not measure how many
+    entries are non-zero and has no reference coupling, so it pushes every
+    entry toward zero rather than toward an exact density.
 
     Parameters
     ----------
     K : jax.Array
         (N, N) coupling matrix.
     target_density : float
-        fraction of nonzero entries desired.
+        Allowed fraction of non-zero entries in ``[0, 1]``; ``0`` is the full L1
+        penalty and ``1`` turns it off.
 
     Returns
     -------
     jax.Array
-        Scalar penalty: |mean(|K|) - target_density * mean(|K|_initial)|.
+        Scalar penalty ``(1 - target_density) * mean(|K|)``.
+
+    Raises
+    ------
+    ValueError
+        If ``target_density`` is not a finite number in ``[0, 1]``. Above 1 the
+        penalty turned negative and rewarded larger couplings.
     """
-    return jnp.mean(jnp.abs(K)) - target_density * jnp.mean(jnp.abs(K))
+    if (
+        isinstance(target_density, bool)
+        or not isinstance(target_density, int | float)
+        or not 0.0 <= target_density <= 1.0
+    ):
+        raise ValueError(f"target_density must be in [0, 1], got {target_density!r}")
+    return (1.0 - target_density) * jnp.mean(jnp.abs(K))
 
 
 # ──────────────────────────────────────────────────
@@ -189,7 +216,14 @@ def train(
     -------
     tuple[eqx.Module, list[float]]
         (trained_model, loss_history).
+
+    Raises
+    ------
+    ValueError
+        If ``n_epochs`` is not a non-negative integer.
     """
+    if isinstance(n_epochs, bool) or not isinstance(n_epochs, int) or n_epochs < 0:
+        raise ValueError(f"n_epochs must be a non-negative integer, got {n_epochs!r}")
     opt_state = optimizer.init(eqx.filter(model, eqx.is_array))
     losses: list[float] = []
 
