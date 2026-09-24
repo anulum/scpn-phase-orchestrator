@@ -36,6 +36,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   backend. Admission runs each compiled Mojo executable once with empty input
   and caches the verdict per build; on a loaded workstation one launch took
   0.06–0.23 s.
+- STL monitors no longer report a strict predicate as satisfied at its
+  boundary. `always (R > 0.3)` over `R = [0.3, 0.5]` has robustness 0 and was
+  reported `satisfied=True`; the builtin monitor, the monitoring automaton and
+  the controller synthesis now decide satisfaction with each predicate's own
+  operator, so it is not satisfied and a controller candidate is produced.
+  Results from the `rtamt` backend are satisfied only at strictly positive
+  robustness. Thresholds written as `.5`, `5.` or `5e-1` now use the builtin
+  backend instead of reaching `rtamt`, which raised `UnboundLocalError` on
+  some of them; a threshold that overflows to infinity is rejected. `rtamt`
+  parse and evaluation failures (syntax errors, a signal missing from the
+  trace, unknown functions) are raised as `ValueError` instead of `rtamt`'s own
+  exception types, `KeyError` or `UnboundLocalError`.
 - `import scpn_phase_orchestrator.supervisor`, `from
   scpn_phase_orchestrator.monitor.stl import STLMonitor` and 58 other modules
   failed with a circular `ImportError` when imported first in a fresh

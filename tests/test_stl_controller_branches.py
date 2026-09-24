@@ -48,3 +48,23 @@ def test_equality_predicate_yields_a_restore_direction() -> None:
 
     assert synthesis.candidates
     assert any(candidate.direction == "restore" for candidate in synthesis.candidates)
+
+
+def test_strict_predicate_at_zero_robustness_yields_a_candidate() -> None:
+    """A violated strict predicate at the boundary still produces a candidate."""
+    trace = {"R": [0.5, 0.3, 0.6]}
+    automaton = synthesise_stl_monitoring_automaton("always (R > 0.3)", trace)
+    synthesis = synthesise_stl_controller_candidates(automaton, trace)
+    assert not synthesis.satisfied
+    assert [(c.action, c.time_index, c.robustness) for c in synthesis.candidates] == [
+        ("increase_R", 1, 0.0)
+    ]
+
+
+def test_non_strict_predicate_at_zero_robustness_needs_no_candidate() -> None:
+    """A non-strict predicate that holds at the boundary is satisfied."""
+    trace = {"R": [0.5, 0.3, 0.6]}
+    automaton = synthesise_stl_monitoring_automaton("always (R >= 0.3)", trace)
+    synthesis = synthesise_stl_controller_candidates(automaton, trace)
+    assert synthesis.satisfied
+    assert synthesis.candidates == ()
