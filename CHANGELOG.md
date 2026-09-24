@@ -24,6 +24,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `SymbolicExtractor` in ring mode scores the circular step. The wrap from
+  state N-1 to 0 was scored as a jump of N-1 (quality 0.33 for six states),
+  while the omega written beside it treated the same transition as one step.
+  Graph mode keeps the linear distance.
 - `InformationalExtractor` gives the same phase state for a repeated event
   timestamp with and without the Rust kernel. The Python path drops zero
   inter-event intervals. The kernel received the raw train and returned

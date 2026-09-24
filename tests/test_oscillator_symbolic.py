@@ -328,57 +328,32 @@ class TestSymbolicPipelineEndToEnd:
         assert elapsed < budget, f"extract(1000) took {elapsed * 1e3:.2f}ms"
 
 
-def test_symbolic_extractor_uses_rust_ring_and_transition_quality_when_available(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    import scpn_phase_orchestrator.oscillators.symbolic as symbolic_mod
+def test_ring_mode_scores_the_circular_step() -> None:
+    """Ring phases and qualities, with or without the kernel, no substitution.
 
-    ring_calls: list[tuple[list[int], int]] = []
-    quality_calls: list[tuple[list[int], int, float]] = []
-
-    def _ring_phases(state_indices: np.ndarray, n_states: int) -> np.ndarray:
-        values = [int(item) for item in state_indices.tolist()]
-        ring_calls.append((values, n_states))
-        return np.asarray(
-            [TWO_PI * (state_index % n_states) / n_states for state_index in values],
-            dtype=np.float64,
-        )
-
-    def _transition_qualities(
-        state_indices: np.ndarray,
-        n_states: int,
-        initial_quality: float,
-    ) -> np.ndarray:
-        values = [int(item) for item in state_indices.tolist()]
-        quality_calls.append((values, n_states, initial_quality))
-        out = [initial_quality]
-        for lhs, rhs in zip(values, values[1:], strict=False):
-            step_size = abs(rhs - lhs)
-            if step_size == 0:
-                out.append(0.2)
-            elif step_size == 1:
-                out.append(1.0)
-            else:
-                out.append(max(0.1, 1.0 - float(step_size - 1) / float(n_states)))
-        return np.asarray(out, dtype=np.float64)
-
-    monkeypatch.setattr(symbolic_mod, "_HAS_RUST_SYMBOLIC", True)
-    monkeypatch.setattr(symbolic_mod, "_rust_ring_phases", _ring_phases, raising=False)
-    monkeypatch.setattr(
-        symbolic_mod,
-        "_rust_transition_qualities",
-        _transition_qualities,
-        raising=False,
-    )
-
+    On a ring the wrap from N-1 to 0 is one step: omega already treats it so,
+    and the quality now does too instead of scoring an (N-1)-sized jump.
+    """
     ext = SymbolicExtractor(n_states=4, mode="ring")
     states = ext.extract(np.array([0, 1, 3]), sample_rate=1.0)
-
     assert [state.theta for state in states] == pytest.approx(
         [0.0, np.pi / 2, 3 * np.pi / 2]
     )
-    assert ring_calls == [([0, 1, 3], 4)]
-    assert quality_calls == [([0, 1, 3], 4, 0.5)]
+    assert [state.quality for state in states] == pytest.approx([0.5, 1.0, 0.75])
+
+    wrap = SymbolicExtractor(n_states=6, mode="ring").extract(
+        np.array([3, 4, 5, 0, 1]), sample_rate=1.0
+    )
+    assert [state.quality for state in wrap] == pytest.approx([0.5, 1.0, 1.0, 1.0, 1.0])
+    assert {round(state.omega, 9) for state in wrap[1:]} == {round(np.pi / 3, 9)}
+
+
+def test_graph_mode_keeps_the_linear_step() -> None:
+    """Graph-walk distance is linear: 5 -> 0 on six states is a jump of five."""
+    states = SymbolicExtractor(n_states=6, mode="graph").extract(
+        np.array([4, 5, 0]), sample_rate=1.0
+    )
+    assert states[2].quality == pytest.approx(max(0.1, 1.0 - 4 / 6))
 
 
 def test_symbolic_extractor_uses_rust_graph_walk_when_available(
