@@ -36,6 +36,7 @@ predictor, plant model, and evidence boundaries are explicit.
 
 from __future__ import annotations
 
+import math
 from collections.abc import Callable
 from dataclasses import dataclass
 from numbers import Real
@@ -275,6 +276,16 @@ class SimulationTwinConfidenceContext:
     layer_order_parameters: tuple[float, ...]
 
 
+def _ttl_steps(ttl_s: float, sample_period_s: float) -> int:
+    """Return the integration steps a TTL covers, rounding a partial step up.
+
+    ``int(ttl / dt)`` truncated: 0.3 s at 0.1 s gave 2 steps (0.3 / 0.1 is
+    2.999...), a TTL under one step gave 0, which never expired, and the
+    countdown then applied the action for one step fewer than it counted.
+    """
+    return max(0, math.ceil(ttl_s / sample_period_s - 1e-9))
+
+
 def _objective_r(
     phases: FloatArray,
     layer_indices: list[int],
@@ -505,7 +516,11 @@ def simulate(
         (cfg.get("zeta", 0.0) for cfg in spec.drivers.all_channel_configs().values()),
         default=0.0,
     )
-    zeta_ttl = 0
+    # A zeta action is an offset on the spec's baseline drive that lasts a whole
+    # number of integration steps; at expiry the baseline returns (resetting to
+    # 0.0 dropped a non-zero baseline for the rest of the run).
+    zeta_baseline = zeta
+    zeta_expires_at: int | None = None
     psi_target = spec.drivers.physical.get("psi", 0.0)
 
     psi_driver: PhysicalDriver | InformationalDriver | SymbolicDriver | None = None
@@ -543,10 +558,9 @@ def simulate(
     eff_mu = mu
 
     for step_idx in range(steps):
-        if zeta_ttl > 0:
-            zeta_ttl -= 1
-            if zeta_ttl == 0:
-                zeta = 0.0
+        if zeta_expires_at is not None and step_idx >= zeta_expires_at:
+            zeta = zeta_baseline
+            zeta_expires_at = None
 
         if psi_driver is not None:
             t = step_idx * spec.sample_period_s
@@ -749,7 +763,9 @@ def simulate(
         for act in actions:
             if act.knob == "zeta":
                 zeta = max(0.0, min(zeta + act.value, 0.5))
-                zeta_ttl = int(act.ttl_s / spec.sample_period_s)
+                zeta_expires_at = (
+                    step_idx + 1 + _ttl_steps(act.ttl_s, spec.sample_period_s)
+                )
             elif act.knob == "K":
                 if act.scope == "global":
                     coupling = CouplingState(
