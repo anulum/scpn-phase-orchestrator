@@ -1025,10 +1025,9 @@ def test_deployment_readiness_records_guided_target_status() -> None:
         "docker_manifest.json",
     ]
     assert docker["commands"] == [
-        "docker compose config",
         "docker build -t scpn-phase-orchestrator:local .",
-        "docker run --rm -v $PWD:/workspace scpn-phase-orchestrator:local "
-        "spo run binding_spec.yaml --audit audit.jsonl",
+        'docker run --rm -v "$PWD":/workspace -w /workspace '
+        "scpn-phase-orchestrator:local run binding_spec.yaml --audit audit.jsonl",
     ]
     assert wasm["status"] == "ready"
     assert wasm["commands"] == [
@@ -1282,11 +1281,11 @@ def test_command_table_exposes_review_commands_only() -> None:
 
     rows = build_command_table(state)
 
-    assert [row["target"] for row in rows] == ["docker", "docker", "docker", "wasm"]
+    assert [row["target"] for row in rows] == ["docker", "docker", "wasm"]
     assert rows[0] == {
         "target": "docker",
         "command_index": 1,
-        "command": "docker compose config",
+        "command": "docker build -t scpn-phase-orchestrator:local .",
         "status": "ready",
     }
     assert rows[-1]["command"].startswith("cd spo-kernel && wasm-pack build")
@@ -1316,10 +1315,10 @@ def test_package_materialisation_plan_orders_ready_target_commands() -> None:
     assert plan["commands"][0] == {
         "step": 1,
         "target": "docker",
-        "command": "docker compose config",
+        "command": "docker build -t scpn-phase-orchestrator:local .",
         "status": "ready",
         "requires_operator": True,
-        "writes_artifact": False,
+        "writes_artifact": True,
     }
     assert plan["commands"][-1]["target"] == "wasm"
     assert plan["commands"][-1]["writes_artifact"] is True

@@ -84,8 +84,10 @@ The readiness JSON gives each target a status and the next operator action:
 
 - `docker`: ready when binding validation passes; review `binding_spec.yaml`,
   `spo_studio_audit.json`, and `docker_manifest.json` before packaging. The
-  checklist includes the review commands for `docker compose config`, local
-  image build, and local replay inside the image.
+  checklist includes the local image build and a local replay inside the
+  image. The image entrypoint is the `spo` CLI, so the replay passes
+  `run binding_spec.yaml ...` and uses `-w /workspace` to run in the mounted
+  directory.
 - `wasm`: ready when binding validation passes; review browser-safe replay
   constraints and the `wasm_manifest.json` artefact. The checklist includes the
   `wasm-pack` build command for the browser demo artefact.

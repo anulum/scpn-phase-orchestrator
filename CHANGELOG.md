@@ -24,6 +24,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The deployment commands Studio gives the operator now run.
+  - The audit and WASM exports listed `spo audit summary` and
+    `spo export wasm`, which are not CLI commands. The audit export now lists
+    `python -m json.tool spo_studio_audit.json`, and the WASM export lists the
+    `wasm-pack` build of the readiness checklist.
+  - The docker target began with `docker compose config`, although Studio
+    exports no compose file for it. The docker manifest now lists the image
+    build.
+  - `docker run ... scpn-phase-orchestrator:local spo run binding_spec.yaml`
+    passed `spo` to an image whose entrypoint is already the `spo` CLI, and
+    ran in `/app` instead of the mounted directory. It now passes
+    `run binding_spec.yaml --audit audit.jsonl` with `-w /workspace`.
+  - The compose validator services passed `python -m
+    scpn_phase_orchestrator.runtime.cli ...` to the same entrypoint, and their
+    healthchecks called that package with `-m`, which has no `__main__`. The
+    services now pass `validate binding_spec.yaml`, and the healthchecks call
+    the entrypoint's callable.
+  - A new test runs each of these commands against the real CLI in a
+    workspace that holds the exported files.
+
 - The container image runs the `spo` CLI again.
   - The `Dockerfile` entrypoint imported `scpn_phase_orchestrator.cli`, a
     module that was removed when the CLI moved to
