@@ -36,6 +36,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   backend. Admission runs each compiled Mojo executable once with empty input
   and caches the verdict per build; on a loaded workstation one launch took
   0.06–0.23 s.
+- `ultradian_phase` no longer accepts time axes that are not plain seconds.
+  Numeric text such as `"30"` was parsed as a number, a boolean inside an
+  object array was read as one second, and a `timedelta64[ms]` array was read
+  in milliseconds as if they were seconds, so one minute counted as 60 000
+  seconds and gave a phase of 0.111 instead of 0.011. These inputs now raise `ValueError`, as do non-string or unhashable
+  stage labels, which previously raised a bare `TypeError`.
+  `classify_sleep_stage` now accepts a NumPy boolean `functional_desync`, such
+  as the result of an array comparison, which it had rejected.
 
 ## [1.4.3] - 2026-09-05
 

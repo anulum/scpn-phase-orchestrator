@@ -25,7 +25,7 @@ mixed-frequency EEG) versus wakefulness.
 | N2 | $[0.40, 0.70)$ | Sleep spindles (12-14 Hz), K-complexes | Moderate synchrony with bursting |
 | N1 | $[0.30, 0.40)$ | Theta waves (4-8 Hz), vertex sharp waves | Partial desynchronisation |
 | REM | $[0.20, 0.40)$ + desync | Low-voltage mixed frequency | Desynchronised but not wakeful |
-| Wake | $< 0.30$ | Alpha (8-12 Hz), beta (12-30 Hz) | Desynchronised cortex |
+| Wake | $< 0.30$ without desync, $< 0.20$ with it | Alpha (8-12 Hz), beta (12-30 Hz) | Desynchronised cortex |
 
 ### Ultradian Sleep Cycle
 
@@ -52,7 +52,7 @@ For FFI transfer, stages are encoded as unsigned integers:
 
 | Code | Stage | $R$ Range |
 |------|-------|----------|
-| 0 | Wake | $< 0.30$ (no desync) |
+| 0 | Wake | $< 0.30$ (no desync) or $< 0.20$ (desync) |
 | 1 | N1 | $[0.30, 0.40)$ (no desync) |
 | 2 | N2 | $[0.40, 0.70)$ |
 | 3 | N3 | $\geq 0.70$ |
@@ -172,6 +172,10 @@ a computational analogue for brain-inspired control systems.
 | `R` | `float` | $[0, 1]$ | Kuramoto order parameter |
 | `functional_desync` | `bool` | — | REM-like desynchronisation pattern |
 
+`R` may be any Python or NumPy real number; booleans are rejected. The flag
+may be a Python `bool` or a NumPy boolean such as the result of an array
+comparison. Integers, strings and other objects are rejected.
+
 **ultradian_phase:**
 
 | Parameter | Type | Shape | Meaning |
@@ -179,9 +183,14 @@ a computational analogue for brain-inspired control systems.
 | `timestamps` | `NDArray[float64]` | `(T,)` | Epoch times in seconds |
 | `stage_history` | `list[str]` | `(T,)` | Stage labels per epoch |
 
-Timestamp arrays are validated as finite, monotonic, real-valued
-one-dimensional buffers. Boolean and complex aliases are rejected before float
-coercion so ultradian phase is never computed from non-real time axes.
+Timestamp arrays are validated as finite, non-decreasing, real-valued
+one-dimensional buffers in seconds. Boolean, complex and text samples are
+rejected before float coercion, including numeric text such as `"30"` and
+booleans or strings inside object arrays, so ultradian phase is never computed
+from a non-real time axis. `datetime64` and `timedelta64` arrays are rejected
+because their values are counted in their own unit, not in seconds; convert
+them explicitly. Stage labels must be the strings `"Wake"`, `"N1"`, `"N2"`,
+`"N3"` or `"REM"`, held in a list or a NumPy string array.
 
 ### Output Contracts
 
@@ -203,7 +212,8 @@ coercion so ultradian phase is never computed from non-real time axes.
 - **Rust FFI for both functions** — classify and ultradian dispatch
   to native code
 - **Stage code mapping** — integer codes (0-4) for FFI transfer
-- **Configurable thresholds** — threshold constants in both backends
+- **Shared thresholds** — the same constants in both backends; they are
+  module constants, not run-time settings
 - **Zero-allocation classify** — pure arithmetic, no heap allocation
 
 ---
@@ -372,8 +382,8 @@ is 5 comparisons — even Python executes this in sub-microsecond.
 
 The Rust path is significantly slower because the Python→Rust
 data marshalling dominates: converting a Python `list[str]` to
-`NDArray[uint8]` via `[_STAGE_CODES.get(s, 0) for s in stage_history]`
-requires iterating the list in Python, then passing the array
+`NDArray[uint8]` via `[_STAGE_CODES[s] for s in stages]` (after the labels
+are validated) requires iterating the list in Python, then passing the array
 through PyO3. The actual Rust computation (reverse scan for N3)
 takes nanoseconds.
 
@@ -381,7 +391,9 @@ takes nanoseconds.
 function in the current design. The FFI overhead exceeds the
 compute savings. These functions are best kept on the Python path.
 The Rust implementations exist for correctness verification and
-for use in pure-Rust pipelines (e.g., embedded systems).
+for use in pure-Rust pipelines (e.g., embedded systems). The current
+dispatcher nevertheless calls the Rust path whenever `spo_kernel` is
+importable; the NumPy path runs only when the kernel is absent.
 
 ### Memory Usage
 
@@ -393,11 +405,17 @@ for use in pure-Rust pipelines (e.g., embedded systems).
 - **Rust tests:** 10 (sleep_staging module in spo-engine)
   - N3, N2, N1, REM with desync, Wake, Wake low desync,
     ultradian basic, ultradian no N3, ultradian empty, wrapping
-- **Python tests:** 14 (`tests/test_sleep_staging.py`)
-  - All stage classifications, boundary values, desync flag
-    combinations, ultradian phase, cycle wrapping, pipeline
-    wiring
-- **Source lines:** 147 (Rust) + 122 (Python) = 269 total
+- **Python tests:** `tests/test_sleep_staging.py`
+  - The active backend (Rust when `spo_kernel` is installed, NumPy
+    otherwise) checked against the documented stage function at every
+    threshold, its float neighbours and a 1001-point grid, for both flag
+    values
+  - The active backend checked against the ultradian formula over random
+    histories that carry all five stage labels
+  - The NumPy path run explicitly when the kernel is installed
+  - Rejection of invalid `R`, flags, timestamps (non-finite, decreasing,
+    ragged, boolean, complex, text, `datetime64`, `timedelta64`) and labels
+  - Guards on the native return values, pipeline wiring from `UPDEEngine`
 
 ---
 

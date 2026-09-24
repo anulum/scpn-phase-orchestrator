@@ -11,8 +11,8 @@
 //! N3 (slow-wave): R >= 0.70 — highly synchronised cortical oscillations.
 //! N2 (spindle):   R in [0.40, 0.70) — moderate synchrony with K-complex bursts.
 //! N1 (drowsy):    R in [0.30, 0.40) — partial desynchronisation.
-//! REM:            R in [0.20, 0.35) with functional_desync flag.
-//! Wake:           R < 0.30, no functional_desync.
+//! REM:            R in [0.20, 0.40) with functional_desync flag.
+//! Wake:           R < 0.30 without functional_desync, or R < 0.20 with it.
 
 const N3_THRESHOLD: f64 = 0.70;
 const N2_THRESHOLD: f64 = 0.40;

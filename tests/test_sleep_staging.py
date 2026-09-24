@@ -139,25 +139,66 @@ def test_ultradian_rejects_invalid_history_contract(timestamps, stages, match):
         ultradian_phase(timestamps, stages)
 
 
-def test_optional_rust_classification_path_maps_stage_codes(monkeypatch):
-    calls = []
-
-    def fake_rust_classify(r_value, functional_desync):
-        calls.append((r_value, functional_desync))
-        return 4
-
-    monkeypatch.setattr(sleep_staging_module, "_HAS_RUST", True)
-    monkeypatch.setattr(
-        sleep_staging_module,
-        "_rust_classify",
-        fake_rust_classify,
-        raising=False,
-    )
-
-    assert classify_sleep_stage(0.21, functional_desync=True) == "REM"
-    assert calls == [(0.21, True)]
+def _documented_stage(order_parameter: float, desync: bool) -> str:
+    """Stage function as written in the API reference, kept independent."""
+    if order_parameter >= 0.70:
+        return "N3"
+    if order_parameter >= 0.40:
+        return "N2"
+    if order_parameter >= 0.30:
+        return "REM" if desync else "N1"
+    if desync and order_parameter >= 0.20:
+        return "REM"
+    return "Wake"
 
 
+def _band_probe_values() -> list[float]:
+    """Every threshold, its float neighbours, the interval ends and a dense grid."""
+    probes = {0.0, 1.0}
+    for threshold in (0.20, 0.30, 0.40, 0.70):
+        probes.update(
+            {
+                threshold,
+                float(np.nextafter(threshold, 0.0)),
+                float(np.nextafter(threshold, 1.0)),
+            }
+        )
+    probes.update(float(value) for value in np.linspace(0.0, 1.0, 1001))
+    return sorted(probes)
+
+
+@pytest.mark.parametrize("desync", [False, True])
+def test_classification_matches_documented_bands(desync: bool) -> None:
+    """The active backend reproduces the documented piecewise stage function.
+
+    Runs the Rust kernel when ``spo_kernel`` is installed and the NumPy path
+    otherwise, so every environment checks the backend it actually uses.
+    """
+    for order_parameter in _band_probe_values():
+        assert classify_sleep_stage(order_parameter, functional_desync=desync) == (
+            _documented_stage(order_parameter, desync)
+        ), order_parameter
+
+
+def test_classification_accepts_numpy_real_and_boolean_inputs() -> None:
+    """NumPy scalars from real pipelines are accepted and normalised."""
+    spectral_ratio = np.array([0.2, 1.4])
+    desync_flags = spectral_ratio > 1.0
+    assert isinstance(desync_flags[1], np.bool_)
+
+    assert classify_sleep_stage(np.float64(0.35), desync_flags[1]) == "REM"
+    assert classify_sleep_stage(np.float32(0.35), desync_flags[0]) == "N1"
+    assert classify_sleep_stage(np.float64(0.25), np.bool_(True)) == "REM"
+    assert classify_sleep_stage(np.float64(0.25), np.bool_(False)) == "Wake"
+
+
+# The four ``*_rejects_*`` tests that set ``_rust_classify`` or ``_rust_ultradian``
+# substitute the native backend. A correct build cannot
+# return an unknown stage code or a phase outside [0, 1) for validated input,
+# so no real backend reaches these guards; they exist to catch a stale or
+# mismatched spo_kernel build whose code table differs from this module. The
+# nearest real coverage is test_classification_matches_documented_bands and
+# test_ultradian_phase_matches_documented_formula, which run the real backend.
 def test_optional_rust_classification_rejects_invalid_stage_code(monkeypatch):
     monkeypatch.setattr(sleep_staging_module, "_HAS_RUST", True)
     monkeypatch.setattr(
@@ -171,29 +212,37 @@ def test_optional_rust_classification_rejects_invalid_stage_code(monkeypatch):
         classify_sleep_stage(0.21, functional_desync=True)
 
 
-def test_optional_rust_ultradian_path_translates_stage_codes(monkeypatch):
-    calls = []
+def _documented_ultradian_phase(timestamps: np.ndarray, stages: list[str]) -> float:
+    """Ultradian phase as written in the API reference, kept independent."""
+    n3_indices = [index for index, stage in enumerate(stages) if stage == "N3"]
+    if not n3_indices:
+        return 0.0
+    elapsed = float(timestamps[-1] - timestamps[n3_indices[-1]])
+    return (elapsed % 5400.0) / 5400.0
 
-    def fake_rust_ultradian(timestamps, codes):
-        calls.append((timestamps.copy(), codes.copy()))
-        return 0.625
 
-    monkeypatch.setattr(sleep_staging_module, "_HAS_RUST", True)
-    monkeypatch.setattr(
-        sleep_staging_module,
-        "_rust_ultradian",
-        fake_rust_ultradian,
-        raising=False,
-    )
+def test_ultradian_phase_matches_documented_formula() -> None:
+    """The active backend matches the formula over random full-code histories.
 
-    timestamps = np.array([10.0, 70.0, 130.0], dtype=np.float64)
-    phase = ultradian_phase(timestamps, ["Wake", "N3", "REM"])
-
-    assert phase == 0.625
-    assert len(calls) == 1
-    np.testing.assert_array_equal(calls[0][0], timestamps)
-    assert calls[0][0].dtype == np.float64
-    np.testing.assert_array_equal(calls[0][1], np.array([0, 3, 4], dtype=np.uint8))
+    Every history carries all five stage labels, so the label-to-code
+    translation is exercised for each code on the backend in use.
+    """
+    rng = np.random.default_rng(20260924)
+    labels = ["Wake", "N1", "N2", "N3", "REM"]
+    for _ in range(200):
+        n_epochs = int(rng.integers(5, 400))
+        steps = rng.choice([0.0, 30.0, 30.0, 30.0, 17.5], size=n_epochs - 1)
+        timestamps = np.concatenate(([rng.uniform(0.0, 1.0e6)], steps)).cumsum()
+        stages = [labels[i % 5] for i in range(5)] + [
+            labels[int(code)] for code in rng.integers(0, 5, size=n_epochs - 5)
+        ]
+        order = rng.permutation(n_epochs)
+        stages = [stages[int(i)] for i in order]
+        phase = ultradian_phase(timestamps, stages)
+        assert 0.0 <= phase < 1.0
+        assert phase == pytest.approx(
+            _documented_ultradian_phase(timestamps, stages), abs=1e-12
+        )
 
 
 @pytest.mark.parametrize("backend_value", [np.nan, np.inf, -0.1, 1.0])
@@ -243,6 +292,10 @@ class TestSleepStagingPipelineWiring:
             assert stage == "N3"
 
 
+# The tests below set ``_HAS_RUST`` to False to run the NumPy implementation in
+# an environment where spo_kernel is installed. Nothing is substituted: the flag
+# selects which real implementation executes, and without it the NumPy path is
+# unreachable in a build that has the kernel.
 @pytest.mark.parametrize(
     ("order_parameter", "desync", "expected"),
     [
@@ -282,8 +335,72 @@ def test_numpy_fallback_ultradian_phase_without_n3_is_zero(monkeypatch):
 
 def test_timestamps_reject_non_castable_samples():
     """Timestamps that cannot be cast to float are rejected, not silently zeroed."""
-    with pytest.raises(ValueError, match="timestamps must be a finite 1-D array"):
+    with pytest.raises(ValueError, match="timestamps must contain real-valued"):
         ultradian_phase(np.array(["a", "b"], dtype=object), ["Wake", "N2"])
+
+
+@pytest.mark.parametrize(
+    "timestamps",
+    [
+        np.array(["0", "30"]),
+        np.array([b"0", b"30"]),
+        np.array(["0.0", "30.0"], dtype=object),
+        [0.0, "30"],
+    ],
+)
+def test_timestamps_reject_numeric_text(timestamps) -> None:
+    """Text that happens to parse as a number is not accepted as seconds."""
+    with pytest.raises(ValueError, match="timestamps must contain real-valued"):
+        ultradian_phase(timestamps, ["N3", "REM"])
+
+
+@pytest.mark.parametrize(
+    "timestamps",
+    [
+        np.array([0, 60_000], dtype="timedelta64[ms]"),
+        np.array([0, 60], dtype="timedelta64[s]"),
+        np.array(["2026-09-24T00:00", "2026-09-24T00:01"], dtype="datetime64[s]"),
+    ],
+)
+def test_timestamps_reject_time_unit_dtypes(timestamps) -> None:
+    """A unit-carrying time array would be read in its own unit, not seconds."""
+    with pytest.raises(ValueError, match="plain seconds"):
+        ultradian_phase(timestamps, ["N3", "REM"])
+
+
+def test_timestamps_reject_boolean_items_in_object_arrays() -> None:
+    """A boolean hidden in an object array is not read as 1.0 second."""
+    with pytest.raises(ValueError, match="boolean"):
+        ultradian_phase(np.array([0.0, True], dtype=object), ["N3", "REM"])
+
+
+def test_timestamps_reject_ragged_input() -> None:
+    """A ragged sequence is reported as a malformed timestamp array."""
+    with pytest.raises(ValueError, match="finite 1-D array"):
+        ultradian_phase([[0.0, 30.0], [60.0]], ["N3", "REM"])
+
+
+def test_timestamps_accept_mixed_real_object_samples() -> None:
+    """Python and NumPy reals in an object array are valid seconds."""
+    timestamps = np.array([0, np.float32(30.0), 2700.0], dtype=object)
+    phase = ultradian_phase(timestamps, ["N3", "N2", "REM"])
+    assert phase == pytest.approx(0.5)
+
+
+def test_stage_history_accepts_numpy_string_labels() -> None:
+    """Labels held in a NumPy string array give the same phase as a list."""
+    timestamps = np.array([0.0, 30.0, 2700.0])
+    labels = ["N3", "N2", "REM"]
+    assert ultradian_phase(timestamps, np.array(labels)) == ultradian_phase(
+        timestamps, labels
+    )
+
+
+@pytest.mark.parametrize("bad_label", [["N3"], 3, np.int64(3), None])
+def test_stage_history_rejects_non_string_labels(bad_label) -> None:
+    """Unhashable or non-string labels fail with the documented ValueError."""
+    with pytest.raises(ValueError, match="unknown sleep stage"):
+        ultradian_phase(np.array([0.0, 30.0]), ["N3", bad_label])
 
 
 def test_timestamps_reject_complex_samples():
@@ -292,6 +409,8 @@ def test_timestamps_reject_complex_samples():
         ultradian_phase(np.array([0.0 + 1.0j, 1.0 + 0.0j]), ["Wake", "N2"])
 
 
+# Substitutes the native backend; see the justification above
+# test_optional_rust_classification_rejects_invalid_stage_code.
 def test_rust_stage_code_rejects_non_real_output(monkeypatch):
     """A non-real Rust stage code is rejected rather than coerced."""
     monkeypatch.setattr(sleep_staging_module, "_HAS_RUST", True)
@@ -305,6 +424,8 @@ def test_rust_stage_code_rejects_non_real_output(monkeypatch):
         classify_sleep_stage(0.85)
 
 
+# Substitutes the native backend; see the justification above
+# test_optional_rust_classification_rejects_invalid_stage_code.
 def test_rust_ultradian_rejects_non_real_output(monkeypatch):
     """A non-real Rust ultradian phase is rejected rather than coerced."""
     monkeypatch.setattr(sleep_staging_module, "_HAS_RUST", True)
