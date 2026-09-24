@@ -148,6 +148,24 @@ def _validated_finite_metric(value: object, *, field: str) -> float:
     return result
 
 
+def _validated_layer_r(upde_state: UPDEState) -> list[float]:
+    """Return every layer's order parameter, each validated finite."""
+    return [
+        _validated_finite_metric(layer.R, field=f"layer {idx} R")
+        for idx, layer in enumerate(upde_state.layers)
+    ]
+
+
+def _global_order_parameter(r_values: list[float]) -> float:
+    """Return the unweighted mean layer ``R`` exported as ``r_global``.
+
+    Prometheus and OpenTelemetry both export this value under ``r_global``;
+    ``stability_proxy`` is a separate, producer-defined quantity (a weighted
+    mean, a fidelity, a plant stability score) and is exported on its own.
+    """
+    return sum(r_values) / len(r_values) if r_values else 0.0
+
+
 def _validated_step_idx(step_idx: object) -> int:
     """Return the validated step index, else raise."""
     if isinstance(step_idx, bool) or not isinstance(step_idx, Integral):
@@ -317,11 +335,8 @@ class MetricsExporter:
         latency_ms = _validated_latency_ms(latency_ms)
         lines: list[str] = []
 
-        r_values = [
-            _validated_finite_metric(layer.R, field=f"layer {idx} R")
-            for idx, layer in enumerate(upde_state.layers)
-        ]
-        r_global = sum(r_values) / len(r_values) if r_values else 0.0
+        r_values = _validated_layer_r(upde_state)
+        r_global = _global_order_parameter(r_values)
         stability_proxy = _validated_finite_metric(
             upde_state.stability_proxy,
             field="stability_proxy",
@@ -687,8 +702,15 @@ class OTelExporter:
             The UPDE state to record or export.
         step_idx : int
             Zero-based simulation step index, or ``None``.
+
+        Raises
+        ------
+        ValueError
+            If ``step_idx`` is not a non-negative integer, a layer ``R`` or
+            ``stability_proxy`` is not finite, or the regime label is invalid.
         """
         _validated_step_idx(step_idx)
+        r_global = _global_order_parameter(_validated_layer_r(upde_state))
         stability_proxy = _validated_finite_metric(
             upde_state.stability_proxy,
             field="stability_proxy",
@@ -697,7 +719,7 @@ class OTelExporter:
         if not self._enabled:
             return
         attrs = {"spo.regime": regime}
-        self._r_global_gauge.set(stability_proxy, attrs)
+        self._r_global_gauge.set(r_global, attrs)
         self._stability_gauge.set(stability_proxy, attrs)
         self._step_counter.add(1, attrs)
 

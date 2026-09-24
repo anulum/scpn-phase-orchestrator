@@ -24,6 +24,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The OpenTelemetry exporter publishes `spo.r_global` as the mean layer order
+  parameter, the value Prometheus publishes under `r_global`. It used to set
+  the gauge from `stability_proxy`, which some producers define differently
+  (a weighted mean, the quantum bridge's fidelity), so the two backends
+  reported different values under the same name. It also skipped the
+  finiteness check Prometheus applies to layer `R`, so a NaN layer was
+  recorded instead of refused.
 - `underdamped_oscillator` refuses non-finite and non-real parameters. Its
   sign checks (`frequency_hz <= 0`) are false for NaN, so a NaN frequency,
   damping ratio or step, or an infinite step, returned a plant made of NaN
