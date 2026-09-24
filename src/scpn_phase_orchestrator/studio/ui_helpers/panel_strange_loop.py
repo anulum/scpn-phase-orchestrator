@@ -19,6 +19,7 @@ from ._shared import (
     _normalise_text_sequence,
     _positive_int,
     _require_non_empty_text,
+    _require_self_hash,
     _require_sha256_hex,
     _unit_interval_number,
 )
@@ -186,10 +187,7 @@ def _normalise_strange_loop_records(
                     record.get("scenario_hash"),
                     "scenario_hash",
                 ),
-                "result_hash": _require_sha256_hex(
-                    record.get("result_hash"),
-                    "result_hash",
-                ),
+                "result_hash": _require_self_hash(record, "result_hash", "result_hash"),
                 "non_actuating": True,
                 "execution_disabled": True,
                 "claim_boundary": claim_boundary,

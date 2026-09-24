@@ -10,7 +10,9 @@
 
 from __future__ import annotations
 
+import json
 from collections.abc import Mapping, Sequence
+from hashlib import sha256
 from math import isfinite
 from numbers import Real
 from typing import TYPE_CHECKING
@@ -163,6 +165,26 @@ def _require_sha256_hex(value: object, name: str) -> str:
     if len(text) != 64 or any(char not in "0123456789abcdef" for char in text):
         raise ValueError(f"{name} must be a lowercase SHA-256 hex digest")
     return text
+
+
+def _require_self_hash(record: Mapping[str, object], hash_field: str, name: str) -> str:
+    """Return a record's own SHA-256 seal after recomputing it, else raise.
+
+    The seal is the SHA-256 of the record's canonical JSON (sorted keys, compact
+    separators, no NaN) without ``hash_field``, the rule the supervisor producers
+    use. A record edited after sealing no longer matches its seal.
+    """
+    digest = _require_sha256_hex(record.get(hash_field), name)
+    payload = {key: value for key, value in record.items() if key != hash_field}
+    try:
+        canonical = json.dumps(
+            payload, sort_keys=True, separators=(",", ":"), allow_nan=False
+        )
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} covers a record that is not canonical JSON") from exc
+    if sha256(canonical.encode("utf-8")).hexdigest() != digest:
+        raise ValueError(f"{name} does not match the record")
+    return digest
 
 
 def _connector_by_transport(
