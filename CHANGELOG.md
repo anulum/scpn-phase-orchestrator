@@ -24,6 +24,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `spo --help` no longer fails on Windows when its output is redirected.
+  - Windows writes redirected output in the ANSI code page, usually cp1252.
+    The `quickstart` summary contained `→`, which cp1252 cannot encode, so
+    `spo --help > help.txt` and `spo quickstart --help | more` stopped with
+    `UnicodeEncodeError`. The summary now reads "Run the validate, run,
+    replay, and report golden path".
+  - A new test renders the help of every command and checks that it encodes
+    to cp1252.
+
 - The Studio strange-loop and information-geometry panels verify record seals.
   - Each strange-loop result record and information-geometry proposal record
     carries a SHA-256 of its own canonical JSON (`result_hash`,

@@ -73,7 +73,7 @@ _EVIDENCE_RECORD = _ASSET_ROOT / "evidence" / "pmu_ringdown_prc_evidence.json"
     help="Write the Markdown report here instead of printing it",
 )
 def quickstart(domain: str, steps: int, seed: int, output: str | None) -> None:
-    """Run the validate → run → replay → report golden path for a domain.
+    """Run the validate, run, replay, and report golden path for a domain.
 
     Parameters
     ----------
