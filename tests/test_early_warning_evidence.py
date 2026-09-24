@@ -514,3 +514,34 @@ def test_seal_transition_entropy_alarm_rejects_a_foreign_object() -> None:
             captured_at="z",
             sampling_rate_hz=1.0,
         )
+
+
+@pytest.mark.parametrize(
+    ("direction", "robust_z"), [(RISE, 1.0), (DROP, -1.0), (DROP, 5.0)]
+)
+def test_breach_without_crossing_the_z_gate_is_rejected(direction, robust_z) -> None:
+    """A record cannot attest a breach its own z-score does not show."""
+    indicator = _indicator(
+        direction=direction, robust_z=robust_z, z_threshold=3.0, breached=True
+    )
+    with pytest.raises(ValueError, match="marked breached but robust_z"):
+        _seal(indicators=(indicator,))
+
+
+def test_unbreached_indicator_may_cross_the_z_gate() -> None:
+    """Detectors add gates (relative change, persistence) beyond the z gate."""
+    indicator = _indicator(robust_z=4.0, z_threshold=3.0, breached=False)
+    assert _seal(indicators=(indicator,)).indicators == (indicator,)
+
+
+@pytest.mark.parametrize("breached", [1, None, "yes"])
+def test_breach_flag_must_be_a_bool(breached) -> None:
+    indicator = _indicator(robust_z=4.0, z_threshold=3.0, breached=breached)
+    with pytest.raises(ValueError, match=r"breached must be a bool"):
+        _seal(indicators=(indicator,))
+
+
+def test_negative_z_threshold_is_rejected() -> None:
+    indicator = _indicator(robust_z=0.0, z_threshold=-1.0, breached=False)
+    with pytest.raises(ValueError, match="z_threshold must be >= 0"):
+        _seal(indicators=(indicator,))

@@ -129,8 +129,10 @@ class EarlyWarningIndicator:
         Robust z-score magnitude at or beyond which the indicator breaches its
         gate.
     breached : bool
-        Whether ``robust_z`` crossed the gate in the indicator's alarm direction
-        at the reported window.
+        Whether the indicator breached its detector's gate at the reported
+        window. A breach requires ``robust_z`` to cross ``z_threshold`` in the
+        alarm direction; detectors may require more (a relative change, a
+        persistence run), so an unbreached indicator can still cross it.
     """
 
     name: str
@@ -797,6 +799,24 @@ def _validate_indicators(
             _finite_real(
                 getattr(indicator, field_name),
                 f"indicators[{position}].{field_name}",
+            )
+        if indicator.z_threshold < 0.0:
+            raise ValueError(f"indicators[{position}].z_threshold must be >= 0")
+        breached = _bool(indicator.breached, f"indicators[{position}].breached")
+        # A breach needs the z gate in the indicator's direction. Producers may
+        # add gates (relative change, persistence), so an unbreached indicator
+        # can still meet the z gate, but a breached one that does not meet it
+        # would attest a breach that did not happen.
+        gate = (
+            indicator.robust_z >= indicator.z_threshold
+            if indicator.direction == RISE
+            else indicator.robust_z <= -indicator.z_threshold
+        )
+        if breached and not gate:
+            raise ValueError(
+                f"indicators[{position}] is marked breached but robust_z "
+                f"{indicator.robust_z} does not meet the {indicator.direction} "
+                f"gate at z_threshold {indicator.z_threshold}"
             )
     return sealed
 

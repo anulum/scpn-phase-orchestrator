@@ -36,6 +36,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   backend. Admission runs each compiled Mojo executable once with empty input
   and caches the verdict per build; on a loaded workstation one launch took
   0.06–0.23 s.
+- `seal_early_warning()` no longer seals an indicator marked breached whose own
+  robust z-score does not cross its gate in the alarm direction, nor a
+  negative `z_threshold` or a non-boolean `breached` flag. An indicator may
+  still be unbreached while crossing the z gate, because detectors add further
+  gates.
 - PRC-029-1 ride-through screening no longer applies the voltage tables while
   frequency is outside 57.0-61.8 Hz. Attachment 1, note 6 of the standard makes
   Tables 1 and 2 applicable only inside the frequency must ride-through zone;
