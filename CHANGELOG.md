@@ -31,6 +31,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Both hashes are now recomputed with the scheduler's canonical record hash.
   A row's `overdue` must be a boolean: `bool("false")` is true, so a text
   flag counted as overdue.
+  `spo digital-twin-grafana-dashboard-pack` and
+  `spo digital-twin-live-deployment-playbook` also verify the seals of the
+  bundle and pack they consume. Before, a bundle whose linkage counts were
+  edited to clear the rollout gate produced a "ready" playbook. The pack
+  also refuses a metric prefix that is not a Prometheus name: it is spliced
+  into the PromQL panel queries. The playbook refuses boolean counts.
 - `spo chaos` scores resilience under the pack's own closed loop.
   `run_resilience_experiment` called `simulate` without the spec path, so a
   domainpack's `policy.yaml` never loaded. For 18 of the 35 packs that ship a

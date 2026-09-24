@@ -17,6 +17,7 @@ overdue.
 
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
 from pathlib import Path
@@ -66,8 +67,9 @@ def _evidence(tmp_path: Path) -> Path:
 
 
 def _dashboard(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    # deep copy: tests edit rows in place, and _ROWS is shared module state
     return _seal(
-        {"schema": _DASHBOARD_SCHEMA, "version": "1.0.0", "rows": rows},
+        {"schema": _DASHBOARD_SCHEMA, "version": "1.0.0", "rows": copy.deepcopy(rows)},
         "dashboard_hash",
     )
 
@@ -128,3 +130,105 @@ def test_non_boolean_overdue_flag_is_refused(tmp_path: Path, flag: object) -> No
     result = _bundle(tmp_path, dashboard=_dashboard(rows))
     assert result.exit_code != 0
     assert "overdue must be a boolean" in result.output
+
+
+def _real_bundle(tmp_path: Path) -> dict[str, Any]:
+    result = _bundle(tmp_path, dashboard=_dashboard(_ROWS))
+    assert result.exit_code == 0, result.output
+    return dict(json.loads(result.output))
+
+
+def _write(tmp_path: Path, name: str, record: dict[str, Any]) -> Path:
+    path = tmp_path / name
+    path.write_text(json.dumps(record), encoding="utf-8")
+    return path
+
+
+def _pack(tmp_path: Path, bundle: dict[str, Any]) -> Any:
+    return CliRunner().invoke(
+        main,
+        [
+            "digital-twin-grafana-dashboard-pack",
+            str(_write(tmp_path, "bundle.json", bundle)),
+            "--adapter-family",
+            "kafka",
+            "--created-by",
+            "operator_console",
+        ],
+    )
+
+
+def _playbook(tmp_path: Path, bundle: dict[str, Any], pack: dict[str, Any]) -> Any:
+    return CliRunner().invoke(
+        main,
+        [
+            "digital-twin-live-deployment-playbook",
+            str(_write(tmp_path, "bundle.json", bundle)),
+            str(_write(tmp_path, "pack.json", pack)),
+            "--environment-name",
+            "prod-eu-west",
+            "--created-by",
+            "operator_console",
+        ],
+    )
+
+
+def test_real_chain_bundle_pack_playbook_passes(tmp_path: Path) -> None:
+    bundle = _real_bundle(tmp_path)
+    pack = _pack(tmp_path, bundle)
+    assert pack.exit_code == 0, pack.output
+    playbook = _playbook(tmp_path, bundle, json.loads(pack.output))
+    assert playbook.exit_code == 0, playbook.output
+    assert json.loads(playbook.output)["rollout_gate"] == "blocked"  # 1 blocked row
+
+
+def test_pack_refuses_an_edited_bundle(tmp_path: Path) -> None:
+    bundle = _real_bundle(tmp_path)
+    bundle["status"] = "healthy" if bundle["status"] != "healthy" else "critical"
+    result = _pack(tmp_path, bundle)
+    assert result.exit_code != 0
+    assert "bundle_hash does not match its content" in result.output
+
+
+def test_pack_refuses_a_promql_breaking_prefix_even_when_resealed(
+    tmp_path: Path,
+) -> None:
+    bundle = _real_bundle(tmp_path)
+    bundle.pop("bundle_hash")
+    bundle["prometheus_metric_prefix"] = 'spo{x="1"} or vector(1) #'
+    result = _pack(tmp_path, _seal(bundle, "bundle_hash"))
+    assert result.exit_code != 0
+    assert "prometheus_metric_prefix must match" in result.output
+
+
+def test_playbook_refuses_a_bundle_edited_to_clear_the_gate(tmp_path: Path) -> None:
+    bundle = _real_bundle(tmp_path)
+    pack = json.loads(_pack(tmp_path, bundle).output)
+    bundle["replay_linkage"]["scheduler_overdue_count"] = 0
+    bundle["replay_linkage"]["scheduler_blocked_count"] = (
+        0  # the gate would read "ready"
+    )
+    result = _playbook(tmp_path, bundle, pack)
+    assert result.exit_code != 0
+    assert "bundle_hash does not match its content" in result.output
+
+
+def test_playbook_refuses_an_edited_pack(tmp_path: Path) -> None:
+    bundle = _real_bundle(tmp_path)
+    pack = json.loads(_pack(tmp_path, bundle).output)
+    pack["created_by"] = "someone_else"
+    result = _playbook(tmp_path, bundle, pack)
+    assert result.exit_code != 0
+    assert "dashboard_pack_hash does not match its content" in result.output
+
+
+def test_playbook_refuses_boolean_counts(tmp_path: Path) -> None:
+    bundle = _real_bundle(tmp_path)
+    bundle.pop("bundle_hash")
+    bundle["replay_linkage"]["scheduler_blocked_count"] = True
+    resealed = _seal(bundle, "bundle_hash")
+    pack = _pack(tmp_path, resealed)
+    assert pack.exit_code == 0, pack.output
+    result = _playbook(tmp_path, resealed, json.loads(pack.output))
+    assert result.exit_code != 0
+    assert "scheduler_blocked_count must be non-negative integer" in result.output
