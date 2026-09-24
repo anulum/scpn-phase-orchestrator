@@ -109,18 +109,18 @@ def validate_stl_runtime_actuation_gate(
         if template is None:
             blocked_reasons.append("actuation_template_missing")
             continue
-        try:
-            mappings.append(
-                ActuatorMapping(
-                    name=_runtime_actuator_name(template.knob, template.scope),
-                    knob=template.knob,
-                    scope=template.scope,
-                    limits=template.value_bounds,
-                    rate_limit_per_step=template.rate_limit,
-                )
+        # A template has already checked its bounds and rate limit with the
+        # rules ActuatorMapping applies (finite reals, ordered, non-negative),
+        # so building the mapping cannot fail here.
+        mappings.append(
+            ActuatorMapping(
+                name=_runtime_actuator_name(template.knob, template.scope),
+                knob=template.knob,
+                scope=template.scope,
+                limits=template.value_bounds,
+                rate_limit_per_step=template.rate_limit,
             )
-        except (TypeError, ValueError):
-            blocked_reasons.append("actuation_mapper_rejected_template")
+        )
 
     if not mappings:
         return STLRuntimeActuationGate(

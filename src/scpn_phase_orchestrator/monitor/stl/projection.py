@@ -10,8 +10,10 @@
 
 from __future__ import annotations
 
+import math
 from collections.abc import Sequence
 from dataclasses import dataclass
+from numbers import Real
 
 from scpn_phase_orchestrator.actuation.constraints import ActionProjector
 from scpn_phase_orchestrator.actuation.mapper import ControlAction
@@ -22,7 +24,13 @@ from .monitor import _require_non_empty
 
 @dataclass(frozen=True)
 class STLActionProjectionTemplate:
-    """Policy-approved projection template for one STL candidate action."""
+    """Policy-approved projection template for one STL candidate action.
+
+    Every numeric field must be a finite real (booleans excluded): ``step``
+    positive, ``ttl_s`` and ``rate_limit`` non-negative, ``value_bounds`` an
+    ordered pair. A non-finite TTL would otherwise reach the runtime
+    actuation gate unchecked.
+    """
 
     action: str
     knob: str
@@ -38,14 +46,22 @@ class STLActionProjectionTemplate:
         _require_non_empty(self.action, "projection action")
         _require_non_empty(self.knob, "projection knob")
         _require_non_empty(self.scope, "projection scope")
-        if self.step <= 0.0:
+        _require_finite_real(self.base_value, "projection base_value")
+        _require_finite_real(self.previous_value, "projection previous_value")
+        if _require_finite_real(self.step, "projection step") <= 0.0:
             raise ValueError("projection step must be positive")
-        if self.ttl_s < 0.0:
+        if _require_finite_real(self.ttl_s, "projection ttl_s") < 0.0:
             raise ValueError("projection ttl_s must be non-negative")
-        lo, hi = self.value_bounds
+        if not isinstance(self.value_bounds, tuple) or len(self.value_bounds) != 2:
+            raise ValueError("projection value_bounds must be a (low, high) pair")
+        lo = _require_finite_real(self.value_bounds[0], "projection value_bounds")
+        hi = _require_finite_real(self.value_bounds[1], "projection value_bounds")
         if lo > hi:
             raise ValueError("projection value_bounds must be ordered")
-        if self.rate_limit is not None and self.rate_limit < 0.0:
+        if (
+            self.rate_limit is not None
+            and _require_finite_real(self.rate_limit, "projection rate_limit") < 0.0
+        ):
             raise ValueError("projection rate_limit must be non-negative")
 
 
@@ -162,3 +178,13 @@ def _control_action_record(action: ControlAction) -> dict[str, object]:
         "ttl_s": action.ttl_s,
         "justification": action.justification,
     }
+
+
+def _require_finite_real(value: object, name: str) -> float:
+    """Return ``value`` as a float if it is a finite real, else raise."""
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be a finite real number, got {value!r}")
+    number = float(value)
+    if not math.isfinite(number):
+        raise ValueError(f"{name} must be a finite real number, got {value!r}")
+    return number

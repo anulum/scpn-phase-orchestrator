@@ -90,16 +90,22 @@ def test_gate_fails_closed_when_action_template_is_missing() -> None:
     )
 
 
-def test_gate_deduplicates_template_construction_failures() -> None:
-    """Invalid template bounds fail before any runtime command can be mapped."""
+def test_invalid_template_bounds_fail_before_the_gate() -> None:
+    """Boolean bounds are rejected by the template, so no gate run can use them."""
     bool_bounds = cast("tuple[float, float]", (False, True))
-    template = _template(value_bounds=bool_bounds)
+    with pytest.raises(ValueError, match="value_bounds must be a finite real"):
+        _template(value_bounds=bool_bounds)
+
+
+def test_gate_fails_closed_when_mapper_rejects_degenerate_bounds() -> None:
+    """Equal bounds pass the template but the runtime mapper refuses them."""
     gate = validate_stl_runtime_actuation_gate(
-        _plan(_action(), _action()),
-        (template,),
+        _plan(_action(value=0.5), _action(value=0.5)),
+        (_template(value_bounds=(0.5, 0.5)),),
     )
 
     assert gate.accepted is False
+    assert gate.action_count == 2
     assert gate.mapper_valid_action_count == 0
     assert gate.mapped_command_count == 0
     assert gate.blocked_reasons == ("actuation_mapper_rejected_template",)

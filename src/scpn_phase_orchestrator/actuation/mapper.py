@@ -65,11 +65,12 @@ class ActuationMapper:
         list[dict[str, Any]]
             One command dict (``actuator``, ``knob``, ``scope``, ``value``,
             ``ttl_s``) per matching actuator, with the value clamped to that
-            actuator's limits; actions with a non-finite value are dropped.
+            actuator's limits; actions with a non-finite value, or a TTL that
+            is not a finite, non-negative real, are dropped.
         """
         commands = []
         for action in actions:
-            if not _finite_real(action.value):
+            if not _finite_real(action.value) or not _valid_ttl(action.ttl_s):
                 continue
             mappings = self._by_knob.get(action.knob, [])
             for am in mappings:
@@ -86,7 +87,10 @@ class ActuationMapper:
         return commands
 
     def validate_action(self, action: ControlAction) -> bool:
-        """Return True if knob is valid and value is within limits.
+        """Return True if knob, TTL and value are valid for a mapped actuator.
+
+        The TTL must be a finite, non-negative real number of seconds, the
+        contract the policy validators already apply.
 
         Parameters
         ----------
@@ -96,13 +100,14 @@ class ActuationMapper:
         Returns
         -------
         bool
-            True if knob is valid and value is within limits.
+            True if the knob is valid, the TTL is admissible and the value is
+            within the limits of a matching actuator.
         """
         from scpn_phase_orchestrator.binding.types import VALID_KNOBS
 
         if action.knob not in VALID_KNOBS:
             return False
-        if not _finite_real(action.value):
+        if not _finite_real(action.value) or not _valid_ttl(action.ttl_s):
             return False
         mappings = self._by_knob.get(action.knob, [])
         for am in mappings:
@@ -121,11 +126,22 @@ def _validate_mapping(mapping: ActuatorMapping) -> None:
         raise ValueError("actuator mapping knob must be a valid control knob")
     if not isinstance(mapping.scope, str) or not mapping.scope.strip():
         raise ValueError("actuator mapping scope must be a non-empty string")
-    if len(mapping.limits) != 2:
-        raise ValueError("actuator mapping limits must contain two values")
+    # ActuatorMapping unpacks ``limits`` into two values when it is built, and
+    # this unpacking raises ValueError for any other length.
     lo, hi = mapping.limits
     if not _finite_real(lo) or not _finite_real(hi) or lo >= hi:
         raise ValueError("actuator mapping limits must be finite and increasing")
+
+
+def _valid_ttl(value: object) -> bool:
+    """Return whether ``value`` is a finite, non-negative real TTL in seconds.
+
+    Plain ``float`` and ``int`` take an exact-type fast path, because this runs
+    once per action in ``map_actions``; other reals go through the ABC check.
+    """
+    if type(value) is float or type(value) is int:
+        return isfinite(value) and value >= 0
+    return isinstance(value, Real) and _finite_real(value) and float(value) >= 0.0
 
 
 def _finite_real(value: object) -> bool:

@@ -193,3 +193,77 @@ def test_projected_plan_dataclass_is_frozen() -> None:
     )
     with pytest.raises((AttributeError, TypeError)):
         plan.actuating = True  # type: ignore[misc]
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "match"),
+    [
+        ("base_value", float("nan"), "base_value must be a finite real"),
+        ("base_value", float("inf"), "base_value must be a finite real"),
+        ("base_value", "1", "base_value must be a finite real"),
+        ("previous_value", float("nan"), "previous_value must be a finite real"),
+        ("step", float("nan"), "step must be a finite real"),
+        ("step", float("inf"), "step must be a finite real"),
+        ("step", True, "step must be a finite real"),
+        ("ttl_s", float("nan"), "ttl_s must be a finite real"),
+        ("ttl_s", float("inf"), "ttl_s must be a finite real"),
+        ("value_bounds", (float("nan"), 1.0), "value_bounds must be a finite real"),
+        ("value_bounds", (0.0, float("inf")), "value_bounds must be a finite real"),
+        ("value_bounds", (0.0,), r"value_bounds must be a \(low, high\) pair"),
+        ("value_bounds", [0.0, 1.0], r"value_bounds must be a \(low, high\) pair"),
+        ("rate_limit", float("nan"), "rate_limit must be a finite real"),
+        ("rate_limit", True, "rate_limit must be a finite real"),
+    ],
+)
+def test_template_rejects_non_finite_and_non_real_numbers(
+    field: str, value: object, match: str
+) -> None:
+    """Every numeric template field must be a finite real, booleans excluded."""
+    with pytest.raises(ValueError, match=match):
+        _template(**{field: value})
+
+
+def test_nan_ttl_template_can_no_longer_reach_an_accepted_runtime_gate() -> None:
+    """The full chain from automaton to runtime gate never carries a NaN TTL."""
+    from scpn_phase_orchestrator.monitor.stl import (
+        synthesise_stl_closed_loop_plan,
+        synthesise_stl_monitoring_automaton,
+    )
+
+    trace = {"R": [0.5, 0.1, 0.6]}
+    automaton = synthesise_stl_monitoring_automaton("always (R >= 0.3)", trace)
+    with pytest.raises(ValueError, match="ttl_s must be a finite real"):
+        synthesise_stl_closed_loop_plan(
+            automaton,
+            trace,
+            [
+                STLActionProjectionTemplate(
+                    action="increase_R",
+                    knob="K",
+                    scope="global",
+                    base_value=1.0,
+                    step=0.5,
+                    ttl_s=float("nan"),
+                    previous_value=1.0,
+                    value_bounds=(0.0, 2.0),
+                )
+            ],
+        )
+    plan = synthesise_stl_closed_loop_plan(
+        automaton,
+        trace,
+        [
+            STLActionProjectionTemplate(
+                action="increase_R",
+                knob="K",
+                scope="global",
+                base_value=1.0,
+                step=0.5,
+                ttl_s=5.0,
+                previous_value=1.0,
+                value_bounds=(0.0, 2.0),
+            )
+        ],
+    )
+    assert plan.runtime_gate.accepted
+    assert [command["ttl_s"] for command in plan.runtime_gate.commands] == [5.0]

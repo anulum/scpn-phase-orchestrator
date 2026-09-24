@@ -315,3 +315,42 @@ class TestActuationMapperPipelineEndToEnd:
 # Pipeline wiring: ActuationMapper tested via UPDEEngine → R → SupervisorPolicy
 # → map_actions() → device commands. Output adapter chain verified.
 # Performance: map_actions()<10μs.
+
+
+def _k_mapper() -> ActuationMapper:
+    return ActuationMapper(
+        [ActuatorMapping(name="k_drive", knob="K", scope="global", limits=(0.0, 5.0))]
+    )
+
+
+@pytest.mark.parametrize(
+    "ttl_s",
+    [float("nan"), float("inf"), float("-inf"), -1.0, True, "5", None],
+)
+def test_action_with_inadmissible_ttl_is_rejected_and_not_mapped(ttl_s) -> None:
+    """A TTL that is not a finite, non-negative real never becomes a command."""
+    mapper = _k_mapper()
+    action = ControlAction(
+        knob="K", scope="global", value=1.0, ttl_s=ttl_s, justification="probe"
+    )
+    assert mapper.validate_action(action) is False
+    assert mapper.map_actions([action]) == []
+
+
+@pytest.mark.parametrize("ttl_s", [0.0, 0, 5.0, 30])
+def test_action_with_admissible_ttl_is_mapped_with_its_ttl(ttl_s) -> None:
+    """Finite, non-negative TTLs, including zero, pass through unchanged."""
+    mapper = _k_mapper()
+    action = ControlAction(
+        knob="K", scope="global", value=1.0, ttl_s=ttl_s, justification="probe"
+    )
+    assert mapper.validate_action(action) is True
+    assert mapper.map_actions([action]) == [
+        {
+            "actuator": "k_drive",
+            "knob": "K",
+            "scope": "global",
+            "value": 1.0,
+            "ttl_s": ttl_s,
+        }
+    ]
