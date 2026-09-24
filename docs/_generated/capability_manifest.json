@@ -12,7 +12,7 @@
     "research_experimental_modules": 205,
     "runtime_serving_modules": 158,
     "rust_kernel_files": 97,
-    "test_files": 940
+    "test_files": 941
   },
   "documentation": {
     "public_pages": [
@@ -2051,6 +2051,7 @@
       "tests/test_causal_supervisor.py",
       "tests/test_chaos.py",
       "tests/test_chaos_cli.py",
+      "tests/test_chaos_fault_window_overlay.py",
       "tests/test_chb01_seizure_evidence.py",
       "tests/test_chbmit_crosssubject_negative_evidence.py",
       "tests/test_check_tracked_ignored.py",

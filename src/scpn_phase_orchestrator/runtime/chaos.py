@@ -93,12 +93,12 @@ class ChaosFault:
     ----------
     kind : str
         Fault type: ``"coupling_drop"`` (scale the coupling matrix down),
-        ``"frequency_drift"`` (offset the natural frequencies),
+        ``"frequency_drift"`` (offset the natural frequencies by a constant),
         ``"sensor_noise"`` (Gaussian phase perturbation), or ``"drive_dropout"``
         (attenuate the external drive ``zeta``).
     start_step : int
-        First step at which the fault is active (``>= 1`` so step 0 captures the
-        nominal coupling reference).
+        First step at which the fault is active (``>= 1``, so the run starts
+        from the spec's own initial state).
     duration_steps : int
         Number of consecutive steps the fault stays active.
     magnitude : float
@@ -311,9 +311,21 @@ class ChaosExperimentResult:
 def make_chaos_hook(schedule: ChaosSchedule) -> ScenarioCallback:
     """Build a non-actuating scenario hook that injects the fault schedule.
 
-    The hook captures the nominal coupling matrix at step 0 (faults start at
-    step >= 1) so that ``coupling_drop`` faults scale relative to the unperturbed
-    coupling rather than compounding across the fault window.
+    The simulation keeps whatever a scenario hook writes into its context, so
+    the hook treats each fault as an overlay: at every step it first removes the
+    perturbation it applied on the previous step, then applies the faults
+    active on this step to the unperturbed values. A fault therefore holds a
+    constant strength across its window, never compounds step over step, and
+    ends at ``end_step``. Overlapping faults of the same kind combine: drift
+    offsets add, coupling and drive factors multiply.
+
+    Removal is exact for the natural frequencies, which only the hook changes.
+    When the supervisor rescales the coupling during a ``coupling_drop``
+    window, its multiplicative change is carried into the restored coupling;
+    under a total drop (``magnitude == 1``) the dropped matrix carries no such
+    change and the coupling from before the drop is restored. When the
+    supervisor changes ``zeta`` during a ``drive_dropout`` window, its change is
+    carried as an additive offset, and a reset to zero is kept as zero.
 
     Parameters
     ----------
@@ -325,41 +337,98 @@ def make_chaos_hook(schedule: ChaosSchedule) -> ScenarioCallback:
     ScenarioCallback
         A callable suitable for ``simulate(..., scenario_hook=...)``.
     """
-    nominal_knm: dict[str, FloatArray] = {}
+    overlay = _ChaosOverlay()
 
     def hook(context: SimulationScenarioContext) -> None:
-        """Apply the chaos fault hook to the simulation step."""
-        if context.step == 0:
-            nominal_knm["knm"] = np.array(context.coupling.knm, dtype=np.float64)
-        for fault in schedule.faults:
-            if not fault.active_at(context.step):
-                continue
-            _apply_fault(fault, context, nominal_knm.get("knm"))
+        """Remove the previous step's overlay, then apply the active faults."""
+        overlay.remove(context)
+        active = [fault for fault in schedule.faults if fault.active_at(context.step)]
+        overlay.apply(active, context)
 
     return hook
 
 
-def _apply_fault(
-    fault: ChaosFault,
-    context: SimulationScenarioContext,
-    nominal_knm: FloatArray | None,
-) -> None:
-    """Apply the configured fault to the state."""
-    if fault.kind == "coupling_drop":
-        reference = nominal_knm if nominal_knm is not None else context.coupling.knm
-        context.coupling = CouplingState(
-            knm=reference * (1.0 - fault.magnitude),
-            alpha=context.coupling.alpha,
-            active_template=context.coupling.active_template,
-            knm_r=context.coupling.knm_r,
-        )
-    elif fault.kind == "frequency_drift":
-        context.omegas = context.omegas + fault.magnitude
-    elif fault.kind == "sensor_noise":
-        noise = context.rng.normal(0.0, fault.magnitude, size=context.phases.shape)
-        context.phases = context.phases + noise
-    else:  # drive_dropout
-        context.zeta = context.zeta * (1.0 - fault.magnitude)
+@dataclass
+class _ChaosOverlay:
+    """Perturbation the chaos hook wrote on the previous step, for removal."""
+
+    omega_offset: float = 0.0
+    coupling_factor: float = 1.0
+    clean_coupling: CouplingState | None = None
+    written_coupling: CouplingState | None = None
+    clean_zeta: float | None = None
+    written_zeta: float | None = None
+
+    def remove(self, context: SimulationScenarioContext) -> None:
+        """Restore the unperturbed values the previous step's overlay replaced."""
+        if self.omega_offset != 0.0:
+            context.omegas = context.omegas - self.omega_offset
+            self.omega_offset = 0.0
+        if self.clean_coupling is not None:
+            current = context.coupling
+            if current is self.written_coupling or self.coupling_factor == 0.0:
+                context.coupling = self.clean_coupling
+            else:
+                context.coupling = CouplingState(
+                    knm=current.knm / self.coupling_factor,
+                    alpha=current.alpha,
+                    active_template=current.active_template,
+                    knm_r=current.knm_r,
+                )
+            self.clean_coupling = None
+            self.written_coupling = None
+            self.coupling_factor = 1.0
+        if self.clean_zeta is not None and self.written_zeta is not None:
+            current_zeta = float(context.zeta)
+            if current_zeta == self.written_zeta:
+                context.zeta = self.clean_zeta
+            elif current_zeta != 0.0:
+                context.zeta = max(
+                    0.0, self.clean_zeta + (current_zeta - self.written_zeta)
+                )
+            self.clean_zeta = None
+            self.written_zeta = None
+
+    def apply(
+        self, faults: list[ChaosFault], context: SimulationScenarioContext
+    ) -> None:
+        """Apply the active faults to the unperturbed context values."""
+        omega_offset = 0.0
+        coupling_factor = 1.0
+        zeta_factor = 1.0
+        for fault in faults:
+            if fault.kind == "coupling_drop":
+                coupling_factor *= 1.0 - fault.magnitude
+            elif fault.kind == "frequency_drift":
+                omega_offset += fault.magnitude
+            elif fault.kind == "sensor_noise":
+                noise = context.rng.normal(
+                    0.0, fault.magnitude, size=context.phases.shape
+                )
+                context.phases = context.phases + noise
+            else:  # drive_dropout
+                zeta_factor *= 1.0 - fault.magnitude
+        if omega_offset != 0.0:
+            context.omegas = context.omegas + omega_offset
+            self.omega_offset = omega_offset
+        if coupling_factor != 1.0:
+            clean = context.coupling
+            written = CouplingState(
+                knm=clean.knm * coupling_factor,
+                alpha=clean.alpha,
+                active_template=clean.active_template,
+                knm_r=clean.knm_r,
+            )
+            context.coupling = written
+            self.clean_coupling = clean
+            self.written_coupling = written
+            self.coupling_factor = coupling_factor
+        if zeta_factor != 1.0:
+            clean_zeta = float(context.zeta)
+            written_zeta = clean_zeta * zeta_factor
+            context.zeta = written_zeta
+            self.clean_zeta = clean_zeta
+            self.written_zeta = written_zeta
 
 
 def compute_resilience(
