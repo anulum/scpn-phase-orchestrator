@@ -61,6 +61,30 @@ class EthicalCost:
     constraints_violated: int
 
 
+def _validated_inputs(phases: object, knm: object) -> tuple[FloatArray, FloatArray]:
+    """Return finite phases and a matching square coupling matrix, else raise.
+
+    Validated once, before the backend is chosen: the Rust kernel returned
+    NaN or numbers for inputs the NumPy path refused, and both accepted a
+    coupling matrix whose size did not match the phases (with different
+    results).
+    """
+    phase_array = np.asarray(phases, dtype=np.float64)
+    knm_array = np.asarray(knm, dtype=np.float64)
+    if phase_array.ndim != 1:
+        raise ValueError("phases must be a one-dimensional vector")
+    n = phase_array.shape[0]
+    if knm_array.shape != (n, n):
+        raise ValueError(
+            f"knm must have shape ({n}, {n}) to match phases, got {knm_array.shape}"
+        )
+    if not np.all(np.isfinite(phase_array)):
+        raise ValueError("phases must contain only finite values")
+    if not np.all(np.isfinite(knm_array)):
+        raise ValueError("knm must contain only finite values")
+    return phase_array, knm_array
+
+
 def compute_ethical_cost(
     phases: FloatArray,
     knm: FloatArray,
@@ -115,7 +139,26 @@ def compute_ethical_cost(
     -------
     EthicalCost
         C15_sec ethical cost term.
+
+    Raises
+    ------
+    ValueError
+        If ``phases`` is not a finite 1-D vector, ``knm`` is not a finite
+        square matrix matching it, or a weight or threshold is not finite.
     """
+    phases, knm = _validated_inputs(phases, knm)
+    for name, value in (
+        ("alpha_R", alpha_R),
+        ("beta_K", beta_K),
+        ("gamma_Q", gamma_Q),
+        ("nu_S", nu_S),
+        ("kappa", kappa),
+        ("R_min", R_min),
+        ("connectivity_min", connectivity_min),
+        ("max_coupling", max_coupling),
+    ):
+        if isinstance(value, bool) or not np.isfinite(value):
+            raise ValueError(f"{name} must be a finite real number, got {value!r}")
     n = len(phases)
     if n == 0:
         return EthicalCost(

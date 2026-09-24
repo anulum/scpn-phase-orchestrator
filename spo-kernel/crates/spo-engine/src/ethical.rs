@@ -104,12 +104,18 @@ fn fiedler_value_inline(knm: &[f64], n: usize) -> f64 {
         return 0.0;
     }
 
-    // Build Laplacian L = D - |W|
+    // Build the Laplacian of the symmetrised graph, matching the Python
+    // coupling.spectral.fiedler_value: edge weight (|w_ij| + |w_ji|) / 2 and no
+    // self-loops. The Jacobi solver below assumes a symmetric matrix; the raw
+    // D - |W| of an asymmetric coupling gave a different lambda_2 than NumPy.
     let mut laplacian = vec![0.0; n * n];
     for i in 0..n {
         let mut deg = 0.0;
         for j in 0..n {
-            let w = knm[i * n + j].abs();
+            if i == j {
+                continue;
+            }
+            let w = 0.5 * (knm[i * n + j].abs() + knm[j * n + i].abs());
             laplacian[i * n + j] = -w;
             deg += w;
         }
@@ -284,5 +290,27 @@ mod tests {
         let knm = vec![0.0; n * n];
         let lam2 = fiedler_value_inline(&knm, n);
         assert!(lam2 < 1e-10, "disconnected graph: λ₂={lam2} should be ~0");
+    }
+
+    #[test]
+    fn test_fiedler_asymmetric_matches_symmetrised_graph() {
+        // A directed coupling and its symmetrised, self-loop-free form describe
+        // the same undirected graph, so lambda_2 must agree.
+        let n = 3;
+        let asym = vec![0.7, 2.0, 0.0, 0.0, 0.3, 1.0, 4.0, 0.0, 0.9];
+        let mut sym = vec![0.0; n * n];
+        for i in 0..n {
+            for j in 0..n {
+                if i != j {
+                    sym[i * n + j] = 0.5 * (asym[i * n + j] + asym[j * n + i]);
+                }
+            }
+        }
+        let a = fiedler_value_inline(&asym, n);
+        let b = fiedler_value_inline(&sym, n);
+        assert!(
+            (a - b).abs() < 1e-9,
+            "asymmetric λ₂={a} vs symmetrised λ₂={b}"
+        );
     }
 }
