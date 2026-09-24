@@ -36,6 +36,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   backend. Admission runs each compiled Mojo executable once with empty input
   and caches the verdict per build; on a loaded workstation one launch took
   0.06–0.23 s.
+- PRC-029-1 ride-through screening no longer applies the voltage tables while
+  frequency is outside 57.0-61.8 Hz. Attachment 1, note 6 of the standard makes
+  Tables 1 and 2 applicable only inside the frequency must ride-through zone;
+  a voltage sag during a frequency excursion used to be reported as a voltage
+  duration finding as well. The frequency finding still records the excursion,
+  so the review verdict is unchanged.
 - `build_twin_confidence_evidence()` no longer attests a score record as sent.
   It checked only that `score_hash` was non-empty, so a critical tick edited
   to read `"healthy"` was attested as healthy. The hash must now equal the

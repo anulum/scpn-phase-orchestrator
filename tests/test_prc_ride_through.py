@@ -312,3 +312,27 @@ class TestValidation:
     def test_rejects_non_finite_frequency(self) -> None:
         with pytest.raises(ValueError, match="frequency_hz\\[1\\] must be finite"):
             _screen((0.0, 1.0), (1.0, 1.0), (60.0, float("inf")))
+
+
+def test_voltage_tables_are_not_applied_during_a_frequency_excursion() -> None:
+    """Attachment 1 note 6: Tables 1 and 2 apply only inside 57.0-61.8 Hz."""
+    evidence = _screen(
+        [0.0, 5.0, 10.0],
+        [0.60, 0.60, 1.00],
+        [56.5, 56.5, 60.0],
+    )
+    assert [finding.channel for finding in evidence.findings] == ["frequency"]
+    assert evidence.findings[0].classification == "may_trip_zone_observed"
+
+
+def test_voltage_tables_apply_inside_the_frequency_must_zone() -> None:
+    """The same low-voltage sag at nominal frequency is screened and flagged."""
+    evidence = _screen(
+        [0.0, 5.0, 10.0],
+        [0.60, 0.60, 1.00],
+        [60.0, 60.0, 60.0],
+    )
+    voltage = [f for f in evidence.findings if f.channel == "voltage"]
+    assert len(voltage) == 1
+    assert voltage[0].classification == "duration_exceeds_minimum"
+    assert voltage[0].duration_s == 10.0
