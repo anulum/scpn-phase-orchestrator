@@ -36,6 +36,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   backend. Admission runs each compiled Mojo executable once with empty input
   and caches the verdict per build; on a loaded workstation one launch took
   0.06–0.23 s.
+- `synchronisation_warning()` no longer coerces non-numeric phases. Text such
+  as `"1"`, booleans inside object arrays and `timedelta64` values were
+  converted to floats and analysed as radians; they now raise `ValueError`.
 - `export_stl_specs_prism()` reads the STL monitor's own predicate grammar
   instead of a separate copy, so every formula the builtin monitor evaluates
   also exports; thresholds such as `.5` or `5e-1` were refused, and one that
