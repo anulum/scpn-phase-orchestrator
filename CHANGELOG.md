@@ -24,6 +24,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The Studio multiverse panel verifies the rollout and risk-report seals.
+  - A risk report whose rejected branches were rewritten as approved
+    rendered as "2/2 branches approved" under its original `report_hash`,
+    and an edited rollout manifest rendered under its `manifest_hash`. The
+    panel checked only the digest format.
+  - The panel now recomputes both seals after its structural checks: the
+    manifest over the record with `manifest_hash` blank, the risk report over
+    the record without `report_hash`, as the supervisor produces them.
+
 - `spo --help` no longer fails on Windows when its output is redirected.
   - Windows writes redirected output in the ANSI code page, usually cp1252.
     The `quickstart` summary contained `→`, which cp1252 cannot encode, so

@@ -167,15 +167,25 @@ def _require_sha256_hex(value: object, name: str) -> str:
     return text
 
 
-def _require_self_hash(record: Mapping[str, object], hash_field: str, name: str) -> str:
+def _require_self_hash(
+    record: Mapping[str, object],
+    hash_field: str,
+    name: str,
+    *,
+    blanked: bool = False,
+) -> str:
     """Return a record's own SHA-256 seal after recomputing it, else raise.
 
     The seal is the SHA-256 of the record's canonical JSON (sorted keys, compact
-    separators, no NaN) without ``hash_field``, the rule the supervisor producers
-    use. A record edited after sealing no longer matches its seal.
+    separators, no NaN) without ``hash_field``, the rule most supervisor
+    producers use. Producers that hash the record with ``hash_field`` set to
+    ``""`` instead are matched with ``blanked=True``. A record edited after
+    sealing no longer matches its seal.
     """
     digest = _require_sha256_hex(record.get(hash_field), name)
     payload = {key: value for key, value in record.items() if key != hash_field}
+    if blanked:
+        payload[hash_field] = ""
     try:
         canonical = json.dumps(
             payload, sort_keys=True, separators=(",", ":"), allow_nan=False

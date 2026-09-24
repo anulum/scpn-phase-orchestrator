@@ -26,6 +26,7 @@ from scpn_phase_orchestrator.supervisor.multiverse_risk import (
     MultiverseRiskThresholds,
     evaluate_multiverse_branch_risk,
 )
+from tests.sealing import seal
 
 
 def _production_multiverse_records(
@@ -66,6 +67,11 @@ def _production_multiverse_records(
 
 def _manual_manifest() -> dict[str, object]:
     """Return a compact valid multiverse manifest for validation mutations."""
+    return seal(_manual_manifest_body(), "manifest_hash", blanked=True)
+
+
+def _manual_manifest_body() -> dict[str, object]:
+    """Return the unsealed body of :func:`_manual_manifest`."""
     return {
         "schema_name": "multiverse_counterfactual_rollout",
         "schema_version": "0.1.0",
@@ -96,6 +102,11 @@ def _manual_manifest() -> dict[str, object]:
 
 def _manual_risk() -> dict[str, object]:
     """Return a compact valid multiverse risk report for validation mutations."""
+    return seal(_manual_risk_body(), "report_hash")
+
+
+def _manual_risk_body() -> dict[str, object]:
+    """Return the unsealed body of :func:`_manual_risk`."""
     return {
         "schema_name": "multiverse_branch_risk_gate",
         "schema_version": "0.1.0",
@@ -342,6 +353,7 @@ def test_multiverse_panel_accepts_missing_optional_risk_topology_scale() -> None
     decision = dict(_risk_decisions(risk)[0])
     decision["topology_scale"] = None
     risk["branch_decisions"] = [decision]
+    risk = seal(risk, "report_hash")
 
     panel = studio.build_multiverse_counterfactual_studio_panel(
         _manual_manifest(),
