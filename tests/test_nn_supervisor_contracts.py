@@ -33,11 +33,16 @@ from scpn_phase_orchestrator.autotune.reward import KnobPolicyCandidate
 from scpn_phase_orchestrator.nn.supervisor import (
     DifferentiableSupervisorConfig,
     DifferentiableSupervisorPolicy,
+    collect_supervisor_rollouts,
     load_supervisor_ppo_checkpoint,
+    ppo_supervisor_loss,
     project_supervisor_action_for_audit,
     save_supervisor_ppo_checkpoint,
 )
-from scpn_phase_orchestrator.nn.supervisor._types import SupervisorAction
+from scpn_phase_orchestrator.nn.supervisor._types import (
+    KuramotoSupervisorScenario,
+    SupervisorAction,
+)
 from scpn_phase_orchestrator.nn.supervisor.candidate_bridge import (
     supervisor_action_to_candidate,
 )
@@ -304,3 +309,44 @@ class TestCandidateBridge:
     def test_non_finite_action_is_refused(self, action: SupervisorAction) -> None:
         with pytest.raises(ValueError, match="NaN or infinite component"):
             supervisor_action_to_candidate(action)
+
+
+def _rollout_batch() -> object:
+    scenario = KuramotoSupervisorScenario(
+        phases=jnp.array([0.0, 0.1, 2.7, 3.1]),
+        omegas=jnp.array([0.04, 0.03, -0.03, -0.04]),
+        base_K=jnp.full((4, 4), 0.03) - jnp.eye(4) * 0.03,
+        good_mask=jnp.array([1.0, 1.0, 0.0, 0.0]),
+        bad_mask=jnp.array([0.0, 0.0, 1.0, 1.0]),
+        dt=0.02,
+        inner_steps=2,
+        horizon=2,
+    )
+    rollout = collect_supervisor_rollouts(
+        POLICY, scenario, key=jax.random.PRNGKey(5), n_episodes=1
+    )
+    return rollout.batch
+
+
+class TestPPOLoss:
+    @pytest.mark.parametrize(
+        ("field", "value", "message"),
+        [
+            ("clip_epsilon", -0.2, "clip_epsilon must be a finite positive"),
+            ("clip_epsilon", 0.0, "clip_epsilon must be a finite positive"),
+            ("clip_epsilon", float("nan"), "clip_epsilon must be a finite positive"),
+            ("value_weight", -0.5, "value_weight must be a finite non-negative"),
+            ("entropy_weight", -0.01, "entropy_weight must be a finite non-negative"),
+            ("entropy_weight", float("inf"), "entropy_weight must be a finite"),
+        ],
+    )
+    def test_objective_parameters_are_validated(
+        self, field: str, value: float, message: str
+    ) -> None:
+        """A negative epsilon inverted the ratio clip and trained silently."""
+        with pytest.raises(ValueError, match=message):
+            ppo_supervisor_loss(POLICY, _rollout_batch(), **{field: value})
+
+    def test_default_objective_is_finite(self) -> None:
+        total, _ = ppo_supervisor_loss(POLICY, _rollout_batch())
+        assert bool(jnp.isfinite(total))

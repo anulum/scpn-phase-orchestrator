@@ -70,7 +70,19 @@ def ppo_supervisor_loss(
     -------
     tuple[jax.Array, SupervisorPPOAux]
         The clipped PPO loss and its auxiliary metrics.
+
+    Raises
+    ------
+    ValueError
+        If ``clip_epsilon`` is not a finite positive number, or ``value_clip``,
+        ``value_weight`` or ``entropy_weight`` is not a finite non-negative
+        number. A negative epsilon inverts the ratio clip (the upper bound falls
+        below the lower one), and a negative weight rewards value error or
+        penalises exploration instead of the reverse.
     """
+    clip_epsilon = _positive_float(clip_epsilon, "clip_epsilon")
+    value_weight = _non_negative_float(value_weight, "value_weight")
+    entropy_weight = _non_negative_float(entropy_weight, "entropy_weight")
     if value_clip is not None:
         value_clip = _non_negative_float(value_clip, "value_clip")
 
