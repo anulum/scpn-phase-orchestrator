@@ -24,6 +24,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The Studio product manifest refuses a panel that enables a gate it declares.
+  - The manifest states for the whole product that QPU execution, hardware
+    writes, and network access are not permitted. It checked only five fixed
+    gates on each panel. A panel record with `qpu_execution_permitted`,
+    `hardware_write_permitted`, `formal_proof_claim_permitted`, or
+    `direct_hot_patch_permitted` set to `True` was published unchanged under a
+    manifest that said the opposite.
+  - Every `*_permitted` gate and `network_opened` that a panel declares must
+    now be `False`, or `build_studio_product_manifest` raises `ValueError`.
+
 - The C15 ethical cost gives the same result on the Rust and NumPy paths.
   - The Rust kernel computed the algebraic connectivity λ₂ from the raw
     Laplacian `D − |W|`, which counts self-loops and is not symmetric, with

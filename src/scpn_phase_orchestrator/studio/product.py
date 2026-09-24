@@ -306,14 +306,27 @@ def build_studio_product_manifest(
 
 
 def _require_disabled_panel_gates(panel: PanelRecord) -> None:
-    """Assert a panel's actuation/merge/patch gates are disabled, else raise."""
-    for field, expected in (
+    """Assert every permission gate a panel declares is disabled, else raise.
+
+    The required actuation, merge, patch, execution, and review gates must be
+    present. Any further ``*_permitted`` gate a panel declares (QPU execution,
+    formal-proof claims, hardware writes) must also be ``False``: the manifest
+    states product-wide that none of them is permitted, so a panel that enables
+    one would contradict it.
+    """
+    required: tuple[tuple[str, bool], ...] = (
         ("actuation_permitted", False),
         ("live_merge_permitted", False),
         ("hot_patch_permitted", False),
         ("execution_disabled", True),
         ("operator_review_required", True),
-    ):
+    )
+    declared = tuple(
+        (field, False)
+        for field in sorted(panel)
+        if field.endswith("_permitted") or field == "network_opened"
+    )
+    for field, expected in required + declared:
         if panel.get(field) is not expected:
             raise ValueError(f"{panel.get('panel_id', '<unknown>')} {field} invalid")
 

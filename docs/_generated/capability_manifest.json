@@ -12,7 +12,7 @@
     "research_experimental_modules": 205,
     "runtime_serving_modules": 158,
     "rust_kernel_files": 97,
-    "test_files": 972
+    "test_files": 973
   },
   "documentation": {
     "public_pages": [
@@ -2796,6 +2796,7 @@
       "tests/test_studio_panel_topos.py",
       "tests/test_studio_panel_twin_confidence.py",
       "tests/test_studio_product.py",
+      "tests/test_studio_product_declared_gates.py",
       "tests/test_studio_public_facade.py",
       "tests/test_studio_shared_helpers.py",
       "tests/test_studio_ui_helpers.py",
