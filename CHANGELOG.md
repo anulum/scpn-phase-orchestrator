@@ -24,6 +24,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- A scenario hook's phase edit now reaches the amplitude-mode (Stuart-Landau)
+  integrator. `simulate` integrates a combined phase-and-amplitude state that
+  it builds once before the loop, and it never wrote a hook's
+  `context.phases` back into it. Every phase perturbation was silently
+  dropped, including chaos `sensor_noise` (2 rad for 20 steps had no effect
+  at all), on the 32 of 36 shipped domainpacks that run in amplitude mode.
 - A `zeta` control action in `simulate` now lasts exactly its TTL, and then
   the spec's baseline drive returns. At expiry the drive used to be set to
   0.0, dropping a non-zero baseline (0.02 in `minimal_domain`) for the rest
