@@ -1,0 +1,953 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://anulum.li/schemas/scpn-phase-orchestrator/reactor-producer-evidence-priority-register.v1.schema.json",
+  "title": "SCPN Phase Orchestrator reactor producer evidence priority register v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "schema_version",
+    "payload",
+    "payload_sha256"
+  ],
+  "properties": {
+    "schema": {
+      "const": "scpn-phase-orchestrator.reactor-producer-evidence-priority-register.v1"
+    },
+    "schema_version": {
+      "const": "1.2.0"
+    },
+    "payload_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "observed_at",
+        "method",
+        "non_scalar_priority_policy",
+        "source_bindings",
+        "lane_order",
+        "lane_definitions",
+        "required_physical_evidence",
+        "project_scope",
+        "counts",
+        "configurations",
+        "authority",
+        "actionable",
+        "direct_actuation_authorized",
+        "machine_protection_final_veto"
+      ],
+      "properties": {
+        "observed_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "method": {
+          "type": "string",
+          "minLength": 40
+        },
+        "non_scalar_priority_policy": {
+          "type": "string",
+          "minLength": 40
+        },
+        "source_bindings": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "configuration_evidence_coverage",
+            "diagnostic_plan_portfolio_status",
+            "signal_occurrence_ledger",
+            "technology_diagnostic_atlas"
+          ],
+          "properties": {
+            "configuration_evidence_coverage": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "path",
+                "schema",
+                "schema_version",
+                "payload_sha256",
+                "file_sha256"
+              ],
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "schema_version": {
+                  "const": "1.1.0"
+                },
+                "payload_sha256": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                },
+                "file_sha256": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                }
+              }
+            },
+            "diagnostic_plan_portfolio_status": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "path",
+                "schema",
+                "schema_version",
+                "payload_sha256",
+                "file_sha256"
+              ],
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "schema_version": {
+                  "const": "1.3.0"
+                },
+                "payload_sha256": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                },
+                "file_sha256": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                }
+              }
+            },
+            "signal_occurrence_ledger": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "path",
+                "schema",
+                "schema_version",
+                "payload_sha256",
+                "file_sha256"
+              ],
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "schema_version": {
+                  "const": "1.0.0"
+                },
+                "payload_sha256": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                },
+                "file_sha256": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                }
+              }
+            },
+            "technology_diagnostic_atlas": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "path",
+                "schema",
+                "schema_version",
+                "payload_sha256",
+                "file_sha256"
+              ],
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "schema_version": {
+                  "const": "1.1.0"
+                },
+                "payload_sha256": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                },
+                "file_sha256": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                }
+              }
+            }
+          }
+        },
+        "lane_order": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "const": "L0_qualify_existing_physical_source"
+            },
+            {
+              "const": "L1_extend_exercised_review_adapter"
+            },
+            {
+              "const": "L2_build_missing_diagnostic_plan"
+            },
+            {
+              "const": "L3_build_from_accepted_plan"
+            },
+            {
+              "const": "L4_repair_refused_plan_before_intake"
+            }
+          ],
+          "items": false,
+          "minItems": 5,
+          "maxItems": 5
+        },
+        "lane_definitions": {
+          "type": "array",
+          "minItems": 5,
+          "maxItems": 5,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "lane",
+              "selection_rule",
+              "next_gate",
+              "ordered_within_lane"
+            ],
+            "properties": {
+              "lane": {
+                "enum": [
+                  "L0_qualify_existing_physical_source",
+                  "L1_extend_exercised_review_adapter",
+                  "L2_build_missing_diagnostic_plan",
+                  "L3_build_from_accepted_plan",
+                  "L4_repair_refused_plan_before_intake"
+                ]
+              },
+              "selection_rule": {
+                "type": "string",
+                "minLength": 30
+              },
+              "next_gate": {
+                "enum": [
+                  "complete_physical_source_qualification",
+                  "publish_versioned_diagnostic_plan",
+                  "supply_physical_producer_payload",
+                  "supply_physical_sample_envelope",
+                  "repair_plan_contract_then_supply_physical_sample_envelope"
+                ]
+              },
+              "ordered_within_lane": {
+                "const": false
+              }
+            }
+          }
+        },
+        "required_physical_evidence": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "const": "physical_sample"
+            },
+            {
+              "const": "phenomenon_identity"
+            },
+            {
+              "const": "reference"
+            },
+            {
+              "const": "clock_epoch"
+            },
+            {
+              "const": "observation_operator_or_calibration"
+            },
+            {
+              "const": "uncertainty"
+            },
+            {
+              "const": "validity"
+            },
+            {
+              "const": "quality"
+            },
+            {
+              "const": "provenance"
+            },
+            {
+              "const": "observability_gate"
+            }
+          ],
+          "items": false,
+          "minItems": 10,
+          "maxItems": 10
+        },
+        "project_scope": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "diagnostic_plan_portfolio_projects",
+            "registry_device_owner_projects",
+            "upstream_reactor_projects",
+            "control_project",
+            "orchestration_authority_project"
+          ],
+          "properties": {
+            "diagnostic_plan_portfolio_projects": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/upstreamProjectId"
+              },
+              "uniqueItems": true,
+              "minItems": 22,
+              "maxItems": 22
+            },
+            "registry_device_owner_projects": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/upstreamProjectId"
+              },
+              "uniqueItems": true,
+              "minItems": 23,
+              "maxItems": 23
+            },
+            "upstream_reactor_projects": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/upstreamProjectId"
+              },
+              "uniqueItems": true,
+              "minItems": 24,
+              "maxItems": 24
+            },
+            "control_project": {
+              "const": "SCPN-CONTROL"
+            },
+            "orchestration_authority_project": {
+              "const": "SCPN-PHASE-ORCHESTRATOR"
+            }
+          }
+        },
+        "counts": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "registered_configurations",
+            "confinement_families",
+            "registry_device_owner_projects",
+            "upstream_reactor_projects",
+            "diagnostic_plan_portfolio_projects",
+            "control_projects",
+            "upstream_plus_control_projects",
+            "L0_qualify_existing_physical_source",
+            "L1_extend_exercised_review_adapter",
+            "L2_build_missing_diagnostic_plan",
+            "L3_build_from_accepted_plan",
+            "L4_repair_refused_plan_before_intake",
+            "qualified_physical_observations",
+            "qualified_physical_phases",
+            "control_admitted"
+          ],
+          "properties": {
+            "registered_configurations": {
+              "const": 34
+            },
+            "confinement_families": {
+              "const": 9
+            },
+            "registry_device_owner_projects": {
+              "const": 23
+            },
+            "upstream_reactor_projects": {
+              "const": 24
+            },
+            "diagnostic_plan_portfolio_projects": {
+              "const": 22
+            },
+            "control_projects": {
+              "const": 1
+            },
+            "upstream_plus_control_projects": {
+              "const": 25
+            },
+            "L0_qualify_existing_physical_source": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "L1_extend_exercised_review_adapter": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "L2_build_missing_diagnostic_plan": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "L3_build_from_accepted_plan": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "L4_repair_refused_plan_before_intake": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "qualified_physical_observations": {
+              "const": 0
+            },
+            "qualified_physical_phases": {
+              "const": 0
+            },
+            "control_admitted": {
+              "const": 0
+            }
+          }
+        },
+        "configurations": {
+          "type": "array",
+          "minItems": 34,
+          "maxItems": 34,
+          "items": {
+            "$ref": "#/$defs/configuration"
+          }
+        },
+        "authority": {
+          "const": "review_only"
+        },
+        "actionable": {
+          "const": false
+        },
+        "direct_actuation_authorized": {
+          "const": false
+        },
+        "machine_protection_final_veto": {
+          "const": true
+        }
+      }
+    }
+  },
+  "$defs": {
+    "upstreamProjectId": {
+      "enum": [
+        "SCPN-BEAM-TARGET-CORE",
+        "SCPN-DENSE-PLASMA-FOCUS-CORE",
+        "SCPN-FRC-CORE",
+        "SCPN-FUSION-CORE",
+        "SCPN-FUSION-FISSION-HYBRID-CORE",
+        "SCPN-ICF-BEAM-CORE",
+        "SCPN-ICF-IMPACT-CORE",
+        "SCPN-ICF-LASER-CORE",
+        "SCPN-IEC-CORE",
+        "SCPN-LATTICE-FUSION-CORE",
+        "SCPN-LEVITATED-DIPOLE-CORE",
+        "SCPN-MAGNETIC-CUSP-CORE",
+        "SCPN-MIF-CORE",
+        "SCPN-MIF-LINER-CORE",
+        "SCPN-MIF-MAGLIF-CORE",
+        "SCPN-MIF-PLASMA-JET-CORE",
+        "SCPN-MIRROR-CORE",
+        "SCPN-MUON-FUSION-CORE",
+        "SCPN-RFP-CORE",
+        "SCPN-SPHEROMAK-CORE",
+        "SCPN-STELLARATOR-CORE",
+        "SCPN-THETA-PINCH-CORE",
+        "SCPN-TOKAMAK-CORE",
+        "SCPN-Z-PINCH-CORE"
+      ]
+    },
+    "nullableString": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "stringArray": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "uniqueItems": true
+    },
+    "diagnosticPlan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "structural_status",
+        "custody_state",
+        "observed_revision",
+        "fixture_sha256",
+        "missing_required_members",
+        "affected_channel_ids"
+      ],
+      "properties": {
+        "structural_status": {
+          "enum": [
+            "accepted",
+            "not_declared",
+            "not_in_portfolio",
+            "refused"
+          ]
+        },
+        "custody_state": {
+          "enum": [
+            "architecture_only_no_plan",
+            "not_in_portfolio",
+            "producer_fix_required",
+            "verified_public_producer_object"
+          ]
+        },
+        "observed_revision": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{40}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "fixture_sha256": {
+          "anyOf": [
+            {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "missing_required_members": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "affected_channel_ids": {
+          "$ref": "#/$defs/stringArray"
+        }
+      }
+    },
+    "configuration": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "configuration",
+        "confinement_family",
+        "topology",
+        "device_project",
+        "intake_lane",
+        "next_gate",
+        "external_context",
+        "current_spo_evidence",
+        "diagnostic_plan",
+        "readiness_axes",
+        "observability_candidate_ids",
+        "producer_request",
+        "priority_score",
+        "authority",
+        "actionable",
+        "direct_actuation_authorized",
+        "machine_protection_final_veto"
+      ],
+      "properties": {
+        "configuration": {
+          "enum": [
+            "beam_target",
+            "colliding_beam",
+            "conventional_tokamak",
+            "cusp",
+            "dense_plasma_focus",
+            "field_reversed_configuration",
+            "frc_compression_mif",
+            "fusion_fission_hybrid",
+            "gas_dynamic_mirror",
+            "gridded_iec",
+            "heliotron",
+            "ion_beam_icf",
+            "laser_icf_direct_drive",
+            "laser_icf_fast_or_shock_ignition",
+            "laser_icf_indirect_drive",
+            "levitated_dipole",
+            "maglif",
+            "mechanical_or_liquid_liner_mif",
+            "plasma_jet_mif",
+            "polywell",
+            "projectile_or_impact_icf",
+            "pulsed_electron_beam_icf",
+            "reversed_field_pinch",
+            "scpn.reactor_systems:lattice_confinement_fusion",
+            "scpn.reactor_systems:muon_catalysed_fusion",
+            "sheared_flow_z_pinch",
+            "simple_magnetic_mirror",
+            "spherical_tokamak",
+            "spheromak",
+            "stellarator",
+            "tandem_mirror",
+            "theta_pinch",
+            "torsatron",
+            "z_pinch"
+          ]
+        },
+        "confinement_family": {
+          "enum": [
+            "beam_target",
+            "electrostatic",
+            "extension",
+            "hybrid",
+            "inertial",
+            "magnetic_closed",
+            "magnetic_open",
+            "magneto_inertial",
+            "self_magnetic"
+          ]
+        },
+        "topology": {
+          "type": "string",
+          "minLength": 1
+        },
+        "device_project": {
+          "type": "string",
+          "pattern": "^SCPN-[A-Z0-9-]+$"
+        },
+        "intake_lane": {
+          "enum": [
+            "L0_qualify_existing_physical_source",
+            "L1_extend_exercised_review_adapter",
+            "L2_build_missing_diagnostic_plan",
+            "L3_build_from_accepted_plan",
+            "L4_repair_refused_plan_before_intake"
+          ]
+        },
+        "next_gate": {
+          "enum": [
+            "complete_physical_source_qualification",
+            "publish_versioned_diagnostic_plan",
+            "repair_plan_contract_then_supply_physical_sample_envelope",
+            "supply_physical_producer_payload",
+            "supply_physical_sample_envelope"
+          ]
+        },
+        "external_context": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "evidence_rank",
+            "source_ids",
+            "diagnostic_evidence_state",
+            "technology_is_priority_score",
+            "technology_is_signal_evidence",
+            "technology_is_control_evidence"
+          ],
+          "properties": {
+            "evidence_rank": {
+              "enum": [
+                "E5_integrated_fusion_observation",
+                "E4_integrated_plasma_experiment",
+                "E3_component_or_driver_experiment",
+                "E2_engineering_or_facility_development",
+                "E1_concept_or_simulation",
+                "E0_no_qualifying_source"
+              ]
+            },
+            "source_ids": {
+              "$ref": "#/$defs/stringArray"
+            },
+            "diagnostic_evidence_state": {
+              "type": "string",
+              "minLength": 1
+            },
+            "technology_is_priority_score": {
+              "const": false
+            },
+            "technology_is_signal_evidence": {
+              "const": false
+            },
+            "technology_is_control_evidence": {
+              "const": false
+            }
+          }
+        },
+        "current_spo_evidence": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "evidence_state",
+            "semantic_ingress_state",
+            "producer_project",
+            "source_schema",
+            "adapter_api",
+            "occurrence_ids",
+            "physical_source_present",
+            "portable_review_adapter_present",
+            "qualified_observation",
+            "qualified_physical_phase"
+          ],
+          "properties": {
+            "evidence_state": {
+              "type": "string",
+              "minLength": 1
+            },
+            "semantic_ingress_state": {
+              "enum": [
+                "not_declared",
+                "verified_review_adapter"
+              ]
+            },
+            "producer_project": {
+              "$ref": "#/$defs/nullableString"
+            },
+            "source_schema": {
+              "$ref": "#/$defs/nullableString"
+            },
+            "adapter_api": {
+              "$ref": "#/$defs/nullableString"
+            },
+            "occurrence_ids": {
+              "$ref": "#/$defs/stringArray"
+            },
+            "physical_source_present": {
+              "type": "boolean"
+            },
+            "portable_review_adapter_present": {
+              "type": "boolean"
+            },
+            "qualified_observation": {
+              "const": false
+            },
+            "qualified_physical_phase": {
+              "const": false
+            }
+          }
+        },
+        "diagnostic_plan": {
+          "$ref": "#/$defs/diagnosticPlan"
+        },
+        "readiness_axes": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "exact_configuration_identity",
+            "external_context_present",
+            "physical_source_present",
+            "portable_review_adapter_present",
+            "structural_plan_accepted",
+            "exact_plan_fixture_custody",
+            "complete_physical_evidence",
+            "control_admission"
+          ],
+          "properties": {
+            "exact_configuration_identity": {
+              "const": true
+            },
+            "external_context_present": {
+              "const": true
+            },
+            "physical_source_present": {
+              "type": "boolean"
+            },
+            "portable_review_adapter_present": {
+              "type": "boolean"
+            },
+            "structural_plan_accepted": {
+              "type": "boolean"
+            },
+            "exact_plan_fixture_custody": {
+              "type": "boolean"
+            },
+            "complete_physical_evidence": {
+              "const": false
+            },
+            "control_admission": {
+              "const": false
+            }
+          }
+        },
+        "observability_candidate_ids": {
+          "$ref": "#/$defs/stringArray"
+        },
+        "producer_request": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "requested_owner_project",
+            "artifact_kind",
+            "required_evidence",
+            "lane_blockers",
+            "source_revision_required",
+            "package_identity_required",
+            "canonical_bytes_required",
+            "independent_validation_required"
+          ],
+          "properties": {
+            "requested_owner_project": {
+              "type": "string",
+              "pattern": "^SCPN-[A-Z0-9-]+$"
+            },
+            "artifact_kind": {
+              "enum": [
+                "configuration_specific_canonical_evidence_envelope",
+                "configuration_specific_diagnostic_plan",
+                "configuration_specific_diagnostic_plan_repair"
+              ]
+            },
+            "required_evidence": {
+              "oneOf": [
+                {
+                  "const": [
+                    "physical_sample",
+                    "phenomenon_identity",
+                    "reference",
+                    "clock_epoch",
+                    "observation_operator_or_calibration",
+                    "uncertainty",
+                    "validity",
+                    "quality",
+                    "provenance",
+                    "observability_gate"
+                  ]
+                },
+                {
+                  "const": [
+                    "physical_sample",
+                    "phenomenon_identity",
+                    "reference",
+                    "clock_epoch",
+                    "observation_operator_or_calibration",
+                    "uncertainty",
+                    "validity",
+                    "plant_truth_state_semantics",
+                    "quality",
+                    "provenance",
+                    "observability_gate"
+                  ]
+                },
+                {
+                  "const": [
+                    "physical_sample",
+                    "phenomenon_identity",
+                    "reference",
+                    "clock_epoch",
+                    "observation_operator_or_calibration",
+                    "uncertainty",
+                    "validity",
+                    "producer_evidence_state_semantics",
+                    "quality",
+                    "provenance",
+                    "observability_gate"
+                  ]
+                }
+              ]
+            },
+            "lane_blockers": {
+              "$ref": "#/$defs/stringArray"
+            },
+            "materialized_request": {
+              "type": "object",
+              "additionalProperties": false,
+              "dependentRequired": {
+                "path": ["source_review_id", "source_review_sha256"],
+                "source_review_id": ["path", "source_review_sha256"],
+                "source_review_sha256": ["path", "source_review_id"]
+              },
+              "required": [
+                "api",
+                "envelope_sha256",
+                "request_id",
+                "schema",
+                "schema_version"
+              ],
+              "properties": {
+                "api": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "envelope_sha256": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                },
+                "request_id": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                },
+                "path": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "schema": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "schema_version": {
+                  "enum": [
+                    "1.0.0",
+                    "1.1.0"
+                  ]
+                },
+                "source_review_id": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                },
+                "source_review_sha256": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                }
+              }
+            },
+            "source_revision_required": {
+              "const": true
+            },
+            "package_identity_required": {
+              "const": true
+            },
+            "canonical_bytes_required": {
+              "const": true
+            },
+            "independent_validation_required": {
+              "const": true
+            }
+          }
+        },
+        "priority_score": {
+          "const": null
+        },
+        "authority": {
+          "const": "review_only"
+        },
+        "actionable": {
+          "const": false
+        },
+        "direct_actuation_authorized": {
+          "const": false
+        },
+        "machine_protection_final_veto": {
+          "const": true
+        }
+      }
+    }
+  }
+}
