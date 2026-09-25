@@ -20,7 +20,7 @@ from __future__ import annotations
 import operator
 from dataclasses import dataclass
 from math import isfinite
-from numbers import Real
+from numbers import Integral, Real
 from pathlib import Path
 from typing import Any, NoReturn
 
@@ -394,13 +394,15 @@ def _non_negative_float(value: Any, context: str) -> float:
 
 
 def _non_negative_int(value: Any, context: str) -> int:
-    """Return ``value`` as a non-negative integer, else raise ``ValueError``."""
-    if isinstance(value, bool):
+    """Return ``value`` as a non-negative integer, else raise ``ValueError``.
+
+    Only integral values are accepted. ``int()`` would truncate ``1.9`` to layer
+    ``1`` and read the text ``"2"`` as a count, silently changing what a rule
+    watches or how often it fires.
+    """
+    if isinstance(value, bool) or not isinstance(value, Integral):
         _policy_error(f"{context} must be a non-negative integer")
-    try:
-        result = int(value)
-    except (TypeError, ValueError):
-        _policy_error(f"{context} must be a non-negative integer")
+    result = int(value)
     if result < 0:
         _policy_error(f"{context} must be non-negative")
     return result

@@ -24,6 +24,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Policy rules refuse a non-integral layer index or fire limit.
+  - The policy loader read `condition.layer` and `max_fires` with `int()`. A
+    rule written with `layer: 1.9` watched layer 1 and `max_fires: 2.5`
+    fired twice, with no error; the text `"2"` was also accepted.
+  - Both fields now must be integers. All 37 shipped policy files already
+    use integers.
+
 - The supervisor classifies a non-finite mean order parameter as CRITICAL.
   - A diverged simulation or a failed monitor yields `R = NaN` or `inf`.
     Every threshold comparison in `RegimeManager.evaluate` is false for NaN
