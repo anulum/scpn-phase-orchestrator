@@ -12,7 +12,7 @@
     "research_experimental_modules": 205,
     "runtime_serving_modules": 158,
     "rust_kernel_files": 97,
-    "test_files": 982
+    "test_files": 983
   },
   "documentation": {
     "public_pages": [
@@ -2672,6 +2672,7 @@
       "tests/test_regime_adaptive_ensemble_evidence.py",
       "tests/test_regime_events.py",
       "tests/test_regime_hysteresis.py",
+      "tests/test_regime_nonfinite_mean_r.py",
       "tests/test_regressions.py",
       "tests/test_remanentia_bridge.py",
       "tests/test_remanentia_bridge_defensive_contracts.py",

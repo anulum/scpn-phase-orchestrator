@@ -120,12 +120,20 @@ class RegimeManager:
         Returns
         -------
         Regime
-            The regime proposed for the current state.
+            The regime proposed for the current state. A non-finite mean ``R``
+            proposes ``CRITICAL``.
         """
         if boundary_state.hard_violations:
             return Regime.CRITICAL
 
         avg_r = self._mean_r(upde_state)
+
+        # A non-finite coherence reading means the state diverged or the monitor
+        # failed; it is never evidence of synchrony. Every comparison below is
+        # false for NaN, which would fall through to NOMINAL. The Rust kernel's
+        # ``classify_regime_from_summary`` returns Critical here as well.
+        if not isfinite(avg_r):
+            return Regime.CRITICAL
 
         if avg_r < _R_CRITICAL:
             return Regime.CRITICAL

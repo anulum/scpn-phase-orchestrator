@@ -24,6 +24,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The supervisor classifies a non-finite mean order parameter as CRITICAL.
+  - A diverged simulation or a failed monitor yields `R = NaN` or `inf`.
+    Every threshold comparison in `RegimeManager.evaluate` is false for NaN
+    and for `+inf`, so the Python path proposed NOMINAL (RECOVERY from
+    CRITICAL) and the supervisor treated a failed state as healthy. The Rust
+    kernel's `classify_regime_from_summary` already returned Critical.
+  - The Python path now returns CRITICAL for a non-finite mean `R`. A test
+    checks both regime managers against each other.
+
 - Studio's `zeta` and `Psi` replay knobs drive the oscillators as SPO defines
   them.
   - Elsewhere in SPO `zeta` is the driver strength and `Psi` the target phase
