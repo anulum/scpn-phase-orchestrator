@@ -24,6 +24,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The supervisor's CBF admission gate rate-limits against the last admitted
+  value.
+  - `PolicyCBFChannel` is frozen, and its `previous_action` was the rate
+    limit and fallback reference for every decision of the run. With
+    `max_rate = 0.1`, a zeta ramp 0.1, 0.2, 0.3, 0.4 stayed at 0.1 for the
+    whole run, and a jump was limited relative to the constructor value, not
+    to the knob's current value.
+  - `PolicyCBFAdmissionGate` now keeps the last admitted value per channel and
+    passes it to `PolicyCBFChannel.admit(previous_action=...)`. The channel's
+    `previous_action` is the reference for the first decision only.
+
 - Policy rules refuse a non-integral layer index or fire limit.
   - The policy loader read `condition.layer` and `max_fires` with `int()`. A
     rule written with `layer: 1.9` watched layer 1 and `max_fires: 2.5`
