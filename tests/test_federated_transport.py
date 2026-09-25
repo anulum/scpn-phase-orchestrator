@@ -11,6 +11,7 @@ from __future__ import annotations
 import hashlib
 import json
 from dataclasses import replace
+from typing import cast
 
 import pytest
 
@@ -32,27 +33,6 @@ def _stable_hash(payload: dict[str, object]) -> str:
             payload, sort_keys=True, separators=(",", ":"), allow_nan=False
         ).encode("utf-8")
     ).hexdigest()
-
-
-def _update_hash(
-    node_id: str, policy_delta: dict[str, float], sample_count: int
-) -> str:
-    return _stable_hash(
-        {
-            "node_id": node_id,
-            "policy_delta": [
-                [key, value] for key, value in sorted(policy_delta.items())
-            ],
-            "sample_count": sample_count,
-            "local_loss": 0.21,
-            "previous_audit_hash": "a" * 64,
-            "privacy_epsilon_spent": 0.5,
-            "clipped_l2_norm": 0.4,
-            "clip_scale": 1.0,
-            "accepted": True,
-            "rejection_reasons": [],
-        }
-    )
 
 
 def _records() -> tuple[dict[str, object], ...]:
@@ -82,16 +62,18 @@ def _records() -> tuple[dict[str, object], ...]:
         "sample_count": 80,
         "privacy_epsilon_spent": 0.5,
     }
-    first["update_hash"] = _update_hash(
-        first["node_id"], first["policy_delta"], first["sample_count"]
-    )
-    second["update_hash"] = _update_hash(
-        second["node_id"], second["policy_delta"], second["sample_count"]
-    )
-    third["update_hash"] = _update_hash(
-        third["node_id"], third["policy_delta"], third["sample_count"]
-    )
-    return first, second, third
+    return _sealed(first), _sealed(second), _sealed(third)
+
+
+def _sealed(record: dict[str, object]) -> dict[str, object]:
+    """Return ``record`` with the ``update_hash`` the aggregator would give it.
+
+    The seal covers the record without ``update_hash``, with ``policy_delta`` as
+    ``[key, value]`` pairs in the record's order.
+    """
+    delta = cast("dict[str, float]", record["policy_delta"])
+    body = {**record, "policy_delta": [[key, value] for key, value in delta.items()]}
+    return {**record, "update_hash": _stable_hash(body)}
 
 
 def _is_sha256(value: str) -> bool:

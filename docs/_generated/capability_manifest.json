@@ -12,7 +12,7 @@
     "research_experimental_modules": 205,
     "runtime_serving_modules": 158,
     "rust_kernel_files": 97,
-    "test_files": 985
+    "test_files": 986
   },
   "documentation": {
     "public_pages": [
@@ -2266,6 +2266,7 @@
       "tests/test_federated_meta_orchestrator.py",
       "tests/test_federated_secure_aggregation.py",
       "tests/test_federated_transport.py",
+      "tests/test_federated_transport_update_seal.py",
       "tests/test_fep_predictive_supervisor.py",
       "tests/test_ffi_parity.py",
       "tests/test_fmi_cosimulation.py",

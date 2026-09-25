@@ -926,6 +926,10 @@ def _normalise_update_record(raw: object) -> _NormalisedUpdateRecord:
     )
     update_hash = _sha256_text(raw["update_hash"], "update_hash")
     policy_delta = _normalise_policy_delta(raw["policy_delta"])
+    if _update_record_hash(raw) != update_hash:
+        raise ValueError(
+            f"update_hash of node {node_id!r} does not match the node update record"
+        )
 
     payload: dict[str, object] = {
         "node_id": node_id,
@@ -955,6 +959,25 @@ def _normalise_update_record(raw: object) -> _NormalisedUpdateRecord:
         "update_hash": update_hash,
         "payload": tuple((key, value) for key, value in payload.items()),
     }
+
+
+def _update_record_hash(raw: Mapping[str, object]) -> str:
+    """Return the seal the federated aggregator gives a node update record.
+
+    ``federated.build_federated_meta_orchestrator_manifest`` hashes the record's
+    canonical JSON without ``update_hash``, with ``policy_delta`` as
+    ``[key, value]`` pairs in the record's own order. A record edited after
+    sealing, such as a lowered privacy spend or a changed policy delta, no
+    longer matches the ``update_hash`` the transport envelopes would cite.
+    """
+    body = {key: value for key, value in raw.items() if key != "update_hash"}
+    delta = raw["policy_delta"]
+    if isinstance(delta, Mapping):
+        body["policy_delta"] = [[key, value] for key, value in delta.items()]
+    # The producer's canonical JSON keeps integers as integers; the transport's
+    # own ``_stable_json`` writes every number as a float, so it cannot be used.
+    canonical = json.dumps(body, sort_keys=True, separators=(",", ":"), allow_nan=False)
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
 def _normalise_policy_delta(raw: object) -> tuple[tuple[str, float], ...]:

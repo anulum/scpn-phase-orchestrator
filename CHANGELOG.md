@@ -24,6 +24,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The federated transport verifies each node update record's seal.
+  - The federated aggregator seals every node update record with
+    `update_hash`. The transport checked only that the value was a SHA-256
+    digest and then cited it in signed, hash-linked envelopes. A record
+    edited after sealing, for example with its privacy spend set to 0 or a
+    different policy delta, was transported under its original hash.
+  - The transport now recomputes the seal with the aggregator's rule: the
+    record's canonical JSON without `update_hash`, integers kept as integers,
+    and `policy_delta` as pairs in the record's order. It refuses a record
+    that does not match. The transport test fixtures had sealed different
+    values from the ones they carried; they are sealed from their own
+    content now.
+
 - The supervisor's CBF admission gate rate-limits against the last admitted
   value.
   - `PolicyCBFChannel` is frozen, and its `previous_action` was the rate
