@@ -172,7 +172,9 @@ class PolicyCBFChannel:
     drift_bounds : tuple[float, ...]
         Deterministic drift vector supplied to the CBF filter for admission.
     previous_action : float
-        Held fallback and rate-limit reference for rejected decisions.
+        Initial held fallback and rate-limit reference. A
+        :class:`PolicyCBFAdmissionGate` then passes the channel's last admitted
+        value, so the rate limit follows the knob across decisions.
     max_rate : float | None
         Optional per-call rate limit. ``None`` uses the full control span.
     """
@@ -223,6 +225,8 @@ class PolicyCBFChannel:
         action: ControlAction,
         upde_state: UPDEState,
         boundary_state: BoundaryState,
+        *,
+        previous_action: float | None = None,
     ) -> tuple[ControlAction, PolicyCBFAdmissionRecord]:
         """Admit one matching action through the verified CBF governor.
 
@@ -234,6 +238,9 @@ class PolicyCBFChannel:
             Current UPDE metrics used to build the CBF state vector.
         boundary_state : BoundaryState
             Current boundary metrics used to build the CBF state vector.
+        previous_action : float | None
+            Held fallback and rate-limit reference for this decision, normally
+            the last admitted value. ``None`` uses :attr:`previous_action`.
 
         Returns
         -------
@@ -256,11 +263,16 @@ class PolicyCBFChannel:
             barrier_filter=self.barrier_filter,
             barrier_certificate=self.barrier_certificate,
         )
+        reference = (
+            self.previous_action
+            if previous_action is None
+            else _finite_real(previous_action, "previous_action")
+        )
         decision = governor.govern(
             action.value,
             state,
             drift,
-            previous_action=self.previous_action,
+            previous_action=reference,
         )
         smt_artifact = _admission_smt(
             channel=self,
@@ -310,6 +322,13 @@ class PolicyCBFAdmissionGate:
         if len(set(keys)) != len(keys):
             raise ValueError("CBF admission channels must be unique by knob/scope")
         self._channels = tuple(channels)
+        # The last admitted value per channel. The rate limit and the held
+        # fallback refer to it, not to the value the channel was built with, so
+        # a knob can be ramped across decisions within ``max_rate`` per call.
+        self._previous: dict[tuple[str, str], float] = {
+            (channel.knob, channel.scope): float(channel.previous_action)
+            for channel in channels
+        }
 
     def admit_actions(
         self,
@@ -340,7 +359,14 @@ class PolicyCBFAdmissionGate:
             if channel is None:
                 admitted.append(action)
                 continue
-            admitted_action, record = channel.admit(action, upde_state, boundary_state)
+            key = (channel.knob, channel.scope)
+            admitted_action, record = channel.admit(
+                action,
+                upde_state,
+                boundary_state,
+                previous_action=self._previous[key],
+            )
+            self._previous[key] = record.admitted_value
             admitted.append(admitted_action)
             records.append(record)
         return PolicyCBFAdmissionResult(tuple(admitted), tuple(records))
