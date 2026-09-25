@@ -16,6 +16,7 @@ once the hardware evidence was complete.
 
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
 
 from scpn_phase_orchestrator.binding import validate_binding_spec
@@ -84,3 +85,21 @@ def test_valid_binding_with_complete_evidence_is_review_ready() -> None:
     assert package["overall_status"] == "review_ready"
     assert package["blocked_reasons"] == []
     assert "binding validation passed" in package["safety_gates"]
+
+
+def test_unfinished_replay_blocks_the_verified_hardware_package() -> None:
+    """A replay status other than completed blocks the hardware handoff."""
+    result = run_binding_spec_replay(
+        MINIMAL_SPEC, steps=3, knobs=StudioKnobState(K=1.0)
+    )
+    runtime = replace(result.project_state.runtime, replay_status="failed")
+    unfinished = replace(
+        result, project_state=replace(result.project_state, runtime=runtime)
+    )
+
+    package = build_verified_hardware_target_package(unfinished, evidence=EVIDENCE)
+
+    assert package["overall_status"] == "blocked"
+    assert package["blocked_reasons"] == ["local replay has not completed"]
+    assert "local replay incomplete" in package["safety_gates"]
+    assert package["commands"] == []
