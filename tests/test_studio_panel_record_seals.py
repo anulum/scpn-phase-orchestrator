@@ -192,3 +192,12 @@ def test_resealed_rollout_manifest_renders() -> None:
     panel = studio.build_multiverse_counterfactual_studio_panel(manifest, risk)
 
     assert panel["horizon"] == 80
+
+
+def test_record_with_a_non_json_value_is_refused() -> None:
+    """A record the canonical JSON cannot encode has no verifiable seal."""
+    records = _strange_loop_records()
+    records[0]["unvalidated_extra"] = {1, 2}
+
+    with pytest.raises(ValueError, match="covers a record that is not canonical JSON"):
+        studio.build_strange_loop_studio_panel(records)
