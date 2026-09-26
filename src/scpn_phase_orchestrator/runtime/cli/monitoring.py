@@ -21,6 +21,7 @@ from __future__ import annotations
 import json
 from collections.abc import Mapping
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import click
 import numpy as np
@@ -29,20 +30,15 @@ from numpy.typing import NDArray
 from scpn_phase_orchestrator.binding import (
     load_binding_spec,
 )
-from scpn_phase_orchestrator.monitor.twin_confidence import (
-    TwinConfidenceCalibrator,
-    TwinConfidenceSummary,
-    phase_order_divergence,
-    score_twin_confidence,
-    summarise_twin_confidence,
-    twin_confidence_prometheus_text,
-)
 from scpn_phase_orchestrator.runtime.chaos import (
     ChaosFault,
     ChaosSchedule,
     run_resilience_experiment,
 )
 from scpn_phase_orchestrator.runtime.cli._app import main
+
+if TYPE_CHECKING:
+    from scpn_phase_orchestrator.monitor.twin_confidence import TwinConfidenceSummary
 
 
 def _load_twin_confidence_ticks(
@@ -187,6 +183,14 @@ def twin_confidence(
     SystemExit
         If ``--fail-on-critical`` is set and the worst scored status is critical.
     """
+    from scpn_phase_orchestrator.monitor.twin_confidence import (
+        TwinConfidenceCalibrator,
+        phase_order_divergence,
+        score_twin_confidence,
+        summarise_twin_confidence,
+        twin_confidence_prometheus_text,
+    )
+
     try:
         calibrator = TwinConfidenceCalibrator(band_z=band_z)
         for tick in _load_twin_confidence_ticks(calibration):

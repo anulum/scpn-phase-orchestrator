@@ -165,8 +165,9 @@ the command can gate a deployment pipeline.
 ## 3. Backend fallback chain
 
 The module resolves backends in the order **Rust → Mojo → Julia → Go → Python**
-at import time; the first that loads becomes `ACTIVE_BACKEND`, and Python is
-always appended as the guaranteed fallback.
+on first computation or explicit backend-status access; importing the module
+does not probe toolchains. The first that loads becomes `ACTIVE_BACKEND`, and
+Python is always appended as the guaranteed fallback.
 
 | Backend | Probe | Artefact |
 | ------- | ----- | -------- |

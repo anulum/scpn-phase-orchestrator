@@ -591,8 +591,9 @@ Total collected PAC tests: **165**.
 Since the 2026-04-17 migration to the AttnRes-level module standard,
 ``pac`` ships with five language-backed implementations for every
 kernel (``modulation_index`` and ``pac_matrix``). The dispatcher
-resolves the fastest available backend at import time and exposes
-the choice as ``ACTIVE_BACKEND`` / ``AVAILABLE_BACKENDS``.
+resolves the fastest available backend on first computation or explicit
+access to ``ACTIVE_BACKEND`` / ``AVAILABLE_BACKENDS``. Importing the module
+alone does not probe optional toolchains.
 
 | Position | Backend | Build |
 |---|---|---|

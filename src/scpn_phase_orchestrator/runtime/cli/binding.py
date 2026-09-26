@@ -26,13 +26,6 @@ from typing import Literal, cast
 import click
 import numpy as np
 
-from scpn_phase_orchestrator.autotune.binding_proposal import (
-    propose_binding_from_event_log,
-    propose_binding_from_graph,
-    propose_binding_from_time_series_csv,
-)
-from scpn_phase_orchestrator.autotune.sindy_confidence import SindyConfidencePolicy
-from scpn_phase_orchestrator.autotune.sindy_options import SindyOptions
 from scpn_phase_orchestrator.binding import (
     format_resolved_binding_config,
     load_binding_spec,
@@ -41,7 +34,6 @@ from scpn_phase_orchestrator.binding import (
     validate_binding_spec,
     validate_binding_spec_security,
 )
-from scpn_phase_orchestrator.coupling.infer import auto_coupling_estimation
 from scpn_phase_orchestrator.runtime.cli._app import FloatArray, main
 from scpn_phase_orchestrator.studio.workflow import StudioProjectState
 from scpn_phase_orchestrator.supervisor.policy_rules import load_policy_rules
@@ -230,6 +222,14 @@ def auto_bind(
     SystemExit
         If the command fails; the error is reported and the process exits non-zero.
     """
+    from scpn_phase_orchestrator.autotune.binding_proposal import (
+        propose_binding_from_event_log,
+        propose_binding_from_graph,
+        propose_binding_from_time_series_csv,
+    )
+    from scpn_phase_orchestrator.autotune.sindy_confidence import SindyConfidencePolicy
+    from scpn_phase_orchestrator.autotune.sindy_options import SindyOptions
+
     try:
         source_text = Path(source_path).read_text(encoding="utf-8")
         if source_kind == "time-series-csv":
@@ -381,6 +381,8 @@ def auto_coupling_estimation_command(
     ClickException
         If the inputs are invalid or the operation fails.
     """
+    from scpn_phase_orchestrator.coupling.infer import auto_coupling_estimation
+
     series = _load_phase_series_table(Path(source_path))
     if orientation == "time-by-oscillator":
         series = np.ascontiguousarray(series.T, dtype=np.float64)
