@@ -612,6 +612,11 @@ def generate_offline_policy_candidates(
     -------
     tuple[KnobPolicyCandidate, ...]
         Deterministic replay-search candidates around a seed policy.
+
+    Raises
+    ------
+    ValueError
+        If the seed is invalid or a channel weight or gain mutation overflows.
     """
     active_config = config or OfflinePolicySearchConfig()
     _validate_candidate(seed)
@@ -755,7 +760,10 @@ def _mutate_channel_weight(
 ) -> KnobPolicyCandidate:
     """Return the candidate with a channel weight mutated."""
     weights = list(seed.channel_weights)
-    value = max(0.0, weights[index] + delta)
+    mutated = weights[index] + delta
+    if not np.isfinite(mutated):
+        raise ValueError("channel weight mutation must remain finite")
+    value = max(0.0, mutated)
     if max_abs_knob is not None:
         value = min(max_abs_knob, value)
     weights[index] = value
@@ -777,7 +785,10 @@ def _mutate_cross_channel_gain(
 ) -> KnobPolicyCandidate:
     """Return the candidate with a cross-channel gain mutated."""
     gains = list(seed.cross_channel_gains)
-    value = max(0.0, gains[index] + delta)
+    mutated = gains[index] + delta
+    if not np.isfinite(mutated):
+        raise ValueError("cross-channel gain mutation must remain finite")
+    value = max(0.0, mutated)
     if max_abs_knob is not None:
         value = min(max_abs_knob, value)
     gains[index] = value

@@ -381,12 +381,15 @@ class _ChaosOverlay:
             self.coupling_factor = 1.0
         if self.clean_zeta is not None and self.written_zeta is not None:
             current_zeta = float(context.zeta)
+            if not np.isfinite(current_zeta):
+                raise ValueError("chaos drive state must remain finite")
             if current_zeta == self.written_zeta:
                 context.zeta = self.clean_zeta
             elif current_zeta != 0.0:
-                context.zeta = max(
-                    0.0, self.clean_zeta + (current_zeta - self.written_zeta)
-                )
+                restored_zeta = self.clean_zeta + (current_zeta - self.written_zeta)
+                if not np.isfinite(restored_zeta):
+                    raise ValueError("chaos drive restoration must remain finite")
+                context.zeta = max(0.0, restored_zeta)
             self.clean_zeta = None
             self.written_zeta = None
 
@@ -426,6 +429,8 @@ class _ChaosOverlay:
             self.coupling_factor = coupling_factor
         if zeta_factor != 1.0:
             clean_zeta = float(context.zeta)
+            if not np.isfinite(clean_zeta):
+                raise ValueError("chaos drive state must remain finite")
             written_zeta = clean_zeta * zeta_factor
             context.zeta = written_zeta
             self.clean_zeta = clean_zeta
@@ -465,7 +470,7 @@ def compute_resilience(
     ------
     ValueError
         If the histories are empty, length-mismatched, or non-finite, or the
-        parameters are out of range.
+        parameters are out of range, or trajectory differences overflow.
     """
     nominal = np.asarray(nominal_history, dtype=np.float64)
     perturbed = np.asarray(perturbed_history, dtype=np.float64)
@@ -485,18 +490,26 @@ def compute_resilience(
     end = _positive_int(last_fault_end, name="last_fault_end", minimum=0)
     tolerance = _finite_real(recovery_tolerance, name="recovery_tolerance", minimum=0.0)
 
-    signed_drop = nominal - perturbed
+    with np.errstate(over="ignore", invalid="ignore"):
+        signed_drop = nominal - perturbed
+    if not np.all(np.isfinite(signed_drop)):
+        raise ValueError("resilience trajectory differences must remain finite")
     max_coherence_drop = float(max(0.0, float(np.max(signed_drop))))
     erosion_window = signed_drop[min(onset, steps) :]
-    stability_margin_erosion = (
-        float(np.mean(np.abs(erosion_window))) if erosion_window.size else 0.0
+    erosion_scale = (
+        float(np.max(np.abs(erosion_window))) if erosion_window.size else 0.0
     )
-    final_deviation = float(abs(nominal[-1] - perturbed[-1]))
+    stability_margin_erosion = (
+        float(np.mean(np.abs(erosion_window) / erosion_scale)) * erosion_scale
+        if erosion_scale
+        else 0.0
+    )
+    final_deviation = float(abs(signed_drop[-1]))
 
     recovery_steps: int | None = None
     recovered = False
     for step in range(min(end, steps), steps):
-        if abs(nominal[step] - perturbed[step]) <= tolerance:
+        if abs(signed_drop[step]) <= tolerance:
             recovery_steps = step - min(end, steps)
             recovered = True
             break

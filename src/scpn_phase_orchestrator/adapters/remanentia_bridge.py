@@ -385,7 +385,13 @@ class RemanentiaBridge:
             # scores may be cosine similarities in [-1, 1]; a negative mean
             # would push 1 - mean above 1 and later violate the unit-interval
             # contract enforced by CoherenceMemorySnapshot.
-            novelty = float(min(1.0, max(0.0, 1.0 - float(np.mean(scores)))))
+            score_scale = max(abs(score) for score in scores)
+            mean_score = (
+                float(np.mean(np.asarray(scores) / score_scale)) * score_scale
+                if score_scale
+                else 0.0
+            )
+            novelty = float(min(1.0, max(0.0, 1.0 - mean_score)))
             self._last_novelty_score = novelty
             return novelty
         except BaseException as exc:

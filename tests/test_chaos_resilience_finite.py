@@ -56,3 +56,26 @@ def test_finite_drop_is_reported() -> None:
     assert metrics.max_coherence_drop == pytest.approx(0.8)
     assert metrics.recovered is True
     assert metrics.recovery_steps == 0
+
+
+def test_finite_histories_with_unrepresentable_difference_are_refused() -> None:
+    with pytest.raises(ValueError, match="differences must remain finite"):
+        compute_resilience(
+            (1e308, 1e308),
+            (-1e308, -1e308),
+            fault_onset_step=0,
+            last_fault_end=1,
+            recovery_tolerance=0.05,
+        )
+
+
+def test_finite_erosion_mean_does_not_overflow() -> None:
+    metrics = compute_resilience(
+        (1e308, 1e308),
+        (0.0, 0.0),
+        fault_onset_step=0,
+        last_fault_end=1,
+        recovery_tolerance=0.05,
+    )
+    assert metrics.stability_margin_erosion == 1e308
+    assert metrics.recovered is False

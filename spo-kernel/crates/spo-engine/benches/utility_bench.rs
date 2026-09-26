@@ -221,7 +221,8 @@ fn bench_compute_ethical_cost(c: &mut Criterion) {
         group.bench_with_input(BenchmarkId::from_parameter(n), &n, |b, &n| {
             b.iter(|| {
                 let r =
-                    compute_ethical_cost(&phases, &knm, n, 1.0, 0.5, 0.1, 0.1, 1.0, 0.3, 0.1, 5.0);
+                    compute_ethical_cost(&phases, &knm, n, 1.0, 0.5, 0.1, 0.1, 1.0, 0.3, 0.1, 5.0)
+                        .expect("finite benchmark fixture");
                 criterion::black_box(r);
             });
         });
@@ -264,13 +265,27 @@ fn bench_oa_run(c: &mut Criterion) {
 fn bench_attnres_modulate(c: &mut Criterion) {
     // State-dependent coupling modulation: O(N²) per call.
     let mut group = c.benchmark_group("attnres_modulate");
+    // H=4, D=8, D_h=2: Q/K/V and output projections each contain 64 weights.
+    let projection: Vec<f64> = (0..64).map(|i| (i as f64 * 0.17).sin() * 0.125).collect();
     for &n in &[16usize, 64, 128, 256] {
         let knm = ring_knm(n, 0.3);
         let theta: Vec<f64> = (0..n).map(|i| i as f64 * 0.13).collect();
         group.bench_with_input(BenchmarkId::from_parameter(n), &n, |b, &_n| {
             b.iter(|| {
-                let r = attnres_modulate(&knm, &theta, n, 4, 0.1, 0.5)
-                    .expect("valid attnres_modulate arguments");
+                let r = attnres_modulate(
+                    &knm,
+                    &theta,
+                    &projection,
+                    &projection,
+                    &projection,
+                    &projection,
+                    n,
+                    4,
+                    -1,
+                    0.1,
+                    0.5,
+                )
+                .expect("valid attnres_modulate arguments");
                 criterion::black_box(r);
             });
         });

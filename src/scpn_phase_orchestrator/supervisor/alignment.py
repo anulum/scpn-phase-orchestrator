@@ -325,6 +325,11 @@ class ValueAlignmentGuard:
         -------
         ValueAlignmentDecision
             The auditable value-alignment decision.
+
+        Raises
+        ------
+        ValueError
+            If a proposed action has a non-finite or non-numeric value.
         """
         proposed = tuple(actions)
         approved: list[ControlAction] = []
@@ -333,6 +338,10 @@ class ValueAlignmentGuard:
         scores: list[float] = []
 
         for action in proposed:
+            if not _is_real_numeric_scalar(action.value) or not np.isfinite(
+                float(action.value)
+            ):
+                raise ValueError("value-alignment action.value must be finite")
             action_violations = self._violations_for_action(action)
             if action_violations:
                 blocked.append(action)

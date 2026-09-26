@@ -3695,7 +3695,7 @@ fn compute_ethical_cost_rust(
     let k = knm
         .as_slice()
         .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    Ok(ethical::compute_ethical_cost(
+    ethical::compute_ethical_cost(
         p,
         k,
         n,
@@ -3707,7 +3707,8 @@ fn compute_ethical_cost_rust(
         r_min,
         connectivity_min,
         max_coupling,
-    ))
+    )
+    .map_err(PyValueError::new_err)
 }
 
 // ─── Sleep Staging ──────────────────────────────────────────────────

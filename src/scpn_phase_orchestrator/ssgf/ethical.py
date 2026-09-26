@@ -61,6 +61,18 @@ class EthicalCost:
     constraints_violated: int
 
 
+def _finite_cost(j: float, phi: float, c15: float, nv: int) -> EthicalCost:
+    """Refuse an unrepresentable diagnostic from either compute backend."""
+    if not all(np.isfinite(value) for value in (j, phi, c15)):
+        raise ValueError("ethical cost arithmetic must remain finite")
+    return EthicalCost(
+        J_sec=j,
+        phi_ethics=phi,
+        c15_sec=c15,
+        constraints_violated=nv,
+    )
+
+
 def _validated_inputs(phases: object, knm: object) -> tuple[FloatArray, FloatArray]:
     """Return finite phases and a matching square coupling matrix, else raise.
 
@@ -144,7 +156,8 @@ def compute_ethical_cost(
     ------
     ValueError
         If ``phases`` is not a finite 1-D vector, ``knm`` is not a finite
-        square matrix matching it, or a weight or threshold is not finite.
+        square matrix matching it, a weight or threshold is not finite,
+        or constraint or cost arithmetic cannot remain finite.
     """
     phases, knm = _validated_inputs(phases, knm)
     for name, value in (
@@ -181,12 +194,7 @@ def compute_ethical_cost(
             connectivity_min,
             max_coupling,
         )
-        return EthicalCost(
-            J_sec=j,
-            phi_ethics=phi,
-            c15_sec=c15,
-            constraints_violated=nv,
-        )
+        return _finite_cost(j, phi, c15, nv)
 
     R, _ = compute_order_parameter(phases)
     lam2 = fiedler_value(knm)
@@ -207,15 +215,14 @@ def compute_ethical_cost(
         connectivity_min - lam2,
         float(np.max(knm)) - max_coupling if np.any(knm > 0) else 0.0,
     ]
+    if not all(np.isfinite(value) for value in g) or any(
+        value > np.sqrt(np.finfo(float).max) for value in g
+    ):
+        raise ValueError("ethical constraint arithmetic must remain finite")
     violations = [max(0.0, gi) ** 2 for gi in g]
     phi_ethics = kappa * sum(violations)
     n_violated = sum(1 for gi in g if gi > 0)
 
     c15_sec = (1.0 - J_sec) + phi_ethics
 
-    return EthicalCost(
-        J_sec=J_sec,
-        phi_ethics=phi_ethics,
-        c15_sec=c15_sec,
-        constraints_violated=n_violated,
-    )
+    return _finite_cost(J_sec, phi_ethics, c15_sec, n_violated)

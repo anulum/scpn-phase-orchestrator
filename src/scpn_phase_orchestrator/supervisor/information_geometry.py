@@ -272,7 +272,10 @@ def _normalise_simplex(
         raise ValueError(f"{name} must contain at least one element")
     if np.any(array < 0.0):
         raise ValueError(f"{name} must be non-negative")
-    mass = float(np.sum(array))
+    with np.errstate(over="ignore"):
+        mass = float(np.sum(array))
+    if not np.isfinite(mass):
+        raise ValueError(f"{name} must have finite positive mass")
     if mass <= 0.0:
         raise ValueError(f"{name} must have positive mass")
     normalised = array / mass

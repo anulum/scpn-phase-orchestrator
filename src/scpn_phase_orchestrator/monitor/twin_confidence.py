@@ -57,6 +57,9 @@ import numpy as np
 from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.monitor._julia_runtime import require_juliacall_main
+from scpn_phase_orchestrator.monitor.twin_confidence_export import (
+    twin_confidence_prometheus_text as twin_confidence_prometheus_text,
+)
 
 FloatArray: TypeAlias = NDArray[np.float64]
 ACTIVE_BACKEND: str
@@ -1134,78 +1137,6 @@ def _with_summary_hash(summary: TwinConfidenceSummary) -> TwinConfidenceSummary:
         latest_status=summary.latest_status,
         summary_hash=digest,
     )
-
-
-_STATUS_LEVELS: dict[str, int] = {"healthy": 0, "warning": 1, "critical": 2}
-
-
-def twin_confidence_prometheus_text(
-    summary: TwinConfidenceSummary,
-    *,
-    prefix: str = "spo",
-) -> str:
-    """Render a twin-confidence summary as Prometheus exposition text.
-
-    Parameters
-    ----------
-    summary : TwinConfidenceSummary
-        The operator-facing aggregate to export.
-    prefix : str, optional
-        Metric-name prefix (default ``"spo"``).
-
-    Returns
-    -------
-    str
-        Prometheus exposition text with confidence gauges, per-status counters,
-        and a numeric worst-status level gauge.
-
-    Raises
-    ------
-    ValueError
-        If ``prefix`` is not a non-empty string.
-    """
-    _require_non_empty(prefix, "prefix")
-    lines = [
-        f"# HELP {prefix}_twin_confidence_mean Mean twin confidence over scored ticks",
-        f"# TYPE {prefix}_twin_confidence_mean gauge",
-        f"{prefix}_twin_confidence_mean {summary.mean_confidence}",
-        f"# HELP {prefix}_twin_confidence_min Minimum twin confidence over ticks",
-        f"# TYPE {prefix}_twin_confidence_min gauge",
-        f"{prefix}_twin_confidence_min {summary.min_confidence}",
-        f"# HELP {prefix}_twin_confidence_latest Most recent twin confidence",
-        f"# TYPE {prefix}_twin_confidence_latest gauge",
-        f"{prefix}_twin_confidence_latest {summary.latest_confidence}",
-        f"# HELP {prefix}_twin_confidence_tick_count Scored twin-confidence ticks",
-        f"# TYPE {prefix}_twin_confidence_tick_count gauge",
-        f"{prefix}_twin_confidence_tick_count {summary.tick_count}",
-        (
-            f"# HELP {prefix}_twin_confidence_status_total "
-            "Twin-confidence ticks per operator status"
-        ),
-        f"# TYPE {prefix}_twin_confidence_status_total counter",
-        (
-            f'{prefix}_twin_confidence_status_total{{status="healthy"}} '
-            f"{summary.healthy_count}"
-        ),
-        (
-            f'{prefix}_twin_confidence_status_total{{status="warning"}} '
-            f"{summary.warning_count}"
-        ),
-        (
-            f'{prefix}_twin_confidence_status_total{{status="critical"}} '
-            f"{summary.critical_count}"
-        ),
-        (
-            f"# HELP {prefix}_twin_confidence_worst_status_level "
-            "Worst operator status (0 healthy, 1 warning, 2 critical)"
-        ),
-        f"# TYPE {prefix}_twin_confidence_worst_status_level gauge",
-        (
-            f"{prefix}_twin_confidence_worst_status_level "
-            f"{_STATUS_LEVELS[summary.worst_status]}"
-        ),
-    ]
-    return "\n".join(lines) + "\n"
 
 
 def _require_non_empty(value: str, name: str) -> None:

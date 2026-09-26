@@ -98,6 +98,14 @@ def env_int(name: str, default: int) -> int:
 _MAX_TRACKED_IDENTITIES = 10_000
 
 
+def _elapsed_time(timestamp: float, updated_at: float) -> float:
+    """Return a finite non-negative bucket interval."""
+    elapsed = timestamp - updated_at
+    if not isfinite(elapsed):
+        raise ValueError("rate-limit timestamp difference must remain finite")
+    return max(0.0, elapsed)
+
+
 class TokenBucketRateLimiter:
     """Thread-safe per-identity token-bucket rate limiter.
 
@@ -167,7 +175,7 @@ class TokenBucketRateLimiter:
             tokens, updated_at = self._buckets.get(
                 key, (float(self._capacity), timestamp)
             )
-            elapsed = max(0.0, timestamp - updated_at)
+            elapsed = _elapsed_time(timestamp, updated_at)
             tokens = min(
                 float(self._capacity), tokens + elapsed * self._refill_per_second
             )
@@ -189,7 +197,7 @@ class TokenBucketRateLimiter:
         self._buckets = {
             identity: (tokens, updated_at)
             for identity, (tokens, updated_at) in self._buckets.items()
-            if tokens + max(0.0, timestamp - updated_at) * self._refill_per_second
+            if tokens + _elapsed_time(timestamp, updated_at) * self._refill_per_second
             < capacity
         }
 

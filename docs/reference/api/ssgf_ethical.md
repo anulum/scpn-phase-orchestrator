@@ -226,7 +226,7 @@ class EthicalCost:
 - **Violation counting** — reports how many constraints are violated
 - **Decomposable cost** — $C_{15}$ = deficit + penalties, separable
   for diagnosis
-- **Rust FFI acceleration** — 5.7x faster for small N (N ≤ 8)
+- **Rust FFI acceleration** — 4.9x faster at N=8 in the benchmark below
 - **Configurable weights** — all 4 SEC weights and 3 CBF thresholds
   adjustable
 - **Pipeline composable** — feeds into SSGFCosts as an additive term
@@ -365,8 +365,12 @@ pub fn compute_ethical_cost(
     phases: &[f64], knm: &[f64], n: usize,
     alpha_r: f64, beta_k: f64, gamma_q: f64, nu_s: f64, kappa: f64,
     r_min: f64, connectivity_min: f64, max_coupling: f64,
-) -> (f64, f64, f64, usize)  // (j_sec, phi_ethics, c15_sec, n_violated)
+) -> Result<(f64, f64, f64, usize), String>
 ```
+
+Invalid shapes, non-finite inputs, and non-finite derived arithmetic return
+`Err`; the Python FFI maps this to `ValueError`. Both Python backends reject
+unrepresentable costs before returning a result.
 
 Internal helpers:
 - `compute_sec_inputs` — R, λ₂, Q, S_dev
@@ -397,14 +401,20 @@ small constant factor due to BLAS optimisation).
 
 ## 7. Performance Benchmarks
 
-Measured on Intel Core i5-11600K @ 3.90 GHz, 32 GB DDR4-2400.
-Random phases and coupling, median of 50-100 iterations.
+Measured on 2026-09-26 on Intel Core i5-11600K @ 3.90 GHz through the
+public Python entry point, including validation and FFI conversion. Each result
+is the median of five batches of 100 calls using the same seed-42 fixture.
+Python and Rust outputs pass numerical parity checks. These are host observations.
 
-| N | Python (µs) | Rust (µs) | Speedup |
-|---|-------------|-----------|---------|
-| 8 | 82.6 | 14.5 | **5.7x** |
-| 16 | 124.4 | 94.8 | **1.3x** |
-| 32 | 735.2 | 1711.5 | **0.4x** |
+```bash
+.venv/bin/python benchmarks/ethical_cost_benchmark.py --sizes 8 16 32 --calls 100 --batches 5
+```
+
+| N | Python (µs) | Rust (µs) | Python / Rust |
+|---|-------------|-----------|---------------|
+| 8 | 117.4 | 24.1 | **4.9x** |
+| 16 | 148.5 | 131.6 | **1.1x** |
+| 32 | 203.2 | 1638.8 | **0.12x** |
 
 ### Why Does Rust Slow Down at Large N?
 
@@ -420,17 +430,6 @@ Python overhead. For N=32, the $O(N^4)$ Jacobi dominates.
 Python path for $N > 16$. Future work: integrate LAPACK bindings
 (ndarray-linalg) in Rust for $O(N^3)$ eigenvalue computation.
 
-### Cost Breakdown (N=16)
-
-| Component | Python (µs) | Rust (µs) |
-|-----------|-------------|-----------|
-| Order parameter R | ~5 | ~2 |
-| Fiedler value λ₂ | ~100 | ~80 |
-| Density Q | ~1 | ~0.5 |
-| Phase deviation S_dev | ~2 | ~1 |
-| CBF penalties | ~1 | ~0.5 |
-| **Total** | **~124** | **~95** |
-
 ### Memory Usage
 
 - Laplacian: $N^2$ floats (temporary, 8 KB for N=32)
@@ -439,15 +438,11 @@ Python path for $N > 16$. Future work: integrate LAPACK bindings
 
 ### Test Coverage
 
-- **Rust tests:** 7 (ethical module in spo-engine)
-  - Empty phases, synchronised high coupling, no coupling violation,
-    high coupling violation, C15 decomposition, Fiedler complete
-    graph, Fiedler disconnected
-- **Python tests:** 13 (`tests/test_closure_ethical.py`)
-  - Shape/type, synchronised lower cost, constraints detected,
-    decomposition identity, coupling limit, kappa scaling, weight
-    sensitivity, pipeline wiring, edge cases
-- **Source lines:** 277 (Rust) + 125 (Python) = 402 total
+- **Rust ethical module:** 14 tests, including malformed shapes, non-finite
+  inputs, spectral overflow, constraint overflow, and cost overflow.
+- **Python ethical feature suites:** 57 tests across
+  `test_ssgf_ethical_cost_inputs.py`, `test_closure_ethical.py`, and
+  `test_ssgf_modules.py`, including direct calls to the compiled Rust FFI.
 
 ---
 

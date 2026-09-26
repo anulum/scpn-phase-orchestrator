@@ -37,6 +37,16 @@ def _action(knob: str = "K", value: float = 0.05) -> ControlAction:
 
 
 class TestValueAlignmentContracts:
+    @pytest.mark.parametrize("value", [float("nan"), float("inf"), float("-inf")])
+    def test_invalid_action_cannot_pass_default_alignment_threshold(
+        self, value: float
+    ) -> None:
+        guard = ValueAlignmentGuard(
+            ValueAlignmentPolicy((ValueConstraint("limit", max_abs_value=1.0),))
+        )
+        with pytest.raises(ValueError, match="action.value must be finite"):
+            guard.evaluate([_action(value=value)])
+
     def test_public_contracts_are_typed(self) -> None:
         hints = get_type_hints(ValueAlignmentGuard.evaluate)
 
