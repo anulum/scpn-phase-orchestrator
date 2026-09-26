@@ -22,6 +22,11 @@ Each backend gates on its toolchain being present:
 * Mojo — needs ``mojo/twin_confidence_mojo``. The Wasserstein term is bit-exact;
   the Jensen–Shannon term carries a ~1e-9 floor because Mojo's ``std.math.log``
   is an approximation, so its parity budget is ``1e-8``.
+
+The existing fault-injection cases below check rejection of malformed native
+outputs and missing runtime artifacts, which healthy installed toolchains do
+not produce on demand. They do not establish parity; the public-path and
+per-backend tests use the actual compiled runtimes for that claim.
 """
 
 from __future__ import annotations
@@ -465,6 +470,39 @@ def test_mojo_non_scalar_output_raises(monkeypatch: pytest.MonkeyPatch) -> None:
 # ---------------------------------------------------------------------
 # Per-backend parity (gated on toolchain availability)
 # ---------------------------------------------------------------------
+
+
+@pytest.mark.parametrize("backend_name", ["rust", "go", "julia", "mojo"])
+def test_public_divergence_uses_real_backend(backend_name: str) -> None:
+    if backend_name not in tc.AVAILABLE_BACKENDS:
+        pytest.skip(f"{backend_name} backend toolchain not available")
+
+    phases = np.array([0.1, 0.7, 1.3, 2.1, 3.4, 5.2])
+    observed = np.array([0.2, 0.6, 1.5, 2.0, 3.1, 5.5])
+    model_order = np.array([0.2, 0.5, 0.8])
+    observed_order = np.array([0.3, 0.4, 0.7])
+    original = tc.ACTIVE_BACKEND
+    try:
+        tc.ACTIVE_BACKEND = "python"
+        reference = tc.phase_order_divergence(
+            phases, observed, model_order, observed_order
+        )
+        tc._BACKEND_CACHE.pop(backend_name, None)
+        tc.ACTIVE_BACKEND = backend_name
+        result = tc.phase_order_divergence(
+            phases, observed, model_order, observed_order
+        )
+    finally:
+        tc.ACTIVE_BACKEND = original
+
+    tolerance = _TOLERANCE[backend_name]
+    assert result.backend == backend_name
+    assert result.phase_js_divergence == pytest.approx(
+        reference.phase_js_divergence, abs=tolerance
+    )
+    assert result.order_wasserstein == pytest.approx(
+        reference.order_wasserstein, abs=tolerance
+    )
 
 
 @pytest.mark.parametrize("backend_name", ["rust", "go", "julia", "mojo"])

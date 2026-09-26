@@ -310,7 +310,7 @@ def _load_rust() -> _BackendFn:
     return cast("_BackendFn", twin_divergence_rust)
 
 
-def _load_mojo() -> _BackendFn:  # pragma: no cover — toolchain-gated
+def _load_mojo() -> _BackendFn:
     """Load the Mojo twin-confidence backend callable."""
     from ..experimental.accelerators.monitor._twin_confidence_mojo import (
         _ensure_exe,
@@ -321,7 +321,7 @@ def _load_mojo() -> _BackendFn:  # pragma: no cover — toolchain-gated
     return twin_divergence_mojo
 
 
-def _load_julia() -> _BackendFn:  # pragma: no cover — toolchain-gated
+def _load_julia() -> _BackendFn:
     """Load the Julia twin-confidence backend callable."""
     require_juliacall_main()
     from ..experimental.accelerators.monitor._twin_confidence_julia import (
@@ -331,7 +331,7 @@ def _load_julia() -> _BackendFn:  # pragma: no cover — toolchain-gated
     return twin_divergence_julia
 
 
-def _load_go() -> _BackendFn:  # pragma: no cover — toolchain-gated
+def _load_go() -> _BackendFn:
     """Load the Go twin-confidence backend callable."""
     from ..experimental.accelerators.monitor._twin_confidence_go import (
         _load_lib,
@@ -536,19 +536,13 @@ def _as_real_vector(name: str, value: object) -> FloatArray:
 
 def _contains_boolean_alias(value: object) -> bool:
     """Return whether the value contains any boolean alias."""
-    try:
-        raw = np.asarray(value, dtype=object)
-    except (TypeError, ValueError):  # pragma: no cover - numpy always coerces
-        return False
+    raw = np.asarray(value, dtype=object)
     return any(isinstance(item, (bool, np.bool_)) for item in raw.flat)
 
 
 def _contains_complex_alias(value: object) -> bool:
     """Return whether the value contains any complex-number alias."""
-    try:
-        raw = np.asarray(value, dtype=object)
-    except (TypeError, ValueError):  # pragma: no cover - numpy always coerces
-        return False
+    raw = np.asarray(value, dtype=object)
     return any(isinstance(item, (complex, np.complexfloating)) for item in raw.flat)
 
 
@@ -572,7 +566,7 @@ def _contains_numeric_string_alias(value: object) -> bool:
     """Return whether the value contains numeric-string aliases."""
     try:
         raw = np.asarray(value)
-    except (TypeError, ValueError):  # pragma: no cover - numpy usually coerces
+    except (TypeError, ValueError):
         return False
     if raw.dtype.kind not in {"O", "S", "U"}:
         return False
