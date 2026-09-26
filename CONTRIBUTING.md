@@ -131,6 +131,38 @@ ruff check src/ tests/
 ruff format --check src/ tests/
 ```
 
+### Coverage across Python processes
+
+The development profile requires coverage 7.16.1 or newer and pytest-cov 7.1
+or newer. `pyproject.toml` enables the coverage subprocess patch and separate
+process data files. Python children inherit measurement, including fresh
+interpreters started with `-I`, when they preserve the coverage environment and
+exit normally. Native Julia/Go/Mojo execution is outside Python coverage; their
+existing parity lanes remain responsible for those implementations.
+
+For a focused pytest run, pytest-cov combines the parent and child files before
+reporting. CI uploads that combined `.coverage` under its lane-specific name;
+the coverage assurance job merges the lane artefacts and applies the existing
+module thresholds. Avoid concurrent runs sharing a `COVERAGE_FILE` location.
+
+```bash
+pytest tests/test_network_security.py --cov=scpn_phase_orchestrator.runtime.network_security
+```
+
+For direct coverage runs, combine process files explicitly before reporting:
+
+```bash
+coverage run --source=scpn_phase_orchestrator.runtime.network_security -m pytest tests/test_network_security.py
+coverage combine
+coverage report --include='*/runtime/network_security.py'
+```
+
+This configuration does not recover data from `SIGKILL`, `os._exit`, or children
+that discard the measurement environment. Wait for measured children to finish
+before combining. Subprocess transport and line/branch collection are exercised
+by `tests/test_subprocess_coverage.py` through a real rate limiter in an isolated child
+and the same data-file rename/combine sequence used by CI.
+
 ### nn/ Module Physics Validation (requires JAX)
 
 The nn/ module has a dedicated 194-test physics validation suite that
