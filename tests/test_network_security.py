@@ -167,3 +167,10 @@ def test_rate_limiter_rejects_malformed_burst_capacity(
 def test_rate_limiter_rejects_burst_above_minute_limit() -> None:
     with pytest.raises(ValueError, match="burst_capacity"):
         TokenBucketRateLimiter(limit_per_minute=2, burst_capacity=3)
+
+
+def test_rate_limiter_refuses_overflowing_finite_timestamp_difference() -> None:
+    limiter = TokenBucketRateLimiter(limit_per_minute=10)
+    assert limiter.allow("caller", now=-1e308)
+    with pytest.raises(ValueError, match="timestamp difference must remain finite"):
+        limiter.allow("caller", now=1e308)

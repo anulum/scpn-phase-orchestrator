@@ -65,6 +65,30 @@ def test_discover_time_series_structure_reports_json_ready_evidence() -> None:
     assert 0.0 <= report.cluster_coverage <= 1.0
 
 
+def test_discovery_refuses_overflow_instead_of_perfect_regression_score() -> None:
+    samples = np.array(
+        [
+            [0, 0.1],
+            [1, 0.3],
+            [2, 0.5],
+            [3, 0.8],
+            [4, 0.9],
+            [5, 1.1],
+            [6, 1.3],
+            [7, 1.5],
+        ],
+        dtype=np.float64,
+    )
+    with pytest.raises(
+        ValueError, match="regression residual arithmetic must remain finite"
+    ):
+        discover_time_series_structure(
+            samples,
+            columns=("theta_source", "theta_target"),
+            sample_period_s=1e-200,
+        )
+
+
 def test_discover_time_series_structure_reports_phase_sindy_edges() -> None:
     times = np.linspace(0.0, 2.4, 25, dtype=np.float64)
     phases = np.column_stack(

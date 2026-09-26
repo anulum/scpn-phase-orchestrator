@@ -509,6 +509,10 @@ actuation gates.
 violating actions, and returns a forced fallback action set when the proposal
 does not satisfy the configured score threshold.
 
+Proposed action values must be finite real numbers. Invalid values raise
+`ValueError` before constraint comparisons, including with the default score
+threshold of zero.
+
 The guard is intentionally simple and auditable: no hidden reward model is
 loaded at runtime. Domainpacks can translate their safety or objective priors
 into `ValueConstraint` entries and attach the resulting decision record to the
@@ -736,6 +740,11 @@ production claims, hot patches, and actuation are disabled, and non-winning
 candidates are retained as blocked evidence for audit comparison. Use this for
 offline discovery of higher-order temporal coupling hypotheses, not for
 real-time causal intervention.
+
+The conventional baselines scale finite traces before correlation and residual
+calculations, so large signal units do not silently turn an undefined score
+into zero. Arithmetic that cannot be represented as a finite value is refused
+instead of being treated as evidence that a baseline was beaten.
 
 ```python
 from scpn_phase_orchestrator.supervisor import (
@@ -1251,6 +1260,8 @@ The information-geometry primitive keeps NumPy as the default audit-stable
 backend and exposes explicit `backend="jax"` acceleration with reference-gated
 parity for Fisher-Rao distance, Wasserstein distance, curvature proxy, and
 natural-gradient proposals. Both paths remain non-actuating review surfaces.
+Distribution mass must remain finite during normalisation; a sum that
+overflows is refused before computing geometry or control proposals.
 The lineage sandbox generates deterministic child-policy candidates from a
 parent policy and replay corpus, records accepted/rejected evidence, hashes the
 lineage and replay corpus, and keeps live merge, hot patching, execution, and

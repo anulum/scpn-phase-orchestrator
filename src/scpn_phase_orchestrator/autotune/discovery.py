@@ -299,7 +299,8 @@ def discover_time_series_structure(
     Raises
     ------
     ValueError
-        If the inputs are invalid or inconsistent.
+        If the inputs are invalid or inconsistent, or regression residual
+        or variance arithmetic cannot be represented as finite values.
     """
     cfg = config or TimeSeriesDiscoveryConfig()
     sample_period_s = _finite_real_scalar(sample_period_s, "sample_period_s")
@@ -730,18 +731,27 @@ def _regression_quality(
     observed = np.asarray(observations, dtype=np.float64)
     residual = observed - np.asarray(predictions, dtype=np.float64)
     sample_count = max(1, int(residual.size))
-    residual_sum_squares = float(np.sum(residual * residual))
+    with np.errstate(over="ignore", invalid="ignore"):
+        residual_sum_squares = float(np.sum(residual * residual))
+    if not np.isfinite(residual_sum_squares):
+        raise ValueError("discovery regression residual arithmetic must remain finite")
     residual_mse = max(residual_sum_squares / sample_count, np.finfo(float).tiny)
     residual_rmse = float(np.sqrt(residual_mse))
     score = float(
         sample_count * np.log(residual_mse) + active_terms * np.log(sample_count)
     )
     centred = observed - np.mean(observed, axis=0, keepdims=True)
-    total_sum_squares = float(np.sum(centred * centred))
+    with np.errstate(over="ignore", invalid="ignore"):
+        total_sum_squares = float(np.sum(centred * centred))
+    if not np.isfinite(total_sum_squares):
+        raise ValueError("discovery regression variance arithmetic must remain finite")
     if total_sum_squares <= np.finfo(float).tiny:
         r_squared = 0.0
     else:
-        r_squared = min(1.0, 1.0 - residual_sum_squares / total_sum_squares)
+        raw_r_squared = 1.0 - residual_sum_squares / total_sum_squares
+        if not np.isfinite(raw_r_squared):
+            raise ValueError("discovery regression quality must remain finite")
+        r_squared = min(1.0, raw_r_squared)
     return {
         "residual_rmse": residual_rmse,
         "score": score,

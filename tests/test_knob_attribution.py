@@ -303,3 +303,39 @@ def test_audit_records_are_json_ready_and_sorted() -> None:
     components = first["shapley_components"]
     assert isinstance(components, dict)
     assert list(components) == sorted(components)
+
+
+def test_nonfinite_evaluator_cannot_produce_attribution() -> None:
+    def evaluate(candidate: KnobPolicyCandidate) -> AutotuneRewardReport:
+        return _report(candidate, {"main": float("nan")})
+
+    with pytest.raises(ValueError, match="finite reward components"):
+        attribute_knob_policy(
+            KnobPolicyCandidate(alpha=1.0), KnobPolicyCandidate(alpha=0.0), evaluate
+        )
+
+
+def test_sampled_variance_cannot_hide_overflow_as_zero_error() -> None:
+    def evaluate(candidate: KnobPolicyCandidate) -> AutotuneRewardReport:
+        return _report(candidate, {"main": float(candidate.alpha)})
+
+    with pytest.raises(ValueError, match="arithmetic must remain finite"):
+        attribute_knob_policy(
+            KnobPolicyCandidate(alpha=1e200, zeta=1.0),
+            KnobPolicyCandidate(alpha=0.0, zeta=0.0),
+            evaluate,
+            config=KnobAttributionConfig(exact_max_knobs=1, sample_permutations=2),
+        )
+
+
+def test_sampled_attribution_refuses_overflowing_reward_difference() -> None:
+    def evaluate(candidate: KnobPolicyCandidate) -> AutotuneRewardReport:
+        return _report(candidate, {"main": 1e308 if float(candidate.alpha) else -1e308})
+
+    with pytest.raises(ValueError, match="arithmetic must remain finite"):
+        attribute_knob_policy(
+            KnobPolicyCandidate(alpha=1.0, zeta=1.0),
+            KnobPolicyCandidate(alpha=0.0, zeta=0.0),
+            evaluate,
+            config=KnobAttributionConfig(exact_max_knobs=1, sample_permutations=2),
+        )

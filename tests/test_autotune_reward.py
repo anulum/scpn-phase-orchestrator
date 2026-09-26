@@ -32,6 +32,25 @@ from scpn_phase_orchestrator.autotune import (
 
 
 class TestAutotuneRewardContract:
+    @pytest.mark.parametrize(
+        ("candidate", "config"),
+        [
+            (
+                KnobPolicyCandidate(channel_weights=(1e308,)),
+                OfflinePolicySearchConfig(channel_weight_step=1e308),
+            ),
+            (
+                KnobPolicyCandidate(cross_channel_gains=(1e308,)),
+                OfflinePolicySearchConfig(cross_channel_gain_step=1e308),
+            ),
+        ],
+    )
+    def test_coordinate_mutation_refuses_nonfinite_generated_value(
+        self, candidate: KnobPolicyCandidate, config: OfflinePolicySearchConfig
+    ) -> None:
+        with pytest.raises(ValueError, match="mutation must remain finite"):
+            generate_offline_policy_candidates(candidate, config=config)
+
     def test_public_contracts_are_typed(self) -> None:
         hints = get_type_hints(evaluate_knob_policy)
 

@@ -39,7 +39,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
-from math import factorial, sqrt
+from math import factorial, isfinite, sqrt
 
 import numpy as np
 from numpy.typing import NDArray
@@ -307,6 +307,8 @@ class _CoalitionValuer:
         report = self._evaluate(_rebuild_candidate(self._template, values))
         scored = dict(report.components)
         scored[_TOTAL_KEY] = report.reward
+        if not all(isfinite(value) for value in scored.values()):
+            raise ValueError("knob evaluator must return finite reward components")
         self._cache[coalition] = scored
         return scored
 
@@ -363,8 +365,12 @@ def _sampled_shapley(
             current = valuer.value(frozenset(coalition))
             for key in keys:
                 contribution = current[key] - previous[key]
+                if not isfinite(contribution):
+                    raise ValueError("knob attribution arithmetic must remain finite")
                 sums[knob][key] += contribution
                 squares[knob][key] += contribution * contribution
+                if not isfinite(sums[knob][key]) or not isfinite(squares[knob][key]):
+                    raise ValueError("knob attribution arithmetic must remain finite")
             previous = current
     result: dict[str, dict[str, float]] = {}
     max_error = 0.0
@@ -373,7 +379,10 @@ def _sampled_shapley(
         if permutations > 1:
             for key in keys:
                 mean = result[knob][key]
-                variance = max(0.0, squares[knob][key] / permutations - mean * mean)
+                raw_variance = squares[knob][key] / permutations - mean * mean
+                if not isfinite(raw_variance):
+                    raise ValueError("knob attribution variance must remain finite")
+                variance = max(0.0, raw_variance)
                 error = sqrt(variance / permutations)
                 max_error = max(max_error, error)
     return result, max_error
@@ -419,7 +428,9 @@ def attribute_knob_policy(
     Raises
     ------
     ValueError
-        If ``candidate`` and ``baseline`` do not share the same knob shape.
+        If ``candidate`` and ``baseline`` do not share the same knob shape,
+        evaluator values are non-finite, or sampled attribution arithmetic
+        cannot be represented as finite values.
     """
     active_config = config or KnobAttributionConfig()
     candidate_values = dict(_flatten_candidate(candidate))

@@ -29,6 +29,12 @@ from numpy.typing import NDArray
 
 from scpn_phase_orchestrator._compat import TWO_PI
 from scpn_phase_orchestrator.actuation.mapper import ControlAction
+from scpn_phase_orchestrator.supervisor._causal_baselines import (
+    _causal_baseline_family,
+    _coerce_float_array,
+    _lagged_linear_effect,
+    _validate_causal_trace,
+)
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
 from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
@@ -544,6 +550,12 @@ def learn_causal_graph(
     -------
     CausalGraphEstimate
         The estimated signed causal graph.
+
+    Raises
+    ------
+    ValueError
+        If trace or intervention values are non-finite, or the influence
+        arithmetic cannot be represented as finite values.
     """
     trace_arrays = _validate_causal_trace(trace, lag, min_abs_weight)
     nodes = tuple(trace_arrays)
@@ -571,15 +583,29 @@ def learn_causal_graph(
 
     intervention_nodes: list[str] = []
     for rollout in rollouts:
+        if not all(
+            np.isfinite(value)
+            for value in (rollout.delta_R_mean, rollout.delta_R_final)
+        ):
+            raise ValueError("counterfactual causal effects must be finite")
         for action in rollout.actions:
+            if not np.isfinite(action.value):
+                raise ValueError("counterfactual causal action values must be finite")
             source = f"do({action.knob}:{action.scope})"
             intervention_nodes.append(source)
             effect_scale = action.value if action.value != 0.0 else 1.0
             weight = float(rollout.delta_R_mean / effect_scale)
+            if not np.isfinite(weight):
+                raise ValueError("counterfactual causal influence must be finite")
             if abs(weight) < min_abs_weight:
                 continue
-            magnitude = abs(rollout.delta_R_mean) + abs(rollout.delta_R_final)
-            confidence = min(1.0, magnitude / max(min_abs_weight, 1e-12))
+            threshold = max(min_abs_weight, 1e-12)
+            effects = (abs(rollout.delta_R_mean), abs(rollout.delta_R_final))
+            confidence = (
+                1.0
+                if max(effects) >= threshold
+                else min(1.0, sum(value / threshold for value in effects))
+            )
             edges.append(
                 CausalInfluenceEdge(
                     source=source,
@@ -835,35 +861,6 @@ def _signed_phase_delta(a: float, b: float) -> float:
     return float((a - b + np.pi) % TWO_PI - np.pi)
 
 
-def _validate_causal_trace(
-    trace: dict[str, list[float]],
-    lag: int,
-    min_abs_weight: float,
-) -> dict[str, FloatArray]:
-    """Validate the causal trace, else raise."""
-    if isinstance(lag, bool) or int(lag) != lag or lag < 1:
-        raise ValueError("lag must be a positive integer")
-    if not np.isfinite(min_abs_weight) or min_abs_weight < 0.0:
-        raise ValueError("min_abs_weight must be finite and non-negative")
-    if len(trace) < 2:
-        raise ValueError("trace must contain at least two signals")
-    lengths = {len(values) for values in trace.values()}
-    if len(lengths) != 1:
-        raise ValueError("all trace signals must have equal length")
-    length = lengths.pop()
-    if length <= lag:
-        raise ValueError("trace length must be greater than lag")
-    arrays: dict[str, FloatArray] = {}
-    for name, values in trace.items():
-        data = _coerce_float_array(f"trace signal {name!r}", values)
-        if data.ndim != 1:
-            raise ValueError(f"trace signal {name!r} must be one-dimensional")
-        if not np.all(np.isfinite(data)):
-            raise ValueError(f"trace signal {name!r} contains NaN/Inf")
-        arrays[name] = data
-    return arrays
-
-
 def _validated_temporal_hyperedges(
     candidate_hyperedges: list[dict[str, object]] | tuple[dict[str, object], ...],
 ) -> list[dict[str, object]]:
@@ -908,165 +905,6 @@ def _validated_temporal_hyperedges(
     return records
 
 
-def _baseline_score(graph: CausalGraphEstimate) -> float:
-    """Return the baseline causal score."""
-    if not graph.edges:
-        return 0.0
-    return float(max(abs(edge.weight) * edge.confidence for edge in graph.edges))
-
-
-def _causal_baseline_family(
-    trace: dict[str, list[float]],
-    *,
-    lag: int,
-    min_abs_weight: float,
-    graph: CausalGraphEstimate,
-) -> list[dict[str, float | int | str]]:
-    """Return the family of baseline causal scores."""
-    arrays = _validate_causal_trace(trace, lag, min_abs_weight)
-    lagged_linear_score = _baseline_score(graph)
-    records: list[dict[str, float | int | str]] = [
-        {
-            "name": "lagged_linear_graph",
-            "score": lagged_linear_score,
-            "edge_count": len(graph.edges),
-            "description": "max_abs_lagged_linear_edge_weight_times_confidence",
-        },
-        _pairwise_correlation_baseline(
-            arrays,
-            lag=lag,
-            min_abs_weight=min_abs_weight,
-            name="lagged_pearson",
-            description="max_abs_corr_source_t_target_t_plus_lag",
-            use_delta=False,
-        ),
-        _pairwise_correlation_baseline(
-            arrays,
-            lag=lag,
-            min_abs_weight=min_abs_weight,
-            name="lagged_delta_pearson",
-            description="max_abs_corr_source_t_target_delta_t_plus_lag",
-            use_delta=True,
-        ),
-        _granger_residual_improvement_baseline(
-            arrays,
-            lag=lag,
-            min_abs_weight=min_abs_weight,
-        ),
-        _target_persistence_baseline(
-            arrays,
-            lag=lag,
-            min_abs_weight=min_abs_weight,
-        ),
-    ]
-    return sorted(records, key=lambda record: str(record["name"]))
-
-
-def _pairwise_correlation_baseline(
-    arrays: dict[str, FloatArray],
-    *,
-    lag: int,
-    min_abs_weight: float,
-    name: str,
-    description: str,
-    use_delta: bool,
-) -> dict[str, float | int | str]:
-    """Return the pairwise-correlation baseline score."""
-    max_score = 0.0
-    edge_count = 0
-    for source, source_values in arrays.items():
-        source_window = source_values[:-lag]
-        for target, target_values in arrays.items():
-            if source == target:
-                continue
-            target_window = (
-                target_values[lag:] - target_values[:-lag]
-                if use_delta
-                else target_values[lag:]
-            )
-            score = abs(_correlation(source_window, target_window))
-            max_score = max(max_score, score)
-            if score >= min_abs_weight:
-                edge_count += 1
-    return {
-        "name": name,
-        "score": float(max_score),
-        "edge_count": edge_count,
-        "description": description,
-    }
-
-
-def _granger_residual_improvement_baseline(
-    arrays: dict[str, FloatArray],
-    *,
-    lag: int,
-    min_abs_weight: float,
-) -> dict[str, float | int | str]:
-    """Return the Granger residual-improvement baseline score."""
-    max_score = 0.0
-    edge_count = 0
-    for source, source_values in arrays.items():
-        source_window = source_values[:-lag]
-        for target, target_values in arrays.items():
-            if source == target:
-                continue
-            autoregressive_window = target_values[:-lag]
-            target_future = target_values[lag:]
-            restricted_sse = _linear_residual_sse(
-                autoregressive_window.reshape(-1, 1),
-                target_future,
-            )
-            full_sse = _linear_residual_sse(
-                np.column_stack((autoregressive_window, source_window)),
-                target_future,
-            )
-            if restricted_sse <= 0.0:
-                score = 0.0
-            else:
-                score = max(0.0, (restricted_sse - full_sse) / restricted_sse)
-            max_score = max(max_score, score)
-            if score >= min_abs_weight:
-                edge_count += 1
-    return {
-        "name": "granger_residual_improvement",
-        "score": float(max_score),
-        "edge_count": edge_count,
-        "description": "max_fractional_sse_reduction_source_plus_target_history",
-    }
-
-
-def _target_persistence_baseline(
-    arrays: dict[str, FloatArray],
-    *,
-    lag: int,
-    min_abs_weight: float,
-) -> dict[str, float | int | str]:
-    """Return the target-persistence baseline score."""
-    max_score = 0.0
-    edge_count = 0
-    for values in arrays.values():
-        score = abs(_correlation(values[:-lag], values[lag:]))
-        max_score = max(max_score, score)
-        if score >= min_abs_weight:
-            edge_count += 1
-    return {
-        "name": "target_persistence_null",
-        "score": float(max_score),
-        "edge_count": edge_count,
-        "description": "max_abs_corr_target_t_target_t_plus_lag",
-    }
-
-
-def _linear_residual_sse(design: FloatArray, target: FloatArray) -> float:
-    """Return the linear-regression residual sum of squares."""
-    if design.shape[0] != target.shape[0]:
-        raise ValueError("linear baseline design and target length mismatch")
-    augmented = np.column_stack((np.ones(design.shape[0], dtype=np.float64), design))
-    coefficients, *_ = np.linalg.lstsq(augmented, target, rcond=None)
-    residual = target - augmented @ coefficients
-    return float(np.dot(residual, residual))
-
-
 def _stable_json_hash(payload: object) -> str:
     """Return the canonical-JSON SHA-256 hash of the value."""
     canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
@@ -1106,44 +944,3 @@ def _require_finite_real(value: object, *, name: str) -> float:
     if not np.isfinite(coerced):
         raise ValueError(f"{name} must be finite")
     return coerced
-
-
-def _coerce_float_array(name: str, value: object) -> FloatArray:
-    """Return ``value`` as a validated finite float array, else raise."""
-    raw = np.asarray(value, dtype=object)
-    if any(isinstance(item, bool | np.bool_) for item in raw.ravel()):
-        raise ValueError(f"{name} must not contain boolean values")
-    if any(isinstance(item, complex | np.complexfloating) for item in raw.ravel()):
-        raise ValueError(f"{name} must contain real-valued samples")
-    try:
-        return np.ascontiguousarray(raw.astype(np.float64), dtype=np.float64)
-    except (TypeError, ValueError) as exc:
-        raise ValueError(f"{name} must be numeric") from exc
-
-
-def _lagged_linear_effect(
-    source: FloatArray,
-    target_delta: FloatArray,
-) -> tuple[float, float]:
-    """Return the lagged linear effect between two series."""
-    source_centered = source - float(np.mean(source))
-    target_centered = target_delta - float(np.mean(target_delta))
-    source_var = float(np.dot(source_centered, source_centered))
-    target_var = float(np.dot(target_centered, target_centered))
-    if source_var == 0.0 or target_var == 0.0:
-        return 0.0, 0.0
-    covariance = float(np.dot(source_centered, target_centered))
-    weight = covariance / source_var
-    confidence = min(1.0, abs(covariance) / float(np.sqrt(source_var * target_var)))
-    return float(weight), float(confidence)
-
-
-def _correlation(a: FloatArray, b: FloatArray) -> float:
-    """Return the Pearson correlation between two series."""
-    a_centered = a - float(np.mean(a))
-    b_centered = b - float(np.mean(b))
-    a_var = float(np.dot(a_centered, a_centered))
-    b_var = float(np.dot(b_centered, b_centered))
-    if a_var == 0.0 or b_var == 0.0:
-        return 0.0
-    return float(np.dot(a_centered, b_centered) / np.sqrt(a_var * b_var))

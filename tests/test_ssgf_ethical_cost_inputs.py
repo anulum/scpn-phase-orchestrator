@@ -63,3 +63,47 @@ def test_backends_agree_on_valid_inputs(monkeypatch: pytest.MonkeyPatch) -> None
     numpy_path = ethical.compute_ethical_cost(phases, knm, R_min=0.7)
     assert rust.c15_sec == pytest.approx(numpy_path.c15_sec, abs=1e-12)
     assert rust.constraints_violated == numpy_path.constraints_violated
+
+
+@pytest.mark.parametrize("use_rust", [False, True])
+def test_extreme_finite_coupling_refuses_nonfinite_cost(
+    monkeypatch: pytest.MonkeyPatch, use_rust: bool
+) -> None:
+    if use_rust and not ethical._HAS_RUST:
+        pytest.skip("spo_kernel not built")
+    if not use_rust:
+        monkeypatch.setattr(ethical, "_HAS_RUST", False)
+    knm = np.full((4, 4), 1e200)
+    np.fill_diagonal(knm, 0.0)
+    with pytest.raises(ValueError, match="arithmetic must remain finite"):
+        ethical.compute_ethical_cost(np.zeros(4), knm)
+
+
+def test_direct_rust_ffi_refuses_unrepresentable_cost() -> None:
+    kernel = pytest.importorskip("spo_kernel")
+    compute_ethical_cost_rust = kernel.compute_ethical_cost_rust
+    knm = np.full((2, 2), 1e200)
+    np.fill_diagonal(knm, 0.0)
+    with pytest.raises(ValueError, match="cost arithmetic must remain finite"):
+        compute_ethical_cost_rust(
+            np.zeros(2), knm.ravel(), 2, 0.4, 0.3, 0.2, 0.1, 1.0, 0.2, 0.1, 5.0
+        )
+
+
+def test_direct_rust_ffi_refuses_nan_before_constraint_clamps() -> None:
+    kernel = pytest.importorskip("spo_kernel")
+    compute_ethical_cost_rust = kernel.compute_ethical_cost_rust
+    with pytest.raises(ValueError, match="contain only finite values"):
+        compute_ethical_cost_rust(
+            np.array([0.0, math.nan]),
+            np.zeros(4),
+            2,
+            0.4,
+            0.3,
+            0.2,
+            0.1,
+            1.0,
+            0.2,
+            0.1,
+            5.0,
+        )

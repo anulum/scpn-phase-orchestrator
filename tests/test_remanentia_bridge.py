@@ -308,6 +308,37 @@ class TestNoveltyEmpty:
         server.shutdown()
 
 
+def test_finite_recall_scores_cannot_overflow_the_novelty_mean() -> None:
+    class RecallHandler(BaseHTTPRequestHandler):
+        def do_POST(self) -> None:
+            self.rfile.read(int(self.headers.get("Content-Length", 0)))
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            payload = {
+                "results": [
+                    {"score": value} for value in (1e308, 1e308, -1e308, -1e308)
+                ]
+            }
+            self.wfile.write(json.dumps(payload).encode())
+
+        def log_message(self, format: str, *args: object) -> None:
+            pass
+
+    server = HTTPServer(("127.0.0.1", 0), RecallHandler)
+    thread = Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        bridge = RemanentiaBridge(
+            remanentia_url=f"http://127.0.0.1:{server.server_address[1]}", timeout=2.0
+        )
+        assert bridge.get_novelty_score("balanced relevance") == 1.0
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join()
+
+
 class TestRemanentiaPipelineWiring:
     """Pipeline: engine state → snapshot → Remanentia memory store."""
 

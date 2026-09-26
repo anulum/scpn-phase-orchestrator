@@ -31,6 +31,10 @@ that differs between the two with:
   example, that a knob's positive coherence contribution is partly cancelled by
   its actuation cost.
 
+Evaluator rewards and component values must be finite. Unrepresentable sampled
+contributions, moments, or variance raise `ValueError` before a variance clamp
+can hide the arithmetic failure.
+
 The value function is supplied by the caller and treated as a black box, so the
 same attribution works for a fixed-observation reward, a replay evaluator that
 re-runs the candidate over recorded data, or any other scorer. The module

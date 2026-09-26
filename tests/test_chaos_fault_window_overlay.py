@@ -97,6 +97,34 @@ def test_drive_dropout_is_constant_in_window_and_ends() -> None:
     assert zetas == pytest.approx([0.2, 0.2, 0.1, 0.1, 0.1, 0.2, 0.2])
 
 
+@pytest.mark.parametrize("zeta", [float("nan"), float("inf")])
+@pytest.mark.parametrize("during_dropout", [False, True])
+def test_drive_dropout_does_not_restore_invalid_state_as_zero(
+    zeta: float, during_dropout: bool
+) -> None:
+    hook = make_chaos_hook(ChaosSchedule((ChaosFault("drive_dropout", 1, 2, 0.5),)))
+    context = _persistent_context()
+    context.step = 1
+    if during_dropout:
+        hook(context)
+        context.step = 2
+    context.zeta = zeta
+    with pytest.raises(ValueError, match="drive state must remain finite"):
+        hook(context)
+
+
+def test_drive_restoration_refuses_overflowing_finite_state() -> None:
+    hook = make_chaos_hook(ChaosSchedule((ChaosFault("drive_dropout", 1, 2, 0.5),)))
+    context = _persistent_context()
+    context.step = 1
+    context.zeta = 1e308
+    hook(context)
+    context.step = 2
+    context.zeta = 1.7e308
+    with pytest.raises(ValueError, match="restoration must remain finite"):
+        hook(context)
+
+
 @pytest.mark.parametrize("magnitude", [0.25, 1.0])
 def test_coupling_drop_is_constant_in_window_and_ends(magnitude: float) -> None:
     fault = ChaosFault(

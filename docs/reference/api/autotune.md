@@ -95,6 +95,9 @@ connected-component clusters, and regular time-column sample-rate inference.
 Non-phase data carries an explicit phase-SINDy skipped status. The reports are
 JSON-ready provenance for binding review and do not promote actuation.
 
+Non-finite or unrepresentable regression metrics raise `ValueError`; an extreme
+sample period cannot turn an overflowing residual into a perfect fit.
+
 ::: scpn_phase_orchestrator.autotune.discovery
 
 ## Phase-SINDy Discovery Confidence

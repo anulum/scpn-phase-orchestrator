@@ -296,3 +296,8 @@ def test_unknown_information_geometry_backend_fails_closed() -> None:
             max_step=0.1,
             backend="gpu_magic",
         )
+
+
+def test_finite_distribution_with_overflowing_mass_is_refused() -> None:
+    with pytest.raises(ValueError, match="finite positive mass"):
+        propose_information_geometry_control([1e308, 1e308], [0.25, 0.75], max_step=0.1)
