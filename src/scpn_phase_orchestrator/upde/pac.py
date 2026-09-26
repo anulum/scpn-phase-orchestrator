@@ -19,8 +19,8 @@ Follows ``feedback_module_standard_attnres.md``:
 
 All compute kernels are available in Rust, Mojo, Julia, Go, Python.
 ``AVAILABLE_BACKENDS`` reports detected backends in canonical fallback order,
-while ``ACTIVE_BACKEND`` is selected by a small import-time hot-path probe so
-slow external wrappers do not displace the faster local path.
+while ``ACTIVE_BACKEND`` is selected by a small hot-path probe on first use so
+slow external wrappers do not displace the faster local path or delay imports.
 """
 
 from __future__ import annotations
@@ -28,6 +28,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from math import isfinite
 from numbers import Integral, Real
+from threading import Lock
 from time import perf_counter
 from typing import TypeAlias, cast
 
@@ -41,6 +42,8 @@ from scpn_phase_orchestrator.upde._pac_validation import (
 )
 
 FloatArray: TypeAlias = NDArray[np.float64]
+ACTIVE_BACKEND: str
+AVAILABLE_BACKENDS: list[str]
 
 __all__ = [
     "ACTIVE_BACKEND",
@@ -250,12 +253,37 @@ def _modulation_index_probe_seconds(name: str) -> float:
     return perf_counter() - start
 
 
-ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
+_BACKEND_STATE_LOCK = Lock()
+
+
+def _backend_state() -> tuple[str, list[str]]:
+    """Resolve backend availability once, on first computation or inspection."""
+    active = globals().get("ACTIVE_BACKEND")
+    available = globals().get("AVAILABLE_BACKENDS")
+    if isinstance(active, str) and isinstance(available, list):
+        return active, available
+    with _BACKEND_STATE_LOCK:
+        active = globals().get("ACTIVE_BACKEND")
+        available = globals().get("AVAILABLE_BACKENDS")
+        if not isinstance(active, str) or not isinstance(available, list):
+            active, available = _resolve_backends()
+            globals()["ACTIVE_BACKEND"] = active
+            globals()["AVAILABLE_BACKENDS"] = available
+    return active, available
+
+
+def __getattr__(name: str) -> object:
+    """Resolve public backend status only when a caller requests it."""
+    if name in {"ACTIVE_BACKEND", "AVAILABLE_BACKENDS"}:
+        active, available = _backend_state()
+        return {"ACTIVE_BACKEND": active, "AVAILABLE_BACKENDS": available}[name]
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 def _dispatch(fn_name: str) -> object:
     """Return the fastest available backend callables, or ``None`` for Python."""
-    ordered_backends = [ACTIVE_BACKEND] + list(AVAILABLE_BACKENDS)
+    active, available = _backend_state()
+    ordered_backends = [active, *available]
     seen: set[str] = set()
     for backend in ordered_backends:
         if backend in seen:

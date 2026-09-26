@@ -45,6 +45,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 from numbers import Complex, Integral, Real
+from threading import Lock
 from typing import TypeAlias
 
 import numpy as np
@@ -68,6 +69,8 @@ except ImportError:
     _HAS_RUST_SCALAR = False
 
 FloatArray: TypeAlias = NDArray[np.float64]
+ACTIVE_BACKEND: str
+AVAILABLE_BACKENDS: list[str]
 
 __all__ = [
     "ACTIVE_BACKEND",
@@ -211,12 +214,37 @@ def _resolve_backends() -> tuple[str, list[str]]:
     return available[0], available
 
 
-ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
+_BACKEND_STATE_LOCK = Lock()
+
+
+def _backend_state() -> tuple[str, list[str]]:
+    """Resolve backend availability once, on first computation or inspection."""
+    active = globals().get("ACTIVE_BACKEND")
+    available = globals().get("AVAILABLE_BACKENDS")
+    if isinstance(active, str) and isinstance(available, list):
+        return active, available
+    with _BACKEND_STATE_LOCK:
+        active = globals().get("ACTIVE_BACKEND")
+        available = globals().get("AVAILABLE_BACKENDS")
+        if not isinstance(active, str) or not isinstance(available, list):
+            active, available = _resolve_backends()
+            globals()["ACTIVE_BACKEND"] = active
+            globals()["AVAILABLE_BACKENDS"] = available
+    return active, available
+
+
+def __getattr__(name: str) -> object:
+    """Resolve public backend status only when a caller requests it."""
+    if name in {"ACTIVE_BACKEND", "AVAILABLE_BACKENDS"}:
+        active, available = _backend_state()
+        return {"ACTIVE_BACKEND": active, "AVAILABLE_BACKENDS": available}[name]
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 def _dispatch() -> Callable[..., tuple[float, float, float, float]] | None:
     """Return the fastest available backend callable, or ``None`` for Python."""
-    ordered_backends = [ACTIVE_BACKEND] + list(AVAILABLE_BACKENDS)
+    active, available = _backend_state()
+    ordered_backends = [active, *available]
     deduped: list[str] = []
     for backend in ordered_backends:
         if backend in deduped:

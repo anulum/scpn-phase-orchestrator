@@ -249,8 +249,9 @@ This prevents silent corruption from propagating through the pipeline.
 
 `upde.engine` now exposes a stateless batched kernel `upde_run` that
 dispatches across Rust → Mojo → Julia → Go → Python. The first
-available backend becomes `ACTIVE_BACKEND` at import time; the others
-are available as overrides for tests and benchmarks. `UPDEEngine.run`
+available backend becomes `ACTIVE_BACKEND` on first computation or explicit
+status access; importing the module does not probe optional toolchains. The
+others are available as overrides for tests and benchmarks. `UPDEEngine.run`
 routes through this dispatcher so every available toolchain is used.
 
 | Backend | Probe                                                         | Artefact                         |

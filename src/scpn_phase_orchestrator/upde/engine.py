@@ -40,9 +40,34 @@ __all__ = [
 
 FloatArray: TypeAlias = NDArray[np.float64]
 OmegaSource: TypeAlias = FloatArray | Callable[[float], object]
+ACTIVE_BACKEND: str
+AVAILABLE_BACKENDS: list[str]
 
-ACTIVE_BACKEND = _run_mod.ACTIVE_BACKEND
-AVAILABLE_BACKENDS = _run_mod.AVAILABLE_BACKENDS
+_BACKEND_STATE_LOCK = threading.Lock()
+
+
+def _backend_state() -> tuple[str, list[str]]:
+    """Mirror the dispatcher status when computation or inspection needs it."""
+    active = globals().get("ACTIVE_BACKEND")
+    available = globals().get("AVAILABLE_BACKENDS")
+    if isinstance(active, str) and isinstance(available, list):
+        return active, available
+    with _BACKEND_STATE_LOCK:
+        active = globals().get("ACTIVE_BACKEND")
+        available = globals().get("AVAILABLE_BACKENDS")
+        if not isinstance(active, str) or not isinstance(available, list):
+            active, available = _run_mod._backend_state()
+            globals()["ACTIVE_BACKEND"] = active
+            globals()["AVAILABLE_BACKENDS"] = available
+    return active, available
+
+
+def __getattr__(name: str) -> object:
+    """Resolve public backend status only when a caller requests it."""
+    if name in {"ACTIVE_BACKEND", "AVAILABLE_BACKENDS"}:
+        active, available = _backend_state()
+        return {"ACTIVE_BACKEND": active, "AVAILABLE_BACKENDS": available}[name]
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 def upde_run(
@@ -96,8 +121,9 @@ def upde_run(
     FloatArray
         The final phases after ``n_steps`` integration steps.
     """
+    active, _ = _backend_state()
     previous = _run_mod.ACTIVE_BACKEND
-    _run_mod.ACTIVE_BACKEND = ACTIVE_BACKEND
+    _run_mod.ACTIVE_BACKEND = active
     try:
         return _run_mod.upde_run(
             phases,
@@ -162,8 +188,9 @@ def upde_run_omega_schedule(
     FloatArray
         The final phases after integrating the omega schedule.
     """
+    active, _ = _backend_state()
     previous = _run_mod.ACTIVE_BACKEND
-    _run_mod.ACTIVE_BACKEND = ACTIVE_BACKEND
+    _run_mod.ACTIVE_BACKEND = active
     try:
         return _run_mod.upde_run_omega_schedule(
             phases,

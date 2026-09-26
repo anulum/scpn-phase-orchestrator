@@ -30,9 +30,6 @@ from urllib.parse import urlparse
 import click
 import numpy as np
 
-from scpn_phase_orchestrator.autotune.binding_proposal import (
-    propose_binding_from_time_series_csv,
-)
 from scpn_phase_orchestrator.binding import (
     compile_symbolic_binding,
     load_binding_spec,
@@ -344,6 +341,10 @@ def demo(domain: str, dataset: str | None, target: str, steps: int, port: int) -
 
 def _run_real_data_demo(*, dataset: str, target: str, steps: int, port: int) -> None:
     """Run the real-data scaffolding demo."""
+    from scpn_phase_orchestrator.autotune.binding_proposal import (
+        propose_binding_from_time_series_csv,
+    )
+
     if steps < 1:
         raise click.BadParameter("steps must be positive")
     if target != "coherence":
