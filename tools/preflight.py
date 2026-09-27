@@ -166,7 +166,7 @@ BRANCH_COVERAGE_GATE: tuple[str, list[str], Path] = (
         "--tb=short",
         "-q",
         "-m",
-        "not slow and not performance",
+        "not slow and not performance and not native_runtime",
         "-k",
         "not performance",
         "--cov=scpn_phase_orchestrator",

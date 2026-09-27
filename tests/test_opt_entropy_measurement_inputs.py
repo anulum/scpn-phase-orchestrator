@@ -89,7 +89,17 @@ def test_ordinal_api_rejects_temporal_controls(
             entropy(np.arange(20, dtype=np.float64), dimension, delay)
 
 
-@pytest.mark.parametrize("backend", list(BACKENDS))
+@pytest.mark.parametrize(
+    "backend",
+    [
+        "public",
+        *[
+            pytest.param(name, marks=pytest.mark.native_runtime)
+            for name in BACKENDS
+            if name != "public"
+        ],
+    ],
+)
 def test_ordinal_api_preserves_numeric_objects(backend: str) -> None:
     """Real object samples preserve tied ordinal codes and entropy."""
     value = np.array([0.0, 2.0, 1.0, 1.0, 3.0, 0.0, 2.0, 4.0])

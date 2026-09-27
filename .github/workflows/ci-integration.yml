@@ -55,6 +55,8 @@ jobs:
           print('backends:', AVAILABLE_BACKENDS)"
       - name: Run native-backend parity tests without coverage
         run: pytest tests/ -k backends -m "not slow" --tb=short -p no:cacheprovider
+      - name: Execute Julia measurement ingress contracts
+        run: pytest tests/test_chimera_measurement_inputs.py tests/test_embedding_measurement_inputs.py tests/test_entropy_prod_measurement_inputs.py tests/test_opt_entropy_measurement_inputs.py -m native_runtime -k julia --tb=short --strict-markers
       - name: Generate Julia API documentation
         run: python tools/generate_polyglot_docs.py julia --output build/polyglot-docs
       - name: Upload Julia API documentation
@@ -93,6 +95,18 @@ jobs:
             fi
           done
           exit "$fail"
+      - name: Install Python measurement test dependencies
+        run: pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
+      - name: Execute Go measurement ingress contracts with coverage
+        run: |
+          pytest tests/test_chimera_measurement_inputs.py tests/test_embedding_measurement_inputs.py tests/test_entropy_prod_measurement_inputs.py tests/test_opt_entropy_measurement_inputs.py -m native_runtime -k go --tb=short --strict-markers --cov=scpn_phase_orchestrator --cov-report= --cov-fail-under=0
+          mv .coverage .coverage.go
+      - name: Upload Go measurement coverage
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: coverage-data-go
+          path: .coverage.go
+          include-hidden-files: true
       - name: Generate Go API documentation
         run: python tools/generate_polyglot_docs.py go --output build/polyglot-docs
       - name: Upload Go API documentation
@@ -105,9 +119,9 @@ jobs:
     # The Mojo accelerator bridges compile each source to a standalone binary that
     # the Python runtime invokes as a subprocess. This lane installs the pinned
     # Mojo toolchain from PyPI and compiles every Mojo accelerator so a broken or
-    # bit-rotted source is caught in CI. Compile-only: the binaries are never
-    # executed, so the AVX-512/ISA runtime trap that motivates target-cpu pinning
-    # does not arise here. The lane is owned by the backend-integration category
+    # bit-rotted source is caught in CI. Measurement contracts execute the
+    # resulting binaries, built for baseline x86-64 to avoid host-specific ISA.
+    # The lane is owned by the backend-integration category
     # aggregated by ``ci-gate``.
     runs-on: ubuntu-latest
     timeout-minutes: 25
@@ -126,17 +140,28 @@ jobs:
       - name: Compile every Mojo accelerator
         run: |
           . .venv/bin/activate
-          out="$RUNNER_TEMP/mojo_out"
-          mkdir -p "$out"
+          out="mojo"
           fail=0
           for src in mojo/*.mojo; do
             name="$(basename "$src" .mojo)"
-            if ! mojo build "$src" -o "$out/${name}_mojo" -Xlinker -lm; then
+            if ! mojo build "$src" --target-cpu x86-64 -o "$out/${name}_mojo" -Xlinker -lm; then
               echo "::error file=${src}::mojo build failed"
               fail=1
             fi
           done
           exit "$fail"
+      - name: Install Python measurement test dependencies
+        run: .venv/bin/pip install --require-hashes --no-deps -r requirements/dev-lock.txt && .venv/bin/pip install --no-deps -e .
+      - name: Execute Mojo measurement ingress contracts with coverage
+        run: |
+          .venv/bin/pytest tests/test_chimera_measurement_inputs.py tests/test_embedding_measurement_inputs.py tests/test_entropy_prod_measurement_inputs.py tests/test_opt_entropy_measurement_inputs.py -m native_runtime -k mojo --tb=short --strict-markers --cov=scpn_phase_orchestrator --cov-report= --cov-fail-under=0
+          mv .coverage .coverage.mojo
+      - name: Upload Mojo measurement coverage
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: coverage-data-mojo
+          path: .coverage.mojo
+          include-hidden-files: true
       - name: Generate Mojo API documentation
         run: .venv/bin/python tools/generate_polyglot_docs.py mojo --output build/polyglot-docs
       - name: Upload Mojo API documentation
@@ -261,7 +286,7 @@ jobs:
             --ignore=tests/test_quantum_bridge_live.py \
             --ignore=tests/test_geometry_walk.py \
             --ignore-glob=tests/test_nn_physics_validation*.py \
-            -m "not slow and not performance" \
+            -m "not slow and not performance and not native_runtime" \
             -k "not performance" \
             --cov=scpn_phase_orchestrator --cov-report= --cov-fail-under=0
           mv .coverage .coverage.ffi
@@ -291,7 +316,7 @@ jobs:
             --ignore=tests/test_quantum_bridge_live.py \
             --ignore=tests/test_geometry_walk.py \
             --ignore-glob=tests/test_nn_physics_validation*.py \
-            -m "not slow and not performance" \
+            -m "not slow and not performance and not native_runtime" \
             -k "not performance"
       - name: Build and test (Windows)
         if: runner.os == 'Windows'
@@ -313,5 +338,5 @@ jobs:
             --ignore=tests/test_quantum_bridge_live.py \
             --ignore=tests/test_geometry_walk.py \
             --ignore-glob=tests/test_nn_physics_validation*.py \
-            -m "not slow and not performance" \
+            -m "not slow and not performance and not native_runtime" \
             -k "not performance"

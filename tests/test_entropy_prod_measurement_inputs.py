@@ -68,7 +68,13 @@ def test_temporal_control_refusal(backend: Rate, field: str) -> None:
         backend(np.zeros(3), np.ones(3), np.zeros((3, 3)), alpha, dt)
 
 
-@pytest.mark.parametrize("backend", BACKENDS)
+@pytest.mark.parametrize(
+    "backend",
+    [
+        BACKENDS[0],
+        *[pytest.param(fn, marks=pytest.mark.native_runtime) for fn in BACKENDS[1:]],
+    ],
+)
 def test_object_numeric_parity(backend: Rate) -> None:
     """Supported numeric object storage retains real runtime parity."""
     p = np.arange(3, dtype=np.float64)

@@ -83,7 +83,13 @@ def test_embedding_rejects_measurement_aliases(
         _run(backend, surface, cast(FloatArray, value))
 
 
-@pytest.mark.parametrize("backend", ["public", *BRIDGES])
+@pytest.mark.parametrize(
+    "backend",
+    [
+        "public",
+        *[pytest.param(name, marks=pytest.mark.native_runtime) for name in BRIDGES],
+    ],
+)
 @pytest.mark.parametrize("surface", ["embed", "mi", "nn"])
 def test_embedding_preserves_real_numeric_objects(backend: str, surface: str) -> None:
     """Real object storage preserves samples, information and neighbor geometry."""

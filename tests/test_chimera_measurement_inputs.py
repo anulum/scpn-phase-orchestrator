@@ -71,7 +71,14 @@ def test_direct_source_refusal(backend: Backend, field: str, dtype: str) -> None
 
 @pytest.mark.parametrize(
     "backend",
-    [local_order_parameter_go, local_order_parameter_julia, local_order_parameter_mojo],
+    [
+        pytest.param(fn, marks=pytest.mark.native_runtime)
+        for fn in (
+            local_order_parameter_go,
+            local_order_parameter_julia,
+            local_order_parameter_mojo,
+        )
+    ],
 )
 def test_numeric_object_parity(backend: Backend) -> None:
     """Real object arrays retain numerical parity through installed accelerators."""
@@ -127,3 +134,18 @@ def test_object_temporal_refusal(field: str) -> None:
         )
     with pytest.raises(ValueError):
         chimera.local_order_parameter(p, k)
+
+
+def test_public_numeric_object_parity() -> None:
+    """Public chimera measurements preserve real object samples without a runtime."""
+    phases = np.arange(3, dtype=np.float64)
+    knm = np.ones((3, 3)) - np.eye(3)
+    np.testing.assert_allclose(
+        chimera.local_order_parameter(
+            cast(FloatArray, phases.astype(object)),
+            cast(FloatArray, knm.astype(object)),
+        ),
+        chimera.local_order_parameter(phases, knm),
+        atol=1e-9,
+        rtol=0,
+    )

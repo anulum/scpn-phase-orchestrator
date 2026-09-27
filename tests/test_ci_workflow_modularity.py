@@ -10,9 +10,13 @@
 from __future__ import annotations
 
 import json
+import shlex
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
+import yaml
 
 from tools import audit_ci_workflow_modularity as modularity
 from tools import ci_workflow_inventory as inventory
@@ -316,3 +320,70 @@ def test_category_graph_rejects_unknown_self_and_cyclic_dependencies() -> None:
     assert any("unknown categories" in error for error in errors)
     assert any("depends on itself" in error for error in errors)
     assert any("dependency cycle" in error for error in errors)
+
+
+def test_native_measurement_contracts_run_in_prepared_jobs() -> None:
+    """Real pytest collection assigns each native contract to one prepared CI job."""
+    root = inventory.REPOSITORY_ROOT
+    workflow = yaml.safe_load(inventory.workflow_path_for_job("go-backend").read_text())
+    files = [
+        "tests/test_chimera_measurement_inputs.py",
+        "tests/test_embedding_measurement_inputs.py",
+        "tests/test_entropy_prod_measurement_inputs.py",
+        "tests/test_opt_entropy_measurement_inputs.py",
+    ]
+
+    def collect(arguments: list[str]) -> set[str]:
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "pytest",
+                *arguments,
+                "--collect-only",
+                "-q",
+                "-o",
+                "addopts=",
+            ],
+            cwd=root,
+            check=True,
+            text=True,
+            capture_output=True,
+        )
+        return {
+            line
+            for line in result.stdout.splitlines()
+            if line.startswith("tests/") and "::" in line
+        }
+
+    native = collect([*files, "-m", "native_runtime"])
+    standard = collect([*files, "-m", "not native_runtime"])
+    assert len(native) == 18
+    assert not native & standard
+    assert native | standard == collect(files)
+    routed: set[str] = set()
+    for backend in ("go", "julia", "mojo"):
+        steps = workflow["jobs"][f"{backend}-backend"]["steps"]
+        contract = next(
+            step
+            for step in steps
+            if step.get("name", "").startswith(f"Execute {backend.title()} measurement")
+        )
+        tokens = shlex.split(contract["run"].splitlines()[0])
+        args = [token for token in tokens[1:] if not token.startswith("--cov")]
+        selected = collect(args)
+        assert len(selected) == 6
+        assert selected <= native
+        assert not selected & routed
+        routed |= selected
+        preceding = str(steps[: steps.index(contract)])
+        assert "requirements/dev-lock.txt" in preceding
+        if backend == "go":
+            assert "go build -buildmode=c-shared" in preceding
+        elif backend == "julia":
+            assert "requirements/julia-lock.txt" in preceding
+            assert "from juliacall import Main" in preceding
+        else:
+            assert "--target-cpu x86-64" in preceding
+            assert 'out="mojo"' in preceding
+    assert routed == native
