@@ -316,7 +316,7 @@ class TestMain:
     def test_branch_coverage_gate_deselects_performance_tests(self) -> None:
         """The branch lane is perf-isolated: performance tests are deselected."""
         _, cmd, _ = mod.BRANCH_COVERAGE_GATE
-        assert "not slow and not performance" in cmd
+        assert "not slow and not performance and not native_runtime" in cmd
         assert "not performance" in cmd
         assert "--cov-branch" in cmd
 

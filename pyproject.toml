@@ -368,6 +368,7 @@ filterwarnings = ["error::DeprecationWarning"]
 asyncio_mode = "auto"
 markers = [
     "integration: end-to-end integration tests",
+    "native_runtime: executes a compiled Go, Julia or Mojo backend",
     "contract: boundary-contract verification tests",
     "performance: host-sensitive wall-clock regression checks",
     "slow: long-running stress/scale tests (N>1000 or T>10000)",

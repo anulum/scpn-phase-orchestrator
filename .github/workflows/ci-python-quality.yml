@@ -53,7 +53,7 @@ jobs:
           --ignore=tests/test_quantum_bridge_live.py
           --ignore=tests/test_geometry_walk.py
           --ignore-glob=tests/test_nn_physics_validation*.py
-          -m "not slow and not performance"
+          -m "not slow and not performance and not native_runtime"
           -k "not performance"
           ${{ matrix.python-version == '3.12' && '--cov=scpn_phase_orchestrator --cov-report=term-missing --cov-fail-under=0' || '' }}
       - name: Rename coverage data (test)
@@ -203,7 +203,7 @@ jobs:
             --ignore=tests/test_quantum_bridge_live.py \
             --ignore=tests/test_geometry_walk.py \
             --ignore-glob=tests/test_nn_physics_validation*.py \
-            -m "not slow and not performance" \
+            -m "not slow and not performance and not native_runtime" \
             -k "not performance" \
             --cov=scpn_phase_orchestrator --cov-branch --cov-report= --cov-fail-under=0
           coverage xml -o coverage-branch.xml

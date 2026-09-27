@@ -178,6 +178,12 @@ def compute_ethical_cost(
             J_sec=0.0, phi_ethics=0.0, c15_sec=1.0, constraints_violated=0
         )
 
+    coupling_violation = float(np.max(knm)) - max_coupling if np.any(knm > 0) else 0.0
+    if not np.isfinite(coupling_violation) or coupling_violation > np.sqrt(
+        np.finfo(float).max
+    ):
+        raise ValueError("ethical constraint arithmetic must remain finite")
+
     if _HAS_RUST:
         p: FloatArray = np.ascontiguousarray(phases, dtype=np.float64)
         k: FloatArray = np.ascontiguousarray(knm.ravel(), dtype=np.float64)
@@ -213,7 +219,7 @@ def compute_ethical_cost(
     g = [
         R_min - R,
         connectivity_min - lam2,
-        float(np.max(knm)) - max_coupling if np.any(knm > 0) else 0.0,
+        coupling_violation,
     ]
     if not all(np.isfinite(value) for value in g) or any(
         value > np.sqrt(np.finfo(float).max) for value in g

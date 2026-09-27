@@ -37,6 +37,14 @@ jobs:
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
           name: coverage-data-ffi
+      - name: Download Go measurement coverage
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: coverage-data-go
+      - name: Download Mojo measurement coverage
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: coverage-data-mojo
       - name: Download nn coverage (all shards)
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
         with:
@@ -44,7 +52,7 @@ jobs:
           merge-multiple: true
       - name: Combine coverage and generate XML
         run: |
-          coverage combine .coverage.test .coverage.ffi .coverage.nn-*
+          coverage combine .coverage.test .coverage.ffi .coverage.go .coverage.mojo .coverage.nn-*
           coverage xml -o coverage-python.xml
           coverage report
       - name: Upload merged coverage XML

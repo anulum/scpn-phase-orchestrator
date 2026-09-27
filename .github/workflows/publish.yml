@@ -51,7 +51,7 @@ jobs:
           --ignore=tests/test_quantum_bridge_live.py
           --ignore=tests/test_geometry_walk.py
           --ignore-glob=tests/test_nn_physics_validation*.py
-          -m "not slow and not performance"
+          -m "not slow and not performance and not native_runtime"
           -k "not performance"
       - run: python tools/check_version_sync.py
       - run: python tools/check_release_tag_version.py
