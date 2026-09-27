@@ -721,8 +721,8 @@
     "src/scpn_phase_orchestrator/supervisor/multiverse.py": 96.46,
     "src/scpn_phase_orchestrator/supervisor/multiverse_examples.py": 95.8,
     "src/scpn_phase_orchestrator/supervisor/multiverse_risk.py": 100.0,
-    "src/scpn_phase_orchestrator/supervisor/petri_adapter.py": 98.7,
-    "src/scpn_phase_orchestrator/supervisor/petri_net.py": 97.46,
+    "src/scpn_phase_orchestrator/supervisor/petri_adapter.py": 100,
+    "src/scpn_phase_orchestrator/supervisor/petri_net.py": 99.36,
     "src/scpn_phase_orchestrator/supervisor/policy.py": 100.0,
     "src/scpn_phase_orchestrator/supervisor/policy_diagnostics.py": 100.0,
     "src/scpn_phase_orchestrator/supervisor/policy_rules.py": 100.0,
@@ -1340,8 +1340,8 @@
     "src/scpn_phase_orchestrator/supervisor/multiverse.py": 94.79,
     "src/scpn_phase_orchestrator/supervisor/multiverse_examples.py": 96.96,
     "src/scpn_phase_orchestrator/supervisor/multiverse_risk.py": 100.0,
-    "src/scpn_phase_orchestrator/supervisor/petri_adapter.py": 97.36,
-    "src/scpn_phase_orchestrator/supervisor/petri_net.py": 96.15,
+    "src/scpn_phase_orchestrator/supervisor/petri_adapter.py": 100,
+    "src/scpn_phase_orchestrator/supervisor/petri_net.py": 98.07,
     "src/scpn_phase_orchestrator/supervisor/policy.py": 100.0,
     "src/scpn_phase_orchestrator/supervisor/policy_diagnostics.py": 100.0,
     "src/scpn_phase_orchestrator/supervisor/policy_rules.py": 98.24,
@@ -1408,5 +1408,6 @@
   "_comment_phase_wheel_json_names": "2026-09-27: visualization/torus.py measured at 71/71 statements and 26/26 branches through public phase-wheel JSON name refusal and existing torus presentation tests. File floors are 100%; production semantics unchanged.",
   "_comment_predictive_scalar_config": "2026-09-27: supervisor/predictive.py measured at 270/270 statements and 80/80 branches through public scalar configuration refusal, retained FEP assessment on invalid observations and existing OA/FEP hierarchy tests. File floors are 100%; production semantics unchanged.",
   "_comment_causal_public_refusal": "2026-09-27: three real public causal API refusal contracts exercised; focused 80-test report measures 141/148 statements and 61/66 branches. Conservative file floors 95.27% line and 92.42% branch retain all existing limits. Five numerical guard paths remain without public reproduction; no full-module or global 100% claim. Production semantics unchanged.",
-  "_comment_causal_candidate_admission": "2026-09-27: public temporal experiment JSON schema refusal, intervention matrix shape refusal, input preservation and recovery verified alongside existing real causal tests: 317/318 statements and 123/124 branches. Conservative file floors 99.68% line and 99.19% branch; post-normalization score guard remains open without public reproduction. Production semantics unchanged."
+  "_comment_causal_candidate_admission": "2026-09-27: public temporal experiment JSON schema refusal, intervention matrix shape refusal, input preservation and recovery verified alongside existing real causal tests: 317/318 statements and 123/124 branches. Conservative file floors 99.68% line and 99.19% branch; post-normalization score guard remains open without public reproduction. Production semantics unchanged.",
+  "_comment_petri_protocol_inputs": "2026-09-27: real protocol builder and net/adapter admission tests verify malformed numeric guard thresholds, JSON context non-mappings and blank regime-map place keys with token/input preservation and valid recovery. Adapter measures 77/77 statements and 38/38 branches; net 157/158 statements and 51/52 branches, retaining the unexercised post-validation operator guard. Production semantics and benchmark evidence unchanged."
 }
