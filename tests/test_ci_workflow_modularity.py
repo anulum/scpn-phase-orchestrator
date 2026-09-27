@@ -9,6 +9,7 @@
 
 from __future__ import annotations
 
+import ast
 import json
 import shlex
 import subprocess
@@ -234,7 +235,7 @@ def test_modularity_audit_rejects_duplicate_jobs_and_direct_coordinator_readers(
 ) -> None:
     """Reject shared job ownership and renewed test coupling to the coordinator."""
     policy = _policy()
-    duplicate = {
+    duplicate: inventory.WorkflowCategory = {
         "id": "duplicate-quality",
         "workflow": ".github/workflows/ci-duplicate-quality.yml",
         "caller_needs": [],
@@ -369,13 +370,36 @@ def test_native_measurement_contracts_run_in_prepared_jobs() -> None:
             for step in steps
             if step.get("name", "").startswith(f"Execute {backend.title()} measurement")
         )
-        tokens = shlex.split(contract["run"].splitlines()[0])
-        args = [token for token in tokens[1:] if not token.startswith("--cov")]
+        if backend == "julia":
+            program = "\n".join(contract["run"].splitlines()[1:-1])
+            tree = ast.parse(program)
+            assignment = next(
+                node
+                for node in tree.body
+                if isinstance(node, ast.Assign)
+                and any(
+                    isinstance(target, ast.Name) and target.id == "arguments"
+                    for target in node.targets
+                )
+            )
+            args = ast.literal_eval(assignment.value)
+            assert program.index("from juliacall import Main") < program.index(
+                "measurement.start()"
+            )
+            assert 'data_file=".coverage.julia", data_suffix=False' in program
+        else:
+            tokens = shlex.split(contract["run"].splitlines()[0])
+            args = [token for token in tokens[1:] if not token.startswith("--cov")]
         selected = collect(args)
-        assert len(selected) == 6
-        assert selected <= native
-        assert not selected & routed
-        routed |= selected
+        selected_native = selected & native
+        assert len(selected_native) == 6
+        assert selected - native
+        assert not selected_native & routed
+        routed |= selected_native
+        assert any("TestPoincareSectionParity" in name for name in selected)
+        assert any(
+            "test_public_divergence_uses_real_backend" in name for name in selected
+        )
         preceding = str(steps[: steps.index(contract)])
         assert "requirements/dev-lock.txt" in preceding
         if backend == "go":
