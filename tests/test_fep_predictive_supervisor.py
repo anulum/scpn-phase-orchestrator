@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+import json
+
 import numpy as np
 import pytest
 
@@ -33,6 +35,19 @@ def _state(r_value: float) -> UPDEState:
 
 
 class TestFEPPredictiveSupervisorValidation:
+    @pytest.mark.parametrize("field", ["dt", "target_R"])
+    @pytest.mark.parametrize("encoded_value", ["[0.01]", "[[0.01]]"])
+    def test_constructor_refuses_json_arrays_for_scalar_parameters(
+        self, field: str, encoded_value: str
+    ) -> None:
+        """A decoded numerical array cannot stand in for a scalar configuration."""
+        value = json.loads(encoded_value)
+        with pytest.raises(ValueError, match=field):
+            if field == "dt":
+                FEPPredictiveSupervisor(4, dt=value)
+            else:
+                FEPPredictiveSupervisor(4, dt=0.01, target_R=value)
+
     def test_rejects_invalid_constructor_values(self) -> None:
         with pytest.raises(ValueError, match="n_oscillators"):
             FEPPredictiveSupervisor(0, dt=0.01)
@@ -50,6 +65,31 @@ class TestFEPPredictiveSupervisorValidation:
 
 
 class TestFEPPredictionAssessment:
+    @pytest.mark.parametrize("field", ["phases", "omegas"])
+    @pytest.mark.parametrize("kind", ["text", "duration", "missing"])
+    def test_invalid_observation_preserves_last_assessment(
+        self, field: str, kind: str
+    ) -> None:
+        """Refused measurement aliases cannot replace the last accepted assessment."""
+        supervisor = FEPPredictiveSupervisor(4, dt=0.01)
+        phases = np.zeros(4)
+        omegas = np.ones(4)
+        previous = supervisor.assess(phases, omegas)
+        if kind == "text":
+            invalid = np.array(["0.0"] * 4)
+        elif kind == "duration":
+            invalid = np.arange(4).astype("timedelta64[ms]")
+        else:
+            invalid = np.array([None] * 4)
+        with pytest.raises(ValueError, match=f"{field} must be numeric"):
+            supervisor.assess(
+                invalid if field == "phases" else phases,
+                invalid if field == "omegas" else omegas,
+            )
+        assert supervisor.last_assessment is previous
+        np.testing.assert_array_equal(phases, np.zeros(4))
+        np.testing.assert_array_equal(omegas, np.ones(4))
+
     def test_assess_returns_audit_ready_metrics(self) -> None:
         supervisor = FEPPredictiveSupervisor(4, dt=0.01, target_R=0.8)
 
@@ -191,14 +231,46 @@ class TestFEPHierarchyAssessment:
             for child in hierarchy.children
         )
         assert record["hierarchy"] == "unit_test_hierarchy"
-        assert [child["name"] for child in record["children"]] == [
+        child_records = record["children"]
+        child_r_values = record["child_R_values"]
+        parent_phase_encoding = record["parent_phase_encoding"]
+        parent_record = record["parent"]
+        assert isinstance(child_records, list)
+        assert isinstance(child_r_values, list)
+        assert isinstance(parent_phase_encoding, list)
+        assert isinstance(parent_record, dict)
+        parent_assessment = parent_record["assessment"]
+        assert isinstance(parent_assessment, dict)
+        assert [child["name"] for child in child_records] == [
             "coherent_child",
             "dispersed_child",
         ]
-        assert len(record["child_R_values"]) == 2
-        assert len(record["parent_phase_encoding"]) == 2
-        assert record["parent"]["actions"]
-        assert 0.0 <= record["parent"]["assessment"]["observed_R"] <= 1.0
+        assert len(child_r_values) == 2
+        assert len(parent_phase_encoding) == 2
+        assert parent_record["actions"]
+        assert 0.0 <= parent_assessment["observed_R"] <= 1.0
+
+    @pytest.mark.parametrize(
+        "encoded_config",
+        [
+            '{"dt": [0.01]}',
+            '{"dt": 0.01, "parent_dt": [0.05]}',
+            '{"dt": 0.01, "child_target_R": [0.8]}',
+            '{"dt": 0.01, "parent_target_R": [0.8]}',
+        ],
+    )
+    def test_hierarchy_refuses_array_configuration_before_observation(
+        self, encoded_config: str
+    ) -> None:
+        """Invalid scalar configuration refuses the hierarchy without changing data."""
+        phases = np.array([0.0, 0.1])
+        omegas = np.array([0.9, 1.1])
+        children = {"region": (phases, omegas)}
+        config = json.loads(encoded_config)
+        with pytest.raises(ValueError, match="must be finite"):
+            assess_fep_hierarchy(children, **config)
+        np.testing.assert_array_equal(phases, [0.0, 0.1])
+        np.testing.assert_array_equal(omegas, [0.9, 1.1])
 
     def test_assess_fep_hierarchy_rejects_invalid_child_inputs(self) -> None:
         with pytest.raises(ValueError, match="at least one child"):

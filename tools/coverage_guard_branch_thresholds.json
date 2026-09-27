@@ -726,7 +726,7 @@
     "src/scpn_phase_orchestrator/supervisor/policy.py": 100.0,
     "src/scpn_phase_orchestrator/supervisor/policy_diagnostics.py": 100.0,
     "src/scpn_phase_orchestrator/supervisor/policy_rules.py": 100.0,
-    "src/scpn_phase_orchestrator/supervisor/predictive.py": 99.25,
+    "src/scpn_phase_orchestrator/supervisor/predictive.py": 100.0,
     "src/scpn_phase_orchestrator/supervisor/regimes.py": 100.0,
     "src/scpn_phase_orchestrator/supervisor/rust_backend.py": 100.0,
     "src/scpn_phase_orchestrator/supervisor/sheaf.py": 100.0,
@@ -1345,7 +1345,7 @@
     "src/scpn_phase_orchestrator/supervisor/policy.py": 100.0,
     "src/scpn_phase_orchestrator/supervisor/policy_diagnostics.py": 100.0,
     "src/scpn_phase_orchestrator/supervisor/policy_rules.py": 98.24,
-    "src/scpn_phase_orchestrator/supervisor/predictive.py": 97.5,
+    "src/scpn_phase_orchestrator/supervisor/predictive.py": 100.0,
     "src/scpn_phase_orchestrator/supervisor/regimes.py": 100.0,
     "src/scpn_phase_orchestrator/supervisor/rust_backend.py": 100.0,
     "src/scpn_phase_orchestrator/supervisor/sheaf.py": 98.75,
@@ -1405,5 +1405,6 @@
   },
   "_comment_control_barrier_certificates": "2026-09-27: control_barrier.py retains 100% line and branch floors after real certificate refusal and governor/policy admission tests; focused public runtime suite measures 238/238 statements and 92/92 branches. Production semantics unchanged.",
   "_comment_network_json_containers": "2026-09-27: visualization/network.py measured at 82/82 statements and 36/36 branches through real graph and heatmap JSON container refusal plus existing presentation tests. File floors are 100%; production semantics unchanged.",
-  "_comment_phase_wheel_json_names": "2026-09-27: visualization/torus.py measured at 71/71 statements and 26/26 branches through public phase-wheel JSON name refusal and existing torus presentation tests. File floors are 100%; production semantics unchanged."
+  "_comment_phase_wheel_json_names": "2026-09-27: visualization/torus.py measured at 71/71 statements and 26/26 branches through public phase-wheel JSON name refusal and existing torus presentation tests. File floors are 100%; production semantics unchanged.",
+  "_comment_predictive_scalar_config": "2026-09-27: supervisor/predictive.py measured at 270/270 statements and 80/80 branches through public scalar configuration refusal, retained FEP assessment on invalid observations and existing OA/FEP hierarchy tests. File floors are 100%; production semantics unchanged."
 }
