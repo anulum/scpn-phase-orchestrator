@@ -57,7 +57,7 @@
     "src/scpn_phase_orchestrator/actuation/_qp.py": 64.86,
     "src/scpn_phase_orchestrator/actuation/_qp_admm.py": 100.0,
     "src/scpn_phase_orchestrator/actuation/constraints.py": 98.68,
-    "src/scpn_phase_orchestrator/actuation/control_barrier.py": 99.15,
+    "src/scpn_phase_orchestrator/actuation/control_barrier.py": 100.0,
     "src/scpn_phase_orchestrator/actuation/foundation_model_governor.py": 100.0,
     "src/scpn_phase_orchestrator/actuation/hdl_compiler.py": 100.0,
     "src/scpn_phase_orchestrator/actuation/koopman_mpc.py": 100.0,
@@ -803,5 +803,6 @@
     "src/scpn_phase_orchestrator/visualization/streamer.py": 100.0,
     "src/scpn_phase_orchestrator/visualization/torus.py": 98.59
   },
-  "_comment_measurement_sources": "2026-09-27: earlier 101-module measurement floors preserved; exact-head hosted evidence supplies global, domain and file ratchets. Every remaining line, condition, exclusion and configured omission stays in the internal coverage backlog."
+  "_comment_measurement_sources": "2026-09-27: earlier 101-module measurement floors preserved; exact-head hosted evidence supplies global, domain and file ratchets. Every remaining line, condition, exclusion and configured omission stays in the internal coverage backlog.",
+  "_comment_control_barrier_certificates": "2026-09-27: control_barrier.py retains 100% line and branch floors after real certificate refusal and governor/policy admission tests; focused public runtime suite measures 238/238 statements and 92/92 branches. Production semantics unchanged."
 }
