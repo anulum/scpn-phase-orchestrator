@@ -6,6 +6,8 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — FEP predictive supervisor tests
 
+"""Exercise FEP configuration, observation, action and hierarchy audit contracts."""
+
 from __future__ import annotations
 
 import json
@@ -35,6 +37,8 @@ def _state(r_value: float) -> UPDEState:
 
 
 class TestFEPPredictiveSupervisorValidation:
+    """Refuse malformed configuration and observation dimensions at public APIs."""
+
     @pytest.mark.parametrize("field", ["dt", "target_R"])
     @pytest.mark.parametrize("encoded_value", ["[0.01]", "[[0.01]]"])
     def test_constructor_refuses_json_arrays_for_scalar_parameters(
@@ -65,6 +69,8 @@ class TestFEPPredictiveSupervisorValidation:
 
 
 class TestFEPPredictionAssessment:
+    """Verify assessment records, reset and preservation after invalid input."""
+
     @pytest.mark.parametrize("field", ["phases", "omegas"])
     @pytest.mark.parametrize("kind", ["text", "duration", "missing"])
     def test_invalid_observation_preserves_last_assessment(
@@ -202,7 +208,10 @@ class TestFEPPipelineWiring:
 
 
 class TestFEPHierarchyAssessment:
+    """Verify child and parent audit records and hierarchy input refusal."""
+
     def test_assess_fep_hierarchy_emits_child_and_parent_audit_records(self) -> None:
+        """The real hierarchy emits named children and a bounded parent assessment."""
         children = {
             "coherent_child": (
                 np.array([0.0, 0.02, 0.04], dtype=np.float64),
