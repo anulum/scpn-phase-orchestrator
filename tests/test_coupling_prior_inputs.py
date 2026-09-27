@@ -41,3 +41,10 @@ def test_prior_preserves_real_numeric_objects_and_critical_coupling() -> None:
     actual = prior.estimate_Kc(np.array([np.int64(1), np.float64(2)], dtype=object), 2)
     assert actual == expected
     assert actual.K_c_estimate > 0
+
+
+def test_prior_rejects_real_frequency_objects_outside_float_range() -> None:
+    omegas = np.array([10**400, 2], dtype=object)
+    with pytest.raises(ValueError, match="finite 1-D frequency vector") as error:
+        UniversalPrior().estimate_Kc(omegas, 2)
+    assert isinstance(error.value.__cause__, OverflowError)

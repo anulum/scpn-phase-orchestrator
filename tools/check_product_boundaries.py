@@ -39,6 +39,7 @@ CORE_PACKAGES = frozenset(
         "ssgf",
         "supervisor",
         "upde",
+        "_array_types",
         "_compat",
         "_validation",
     }

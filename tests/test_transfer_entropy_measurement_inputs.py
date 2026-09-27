@@ -103,3 +103,39 @@ def test_public_pair_preserves_real_numeric_object_entropy() -> None:
     )
     assert actual == pytest.approx(expected, abs=1e-12)
     assert 0 <= actual <= np.log(2)
+
+
+@pytest.mark.parametrize(
+    "pair", [phase_transfer_entropy, phase_te_go, phase_te_julia, phase_te_mojo]
+)
+@pytest.mark.parametrize("argument", ["source", "target"])
+def test_pairwise_ingress_rejects_real_objects_outside_float_range(
+    pair: PairFn, argument: str
+) -> None:
+    real = np.array([0.0, 1.0, 2.0, 3.0, 2.0, 1.0])
+    invalid = real.astype(object)
+    invalid[1] = 10**400
+    with pytest.raises(ValueError, match=argument) as error:
+        pair(
+            invalid if argument == "source" else real,
+            invalid if argument == "target" else real,
+            2,
+        )
+    assert isinstance(error.value.__cause__, OverflowError)
+
+
+@pytest.mark.parametrize("matrix", [te_matrix_go, te_matrix_julia, te_matrix_mojo])
+def test_direct_matrix_ingress_rejects_real_objects_outside_float_range(
+    matrix: MatrixFn,
+) -> None:
+    invalid = np.array([0, 10**400, 2, 1, 2, 3], dtype=object)
+    with pytest.raises(ValueError, match="phase_series") as error:
+        matrix(invalid, 2, 3, 2)
+    assert isinstance(error.value.__cause__, OverflowError)
+
+
+def test_public_matrix_rejects_real_objects_outside_float_range() -> None:
+    series = np.array([[0, 10**400, 2], [1, 2, 3]], dtype=object)
+    with pytest.raises(ValueError, match="phase_series") as error:
+        transfer_entropy_matrix(series, n_bins=2)
+    assert isinstance(error.value.__cause__, OverflowError)

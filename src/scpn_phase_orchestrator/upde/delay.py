@@ -27,6 +27,7 @@ from typing import TypeAlias, cast
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
 from scpn_phase_orchestrator._compat import TWO_PI
 from scpn_phase_orchestrator.upde._julia_runtime import require_juliacall_main
 
@@ -206,8 +207,9 @@ def _validate_state_array(
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
     try:
+        require_real_values(value, name=name, allow_object=True)
         arr = np.asarray(value, dtype=np.float64)
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, OverflowError) as exc:
         raise ValueError(f"{name} must be a finite float array") from exc
     if arr.shape != shape:
         raise ValueError(f"{name} shape {arr.shape} does not match {shape}")
@@ -223,8 +225,9 @@ def _validate_phase_output(value: object, *, n_oscillators: int) -> FloatArray:
             "delayed engine output must not contain numeric-string aliases"
         )
     try:
+        require_real_values(value, name="delayed engine output", allow_object=True)
         arr = np.asarray(value, dtype=np.float64)
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, OverflowError) as exc:
         raise ValueError("delayed engine output must be a finite phase vector") from exc
     if arr.shape != (n_oscillators,):
         raise ValueError(
@@ -323,7 +326,8 @@ class DelayBuffer:
         Parameters
         ----------
         phases : FloatArray
-            Oscillator phases in radians, shape ``(N,)``.
+            Plain real oscillator phases in radians, shape ``(N,)``.
+            Text, boolean, complex and temporal measurement aliases are rejected.
         """
         phases64 = _validate_state_array(phases, name="phases", shape=(self._n,))
         self._buffer.append(phases64.copy())
@@ -401,7 +405,8 @@ class DelayedEngine:
         Parameters
         ----------
         phases : FloatArray
-            Oscillator phases in radians, shape ``(N,)``.
+            Plain real oscillator phases in radians, shape ``(N,)``.
+            Text, boolean, complex and temporal measurement aliases are rejected.
         omegas : FloatArray
             Natural frequencies in rad/s, shape ``(N,)``.
         knm : FloatArray
@@ -461,7 +466,8 @@ class DelayedEngine:
         Parameters
         ----------
         phases : FloatArray
-            Oscillator phases in radians, shape ``(N,)``.
+            Plain real oscillator phases in radians, shape ``(N,)``.
+            Text, boolean, complex and temporal measurement aliases are rejected.
         omegas : FloatArray
             Natural frequencies in rad/s, shape ``(N,)``.
         knm : FloatArray

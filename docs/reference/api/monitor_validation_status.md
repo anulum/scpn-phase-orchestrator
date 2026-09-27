@@ -51,4 +51,8 @@ A test drift-guard fails closed if a newly added public monitor module is left
 neither classified nor explicitly excluded, so the honest posture cannot silently
 rot as the monitor suite grows.
 
+The twin-confidence Prometheus exporter is a support utility, rather than an
+independent diagnostic monitor. Its export does not change the evidence tier
+of the confidence summary it renders.
+
 ::: scpn_phase_orchestrator.monitor.validation_status
