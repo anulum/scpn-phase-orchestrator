@@ -8,6 +8,9 @@
 
 """Domain-adaptable early-warning suite over a neutral phase-observable contract.
 
+Measurement arrays and scalar controls reject boolean, text and temporal aliases
+before conversion. Real numeric object samples remain supported.
+
 The early-warning detectors — critical slowing down
 (:mod:`~scpn_phase_orchestrator.monitor.critical_slowing_down`), rising
 synchronisation (:mod:`~scpn_phase_orchestrator.monitor.synchronisation`), and
@@ -53,6 +56,7 @@ from typing import Protocol, runtime_checkable
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
 from scpn_phase_orchestrator.monitor.critical_slowing_down import (
     CriticalSlowingDownWarning,
     critical_slowing_down_warning,
@@ -401,6 +405,7 @@ def _validate_field(value: object, name: str) -> FloatArray:
             raise ValueError(f"{name} must be a finite real array")
     elif raw.dtype.kind not in "iuf":
         raise ValueError(f"{name} must be a finite real array")
+    require_real_values(value, name=name, allow_object=True)
     array = raw.astype(np.float64, copy=True)
     if array.ndim != 2:
         raise ValueError(f"{name} shape {raw.shape} must be two-dimensional (N, T)")
@@ -426,6 +431,7 @@ def _validate_series(value: object, name: str) -> FloatArray:
             raise ValueError(f"{name} must be a finite real array")
     elif raw.dtype.kind not in "iuf":
         raise ValueError(f"{name} must be a finite real array")
+    require_real_values(value, name=name, allow_object=True)
     array = raw.astype(np.float64, copy=True)
     if array.ndim != 1:
         raise ValueError(f"{name} shape {raw.shape} must be one-dimensional (T,)")
@@ -440,6 +446,7 @@ def _positive_real(value: object, name: str) -> float:
     """Return ``value`` as a strictly positive finite real, else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a positive real, got {value!r}")
+    require_real_values(value, name=name)
     result = float(value)
     if not np.isfinite(result) or result <= 0.0:
         raise ValueError(f"{name} must be finite and positive, got {result}")
@@ -450,6 +457,7 @@ def _non_negative_real(value: object, name: str) -> float:
     """Return ``value`` as a non-negative finite real, else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a non-negative finite real")
+    require_real_values(value, name=name)
     result = float(value)
     if not np.isfinite(result) or result < 0.0:
         raise ValueError(f"{name} must be a non-negative finite real")

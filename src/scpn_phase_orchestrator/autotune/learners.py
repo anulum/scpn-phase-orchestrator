@@ -18,6 +18,7 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
 from scpn_phase_orchestrator.autotune.policy_search import (
     ReplayPolicyEvaluator,
     ReplayPolicySearchResult,
@@ -411,6 +412,7 @@ def _mean_seed_k(seed: KnobPolicyCandidate) -> float:
     ):
         raise ValueError("seed.K must be real-valued")
     try:
+        require_real_values(seed.K, name="seed.K", allow_object=True)
         values = raw.astype(np.float64, copy=False)
     except (TypeError, ValueError) as exc:
         raise ValueError("seed.K must be real-valued") from exc

@@ -785,3 +785,11 @@ or duplicate sender sequences are rejected before they can influence local
 state.
 The synchronization operation then applies bounded circular correction so that
 accepted peer data can guide phase alignment without creating an unbounded jump.
+
+## Original numerical input types
+
+Measurement and policy arrays are checked before conversion to floating point.
+Numeric text, boolean and temporal aliases are refused; supported numeric-object
+inputs retain the owning API's shape and finiteness checks. See
+[numerical source types](numerical_source_types.md) for the boundary contracts and
+current language measurements.

@@ -16,6 +16,8 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
+
 FloatArray: TypeAlias = NDArray[np.float64]
 ArrayPayload: TypeAlias = NDArray[np.generic]
 
@@ -77,6 +79,7 @@ def validate_phase_distance_backend_input(phases: object) -> FloatArray:
     if _contains_complex_alias(raw):
         raise ValueError("phases must contain real-valued phase samples")
     try:
+        require_real_values(phases, name="phases", allow_object=True)
         array = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError("phases must be a one-dimensional float array") from exc
@@ -169,6 +172,7 @@ def validate_phase_distance_backend_output(
     if _contains_complex_alias(raw):
         raise ValueError("phase distance backend output must contain real values")
     try:
+        require_real_values(distances, name="distances", allow_object=True)
         array = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError("phase distance backend output must be numeric") from exc

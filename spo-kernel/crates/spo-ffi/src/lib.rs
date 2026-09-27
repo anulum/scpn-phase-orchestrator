@@ -15,7 +15,48 @@
 //! unsafe blocks internally. We forbid undocumented unsafe instead.
 #![forbid(clippy::undocumented_unsafe_blocks)]
 
+mod adaptive_coupling;
+mod call_arguments;
+mod chimera_boundary;
+mod coupling_builder;
+mod delayed_boundary;
+mod embedding_boundary;
+mod entropy_boundary;
+mod hypergraph_boundary;
+mod inertial_boundary;
+mod measurement_types;
+mod ordinal_entropy;
+mod phase_lag;
+mod phase_quality;
+mod return_types;
+mod simplicial_boundary;
+mod splitting_boundary;
+mod stability_boundary;
+mod swarmalator_boundary;
+mod torus_boundary;
+
+use adaptive_coupling::te_adapt_coupling_rust;
+use coupling_builder::PyCouplingBuilder;
+use delayed_boundary::delayed_kuramoto_run_rust;
+use embedding_boundary::{delay_embed_rust, optimal_delay_rust, optimal_dimension_rust};
+use hypergraph_boundary::{hypergraph_run_rust, PyHypergraphStepper};
+use inertial_boundary::{inertial_run_rust, inertial_step_rust};
+use measurement_types::{real_values, PlainI32, PlainI64, PlainReal, PlainU64, PlainUsize};
+use ordinal_entropy::{ordinal_pattern_sequence, transition_entropy};
+use phase_lag::PyLagModel;
+use phase_quality::PyPhaseQualityScorer;
+use return_types::{
+    ArrayPair, ArrayTriple, ArraysWithCount, EiBalanceMetrics, PhaseExtractionOutput, RqaMetrics,
+};
+use simplicial_boundary::{simplicial_run_rust, PySimplicialStepper};
+use splitting_boundary::{splitting_run_rust, PySplittingStepper};
+use stability_boundary::{
+    basin_stability_rust, find_critical_coupling_bif_rust, steady_state_r_rust,
+    trace_sync_transition_rust,
+};
 use std::collections::HashMap;
+use swarmalator_boundary::{swarmalator_run_rust, PySwarmalatorStepper};
+use torus_boundary::torus_run_rust;
 
 use numpy::{PyArray1, PyArrayMethods, PyReadonlyArray1};
 use pyo3::exceptions::PyValueError;
@@ -23,27 +64,25 @@ use pyo3::prelude::*;
 use pyo3::types::PyDict;
 
 use spo_engine::{
-    basin_stability, bifurcation, carrier, chimera, connectome,
-    coupling::{project_knm, spatial_modulate_flat, CouplingBuilder, SpatialDecayForm},
-    coupling_est, delay, dimension, ei_balance, embedding, entropy_prod, envelope, ethical, evs,
-    free_energy, freq_id, geometric, hodge, hypergraph,
+    carrier, connectome,
+    coupling::{spatial_modulate_flat, SpatialDecayForm},
+    coupling_est, dimension, ei_balance, envelope, ethical, evs, free_energy, freq_id, hodge,
     imprint::ImprintModel,
     inertial, itpc,
-    lags::LagModel,
     lif_ensemble::{LIFEnsemble, LIFParams},
     lyapunov, market, order_params, pac, phase_extract,
     plasticity::PlasticityModel,
     poincare, prior, psychedelic, recurrence, reduction,
     sheaf_upde::SheafUPDEStepper,
-    simplicial, sindy, sleep_staging,
+    sindy, sleep_staging,
     sparse_upde::SparseUPDEStepper,
-    spectral, splitting, ssgf_costs,
+    spectral, ssgf_costs,
     stuart_landau::StuartLandauStepper,
-    swarmalator, te_adaptive, transfer_entropy, twin_confidence,
+    transfer_entropy, twin_confidence,
     upde::UPDEStepper,
     winding,
 };
-use spo_oscillators::{informational, physical, quality::PhaseQualityScorer, symbolic};
+use spo_oscillators::{informational, physical, symbolic};
 use spo_supervisor::{
     active_inference::ActiveInferenceAgent,
     boundaries::{BoundaryDef, BoundaryObserver, Severity},
@@ -55,8 +94,7 @@ use spo_supervisor::{
     rule_engine,
 };
 use spo_types::{
-    ControlAction, CouplingConfig, IntegrationConfig, Knob, LayerState, Method, Regime, SpoError,
-    UPDEState,
+    ControlAction, IntegrationConfig, Knob, LayerState, Method, Regime, SpoError, UPDEState,
 };
 
 fn spo_err(e: SpoError) -> PyErr {
@@ -534,70 +572,32 @@ impl PyUPDEStepper {
     }
 }
 
-// ─── PyCouplingBuilder ──────────────────────────────────────────────
-
-#[pyclass(name = "PyCouplingBuilder")]
-struct PyCouplingBuilder;
-
-#[pymethods]
-impl PyCouplingBuilder {
-    #[new]
-    fn new() -> Self {
-        Self
-    }
-
-    /// Build coupling matrix. Returns dict with knm, alpha, n.
-    fn build<'py>(
-        &self,
-        py: Python<'py>,
-        n: usize,
-        base_strength: f64,
-        decay_alpha: f64,
-    ) -> PyResult<Bound<'py, PyDict>> {
-        let config = CouplingConfig {
-            base_strength,
-            decay_alpha,
-        };
-        let cs = CouplingBuilder::build(n, &config).map_err(spo_err)?;
-        let dict = PyDict::new(py);
-        dict.set_item("knm", cs.knm)?;
-        dict.set_item("alpha", cs.alpha)?;
-        dict.set_item("n", cs.n)?;
-        Ok(dict)
-    }
-
-    /// Project Knm to enforce symmetry, non-negative, zero diagonal.
-    #[staticmethod]
-    fn project(mut knm: Vec<f64>, n: usize) -> PyResult<Vec<f64>> {
-        project_knm(&mut knm, n).map_err(spo_err)?;
-        Ok(knm)
-    }
-}
-
 #[pyfunction]
 #[allow(clippy::too_many_arguments)]
 fn spatial_modulate_rust(
-    knm: Vec<f64>,
-    positions: Vec<f64>,
-    n: usize,
-    dim: usize,
-    k_base: f64,
-    decay_form_code: i32,
-    decay_exponent: f64,
-    decay_length_scale: f64,
-    epsilon: f64,
+    knm: &Bound<'_, PyAny>,
+    positions: &Bound<'_, PyAny>,
+    n: PlainUsize,
+    dim: PlainUsize,
+    k_base: PlainReal,
+    decay_form_code: PlainI32,
+    decay_exponent: PlainReal,
+    decay_length_scale: PlainReal,
+    epsilon: PlainReal,
 ) -> PyResult<Vec<f64>> {
-    let decay_form = SpatialDecayForm::from_code(decay_form_code).map_err(spo_err)?;
+    let knm = real_values(knm, "knm")?;
+    let positions = real_values(positions, "positions")?;
+    let decay_form = SpatialDecayForm::from_code(decay_form_code.0).map_err(spo_err)?;
     spatial_modulate_flat(
         &knm,
         &positions,
-        n,
-        dim,
-        k_base,
+        n.0,
+        dim.0,
+        k_base.0,
         decay_form,
-        decay_exponent,
-        decay_length_scale,
-        epsilon,
+        decay_exponent.0,
+        decay_length_scale.0,
+        epsilon.0,
     )
     .map_err(spo_err)
 }
@@ -844,72 +844,6 @@ impl PyActionProjector {
     }
 }
 
-// ─── PyPhaseQualityScorer ───────────────────────────────────────────
-
-#[pyclass(name = "PyPhaseQualityScorer")]
-struct PyPhaseQualityScorer {
-    inner: PhaseQualityScorer,
-}
-
-#[pymethods]
-impl PyPhaseQualityScorer {
-    #[new]
-    #[pyo3(signature = (collapse_threshold = 0.1, min_quality = 0.3))]
-    fn new(collapse_threshold: f64, min_quality: f64) -> Self {
-        Self {
-            inner: PhaseQualityScorer {
-                collapse_threshold,
-                min_quality,
-            },
-        }
-    }
-
-    fn score(&self, qualities: Vec<f64>, amplitudes: Vec<f64>) -> f64 {
-        self.inner.score(&qualities, &amplitudes)
-    }
-
-    fn is_collapsed(&self, qualities: Vec<f64>) -> bool {
-        self.inner.is_collapsed(&qualities)
-    }
-
-    fn downweight_mask(&self, qualities: Vec<f64>) -> Vec<f64> {
-        self.inner.downweight_mask(&qualities)
-    }
-}
-
-// ─── PyLagModel ─────────────────────────────────────────────────────
-
-#[pyclass(name = "PyLagModel")]
-struct PyLagModel {
-    inner: LagModel,
-}
-
-#[pymethods]
-impl PyLagModel {
-    #[staticmethod]
-    fn estimate(distances: Vec<f64>, n: usize, speed: f64) -> PyResult<Self> {
-        let inner = LagModel::estimate_from_distances(&distances, n, speed).map_err(spo_err)?;
-        Ok(Self { inner })
-    }
-
-    #[staticmethod]
-    fn zeros(n: usize) -> Self {
-        Self {
-            inner: LagModel::zeros(n),
-        }
-    }
-
-    #[getter]
-    fn alpha(&self) -> Vec<f64> {
-        self.inner.alpha.clone()
-    }
-
-    #[getter]
-    fn n(&self) -> usize {
-        self.inner.n
-    }
-}
-
 // ─── PySupervisorPolicy ─────────────────────────────────────────────
 
 #[pyclass(name = "PySupervisorPolicy")]
@@ -973,14 +907,14 @@ impl PyInertialStepper {
 
     fn step<'py>(
         &mut self,
-        py: Python<'py>,
         theta: PyReadonlyArray1<'py, f64>,
         omega_dot: PyReadonlyArray1<'py, f64>,
         power: PyReadonlyArray1<'py, f64>,
         knm: PyReadonlyArray1<'py, f64>,
         inertia: PyReadonlyArray1<'py, f64>,
         damping: PyReadonlyArray1<'py, f64>,
-    ) -> PyResult<(Bound<'py, PyArray1<f64>>, Bound<'py, PyArray1<f64>>)> {
+    ) -> PyResult<ArrayPair<'py>> {
+        let py = theta.py();
         let mut th = theta
             .to_vec()
             .map_err(|_| PyValueError::new_err("theta not contiguous"))?;
@@ -1005,330 +939,6 @@ impl PyInertialStepper {
             .map_err(spo_err)?;
 
         Ok((PyArray1::from_vec(py, th), PyArray1::from_vec(py, od)))
-    }
-}
-
-// ─── PyHypergraphStepper ──────────────────────────────────────────────────
-
-#[pyclass(name = "PyHypergraphStepper")]
-struct PyHypergraphStepper {
-    inner: hypergraph::HypergraphStepper,
-}
-
-#[pymethods]
-impl PyHypergraphStepper {
-    #[new]
-    #[pyo3(signature = (n, dt = 0.01))]
-    fn new(n: usize, dt: f64) -> PyResult<Self> {
-        let config = IntegrationConfig {
-            dt,
-            ..Default::default()
-        };
-        let inner = hypergraph::HypergraphStepper::new(n, config).map_err(spo_err)?;
-        Ok(Self { inner })
-    }
-
-    fn step<'py>(
-        &mut self,
-        py: Python<'py>,
-        phases: PyReadonlyArray1<'py, f64>,
-        omegas: PyReadonlyArray1<'py, f64>,
-        edges: Vec<(Vec<usize>, f64)>,
-        knm: PyReadonlyArray1<'py, f64>,
-        alpha: PyReadonlyArray1<'py, f64>,
-        zeta: f64,
-        psi: f64,
-    ) -> PyResult<Bound<'py, PyArray1<f64>>> {
-        let mut p = phases
-            .to_vec()
-            .map_err(|_| PyValueError::new_err("phases not contiguous"))?;
-        let o = omegas
-            .as_slice()
-            .map_err(|e| PyValueError::new_err(e.to_string()))?;
-        let k = knm
-            .as_slice()
-            .map_err(|e| PyValueError::new_err(e.to_string()))?;
-        let a = alpha
-            .as_slice()
-            .map_err(|e| PyValueError::new_err(e.to_string()))?;
-
-        let h_edges: Vec<hypergraph::Hyperedge> = edges
-            .into_iter()
-            .map(|(nodes, strength)| hypergraph::Hyperedge { nodes, strength })
-            .collect();
-
-        self.inner
-            .step(&mut p, o, &h_edges, k, a, zeta, psi)
-            .map_err(spo_err)?;
-        Ok(PyArray1::from_vec(py, p))
-    }
-
-    fn run<'py>(
-        &mut self,
-        py: Python<'py>,
-        phases: PyReadonlyArray1<'py, f64>,
-        omegas: PyReadonlyArray1<'py, f64>,
-        edges: Vec<(Vec<usize>, f64)>,
-        knm: PyReadonlyArray1<'py, f64>,
-        alpha: PyReadonlyArray1<'py, f64>,
-        zeta: f64,
-        psi: f64,
-        n_steps: usize,
-    ) -> PyResult<Bound<'py, PyArray1<f64>>> {
-        let mut p = phases
-            .to_vec()
-            .map_err(|_| PyValueError::new_err("phases not contiguous"))?;
-        let o = omegas
-            .as_slice()
-            .map_err(|e| PyValueError::new_err(e.to_string()))?;
-        let k = knm
-            .as_slice()
-            .map_err(|e| PyValueError::new_err(e.to_string()))?;
-        let a = alpha
-            .as_slice()
-            .map_err(|e| PyValueError::new_err(e.to_string()))?;
-
-        let h_edges: Vec<hypergraph::Hyperedge> = edges
-            .into_iter()
-            .map(|(nodes, strength)| hypergraph::Hyperedge { nodes, strength })
-            .collect();
-
-        self.inner
-            .run(&mut p, o, &h_edges, k, a, zeta, psi, n_steps)
-            .map_err(spo_err)?;
-        Ok(PyArray1::from_vec(py, p))
-    }
-
-    fn order_parameter(&self) -> (f64, f64) {
-        self.inner.order_parameter()
-    }
-}
-
-// ─── PySplittingStepper ──────────────────────────────────────────────────
-
-#[pyclass(name = "PySplittingStepper")]
-struct PySplittingStepper {
-    inner: splitting::SplittingStepper,
-}
-
-#[pymethods]
-impl PySplittingStepper {
-    #[new]
-    #[pyo3(signature = (n, dt = 0.01))]
-    fn new(n: usize, dt: f64) -> PyResult<Self> {
-        let config = IntegrationConfig {
-            dt,
-            ..Default::default()
-        };
-        let inner = splitting::SplittingStepper::new(n, config).map_err(spo_err)?;
-        Ok(Self { inner })
-    }
-
-    fn step<'py>(
-        &mut self,
-        py: Python<'py>,
-        phases: PyReadonlyArray1<'py, f64>,
-        omegas: PyReadonlyArray1<'py, f64>,
-        knm: PyReadonlyArray1<'py, f64>,
-        alpha: PyReadonlyArray1<'py, f64>,
-        zeta: f64,
-        psi: f64,
-    ) -> PyResult<Bound<'py, PyArray1<f64>>> {
-        let mut p = phases
-            .to_vec()
-            .map_err(|_| PyValueError::new_err("phases not contiguous"))?;
-        let o = omegas
-            .as_slice()
-            .map_err(|e| PyValueError::new_err(e.to_string()))?;
-        let k = knm
-            .as_slice()
-            .map_err(|e| PyValueError::new_err(e.to_string()))?;
-        let a = alpha
-            .as_slice()
-            .map_err(|e| PyValueError::new_err(e.to_string()))?;
-
-        self.inner
-            .step(&mut p, o, k, a, zeta, psi)
-            .map_err(spo_err)?;
-        Ok(PyArray1::from_vec(py, p))
-    }
-
-    fn run<'py>(
-        &mut self,
-        py: Python<'py>,
-        phases: PyReadonlyArray1<'py, f64>,
-        omegas: PyReadonlyArray1<'py, f64>,
-        knm: PyReadonlyArray1<'py, f64>,
-        alpha: PyReadonlyArray1<'py, f64>,
-        zeta: f64,
-        psi: f64,
-        n_steps: usize,
-    ) -> PyResult<Bound<'py, PyArray1<f64>>> {
-        let mut p = phases
-            .to_vec()
-            .map_err(|_| PyValueError::new_err("phases not contiguous"))?;
-        let o = omegas
-            .as_slice()
-            .map_err(|e| PyValueError::new_err(e.to_string()))?;
-        let k = knm
-            .as_slice()
-            .map_err(|e| PyValueError::new_err(e.to_string()))?;
-        let a = alpha
-            .as_slice()
-            .map_err(|e| PyValueError::new_err(e.to_string()))?;
-
-        self.inner
-            .run(&mut p, o, k, a, zeta, psi, n_steps)
-            .map_err(spo_err)?;
-        Ok(PyArray1::from_vec(py, p))
-    }
-
-    fn order_parameter(&self) -> (f64, f64) {
-        self.inner.order_parameter()
-    }
-}
-
-// ─── PySwarmalatorStepper ────────────────────────────────────────────────
-
-#[pyclass(name = "PySwarmalatorStepper")]
-struct PySwarmalatorStepper {
-    inner: swarmalator::SwarmalatorStepper,
-}
-
-#[pymethods]
-impl PySwarmalatorStepper {
-    #[new]
-    #[pyo3(signature = (n, dim, dt = 0.01))]
-    fn new(n: usize, dim: usize, dt: f64) -> PyResult<Self> {
-        let config = IntegrationConfig {
-            dt,
-            ..Default::default()
-        };
-        let inner = swarmalator::SwarmalatorStepper::new(n, dim, config).map_err(spo_err)?;
-        Ok(Self { inner })
-    }
-
-    fn step<'py>(
-        &mut self,
-        py: Python<'py>,
-        pos: PyReadonlyArray1<'py, f64>,
-        phases: PyReadonlyArray1<'py, f64>,
-        omegas: PyReadonlyArray1<'py, f64>,
-        a: f64,
-        b: f64,
-        j: f64,
-        k: f64,
-    ) -> PyResult<(Bound<'py, PyArray1<f64>>, Bound<'py, PyArray1<f64>>)> {
-        let mut p_pos = pos
-            .to_vec()
-            .map_err(|_| PyValueError::new_err("pos not contiguous"))?;
-        let mut p_phases = phases
-            .to_vec()
-            .map_err(|_| PyValueError::new_err("phases not contiguous"))?;
-        let o = omegas
-            .as_slice()
-            .map_err(|e| PyValueError::new_err(e.to_string()))?;
-
-        self.inner
-            .step(&mut p_pos, &mut p_phases, o, a, b, j, k)
-            .map_err(spo_err)?;
-
-        Ok((
-            PyArray1::from_vec(py, p_pos),
-            PyArray1::from_vec(py, p_phases),
-        ))
-    }
-
-    fn order_parameter(&self) -> (f64, f64) {
-        self.inner.order_parameter()
-    }
-}
-
-// ─── PySimplicialStepper ──────────────────────────────────────────────────
-
-#[pyclass(name = "PySimplicialStepper")]
-struct PySimplicialStepper {
-    inner: simplicial::SimplicialStepper,
-}
-
-#[pymethods]
-impl PySimplicialStepper {
-    #[new]
-    #[pyo3(signature = (n, dt = 0.01))]
-    fn new(n: usize, dt: f64) -> PyResult<Self> {
-        let config = IntegrationConfig {
-            dt,
-            ..Default::default()
-        };
-        let inner = simplicial::SimplicialStepper::new(n, config).map_err(spo_err)?;
-        Ok(Self { inner })
-    }
-
-    fn step<'py>(
-        &mut self,
-        py: Python<'py>,
-        phases: PyReadonlyArray1<'py, f64>,
-        omegas: PyReadonlyArray1<'py, f64>,
-        knm: PyReadonlyArray1<'py, f64>,
-        alpha: PyReadonlyArray1<'py, f64>,
-        zeta: f64,
-        psi: f64,
-        sigma2: f64,
-    ) -> PyResult<Bound<'py, PyArray1<f64>>> {
-        let mut p = phases
-            .to_vec()
-            .map_err(|_| PyValueError::new_err("phases not contiguous"))?;
-        let o = omegas
-            .as_slice()
-            .map_err(|e| PyValueError::new_err(e.to_string()))?;
-        let k = knm
-            .as_slice()
-            .map_err(|e| PyValueError::new_err(e.to_string()))?;
-        let a = alpha
-            .as_slice()
-            .map_err(|e| PyValueError::new_err(e.to_string()))?;
-
-        self.inner
-            .step(&mut p, o, k, a, zeta, psi, sigma2)
-            .map_err(spo_err)?;
-
-        Ok(PyArray1::from_vec(py, p))
-    }
-
-    fn run<'py>(
-        &mut self,
-        py: Python<'py>,
-        phases: PyReadonlyArray1<'py, f64>,
-        omegas: PyReadonlyArray1<'py, f64>,
-        knm: PyReadonlyArray1<'py, f64>,
-        alpha: PyReadonlyArray1<'py, f64>,
-        zeta: f64,
-        psi: f64,
-        sigma2: f64,
-        n_steps: usize,
-    ) -> PyResult<Bound<'py, PyArray1<f64>>> {
-        let mut p = phases
-            .to_vec()
-            .map_err(|_| PyValueError::new_err("phases not contiguous"))?;
-        let o = omegas
-            .as_slice()
-            .map_err(|e| PyValueError::new_err(e.to_string()))?;
-        let k = knm
-            .as_slice()
-            .map_err(|e| PyValueError::new_err(e.to_string()))?;
-        let a = alpha
-            .as_slice()
-            .map_err(|e| PyValueError::new_err(e.to_string()))?;
-
-        self.inner
-            .run(&mut p, o, k, a, zeta, psi, sigma2, n_steps)
-            .map_err(spo_err)?;
-
-        Ok(PyArray1::from_vec(py, p))
-    }
-
-    fn order_parameter(&self) -> (f64, f64) {
-        self.inner.order_parameter()
     }
 }
 
@@ -1534,7 +1144,7 @@ impl PyStuartLandauStepper {
         let m = mu
             .as_slice()
             .map_err(|e| PyValueError::new_err(e.to_string()))?;
-        let mut k = knm
+        let k = knm
             .to_vec()
             .map_err(|e| PyValueError::new_err(e.to_string()))?;
         let kr = knm_r
@@ -1544,7 +1154,7 @@ impl PyStuartLandauStepper {
             .as_slice()
             .map_err(|e| PyValueError::new_err(e.to_string()))?;
         self.inner
-            .step(&mut s, o, m, &mut k, kr, zeta, psi, a, epsilon)
+            .step(&mut s, o, m, &k, kr, zeta, psi, a, epsilon)
             .map_err(spo_err)?;
         Ok(s)
     }
@@ -1574,7 +1184,7 @@ impl PyStuartLandauStepper {
         let m = mu
             .as_slice()
             .map_err(|e| PyValueError::new_err(e.to_string()))?;
-        let mut k = knm
+        let k = knm
             .to_vec()
             .map_err(|e| PyValueError::new_err(e.to_string()))?;
         let kr = knm_r
@@ -1584,7 +1194,7 @@ impl PyStuartLandauStepper {
             .as_slice()
             .map_err(|e| PyValueError::new_err(e.to_string()))?;
         self.inner
-            .run(&mut s, o, m, &mut k, kr, zeta, psi, a, epsilon, n_steps)
+            .run(&mut s, o, m, &k, kr, zeta, psi, a, epsilon, n_steps)
             .map_err(spo_err)?;
         Ok(s)
     }
@@ -1616,11 +1226,11 @@ fn attnres_modulate_rust<'py>(
     w_k: PyReadonlyArray1<'py, f64>,
     w_v: PyReadonlyArray1<'py, f64>,
     w_o: PyReadonlyArray1<'py, f64>,
-    n: usize,
-    n_heads: usize,
-    block_size: i64,
-    temperature: f64,
-    lambda_: f64,
+    n: PlainUsize,
+    n_heads: PlainUsize,
+    block_size: PlainI64,
+    temperature: PlainReal,
+    lambda_: PlainReal,
 ) -> PyResult<Bound<'py, PyArray1<f64>>> {
     let k = knm
         .as_slice()
@@ -1647,11 +1257,11 @@ fn attnres_modulate_rust<'py>(
         wk,
         wv,
         wo,
-        n,
-        n_heads,
-        block_size,
-        temperature,
-        lambda_,
+        n.0,
+        n_heads.0,
+        block_size.0,
+        temperature.0,
+        lambda_.0,
     )
     .map_err(PyValueError::new_err)?;
     Ok(PyArray1::from_vec(py, out))
@@ -2316,59 +1926,7 @@ fn phase_distance_matrix<'py>(
     Ok(PyArray1::from_slice(py, &dist))
 }
 
-// ─── Ordinal-Pattern Transition Entropy (OPT-entropy) ───────────────
-
-#[pyfunction]
-#[pyo3(signature = (series, dimension = 3, delay = 1))]
-fn ordinal_pattern_sequence<'py>(
-    py: Python<'py>,
-    series: PyReadonlyArray1<'_, f64>,
-    dimension: usize,
-    delay: usize,
-) -> PyResult<Bound<'py, PyArray1<i64>>> {
-    let s = series
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let codes = spo_engine::opt_entropy::ordinal_pattern_sequence(s, dimension, delay);
-    Ok(PyArray1::from_vec(py, codes))
-}
-
-#[pyfunction]
-#[pyo3(signature = (series, dimension = 3, delay = 1))]
-fn transition_entropy(
-    series: PyReadonlyArray1<'_, f64>,
-    dimension: usize,
-    delay: usize,
-) -> PyResult<f64> {
-    let s = series
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    Ok(spo_engine::opt_entropy::transition_entropy(
-        s, dimension, delay,
-    ))
-}
-
 // ─── Entropy Production Rate ────────────────────────────────────────
-
-#[pyfunction]
-fn entropy_production_rate(
-    phases: PyReadonlyArray1<'_, f64>,
-    omegas: PyReadonlyArray1<'_, f64>,
-    knm: PyReadonlyArray1<'_, f64>,
-    alpha: f64,
-    dt: f64,
-) -> PyResult<f64> {
-    let p = phases
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let o = omegas
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let k = knm
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    Ok(entropy_prod::entropy_production_rate(p, o, k, alpha, dt))
-}
 
 // ─── Winding Numbers ────────────────────────────────────────────────
 
@@ -2457,7 +2015,7 @@ fn lyapunov_spectrum_rust<'py>(
         .as_slice()
         .map_err(|e| PyValueError::new_err(e.to_string()))?;
     let result = lyapunov::lyapunov_spectrum(p, o, k, a, dt, n_steps, qr_interval, zeta, psi)
-        .map_err(|e| PyValueError::new_err(e))?;
+        .map_err(PyValueError::new_err)?;
     Ok(PyArray1::from_vec(py, result))
 }
 
@@ -2482,7 +2040,7 @@ fn correlation_integral_rust<'py>(
         .as_slice()
         .map_err(|e| PyValueError::new_err(e.to_string()))?;
     let result = dimension::correlation_integral(traj, t, d, eps, max_pairs, seed)
-        .map_err(|e| PyValueError::new_err(e))?;
+        .map_err(PyValueError::new_err)?;
     Ok(PyArray1::from_vec(py, result))
 }
 
@@ -2495,29 +2053,6 @@ fn kaplan_yorke_dimension_rust(exponents: PyReadonlyArray1<'_, f64>) -> PyResult
 }
 
 // ─── Chimera Detection ──────────────────────────────────────────────
-
-/// Returns (coherent_indices, incoherent_indices, chimera_index, local_order).
-#[pyfunction]
-fn detect_chimera_rust<'py>(
-    py: Python<'py>,
-    phases: PyReadonlyArray1<'py, f64>,
-    knm: PyReadonlyArray1<'py, f64>,
-    n: usize,
-) -> PyResult<(Vec<usize>, Vec<usize>, f64, Bound<'py, PyArray1<f64>>)> {
-    let p = phases
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let k = knm
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let result = chimera::detect_chimera(p, k, n);
-    Ok((
-        result.coherent_indices,
-        result.incoherent_indices,
-        result.chimera_index,
-        PyArray1::from_vec(py, result.local_order),
-    ))
-}
 
 // ─── Spectral Analysis ──────────────────────────────────────────────
 
@@ -2610,7 +2145,7 @@ fn transfer_entropy_matrix_rust<'py>(
         .as_slice()
         .map_err(|e| PyValueError::new_err(e.to_string()))?;
     let result = transfer_entropy::transfer_entropy_matrix(ps, n_osc, n_time, n_bins)
-        .map_err(|e| PyValueError::new_err(e))?;
+        .map_err(PyValueError::new_err)?;
     Ok(PyArray1::from_vec(py, result))
 }
 
@@ -2627,11 +2162,7 @@ fn koopman_edmd_solve_rust<'py>(
     m: usize,
     n_state: usize,
     regularisation: f64,
-) -> PyResult<(
-    Bound<'py, PyArray1<f64>>,
-    Bound<'py, PyArray1<f64>>,
-    Bound<'py, PyArray1<f64>>,
-)> {
+) -> PyResult<ArrayTriple<'py>> {
     let xl = x_lift
         .as_slice()
         .map_err(|e| PyValueError::new_err(e.to_string()))?;
@@ -2679,7 +2210,7 @@ fn recurrence_matrix_rust<'py>(
         .as_slice()
         .map_err(|e| PyValueError::new_err(e.to_string()))?;
     let result = recurrence::recurrence_matrix(traj, t, d, epsilon, angular)
-        .map_err(|e| PyValueError::new_err(e))?;
+        .map_err(PyValueError::new_err)?;
     Ok(PyArray1::from_vec(py, result))
 }
 
@@ -2701,7 +2232,7 @@ fn cross_recurrence_matrix_rust<'py>(
         .as_slice()
         .map_err(|e| PyValueError::new_err(e.to_string()))?;
     let result = recurrence::cross_recurrence_matrix(a, b, t, d, epsilon, angular)
-        .map_err(|e| PyValueError::new_err(e))?;
+        .map_err(PyValueError::new_err)?;
     Ok(PyArray1::from_vec(py, result))
 }
 
@@ -2714,12 +2245,12 @@ fn rqa_rust(
     l_min: usize,
     v_min: usize,
     exclude_main_diagonal: bool,
-) -> PyResult<(f64, f64, f64, usize, f64, f64, f64, usize)> {
+) -> PyResult<RqaMetrics> {
     let r = recurrence_flat
         .as_slice()
         .map_err(|e| PyValueError::new_err(e.to_string()))?;
     let result = recurrence::rqa(r, t, l_min, v_min, exclude_main_diagonal)
-        .map_err(|e| PyValueError::new_err(e))?;
+        .map_err(PyValueError::new_err)?;
     Ok((
         result.recurrence_rate,
         result.determinism,
@@ -2803,81 +2334,7 @@ fn compute_ssgf_costs_rust(
 
 // ─── Swarmalator ──────────────────────────────────────────────────
 
-#[pyfunction]
-#[pyo3(signature = (pos_init, phases_init, omegas, n, dim, dt, a, b, j, k, n_steps))]
-fn swarmalator_run_rust<'py>(
-    py: Python<'py>,
-    pos_init: PyReadonlyArray1<'py, f64>,
-    phases_init: PyReadonlyArray1<'py, f64>,
-    omegas: PyReadonlyArray1<'py, f64>,
-    n: usize,
-    dim: usize,
-    dt: f64,
-    a: f64,
-    b: f64,
-    j: f64,
-    k: f64,
-    n_steps: usize,
-) -> PyResult<(
-    Bound<'py, PyArray1<f64>>,
-    Bound<'py, PyArray1<f64>>,
-    Bound<'py, PyArray1<f64>>,
-    Bound<'py, PyArray1<f64>>,
-)> {
-    let p = pos_init
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let ph = phases_init
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let o = omegas
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let (fp, fph, pt, pht) =
-        swarmalator::swarmalator_run(p, ph, o, n, dim, dt, a, b, j, k, n_steps);
-    Ok((
-        PyArray1::from_vec(py, fp),
-        PyArray1::from_vec(py, fph),
-        PyArray1::from_vec(py, pt),
-        PyArray1::from_vec(py, pht),
-    ))
-}
-
 // ─── Delayed Kuramoto ─────────────────────────────────────────────
-
-#[pyfunction]
-#[pyo3(signature = (
-    phases_init, omegas, knm_flat, alpha_flat, n,
-    zeta, psi, dt, delay_steps, n_steps
-))]
-fn delayed_kuramoto_run_rust<'py>(
-    py: Python<'py>,
-    phases_init: PyReadonlyArray1<'py, f64>,
-    omegas: PyReadonlyArray1<'py, f64>,
-    knm_flat: PyReadonlyArray1<'py, f64>,
-    alpha_flat: PyReadonlyArray1<'py, f64>,
-    n: usize,
-    zeta: f64,
-    psi: f64,
-    dt: f64,
-    delay_steps: usize,
-    n_steps: usize,
-) -> PyResult<Bound<'py, PyArray1<f64>>> {
-    let p = phases_init
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let o = omegas
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let k = knm_flat
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let a = alpha_flat
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let result = delay::delayed_kuramoto_run(p, o, k, a, n, zeta, psi, dt, delay_steps, n_steps);
-    Ok(PyArray1::from_vec(py, result))
-}
 
 // ─── Free Energy ──────────────────────────────────────────────────
 
@@ -2924,11 +2381,7 @@ fn hodge_decomposition_rust<'py>(
     n_edges: usize,
     tris_flat: PyReadonlyArray1<'py, i64>,
     n_tris: usize,
-) -> PyResult<(
-    Bound<'py, PyArray1<f64>>,
-    Bound<'py, PyArray1<f64>>,
-    Bound<'py, PyArray1<f64>>,
-)> {
+) -> PyResult<ArrayTriple<'py>> {
     let k = knm_flat
         .as_slice()
         .map_err(|e| PyValueError::new_err(e.to_string()))?;
@@ -2954,10 +2407,10 @@ fn hodge_decomposition_rust<'py>(
 #[pyfunction]
 fn compute_ei_balance_rust(
     knm_flat: PyReadonlyArray1<'_, f64>,
-    n: usize,
+    n: PlainUsize,
     excitatory_indices: PyReadonlyArray1<'_, i64>,
     inhibitory_indices: PyReadonlyArray1<'_, i64>,
-) -> PyResult<(f64, f64, f64, bool, f64, f64, f64, f64)> {
+) -> PyResult<EiBalanceMetrics> {
     let k = knm_flat
         .as_slice()
         .map_err(|e| PyValueError::new_err(e.to_string()))?;
@@ -2977,7 +2430,7 @@ fn compute_ei_balance_rust(
         .filter(|&&v| v >= 0)
         .map(|&v| v as usize)
         .collect();
-    let r = ei_balance::compute_ei_balance(k, n, &e_idx, &i_idx);
+    let r = ei_balance::compute_ei_balance(k, n.0, &e_idx, &i_idx);
     Ok((
         r.ratio,
         r.excitatory_strength,
@@ -2991,14 +2444,14 @@ fn compute_ei_balance_rust(
 }
 
 #[pyfunction]
-#[pyo3(signature = (knm_flat, n, excitatory_indices, inhibitory_indices, target_ratio = 1.0))]
+#[pyo3(signature = (knm_flat, n, excitatory_indices, inhibitory_indices, target_ratio = PlainReal(1.0)))]
 fn adjust_ei_ratio_rust<'py>(
     py: Python<'py>,
     knm_flat: PyReadonlyArray1<'py, f64>,
-    n: usize,
+    n: PlainUsize,
     excitatory_indices: PyReadonlyArray1<'py, i64>,
     inhibitory_indices: PyReadonlyArray1<'py, i64>,
-    target_ratio: f64,
+    target_ratio: PlainReal,
 ) -> PyResult<Bound<'py, PyArray1<f64>>> {
     let k = knm_flat
         .as_slice()
@@ -3019,95 +2472,11 @@ fn adjust_ei_ratio_rust<'py>(
         .filter(|&&v| v >= 0)
         .map(|&v| v as usize)
         .collect();
-    let result = ei_balance::adjust_ei_ratio(k, n, &e_idx, &i_idx, target_ratio);
+    let result = ei_balance::adjust_ei_ratio(k, n.0, &e_idx, &i_idx, target_ratio.0);
     Ok(PyArray1::from_vec(py, result))
 }
 
 // ─── Inertial Kuramoto (Swing Equation) ───────────────────────────
-
-#[pyfunction]
-#[pyo3(signature = (theta, omega_dot, power, knm_flat, inertia, damping, n, dt))]
-fn inertial_step_rust<'py>(
-    py: Python<'py>,
-    theta: PyReadonlyArray1<'py, f64>,
-    omega_dot: PyReadonlyArray1<'py, f64>,
-    power: PyReadonlyArray1<'py, f64>,
-    knm_flat: PyReadonlyArray1<'py, f64>,
-    inertia: PyReadonlyArray1<'py, f64>,
-    damping: PyReadonlyArray1<'py, f64>,
-    n: usize,
-    dt: f64,
-) -> PyResult<(Bound<'py, PyArray1<f64>>, Bound<'py, PyArray1<f64>>)> {
-    let th = theta
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let od = omega_dot
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let pw = power
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let km = knm_flat
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let in_ = inertia
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let dm = damping
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let (new_th, new_od) = inertial::inertial_step(th, od, pw, km, in_, dm, n, dt);
-    Ok((
-        PyArray1::from_vec(py, new_th),
-        PyArray1::from_vec(py, new_od),
-    ))
-}
-
-#[pyfunction]
-#[pyo3(signature = (theta, omega_dot, power, knm_flat, inertia, damping, n, dt, n_steps))]
-fn inertial_run_rust<'py>(
-    py: Python<'py>,
-    theta: PyReadonlyArray1<'py, f64>,
-    omega_dot: PyReadonlyArray1<'py, f64>,
-    power: PyReadonlyArray1<'py, f64>,
-    knm_flat: PyReadonlyArray1<'py, f64>,
-    inertia: PyReadonlyArray1<'py, f64>,
-    damping: PyReadonlyArray1<'py, f64>,
-    n: usize,
-    dt: f64,
-    n_steps: usize,
-) -> PyResult<(
-    Bound<'py, PyArray1<f64>>,
-    Bound<'py, PyArray1<f64>>,
-    Bound<'py, PyArray1<f64>>,
-    Bound<'py, PyArray1<f64>>,
-)> {
-    let th = theta
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let od = omega_dot
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let pw = power
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let km = knm_flat
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let in_ = inertia
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let dm = damping
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let (f_th, f_od, t_th, t_od) = inertial::inertial_run(th, od, pw, km, in_, dm, n, dt, n_steps);
-    Ok((
-        PyArray1::from_vec(py, f_th),
-        PyArray1::from_vec(py, f_od),
-        PyArray1::from_vec(py, t_th),
-        PyArray1::from_vec(py, t_od),
-    ))
-}
 
 // ─── Market Synchronisation ───────────────────────────────────────
 
@@ -3161,182 +2530,7 @@ fn detect_regimes_rust<'py>(
 
 // ─── Basin Stability (Menck et al. 2013) ──────────────────────────
 
-#[pyfunction]
-#[pyo3(signature = (
-    omegas, knm_flat, alpha_flat, n,
-    dt, n_transient, n_measure, n_samples, r_threshold, seed
-))]
-fn basin_stability_rust<'py>(
-    py: Python<'py>,
-    omegas: PyReadonlyArray1<'py, f64>,
-    knm_flat: PyReadonlyArray1<'py, f64>,
-    alpha_flat: PyReadonlyArray1<'py, f64>,
-    n: usize,
-    dt: f64,
-    n_transient: usize,
-    n_measure: usize,
-    n_samples: usize,
-    r_threshold: f64,
-    seed: u64,
-) -> PyResult<(f64, Bound<'py, PyArray1<f64>>, usize)> {
-    let o = omegas
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let k = knm_flat
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let a = alpha_flat
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let result = basin_stability::basin_stability(
-        o,
-        k,
-        a,
-        n,
-        dt,
-        n_transient,
-        n_measure,
-        n_samples,
-        r_threshold,
-        seed,
-    );
-    Ok((
-        result.s_b,
-        PyArray1::from_vec(py, result.r_finals),
-        result.n_converged,
-    ))
-}
-
 // ─── Bifurcation (Kuramoto 1975) ──────────────────────────────────
-
-#[pyfunction]
-#[pyo3(signature = (
-    phases_init, omegas, knm_flat, alpha_flat, n,
-    k_scale, dt, n_transient, n_measure
-))]
-fn steady_state_r_rust(
-    phases_init: PyReadonlyArray1<'_, f64>,
-    omegas: PyReadonlyArray1<'_, f64>,
-    knm_flat: PyReadonlyArray1<'_, f64>,
-    alpha_flat: PyReadonlyArray1<'_, f64>,
-    n: usize,
-    k_scale: f64,
-    dt: f64,
-    n_transient: usize,
-    n_measure: usize,
-) -> PyResult<f64> {
-    let p = phases_init
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let o = omegas
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let k = knm_flat
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let a = alpha_flat
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    Ok(bifurcation::steady_state_r(
-        p,
-        o,
-        k,
-        a,
-        n,
-        k_scale,
-        dt,
-        n_transient,
-        n_measure,
-    ))
-}
-
-#[pyfunction]
-#[pyo3(signature = (
-    omegas, knm_flat, alpha_flat, n, phases_init,
-    k_min, k_max, n_points, dt, n_transient, n_measure
-))]
-fn trace_sync_transition_rust<'py>(
-    py: Python<'py>,
-    omegas: PyReadonlyArray1<'py, f64>,
-    knm_flat: PyReadonlyArray1<'py, f64>,
-    alpha_flat: PyReadonlyArray1<'py, f64>,
-    n: usize,
-    phases_init: PyReadonlyArray1<'py, f64>,
-    k_min: f64,
-    k_max: f64,
-    n_points: usize,
-    dt: f64,
-    n_transient: usize,
-    n_measure: usize,
-) -> PyResult<(Bound<'py, PyArray1<f64>>, Bound<'py, PyArray1<f64>>, f64)> {
-    let o = omegas
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let k = knm_flat
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let a = alpha_flat
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let p = phases_init
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let (kv, rv, kc) = bifurcation::trace_sync_transition(
-        o,
-        k,
-        a,
-        n,
-        p,
-        k_min,
-        k_max,
-        n_points,
-        dt,
-        n_transient,
-        n_measure,
-    );
-    Ok((PyArray1::from_vec(py, kv), PyArray1::from_vec(py, rv), kc))
-}
-
-#[pyfunction]
-#[pyo3(signature = (
-    omegas, knm_flat, alpha_flat, n, phases_init,
-    dt, n_transient, n_measure, tol
-))]
-fn find_critical_coupling_bif_rust(
-    omegas: PyReadonlyArray1<'_, f64>,
-    knm_flat: PyReadonlyArray1<'_, f64>,
-    alpha_flat: PyReadonlyArray1<'_, f64>,
-    n: usize,
-    phases_init: PyReadonlyArray1<'_, f64>,
-    dt: f64,
-    n_transient: usize,
-    n_measure: usize,
-    tol: f64,
-) -> PyResult<f64> {
-    let o = omegas
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let k = knm_flat
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let a = alpha_flat
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let p = phases_init
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    Ok(bifurcation::find_critical_coupling(
-        o,
-        k,
-        a,
-        n,
-        p,
-        dt,
-        n_transient,
-        n_measure,
-        tol,
-    ))
-}
 
 // ─── Psychedelic Entropy ───────────────────────────────────────────
 
@@ -3377,7 +2571,7 @@ fn poincare_section_rust<'py>(
     normal: PyReadonlyArray1<'py, f64>,
     offset: f64,
     direction: &str,
-) -> PyResult<(Bound<'py, PyArray1<f64>>, Bound<'py, PyArray1<f64>>, usize)> {
+) -> PyResult<ArraysWithCount<'py>> {
     let tr = traj_flat
         .as_slice()
         .map_err(|e| PyValueError::new_err(e.to_string()))?;
@@ -3394,8 +2588,8 @@ fn poincare_section_rust<'py>(
             ))
         }
     };
-    let result = poincare::poincare_section(tr, t, d, n, offset, dir)
-        .map_err(|e| PyValueError::new_err(e))?;
+    let result =
+        poincare::poincare_section(tr, t, d, n, offset, dir).map_err(PyValueError::new_err)?;
     Ok((
         PyArray1::from_vec(py, result.crossings),
         PyArray1::from_vec(py, result.crossing_times),
@@ -3412,62 +2606,17 @@ fn phase_poincare_rust<'py>(
     n: usize,
     oscillator_idx: usize,
     section_phase: f64,
-) -> PyResult<(Bound<'py, PyArray1<f64>>, Bound<'py, PyArray1<f64>>, usize)> {
+) -> PyResult<ArraysWithCount<'py>> {
     let p = phases_flat
         .as_slice()
         .map_err(|e| PyValueError::new_err(e.to_string()))?;
     let result = poincare::phase_poincare(p, t, n, oscillator_idx, section_phase)
-        .map_err(|e| PyValueError::new_err(e))?;
+        .map_err(PyValueError::new_err)?;
     Ok((
         PyArray1::from_vec(py, result.crossings),
         PyArray1::from_vec(py, result.crossing_times),
         result.n_crossings,
     ))
-}
-
-// ─── Embedding (Takens 1981) ───────────────────────────────────────
-
-#[pyfunction]
-fn delay_embed_rust<'py>(
-    py: Python<'py>,
-    signal: PyReadonlyArray1<'py, f64>,
-    delay: usize,
-    dimension: usize,
-) -> PyResult<Bound<'py, PyArray1<f64>>> {
-    let s = signal
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let result =
-        embedding::delay_embed(s, delay, dimension).map_err(|e| PyValueError::new_err(e))?;
-    Ok(PyArray1::from_vec(py, result))
-}
-
-#[pyfunction]
-#[pyo3(signature = (signal, max_lag = 100, n_bins = 32))]
-fn optimal_delay_rust(
-    signal: PyReadonlyArray1<'_, f64>,
-    max_lag: usize,
-    n_bins: usize,
-) -> PyResult<usize> {
-    let s = signal
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    Ok(embedding::optimal_delay(s, max_lag, n_bins))
-}
-
-#[pyfunction]
-#[pyo3(signature = (signal, delay, max_dim = 10, rtol = 15.0, atol = 2.0))]
-fn optimal_dimension_rust(
-    signal: PyReadonlyArray1<'_, f64>,
-    delay: usize,
-    max_dim: usize,
-    rtol: f64,
-    atol: f64,
-) -> PyResult<usize> {
-    let s = signal
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    Ok(embedding::optimal_dimension(s, delay, max_dim, rtol, atol))
 }
 
 // ─── ITPC (Lachaux et al. 1999) ────────────────────────────────────
@@ -3534,10 +2683,13 @@ fn carrier_decode_rust(
 #[pyfunction]
 fn load_hcp_connectome_rust(
     py: Python<'_>,
-    n_regions: usize,
-    seed: u64,
+    n_regions: PlainUsize,
+    seed: PlainU64,
 ) -> PyResult<Py<PyArray1<f64>>> {
-    let result = connectome::load_hcp_connectome(n_regions, seed);
+    if n_regions.0 < 2 {
+        return Err(PyValueError::new_err("n_regions must be >= 2"));
+    }
+    let result = connectome::load_hcp_connectome(n_regions.0, seed.0);
     Ok(PyArray1::from_vec(py, result).into())
 }
 
@@ -3606,7 +2758,7 @@ fn extract_phases_rust(
     py: Python<'_>,
     signal: PyReadonlyArray1<f64>,
     fs: f64,
-) -> PyResult<(Py<PyArray1<f64>>, Py<PyArray1<f64>>, Py<PyArray1<f64>>, f64)> {
+) -> PyResult<PhaseExtractionOutput> {
     let s = signal
         .as_slice()
         .map_err(|e| PyValueError::new_err(e.to_string()))?;
@@ -3617,27 +2769,6 @@ fn extract_phases_rust(
         PyArray1::from_vec(py, inst).into(),
         dom,
     ))
-}
-
-// ─── TE Adaptive Coupling ───────────────────────────────────────────
-
-#[pyfunction]
-fn te_adapt_coupling_rust(
-    py: Python<'_>,
-    knm: PyReadonlyArray1<f64>,
-    te: PyReadonlyArray1<f64>,
-    n: usize,
-    lr: f64,
-    decay: f64,
-) -> PyResult<Py<PyArray1<f64>>> {
-    let k = knm
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let t = te
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let result = te_adaptive::te_adapt_coupling(k, t, n, lr, decay);
-    Ok(PyArray1::from_vec(py, result).into())
 }
 
 // ─── Prior ──────────────────────────────────────────────────────────
@@ -3756,35 +2887,6 @@ fn frequency_specificity_rust(
 
 // ─── Geometric (Torus) Integrator ───────────────────────────────────
 
-#[pyfunction]
-fn torus_run_rust(
-    py: Python<'_>,
-    phases: PyReadonlyArray1<f64>,
-    omegas: PyReadonlyArray1<f64>,
-    knm: PyReadonlyArray1<f64>,
-    alpha: PyReadonlyArray1<f64>,
-    _n: usize,
-    zeta: f64,
-    psi: f64,
-    dt: f64,
-    n_steps: usize,
-) -> PyResult<Py<PyArray1<f64>>> {
-    let p = phases
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let o = omegas
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let k = knm
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let a = alpha
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let result = geometric::torus_run(p, o, k, a, zeta, psi, dt, n_steps);
-    Ok(PyArray1::from_vec(py, result).into())
-}
-
 // ─── Envelope ───────────────────────────────────────────────────────
 
 #[pyfunction]
@@ -3846,139 +2948,6 @@ fn fit_lorentzian_rust(omegas: PyReadonlyArray1<f64>) -> PyResult<(f64, f64)> {
     Ok(reduction::fit_lorentzian(o))
 }
 
-// ─── Strang Splitting ───────────────────────────────────────────────
-
-#[pyfunction]
-fn splitting_run_rust(
-    py: Python<'_>,
-    phases: PyReadonlyArray1<f64>,
-    omegas: PyReadonlyArray1<f64>,
-    knm: PyReadonlyArray1<f64>,
-    alpha: PyReadonlyArray1<f64>,
-    _n: usize,
-    zeta: f64,
-    psi: f64,
-    dt: f64,
-    n_steps: usize,
-) -> PyResult<Py<PyArray1<f64>>> {
-    let p = phases
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let o = omegas
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let k = knm
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let a = alpha
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let result = splitting::splitting_run(p, o, k, a, zeta, psi, dt, n_steps);
-    Ok(PyArray1::from_vec(py, result).into())
-}
-
-/// Hypergraph Kuramoto run with flat-encoded hyperedges.
-///
-/// `edge_nodes`: flat array of node indices for all edges concatenated.
-/// `edge_offsets`: start index in `edge_nodes` for each edge (length = n_edges).
-/// `edge_strengths`: coupling strength per edge (length = n_edges).
-#[pyfunction]
-fn hypergraph_run_rust(
-    py: Python<'_>,
-    phases: PyReadonlyArray1<f64>,
-    omegas: PyReadonlyArray1<f64>,
-    n: usize,
-    edge_nodes: PyReadonlyArray1<i64>,
-    edge_offsets: PyReadonlyArray1<i64>,
-    edge_strengths: PyReadonlyArray1<f64>,
-    pairwise_knm: PyReadonlyArray1<f64>,
-    alpha: PyReadonlyArray1<f64>,
-    zeta: f64,
-    psi: f64,
-    dt: f64,
-    n_steps: usize,
-) -> PyResult<Py<PyArray1<f64>>> {
-    let p = phases
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let o = omegas
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let en = edge_nodes
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let eo = edge_offsets
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let es = edge_strengths
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let kn = pairwise_knm
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let al = alpha
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-
-    // Reconstruct hyperedges from flat encoding
-    let n_edges = eo.len();
-    let mut edges = Vec::with_capacity(n_edges);
-    for i in 0..n_edges {
-        let start = eo[i] as usize;
-        let end = if i + 1 < n_edges {
-            eo[i + 1] as usize
-        } else {
-            en.len()
-        };
-        let nodes: Vec<usize> = en[start..end].iter().map(|&v| v as usize).collect();
-        edges.push(hypergraph::Hyperedge {
-            nodes,
-            strength: es[i],
-        });
-    }
-
-    let result = hypergraph::hypergraph_run(p, o, n, &edges, kn, al, zeta, psi, dt, n_steps);
-    Ok(PyArray1::from_vec(py, result).into())
-}
-
-// ─── Simplicial Kuramoto ────────────────────────────────────────────
-
-#[pyfunction]
-fn simplicial_run_rust(
-    py: Python<'_>,
-    phases: PyReadonlyArray1<f64>,
-    omegas: PyReadonlyArray1<f64>,
-    knm: PyReadonlyArray1<f64>,
-    alpha: PyReadonlyArray1<f64>,
-    n: usize,
-    zeta: f64,
-    psi: f64,
-    sigma2: f64,
-    dt: f64,
-    n_steps: usize,
-) -> PyResult<Py<PyArray1<f64>>> {
-    let p = phases
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let o = omegas
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let k = knm
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let a = alpha
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    if p.len() != n || o.len() != n {
-        return Err(PyValueError::new_err("phases/omegas length must equal n"));
-    }
-    if k.len() != n * n || a.len() != n * n {
-        return Err(PyValueError::new_err("knm/alpha length must equal n*n"));
-    }
-    let result = simplicial::simplicial_run(p, o, k, a, zeta, psi, sigma2, dt, n_steps);
-    Ok(PyArray1::from_vec(py, result).into())
-}
-
 // ─── Module Registration ────────────────────────────────────────────
 
 #[pymodule]
@@ -4027,7 +2996,10 @@ fn spo_kernel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(phase_distance_matrix, m)?)?;
     m.add_function(wrap_pyfunction!(ordinal_pattern_sequence, m)?)?;
     m.add_function(wrap_pyfunction!(transition_entropy, m)?)?;
-    m.add_function(wrap_pyfunction!(entropy_production_rate, m)?)?;
+    m.add_function(wrap_pyfunction!(
+        entropy_boundary::entropy_production_rate,
+        m
+    )?)?;
     m.add_function(wrap_pyfunction!(winding_numbers, m)?)?;
     m.add_function(wrap_pyfunction!(lyapunov_spectrum_rust, m)?)?;
     m.add_function(wrap_pyfunction!(recurrence_matrix_rust, m)?)?;
@@ -4040,7 +3012,7 @@ fn spo_kernel(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(spectral_gap_rust, m)?)?;
     m.add_function(wrap_pyfunction!(critical_coupling_rust, m)?)?;
     m.add_function(wrap_pyfunction!(sync_convergence_rate_rust, m)?)?;
-    m.add_function(wrap_pyfunction!(detect_chimera_rust, m)?)?;
+    m.add_function(wrap_pyfunction!(chimera_boundary::detect_chimera_rust, m)?)?;
     m.add_function(wrap_pyfunction!(correlation_integral_rust, m)?)?;
     m.add_function(wrap_pyfunction!(kaplan_yorke_dimension_rust, m)?)?;
     m.add_function(wrap_pyfunction!(compute_itpc_rust, m)?)?;

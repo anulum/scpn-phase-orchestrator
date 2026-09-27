@@ -26,6 +26,7 @@ from typing import Any, TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
 from scpn_phase_orchestrator._compat import HAS_RUST as _HAS_RUST
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -92,7 +93,10 @@ SCPN_CALIBRATION_ANCHORS: dict[tuple[int, int], float] = {
 
 def _validate_positive_int(value: object, *, name: str) -> int:
     """Return ``value`` as a positive integer, else raise ``ValueError``."""
-    if isinstance(value, bool) or not isinstance(value, Integral) or value < 1:
+    if isinstance(value, bool) or not isinstance(value, Integral):
+        raise ValueError(f"{name} must be >= 1 as a non-boolean integer, got {value!r}")
+    require_real_values(value, name=name)
+    if value < 1:
         raise ValueError(f"{name} must be >= 1 as a non-boolean integer, got {value!r}")
     return int(value)
 
@@ -107,6 +111,7 @@ def _validate_finite_float(
     """Return ``value`` as a finite float, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite real, got {value!r}")
+    require_real_values(value, name=name)
     coerced = float(value)
     if not np.isfinite(coerced):
         raise ValueError(f"{name} must be finite, got {value!r}")
@@ -165,9 +170,7 @@ def _validate_coupling_output(
     for name, value in (("K_nm", knm), ("alpha", alpha)):
         if isinstance(value, np.ndarray) and value.dtype.kind in {"f", "i", "u"}:
             continue
-        if isinstance(value, (list, tuple)) and all(
-            type(item) is float for item in value
-        ):
+        if isinstance(value, (list, tuple)) and set(map(type, value)).issubset({float}):
             continue
         try:
             raw = np.asarray(value, dtype=object)
@@ -187,10 +190,11 @@ def _validate_coupling_output(
             raise ValueError(
                 f"coupling builder output {name} contains numeric-string aliases"
             )
+        require_real_values(value, name=name, allow_object=True)
     try:
         knm_array = np.asarray(knm, dtype=np.float64).reshape(n_layers, n_layers)
         alpha_array = np.asarray(alpha, dtype=np.float64).reshape(n_layers, n_layers)
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, OverflowError) as exc:
         raise ValueError("coupling builder output must match requested shape") from exc
     if not np.all(np.isfinite(knm_array)):
         raise ValueError("coupling builder output K_nm must contain only finite values")
@@ -268,7 +272,7 @@ class CouplingBuilder:
             name="decay_alpha",
             lower_bound=0.0,
         )
-        if _HAS_RUST:  # pragma: no cover
+        if _HAS_RUST:
             from spo_kernel import PyCouplingBuilder
 
             try:
@@ -520,6 +524,9 @@ class CouplingBuilder:
         """
         if template_name not in templates:
             raise KeyError(f"Template {template_name!r} not found")
+        require_real_values(
+            templates[template_name], name="template", allow_object=True
+        )
         template = np.asarray(templates[template_name], dtype=np.float64)
         if template.shape != state.knm.shape:
             raise ValueError(

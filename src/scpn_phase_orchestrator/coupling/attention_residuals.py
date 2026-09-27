@@ -53,6 +53,7 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
 from scpn_phase_orchestrator.coupling import (
     _attnres_validation as attnres_validation,
 )
@@ -87,6 +88,7 @@ def _validate_positive_int(name: str, value: object) -> int:
     if isinstance(value, bool) or not isinstance(value, Integral):
         msg = f"{name} must be a positive integer, got {value!r}"
         raise ValueError(msg)
+    require_real_values(value, name=name)
     value_int = int(value)
     if value_int < 1:
         msg = f"{name} must be a positive integer, got {value_int}"
@@ -111,6 +113,7 @@ def _validate_finite_real(name: str, value: object) -> float:
     if isinstance(value, bool) or not isinstance(value, Real):
         msg = f"{name} must be a finite real number, got {value!r}"
         raise ValueError(msg)
+    require_real_values(value, name=name)
     value_float = float(value)
     if not np.isfinite(value_float):
         msg = f"{name} must be finite, got {value_float}"
@@ -123,6 +126,7 @@ def _validate_seed(name: str, value: object) -> int:
     if isinstance(value, bool) or not isinstance(value, Integral):
         msg = f"{name} must be a non-negative integer, got {value!r}"
         raise ValueError(msg)
+    require_real_values(value, name=name)
     value_int = int(value)
     if value_int < 0:
         msg = f"{name} must be a non-negative integer, got {value_int}"
@@ -151,8 +155,9 @@ def _as_real_array(name: str, value: object) -> FloatArray:
     if attnres_validation.contains_numeric_string_alias(value):
         raise ValueError(f"{name} must not contain numeric-string aliases")
     try:
+        require_real_values(value, name=name, allow_object=True)
         parsed = np.asarray(value, dtype=np.float64)
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, OverflowError) as exc:
         raise ValueError(f"{name} must be a finite real array") from exc
     if not np.all(np.isfinite(parsed)):
         raise ValueError(f"{name} must contain only finite values")
@@ -509,7 +514,7 @@ def attnres_modulate(
     Raises
     ------
     ValueError
-        On shape mismatches, boolean or complex numeric aliases,
+        On shape mismatches, boolean, complex, text or temporal numeric aliases,
         non-symmetric or self-coupled ``knm`` topology, negative
         ``lambda_``, non-positive ``temperature``, non-finite numeric
         inputs, invalid model topology, or non-physical optional-backend

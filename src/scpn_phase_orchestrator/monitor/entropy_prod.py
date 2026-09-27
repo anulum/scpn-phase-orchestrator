@@ -12,6 +12,10 @@
     dθ_i/dt = ω_i + (α / N) · Σ_j K_ij · sin(θ_j − θ_i)
 
 Zero at frequency-locked fixed points; positive otherwise.
+
+Measurements and controls must be plain real values before conversion. Boolean,
+text, complex and temporal aliases are refused; real numeric object arrays remain
+supported.
 Reference: Acebrón et al. 2005, Rev. Mod. Phys. 77:137–185.
 """
 
@@ -24,6 +28,7 @@ from typing import TypeAlias, cast
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
 from scpn_phase_orchestrator.monitor._julia_runtime import require_juliacall_main
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -220,6 +225,7 @@ def _validate_finite_float(value: object, *, name: str) -> float:
         raise ValueError(f"{name} must not be a numeric-string alias")
     if not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite real, got {value!r}")
+    require_real_values(value, name=name, allow_object=True)
     result = float(value)
     if not np.isfinite(result):
         raise ValueError(f"{name} must be finite, got {value!r}")
@@ -236,6 +242,7 @@ def _validate_vector(value: object, *, name: str) -> FloatArray:
     if _contains_numeric_string_alias(value):
         raise ValueError(f"{name} must not contain numeric-string aliases")
     try:
+        require_real_values(value, name=name, allow_object=True)
         array = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError(f"{name} must be a one-dimensional float array") from exc
@@ -261,6 +268,7 @@ def _validate_matrix(
     if _contains_numeric_string_alias(value):
         raise ValueError(f"{name} must not contain numeric-string aliases")
     try:
+        require_real_values(value, name=name, allow_object=True)
         array = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError(f"{name} must be a two-dimensional float array") from exc

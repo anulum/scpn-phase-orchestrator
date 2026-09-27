@@ -33,6 +33,7 @@ from typing import cast
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
 from scpn_phase_orchestrator._compat import TWO_PI
 from scpn_phase_orchestrator.upde._order_params_validation import (
     validate_mean_phase_output,
@@ -169,6 +170,7 @@ def _validate_phases(name: str, phases: FloatArray) -> FloatArray:
         raise ValueError(f"{name} must be real-valued")
     if not np.issubdtype(raw.dtype, np.number):
         raise ValueError(f"{name} must be numeric")
+    require_real_values(phases, name=name, allow_object=True)
     values = raw.astype(np.float64, copy=True).ravel()
     if not np.all(np.isfinite(values)):
         raise ValueError(f"{name} must contain only finite values")

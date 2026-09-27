@@ -29,6 +29,8 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
+
 FloatArray: TypeAlias = NDArray[np.float64]
 
 
@@ -356,6 +358,7 @@ def _trace_signal_array(signal: str, trace: dict[str, list[float]]) -> FloatArra
         raise ValueError(f"trace signal {signal!r} must contain real-valued samples")
 
     try:
+        require_real_values(trace[signal], name="trace[signal]", allow_object=True)
         values = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError(f"trace signal {signal!r} must be numeric") from exc

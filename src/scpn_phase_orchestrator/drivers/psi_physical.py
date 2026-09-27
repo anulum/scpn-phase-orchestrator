@@ -24,6 +24,7 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
 from scpn_phase_orchestrator._compat import TWO_PI
 
 __all__ = ["PhysicalDriver"]
@@ -70,6 +71,7 @@ def _require_finite_real_array(value: object, *, name: str) -> FloatArray:
         or not np.issubdtype(dtype, np.number)
     ):
         raise ValueError(f"{name} must be finite")
+    require_real_values(value, name=name, allow_object=True)
     parsed = array.astype(np.float64, copy=False)
     if not np.all(np.isfinite(parsed)):
         raise ValueError(f"{name} must be finite")

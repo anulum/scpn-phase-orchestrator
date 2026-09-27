@@ -33,6 +33,8 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
+
 try:
     from spo_kernel import (
         load_hcp_connectome_rust as _rust_load_hcp,
@@ -54,6 +56,7 @@ def _validate_n_regions(value: object, *, max_regions: int | None = None) -> int
     """Return the region count as a positive integer, else raise."""
     if isinstance(value, bool) or not isinstance(value, Integral):
         raise TypeError("n_regions must be an integer")
+    require_real_values(value, name="n_regions")
     n_regions = int(value)
     if n_regions < 2:
         msg = f"n_regions must be >= 2, got {n_regions}"
@@ -68,6 +71,7 @@ def _validate_seed(value: object) -> int:
     """Return the validated random seed, else raise."""
     if isinstance(value, bool) or not isinstance(value, Integral):
         raise TypeError("seed must be an integer in the u64 range")
+    require_real_values(value, name="seed")
     seed = int(value)
     if seed < 0 or seed > _MAX_SEED:
         raise ValueError("seed must be an integer in the u64 range")
@@ -104,8 +108,11 @@ def _coerce_connectome_matrix(
             f"{source} connectome output must not contain numeric-string aliases"
         )
     try:
+        require_real_values(
+            value, name=f"{source} connectome output", allow_object=True
+        )
         matrix = np.asarray(raw, dtype=np.float64)
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, OverflowError) as exc:
         raise ValueError(f"{source} connectome output must be a float matrix") from exc
     if matrix.shape != (n_regions, n_regions):
         raise ValueError(
@@ -232,8 +239,11 @@ def _load_hcp_connectome_cached(
                 "Rust HCP connectome output must not contain numeric-string aliases"
             )
         try:
+            require_real_values(
+                raw_array, name="Rust HCP connectome output", allow_object=True
+            )
             flat: FloatArray = np.asarray(raw_array, dtype=np.float64)
-        except (TypeError, ValueError) as exc:
+        except (TypeError, ValueError, OverflowError) as exc:
             raise ValueError(
                 "Rust HCP connectome output must contain real-valued weights"
             ) from exc

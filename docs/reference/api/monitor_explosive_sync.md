@@ -9,6 +9,12 @@ entropy primitive in [`monitor.opt_entropy`](monitor_opt_entropy.md).
 The monitor is **passive**: it reads node observables and emits a warning
 record. It never actuates — consistent with SPO's review-only posture.
 
+Measurement and result arrays reject text, Boolean, complex and temporal aliases
+before conversion, including durations stored in object arrays. Real numeric
+object samples are supported. Scalar window/count controls and alarm gates also
+reject temporal values. See the [warning pipeline source-type benchmark](../data/early_warning_measurement_types_benchmark_2026-09-26.json)
+for the real detector and observable-to-ensemble measurements and limits.
+
 ---
 
 ## 1. Why ordinal transition entropy is the right signal

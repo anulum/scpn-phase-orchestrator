@@ -22,6 +22,7 @@ from numbers import Integral, Real
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
 from scpn_phase_orchestrator.upde.metrics import LayerState, LockSignature, UPDEState
 
 __all__ = ["CoherenceMonitor"]
@@ -70,6 +71,7 @@ def _validate_cross_layer_alignment(value: object, *, n_layers: int) -> FloatArr
             raise ValueError("cross_layer_alignment must be a finite real matrix")
     elif raw.dtype.kind not in "iuf":
         raise ValueError("cross_layer_alignment must be a finite real matrix")
+    require_real_values(value, name="value", allow_object=True)
     cla = raw.astype(np.float64, copy=True)
 
     expected_shape = (n_layers, n_layers)

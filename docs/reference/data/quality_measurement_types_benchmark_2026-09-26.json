@@ -1,0 +1,181 @@
+{
+  "created_at": "2026-09-26T19:05:26.688134+00:00",
+  "limitations": "Shared host; current release kernel. Python mask/collapse are exercised via supported per-call threshold overrides that select the Python path, using the same applied thresholds as native. Pure Python score is not measured on this installed-kernel environment.",
+  "source_sha256": {
+    "src/scpn_phase_orchestrator/oscillators/quality.py": "0a3eb87a07395950842ca71537aaff4531e971ded7ef825606bca81f7c623331",
+    "spo-kernel/crates/spo-ffi/src/phase_quality.rs": "b9af607d77ff0cde4c9216120ede8a1af6e8ac63b02696b86db9acc766b38399"
+  },
+  "extension_sha256": "1603404a708c8265c7329a4316121f90bb87058c51b5359cc708b982afe8270a",
+  "records": [
+    {
+      "n": 10,
+      "operation": "native_score",
+      "median_us": 1.8282898236066103,
+      "calls_per_repeat": 100,
+      "repeats": 5
+    },
+    {
+      "n": 10,
+      "operation": "public_score_native",
+      "median_us": 11.068679741583765,
+      "calls_per_repeat": 100,
+      "repeats": 5
+    },
+    {
+      "n": 10,
+      "operation": "native_mask",
+      "median_us": 1.137329963967204,
+      "calls_per_repeat": 100,
+      "repeats": 5
+    },
+    {
+      "n": 10,
+      "operation": "public_mask_native",
+      "median_us": 7.159400265663862,
+      "calls_per_repeat": 100,
+      "repeats": 5
+    },
+    {
+      "n": 10,
+      "operation": "public_mask_python_override",
+      "median_us": 10.176480282098055,
+      "calls_per_repeat": 100,
+      "repeats": 5
+    },
+    {
+      "n": 10,
+      "operation": "native_collapse",
+      "median_us": 0.9332405170425773,
+      "calls_per_repeat": 100,
+      "repeats": 5
+    },
+    {
+      "n": 10,
+      "operation": "public_collapse_native",
+      "median_us": 6.51275971904397,
+      "calls_per_repeat": 100,
+      "repeats": 5
+    },
+    {
+      "n": 10,
+      "operation": "public_collapse_python_override",
+      "median_us": 14.214570401236415,
+      "calls_per_repeat": 100,
+      "repeats": 5
+    },
+    {
+      "n": 100,
+      "operation": "native_score",
+      "median_us": 4.870010307058692,
+      "calls_per_repeat": 100,
+      "repeats": 5
+    },
+    {
+      "n": 100,
+      "operation": "public_score_native",
+      "median_us": 51.78702995181084,
+      "calls_per_repeat": 100,
+      "repeats": 5
+    },
+    {
+      "n": 100,
+      "operation": "native_mask",
+      "median_us": 3.1470099929720163,
+      "calls_per_repeat": 100,
+      "repeats": 5
+    },
+    {
+      "n": 100,
+      "operation": "public_mask_native",
+      "median_us": 31.570519786328077,
+      "calls_per_repeat": 100,
+      "repeats": 5
+    },
+    {
+      "n": 100,
+      "operation": "public_mask_python_override",
+      "median_us": 32.40421996451914,
+      "calls_per_repeat": 100,
+      "repeats": 5
+    },
+    {
+      "n": 100,
+      "operation": "native_collapse",
+      "median_us": 2.3856398183852434,
+      "calls_per_repeat": 100,
+      "repeats": 5
+    },
+    {
+      "n": 100,
+      "operation": "public_collapse_native",
+      "median_us": 28.260800172574818,
+      "calls_per_repeat": 100,
+      "repeats": 5
+    },
+    {
+      "n": 100,
+      "operation": "public_collapse_python_override",
+      "median_us": 85.77557979151607,
+      "calls_per_repeat": 100,
+      "repeats": 5
+    },
+    {
+      "n": 1000,
+      "operation": "native_score",
+      "median_us": 22.14974956586957,
+      "calls_per_repeat": 100,
+      "repeats": 5
+    },
+    {
+      "n": 1000,
+      "operation": "public_score_native",
+      "median_us": 441.89789972733706,
+      "calls_per_repeat": 100,
+      "repeats": 5
+    },
+    {
+      "n": 1000,
+      "operation": "native_mask",
+      "median_us": 22.22189970780164,
+      "calls_per_repeat": 100,
+      "repeats": 5
+    },
+    {
+      "n": 1000,
+      "operation": "public_mask_native",
+      "median_us": 269.4555895868689,
+      "calls_per_repeat": 100,
+      "repeats": 5
+    },
+    {
+      "n": 1000,
+      "operation": "public_mask_python_override",
+      "median_us": 235.78227031975985,
+      "calls_per_repeat": 100,
+      "repeats": 5
+    },
+    {
+      "n": 1000,
+      "operation": "native_collapse",
+      "median_us": 12.611899874173105,
+      "calls_per_repeat": 100,
+      "repeats": 5
+    },
+    {
+      "n": 1000,
+      "operation": "public_collapse_native",
+      "median_us": 235.50231009721756,
+      "calls_per_repeat": 100,
+      "repeats": 5
+    },
+    {
+      "n": 1000,
+      "operation": "public_collapse_python_override",
+      "median_us": 868.2519500143826,
+      "calls_per_repeat": 100,
+      "repeats": 5
+    }
+  ],
+  "extension_path": "/media/anulum/GOTM/aaa_God_of_the_Math_Collection/03_CODE/SCPN-SYSTEMS-INTEGRATION-AND-CONTROL/repositories/SCPN-PHASE-ORCHESTRATOR/.venv/lib/python3.12/site-packages/spo_kernel/spo_kernel.abi3.so",
+  "method": "Five repeats of 100 timed calls after one warm-up, median microseconds; all-real quality0.8/amplitude1 fixtures at N10/100/1000. Native and public Python override mask/collapse outputs compared before timing. Public override object constructed with min_quality0.35 and collapse_threshold0.2, called with min_quality0.3/threshold0.1, selecting the real Python path. Score compares actual Rust-backed public API with direct Rust."
+}

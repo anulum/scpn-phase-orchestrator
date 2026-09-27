@@ -30,6 +30,7 @@ from typing import Literal, TypeAlias, cast
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
 from scpn_phase_orchestrator.coupling import _spatial_modulator_validation
 from scpn_phase_orchestrator.coupling._julia_runtime import require_juliacall_main
 
@@ -91,6 +92,7 @@ def _validate_scalar(value: object, *, name: str, positive: bool = False) -> flo
         raise ValueError(f"{name} must not be a numeric-string alias")
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite real scalar")
+    require_real_values(value, name=name)
     resolved = float(value)
     if not np.isfinite(resolved):
         raise ValueError(f"{name} must be finite")
@@ -125,8 +127,9 @@ def _validate_positions(value: object) -> FloatArray:
     if np.iscomplexobj(raw) or _contains_complex_alias(value):
         raise ValueError("positions must be finite real coordinates")
     try:
+        require_real_values(value, name="positions", allow_object=True)
         positions = raw.astype(np.float64, copy=True)
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, OverflowError) as exc:
         raise ValueError("positions must be a finite real array") from exc
     if positions.ndim == 1:
         positions = positions.reshape(positions.shape[0], 1)
@@ -149,8 +152,9 @@ def _validate_knm_base(value: object, *, expected_n: int | None = None) -> Float
     if np.iscomplexobj(raw) or _contains_complex_alias(value):
         raise ValueError("k_nm_base must be a finite real square matrix")
     try:
+        require_real_values(value, name="k_nm_base", allow_object=True)
         matrix = raw.astype(np.float64, copy=True)
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, OverflowError) as exc:
         raise ValueError("k_nm_base must be a finite real square matrix") from exc
     if matrix.ndim != 2 or matrix.shape[0] != matrix.shape[1]:
         raise ValueError("k_nm_base must be a finite real square matrix")
@@ -173,8 +177,9 @@ def _validate_distance_matrix(value: object, *, n: int) -> FloatArray:
     if _contains_numeric_string_alias(value):
         raise ValueError("distance matrix must not contain numeric-string aliases")
     try:
+        require_real_values(value, name="distance matrix", allow_object=True)
         distances = np.asarray(value, dtype=np.float64)
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, OverflowError) as exc:
         raise ValueError("distance matrix must be finite real-valued") from exc
     if distances.shape != (n, n):
         raise ValueError(

@@ -29,6 +29,7 @@ from typing import Any, TypeAlias, cast
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
 from scpn_phase_orchestrator.monitor._julia_runtime import require_juliacall_main
 from scpn_phase_orchestrator.monitor.chimera import detect_chimera
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
@@ -227,6 +228,7 @@ def _validate_phase_vector(value: object, *, name: str) -> FloatArray:
     if _contains_numeric_string_alias(raw):
         raise ValueError(f"{name} must not contain numeric-string aliases")
     try:
+        require_real_values(value, name=name, allow_object=True)
         phases = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError(f"{name} must be a finite 1-D phase vector") from exc
@@ -249,6 +251,7 @@ def _validate_coupling_matrix(
     if _contains_numeric_string_alias(raw):
         raise ValueError(f"{name} must not contain numeric-string aliases")
     try:
+        require_real_values(value, name=name, allow_object=True)
         matrix = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError(f"{name} must be a finite 2-D matrix") from exc
@@ -327,6 +330,7 @@ def _validate_reduced_coupling(
             "reduced coupling matrix must not contain numeric-string aliases"
         )
     try:
+        require_real_values(value, name="value", allow_object=True)
         reduced = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError("reduced coupling matrix must be numeric") from exc
@@ -352,6 +356,7 @@ def _validate_entropy_value(value: object, *, n_bins: int) -> float:
     if _contains_numeric_string_alias(raw):
         raise ValueError("entropy output must not contain numeric-string aliases")
     try:
+        require_real_values(value, name="value", allow_object=True)
         scalar = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError("entropy output must be numeric") from exc

@@ -34,6 +34,7 @@ from typing import TypeAlias, cast
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
 from scpn_phase_orchestrator.monitor._julia_runtime import require_juliacall_main
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -209,9 +210,10 @@ def _validate_phase_vector(value: object, *, name: str) -> FloatArray:
             f"{name} must be plain radians; datetime64 and timedelta64 values "
             "are rejected"
         )
+    require_real_values(value, name=name, allow_object=True)
     try:
         phases = raw.astype(np.float64, copy=True)
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, OverflowError) as exc:
         raise ValueError(f"{name} must be a finite 1-D phase vector") from exc
     if phases.ndim != 1:
         raise ValueError(f"{name} must be 1-D, got shape {phases.shape}")
@@ -234,9 +236,10 @@ def _validate_phase_series(value: object, *, name: str) -> FloatArray:
             f"{name} must be plain radians; datetime64 and timedelta64 values "
             "are rejected"
         )
+    require_real_values(value, name=name, allow_object=True)
     try:
         series = raw.astype(np.float64, copy=True)
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, OverflowError) as exc:
         raise ValueError(f"{name} must be a finite 2-D phase series") from exc
     if series.ndim != 2:
         raise ValueError(
@@ -272,9 +275,10 @@ def _validate_te_scalar(
         raise ValueError(f"{name} must not be a boolean value")
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite non-negative scalar")
+    require_real_values(value, name=name, allow_object=True)
     try:
         result = float(value)
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, OverflowError) as exc:
         raise ValueError(f"{name} must be a finite non-negative scalar") from exc
     if not np.isfinite(result) or result < -1e-12:
         raise ValueError(f"{name} must be finite and non-negative, got {value!r}")
@@ -298,9 +302,10 @@ def _validate_te_matrix(
         raise ValueError(
             "transfer entropy matrix must not contain numeric-string aliases"
         )
+    require_real_values(value, name="transfer entropy matrix", allow_object=True)
     try:
         matrix = np.asarray(value, dtype=np.float64)
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, OverflowError) as exc:
         raise ValueError("transfer entropy matrix must be numeric") from exc
     if matrix.size != n_osc * n_osc:
         raise ValueError(

@@ -605,3 +605,11 @@ reflect the actual dynamics. For accurate analysis, discard the first
 `envelope_modulation_depth` on a single-element array returns 0.0
 (max = min). This is correct but may be surprising. Ensure at least
 2 distinct values for a meaningful modulation depth.
+
+## Original numerical input types
+
+Measurement and policy arrays are checked before conversion to floating point.
+Numeric text, boolean and temporal aliases are refused; supported numeric-object
+inputs retain the owning API's shape and finiteness checks. See
+[numerical source types](numerical_source_types.md) for the boundary contracts and
+current language measurements.

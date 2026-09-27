@@ -27,6 +27,8 @@ import numpy as np
 from numpy.typing import NDArray
 from scipy.signal import hilbert
 
+from scpn_phase_orchestrator._array_types import require_real_values
+
 __all__ = ["extract_phases", "PhaseResult"]
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -126,6 +128,7 @@ def _real_signal(signal: object) -> FloatArray:
     if np.iscomplexobj(raw) or _contains_alias(raw, (complex, np.complexfloating)):
         raise ValueError("signal must be real-valued")
     try:
+        require_real_values(signal, name="signal", allow_object=True)
         x: FloatArray = raw.astype(np.float64, copy=False)
     except (TypeError, ValueError) as exc:
         raise ValueError("signal must be real-valued") from exc

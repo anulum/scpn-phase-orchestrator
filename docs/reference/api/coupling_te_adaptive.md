@@ -397,61 +397,34 @@ $\log(0)$.
 
 ## 7. Performance Benchmarks
 
-Measured on Intel Core i5-11600K @ 3.90 GHz, 32 GB DDR4-2400.
-Phase history length $T = 200$, $B = 8$ bins, median of 10-20 runs.
+Measured 2026-09-26 on a shared host, median of five actual end-to-end calls.
+Both environments select the real Python transfer-entropy estimator through
+its public backend selector; the update uses the actual Python fallback or
+installed Rust kernel. NumPy versions differ, so these snapshots do not establish
+a controlled speed-up.
 
-### End-to-End (TE Computation + Update)
+| N | Samples | Public Python update (ms) | Public Rust update (ms) |
+|---|---:|---:|---:|
+| 4 | 128 | 12.073 | 17.111 |
+| 8 | 128 | 59.324 | 68.427 |
 
-| N | Python (ms) | Rust (ms) | Speedup |
-|---|-------------|-----------|---------|
-| 16 | 3.191 | 3.986 | **0.8x** |
-| 32 | 13.676 | 12.989 | **1.1x** |
-| 64 | 60.312 | 61.156 | **1.0x** |
+[Source identities, environments and reproduction script](../data/te_adaptive_measurement_types_benchmark_2026-09-26.json).
+The complete TE computation is included; both update paths agree within
+`rtol=1e-12, atol=1e-12`. These fixtures do not establish production scaling
+or the performance of a fully native TE pipeline.
 
-### Why ~1x Speedup?
+### Input and output boundaries
 
-The Rust path only accelerates the coupling update ($O(N^2)$
-element-wise operations). The dominant cost is the TE matrix
-computation ($O(N^2 \cdot T \cdot B)$), which involves:
-- $N^2$ calls to `phase_transfer_entropy`
-- Each call: binning $T$ samples, computing conditional entropy
-  over $B^2$ joint bins
+Coupling, phase history, TE scores and adapted results require original real
+source values before float conversion. Boolean, complex, text and temporal
+aliases are rejected, while real numeric object arrays remain supported by
+the Python API. Counts, learning rate and decay reject temporal aliases.
 
-This TE computation runs in Python regardless of the Rust flag.
-The coupling update itself is ~microseconds for $N \leq 64$,
-invisible in the total cost.
-
-To achieve meaningful speedup, the TE matrix computation itself
-needs Rust acceleration (already available via `transfer_entropy.py`
-`_HAS_RUST`). When both TE and update run in Rust, the full pipeline
-benefits from native speed.
-
-### Cost Breakdown (N=32, T=200)
-
-| Phase | Time (ms) | Fraction |
-|-------|-----------|----------|
-| TE matrix computation | ~13.5 | ~99% |
-| Coupling update | ~0.02 | ~1% |
-| Total | ~13.5 | 100% |
-
-### Memory Usage
-
-- TE matrix: $N^2$ floats (~8 KB for $N = 32$)
-- Coupling matrix: $N^2$ floats
-- Phase history: $N \times T$ floats (~50 KB for $N = 32$, $T = 200$)
-- Binned arrays: $3 \times T$ ints (per pair, temporary)
-
-### Test Coverage
-
-- **Rust tests:** 6 (te_adaptive module in spo-engine)
-  - Diagonal always zero, no-decay adds TE, full decay reduces,
-    clamp non-negative, preserves asymmetry, zero LR no change
-- **Python tests:** 7 (`tests/test_te_adaptive.py`)
-  - Output shape, zero diagonal, non-negative, coupling increases,
-    decay reduces, pipeline wiring (engine → TE → adapt → engine)
-- **Source lines:** 128 (Rust) + 64 (Python) = 192 total
-
----
+The direct Rust update retains its float64 ndarray ABI and checks source
+metadata, `n*n` cardinality, finite non-negative weights, zero diagonals,
+non-negative learning rate and decay in `[0,1]` before arithmetic. Negligible
+negative TE scores within `1e-12` are clamped to zero, matching the public
+score contract. Non-finite adapted output is rejected before publication.
 
 ## 8. Citations
 

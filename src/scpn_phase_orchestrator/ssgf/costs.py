@@ -13,7 +13,8 @@ sparsity, and symmetry terms into a weighted objective. The public entry point
 rejects boolean, non-numeric, non-finite, non-vector phase inputs, non-square
 or non-finite coupling matrices, and invalid weight tuples before dispatching
 to Rust or Python. This keeps accelerated and fallback paths aligned on the
-same physical dimensions and cost semantics.
+same physical dimensions and cost semantics. Numeric text and temporal units
+are rejected before conversion; plain real numeric object arrays remain valid.
 """
 
 from __future__ import annotations
@@ -26,6 +27,7 @@ from typing import TypeAlias, cast
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
 from scpn_phase_orchestrator.coupling.spectral import fiedler_value
 from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
@@ -87,6 +89,7 @@ def _validate_weights(weights: tuple[float, ...]) -> tuple[float, float, float, 
     for weight in weights:
         if isinstance(weight, (bool, np.bool_)) or not isinstance(weight, Real):
             raise ValueError("weights must contain finite non-negative real values")
+        require_real_values(weight, name="weights")
         value = float(weight)
         if not np.isfinite(value) or value < 0.0:
             raise ValueError("weights must contain finite non-negative real values")
@@ -102,8 +105,9 @@ def _validate_phases(phases: object) -> FloatArray:
     if np.iscomplexobj(raw) or _contains_complex_alias(phases):
         raise ValueError("phases must be real-valued")
     try:
+        require_real_values(phases, name="phases", allow_object=True)
         values = raw.astype(np.float64, copy=True)
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, OverflowError) as exc:
         raise ValueError("phases must be numeric") from exc
     if values.ndim != 1:
         raise ValueError("phases must be a one-dimensional vector")
@@ -122,8 +126,9 @@ def _validate_weight_matrix(W: object) -> FloatArray:
     if np.iscomplexobj(raw) or _contains_complex_alias(W):
         raise ValueError("W must be real-valued")
     try:
+        require_real_values(W, name="W", allow_object=True)
         values = raw.astype(np.float64, copy=True)
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, OverflowError) as exc:
         raise ValueError("W must be numeric") from exc
     if values.ndim != 2 or values.shape[0] != values.shape[1]:
         raise ValueError("W must be a square matrix")
@@ -136,6 +141,7 @@ def _validate_cost_scalar(value: object, *, name: str) -> float:
     """Return ``value`` as a validated cost scalar, else raise."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite non-boolean real")
+    require_real_values(value, name=name)
     scalar = float(value)
     if not np.isfinite(scalar):
         raise ValueError(f"{name} must be finite")

@@ -80,7 +80,30 @@ def ordinal_pattern_sequence_mojo(
     dimension: int,
     delay: int,
 ) -> IntArray:
-    """Compute the ordinal-pattern code sequence through the Mojo backend."""
+    """Compute the ordinal-pattern code sequence through the Mojo backend.
+
+    Parameters
+    ----------
+    series : FloatArray
+        Finite real one-dimensional samples. Numeric object storage is allowed;
+        Boolean, text, complex and temporal samples are refused before conversion.
+    dimension : int
+        Plain integer embedding dimension in [2, 7].
+    delay : int
+        Plain positive integer delay. An embedding exceeding the series length
+        returns empty evidence before conversion to native parameter storage.
+
+    Returns
+    -------
+    IntArray
+        Stable Lehmer codes; empty when no embedding window fits.
+
+    Raises
+    ------
+    ValueError
+        If source types, dimensions, finite samples or backend outputs violate
+        the ordinal embedding contract.
+    """
     s, d, tau = validate_transition_entropy_backend_inputs(series, dimension, delay)
     n = int(s.size)
     count = ordinal_window_count(n, d, tau)
@@ -102,9 +125,34 @@ def transition_entropy_mojo(
     dimension: int,
     delay: int,
 ) -> float:
-    """Compute the normalised transition entropy through the Mojo backend."""
+    """Compute the normalised transition entropy through the Mojo backend.
+
+    Parameters
+    ----------
+    series : FloatArray
+        Finite real one-dimensional samples. Numeric object storage is allowed;
+        Boolean, text, complex and temporal samples are refused before conversion.
+    dimension : int
+        Plain integer embedding dimension in [2, 7].
+    delay : int
+        Plain positive integer delay. An embedding exceeding the series length
+        returns empty evidence before conversion to native parameter storage.
+
+    Returns
+    -------
+    float
+        Normalised entropy; zero when fewer than two patterns fit.
+
+    Raises
+    ------
+    ValueError
+        If source types, dimensions, finite samples or backend outputs violate
+        the ordinal embedding contract.
+    """
     s, d, tau = validate_transition_entropy_backend_inputs(series, dimension, delay)
     n = int(s.size)
+    if ordinal_window_count(n, d, tau) < 2:
+        return 0.0
     payload = f"OTE {n} {d} {tau} {_serialise(s)}\n"
     result = _run(payload, expected_count=1, label="OTE")
     return validate_transition_entropy_backend_output(

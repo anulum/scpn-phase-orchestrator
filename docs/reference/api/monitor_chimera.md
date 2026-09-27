@@ -160,6 +160,13 @@ runtimes:
   boolean aliases, no numeric-string aliases, no complex dtype/object-complex
   payloads, and values inside the physical interval `[0, 1]`.
 
+Temporal dtypes and object-carried datetime/timedelta values are refused before
+floating-point conversion on public inputs, direct inputs and backend outputs.
+Real numeric object arrays remain supported. Direct Rust calls require contiguous
+float64 vectors and a plain nonnegative integer count, exact `n`/`n*n`
+cardinality, finite values and a zero coupling diagonal. Overflowing matrix
+cardinality is refused before invoking the kernel.
+
 Empty direct calls preserve the Python public contract by returning an empty
 local-order vector before shared-library loading, Julia initialisation, or
 subprocess execution.
@@ -430,3 +437,13 @@ on Python, ~90 ms on Mojo.
   cross-backend parity + 3 long-run stability) plus the
   multi-backend benchmark harness. Parity measured at ``1.1e-16``
   across all four non-Python backends.
+
+
+### Measurement boundary benchmark
+
+The [2026-09-26 comparison](../data/chimera_measurement_types_benchmark_2026-09-26.json)
+reran all five backend contracts for 8 and 32 oscillators, with three calls per
+case. Each passed local-order parity, phase-gauge invariance, synchronised,
+disconnected and uniform-circle reference checks. Source and installed-extension
+hashes are recorded. These shared-host measurements are local regression evidence;
+they do not establish a controlled fastest-backend ranking.

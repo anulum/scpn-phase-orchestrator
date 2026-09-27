@@ -20,6 +20,7 @@ from typing import Any, TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
 from scpn_phase_orchestrator.actuation.mapper import ControlAction
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -130,9 +131,10 @@ def propose_information_geometry_control(
     Parameters
     ----------
     current_distribution : FloatArray | list[float] | tuple[float, ...]
-        The current probability distribution.
+        The current plain real probability distribution; text and temporal
+        aliases are rejected before conversion.
     target_distribution : FloatArray | list[float] | tuple[float, ...]
-        The target probability distribution.
+        The target plain real probability distribution.
     coupling_gradient : FloatArray | list[float] | tuple[float, ...] | None
         Gradient of coherence with respect to the coupling, or ``None``.
     max_step : float
@@ -308,7 +310,11 @@ def _as_float_array(
         raise ValueError(f"{name} must contain numeric values")
     if _contains_complex_alias(values):
         raise ValueError(f"{name} must contain real-valued numeric values")
-    array = np.asarray(values, dtype=np.float64)
+    try:
+        require_real_values(values, name=name, allow_object=True)
+        array = np.asarray(values, dtype=np.float64)
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise ValueError(f"{name} must contain numeric values") from exc
     if not isinstance(array, np.ndarray):
         raise ValueError(  # pragma: no cover - asarray returns a float64 ndarray
             f"{name} must be an array-like of floats"
@@ -344,6 +350,7 @@ def _as_finite_real(value: object, name: str, *, allow_non_positive: bool) -> fl
     """Return ``value`` as a finite real float, else raise ``ValueError``."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite real")
+    require_real_values(value, name=name)
     number = float(value)
     if not np.isfinite(number):
         raise ValueError(f"{name} must be finite")

@@ -15,6 +15,10 @@ coherence threshold, incoherent when it falls below the incoherence
 threshold. The chimera index is the fraction of oscillators that sit
 in the boundary band in between.
 
+Measurements must be plain real numbers before conversion. Boolean, text,
+complex and temporal values are refused; real numeric object arrays remain
+supported.
+
 Compute surface:
 
 * :func:`local_order_parameter` — ``(N,)`` per-oscillator ``R_i`` vector;
@@ -35,6 +39,7 @@ from typing import TypeAlias, cast
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
 from scpn_phase_orchestrator.monitor._julia_runtime import require_juliacall_main
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -287,6 +292,7 @@ def _validate_chimera_inputs(
     if _contains_numeric_string_alias(raw_phases):
         raise ValueError("phases must not contain numeric-string aliases")
     try:
+        require_real_values(phases, name="phases", allow_object=True)
         phases_array = raw_phases.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError("phases must be a finite one-dimensional array") from exc
@@ -304,6 +310,7 @@ def _validate_chimera_inputs(
     if _contains_numeric_string_alias(raw_knm):
         raise ValueError("knm must not contain numeric-string aliases")
     try:
+        require_real_values(knm, name="knm", allow_object=True)
         knm_array = raw_knm.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError("knm must be a finite square coupling matrix") from exc
@@ -331,6 +338,7 @@ def _validate_local_order(value: object, *, n_oscillators: int) -> FloatArray:
             "local order parameter output must not contain numeric-string aliases"
         )
     try:
+        require_real_values(value, name="local order parameter", allow_object=True)
         local = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError("local order parameter output must be numeric") from exc

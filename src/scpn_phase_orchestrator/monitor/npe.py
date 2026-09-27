@@ -28,6 +28,7 @@ from typing import TypeAlias, cast
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
 from scpn_phase_orchestrator.monitor._julia_runtime import require_juliacall_main
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -200,6 +201,7 @@ def _validate_phases(phases: object) -> FloatArray:
     if _contains_complex_alias(raw):
         raise ValueError("phases must contain real-valued phase samples")
     try:
+        require_real_values(phases, name="phases", allow_object=True)
         array = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError("phases must be a one-dimensional float array") from exc
@@ -228,6 +230,7 @@ def _validate_distance_matrix(
     if _contains_complex_alias(raw):
         raise ValueError("phase distance matrix must contain real values")
     try:
+        require_real_values(value, name="value", allow_object=True)
         matrix = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError("phase distance matrix must be numeric") from exc

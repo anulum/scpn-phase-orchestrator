@@ -18,6 +18,7 @@ from typing import TypeAlias, cast
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
 from scpn_phase_orchestrator._validation import non_negative_real
 
 __all__ = [
@@ -902,6 +903,7 @@ def _real_knob_array(value: object, label: str) -> FloatArray:
     if np.iscomplexobj(raw) or _contains_alias(raw, (complex, np.complexfloating)):
         raise ValueError(f"{label} must be real-valued")
     try:
+        require_real_values(value, name=label, allow_object=True)
         array: FloatArray = raw.astype(np.float64, copy=False)
     except (TypeError, ValueError) as exc:
         raise ValueError(f"{label} must be real-valued") from exc

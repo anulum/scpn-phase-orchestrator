@@ -26,6 +26,7 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
 from scpn_phase_orchestrator.autotune.coupling_est import estimate_coupling
 from scpn_phase_orchestrator.autotune.phase_extract import extract_phases
 from scpn_phase_orchestrator.coupling.prior import UniversalPrior
@@ -141,6 +142,7 @@ def _real_time_series(time_series: object) -> FloatArray:
     if np.iscomplexobj(raw) or _contains_alias(raw, (complex, np.complexfloating)):
         raise ValueError("time_series must be real-valued")
     try:
+        require_real_values(time_series, name="time_series", allow_object=True)
         data: FloatArray = raw.astype(np.float64, copy=False)
     except (TypeError, ValueError) as exc:
         raise ValueError("time_series must be real-valued") from exc

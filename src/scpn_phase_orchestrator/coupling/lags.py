@@ -23,6 +23,8 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
+
 __all__ = ["LagModel"]
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -60,8 +62,9 @@ def _validate_distances(value: object) -> FloatArray:
     if _contains_complex_alias(value):
         raise ValueError("distances must contain real-valued samples")
     try:
+        require_real_values(value, name="distances", allow_object=True)
         distances = np.asarray(value, dtype=np.float64)
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, OverflowError) as exc:
         raise ValueError(
             "distances must be a finite non-negative square matrix"
         ) from exc
@@ -82,6 +85,7 @@ def _validate_positive_real(value: object, *, name: str) -> float:
     """Return ``value`` as a strictly positive finite real, else raise."""
     if isinstance(value, bool | np.bool_) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite positive real")
+    require_real_values(value, name=name)
     resolved = float(value)
     if not np.isfinite(resolved) or resolved <= 0.0:
         raise ValueError(f"{name} must be a finite positive real")
@@ -92,6 +96,7 @@ def _validate_n_layers(value: object) -> int:
     """Return the layer count as a positive integer, else raise."""
     if isinstance(value, bool | np.bool_) or not isinstance(value, Integral):
         raise ValueError("n_layers must be a positive integer")
+    require_real_values(value, name="n_layers")
     resolved = int(value)
     if resolved <= 0:
         raise ValueError("n_layers must be a positive integer")
@@ -105,8 +110,9 @@ def _validate_signal(value: object, *, name: str) -> FloatArray:
     if _contains_complex_alias(value):
         raise ValueError(f"{name} must contain real-valued samples")
     try:
+        require_real_values(value, name=name, allow_object=True)
         signal = np.asarray(value, dtype=np.float64)
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, OverflowError) as exc:
         raise ValueError(
             "signals must be the same finite one-dimensional arrays"
         ) from exc
@@ -135,6 +141,8 @@ def _validate_lag_entry(
         or not isinstance(j, Integral)
     ):
         raise ValueError("lag index must contain integer layer indices")
+    require_real_values(i, name="lag source index")
+    require_real_values(j, name="lag target index")
     i = int(i)
     j = int(j)
     if i == j:
@@ -143,6 +151,7 @@ def _validate_lag_entry(
         raise ValueError("lag index must be within n_layers")
     if isinstance(lag, bool | np.bool_) or not isinstance(lag, Real):
         raise ValueError("lag estimate must be a finite real")
+    require_real_values(lag, name="lag estimate")
     lag_value = float(lag)
     if not np.isfinite(lag_value):
         raise ValueError("lag estimate must be a finite real")

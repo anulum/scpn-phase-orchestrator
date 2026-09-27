@@ -59,6 +59,23 @@ constants, duplicate object keys, non-list `matrix` payloads, self-coupled
 entries, and out-of-range layer indices are rejected before any K_nm entries
 are modified.
 
+Construction coefficients and layer counts reject boolean, text and temporal
+aliases before numeric conversion. Dictionary template switching accepts real
+numeric object arrays, but refuses text, complex, boolean and temporal values
+before changing the state. `KnmTemplateSet` retains its stricter floating-point
+dtype contract and returns independent copies of stored matrices.
+The installed Rust builder applies the same original scalar-type checks;
+its projection checks the original sequence elements, and construction rejects
+an overflowing matrix-size product before allocation.
+
+The [construction and projection benchmark](../data/coupling_builder_measurement_types_benchmark_2026-09-26.json)
+records actual kernel-absent Python and release-kernel environments, source
+hashes and a reproduction script. It verifies public construction and projection
+parity at `rtol=atol=1e-12` for 4, 16 and 64 layers, including an observed native
+build call from the public API. The public builder currently selects Rust when
+available; this snapshot does not establish that Rust construction is faster.
+Shared host load and different NumPy versions limit timing comparisons.
+
 ### CouplingState (frozen dataclass)
 
 | Field | Type | Description |
@@ -147,7 +164,8 @@ Enforces structural invariants on K_nm.
 
 `validate_knm(knm, atol=1e-12)` accepts only finite real square matrices and
 checks all four invariants: symmetric, non-negative, zero diagonal, and
-boolean/complex aliases rejected before numeric projection. Raises
+boolean, complex, text and temporal aliases rejected before numeric projection.
+Real numeric object arrays remain supported. Raises
 `ValueError` on violation.
 
 `project_knm(knm, constraints)` applies constraints sequentially, then
@@ -174,8 +192,10 @@ known physical distances.
 
 Inputs must be a finite real square physical-distance matrix with
 non-negative entries, a zero diagonal, and symmetric pair distances, plus a
-finite positive propagation speed. Boolean aliases and complex/object-complex
-distance payloads are rejected before numeric coercion because transport
+finite positive propagation speed. Boolean, complex, textual and temporal
+distance payloads are rejected before numeric coercion; real numeric object
+matrices remain supported. The direct Rust `PyLagModel.estimate` boundary
+checks original flat distance values, counts and speed before extraction. Transport
 delays are ordered real quantities. Returns an antisymmetric matrix:
 α_ij = -α_ji. This encodes the fact that if signal from i reaches j with
 positive lag, then j reaches i with negative lag. Directed or asymmetric
@@ -188,7 +208,7 @@ constructor.
 cross-correlation peak lag in seconds between two signals. Signals must be
 finite real one-dimensional arrays with equal non-zero length and non-zero
 variance. The sample-rate must be a finite positive real value. Constant,
-boolean, complex/object-complex, non-finite, or length-mismatched signals are
+boolean, complex/object-complex, textual, temporal, non-finite, or length-mismatched signals are
 rejected before cross-correlation because they do not define a reliable
 phase-lag estimate.
 
@@ -201,7 +221,12 @@ pairwise lag estimates (in seconds) to a phase-offset matrix (in radians):
 α_ij = 2π × carrier_freq_hz × lag_seconds_ij
 ```
 
-**Performance:** `estimate_from_distances(64×64)` < 5 ms.
+Counts, lag indices, measured lag scalars, carrier frequency and sample rate
+reject temporal aliases before integer or real conversion.
+
+[Python/Rust measurements from 2026-09-26](../data/lag_measurement_types_benchmark_2026-09-26.json)
+cover actual distance estimators. Shared-host small fixtures do not establish
+production scaling or a controlled before/after speed-up.
 
 ::: scpn_phase_orchestrator.coupling.lags
 
@@ -315,7 +340,10 @@ wrapper, and the Go, Julia, and Mojo Hodge adapters reject numeric-string
 aliases before Python, NumPy, shared-library, Julia, or subprocess coercion.
 The public surface applies the boundary to `knm`, `phases`, and explicit
 triangle nodes; the direct adapters apply it to counts, flattened coupling,
-phase, edge, triangle, backend-output, and Julia raw-return payloads. The
+phase, edge, triangle, backend-output, and Julia raw-return payloads. Direct
+Go, Julia, and Mojo edge and triangle indices must be exactly integer-valued
+before conversion; fractional, non-finite, temporal, and overflowing indices
+are rejected. Exact integer-valued float arrays retain their existing support. The
 shared typed `float64` path also rejects boolean aliases, complex or non-finite
 payloads, malformed flattened `n*n` coupling buffers, phase vectors whose
 length does not match `n`, and invalid oscillator counts before optional runtime
@@ -408,6 +436,13 @@ Coupling adaptation rule inspired by biological synaptic plasticity:
   depress coupling but is clamped at zero, and the result always keeps a
   zero self-coupling diagonal.
 
+Phase, coupling and eligibility arrays must contain plain real numbers.
+Numeric strings, bytes, booleans, complex values, `datetime64` and `timedelta64`
+are rejected before conversion, including those inside object arrays. Object
+arrays containing real numeric values remain accepted. Temporal counts are
+not phases in radians or coupling strengths; convert units explicitly at the
+measurement boundary before calling plasticity functions.
+
 ### Three factors
 
 1. **Eligibility** (local): cos(Δθ) — pairwise Hebbian trace
@@ -482,8 +517,16 @@ interaction-type blocks (e.g. `excitatory_strength` blends `e_to_e` and
   target_ratio=1.0) → NDArray` — scales inhibitory coupling to
   achieve target ratio
 
-Both helpers reject boolean aliases in `knm` before computing row means or
-scaling inhibitory rows.
+Both helpers reject boolean, complex, text and temporal aliases in `knm`
+before computing row means or scaling inhibitory rows, while preserving real
+numeric object matrices. Target ratios reject temporal aliases; direct Rust
+counts and target ratios reject boolean/text/temporal aliases before extraction.
+Rust measurement buffers retain their explicit float64 ndarray ABI.
+
+[Python/Rust measurements from 2026-09-26](../data/ei_balance_measurement_types_benchmark_2026-09-26.json)
+exercise the public Python fallback with the kernel absent and the installed Rust
+path. NumPy versions differ between these environments; timings are not a controlled
+backend speed-up comparison.
 
 ::: scpn_phase_orchestrator.coupling.ei_balance
 
@@ -512,8 +555,10 @@ experimental programme.
 - `log_probability(K_base, decay_alpha) → float` — unnormalised
   log-probability under Gaussian prior
 
-`estimate_Kc` rejects boolean aliases in `omegas`, including NumPy boolean
-scalars carried inside object arrays, before constructing the prior graph.
+`estimate_Kc` requires plain real frequencies in radians per second. It rejects
+text, boolean, complex and temporal aliases, including those carried inside
+object arrays, before constructing the prior graph. Numeric-object arrays
+containing real values remain supported.
 
 **Detailed documentation:** [Universal Prior — detailed reference](coupling_prior.md)
 
@@ -587,3 +632,24 @@ The module also exposes exponential, power-law, and inverse-distance kernels. Th
 The reference implementation is NumPy. Rust, Go, Julia, and Mojo adapters are validated as optional accelerators and must reproduce the same invariants before their output is accepted: finite real-valued matrices, exact shape or flat cardinality, non-boolean and non-complex values, non-negative entries, zero diagonal, and symmetry preservation for symmetric inputs. Public positions, base coupling matrices, scalar decay controls, direct accelerator counts/forms/flat buffers, optional backend outputs, and raw Julia returns reject numeric-string aliases before float coercion. The public dispatcher preserves matrix-shaped output for callers after replaying the shared direct output validator; optional backend fallback remains limited to loader or runtime unavailability.
 
 See [Coupling - Spatial Modulator](coupling_spatial_modulator.md) for examples, backend notes, and the benchmark contract.
+
+## Measurement source units
+
+Hodge phases, coupling weights and topology indices; spectral weights and
+frequencies; spatial coordinates, distances and weights; and inference phase
+series require plain real source values before numerical conversion. Text,
+boolean, complex and temporal aliases are rejected. Real numeric object arrays
+remain compatible. Metadata counts and form codes require plain non-boolean integers. The direct Go/Julia/Mojo bridges share the same array source checks.
+The direct Rust spatial boundary also rejects aliases in vectors, controls,
+counts and form codes before extracting native values.
+
+[Measured coupling parity records](../data/coupling_measurement_types_benchmark_2026-09-26.json)
+record all five available Python/Rust/Go/Julia/Mojo implementations for each
+of Hodge (N=6), spectral (N=10) and spatial (N=10, d=2). Each gate used three
+calls and passed its declared physics/parity tolerances. These small-fixture
+shared-host timings do not establish production-scale performance.
+
+## Original numerical input types
+
+See [numerical source types](numerical_source_types.md) for text, boolean and
+temporal refusal, numeric-object compatibility and current language measurements.

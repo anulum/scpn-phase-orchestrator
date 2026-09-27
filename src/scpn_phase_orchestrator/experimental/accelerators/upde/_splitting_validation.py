@@ -16,6 +16,7 @@ from typing import Any, TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
 from scpn_phase_orchestrator._compat import TWO_PI
 from scpn_phase_orchestrator.upde._validation_common import (
     contains_boolean_alias,
@@ -83,6 +84,7 @@ def _as_real_vector(value: Any, *, name: str) -> FloatArray:
         raise ValueError(f"{name} must be real-valued, not complex")
     if not np.issubdtype(array.dtype, np.number):
         raise ValueError(f"{name} must be numeric")
+    require_real_values(value, name=name)
     out = np.ascontiguousarray(array, dtype=np.float64)
     if not np.all(np.isfinite(out)):
         raise ValueError(f"{name} must contain only finite values")
@@ -102,7 +104,9 @@ def _as_positive_int(value: Any, *, name: str) -> int:
     """Return ``value`` as a positive integer, else raise ``ValueError``."""
     if contains_boolean_alias(value):
         raise ValueError(f"{name} must be a non-boolean integer")
-    if not isinstance(value, Integral):
+    if isinstance(value, (np.datetime64, np.timedelta64)) or not isinstance(
+        value, Integral
+    ):
         raise ValueError(f"{name} must be a non-boolean integer")
     out = int(value)
     if out < 1:
@@ -114,7 +118,9 @@ def _as_finite_real(value: Any, *, name: str) -> float:
     """Return ``value`` as a finite real float, else raise ``ValueError``."""
     if contains_boolean_alias(value):
         raise ValueError(f"{name} must be finite real, not boolean")
-    if not isinstance(value, Real):
+    if isinstance(value, (np.datetime64, np.timedelta64)) or not isinstance(
+        value, Real
+    ):
         raise ValueError(f"{name} must be finite real")
     out = float(value)
     if not np.isfinite(out):

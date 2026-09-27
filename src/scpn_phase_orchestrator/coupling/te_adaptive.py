@@ -24,6 +24,7 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
 from scpn_phase_orchestrator.monitor.transfer_entropy import (
     transfer_entropy_matrix,
 )
@@ -57,8 +58,9 @@ def _as_finite_real_array(value: object, *, name: str) -> FloatArray:
     if np.iscomplexobj(raw):
         raise ValueError(f"{name} must be finite and real-valued")
     try:
+        require_real_values(value, name=name, allow_object=True)
         array = np.asarray(raw, dtype=np.float64)
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, OverflowError) as exc:
         raise ValueError(f"{name} must be finite and real-valued") from exc
     if not np.all(np.isfinite(array)):
         raise ValueError(f"{name} must contain only finite values")
@@ -91,6 +93,7 @@ def _validate_non_negative_real(value: object, *, name: str) -> float:
     """Return ``value`` as a non-negative finite real, else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite non-negative real")
+    require_real_values(value, name=name)
     parsed = float(value)
     if not np.isfinite(parsed) or parsed < 0.0:
         raise ValueError(f"{name} must be a finite non-negative real")
@@ -109,6 +112,7 @@ def _validate_n_bins(value: object) -> int:
     """Return ``n_bins`` as an integer at least 2, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral):
         raise ValueError("n_bins must be an integer >= 2")
+    require_real_values(value, name="n_bins")
     parsed = int(value)
     if parsed < 2:
         raise ValueError("n_bins must be an integer >= 2")
@@ -196,10 +200,8 @@ def te_adapt_coupling(
     if _HAS_RUST:
         k_flat = np.ascontiguousarray(knm.ravel(), dtype=np.float64)
         t_flat = np.ascontiguousarray(te.ravel(), dtype=np.float64)
-        result_flat = np.asarray(
-            _rust_te_adapt(k_flat, t_flat, n, lr, decay),
-            dtype=np.float64,
-        )
+        raw_result = _rust_te_adapt(k_flat, t_flat, n, lr, decay)
+        result_flat = _as_finite_real_array(raw_result, name="adapted coupling")
         if result_flat.size != n * n:
             raise RuntimeError("TE adaptive backend returned wrong shape")
         return _validate_adapted_coupling(result_flat.reshape(n, n), n=n)

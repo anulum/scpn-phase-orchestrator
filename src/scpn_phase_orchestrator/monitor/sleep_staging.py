@@ -31,6 +31,8 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
+
 FloatArray: TypeAlias = NDArray[np.float64]
 StageCodeArray: TypeAlias = NDArray[np.uint8]
 
@@ -205,6 +207,7 @@ def _validate_timestamps(value: object) -> FloatArray:
         _require_real_object_samples(raw)
     elif raw.dtype.kind not in "fiu":
         raise ValueError("timestamps must contain real-valued samples")
+    require_real_values(value, name="value", allow_object=True)
     timestamps = raw.astype(np.float64, copy=True)
     if timestamps.ndim != 1:
         raise ValueError("timestamps must be a finite 1-D array")

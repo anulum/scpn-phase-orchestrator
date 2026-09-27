@@ -35,6 +35,7 @@ from typing import TypeAlias, cast
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
 from scpn_phase_orchestrator.upde._julia_runtime import require_juliacall_main
 from scpn_phase_orchestrator.upde._pac_validation import (
     validate_modulation_index_output,
@@ -138,6 +139,7 @@ def _validate_signal(name: str, value: FloatArray) -> FloatArray:
         raise ValueError(f"{name} must not contain boolean values")
     if np.iscomplexobj(raw) or not np.issubdtype(raw.dtype, np.number):
         raise ValueError(f"{name} must be numeric and real-valued")
+    require_real_values(value, name=name, allow_object=True)
     array = raw.astype(np.float64, copy=True)
     if array.ndim != 1:
         raise ValueError(f"{name} must be a one-dimensional vector")
@@ -156,6 +158,7 @@ def _validate_history(
         raise ValueError(f"{name} must not contain boolean values")
     if np.iscomplexobj(raw) or not np.issubdtype(raw.dtype, np.number):
         raise ValueError(f"{name} must be numeric and real-valued")
+    require_real_values(value, name=name, allow_object=True)
     array = raw.astype(np.float64, copy=True)
     if array.ndim != 2:
         raise ValueError("phases_history and amplitudes_history must be 2-D")

@@ -97,6 +97,7 @@ from typing import TypeAlias, cast
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
 from scpn_phase_orchestrator.coupling._hodge_validation import (
     contains_numeric_string_alias,
     is_numeric_string_alias,
@@ -295,8 +296,9 @@ def _validate_phase_vector(value: object, *, name: str) -> FloatArray:
     if raw.dtype == np.bool_:
         raise ValueError(f"{name} must not contain boolean values")
     try:
+        require_real_values(value, name=name, allow_object=True)
         phases = raw.astype(np.float64, copy=True)
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, OverflowError) as exc:
         raise ValueError(f"{name} must be a finite 1-D phase vector") from exc
     if phases.ndim != 1:
         raise ValueError(f"{name} must be a finite 1-D phase vector")
@@ -315,8 +317,9 @@ def _validate_coupling_matrix(value: object, *, expected_n: int) -> FloatArray:
     if raw.dtype == np.bool_:
         raise ValueError("knm must not contain boolean values")
     try:
+        require_real_values(value, name="knm", allow_object=True)
         matrix = raw.astype(np.float64, copy=True)
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, OverflowError) as exc:
         raise ValueError("knm must be a finite square matrix") from exc
     if matrix.ndim != 2 or matrix.shape[0] != matrix.shape[1]:
         raise ValueError("knm must be a finite square matrix")
@@ -356,6 +359,7 @@ def _validate_triangles(
                 raise ValueError("triangle node must not be a numeric-string alias")
             if isinstance(node, bool) or not isinstance(node, Integral):
                 raise ValueError(f"triangle node must be an integer, got {node!r}")
+        require_real_values(nodes, name="triangle nodes", allow_object=True)
         i, j, k = sorted(int(node) for node in nodes)
         if i == j or j == k:
             raise ValueError("triangle nodes must be distinct")

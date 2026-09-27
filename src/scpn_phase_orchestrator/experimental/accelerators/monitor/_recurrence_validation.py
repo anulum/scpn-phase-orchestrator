@@ -16,6 +16,8 @@ from typing import TypeAlias, cast
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
+
 FloatArray: TypeAlias = NDArray[np.float64]
 ArrayPayload: TypeAlias = NDArray[np.generic]
 
@@ -110,6 +112,7 @@ def _validate_flat_trajectory(
     if np.iscomplexobj(raw):
         raise ValueError(f"{name} must contain real-valued trajectory samples")
     try:
+        require_real_values(value, name=name, allow_object=True)
         array = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         msg = f"{name} must be a finite one-dimensional float array"
@@ -212,6 +215,8 @@ def validate_recurrence_backend_output(
     if _contains_numeric_string_alias(array):
         raise ValueError(f"{name} output must not contain numeric-string aliases")
     try:
+        if array.dtype.kind != "b":
+            require_real_values(value, name=name, allow_object=True)
         numeric = array.reshape(t_int, t_int).astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError(f"{name} output must be numeric") from exc

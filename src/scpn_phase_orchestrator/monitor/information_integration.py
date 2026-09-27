@@ -23,6 +23,8 @@ from typing import Any, TypeAlias, cast
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
+
 __all__ = [
     "IntegratedInformationBenchmarkCase",
     "IntegratedInformationBenchmarkReport",
@@ -407,6 +409,7 @@ def _validate_phase_series(phase_series: FloatArray) -> FloatArray:
         raise ValueError("phase_series must contain real-valued phase samples")
     elif raw.dtype.kind not in "iuf":
         raise ValueError("phase_series must be a finite real-valued matrix")
+    require_real_values(phase_series, name="phase_series", allow_object=True)
     phases = raw.astype(np.float64, copy=True)
     if phases.ndim != 2:
         msg = "phase_series must have shape (n_oscillators, n_samples)"
@@ -530,6 +533,7 @@ def _validate_pairwise_mi(value: object) -> FloatArray:
         raise ValueError("pairwise_mi must contain real-valued entries")
     elif raw.dtype.kind not in "iuf":
         raise ValueError("pairwise_mi must be a numeric matrix")
+    require_real_values(value, name="value", allow_object=True)
     matrix = raw.astype(np.float64, copy=True)
     if matrix.ndim != 2 or matrix.shape[0] != matrix.shape[1]:
         raise ValueError("pairwise_mi must be a square matrix")

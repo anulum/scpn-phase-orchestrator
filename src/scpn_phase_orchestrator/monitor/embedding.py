@@ -8,6 +8,9 @@
 
 """Delay-embedding analysis with a 5-backend fallback chain.
 
+Original measurement and parameter types exclude temporal, Boolean and text
+aliases before conversion; numeric object samples remain supported.
+
 Three compute primitives on the multi-language chain:
 
 * :func:`delay_embed` — time-delay embedding matrix.
@@ -44,6 +47,7 @@ from typing import TypeAlias, cast
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
 from scpn_phase_orchestrator.monitor._julia_runtime import require_juliacall_main
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -293,6 +297,7 @@ def _validate_signal(signal: object, *, name: str = "signal") -> FloatArray:
     if _contains_numeric_string_alias(raw):
         raise ValueError(f"{name} must not contain numeric-string aliases")
     try:
+        require_real_values(signal, name=name, allow_object=True)
         array = raw.astype(np.float64, copy=True).ravel()
     except (TypeError, ValueError) as exc:
         raise ValueError(
@@ -313,6 +318,7 @@ def _validate_embedded(embedded: object) -> FloatArray:
     if _contains_numeric_string_alias(raw):
         raise ValueError("embedded must not contain numeric-string aliases")
     try:
+        require_real_values(embedded, name="embedded", allow_object=True)
         array = np.atleast_2d(raw.astype(np.float64, copy=True))
     except (TypeError, ValueError) as exc:
         raise ValueError(
@@ -329,6 +335,7 @@ def _validate_int_at_least(value: object, *, name: str, minimum: int) -> int:
     """Return ``value`` as an integer at least the minimum, else raise."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral):
         raise ValueError(f"{name} must be an integer >= {minimum}, got {value!r}")
+    require_real_values(value, name=name)
     result = int(value)
     if result < minimum:
         raise ValueError(f"{name} must be >= {minimum}, got {result}")
@@ -339,6 +346,7 @@ def _validate_non_negative_real(value: object, *, name: str) -> float:
     """Return ``value`` as a non-negative finite real, else raise."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite non-negative real, got {value!r}")
+    require_real_values(value, name=name)
     result = float(value)
     if not np.isfinite(result) or result < 0.0:
         raise ValueError(f"{name} must be finite and non-negative, got {value!r}")
@@ -364,6 +372,7 @@ def _validate_delay_embedding_output(
             "delay embedding output must not contain numeric-string aliases"
         )
     try:
+        require_real_values(value, name="delay embedding output", allow_object=True)
         embedded = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError("delay embedding output must be numeric") from exc
@@ -396,6 +405,7 @@ def _validate_non_negative_scalar(value: object, *, name: str) -> float:
     if _contains_numeric_string_alias(raw):
         raise ValueError(f"{name} must not contain numeric-string aliases")
     try:
+        require_real_values(value, name=name, allow_object=True)
         scalar = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError(f"{name} must be numeric") from exc
@@ -433,6 +443,8 @@ def _validate_nn_output(
             "nearest-neighbor indices must not contain numeric-string aliases"
         )
     try:
+        require_real_values(distances, name="distances", allow_object=True)
+        require_real_values(indices, name="indices", allow_object=True)
         dist = raw_dist.astype(np.float64, copy=True)
         idx_float = raw_idx.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:

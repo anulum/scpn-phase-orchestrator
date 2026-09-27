@@ -1,0 +1,331 @@
+{
+  "measured_at": "2026-09-26T20:48:54.000735+00:00",
+  "head": "748abdf4e0ad83e617d702e310d6701eac36d287",
+  "reproduction_script": "import sys,json,time,statistics,importlib.util\nfrom pathlib import Path\nsys.path.insert(0,str(Path.cwd()/\"src\"))\nimport numpy as np\nfrom scpn_phase_orchestrator.monitor.synchronisation import synchronisation_warning\nfrom scpn_phase_orchestrator.monitor.critical_slowing_down import critical_slowing_down_warning\nfrom scpn_phase_orchestrator.monitor.explosive_sync import explosive_sync_warning\nfrom scpn_phase_orchestrator.monitor.early_warning_suite import observables_from_phases,run_early_warning_suite\nx=np.arange(256,dtype=np.float64)/20;a=np.vstack([x,1.2*x+.2*np.sin(x)])\nthresholds=dict(critical_slowing_down=3.,synchronisation=3.,transition_entropy=3.,ensemble_weighted=3.)\nfns={\"synchronisation\":lambda v:synchronisation_warning(v,window=32,step=16),\"critical\":lambda v:critical_slowing_down_warning(v,window=32,step=16),\"explosive\":lambda v:explosive_sync_warning(v,window=32,step=16),\"suite\":lambda v:run_early_warning_suite(observables_from_phases(v,sampling_rate_hz=20),thresholds=thresholds,window=32,step=16)}\nrows=[]\nfor name,f in fns.items():\n r=f(a);o=f(a.astype(object));samples=[]\n if name==\"suite\":values=r.ensemble.fused_score;ov=o.ensemble.fused_score;summary=r.triggered();assert summary==o.triggered()\n else:\n  key={\"synchronisation\":\"synchrony_index\",\"critical\":\"combined_z\",\"explosive\":\"entropy_index\"}[name];values=getattr(r,key);ov=getattr(o,key);summary=r.summary();assert summary==o.summary()\n np.testing.assert_array_equal(values,ov)\n for _ in range(5):\n  t=time.perf_counter();f(a);samples.append((time.perf_counter()-t)*1e3)\n rows.append(dict(surface=name,median_ms=statistics.median(samples),summary=summary,values=values.tolist()))\nprint(json.dumps(dict(python=sys.version,numpy=np.__version__,kernel_available=importlib.util.find_spec(\"spo_kernel\") is not None,rows=rows)))\n",
+  "source_sha256": {
+    "src/scpn_phase_orchestrator/monitor/synchronisation.py": "d1e8585c7be9efe86c1e26b5ea56324726761db010f0d32fd1efa359f6bb8a2c",
+    "src/scpn_phase_orchestrator/monitor/critical_slowing_down.py": "6e8ea301f41fa3efc7ffd05692abddd1caff347fba9f824a4346e435aca545a3",
+    "src/scpn_phase_orchestrator/monitor/explosive_sync.py": "9316e7bc1a919da3a2317aac7ec0aa462cb9307678c6d099b4324ed66d4be459",
+    "src/scpn_phase_orchestrator/monitor/early_warning_suite.py": "3414118d8816b0cd6076a1d32e97cee02278cac7e2aed3c9f4e266d4c086391e",
+    "src/scpn_phase_orchestrator/monitor/ensemble_warning.py": "ae2c4425294625342661097f32bd4f0217225864f404cf524666a42576a945c2",
+    "src/scpn_phase_orchestrator/_array_types.py": "1825d3159caa012ebd07bebcd011f2de8125f734f33397464844e42ff2f6655a",
+    "src/scpn_phase_orchestrator/monitor/opt_entropy.py": "d8509e8c06fbee7b44182f3bf6a0c7297447901dd858414d2ecc35aa224419a5",
+    "src/scpn_phase_orchestrator/experimental/accelerators/monitor/_opt_entropy_validation.py": "301911b1e784a6fed5d09504dfdd8e3407ad97a3aa6aee161cb8a4c9a414b6b9",
+    "spo-kernel/crates/spo-ffi/src/ordinal_entropy.rs": "7cf911cbde6e51c4b07e647805323a6efaa00b928678a82d32c778be07b48cb7"
+  },
+  "environments": [
+    {
+      "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]",
+      "numpy": "2.2.6",
+      "kernel_available": false,
+      "rows": [
+        {
+          "surface": "synchronisation",
+          "median_ms": 0.14874397311359644,
+          "summary": {
+            "n_windows": 15,
+            "n_baseline_windows": 4,
+            "baseline_median": 0.9619176845769462,
+            "max_synchrony_index": 0.9872189013890189,
+            "max_robust_z": 1.9398215084162809,
+            "max_relative_rise": 0.02630289183549037,
+            "warning_triggered": false,
+            "warning_window": null,
+            "warning_sample": null
+          },
+          "values": [
+            0.9872189013890189,
+            0.968539806503153,
+            0.9552955626507394,
+            0.9509449537095167,
+            0.9455206102958458,
+            0.9245292505089471,
+            0.8752331733156791,
+            0.7954842931242478,
+            0.7038417427904018,
+            0.631549475276775,
+            0.5963744838152669,
+            0.586484902686079,
+            0.5696531090762889,
+            0.5146935736107388,
+            0.4093894871527768
+          ]
+        },
+        {
+          "surface": "critical",
+          "median_ms": 0.4784709890373051,
+          "summary": {
+            "n_windows": 15,
+            "n_baseline_windows": 4,
+            "baseline_variance": 0.2437356234934777,
+            "baseline_autocorrelation": 0.9352292037856466,
+            "max_combined_z": 2.070211142773059,
+            "max_relative_rise": 0.2779740667814727,
+            "warning_triggered": false,
+            "warning_window": null,
+            "warning_sample": null
+          },
+          "values": [
+            1.6051979457537462,
+            0.49624460730479464,
+            -0.4708452027158633,
+            -0.8527369116483958,
+            -0.40331140280426037,
+            0.5945196722514526,
+            1.678603919068786,
+            2.070211142773059,
+            1.4658533356288324,
+            0.32709500988685064,
+            -0.5792736683026269,
+            -0.839382448036837,
+            -0.2771305661667266,
+            0.7674074266612073,
+            1.7944077797899243
+          ]
+        },
+        {
+          "surface": "explosive",
+          "median_ms": 849.7717159916647,
+          "summary": {
+            "n_windows": 15,
+            "n_baseline_windows": 4,
+            "baseline_median": 0.0,
+            "baseline_scale": 0.0,
+            "min_entropy_index": 0.0,
+            "min_robust_z": 0.0,
+            "max_relative_drop": 0.0,
+            "warning_triggered": false,
+            "warning_window": null,
+            "warning_sample": null
+          },
+          "values": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "surface": "suite",
+          "median_ms": 792.2909689950757,
+          "summary": {
+            "critical_slowing_down": true,
+            "synchronisation": false,
+            "transition_entropy": false,
+            "ensemble_weighted": true
+          },
+          "values": [
+            0.6768406168130626,
+            -0.3161479681518948,
+            -0.13900392754135069,
+            -0.3526441105668909,
+            -1.0272749721227912,
+            -0.020286728496991646,
+            4.484874342437535,
+            8.287441989729203,
+            5.116884695735188,
+            -4.314041807827585,
+            -9.400404105640938,
+            -10.018451660077151,
+            -8.801895771155147,
+            -2.043394595639348,
+            11.067268040751996
+          ]
+        }
+      ],
+      "underlying_ordinal_entropy_backend": {
+        "ACTIVE_BACKEND": "mojo",
+        "AVAILABLE_BACKENDS": [
+          "mojo",
+          "julia",
+          "go",
+          "python"
+        ]
+      }
+    },
+    {
+      "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]",
+      "numpy": "2.5.3",
+      "kernel_available": true,
+      "rows": [
+        {
+          "surface": "synchronisation",
+          "median_ms": 0.17243699403479695,
+          "summary": {
+            "n_windows": 15,
+            "n_baseline_windows": 4,
+            "baseline_median": 0.9619176845769462,
+            "max_synchrony_index": 0.9872189013890189,
+            "max_robust_z": 1.9398215084162809,
+            "max_relative_rise": 0.02630289183549037,
+            "warning_triggered": false,
+            "warning_window": null,
+            "warning_sample": null
+          },
+          "values": [
+            0.9872189013890189,
+            0.968539806503153,
+            0.9552955626507394,
+            0.9509449537095167,
+            0.9455206102958458,
+            0.9245292505089471,
+            0.8752331733156791,
+            0.7954842931242478,
+            0.7038417427904018,
+            0.631549475276775,
+            0.5963744838152669,
+            0.586484902686079,
+            0.5696531090762889,
+            0.5146935736107388,
+            0.4093894871527768
+          ]
+        },
+        {
+          "surface": "critical",
+          "median_ms": 0.4422360216267407,
+          "summary": {
+            "n_windows": 15,
+            "n_baseline_windows": 4,
+            "baseline_variance": 0.2437356234934777,
+            "baseline_autocorrelation": 0.9352292037856466,
+            "max_combined_z": 2.070211142773059,
+            "max_relative_rise": 0.2779740667814727,
+            "warning_triggered": false,
+            "warning_window": null,
+            "warning_sample": null
+          },
+          "values": [
+            1.6051979457537462,
+            0.49624460730479464,
+            -0.4708452027158633,
+            -0.8527369116483958,
+            -0.40331140280426037,
+            0.5945196722514526,
+            1.678603919068786,
+            2.070211142773059,
+            1.4658533356288324,
+            0.32709500988685064,
+            -0.5792736683026269,
+            -0.839382448036837,
+            -0.2771305661667266,
+            0.7674074266612073,
+            1.7944077797899243
+          ]
+        },
+        {
+          "surface": "explosive",
+          "median_ms": 4.974798997864127,
+          "summary": {
+            "n_windows": 15,
+            "n_baseline_windows": 4,
+            "baseline_median": 0.0,
+            "baseline_scale": 0.0,
+            "min_entropy_index": 0.0,
+            "min_robust_z": 0.0,
+            "max_relative_drop": 0.0,
+            "warning_triggered": false,
+            "warning_window": null,
+            "warning_sample": null
+          },
+          "values": [
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0
+          ]
+        },
+        {
+          "surface": "suite",
+          "median_ms": 6.749710999429226,
+          "summary": {
+            "critical_slowing_down": true,
+            "synchronisation": false,
+            "transition_entropy": false,
+            "ensemble_weighted": true
+          },
+          "values": [
+            0.6768406168130626,
+            -0.31614796860217353,
+            -0.13900392754135069,
+            -0.3526441105668909,
+            -1.0272749724768386,
+            -0.020286728851039177,
+            4.484874342437535,
+            8.287441989442089,
+            5.116884695555441,
+            -4.3140418081147,
+            -9.400404105642169,
+            -10.01845166037396,
+            -8.801895771269548,
+            -2.0433945958718076,
+            11.067268040483638
+          ]
+        }
+      ],
+      "underlying_ordinal_entropy_backend": {
+        "ACTIVE_BACKEND": "rust",
+        "AVAILABLE_BACKENDS": [
+          "rust",
+          "mojo",
+          "julia",
+          "go",
+          "python"
+        ]
+      }
+    }
+  ],
+  "cross_environment_comparisons": [
+    {
+      "surface": "synchronisation",
+      "max_absolute_difference": 0.0,
+      "passes_1e_minus_12": true,
+      "summary_exactly_equal": true
+    },
+    {
+      "surface": "critical",
+      "max_absolute_difference": 0.0,
+      "passes_1e_minus_12": true,
+      "summary_exactly_equal": true
+    },
+    {
+      "surface": "explosive",
+      "max_absolute_difference": 0.0,
+      "passes_1e_minus_12": true,
+      "summary_exactly_equal": true
+    },
+    {
+      "surface": "suite",
+      "max_absolute_difference": 4.502787587234991e-10,
+      "passes_1e_minus_12": false,
+      "summary_exactly_equal": true
+    }
+  ],
+  "contract": "Real public detector and phase-to-observable-to-ensemble chain; numeric object/float output equality verified within each environment.",
+  "limits": [
+    "Initial cross-environment1e-12 assertion failed; final per-surface report locates the4.50278759e-10 difference in suite fused robust scores. Summary verdicts remain equal; not exact output parity.",
+    "No direct native warning API counterpart found; unchanged underlying primitives retain their separate backend contracts.",
+    "Shared host, NumPy2.2.6 vs2.5.3, small fixture and5measurements, no controlled speedup claim."
+  ]
+}

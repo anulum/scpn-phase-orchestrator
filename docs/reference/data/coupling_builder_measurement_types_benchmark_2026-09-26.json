@@ -1,0 +1,75 @@
+{
+  "measured_at": "2026-09-26T20:29:16.442800+00:00",
+  "head": "748abdf4e0ad83e617d702e310d6701eac36d287",
+  "reproduction_script": "import sys,json,time,statistics,importlib.util,hashlib,importlib\nfrom pathlib import Path\nsys.path.insert(0,str(Path.cwd()/\"src\"))\nimport numpy as np\nfrom scpn_phase_orchestrator.coupling.knm import CouplingBuilder\nfrom scpn_phase_orchestrator.coupling.geometry_constraints import project_knm,SymmetryConstraint,NonNegativeConstraint\nnative=importlib.util.find_spec(\"spo_kernel\") is not None\ncalls=[]\ndef profile(frame,event,arg):\n if event==\"c_call\" and getattr(arg,\"__name__\",\"\")==\"build\":calls.append(str(arg))\nsys.setprofile(profile)\nCouplingBuilder().build(4,.5,.2)\nsys.setprofile(None)\ndef measure(fn):\n fn(); samples=[]\n for _ in range(5):\n  start=time.perf_counter()\n  for _ in range(100):fn()\n  samples.append((time.perf_counter()-start)*1e6/100)\n return statistics.median(samples)\nrows=[]\nfor n in (4,16,64):\n builder=CouplingBuilder()\n state=builder.build(n,.5,.2)\n raw=np.arange(n*n,dtype=np.float64).reshape(n,n)/max(n*n,1)-.25\n projection=project_knm(raw,[SymmetryConstraint(),NonNegativeConstraint()])\n row={\"n\":n,\"public_build_us\":measure(lambda:builder.build(n,.5,.2)),\"python_projection_us\":measure(lambda:project_knm(raw,[SymmetryConstraint(),NonNegativeConstraint()])),\"knm\":state.knm.tolist(),\"alpha\":state.alpha.tolist(),\"projection\":projection.tolist()}\n if native:\n  import spo_kernel\n  direct=spo_kernel.PyCouplingBuilder().build(n,.5,.2)\n  np.testing.assert_allclose(state.knm,np.array(direct[\"knm\"]).reshape(n,n),rtol=1e-12,atol=1e-12)\n  projected=np.array(spo_kernel.PyCouplingBuilder.project(raw.ravel(),n)).reshape(n,n)\n  np.testing.assert_allclose(projection,projected,rtol=1e-12,atol=1e-12)\n  row[\"native_projection_us\"]=measure(lambda:spo_kernel.PyCouplingBuilder.project(raw.ravel(),n))\n rows.append(row)\nextension=Path(importlib.import_module(\"spo_kernel.spo_kernel\").__file__) if native else None\nprint(json.dumps({\"python\":sys.version,\"numpy\":np.__version__,\"native_available\":native,\"observed_public_build_native_calls\":calls,\"extension_sha256\":hashlib.sha256(extension.read_bytes()).hexdigest() if extension else None,\"rows\":rows}))\n",
+  "source_sha256": {
+    "src/scpn_phase_orchestrator/coupling/knm.py": "dfe49598c2e39a9fa1ad80ffcb019b102e3a55887a5e2e4c69da298dee07acf1",
+    "src/scpn_phase_orchestrator/coupling/templates.py": "7a86132b3b09af64179cf11d9814b5e490645a3242c233c5814e878ae4442319",
+    "src/scpn_phase_orchestrator/coupling/geometry_constraints.py": "2c3730d6224c86322e9803066f1ad1d77614792ed042795e1daa2e6cdf1bc135",
+    "src/scpn_phase_orchestrator/_array_types.py": "1825d3159caa012ebd07bebcd011f2de8125f734f33397464844e42ff2f6655a",
+    "spo-kernel/crates/spo-ffi/src/coupling_builder.rs": "7cf4d21a07c2ae56066c8e8d7de43d4bd1019c2e5a78adebfdd5a5958f34e0d3",
+    "spo-kernel/crates/spo-ffi/src/measurement_types.rs": "608760bfa0e46643fb6661594574af1c1bb52c62cfa219b7df07ff8735a88b65",
+    "spo-kernel/crates/spo-engine/src/coupling.rs": "104ecd77c972b805f14284f50543a4ba91bdc4c9d6b3d7e4f40eeb6ee61c6187"
+  },
+  "environments": [
+    {
+      "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]",
+      "numpy": "2.2.6",
+      "native_available": false,
+      "observed_public_build_native_calls": [],
+      "extension_sha256": null,
+      "rows": [
+        {
+          "n": 4,
+          "public_build_us": 14.888799632899463,
+          "python_projection_us": 83.99420999921858
+        },
+        {
+          "n": 16,
+          "public_build_us": 17.380289500579238,
+          "python_projection_us": 429.5479296706617
+        },
+        {
+          "n": 64,
+          "public_build_us": 23.375150049105287,
+          "python_projection_us": 5628.310689935461
+        }
+      ]
+    },
+    {
+      "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]",
+      "numpy": "2.5.3",
+      "native_available": true,
+      "observed_public_build_native_calls": [
+        "<built-in method build of builtins.PyCouplingBuilder object at 0x7ca67e9de9f0>"
+      ],
+      "extension_sha256": "6d657130855fe40c3d367c9eadf16fbbe4650e0e1250473d44471f332fd1c404",
+      "rows": [
+        {
+          "n": 4,
+          "public_build_us": 65.0628498988226,
+          "python_projection_us": 55.187950492836535,
+          "native_projection_us": 3.4917902667075396
+        },
+        {
+          "n": 16,
+          "public_build_us": 89.28509021643549,
+          "python_projection_us": 523.4988400479779,
+          "native_projection_us": 25.948540423996747
+        },
+        {
+          "n": 64,
+          "public_build_us": 485.9642795054242,
+          "python_projection_us": 5306.500350125134,
+          "native_projection_us": 190.22231979761273
+        }
+      ]
+    }
+  ],
+  "parity": "Public Python kernel-absent vs kernel-present build and Python/native projection: rtol=atol=1e-12; public Rust build c_call observed.",
+  "limitations": [
+    "Shared host, NumPy versions differ; not a controlled speedup study.",
+    "Native projection includes Python-to-Rust sequence conversion; public Python projection includes three matrix validations.",
+    "No Go/Julia/Mojo implementation of this builder/template surface located."
+  ]
+}

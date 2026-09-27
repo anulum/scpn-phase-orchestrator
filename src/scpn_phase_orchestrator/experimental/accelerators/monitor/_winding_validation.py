@@ -16,6 +16,8 @@ from typing import TypeAlias, cast
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
+
 FloatArray: TypeAlias = NDArray[np.float64]
 IntArray: TypeAlias = NDArray[np.int64]
 TWO_PI = 2.0 * np.pi
@@ -110,6 +112,7 @@ def validate_winding_backend_inputs(
     if _contains_numeric_string_alias(phases_flat):
         raise ValueError("phases_flat must not contain numeric-string aliases")
     try:
+        require_real_values(phases_flat, name="phases_flat", allow_object=True)
         phases = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError(
@@ -167,6 +170,7 @@ def validate_winding_backend_output(
     if array.shape != (n_int,):
         raise ValueError(f"winding output shape {array.shape} must be ({n_int},)")
     try:
+        require_real_values(value, name="value", allow_object=True)
         numeric = array.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError("winding output must be numeric") from exc

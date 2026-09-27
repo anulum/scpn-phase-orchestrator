@@ -23,6 +23,7 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
 from scpn_phase_orchestrator._compat import TWO_PI
 from scpn_phase_orchestrator.oscillators.base import PhaseExtractor, PhaseState
 
@@ -68,13 +69,9 @@ def _validate_node_id(value: object) -> str:
 def _validate_signal(value: object) -> IntArray:
     """Return the signal as a validated finite array, else raise."""
     signal = np.asarray(value)
-    dtype = signal.dtype
-    if (
-        np.issubdtype(dtype, np.bool_)
-        or np.issubdtype(dtype, np.complexfloating)
-        or not np.issubdtype(dtype, np.integer)
-    ):
+    if signal.dtype.kind not in "iu":
         raise ValueError("signal must be integer")
+    require_real_values(value, name="signal")
     if signal.ndim != 1:
         raise ValueError(f"signal must be 1-D, got shape {signal.shape}")
     return signal.astype(np.int64, copy=False)
@@ -149,7 +146,8 @@ class SymbolicExtractor(PhaseExtractor):
         Parameters
         ----------
         signal : FloatArray | IntArray
-            Input signal, shape ``(T,)``.
+            Plain integer state indices, shape ``(T,)``. Text, boolean,
+            object and temporal values are rejected before state mapping.
         sample_rate : float
             Sampling rate in Hz.
 

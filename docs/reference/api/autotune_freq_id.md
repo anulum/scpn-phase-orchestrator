@@ -571,3 +571,11 @@ target_freq = result.frequencies[0]  # Most dominant mode
 control_freq = result.frequencies[1] if len(result.frequencies) > 1 else target_freq * 1.5
 evs_result = evs_monitor.evaluate(phases_trials, pause_idx, target_freq, control_freq)
 ```
+
+## Original numerical input types
+
+Measurement and policy arrays are checked before conversion to floating point.
+Numeric text, boolean and temporal aliases are refused; supported numeric-object
+inputs retain the owning API's shape and finiteness checks. See
+[numerical source types](numerical_source_types.md) for the boundary contracts and
+current language measurements.

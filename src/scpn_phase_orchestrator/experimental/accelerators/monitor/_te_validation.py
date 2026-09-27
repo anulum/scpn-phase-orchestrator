@@ -16,6 +16,8 @@ from typing import TypeAlias, cast
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
+
 FloatArray: TypeAlias = NDArray[np.float64]
 
 __all__ = [
@@ -81,9 +83,10 @@ def _validate_phase_vector(value: object, *, name: str) -> FloatArray:
         raise ValueError(f"{name} must not contain numeric-string aliases")
     if np.iscomplexobj(raw):
         raise ValueError(f"{name} must be a finite real-valued phase vector")
+    require_real_values(value, name=name, allow_object=True)
     try:
         array = raw.astype(np.float64, copy=True)
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, OverflowError) as exc:
         raise ValueError(f"{name} must be a finite phase vector") from exc
     if array.ndim != 1:
         raise ValueError(f"{name} must be one-dimensional, got shape {array.shape}")
@@ -106,9 +109,10 @@ def _validate_phase_series_flat(
         raise ValueError("phase_series must not contain numeric-string aliases")
     if np.iscomplexobj(raw):
         raise ValueError("phase_series must be a finite real-valued phase series")
+    require_real_values(value, name="phase_series", allow_object=True)
     try:
         array = raw.astype(np.float64, copy=True).ravel()
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, OverflowError) as exc:
         raise ValueError("phase_series must be a finite phase series") from exc
     expected_size = n_osc * n_time
     if array.size != expected_size:
@@ -138,7 +142,8 @@ def validate_phase_te_backend_inputs(
     """Validate direct pairwise transfer-entropy backend arguments.
 
     Boolean aliases, numeric-string aliases, complex values, non-finite phase
-    samples, and invalid bin counts fail before optional backend loading.
+    samples, temporal values and invalid bin counts fail before optional
+    backend loading. Real numeric-object arrays remain supported.
     """
     source_values = _validate_phase_vector(source, name="source")
     target_values = _validate_phase_vector(target, name="target")
@@ -158,7 +163,8 @@ def validate_te_matrix_backend_inputs(
     """Validate direct transfer-entropy matrix backend arguments.
 
     The flattened phase-series payload must be real, finite, non-string numeric,
-    and sized exactly as ``n_osc * n_time`` before optional backend loading.
+    free of temporal units and sized exactly as ``n_osc * n_time`` before
+    optional backend loading. Real numeric-object arrays remain supported.
     """
     oscillator_count = _validate_int_at_least(n_osc, name="n_osc", minimum=1)
     timestep_count = _validate_int_at_least(n_time, name="n_time", minimum=1)
@@ -269,9 +275,12 @@ def validate_te_backend_output(
         )
     if np.iscomplexobj(raw):
         raise ValueError("transfer entropy backend output must be real")
+    require_real_values(
+        value, name="transfer entropy backend output", allow_object=True
+    )
     try:
         scalar = raw.astype(np.float64, copy=True)
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, OverflowError) as exc:
         raise ValueError("transfer entropy backend output must be numeric") from exc
     if scalar.shape != ():
         raise ValueError("transfer entropy backend output must be scalar")
@@ -290,8 +299,11 @@ def validate_te_backend_output(
                 "numeric-string aliases"
             )
         try:
+            require_real_values(
+                expected, name="expected transfer entropy", allow_object=True
+            )
             expected_scalar = np.asarray(expected, dtype=np.float64)
-        except (TypeError, ValueError) as exc:
+        except (TypeError, ValueError, OverflowError) as exc:
             raise ValueError(
                 "expected transfer entropy backend output must be numeric"
             ) from exc
@@ -323,8 +335,11 @@ def _coerce_expected_te_matrix(
             "numeric-string aliases"
         )
     try:
+        require_real_values(
+            expected, name="expected transfer entropy matrix", allow_object=True
+        )
         reference = np.asarray(expected, dtype=np.float64)
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, OverflowError) as exc:
         raise ValueError(
             "expected transfer entropy matrix backend output must be numeric"
         ) from exc
@@ -356,8 +371,11 @@ def validate_te_matrix_backend_output(
     if np.iscomplexobj(raw):
         raise ValueError("transfer entropy matrix backend output must be real")
     try:
+        require_real_values(
+            value, name="transfer entropy matrix backend output", allow_object=True
+        )
         matrix = raw.astype(np.float64, copy=True)
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, OverflowError) as exc:
         raise ValueError(
             "transfer entropy matrix backend output must be numeric"
         ) from exc

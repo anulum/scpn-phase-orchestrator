@@ -16,11 +16,12 @@ near-zero signals from dominating quality summaries.
 
 from __future__ import annotations
 
-from typing import TypeAlias
+from typing import Literal, TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
 from scpn_phase_orchestrator.oscillators.base import PhaseState
 
 __all__ = ["PhaseQualityScorer"]
@@ -33,10 +34,23 @@ except ImportError:
     _RustPhaseQualityScorer = None
 
 
+def _state_values(
+    states: list[PhaseState], *, name: Literal["quality", "amplitude"]
+) -> FloatArray:
+    """Preserve source types until plain real state measurements are validated."""
+    values = [
+        state.quality if name == "quality" else state.amplitude for state in states
+    ]
+    require_real_values(values, name=name, allow_object=True)
+    return np.asarray(values, dtype=np.float64)
+
+
 class PhaseQualityScorer:
     """Aggregate quality scoring and collapse detection for phase state arrays."""
 
     def __init__(self, collapse_threshold: float = 0.1, min_quality: float = 0.3):
+        require_real_values(collapse_threshold, name="collapse_threshold")
+        require_real_values(min_quality, name="min_quality")
         if not np.isfinite(collapse_threshold):
             raise ValueError("collapse_threshold must be finite")
         if not np.isfinite(min_quality):
@@ -62,7 +76,8 @@ class PhaseQualityScorer:
         Parameters
         ----------
         phase_states : list[PhaseState]
-            Extracted per-oscillator phase states.
+            Extracted per-oscillator phase states with plain real quality and
+            amplitude values; text, boolean and temporal aliases are rejected.
 
         Returns
         -------
@@ -74,8 +89,8 @@ class PhaseQualityScorer:
         """
         if not phase_states:
             return 0.0
-        qualities = np.array([ps.quality for ps in phase_states], dtype=np.float64)
-        amplitudes = np.array([ps.amplitude for ps in phase_states], dtype=np.float64)
+        qualities = _state_values(phase_states, name="quality")
+        amplitudes = _state_values(phase_states, name="amplitude")
         if self._rust is not None:
             return float(self._rust.score(qualities.tolist(), amplitudes.tolist()))
         usable = np.isfinite(qualities) & np.isfinite(amplitudes)
@@ -93,7 +108,8 @@ class PhaseQualityScorer:
         Parameters
         ----------
         phase_states : list[PhaseState]
-            Extracted per-oscillator phase states.
+            Extracted per-oscillator phase states with plain real quality
+            values; text, boolean and temporal aliases are rejected.
         threshold : float
             Decision threshold.
 
@@ -111,18 +127,19 @@ class PhaseQualityScorer:
         """
         if not phase_states:
             return True
+        require_real_values(threshold, name="threshold")
+        qualities = _state_values(phase_states, name="quality")
         if not np.isfinite(threshold):
             raise ValueError("threshold must be finite")
         threshold = float(threshold)
         if not 0.0 <= threshold <= 1.0:
             raise ValueError("threshold must be in [0, 1]")
         if self._rust is not None and threshold == self._collapse_threshold:
-            qualities = [ps.quality for ps in phase_states]
-            return bool(self._rust.is_collapsed(qualities))
+            return bool(self._rust.is_collapsed(qualities.tolist()))
         below = sum(
             1
-            for ps in phase_states
-            if not np.isfinite(ps.quality) or ps.quality < threshold
+            for quality in qualities
+            if not np.isfinite(quality) or quality < threshold
         )
         return below > len(phase_states) / 2
 
@@ -134,7 +151,8 @@ class PhaseQualityScorer:
         Parameters
         ----------
         phase_states : list[PhaseState]
-            Extracted per-oscillator phase states.
+            Extracted per-oscillator phase states with plain real quality
+            values; text, boolean and temporal aliases are rejected.
         min_quality : float
             Minimum extraction quality.
 
@@ -151,12 +169,13 @@ class PhaseQualityScorer:
         """
         if not phase_states:
             return np.array([], dtype=np.float64)
+        require_real_values(min_quality, name="min_quality")
         if not np.isfinite(min_quality):
             raise ValueError("min_quality must be finite")
         min_quality = float(min_quality)
         if not 0.0 <= min_quality <= 1.0:
             raise ValueError("min_quality must be in [0, 1]")
-        qualities = np.array([ps.quality for ps in phase_states], dtype=np.float64)
+        qualities = _state_values(phase_states, name="quality")
         if self._rust is not None and min_quality == self._min_quality:
             return np.asarray(
                 self._rust.downweight_mask(qualities.tolist()),

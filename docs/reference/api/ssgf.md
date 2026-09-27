@@ -44,6 +44,11 @@ the $\tau_{h1} > 0.72$ threshold.
 
 ## SSGF Costs
 
+`compute_ssgf_costs` and `PGBO.observe` require plain real phases and coupling
+values. Numeric text, booleans, complex values and temporal units (including
+those in object arrays) are rejected before conversion. Real numeric object
+arrays remain supported; rejected observations do not update observer history.
+
 Computes the energy functional {total}$ that drives the geometric
 minimization:
 
@@ -375,3 +380,8 @@ These results demonstrate that while the observers (PGBO) are
 sufficiently fast in Python for monitoring, the **inner integration
 and plasticity loop** MUST remain in the Rust kernel to maintain
 sub-millisecond control frequencies at high N.
+
+## Original numerical input types
+
+See [numerical source types](numerical_source_types.md) for text, boolean and
+temporal refusal, numeric-object compatibility and current language measurements.

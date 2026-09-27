@@ -1,0 +1,120 @@
+{
+  "created_at": "2026-09-26T18:56:48.402174+00:00",
+  "head": "748abdf4e0ad83e617d702e310d6701eac36d287",
+  "state": "uncommitted measurement source-type sweep",
+  "platform": "Linux-7.0.0-31-generic-x86_64-with-glibc2.39",
+  "python": "3.12.3",
+  "timing_command": ".venv/bin/python benchmarks/lyapunov_benchmark.py --sizes 4 8 16 32 --n-steps 500 --calls 3",
+  "parity_command": ".venv/bin/python benchmarks/lyapunov_benchmark.py --parity-gate --sizes 4 --n-steps 500 --calls 3",
+  "limitations": "Shared host; not an isolated paired before/after performance experiment. Timing grid is not a full parity grid.",
+  "source_sha256": {
+    "src/scpn_phase_orchestrator/monitor/lyapunov.py": "35e5ebfbb6ce4c2efb722b693930a15e66254f26aa8158aa6564b86c1a830038",
+    "src/scpn_phase_orchestrator/experimental/accelerators/monitor/_lyapunov_validation.py": "2a4072b282403db0d364808bcc22b072b17807aeb26824b40f46144bff28ff52",
+    "src/scpn_phase_orchestrator/_array_types.py": "1825d3159caa012ebd07bebcd011f2de8125f734f33397464844e42ff2f6655a"
+  },
+  "timings": [
+    {
+      "n": 4,
+      "n_steps": 500,
+      "qr_interval": 10,
+      "calls": 3,
+      "zeta": 0.0,
+      "psi": 0.0,
+      "available": [
+        "rust",
+        "mojo",
+        "julia",
+        "go",
+        "python"
+      ],
+      "rust_ms_per_call": 36.229886017584555,
+      "mojo_ms_per_call": 24.3453016737476,
+      "julia_ms_per_call": 2.850988336528341,
+      "go_ms_per_call": 1.2647003362265725,
+      "python_ms_per_call": 43.361952664175384
+    },
+    {
+      "n": 8,
+      "n_steps": 500,
+      "qr_interval": 10,
+      "calls": 3,
+      "zeta": 0.0,
+      "psi": 0.0,
+      "available": [
+        "rust",
+        "mojo",
+        "julia",
+        "go",
+        "python"
+      ],
+      "rust_ms_per_call": 45.944017998408526,
+      "mojo_ms_per_call": 33.30731834284961,
+      "julia_ms_per_call": 3.562845328512291,
+      "go_ms_per_call": 4.184275011842449,
+      "python_ms_per_call": 45.07782832176114
+    },
+    {
+      "n": 16,
+      "n_steps": 500,
+      "qr_interval": 10,
+      "calls": 3,
+      "zeta": 0.0,
+      "psi": 0.0,
+      "available": [
+        "rust",
+        "mojo",
+        "julia",
+        "go",
+        "python"
+      ],
+      "rust_ms_per_call": 40.32252001343295,
+      "mojo_ms_per_call": 33.827362659697734,
+      "julia_ms_per_call": 16.753650328610092,
+      "go_ms_per_call": 17.663127335254103,
+      "python_ms_per_call": 83.85933000439157
+    },
+    {
+      "n": 32,
+      "n_steps": 500,
+      "qr_interval": 10,
+      "calls": 3,
+      "zeta": 0.0,
+      "psi": 0.0,
+      "available": [
+        "rust",
+        "mojo",
+        "julia",
+        "go",
+        "python"
+      ],
+      "rust_ms_per_call": 69.47036533771704,
+      "mojo_ms_per_call": 109.37683165927108,
+      "julia_ms_per_call": 50.32011365983635,
+      "go_ms_per_call": 107.256973007073,
+      "python_ms_per_call": 237.32735199155286
+    }
+  ],
+  "parity": {
+    "suite": "lyapunov_polyglot_parity_gate",
+    "backend_count": 5,
+    "available_backend_count": 5,
+    "unavailable_backend_count": 0,
+    "parity_checked_count": 5,
+    "parity_pass_count": 5,
+    "all_available_passed": 1,
+    "python_reference_present": 1,
+    "n": 4,
+    "n_steps": 500,
+    "qr_interval": 10,
+    "calls": 3,
+    "zeta": 0.0,
+    "psi": 0.0,
+    "reference_spectrum_sha256": "59a5b9a27d302a1b1f0ede6ab16a1191d50447373a265e71368ab7cff6715e11",
+    "benchmark_sha256": "5823fcba2098f73e03fedb257800a7e2ec5da7b7932ef45b703c894081b916e3",
+    "wall_time_s": 0.09877305733971298,
+    "steps_per_second": 151.8632753100886,
+    "acceptance_passed": 1,
+    "acceptance_thresholds_json": "{\"backend_order\": [\"rust\", \"mojo\", \"julia\", \"go\", \"python\"], \"max_mojo_abs_error\": 1e-06, \"max_native_abs_error\": 1e-12, \"require_all_available_parity\": true, \"require_all_declared_backend_records\": true, \"require_python_reference\": true}",
+    "backend_records_json": "[{\"backend\": \"rust\", \"max_abs_error\": 4.440892098500626e-16, \"ms_per_call\": 33.77746064992001, \"parity_passed\": true, \"spectrum_sha256\": \"6d6336a8789ee1fdb7a9660d594d5cc893638b4c0a937085841095f120e529d8\", \"status\": \"available\", \"tolerance\": 1e-12, \"unavailable_reason\": \"\"}, {\"backend\": \"mojo\", \"max_abs_error\": 7.081156994104276e-09, \"ms_per_call\": 26.451772001261514, \"parity_passed\": true, \"spectrum_sha256\": \"3cb4264d5ba6a21569e4072d111b23615abbbc9b9de69aca14d279cac094b8c9\", \"status\": \"available\", \"tolerance\": 1e-06, \"unavailable_reason\": \"\"}, {\"backend\": \"julia\", \"max_abs_error\": 1.3322676295501878e-15, \"ms_per_call\": 1.3990799974029262, \"parity_passed\": true, \"spectrum_sha256\": \"18b797caf65140a65304019e6ff653e662d9e5b09d036da15e1156c7cee8fe60\", \"status\": \"available\", \"tolerance\": 1e-12, \"unavailable_reason\": \"\"}, {\"backend\": \"go\", \"max_abs_error\": 4.440892098500626e-16, \"ms_per_call\": 1.119349675718695, \"parity_passed\": true, \"spectrum_sha256\": \"be1580aa68b4af2da07fab97550c3cbc849dcb6cbe972f63c06a584cb2809612\", \"status\": \"available\", \"tolerance\": 1e-12, \"unavailable_reason\": \"\"}, {\"backend\": \"python\", \"max_abs_error\": 0.0, \"ms_per_call\": 36.025395015409835, \"parity_passed\": true, \"spectrum_sha256\": \"59a5b9a27d302a1b1f0ede6ab16a1191d50447373a265e71368ab7cff6715e11\", \"status\": \"available\", \"tolerance\": 0.0, \"unavailable_reason\": \"\"}]"
+  }
+}

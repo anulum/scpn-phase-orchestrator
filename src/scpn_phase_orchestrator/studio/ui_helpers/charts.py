@@ -15,6 +15,8 @@ from typing import cast
 
 import numpy as np
 
+from scpn_phase_orchestrator._array_types import require_real_values
+
 from ._shared import (
     _finite_number,
     _non_negative_float,
@@ -265,6 +267,7 @@ def _integrated_information_pairwise_shape(
     if matrix.dtype == np.bool_ or np.issubdtype(matrix.dtype, np.complexfloating):
         raise ValueError("pairwise_mi must be finite real-valued")
     try:
+        require_real_values(value, name="pairwise_mi", allow_object=True)
         checked = matrix.astype(np.float64, copy=False)
     except (TypeError, ValueError) as exc:
         raise ValueError("pairwise_mi must be finite real-valued") from exc

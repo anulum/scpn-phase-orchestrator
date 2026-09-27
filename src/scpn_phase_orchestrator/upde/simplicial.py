@@ -46,6 +46,7 @@ from numbers import Integral, Real
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
 from scpn_phase_orchestrator._compat import TWO_PI
 from scpn_phase_orchestrator.upde import (
     _simplicial_validation,
@@ -248,6 +249,8 @@ def _validate_state_array(
     ):
         raise ValueError(f"{name} must contain finite reals, got {arr.dtype}")
     try:
+        require_real_values(value, name=name, allow_object=True)
+        require_real_values(value, name=name)
         arr = arr.astype(np.float64, copy=False)
     except (TypeError, ValueError) as exc:
         raise ValueError(f"{name} must be a finite float array") from exc

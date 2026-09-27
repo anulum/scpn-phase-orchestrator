@@ -27,6 +27,7 @@ from typing import Any, TypeAlias, cast
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
 from scpn_phase_orchestrator.coupling.spatial_modulator import (
     SpatialCouplingModulator,
 )
@@ -165,6 +166,7 @@ def _as_float_vector(values: ArrayLike, *, name: str) -> FloatArray:
     if array.size == 0:
         raise ValueError(f"{name} must contain at least one oscillator")
     try:
+        require_real_values(values, name=name)
         out = np.ascontiguousarray(array, dtype=np.float64)
     except (TypeError, ValueError) as exc:
         raise ValueError(f"{name} must be numeric") from exc
@@ -188,6 +190,7 @@ def _as_schedule(values: ArrayLike, *, name: str, n: int) -> FloatArray:
     if array.shape[0] < 1 or array.shape[1] != n:
         raise ValueError(f"{name} must have shape (steps, oscillator_count)")
     try:
+        require_real_values(values, name=name)
         out = np.ascontiguousarray(array, dtype=np.float64)
     except (TypeError, ValueError) as exc:
         raise ValueError(f"{name} must be numeric") from exc
@@ -207,6 +210,7 @@ def _as_knm(values: ArrayLike, *, n: int) -> FloatArray:
     ):
         raise ValueError("knm must be real-valued, not boolean or complex")
     try:
+        require_real_values(values, name="knm")
         out = np.ascontiguousarray(array, dtype=np.float64)
     except (TypeError, ValueError) as exc:
         raise ValueError("knm must be numeric") from exc

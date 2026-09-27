@@ -8,6 +8,9 @@
 
 """Critical-slowing-down early warning from rising variance and autocorrelation.
 
+Measurement arrays and scalar controls reject boolean, text and temporal aliases
+before conversion. Real numeric object samples remain supported.
+
 The established generic early-warning framework for an approaching critical
 transition is *critical slowing down*: as a system nears a bifurcation its
 recovery from perturbations lengthens, which shows up as a rising variance and a
@@ -47,6 +50,8 @@ from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
+
+from scpn_phase_orchestrator._array_types import require_real_values
 
 FloatArray: TypeAlias = NDArray[np.float64]
 IntArray: TypeAlias = NDArray[np.int64]
@@ -521,6 +526,7 @@ def surrogate_score_threshold(
     ):
         raise ValueError("rng must be a non-negative integer, Generator, or None")
     if isinstance(rng, Integral):
+        require_real_values(rng, name="rng")
         seed = int(rng)
         if seed < 0:
             raise ValueError("rng must be a non-negative integer, Generator, or None")
@@ -627,6 +633,7 @@ def _validate_signals(signals: object) -> FloatArray:
             raise ValueError("signals must be a finite real array")
     elif raw.dtype.kind not in "iuf":
         raise ValueError("signals must be a finite real array")
+    require_real_values(signals, name="signals", allow_object=True)
     array = raw.astype(np.float64, copy=True)
     if array.ndim == 1:
         array = array.reshape(1, -1)
@@ -643,6 +650,7 @@ def _validate_positive_int(value: object, name: str) -> int:
     """Return ``value`` as a positive integer, else raise ``ValueError``."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral):
         raise ValueError(f"{name} must be a positive integer, got {value!r}")
+    require_real_values(value, name=name)
     result = int(value)
     if result < 1:
         raise ValueError(f"{name} must be a positive integer, got {result}")
@@ -653,6 +661,7 @@ def _validate_unit_fraction(value: object, name: str) -> float:
     """Return ``value`` as a fraction in the open interval (0, 1), else raise."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a real number in (0, 1), got {value!r}")
+    require_real_values(value, name=name)
     result = float(value)
     if not np.isfinite(result) or result <= 0.0 or result >= 1.0:
         raise ValueError(f"{name} must lie in the open interval (0, 1), got {result}")
@@ -663,6 +672,7 @@ def _validate_non_negative_real(value: object, name: str) -> float:
     """Return ``value`` as a non-negative finite real, else raise."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a non-negative real, got {value!r}")
+    require_real_values(value, name=name)
     result = float(value)
     if not np.isfinite(result) or result < 0.0:
         raise ValueError(f"{name} must be finite and non-negative, got {result}")

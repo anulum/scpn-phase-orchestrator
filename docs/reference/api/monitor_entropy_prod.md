@@ -455,3 +455,22 @@ Python, seconds on Mojo (subprocess-bound).
   algorithm + Hypothesis, 7 cross-backend parity, 3 long-run
   stability) plus the multi-backend benchmark harness. Parity
   ≤ 1e-19 measured across all four non-Python backends.
+
+
+### Original measurement types
+
+Public and direct accelerator inputs reject boolean, text, complex and temporal
+source values before floating-point conversion, including object-carried temporal
+values. Real numeric object arrays remain supported. Scalar alpha and dt must be
+plain finite real numbers; dt is nonnegative. Native Rust requires contiguous
+float64 buffers with exact n/n*n cardinality and refuses nonfinite dissipation.
+Valid empty networks and zero timesteps keep their zero result.
+
+
+### Measurement boundary comparison
+
+The [2026-09-26 comparison](../data/entropy_production_measurement_types_benchmark_2026-09-26.json)
+records all five available backend contracts at 8 and 32 oscillators, three calls
+per case, with source and actual installed-extension hashes. All passed numerical
+parity and reference/acceptance checks. Shared-host local regression timing does
+not establish a controlled performance ranking.

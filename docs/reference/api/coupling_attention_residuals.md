@@ -490,12 +490,15 @@ value that meets the objective.
 Direct accelerator boundary contract: Go, Julia, and Mojo AttnRes adapters use
 one shared typed `float64` validation path before loading shared-library, Julia,
 or subprocess runtimes. The contract rejects boolean, complex, numeric-string,
-or non-finite flattened coupling, phase, and projection buffers before numeric
+temporal, or non-finite flattened coupling, phase, and projection buffers before numeric
 coercion, plus malformed `n*n` coupling lengths, phase-length mismatch,
 incompatible flattened projection lengths, invalid head counts, invalid
 `block_size`, non-positive temperature, and negative modulation strength. Empty
 systems return an empty flattened coupling vector without optional runtime
-loading.
+loading. Real numeric object arrays remain supported by the Python and direct
+Go/Julia/Mojo adapters. Scalar controls reject boolean and temporal aliases
+before coercion, including at the installed Rust boundary; Rust array inputs
+retain their explicit one-dimensional float64 ABI.
 After backend execution, the same shared validator is replayed by the direct
 Go, Julia, and Mojo adapters and by the public optional-backend path. Backend
 outputs may be flattened `N*N` vectors or `(N, N)` matrices, but must be finite
@@ -506,6 +509,11 @@ physics raises immediately; fallback remains reserved for loader or runtime
 unavailability.
 
 ---
+
+Current small-fixture five-backend measurements and source identities are recorded
+in [the measurement-type benchmark](../data/attention_residuals_measurement_types_benchmark_2026-09-26.json).
+The record includes actual public dispatch and the integration benchmark; shared-host
+timings do not establish production scaling or a before/after speed-up.
 
 ## 11. Design notes
 

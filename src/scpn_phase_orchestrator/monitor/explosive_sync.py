@@ -8,6 +8,9 @@
 
 """Ordinal-pattern transition-entropy early warning for explosive sync.
 
+Measurement arrays and scalar controls reject boolean, text and temporal aliases
+before conversion. Real numeric object samples remain supported.
+
 A first-order (explosive) synchronisation transition — the abrupt, hysteretic
 collapse to coherence behind power-grid blackouts and seizure onset — is
 preceded by a regularisation of each oscillator's local dynamics. That
@@ -39,6 +42,8 @@ from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
+
+from scpn_phase_orchestrator._array_types import require_real_values
 
 from .opt_entropy import (
     DEFAULT_DELAY,
@@ -302,6 +307,7 @@ def _validate_signals(signals: object) -> FloatArray:
     ):
         raise ValueError("signals must be a real float array")
     try:
+        require_real_values(signals, name="signals", allow_object=True)
         array = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError("signals must be a real float array") from exc
@@ -333,6 +339,7 @@ def _validate_result_array(value: object, name: str, *, ndim: int) -> FloatArray
             raise ValueError(f"{name} must be a finite real array")
     elif raw.dtype.kind not in "iuf":
         raise ValueError(f"{name} must be a finite real array")
+    require_real_values(value, name=name, allow_object=True)
     result = np.asarray(raw, dtype=np.float64).copy()
     if result.ndim != ndim or result.size == 0 or not np.all(np.isfinite(result)):
         raise ValueError(f"{name} must be a non-empty finite {ndim}-D array")
@@ -358,6 +365,7 @@ def _validate_optional_index(value: object, name: str) -> int | None:
         return None
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral):
         raise ValueError(f"{name} must be a non-negative integer or None")
+    require_real_values(value, name=name)
     result = int(value)
     if result < 0:
         raise ValueError(f"{name} must be a non-negative integer or None")
@@ -368,6 +376,7 @@ def _validate_positive_int(value: object, name: str) -> int:
     """Return ``value`` as a positive integer, else raise ``ValueError``."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral):
         raise ValueError(f"{name} must be a positive integer, got {value!r}")
+    require_real_values(value, name=name)
     result = int(value)
     if result < 1:
         raise ValueError(f"{name} must be a positive integer, got {result}")
@@ -378,6 +387,7 @@ def _validate_unit_fraction(value: object, name: str) -> float:
     """Return ``value`` as a fraction in [0, 1], else raise ``ValueError``."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a real number in (0, 1), got {value!r}")
+    require_real_values(value, name=name)
     result = float(value)
     if not np.isfinite(result) or result <= 0.0 or result >= 1.0:
         raise ValueError(f"{name} must lie in the open interval (0, 1), got {result}")
@@ -388,6 +398,7 @@ def _validate_non_negative_real(value: object, name: str) -> float:
     """Return ``value`` as a non-negative finite real, else raise."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a non-negative real, got {value!r}")
+    require_real_values(value, name=name)
     result = float(value)
     if not np.isfinite(result) or result < 0.0:
         raise ValueError(f"{name} must be finite and non-negative, got {result}")

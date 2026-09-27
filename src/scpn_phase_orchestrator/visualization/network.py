@@ -25,6 +25,8 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
+
 __all__ = ["network_graph_json", "coupling_heatmap_json"]
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -33,13 +35,10 @@ FloatArray: TypeAlias = NDArray[np.float64]
 def _validate_coupling_matrix(value: object, *, name: str) -> FloatArray:
     """Return the coupling as a validated finite square matrix, else raise."""
     matrix = np.asarray(value)
-    dtype = matrix.dtype
-    if (
-        np.issubdtype(dtype, np.bool_)
-        or np.issubdtype(dtype, np.complexfloating)
-        or not np.issubdtype(dtype, np.number)
-    ):
-        raise ValueError(f"{name} must be finite")
+    try:
+        require_real_values(value, name=name)
+    except ValueError as exc:
+        raise ValueError(f"{name} must be finite real numbers") from exc
     if matrix.ndim != 2 or matrix.shape[0] != matrix.shape[1]:
         raise ValueError(f"{name} must be a square matrix")
     parsed = matrix.astype(np.float64, copy=False)
@@ -56,13 +55,10 @@ def _validate_metric_values(
 ) -> FloatArray:
     """Return the per-node metric values as a validated finite array, else raise."""
     values = np.asarray(value)
-    dtype = values.dtype
-    if (
-        np.issubdtype(dtype, np.bool_)
-        or np.issubdtype(dtype, np.complexfloating)
-        or not np.issubdtype(dtype, np.number)
-    ):
-        raise ValueError(f"{name} must be finite")
+    try:
+        require_real_values(value, name=name)
+    except ValueError as exc:
+        raise ValueError(f"{name} must be finite real numbers") from exc
     if values.ndim != 1:
         raise ValueError(f"{name} must be 1-D, got shape {values.shape}")
     parsed = values.astype(np.float64, copy=False)

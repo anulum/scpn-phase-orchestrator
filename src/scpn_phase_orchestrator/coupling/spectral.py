@@ -56,6 +56,7 @@ from typing import Any, TypeAlias, cast
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
 from scpn_phase_orchestrator.coupling import (
     _spectral_validation as spectral_validation,
 )
@@ -119,8 +120,9 @@ def _validate_coupling_matrix(knm: object) -> FloatArray:
     if np.iscomplexobj(raw) or _contains_complex_alias(knm):
         raise ValueError("knm must be a finite square matrix of real-valued weights")
     try:
+        require_real_values(knm, name="knm", allow_object=True)
         matrix = raw.astype(np.float64, copy=True)
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, OverflowError) as exc:
         raise ValueError("knm must be a finite square matrix") from exc
     if matrix.ndim != 2 or matrix.shape[0] != matrix.shape[1]:
         raise ValueError("knm must be a finite square matrix")
@@ -149,8 +151,9 @@ def _validate_omega_vector(omegas: object) -> FloatArray:
     if np.iscomplexobj(raw) or _contains_complex_alias(omegas):
         raise ValueError("omegas must be a finite real-valued frequency vector")
     try:
+        require_real_values(omegas, name="omegas", allow_object=True)
         values = raw.astype(np.float64, copy=True)
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, OverflowError) as exc:
         raise ValueError("omegas must be a finite 1-D frequency vector") from exc
     if values.ndim != 1:
         raise ValueError("omegas must be a finite 1-D frequency vector")
@@ -167,6 +170,7 @@ def _validate_gamma_max(value: object) -> float:
         raise TypeError("gamma_max must not be a numeric-string alias")
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise TypeError("gamma_max must be a finite real value")
+    require_real_values(value, name="gamma_max")
     gamma = float(value)
     if not np.isfinite(gamma):
         raise ValueError("gamma_max must be finite")
@@ -183,6 +187,7 @@ def _validate_non_negative_scalar(
         raise ValueError(f"{name} must not be a numeric-string alias")
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a non-negative scalar")
+    require_real_values(value, name=name)
     resolved = float(value)
     if allow_infinite and np.isposinf(resolved):
         return resolved
@@ -198,8 +203,9 @@ def _validate_rust_fiedler_vector(value: object, *, n: int) -> FloatArray:
     if _contains_boolean_alias(value) or _contains_complex_alias(value):
         raise ValueError("Fiedler vector must be real-valued and non-boolean")
     try:
+        require_real_values(value, name="Fiedler vector", allow_object=True)
         vector = np.asarray(value, dtype=np.float64)
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, OverflowError) as exc:
         raise ValueError("Fiedler vector must be numeric") from exc
     if vector.shape != (n,):
         raise ValueError(f"Fiedler vector shape {vector.shape} must be ({n},)")

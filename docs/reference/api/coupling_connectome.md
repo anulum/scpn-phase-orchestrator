@@ -359,6 +359,12 @@ hemispheric, DMN hubs) are identical; only the noise differs.
 The public Python wrapper validates those structural properties after optional
 Rust execution instead of trusting the foreign-function boundary blindly.
 
+The public and direct Rust generators require at least two regions and genuine
+non-boolean integer metadata. Counts and seeds reject text and temporal aliases
+before allocation or RNG execution; seeds preserve the full unsigned 64-bit
+range. External matrix source types are checked before float conversion, with
+real numeric object matrices supported and temporal aliases refused.
+
 ### Auto-Select Logic
 
 ```python
@@ -373,24 +379,27 @@ except ImportError:
 
 ## 7. Performance Benchmarks
 
-Measured on Intel Core i5-11600K @ 3.90 GHz, 32 GB DDR4-2400.
-Median of 50-100 iterations.
+Measured 2026-09-26 through actual public cold-cache calls, median of 50
+iterations on a shared host. The system interpreter has no Rust kernel; the
+selected project environment has the installed release kernel. Their NumPy
+versions differ, so these snapshots do not establish a controlled speed-up.
 
-| N | Python (µs) | Rust (µs) | Speedup |
-|---|-------------|-----------|---------|
-| 20 | 228.5 | 4.5 | **50.4x** |
-| 80 | 843.7 | 47.8 | **17.6x** |
-| 200 | 4045.3 | 301.9 | **13.4x** |
+| N | Public Python fallback (µs) | Public Rust path (µs) |
+|---|---:|---:|
+| 20 | 523.3 | 553.3 |
+| 80 | 4900.0 | 7715.7 |
+| 200 | 34811.8 | 50694.5 |
 
-### Why 13-50x Speedup?
+[Source hashes, environment versions and reproduction script](../data/connectome_measurement_types_benchmark_2026-09-26.json).
+Both paths passed finite, non-negative, symmetric, zero-diagonal and per-backend
+determinism checks. Seeded elementwise equivalence is not claimed because their
+noise generators differ.
 
-The Python path creates multiple intermediate NumPy arrays
-(distance matrix, exponential, noise, clip) with associated memory
-allocation overhead. The Rust path operates in-place on a single
-`Vec<f64>`, avoiding all temporary allocations.
+### Allocation behavior
 
-The speedup decreases with $N$ because the $O(N^2)$ computation
-begins to dominate the fixed Python overhead.
+The Python generator creates intermediate NumPy arrays for distances, exponential
+weights, noise and clipping. The Rust generator writes into its output vector;
+both public paths also perform structural validation and return a matrix copy.
 
 ### Memory Usage
 
@@ -407,7 +416,6 @@ begins to dominate the fixed Python overhead.
   - Shape, symmetry, non-negative, diagonal zero, hemispheric
     structure, DMN hubs, spectral properties, pipeline wiring,
     neurolib interface (optional), determinism, edge cases
-- **Source lines:** 179 (Rust) + 144 (Python) = 323 total
 
 ---
 

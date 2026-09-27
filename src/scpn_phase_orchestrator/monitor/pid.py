@@ -50,6 +50,7 @@ from typing import TypeAlias, cast
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
 from scpn_phase_orchestrator.monitor._julia_runtime import require_juliacall_main
 
 __all__ = [
@@ -265,6 +266,7 @@ def _validate_phase_history(value: object) -> FloatArray:
     if _contains_numeric_string_alias(raw):
         raise ValueError("phases must not contain numeric-string aliases")
     try:
+        require_real_values(value, name="value", allow_object=True)
         history = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError("phases must be a finite (T, N) phase history") from exc

@@ -16,6 +16,8 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
+
 FloatArray: TypeAlias = NDArray[np.float64]
 
 _TWO_PI = 2.0 * np.pi
@@ -90,6 +92,7 @@ def _float_vector(value: object, *, name: str, size: int) -> FloatArray:
     if np.iscomplexobj(raw):
         raise ValueError(f"{name} must be real-valued")
     try:
+        require_real_values(value, name=name, allow_object=True)
         vector = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError(f"{name} must be a finite float array") from exc
@@ -119,6 +122,7 @@ def validate_delay_backend_output(value: object, *, n: object) -> FloatArray:
     if np.iscomplexobj(raw):
         raise ValueError("delay backend output must be real-valued")
     try:
+        require_real_values(value, name="value", allow_object=True)
         vector = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError("delay backend output must be a finite phase vector") from exc

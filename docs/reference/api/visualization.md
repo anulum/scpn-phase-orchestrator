@@ -144,6 +144,12 @@ Input contracts:
 - `R_values`, when supplied, is a finite numeric vector with one value per node.
 - `threshold` is finite and non-negative.
 
+Coupling and node-metric arrays contain plain integer or floating-point
+numbers. Object, text, boolean, complex, datetime and duration arrays are
+rejected before JSON encoding. A temporal count cannot serve as a coupling
+weight or a dimensionless order parameter. Boolean aliases in numeric lists
+are also rejected before promotion.
+
 Output contract:
 
 - the JSON object has `nodes` and `links`,
@@ -647,3 +653,8 @@ or create a control path.
 ::: scpn_phase_orchestrator.visualization.network
 
 ::: scpn_phase_orchestrator.visualization.torus
+
+## Original numerical input types
+
+See [numerical source types](numerical_source_types.md) for text, boolean and
+temporal refusal, numeric-object compatibility and current language measurements.

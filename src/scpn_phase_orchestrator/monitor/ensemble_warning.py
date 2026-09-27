@@ -8,6 +8,9 @@
 
 """Ensemble early warning that fuses the detector suite into one decision.
 
+Measurement arrays and scalar controls reject boolean, text and temporal aliases
+before conversion. Real numeric object samples remain supported.
+
 The early-warning suite carries three complementary passive indicators of an
 approaching synchronisation transition, each on its own observable: critical
 slowing down (:mod:`~scpn_phase_orchestrator.monitor.critical_slowing_down`,
@@ -55,6 +58,8 @@ from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
+
+from scpn_phase_orchestrator._array_types import require_real_values
 
 FloatArray: TypeAlias = NDArray[np.float64]
 IntArray: TypeAlias = NDArray[np.int64]
@@ -151,6 +156,7 @@ class MemberEvidence:
             self.n_baseline_windows, Integral
         ):
             raise ValueError("n_baseline_windows must be a non-negative integer")
+        require_real_values(self.n_baseline_windows, name="n_baseline_windows")
         n_baseline = int(self.n_baseline_windows)
         if not 0 <= n_baseline <= starts.size:
             raise ValueError("n_baseline_windows must lie within the window grid")
@@ -648,6 +654,7 @@ def _validate_real_vector(value: object, name: str) -> FloatArray:
             raise ValueError(f"{name} must be a finite real vector")
     elif raw.dtype.kind not in "iuf":
         raise ValueError(f"{name} must be a finite real vector")
+    require_real_values(value, name=name, allow_object=True)
     result = np.asarray(raw, dtype=np.float64).copy()
     if result.ndim != 1 or result.size == 0 or not np.all(np.isfinite(result)):
         raise ValueError(f"{name} must be a finite real vector")
@@ -677,6 +684,7 @@ def _validate_positive_int(value: object, name: str) -> int:
     """Return ``value`` as a positive integer, else raise ``ValueError``."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral):
         raise ValueError(f"{name} must be a positive integer, got {value!r}")
+    require_real_values(value, name=name)
     result = int(value)
     if result < 1:
         raise ValueError(f"{name} must be a positive integer, got {result}")
@@ -695,6 +703,7 @@ def _validate_finite_real(value: object, name: str) -> float:
     """Return ``value`` as a finite real, else raise."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite real")
+    require_real_values(value, name=name)
     result = float(value)
     if not np.isfinite(result):
         raise ValueError(f"{name} must be a finite real")
@@ -705,6 +714,7 @@ def _validate_non_negative_real(value: object, name: str) -> float:
     """Return ``value`` as a non-negative finite real, else raise."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a non-negative real, got {value!r}")
+    require_real_values(value, name=name)
     result = float(value)
     if not np.isfinite(result) or result < 0.0:
         raise ValueError(f"{name} must be finite and non-negative, got {result}")

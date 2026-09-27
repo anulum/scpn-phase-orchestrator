@@ -22,6 +22,7 @@ from typing import TypeAlias, cast
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
 from scpn_phase_orchestrator.monitor._julia_runtime import require_juliacall_main
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -214,6 +215,7 @@ def _validate_phase_history(phases_history: object) -> FloatArray:
             "values are rejected"
         )
     try:
+        require_real_values(phases_history, name="phases_history", allow_object=True)
         array = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError("phases_history must be a numeric array") from exc
@@ -261,6 +263,7 @@ def _validate_backend_winding(
     if array.shape != (n,):
         raise ValueError(f"backend winding output shape {array.shape} must be ({n},)")
     try:
+        require_real_values(value, name="value", allow_object=True)
         numeric = array.astype(np.float64, copy=False)
     except (TypeError, ValueError) as exc:
         raise ValueError("backend winding output must be numeric") from exc

@@ -16,6 +16,8 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
+
 FloatArray: TypeAlias = NDArray[np.float64]
 ArrayPayload: TypeAlias = NDArray[np.generic]
 IntArray: TypeAlias = NDArray[np.int64]
@@ -92,6 +94,7 @@ def _validate_float_vector(value: object, *, name: str) -> FloatArray:
     if _has_complex_payload(value):
         raise ValueError(f"{name} must contain real values")
     try:
+        require_real_values(value, name=name, allow_object=True)
         array = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         msg = f"{name} must be a finite one-dimensional float array"
@@ -113,6 +116,7 @@ def _validate_index_vector(value: object, *, name: str, upper_bound: int) -> Int
     if _has_complex_payload(value):
         raise ValueError(f"{name} must contain integer indices")
     try:
+        require_real_values(value, name=name, allow_object=True)
         numeric = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError(f"{name} must be a one-dimensional integer array") from exc

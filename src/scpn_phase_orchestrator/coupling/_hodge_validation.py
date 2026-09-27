@@ -16,6 +16,8 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
+
 FloatArray: TypeAlias = NDArray[np.float64]
 IntArray: TypeAlias = NDArray[np.int64]
 HodgeTuple: TypeAlias = tuple[FloatArray, FloatArray, FloatArray]
@@ -100,6 +102,7 @@ def _validate_n(value: object) -> int:
         raise ValueError("n must not be a numeric-string alias")
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral):
         raise ValueError("n must be a non-negative integer")
+    require_real_values(value, name="n")
     n_int = int(value)
     if n_int < 0:
         raise ValueError(f"n must be non-negative, got {n_int}")
@@ -116,8 +119,9 @@ def _validate_float_vector(value: object, *, name: str) -> FloatArray:
     if np.iscomplexobj(raw) or _contains_complex_alias(value):
         raise ValueError(f"{name} must be real-valued")
     try:
+        require_real_values(value, name=name, allow_object=True)
         vector = raw.astype(np.float64, copy=True)
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, OverflowError) as exc:
         raise ValueError(
             f"{name} must be a finite one-dimensional float array"
         ) from exc
@@ -145,8 +149,11 @@ def _validate_simplex_array(
     if np.iscomplexobj(raw):
         raise ValueError(f"{name} must be integer-valued")
     try:
+        require_real_values(value, name=name, allow_object=True)
+        if any(item != int(item) for item in raw.flat):
+            raise ValueError(f"{name} must be integer-valued")
         indices = raw.astype(np.int64, copy=True)
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, OverflowError) as exc:
         raise ValueError(f"{name} must be an integer index array") from exc
     if indices.ndim != 1:
         raise ValueError(f"{name} must be one-dimensional, got shape {indices.shape}")
@@ -163,6 +170,7 @@ def _validate_count(value: object, *, name: str) -> int:
         raise ValueError(f"{name} must not be a numeric-string alias")
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral):
         raise ValueError(f"{name} must be a non-negative integer")
+    require_real_values(value, name=name)
     count = int(value)
     if count < 0:
         raise ValueError(f"{name} must be non-negative, got {count}")
@@ -213,8 +221,9 @@ def _validate_output_matrix(value: object, *, n: int) -> FloatArray:
     if contains_numeric_string_alias(value):
         raise ValueError("Hodge backend output must not contain numeric-string aliases")
     try:
+        require_real_values(value, name="Hodge backend output", allow_object=True)
         raw = np.asarray(value, dtype=np.float64)
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, OverflowError) as exc:
         raise ValueError("Hodge backend output must be finite real-valued") from exc
 
     expected_shape = (n, n)

@@ -56,6 +56,7 @@ from typing import TypeAlias, cast
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
 from scpn_phase_orchestrator.monitor._julia_runtime import require_juliacall_main
 from scpn_phase_orchestrator.monitor.twin_confidence_export import (
     twin_confidence_prometheus_text as twin_confidence_prometheus_text,
@@ -550,7 +551,6 @@ def _as_real_vector(name: str, value: object) -> FloatArray:
         raise ValueError(f"{name} must not contain numeric-string aliases")
     try:
         raw = np.asarray(value)
-        parsed = raw.astype(np.float64)
     except (TypeError, ValueError) as exc:
         raise ValueError(f"{name} must be a finite real array") from exc
     if raw.dtype.kind in "mM":
@@ -558,6 +558,11 @@ def _as_real_vector(name: str, value: object) -> FloatArray:
             f"{name} must be plain numbers; datetime64 and timedelta64 values "
             "are rejected"
         )
+    try:
+        require_real_values(value, name=name, allow_object=True)
+        parsed = raw.astype(np.float64)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be a finite real array") from exc
     if parsed.ndim != 1:
         raise ValueError(f"{name} must be one-dimensional, got shape {parsed.shape}")
     if not np.all(np.isfinite(parsed)):

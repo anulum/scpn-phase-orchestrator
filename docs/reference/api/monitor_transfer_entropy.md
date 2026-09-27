@@ -651,3 +651,12 @@ reflects tight inner-loop code generation, not cache effects.
   missed connections*. Physical Review E 75(5):056211 — the
   paper that motivated the SPO choice to clamp TE to the
   non-negative range.
+
+## Measurement source types
+
+Public pairwise and matrix calls, and direct Go, Julia and Mojo bridges,
+require plain real phase values in radians before conversion. Numeric text,
+booleans, complex values and temporal units are rejected, including temporal
+scalars stored in object arrays. Real numeric object arrays remain compatible.
+Backend results and exact-reference values obey the same source-type contract;
+Mojo stdout remains explicitly parsed protocol text.

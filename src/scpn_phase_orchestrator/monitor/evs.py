@@ -25,6 +25,7 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
 from scpn_phase_orchestrator.monitor.itpc import compute_itpc, itpc_persistence
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -264,6 +265,7 @@ def _validate_phase_trials(value: object) -> FloatArray:
     elif raw.dtype.kind not in "iuf":
         raise ValueError("phases_trials must contain real-valued finite phase samples")
     try:
+        require_real_values(value, name="value", allow_object=True)
         phases = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError("phases_trials must be a finite 2-D phase matrix") from exc

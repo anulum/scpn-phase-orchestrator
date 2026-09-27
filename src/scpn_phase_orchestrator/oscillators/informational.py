@@ -21,6 +21,7 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
 from scpn_phase_orchestrator._compat import TWO_PI
 from scpn_phase_orchestrator.oscillators.base import PhaseExtractor, PhaseState
 
@@ -44,13 +45,10 @@ def _validate_node_id(value: object) -> str:
 def _validate_signal(value: object) -> FloatArray:
     """Return the signal as a validated finite array, else raise."""
     signal = np.asarray(value)
-    dtype = signal.dtype
-    if (
-        np.issubdtype(dtype, np.bool_)
-        or np.issubdtype(dtype, np.complexfloating)
-        or not np.issubdtype(dtype, np.number)
-    ):
-        raise ValueError("signal must be finite")
+    try:
+        require_real_values(value, name="signal")
+    except ValueError as exc:
+        raise ValueError("signal must be finite") from exc
     if signal.ndim != 1:
         raise ValueError(f"signal must be 1-D, got shape {signal.shape}")
     parsed = signal.astype(np.float64, copy=False)
@@ -75,14 +73,17 @@ class InformationalExtractor(PhaseExtractor):
         Parameters
         ----------
         signal : FloatArray
-            1-D array of event timestamps in seconds (sorted ascending).
+            1-D array of plain real event timestamps in seconds (sorted
+            ascending). Text, boolean, complex, object and temporal arrays
+            are rejected before conversion.
         sample_rate : float
             not used for timestamps but kept for interface consistency.
 
         Returns
         -------
         list[PhaseState]
-            The result.
+            One informational-channel state with event-derived phase,
+            angular frequency and interval-regularity quality.
 
         Raises
         ------

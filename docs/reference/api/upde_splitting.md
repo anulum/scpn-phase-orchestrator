@@ -390,6 +390,14 @@ Public state arrays, direct Go/Julia/Mojo vectors and flattened matrices, and
 backend phase outputs reject boolean and complex/object-complex aliases. They
 also reject numeric-string aliases before float coercion. The boundary keeps
 preserving finite real numeric-object arrays.
+Public state arrays and direct Go/Julia/Mojo arrays reject temporal dtypes before
+float conversion. Dimensions, step counts and scalar controls likewise reject
+NumPy datetime and duration scalars. Public numeric arrays use dtype checks
+instead of element-by-element Python scans; mixed and object inputs retain
+element checks. This preserves the same Strang integration equations.
+
+[Measured validation and backend timings](../data/splitting_measurement_types_benchmark_2026-09-27.json)
+record the local workload and host limitations.
 Nonnumeric string payloads remain ordinary numeric parse errors. Mojo stdout is
 the text transport exception: it is parsed line by line and then revalidated as
 finite torus phases with exact cardinality.

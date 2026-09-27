@@ -16,6 +16,8 @@ from typing import TypeAlias, cast
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
+
 FloatArray: TypeAlias = NDArray[np.float64]
 
 __all__ = [
@@ -95,6 +97,7 @@ def _validate_phase_vector(value: object) -> FloatArray:
         raise ValueError("phases must not contain numeric-string aliases")
     try:
         raw = np.asarray(value)
+        require_real_values(value, name="value", allow_object=True)
         phases = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError("phases must be a finite one-dimensional float array") from exc
@@ -140,6 +143,7 @@ def validate_psychedelic_entropy_backend_output(
         )
     try:
         raw = np.asarray(value)
+        require_real_values(value, name="value", allow_object=True)
         entropy = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError("entropy backend output must be numeric") from exc

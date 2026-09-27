@@ -16,6 +16,8 @@ from typing import TypeAlias, cast
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
+
 FloatArray: TypeAlias = NDArray[np.float64]
 IntArray: TypeAlias = NDArray[np.int64]
 
@@ -91,6 +93,7 @@ def _validate_phase_buffer(
     if _contains_numeric_string_alias(raw):
         raise ValueError("phases_flat must not contain numeric-string aliases")
     try:
+        require_real_values(phases_flat, name="phases_flat", allow_object=True)
         phases = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError(
@@ -173,6 +176,7 @@ def validate_compute_itpc_backend_output(
     if _contains_numeric_string_alias(raw):
         raise ValueError("ITPC backend output must not contain numeric-string aliases")
     try:
+        require_real_values(value, name="value", allow_object=True)
         itpc = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError("ITPC backend output must be numeric") from exc
@@ -216,6 +220,7 @@ def validate_itpc_persistence_backend_output(
             "ITPC persistence backend output must not contain numeric-string aliases"
         )
     try:
+        require_real_values(value, name="value", allow_object=True)
         scalar = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError("ITPC persistence backend output must be numeric") from exc

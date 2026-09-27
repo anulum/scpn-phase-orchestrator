@@ -31,6 +31,7 @@ from typing import TypeAlias, cast
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
 from scpn_phase_orchestrator.upde._envelope_validation import (
     _contains_numeric_string_alias,
     _is_numeric_string_alias,
@@ -244,6 +245,9 @@ def extract_envelope(
         raise ValueError("amplitudes_history must not contain numeric-string aliases")
     if _is_numeric_string_alias(window):
         raise ValueError("window must not be a numeric-string alias")
+    require_real_values(
+        amplitudes_history, name="amplitudes_history", allow_object=True
+    )
     amplitudes = np.asarray(amplitudes_history, dtype=np.float64)
     if amplitudes.size == 0:
         return amplitudes.copy()
@@ -301,6 +305,7 @@ def envelope_modulation_depth(envelope: FloatArray) -> float:
     """
     if _contains_numeric_string_alias(envelope):
         raise ValueError("envelope must not contain numeric-string aliases")
+    require_real_values(envelope, name="envelope", allow_object=True)
     if envelope.size == 0:
         return 0.0
     backend_fn = _dispatch("mod")
