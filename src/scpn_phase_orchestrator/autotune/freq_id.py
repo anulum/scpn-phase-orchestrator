@@ -25,6 +25,8 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
+
 __all__ = ["identify_frequencies", "FrequencyResult"]
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -139,6 +141,7 @@ def _real_data(data: object) -> FloatArray:
     if np.iscomplexobj(raw) or _contains_alias(raw, (complex, np.complexfloating)):
         raise ValueError("data must be real-valued")
     try:
+        require_real_values(data, name="data", allow_object=True)
         parsed: FloatArray = raw.astype(np.float64, copy=False)
     except (TypeError, ValueError) as exc:
         raise ValueError("data must be real-valued") from exc

@@ -16,6 +16,8 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
+
 FloatArray: TypeAlias = NDArray[np.float64]
 
 __all__ = [
@@ -82,6 +84,7 @@ def _validate_non_negative_int(value: object, *, name: str) -> int:
     """Return ``value`` as a non-negative integer, else raise ``ValueError``."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral):
         raise ValueError(f"{name} must be a non-negative integer")
+    require_real_values(value, name=name)
     resolved = int(value)
     if resolved < 0:
         raise ValueError(f"{name} must be non-negative, got {resolved}")
@@ -92,6 +95,7 @@ def _validate_positive_int(value: object, *, name: str) -> int:
     """Return ``value`` as a positive integer, else raise ``ValueError``."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral):
         raise ValueError(f"{name} must be a positive integer")
+    require_real_values(value, name=name)
     resolved = int(value)
     if resolved < 1:
         raise ValueError(f"{name} must be positive, got {resolved}")
@@ -102,6 +106,7 @@ def _validate_block_size(value: object) -> int:
     """Return the validated attention block size, else raise."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral):
         raise ValueError("block_size must be -1 or a positive integer")
+    require_real_values(value, name="block_size")
     resolved = int(value)
     if resolved != -1 and resolved < 1:
         raise ValueError("block_size must be -1 or a positive integer")
@@ -112,6 +117,7 @@ def _validate_temperature(value: object) -> float:
     """Return the validated attention temperature, else raise."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise ValueError("temperature must be a finite positive real value")
+    require_real_values(value, name="temperature")
     resolved = float(value)
     if not np.isfinite(resolved) or resolved <= 0.0:
         raise ValueError("temperature must be a finite positive real value")
@@ -122,6 +128,7 @@ def _validate_lambda(value: object) -> float:
     """Return the validated residual lambda, else raise."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise ValueError("lambda_ must be a finite non-negative real value")
+    require_real_values(value, name="lambda_")
     resolved = float(value)
     if not np.isfinite(resolved) or resolved < 0.0:
         raise ValueError("lambda_ must be a finite non-negative real value")
@@ -143,8 +150,9 @@ def _validate_float_array(value: object, *, name: str) -> FloatArray:
     if np.iscomplexobj(raw):
         raise ValueError(f"{name} must be real-valued")
     try:
+        require_real_values(value, name=name, allow_object=True)
         array = raw.astype(np.float64, copy=True)
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, OverflowError) as exc:
         raise ValueError(f"{name} must be a finite real float array") from exc
     if not np.all(np.isfinite(array)):
         raise ValueError(f"{name} must contain only finite values")

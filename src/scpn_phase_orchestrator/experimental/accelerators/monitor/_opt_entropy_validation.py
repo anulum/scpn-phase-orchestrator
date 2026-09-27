@@ -8,6 +8,8 @@
 
 """Shared typed validation for ordinal-pattern-transition backend bridges.
 
+Original source types are checked before coercion for every direct bridge.
+
 The canonical reference computation lives here so every polyglot bridge
 (Go, Julia, Mojo) and the public dispatcher all verify against one source
 of truth:
@@ -27,6 +29,8 @@ from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
+
+from scpn_phase_orchestrator._array_types import require_real_values
 
 FloatArray: TypeAlias = NDArray[np.float64]
 IntArray: TypeAlias = NDArray[np.int64]
@@ -107,6 +111,7 @@ def validate_series_backend_input(series: object) -> FloatArray:
     if _contains_complex_alias(raw):
         raise ValueError("series must contain real-valued samples")
     try:
+        require_real_values(series, name="series", allow_object=True)
         array = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError("series must be a one-dimensional float array") from exc
@@ -121,6 +126,7 @@ def _validate_dimension(dimension: object) -> int:
     """Return the validated dimension parameter, else raise."""
     if isinstance(dimension, (bool, np.bool_)) or not isinstance(dimension, Integral):
         raise ValueError(f"dimension must be an integer, got {dimension!r}")
+    require_real_values(dimension, name="dimension")
     value = int(dimension)
     if value < MIN_DIMENSION or value > MAX_DIMENSION:
         raise ValueError(
@@ -133,6 +139,7 @@ def _validate_delay(delay: object) -> int:
     """Return the validated delay parameter, else raise."""
     if isinstance(delay, (bool, np.bool_)) or not isinstance(delay, Integral):
         raise ValueError(f"delay must be an integer, got {delay!r}")
+    require_real_values(delay, name="delay")
     value = int(delay)
     if value < 1:
         raise ValueError(f"delay must be a positive integer, got {value}")
@@ -263,6 +270,7 @@ def validate_ordinal_pattern_backend_output(
         )
     if _contains_complex_alias(raw):
         raise ValueError("ordinal pattern backend output must contain real values")
+    require_real_values(codes, name="ordinal pattern output", allow_object=True)
     if not np.all(np.isfinite(raw.astype(np.float64, copy=False))):
         raise ValueError("ordinal pattern backend output must be finite")
     rounded = np.rint(raw.astype(np.float64, copy=True))
@@ -307,6 +315,7 @@ def validate_transition_entropy_backend_output(
         raise ValueError(
             f"transition entropy backend output must be a real scalar, got {value!r}"
         )
+    require_real_values(value, name="transition entropy output")
     score = float(value)
     if not np.isfinite(score):
         raise ValueError(

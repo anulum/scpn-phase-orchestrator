@@ -24,6 +24,7 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
 from scpn_phase_orchestrator.imprint.state import ImprintState
 
 __all__ = ["ImprintModel"]
@@ -76,6 +77,7 @@ def _finite_vector(
         raise ValueError(f"{name} must not contain boolean values")
     raw = np.asarray(value)
     try:
+        require_real_values(value, name=name, allow_object=True)
         array = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError(f"{name} must be numeric") from exc
@@ -96,6 +98,7 @@ def _finite_square_matrix(value: FloatArray, name: str, *, size: int) -> FloatAr
         raise ValueError(f"{name} must not contain boolean values")
     raw = np.asarray(value)
     try:
+        require_real_values(value, name=name, allow_object=True)
         array = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError(f"{name} must be numeric") from exc

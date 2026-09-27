@@ -64,6 +64,11 @@ binding specification declares which channels are active.
 | `channel` | `str` | Identifier | Binding channel (`P`, `I`, `S`, or named extension) |
 | `node_id` | `str` | — | Unique oscillator identifier |
 
+`PhaseQualityScorer` requires plain real quality values and amplitude weights.
+Text, boolean, complex and temporal aliases are rejected before conversion.
+Nonfinite real qualities retain the documented skip/collapse/zero-mask policy.
+Constructor and per-call quality thresholds must also be plain real numbers.
+
 Quality scores gate downstream processing: low-quality oscillators
 are downweighted in coupling and excluded from regime classification.
 
@@ -103,6 +108,13 @@ PhysicalExtractor(node_id: str = "phys_0")
 
 Uses the analytic signal (Hilbert transform) to decompose a real-valued
 waveform into instantaneous phase and amplitude:
+
+Hilbert, wavelet and zero-crossing extractors accept one-dimensional finite
+integer or floating-point measurement arrays. Text, boolean, complex, object,
+`datetime64` and `timedelta64` arrays are rejected before signal processing.
+Boolean values in numeric lists are also rejected before NumPy promotes them
+to numbers. Convert temporal quantities to explicitly chosen physical units
+at ingestion; changing a duration dtype must not silently change the waveform.
 
 ```
 z(t) = x(t) + i H[x(t)]
@@ -355,7 +367,23 @@ with tolerance atol=1e-10 for phase, rtol=0.01 for frequency.
 | `PhysicalExtractor.extract(1s @ 1kHz)` | < 5 ms | < 1 ms | Hilbert transform |
 | `InformationalExtractor.extract(100 ts)` | < 500 μs | — | numpy operations |
 | `SymbolicExtractor.extract(1000 states)` | < 1 ms | — | ring mapping |
-| `PhaseQualityScorer.downweight_mask(100)` | < 50 μs | — | array comparison |
+| `PhaseQualityScorer.downweight_mask(100)` | < 50 μs | 3.15 μs | public wrapper: 31.57 μs |
+
+Quality timings measured on 2026-09-26 with the rebuilt release extension,
+five repeats of 100 calls after warm-up on a shared host. Direct Rust mask
+and the public wrapper include source-type validation. The supported per-call
+threshold override selects the real Python mask path, measured at 32.40 μs
+for the same applied threshold and input. This is a current measurement,
+not an isolated performance comparison against an earlier release.
+[Raw quality timing records and source hashes](../data/quality_measurement_types_benchmark_2026-09-26.json)
+cover N=10/100/1000. Pure Python score was not measured on this kernel-installed
+host; the public score uses the real Rust backend.
+
+The direct `spo_kernel.PyPhaseQualityScorer` also rejects text, boolean,
+complex and temporal aliases, while retaining real arrays and documented
+nonfinite measurement policies. Its constructor retains the `0.1`/`0.3`
+defaults and requires finite unit-interval thresholds. Native boundary tests
+run under `native-tests/` in the kernel-built Unix and Windows FFI CI lanes.
 
 ## Domain examples
 
@@ -389,3 +417,8 @@ extractor = SymbolicExtractor(n_states=64, mode="ring")
 codon_indices = encode_codons(sequence)
 states = extractor.extract(codon_indices, sample_rate=1.0)
 ```
+
+## Original numerical input types
+
+See [numerical source types](numerical_source_types.md) for text, boolean and
+temporal refusal, numeric-object compatibility and current language measurements.

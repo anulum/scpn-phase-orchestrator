@@ -24,6 +24,7 @@ from typing import Any, TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
 from scpn_phase_orchestrator.coupling.knm import CouplingState
 from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
 
@@ -55,6 +56,7 @@ def _finite_array(value: object, *, name: str) -> FloatArray:
     if raw.dtype.kind == "b":
         raise ValueError(f"{name} must be numeric, not boolean")
     try:
+        require_real_values(value, name=name, allow_object=True)
         array = np.asarray(raw, dtype=np.float64)
     except (TypeError, ValueError) as exc:
         raise ValueError(f"{name} must be numeric") from exc

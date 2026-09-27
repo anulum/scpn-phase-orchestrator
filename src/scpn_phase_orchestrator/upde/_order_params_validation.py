@@ -16,6 +16,7 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
 from scpn_phase_orchestrator._compat import TWO_PI
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -58,6 +59,7 @@ def validate_phase_vector(value: object, *, name: str) -> FloatArray:
         raise ValueError(f"{name} must be real-valued")
     if not np.issubdtype(raw.dtype, np.number):
         raise ValueError(f"{name} must be numeric")
+    require_real_values(value, name=name, allow_object=True)
     values = np.ascontiguousarray(raw.astype(np.float64, copy=True))
     if not np.all(np.isfinite(values)):
         raise ValueError(f"{name} must contain only finite values")

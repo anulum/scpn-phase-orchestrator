@@ -25,6 +25,7 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
 from scpn_phase_orchestrator.ssgf.costs import SSGFCosts, compute_ssgf_costs
 from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
@@ -41,6 +42,7 @@ def _validate_cost_weights(cost_weights: tuple[float, ...]) -> tuple[float, ...]
     for weight in cost_weights:
         if isinstance(weight, bool) or not isinstance(weight, Real):
             raise ValueError("cost_weights must contain finite real weights")
+        require_real_values(weight, name="cost_weights")
         value = float(weight)
         if not np.isfinite(value):
             raise ValueError("cost_weights must contain finite real weights")
@@ -58,8 +60,9 @@ def _validate_phases(phases: FloatArray) -> FloatArray:
     ):
         raise ValueError("phases must not contain boolean values")
     try:
+        require_real_values(phases, name="phases", allow_object=True)
         values = raw.astype(np.float64, copy=True)
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, OverflowError) as exc:
         raise ValueError("phases must be numeric") from exc
     if values.ndim != 1:
         raise ValueError("phases must be a one-dimensional vector")
@@ -78,8 +81,9 @@ def _validate_coupling_matrix(W: FloatArray, n_oscillators: int) -> FloatArray:
     ):
         raise ValueError("W must not contain boolean values")
     try:
+        require_real_values(W, name="W", allow_object=True)
         values = raw.astype(np.float64, copy=True)
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, OverflowError) as exc:
         raise ValueError("W must be numeric") from exc
     expected = (n_oscillators, n_oscillators)
     if values.shape != expected:
@@ -128,9 +132,11 @@ class PGBO:
         Parameters
         ----------
         phases : FloatArray
-            Current phase vector theta_i.
+            Current plain real phase vector theta_i in radians; text and temporal
+            units are rejected before conversion.
         W : FloatArray
-            Current geometric coupling matrix W_ij.
+            Current plain real geometric coupling matrix W_ij; text and temporal
+            units are rejected before conversion.
 
         Returns
         -------

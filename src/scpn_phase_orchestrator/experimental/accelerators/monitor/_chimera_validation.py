@@ -6,7 +6,11 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — chimera backend boundary validation
 
-"""Shared validation for direct chimera accelerator calls."""
+"""Shared validation for direct chimera accelerator calls.
+
+Original boolean, text, complex and temporal measurement aliases are refused;
+real numeric object arrays are supported and counts must be plain integers.
+"""
 
 from __future__ import annotations
 
@@ -15,6 +19,8 @@ from typing import TypeAlias, cast
 
 import numpy as np
 from numpy.typing import NDArray
+
+from scpn_phase_orchestrator._array_types import require_real_values
 
 FloatArray: TypeAlias = NDArray[np.float64]
 
@@ -82,7 +88,9 @@ def _has_complex_payload(value: object) -> bool:
 
 def _validate_n(value: object) -> int:
     """Return the validated oscillator count, else raise."""
-    if isinstance(value, bool) or not isinstance(value, Integral):
+    if isinstance(
+        value, (bool, np.bool_, np.timedelta64, np.datetime64)
+    ) or not isinstance(value, Integral):
         raise ValueError("n must be a non-negative integer")
     result = int(value)
     if result < 0:
@@ -100,6 +108,7 @@ def _validate_float_vector(value: object, name: str) -> FloatArray:
     if _contains_numeric_string_alias(raw):
         raise ValueError(f"{name} must not contain numeric-string aliases")
     try:
+        require_real_values(value, name=name, allow_object=True)
         array = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError(

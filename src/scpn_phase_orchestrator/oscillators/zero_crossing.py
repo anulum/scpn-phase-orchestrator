@@ -47,13 +47,13 @@ def _validate_node_id(value: object) -> str:
 def _validate_signal(value: object) -> FloatArray:
     """Return the signal as a validated finite array, else raise."""
     signal = np.asarray(value)
-    dtype = signal.dtype
-    if (
-        np.issubdtype(dtype, np.bool_)
-        or np.issubdtype(dtype, np.complexfloating)
-        or not np.issubdtype(dtype, np.number)
+    if signal.dtype.kind not in "iuf":
+        raise ValueError("signal must be finite real numbers without temporal units")
+    if not isinstance(value, np.ndarray) and any(
+        isinstance(item, (bool, np.bool_))
+        for item in np.asarray(value, dtype=object).flat
     ):
-        raise ValueError("signal must be finite")
+        raise ValueError("signal must not contain boolean values")
     if signal.ndim != 1 or signal.size < 2:
         raise ValueError(
             f"signal must be 1-D with >= 2 samples, got shape {signal.shape}"
@@ -89,7 +89,8 @@ class ZeroCrossingExtractor(PhaseExtractor):
         Parameters
         ----------
         signal : FloatArray
-            Input signal, shape ``(T,)``.
+            Input signal, shape ``(T,)``, containing plain real numbers.
+            Text, boolean, complex, object and temporal arrays are rejected.
         sample_rate : float
             Sampling rate in Hz.
 

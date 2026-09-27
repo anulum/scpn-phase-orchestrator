@@ -24,6 +24,8 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
+
 try:
     from spo_kernel import (
         prior_log_probability_rust as _rust_log_prob,
@@ -91,9 +93,10 @@ def _validate_frequency_vector(value: object) -> FloatArray:
         raise ValueError("omegas must not contain boolean values")
     if np.iscomplexobj(raw):
         raise ValueError("omegas must be a finite 1-D frequency vector")
+    require_real_values(value, name="omegas", allow_object=True)
     try:
         omegas = raw.astype(np.float64, copy=True)
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, OverflowError) as exc:
         raise ValueError("omegas must be a finite 1-D frequency vector") from exc
     if omegas.ndim != 1:
         raise ValueError("omegas must be a finite 1-D frequency vector")
@@ -192,7 +195,9 @@ class UniversalPrior:
         Parameters
         ----------
         omegas : FloatArray
-            Natural frequencies in rad/s, shape ``(N,)``.
+            Natural frequencies in rad/s, shape ``(N,)``. Plain real numeric
+            objects are accepted; text, boolean, complex and temporal values
+            are rejected before conversion.
         n_layers : int
             Number of SCPN hierarchy layers.
 

@@ -192,7 +192,10 @@ dispatcher reshapes them for each backend).
 Public validation runs before float coercion. Phase/frequency vectors and
 coupling/lag matrices must contain finite real non-boolean numeric values;
 numeric strings such as `"1.0"`, complex dtypes, object-complex aliases, and
-boolean aliases are rejected before backend dispatch.
+boolean aliases are rejected before backend dispatch. Datetime and duration
+arrays or object elements are also rejected: phases and phase lags are plain
+radians and frequencies are plain radians per second. Numeric-object arrays
+containing real values remain supported by the Python public boundary.
 
 **Guidelines** on the integrator parameters:
 
@@ -378,38 +381,31 @@ online control.
 
 ## 5. Benchmarks
 
-Measured on an Ubuntu 24.04 host with 16-thread x86_64 CPU, NumPy
-2.3.4 / MKL, Julia 1.11.2, Go 1.23.4, Mojo 0.26.2, `spo_kernel`
-built in release mode with `maturin build --release`. Every entry
-is **ms per call** for a fresh `(N × N)` Kuramoto problem with
-`dt = 0.01`, `qr_interval = 10`, `calls = 2` (warm-up plus measured
-pair). Re-run with
-`python benchmarks/lyapunov_benchmark.py --sizes 4 8 16 32 --n-steps 500`.
+Measured on 2026-09-26 on the shared Linux host after measurement source-type
+validation. Every entry is **ms per call** for `dt = 0.01`, `qr_interval = 10`,
+and three measured calls after warm-up. All five backends were available.
+Re-run with:
 
-| N   | n_steps | rust (ms) | mojo (ms) | julia (ms) | go (ms) | python (ms) |
-| --- | ------- | --------: | --------: | ---------: | ------: | ----------: |
-| 4   | 500     |     49.87 |     89.22 |       1.91 |    2.53 |       67.30 |
-| 8   | 500     |     65.45 |    123.80 |       6.57 |    8.28 |       69.51 |
-| 16  | 500     |     72.63 |    122.40 |      22.12 |   28.89 |       77.41 |
-| 32  | 500     |    157.81 |    185.12 |     166.53 |  165.61 |      216.84 |
+```bash
+python benchmarks/lyapunov_benchmark.py --sizes 4 8 16 32 --n-steps 500 --calls 3
+```
 
-Observations:
+| N | n_steps | rust (ms) | mojo (ms) | julia (ms) | go (ms) | python (ms) |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| 4 | 500 | 36.23 | 24.35 | 2.85 | 1.26 | 43.36 |
+| 8 | 500 | 45.94 | 33.31 | 3.56 | 4.18 | 45.08 |
+| 16 | 500 | 40.32 | 33.83 | 16.75 | 17.66 | 83.86 |
+| 32 | 500 | 69.47 | 109.38 | 50.32 | 107.26 | 237.33 |
 
-* **Go and Julia lead at small N.** For `N ≤ 16` they dominate
-  because the per-call setup cost is minimal (no process spawn, no
-  rayon thread-pool priming). The naive triple-loop `matMul` in Go
-  is faster than the LAPACK dispatch overhead in Python / Rust.
-* **Rust dominates at large N.** At `N = 32` rayon amortises across
-  all 16 threads and the rust backend matches Julia / Go while
-  bringing a lot more headroom (tests at `N = 64, n_steps = 2000`
-  clock rust at ~900 ms, go at ~2.6 s).
-* **Mojo subprocess overhead is the floor.** Each call forks a
-  process, parses a text stream, and prints `N` lines of ASCII —
-  this dominates below `N = 32`. Mojo is retained in the chain for
-  parity coverage rather than raw throughput.
-* **Python is competitive at small N.** The RK4 loop is only a few
-  lines of NumPy, so dispatch overhead is small; the `N³` scaling
-  catches up by `N = 32`.
+Go and Julia were fastest at small N; Julia was fastest at N=32 in this run.
+These shared-host timings do not establish a paired performance improvement
+or a universal backend ranking.
+
+[Raw timings, source hashes and the N=4 parity record](../data/lyapunov_measurement_types_benchmark_2026-09-26.json)
+retain the commands and scope. All five backends passed the parity gate at
+N=4, 500 steps: Rust/Julia/Go maximum errors were below `1e-12`, and Mojo
+error was `7.09e-9`, below its `1e-6` tolerance. The timing grid does not
+constitute a parity gate at every network size.
 
 **Raw benchmark JSON** is saved by
 `--output /tmp/ly_bench.json`; SPO CI publishes this file as a build
@@ -705,3 +701,12 @@ on Python.
   QR kernels in pure Mojo. Three new test files (`test_lyapunov_algorithm.py`,
   `test_lyapunov_backends.py`, `test_lyapunov_stability.py`) plus the
   multi-backend benchmark.
+
+## Final source-type comparison
+
+The [2026-09-27 comparison](../data/coercion_sweep_final_polyglot_2026-09-27.json)
+reruns the five-language spectrum gate against the final installed Rust kernel.
+Plain numerical ndarray checks avoid per-element object conversion in the
+Lyapunov guard; boolean, numeric-text and temporal checks remain active.
+The original 5 ms guard timing budget is retained. Earlier dated tables describe
+their recorded source revision and are not controlled performance comparisons.

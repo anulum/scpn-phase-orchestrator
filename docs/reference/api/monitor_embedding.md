@@ -59,8 +59,9 @@ supports false-nearest-neighbor dimension selection.
 
 Go, Julia, and Mojo direct bridge calls share the same typed pre-dispatch
 contract before optional runtime loading. Signal payloads must be finite
-real one-dimensional `float64` arrays and must reject numeric-string aliases
-before float coercion. Delay, dimension, lag, bin-count, row-count, and
+real one-dimensional samples. Real numeric object arrays are supported;
+Boolean, text, complex and temporal aliases, including object-stored durations,
+are rejected before float conversion. Delay, dimension, lag, bin-count, row-count, and
 embedding-dimension controls must be integer values in the public API domain.
 Embedded nearest-neighbor payloads must be finite real flat `float64` arrays
 whose length matches `T*m`, with numeric-string aliases rejected at the same
@@ -84,6 +85,19 @@ finite non-negative distances and integral in-range neighbor indices, with
 self-neighbors rejected for non-trivial embeddings. Malformed Mojo text output
 is normalised to deterministic `ValueError` failures rather than leaking parser
 exceptions.
+
+The installed Rust entry points retain their contiguous one-dimensional float64
+array ABI. They check original non-Boolean integer metadata, finite samples and
+finite nonnegative FNN tolerances. Embedding-window, output-size and histogram-size
+products are checked before allocation. A valid delay exceeding the series length
+returns dimension 1 from the native FNN selector without signed truncation.
+
+The [source-type benchmark](../data/embedding_measurement_types_benchmark_2026-09-26.json)
+records the canonical parity gate on actual Python, Rust, Go, Julia and Mojo
+backends at 64 and 160 samples, with source and extension hashes. Rust has no
+standalone mutual-information or nearest-neighbor FFI; its supported contracts
+are recorded separately. Three calls per backend on a shared host are local
+regression evidence, not a controlled speedup comparison.
 
 ## Invariants
 

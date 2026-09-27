@@ -22,6 +22,7 @@ from typing import Literal, TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
 from scpn_phase_orchestrator.monitor.transfer_entropy import (
     ACTIVE_BACKEND as TRANSFER_ENTROPY_BACKEND,
 )
@@ -108,6 +109,7 @@ def _validate_optional_finite_real(value: object | None, *, name: str) -> float 
         return None
     if isinstance(value, bool) or not isinstance(value, Real):
         raise TypeError(f"{name} must be a finite real value")
+    require_real_values(value, name=name)
     resolved = float(value)
     if not np.isfinite(resolved):
         raise ValueError(f"{name} must be finite")
@@ -240,8 +242,9 @@ def _validate_phase_series(value: object, *, min_timesteps: int) -> FloatArray:
             "(oscillators, timesteps)"
         )
     try:
+        require_real_values(value, name="phase_series", allow_object=True)
         series = raw.astype(np.float64, copy=True)
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, OverflowError) as exc:
         raise ValueError(
             "phase_series must be a finite 2-D array with shape "
             "(oscillators, timesteps)"

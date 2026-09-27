@@ -31,6 +31,7 @@ from typing import TypeAlias, cast
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
 from scpn_phase_orchestrator.monitor._julia_runtime import require_juliacall_main
 
 __all__ = [
@@ -145,6 +146,8 @@ def _dispatch() -> LyapunovBackendFn | None:
 
 def _contains_boolean_alias(value: object) -> bool:
     """Return whether the value contains any boolean alias."""
+    if isinstance(value, np.ndarray) and value.dtype.kind in "iuf":
+        return False
     try:
         array = np.asarray(value, dtype=object)
     except (TypeError, ValueError):
@@ -171,6 +174,8 @@ def _contains_complex_alias(value: object) -> bool:
 
 def _contains_numeric_string_alias(value: object) -> bool:
     """Return whether the value contains a parseable numeric string alias."""
+    if isinstance(value, np.ndarray) and value.dtype.kind in "iuf":
+        return False
     try:
         array = np.asarray(value, dtype=object)
     except (TypeError, ValueError):
@@ -191,6 +196,7 @@ def _validate_finite_real(value: object, *, name: str) -> float:
     """Return ``value`` as a finite real float, else raise ``ValueError``."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite real, got {value!r}")
+    require_real_values(value, name=name)
     result = float(value)
     if not np.isfinite(result):
         raise ValueError(f"{name} must be finite, got {value!r}")
@@ -217,6 +223,7 @@ def _validate_int_at_least(value: object, *, name: str, minimum: int) -> int:
     """Return ``value`` as an integer at least the minimum, else raise."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral):
         raise ValueError(f"{name} must be an integer >= {minimum}, got {value!r}")
+    require_real_values(value, name=name)
     result = int(value)
     if result < minimum:
         raise ValueError(f"{name} must be >= {minimum}, got {result}")
@@ -233,8 +240,9 @@ def _validate_vector(value: object, *, name: str) -> FloatArray:
     if np.iscomplexobj(raw) or _contains_complex_alias(value):
         raise ValueError(f"{name} must be a finite real-valued vector")
     try:
+        require_real_values(value, name=name, allow_object=True)
         array = raw.astype(np.float64, copy=True)
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, OverflowError) as exc:
         raise ValueError(f"{name} must be a finite one-dimensional array") from exc
     if array.ndim != 1:
         raise ValueError(f"{name} must be one-dimensional, got shape {array.shape}")
@@ -258,8 +266,9 @@ def _validate_matrix(
     if np.iscomplexobj(raw) or _contains_complex_alias(value):
         raise ValueError(f"{name} must be a finite real-valued matrix")
     try:
+        require_real_values(value, name=name, allow_object=True)
         array = raw.astype(np.float64, copy=True)
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, OverflowError) as exc:
         raise ValueError(f"{name} must be a finite matrix") from exc
     if array.shape != expected_shape:
         raise ValueError(f"{name} shape {array.shape} does not match {expected_shape}")
@@ -339,9 +348,11 @@ class LyapunovGuard:
         Parameters
         ----------
         phases : object
-            Oscillator phases in radians, shape ``(N,)``.
+            Plain real oscillator phases in radians, shape ``(N,)``.
+            Real numeric objects are accepted; temporal aliases are rejected.
         knm : object
-            Coupling matrix ``K_nm``, shape ``(N, N)``.
+            Finite real zero-diagonal coupling matrix, shape ``(N, N)``.
+            Real numeric objects are accepted; temporal aliases are rejected.
 
         Returns
         -------
@@ -552,8 +563,9 @@ def _validate_spectrum_output(value: object, *, n: int) -> FloatArray:
     if np.iscomplexobj(raw) or _contains_complex_alias(value):
         raise ValueError("Lyapunov spectrum output must be real-valued")
     try:
+        require_real_values(value, name="Lyapunov spectrum output", allow_object=True)
         spectrum = raw.astype(np.float64, copy=True)
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, OverflowError) as exc:
         raise ValueError("Lyapunov spectrum output must be numeric") from exc
     if spectrum.shape != (n,):
         raise ValueError(f"Lyapunov spectrum shape {spectrum.shape} must be ({n},)")
@@ -592,13 +604,13 @@ def lyapunov_spectrum(
     Parameters
     ----------
     phases_init : object
-        (N,) initial phases.
+        (N,) plain real initial phases in radians; temporal aliases rejected.
     omegas : object
-        (N,) natural frequencies.
+        (N,) plain real natural frequencies in radians per second.
     knm : object
-        (N, N) coupling matrix.
+        (N, N) plain real coupling matrix with zero diagonal.
     alpha : object
-        (N, N) phase-lag matrix.
+        (N, N) plain real phase-lag matrix in radians.
     dt : object
         integration timestep.
     n_steps : object

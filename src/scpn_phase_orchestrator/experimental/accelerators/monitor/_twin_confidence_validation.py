@@ -23,6 +23,8 @@ from typing import TypeAlias, cast
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
+
 __all__ = [
     "validate_twin_divergence_backend_inputs",
     "validate_twin_divergence_backend_output",
@@ -101,6 +103,7 @@ def _validate_vector(value: object, *, name: str) -> FloatArray:
     if _contains_numeric_string_alias(value):
         raise ValueError(f"{name} must not contain numeric-string aliases")
     try:
+        require_real_values(value, name=name, allow_object=True)
         array = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError(f"{name} must be a finite one-dimensional array") from exc
@@ -210,6 +213,7 @@ def validate_twin_divergence_backend_output(value: object) -> FloatArray:
     if _contains_numeric_string_alias(value):
         raise ValueError("backend output must not contain numeric-string aliases")
     try:
+        require_real_values(value, name="backend output", allow_object=True)
         array = np.asarray(value).astype(np.float64, copy=True).ravel()
     except (OverflowError, TypeError, ValueError) as exc:
         raise ValueError("backend output must be a finite numeric pair") from exc

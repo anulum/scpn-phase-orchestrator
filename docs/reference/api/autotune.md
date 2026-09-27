@@ -157,3 +157,11 @@ In practical terms, autotune is most valuable in three moments:
 
 The same evidence record model used here is what allows these candidate policies to
 be replayed and compared across time windows and boundary profiles.
+
+## Original numerical input types
+
+Measurement and policy arrays are checked before conversion to floating point.
+Numeric text, boolean and temporal aliases are refused; supported numeric-object
+inputs retain the owning API's shape and finiteness checks. See
+[numerical source types](numerical_source_types.md) for the boundary contracts and
+current language measurements.

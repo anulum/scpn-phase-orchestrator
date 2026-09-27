@@ -1,0 +1,409 @@
+{
+  "measured_at": "2026-09-27T07:39:38.520854+00:00",
+  "extension_sha256": "7b4f84383887a07a1506b9c51c3065b710121c2ecf5cdb55f79f1dfb724b74ec",
+  "source_sha256": {
+    "spo-kernel/crates/spo-ffi/src/adaptive_coupling.rs": "d3a21d31fa2888bae4a03db851b0b51aae7880a8d02f687edd1858fa8a9ea1c8",
+    "spo-kernel/crates/spo-ffi/src/call_arguments.rs": "5e419daf77c85eb5f09d074dbf0621ae09dd7efb0cc9070ee9feb70aa4f293bf",
+    "spo-kernel/crates/spo-ffi/src/chimera_boundary.rs": "0efe4a47586d5bef0ee5f0effbc860b2ac7a2c3201e3d1fb93b7d926e63926ec",
+    "spo-kernel/crates/spo-ffi/src/coupling_builder.rs": "7cf4d21a07c2ae56066c8e8d7de43d4bd1019c2e5a78adebfdd5a5958f34e0d3",
+    "spo-kernel/crates/spo-ffi/src/delayed_boundary.rs": "4ada25ec879fe468f8c6b65d8718481708838017ec9ff27cfb3cd4ce71e2113c",
+    "spo-kernel/crates/spo-ffi/src/embedding_boundary.rs": "8dfd83056f31c664d0f571ea07775e0c45cd22eae4b0815f907a694fe839caa7",
+    "spo-kernel/crates/spo-ffi/src/entropy_boundary.rs": "512dc5a096b9c43b101c213bdc6314f44ccd7f0d8857080c06ca0806350c522a",
+    "spo-kernel/crates/spo-ffi/src/hypergraph_boundary.rs": "4e5e2a25857f7cfd0a48defda000096800ee507d6fc866b82c5b5b9ea17ce01b",
+    "spo-kernel/crates/spo-ffi/src/inertial_boundary.rs": "1e0ba72a3f68c4de0a3fe7c2ce65ad10b60bc57331a5b449d2df80ad026e3608",
+    "spo-kernel/crates/spo-ffi/src/lib.rs": "97a74cdce2c9a9d3bdcd9cb05db5616af1682e27809ee0e88a5cdcb196bb7571",
+    "spo-kernel/crates/spo-ffi/src/measurement_types.rs": "608760bfa0e46643fb6661594574af1c1bb52c62cfa219b7df07ff8735a88b65",
+    "spo-kernel/crates/spo-ffi/src/ordinal_entropy.rs": "7cf911cbde6e51c4b07e647805323a6efaa00b928678a82d32c778be07b48cb7",
+    "spo-kernel/crates/spo-ffi/src/phase_lag.rs": "a3e8694b39ce314bc67f077e67496f6345c437b0ac119da096230c70760c6061",
+    "spo-kernel/crates/spo-ffi/src/phase_quality.rs": "92c54829c84e311ad416edc91dc633a214c80db930c303a9e5a4abaa757cf42f",
+    "spo-kernel/crates/spo-ffi/src/return_types.rs": "4fe0eb967adab8ab351c6c808d91f30cc4495212656f442a94f6dbe9aa6649c6",
+    "spo-kernel/crates/spo-ffi/src/simplicial_boundary.rs": "f787310f8e25223583789a806ef73c619181492967d1c4d4afb37674dba151cf",
+    "spo-kernel/crates/spo-ffi/src/splitting_boundary.rs": "7bf88a2e3ec7d74ec311d7956d69920553e888360f12bd5c2a30c002bed92839",
+    "spo-kernel/crates/spo-ffi/src/stability_boundary.rs": "7169b8aa2d3762407ececa90a41f5bfc107f5106af7a1c9dfc44aba0092365f3",
+    "spo-kernel/crates/spo-ffi/src/swarmalator_boundary.rs": "7b4b70f6ac370b342d06e43227ccd25402009b215704eed3b0ff5b86d69d8675",
+    "spo-kernel/crates/spo-ffi/src/torus_boundary.rs": "0649e537ccdbb19dd943eabe3d8a02fdaf667d5ebc44f5f8ce723223db7b9a05"
+  },
+  "rows": [
+    {
+      "surface": "hodge",
+      "parameters": {
+        "n": 6,
+        "calls": 3
+      },
+      "result": {
+        "suite": "hodge_polyglot_parity_gate",
+        "n": 6,
+        "calls": 3,
+        "seed": 2026,
+        "backend_count": 5,
+        "available_backend_count": 5,
+        "unavailable_backend_count": 0,
+        "invalid_backend_count": 0,
+        "parity_passed_count": 5,
+        "python_reference_present": 1,
+        "all_available_passed": 1,
+        "reference_contracts_passed": 1,
+        "acceptance_passed": 1,
+        "reference_gradient_sha256": "83a055a86c86cf52f49f8727fa1705211cccd5450996ebcae98d82ef827820ee",
+        "reference_curl_sha256": "0e08b0b0c6a362ef4cc3727cde7d8eed0572053049fe4061bd692716ae08c598",
+        "reference_harmonic_sha256": "ba7eccb7d1cb37d85441127df2afb3894471af1fdb39b1fca05f7986439912d3",
+        "reference_bundle_sha256": "a95969911ebd3d5048022e5aded5836583d02607a7439de02a6bc6eef7063c4b",
+        "reconstruction_max_abs_error": 2.7755575615628914e-17,
+        "antisymmetry_max_abs_error": 0.0,
+        "orthogonality_max_abs_error": 2.471180093367269e-17,
+        "curl_divergence_max_abs_error": 4.163336342344337e-17,
+        "harmonic_divergence_max_abs_error": 1.491862189340054e-16,
+        "phase_shift_max_abs_error": 1.0408340855860843e-16,
+        "scale_covariance_max_abs_error": 1.1102230246251565e-16,
+        "cycle_curl_max_abs_error": 0.0,
+        "cycle_harmonic_max_abs": 0.506148883169124,
+        "cycle_betti_one": 1,
+        "backend_records_json": "[{\"backend\": \"rust\", \"bundle_sha256\": \"9bf6e20f7000a5958df0d5be00a3e5a6439b75d7487295c544f85e715647e00f\", \"curl_abs_error\": 1.3877787807814457e-16, \"curl_sha256\": \"4d2a4f886bf8e10037f0211452152faf73882716be185a4df4ff55846f12fd61\", \"gradient_abs_error\": 1.1102230246251565e-16, \"gradient_sha256\": \"1ec7a85b40e2ac1bae41dc6d6264d74b4b81c6a21ba13758fc8970688aa4befa\", \"harmonic_abs_error\": 1.6653345369377348e-16, \"harmonic_sha256\": \"6d327452db418c1526804df44987fe87a047fbd15b9ddfc87909e44f08f5c814\", \"max_abs_error\": 1.6653345369377348e-16, \"ms_per_call\": 0.16723266647507748, \"parity_passed\": true, \"reference_contracts_passed\": true, \"status\": \"available\", \"tolerance\": 1e-10, \"unavailable_reason\": \"\"}, {\"backend\": \"mojo\", \"bundle_sha256\": \"f5817cd2556a3973275597812022934cfe9e1d327d10a2a9171492d1db67a070\", \"curl_abs_error\": 1.1102230246251565e-16, \"curl_sha256\": \"ceb4ede81a13b99d3da3d941498807bb6d1fa68a0700f2871dcfb4793d86b627\", \"gradient_abs_error\": 4.163336342344337e-17, \"gradient_sha256\": \"1f0136d575a9daae6b1039b0521d96d4c121f7137b11391b6bf498057fc5ad8e\", \"harmonic_abs_error\": 1.0408340855860843e-16, \"harmonic_sha256\": \"d5e9d8e1ca49ec39a29da8690269e1e6beacf8a7a4ae55c62d171d0b0f2ee7a7\", \"max_abs_error\": 1.1102230246251565e-16, \"ms_per_call\": 551.3123479904607, \"parity_passed\": true, \"reference_contracts_passed\": true, \"status\": \"available\", \"tolerance\": 1e-08, \"unavailable_reason\": \"\"}, {\"backend\": \"julia\", \"bundle_sha256\": \"2f5da945840426c3671e8be051ee5554a7fd0fc50380f97a4157fbb17a26b5cf\", \"curl_abs_error\": 1.1102230246251565e-16, \"curl_sha256\": \"75abda331c235de4bf242c97bee50d2f904e2fa773d705ba0eec66c58b6f5322\", \"gradient_abs_error\": 1.1102230246251565e-16, \"gradient_sha256\": \"ea8bf501edec021cfa3a889c90844946272806ae7706458793a35ff233cf3552\", \"harmonic_abs_error\": 1.6653345369377348e-16, \"harmonic_sha256\": \"fb1678e24f7f807e919b7c6f95176ab1d94d7c0c68b957ed7fdcdb4b02cac51b\", \"max_abs_error\": 1.6653345369377348e-16, \"ms_per_call\": 26940.86797166771, \"parity_passed\": true, \"reference_contracts_passed\": true, \"status\": \"available\", \"tolerance\": 1e-10, \"unavailable_reason\": \"\"}, {\"backend\": \"go\", \"bundle_sha256\": \"03d588f66c79ab4367f63ca1a000a4bbe6916f04645318424d2328224ed15239\", \"curl_abs_error\": 1.3877787807814457e-16, \"curl_sha256\": \"b1ab9bfef6a6f8a9cda0a1cba2015bdf11ec320bc0f0f33808b81e4b9054320b\", \"gradient_abs_error\": 7.632783294297951e-17, \"gradient_sha256\": \"fc29bfb78e994884a6166812c055513d0001d40bbaee845ef7f7c3c992a16817\", \"harmonic_abs_error\": 1.5265566588595902e-16, \"harmonic_sha256\": \"ce433e73dae6bc7a9ef21b76129316cb7321b7fb128f143c1f13db984947c8f6\", \"max_abs_error\": 1.5265566588595902e-16, \"ms_per_call\": 28.909177985042334, \"parity_passed\": true, \"reference_contracts_passed\": true, \"status\": \"available\", \"tolerance\": 1e-10, \"unavailable_reason\": \"\"}, {\"backend\": \"python\", \"bundle_sha256\": \"a95969911ebd3d5048022e5aded5836583d02607a7439de02a6bc6eef7063c4b\", \"curl_abs_error\": 0.0, \"curl_sha256\": \"0e08b0b0c6a362ef4cc3727cde7d8eed0572053049fe4061bd692716ae08c598\", \"gradient_abs_error\": 0.0, \"gradient_sha256\": \"83a055a86c86cf52f49f8727fa1705211cccd5450996ebcae98d82ef827820ee\", \"harmonic_abs_error\": 0.0, \"harmonic_sha256\": \"ba7eccb7d1cb37d85441127df2afb3894471af1fdb39b1fca05f7986439912d3\", \"max_abs_error\": 0.0, \"ms_per_call\": 0.8287380139032999, \"parity_passed\": true, \"reference_contracts_passed\": true, \"status\": \"available\", \"tolerance\": 0.0, \"unavailable_reason\": \"\"}]",
+        "acceptance_thresholds_json": "{\"backend_order\": [\"rust\", \"mojo\", \"julia\", \"go\", \"python\"], \"harmonic_presence_floor\": 0.001, \"max_reference_contract_abs_error\": 1e-10, \"parity_tolerances\": {\"go\": 1e-10, \"julia\": 1e-10, \"mojo\": 1e-08, \"python\": 0.0, \"rust\": 1e-10}, \"production_timing_claim\": false, \"require_all_available_backends_pass\": true, \"require_antisymmetric_flow_components\": true, \"require_component_orthogonality\": true, \"require_cycle_betti_one\": true, \"require_divergence_free_curl_and_harmonic\": true, \"require_global_phase_shift_invariance\": true, \"require_no_invalid_backend_outputs\": true, \"require_nontrivial_cycle_harmonic\": true, \"require_python_reference_present\": true, \"require_reconstruction_contract\": true, \"require_scale_covariance\": true}",
+        "benchmark_sha256": "96fb1aacae1bc875e7d1c1fadf0dc41915a763f31e9e29998febc46f69394074",
+        "benchmark_evidence_kind": "local_regression_non_isolated",
+        "isolation_method": "none",
+        "production_timing_claim": 0,
+        "wall_time_s": 82.78214241901878,
+        "steps_per_second": 1.0871909976000205
+      }
+    },
+    {
+      "surface": "koopman",
+      "parameters": {
+        "samples": 32,
+        "lift_dim": 4,
+        "calls": 3
+      },
+      "result": {
+        "suite": "koopman_edmd_polyglot_parity_gate",
+        "boundary_contract": "exact_numpy_reference_validated",
+        "parity_tolerance": 1e-09,
+        "parity_ok": true,
+        "backend_records": [
+          {
+            "backend": "rust",
+            "available": true,
+            "seconds_per_call": 0.005683373349408309,
+            "max_abs_deviation": 1.1102230246251565e-16,
+            "within_tolerance": true
+          },
+          {
+            "backend": "mojo",
+            "available": true,
+            "seconds_per_call": 0.2906436756796514,
+            "max_abs_deviation": 1.1102230246251565e-16,
+            "within_tolerance": true
+          },
+          {
+            "backend": "julia",
+            "available": true,
+            "seconds_per_call": 3.905924284675469,
+            "max_abs_deviation": 1.1102230246251565e-16,
+            "within_tolerance": true
+          },
+          {
+            "backend": "go",
+            "available": true,
+            "seconds_per_call": 0.0271835809883972,
+            "max_abs_deviation": 1.1102230246251565e-16,
+            "within_tolerance": true
+          },
+          {
+            "backend": "python",
+            "available": true,
+            "seconds_per_call": 0.0001905506942421198,
+            "max_abs_deviation": 0.0,
+            "within_tolerance": true
+          }
+        ],
+        "backend_records_json": "[{\"available\": true, \"backend\": \"rust\", \"max_abs_deviation\": 1.1102230246251565e-16, \"seconds_per_call\": 0.005683373349408309, \"within_tolerance\": true}, {\"available\": true, \"backend\": \"mojo\", \"max_abs_deviation\": 1.1102230246251565e-16, \"seconds_per_call\": 0.2906436756796514, \"within_tolerance\": true}, {\"available\": true, \"backend\": \"julia\", \"max_abs_deviation\": 1.1102230246251565e-16, \"seconds_per_call\": 3.905924284675469, \"within_tolerance\": true}, {\"available\": true, \"backend\": \"go\", \"max_abs_deviation\": 1.1102230246251565e-16, \"seconds_per_call\": 0.0271835809883972, \"within_tolerance\": true}, {\"available\": true, \"backend\": \"python\", \"max_abs_deviation\": 0.0, \"seconds_per_call\": 0.0001905506942421198, \"within_tolerance\": true}]"
+      }
+    },
+    {
+      "surface": "recurrence",
+      "parameters": {
+        "t": 16,
+        "calls": 3
+      },
+      "result": {
+        "suite": "recurrence_polyglot_parity_gate",
+        "backend_count": 5,
+        "available_backend_count": 5,
+        "unavailable_backend_count": 0,
+        "parity_checked_count": 5,
+        "parity_pass_count": 5,
+        "all_available_passed": 1,
+        "python_reference_present": 1,
+        "T": 16,
+        "d": 3,
+        "epsilon": 0.8,
+        "calls": 3,
+        "seed": 2026,
+        "reference_recurrence_rate": 0.0,
+        "reference_determinism": 0.0,
+        "reference_laminarity": 0.0,
+        "reference_recurrence_sha256": "4c544a4e6a4adf6d06642e323c6024a7b6028763fe4e4ca4fabd5842bc72775e",
+        "reference_cross_recurrence_sha256": "4d5a33cd7c5a2dd4422affb099bdc4cf9639f4635bf2a78eb0a2955befcc80ef",
+        "reference_self_cross_sha256": "d3cdf61e954bb924ad3aad9cd9478a36c0b7fc63f42427184026cab37983386d",
+        "benchmark_sha256": "11f08f09e6e81c84924e1a743f5e20669235edfb62d7433c25aed875099e3f86",
+        "wall_time_s": 11.907104835961945,
+        "steps_per_second": 0.4199173576517908,
+        "acceptance_passed": 1,
+        "acceptance_thresholds_json": "{\"backend_order\": [\"rust\", \"mojo\", \"julia\", \"go\", \"python\"], \"metrics\": [\"euclidean\", \"angular\"], \"require_all_available_parity\": true, \"require_all_declared_backend_records\": true, \"require_cross_recurrence_contract\": true, \"require_exact_threshold_reference\": true, \"require_python_reference\": true, \"require_rqa_unit_interval_contract\": true, \"require_self_cross_equals_recurrence\": true, \"require_symmetric_true_diagonal_recurrence\": true, \"tolerance\": 0}",
+        "backend_records_json": "[{\"backend\": \"rust\", \"cross_recurrence_sha256\": \"4d5a33cd7c5a2dd4422affb099bdc4cf9639f4635bf2a78eb0a2955befcc80ef\", \"max_abs_error\": 0, \"mismatch_count\": 0, \"ms_per_call\": 1.1937856518973906, \"parity_passed\": true, \"recurrence_invariants_passed\": true, \"recurrence_sha256\": \"4c544a4e6a4adf6d06642e323c6024a7b6028763fe4e4ca4fabd5842bc72775e\", \"self_cross_equals_recurrence\": true, \"self_cross_mismatch_count\": 0, \"self_cross_sha256\": \"d3cdf61e954bb924ad3aad9cd9478a36c0b7fc63f42427184026cab37983386d\", \"status\": \"available\", \"tolerance\": 0, \"unavailable_reason\": \"\"}, {\"backend\": \"mojo\", \"cross_recurrence_sha256\": \"4d5a33cd7c5a2dd4422affb099bdc4cf9639f4635bf2a78eb0a2955befcc80ef\", \"max_abs_error\": 0, \"mismatch_count\": 0, \"ms_per_call\": 3045.268361340277, \"parity_passed\": true, \"recurrence_invariants_passed\": true, \"recurrence_sha256\": \"4c544a4e6a4adf6d06642e323c6024a7b6028763fe4e4ca4fabd5842bc72775e\", \"self_cross_equals_recurrence\": true, \"self_cross_mismatch_count\": 0, \"self_cross_sha256\": \"d3cdf61e954bb924ad3aad9cd9478a36c0b7fc63f42427184026cab37983386d\", \"status\": \"available\", \"tolerance\": 0, \"unavailable_reason\": \"\"}, {\"backend\": \"julia\", \"cross_recurrence_sha256\": \"4d5a33cd7c5a2dd4422affb099bdc4cf9639f4635bf2a78eb0a2955befcc80ef\", \"max_abs_error\": 0, \"mismatch_count\": 0, \"ms_per_call\": 2.7497973448286452, \"parity_passed\": true, \"recurrence_invariants_passed\": true, \"recurrence_sha256\": \"4c544a4e6a4adf6d06642e323c6024a7b6028763fe4e4ca4fabd5842bc72775e\", \"self_cross_equals_recurrence\": true, \"self_cross_mismatch_count\": 0, \"self_cross_sha256\": \"d3cdf61e954bb924ad3aad9cd9478a36c0b7fc63f42427184026cab37983386d\", \"status\": \"available\", \"tolerance\": 0, \"unavailable_reason\": \"\"}, {\"backend\": \"go\", \"cross_recurrence_sha256\": \"4d5a33cd7c5a2dd4422affb099bdc4cf9639f4635bf2a78eb0a2955befcc80ef\", \"max_abs_error\": 0, \"mismatch_count\": 0, \"ms_per_call\": 23.857776657678187, \"parity_passed\": true, \"recurrence_invariants_passed\": true, \"recurrence_sha256\": \"4c544a4e6a4adf6d06642e323c6024a7b6028763fe4e4ca4fabd5842bc72775e\", \"self_cross_equals_recurrence\": true, \"self_cross_mismatch_count\": 0, \"self_cross_sha256\": \"d3cdf61e954bb924ad3aad9cd9478a36c0b7fc63f42427184026cab37983386d\", \"status\": \"available\", \"tolerance\": 0, \"unavailable_reason\": \"\"}, {\"backend\": \"python\", \"cross_recurrence_sha256\": \"4d5a33cd7c5a2dd4422affb099bdc4cf9639f4635bf2a78eb0a2955befcc80ef\", \"max_abs_error\": 0, \"mismatch_count\": 0, \"ms_per_call\": 0.21024230712403855, \"parity_passed\": true, \"recurrence_invariants_passed\": true, \"recurrence_sha256\": \"4c544a4e6a4adf6d06642e323c6024a7b6028763fe4e4ca4fabd5842bc72775e\", \"self_cross_equals_recurrence\": true, \"self_cross_mismatch_count\": 0, \"self_cross_sha256\": \"d3cdf61e954bb924ad3aad9cd9478a36c0b7fc63f42427184026cab37983386d\", \"status\": \"available\", \"tolerance\": 0, \"unavailable_reason\": \"\"}]"
+      }
+    },
+    {
+      "surface": "poincare",
+      "parameters": {
+        "n_steps": 64,
+        "calls": 3
+      },
+      "result": {
+        "suite": "poincare_polyglot_parity_gate",
+        "backend_count": 5,
+        "available_backend_count": 5,
+        "unavailable_backend_count": 0,
+        "parity_checked_count": 5,
+        "parity_pass_count": 5,
+        "all_available_passed": 1,
+        "python_reference_present": 1,
+        "reference_contracts_passed": 1,
+        "acceptance_passed": 1,
+        "n_steps": 64,
+        "n_osc": 4,
+        "calls": 3,
+        "seed": 2026,
+        "reference_section_count": 2,
+        "reference_phase_count": 2,
+        "section_plane_residual": 0.0,
+        "phase_value_residual": 0.0,
+        "reference_section_crossings_sha256": "372a895dfaeea6fab5b4084cd0542a097c961059e150bab7257e4c1c375102f5",
+        "reference_phase_crossings_sha256": "847c4ad4ac63dd309cc3af860d519a3283a7c50da2b7ab9214da4b94d49f046f",
+        "benchmark_sha256": "8fff2da072bff17116a626d9ea8452d94d3662b8713055d7a23219c5b79bcaa1",
+        "benchmark_evidence_kind": "local_regression_non_isolated",
+        "isolation_method": "none",
+        "production_timing_claim": 0,
+        "wall_time_s": 8.613727006013505,
+        "steps_per_second": 0.5804688256905922,
+        "acceptance_thresholds_json": "{\"backend_order\": [\"rust\", \"mojo\", \"julia\", \"go\", \"python\"], \"max_reference_contract_abs_error\": 1e-09, \"parity_tolerances\": {\"go\": 1e-10, \"julia\": 1e-10, \"mojo\": 1e-07, \"python\": 0.0, \"rust\": 1e-10}, \"production_timing_claim\": false, \"require_all_available_parity\": true, \"require_all_declared_backend_records\": true, \"require_matching_crossing_counts\": true, \"require_nonzero_crossings\": true, \"require_phase_recovers_section\": true, \"require_python_reference\": true, \"require_section_on_plane\": true, \"require_strictly_increasing_times\": true}",
+        "backend_records_json": "[{\"backend\": \"rust\", \"count_match\": true, \"max_abs_error\": 0.0, \"ms_per_call\": 0.12537231668829918, \"parity_passed\": true, \"phase_count\": 2, \"phase_crossings_abs_error\": 0.0, \"phase_crossings_sha256\": \"847c4ad4ac63dd309cc3af860d519a3283a7c50da2b7ab9214da4b94d49f046f\", \"phase_times_abs_error\": 0.0, \"phase_times_sha256\": \"9213e3c517d4d9e2fb3f9ecfb9fa25dafdc025b3cc1c082d04e1accbe53ac6ee\", \"reference_contracts_passed\": true, \"section_count\": 2, \"section_crossings_abs_error\": 0.0, \"section_crossings_sha256\": \"372a895dfaeea6fab5b4084cd0542a097c961059e150bab7257e4c1c375102f5\", \"section_times_abs_error\": 0.0, \"section_times_sha256\": \"092b4285d1aff03e09dabb9cbc2d0f211a9025839193a59a2c849e75238d3f53\", \"status\": \"available\", \"tolerance\": 1e-10, \"unavailable_reason\": \"\"}, {\"backend\": \"mojo\", \"count_match\": true, \"max_abs_error\": 8.881784197001252e-16, \"ms_per_call\": 1116.6253293631598, \"parity_passed\": true, \"phase_count\": 2, \"phase_crossings_abs_error\": 8.881784197001252e-16, \"phase_crossings_sha256\": \"c3d7e91047ba5aef91ff79cbc479d1c0d2dfbe97bb4bdef8db707b71c1ac68b7\", \"phase_times_abs_error\": 0.0, \"phase_times_sha256\": \"9213e3c517d4d9e2fb3f9ecfb9fa25dafdc025b3cc1c082d04e1accbe53ac6ee\", \"reference_contracts_passed\": true, \"section_count\": 2, \"section_crossings_abs_error\": 2.296281777809735e-18, \"section_crossings_sha256\": \"1ddd7f27620c83a1147529b6a6404297c987e838fb78afdbc9b7b3881af5a937\", \"section_times_abs_error\": 0.0, \"section_times_sha256\": \"092b4285d1aff03e09dabb9cbc2d0f211a9025839193a59a2c849e75238d3f53\", \"status\": \"available\", \"tolerance\": 1e-07, \"unavailable_reason\": \"\"}, {\"backend\": \"julia\", \"count_match\": true, \"max_abs_error\": 0.0, \"ms_per_call\": 1.2307663370544712, \"parity_passed\": true, \"phase_count\": 2, \"phase_crossings_abs_error\": 0.0, \"phase_crossings_sha256\": \"847c4ad4ac63dd309cc3af860d519a3283a7c50da2b7ab9214da4b94d49f046f\", \"phase_times_abs_error\": 0.0, \"phase_times_sha256\": \"9213e3c517d4d9e2fb3f9ecfb9fa25dafdc025b3cc1c082d04e1accbe53ac6ee\", \"reference_contracts_passed\": true, \"section_count\": 2, \"section_crossings_abs_error\": 0.0, \"section_crossings_sha256\": \"372a895dfaeea6fab5b4084cd0542a097c961059e150bab7257e4c1c375102f5\", \"section_times_abs_error\": 0.0, \"section_times_sha256\": \"092b4285d1aff03e09dabb9cbc2d0f211a9025839193a59a2c849e75238d3f53\", \"status\": \"available\", \"tolerance\": 1e-10, \"unavailable_reason\": \"\"}, {\"backend\": \"go\", \"count_match\": true, \"max_abs_error\": 0.0, \"ms_per_call\": 0.7333109776178995, \"parity_passed\": true, \"phase_count\": 2, \"phase_crossings_abs_error\": 0.0, \"phase_crossings_sha256\": \"847c4ad4ac63dd309cc3af860d519a3283a7c50da2b7ab9214da4b94d49f046f\", \"phase_times_abs_error\": 0.0, \"phase_times_sha256\": \"9213e3c517d4d9e2fb3f9ecfb9fa25dafdc025b3cc1c082d04e1accbe53ac6ee\", \"reference_contracts_passed\": true, \"section_count\": 2, \"section_crossings_abs_error\": 0.0, \"section_crossings_sha256\": \"372a895dfaeea6fab5b4084cd0542a097c961059e150bab7257e4c1c375102f5\", \"section_times_abs_error\": 0.0, \"section_times_sha256\": \"092b4285d1aff03e09dabb9cbc2d0f211a9025839193a59a2c849e75238d3f53\", \"status\": \"available\", \"tolerance\": 1e-10, \"unavailable_reason\": \"\"}, {\"backend\": \"python\", \"count_match\": true, \"max_abs_error\": 0.0, \"ms_per_call\": 1.533079349125425, \"parity_passed\": true, \"phase_count\": 2, \"phase_crossings_abs_error\": 0.0, \"phase_crossings_sha256\": \"847c4ad4ac63dd309cc3af860d519a3283a7c50da2b7ab9214da4b94d49f046f\", \"phase_times_abs_error\": 0.0, \"phase_times_sha256\": \"9213e3c517d4d9e2fb3f9ecfb9fa25dafdc025b3cc1c082d04e1accbe53ac6ee\", \"reference_contracts_passed\": true, \"section_count\": 2, \"section_crossings_abs_error\": 0.0, \"section_crossings_sha256\": \"372a895dfaeea6fab5b4084cd0542a097c961059e150bab7257e4c1c375102f5\", \"section_times_abs_error\": 0.0, \"section_times_sha256\": \"092b4285d1aff03e09dabb9cbc2d0f211a9025839193a59a2c849e75238d3f53\", \"status\": \"available\", \"tolerance\": 0.0, \"unavailable_reason\": \"\"}]"
+      }
+    },
+    {
+      "surface": "delay",
+      "parameters": {
+        "n": 8,
+        "n_steps": 8,
+        "calls": 3
+      },
+      "result": {
+        "suite": "delay_polyglot_parity_gate",
+        "backend_count": 5,
+        "available_backend_count": 5,
+        "unavailable_backend_count": 0,
+        "parity_checked_count": 5,
+        "parity_pass_count": 5,
+        "all_available_passed": 1,
+        "python_reference_present": 1,
+        "reference_contracts_passed": 1,
+        "acceptance_passed": 1,
+        "n": 8,
+        "delay_steps": 3,
+        "n_steps": 8,
+        "calls": 3,
+        "seed": 2026,
+        "pure_rotation_max_abs_error": 6.217248937900877e-15,
+        "reference_phases_sha256": "5c8f9e0f4635829ae27afcb5d0df91278953f907541cf98c8146f03a4711a60d",
+        "benchmark_sha256": "a756be2df57ac66f9c59b90b4dcebf73d375866e4db7c7ddf805be8d0d45ff78",
+        "benchmark_evidence_kind": "local_regression_non_isolated",
+        "isolation_method": "none",
+        "production_timing_claim": 0,
+        "wall_time_s": 7.083032576018013,
+        "steps_per_second": 0.7059123258770799,
+        "acceptance_thresholds_json": "{\"backend_order\": [\"rust\", \"mojo\", \"julia\", \"go\", \"python\"], \"max_reference_contract_abs_error\": 1e-09, \"parity_tolerances\": {\"go\": 1e-09, \"julia\": 1e-09, \"mojo\": 1e-06, \"python\": 0.0, \"rust\": 1e-09}, \"production_timing_claim\": false, \"require_all_available_parity\": true, \"require_all_declared_backend_records\": true, \"require_phases_in_range\": true, \"require_pure_rotation_limit\": true, \"require_python_reference\": true}",
+        "backend_records_json": "[{\"backend\": \"rust\", \"max_abs_error\": 2.220446049250313e-16, \"ms_per_call\": 5.189387671028574, \"parity_passed\": true, \"phases_sha256\": \"2cd2d8f58a4f9b78db0a9b21538b7b189749806ad35cc5703653c4af8d41cb71\", \"reference_contracts_passed\": true, \"status\": \"available\", \"tolerance\": 1e-09, \"unavailable_reason\": \"\"}, {\"backend\": \"mojo\", \"max_abs_error\": 4.440892098500626e-16, \"ms_per_call\": 499.70543233212084, \"parity_passed\": true, \"phases_sha256\": \"02d6433084ccd3106198d17dba6ac82496ea0175f3752f692a006c8d35581d61\", \"reference_contracts_passed\": true, \"status\": \"available\", \"tolerance\": 1e-06, \"unavailable_reason\": \"\"}, {\"backend\": \"julia\", \"max_abs_error\": 0.0, \"ms_per_call\": 0.8136543134848276, \"parity_passed\": true, \"phases_sha256\": \"5c8f9e0f4635829ae27afcb5d0df91278953f907541cf98c8146f03a4711a60d\", \"reference_contracts_passed\": true, \"status\": \"available\", \"tolerance\": 1e-09, \"unavailable_reason\": \"\"}, {\"backend\": \"go\", \"max_abs_error\": 0.0, \"ms_per_call\": 0.3847116992498438, \"parity_passed\": true, \"phases_sha256\": \"5c8f9e0f4635829ae27afcb5d0df91278953f907541cf98c8146f03a4711a60d\", \"reference_contracts_passed\": true, \"status\": \"available\", \"tolerance\": 1e-09, \"unavailable_reason\": \"\"}, {\"backend\": \"python\", \"max_abs_error\": 0.0, \"ms_per_call\": 0.28473833420624334, \"parity_passed\": true, \"phases_sha256\": \"5c8f9e0f4635829ae27afcb5d0df91278953f907541cf98c8146f03a4711a60d\", \"reference_contracts_passed\": true, \"status\": \"available\", \"tolerance\": 0.0, \"unavailable_reason\": \"\"}]"
+      }
+    },
+    {
+      "surface": "hypergraph",
+      "parameters": [
+        8,
+        8,
+        3
+      ],
+      "result": {
+        "N": 8,
+        "n_steps": 8,
+        "calls": 3,
+        "n_edges": 16,
+        "available": [
+          "rust",
+          "mojo",
+          "julia",
+          "go",
+          "python"
+        ],
+        "rust_ms_per_call": 3.72909102588892,
+        "mojo_ms_per_call": 522.9818103058884,
+        "julia_ms_per_call": 1.0676903184503317,
+        "go_ms_per_call": 0.9812866725648444,
+        "python_ms_per_call": 2.6018473242099085
+      }
+    },
+    {
+      "surface": "simplicial",
+      "parameters": [
+        8,
+        0.1,
+        8,
+        3
+      ],
+      "result": {
+        "N": 8,
+        "sigma2": 0.1,
+        "n_steps": 8,
+        "calls": 3,
+        "available": [
+          "rust",
+          "mojo",
+          "julia",
+          "go",
+          "python"
+        ],
+        "rust_ms_per_call": 7.246137674277027,
+        "mojo_ms_per_call": 793.2481549990674,
+        "julia_ms_per_call": 3.257352664756278,
+        "go_ms_per_call": 0.8291229993725816,
+        "python_ms_per_call": 1.0958656979103882
+      }
+    },
+    {
+      "surface": "splitting",
+      "parameters": [
+        8,
+        8,
+        3
+      ],
+      "result": {
+        "N": 8,
+        "n_steps": 8,
+        "calls": 3,
+        "available": [
+          "rust",
+          "mojo",
+          "julia",
+          "go",
+          "python"
+        ],
+        "rust_ms_per_call": 0.23333367425948381,
+        "mojo_ms_per_call": 392.6102409992988,
+        "julia_ms_per_call": 2.940852311439812,
+        "go_ms_per_call": 0.6878679851070046,
+        "python_ms_per_call": 1.3998236584787567
+      }
+    },
+    {
+      "surface": "inertial",
+      "parameters": [
+        8,
+        3
+      ],
+      "result": {
+        "N": 8,
+        "calls": 3,
+        "available": [
+          "rust",
+          "mojo",
+          "julia",
+          "go",
+          "python"
+        ],
+        "rust_ms_per_call": 0.31926467393835384,
+        "mojo_ms_per_call": 338.9291353523731,
+        "julia_ms_per_call": 3.3250306732952595,
+        "go_ms_per_call": 0.48759331305821735,
+        "python_ms_per_call": 0.20128131533662477
+      }
+    },
+    {
+      "surface": "swarmalator",
+      "parameters": [
+        8,
+        2,
+        3
+      ],
+      "result": {
+        "N": 8,
+        "dim": 2,
+        "calls": 3,
+        "available": [
+          "rust",
+          "mojo",
+          "julia",
+          "go",
+          "python"
+        ],
+        "rust_ms_per_call": 0.2450309693813324,
+        "mojo_ms_per_call": 347.18500000114244,
+        "julia_ms_per_call": 2.884307332957784,
+        "go_ms_per_call": 0.7065103466932973,
+        "python_ms_per_call": 0.6870403497790297
+      }
+    },
+    {
+      "surface": "geometric",
+      "parameters": [
+        8,
+        8,
+        3
+      ],
+      "result": {
+        "N": 8,
+        "n_steps": 8,
+        "calls": 3,
+        "available": [
+          "rust",
+          "mojo",
+          "julia",
+          "go",
+          "python"
+        ],
+        "rust_ms_per_call": 2.7689080064495406,
+        "mojo_ms_per_call": 285.5516650015488,
+        "julia_ms_per_call": 1.8033173400908709,
+        "go_ms_per_call": 6.368376663886011,
+        "python_ms_per_call": 0.6436753319576383
+      }
+    },
+    {
+      "surface": "basin_stability",
+      "parameters": [
+        8,
+        8,
+        8,
+        3
+      ],
+      "result": {
+        "N": 8,
+        "n_transient": 8,
+        "n_measure": 8,
+        "calls": 3,
+        "available": [
+          "rust",
+          "mojo",
+          "julia",
+          "go",
+          "python"
+        ],
+        "rust_ms_per_call": 0.2990789944306016,
+        "mojo_ms_per_call": 141.600396639357,
+        "julia_ms_per_call": 1.1773930164054036,
+        "go_ms_per_call": 1.2094246534009774,
+        "python_ms_per_call": 1.3372113074486454
+      }
+    }
+  ],
+  "limits": "Shared host scoped small-input regressions. Seven legacy benches record timings only; they are not numerical parity gates. Five named gates exercise their declared available language backends."
+}

@@ -289,6 +289,11 @@ assert result.satisfied and result.backend == "builtin"
 
 ## Chimera State Detection
 
+Phase and coupling measurements reject boolean, text, complex and temporal
+aliases before conversion, including object-carried temporal values. Numeric
+object arrays remain supported; backend local-order values obey the same source
+type contract.
+
 Detects chimera states: the coexistence of coherent (phase-locked) and
 incoherent (desynchronised) clusters within the same network. This is a
 fundamentally different phenomenon from uniform synchronization or
@@ -561,6 +566,13 @@ assert isinstance(decision.alarm, bool)
 
 ## Entropy Production Rate
 
+Original phase, frequency, coupling and control values must be plain real
+numbers; temporal, boolean, text and complex aliases are refused before
+conversion. Real numeric object arrays are supported. Direct Rust calls require
+contiguous float64 vectors with exact frequency and flattened coupling
+cardinality, finite controls and a nonnegative timestep. Overflowed dissipation
+is refused; valid empty networks and zero timesteps retain a zero result.
+
 Measures the thermodynamic irreversibility of the phase dynamics.
 Higher entropy production means the system is further from
 equilibrium — it is actively dissipating energy to maintain its
@@ -692,10 +704,15 @@ recurrence analysis on scalar measurements.
 3. **Embedding** constructs vectors v(t) = [x(t), x(t-τ), ..., x(t-(m-1)τ)]
 
 Inputs and backend outputs are validated as finite real-valued arrays.
-Boolean aliases and complex samples are rejected before the
+Boolean, text, complex and temporal aliases are rejected before the
 Rust/Mojo/Julia/Go backend chain because Takens delay coordinates,
 Fraser-Swinney mutual information, and false-nearest-neighbour
 distances are defined over real scalar observations.
+Real numeric object samples remain supported. Delay, dimension, histogram and
+FNN metadata preserve their original integer/real types; the installed Rust ABI
+also checks finite samples and size products before allocation. The
+[embedding source-type benchmark](../data/embedding_measurement_types_benchmark_2026-09-26.json)
+records actual supported backend contracts and measurement limits.
 The Mojo subprocess adapter also validates raw stdout cardinality for
 delay-coordinate rows, mutual-information scalars, and nearest-neighbour
 distance/index pairs before numeric parsing, so blank-line insertion or
@@ -934,6 +951,22 @@ published warning record owns read-only array copies and replays the entropy
 mean, baseline median/MAD, derived scores, window grid, and sustained-breach
 decision before summary or metric export.
 
+The three warning detectors, observable bundle and ensemble reject temporal
+measurement values, including `timedelta64` inside object arrays, before float
+conversion. Window/count controls, scalar gates, sampling rates, member baseline
+counts and bootstrap seeds retain their original numeric-type checks. Real
+numeric object samples remain supported; Boolean breach masks remain exact
+Boolean arrays.
+The [source-type benchmark](../data/early_warning_measurement_types_benchmark_2026-09-26.json)
+records real public detector and complete phase-to-ensemble runs, numeric-object
+parity and kernel-absent/kernel-present environment comparisons. These warning
+APIs have no direct native counterpart; different NumPy versions and shared host
+load limit timing comparisons.
+The underlying ordinal-entropy primitive selected Mojo in the kernel-absent
+environment and Rust in the kernel-present environment. The measured suite
+fused scores differ by at most `4.51e-10` on this fixture, while alarm verdicts
+agree; this is not exact cross-environment output parity.
+
 ### Critical Slowing Down
 
 Rising variance and lag-one autocorrelation of an observable ahead of a critical
@@ -995,3 +1028,8 @@ cross-node Kuramoto magnitude derived from those same phases. Arrays must be
 finite real and non-coercive; valid numeric-object inputs normalise to contiguous
 `float64`. Suite thresholds are prevalidated as a complete mapping of
 non-negative finite real values before any detector executes.
+
+## Original numerical input types
+
+See [numerical source types](numerical_source_types.md) for text, boolean and
+temporal refusal, numeric-object compatibility and current language measurements.

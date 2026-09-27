@@ -1,0 +1,50 @@
+{
+  "active_backend": "python",
+  "load": [
+    54.36669921875,
+    53.8544921875,
+    50.88037109375
+  ],
+  "step_n64_calls500_mean_ms": 0.9896718820091337,
+  "source_sha256": {
+    "src/scpn_phase_orchestrator/upde/splitting.py": "f649d10a4ec55235f3f768f5539a36d295c01d4d1da4d7e00d16ba9e5717787f",
+    "src/scpn_phase_orchestrator/experimental/accelerators/upde/_splitting_validation.py": "0e84929d916d7b2b90d715caf3b52cadccfe86c8102b33db27e37ba0f2046313"
+  },
+  "rows": [
+    {
+      "N": 8,
+      "n_steps": 8,
+      "calls": 3,
+      "available": [
+        "rust",
+        "mojo",
+        "julia",
+        "go",
+        "python"
+      ],
+      "rust_ms_per_call": 0.0995293182010452,
+      "mojo_ms_per_call": 331.6999013380458,
+      "julia_ms_per_call": 0.5524533335119486,
+      "go_ms_per_call": 0.3064530125508706,
+      "python_ms_per_call": 0.832223993105193
+    },
+    {
+      "N": 64,
+      "n_steps": 8,
+      "calls": 3,
+      "available": [
+        "rust",
+        "mojo",
+        "julia",
+        "go",
+        "python"
+      ],
+      "rust_ms_per_call": 0.4635613489275177,
+      "mojo_ms_per_call": 152.82516833394766,
+      "julia_ms_per_call": 29.151483982180554,
+      "go_ms_per_call": 24.409554665908217,
+      "python_ms_per_call": 3.200813002573947
+    }
+  ],
+  "limits": "Shared host local measurements, no controlled performance ranking. Legacy benchmark records timings only; numerical parity is tested separately."
+}

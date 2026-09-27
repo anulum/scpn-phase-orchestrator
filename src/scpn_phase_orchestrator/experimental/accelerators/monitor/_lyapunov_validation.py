@@ -16,6 +16,8 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
+
 FloatArray: TypeAlias = NDArray[np.float64]
 
 
@@ -73,8 +75,9 @@ def _validate_vector(value: object, *, name: str) -> FloatArray:
     if np.iscomplexobj(raw) or _contains_complex_alias(value):
         raise ValueError(f"{name} must be a finite real-valued vector")
     try:
+        require_real_values(value, name=name, allow_object=True)
         array = raw.astype(np.float64, copy=True)
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, OverflowError) as exc:
         raise ValueError(f"{name} must be a finite one-dimensional array") from exc
     if array.ndim != 1:
         raise ValueError(f"{name} must be one-dimensional, got shape {array.shape}")
@@ -93,8 +96,9 @@ def _validate_matrix(value: object, *, name: str, n: int) -> FloatArray:
     if np.iscomplexobj(raw) or _contains_complex_alias(value):
         raise ValueError(f"{name} must be a finite real-valued matrix")
     try:
+        require_real_values(value, name=name, allow_object=True)
         array = raw.astype(np.float64, copy=True)
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, OverflowError) as exc:
         raise ValueError(f"{name} must be a finite matrix") from exc
     expected_shape = (n, n)
     if array.shape != expected_shape:
@@ -108,6 +112,7 @@ def _validate_finite_real(value: object, *, name: str) -> float:
     """Return ``value`` as a finite real float, else raise ``ValueError``."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite real, got {value!r}")
+    require_real_values(value, name=name)
     scalar = float(value)
     if not np.isfinite(scalar):
         raise ValueError(f"{name} must be finite, got {value!r}")
@@ -134,6 +139,7 @@ def _validate_int_at_least(value: object, *, name: str, minimum: int) -> int:
     """Return ``value`` as an integer at least the minimum, else raise."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral):
         raise ValueError(f"{name} must be an integer >= {minimum}, got {value!r}")
+    require_real_values(value, name=name)
     scalar = int(value)
     if scalar < minimum:
         raise ValueError(f"{name} must be >= {minimum}, got {scalar}")
@@ -204,8 +210,9 @@ def validate_lyapunov_backend_output(value: object, n: int) -> FloatArray:
     if np.iscomplexobj(raw) or _contains_complex_alias(value):
         raise ValueError("Lyapunov backend output must be real-valued")
     try:
+        require_real_values(value, name="Lyapunov backend output", allow_object=True)
         spectrum = raw.astype(np.float64, copy=True)
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, OverflowError) as exc:
         raise ValueError("Lyapunov backend output must be numeric") from exc
     if spectrum.shape != (n,):
         raise ValueError(

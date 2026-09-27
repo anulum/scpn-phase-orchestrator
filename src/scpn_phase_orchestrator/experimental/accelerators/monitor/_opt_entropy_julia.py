@@ -57,10 +57,35 @@ def ordinal_pattern_sequence_julia(
     dimension: int,
     delay: int,
 ) -> IntArray:
-    """Compute the ordinal-pattern code sequence through the Julia backend."""
+    """Compute the ordinal-pattern code sequence through the Julia backend.
+
+    Parameters
+    ----------
+    series : FloatArray
+        Finite real one-dimensional samples. Numeric object storage is allowed;
+        Boolean, text, complex and temporal samples are refused before conversion.
+    dimension : int
+        Plain integer embedding dimension in [2, 7].
+    delay : int
+        Plain positive integer delay. An embedding exceeding the series length
+        returns empty evidence before conversion to native parameter storage.
+
+    Returns
+    -------
+    IntArray
+        Stable Lehmer codes; empty when no embedding window fits.
+
+    Raises
+    ------
+    ValueError
+        If source types, dimensions, finite samples or backend outputs violate
+        the ordinal embedding contract.
+    """
     s, d, tau = validate_transition_entropy_backend_inputs(series, dimension, delay)
-    jl = _ensure()
     count = ordinal_window_count(int(s.size), d, tau)
+    if count == 0:
+        return np.zeros(0, dtype=np.int64)
+    jl = _ensure()
     return validate_ordinal_pattern_backend_output(
         np.asarray(jl.ordinal_pattern_sequence(s, d, tau)),
         n_windows=count,
@@ -74,8 +99,33 @@ def transition_entropy_julia(
     dimension: int,
     delay: int,
 ) -> float:
-    """Compute the normalised transition entropy through the Julia backend."""
+    """Compute the normalised transition entropy through the Julia backend.
+
+    Parameters
+    ----------
+    series : FloatArray
+        Finite real one-dimensional samples. Numeric object storage is allowed;
+        Boolean, text, complex and temporal samples are refused before conversion.
+    dimension : int
+        Plain integer embedding dimension in [2, 7].
+    delay : int
+        Plain positive integer delay. An embedding exceeding the series length
+        returns empty evidence before conversion to native parameter storage.
+
+    Returns
+    -------
+    float
+        Normalised entropy; zero when fewer than two patterns fit.
+
+    Raises
+    ------
+    ValueError
+        If source types, dimensions, finite samples or backend outputs violate
+        the ordinal embedding contract.
+    """
     s, d, tau = validate_transition_entropy_backend_inputs(series, dimension, delay)
+    if ordinal_window_count(int(s.size), d, tau) < 2:
+        return 0.0
     jl = _ensure()
     return validate_transition_entropy_backend_output(
         jl.transition_entropy(s, d, tau),

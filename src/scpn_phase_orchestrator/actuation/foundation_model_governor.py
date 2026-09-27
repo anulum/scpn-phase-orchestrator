@@ -51,6 +51,7 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
 from scpn_phase_orchestrator.actuation.control_barrier import (
     BarrierCertificate,
     ControlBarrierFilter,
@@ -342,6 +343,7 @@ def _finite_vector(value: Sequence[float] | FloatArray, name: str) -> FloatArray
     if np.iscomplexobj(raw):
         raise ValueError(f"{name} must be real-valued")
     try:
+        require_real_values(value, name=name, allow_object=True)
         array = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError(f"{name} must be a real float array") from exc

@@ -56,6 +56,8 @@ from typing import TypeAlias, cast
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
+
 FloatArray: TypeAlias = NDArray[np.float64]
 
 __all__ = [
@@ -73,6 +75,7 @@ def _as_float_vector(value: object, *, name: str) -> FloatArray:
     if np.iscomplexobj(raw):
         raise ValueError(f"{name} must be real-valued")
     try:
+        require_real_values(value, name=name, allow_object=True)
         array = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError(f"{name} must be a real float array") from exc
@@ -125,6 +128,8 @@ class NeuralBarrier:
         for index, (weight, bias) in enumerate(
             zip(self.weights, self.biases, strict=True)
         ):
+            require_real_values(weight, name="weight", allow_object=True)
+            require_real_values(bias, name="bias", allow_object=True)
             w = np.asarray(weight, dtype=np.float64)
             b = np.asarray(bias, dtype=np.float64)
             if w.ndim != 2:

@@ -16,6 +16,8 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
+
 FloatArray: TypeAlias = NDArray[np.float64]
 SpectralOutput: TypeAlias = tuple[FloatArray, FloatArray]
 
@@ -99,6 +101,7 @@ def _validate_n(value: object) -> int:
         raise ValueError("n must not be a numeric-string alias")
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral):
         raise ValueError("n must be a non-negative integer")
+    require_real_values(value, name="n")
     n_int = int(value)
     if n_int < 0:
         raise ValueError(f"n must be non-negative, got {n_int}")
@@ -115,8 +118,9 @@ def _validate_knm_flat(value: object) -> FloatArray:
     if np.iscomplexobj(raw) or _contains_complex_alias(value):
         raise ValueError("knm_flat must be real-valued")
     try:
+        require_real_values(value, name="knm_flat", allow_object=True)
         knm_flat = raw.astype(np.float64, copy=True)
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, OverflowError) as exc:
         raise ValueError(
             "knm_flat must be a finite one-dimensional float array"
         ) from exc
@@ -173,9 +177,13 @@ def validate_spectral_backend_output(
             "spectral primitive output must not contain numeric-string aliases"
         )
     try:
+        require_real_values(eigvals_raw, name="spectral eigenvalues", allow_object=True)
         eigvals = np.asarray(eigvals_raw, dtype=np.float64)
+        require_real_values(
+            fiedler_raw, name="spectral Fiedler vector", allow_object=True
+        )
         fiedler = np.asarray(fiedler_raw, dtype=np.float64)
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, OverflowError) as exc:
         raise ValueError("spectral primitive output must be numeric") from exc
     if eigvals.shape != (n_int,):
         raise ValueError(

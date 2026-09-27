@@ -6,7 +6,11 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Entropy production backend input validation
 
-"""Shared adapter-boundary validation for entropy-production backends."""
+"""Shared adapter-boundary validation for entropy-production backends.
+
+Measurement and control source types reject temporal, boolean, text and complex
+aliases before conversion while retaining real numeric object arrays.
+"""
 
 from __future__ import annotations
 
@@ -15,6 +19,8 @@ from typing import TypeAlias, cast
 
 import numpy as np
 from numpy.typing import NDArray
+
+from scpn_phase_orchestrator._array_types import require_real_values
 
 FloatArray: TypeAlias = NDArray[np.float64]
 
@@ -85,6 +91,7 @@ def _validate_finite_float(value: object, *, name: str) -> float:
         raise ValueError(f"{name} must not be a numeric-string alias")
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite real, got {value!r}")
+    require_real_values(value, name=name, allow_object=True)
     result = float(value)
     if not np.isfinite(result):
         raise ValueError(f"{name} must be finite, got {value!r}")
@@ -101,6 +108,7 @@ def _validate_vector(value: object, *, name: str) -> FloatArray:
     if _contains_numeric_string_alias(value):
         raise ValueError(f"{name} must not contain numeric-string aliases")
     try:
+        require_real_values(value, name=name, allow_object=True)
         array = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError(f"{name} must be a one-dimensional float array") from exc
@@ -126,6 +134,7 @@ def _validate_matrix(
     if _contains_numeric_string_alias(value):
         raise ValueError(f"{name} must not contain numeric-string aliases")
     try:
+        require_real_values(value, name=name, allow_object=True)
         array = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError(f"{name} must be a two-dimensional float array") from exc
@@ -176,6 +185,7 @@ def validate_entropy_prod_backend_output(value: object) -> float:
             "entropy_production_rate must not contain numeric-string aliases"
         )
     try:
+        require_real_values(value, name="entropy_production_rate", allow_object=True)
         result = float(raw)
     except (TypeError, ValueError) as exc:
         raise ValueError(

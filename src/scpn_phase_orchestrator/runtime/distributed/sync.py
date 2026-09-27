@@ -28,6 +28,8 @@ from typing import Any, TypeAlias, cast
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
+
 FloatArray: TypeAlias = NDArray[np.float64]
 
 __all__ = [
@@ -671,6 +673,7 @@ def _message_digest(
 
 def _phase_array(value: Any, expected: int, label: str) -> FloatArray:
     """Return ``value`` as a validated phase array, else raise."""
+    require_real_values(value, name=label, allow_object=True)
     array = np.asarray(value, dtype=float)
     if array.shape != (expected,):
         raise ValueError(f"{label} must have shape ({expected},)")
@@ -681,6 +684,7 @@ def _phase_array(value: Any, expected: int, label: str) -> FloatArray:
 
 def _phase_tuple(value: Any, label: str) -> tuple[float, ...]:
     """Return ``value`` as a validated tuple of phases, else raise."""
+    require_real_values(value, name=label, allow_object=True)
     array = np.asarray(value, dtype=float)
     if array.ndim != 1 or array.size == 0:
         raise ValueError(f"{label} must be a non-empty one-dimensional sequence")

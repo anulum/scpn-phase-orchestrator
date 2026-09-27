@@ -25,6 +25,7 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
 from scpn_phase_orchestrator._compat import TWO_PI
 from scpn_phase_orchestrator._validation import non_negative_real
 from scpn_phase_orchestrator.actuation.mapper import ControlAction
@@ -198,7 +199,8 @@ class PredictiveSupervisor:
         Parameters
         ----------
         phases : FloatArray
-            Oscillator phases in radians, shape ``(N,)``.
+            Plain real oscillator phases in radians, shape ``(N,)``; text
+            and temporal aliases are rejected before conversion.
         omegas : FloatArray
             Natural frequencies in rad/s, shape ``(N,)``.
         knm : FloatArray
@@ -658,8 +660,9 @@ def _coerce_real_array(name: str, value: object) -> FloatArray:
     if any(isinstance(item, complex | np.complexfloating) for item in raw.ravel()):
         raise ValueError(f"{name} must contain real-valued samples")
     try:
+        require_real_values(value, name=name, allow_object=True)
         return np.ascontiguousarray(raw.astype(np.float64), dtype=np.float64)
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, OverflowError) as exc:
         raise ValueError(f"{name} must be numeric") from exc
 
 
@@ -707,6 +710,7 @@ def _validate_predictive_inputs(
 
 def _require_positive_int(value: object, name: str) -> int:
     """Return ``value`` as a positive integer, else raise ``ValueError``."""
+    require_real_values(value, name=name)
     if isinstance(value, bool) or not isinstance(value, Integral) or value < 1:
         raise ValueError(f"{name} must be a positive integer")
     return int(value)
@@ -714,6 +718,7 @@ def _require_positive_int(value: object, name: str) -> int:
 
 def _require_positive_real(value: object, name: str) -> float:
     """Return ``value`` as a strictly positive finite real, else raise."""
+    require_real_values(value, name=name)
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be finite and positive")
     float_value = float(value)
@@ -724,6 +729,7 @@ def _require_positive_real(value: object, name: str) -> float:
 
 def _require_unit_interval(value: float, name: str) -> None:
     """Return ``value`` as a float in [0, 1], else raise ``ValueError``."""
+    require_real_values(value, name=name)
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be finite and in [0, 1]")
     if not np.isfinite(value) or value < 0.0 or value > 1.0:

@@ -32,6 +32,7 @@ from typing import TypeAlias, cast
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
 from scpn_phase_orchestrator.monitor._julia_runtime import require_juliacall_main
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -268,6 +269,7 @@ def _validate_state_history(value: object, *, name: str) -> FloatArray:
     if _contains_numeric_string_alias(value):
         raise ValueError(f"{name} must not contain numeric-string aliases")
     try:
+        require_real_values(value, name=name, allow_object=True)
         array = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError(f"{name} must be a finite 1D or 2D float array") from exc
@@ -290,6 +292,7 @@ def _validate_normal(normal: object, *, expected_dim: int) -> FloatArray:
     if _contains_numeric_string_alias(normal):
         raise ValueError("normal must not contain numeric-string aliases")
     try:
+        require_real_values(normal, name="normal", allow_object=True)
         normal_vec = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError("normal must be a finite one-dimensional float array") from exc

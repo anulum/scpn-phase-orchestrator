@@ -10,7 +10,8 @@
 
 The module computes pairwise phase eligibility traces and applies a
 modulator-gated Hebbian update to `K_nm`. Public functions reject boolean,
-non-numeric, non-finite, non-vector, non-square, and shape-mismatched inputs so
+non-numeric, text, temporal, non-finite, non-vector, non-square, and
+shape-mismatched inputs so
 plasticity cannot corrupt coupling state silently. The update preserves the
 Kuramoto coupling contract by requiring non-negative zero-diagonal `K_nm`,
 bounded zero-diagonal eligibility traces, and finite real scalar controls.
@@ -40,13 +41,22 @@ def _validate_phase_vector(value: object, *, name: str) -> FloatArray:
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
     raw = np.asarray(value)
-    if raw.dtype == np.bool_:
+    if raw.dtype.kind == "b":
         raise ValueError(f"{name} must not contain boolean values")
     if np.iscomplexobj(raw):
         raise ValueError(f"{name} must be real-valued")
+    if raw.dtype.kind not in "iufO" or (
+        raw.dtype.kind == "O"
+        and any(
+            isinstance(item, (np.datetime64, np.timedelta64))
+            or not isinstance(item, Real)
+            for item in raw.flat
+        )
+    ):
+        raise ValueError(f"{name} must be a finite 1-D phase vector")
     try:
         phases = raw.astype(np.float64, copy=True)
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, OverflowError) as exc:
         raise ValueError(f"{name} must be a finite 1-D phase vector") from exc
     if phases.ndim != 1:
         raise ValueError(f"{name} must be a finite 1-D phase vector")
@@ -60,13 +70,22 @@ def _validate_square_matrix(value: object, *, name: str) -> FloatArray:
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
     raw = np.asarray(value)
-    if raw.dtype == np.bool_:
+    if raw.dtype.kind == "b":
         raise ValueError(f"{name} must not contain boolean values")
     if np.iscomplexobj(raw):
         raise ValueError(f"{name} must be real-valued")
+    if raw.dtype.kind not in "iufO" or (
+        raw.dtype.kind == "O"
+        and any(
+            isinstance(item, (np.datetime64, np.timedelta64))
+            or not isinstance(item, Real)
+            for item in raw.flat
+        )
+    ):
+        raise ValueError(f"{name} must be a finite square matrix")
     try:
         matrix = raw.astype(np.float64, copy=True)
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, OverflowError) as exc:
         raise ValueError(f"{name} must be a finite square matrix") from exc
     if matrix.ndim != 2 or matrix.shape[0] != matrix.shape[1]:
         raise ValueError(f"{name} must be a finite square matrix")
@@ -123,12 +142,19 @@ def compute_eligibility(phases: FloatArray) -> FloatArray:
     Parameters
     ----------
     phases : FloatArray
-        Oscillator phases in radians, shape ``(N,)``.
+        Oscillator phases in radians, shape ``(N,)``. Real numeric object
+        arrays are accepted; text, boolean, complex and temporal values are
+        rejected before conversion.
 
     Returns
     -------
     FloatArray
         The pairwise Hebbian eligibility trace ``cos(θ_j − θ_i)``.
+
+    Raises
+    ------
+    ValueError
+        If phases are not a finite real vector in plain radians.
     """
     phases = _validate_phase_vector(phases, name="phases")
     diffs = phases[np.newaxis, :] - phases[:, np.newaxis]
@@ -158,9 +184,10 @@ def three_factor_update(
     Parameters
     ----------
     knm : FloatArray
-        current coupling matrix, shape (n, n).
+        Current real coupling matrix, shape (n, n). Text, boolean, complex
+        and temporal aliases are rejected; real numeric objects are accepted.
     eligibility : FloatArray
-        Hebbian trace, shape (n, n).
+        Real Hebbian trace, shape (n, n), under the same input type contract.
     modulator : float
         scalar neuromodulatory signal.
     phase_gate : bool

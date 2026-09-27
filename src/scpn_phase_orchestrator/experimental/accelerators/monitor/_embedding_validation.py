@@ -16,6 +16,8 @@ from typing import TypeAlias, cast
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
+
 FloatArray: TypeAlias = NDArray[np.float64]
 ArrayPayload: TypeAlias = NDArray[np.generic]
 
@@ -82,6 +84,7 @@ def _validate_int_at_least(value: object, *, name: str, minimum: int) -> int:
     """Return ``value`` as an integer at least the minimum, else raise."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral):
         raise ValueError(f"{name} must be an integer >= {minimum}, got {value!r}")
+    require_real_values(value, name=name)
     result = int(value)
     if result < minimum:
         raise ValueError(f"{name} must be >= {minimum}, got {result}")
@@ -98,6 +101,7 @@ def _validate_float_vector(value: object, *, name: str) -> FloatArray:
     if _contains_numeric_string_alias(raw):
         raise ValueError(f"{name} must not contain numeric-string aliases")
     try:
+        require_real_values(value, name=name, allow_object=True)
         array = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         msg = f"{name} must be a finite one-dimensional float array"
@@ -174,6 +178,7 @@ def validate_delay_embed_backend_output(
             "delay embedding backend output must not contain numeric-string aliases"
         )
     try:
+        require_real_values(embedded, name="delay embedding output", allow_object=True)
         array = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError("delay embedding backend output must be numeric") from exc
@@ -206,6 +211,7 @@ def validate_mutual_information_backend_output(value: object) -> float:
             "mutual information backend output must not contain numeric-string aliases"
         )
     try:
+        require_real_values(value, name="mutual information output", allow_object=True)
         scalar = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError("mutual information backend output must be numeric") from exc
@@ -244,10 +250,12 @@ def validate_nearest_neighbor_backend_outputs(
             "nearest-neighbor indices must not contain numeric-string aliases"
         )
     try:
+        require_real_values(distances, name="distances", allow_object=True)
         dist = raw_dist.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError("nearest-neighbor distances must be numeric") from exc
     try:
+        require_real_values(indices, name="indices", allow_object=True)
         idx_float = raw_idx.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError("nearest-neighbor indices must be numeric") from exc

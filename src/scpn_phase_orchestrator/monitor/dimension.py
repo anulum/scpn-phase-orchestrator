@@ -31,6 +31,7 @@ from typing import TypeAlias, cast
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
 from scpn_phase_orchestrator.monitor._julia_runtime import require_juliacall_main
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -214,6 +215,7 @@ def _validate_trajectory(trajectory: object) -> FloatArray:
     if _has_complex_payload(trajectory):
         raise ValueError("trajectory must contain real-valued phase-space samples")
     try:
+        require_real_values(trajectory, name="trajectory", allow_object=True)
         traj = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError("trajectory must be a finite 1D or 2D float array") from exc
@@ -236,6 +238,7 @@ def _validate_epsilons(epsilons: object) -> FloatArray:
     if _has_complex_payload(epsilons):
         raise ValueError("epsilons must contain real-valued distance thresholds")
     try:
+        require_real_values(epsilons, name="epsilons", allow_object=True)
         eps = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError("epsilons must be a finite one-dimensional array") from exc
@@ -276,6 +279,9 @@ def _validate_spectrum(lyapunov_exponents: object) -> FloatArray:
     if _has_complex_payload(lyapunov_exponents):
         raise ValueError("lyapunov_exponents must contain real-valued exponents")
     try:
+        require_real_values(
+            lyapunov_exponents, name="lyapunov_exponents", allow_object=True
+        )
         le = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError("lyapunov_exponents must be a finite 1D float array") from exc
@@ -310,6 +316,7 @@ def _validate_ci_values(value: object, *, expected_size: int) -> FloatArray:
     if _has_complex_payload(value):
         raise ValueError("correlation integral output must contain real values")
     try:
+        require_real_values(value, name="value", allow_object=True)
         ci = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError("correlation integral output must be numeric") from exc

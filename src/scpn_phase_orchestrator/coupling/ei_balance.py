@@ -23,6 +23,8 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
+
 try:
     from spo_kernel import (
         adjust_ei_ratio_rust as _rust_adjust,
@@ -51,8 +53,9 @@ def _validate_knm(value: object) -> FloatArray:
     if _contains_boolean_alias(value):
         raise ValueError("knm must not contain boolean values")
     try:
+        require_real_values(value, name="knm", allow_object=True)
         knm = np.asarray(value, dtype=np.float64)
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, OverflowError) as exc:
         raise ValueError("knm must be a finite square matrix") from exc
     if knm.ndim != 2 or knm.shape[0] != knm.shape[1]:
         raise ValueError("knm must be a finite square matrix")
@@ -65,6 +68,7 @@ def _validate_target_ratio(value: object) -> float:
     """Return the validated target excitation/inhibition ratio, else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise TypeError("target_ratio must be a finite positive real")
+    require_real_values(value, name="target_ratio")
     target_ratio = float(value)
     if not np.isfinite(target_ratio) or target_ratio <= 0.0:
         raise ValueError("target_ratio must be a finite positive real")

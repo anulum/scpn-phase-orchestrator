@@ -23,6 +23,7 @@ from typing import TypeAlias, cast
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
 from scpn_phase_orchestrator.binding.types import (
     BindingSpec,
     OscillatorFamily,
@@ -61,13 +62,10 @@ def _oscillator_count(spec: BindingSpec) -> int:
 def _validate_omegas(value: object, *, expected_count: int) -> FloatArray:
     """Return the natural frequencies as a validated finite array, else raise."""
     omegas = np.asarray(value)
-    dtype = omegas.dtype
-    if (
-        np.issubdtype(dtype, np.bool_)
-        or np.issubdtype(dtype, np.complexfloating)
-        or not np.issubdtype(dtype, np.number)
-    ):
-        raise ValueError("omegas must be finite")
+    try:
+        require_real_values(value, name="omegas")
+    except ValueError as exc:
+        raise ValueError("omegas must be finite") from exc
     if omegas.ndim != 1 or len(omegas) != expected_count:
         raise ValueError(
             f"omegas length must match oscillator count {expected_count}, "
@@ -107,7 +105,8 @@ def extract_initial_phases(
     spec : BindingSpec
         The binding specification.
     omegas : FloatArray
-        Natural frequencies in rad/s, shape ``(N,)``.
+        Plain real natural frequencies in rad/s, shape ``(N,)``.
+        Text, boolean, complex, object and temporal arrays are rejected.
     seed : int
         Seed for the deterministic RNG.
 

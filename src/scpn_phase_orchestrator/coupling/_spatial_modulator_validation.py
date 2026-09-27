@@ -16,6 +16,8 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
+
 __all__ = ["validate_spatial_modulator_inputs", "validate_spatial_modulator_output"]
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -87,6 +89,7 @@ def _validate_positive_int(value: object, *, name: str) -> int:
         raise ValueError(f"{name} must not be a numeric-string alias")
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral):
         raise ValueError(f"{name} must be a positive integer")
+    require_real_values(value, name=name)
     parsed = int(value)
     if parsed < 1:
         raise ValueError(f"{name} must be positive")
@@ -99,6 +102,7 @@ def _validate_scalar(value: object, *, name: str, positive: bool = False) -> flo
         raise ValueError(f"{name} must not be a numeric-string alias")
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite real scalar")
+    require_real_values(value, name=name)
     parsed = float(value)
     if not np.isfinite(parsed):
         raise ValueError(f"{name} must be finite")
@@ -114,8 +118,9 @@ def _validate_flat(value: object, *, name: str, expected: int) -> FloatArray:
     if contains_numeric_string_alias(value):
         raise ValueError(f"{name} must not contain numeric-string aliases")
     try:
+        require_real_values(value, name=name, allow_object=True)
         arr = np.asarray(value, dtype=np.float64)
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, OverflowError) as exc:
         raise ValueError(f"{name} must be finite real-valued") from exc
     if arr.shape != (expected,):
         raise ValueError(f"{name} length {arr.size} does not match {expected}")
@@ -175,8 +180,9 @@ def validate_spatial_modulator_output(value: object, *, n: int) -> FloatArray:
             "spatial modulator output must not contain numeric-string aliases"
         )
     try:
+        require_real_values(value, name="spatial modulator output", allow_object=True)
         out = np.asarray(value, dtype=np.float64)
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, OverflowError) as exc:
         raise ValueError("spatial modulator output must be finite real-valued") from exc
     if out.shape != (n * n,):
         raise ValueError(

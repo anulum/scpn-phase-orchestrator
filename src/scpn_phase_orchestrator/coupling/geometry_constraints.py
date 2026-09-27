@@ -22,6 +22,8 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
+
 __all__ = [
     "GeometryConstraint",
     "SymmetryConstraint",
@@ -52,8 +54,9 @@ def _validate_knm_matrix(value: object, *, name: str = "Knm") -> FloatArray:
     if _contains_complex_alias(value):
         raise ValueError(f"{name} must be real-valued")
     try:
+        require_real_values(value, name=name, allow_object=True)
         matrix = np.asarray(value, dtype=np.float64)
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, OverflowError) as exc:
         raise ValueError(f"{name} must be a finite real square matrix") from exc
     if matrix.ndim != 2 or matrix.shape[0] != matrix.shape[1]:
         raise ValueError(f"{name} must be square, got shape {matrix.shape}")

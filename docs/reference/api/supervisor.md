@@ -1184,7 +1184,7 @@ Domainpack hierarchy proofs:
 | `RegimeManager.evaluate()` | < 10 μs | Pure Python comparison |
 | `SupervisorPolicy.decide()` | < 50 μs | Rule evaluation + action construction |
 | `PetriNet.enabled()` | < 10 μs | Guard evaluation |
-| `PredictiveSupervisor.predict()` | < 1 ms | OA mean-field (10 complex ODE steps) |
+| `PredictiveSupervisor.predict()` | < 1 ms | 339 μs measured at N=8, horizon=10 (2026-09-26) |
 | `EventBus.post()` | < 5 μs | Synchronous dispatch |
 
 ---
@@ -1310,3 +1310,22 @@ renders approval/rejection evidence, and never emits executable actions.
 ::: scpn_phase_orchestrator.supervisor.multiverse_risk
 
 ::: scpn_phase_orchestrator.supervisor.topos_policy
+
+## Measurement source types
+
+Causal traces, predictive/FEP phase and frequency arrays, predictive coupling
+and phase-lag matrices, and information-geometry distributions/gradients require
+plain real measurement values before floating-point conversion. Numeric text,
+booleans, complex values and temporal aliases are rejected; real numeric object
+arrays remain supported. Invalid FEP ingress does not publish an assessment.
+The NumPy and JAX information-geometry paths share this input contract.
+
+[Supervisor measurement benchmark records](../data/supervisor_measurement_types_benchmark_2026-09-26.json)
+record the real causal-hypergraph acceptance gate, NumPy/JAX geometry parity
+gate and dated predictive-call timing after source-type validation. These
+shared-host measurements do not establish a paired performance improvement.
+
+## Original numerical input types
+
+See [numerical source types](numerical_source_types.md) for text, boolean and
+temporal refusal, numeric-object compatibility and current language measurements.

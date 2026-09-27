@@ -36,6 +36,7 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
 from scpn_phase_orchestrator._compat import TWO_PI
 
 __all__ = [
@@ -105,6 +106,7 @@ def _validate_vector(name: str, value: FloatArray, n_oscillators: int) -> FloatA
     if not np.issubdtype(raw.dtype, np.number) and not numeric_object:
         raise ValueError(f"{name} must be a finite real numeric vector")
     try:
+        require_real_values(value, name=name, allow_object=True)
         array = raw.astype(np.float64, copy=True)
     except (OverflowError, TypeError, ValueError) as exc:
         raise ValueError(f"{name} must be a finite real numeric vector") from exc

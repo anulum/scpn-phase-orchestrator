@@ -387,3 +387,11 @@ plant. This is the runtime embodiment of EU AI Act Art. 14 (human oversight) and
 Art. 12 (logging / traceability).
 
 ::: scpn_phase_orchestrator.actuation.foundation_model_governor
+
+## Original numerical input types
+
+Measurement and policy arrays are checked before conversion to floating point.
+Numeric text, boolean and temporal aliases are refused; supported numeric-object
+inputs retain the owning API's shape and finiteness checks. See
+[numerical source types](numerical_source_types.md) for the boundary contracts and
+current language measurements.

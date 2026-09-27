@@ -16,6 +16,8 @@ from typing import TypeAlias, cast
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
+
 FloatArray: TypeAlias = NDArray[np.float64]
 IntArray: TypeAlias = NDArray[np.int64]
 
@@ -88,6 +90,7 @@ def _validate_float_vector(value: object, *, name: str) -> FloatArray:
     if _contains_numeric_string_alias(raw):
         raise ValueError(f"{name} must not contain numeric-string aliases")
     try:
+        require_real_values(value, name=name, allow_object=True)
         vector = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError(
@@ -153,6 +156,7 @@ def validate_pid_scalar_output(value: object, *, name: str) -> float:
     if _contains_numeric_string_alias(raw):
         raise ValueError(f"{name} must not contain numeric-string aliases")
     try:
+        require_real_values(value, name=name, allow_object=True)
         scalar = raw.astype(np.float64, copy=False)
     except (TypeError, ValueError) as exc:
         raise ValueError(f"{name} must be a real scalar") from exc

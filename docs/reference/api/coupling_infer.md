@@ -664,3 +664,19 @@ records, and keeps unimplemented estimator names fail-closed until measured
 production implementations exist.
 
 ::: scpn_phase_orchestrator.coupling.infer
+
+## Measurement source units
+
+Hodge phases, coupling weights and topology indices; spectral weights and
+frequencies; spatial coordinates, distances and weights; and inference phase
+series require plain real source values before numerical conversion. Text,
+boolean, complex and temporal aliases are rejected. Real numeric object arrays
+remain compatible. Metadata counts and form codes require plain non-boolean integers. The direct Go/Julia/Mojo bridges share the same array source checks.
+The direct Rust spatial boundary also rejects aliases in vectors, controls,
+counts and form codes before extracting native values.
+
+[Measured coupling parity records](../data/coupling_measurement_types_benchmark_2026-09-26.json)
+record all five available Python/Rust/Go/Julia/Mojo implementations for each
+of Hodge (N=6), spectral (N=10) and spatial (N=10, d=2). Each gate used three
+calls and passed its declared physics/parity tolerances. These small-fixture
+shared-host timings do not establish production-scale performance.

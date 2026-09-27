@@ -178,35 +178,37 @@ numeric-domain guard.
 
 ---
 
+Measurement samples, codes and entropy results reject Boolean, text, complex and
+temporal aliases before conversion, including durations stored in object arrays.
+Real numeric object samples remain supported by the public API and direct
+Go/Julia/Mojo bridges. Dimension and delay require original plain integer types.
+The installed Rust ABI retains one-dimensional contiguous float64 arrays and
+checks finite samples, dimensions 2–7 and positive delay. When a valid delay
+leaves no embedding windows, each boundary returns empty codes and zero entropy
+before converting that delay into a narrower native parameter type.
+
 ## 4. Measured benchmarks
 
-Output from
-`PYTHONPATH=src python benchmarks/opt_entropy_benchmark.py --sizes 256 1024 4096 --calls 20`
-on the development host (x86_64, single thread, release Rust wheel, juliacall
-bootstrapped, Mojo and Go built). Each measured call runs the **public
-dispatcher**, which always computes the Python reference for verification, so
-these figures price the safety boundary, not the bare kernel:
+Measured on 2026-09-26 with the release Rust kernel and actual Go, Julia and
+Mojo runtimes. The [measurement artifact](../data/ordinal_entropy_measurement_types_benchmark_2026-09-26.json)
+contains source hashes, extension hash and results from
+`benchmark_opt_entropy_polyglot_parity_gate(n=n, calls=5)` for each size below.
+One measured call runs both public ordinal codes and entropy, including Python
+reference validation. Values are milliseconds per call on a shared host.
 
 | N | rust (ms) | mojo (ms) | julia (ms) | go (ms) | python (ms) |
 |---|---:|---:|---:|---:|---:|
-| 256 | 3.32 | 203.60 | 7.31 | 9.24 | 3.29 |
-| 1024 | 11.11 | 237.60 | 23.50 | 22.77 | 11.46 |
-| 4096 | 53.60 | 280.76 | 68.57 | 81.49 | 38.10 |
+| 256 | 4.184 | 80.364 | 3.900 | 5.555 | 2.382 |
+| 1024 | 6.733 | 97.740 | 12.235 | 13.793 | 4.962 |
+| 4096 | 21.840 | 116.368 | 38.587 | 35.121 | 19.319 |
 
-Observations (honest, not aspirational):
-
-* **The reference check dominates at these sizes.** Because the dispatcher
-  recomputes the Python reference on every call to verify the backend, the
-  `rust` row includes the Python cost plus the Rust round-trip; in this safety
-  boundary snapshot, pure Python remains competitive and is the fastest row at
-  `N = 4096`. Callers who have already validated a backend and want raw
-  throughput should pin `ACTIVE_BACKEND` and bypass per-call reference
-  recomputation in a tight loop.
-* **Mojo is ruled out of hot loops:** the subprocess spawn and text protocol
-  floor each call at roughly 200 ms on this host. It earns its second slot as a
-  correctness cross-check, not as a production hot path.
-* **Go and Julia track each other** within a factor of two; Julia's first call
-  pays a JIT warm-up not shown here (one warm-up call precedes timing).
+All five actual backends passed the canonical gate: ordinal codes agree exactly;
+entropy uses the existing `1e-12` Rust/Go/Julia and `1e-9` Mojo tolerances.
+Python was the fastest public path at these three measured sizes. The dispatcher
+currently retains its declared Rust/Mojo/Julia/Go/Python preference; this
+measurement does not establish fastest-first dispatch. Selecting `ACTIVE_BACKEND`
+changes backend selection but does not bypass reference validation.
+The shared host and five calls per backend limit performance conclusions.
 
 Reproduce the deterministic parity gate with:
 

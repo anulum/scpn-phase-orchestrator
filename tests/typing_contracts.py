@@ -4,6 +4,7 @@
 # © Code 2020–2026 Miroslav Šotek. All rights reserved.
 # ORCID: 0009-0009-3560-0851
 # Contact: www.anulum.li | protoscience@anulum.li
+# SCPN Phase Orchestrator — Public typing contract assertions
 """Shared assertions for public typing contract tests."""
 
 from __future__ import annotations
@@ -77,6 +78,10 @@ def _assert_concrete_dtype(
     """Raise unless ``dtype_arg`` is a concrete (non-``Any``) numpy dtype."""
     if dtype_arg is Any:
         raise AssertionError(f"{context_prefix}NDArray dtype must not be Any")
+    if not isinstance(dtype_arg, (type, str, np.dtype)):
+        raise AssertionError(
+            f"{context_prefix}NDArray dtype must be concrete; got {dtype_arg!r}"
+        )
     try:
         np.dtype(dtype_arg)
     except TypeError as exc:

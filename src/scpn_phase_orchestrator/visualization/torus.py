@@ -25,6 +25,8 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
+
 __all__ = ["torus_points_json", "phase_wheel_json"]
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -42,6 +44,7 @@ def _validate_phase_array(value: object, *, name: str) -> FloatArray:
         raise ValueError(f"{name} must be finite")
     if array.ndim != 1:
         raise ValueError(f"{name} must be 1-D, got shape {array.shape}")
+    require_real_values(value, name=name, allow_object=True)
     parsed = array.astype(np.float64, copy=False)
     if not np.all(np.isfinite(parsed)):
         raise ValueError(f"{name} must be finite")

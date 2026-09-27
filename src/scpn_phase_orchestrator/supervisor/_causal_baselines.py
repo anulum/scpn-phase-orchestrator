@@ -15,6 +15,8 @@ from typing import TYPE_CHECKING, TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
+
 if TYPE_CHECKING:
     from scpn_phase_orchestrator.supervisor.causal import CausalGraphEstimate
 
@@ -27,6 +29,8 @@ def _validate_causal_trace(
     min_abs_weight: float,
 ) -> dict[str, FloatArray]:
     """Validate the causal trace, else raise."""
+    require_real_values(lag, name="lag")
+    require_real_values(min_abs_weight, name="min_abs_weight")
     if isinstance(lag, bool) or int(lag) != lag or lag < 1:
         raise ValueError("lag must be a positive integer")
     if not np.isfinite(min_abs_weight) or min_abs_weight < 0.0:
@@ -238,8 +242,9 @@ def _coerce_float_array(name: str, value: object) -> FloatArray:
     if any(isinstance(item, complex | np.complexfloating) for item in raw.ravel()):
         raise ValueError(f"{name} must contain real-valued samples")
     try:
+        require_real_values(value, name=name, allow_object=True)
         return np.ascontiguousarray(raw.astype(np.float64), dtype=np.float64)
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, OverflowError) as exc:
         raise ValueError(f"{name} must be numeric") from exc
 
 

@@ -8,6 +8,9 @@
 
 """Ordinal-pattern transition entropy of a scalar observable.
 
+Original measurement and parameter types exclude Boolean, text and temporal
+aliases before conversion; real numeric object samples remain supported.
+
 Two primitives, each with a five-backend fallback chain:
 
 * ``ordinal_pattern_sequence`` — the Bandt–Pompe ordinal-pattern code of every
@@ -47,6 +50,7 @@ from typing import TypeAlias, cast
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
 from scpn_phase_orchestrator.monitor._julia_runtime import require_juliacall_main
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -138,6 +142,7 @@ def _validate_series(series: object) -> FloatArray:
     if _contains_complex_alias(raw):
         raise ValueError("series must contain real-valued samples")
     try:
+        require_real_values(series, name="series", allow_object=True)
         array = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError("series must be a one-dimensional float array") from exc
@@ -152,6 +157,7 @@ def _validate_dimension(dimension: object) -> int:
     """Return ``dimension`` as an integer within the supported range, else raise."""
     if isinstance(dimension, (bool, np.bool_)) or not isinstance(dimension, Integral):
         raise ValueError(f"dimension must be an integer, got {dimension!r}")
+    require_real_values(dimension, name="dimension")
     value = int(dimension)
     if value < MIN_DIMENSION or value > MAX_DIMENSION:
         raise ValueError(
@@ -164,6 +170,7 @@ def _validate_delay(delay: object) -> int:
     """Return ``delay`` as a positive integer, else raise ``ValueError``."""
     if isinstance(delay, (bool, np.bool_)) or not isinstance(delay, Integral):
         raise ValueError(f"delay must be an integer, got {delay!r}")
+    require_real_values(delay, name="delay")
     value = int(delay)
     if value < 1:
         raise ValueError(f"delay must be a positive integer, got {value}")
@@ -192,6 +199,7 @@ def _validate_codes_output(
         )
     if _contains_complex_alias(raw):
         raise ValueError("ordinal pattern backend output must contain real values")
+    require_real_values(codes, name="ordinal pattern output", allow_object=True)
     floated = raw.astype(np.float64, copy=False)
     if not np.all(np.isfinite(floated)):
         raise ValueError("ordinal pattern backend output must be finite")
@@ -226,6 +234,7 @@ def _validate_entropy_output(
         raise ValueError(
             f"transition entropy backend output must be a real scalar, got {value!r}"
         )
+    require_real_values(value, name="transition entropy output")
     score = float(value)
     if not np.isfinite(score):
         raise ValueError(
@@ -439,6 +448,8 @@ def ordinal_pattern_sequence(
     ----------
     series : FloatArray
         Finite real one-dimensional samples, shape ``(T,)``.
+        Numeric object samples are supported; Boolean, text, complex and
+        temporal aliases are rejected before conversion.
     dimension : int
         Embedding dimension ``D`` in ``[2, 7]`` (default 3); each window
         spans ``D`` samples.
@@ -491,6 +502,8 @@ def transition_entropy(
     ----------
     series : FloatArray
         Finite real one-dimensional samples, shape ``(T,)``.
+        Numeric object samples are supported; Boolean, text, complex and
+        temporal aliases are rejected before conversion.
     dimension : int
         Embedding dimension ``D`` in ``[2, 7]`` (default 3).
     delay : int
@@ -505,6 +518,8 @@ def transition_entropy(
     series = _validate_series(series)
     dimension, delay = _validate_ordinal_params(dimension, delay)
     expected = _transition_entropy_reference(series, dimension, delay)
+    if _ordinal_window_count(int(series.size), dimension, delay) < 2:
+        return expected
 
     backend_fn = _dispatch("transition_entropy")
     if backend_fn is not None:

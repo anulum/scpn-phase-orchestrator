@@ -23,6 +23,7 @@ from typing import TypeAlias, cast
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
 from scpn_phase_orchestrator.monitor._julia_runtime import require_juliacall_main
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -207,6 +208,7 @@ def _validate_phases_trials(phases_trials: object) -> FloatArray:
     if _contains_numeric_string_alias(raw):
         raise ValueError("phases_trials must not contain numeric-string aliases")
     try:
+        require_real_values(phases_trials, name="phases_trials", allow_object=True)
         phases = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError("phases_trials must be a finite 1D or 2D float array") from exc
@@ -260,6 +262,7 @@ def _validate_itpc_values(
     if _contains_numeric_string_alias(raw):
         raise ValueError("ITPC output must not contain numeric-string aliases")
     try:
+        require_real_values(value, name="value", allow_object=True)
         itpc = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError("ITPC output must be numeric") from exc
@@ -299,6 +302,7 @@ def _validate_persistence_value(
             "ITPC persistence output must not contain numeric-string aliases"
         )
     try:
+        require_real_values(value, name="value", allow_object=True)
         scalar = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError) as exc:
         raise ValueError("ITPC persistence output must be numeric") from exc

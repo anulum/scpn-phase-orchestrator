@@ -23,6 +23,7 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
 from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -292,6 +293,7 @@ def _raw_numeric_array(
 def _require_finite_float_array(values: object, *, name: str) -> FloatArray:
     """Return ``value`` as a validated finite float array, else raise."""
     raw = _raw_numeric_array(values, name=name, allow_complex=False)
+    require_real_values(values, name=name, allow_object=True)
     array = raw.astype(np.float64, copy=True).ravel()
     if array.size == 0:
         raise ValueError(f"{name} must be non-empty")

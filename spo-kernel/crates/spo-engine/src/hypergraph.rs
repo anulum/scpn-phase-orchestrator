@@ -56,11 +56,58 @@ impl HypergraphStepper {
     /// Advance one hypergraph Kuramoto timestep in place.
     ///
     /// # Errors
-    /// Currently returns `Ok(())` after construction-time validation; the result
-    /// type is retained for API parity with other Rust steppers.
+    /// Rejects mismatched dimensions, invalid node indices and non-finite inputs.
     pub fn step(
         &mut self,
         phases: &mut [f64],
+        omegas: &[f64],
+        edges: &[Hyperedge],
+        knm: &[f64],
+        alpha: &[f64],
+        zeta: f64,
+        psi: f64,
+    ) -> SpoResult<()> {
+        self.validate_inputs(phases, omegas, edges, knm, alpha, zeta, psi)?;
+        self.compute_derivative(phases, omegas, edges, knm, alpha, zeta, psi);
+        for i in 0..self.n {
+            phases[i] = (phases[i] + self.dt * self.deriv_buf[i]).rem_euclid(TAU);
+        }
+        Ok(())
+    }
+
+    /// Advance the hypergraph Kuramoto system for `n_steps` in-place timesteps.
+    ///
+    /// # Errors
+    /// Rejects mismatched dimensions, invalid node indices and non-finite inputs.
+    pub fn run(
+        &mut self,
+        phases: &mut [f64],
+        omegas: &[f64],
+        edges: &[Hyperedge],
+        knm: &[f64],
+        alpha: &[f64],
+        zeta: f64,
+        psi: f64,
+        n_steps: usize,
+    ) -> SpoResult<()> {
+        self.validate_inputs(phases, omegas, edges, knm, alpha, zeta, psi)?;
+        for _ in 0..n_steps {
+            self.compute_derivative(phases, omegas, edges, knm, alpha, zeta, psi);
+            for i in 0..self.n {
+                phases[i] = (phases[i] + self.dt * self.deriv_buf[i]).rem_euclid(TAU);
+            }
+        }
+        Ok(())
+    }
+
+    /// Return the current Kuramoto order parameter `(R, psi)` from cached phases.
+    pub fn order_parameter(&self) -> (f64, f64) {
+        crate::order_params::compute_order_parameter_from_sincos(&self.sin_theta, &self.cos_theta)
+    }
+
+    fn validate_inputs(
+        &self,
+        phases: &[f64],
         omegas: &[f64],
         edges: &[Hyperedge],
         knm: &[f64],
@@ -76,7 +123,7 @@ impl HypergraphStepper {
                 omegas.len()
             )));
         }
-        if knm.len() != n * n || alpha.len() != n * n {
+        if (!knm.is_empty() && knm.len() != n * n) || (!alpha.is_empty() && alpha.len() != n * n) {
             return Err(SpoError::InvalidDimension(format!(
                 "expected knm/alpha length {} got {}/{}",
                 n * n,
@@ -104,41 +151,7 @@ impl HypergraphStepper {
                 "hypergraph step inputs contain NaN/Inf".into(),
             ));
         }
-        self.compute_derivative(phases, omegas, edges, knm, alpha, zeta, psi);
-        for i in 0..self.n {
-            phases[i] = (phases[i] + self.dt * self.deriv_buf[i]).rem_euclid(TAU);
-        }
         Ok(())
-    }
-
-    /// Advance the hypergraph Kuramoto system for `n_steps` in-place timesteps.
-    ///
-    /// # Errors
-    /// Currently returns `Ok(())` after construction-time validation; the result
-    /// type is retained for API parity with other Rust steppers.
-    pub fn run(
-        &mut self,
-        phases: &mut [f64],
-        omegas: &[f64],
-        edges: &[Hyperedge],
-        knm: &[f64],
-        alpha: &[f64],
-        zeta: f64,
-        psi: f64,
-        n_steps: usize,
-    ) -> SpoResult<()> {
-        for _ in 0..n_steps {
-            self.compute_derivative(phases, omegas, edges, knm, alpha, zeta, psi);
-            for i in 0..self.n {
-                phases[i] = (phases[i] + self.dt * self.deriv_buf[i]).rem_euclid(TAU);
-            }
-        }
-        Ok(())
-    }
-
-    /// Return the current Kuramoto order parameter `(R, psi)` from cached phases.
-    pub fn order_parameter(&self) -> (f64, f64) {
-        crate::order_params::compute_order_parameter_from_sincos(&self.sin_theta, &self.cos_theta)
     }
 
     fn compute_derivative(

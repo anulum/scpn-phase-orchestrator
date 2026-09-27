@@ -226,3 +226,11 @@ would coerce to the reference value.
 ## API documentation
 
 ::: scpn_phase_orchestrator.upde.pha_c_acceptance
+
+## Original numerical input types
+
+Measurement and policy arrays are checked before conversion to floating point.
+Numeric text, boolean and temporal aliases are refused; supported numeric-object
+inputs retain the owning API's shape and finiteness checks. See
+[numerical source types](numerical_source_types.md) for the boundary contracts and
+current language measurements.
