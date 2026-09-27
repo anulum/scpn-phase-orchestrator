@@ -799,10 +799,11 @@
     "src/scpn_phase_orchestrator/upde/stuart_landau.py": 100.0,
     "src/scpn_phase_orchestrator/upde/swarmalator.py": 100.0,
     "src/scpn_phase_orchestrator/visualization/__init__.py": 100.0,
-    "src/scpn_phase_orchestrator/visualization/network.py": 97.56,
+    "src/scpn_phase_orchestrator/visualization/network.py": 100.0,
     "src/scpn_phase_orchestrator/visualization/streamer.py": 100.0,
     "src/scpn_phase_orchestrator/visualization/torus.py": 98.59
   },
   "_comment_measurement_sources": "2026-09-27: earlier 101-module measurement floors preserved; exact-head hosted evidence supplies global, domain and file ratchets. Every remaining line, condition, exclusion and configured omission stays in the internal coverage backlog.",
-  "_comment_control_barrier_certificates": "2026-09-27: control_barrier.py retains 100% line and branch floors after real certificate refusal and governor/policy admission tests; focused public runtime suite measures 238/238 statements and 92/92 branches. Production semantics unchanged."
+  "_comment_control_barrier_certificates": "2026-09-27: control_barrier.py retains 100% line and branch floors after real certificate refusal and governor/policy admission tests; focused public runtime suite measures 238/238 statements and 92/92 branches. Production semantics unchanged.",
+  "_comment_network_json_containers": "2026-09-27: visualization/network.py measured at 82/82 statements and 36/36 branches through real graph and heatmap JSON container refusal plus existing presentation tests. File floors are 100%; production semantics unchanged."
 }
