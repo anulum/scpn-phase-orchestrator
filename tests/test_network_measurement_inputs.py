@@ -21,6 +21,42 @@ from scpn_phase_orchestrator.visualization.network import (
 
 
 @pytest.mark.parametrize(
+    "encoded_values", ["0.5", "[[0.25, 0.75]]", "[[0.25], [0.75]]"]
+)
+def test_network_graph_rejects_non_vector_json_node_metrics(
+    encoded_values: str,
+) -> None:
+    """JSON node metrics must remain a vector before graph serialisation."""
+    knm = np.array([[0.0, 1.0], [1.0, 0.0]])
+    with pytest.raises(ValueError, match="R_values must be 1-D"):
+        network_graph_json(knm, R_values=json.loads(encoded_values))
+    payload = json.loads(network_graph_json(knm, R_values=[0.25, 0.75]))
+    assert [node["R"] for node in payload["nodes"]] == [0.25, 0.75]
+    assert payload["links"] == [{"source": 0, "target": 1, "weight": 1.0}]
+
+
+@pytest.mark.parametrize(
+    "encoded_names", ['"Alpha"', '{"0": "Alpha", "1": "Beta"}', "1", "true"]
+)
+def test_network_views_reject_non_list_json_layer_names(encoded_names: str) -> None:
+    """Both D3 payload formats refuse JSON names with the wrong container type."""
+    knm = np.array([[0.0, -0.5], [-0.5, 0.0]])
+    names = json.loads(encoded_names)
+    with pytest.raises(ValueError, match="layer_names must be a list"):
+        network_graph_json(knm, layer_names=names)
+    with pytest.raises(ValueError, match="layer_names must be a list"):
+        coupling_heatmap_json(knm, layer_names=names)
+
+    valid_names = ["Alpha", "Beta"]
+    graph = json.loads(network_graph_json(knm, layer_names=valid_names))
+    heatmap = json.loads(coupling_heatmap_json(knm, layer_names=valid_names))
+    assert [node["name"] for node in graph["nodes"]] == valid_names
+    assert graph["links"] == [{"source": 0, "target": 1, "weight": -0.5}]
+    assert heatmap["labels"] == valid_names
+    assert heatmap["matrix"] == [[0.0, -0.5], [-0.5, 0.0]]
+
+
+@pytest.mark.parametrize(
     "dtype", ["timedelta64[ms]", "timedelta64[ns]", "datetime64[ms]", "object"]
 )
 def test_network_views_reject_temporal_and_object_coupling(dtype: str) -> None:
