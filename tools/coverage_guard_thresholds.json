@@ -664,7 +664,7 @@
     "src/scpn_phase_orchestrator/supervisor/_causal_baselines.py": 95.27,
     "src/scpn_phase_orchestrator/supervisor/alignment.py": 96.75,
     "src/scpn_phase_orchestrator/supervisor/byzantine.py": 100.0,
-    "src/scpn_phase_orchestrator/supervisor/causal.py": 97.48,
+    "src/scpn_phase_orchestrator/supervisor/causal.py": 99.68,
     "src/scpn_phase_orchestrator/supervisor/cbf_admission.py": 100.0,
     "src/scpn_phase_orchestrator/supervisor/events.py": 100.0,
     "src/scpn_phase_orchestrator/supervisor/evolutionary_examples.py": 98.51,
@@ -808,5 +808,6 @@
   "_comment_network_json_containers": "2026-09-27: visualization/network.py measured at 82/82 statements and 36/36 branches through real graph and heatmap JSON container refusal plus existing presentation tests. File floors are 100%; production semantics unchanged.",
   "_comment_phase_wheel_json_names": "2026-09-27: visualization/torus.py measured at 71/71 statements and 26/26 branches through public phase-wheel JSON name refusal and existing torus presentation tests. File floors are 100%; production semantics unchanged.",
   "_comment_predictive_scalar_config": "2026-09-27: supervisor/predictive.py measured at 270/270 statements and 80/80 branches through public scalar configuration refusal, retained FEP assessment on invalid observations and existing OA/FEP hierarchy tests. File floors are 100%; production semantics unchanged.",
-  "_comment_causal_public_refusal": "2026-09-27: three real public causal API refusal contracts exercised; focused 80-test report measures 141/148 statements and 61/66 branches. Conservative file floors 95.27% line and 92.42% branch retain all existing limits. Five numerical guard paths remain without public reproduction; no full-module or global 100% claim. Production semantics unchanged."
+  "_comment_causal_public_refusal": "2026-09-27: three real public causal API refusal contracts exercised; focused 80-test report measures 141/148 statements and 61/66 branches. Conservative file floors 95.27% line and 92.42% branch retain all existing limits. Five numerical guard paths remain without public reproduction; no full-module or global 100% claim. Production semantics unchanged.",
+  "_comment_causal_candidate_admission": "2026-09-27: public temporal experiment JSON schema refusal, intervention matrix shape refusal, input preservation and recovery verified alongside existing real causal tests: 317/318 statements and 123/124 branches. Conservative file floors 99.68% line and 99.19% branch; post-normalization score guard remains open without public reproduction. Production semantics unchanged."
 }

@@ -18,6 +18,7 @@ import pytest
 
 from scpn_phase_orchestrator.actuation.mapper import ControlAction
 from scpn_phase_orchestrator.supervisor import (
+    CausalInterventionEngine,
     CounterfactualRollout,
     build_temporal_causal_hypergraph_experiment,
     learn_causal_graph,
@@ -160,3 +161,77 @@ def test_zero_information_trace_has_no_causal_baseline_edges() -> None:
     for baseline in _baseline_records(experiment):
         assert baseline["score"] == 0.0
         assert baseline["edge_count"] == 0
+
+
+@pytest.mark.parametrize(
+    ("payload", "message"),
+    [
+        ('{"sources": ["driver"]}', "must be a non-empty sequence"),
+        ("[42]", "must be a mapping"),
+        ("[{}]", "sources must be a list"),
+        ('[{"sources": []}]', "sources must be a list"),
+        ('[{"sources": [42]}]', "sources must be non-empty strings"),
+        ('[{"sources": [""]}]', "sources must be non-empty strings"),
+        ('[{"sources": ["driver"]}]', "target is required"),
+        (
+            '[{"sources": ["driver"], "target": "response"}]',
+            "time_offsets must be a list",
+        ),
+        (
+            '[{"sources": ["driver"], "target": "response", "time_offsets": []}]',
+            "time_offsets must be a list",
+        ),
+        (
+            '[{"sources": ["driver"], "target": "response", "time_offsets": [true]}]',
+            "time_offsets must be integers",
+        ),
+        (
+            '[{"sources": ["driver"], "target": "response", "time_offsets": [0.5]}]',
+            "time_offsets must be integers",
+        ),
+    ],
+)
+def test_temporal_candidate_json_refusal_preserves_research_inputs(
+    payload: str, message: str
+) -> None:
+    """Malformed candidates cannot mutate evidence or admit a research report."""
+    candidates = json.loads(payload)
+    trace = _trace(1.0)
+    original_trace = json.dumps(trace, sort_keys=True)
+    original_candidates = json.dumps(candidates, sort_keys=True)
+    with pytest.raises(ValueError, match=message):
+        build_temporal_causal_hypergraph_experiment(trace, candidates)
+    assert json.dumps(trace, sort_keys=True) == original_trace
+    assert json.dumps(candidates, sort_keys=True) == original_candidates
+
+    recovered = build_temporal_causal_hypergraph_experiment(trace, _candidate())
+    assert recovered["research_only"] is True
+    assert recovered["production_claim_permitted"] is False
+    assert recovered["hot_patch_permitted"] is False
+    assert recovered["actuation_permitted"] is False
+    assert recovered["candidate_hyperedge_count"] == 1
+    assert recovered["accepted_hyperedge_count"] == 0
+
+
+@pytest.mark.parametrize("parameter", ["knm", "alpha"])
+def test_public_intervention_matrix_shape_refusal_preserves_parameters(
+    parameter: str,
+) -> None:
+    """Wrong-sized action matrices fail before altering caller-owned parameters."""
+    engine = CausalInterventionEngine(2, 0.01, horizon=2)
+    knm = np.zeros((1, 2)) if parameter == "knm" else np.zeros((2, 2))
+    alpha = np.zeros((1, 2)) if parameter == "alpha" else np.zeros((2, 2))
+    original_knm = knm.copy()
+    original_alpha = alpha.copy()
+    action = ControlAction("K", "global", 0.25, 1.0, "shape admission")
+    with pytest.raises(ValueError, match=parameter + r"\.shape"):
+        engine.apply_actions(knm, alpha, 0.0, 0.0, (action,))
+    np.testing.assert_array_equal(knm, original_knm)
+    np.testing.assert_array_equal(alpha, original_alpha)
+
+    valid_knm = np.zeros((2, 2))
+    valid_alpha = np.zeros((2, 2))
+    admitted = engine.apply_actions(valid_knm, valid_alpha, 0.0, 0.0, (action,))
+    np.testing.assert_array_equal(admitted.knm, [[0.0, 0.25], [0.25, 0.0]])
+    np.testing.assert_array_equal(admitted.alpha, valid_alpha)
+    np.testing.assert_array_equal(valid_knm, np.zeros((2, 2)))
