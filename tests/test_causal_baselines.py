@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import cast
 
 import numpy as np
@@ -20,9 +21,6 @@ from scpn_phase_orchestrator.supervisor import (
     CounterfactualRollout,
     build_temporal_causal_hypergraph_experiment,
     learn_causal_graph,
-)
-from scpn_phase_orchestrator.supervisor._causal_baselines import (
-    _causal_baseline_family,
 )
 
 
@@ -54,6 +52,7 @@ def _baseline_records(report: dict[str, object]) -> list[dict[str, float | int |
 
 
 def test_large_finite_traces_preserve_public_causal_baseline_verdict() -> None:
+    """Public baseline scores and graph records survive finite trace rescaling."""
     reference = build_temporal_causal_hypergraph_experiment(_trace(1.0), _candidate())
     high_magnitude_trace = _trace(1e155)
     scaled = build_temporal_causal_hypergraph_experiment(
@@ -69,9 +68,50 @@ def test_large_finite_traces_preserve_public_causal_baseline_verdict() -> None:
     assert scaled["accepted_hyperedge_count"] == 0
 
     graph = learn_causal_graph(high_magnitude_trace)
-    assert _causal_baseline_family(
-        high_magnitude_trace, lag=1, min_abs_weight=1e-6, graph=graph
-    ) == _baseline_records(scaled)
+    baseline = scaled["baseline"]
+    assert isinstance(baseline, dict)
+    assert graph.to_audit_record()["edges"] == baseline["edges"]
+
+
+def test_public_causal_entries_refuse_nested_trace_samples() -> None:
+    """A sample vector cannot be replaced by a same-length matrix of JSON rows."""
+    trace = json.loads('{"driver": [[0.0], [1.0], [2.0]], "response": [0.0, 1.0, 2.0]}')
+    with pytest.raises(
+        ValueError, match="trace signal 'driver' must be one-dimensional"
+    ):
+        learn_causal_graph(trace)
+    with pytest.raises(
+        ValueError, match="trace signal 'driver' must be one-dimensional"
+    ):
+        build_temporal_causal_hypergraph_experiment(trace, _candidate())
+
+
+def test_unrepresentable_influence_refuses_public_causal_evidence() -> None:
+    """Finite subnormal drivers cannot yield an infinite influence edge or report."""
+    trace = {
+        "driver": [0.0, 1e-320, 2e-320, 3e-320, 4e-320],
+        "response": [0.0, 0.0, 1.0, 3.0, 6.0],
+    }
+    with np.errstate(over="ignore", invalid="ignore"):
+        with pytest.raises(ValueError, match="causal trace influence must be finite"):
+            learn_causal_graph(trace)
+        with pytest.raises(ValueError, match="causal trace influence must be finite"):
+            build_temporal_causal_hypergraph_experiment(trace, _candidate())
+
+
+def test_baseline_centring_overflow_refuses_research_report() -> None:
+    """A valid lagged graph cannot bypass overflow in future-sample correlation."""
+    trace = {
+        "driver": [0.0, 1.0, 2.0, 3.0],
+        "response": [0.0, 0.0, 9e307, 9e307],
+    }
+    with np.errstate(over="ignore", invalid="ignore"):
+        graph = learn_causal_graph(trace)
+        assert not graph.edges
+        with pytest.raises(
+            ValueError, match="causal baseline centred samples must be finite"
+        ):
+            build_temporal_causal_hypergraph_experiment(trace, _candidate())
 
 
 def test_unrepresentable_trace_delta_refuses_public_causal_estimate() -> None:

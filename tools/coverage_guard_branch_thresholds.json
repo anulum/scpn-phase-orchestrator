@@ -684,7 +684,7 @@
     "src/scpn_phase_orchestrator/studio/ui_helpers/tables.py": 100.0,
     "src/scpn_phase_orchestrator/studio/workflow.py": 100.0,
     "src/scpn_phase_orchestrator/supervisor/__init__.py": 100.0,
-    "src/scpn_phase_orchestrator/supervisor/_causal_baselines.py": 94.59,
+    "src/scpn_phase_orchestrator/supervisor/_causal_baselines.py": 95.27,
     "src/scpn_phase_orchestrator/supervisor/alignment.py": 96.75,
     "src/scpn_phase_orchestrator/supervisor/byzantine.py": 100.0,
     "src/scpn_phase_orchestrator/supervisor/causal.py": 97.48,
@@ -1306,7 +1306,7 @@
     "src/scpn_phase_orchestrator/studio/ui_helpers/replay.py": 100.0,
     "src/scpn_phase_orchestrator/studio/ui_helpers/tables.py": 100.0,
     "src/scpn_phase_orchestrator/studio/workflow.py": 100.0,
-    "src/scpn_phase_orchestrator/supervisor/_causal_baselines.py": 87.87,
+    "src/scpn_phase_orchestrator/supervisor/_causal_baselines.py": 92.42,
     "src/scpn_phase_orchestrator/supervisor/alignment.py": 92.1,
     "src/scpn_phase_orchestrator/supervisor/byzantine.py": 100.0,
     "src/scpn_phase_orchestrator/supervisor/causal.py": 93.54,
@@ -1406,5 +1406,6 @@
   "_comment_control_barrier_certificates": "2026-09-27: control_barrier.py retains 100% line and branch floors after real certificate refusal and governor/policy admission tests; focused public runtime suite measures 238/238 statements and 92/92 branches. Production semantics unchanged.",
   "_comment_network_json_containers": "2026-09-27: visualization/network.py measured at 82/82 statements and 36/36 branches through real graph and heatmap JSON container refusal plus existing presentation tests. File floors are 100%; production semantics unchanged.",
   "_comment_phase_wheel_json_names": "2026-09-27: visualization/torus.py measured at 71/71 statements and 26/26 branches through public phase-wheel JSON name refusal and existing torus presentation tests. File floors are 100%; production semantics unchanged.",
-  "_comment_predictive_scalar_config": "2026-09-27: supervisor/predictive.py measured at 270/270 statements and 80/80 branches through public scalar configuration refusal, retained FEP assessment on invalid observations and existing OA/FEP hierarchy tests. File floors are 100%; production semantics unchanged."
+  "_comment_predictive_scalar_config": "2026-09-27: supervisor/predictive.py measured at 270/270 statements and 80/80 branches through public scalar configuration refusal, retained FEP assessment on invalid observations and existing OA/FEP hierarchy tests. File floors are 100%; production semantics unchanged.",
+  "_comment_causal_public_refusal": "2026-09-27: three real public causal API refusal contracts exercised; focused 80-test report measures 141/148 statements and 61/66 branches. Conservative file floors 95.27% line and 92.42% branch retain all existing limits. Five numerical guard paths remain without public reproduction; no full-module or global 100% claim. Production semantics unchanged."
 }
