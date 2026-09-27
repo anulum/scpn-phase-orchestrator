@@ -141,6 +141,7 @@ class MonitorValidationRecord:
 NON_MONITOR_MODULES: frozenset[str] = frozenset(
     {
         "validation_status",
+        "twin_confidence_export",
         "hybrid_order_examples",
         "self_model_examples",
         "information_replay_cyber_industrial",

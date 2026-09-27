@@ -83,8 +83,8 @@ def _validate_phase_vector(value: object, *, name: str) -> FloatArray:
         raise ValueError(f"{name} must not contain numeric-string aliases")
     if np.iscomplexobj(raw):
         raise ValueError(f"{name} must be a finite real-valued phase vector")
-    require_real_values(value, name=name, allow_object=True)
     try:
+        require_real_values(value, name=name, allow_object=True)
         array = raw.astype(np.float64, copy=True)
     except (TypeError, ValueError, OverflowError) as exc:
         raise ValueError(f"{name} must be a finite phase vector") from exc
@@ -109,8 +109,8 @@ def _validate_phase_series_flat(
         raise ValueError("phase_series must not contain numeric-string aliases")
     if np.iscomplexobj(raw):
         raise ValueError("phase_series must be a finite real-valued phase series")
-    require_real_values(value, name="phase_series", allow_object=True)
     try:
+        require_real_values(value, name="phase_series", allow_object=True)
         array = raw.astype(np.float64, copy=True).ravel()
     except (TypeError, ValueError, OverflowError) as exc:
         raise ValueError("phase_series must be a finite phase series") from exc

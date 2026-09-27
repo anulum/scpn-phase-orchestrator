@@ -297,6 +297,13 @@ pytest tests/test_twin_confidence_stability.py -m slow
 
 ---
 
+## Prometheus export
+
+`twin_confidence_prometheus_text` renders a scored confidence summary for
+Prometheus, with a configurable metric prefix.
+
+::: scpn_phase_orchestrator.monitor.twin_confidence_export
+
 ## 7. References
 
 * Lin, J. (1991). *Divergence measures based on the Shannon entropy.* IEEE

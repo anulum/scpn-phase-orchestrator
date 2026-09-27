@@ -16,11 +16,14 @@ booleans, datetime values and duration values are refused before conversion to
 floating arrays remain supported. Where an API already accepts numeric object
 arrays, every original element must be a plain real number. Shape, finiteness,
 index, probability and domain bounds remain owned by the individual API.
+Coupling prior, spectral coupling, transfer entropy and delayed dynamics refuse
+real numeric object values outside the `float64` range with the owning input
+error before native dispatch.
 
 This contract applies to coupling, phase extraction, monitor inputs, replay
 policy arrays, imprint updates, SSGF, supervisor distributions and gradients,
-phase gossip, plasma coupling imports, PHA-C acceptance evidence and numerical
-visualisations. For hybrid quantum monitoring, classical phases obey this rule;
+phase gossip, delayed dynamics, plasma coupling imports, PHA-C acceptance
+evidence and numerical visualisations. For hybrid quantum monitoring, classical phases obey this rule;
 the quantum state retains its complex statevector or density-matrix contract.
 
 Recurrence outputs are binary masks and accept boolean arrays as well as valid
@@ -47,6 +50,10 @@ existing meanings: absent pairwise coupling and zero phase shifts. A zero-step
 run validates its inputs and returns the initial state.
 
 ## Measurements
+
+[Delayed dynamics and transfer entropy comparisons](../data/measurement_source_contracts_polyglot_2026-09-27.json)
+record the subsequent overflow and diagnostic corrections against all five
+available backends, with the corrected source hashes.
 
 [Final language comparisons](../data/coercion_sweep_final_polyglot_2026-09-27.json)
 record real calls to the available Python, Rust, Go, Julia and Mojo backends.

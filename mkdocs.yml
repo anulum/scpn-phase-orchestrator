@@ -153,6 +153,7 @@ nav:
       - Polyglot API Artifacts: reference/polyglot_api.md
       - Python Facade: reference/api/api.md
       - Core & Exceptions: reference/api/core.md
+      - Numerical Source Types: reference/api/numerical_source_types.md
       - Binding: reference/api/binding.md
       - Reactor Semantics: reference/api/reactor_semantics.md
       - Reactor Signal Occurrence Ledger: reference/reactor_signal_occurrence_ledger.md

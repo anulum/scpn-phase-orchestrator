@@ -10,6 +10,8 @@
 
 from __future__ import annotations
 
+from typing import cast
+
 import numpy as np
 import pytest
 
@@ -42,6 +44,15 @@ def _candidate() -> list[dict[str, object]]:
     ]
 
 
+def _baseline_records(report: dict[str, object]) -> list[dict[str, float | int | str]]:
+    baseline = report["baseline"]
+    assert isinstance(baseline, dict)
+    records = baseline["baseline_family"]
+    assert isinstance(records, list)
+    assert all(isinstance(record, dict) for record in records)
+    return cast(list[dict[str, float | int | str]], records)
+
+
 def test_large_finite_traces_preserve_public_causal_baseline_verdict() -> None:
     reference = build_temporal_causal_hypergraph_experiment(_trace(1.0), _candidate())
     high_magnitude_trace = _trace(1e155)
@@ -50,24 +61,17 @@ def test_large_finite_traces_preserve_public_causal_baseline_verdict() -> None:
     )
 
     expected = {
-        record["name"]: record["score"]
-        for record in reference["baseline"]["baseline_family"]
+        record["name"]: record["score"] for record in _baseline_records(reference)
     }
-    actual = {
-        record["name"]: record["score"]
-        for record in scaled["baseline"]["baseline_family"]
-    }
+    actual = {record["name"]: record["score"] for record in _baseline_records(scaled)}
     assert actual == pytest.approx(expected, rel=1e-12, abs=1e-12)
     assert scaled["baseline_beaten"] is False
     assert scaled["accepted_hyperedge_count"] == 0
 
     graph = learn_causal_graph(high_magnitude_trace)
-    assert (
-        _causal_baseline_family(
-            high_magnitude_trace, lag=1, min_abs_weight=1e-6, graph=graph
-        )
-        == scaled["baseline"]["baseline_family"]
-    )
+    assert _causal_baseline_family(
+        high_magnitude_trace, lag=1, min_abs_weight=1e-6, graph=graph
+    ) == _baseline_records(scaled)
 
 
 def test_unrepresentable_trace_delta_refuses_public_causal_estimate() -> None:
@@ -106,3 +110,13 @@ def test_invalid_rollout_cannot_become_confident_causal_edge(
     )
     with pytest.raises(ValueError, match=message):
         learn_causal_graph(_trace(1.0), (rollout,))
+
+
+def test_zero_information_trace_has_no_causal_baseline_edges() -> None:
+    trace = {"driver": [0.0] * 6, "response": [0.0] * 6}
+    graph = learn_causal_graph(trace)
+    assert not graph.edges
+    experiment = build_temporal_causal_hypergraph_experiment(trace, _candidate())
+    for baseline in _baseline_records(experiment):
+        assert baseline["score"] == 0.0
+        assert baseline["edge_count"] == 0

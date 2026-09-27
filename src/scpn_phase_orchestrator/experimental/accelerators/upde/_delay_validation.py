@@ -94,7 +94,7 @@ def _float_vector(value: object, *, name: str, size: int) -> FloatArray:
     try:
         require_real_values(value, name=name, allow_object=True)
         vector = raw.astype(np.float64, copy=True)
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, OverflowError) as exc:
         raise ValueError(f"{name} must be a finite float array") from exc
     if vector.ndim != 1:
         raise ValueError(f"{name} must be one-dimensional, got shape {vector.shape}")
@@ -124,7 +124,7 @@ def validate_delay_backend_output(value: object, *, n: object) -> FloatArray:
     try:
         require_real_values(value, name="value", allow_object=True)
         vector = raw.astype(np.float64, copy=True)
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, OverflowError) as exc:
         raise ValueError("delay backend output must be a finite phase vector") from exc
     if vector.shape != (n_int,):
         raise ValueError(
