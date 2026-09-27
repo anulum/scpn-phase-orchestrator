@@ -17,7 +17,9 @@ hash.
 
 from __future__ import annotations
 
+import json
 from copy import deepcopy
+from decimal import Decimal
 
 import pytest
 
@@ -26,6 +28,8 @@ from scpn_phase_orchestrator.supervisor.federated import (
 )
 from scpn_phase_orchestrator.supervisor.federated_transport import (
     build_signed_transport_envelopes,
+    replay_federated_transport_batch,
+    validate_federated_transport_batch,
 )
 
 UPDATES = (
@@ -98,3 +102,46 @@ def test_aggregator_records_are_transported() -> None:
             "site-b",
             "site-c",
         ]
+
+
+@pytest.mark.parametrize("payload", ["1e999", "-1e999", "NaN"])
+def test_nonfinite_json_batch_identifier_refusal_preserves_sealed_updates(
+    payload: str,
+) -> None:
+    """A decoded nonfinite batch identifier cannot seal or modify node evidence."""
+    records = _node_records()
+    original = deepcopy(records)
+    batch_id = json.loads(payload)
+    with pytest.raises(ValueError, match="numbers in transport records must be finite"):
+        build_signed_transport_envelopes(records, batch_id=batch_id)
+    assert records == original
+
+    envelopes = build_signed_transport_envelopes(records, batch_id="recovered-batch")
+    assert validate_federated_transport_batch(envelopes) == envelopes
+    ledger = replay_federated_transport_batch(envelopes)
+    assert ledger.batch_id == "recovered-batch"
+    assert ledger.envelope_count == 3
+    assert ledger.node_last_sequences == (("site-a", 1), ("site-b", 1), ("site-c", 1))
+    assert all(
+        envelope.transport_execution_permitted is False for envelope in envelopes
+    )
+    assert all(envelope.raw_data_export_permitted is False for envelope in envelopes)
+    assert records == original
+
+
+def test_decimal_json_batch_identifier_refusal_preserves_sealed_updates() -> None:
+    """Decimal JSON decoding cannot smuggle a numeric identifier into a seal."""
+    request = json.loads('{"batch_id": 0.5}', parse_float=Decimal)
+    records = _node_records()
+    original = deepcopy(records)
+    with pytest.raises(
+        ValueError, match="transport payload contains unsupported JSON type"
+    ):
+        build_signed_transport_envelopes(records, batch_id=request["batch_id"])
+    assert records == original
+
+    envelopes = build_signed_transport_envelopes(records, batch_id="decimal-recovery")
+    assert validate_federated_transport_batch(envelopes) == envelopes
+    assert replay_federated_transport_batch(envelopes).batch_id == "decimal-recovery"
+    assert all(envelope.operator_review_required is True for envelope in envelopes)
+    assert records == original
