@@ -395,12 +395,10 @@ omit = [
 # plus their ``experimental/accelerators`` implementations) are NOT omitted: the
 # public forwarder modules and every implementation's module-level import surface
 # run in the standard matrix (see tests/test_backend_module_imports.py) and are
-# measured. The Go/Julia/Mojo FFI call bodies execute only with their toolchains
-# and built artefacts, which the standard coverage matrix does not provide (the
-# Julia, Go, and Mojo lanes build/exercise them without coverage), so those native
-# lines surface honestly as uncovered, not hidden from the gate.
-# Worst case (every shim body uncovered) keeps the project ~84%, well above the
-# 60% floor below.
+# measured. Prepared Go/Julia/Mojo jobs exercise the real public Python bridges
+# and merge that coverage with the standard matrix. Julia initialises PythonCall
+# before starting the tracer. Python bridge coverage does not measure the native
+# Rust/Go/Julia/Mojo source; native instrumentation remains a separate scope.
 
 [tool.coverage.report]
 # This is a LOCAL soft floor for a quick `pytest --cov` run, not the project

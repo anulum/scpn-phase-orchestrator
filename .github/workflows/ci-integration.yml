@@ -16,14 +16,10 @@ permissions:
 
 jobs:
   julia-backend:
-    # The Julia backend cannot be exercised under the main coverage matrix:
-    # coverage's thread tracer stops juliacall/PythonCall from injecting
-    # ``juliacall.Main`` during its C-level ``using PythonCall``, so the Julia
-    # path is correctly skipped there. This lane installs juliacall and runs the
-    # native-backend parity tests WITHOUT coverage, so the Julia path is
-    # actually verified end to end. juliacall is an optional experimental extra
-    # and is installed outside the hashed lock; juliapkg fetches the Julia
-    # runtime on demand (cached in ~/.julia).
+    # Julia must initialise PythonCall before coverage starts its thread tracer.
+    # This lane first exercises broad native parity without instrumentation,
+    # then measures Python bridge and public contracts after Main is ready.
+    # Julia native source coverage remains a separate instrumentation scope.
     runs-on: ubuntu-latest
     timeout-minutes: 40
     env:
@@ -56,7 +52,50 @@ jobs:
       - name: Run native-backend parity tests without coverage
         run: pytest tests/ -k backends -m "not slow" --tb=short -p no:cacheprovider
       - name: Execute Julia measurement ingress contracts
-        run: pytest tests/test_chimera_measurement_inputs.py tests/test_embedding_measurement_inputs.py tests/test_entropy_prod_measurement_inputs.py tests/test_opt_entropy_measurement_inputs.py -m native_runtime -k julia --tb=short --strict-markers
+        run: |
+          python - <<'PY'
+          from juliacall import Main
+          from coverage import Coverage
+          import pytest
+
+          assert Main is not None
+          arguments = [
+              'tests/test_chimera_measurement_inputs.py',
+              'tests/test_embedding_measurement_inputs.py',
+              'tests/test_entropy_prod_measurement_inputs.py',
+              'tests/test_opt_entropy_measurement_inputs.py',
+              'tests/test_dimension_backends.py',
+              'tests/test_npe_backends.py',
+              'tests/test_pid_backends.py',
+              'tests/test_poincare_backends.py',
+              'tests/test_psychedelic_backends.py',
+              'tests/test_recurrence_backends.py',
+              'tests/test_transfer_entropy_backends.py',
+              'tests/test_twin_confidence_backends.py',
+              'tests/test_winding_backends.py',
+              'tests/test_delay_backends.py',
+              '-m',
+              'not slow and not performance',
+              '-k',
+              '(julia and native_runtime) or JuliaParity or (test_public_divergence_uses_real_backend and julia) or PoincareSectionParity or PhasePoincareParity',
+              '--tb=short',
+              '--strict-markers',
+          ]
+          measurement = Coverage(data_file=".coverage.julia", data_suffix=False)
+          measurement.start()
+          try:
+              result = pytest.main(arguments)
+          finally:
+              measurement.stop()
+              measurement.save()
+          raise SystemExit(result)
+          PY
+      - name: Upload Julia bridge coverage
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: coverage-data-julia
+          path: .coverage.julia
+          include-hidden-files: true
       - name: Generate Julia API documentation
         run: python tools/generate_polyglot_docs.py julia --output build/polyglot-docs
       - name: Upload Julia API documentation
@@ -99,7 +138,7 @@ jobs:
         run: pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
       - name: Execute Go measurement ingress contracts with coverage
         run: |
-          pytest tests/test_chimera_measurement_inputs.py tests/test_embedding_measurement_inputs.py tests/test_entropy_prod_measurement_inputs.py tests/test_opt_entropy_measurement_inputs.py -m native_runtime -k go --tb=short --strict-markers --cov=scpn_phase_orchestrator --cov-report= --cov-fail-under=0
+          pytest tests/test_chimera_measurement_inputs.py tests/test_embedding_measurement_inputs.py tests/test_entropy_prod_measurement_inputs.py tests/test_opt_entropy_measurement_inputs.py tests/test_dimension_backends.py tests/test_npe_backends.py tests/test_pid_backends.py tests/test_poincare_backends.py tests/test_psychedelic_backends.py tests/test_recurrence_backends.py tests/test_transfer_entropy_backends.py tests/test_twin_confidence_backends.py tests/test_winding_backends.py tests/test_delay_backends.py -m "not slow and not performance" -k "(go and native_runtime) or GoParity or (test_public_divergence_uses_real_backend and go) or PoincareSectionParity or PhasePoincareParity" --tb=short --strict-markers --cov=scpn_phase_orchestrator --cov-report= --cov-fail-under=0
           mv .coverage .coverage.go
       - name: Upload Go measurement coverage
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
@@ -154,7 +193,7 @@ jobs:
         run: .venv/bin/pip install --require-hashes --no-deps -r requirements/dev-lock.txt && .venv/bin/pip install --no-deps -e .
       - name: Execute Mojo measurement ingress contracts with coverage
         run: |
-          .venv/bin/pytest tests/test_chimera_measurement_inputs.py tests/test_embedding_measurement_inputs.py tests/test_entropy_prod_measurement_inputs.py tests/test_opt_entropy_measurement_inputs.py -m native_runtime -k mojo --tb=short --strict-markers --cov=scpn_phase_orchestrator --cov-report= --cov-fail-under=0
+          .venv/bin/pytest tests/test_chimera_measurement_inputs.py tests/test_embedding_measurement_inputs.py tests/test_entropy_prod_measurement_inputs.py tests/test_opt_entropy_measurement_inputs.py tests/test_dimension_backends.py tests/test_npe_backends.py tests/test_pid_backends.py tests/test_poincare_backends.py tests/test_psychedelic_backends.py tests/test_recurrence_backends.py tests/test_transfer_entropy_backends.py tests/test_twin_confidence_backends.py tests/test_winding_backends.py tests/test_delay_backends.py -m "not slow and not performance" -k "(mojo and native_runtime) or MojoParity or (test_public_divergence_uses_real_backend and mojo) or PoincareSectionParity or PhasePoincareParity" --tb=short --strict-markers --cov=scpn_phase_orchestrator --cov-report= --cov-fail-under=0
           mv .coverage .coverage.mojo
       - name: Upload Mojo measurement coverage
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
