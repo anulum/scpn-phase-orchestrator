@@ -12,7 +12,7 @@
     "research_experimental_modules": 205,
     "runtime_serving_modules": 158,
     "rust_kernel_files": 116,
-    "test_files": 1057
+    "test_files": 1059
   },
   "documentation": {
     "public_pages": [
@@ -2305,6 +2305,7 @@
       "tests/test_fep_predictive_supervisor.py",
       "tests/test_ffi_parity.py",
       "tests/test_fmi_cosimulation.py",
+      "tests/test_formal.py",
       "tests/test_formal_export.py",
       "tests/test_formal_export_modules.py",
       "tests/test_formal_export_residual.py",
@@ -2474,6 +2475,7 @@
       "tests/test_morphogenetic_supervisor.py",
       "tests/test_moving_frame_validation_guards.py",
       "tests/test_mqtt_bridge.py",
+      "tests/test_multiverse_action_labels.py",
       "tests/test_multiverse_counterfactual.py",
       "tests/test_multiverse_domain_scenarios.py",
       "tests/test_multiverse_risk_gate.py",

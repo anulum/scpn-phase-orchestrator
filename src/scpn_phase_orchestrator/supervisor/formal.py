@@ -34,7 +34,8 @@ def export_petri_net_to_prism(
     The exporter preserves the runtime engine's first-enabled transition
     priority by blocking each command when an earlier transition is enabled.
     Guard metrics become PRISM constants so verification jobs can bind them
-    explicitly for a scenario.
+    explicitly for a scenario. Threshold literals use 17 significant digits
+    so parsing them as binary64 preserves the runtime guard boundary.
 
     Parameters
     ----------
@@ -185,7 +186,7 @@ def _enabled_expr(
         if op is None:
             raise PolicyError(f"unsupported guard operator {transition.guard.op!r}")
         metric_id = metric_ids[transition.guard.metric]
-        parts.append(f"{metric_id} {op} {transition.guard.threshold:g}")
+        parts.append(f"{metric_id} {op} {transition.guard.threshold:.17g}")
     return " & ".join(parts) if parts else "true"
 
 

@@ -956,6 +956,9 @@ mutating runtime state or enabling actuation.
 `export_petri_net_to_prism` renders a guard-gated Petri net as a finite PRISM
 MDP model, preserving the runtime engine's first-enabled transition priority and
 exposing guard metrics as PRISM constants for scenario binding.
+Threshold literals use 17 significant digits, preserving the binary64 runtime
+boundary rather than rounding it to six significant digits. This direct Python
+exporter is separate from the `spo formal-export` CLI surface above.
 
 ::: scpn_phase_orchestrator.supervisor.formal
 
@@ -1302,6 +1305,20 @@ the public
 `scpn_phase_orchestrator.studio.build_multiverse_counterfactual_studio_panel()`
 facade, which preserves the non-actuating claim boundaries, joins branch hashes,
 renders approval/rejection evidence, and never emits executable actions.
+Branch `action_labels` retain each applied binary64 value with 17 significant
+digits in `knob:scope:value` text, identically for NumPy and JAX. JSON export and
+the Studio panel preserve that text without rounding. Labels are audit evidence,
+not an action-replay protocol. Their corrected precision can change newly
+generated manifest hashes; existing sealed records are not
+rewritten, and the non-actuating boundary is unchanged.
+
+The 2026-09-29 precision-change regression reran the existing counterfactual
+benchmark on NumPy 2.5.3 and JAX 0.11.2 (CPU): four branches, six domain scenarios,
+three approved and one rejected branch, with deterministic hashes and backend
+parity passing. The measured combined runtime was 0.904 s on a shared host pinned
+to CPU 0, not an isolated speed claim. The full record and reproduction command
+are in `benchmarks/results/multiverse_counterfactual_precision.json`; this scoped
+rerun supersedes only the multiverse row of the historical reference snapshot.
 
 ::: scpn_phase_orchestrator.supervisor.multiverse
 
