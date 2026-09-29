@@ -81,7 +81,11 @@ class MultiverseBranchSpec:
 
 @dataclass(frozen=True)
 class MultiverseBranchRecord:
-    """Audit record for one counterfactual branch rollout."""
+    """Audit record for one counterfactual branch rollout.
+
+    Action labels encode ``knob:scope:value`` with 17 significant digits for
+    lossless binary64 value recovery. They are review text, not commands.
+    """
 
     branch_id: str
     branch_hash: str
@@ -401,7 +405,7 @@ def _apply_branch_actions(
     actions: tuple[ControlAction, ...],
     topology_mask: FloatArray | None,
 ) -> tuple[FloatArray, FloatArray, float, float, tuple[str, ...], int, float]:
-    """Return the coupling after applying a branch's actions."""
+    """Apply branch actions and retain their binary64 values in audit labels."""
     knm = np.array(baseline_k, copy=True, dtype=np.float64)
     alpha = np.array(baseline_alpha, copy=True, dtype=np.float64)
     zeta = float(baseline_zeta)
@@ -410,7 +414,7 @@ def _apply_branch_actions(
     labels: list[str] = []
     for action in actions:
         knob, scope, value = _validate_action(branch_id, action)
-        labels.append(f"{knob}:{scope}:{value:g}")
+        labels.append(f"{knob}:{scope}:{value:.17g}")
         if knob == "K":
             _apply_matrix_delta(knm, scope, value, branch_id)
         elif knob == "alpha":

@@ -24,6 +24,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Direct Petri-to-PRISM guard thresholds and multiverse audit action labels
+  retain binary64 precision instead of rounding to six significant digits.
+  NumPy/JAX rollouts and Studio review preserve the same action text; newly
+  generated audit hashes reflect the corrected labels.
 - The root `LICENSE` held a 16-line custom notice that licence scanners could
   not match, so the repository was reported as `NOASSERTION`. It now carries
   the standard AGPL-3.0 text with a "How to Apply" notice naming SCPN Phase
