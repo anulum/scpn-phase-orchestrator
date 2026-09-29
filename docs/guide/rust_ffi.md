@@ -82,6 +82,14 @@ engine = UPDEEngine(n_oscillators=64, dt=0.01, method="rk4")
 The `_compat.HAS_RUST` flag controls delegation globally. Set it to `False`
 in benchmarks to force the Python path.
 
+Sleep staging is an explicit exception: `classify_sleep_stage` and
+`ultradian_phase` use Python by default even when the kernel is installed.
+Select `backend="rust"` to exercise their native wrappers; an unavailable
+kernel raises `RuntimeError`. Their dispatcher does not use
+`_compat.HAS_RUST`. See the
+[sleep-staging reference](../reference/api/monitor_sleep_staging.md#backend-selection)
+for validation, parity tests and measured wrapper overhead.
+
 ## Accelerated Modules
 
 | Python Class / Function | Rust FFI Class | Hot path |
@@ -116,7 +124,8 @@ in benchmarks to force the Python path.
 | `load_hcp_connectome` | `load_hcp_connectome_rust` | synthetic connectome generation |
 | `GeometryCarrier.decode` | `carrier_decode_rust` | softplus(A·z) decode |
 | `compute_ethical_cost` | `compute_ethical_cost_rust` | SEC + CBF ethical cost |
-| `classify_sleep_stage` | `classify_sleep_stage_rust` | AASM stage classification |
+| `classify_sleep_stage` | `classify_sleep_stage_rust` | stage classification, explicit `backend="rust"` |
+| `ultradian_phase` | `ultradian_phase_rust` | cycle phase, explicit `backend="rust"` |
 | `EVSMonitor._frequency_specificity` | `frequency_specificity_rust` | target/control ITPC ratio |
 | `PhaseSINDy.fit` | `sindy_fit_rust` | STLSQ sparse regression |
 | `estimate_coupling` | (disabled) | normal equations (3x slower than LAPACK) |
