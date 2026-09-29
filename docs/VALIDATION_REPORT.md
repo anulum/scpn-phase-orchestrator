@@ -30,7 +30,7 @@ them as point-in-time figures, not a live total. The continuously-enforced gates
 | Total Python tests | 3,130+ (core) + 194 (nn/ physics validation) | — |
 | Total Rust tests | 211 | — |
 | nn/ physics validation | 194 tests, 183 pass, 10 xfail, 1 skip | 0 hard failures |
-| Line / branch coverage | 94.34% line, 93.22% branch (CI-measured; see §1.1) | no-decrease per-domain ratchet |
+| Line / branch coverage | ≥ 98.67% merged line, ≥ 96.96% branch conditions (CI run 36330774494, 2026-09-27; see §1.1) | no-decrease per-domain ratchet |
 | Docstring coverage | 100% (0 missing) | — |
 | Domainpack coverage | 32/32 (100%) | — |
 | Property-based tests (hypothesis) | ~350 | — |
@@ -46,12 +46,12 @@ Cobertura XML from the CI coverage lanes:
 
 | Axis | CI-measured rate | Global ratchet floor | Source of truth |
 |------|------------------|----------------------|-----------------|
-| Line | 94.34% (50,787 / 53,835) | ≥ 93% global + per-domain floors | [`coverage_guard_thresholds.json`](https://github.com/anulum/scpn-phase-orchestrator/blob/main/tools/coverage_guard_thresholds.json) |
-| Branch | 93.22% (17,364 / 18,626) | ≥ 91% global + per-domain floors | [`coverage_guard_branch_thresholds.json`](https://github.com/anulum/scpn-phase-orchestrator/blob/main/tools/coverage_guard_branch_thresholds.json) |
+| Line | ≥ 98.67% merged report | 98.67% global (≥ 98%) + per-domain and per-file floors | [`coverage_guard_thresholds.json`](https://github.com/anulum/scpn-phase-orchestrator/blob/main/tools/coverage_guard_thresholds.json) |
+| Branch | ≥ 96.96% conditions, ≥ 97.69% lines in the branch lane | 96.96% global (≥ 96%) + per-domain and per-file floors | [`coverage_guard_branch_thresholds.json`](https://github.com/anulum/scpn-phase-orchestrator/blob/main/tools/coverage_guard_branch_thresholds.json) |
 
-The measured rates are the baselines recorded in those threshold files (line lane
-2026-06-26, perf-isolated branch lane 2026-07-03); the floors sit just below them
-as no-regression baselines. **Raise path:** the per-domain floors ratchet
+The floors come from the merged and branch coverage reports of successful CI run
+36330774494 at `ce9cd692` (2026-09-27), rounded down to two decimals from the
+exact counts; the report digests are recorded in the threshold files. **Raise path:** the per-domain floors ratchet
 **upward** from each green CI run and never decrease — a new module ships at 100%
 line coverage and lifts its domain's floor. The generated `grpc_gen` domain is the
 one deliberately low floor (protobuf stubs).
