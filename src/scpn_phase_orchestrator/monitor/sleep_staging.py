@@ -11,8 +11,9 @@
 The staging path maps Kuramoto R summaries and ultradian phase estimates into
 an AASM-like heuristic stage timeline for diagnostics and simulation review.
 R values, timestamps, and stage labels are validated before use, and the Rust
-accelerator mirrors the deterministic Python fallback rather than changing
-classification semantics.
+backend mirrors the deterministic Python default rather than changing
+classification semantics. Native execution is opt-in with ``backend="rust"``;
+installing the optional kernel does not change dispatch.
 
 Validation is fail-closed. ``R`` must be a real number in ``[0, 1]`` and the
 desynchronisation flag a Python or NumPy boolean. Timestamps must be a
@@ -26,7 +27,7 @@ labels must be one of ``"Wake"``, ``"N1"``, ``"N2"``, ``"N3"``, ``"REM"``.
 from __future__ import annotations
 
 from numbers import Real
-from typing import TypeAlias
+from typing import Literal, TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -69,7 +70,12 @@ _STAGE_THRESHOLDS = {
 _STAGE_NAMES = {0: "Wake", 1: "N1", 2: "N2", 3: "N3", 4: "REM"}
 
 
-def classify_sleep_stage(R: float, functional_desync: bool = False) -> str:
+def classify_sleep_stage(
+    R: float,
+    functional_desync: bool = False,
+    *,
+    backend: Literal["python", "rust"] = "python",
+) -> str:
     """Classify sleep stage from Kuramoto order parameter *R*.
 
     Parameters
@@ -80,6 +86,9 @@ def classify_sleep_stage(R: float, functional_desync: bool = False) -> str:
         True when EEG shows desynchronisation pattern characteristic of REM (low-voltage
         mixed-frequency), as opposed to wakeful desynchronisation. A NumPy boolean
         is accepted and normalised to ``bool``.
+    backend : {"python", "rust"}, optional
+        Python is the measured lower-overhead default. Explicit Rust execution
+        requires the optional kernel and retains native-result validation.
 
     Returns
     -------
@@ -91,11 +100,14 @@ def classify_sleep_stage(R: float, functional_desync: bool = False) -> str:
     TypeError
         If ``R`` is not a real number or ``functional_desync`` is not a boolean.
     ValueError
-        If ``R`` is not finite or lies outside ``[0, 1]``.
+        If ``R`` is not finite, lies outside ``[0, 1]``, or the backend is unknown.
+    RuntimeError
+        If Rust is requested but the optional kernel is unavailable.
     """
     r_value = _validate_order_parameter(R)
     desync = _validate_functional_desync(functional_desync)
-    if _HAS_RUST:
+    _validate_backend(backend)
+    if backend == "rust":
         code = _rust_classify(r_value, desync)
         return _validate_stage_code(code)
     if _STAGE_THRESHOLDS["N3"] <= r_value:
@@ -122,6 +134,8 @@ _STAGE_CODES = {"Wake": 0, "N1": 1, "N2": 2, "N3": 3, "REM": 4}
 def ultradian_phase(
     timestamps: FloatArray,
     stage_history: list[str],
+    *,
+    backend: Literal["python", "rust"] = "python",
 ) -> float:
     """Estimate position within the ~90-minute ultradian sleep cycle.
 
@@ -134,6 +148,9 @@ def ultradian_phase(
         non-decreasing epoch times in seconds, shape (n_epochs,).
     stage_history : list[str]
         sleep stage label per epoch, same length as timestamps.
+    backend : {"python", "rust"}, optional
+        Python avoids native label-marshalling overhead by default. Explicit
+        Rust execution requires the optional kernel.
 
     Returns
     -------
@@ -145,13 +162,17 @@ def ultradian_phase(
     ------
     ValueError
         If the timestamps are not finite, real, one-dimensional seconds in
-        non-decreasing order, or the stage history does not match them.
+        non-decreasing order, the stage history does not match them, or the
+        backend is unknown.
+    RuntimeError
+        If Rust is requested but the optional kernel is unavailable.
     """
     ts = _validate_timestamps(timestamps)
     stages = _validate_stage_history(stage_history, expected_n=int(ts.size))
+    _validate_backend(backend)
     if ts.size == 0:
         return 0.0
-    if _HAS_RUST:
+    if backend == "rust":
         rust_ts: FloatArray = np.ascontiguousarray(ts, dtype=np.float64)
         codes: StageCodeArray = np.array(
             [_STAGE_CODES[s] for s in stages],
@@ -171,6 +192,14 @@ def ultradian_phase(
 
     elapsed = float(ts[n - 1] - ts[last_n3_idx])
     return (elapsed % _ULTRADIAN_PERIOD_S) / _ULTRADIAN_PERIOD_S
+
+
+def _validate_backend(backend: str) -> None:
+    """Reject unknown engines and explicit requests for an unavailable kernel."""
+    if backend not in ("python", "rust"):
+        raise ValueError("backend must be 'python' or 'rust'")
+    if backend == "rust" and not _HAS_RUST:
+        raise RuntimeError("Rust sleep staging requires the optional spo_kernel")
 
 
 def _validate_order_parameter(value: object) -> float:

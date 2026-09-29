@@ -209,8 +209,8 @@ them explicitly. Stage labels must be the strings `"Wake"`, `"N1"`, `"N2"`,
 - **Ultradian phase estimation** — position within the 90-minute cycle
 - **N3-anchored cycle tracking** — uses deepest sleep as cycle reference
 - **Cyclic wrapping** — ultradian phase wraps modulo 90 minutes
-- **Rust FFI for both functions** — classify and ultradian dispatch
-  to native code
+- **Optional Rust FFI for both functions** — explicit `backend="rust"`
+  dispatches classification and ultradian estimation to native code
 - **Stage code mapping** — integer codes (0-4) for FFI transfer
 - **Shared thresholds** — the same constants in both backends; they are
   module constants, not run-time settings
@@ -332,16 +332,24 @@ pub fn classify_sleep_stage(r: f64, functional_desync: bool) -> u8
 pub fn ultradian_phase(timestamps: &[f64], stages: &[u8]) -> f64
 ```
 
-### Auto-Select Logic
+### Backend Selection
+
+Both helpers default to Python, including when `spo_kernel` is installed.
+The keyword-only `backend="rust"` option explicitly selects the validated
+native wrapper; `backend="python"` explicitly selects Python. No timing
+probe runs at import or on ordinary calls. Existing positional calls retain
+their numerical semantics.
 
 ```python
-try:
-    from spo_kernel import classify_sleep_stage_rust as _rust_classify
-    from spo_kernel import ultradian_phase_rust as _rust_ultradian
-    _HAS_RUST = True
-except ImportError:
-    _HAS_RUST = False
+classify_sleep_stage(0.85)                  # Python default: "N3"
+classify_sleep_stage(0.85, backend="rust")  # Optional native wrapper: "N3"
+ultradian_phase(timestamps, stages, backend="python")
 ```
+
+Unknown backends raise `ValueError`. Explicit Rust requests raise
+`RuntimeError` if the optional kernel is absent, including for empty
+histories. Inputs are validated before dispatch in both modes.
+No Go, Julia or Mojo sleep-staging implementation exists in this repository.
 
 ### Stage Code Translation
 
@@ -360,59 +368,72 @@ Rust outputs are validated before use: sleep-stage codes must map to
 
 ## 7. Performance Benchmarks
 
-Measured on Intel Core i5-11600K @ 3.90 GHz, 32 GB DDR4-2400.
+Local measurements on 2026-09-29 use the complete validated public APIs,
+including conversion and output guards, not bare kernels. Host: Intel Core
+i5-11600K, Python 3.12.3, NumPy 2.5.3, `spo_kernel` 0.5.10. The installed
+extension matches the local release library, SHA-256
+`fc6c59fda292055539a8c66bd2eb297bc700d0de7d6bffb37fcb26ca512a82d6`.
+CPU 0 affinity with the powersave governor is **not core isolation**.
+Concurrent work was not controlled; these are local regression measurements,
+not production latency guarantees or evidence about pure-Rust performance.
 
-### classify_sleep_stage
+Median microseconds per call over seven samples:
 
-| Backend | Time (µs) | Speedup |
-|---------|-----------|---------|
-| Python | 0.37 | — |
-| Rust | 0.42 | **0.9x** |
+| Input | Default (Python) | Explicit Python | Explicit Rust |
+|-------|-----------------:|----------------:|--------------:|
+| Classifier, five stage probes (range) | 1.774–2.056 | 1.706–2.405 | 2.270–2.728 |
+| Ultradian, 1000 epochs, no N3 | 103.149 | 115.502 | 130.269 |
+| Ultradian, 1000 epochs, first N3 | 88.083 | 89.475 | 106.256 |
+| Ultradian, 1000 epochs, last N3 | 69.830 | 71.427 | 116.878 |
+| Ultradian, 10000 epochs, no N3 | 864.509 | 821.835 | 965.103 |
+| Ultradian, 10000 epochs, first N3 | 928.734 | 926.295 | 1199.050 |
+| Ultradian, 10000 epochs, last N3 | 549.291 | 577.829 | 1118.710 |
 
-The Rust path is marginally slower due to FFI call overhead
-(~200 ns) exceeding the computation cost (~100 ns). The function
-is 5 comparisons — even Python executes this in sub-microsecond.
+The benchmark retains all 17 cases, including two-epoch and empty histories,
+raw samples, exact output parity, CPU affinity, governor, load before/after,
+runtime versions and source/extension hashes in
+`benchmarks/results/sleep_staging_dispatch.json` in the repository.
+Classifier samples contain 1000 calls; ultradian samples contain 100.
+Empty histories return before kernel execution and are not backend-ranking
+evidence. All 14 non-empty cases favour Python in this run, consistent with
+the pre-change diagnostic. Differences between default and explicit Python
+include keyword-call overhead and workstation noise.
 
-### ultradian_phase (1000 epochs)
+Reproduce from the repository root with an installed release kernel:
 
-| Backend | Time (µs) | Speedup |
-|---------|-----------|---------|
-| Python | 1.9 | — |
-| Rust | 81.8 | **0.02x** |
+```bash
+taskset -c 0 .venv/bin/python benchmarks/sleep_staging_dispatch.py
+```
 
-The Rust path is significantly slower because the Python→Rust
-data marshalling dominates: converting a Python `list[str]` to
-`NDArray[uint8]` via `[_STAGE_CODES[s] for s in stages]` (after the labels
-are validated) requires iterating the list in Python, then passing the array
-through PyO3. The actual Rust computation (reverse scan for N3)
-takes nanoseconds.
-
-**Recommendation:** The Rust path provides no benefit for either
-function in the current design. The FFI overhead exceeds the
-compute savings. These functions are best kept on the Python path.
-The Rust implementations exist for correctness verification and
-for use in pure-Rust pipelines (e.g., embedded systems). The current
-dispatcher nevertheless calls the Rust path whenever `spo_kernel` is
-importable; the NumPy path runs only when the kernel is absent.
+The native wrapper additionally translates validated labels to uint8 codes,
+crosses PyO3, and validates the result. The timings do not separately isolate
+these costs. Native execution remains available for parity checks and callers
+that explicitly request it; the Rust library remains available to Rust callers.
 
 ### Memory Usage
 
-- `classify_sleep_stage`: Zero allocation (pure comparisons)
-- `ultradian_phase`: 1 temporary array for stage codes ($T$ bytes)
+- Both wrappers validate inputs before computation.
+- `ultradian_phase` copies timestamps and normalises the stage list; explicit
+  Rust execution also constructs a uint8 stage-code array ($T$ bytes).
 
 ### Test Coverage
 
 - **Rust tests:** 10 (sleep_staging module in spo-engine)
   - N3, N2, N1, REM with desync, Wake, Wake low desync,
     ultradian basic, ultradian no N3, ultradian empty, wrapping
-- **Python tests:** `tests/test_sleep_staging.py`
-  - The active backend (Rust when `spo_kernel` is installed, NumPy
-    otherwise) checked against the documented stage function at every
+- **Python tests:** `tests/test_sleep_staging.py` and
+  `tests/test_sleep_staging_backends.py`
+  - The Python default checked against the documented stage function at every
     threshold, its float neighbours and a 1001-point grid, for both flag
     values
-  - The active backend checked against the ultradian formula over random
+  - The Python default checked against the ultradian formula over random
     histories that carry all five stage labels
-  - The NumPy path run explicitly when the kernel is installed
+  - Explicit Python and real Rust paths compared at threshold neighbours,
+    repeated/strided timestamps, empty histories and up to 10000 epochs
+  - Actual native calls observed without replacing the backend; the default
+    never invokes the native functions, while explicit Rust does
+  - Optional-kernel refusal exercised in a real interpreter without the kernel
+  - Benchmark CLI executed with the actual interpreter and kernel availability
   - Rejection of invalid `R`, flags, timestamps (non-finite, decreasing,
     ragged, boolean, complex, text, `datetime64`, `timedelta64`) and labels
   - Guards on the native return values, pipeline wiring from `UPDEEngine`

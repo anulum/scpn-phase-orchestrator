@@ -24,6 +24,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Sleep staging uses Python by default, avoiding the slower native-wrapper
+  path observed in public-API measurements. Both helpers accept an explicit
+  `backend="rust"` override; absent kernels and unknown backends are refused.
+  Stage thresholds, ultradian timing and input/output validation are unchanged.
 - Direct Petri-to-PRISM guard thresholds and multiverse audit action labels
   retain binary64 precision instead of rounding to six significant digits.
   NumPy/JAX rollouts and Studio review preserve the same action text; newly
