@@ -10,8 +10,10 @@ from __future__ import annotations
 
 import asyncio
 import importlib.util
-import sys
-from types import SimpleNamespace
+import json
+from collections.abc import Iterator
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from threading import Thread
 from typing import Any
 
 import pytest
@@ -23,6 +25,39 @@ from scpn_phase_orchestrator.apps.queuewaves.alerter import (
 )
 from scpn_phase_orchestrator.apps.queuewaves.config import AlertSink
 from scpn_phase_orchestrator.apps.queuewaves.detector import Anomaly
+
+
+@pytest.fixture()
+def webhook_server() -> Iterator[tuple[str, list[tuple[str, dict[str, Any]]]]]:
+    """Receive real webhook requests and return route-specific HTTP statuses."""
+    received: list[tuple[str, dict[str, Any]]] = []
+
+    class Handler(BaseHTTPRequestHandler):
+        def do_POST(self) -> None:
+            """Capture JSON before acknowledging or refusing a webhook."""
+            length = int(self.headers["Content-Length"])
+            payload = json.loads(self.rfile.read(length))
+            received.append((self.path, payload))
+            if self.path.startswith("/disconnect"):
+                self.close_connection = True
+                return
+            self.send_response(500 if self.path.startswith("/fail") else 200)
+            self.end_headers()
+            self.wfile.write(b"PRIVATE_TOPOLOGY")
+
+        def log_message(self, format: str, *args: object) -> None:
+            """Keep the HTTP access log out of application-log assertions."""
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    thread = Thread(target=server.serve_forever, kwargs={"poll_interval": 0.05})
+    thread.start()
+    try:
+        yield f"http://127.0.0.1:{server.server_port}", received
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=2.0)
+        assert not thread.is_alive()
 
 
 def _anomaly(
@@ -145,18 +180,21 @@ def test_async_send_dedup_suppresses() -> None:
 # Salvaged module-specific behavioural contracts from deleted bucket files.
 
 
-def test_format_slack_with_suppressed():
+def test_format_slack_with_suppressed() -> None:
+    """Include the number of deduplicated anomalies in Slack text."""
     payload = _format_slack(_anomaly(), suppressed=5)
     text = payload["attachments"][0]["blocks"][0]["text"]["text"]
     assert "5 suppressed" in text
 
 
-def test_format_slack_critical_color():
+def test_format_slack_critical_color() -> None:
+    """Mark critical anomalies with the configured Slack colour."""
     payload = _format_slack(_anomaly(severity="critical"))
     assert payload["attachments"][0]["color"] == "#FF0000"
 
 
-def test_format_slack_unknown_severity():
+def test_format_slack_unknown_severity() -> None:
+    """Use the fallback Slack colour for an unknown severity."""
     a = Anomaly(
         type="x",
         severity="unknown",
@@ -174,41 +212,42 @@ _HAS_HTTPX = importlib.util.find_spec("httpx") is not None
 
 
 @pytest.mark.skipif(not _HAS_HTTPX, reason="httpx not installed")
-def test_async_send_with_sink_post_failure():
-    """Sink URL is unreachable — send should still return the anomaly list
-    (HTTP errors are caught internally)."""
+def test_async_send_with_sink_post_failure(
+    webhook_server: tuple[str, list[tuple[str, dict[str, Any]]]],
+) -> None:
+    """A refused HTTP delivery must not stop the remaining sink or anomaly."""
+    base_url, received = webhook_server
 
-    async def _run():
-        sink = AlertSink(url="http://127.0.0.1:1/nonexistent", format="generic")
-        alerter = WebhookAlerter([sink], cooldown_seconds=0.0)
-        sent = await alerter.send([_anomaly()])
-        assert len(sent) == 1
+    async def _run() -> None:
+        sinks = [
+            AlertSink(url=f"{base_url}/fail", format="generic"),
+            AlertSink(url=f"{base_url}/accepted", format="generic"),
+        ]
+        anomalies = [_anomaly(svc="svc-a"), _anomaly(svc="svc-b")]
+        alerter = WebhookAlerter(sinks, cooldown_seconds=0.0)
+        sent = await alerter.send(anomalies)
+        assert sent == anomalies
+
+    asyncio.run(_run())
+    assert [(path, payload["service"]) for path, payload in received] == [
+        ("/fail", "svc-a"),
+        ("/fail", "svc-b"),
+        ("/accepted", "svc-a"),
+        ("/accepted", "svc-b"),
+    ]
 
 
-def test_async_send_failure_log_does_not_leak_sink_url(caplog, monkeypatch):
-    """Webhook failures must not echo sink URLs or HTTP exception details."""
+@pytest.mark.parametrize("failure_route", ["fail", "disconnect"])
+def test_async_send_failure_log_does_not_leak_sink_url(
+    caplog: pytest.LogCaptureFixture,
+    webhook_server: tuple[str, list[tuple[str, dict[str, Any]]]],
+    failure_route: str,
+) -> None:
+    """Real HTTP failures must not echo sink URLs or response-body details."""
+    base_url, received = webhook_server
+    sink_url = f"{base_url}/{failure_route}?tenant=PRIVATE_TOPOLOGY"
 
-    class _FailingClient:
-        def __init__(self, timeout):
-            self.timeout = timeout
-
-        async def __aenter__(self):
-            return self
-
-        async def __aexit__(self, exc_type, exc, tb):
-            return None
-
-        async def post(self, url, json):
-            raise OSError(f"ConnectError {url} PRIVATE_TOPOLOGY")
-
-    monkeypatch.setitem(
-        sys.modules,
-        "httpx",
-        SimpleNamespace(AsyncClient=_FailingClient),
-    )
-
-    async def _run():
-        sink_url = "http://ops.internal.example:8080/hook?tenant=PRIVATE_TOPOLOGY"
+    async def _run() -> None:
         sink = AlertSink(url=sink_url, format="generic")
         alerter = WebhookAlerter([sink], cooldown_seconds=0.0)
         with caplog.at_level("WARNING"):
@@ -216,18 +255,20 @@ def test_async_send_failure_log_does_not_leak_sink_url(caplog, monkeypatch):
         assert len(sent) == 1
         text = caplog.text
         assert "alert POST failed for configured sink" in text
-        assert "ops.internal.example" not in text
+        assert sink_url not in text
         assert "PRIVATE_TOPOLOGY" not in text
-        assert "ConnectError" not in text
+        assert "500" not in text
 
     asyncio.run(_run())
+    assert len(received) == 1
+    assert received[0][0] == f"/{failure_route}?tenant=PRIVATE_TOPOLOGY"
 
 
 @pytest.mark.skipif(not _HAS_HTTPX, reason="httpx not installed")
-def test_async_send_slack_format():
+def test_async_send_slack_format() -> None:
     """Slack-formatted sink with unreachable URL."""
 
-    async def _run():
+    async def _run() -> None:
         sink = AlertSink(url="http://127.0.0.1:1/slack", format="slack")
         alerter = WebhookAlerter([sink], cooldown_seconds=0.0)
         sent = await alerter.send([_anomaly()])
@@ -237,16 +278,43 @@ def test_async_send_slack_format():
 
 
 @pytest.mark.skipif(not _HAS_HTTPX, reason="httpx not installed")
-def test_async_send_successful_post():
-    """Mock httpx.AsyncClient to return 200 → resp.raise_for_status() succeeds."""
+@pytest.mark.parametrize("sink_format", ["generic", "slack"])
+def test_async_send_successful_post(
+    webhook_server: tuple[str, list[tuple[str, dict[str, Any]]]],
+    sink_format: str,
+) -> None:
+    """Transmit the configured payload once and suppress an immediate repeat."""
+    base_url, received = webhook_server
+    anomaly = _anomaly()
 
-    import httpx
+    async def _run() -> None:
+        sink = AlertSink(url=f"{base_url}/accepted", format=sink_format)
+        alerter = WebhookAlerter([sink], cooldown_seconds=300.0)
+        assert await alerter.send([anomaly]) == [anomaly]
+        assert await alerter.send([anomaly]) == []
 
-    async def _run():
-        httpx.Response(
-            200,
-            request=httpx.Request("POST", "http://fake:8080/hook"),
-        )
+    asyncio.run(_run())
+    assert len(received) == 1
+    path, payload = received[0]
+    assert path == "/accepted"
+    if sink_format == "generic":
+        assert payload == {
+            "type": anomaly.type,
+            "severity": anomaly.severity,
+            "service": anomaly.service,
+            "value": anomaly.value,
+            "threshold": anomaly.threshold,
+            "tick": anomaly.tick,
+            "message": anomaly.message,
+            "suppressed_count": 0,
+        }
+    else:
+        attachment = payload["attachments"][0]
+        assert attachment["color"] == "#FFA500"
+        assert attachment["blocks"][0]["text"] == {
+            "type": "mrkdwn",
+            "text": ":warning: *retry_storm_forming* [warning]\ntest anomaly",
+        }
 
 
 # Salvaged module-specific behavioural contracts from deleted broad tests.
