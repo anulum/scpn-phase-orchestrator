@@ -1,8 +1,8 @@
 # NOTICE
 
 SCPN Phase Orchestrator
-Copyright concepts (c) 1996–2026 Miroslav Šotek. All rights reserved.
-Copyright code (c) 2026 Miroslav Šotek. All rights reserved.
+© Concepts 1996–2026 Miroslav Šotek. All rights reserved.
+© Code 2020–2026 Miroslav Šotek. All rights reserved.
 
 Licensed under the GNU Affero General Public License v3.0 or later (AGPL-3.0-or-later).
 
