@@ -156,7 +156,7 @@
     "src/scpn_phase_orchestrator/binding/semantic/__init__.py": 100.0,
     "src/scpn_phase_orchestrator/binding/semantic/coercion.py": 100.0,
     "src/scpn_phase_orchestrator/binding/semantic/compiler.py": 100.0,
-    "src/scpn_phase_orchestrator/binding/semantic/retrieval.py": 98.82,
+    "src/scpn_phase_orchestrator/binding/semantic/retrieval.py": 100.0,
     "src/scpn_phase_orchestrator/binding/semantic/review.py": 100.0,
     "src/scpn_phase_orchestrator/binding/semantic/serialization.py": 100.0,
     "src/scpn_phase_orchestrator/binding/topos_examples.py": 100.0,
