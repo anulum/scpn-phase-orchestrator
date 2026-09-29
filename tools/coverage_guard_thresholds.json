@@ -92,7 +92,7 @@
     "src/scpn_phase_orchestrator/adapters/synchrophasor_phase_bridge.py": 100.0,
     "src/scpn_phase_orchestrator/api.py": 100.0,
     "src/scpn_phase_orchestrator/apps/queuewaves/__init__.py": 100.0,
-    "src/scpn_phase_orchestrator/apps/queuewaves/alerter.py": 98.71,
+    "src/scpn_phase_orchestrator/apps/queuewaves/alerter.py": 100.0,
     "src/scpn_phase_orchestrator/apps/queuewaves/collector.py": 95.6,
     "src/scpn_phase_orchestrator/apps/queuewaves/config.py": 100.0,
     "src/scpn_phase_orchestrator/apps/queuewaves/detector.py": 100.0,
