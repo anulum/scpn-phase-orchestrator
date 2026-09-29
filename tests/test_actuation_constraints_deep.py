@@ -8,10 +8,14 @@
 
 from __future__ import annotations
 
+import json
+from dataclasses import replace
+
 import pytest
 
 from scpn_phase_orchestrator.actuation.constraints import ActionProjector
-from scpn_phase_orchestrator.actuation.mapper import ControlAction
+from scpn_phase_orchestrator.actuation.mapper import ActuationMapper, ControlAction
+from scpn_phase_orchestrator.binding.types import ActuatorMapping
 
 
 def _action(
@@ -142,3 +146,95 @@ class TestEdgeCases:
         r2 = proj.project(_action(knob="alpha", value=5.0), previous_value=0.0)
         assert r1.value == 6.0
         assert r2.value == pytest.approx(0.1)
+
+
+@pytest.mark.parametrize("payload", ["null", "false", "0", '"K"', '{"knob":"K"}'])
+@pytest.mark.parametrize("invalid_first", [False, True])
+def test_mapping_factory_refuses_unparsed_records_and_recovers(
+    payload: str, invalid_first: bool
+) -> None:
+    """Reject JSON values among typed mappings without corrupting valid inputs."""
+    mapping = ActuatorMapping(
+        name="coupling",
+        knob="K",
+        scope="global",
+        limits=(0.0, 2.0),
+        rate_limit_per_step=0.125,
+    )
+    original = replace(mapping)
+    entries = [mapping, json.loads(payload)]
+    if invalid_first:
+        entries.reverse()
+    with pytest.raises(TypeError, match="actuators must contain ActuatorMapping"):
+        ActionProjector.from_actuator_mappings(iter(entries))
+
+    assert mapping == original
+    projector = ActionProjector.from_actuator_mappings(iter([mapping]))
+    action = _action(value=1.0)
+    projected = projector.project(action, previous_value=0.25)
+    assert projected == replace(action, value=0.375)
+    assert action.value == 1.0
+    assert ActuationMapper([mapping]).map_actions([projected]) == [
+        {
+            "actuator": "coupling",
+            "knob": "K",
+            "scope": "global",
+            "value": 0.375,
+            "ttl_s": 1.0,
+        }
+    ]
+
+
+@pytest.mark.parametrize("reverse_order", [False, True])
+def test_mapping_factory_refuses_conflicting_bounds_in_either_order(
+    reverse_order: bool,
+) -> None:
+    """Shared knobs cannot silently inherit one actuator's conflicting bounds."""
+    mapping = ActuatorMapping(
+        name="global_coupling",
+        knob="K",
+        scope="global",
+        limits=(0.0, 2.0),
+    )
+    local = replace(mapping, name="local_coupling", scope="layer_0", limits=(0.0, 1.0))
+    entries = [mapping, local]
+    if reverse_order:
+        entries.reverse()
+    originals = [replace(entry) for entry in entries]
+    with pytest.raises(ValueError, match="conflicting value bounds"):
+        ActionProjector.from_actuator_mappings(iter(entries))
+    assert entries == originals
+
+
+@pytest.mark.parametrize("rate_limit", [None, 0.125])
+def test_consistent_mapping_limits_reach_each_actuator(
+    rate_limit: float | None,
+) -> None:
+    """Identical knob declarations preserve metadata and optional slew limits."""
+    mapping = ActuatorMapping(
+        name="global_coupling",
+        knob="K",
+        scope="global",
+        limits=(0.0, 2.0),
+        rate_limit_per_step=rate_limit,
+    )
+    mappings = [
+        mapping,
+        replace(mapping, name="local_coupling", scope="layer_0"),
+    ]
+    projector = ActionProjector.from_actuator_mappings(iter(mappings))
+    action = _action(value=3.0)
+    expected = 2.0 if rate_limit is None else 0.375
+    projected = projector.project(action, previous_value=0.25)
+    assert projected == replace(action, value=expected)
+    assert action.value == 3.0
+    assert ActuationMapper(mappings).map_actions([projected]) == [
+        {
+            "actuator": name,
+            "knob": "K",
+            "scope": "global",
+            "value": expected,
+            "ttl_s": 1.0,
+        }
+        for name in ("global_coupling", "local_coupling")
+    ]
