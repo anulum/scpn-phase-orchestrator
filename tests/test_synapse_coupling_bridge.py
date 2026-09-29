@@ -8,6 +8,9 @@
 
 from __future__ import annotations
 
+import json
+from dataclasses import replace
+
 import numpy as np
 import pytest
 from numpy.testing import assert_allclose
@@ -35,6 +38,63 @@ class TestInitialState:
 
 
 class TestSynapseSnapshotBoundary:
+    @pytest.mark.parametrize(
+        "statistic", ["mean_weight_change", "mean_conductance", "mean_ca"]
+    )
+    @pytest.mark.parametrize(
+        "payload",
+        ["true", "false", '"0.5"', "null", "[]", "-0.5", "NaN", "1e400", "-1e400"],
+    )
+    def test_rejects_invalid_statistics_without_changing_snapshot(
+        self, statistic: str, payload: str
+    ) -> None:
+        """Reject malformed summary values while preserving the source snapshot."""
+        bridge = SynapseCouplingBridge(2)
+        bridge.update_stdp_weights(np.array([[0.0, 0.4], [0.6, 0.0]]))
+        bridge.update_gap_conductances(np.array([[0.0, 0.8], [0.4, 0.0]]))
+        bridge.update_astrocyte_ca(np.array([0.25, 0.5]))
+        snapshot = bridge.snapshot()
+
+        with pytest.raises(
+            ValueError,
+            match=f"^{statistic} must be a finite non-negative real number$",
+        ):
+            replace(snapshot, **json.loads(f'{{"{statistic}": {payload}}}'))
+
+        recovered = replace(snapshot)
+        for result in (snapshot, recovered, bridge.snapshot()):
+            assert_allclose(result.knm_delta, [[0.0, 0.4], [0.6, 0.0]])
+            assert_allclose(result.gap_coupling, [[0.0, 0.6], [0.6, 0.0]])
+            assert_allclose(result.astrocyte_modulation, [0.5, 1.0])
+            assert result.mean_weight_change == pytest.approx(0.25)
+            assert result.mean_conductance == pytest.approx(0.3)
+            assert result.mean_ca == pytest.approx(0.375)
+        assert_allclose(bridge.apply_to_knm(np.zeros((2, 2))), [[0.0, 1.0], [1.2, 0.0]])
+        assert_allclose(bridge.apply_to_imprint(np.ones(2)), [1.5, 2.0])
+
+    @pytest.mark.parametrize(
+        "statistic", ["mean_weight_change", "mean_conductance", "mean_ca"]
+    )
+    @pytest.mark.parametrize("value", [0, 0.5, np.float64(0.75)])
+    def test_accepts_nonnegative_real_statistics_and_copies_arrays(
+        self, statistic: str, value: float
+    ) -> None:
+        """Normalise supported real statistics without sharing snapshot arrays."""
+        snapshot = SynapseCouplingBridge(2).snapshot()
+        restored = replace(
+            snapshot,
+            mean_weight_change=value if statistic == "mean_weight_change" else 0.0,
+            mean_conductance=value if statistic == "mean_conductance" else 0.0,
+            mean_ca=value if statistic == "mean_ca" else 0.0,
+        )
+        assert type(getattr(restored, statistic)) is float
+        assert getattr(restored, statistic) == float(value)
+        for name in ("knm_delta", "gap_coupling", "astrocyte_modulation"):
+            assert_allclose(getattr(restored, name), getattr(snapshot, name))
+            assert not np.shares_memory(
+                getattr(restored, name), getattr(snapshot, name)
+            )
+
     @pytest.mark.parametrize(
         "knm_delta",
         [
