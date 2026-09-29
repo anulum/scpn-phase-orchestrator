@@ -93,7 +93,7 @@
     "src/scpn_phase_orchestrator/api.py": 100.0,
     "src/scpn_phase_orchestrator/apps/queuewaves/__init__.py": 100.0,
     "src/scpn_phase_orchestrator/apps/queuewaves/alerter.py": 100.0,
-    "src/scpn_phase_orchestrator/apps/queuewaves/collector.py": 95.6,
+    "src/scpn_phase_orchestrator/apps/queuewaves/collector.py": 100.0,
     "src/scpn_phase_orchestrator/apps/queuewaves/config.py": 100.0,
     "src/scpn_phase_orchestrator/apps/queuewaves/detector.py": 100.0,
     "src/scpn_phase_orchestrator/apps/queuewaves/pipeline.py": 99.33,

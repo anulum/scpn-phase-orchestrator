@@ -14,19 +14,12 @@ from typing import get_type_hints
 import numpy as np
 import pytest
 
-from tests.typing_contracts import assert_precise_ndarray_hint
-
-try:
-    import httpx  # noqa: F401
-
-    _HAS_HTTPX = True
-except ModuleNotFoundError:
-    _HAS_HTTPX = False
-
 from scpn_phase_orchestrator.apps.queuewaves.collector import (
     MetricBuffer,
     PrometheusCollector,
 )
+from tests.prometheus_range_server import prometheus_range_server
+from tests.typing_contracts import assert_precise_ndarray_hint
 
 
 def test_metric_buffer_push_and_ready() -> None:
@@ -87,21 +80,20 @@ def test_collector_get_signal_arrays_skips_not_ready() -> None:
     assert "s" not in collector.get_signal_arrays()
 
 
-@pytest.mark.skipif(not _HAS_HTTPX, reason="httpx not installed")
-def test_collector_client_lifecycle() -> None:
-    async def _run() -> None:
-        collector = PrometheusCollector(
-            "http://localhost:9090", {"s": "up"}, buffer_length=4
-        )
-        assert collector._client is None
-        client = await collector._get_client()
-        assert client is not None
-        same = await collector._get_client()
-        assert same is client
-        await collector.close()
-        assert collector._client is None
-
-    asyncio.run(_run())
+async def test_collector_client_lifecycle() -> None:
+    """Closing twice permits another public scrape with the same buffers."""
+    with prometheus_range_server() as url:
+        collector = PrometheusCollector(url, {"s": "up"}, buffer_length=4)
+        try:
+            await collector.scrape()
+            await collector.close()
+            await collector.close()
+            await collector.scrape()
+            np.testing.assert_allclose(
+                collector.buffers["s"].values_array(), [1.1, 1.2]
+            )
+        finally:
+            await collector.close()
 
 
 def test_collector_array_annotations_use_float64_ndarray() -> None:
@@ -114,10 +106,10 @@ def test_collector_array_annotations_use_float64_ndarray() -> None:
 
 
 # Salvaged module-specific behavioural contracts from deleted bucket files.
-def test_scrape_unreachable_prometheus():
+def test_scrape_unreachable_prometheus() -> None:
     """Scrape against unreachable URL should log a warning but not raise."""
 
-    async def _run():
+    async def _run() -> None:
         collector = PrometheusCollector(
             "http://127.0.0.1:1",
             {"svc": "up"},
@@ -131,7 +123,7 @@ def test_scrape_unreachable_prometheus():
     asyncio.run(_run())
 
 
-def test_scrape_sync_push():
+def test_scrape_sync_push() -> None:
     """scrape_sync pushes values into named buffers."""
     collector = PrometheusCollector("http://unused:9090", {"a": "up", "b": "down"}, 8)
     collector.scrape_sync({"a": (1.0, 42.0), "b": (2.0, 99.0)})
@@ -141,14 +133,14 @@ def test_scrape_sync_push():
     np.testing.assert_allclose(arr, [42.0])
 
 
-def test_scrape_sync_unknown_key():
+def test_scrape_sync_unknown_key() -> None:
     """Unknown keys in scrape_sync are silently ignored."""
     collector = PrometheusCollector("http://unused:9090", {"a": "up"}, 8)
     collector.scrape_sync({"unknown": (1.0, 0.0)})
     assert len(collector.buffers["a"]) == 0
 
 
-def test_get_signal_arrays_requires_min_4():
+def test_get_signal_arrays_requires_min_4() -> None:
     """get_signal_arrays only returns buffers with >= 4 samples."""
     collector = PrometheusCollector("http://unused:9090", {"a": "up"}, 8)
     for i in range(3):
@@ -160,95 +152,134 @@ def test_get_signal_arrays_requires_min_4():
     assert len(arrays["a"]) == 4
 
 
-def test_scrape_successful_response():
-    """Mock httpx response to exercise the successful scrape code path."""
+async def test_scrape_successful_response() -> None:
+    """An actual instant query appends the returned numeric sample."""
+    requests: list[tuple[str, dict[str, str]]] = []
+    with prometheus_range_server(requests=requests) as url:
+        collector = PrometheusCollector(url + "/", {"svc": "rate(x[1m])"}, 8)
+        try:
+            buffers = await collector.scrape()
+            np.testing.assert_allclose(buffers["svc"].values_array(), [1.1])
+            assert requests == [("/api/v1/query", {"query": "rate(x[1m])"})]
+        finally:
+            await collector.close()
 
-    async def _run():
-        import httpx
 
-        prom_response = {
+async def test_scrape_isolates_malformed_response_per_service(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Malformed HTTP200 data preserves the bad buffer and permits recovery."""
+    responses: dict[str, dict[str, object]] = {
+        "up": {"status": "success", "data": {"result": [{"metric": {}}]}}
+    }
+    with prometheus_range_server(responses=responses) as url:
+        collector = PrometheusCollector(url, {"bad": "up", "good": "up2"}, 8)
+        collector.scrape_sync({"bad": (999.0, 7.0)})
+        try:
+            buffers = await collector.scrape()
+            np.testing.assert_array_equal(buffers["bad"].values_array(), [7.0])
+            np.testing.assert_allclose(buffers["good"].values_array(), [1.1])
+            assert "malformed Prometheus response for bad" in caplog.text
+            responses.clear()
+            await collector.scrape()
+            assert len(buffers["bad"]) == 2
+            assert len(buffers["good"]) == 2
+        finally:
+            await collector.close()
+
+
+@pytest.mark.parametrize(
+    ("samples", "step_s", "message"),
+    [
+        (0, 1.0, "samples must be at least 1"),
+        (-1, 1.0, "samples must be at least 1"),
+        (4, 0.0, "step_s must be positive"),
+        (4, -0.5, "step_s must be positive"),
+        (4, float("nan"), "step_s must be positive"),
+    ],
+)
+async def test_backfill_rejects_invalid_history_before_http(
+    samples: int, step_s: float, message: str
+) -> None:
+    """Invalid history leaves existing samples and the HTTP endpoint untouched."""
+    requests: list[tuple[str, dict[str, str]]] = []
+    with prometheus_range_server(requests=requests) as url:
+        collector = PrometheusCollector(url, {"service": "up"}, 4)
+        collector.scrape_sync({"service": (9.0, 7.0)})
+        try:
+            with pytest.raises(ValueError, match=message):
+                await collector.backfill(end=10.0, samples=samples, step_s=step_s)
+            assert requests == []
+            np.testing.assert_array_equal(
+                collector.buffers["service"].values_array(), [7.0]
+            )
+            await collector.backfill(end=10.0, samples=4, step_s=0.5)
+            assert collector.buffers["service"].full
+            assert "service" in collector.get_signal_arrays()
+        finally:
+            await collector.close()
+
+
+@pytest.mark.parametrize(
+    "result",
+    [
+        {"metric": {}},
+        {"values": [[10.0, "not-numeric"]]},
+        {"values": [["not-a-timestamp", "1.0"]]},
+        {"values": [[10.0, "1.0", "extra"]]},
+        {"values": None},
+    ],
+)
+async def test_backfill_isolates_malformed_service_and_recovers(
+    result: dict[str, object], caplog: pytest.LogCaptureFixture
+) -> None:
+    """A malformed range does not block another service or a later valid range."""
+    responses: dict[str, dict[str, object]] = {
+        "bad_query": {"status": "success", "data": {"result": [result]}},
+        "good_query": {
             "status": "success",
             "data": {
-                "resultType": "vector",
-                "result": [{"metric": {"__name__": "up"}, "value": [1000.0, "1.5"]}],
+                "result": [
+                    {
+                        "values": [
+                            [10.0, "2.5"],
+                            [10.5, "3.5"],
+                            [11.0, "4.5"],
+                            [11.5, "5.5"],
+                        ]
+                    }
+                ]
             },
-        }
-
-        mock_response = httpx.Response(
-            200,
-            json=prom_response,
-            request=httpx.Request("GET", "http://fake:9090/api/v1/query"),
-        )
-
+        },
+    }
+    requests: list[tuple[str, dict[str, str]]] = []
+    with prometheus_range_server(responses=responses, requests=requests) as url:
         collector = PrometheusCollector(
-            "http://fake:9090",
-            {"svc": "up"},
-            buffer_length=8,
+            url, {"bad": "bad_query", "good": "good_query"}, 4
         )
-
-        from unittest.mock import AsyncMock
-
-        mock_client = AsyncMock()
-        mock_client.get = AsyncMock(return_value=mock_response)
-        collector._client = mock_client
-
-        buffers = await collector.scrape()
-        assert len(buffers["svc"]) == 1
-        arr = buffers["svc"].values_array()
-        np.testing.assert_allclose(arr, [1.5])
-
-        await collector.close()
-
-    asyncio.run(_run())
-
-
-def test_scrape_isolates_malformed_response_per_service():
-    """A 2xx response missing `value` must not abort the remaining services.
-
-    The module contract promises per-service isolation ("failures are logged
-    per service and do not mutate unrelated buffers"). A malformed but HTTP-200
-    payload raises KeyError/ValueError inside the parse; if uncaught it would
-    propagate and skip every service queued after the bad one.
-    """
-
-    async def _run():
-        from unittest.mock import AsyncMock
-
-        import httpx
-
-        req = httpx.Request("GET", "http://fake:9090/api/v1/query")
-        malformed = httpx.Response(
-            200,
-            json={"status": "success", "data": {"result": [{"metric": {}}]}},
-            request=req,
-        )
-        good = httpx.Response(
-            200,
-            json={
-                "status": "success",
-                "data": {"result": [{"value": [1000.0, "2.5"]}]},
-            },
-            request=req,
-        )
-
-        collector = PrometheusCollector(
-            "http://fake:9090",
-            {"bad": "up", "good": "up2"},
-            buffer_length=8,
-        )
-        mock_client = AsyncMock()
-        mock_client.get = AsyncMock(side_effect=[malformed, good])
-        collector._client = mock_client
-
-        buffers = await collector.scrape()  # must not raise
-
-        assert len(buffers["bad"]) == 0
-        assert len(buffers["good"]) == 1
-        np.testing.assert_allclose(buffers["good"].values_array(), [2.5])
-
-        await collector.close()
-
-    asyncio.run(_run())
+        collector.scrape_sync({"bad": (9.0, 7.0)})
+        try:
+            buffers = await collector.backfill(end=11.5, samples=4, step_s=0.5)
+            np.testing.assert_array_equal(buffers["bad"].values_array(), [7.0])
+            np.testing.assert_array_equal(
+                collector.get_signal_arrays()["good"], [2.5, 3.5, 4.5, 5.5]
+            )
+            assert "bad" not in collector.get_signal_arrays()
+            assert "malformed Prometheus range response for bad" in caplog.text
+            assert requests == [
+                (
+                    "/api/v1/query_range",
+                    {"query": query, "start": "10.0", "end": "11.5", "step": "0.5"},
+                )
+                for query in ("bad_query", "good_query")
+            ]
+            responses["bad_query"] = responses["good_query"]
+            await collector.backfill(end=11.5, samples=4, step_s=0.5)
+            np.testing.assert_array_equal(
+                collector.get_signal_arrays()["bad"], [2.5, 3.5, 4.5, 5.5]
+            )
+        finally:
+            await collector.close()
 
 
 # Salvaged module-specific behavioural contracts from deleted broad tests.
