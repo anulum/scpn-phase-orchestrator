@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # SCPN Phase Orchestrator — commit message policy hook
 # Install: git config core.hooksPath .githooks
-# © 1998–2026 Miroslav Šotek. All rights reserved.
+# © 1996–2026 Miroslav Šotek. All rights reserved.
 
 set -euo pipefail
 

@@ -24,6 +24,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The root `LICENSE` held a 16-line custom notice that licence scanners could
+  not match, so the repository was reported as `NOASSERTION`. It now carries
+  the standard AGPL-3.0 text with a "How to Apply" notice naming SCPN Phase
+  Orchestrator, the canonical concepts (1996) and code (2020) years, the SPDX
+  identifier and the commercial-licence route. `NOTICE.md` gave the code year
+  as 2026 and now reads 2020–2026. Nine legacy file banners carried a 1998
+  start year and now read 1996. `tests/test_licence_metadata.py` checks the
+  licence text against the FSF original, the licence on every manifest, and
+  every tracked file for piped SPDX expressions or the retired start year.
 - The federated transport verifies each node update record's seal.
   - The federated aggregator seals every node update record with
     `update_hash`. The transport checked only that the value was a SHA-256
