@@ -1,6 +1,6 @@
 # Testing Guide
 
-SCPN Phase Orchestrator builds its Python test surface around dedicated module-owned tests. Measured coverage is **94.34% line / 93.22% branch** (CI lanes; see the [V&V Report §1.1](../VALIDATION_REPORT.md)); the authoritative gate is a per-domain **no-decrease ratchet** enforced by `tools/coverage_guard.py`, not a flat percentage. The `60%` figure in older notes was the floor held during the dedicated-test-surface rebuild and is superseded. Each production module regains coverage through its own focused unit, property, parity, or pipeline tests.
+SCPN Phase Orchestrator builds its Python test surface around dedicated module-owned tests. Measured coverage is at least **98.67% line / 96.96% branch conditions** (CI run 36330774494; see the [V&V Report §1.1](../VALIDATION_REPORT.md)); the authoritative gate is a per-domain **no-decrease ratchet** enforced by `tools/coverage_guard.py`, not a flat percentage. The `60%` figure in older notes was the floor held during the dedicated-test-surface rebuild and is superseded. Each production module regains coverage through its own focused unit, property, parity, or pipeline tests.
 
 ## Running Tests
 
@@ -197,7 +197,7 @@ The Python fallback uses pure-NumPy integrators; the Rust path uses `spo-kernel`
 via PyO3. Tests handle both paths — see
 `test_degenerate_edges.py::TestUPDEZeroDt` for the pattern.
 
-Coverage gate: a per-domain **no-decrease ratchet** (`tools/coverage_guard.py`) against the CI coverage lanes, seeded from the measured baselines in `tools/coverage_guard_thresholds.json` (line, ≥93% global) and `tools/coverage_guard_branch_thresholds.json` (branch, ≥91% global). The floors ratchet upward from each green run and never decrease; new modules ship at 100% and lift their domain's floor. (The historical "60% minimum" was the rebuild floor, now superseded.)
+Coverage gate: a per-domain **no-decrease ratchet** (`tools/coverage_guard.py`) against the CI coverage lanes, seeded from the measured baselines in `tools/coverage_guard_thresholds.json` (line, 98.67% global, ≥98%) and `tools/coverage_guard_branch_thresholds.json` (branch conditions, 96.96% global, ≥96%). The floors ratchet upward from each green run and never decrease; new modules ship at 100% and lift their domain's floor. (The historical "60% minimum" was the rebuild floor, now superseded.)
 
 ## Convergence & Topology Tests (`test_convergence_topology.py`)
 

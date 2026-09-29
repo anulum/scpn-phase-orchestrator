@@ -23,6 +23,9 @@ from scpn_phase_orchestrator.supervisor import (
     build_temporal_causal_hypergraph_experiment,
     learn_causal_graph,
 )
+from scpn_phase_orchestrator.supervisor._causal_baselines import (
+    _causal_baseline_family,
+)
 
 
 def _trace(scale: float) -> dict[str, list[float]]:
@@ -72,6 +75,9 @@ def test_large_finite_traces_preserve_public_causal_baseline_verdict() -> None:
     baseline = scaled["baseline"]
     assert isinstance(baseline, dict)
     assert graph.to_audit_record()["edges"] == baseline["edges"]
+    assert _causal_baseline_family(
+        high_magnitude_trace, lag=1, min_abs_weight=1e-6, graph=graph
+    ) == _baseline_records(scaled)
 
 
 def test_public_causal_entries_refuse_nested_trace_samples() -> None:
