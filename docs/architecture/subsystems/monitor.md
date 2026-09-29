@@ -48,6 +48,13 @@ Five-language fallback per kernel: **Rust → Mojo → Julia → Go → Python**
 each observer's `_load_*_fns()` forwarding to
 `experimental/accelerators/monitor/`.
 
+Sleep staging does not use that chain: `classify_sleep_stage` and
+`ultradian_phase` default to Python, with explicit `backend="rust"`
+selection for the validated native wrappers. No Go, Julia or Mojo
+counterpart exists for this module. The
+[sleep-staging reference](../../reference/api/monitor_sleep_staging.md#backend-selection)
+records its selection contract and public-API measurements.
+
 The public twin-confidence dispatcher validates the raw `(js, w1)` backend pair
 before float coercion. Boolean, complex/object-complex, and numeric-string
 aliases fail closed while finite real numeric-object pairs remain compatible;
