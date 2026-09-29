@@ -56,7 +56,7 @@
     "src/scpn_phase_orchestrator/actuation/__init__.py": 86.66,
     "src/scpn_phase_orchestrator/actuation/_qp.py": 64.86,
     "src/scpn_phase_orchestrator/actuation/_qp_admm.py": 100.0,
-    "src/scpn_phase_orchestrator/actuation/constraints.py": 98.68,
+    "src/scpn_phase_orchestrator/actuation/constraints.py": 100.0,
     "src/scpn_phase_orchestrator/actuation/control_barrier.py": 100.0,
     "src/scpn_phase_orchestrator/actuation/foundation_model_governor.py": 100.0,
     "src/scpn_phase_orchestrator/actuation/hdl_compiler.py": 100.0,
