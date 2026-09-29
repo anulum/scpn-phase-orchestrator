@@ -42,10 +42,18 @@ def _series(query: str, start: float, end: float, step: float) -> list[list[obje
 class _Handler(BaseHTTPRequestHandler):
     empty_queries: frozenset[str] = frozenset()
     instant_calls: int = 0
+    response_overrides: dict[str, dict[str, object]] = {}
+    requests: list[tuple[str, dict[str, str]]] = []
 
-    def do_GET(self) -> None:  # noqa: N802 - http.server API
+    def do_GET(self) -> None:
+        """Record a query request and return its configured Prometheus payload."""
         parsed = urlparse(self.path)
-        params = {k: v[0] for k, v in parse_qs(parsed.query).items()}
+        params = {name: values[0] for name, values in parse_qs(parsed.query).items()}
+        self.requests.append((parsed.path, params))
+        query = params.get("query", "")
+        if query in self.response_overrides:
+            self._send(self.response_overrides[query])
+            return
         if parsed.path == "/api/v1/query":
             self._instant(params["query"])
             return
@@ -109,10 +117,35 @@ class _Handler(BaseHTTPRequestHandler):
 @contextmanager
 def prometheus_range_server(
     empty_queries: frozenset[str] = frozenset(),
+    *,
+    responses: dict[str, dict[str, object]] | None = None,
+    requests: list[tuple[str, dict[str, str]]] | None = None,
 ) -> Iterator[str]:
-    """Serve the range API on 127.0.0.1 and yield its base URL."""
+    """Serve Prometheus query contracts over a loopback HTTP socket.
+
+    Parameters
+    ----------
+    empty_queries : frozenset[str]
+        Queries returning an empty result.
+    responses : dict[str, dict[str, object]], optional
+        Mutable per-query payload overrides for refusal and recovery tests.
+    requests : list[tuple[str, dict[str, str]]], optional
+        Destination for actual request paths and decoded query parameters.
+
+    Yields
+    ------
+    str
+        Base URL of the ephemeral loopback server.
+    """
     handler = type(
-        "Handler", (_Handler,), {"empty_queries": empty_queries, "instant_calls": 0}
+        "Handler",
+        (_Handler,),
+        {
+            "empty_queries": empty_queries,
+            "instant_calls": 0,
+            "response_overrides": responses if responses is not None else {},
+            "requests": requests if requests is not None else [],
+        },
     )
     server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
@@ -123,3 +156,4 @@ def prometheus_range_server(
         server.shutdown()
         server.server_close()
         thread.join(timeout=5)
+        assert not thread.is_alive()
