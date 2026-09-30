@@ -11,8 +11,8 @@
     "python_package_modules": 760,
     "research_experimental_modules": 205,
     "runtime_serving_modules": 158,
-    "rust_kernel_files": 119,
-    "test_files": 1070
+    "rust_kernel_files": 120,
+    "test_files": 1071
   },
   "documentation": {
     "public_pages": [
@@ -2788,6 +2788,7 @@
       "tests/test_session_start.py",
       "tests/test_session_start_coherence.py",
       "tests/test_sha256_digest_format.py",
+      "tests/test_sheaf_benchmark.py",
       "tests/test_sheaf_engine.py",
       "tests/test_sheaf_engine_python_fallback.py",
       "tests/test_simplicial.py",
@@ -3102,6 +3103,7 @@
     "spo-kernel/crates/spo-ffi/src/phase_lag.rs",
     "spo-kernel/crates/spo-ffi/src/phase_quality.rs",
     "spo-kernel/crates/spo-ffi/src/return_types.rs",
+    "spo-kernel/crates/spo-ffi/src/sheaf.rs",
     "spo-kernel/crates/spo-ffi/src/simplicial_boundary.rs",
     "spo-kernel/crates/spo-ffi/src/sparse.rs",
     "spo-kernel/crates/spo-ffi/src/splitting_boundary.rs",

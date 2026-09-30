@@ -29,6 +29,7 @@ mod ordinal_entropy;
 mod phase_lag;
 mod phase_quality;
 mod return_types;
+mod sheaf;
 mod simplicial_boundary;
 mod sparse;
 mod splitting_boundary;
@@ -51,6 +52,7 @@ use phase_quality::PyPhaseQualityScorer;
 use return_types::{
     ArrayPair, ArrayTriple, ArraysWithCount, EiBalanceMetrics, PhaseExtractionOutput, RqaMetrics,
 };
+use sheaf::PySheafUPDEStepper;
 use simplicial_boundary::{simplicial_run_rust, PySimplicialStepper};
 use sparse::PySparseUPDEStepper;
 use splitting_boundary::{splitting_run_rust, PySplittingStepper};
@@ -76,9 +78,7 @@ use spo_engine::{
     inertial, itpc,
     lif_ensemble::{LIFEnsemble, LIFParams},
     lyapunov, market, order_params, pac, phase_extract, poincare, prior, psychedelic, recurrence,
-    reduction,
-    sheaf_upde::SheafUPDEStepper,
-    sindy, sleep_staging, spectral, ssgf_costs,
+    reduction, sindy, sleep_staging, spectral, ssgf_costs,
     stuart_landau::StuartLandauStepper,
     transfer_entropy, twin_confidence, winding,
 };
@@ -162,120 +162,6 @@ impl PyActiveInferenceAgent {
     #[setter]
     fn set_target_r(&mut self, val: f64) {
         self.inner.target_r = val;
-    }
-}
-
-// ─── PySheafUPDEStepper ───────────────────────────────────────────────────
-
-#[pyclass(name = "PySheafUPDEStepper")]
-struct PySheafUPDEStepper {
-    inner: SheafUPDEStepper,
-}
-
-#[pymethods]
-impl PySheafUPDEStepper {
-    #[new]
-    #[pyo3(signature = (n, d, dt = 0.01, method = "euler", n_substeps = 1, atol = 1e-6, rtol = 1e-3))]
-    fn new(
-        n: usize,
-        d: usize,
-        dt: f64,
-        method: &str,
-        n_substeps: u32,
-        atol: f64,
-        rtol: f64,
-    ) -> PyResult<Self> {
-        let m = match method {
-            "euler" => Method::Euler,
-            "rk4" => Method::RK4,
-            "rk45" => Method::RK45,
-            _ => return Err(PyValueError::new_err(format!("unknown method: {method}"))),
-        };
-        let config = IntegrationConfig {
-            dt,
-            method: m,
-            n_substeps,
-            atol,
-            rtol,
-        };
-        let inner = SheafUPDEStepper::new(n, d, config).map_err(spo_err)?;
-        Ok(Self { inner })
-    }
-
-    #[allow(clippy::too_many_arguments)]
-    fn step<'py>(
-        &mut self,
-        py: Python<'py>,
-        phases: PyReadonlyArray1<'py, f64>,
-        omegas: PyReadonlyArray1<'py, f64>,
-        restriction_maps: PyReadonlyArray1<'py, f64>,
-        zeta: f64,
-        psi: PyReadonlyArray1<'py, f64>,
-    ) -> PyResult<Bound<'py, PyArray1<f64>>> {
-        let mut p_out = phases
-            .to_vec()
-            .map_err(|_| PyValueError::new_err("phases not contiguous"))?;
-        let p_w = omegas
-            .as_slice()
-            .map_err(|e| PyValueError::new_err(e.to_string()))?;
-        let r_m = restriction_maps
-            .as_slice()
-            .map_err(|e| PyValueError::new_err(e.to_string()))?;
-        let p_psi = psi
-            .as_slice()
-            .map_err(|e| PyValueError::new_err(e.to_string()))?;
-
-        self.inner
-            .step(&mut p_out, p_w, r_m, zeta, p_psi)
-            .map_err(spo_err)?;
-
-        Ok(PyArray1::from_vec(py, p_out))
-    }
-
-    #[allow(clippy::too_many_arguments)]
-    fn run<'py>(
-        &mut self,
-        py: Python<'py>,
-        phases: PyReadonlyArray1<'py, f64>,
-        omegas: PyReadonlyArray1<'py, f64>,
-        restriction_maps: PyReadonlyArray1<'py, f64>,
-        zeta: f64,
-        psi: PyReadonlyArray1<'py, f64>,
-        n_steps: u64,
-    ) -> PyResult<Bound<'py, PyArray1<f64>>> {
-        let mut p_out = phases
-            .to_vec()
-            .map_err(|_| PyValueError::new_err("phases not contiguous"))?;
-        let p_w = omegas
-            .as_slice()
-            .map_err(|e| PyValueError::new_err(e.to_string()))?;
-        let r_m = restriction_maps
-            .as_slice()
-            .map_err(|e| PyValueError::new_err(e.to_string()))?;
-        let p_psi = psi
-            .as_slice()
-            .map_err(|e| PyValueError::new_err(e.to_string()))?;
-
-        self.inner
-            .run(&mut p_out, p_w, r_m, zeta, p_psi, n_steps)
-            .map_err(spo_err)?;
-
-        Ok(PyArray1::from_vec(py, p_out))
-    }
-
-    #[getter]
-    fn n(&self) -> usize {
-        self.inner.n()
-    }
-
-    #[getter]
-    fn d(&self) -> usize {
-        self.inner.d()
-    }
-
-    #[getter]
-    fn last_dt(&self) -> f64 {
-        self.inner.last_dt()
     }
 }
 

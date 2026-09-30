@@ -60,7 +60,7 @@ documented in [Advanced Dynamics](advanced_dynamics.md):
 | `HypergraphEngine` | Arbitrary k-body (hypergraph) coupling. |
 | `InertialKuramotoEngine` | Second-order swing-equation Kuramoto (power grids). |
 | `MovingFrameUPDEEngine` | Chamber-frame axial positions with collision checks (fusion / MIF). |
-| `SheafUPDEEngine` | Cellular-sheaf integrator for multi-dimensional phase vectors. |
+| `SheafUPDEEngine` | Cellular-sheaf phase vectors and anisotropic block coupling; [full-interval and recovery contract](../reference/api/upde.md#cellular-sheaf-engine). |
 | `SimplicialEngine` | Pairwise + simplicial (3-body) coupling. |
 | `SplittingEngine` | Strang-split stepper (operator splitting). |
 | `SwarmalatorEngine` | Swarmalators (coupled phase + spatial position). |

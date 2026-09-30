@@ -187,11 +187,13 @@ The following invariants hold at all times in a correctly wired pipeline:
 ## Rust FFI Considerations
 
 When the `spo_kernel` Rust FFI is available, the UPDE integration and
-order parameter computations run in Rust. The Rust code enforces the
-same wrapping (`rem_euclid(TAU)`) and NaN/Inf checks. Phase arrays
-cross the FFI boundary as contiguous `f64` numpy arrays — the Rust
-side receives a borrowed slice, computes in-place, and returns. No
-copying occurs for the integration hot path.
+order parameter computations run in Rust. Native phase results are wrapped
+and checked for NaN/Inf; buffer ownership and wrapping details depend on the
+engine. The Sheaf binding reads contiguous one-dimensional `float64` NumPy
+buffers, advances a private candidate, and returns independent storage.
+It canonicalises rounded upper endpoints and signed zero to positive zero.
+See the [binding contracts](../guide/rust_ffi.md#cellular-sheaf-integration) for
+input validation, copying and refusal behavior.
 
 The `PlasticityModel` in Rust also respects the phase contract: it
 reads `theta_j - theta_i` from the phase array and computes
@@ -304,7 +306,9 @@ phases. Instead of a scalar `theta` per oscillator, each oscillator
 carries a `D`-dimensional phase vector `theta_{i,d}` for
 `d = 0, ..., D-1`. The contract generalises:
 
-- **Range**: each component `theta_{i,d}` in `[0, 2pi)`.
+- **Range**: successful positive-step results have each component `theta_{i,d}`
+  in `[0, 2pi)`. Inputs may be finite unwrapped phases; zero-step runs validate
+  and return an independent copy preserving those values.
 - **Coupling**: restriction maps `B_ij` are `D x D` matrices replacing
   scalar `K_ij`. The coupling term becomes
   `sum_j sum_k B_ij^{dk} sin(theta_{j,k} - theta_{i,d})`.
@@ -312,9 +316,12 @@ carries a `D`-dimensional phase vector `theta_{i,d}` for
 - **Order parameter**: computed per component or as the mean over
   components.
 
-All other invariants (finite, quality range, node binding) apply
-unchanged. The sheaf extension is experimental and documented further
-in `docs/concepts/sheaf_topology.md`.
+The solver returns an `(N, D)` phase array. Consumers retain responsibility for
+binding node identities, quality metadata and any diagnostic records to that
+array. Each step advances exactly the configured outer interval, including
+RK45 adaptive substeps. Numerical refusal preserves caller inputs and the
+pre-call timestep proposal across an entire batch. See the
+[cellular-sheaf API contract](../reference/api/upde.md#cellular-sheaf-engine).
 
 ## Stuart-Landau Extension
 

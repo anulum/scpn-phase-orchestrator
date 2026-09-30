@@ -42,7 +42,7 @@ pub struct SheafUPDEStepper {
 
 impl SheafUPDEStepper {
     /// # Errors
-    /// Propagates config validation errors.
+    /// Rejects zero/overflowing geometry, invalid controls or an unrepresentable substep.
     pub fn new(n: usize, d: usize, config: IntegrationConfig) -> SpoResult<Self> {
         if n == 0 || d == 0 {
             return Err(SpoError::InvalidDimension(
@@ -50,7 +50,15 @@ impl SheafUPDEStepper {
             ));
         }
         config.validate()?;
-        let size = n * d;
+        if config.dt / f64::from(config.n_substeps) <= 0.0 {
+            return Err(SpoError::InvalidConfig(
+                "sheaf substep must be positive".into(),
+            ));
+        }
+        let size = n
+            .checked_mul(d)
+            .filter(|size| size.checked_mul(*size).is_some())
+            .ok_or_else(|| SpoError::InvalidDimension("sheaf geometry overflows usize".into()))?;
         let last_dt = config.dt;
         Ok(Self {
             n,
@@ -85,17 +93,44 @@ impl SheafUPDEStepper {
         self.d
     }
 
-    /// Return the latest adaptive timestep used by RK45, or configured `dt` otherwise.
+    /// Return the next adaptive substep proposal, or configured `dt` otherwise.
     #[must_use]
     pub fn last_dt(&self) -> f64 {
         self.last_dt
     }
 
     /// # Errors
-    /// Returns `InvalidDimension` on size mismatch.
+    /// Returns `InvalidDimension` on shape mismatch or `IntegrationDiverged` on
+    /// non-finite input/output or unsuccessful adaptive integration. Rounded upper
+    /// torus endpoints and signed zero canonicalise to positive zero.
+    /// Phases and the published timestep remain unchanged on refusal.
     pub fn step(
         &mut self,
         phases: &mut [f64],
+        omegas: &[f64],
+        restriction_maps: &[f64],
+        zeta: f64,
+        psi: &[f64],
+    ) -> SpoResult<()> {
+        self.validate_inputs(phases, omegas, restriction_maps, zeta, psi)?;
+        let previous_dt = self.last_dt;
+        let mut candidate = phases.to_vec();
+        match self.advance(&mut candidate, omegas, restriction_maps, zeta, psi) {
+            Ok(()) => {
+                phases.copy_from_slice(&candidate);
+                Ok(())
+            }
+            Err(error) => {
+                self.last_dt = previous_dt;
+                Err(error)
+            }
+        }
+    }
+
+    /// Validate full sheaf geometry and all finite integration inputs.
+    fn validate_inputs(
+        &self,
+        phases: &[f64],
         omegas: &[f64],
         restriction_maps: &[f64],
         zeta: f64,
@@ -123,6 +158,18 @@ impl SheafUPDEStepper {
             ));
         }
 
+        Ok(())
+    }
+
+    /// Advance a private candidate state; public calls publish only on success.
+    fn advance(
+        &mut self,
+        phases: &mut [f64],
+        omegas: &[f64],
+        restriction_maps: &[f64],
+        zeta: f64,
+        psi: &[f64],
+    ) -> SpoResult<()> {
         let dt = self.config.dt;
         let n_substeps = self.config.n_substeps.max(1);
         let sub_dt = dt / (n_substeps as f64);
@@ -144,16 +191,25 @@ impl SheafUPDEStepper {
                     self.rk4_step(phases, omegas, restriction_maps, zeta, psi, sub_dt);
                 }
                 Method::RK45 => {
-                    self.rk45_step(phases, omegas, restriction_maps, zeta, psi);
+                    self.rk45_step(phases, omegas, restriction_maps, zeta, psi, sub_dt)?;
                 }
             }
         }
         wrap_phases(phases);
+        if phases
+            .iter()
+            .any(|phase| !phase.is_finite() || *phase < 0.0 || *phase >= std::f64::consts::TAU)
+        {
+            return Err(SpoError::IntegrationDiverged(
+                "sheaf output outside finite torus".into(),
+            ));
+        }
         Ok(())
     }
 
     /// # Errors
-    /// Propagates errors from `step()`.
+    /// Validates inputs even for zero steps and propagates integration errors.
+    /// The entire call preserves phases and its entry timestep on refusal.
     pub fn run(
         &mut self,
         phases: &mut [f64],
@@ -163,9 +219,16 @@ impl SheafUPDEStepper {
         psi: &[f64],
         n_steps: u64,
     ) -> SpoResult<()> {
+        self.validate_inputs(phases, omegas, restriction_maps, zeta, psi)?;
+        let mut candidate = phases.to_vec();
+        let previous_dt = self.last_dt;
         for _ in 0..n_steps {
-            self.step(phases, omegas, restriction_maps, zeta, psi)?;
+            if let Err(error) = self.advance(&mut candidate, omegas, restriction_maps, zeta, psi) {
+                self.last_dt = previous_dt;
+                return Err(error);
+            }
         }
+        phases.copy_from_slice(&candidate);
         Ok(())
     }
 
@@ -288,12 +351,14 @@ impl SheafUPDEStepper {
         restriction_maps: &[f64],
         zeta: f64,
         #[allow(unused_variables)] psi: &[f64],
-    ) {
+        horizon: f64,
+    ) -> SpoResult<()> {
         let mut dt = self.last_dt;
-        let mut t_remaining = self.config.dt;
+        let mut t_remaining = horizon;
         let size = phases.len();
+        let mut rejects = 0;
 
-        while t_remaining > 1e-12 {
+        for _ in 0..100_000 {
             dt = dt.min(t_remaining);
 
             compute_derivative(
@@ -427,7 +492,7 @@ impl SheafUPDEStepper {
                 &mut self.k7,
             );
 
-            let mut err_sq = 0.0;
+            let mut err_norm: f64 = 0.0;
             for i in 0..size {
                 let err = dt
                     * ((dp::B4[0] - dp::B5[0]) * self.k1[i]
@@ -441,22 +506,54 @@ impl SheafUPDEStepper {
                 let scale = self.config.atol
                     + self.config.rtol * phases[i].abs().max(self.tmp_phases[i].abs());
                 let scaled_err = err / scale;
-                err_sq += scaled_err * scaled_err;
+                if !scaled_err.is_finite() || !self.tmp_phases[i].is_finite() || !scale.is_finite()
+                {
+                    return Err(SpoError::IntegrationDiverged(
+                        "sheaf RK45 non-finite arithmetic".into(),
+                    ));
+                }
+                err_norm = err_norm.max(scaled_err.abs());
             }
 
-            let err_norm = (err_sq / size as f64).sqrt();
-            let mut dt_next = dt * 0.9 * err_norm.powf(-0.2);
-            dt_next = dt_next
-                .clamp(dt * 0.1, dt * 5.0)
-                .clamp(1e-9, self.config.dt);
+            let factor = if err_norm > 0.0 {
+                (0.9 * err_norm.powf(-0.2)).clamp(0.2, 5.0)
+            } else {
+                5.0
+            };
+            let dt_next = (dt * factor).min(self.config.dt);
+            if !dt_next.is_finite() || dt_next <= 0.0 {
+                return Err(SpoError::IntegrationDiverged(
+                    "sheaf RK45 timestep cannot advance".into(),
+                ));
+            }
 
             if err_norm <= 1.0 {
                 phases[..size].copy_from_slice(&self.tmp_phases[..size]);
-                t_remaining -= dt;
+                let next_remaining = t_remaining - dt;
+                if next_remaining == t_remaining {
+                    return Err(SpoError::IntegrationDiverged(
+                        "sheaf RK45 timestep cannot advance".into(),
+                    ));
+                }
+                t_remaining = next_remaining;
                 self.last_dt = dt_next;
+                rejects = 0;
+                if t_remaining <= 0.0 {
+                    return Ok(());
+                }
+            } else {
+                rejects += 1;
+                if rejects >= 64 {
+                    return Err(SpoError::IntegrationDiverged(
+                        "sheaf RK45 rejection limit exceeded".into(),
+                    ));
+                }
             }
             dt = dt_next;
         }
+        Err(SpoError::IntegrationDiverged(
+            "sheaf RK45 substep limit exceeded".into(),
+        ))
     }
 }
 
@@ -512,6 +609,7 @@ fn compute_derivative(
     });
 }
 
+/// Canonicalise finite torus values, including a rounded upper endpoint.
 fn wrap_phases(phases: &mut [f64]) {
     let two_pi = 2.0 * std::f64::consts::PI;
     for p in phases.iter_mut() {
@@ -519,12 +617,230 @@ fn wrap_phases(phases: &mut [f64]) {
         if *p < 0.0 {
             *p += two_pi;
         }
+        if *p >= two_pi || *p == 0.0 {
+            *p = 0.0;
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn methods_and_substeps_preserve_outer_horizon() {
+        for method in [Method::Euler, Method::RK4, Method::RK45] {
+            for n_substeps in [1, 3] {
+                let mut stepper = SheafUPDEStepper::new(
+                    1,
+                    2,
+                    IntegrationConfig {
+                        method,
+                        n_substeps,
+                        dt: 0.01,
+                        ..Default::default()
+                    },
+                )
+                .unwrap();
+                let mut phases = [0.2, 0.5];
+                stepper
+                    .run(&mut phases, &[1.0, -0.5], &[0.0; 4], 0.0, &[0.0; 2], 7)
+                    .unwrap();
+                assert!((phases[0] - 0.27).abs() < 2e-15);
+                assert!((phases[1] - 0.465).abs() < 2e-15);
+                assert_eq!((stepper.n(), stepper.d()), (1, 2));
+                assert!(stepper.last_dt() > 0.0 && stepper.last_dt() <= 0.01);
+            }
+        }
+    }
+
+    #[test]
+    fn adaptive_forcing_matches_closed_form_relaxation() {
+        let mut stepper = SheafUPDEStepper::new(
+            1,
+            1,
+            IntegrationConfig {
+                method: Method::RK45,
+                dt: 0.4,
+                atol: 1e-12,
+                rtol: 1e-12,
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        let mut phases = [0.1];
+        stepper
+            .run(&mut phases, &[0.0], &[0.0], 2.0, &[1.2], 3)
+            .unwrap();
+        let expected = 1.2 - 2.0 * (((1.2_f64 - 0.1) / 2.0).tan() * (-2.0_f64 * 1.2).exp()).atan();
+        assert!((phases[0] - expected).abs() < 2e-11);
+        assert!(stepper.last_dt() > 0.0 && stepper.last_dt() < 0.4);
+    }
+
+    #[test]
+    fn adaptive_tiny_interval_still_advances() {
+        let mut stepper = SheafUPDEStepper::new(
+            1,
+            1,
+            IntegrationConfig {
+                method: Method::RK45,
+                dt: 1e-14,
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        let mut phases = [0.0];
+        stepper
+            .run(&mut phases, &[1.0], &[0.0], 0.0, &[0.0], 3)
+            .unwrap();
+        assert!((phases[0] - 3e-14).abs() < 1e-28);
+    }
+
+    #[test]
+    fn unusable_geometry_and_configurations_refuse() {
+        assert!(SheafUPDEStepper::new(0, 1, IntegrationConfig::default()).is_err());
+        assert!(SheafUPDEStepper::new(1, 0, IntegrationConfig::default()).is_err());
+        assert!(SheafUPDEStepper::new(usize::MAX, 2, IntegrationConfig::default()).is_err());
+        assert!(SheafUPDEStepper::new(usize::MAX, 1, IntegrationConfig::default()).is_err());
+        assert!(SheafUPDEStepper::new(
+            1,
+            1,
+            IntegrationConfig {
+                dt: 0.0,
+                ..Default::default()
+            }
+        )
+        .is_err());
+        assert!(SheafUPDEStepper::new(
+            1,
+            1,
+            IntegrationConfig {
+                dt: f64::from_bits(1),
+                n_substeps: 2,
+                ..Default::default()
+            }
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn zero_batch_validates_shapes_and_every_numeric_input() {
+        let mut stepper = SheafUPDEStepper::new(1, 1, IntegrationConfig::default()).unwrap();
+        for (omega, maps, zeta, psi) in [
+            (vec![], vec![0.0], 0.0, vec![0.0]),
+            (vec![0.0], vec![], 0.0, vec![0.0]),
+            (vec![0.0], vec![0.0], 0.0, vec![]),
+            (vec![f64::NAN], vec![0.0], 0.0, vec![0.0]),
+            (vec![0.0], vec![f64::INFINITY], 0.0, vec![0.0]),
+            (vec![0.0], vec![0.0], f64::INFINITY, vec![0.0]),
+            (vec![0.0], vec![0.0], 0.0, vec![f64::NAN]),
+        ] {
+            let mut phases = [-0.4];
+            assert!(stepper
+                .run(&mut phases, &omega, &maps, zeta, &psi, 0)
+                .is_err());
+            assert_eq!(phases, [-0.4]);
+            assert_eq!(stepper.last_dt(), 0.01);
+        }
+        let mut invalid = [f64::NAN];
+        assert!(stepper
+            .run(&mut invalid, &[0.0], &[0.0], 0.0, &[0.0], 0)
+            .is_err());
+        let mut phases = [-0.4];
+        stepper
+            .run(&mut phases, &[0.0], &[0.0], 0.0, &[0.0], 0)
+            .unwrap();
+        assert_eq!(phases, [-0.4]);
+    }
+
+    #[test]
+    fn numerical_refusal_preserves_phase_and_timestep_and_recovers() {
+        for method in [Method::Euler, Method::RK4, Method::RK45] {
+            let mut stepper = SheafUPDEStepper::new(
+                1,
+                1,
+                IntegrationConfig {
+                    method,
+                    dt: 10.0,
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+            let mut phases = [0.0];
+            assert!(stepper
+                .step(&mut phases, &[1e308], &[0.0], 0.0, &[0.0])
+                .is_err());
+            assert_eq!(phases, [0.0]);
+            assert_eq!(stepper.last_dt(), 10.0);
+            assert!(stepper
+                .run(&mut phases, &[1e308], &[0.0], 0.0, &[0.0], 2)
+                .is_err());
+            assert_eq!(phases, [0.0]);
+            stepper
+                .run(&mut phases, &[0.1], &[0.0], 0.0, &[0.0], 2)
+                .unwrap();
+            assert!((phases[0] - 2.0).abs() < 1e-14);
+        }
+    }
+
+    #[test]
+    fn later_batch_failure_restores_original_phase() {
+        let angle = 1e308_f64.rem_euclid(std::f64::consts::TAU) + std::f64::consts::FRAC_PI_2;
+        let mut stepper = SheafUPDEStepper::new(
+            1,
+            1,
+            IntegrationConfig {
+                dt: 1.0,
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        let mut first = [angle];
+        stepper
+            .step(&mut first, &[1e308], &[0.0], 1e308, &[angle])
+            .unwrap();
+        assert!((first[0] - 1e308_f64.rem_euclid(std::f64::consts::TAU)).abs() < 1e-15);
+        let mut phases = [angle];
+        assert!(stepper
+            .run(&mut phases, &[1e308], &[0.0], 1e308, &[angle], 2)
+            .is_err());
+        assert_eq!(phases, [angle]);
+        assert_eq!(stepper.last_dt(), 1.0);
+    }
+
+    #[test]
+    fn wrapping_canonicalises_rounding_and_negative_crossings() {
+        for method in [Method::Euler, Method::RK4, Method::RK45] {
+            let mut stepper = SheafUPDEStepper::new(
+                1,
+                1,
+                IntegrationConfig {
+                    method,
+                    ..Default::default()
+                },
+            )
+            .unwrap();
+            for (phase, omega) in [
+                (-1e-300, 0.0),
+                (0.0, -1e-15),
+                (-std::f64::consts::TAU, 0.0),
+                (-2.0 * std::f64::consts::TAU, 0.0),
+            ] {
+                let mut phases = [phase];
+                stepper
+                    .step(&mut phases, &[omega], &[0.0], 0.0, &[0.0])
+                    .unwrap();
+                assert_eq!(phases, [0.0]);
+                assert!(!phases[0].is_sign_negative());
+            }
+        }
+        let mut stepper = SheafUPDEStepper::new(1, 1, IntegrationConfig::default()).unwrap();
+        let mut valid = [-1.0];
+        stepper
+            .step(&mut valid, &[0.0], &[0.0], 0.0, &[0.0])
+            .unwrap();
+        assert!((valid[0] - (std::f64::consts::TAU - 1.0)).abs() < 1e-15);
+    }
 
     #[test]
     fn sheaf_stepper_reports_geometry_and_timestep() {

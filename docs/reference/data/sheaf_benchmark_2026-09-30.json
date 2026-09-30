@@ -1,0 +1,211 @@
+{
+  "schema": "sheaf-local-diagnostic.v1",
+  "date": "2026-09-30",
+  "seed": 42,
+  "reference": "independent tensor ODE evaluated with SciPy DOP853, atol=rtol=1e-13",
+  "scope": "actual public Python and installed release PyO3/Rust; shared host, different dependency versions, no production latency or causal speedup claim",
+  "maintained_counterparts": [
+    "Python NumPy",
+    "PyO3/Rust"
+  ],
+  "records": {
+    "native": [
+      {
+        "d": 3,
+        "diagnostic_scope": "shared-host functional and timing diagnostic; no production latency claim",
+        "dt": 0.01,
+        "input_sha256": "5011e46a6f5ec357315acc72d8bb2eb5920328a3f11fae8ee2fa31e6b9f77ced",
+        "kernel_available": true,
+        "last_dt": 0.01,
+        "max_phase_error": 7.622637177606695e-05,
+        "median_step_us": 421.1333998682676,
+        "method": "euler",
+        "n": 8,
+        "numpy": "2.5.3",
+        "python": "3.12.3",
+        "repeats": 3,
+        "scipy": "1.18.1",
+        "seconds": [
+          0.014574993001588155,
+          0.0034304910004721023,
+          0.008422667997365352
+        ],
+        "steps": 20
+      },
+      {
+        "d": 3,
+        "diagnostic_scope": "shared-host functional and timing diagnostic; no production latency claim",
+        "dt": 0.01,
+        "input_sha256": "5011e46a6f5ec357315acc72d8bb2eb5920328a3f11fae8ee2fa31e6b9f77ced",
+        "kernel_available": true,
+        "last_dt": 0.01,
+        "max_phase_error": 2.7533531010703882e-14,
+        "median_step_us": 868.9394999237265,
+        "method": "rk4",
+        "n": 8,
+        "numpy": "2.5.3",
+        "python": "3.12.3",
+        "repeats": 3,
+        "scipy": "1.18.1",
+        "seconds": [
+          0.010782668003230356,
+          0.01737878999847453,
+          0.029464436003763694
+        ],
+        "steps": 20
+      },
+      {
+        "d": 3,
+        "diagnostic_scope": "shared-host functional and timing diagnostic; no production latency claim",
+        "dt": 0.01,
+        "input_sha256": "5011e46a6f5ec357315acc72d8bb2eb5920328a3f11fae8ee2fa31e6b9f77ced",
+        "kernel_available": true,
+        "last_dt": 0.01,
+        "max_phase_error": 4.440892098500626e-16,
+        "median_step_us": 1816.8994000006933,
+        "method": "rk45",
+        "n": 8,
+        "numpy": "2.5.3",
+        "python": "3.12.3",
+        "repeats": 3,
+        "scipy": "1.18.1",
+        "seconds": [
+          0.036337988000013866,
+          0.010717804005253129,
+          0.059639261999109294
+        ],
+        "steps": 20
+      }
+    ],
+    "absent": [
+      {
+        "d": 3,
+        "diagnostic_scope": "shared-host functional and timing diagnostic; no production latency claim",
+        "dt": 0.01,
+        "input_sha256": "5011e46a6f5ec357315acc72d8bb2eb5920328a3f11fae8ee2fa31e6b9f77ced",
+        "kernel_available": false,
+        "last_dt": 0.01,
+        "max_phase_error": 7.622637177606695e-05,
+        "median_step_us": 5398.406699896441,
+        "method": "euler",
+        "n": 8,
+        "numpy": "2.2.6",
+        "python": "3.12.3",
+        "repeats": 3,
+        "scipy": "1.15.3",
+        "seconds": [
+          0.10796813399792882,
+          0.08268106200557668,
+          0.1313431429953198
+        ],
+        "steps": 20
+      },
+      {
+        "d": 3,
+        "diagnostic_scope": "shared-host functional and timing diagnostic; no production latency claim",
+        "dt": 0.01,
+        "input_sha256": "5011e46a6f5ec357315acc72d8bb2eb5920328a3f11fae8ee2fa31e6b9f77ced",
+        "kernel_available": false,
+        "last_dt": 0.01,
+        "max_phase_error": 2.7533531010703882e-14,
+        "median_step_us": 20952.881300036097,
+        "method": "rk4",
+        "n": 8,
+        "numpy": "2.2.6",
+        "python": "3.12.3",
+        "repeats": 3,
+        "scipy": "1.15.3",
+        "seconds": [
+          0.5739656939986162,
+          0.41905762600072194,
+          0.23186809099570382
+        ],
+        "steps": 20
+      },
+      {
+        "d": 3,
+        "diagnostic_scope": "shared-host functional and timing diagnostic; no production latency claim",
+        "dt": 0.01,
+        "input_sha256": "5011e46a6f5ec357315acc72d8bb2eb5920328a3f11fae8ee2fa31e6b9f77ced",
+        "kernel_available": false,
+        "last_dt": 0.01,
+        "max_phase_error": 4.440892098500626e-16,
+        "median_step_us": 15546.097650076263,
+        "method": "rk45",
+        "n": 8,
+        "numpy": "2.2.6",
+        "python": "3.12.3",
+        "repeats": 3,
+        "scipy": "1.15.3",
+        "seconds": [
+          0.2901208619950921,
+          0.4381854140010546,
+          0.31092195300152525
+        ],
+        "steps": 20
+      }
+    ]
+  },
+  "provenance": {
+    "native": {
+      "started_utc": "2026-09-30T21:59:09.785402+00:00",
+      "load_before": [
+        37.37744140625,
+        40.6181640625,
+        43.9814453125
+      ],
+      "platform": "Linux-7.0.0-34-generic-x86_64-with-glibc2.39",
+      "governor": "powersave",
+      "isolation": "none; shared workstation; no reserved CPUs; local diagnostic only",
+      "rayon_num_threads": 2,
+      "source_sha256": {
+        "src/scpn_phase_orchestrator/upde/sheaf_engine.py": "69a68b401fee4af9ac130355b2dca4172cf7ded0379990178b11532f596bd66d",
+        "benchmarks/sheaf_benchmark.py": "e9afdc900b7dbc2cb96fc9230921b73f987ed2badd719a16655f40be82ec5c40",
+        "spo-kernel/crates/spo-engine/src/sheaf_upde.rs": "591a285b5999ca646d7434b14945b98a4362e2fec196ba456ac71aff09ed670c",
+        "spo-kernel/crates/spo-ffi/src/sheaf.rs": "d21bfc85902ac49916aaca023274671798d7fbb4965b8c612a5384f2d6ca23f6",
+        "spo-kernel/crates/spo-ffi/src/lib.rs": "b056a0400e37fafcb1bda32124945cbeaa7e51474f5e17205c9f1766f1795acf"
+      },
+      "command": "PYTHONPATH=.:src RAYON_NUM_THREADS=2 .venv/bin/python -m benchmarks.sheaf_benchmark",
+      "interpreter": ".venv/bin/python",
+      "cpu_affinity_count": 12,
+      "extension_sha256": "23817c6e351c2f6c2479127b7cf55d2cf827f89b3e4af619030e7739ec3aeb28",
+      "extension_matches_release_library": true,
+      "exit_code": 0,
+      "load_after": [
+        37.37744140625,
+        40.6181640625,
+        43.9814453125
+      ],
+      "ended_utc": "2026-09-30T21:59:12.754745+00:00"
+    },
+    "absent": {
+      "started_utc": "2026-09-30T21:59:12.758102+00:00",
+      "load_before": [
+        37.37744140625,
+        40.6181640625,
+        43.9814453125
+      ],
+      "platform": "Linux-7.0.0-34-generic-x86_64-with-glibc2.39",
+      "governor": "powersave",
+      "isolation": "none; shared workstation; no reserved CPUs; local diagnostic only",
+      "rayon_num_threads": 2,
+      "source_sha256": {
+        "src/scpn_phase_orchestrator/upde/sheaf_engine.py": "69a68b401fee4af9ac130355b2dca4172cf7ded0379990178b11532f596bd66d",
+        "benchmarks/sheaf_benchmark.py": "e9afdc900b7dbc2cb96fc9230921b73f987ed2badd719a16655f40be82ec5c40",
+        "spo-kernel/crates/spo-engine/src/sheaf_upde.rs": "591a285b5999ca646d7434b14945b98a4362e2fec196ba456ac71aff09ed670c",
+        "spo-kernel/crates/spo-ffi/src/sheaf.rs": "d21bfc85902ac49916aaca023274671798d7fbb4965b8c612a5384f2d6ca23f6",
+        "spo-kernel/crates/spo-ffi/src/lib.rs": "b056a0400e37fafcb1bda32124945cbeaa7e51474f5e17205c9f1766f1795acf"
+      },
+      "command": "PYTHONPATH=.:src RAYON_NUM_THREADS=2 /usr/bin/python3 -m benchmarks.sheaf_benchmark",
+      "interpreter": "/usr/bin/python3",
+      "cpu_affinity_count": 12,
+      "exit_code": 0,
+      "load_after": [
+        39.58154296875,
+        40.9912109375,
+        44.06787109375
+      ],
+      "ended_utc": "2026-09-30T21:59:18.018785+00:00"
+    }
+  }
+}

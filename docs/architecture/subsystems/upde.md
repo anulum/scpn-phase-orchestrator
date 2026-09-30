@@ -58,9 +58,16 @@ native binding requires writable contiguous coupling, whereas the NumPy-only
 fallback does not mutate it. Public strided inputs are copied to contiguous
 buffers. See [the CSR contract](../../reference/api/upde.md#csr-buffer-ownership-and-timestep-diagnostics).
 The sheaf boundary validates phase, frequency, restriction-map, and drive-target
-source types before conversion. Its Rust result is accepted only as a finite
-real flattened `N * D` torus state, and the positive finite Rust adaptive
-timestep is replayed into the public `last_dt` diagnostic.
+source types before conversion, including temporal aliases. It selects its own
+Python or PyO3/Rust implementation independently of the scalar dispatch chain.
+Its RK45 uses proportional control of the maximum scaled component error and
+traverses the complete configured outer interval. Its Rust result is accepted
+only as a finite real flattened `N * D` torus state; `last_dt` reports a positive
+finite next substep proposal bounded by the outer interval. Direct native
+substeps partition that interval. Refusal preserves input storage and the
+pre-call proposal across the entire step or batch. The solver returns a phase
+matrix; consumers supply any `UPDEState` diagnostics. See the
+[cellular-sheaf contract](../../reference/api/upde.md#cellular-sheaf-engine).
 Finite-difference and optional JAX adjoint paths share one pre-execution state
 contract for phase, frequency, coupling, and phase-lag arrays. Counts and
 perturbation/timestep scalars are validated before arithmetic or optional JAX

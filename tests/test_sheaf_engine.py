@@ -6,22 +6,88 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Cellular Sheaf Engine tests
 
+"""Verify public sheaf equations, elapsed intervals and refusal recovery."""
+
 from __future__ import annotations
 
-import sys
-import types
+from concurrent.futures import ThreadPoolExecutor
+from typing import TypedDict, cast
 
 import numpy as np
 import pytest
+from numpy.typing import ArrayLike, DTypeLike
+from scipy.integrate import solve_ivp
 
-from scpn_phase_orchestrator.upde import sheaf_engine as sheaf_mod
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
 from scpn_phase_orchestrator.upde.sheaf_engine import SheafUPDEEngine
 
 
+class SheafConfig(TypedDict, total=False):
+    """Constructor fields used to preserve malformed runtime configurations."""
+
+    n_oscillators: int
+    d_dimensions: int
+    dt: float
+    method: str
+
+
 class TestSheafUPDEEngine:
-    def test_compare_with_dense_1d(self):
+    """Public vector-phase integration and scalar-engine interoperability."""
+
+    @pytest.mark.parametrize("method", ["euler", "rk4", "rk45"])
+    @pytest.mark.parametrize("dt", [0.01, 1e-14])
+    def test_repeated_steps_and_batch_have_exact_elapsed_time(
+        self, method: str, dt: float
+    ) -> None:
+        """Every successful call advances dt, independently of adaptive proposals."""
+        phase = np.zeros((2, 2))
+        omega = np.array([[1.0, 0.2], [0.5, 1.2]])
+        maps = np.zeros((2, 2, 2, 2))
+        psi = np.zeros(2)
+        engine = SheafUPDEEngine(2, 2, dt, method=method)
+        current = phase.copy()
+        for _ in range(7):
+            current = engine.step(current, omega, maps, 0.0, psi)
+        expected = 7 * dt * omega
+        np.testing.assert_allclose(current, expected, atol=dt * 1e-13, rtol=0)
+        np.testing.assert_allclose(
+            engine.run(phase, omega, maps, 0.0, psi, 7),
+            expected,
+            atol=dt * 1e-13,
+            rtol=0,
+        )
+        assert 0.0 < engine.last_dt <= dt
+
+    @pytest.mark.parametrize("method", ["euler", "rk4", "rk45"])
+    def test_concurrent_batches_preserve_independent_equations(
+        self, method: str
+    ) -> None:
+        """Shared solver scratch state cannot contaminate independent threaded calls."""
+        engine = SheafUPDEEngine(2, 2, 0.01, method=method)
+        omega = np.array([[1.0, 0.2], [0.5, 1.2]])
+        maps = np.zeros((2, 2, 2, 2))
+        psi = np.zeros(2)
+
+        def advance(offset: float) -> np.ndarray[tuple[int, ...], np.dtype[np.float64]]:
+            """Run the real public batch with one thread's independent initial state."""
+            return engine.run(np.full((2, 2), offset), omega, maps, 0.0, psi, 20)
+
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            results = list(pool.map(advance, [0.1, 0.2, 0.3, 0.4]))
+        for offset, result in zip([0.1, 0.2, 0.3, 0.4], results, strict=True):
+            np.testing.assert_allclose(result, offset + 0.2 * omega, atol=1e-13, rtol=0)
+
+    @pytest.mark.parametrize(("n", "d"), [(2**32, 1), (1, 2**32), (2**64, 2)])
+    def test_overflowing_restriction_geometry_refuses_before_runtime_allocation(
+        self, n: int, d: int
+    ) -> None:
+        """Both runtimes reject overflowing restriction-tensor cardinality."""
+        with pytest.raises(ValueError, match="geometry overflows"):
+            SheafUPDEEngine(n, d, 0.01)
+
+    def test_compare_with_dense_1d(self) -> None:
         # A Sheaf with D=1 should be mathematically identical to the scalar UPDEEngine
+        """D=1 Euler matches the wired scalar engine with nonzero graph and drive."""
         n = 4
         dt = 0.01
 
@@ -62,14 +128,17 @@ class TestSheafUPDEEngine:
 
         np.testing.assert_allclose(p_dense, p_sheaf.flatten(), atol=1e-12)
 
-    def test_run_sheaf_2d(self):
+    def test_run_sheaf_2d(self) -> None:
+        """Cross-frequency RK45 matches an independent one-second trajectory."""
         n = 4
         d = 2
         dt = 0.01
         engine = SheafUPDEEngine(n, d_dimensions=d, dt=dt, method="rk45")
 
         phases = np.zeros((n, d), dtype=np.float64)
+        phases[:, 1] = 0.3
         omegas = np.ones((n, d), dtype=np.float64)
+        omegas[:, 1] = 0.7
         restriction_maps = np.zeros((n, n, d, d), dtype=np.float64)
 
         # Cross-frequency coupling: dim 0 of node j drives dim 1 of node i
@@ -83,17 +152,141 @@ class TestSheafUPDEEngine:
         # Run 100 steps
         p_final = engine.run(phases, omegas, restriction_maps, 0.0, psi, 100)
 
-        assert p_final.shape == (n, d)
-        assert np.all(p_final >= 0)
-        assert np.all(p_final < 2 * np.pi)
+        reference = solve_ivp(
+            lambda _t, y: np.array([1.0, 0.7 + 1.5 * np.sin(y[0] - y[1])]),
+            (0.0, 1.0),
+            np.array([0.0, 0.3]),
+            method="DOP853",
+            atol=1e-12,
+            rtol=1e-12,
+        )
+        np.testing.assert_allclose(
+            p_final, np.tile(reference.y[:, -1], (n, 1)), atol=3e-6, rtol=0
+        )
 
 
 class TestSheafEngineEdgeCases:
     """Edge cases and error paths a prior audit flagged as missing."""
 
-    def test_zero_restriction_maps_decouple_oscillators(self):
-        """Empty coupling (all zero restriction maps) → each dim evolves
-        independently with only ω·dt plus the external drive term."""
+    @pytest.mark.parametrize(
+        ("dt", "omega", "zeta", "tolerance", "match"),
+        [
+            (0.1, 1.0, 1.0, 5e-324, "non-finite"),
+            (5e-324, 1e308, 0.0, 1e-320, "cannot advance"),
+            (1e16, 0.0, 1.0, 1e-12, "cannot advance"),
+            (1e300, 0.0, 1.0, 1e-300, "rejection limit"),
+            (0.01, 200.0, 0.0, 1e308, "non-finite"),
+        ],
+    )
+    @pytest.mark.parametrize("operation", ["step", "run"])
+    def test_real_adaptive_limits_refuse_and_recover(
+        self,
+        dt: float,
+        omega: float,
+        zeta: float,
+        tolerance: float,
+        match: str,
+        operation: str,
+    ) -> None:
+        """Extreme real controls expose estimator, proposal and progress limits."""
+        engine = SheafUPDEEngine(
+            1, 1, dt, method="rk45", atol=tolerance, rtol=tolerance
+        )
+        phases = np.array([[0.1]])
+        maps = np.zeros((1, 1, 1, 1))
+        psi = np.ones(1)
+        with pytest.raises(ValueError, match=match):
+            if operation == "step":
+                engine.step(phases, np.full((1, 1), omega), maps, zeta, psi)
+            else:
+                engine.run(phases, np.full((1, 1), omega), maps, zeta, psi, 2)
+        assert engine.last_dt == dt
+        np.testing.assert_array_equal(phases, [[0.1]])
+        np.testing.assert_allclose(
+            engine.step(phases, np.zeros((1, 1)), maps, 0.0, psi),
+            phases,
+            atol=1e-15,
+            rtol=0,
+        )
+
+    def test_rk45_long_forced_interval_refuses_at_work_limit_and_recovers(
+        self,
+    ) -> None:
+        """A genuine long driven trajectory reaches the bounded adaptive work limit."""
+        engine = SheafUPDEEngine(1, 1, 1e8, method="rk45", atol=1e-12, rtol=1e-12)
+        phases = np.zeros((1, 1))
+        maps = np.zeros((1, 1, 1, 1))
+        psi = np.zeros(1)
+        with pytest.raises(ValueError, match="substep limit"):
+            engine.step(phases, np.full((1, 1), 2.0), maps, 1.0, psi)
+        np.testing.assert_array_equal(phases, [[0.0]])
+        assert engine.last_dt == 1e8
+        np.testing.assert_array_equal(
+            engine.step(phases, np.zeros((1, 1)), maps, 0.0, psi), [[0.0]]
+        )
+
+    def test_rk45_rejects_relative_tolerance_below_absolute(self) -> None:
+        """Both runtimes enforce the shared adaptive tolerance order."""
+        with pytest.raises(ValueError, match="rtol must be >= atol"):
+            SheafUPDEEngine(1, 1, 0.01, method="rk45", atol=1e-2, rtol=1e-3)
+
+    @pytest.mark.parametrize(
+        "count", [True, "1", 1.5, -1, np.bool_(True), 2**64, 10**400]
+    )
+    def test_batch_count_refuses_aliases_and_native_overflow(
+        self, count: object
+    ) -> None:
+        """Both runtimes reject malformed counts before consuming solver state."""
+        engine = SheafUPDEEngine(1, 1, 0.01, method="rk45")
+        phases = np.array([[0.2]])
+        frequency = np.ones((1, 1))
+        maps = np.zeros((1, 1, 1, 1))
+        psi = np.zeros(1)
+        with pytest.raises(ValueError, match="n_steps"):
+            engine.run(phases, frequency, maps, 0.0, psi, cast(int, count))
+        assert engine.last_dt == 0.01
+        np.testing.assert_array_equal(phases, [[0.2]])
+        np.testing.assert_allclose(
+            engine.run(phases, frequency, maps, 0.0, psi, 2), [[0.22]], atol=1e-15
+        )
+
+    def test_unrepresentable_drive_refuses_before_runtime_dispatch(self) -> None:
+        """A genuine integer drive beyond float64 refuses without coercion overflow."""
+        engine = SheafUPDEEngine(1, 1, 0.01)
+        with pytest.raises(ValueError, match="zeta must be finite real"):
+            engine.step(
+                np.zeros((1, 1)),
+                np.zeros((1, 1)),
+                np.zeros((1, 1, 1, 1)),
+                10**400,
+                np.zeros(1),
+            )
+        assert engine.last_dt == 0.01
+
+    def test_late_batch_overflow_preserves_original_phase_and_recovers(self) -> None:
+        """A valid first increment cannot partially publish a failed batch."""
+        angle = float(np.remainder(1e308, 2 * np.pi) + np.pi / 2)
+        phases = np.array([[angle]])
+        psi = np.array([angle])
+        maps = np.zeros((1, 1, 1, 1))
+        engine = SheafUPDEEngine(1, 1, 1.0)
+        first = engine.step(phases, np.full((1, 1), 1e308), maps, 1e308, psi)
+        np.testing.assert_allclose(
+            first, [[np.remainder(1e308, 2 * np.pi)]], atol=1e-15
+        )
+        with pytest.raises(ValueError):
+            engine.run(phases, np.full((1, 1), 1e308), maps, 1e308, psi, 2)
+        np.testing.assert_array_equal(phases, [[angle]])
+        assert engine.last_dt == 1.0
+        np.testing.assert_allclose(
+            engine.run(phases, np.full((1, 1), 0.1), maps, 0.0, psi, 2),
+            (phases + 0.2) % (2 * np.pi),
+            atol=1e-14,
+            rtol=0,
+        )
+
+    def test_zero_restriction_maps_decouple_oscillators(self) -> None:
+        """Empty restriction maps leave each component's frequency and drive."""
         n = 3
         d = 2
         dt = 0.01
@@ -107,7 +300,8 @@ class TestSheafEngineEdgeCases:
         p = engine.step(phases, omegas, restriction_maps, 0.0, psi)
         np.testing.assert_allclose(p, 0.5 * dt * np.ones((n, d)), atol=1e-12)
 
-    def test_run_rejects_shape_mismatch(self):
+    def test_run_rejects_shape_mismatch(self) -> None:
+        """Wrong phase geometry refuses the public batch entry point."""
         engine = SheafUPDEEngine(2, d_dimensions=2, dt=0.01, method="euler")
         phases = np.zeros(2, dtype=np.float64)
         omegas = np.ones((2, 2), dtype=np.float64)
@@ -117,7 +311,8 @@ class TestSheafEngineEdgeCases:
         with pytest.raises(ValueError, match="phases.shape"):
             engine.run(phases, omegas, restriction_maps, 0.0, psi, 1)
 
-    def test_run_rejects_non_finite_inputs(self):
+    def test_run_rejects_non_finite_inputs(self) -> None:
+        """Nonfinite frequencies refuse before a real batch advances."""
         engine = SheafUPDEEngine(2, d_dimensions=2, dt=0.01, method="euler")
         phases = np.array([[0.0, 0.0], [0.1, 0.1]], dtype=np.float64)
         omegas = np.array([[1.0, 0.0], [np.inf, 0.2]], dtype=np.float64)
@@ -127,7 +322,8 @@ class TestSheafEngineEdgeCases:
         with pytest.raises(ValueError, match="omegas contains NaN/Inf"):
             engine.run(phases, omegas, restriction_maps, 0.0, psi, 1)
 
-    def test_run_with_empty_restriction_maps_decouples(self):
+    def test_run_with_empty_restriction_maps_decouples(self) -> None:
+        """Uncoupled multidimensional batch follows exact omega times elapsed time."""
         n = 3
         d = 3
         dt = 0.02
@@ -148,9 +344,8 @@ class TestSheafEngineEdgeCases:
         expected = (phases + n_steps * dt * omegas) % (2 * np.pi)
         np.testing.assert_allclose(out, expected, atol=1e-12)
 
-    def test_d_dimensions_one_matches_scalar_engine_over_many_steps(self):
-        """Long-run parity: D=1 sheaf tracks scalar UPDEEngine across 50
-        steps (single-step parity is already covered above)."""
+    def test_d_dimensions_one_matches_scalar_engine_over_many_steps(self) -> None:
+        """D=1 sheaf tracks the scalar UPDEEngine across 50 real steps."""
         n = 5
         dt = 0.01
         rng = np.random.default_rng(13)
@@ -174,7 +369,7 @@ class TestSheafEngineEdgeCases:
             p_sheaf = sheaf.step(p_sheaf, omegas_d, restrict, 0.0, psi)
         np.testing.assert_allclose(p_dense, p_sheaf.flatten(), atol=1e-7)
 
-    def test_external_drive_is_applied_per_dimension(self):
+    def test_external_drive_is_applied_per_dimension(self) -> None:
         """ζ·sin(Ψ_d − θ_d) must drive each dimension's phases toward Ψ_d."""
         n = 3
         d = 2
@@ -194,7 +389,7 @@ class TestSheafEngineEdgeCases:
         assert np.all(p[:, 0] > 0.5) and np.all(p[:, 0] < 1.5)
         assert np.all((p[:, 1] > 2 * np.pi - 1.5) & (p[:, 1] < 2 * np.pi - 0.5))
 
-    def test_single_oscillator_multi_dim(self):
+    def test_single_oscillator_multi_dim(self) -> None:
         """N=1, D=3: no neighbours, so each dimension evolves under ω·dt."""
         n = 1
         d = 3
@@ -209,7 +404,7 @@ class TestSheafEngineEdgeCases:
         p = engine.step(phases, omegas, restriction_maps, 0.0, psi)
         np.testing.assert_allclose(p[0], [0.005, 0.01, 0.015], atol=1e-12)
 
-    def test_output_bounded_to_unit_circle(self):
+    def test_output_bounded_to_unit_circle(self) -> None:
         """After ``run`` every phase must live in [0, 2π) — wrap contract."""
         n = 4
         d = 2
@@ -244,80 +439,71 @@ class TestSheafEngineEdgeCases:
             ),
         ],
     )
-    def test_constructor_rejects_invalid_configuration(self, kwargs, match):
+    def test_constructor_rejects_invalid_configuration(
+        self, kwargs: SheafConfig, match: str
+    ) -> None:
+        """Public construction rejects malformed geometry, timestep and method."""
         with pytest.raises(ValueError, match=match):
             SheafUPDEEngine(**kwargs)
 
-    def test_last_dt_reports_configured_python_timestep(self):
+    def test_last_dt_reports_configured_python_timestep(self) -> None:
+        """Fixed-step proposal agrees with the real uncoupled phase increment."""
         engine = SheafUPDEEngine(2, d_dimensions=2, dt=0.0125, method="rk4")
         assert engine.last_dt == pytest.approx(0.0125)
+        out = engine.step(
+            np.zeros((2, 2)), np.ones((2, 2)), np.zeros((2, 2, 2, 2)), 0.0, np.zeros(2)
+        )
+        np.testing.assert_allclose(
+            out, np.full((2, 2), engine.last_dt), atol=1e-15, rtol=0
+        )
 
-    def test_rust_import_error_falls_back_to_python(self, monkeypatch):
-        """A missing optional Rust sheaf class must leave the Python path
-        available instead of failing construction."""
-        fake_spo = types.ModuleType("spo_kernel")
-        monkeypatch.setattr(sheaf_mod, "_HAS_RUST", True)
-        monkeypatch.setitem(sys.modules, "spo_kernel", fake_spo)
+    def test_available_runtime_executes_uncoupled_equation(self) -> None:
+        """Installed native and genuinely absent runs both advance the same equation.
 
-        engine = SheafUPDEEngine(2, d_dimensions=1, dt=0.01, method="euler")
-        assert engine._rust is None
-
-        phases = np.array([[0.1], [0.2]], dtype=np.float64)
-        omegas = np.array([[1.0], [1.5]], dtype=np.float64)
-        restriction_maps = np.zeros((2, 2, 1, 1), dtype=np.float64)
-        psi = np.zeros(1, dtype=np.float64)
-        out = engine.step(phases, omegas, restriction_maps, 0.0, psi)
+        Partial-wheel ImportError is not reachable with these two real runtimes.
+        No incompatible released wheel is available here; no synthetic module
+        is inserted to manufacture constructor-branch coverage.
+        """
+        engine = SheafUPDEEngine(2, 1, 0.01)
+        phases = np.array([[0.1], [0.2]])
+        omegas = np.array([[1.0], [1.5]])
+        maps = np.zeros((2, 2, 1, 1))
+        out = engine.step(phases, omegas, maps, 0.0, np.zeros(1))
         np.testing.assert_allclose(out, phases + 0.01 * omegas, atol=1e-12)
+        np.testing.assert_array_equal(phases, [[0.1], [0.2]])
 
-    def test_rust_stepper_dispatches_and_reshapes_outputs(self, monkeypatch):
-        """The optional Rust path is flattened at the FFI boundary and
-        reshaped back to the engine's (N, D) phase matrix."""
+    def test_runtime_preserves_row_major_phase_geometry(self) -> None:
+        """Real forced RK4 preserves distinct node/dimension coordinates."""
+        engine = SheafUPDEEngine(2, 2, 0.01, method="rk4")
+        phases = np.array([[0.0, 0.1], [0.2, 0.3]])
+        omegas = np.array([[1.0, 1.5], [0.5, -0.2]])
+        maps = np.zeros((2, 2, 2, 2))
+        psi = np.array([0.0, 1.0])
+        expected = solve_ivp(
+            lambda _t, state: omegas.ravel() + 0.25 * np.sin(np.tile(psi, 2) - state),
+            (0.0, 0.05),
+            phases.ravel(),
+            method="DOP853",
+            atol=1e-13,
+            rtol=1e-13,
+            t_eval=[0.01, 0.05],
+        ).y
+        np.testing.assert_allclose(
+            engine.step(phases, omegas, maps, 0.25, psi),
+            expected[:, 0].reshape(2, 2) % (2 * np.pi),
+            atol=1e-10,
+            rtol=0,
+        )
+        np.testing.assert_allclose(
+            engine.run(phases, omegas, maps, 0.25, psi, 5),
+            expected[:, 1].reshape(2, 2) % (2 * np.pi),
+            atol=1e-10,
+            rtol=0,
+        )
+        assert engine.last_dt == 0.01
 
-        class FakeSheafStepper:
-            def __init__(self, n, d, dt, method, *, atol, rtol):
-                assert (n, d, dt, method, atol, rtol) == (
-                    2,
-                    2,
-                    0.01,
-                    "rk4",
-                    1e-6,
-                    1e-3,
-                )
-                self.last_dt = dt
-
-            def step(self, phases, omegas, restriction_maps, zeta, psi):
-                assert phases.flags.c_contiguous
-                assert omegas.flags.c_contiguous
-                assert restriction_maps.flags.c_contiguous
-                assert psi.flags.c_contiguous
-                assert zeta == 0.25
-                self.last_dt = 0.004
-                return np.array([0.1, 0.2, 0.3, 0.4], dtype=np.float64)
-
-            def run(self, phases, omegas, restriction_maps, zeta, psi, n_steps):
-                assert n_steps == 5
-                self.last_dt = 0.003
-                return np.array([0.5, 0.6, 0.7, 0.8], dtype=np.float64)
-
-        fake_spo = types.ModuleType("spo_kernel")
-        fake_spo.PySheafUPDEStepper = FakeSheafStepper
-        monkeypatch.setattr(sheaf_mod, "_HAS_RUST", True)
-        monkeypatch.setitem(sys.modules, "spo_kernel", fake_spo)
-
-        engine = SheafUPDEEngine(2, d_dimensions=2, dt=0.01, method="rk4")
-        phases = np.array([[0.0, 0.1], [0.2, 0.3]], dtype=np.float64)
-        omegas = np.ones((2, 2), dtype=np.float64)
-        restriction_maps = np.zeros((2, 2, 2, 2), dtype=np.float64)
-        psi = np.array([0.0, 1.0], dtype=np.float64)
-
-        step = engine.step(phases, omegas, restriction_maps, 0.25, psi)
-        assert engine.last_dt == pytest.approx(0.004)
-        run = engine.run(phases, omegas, restriction_maps, 0.25, psi, 5)
-        assert engine.last_dt == pytest.approx(0.003)
-        np.testing.assert_allclose(step, [[0.1, 0.2], [0.3, 0.4]], atol=1e-12)
-        np.testing.assert_allclose(run, [[0.5, 0.6], [0.7, 0.8]], atol=1e-12)
-
-    def test_step_rejects_malformed_shapes_and_non_finite_values(self):
+    def test_step_rejects_malformed_shapes_and_non_finite_values(self) -> None:
+        """Real inputs refuse wrong shapes and nonfinite controls."""
         engine = SheafUPDEEngine(2, d_dimensions=2, dt=0.01, method="euler")
         phases = np.zeros((2, 2), dtype=np.float64)
         omegas = np.ones((2, 2), dtype=np.float64)
@@ -350,7 +536,8 @@ class TestSheafEngineEdgeCases:
                 psi,
             )
 
-    def test_step_accepts_numeric_array_like_inputs(self):
+    def test_step_accepts_numeric_array_like_inputs(self) -> None:
+        """Nested Python sequences advance the real uncoupled Euler equation."""
         engine = SheafUPDEEngine(2, d_dimensions=1, dt=0.01, method="euler")
         out = engine.step(
             [[0.0], [0.1]],
@@ -370,13 +557,18 @@ class TestSheafEngineEdgeCases:
         ("alias", "dtype", "match"),
         [
             (True, None, "real-valued, not boolean"),
+            (np.timedelta64(1, "s"), None, "must be numeric"),
+            (np.datetime64("2026-09-30"), None, "must be numeric"),
             ("0.1", None, "must be numeric"),
             (0.1 + 0.2j, None, "real-valued, not complex"),
             (np.bool_(True), object, "real-valued, not boolean"),
             (0.1 + 0.2j, object, "real-valued, not complex"),
         ],
     )
-    def test_step_rejects_coercive_array_aliases(self, field, alias, dtype, match):
+    def test_step_rejects_coercive_array_aliases(
+        self, field: str, alias: object, dtype: DTypeLike, match: str
+    ) -> None:
+        """Boolean, string and complex arrays refuse without numeric coercion."""
         engine = SheafUPDEEngine(2, d_dimensions=1, dt=0.01, method="euler")
         inputs = {
             "phases": np.array([[0.0], [0.1]], dtype=np.float64),
@@ -395,7 +587,55 @@ class TestSheafEngineEdgeCases:
                 inputs["psi"],
             )
 
-    def test_step_accepts_real_numeric_object_arrays(self):
+    @pytest.mark.parametrize("field", ["phases", "omegas", "restriction_maps", "psi"])
+    @pytest.mark.parametrize("operation", ["step", "run", "zero"])
+    def test_mixed_boolean_sequences_refuse_and_recover(
+        self, field: str, operation: str
+    ) -> None:
+        """Nested lists retain boolean source values before numeric promotion."""
+        inputs: dict[str, ArrayLike] = {
+            "phases": np.array([[0.1, 0.2], [0.3, 0.4]]),
+            "omegas": np.ones((2, 2)),
+            "restriction_maps": np.zeros((2, 2, 2, 2)),
+            "psi": np.zeros(2),
+        }
+        original = inputs[field]
+        mixed = np.asarray(original, dtype=object)
+        mixed.flat[0] = True
+        inputs[field] = mixed.tolist()
+        engine = SheafUPDEEngine(2, 2, 0.01, method="rk45")
+        with pytest.raises(ValueError, match="not boolean"):
+            if operation == "step":
+                engine.step(
+                    inputs["phases"],
+                    inputs["omegas"],
+                    inputs["restriction_maps"],
+                    0.0,
+                    inputs["psi"],
+                )
+            else:
+                engine.run(
+                    inputs["phases"],
+                    inputs["omegas"],
+                    inputs["restriction_maps"],
+                    0.0,
+                    inputs["psi"],
+                    0 if operation == "zero" else 2,
+                )
+        assert engine.last_dt == 0.01
+        inputs[field] = original
+        result = engine.run(
+            inputs["phases"],
+            inputs["omegas"],
+            inputs["restriction_maps"],
+            0.0,
+            inputs["psi"],
+            2,
+        )
+        np.testing.assert_allclose(result, [[0.12, 0.22], [0.32, 0.42]], atol=1e-15)
+
+    def test_step_accepts_real_numeric_object_arrays(self) -> None:
+        """Real object arrays normalise to float64 before the phase equation."""
         engine = SheafUPDEEngine(2, d_dimensions=1, dt=0.01, method="euler")
         out = engine.step(
             np.array([[0], [0.1]], dtype=object),
@@ -415,7 +655,10 @@ class TestSheafEngineEdgeCases:
             np.array([[10**400], [0]], dtype=object),
         ],
     )
-    def test_step_rejects_unrepresentable_numeric_inputs(self, phases):
+    def test_step_rejects_unrepresentable_numeric_inputs(
+        self, phases: ArrayLike
+    ) -> None:
+        """Ragged phases and unrepresentable integers refuse public admission."""
         engine = SheafUPDEEngine(2, d_dimensions=1, dt=0.01, method="euler")
 
         with pytest.raises(ValueError, match="phases must be a numeric array"):
@@ -427,7 +670,8 @@ class TestSheafEngineEdgeCases:
                 np.zeros(1),
             )
 
-    def test_run_zero_steps_returns_independent_copy(self):
+    def test_run_zero_steps_returns_independent_copy(self) -> None:
+        """Zero-step batches validate and copy without sharing input storage."""
         engine = SheafUPDEEngine(2, d_dimensions=2, dt=0.01, method="rk4")
         phases = np.array([[0.1, 0.2], [0.3, 0.4]], dtype=np.float64)
         omegas = np.ones((2, 2), dtype=np.float64)
@@ -436,10 +680,10 @@ class TestSheafEngineEdgeCases:
 
         out = engine.run(phases, omegas, restriction_maps, 0.0, psi, 0)
         np.testing.assert_allclose(out, phases, atol=0.0)
-        assert out is not phases
+        assert not np.shares_memory(out, phases)
 
-    def test_rk45_sheaf_fallback_uses_error_control(self, monkeypatch):
-        monkeypatch.setattr(sheaf_mod, "_HAS_RUST", False)
+    def test_rk45_sheaf_fallback_uses_error_control(self) -> None:
+        """Adaptive full-interval dynamics agree with a fine fixed-step reference."""
         n = 3
         d = 2
         dt = 0.4
@@ -480,154 +724,118 @@ class TestSheafEngineEdgeCases:
         out_rk45 = rk45.step(phases, omegas, restriction_maps, 0.4, psi)
         out_rk4 = rk4.step(phases, omegas, restriction_maps, 0.4, psi)
 
-        assert rk45.last_dt > 0.0
+        reference = SheafUPDEEngine(n, d, dt / 1000, method="rk4").run(
+            phases, omegas, restriction_maps, 0.4, psi, 1000
+        )
+        np.testing.assert_allclose(out_rk45, reference, atol=2e-10, rtol=0)
+        assert 0.0 < rk45.last_dt <= dt
         assert np.all(np.isfinite(out_rk45))
         assert np.all(out_rk45 >= 0.0)
         assert np.all(out_rk45 < 2 * np.pi)
         with pytest.raises(AssertionError):
             np.testing.assert_allclose(out_rk45, out_rk4, atol=1e-12, rtol=1e-12)
 
-    def test_rk45_exhausted_retry_returns_bounded_fallback(self, monkeypatch):
-        engine = SheafUPDEEngine(
-            2,
-            d_dimensions=1,
-            dt=0.1,
-            method="rk45",
-            atol=1e-12,
-            rtol=1e-12,
-        )
-        engine._rust = None
-        calls = 0
-
-        def rejecting_stages(phases, omegas, restriction_maps, zeta, psi, dt):
-            nonlocal calls
-            calls += 1
-            return [np.full_like(phases, index + 1.0) for index in range(7)]
-
-        monkeypatch.setattr(engine, "_rk45_stage_vector", rejecting_stages)
-        out = engine.step(
-            np.zeros((2, 1)),
-            np.ones((2, 1)),
-            np.zeros((2, 2, 1, 1)),
-            0.0,
-            np.zeros(1),
+    @pytest.mark.parametrize("operation", ["step", "run"])
+    def test_rk45_nonfinite_arithmetic_refuses_and_recovers(
+        self, operation: str
+    ) -> None:
+        """Finite overflowing frequencies cannot publish a fabricated bounded phase."""
+        engine = SheafUPDEEngine(1, 1, 10.0, method="rk45")
+        phases = np.zeros((1, 1))
+        maps = np.zeros((1, 1, 1, 1))
+        psi = np.zeros(1)
+        with pytest.raises(ValueError):
+            if operation == "step":
+                engine.step(phases, np.full((1, 1), 1e308), maps, 0.0, psi)
+            else:
+                engine.run(phases, np.full((1, 1), 1e308), maps, 0.0, psi, 2)
+        assert engine.last_dt == 10.0
+        np.testing.assert_array_equal(phases, [[0.0]])
+        np.testing.assert_allclose(
+            engine.step(phases, np.full((1, 1), 0.1), maps, 0.0, psi),
+            [[1.0]],
+            atol=1e-14,
+            rtol=0,
         )
 
-        assert calls == 4
-        assert engine.last_dt == pytest.approx(0.00016)
-        assert np.all(np.isfinite(out))
-        assert np.all((out >= 0.0) & (out < 2 * np.pi))
+    def test_real_phase_shape_refusal_preserves_state_and_recovers(self) -> None:
+        """Malformed public geometry refuses before either real runtime advances.
 
-    def test_rust_step_rejects_malformed_flattened_output(self, monkeypatch):
-        class BadSheafStepper:
-            def __init__(self, *args, **kwargs):
-                pass
+        Current native Vec<f64>/PyArray1 always has the validated N*D cardinality;
+        malformed native output cannot be produced by admitted real inputs.
+        Rust refuses non-finite values and canonicalises rounded torus endpoints
+        before publishing. Real overflow and crossing cases cover that producer.
+        Retain the defensive consumer guard without injecting a fake producer.
+        """
+        engine = SheafUPDEEngine(2, 2, 0.01)
+        phases = np.zeros((2, 2))
+        maps = np.zeros((2, 2, 2, 2))
+        with pytest.raises(ValueError, match="phases.shape"):
+            engine.step(np.zeros(3), np.ones((2, 2)), maps, 0.0, np.zeros(2))
+        assert engine.last_dt == 0.01
+        np.testing.assert_allclose(
+            engine.step(phases, np.ones((2, 2)), maps, 0.0, np.zeros(2)),
+            np.full((2, 2), 0.01),
+            atol=1e-15,
+            rtol=0,
+        )
 
-            def step(self, phases, omegas, restriction_maps, zeta, psi):
-                return np.array([0.1, 0.2, 0.3], dtype=np.float64)
+    @pytest.mark.parametrize("method", ["euler", "rk4", "rk45"])
+    def test_real_overflowing_batch_refuses_without_publishing(
+        self, method: str
+    ) -> None:
+        """Overflowing finite input refuses a real batch and retains input/proposal."""
+        engine = SheafUPDEEngine(1, 1, 10.0, method=method)
+        phases = np.zeros((1, 1))
+        maps = np.zeros((1, 1, 1, 1))
+        with pytest.raises(ValueError):
+            engine.run(phases, np.full((1, 1), 1e308), maps, 0.0, np.zeros(1), 2)
+        np.testing.assert_array_equal(phases, [[0.0]])
+        assert engine.last_dt == 10.0
+        np.testing.assert_allclose(
+            engine.run(phases, np.full((1, 1), 0.1), maps, 0.0, np.zeros(1), 2),
+            [[2.0]],
+            atol=1e-14,
+            rtol=0,
+        )
 
-        fake_spo = types.ModuleType("spo_kernel")
-        fake_spo.PySheafUPDEStepper = BadSheafStepper
-        monkeypatch.setattr(sheaf_mod, "_HAS_RUST", True)
-        monkeypatch.setitem(sys.modules, "spo_kernel", fake_spo)
-
-        engine = SheafUPDEEngine(2, d_dimensions=2, dt=0.01, method="rk4")
-        with pytest.raises(ValueError, match="Rust sheaf step returned 3 values"):
-            engine.step(
-                np.zeros((2, 2)),
-                np.ones((2, 2)),
-                np.zeros((2, 2, 2, 2)),
-                0.0,
-                np.zeros(2),
-            )
-
-    def test_rust_run_rejects_non_finite_flattened_output(self, monkeypatch):
-        class BadSheafStepper:
-            def __init__(self, *args, **kwargs):
-                pass
-
-            def run(self, phases, omegas, restriction_maps, zeta, psi, n_steps):
-                return np.array([0.1, 0.2, np.nan, 0.4], dtype=np.float64)
-
-        fake_spo = types.ModuleType("spo_kernel")
-        fake_spo.PySheafUPDEStepper = BadSheafStepper
-        monkeypatch.setattr(sheaf_mod, "_HAS_RUST", True)
-        monkeypatch.setitem(sys.modules, "spo_kernel", fake_spo)
-
-        engine = SheafUPDEEngine(2, d_dimensions=2, dt=0.01, method="rk4")
-        with pytest.raises(ValueError, match="Rust sheaf run returned NaN/Inf"):
-            engine.run(
-                np.zeros((2, 2)),
-                np.ones((2, 2)),
-                np.zeros((2, 2, 2, 2)),
-                0.0,
-                np.zeros(2),
-                1,
-            )
-
+    @pytest.mark.parametrize("method", ["euler", "rk4", "rk45"])
+    @pytest.mark.parametrize("operation", ["step", "run"])
     @pytest.mark.parametrize(
-        ("payload", "match"),
-        [
-            (np.array([True, False, True, False]), "real-valued, not boolean"),
-            (np.array(["0.1", "0.2", "0.3", "0.4"]), "must be numeric"),
-            (
-                np.array([0.1 + 0.2j, 0.2, 0.3, 0.4]),
-                "real-valued, not complex",
-            ),
-            (np.zeros((2, 2)), "one-dimensional"),
-            (np.array([-0.1, 0.2, 0.3, 0.4]), "outside"),
-            (np.array([0.1, 2 * np.pi, 0.3, 0.4]), "outside"),
-        ],
+        ("phase", "omega"),
+        [(-1e-300, 0.0), (0.0, -1e-15), (-2 * np.pi, 0.0), (-4 * np.pi, 0.0)],
     )
-    def test_rust_step_rejects_invalid_phase_output(self, monkeypatch, payload, match):
-        class BadSheafStepper:
-            def __init__(self, *args, **kwargs):
-                self.last_dt = 0.01
+    def test_real_rounded_endpoint_and_negative_crossing_return_zero(
+        self, method: str, operation: str, phase: float, omega: float
+    ) -> None:
+        """Near-zero crossings and exact torus multiples return positive zero."""
+        engine = SheafUPDEEngine(1, 1, 0.01, method=method)
+        phases = np.array([[phase]])
+        frequencies = np.array([[omega]])
+        maps = np.zeros((1, 1, 1, 1))
+        output = (
+            engine.step(phases, frequencies, maps, 0.0, np.zeros(1))
+            if operation == "step"
+            else engine.run(phases, frequencies, maps, 0.0, np.zeros(1), 3)
+        )
+        np.testing.assert_array_equal(output, [[0.0]])
+        assert not np.any(np.signbit(output))
+        np.testing.assert_array_equal(phases, [[phase]])
+        assert engine.last_dt == 0.01
 
-            def step(self, phases, omegas, restriction_maps, zeta, psi):
-                return payload
+    @pytest.mark.parametrize("dt", [False, "0.01", 0.0, -0.01, np.inf, 10**400])
+    def test_real_constructor_rejects_invalid_timestep(self, dt: object) -> None:
+        """Actual configuration admission prevents invalid producer timesteps.
 
-        fake_spo = types.ModuleType("spo_kernel")
-        fake_spo.PySheafUPDEStepper = BadSheafStepper
-        monkeypatch.setattr(sheaf_mod, "_HAS_RUST", True)
-        monkeypatch.setitem(sys.modules, "spo_kernel", fake_spo)
-
-        engine = SheafUPDEEngine(2, d_dimensions=2, dt=0.01, method="rk4")
-        with pytest.raises(ValueError, match=match):
-            engine.step(
-                np.zeros((2, 2)),
-                np.ones((2, 2)),
-                np.zeros((2, 2, 2, 2)),
-                0.0,
-                np.zeros(2),
-            )
-
-    @pytest.mark.parametrize("last_dt", [False, "0.01", 0.0, -0.01, np.inf])
-    def test_rust_step_rejects_invalid_last_dt(self, monkeypatch, last_dt):
-        class BadSheafStepper:
-            def __init__(self, *args, **kwargs):
-                self.last_dt = last_dt
-
-            def step(self, phases, omegas, restriction_maps, zeta, psi):
-                return np.array([0.1, 0.2, 0.3, 0.4], dtype=np.float64)
-
-        fake_spo = types.ModuleType("spo_kernel")
-        fake_spo.PySheafUPDEStepper = BadSheafStepper
-        monkeypatch.setattr(sheaf_mod, "_HAS_RUST", True)
-        monkeypatch.setitem(sys.modules, "spo_kernel", fake_spo)
-
-        engine = SheafUPDEEngine(2, d_dimensions=2, dt=0.01, method="rk4")
-        with pytest.raises(ValueError, match="last_dt"):
-            engine.step(
-                np.zeros((2, 2)),
-                np.ones((2, 2)),
-                np.zeros((2, 2, 2, 2)),
-                0.0,
-                np.zeros(2),
-            )
+        Cast preserves the deliberately invalid object; it does not coerce it.
+        Current successful solver proposals are positive finite f64 values.
+        """
+        with pytest.raises(ValueError, match="dt must be positive finite"):
+            SheafUPDEEngine(2, 2, cast(float, dt))
 
 
-# Pipeline wiring: SheafUPDEEngine extends UPDEEngine to multi-dimensional
+# Pipeline wiring: SheafUPDEEngine generalises the scalar phase equation to
+# multi-dimensional
 # phase vectors with matrix-valued restriction maps. The D=1 parity case
 # above guarantees backwards compatibility; the higher-D cases pin
 # external drive, degenerate connectivity, single-oscillator decoupling

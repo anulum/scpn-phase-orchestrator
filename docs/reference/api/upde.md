@@ -737,10 +737,50 @@ $$
 - **Rust parity:** Uses `PySheafUPDEStepper` when available while preserving the
   same public state-shape, numeric-type, finiteness, and torus-domain contracts.
 - **Fail-closed arrays:** Phase, frequency, restriction-map, and drive-target
-  arrays reject boolean, complex, and numeric-string aliases before conversion.
+  arrays reject boolean, complex, temporal, and numeric-string aliases before
+  conversion. Finite real integer, floating, and numeric-object arrays are
+  converted to contiguous float64 storage with the documented tensor shapes.
 - **Fail-closed publication:** Rust output must be a finite real flattened
   `N * D` torus state, and its adaptive timestep must be positive and finite.
   A zero-step run returns a validated independent copy without backend dispatch.
+
+### Elapsed time and refusal recovery
+
+Every successful `step()` advances the complete configured `dt`; a positive
+`run(..., n_steps)` advances `n_steps * dt`. RK45 uses Dormand–Prince 5/4 with
+the maximum component error scaled by `atol + rtol * max(abs(theta), abs(y5))`.
+Both tolerances must be positive and finite, with `rtol >= atol` for RK45.
+`last_dt` is the next adaptive substep proposal, bounded by the configured outer
+interval. Fixed methods report the configured timestep. Adaptive substeps never
+change the elapsed time represented by a public call.
+Batch counts are non-boolean integers in the native u64 range in both runtimes.
+Each adaptive interval refuses after 64 consecutive rejected proposals or
+100,000 attempts, preserving the published state when that work limit is reached.
+
+Results are independent `(N, D)` float64 arrays in `[0, 2*pi)`. Zero-step runs
+validate all inputs and preserve finite unwrapped input phases in the copy.
+Rounded upper torus endpoints map to the equivalent `0.0`, allowing finite
+near-zero phases and negative frequency crossings to advance normally.
+Invalid controls, shapes, source types, non-finite arithmetic,
+or inability to make adaptive progress refuse. A failed step or batch
+preserves all caller inputs and the pre-call `last_dt`, including failures after
+an earlier valid interval. The same instance can subsequently integrate valid
+inputs.
+
+The direct native `PySheafUPDEStepper` accepts one-dimensional contiguous float64
+readonly arrays: phases/frequencies have `N * D` entries, restriction maps have
+`N * N * D * D` entries in `(i, j, d, k)` order, and `psi` has `D` entries.
+Shared readonly storage is permitted; returned arrays own independent storage.
+Counts reject boolean aliases and overflowing geometry; `n_substeps` is a
+positive u32 count partitioning each outer interval. The public Python engine
+uses one configured substep and accepts strided arrays by copying them.
+
+Only Python and its PyO3/Rust counterpart implement this solver; the scalar
+engine's Go, Julia, Mojo and WebGPU dispatch chain does not apply. Reproduce
+seeded equation and timing diagnostics with `python -m benchmarks.sheaf_benchmark`.
+See [the recorded local diagnostics](../data/sheaf_benchmark_2026-09-30.json) for
+both actual runtime environments and all three methods. These shared-host
+measurements do not establish production latency or a causal speedup.
 
 ::: scpn_phase_orchestrator.upde.sheaf_engine
 

@@ -155,8 +155,11 @@ traffic, industrial control, and more.
 | `SplittingEngine` | Operator splitting | Stiff multi-scale systems |
 | `JaxUPDEEngine` | JAX-accelerated | GPU, autodiff, large-scale |
 
-All engines implement the same `step()` / `run()` interface and
-produce compatible `UPDEState` output.
+Engine variants expose `step()` / `run()` with model-specific state shapes and
+controls. `SheafUPDEEngine` returns independent `(N, D)` phase arrays; consumers
+construct any `UPDEState` diagnostics they require. Its adaptive solver advances
+one complete configured interval per step. See the
+[cellular-sheaf contract](../reference/api/upde.md#cellular-sheaf-engine).
 
 ## Key Data Structures
 

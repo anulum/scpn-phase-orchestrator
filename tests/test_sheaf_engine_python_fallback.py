@@ -6,25 +6,22 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Sheaf engine Python fallback contracts
 
-"""
-Numerical parity and validation contracts for SheafUPDEEngine Python fallback
-execution.
-"""
+"""Verify sheaf numerical contracts with the native runtime and genuine absence."""
 
 from __future__ import annotations
 
 import numpy as np
 import pytest
+from numpy.typing import NDArray
+from scipy.integrate import solve_ivp
 
 from scpn_phase_orchestrator.upde import sheaf_engine
 
 TWO_PI = 2.0 * np.pi
 
 
-def test_sheaf_engine_python_fallback_respects_restriction_maps(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setattr(sheaf_engine, "_HAS_RUST", False)
+def test_sheaf_engine_python_fallback_respects_restriction_maps() -> None:
+    """Both real runtimes integrate nonzero anisotropic maps and external drive."""
     phases = np.array([[0.1, 0.4], [0.9, 1.2]], dtype=np.float64)
     omegas = np.array([[0.2, -0.1], [0.05, 0.15]], dtype=np.float64)
     restriction = np.zeros((2, 2, 2, 2), dtype=np.float64)
@@ -46,29 +43,43 @@ def test_sheaf_engine_python_fallback_respects_restriction_maps(
             deriv[i, dim] += 0.2 * np.sin(psi[dim] - phases[i, dim])
     np.testing.assert_allclose(result, (phases + 0.01 * deriv) % TWO_PI)
 
-    rk4 = sheaf_engine.SheafUPDEEngine(2, 2, 0.01, method="rk4").run(
-        phases, omegas, restriction, 0.1, psi, 2
-    )
-    rk45 = sheaf_engine.SheafUPDEEngine(2, 2, 0.01, method="rk45").step(
-        phases, omegas, restriction, 0.1, psi
-    )
-    assert rk4.shape == phases.shape
-    assert rk45.shape == phases.shape
-    assert np.all((rk4 >= 0.0) & (rk4 < TWO_PI))
+    def derivative(_time: float, state: NDArray[np.float64]) -> NDArray[np.float64]:
+        """Evaluate the tensor equation with independent broadcast contraction."""
+        theta = state.reshape(2, 2)
+        differences = theta[None, :, None, :] - theta[:, None, :, None]
+        coupling = np.einsum("ijdk,ijdk->id", restriction, np.sin(differences))
+        return np.asarray(omegas + coupling + 0.1 * np.sin(psi - theta)).ravel()
+
+    for method, steps in (("rk4", 2), ("rk45", 7)):
+        engine = sheaf_engine.SheafUPDEEngine(
+            2, 2, 0.01, method=method, atol=1e-11, rtol=1e-11
+        )
+        output = engine.run(phases, omegas, restriction, 0.1, psi, steps)
+        reference = solve_ivp(
+            derivative,
+            (0.0, 0.01 * steps),
+            phases.ravel(),
+            method="DOP853",
+            atol=1e-13,
+            rtol=1e-13,
+        )
+        assert reference.success
+        np.testing.assert_allclose(
+            output, reference.y[:, -1].reshape(2, 2), atol=1e-10, rtol=0
+        )
+        np.testing.assert_array_equal(phases, [[0.1, 0.4], [0.9, 1.2]])
 
 
-def test_sheaf_engine_rejects_invalid_python_configuration(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setattr(sheaf_engine, "_HAS_RUST", False)
-    for kwargs in (
-        {"n_oscillators": True, "d_dimensions": 2, "dt": 0.01},
-        {"n_oscillators": 2, "d_dimensions": 0, "dt": 0.01},
-        {"n_oscillators": 2, "d_dimensions": 2, "dt": False},
-        {"n_oscillators": 2, "d_dimensions": 2, "dt": float("inf")},
+def test_sheaf_engine_rejects_invalid_python_configuration() -> None:
+    """Both real runtimes reject malformed configuration and batch counts."""
+    for n, d, dt in (
+        (True, 2, 0.01),
+        (2, 0, 0.01),
+        (2, 2, False),
+        (2, 2, float("inf")),
     ):
         with pytest.raises(ValueError):
-            sheaf_engine.SheafUPDEEngine(**kwargs)
+            sheaf_engine.SheafUPDEEngine(n, d, dt)
     with pytest.raises(ValueError, match="Unknown method"):
         sheaf_engine.SheafUPDEEngine(2, 2, 0.01, method="bad")
     engine = sheaf_engine.SheafUPDEEngine(2, 2, 0.01)
