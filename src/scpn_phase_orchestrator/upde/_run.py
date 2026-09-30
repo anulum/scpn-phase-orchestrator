@@ -306,7 +306,7 @@ def __getattr__(name: str) -> object:
 
 
 def _dispatch() -> Callable[..., FloatArray] | None:
-    """Return the fastest available step backend, or ``None`` for Python."""
+    """Prefer the selected step backend, returning ``None`` for Python."""
     active, available = _backend_state()
     ordered_backends = [active, *available]
     seen: set[str] = set()
@@ -315,7 +315,7 @@ def _dispatch() -> Callable[..., FloatArray] | None:
             continue
         seen.add(backend)
         if backend == "python":
-            continue
+            return None
         try:
             return _load_backend(backend)
         except (ImportError, RuntimeError, OSError, KeyError):
@@ -324,7 +324,7 @@ def _dispatch() -> Callable[..., FloatArray] | None:
 
 
 def _dispatch_schedule() -> Callable[..., FloatArray] | None:
-    """Return the fastest available schedule backend, or ``None`` for Python."""
+    """Prefer the selected schedule backend, returning ``None`` for Python."""
     active, available = _backend_state()
     ordered_backends = [active, *available]
     seen: set[str] = set()
@@ -332,6 +332,8 @@ def _dispatch_schedule() -> Callable[..., FloatArray] | None:
         if backend in seen:
             continue
         seen.add(backend)
+        if backend == "python":
+            return None
         if backend not in _SCHEDULE_LOADERS:
             continue
         try:

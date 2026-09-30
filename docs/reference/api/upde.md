@@ -78,6 +78,55 @@ First-order Kuramoto ODE: dθ_i/dt = ω_i + Σ_j K_ij sin(θ_j - θ_i - α_ij) +
 Supports Euler, RK4, and RK45 (adaptive) integration. Optional Rust FFI
 acceleration via `spo_kernel.PyUPDEStepper`.
 
+### Shared NumPy storage
+
+With writable coupling, `UPDEEngine.step()` accepts matrices that share storage,
+including identical matrices and partially overlapping views. With plasticity
+disabled, these inputs remain unchanged and the result matches independent
+copies of the input values.
+
+The direct dense `PyUPDEStepper.step()`, `run()`, `run_omega_schedule()` and
+`run_doppler_schedule()` bindings snapshot their contiguous readonly phase,
+frequency, lag and velocity inputs before borrowing coupling for mutation.
+Those snapshots remain fixed throughout a batched call. Enabling native
+`set_plasticity()` still writes each step's learned coupling into the caller's
+original array; Doppler correction uses the current coupling at each step.
+Disabling plasticity stops those updates without changing the solver equations.
+
+Direct dense coupling must be writable and contiguous. An unwritable array,
+an outstanding external NumPy borrow, or a non-contiguous required input raises
+`ValueError`, not a Rust panic. A refused mutable borrow leaves solver state
+and input values unchanged. This writability requirement belongs to the native
+mutable binding; the NumPy-only engine does not mutate coupling. The separate
+moving-frame binding reads coupling without requiring a mutable borrow.
+Public `UPDEEngine.step()` and fixed-frequency `run()` inherit the native
+writability requirement when the Rust kernel is installed, even with plasticity
+disabled. Callable-frequency `UPDEEngine.run()` and stateless
+fixed/frequency-scheduled runs inherit it when Rust is
+selected. Readonly coupling then raises `ValueError`; the NumPy, Go, Julia and
+Mojo paths accept it without mutation. Pass a writable `coupling.copy()` for
+backend-independent admission. Native borrow refusals do not silently fall back
+to another backend. These dense contracts do not certify the distinct sparse CSR
+binding.
+
+The public `doppler_run()` and `DopplerEngine` step/run paths inherit the same
+requirement when they execute Rust. Automatic Doppler selection tries Rust
+first; a readonly-coupling `ValueError` propagates rather than switching to a
+different backend. See [Doppler buffer admission](upde_doppler.md#shared-storage-admission).
+
+For comparative stateless runs, the public `engine.ACTIVE_BACKEND = "python"`
+override selects the actual NumPy runner, for both fixed frequencies and
+frequency schedules. Without an override, default fastest-first selection
+is unchanged. Runtime-profiled public alias regressions verify the selected
+CPU backend executes and does not silently substitute the Python fallback for an
+available accelerator.
+
+Earlier comparisons that forced Python through this override could instead
+execute an accelerator and are not evidence of NumPy parity. Rerun those
+comparisons after this correction. The host-managed WebGPU bridge is separate:
+its declared kernel supports Euler only and has no frequency-schedule loader;
+the five-CPU-backend regressions do not certify a browser/edge bridge.
+
 Direct Go, Julia, and Mojo accelerator entrypoints share the same boundary
 contract before optional runtime loading: phase and frequency vectors must be
 finite real one-dimensional `float64` arrays with matching length; coupling

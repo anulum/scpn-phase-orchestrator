@@ -280,6 +280,13 @@ OttAntonsenReduction    # O(1) mean-field (not a stepper, a predictor)
 All engines share the interface: `step(phases, omegas, knm, ...) → new_phases`.
 The Rust kernel provides drop-in replacements for UPDEEngine and StuartLandauEngine.
 
+The dense `PyUPDEStepper` buffer boundary lives in
+`spo-kernel/crates/spo-ffi/src/upde_stepper.rs`, registered by the FFI façade.
+Readonly inputs are snapshotted before mutable coupling is borrowed, so shared
+NumPy views do not conflict with native plasticity writeback. The separate
+moving-frame call retains readonly coupling. See
+[the dense storage contract](docs/reference/api/upde.md#shared-numpy-storage).
+
 ### Supervisor Stack
 
 ```

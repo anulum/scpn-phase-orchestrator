@@ -245,6 +245,17 @@ Every call to `step()` validates:
 
 This prevents silent corruption from propagating through the pipeline.
 
+Writable coupling and lag may share storage, including identical matrices and overlapping
+views. The dense native binding snapshots readonly input values before borrowing
+writable coupling; enabled native plasticity still updates the original array.
+Its borrow/writeability faults raise `ValueError` before advancing the solver.
+See [shared NumPy storage](upde.md#shared-numpy-storage) for the snapshot,
+readonly moving-frame and sparse-scope boundaries.
+Public stateful calls inherit Rust's writable-coupling requirement when its
+kernel is installed; selected stateless Rust calls do too. Readonly coupling
+raises `ValueError` there but is accepted by the other CPU paths. Use a writable
+copy for backend-independent admission.
+
 ### 4.3 Five-backend fallback chain (2026-04-18)
 
 `upde.engine` now exposes a stateless batched kernel `upde_run` that
@@ -452,76 +463,50 @@ adaptive stepping).
 
 ## 7. Performance Benchmarks
 
-### 7.0 Five-backend comparison (2026-04-18)
+### 7.0 Five-backend comparison (2026-09-30)
 
-Per-call wall-clock in milliseconds on the local Ubuntu 24.04 host,
-16-thread x86_64, ``dt = 0.01, n_steps = 500``, one warm-up and two
-measured calls. Reproduce with
-`python benchmarks/upde_engine_benchmark.py --sizes 8 32 64 --methods euler rk4 rk45 --n-steps 500`.
+Observed milliseconds per stateless call on the shared Linux x86-64 host,
+CPython 3.12.3, NumPy 2.5.3, Rust 1.98.1 release build: `dt=0.01`,
+32 steps, one warmup and three measured calls. Reproduce with:
 
-| N  | method | rust (ms) | mojo (ms) | julia (ms) | go (ms) | python (ms) |
-| -- | ------ | --------: | --------: | ---------: | ------: | ----------: |
-| 8  | euler  |      0.32 |     44.82 |       0.67 |    0.98 |        3.90 |
-| 8  | rk4    |      0.85 |     52.95 |       1.52 |    3.20 |       22.47 |
-| 8  | rk45   |      1.31 |     57.31 |       1.64 |    3.74 |       50.10 |
-| 32 | euler  |      3.08 |     63.59 |       3.32 |    6.70 |        8.88 |
-| 32 | rk4    |     10.55 |     64.62 |      12.45 |   20.86 |       34.94 |
-| 32 | rk45   |     17.71 |     77.03 |      25.01 |   42.17 |       69.24 |
-| 64 | euler  |     10.77 |     59.49 |      11.96 |   27.71 |       22.90 |
-| 64 | rk4    |     43.98 |    112.90 |      48.93 |  112.63 |      132.38 |
-| 64 | rk45   |     91.94 |    164.18 |     114.44 |  208.41 |      184.49 |
+```bash
+PYTHONPATH=src python -m benchmarks.upde_engine_benchmark --sizes 8 32 64 --n-steps 32 --calls 3
+```
 
-Observations:
+| N | method | rust (ms) | mojo (ms) | julia (ms) | go (ms) | python (ms) |
+|---|--------|----------:|----------:|-----------:|--------:|------------:|
+| 8 | euler | 0.0875 | 16.9431 | 0.1787 | 0.1193 | 0.2753 |
+| 8 | rk4 | 0.1133 | 17.8689 | 0.1659 | 0.1589 | 0.9947 |
+| 8 | rk45 | 0.1822 | 16.2757 | 0.1917 | 0.2233 | 2.4467 |
+| 32 | euler | 0.3746 | 17.7843 | 0.3529 | 0.6584 | 0.6401 |
+| 32 | rk4 | 1.0571 | 19.8185 | 0.9775 | 1.3187 | 1.9909 |
+| 32 | rk45 | 1.4103 | 19.2276 | 1.6066 | 2.2113 | 4.0094 |
+| 64 | euler | 1.1685 | 22.8019 | 1.0298 | 1.6669 | 1.3750 |
+| 64 | rk4 | 3.5367 | 26.1005 | 3.2755 | 5.7417 | 4.6868 |
+| 64 | rk45 | 5.6854 | 28.0086 | 6.4194 | 13.6353 | 9.9964 |
 
-* Rust wins everywhere — pre-allocated scratch + rayon + FSAL.
-* Julia is a consistent second after JIT warm-up (1.1–2.7× Rust).
-* Go is single-goroutine; competitive at small ``N``, falls behind
-  Julia from ``N = 32`` onwards.
-* Mojo subprocess overhead floors at ~45 ms; retained for parity, not
-  throughput.
-* Python scales on par with Julia / Go at small ``N`` thanks to
-  NumPy vector ops.
+These non-isolated diagnostics do not establish a backend ranking, a causal
+speedup or a deployment deadline. They supersede the April table and the
+Windows-host/extrapolated speedup headlines. Historical result files remain
+historical evidence, not current capacity estimates.
 
-### 7.1 Rust Backend (legacy bench/baseline.json, Windows host)
+Public `ACTIVE_BACKEND="python"` now selects the actual NumPy runner;
+runtime-profiled fixed/scheduled regressions verify each available CPU backend
+is exercised, with no silent reference fallback for selected accelerators.
+The host-managed WebGPU Euler bridge has no schedule loader and is not covered
+by this five-language comparison. Earlier forced-Python parity results must be
+rerun: the old selector could have executed an accelerator instead of NumPy.
 
-Pre-migration Rust numbers, kept for historical comparison. Measured
-on Windows 11, Python 3.12.5, NumPy 2.2.6, spo-kernel (Rust)
-backend.
+### 7.1 Stateful boundary
 
-### 7.1 Rust Backend (spo-kernel)
+The dense native class now snapshots readonly inputs before borrowing mutable
+coupling. Its stateful wrapper cost is measured separately from the stateless
+comparison above; current real NumPy-only and native RK4 P50 diagnostics are
+in [Rust FFI acceleration](../../guide/rust_ffi.md#benchmark-comparison).
+The NumPy environments differ, so no causal speedup is claimed. Batch runs
+amortise entry-time snapshot allocation across their inner timesteps.
 
-| N | Method | µs/step | steps/s | R_final |
-|---|--------|---------|---------|---------|
-| 8 | euler | 7.5 | 133,333 | 1.000 |
-| 8 | rk4 | 5.6 | 178,571 | 1.000 |
-| 8 | rk45 | 13.9 | 71,942 | 0.981 |
-| 16 | euler | 11.6 | 86,207 | 1.000 |
-| 16 | rk4 | 24.4 | 40,984 | 1.000 |
-| 16 | rk45 | 37.9 | 26,385 | 0.827 |
-| 64 | euler | 57.0 | 17,544 | 0.908 |
-| 64 | rk4 | 257.3 | 3,887 | 0.913 |
-| 256 | euler | 1,058.9 | 944 | 0.264 |
-| 256 | rk4 | 3,142.3 | 318 | 0.267 |
-| 1024 | euler | 18,494.4 | 54 | 0.186 |
-
-### 7.2 Python Fallback (scaling_results.json)
-
-| N | steps/s | ms/step | Memory (MB) |
-|---|---------|---------|-------------|
-| 16 | 29,156 | 0.034 | 0.0 |
-| 64 | 10,799 | 0.093 | 0.07 |
-| 256 | 143 | 7.003 | 1.05 |
-| 1000 | 21 | 46.746 | 16.01 |
-
-### 7.3 Speedup (Rust vs Python)
-
-At N=256: Rust Euler 1.06ms vs Python 7.0ms → **~6.6x speedup**.
-At N=1024: Rust Euler 18.5ms vs Python ~200ms (extrapolated) → **~12x**.
-
-The Rust backend uses sin/cos precomputation and Rayon parallelisation
-for N ≥ 256, achieving near-linear scaling with core count.
-
-### 7.4 Complexity
+### 7.2 Complexity
 
 | Operation | Time complexity | Space complexity |
 |-----------|----------------|------------------|
@@ -570,8 +555,9 @@ elapsed = time.perf_counter() - t0
 print(f"{elapsed/100*1e6:.1f} µs/step")
 ```
 
-To compare Rust vs Python, set `_HAS_RUST = False` in `_compat.py`
-temporarily (or uninstall `spo-kernel`).
+Compare actual separate environments, one with the installed extension and one
+without it. Do not modify private import flags or uninstall a shared environment's
+kernel merely to obtain a reference timing.
 
 ---
 
@@ -611,22 +597,26 @@ temporarily (or uninstall `spo-kernel`).
 
 ## Test Coverage
 
-- `tests/test_upde_engine.py` — 12 tests: method dispatch, euler/rk4/rk45
-  correctness, shape validation, NaN rejection, run() multi-step
-- `tests/test_rust_python_parity_performance.py` — 9 tests: Rust vs Python
-  numerical parity within 1e-10, performance speedup verification
-- `tests/test_nan_inf_edges.py` — 32 tests: degenerate inputs, zero coupling,
-  single oscillator, large N boundary conditions
+- `tests/test_upde_engine.py`: integration methods, synchronisation, phase
+  wrapping and validation.
+- `tests/test_upde_engine_matrix_aliases.py`: actual public shared and overlapping
+  matrices, analytical zero-coupling trajectory and input/state preservation.
+- `native-tests/test_upde_stepper_aliases.py`: installed dense FFI snapshots,
+  mutable plasticity writeback, contiguous/writable buffer refusals and the
+  distinct readonly moving-frame contract.
+- `tests/test_upde_time_varying_omega.py`, `tests/test_upde_doppler.py` and
+  `tests/test_upde_moving_frame.py`: scheduled and kinematic integration.
 
-Total: **53 tests** covering the core engine.
+These are owning regression surfaces, not a claim of whole-project coverage.
 
 ---
 
 ## Source
 
-- Python: `src/scpn_phase_orchestrator/upde/engine.py` (278 lines)
-- Rust: `spo-kernel/crates/spo-engine/src/upde.rs` (~400 lines)
-- FFI: `spo-kernel/crates/spo-ffi/src/lib.rs` (PyUPDEStepper binding)
+- Python: `src/scpn_phase_orchestrator/upde/engine.py`
+- Rust: `spo-kernel/crates/spo-engine/src/upde.rs`
+- FFI: `spo-kernel/crates/spo-ffi/src/upde_stepper.rs` (dense buffer ownership),
+  registered by `spo-kernel/crates/spo-ffi/src/lib.rs`
 
 ## Time-varying omega support
 

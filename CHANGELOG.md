@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Dense native integration snapshots shared NumPy inputs before borrowing
+  writable coupling, preserving plasticity writeback and replacing coupling
+  borrow/writeability panics with `ValueError` refusals.
+- Explicit Python selection in fixed-frequency and scheduled UPDE dispatch
+  reaches the NumPy runner rather than an available accelerator, so
+  comparative benchmark labels describe the executed backend.
+- Public dense Rust callers document and test their inherited writable-coupling
+  requirement. Earlier forced-Python parity comparisons require a rerun because
+  the previous selector could execute an accelerator instead of NumPy.
 - Binding validation rejects required nonderived channels backed only by empty
   driver mappings, matching the channel algebra runtime-evidence report.
 

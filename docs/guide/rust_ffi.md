@@ -79,8 +79,9 @@ engine = UPDEEngine(n_oscillators=64, dt=0.01, method="rk4")
 # engine._rust is None otherwise (pure numpy fallback)
 ```
 
-The `_compat.HAS_RUST` flag controls delegation globally. Set it to `False`
-in benchmarks to force the Python path.
+Use separate actual kernel-present and kernel-absent environments for
+stateful comparisons. Changing `_compat.HAS_RUST` after import does not update
+the engine module's imported flag and is not evidence of Python execution.
 
 Sleep staging is an explicit exception: `classify_sleep_stage` and
 `ultradian_phase` use Python by default even when the kernel is installed.
@@ -94,7 +95,7 @@ for validation, parity tests and measured wrapper overhead.
 
 | Python Class / Function | Rust FFI Class | Hot path |
 |------------------------|----------------|----------|
-| `UPDEEngine` | `PyUPDEStepper` | `step()`, `run()` |
+| `UPDEEngine` | `PyUPDEStepper` | dense `step()`, `run()`, frequency/Doppler schedules and moving-frame schedule |
 | `StuartLandauEngine` | `PyStuartLandauStepper` | `step()`, `run()` |
 | `CouplingBuilder` | `PyCouplingBuilder` | `build()`, `project()` |
 | `ImprintModel` | `PyImprintModel` | `update()`, `modulate_coupling()`, `modulate_lag()` |
@@ -133,21 +134,47 @@ for validation, parity tests and measured wrapper overhead.
 
 ## Benchmark Comparison
 
-`bench/run_benchmarks.py` measures `UPDEEngine.step()` with RK4, averaged
-over 1000 steps after 50 warmup iterations. The table is a historical local
-snapshot. Re-run the benchmark and record host/build metadata before using a
-number for capacity planning.
+Local diagnostics on 2026-09-30 measured real `UPDEEngine.step()` after the
+dense buffer-snapshot correction: RK4, 50 warmups, 200 individually timed
+calls, Linux x86-64, CPython 3.12.3 and Rust 1.98.1 release build.
 
-| N | Python (numpy) | Rust (spo_kernel) | Speedup |
-|---|---------------|-------------------|---------|
-| 16 | ~25 us/step | 7.3 us/step | 3.4x |
-| 64 | ~180 us/step | 28 us/step | 6.4x |
-| 256 | ~2.8 ms/step | 0.32 ms/step | 8.7x |
-| 1024 | ~45 ms/step | 8.6 ms/step | 5.2x |
+| N | NumPy-only P50 (us/step) | Installed Rust P50 (us/step) |
+|---|--------------------------|----------------------------|
+| 8 | 75.258 | 44.343 |
+| 32 | 110.551 | 67.970 |
+| 64 | 186.091 | 144.306 |
 
-The speedup saturates at large N because both paths are O(N^2) in coupling
-computation; the Rust advantage comes from avoiding Python interpreter overhead
-and numpy dispatch per operation.
+The environments used NumPy 2.2.6 and 2.5.3 respectively, on a shared,
+non-isolated workstation. These are observed wrapper timings, not a causal
+backend speedup, a latency guarantee, or capacity-planning evidence. Raw
+samples and environment provenance remain in the internal task record.
+The previous undocumented build/host speedup table is superseded.
+
+`benchmarks/engine_comparison.py` exercises the stateful variants.
+`benchmarks/upde_engine_benchmark.py` compares the separate stateless runner
+across Rust, Mojo, Julia, Go and Python; frequency/Doppler and moving-frame
+comparators cover their own scheduled contracts. Do not use a stateless-only
+comparison to infer the cost of the stateful NumPy borrow boundary.
+
+## Dense stepper buffer ownership
+
+The four mutable dense calls (`step`, `run`, `run_omega_schedule`,
+`run_doppler_schedule`) copy readonly input values and release their NumPy
+borrow guards before requesting writable coupling. Identical or overlapping
+input views therefore retain entry-time values rather than conflicting with
+that request. Native plasticity still updates the original coupling after
+each step; lag and frequency/velocity snapshots do not change mid-run.
+
+Coupling must remain writable and contiguous at this native boundary.
+Outstanding external borrows, readonly coupling and non-contiguous required
+buffers raise `ValueError`. A failed mutable borrow does not advance the
+stepper. The moving-frame method has a distinct readonly coupling contract.
+The public stateful engine and stateless Rust callers pass coupling through
+this boundary: readonly coupling is refused there even when plasticity is off,
+whereas the other CPU paths accept it. Supply a writable copy for portable
+admission across backends.
+See [the core engine reference](../reference/api/upde.md#shared-numpy-storage)
+for public-engine behaviour and the sparse-binding scope boundary.
 
 ### LIF Ensemble (NeurocoreBridge)
 
