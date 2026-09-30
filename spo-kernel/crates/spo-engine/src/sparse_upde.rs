@@ -82,8 +82,9 @@ impl SparseUPDEStepper {
     /// Advance one sparse UPDE timestep in place.
     ///
     /// # Errors
-    /// Currently returns `Ok(())` after construction-time validation; the result
-    /// type is retained for API parity with the dense stepper.
+    /// Returns `InvalidDimension` for inconsistent phase/CSR shapes, invalid
+    /// row pointers or out-of-range column indices. Returns `IntegrationDiverged`
+    /// for non-finite phase, frequency, coupling, lag or drive inputs.
     pub fn step(
         &mut self,
         phases: &mut [f64],
@@ -247,12 +248,16 @@ impl SparseUPDEStepper {
     pub fn n(&self) -> usize {
         self.n
     }
-    /// Return the most recent timestep used by the integrator.
+    /// Return the RK45 next-step proposal or configured fixed timestep.
     pub fn last_dt(&self) -> f64 {
         self.last_dt
     }
 
-    /// Return the current Kuramoto order parameter `(R, psi)` from cached phases.
+    /// Return the Kuramoto order parameter `(R, psi)` from cached stage phases.
+    ///
+    /// Euler caches the input of its final substep, RK4 its final k4 stage,
+    /// and RK45 its final y5 stage before wrapping. Compute from the returned
+    /// phase vector when the diagnostic must describe that wrapped output.
     pub fn order_parameter(&self) -> (f64, f64) {
         crate::order_params::compute_order_parameter_from_sincos(&self.sin_theta, &self.cos_theta)
     }

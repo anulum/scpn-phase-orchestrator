@@ -47,10 +47,16 @@ Dispatched through `upde/_run.py` with the fastest-first chain
 modules (`_engine_go.py`, `_engine_mojo.py`, …) point to
 `experimental/accelerators/upde/`. Rust paths exist for the standard, sparse,
 sheaf, geometric, inertial, and Ott–Antonsen engines.
-The sparse Rust boundary accepts only a finite real phase vector with exact
-oscillator cardinality and every phase inside `[0, 2*pi)`. Its positive finite
-adaptive timestep is replayed into the public `last_dt` diagnostic only after
-the phase result passes validation.
+The sparse engine has its own Python/optional-Rust selection, independent of
+the stateless dense chain. Finite real input phases may lie outside the torus;
+returned native phases must have exact oscillator cardinality and lie inside
+`[0, 2*pi)`. A positive finite native timestep diagnostic is copied into public
+`last_dt` only after output validation. RK45 reports a next-step proposal.
+Readonly phase/frequency/CSR/lag inputs are snapshotted before mutable native
+coupling admission; aliased inputs keep entry-time values during a run. The
+native binding requires writable contiguous coupling, whereas the NumPy-only
+fallback does not mutate it. Public strided inputs are copied to contiguous
+buffers. See [the CSR contract](../../reference/api/upde.md#csr-buffer-ownership-and-timestep-diagnostics).
 The sheaf boundary validates phase, frequency, restriction-map, and drive-target
 source types before conversion. Its Rust result is accepted only as a finite
 real flattened `N * D` torus state, and the positive finite Rust adaptive

@@ -208,7 +208,78 @@ this boundary: readonly coupling is refused there even when plasticity is off,
 whereas the other CPU paths accept it. Supply a writable copy for portable
 admission across backends.
 See [the core engine reference](../reference/api/upde.md#shared-numpy-storage)
-for public-engine behaviour and the sparse-binding scope boundary.
+for public-engine behaviour.
+
+## Sparse stepper buffer ownership
+
+`PySparseUPDEStepper.step()` and `run()` snapshot readonly phase, frequency,
+CSR row/column and lag inputs before acquiring writable coupling. This permits
+shared storage while preserving entry-time readonly values across a run.
+`set_plasticity()` still changes the original coupling; `disable_plasticity()`
+keeps it fixed. The public `SparseUPDEEngine` constructs the native solver with
+plasticity disabled and has no public plasticity setter.
+
+The native `order_parameter()` reads cached derivative-stage phases:
+Euler retains the input of its final substep, RK4 its final k4 stage, and RK45
+its final y5 stage before wrapping. Compute the order parameter from the
+returned phase vector when it must describe that wrapped output.
+Integer phase, frequency, coupling and lag inputs are converted to float64
+before integration in both environments; unsigned and narrow integer
+subtraction therefore follows the real-valued phase equation.
+
+Direct native calls require contiguous buffers and writable coupling.
+Readonly coupling raises `ValueError` without advancing the solver; supplying a
+writable copy lets the same instance recover. The public wrapper admits strided
+inputs by copying them, but native readonly-coupling refusals propagate.
+The public refusal applies to contiguous float64 coupling passed through without
+copying; dtype conversion and strided copies can create writable native buffers
+while leaving the original input unchanged. The actual NumPy-only fallback
+accepts readonly coupling without mutation.
+Public zero-step runs validate and return a copy without advancing the solver.
+`last_dt` reports the configured fixed timestep or the RK45 next-step proposal,
+not the elapsed time of an accepted adaptive step.
+The public wrapper validates real results in both environments: overflowed
+phases, a rounded upper torus endpoint and a zero adaptive proposal refuse with
+`ValueError`, retaining the timestep from before the whole call, including a
+failed multi-step run. Reconstruct the
+solver after numerical-output refusal; a buffer-borrow refusal leaves the
+solver usable with writable contiguous inputs.
+
+The maintained sparse chain is Python → PyO3 → Rust. The stateless dense
+Go/Julia/Mojo accelerators are separate surfaces and do not implement CSR sparse
+integration. See [the sparse API reference](../reference/api/upde.md#sparse-engine).
+
+### Sparse diagnostic workloads (2026-09-30)
+
+Run the real public Euler path against an independent SciPy CSR sine-difference
+reference:
+
+```bash
+.venv/bin/python -m benchmarks.sparse_benchmark
+PYTHONPATH=src /usr/bin/python3 -m benchmarks.sparse_benchmark
+```
+
+The second command requires an environment where `spo_kernel` is absent;
+verify availability rather than selecting a synthetic backend. Both defaults
+use seed 42, `dt=0.01` seconds, 100 steps and three freshly initialised repeats.
+Duplicate random edges merge in CSR, so stored edge counts differ from requested
+entry counts. JSON includes raw seconds, input SHA-256, runtime versions, order
+parameter and the largest final circular phase error against the reference.
+
+| Nodes | Stored edges | Installed Rust: median µs/step | Kernel absent: median µs/step | Largest reference error (rad) |
+| --- | --- | --- | --- | --- |
+| 1,000 | 9,963 | 286.5 | 36,525.5 | 1.0e-15 |
+| 10,000 | 99,936 | 4,119.6 | 361,771.6 | 2.7e-15 |
+
+Input SHA-256 agrees across both environments for each workload. Both use
+Python 3.12.3; the installed-kernel environment uses NumPy 2.5.3/SciPy 1.18.1,
+and the absent-kernel environment NumPy 2.2.6/SciPy 1.15.3. Measurements run on a
+shared, non-isolated workstation with no reserved cores. Native per-step
+observations vary across repeats (241–417 µs at 1,000 nodes);
+the displayed median is not a stable latency estimate. They are local equation
+and timing diagnostics, not causal speedup, production latency or capacity
+claims. Raw repetitions, host load before/after, affinity, governor and source
+fingerprint remain in the internal task evidence.
 
 ### LIF Ensemble (NeurocoreBridge)
 

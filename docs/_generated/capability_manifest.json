@@ -11,8 +11,8 @@
     "python_package_modules": 760,
     "research_experimental_modules": 205,
     "runtime_serving_modules": 158,
-    "rust_kernel_files": 118,
-    "test_files": 1069
+    "rust_kernel_files": 119,
+    "test_files": 1070
   },
   "documentation": {
     "public_pages": [
@@ -2808,6 +2808,7 @@
       "tests/test_sleepedf_kuramoto_variants_evidence.py",
       "tests/test_sleepedf_staging_evidence.py",
       "tests/test_snn_bridge.py",
+      "tests/test_sparse_benchmark.py",
       "tests/test_sparse_coupling.py",
       "tests/test_sparse_engine.py",
       "tests/test_sparse_engine_config_validation.py",
@@ -3102,6 +3103,7 @@
     "spo-kernel/crates/spo-ffi/src/phase_quality.rs",
     "spo-kernel/crates/spo-ffi/src/return_types.rs",
     "spo-kernel/crates/spo-ffi/src/simplicial_boundary.rs",
+    "spo-kernel/crates/spo-ffi/src/sparse.rs",
     "spo-kernel/crates/spo-ffi/src/splitting_boundary.rs",
     "spo-kernel/crates/spo-ffi/src/stability_boundary.rs",
     "spo-kernel/crates/spo-ffi/src/swarmalator_boundary.rs",

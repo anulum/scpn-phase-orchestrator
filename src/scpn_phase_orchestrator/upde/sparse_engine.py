@@ -30,7 +30,7 @@ from scpn_phase_orchestrator._compat import TWO_PI
 __all__ = ["SparseUPDEEngine"]
 
 FloatArray: TypeAlias = NDArray[np.float64]
-IntArray: TypeAlias = NDArray[np.int64]
+IntArray: TypeAlias = NDArray[np.int64 | np.uint64]
 
 
 def _validate_finite_real(value: object, *, name: str) -> float:
@@ -98,17 +98,16 @@ class SparseUPDEEngine:
     The SparseUPDEEngine solves the Universal Phase Dynamics Equation (UPDE)
     using a CSR (Compressed Sparse Row) representation for the coupling matrix
     K_nm and phase lags alpha_nm. This is critical for scaling to large-scale
-    oscillator networks (e.g., N > 10,000) where the dense K_nm matrix
-    would consume terabytes of RAM.
+    oscillator networks with few edges per node. Dense float64 coupling alone
+    occupies ``8 * N**2`` bytes; CSR storage scales with nodes and stored edges.
 
     Mathematics:
     dtheta_i/dt = omega_i
                   + sum_{j in neighbors(i)} K_ij sin(theta_j - theta_i - alpha_ij)
                   + zeta sin(Psi - theta_i)
 
-    The integrator supports sub-microsecond in-place plasticity updates
-    when running on the Rust FFI path, allowing the coupling topology to
-    evolve concurrently with the phase dynamics.
+    The direct Rust stepper supports in-place coupling plasticity. Public Python
+    construction leaves plasticity disabled; no latency guarantee is implied.
     """
 
     _DP_A = np.array(
@@ -139,7 +138,7 @@ class SparseUPDEEngine:
         method: str = "euler",
         atol: float = 1e-6,
         rtol: float = 1e-3,
-    ):
+    ) -> None:
         """Initialize the sparse integrator.
 
         Parameters
@@ -186,12 +185,13 @@ class SparseUPDEEngine:
 
     @property
     def last_dt(self) -> float:
-        """Return the most recent accepted Python or Rust timestep.
+        """Return the Python or Rust next-step timestep diagnostic.
 
         Returns
         -------
         float
-            Positive finite timestep accepted by the sparse engine.
+            Positive finite next-step proposal for adaptive RK45, or the configured
+            timestep for fixed-step methods. It is not elapsed integration time.
         """
         return self._last_dt
 
@@ -230,7 +230,15 @@ class SparseUPDEEngine:
         Returns
         -------
         FloatArray
-            New phase vector [theta_1(t+dt), ..., theta_N(t+dt)], shape (N,).
+            New finite phase vector of shape (N,), inside [0, 2*pi).
+
+        Raises
+        ------
+        ValueError
+            Inputs violate the finite CSR contract, native buffers cannot be
+            borrowed, the result leaves the finite torus, or the adaptive
+            next-step proposal is not positive and finite. The previously
+            published timestep is retained on a numerical-output refusal.
         """
         zeta = _validate_finite_real(zeta, name="zeta")
         psi = _validate_finite_real(psi, name="psi")
@@ -256,45 +264,58 @@ class SparseUPDEEngine:
                     psi,
                     np.ascontiguousarray(alpha_values.ravel(), dtype=np.float64),
                 )
-                output = self._validate_rust_output(result)
+                output = self._validate_output(result)
                 self._last_dt = _validate_positive_float(
                     self._rust.last_dt,
-                    name="Rust last_dt",
+                    name="Sparse last_dt",
                 )
                 return output
 
-            if self._method == "euler":
-                return self._euler_step(
-                    phases,
-                    omegas,
-                    row_ptr,
-                    col_indices,
-                    knm_values,
-                    zeta,
-                    psi,
-                    alpha_values,
-                )
-            if self._method == "rk45":
-                return self._rk45_step(
-                    phases,
-                    omegas,
-                    row_ptr,
-                    col_indices,
-                    knm_values,
-                    zeta,
-                    psi,
-                    alpha_values,
-                )
-            return self._rk4_step(
-                phases,
-                omegas,
-                row_ptr,
-                col_indices,
-                knm_values,
-                zeta,
-                psi,
-                alpha_values,
-            )
+            phases = np.asarray(phases, dtype=np.float64)
+            omegas = np.asarray(omegas, dtype=np.float64)
+            knm_values = np.asarray(knm_values, dtype=np.float64)
+            alpha_values = np.asarray(alpha_values, dtype=np.float64)
+            previous_dt = self._last_dt
+            try:
+                if self._method == "euler":
+                    result = self._euler_step(
+                        phases,
+                        omegas,
+                        row_ptr,
+                        col_indices,
+                        knm_values,
+                        zeta,
+                        psi,
+                        alpha_values,
+                    )
+                elif self._method == "rk45":
+                    result = self._rk45_step(
+                        phases,
+                        omegas,
+                        row_ptr,
+                        col_indices,
+                        knm_values,
+                        zeta,
+                        psi,
+                        alpha_values,
+                    )
+                else:
+                    result = self._rk4_step(
+                        phases,
+                        omegas,
+                        row_ptr,
+                        col_indices,
+                        knm_values,
+                        zeta,
+                        psi,
+                        alpha_values,
+                    )
+                output = self._validate_output(result)
+                _validate_positive_float(self._last_dt, name="Sparse last_dt")
+            except ValueError:
+                self._last_dt = previous_dt
+                raise
+            return output
 
     def run(
         self,
@@ -334,7 +355,13 @@ class SparseUPDEEngine:
         Returns
         -------
         FloatArray
-            Final phase vector after n_steps.
+            Final finite torus phase vector after n_steps, or an unchanged
+            independent copy for a zero-step run.
+
+        Raises
+        ------
+        ValueError
+            Input or output violates the same contract as :meth:`step`.
         """
         n_steps = _validate_nonnegative_int(n_steps, name="n_steps")
         zeta = _validate_finite_real(zeta, name="zeta")
@@ -364,27 +391,39 @@ class SparseUPDEEngine:
                     np.ascontiguousarray(alpha_values.ravel(), dtype=np.float64),
                     n_steps,
                 )
-                output = self._validate_rust_output(result)
+                output = self._validate_output(result)
                 self._last_dt = _validate_positive_float(
                     self._rust.last_dt,
-                    name="Rust last_dt",
+                    name="Sparse last_dt",
                 )
                 return output
 
+            previous_dt = self._last_dt
             p = phases.copy()
-            for _ in range(n_steps):
-                p = self.step(
-                    p, omegas, row_ptr, col_indices, knm_values, zeta, psi, alpha_values
-                )
+            try:
+                for _ in range(n_steps):
+                    p = self.step(
+                        p,
+                        omegas,
+                        row_ptr,
+                        col_indices,
+                        knm_values,
+                        zeta,
+                        psi,
+                        alpha_values,
+                    )
+            except ValueError:
+                self._last_dt = previous_dt
+                raise
             return p
 
-    def _validate_rust_output(self, result: object) -> FloatArray:
-        """Return the Rust backend output matching the reference shape, else raise."""
+    def _validate_output(self, result: object) -> FloatArray:
+        """Return a finite real torus output with the configured shape, else raise."""
         out = np.asarray(result)
         if out.shape != (self._n,):
             shape_expected = (self._n,)
             raise ValueError(
-                f"Rust output has malformed shape {out.shape},"
+                f"Sparse output has malformed shape {out.shape},"
                 f" expected {shape_expected}"
             )
         if out.dtype == np.bool_ or not (
@@ -392,12 +431,12 @@ class SparseUPDEEngine:
             or np.issubdtype(out.dtype, np.floating)
         ):
             raise ValueError(
-                f"Rust output must be a real numeric array, got {out.dtype}"
+                f"Sparse output must be a real numeric array, got {out.dtype}"
             )
         if not np.all(np.isfinite(out)):
-            raise ValueError("Rust output contains NaN/Inf")
+            raise ValueError("Sparse output contains NaN/Inf")
         if np.any((out < 0.0) | (out >= TWO_PI)):
-            raise ValueError("Rust output contains phases outside [0, 2*pi)")
+            raise ValueError("Sparse output contains phases outside [0, 2*pi)")
         return np.asarray(out, dtype=np.float64)
 
     def _validate_inputs(

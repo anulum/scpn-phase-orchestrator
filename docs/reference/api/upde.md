@@ -44,7 +44,7 @@ output (order parameters, monitors, supervisor).
 |--------|-------|-----|----------|
 | UPDEEngine | θ ∈ [0,2π)^N | Kuramoto | General synchronisation |
 | BayesianUPDE | θ plus sampled K,ω | Monte Carlo UPDE | Safety-tier uncertainty quantification |
-| SparseUPDEEngine | θ ∈ [0,2π)^N | Sparse Kuramoto | High-N scalability ($O(N \log N)$) |
+| SparseUPDEEngine | θ ∈ [0,2π)^N | Sparse Kuramoto | Sparse storage and derivative work ($O(N + E)$) |
 | SheafUPDEEngine | $\vec{\theta} \in \mathbb{R}^{N \times D}$ | Cellular Sheaf | Multi-dimensional block coupling |
 | StuartLandauEngine | [θ,r] ∈ R^{2N} | Stuart-Landau | Amplitude dynamics |
 | SimplicialEngine | θ ∈ [0,2π)^N | 3-body Kuramoto | Triadic/group synchronization |
@@ -106,8 +106,7 @@ fixed/frequency-scheduled runs inherit it when Rust is
 selected. Readonly coupling then raises `ValueError`; the NumPy, Go, Julia and
 Mojo paths accept it without mutation. Pass a writable `coupling.copy()` for
 backend-independent admission. Native borrow refusals do not silently fall back
-to another backend. These dense contracts do not certify the distinct sparse CSR
-binding.
+to another backend. The distinct CSR contract is described under [Sparse Engine](#sparse-engine).
 
 The public `doppler_run()` and `DopplerEngine` step/run paths inherit the same
 requirement when they execute Rust. Automatic Doppler selection tries Rust
@@ -649,8 +648,10 @@ instead of direct optional accelerators.
 `O(N^2)` dense coupling storage to `O(N + E)`, where `E` is the number
 of active directed edge connections.
 
-It is designed for large-scale simulations (national power grids, social networks)
-where most oscillators are only coupled to local neighbours.
+Choose CSR when the graph has few stored edges relative to `N^2`. Each derivative
+evaluation takes `O(N + E)` work; integration stages, validation and buffer
+copies add work with the same scaling. Node count alone does not establish a
+crossover or a real-time capacity limit.
 
 ### Features
 - **Scalability:** Uses CSR row pointers, column indices, coupling values,
@@ -664,6 +665,47 @@ where most oscillators are only coupled to local neighbours.
   indices, non-finite phase/frequency/coupling arrays, unsupported methods,
   and malformed optional-backend outputs before downstream workflows consume
   the result.
+
+### CSR buffer ownership and timestep diagnostics
+
+The public Python engine validates the CSR topology and copies strided inputs
+into contiguous arrays before native calls. The installed Rust binding snapshots
+phases, frequencies, row pointers, column indices and lags before requesting a
+mutable borrow of coupling values. Inputs may share storage with coupling;
+frequency and lag snapshots retain their entry-time values throughout a native
+`run()` even when direct native plasticity updates the original coupling.
+
+Native coupling must be writable and contiguous. Readonly coupling raises
+`ValueError`; the NumPy-only engine accepts it without mutation. Use a writable
+`knm_values.copy()` for admission in either environment. Native refusals propagate
+rather than triggering a fallback. This public refusal applies when contiguous
+float64 coupling passes through without a copy; dtype conversion or a strided
+copy can instead create a writable native buffer and leave the original array
+untouched. Direct native calls also refuse strided required buffers. Public `run(..., n_steps=0)` validates the input and returns a
+copy without advancing either solver.
+
+The native `order_parameter()` reads cached derivative-stage phases:
+Euler retains the input of its final substep, RK4 its final k4 stage, and RK45
+its final y5 stage before wrapping. Compute the order parameter from the
+returned phase vector when it must describe that wrapped output.
+Integer phase, frequency, coupling and lag inputs are converted to float64
+before integration in both environments; unsigned and narrow integer
+subtraction therefore follows the real-valued phase equation.
+
+Public Python construction leaves coupling plasticity disabled. The direct
+`spo_kernel.PySparseUPDEStepper` exposes `set_plasticity()` and
+`disable_plasticity()`; this is a distinct capability, not a public Python setter.
+`last_dt` is the configured timestep for Euler/RK4 and a next-step proposal for
+RK45. It is not the elapsed time of the accepted adaptive step.
+Both actual environments reject non-finite output, the excluded torus upper
+endpoint caused by floating remainder rounding, and nonpositive/non-finite
+adaptive proposals. Finite input alone cannot prevent numerical overflow or
+underflow. On a numerical-output refusal the public timestep keeps its previous
+value from before the whole call, including a failed multi-step run; reconstruct the solver with suitable inputs/tolerances before resuming.
+The native buffer-refusal recovery described above does not require a reset.
+
+[The Rust FFI guide](../../guide/rust_ffi.md#sparse-stepper-buffer-ownership)
+records current sparse diagnostic workloads and the scope of their timings.
 
 ::: scpn_phase_orchestrator.upde.sparse_engine
 

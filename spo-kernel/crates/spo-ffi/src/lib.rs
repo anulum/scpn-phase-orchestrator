@@ -30,6 +30,7 @@ mod phase_lag;
 mod phase_quality;
 mod return_types;
 mod simplicial_boundary;
+mod sparse;
 mod splitting_boundary;
 mod stability_boundary;
 mod swarmalator_boundary;
@@ -51,6 +52,7 @@ use return_types::{
     ArrayPair, ArrayTriple, ArraysWithCount, EiBalanceMetrics, PhaseExtractionOutput, RqaMetrics,
 };
 use simplicial_boundary::{simplicial_run_rust, PySimplicialStepper};
+use sparse::PySparseUPDEStepper;
 use splitting_boundary::{splitting_run_rust, PySplittingStepper};
 use stability_boundary::{
     basin_stability_rust, find_critical_coupling_bif_rust, steady_state_r_rust,
@@ -73,13 +75,10 @@ use spo_engine::{
     imprint::ImprintModel,
     inertial, itpc,
     lif_ensemble::{LIFEnsemble, LIFParams},
-    lyapunov, market, order_params, pac, phase_extract,
-    plasticity::PlasticityModel,
-    poincare, prior, psychedelic, recurrence, reduction,
+    lyapunov, market, order_params, pac, phase_extract, poincare, prior, psychedelic, recurrence,
+    reduction,
     sheaf_upde::SheafUPDEStepper,
-    sindy, sleep_staging,
-    sparse_upde::SparseUPDEStepper,
-    spectral, ssgf_costs,
+    sindy, sleep_staging, spectral, ssgf_costs,
     stuart_landau::StuartLandauStepper,
     transfer_entropy, twin_confidence, winding,
 };
@@ -647,149 +646,6 @@ impl PyInertialStepper {
             .map_err(spo_err)?;
 
         Ok((PyArray1::from_vec(py, th), PyArray1::from_vec(py, od)))
-    }
-}
-
-// ─── PySparseUPDEStepper ──────────────────────────────────────────────────
-
-#[pyclass(name = "PySparseUPDEStepper")]
-struct PySparseUPDEStepper {
-    inner: SparseUPDEStepper,
-}
-
-#[pymethods]
-impl PySparseUPDEStepper {
-    #[new]
-    #[pyo3(signature = (n, dt = 0.01, method = "euler", n_substeps = 1, atol = 1e-6, rtol = 1e-3))]
-    fn new(
-        n: usize,
-        dt: f64,
-        method: &str,
-        n_substeps: u32,
-        atol: f64,
-        rtol: f64,
-    ) -> PyResult<Self> {
-        let m = match method {
-            "euler" => Method::Euler,
-            "rk4" => Method::RK4,
-            "rk45" => Method::RK45,
-            _ => return Err(PyValueError::new_err(format!("unknown method: {method}"))),
-        };
-        let config = IntegrationConfig {
-            dt,
-            method: m,
-            n_substeps,
-            atol,
-            rtol,
-        };
-        let inner = SparseUPDEStepper::new(n, config).map_err(spo_err)?;
-        Ok(Self { inner })
-    }
-
-    #[pyo3(signature = (lr, decay = 0.0, modulator = 1.0))]
-    fn set_plasticity(&mut self, lr: f64, decay: f64, modulator: f64) -> PyResult<()> {
-        self.inner.plasticity = Some(PlasticityModel::new(lr, decay).map_err(spo_err)?);
-        self.inner.modulator = modulator;
-        Ok(())
-    }
-
-    fn disable_plasticity(&mut self) {
-        self.inner.plasticity = None;
-    }
-
-    #[allow(clippy::too_many_arguments)]
-    fn step<'py>(
-        &mut self,
-        py: Python<'py>,
-        phases: PyReadonlyArray1<'py, f64>,
-        omegas: PyReadonlyArray1<'py, f64>,
-        row_ptr: PyReadonlyArray1<'py, usize>,
-        col_indices: PyReadonlyArray1<'py, usize>,
-        knm_values: Bound<'py, PyArray1<f64>>,
-        zeta: f64,
-        psi: f64,
-        alpha_values: PyReadonlyArray1<'py, f64>,
-    ) -> PyResult<Bound<'py, PyArray1<f64>>> {
-        let mut p_out = phases
-            .to_vec()
-            .map_err(|_| PyValueError::new_err("phases not contiguous"))?;
-        let p_w = omegas
-            .as_slice()
-            .map_err(|e| PyValueError::new_err(e.to_string()))?;
-        let rp = row_ptr
-            .as_slice()
-            .map_err(|e| PyValueError::new_err(e.to_string()))?;
-        let ci = col_indices
-            .as_slice()
-            .map_err(|e| PyValueError::new_err(e.to_string()))?;
-        let mut kv_bound = knm_values.readwrite();
-        let kv = kv_bound
-            .as_slice_mut()
-            .map_err(|e| PyValueError::new_err(e.to_string()))?;
-        let av = alpha_values
-            .as_slice()
-            .map_err(|e| PyValueError::new_err(e.to_string()))?;
-
-        self.inner
-            .step(&mut p_out, p_w, rp, ci, kv, zeta, psi, av)
-            .map_err(spo_err)?;
-
-        Ok(PyArray1::from_vec(py, p_out))
-    }
-
-    #[allow(clippy::too_many_arguments)]
-    fn run<'py>(
-        &mut self,
-        py: Python<'py>,
-        phases: PyReadonlyArray1<'py, f64>,
-        omegas: PyReadonlyArray1<'py, f64>,
-        row_ptr: PyReadonlyArray1<'py, usize>,
-        col_indices: PyReadonlyArray1<'py, usize>,
-        knm_values: Bound<'py, PyArray1<f64>>,
-        zeta: f64,
-        psi: f64,
-        alpha_values: PyReadonlyArray1<'py, f64>,
-        n_steps: u64,
-    ) -> PyResult<Bound<'py, PyArray1<f64>>> {
-        let mut p_out = phases
-            .to_vec()
-            .map_err(|_| PyValueError::new_err("phases not contiguous"))?;
-        let p_w = omegas
-            .as_slice()
-            .map_err(|e| PyValueError::new_err(e.to_string()))?;
-        let rp = row_ptr
-            .as_slice()
-            .map_err(|e| PyValueError::new_err(e.to_string()))?;
-        let ci = col_indices
-            .as_slice()
-            .map_err(|e| PyValueError::new_err(e.to_string()))?;
-        let mut kv_bound = knm_values.readwrite();
-        let kv = kv_bound
-            .as_slice_mut()
-            .map_err(|e| PyValueError::new_err(e.to_string()))?;
-        let av = alpha_values
-            .as_slice()
-            .map_err(|e| PyValueError::new_err(e.to_string()))?;
-
-        self.inner
-            .run(&mut p_out, p_w, rp, ci, kv, zeta, psi, av, n_steps)
-            .map_err(spo_err)?;
-
-        Ok(PyArray1::from_vec(py, p_out))
-    }
-
-    #[getter]
-    fn n(&self) -> usize {
-        self.inner.n()
-    }
-
-    #[getter]
-    fn last_dt(&self) -> f64 {
-        self.inner.last_dt()
-    }
-
-    fn order_parameter(&self) -> (f64, f64) {
-        self.inner.order_parameter()
     }
 }
 
