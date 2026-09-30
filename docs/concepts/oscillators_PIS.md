@@ -80,9 +80,9 @@ algorithm but avoids Python overhead for large arrays.
 the occurrence of a discrete event: a neural spike, a network packet
 arrival, a heartbeat R-peak, a job completion, a user click.
 
-**Method:** The core idea is that a regular point process has an
-inherent frequency (its rate), and the phase between events increases
-linearly from 0 to 2pi:
+**Method:** A regular point process has an inherent frequency (its rate).
+The extractor represents the observed event train by its median instantaneous
+frequency and cumulative phase:
 
 ```
 IEI_k = t_{k+1} - t_k           — inter-event interval
@@ -90,15 +90,17 @@ f_k = 1 / IEI_k                 — instantaneous frequency
 omega = 2 * pi * median(f_k)    — angular frequency (robust to outliers)
 ```
 
-For a given observation time `t` between events `t_k` and `t_{k+1}`:
+The extractor returns the cumulative median-frequency phase over the observed
+train, not an interpolation between the two most recent events:
 
 ```
-theta(t) = 2 * pi * (t - t_k) / (t_{k+1} - t_k)
+theta = (2 * pi * median(f_k) * (t_last - t_first)) mod (2 * pi)
 ```
 
-This is the "ring projection" — it maps the time between consecutive
-events to a linear phase on `[0, 2pi)`. At the event itself, phase
-resets to 0 (or equivalently, wraps from 2pi to 0).
+Phase lies in `[0, 2pi)` and is invariant under a shift of timestamp origin.
+Amplitude is the mean instantaneous frequency. For an even interval count,
+`median(1 / IEI)` need not equal `1 / median(IEI)`: timestamps
+`[0, 0.125, 0.375]` yield 6 Hz, phase pi/2, amplitude 6 and quality 0.75.
 
 **Quality metric:** Inverse coefficient of variation:
 
@@ -122,14 +124,18 @@ quality=0.5 — barely usable.
 
 **Implementation detail:** `InformationalExtractor` handles edge cases:
 - Fewer than 2 events: returns quality=0 (no phase estimate possible).
-- Events with zero interval: treated as simultaneous, IEI floored at
-  1e-12 to prevent division by zero.
-- Non-sorted input: sorted internally with a warning.
+- Duplicate timestamps: ignore zero intervals; an all-identical train returns
+  zero phase, frequency, amplitude and quality. No interval flooring is applied.
+- Non-sorted input: raise `ValueError` without modifying the timestamps.
+- Quality uses population standard deviation of the positive intervals.
 
 **Extractor:** `InformationalExtractor` in `oscillators.informational`.
 
-**Rust path:** `spo-oscillators::informational` provides `ring_phase()`
-and `event_phase()` via FFI.
+**Rust path:** `spo-oscillators::informational::event_phase()` is exposed via FFI.
+The extractor validates timestamps and removes duplicates before calling it.
+The raw kernel instead returns zero phase, frequency and quality for
+non-positive intervals, including duplicate or unsorted timestamps.
+`ring_phase()` belongs to the symbolic channel, not the informational module.
 
 ---
 
