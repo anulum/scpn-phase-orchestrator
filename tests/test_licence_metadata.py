@@ -6,7 +6,7 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Tests for the repository licence declarations
 
-"""The repository must state one licence, machine-readably, on every surface.
+"""Software and brand assets must carry their own machine-readable licences.
 
 Licence scanners, package indexes and dataset builders read the root
 ``LICENSE`` and the package metadata only. A root ``LICENSE`` that is not the
@@ -136,3 +136,80 @@ def test_tracked_files_use_valid_spdx_lines_and_the_canonical_start_year() -> No
 
     assert offenders == []
     assert all((ROOT / name).is_file() for name in _QUOTES_PIPED_SPDX)
+
+
+def test_reuse_blanket_years_match_the_source_header() -> None:
+    """Unannotated repository files retain both concepts and code attribution."""
+    annotations = tomllib.loads(_read("REUSE.toml"))["annotations"]
+    blanket = annotations[0]
+    owner = "Miroslav Šotek <protoscience@anulum.li>"
+    expected = [f"1996-2026 {owner} (concepts)", f"2020-2026 {owner} (code)"]
+
+    assert blanket["path"] == ["*", "**/*"]
+    assert blanket["SPDX-License-Identifier"] == LICENCE
+    assert blanket["SPDX-FileCopyrightText"] == expected
+    header = _read("src", "scpn_phase_orchestrator", "__init__.py").splitlines()[:7]
+    assert "# © Concepts 1996–2026 Miroslav Šotek. All rights reserved." in header
+    assert "# © Code 2020–2026 Miroslav Šotek. All rights reserved." in header
+    for annotation in annotations:
+        if (
+            annotation.get("precedence") == "override"
+            and "CHANGELOG.md" in annotation["path"]
+        ):
+            assert annotation["SPDX-FileCopyrightText"] == expected
+
+
+def test_reuse_code_annotations_preserve_the_code_start_year() -> None:
+    """Python and Rust source metadata must not shorten the canonical code years."""
+    annotations = tomllib.loads(_read("REUSE.toml"))["annotations"]
+    patterns = {
+        "src/**/*.py",
+        "tests/**/*.py",
+        "tools/**/*.py",
+        "bench/**/*.py",
+        "spo-kernel/**/*.rs",
+    }
+    matched: set[str] = set()
+    for annotation in annotations:
+        owned = patterns.intersection(annotation["path"])
+        if owned:
+            assert annotation["SPDX-FileCopyrightText"] == (
+                "2020-2026 Miroslav Šotek <protoscience@anulum.li> (code)"
+            )
+            assert annotation["SPDX-License-Identifier"] == LICENCE
+            matched.update(owned)
+    assert matched == patterns
+
+
+def test_brand_logos_override_the_software_licence_with_the_owner_terms() -> None:
+    """All tracked brand logos use the exact separate owner-approved licence."""
+    annotations = tomllib.loads(_read("REUSE.toml"))["annotations"]
+    brand = annotations[-1]
+    logos = {
+        "docs/assets/anulum_logo.png",
+        "docs/assets/anulum_logo_company.jpg",
+        "docs/assets/fortis_studio_logo.jpg",
+    }
+    git = shutil.which("git")
+    assert git is not None
+    tracked = subprocess.run(
+        [git, "-C", str(ROOT), "ls-files", "-z"],
+        check=True,
+        stdout=subprocess.PIPE,
+    ).stdout.decode("utf-8")
+    brand_name = re.compile(r"anulum[_-]logo|fortis_studio_logo", re.IGNORECASE)
+    assert {
+        name
+        for name in tracked.split("\0")
+        if name and brand_name.search(Path(name).name)
+    } == logos
+    assert set(brand["path"]) == logos
+    assert brand["precedence"] == "override"
+    assert brand["SPDX-FileCopyrightText"] == (
+        "Miroslav Šotek <protoscience@anulum.li>"
+    )
+    assert brand["SPDX-License-Identifier"] == "LicenseRef-ANULUM-Brand"
+    licence = _read("LICENSES", "LicenseRef-ANULUM-Brand.txt")
+    assert hashlib.sha256(licence.encode("utf-8")).hexdigest() == (
+        "2e3f40f155540b738031b3f434a19739aef07acb8796cb75fae9e46bf273b905"
+    )

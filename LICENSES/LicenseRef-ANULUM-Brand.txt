@@ -1,0 +1,13 @@
+ANULUM and Fortis Studio brand assets
+
+Copyright (c) Miroslav Šotek <protoscience@anulum.li>. All rights reserved.
+
+The ANULUM and Fortis Studio names and logos, including the image files that
+REUSE.toml assigns to this licence, identify their owner. They are not licensed
+under the GNU Affero General Public License or under any other licence that
+covers this repository, and no trademark rights are granted.
+
+You may reproduce the logo files unmodified, and only to refer to ANULUM,
+Fortis Studio or the project in which they appear. Any other use, including
+modification, use in another product or service, or use that suggests
+endorsement, requires prior written permission from protoscience@anulum.li.
