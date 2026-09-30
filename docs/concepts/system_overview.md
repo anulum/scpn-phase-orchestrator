@@ -143,7 +143,7 @@ traffic, industrial control, and more.
 | Engine | Equation | Use case |
 |--------|----------|----------|
 | `UPDEEngine` | Standard Kuramoto | General-purpose, dense coupling |
-| `SparseUPDEEngine` | Standard Kuramoto, CSR sparse | Large N (>100), sparse topology |
+| `SparseUPDEEngine` | Standard Kuramoto, CSR sparse | Sparse topology, `O(N + E)` storage and derivative work |
 | `SheafUPDEEngine` | Vector-valued phases | Multi-dimensional oscillators |
 | `StuartLandauEngine` | Phase + amplitude | Systems with amplitude dynamics |
 | `InertialKuramotoEngine` | Second-order (with inertia) | Power grids, mechanical systems |

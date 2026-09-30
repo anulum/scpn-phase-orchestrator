@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Sparse native integration snapshots phase, frequency and CSR inputs before
+  requesting writable coupling. Shared NumPy storage preserves entry-time
+  values and direct native plasticity writeback; readonly native coupling
+  raises `ValueError` instead of a borrow panic. Real public/native equations,
+  refusal recovery and kernel-absent tests replace simulated paths. Real
+  overflow, torus-rounding and adaptive-underflow regressions enforce the
+  same output/timestep guards in the Python fallback without publishing an
+  invalid diagnostic. Integer inputs retain fractional terms without unsigned
+  or narrow-integer phase subtraction wrapping; failed batches retain their
+  entry timestep diagnostic. Reproducible sparse diagnostics and CSR buffer/timestep
+  documentation are updated for both actual environments.
+
 - gRPC errors never carry exception text. Binary (`-bin`) request metadata
   broke the UTF-8 decode in the authorisation step, and grpcio answered any
   unauthenticated caller with `UNKNOWN` and the interpreter's decode error;

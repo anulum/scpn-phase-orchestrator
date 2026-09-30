@@ -353,11 +353,12 @@ before continuing.
 ## FAQ
 
 **Q: How many oscillators can SPO handle?**
-A: The pure Python path step takes ~0.1ms for N=64 (measured 2026-04-04),
-which fits within a 256 Hz sample budget (3.9ms). Rust FFI and JAX GPU
-scaling have not been measured on the current host. The
-SparseUPDEEngine is recommended for N>100 with sparse coupling
-topology to avoid O(N^2) dense matrix overhead.
+A: Capacity depends on graph density, integration method, timestep and host.
+`SparseUPDEEngine` stores CSR coupling in `O(N + E)` space and evaluates each
+sparse derivative in `O(N + E)` work. Choose it for sparse graphs rather than a
+fixed node-count threshold. The [sparse diagnostic workloads](../guide/rust_ffi.md#sparse-stepper-buffer-ownership)
+exercise 1,000 and 10,000 nodes in real Python and Rust environments; shared-host
+timings do not establish a sample-rate guarantee.
 
 **Q: Do I need to understand Kuramoto theory to use SPO?**
 A: No. If you just want to detect synchronisation regimes, you can use

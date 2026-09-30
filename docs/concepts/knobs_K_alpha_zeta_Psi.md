@@ -43,7 +43,8 @@ phase relationship.
 - **Symmetric by default**: `K_ij = K_ji` unless directed coupling is
   explicitly configured (e.g., feedforward neural pathways).
 - **Sparse**: for large N, only a subset of pairs have non-zero coupling.
-  The `SparseUPDEEngine` uses CSR format for efficient computation.
+  The `SparseUPDEEngine` uses CSR format with `O(N + E)` storage and derivative
+  work. See its [buffer and timestep contract](../reference/api/upde.md#sparse-engine).
 
 ### Construction
 

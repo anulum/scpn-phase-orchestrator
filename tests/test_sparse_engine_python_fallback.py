@@ -6,10 +6,7 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Sparse engine Python fallback contracts
 
-"""
-Numerical parity and validation contracts for SparseUPDEEngine Python fallback
-execution.
-"""
+"""Numerical contracts with installed Rust and a genuinely absent kernel."""
 
 from __future__ import annotations
 
@@ -18,13 +15,16 @@ import pytest
 
 from scpn_phase_orchestrator.upde import sparse_engine
 
+# Coverage exception: the constructor's partial-wheel ImportError recovery is
+# not reached by the current compatible installed kernel or genuine absence.
+# An actual released incompatible wheel is not available in these environments;
+# installed/absent numerical contracts below cover the nearest real dispatch.
+# Do not insert a synthetic module or change availability to cover this branch.
 TWO_PI = 2.0 * np.pi
 
 
-def test_sparse_engine_python_fallback_matches_dense_euler_and_rk4(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setattr(sparse_engine, "_HAS_RUST", False)
+def test_sparse_engine_python_fallback_matches_dense_euler_and_rk4() -> None:
+    """Real installed/absent Euler agrees with the independently computed derivative."""
     row_ptr = np.array([0, 2, 4, 6], dtype=np.int64)
     col_indices = np.array([1, 2, 0, 2, 0, 1], dtype=np.int64)
     knm_values = np.array([0.3, 0.1, 0.2, 0.4, 0.5, 0.1], dtype=np.float64)
@@ -71,10 +71,8 @@ def test_sparse_engine_python_fallback_matches_dense_euler_and_rk4(
     assert np.all((rk4 >= 0.0) & (rk4 < TWO_PI))
 
 
-def test_sparse_engine_rejects_invalid_python_configuration(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setattr(sparse_engine, "_HAS_RUST", False)
+def test_sparse_engine_rejects_invalid_python_configuration() -> None:
+    """Configuration and zero-step admission refuse malformed public inputs."""
     for kwargs in (
         {"n_oscillators": True, "dt": 0.01},
         {"n_oscillators": 0, "dt": 0.01},

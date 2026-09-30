@@ -44,7 +44,7 @@ These have a dedicated, documented entry point:
 | Engine | When to use | Where |
 | --- | --- | --- |
 | `StuartLandauEngine` | Phase **and** amplitude matter (limit-cycle oscillators). | [Stuart-Landau Amplitude Mode](stuart_landau.md) |
-| `SparseUPDEEngine` | Large networks with a sparse coupling matrix. | [API reference](../reference/api/upde.md) |
+| `SparseUPDEEngine` | Sparse graphs requiring `O(N + E)` storage and derivative work. | [CSR contract](../reference/api/upde.md#sparse-engine) |
 | `JaxUPDEEngine` | Differentiable / GPU-accelerated integration (needs the `nn` extra). | [Differentiable Kuramoto Layer](differentiable_kuramoto.md) |
 
 ## Specialised dynamics engines (advanced)
