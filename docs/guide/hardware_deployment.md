@@ -54,6 +54,12 @@ Install: build from the in-repo `spo-kernel/` workspace with maturin —
 PYTHON=.venv/bin/python`). The Rust accel is not on public PyPI; when `spo_kernel`
 is absent the pure-Python path runs automatically.
 
+The dense stepper supports shared coupling/lag storage by snapshotting readonly
+inputs before requesting writable coupling. Native plasticity still writes to
+the original coupling; failed borrow or writeability checks raise `ValueError`.
+See [dense buffer ownership](rust_ffi.md#dense-stepper-buffer-ownership). This
+contract correction does not establish a real-time deployment deadline.
+
 ## FPGA Kernel (Sub-15μs Real-Time)
 
 Hardware-accelerated Kuramoto solver for Xilinx Zynq-7020:

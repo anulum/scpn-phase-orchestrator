@@ -74,6 +74,25 @@ Each backend receives the same row-major schedule. Validation rejects boolean,
 complex, non-finite, empty, wrong-rank, and wrong-width schedules before any
 integration result is accepted.
 
+The dense Rust schedule binding snapshots frequencies, phases and lag at entry,
+then releases their NumPy borrow guards before acquiring writable coupling.
+Shared or partially overlapping input views therefore retain those initial
+values throughout a batched call. Enabled native plasticity still writes each
+coupling update back to the caller. See
+[shared NumPy storage](upde.md#shared-numpy-storage) for native borrow refusals
+and the separate moving-frame/CSR scope.
+
+An explicit public `engine.ACTIVE_BACKEND = "python"` override reaches the
+NumPy schedule runner even when accelerators are available. Default
+fastest-first selection remains unchanged.
+
+Callable-frequency `UPDEEngine.run()` uses this schedule dispatcher too.
+When Rust is selected, its coupling must be writable even with plasticity
+disabled; readonly coupling raises `ValueError` without advancing phase/time/
+frequency state. Other CPU paths accept readonly coupling. Use a writable
+copy for backend-independent admission; see
+[shared storage](upde.md#shared-numpy-storage).
+
 ## Benchmark gate
 
 Run the local parity gate:

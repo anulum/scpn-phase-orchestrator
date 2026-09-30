@@ -75,6 +75,25 @@ rerun with the repository benchmark-isolation protocol.
 
 ## Failure boundaries
 
+### Shared storage admission
+
+Writable coupling and phase lag may share storage, including the same matrix.
+The dense native stepper snapshots readonly frequency, velocity and lag inputs
+before borrowing coupling for mutation. Public `doppler_run()` and
+`DopplerEngine.step()`/`run()` inherit that native writable-coupling
+requirement when Rust executes, even with plasticity disabled. Readonly
+coupling raises `ValueError`, not a borrow panic; automatic selection does not
+catch that refusal and retry another backend. NumPy, Go, Julia and Mojo accept
+readonly coupling without mutation. A writable `coupling.copy()` gives
+backend-independent admission.
+
+A native borrow refusal does not advance phase integration. `DopplerEngine.run()`
+publishes its phase/time/frequency state only after successful integration;
+`step()` may refresh velocity and Doppler diagnostics before the native call.
+The owning real regression tests cover shared matrices, readonly admission,
+state preservation and writable retry in kernel-present and kernel-absent
+environments. See [dense snapshots and plasticity](upde.md#shared-numpy-storage).
+
 `DopplerEngine` fails closed on:
 
 - non-finite or non-real phases, omega schedules, velocities, `K_nm`, or `alpha`;
