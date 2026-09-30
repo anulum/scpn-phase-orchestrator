@@ -31,8 +31,18 @@ FloatArray: TypeAlias = NDArray[np.float64]
 
 
 def _matrix_copy(matrix: FloatArray) -> FloatArray:
-    """Return a contiguous float64 copy of a matrix."""
-    return np.array(matrix, dtype=np.float64, copy=True)
+    """Return a finite contiguous float64 copy of a matrix.
+
+    Raises
+    ------
+    ValueError
+        If precision narrowing produces a non-finite matrix element.
+    """
+    with np.errstate(over="ignore"):
+        converted = np.array(matrix, dtype=np.float64, copy=True)
+    if not np.isfinite(converted).all():
+        raise ValueError("template knm/alpha must remain finite in float64")
+    return converted
 
 
 @dataclass(frozen=True)
