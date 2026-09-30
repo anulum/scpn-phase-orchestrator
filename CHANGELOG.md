@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Binding validation rejects required nonderived channels backed only by empty
+  driver mappings, matching the channel algebra runtime-evidence report.
+
 ### Repository hygiene
 
 - ANULUM and Fortis Studio logos carry the separate

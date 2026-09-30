@@ -12,7 +12,9 @@
 find instead of failing at the first issue. It checks version shape, safety
 tier, timing, layer/objective references, N-channel declarations, extractor
 aliases, boundary and actuator scopes, imprint, amplitude, geometry, and
-protocol-net consistency before a binding is used by runtime code.
+protocol-net consistency before a binding is used by runtime code. Required
+nonderived channels need an oscillator family or a nonempty driver configuration,
+matching the channel algebra report's runtime-evidence classification.
 """
 
 from __future__ import annotations
@@ -130,7 +132,11 @@ def validate_binding_spec(spec: BindingSpec) -> list[str]:
     family_driver_channels = {
         family.channel for family in spec.oscillator_families.values()
     }
-    family_driver_channels.update(spec.drivers.all_channel_configs())
+    driver_configs = spec.drivers.all_channel_configs()
+    runtime_evidence_channels = family_driver_channels | {
+        channel for channel, config in driver_configs.items() if config
+    }
+    family_driver_channels.update(driver_configs)
     declared_or_used = family_driver_channels | set(spec.channels)
     undeclared_named_channels = sorted(
         channel
@@ -182,7 +188,7 @@ def validate_binding_spec(spec: BindingSpec) -> list[str]:
         if (
             channel_spec.required
             and not channel_spec.derived_from
-            and channel_name not in family_driver_channels
+            and channel_name not in runtime_evidence_channels
         ):
             errors.append(
                 f"channel {channel_name!r}: required channel must be backed by "

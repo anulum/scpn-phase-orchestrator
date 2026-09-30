@@ -101,6 +101,14 @@ membership, supervisor visibility, coupling participation, and cross-channel
 edges. It is intended for audit, replay, and reporting surfaces that need a
 channel-count-agnostic view without re-parsing YAML.
 
+Required nonderived channels must have a declared oscillator family or a
+nonempty driver configuration. An empty driver mapping is a declaration, not
+runtime evidence: `validate_binding_spec()` reports it as missing evidence,
+consistently with `build_channel_algebra_report()`. Required derived channels
+instead need declared source channels, `replay_semantics: derived`, and a
+nonempty `derive_rule`; admission does not certify physical observations or
+execute the derivation.
+
 The same report classifies delayed and uncertain channels from existing
 `role`, `metric_semantics`, and `replay_semantics` metadata. This lets audit and
 reporting surfaces expose delayed/uncertain policy evidence without changing
