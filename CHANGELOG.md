@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Repository hygiene
+
+- ANULUM and Fortis Studio logos carry the separate
+  `LicenseRef-ANULUM-Brand` terms rather than the software AGPL licence.
+  REUSE metadata preserves the concepts (1996–2026) and code (2020–2026)
+  copyright years.
+
 ### Changed
 
 - The minimum `protobuf` is now 7.35.1 and the `full` extra's `grpcio` and
