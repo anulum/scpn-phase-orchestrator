@@ -12,7 +12,7 @@
     "research_experimental_modules": 205,
     "runtime_serving_modules": 158,
     "rust_kernel_files": 116,
-    "test_files": 1062
+    "test_files": 1063
   },
   "documentation": {
     "public_pages": [
@@ -2040,6 +2040,7 @@
       "tests/test_benchmarks.py",
       "tests/test_bifurcation.py",
       "tests/test_bifurcation_dispatch.py",
+      "tests/test_binding_actuator_admission.py",
       "tests/test_binding_channel_admission.py",
       "tests/test_binding_channel_algebra.py",
       "tests/test_binding_channel_runtime.py",
