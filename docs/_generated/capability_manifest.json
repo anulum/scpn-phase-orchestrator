@@ -12,7 +12,7 @@
     "research_experimental_modules": 205,
     "runtime_serving_modules": 158,
     "rust_kernel_files": 116,
-    "test_files": 1063
+    "test_files": 1064
   },
   "documentation": {
     "public_pages": [
@@ -2401,6 +2401,7 @@
       "tests/test_information_replay_infrastructure.py",
       "tests/test_information_replay_physiology.py",
       "tests/test_informational_extractor_duplicates.py",
+      "tests/test_informational_timestamp_admission.py",
       "tests/test_init_phases.py",
       "tests/test_init_phases_channel_resolution.py",
       "tests/test_install_spo_kernel_tool.py",
