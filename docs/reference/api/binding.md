@@ -357,6 +357,17 @@ Core type definitions shared across the binding subsystem.
   but misspelled family names fail validation and direct runtime construction.
 - `VALID_KNOBS` — recognised control knobs: `K`, `alpha`, `zeta`, `Psi`
 
+### Actuator consistency
+
+Actuators sharing a knob must declare identical `limits`, even across different
+scopes: the runtime `ActionProjector` holds one bound per knob. Explicit
+`rate_limit_per_step` values must also agree. Omitted or `None` rates do not
+participate in that comparison or erase another actuator's explicit rate; zero
+is an explicit rate and prevents a step change from an in-bound previous value.
+`validate_binding_spec()` accumulates these conflicts in declaration order, and
+`spo validate` reports them before projection. Structural admission is not
+hardware qualification or permission to actuate.
+
 ::: scpn_phase_orchestrator.binding.types
 
 ## Loader

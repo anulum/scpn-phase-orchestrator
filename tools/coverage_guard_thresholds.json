@@ -162,7 +162,7 @@
     "src/scpn_phase_orchestrator/binding/topos_examples.py": 100.0,
     "src/scpn_phase_orchestrator/binding/topos_semantic.py": 100.0,
     "src/scpn_phase_orchestrator/binding/types.py": 100.0,
-    "src/scpn_phase_orchestrator/binding/validator.py": 98.07,
+    "src/scpn_phase_orchestrator/binding/validator.py": 99.52,
     "src/scpn_phase_orchestrator/coupling/__init__.py": 100.0,
     "src/scpn_phase_orchestrator/coupling/_attnres_go.py": 100.0,
     "src/scpn_phase_orchestrator/coupling/_attnres_julia.py": 100.0,
