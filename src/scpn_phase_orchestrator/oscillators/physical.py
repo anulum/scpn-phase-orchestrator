@@ -117,7 +117,7 @@ class PhysicalExtractor(PhaseExtractor):
 
     By default the extractor Hilbert-transforms the raw broadband signal and reports
     the trailing (endpoint) instantaneous phase — the historical behaviour, retained
-    bit-for-bit so existing bindings and sealed evidence are unchanged. Two optional,
+    without changing the phase equations used by existing bindings. Two optional,
     opt-in refinements are available for callers who need a cleaner estimate:
 
     - ``band=(low_hz, high_hz)`` applies a zero-phase Butterworth band-pass
@@ -129,7 +129,8 @@ class PhysicalExtractor(PhaseExtractor):
       than the artefact-prone endpoint.
 
     Both refinements are applied identically before the NumPy and Rust paths, so the
-    accelerated kernel needs no change and stays bit-parity with the reference.
+    accelerated kernel agrees with the reference within floating-point
+    tolerances.
     """
 
     def __init__(
@@ -160,6 +161,12 @@ class PhysicalExtractor(PhaseExtractor):
         -------
         list[PhaseState]
             Instantaneous phase from a 1-D waveform via Hilbert transform.
+
+        Raises
+        ------
+        ValueError
+            If input validation fails or filtering/Hilbert preprocessing produces
+            a non-finite analytic signal, including FFT overflow on finite inputs.
         """
         signal = _validate_signal(signal)
         sample_rate = _validate_sample_rate(sample_rate)
@@ -167,6 +174,8 @@ class PhysicalExtractor(PhaseExtractor):
 
         filtered = self._apply_bandpass(signal, sample_rate)
         analytic = hilbert(filtered)
+        if not np.all(np.isfinite(analytic)):
+            raise ValueError("analytic signal must be finite; reduce signal magnitude")
 
         trim = self._resolve_edge_trim(analytic.shape[0])
         if trim:
@@ -231,7 +240,12 @@ class PhysicalExtractor(PhaseExtractor):
 
         theta = float(inst_phase[-1])
         omega = float(np.median(inst_freq)) * TWO_PI  # rad/s
-        amplitude = float(np.mean(inst_amp))
+        envelope_scale = float(np.max(inst_amp))
+        amplitude = (
+            envelope_scale * float(np.mean(inst_amp / envelope_scale))
+            if envelope_scale > 0.0
+            else 0.0
+        )
         quality = self._envelope_quality(signal, analytic)
         return theta, omega, amplitude, quality
 
@@ -239,7 +253,7 @@ class PhysicalExtractor(PhaseExtractor):
         """Return the zero-phase band-passed signal, or the signal unchanged.
 
         When no band is configured the input is returned as-is, so the default
-        extraction path is bit-for-bit identical to the historical behaviour.
+        extraction uses the historical raw waveform.
         """
         if self._band is None:
             return signal
@@ -282,8 +296,12 @@ class PhysicalExtractor(PhaseExtractor):
     def _envelope_quality(signal: FloatArray, analytic: ComplexArray) -> float:
         """Return the envelope-based extraction quality score."""
         envelope = np.abs(analytic)
-        mean_env = np.mean(envelope)
-        if mean_env < 1e-15:
+        envelope_scale = float(np.max(envelope))
+        if envelope_scale == 0.0:
             return 0.0
-        cv = np.std(envelope) / mean_env
+        scaled_envelope = envelope / envelope_scale
+        scaled_mean = float(np.mean(scaled_envelope))
+        if envelope_scale * scaled_mean < 1e-15:
+            return 0.0
+        cv = np.std(scaled_envelope) / scaled_mean
         return float(np.clip(1.0 - cv, 0.0, 1.0))

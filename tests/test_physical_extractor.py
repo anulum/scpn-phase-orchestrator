@@ -6,7 +6,7 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Physical extractor contracts
 
-"""Validation and Python-path contracts for oscillators.physical.PhysicalExtractor."""
+"""Validate physical extraction through its public waveform interface."""
 
 from __future__ import annotations
 
@@ -15,42 +15,38 @@ import pytest
 
 from scpn_phase_orchestrator.oscillators.physical import PhysicalExtractor
 
-TWO_PI = 2.0 * np.pi
-
 
 class TestPhysicalExtractor:
-    def test_invalid_signal_shape(self):
-        ext = PhysicalExtractor()
+    """Public input refusal and returned phase-state contracts."""
+
+    def test_invalid_signal_shape(self) -> None:
+        """Multichannel arrays require separate per-channel extraction."""
         with pytest.raises(ValueError, match="1-D"):
-            ext.extract(np.zeros((2, 3)), 1000.0)
+            PhysicalExtractor().extract(np.zeros((2, 3)), 1000.0)
 
-    def test_single_sample_raises(self):
-        ext = PhysicalExtractor()
+    def test_single_sample_raises(self) -> None:
+        """A single sample cannot supply the phase-gradient frequency."""
         with pytest.raises(ValueError, match=">= 2"):
-            ext.extract(np.array([1.0]), 1000.0)
+            PhysicalExtractor().extract(np.array([1.0]), 1000.0)
 
-    def test_zero_envelope_quality(self):
-        from scipy.signal import hilbert
+    def test_zero_envelope_quality(self) -> None:
+        """A silent waveform returns zero amplitude and quality publicly."""
+        state = PhysicalExtractor().extract(np.zeros(100), 1000.0)[0]
+        assert state.amplitude == 0.0
+        assert state.quality == 0.0
 
-        signal = np.zeros(100)
-        quality = PhysicalExtractor._envelope_quality(signal, hilbert(signal))
-        assert quality == 0.0
-
-    def test_extract_python_path(self, monkeypatch):
-        """Force Python fallback by disabling the optional Rust extractor."""
-        import scpn_phase_orchestrator.oscillators.physical as phys_mod
-
-        monkeypatch.setattr(phys_mod, "_rust_physical_extract", None)
-        ext = PhysicalExtractor(node_id="py_test")
-        t = np.arange(0, 0.5, 1.0 / 1000)
-        signal = np.sin(TWO_PI * 10.0 * t)
-        states = ext.extract(signal, 1000.0)
+    def test_extract_periodic_waveform(self) -> None:
+        """The configured node returns the analytic periodic phase and frequency."""
+        time = np.arange(500, dtype=np.float64) / 1000.0
+        phase = 2.0 * np.pi * 10.0 * time
+        states = PhysicalExtractor(node_id="periodic").extract(np.sin(phase), 1000.0)
         assert len(states) == 1
-        assert 0.0 <= states[0].theta < TWO_PI
-        assert states[0].channel == "P"
-        assert states[0].quality > 0.5
-
-
-# ──────────────────────────────────────────────────────────────────────
-# pac.py: force Python fallback for modulation_index, pac_matrix, pac_gate
-# ──────────────────────────────────────────────────────────────────────
+        state = states[0]
+        assert state.theta == pytest.approx(
+            float((phase[-1] - np.pi / 2.0) % (2.0 * np.pi)), abs=1e-12
+        )
+        assert state.omega == pytest.approx(20.0 * np.pi, abs=1e-12)
+        assert state.amplitude == pytest.approx(1.0, abs=1e-12)
+        assert state.quality == pytest.approx(1.0, abs=1e-12)
+        assert state.channel == "P"
+        assert state.node_id == "periodic"

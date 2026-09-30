@@ -37,21 +37,23 @@ For broadband signals, bandpass filtering before extraction is
 essential — the Hilbert transform of a broadband signal produces
 a noisy, rapidly varying phase.
 
-**Implementation detail:** `PhysicalExtractor` uses `scipy.signal.hilbert`
-on the input signal. The signal is zero-padded to the next power of 2
-for FFT efficiency. Phase is unwrapped before frequency computation
-to avoid discontinuities, then re-wrapped to `[0, 2pi)` for output.
+**Implementation detail:** `PhysicalExtractor` applies optional zero-phase
+Butterworth band-pass filtering, then calls `scipy.signal.hilbert` at the
+original signal length. Optional edge trimming selects the final retained
+interior phase. The angular frequency is the median gradient of unwrapped
+phase multiplied by the sample rate, in rad/s.
 
-**Quality metric:** SNR estimate:
+**Quality metric:** Variation of the analytic envelope:
 
 ```
-quality = sig_power / (sig_power + noise_power)
+quality = clip(1 - std(abs(a)) / mean(abs(a)), 0, 1)
 ```
 
-Where `sig_power` is the variance of the bandpass-filtered signal and
-`noise_power` is the variance of the residual (original minus filtered).
-Quality saturates at 1.0. A quality of 0.5 means the signal and noise
-have equal power — the phase estimate is unreliable.
+A mean envelope below `1e-15` gives zero quality. Envelope magnitudes and
+statistics use scaled arithmetic to avoid intermediate overflow for large,
+representable analytic envelopes. Filtering and the Hilbert transform must
+produce finite values; otherwise public extraction raises `ValueError`. This score measures envelope regularity, not a
+signal-to-noise power ratio; it does not establish physical observability.
 
 **When to use:**
 - EEG, MEG, LFP (neural oscillations)
@@ -68,9 +70,10 @@ have equal power — the phase estimate is unreliable.
 
 **Extractor:** `PhysicalExtractor` in `oscillators.physical`.
 
-**Rust path:** `spo-oscillators::physical` provides `physical_extract()`
-via the `spo_kernel` FFI. The Rust implementation uses the same
-algorithm but avoids Python overhead for large arrays.
+**Rust path:** `spo-oscillators::physical::extract_from_analytic` is exposed
+as `spo_kernel.physical_extract()` through the FFI. The Rust implementation uses the same
+envelope and phase equations. Floating-point results agree within the owning
+tests' tolerances; this is not a bitwise replay guarantee.
 
 ---
 

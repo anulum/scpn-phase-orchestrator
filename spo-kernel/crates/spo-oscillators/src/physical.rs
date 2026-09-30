@@ -8,7 +8,7 @@
 
 //!
 //! Fused extraction of theta, omega, amplitude, quality from a pre-computed
-//! analytic signal. Replaces five separate NumPy passes with two Rust loops.
+//! analytic signal, with scaled envelope statistics.
 
 use std::f64::consts::TAU;
 
@@ -21,7 +21,10 @@ use std::f64::consts::TAU;
 /// - theta: instantaneous phase of the last sample, in [0, TAU)
 /// - omega: median instantaneous angular frequency (rad/s)
 /// - amplitude: mean envelope magnitude
-/// - quality: always 1.0 for Hilbert analytic signals (real == signal, so noise = 0)
+/// - quality: clipped `1 - CV(envelope)`, or zero for mean envelope below 1e-15
+///
+/// Envelope magnitudes use hypot and scaled mean/variance arithmetic so finite,
+/// representable large envelopes do not overflow intermediate squares or sums.
 #[must_use]
 #[allow(clippy::needless_range_loop)] // Pass 2 unwrap mutates inst_phase[i] from inst_phase[i-1]
 pub fn extract_from_analytic(real: &[f64], imag: &[f64], sample_rate: f64) -> (f64, f64, f64, f64) {
@@ -30,33 +33,36 @@ pub fn extract_from_analytic(real: &[f64], imag: &[f64], sample_rate: f64) -> (f
         return (0.0, 0.0, 0.0, 0.0);
     }
 
-    // Pass 1: inst_phase + amplitude accumulator
     let mut inst_phase = vec![0.0_f64; n];
-    let mut amp_sum = 0.0_f64;
-
-    for (ip, (&r, &im)) in inst_phase.iter_mut().zip(real.iter().zip(imag.iter())) {
+    let mut envelope = vec![0.0_f64; n];
+    let mut envelope_scale = 0.0_f64;
+    for ((ip, env), (&r, &im)) in inst_phase
+        .iter_mut()
+        .zip(envelope.iter_mut())
+        .zip(real.iter().zip(imag.iter()))
+    {
         *ip = im.atan2(r);
-        amp_sum += (r * r + im * im).sqrt();
+        *env = r.hypot(im);
+        envelope_scale = envelope_scale.max(*env);
     }
 
-    let amplitude = amp_sum / n as f64;
     let theta = inst_phase[n - 1].rem_euclid(TAU);
-
-    // Quality = 1 - CV(envelope). Low CV → stable envelope → high quality.
-    let quality = if amplitude < 1e-15 {
-        0.0
+    let (amplitude, quality) = if envelope_scale == 0.0 {
+        (0.0, 0.0)
     } else {
-        let amp_var: f64 = real
-            .iter()
-            .zip(imag.iter())
-            .map(|(&r, &im)| {
-                let env = (r * r + im * im).sqrt();
-                (env - amplitude).powi(2)
-            })
-            .sum::<f64>()
-            / n as f64;
-        let cv = amp_var.sqrt() / amplitude;
-        (1.0 - cv).clamp(0.0, 1.0)
+        let scaled_mean = envelope.iter().map(|env| env / envelope_scale).sum::<f64>() / n as f64;
+        let amplitude = envelope_scale * scaled_mean;
+        let quality = if amplitude < 1e-15 {
+            0.0
+        } else {
+            let scaled_variance = envelope
+                .iter()
+                .map(|env| (env / envelope_scale - scaled_mean).powi(2))
+                .sum::<f64>()
+                / n as f64;
+            (1.0 - scaled_variance.sqrt() / scaled_mean).clamp(0.0, 1.0)
+        };
+        (amplitude, quality)
     };
 
     // Pass 2: unwrap + gradient → inst_freq → median → omega
@@ -164,6 +170,34 @@ mod tests {
                 "freq={freq}: omega={omega}, expected={expected}"
             );
         }
+    }
+
+    #[test]
+    fn large_envelopes_preserve_mean_and_variation() {
+        for scale in [1.0, 1e150, 1e160, 1e200, 1e290] {
+            for modulation in [0.0, 0.6] {
+                let n = 128;
+                let mut real = Vec::with_capacity(n);
+                let mut imag = Vec::with_capacity(n);
+                for i in 0..n {
+                    let phase = TAU * i as f64 / n as f64;
+                    let amplitude = scale * (1.0 + modulation * phase.cos());
+                    real.push(amplitude * (8.0 * phase).cos());
+                    imag.push(amplitude * (8.0 * phase).sin());
+                }
+                let (_, omega, amplitude, quality) = extract_from_analytic(&real, &imag, 128.0);
+                assert!((omega / (TAU * 8.0) - 1.0).abs() < 1e-12);
+                assert!((amplitude / scale - 1.0).abs() < 1e-12);
+                assert!((quality - (1.0 - modulation / 2.0_f64.sqrt())).abs() < 1e-12);
+            }
+        }
+    }
+
+    #[test]
+    fn representable_envelope_mean_does_not_overflow_its_sum() {
+        let (_, _, amplitude, quality) = extract_from_analytic(&[1e308; 4], &[0.0; 4], 1.0);
+        assert_eq!(amplitude, 1e308);
+        assert_eq!(quality, 1.0);
     }
 
     #[test]

@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Physical waveform extraction preserves representable large envelope means
+  and variation scores in Python and Rust by scaling intermediate statistics
+  and using native hypot magnitudes. Non-finite analytic signals caused by
+  filtering/Hilbert overflow are refused before returning phase metadata.
+  The absolute low-envelope quality floor remains unchanged. Real public/native regressions and reproducible local
+  diagnostics cover periodic, modulated, filtered and degenerate waveforms.
+
 - Symbolic graph walks retain full signed and unsigned integer distances
   without subtraction overflow or saturating the cumulative path length.
   Native vector extraction preserves strided observation order; public input
