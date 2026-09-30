@@ -205,7 +205,8 @@ the limit is not a hosted gate or a new benchmark result.
 ### SymbolicExtractor
 
 ```python
-SymbolicExtractor(n_states: int, node_id: str = "sym", mode: str = "ring")
+SymbolicExtractor(n_states: int, node_id: str = "sym", mode: str = "ring", *,
+                  initial_transition_quality: float = 0.5)
 ```
 
 | Parameter | Type | Description |
@@ -213,31 +214,42 @@ SymbolicExtractor(n_states: int, node_id: str = "sym", mode: str = "ring")
 | `n_states` | `int` | Vocabulary size (≥ 2) |
 | `node_id` | `str` | Oscillator identifier |
 | `mode` | `str` | `"ring"` or `"graph"` |
+| `initial_transition_quality` | `float` | Finite initial quality in [0, 1]; default 0.5 |
 
 ### Ring mode
 
 Maps state index s to phase: θ_s = 2πs / N (mod 2π).
 Equispaced phases with gap = 2π/N.
+Signed and out-of-vocabulary integer labels are cyclic aliases modulo N.
 
 ### Graph mode
 
-Cumulative transition distances normalised to [0, 2π).
+Cumulative absolute linear index differences normalised to [0, 2π).
+No adjacency graph is consulted. A singleton uses the ring mapping; a
+stationary multi-state sequence has zero phase.
 
 ### Quality scoring
 
 | Transition type | Quality |
 |----------------|---------|
-| Single step (|Δs| = 1) | 1.0 |
-| Stalled (Δs = 0) | 0.2 |
-| Large jump (|Δs| = k) | max(0.1, 1 - (k-1)/N) |
-| First state (no prior) | 0.5 |
+| Single step (k = 1) | 1.0 |
+| Stalled (k = 0) | 0.2 |
+| Large jump (k > 1) | max(0.1, 1 - (k-1)/N) |
+| First state (no prior) | Configured initial quality; default 0.5 |
+
+Graph mode uses k = |Δs|. Ring mode uses d = |Δs| mod N and
+k = min(d, N-d), so full cycles score as stalls, including signed aliases.
 
 ### Omega derivation
 
-ω is derived from consecutive phase differences divided by dt
-(1/sample_rate). For ring mode with single steps: ω = 2π/(N·dt).
+ω is derived from consecutive phase differences wrapped to [-π, π), divided
+by dt (1/sample_rate). The first frequency is zero; an exact half-turn is
+negative. For forward single steps with N > 2: ω = 2π/(N·dt).
 
-**Performance:** `extract(1000 states)` < 1 ms.
+**Local test budget:** `extract(1000 states)` averages below 5 ms, or
+50 ms when CI is set or the one-minute load exceeds
+`max(2, cpu_count/4)`. This is the existing load-aware test limit, not a
+published comparative benchmark; hosted CI deselects performance tests.
 
 ::: scpn_phase_orchestrator.oscillators.symbolic
 
@@ -381,7 +393,7 @@ with tolerance atol=1e-10 for phase, rtol=0.01 for frequency.
 |-----------|--------|------|-------|
 | `PhysicalExtractor.extract(1s @ 1kHz)` | < 5 ms | < 1 ms | Hilbert transform |
 | `InformationalExtractor.extract(100 ts)` | < 600 μs (local test limit, deselected in hosted CI) | — | native kernel or NumPy fallback |
-| `SymbolicExtractor.extract(1000 states)` | < 1 ms | — | ring mapping |
+| `SymbolicExtractor.extract(1000 states)` | Local test: < 5 ms; < 50 ms under CI/high load | — | ring mapping; not a published benchmark |
 | `PhaseQualityScorer.downweight_mask(100)` | < 50 μs | 3.15 μs | public wrapper: 31.57 μs |
 
 Quality timings measured on 2026-09-26 with the rebuilt release extension,

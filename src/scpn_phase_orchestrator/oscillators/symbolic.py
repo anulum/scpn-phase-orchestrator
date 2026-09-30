@@ -165,7 +165,7 @@ class SymbolicExtractor(PhaseExtractor):
                     dtype=np.float64,
                 )
             else:
-                thetas = TWO_PI * indices / self._n_states
+                thetas = TWO_PI * np.mod(indices, self._n_states) / self._n_states
         else:
             # Graph-walk: cumulative phase from state transitions
             # Each step adds phase proportional to the transition distance
@@ -176,7 +176,7 @@ class SymbolicExtractor(PhaseExtractor):
                         dtype=np.float64,
                     )
                 else:
-                    thetas = TWO_PI * indices.astype(np.float64) / self._n_states
+                    thetas = TWO_PI * np.mod(indices, self._n_states) / self._n_states
             else:
                 steps = np.abs(np.diff(indices)).astype(np.float64)
                 cumulative = np.concatenate([[0.0], np.cumsum(steps)])
@@ -250,12 +250,14 @@ class SymbolicExtractor(PhaseExtractor):
         """Quality based on transition regularity: penalise repeated or large jumps.
 
         The jump is the linear index distance in graph mode and the circular
-        distance ``min(d, N - d)`` in ring mode, where ``N - 1 -> 0`` is one step.
+        distance ``min(d % N, N - d % N)`` in ring mode. Signed or unbounded
+        state labels are aliases of their residues; full cycles are stalls.
         """
         if i == 0 or len(indices) < 2:
             return self._initial_transition_quality
         step = abs(int(indices[i]) - int(indices[i - 1]))
         if self._mode == "ring":
+            step %= self._n_states
             step = min(step, self._n_states - step)
         if step == 0:
             return 0.2  # stalled
