@@ -261,6 +261,10 @@ jobs:
           path: spo-kernel/target/doc
           retention-days: 14
       - run: cargo test --workspace --exclude spo-ffi
+      - name: Install the embedded Python runtime dependencies
+        if: runner.os == 'Linux'
+        working-directory: ${{ github.workspace }}
+        run: python -m pip install --require-hashes --no-deps -r requirements/runtime-lock.txt
       # spo-ffi `extension-module` is a default feature; disable it so the
       # test binary can link libpython. Ubuntu-only — macOS and Windows
       # runners exercise the FFI path via the maturin wheel build in

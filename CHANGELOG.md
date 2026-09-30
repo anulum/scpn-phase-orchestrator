@@ -33,6 +33,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Repository hygiene
 
+- Native dense-stepper constructor documentation checks follow their owning
+  module. The Linux Rust CI lane installs locked Python runtime dependencies before
+  exercising the embedded NumPy borrow-refusal contract.
 - ANULUM and Fortis Studio logos carry the separate
   `LicenseRef-ANULUM-Brand` terms rather than the software AGPL licence.
   REUSE metadata preserves the concepts (1996–2026) and code (2020–2026)

@@ -5,6 +5,7 @@
 # ORCID: 0009-0009-3560-0851
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Public API docstring regressions
+"""Check tracked and importable public API documentation contracts."""
 
 from __future__ import annotations
 
@@ -56,6 +57,7 @@ def _is_protoc_generated(path: Path) -> bool:
 
 
 def test_protoc_generated_docstring_boundary_is_exact() -> None:
+    """Exclude only the two compiler-owned protobuf sources from the gate."""
     generated_dir = SOURCE_ROOT / "runtime/grpc_gen"
 
     assert _is_protoc_generated(generated_dir / "spo_pb2.py")
@@ -65,6 +67,7 @@ def test_protoc_generated_docstring_boundary_is_exact() -> None:
 
 
 def test_source_public_python_surfaces_have_docstrings() -> None:
+    """Require docstrings on every tracked public Python source and symbol."""
     missing: list[str] = []
     for path in _tracked_python_sources():
         if _is_protoc_generated(path):
@@ -106,6 +109,7 @@ def test_source_public_python_surfaces_have_docstrings() -> None:
 def test_core_public_methods_use_numpy_style_docstrings(
     target: Callable[..., object], sections: tuple[str, ...]
 ) -> None:
+    """Inspect the public method's rendered NumPy contract sections."""
     doc = inspect.getdoc(target)
 
     assert doc is not None
@@ -150,6 +154,7 @@ OPTIONAL_MODULE_DEPENDENCIES = {
 
 
 def _unwrap(obj: object) -> object:
+    """Expose a descriptor's function for public method inspection."""
     if isinstance(obj, (classmethod, staticmethod)):
         return obj.__func__
     return obj
@@ -158,6 +163,7 @@ def _unwrap(obj: object) -> object:
 def _public_callables(
     module: ModuleType,
 ) -> Iterator[tuple[str, Callable[..., object]]]:
+    """Yield functions and class methods owned by the public module."""
     exported = getattr(
         module, "__all__", [n for n in vars(module) if not n.startswith("_")]
     )
@@ -179,6 +185,7 @@ def _public_callables(
 
 
 def _required_sections(func: Callable[..., object]) -> list[str]:
+    """Derive contract sections from a public callable's actual signature."""
     sections: list[str] = []
     parameters = [
         param
@@ -202,6 +209,7 @@ def _required_sections(func: Callable[..., object]) -> list[str]:
 
 
 def test_section_enforced_families_document_numpy_contracts() -> None:
+    """Require NumPy sections on each imported public callable's docstring."""
     problems: list[str] = []
     for module_name in SECTION_ENFORCED_MODULES:
         optional_dependency = OPTIONAL_MODULE_DEPENDENCIES.get(module_name)
@@ -219,15 +227,21 @@ def test_section_enforced_families_document_numpy_contracts() -> None:
 
 
 def test_rust_upde_stepper_constructor_documents_public_contract() -> None:
-    rust_source = Path("spo-kernel/crates/spo-ffi/src/lib.rs").read_text(
+    """Read the constructor contract from the owning native stepper module."""
+    rust_source = Path("spo-kernel/crates/spo-ffi/src/upde_stepper.rs").read_text(
         encoding="utf-8"
     )
     stepper_start = rust_source.index('pyclass(name = "PyUPDEStepper")')
     constructor_start = rust_source.index("fn new(", stepper_start)
-    constructor_doc = rust_source[stepper_start:constructor_start]
+    constructor_doc = "\n".join(
+        line.strip().removeprefix("///").lstrip()
+        for line in rust_source[stepper_start:constructor_start].splitlines()
+        if line.lstrip().startswith("///")
+    )
 
     assert "Create a Rust-backed UPDE stepper." in constructor_doc
-    assert "Parameters" in constructor_doc
-    assert "Raises" in constructor_doc
-    assert "method" in constructor_doc
+    assert "Parameters\n----------" in constructor_doc
+    assert "Raises\n------" in constructor_doc
+    for parameter in ("n", "dt", "method", "n_substeps", "atol", "rtol"):
+        assert f"\n{parameter}\n" in constructor_doc
     assert "ValueError" in constructor_doc
