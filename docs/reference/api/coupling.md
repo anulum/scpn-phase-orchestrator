@@ -254,6 +254,13 @@ Registry for named templates:
   error message lists available names)
 - `list_names() → list[str]` — all registered names
 
+Registration stores independent, contiguous `float64` matrix copies. Finite
+floating-point inputs must also remain finite after precision narrowing;
+a conversion that would produce infinity raises `ValueError`, including when
+NumPy is configured to raise on overflow. Refusal leaves the existing registry
+and caller matrices unchanged. Representable narrower or extended-precision
+matrices remain accepted; retrieval returns independent copies.
+
 **Usage:** The supervisor can switch coupling topology at runtime by calling
 `CouplingBuilder.switch_template(state, name, templates)` when a regime
 transition occurs (e.g., switching from all-to-all to nearest-neighbour
