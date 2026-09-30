@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+import importlib.util
 import os
 from typing import cast, get_type_hints
 
@@ -21,6 +22,31 @@ from scpn_phase_orchestrator.oscillators.symbolic import SymbolicExtractor
 from tests.typing_contracts import assert_precise_ndarray_hint
 
 TWO_PI = 2.0 * np.pi
+
+
+def test_large_vocabulary_retains_the_declared_float64_rounding_contract() -> None:
+    """Real backends retain exact residues but may round ratios differently."""
+    n_states = 2**53 + 1
+    use_native = importlib.util.find_spec("spo_kernel") is not None and n_states <= int(
+        np.iinfo(np.uintp).max
+    )
+    ratio = 1.0 / float(n_states) if use_native else 1 / n_states
+    ring = SymbolicExtractor(n_states=n_states).extract(
+        np.array([0, 1], dtype=np.int64), sample_rate=1.0
+    )
+    assert ring[1].theta == TWO_PI * ratio
+    assert ring[1].theta in (TWO_PI / float(n_states), TWO_PI * (1 / n_states))
+
+    distance = 3 * 2**51 + 1
+    penalty = (
+        float(distance - 1) / float(n_states)
+        if use_native
+        else (distance - 1) / n_states
+    )
+    graph = SymbolicExtractor(n_states=n_states, mode="graph").extract(
+        np.array([0, distance], dtype=np.int64), sample_rate=1.0
+    )
+    assert graph[1].quality == 1.0 - penalty
 
 
 # ---------------------------------------------------------------------------
@@ -504,6 +530,158 @@ def test_symbolic_states_drive_an_exact_uncoupled_engine(mode: str) -> None:
     expected_vector = np.mean(np.exp(1j * expected))
     assert coherence == pytest.approx(abs(expected_vector))
     assert mean_phase == pytest.approx(float(np.angle(expected_vector)) % TWO_PI)
+
+
+@pytest.mark.parametrize(
+    ("labels", "expected_turns"),
+    [
+        ([-(2**62), 2**62, 0], [0.0, 2.0 / 3.0, 0.0]),
+        ([-(2**63), 2**63 - 1, -(2**63)], [0.0, 0.5, 0.0]),
+        ([-(2**63), 0, 2**63 - 1], [0.0, 0.5, 0.0]),
+        ([-(2**63), 2**63 - 1, 0, -(2**63)], [0.0, 0.5, 0.75, 0.0]),
+    ],
+)
+def test_graph_walk_full_signed_domain(
+    labels: list[int], expected_turns: list[float]
+) -> None:
+    """Preserve full-span distances and totals beyond uint64 in public extraction."""
+    signal = np.array(labels, dtype=np.int64)
+    original = signal.copy()
+    states = SymbolicExtractor(n_states=4, mode="graph").extract(signal, 8.0)
+    expected = TWO_PI * np.array(expected_turns)
+    expected_omega = np.concatenate(
+        [[0.0], ((np.diff(expected) + np.pi) % TWO_PI - np.pi) * 8.0]
+    )
+    np.testing.assert_allclose([state.theta for state in states], expected, atol=1e-12)
+    np.testing.assert_allclose(
+        [state.omega for state in states], expected_omega, atol=1e-12
+    )
+    assert [state.quality for state in states] == pytest.approx(
+        [0.5] + [0.1] * (len(labels) - 1)
+    )
+    np.testing.assert_array_equal(signal, original)
+
+
+@pytest.mark.parametrize("mode", ["ring", "graph"])
+@pytest.mark.parametrize(
+    "signal",
+    [
+        np.array([0, 9, 2, 9, 5, 9, 1, 9], dtype=np.int64)[::2],
+        np.array([1, 5, 2, 0], dtype=np.int64)[::-1],
+    ],
+)
+def test_symbolic_strided_views_preserve_logical_order(
+    mode: str, signal: NDArray[np.int64]
+) -> None:
+    """Forward and reversed strides map the same logical labels without mutation."""
+    original = signal.copy()
+    states = SymbolicExtractor(n_states=8, mode=mode).extract(signal, 8.0)
+    expected = (
+        [0.0, np.pi / 2, 5 * np.pi / 4, np.pi / 4]
+        if mode == "ring"
+        else [0.0, 4 * np.pi / 9, 10 * np.pi / 9, 0.0]
+    )
+    np.testing.assert_allclose([state.theta for state in states], expected, atol=1e-12)
+    assert [state.quality for state in states] == pytest.approx(
+        [0.5, 0.875, 0.75, 0.625]
+    )
+    np.testing.assert_array_equal(signal, original)
+
+
+@pytest.mark.parametrize("mode", ["ring", "graph"])
+def test_symbolic_unaligned_observations(mode: str) -> None:
+    """Normalise an unaligned int64 buffer before extraction without rewriting it."""
+    signal = np.ndarray((3,), dtype=np.int64, buffer=bytearray(25), offset=1)
+    signal[:] = [0, 1, 0]
+    original = signal.copy()
+    states = SymbolicExtractor(n_states=4, mode=mode).extract(signal, 8.0)
+    expected_middle = np.pi / 2 if mode == "ring" else np.pi
+    assert [state.theta for state in states] == pytest.approx(
+        [0.0, expected_middle, 0.0]
+    )
+    assert [state.quality for state in states] == pytest.approx([0.5, 1.0, 1.0])
+    np.testing.assert_array_equal(signal, original)
+
+
+def test_graph_walk_many_full_span_transitions() -> None:
+    """Repeated full-span transitions retain every normalised prefix, not a clamp."""
+    signal = np.tile(np.array([-(2**63), 2**63 - 1], dtype=np.int64), 129)[:-1]
+    states = SymbolicExtractor(n_states=4, mode="graph").extract(signal, 8.0)
+    expected = (TWO_PI * np.arange(257) / 256.0) % TWO_PI
+    np.testing.assert_allclose([state.theta for state in states], expected, atol=1e-12)
+    assert states[128].theta == pytest.approx(np.pi)
+    assert [state.quality for state in states] == pytest.approx([0.5] + [0.1] * 256)
+
+
+@pytest.mark.parametrize("mode", ["ring", "graph"])
+def test_unsigned_full_span_labels_keep_their_values(mode: str) -> None:
+    """A uint64 maximum is a full linear jump, not the signed label minus one."""
+    signal = np.array([0, 2**64 - 1, 0], dtype=np.uint64)
+    original = signal.copy()
+    states = SymbolicExtractor(n_states=4, mode=mode).extract(signal, 8.0)
+    middle = 3 * np.pi / 2 if mode == "ring" else np.pi
+    quality = 1.0 if mode == "ring" else 0.1
+    assert [state.theta for state in states] == pytest.approx([0.0, middle, 0.0])
+    assert [state.quality for state in states] == pytest.approx([0.5, quality, quality])
+    np.testing.assert_array_equal(signal, original)
+
+
+@pytest.mark.parametrize("mode", ["ring", "graph"])
+@pytest.mark.parametrize("n_states", [2**31, 2**32, 2**63, 2**64 - 1, 2**64, 2**4096])
+def test_large_vocabulary_preserves_public_integer_contract(
+    mode: str, n_states: int
+) -> None:
+    """Vocabulary sizes beyond machine integers retain real Python phase mapping."""
+    signal = np.array([0, 1, 0], dtype=np.int64)
+    states = SymbolicExtractor(n_states=n_states, mode=mode).extract(signal, 8.0)
+    middle = TWO_PI * (1 / n_states) if mode == "ring" else np.pi
+    np.testing.assert_allclose(
+        [state.theta for state in states], [0.0, middle, 0.0], rtol=1e-15, atol=0.0
+    )
+    assert [state.quality for state in states] == pytest.approx([0.5, 1.0, 1.0])
+
+
+@pytest.mark.parametrize("mode", ["ring", "graph"])
+@pytest.mark.parametrize("n_states", [2**64 - 1, 2**64, 2**4096])
+def test_large_vocabulary_singleton_retains_signed_alias(
+    mode: str, n_states: int
+) -> None:
+    """Graph singletons and ring observations share exact integer residue reduction."""
+    signal = np.array([-1], dtype=np.int64)
+    states = SymbolicExtractor(n_states=n_states, mode=mode).extract(signal, 8.0)
+    expected = (TWO_PI * ((n_states - 1) / n_states)) % TWO_PI
+    assert len(states) == 1
+    assert states[0].theta == pytest.approx(expected, abs=0.0)
+    assert states[0].omega == 0.0
+    assert states[0].quality == 0.5
+
+
+@pytest.mark.parametrize("unsigned", [False, True])
+@pytest.mark.parametrize("mode", ["ring", "graph"])
+def test_swapped_byte_order_preserves_public_labels(unsigned: bool, mode: str) -> None:
+    """Public normalisation preserves labels with non-native byte order."""
+    swapped: NDArray[np.int64] | NDArray[np.uint64]
+    if unsigned:
+        swapped = (
+            np.array([0, 2, 5, 1], dtype=np.uint64)
+            .byteswap()
+            .view(np.dtype(np.uint64).newbyteorder("S"))
+        )
+    else:
+        swapped = (
+            np.array([0, 2, 5, 1], dtype=np.int64)
+            .byteswap()
+            .view(np.dtype(np.int64).newbyteorder("S"))
+        )
+    original = swapped.copy()
+    states = SymbolicExtractor(n_states=8, mode=mode).extract(swapped, 8.0)
+    expected = (
+        [0.0, np.pi / 2, 5 * np.pi / 4, np.pi / 4]
+        if mode == "ring"
+        else [0.0, 4 * np.pi / 9, 10 * np.pi / 9, 0.0]
+    )
+    np.testing.assert_allclose([state.theta for state in states], expected, atol=1e-12)
+    np.testing.assert_array_equal(swapped, original)
 
 
 # Pipeline wiring: SymbolicExtractor → theta/omega → UPDEEngine

@@ -12,7 +12,7 @@ build-backend = "maturin"
 
 [project]
 name = "spo-kernel"
-version = "0.5.10"
+version = "0.5.11"
 description = "SCPN Phase Orchestrator — Rust-accelerated UPDE kernel"
 readme = "README.md"
 authors = [{name = "Miroslav Sotek", email = "protoscience@anulum.li"}]

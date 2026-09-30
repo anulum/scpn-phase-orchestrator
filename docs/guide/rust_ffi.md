@@ -132,6 +132,40 @@ for validation, parity tests and measured wrapper overhead.
 | `estimate_coupling` | (disabled) | normal equations (3x slower than LAPACK) |
 | `extract_phases` | (disabled) | naive DFT (60x slower than SciPy FFT) |
 
+### Symbolic input boundaries
+
+The vector symbolic functions accept one-dimensional native-endian `int64` or
+`uint64` NumPy arrays. Positive, negative and zero strides, read-only views and
+empty arrays preserve logical observation order; a contiguous buffer is not
+required. Direct FFI refuses unaligned views before Rust element access and
+refuses other dtypes, ranks and Python lists. The public `SymbolicExtractor`
+normalises narrower integer widths within their signedness and copies unaligned
+input, so callers need not pre-align public observations.
+
+Ring residues are computed as integers before conversion. Graph walk differences
+and totals use `u128`, including the full signed/unsigned 64-bit span; the Python
+fallback uses arbitrary-size integers. Output remains `float64`, not exact
+rational arithmetic. Vector graph qualities use linear distances; cyclic ring
+quality remains in Python.
+
+These symbolic vector contracts require `spo-kernel >= 0.5.11`; both the
+`rust` and `scpn-all` extras enforce that floor. Rebuild the kernel when
+updating a source checkout; older wheels do not accept unsigned or strided
+arrays under this contract.
+
+Direct scalar/count arguments are bounded by the target's `usize`; the public
+extractor separately requires `n_states >= 2` and uses Python for larger-than-
+`usize` counts instead of claiming native execution. Direct
+`transition_qualities_rust` requires a finite initial quality; the public
+extractor additionally bounds that configured quality to [0, 1].
+
+`benchmarks/bench_symbolic.py` measures both installed-native and genuinely
+kernel-absent environments through the public extractor. It records actual
+C-call identity, source hashes, Python/NumPy versions and host load. Its
+non-isolated median/P95 timings do not establish a cross-environment speedup.
+The [2026-09-30 raw diagnostic](../reference/data/symbolic_extraction_diagnostic_2026-09-30.json)
+also pins the loaded extension artifact by SHA-256.
+
 ## Benchmark Comparison
 
 Local diagnostics on 2026-09-30 measured real `UPDEEngine.step()` after the
@@ -251,7 +285,11 @@ The CI pipeline runs:
 
 ## Numerical Parity
 
-The Rust and Python implementations produce identical results to float64
-precision. The CI `ffi-test` job runs the full Python test suite with
+The Rust and Python implementations agree numerically at float64 precision,
+not necessarily bitwise. Symbolic ring phases and graph qualities may differ
+in their last bits above `2**53`: Rust divides converted operands while
+Python rounds an integer quotient. The `2**53 + 1` regression preserves this
+explicit finite-precision contract without changing parity tolerances.
+The CI `ffi-test` job runs the full Python test suite with
 `spo_kernel` installed, confirming parity across all integration methods
 (euler, rk4, rk45) and both engines (UPDEEngine, StuartLandauEngine).

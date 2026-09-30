@@ -31,6 +31,9 @@ __all__ = ["SymbolicExtractor", "SYMBOLIC_INITIAL_TRANSITION_QUALITY_BASELINE"]
 
 FloatArray: TypeAlias = NDArray[np.float64]
 IntArray: TypeAlias = NDArray[np.int64]
+UnsignedIntArray: TypeAlias = NDArray[np.uint64]
+SymbolicArray: TypeAlias = IntArray | UnsignedIntArray
+_NATIVE_STATE_COUNT_MAX = int(np.iinfo(np.uintp).max)
 SYMBOLIC_INITIAL_TRANSITION_QUALITY_BASELINE = 0.5
 
 try:
@@ -66,15 +69,22 @@ def _validate_node_id(value: object) -> str:
     return value
 
 
-def _validate_signal(value: object) -> IntArray:
-    """Return the signal as a validated finite array, else raise."""
+def _validate_signal(value: object) -> SymbolicArray:
+    """Normalise integer widths and alignment without changing signedness or labels."""
     signal = np.asarray(value)
     if signal.dtype.kind not in "iu":
         raise ValueError("signal must be integer")
     require_real_values(value, name="signal")
     if signal.ndim != 1:
         raise ValueError(f"signal must be 1-D, got shape {signal.shape}")
-    return signal.astype(np.int64, copy=False)
+    indices = (
+        signal.astype(np.uint64, copy=False)
+        if signal.dtype.kind == "u"
+        else signal.astype(np.int64, copy=False)
+    )
+    if not indices.flags.aligned:
+        indices = indices.copy()
+    return indices
 
 
 def _validate_sample_rate(value: object) -> float:
@@ -119,14 +129,19 @@ class SymbolicExtractor(PhaseExtractor):
         Parameters
         ----------
         n_states : int
-            total number of discrete states N.
+            Integer vocabulary size N >= 2, with no public upper bound.
+            Counts beyond the native target's usize capacity use Python.
         node_id : str
             identifier for generated PhaseState objects.
         mode : str
             "ring" for ring-phase, "graph" for graph-walk phase.
         initial_transition_quality : float
-            quality assigned when no transition evidence exists yet (first sample /
-            insufficient history).
+            Finite quality in [0, 1] assigned to the first sample.
+
+        Raises
+        ------
+        ValueError
+            If the vocabulary, node identifier, mode or initial quality is invalid.
         """
         n_states = _validate_n_states(n_states)
         if mode not in ("ring", "graph"):
@@ -139,55 +154,66 @@ class SymbolicExtractor(PhaseExtractor):
         )
 
     def extract(
-        self, signal: FloatArray | IntArray, sample_rate: float
+        self, signal: FloatArray | SymbolicArray, sample_rate: float
     ) -> list[PhaseState]:
         """Map discrete state indices to phases on the unit circle.
 
         Parameters
         ----------
-        signal : FloatArray | IntArray
-            Plain integer state indices, shape ``(T,)``. Text, boolean,
-            object and temporal values are rejected before state mapping.
+        signal : FloatArray | SymbolicArray
+            Signed or unsigned integer state indices, shape ``(T,)``; labels
+            retain their values across integer-width normalisation. Text,
+            boolean, floating, object and temporal values are rejected before
+            mapping. Strided and read-only views are accepted; unaligned input
+            is copied before native access.
         sample_rate : float
             Sampling rate in Hz.
 
         Returns
         -------
         list[PhaseState]
-            Discrete state indices to phases on the unit circle.
+            One state per observation, with float64 phases and frequencies,
+            transition qualities, unit amplitude and the configured node id.
+            Graph distances accumulate as exact integers before float conversion;
+            the resulting phases remain subject to float64 rounding.
+
+        Raises
+        ------
+        ValueError
+            If the signal is not a one-dimensional integer array or the sampling
+            rate is not finite and positive.
         """
         indices = _validate_signal(signal)
         sample_rate = _validate_sample_rate(sample_rate)
-        if self._mode == "ring":
-            if _HAS_RUST_SYMBOLIC:
+        use_native = _HAS_RUST_SYMBOLIC and self._n_states <= _NATIVE_STATE_COUNT_MAX
+        if self._mode == "ring" or len(indices) < 2:
+            if use_native:
                 thetas = np.asarray(
                     _rust_ring_phases(indices, self._n_states),
                     dtype=np.float64,
                 )
             else:
-                thetas = TWO_PI * np.mod(indices, self._n_states) / self._n_states
+                thetas = np.fromiter(
+                    (
+                        TWO_PI * ((int(index) % self._n_states) / self._n_states)
+                        for index in indices
+                    ),
+                    dtype=np.float64,
+                    count=len(indices),
+                )
         else:
-            # Graph-walk: cumulative phase from state transitions
-            # Each step adds phase proportional to the transition distance
-            if len(indices) < 2:
-                if _HAS_RUST_SYMBOLIC:
-                    thetas = np.asarray(
-                        _rust_ring_phases(indices, self._n_states),
-                        dtype=np.float64,
-                    )
-                else:
-                    thetas = TWO_PI * np.mod(indices, self._n_states) / self._n_states
+            if use_native:
+                thetas = np.asarray(
+                    _rust_graph_walk_phases(indices, self._n_states),
+                    dtype=np.float64,
+                )
             else:
-                steps = np.abs(np.diff(indices)).astype(np.float64)
-                cumulative = np.concatenate([[0.0], np.cumsum(steps)])
-                total = cumulative[-1] if cumulative[-1] > 0 else 1.0
-                if _HAS_RUST_SYMBOLIC:
-                    thetas = np.asarray(
-                        _rust_graph_walk_phases(indices, self._n_states),
-                        dtype=np.float64,
-                    )
-                else:
-                    thetas = TWO_PI * cumulative / total
+                positions = [0]
+                for previous, current in zip(indices[:-1], indices[1:], strict=True):
+                    positions.append(positions[-1] + abs(int(current) - int(previous)))
+                cumulative = np.asarray(positions, dtype=np.float64)
+                total = float(max(positions[-1], 1))
+                thetas = TWO_PI * cumulative / total
 
         thetas = thetas % TWO_PI
         dt = 1.0 / sample_rate
@@ -203,7 +229,7 @@ class SymbolicExtractor(PhaseExtractor):
         # The kernel scores the linear index distance, which is the graph-walk
         # step. On a ring the wrap from N-1 to 0 is a single step (omega above
         # already treats it so), so ring mode scores the circular distance here.
-        if _HAS_RUST_SYMBOLIC and self._mode == "graph":
+        if use_native and self._mode == "graph":
             rust_qualities = np.asarray(
                 _rust_transition_qualities(
                     indices,
@@ -246,7 +272,7 @@ class SymbolicExtractor(PhaseExtractor):
             return 0.0
         return float(np.mean([ps.quality for ps in phase_states]))
 
-    def _transition_quality(self, indices: IntArray, i: int) -> float:
+    def _transition_quality(self, indices: SymbolicArray, i: int) -> float:
         """Quality based on transition regularity: penalise repeated or large jumps.
 
         The jump is the linear index distance in graph mode and the circular
