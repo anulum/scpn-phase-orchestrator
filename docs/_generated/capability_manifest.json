@@ -12,7 +12,7 @@
     "research_experimental_modules": 205,
     "runtime_serving_modules": 158,
     "rust_kernel_files": 118,
-    "test_files": 1068
+    "test_files": 1069
   },
   "documentation": {
     "public_pages": [
@@ -2349,6 +2349,7 @@
       "tests/test_grid_modal_stream.py",
       "tests/test_grid_modal_stream_operating_point.py",
       "tests/test_grid_oscillation_detector.py",
+      "tests/test_grpc_caller_safe_errors.py",
       "tests/test_grpc_gen_aliases.py",
       "tests/test_grpc_rate_limit_identity.py",
       "tests/test_grpc_service.py",
