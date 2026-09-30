@@ -111,7 +111,7 @@ for validation, parity tests and measured wrapper overhead.
 | `LagModel` | `PyLagModel` | `estimate()` |
 | `NeurocoreBridge` | `PyLIFEnsemble` | `step()` (LIF ensemble, 325x at N=10000) |
 | Physical extractor | `physical_extract` | analytic signal extraction |
-| Symbolic extractors | `ring_phase`, `graph_walk_phase`, `transition_quality` | single call |
+| Symbolic extractors | `ring_phases_rust`, `graph_walk_phases_rust`, `transition_qualities_rust` | vector phases and linear graph qualities; cyclic ring quality stays in Python |
 | Informational extractor | `event_phase` | timestamp analysis |
 | `SimplicialEngine` | `simplicial_run` | 3-body coupling `run()` |
 | `HypergraphEngine` | `hypergraph_run` | k-body coupling `run()` |

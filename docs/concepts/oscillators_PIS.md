@@ -141,7 +141,7 @@ non-positive intervals, including duplicate or unsorted timestamps.
 
 ## S — Symbolic Channel
 
-**Input:** Sequence of discrete state indices `s in {0, 1, ..., N-1}`,
+**Input:** Sequence of integer state indices (ring labels wrap modulo N),
 observed at discrete time steps. Protocol states, workflow stages,
 Markov chain positions, categorical labels.
 
@@ -152,7 +152,7 @@ Markov chain positions, categorical labels.
 Maps discrete state to equally spaced phases on the unit circle:
 
 ```
-theta = 2 * pi * s / N
+theta = (2 * pi * (s mod N) / N) mod (2 * pi)
 ```
 
 State 0 maps to phase 0, state 1 to `2pi/N`, etc. This preserves
@@ -165,29 +165,34 @@ observations:
 omega = (theta_current - theta_previous) / dt
 ```
 
-where the phase difference is wrapped to `[-pi, pi]` before division.
+where the phase difference is wrapped to `[-pi, pi)` before division.
+The first frequency is zero; an exact half-turn selects the negative direction.
 
 ### Graph Mode
 
-For state machines where not all transitions are equally "distant"
-(e.g., a TCP state machine where SYN_SENT → ESTABLISHED is one step
-but SYN_SENT → CLOSED is a reset), graph mode normalises the
-sequential position along the observed path:
+Graph mode accumulates absolute linear index differences along the observed
+sequence, then normalises that cumulative distance:
 
 ```
-theta = 2 * pi * path_position / path_length
+theta = (2 * pi * cumulative_distance / total_distance) mod (2 * pi)
 ```
 
-This requires a graph of valid transitions, provided in the binding
-spec `config.adjacency` field.
+It does not use an adjacency graph. A singleton uses ring mapping; a stationary
+multi-state sequence produces zero phases. Label spacing therefore matters in
+graph mode; ring aliases are not graph-distance aliases.
 
 **Quality metric:** Transition regularity:
 
 | Transition type | Quality |
 |----------------|---------|
-| Single step to adjacent state | 1.0 |
-| Stall (repeated state) | 0.2 |
-| Multi-step jump (`|s_new - s_old| > 1`) | `1.0 - jump_size / N` |
+| Single step (k = 1) | 1.0 |
+| Stall (k = 0) | 0.2 |
+| Multi-step jump (k > 1) | `max(0.1, 1.0 - (k - 1) / N)` |
+| First observation | `initial_transition_quality`, default 0.5 |
+
+Graph distance k is the absolute linear index difference. Ring distance uses
+d = |s_new - s_old| mod N and k = min(d, N-d), including signed and
+out-of-vocabulary labels; a full cycle is a stall.
 
 Low quality indicates the state machine is behaving unexpectedly
 (stalling, skipping states), which makes the phase estimate
@@ -203,8 +208,11 @@ unreliable.
 
 **Extractor:** `SymbolicExtractor` in `oscillators.symbolic`.
 
-**Rust path:** `spo-oscillators::symbolic` provides `graph_walk_phase()`
-via FFI.
+**Rust path:** `spo-oscillators::symbolic` provides vector ring phases,
+graph-walk phases and linear transition qualities through the corresponding
+`*_rust` FFI functions. The public extractor scores cyclic ring quality in
+Python on both backend paths; without the kernel it also computes phases and
+graph quality in Python.
 
 ---
 

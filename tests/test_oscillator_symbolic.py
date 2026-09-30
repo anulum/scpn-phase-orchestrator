@@ -6,13 +6,16 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Symbolic oscillator tests
 
+"""Exercise symbolic extraction, cyclic quality and public engine integration."""
+
 from __future__ import annotations
 
 import os
-from typing import Any, get_type_hints
+from typing import cast, get_type_hints
 
 import numpy as np
 import pytest
+from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.oscillators.symbolic import SymbolicExtractor
 from tests.typing_contracts import assert_precise_ndarray_hint
@@ -26,10 +29,12 @@ TWO_PI = 2.0 * np.pi
 
 
 class TestRingPhaseMapping:
-    """Verify the analytical ring-phase mapping from discrete states
-    to continuous phase on the unit circle."""
+    """Verify the analytical ring-phase mapping.
 
-    def test_four_state_ring_phases(self):
+    Map discrete states to continuous phase on the unit circle.
+    """
+
+    def test_four_state_ring_phases(self) -> None:
         """States [0,1,2,3] with N=4 → θ = [0, π/2, π, 3π/2]."""
         ext = SymbolicExtractor(n_states=4, mode="ring")
         states = ext.extract(np.array([0, 1, 2, 3]), sample_rate=1.0)
@@ -38,7 +43,7 @@ class TestRingPhaseMapping:
             thetas, [0.0, np.pi / 2, np.pi, 3 * np.pi / 2], atol=1e-12
         )
 
-    def test_equispaced_phases(self):
+    def test_equispaced_phases(self) -> None:
         """N states must produce equispaced phases with gap = 2π/N."""
         for n in [3, 5, 8, 16]:
             ext = SymbolicExtractor(n_states=n, mode="ring")
@@ -50,7 +55,7 @@ class TestRingPhaseMapping:
                 gaps, expected_gap, atol=1e-12, err_msg=f"N={n}: gaps not equispaced"
             )
 
-    def test_phase_wraps_at_2pi(self):
+    def test_phase_wraps_at_2pi(self) -> None:
         """State index ≥ N must wrap via modulo."""
         ext = SymbolicExtractor(n_states=4, mode="ring")
         states = ext.extract(np.array([0, 4, 8]), sample_rate=1.0)
@@ -59,7 +64,7 @@ class TestRingPhaseMapping:
                 f"Multiples of N must map to θ=0, got {s.theta}"
             )
 
-    def test_all_phases_in_range(self):
+    def test_all_phases_in_range(self) -> None:
         """All output phases must be in [0, 2π)."""
         ext = SymbolicExtractor(n_states=7, mode="ring")
         states = ext.extract(np.arange(20), sample_rate=1.0)
@@ -73,28 +78,33 @@ class TestRingPhaseMapping:
 
 
 class TestGraphWalkMode:
-    """Verify the graph-walk phase mapping: cumulative transition distances
-    normalised to [0, 2π)."""
+    """Verify graph-walk cumulative transition distances.
 
-    def test_graph_phases_in_range(self):
+    Normalise the observed walk to [0, 2π).
+    """
+
+    def test_graph_phases_in_range(self) -> None:
+        """Keep observed graph phases on the unit circle."""
         ext = SymbolicExtractor(n_states=10, mode="graph")
         states = ext.extract(np.array([3, 5, 7, 2, 9]), sample_rate=1.0)
         for s in states:
             assert 0.0 <= s.theta < TWO_PI
 
-    def test_stationary_sequence_zero_phase(self):
+    def test_stationary_sequence_zero_phase(self) -> None:
         """No transitions → cumulative distance = 0 → all phases = 0."""
         ext = SymbolicExtractor(n_states=5, mode="graph")
         states = ext.extract(np.array([3, 3, 3, 3]), sample_rate=1.0)
-        # Total distance is 0, so thetas are all 0 or single-value division
-        for s in states:
-            assert 0.0 <= s.theta < TWO_PI
+        assert [state.theta for state in states] == pytest.approx([0.0] * 4)
+        assert [state.omega for state in states] == pytest.approx([0.0] * 4)
 
-    def test_single_state_has_valid_phase(self):
+    def test_single_state_has_valid_phase(self) -> None:
+        """Map a singleton graph sequence through the ring mapping."""
         ext = SymbolicExtractor(n_states=5, mode="graph")
         states = ext.extract(np.array([2]), sample_rate=1.0)
         assert len(states) == 1
-        assert 0.0 <= states[0].theta < TWO_PI
+        assert states[0].theta == pytest.approx(4 * np.pi / 5)
+        assert states[0].omega == 0.0
+        assert states[0].quality == 0.5
 
 
 # ---------------------------------------------------------------------------
@@ -103,30 +113,33 @@ class TestGraphWalkMode:
 
 
 class TestTransitionQuality:
-    """Verify the quality heuristic: single-step transitions = 1.0,
-    stalled = 0.2, large jumps penalised proportionally."""
+    """Verify transition quality.
 
-    def test_single_step_transitions_quality_1(self):
+    Single steps score 1.0, stalls 0.2, and larger jumps are penalised.
+    """
+
+    def test_single_step_transitions_quality_1(self) -> None:
         """Consecutive states [0,1,2,3,4] — all single-step → quality=1.0."""
         ext = SymbolicExtractor(n_states=8, mode="ring")
         states = ext.extract(np.array([0, 1, 2, 3, 4]), sample_rate=1.0)
         for s in states[1:]:
             assert s.quality == pytest.approx(1.0)
 
-    def test_stalled_state_quality_0_2(self):
+    def test_stalled_state_quality_0_2(self) -> None:
         """Repeated state → quality = 0.2 (penalised)."""
         ext = SymbolicExtractor(n_states=5, mode="ring")
         states = ext.extract(np.array([2, 2, 2, 2]), sample_rate=1.0)
         for s in states[1:]:
             assert s.quality == pytest.approx(0.2)
 
-    def test_first_state_quality_0_5(self):
+    def test_first_state_quality_0_5(self) -> None:
         """First state has no previous transition → default quality = 0.5."""
         ext = SymbolicExtractor(n_states=4, mode="ring")
         states = ext.extract(np.array([0, 1]), sample_rate=1.0)
         assert states[0].quality == pytest.approx(0.5)
 
-    def test_first_state_quality_respects_explicit_policy_override(self):
+    def test_first_state_quality_respects_explicit_policy_override(self) -> None:
+        """Respect the configured initial transition quality."""
         ext = SymbolicExtractor(
             n_states=4,
             mode="ring",
@@ -135,14 +148,14 @@ class TestTransitionQuality:
         states = ext.extract(np.array([0, 1]), sample_rate=1.0)
         assert states[0].quality == pytest.approx(0.8)
 
-    def test_large_jump_penalised(self):
+    def test_large_jump_penalised(self) -> None:
         """Jump of size 3 with N=8 → quality = max(0.1, 1-(3-1)/8) = 0.75."""
         ext = SymbolicExtractor(n_states=8, mode="ring")
         states = ext.extract(np.array([0, 3]), sample_rate=1.0)
         expected_q = max(0.1, 1.0 - (3 - 1) / 8)  # 0.75
         assert states[1].quality == pytest.approx(expected_q)
 
-    def test_quality_discriminates_clean_vs_noisy(self):
+    def test_quality_discriminates_clean_vs_noisy(self) -> None:
         """Clean sequential signal must score higher than noisy random jumps."""
         ext = SymbolicExtractor(n_states=10, mode="ring")
         clean = ext.extract(np.array([0, 1, 2, 3, 4, 5, 6, 7]), sample_rate=1.0)
@@ -162,37 +175,44 @@ class TestTransitionQuality:
 class TestSymbolicExtractorMetadata:
     """Verify channel, node_id, and construction constraints."""
 
-    def test_extract_signal_type_hint_includes_discrete_integer_contract(self):
+    def test_extract_signal_type_hint_includes_discrete_integer_contract(self) -> None:
+        """Retain the public discrete ndarray typing contract."""
         hint = get_type_hints(SymbolicExtractor.extract)["signal"]
         assert_precise_ndarray_hint(hint)
         assert "int64" in str(hint)
 
-    def test_channel_is_S(self):
+    def test_channel_is_S(self) -> None:
+        """Preserve symbolic channel and requested oscillator identifier."""
         ext = SymbolicExtractor(n_states=4, node_id="sym_q")
         states = ext.extract(np.array([0, 1]), sample_rate=1.0)
         assert all(s.channel == "S" for s in states)
         assert all(s.node_id == "sym_q" for s in states)
 
     @pytest.mark.parametrize("node_id", ["", "   ", 42, True])
-    def test_invalid_node_id_rejected(self, node_id: Any):
+    def test_invalid_node_id_rejected(self, node_id: object) -> None:
+        """Reject blank and non-string oscillator identifiers."""
         with pytest.raises(ValueError, match="node_id must be a non-empty string"):
-            SymbolicExtractor(n_states=4, node_id=node_id)
+            SymbolicExtractor(n_states=4, node_id=cast(str, node_id))
 
-    def test_n_states_below_2_rejected(self):
+    def test_n_states_below_2_rejected(self) -> None:
+        """Reject a vocabulary without two distinct states."""
         with pytest.raises(ValueError, match="n_states must be >= 2"):
             SymbolicExtractor(n_states=1)
 
     @pytest.mark.parametrize("n_states", [True, 4.0, "4"])
-    def test_non_integer_n_states_rejected(self, n_states: Any):
+    def test_non_integer_n_states_rejected(self, n_states: object) -> None:
+        """Reject boolean, fractional and textual vocabulary sizes."""
         with pytest.raises(ValueError, match="n_states must be an integer"):
-            SymbolicExtractor(n_states=n_states)
+            SymbolicExtractor(n_states=cast(int, n_states))
 
-    def test_numpy_integer_n_states_normalised(self):
-        ext = SymbolicExtractor(n_states=np.int64(4))
+    def test_numpy_integer_n_states_normalised(self) -> None:
+        """Accept a NumPy integral vocabulary size."""
+        ext = SymbolicExtractor(n_states=cast(int, np.int64(4)))
         states = ext.extract(np.array([0, 1]), sample_rate=1.0)
         assert states[1].theta == pytest.approx(np.pi / 2)
 
-    def test_invalid_mode_rejected(self):
+    def test_invalid_mode_rejected(self) -> None:
+        """Reject an unknown extraction mode."""
         with pytest.raises(ValueError, match="mode must be"):
             SymbolicExtractor(n_states=4, mode="invalid")
 
@@ -202,25 +222,30 @@ class TestSymbolicExtractorMetadata:
     )
     def test_invalid_initial_transition_quality_rejected(
         self, initial_transition_quality: object
-    ):
+    ) -> None:
+        """Reject non-real or out-of-range initial qualities."""
         with pytest.raises(ValueError, match="initial_transition_quality"):
             SymbolicExtractor(
                 n_states=4,
-                initial_transition_quality=initial_transition_quality,  # type: ignore[arg-type]
+                initial_transition_quality=cast(float, initial_transition_quality),
             )
 
-    def test_quality_score_empty(self):
+    def test_quality_score_empty(self) -> None:
+        """Score an empty observation list as zero."""
         assert SymbolicExtractor(n_states=4).quality_score([]) == 0.0
 
-    def test_quality_score_range(self):
+    def test_quality_score_range(self) -> None:
+        """Keep the mean quality in the unit interval."""
         ext = SymbolicExtractor(n_states=4)
         states = ext.extract(np.array([0, 1, 2, 3]), sample_rate=1.0)
         score = ext.quality_score(states)
         assert 0.0 < score <= 1.0
 
-    def test_omega_from_phase_differences(self):
+    def test_omega_from_phase_differences(self) -> None:
         """Omega must be derived from phase differences / dt.
-        For ring N=4 at sample_rate=1: Δθ = π/2, so ω ≈ π/2."""
+
+        For ring N=4 at sample_rate=1: Δθ = π/2, so ω ≈ π/2.
+        """
         ext = SymbolicExtractor(n_states=4, mode="ring")
         states = ext.extract(np.array([0, 1, 2, 3]), sample_rate=1.0)
         # states[0].omega = 0 (no previous), states[1..].omega ≈ π/2
@@ -238,12 +263,14 @@ class TestSymbolicExtractorMetadata:
             np.array(["1"], dtype=object),
         ],
     )
-    def test_extract_rejects_non_integer_signal(self, signal: object):
+    def test_extract_rejects_non_integer_signal(self, signal: object) -> None:
+        """Reject boolean, floating, complex and object observations."""
         ext = SymbolicExtractor(n_states=4, mode="ring")
         with pytest.raises(ValueError, match="signal must be integer"):
-            ext.extract(signal, sample_rate=1.0)
+            ext.extract(cast(NDArray[np.int64], signal), sample_rate=1.0)
 
-    def test_extract_rejects_multidimensional_signal(self):
+    def test_extract_rejects_multidimensional_signal(self) -> None:
+        """Reject state arrays with multiple dimensions."""
         ext = SymbolicExtractor(n_states=4, mode="ring")
         with pytest.raises(ValueError, match="signal must be 1-D"):
             ext.extract(np.array([[0, 1], [2, 3]]), sample_rate=1.0)
@@ -252,10 +279,11 @@ class TestSymbolicExtractorMetadata:
         "sample_rate",
         [True, 0.0, -1.0, float("nan"), float("inf"), "1.0"],
     )
-    def test_extract_rejects_invalid_sample_rate(self, sample_rate: object):
+    def test_extract_rejects_invalid_sample_rate(self, sample_rate: object) -> None:
+        """Reject non-positive, non-real or non-finite rates."""
         ext = SymbolicExtractor(n_states=4, mode="ring")
         with pytest.raises(ValueError, match="sample_rate must be finite and positive"):
-            ext.extract(np.array([0, 1]), sample_rate=sample_rate)
+            ext.extract(np.array([0, 1]), sample_rate=cast(float, sample_rate))
 
 
 class TestSymbolicPipelineEndToEnd:
@@ -264,7 +292,7 @@ class TestSymbolicPipelineEndToEnd:
     Proves SymbolicExtractor is a functional input adapter.
     """
 
-    def test_symbolic_phases_feed_engine(self):
+    def test_symbolic_phases_feed_engine(self) -> None:
         """Extract symbolic phases from state sequences → engine → R."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
         from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
@@ -296,7 +324,7 @@ class TestSymbolicPipelineEndToEnd:
         assert np.all(phases_arr >= 0.0)
         assert np.all(phases_arr < TWO_PI)
 
-    def test_ring_vs_graph_both_produce_valid_engine_input(self):
+    def test_ring_vs_graph_both_produce_valid_engine_input(self) -> None:
         """Both modes produce phases in [0, 2π) suitable for engine."""
         from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
@@ -310,7 +338,7 @@ class TestSymbolicPipelineEndToEnd:
             r, _ = compute_order_parameter(phases)
             assert 0.0 <= r <= 1.0
 
-    def test_performance_extract_1000_states_under_5ms(self):
+    def test_performance_extract_1000_states_under_5ms(self) -> None:
         """SymbolicExtractor.extract(1000 states) < 5ms."""
         import time
 
@@ -356,48 +384,126 @@ def test_graph_mode_keeps_the_linear_step() -> None:
     assert states[2].quality == pytest.approx(max(0.1, 1.0 - 4 / 6))
 
 
-def test_symbolic_extractor_uses_rust_graph_walk_when_available(
-    monkeypatch: pytest.MonkeyPatch,
+@pytest.mark.parametrize("indices", [[0, 2, 5, 1], [5, 3, 0, 4], [1, 3, 6, 2]])
+@pytest.mark.parametrize("sample_rate", [1.0, 8.0])
+def test_graph_walk_matches_observed_linear_distance(
+    indices: list[int], sample_rate: float
 ) -> None:
-    import scpn_phase_orchestrator.oscillators.symbolic as symbolic_mod
+    """Pin phases, signed velocity and quality through real graph extraction."""
+    signal = np.array(indices, dtype=np.int64)
+    original = signal.copy()
+    extractor = SymbolicExtractor(n_states=8, node_id="workflow", mode="graph")
+    states = extractor.extract(signal, sample_rate)
+    np.testing.assert_array_equal(signal, original)
+    assert [state.theta for state in states] == pytest.approx(
+        [0.0, 4 * np.pi / 9, 10 * np.pi / 9, 0.0], abs=1e-12
+    )
+    assert [state.omega for state in states] == pytest.approx(
+        np.array([0.0, 4 * np.pi / 9, 2 * np.pi / 3, 8 * np.pi / 9]) * sample_rate
+    )
+    assert [state.quality for state in states] == pytest.approx(
+        [0.5, 0.875, 0.75, 0.625]
+    )
+    assert extractor.quality_score(states) == pytest.approx(0.6875)
+    assert all(
+        state.amplitude == 1.0 and state.channel == "S" and state.node_id == "workflow"
+        for state in states
+    )
 
-    graph_calls: list[tuple[list[int], int]] = []
 
-    def _graph_walk_phases(state_indices: np.ndarray, n_states: int) -> np.ndarray:
-        values = [int(item) for item in state_indices.tolist()]
-        graph_calls.append((values, n_states))
-        cumulative = [0]
-        running = 0
-        for lhs, rhs in zip(values, values[1:], strict=False):
-            running += abs(rhs - lhs)
-            cumulative.append(running)
-        total = cumulative[-1] if cumulative and cumulative[-1] > 0 else 1
-        return np.asarray(
-            [TWO_PI * (position % total) / total for position in cumulative],
-            dtype=np.float64,
+@pytest.mark.parametrize(
+    "indices",
+    [
+        [3, 0, 1, 3],
+        [7, 0, 9, 7],
+        [-5, 0, 9, -1],
+        [2**53 + 3, -(2**62), 2**53 + 1, -(2**62) + 3],
+    ],
+)
+@pytest.mark.parametrize("sample_rate", [1.0, 8.0])
+def test_ring_aliases_preserve_cyclic_observation(
+    indices: list[int], sample_rate: float
+) -> None:
+    """Signed reindexing preserves phase, half-turn direction and bounded quality."""
+    signal = np.array(indices, dtype=np.int64)
+    original = signal.copy()
+    extractor = SymbolicExtractor(
+        n_states=4, node_id="cycle", initial_transition_quality=0.8
+    )
+    states = extractor.extract(signal, sample_rate)
+    np.testing.assert_array_equal(signal, original)
+    assert [state.theta for state in states] == pytest.approx(
+        [3 * np.pi / 2, 0.0, np.pi / 2, 3 * np.pi / 2], abs=1e-12
+    )
+    assert [state.omega for state in states] == pytest.approx(
+        np.array([0.0, np.pi / 2, np.pi / 2, -np.pi]) * sample_rate
+    )
+    assert [state.quality for state in states] == pytest.approx([0.8, 1.0, 1.0, 0.75])
+    assert extractor.quality_score(states) == pytest.approx(0.8875)
+    assert all(
+        state.amplitude == 1.0 and state.channel == "S" and state.node_id == "cycle"
+        for state in states
+    )
+
+
+@pytest.mark.parametrize("mode", ["ring", "graph"])
+@pytest.mark.parametrize("label", [2**53 + 1, -(2**62) + 3])
+def test_singleton_large_labels_preserve_integer_residues(
+    mode: str, label: int
+) -> None:
+    """Reduce int64 labels before floating-point mapping, including graph singletons."""
+    signal = np.array([label], dtype=np.int64)
+    states = SymbolicExtractor(n_states=4, mode=mode).extract(signal, 8.0)
+    expected = np.pi / 2 if label > 0 else 3 * np.pi / 2
+    assert len(states) == 1
+    assert states[0].theta == pytest.approx(expected, abs=1e-12)
+    assert states[0].omega == 0.0
+    assert states[0].quality == 0.5
+    assert signal[0] == label
+
+
+def test_complete_ring_cycles_are_stalls() -> None:
+    """Full positive and negative cycles retain the same observed state."""
+    states = SymbolicExtractor(n_states=4).extract(np.array([0, 8, -4, 12]), 1.0)
+    assert [state.theta for state in states] == pytest.approx([0.0] * 4)
+    assert [state.omega for state in states] == pytest.approx([0.0] * 4)
+    assert [state.quality for state in states] == pytest.approx([0.5, 0.2, 0.2, 0.2])
+
+
+@pytest.mark.parametrize("mode", ["ring", "graph"])
+def test_empty_symbolic_observation(mode: str) -> None:
+    """Empty observations return no fabricated state or quality."""
+    extractor = SymbolicExtractor(n_states=4, mode=mode)
+    states = extractor.extract(np.array([], dtype=np.int64), 1.0)
+    assert states == []
+    assert extractor.quality_score(states) == 0.0
+
+
+@pytest.mark.parametrize("mode", ["ring", "graph"])
+def test_symbolic_states_drive_an_exact_uncoupled_engine(mode: str) -> None:
+    """Exercise extracted signed frequencies through the public engine trajectory."""
+    from scpn_phase_orchestrator.upde.engine import UPDEEngine
+    from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
+
+    if mode == "ring":
+        states = SymbolicExtractor(n_states=4).extract(np.array([7, 0, 9, -1]), 8.0)
+        expected = np.array([5 * np.pi / 8, 5 * np.pi / 4])
+    else:
+        states = SymbolicExtractor(n_states=8, mode="graph").extract(
+            np.array([0, 2, 5, 1]), 8.0
         )
-
-    monkeypatch.setattr(symbolic_mod, "_HAS_RUST_SYMBOLIC", True)
-    monkeypatch.setattr(
-        symbolic_mod,
-        "_rust_graph_walk_phases",
-        _graph_walk_phases,
-        raising=False,
-    )
-    monkeypatch.setattr(
-        symbolic_mod,
-        "_rust_transition_qualities",
-        lambda indices, _n, initial: np.asarray(
-            [initial] + [1.0] * max(0, len(indices) - 1),
-            dtype=np.float64,
-        ),
-        raising=False,
-    )
-
-    ext = SymbolicExtractor(n_states=8, mode="graph")
-    _ = ext.extract(np.array([0, 2, 5]), sample_rate=1.0)
-
-    assert graph_calls == [([0, 2, 5], 8)]
+        expected = np.array([23 * np.pi / 18, 2 * np.pi / 9])
+    phases = np.array([states[2].theta, states[3].theta])
+    frequencies = np.array([states[2].omega, states[3].omega])
+    engine = UPDEEngine(2, dt=0.03125)
+    coupling = np.zeros((2, 2))
+    lags = np.zeros((2, 2))
+    actual = engine.step(phases, frequencies, coupling, 0.0, 0.0, lags)
+    np.testing.assert_allclose(actual, expected, atol=1e-12)
+    coherence, mean_phase = compute_order_parameter(actual)
+    expected_vector = np.mean(np.exp(1j * expected))
+    assert coherence == pytest.approx(abs(expected_vector))
+    assert mean_phase == pytest.approx(float(np.angle(expected_vector)) % TWO_PI)
 
 
 # Pipeline wiring: SymbolicExtractor → theta/omega → UPDEEngine
