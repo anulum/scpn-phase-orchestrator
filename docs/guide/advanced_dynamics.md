@@ -2,6 +2,22 @@
 
 Beyond basic Kuramoto, SPO provides several additional dynamical modules.
 
+## Cellular-Sheaf Phase Vectors
+
+`SheafUPDEEngine` integrates an `(N, D)` phase matrix with anisotropic
+`(N, N, D, D)` restriction maps. Off-diagonal map components couple distinct
+phase dimensions; a `D`-vector supplies the external-drive target. It returns
+independent phase arrays, with application diagnostics constructed by consumers.
+
+Euler, RK4 and adaptive Dormand–Prince RK45 advance the complete configured
+outer interval on every step. RK45's `last_dt` reports the next internal
+proposal, while a batch advances `n_steps * dt`. Python and PyO3/Rust enforce
+the same input, torus-output and refusal-recovery contracts. Direct native
+substeps divide the outer interval. See the
+[cellular-sheaf API](../reference/api/upde.md#cellular-sheaf-engine) for shapes,
+tolerances and validation details, and run
+`python -m benchmarks.sheaf_benchmark` for independent ODE-reference diagnostics.
+
 ## Variational Free Energy Predictor
 
 Implementation of Friston's Free Energy Principle mapped to Kuramoto dynamics.

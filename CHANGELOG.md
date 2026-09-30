@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Cellular-sheaf RK45 advances the full configured interval in Python and
+  Rust; native substeps partition that interval. Both paths use maximum scaled
+  component error and bounded adaptive progress. Invalid numerical results
+  refuse while preserving caller inputs and the pre-call proposal across
+  whole batches; rounded upper torus endpoints map to equivalent zero so
+  valid near-zero trajectories continue. Source-type validation rejects temporal
+  and mixed boolean sequence aliases, and geometry checks prevent native
+  cardinality overflow.
+  Real public/native equations, direct readonly buffer behavior and recovery
+  tests replace simulated producers. All three methods have refreshed seeded
+  diagnostics in native and genuinely kernel-absent environments.
+
 - Sparse native integration snapshots phase, frequency and CSR inputs before
   requesting writable coupling. Shared NumPy storage preserves entry-time
   values and direct native plasticity writeback; readonly native coupling

@@ -66,6 +66,37 @@ import spo_kernel
 print(spo_kernel.PyUPDEStepper)
 ```
 
+## Cellular-Sheaf Integration
+
+The public `SheafUPDEEngine` selects `PySheafUPDEStepper` when the compiled
+module is available, otherwise it uses NumPy. This selection is separate from
+the scalar engine's auxiliary-language fallback chain.
+
+Every successful step advances the configured outer `dt`, including adaptive
+RK45. Native `n_substeps` divides that interval for all three methods. RK45 uses
+the maximum scaled component error; its positive finite `last_dt` is the next
+internal proposal, bounded by the outer interval. Fixed methods report `dt`.
+Counts reject boolean aliases, overflowing geometry and invalid substep counts;
+numerical controls are finite real values, with `rtol >= atol` for RK45.
+
+Direct native inputs are readonly, one-dimensional contiguous float64 arrays
+in `(i, d)` phase/frequency and `(i, j, d, k)` restriction-map order. They may
+share storage. Step and batch outputs own independent storage, and invalid
+buffers or numerical refusal preserve input values and the pre-call proposal.
+Rounded upper torus endpoints map to equivalent zero, including valid tiny
+negative phase crossings; non-finite arithmetic still refuses.
+Zero batches still validate all buffers and return a copy preserving finite
+unwrapped phases. The same native instance recovers on subsequent valid input.
+The Python entry point also accepts finite real array-like inputs and copies
+strided storage. See the [complete contract](../reference/api/upde.md#cellular-sheaf-engine).
+
+Run `PYTHONPATH=.:src python -m benchmarks.sheaf_benchmark` in each actual
+environment to compare all three methods with an independent SciPy DOP853
+tensor ODE reference. The [September 30 diagnostic record](../reference/data/sheaf_benchmark_2026-09-30.json)
+contains raw repeats, source and binary provenance, input fingerprints and
+equation errors. Shared-host timings establish neither a production latency
+guarantee nor a causal acceleration claim.
+
 ## Auto-Delegation
 
 Python classes check for `spo_kernel` at construction time. If present, hot
@@ -96,6 +127,7 @@ for validation, parity tests and measured wrapper overhead.
 | Python Class / Function | Rust FFI Class | Hot path |
 |------------------------|----------------|----------|
 | `UPDEEngine` | `PyUPDEStepper` | dense `step()`, `run()`, frequency/Doppler schedules and moving-frame schedule |
+| `SheafUPDEEngine` | `PySheafUPDEStepper` | matrix phase `step()`, `run()` |
 | `StuartLandauEngine` | `PyStuartLandauStepper` | `step()`, `run()` |
 | `CouplingBuilder` | `PyCouplingBuilder` | `build()`, `project()` |
 | `ImprintModel` | `PyImprintModel` | `update()`, `modulate_coupling()`, `modulate_lag()` |

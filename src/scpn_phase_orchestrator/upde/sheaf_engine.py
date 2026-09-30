@@ -23,7 +23,7 @@ from numbers import Complex, Integral, Real
 from typing import TypeAlias
 
 import numpy as np
-from numpy.typing import NDArray
+from numpy.typing import ArrayLike, NDArray
 
 from scpn_phase_orchestrator._compat import HAS_RUST as _HAS_RUST
 from scpn_phase_orchestrator._compat import TWO_PI
@@ -31,6 +31,13 @@ from scpn_phase_orchestrator._compat import TWO_PI
 __all__ = ["SheafUPDEEngine"]
 
 FloatArray: TypeAlias = NDArray[np.float64]
+
+
+def _wrap_phases(phases: FloatArray) -> FloatArray:
+    """Return torus phases, mapping a rounded upper endpoint to equivalent zero."""
+    wrapped: FloatArray = phases % TWO_PI
+    wrapped[wrapped >= TWO_PI] = 0.0
+    return wrapped
 
 
 def _validate_positive_int(value: object, *, name: str) -> int:
@@ -44,7 +51,12 @@ def _validate_positive_float(value: object, *, name: str) -> float:
     """Return ``value`` as a strictly positive finite float, else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be positive finite real, got {value!r}")
-    coerced = float(value)
+    try:
+        coerced = float(value)
+    except OverflowError:
+        raise ValueError(
+            f"{name} must be positive finite real, got {value!r}"
+        ) from None
     if not np.isfinite(coerced) or coerced <= 0.0:
         raise ValueError(f"{name} must be positive finite real, got {value!r}")
     return coerced
@@ -54,13 +66,18 @@ def _validate_nonnegative_int(value: object, *, name: str) -> int:
     """Return ``value`` as a non-negative integer, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Integral) or value < 0:
         raise ValueError(f"{name} must be >= 0 as a non-boolean integer, got {value!r}")
-    return int(value)
+    count = int(value)
+    if count > np.iinfo(np.uint64).max:
+        raise ValueError(f"{name} exceeds the native u64 count range")
+    return count
 
 
 def _as_real_numeric_array(value: object, *, name: str) -> FloatArray:
     """Return a real numeric array without coercing string or complex aliases."""
     try:
         raw = np.asarray(value)
+        if isinstance(value, (list, tuple)):
+            raw = np.asarray(value, dtype=object)
     except (TypeError, ValueError):
         raise ValueError(f"{name} must be a numeric array") from None
     object_values = raw.dtype == np.object_
@@ -77,7 +94,9 @@ def _as_real_numeric_array(value: object, *, name: str) -> FloatArray:
     ):
         raise ValueError(f"{name} must be real-valued, not complex")
     numeric_object = object_values and all(isinstance(item, Real) for item in raw.flat)
-    if not np.issubdtype(raw.dtype, np.number) and not numeric_object:
+    if raw.dtype.kind in ("m", "M") or (
+        not np.issubdtype(raw.dtype, np.number) and not numeric_object
+    ):
         raise ValueError(f"{name} must be numeric")
     try:
         return np.ascontiguousarray(raw, dtype=np.float64)
@@ -104,7 +123,10 @@ def _validate_finite_real(value: object, *, name: str) -> float:
     """Return ``value`` as a finite real float, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be finite real, got {value!r}")
-    coerced = float(value)
+    try:
+        coerced = float(value)
+    except OverflowError:
+        raise ValueError(f"{name} must be finite real, got {value!r}") from None
     if not np.isfinite(coerced):
         raise ValueError(f"{name} must be finite real, got {value!r}")
     return coerced
@@ -177,7 +199,27 @@ class SheafUPDEEngine:
         method: str = "euler",
         atol: float = 1e-6,
         rtol: float = 1e-3,
-    ):
+    ) -> None:
+        """Configure a fixed outer timestep and optional adaptive integration.
+
+        Parameters
+        ----------
+        n_oscillators, d_dimensions : int
+            Positive oscillator count and phase-vector dimension.
+        dt : float
+            Positive duration advanced by each successful step.
+        method : str
+            Euler, RK4 or adaptive Dormand-Prince RK45 integration.
+        atol, rtol : float
+            Positive finite absolute and relative RK45 tolerances, with
+            ``rtol >= atol`` when using RK45.
+
+        Raises
+        ------
+        ValueError
+            Geometry overflows native cardinality, a count or numerical control
+            is invalid, or the method is unsupported.
+        """
         n_oscillators = _validate_positive_int(
             n_oscillators,
             name="n_oscillators",
@@ -186,6 +228,9 @@ class SheafUPDEEngine:
             d_dimensions,
             name="d_dimensions",
         )
+        size = n_oscillators * d_dimensions
+        if size * size > np.iinfo(np.uintp).max:
+            raise ValueError("sheaf geometry overflows usize")
         dt = _validate_positive_float(dt, name="dt")
         atol = _validate_positive_float(atol, name="atol")
         rtol = _validate_positive_float(rtol, name="rtol")
@@ -195,6 +240,8 @@ class SheafUPDEEngine:
         if method not in ("euler", "rk4", "rk45"):
             msg = f"Unknown method {method!r}, expected 'euler', 'rk4', or 'rk45'"
             raise ValueError(msg)
+        if method == "rk45" and rtol < atol:
+            raise ValueError("for RK45, rtol must be >= atol")
         self._method = method
         self._atol = atol
         self._rtol = rtol
@@ -214,42 +261,49 @@ class SheafUPDEEngine:
 
     @property
     def last_dt(self) -> float:
-        """Return the most recent accepted Python or Rust timestep.
+        """Return the next adaptive substep proposal or configured fixed timestep.
 
         Returns
         -------
         float
-            Positive finite timestep accepted by the sheaf engine.
+            Positive finite proposal bounded by the configured outer timestep.
         """
         return self._last_dt
 
     def step(
         self,
-        phases: FloatArray,
-        omegas: FloatArray,
-        restriction_maps: FloatArray,
+        phases: ArrayLike,
+        omegas: ArrayLike,
+        restriction_maps: ArrayLike,
         zeta: float,
-        psi: FloatArray,
+        psi: ArrayLike,
     ) -> FloatArray:
-        """Advance phases by one timestep.
+        """Advance phases through one complete configured outer interval.
 
         Parameters
         ----------
-        phases : FloatArray
+        phases : array_like
             Current phase matrix [theta_i,d], shape (N, D).
-        omegas : FloatArray
+        omegas : array_like
             Natural frequency matrix [omega_i,d], shape (N, D).
-        restriction_maps : FloatArray
+        restriction_maps : array_like
             Block matrix coupling [B_ij^{dk}], shape (N, N, D, D).
         zeta : float
             External forcing strength (global scalar).
-        psi : FloatArray
+        psi : array_like
             Reference phase target vector, shape (D,).
 
         Returns
         -------
         FloatArray
-            New phase matrix, shape (N, D).
+            Independent float64 phase matrix, shape (N, D), in ``[0, 2*pi)``.
+
+        Raises
+        ------
+        ValueError
+            Inputs have invalid source types, shapes or non-finite values, or
+            integration cannot produce a finite torus state. Refusal preserves
+            input storage and the previously published ``last_dt`` proposal.
         """
         phases, omegas, restriction_maps, zeta, psi = self._validate_inputs(
             phases,
@@ -278,43 +332,68 @@ class SheafUPDEEngine:
                 )
                 return output
 
-            if self._method == "euler":
-                return self._euler_step(phases, omegas, restriction_maps, zeta, psi)
-            if self._method == "rk45":
-                return self._rk45_step(phases, omegas, restriction_maps, zeta, psi)
-            return self._rk4_step(phases, omegas, restriction_maps, zeta, psi)
+            previous_dt = self._last_dt
+            try:
+                with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
+                    if self._method == "euler":
+                        output = self._euler_step(
+                            phases, omegas, restriction_maps, zeta, psi
+                        )
+                    elif self._method == "rk45":
+                        output = self._rk45_step(
+                            phases, omegas, restriction_maps, zeta, psi
+                        )
+                    else:
+                        output = self._rk4_step(
+                            phases, omegas, restriction_maps, zeta, psi
+                        )
+                if not np.all(np.isfinite(output)) or np.any(
+                    (output < 0.0) | (output >= TWO_PI)
+                ):
+                    raise ValueError("Sheaf step returned invalid torus phases")
+                return output
+            except ValueError:
+                self._last_dt = previous_dt
+                raise
 
     def run(
         self,
-        phases: FloatArray,
-        omegas: FloatArray,
-        restriction_maps: FloatArray,
+        phases: ArrayLike,
+        omegas: ArrayLike,
+        restriction_maps: ArrayLike,
         zeta: float,
-        psi: FloatArray,
+        psi: ArrayLike,
         n_steps: int,
     ) -> FloatArray:
-        """Run multiple steps in a batch, return final phases.
+        """Advance a batch of complete outer intervals and return final phases.
 
         Parameters
         ----------
-        phases : FloatArray
+        phases : array_like
             Oscillator phases in radians, shape ``(N, D)``.
-        omegas : FloatArray
+        omegas : array_like
             Natural frequencies in rad/s, shape ``(N, D)``.
-        restriction_maps : FloatArray
+        restriction_maps : array_like
             Sheaf restriction maps, shape ``(N, N, D, D)``.
         zeta : float
             External drive strength ``ζ``.
-        psi : FloatArray
+        psi : array_like
             External drive reference phase ``Ψ`` in radians, shape ``(D,)``.
         n_steps : int
-            Number of integration steps to run. Zero returns an independent,
-            validated copy without invoking the optional backend.
+            Non-boolean count in the native u64 range. Zero returns an
+            independent, validated copy without invoking the optional backend.
 
         Returns
         -------
         FloatArray
-            The final phases after ``n_steps`` sheaf steps.
+            Independent float64 phases after ``n_steps * dt`` elapsed time,
+            in ``[0, 2*pi)``. Zero steps preserve valid unwrapped phase values.
+
+        Raises
+        ------
+        ValueError
+            Count, inputs or numerical integration are invalid. A refusal at
+            any interval preserves input storage and the pre-batch proposal.
         """
         n_steps = _validate_nonnegative_int(n_steps, name="n_steps")
         phases, omegas, restriction_maps, zeta, psi = self._validate_inputs(
@@ -347,18 +426,23 @@ class SheafUPDEEngine:
                 )
                 return output
 
-            p = phases.copy()
-            for _ in range(n_steps):
-                p = self.step(p, omegas, restriction_maps, zeta, psi)
-            return p
+            previous_dt = self._last_dt
+            try:
+                p = phases.copy()
+                for _ in range(n_steps):
+                    p = self.step(p, omegas, restriction_maps, zeta, psi)
+                return p
+            except ValueError:
+                self._last_dt = previous_dt
+                raise
 
     def _validate_inputs(
         self,
-        phases: FloatArray,
-        omegas: FloatArray,
-        restriction_maps: FloatArray,
+        phases: ArrayLike,
+        omegas: ArrayLike,
+        restriction_maps: ArrayLike,
         zeta: float,
-        psi: FloatArray,
+        psi: ArrayLike,
     ) -> tuple[FloatArray, FloatArray, FloatArray, float, FloatArray]:
         """Validate and normalise the sheaf-engine integration inputs."""
         n, d = self._n, self._d
@@ -407,17 +491,14 @@ class SheafUPDEEngine:
         zeta: float,
         psi: FloatArray,
     ) -> FloatArray:
-        """Single RK4 integration step (Python fallback for rk4/rk45)."""
+        """Advance a complete configured timestep by classical RK4."""
         dt = self._dt
         args = (omegas, restriction_maps, zeta, psi)
         k1 = self._derivative(phases, *args)
-        k2 = self._derivative((phases + 0.5 * dt * k1) % TWO_PI, *args)
-        k3 = self._derivative((phases + 0.5 * dt * k2) % TWO_PI, *args)
-        k4 = self._derivative((phases + dt * k3) % TWO_PI, *args)
-        result: FloatArray = (
-            phases + (dt / 6.0) * (k1 + 2 * k2 + 2 * k3 + k4)
-        ) % TWO_PI
-        return result
+        k2 = self._derivative(_wrap_phases(phases + 0.5 * dt * k1), *args)
+        k3 = self._derivative(_wrap_phases(phases + 0.5 * dt * k2), *args)
+        k4 = self._derivative(_wrap_phases(phases + dt * k3), *args)
+        return _wrap_phases(phases + (dt / 6.0) * (k1 + 2 * k2 + 2 * k3 + k4))
 
     def _rk45_stage_vector(
         self,
@@ -444,31 +525,57 @@ class SheafUPDEEngine:
         zeta: float,
         psi: FloatArray,
     ) -> FloatArray:
-        """Advance the sheaf state one adaptive RK45 step."""
+        """Advance the complete outer interval with bounded RK45 substeps."""
         dt = self._last_dt
-        max_reject = 3
-        for _ in range(max_reject + 1):
+        remaining = self._dt
+        current = phases.copy()
+        rejects = 0
+        for _ in range(100_000):
+            dt = min(dt, remaining)
             stages = self._rk45_stage_vector(
-                phases,
+                current,
                 omegas,
                 restriction_maps,
                 zeta,
                 psi,
                 dt,
             )
-            y5 = phases + dt * sum(self._DP_B5[i] * stages[i] for i in range(7))
-            y4 = phases + dt * sum(self._DP_B4[i] * stages[i] for i in range(7))
-            scale = self._atol + self._rtol * np.maximum(np.abs(phases), np.abs(y5))
-            err_norm = float(np.max(np.abs(y5 - y4) / scale))
+            y5 = current + dt * sum(self._DP_B5[i] * stages[i] for i in range(7))
+            error = dt * sum(
+                (self._DP_B4[i] - self._DP_B5[i]) * stages[i] for i in range(7)
+            )
+            scale = self._atol + self._rtol * np.maximum(np.abs(current), np.abs(y5))
+            if (
+                not all(np.all(np.isfinite(stage)) for stage in stages)
+                or not np.all(np.isfinite(y5))
+                or not np.all(np.isfinite(scale))
+            ):
+                raise ValueError("Sheaf RK45 produced non-finite arithmetic")
+            err_norm = float(np.max(np.abs(error) / scale))
+            if not np.isfinite(err_norm):
+                raise ValueError("Sheaf RK45 produced non-finite error estimate")
+            factor = (
+                min(5.0, max(0.2, 0.9 * err_norm ** (-0.2))) if err_norm > 0.0 else 5.0
+            )
+            next_dt = min(dt * factor, self._dt)
+            if not np.isfinite(next_dt) or next_dt <= 0.0:
+                raise ValueError("Sheaf RK45 timestep cannot advance")
             if err_norm <= 1.0:
-                factor = min(5.0, 0.9 * err_norm ** (-0.2)) if err_norm > 0.0 else 5.0
-                self._last_dt = min(dt * factor, self._dt * 10.0)
-                result: FloatArray = y5 % TWO_PI
-                return result
-            dt *= max(0.2, 0.9 * err_norm ** (-0.25))
-        self._last_dt = dt
-        result_fallback: FloatArray = y5 % TWO_PI
-        return result_fallback
+                next_remaining = remaining - dt
+                if next_remaining == remaining:
+                    raise ValueError("Sheaf RK45 timestep cannot advance")
+                current = y5
+                remaining = next_remaining
+                self._last_dt = next_dt
+                rejects = 0
+                if remaining <= 0.0:
+                    return _wrap_phases(current)
+            else:
+                rejects += 1
+                if rejects >= 64:
+                    raise ValueError("Sheaf RK45 rejection limit exceeded")
+            dt = next_dt
+        raise ValueError("Sheaf RK45 substep limit exceeded")
 
     def _euler_step(
         self,
@@ -480,5 +587,4 @@ class SheafUPDEEngine:
     ) -> FloatArray:
         """Advance the sheaf state one explicit-Euler step."""
         dtheta = self._derivative(phases, omegas, restriction_maps, zeta, psi)
-        result: FloatArray = (phases + self._dt * dtheta) % TWO_PI
-        return result
+        return _wrap_phases(phases + self._dt * dtheta)

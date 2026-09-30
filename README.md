@@ -348,9 +348,9 @@ inside a dashboard or notebook; it turns them into inspectable artefacts.
 | Integration modules | 32 |
 | Research/Experimental modules | 205 |
 | Domainpack files | 36 |
-| Rust kernel files | 119 |
+| Rust kernel files | 120 |
 | Optional extras | 23 |
-| Python test files | 1070 |
+| Python test files | 1071 |
 | Public documentation pages | 243 |
 | GitHub Actions workflows | 19 |
 
@@ -561,6 +561,16 @@ print(state.order_parameter)
 ```
 
 ## Reference Benchmarks
+
+Cellular-sheaf diagnostics exercise the public `SheafUPDEEngine` with all three
+solver methods, anisotropic coupling and external forcing against an independent
+SciPy DOP853 reference. Each step advances the complete configured interval;
+RK45's `last_dt` is its next internal proposal. Run
+`PYTHONPATH=.:src python -m benchmarks.sheaf_benchmark`. The
+[September 30 local record](docs/reference/data/sheaf_benchmark_2026-09-30.json)
+contains both actual runtime environments, raw repeats and provenance. These
+shared-host timings establish neither a causal speedup nor production latency.
+See the [cellular-sheaf contract](docs/reference/api/upde.md#cellular-sheaf-engine).
 
 SPO keeps reference benchmarks as reproducible evidence, not as marketing
 claims. The checked-in snapshot is dated `2026-06-14` and was generated with:
