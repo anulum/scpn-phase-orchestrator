@@ -23,8 +23,13 @@ downstream.
 
 **Physical (`"P"`)** — theta is the Hilbert-transform analytic phase of a
 continuous signal (EEG, MEG, accelerometer, voltage). Omega is the
-instantaneous frequency from the phase gradient. Amplitude is the
-analytic signal envelope.
+median angular frequency from the unwrapped phase gradient. Amplitude is the
+mean analytic signal envelope. Physical quality is clipped `1 - CV(envelope)`,
+with zero quality when the mean envelope is below `1e-15`. Python and Rust use
+scaled envelope statistics to avoid intermediate overflow for representable
+large analytic magnitudes. A non-finite analytic signal after filtering/Hilbert
+preprocessing raises `ValueError`, even when raw samples are finite. Quality
+does not measure an SNR or certify observability.
 
 **Informational (`"I"`)** — theta maps discrete events (spikes, network
 packets, heartbeats) to a continuous phase on `[0, 2π)` via ring
@@ -54,7 +59,7 @@ or probability of the current state assignment.
 
 3. **Quality** — reflects measurement reliability, not system health.
    Low quality means the phase estimate is uncertain. Causes include:
-   - Low SNR in the P-channel signal.
+   - Low envelope-regularity score or mean envelope below `1e-15` in the P-channel.
    - Irregular event timing in the I-channel (high coefficient of
      variation of inter-event intervals).
    - Ambiguous state assignment in the S-channel.

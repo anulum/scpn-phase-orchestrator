@@ -40,7 +40,11 @@ and `semantic/` subpackages), `oscillators` 8, `drivers` 4, `imprint` 3.
 Extractors carry optional Rust paths (`spo_kernel.physical_extract`,
 `event_phase`, `ring_phases_rust`, …) with Python fallbacks. Symbolic distances
 and residues use exact integers before float64 conversion; continuous inputs
-use Python/NumPy by design (LAPACK/FFT-favoured).
+use Python/NumPy by design (LAPACK/FFT-favoured). Physical filtering and the
+Hilbert transform precede either envelope-statistics core. Both cores use scaled
+mean/CV arithmetic for representable large envelopes; the Rust core uses hypot
+magnitudes. The [physical diagnostic](../../reference/api/oscillators.md#reproducing-local-physical-diagnostics)
+records actual native dispatch and each runtime's numerical reference.
 
 ## Wiring
 

@@ -59,7 +59,7 @@ binding specification declares which channels are active.
 |-------|------|-------|-------------|
 | `theta` | `float` | [0, 2π) | Phase angle |
 | `omega` | `float` | R | Instantaneous frequency (rad/s) |
-| `amplitude` | `float` | ≥ 0 | Signal strength (SNR proxy) |
+| `amplitude` | `float` | ≥ 0 | Extractor-dependent signal magnitude |
 | `quality` | `float` | [0, 1] | Extraction confidence |
 | `channel` | `str` | Identifier | Binding channel (`P`, `I`, `S`, or named extension) |
 | `node_id` | `str` | — | Unique oscillator identifier |
@@ -103,7 +103,12 @@ method computes an aggregate quality for the extraction.
 ### PhysicalExtractor
 
 ```python
-PhysicalExtractor(node_id: str = "phys_0")
+PhysicalExtractor(
+    node_id: str = "phys_0", *,
+    band: tuple[float, float] | None = None,
+    filter_order: int = 4,
+    edge_trim: int | None = None,
+)
 ```
 
 Uses the analytic signal (Hilbert transform) to decompose a real-valued
@@ -124,15 +129,16 @@ z(t) = x(t) + i H[x(t)]
 
 ### Quality metric
 
-`_envelope_quality(signal, analytic)` returns quality based on the
-coefficient of variation (CV) of the analytic signal envelope:
+The returned `PhaseState.quality` uses the coefficient of variation (CV) of the analytic signal envelope:
 
 ```
 quality = clip(1.0 - CV(|z(t)|), 0, 1)
 ```
 
 Clean sinusoids have near-constant envelope (CV ≈ 0, quality ≈ 1.0).
-Noisy signals have variable envelope (high CV, low quality).
+Variable envelopes have high CV and low quality, including deterministic
+amplitude modulation with an exactly known phase. A mean envelope below
+`1e-15` gives zero quality; the score does not measure SNR or observability.
 
 ### Validation
 
@@ -144,9 +150,54 @@ Noisy signals have variable envelope (high CV, low quality).
 
 When `spo_kernel` is importable, uses `spo_kernel.physical_extract()`
 for the core computation. Python fallback uses scipy Hilbert transform.
-Parity verified in `tests/test_oscillator_physical.py::test_rust_python_parity`.
+The Hilbert transform and optional filtering/trimming run before either core.
+Both real environments are exercised by `tests/test_oscillator_physical.py`;
+`native-tests/test_physical.py` additionally verifies the registered native
+call and direct readonly-array admission. Scaled envelope statistics avoid
+intermediate overflow without changing the CV equation or its absolute
+`1e-15` quality cutoff. This protects representable analytic envelopes;
+filtering/Hilbert preprocessing can still overflow on finite raw samples.
+Public extraction refuses a non-finite analytic signal with `ValueError`
+before entering either statistics core.
 
-**Performance:** `extract(1s @ 1kHz)` < 5 ms.
+**Local test budget:** `extract(1s @ 1kHz)` averages below 5 ms in the
+owning host-sensitive test. This is not a published latency guarantee.
+
+
+### Reproducing local physical diagnostics
+
+Run `python -m benchmarks.physical_extraction --repeats 20` in each actual
+runtime. The command records native C-call identities, artifact/source hashes,
+raw-waveform and analytic-signal hashes, NumPy/SciPy versions, host affinity,
+load, all four extraction fields and a separately computed equation reference.
+Every case must agree with its own runtime's reference before JSON is emitted.
+
+The following medians in microseconds were recorded on 2026-09-30 on an Intel
+i5-11600K, CPython 3.12, affinity CPUs 0–11, without isolation. Host load was
+20.5–25.3 during the runs. These are functional diagnostics on a shared host;
+they do not support a speedup or deployment latency claim. The native runtime
+used NumPy 2.5.3/SciPy 1.18.1; the actual kernel-absent runtime used
+NumPy 2.2.6/SciPy 1.15.3. Each row passed its separately computed numerical reference.
+
+| Workload | Native runtime median (µs) | Kernel-absent runtime median (µs) |
+|----------|----------------------------|----------------------------------|
+| sinusoid_1000 | 195.4 | 397.3 |
+| bandpass_1000 | 928.6 | 1233.9 |
+| zero_envelope | 108.7 | 227.2 |
+| tiny_envelope | 113.5 | 304.0 |
+| trim_to_two | 139.9 | 342.8 |
+| modulated_127 | 140.6 | 330.9 |
+| large_modulated_127 | 125.3 | 496.8 |
+| modulated_128 | 111.5 | 299.7 |
+| large_modulated_128 | 115.6 | 317.3 |
+
+All nine raw-waveform hashes matched between runtimes. The band-pass analytic
+hash differed and its endpoint phase differed by about `6.72e-6` radians;
+each runtime still matched its own filtering/Hilbert reference. The zero and
+tiny analytic hashes also differed while their returned fields agreed.
+Equal raw inputs therefore do not establish bitwise preprocessing parity
+across different dependency versions. Compare matched preprocessing and
+recorded runtime versions before making a numerical or timing claim.
 
 ::: scpn_phase_orchestrator.oscillators.physical
 
@@ -417,12 +468,15 @@ analysis (e.g., computing R separately for P and I oscillators).
 ## Rust FFI acceleration
 
 `PhysicalExtractor` uses `spo_kernel.physical_extract()` when the
-Rust extension is installed. The Rust path computes the Hilbert
-transform and phase extraction in a single pass, avoiding Python/NumPy
-overhead for large signals.
+Rust extension is installed. SciPy computes filtering and the Hilbert transform
+before the native core receives contiguous real and imaginary arrays. Rust then
+computes phase, median angular frequency, scaled mean amplitude and envelope CV.
 
-Parity is verified in `tests/test_oscillator_physical.py::test_rust_python_parity`
-with tolerance atol=1e-10 for phase, rtol=0.01 for frequency.
+`tests/test_oscillator_physical.py` checks public analytical contracts in native
+and kernel-absent environments. `native-tests/test_physical.py` proves registered
+C-call dispatch and direct native admission. The diagnostic command above records
+floating-point agreement with each runtime's reference; bitwise parity depends
+on the preprocessing environment.
 
 ---
 
@@ -430,7 +484,7 @@ with tolerance atol=1e-10 for phase, rtol=0.01 for frequency.
 
 | Operation | Budget | Rust | Notes |
 |-----------|--------|------|-------|
-| `PhysicalExtractor.extract(1s @ 1kHz)` | < 5 ms | < 1 ms | Hilbert transform |
+| `PhysicalExtractor.extract(1s @ 1kHz)` | Local test: < 5 ms | Same public test budget | Hilbert transform; no published speedup |
 | `InformationalExtractor.extract(100 ts)` | < 600 μs (local test limit, deselected in hosted CI) | — | native kernel or NumPy fallback |
 | `SymbolicExtractor.extract(1000 states)` | Local test: < 5 ms; < 50 ms under CI/high load | — | ring mapping; not a published benchmark |
 | `PhaseQualityScorer.downweight_mask(100)` | < 50 μs | 3.15 μs | public wrapper: 31.57 μs |

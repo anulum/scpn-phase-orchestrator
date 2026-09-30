@@ -111,7 +111,7 @@ for validation, parity tests and measured wrapper overhead.
 | `PhaseQualityScorer` | `PyPhaseQualityScorer` | `score()`, `is_collapsed()` |
 | `LagModel` | `PyLagModel` | `estimate()` |
 | `NeurocoreBridge` | `PyLIFEnsemble` | `step()` (LIF ensemble, 325x at N=10000) |
-| Physical extractor | `physical_extract` | analytic signal extraction |
+| Physical extractor | `physical_extract` | analytic phase/frequency and scaled envelope mean/CV; Hilbert preprocessing stays in SciPy |
 | Symbolic extractors | `ring_phases_rust`, `graph_walk_phases_rust`, `transition_qualities_rust` | vector phases and linear graph qualities; cyclic ring quality stays in Python |
 | Informational extractor | `event_phase` | timestamp analysis |
 | `SimplicialEngine` | `simplicial_run` | 3-body coupling `run()` |
