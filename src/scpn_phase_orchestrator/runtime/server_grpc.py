@@ -22,10 +22,12 @@ import hmac
 import logging
 import os
 import time
-from collections.abc import Iterator
+from collections.abc import Callable, Iterator
+from functools import wraps
 from math import isfinite
-from typing import Any
+from typing import Any, NoReturn, TypeVar
 
+from scpn_phase_orchestrator.exceptions import SPOError
 from scpn_phase_orchestrator.runtime.grpc_gen import (
     ConfigResponse,
     LayerState,
@@ -41,7 +43,24 @@ from scpn_phase_orchestrator.runtime.server import SimulationState
 
 logger = logging.getLogger(__name__)
 
-__all__ = ["PhaseStreamServicer", "HAS_GRPC"]
+__all__ = ["GrpcRequestRefusalError", "PhaseStreamServicer", "HAS_GRPC"]
+
+_INTERNAL_ERROR_DETAIL = "internal error"
+
+
+class GrpcRequestRefusalError(SPOError, ValueError):
+    """A deliberately authored request refusal whose text may reach the caller.
+
+    The servicer answers this type with ``INVALID_ARGUMENT`` and its message.
+    Any other exception raised while serving a call is logged and answered
+    with ``INTERNAL`` and a fixed detail, because gRPC would otherwise send
+    ``"Exception calling application: <exception text>"`` to the client.
+    """
+
+
+class _RpcAbortedError(PermissionError):
+    """Raised once the servicer has aborted a call with a chosen status."""
+
 
 try:
     # type ignore: grpcio ships without complete typing in the supported range.
@@ -89,28 +108,33 @@ def _normalise_metadata(raw_metadata: Any) -> dict[str, str]:
         if not isinstance(pair, tuple) or len(pair) != 2:
             continue
         key, value = pair
-        if isinstance(key, bytes):
-            key = key.decode("utf-8", errors="strict")
-        if isinstance(value, bytes):
-            value = value.decode("utf-8", errors="strict")
+        try:
+            if isinstance(key, bytes):
+                key = key.decode("utf-8", errors="strict")
+            if isinstance(value, bytes):
+                value = value.decode("utf-8", errors="strict")
+        except UnicodeDecodeError:
+            # Binary ("-bin") metadata carries arbitrary bytes by the gRPC
+            # specification; no text header read here can be binary.
+            continue
         metadata[str(key).lower()] = str(value)
     return metadata
 
 
 def _validate_positive_int(value: Any, field: str) -> int:
-    """Return ``value`` as a positive integer, else raise ``ValueError``."""
+    """Return ``value`` as a positive integer, else raise the authored refusal."""
     if not isinstance(value, int) or isinstance(value, bool) or value <= 0:
-        raise ValueError(f"{field} must be a positive integer")
+        raise GrpcRequestRefusalError(f"{field} must be a positive integer")
     return value
 
 
 def _validate_non_negative_real(value: Any, field: str) -> float:
     """Return ``value`` as a non-negative finite real, else raise."""
     if isinstance(value, bool) or not isinstance(value, int | float):
-        raise ValueError(f"{field} must be a non-negative real")
+        raise GrpcRequestRefusalError(f"{field} must be a non-negative real")
     value_f = float(value)
     if not isfinite(value_f) or value_f < 0.0:
-        raise ValueError(f"{field} must be a non-negative real")
+        raise GrpcRequestRefusalError(f"{field} must be a non-negative real")
     return value_f
 
 
@@ -120,18 +144,20 @@ def _resolve_stream_max_steps(request: Any) -> int:
     if raw_max_steps is None:
         return 100
     if not isinstance(raw_max_steps, int) or isinstance(raw_max_steps, bool):
-        raise ValueError("max_steps must be a positive integer")
+        raise GrpcRequestRefusalError("max_steps must be a positive integer")
     if raw_max_steps < 0:
-        raise ValueError("max_steps must be a positive integer")
+        raise GrpcRequestRefusalError("max_steps must be a positive integer")
     if raw_max_steps == 0:
         list_fields = getattr(request, "ListFields", None)
         if callable(list_fields):
             populated = list_fields()
             for descriptor, _value in populated:
                 if getattr(descriptor, "name", None) == "max_steps":
-                    raise ValueError("max_steps must be a positive integer")
+                    raise GrpcRequestRefusalError(
+                        "max_steps must be a positive integer"
+                    )
             return 100
-        raise ValueError("max_steps must be a positive integer")
+        raise GrpcRequestRefusalError("max_steps must be a positive integer")
     return raw_max_steps
 
 
@@ -163,6 +189,61 @@ def _log_state_rpc(
     )
 
 
+_Response = TypeVar("_Response")
+
+
+def _guard_unary(
+    rpc: str,
+) -> Callable[
+    [Callable[[PhaseStreamServicer, Any, Any], _Response]],
+    Callable[[PhaseStreamServicer, Any, Any], _Response],
+]:
+    """Answer an unexpected unary-RPC failure with a fixed ``INTERNAL`` detail."""
+
+    def decorate(
+        method: Callable[[PhaseStreamServicer, Any, Any], _Response],
+    ) -> Callable[[PhaseStreamServicer, Any, Any], _Response]:
+        @wraps(method)
+        def guarded(self: PhaseStreamServicer, request: Any, context: Any) -> _Response:
+            try:
+                return method(self, request, context)
+            except _RpcAbortedError:
+                raise
+            except Exception as exc:
+                self._fail_internally(context, rpc, exc)
+
+        return guarded
+
+    return decorate
+
+
+def _guard_stream(
+    rpc: str,
+) -> Callable[
+    [Callable[[PhaseStreamServicer, Any, Any], Iterator[_Response]]],
+    Callable[[PhaseStreamServicer, Any, Any], Iterator[_Response]],
+]:
+    """Answer an unexpected streaming-RPC failure with a fixed ``INTERNAL`` detail."""
+
+    def decorate(
+        method: Callable[[PhaseStreamServicer, Any, Any], Iterator[_Response]],
+    ) -> Callable[[PhaseStreamServicer, Any, Any], Iterator[_Response]]:
+        @wraps(method)
+        def guarded(
+            self: PhaseStreamServicer, request: Any, context: Any
+        ) -> Iterator[_Response]:
+            try:
+                yield from method(self, request, context)
+            except _RpcAbortedError:
+                raise
+            except Exception as exc:
+                self._fail_internally(context, rpc, exc)
+
+        return guarded
+
+    return decorate
+
+
 class PhaseStreamServicer(PhaseOrchestratorServicer):
     """gRPC servicer that exposes state, step, reset, streaming, and config.
 
@@ -189,11 +270,32 @@ class PhaseStreamServicer(PhaseOrchestratorServicer):
         )
         self._limiter = FixedWindowRateLimiter(rate_limit) if rate_limit > 0 else None
 
-    def _abort(self, context: Any, code: Any, detail: str) -> None:
-        """Abort a gRPC call with the given status and message."""
+    def _abort(self, context: Any, code: Any, detail: str) -> NoReturn:
+        """Abort a gRPC call with the given status and message.
+
+        Raises
+        ------
+        PermissionError
+            Always, as ``_RpcAbortedError``, so the call body stops and the
+            unexpected-failure guard leaves the chosen status untouched.
+        """
         if context is not None and hasattr(context, "abort"):
-            context.abort(code, detail)
-        raise PermissionError(detail)
+            try:
+                context.abort(code, detail)
+            except Exception as exc:
+                raise _RpcAbortedError(detail) from exc
+        raise _RpcAbortedError(detail)
+
+    def _fail_internally(self, context: Any, rpc: str, exc: Exception) -> NoReturn:
+        """Log an unexpected failure and abort with a fixed ``INTERNAL`` detail."""
+        logger.error(
+            "grpc.%s: unexpected failure",
+            rpc,
+            exc_info=exc,
+            extra={"rpc": rpc, "status": "internal_error"},
+        )
+        code = grpc.StatusCode.INTERNAL if grpc is not None else None
+        self._abort(context, code, _INTERNAL_ERROR_DETAIL)
 
     def _authorise(self, context: Any) -> None:
         """Authorise a gRPC request, raising on failure."""
@@ -220,6 +322,7 @@ class PhaseStreamServicer(PhaseOrchestratorServicer):
 
     # -- unary RPCs -----------------------------------------------------------
 
+    @_guard_unary("GetState")
     def GetState(self, request: Any, context: Any) -> StateResponse:
         """GRPC unary RPC: return current simulation state.
 
@@ -241,6 +344,7 @@ class PhaseStreamServicer(PhaseOrchestratorServicer):
         _log_state_rpc("GetState", response)
         return response
 
+    @_guard_unary("Step")
     def Step(self, request: Any, context: Any) -> StateResponse:
         """GRPC unary RPC: advance simulation by n_steps and return state.
 
@@ -262,7 +366,7 @@ class PhaseStreamServicer(PhaseOrchestratorServicer):
             raw_n_steps = 1
         try:
             n = _validate_positive_int(raw_n_steps, "n_steps")
-        except ValueError as exc:
+        except GrpcRequestRefusalError as exc:
             code = grpc.StatusCode.INVALID_ARGUMENT if grpc is not None else None
             self._abort(context, code, str(exc))
         with self._lock:
@@ -272,6 +376,7 @@ class PhaseStreamServicer(PhaseOrchestratorServicer):
         _log_state_rpc("Step", response, n_steps=n)
         return response
 
+    @_guard_unary("Reset")
     def Reset(self, request: Any, context: Any) -> StateResponse:
         """GRPC unary RPC: reset simulation and return fresh state.
 
@@ -294,6 +399,7 @@ class PhaseStreamServicer(PhaseOrchestratorServicer):
         _log_state_rpc("Reset", response)
         return response
 
+    @_guard_unary("GetConfig")
     def GetConfig(self, request: Any, context: Any) -> ConfigResponse:
         """GRPC unary RPC: return engine configuration.
 
@@ -336,6 +442,7 @@ class PhaseStreamServicer(PhaseOrchestratorServicer):
 
     # -- server-streaming RPC -------------------------------------------------
 
+    @_guard_stream("StreamPhases")
     def StreamPhases(self, request: Any, context: Any) -> Iterator[StateResponse]:
         """Read-only observer: streams snapshots without advancing simulation.
 
@@ -355,13 +462,13 @@ class PhaseStreamServicer(PhaseOrchestratorServicer):
         try:
             max_steps = _resolve_stream_max_steps(request)
             max_steps = _validate_positive_int(max_steps, "max_steps")
-        except ValueError as exc:
+        except GrpcRequestRefusalError as exc:
             code = grpc.StatusCode.INVALID_ARGUMENT if grpc is not None else None
             self._abort(context, code, str(exc))
         interval = getattr(request, "interval_s", 0.05)
         try:
             interval = _validate_non_negative_real(interval, "interval_s")
-        except ValueError as exc:
+        except GrpcRequestRefusalError as exc:
             code = grpc.StatusCode.INVALID_ARGUMENT if grpc is not None else None
             self._abort(context, code, str(exc))
         emitted = 0

@@ -73,6 +73,15 @@ dataclass message layer when `protobuf` is absent.
 `amplitude_mode`, `mean_amplitude`. Optional API-key + rate limiting via
 `SPO_GRPC_*` environment variables.
 
+Error details never carry exception text. A malformed request is refused with
+`INVALID_ARGUMENT` and the authored sentence of `GrpcRequestRefusalError`
+(for example `n_steps must be a positive integer`). Authentication and rate
+limits answer `UNAUTHENTICATED` and `RESOURCE_EXHAUSTED` with fixed sentences.
+Any other failure while serving a call is logged server-side and answered with
+`INTERNAL` and the detail `internal error`; without this guard grpcio would send
+`Exception calling application: <exception text>` to the client. Binary (`-bin`)
+request metadata is ignored by the authorisation step.
+
 ## 5. STUDIO surface
 
 `studio/` exposes builder functions (`build_canvas_graph`,

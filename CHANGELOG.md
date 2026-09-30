@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- gRPC errors never carry exception text. Binary (`-bin`) request metadata
+  broke the UTF-8 decode in the authorisation step, and grpcio answered any
+  unauthenticated caller with `UNKNOWN` and the interpreter's decode error;
+  undecodable metadata pairs are now ignored. Any other unexpected failure in
+  a call answers `INTERNAL` with the fixed detail `internal error` and is
+  logged server-side. Authored request refusals are the explicit
+  `GrpcRequestRefusalError` type and still arrive verbatim as
+  `INVALID_ARGUMENT`. Real-server probes cover every RPC.
+
 - Physical waveform extraction preserves representable large envelope means
   and variation scores in Python and Rust by scaling intermediate statistics
   and using native hypot magnitudes. Non-finite analytic signals caused by
