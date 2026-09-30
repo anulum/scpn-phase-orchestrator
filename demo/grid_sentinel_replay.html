@@ -1,0 +1,269 @@
+<title>Grid Sentinel Replay</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --ground:#F7F8F6; --panel:#FFFFFF; --ink:#1A2330; --muted:#5B6672;
+    --line:#D9DEDA; --grid:#E7EBE7;
+    --score:#12A594; --score-soft:#E2F3F0; --alarm:#B4552D; --alarm-soft:#F6E9E2;
+    --mono-bg:#EEF1EE;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:#10161D; --panel:#171F28; --ink:#E5EAE8; --muted:#93A0A8;
+      --line:#2A3540; --grid:#212B36;
+      --score:#2FA093; --score-soft:#143029; --alarm:#C97B50; --alarm-soft:#392318;
+      --mono-bg:#1D2732;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:#10161D; --panel:#171F28; --ink:#E5EAE8; --muted:#93A0A8;
+    --line:#2A3540; --grid:#212B36;
+    --score:#2FA093; --score-soft:#143029; --alarm:#C97B50; --alarm-soft:#392318;
+    --mono-bg:#1D2732;
+  }
+  * { box-sizing:border-box; }
+  body {
+    background:var(--ground); color:var(--ink);
+    font-family:"Public Sans","Segoe UI",system-ui,sans-serif;
+    font-size:16px; line-height:1.55; margin:0; padding:0 20px 90px;
+  }
+  main { max-width:56rem; margin:0 auto; }
+  header.masthead { border-bottom:2px solid var(--ink); padding:48px 0 18px; margin-bottom:26px; }
+  .eyebrow { font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--score); font-weight:600; margin:0 0 10px; }
+  h1 { font-family:"Newsreader",Georgia,serif; font-weight:500; font-size:clamp(28px,4.6vw,40px); line-height:1.12; margin:0 0 10px; text-wrap:balance; }
+  .standfirst { color:var(--muted); margin:0; max-width:44rem; }
+  h2 { font-family:"Newsreader",Georgia,serif; font-weight:600; font-size:22px; margin:40px 0 10px; text-wrap:balance; }
+  p { max-width:44rem; margin:0 0 12px; }
+  .tiles { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:12px; margin:22px 0 6px; }
+  .tile { background:var(--panel); border:1px solid var(--line); padding:14px 16px; }
+  .tile .k { font-size:11px; letter-spacing:.12em; text-transform:uppercase; font-weight:600; color:var(--muted); margin-bottom:6px; }
+  .tile .v { font-family:"IBM Plex Mono",monospace; font-size:22px; font-weight:500; font-variant-numeric:tabular-nums; }
+  .tile .v small { font-size:12px; color:var(--muted); font-weight:400; }
+  .tile.lead .v { color:var(--score); }
+  .chartcard { background:var(--panel); border:1px solid var(--line); padding:18px 18px 10px; margin:16px 0; }
+  .chartcard h3 { font-size:14px; font-weight:700; margin:0 0 2px; }
+  .chartcard .sub { font-size:12.5px; color:var(--muted); margin:0 0 10px; }
+  .chartwrap { overflow-x:auto; }
+  svg text { font-family:"Public Sans",system-ui,sans-serif; }
+  .controls { display:flex; gap:10px; align-items:center; margin:6px 0 4px; }
+  button.play {
+    font:600 13px "Public Sans",system-ui,sans-serif; color:var(--panel);
+    background:var(--score); border:none; padding:7px 16px; border-radius:3px; cursor:pointer;
+  }
+  button.play:focus-visible { outline:2px solid var(--ink); outline-offset:2px; }
+  .clock { font-family:"IBM Plex Mono",monospace; font-size:13px; color:var(--muted); font-variant-numeric:tabular-nums; }
+  .tooltip {
+    position:fixed; pointer-events:none; background:var(--ink); color:var(--ground);
+    font:12px "IBM Plex Mono",monospace; padding:5px 9px; border-radius:3px;
+    display:none; z-index:9; white-space:nowrap;
+  }
+  table { border-collapse:collapse; width:100%; font-size:13px; font-variant-numeric:tabular-nums; }
+  th { text-align:left; font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); padding:8px 10px; border-bottom:2px solid var(--line); background:var(--panel); }
+  td { padding:7px 10px; border-bottom:1px solid var(--line); background:var(--panel); font-family:"IBM Plex Mono",monospace; }
+  .tablewrap { overflow-x:auto; border:1px solid var(--line); margin:10px 0; max-height:260px; overflow-y:auto; }
+  code { font-family:"IBM Plex Mono",monospace; font-size:.85em; background:var(--mono-bg); padding:1px 5px; border-radius:3px; word-break:break-all; }
+  .seal { background:var(--panel); border:1px solid var(--line); border-left:3px solid var(--score); padding:14px 18px; margin:10px 0; }
+  .seal .k { font-size:11px; letter-spacing:.12em; text-transform:uppercase; font-weight:600; color:var(--muted); }
+  .caveats { border-left:3px solid var(--alarm); background:var(--panel); border-top:1px solid var(--line); border-right:1px solid var(--line); border-bottom:1px solid var(--line); padding:14px 18px; margin:14px 0; }
+  .caveats ul { margin:6px 0 0; padding-left:1.1rem; }
+  .caveats li { margin-bottom:6px; max-width:42rem; }
+  .footer-note { margin-top:44px; padding-top:14px; border-top:1px solid var(--line); font:12px "IBM Plex Mono",monospace; color:var(--muted); }
+</style>
+
+<main>
+<header class="masthead">
+  <p class="eyebrow">SCPN Phase Orchestrator &middot; sentinel demo &middot; real recorded event</p>
+  <h1>A real grid oscillation, caught live, with sealed evidence</h1>
+  <p class="standfirst">ISO-NE case&nbsp;3 &mdash; a documented 1.13&nbsp;Hz regional oscillation
+  (July&nbsp;2017, real PMU capture) &mdash; replayed sample by sample through the certified
+  modal-growth stream monitor. The operating point comes only from a sealed,
+  hash-verified evidence artefact. Nothing here is simulated.</p>
+</header>
+
+<div class="tiles">
+  <div class="tile lead"><div class="k">Alarm lead</div><div class="v" id="tile-lead">&mdash;</div></div>
+  <div class="tile"><div class="k">Certified threshold</div><div class="v" id="tile-threshold">&mdash; <small>&sigma;/s</small></div></div>
+  <div class="tile"><div class="k">Ambient false alarm held</div><div class="v">0.0 <small>of 10% target</small></div></div>
+  <div class="tile"><div class="k">Stream</div><div class="v" id="tile-stream">&mdash;</div></div>
+</div>
+
+<div class="chartcard">
+  <h3>Live modal growth rate &sigma;</h3>
+  <p class="sub">Each point is the monitor&#8217;s causal window score as the stream advances.
+  The alarm fires where &sigma; crosses the certified threshold; the onset marker is the
+  independently estimated oscillation onset.</p>
+  <div class="controls">
+    <button class="play" id="play">Replay stream</button>
+    <span class="clock" id="clock"></span>
+  </div>
+  <div class="chartwrap"><svg id="scorechart" width="820" height="320" role="img" aria-label="Line chart of the live modal growth rate over stream time with the certified threshold, the first alarm, and the estimated onset marked"></svg></div>
+</div>
+
+<div class="chartcard">
+  <h3>In-band envelope (context)</h3>
+  <p class="sub">Mean analytic envelope of the clean frequency channels around the documented
+  1.13&nbsp;Hz mode &mdash; the physical growth the detector reads.</p>
+  <div class="chartwrap"><svg id="envchart" width="820" height="150" role="img" aria-label="Area chart of the mean in-band envelope over the capture"></svg></div>
+</div>
+
+<h2>Alarm log (table view)</h2>
+<div class="tablewrap"><table id="alarmtable">
+  <thead><tr><th>#</th><th>Stream time (s)</th><th>&sigma; (1/s)</th><th>vs onset</th></tr></thead>
+  <tbody></tbody>
+</table></div>
+
+<h2>The sealed chain</h2>
+<p>Every link is content-addressed. Anyone with the cited public capture can recompute
+all three hashes and replay this page&#8217;s claim.</p>
+<div class="seal"><div class="k">Raw capture (citation-only, UTK library)</div>
+<code>f30d399b017aeee04987dadbf9cec0117444b4372456c93aa367e86ccba3772f</code></div>
+<div class="seal"><div class="k">Certified operating point &mdash; sealed cross-dataset evaluation</div>
+<code id="evhash"></code></div>
+<div class="seal"><div class="k">This replay&#8217;s sealed record</div>
+<code>aafa496766ab9af6&hellip;</code> <span style="color:var(--muted);font-size:12.5px">(regenerable byte-for-byte from the capture + evidence)</span></div>
+
+<div class="caveats">
+  <strong>Claim boundary (read before quoting)</strong>
+  <ul>
+    <li>The threshold was calibrated on this system&#8217;s own pre-onset ambient windows at a
+    10% false-alarm target &mdash; per-system calibration is the deployment step, not a fallback.</li>
+    <li>The calibration corpus is small (six ambient windows, three events, p&nbsp;=&nbsp;0.33):
+    this is a demonstration of the sealed live pipeline, <em>not</em> a statistical
+    generalisation claim. The powered leg (WECC 240-bus) is in progress.</li>
+    <li>The sentinel is review-only: it observes and seals; it never actuates.</li>
+  </ul>
+</div>
+
+<p class="footer-note">SCPN Phase Orchestrator &middot; data: Maslennikov et&nbsp;al. 2016 test-case
+library (ISO-NE case&nbsp;3, citation-only) &middot; detector certified on PSML (Zheng et&nbsp;al. 2021) &middot;
+replay module bench/pmu_stream_replay.py &middot; &copy; 1996&ndash;2026 Miroslav &Scaron;otek</p>
+</main>
+<div class="tooltip" id="tip"></div>
+
+<script>
+const D = {"onset":62.63,"threshold":0.06728,"first":5.54,"lead":57.09,"dur":178.2,"rate":30.3,"ev":"fd6285fc341a5884aab0d806e54a912c90eec1024e95ee269f71b0db4bd461b7","alarms":[{"t":5.54,"s":1.2148},{"t":8.91,"s":0.4155},{"t":13.4,"s":0.3483},{"t":20.13,"s":0.1387},{"t":25.74,"s":0.129},{"t":27.98,"s":0.2238},{"t":36.96,"s":0.0719},{"t":44.81,"s":0.8447},{"t":49.3,"s":0.457},{"t":54.91,"s":0.3675},{"t":62.77,"s":0.0803},{"t":94.18,"s":0.1378},{"t":100.91,"s":0.1656},{"t":108.77,"s":0.2184},{"t":114.38,"s":0.0853},{"t":116.62,"s":0.1048},{"t":122.23,"s":0.6157},{"t":126.72,"s":0.1427},{"t":136.82,"s":0.3027},{"t":144.67,"s":0.2767},{"t":150.28,"s":0.2872},{"t":152.53,"s":0.6415},{"t":157.01,"s":0.3045},{"t":159.26,"s":0.2244},{"t":164.87,"s":0.2845},{"t":168.23,"s":0.2362},{"t":172.72,"s":1.3514}],"st":[4.488,5.61,6.732,7.854,8.976,10.098,11.22,12.342,13.464,14.586,15.708,16.83,17.952,19.074,20.196,21.318,22.44,23.562,24.684,25.806,26.928,28.05,29.172,30.294,31.416,32.538,33.66,34.782,35.904,37.026,38.148,39.27,40.392,41.514,42.636,43.758,44.88,46.002,47.124,48.246,49.368,50.49,51.612,52.734,53.856,54.978,56.1,57.222,58.344,59.466,60.588,61.71,62.832,63.954,65.076,66.198,67.32,68.442,69.564,70.686,71.808,72.93,74.052,75.174,76.296,77.418,78.54,79.662,80.784,81.906,83.028,84.15,85.272,86.394,87.516,88.638,89.76,90.882,92.004,93.126,94.248,95.37,96.492,97.614,98.736,99.858,100.98,102.102,103.224,104.346,105.468,106.59,107.712,108.834,109.956,111.078,112.2,113.322,114.444,115.566,116.688,117.81,118.932,120.054,121.176,122.298,123.42,124.542,125.664,126.786,127.908,129.03,130.152,131.274,132.396,133.518,134.64,135.762,136.884,138.006,139.128,140.25,141.372,142.494,143.616,144.738,145.86,146.982,148.104,149.226,150.348,151.47,152.592,153.714,154.836,155.958,157.08,158.202,159.324,160.446,161.568,162.69,163.812,164.934,166.056,167.178,168.3,169.422,170.544,171.666,172.788,173.91,175.032,176.154,177.276],"sv":[0.00045,1.21481,-0.21853,-0.14876,0.41554,1.30819,0.14684,-1.146,0.34831,1.50348,1.6533,0.54697,0.15749,-0.73192,0.13874,0.69694,0.99479,-1.41005,-1.22962,0.12896,-0.08924,0.22384,0.46007,0.21411,0.43629,1.17496,0.82179,-0.00784,-0.70287,0.0719,0.58404,0.63832,0.11147,0.32901,-2.39702,-0.27394,0.8447,1.78505,-0.37333,-0.62006,0.45698,0.30029,0.62474,0.61796,-0.56444,0.36751,0.46222,1.04228,0.29451,0.29125,0.05872,0.00637,0.08031,0.35141,0.23758,0.74951,0.64813,0.74832,0.3341,0.25796,0.31491,0.16258,0.18941,0.26418,0.29333,0.33997,0.26792,0.116,0.10676,0.2288,0.25089,0.21201,0.19285,0.45433,0.14567,0.17955,0.08857,0.07392,0.04376,0.0652,0.13783,0.13588,0.10624,0.01824,0.01423,0.00847,0.16555,0.10598,0.18147,0.28802,0.02702,-0.05596,0.01417,0.21841,0.15102,-0.0172,0.04986,-0.07538,0.08532,-0.10175,0.10484,0.19892,0.06025,-0.18452,0.01877,0.61573,0.60393,-1.73261,-0.83623,0.14269,1.45655,0.87998,1.12918,0.1399,0.24706,0.41543,-0.94176,-0.47472,0.30267,1.25745,0.79815,0.26509,0.70214,0.54434,-0.01602,0.27668,0.83903,0.95703,0.08121,-0.16999,0.28723,-0.72198,0.64148,1.23846,0.6587,-0.42895,0.30448,-0.25968,0.22438,0.68777,0.72063,-0.39942,-0.79075,0.2845,0.57409,-0.43969,0.23624,-0.08382,-0.78957,-0.02354,1.35141,1.8278,0.87689,0.11692,-0.03954],"et":[0.0,0.5,0.99,1.49,1.98,2.48,2.97,3.47,3.96,4.46,4.95,5.45,5.94,6.44,6.93,7.43,7.92,8.42,8.91,9.41,9.9,10.4,10.89,11.39,11.88,12.38,12.87,13.37,13.86,14.36,14.85,15.35,15.84,16.34,16.83,17.33,17.82,18.32,18.81,19.31,19.8,20.3,20.79,21.29,21.78,22.28,22.77,23.27,23.76,24.26,24.75,25.25,25.74,26.24,26.73,27.23,27.72,28.22,28.71,29.21,29.7,30.2,30.69,31.19,31.68,32.18,32.67,33.17,33.66,34.16,34.65,35.15,35.64,36.14,36.63,37.13,37.62,38.12,38.61,39.11,39.6,40.1,40.59,41.09,41.58,42.08,42.57,43.07,43.56,44.06,44.55,45.05,45.54,46.04,46.53,47.03,47.52,48.02,48.51,49.01,49.5,50.0,50.49,50.99,51.48,51.98,52.47,52.97,53.46,53.96,54.45,54.95,55.44,55.94,56.43,56.93,57.42,57.92,58.41,58.91,59.4,59.9,60.39,60.89,61.38,61.88,62.37,62.87,63.36,63.86,64.35,64.85,65.34,65.84,66.33,66.83,67.32,67.82,68.31,68.81,69.3,69.8,70.29,70.79,71.28,71.78,72.27,72.77,73.26,73.76,74.25,74.75,75.24,75.74,76.23,76.73,77.22,77.72,78.21,78.71,79.2,79.7,80.19,80.69,81.18,81.68,82.17,82.67,83.16,83.66,84.15,84.65,85.14,85.64,86.13,86.63,87.12,87.62,88.11,88.61,89.1,89.6,90.09,90.59,91.08,91.58,92.07,92.57,93.06,93.56,94.05,94.55,95.04,95.54,96.03,96.53,97.02,97.52,98.01,98.51,99.0,99.5,99.99,100.49,100.98,101.48,101.97,102.47,102.96,103.46,103.95,104.45,104.94,105.44,105.93,106.43,106.92,107.42,107.91,108.41,108.9,109.4,109.89,110.39,110.88,111.38,111.87,112.37,112.86,113.36,113.85,114.35,114.84,115.34,115.83,116.33,116.82,117.32,117.81,118.31,118.8,119.3,119.79,120.29,120.78,121.28,121.77,122.27,122.76,123.26,123.75,124.25,124.74,125.24,125.73,126.23,126.72,127.22,127.71,128.21,128.7,129.2,129.69,130.19,130.68,131.18,131.67,132.17,132.66,133.16,133.65,134.15,134.64,135.14,135.63,136.13,136.62,137.12,137.61,138.11,138.6,139.1,139.59,140.09,140.58,141.08,141.57,142.07,142.56,143.06,143.55,144.05,144.54,145.04,145.53,146.03,146.52,147.02,147.51,148.01,148.5,149.0,149.49,149.99,150.48,150.98,151.47,151.97,152.46,152.96,153.45,153.95,154.44,154.94,155.43,155.93,156.42,156.92,157.41,157.91,158.4,158.9,159.39,159.89,160.38,160.88,161.37,161.87,162.36,162.86,163.35,163.85,164.34,164.84,165.33,165.83,166.32,166.82,167.31,167.81,168.3,168.8,169.29,169.79,170.28,170.78,171.27,171.77,172.26,172.76,173.25,173.75,174.24,174.74,175.23,175.73,176.22,176.72,177.21,177.71],"ev_v":[0.000154,0.000206,0.000225,0.000208,0.000204,0.000218,0.000177,0.000184,0.00022,0.000153,0.000237,0.000201,0.000177,0.000158,0.000275,0.0003,0.000172,0.000215,0.000243,0.000224,0.000295,0.000186,0.000368,0.000252,0.000313,0.000327,0.000213,0.000273,0.000166,0.000153,0.000222,0.000285,0.000297,0.000301,0.000353,0.000338,0.000333,0.000285,0.000221,0.000355,0.00039,0.000303,0.000178,0.000174,0.000268,0.000257,0.000216,0.000259,0.000334,0.000375,0.000212,0.000323,0.000267,0.00014,0.000109,0.000242,0.00032,0.000301,0.000291,0.000246,0.000154,0.000198,0.000218,0.000227,0.000246,0.000336,0.000205,0.000238,0.000238,0.000221,0.000194,0.000276,0.000257,0.000206,0.000237,0.000337,0.000356,0.000208,0.000221,0.000314,0.000305,0.000273,0.000204,0.000203,0.000254,0.000356,0.000222,0.000223,0.000284,0.000258,0.000285,0.000297,0.000237,0.000191,0.000234,0.000421,0.000378,0.000251,0.000367,0.000365,0.00028,0.000259,0.000315,0.000313,0.000318,0.000412,0.000413,0.000259,0.000261,0.000326,0.000295,0.000249,0.000348,0.000442,0.00044,0.000459,0.000431,0.000418,0.000514,0.000602,0.000529,0.000496,0.000683,0.000763,0.000628,0.000496,0.000663,0.000793,0.000762,0.000798,0.000855,0.000846,0.000852,0.00099,0.001146,0.001177,0.001184,0.001396,0.001552,0.001488,0.001495,0.001676,0.001786,0.001781,0.001898,0.002068,0.002204,0.002366,0.002531,0.00265,0.002781,0.003024,0.003169,0.003202,0.003482,0.00379,0.003855,0.004015,0.004244,0.004339,0.004508,0.004817,0.005033,0.005131,0.005249,0.005392,0.005444,0.005596,0.005945,0.006029,0.005892,0.005921,0.00608,0.006049,0.005843,0.005724,0.005781,0.005797,0.005668,0.005734,0.005807,0.005564,0.005401,0.005517,0.005589,0.005516,0.005552,0.005592,0.005476,0.005275,0.005209,0.005298,0.005328,0.005278,0.005153,0.004967,0.004775,0.00457,0.004366,0.004175,0.004018,0.00391,0.003905,0.003633,0.002924,0.002917,0.003096,0.002985,0.002781,0.002702,0.002637,0.002562,0.002511,0.002387,0.002147,0.002036,0.001967,0.001752,0.001574,0.001552,0.001539,0.001445,0.001327,0.001288,0.001231,0.001065,0.001032,0.001042,0.000882,0.000785,0.00082,0.000758,0.000589,0.000566,0.000623,0.000527,0.000469,0.000481,0.000439,0.000321,0.000378,0.000384,0.000325,0.0004,0.000407,0.00031,0.000251,0.000288,0.000284,0.000198,0.000203,0.000156,0.000184,0.000261,0.000274,0.000261,0.000191,0.000242,0.000333,0.000261,0.000237,0.000361,0.000318,0.000259,0.000239,0.000251,0.000254,0.000237,0.00023,0.000176,0.00014,0.000186,0.000311,0.000301,0.000258,0.000166,0.000307,0.000252,0.000331,0.000233,0.000275,0.000193,0.00025,0.000307,0.0003,0.000333,0.000328,0.000368,0.000677,0.000644,0.000538,0.000676,0.001305,0.003581,0.004176,0.003208,0.000761,0.000647,0.000404,0.000385,0.000234,0.000205,0.000239,0.000293,0.000246,0.000265,0.000271,0.000288,0.000295,0.00039,0.00032,0.000243,0.000319,0.000197,0.000201,0.000214,0.000277,0.000245,0.00022,0.000274,0.00031,0.000259,0.000324,0.00033,0.000203,0.000112,0.000159,0.00028,0.00021,0.000344,0.000297,0.000172,0.000217,0.000295,0.000216,0.00023,0.000162,0.000279,0.000262,0.000173,0.000164,0.00013,0.000162,0.000144,0.000198,0.000302,0.000242,0.000138,0.000131,0.000173,0.000276,0.000378,0.000252,0.000122,0.000175,0.000235,0.000264,0.00024,0.000231,0.000155]};
+
+const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
+function fmt(x, d=2){ return Number(x).toFixed(d); }
+
+document.getElementById('tile-lead').innerHTML = fmt(D.lead,1) + ' <small>s before onset</small>';
+document.getElementById('tile-threshold').innerHTML = fmt(D.threshold,4) + ' <small>\u03C3/s</small>';
+document.getElementById('tile-stream').innerHTML = fmt(D.dur,0) + ' <small>s @ ' + fmt(D.rate,0) + ' Hz</small>';
+document.getElementById('evhash').textContent = D.ev;
+
+const tbody = document.querySelector('#alarmtable tbody');
+D.alarms.forEach((a,i)=>{
+  const tr = document.createElement('tr');
+  const rel = D.onset - a.t;
+  tr.innerHTML = '<td>'+(i+1)+'</td><td>'+fmt(a.t)+'</td><td>'+fmt(a.s,4)+'</td><td>'+
+    (rel>=0? fmt(rel,1)+' s before' : fmt(-rel,1)+' s after')+'</td>';
+  tbody.appendChild(tr);
+});
+
+// ---------- score chart ----------
+(function(){
+  const svg = document.getElementById('scorechart');
+  const W=820,H=320,m={t:18,r:16,b:34,l:52};
+  const iw=W-m.l-m.r, ih=H-m.t-m.b;
+  const tmax=D.dur, ymin=-2.6, ymax=2.2;
+  const X=t=>m.l+iw*t/tmax, Y=v=>m.t+ih*(1-(v-ymin)/(ymax-ymin));
+  const NS='http://www.w3.org/2000/svg';
+  const el=(n,a)=>{const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);return e;};
+
+  // grid + axes
+  for(let v=-2; v<=2; v+=1){
+    svg.appendChild(el('line',{x1:m.l,x2:W-m.r,y1:Y(v),y2:Y(v),stroke:css('--grid'),'stroke-width':1}));
+    const t=el('text',{x:m.l-8,y:Y(v)+4,'text-anchor':'end','font-size':11,fill:css('--muted')});
+    t.textContent=v; svg.appendChild(t);
+  }
+  for(let s=0; s<=180; s+=30){
+    const t=el('text',{x:X(s),y:H-10,'text-anchor':'middle','font-size':11,fill:css('--muted')});
+    t.textContent=s+'s'; svg.appendChild(t);
+  }
+  const ylab=el('text',{x:14,y:m.t+10,'font-size':11,fill:css('--muted')}); ylab.textContent='\u03C3 (1/s)'; svg.appendChild(ylab);
+
+  // threshold rule
+  svg.appendChild(el('line',{x1:m.l,x2:W-m.r,y1:Y(D.threshold),y2:Y(D.threshold),stroke:css('--muted'),'stroke-width':1.5,'stroke-dasharray':'5 4'}));
+  const thresholdLabel=el('text',{x:W-m.r,y:Y(D.threshold)-6,'text-anchor':'end','font-size':11,fill:css('--muted'),'font-weight':600});
+  thresholdLabel.textContent='certified threshold '+fmt(D.threshold,3); svg.appendChild(thresholdLabel);
+
+  // onset rule
+  svg.appendChild(el('line',{x1:X(D.onset),x2:X(D.onset),y1:m.t,y2:m.t+ih,stroke:css('--ink'),'stroke-width':1.5,'stroke-dasharray':'2 4'}));
+  const onlab=el('text',{x:X(D.onset)+5,y:m.t+14,'font-size':11,fill:css('--ink'),'font-weight':600});
+  onlab.textContent='estimated onset '+fmt(D.onset,0)+'s'; svg.appendChild(onlab);
+
+  // score line (clipped for replay animation)
+  const clip=el('clipPath',{id:'reveal'}); const cliprect=el('rect',{x:m.l,y:0,width:iw,height:H});
+  clip.appendChild(cliprect); svg.appendChild(clip);
+  const g=el('g',{'clip-path':'url(#reveal)'});
+  let dpath='';
+  D.st.forEach((t,i)=>{ dpath+=(i?'L':'M')+X(t).toFixed(1)+' '+Y(D.sv[i]).toFixed(1)+' '; });
+  g.appendChild(el('path',{d:dpath,fill:'none',stroke:css('--score'),'stroke-width':2,'stroke-linejoin':'round'}));
+
+  // first alarm marker
+  const fa=D.alarms[0];
+  g.appendChild(el('circle',{cx:X(fa.t),cy:Y(fa.s),r:5,fill:css('--alarm'),stroke:css('--panel'),'stroke-width':2}));
+  svg.appendChild(g);
+  const alab=el('text',{x:X(fa.t)+8,y:Y(fa.s)-10,'font-size':11,fill:css('--alarm'),'font-weight':700});
+  alab.textContent='\u26A0 first alarm '+fmt(fa.t,1)+'s \u2014 '+fmt(D.lead,1)+'s lead'; svg.appendChild(alab);
+
+  // hover crosshair + tooltip
+  const tip=document.getElementById('tip');
+  const cross=el('line',{y1:m.t,y2:m.t+ih,stroke:css('--muted'),'stroke-width':1,'stroke-dasharray':'3 3',visibility:'hidden'});
+  svg.appendChild(cross);
+  svg.addEventListener('pointermove',e=>{
+    const r=svg.getBoundingClientRect();
+    const px=(e.clientX-r.left)*(W/r.width);
+    if(px<m.l||px>W-m.r){cross.setAttribute('visibility','hidden');tip.style.display='none';return;}
+    const t=(px-m.l)/iw*tmax;
+    let lo=0,hi=D.st.length-1;
+    while(hi-lo>1){const mid=(lo+hi)>>1; (D.st[mid]<t?lo=mid:hi=mid);}
+    const i=(t-D.st[lo]<D.st[hi]-t)?lo:hi;
+    cross.setAttribute('x1',X(D.st[i])); cross.setAttribute('x2',X(D.st[i]));
+    cross.setAttribute('visibility','visible');
+    tip.style.display='block';
+    tip.style.left=(e.clientX+14)+'px'; tip.style.top=(e.clientY-10)+'px';
+    tip.textContent='t='+fmt(D.st[i],1)+'s  \u03C3='+fmt(D.sv[i],3);
+  });
+  svg.addEventListener('pointerleave',()=>{cross.setAttribute('visibility','hidden');tip.style.display='none';});
+
+  // replay animation (x10 wall clock), reduced-motion aware
+  const btn=document.getElementById('play'), clock=document.getElementById('clock');
+  const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let raf=null;
+  btn.addEventListener('click',()=>{
+    if(raf)cancelAnimationFrame(raf);
+    if(reduced){cliprect.setAttribute('width',iw);clock.textContent='';return;}
+    const t0=performance.now(); const speed=10;
+    const stepFn=now=>{
+      const st=Math.min((now-t0)/1000*speed,tmax);
+      cliprect.setAttribute('width',iw*st/tmax);
+      clock.textContent='stream '+fmt(st,1)+'s  \u00B7  \u00D7'+speed+' wall clock';
+      if(st<tmax){raf=requestAnimationFrame(stepFn);}else{clock.textContent='stream complete \u2014 '+fmt(tmax,0)+'s';}
+    };
+    raf=requestAnimationFrame(stepFn);
+  });
+})();
+
+// ---------- envelope chart ----------
+(function(){
+  const svg=document.getElementById('envchart');
+  const W=820,H=150,m={t:10,r:16,b:24,l:52};
+  const iw=W-m.l-m.r, ih=H-m.t-m.b;
+  const tmax=D.dur, vmax=Math.max(...D.ev_v)*1.08;
+  const X=t=>m.l+iw*t/tmax, Y=v=>m.t+ih*(1-v/vmax);
+  const NS='http://www.w3.org/2000/svg';
+  const el=(n,a)=>{const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);return e;};
+  let dpath='M'+X(D.et[0]).toFixed(1)+' '+Y(D.ev_v[0]).toFixed(1)+' ';
+  D.et.forEach((t,i)=>{ if(i)dpath+='L'+X(t).toFixed(1)+' '+Y(D.ev_v[i]).toFixed(1)+' '; });
+  const area=dpath+'L'+X(D.et[D.et.length-1]).toFixed(1)+' '+Y(0)+' L'+X(D.et[0]).toFixed(1)+' '+Y(0)+' Z';
+  svg.appendChild(el('path',{d:area,fill:css('--score-soft')}));
+  svg.appendChild(el('path',{d:dpath,fill:'none',stroke:css('--score'),'stroke-width':1.5}));
+  svg.appendChild(el('line',{x1:X(D.onset),x2:X(D.onset),y1:m.t,y2:m.t+ih,stroke:css('--ink'),'stroke-width':1.5,'stroke-dasharray':'2 4'}));
+  for(let s=0;s<=180;s+=30){
+    const t=el('text',{x:X(s),y:H-6,'text-anchor':'middle','font-size':11,fill:css('--muted')});
+    t.textContent=s+'s'; svg.appendChild(t);
+  }
+})();
+</script>

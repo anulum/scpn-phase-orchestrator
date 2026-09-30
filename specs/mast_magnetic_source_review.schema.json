@@ -1,0 +1,223 @@
+{
+  "$defs": {
+    "clock_review": {
+      "additionalProperties": false,
+      "properties": {
+        "archive_grid_reproduced": {"const": true},
+        "first_value_s": {"type": "number"},
+        "instrument_clock_relation_claimed": {"const": false},
+        "last_value_s": {"type": "number"},
+        "mapping_evidence_claimed": {"const": false},
+        "name": {
+          "enum": ["time", "time_mirnov", "time_omaha", "time_saddle"]
+        },
+        "sample_count": {"minimum": 1, "type": "integer"},
+        "spo_clock_kind_candidate": {"const": "shot_relative"},
+        "step_s": {"exclusiveMinimum": 0, "type": "number"}
+      },
+      "required": [
+        "archive_grid_reproduced",
+        "first_value_s",
+        "instrument_clock_relation_claimed",
+        "last_value_s",
+        "mapping_evidence_claimed",
+        "name",
+        "sample_count",
+        "spo_clock_kind_candidate",
+        "step_s"
+      ],
+      "type": "object"
+    },
+    "measurement_review": {
+      "additionalProperties": false,
+      "properties": {
+        "applied_transform_recorded": {"const": true},
+        "array_name": {
+          "enum": [
+            "b_field_pol_probe_cc_field",
+            "b_field_pol_probe_ccbv_field",
+            "b_field_pol_probe_obr_field",
+            "b_field_pol_probe_obv_field",
+            "b_field_pol_probe_omv_voltage",
+            "b_field_tor_probe_cc_field",
+            "b_field_tor_probe_omaha_voltage",
+            "b_field_tor_probe_saddle_field",
+            "b_field_tor_probe_saddle_voltage",
+            "flux_loop_flux",
+            "ip"
+          ]
+        },
+        "calibration_lineage_available": {"const": false},
+        "channel_count": {"minimum": 0, "type": "integer"},
+        "clock_name": {
+          "enum": ["time", "time_mirnov", "time_omaha", "time_saddle"]
+        },
+        "observation_operator_available": {"const": false},
+        "phase_eligible": {"const": false},
+        "provider_quality_flags_supplied": {"const": false},
+        "source_valid_for_shot": {"const": true},
+        "uncertainty_supplied": {"const": false},
+        "units": {"minLength": 1, "type": "string"}
+      },
+      "required": [
+        "applied_transform_recorded",
+        "array_name",
+        "calibration_lineage_available",
+        "channel_count",
+        "clock_name",
+        "observation_operator_available",
+        "phase_eligible",
+        "provider_quality_flags_supplied",
+        "source_valid_for_shot",
+        "uncertainty_supplied",
+        "units"
+      ],
+      "type": "object"
+    },
+    "sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "type": "string"
+    }
+  },
+  "$id": "https://www.anulum.li/schemas/spo/mast-magnetic-source-review/v1",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Digest-sealed SPO review of exact FAIR-MAST magnetic archive and qualification bytes. The contract records physical-source custody but forbids observation admission, phase evidence, classification, control intent, execution, and actuation.",
+  "properties": {
+    "payload": {
+      "additionalProperties": false,
+      "properties": {
+        "accepted_as_physical_source_review": {"const": true},
+        "actionable": {"const": false},
+        "archive_payload_sha256": {"$ref": "#/$defs/sha256"},
+        "array_count": {"const": 72},
+        "channel_count": {"const": 132},
+        "classification_performed": {"const": false},
+        "clock_reviews": {
+          "items": {"$ref": "#/$defs/clock_review"},
+          "maxItems": 4,
+          "minItems": 4,
+          "type": "array"
+        },
+        "configuration": {"const": "spherical_tokamak"},
+        "control_intent_created": {"const": false},
+        "device_project": {"const": "SCPN-TOKAMAK-CORE"},
+        "direct_actuation": {"const": false},
+        "execution_permitted": {"const": false},
+        "facility": {"const": "MAST"},
+        "machine_protection_final_veto": {"const": true},
+        "measurement_count": {"const": 11},
+        "measurement_reviews": {
+          "items": {"$ref": "#/$defs/measurement_review"},
+          "maxItems": 11,
+          "minItems": 11,
+          "type": "array"
+        },
+        "observation_admitted": {"const": false},
+        "observation_id": {
+          "pattern": "^mast-27707-complete-magnetics-[0-9a-f]+$",
+          "type": "string"
+        },
+        "phase_inference_performed": {"const": false},
+        "physical_source_recorded": {"const": true},
+        "qualification_payload_sha256": {"$ref": "#/$defs/sha256"},
+        "qualified_phase_evidence": {"const": false},
+        "review_id": {"$ref": "#/$defs/sha256"},
+        "review_only": {"const": true},
+        "semantic_ingress_declared": {"const": false},
+        "semantic_ingress_state": {"const": "not_declared"},
+        "shot_id": {"const": 27707},
+        "source_archive": {"const": "FAIR-MAST"},
+        "source_archive_json": {
+          "contentMediaType": "application/json",
+          "minLength": 1,
+          "type": "string"
+        },
+        "source_archive_sha256": {"$ref": "#/$defs/sha256"},
+        "source_artifact_sha256": {"$ref": "#/$defs/sha256"},
+        "source_ingestion_revision": {
+          "pattern": "^[0-9a-f]{40}$",
+          "type": "string"
+        },
+        "source_ingestion_tree_state": {
+          "enum": ["clean", "dirty"]
+        },
+        "source_project": {"const": "SCPN-FUSION-CORE"},
+        "source_qualification_json": {
+          "contentMediaType": "application/json",
+          "minLength": 1,
+          "type": "string"
+        },
+        "source_qualification_sha256": {"$ref": "#/$defs/sha256"},
+        "source_revision": {
+          "pattern": "^[0-9a-f]{40}$",
+          "type": "string"
+        },
+        "unresolved_qualification_fields": {
+          "maxItems": 8,
+          "minItems": 8,
+          "prefixItems": [
+            {"const": "calibration_state"},
+            {"const": "channel_geometry_mapping_state"},
+            {"const": "event_identity_state"},
+            {"const": "observation_operator_state"},
+            {"const": "provider_quality_state"},
+            {"const": "source_clock_relationship_state"},
+            {"const": "uncertainty_state"},
+            {"const": "validity_state"}
+          ],
+          "type": "array"
+        }
+      },
+      "required": [
+        "accepted_as_physical_source_review",
+        "actionable",
+        "archive_payload_sha256",
+        "array_count",
+        "channel_count",
+        "classification_performed",
+        "clock_reviews",
+        "configuration",
+        "control_intent_created",
+        "device_project",
+        "direct_actuation",
+        "execution_permitted",
+        "facility",
+        "machine_protection_final_veto",
+        "measurement_count",
+        "measurement_reviews",
+        "observation_admitted",
+        "observation_id",
+        "phase_inference_performed",
+        "physical_source_recorded",
+        "qualification_payload_sha256",
+        "qualified_phase_evidence",
+        "review_id",
+        "review_only",
+        "semantic_ingress_declared",
+        "semantic_ingress_state",
+        "shot_id",
+        "source_archive",
+        "source_archive_json",
+        "source_archive_sha256",
+        "source_artifact_sha256",
+        "source_ingestion_revision",
+        "source_ingestion_tree_state",
+        "source_project",
+        "source_qualification_json",
+        "source_qualification_sha256",
+        "source_revision",
+        "unresolved_qualification_fields"
+      ],
+      "type": "object"
+    },
+    "payload_sha256": {"$ref": "#/$defs/sha256"},
+    "schema": {
+      "const": "scpn-phase-orchestrator.mast-magnetic-source-review.v1"
+    },
+    "schema_version": {"const": "1.0.0"}
+  },
+  "required": ["payload", "payload_sha256", "schema", "schema_version"],
+  "title": "SCPN Phase Orchestrator FAIR-MAST magnetic source review v1",
+  "type": "object"
+}
