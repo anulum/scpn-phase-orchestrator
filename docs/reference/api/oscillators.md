@@ -171,6 +171,12 @@ Converts event timestamps into phase oscillators:
 
 ### Edge cases
 
+Event timestamps must be a one-dimensional array. Scalars, row or column
+matrices, higher-rank arrays and empty matrices raise `ValueError` before phase
+extraction. An empty one-dimensional array is a valid degenerate event train.
+Refusal does not modify the input or prevent a later valid extraction with the
+same extractor.
+
 | Input | Result |
 |-------|--------|
 | Single timestamp | θ=0, ω=0, quality=0 |
