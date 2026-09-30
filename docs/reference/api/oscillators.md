@@ -162,12 +162,19 @@ InformationalExtractor(node_id: str = "info_0")
 
 Converts event timestamps into phase oscillators:
 
-1. Compute inter-event intervals: τ_k = t_k - t_{k-1}
-2. Median frequency: f = 1 / median(τ)
+1. Compute inter-event intervals: τ_k = t_k - t_{k-1}; retain positive intervals
+2. Median frequency: f = median(1 / τ)
 3. Angular frequency: ω = 2πf
 4. Phase: θ = (2πf × total_duration) mod 2π
 5. Amplitude: mean instantaneous frequency
 6. Quality: 1/(1 + CV(τ)) where CV = std(τ)/mean(τ)
+
+For an even interval count, median instantaneous frequency is not generally
+the reciprocal of median interval. For timestamps `[0, 0.125, 0.375]`, the
+frequencies are 8 and 4 Hz: f = 6 Hz, θ = π/2, amplitude = 6 and quality = 0.75.
+Both Python and the optional Rust kernel use this median-frequency convention.
+Duplicate events contribute no interval; unsorted timestamps raise `ValueError`.
+Quality uses population standard deviation of the positive intervals.
 
 ### Edge cases
 
@@ -183,9 +190,11 @@ same extractor.
 | Identical timestamps | θ=0, ω=0, quality=0 |
 | Two timestamps | Valid extraction from one interval |
 | Regular events | quality ≈ 1.0 |
-| Irregular events | quality < 0.9 |
+| Non-constant positive intervals | quality < 1.0 |
 
-**Performance:** `extract(100 timestamps)` < 500 μs.
+**Local test limit:** `extract(100 timestamps)` < 600 μs averaged over
+1,000 extractions after warm-up. Hosted CI deselects this performance test;
+the limit is not a hosted gate or a new benchmark result.
 
 ::: scpn_phase_orchestrator.oscillators.informational
 
@@ -371,7 +380,7 @@ with tolerance atol=1e-10 for phase, rtol=0.01 for frequency.
 | Operation | Budget | Rust | Notes |
 |-----------|--------|------|-------|
 | `PhysicalExtractor.extract(1s @ 1kHz)` | < 5 ms | < 1 ms | Hilbert transform |
-| `InformationalExtractor.extract(100 ts)` | < 500 μs | — | numpy operations |
+| `InformationalExtractor.extract(100 ts)` | < 600 μs (local test limit, deselected in hosted CI) | — | native kernel or NumPy fallback |
 | `SymbolicExtractor.extract(1000 states)` | < 1 ms | — | ring mapping |
 | `PhaseQualityScorer.downweight_mask(100)` | < 50 μs | 3.15 μs | public wrapper: 31.57 μs |
 
