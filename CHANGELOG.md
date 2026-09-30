@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Symbolic graph walks retain full signed and unsigned integer distances
+  without subtraction overflow or saturating the cumulative path length.
+  Native vector extraction preserves strided observation order; public input
+  normalisation retains unsigned labels and aligns buffers before native access.
+  Vocabulary counts above native capacity use the Python implementation, with
+  real-path diagnostics documenting the execution and float64 precision limits.
+  Symbolic vector support requires kernel 0.5.11 or newer; both Rust extras
+  enforce that floor. Above `2**53`, ring phase and graph quality equivalence
+  is numerical rather than bitwise. Integer-first ring scaling also changes
+  rounding order relative to earlier kernels; bitwise replay is not guaranteed.
 - Dense native integration snapshots shared NumPy inputs before borrowing
   writable coupling, preserving plasticity writeback and replacing coupling
   borrow/writeability panics with `ValueError` refusals.

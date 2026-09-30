@@ -181,6 +181,18 @@ It does not use an adjacency graph. A singleton uses ring mapping; a stationary
 multi-state sequence produces zero phases. Label spacing therefore matters in
 graph mode; ring aliases are not graph-distance aliases.
 
+Signed and unsigned 64-bit labels retain their values, including their full
+minimum-to-maximum spans. Narrower integer arrays promote within the same
+signedness. Graph differences and cumulative walk lengths use exact integer
+arithmetic before conversion to `float64`; they neither overflow signed
+subtraction nor saturate at machine-word capacity. The phase output itself is
+rounded to `float64`, so this is not an exact-rational phase representation.
+
+Backend equivalence is numerical rather than bitwise: ring phases and graph
+qualities can differ in the last float64 bits for vocabularies above `2**53`,
+because Rust converts the operands before division while Python rounds the
+integer quotient. Integer residues and graph distances still retain every bit.
+
 **Quality metric:** Transition regularity:
 
 | Transition type | Quality |
@@ -213,6 +225,15 @@ graph-walk phases and linear transition qualities through the corresponding
 `*_rust` FFI functions. The public extractor scores cyclic ring quality in
 Python on both backend paths; without the kernel it also computes phases and
 graph quality in Python.
+
+Both paths accept one-dimensional strided and read-only observations. Public
+input normalisation copies unaligned arrays before native access. Vocabulary
+sizes are integers ≥ 2 without a public upper bound; counts exceeding the native
+target's `usize` capacity use Python, even with the extension installed.
+The [API integer contract](../reference/api/oscillators.md#integer-and-backend-contract)
+and public diagnostic document these boundaries.
+The [dated raw observations](../reference/data/symbolic_extraction_diagnostic_2026-09-30.json)
+record each real execution path without an isolated speedup claim.
 
 ---
 

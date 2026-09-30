@@ -47,6 +47,13 @@ Examples:
 
 Use this path when runtime stability matters.
 
+Symbolic extraction also checks native count capacity: `n_states` above the
+target's `usize` maximum uses the real Python implementation even when the
+extension is installed. Signed and unsigned integer labels preserve their
+values, while cyclic ring quality stays in Python on both paths. See the
+[symbolic integer contract](../reference/api/oscillators.md#integer-and-backend-contract)
+for alignment, strides, exact graph accumulation and `float64` precision limits.
+
 ### WebGPU Browser/Edge Dispatch
 
 The UPDE stateless dispatcher declares a WebGPU slot:

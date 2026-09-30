@@ -228,6 +228,30 @@ Cumulative absolute linear index differences normalised to [0, 2π).
 No adjacency graph is consulted. A singleton uses the ring mapping; a
 stationary multi-state sequence has zero phase.
 
+### Integer and backend contract
+
+Signed and unsigned integer arrays retain their labels: narrower widths promote
+to `int64` or `uint64` respectively, never by wrapping unsigned labels into
+negative values. One-dimensional strided, reversed and read-only views are
+accepted. Unaligned public input is copied before native access.
+
+Graph distances and cumulative totals use exact integer arithmetic (Python
+integers or Rust `u128`) before conversion to `float64`. This preserves full-span
+64-bit label distances without signed overflow or saturating the walk total.
+Output phases and frequencies still have `float64` precision; sub-ULP differences
+and underflow are not exact rational results.
+
+Ring phases and graph qualities are numerically, not bitwise, backend-equivalent.
+Rust divides converted integer operands; Python rounds the integer quotient.
+Above `2**53`, those operations can produce adjacent float64 values. For
+`n_states = 2**53 + 1` and label 1, the native ring phase is one ULP above
+the Python phase. Integer residues and graph distances remain exact.
+
+`n_states` has no public upper bound beyond being an integer ≥ 2. The Rust path
+uses the target's `usize` capacity; larger counts use the real Python mapping and
+quality computation, even when `spo_kernel` is installed. Without the kernel,
+all symbolic computations use Python. Cyclic ring quality always uses Python.
+
 ### Quality scoring
 
 | Transition type | Quality |
@@ -251,7 +275,22 @@ negative. For forward single steps with N > 2: ω = 2π/(N·dt).
 `max(2, cpu_count/4)`. This is the existing load-aware test limit, not a
 published comparative benchmark; hosted CI deselects performance tests.
 
+The real public-path diagnostic covers ring, graph, full-span signed/unsigned
+labels, strides and counts above native capacity:
+
+```bash
+PYTHONPATH=src .venv/bin/python benchmarks/bench_symbolic.py --repeats 20
+```
+
+It reports actual native C-call identities outside timed loops, source hashes,
+runtime versions, host context and per-workload median/P95 timings. Shared-host
+runs are non-isolated diagnostics, not portable speedup or latency guarantees.
+The [2026-09-30 raw observations](../data/symbolic_extraction_diagnostic_2026-09-30.json)
+contain separate installed-native and genuinely kernel-absent runs.
+
 ::: scpn_phase_orchestrator.oscillators.symbolic
+    options:
+      docstring_style: numpy
 
 ---
 

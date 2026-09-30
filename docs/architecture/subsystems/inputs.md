@@ -38,8 +38,9 @@ and `semantic/` subpackages), `oscillators` 8, `drivers` 4, `imprint` 3.
 ## Backends
 
 Extractors carry optional Rust paths (`spo_kernel.physical_extract`,
-`event_phase`, `ring_phases_rust`, …) with NumPy fallback. The phase-extraction
-path is otherwise Python/NumPy by design (LAPACK/FFT-favoured).
+`event_phase`, `ring_phases_rust`, …) with Python fallbacks. Symbolic distances
+and residues use exact integers before float64 conversion; continuous inputs
+use Python/NumPy by design (LAPACK/FFT-favoured).
 
 ## Wiring
 
