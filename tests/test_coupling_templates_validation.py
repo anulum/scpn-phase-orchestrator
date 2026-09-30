@@ -230,29 +230,41 @@ def test_u1_knm_template_set_stores_canonical_template_name() -> None:
 @pytest.mark.parametrize("sign", [-1, 1])
 @pytest.mark.parametrize("replace_existing", [False, True])
 @pytest.mark.parametrize("error_mode", ["warn", "raise"])
+@pytest.mark.parametrize("dtype", ["float64", "longdouble"])
 def test_float64_overflow_refuses_without_changing_registry(
     field: str,
     sign: int,
     replace_existing: bool,
     error_mode: Literal["warn", "raise"],
+    dtype: str,
 ) -> None:
-    """Refuse finite extended-precision overflow before mutating either name."""
+    """Refuse raw or narrowing overflow without mutating either registration."""
     registry = KnmTemplateSet()
     baseline = np.array([[0.0, 0.25], [0.25, 0.0]])
     registry.add(KnmTemplate("baseline", baseline, np.zeros((2, 2)), "original"))
     name = "baseline" if replace_existing else "overflow"
-    magnitude = np.longdouble(np.finfo(np.float64).max) * 2 * sign
-    oversized = np.array([[0.0, magnitude], [magnitude, 0.0]], dtype="longdouble")
+    source_dtype = np.dtype(dtype)
+    with np.errstate(over="ignore"):
+        magnitude = source_dtype.type(np.finfo(np.float64).max) * source_dtype.type(
+            2 * sign
+        )
+    oversized = np.array([[0.0, magnitude], [magnitude, 0.0]], dtype=dtype)
     coupling = oversized if field == "knm" else baseline.copy()
     lag = oversized if field == "alpha" else np.zeros((2, 2))
     coupling_before = coupling.copy()
     lag_before = lag.copy()
-    assert np.isfinite(coupling).all()
-    assert np.isfinite(lag).all()
+    source_is_finite = np.finfo(source_dtype).maxexp > np.finfo(np.float64).maxexp
+    assert bool(np.isfinite(oversized).all()) == source_is_finite
+    if not source_is_finite:
+        refusal = "contain only finite values"
+    elif field == "knm":
+        refusal = "remain finite in float64"
+    else:
+        refusal = "alpha must contain finite real values"
 
     with (
         np.errstate(over=error_mode, invalid="raise"),
-        pytest.raises(ValueError, match="finite"),
+        pytest.raises(ValueError, match=refusal),
     ):
         registry.add(KnmTemplate(name, coupling, lag, "unrepresentable"))
 
@@ -326,21 +338,60 @@ def test_representable_templates_keep_copy_isolation_and_phase_lag(
 
 
 @pytest.mark.parametrize("sign", [-1, 1])
-@pytest.mark.parametrize("rounds_to_limit", [False, True])
-def test_float64_finite_limit_remains_a_valid_template(
-    sign: int, rounds_to_limit: bool
+@pytest.mark.parametrize("next_value", [False, True])
+@pytest.mark.parametrize("dtype", ["float64", "longdouble"])
+def test_float64_limit_admission_tracks_source_representation(
+    sign: int, next_value: bool, dtype: str
 ) -> None:
-    """Retain finite boundary rounding without imposing a coupling cap."""
-    limit = np.longdouble(np.finfo(np.float64).max) * sign
-    if rounds_to_limit:
-        limit = np.nextafter(limit, np.longdouble(np.inf) * sign)
-    matrix = np.array([[0.0, limit], [limit, 0.0]], dtype="longdouble")
+    """Accept finite boundary rounding or refuse infinity, then recover."""
+    source_dtype = np.dtype(dtype)
+    limit = source_dtype.type(np.finfo(np.float64).max) * source_dtype.type(sign)
+    if next_value:
+        with np.errstate(over="ignore"):
+            limit = np.nextafter(limit, source_dtype.type(np.inf) * sign)
+    matrix = np.array([[0.0, limit], [limit, 0.0]], dtype=dtype)
+    original = matrix.copy()
+    with np.errstate(over="ignore"):
+        canonical = matrix.astype(np.float64)
+    expect_finite = (
+        not next_value or np.finfo(source_dtype).maxexp > np.finfo(np.float64).maxexp
+    )
+    assert bool(np.isfinite(canonical).all()) == expect_finite
     registry = KnmTemplateSet()
+    baseline = np.array([[0.0, 0.5], [0.5, 0.0]])
+    registry.add(KnmTemplate("limit", baseline, np.zeros((2, 2)), "original"))
 
-    registry.add(KnmTemplate("limit", matrix, matrix.copy(), "finite limit"))
+    if expect_finite:
+        expected_limit = np.finfo(np.float64).max * sign
+        np.testing.assert_array_equal(
+            canonical, [[0.0, expected_limit], [expected_limit, 0.0]]
+        )
+        registry.add(KnmTemplate("limit", matrix, matrix.copy(), "finite limit"))
+        stored = registry.get("limit")
+        assert stored.description == "finite limit"
+        assert np.isfinite(stored.knm).all()
+        assert np.isfinite(stored.alpha).all()
+        np.testing.assert_array_equal(stored.knm, canonical)
+        np.testing.assert_array_equal(stored.alpha, canonical)
+    else:
+        with pytest.raises(ValueError, match="contain only finite values"):
+            registry.add(KnmTemplate("limit", matrix, matrix.copy(), "non-finite"))
+        preserved = registry.get("limit")
+        assert preserved.description == "original"
+        np.testing.assert_array_equal(preserved.knm, baseline)
+        np.testing.assert_array_equal(preserved.alpha, np.zeros((2, 2)))
 
-    stored = registry.get("limit")
-    assert np.isfinite(stored.knm).all()
-    assert np.isfinite(stored.alpha).all()
-    np.testing.assert_array_equal(stored.knm, matrix.astype(np.float64))
-    np.testing.assert_array_equal(stored.alpha, matrix.astype(np.float64))
+    np.testing.assert_array_equal(matrix, original)
+    assert registry.list_names() == ["limit"]
+    registry.add(KnmTemplate("limit", baseline, np.zeros((2, 2)), "recovered"))
+    recovered = registry.get("limit")
+    assert recovered.description == "recovered"
+    phase = UPDEEngine(2, dt=0.01, method="euler").step(
+        np.array([0.0, np.pi / 2]),
+        np.zeros(2),
+        recovered.knm,
+        0.0,
+        0.0,
+        recovered.alpha,
+    )
+    np.testing.assert_allclose(phase, [0.005, np.pi / 2 - 0.005], atol=1e-12)
