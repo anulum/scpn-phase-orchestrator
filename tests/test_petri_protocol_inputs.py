@@ -46,6 +46,24 @@ def _protocol(guard: str = "load > 0.6") -> ProtocolNetSpec:
     )
 
 
+_INVALID_ARCS: list[tuple[str, dict[str, object], str]] = [
+    (
+        "missing-place",
+        {"weight": 1},
+        " must be a mapping {place: <name>, weight: <int>}, got {'weight': 1}",
+    ),
+    ("unknown-place", {"place": "missing"}, ": unknown place 'missing'"),
+    *[
+        (
+            f"weight-{weight!r}",
+            {"place": "nominal", "weight": weight},
+            ": weight must be a positive integer",
+        )
+        for weight in [0, -1, True, False, 1.5, "1"]
+    ],
+]
+
+
 @pytest.mark.parametrize(
     ("protocol", "expected_errors"),
     [
@@ -88,12 +106,140 @@ def _protocol(guard: str = "load > 0.6") -> ProtocolNetSpec:
             ],
             id="accumulated-diagnostics",
         ),
+        *[
+            pytest.param(
+                _protocol(guard),
+                [
+                    "protocol_net.transition 'recover': guard "
+                    f"{guard!r} is not 'metric op threshold': {reason}"
+                ],
+                id=f"guard-{label}",
+            )
+            for label, guard, reason in [
+                (
+                    "syntax",
+                    "load >",
+                    "guard must be 'metric op threshold', got 'load >'",
+                ),
+                (
+                    "threshold",
+                    "load > nope",
+                    "threshold must be finite, got 'nope'",
+                ),
+                (
+                    "nonfinite",
+                    "load > nan",
+                    "threshold must be finite, got nan",
+                ),
+                (
+                    "operator",
+                    "load != 0.6",
+                    "operator must be one of ['<', '<=', '==', '>', '>='], got '!='",
+                ),
+            ]
+        ],
+        pytest.param(
+            _protocol("nominal > 0.6"),
+            [
+                "protocol_net.transition 'recover': guard metric 'nominal' is a "
+                "place name; guards read context metrics, and token availability "
+                "is set by input arcs"
+            ],
+            id="place-as-guard-metric",
+        ),
+        *[
+            pytest.param(
+                replace(
+                    _protocol(),
+                    transitions=[
+                        ProtocolTransitionSpec(
+                            name="recover",
+                            inputs=[arc]
+                            if side == "inputs"
+                            else [{"place": "nominal"}],
+                            outputs=[arc]
+                            if side == "outputs"
+                            else [{"place": "recovery"}],
+                            guard="load > 0.6",
+                        )
+                    ],
+                ),
+                [f"protocol_net.transition 'recover' {side}[0]{reason}"],
+                id=f"{side}-{label}",
+            )
+            for side in ["inputs", "outputs"]
+            for label, arc, reason in _INVALID_ARCS
+        ],
+        *[
+            pytest.param(
+                replace(_protocol(), place_regime=mapping),
+                [f"protocol_net is refused by the runtime: {reason}"],
+                id=f"runtime-{label}",
+            )
+            for label, mapping, reason in [
+                ("empty-map", {}, "place_to_regime must not be empty"),
+                (
+                    "blank-regime",
+                    {"nominal": " "},
+                    "regime mapping value for place 'nominal' must be "
+                    "non-empty string, got ' '",
+                ),
+                (
+                    "unknown-regime",
+                    {"nominal": "missing"},
+                    "unknown regime 'missing' for place 'nominal'",
+                ),
+            ]
+        ],
+        pytest.param(
+            replace(
+                _protocol(),
+                transitions=[
+                    ProtocolTransitionSpec(
+                        name="",
+                        inputs=[{"place": "nominal"}],
+                        outputs=[{"place": "recovery"}],
+                    )
+                ],
+            ),
+            [
+                "protocol_net is refused by the runtime: transition names must "
+                "not be empty, got ''"
+            ],
+            id="runtime-empty-transition-name",
+        ),
+        pytest.param(
+            replace(
+                _protocol(),
+                transitions=[
+                    ProtocolTransitionSpec(
+                        name="recover",
+                        inputs=[{"weight": 1}, {"place": "missing", "weight": False}],
+                        outputs=[{"place": "recovery", "weight": 0}],
+                        guard="nominal > 0.6",
+                    )
+                ],
+            ),
+            [
+                "protocol_net.transition 'recover': guard metric 'nominal' is a "
+                "place name; guards read context metrics, and token availability "
+                "is set by input arcs",
+                "protocol_net.transition 'recover' inputs[0] must be a mapping "
+                "{place: <name>, weight: <int>}, got {'weight': 1}",
+                "protocol_net.transition 'recover' inputs[1]: unknown place 'missing'",
+                "protocol_net.transition 'recover' inputs[1]: weight must be a "
+                "positive integer",
+                "protocol_net.transition 'recover' outputs[0]: weight must be a "
+                "positive integer",
+            ],
+            id="accumulated-transition-diagnostics",
+        ),
     ],
 )
 def test_binding_protocol_admission_preserves_spec_and_recovers(
     protocol: ProtocolNetSpec, expected_errors: list[str]
 ) -> None:
-    """Binding validation reports every bad seed/reference before runtime recovery."""
+    """Binding refusals preserve the spec before corrected runtime event delivery."""
     binding_path = (
         Path(__file__).resolve().parents[1]
         / "domainpacks/minimal_domain/binding_spec.yaml"
@@ -128,6 +274,46 @@ def test_binding_protocol_admission_preserves_spec_and_recovers(
     assert bus.history[0].detail == "recover"
     assert bus.history[0].step == 2
     assert asdict(malformed) == original
+
+
+def test_binding_unguarded_weighted_transition_consumes_exact_tokens() -> None:
+    """An admitted unguarded transition waits for its full input weight."""
+    binding_path = (
+        Path(__file__).resolve().parents[1]
+        / "domainpacks/minimal_domain/binding_spec.yaml"
+    )
+    protocol = replace(
+        _protocol(),
+        transitions=[
+            ProtocolTransitionSpec(
+                name="recover",
+                inputs=[{"place": "nominal", "weight": 2}],
+                outputs=[{"place": "recovery", "weight": 3}],
+            )
+        ],
+    )
+    binding = replace(load_binding_spec(binding_path), protocol_net=protocol)
+    original = asdict(binding)
+    assert validate_binding_spec(binding) == []
+    net, marking = petri_net_from_protocol(protocol)
+    bus = EventBus()
+    adapter = PetriNetAdapter(net, marking, protocol.place_regime, event_bus=bus)
+    assert adapter.step({}) is Regime.NOMINAL
+    assert adapter.marking.tokens == {"nominal": 1}
+    assert bus.count == 0
+
+    supplied = marking.copy()
+    supplied["nominal"] = 2
+    admitted = PetriNetAdapter(net, supplied, protocol.place_regime, event_bus=bus)
+    assert admitted.step({}) is Regime.RECOVERY
+    assert admitted.marking.tokens == {"recovery": 3}
+    assert supplied.tokens == {"nominal": 2}
+    assert marking.tokens == {"nominal": 1}
+    assert bus.count == 1
+    assert bus.history[0].kind == "petri_transition"
+    assert bus.history[0].detail == "recover"
+    assert bus.history[0].step == 1
+    assert asdict(binding) == original
 
 
 @pytest.mark.parametrize("threshold", ["not-a-number", "null", "0,5"])
