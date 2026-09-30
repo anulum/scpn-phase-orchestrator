@@ -11,14 +11,17 @@
 from __future__ import annotations
 
 import json
-from dataclasses import asdict
+from dataclasses import asdict, replace
+from pathlib import Path
 
 import pytest
 
+from scpn_phase_orchestrator.binding.loader import load_binding_spec
 from scpn_phase_orchestrator.binding.types import (
     ProtocolNetSpec,
     ProtocolTransitionSpec,
 )
+from scpn_phase_orchestrator.binding.validator import validate_binding_spec
 from scpn_phase_orchestrator.exceptions import PolicyError
 from scpn_phase_orchestrator.supervisor.events import EventBus
 from scpn_phase_orchestrator.supervisor.petri_adapter import PetriNetAdapter
@@ -41,6 +44,90 @@ def _protocol(guard: str = "load > 0.6") -> ProtocolNetSpec:
             )
         ],
     )
+
+
+@pytest.mark.parametrize(
+    ("protocol", "expected_errors"),
+    [
+        pytest.param(
+            replace(_protocol(), places=["nominal", "recovery", ""]),
+            ["protocol_net.places must be non-empty strings"],
+            id="blank-place",
+        ),
+        pytest.param(
+            replace(_protocol(), initial={"missing": 1}),
+            ["protocol_net.initial: unknown place 'missing'"],
+            id="unknown-initial-place",
+        ),
+        *[
+            pytest.param(
+                replace(_protocol(), initial={"nominal": tokens}),
+                ["protocol_net.initial['nominal'] must be a non-negative integer"],
+                id=f"invalid-token-{tokens}",
+            )
+            for tokens in [-1, True, False]
+        ],
+        pytest.param(
+            replace(_protocol(), place_regime={"missing": "RECOVERY"}),
+            ["protocol_net.place_regime: unknown place 'missing'"],
+            id="unknown-regime-place",
+        ),
+        pytest.param(
+            replace(
+                _protocol(),
+                places=["nominal", "recovery", ""],
+                initial={"missing": -1, "nominal": True},
+                place_regime={"missing": "RECOVERY"},
+            ),
+            [
+                "protocol_net.places must be non-empty strings",
+                "protocol_net.initial: unknown place 'missing'",
+                "protocol_net.initial['missing'] must be a non-negative integer",
+                "protocol_net.initial['nominal'] must be a non-negative integer",
+                "protocol_net.place_regime: unknown place 'missing'",
+            ],
+            id="accumulated-diagnostics",
+        ),
+    ],
+)
+def test_binding_protocol_admission_preserves_spec_and_recovers(
+    protocol: ProtocolNetSpec, expected_errors: list[str]
+) -> None:
+    """Binding validation reports every bad seed/reference before runtime recovery."""
+    binding_path = (
+        Path(__file__).resolve().parents[1]
+        / "domainpacks/minimal_domain/binding_spec.yaml"
+    )
+    base = load_binding_spec(binding_path)
+    malformed = replace(base, protocol_net=protocol)
+    original = asdict(malformed)
+
+    assert validate_binding_spec(malformed) == expected_errors
+    assert validate_binding_spec(malformed) == expected_errors
+    assert asdict(malformed) == original
+    assert base.protocol_net is None
+
+    repaired = replace(malformed, protocol_net=_protocol())
+    assert validate_binding_spec(repaired) == []
+    admitted_protocol = repaired.protocol_net
+    assert admitted_protocol is not None
+    net, marking = petri_net_from_protocol(admitted_protocol)
+    bus = EventBus()
+    adapter = PetriNetAdapter(
+        net, marking, admitted_protocol.place_regime, event_bus=bus
+    )
+    assert adapter.step({"load": 0.6}) is Regime.NOMINAL
+    assert adapter.marking.tokens == {"nominal": 1}
+    assert bus.count == 0
+    assert adapter.step({"load": 0.8}) is Regime.RECOVERY
+    assert adapter.marking.tokens == {"recovery": 1}
+    assert marking.tokens == {"nominal": 1}
+    assert admitted_protocol.initial == {"nominal": 1}
+    assert bus.count == 1
+    assert bus.history[0].kind == "petri_transition"
+    assert bus.history[0].detail == "recover"
+    assert bus.history[0].step == 2
+    assert asdict(malformed) == original
 
 
 @pytest.mark.parametrize("threshold", ["not-a-number", "null", "0,5"])
