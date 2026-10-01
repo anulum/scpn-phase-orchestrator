@@ -25,6 +25,19 @@ import (
 
 const twoPiUPDE = 2.0 * math.Pi
 
+// wrapPhaseUPDE projects finite remainders onto [0, twoPiUPDE) with positive
+// zero for rounded upper endpoints and either sign of zero.
+func wrapPhaseUPDE(phase float64) float64 {
+	wrapped := math.Mod(phase, twoPiUPDE)
+	if wrapped < 0.0 {
+		wrapped += twoPiUPDE
+	}
+	if wrapped >= twoPiUPDE || wrapped == 0.0 {
+		return 0.0
+	}
+	return wrapped
+}
+
 // Dormand-Prince tableau (matches spo-engine/src/dp_tableau.rs).
 const (
 	dpA21  = 1.0 / 5.0
@@ -214,10 +227,7 @@ func upderRun(
 			}
 		}
 		for i := 0; i < n; i++ {
-			phases[i] = math.Mod(phases[i], twoPiUPDE)
-			if phases[i] < 0.0 {
-				phases[i] += twoPiUPDE
-			}
+			phases[i] = wrapPhaseUPDE(phases[i])
 		}
 	}
 }
@@ -269,10 +279,7 @@ func upderRunOmegaSchedule(
 			}
 		}
 		for i := 0; i < n; i++ {
-			phases[i] = math.Mod(phases[i], twoPiUPDE)
-			if phases[i] < 0.0 {
-				phases[i] += twoPiUPDE
-			}
+			phases[i] = wrapPhaseUPDE(phases[i])
 		}
 	}
 }
@@ -361,10 +368,7 @@ func upderRunDopplerSchedule(
 			}
 		}
 		for i := 0; i < n; i++ {
-			phases[i] = math.Mod(phases[i], twoPiUPDE)
-			if phases[i] < 0.0 {
-				phases[i] += twoPiUPDE
-			}
+			phases[i] = wrapPhaseUPDE(phases[i])
 		}
 	}
 }
@@ -477,10 +481,7 @@ func upderRunMovingFrameSchedule(
 			}
 		}
 		for i := 0; i < n; i++ {
-			phases[i] = math.Mod(phases[i], twoPiUPDE)
-			if phases[i] < 0.0 {
-				phases[i] += twoPiUPDE
-			}
+			phases[i] = wrapPhaseUPDE(phases[i])
 			positions[i] += velocities[i] * dt
 		}
 	}

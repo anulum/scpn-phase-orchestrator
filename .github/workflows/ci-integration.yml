@@ -74,6 +74,7 @@ jobs:
               'tests/test_twin_confidence_backends.py',
               'tests/test_winding_backends.py',
               'tests/test_delay_backends.py',
+              'native-tests/test_upde_runtime_phase_wrapping.py',
               '-m',
               'not slow and not performance',
               '-k',
@@ -138,7 +139,7 @@ jobs:
         run: pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
       - name: Execute Go measurement ingress contracts with coverage
         run: |
-          pytest tests/test_chimera_measurement_inputs.py tests/test_embedding_measurement_inputs.py tests/test_entropy_prod_measurement_inputs.py tests/test_opt_entropy_measurement_inputs.py tests/test_dimension_backends.py tests/test_npe_backends.py tests/test_pid_backends.py tests/test_poincare_backends.py tests/test_psychedelic_backends.py tests/test_recurrence_backends.py tests/test_transfer_entropy_backends.py tests/test_twin_confidence_backends.py tests/test_winding_backends.py tests/test_delay_backends.py -m "not slow and not performance" -k "(go and native_runtime) or GoParity or (test_public_divergence_uses_real_backend and go) or PoincareSectionParity or PhasePoincareParity" --tb=short --strict-markers --cov=scpn_phase_orchestrator --cov-report= --cov-fail-under=0
+          pytest tests/test_chimera_measurement_inputs.py tests/test_embedding_measurement_inputs.py tests/test_entropy_prod_measurement_inputs.py tests/test_opt_entropy_measurement_inputs.py tests/test_dimension_backends.py tests/test_npe_backends.py tests/test_pid_backends.py tests/test_poincare_backends.py tests/test_psychedelic_backends.py tests/test_recurrence_backends.py tests/test_transfer_entropy_backends.py tests/test_twin_confidence_backends.py tests/test_winding_backends.py tests/test_delay_backends.py native-tests/test_upde_runtime_phase_wrapping.py -m "not slow and not performance" -k "(go and native_runtime) or GoParity or (test_public_divergence_uses_real_backend and go) or PoincareSectionParity or PhasePoincareParity" --tb=short --strict-markers --cov=scpn_phase_orchestrator --cov-report= --cov-fail-under=0
           mv .coverage .coverage.go
       - name: Upload Go measurement coverage
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
@@ -193,7 +194,7 @@ jobs:
         run: .venv/bin/pip install --require-hashes --no-deps -r requirements/dev-lock.txt && .venv/bin/pip install --no-deps -e .
       - name: Execute Mojo measurement ingress contracts with coverage
         run: |
-          .venv/bin/pytest tests/test_chimera_measurement_inputs.py tests/test_embedding_measurement_inputs.py tests/test_entropy_prod_measurement_inputs.py tests/test_opt_entropy_measurement_inputs.py tests/test_dimension_backends.py tests/test_npe_backends.py tests/test_pid_backends.py tests/test_poincare_backends.py tests/test_psychedelic_backends.py tests/test_recurrence_backends.py tests/test_transfer_entropy_backends.py tests/test_twin_confidence_backends.py tests/test_winding_backends.py tests/test_delay_backends.py -m "not slow and not performance" -k "(mojo and native_runtime) or MojoParity or (test_public_divergence_uses_real_backend and mojo) or PoincareSectionParity or PhasePoincareParity" --tb=short --strict-markers --cov=scpn_phase_orchestrator --cov-report= --cov-fail-under=0
+          .venv/bin/pytest tests/test_chimera_measurement_inputs.py tests/test_embedding_measurement_inputs.py tests/test_entropy_prod_measurement_inputs.py tests/test_opt_entropy_measurement_inputs.py tests/test_dimension_backends.py tests/test_npe_backends.py tests/test_pid_backends.py tests/test_poincare_backends.py tests/test_psychedelic_backends.py tests/test_recurrence_backends.py tests/test_transfer_entropy_backends.py tests/test_twin_confidence_backends.py tests/test_winding_backends.py tests/test_delay_backends.py native-tests/test_upde_runtime_phase_wrapping.py -m "not slow and not performance" -k "(mojo and native_runtime) or MojoParity or (test_public_divergence_uses_real_backend and mojo) or PoincareSectionParity or PhasePoincareParity" --tb=short --strict-markers --cov=scpn_phase_orchestrator --cov-report= --cov-fail-under=0
           mv .coverage .coverage.mojo
       - name: Upload Mojo measurement coverage
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7

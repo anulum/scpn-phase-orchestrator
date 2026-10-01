@@ -2,6 +2,15 @@
 
 Beyond basic Kuramoto, SPO provides several additional dynamical modules.
 
+Dense/CSR Kuramoto and the fixed/frequency-scheduled/Doppler/moving-frame CPU
+chain share [canonical phase projection](../specs/phase_contract.md#phase-wrapping-in-the-upde-engine):
+rounded upper remainders and signed zero become positive zero without clipping
+interior phases. Nonfinite arithmetic still refuses; dense/CSR stateful steps
+retain caller phases and their adaptive proposal for a subsequent valid retry.
+JAX dense/masked Kuramoto uses its actual float32/float64 period; other models
+below have separate integration contracts. Generated WebGPU UPDE is float32
+Euler only, with browser control/readback validation.
+
 ## Cellular-Sheaf Phase Vectors
 
 `SheafUPDEEngine` integrates an `(N, D)` phase matrix with anisotropic

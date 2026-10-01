@@ -23,6 +23,17 @@ export upde_run, upde_run_omega_schedule, upde_run_doppler_schedule,
 
 const TWO_PI = 2.0 * pi
 
+"""
+    wrap_phase(phase::Float64) -> Float64
+
+Project a finite remainder onto `[0, TWO_PI)`, mapping a rounded upper
+endpoint and either sign of zero to positive zero.
+"""
+function wrap_phase(phase::Float64)::Float64
+    wrapped = mod(phase, TWO_PI)
+    return wrapped >= TWO_PI || wrapped == 0.0 ? 0.0 : wrapped
+end
+
 # Dormand-Prince (1980) coefficients (shared with `spo-engine/dp_tableau.rs`).
 const A21 = 1.0 / 5.0
 const A31 = 3.0 / 40.0
@@ -287,7 +298,7 @@ function upde_run(
             error("unknown method: $method")
         end
         @inbounds for i in 1:n
-            phases[i] = mod(phases[i], TWO_PI)
+            phases[i] = wrap_phase(phases[i])
         end
     end
 
@@ -370,7 +381,7 @@ function upde_run_omega_schedule(
             error("unknown method: $method")
         end
         @inbounds for i in 1:n
-            phases[i] = mod(phases[i], TWO_PI)
+            phases[i] = wrap_phase(phases[i])
         end
     end
 
@@ -498,7 +509,7 @@ function upde_run_doppler_schedule(
             error("unknown method: $method")
         end
         @inbounds for i in 1:n
-            phases[i] = mod(phases[i], TWO_PI)
+            phases[i] = wrap_phase(phases[i])
         end
     end
 
@@ -672,7 +683,7 @@ function upde_run_moving_frame_schedule(
             error("unknown method: $method")
         end
         @inbounds for i in 1:n
-            phases[i] = mod(phases[i], TWO_PI)
+            phases[i] = wrap_phase(phases[i])
             positions[i] += velocities[i] * dt
         end
     end

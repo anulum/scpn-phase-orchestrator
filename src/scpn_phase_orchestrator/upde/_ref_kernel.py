@@ -8,9 +8,9 @@
 
 """NumPy reference implementation of the UPDE batched integrator.
 
-Mirrors ``spo-kernel/crates/spo-engine/src/upde.rs`` line-for-line —
+Uses the dense Rust engine's integration tableaus and outer-step structure:
 forward Euler, classic RK4, Dormand-Prince RK45 with PI step-size
-control, a single ``% 2π`` wrap per outer step, and ``n_substeps``
+control, canonical torus projection once per outer step, and ``n_substeps``
 support for the fixed-step methods.
 
 The module is private to :mod:`scpn_phase_orchestrator.upde`. The
@@ -26,7 +26,7 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
-from scpn_phase_orchestrator._compat import TWO_PI
+from scpn_phase_orchestrator.upde._phase_wrap import wrap_phases
 
 __all__ = ["upde_run_omega_schedule_python", "upde_run_python"]
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -202,7 +202,46 @@ def upde_run_python(
     atol: float,
     rtol: float,
 ) -> FloatArray:
-    """Python fallback matching the Rust kernel exactly."""
+    """Run the already-admitted dense NumPy integration kernel.
+
+    Parameters
+    ----------
+    phases : FloatArray
+        Oscillator phases in radians, shape ``(N,)``.
+    omegas : FloatArray
+        Natural frequencies in rad/s, shape ``(N,)``.
+    knm : FloatArray
+        Coupling matrix ``K_nm``, shape ``(N, N)``.
+    alpha : FloatArray
+        Finite phase-lag matrix in radians, shape ``(N, N)``; use zeros for no lag.
+    zeta : float
+        External drive strength ``ζ``.
+    psi : float
+        External drive reference phase ``Ψ`` in radians.
+    dt : float
+        Integration step size.
+    n_steps : int
+        Number of integration steps to run.
+    method : str
+        Integration method (``euler``, ``rk4``, or ``rk45``).
+    n_substeps : int
+        Number of inner substeps per outer step.
+    atol : float
+        Absolute tolerance for the adaptive (rk45) integrator.
+    rtol : float
+        Relative tolerance for the adaptive (rk45) integrator.
+
+    Returns
+    -------
+    FloatArray
+        The final phases after ``n_steps`` integration steps.
+
+    Notes
+    -----
+    Inputs are admitted by the owning public dispatcher. Use the public
+    engine facade for shape, finite-value and output-domain guards.
+    Finite results are projected after each outer step.
+    """
     if method not in ("euler", "rk4", "rk45"):
         raise ValueError(f"unknown method {method!r}")
     if n_substeps < 1:
@@ -231,7 +270,7 @@ def upde_run_python(
             for _ in range(n_substeps):
                 deriv = _compute_derivative(phases, omegas, knm, alpha, zeta, psi)
                 phases = phases + sub_dt * deriv
-        phases = phases % TWO_PI
+        phases = wrap_phases(phases)
     return phases
 
 
@@ -248,7 +287,44 @@ def upde_run_omega_schedule_python(
     atol: float,
     rtol: float,
 ) -> FloatArray:
-    """Python fallback for one frequency vector per outer UPDE step."""
+    """Run the already-admitted dense NumPy integration kernel.
+
+    Parameters
+    ----------
+    phases : FloatArray
+        Oscillator phases in radians, shape ``(N,)``.
+    omega_schedule : FloatArray
+        Per-step natural-frequency vectors, shape ``(n_steps, N)``.
+    knm : FloatArray
+        Coupling matrix ``K_nm``, shape ``(N, N)``.
+    alpha : FloatArray
+        Finite phase-lag matrix in radians, shape ``(N, N)``; use zeros for no lag.
+    zeta : float
+        External drive strength ``ζ``.
+    psi : float
+        External drive reference phase ``Ψ`` in radians.
+    dt : float
+        Integration step size.
+    method : str
+        Integration method (``euler``, ``rk4``, or ``rk45``).
+    n_substeps : int
+        Number of inner substeps per outer step.
+    atol : float
+        Absolute tolerance for the adaptive (rk45) integrator.
+    rtol : float
+        Relative tolerance for the adaptive (rk45) integrator.
+
+    Returns
+    -------
+    FloatArray
+        The final phases after integrating the omega schedule.
+
+    Notes
+    -----
+    Inputs are admitted by the owning public dispatcher. Use the public
+    engine facade for shape, finite-value and output-domain guards.
+    Finite results are projected after each outer step.
+    """
     if omega_schedule.ndim != 2:
         raise ValueError("omega_schedule must be a two-dimensional matrix")
     phases_out = phases.copy()
@@ -285,5 +361,5 @@ def upde_run_omega_schedule_python(
                 phases_out = phases_out + sub_dt * deriv
         else:
             raise ValueError(f"unknown method {method!r}")
-        phases_out = phases_out % TWO_PI
+        phases_out = wrap_phases(phases_out)
     return phases_out

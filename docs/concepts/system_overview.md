@@ -153,13 +153,23 @@ traffic, industrial control, and more.
 | `SwarmalatorEngine` | Position + phase | Swarm robotics |
 | `DelayedEngine` | Time-delayed coupling | Signal propagation delays |
 | `SplittingEngine` | Operator splitting | Stiff multi-scale systems |
-| `JaxUPDEEngine` | JAX-accelerated | GPU, autodiff, large-scale |
+| `JaxUPDEEngine` | JIT Kuramoto with validated host readback | Configured JAX CPU/GPU/TPU device |
 
 Engine variants expose `step()` / `run()` with model-specific state shapes and
 controls. `SheafUPDEEngine` returns independent `(N, D)` phase arrays; consumers
 construct any `UPDEState` diagnostics they require. Its adaptive solver advances
 one complete configured interval per step. See the
 [cellular-sheaf contract](../reference/api/upde.md#cellular-sheaf-engine).
+
+Successful scalar dense/CSR Kuramoto steps publish canonical phases in their
+actual precision: rounded upper remainders and signed zero become positive zero,
+interior values remain, and nonfinite computed output refuses. A refused step
+retains caller phases and the adaptive proposal for valid same-instance retry.
+JAX Kuramoto uses its configured float32/float64 period; device-array autodiff
+is provided by the [pure functional API](../reference/api/nn.md#kuramoto-model)
+away from wrap cuts. The generated browser WebGPU UPDE package implements
+float32 Euler with real control/readback guards; a software adapter diagnostic
+does not establish hardware performance.
 
 ## Key Data Structures
 

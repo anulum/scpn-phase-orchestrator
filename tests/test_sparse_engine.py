@@ -723,13 +723,19 @@ def _call_sparse_operation(
 
 @pytest.mark.parametrize("operation", ["step", "run"])
 def test_sparse_real_overflow_refuses_nonfinite_output(operation: str) -> None:
-    """Finite frequencies can overflow the real integrator and must fail closed."""
+    """Refuse real computed overflow at the owning native or NumPy boundary.
+
+    Parameters
+    ----------
+    operation : str
+        Actual public step or one-step batch entry point.
+    """
     engine = SparseUPDEEngine(3, dt=10.0)
     phases = np.zeros(3)
     frequencies = np.full(3, 1e308)
     with (
         np.errstate(over="ignore", invalid="ignore"),
-        pytest.raises(ValueError, match="Sparse output contains NaN/Inf"),
+        pytest.raises(ValueError, match="output.*NaN/Inf"),
     ):
         _call_sparse_operation(engine, operation, phases, frequencies)
     assert engine.last_dt == 10.0
@@ -739,14 +745,23 @@ def test_sparse_real_overflow_refuses_nonfinite_output(operation: str) -> None:
 
 
 @pytest.mark.parametrize("operation", ["step", "run"])
-def test_sparse_real_wrap_rounding_refuses_upper_endpoint(operation: str) -> None:
-    """A tiny negative phase can wrap to the excluded upper endpoint."""
+def test_sparse_real_wrap_rounding_canonicalises_upper_endpoint(operation: str) -> None:
+    """Publish positive zero for a real rounded remainder and retain valid retry.
+
+    Parameters
+    ----------
+    operation : str
+        Actual public step or one-step batch entry point.
+    """
     engine = SparseUPDEEngine(3, dt=0.01)
     phases = np.array([-1e-300, 0.0, 0.0])
-    with pytest.raises(ValueError, match=r"outside \[0, 2\*pi\)"):
-        _call_sparse_operation(engine, operation, phases, np.zeros(3))
+    result = _call_sparse_operation(engine, operation, phases, np.zeros(3))
+    np.testing.assert_array_equal(result, np.zeros(3))
+    assert not np.any(np.signbit(result))
     assert engine.last_dt == 0.01
     np.testing.assert_array_equal(phases, [-1e-300, 0.0, 0.0])
+    recovered = _call_sparse_operation(engine, operation, result, np.ones(3))
+    np.testing.assert_allclose(recovered, np.full(3, 0.01), atol=1e-15, rtol=0.0)
 
 
 @pytest.mark.parametrize("operation", ["step", "run"])

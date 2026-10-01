@@ -87,9 +87,13 @@ impl UPDEStepper {
 
     /// Advance one dense UPDE timestep in place.
     ///
+    /// Finite phase remainders lie in `[0, TAU)`; a rounded upper endpoint
+    /// and either sign of zero publish as positive zero.
+    ///
     /// # Errors
     /// Returns dimension errors for mismatched state/coupling inputs and
-    /// divergence errors for non-finite phase or drive values.
+    /// divergence errors for non-finite phase or drive values or computed phases.
+    /// A divergent step preserves caller phases and the adaptive-step proposal.
     pub fn step(
         &mut self,
         phases: &mut [f64],
@@ -143,6 +147,10 @@ impl UPDEStepper {
         }
 
         let alpha_zero = alpha.iter().all(|&a| a == 0.0);
+        let previous_phases = phases.to_vec();
+        let previous_dt = self.last_dt;
+        let previous_sin = self.sin_theta.clone();
+        let previous_cos = self.cos_theta.clone();
 
         match self.method {
             Method::RK45 => {
@@ -168,6 +176,16 @@ impl UPDEStepper {
             }
         }
 
+        wrap_phases(phases);
+        if phases.iter().any(|phase| !phase.is_finite()) {
+            phases.copy_from_slice(&previous_phases);
+            self.last_dt = previous_dt;
+            self.sin_theta.copy_from_slice(&previous_sin);
+            self.cos_theta.copy_from_slice(&previous_cos);
+            return Err(SpoError::IntegrationDiverged(
+                "output phases contain NaN/Inf".into(),
+            ));
+        }
         if let Some(ref plast) = self.plasticity {
             plast.update(
                 &self.sin_theta,
@@ -177,7 +195,6 @@ impl UPDEStepper {
                 self.dt,
             );
         }
-        wrap_phases(phases);
         Ok(())
     }
 
@@ -815,6 +832,79 @@ mod upde_stepper_tests {
     use super::*;
 
     #[test]
+    fn finite_input_divergence_preserves_state_and_recovers() {
+        for method in [Method::Euler, Method::RK4, Method::RK45] {
+            let mut stepper = UPDEStepper::new(
+                1,
+                IntegrationConfig {
+                    method,
+                    ..Default::default()
+                },
+            )
+            .expect("valid divergence-recovery configuration");
+            let mut phases = [0.0];
+            let mut knm = [0.0];
+            let previous_order = stepper.order_parameter();
+            let error = stepper.step(
+                &mut phases,
+                &[1e308],
+                &mut knm,
+                1e308,
+                std::f64::consts::FRAC_PI_2,
+                &[0.0],
+            );
+            assert!(matches!(error, Err(SpoError::IntegrationDiverged(_))));
+            assert_eq!(phases, [0.0]);
+            assert_eq!(knm, [0.0]);
+            assert_eq!(stepper.last_dt(), 0.01);
+            assert_eq!(stepper.order_parameter(), previous_order);
+            stepper
+                .step(&mut phases, &[1.0], &mut knm, 0.0, 0.0, &[0.0])
+                .expect("same stepper recovers on valid finite dynamics");
+            assert!((phases[0] - 0.01).abs() <= 2e-17);
+        }
+    }
+
+    #[test]
+    fn public_steps_and_runs_publish_canonical_torus_phases() {
+        let tau = std::f64::consts::TAU;
+        let interior = f64::from_bits(tau.to_bits() - 1);
+        let initial = [0.0, -tau, -2.0 * tau, -0.0, tau, interior, 0.25];
+        let omegas = [-1e-15, 0.0, 0.0, 0.0, 0.0, 0.0, 2.0];
+        for method in [Method::Euler, Method::RK4, Method::RK45] {
+            for batch in [false, true] {
+                let mut stepper = UPDEStepper::new(
+                    initial.len(),
+                    IntegrationConfig {
+                        method,
+                        ..Default::default()
+                    },
+                )
+                .expect("valid UPDE integration fixture");
+                let mut phases = initial.to_vec();
+                let mut knm = vec![0.0; initial.len() * initial.len()];
+                let alpha = knm.clone();
+                if batch {
+                    stepper
+                        .run(&mut phases, &omegas, &mut knm, 0.0, 0.0, &alpha, 1)
+                        .expect("valid UPDE integration fixture");
+                } else {
+                    stepper
+                        .step(&mut phases, &omegas, &mut knm, 0.0, 0.0, &alpha)
+                        .expect("valid UPDE integration fixture");
+                }
+                for phase in &phases[..5] {
+                    assert_eq!(phase.to_bits(), 0.0f64.to_bits());
+                }
+                assert_eq!(phases[5].to_bits(), interior.to_bits());
+                assert!((phases[6] - 0.27).abs() < 2e-16);
+                assert!(phases.iter().all(|&p| (0.0..tau).contains(&p)));
+                assert!(knm.iter().all(|&k| k == 0.0));
+            }
+        }
+    }
+
+    #[test]
     fn upde_stepper_rejects_zero_oscillators() {
         assert!(matches!(
             UPDEStepper::new(0, IntegrationConfig::default()),
@@ -1063,6 +1153,9 @@ fn compute_derivative(
 fn wrap_phases(phases: &mut [f64]) {
     for p in phases.iter_mut() {
         *p = p.rem_euclid(std::f64::consts::TAU);
+        if *p >= std::f64::consts::TAU || *p == 0.0 {
+            *p = 0.0;
+        }
     }
 }
 
@@ -1071,7 +1164,7 @@ mod tests {
     use super::*;
     use spo_types::IntegrationConfig;
     fn make_stepper(n: usize) -> UPDEStepper {
-        UPDEStepper::new(n, IntegrationConfig::default()).unwrap()
+        UPDEStepper::new(n, IntegrationConfig::default()).expect("valid UPDE integration fixture")
     }
     fn zero_alpha(n: usize) -> Vec<f64> {
         vec![0.0; n * n]
@@ -1089,7 +1182,7 @@ mod tests {
         let mut knm = vec![0.0; n * n];
         let alpha = zero_alpha(n);
         s.step(&mut phases, &omegas, &mut knm, 0.0, 0.0, &alpha)
-            .unwrap();
+            .expect("valid UPDE integration fixture");
         for &p in &phases {
             assert!((p - 0.01).abs() < 1e-12);
         }
@@ -1107,7 +1200,7 @@ mod tests {
         let alpha = zero_alpha(n);
         let r_before = crate::order_params::compute_order_parameter(&phases).0;
         s.run(&mut phases, &omegas, &mut knm, 0.0, 0.0, &alpha, 1000)
-            .unwrap();
+            .expect("valid UPDE integration fixture");
         let r_after = crate::order_params::compute_order_parameter(&phases).0;
         assert!(r_after > r_before);
     }

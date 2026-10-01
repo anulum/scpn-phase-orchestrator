@@ -5,6 +5,13 @@ Auto-generated from source docstrings via
 Python classes auto-delegate to Rust when the `spo_kernel` extension is
 available; the public interface is identical in both backends.
 
+Scalar dense/CSR Kuramoto steps use the [canonical phase/recovery contract](upde.md#core-kuramoto-engine).
+The stateless CPU chain shares that producer projection. JAX Kuramoto uses its
+configured float32/float64 period and provides
+[pure functional autodiff](nn.md#kuramoto-model) away from the wrap cut; its
+engine API performs validated host readback. The generated browser WebGPU UPDE
+package implements float32 Euler only and validates actual controls/readback.
+
 ## What this index is for
 
 This index is the operational entrypoint for implementation teams. It is organized by

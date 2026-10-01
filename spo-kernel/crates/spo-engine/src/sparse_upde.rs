@@ -81,10 +81,14 @@ impl SparseUPDEStepper {
 
     /// Advance one sparse UPDE timestep in place.
     ///
+    /// Finite phase remainders lie in `[0, TAU)`; a rounded upper endpoint
+    /// and either sign of zero publish as positive zero.
+    ///
     /// # Errors
     /// Returns `InvalidDimension` for inconsistent phase/CSR shapes, invalid
     /// row pointers or out-of-range column indices. Returns `IntegrationDiverged`
-    /// for non-finite phase, frequency, coupling, lag or drive inputs.
+    /// for non-finite phase, frequency, coupling, lag or drive inputs or outputs.
+    /// A divergent step preserves caller phases and the adaptive-step proposal.
     pub fn step(
         &mut self,
         phases: &mut [f64],
@@ -147,6 +151,10 @@ impl SparseUPDEStepper {
             ));
         }
         let alpha_zero = alpha_values.iter().all(|&a| a == 0.0);
+        let previous_phases = phases.to_vec();
+        let previous_dt = self.last_dt;
+        let previous_sin = self.sin_theta.clone();
+        let previous_cos = self.cos_theta.clone();
         match self.method {
             Method::RK45 => {
                 self.rk45_step(
@@ -198,6 +206,16 @@ impl SparseUPDEStepper {
                 }
             }
         }
+        wrap_phases(phases);
+        if phases.iter().any(|phase| !phase.is_finite()) {
+            phases.copy_from_slice(&previous_phases);
+            self.last_dt = previous_dt;
+            self.sin_theta.copy_from_slice(&previous_sin);
+            self.cos_theta.copy_from_slice(&previous_cos);
+            return Err(SpoError::IntegrationDiverged(
+                "output phases contain NaN/Inf".into(),
+            ));
+        }
         if let Some(ref plast) = self.plasticity {
             plast.update_sparse(
                 &self.sin_theta,
@@ -209,7 +227,6 @@ impl SparseUPDEStepper {
                 self.dt,
             );
         }
-        wrap_phases(phases);
         Ok(())
     }
 
@@ -573,70 +590,6 @@ impl SparseUPDEStepper {
     }
 }
 
-#[cfg(test)]
-mod sparse_upde_stepper_tests {
-    use super::*;
-
-    #[test]
-    fn sparse_upde_stepper_rejects_zero_oscillators() {
-        assert!(matches!(
-            SparseUPDEStepper::new(0, IntegrationConfig::default()),
-            Err(SpoError::InvalidDimension(_))
-        ));
-    }
-
-    #[test]
-    fn sparse_upde_stepper_reports_geometry_and_timestep() {
-        let stepper = SparseUPDEStepper::new(
-            2,
-            IntegrationConfig {
-                dt: 0.1,
-                method: Method::Euler,
-                ..Default::default()
-            },
-        )
-        .expect("stepper init failed");
-
-        assert_eq!(stepper.n(), 2);
-        assert_eq!(stepper.last_dt(), 0.1);
-    }
-
-    #[test]
-    fn sparse_upde_stepper_advances_uncoupled_natural_frequency() {
-        let mut stepper = SparseUPDEStepper::new(
-            2,
-            IntegrationConfig {
-                dt: 0.1,
-                method: Method::Euler,
-                ..Default::default()
-            },
-        )
-        .expect("stepper init failed");
-        let mut phases = vec![0.2, std::f64::consts::TAU - 0.05];
-        let omegas = vec![1.0, 1.0];
-        let row_ptr = vec![0, 0, 0];
-        let col_indices = Vec::new();
-        let mut knm_values = Vec::new();
-        let alpha_values = Vec::new();
-
-        stepper
-            .step(
-                &mut phases,
-                &omegas,
-                &row_ptr,
-                &col_indices,
-                &mut knm_values,
-                0.0,
-                0.0,
-                &alpha_values,
-            )
-            .expect("step failed");
-
-        assert!((phases[0] - 0.3).abs() < 1e-12);
-        assert!((phases[1] - 0.05).abs() < 1e-12);
-    }
-}
-
 fn compute_derivative(
     n: usize,
     theta: &[f64],
@@ -701,5 +654,155 @@ fn compute_derivative(
 fn wrap_phases(phases: &mut [f64]) {
     for p in phases.iter_mut() {
         *p = p.rem_euclid(std::f64::consts::TAU);
+        if *p >= std::f64::consts::TAU || *p == 0.0 {
+            *p = 0.0;
+        }
+    }
+}
+
+#[cfg(test)]
+mod sparse_upde_stepper_tests {
+    use super::*;
+
+    #[test]
+    fn finite_input_divergence_preserves_state_and_recovers() {
+        for method in [Method::Euler, Method::RK4, Method::RK45] {
+            let mut stepper = SparseUPDEStepper::new(
+                1,
+                IntegrationConfig {
+                    method,
+                    ..Default::default()
+                },
+            )
+            .expect("valid sparse divergence-recovery configuration");
+            let mut phases = [0.0];
+            let mut knm = [];
+            let previous_order = stepper.order_parameter();
+            let error = stepper.step(
+                &mut phases,
+                &[1e308],
+                &[0, 0],
+                &[],
+                &mut knm,
+                1e308,
+                std::f64::consts::FRAC_PI_2,
+                &[],
+            );
+            assert!(matches!(error, Err(SpoError::IntegrationDiverged(_))));
+            assert_eq!(phases, [0.0]);
+            assert_eq!(stepper.last_dt(), 0.01);
+            assert_eq!(stepper.order_parameter(), previous_order);
+            stepper
+                .step(&mut phases, &[1.0], &[0, 0], &[], &mut knm, 0.0, 0.0, &[])
+                .expect("same sparse stepper recovers on valid finite dynamics");
+            assert!((phases[0] - 0.01).abs() <= 2e-17);
+        }
+    }
+
+    #[test]
+    fn public_steps_and_runs_publish_canonical_torus_phases() {
+        let tau = std::f64::consts::TAU;
+        let interior = f64::from_bits(tau.to_bits() - 1);
+        let initial = [0.0, -tau, -2.0 * tau, -0.0, tau, interior, 0.25];
+        let omegas = [-1e-15, 0.0, 0.0, 0.0, 0.0, 0.0, 2.0];
+        let row_ptr = vec![0; initial.len() + 1];
+        for method in [Method::Euler, Method::RK4, Method::RK45] {
+            for batch in [false, true] {
+                let mut stepper = SparseUPDEStepper::new(
+                    initial.len(),
+                    IntegrationConfig {
+                        method,
+                        ..Default::default()
+                    },
+                )
+                .expect("valid canonical torus integration fixture");
+                let mut phases = initial.to_vec();
+                let mut knm = Vec::new();
+                if batch {
+                    stepper
+                        .run(
+                            &mut phases,
+                            &omegas,
+                            &row_ptr,
+                            &[],
+                            &mut knm,
+                            0.0,
+                            0.0,
+                            &[],
+                            1,
+                        )
+                        .expect("valid canonical torus integration fixture");
+                } else {
+                    stepper
+                        .step(&mut phases, &omegas, &row_ptr, &[], &mut knm, 0.0, 0.0, &[])
+                        .expect("valid canonical torus integration fixture");
+                }
+                for phase in &phases[..5] {
+                    assert_eq!(phase.to_bits(), 0.0f64.to_bits());
+                }
+                assert_eq!(phases[5].to_bits(), interior.to_bits());
+                assert!((phases[6] - 0.27).abs() < 2e-16);
+                assert!(phases.iter().all(|&p| (0.0..tau).contains(&p)));
+            }
+        }
+    }
+
+    #[test]
+    fn sparse_upde_stepper_rejects_zero_oscillators() {
+        assert!(matches!(
+            SparseUPDEStepper::new(0, IntegrationConfig::default()),
+            Err(SpoError::InvalidDimension(_))
+        ));
+    }
+
+    #[test]
+    fn sparse_upde_stepper_reports_geometry_and_timestep() {
+        let stepper = SparseUPDEStepper::new(
+            2,
+            IntegrationConfig {
+                dt: 0.1,
+                method: Method::Euler,
+                ..Default::default()
+            },
+        )
+        .expect("stepper init failed");
+
+        assert_eq!(stepper.n(), 2);
+        assert_eq!(stepper.last_dt(), 0.1);
+    }
+
+    #[test]
+    fn sparse_upde_stepper_advances_uncoupled_natural_frequency() {
+        let mut stepper = SparseUPDEStepper::new(
+            2,
+            IntegrationConfig {
+                dt: 0.1,
+                method: Method::Euler,
+                ..Default::default()
+            },
+        )
+        .expect("stepper init failed");
+        let mut phases = vec![0.2, std::f64::consts::TAU - 0.05];
+        let omegas = vec![1.0, 1.0];
+        let row_ptr = vec![0, 0, 0];
+        let col_indices = Vec::new();
+        let mut knm_values = Vec::new();
+        let alpha_values = Vec::new();
+
+        stepper
+            .step(
+                &mut phases,
+                &omegas,
+                &row_ptr,
+                &col_indices,
+                &mut knm_values,
+                0.0,
+                0.0,
+                &alpha_values,
+            )
+            .expect("step failed");
+
+        assert!((phases[0] - 0.3).abs() < 1e-12);
+        assert!((phases[1] - 0.05).abs() < 1e-12);
     }
 }

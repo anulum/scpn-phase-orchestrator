@@ -147,13 +147,20 @@ $K$, making explicit Runge-Kutta methods efficient. However, for very large
 $K/N$ ratios (strong coupling), the system becomes stiff and RK45 adaptive
 stepping automatically reduces $\Delta t$.
 
-**Phase wrapping.** The $\bmod 2\pi$ operation is applied AFTER the full
-integration step (not after each stage), preserving the integrator's order
-of accuracy. This is correct because $\sin(\cdot)$ is periodic.
+**Phase wrapping.** Dense output is projected after stage evaluation.
+Producers use the floating period of their actual precision and map only a
+remainder rounded to that upper endpoint, or signed zero, to positive zero.
+`nextafter(period, 0)` remains an interior phase; no tolerance clips it.
+Positive-step output is finite and half-open; zero-step runs return independent
+unwrapped copies. Nonfinite computed output still refuses. Dense/CSR stateful
+nonfinite phase-computation refusal preserves caller phases and the adaptive proposal for valid retry;
+earlier accepted steps of a native batch are not rewound by a later refusal.
 
 **Floating-point.** At extreme $N$ (>10,000), the $O(N^2)$ coupling sum
-can accumulate rounding error. The Rust backend uses compensated summation
-(Kahan algorithm) for N ≥ 1024.
+can accumulate rounding error. The Rust backend parallelises row blocks for
+N ≥ 256. With zero phase lag, each sine/cosine sum uses eight independent
+accumulators; nonzero lag uses scalar row reductions. These ordinary
+floating-point reductions do not provide compensated-summation guarantees.
 
 ### 2.2 Why UPDE?
 
@@ -256,18 +263,22 @@ kernel is installed; selected stateless Rust calls do too. Readonly coupling
 raises `ValueError` there but is accepted by the other CPU paths. Use a writable
 copy for backend-independent admission.
 
-### 4.3 Five-backend fallback chain (2026-04-18)
+### 4.3 CPU fallback chain and WebGPU host dispatch
 
 `upde.engine` now exposes a stateless batched kernel `upde_run` that
-dispatches across Rust → Mojo → Julia → Go → Python. The first
+dispatches across Rust → WebGPU → Mojo → Julia → Go → Python. The first
 available backend becomes `ACTIVE_BACKEND` on first computation or explicit
 status access; importing the module does not probe optional toolchains. The
-others are available as overrides for tests and benchmarks. `UPDEEngine.run`
-routes through this dispatcher so every available toolchain is used.
+others are available as overrides for tests and benchmarks. Stateful fixed-
+frequency `UPDEEngine` selects its own Rust/NumPy solver; callable-frequency
+batch runs use the schedule dispatcher. WebGPU dispatch requires a host-provided
+`SPO_WEBGPU_DISPATCH_BRIDGE=module:function` adapter, implements Euler only, and
+has no schedule runner. See [host dispatch setup](../../guide/webgpu_backend.md).
 
 | Backend | Probe                                                         | Artefact                         |
 | ------- | ------------------------------------------------------------- | -------------------------------- |
 | Rust    | `from spo_kernel import PyUPDEStepper`                        | `spo_kernel` wheel via maturin.  |
+| WebGPU  | Host adapter via `SPO_WEBGPU_DISPATCH_BRIDGE`                    | Generated float32 WGSL/ES module; Euler only. |
 | Mojo    | `mojo/upde_engine_mojo` executable                            | `mojo build mojo/upde_engine.mojo`. |
 | Julia   | `juliacall` + `julia/upde_engine.jl`                          | Julia 1.11.                      |
 | Go      | `go/libupde_engine.so`                                        | `go build -buildmode=c-shared`.  |
@@ -283,15 +294,27 @@ Parity tolerances against the Python reference:
 | Mojo       | `1e-6`    |
 | Python     | exact     |
 
-The cross-backend parity suite `tests/test_upde_run_backends.py`
-enforces these across all three integrators (Euler, RK4, RK45).
+These are finite ordinary-trajectory parity tolerances, not guarantees of
+bitwise equivalence for arbitrary large phases. Real phase-cut/runtime tests
+exercise all three CPU integrators, both JAX precisions and actual browser
+Euler. JAX uses its configured float32/float64 period. WebGPU transcendental
+accuracy follows WGSL and does not promise binary64 NumPy parity. Its driver
+refuses controls that overflow/underflow a positive binary32 substep and rejects
+invalid actual readback; it does not repair arbitrary malformed backend output.
+Each invocation destroys its seven temporary buffers when dispatch or readback
+exits, including a failed mapping. Device loss still propagates a browser
+exception; subsequent execution requires a new device.
+See [the runtime diagnostics](../data/upde_phase_wrapping_benchmark_2026-10-01.json).
 
 ### 4.4 Pre-allocated Scratch Arrays
 
 The engine pre-allocates intermediate arrays (`_phase_diff`, `_sin_diff`,
-`_scratch_dtheta`) at construction time to avoid per-step allocation.
+`_scratch_dtheta`) at construction time to reuse derivative storage.
 For RK45, seven stage buffers (`_ks`) and an error buffer are also
-pre-allocated.
+pre-allocated. Candidate/output arrays and RK4 stage copies still allocate.
+Rust dense/CSR integration snapshots three O(N) vectors per step: phases and
+the sine/cosine order-parameter caches. Computed-divergence refusals restore
+these vectors and the step proposal before plasticity updates.
 
 ### 4.5 Batch Execution
 
@@ -332,7 +355,7 @@ print(f"Order parameter R = {R:.4f}")  # expect R ≈ 1.0 (synchronised)
 ```python
 engine = UPDEEngine(N, dt=0.01, method="rk45", atol=1e-8, rtol=1e-5)
 phases = engine.step(phases, omegas, knm, zeta=0.0, psi=0.0, alpha=alpha)
-print(f"Adaptive dt used: {engine.last_dt:.6f}")
+print(f"Configured or proposed dt: {engine.last_dt:.6f}")
 ```
 
 ### 5.3 External Drive (Entrainment)
@@ -447,8 +470,11 @@ Delegates to `order_params.compute_order_parameter`. Returns $(R, \psi)$.
 
 **`last_dt → float`**
 
-Property: actual $\Delta t$ used on last accepted step (relevant for RK45
-adaptive stepping).
+Property: configured timestep for the native dense backend and fixed methods,
+or the most recently retained NumPy RK45 `step()` proposal. Batch `run()` calls
+leave this diagnostic unchanged, and the dense wrapper does not synchronise
+the native RK45 proposal into it. Neither value is the elapsed time of an
+accepted adaptive step.
 
 ### 6.4 Exceptions
 
@@ -458,37 +484,40 @@ adaptive stepping).
 | `ValueError` | Shape mismatch (phases, omegas, knm, alpha) |
 | `ValueError` | NaN or Inf in input arrays |
 | `ValueError` | Non-finite zeta or psi |
+| `ValueError` | Non-finite computed phases after integration |
 
 ---
 
 ## 7. Performance Benchmarks
 
-### 7.0 Five-backend comparison (2026-09-30)
+### 7.0 Five-backend comparison (2026-10-01)
 
-Observed milliseconds per stateless call on the shared Linux x86-64 host,
-CPython 3.12.3, NumPy 2.5.3, Rust 1.98.1 release build: `dt=0.01`,
-32 steps, one warmup and three measured calls. Reproduce with:
+Observed mean milliseconds per stateless call on the shared Linux x86-64 host,
+CPython 3.12.3, NumPy 2.5.3, Rust 1.98.1 release build and embedded Julia 1.11.9:
+`dt=0.01`, 500 steps, one warmup and three measured calls. Reproduce with:
 
 ```bash
-PYTHONPATH=src python -m benchmarks.upde_engine_benchmark --sizes 8 32 64 --n-steps 32 --calls 3
+.venv/bin/python -m benchmarks.upde_engine_benchmark --output results.json
 ```
 
 | N | method | rust (ms) | mojo (ms) | julia (ms) | go (ms) | python (ms) |
 |---|--------|----------:|----------:|-----------:|--------:|------------:|
-| 8 | euler | 0.0875 | 16.9431 | 0.1787 | 0.1193 | 0.2753 |
-| 8 | rk4 | 0.1133 | 17.8689 | 0.1659 | 0.1589 | 0.9947 |
-| 8 | rk45 | 0.1822 | 16.2757 | 0.1917 | 0.2233 | 2.4467 |
-| 32 | euler | 0.3746 | 17.7843 | 0.3529 | 0.6584 | 0.6401 |
-| 32 | rk4 | 1.0571 | 19.8185 | 0.9775 | 1.3187 | 1.9909 |
-| 32 | rk45 | 1.4103 | 19.2276 | 1.6066 | 2.2113 | 4.0094 |
-| 64 | euler | 1.1685 | 22.8019 | 1.0298 | 1.6669 | 1.3750 |
-| 64 | rk4 | 3.5367 | 26.1005 | 3.2755 | 5.7417 | 4.6868 |
-| 64 | rk45 | 5.6854 | 28.0086 | 6.4194 | 13.6353 | 9.9964 |
+| 8 | euler | 0.8275 | 57.1444 | 0.7806 | 1.0739 | 11.6304 |
+| 8 | rk4 | 2.0923 | 49.4179 | 2.4365 | 2.2390 | 54.6946 |
+| 8 | rk45 | 2.5307 | 54.4482 | 5.7154 | 6.5171 | 102.4653 |
+| 32 | euler | 5.9014 | 65.3821 | 8.5493 | 18.3068 | 19.6329 |
+| 32 | rk4 | 25.6531 | 76.6047 | 27.0021 | 48.4175 | 75.8595 |
+| 32 | rk45 | 45.3127 | 255.9066 | 74.6279 | 80.3099 | 200.8557 |
+| 64 | euler | 21.8070 | 142.5860 | 28.8938 | 51.2086 | 43.6911 |
+| 64 | rk4 | 140.1609 | 161.2979 | 114.6480 | 331.2789 | 144.5777 |
+| 64 | rk45 | 144.5623 | 296.6771 | 233.4334 | 546.6765 | 326.0371 |
 
-These non-isolated diagnostics do not establish a backend ranking, a causal
-speedup or a deployment deadline. They supersede the April table and the
-Windows-host/extrapolated speedup headlines. Historical result files remain
-historical evidence, not current capacity estimates.
+The [raw runtime record](../data/upde_phase_wrapping_benchmark_2026-10-01.json)
+contains exact source/artefact hashes, all five CPU comparisons, the scheduled,
+Doppler and moving-frame acceptance results, CSR repetitions, and actual
+JAX/browser phase-cut readbacks. These non-isolated measurements do not establish
+a backend ranking, a causal speedup or a deployment deadline. The maintained
+stateless CLI emits means, not individual timing samples.
 
 Public `ACTIVE_BACKEND="python"` now selects the actual NumPy runner;
 runtime-profiled fixed/scheduled regressions verify each available CPU backend
@@ -501,7 +530,7 @@ rerun: the old selector could have executed an accelerator instead of NumPy.
 
 The dense native class now snapshots readonly inputs before borrowing mutable
 coupling. Its stateful wrapper cost is measured separately from the stateless
-comparison above; current real NumPy-only and native RK4 P50 diagnostics are
+comparison above; current real NumPy-only and native stateful timing diagnostics are
 in [Rust FFI acceleration](../../guide/rust_ffi.md#benchmark-comparison).
 The NumPy environments differ, so no causal speedup is claimed. Batch runs
 amortise entry-time snapshot allocation across their inner timesteps.

@@ -1,0 +1,3358 @@
+{
+  "base_commit": "e962aa0112ca3730cbcd273b886a51d585a2db44",
+  "benchmark_source_sha256": {
+    "benchmarks/engine_comparison.py": "71fa6ded0f84e8bafdff71286896fd1d7a4ef7847718c315c9e4c402032080c9",
+    "benchmarks/sparse_benchmark.py": "55db13c84a3f2b71c69d0e073e1ab507294ce0bd04cdfd65714b15abe7ed442a",
+    "benchmarks/upde_doppler_benchmark.py": "095f3a8447e0859924df64e45e1cc91a1e98d92b72ae4aa8b9bf6c96d21709d2",
+    "benchmarks/upde_engine_benchmark.py": "fc7bbf7a3ffc84102da1094968d5a8f6818153e4e94f8a3eef9731a92e2aaeba",
+    "benchmarks/upde_moving_frame_benchmark.py": "ae0750e808747ccc3b2550cde46ad60e26b86691220598def54948bb3541cf94",
+    "benchmarks/upde_phase_wrapping_benchmark.py": "d2d153cd115dcc3742bbddc57b6945328929f82f32c036609248edc7b646f530",
+    "benchmarks/upde_time_varying_omega_benchmark.py": "c0c103e8d46af094da386fc7791de8cf3f1596a4aabe1dfa2246ab913797f19b",
+    "benchmarks/upde_webgpu_benchmark.py": "e195a5122d5144d908e3db029ea5094a76f09182502405967229836d560da3ab",
+    "tools/run_webgpu_phase_benchmark.py": "76d26d4667645781d4ac56bc0254c8d63195dee2b3a6d6dc84e789f675e9a969"
+  },
+  "compiled_artifacts": {
+    ".venv/lib/python3.12/site-packages/spo_kernel/spo_kernel.abi3.so": {
+      "bytes": 2519928,
+      "sha256": "2bbd16e30e0ddec1f1bbb1288a3453e01f747700da72b5466fa4704e316cbf17"
+    },
+    "go/libupde_engine.so": {
+      "bytes": 2117432,
+      "sha256": "b51dd601e1f51526780eb60a60f1a923557bc714e73d492eb8ded9de0c0f373c"
+    },
+    "go/upde_engine.go": {
+      "bytes": 16603,
+      "sha256": "1a93107c3fc484a88a47bb914ec9ee56c4545e0f7fa351be5b5c8ad2e3f1f16a"
+    },
+    "julia/upde_engine.jl": {
+      "bytes": 21801,
+      "sha256": "7643b1d7c25ebcdb40753e744570824aede9042ab24617da024c03ef7a902e14"
+    },
+    "mojo/upde_engine.mojo": {
+      "bytes": 22658,
+      "sha256": "7b689a721713964cb906fa3696d080c4796c41e830d2738f584660089be20201"
+    },
+    "mojo/upde_engine_mojo": {
+      "bytes": 146224,
+      "sha256": "71044b8aa67c3be310f696ae15203387282d5517f8a73a315228ad42ae69a194"
+    },
+    "spo-kernel/crates/spo-engine/src/sparse_upde.rs": {
+      "bytes": 25271,
+      "sha256": "434b5ccd6f4ec625a1956a5f3fddc4b7813969a2b2ec2f781bf907b2315c3c59"
+    },
+    "spo-kernel/crates/spo-engine/src/upde.rs": {
+      "bytes": 39690,
+      "sha256": "9bdcb23b2a81dd15e265a65e2e73a11f51edc00869cac971bb90e642a2a45856"
+    },
+    "spo-kernel/target/release/libspo_kernel.so": {
+      "bytes": 2519928,
+      "sha256": "2bbd16e30e0ddec1f1bbb1288a3453e01f747700da72b5466fa4704e316cbf17"
+    }
+  },
+  "documentation_only_source_deltas": {
+    "tests/test_upde_jax_phase_wrap.py": {
+      "change": "British English in test docstrings only; executable AST including locations unchanged",
+      "current_sha256": "1d1cfb6352bff8c13a7e9334de06e47d85254b211fd0065678313816e685911b",
+      "measured_sha256": "30694905b2de23cd17d772a68d9692791c00deb7a06095fab2c78a64cb1693e1"
+    },
+    "tests/test_upde_phase_wrapping_benchmark.py": {
+      "change": "British English in test docstrings only; executable AST including locations unchanged",
+      "current_sha256": "d7bf012371da0942e4a23fa814cda379b9914425189f2ad0663c3d38c1d55cc3",
+      "measured_sha256": "9c05aecc602dd2042697fbaa6152b71db01cd37d3eaeb608bb0fe9b16f650a16"
+    }
+  },
+  "evidence_kind": "local_regression_non_isolated",
+  "host_hardware": {
+    "architecture": "x86_64",
+    "cpu_model": "11th Gen Intel(R) Core(TM) i5-11600K @ 3.90GHz",
+    "logical_cpu_count": 12,
+    "platform": "Linux-7.0.0-34-generic-x86_64-with-glibc2.39"
+  },
+  "isolation_method": "Shared Linux x86-64 workstation; no reserved cores or host isolation.",
+  "jobs": {
+    "comparison": {
+      "captured_output_sha256": "a9c849501e31f7f5d32ec1bc06c89d9696fb72a6f1d6ce9a84c324dd81fbf7b4",
+      "command_note": "Output and installed Playwright package paths are placeholders; all measurement arguments are the executed arguments.",
+      "environment_overrides": {
+        "JAX_PLATFORMS": "cpu"
+      },
+      "exit_code": 0,
+      "finished_utc": "2026-10-01T02:31:09.737585+00:00",
+      "host_context_after": {
+        "allowed_cpu_ids": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "author_owned_heavy_jobs": "only this sequential comparison worker",
+        "core_reservation": "none; inherited affinity is not exclusive",
+        "cpu_frequency_context": {
+          "0": {
+            "scaling_cur_freq": "3599891",
+            "scaling_governor": "powersave"
+          },
+          "1": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "10": {
+            "scaling_cur_freq": "3599963",
+            "scaling_governor": "powersave"
+          },
+          "11": {
+            "scaling_cur_freq": "3600036",
+            "scaling_governor": "powersave"
+          },
+          "2": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "3": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "4": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "5": {
+            "scaling_cur_freq": "3599891",
+            "scaling_governor": "powersave"
+          },
+          "6": {
+            "scaling_cur_freq": "3599927",
+            "scaling_governor": "powersave"
+          },
+          "7": {
+            "scaling_cur_freq": "3599891",
+            "scaling_governor": "powersave"
+          },
+          "8": {
+            "scaling_cur_freq": "3600036",
+            "scaling_governor": "powersave"
+          },
+          "9": {
+            "scaling_cur_freq": "3599963",
+            "scaling_governor": "powersave"
+          }
+        },
+        "isolation_method": "none; shared workstation",
+        "load_average_1_5_15": [
+          40.6884765625,
+          34.99365234375,
+          33.6494140625
+        ],
+        "other_heavy_jobs": "unknown; no whole-host inventory performed",
+        "recorded_utc": "2026-10-01T02:31:09.737585+00:00"
+      },
+      "host_context_before": {
+        "allowed_cpu_ids": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "author_owned_heavy_jobs": "only this sequential comparison worker",
+        "core_reservation": "none; inherited affinity is not exclusive",
+        "cpu_frequency_context": {
+          "0": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "1": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "10": {
+            "scaling_cur_freq": "3533324",
+            "scaling_governor": "powersave"
+          },
+          "11": {
+            "scaling_cur_freq": "3533318",
+            "scaling_governor": "powersave"
+          },
+          "2": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "3": {
+            "scaling_cur_freq": "3599963",
+            "scaling_governor": "powersave"
+          },
+          "4": {
+            "scaling_cur_freq": "3599963",
+            "scaling_governor": "powersave"
+          },
+          "5": {
+            "scaling_cur_freq": "3599963",
+            "scaling_governor": "powersave"
+          },
+          "6": {
+            "scaling_cur_freq": "3599963",
+            "scaling_governor": "powersave"
+          },
+          "7": {
+            "scaling_cur_freq": "3599963",
+            "scaling_governor": "powersave"
+          },
+          "8": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "9": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          }
+        },
+        "isolation_method": "none; shared workstation",
+        "load_average_1_5_15": [
+          40.4609375,
+          34.65185546875,
+          33.5185546875
+        ],
+        "other_heavy_jobs": "unknown; no whole-host inventory performed",
+        "recorded_utc": "2026-10-01T02:30:55.991419+00:00"
+      },
+      "measured_source_sha256_after_job": {
+        "benchmarks/engine_comparison.py": "71fa6ded0f84e8bafdff71286896fd1d7a4ef7847718c315c9e4c402032080c9",
+        "benchmarks/sparse_benchmark.py": "55db13c84a3f2b71c69d0e073e1ab507294ce0bd04cdfd65714b15abe7ed442a",
+        "benchmarks/upde_doppler_benchmark.py": "095f3a8447e0859924df64e45e1cc91a1e98d92b72ae4aa8b9bf6c96d21709d2",
+        "benchmarks/upde_engine_benchmark.py": "fc7bbf7a3ffc84102da1094968d5a8f6818153e4e94f8a3eef9731a92e2aaeba",
+        "benchmarks/upde_moving_frame_benchmark.py": "ae0750e808747ccc3b2550cde46ad60e26b86691220598def54948bb3541cf94",
+        "benchmarks/upde_phase_wrapping_benchmark.py": "d2d153cd115dcc3742bbddc57b6945328929f82f32c036609248edc7b646f530",
+        "benchmarks/upde_time_varying_omega_benchmark.py": "c0c103e8d46af094da386fc7791de8cf3f1596a4aabe1dfa2246ab913797f19b",
+        "benchmarks/upde_webgpu_benchmark.py": "e195a5122d5144d908e3db029ea5094a76f09182502405967229836d560da3ab",
+        "go/upde_engine.go": "1a93107c3fc484a88a47bb914ec9ee56c4545e0f7fa351be5b5c8ad2e3f1f16a",
+        "julia/upde_engine.jl": "7643b1d7c25ebcdb40753e744570824aede9042ab24617da024c03ef7a902e14",
+        "mojo/upde_engine.mojo": "7b689a721713964cb906fa3696d080c4796c41e830d2738f584660089be20201",
+        "native-tests/test_sparse_phase_wrapping.py": "13cbf640a1600cc3569e5bbb680bc4f27f9f17623e4287f8715baabed90713dd",
+        "native-tests/test_upde_runtime_phase_wrapping.py": "d2d7664e9ce6159efcf3686d0b08c9ab970b0f3fa0f1405a8a323fab68ce5ccb",
+        "native-tests/test_upde_stepper_phase_wrapping.py": "516b194ed5895296ea48588ef36751e01a932d020595167e31d15cb8c3334df6",
+        "spo-kernel/crates/spo-engine/src/sparse_upde.rs": "434b5ccd6f4ec625a1956a5f3fddc4b7813969a2b2ec2f781bf907b2315c3c59",
+        "spo-kernel/crates/spo-engine/src/upde.rs": "9bdcb23b2a81dd15e265a65e2e73a11f51edc00869cac971bb90e642a2a45856",
+        "src/juliacall.pyi": "2a07cc2a5db21ccf7759a0ab08bd5662c3374469df9c9ec9b2d60caebf2d3a2e",
+        "src/scpn_phase_orchestrator/experimental/accelerators/upde/_doppler_julia.py": "cec0690ae4bf6db942b57c335de5477d558a1a74974272995a66a4758102dd36",
+        "src/scpn_phase_orchestrator/experimental/accelerators/upde/_engine_julia.py": "5fa109f2a181b6dbb51b6318d5f12c2e43aaa67fe3e4cf1d1a5ade4fe2208d37",
+        "src/scpn_phase_orchestrator/experimental/accelerators/upde/_engine_webgpu.py": "e75a4dc870a86c5da3ed23824b978ea1e24503fcf709f627b88371ee2bf7eb21",
+        "src/scpn_phase_orchestrator/experimental/accelerators/upde/_moving_frame_julia.py": "a52e4adfddb239280f8228afa9ceac43305fb12db547edc0a0182737bc091b1c",
+        "src/scpn_phase_orchestrator/nn/functional.py": "cdd25fe83a6e5311b7cd51116cc1f70ac7093378a8cb96be2f751a2b7c056c80",
+        "src/scpn_phase_orchestrator/upde/_engine_validation.py": "877e2dab64cf00065e579893b4a56e8196e5468c4530efd14c8a0bdf68364896",
+        "src/scpn_phase_orchestrator/upde/_jax_phase_wrap.py": "08b0ee1700fc085c089a4df0cc1c8759406ccc0f794a71537349c21a4d3c88cf",
+        "src/scpn_phase_orchestrator/upde/_phase_wrap.py": "5551ef413db67a5027e9e72379c3a903320f0c272dba8105c297a3760f6a5dbd",
+        "src/scpn_phase_orchestrator/upde/_ref_kernel.py": "760f7e5eeb1da4cccdc07053001bd2234e64c56eb42ca6782597ce3cef9c6e9b",
+        "src/scpn_phase_orchestrator/upde/_run.py": "2a06ad90a7d02725679b96b6e72dcdfc8d4b6c00ad2e3d5a551c0e122562cfd3",
+        "src/scpn_phase_orchestrator/upde/engine.py": "85596d08b75b5101983ad36040186535a8681ce454304a6ee30663846954fce6",
+        "src/scpn_phase_orchestrator/upde/jax_engine.py": "fcb4038b9973bf43c826aab2c49160ae3aac3583136da468bce93306637b687c",
+        "src/scpn_phase_orchestrator/upde/sparse_engine.py": "c6aa5665e7d0062ca16b4f9ba2d3148297d5baed61111a797bcc852810a99775",
+        "tests/test_nn_kuramoto_phase_wrapping.py": "cbda487ee7d428435d356d6a9d76366e175539b16ade807a969ba41915e4f33a",
+        "tests/test_sparse_engine.py": "445249c55f7594983967c6b58bc3c623b4d3da18012bb1c6ea23fd275b19f23d",
+        "tests/test_sparse_engine_phase_wrapping.py": "2db3bad4ab9f0fb6ce9b2444f0e86c5f90edbe295535c17b4ab63f187c18de5b",
+        "tests/test_upde_engine_phase_wrapping.py": "25756ce867c423797485870f6f7df737f03e4edc82d26774b3d455f1aa84427a",
+        "tests/test_upde_jax_phase_wrap.py": "30694905b2de23cd17d772a68d9692791c00deb7a06095fab2c78a64cb1693e1",
+        "tests/test_upde_phase_wrap.py": "f181b7c301b31f8e6b4c4ef056d426d2ea434adb5579c846a8977de6e49839a3",
+        "tests/test_upde_phase_wrapping_benchmark.py": "9c05aecc602dd2042697fbaa6152b71db01cd37d3eaeb608bb0fe9b16f650a16",
+        "tests/test_upde_webgpu_phase_wrapping.py": "a034019d68c289d9ab590493cdb0c0f55d4a2c886db0feb53aa358a0d0c52901",
+        "tools/run_webgpu_phase_benchmark.py": "76d26d4667645781d4ac56bc0254c8d63195dee2b3a6d6dc84e789f675e9a969"
+      },
+      "process_elapsed_s": 13.751728235001792,
+      "reproduce_argv": [
+        ".venv/bin/python",
+        "-m",
+        "benchmarks.engine_comparison"
+      ],
+      "results": "Engine                           Time(ms)        R    Steps/s\n--------------------------------------------------------------\nUPDEEngine(euler)       138.8  1.0000      7206\nUPDEEngine(rk4)         135.1  1.0000      7404\nUPDEEngine(rk45)        138.8  1.0000      7205\nSplittingEngine          91.8  1.0000     10897\nTorusEngine             135.3  1.0000      7389\nSimplicialEngine(\u03c3\u2082=0)    173.8  1.0000      5752\nSimplicialEngine(\u03c3\u2082=0.1)    184.7  1.0000      5414\nDelayedEngine(\u03c4=3)      405.0  1.0000      2469\n",
+      "source_freeze_matches_after_job": true
+    },
+    "comparison-absent": {
+      "captured_output_sha256": "30a3133165e3bbc549257a78def336886b8024c3595328f77a3435f4e3412a2f",
+      "command_note": "Output and installed Playwright package paths are placeholders; all measurement arguments are the executed arguments.",
+      "environment_overrides": {
+        "JAX_PLATFORMS": "cpu",
+        "PYTHONPATH": "src"
+      },
+      "exit_code": 0,
+      "finished_utc": "2026-10-01T02:37:15.358938+00:00",
+      "host_context_after": {
+        "allowed_cpu_ids": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "author_owned_heavy_jobs": "only this sequential comparison worker",
+        "core_reservation": "none; inherited affinity is not exclusive",
+        "cpu_frequency_context": {
+          "0": {
+            "scaling_cur_freq": "3599855",
+            "scaling_governor": "powersave"
+          },
+          "1": {
+            "scaling_cur_freq": "3599891",
+            "scaling_governor": "powersave"
+          },
+          "10": {
+            "scaling_cur_freq": "3600036",
+            "scaling_governor": "powersave"
+          },
+          "11": {
+            "scaling_cur_freq": "3600036",
+            "scaling_governor": "powersave"
+          },
+          "2": {
+            "scaling_cur_freq": "3599927",
+            "scaling_governor": "powersave"
+          },
+          "3": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "4": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "5": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "6": {
+            "scaling_cur_freq": "3600144",
+            "scaling_governor": "powersave"
+          },
+          "7": {
+            "scaling_cur_freq": "3600108",
+            "scaling_governor": "powersave"
+          },
+          "8": {
+            "scaling_cur_freq": "3600108",
+            "scaling_governor": "powersave"
+          },
+          "9": {
+            "scaling_cur_freq": "3599963",
+            "scaling_governor": "powersave"
+          }
+        },
+        "isolation_method": "none; shared workstation",
+        "load_average_1_5_15": [
+          40.5458984375,
+          36.38916015625,
+          34.4931640625
+        ],
+        "other_heavy_jobs": "unknown; no whole-host inventory performed",
+        "recorded_utc": "2026-10-01T02:37:15.358938+00:00"
+      },
+      "host_context_before": {
+        "allowed_cpu_ids": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "author_owned_heavy_jobs": "only this sequential comparison worker",
+        "core_reservation": "none; inherited affinity is not exclusive",
+        "cpu_frequency_context": {
+          "0": {
+            "scaling_cur_freq": "3700037",
+            "scaling_governor": "powersave"
+          },
+          "1": {
+            "scaling_cur_freq": "3699518",
+            "scaling_governor": "powersave"
+          },
+          "10": {
+            "scaling_cur_freq": "3699480",
+            "scaling_governor": "powersave"
+          },
+          "11": {
+            "scaling_cur_freq": "3700190",
+            "scaling_governor": "powersave"
+          },
+          "2": {
+            "scaling_cur_freq": "3700000",
+            "scaling_governor": "powersave"
+          },
+          "3": {
+            "scaling_cur_freq": "3700000",
+            "scaling_governor": "powersave"
+          },
+          "4": {
+            "scaling_cur_freq": "3700000",
+            "scaling_governor": "powersave"
+          },
+          "5": {
+            "scaling_cur_freq": "3700075",
+            "scaling_governor": "powersave"
+          },
+          "6": {
+            "scaling_cur_freq": "3700000",
+            "scaling_governor": "powersave"
+          },
+          "7": {
+            "scaling_cur_freq": "3700000",
+            "scaling_governor": "powersave"
+          },
+          "8": {
+            "scaling_cur_freq": "3700000",
+            "scaling_governor": "powersave"
+          },
+          "9": {
+            "scaling_cur_freq": "3700000",
+            "scaling_governor": "powersave"
+          }
+        },
+        "isolation_method": "none; shared workstation",
+        "load_average_1_5_15": [
+          38.15625,
+          35.44677734375,
+          33.94140625
+        ],
+        "other_heavy_jobs": "unknown; no whole-host inventory performed",
+        "recorded_utc": "2026-10-01T02:32:54.227378+00:00"
+      },
+      "measured_source_sha256_after_job": {
+        "benchmarks/engine_comparison.py": "71fa6ded0f84e8bafdff71286896fd1d7a4ef7847718c315c9e4c402032080c9",
+        "benchmarks/sparse_benchmark.py": "55db13c84a3f2b71c69d0e073e1ab507294ce0bd04cdfd65714b15abe7ed442a",
+        "benchmarks/upde_doppler_benchmark.py": "095f3a8447e0859924df64e45e1cc91a1e98d92b72ae4aa8b9bf6c96d21709d2",
+        "benchmarks/upde_engine_benchmark.py": "fc7bbf7a3ffc84102da1094968d5a8f6818153e4e94f8a3eef9731a92e2aaeba",
+        "benchmarks/upde_moving_frame_benchmark.py": "ae0750e808747ccc3b2550cde46ad60e26b86691220598def54948bb3541cf94",
+        "benchmarks/upde_phase_wrapping_benchmark.py": "d2d153cd115dcc3742bbddc57b6945328929f82f32c036609248edc7b646f530",
+        "benchmarks/upde_time_varying_omega_benchmark.py": "c0c103e8d46af094da386fc7791de8cf3f1596a4aabe1dfa2246ab913797f19b",
+        "benchmarks/upde_webgpu_benchmark.py": "e195a5122d5144d908e3db029ea5094a76f09182502405967229836d560da3ab",
+        "go/upde_engine.go": "1a93107c3fc484a88a47bb914ec9ee56c4545e0f7fa351be5b5c8ad2e3f1f16a",
+        "julia/upde_engine.jl": "7643b1d7c25ebcdb40753e744570824aede9042ab24617da024c03ef7a902e14",
+        "mojo/upde_engine.mojo": "7b689a721713964cb906fa3696d080c4796c41e830d2738f584660089be20201",
+        "native-tests/test_sparse_phase_wrapping.py": "13cbf640a1600cc3569e5bbb680bc4f27f9f17623e4287f8715baabed90713dd",
+        "native-tests/test_upde_runtime_phase_wrapping.py": "d2d7664e9ce6159efcf3686d0b08c9ab970b0f3fa0f1405a8a323fab68ce5ccb",
+        "native-tests/test_upde_stepper_phase_wrapping.py": "516b194ed5895296ea48588ef36751e01a932d020595167e31d15cb8c3334df6",
+        "spo-kernel/crates/spo-engine/src/sparse_upde.rs": "434b5ccd6f4ec625a1956a5f3fddc4b7813969a2b2ec2f781bf907b2315c3c59",
+        "spo-kernel/crates/spo-engine/src/upde.rs": "9bdcb23b2a81dd15e265a65e2e73a11f51edc00869cac971bb90e642a2a45856",
+        "src/juliacall.pyi": "2a07cc2a5db21ccf7759a0ab08bd5662c3374469df9c9ec9b2d60caebf2d3a2e",
+        "src/scpn_phase_orchestrator/experimental/accelerators/upde/_doppler_julia.py": "cec0690ae4bf6db942b57c335de5477d558a1a74974272995a66a4758102dd36",
+        "src/scpn_phase_orchestrator/experimental/accelerators/upde/_engine_julia.py": "5fa109f2a181b6dbb51b6318d5f12c2e43aaa67fe3e4cf1d1a5ade4fe2208d37",
+        "src/scpn_phase_orchestrator/experimental/accelerators/upde/_engine_webgpu.py": "e75a4dc870a86c5da3ed23824b978ea1e24503fcf709f627b88371ee2bf7eb21",
+        "src/scpn_phase_orchestrator/experimental/accelerators/upde/_moving_frame_julia.py": "a52e4adfddb239280f8228afa9ceac43305fb12db547edc0a0182737bc091b1c",
+        "src/scpn_phase_orchestrator/nn/functional.py": "cdd25fe83a6e5311b7cd51116cc1f70ac7093378a8cb96be2f751a2b7c056c80",
+        "src/scpn_phase_orchestrator/upde/_engine_validation.py": "877e2dab64cf00065e579893b4a56e8196e5468c4530efd14c8a0bdf68364896",
+        "src/scpn_phase_orchestrator/upde/_jax_phase_wrap.py": "08b0ee1700fc085c089a4df0cc1c8759406ccc0f794a71537349c21a4d3c88cf",
+        "src/scpn_phase_orchestrator/upde/_phase_wrap.py": "5551ef413db67a5027e9e72379c3a903320f0c272dba8105c297a3760f6a5dbd",
+        "src/scpn_phase_orchestrator/upde/_ref_kernel.py": "760f7e5eeb1da4cccdc07053001bd2234e64c56eb42ca6782597ce3cef9c6e9b",
+        "src/scpn_phase_orchestrator/upde/_run.py": "2a06ad90a7d02725679b96b6e72dcdfc8d4b6c00ad2e3d5a551c0e122562cfd3",
+        "src/scpn_phase_orchestrator/upde/engine.py": "85596d08b75b5101983ad36040186535a8681ce454304a6ee30663846954fce6",
+        "src/scpn_phase_orchestrator/upde/jax_engine.py": "fcb4038b9973bf43c826aab2c49160ae3aac3583136da468bce93306637b687c",
+        "src/scpn_phase_orchestrator/upde/sparse_engine.py": "c6aa5665e7d0062ca16b4f9ba2d3148297d5baed61111a797bcc852810a99775",
+        "tests/test_nn_kuramoto_phase_wrapping.py": "cbda487ee7d428435d356d6a9d76366e175539b16ade807a969ba41915e4f33a",
+        "tests/test_sparse_engine.py": "445249c55f7594983967c6b58bc3c623b4d3da18012bb1c6ea23fd275b19f23d",
+        "tests/test_sparse_engine_phase_wrapping.py": "2db3bad4ab9f0fb6ce9b2444f0e86c5f90edbe295535c17b4ab63f187c18de5b",
+        "tests/test_upde_engine_phase_wrapping.py": "25756ce867c423797485870f6f7df737f03e4edc82d26774b3d455f1aa84427a",
+        "tests/test_upde_jax_phase_wrap.py": "30694905b2de23cd17d772a68d9692791c00deb7a06095fab2c78a64cb1693e1",
+        "tests/test_upde_phase_wrap.py": "f181b7c301b31f8e6b4c4ef056d426d2ea434adb5579c846a8977de6e49839a3",
+        "tests/test_upde_phase_wrapping_benchmark.py": "9c05aecc602dd2042697fbaa6152b71db01cd37d3eaeb608bb0fe9b16f650a16",
+        "tests/test_upde_webgpu_phase_wrapping.py": "a034019d68c289d9ab590493cdb0c0f55d4a2c886db0feb53aa358a0d0c52901",
+        "tools/run_webgpu_phase_benchmark.py": "76d26d4667645781d4ac56bc0254c8d63195dee2b3a6d6dc84e789f675e9a969"
+      },
+      "process_elapsed_s": 261.13463885300007,
+      "reproduce_argv": [
+        "/usr/bin/python3",
+        "-m",
+        "benchmarks.engine_comparison"
+      ],
+      "results": "Engine                           Time(ms)        R    Steps/s\n--------------------------------------------------------------\nUPDEEngine(euler)       120.9  1.0000      8271\nUPDEEngine(rk4)         209.3  1.0000      4777\nUPDEEngine(rk45)        198.6  1.0000      5035\nSplittingEngine         103.7  1.0000      9644\nTorusEngine           67311.7  1.0000        15\nSimplicialEngine(\u03c3\u2082=0)  88667.4  1.0000        11\nSimplicialEngine(\u03c3\u2082=0.1)  91660.7  1.0000        11\nDelayedEngine(\u03c4=3)      573.8  1.0000      1743\n",
+      "source_freeze_matches_after_job": true
+    },
+    "dense-all": {
+      "captured_output_sha256": "6538f9ef52044a752034df7461de82622145ab26712f3ce4ed6c242c1bcd2fd9",
+      "command_note": "Output and installed Playwright package paths are placeholders; all measurement arguments are the executed arguments.",
+      "environment_overrides": {
+        "JAX_PLATFORMS": "cpu"
+      },
+      "exit_code": 0,
+      "finished_utc": "2026-10-01T02:30:11.178265+00:00",
+      "host_context_after": {
+        "allowed_cpu_ids": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "author_owned_heavy_jobs": "only this sequential comparison worker",
+        "core_reservation": "none; inherited affinity is not exclusive",
+        "cpu_frequency_context": {
+          "0": {
+            "scaling_cur_freq": "3600036",
+            "scaling_governor": "powersave"
+          },
+          "1": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "10": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "11": {
+            "scaling_cur_freq": "3599963",
+            "scaling_governor": "powersave"
+          },
+          "2": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "3": {
+            "scaling_cur_freq": "3600036",
+            "scaling_governor": "powersave"
+          },
+          "4": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "5": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "6": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "7": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "8": {
+            "scaling_cur_freq": "3600036",
+            "scaling_governor": "powersave"
+          },
+          "9": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          }
+        },
+        "isolation_method": "none; shared workstation",
+        "load_average_1_5_15": [
+          37.93212890625,
+          33.55078125,
+          33.13525390625
+        ],
+        "other_heavy_jobs": "unknown; no whole-host inventory performed",
+        "recorded_utc": "2026-10-01T02:30:11.178265+00:00"
+      },
+      "host_context_before": {
+        "allowed_cpu_ids": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "author_owned_heavy_jobs": "only this sequential comparison worker",
+        "core_reservation": "none; inherited affinity is not exclusive",
+        "cpu_frequency_context": {
+          "0": {
+            "scaling_cur_freq": "3500000",
+            "scaling_governor": "powersave"
+          },
+          "1": {
+            "scaling_cur_freq": "3499964",
+            "scaling_governor": "powersave"
+          },
+          "10": {
+            "scaling_cur_freq": "3500035",
+            "scaling_governor": "powersave"
+          },
+          "11": {
+            "scaling_cur_freq": "3500000",
+            "scaling_governor": "powersave"
+          },
+          "2": {
+            "scaling_cur_freq": "3500000",
+            "scaling_governor": "powersave"
+          },
+          "3": {
+            "scaling_cur_freq": "3500000",
+            "scaling_governor": "powersave"
+          },
+          "4": {
+            "scaling_cur_freq": "3499964",
+            "scaling_governor": "powersave"
+          },
+          "5": {
+            "scaling_cur_freq": "3500000",
+            "scaling_governor": "powersave"
+          },
+          "6": {
+            "scaling_cur_freq": "3500000",
+            "scaling_governor": "powersave"
+          },
+          "7": {
+            "scaling_cur_freq": "3500105",
+            "scaling_governor": "powersave"
+          },
+          "8": {
+            "scaling_cur_freq": "3500000",
+            "scaling_governor": "powersave"
+          },
+          "9": {
+            "scaling_cur_freq": "3500035",
+            "scaling_governor": "powersave"
+          }
+        },
+        "isolation_method": "none; shared workstation",
+        "load_average_1_5_15": [
+          33.5703125,
+          32.3212890625,
+          32.73583984375
+        ],
+        "other_heavy_jobs": "unknown; no whole-host inventory performed",
+        "recorded_utc": "2026-10-01T02:29:41.219381+00:00"
+      },
+      "measured_source_sha256_after_job": {
+        "benchmarks/engine_comparison.py": "71fa6ded0f84e8bafdff71286896fd1d7a4ef7847718c315c9e4c402032080c9",
+        "benchmarks/sparse_benchmark.py": "55db13c84a3f2b71c69d0e073e1ab507294ce0bd04cdfd65714b15abe7ed442a",
+        "benchmarks/upde_doppler_benchmark.py": "095f3a8447e0859924df64e45e1cc91a1e98d92b72ae4aa8b9bf6c96d21709d2",
+        "benchmarks/upde_engine_benchmark.py": "fc7bbf7a3ffc84102da1094968d5a8f6818153e4e94f8a3eef9731a92e2aaeba",
+        "benchmarks/upde_moving_frame_benchmark.py": "ae0750e808747ccc3b2550cde46ad60e26b86691220598def54948bb3541cf94",
+        "benchmarks/upde_phase_wrapping_benchmark.py": "d2d153cd115dcc3742bbddc57b6945328929f82f32c036609248edc7b646f530",
+        "benchmarks/upde_time_varying_omega_benchmark.py": "c0c103e8d46af094da386fc7791de8cf3f1596a4aabe1dfa2246ab913797f19b",
+        "benchmarks/upde_webgpu_benchmark.py": "e195a5122d5144d908e3db029ea5094a76f09182502405967229836d560da3ab",
+        "go/upde_engine.go": "1a93107c3fc484a88a47bb914ec9ee56c4545e0f7fa351be5b5c8ad2e3f1f16a",
+        "julia/upde_engine.jl": "7643b1d7c25ebcdb40753e744570824aede9042ab24617da024c03ef7a902e14",
+        "mojo/upde_engine.mojo": "7b689a721713964cb906fa3696d080c4796c41e830d2738f584660089be20201",
+        "native-tests/test_sparse_phase_wrapping.py": "13cbf640a1600cc3569e5bbb680bc4f27f9f17623e4287f8715baabed90713dd",
+        "native-tests/test_upde_runtime_phase_wrapping.py": "d2d7664e9ce6159efcf3686d0b08c9ab970b0f3fa0f1405a8a323fab68ce5ccb",
+        "native-tests/test_upde_stepper_phase_wrapping.py": "516b194ed5895296ea48588ef36751e01a932d020595167e31d15cb8c3334df6",
+        "spo-kernel/crates/spo-engine/src/sparse_upde.rs": "434b5ccd6f4ec625a1956a5f3fddc4b7813969a2b2ec2f781bf907b2315c3c59",
+        "spo-kernel/crates/spo-engine/src/upde.rs": "9bdcb23b2a81dd15e265a65e2e73a11f51edc00869cac971bb90e642a2a45856",
+        "src/juliacall.pyi": "2a07cc2a5db21ccf7759a0ab08bd5662c3374469df9c9ec9b2d60caebf2d3a2e",
+        "src/scpn_phase_orchestrator/experimental/accelerators/upde/_doppler_julia.py": "cec0690ae4bf6db942b57c335de5477d558a1a74974272995a66a4758102dd36",
+        "src/scpn_phase_orchestrator/experimental/accelerators/upde/_engine_julia.py": "5fa109f2a181b6dbb51b6318d5f12c2e43aaa67fe3e4cf1d1a5ade4fe2208d37",
+        "src/scpn_phase_orchestrator/experimental/accelerators/upde/_engine_webgpu.py": "e75a4dc870a86c5da3ed23824b978ea1e24503fcf709f627b88371ee2bf7eb21",
+        "src/scpn_phase_orchestrator/experimental/accelerators/upde/_moving_frame_julia.py": "a52e4adfddb239280f8228afa9ceac43305fb12db547edc0a0182737bc091b1c",
+        "src/scpn_phase_orchestrator/nn/functional.py": "cdd25fe83a6e5311b7cd51116cc1f70ac7093378a8cb96be2f751a2b7c056c80",
+        "src/scpn_phase_orchestrator/upde/_engine_validation.py": "877e2dab64cf00065e579893b4a56e8196e5468c4530efd14c8a0bdf68364896",
+        "src/scpn_phase_orchestrator/upde/_jax_phase_wrap.py": "08b0ee1700fc085c089a4df0cc1c8759406ccc0f794a71537349c21a4d3c88cf",
+        "src/scpn_phase_orchestrator/upde/_phase_wrap.py": "5551ef413db67a5027e9e72379c3a903320f0c272dba8105c297a3760f6a5dbd",
+        "src/scpn_phase_orchestrator/upde/_ref_kernel.py": "760f7e5eeb1da4cccdc07053001bd2234e64c56eb42ca6782597ce3cef9c6e9b",
+        "src/scpn_phase_orchestrator/upde/_run.py": "2a06ad90a7d02725679b96b6e72dcdfc8d4b6c00ad2e3d5a551c0e122562cfd3",
+        "src/scpn_phase_orchestrator/upde/engine.py": "85596d08b75b5101983ad36040186535a8681ce454304a6ee30663846954fce6",
+        "src/scpn_phase_orchestrator/upde/jax_engine.py": "fcb4038b9973bf43c826aab2c49160ae3aac3583136da468bce93306637b687c",
+        "src/scpn_phase_orchestrator/upde/sparse_engine.py": "c6aa5665e7d0062ca16b4f9ba2d3148297d5baed61111a797bcc852810a99775",
+        "tests/test_nn_kuramoto_phase_wrapping.py": "cbda487ee7d428435d356d6a9d76366e175539b16ade807a969ba41915e4f33a",
+        "tests/test_sparse_engine.py": "445249c55f7594983967c6b58bc3c623b4d3da18012bb1c6ea23fd275b19f23d",
+        "tests/test_sparse_engine_phase_wrapping.py": "2db3bad4ab9f0fb6ce9b2444f0e86c5f90edbe295535c17b4ab63f187c18de5b",
+        "tests/test_upde_engine_phase_wrapping.py": "25756ce867c423797485870f6f7df737f03e4edc82d26774b3d455f1aa84427a",
+        "tests/test_upde_jax_phase_wrap.py": "30694905b2de23cd17d772a68d9692791c00deb7a06095fab2c78a64cb1693e1",
+        "tests/test_upde_phase_wrap.py": "f181b7c301b31f8e6b4c4ef056d426d2ea434adb5579c846a8977de6e49839a3",
+        "tests/test_upde_phase_wrapping_benchmark.py": "9c05aecc602dd2042697fbaa6152b71db01cd37d3eaeb608bb0fe9b16f650a16",
+        "tests/test_upde_webgpu_phase_wrapping.py": "a034019d68c289d9ab590493cdb0c0f55d4a2c886db0feb53aa358a0d0c52901",
+        "tools/run_webgpu_phase_benchmark.py": "76d26d4667645781d4ac56bc0254c8d63195dee2b3a6d6dc84e789f675e9a969"
+      },
+      "process_elapsed_s": 29.962404115998652,
+      "reproduce_argv": [
+        ".venv/bin/python",
+        "-m",
+        "benchmarks.upde_engine_benchmark",
+        "--output",
+        "<output.json>"
+      ],
+      "results": {
+        "results": [
+          {
+            "available": [
+              "rust",
+              "mojo",
+              "julia",
+              "go",
+              "python"
+            ],
+            "calls": 3,
+            "go_ms_per_call": 1.0739426652435213,
+            "julia_ms_per_call": 0.780583000353848,
+            "method": "euler",
+            "mojo_ms_per_call": 57.14441900151238,
+            "n": 8,
+            "n_steps": 500,
+            "python_ms_per_call": 11.630383666973406,
+            "rust_ms_per_call": 0.8274766660179012
+          },
+          {
+            "available": [
+              "rust",
+              "mojo",
+              "julia",
+              "go",
+              "python"
+            ],
+            "calls": 3,
+            "go_ms_per_call": 2.239015666418709,
+            "julia_ms_per_call": 2.4365456653564856,
+            "method": "rk4",
+            "mojo_ms_per_call": 49.417855334468186,
+            "n": 8,
+            "n_steps": 500,
+            "python_ms_per_call": 54.694616000536676,
+            "rust_ms_per_call": 2.0923263339985474
+          },
+          {
+            "available": [
+              "rust",
+              "mojo",
+              "julia",
+              "go",
+              "python"
+            ],
+            "calls": 3,
+            "go_ms_per_call": 6.517072666611057,
+            "julia_ms_per_call": 5.715363333971861,
+            "method": "rk45",
+            "mojo_ms_per_call": 54.44819700157192,
+            "n": 8,
+            "n_steps": 500,
+            "python_ms_per_call": 102.4653339991346,
+            "rust_ms_per_call": 2.530716999899596
+          },
+          {
+            "available": [
+              "rust",
+              "mojo",
+              "julia",
+              "go",
+              "python"
+            ],
+            "calls": 3,
+            "go_ms_per_call": 18.306780000178453,
+            "julia_ms_per_call": 8.549329999368638,
+            "method": "euler",
+            "mojo_ms_per_call": 65.38214866547303,
+            "n": 32,
+            "n_steps": 500,
+            "python_ms_per_call": 19.632872999257717,
+            "rust_ms_per_call": 5.901413666530668
+          },
+          {
+            "available": [
+              "rust",
+              "mojo",
+              "julia",
+              "go",
+              "python"
+            ],
+            "calls": 3,
+            "go_ms_per_call": 48.417452000042736,
+            "julia_ms_per_call": 27.002142000128515,
+            "method": "rk4",
+            "mojo_ms_per_call": 76.60471599956509,
+            "n": 32,
+            "n_steps": 500,
+            "python_ms_per_call": 75.85952700173948,
+            "rust_ms_per_call": 25.653058335592505
+          },
+          {
+            "available": [
+              "rust",
+              "mojo",
+              "julia",
+              "go",
+              "python"
+            ],
+            "calls": 3,
+            "go_ms_per_call": 80.30988533331158,
+            "julia_ms_per_call": 74.62788599999233,
+            "method": "rk45",
+            "mojo_ms_per_call": 255.90661400201498,
+            "n": 32,
+            "n_steps": 500,
+            "python_ms_per_call": 200.85568599946177,
+            "rust_ms_per_call": 45.312718000786845
+          },
+          {
+            "available": [
+              "rust",
+              "mojo",
+              "julia",
+              "go",
+              "python"
+            ],
+            "calls": 3,
+            "go_ms_per_call": 51.20857933313042,
+            "julia_ms_per_call": 28.893770667006418,
+            "method": "euler",
+            "mojo_ms_per_call": 142.58599066670286,
+            "n": 64,
+            "n_steps": 500,
+            "python_ms_per_call": 43.69110633221377,
+            "rust_ms_per_call": 21.807003332166158
+          },
+          {
+            "available": [
+              "rust",
+              "mojo",
+              "julia",
+              "go",
+              "python"
+            ],
+            "calls": 3,
+            "go_ms_per_call": 331.27889699972,
+            "julia_ms_per_call": 114.64797600153058,
+            "method": "rk4",
+            "mojo_ms_per_call": 161.29787500055195,
+            "n": 64,
+            "n_steps": 500,
+            "python_ms_per_call": 144.5777370002664,
+            "rust_ms_per_call": 140.16093666577945
+          },
+          {
+            "available": [
+              "rust",
+              "mojo",
+              "julia",
+              "go",
+              "python"
+            ],
+            "calls": 3,
+            "go_ms_per_call": 546.6764709999552,
+            "julia_ms_per_call": 233.43344866831708,
+            "method": "rk45",
+            "mojo_ms_per_call": 296.6770586669251,
+            "n": 64,
+            "n_steps": 500,
+            "python_ms_per_call": 326.0371083330635,
+            "rust_ms_per_call": 144.56230233433112
+          }
+        ]
+      },
+      "source_freeze_matches_after_job": true
+    },
+    "doppler-all": {
+      "captured_output_sha256": "5fa5373d84e9e054a85e3175389b031ee9aa0641fddaca17003a5481dec474db",
+      "command_note": "Output and installed Playwright package paths are placeholders; all measurement arguments are the executed arguments.",
+      "environment_overrides": {
+        "JAX_PLATFORMS": "cpu"
+      },
+      "exit_code": 0,
+      "finished_utc": "2026-10-01T02:30:41.237297+00:00",
+      "host_context_after": {
+        "allowed_cpu_ids": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "author_owned_heavy_jobs": "only this sequential comparison worker",
+        "core_reservation": "none; inherited affinity is not exclusive",
+        "cpu_frequency_context": {
+          "0": {
+            "scaling_cur_freq": "3700037",
+            "scaling_governor": "powersave"
+          },
+          "1": {
+            "scaling_cur_freq": "3700073",
+            "scaling_governor": "powersave"
+          },
+          "10": {
+            "scaling_cur_freq": "3700000",
+            "scaling_governor": "powersave"
+          },
+          "11": {
+            "scaling_cur_freq": "3700000",
+            "scaling_governor": "powersave"
+          },
+          "2": {
+            "scaling_cur_freq": "3699962",
+            "scaling_governor": "powersave"
+          },
+          "3": {
+            "scaling_cur_freq": "3699962",
+            "scaling_governor": "powersave"
+          },
+          "4": {
+            "scaling_cur_freq": "3699962",
+            "scaling_governor": "powersave"
+          },
+          "5": {
+            "scaling_cur_freq": "3700000",
+            "scaling_governor": "powersave"
+          },
+          "6": {
+            "scaling_cur_freq": "3700036",
+            "scaling_governor": "powersave"
+          },
+          "7": {
+            "scaling_cur_freq": "3700000",
+            "scaling_governor": "powersave"
+          },
+          "8": {
+            "scaling_cur_freq": "3700000",
+            "scaling_governor": "powersave"
+          },
+          "9": {
+            "scaling_cur_freq": "3700037",
+            "scaling_governor": "powersave"
+          }
+        },
+        "isolation_method": "none; shared workstation",
+        "load_average_1_5_15": [
+          39.015625,
+          34.19384765625,
+          33.36083984375
+        ],
+        "other_heavy_jobs": "unknown; no whole-host inventory performed",
+        "recorded_utc": "2026-10-01T02:30:41.237297+00:00"
+      },
+      "host_context_before": {
+        "allowed_cpu_ids": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "author_owned_heavy_jobs": "only this sequential comparison worker",
+        "core_reservation": "none; inherited affinity is not exclusive",
+        "cpu_frequency_context": {
+          "0": {
+            "scaling_cur_freq": "3700000",
+            "scaling_governor": "powersave"
+          },
+          "1": {
+            "scaling_cur_freq": "3700000",
+            "scaling_governor": "powersave"
+          },
+          "10": {
+            "scaling_cur_freq": "3700000",
+            "scaling_governor": "powersave"
+          },
+          "11": {
+            "scaling_cur_freq": "3699851",
+            "scaling_governor": "powersave"
+          },
+          "2": {
+            "scaling_cur_freq": "3700000",
+            "scaling_governor": "powersave"
+          },
+          "3": {
+            "scaling_cur_freq": "3700000",
+            "scaling_governor": "powersave"
+          },
+          "4": {
+            "scaling_cur_freq": "3700000",
+            "scaling_governor": "powersave"
+          },
+          "5": {
+            "scaling_cur_freq": "3699962",
+            "scaling_governor": "powersave"
+          },
+          "6": {
+            "scaling_cur_freq": "3699814",
+            "scaling_governor": "powersave"
+          },
+          "7": {
+            "scaling_cur_freq": "3699962",
+            "scaling_governor": "powersave"
+          },
+          "8": {
+            "scaling_cur_freq": "3700000",
+            "scaling_governor": "powersave"
+          },
+          "9": {
+            "scaling_cur_freq": "3699777",
+            "scaling_governor": "powersave"
+          }
+        },
+        "isolation_method": "none; shared workstation",
+        "load_average_1_5_15": [
+          38.17724609375,
+          33.74755859375,
+          33.2041015625
+        ],
+        "other_heavy_jobs": "unknown; no whole-host inventory performed",
+        "recorded_utc": "2026-10-01T02:30:25.733186+00:00"
+      },
+      "measured_source_sha256_after_job": {
+        "benchmarks/engine_comparison.py": "71fa6ded0f84e8bafdff71286896fd1d7a4ef7847718c315c9e4c402032080c9",
+        "benchmarks/sparse_benchmark.py": "55db13c84a3f2b71c69d0e073e1ab507294ce0bd04cdfd65714b15abe7ed442a",
+        "benchmarks/upde_doppler_benchmark.py": "095f3a8447e0859924df64e45e1cc91a1e98d92b72ae4aa8b9bf6c96d21709d2",
+        "benchmarks/upde_engine_benchmark.py": "fc7bbf7a3ffc84102da1094968d5a8f6818153e4e94f8a3eef9731a92e2aaeba",
+        "benchmarks/upde_moving_frame_benchmark.py": "ae0750e808747ccc3b2550cde46ad60e26b86691220598def54948bb3541cf94",
+        "benchmarks/upde_phase_wrapping_benchmark.py": "d2d153cd115dcc3742bbddc57b6945328929f82f32c036609248edc7b646f530",
+        "benchmarks/upde_time_varying_omega_benchmark.py": "c0c103e8d46af094da386fc7791de8cf3f1596a4aabe1dfa2246ab913797f19b",
+        "benchmarks/upde_webgpu_benchmark.py": "e195a5122d5144d908e3db029ea5094a76f09182502405967229836d560da3ab",
+        "go/upde_engine.go": "1a93107c3fc484a88a47bb914ec9ee56c4545e0f7fa351be5b5c8ad2e3f1f16a",
+        "julia/upde_engine.jl": "7643b1d7c25ebcdb40753e744570824aede9042ab24617da024c03ef7a902e14",
+        "mojo/upde_engine.mojo": "7b689a721713964cb906fa3696d080c4796c41e830d2738f584660089be20201",
+        "native-tests/test_sparse_phase_wrapping.py": "13cbf640a1600cc3569e5bbb680bc4f27f9f17623e4287f8715baabed90713dd",
+        "native-tests/test_upde_runtime_phase_wrapping.py": "d2d7664e9ce6159efcf3686d0b08c9ab970b0f3fa0f1405a8a323fab68ce5ccb",
+        "native-tests/test_upde_stepper_phase_wrapping.py": "516b194ed5895296ea48588ef36751e01a932d020595167e31d15cb8c3334df6",
+        "spo-kernel/crates/spo-engine/src/sparse_upde.rs": "434b5ccd6f4ec625a1956a5f3fddc4b7813969a2b2ec2f781bf907b2315c3c59",
+        "spo-kernel/crates/spo-engine/src/upde.rs": "9bdcb23b2a81dd15e265a65e2e73a11f51edc00869cac971bb90e642a2a45856",
+        "src/juliacall.pyi": "2a07cc2a5db21ccf7759a0ab08bd5662c3374469df9c9ec9b2d60caebf2d3a2e",
+        "src/scpn_phase_orchestrator/experimental/accelerators/upde/_doppler_julia.py": "cec0690ae4bf6db942b57c335de5477d558a1a74974272995a66a4758102dd36",
+        "src/scpn_phase_orchestrator/experimental/accelerators/upde/_engine_julia.py": "5fa109f2a181b6dbb51b6318d5f12c2e43aaa67fe3e4cf1d1a5ade4fe2208d37",
+        "src/scpn_phase_orchestrator/experimental/accelerators/upde/_engine_webgpu.py": "e75a4dc870a86c5da3ed23824b978ea1e24503fcf709f627b88371ee2bf7eb21",
+        "src/scpn_phase_orchestrator/experimental/accelerators/upde/_moving_frame_julia.py": "a52e4adfddb239280f8228afa9ceac43305fb12db547edc0a0182737bc091b1c",
+        "src/scpn_phase_orchestrator/nn/functional.py": "cdd25fe83a6e5311b7cd51116cc1f70ac7093378a8cb96be2f751a2b7c056c80",
+        "src/scpn_phase_orchestrator/upde/_engine_validation.py": "877e2dab64cf00065e579893b4a56e8196e5468c4530efd14c8a0bdf68364896",
+        "src/scpn_phase_orchestrator/upde/_jax_phase_wrap.py": "08b0ee1700fc085c089a4df0cc1c8759406ccc0f794a71537349c21a4d3c88cf",
+        "src/scpn_phase_orchestrator/upde/_phase_wrap.py": "5551ef413db67a5027e9e72379c3a903320f0c272dba8105c297a3760f6a5dbd",
+        "src/scpn_phase_orchestrator/upde/_ref_kernel.py": "760f7e5eeb1da4cccdc07053001bd2234e64c56eb42ca6782597ce3cef9c6e9b",
+        "src/scpn_phase_orchestrator/upde/_run.py": "2a06ad90a7d02725679b96b6e72dcdfc8d4b6c00ad2e3d5a551c0e122562cfd3",
+        "src/scpn_phase_orchestrator/upde/engine.py": "85596d08b75b5101983ad36040186535a8681ce454304a6ee30663846954fce6",
+        "src/scpn_phase_orchestrator/upde/jax_engine.py": "fcb4038b9973bf43c826aab2c49160ae3aac3583136da468bce93306637b687c",
+        "src/scpn_phase_orchestrator/upde/sparse_engine.py": "c6aa5665e7d0062ca16b4f9ba2d3148297d5baed61111a797bcc852810a99775",
+        "tests/test_nn_kuramoto_phase_wrapping.py": "cbda487ee7d428435d356d6a9d76366e175539b16ade807a969ba41915e4f33a",
+        "tests/test_sparse_engine.py": "445249c55f7594983967c6b58bc3c623b4d3da18012bb1c6ea23fd275b19f23d",
+        "tests/test_sparse_engine_phase_wrapping.py": "2db3bad4ab9f0fb6ce9b2444f0e86c5f90edbe295535c17b4ab63f187c18de5b",
+        "tests/test_upde_engine_phase_wrapping.py": "25756ce867c423797485870f6f7df737f03e4edc82d26774b3d455f1aa84427a",
+        "tests/test_upde_jax_phase_wrap.py": "30694905b2de23cd17d772a68d9692791c00deb7a06095fab2c78a64cb1693e1",
+        "tests/test_upde_phase_wrap.py": "f181b7c301b31f8e6b4c4ef056d426d2ea434adb5579c846a8977de6e49839a3",
+        "tests/test_upde_phase_wrapping_benchmark.py": "9c05aecc602dd2042697fbaa6152b71db01cd37d3eaeb608bb0fe9b16f650a16",
+        "tests/test_upde_webgpu_phase_wrapping.py": "a034019d68c289d9ab590493cdb0c0f55d4a2c886db0feb53aa358a0d0c52901",
+        "tools/run_webgpu_phase_benchmark.py": "76d26d4667645781d4ac56bc0254c8d63195dee2b3a6d6dc84e789f675e9a969"
+      },
+      "process_elapsed_s": 15.509916627001076,
+      "reproduce_argv": [
+        ".venv/bin/python",
+        "-m",
+        "benchmarks.upde_doppler_benchmark",
+        "--parity-gate",
+        "--output",
+        "<output.json>"
+      ],
+      "results": {
+        "acceptance_passed": 1,
+        "acceptance_thresholds_json": "{\"backend_order\": [\"rust\", \"webgpu\", \"mojo\", \"julia\", \"go\", \"python\"], \"production_timing_claim\": false, \"require_all_available_parity\": true, \"require_python_reference\": true}",
+        "all_available_passed": 1,
+        "available_backend_count": 5,
+        "backend_count": 6,
+        "backend_records_json": "[{\"backend\": \"rust\", \"matrix_sha256\": \"e7ac257c0872466bf8773a3d5474a97d7e9f5b6e65b26a479bebf0fa95f5e6a4\", \"max_abs_error\": 0.0, \"ms_per_call\": 0.2923680003732443, \"parity_passed\": true, \"status\": \"available\", \"tolerance\": 1e-12, \"unavailable_reason\": \"\"}, {\"backend\": \"webgpu\", \"matrix_sha256\": null, \"max_abs_error\": null, \"ms_per_call\": null, \"parity_passed\": false, \"status\": \"unavailable\", \"tolerance\": 1e-09, \"unavailable_reason\": \"Doppler backend is not installed\"}, {\"backend\": \"mojo\", \"matrix_sha256\": \"148284e0f92ff80ce4548a55d00d58dce7d183ab10ebcac8aaf54ec4de98870d\", \"max_abs_error\": 2.7755575615628914e-17, \"ms_per_call\": 91.80753200053005, \"parity_passed\": true, \"status\": \"available\", \"tolerance\": 1e-09, \"unavailable_reason\": \"\"}, {\"backend\": \"julia\", \"matrix_sha256\": \"e7ac257c0872466bf8773a3d5474a97d7e9f5b6e65b26a479bebf0fa95f5e6a4\", \"max_abs_error\": 0.0, \"ms_per_call\": 14778.937772003701, \"parity_passed\": true, \"status\": \"available\", \"tolerance\": 1e-10, \"unavailable_reason\": \"\"}, {\"backend\": \"go\", \"matrix_sha256\": \"e7ac257c0872466bf8773a3d5474a97d7e9f5b6e65b26a479bebf0fa95f5e6a4\", \"max_abs_error\": 0.0, \"ms_per_call\": 70.03589899977669, \"parity_passed\": true, \"status\": \"available\", \"tolerance\": 1e-10, \"unavailable_reason\": \"\"}, {\"backend\": \"python\", \"matrix_sha256\": \"e7ac257c0872466bf8773a3d5474a97d7e9f5b6e65b26a479bebf0fa95f5e6a4\", \"max_abs_error\": 0.0, \"ms_per_call\": 2.11353600025177, \"parity_passed\": true, \"status\": \"available\", \"tolerance\": 0.0, \"unavailable_reason\": \"\"}]",
+        "benchmark_evidence_kind": "local_regression_non_isolated",
+        "benchmark_sha256": "fc1993b3a9e1069025e446281284ca9512f84f2695c614803752df6f665e1927",
+        "calls": 1,
+        "isolation_method": "none",
+        "n": 8,
+        "n_steps": 8,
+        "omega_schedule_sha256": "31d7e5f828e391927b1cc5efa9542e875ceb2550905f4fac28882f99181fda92",
+        "parity_pass_count": 5,
+        "production_timing_claim": 0,
+        "reference_matrix_sha256": "e7ac257c0872466bf8773a3d5474a97d7e9f5b6e65b26a479bebf0fa95f5e6a4",
+        "seed": 2026,
+        "steps_per_second": 0.5353509875479827,
+        "suite": "upde_doppler_polyglot_gate",
+        "unavailable_backend_count": 1,
+        "velocity_schedule_sha256": "b4c0fa0e4006fb50135a78c967bf5c4c398e9d65f7ef3fc65f5fc6051373b1fd",
+        "wall_time_s": 14.943467343997327
+      },
+      "source_freeze_matches_after_job": true
+    },
+    "moving-all": {
+      "captured_output_sha256": "80bbeaf8f2c932803f64d9f386bb5c49a022c743300a1a9e01eae2832ec9db20",
+      "command_note": "Output and installed Playwright package paths are placeholders; all measurement arguments are the executed arguments.",
+      "environment_overrides": {
+        "JAX_PLATFORMS": "cpu"
+      },
+      "exit_code": 0,
+      "finished_utc": "2026-10-01T02:30:54.038930+00:00",
+      "host_context_after": {
+        "allowed_cpu_ids": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "author_owned_heavy_jobs": "only this sequential comparison worker",
+        "core_reservation": "none; inherited affinity is not exclusive",
+        "cpu_frequency_context": {
+          "0": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "1": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "10": {
+            "scaling_cur_freq": "3599422",
+            "scaling_governor": "powersave"
+          },
+          "11": {
+            "scaling_cur_freq": "3599747",
+            "scaling_governor": "powersave"
+          },
+          "2": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "3": {
+            "scaling_cur_freq": "3600216",
+            "scaling_governor": "powersave"
+          },
+          "4": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "5": {
+            "scaling_cur_freq": "3599530",
+            "scaling_governor": "powersave"
+          },
+          "6": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "7": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "8": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "9": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          }
+        },
+        "isolation_method": "none; shared workstation",
+        "load_average_1_5_15": [
+          40.4609375,
+          34.65185546875,
+          33.5185546875
+        ],
+        "other_heavy_jobs": "unknown; no whole-host inventory performed",
+        "recorded_utc": "2026-10-01T02:30:54.038930+00:00"
+      },
+      "host_context_before": {
+        "allowed_cpu_ids": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "author_owned_heavy_jobs": "only this sequential comparison worker",
+        "core_reservation": "none; inherited affinity is not exclusive",
+        "cpu_frequency_context": {
+          "0": {
+            "scaling_cur_freq": "3700000",
+            "scaling_governor": "powersave"
+          },
+          "1": {
+            "scaling_cur_freq": "3699963",
+            "scaling_governor": "powersave"
+          },
+          "10": {
+            "scaling_cur_freq": "3700000",
+            "scaling_governor": "powersave"
+          },
+          "11": {
+            "scaling_cur_freq": "3699962",
+            "scaling_governor": "powersave"
+          },
+          "2": {
+            "scaling_cur_freq": "3699816",
+            "scaling_governor": "powersave"
+          },
+          "3": {
+            "scaling_cur_freq": "3700000",
+            "scaling_governor": "powersave"
+          },
+          "4": {
+            "scaling_cur_freq": "3700000",
+            "scaling_governor": "powersave"
+          },
+          "5": {
+            "scaling_cur_freq": "3700000",
+            "scaling_governor": "powersave"
+          },
+          "6": {
+            "scaling_cur_freq": "3700000",
+            "scaling_governor": "powersave"
+          },
+          "7": {
+            "scaling_cur_freq": "3699962",
+            "scaling_governor": "powersave"
+          },
+          "8": {
+            "scaling_cur_freq": "3700000",
+            "scaling_governor": "powersave"
+          },
+          "9": {
+            "scaling_cur_freq": "3700000",
+            "scaling_governor": "powersave"
+          }
+        },
+        "isolation_method": "none; shared workstation",
+        "load_average_1_5_15": [
+          39.015625,
+          34.19384765625,
+          33.36083984375
+        ],
+        "other_heavy_jobs": "unknown; no whole-host inventory performed",
+        "recorded_utc": "2026-10-01T02:30:41.249806+00:00"
+      },
+      "measured_source_sha256_after_job": {
+        "benchmarks/engine_comparison.py": "71fa6ded0f84e8bafdff71286896fd1d7a4ef7847718c315c9e4c402032080c9",
+        "benchmarks/sparse_benchmark.py": "55db13c84a3f2b71c69d0e073e1ab507294ce0bd04cdfd65714b15abe7ed442a",
+        "benchmarks/upde_doppler_benchmark.py": "095f3a8447e0859924df64e45e1cc91a1e98d92b72ae4aa8b9bf6c96d21709d2",
+        "benchmarks/upde_engine_benchmark.py": "fc7bbf7a3ffc84102da1094968d5a8f6818153e4e94f8a3eef9731a92e2aaeba",
+        "benchmarks/upde_moving_frame_benchmark.py": "ae0750e808747ccc3b2550cde46ad60e26b86691220598def54948bb3541cf94",
+        "benchmarks/upde_phase_wrapping_benchmark.py": "d2d153cd115dcc3742bbddc57b6945328929f82f32c036609248edc7b646f530",
+        "benchmarks/upde_time_varying_omega_benchmark.py": "c0c103e8d46af094da386fc7791de8cf3f1596a4aabe1dfa2246ab913797f19b",
+        "benchmarks/upde_webgpu_benchmark.py": "e195a5122d5144d908e3db029ea5094a76f09182502405967229836d560da3ab",
+        "go/upde_engine.go": "1a93107c3fc484a88a47bb914ec9ee56c4545e0f7fa351be5b5c8ad2e3f1f16a",
+        "julia/upde_engine.jl": "7643b1d7c25ebcdb40753e744570824aede9042ab24617da024c03ef7a902e14",
+        "mojo/upde_engine.mojo": "7b689a721713964cb906fa3696d080c4796c41e830d2738f584660089be20201",
+        "native-tests/test_sparse_phase_wrapping.py": "13cbf640a1600cc3569e5bbb680bc4f27f9f17623e4287f8715baabed90713dd",
+        "native-tests/test_upde_runtime_phase_wrapping.py": "d2d7664e9ce6159efcf3686d0b08c9ab970b0f3fa0f1405a8a323fab68ce5ccb",
+        "native-tests/test_upde_stepper_phase_wrapping.py": "516b194ed5895296ea48588ef36751e01a932d020595167e31d15cb8c3334df6",
+        "spo-kernel/crates/spo-engine/src/sparse_upde.rs": "434b5ccd6f4ec625a1956a5f3fddc4b7813969a2b2ec2f781bf907b2315c3c59",
+        "spo-kernel/crates/spo-engine/src/upde.rs": "9bdcb23b2a81dd15e265a65e2e73a11f51edc00869cac971bb90e642a2a45856",
+        "src/juliacall.pyi": "2a07cc2a5db21ccf7759a0ab08bd5662c3374469df9c9ec9b2d60caebf2d3a2e",
+        "src/scpn_phase_orchestrator/experimental/accelerators/upde/_doppler_julia.py": "cec0690ae4bf6db942b57c335de5477d558a1a74974272995a66a4758102dd36",
+        "src/scpn_phase_orchestrator/experimental/accelerators/upde/_engine_julia.py": "5fa109f2a181b6dbb51b6318d5f12c2e43aaa67fe3e4cf1d1a5ade4fe2208d37",
+        "src/scpn_phase_orchestrator/experimental/accelerators/upde/_engine_webgpu.py": "e75a4dc870a86c5da3ed23824b978ea1e24503fcf709f627b88371ee2bf7eb21",
+        "src/scpn_phase_orchestrator/experimental/accelerators/upde/_moving_frame_julia.py": "a52e4adfddb239280f8228afa9ceac43305fb12db547edc0a0182737bc091b1c",
+        "src/scpn_phase_orchestrator/nn/functional.py": "cdd25fe83a6e5311b7cd51116cc1f70ac7093378a8cb96be2f751a2b7c056c80",
+        "src/scpn_phase_orchestrator/upde/_engine_validation.py": "877e2dab64cf00065e579893b4a56e8196e5468c4530efd14c8a0bdf68364896",
+        "src/scpn_phase_orchestrator/upde/_jax_phase_wrap.py": "08b0ee1700fc085c089a4df0cc1c8759406ccc0f794a71537349c21a4d3c88cf",
+        "src/scpn_phase_orchestrator/upde/_phase_wrap.py": "5551ef413db67a5027e9e72379c3a903320f0c272dba8105c297a3760f6a5dbd",
+        "src/scpn_phase_orchestrator/upde/_ref_kernel.py": "760f7e5eeb1da4cccdc07053001bd2234e64c56eb42ca6782597ce3cef9c6e9b",
+        "src/scpn_phase_orchestrator/upde/_run.py": "2a06ad90a7d02725679b96b6e72dcdfc8d4b6c00ad2e3d5a551c0e122562cfd3",
+        "src/scpn_phase_orchestrator/upde/engine.py": "85596d08b75b5101983ad36040186535a8681ce454304a6ee30663846954fce6",
+        "src/scpn_phase_orchestrator/upde/jax_engine.py": "fcb4038b9973bf43c826aab2c49160ae3aac3583136da468bce93306637b687c",
+        "src/scpn_phase_orchestrator/upde/sparse_engine.py": "c6aa5665e7d0062ca16b4f9ba2d3148297d5baed61111a797bcc852810a99775",
+        "tests/test_nn_kuramoto_phase_wrapping.py": "cbda487ee7d428435d356d6a9d76366e175539b16ade807a969ba41915e4f33a",
+        "tests/test_sparse_engine.py": "445249c55f7594983967c6b58bc3c623b4d3da18012bb1c6ea23fd275b19f23d",
+        "tests/test_sparse_engine_phase_wrapping.py": "2db3bad4ab9f0fb6ce9b2444f0e86c5f90edbe295535c17b4ab63f187c18de5b",
+        "tests/test_upde_engine_phase_wrapping.py": "25756ce867c423797485870f6f7df737f03e4edc82d26774b3d455f1aa84427a",
+        "tests/test_upde_jax_phase_wrap.py": "30694905b2de23cd17d772a68d9692791c00deb7a06095fab2c78a64cb1693e1",
+        "tests/test_upde_phase_wrap.py": "f181b7c301b31f8e6b4c4ef056d426d2ea434adb5579c846a8977de6e49839a3",
+        "tests/test_upde_phase_wrapping_benchmark.py": "9c05aecc602dd2042697fbaa6152b71db01cd37d3eaeb608bb0fe9b16f650a16",
+        "tests/test_upde_webgpu_phase_wrapping.py": "a034019d68c289d9ab590493cdb0c0f55d4a2c886db0feb53aa358a0d0c52901",
+        "tools/run_webgpu_phase_benchmark.py": "76d26d4667645781d4ac56bc0254c8d63195dee2b3a6d6dc84e789f675e9a969"
+      },
+      "process_elapsed_s": 12.79671362299996,
+      "reproduce_argv": [
+        ".venv/bin/python",
+        "-m",
+        "benchmarks.upde_moving_frame_benchmark",
+        "--parity-gate",
+        "--output",
+        "<output.json>"
+      ],
+      "results": {
+        "acceptance_passed": 1,
+        "acceptance_thresholds_json": "{\"backend_order\": [\"rust\", \"webgpu\", \"mojo\", \"julia\", \"go\", \"python\"], \"kinematic_summary_replay_tolerance\": 1e-12, \"max_kinematic_residual_m\": 1e-09, \"production_timing_claim\": false, \"require_all_available_parity\": true, \"require_kinematic_equations\": true, \"require_kinematic_residual_contract\": true, \"require_python_reference\": true}",
+        "all_available_passed": 1,
+        "available_backend_count": 5,
+        "backend_count": 6,
+        "backend_records_json": "[{\"backend\": \"rust\", \"final_position_equation_validated\": 1, \"kinematic_equations_validated\": 1, \"kinematic_residual_max_m\": 1.734723475976807e-18, \"kinematic_residual_passed\": true, \"kinematic_residual_tolerance_m\": 1e-09, \"kinematic_summary_replay_tolerance\": 1e-12, \"matrix_sha256\": \"d6c4ce116efa89b79ec27e2fb828ddec150f147e2e2688522d50f505bb6c156d\", \"max_abs_error\": 0.0, \"max_abs_velocity_equation_validated\": 1, \"ms_per_call\": 0.3464210021775216, \"parity_passed\": true, \"path_length_equation_validated\": 1, \"status\": \"available\", \"tolerance\": 1e-12, \"unavailable_reason\": \"\"}, {\"backend\": \"webgpu\", \"final_position_equation_validated\": 0, \"kinematic_equations_validated\": 0, \"kinematic_residual_max_m\": null, \"kinematic_residual_passed\": false, \"kinematic_residual_tolerance_m\": 1e-09, \"kinematic_summary_replay_tolerance\": 1e-12, \"matrix_sha256\": null, \"max_abs_error\": null, \"max_abs_velocity_equation_validated\": 0, \"ms_per_call\": null, \"parity_passed\": false, \"path_length_equation_validated\": 0, \"status\": \"unavailable\", \"tolerance\": 1e-09, \"unavailable_reason\": \"moving-frame backend is not installed\"}, {\"backend\": \"mojo\", \"final_position_equation_validated\": 1, \"kinematic_equations_validated\": 1, \"kinematic_residual_max_m\": 1.734723475976807e-18, \"kinematic_residual_passed\": true, \"kinematic_residual_tolerance_m\": 1e-09, \"kinematic_summary_replay_tolerance\": 1e-12, \"matrix_sha256\": \"39c6c351ea3e7690518284be3835468e1afdb11715045768146fd570a4096991\", \"max_abs_error\": 8.673617379884035e-19, \"max_abs_velocity_equation_validated\": 1, \"ms_per_call\": 81.09717100160196, \"parity_passed\": true, \"path_length_equation_validated\": 1, \"status\": \"available\", \"tolerance\": 1e-09, \"unavailable_reason\": \"\"}, {\"backend\": \"julia\", \"final_position_equation_validated\": 1, \"kinematic_equations_validated\": 1, \"kinematic_residual_max_m\": 1.734723475976807e-18, \"kinematic_residual_passed\": true, \"kinematic_residual_tolerance_m\": 1e-09, \"kinematic_summary_replay_tolerance\": 1e-12, \"matrix_sha256\": \"d6c4ce116efa89b79ec27e2fb828ddec150f147e2e2688522d50f505bb6c156d\", \"max_abs_error\": 0.0, \"max_abs_velocity_equation_validated\": 1, \"ms_per_call\": 9940.403200002038, \"parity_passed\": true, \"path_length_equation_validated\": 1, \"status\": \"available\", \"tolerance\": 1e-10, \"unavailable_reason\": \"\"}, {\"backend\": \"go\", \"final_position_equation_validated\": 1, \"kinematic_equations_validated\": 1, \"kinematic_residual_max_m\": 1.734723475976807e-18, \"kinematic_residual_passed\": true, \"kinematic_residual_tolerance_m\": 1e-09, \"kinematic_summary_replay_tolerance\": 1e-12, \"matrix_sha256\": \"d6c4ce116efa89b79ec27e2fb828ddec150f147e2e2688522d50f505bb6c156d\", \"max_abs_error\": 0.0, \"max_abs_velocity_equation_validated\": 1, \"ms_per_call\": 75.16252499772236, \"parity_passed\": true, \"path_length_equation_validated\": 1, \"status\": \"available\", \"tolerance\": 1e-10, \"unavailable_reason\": \"\"}, {\"backend\": \"python\", \"final_position_equation_validated\": 1, \"kinematic_equations_validated\": 1, \"kinematic_residual_max_m\": 1.734723475976807e-18, \"kinematic_residual_passed\": true, \"kinematic_residual_tolerance_m\": 1e-09, \"kinematic_summary_replay_tolerance\": 1e-12, \"matrix_sha256\": \"d6c4ce116efa89b79ec27e2fb828ddec150f147e2e2688522d50f505bb6c156d\", \"max_abs_error\": 0.0, \"max_abs_velocity_equation_validated\": 1, \"ms_per_call\": 2.6262480023433454, \"parity_passed\": true, \"path_length_equation_validated\": 1, \"status\": \"available\", \"tolerance\": 0.0, \"unavailable_reason\": \"\"}]",
+        "benchmark_evidence_kind": "local_regression_non_isolated",
+        "benchmark_sha256": "79e2aac5d5cda3401daf736df53807863192bc3616b957900ec8e9829be12984",
+        "calls": 1,
+        "expected_final_position_sha256": "b448d32d60ef7c552e90b5431b9e0efcc9440c0adf0ee9e975145a3a0b663f0b",
+        "final_position_equation_validated": 1,
+        "isolation_method": "none",
+        "kinematic_equations_validated": 1,
+        "kinematic_residual_contract_passed": 1,
+        "kinematic_summary_replay_tolerance": 1e-12,
+        "max_abs_velocity_equation_validated": 1,
+        "max_abs_velocity_m_per_s": 1217.855280637674,
+        "n": 8,
+        "n_steps": 8,
+        "omega_schedule_sha256": "6e82710c98df7ded9367f9acabb83c2a4040b930f3c2ce6cb38ce431656f5be5",
+        "parity_pass_count": 5,
+        "path_length_equation_validated": 1,
+        "path_length_max_m": 0.00670359401216184,
+        "position_initial_sha256": "82caf2c2442eb3590918cff33bcc1d3c60d2d840626104017e014351a296621d",
+        "production_timing_claim": 0,
+        "reference_kinematic_residual_max_m": 1.734723475976807e-18,
+        "reference_matrix_sha256": "d6c4ce116efa89b79ec27e2fb828ddec150f147e2e2688522d50f505bb6c156d",
+        "seed": 2026,
+        "steps_per_second": 0.7920568759161246,
+        "suite": "upde_moving_frame_polyglot_gate",
+        "unavailable_backend_count": 1,
+        "velocity_schedule_sha256": "f4c034e7d5488d1ff49d89400543ce770d256c8bc940a4dbc604a6af74ba9e47",
+        "wall_time_s": 10.100284769003338
+      },
+      "source_freeze_matches_after_job": true
+    },
+    "phase-all": {
+      "captured_output_sha256": "6a6e08b96a49fc63f3ef46fd736cf34257c14aadce88a013eb6fe18359ef215c",
+      "command_note": "Output and installed Playwright package paths are placeholders; all measurement arguments are the executed arguments.",
+      "environment_overrides": {
+        "JAX_PLATFORMS": "cpu"
+      },
+      "exit_code": 0,
+      "finished_utc": "2026-10-01T02:37:39.606271+00:00",
+      "host_context_after": {
+        "allowed_cpu_ids": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "author_owned_heavy_jobs": "only this sequential comparison worker",
+        "core_reservation": "none; inherited affinity is not exclusive",
+        "cpu_frequency_context": {
+          "0": {
+            "scaling_cur_freq": "3600036",
+            "scaling_governor": "powersave"
+          },
+          "1": {
+            "scaling_cur_freq": "3599963",
+            "scaling_governor": "powersave"
+          },
+          "10": {
+            "scaling_cur_freq": "3599963",
+            "scaling_governor": "powersave"
+          },
+          "11": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "2": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "3": {
+            "scaling_cur_freq": "3599963",
+            "scaling_governor": "powersave"
+          },
+          "4": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "5": {
+            "scaling_cur_freq": "3600036",
+            "scaling_governor": "powersave"
+          },
+          "6": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "7": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "8": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "9": {
+            "scaling_cur_freq": "3599963",
+            "scaling_governor": "powersave"
+          }
+        },
+        "isolation_method": "none; shared workstation",
+        "load_average_1_5_15": [
+          40.4541015625,
+          36.70947265625,
+          34.650390625
+        ],
+        "other_heavy_jobs": "unknown; no whole-host inventory performed",
+        "recorded_utc": "2026-10-01T02:37:39.606271+00:00"
+      },
+      "host_context_before": {
+        "allowed_cpu_ids": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "author_owned_heavy_jobs": "only this sequential comparison worker",
+        "core_reservation": "none; inherited affinity is not exclusive",
+        "cpu_frequency_context": {
+          "0": {
+            "scaling_cur_freq": "3600180",
+            "scaling_governor": "powersave"
+          },
+          "1": {
+            "scaling_cur_freq": "3599927",
+            "scaling_governor": "powersave"
+          },
+          "10": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "11": {
+            "scaling_cur_freq": "3600144",
+            "scaling_governor": "powersave"
+          },
+          "2": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "3": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "4": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "5": {
+            "scaling_cur_freq": "3600036",
+            "scaling_governor": "powersave"
+          },
+          "6": {
+            "scaling_cur_freq": "3600144",
+            "scaling_governor": "powersave"
+          },
+          "7": {
+            "scaling_cur_freq": "3599963",
+            "scaling_governor": "powersave"
+          },
+          "8": {
+            "scaling_cur_freq": "3600036",
+            "scaling_governor": "powersave"
+          },
+          "9": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          }
+        },
+        "isolation_method": "none; shared workstation",
+        "load_average_1_5_15": [
+          40.5458984375,
+          36.38916015625,
+          34.4931640625
+        ],
+        "other_heavy_jobs": "unknown; no whole-host inventory performed",
+        "recorded_utc": "2026-10-01T02:37:15.367244+00:00"
+      },
+      "measured_source_sha256_after_job": {
+        "benchmarks/engine_comparison.py": "71fa6ded0f84e8bafdff71286896fd1d7a4ef7847718c315c9e4c402032080c9",
+        "benchmarks/sparse_benchmark.py": "55db13c84a3f2b71c69d0e073e1ab507294ce0bd04cdfd65714b15abe7ed442a",
+        "benchmarks/upde_doppler_benchmark.py": "095f3a8447e0859924df64e45e1cc91a1e98d92b72ae4aa8b9bf6c96d21709d2",
+        "benchmarks/upde_engine_benchmark.py": "fc7bbf7a3ffc84102da1094968d5a8f6818153e4e94f8a3eef9731a92e2aaeba",
+        "benchmarks/upde_moving_frame_benchmark.py": "ae0750e808747ccc3b2550cde46ad60e26b86691220598def54948bb3541cf94",
+        "benchmarks/upde_phase_wrapping_benchmark.py": "d2d153cd115dcc3742bbddc57b6945328929f82f32c036609248edc7b646f530",
+        "benchmarks/upde_time_varying_omega_benchmark.py": "c0c103e8d46af094da386fc7791de8cf3f1596a4aabe1dfa2246ab913797f19b",
+        "benchmarks/upde_webgpu_benchmark.py": "e195a5122d5144d908e3db029ea5094a76f09182502405967229836d560da3ab",
+        "go/upde_engine.go": "1a93107c3fc484a88a47bb914ec9ee56c4545e0f7fa351be5b5c8ad2e3f1f16a",
+        "julia/upde_engine.jl": "7643b1d7c25ebcdb40753e744570824aede9042ab24617da024c03ef7a902e14",
+        "mojo/upde_engine.mojo": "7b689a721713964cb906fa3696d080c4796c41e830d2738f584660089be20201",
+        "native-tests/test_sparse_phase_wrapping.py": "13cbf640a1600cc3569e5bbb680bc4f27f9f17623e4287f8715baabed90713dd",
+        "native-tests/test_upde_runtime_phase_wrapping.py": "d2d7664e9ce6159efcf3686d0b08c9ab970b0f3fa0f1405a8a323fab68ce5ccb",
+        "native-tests/test_upde_stepper_phase_wrapping.py": "516b194ed5895296ea48588ef36751e01a932d020595167e31d15cb8c3334df6",
+        "spo-kernel/crates/spo-engine/src/sparse_upde.rs": "434b5ccd6f4ec625a1956a5f3fddc4b7813969a2b2ec2f781bf907b2315c3c59",
+        "spo-kernel/crates/spo-engine/src/upde.rs": "9bdcb23b2a81dd15e265a65e2e73a11f51edc00869cac971bb90e642a2a45856",
+        "src/juliacall.pyi": "2a07cc2a5db21ccf7759a0ab08bd5662c3374469df9c9ec9b2d60caebf2d3a2e",
+        "src/scpn_phase_orchestrator/experimental/accelerators/upde/_doppler_julia.py": "cec0690ae4bf6db942b57c335de5477d558a1a74974272995a66a4758102dd36",
+        "src/scpn_phase_orchestrator/experimental/accelerators/upde/_engine_julia.py": "5fa109f2a181b6dbb51b6318d5f12c2e43aaa67fe3e4cf1d1a5ade4fe2208d37",
+        "src/scpn_phase_orchestrator/experimental/accelerators/upde/_engine_webgpu.py": "e75a4dc870a86c5da3ed23824b978ea1e24503fcf709f627b88371ee2bf7eb21",
+        "src/scpn_phase_orchestrator/experimental/accelerators/upde/_moving_frame_julia.py": "a52e4adfddb239280f8228afa9ceac43305fb12db547edc0a0182737bc091b1c",
+        "src/scpn_phase_orchestrator/nn/functional.py": "cdd25fe83a6e5311b7cd51116cc1f70ac7093378a8cb96be2f751a2b7c056c80",
+        "src/scpn_phase_orchestrator/upde/_engine_validation.py": "877e2dab64cf00065e579893b4a56e8196e5468c4530efd14c8a0bdf68364896",
+        "src/scpn_phase_orchestrator/upde/_jax_phase_wrap.py": "08b0ee1700fc085c089a4df0cc1c8759406ccc0f794a71537349c21a4d3c88cf",
+        "src/scpn_phase_orchestrator/upde/_phase_wrap.py": "5551ef413db67a5027e9e72379c3a903320f0c272dba8105c297a3760f6a5dbd",
+        "src/scpn_phase_orchestrator/upde/_ref_kernel.py": "760f7e5eeb1da4cccdc07053001bd2234e64c56eb42ca6782597ce3cef9c6e9b",
+        "src/scpn_phase_orchestrator/upde/_run.py": "2a06ad90a7d02725679b96b6e72dcdfc8d4b6c00ad2e3d5a551c0e122562cfd3",
+        "src/scpn_phase_orchestrator/upde/engine.py": "85596d08b75b5101983ad36040186535a8681ce454304a6ee30663846954fce6",
+        "src/scpn_phase_orchestrator/upde/jax_engine.py": "fcb4038b9973bf43c826aab2c49160ae3aac3583136da468bce93306637b687c",
+        "src/scpn_phase_orchestrator/upde/sparse_engine.py": "c6aa5665e7d0062ca16b4f9ba2d3148297d5baed61111a797bcc852810a99775",
+        "tests/test_nn_kuramoto_phase_wrapping.py": "cbda487ee7d428435d356d6a9d76366e175539b16ade807a969ba41915e4f33a",
+        "tests/test_sparse_engine.py": "445249c55f7594983967c6b58bc3c623b4d3da18012bb1c6ea23fd275b19f23d",
+        "tests/test_sparse_engine_phase_wrapping.py": "2db3bad4ab9f0fb6ce9b2444f0e86c5f90edbe295535c17b4ab63f187c18de5b",
+        "tests/test_upde_engine_phase_wrapping.py": "25756ce867c423797485870f6f7df737f03e4edc82d26774b3d455f1aa84427a",
+        "tests/test_upde_jax_phase_wrap.py": "30694905b2de23cd17d772a68d9692791c00deb7a06095fab2c78a64cb1693e1",
+        "tests/test_upde_phase_wrap.py": "f181b7c301b31f8e6b4c4ef056d426d2ea434adb5579c846a8977de6e49839a3",
+        "tests/test_upde_phase_wrapping_benchmark.py": "9c05aecc602dd2042697fbaa6152b71db01cd37d3eaeb608bb0fe9b16f650a16",
+        "tests/test_upde_webgpu_phase_wrapping.py": "a034019d68c289d9ab590493cdb0c0f55d4a2c886db0feb53aa358a0d0c52901",
+        "tools/run_webgpu_phase_benchmark.py": "76d26d4667645781d4ac56bc0254c8d63195dee2b3a6d6dc84e789f675e9a969"
+      },
+      "process_elapsed_s": 24.242353762994753,
+      "reproduce_argv": [
+        ".venv/bin/python",
+        "-m",
+        "benchmarks.upde_phase_wrapping_benchmark",
+        "--calls",
+        "3",
+        "--backends",
+        "rust",
+        "mojo",
+        "julia",
+        "go",
+        "python",
+        "--output",
+        "<output.json>"
+      ],
+      "results": {
+        "evidence_kind": "local_regression_non_isolated",
+        "installed_backends": [
+          "rust",
+          "mojo",
+          "julia",
+          "go",
+          "python"
+        ],
+        "jax": "0.11.2",
+        "jax_devices": [
+          "cpu:0"
+        ],
+        "measurements": [
+          {
+            "backend": "rust",
+            "canonical_torus_passed": true,
+            "first_call_ms": 0.8585030009271577,
+            "input_sha256": "33fe36e12fdeeef0a103274c9a0ca1ac3598ff620c424fbd51c5a86bea4cf210",
+            "method": "euler",
+            "output": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              6.283185307179585,
+              0.27
+            ],
+            "period": 6.283185307179586,
+            "precision": "float64",
+            "repeated_call_ms": [
+              2.291312994202599,
+              0.21736600319854915,
+              0.129285006551072
+            ]
+          },
+          {
+            "backend": "rust",
+            "canonical_torus_passed": true,
+            "first_call_ms": 0.23996299569262192,
+            "input_sha256": "33fe36e12fdeeef0a103274c9a0ca1ac3598ff620c424fbd51c5a86bea4cf210",
+            "method": "rk4",
+            "output": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              6.283185307179585,
+              0.27
+            ],
+            "period": 6.283185307179586,
+            "precision": "float64",
+            "repeated_call_ms": [
+              0.13529100397136062,
+              0.1223720028065145,
+              0.11870500020449981
+            ]
+          },
+          {
+            "backend": "rust",
+            "canonical_torus_passed": true,
+            "first_call_ms": 0.1485009997850284,
+            "input_sha256": "33fe36e12fdeeef0a103274c9a0ca1ac3598ff620c424fbd51c5a86bea4cf210",
+            "method": "rk45",
+            "output": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              6.283185307179585,
+              0.27
+            ],
+            "period": 6.283185307179586,
+            "precision": "float64",
+            "repeated_call_ms": [
+              0.12730600428767502,
+              0.15238400374073535,
+              0.13233799836598337
+            ]
+          },
+          {
+            "backend": "mojo",
+            "canonical_torus_passed": true,
+            "first_call_ms": 118.7839990016073,
+            "input_sha256": "33fe36e12fdeeef0a103274c9a0ca1ac3598ff620c424fbd51c5a86bea4cf210",
+            "method": "euler",
+            "output": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              6.283185307179585,
+              0.27
+            ],
+            "period": 6.283185307179586,
+            "precision": "float64",
+            "repeated_call_ms": [
+              116.41257000155747,
+              89.23945399874356,
+              133.48768799914978
+            ]
+          },
+          {
+            "backend": "mojo",
+            "canonical_torus_passed": true,
+            "first_call_ms": 93.8509360057651,
+            "input_sha256": "33fe36e12fdeeef0a103274c9a0ca1ac3598ff620c424fbd51c5a86bea4cf210",
+            "method": "rk4",
+            "output": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              6.283185307179585,
+              0.27
+            ],
+            "period": 6.283185307179586,
+            "precision": "float64",
+            "repeated_call_ms": [
+              87.62272299645701,
+              142.1592539991252,
+              129.04310099838767
+            ]
+          },
+          {
+            "backend": "mojo",
+            "canonical_torus_passed": true,
+            "first_call_ms": 102.83133900520625,
+            "input_sha256": "33fe36e12fdeeef0a103274c9a0ca1ac3598ff620c424fbd51c5a86bea4cf210",
+            "method": "rk45",
+            "output": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              6.283185307179585,
+              0.27
+            ],
+            "period": 6.283185307179586,
+            "precision": "float64",
+            "repeated_call_ms": [
+              77.91941100003896,
+              79.90029799839249,
+              77.6540799997747
+            ]
+          },
+          {
+            "backend": "julia",
+            "canonical_torus_passed": true,
+            "first_call_ms": 13604.519487002108,
+            "input_sha256": "33fe36e12fdeeef0a103274c9a0ca1ac3598ff620c424fbd51c5a86bea4cf210",
+            "method": "euler",
+            "output": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              6.283185307179585,
+              0.27
+            ],
+            "period": 6.283185307179586,
+            "precision": "float64",
+            "repeated_call_ms": [
+              0.5466290022013709,
+              0.3524999992805533,
+              0.3175870006089099
+            ]
+          },
+          {
+            "backend": "julia",
+            "canonical_torus_passed": true,
+            "first_call_ms": 0.3559260003385134,
+            "input_sha256": "33fe36e12fdeeef0a103274c9a0ca1ac3598ff620c424fbd51c5a86bea4cf210",
+            "method": "rk4",
+            "output": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              6.283185307179585,
+              0.27
+            ],
+            "period": 6.283185307179586,
+            "precision": "float64",
+            "repeated_call_ms": [
+              0.3079670059378259,
+              0.30933200469007716,
+              0.32259099680231884
+            ]
+          },
+          {
+            "backend": "julia",
+            "canonical_torus_passed": true,
+            "first_call_ms": 0.40231100138043985,
+            "input_sha256": "33fe36e12fdeeef0a103274c9a0ca1ac3598ff620c424fbd51c5a86bea4cf210",
+            "method": "rk45",
+            "output": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              6.283185307179585,
+              0.27
+            ],
+            "period": 6.283185307179586,
+            "precision": "float64",
+            "repeated_call_ms": [
+              0.32356799783883616,
+              0.2840470042428933,
+              0.27144100022269413
+            ]
+          },
+          {
+            "backend": "go",
+            "canonical_torus_passed": true,
+            "first_call_ms": 4.312350996769965,
+            "input_sha256": "33fe36e12fdeeef0a103274c9a0ca1ac3598ff620c424fbd51c5a86bea4cf210",
+            "method": "euler",
+            "output": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              6.283185307179585,
+              0.27
+            ],
+            "period": 6.283185307179586,
+            "precision": "float64",
+            "repeated_call_ms": [
+              0.3427439951337874,
+              0.2444689962430857,
+              0.28500600456027314
+            ]
+          },
+          {
+            "backend": "go",
+            "canonical_torus_passed": true,
+            "first_call_ms": 0.327993999235332,
+            "input_sha256": "33fe36e12fdeeef0a103274c9a0ca1ac3598ff620c424fbd51c5a86bea4cf210",
+            "method": "rk4",
+            "output": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              6.283185307179585,
+              0.27
+            ],
+            "period": 6.283185307179586,
+            "precision": "float64",
+            "repeated_call_ms": [
+              0.25751599605428055,
+              0.24732800375204533,
+              0.24512600066373125
+            ]
+          },
+          {
+            "backend": "go",
+            "canonical_torus_passed": true,
+            "first_call_ms": 0.29532299959100783,
+            "input_sha256": "33fe36e12fdeeef0a103274c9a0ca1ac3598ff620c424fbd51c5a86bea4cf210",
+            "method": "rk45",
+            "output": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              6.283185307179585,
+              0.27
+            ],
+            "period": 6.283185307179586,
+            "precision": "float64",
+            "repeated_call_ms": [
+              2.431586995953694,
+              0.26719900051830336,
+              0.3001509976456873
+            ]
+          },
+          {
+            "backend": "python",
+            "canonical_torus_passed": true,
+            "first_call_ms": 0.3484349945210852,
+            "input_sha256": "33fe36e12fdeeef0a103274c9a0ca1ac3598ff620c424fbd51c5a86bea4cf210",
+            "method": "euler",
+            "output": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              6.283185307179585,
+              0.27
+            ],
+            "period": 6.283185307179586,
+            "precision": "float64",
+            "repeated_call_ms": [
+              0.1489369969931431,
+              0.1260960052604787,
+              0.11672600521706045
+            ]
+          },
+          {
+            "backend": "python",
+            "canonical_torus_passed": true,
+            "first_call_ms": 0.41724400216480717,
+            "input_sha256": "33fe36e12fdeeef0a103274c9a0ca1ac3598ff620c424fbd51c5a86bea4cf210",
+            "method": "rk4",
+            "output": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              6.283185307179585,
+              0.27
+            ],
+            "period": 6.283185307179586,
+            "precision": "float64",
+            "repeated_call_ms": [
+              0.19979599892394617,
+              0.17574099911144003,
+              0.18978399748448282
+            ]
+          },
+          {
+            "backend": "python",
+            "canonical_torus_passed": true,
+            "first_call_ms": 0.3649159989436157,
+            "input_sha256": "33fe36e12fdeeef0a103274c9a0ca1ac3598ff620c424fbd51c5a86bea4cf210",
+            "method": "rk45",
+            "output": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              6.283185307179585,
+              0.27
+            ],
+            "period": 6.283185307179586,
+            "precision": "float64",
+            "repeated_call_ms": [
+              0.29624500166391954,
+              0.31674699857831,
+              0.3159650004818104
+            ]
+          },
+          {
+            "backend": "jax",
+            "canonical_torus_passed": true,
+            "first_call_ms": 398.2358039938845,
+            "input_sha256": "1823564f2a2e992b2048913323cb2c0936c8ed604a217d2036723875fc514423",
+            "method": "euler",
+            "output": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              6.283185005187988,
+              0.27000001072883606
+            ],
+            "period": 6.2831854820251465,
+            "precision": "float32",
+            "repeated_call_ms": [
+              0.844887996208854,
+              0.6004370006849058,
+              2.6626699982443824
+            ]
+          },
+          {
+            "backend": "jax",
+            "canonical_torus_passed": true,
+            "first_call_ms": 346.91707900492474,
+            "input_sha256": "1823564f2a2e992b2048913323cb2c0936c8ed604a217d2036723875fc514423",
+            "method": "rk4",
+            "output": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              6.283185005187988,
+              0.27000001072883606
+            ],
+            "period": 6.2831854820251465,
+            "precision": "float32",
+            "repeated_call_ms": [
+              2.694331000384409,
+              3.6602070031221956,
+              6.461174998548813
+            ]
+          },
+          {
+            "backend": "nn-dense",
+            "canonical_torus_passed": true,
+            "first_call_ms": 129.86463800189085,
+            "input_sha256": "1823564f2a2e992b2048913323cb2c0936c8ed604a217d2036723875fc514423",
+            "method": "euler",
+            "output": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              6.283185005187988,
+              0.27000001072883606
+            ],
+            "period": 6.2831854820251465,
+            "precision": "float32",
+            "repeated_call_ms": [
+              0.0922800027183257,
+              0.037828998756594956,
+              0.03283999831182882
+            ]
+          },
+          {
+            "backend": "nn-dense",
+            "canonical_torus_passed": true,
+            "first_call_ms": 267.4247579998337,
+            "input_sha256": "1823564f2a2e992b2048913323cb2c0936c8ed604a217d2036723875fc514423",
+            "method": "rk4",
+            "output": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              6.283185005187988,
+              0.27000001072883606
+            ],
+            "period": 6.2831854820251465,
+            "precision": "float32",
+            "repeated_call_ms": [
+              0.10610100434860215,
+              0.04189000173937529,
+              0.033291995350737125
+            ]
+          },
+          {
+            "backend": "nn-masked",
+            "canonical_torus_passed": true,
+            "first_call_ms": 144.6710379968863,
+            "input_sha256": "1823564f2a2e992b2048913323cb2c0936c8ed604a217d2036723875fc514423",
+            "method": "euler",
+            "output": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              6.283185005187988,
+              0.27000001072883606
+            ],
+            "period": 6.2831854820251465,
+            "precision": "float32",
+            "repeated_call_ms": [
+              0.20730499818455428,
+              0.051249000534880906,
+              0.048107001930475235
+            ]
+          },
+          {
+            "backend": "nn-masked",
+            "canonical_torus_passed": true,
+            "first_call_ms": 348.29741299472516,
+            "input_sha256": "1823564f2a2e992b2048913323cb2c0936c8ed604a217d2036723875fc514423",
+            "method": "rk4",
+            "output": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              6.283185005187988,
+              0.27000001072883606
+            ],
+            "period": 6.2831854820251465,
+            "precision": "float32",
+            "repeated_call_ms": [
+              0.10240999836241826,
+              0.047295994590967894,
+              0.04221800190862268
+            ]
+          },
+          {
+            "backend": "jax",
+            "canonical_torus_passed": true,
+            "first_call_ms": 195.51452300220262,
+            "input_sha256": "33fe36e12fdeeef0a103274c9a0ca1ac3598ff620c424fbd51c5a86bea4cf210",
+            "method": "euler",
+            "output": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              6.283185307179585,
+              0.27
+            ],
+            "period": 6.283185307179586,
+            "precision": "float64",
+            "repeated_call_ms": [
+              0.7757279963698238,
+              0.4369790040072985,
+              0.5592449961113743
+            ]
+          },
+          {
+            "backend": "jax",
+            "canonical_torus_passed": true,
+            "first_call_ms": 239.96699299459578,
+            "input_sha256": "33fe36e12fdeeef0a103274c9a0ca1ac3598ff620c424fbd51c5a86bea4cf210",
+            "method": "rk4",
+            "output": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              6.283185307179585,
+              0.27
+            ],
+            "period": 6.283185307179586,
+            "precision": "float64",
+            "repeated_call_ms": [
+              3.098167995631229,
+              2.524807998270262,
+              1.6888190002646297
+            ]
+          },
+          {
+            "backend": "nn-dense",
+            "canonical_torus_passed": true,
+            "first_call_ms": 148.64668199879816,
+            "input_sha256": "33fe36e12fdeeef0a103274c9a0ca1ac3598ff620c424fbd51c5a86bea4cf210",
+            "method": "euler",
+            "output": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              6.283185307179585,
+              0.27
+            ],
+            "period": 6.283185307179586,
+            "precision": "float64",
+            "repeated_call_ms": [
+              0.0967090018093586,
+              0.035323995689395815,
+              0.029540002287831157
+            ]
+          },
+          {
+            "backend": "nn-dense",
+            "canonical_torus_passed": true,
+            "first_call_ms": 281.3391119998414,
+            "input_sha256": "33fe36e12fdeeef0a103274c9a0ca1ac3598ff620c424fbd51c5a86bea4cf210",
+            "method": "rk4",
+            "output": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              6.283185307179585,
+              0.27
+            ],
+            "period": 6.283185307179586,
+            "precision": "float64",
+            "repeated_call_ms": [
+              0.11152400111313909,
+              0.04749400250148028,
+              0.04738999996334314
+            ]
+          },
+          {
+            "backend": "nn-masked",
+            "canonical_torus_passed": true,
+            "first_call_ms": 84.87529499689117,
+            "input_sha256": "33fe36e12fdeeef0a103274c9a0ca1ac3598ff620c424fbd51c5a86bea4cf210",
+            "method": "euler",
+            "output": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              6.283185307179585,
+              0.27
+            ],
+            "period": 6.283185307179586,
+            "precision": "float64",
+            "repeated_call_ms": [
+              0.07680099952267483,
+              0.034642005630303174,
+              0.027310998120810837
+            ]
+          },
+          {
+            "backend": "nn-masked",
+            "canonical_torus_passed": true,
+            "first_call_ms": 170.4653530032374,
+            "input_sha256": "33fe36e12fdeeef0a103274c9a0ca1ac3598ff620c424fbd51c5a86bea4cf210",
+            "method": "rk4",
+            "output": [
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              0.0,
+              6.283185307179585,
+              0.27
+            ],
+            "period": 6.283185307179586,
+            "precision": "float64",
+            "repeated_call_ms": [
+              0.10936299804598093,
+              0.04687599721364677,
+              0.03430900687817484
+            ]
+          }
+        ],
+        "numpy": "2.5.3",
+        "production_speedup_claim": false,
+        "python": "3.12.3",
+        "schema_version": 1
+      },
+      "source_freeze_matches_after_job": true
+    },
+    "schedule-all": {
+      "captured_output_sha256": "932ffae7c81d17e7fce99feabe2e8e392a31d02f669cb0e9bf8cb86f62071907",
+      "command_note": "Output and installed Playwright package paths are placeholders; all measurement arguments are the executed arguments.",
+      "environment_overrides": {
+        "JAX_PLATFORMS": "cpu"
+      },
+      "exit_code": 0,
+      "finished_utc": "2026-10-01T02:30:25.728408+00:00",
+      "host_context_after": {
+        "allowed_cpu_ids": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "author_owned_heavy_jobs": "only this sequential comparison worker",
+        "core_reservation": "none; inherited affinity is not exclusive",
+        "cpu_frequency_context": {
+          "0": {
+            "scaling_cur_freq": "3700000",
+            "scaling_governor": "powersave"
+          },
+          "1": {
+            "scaling_cur_freq": "3699740",
+            "scaling_governor": "powersave"
+          },
+          "10": {
+            "scaling_cur_freq": "3700000",
+            "scaling_governor": "powersave"
+          },
+          "11": {
+            "scaling_cur_freq": "3700259",
+            "scaling_governor": "powersave"
+          },
+          "2": {
+            "scaling_cur_freq": "3699665",
+            "scaling_governor": "powersave"
+          },
+          "3": {
+            "scaling_cur_freq": "3700000",
+            "scaling_governor": "powersave"
+          },
+          "4": {
+            "scaling_cur_freq": "3699703",
+            "scaling_governor": "powersave"
+          },
+          "5": {
+            "scaling_cur_freq": "3700000",
+            "scaling_governor": "powersave"
+          },
+          "6": {
+            "scaling_cur_freq": "3699554",
+            "scaling_governor": "powersave"
+          },
+          "7": {
+            "scaling_cur_freq": "3699740",
+            "scaling_governor": "powersave"
+          },
+          "8": {
+            "scaling_cur_freq": "3699665",
+            "scaling_governor": "powersave"
+          },
+          "9": {
+            "scaling_cur_freq": "3699777",
+            "scaling_governor": "powersave"
+          }
+        },
+        "isolation_method": "none; shared workstation",
+        "load_average_1_5_15": [
+          38.17724609375,
+          33.74755859375,
+          33.2041015625
+        ],
+        "other_heavy_jobs": "unknown; no whole-host inventory performed",
+        "recorded_utc": "2026-10-01T02:30:25.728408+00:00"
+      },
+      "host_context_before": {
+        "allowed_cpu_ids": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "author_owned_heavy_jobs": "only this sequential comparison worker",
+        "core_reservation": "none; inherited affinity is not exclusive",
+        "cpu_frequency_context": {
+          "0": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "1": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "10": {
+            "scaling_cur_freq": "3600036",
+            "scaling_governor": "powersave"
+          },
+          "11": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "2": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "3": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "4": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "5": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "6": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "7": {
+            "scaling_cur_freq": "3600036",
+            "scaling_governor": "powersave"
+          },
+          "8": {
+            "scaling_cur_freq": "3600036",
+            "scaling_governor": "powersave"
+          },
+          "9": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          }
+        },
+        "isolation_method": "none; shared workstation",
+        "load_average_1_5_15": [
+          37.93212890625,
+          33.55078125,
+          33.13525390625
+        ],
+        "other_heavy_jobs": "unknown; no whole-host inventory performed",
+        "recorded_utc": "2026-10-01T02:30:11.182528+00:00"
+      },
+      "measured_source_sha256_after_job": {
+        "benchmarks/engine_comparison.py": "71fa6ded0f84e8bafdff71286896fd1d7a4ef7847718c315c9e4c402032080c9",
+        "benchmarks/sparse_benchmark.py": "55db13c84a3f2b71c69d0e073e1ab507294ce0bd04cdfd65714b15abe7ed442a",
+        "benchmarks/upde_doppler_benchmark.py": "095f3a8447e0859924df64e45e1cc91a1e98d92b72ae4aa8b9bf6c96d21709d2",
+        "benchmarks/upde_engine_benchmark.py": "fc7bbf7a3ffc84102da1094968d5a8f6818153e4e94f8a3eef9731a92e2aaeba",
+        "benchmarks/upde_moving_frame_benchmark.py": "ae0750e808747ccc3b2550cde46ad60e26b86691220598def54948bb3541cf94",
+        "benchmarks/upde_phase_wrapping_benchmark.py": "d2d153cd115dcc3742bbddc57b6945328929f82f32c036609248edc7b646f530",
+        "benchmarks/upde_time_varying_omega_benchmark.py": "c0c103e8d46af094da386fc7791de8cf3f1596a4aabe1dfa2246ab913797f19b",
+        "benchmarks/upde_webgpu_benchmark.py": "e195a5122d5144d908e3db029ea5094a76f09182502405967229836d560da3ab",
+        "go/upde_engine.go": "1a93107c3fc484a88a47bb914ec9ee56c4545e0f7fa351be5b5c8ad2e3f1f16a",
+        "julia/upde_engine.jl": "7643b1d7c25ebcdb40753e744570824aede9042ab24617da024c03ef7a902e14",
+        "mojo/upde_engine.mojo": "7b689a721713964cb906fa3696d080c4796c41e830d2738f584660089be20201",
+        "native-tests/test_sparse_phase_wrapping.py": "13cbf640a1600cc3569e5bbb680bc4f27f9f17623e4287f8715baabed90713dd",
+        "native-tests/test_upde_runtime_phase_wrapping.py": "d2d7664e9ce6159efcf3686d0b08c9ab970b0f3fa0f1405a8a323fab68ce5ccb",
+        "native-tests/test_upde_stepper_phase_wrapping.py": "516b194ed5895296ea48588ef36751e01a932d020595167e31d15cb8c3334df6",
+        "spo-kernel/crates/spo-engine/src/sparse_upde.rs": "434b5ccd6f4ec625a1956a5f3fddc4b7813969a2b2ec2f781bf907b2315c3c59",
+        "spo-kernel/crates/spo-engine/src/upde.rs": "9bdcb23b2a81dd15e265a65e2e73a11f51edc00869cac971bb90e642a2a45856",
+        "src/juliacall.pyi": "2a07cc2a5db21ccf7759a0ab08bd5662c3374469df9c9ec9b2d60caebf2d3a2e",
+        "src/scpn_phase_orchestrator/experimental/accelerators/upde/_doppler_julia.py": "cec0690ae4bf6db942b57c335de5477d558a1a74974272995a66a4758102dd36",
+        "src/scpn_phase_orchestrator/experimental/accelerators/upde/_engine_julia.py": "5fa109f2a181b6dbb51b6318d5f12c2e43aaa67fe3e4cf1d1a5ade4fe2208d37",
+        "src/scpn_phase_orchestrator/experimental/accelerators/upde/_engine_webgpu.py": "e75a4dc870a86c5da3ed23824b978ea1e24503fcf709f627b88371ee2bf7eb21",
+        "src/scpn_phase_orchestrator/experimental/accelerators/upde/_moving_frame_julia.py": "a52e4adfddb239280f8228afa9ceac43305fb12db547edc0a0182737bc091b1c",
+        "src/scpn_phase_orchestrator/nn/functional.py": "cdd25fe83a6e5311b7cd51116cc1f70ac7093378a8cb96be2f751a2b7c056c80",
+        "src/scpn_phase_orchestrator/upde/_engine_validation.py": "877e2dab64cf00065e579893b4a56e8196e5468c4530efd14c8a0bdf68364896",
+        "src/scpn_phase_orchestrator/upde/_jax_phase_wrap.py": "08b0ee1700fc085c089a4df0cc1c8759406ccc0f794a71537349c21a4d3c88cf",
+        "src/scpn_phase_orchestrator/upde/_phase_wrap.py": "5551ef413db67a5027e9e72379c3a903320f0c272dba8105c297a3760f6a5dbd",
+        "src/scpn_phase_orchestrator/upde/_ref_kernel.py": "760f7e5eeb1da4cccdc07053001bd2234e64c56eb42ca6782597ce3cef9c6e9b",
+        "src/scpn_phase_orchestrator/upde/_run.py": "2a06ad90a7d02725679b96b6e72dcdfc8d4b6c00ad2e3d5a551c0e122562cfd3",
+        "src/scpn_phase_orchestrator/upde/engine.py": "85596d08b75b5101983ad36040186535a8681ce454304a6ee30663846954fce6",
+        "src/scpn_phase_orchestrator/upde/jax_engine.py": "fcb4038b9973bf43c826aab2c49160ae3aac3583136da468bce93306637b687c",
+        "src/scpn_phase_orchestrator/upde/sparse_engine.py": "c6aa5665e7d0062ca16b4f9ba2d3148297d5baed61111a797bcc852810a99775",
+        "tests/test_nn_kuramoto_phase_wrapping.py": "cbda487ee7d428435d356d6a9d76366e175539b16ade807a969ba41915e4f33a",
+        "tests/test_sparse_engine.py": "445249c55f7594983967c6b58bc3c623b4d3da18012bb1c6ea23fd275b19f23d",
+        "tests/test_sparse_engine_phase_wrapping.py": "2db3bad4ab9f0fb6ce9b2444f0e86c5f90edbe295535c17b4ab63f187c18de5b",
+        "tests/test_upde_engine_phase_wrapping.py": "25756ce867c423797485870f6f7df737f03e4edc82d26774b3d455f1aa84427a",
+        "tests/test_upde_jax_phase_wrap.py": "30694905b2de23cd17d772a68d9692791c00deb7a06095fab2c78a64cb1693e1",
+        "tests/test_upde_phase_wrap.py": "f181b7c301b31f8e6b4c4ef056d426d2ea434adb5579c846a8977de6e49839a3",
+        "tests/test_upde_phase_wrapping_benchmark.py": "9c05aecc602dd2042697fbaa6152b71db01cd37d3eaeb608bb0fe9b16f650a16",
+        "tests/test_upde_webgpu_phase_wrapping.py": "a034019d68c289d9ab590493cdb0c0f55d4a2c886db0feb53aa358a0d0c52901",
+        "tools/run_webgpu_phase_benchmark.py": "76d26d4667645781d4ac56bc0254c8d63195dee2b3a6d6dc84e789f675e9a969"
+      },
+      "process_elapsed_s": 14.549193302998901,
+      "reproduce_argv": [
+        ".venv/bin/python",
+        "-m",
+        "benchmarks.upde_time_varying_omega_benchmark",
+        "--parity-gate",
+        "--output",
+        "<output.json>"
+      ],
+      "results": {
+        "acceptance_passed": 1,
+        "acceptance_thresholds_json": "{\"backend_order\": [\"rust\", \"webgpu\", \"mojo\", \"julia\", \"go\", \"python\"], \"production_timing_claim\": false, \"require_all_available_parity\": true, \"require_python_reference\": true, \"require_stateful_vs_schedule_parity\": true}",
+        "all_available_passed": 1,
+        "available_backend_count": 5,
+        "backend_count": 6,
+        "backend_records_json": "[{\"backend\": \"rust\", \"matrix_sha256\": \"bac388af44caf569eec358950671e25f307b37d179a39581c6e73720e8f68a53\", \"max_abs_error\": 0.0, \"ms_per_call\": 0.04132500180276111, \"parity_passed\": true, \"status\": \"available\", \"tolerance\": 1e-12, \"unavailable_reason\": \"\"}, {\"backend\": \"webgpu\", \"matrix_sha256\": null, \"max_abs_error\": null, \"ms_per_call\": null, \"parity_passed\": false, \"status\": \"unavailable\", \"tolerance\": 1e-09, \"unavailable_reason\": \"schedule backend is not installed\"}, {\"backend\": \"mojo\", \"matrix_sha256\": \"bac388af44caf569eec358950671e25f307b37d179a39581c6e73720e8f68a53\", \"max_abs_error\": 0.0, \"ms_per_call\": 47.21401999995578, \"parity_passed\": true, \"status\": \"available\", \"tolerance\": 1e-09, \"unavailable_reason\": \"\"}, {\"backend\": \"julia\", \"matrix_sha256\": \"bac388af44caf569eec358950671e25f307b37d179a39581c6e73720e8f68a53\", \"max_abs_error\": 0.0, \"ms_per_call\": 11280.814770994766, \"parity_passed\": true, \"status\": \"available\", \"tolerance\": 1e-10, \"unavailable_reason\": \"\"}, {\"backend\": \"go\", \"matrix_sha256\": \"bac388af44caf569eec358950671e25f307b37d179a39581c6e73720e8f68a53\", \"max_abs_error\": 0.0, \"ms_per_call\": 4.727350999019109, \"parity_passed\": true, \"status\": \"available\", \"tolerance\": 1e-10, \"unavailable_reason\": \"\"}, {\"backend\": \"python\", \"matrix_sha256\": \"bac388af44caf569eec358950671e25f307b37d179a39581c6e73720e8f68a53\", \"max_abs_error\": 0.0, \"ms_per_call\": 0.7971680024638772, \"parity_passed\": true, \"status\": \"available\", \"tolerance\": 0.0, \"unavailable_reason\": \"\"}]",
+        "benchmark_evidence_kind": "local_regression_non_isolated",
+        "benchmark_sha256": "78fd46cc0aa0ee5444a931e88fa5a5cd1d739c13ed83516c1684d8b281432f9a",
+        "calls": 1,
+        "isolation_method": "none",
+        "n": 8,
+        "n_steps": 8,
+        "parity_pass_count": 5,
+        "production_timing_claim": 0,
+        "reference_matrix_sha256": "bac388af44caf569eec358950671e25f307b37d179a39581c6e73720e8f68a53",
+        "schedule_sha256": "1f3676c8618e6d16aa75cfb1091ec55d6b38baf378e1097cae0a9c469ec831be",
+        "seed": 2026,
+        "stateful_schedule_abs_error": 0.0,
+        "steps_per_second": 0.7058507813154752,
+        "suite": "upde_time_varying_omega_polyglot_gate",
+        "unavailable_backend_count": 1,
+        "wall_time_s": 11.33384025599662
+      },
+      "source_freeze_matches_after_job": true
+    },
+    "sparse-absent": {
+      "captured_output_sha256": "4efd208a7615a7bff8949224216331bcc9fc975f4b78feb558f7b7de581ed873",
+      "command_note": "Output and installed Playwright package paths are placeholders; all measurement arguments are the executed arguments.",
+      "environment_overrides": {
+        "JAX_PLATFORMS": "cpu",
+        "PYTHONPATH": "src"
+      },
+      "exit_code": 0,
+      "finished_utc": "2026-10-01T02:32:54.217422+00:00",
+      "host_context_after": {
+        "allowed_cpu_ids": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "author_owned_heavy_jobs": "only this sequential comparison worker",
+        "core_reservation": "none; inherited affinity is not exclusive",
+        "cpu_frequency_context": {
+          "0": {
+            "scaling_cur_freq": "3700000",
+            "scaling_governor": "powersave"
+          },
+          "1": {
+            "scaling_cur_freq": "3700147",
+            "scaling_governor": "powersave"
+          },
+          "10": {
+            "scaling_cur_freq": "3700222",
+            "scaling_governor": "powersave"
+          },
+          "11": {
+            "scaling_cur_freq": "3699962",
+            "scaling_governor": "powersave"
+          },
+          "2": {
+            "scaling_cur_freq": "3699962",
+            "scaling_governor": "powersave"
+          },
+          "3": {
+            "scaling_cur_freq": "3700000",
+            "scaling_governor": "powersave"
+          },
+          "4": {
+            "scaling_cur_freq": "3700037",
+            "scaling_governor": "powersave"
+          },
+          "5": {
+            "scaling_cur_freq": "3700000",
+            "scaling_governor": "powersave"
+          },
+          "6": {
+            "scaling_cur_freq": "3700000",
+            "scaling_governor": "powersave"
+          },
+          "7": {
+            "scaling_cur_freq": "3700000",
+            "scaling_governor": "powersave"
+          },
+          "8": {
+            "scaling_cur_freq": "3700000",
+            "scaling_governor": "powersave"
+          },
+          "9": {
+            "scaling_cur_freq": "3700000",
+            "scaling_governor": "powersave"
+          }
+        },
+        "isolation_method": "none; shared workstation",
+        "load_average_1_5_15": [
+          38.15625,
+          35.44677734375,
+          33.94140625
+        ],
+        "other_heavy_jobs": "unknown; no whole-host inventory performed",
+        "recorded_utc": "2026-10-01T02:32:54.217422+00:00"
+      },
+      "host_context_before": {
+        "allowed_cpu_ids": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "author_owned_heavy_jobs": "only this sequential comparison worker",
+        "core_reservation": "none; inherited affinity is not exclusive",
+        "cpu_frequency_context": {
+          "0": {
+            "scaling_cur_freq": "3600036",
+            "scaling_governor": "powersave"
+          },
+          "1": {
+            "scaling_cur_freq": "3600036",
+            "scaling_governor": "powersave"
+          },
+          "10": {
+            "scaling_cur_freq": "3600759",
+            "scaling_governor": "powersave"
+          },
+          "11": {
+            "scaling_cur_freq": "3600472",
+            "scaling_governor": "powersave"
+          },
+          "2": {
+            "scaling_cur_freq": "3600071",
+            "scaling_governor": "powersave"
+          },
+          "3": {
+            "scaling_cur_freq": "3599243",
+            "scaling_governor": "powersave"
+          },
+          "4": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "5": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "6": {
+            "scaling_cur_freq": "3600108",
+            "scaling_governor": "powersave"
+          },
+          "7": {
+            "scaling_cur_freq": "3600506",
+            "scaling_governor": "powersave"
+          },
+          "8": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "9": {
+            "scaling_cur_freq": "3600795",
+            "scaling_governor": "powersave"
+          }
+        },
+        "isolation_method": "none; shared workstation",
+        "load_average_1_5_15": [
+          40.6884765625,
+          34.99365234375,
+          33.6494140625
+        ],
+        "other_heavy_jobs": "unknown; no whole-host inventory performed",
+        "recorded_utc": "2026-10-01T02:31:09.750786+00:00"
+      },
+      "measured_source_sha256_after_job": {
+        "benchmarks/engine_comparison.py": "71fa6ded0f84e8bafdff71286896fd1d7a4ef7847718c315c9e4c402032080c9",
+        "benchmarks/sparse_benchmark.py": "55db13c84a3f2b71c69d0e073e1ab507294ce0bd04cdfd65714b15abe7ed442a",
+        "benchmarks/upde_doppler_benchmark.py": "095f3a8447e0859924df64e45e1cc91a1e98d92b72ae4aa8b9bf6c96d21709d2",
+        "benchmarks/upde_engine_benchmark.py": "fc7bbf7a3ffc84102da1094968d5a8f6818153e4e94f8a3eef9731a92e2aaeba",
+        "benchmarks/upde_moving_frame_benchmark.py": "ae0750e808747ccc3b2550cde46ad60e26b86691220598def54948bb3541cf94",
+        "benchmarks/upde_phase_wrapping_benchmark.py": "d2d153cd115dcc3742bbddc57b6945328929f82f32c036609248edc7b646f530",
+        "benchmarks/upde_time_varying_omega_benchmark.py": "c0c103e8d46af094da386fc7791de8cf3f1596a4aabe1dfa2246ab913797f19b",
+        "benchmarks/upde_webgpu_benchmark.py": "e195a5122d5144d908e3db029ea5094a76f09182502405967229836d560da3ab",
+        "go/upde_engine.go": "1a93107c3fc484a88a47bb914ec9ee56c4545e0f7fa351be5b5c8ad2e3f1f16a",
+        "julia/upde_engine.jl": "7643b1d7c25ebcdb40753e744570824aede9042ab24617da024c03ef7a902e14",
+        "mojo/upde_engine.mojo": "7b689a721713964cb906fa3696d080c4796c41e830d2738f584660089be20201",
+        "native-tests/test_sparse_phase_wrapping.py": "13cbf640a1600cc3569e5bbb680bc4f27f9f17623e4287f8715baabed90713dd",
+        "native-tests/test_upde_runtime_phase_wrapping.py": "d2d7664e9ce6159efcf3686d0b08c9ab970b0f3fa0f1405a8a323fab68ce5ccb",
+        "native-tests/test_upde_stepper_phase_wrapping.py": "516b194ed5895296ea48588ef36751e01a932d020595167e31d15cb8c3334df6",
+        "spo-kernel/crates/spo-engine/src/sparse_upde.rs": "434b5ccd6f4ec625a1956a5f3fddc4b7813969a2b2ec2f781bf907b2315c3c59",
+        "spo-kernel/crates/spo-engine/src/upde.rs": "9bdcb23b2a81dd15e265a65e2e73a11f51edc00869cac971bb90e642a2a45856",
+        "src/juliacall.pyi": "2a07cc2a5db21ccf7759a0ab08bd5662c3374469df9c9ec9b2d60caebf2d3a2e",
+        "src/scpn_phase_orchestrator/experimental/accelerators/upde/_doppler_julia.py": "cec0690ae4bf6db942b57c335de5477d558a1a74974272995a66a4758102dd36",
+        "src/scpn_phase_orchestrator/experimental/accelerators/upde/_engine_julia.py": "5fa109f2a181b6dbb51b6318d5f12c2e43aaa67fe3e4cf1d1a5ade4fe2208d37",
+        "src/scpn_phase_orchestrator/experimental/accelerators/upde/_engine_webgpu.py": "e75a4dc870a86c5da3ed23824b978ea1e24503fcf709f627b88371ee2bf7eb21",
+        "src/scpn_phase_orchestrator/experimental/accelerators/upde/_moving_frame_julia.py": "a52e4adfddb239280f8228afa9ceac43305fb12db547edc0a0182737bc091b1c",
+        "src/scpn_phase_orchestrator/nn/functional.py": "cdd25fe83a6e5311b7cd51116cc1f70ac7093378a8cb96be2f751a2b7c056c80",
+        "src/scpn_phase_orchestrator/upde/_engine_validation.py": "877e2dab64cf00065e579893b4a56e8196e5468c4530efd14c8a0bdf68364896",
+        "src/scpn_phase_orchestrator/upde/_jax_phase_wrap.py": "08b0ee1700fc085c089a4df0cc1c8759406ccc0f794a71537349c21a4d3c88cf",
+        "src/scpn_phase_orchestrator/upde/_phase_wrap.py": "5551ef413db67a5027e9e72379c3a903320f0c272dba8105c297a3760f6a5dbd",
+        "src/scpn_phase_orchestrator/upde/_ref_kernel.py": "760f7e5eeb1da4cccdc07053001bd2234e64c56eb42ca6782597ce3cef9c6e9b",
+        "src/scpn_phase_orchestrator/upde/_run.py": "2a06ad90a7d02725679b96b6e72dcdfc8d4b6c00ad2e3d5a551c0e122562cfd3",
+        "src/scpn_phase_orchestrator/upde/engine.py": "85596d08b75b5101983ad36040186535a8681ce454304a6ee30663846954fce6",
+        "src/scpn_phase_orchestrator/upde/jax_engine.py": "fcb4038b9973bf43c826aab2c49160ae3aac3583136da468bce93306637b687c",
+        "src/scpn_phase_orchestrator/upde/sparse_engine.py": "c6aa5665e7d0062ca16b4f9ba2d3148297d5baed61111a797bcc852810a99775",
+        "tests/test_nn_kuramoto_phase_wrapping.py": "cbda487ee7d428435d356d6a9d76366e175539b16ade807a969ba41915e4f33a",
+        "tests/test_sparse_engine.py": "445249c55f7594983967c6b58bc3c623b4d3da18012bb1c6ea23fd275b19f23d",
+        "tests/test_sparse_engine_phase_wrapping.py": "2db3bad4ab9f0fb6ce9b2444f0e86c5f90edbe295535c17b4ab63f187c18de5b",
+        "tests/test_upde_engine_phase_wrapping.py": "25756ce867c423797485870f6f7df737f03e4edc82d26774b3d455f1aa84427a",
+        "tests/test_upde_jax_phase_wrap.py": "30694905b2de23cd17d772a68d9692791c00deb7a06095fab2c78a64cb1693e1",
+        "tests/test_upde_phase_wrap.py": "f181b7c301b31f8e6b4c4ef056d426d2ea434adb5579c846a8977de6e49839a3",
+        "tests/test_upde_phase_wrapping_benchmark.py": "9c05aecc602dd2042697fbaa6152b71db01cd37d3eaeb608bb0fe9b16f650a16",
+        "tests/test_upde_webgpu_phase_wrapping.py": "a034019d68c289d9ab590493cdb0c0f55d4a2c886db0feb53aa358a0d0c52901",
+        "tools/run_webgpu_phase_benchmark.py": "76d26d4667645781d4ac56bc0254c8d63195dee2b3a6d6dc84e789f675e9a969"
+      },
+      "process_elapsed_s": 104.47306152099918,
+      "reproduce_argv": [
+        "/usr/bin/python3",
+        "-m",
+        "benchmarks.sparse_benchmark"
+      ],
+      "results": [
+        {
+          "density": 0.01,
+          "edges": 9963,
+          "input_sha256": "aa44a59d3f4c536a9ca199569b16348c3e168c957691978252236840f88138e2",
+          "kernel_available": false,
+          "max_phase_error": 9.992007221626409e-16,
+          "median_step_us": 33648.163819962065,
+          "n": 1000,
+          "numpy": "2.2.6",
+          "order_parameter": 0.01977720555465984,
+          "python": "3.12.3",
+          "repeats": 3,
+          "scipy": "1.15.3",
+          "seconds": [
+            2.9083061659985106,
+            3.811666128996876,
+            3.3648163819962065
+          ],
+          "steps": 100
+        },
+        {
+          "density": 0.001,
+          "edges": 99936,
+          "input_sha256": "d29211879702a863b626fe0227a11136a43f2b1d6973ecf470b2b09ec9f9817f",
+          "kernel_available": false,
+          "max_phase_error": 2.6645352591003757e-15,
+          "median_step_us": 313791.71546999714,
+          "n": 10000,
+          "numpy": "2.2.6",
+          "order_parameter": 0.006291721012298108,
+          "python": "3.12.3",
+          "repeats": 3,
+          "scipy": "1.15.3",
+          "seconds": [
+            34.43916858600278,
+            31.379171546999714,
+            27.808948184996552
+          ],
+          "steps": 100
+        }
+      ],
+      "source_freeze_matches_after_job": true
+    },
+    "sparse-native": {
+      "captured_output_sha256": "da63120a2550435c3c37ed2d969cf96890e5077022080a4d118d15d075a3daea",
+      "command_note": "Output and installed Playwright package paths are placeholders; all measurement arguments are the executed arguments.",
+      "environment_overrides": {
+        "JAX_PLATFORMS": "cpu"
+      },
+      "exit_code": 0,
+      "finished_utc": "2026-10-01T02:30:55.986771+00:00",
+      "host_context_after": {
+        "allowed_cpu_ids": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "author_owned_heavy_jobs": "only this sequential comparison worker",
+        "core_reservation": "none; inherited affinity is not exclusive",
+        "cpu_frequency_context": {
+          "0": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "1": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "10": {
+            "scaling_cur_freq": "3600036",
+            "scaling_governor": "powersave"
+          },
+          "11": {
+            "scaling_cur_freq": "3600036",
+            "scaling_governor": "powersave"
+          },
+          "2": {
+            "scaling_cur_freq": "3600036",
+            "scaling_governor": "powersave"
+          },
+          "3": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "4": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "5": {
+            "scaling_cur_freq": "3600045",
+            "scaling_governor": "powersave"
+          },
+          "6": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "7": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "8": {
+            "scaling_cur_freq": "3600036",
+            "scaling_governor": "powersave"
+          },
+          "9": {
+            "scaling_cur_freq": "3599963",
+            "scaling_governor": "powersave"
+          }
+        },
+        "isolation_method": "none; shared workstation",
+        "load_average_1_5_15": [
+          40.4609375,
+          34.65185546875,
+          33.5185546875
+        ],
+        "other_heavy_jobs": "unknown; no whole-host inventory performed",
+        "recorded_utc": "2026-10-01T02:30:55.986771+00:00"
+      },
+      "host_context_before": {
+        "allowed_cpu_ids": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "author_owned_heavy_jobs": "only this sequential comparison worker",
+        "core_reservation": "none; inherited affinity is not exclusive",
+        "cpu_frequency_context": {
+          "0": {
+            "scaling_cur_freq": "3599963",
+            "scaling_governor": "powersave"
+          },
+          "1": {
+            "scaling_cur_freq": "3600036",
+            "scaling_governor": "powersave"
+          },
+          "10": {
+            "scaling_cur_freq": "3599963",
+            "scaling_governor": "powersave"
+          },
+          "11": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "2": {
+            "scaling_cur_freq": "3600036",
+            "scaling_governor": "powersave"
+          },
+          "3": {
+            "scaling_cur_freq": "3599963",
+            "scaling_governor": "powersave"
+          },
+          "4": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "5": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "6": {
+            "scaling_cur_freq": "3600036",
+            "scaling_governor": "powersave"
+          },
+          "7": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "8": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "9": {
+            "scaling_cur_freq": "3600108",
+            "scaling_governor": "powersave"
+          }
+        },
+        "isolation_method": "none; shared workstation",
+        "load_average_1_5_15": [
+          40.4609375,
+          34.65185546875,
+          33.5185546875
+        ],
+        "other_heavy_jobs": "unknown; no whole-host inventory performed",
+        "recorded_utc": "2026-10-01T02:30:54.049602+00:00"
+      },
+      "measured_source_sha256_after_job": {
+        "benchmarks/engine_comparison.py": "71fa6ded0f84e8bafdff71286896fd1d7a4ef7847718c315c9e4c402032080c9",
+        "benchmarks/sparse_benchmark.py": "55db13c84a3f2b71c69d0e073e1ab507294ce0bd04cdfd65714b15abe7ed442a",
+        "benchmarks/upde_doppler_benchmark.py": "095f3a8447e0859924df64e45e1cc91a1e98d92b72ae4aa8b9bf6c96d21709d2",
+        "benchmarks/upde_engine_benchmark.py": "fc7bbf7a3ffc84102da1094968d5a8f6818153e4e94f8a3eef9731a92e2aaeba",
+        "benchmarks/upde_moving_frame_benchmark.py": "ae0750e808747ccc3b2550cde46ad60e26b86691220598def54948bb3541cf94",
+        "benchmarks/upde_phase_wrapping_benchmark.py": "d2d153cd115dcc3742bbddc57b6945328929f82f32c036609248edc7b646f530",
+        "benchmarks/upde_time_varying_omega_benchmark.py": "c0c103e8d46af094da386fc7791de8cf3f1596a4aabe1dfa2246ab913797f19b",
+        "benchmarks/upde_webgpu_benchmark.py": "e195a5122d5144d908e3db029ea5094a76f09182502405967229836d560da3ab",
+        "go/upde_engine.go": "1a93107c3fc484a88a47bb914ec9ee56c4545e0f7fa351be5b5c8ad2e3f1f16a",
+        "julia/upde_engine.jl": "7643b1d7c25ebcdb40753e744570824aede9042ab24617da024c03ef7a902e14",
+        "mojo/upde_engine.mojo": "7b689a721713964cb906fa3696d080c4796c41e830d2738f584660089be20201",
+        "native-tests/test_sparse_phase_wrapping.py": "13cbf640a1600cc3569e5bbb680bc4f27f9f17623e4287f8715baabed90713dd",
+        "native-tests/test_upde_runtime_phase_wrapping.py": "d2d7664e9ce6159efcf3686d0b08c9ab970b0f3fa0f1405a8a323fab68ce5ccb",
+        "native-tests/test_upde_stepper_phase_wrapping.py": "516b194ed5895296ea48588ef36751e01a932d020595167e31d15cb8c3334df6",
+        "spo-kernel/crates/spo-engine/src/sparse_upde.rs": "434b5ccd6f4ec625a1956a5f3fddc4b7813969a2b2ec2f781bf907b2315c3c59",
+        "spo-kernel/crates/spo-engine/src/upde.rs": "9bdcb23b2a81dd15e265a65e2e73a11f51edc00869cac971bb90e642a2a45856",
+        "src/juliacall.pyi": "2a07cc2a5db21ccf7759a0ab08bd5662c3374469df9c9ec9b2d60caebf2d3a2e",
+        "src/scpn_phase_orchestrator/experimental/accelerators/upde/_doppler_julia.py": "cec0690ae4bf6db942b57c335de5477d558a1a74974272995a66a4758102dd36",
+        "src/scpn_phase_orchestrator/experimental/accelerators/upde/_engine_julia.py": "5fa109f2a181b6dbb51b6318d5f12c2e43aaa67fe3e4cf1d1a5ade4fe2208d37",
+        "src/scpn_phase_orchestrator/experimental/accelerators/upde/_engine_webgpu.py": "e75a4dc870a86c5da3ed23824b978ea1e24503fcf709f627b88371ee2bf7eb21",
+        "src/scpn_phase_orchestrator/experimental/accelerators/upde/_moving_frame_julia.py": "a52e4adfddb239280f8228afa9ceac43305fb12db547edc0a0182737bc091b1c",
+        "src/scpn_phase_orchestrator/nn/functional.py": "cdd25fe83a6e5311b7cd51116cc1f70ac7093378a8cb96be2f751a2b7c056c80",
+        "src/scpn_phase_orchestrator/upde/_engine_validation.py": "877e2dab64cf00065e579893b4a56e8196e5468c4530efd14c8a0bdf68364896",
+        "src/scpn_phase_orchestrator/upde/_jax_phase_wrap.py": "08b0ee1700fc085c089a4df0cc1c8759406ccc0f794a71537349c21a4d3c88cf",
+        "src/scpn_phase_orchestrator/upde/_phase_wrap.py": "5551ef413db67a5027e9e72379c3a903320f0c272dba8105c297a3760f6a5dbd",
+        "src/scpn_phase_orchestrator/upde/_ref_kernel.py": "760f7e5eeb1da4cccdc07053001bd2234e64c56eb42ca6782597ce3cef9c6e9b",
+        "src/scpn_phase_orchestrator/upde/_run.py": "2a06ad90a7d02725679b96b6e72dcdfc8d4b6c00ad2e3d5a551c0e122562cfd3",
+        "src/scpn_phase_orchestrator/upde/engine.py": "85596d08b75b5101983ad36040186535a8681ce454304a6ee30663846954fce6",
+        "src/scpn_phase_orchestrator/upde/jax_engine.py": "fcb4038b9973bf43c826aab2c49160ae3aac3583136da468bce93306637b687c",
+        "src/scpn_phase_orchestrator/upde/sparse_engine.py": "c6aa5665e7d0062ca16b4f9ba2d3148297d5baed61111a797bcc852810a99775",
+        "tests/test_nn_kuramoto_phase_wrapping.py": "cbda487ee7d428435d356d6a9d76366e175539b16ade807a969ba41915e4f33a",
+        "tests/test_sparse_engine.py": "445249c55f7594983967c6b58bc3c623b4d3da18012bb1c6ea23fd275b19f23d",
+        "tests/test_sparse_engine_phase_wrapping.py": "2db3bad4ab9f0fb6ce9b2444f0e86c5f90edbe295535c17b4ab63f187c18de5b",
+        "tests/test_upde_engine_phase_wrapping.py": "25756ce867c423797485870f6f7df737f03e4edc82d26774b3d455f1aa84427a",
+        "tests/test_upde_jax_phase_wrap.py": "30694905b2de23cd17d772a68d9692791c00deb7a06095fab2c78a64cb1693e1",
+        "tests/test_upde_phase_wrap.py": "f181b7c301b31f8e6b4c4ef056d426d2ea434adb5579c846a8977de6e49839a3",
+        "tests/test_upde_phase_wrapping_benchmark.py": "9c05aecc602dd2042697fbaa6152b71db01cd37d3eaeb608bb0fe9b16f650a16",
+        "tests/test_upde_webgpu_phase_wrapping.py": "a034019d68c289d9ab590493cdb0c0f55d4a2c886db0feb53aa358a0d0c52901",
+        "tools/run_webgpu_phase_benchmark.py": "76d26d4667645781d4ac56bc0254c8d63195dee2b3a6d6dc84e789f675e9a969"
+      },
+      "process_elapsed_s": 1.9417657070007408,
+      "reproduce_argv": [
+        ".venv/bin/python",
+        "-m",
+        "benchmarks.sparse_benchmark"
+      ],
+      "results": [
+        {
+          "density": 0.01,
+          "edges": 9963,
+          "input_sha256": "aa44a59d3f4c536a9ca199569b16348c3e168c957691978252236840f88138e2",
+          "kernel_available": true,
+          "max_phase_error": 9.43689570931383e-16,
+          "median_step_us": 240.82691001240164,
+          "n": 1000,
+          "numpy": "2.5.3",
+          "order_parameter": 0.019777205554659845,
+          "python": "3.12.3",
+          "repeats": 3,
+          "scipy": "1.18.1",
+          "seconds": [
+            0.02558931999374181,
+            0.023376851000648458,
+            0.024082691001240164
+          ],
+          "steps": 100
+        },
+        {
+          "density": 0.001,
+          "edges": 99936,
+          "input_sha256": "d29211879702a863b626fe0227a11136a43f2b1d6973ecf470b2b09ec9f9817f",
+          "kernel_available": true,
+          "max_phase_error": 1.7763568394002505e-15,
+          "median_step_us": 3242.3112000105903,
+          "n": 10000,
+          "numpy": "2.5.3",
+          "order_parameter": 0.006291721012298109,
+          "python": "3.12.3",
+          "repeats": 3,
+          "scipy": "1.18.1",
+          "seconds": [
+            0.30028096600290155,
+            0.33945954000228085,
+            0.324231120001059
+          ],
+          "steps": 100
+        }
+      ],
+      "source_freeze_matches_after_job": true
+    },
+    "webgpu-real": {
+      "captured_output_sha256": "ff0d5437169fe7c4a004fe5669616689aa480b468c21cb9162166abae18c9ffc",
+      "command_note": "Output and installed Playwright package paths are placeholders; all measurement arguments are the executed arguments.",
+      "environment_overrides": {
+        "JAX_PLATFORMS": "cpu"
+      },
+      "exit_code": 0,
+      "finished_utc": "2026-10-01T02:37:44.111773+00:00",
+      "host_context_after": {
+        "allowed_cpu_ids": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "author_owned_heavy_jobs": "only this sequential comparison worker",
+        "core_reservation": "none; inherited affinity is not exclusive",
+        "cpu_frequency_context": {
+          "0": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "1": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "10": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "11": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "2": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "3": {
+            "scaling_cur_freq": "3599747",
+            "scaling_governor": "powersave"
+          },
+          "4": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "5": {
+            "scaling_cur_freq": "3600144",
+            "scaling_governor": "powersave"
+          },
+          "6": {
+            "scaling_cur_freq": "3600108",
+            "scaling_governor": "powersave"
+          },
+          "7": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "8": {
+            "scaling_cur_freq": "3600216",
+            "scaling_governor": "powersave"
+          },
+          "9": {
+            "scaling_cur_freq": "3600216",
+            "scaling_governor": "powersave"
+          }
+        },
+        "isolation_method": "none; shared workstation",
+        "load_average_1_5_15": [
+          40.578125,
+          36.79736328125,
+          34.68994140625
+        ],
+        "other_heavy_jobs": "unknown; no whole-host inventory performed",
+        "recorded_utc": "2026-10-01T02:37:44.111773+00:00"
+      },
+      "host_context_before": {
+        "allowed_cpu_ids": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "author_owned_heavy_jobs": "only this sequential comparison worker",
+        "core_reservation": "none; inherited affinity is not exclusive",
+        "cpu_frequency_context": {
+          "0": {
+            "scaling_cur_freq": "3599963",
+            "scaling_governor": "powersave"
+          },
+          "1": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "10": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "11": {
+            "scaling_cur_freq": "3600036",
+            "scaling_governor": "powersave"
+          },
+          "2": {
+            "scaling_cur_freq": "3600036",
+            "scaling_governor": "powersave"
+          },
+          "3": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "4": {
+            "scaling_cur_freq": "3600036",
+            "scaling_governor": "powersave"
+          },
+          "5": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "6": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          },
+          "7": {
+            "scaling_cur_freq": "3599963",
+            "scaling_governor": "powersave"
+          },
+          "8": {
+            "scaling_cur_freq": "3599963",
+            "scaling_governor": "powersave"
+          },
+          "9": {
+            "scaling_cur_freq": "3600000",
+            "scaling_governor": "powersave"
+          }
+        },
+        "isolation_method": "none; shared workstation",
+        "load_average_1_5_15": [
+          40.4541015625,
+          36.70947265625,
+          34.650390625
+        ],
+        "other_heavy_jobs": "unknown; no whole-host inventory performed",
+        "recorded_utc": "2026-10-01T02:37:39.615521+00:00"
+      },
+      "measured_source_sha256_after_job": {
+        "benchmarks/engine_comparison.py": "71fa6ded0f84e8bafdff71286896fd1d7a4ef7847718c315c9e4c402032080c9",
+        "benchmarks/sparse_benchmark.py": "55db13c84a3f2b71c69d0e073e1ab507294ce0bd04cdfd65714b15abe7ed442a",
+        "benchmarks/upde_doppler_benchmark.py": "095f3a8447e0859924df64e45e1cc91a1e98d92b72ae4aa8b9bf6c96d21709d2",
+        "benchmarks/upde_engine_benchmark.py": "fc7bbf7a3ffc84102da1094968d5a8f6818153e4e94f8a3eef9731a92e2aaeba",
+        "benchmarks/upde_moving_frame_benchmark.py": "ae0750e808747ccc3b2550cde46ad60e26b86691220598def54948bb3541cf94",
+        "benchmarks/upde_phase_wrapping_benchmark.py": "d2d153cd115dcc3742bbddc57b6945328929f82f32c036609248edc7b646f530",
+        "benchmarks/upde_time_varying_omega_benchmark.py": "c0c103e8d46af094da386fc7791de8cf3f1596a4aabe1dfa2246ab913797f19b",
+        "benchmarks/upde_webgpu_benchmark.py": "e195a5122d5144d908e3db029ea5094a76f09182502405967229836d560da3ab",
+        "go/upde_engine.go": "1a93107c3fc484a88a47bb914ec9ee56c4545e0f7fa351be5b5c8ad2e3f1f16a",
+        "julia/upde_engine.jl": "7643b1d7c25ebcdb40753e744570824aede9042ab24617da024c03ef7a902e14",
+        "mojo/upde_engine.mojo": "7b689a721713964cb906fa3696d080c4796c41e830d2738f584660089be20201",
+        "native-tests/test_sparse_phase_wrapping.py": "13cbf640a1600cc3569e5bbb680bc4f27f9f17623e4287f8715baabed90713dd",
+        "native-tests/test_upde_runtime_phase_wrapping.py": "d2d7664e9ce6159efcf3686d0b08c9ab970b0f3fa0f1405a8a323fab68ce5ccb",
+        "native-tests/test_upde_stepper_phase_wrapping.py": "516b194ed5895296ea48588ef36751e01a932d020595167e31d15cb8c3334df6",
+        "spo-kernel/crates/spo-engine/src/sparse_upde.rs": "434b5ccd6f4ec625a1956a5f3fddc4b7813969a2b2ec2f781bf907b2315c3c59",
+        "spo-kernel/crates/spo-engine/src/upde.rs": "9bdcb23b2a81dd15e265a65e2e73a11f51edc00869cac971bb90e642a2a45856",
+        "src/juliacall.pyi": "2a07cc2a5db21ccf7759a0ab08bd5662c3374469df9c9ec9b2d60caebf2d3a2e",
+        "src/scpn_phase_orchestrator/experimental/accelerators/upde/_doppler_julia.py": "cec0690ae4bf6db942b57c335de5477d558a1a74974272995a66a4758102dd36",
+        "src/scpn_phase_orchestrator/experimental/accelerators/upde/_engine_julia.py": "5fa109f2a181b6dbb51b6318d5f12c2e43aaa67fe3e4cf1d1a5ade4fe2208d37",
+        "src/scpn_phase_orchestrator/experimental/accelerators/upde/_engine_webgpu.py": "e75a4dc870a86c5da3ed23824b978ea1e24503fcf709f627b88371ee2bf7eb21",
+        "src/scpn_phase_orchestrator/experimental/accelerators/upde/_moving_frame_julia.py": "a52e4adfddb239280f8228afa9ceac43305fb12db547edc0a0182737bc091b1c",
+        "src/scpn_phase_orchestrator/nn/functional.py": "cdd25fe83a6e5311b7cd51116cc1f70ac7093378a8cb96be2f751a2b7c056c80",
+        "src/scpn_phase_orchestrator/upde/_engine_validation.py": "877e2dab64cf00065e579893b4a56e8196e5468c4530efd14c8a0bdf68364896",
+        "src/scpn_phase_orchestrator/upde/_jax_phase_wrap.py": "08b0ee1700fc085c089a4df0cc1c8759406ccc0f794a71537349c21a4d3c88cf",
+        "src/scpn_phase_orchestrator/upde/_phase_wrap.py": "5551ef413db67a5027e9e72379c3a903320f0c272dba8105c297a3760f6a5dbd",
+        "src/scpn_phase_orchestrator/upde/_ref_kernel.py": "760f7e5eeb1da4cccdc07053001bd2234e64c56eb42ca6782597ce3cef9c6e9b",
+        "src/scpn_phase_orchestrator/upde/_run.py": "2a06ad90a7d02725679b96b6e72dcdfc8d4b6c00ad2e3d5a551c0e122562cfd3",
+        "src/scpn_phase_orchestrator/upde/engine.py": "85596d08b75b5101983ad36040186535a8681ce454304a6ee30663846954fce6",
+        "src/scpn_phase_orchestrator/upde/jax_engine.py": "fcb4038b9973bf43c826aab2c49160ae3aac3583136da468bce93306637b687c",
+        "src/scpn_phase_orchestrator/upde/sparse_engine.py": "c6aa5665e7d0062ca16b4f9ba2d3148297d5baed61111a797bcc852810a99775",
+        "tests/test_nn_kuramoto_phase_wrapping.py": "cbda487ee7d428435d356d6a9d76366e175539b16ade807a969ba41915e4f33a",
+        "tests/test_sparse_engine.py": "445249c55f7594983967c6b58bc3c623b4d3da18012bb1c6ea23fd275b19f23d",
+        "tests/test_sparse_engine_phase_wrapping.py": "2db3bad4ab9f0fb6ce9b2444f0e86c5f90edbe295535c17b4ab63f187c18de5b",
+        "tests/test_upde_engine_phase_wrapping.py": "25756ce867c423797485870f6f7df737f03e4edc82d26774b3d455f1aa84427a",
+        "tests/test_upde_jax_phase_wrap.py": "30694905b2de23cd17d772a68d9692791c00deb7a06095fab2c78a64cb1693e1",
+        "tests/test_upde_phase_wrap.py": "f181b7c301b31f8e6b4c4ef056d426d2ea434adb5579c846a8977de6e49839a3",
+        "tests/test_upde_phase_wrapping_benchmark.py": "9c05aecc602dd2042697fbaa6152b71db01cd37d3eaeb608bb0fe9b16f650a16",
+        "tests/test_upde_webgpu_phase_wrapping.py": "a034019d68c289d9ab590493cdb0c0f55d4a2c886db0feb53aa358a0d0c52901",
+        "tools/run_webgpu_phase_benchmark.py": "76d26d4667645781d4ac56bc0254c8d63195dee2b3a6d6dc84e789f675e9a969"
+      },
+      "process_elapsed_s": 4.5041206019959645,
+      "reproduce_argv": [
+        ".venv/bin/python",
+        "-m",
+        "benchmarks.upde_webgpu_benchmark",
+        "--playwright-package",
+        "<installed-playwright-package>",
+        "--browser-executable",
+        "/usr/bin/google-chrome",
+        "--output",
+        "<output.json>"
+      ],
+      "results": {
+        "adapter": {
+          "architecture": "swiftshader",
+          "description": "",
+          "device": "",
+          "isFallbackAdapter": true,
+          "vendor": "google"
+        },
+        "browserVersion": "154.0.8037.57",
+        "cases": [
+          {
+            "inputBitsAfter": [
+              0,
+              3234402267,
+              3242790875,
+              2147483648,
+              1086918619,
+              1086918618,
+              1048576000
+            ],
+            "inputBitsBefore": [
+              0,
+              3234402267,
+              3242790875,
+              2147483648,
+              1086918619,
+              1086918618,
+              1048576000
+            ],
+            "interior": 6.283185005187988,
+            "msPerCall": 12.666666666666666,
+            "nSubsteps": 1,
+            "negativeZero": [
+              false,
+              false,
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "output": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              6.283185005187988,
+              0.27000001072883606
+            ]
+          },
+          {
+            "inputBitsAfter": [
+              0,
+              3234402267,
+              3242790875,
+              2147483648,
+              1086918619,
+              1086918618,
+              1048576000
+            ],
+            "inputBitsBefore": [
+              0,
+              3234402267,
+              3242790875,
+              2147483648,
+              1086918619,
+              1086918618,
+              1048576000
+            ],
+            "interior": 6.283185005187988,
+            "msPerCall": 34.86666666716337,
+            "nSubsteps": 3,
+            "negativeZero": [
+              false,
+              false,
+              false,
+              false,
+              false,
+              false,
+              false
+            ],
+            "output": [
+              0,
+              0,
+              0,
+              0,
+              0,
+              6.283185005187988,
+              0.26999998092651367
+            ]
+          }
+        ],
+        "coupled": [
+          0.11849603801965714,
+          0.684058666229248
+        ],
+        "deviceLossRefusal": {
+          "name": "AbortError",
+          "reason": "destroyed"
+        },
+        "evidence_kind": "local_regression_non_isolated",
+        "hardwareSpeedupClaim": false,
+        "javascript_sha256": "bd494d9f7d4a9922817c1c8c1800c827670b5d0502c9d489fd75cf7737639deb",
+        "method": "euler",
+        "numericalRefusal": {
+          "error": "RangeError: result[0] is not finite",
+          "inputBitsAfter": [
+            0
+          ],
+          "inputBitsBefore": [
+            0
+          ]
+        },
+        "period": 6.2831854820251465,
+        "recovered": [
+          0.11849603801965714,
+          0.684058666229248
+        ],
+        "refusals": [
+          {
+            "dt": 1e+308,
+            "error": "RangeError: dt must be finite in float32"
+          },
+          {
+            "dt": 1e-300,
+            "error": "RangeError: dt / nSubsteps must be positive and finite in float32"
+          },
+          {
+            "dt": 0,
+            "error": "RangeError: dt / nSubsteps must be positive and finite in float32"
+          },
+          {
+            "dt": -0.01,
+            "error": "RangeError: dt / nSubsteps must be positive and finite in float32"
+          }
+        ],
+        "repeats": 3,
+        "scalarType": "f32",
+        "setupMs": 69,
+        "timingScope": "buffer-upload-submission-readback",
+        "wgsl_sha256": "c1431cdaf4e4cf247f123ac99607dac06b8c6a66e76f5c8b4adcb4b8607aba8c"
+      },
+      "source_freeze_matches_after_job": true
+    }
+  },
+  "measurement_boundary": "shared_host_not_isolated_no_speedup_or_capacity_claim",
+  "measurement_scope": "Dense stateless: nine N/method geometries, 500 steps, one warmup, three calls. Schedule/Doppler/moving: maintained default comparison and acceptance gates. CSR: independent SciPy reference and three fresh repetitions per size in genuine installed/absent-kernel environments. Stateful comparison: all eight maintained variants, aggregate wall time for 1000 public steps at N=16; only ordinary UPDE slots are asserted Rust/NumPy by kernel availability. Phase edge/JAX: first call separated from three raw repetitions. Browser: actual compute and readback including coupled recovery; timings include buffer upload and submission.",
+  "precision_scope": "Five CPU implementations use float64. JAX host and functional Kuramoto were executed in float32 and float64 on CPU. Browser WebGPU Euler uses float32 on Google SwiftShader, a software fallback adapter.",
+  "production_speedup_claim": false,
+  "raw_sample_boundary": "The maintained dense stateless CLI reports means; the maintained stateful CLI reports formatted aggregate times. No per-call samples or quantiles were emitted by those CLIs. CSR and phase edge records retain their emitted raw repetitions. Do not interpret aggregates as P50 or infer a causal speedup across different NumPy environments.",
+  "recorded_utc": "2026-10-01T02:38:52.904210+00:00",
+  "runtime_versions": {
+    "absent_numpy": "2.2.6",
+    "absent_scipy": "1.15.3",
+    "browser": "154.0.8037.57",
+    "embedded_julia": "1.11.9",
+    "go": "1.27.1 linux/amd64",
+    "jax": "0.11.2",
+    "jax_devices": [
+      "cpu:0"
+    ],
+    "mojo": "0.26.2.0 (d627decc)",
+    "native_numpy": "2.5.3",
+    "native_scipy": "1.18.1",
+    "python": "3.12.3",
+    "rustc": "1.98.1 (48a229cea 2026-09-01)",
+    "shell_julia": "1.13.1"
+  },
+  "schema_version": "upde-phase-wrapping-runtime.v1",
+  "solver_source_sha256": {
+    "go/upde_engine.go": "1a93107c3fc484a88a47bb914ec9ee56c4545e0f7fa351be5b5c8ad2e3f1f16a",
+    "julia/upde_engine.jl": "7643b1d7c25ebcdb40753e744570824aede9042ab24617da024c03ef7a902e14",
+    "mojo/upde_engine.mojo": "7b689a721713964cb906fa3696d080c4796c41e830d2738f584660089be20201",
+    "spo-kernel/crates/spo-engine/src/sparse_upde.rs": "434b5ccd6f4ec625a1956a5f3fddc4b7813969a2b2ec2f781bf907b2315c3c59",
+    "spo-kernel/crates/spo-engine/src/upde.rs": "9bdcb23b2a81dd15e265a65e2e73a11f51edc00869cac971bb90e642a2a45856",
+    "src/juliacall.pyi": "2a07cc2a5db21ccf7759a0ab08bd5662c3374469df9c9ec9b2d60caebf2d3a2e",
+    "src/scpn_phase_orchestrator/experimental/accelerators/upde/_doppler_julia.py": "cec0690ae4bf6db942b57c335de5477d558a1a74974272995a66a4758102dd36",
+    "src/scpn_phase_orchestrator/experimental/accelerators/upde/_engine_julia.py": "5fa109f2a181b6dbb51b6318d5f12c2e43aaa67fe3e4cf1d1a5ade4fe2208d37",
+    "src/scpn_phase_orchestrator/experimental/accelerators/upde/_engine_webgpu.py": "e75a4dc870a86c5da3ed23824b978ea1e24503fcf709f627b88371ee2bf7eb21",
+    "src/scpn_phase_orchestrator/experimental/accelerators/upde/_moving_frame_julia.py": "a52e4adfddb239280f8228afa9ceac43305fb12db547edc0a0182737bc091b1c",
+    "src/scpn_phase_orchestrator/nn/functional.py": "cdd25fe83a6e5311b7cd51116cc1f70ac7093378a8cb96be2f751a2b7c056c80",
+    "src/scpn_phase_orchestrator/upde/_engine_validation.py": "877e2dab64cf00065e579893b4a56e8196e5468c4530efd14c8a0bdf68364896",
+    "src/scpn_phase_orchestrator/upde/_jax_phase_wrap.py": "08b0ee1700fc085c089a4df0cc1c8759406ccc0f794a71537349c21a4d3c88cf",
+    "src/scpn_phase_orchestrator/upde/_phase_wrap.py": "5551ef413db67a5027e9e72379c3a903320f0c272dba8105c297a3760f6a5dbd",
+    "src/scpn_phase_orchestrator/upde/_ref_kernel.py": "760f7e5eeb1da4cccdc07053001bd2234e64c56eb42ca6782597ce3cef9c6e9b",
+    "src/scpn_phase_orchestrator/upde/_run.py": "2a06ad90a7d02725679b96b6e72dcdfc8d4b6c00ad2e3d5a551c0e122562cfd3",
+    "src/scpn_phase_orchestrator/upde/engine.py": "85596d08b75b5101983ad36040186535a8681ce454304a6ee30663846954fce6",
+    "src/scpn_phase_orchestrator/upde/jax_engine.py": "fcb4038b9973bf43c826aab2c49160ae3aac3583136da468bce93306637b687c",
+    "src/scpn_phase_orchestrator/upde/sparse_engine.py": "c6aa5665e7d0062ca16b4f9ba2d3148297d5baed61111a797bcc852810a99775"
+  },
+  "source_state": "Measured numerical sources and benchmark drivers before the atomic local commit; per-job hashes identify the measured bytes. Two test docstrings were subsequently corrected to British English, with unchanged executable AST including locations; documentation_only_source_deltas records both measured and current hashes."
+}

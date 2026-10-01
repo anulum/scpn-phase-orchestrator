@@ -97,6 +97,15 @@ counts or stored outputs. CI executes fresh copies, so a reader sees source
 rather than host-specific output while the release gate still proves that every
 cell runs.
 
+When comparing Kuramoto rollouts, use the engine's actual precision and the
+[canonical phase contract](../specs/phase_contract.md#phase-wrapping-in-the-upde-engine).
+JAX device-array gradients belong to the functional API and are defined away
+from the wrap cut; `JaxUPDEEngine` performs validated NumPy host readback. The
+generated WebGPU UPDE benchmark is separate from the WASM demo: it executes
+real float32 Euler compute and reports the actual adapter, including software
+fallback. Reproduce it with `python -m benchmarks.upde_webgpu_benchmark` and
+explicit Playwright/browser paths; see [the runtime data](../reference/data/upde_phase_wrapping_benchmark_2026-10-01.json).
+
 ## Terminal Examples
 
 Run examples from the repository root with `PYTHONPATH=src` for a source

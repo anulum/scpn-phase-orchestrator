@@ -130,6 +130,13 @@ and returns a flat vector:
 Python, Rust/PyO3, Go, Julia, and Mojo source surfaces share the same contract.
 Optional accelerator runtimes are feature-detected; unavailable runtimes are
 reported by the benchmark rather than hidden.
+All five producers canonically project the phase half to float64 `[0, 2*pi)`;
+rounded upper remainders and signed zero map to positive zero while interior
+values remain. Ballistic position transport is unchanged. Nonfinite computed
+phases still refuse; Julia native domain errors become `ValueError` at its
+Python bridge. Public moving-frame schedules require at least one step.
+See the [phase contract](../../specs/phase_contract.md#phase-wrapping-in-the-upde-engine)
+and [current runtime data](../data/upde_phase_wrapping_benchmark_2026-10-01.json).
 The benchmark also records `expected_final_position_sha256`,
 `reference_kinematic_residual_max_m`, `kinematic_residual_contract_passed`,
 `final_position_equation_validated`, `max_abs_velocity_equation_validated`,

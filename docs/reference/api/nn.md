@@ -2,7 +2,7 @@
 
 GPU-first differentiable Kuramoto dynamics for neural network integration via
 JAX and equinox. Every function and layer is JIT-compilable, vmap-compatible,
-and fully differentiable — enabling gradient-based coupling inference,
+and differentiable away from phase-wrap cuts — enabling gradient-based coupling inference,
 synchronisation optimisation, and physics-informed machine learning.
 
 **Requires:** `pip install scpn-phase-orchestrator[nn]` (installs jax + equinox + optax)
@@ -72,6 +72,22 @@ decorated with `@jax.jit` internally or designed to be JIT'd by the caller.
 
 Masked (sparse) variants append `_masked` and take an additional
 `mask: jax.Array` parameter for selective coupling.
+
+The four dense/masked Euler/RK4 primitives project their output using the
+period represented in the input float32 or float64 dtype. A rounded upper
+remainder and signed zero map to positive zero; legitimate interior values,
+including `nextafter(period, 0)`, remain. Forward scans inherit this projection
+at each step. A zero-step scan preserves its initial state. Pure JAX functions
+retain device-array/JIT/autodiff semantics and propagate nonfinite arithmetic;
+they do not add host exceptions inside compiled calculations. Gradients and
+JVPs are meaningful away from the discontinuous phase cut.
+
+`JaxUPDEEngine` is a separate validated host API with NumPy readback. The
+canonical projection described here applies to these Kuramoto primitives;
+Winfree, simplicial, Stuart-Landau and neural-ODE models have their own
+integration and wrapping contracts. Actual CPU float32/float64 diagnostics
+are recorded in the [October 1 runtime data](../data/upde_phase_wrapping_benchmark_2026-10-01.json),
+without a hardware accelerator or speedup claim.
 
 ### Winfree model
 

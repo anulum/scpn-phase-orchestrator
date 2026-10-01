@@ -20,6 +20,13 @@ The numerical core: integrates coupled phase dynamics. 74 files, ~18.3k LOC.
   `cross_layer_alignment`, `stability_proxy`.
 - Order parameter `(R ∈ [0,1], ψ)` via `order_params.compute_order_parameter`.
 
+Dense/CSR Kuramoto producers canonicalise a remainder rounded to the upper
+period and signed zero to positive zero, retaining interior values. Zero-step
+batches return independent unwrapped copies. Nonfinite computed output still
+refuses; a nonfinite phase-computation refusal preserves caller phases and the pre-step
+adaptive proposal, permitting same-instance recovery. Native batch steps
+accepted before a later refusal are not rolled back.
+
 ## Processing model
 
 Integration methods: forward Euler, classical RK4, and adaptive RK45
@@ -39,6 +46,9 @@ Acebrón 2005, Filatrella–Nielsen–Mallick 2008, and others.
 The two JAX engines validate array source types on the host before JAX device
 conversion: boolean, complex, and numeric-string aliases fail closed while
 finite real numeric-object arrays remain compatible.
+JAX Kuramoto output uses the configured float32/float64 period; host readback
+checks conversion overflow and the torus bound. Pure dense/masked JAX
+functional consumers remain JIT/autodiff-compatible away from phase cuts.
 
 ## Backends
 
@@ -97,7 +107,11 @@ and, through it, `supervisor/`. `coupling/` supplies the `knm` each step.
 
 ## Scope boundaries
 
-- JAX engines are marked `# pragma: no cover` (untested in standard CI).
+- JAX Kuramoto engines and functional consumers have real CPU float32/float64
+  JIT, gradient and phase-cut tests. Device installation does not certify a GPU.
+- The generated WebGPU UPDE package implements Euler only in float32; its
+  actual browser driver checks controls and readback. Software fallback
+  diagnostics do not establish hardware throughput.
 - `bayesian.py` raises `NotImplementedError` for non-NumPy uncertainty backends.
 - The splitting engine documents symplectic reversibility but has no test
   asserting it.

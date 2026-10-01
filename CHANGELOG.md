@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Scalar dense/CSR UPDE, stateless Python/Rust/Go/Julia/Mojo schedules, JAX
+  dense/masked Kuramoto and generated WebGPU Euler canonicalise a floating
+  remainder rounded to the upper phase endpoint, and signed zero, to positive
+  zero without clipping interior phases. Target precision remains explicit.
+  Dense/CSR computed divergence refuses before state publication or plasticity,
+  retains the pre-step adaptive proposal and cached order parameter, and permits
+  valid same-instance retry.
+  JAX host readback refuses conversion overflow; browser controls and actual
+  readback enforce the float32 contract. Julia bridges translate genuine native
+  domain errors while preserving other runtime errors. Real public/native/JIT/
+  browser regressions and fresh cross-language diagnostics cover these paths.
+
 - Cellular-sheaf RK45 advances the full configured interval in Python and
   Rust; native substeps partition that interval. Both paths use maximum scaled
   component error and bounded adaptive progress. Invalid numerical results
@@ -26,7 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   values and direct native plasticity writeback; readonly native coupling
   raises `ValueError` instead of a borrow panic. Real public/native equations,
   refusal recovery and kernel-absent tests replace simulated paths. Real
-  overflow, torus-rounding and adaptive-underflow regressions enforce the
+  overflow, canonical torus projection and adaptive-underflow regressions enforce the
   same output/timestep guards in the Python fallback without publishing an
   invalid diagnostic. Integer inputs retain fractional terms without unsigned
   or narrow-integer phase subtraction wrapping; failed batches retain their
