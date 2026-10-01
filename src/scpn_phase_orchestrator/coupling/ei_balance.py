@@ -8,15 +8,17 @@
 
 """Excitatory/inhibitory balance summaries and adjustment helpers.
 
-The module measures mean outgoing coupling from caller-specified excitatory and
-inhibitory index sets, then optionally rescales inhibitory rows toward a target
-ratio. Rust acceleration is used when available; the NumPy fallback preserves
-the same shape and summary contract for examples and deterministic tests.
+The module measures signed mean outgoing coupling from caller-specified source
+sets. Repeated indices count once. Rust acceleration and the genuinely
+kernel-absent NumPy path share the same arithmetic and copy-preserving adjustment
+contract. These summaries are engineering diagnostics, not a physiological
+validation or a universal synchronisation criterion.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
+from math import fsum
 from numbers import Real
 from typing import TypeAlias
 
@@ -81,10 +83,9 @@ class EIBalance:
 
     ``excitatory_strength`` / ``inhibitory_strength`` aggregate the mean
     coupling from each source group over all targets, and ``ratio`` is their
-    quotient. The four ``*_to_*`` block means resolve this into the directed
-    interaction-type strengths (source group → target group) that Kuroki &
-    Mizuseki 2025 identify as the control parameters of the synchronised,
-    bistable, and desynchronised regimes of the EI-Kuramoto model.
+    signed quotient. The four ``*_to_*`` means describe directed source-to-target
+    blocks, including diagonal entries. ``is_balanced`` is the configured
+    numerical interval ``[0.8, 1.2]``, not an empirical regime classification.
     """
 
     ratio: float
@@ -109,7 +110,28 @@ def _validate_indices(indices: list[int], n: int, name: str) -> list[int]:
             raise ValueError(msg)
         if idx < n:
             valid.append(idx)
-    return valid
+    return sorted(set(valid))
+
+
+def _mean(values: FloatArray) -> float:
+    """Return a scaled arithmetic mean without overflowing a finite sum.
+
+    Parameters
+    ----------
+    values : FloatArray
+        Finite selected coupling entries.
+
+    Returns
+    -------
+    float
+        Compensated mean, or zero for empty and all-zero selections.
+    """
+    if values.size == 0:
+        return 0.0
+    scale = float(np.max(np.abs(values)))
+    if scale == 0.0:
+        return 0.0
+    return fsum(float(v) / scale for v in values.ravel()) / values.size * scale
 
 
 def _block_mean(
@@ -123,7 +145,7 @@ def _block_mean(
     """
     if not (np.any(source_mask) and np.any(target_mask)):
         return 0.0
-    return float(np.mean(knm[np.ix_(source_mask, target_mask)]))
+    return _mean(knm[np.ix_(source_mask, target_mask)])
 
 
 def compute_ei_balance(
@@ -133,12 +155,13 @@ def compute_ei_balance(
 ) -> EIBalance:
     """Compute E/I balance from coupling matrix and layer typing.
 
-    Kuroki & Mizuseki 2025, Neural Computation — E/I balance is the
-    critical parameter for synchronization, not K or D.
+    Means retain coupling signs and include diagonal entries. Duplicate indices
+    count once; non-negative out-of-range indices are ignored. Groups can overlap
+    and need not cover all oscillators. Empty groups have zero strength.
 
-    ratio > 1: excitation-dominated (hypersynchrony risk)
-    ratio < 1: inhibition-dominated (desynchronization risk)
-    ratio ≈ 1: balanced (optimal for metastability)
+    When the inhibitory mean has magnitude below ``1e-15``, the ratio is
+    infinity for positive excitation and one otherwise. Other ratios are signed
+    quotients and may overflow to infinity. Balance means ``0.8 <= ratio <= 1.2``.
 
     Parameters
     ----------
@@ -153,6 +176,12 @@ def compute_ei_balance(
     -------
     EIBalance
         The E/I balance summary derived from the coupling typing.
+
+    Raises
+    ------
+    ValueError
+        If coupling is not a finite square real matrix or indices are negative,
+        boolean, or non-integral.
     """
     knm = _validate_knm(knm)
     n = knm.shape[0]
@@ -166,6 +195,10 @@ def compute_ei_balance(
         ratio, e_str, i_str, balanced, e_to_e, e_to_i, i_to_e, i_to_i = _rust_ei(
             k_flat, n, e_arr, i_arr
         )
+        if np.isnan(ratio) or not np.all(
+            np.isfinite([e_str, i_str, e_to_e, e_to_i, i_to_e, i_to_i])
+        ):
+            raise ValueError("E/I means must remain finite and ratio must not be NaN")
         return EIBalance(
             ratio=float(ratio),
             excitatory_strength=float(e_str),
@@ -185,11 +218,11 @@ def compute_ei_balance(
         i_mask[idx] = True
 
     # Excitatory strength: mean coupling FROM excitatory oscillators
-    e_strength = float(np.mean(knm[e_mask, :])) if np.any(e_mask) else 0.0
+    e_strength = _mean(knm[e_mask, :])
     # Inhibitory strength: mean coupling FROM inhibitory oscillators
-    i_strength = float(np.mean(knm[i_mask, :])) if np.any(i_mask) else 0.0
+    i_strength = _mean(knm[i_mask, :])
 
-    if i_strength < 1e-15:
+    if abs(i_strength) < 1e-15:
         ratio = float("inf") if e_strength > 0 else 1.0
     else:
         ratio = e_strength / i_strength
@@ -214,8 +247,17 @@ def adjust_ei_ratio(
 ) -> FloatArray:
     """Scale inhibitory coupling to achieve target E/I ratio.
 
-    Returns modified knm with inhibitory rows scaled so that
-    E_strength / I_strength ≈ target_ratio.
+    Scale each inhibitory row once by ``current_ratio / target_ratio``.
+    The source is preserved and every successful return is an independent copy.
+    The scale must be finite and non-zero in float64; underflow to either signed
+    zero raises instead of silently erasing inhibitory coupling.
+    Magnitudes below ``1e-15`` in either source mean give an unchanged copy;
+    so does a ratio within ``1e-10`` of target. Signed inputs remain supported.
+
+    Target attainment also requires disjoint source groups, adequate float64
+    precision and an adjusted inhibitory mean with magnitude at least ``1e-15``.
+    Below that threshold the summary uses its silent convention. Overlapping
+    groups remain admissible, but scaling shared rows changes both source means.
 
     Parameters
     ----------
@@ -231,7 +273,16 @@ def adjust_ei_ratio(
     Returns
     -------
     FloatArray
-        The coupling matrix with inhibitory weights scaled to the target ratio.
+        The finite coupling matrix with each inhibitory row scaled once.
+
+    Raises
+    ------
+    TypeError
+        If target_ratio is not a non-boolean real scalar.
+    ValueError
+        If matrix or indices are invalid, target_ratio is non-positive or
+        non-finite, the scale underflows to zero, or the scale or an adjusted
+        element is non-finite.
     """
     knm = _validate_knm(knm)
     target_ratio = _validate_target_ratio(target_ratio)
@@ -246,10 +297,13 @@ def adjust_ei_ratio(
         result_flat: FloatArray = np.asarray(
             _rust_adjust(k_flat, n, e_arr, i_arr, target_ratio),
         )
-        return result_flat.reshape(n, n)
+        return _validate_knm(result_flat.reshape(n, n)).copy()
 
     balance = compute_ei_balance(knm, excitatory_indices, inhibitory_indices)
-    if balance.inhibitory_strength < 1e-15 or balance.excitatory_strength < 1e-15:
+    if (
+        abs(balance.inhibitory_strength) < 1e-15
+        or abs(balance.excitatory_strength) < 1e-15
+    ):
         return knm.copy()
 
     current_ratio = balance.ratio
@@ -258,7 +312,12 @@ def adjust_ei_ratio(
 
     # Scale inhibitory rows: I_new = I_old * (current_ratio / target_ratio)
     scale = current_ratio / target_ratio
+    if not np.isfinite(scale) or scale == 0.0:
+        raise ValueError("E/I adjustment must remain finite with a non-zero scale")
     result: FloatArray = knm.copy()
-    for idx in inhibitory_indices:
-        result[idx, :] *= scale
+    with np.errstate(over="ignore", invalid="ignore"):
+        for idx in inhibitory_indices:
+            result[idx, :] *= scale
+    if not np.all(np.isfinite(result)):
+        raise ValueError("E/I adjustment must remain finite")
     return result

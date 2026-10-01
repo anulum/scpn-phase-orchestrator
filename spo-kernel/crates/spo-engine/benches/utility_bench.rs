@@ -98,7 +98,7 @@ fn bench_ei_balance(c: &mut Criterion) {
         let inh: Vec<usize> = (half..n).collect();
         group.bench_with_input(BenchmarkId::from_parameter(n), &n, |b, &n| {
             b.iter(|| {
-                let r = compute_ei_balance(&knm, n, &exc, &inh);
+                let r = compute_ei_balance(&knm, n, &exc, &inh).expect("finite ring coupling");
                 criterion::black_box(r);
             });
         });
