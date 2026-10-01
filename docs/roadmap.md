@@ -12,6 +12,17 @@ This roadmap is a public planning view. It avoids dates unless a release is
 already published, and it separates stable surfaces from research or deferred
 maintenance tracks.
 
+The implemented scalar UPDE contract projects successful positive-step outputs
+into a half-open torus in the backend's precision, including positive zero at
+rounded upper endpoints. Dense and CSR solvers preserve caller phases on
+nonfinite phase computation; this does not rewind earlier accepted native batch
+steps or promise recovery from invalid adaptive diagnostics. Fixed zero-step
+calls return independent source copies. The
+[phase contract](specs/phase_contract.md) and
+[current runtime comparisons](reference/data/upde_phase_wrapping_benchmark_2026-10-01.json)
+document the five float64 CPU implementations, configured JAX precision and
+Euler-only float32 WebGPU bridge.
+
 ## Consolidated Open-Item Register
 
 This section is the canonical open-item list. Rows keep completed sub-items as

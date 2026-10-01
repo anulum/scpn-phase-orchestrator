@@ -26,6 +26,7 @@ from numpy.typing import NDArray
 
 from scpn_phase_orchestrator._compat import HAS_RUST as _HAS_RUST
 from scpn_phase_orchestrator._compat import TWO_PI
+from scpn_phase_orchestrator.upde._phase_wrap import wrap_phases
 
 __all__ = ["SparseUPDEEngine"]
 
@@ -545,13 +546,10 @@ class SparseUPDEEngine:
         dt = self._dt
         args = (omegas, row_ptr, col_indices, knm_values, zeta, psi, alpha_values)
         k1 = self._derivative(phases, *args)
-        k2 = self._derivative((phases + 0.5 * dt * k1) % TWO_PI, *args)
-        k3 = self._derivative((phases + 0.5 * dt * k2) % TWO_PI, *args)
-        k4 = self._derivative((phases + dt * k3) % TWO_PI, *args)
-        result: FloatArray = (
-            phases + (dt / 6.0) * (k1 + 2 * k2 + 2 * k3 + k4)
-        ) % TWO_PI
-        return result
+        k2 = self._derivative(wrap_phases(phases + 0.5 * dt * k1), *args)
+        k3 = self._derivative(wrap_phases(phases + 0.5 * dt * k2), *args)
+        k4 = self._derivative(wrap_phases(phases + dt * k3), *args)
+        return wrap_phases(phases + (dt / 6.0) * (k1 + 2 * k2 + 2 * k3 + k4))
 
     def _rk45_stage_vector(
         self,
@@ -606,12 +604,10 @@ class SparseUPDEEngine:
             if err_norm <= 1.0:
                 factor = min(5.0, 0.9 * err_norm ** (-0.2)) if err_norm > 0.0 else 5.0
                 self._last_dt = min(dt * factor, self._dt * 10.0)
-                result: FloatArray = y5 % TWO_PI
-                return result
+                return wrap_phases(y5)
             dt *= max(0.2, 0.9 * err_norm ** (-0.25))
         self._last_dt = dt
-        result_fallback: FloatArray = y5 % TWO_PI
-        return result_fallback
+        return wrap_phases(y5)
 
     def _euler_step(
         self,
@@ -628,5 +624,4 @@ class SparseUPDEEngine:
         dtheta = self._derivative(
             phases, omegas, row_ptr, col_indices, knm_values, zeta, psi, alpha_values
         )
-        result: FloatArray = (phases + self._dt * dtheta) % TWO_PI
-        return result
+        return wrap_phases(phases + self._dt * dtheta)

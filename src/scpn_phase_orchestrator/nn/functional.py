@@ -24,6 +24,8 @@ import jax
 import jax.numpy as jnp
 from jax.scipy.sparse.linalg import cg
 
+from scpn_phase_orchestrator.upde._jax_phase_wrap import wrap_phases
+
 TWO_PI = 2.0 * jnp.pi
 
 
@@ -143,7 +145,7 @@ def kuramoto_step(
     """
     diff = phases[jnp.newaxis, :] - phases[:, jnp.newaxis]
     coupling = jnp.sum(K * jnp.sin(diff), axis=1)
-    return (phases + dt * (omegas + coupling)) % TWO_PI
+    return wrap_phases(phases + dt * (omegas + coupling))
 
 
 def kuramoto_rk4_step(
@@ -181,7 +183,7 @@ def kuramoto_rk4_step(
     k3 = deriv(phases + 0.5 * dt * k2)
     k4 = deriv(phases + dt * k3)
     new = phases + (dt / 6.0) * (k1 + 2.0 * k2 + 2.0 * k3 + k4)
-    return new % TWO_PI
+    return wrap_phases(new)
 
 
 def kuramoto_forward(
@@ -279,7 +281,7 @@ def kuramoto_step_masked(
         (N,) updated phases.
     """
     dphi = _kuramoto_deriv_masked(phases, omegas, K, mask)
-    return (phases + dt * dphi) % TWO_PI
+    return wrap_phases(phases + dt * dphi)
 
 
 def kuramoto_rk4_step_masked(
@@ -318,7 +320,7 @@ def kuramoto_rk4_step_masked(
     k2 = deriv(phases + 0.5 * dt * k1)
     k3 = deriv(phases + 0.5 * dt * k2)
     k4 = deriv(phases + dt * k3)
-    return (phases + (dt / 6.0) * (k1 + 2.0 * k2 + 2.0 * k3 + k4)) % TWO_PI
+    return wrap_phases(phases + (dt / 6.0) * (k1 + 2.0 * k2 + 2.0 * k3 + k4))
 
 
 def kuramoto_forward_masked(

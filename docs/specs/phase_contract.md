@@ -108,14 +108,41 @@ oscillator is effectively offline.
 
 ## Phase Wrapping in the UPDE Engine
 
-The UPDE engine wraps output phases via `theta % TWO_PI` after every
-integration step. Phase differences in the coupling term use the
+Successful positive UPDE steps project finite output onto `[0, period)` in
+the producer's precision. A floating remainder can round a tiny negative
+crossing to exactly `period`; producers map that endpoint to equivalent
+positive zero. Signed zero also becomes positive zero. No epsilon is used:
+`nextafter(period, 0)` and all other interior representable values remain.
+Fixed zero-step batches return an independent, unwrapped input copy. Stateless
+and CSR batches validate it; the dense class only converts and copies phases
+on its zero-step path and does not apply its positive-step state validation.
+Nonfinite arithmetic is refused rather than clipped into the torus.
+
+The dense NumPy/PyO3/Rust, Go, Julia and Mojo paths use float64. JAX Kuramoto
+engines and dense/masked functional primitives use their configured float32
+or float64 period. Generated WebGPU Euler uses float32; its JavaScript driver
+rejects controls that cannot represent a positive finite substep and validates
+actual readback. Browser intrinsic accuracy differs from binary64 NumPy;
+see [the scalar engine contract](../reference/api/upde_engine.md).
+WebGPU uses quotient-based float32 range reduction. Very large unwrapped
+phases can lose phase information during division and subtraction; a finite
+half-open result does not certify accurate reduction of such inputs. Keep
+browser phase state near one period when phase accuracy matters.
+
+Phase differences in the coupling term use the
 standard Kuramoto form `sin(theta_j - theta_i)`, which handles
 wrapping implicitly because sine is `2π`-periodic.
 
 For adaptive-step methods (RK45), the error estimate operates on
 unwrapped phases to avoid discontinuities at the `0/2π` boundary.
-The 5th-order solution is wrapped only after step acceptance.
+The candidate is projected after stage evaluation. The NumPy CSR RK4 fallback
+also projects intermediate stage phases; native CSR and NumPy CSR RK45 retain
+unwrapped intermediate stages. Projection and acceptance details are
+engine-specific; the sheaf engine has its own full-interval contract below.
+Dense and CSR stateful nonfinite phase-computation refusals preserve caller phase storage and
+the pre-step adaptive proposal and cached order parameter, so the same instance can accept a subsequent
+valid step. Earlier successful steps in a native batch are not rewound by a
+later refused step.
 
 ### Wrapping and Winding Numbers
 
@@ -353,7 +380,7 @@ The test suite `tests/test_phase_contract.py` verifies:
 
 Property-based tests (Hypothesis) additionally verify:
 
-- For any array of floats passed through wrapping, the result is in
+- For any array of finite floats passed through canonical UPDE wrapping, the result is in
   `[0, 2pi)`.
 - For any sequence of wrapped phase increments, the reconstructed
   winding number equals `floor(total_unwrapped_phase / 2pi)`.

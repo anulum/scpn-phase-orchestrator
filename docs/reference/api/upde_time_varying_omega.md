@@ -74,6 +74,14 @@ Each backend receives the same row-major schedule. Validation rejects boolean,
 complex, non-finite, empty, wrong-rank, and wrong-width schedules before any
 integration result is accepted.
 
+After each positive outer step, all five producers project phases to float64
+`[0, 2*pi)`, mapping a rounded upper remainder and signed zero to positive zero
+while retaining interior values. Nonfinite computed phases still refuse.
+Julia native domain errors are translated to `ValueError` at its Python bridge;
+other Julia runtime errors propagate. The WebGPU Euler bridge has no frequency-
+schedule implementation. See the [phase and recovery contract](upde.md#core-kuramoto-engine)
+and [current runtime/parity data](../data/upde_phase_wrapping_benchmark_2026-10-01.json).
+
 The dense Rust schedule binding snapshots frequencies, phases and lag at entry,
 then releases their NumPy borrow guards before acquiring writable coupling.
 Shared or partially overlapping input views therefore retain those initial

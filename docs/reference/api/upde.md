@@ -78,6 +78,18 @@ First-order Kuramoto ODE: dθ_i/dt = ω_i + Σ_j K_ij sin(θ_j - θ_i - α_ij) +
 Supports Euler, RK4, and RK45 (adaptive) integration. Optional Rust FFI
 acceleration via `spo_kernel.PyUPDEStepper`.
 
+Successful positive steps return finite float64 phases in `[0, 2*pi)`.
+Producer-side projection maps a remainder rounded to the excluded upper
+endpoint and signed zero to positive zero; interior representable phases
+remain unchanged. Zero-step runs return independent copies preserving finite
+unwrapped input. Computed nonfinite output raises `ValueError`; a refused
+stateful step preserves caller phases, the public clock and adaptive proposal,
+and the same instance accepts subsequent valid input after nonfinite phase
+computation. A later refusal in a
+multi-step native run does not rewind earlier accepted native steps.
+The same canonical projection is implemented by the stateless Python, Rust,
+Go, Julia and Mojo fixed/frequency-scheduled/Doppler/moving-frame producers.
+
 ### Shared NumPy storage
 
 With writable coupling, `UPDEEngine.step()` accepts matrices that share storage,
@@ -168,8 +180,15 @@ NumPyro and BlackJAX names remain explicitly fail-closed.
 
 ## JAX-Accelerated Kuramoto Engine
 
-Optional JAX implementation for GPU-oriented Kuramoto rollouts. It preserves
-the same validated inputs and phase wrapping semantics as the NumPy engine.
+Optional JIT implementation on the configured JAX CPU/GPU/TPU device. Kuramoto
+output uses the period represented in its actual float32 or float64 dtype,
+maps rounded upper endpoints and signed zero to positive zero, and retains
+interior representable phases. The host API refuses conversion overflow or
+nonfinite/out-of-torus readback and can recover on valid input. Enable
+`jax_enable_x64` explicitly for float64; installing JAX does not imply a GPU.
+`JaxUPDEEngine.step()` returns a NumPy host array. For differentiable device
+arrays and gradients away from the phase cut, use the
+[pure JAX Kuramoto primitives](nn.md#kuramoto-model).
 Kuramoto and Stuart-Landau state, frequency, growth, coupling, amplitude-
 coupling, and phase-lag arrays reject boolean, complex, and numeric-string
 aliases before host conversion or device dispatch. Finite real numeric-object
@@ -697,12 +716,17 @@ Public Python construction leaves coupling plasticity disabled. The direct
 `disable_plasticity()`; this is a distinct capability, not a public Python setter.
 `last_dt` is the configured timestep for Euler/RK4 and a next-step proposal for
 RK45. It is not the elapsed time of the accepted adaptive step.
-Both actual environments reject non-finite output, the excluded torus upper
-endpoint caused by floating remainder rounding, and nonpositive/non-finite
-adaptive proposals. Finite input alone cannot prevent numerical overflow or
-underflow. On a numerical-output refusal the public timestep keeps its previous
-value from before the whole call, including a failed multi-step run; reconstruct the solver with suitable inputs/tolerances before resuming.
-The native buffer-refusal recovery described above does not require a reset.
+Both actual environments reject nonfinite output, malformed out-of-torus
+results, and nonpositive/nonfinite adaptive proposals. Producers canonicalise
+a rounded upper remainder and signed zero to positive zero, retaining interior
+phases. Finite input alone cannot prevent overflow or underflow. A numerical
+phase-computation refusal retains caller phases and the pre-step native/public proposal;
+the same solver can accept subsequent valid input. The public proposal keeps
+its pre-call value on a failed run, but native steps accepted before a later
+refusal are not rewound. The native buffer-refusal recovery above remains.
+An invalid native adaptive diagnostic, such as a proposal underflowing to zero,
+is a separate refusal: the public diagnostic is retained, but reconstruct the
+native solver with suitable controls before retrying that case.
 
 [The Rust FFI guide](../../guide/rust_ffi.md#sparse-stepper-buffer-ownership)
 records current sparse diagnostic workloads and the scope of their timings.

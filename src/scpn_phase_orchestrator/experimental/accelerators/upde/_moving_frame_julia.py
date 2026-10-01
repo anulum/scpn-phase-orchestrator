@@ -15,7 +15,10 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
-from scpn_phase_orchestrator.experimental.accelerators.upde._engine_julia import _ensure
+from scpn_phase_orchestrator.experimental.accelerators.upde._engine_julia import (
+    _ensure,
+    _invoke,
+)
 from scpn_phase_orchestrator.upde.moving_frame import (
     _expected_positions_from_schedule,
     validate_moving_frame_backend_inputs,
@@ -48,7 +51,61 @@ def moving_frame_run_julia(
     atol: float,
     rtol: float,
 ) -> FloatArray:
-    """Run the moving-frame schedule through Julia."""
+    """Run the admitted UPDE integration through the actual Julia backend.
+
+    Parameters
+    ----------
+    phases : object
+        Oscillator phases in radians, shape ``(N,)``.
+    positions : object
+        Absolute axial coordinates per oscillator, shape ``(N,)``.
+    omega_schedule : object
+        Per-step natural-frequency vectors, shape ``(n_steps, N)``.
+    knm : object
+        Coupling matrix ``K_nm``, shape ``(N, N)``.
+    alpha : object
+        Finite phase lag in radians, scalar or shape ``(N, N)``; use zero for no lag.
+    velocity_schedule : object
+        Per-step axial velocity vectors, shape ``(n_steps, N)``.
+    spatial_k_base : float
+        Base coupling strength before spatial modulation.
+    spatial_decay_form : object
+        Spatial decay law name (e.g. ``exponential`` or ``power``).
+    spatial_decay_exponent : float
+        Exponent of the spatial decay law.
+    spatial_decay_length_scale : float
+        Characteristic length scale of the spatial decay.
+    spatial_epsilon : float
+        Numerical floor guarding the spatial-decay denominator.
+    doppler_strength : float
+        Doppler coupling-correction strength.
+    doppler_epsilon : float
+        Numerical floor guarding the Doppler denominator.
+    zeta : float
+        External drive strength ``ζ``.
+    psi : float
+        External drive reference phase ``Ψ`` in radians.
+    dt : float
+        Integration step size.
+    method : str
+        Integration method (``euler``, ``rk4``, or ``rk45``).
+    n_substeps : int
+        Number of inner substeps per outer step.
+    atol : float
+        Absolute tolerance for the adaptive (rk45) integrator.
+    rtol : float
+        Relative tolerance for the adaptive (rk45) integrator.
+
+    Returns
+    -------
+    FloatArray
+        Flat final phases followed by positions from the Julia moving-frame schedule.
+
+    Notes
+    -----
+    Native Julia DomainError from numerical divergence is translated to
+    ValueError. Other Julia exceptions retain their native identity.
+    """
     (
         p,
         z,
@@ -99,7 +156,8 @@ def moving_frame_run_julia(
     expected_positions = _expected_positions_from_schedule(z, velocities, dt_f)
     return validate_moving_frame_backend_output(
         np.asarray(
-            jl.upde_run_moving_frame_schedule(
+            _invoke(
+                jl.upde_run_moving_frame_schedule,
                 p,
                 z,
                 omega,

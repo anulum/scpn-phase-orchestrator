@@ -66,6 +66,14 @@ The source contract exists for Python, Rust/PyO3, Go, Julia, and Mojo. The
 benchmark gate records unavailable optional runtimes explicitly rather than
 silently skipping parity evidence.
 
+Successful integrated phases use canonical float64 `[0, 2*pi)` projection in
+each producer: rounded upper remainders and signed zero become positive zero,
+and interior representable phases remain. Nonfinite computed phases refuse;
+Julia native domain errors become `ValueError` at its Python bridge. Public
+Doppler schedules require at least one step. See the
+[phase contract](../../specs/phase_contract.md#phase-wrapping-in-the-upde-engine)
+and [current runtime data](../data/upde_phase_wrapping_benchmark_2026-10-01.json).
+
 ```bash
 PYTHONPATH=src python benchmarks/upde_doppler_benchmark.py --parity-gate
 ```

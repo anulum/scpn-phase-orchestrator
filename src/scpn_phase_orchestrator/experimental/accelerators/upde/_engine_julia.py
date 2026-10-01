@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any, TypeAlias
 
@@ -46,6 +47,41 @@ def _ensure() -> Any:
     return _JULIA_MODULE
 
 
+def _invoke(func: Callable[..., object], *args: object) -> object:
+    """Invoke the real Julia solver with numeric-domain error translation.
+
+    Parameters
+    ----------
+    func : Callable[..., object]
+        Actual Julia UPDE entry point from the loaded native module.
+    *args : object
+        Already validated solver arguments.
+
+    Returns
+    -------
+    object
+        Actual Julia result for the owning output validator.
+
+    Raises
+    ------
+    ValueError
+        Native Julia ``DomainError`` indicates divergent numerical computation.
+    juliacall.JuliaError
+        Other native Julia failures retain their original exception.
+    """
+    from juliacall import JuliaError
+
+    try:
+        return func(*args)
+    except JuliaError as exc:
+        main = require_julia_main()
+        if bool(main.isa(exc.exception, main.DomainError)):
+            raise ValueError(
+                "Julia UPDE computation diverged with a domain error"
+            ) from exc
+        raise
+
+
 def upde_run_julia(
     phases: FloatArray,
     omegas: FloatArray,
@@ -60,9 +96,44 @@ def upde_run_julia(
     atol: float,
     rtol: float,
 ) -> FloatArray:
-    """Run the core UPDE phase integrator.
+    """Run the admitted UPDE integration through the actual Julia backend.
 
-    The calculation is delegated to the Julia backend.
+    Parameters
+    ----------
+    phases : FloatArray
+        Oscillator phases in radians, shape ``(N,)``.
+    omegas : FloatArray
+        Natural frequencies in rad/s, shape ``(N,)``.
+    knm : FloatArray
+        Coupling matrix ``K_nm``, shape ``(N, N)``.
+    alpha : FloatArray
+        Finite phase-lag matrix in radians, shape ``(N, N)``; use zeros for no lag.
+    zeta : float
+        External drive strength ``ζ``.
+    psi : float
+        External drive reference phase ``Ψ`` in radians.
+    dt : float
+        Integration step size.
+    n_steps : int
+        Number of integration steps to run.
+    method : str
+        Integration method (``euler``, ``rk4``, or ``rk45``).
+    n_substeps : int
+        Number of inner substeps per outer step.
+    atol : float
+        Absolute tolerance for the adaptive (rk45) integrator.
+    rtol : float
+        Relative tolerance for the adaptive (rk45) integrator.
+
+    Returns
+    -------
+    FloatArray
+        The final phases after ``n_steps`` integration steps.
+
+    Notes
+    -----
+    Native Julia DomainError from numerical divergence is translated to
+    ValueError. Other Julia exceptions retain their native identity.
     """
     (
         p,
@@ -96,7 +167,8 @@ def upde_run_julia(
         return p.copy()
     jl = _ensure()
     return validate_upde_backend_output(
-        jl.upde_run(
+        _invoke(
+            jl.upde_run,
             p,
             o,
             k,
@@ -128,7 +200,43 @@ def upde_run_omega_schedule_julia(
     atol: float,
     rtol: float,
 ) -> FloatArray:
-    """Run UPDE with one frequency vector per outer step in Julia."""
+    """Run the admitted UPDE integration through the actual Julia backend.
+
+    Parameters
+    ----------
+    phases : FloatArray
+        Oscillator phases in radians, shape ``(N,)``.
+    omega_schedule : FloatArray
+        Per-step natural-frequency vectors, shape ``(n_steps, N)``.
+    knm : FloatArray
+        Coupling matrix ``K_nm``, shape ``(N, N)``.
+    alpha : FloatArray
+        Finite phase-lag matrix in radians, shape ``(N, N)``; use zeros for no lag.
+    zeta : float
+        External drive strength ``ζ``.
+    psi : float
+        External drive reference phase ``Ψ`` in radians.
+    dt : float
+        Integration step size.
+    method : str
+        Integration method (``euler``, ``rk4``, or ``rk45``).
+    n_substeps : int
+        Number of inner substeps per outer step.
+    atol : float
+        Absolute tolerance for the adaptive (rk45) integrator.
+    rtol : float
+        Relative tolerance for the adaptive (rk45) integrator.
+
+    Returns
+    -------
+    FloatArray
+        The final phases after integrating the omega schedule.
+
+    Notes
+    -----
+    Native Julia DomainError from numerical divergence is translated to
+    ValueError. Other Julia exceptions retain their native identity.
+    """
     (
         p,
         schedule,
@@ -158,7 +266,8 @@ def upde_run_omega_schedule_julia(
     n = int(p.size)
     jl = _ensure()
     return validate_upde_backend_output(
-        jl.upde_run_omega_schedule(
+        _invoke(
+            jl.upde_run_omega_schedule,
             p,
             schedule,
             k,

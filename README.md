@@ -342,15 +342,15 @@ inside a dashboard or notebook; it turns them into inspectable artefacts.
 |---|---:|
 | Package version | 1.4.3 |
 | Public API exports | 29 |
-| Python package modules | 760 |
-| Core Engine modules | 360 |
+| Python package modules | 762 |
+| Core Engine modules | 362 |
 | Runtime/Serving modules | 158 |
 | Integration modules | 32 |
 | Research/Experimental modules | 205 |
 | Domainpack files | 36 |
 | Rust kernel files | 120 |
 | Optional extras | 23 |
-| Python test files | 1071 |
+| Python test files | 1078 |
 | Public documentation pages | 243 |
 | GitHub Actions workflows | 19 |
 
@@ -446,7 +446,11 @@ device = require_accelerator()  # raises on CPU-only JAX runtimes
 | OIM Graph Coloring | Oscillator Ising machine for combinatorial optimization |
 | Differentiable Supervisor | Equinox policy for closed-loop `K`/`zeta` proposals with `ControlAction` adapter |
 
-All functions are JIT-compilable, vmap-compatible, and differentiable.
+Functions are JIT-compilable and vmap-compatible; phase gradients are defined
+away from wrap cuts. Dense/masked Kuramoto uses its actual float32/float64
+period, preserving interior values while mapping a rounded upper remainder
+and signed zero to positive zero. `JaxUPDEEngine` instead provides validated
+NumPy host readback; it refuses conversion overflow and invalid computed phases.
 Install: `pip install scpn-phase-orchestrator[nn]`
 For CI and smoke tests on CPU-only hosts, use
 `require_accelerator(allow_cpu=True)` explicitly.
@@ -502,7 +506,8 @@ black-box classifier on identical footing. See the
 | Rust FFI | 12 PyO3 bindings for native-speed core modules |
 | FPGA | 16-oscillator Verilog research artefact; no field latency guarantee |
 | WebAssembly | Browser-based Kuramoto visualization, no server needed |
-| JAX GPU | Transparent GPU acceleration via XLA |
+| JAX | JIT on the configured CPU/GPU/TPU device; installation does not certify a GPU |
+| WebGPU UPDE | Generated float32 Euler package with actual browser control/readback guards |
 
 See [Documentation Coverage](docs/reference/documentation_coverage.md) for the
 current repo-wide documentation inventory and the enforced API-reference policy.
@@ -561,6 +566,16 @@ print(state.order_parameter)
 ```
 
 ## Reference Benchmarks
+
+Scalar dense/CSR Kuramoto and the stateless Python/Rust/Go/Julia/Mojo
+fixed/frequency-scheduled/Doppler/moving-frame chain use
+[canonical phase projection](docs/specs/phase_contract.md#phase-wrapping-in-the-upde-engine).
+Nonfinite phase-computation refusal preserves the pre-step proposal and permits
+valid same-instance retry; zero-step fixed runs retain independent unwrapped
+input copies. Other numerical/adaptive diagnostics retain their own contracts.
+The [October 1 runtime data](docs/reference/data/upde_phase_wrapping_benchmark_2026-10-01.json)
+records fresh all-backend comparisons, actual JAX precisions and real browser
+WebGPU execution, with software adapters and shared-host timing scope explicit.
 
 Cellular-sheaf diagnostics exercise the public `SheafUPDEEngine` with all three
 solver methods, anisotropic coupling and external forcing against an independent

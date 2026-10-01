@@ -28,35 +28,36 @@ Build with::
 
 from std.math import sin, cos, abs
 from std.collections import List
+from std.ffi import external_call
 
 
 # Dormand-Prince tableau (shared with spo-engine/src/dp_tableau.rs).
-alias A21: Float64 = 1.0 / 5.0
-alias A31: Float64 = 3.0 / 40.0
-alias A32: Float64 = 9.0 / 40.0
-alias A41: Float64 = 44.0 / 45.0
-alias A42: Float64 = -56.0 / 15.0
-alias A43: Float64 = 32.0 / 9.0
-alias A51: Float64 = 19372.0 / 6561.0
-alias A52: Float64 = -25360.0 / 2187.0
-alias A53: Float64 = 64448.0 / 6561.0
-alias A54: Float64 = -212.0 / 729.0
-alias A61: Float64 = 9017.0 / 3168.0
-alias A62: Float64 = -355.0 / 33.0
-alias A63: Float64 = 46732.0 / 5247.0
-alias A64: Float64 = 49.0 / 176.0
-alias A65: Float64 = -5103.0 / 18656.0
-alias B5_0: Float64 = 35.0 / 384.0
-alias B5_2: Float64 = 500.0 / 1113.0
-alias B5_3: Float64 = 125.0 / 192.0
-alias B5_4: Float64 = -2187.0 / 6784.0
-alias B5_5: Float64 = 11.0 / 84.0
-alias B4_0: Float64 = 5179.0 / 57600.0
-alias B4_2: Float64 = 7571.0 / 16695.0
-alias B4_3: Float64 = 393.0 / 640.0
-alias B4_4: Float64 = -92097.0 / 339200.0
-alias B4_5: Float64 = 187.0 / 2100.0
-alias B4_6: Float64 = 1.0 / 40.0
+comptime A21: Float64 = 1.0 / 5.0
+comptime A31: Float64 = 3.0 / 40.0
+comptime A32: Float64 = 9.0 / 40.0
+comptime A41: Float64 = 44.0 / 45.0
+comptime A42: Float64 = -56.0 / 15.0
+comptime A43: Float64 = 32.0 / 9.0
+comptime A51: Float64 = 19372.0 / 6561.0
+comptime A52: Float64 = -25360.0 / 2187.0
+comptime A53: Float64 = 64448.0 / 6561.0
+comptime A54: Float64 = -212.0 / 729.0
+comptime A61: Float64 = 9017.0 / 3168.0
+comptime A62: Float64 = -355.0 / 33.0
+comptime A63: Float64 = 46732.0 / 5247.0
+comptime A64: Float64 = 49.0 / 176.0
+comptime A65: Float64 = -5103.0 / 18656.0
+comptime B5_0: Float64 = 35.0 / 384.0
+comptime B5_2: Float64 = 500.0 / 1113.0
+comptime B5_3: Float64 = 125.0 / 192.0
+comptime B5_4: Float64 = -2187.0 / 6784.0
+comptime B5_5: Float64 = 11.0 / 84.0
+comptime B4_0: Float64 = 5179.0 / 57600.0
+comptime B4_2: Float64 = 7571.0 / 16695.0
+comptime B4_3: Float64 = 393.0 / 640.0
+comptime B4_4: Float64 = -92097.0 / 339200.0
+comptime B4_5: Float64 = 187.0 / 2100.0
+comptime B4_6: Float64 = 1.0 / 40.0
 
 
 fn compute_derivative(
@@ -232,9 +233,12 @@ fn rk45_step(
 
 
 fn fmod_positive(x: Float64, m: Float64) -> Float64:
-    var r = x - Float64(Int(x / m)) * m
+    """Project remainders onto [0, m), canonicalising endpoints to positive zero."""
+    var r = external_call["fmod", Float64](x, m)
     if r < 0.0:
         r += m
+    if r >= m or r == 0.0:
+        return 0.0
     return r
 
 

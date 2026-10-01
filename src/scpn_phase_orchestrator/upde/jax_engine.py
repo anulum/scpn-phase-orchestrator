@@ -6,7 +6,7 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — JAX-accelerated UPDE engine
 
-"""GPU-accelerated Kuramoto solver via JAX JIT compilation.
+"""JIT-compiled Kuramoto solver on the configured JAX device.
 
 Raises ImportError if JAX is not installed. Check HAS_JAX before use.
 Usage:
@@ -18,9 +18,10 @@ Usage:
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from math import isfinite
 from numbers import Complex, Integral, Real
-from typing import TYPE_CHECKING, Any, TypeAlias
+from typing import TYPE_CHECKING, TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -28,19 +29,29 @@ from numpy.typing import NDArray
 __all__ = ["JaxUPDEEngine", "HAS_JAX"]
 
 FloatArray: TypeAlias = NDArray[np.float64]
+ResultArray: TypeAlias = NDArray[np.float32 | np.float64]
 
 TWO_PI = 2.0 * np.pi
 
 try:
-    import jax.numpy as jnp  # pragma: no cover
-    from jax import jit  # pragma: no cover
+    import jax.numpy as jnp
+    from jax import jit
 
-    HAS_JAX = True  # pragma: no cover
-except ImportError:  # pragma: no cover
-    HAS_JAX = False  # pragma: no cover
+    HAS_JAX = True
+except ImportError:
+    HAS_JAX = False
 
 if TYPE_CHECKING:
     import jax.numpy as jnp
+    from jax import Array
+
+KuramotoStep: TypeAlias = Callable[
+    ["Array", "Array", "Array", float, float, "Array", float], "Array"
+]
+StuartLandauStep: TypeAlias = Callable[
+    ["Array", "Array", "Array", "Array", "Array", float, float, "Array", float, float],
+    "Array",
+]
 
 
 def _validate_positive_int(value: object, *, name: str) -> int:
@@ -114,26 +125,41 @@ def _validate_method(value: object) -> str:
     return value
 
 
-def _build_jax_step() -> tuple[Any, Any]:  # pragma: no cover
+def _build_jax_step() -> tuple[KuramotoStep, KuramotoStep]:
     """Build JIT-compiled Kuramoto step function."""
+    from scpn_phase_orchestrator.upde._jax_phase_wrap import wrap_phases
 
     @jit
-    # type ignore: JAX tracer callable signatures are intentionally dynamic.
-    def _kuramoto_step(phases, omegas, knm, zeta, psi, alpha, dt):  # type: ignore[no-untyped-def]
+    def _kuramoto_step(
+        phases: Array,
+        omegas: Array,
+        knm: Array,
+        zeta: float,
+        psi: float,
+        alpha: Array,
+        dt: float,
+    ) -> Array:
         """Advance the Kuramoto phases one explicit-Euler step (JAX)."""
         diff = phases[jnp.newaxis, :] - phases[:, jnp.newaxis]
         coupling = jnp.sum(knm * jnp.sin(diff - alpha), axis=1)
         dphi = omegas + coupling
         dphi = dphi + zeta * jnp.sin(psi - phases)
         new_phases = phases + dt * dphi
-        return new_phases % (2.0 * jnp.pi)
+        return wrap_phases(new_phases)
 
     @jit
-    # type ignore: JAX tracer callable signatures are intentionally dynamic.
-    def _kuramoto_rk4(phases, omegas, knm, zeta, psi, alpha, dt):  # type: ignore[no-untyped-def]
+    def _kuramoto_rk4(
+        phases: Array,
+        omegas: Array,
+        knm: Array,
+        zeta: float,
+        psi: float,
+        alpha: Array,
+        dt: float,
+    ) -> Array:
         """Advance the Kuramoto phases one RK4 step (JAX)."""
 
-        def deriv(p: Any) -> Any:
+        def deriv(p: Array) -> Array:
             """Kuramoto coupling derivative at given phases."""
             diff = p[jnp.newaxis, :] - p[:, jnp.newaxis]
             coupling = jnp.sum(knm * jnp.sin(diff - alpha), axis=1)
@@ -144,21 +170,31 @@ def _build_jax_step() -> tuple[Any, Any]:  # pragma: no cover
         k3 = deriv(phases + 0.5 * dt * k2)
         k4 = deriv(phases + dt * k3)
         new_phases = phases + (dt / 6.0) * (k1 + 2.0 * k2 + 2.0 * k3 + k4)
-        return new_phases % (2.0 * jnp.pi)
+        return wrap_phases(new_phases)
 
     return _kuramoto_step, _kuramoto_rk4
 
 
-def _build_jax_sl_step() -> Any:  # pragma: no cover
+def _build_jax_sl_step() -> StuartLandauStep:
     """Build JIT-compiled Stuart-Landau step function."""
 
     @jit
-    # type ignore: JAX tracer callable signatures are intentionally dynamic.
-    def _sl_rk4(state, omegas, mu, knm, knm_r, zeta, psi, alpha, epsilon, dt):  # type: ignore[no-untyped-def]
+    def _sl_rk4(
+        state: Array,
+        omegas: Array,
+        mu: Array,
+        knm: Array,
+        knm_r: Array,
+        zeta: float,
+        psi: float,
+        alpha: Array,
+        epsilon: float,
+        dt: float,
+    ) -> Array:
         """Advance the Stuart-Landau state one RK4 step (JAX)."""
         n = omegas.shape[0]
 
-        def deriv(s: Any) -> Any:
+        def deriv(s: Array) -> Array:
             """Stuart-Landau coupled (phase, amplitude) derivative."""
             th, am = s[:n], s[n:]
             diff = th[jnp.newaxis, :] - th[:, jnp.newaxis]
@@ -183,14 +219,32 @@ def _build_jax_sl_step() -> Any:  # pragma: no cover
     return _sl_rk4
 
 
-class JaxUPDEEngine:  # pragma: no cover
+class JaxUPDEEngine:
     """JAX-accelerated Kuramoto/UPDE integrator.
 
-    GPU-compiled via jax.jit. First call triggers XLA compilation
-    (~1-3s), subsequent calls run at native speed.
+    JIT execution uses the available JAX device and configured floating-point
+    precision. The first call compiles its shape; later calls reuse that code.
     """
 
     def __init__(self, n: int, dt: float = 0.01, method: str = "rk4") -> None:
+        """Configure the actual JAX device integrator.
+
+        Parameters
+        ----------
+        n : int
+            Positive oscillator count.
+        dt : float, default 0.01
+            Positive finite integration timestep in seconds.
+        method : str, default "rk4"
+            Euler or RK4; the first step compiles for the actual shape and dtype.
+
+        Raises
+        ------
+        ImportError
+            JAX is not installed.
+        ValueError
+            The oscillator count, timestep, or integration method is invalid.
+        """
         if not HAS_JAX:
             msg = "JAX not installed. Install with: pip install jax jaxlib"
             raise ImportError(msg)
@@ -209,8 +263,8 @@ class JaxUPDEEngine:  # pragma: no cover
         zeta: float,
         psi: float,
         alpha: FloatArray,
-    ) -> FloatArray:
-        """Advance phases by one Kuramoto step on GPU via JIT-compiled JAX.
+    ) -> ResultArray:
+        """Advance phases by one Kuramoto step via JIT-compiled JAX.
 
         Parameters
         ----------
@@ -225,12 +279,19 @@ class JaxUPDEEngine:  # pragma: no cover
         psi : float
             External drive reference phase ``Ψ`` in radians.
         alpha : FloatArray
-            Phase-lag matrix in radians, shape ``(N, N)``, or ``None`` for no lag.
+            Finite phase-lag matrix in radians, shape ``(N, N)``.
 
         Returns
         -------
-        FloatArray
-            The phases after one JIT-compiled Kuramoto step.
+        ResultArray
+            Finite phases in the half-open torus, with canonical positive zero
+            and float32 or float64 precision according to JAX configuration.
+
+        Raises
+        ------
+        ValueError
+            If inputs are invalid or the actual configured-precision computation
+            produces nonfinite or out-of-domain phases.
         """
         phases = _validate_array(phases, name="phases", shape=(self._n,))
         omegas = _validate_array(omegas, name="omegas", shape=(self._n,))
@@ -239,23 +300,46 @@ class JaxUPDEEngine:  # pragma: no cover
         zeta = _validate_finite_float(zeta, name="zeta")
         psi = _validate_finite_float(psi, name="psi")
 
-        jp = jnp.asarray(phases)
-        jo = jnp.asarray(omegas)
-        jk = jnp.asarray(knm)
-        ja = jnp.asarray(alpha)
+        # A finite float64 input can overflow the actual float32 conversion.
+        # Refuse the resulting nonfinite computation below instead of publishing it.
+        with np.errstate(over="ignore", invalid="ignore"):
+            jp = jnp.asarray(phases)
+            jo = jnp.asarray(omegas)
+            jk = jnp.asarray(knm)
+            ja = jnp.asarray(alpha)
+            if self._method == "rk4":
+                result = self._rk4(jp, jo, jk, zeta, psi, ja, self._dt)
+            else:
+                result = self._euler(jp, jo, jk, zeta, psi, ja, self._dt)
+            output: ResultArray = np.asarray(result)
+        period = np.asarray(TWO_PI, dtype=output.dtype)
+        if not np.all(np.isfinite(output)):
+            raise ValueError("JAX output contains NaN/Inf")
+        if np.any((output < 0.0) | (output >= period)):
+            raise ValueError("JAX output phases must be in [0, 2*pi)")
+        return output
 
-        if self._method == "rk4":
-            result = self._rk4(jp, jo, jk, zeta, psi, ja, self._dt)
-        else:
-            result = self._euler(jp, jo, jk, zeta, psi, ja, self._dt)
 
-        return np.asarray(result)
-
-
-class JaxStuartLandauEngine:  # pragma: no cover
+class JaxStuartLandauEngine:
     """JAX-accelerated Stuart-Landau integrator (RK4 only)."""
 
     def __init__(self, n: int, dt: float = 0.01) -> None:
+        """Configure the existing JAX Stuart-Landau RK4 integrator.
+
+        Parameters
+        ----------
+        n : int
+            Positive oscillator count; state has n phases then n amplitudes.
+        dt : float, default 0.01
+            Positive finite integration timestep in seconds.
+
+        Raises
+        ------
+        ImportError
+            JAX is not installed.
+        ValueError
+            The oscillator count or timestep is invalid.
+        """
         if not HAS_JAX:
             msg = "JAX not installed. Install with: pip install jax jaxlib"
             raise ImportError(msg)
@@ -274,8 +358,39 @@ class JaxStuartLandauEngine:  # pragma: no cover
         psi: float,
         alpha: FloatArray,
         epsilon: float = 1.0,
-    ) -> FloatArray:
-        """Advance Stuart-Landau state by one RK4 step via JIT-compiled JAX."""
+    ) -> ResultArray:
+        """Advance the existing Stuart-Landau state via actual JAX RK4.
+
+        Parameters
+        ----------
+        state : FloatArray
+            Shape (2*n,), with phases followed by amplitudes.
+        omegas, mu : FloatArray
+            Frequencies and amplitude growth parameters, each shape (n,).
+        knm, knm_r : FloatArray
+            Phase and amplitude coupling matrices, each shape (n, n).
+        zeta, psi : float
+            Finite external phase drive strength and target phase.
+        alpha : FloatArray
+            Finite phase-lag matrix, shape (n, n).
+        epsilon : float, default 1.0
+            Finite amplitude-coupling scale.
+
+        Returns
+        -------
+        ResultArray
+            State in JAX's configured float32 or float64 precision.
+
+        Raises
+        ------
+        ValueError
+            Supplied arrays or scalar inputs fail admission.
+
+        Notes
+        -----
+        This existing model retains its own phase and amplitude equations;
+        it uses neither the Kuramoto projection nor its output admission guard.
+        """
         state = _validate_array(state, name="state", shape=(2 * self._n,))
         omegas = _validate_array(omegas, name="omegas", shape=(self._n,))
         mu = _validate_array(mu, name="mu", shape=(self._n,))

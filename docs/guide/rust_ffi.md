@@ -196,25 +196,31 @@ kernel-absent environments through the public extractor. It records actual
 C-call identity, source hashes, Python/NumPy versions and host load. Its
 non-isolated median/P95 timings do not establish a cross-environment speedup.
 The [2026-09-30 raw diagnostic](../reference/data/symbolic_extraction_diagnostic_2026-09-30.json)
-also pins the loaded extension artifact by SHA-256.
+also pins the loaded extension artefact by SHA-256.
 
 ## Benchmark Comparison
 
-Local diagnostics on 2026-09-30 measured real `UPDEEngine.step()` after the
-dense buffer-snapshot correction: RK4, 50 warmups, 200 individually timed
-calls, Linux x86-64, CPython 3.12.3 and Rust 1.98.1 release build.
+Local diagnostics on 2026-10-01 measured real `UPDEEngine.step()` through
+the maintained stateful comparison: 16 nodes, 1000 public steps per method,
+Linux x86-64, CPython 3.12.3 and the Rust 1.98.1 release build.
 
-| N | NumPy-only P50 (us/step) | Installed Rust P50 (us/step) |
-|---|--------------------------|----------------------------|
-| 8 | 75.258 | 44.343 |
-| 32 | 110.551 | 67.970 |
-| 64 | 186.091 | 144.306 |
+| Method | NumPy-only aggregate (ms) | Installed Rust aggregate (ms) |
+|---|---:|---:|
+| Euler | 120.9 | 138.8 |
+| RK4 | 209.3 | 135.1 |
+| RK45 | 198.6 | 138.8 |
 
-The environments used NumPy 2.2.6 and 2.5.3 respectively, on a shared,
-non-isolated workstation. These are observed wrapper timings, not a causal
-backend speedup, a latency guarantee, or capacity-planning evidence. Raw
-samples and environment provenance remain in the internal task record.
-The previous undocumented build/host speedup table is superseded.
+Reproduce with `.venv/bin/python -m benchmarks.engine_comparison` and
+`PYTHONPATH=src /usr/bin/python3 -m benchmarks.engine_comparison` in a genuinely
+kernel-absent interpreter. The maintained CLI emits formatted aggregate times,
+not per-step raw samples or P50 estimates. The
+[raw runtime record](../reference/data/upde_phase_wrapping_benchmark_2026-10-01.json)
+preserves both complete eight-variant outputs, source/artefact fingerprints and
+separate stateless/CSR/JAX/browser measurements.
+The environments use NumPy 2.2.6 and 2.5.3 respectively on a shared workstation;
+these observations do not establish causal speedup, latency guarantees or
+capacity. The ordinary UPDE slots select Rust/NumPy; other models retain their
+own backend dispatch.
 
 `benchmarks/engine_comparison.py` exercises the stateful variants.
 `benchmarks/upde_engine_benchmark.py` compares the separate stateless runner
@@ -270,18 +276,24 @@ accepts readonly coupling without mutation.
 Public zero-step runs validate and return a copy without advancing the solver.
 `last_dt` reports the configured fixed timestep or the RK45 next-step proposal,
 not the elapsed time of an accepted adaptive step.
-The public wrapper validates real results in both environments: overflowed
-phases, a rounded upper torus endpoint and a zero adaptive proposal refuse with
-`ValueError`, retaining the timestep from before the whole call, including a
-failed multi-step run. Reconstruct the
-solver after numerical-output refusal; a buffer-borrow refusal leaves the
-solver usable with writable contiguous inputs.
+The public wrapper validates real results in both environments. Producers
+canonicalise a remainder rounded to the excluded upper endpoint, and signed
+zero, to positive zero; interior phases remain. Nonfinite computed output and
+invalid adaptive proposals still raise `ValueError`. A refused native step
+restores caller phases and its pre-step proposal before plasticity; subsequent
+valid input can use the same solver. Public `last_dt` retains its pre-call
+value on a failed run, but earlier accepted native steps are not rewound if a
+later batch step refuses. Buffer-borrow recovery remains possible with writable
+contiguous inputs. Native dense/CSR rollback snapshots retain phases and trigonometric caches, adding O(N) storage per step.
+Recovery above concerns nonfinite phase computation. A separate invalid native
+adaptive diagnostic, including zero-proposal underflow, retains the public
+diagnostic but requires reconstruction with suitable numerical controls.
 
 The maintained sparse chain is Python → PyO3 → Rust. The stateless dense
 Go/Julia/Mojo accelerators are separate surfaces and do not implement CSR sparse
 integration. See [the sparse API reference](../reference/api/upde.md#sparse-engine).
 
-### Sparse diagnostic workloads (2026-09-30)
+### Sparse diagnostic workloads (2026-10-01)
 
 Run the real public Euler path against an independent SciPy CSR sine-difference
 reference:
@@ -300,18 +312,18 @@ parameter and the largest final circular phase error against the reference.
 
 | Nodes | Stored edges | Installed Rust: median µs/step | Kernel absent: median µs/step | Largest reference error (rad) |
 | --- | --- | --- | --- | --- |
-| 1,000 | 9,963 | 286.5 | 36,525.5 | 1.0e-15 |
-| 10,000 | 99,936 | 4,119.6 | 361,771.6 | 2.7e-15 |
+| 1,000 | 9,963 | 240.8 | 33,648.2 | 1.0e-15 |
+| 10,000 | 99,936 | 3,242.3 | 313,791.7 | 2.7e-15 |
 
 Input SHA-256 agrees across both environments for each workload. Both use
 Python 3.12.3; the installed-kernel environment uses NumPy 2.5.3/SciPy 1.18.1,
 and the absent-kernel environment NumPy 2.2.6/SciPy 1.15.3. Measurements run on a
 shared, non-isolated workstation with no reserved cores. Native per-step
-observations vary across repeats (241–417 µs at 1,000 nodes);
+observations vary across repeats (234–256 µs at 1,000 nodes);
 the displayed median is not a stable latency estimate. They are local equation
 and timing diagnostics, not causal speedup, production latency or capacity
 claims. Raw repetitions, host load before/after, affinity, governor and source
-fingerprint remain in the internal task evidence.
+fingerprints are in the public raw runtime record linked above.
 
 ### LIF Ensemble (NeurocoreBridge)
 

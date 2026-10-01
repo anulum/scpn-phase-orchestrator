@@ -72,7 +72,13 @@ class WebGPUKernelPackage:
 
 
 def get_webgpu_backend_capabilities() -> WebGPUBackendCapabilities:
-    """Return the explicit WebGPU execution contract."""
+    """Return the documented browser-only Euler execution contract.
+
+    Returns
+    -------
+    WebGPUBackendCapabilities
+        Target, supported method, binary32 scalar type, and workgroup size.
+    """
     return WebGPUBackendCapabilities(
         name="webgpu",
         execution_target="browser-or-edge-webgpu",
@@ -87,10 +93,16 @@ def get_webgpu_backend_capabilities() -> WebGPUBackendCapabilities:
 
 
 def is_webgpu_runtime_available() -> bool:
-    """Detect browser WebGPU availability without importing JS on CPython."""
+    """Probe the real Pyodide navigator.gpu capability.
+
+    Returns
+    -------
+    bool
+        True only when the actual JavaScript bridge exposes navigator.gpu.
+        Ordinary CPython returns False without manufacturing a browser bridge.
+    """
     try:
-        # type ignore: Pyodide exposes the browser JS namespace only at runtime.
-        import js  # type: ignore[import-not-found]
+        js = importlib.import_module("js")
     except ImportError:
         return False
     navigator = getattr(js, "navigator", None)
@@ -127,6 +139,9 @@ fn wrap_phase(theta: f32, two_pi: f32) -> f32 {{
     var wrapped = theta - floor(theta / two_pi) * two_pi;
     if (wrapped < 0.0) {{
         wrapped = wrapped + two_pi;
+    }}
+    if (wrapped >= two_pi || wrapped == 0.0) {{
+        return 0.0;
     }}
     return wrapped;
 }}
@@ -235,9 +250,13 @@ export class WebGPUUPDEBackend {
     assertFiniteArray("knm", knm, n * n);
     assertFiniteArray("alpha", alpha, n * n);
     for (const [name, value] of [["zeta", zeta], ["psi", psi], ["dt", dt]]) {
-      if (!Number.isFinite(value)) {
-        throw new RangeError(`${name} must be finite`);
+      if (!Number.isFinite(value) || !Number.isFinite(Math.fround(value))) {
+        throw new RangeError(`${name} must be finite in float32`);
       }
+    }
+    const substep = Math.fround(dt / nSubsteps);
+    if (!(substep > 0.0) || !Number.isFinite(substep)) {
+      throw new RangeError("dt / nSubsteps must be positive and finite in float32");
     }
 
     const device = this.device;
@@ -253,7 +272,7 @@ export class WebGPUUPDEBackend {
     const paramsU32 = new Uint32Array(params);
     const paramsF32 = new Float32Array(params);
     paramsU32[0] = n;
-    paramsF32[1] = dt / nSubsteps;
+    paramsF32[1] = substep;
     paramsF32[2] = zeta;
     paramsF32[3] = psi;
     paramsF32[4] = TWO_PI;
@@ -262,50 +281,88 @@ export class WebGPUUPDEBackend {
       params,
       GPUBufferUsage.UNIFORM,
     );
-
-    const makeBindGroup = () => device.createBindGroup({
-      layout: this.bindGroupLayout,
-      entries: [
-        { binding: 0, resource: { buffer: src } },
-        { binding: 1, resource: { buffer: dst } },
-        { binding: 2, resource: { buffer: omegaBuffer } },
-        { binding: 3, resource: { buffer: knmBuffer } },
-        { binding: 4, resource: { buffer: alphaBuffer } },
-        { binding: 5, resource: { buffer: paramsBuffer } },
-      ],
-    });
-
-    const totalPasses = nSteps * nSubsteps;
-    const workgroups = Math.ceil(n / WORKGROUP_SIZE);
-    for (let passIndex = 0; passIndex < totalPasses; passIndex += 1) {
-      const encoder = device.createCommandEncoder();
-      const pass = encoder.beginComputePass();
-      pass.setPipeline(this.pipeline);
-      pass.setBindGroup(0, makeBindGroup());
-      pass.dispatchWorkgroups(workgroups);
-      pass.end();
-      device.queue.submit([encoder.finish()]);
-      [src, dst] = [dst, src];
-    }
-
     const readBuffer = device.createBuffer({
       size: phases.byteLength,
       usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
     });
-    const encoder = device.createCommandEncoder();
-    encoder.copyBufferToBuffer(src, 0, readBuffer, 0, phases.byteLength);
-    device.queue.submit([encoder.finish()]);
-    await readBuffer.mapAsync(GPUMapMode.READ);
-    const result = new Float32Array(readBuffer.getMappedRange()).slice();
-    readBuffer.unmap();
-    return result;
+
+    try {
+      const makeBindGroup = () => device.createBindGroup({
+        layout: this.bindGroupLayout,
+        entries: [
+          { binding: 0, resource: { buffer: src } },
+          { binding: 1, resource: { buffer: dst } },
+          { binding: 2, resource: { buffer: omegaBuffer } },
+          { binding: 3, resource: { buffer: knmBuffer } },
+          { binding: 4, resource: { buffer: alphaBuffer } },
+          { binding: 5, resource: { buffer: paramsBuffer } },
+        ],
+      });
+
+      const totalPasses = nSteps * nSubsteps;
+      const workgroups = Math.ceil(n / WORKGROUP_SIZE);
+      for (let passIndex = 0; passIndex < totalPasses; passIndex += 1) {
+        const encoder = device.createCommandEncoder();
+        const pass = encoder.beginComputePass();
+        pass.setPipeline(this.pipeline);
+        pass.setBindGroup(0, makeBindGroup());
+        pass.dispatchWorkgroups(workgroups);
+        pass.end();
+        device.queue.submit([encoder.finish()]);
+        [src, dst] = [dst, src];
+      }
+
+      const encoder = device.createCommandEncoder();
+      encoder.copyBufferToBuffer(src, 0, readBuffer, 0, phases.byteLength);
+      device.queue.submit([encoder.finish()]);
+      await readBuffer.mapAsync(GPUMapMode.READ);
+      const result = new Float32Array(readBuffer.getMappedRange()).slice();
+      readBuffer.unmap();
+      assertFiniteArray("result", result, n);
+      const period = Math.fround(TWO_PI);
+      for (let i = 0; i < result.length; i += 1) {
+        if (result[i] < 0.0 || result[i] >= period || Object.is(result[i], -0)) {
+          throw new RangeError(`result[${i}] is outside the canonical float32 torus`);
+        }
+      }
+      return result;
+    } finally {
+      for (const buffer of [src, dst, omegaBuffer, knmBuffer, alphaBuffer,
+        paramsBuffer, readBuffer]) {
+        buffer.destroy();
+      }
+    }
   }
 }
 """
 
 
 def build_webgpu_upde_package(method: str = "euler") -> WebGPUKernelPackage:
-    """Build the browser WebGPU kernel package for a supported method."""
+    """Generate the executable browser Euler shader and ES-module runner.
+
+    Parameters
+    ----------
+    method : str, default "euler"
+        Supported shader method; RK4 and RK45 are unavailable here.
+
+    Returns
+    -------
+    WebGPUKernelPackage
+        Sources executing dense coupling, lag, drive and canonical binary32
+        torus projection after every compute pass.
+
+    Raises
+    ------
+    ValueError
+        The requested method is unsupported.
+
+    Notes
+    -----
+    The host supplies a real WebGPU device. Controls must be finite binary32
+    values, and dt/nSubsteps must remain strictly positive in that precision.
+    The runner refuses invalid readback and releases its allocated buffers.
+    Portable WGSL sine accuracy differs from binary64 reference certification.
+    """
     method = _validate_method(method)
     return WebGPUKernelPackage(
         method=method,

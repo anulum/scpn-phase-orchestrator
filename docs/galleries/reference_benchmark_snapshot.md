@@ -3,6 +3,15 @@
 This page is generated from `benchmarks/results/reference_suite.json`.
 Timing values are local, non-isolated regression evidence unless the metadata states otherwise.
 
+The June 14 records below are historical. Scalar dense/CSR Kuramoto and the
+fixed/frequency-scheduled/Doppler/moving-frame producer chain now use
+[canonical phase projection](../specs/phase_contract.md#phase-wrapping-in-the-upde-engine).
+Their current executable comparisons are superseded by the
+[October 1 runtime diagnostic](../reference/data/upde_phase_wrapping_benchmark_2026-10-01.json),
+including all five CPU backends, genuine kernel-absent stateful runs, JAX
+float32/float64 consumers and real browser WebGPU Euler. This does not claim
+that the unrelated historical suites below were rerun.
+
 ## Metadata
 
 - `suite_version`: `reference_suite_v1`

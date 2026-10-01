@@ -16,6 +16,7 @@ from typing import Any, TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._compat import TWO_PI
 from scpn_phase_orchestrator.upde._validation_common import (
     contains_boolean_alias,
 )
@@ -298,11 +299,37 @@ def validate_upde_schedule_backend_inputs(
     )
 
 
-def validate_upde_backend_output(value: Any, *, n: int) -> FloatArray:
-    """Validate a backend phase-vector result before publication."""
+def validate_upde_backend_output(
+    value: object, *, n: int, wrapped: bool = True
+) -> FloatArray:
+    """Validate a backend phase-vector result before publication.
+
+    Parameters
+    ----------
+    value : object
+        The actual backend result.
+    n : int
+        Expected number of oscillator phases.
+    wrapped : bool
+        Require the half-open torus after integration. Zero-step dispatch
+        passes false to preserve an independent, unwrapped input copy.
+
+    Returns
+    -------
+    FloatArray
+        A finite real phase vector with the expected cardinality and, when
+        requested, values strictly below the upper torus endpoint.
+
+    Raises
+    ------
+    ValueError
+        If the result has an invalid type, shape, value or phase range.
+    """
     out = _as_real_finite_array(value, name="result")
     if out.ndim != 1:
         raise ValueError("result must be a one-dimensional vector")
     if out.size != n:
         raise ValueError(f"result must contain {n} values")
+    if wrapped and np.any((out < 0.0) | (out >= TWO_PI)):
+        raise ValueError("result phases must be in [0, 2*pi)")
     return out

@@ -6,7 +6,7 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — UPDE batched-run dispatcher
 
-"""Five-backend dispatcher for the UPDE batched integrator.
+"""Six-backend dispatcher for the UPDE batched integrator.
 
 Exports:
 
@@ -87,6 +87,7 @@ def _load_rust_fn() -> Callable[..., FloatArray]:
                 int(n_steps),
             ),
             n=n,
+            wrapped=n_steps > 0,
         )
 
     return cast("Callable[..., FloatArray]", _rust_run)
@@ -136,7 +137,6 @@ def _load_rust_schedule_fn() -> Callable[..., FloatArray]:
 
 
 def _load_mojo_fn() -> Callable[..., FloatArray]:
-    # pragma: no cover — toolchain
     """Load the Mojo UPDE step backend callable."""
     from ..experimental.accelerators.upde._engine_mojo import (
         _ensure_exe,
@@ -148,7 +148,6 @@ def _load_mojo_fn() -> Callable[..., FloatArray]:
 
 
 def _load_mojo_schedule_fn() -> Callable[..., FloatArray]:
-    # pragma: no cover — toolchain
     """Load the Mojo UPDE schedule backend callable."""
     from ..experimental.accelerators.upde._engine_mojo import (
         _ensure_exe,
@@ -169,7 +168,6 @@ def _load_webgpu_fn() -> Callable[..., FloatArray]:
 
 
 def _require_juliacall_runtime() -> None:
-    # pragma: no cover — toolchain
     """Import the juliacall runtime, else raise ``ImportError``.
 
     Delegates to the shared UPDE probe, which treats a missing ``Main`` (a
@@ -180,7 +178,6 @@ def _require_juliacall_runtime() -> None:
 
 
 def _load_julia_fn() -> Callable[..., FloatArray]:
-    # pragma: no cover — toolchain
     """Load the Julia UPDE step backend callable."""
     _require_juliacall_runtime()
 
@@ -192,7 +189,6 @@ def _load_julia_fn() -> Callable[..., FloatArray]:
 
 
 def _load_julia_schedule_fn() -> Callable[..., FloatArray]:
-    # pragma: no cover — toolchain
     """Load the Julia UPDE schedule backend callable."""
     _require_juliacall_runtime()
 
@@ -204,7 +200,6 @@ def _load_julia_schedule_fn() -> Callable[..., FloatArray]:
 
 
 def _load_go_fn() -> Callable[..., FloatArray]:
-    # pragma: no cover — toolchain
     """Load the Go UPDE step backend callable."""
     from ..experimental.accelerators.upde._engine_go import (
         _load_lib,
@@ -216,7 +211,6 @@ def _load_go_fn() -> Callable[..., FloatArray]:
 
 
 def _load_go_schedule_fn() -> Callable[..., FloatArray]:
-    # pragma: no cover — toolchain
     """Load the Go UPDE schedule backend callable."""
     from ..experimental.accelerators.upde._engine_go import (
         _load_lib,
@@ -357,14 +351,44 @@ def upde_run(
     atol: float = 1e-6,
     rtol: float = 1e-3,
 ) -> FloatArray:
-    """Stateless batched UPDE integrator.
+    """Run the stateless UPDE integrator through the selected real backend.
 
-    Dispatches to the first available backend per the SPO chain
-    (Rust → WebGPU → Mojo → Julia → Go → Python). Every backend runs the
-    same algorithm: ``method ∈ {"euler", "rk4", "rk45"}`` with
-    ``n_substeps`` applied to the fixed-step methods; RK45 is
-    adaptive with ``(atol, rtol)`` tolerances. Phases are wrapped
-    to ``[0, 2π)`` after each outer step.
+    Euler, RK4 and RK45 use float64 in the native and NumPy chain. The
+    browser WebGPU bridge supports float32 Euler only. Integrated outputs
+    lie in [0, 2*pi); rounded endpoints and signed zeros become positive
+    zero. Zero steps return an independent unwrapped copy.
+
+    Parameters
+    ----------
+    phases : FloatArray
+        Oscillator phases in radians, shape ``(N,)``.
+    omegas : FloatArray
+        Natural frequencies in rad/s, shape ``(N,)``.
+    knm : FloatArray
+        Coupling matrix ``K_nm``, shape ``(N, N)``.
+    alpha : FloatArray
+        Finite phase-lag matrix in radians, shape ``(N, N)``; use zeros for no lag.
+    zeta : float
+        External drive strength ``ζ``.
+    psi : float
+        External drive reference phase ``Ψ`` in radians.
+    dt : float
+        Integration step size.
+    n_steps : int
+        Number of integration steps to run.
+    method : str
+        Integration method (``euler``, ``rk4``, or ``rk45``).
+    n_substeps : int
+        Number of inner substeps per outer step.
+    atol : float
+        Absolute tolerance for the adaptive (rk45) integrator.
+    rtol : float
+        Relative tolerance for the adaptive (rk45) integrator.
+
+    Returns
+    -------
+    FloatArray
+        The final phases after ``n_steps`` integration steps.
     """
     (
         p,
@@ -427,7 +451,7 @@ def upde_run(
             atol_f,
             rtol_f,
         )
-    return validate_upde_backend_output(result, n=n)
+    return validate_upde_backend_output(result, n=n, wrapped=n_steps_i > 0)
 
 
 def upde_run_omega_schedule(
@@ -443,7 +467,38 @@ def upde_run_omega_schedule(
     atol: float = 1e-6,
     rtol: float = 1e-3,
 ) -> FloatArray:
-    """Run UPDE with one resolved natural-frequency vector per outer step."""
+    """Run UPDE with one resolved natural-frequency vector per outer step.
+
+    Parameters
+    ----------
+    phases : FloatArray
+        Oscillator phases in radians, shape ``(N,)``.
+    omega_schedule : FloatArray
+        Per-step natural-frequency vectors, shape ``(n_steps, N)``.
+    knm : FloatArray
+        Coupling matrix ``K_nm``, shape ``(N, N)``.
+    alpha : FloatArray
+        Finite phase-lag matrix in radians, shape ``(N, N)``; use zeros for no lag.
+    zeta : float
+        External drive strength ``ζ``.
+    psi : float
+        External drive reference phase ``Ψ`` in radians.
+    dt : float
+        Integration step size.
+    method : str
+        Integration method (``euler``, ``rk4``, or ``rk45``).
+    n_substeps : int
+        Number of inner substeps per outer step.
+    atol : float
+        Absolute tolerance for the adaptive (rk45) integrator.
+    rtol : float
+        Relative tolerance for the adaptive (rk45) integrator.
+
+    Returns
+    -------
+    FloatArray
+        The final phases after integrating the omega schedule.
+    """
     (
         p,
         schedule,

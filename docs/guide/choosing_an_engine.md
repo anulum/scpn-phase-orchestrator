@@ -45,7 +45,13 @@ These have a dedicated, documented entry point:
 | --- | --- | --- |
 | `StuartLandauEngine` | Phase **and** amplitude matter (limit-cycle oscillators). | [Stuart-Landau Amplitude Mode](stuart_landau.md) |
 | `SparseUPDEEngine` | Sparse graphs requiring `O(N + E)` storage and derivative work. | [CSR contract](../reference/api/upde.md#sparse-engine) |
-| `JaxUPDEEngine` | Differentiable / GPU-accelerated integration (needs the `nn` extra). | [Differentiable Kuramoto Layer](differentiable_kuramoto.md) |
+| `JaxUPDEEngine` | JIT integration on the configured JAX device, with validated NumPy host readback (needs the `nn` extra). | [JAX contract](../reference/api/upde.md#jax-accelerated-kuramoto-engine) |
+
+For device-array autodiff, use the [dense/masked Kuramoto functional API](../reference/api/nn.md#kuramoto-model).
+Both JAX Kuramoto surfaces canonicalise phases in their configured precision;
+gradients are defined away from the wrap cut. CPU execution is supported and
+does not imply a hardware accelerator. Standard dense and CSR steps retain
+their adaptive proposal on numerical refusal and accept subsequent valid input.
 
 ## Specialised dynamics engines (advanced)
 
@@ -75,4 +81,3 @@ reported at chance on real data. See the README *Evidence status* table. Pick th
 engine your physics needs, then rely on the [honest evaluation
 auditor](../reference/api/evaluation.md) — not the engine's sophistication — to
 tell you whether a detector beats chance on your data.
-```

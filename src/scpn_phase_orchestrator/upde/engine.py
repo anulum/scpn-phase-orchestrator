@@ -29,6 +29,8 @@ from numpy.typing import NDArray
 from scpn_phase_orchestrator._compat import HAS_RUST as _HAS_RUST
 from scpn_phase_orchestrator._compat import TWO_PI
 from scpn_phase_orchestrator.upde import _run as _run_mod
+from scpn_phase_orchestrator.upde._engine_validation import validate_upde_backend_output
+from scpn_phase_orchestrator.upde._phase_wrap import wrap_phases
 
 __all__ = [
     "ACTIVE_BACKEND",
@@ -98,7 +100,7 @@ def upde_run(
     knm : FloatArray
         Coupling matrix ``K_nm``, shape ``(N, N)``.
     alpha : FloatArray
-        Phase-lag matrix in radians, shape ``(N, N)``, or ``None`` for no lag.
+        Finite phase-lag matrix in radians, shape ``(N, N)``; use zeros for no lag.
     zeta : float
         External drive strength ``ζ``.
     psi : float
@@ -119,7 +121,23 @@ def upde_run(
     Returns
     -------
     FloatArray
-        The final phases after ``n_steps`` integration steps.
+        Independent final float64 phases in ``[0, 2*pi)`` after positive steps.
+        Zero steps return an independent copy without wrapping the input.
+
+    Raises
+    ------
+    ValueError
+        Inputs are invalid or the actual backend produces malformed, nonfinite,
+        or out-of-torus phases.
+    RuntimeError
+        The selected backend cannot execute in the current runtime.
+
+    Notes
+    -----
+    Producers map a remainder rounded to the upper endpoint, and signed zero,
+    to positive zero. Interior representable values are retained. Rust, Python,
+    Go, Julia and Mojo implement all three methods; the browser WebGPU bridge
+    implements Euler only and requires its actual JavaScript runtime.
     """
     active, _ = _backend_state()
     previous = _run_mod.ACTIVE_BACKEND
@@ -167,7 +185,7 @@ def upde_run_omega_schedule(
     knm : FloatArray
         Coupling matrix ``K_nm``, shape ``(N, N)``.
     alpha : FloatArray
-        Phase-lag matrix in radians, shape ``(N, N)``, or ``None`` for no lag.
+        Finite phase-lag matrix in radians, shape ``(N, N)``; use zeros for no lag.
     zeta : float
         External drive strength ``ζ``.
     psi : float
@@ -186,7 +204,21 @@ def upde_run_omega_schedule(
     Returns
     -------
     FloatArray
-        The final phases after integrating the omega schedule.
+        Independent final float64 phases in ``[0, 2*pi)`` with positive zero.
+
+    Raises
+    ------
+    ValueError
+        Inputs are invalid or the actual backend produces malformed, nonfinite,
+        or out-of-torus phases.
+    RuntimeError
+        The selected backend is unavailable or does not implement schedules.
+
+    Notes
+    -----
+    Each outer step uses one frequency row. The same producer-side canonical
+    projection as :func:`upde_run` applies; the WebGPU bridge has no schedule
+    implementation.
     """
     active, _ = _backend_state()
     previous = _run_mod.ACTIVE_BACKEND
@@ -294,7 +326,34 @@ class UPDEEngine:
         *,
         omega: object | None = None,
         t0: float = 0.0,
-    ):
+    ) -> None:
+        """Configure the real dense integrator and natural-frequency source.
+
+        Parameters
+        ----------
+        n_oscillators : int
+            Positive oscillator count.
+        dt : float
+            Positive finite configured integration timestep in seconds.
+        method : str, default "euler"
+            Explicit Euler, classical RK4, or adaptive Dormand-Prince RK45.
+        atol, rtol : float
+            Positive finite absolute and relative RK45 tolerances.
+        omega : object or None
+            Optional finite frequency vector or callable returning a vector at t.
+        t0 : float, default 0.0
+            Finite initial outer-step clock.
+
+        Raises
+        ------
+        ValueError
+            Invalid dimensions, controls, method, or initial frequency source.
+
+        Notes
+        -----
+        Steps use the native stepper when installed and NumPy otherwise.
+        Nonfinite computed phases are refused before advancing the public clock.
+        """
         n_oscillators = _validate_positive_int(
             n_oscillators,
             name="n_oscillators",
@@ -319,7 +378,7 @@ class UPDEEngine:
             self._omega_current = self._resolve_omega(omega, t0)
 
         self._rust = None
-        if _HAS_RUST:  # pragma: no cover
+        if _HAS_RUST:
             from spo_kernel import PyUPDEStepper
 
             self._rust = PyUPDEStepper(n_oscillators, dt, method, atol=atol, rtol=rtol)
@@ -339,12 +398,15 @@ class UPDEEngine:
 
     @property
     def last_dt(self) -> float:
-        """Actual dt used on the last accepted step (relevant for rk45).
+        """Return the diagnostic timestep exposed by this Python engine.
 
         Returns
         -------
         float
-            Actual dt used on the last accepted step (relevant for rk45).
+            Configured timestep for the native dense backend and fixed methods;
+            most recently retained next-step proposal from NumPy RK45
+            ``step()``. Batch runs leave this diagnostic unchanged; the native
+            dense proposal is not synchronised into this property.
         """
         return self._last_dt
 
@@ -407,7 +469,7 @@ class UPDEEngine:
         ------
         ValueError
             If input shapes do not match the configured oscillator count
-            or any scalar/array input is non-finite.
+            or any scalar/array input or computed phase is non-finite.
         """
         if knm is None:
             raise ValueError("knm is required")
@@ -417,23 +479,30 @@ class UPDEEngine:
         self._validate_inputs(phases, omega_vec, knm, alpha, zeta, psi)
         with self._lock:
             step_dt = self._last_dt if self._method == "rk45" else self._dt
-            if self._rust is not None:  # pragma: no cover
-                result = self._validate_rust_output(
-                    self._rust.step(
-                        np.ascontiguousarray(phases.ravel()),
-                        np.ascontiguousarray(omega_vec.ravel()),
-                        np.ascontiguousarray(knm.ravel()),
-                        float(zeta),
-                        float(psi),
-                        np.ascontiguousarray(alpha.ravel()),
+            previous_dt = self._last_dt
+            try:
+                if self._rust is not None:
+                    result = self._validate_rust_output(
+                        self._rust.step(
+                            np.ascontiguousarray(phases.ravel()),
+                            np.ascontiguousarray(omega_vec.ravel()),
+                            np.ascontiguousarray(knm.ravel()),
+                            float(zeta),
+                            float(psi),
+                            np.ascontiguousarray(alpha.ravel()),
+                        )
                     )
-                )
-            elif self._method == "euler":
-                result = self._euler_step(phases, omega_vec, knm, zeta, psi, alpha)
-            elif self._method == "rk45":
-                result = self._rk45_step(phases, omega_vec, knm, zeta, psi, alpha)
-            else:
-                result = self._rk4_step(phases, omega_vec, knm, zeta, psi, alpha)
+                elif self._method == "euler":
+                    result = self._euler_step(phases, omega_vec, knm, zeta, psi, alpha)
+                elif self._method == "rk45":
+                    result = self._rk45_step(phases, omega_vec, knm, zeta, psi, alpha)
+                else:
+                    result = self._rk4_step(phases, omega_vec, knm, zeta, psi, alpha)
+                if self._rust is None:
+                    result = validate_upde_backend_output(result, n=self._n)
+            except ValueError:
+                self._last_dt = previous_dt
+                raise
             self._time += step_dt
             self._omega_current = omega_vec.copy()
             return result
@@ -463,7 +532,7 @@ class UPDEEngine:
         psi : float
             External drive reference phase ``Ψ`` in radians.
         alpha : FloatArray | None
-            Phase-lag matrix in radians, shape ``(N, N)``, or ``None`` for no lag.
+            Required lag matrix in radians, shape ``(N, N)``; use zeros for no lag.
         n_steps : int
             Number of integration steps to run.
 
@@ -510,7 +579,7 @@ class UPDEEngine:
 
             omega_vec = self._resolve_omega(omega_source, self._time)
             self._validate_inputs(phases, omega_vec, knm, alpha, zeta, psi)
-            if self._rust is not None:  # pragma: no cover
+            if self._rust is not None:
                 result = self._validate_rust_output(
                     self._rust.run(
                         np.ascontiguousarray(phases.ravel()),
@@ -693,8 +762,7 @@ class UPDEEngine:
         """Advance the phase state one explicit-Euler step."""
         dtheta = self._derivative(phases, omegas, knm, zeta, psi, alpha)
         # Mod 2π keeps phases on S¹ (circle topology)
-        result: FloatArray = (phases + self._dt * dtheta) % TWO_PI
-        return result
+        return wrap_phases(phases + self._dt * dtheta)
 
     def _rk4_step(
         self,
@@ -717,8 +785,7 @@ class UPDEEngine:
         ).copy()
         k4 = self._derivative(phases + dt * k3, omegas, knm, zeta, psi, alpha)
         weighted = k1 + 2.0 * k2 + 2.0 * k3 + k4
-        result: FloatArray = (phases + (dt / 6.0) * weighted) % TWO_PI
-        return result
+        return wrap_phases(phases + (dt / 6.0) * weighted)
 
     def _rk45_stage_vector(
         self,
@@ -767,12 +834,10 @@ class UPDEEngine:
             if err_norm <= 1.0:
                 factor = min(5.0, 0.9 * err_norm ** (-0.2)) if err_norm > 0.0 else 5.0
                 self._last_dt = min(dt * factor, self._dt * 10.0)
-                result: FloatArray = y5 % TWO_PI
-                return result
+                return wrap_phases(y5)
 
-            factor = max(0.2, 0.9 * err_norm ** (-0.25))  # pragma: no cover
-            dt = dt * factor  # pragma: no cover
+            factor = max(0.2, 0.9 * err_norm ** (-0.25))
+            dt = dt * factor
 
-        self._last_dt = dt  # pragma: no cover
-        result_fallback: FloatArray = y5 % TWO_PI  # pragma: no cover
-        return result_fallback  # pragma: no cover
+        self._last_dt = dt
+        return wrap_phases(y5)

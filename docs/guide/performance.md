@@ -34,7 +34,9 @@ dt < pi / (max(omega) + N * max(K) + zeta)
 ```
 
 The coupling term contributes up to `N * max(K)` to the effective frequency.
-Exceeding this bound causes phase jumps that break the wrapping invariant.
+Large timesteps can cause inaccurate phase jumps or numerical divergence.
+Canonical projection still keeps every successfully published finite UPDE
+phase in its half-open torus; that bound does not certify integration accuracy.
 
 The binding spec `sample_period_s` sets dt. Validate at initialisation.
 
@@ -52,9 +54,10 @@ construction time:
 | `_scratch_dr` | (N,) | StuartLandau only |
 | `_scratch_deriv` | (2N,) | StuartLandau only |
 
-All operations use numpy `out=` parameters to write into pre-allocated buffers.
-No heap allocation occurs during stepping. For RK4, intermediate `k` vectors
-are copied since the scratch buffer is reused across stages.
+Derivative evaluation reuses these NumPy buffers. Stepping still allocates
+candidate/output arrays and RK4 stage copies. Dense/CSR native solvers also
+snapshot the O(N) phase and trigonometric-cache vectors before a step, allowing computed divergence to
+restore phases and the adaptive proposal before plasticity updates.
 
 ## Rust FFI
 
@@ -68,26 +71,33 @@ table. For backend support tiers and fallback rules, see
 disabled because LAPACK lstsq and SciPy FFT respectively outperform the
 current Rust implementations.
 
-Historical local benchmark snapshot (RK4, 1000 steps, averaged):
+Current local diagnostics (2026-10-01) exercised 16 nodes and 1000 public
+stateful steps per method:
 
-| N | Python (numpy) | Rust (spo_kernel) | Speedup |
-|---|---------------|-------------------|---------|
-| 8 | ~12 us/step | ~4.2 us/step | 2.9x |
-| 16 | ~25 us/step | ~7.3 us/step | 3.4x |
-| 64 | ~180 us/step | ~28 us/step | 6.4x |
-| 256 | ~2.8 ms/step | ~320 us/step | 8.7x |
-| 1024 | ~45 ms/step | ~8.6 ms/step | 5.2x |
+| Method | NumPy-only aggregate (ms) | Installed Rust aggregate (ms) |
+|---|---:|---:|
+| Euler | 120.9 | 138.8 |
+| RK4 | 209.3 | 135.1 |
+| RK45 | 198.6 | 138.8 |
 
-These numbers are regression context, not portable throughput or real-time
-guarantees. Both paths are O(N^2) due to the coupling matrix. The Rust advantage comes
-from eliminating Python interpreter overhead and numpy dispatch per operation.
+Both paths remain O(N²). These are the maintained comparison's formatted
+aggregate wall times, with different NumPy versions on a shared host; they do
+not establish a causal speedup or deadline. The
+[current raw runtime record](../reference/data/upde_phase_wrapping_benchmark_2026-10-01.json)
+also contains the nine stateless geometries across Rust/Mojo/Julia/Go/Python,
+scheduled comparisons, actual CSR repeats, JAX float32/float64 readbacks and
+software WebGPU Euler execution. First-call JIT/setup costs remain separate
+from repeated calls in the phase-edge records. See the
+[stateful measurement scope](rust_ffi.md#benchmark-comparison) before comparing
+stateful and stateless results.
 
 ## Coupling Matrix Sparsity
 
 The default coupling builder uses exponential decay: `K_ij = base * exp(-alpha * |i - j|)`.
 For large N, many entries are negligible. The current implementation stores
-the full dense (N, N) matrix. Sparse representations are planned but not
-yet implemented.
+the full dense (N, N) matrix. `SparseUPDEEngine` provides a separate CSR path
+with O(N + E) storage and derivative work. See its
+[buffer and recovery contract](../reference/api/upde.md#sparse-engine).
 
 For now, keep N manageable. Illustrative modelling configurations:
 
