@@ -70,10 +70,44 @@ These are computational theorem provers. Each `@given` test generates 50-500 ran
 | `test_prop_chimera_winding.py` | 19 | Chimera index ∈ [0,1], coherent/incoherent disjoint. Winding numbers integer-valued, reverse ≈ negation. |
 | `test_prop_free_energy_boltzmann.py` | 25 | Boltzmann weight ∈ (0,1] for U ≥ 0, monotonic in U and T. SSGF costs: c1 ∈ [0,1], c3 ≥ 0, c4 = 0 for symmetric W. |
 | `test_prop_embedding_poincare.py` | 15 | Delay embedding shape = (T-(m-1)τ, m). Optimal delay ≥ 1. Optimal dimension ∈ [1, max_dim]. |
-| `test_prop_ei_balance_npe.py` | 18 | Phase distance: symmetric, diagonal = 0, values ∈ [0,π]. NPE ∈ [0,1], sync → 0. EI ratio ≥ 0. |
+| `test_prop_ei_balance_npe.py` | 18 | Phase distance: symmetric, diagonal = 0, values ∈ [0,π]. NPE ∈ [0,1], sync → 0. EI ratio ≥ 0 for the generated non-negative coupling matrices. |
 | `test_prop_simplicial_reduction.py` | 8 | σ₂ = 0 reduces to standard Kuramoto (exact match). σ₂ ≠ 0 differs. |
 | `test_prop_swarmalator_inertial.py` | 10 | Swarmalator: J=0 decouples phase from position. Inertial: θ wrapped to [0,2π). |
 | `test_prop_plasticity_stochastic.py` | 22 | Eligibility: symmetric, ∈ [-1,1], zero diagonal. StochasticInjector: D=0 → no change, output ∈ [0,2π). |
+
+### Actual E/I runtime contracts
+
+`test_ei_balance.py` exercises the same public numerical and UPDE-consumer
+contracts with the installed kernel and a separate genuinely kernel-absent
+Python installation. Successful backend substitutes, private availability
+flags and import interception are unnecessary. The direct
+`native-tests/test_ei_balance.py` runs against the built PyO3 extension and
+checks buffer/count admission, signed and duplicate source semantics,
+independent copies, scaling underflow refusal, unchanged source buffers and
+recovery. Public and native regressions also exercise representable scaling
+below the summary's silent-mean threshold without claiming target attainment.
+The benchmark callable and actual CLI are exercised by
+`test_ei_balance_benchmark.py`. Its public `native_binary_provenance` contract
+checks actual package and standalone extension origins and refuses real
+source-only candidates. Its public `validate_ei_measurement` contract checks
+results against the declared source and target before timing. Refusal tests
+use genuine successful public computations associated with the wrong matrix
+or target; no corrupted backend or substituted numerical result is required.
+They also preserve both input and result buffers and verify a valid subsequent
+comparison. Native and absent coverage are measured from fresh executions of
+the current benchmark source.
+
+Run the public selection in each prepared interpreter:
+
+```bash
+PYTHONPATH=src python -m pytest tests/test_ei_balance.py tests/test_ei_balance_measurement_inputs.py tests/test_prop_ei_balance_npe.py tests/test_ei_balance_benchmark.py
+```
+
+Add `native-tests/test_ei_balance.py` only in the installed-native lane.
+Record actual import/binary provenance rather than changing an availability
+flag. The [coupling API](../reference/api/coupling.md#eibalance-dataclass)
+defines signed and overlapping-group behaviour; non-negative property-test
+generators do not establish non-negativity for signed coupling.
 
 ### Degenerate Edge Cases (`test_degenerate_edges.py`)
 

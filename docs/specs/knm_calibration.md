@@ -104,19 +104,30 @@ validate_knm(K)  # raises if invalid
 
 ### Step 4: E/I Balance (Optional)
 
-For neural systems, the excitatory/inhibitory balance of K_nm affects
-stability. The `EIBalance` class computes and adjusts the ratio:
+`compute_ei_balance` returns an `EIBalance` summary of signed outgoing
+coupling means. `adjust_ei_ratio` returns an independent matrix with each
+unique inhibitory source row scaled once. Supply the source groups from the
+binding; duplicate indices count once. This two-oscillator example uses
+disjoint groups:
 
 ```python
-from scpn_phase_orchestrator.coupling import EIBalance, compute_ei_balance
+import numpy as np
+from scpn_phase_orchestrator.coupling import adjust_ei_ratio, compute_ei_balance
 
-ratio = compute_ei_balance(K)  # E/I ratio
-balanced_K = EIBalance(target_ratio=4.0).adjust(K)
+K = np.array([[0.0, 2.0], [1.0, 0.0]])
+summary = compute_ei_balance(K, excitatory_indices=[0], inhibitory_indices=[1])
+ratio = summary.ratio  # 2.0
+balanced_K = adjust_ei_ratio(K, [0], [1], target_ratio=1.0)
 ```
 
-The default E/I target ratio of 4:1 follows Dale's principle for
-cortical networks. Domain-specific ratios can be configured in the
-binding spec.
+The default adjustment target is `1.0`. This numerical target and the summary's
+balance interval do not establish a physiological regime or a universal neural
+ratio. Signed inputs remain supported; silent groups return an unchanged copy,
+and non-finite adjustments or a scale rounded to zero raise. Target attainment
+requires disjoint groups, adequate float64 precision and an adjusted inhibitory
+mean with magnitude at least `1e-15`; smaller means use the silent convention.
+See the [E/I API contract](../reference/api/coupling.md#ei-balance) for the
+complete validation, empty-group and overlap semantics.
 
 ### Step 5: Spectral Validation (Optional)
 

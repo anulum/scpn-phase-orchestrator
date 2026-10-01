@@ -492,48 +492,95 @@ Spatiotemporal Filter."
 
 ## E/I Balance
 
-Computes and adjusts excitatory/inhibitory coupling balance. The aggregate
-`ratio` summarises overall balance, while the four directed interaction-type
-means resolve it into the source→target block strengths that Kuroki &
-Mizuseki 2025 (*Neural Computation* **37** (7):1353–1372) identify as the
-control parameters of the EI-Kuramoto synchronised / bistable /
-desynchronised regimes.
+Computes signed arithmetic summaries of caller-declared source groups and
+optionally rescales inhibitory rows. These are numerical coupling diagnostics;
+the balance flag is not a physiological validation or a universal
+synchronisation criterion.
 
 ### EIBalance (dataclass)
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `ratio` | `float` | E/I balance ratio (`excitatory_strength / inhibitory_strength`) |
-| `excitatory_strength` | `float` | Mean coupling from excitatory sources over all targets |
-| `inhibitory_strength` | `float` | Mean coupling from inhibitory sources over all targets |
+| `ratio` | `float` | Signed E/I mean quotient, with the silent-inhibition convention below |
+| `excitatory_strength` | `float` | Mean coupling from unique excitatory sources over all targets |
+| `inhibitory_strength` | `float` | Mean coupling from unique inhibitory sources over all targets |
 | `is_balanced` | `bool` | True if 0.8 ≤ ratio ≤ 1.2 |
-| `e_to_e` | `float` | Mean E→E interaction-type coupling |
-| `e_to_i` | `float` | Mean E→I interaction-type coupling |
-| `i_to_e` | `float` | Mean I→E interaction-type coupling |
-| `i_to_i` | `float` | Mean I→I interaction-type coupling |
+| `e_to_e` | `float` | Mean E→E directed block, including diagonal entries |
+| `e_to_i` | `float` | Mean E→I directed block |
+| `i_to_e` | `float` | Mean I→E directed block |
+| `i_to_i` | `float` | Mean I→I directed block, including diagonal entries |
 
-Each aggregate strength is the count-weighted blend of its two outgoing
-interaction-type blocks (e.g. `excitatory_strength` blends `e_to_e` and
-`e_to_i` over the target-group sizes).
+Each group is a set: duplicates count once and non-negative out-of-range
+indices are ignored. Negative, boolean and non-integral public indices refuse.
+Groups may overlap or leave targets untyped. Each aggregate mean blends its
+two directed blocks by target counts **only when the target groups partition
+all oscillators**. Empty source or target blocks have zero mean. Scaled,
+compensated aggregation prevents overflow of an otherwise representable mean.
+Float64 normalisation can discard contributions below its range; arbitrary
+exponent cancellation is not guaranteed to produce a correctly rounded mean.
 
 ### Functions
 
 - `compute_ei_balance(knm, excitatory_indices, inhibitory_indices)
   → EIBalance`
 - `adjust_ei_ratio(knm, excitatory_indices, inhibitory_indices,
-  target_ratio=1.0) → NDArray` — scales inhibitory coupling to
-  achieve target ratio
+  target_ratio=1.0) → NDArray` — scales each unique inhibitory row once
 
-Both helpers reject boolean, complex, text and temporal aliases in `knm`
-before computing row means or scaling inhibitory rows, while preserving real
-numeric object matrices. Target ratios reject temporal aliases; direct Rust
-counts and target ratios reject boolean/text/temporal aliases before extraction.
-Rust measurement buffers retain their explicit float64 ndarray ABI.
+The summary uses signed strengths. If the inhibitory mean has magnitude
+below `1e-15`, its ratio is infinity for positive excitation and one
+otherwise; other ratios are signed quotients and may overflow to infinity.
+Adjustment returns an independent unchanged copy when either source mean
+has magnitude below `1e-15` or the ratio is within `1e-10` of target.
+Otherwise it scales by `current_ratio / target_ratio`. Target attainment
+requires disjoint source groups, adequate float64 precision and an adjusted
+inhibitory mean with magnitude at least `1e-15`. Below that threshold the
+summary uses its silent convention, even for disjoint groups; an overlapping
+row changes both means.
 
-[Python/Rust measurements from 2026-09-26](../data/ei_balance_measurement_types_benchmark_2026-09-26.json)
-exercise the public Python fallback with the kernel absent and the installed Rust
-path. NumPy versions differ between these environments; timings are not a controlled
-backend speed-up comparison.
+Both public helpers reject boolean, complex, text and temporal coupling
+aliases before conversion, while preserving finite real numeric object
+matrices. The target must be a finite positive non-boolean real. A non-finite
+scale, a scale that rounds to either signed zero, or a non-finite adjusted
+element raises `ValueError`; caller bytes remain unchanged
+on success and refusal. Public strided and readonly inputs are normalised for
+native admission, and every successful adjustment owns independent memory.
+The representability requirement applies to the intermediate scale itself:
+`[[0, 2], [1e308, 0]]` with E=`[0]`, I=`[1]`, target=`1e308` refuses because
+`current_ratio / target_ratio` underflows, even though a mathematically
+rescaled individual entry could be represented. A representable non-zero
+scale remains admissible; individual products retain float64 rounding.
+
+The installed Rust functions retain their float64 coupling and int64 index
+ndarray ABI and require contiguous one-dimensional buffers. They validate
+exact `n * n` cardinality, count overflow, finite coupling and non-negative
+indices before indexing. Bad buffers/targets/numerics raise `ValueError`;
+coercion aliases reject before native scalar extraction. Empty `n=0`
+matrices remain valid. Rust core callers now handle `SpoResult<EIBalanceResult>`
+and `SpoResult<Vec<f64>>`, including the owning Criterion benchmark.
+
+[Current actual-runtime measurements](../data/ei_balance_runtime_benchmark_2026-10-01.json)
+retain three repetitions for summary and adjustment at N=16/64/256 in both
+the installed native and genuinely kernel-absent public paths, plus input and
+binary provenance. Reproduce each interpreter with
+`PYTHONPATH=src python benchmarks/ei_balance_benchmark.py --sizes 16 64 256 --calls 10 --repeats 3`.
+The repository diagnostic also exposes `native_binary_provenance(module_name)`
+to resolve and hash the actual extension file, supporting both standalone
+modules and same-name members of packaging wrappers. Source-only candidates
+refuse native attribution; an actually absent module returns no binary.
+`validate_ei_measurement(matrix, excitatory_indices, inhibitory_indices,
+summary, adjusted, target_ratio)` checks independently obtained real results
+against their declared benchmark input and target before any timing loop.
+It retains independent matrix means, attained-ratio and adjusted-row checks.
+This comparison contract uses moderate positive coupling and a disjoint,
+nonempty source partition; it does not widen the numerical target guarantee
+for signed, silent or overlapping groups.
+The direct Rust core benchmark is
+`cd spo-kernel && cargo bench -p spo-engine --bench utility_bench -- compute_ei_balance`.
+These are non-isolated shared-host diagnostics; NumPy versions differ.
+They establish exercised semantics and local timings, not backend speedup
+or production latency. The
+[2026-09-26 measurement-type snapshot](../data/ei_balance_measurement_types_benchmark_2026-09-26.json)
+is retained as historical ingress evidence.
 
 ::: scpn_phase_orchestrator.coupling.ei_balance
 

@@ -1,0 +1,449 @@
+{
+  "recorded_utc": "2026-10-01T20:51:02.219888+00:00",
+  "scope": "non-isolated shared-host functional/parity and local regression evidence",
+  "production_performance_claim": false,
+  "speedup_claim": false,
+  "seed": "PCG64 default_rng(20261001+n)",
+  "source_sha256": {
+    "src/scpn_phase_orchestrator/coupling/ei_balance.py": "257d9f9b8a3f69c3761a92cb5b161fd5792fbd1627d65125999603f12f3d2893",
+    "tests/test_ei_balance.py": "73f36c255abac7f6a1fb4af6a8e9193b61ed2676c55f7b19454c94cbba5764c3",
+    "native-tests/test_ei_balance.py": "c56cc22c8ba5ab4028e07cdab1371d6476bf57a0e3277f20123aeb62e9a768fc",
+    "spo-kernel/crates/spo-engine/src/ei_balance.rs": "42885c7e7bab9dcda57f52a460497b0c1de84d359d74085f393f79de49618fa8",
+    "spo-kernel/crates/spo-ffi/src/lib.rs": "600c2794baa5a6623d759c548140548fb5a849d99bc0c641369c608fee50179a",
+    "spo-kernel/crates/spo-ffi/src/ei_balance_boundary.rs": "d752a3a4246c69b2b0ea59d31daa611c56e176fb1d778c59243c5c945b575993",
+    "spo-kernel/crates/spo-engine/benches/utility_bench.rs": "5a4d4d5a1fc2cebd849814098484da147c6421a77b46b18781696996ae822c12",
+    "benchmarks/ei_balance_benchmark.py": "395588dc778f920db620d361f4157f20b6f28c3bb447187a58d8909f0c009ae6",
+    "tests/test_ei_balance_benchmark.py": "f1f27dfd5fa79abdc29e69e6692f31c6e6927a51dd12b22f4dfdf86775eb5671",
+    "docs/reference/api/coupling.md": "a882b1a421e9bdea2b64ccbd95a16e6c1d2d8373e1877afd60ec75a879b862c0",
+    "docs/guide/testing.md": "9def031b6cf6ad398454207a52461788183eac7fde93f4ca8f4f425c3c19e6cf",
+    "docs/specs/knm_calibration.md": "f5fe67e0397df945e2a46a6d171f378e5bbbde630acea7edfbd1cf709ce8746d"
+  },
+  "native": {
+    "scope": "non-isolated shared-host functional/parity and local regression evidence",
+    "production_performance_claim": false,
+    "speedup_claim": false,
+    "actual_native": true,
+    "native_binary": "/media/anulum/GOTM/aaa_God_of_the_Math_Collection/03_CODE/SCPN-SYSTEMS-INTEGRATION-AND-CONTROL/repositories/SCPN-PHASE-ORCHESTRATOR/.venv/lib/python3.12/site-packages/spo_kernel/spo_kernel.abi3.so",
+    "native_binary_sha256": "3d22d9b5329d625e16d24d6cdd733529d97949b9345e790313c7624c509ba64e",
+    "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]",
+    "python_executable": "/media/anulum/GOTM/aaa_God_of_the_Math_Collection/03_CODE/SCPN-SYSTEMS-INTEGRATION-AND-CONTROL/repositories/SCPN-PHASE-ORCHESTRATOR/.venv/bin/python",
+    "numpy": "2.5.3",
+    "platform": "Linux-7.0.0-34-generic-x86_64-with-glibc2.39",
+    "cpu_affinity": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ],
+    "load_average": [
+      50.794921875,
+      46.11767578125,
+      42.25341796875
+    ],
+    "rows": [
+      {
+        "n": 16,
+        "operation": "compute",
+        "calls": 10,
+        "repeats": 3,
+        "ns_per_call": [
+          98836.0,
+          619780.7,
+          103212.5
+        ],
+        "median_ns_per_call": 103212.5,
+        "input_sha256": "69ab3f6ebaf0d8e25d375d56019180e27488f9ee776d5745d1f6ab9ed25039c7",
+        "summary": {
+          "ratio": 0.9657339606985204,
+          "excitatory_strength": 0.5377099616252883,
+          "inhibitory_strength": 0.5567889123795128,
+          "is_balanced": true,
+          "e_to_e": 0.5474518802321684,
+          "e_to_i": 0.5279680430184083,
+          "i_to_e": 0.57843889701264,
+          "i_to_i": 0.5351389277463856
+        },
+        "adjusted_ratio": 1.5
+      },
+      {
+        "n": 16,
+        "operation": "adjust",
+        "calls": 10,
+        "repeats": 3,
+        "ns_per_call": [
+          331875.2,
+          173096.6,
+          486388.8
+        ],
+        "median_ns_per_call": 331875.2,
+        "input_sha256": "69ab3f6ebaf0d8e25d375d56019180e27488f9ee776d5745d1f6ab9ed25039c7",
+        "summary": {
+          "ratio": 0.9657339606985204,
+          "excitatory_strength": 0.5377099616252883,
+          "inhibitory_strength": 0.5567889123795128,
+          "is_balanced": true,
+          "e_to_e": 0.5474518802321684,
+          "e_to_i": 0.5279680430184083,
+          "i_to_e": 0.57843889701264,
+          "i_to_i": 0.5351389277463856
+        },
+        "adjusted_ratio": 1.5
+      },
+      {
+        "n": 64,
+        "operation": "compute",
+        "calls": 10,
+        "repeats": 3,
+        "ns_per_call": [
+          3865663.3,
+          5250542.2,
+          5546407.7
+        ],
+        "median_ns_per_call": 5250542.2,
+        "input_sha256": "d6d0b8f8aa6013a1a8ed272978426d199da5a1615b2e5913316e2b1e433006a6",
+        "summary": {
+          "ratio": 1.0037090128764494,
+          "excitatory_strength": 0.5483647578582068,
+          "inhibitory_strength": 0.5463383817653407,
+          "is_balanced": true,
+          "e_to_e": 0.536249000309832,
+          "e_to_i": 0.5604805154065816,
+          "i_to_e": 0.5477368008447256,
+          "i_to_i": 0.5449399626859556
+        },
+        "adjusted_ratio": 1.5
+      },
+      {
+        "n": 64,
+        "operation": "adjust",
+        "calls": 10,
+        "repeats": 3,
+        "ns_per_call": [
+          7223229.1,
+          6578076.7,
+          7618656.2
+        ],
+        "median_ns_per_call": 7223229.1,
+        "input_sha256": "d6d0b8f8aa6013a1a8ed272978426d199da5a1615b2e5913316e2b1e433006a6",
+        "summary": {
+          "ratio": 1.0037090128764494,
+          "excitatory_strength": 0.5483647578582068,
+          "inhibitory_strength": 0.5463383817653407,
+          "is_balanced": true,
+          "e_to_e": 0.536249000309832,
+          "e_to_i": 0.5604805154065816,
+          "i_to_e": 0.5477368008447256,
+          "i_to_i": 0.5449399626859556
+        },
+        "adjusted_ratio": 1.5
+      },
+      {
+        "n": 256,
+        "operation": "compute",
+        "calls": 10,
+        "repeats": 3,
+        "ns_per_call": [
+          46814220.0,
+          32386784.6,
+          26266084.3
+        ],
+        "median_ns_per_call": 32386784.6,
+        "input_sha256": "ba393b115941f9c24a5add4aa18cba92a243eee711504f968f48893d12f4ae68",
+        "summary": {
+          "ratio": 1.001288110689683,
+          "excitatory_strength": 0.5487759189981445,
+          "inhibitory_strength": 0.5480699442442695,
+          "is_balanced": true,
+          "e_to_e": 0.5473238756726172,
+          "e_to_i": 0.5502279623236717,
+          "i_to_e": 0.5499334222863874,
+          "i_to_i": 0.5462064662021515
+        },
+        "adjusted_ratio": 1.5000000000000002
+      },
+      {
+        "n": 256,
+        "operation": "adjust",
+        "calls": 10,
+        "repeats": 3,
+        "ns_per_call": [
+          35838060.4,
+          42507013.7,
+          48931656.3
+        ],
+        "median_ns_per_call": 42507013.7,
+        "input_sha256": "ba393b115941f9c24a5add4aa18cba92a243eee711504f968f48893d12f4ae68",
+        "summary": {
+          "ratio": 1.001288110689683,
+          "excitatory_strength": 0.5487759189981445,
+          "inhibitory_strength": 0.5480699442442695,
+          "is_balanced": true,
+          "e_to_e": 0.5473238756726172,
+          "e_to_i": 0.5502279623236717,
+          "i_to_e": 0.5499334222863874,
+          "i_to_i": 0.5462064662021515
+        },
+        "adjusted_ratio": 1.5000000000000002
+      }
+    ],
+    "command": [
+      "/media/anulum/GOTM/aaa_God_of_the_Math_Collection/03_CODE/SCPN-SYSTEMS-INTEGRATION-AND-CONTROL/repositories/SCPN-PHASE-ORCHESTRATOR/.venv/bin/python",
+      "/media/anulum/GOTM/aaa_God_of_the_Math_Collection/03_CODE/SCPN-SYSTEMS-INTEGRATION-AND-CONTROL/repositories/SCPN-PHASE-ORCHESTRATOR/benchmarks/ei_balance_benchmark.py"
+    ]
+  },
+  "kernel_absent": {
+    "scope": "non-isolated shared-host functional/parity and local regression evidence",
+    "production_performance_claim": false,
+    "speedup_claim": false,
+    "actual_native": false,
+    "native_binary": null,
+    "native_binary_sha256": null,
+    "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]",
+    "python_executable": "/usr/bin/python3",
+    "numpy": "2.2.6",
+    "platform": "Linux-7.0.0-34-generic-x86_64-with-glibc2.39",
+    "cpu_affinity": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ],
+    "load_average": [
+      49.12939453125,
+      45.849609375,
+      42.1875
+    ],
+    "rows": [
+      {
+        "n": 16,
+        "operation": "compute",
+        "calls": 10,
+        "repeats": 3,
+        "ns_per_call": [
+          1563490.9,
+          1230770.4,
+          1127469.3
+        ],
+        "median_ns_per_call": 1230770.4,
+        "input_sha256": "69ab3f6ebaf0d8e25d375d56019180e27488f9ee776d5745d1f6ab9ed25039c7",
+        "summary": {
+          "ratio": 0.9657339606985204,
+          "excitatory_strength": 0.5377099616252883,
+          "inhibitory_strength": 0.5567889123795128,
+          "is_balanced": true,
+          "e_to_e": 0.5474518802321684,
+          "e_to_i": 0.5279680430184083,
+          "i_to_e": 0.57843889701264,
+          "i_to_i": 0.5351389277463856
+        },
+        "adjusted_ratio": 1.5
+      },
+      {
+        "n": 16,
+        "operation": "adjust",
+        "calls": 10,
+        "repeats": 3,
+        "ns_per_call": [
+          1354750.9,
+          892023.3,
+          1574112.4
+        ],
+        "median_ns_per_call": 1354750.9,
+        "input_sha256": "69ab3f6ebaf0d8e25d375d56019180e27488f9ee776d5745d1f6ab9ed25039c7",
+        "summary": {
+          "ratio": 0.9657339606985204,
+          "excitatory_strength": 0.5377099616252883,
+          "inhibitory_strength": 0.5567889123795128,
+          "is_balanced": true,
+          "e_to_e": 0.5474518802321684,
+          "e_to_i": 0.5279680430184083,
+          "i_to_e": 0.57843889701264,
+          "i_to_i": 0.5351389277463856
+        },
+        "adjusted_ratio": 1.5
+      },
+      {
+        "n": 64,
+        "operation": "compute",
+        "calls": 10,
+        "repeats": 3,
+        "ns_per_call": [
+          7771551.4,
+          10597001.2,
+          8953439.7
+        ],
+        "median_ns_per_call": 8953439.7,
+        "input_sha256": "d6d0b8f8aa6013a1a8ed272978426d199da5a1615b2e5913316e2b1e433006a6",
+        "summary": {
+          "ratio": 1.0037090128764494,
+          "excitatory_strength": 0.5483647578582068,
+          "inhibitory_strength": 0.5463383817653407,
+          "is_balanced": true,
+          "e_to_e": 0.536249000309832,
+          "e_to_i": 0.5604805154065816,
+          "i_to_e": 0.5477368008447256,
+          "i_to_i": 0.5449399626859556
+        },
+        "adjusted_ratio": 1.5
+      },
+      {
+        "n": 64,
+        "operation": "adjust",
+        "calls": 10,
+        "repeats": 3,
+        "ns_per_call": [
+          12475785.0,
+          9111827.8,
+          8420283.7
+        ],
+        "median_ns_per_call": 9111827.8,
+        "input_sha256": "d6d0b8f8aa6013a1a8ed272978426d199da5a1615b2e5913316e2b1e433006a6",
+        "summary": {
+          "ratio": 1.0037090128764494,
+          "excitatory_strength": 0.5483647578582068,
+          "inhibitory_strength": 0.5463383817653407,
+          "is_balanced": true,
+          "e_to_e": 0.536249000309832,
+          "e_to_i": 0.5604805154065816,
+          "i_to_e": 0.5477368008447256,
+          "i_to_i": 0.5449399626859556
+        },
+        "adjusted_ratio": 1.5
+      },
+      {
+        "n": 256,
+        "operation": "compute",
+        "calls": 10,
+        "repeats": 3,
+        "ns_per_call": [
+          49877466.9,
+          78626693.9,
+          77733710.7
+        ],
+        "median_ns_per_call": 77733710.7,
+        "input_sha256": "ba393b115941f9c24a5add4aa18cba92a243eee711504f968f48893d12f4ae68",
+        "summary": {
+          "ratio": 1.001288110689683,
+          "excitatory_strength": 0.5487759189981445,
+          "inhibitory_strength": 0.5480699442442695,
+          "is_balanced": true,
+          "e_to_e": 0.5473238756726172,
+          "e_to_i": 0.5502279623236717,
+          "i_to_e": 0.5499334222863874,
+          "i_to_i": 0.5462064662021515
+        },
+        "adjusted_ratio": 1.5000000000000002
+      },
+      {
+        "n": 256,
+        "operation": "adjust",
+        "calls": 10,
+        "repeats": 3,
+        "ns_per_call": [
+          117663101.1,
+          113363499.7,
+          105082120.2
+        ],
+        "median_ns_per_call": 113363499.7,
+        "input_sha256": "ba393b115941f9c24a5add4aa18cba92a243eee711504f968f48893d12f4ae68",
+        "summary": {
+          "ratio": 1.001288110689683,
+          "excitatory_strength": 0.5487759189981445,
+          "inhibitory_strength": 0.5480699442442695,
+          "is_balanced": true,
+          "e_to_e": 0.5473238756726172,
+          "e_to_i": 0.5502279623236717,
+          "i_to_e": 0.5499334222863874,
+          "i_to_i": 0.5462064662021515
+        },
+        "adjusted_ratio": 1.5000000000000002
+      }
+    ],
+    "command": [
+      "/usr/bin/python3",
+      "/media/anulum/GOTM/aaa_God_of_the_Math_Collection/03_CODE/SCPN-SYSTEMS-INTEGRATION-AND-CONTROL/repositories/SCPN-PHASE-ORCHESTRATOR/benchmarks/ei_balance_benchmark.py"
+    ]
+  },
+  "rust_criterion": {
+    "command": [
+      "cargo",
+      "bench",
+      "-p",
+      "spo-engine",
+      "--bench",
+      "utility_bench",
+      "--",
+      "compute_ei_balance",
+      "--sample-size",
+      "10",
+      "--measurement-time",
+      "1",
+      "--warm-up-time",
+      "1"
+    ],
+    "unit": "nanoseconds",
+    "samples": 10,
+    "warmup_seconds": 1,
+    "measurement_seconds": 1,
+    "rows": [
+      {
+        "n": 16,
+        "estimate_low": 4268.6,
+        "estimate": 4870.7,
+        "estimate_high": 5515.0
+      },
+      {
+        "n": 64,
+        "estimate_low": 67818.0,
+        "estimate": 73908.0,
+        "estimate_high": 81074.0
+      },
+      {
+        "n": 256,
+        "estimate_low": 752750.0,
+        "estimate": 827750.0,
+        "estimate_high": 879580.0
+      }
+    ],
+    "source_qualification": "Actual rerun after public binary provenance and source/target result-comparison benchmark contracts and their real tests. Python and Rust numerical runtime bytes and installed native binary are unchanged from the preceding zero-scale refusal correction. Non-isolated shared-host diagnostic timing only; no causal speedup or production latency claim.",
+    "outliers": "Criterion reports apparent regressions at N16, N64 and N256 against its retained baseline. N256: two of ten high mild outliers. Loaded non-isolated observations do not establish cause or a production regression.",
+    "prior_measurement_rows": [
+      {
+        "n": 16,
+        "estimate_low": 2587.8,
+        "estimate": 2721.1,
+        "estimate_high": 3019.1
+      },
+      {
+        "n": 64,
+        "estimate_low": 51643.0,
+        "estimate": 59610.0,
+        "estimate_high": 70060.0
+      },
+      {
+        "n": 256,
+        "estimate_low": 589520.0,
+        "estimate": 683540.0,
+        "estimate_high": 770450.0
+      }
+    ],
+    "prior_measurement_qualification": "Preceding actual zero-scale correction diagnostic snapshot, including the apparent N64 regression59610ns, retained as historical counterevidence; these are not the current rerun estimates."
+  },
+  "wheel_sha256": "92e2365ddcea7e88931e136ece1b58bd06d38cfc311580cd97e01e678fedae5b"
+}

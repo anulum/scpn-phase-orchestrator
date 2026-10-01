@@ -20,6 +20,7 @@ mod call_arguments;
 mod chimera_boundary;
 mod coupling_builder;
 mod delayed_boundary;
+mod ei_balance_boundary;
 mod embedding_boundary;
 mod entropy_boundary;
 mod hypergraph_boundary;
@@ -42,6 +43,7 @@ mod upde_stepper;
 use adaptive_coupling::te_adapt_coupling_rust;
 use coupling_builder::PyCouplingBuilder;
 use delayed_boundary::delayed_kuramoto_run_rust;
+use ei_balance_boundary::{adjust_ei_ratio_rust, compute_ei_balance_rust};
 use embedding_boundary::{delay_embed_rust, optimal_delay_rust, optimal_dimension_rust};
 use hypergraph_boundary::{hypergraph_run_rust, PyHypergraphStepper};
 use inertial_boundary::{inertial_run_rust, inertial_step_rust};
@@ -49,9 +51,7 @@ use measurement_types::{real_values, PlainI32, PlainI64, PlainReal, PlainU64, Pl
 use ordinal_entropy::{ordinal_pattern_sequence, transition_entropy};
 use phase_lag::PyLagModel;
 use phase_quality::PyPhaseQualityScorer;
-use return_types::{
-    ArrayPair, ArrayTriple, ArraysWithCount, EiBalanceMetrics, PhaseExtractionOutput, RqaMetrics,
-};
+use return_types::{ArrayPair, ArrayTriple, ArraysWithCount, PhaseExtractionOutput, RqaMetrics};
 use sheaf::PySheafUPDEStepper;
 use simplicial_boundary::{simplicial_run_rust, PySimplicialStepper};
 use sparse::PySparseUPDEStepper;
@@ -73,7 +73,7 @@ use pyo3::types::PyDict;
 use spo_engine::{
     carrier, connectome,
     coupling::{spatial_modulate_flat, SpatialDecayForm},
-    coupling_est, dimension, ei_balance, envelope, ethical, evs, free_energy, freq_id, hodge,
+    coupling_est, dimension, envelope, ethical, evs, free_energy, freq_id, hodge,
     imprint::ImprintModel,
     inertial, itpc,
     lif_ensemble::{LIFEnsemble, LIFParams},
@@ -1790,80 +1790,6 @@ fn hodge_decomposition_rust<'py>(
         PyArray1::from_vec(py, c),
         PyArray1::from_vec(py, h),
     ))
-}
-
-// ─── E/I Balance ──────────────────────────────────────────────────
-
-#[pyfunction]
-fn compute_ei_balance_rust(
-    knm_flat: PyReadonlyArray1<'_, f64>,
-    n: PlainUsize,
-    excitatory_indices: PyReadonlyArray1<'_, i64>,
-    inhibitory_indices: PyReadonlyArray1<'_, i64>,
-) -> PyResult<EiBalanceMetrics> {
-    let k = knm_flat
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let e_raw = excitatory_indices
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let i_raw = inhibitory_indices
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let e_idx: Vec<usize> = e_raw
-        .iter()
-        .filter(|&&v| v >= 0)
-        .map(|&v| v as usize)
-        .collect();
-    let i_idx: Vec<usize> = i_raw
-        .iter()
-        .filter(|&&v| v >= 0)
-        .map(|&v| v as usize)
-        .collect();
-    let r = ei_balance::compute_ei_balance(k, n.0, &e_idx, &i_idx);
-    Ok((
-        r.ratio,
-        r.excitatory_strength,
-        r.inhibitory_strength,
-        r.is_balanced,
-        r.e_to_e,
-        r.e_to_i,
-        r.i_to_e,
-        r.i_to_i,
-    ))
-}
-
-#[pyfunction]
-#[pyo3(signature = (knm_flat, n, excitatory_indices, inhibitory_indices, target_ratio = PlainReal(1.0)))]
-fn adjust_ei_ratio_rust<'py>(
-    py: Python<'py>,
-    knm_flat: PyReadonlyArray1<'py, f64>,
-    n: PlainUsize,
-    excitatory_indices: PyReadonlyArray1<'py, i64>,
-    inhibitory_indices: PyReadonlyArray1<'py, i64>,
-    target_ratio: PlainReal,
-) -> PyResult<Bound<'py, PyArray1<f64>>> {
-    let k = knm_flat
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let e_raw = excitatory_indices
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let i_raw = inhibitory_indices
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let e_idx: Vec<usize> = e_raw
-        .iter()
-        .filter(|&&v| v >= 0)
-        .map(|&v| v as usize)
-        .collect();
-    let i_idx: Vec<usize> = i_raw
-        .iter()
-        .filter(|&&v| v >= 0)
-        .map(|&v| v as usize)
-        .collect();
-    let result = ei_balance::adjust_ei_ratio(k, n.0, &e_idx, &i_idx, target_ratio.0);
-    Ok(PyArray1::from_vec(py, result))
 }
 
 // ─── Inertial Kuramoto (Swing Equation) ───────────────────────────
