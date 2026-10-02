@@ -119,11 +119,31 @@ generators do not establish non-negativity for signed coupling.
 
 - Synchronised phases → R ≈ 1, PLV ≈ 1, NPE ≈ 0, chimera_index ≈ 0 (four independent measures agree)
 - Spectral λ₂ predicts synchronisability → verified by simulation
-- Projection roundtrip: `project_knm` always produces valid K_nm
+- Projection roundtrip: symmetry then non-negativity with final diagonal zeroing produces structurally valid K_nm; arbitrary custom stacks retain their own constraints
 - Simplicial σ₂ = 0 roundtrip: reduces to standard Kuramoto exactly
 - Free rotation → analytical winding number matches
 - Transfer entropy: directional, correct shape
 - NPE vs R anti-correlation across synchronisation spectrum
+
+### Finite coupling projection
+
+`test_geometry_projection_finite.py` checks overflow-safe signed means,
+least subnormal values, cancellation, readonly input preservation, invalid
+source refusal/recovery, empty-matrix validation and actual RK4 consumption.
+`test_geometry_projection_benchmark.py` checks real measurements and a strict
+JSON CLI subprocess. Run the same public selection in the installed-native and
+actually absent environments:
+
+```bash
+PYTHONPATH=src:. python -m pytest tests/test_geometry_projection_finite.py tests/test_geometry_projection_benchmark.py tests/test_geometry_projection.py tests/test_geometry_constraints_deep.py tests/test_geometry_constraints_measurement_inputs.py
+```
+
+Add `native-tests/test_geometry_projection.py` only in the genuine native
+lane. Its direct calls compare installed Rust results against exact rational
+pair means and the public NumPy chain, then drive the real engine. Selecting
+the appropriate interpreter is part of the test evidence; no availability flag
+or simulated kernel stands in for either runtime. The projection benchmark
+records host load and repeated samples and checks results outside timed intervals.
 
 ### Module Tests
 

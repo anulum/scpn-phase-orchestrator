@@ -29,14 +29,18 @@ impl CouplingBuilder {
     /// Build exponential-decay coupling matrix (row-major N×N).
     ///
     /// # Errors
-    /// Returns `InvalidDimension` if n is 0, or propagates config validation errors.
+    /// Returns `InvalidDimension` if n is 0 or n*n overflows usize,
+    /// or propagates config validation errors.
     pub fn build(n: usize, config: &CouplingConfig) -> SpoResult<CouplingState> {
         if n == 0 {
             return Err(SpoError::InvalidDimension("n must be > 0".into()));
         }
         config.validate()?;
 
-        let mut knm = vec![0.0; n * n];
+        let len = n
+            .checked_mul(n)
+            .ok_or_else(|| SpoError::InvalidDimension("n*n overflows usize for Knm".into()))?;
+        let mut knm = vec![0.0; len];
         for i in 0..n {
             for j in 0..n {
                 if i != j {
@@ -46,12 +50,14 @@ impl CouplingBuilder {
             }
         }
 
-        let alpha = vec![0.0; n * n];
+        let alpha = vec![0.0; len];
         Ok(CouplingState { knm, alpha, n })
     }
 }
 
 /// Project Knm to satisfy: symmetric, non-negative, zero diagonal.
+/// Finite pair means preserve subnormals and avoid overflowing intermediate sums.
+/// The empty matrix is accepted. Invalid inputs are refused before mutation.
 ///
 /// # Errors
 /// Returns `InvalidDimension` if `knm.len() != n * n`.
@@ -73,7 +79,15 @@ pub fn project_knm(knm: &mut [f64], n: usize) -> SpoResult<()> {
     }
     for i in 0..n {
         for j in (i + 1)..n {
-            let avg = 0.5 * (knm[i * n + j] + knm[j * n + i]);
+            let left = knm[i * n + j];
+            let right = knm[j * n + i];
+            let sum = left + right;
+            // Preserve subnormals by halving first only when the sum overflows.
+            let avg = if sum.is_finite() {
+                0.5 * sum
+            } else {
+                0.5 * left + 0.5 * right
+            };
             knm[i * n + j] = avg;
             knm[j * n + i] = avg;
         }
@@ -192,5 +206,53 @@ mod tests {
     fn alpha_initially_zero() {
         let cs = CouplingBuilder::build(4, &CouplingConfig::default()).unwrap();
         assert!(cs.alpha.iter().all(|&v| v == 0.0));
+    }
+
+    #[test]
+    fn project_extreme_finite_means() {
+        let tiny = f64::from_bits(1);
+        for (left, right, expected) in [
+            (f64::MAX, f64::MAX, f64::MAX),
+            (-f64::MAX, -f64::MAX, 0.0),
+            (f64::MAX, f64::MAX / 2.0, f64::MAX * 0.75),
+            (f64::MAX, -f64::MAX, 0.0),
+            (tiny, tiny, tiny),
+            (tiny, 2.0 * tiny, 2.0 * tiny),
+            (-tiny, -tiny, 0.0),
+        ] {
+            let mut matrix = [f64::MAX, left, right, -f64::MAX];
+            project_knm(&mut matrix, 2).unwrap();
+            assert_eq!(matrix, [0.0, expected, expected, 0.0]);
+            assert!(matrix.iter().all(|value| value.is_finite()));
+            project_knm(&mut matrix, 2).unwrap();
+            assert_eq!(matrix, [0.0, expected, expected, 0.0]);
+        }
+    }
+
+    #[test]
+    fn project_refusal_preserves_and_recovers() {
+        let mut matrix = [0.0, f64::INFINITY, 1.0, 0.0];
+        let original = matrix;
+        assert!(project_knm(&mut matrix, 2).is_err());
+        assert_eq!(matrix, original);
+        matrix[1] = 0.6;
+        matrix[2] = 0.2;
+        project_knm(&mut matrix, 2).unwrap();
+        assert_eq!(matrix, [0.0, 0.4, 0.4, 0.0]);
+    }
+
+    #[test]
+    fn project_and_build_refuse_dimension_overflow() {
+        let n = 1usize << (usize::BITS / 2);
+        let mut matrix = [0.0, 1.0, 1.0, 0.0];
+        assert!(project_knm(&mut matrix, n).is_err());
+        assert_eq!(matrix, [0.0, 1.0, 1.0, 0.0]);
+        assert!(CouplingBuilder::build(n, &CouplingConfig::default()).is_err());
+    }
+
+    #[test]
+    fn project_empty_matrix() {
+        let mut matrix = [];
+        project_knm(&mut matrix, 0).unwrap();
     }
 }

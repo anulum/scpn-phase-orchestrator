@@ -11,8 +11,8 @@
     "python_package_modules": 762,
     "research_experimental_modules": 205,
     "runtime_serving_modules": 158,
-    "rust_kernel_files": 120,
-    "test_files": 1078
+    "rust_kernel_files": 122,
+    "test_files": 1081
   },
   "documentation": {
     "public_pages": [
@@ -2253,6 +2253,7 @@
       "tests/test_early_warning_suite.py",
       "tests/test_edge_consensus_sheaf_obstruction_demo.py",
       "tests/test_ei_balance.py",
+      "tests/test_ei_balance_benchmark.py",
       "tests/test_ei_balance_measurement_inputs.py",
       "tests/test_embedding.py",
       "tests/test_embedding_algorithm.py",
@@ -2339,6 +2340,8 @@
       "tests/test_geometry_constraints_deep.py",
       "tests/test_geometry_constraints_measurement_inputs.py",
       "tests/test_geometry_projection.py",
+      "tests/test_geometry_projection_benchmark.py",
+      "tests/test_geometry_projection_finite.py",
       "tests/test_geometry_walk.py",
       "tests/test_grid_advisory_example_evidence.py",
       "tests/test_grid_csv_source_binding.py",
@@ -3031,6 +3034,7 @@
   "rust_kernel_files": [
     "spo-kernel/Cargo.toml",
     "spo-kernel/crates/spo-engine/Cargo.toml",
+    "spo-kernel/crates/spo-engine/benches/coupling_projection_bench.rs",
     "spo-kernel/crates/spo-engine/benches/monitors_bench.rs",
     "spo-kernel/crates/spo-engine/benches/parallel_bench.rs",
     "spo-kernel/crates/spo-engine/benches/twin_confidence_bench.rs",
@@ -3104,6 +3108,7 @@
     "spo-kernel/crates/spo-ffi/src/chimera_boundary.rs",
     "spo-kernel/crates/spo-ffi/src/coupling_builder.rs",
     "spo-kernel/crates/spo-ffi/src/delayed_boundary.rs",
+    "spo-kernel/crates/spo-ffi/src/ei_balance_boundary.rs",
     "spo-kernel/crates/spo-ffi/src/embedding_boundary.rs",
     "spo-kernel/crates/spo-ffi/src/entropy_boundary.rs",
     "spo-kernel/crates/spo-ffi/src/hypergraph_boundary.rs",

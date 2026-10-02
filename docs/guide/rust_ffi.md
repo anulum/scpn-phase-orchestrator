@@ -122,6 +122,24 @@ kernel raises `RuntimeError`. Their dispatcher does not use
 [sleep-staging reference](../reference/api/monitor_sleep_staging.md#backend-selection)
 for validation, parity tests and measured wrapper overhead.
 
+## Coupling projection
+
+`PyCouplingBuilder.project(values, n)` is an explicit native entry point.
+`project_knm(values, [SymmetryConstraint(), NonNegativeConstraint()])` runs
+NumPy and has matching projection semantics. Both preserve finite extreme
+pair means and subnormal values, accept the empty matrix, and reject invalid
+source types and non-finite coefficients. Native count extraction rejects
+negative Python integers with `OverflowError`; boolean/text counts, product
+overflow and wrong flat cardinality raise `ValueError`. No invalid request
+mutates its input or prevents subsequent valid projection. Rust public
+construction also checks `n*n` before allocating its matrices.
+
+Run `native-tests/test_geometry_projection.py` against the newly built wheel;
+run `tests/test_geometry_projection_finite.py` in both real native and genuinely
+kernel-absent interpreters. Never emulate absence with an availability flag.
+See [geometry constraints](../specs/geometry_constraints.md) and
+[recorded measurements](../reference/data/geometry_projection_runtime_benchmark_2026-10-02.json).
+
 ## Accelerated Modules
 
 | Python Class / Function | Rust FFI Class | Hot path |
@@ -129,7 +147,7 @@ for validation, parity tests and measured wrapper overhead.
 | `UPDEEngine` | `PyUPDEStepper` | dense `step()`, `run()`, frequency/Doppler schedules and moving-frame schedule |
 | `SheafUPDEEngine` | `PySheafUPDEStepper` | matrix phase `step()`, `run()` |
 | `StuartLandauEngine` | `PyStuartLandauStepper` | `step()`, `run()` |
-| `CouplingBuilder` | `PyCouplingBuilder` | `build()`, `project()` |
+| `CouplingBuilder` / geometry projection | `PyCouplingBuilder` | `build()`; direct `project()` for symmetry, non-negativity and zero diagonal |
 | `ImprintModel` | `PyImprintModel` | `update()`, `modulate_coupling()`, `modulate_lag()` |
 | `compute_order_parameter` | `order_parameter` | single call |
 | `compute_plv` | `plv` | single call |
