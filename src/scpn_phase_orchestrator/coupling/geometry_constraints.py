@@ -102,9 +102,19 @@ class SymmetryConstraint(GeometryConstraint):
         -------
         FloatArray
             The symmetric part of *knm*.
+
+        Notes
+        -----
+        Finite pair means remain finite even when their sum overflows.
+        Addition precedes halving when possible to preserve subnormal values.
         """
         knm = _validate_knm_matrix(knm)
-        result: FloatArray = 0.5 * (knm + knm.T)
+        with np.errstate(over="ignore"):
+            result: FloatArray = knm + knm.T
+        overflow = ~np.isfinite(result)
+        result *= 0.5
+        # Halve before addition only on overflow; otherwise preserve subnormals.
+        result[overflow] = 0.5 * knm[overflow] + 0.5 * knm.T[overflow]
         return result
 
 
@@ -145,13 +155,17 @@ def validate_knm(knm: FloatArray, *, atol: float = 1e-12) -> None:
     ------
     ValueError
         If ``knm`` is not square, symmetric, non-negative, and zero-diagonal.
+
+    Notes
+    -----
+    The empty ``(0, 0)`` matrix satisfies these structural invariants.
     """
     knm = _validate_knm_matrix(knm)
     if not np.allclose(knm, knm.T, atol=atol):
         raise ValueError("Knm is not symmetric")
     if np.any(knm < -atol):
         raise ValueError("Knm contains negative entries")
-    diag_max = float(np.max(np.abs(np.diag(knm))))
+    diag_max = float(np.max(np.abs(np.diag(knm)), initial=0.0))
     if diag_max > atol:
         raise ValueError(f"Knm diagonal is non-zero (max |diag| = {diag_max:.2e})")
 

@@ -52,6 +52,8 @@ impl PyCouplingBuilder {
     }
 
     /// Project original real values to symmetric non-negative zero-diagonal coupling.
+    /// Finite extreme means and subnormals are preserved; an empty matrix is valid.
+    /// Invalid types, non-finite values and wrong cardinality are refused before projection.
     #[staticmethod]
     fn project(knm: &Bound<'_, PyAny>, n: PlainUsize) -> PyResult<Vec<f64>> {
         let mut knm = real_values(knm, "knm")?;

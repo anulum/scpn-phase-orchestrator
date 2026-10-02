@@ -1,76 +1,86 @@
 # Geometry Constraints
 
-## Purpose
+Geometry constraints project candidate coupling matrices before downstream
+integration. `project_knm` validates finite real square inputs, applies the
+supplied constraint sequence and zeros the diagonal. It returns independent
+storage without modifying the input.
 
-Geometry constraints project the coupling matrix K_nm into a feasible set after each modification. This enforces structural invariants that the supervisor's ControlActions cannot violate.
+## Built-in constraints
 
-## Constraint Catalogue
+| Constraint | Mathematical result | Diagonal |
+|------------|---------------------|----------|
+| `SymmetryConstraint` | `(K + K.T) / 2` | Preserved |
+| `NonNegativeConstraint` | `max(K, 0)` | Clipped as any other entry |
 
-| Constraint | Effect | Idempotent | Implementation |
-|------------|--------|------------|----------------|
-| `SymmetryConstraint` | `K' = 0.5 * (K + K^T)` | Yes | `coupling/geometry_constraints.py` |
-| `NonNegativeConstraint` | `K' = max(K, 0)` | Yes | `coupling/geometry_constraints.py` |
+Symmetry uses addition before halving whenever the sum is finite. Only
+an overflowing sum uses `K/2 + K.T/2`. Thus two maximum finite `float64`
+coefficients produce their finite mean, and two least positive subnormals
+retain that value. Blanket half-before-addition would erase the latter.
+Both methods validate original source types before numeric conversion.
+Boolean, complex, text and temporal aliases are refused; real numeric object
+arrays remain compatible. The computation is a float64 structural projection,
+not evidence of stable physical integration for arbitrarily large weights.
 
-Constraints are applied in order via `project_knm(knm, constraints)`. The composition of idempotent projections is not generally idempotent, but the alternating-projection pattern converges to the intersection of convex sets (Bauschke & Combettes, 2011).
-
-## Projection API
+## Public Python and Rust entry points
 
 ```python
-project_knm(knm: NDArray, constraints: list[GeometryConstraint]) -> NDArray
+import numpy as np
+from scpn_phase_orchestrator.coupling import (
+    NonNegativeConstraint, SymmetryConstraint, project_knm, validate_knm,
+)
+
+raw = np.array([[2.0, 0.8], [-0.4, 3.0]])
+projected = project_knm(raw, [SymmetryConstraint(), NonNegativeConstraint()])
+np.testing.assert_allclose(projected, [[0.0, 0.2], [0.2, 0.0]])
+validate_knm(projected)
 ```
 
-Returns a new array; the input is not mutated.
+Python projection executes NumPy. The explicit native method
+`spo_kernel.PyCouplingBuilder.project(raw.ravel(), 2)` calls Rust
+`spo_engine::coupling::project_knm` and returns a new row-major flat list.
+It has the same symmetry-then-non-negativity-then-zero-diagonal result.
+Native shape admission requires exact `n*n` cardinality and a representable
+size product. Invalid original source values or cardinality refuse before
+mutation. Negative native count extraction raises `OverflowError`; other
+invalid count types, overflowing products and wrong cardinality raise
+`ValueError`. Both implementations accept an empty matrix with zero dimensions;
+`validate_knm` accepts its vacuous structural invariants.
 
-## Binding Spec Configuration
+## Constraint order and custom extensions
 
-```yaml
-geometry_prior:
-  constraint_type: symmetric_non_negative
-  params: {}
-```
+Constraint order changes the result for signed pairs: `[1, -1]` averages to
+zero when symmetrised first, but clips to `[1, 0]` and averages to `0.5` when
+non-negativity is applied first. `project_knm` applies exactly the supplied
+order. Symmetry and non-negativity are not implicit when their constraints
+are absent. Only diagonal zeroing is unconditional at the end.
 
-The `constraint_type` string is parsed as a keyword bag:
+Custom constraints must subclass `GeometryConstraint` and implement
+`project(knm)`. Each returned matrix is checked for original real source
+types, square shape, unchanged dimensions and finite values before the next
+constraint runs. A rejected result does not change the original input.
+Arbitrary custom stacks do not guarantee symmetry or non-negativity;
+call `validate_knm` when the downstream profile requires those invariants.
 
-- Contains `"symmetric"` → `SymmetryConstraint` added.
-- Contains `"non_negative"` or `"nonneg"` → `NonNegativeConstraint` added.
+## Runtime integration and verification
 
-## Integration Point
+The runtime constructs this constraint list from `binding_spec.geometry_prior`:
+`symmetric` selects symmetry, and `non_negative` or `nonneg` selects clipping.
+Projection is applied to effective coupling after imprint modulation and
+before the UPDE step. Tests exercise real projected matrices in the public RK4
+engine and the CLI's geometry-prior path, including original-input preservation
+and refusal followed by valid recovery.
 
-When `binding_spec.geometry_prior` is present, the CLI `run` loop applies `project_knm` to the effective K_nm after imprint modulation and before each UPDE step.
+`tests/test_geometry_projection_finite.py` covers finite extremes,
+subnormal rounding, cancellation, empty systems and public consumption.
+`native-tests/test_geometry_projection.py` exercises the installed native
+entry point and compares both paths with exact rational pair means.
+Run public tests in an actual installed-native and an actually kernel-absent
+interpreter; only the native lane includes the direct-native selection.
 
-## Properties
-
-- **Symmetry**: after projection, `K_nm == K_mn` to machine precision.
-- **Non-negativity**: after projection, `K_nm >= 0` elementwise.
-- **Diagonal**: diagonal of K_nm is not modified by these constraints. Domainpacks that require zero self-coupling should set `diag(K) = 0` in the coupling builder.
-
-## Operations rationale
-
-Geometry constraints are a safety surface between a mathematically designed control
-policy and deployment reality:
-
-- Symmetric projection removes asymmetry that can be introduced by estimation noise.
-- Non-negativity preserves physically interpretable excitatory coupling in the standard
-  production profile.
-- Projections are deterministic and ordered, so audit evidence can attribute later
-  changes to explicit constraints rather than optimizer side effects.
-
-## References
-
-- `src/scpn_phase_orchestrator/coupling/geometry_constraints.py` — constraint classes.
-- H. H. Bauschke & P. L. Combettes (2011). *Convex Analysis and Monotone Operator Theory in Hilbert Spaces*. Springer. — alternating projections convergence.
-
-## Why geometry projection is a production gate
-
-Geometry projection is one of the few places where numerical updates become
-governance decisions. It is deliberately placed on the control path because it
-normalises effective couplings before physics integration, reducing surprise from
-late-bound estimator noise.
-
-This constraint stack is intentionally small and interpretable:
-it does not hide optimization logic, but it does prevent accidental topology
-pathologies from reaching downstream integration.
-
-In deployment, this is typically where an incident review starts:
-if simulation diverges but constraints were applied deterministically, the issue is
-more likely in policy, monitoring, or binding intent than in numerical plumbing.
+The [runtime snapshot](../reference/data/geometry_projection_runtime_benchmark_2026-10-02.json)
+records repeated Python/direct-PyO3 samples, input/source hashes, actual runtime
+versions, native binary provenance and shared-host load. Reproduce with
+`python -m benchmarks.geometry_projection_benchmark`. Rust core measurements
+use `cargo bench -p spo-engine --bench coupling_projection_bench`. These
+non-isolated workstation measurements support local regression and parity
+checks, not production latency or causal speed-up claims.

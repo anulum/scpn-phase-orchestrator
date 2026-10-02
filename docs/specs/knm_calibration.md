@@ -89,18 +89,30 @@ strategies.
   undirected coupling.
 - **NonNegativeConstraint**: `K_nm = max(K_nm, 0)`. No negative
   coupling strengths.
-- **Custom**: any `project_knm(K_nm) -> K_nm` function.
+- **Custom**: a `GeometryConstraint` subclass implementing `project(K_nm) -> K_nm` and preserving finite real square shape.
 
 Projection is applied via `project_knm()`, which chains all active
 constraints:
 
 ```python
-from scpn_phase_orchestrator.coupling import project_knm, validate_knm
+from scpn_phase_orchestrator.coupling import (
+    CouplingBuilder, NonNegativeConstraint, SymmetryConstraint,
+    project_knm, validate_knm,
+)
 
-K = builder.build(spec)
-K = project_knm(K, constraints=[SymmetryConstraint(), NonNegativeConstraint()])
-validate_knm(K)  # raises if invalid
+state = CouplingBuilder().build(4, base_strength=0.45, decay_alpha=0.3)
+K = project_knm(state.knm, [SymmetryConstraint(), NonNegativeConstraint()])
+validate_knm(K)
 ```
+
+The symmetry mean is evaluated without overflowing a finite pair or erasing
+representable subnormals. Projection returns an independent matrix, applies
+constraints in the supplied order and zeros its diagonal last. The empty
+matrix is accepted; invalid original numeric types or custom constraint output
+refuse before being used downstream. The
+[geometry contract](geometry_constraints.md) explains the direct Rust equivalent
+and the measured runtime boundary. Finite structural validation alone does not
+establish stable integration at arbitrarily large coupling strengths.
 
 ### Step 4: E/I Balance (Optional)
 

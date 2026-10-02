@@ -21,14 +21,23 @@ If you know specific coupling strengths from physics, data, or domain expertise:
 
 1. Generate the default matrix.
 2. Override specific entries.
-3. Re-symmetrise: `K = (K + K.T) / 2`.
+3. Re-symmetrise with `SymmetryConstraint().project(K)` to retain finite extreme means and subnormals.
 4. Zero diagonal: `np.fill_diagonal(K, 0)`.
 
 Example: oscillators 1 and 2 have a known strong coupling of 0.8:
 
 ```python
+from scpn_phase_orchestrator.coupling import (
+    CouplingBuilder, NonNegativeConstraint, SymmetryConstraint,
+    project_knm, validate_knm,
+)
+
+state = CouplingBuilder().build(4, 0.45, 0.3)
+K = state.knm.copy()
 K[1, 2] = 0.8
 K[2, 1] = 0.8
+K = project_knm(K, [SymmetryConstraint(), NonNegativeConstraint()])
+validate_knm(K)
 ```
 
 ## Step 3: Calibrate from Data
@@ -73,7 +82,14 @@ Iterate on coupling values until these criteria are met.
 
 - **Too strong coupling:** R_good saturates at 1.0 instantly, but R_bad also goes to 1.0. Reduce base_strength.
 - **Too weak coupling:** R_good stays near 0. Increase base_strength or reduce decay_alpha.
-- **Asymmetric override without re-symmetrisation:** Violates the Knm contract. Always enforce `K = (K + K.T) / 2`.
+- **Asymmetric override without re-symmetrisation:** Violates the Knm contract. Use `SymmetryConstraint().project(K)`; `project_knm` additionally zeros the diagonal after the complete constraint sequence.
+
+The order matters for signed data. Averaging before clipping preserves the
+signed pair mean; clipping first changes that mean. The direct Rust equivalent
+`spo_kernel.PyCouplingBuilder.project(K.ravel(), len(K))` uses symmetry then
+non-negativity and returns a new flat list. Python projection executes NumPy.
+See the [geometry contract](../specs/geometry_constraints.md) for original source
+type checks, empty matrices, input ownership and runtime measurements.
 
 ## References
 

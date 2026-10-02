@@ -13,9 +13,9 @@
 | Integration modules | 32 |
 | Research/Experimental modules | 205 |
 | Domainpack files | 36 |
-| Rust kernel files | 120 |
+| Rust kernel files | 122 |
 | Optional extras | 23 |
-| Python test files | 1078 |
+| Python test files | 1081 |
 | Public documentation pages | 243 |
 | GitHub Actions workflows | 19 |
 

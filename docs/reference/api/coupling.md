@@ -172,6 +172,31 @@ Real numeric object arrays remain supported. Raises
 zeros the diagonal. Built-in and custom constraints are fail-closed: each
 constraint must be a `GeometryConstraint`, preserve the matrix shape, and
 return finite real square K_nm values before the next projection step.
+The empty `(0, 0)` matrix is valid for projection and validation. Constraint
+order is significant: averaging signed edges before clipping differs from
+clipping each directed edge before averaging.
+
+`SymmetryConstraint` preserves finite pair means when `K_ij + K_ji` would
+overflow. It adds before halving for ordinary and subnormal pairs, and halves
+first only for overflowing sums. For example, two `float64` maximum entries
+remain the maximum finite value; two least positive subnormal entries remain
+that subnormal. The standalone constraint preserves the diagonal; the complete
+`project_knm` chain zeros it after all constraints.
+
+The direct `spo_kernel.PyCouplingBuilder.project(flat_values, n)` performs
+symmetry, then non-negativity, then diagonal zeroing in Rust. It accepts an
+empty buffer with `n=0`, validates original source types and exact `n*n`
+cardinality, and returns a new flat list without modifying the caller buffer.
+Python projection executes NumPy; calling the native method explicitly exercises
+Rust. These are equivalent for the two built-in constraints in that order,
+not for arbitrary custom constraint stacks.
+
+[Current projection measurements](../data/geometry_projection_runtime_benchmark_2026-10-02.json)
+include repeated public NumPy and direct native measurements, actual input and
+source hashes, runtime versions and host load. Run
+`python -m benchmarks.geometry_projection_benchmark` in both prepared
+interpreters. Shared-host values are local regression evidence; they establish
+no isolated speed-up or production latency guarantee.
 
 ::: scpn_phase_orchestrator.coupling.geometry_constraints
 
@@ -671,7 +696,7 @@ diagonal checks still run before publication.
 | `build_scpn_physics()` | < 5 ms | ~1 ms |
 | `estimate_from_distances(64)` | < 5 ms | ~0.5 ms |
 | `load_hcp_connectome(80)` | < 10 ms | ~3 ms |
-| `validate_knm(64)` | < 1 ms | ~0.1 ms |
+| `validate_knm(64)` | Profile-dependent | Not timed separately in the current projection snapshot |
 | `graph_laplacian(64)` | < 1 ms | ~0.007 ms |
 | `fiedler_value(64)` | < 1 ms | ~0.12 ms |
 
