@@ -52,5 +52,9 @@ harness = false
 name = "coupling_projection_bench"
 harness = false
 
+[[bench]]
+name = "coupling_builder_bench"
+harness = false
+
 [lints]
 workspace = true

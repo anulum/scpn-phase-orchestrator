@@ -29,7 +29,8 @@ impl CouplingBuilder {
     /// Build exponential-decay coupling matrix (row-major N×N).
     ///
     /// # Errors
-    /// Returns `InvalidDimension` if n is 0 or n*n overflows usize,
+    /// Returns `InvalidDimension` if n is 0, n*n overflows usize, or a
+    /// binary64 matrix exceeds the platform allocation capacity,
     /// or propagates config validation errors.
     pub fn build(n: usize, config: &CouplingConfig) -> SpoResult<CouplingState> {
         if n == 0 {
@@ -40,6 +41,11 @@ impl CouplingBuilder {
         let len = n
             .checked_mul(n)
             .ok_or_else(|| SpoError::InvalidDimension("n*n overflows usize for Knm".into()))?;
+        if len > isize::MAX as usize / std::mem::size_of::<f64>() {
+            return Err(SpoError::InvalidDimension(
+                "matrix exceeds the platform binary64 capacity".into(),
+            ));
+        }
         let mut knm = vec![0.0; len];
         for i in 0..n {
             for j in 0..n {
@@ -200,6 +206,57 @@ mod tests {
     fn build_n_one() {
         let cs = CouplingBuilder::build(1, &CouplingConfig::default()).unwrap();
         assert_eq!(cs.knm, vec![0.0]);
+    }
+
+    #[test]
+    fn build_refuses_byte_capacity_before_allocation() {
+        // n*n fits usize, while the binary64 buffer cannot fit isize bytes.
+        let n = 1usize << (usize::BITS / 2 - 1);
+        let error = CouplingBuilder::build(n, &CouplingConfig::default()).unwrap_err();
+        assert!(matches!(error, SpoError::InvalidDimension(_)));
+        assert!(error.to_string().contains("binary64 capacity"));
+        assert!(CouplingBuilder::build(2, &CouplingConfig::default()).is_ok());
+    }
+
+    #[test]
+    fn build_finite_extremes_and_refusal_recovery() {
+        for strength in [0.0, f64::from_bits(1), 0.45, f64::MAX] {
+            for decay in [0.0, f64::from_bits(1), 0.3, f64::MAX] {
+                let config = CouplingConfig {
+                    base_strength: strength,
+                    decay_alpha: decay,
+                };
+                let state = CouplingBuilder::build(4, &config).unwrap();
+                for i in 0..4 {
+                    for j in 0..4 {
+                        let expected = if i == j {
+                            0.0
+                        } else {
+                            strength * (-decay * (i as f64 - j as f64).abs()).exp()
+                        };
+                        assert_eq!(state.knm[i * 4 + j], expected);
+                        assert!(state.knm[i * 4 + j].is_finite());
+                        assert_eq!(state.knm[i * 4 + j], state.knm[j * 4 + i]);
+                    }
+                }
+                assert!(state.alpha.iter().all(|v| *v == 0.0));
+            }
+        }
+        for value in [-1.0, f64::NAN, f64::INFINITY] {
+            for config in [
+                CouplingConfig {
+                    base_strength: value,
+                    decay_alpha: 0.2,
+                },
+                CouplingConfig {
+                    base_strength: 0.5,
+                    decay_alpha: value,
+                },
+            ] {
+                assert!(CouplingBuilder::build(4, &config).is_err());
+            }
+        }
+        assert!(CouplingBuilder::build(4, &CouplingConfig::default()).is_ok());
     }
 
     #[test]

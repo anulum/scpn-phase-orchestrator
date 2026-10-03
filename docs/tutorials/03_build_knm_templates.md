@@ -123,3 +123,18 @@ numerically stable and that every regime switch preserves:
 
 Template logic should fail closed through the existing monitor and audit checks if
 those invariants break.
+
+## Finite construction and snapshot ownership
+
+When switching a template, keep the returned state: its phase and lag matrices
+are independent copies. The optional amplitude matrix retains its existing
+shared reference, so a frozen state still contains mutable NumPy arrays.
+
+For extreme finite inputs, expected exponential rounding is handled locally;
+your surrounding NumPy error policy is restored. See the
+[construction contract](../reference/api/coupling.md#couplingbuilder) for accepted
+controls, platform capacity and handshake JSON requirements.
+
+Use `tests/test_coupling_builder_finite.py` for construction, refused-call recovery
+and real RK4 consumption. Current [construction measurements](../reference/data/coupling_builder_runtime_benchmark_2026-10-02.json)
+retain all samples and exact runtime/source identities.

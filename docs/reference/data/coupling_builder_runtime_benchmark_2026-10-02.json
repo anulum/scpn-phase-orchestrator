@@ -1,0 +1,724 @@
+{
+  "recorded_utc": "2026-10-03T00:31:45.515288+00:00",
+  "schema": "coupling-construction-runtime-measurement.v1",
+  "reference_source_sha256": {
+    "src/scpn_phase_orchestrator/coupling/knm.py": "6295daf5bef8814e1e865b85d8405ac16e79388a00c50df628341736111f051b",
+    "spo-kernel/crates/spo-engine/src/coupling.rs": "6d015d6190812cf93293d1fbd4f9566b55eaaad827db7e83bc2dc320ae269174",
+    "spo-kernel/crates/spo-ffi/src/coupling_builder.rs": "a6153ac3274647117a9d6cc83672f344fb990be6d4a8f20411ecbb3f17276032",
+    "benchmarks/coupling_builder_benchmark.py": "8505ca7a54c4550f3ca00d5b2723f2c4510d55dbf60fdd74379d42236c9989c7"
+  },
+  "rust_benchmark_source_sha256": "80909c637ea3809e6d5e48ff5e92eacd27c7d0719b9c4871dd071ca36a44d022",
+  "interpretation": "Shared-host uninstrumented regression measurements, overlapping the author scoped coverage jobs and other host work; separate NumPy2.5.3 native and2.2.6 actual-absence environments; no isolated-hardware speed-up or physical validation. Direct PyO3 timings include array conversion; Rust times omit Python checks and conversion. SCPN and amplitude numerical construction are Python-only; amplitude phase construction dispatches normally. Inputs use the same exact scalar bits for all generic counterparts. Actual native and Python caller profiler restoration is exercised separately on Python3.11/3.12/3.13.",
+  "python_lanes": {
+    "native": {
+      "source_sha256": {
+        "src/scpn_phase_orchestrator/coupling/knm.py": "6295daf5bef8814e1e865b85d8405ac16e79388a00c50df628341736111f051b",
+        "spo-kernel/crates/spo-engine/src/coupling.rs": "6d015d6190812cf93293d1fbd4f9566b55eaaad827db7e83bc2dc320ae269174",
+        "spo-kernel/crates/spo-ffi/src/coupling_builder.rs": "a6153ac3274647117a9d6cc83672f344fb990be6d4a8f20411ecbb3f17276032",
+        "benchmarks/coupling_builder_benchmark.py": "8505ca7a54c4550f3ca00d5b2723f2c4510d55dbf60fdd74379d42236c9989c7"
+      },
+      "rows": [
+        {
+          "n": 16,
+          "base_strength": 0.45,
+          "decay_alpha": 0.3,
+          "calls": 100,
+          "repeats": 5,
+          "warmups": 2,
+          "input_encoding": "little-endian uint64 n then IEEE754 binary64 base and decay",
+          "input_hex": "1000000000000000cdccccccccccdc3f333333333333d33f",
+          "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]",
+          "numpy": "2.5.3",
+          "platform": "Linux-7.0.0-34-generic-x86_64-with-glibc2.39",
+          "load_before": [
+            57.35546875,
+            46.9072265625,
+            42.275390625
+          ],
+          "affinity": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11
+          ],
+          "isolated": false,
+          "native_build_calls_observed": 1,
+          "native_installation": "/media/anulum/GOTM/aaa_God_of_the_Math_Collection/03_CODE/SCPN-SYSTEMS-INTEGRATION-AND-CONTROL/repositories/SCPN-PHASE-ORCHESTRATOR/.venv/lib/python3.12/site-packages/spo_kernel/__init__.py",
+          "generic": {
+            "samples_us": [
+              267.00275018811226,
+              294.8526697582565,
+              301.8375800456852,
+              698.4214400290512,
+              222.53517992794514
+            ],
+            "median_us": 294.8526697582565,
+            "knm_sha256": "89d9bf7f0be008c4e37b8ed777eaa4a923cdd846df5536039b871fc589bf4bfd"
+          },
+          "amplitude": {
+            "samples_us": [
+              735.72172987042,
+              607.5142000918277,
+              265.6204701634124,
+              264.80131986318156,
+              1651.7499400652014
+            ],
+            "median_us": 607.5142000918277,
+            "knm_sha256": "89d9bf7f0be008c4e37b8ed777eaa4a923cdd846df5536039b871fc589bf4bfd"
+          },
+          "scpn_physics": {
+            "samples_us": [
+              1321.285669982899,
+              1205.858119938057,
+              1268.66667997092,
+              2071.3189701200463,
+              1473.7496900488622
+            ],
+            "median_us": 1321.285669982899,
+            "knm_sha256": "cbdca07c03631d4978ffba79f795c685379699cd9238652ec12551cd3f939219"
+          },
+          "direct_native_with_array_conversion": {
+            "samples_us": [
+              51.038580131717026,
+              84.72379005979747,
+              87.6830201013945,
+              51.32352001965046,
+              44.38848001882434
+            ],
+            "median_us": 51.32352001965046,
+            "knm_sha256": "89d9bf7f0be008c4e37b8ed777eaa4a923cdd846df5536039b871fc589bf4bfd"
+          },
+          "native_binary_sha256": {
+            "spo_kernel.abi3.so": "28e24e7bfe7adcc924460a887d68cd2035f3c2ea0ce665b2a092137306573134"
+          },
+          "load_after": [
+            57.35546875,
+            46.9072265625,
+            42.275390625
+          ]
+        },
+        {
+          "n": 64,
+          "base_strength": 0.45,
+          "decay_alpha": 0.3,
+          "calls": 100,
+          "repeats": 5,
+          "warmups": 2,
+          "input_encoding": "little-endian uint64 n then IEEE754 binary64 base and decay",
+          "input_hex": "4000000000000000cdccccccccccdc3f333333333333d33f",
+          "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]",
+          "numpy": "2.5.3",
+          "platform": "Linux-7.0.0-34-generic-x86_64-with-glibc2.39",
+          "load_before": [
+            57.35546875,
+            46.9072265625,
+            42.275390625
+          ],
+          "affinity": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11
+          ],
+          "isolated": false,
+          "native_build_calls_observed": 1,
+          "native_installation": "/media/anulum/GOTM/aaa_God_of_the_Math_Collection/03_CODE/SCPN-SYSTEMS-INTEGRATION-AND-CONTROL/repositories/SCPN-PHASE-ORCHESTRATOR/.venv/lib/python3.12/site-packages/spo_kernel/__init__.py",
+          "generic": {
+            "samples_us": [
+              1336.70567010995,
+              1620.0023199780844,
+              1946.5238999691792,
+              1266.7847299599089,
+              2290.338349994272
+            ],
+            "median_us": 1620.0023199780844,
+            "knm_sha256": "8a86c143ac052097971fb809f010bfa44b9c2a22af06aeb665c53f1189639c09"
+          },
+          "amplitude": {
+            "samples_us": [
+              1811.4017299376428,
+              1144.9142699711956,
+              2554.096939857118,
+              1234.8311199457385,
+              1134.372669912409
+            ],
+            "median_us": 1234.8311199457385,
+            "knm_sha256": "8a86c143ac052097971fb809f010bfa44b9c2a22af06aeb665c53f1189639c09"
+          },
+          "direct_native_with_array_conversion": {
+            "samples_us": [
+              499.92184998700395,
+              611.0308799543418,
+              557.4702998274006,
+              779.3592900270596,
+              773.8665898796171
+            ],
+            "median_us": 611.0308799543418,
+            "knm_sha256": "8a86c143ac052097971fb809f010bfa44b9c2a22af06aeb665c53f1189639c09"
+          },
+          "native_binary_sha256": {
+            "spo_kernel.abi3.so": "28e24e7bfe7adcc924460a887d68cd2035f3c2ea0ce665b2a092137306573134"
+          },
+          "load_after": [
+            57.35546875,
+            46.9072265625,
+            42.275390625
+          ]
+        },
+        {
+          "n": 100,
+          "base_strength": 0.45,
+          "decay_alpha": 0.3,
+          "calls": 100,
+          "repeats": 5,
+          "warmups": 2,
+          "input_encoding": "little-endian uint64 n then IEEE754 binary64 base and decay",
+          "input_hex": "6400000000000000cdccccccccccdc3f333333333333d33f",
+          "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]",
+          "numpy": "2.5.3",
+          "platform": "Linux-7.0.0-34-generic-x86_64-with-glibc2.39",
+          "load_before": [
+            57.35546875,
+            46.9072265625,
+            42.275390625
+          ],
+          "affinity": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11
+          ],
+          "isolated": false,
+          "native_build_calls_observed": 1,
+          "native_installation": "/media/anulum/GOTM/aaa_God_of_the_Math_Collection/03_CODE/SCPN-SYSTEMS-INTEGRATION-AND-CONTROL/repositories/SCPN-PHASE-ORCHESTRATOR/.venv/lib/python3.12/site-packages/spo_kernel/__init__.py",
+          "generic": {
+            "samples_us": [
+              3933.45144984778,
+              3259.515410172753,
+              6354.750659957062,
+              2948.086999822408,
+              3641.4349998813123
+            ],
+            "median_us": 3641.4349998813123,
+            "knm_sha256": "05c5c88b69fef514def43f1cd6a394d13ddf7e8045c5b6eb34541188d63f8843"
+          },
+          "amplitude": {
+            "samples_us": [
+              7943.260110041592,
+              9233.15783002181,
+              11924.825119785964,
+              8814.467339834664,
+              3544.7757501970045
+            ],
+            "median_us": 8814.467339834664,
+            "knm_sha256": "05c5c88b69fef514def43f1cd6a394d13ddf7e8045c5b6eb34541188d63f8843"
+          },
+          "direct_native_with_array_conversion": {
+            "samples_us": [
+              1653.1030999612994,
+              3006.7855201195925,
+              4265.763880102895,
+              1502.1188399987295,
+              2866.6448401054367
+            ],
+            "median_us": 2866.6448401054367,
+            "knm_sha256": "05c5c88b69fef514def43f1cd6a394d13ddf7e8045c5b6eb34541188d63f8843"
+          },
+          "native_binary_sha256": {
+            "spo_kernel.abi3.so": "28e24e7bfe7adcc924460a887d68cd2035f3c2ea0ce665b2a092137306573134"
+          },
+          "load_after": [
+            58.0634765625,
+            47.40478515625,
+            42.48681640625
+          ]
+        }
+      ]
+    },
+    "absence": {
+      "source_sha256": {
+        "src/scpn_phase_orchestrator/coupling/knm.py": "6295daf5bef8814e1e865b85d8405ac16e79388a00c50df628341736111f051b",
+        "spo-kernel/crates/spo-engine/src/coupling.rs": "6d015d6190812cf93293d1fbd4f9566b55eaaad827db7e83bc2dc320ae269174",
+        "spo-kernel/crates/spo-ffi/src/coupling_builder.rs": "a6153ac3274647117a9d6cc83672f344fb990be6d4a8f20411ecbb3f17276032",
+        "benchmarks/coupling_builder_benchmark.py": "8505ca7a54c4550f3ca00d5b2723f2c4510d55dbf60fdd74379d42236c9989c7"
+      },
+      "rows": [
+        {
+          "n": 16,
+          "base_strength": 0.45,
+          "decay_alpha": 0.3,
+          "calls": 100,
+          "repeats": 5,
+          "warmups": 2,
+          "input_encoding": "little-endian uint64 n then IEEE754 binary64 base and decay",
+          "input_hex": "1000000000000000cdccccccccccdc3f333333333333d33f",
+          "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]",
+          "numpy": "2.2.6",
+          "platform": "Linux-7.0.0-34-generic-x86_64-with-glibc2.39",
+          "load_before": [
+            57.35546875,
+            46.9072265625,
+            42.275390625
+          ],
+          "affinity": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11
+          ],
+          "isolated": false,
+          "native_build_calls_observed": 0,
+          "native_installation": null,
+          "generic": {
+            "samples_us": [
+              150.0985401798971,
+              289.99542992096394,
+              189.6593300625682,
+              1137.0546399848536,
+              146.01970004150644
+            ],
+            "median_us": 189.6593300625682,
+            "knm_sha256": "b705bbfb207885fcdc36cda9d86f1a09d6aad2298f0113095d7387dfe07b3b62"
+          },
+          "amplitude": {
+            "samples_us": [
+              201.31590019445866,
+              143.84847017936409,
+              191.73301989212632,
+              120.9440000820905,
+              65.40375994518399
+            ],
+            "median_us": 143.84847017936409,
+            "knm_sha256": "b705bbfb207885fcdc36cda9d86f1a09d6aad2298f0113095d7387dfe07b3b62"
+          },
+          "scpn_physics": {
+            "samples_us": [
+              1938.8283899752423,
+              3278.336760122329,
+              1663.3478199946694,
+              2476.602090173401,
+              1757.3648097459227
+            ],
+            "median_us": 1938.8283899752423,
+            "knm_sha256": "cbdca07c03631d4978ffba79f795c685379699cd9238652ec12551cd3f939219"
+          },
+          "load_after": [
+            57.35546875,
+            46.9072265625,
+            42.275390625
+          ]
+        },
+        {
+          "n": 64,
+          "base_strength": 0.45,
+          "decay_alpha": 0.3,
+          "calls": 100,
+          "repeats": 5,
+          "warmups": 2,
+          "input_encoding": "little-endian uint64 n then IEEE754 binary64 base and decay",
+          "input_hex": "4000000000000000cdccccccccccdc3f333333333333d33f",
+          "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]",
+          "numpy": "2.2.6",
+          "platform": "Linux-7.0.0-34-generic-x86_64-with-glibc2.39",
+          "load_before": [
+            57.35546875,
+            46.9072265625,
+            42.275390625
+          ],
+          "affinity": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11
+          ],
+          "isolated": false,
+          "native_build_calls_observed": 0,
+          "native_installation": null,
+          "generic": {
+            "samples_us": [
+              70.72943990351632,
+              74.73736011888832,
+              59.33406995609403,
+              37.317090027499944,
+              53.278940031304955
+            ],
+            "median_us": 59.33406995609403,
+            "knm_sha256": "bf418a22d94299f97603ae449f6959a466c37770aff95a3c6f3a69eab63c0ef7"
+          },
+          "amplitude": {
+            "samples_us": [
+              236.13572004251182,
+              131.63770985556766,
+              142.57778995670378,
+              143.09391001006588,
+              150.804549921304
+            ],
+            "median_us": 143.09391001006588,
+            "knm_sha256": "bf418a22d94299f97603ae449f6959a466c37770aff95a3c6f3a69eab63c0ef7"
+          },
+          "load_after": [
+            57.35546875,
+            46.9072265625,
+            42.275390625
+          ]
+        },
+        {
+          "n": 100,
+          "base_strength": 0.45,
+          "decay_alpha": 0.3,
+          "calls": 100,
+          "repeats": 5,
+          "warmups": 2,
+          "input_encoding": "little-endian uint64 n then IEEE754 binary64 base and decay",
+          "input_hex": "6400000000000000cdccccccccccdc3f333333333333d33f",
+          "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]",
+          "numpy": "2.2.6",
+          "platform": "Linux-7.0.0-34-generic-x86_64-with-glibc2.39",
+          "load_before": [
+            57.35546875,
+            46.9072265625,
+            42.275390625
+          ],
+          "affinity": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10,
+            11
+          ],
+          "isolated": false,
+          "native_build_calls_observed": 0,
+          "native_installation": null,
+          "generic": {
+            "samples_us": [
+              192.63170019257814,
+              109.19016000116244,
+              147.86101004574448,
+              93.31165987532586,
+              135.09056996554136
+            ],
+            "median_us": 135.09056996554136,
+            "knm_sha256": "b2726025e4e18e367ed994d0d155121956d26df2cb068163e5f9e5dddec3613e"
+          },
+          "amplitude": {
+            "samples_us": [
+              359.07472018152475,
+              543.2396600372158,
+              708.0587299424224,
+              684.2385500203818,
+              424.71418011700734
+            ],
+            "median_us": 543.2396600372158,
+            "knm_sha256": "b2726025e4e18e367ed994d0d155121956d26df2cb068163e5f9e5dddec3613e"
+          },
+          "load_after": [
+            57.35546875,
+            46.9072265625,
+            42.275390625
+          ]
+        }
+      ]
+    }
+  },
+  "standalone_rust": {
+    "16": {
+      "input_hex": "1000000000000000cdccccccccccdc3f333333333333d33f",
+      "estimates_ns": {
+        "mean": {
+          "confidence_interval": {
+            "confidence_level": 0.95,
+            "lower_bound": 2844.1932242063494,
+            "upper_bound": 7078.063266132842
+          },
+          "point_estimate": 4481.536841813114,
+          "standard_error": 1167.2058162510984
+        },
+        "median": {
+          "confidence_interval": {
+            "confidence_level": 0.95,
+            "lower_bound": 2620.5958333333333,
+            "upper_bound": 4872.580357142857
+          },
+          "point_estimate": 2847.088392857143,
+          "standard_error": 662.5598834911626
+        },
+        "median_abs_dev": {
+          "confidence_interval": {
+            "confidence_level": 0.95,
+            "lower_bound": 75.14889394361822,
+            "upper_bound": 2826.032076799628
+          },
+          "point_estimate": 619.5897808750829,
+          "standard_error": 753.7858920914053
+        },
+        "slope": {
+          "confidence_interval": {
+            "confidence_level": 0.95,
+            "lower_bound": 2840.4325679781164,
+            "upper_bound": 4593.353017558375
+          },
+          "point_estimate": 3493.256052875696,
+          "standard_error": 461.6737212415484
+        },
+        "std_dev": {
+          "confidence_interval": {
+            "confidence_level": 0.95,
+            "lower_bound": 427.41368701973715,
+            "upper_bound": 5889.812476957711
+          },
+          "point_estimate": 3876.241160798229,
+          "standard_error": 1746.5051812091149
+        }
+      },
+      "samples": {
+        "sampling_mode": "Linear",
+        "iters": [
+          336.0,
+          672.0,
+          1008.0,
+          1344.0,
+          1680.0,
+          2016.0,
+          2352.0,
+          2688.0,
+          3024.0,
+          3360.0
+        ],
+        "times": [
+          958104.0,
+          10151511.0,
+          2330848.0,
+          6548748.0,
+          4402601.0,
+          5132761.0,
+          8143319.0,
+          14628081.0,
+          8343061.0,
+          9551394.0
+        ]
+      },
+      "sample_encoding": "Criterion times are nanoseconds, divided by corresponding iteration counts",
+      "warmup_ms": 100,
+      "measurement_ms": 200,
+      "sample_size": 10
+    },
+    "64": {
+      "input_hex": "4000000000000000cdccccccccccdc3f333333333333d33f",
+      "estimates_ns": {
+        "mean": {
+          "confidence_interval": {
+            "confidence_level": 0.95,
+            "lower_bound": 63089.234003887264,
+            "upper_bound": 113703.83425170067
+          },
+          "point_estimate": 88053.61526724977,
+          "standard_error": 12933.880074583572
+        },
+        "median": {
+          "confidence_interval": {
+            "confidence_level": 0.95,
+            "lower_bound": 44594.1581632653,
+            "upper_bound": 123609.11224489796
+          },
+          "point_estimate": 87604.9294217687,
+          "standard_error": 27949.192028475332
+        },
+        "median_abs_dev": {
+          "confidence_interval": {
+            "confidence_level": 0.95,
+            "lower_bound": 1282.096229381097,
+            "upper_bound": 66816.23846020321
+          },
+          "point_estimate": 59705.03143390136,
+          "standard_error": 20738.79671581731
+        },
+        "slope": {
+          "confidence_interval": {
+            "confidence_level": 0.95,
+            "lower_bound": 47461.44839538869,
+            "upper_bound": 88858.83479105929
+          },
+          "point_estimate": 60234.291015107345,
+          "standard_error": 10758.573490691286
+        },
+        "std_dev": {
+          "confidence_interval": {
+            "confidence_level": 0.95,
+            "lower_bound": 29414.644706976345,
+            "upper_bound": 50253.49189709398
+          },
+          "point_estimate": 43210.27774949654,
+          "standard_error": 5443.732963163306
+        }
+      },
+      "samples": {
+        "sampling_mode": "Linear",
+        "iters": [
+          49.0,
+          98.0,
+          147.0,
+          196.0,
+          245.0,
+          294.0,
+          343.0,
+          392.0,
+          441.0,
+          490.0
+        ],
+        "times": [
+          5854006.0,
+          12519374.0,
+          22897278.0,
+          12863465.0,
+          30119837.0,
+          32216501.0,
+          16192251.0,
+          17480910.0,
+          19454556.0,
+          21309922.0
+        ]
+      },
+      "sample_encoding": "Criterion times are nanoseconds, divided by corresponding iteration counts",
+      "warmup_ms": 100,
+      "measurement_ms": 200,
+      "sample_size": 10
+    },
+    "100": {
+      "input_hex": "6400000000000000cdccccccccccdc3f333333333333d33f",
+      "estimates_ns": {
+        "mean": {
+          "confidence_interval": {
+            "confidence_level": 0.95,
+            "lower_bound": 124679.3631848659,
+            "upper_bound": 293902.52451149427
+          },
+          "point_estimate": 191524.88003968255,
+          "standard_error": 46302.55326812852
+        },
+        "median": {
+          "confidence_interval": {
+            "confidence_level": 0.95,
+            "lower_bound": 113884.05459770115,
+            "upper_bound": 210308.00977011494
+          },
+          "point_estimate": 132335.35522714833,
+          "standard_error": 23663.805808251338
+        },
+        "median_abs_dev": {
+          "confidence_interval": {
+            "confidence_level": 0.95,
+            "lower_bound": 8135.129521089826,
+            "upper_bound": 104158.88529563771
+          },
+          "point_estimate": 39061.78458410091,
+          "standard_error": 27562.019126982308
+        },
+        "slope": {
+          "confidence_interval": {
+            "confidence_level": 0.95,
+            "lower_bound": 130780.74439352861,
+            "upper_bound": 261265.9761845696
+          },
+          "point_estimate": 188108.35485893418,
+          "standard_error": 34230.98410269229
+        },
+        "std_dev": {
+          "confidence_interval": {
+            "confidence_level": 0.95,
+            "lower_bound": 19454.760348145697,
+            "upper_bound": 232984.42383694433
+          },
+          "point_estimate": 154397.59137381017,
+          "standard_error": 67542.54589623482
+        }
+      },
+      "samples": {
+        "sampling_mode": "Linear",
+        "iters": [
+          29.0,
+          58.0,
+          87.0,
+          116.0,
+          145.0,
+          174.0,
+          203.0,
+          232.0,
+          261.0,
+          290.0
+        ],
+        "times": [
+          2962949.0,
+          6000185.0,
+          10815548.0,
+          70729478.0,
+          25001605.0,
+          27169246.0,
+          27464029.0,
+          27343883.0,
+          33768161.0,
+          76696569.0
+        ]
+      },
+      "sample_encoding": "Criterion times are nanoseconds, divided by corresponding iteration counts",
+      "warmup_ms": 100,
+      "measurement_ms": 200,
+      "sample_size": 10
+    }
+  },
+  "reproduction": {
+    "python": "python -m benchmarks.coupling_builder_benchmark --sizes 16 64 100 --calls 100 --repeats 5",
+    "rust": "cd spo-kernel; CARGO_BUILD_JOBS=1 cargo bench -p spo-engine --bench coupling_builder_bench --locked -- --noplot"
+  },
+  "raw_receipts": {
+    "python_native_sha256": "34354648c367038f35bceff1260e172636fc93b253795cb074407ac1dccec3b2",
+    "python_absence_sha256": "d83f639c4b6dc39846ec3140e7060b1b8d09066f8121c001ccaff071b2cd8ff7",
+    "rust_sha256": "41ba28666bb5b4ba4f92758106d4599f7a378af034e72667ec3f165762fa54e1"
+  }
+}

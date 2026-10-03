@@ -132,7 +132,16 @@ source types and non-finite coefficients. Native count extraction rejects
 negative Python integers with `OverflowError`; boolean/text counts, product
 overflow and wrong flat cardinality raise `ValueError`. No invalid request
 mutates its input or prevents subsequent valid projection. Rust public
-construction also checks `n*n` before allocating its matrices.
+construction checks both `n*n` and binary64 byte capacity before allocating its
+matrices, returning `ValueError` rather than a native capacity panic. The public
+builder applies the same capacity bound before attempting either backend.
+Finite extreme strength/decay values preserve the exponential equation and zero
+diagonal; underflow rounds to zero. The amplitude and SCPN numerical paths remain
+Python-only. For actual constructor parity/refusal/recovery cases use
+`native-tests/test_coupling_builder.py` with the newly built wheel and
+`tests/test_coupling_builder_finite.py` in both genuine environments.
+See [construction measurements](../reference/data/coupling_builder_runtime_benchmark_2026-10-02.json)
+for exact scalar bits, current source/binary pins and shared-host timings.
 
 Run `native-tests/test_geometry_projection.py` against the newly built wheel;
 run `tests/test_geometry_projection_finite.py` in both real native and genuinely
