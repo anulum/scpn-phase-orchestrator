@@ -145,6 +145,23 @@ the appropriate interpreter is part of the test evidence; no availability flag
 or simulated kernel stands in for either runtime. The projection benchmark
 records host load and repeated samples and checks results outside timed intervals.
 
+### Quality scorer runtime evidence
+
+Run the dedicated scorer, finite-weight, backend-parity and measurement-input
+tests with the actual installed extension and an actually kernel-absent
+interpreter. Add `native-tests/test_phase_quality.py` only in the native lane;
+it proves real C-call dispatch, source rejection and later valid recovery.
+The finite tests compare public output with exact rational weighting and
+exercise the real session-start consumer. A waveform extraction and RK4 engine
+test checks the analytical coupled trajectory and gated silent oscillator.
+No successful fake native scorer is used.
+
+Run the unchanged 50 μs mask test separately without coverage/profiling.
+The public diagnostic is `python -m benchmarks.phase_quality_benchmark`;
+Rust uses `cargo bench -p spo-oscillators --bench quality_bench --locked`.
+Retain source/binary hashes and actual loaded-host timings. The timing budget
+is a local regression check, not a promised system deadline.
+
 ### Module Tests
 
 Dedicated test files for each subsystem covering unit-level behaviour, input validation, edge cases, and dataclass contracts:

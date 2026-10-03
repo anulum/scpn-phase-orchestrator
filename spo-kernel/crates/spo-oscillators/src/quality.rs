@@ -23,12 +23,19 @@ impl Default for PhaseQualityScorer {
 }
 
 impl PhaseQualityScorer {
-    /// Weighted average quality. `qualities` and `amplitudes` must be same length.
+    /// Amplitude-weighted mean of finite pairs, with overflow-safe weight scaling.
     ///
     /// # Arguments
     ///
-    /// * `qualities` - Per-oscillator quality values in [0, 1].
-    /// * `amplitudes` - Per-oscillator amplitudes used as weights.
+    /// * `qualities` - Per-oscillator quality values, clamped to [0, 1].
+    /// * `amplitudes` - Amplitude weights, floored at 1e-12.
+    ///
+    /// # Returns
+    ///
+    /// The mean of the matching prefix, skipping any pair containing a
+    /// nonfinite measurement. Empty/no usable pairs or nonfinite configured
+    /// thresholds return zero. Weights are divided by their finite maximum
+    /// before summation; an unscaled total above f64::MAX remains admissible.
     #[must_use]
     pub fn score(&self, qualities: &[f64], amplitudes: &[f64]) -> f64 {
         if qualities.is_empty() {
@@ -37,20 +44,22 @@ impl PhaseQualityScorer {
         if !self.collapse_threshold.is_finite() || !self.min_quality.is_finite() {
             return 0.0;
         }
-        let n = qualities.len().min(amplitudes.len());
-        let (wsum, total_w) = (0..n).fold((0.0, 0.0), |(ws, tw), i| {
-            let q = qualities[i];
-            let amp = amplitudes[i];
-            if !q.is_finite() || !amp.is_finite() {
-                return (ws, tw);
-            }
-            let q = q.clamp(0.0, 1.0);
-            let w = amp.max(1e-12);
-            (ws + q * w, tw + w)
-        });
-        if total_w <= 0.0 {
+        let pairs = qualities
+            .iter()
+            .zip(amplitudes)
+            .filter(|(q, amp)| q.is_finite() && amp.is_finite());
+        let scale = pairs
+            .clone()
+            .map(|(_, amp)| amp.max(1e-12))
+            .fold(0.0, f64::max);
+        if scale == 0.0 {
             return 0.0;
         }
+        let (wsum, total_w) = pairs.fold((0.0, 0.0), |(ws, tw), (&q, amp)| {
+            let q = q.clamp(0.0, 1.0);
+            let w = amp.max(1e-12) / scale;
+            (ws + q * w, tw + w)
+        });
         wsum / total_w
     }
 
@@ -159,5 +168,43 @@ mod tests {
         assert_eq!(s.score(&[0.5], &[1.0]), 0.0);
         assert!(s.is_collapsed(&[0.9, 0.8]));
         assert_eq!(s.downweight_mask(&[0.9, 0.8]), vec![0.0, 0.0]);
+    }
+
+    #[test]
+    fn finite_weights_above_representable_total_preserve_mean() {
+        let scorer = PhaseQualityScorer::default();
+        for amplitudes in [[1e308, 1e308], [f64::MAX, f64::MAX]] {
+            assert!((scorer.score(&[0.8, 0.2], &amplitudes) - 0.5).abs() < 1e-15);
+            assert_eq!(scorer.score(&[1.0, 1.0], &amplitudes), 1.0);
+            assert_eq!(scorer.score(&[0.0, 0.0], &amplitudes), 0.0);
+        }
+        let score = scorer.score(&[0.9, 0.1, 0.5], &[1e308, 5e307, 2.5e307]);
+        assert!((score - 4.3 / 7.0).abs() < 1e-15);
+    }
+
+    #[test]
+    fn matching_prefix_and_amplitude_floor_remain_defined() {
+        let scorer = PhaseQualityScorer::default();
+        assert_eq!(scorer.score(&[0.8, 0.2], &[0.0, -f64::MAX]), 0.5);
+        assert_eq!(scorer.score(&[0.8, 0.2], &[1e308]), 0.8);
+        assert_eq!(scorer.score(&[0.8], &[1e308, f64::NAN]), 0.8);
+        assert_eq!(scorer.score(&[0.8], &[]), 0.0);
+        assert_eq!(scorer.score(&[f64::NAN], &[1.0]), 0.0);
+        assert_eq!(scorer.score(&[0.0, 1.0], &[1e308, 1.0]), 1e-308);
+    }
+
+    #[test]
+    fn configured_thresholds_keep_strict_majority_and_boundary_mask() {
+        let scorer = PhaseQualityScorer {
+            collapse_threshold: 0.7,
+            min_quality: 0.4,
+        };
+        assert!(scorer.is_collapsed(&[0.1, 0.6, 0.9]));
+        assert!(!scorer.is_collapsed(&[0.1, 0.9]));
+        assert!(!scorer.is_collapsed(&[0.7]));
+        assert_eq!(
+            scorer.downweight_mask(&[0.1, 0.4, 0.6, 1.5, f64::NAN]),
+            vec![0.0, 0.4, 0.6, 1.0, 0.0]
+        );
     }
 }

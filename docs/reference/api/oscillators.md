@@ -399,7 +399,17 @@ knm_gated = knm * mask[:, None] * mask[None, :]
 This prevents noisy phase estimates from corrupting the synchronisation
 dynamics. Only oscillators with quality ≥ min_quality participate.
 
-**Performance:** `downweight_mask(100 states)` < 50 μs.
+**Performance:** the local uninstrumented regression test retains a 50 μs
+limit for `downweight_mask(100 states)`. It is not a guaranteed runtime deadline.
+
+Scoring skips nonfinite quality/amplitude pairs, clamps usable quality to
+[0, 1] and floors amplitudes at 1e-12. Usable weights are divided by their
+maximum before summation, keeping the mean finite even if an unscaled sum
+would overflow. Empty/no usable input returns 0. Constructor thresholds must
+be finite plain real values in [0, 1]; differing per-call thresholds select
+the Python computation even when the kernel is installed. Exact Python float
+measurements are validated by their original type before conversion; other
+real scalar types retain the shared source validator.
 
 ::: scpn_phase_orchestrator.oscillators.quality
 
@@ -487,17 +497,16 @@ on the preprocessing environment.
 | `PhysicalExtractor.extract(1s @ 1kHz)` | Local test: < 5 ms | Same public test budget | Hilbert transform; no published speedup |
 | `InformationalExtractor.extract(100 ts)` | < 600 μs (local test limit, deselected in hosted CI) | — | native kernel or NumPy fallback |
 | `SymbolicExtractor.extract(1000 states)` | Local test: < 5 ms; < 50 ms under CI/high load | — | ring mapping; not a published benchmark |
-| `PhaseQualityScorer.downweight_mask(100)` | < 50 μs | 3.15 μs | public wrapper: 31.57 μs |
+| `PhaseQualityScorer.downweight_mask(100)` | Local test: < 50 μs | See current snapshot | Actual installed/absent public and native measurements |
 
-Quality timings measured on 2026-09-26 with the rebuilt release extension,
-five repeats of 100 calls after warm-up on a shared host. Direct Rust mask
-and the public wrapper include source-type validation. The supported per-call
-threshold override selects the real Python mask path, measured at 32.40 μs
-for the same applied threshold and input. This is a current measurement,
-not an isolated performance comparison against an earlier release.
-[Raw quality timing records and source hashes](../data/quality_measurement_types_benchmark_2026-09-26.json)
-cover N=10/100/1000. Pure Python score was not measured on this kernel-installed
-host; the public score uses the real Rust backend.
+The [2026-10-03 quality runtime snapshot](../data/phase_quality_runtime_benchmark_2026-10-03.json)
+records repeated ordinary/huge finite score and mask calls at N=10/100/1000
+through the public API, direct PyO3 and typed Rust slices. Public threshold
+overrides and a genuinely kernel-absent interpreter are measured separately.
+Source/native binary hashes, scalar bits, instrumentation and host load are
+recorded. These differing boundaries are local regression evidence; they
+do not establish isolated latency or a speedup. The 2026-09-26 snapshot remains
+historical evidence and does not certify the current scorer.
 
 The direct `spo_kernel.PyPhaseQualityScorer` also rejects text, boolean,
 complex and temporal aliases, while retaining real arrays and documented

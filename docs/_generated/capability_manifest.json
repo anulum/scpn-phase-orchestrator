@@ -11,8 +11,8 @@
     "python_package_modules": 762,
     "research_experimental_modules": 205,
     "runtime_serving_modules": 158,
-    "rust_kernel_files": 122,
-    "test_files": 1081
+    "rust_kernel_files": 124,
+    "test_files": 1085
   },
   "documentation": {
     "public_pages": [
@@ -2163,6 +2163,8 @@
       "tests/test_convergence_topology.py",
       "tests/test_coupled_transport_semantic_exchange.py",
       "tests/test_coupled_transport_semantic_exchange_e2e.py",
+      "tests/test_coupling_builder_benchmark.py",
+      "tests/test_coupling_builder_finite.py",
       "tests/test_coupling_est.py",
       "tests/test_coupling_est_validation.py",
       "tests/test_coupling_harmonic_estimation.py",
@@ -2586,6 +2588,7 @@
       "tests/test_phase_extract_measurement_inputs.py",
       "tests/test_phase_koopman.py",
       "tests/test_phase_quality.py",
+      "tests/test_phase_quality_benchmark.py",
       "tests/test_phase_reduction.py",
       "tests/test_physical_extraction_benchmark.py",
       "tests/test_physical_extractor.py",
@@ -2698,6 +2701,7 @@
       "tests/test_quality_measurement_inputs.py",
       "tests/test_quality_scorer.py",
       "tests/test_quality_scorer_backend_parity.py",
+      "tests/test_quality_scorer_finite.py",
       "tests/test_quantum_bridge.py",
       "tests/test_quantum_bridge_live.py",
       "tests/test_quantum_control_bridge.py",
@@ -3034,6 +3038,7 @@
   "rust_kernel_files": [
     "spo-kernel/Cargo.toml",
     "spo-kernel/crates/spo-engine/Cargo.toml",
+    "spo-kernel/crates/spo-engine/benches/coupling_builder_bench.rs",
     "spo-kernel/crates/spo-engine/benches/coupling_projection_bench.rs",
     "spo-kernel/crates/spo-engine/benches/monitors_bench.rs",
     "spo-kernel/crates/spo-engine/benches/parallel_bench.rs",
@@ -3129,6 +3134,7 @@
     "spo-kernel/crates/spo-ffi/src/torus_boundary.rs",
     "spo-kernel/crates/spo-ffi/src/upde_stepper.rs",
     "spo-kernel/crates/spo-oscillators/Cargo.toml",
+    "spo-kernel/crates/spo-oscillators/benches/quality_bench.rs",
     "spo-kernel/crates/spo-oscillators/src/informational.rs",
     "spo-kernel/crates/spo-oscillators/src/lib.rs",
     "spo-kernel/crates/spo-oscillators/src/physical.rs",

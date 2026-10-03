@@ -167,7 +167,7 @@ See [geometry constraints](../specs/geometry_constraints.md) and
 | `ActionProjector` | `PyActionProjector` | `project()` |
 | `BoundaryObserver` | `PyBoundaryObserver` | `observe()` |
 | `SupervisorPolicy` | `PySupervisorPolicy` | `decide()` |
-| `PhaseQualityScorer` | `PyPhaseQualityScorer` | `score()`, `is_collapsed()` |
+| `PhaseQualityScorer` | `PyPhaseQualityScorer` | `score()`, `is_collapsed()`, `downweight_mask()` |
 | `LagModel` | `PyLagModel` | `estimate()` |
 | `NeurocoreBridge` | `PyLIFEnsemble` | `step()` (LIF ensemble, 325x at N=10000) |
 | Physical extractor | `physical_extract` | analytic phase/frequency and scaled envelope mean/CV; Hilbert preprocessing stays in SciPy |
@@ -206,6 +206,20 @@ and totals use `u128`, including the full signed/unsigned 64-bit span; the Pytho
 fallback uses arbitrary-size integers. Output remains `float64`, not exact
 rational arithmetic. Vector graph qualities use linear distances; cyclic ring
 quality remains in Python.
+
+Quality scoring uses the same finite-pair policy in Python and direct native
+Rust: qualities are clamped to [0, 1], amplitudes have a 1e-12 floor and weights
+are divided by their finite maximum before accumulation. The direct native
+scorer retains matching-prefix behaviour for unequal sequences; the public
+state-based API supplies equal-length quality/amplitude sequences. Per-call
+collapse/mask thresholds differing from the configured values use Python.
+Real native tests observe the installed scorer's C calls and verify public
+outputs, without replacing the backend.
+
+The [quality runtime snapshot](../reference/data/phase_quality_runtime_benchmark_2026-10-03.json)
+records current public/native measurements in installed and genuinely absent
+environments, plus the standalone Rust slice benchmark. These boundaries
+include different validation costs and are shared-host regression evidence.
 
 These symbolic vector contracts require `spo-kernel >= 0.5.11`; both the
 `rust` and `scpn-all` extras enforce that floor. Rebuild the kernel when
