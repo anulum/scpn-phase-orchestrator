@@ -61,3 +61,18 @@ closed with `UnsupportedInferenceMethodError`; they do not silently reuse the
 transfer-entropy backend. SINDy and inference outputs are for inspection, not
 runtime actuation. See also [ssgf.md](ssgf.md) for the gauge-field coupling
 closure and [autotune.md](autotune.md) for offline estimation.
+
+## Construction runtime boundaries
+
+The public builder checks square binary64 capacity before dispatch, and the
+Rust constructor repeats that boundary before allocating. SCPN construction
+validates one timescale snapshot for all three passes. Neither limit certifies
+available RAM or the physical provenance of the declared model.
+
+The [API construction contract](../../reference/api/coupling.md#couplingbuilder)
+defines finite-value rounding, handshake admission and matrix ownership.
+
+Real native and genuinely absent interpreters exercise the same public contracts.
+Negative tests of impossible corrupted producer output are documented ABI fault
+injection and are reported separately from real-runtime construction evidence.
+No successful substitute kernel is used as evidence of actual acceleration.

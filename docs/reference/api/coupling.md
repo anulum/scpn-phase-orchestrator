@@ -55,7 +55,7 @@ Builds coupling matrices from parameters.
 | `switch_template` | `(state, name, templates) → CouplingState` | Runtime topology switch |
 
 `apply_handshakes()` parses the JSON specification fail-closed: non-finite
-constants, duplicate object keys, non-list `matrix` payloads, self-coupled
+constants, duplicate object keys, non-mapping roots, non-list `matrix` payloads, self-coupled
 entries, and out-of-range layer indices are rejected before any K_nm entries
 are modified.
 
@@ -66,15 +66,50 @@ before changing the state. `KnmTemplateSet` retains its stricter floating-point
 dtype contract and returns independent copies of stored matrices.
 The installed Rust builder applies the same original scalar-type checks;
 its projection checks the original sequence elements, and construction rejects
-an overflowing matrix-size product before allocation.
+an overflowing matrix-size product or binary64 byte capacity before allocation.
 
-The [construction and projection benchmark](../data/coupling_builder_measurement_types_benchmark_2026-09-26.json)
+Construction accepts all finite non-negative binary64 strength/decay values,
+including subnormals and the largest finite value. Exponential underflow rounds
+to zero; overflowing negative exponents also yield zero. These operations use a
+local NumPy error context and restore the caller's warning/error policy. The
+phase and amplitude diagonals remain zero. Impossible square binary64 buffers
+are refused before native dispatch or NumPy index allocation; representable
+capacity does not promise available physical memory.
+
+The SCPN builder preserves the four anchors and existing clipping/boost rules.
+It checks all16 exported timescales as finite and positive, evaluates adjacent
+mismatch as a difference of logarithms, and scales reciprocal frequencies by a
+common factor for the near-neighbour penalty. These are numerically stable forms
+of the same equations; timescale values and scientific calibration are unchanged.
+Handshake specifications require a JSON mapping with a list-valued `matrix`.
+A failed overlay leaves its source unchanged. Template and overlay results copy
+phase/lag matrices; the optional amplitude matrix retains its existing shared
+reference. A frozen record does not make the contained NumPy arrays immutable.
+
+
+The [historical construction and projection benchmark](../data/coupling_builder_measurement_types_benchmark_2026-09-26.json)
 records actual kernel-absent Python and release-kernel environments, source
 hashes and a reproduction script. It verifies public construction and projection
 parity at `rtol=atol=1e-12` for 4, 16 and 64 layers, including an observed native
 build call from the public API. The public builder currently selects Rust when
 available; this snapshot does not establish that Rust construction is faster.
 Shared host load and different NumPy versions limit timing comparisons.
+
+The [current construction measurements](../data/coupling_builder_runtime_benchmark_2026-10-02.json)
+use identical scalar bits at16,64 and100 layers for actual kernel-absent Python,
+public PyO3 dispatch and standalone Rust. Generic and amplitude timings include
+public snapshot construction; direct PyO3 timing also includes conversion to
+NumPy arrays. SCPN construction is Python-only. Numerical checks run outside
+measured intervals after two warm-ups. An existing native or Python caller
+profiler is suspended during the complete measurement and restored on success
+or refused construction. Individual samples, native call
+observations, source/binary pins, interpreter/NumPy versions and shared host
+load accompany the data. Reproduce with
+`python -m benchmarks.coupling_builder_benchmark --sizes 16 64 100 --calls 100 --repeats 5`
+and `cargo bench -p spo-engine --bench coupling_builder_bench -- --noplot` from
+`spo-kernel`. Use separate actual native and absent interpreters; timing ratios
+across differing NumPy versions or a shared host are not causal speed-up claims.
+
 
 ### CouplingState (frozen dataclass)
 
@@ -114,36 +149,56 @@ more strongly than distant ones.
 
 ### SCPN physics construction
 
-`build_scpn_physics(k_base=0.45, alpha_decay=0.3)` produces a 16×16 matrix
-using three coupling mechanisms:
+`build_scpn_physics(k_base=0.45, alpha_decay=0.3)` produces a symmetric
+16×16 matrix with zero diagonal and phase lags. For one-based layer indices,
+construction uses three distance classes:
 
-1. **Adjacent layers** (|i-j| = 1): timescale matching via
-   `SCPN_LAYER_TIMESCALES` (Quantum: 1e-15s to Social: 3.15e7s)
-2. **Near-neighbour** (|i-j| ≤ 3): geometric mean of adjacent couplings
-3. **Distant** (|i-j| > 3): exponential decay from k_base
+1. **Adjacent layers** (`|i-j| = 1`): the four declared anchors for L1–L5
+   override timescale matching. Other adjacent pairs use
+   `k_base / (1 + 0.05 * |log(tau_i) - log(tau_j)|)`, clipped to `[0.1, 0.5]`.
+   Adjacency to L16 has the fixed value `0.2`.
+2. **Near-neighbours** (`|i-j| = 2`): the geometric mean of the two adjacent
+   path couplings, divided by
+   `1 + 0.1 * |omega_i - omega_j| / ((omega_i + omega_j) / 2)`, where
+   `omega = 1 / tau`. The implementation scales the reciprocal frequencies
+   before evaluating this penalty. The penalty is omitted for pairs involving
+   L16; the result is clipped to `[0.01, 0.4]`.
+3. **Distant layers** (`|i-j| >= 3`):
+   `k_base * exp(-alpha_decay * |i-j|)`, clipped to `[0.001, 0.2]`.
 
-The 16 SCPN layers span 22 orders of magnitude in timescale:
+After those passes, the symmetric L1–L16 coupling is at least `0.05` and
+L5–L7 is at least `0.15`. These boosts take precedence over the distance rules.
+
+The exported `SCPN_LAYER_NAMES` and `SCPN_LAYER_TIMESCALES` define these inputs:
 
 | Layer | Name | Timescale |
 |-------|------|-----------|
-| L1 | Quantum | 1e-15 s |
-| L2 | Sub-nuclear | 1e-12 s |
-| L3 | Atomic | 1e-10 s |
-| L4 | Molecular | 1e-9 s |
-| L5 | Cellular | 1e-3 s |
-| L6 | Neural | 1e-2 s |
-| L7 | Synaptic | 1e-1 s |
-| L8 | Circuit | 1 s |
-| L9 | Regional | 10 s |
-| L10 | Behavioural | 60 s |
-| L11 | Cognitive | 600 s |
-| L12 | Social | 3600 s |
-| L13 | Cultural | 86400 s |
-| L14 | Evolutionary | 3.15e6 s |
-| L15 | Cosmological | 3.15e7 s |
-| L16 | Director (meta) | — |
+| L1 | Quantum | 0.1 s |
+| L2 | Neural | 0.004 s |
+| L3 | Genomic | 3600 s |
+| L4 | Tissue | 2 s |
+| L5 | Psycho | 1 s |
+| L6 | Planetary | 86400 s |
+| L7 | Symbolic | 10 s |
+| L8 | Cosmic | 31557600 s |
+| L9 | Memory | 3.154e9 s |
+| L10 | Boundary | 1 s |
+| L11 | Noospheric | 86400 s |
+| L12 | Gaian | 31557600 s |
+| L13 | Source | 0.001 s |
+| L14 | Transdim | 1e-20 s |
+| L15 | Consilium | 1 s |
+| L16 | Meta | 1 s |
 
-**Performance:** `build(100)` < 10 ms, `build_scpn_physics()` < 5 ms.
+These are declared model inputs; this implementation check does not establish
+external physical calibration. L2 remains `0.004 s`, although its source comment
+says approximately 25 ms and 40 Hz. That discrepancy remains unresolved; no
+numerical constant has been changed to reconcile it. L16's timescale is validated
+with the complete table, while its adjacency and near-neighbour penalty use the
+explicit rules above.
+
+For measured construction timings and their environment boundaries, use the
+[current construction measurements](../data/coupling_builder_runtime_benchmark_2026-10-02.json).
 
 ::: scpn_phase_orchestrator.coupling.knm
 
@@ -692,8 +747,8 @@ diagonal checks still run before publication.
 
 | Operation | Budget | Measured |
 |-----------|--------|----------|
-| `CouplingBuilder.build(100)` | < 10 ms | ~2 ms |
-| `build_scpn_physics()` | < 5 ms | ~1 ms |
+| `CouplingBuilder.build(100)` | < 10 ms | See current construction measurements above |
+| `build_scpn_physics()` | < 5 ms | See current construction measurements above |
 | `estimate_from_distances(64)` | < 5 ms | ~0.5 ms |
 | `load_hcp_connectome(80)` | < 10 ms | ~3 ms |
 | `validate_knm(64)` | Profile-dependent | Not timed separately in the current projection snapshot |

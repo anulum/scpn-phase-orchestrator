@@ -6,7 +6,12 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Coupling Knm tests
 
+"""Coupling matrices consumed by real integration, monitoring and regime APIs."""
+
 from __future__ import annotations
+
+from pathlib import Path
+from typing import TypedDict
 
 import numpy as np
 import pytest
@@ -16,41 +21,47 @@ from scpn_phase_orchestrator.coupling.knm import CouplingBuilder
 TWO_PI = 2.0 * np.pi
 
 
-def _py_engine(n: int, dt: float = 0.01, method: str = "euler", **kwargs):
-    from scpn_phase_orchestrator.upde.engine import UPDEEngine
+class _BuildParameters(TypedDict):
+    """Original phase-construction controls, including boolean count aliases."""
 
-    engine = UPDEEngine(n_oscillators=n, dt=dt, method=method, **kwargs)
-    engine._use_rust = False
-    return engine
+    n_layers: int
+    base_strength: float
+    decay_alpha: float
 
 
-def test_build_symmetric():
+def test_build_symmetric() -> None:
+    """The default eight-layer constructor produces reciprocal phase weights."""
     state = CouplingBuilder().build(8, 0.45, 0.3)
     np.testing.assert_allclose(state.knm, state.knm.T, atol=1e-14)
 
 
-def test_build_zero_diagonal():
+def test_build_zero_diagonal() -> None:
+    """Each phase diagonal entry is zero after public construction."""
     state = CouplingBuilder().build(8, 0.45, 0.3)
     np.testing.assert_allclose(np.diag(state.knm), 0.0)
 
 
-def test_build_nonnegative():
+def test_build_nonnegative() -> None:
+    """Default construction introduces no negative phase coupling."""
     state = CouplingBuilder().build(8, 0.45, 0.3)
     assert np.all(state.knm >= 0.0)
 
 
-def test_build_exponential_decay():
+def test_build_exponential_decay() -> None:
+    """At positive decay, nearby layers couple more strongly than distant ones."""
     state = CouplingBuilder().build(8, 1.0, 0.5)
     assert state.knm[0, 1] > state.knm[0, 2] > state.knm[0, 3]
 
 
-def test_build_alpha_shape():
+def test_build_alpha_shape() -> None:
+    """The lag matrix matches the requested dimension and starts at zero."""
     state = CouplingBuilder().build(4, 0.45, 0.3)
     assert state.alpha.shape == (4, 4)
     np.testing.assert_allclose(state.alpha, 0.0)
 
 
-def test_switch_template_valid():
+def test_switch_template_valid() -> None:
+    """A supplied ring topology is published under its selected name."""
     builder = CouplingBuilder()
     state = builder.build(3, 0.5, 0.1)
     custom = np.array([[0, 1, 0], [1, 0, 1], [0, 1, 0]], dtype=np.float64)
@@ -59,7 +70,8 @@ def test_switch_template_valid():
     assert new_state.active_template == "ring"
 
 
-def test_switch_template_missing_raises():
+def test_switch_template_missing_raises() -> None:
+    """A missing template name is reported without inventing a topology."""
     builder = CouplingBuilder()
     state = builder.build(3, 0.5, 0.1)
     with pytest.raises(KeyError, match="no_such"):
@@ -92,7 +104,18 @@ class TestCouplingBuilderAlgebraic:
             ),
         ],
     )
-    def test_build_rejects_invalid_parameters(self, kwargs, match):
+    def test_build_rejects_invalid_parameters(
+        self, kwargs: _BuildParameters, match: str
+    ) -> None:
+        """Invalid counts and finite-value controls are refused by field name.
+
+        Parameters
+        ----------
+        kwargs : _BuildParameters
+            Original count, strength and decay passed unchanged to public admission.
+        match : str
+            Expected field or violated invariant in the admission diagnostic.
+        """
         with pytest.raises(ValueError, match=match):
             CouplingBuilder().build(**kwargs)
 
@@ -105,30 +128,48 @@ class TestCouplingBuilderAlgebraic:
             ({"k_base": 0.45, "alpha_decay": np.nan}, "alpha_decay"),
         ],
     )
-    def test_build_scpn_physics_rejects_invalid_parameters(self, kwargs, match):
+    def test_build_scpn_physics_rejects_invalid_parameters(
+        self, kwargs: dict[str, float], match: str
+    ) -> None:
+        """SCPN base strength and decay enforce their declared admissible ranges.
+
+        Parameters
+        ----------
+        kwargs : dict[str, float]
+            Invalid SCPN scalar controls passed unchanged to public admission.
+        match : str
+            Expected field or violated invariant in the admission diagnostic.
+        """
         with pytest.raises(ValueError, match=match):
             CouplingBuilder().build_scpn_physics(**kwargs)
 
     @pytest.mark.parametrize("n", [4, 8, 16, 32])
-    def test_symmetric_for_all_sizes(self, n):
+    def test_symmetric_for_all_sizes(self, n: int) -> None:
+        """Reciprocity and zero self-coupling hold for each requested dimension.
+
+        Parameters
+        ----------
+        n : int
+            Positive oscillator count selected for the reciprocity assertion.
+        """
         state = CouplingBuilder().build(n, 0.45, 0.3)
         np.testing.assert_allclose(state.knm, state.knm.T, atol=1e-14)
         np.testing.assert_allclose(np.diag(state.knm), 0.0)
 
-    def test_stronger_coupling_higher_values(self):
+    def test_stronger_coupling_higher_values(self) -> None:
         """Higher base_strength → larger K_nm entries."""
         s_low = CouplingBuilder().build(8, 0.1, 0.3)
         s_high = CouplingBuilder().build(8, 1.0, 0.3)
         assert np.mean(s_high.knm) > np.mean(s_low.knm)
 
-    def test_faster_decay_reduces_distant_coupling(self):
+    def test_faster_decay_reduces_distant_coupling(self) -> None:
         """Higher decay_alpha → distant layers less coupled."""
         s_slow = CouplingBuilder().build(8, 0.5, 0.1)
         s_fast = CouplingBuilder().build(8, 0.5, 0.9)
         # Distant pair (0,7) should be weaker with fast decay
         assert s_fast.knm[0, 7] < s_slow.knm[0, 7]
 
-    def test_build_scpn_physics_invariants(self):
+    def test_build_scpn_physics_invariants(self) -> None:
         """build_scpn_physics: 16×16, symmetric, zero diagonal, nonneg."""
         state = CouplingBuilder().build_scpn_physics()
         assert state.knm.shape == (16, 16)
@@ -137,7 +178,16 @@ class TestCouplingBuilderAlgebraic:
         assert np.all(state.knm >= 0.0)
         assert np.all(np.isfinite(state.knm))
 
-    def test_apply_handshakes_rejects_duplicate_json_object_keys(self, tmp_path):
+    def test_apply_handshakes_rejects_duplicate_json_object_keys(
+        self, tmp_path: Path
+    ) -> None:
+        """Ambiguous repeated handshake fields refuse the real JSON document.
+
+        Parameters
+        ----------
+        tmp_path : pathlib.Path
+            Isolated directory for the real handshake JSON document.
+        """
         builder = CouplingBuilder()
         state = builder.build(3, 0.5, 0.1)
         handshakes = tmp_path / "handshakes.json"
@@ -153,14 +203,28 @@ class TestCouplingBuilderAlgebraic:
             builder.apply_handshakes(state, handshakes)
 
     @pytest.mark.parametrize("bad_tau", [0.0, -1.0, np.nan, np.inf])
-    def test_adjacent_coupling_rejects_nonfinite_timescale(self, monkeypatch, bad_tau):
+    def test_adjacent_coupling_rejects_nonfinite_timescale(
+        self, bad_tau: float
+    ) -> None:
+        """Public SCPN construction refuses a non-positive or non-finite timescale.
+
+        Parameters
+        ----------
+        bad_tau : float
+            Non-positive or non-finite exported duration in seconds.
+        """
         from scpn_phase_orchestrator.coupling import knm as knm_mod
 
-        monkeypatch.setitem(knm_mod.SCPN_LAYER_TIMESCALES, 6, bad_tau)
-        with pytest.raises(ValueError, match="finite and positive"):
-            CouplingBuilder._adjacent_coupling(6, 7, 0.45)
+        previous = knm_mod.SCPN_LAYER_TIMESCALES[6]
+        try:
+            knm_mod.SCPN_LAYER_TIMESCALES[6] = bad_tau
+            with pytest.raises(ValueError, match="finite and positive"):
+                CouplingBuilder().build_scpn_physics()
+        finally:
+            knm_mod.SCPN_LAYER_TIMESCALES[6] = previous
 
-    def test_switch_template_preserves_shape(self):
+    def test_switch_template_preserves_shape(self) -> None:
+        """Replacing a topology preserves the existing oscillator dimension."""
         builder = CouplingBuilder()
         state = builder.build(4, 0.5, 0.1)
         ring = np.array(
@@ -176,7 +240,8 @@ class TestCouplingBuilderAlgebraic:
         assert new.knm.shape == state.knm.shape
         assert new.active_template == "ring"
 
-    def test_switch_template_rejects_shape_and_nonfinite_values(self):
+    def test_switch_template_rejects_shape_and_nonfinite_values(self) -> None:
+        """Wrong dimensions and non-finite template weights cannot be published."""
         builder = CouplingBuilder()
         state = builder.build(4, 0.5, 0.1)
         with pytest.raises(ValueError, match="template shape"):
@@ -187,7 +252,8 @@ class TestCouplingBuilderAlgebraic:
         with pytest.raises(ValueError, match="finite"):
             builder.switch_template(state, "bad", {"bad": bad})
 
-    def test_build_with_amplitude_rejects_invalid_amplitude_parameters(self):
+    def test_build_with_amplitude_rejects_invalid_amplitude_parameters(self) -> None:
+        """Amplitude construction rejects non-finite strength and negative decay."""
         builder = CouplingBuilder()
         with pytest.raises(ValueError, match="amp_strength"):
             builder.build_with_amplitude(4, 0.45, 0.3, np.inf, 0.2)
@@ -198,7 +264,8 @@ class TestCouplingBuilderAlgebraic:
 class TestCouplingKnmPipelineEndToEnd:
     """Full pipeline: CouplingBuilder → Engine(all methods) → R → Regime."""
 
-    def test_build_engine_sync_regime(self):
+    def test_build_engine_sync_regime(self) -> None:
+        """Built weights drive actual integration, monitoring and regime evaluation."""
         from scpn_phase_orchestrator.monitor.boundaries import BoundaryState
         from scpn_phase_orchestrator.supervisor.regimes import RegimeManager
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
@@ -225,7 +292,7 @@ class TestCouplingKnmPipelineEndToEnd:
         regime = rm.evaluate(state, BoundaryState())
         assert regime.name in {"NOMINAL", "DEGRADED", "CRITICAL", "RECOVERY"}
 
-    def test_template_switch_changes_dynamics(self):
+    def test_template_switch_changes_dynamics(self) -> None:
         """Switching K_nm template changes engine R trajectory."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
         from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
@@ -270,7 +337,7 @@ class TestCouplingKnmPipelineEndToEnd:
         # Stronger coupling → higher R
         assert r_all > r_ring - 0.05
 
-    def test_performance_build_100_under_10ms(self):
+    def test_performance_build_100_under_10ms(self) -> None:
         """CouplingBuilder.build(100) < 10ms budget."""
         import time
 
@@ -282,7 +349,7 @@ class TestCouplingKnmPipelineEndToEnd:
         elapsed = (time.perf_counter() - t0) / 100
         assert elapsed < 0.01, f"build(100) took {elapsed * 1e3:.2f}ms"
 
-    def test_performance_build_scpn_physics_under_5ms(self):
+    def test_performance_build_scpn_physics_under_5ms(self) -> None:
         """build_scpn_physics() < 5ms budget."""
         import time
 
@@ -306,11 +373,14 @@ class TestCouplingKnmPipelineEndToEnd:
 
 # Salvaged module-specific behavioural contracts from deleted mixed tests.
 class TestCouplingBuilderPythonPath:
-    def test_build_python(self, monkeypatch):
-        import scpn_phase_orchestrator.coupling.knm as knm_mod
+    """Public contracts also run in an interpreter genuinely lacking spo_kernel.
 
-        monkeypatch.setattr(knm_mod, "_HAS_RUST", False)
+    No availability flags or engine internals are modified. Separate native and
+    kernel-absent runs establish which actual backend exercised these cases.
+    """
 
+    def test_build_python(self) -> None:
+        """Public construction retains matrix contracts in both genuine runtimes."""
         builder = CouplingBuilder()
         state = builder.build(4, 0.5, 0.3)
         assert state.knm.shape == (4, 4)
@@ -325,11 +395,8 @@ class TestCouplingBuilderPythonPath:
         # Decay: K_01 > K_03 (closer oscillators have stronger coupling)
         assert state.knm[0, 1] >= state.knm[0, 3]
 
-    def test_build_with_amplitude_python(self, monkeypatch):
-        import scpn_phase_orchestrator.coupling.knm as knm_mod
-
-        monkeypatch.setattr(knm_mod, "_HAS_RUST", False)
-
+    def test_build_with_amplitude_python(self) -> None:
+        """Amplitude weights remain reciprocal with zero self-coupling."""
         builder = CouplingBuilder()
         state = builder.build_with_amplitude(4, 0.5, 0.3, 0.2, 0.1)
         assert state.knm_r is not None
@@ -337,13 +404,17 @@ class TestCouplingBuilderPythonPath:
         assert np.all(np.diag(state.knm_r) == 0.0)
         np.testing.assert_allclose(state.knm_r, state.knm_r.T, atol=1e-14)
 
-    def test_python_engine_wires_into_order_parameter(self, monkeypatch):
-        """Pipeline wiring: Python-path engine output must be valid input
-        to compute_order_parameter — proving the module isn't decorative."""
+    def test_python_engine_wires_into_order_parameter(self) -> None:
+        """Pipeline wiring: Python-path engine output must be valid input.
+
+        Its output feeds compute_order_parameter — proving the module isn't decorative.
+        """
         from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
         n = 8
-        engine = _py_engine(n, dt=0.01)
+        from scpn_phase_orchestrator.upde.engine import UPDEEngine
+
+        engine = UPDEEngine(n, dt=0.01)
         rng = np.random.default_rng(99)
         phases = rng.uniform(0, TWO_PI, n)
         omegas = np.ones(n)
@@ -355,9 +426,3 @@ class TestCouplingBuilderPythonPath:
         r, psi = compute_order_parameter(phases)
         assert 0.0 <= r <= 1.0, f"R={r} out of [0,1]"
         assert 0.0 <= psi < TWO_PI, f"Ψ={psi} out of [0,2π)"
-
-
-# ──────────────────────────────────────────────────────────────────────
-# cli.py: non-research safety tier, no-oscillators, amplitude mode,
-#          Psi action, policy_rules, queuewaves check, scaffold bad name
-# ──────────────────────────────────────────────────────────────────────

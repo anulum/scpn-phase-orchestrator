@@ -106,3 +106,16 @@ Before a run, validate these contract points:
 
 These checks should be included in pre-run summaries because a coupling change is
 one of the highest-impact configuration moves and must be explicit in evidence logs.
+
+## Default construction boundaries
+
+The exponential construction law uses binary64 rounding: finite non-negative
+strength and decay are admitted, including subnormal values, and exponential
+underflow rounds to zero. SCPN timescale matching keeps the declared anchors,
+clipping and boosts; stable intermediate forms do not recalibrate that model.
+
+Allocation, JSON admission and snapshot ownership follow the
+[CouplingBuilder API contract](../reference/api/coupling.md#couplingbuilder).
+
+Generic construction invariants do not forbid directional inhibitory handshakes;
+negative overlays remain directional as documented by `apply_handshakes`.

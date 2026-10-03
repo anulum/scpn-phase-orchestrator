@@ -18,6 +18,7 @@ runtime/audit reporting.
 from __future__ import annotations
 
 import json
+import math
 from dataclasses import dataclass
 from numbers import Integral, Real
 from pathlib import Path
@@ -99,6 +100,16 @@ def _validate_positive_int(value: object, *, name: str) -> int:
     if value < 1:
         raise ValueError(f"{name} must be >= 1 as a non-boolean integer, got {value!r}")
     return int(value)
+
+
+def _validate_matrix_size(n_layers: int) -> None:
+    """Refuse square binary64 buffers beyond the platform allocation limit.
+
+    The check precedes both native dispatch and NumPy index allocation. It
+    establishes representable capacity, not available physical memory.
+    """
+    if n_layers * n_layers > np.iinfo(np.intp).max // np.dtype(np.float64).itemsize:
+        raise ValueError("n_layers matrix exceeds the platform binary64 capacity")
 
 
 def _validate_finite_float(
@@ -259,9 +270,11 @@ class CouplingBuilder:
         Raises
         ------
         ValueError
-            If the layer count or coupling parameters are invalid.
+            If controls are invalid or the square binary64 buffer exceeds the
+            platform capacity. Available physical memory is a separate limit.
         """
         n_layers = _validate_positive_int(n_layers, name="n_layers")
+        _validate_matrix_size(n_layers)
         base_strength = _validate_finite_float(
             base_strength,
             name="base_strength",
@@ -290,7 +303,11 @@ class CouplingBuilder:
                 _fallback_reason = exc
         idx = np.arange(n_layers)
         dist = np.abs(idx[:, np.newaxis] - idx[np.newaxis, :])
-        knm = base_strength * np.exp(-decay_alpha * dist)
+        # A negative exponent may overflow to -inf, whose exponential is zero.
+        # Underflow is ordinary binary64 rounding; neither case invalidates a
+        # finite non-negative coefficient or changes the caller's error policy.
+        with np.errstate(over="ignore", under="ignore"):
+            knm = base_strength * np.exp(-decay_alpha * dist)
         np.fill_diagonal(knm, 0.0)
         alpha = np.zeros((n_layers, n_layers), dtype=np.float64)
         return CouplingState(knm=knm, alpha=alpha, active_template="default")
@@ -320,6 +337,18 @@ class CouplingBuilder:
         -------
         CouplingState
             The 16×16 coupling state from SCPN layer physics.
+
+        Raises
+        ------
+        ValueError
+            If k_base is not finite and positive, alpha_decay is not finite
+            and non-negative, or an exported timescale is not finite and positive.
+
+        Notes
+        -----
+        All three passes use one validated timescale snapshot. The logarithm
+        difference and scaled-frequency penalty are stable forms of the same
+        equations, preserving anchors, clipping and cross-hierarchy boosts.
         """
         k_base = _validate_finite_float(
             k_base,
@@ -332,6 +361,15 @@ class CouplingBuilder:
             name="alpha_decay",
             lower_bound=0.0,
         )
+        timescales = {
+            layer: _validate_finite_float(
+                SCPN_LAYER_TIMESCALES[layer],
+                name="layer timescales must be finite and positive",
+                lower_bound=0.0,
+                inclusive=False,
+            )
+            for layer in range(1, 17)
+        }
         K = np.zeros((16, 16))
 
         # Pass 1: Adjacent layers. Use anchors where available.
@@ -340,7 +378,7 @@ class CouplingBuilder:
             if (n, m) in SCPN_CALIBRATION_ANCHORS:
                 val = SCPN_CALIBRATION_ANCHORS[(n, m)]
             else:
-                val = self._adjacent_coupling(n, m, k_base)
+                val = self._adjacent_coupling(n, m, k_base, timescales)
             K[n - 1, m - 1] = val
             K[m - 1, n - 1] = val
 
@@ -352,13 +390,18 @@ class CouplingBuilder:
             k2 = K[mid - 1, m - 1]
             val = float(np.sqrt(k1 * k2))
             # Frequency penalty for large timescale mismatch
-            tau_n = SCPN_LAYER_TIMESCALES.get(n, 1.0)
-            tau_m = SCPN_LAYER_TIMESCALES.get(m, 1.0)
-            if n != 16 and m != 16 and tau_n > 0 and tau_m > 0:
-                omega_n = 2.0 * np.pi / tau_n
-                omega_m = 2.0 * np.pi / tau_m
-                omega_avg = (omega_n + omega_m) / 2.0
-                penalty = 1.0 + abs(omega_n - omega_m) / omega_avg * 0.1
+            tau_n = timescales[n]
+            tau_m = timescales[m]
+            if n != 16 and m != 16:
+                # Scale the reciprocal frequencies by a common factor. This
+                # is the same |omega_n-omega_m| / mean(omega), without forming
+                # overflowing frequencies or their sum.
+                scale = max(tau_n, tau_m)
+                scaled_n = tau_m / scale
+                scaled_m = tau_n / scale
+                penalty = (
+                    1.0 + abs(scaled_n - scaled_m) / ((scaled_n + scaled_m) / 2.0) * 0.1
+                )
                 val /= penalty
             val = float(np.clip(val, 0.01, 0.4))
             K[n - 1, m - 1] = val
@@ -368,7 +411,8 @@ class CouplingBuilder:
         for n in range(1, 17):
             for m in range(n + 3, 17):
                 dist = abs(n - m)
-                val = k_base * np.exp(-alpha_decay * dist)
+                with np.errstate(over="ignore", under="ignore"):
+                    val = k_base * np.exp(-alpha_decay * dist)
                 val = float(np.clip(val, 0.001, 0.2))
                 K[n - 1, m - 1] = val
                 K[m - 1, n - 1] = val
@@ -408,6 +452,8 @@ class CouplingBuilder:
         """
         path = Path(handshakes_path)
         data = _loads_knm_json(path.read_text(encoding="utf-8"))
+        if not isinstance(data, dict):
+            raise ValueError("handshake specification must be a mapping")
         matrix = data.get("matrix")
         if not isinstance(matrix, list):
             raise ValueError("handshake matrix must be a list")
@@ -470,6 +516,17 @@ class CouplingBuilder:
         -------
         CouplingState
             The coupling state with both phase and amplitude coupling matrices.
+
+        Raises
+        ------
+        ValueError
+            If phase or amplitude controls are invalid or the square matrices
+            exceed the platform binary64 capacity.
+
+        Notes
+        -----
+        Finite non-negative decay may round tiny exponentials to zero. A local
+        NumPy error context handles that rounding and restores the caller policy.
         """
         amp_strength = _validate_finite_float(
             amp_strength,
@@ -484,7 +541,8 @@ class CouplingBuilder:
         phase = self.build(n_layers, base_strength, decay_alpha)
         idx = np.arange(n_layers)
         dist = np.abs(idx[:, np.newaxis] - idx[np.newaxis, :])
-        knm_r = amp_strength * np.exp(-amp_decay * dist)
+        with np.errstate(over="ignore", under="ignore"):
+            knm_r = amp_strength * np.exp(-amp_decay * dist)
         np.fill_diagonal(knm_r, 0.0)
         return CouplingState(
             knm=phase.knm,
@@ -527,7 +585,10 @@ class CouplingBuilder:
         require_real_values(
             templates[template_name], name="template", allow_object=True
         )
-        template = np.asarray(templates[template_name], dtype=np.float64)
+        # Extended precision may overflow to inf during binary64 conversion.
+        # Suppress only expected rounding locally, then refuse non-finite output.
+        with np.errstate(over="ignore", under="ignore"):
+            template = np.asarray(templates[template_name], dtype=np.float64)
         if template.shape != state.knm.shape:
             raise ValueError(
                 f"template shape {template.shape}, expected {state.knm.shape}"
@@ -544,19 +605,22 @@ class CouplingBuilder:
         )
 
     @staticmethod
-    def _adjacent_coupling(n: int, m: int, k_base: float) -> float:
-        """Adjacent layer coupling via timescale matching."""
+    def _adjacent_coupling(
+        n: int, m: int, k_base: float, timescales: dict[int, float]
+    ) -> float:
+        """Match the validated timescale snapshot used by all three model passes."""
         if n == 16 or m == 16:
             return 0.2
-        tau_n = SCPN_LAYER_TIMESCALES[n]
-        tau_m = SCPN_LAYER_TIMESCALES[m]
-        if not (
-            np.isfinite(tau_n) and np.isfinite(tau_m) and tau_n > 0.0 and tau_m > 0.0
-        ):
-            raise ValueError("layer timescales must be finite and positive")
-        mismatch = abs(np.log(tau_n / tau_m))
+        # build_scpn_physics validates the complete table before any pass. Reuse
+        # that snapshot so later edits of the exported table cannot change only
+        # some mechanisms during one construction.
+        tau_n = timescales[n]
+        tau_m = timescales[m]
+        mismatch = abs(math.log(tau_n) - math.log(tau_m))
         # Adjusted for stiff biological hierarchies (beta=0.05)
-        val = k_base / (1.0 + 0.05 * mismatch)
+        # Python binary64 division rounds a subnormal to zero without changing
+        # NumPy's caller policy; the model's existing clipping floor still applies.
+        val = float(k_base) / (1.0 + 0.05 * mismatch)
         return float(np.clip(val, 0.1, 0.5))
 
 
