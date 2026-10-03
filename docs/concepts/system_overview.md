@@ -82,8 +82,11 @@ Each integration step follows this sequence:
 
 1. **Extract**: oscillator extractors produce `PhaseState` from raw
    signals (P/I/S channels).
-2. **Quality gate**: `PhaseQualityScorer` computes weights, masks
-   unreliable oscillators.
+2. **Quality gate**: `PhaseQualityScorer` computes a finite-pair,
+   amplitude-weighted confidence score and masks unreliable oscillators.
+   Weight normalisation before summation prevents large finite amplitudes
+   from producing a false zero-confidence report. The caller applies mask
+   weights to the coupling matrix before integration.
 3. **Imprint** (if enabled): update memory vector, modulate K and alpha.
 4. **Integrate**: `UPDEEngine.step()` advances phases by one dt.
 5. **Monitor**: compute R, PLV, check boundaries, update Lyapunov

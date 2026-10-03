@@ -78,13 +78,17 @@ components (coupling builder, supervisor) use to handle unreliable phases:
 ### `score(phase_states) -> float`
 
 Weighted average quality across all phase states. Weights are the
-amplitudes (floored at 1e-12 to prevent division by zero). Returns a
-scalar in `[0, 1]` representing global extraction confidence.
+amplitudes (floored at 1e-12 to prevent division by zero). Finite quality is
+clamped to `[0, 1]`; pairs with nonfinite quality or amplitude are skipped.
+Python, PyO3 and Rust divide usable weights by their maximum before summing,
+so finite amplitudes remain usable even when their total exceeds float64.
+Empty or entirely unusable input returns zero. The resulting scalar in
+`[0, 1]` represents extraction confidence, not system health.
 
 ### `downweight_mask(phase_states, min_quality=0.3) -> NDArray`
 
 Returns an `(N,)` weight array where entries below `min_quality` are
-set to 0.0 and entries at or above retain their original quality value.
+set to 0.0, as are nonfinite qualities; passing values are clamped to [0, 1].
 This mask multiplies into the coupling matrix row-wise:
 
 ```python

@@ -65,10 +65,15 @@ changes across YAML, scripts, or notebooks.
 
 | Constant | Value | Provenance | Used in |
 |----------|-------|------------|---------|
-| `min_quality` | 0.3 | Empirical. Below this, phase estimate is unreliable (SNR < −5 dB equivalent). | `oscillators/quality.py:36` |
-| collapse `threshold` | 0.1 | Empirical. Quality floor for declaring oscillator collapse. | `oscillators/quality.py:28` |
+| `min_quality` | 0.3 | Empirical. Below this, phase estimate is unreliable (SNR < −5 dB equivalent). | `oscillators/quality.py (mask)` |
+| collapse `threshold` | 0.1 | Empirical. Quality floor for declaring oscillator collapse. | `oscillators/quality.py (collapse)` |
 | stall quality | 0.2 | Empirical. Quality assigned to repeated-state symbolic oscillators. | `oscillators/symbolic.py:83` |
 | PLV lock `threshold` | 0.9 | Empirical. Consistent with Lachaux et al. (1999) convention for significant phase locking [lachaux1999]. | `monitor/coherence.py:36` |
+
+The quality scorer's 1e-12 amplitude floor is a numerical weighting convention,
+not a physical noise threshold. Usable finite weights are divided by their
+maximum before summation in Python and Rust; this leaves relative weighting
+and the empirical 0.3/0.1 thresholds unchanged while avoiding total overflow.
 
 ## Coupling Defaults
 

@@ -21,5 +21,9 @@ description = "SCPN Phase Orchestrator — symbolic, informational, and quality 
 [dependencies]
 spo-types = { path = "../spo-types" }
 
+[[bench]]
+name = "quality_bench"
+harness = false
+
 [lints]
 workspace = true

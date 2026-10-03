@@ -305,6 +305,11 @@ down-weighted by `PhaseQualityScorer.downweight_mask()`. The weight
 array multiplies into K_nm row-wise, effectively decoupling unreliable
 oscillators without removing them from the state vector.
 
+Amplitude-weighted aggregate quality uses finite quality/amplitude pairs, a
+1e-12 amplitude floor and weights scaled by their maximum before summation.
+This preserves finite means for amplitudes near the float64 limit in Python
+and Rust. It does not change the empirical gating or collapse thresholds.
+
 Collapsed oscillators (quality < 0.1 for majority of states) trigger
 `detect_collapse()`, which the supervisor interprets as a DEGRADED or
 CRITICAL condition depending on the scope of collapse.

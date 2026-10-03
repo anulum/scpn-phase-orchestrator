@@ -43,7 +43,21 @@ impl PyPhaseQualityScorer {
         })
     }
 
-    /// Score plain real quality/amplitude values, preserving nonfinite policy.
+    /// Score original real measurements with overflow-safe amplitude weighting.
+    ///
+    /// # Arguments
+    ///
+    /// * `qualities` - Real measurement sequence; usable qualities are clamped.
+    /// * `amplitudes` - Real amplitude sequence; weights have a 1e-12 floor.
+    ///
+    /// # Returns
+    ///
+    /// The matching-prefix mean, skipping nonfinite pairs and returning zero
+    /// when none remain. Finite weights are scaled before Rust accumulation.
+    ///
+    /// # Errors
+    ///
+    /// Returns a Python error for noniterable input or a non-real source alias.
     fn score(&self, qualities: &Bound<'_, PyAny>, amplitudes: &Bound<'_, PyAny>) -> PyResult<f64> {
         let qualities = real_values(qualities, "quality")?;
         let amplitudes = real_values(amplitudes, "amplitude")?;

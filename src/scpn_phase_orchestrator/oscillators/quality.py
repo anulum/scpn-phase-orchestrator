@@ -37,18 +37,63 @@ except ImportError:
 def _state_values(
     states: list[PhaseState], *, name: Literal["quality", "amplitude"]
 ) -> FloatArray:
-    """Preserve source types until plain real state measurements are validated."""
+    """Validate original measurements before narrowing them to float64.
+
+    Parameters
+    ----------
+    states : list[PhaseState]
+        Extracted states whose measurement types remain available for validation.
+    name : {"quality", "amplitude"}
+        Measurement to collect.
+
+    Returns
+    -------
+    FloatArray
+        Original measurements converted after plain real source validation.
+
+    Raises
+    ------
+    ValueError
+        If a measurement contains a boolean, text, complex or temporal alias.
+
+    Notes
+    -----
+    Exact Python floats already satisfy the plain real float64 source contract.
+    Other scalar types retain the shared validator before conversion.
+    """
     values = [
         state.quality if name == "quality" else state.amplitude for state in states
     ]
-    require_real_values(values, name=name, allow_object=True)
+    if not all(type(value) is float for value in values):
+        require_real_values(values, name=name, allow_object=True)
     return np.asarray(values, dtype=np.float64)
 
 
 class PhaseQualityScorer:
     """Aggregate quality scoring and collapse detection for phase state arrays."""
 
-    def __init__(self, collapse_threshold: float = 0.1, min_quality: float = 0.3):
+    def __init__(
+        self, collapse_threshold: float = 0.1, min_quality: float = 0.3
+    ) -> None:
+        """Configure the native scorer's collapse and mask thresholds.
+
+        Parameters
+        ----------
+        collapse_threshold : float
+            Finite unit-interval threshold used by matching native calls.
+        min_quality : float
+            Finite unit-interval mask threshold used by matching native calls.
+
+        Raises
+        ------
+        ValueError
+            If a threshold is not a plain real number, finite or in [0, 1].
+
+        Notes
+        -----
+        Per-call thresholds retain their own defaults. A differing threshold
+        uses the Python calculation even when the native scorer is installed.
+        """
         require_real_values(collapse_threshold, name="collapse_threshold")
         require_real_values(min_quality, name="min_quality")
         if not np.isfinite(collapse_threshold):
@@ -85,7 +130,14 @@ class PhaseQualityScorer:
             Weighted average quality across all phase states. States whose quality
             or amplitude is not finite are skipped, quality is clamped to
             ``[0, 1]``, and ``0.0`` is returned when no state remains; the Rust
-            and Python paths give the same result.
+            and Python paths give the same result. Finite amplitude weights are
+            floored at ``1e-12`` and divided by their maximum before summation,
+            so even their unscaled sum exceeding float64 does not overflow.
+
+        Raises
+        ------
+        ValueError
+            If a quality or amplitude contains a non-real measurement alias.
         """
         if not phase_states:
             return 0.0
@@ -97,6 +149,7 @@ class PhaseQualityScorer:
         if not bool(np.any(usable)):
             return 0.0
         weights = np.maximum(amplitudes[usable], 1e-12)
+        weights /= np.max(weights)
         return float(np.average(np.clip(qualities[usable], 0.0, 1.0), weights=weights))
 
     # Thresholds: see docs/ASSUMPTIONS.md § Quality Gating

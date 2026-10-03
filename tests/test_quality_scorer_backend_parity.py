@@ -30,6 +30,7 @@ NAN = float("nan")
 
 
 def _state(quality: float, amplitude: float = 1.0) -> PhaseState:
+    """Construct the public measurement used by the real runtime cases."""
     return PhaseState(
         theta=0.0,
         omega=1.0,
@@ -45,12 +46,14 @@ SCORER = PhaseQualityScorer(collapse_threshold=0.1, min_quality=0.3)
 
 @pytest.mark.parametrize("threshold", [0.1, 0.2])
 def test_non_finite_quality_counts_as_collapsed(threshold: float) -> None:
+    """A majority of NaN qualities collapses for both real threshold paths."""
     states = [_state(NAN)] * 5
     assert SCORER.detect_collapse(states, threshold=threshold) is True
 
 
 @pytest.mark.parametrize("threshold", [0.1, 0.2])
 def test_infinite_quality_counts_as_collapsed(threshold: float) -> None:
+    """Infinite qualities count toward a strict collapse majority."""
     states = [_state(float("inf"))] * 3 + [_state(0.9)] * 2
     assert SCORER.detect_collapse(states, threshold=threshold) is True
 
@@ -69,11 +72,13 @@ def test_infinite_quality_counts_as_collapsed(threshold: float) -> None:
 def test_score_skips_non_finite_and_clamps(
     states: list[PhaseState], expected: float
 ) -> None:
+    """Public weighting retains finite pairs and unit-interval quality clamps."""
     assert SCORER.score(states) == pytest.approx(expected)
 
 
 @pytest.mark.parametrize("min_quality", [0.3, 0.35])
 def test_mask_zeroes_non_finite_and_clamps(min_quality: float) -> None:
+    """Both threshold paths mask nonfinite qualities and clamp passing values."""
     states = [_state(NAN), _state(float("inf")), _state(1.5), _state(0.5), _state(0.2)]
     mask = SCORER.downweight_mask(states, min_quality=min_quality)
     np.testing.assert_allclose(mask, [0.0, 0.0, 1.0, 0.5, 0.0])
