@@ -63,6 +63,7 @@ def measure_projection(n: int, calls: int = 10, repeats: int = 3) -> dict[str, o
     -----
     Shared-host samples provide local regression evidence, not isolated latency
     or causal speed-up measurements. Python projection does not dispatch to Rust.
+    Unsupported affinity and load-average observations are recorded as null.
     """
     if any(
         isinstance(v, bool) or not isinstance(v, Integral) or v < 1
@@ -106,8 +107,10 @@ def measure_projection(n: int, calls: int = 10, repeats: int = 3) -> dict[str, o
         "python": sys.version,
         "numpy": np.__version__,
         "platform": platform.platform(),
-        "load_before": os.getloadavg(),
-        "affinity": sorted(os.sched_getaffinity(0)),
+        "load_before": os.getloadavg() if hasattr(os, "getloadavg") else None,
+        "affinity": sorted(os.sched_getaffinity(0))
+        if hasattr(os, "sched_getaffinity")
+        else None,
         "isolated": False,
         "native_installation": native.__file__ if native else None,
         "public_python": measure(lambda: project_knm(raw, constraints)),
@@ -118,7 +121,7 @@ def measure_projection(n: int, calls: int = 10, repeats: int = 3) -> dict[str, o
                 native.PyCouplingBuilder.project(raw.ravel(), n), dtype=np.float64
             ).reshape(n, n)
         )
-    row["load_after"] = os.getloadavg()
+    row["load_after"] = os.getloadavg() if hasattr(os, "getloadavg") else None
     return row
 
 

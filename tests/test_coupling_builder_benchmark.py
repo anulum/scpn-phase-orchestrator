@@ -39,14 +39,16 @@ def test_actual_construction_measurement(n: int) -> None:
     -----
     CPython suspends tracing inside sys.setprofile callbacks; see
     https://docs.python.org/3.12/library/sys.html#sys.call_tracing
-    Thus the benchmark's observe_native_build statements 129-130 and arcs
-    (129, -126)/(129, 130) remain untraced in the recorded CPython 3.11-3.13
-    coverage runs. This public test covers the nearest real behaviour by
+    Thus statements inside the benchmark's observe_native_build remain untraced
+    in the recorded CPython 3.11-3.13 coverage runs. This public test covers
+    the nearest real behaviour by
     checking actual compiled calls in native and genuinely absent interpreters.
     The caller-profiler test below also exercises public success, refusal and
     recovery under both standard profiling implementations. The exact reporting
-    limit remains 108/110 statements and 26/28 branches, with zero exclusions;
-    these executed callbacks do not establish an unqualified 100% coverage claim.
+    limit before portable host metadata was 108/110 statements and 26/28
+    branches, with zero exclusions. Current OS metadata also requires genuine
+    platform qualification; those historical counts and executed callbacks do
+    not establish a current unqualified 100% coverage claim.
     """
     record = json.loads(json.dumps(measure_construction(n, 2, 2), allow_nan=False))
     assert record["input_hex"] == struct.pack("<Qdd", n, 0.45, 0.3).hex()

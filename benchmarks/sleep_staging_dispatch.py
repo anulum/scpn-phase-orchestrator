@@ -12,6 +12,8 @@ Run from the repository root with the release kernel installed:
 ``taskset -c 0 .venv/bin/python benchmarks/sleep_staging_dispatch.py``.
 JSON is emitted on stdout. CPU affinity is recorded but is not core isolation;
 these measurements are local regression evidence, not production speed claims.
+Unsupported affinity, load average and CPU model observations are JSON null;
+governors contain only available Linux sysfs observations.
 """
 
 from __future__ import annotations
@@ -111,25 +113,32 @@ def main() -> None:
     if kernel is None or kernel.origin is None:
         raise RuntimeError("the release spo_kernel extension is required")
     extension = Path(kernel.origin)
-    affinity = sorted(os.sched_getaffinity(0))
+    affinity = (
+        sorted(os.sched_getaffinity(0)) if hasattr(os, "sched_getaffinity") else None
+    )
     governors = {
         str(cpu): governor.read_text().strip()
-        for cpu in affinity
+        for cpu in affinity or []
         if (
             governor := Path(
                 f"/sys/devices/system/cpu/cpu{cpu}/cpufreq/scaling_governor"
             )
         ).exists()
     }
-    cpu_model = next(
-        (
-            line.split(":", 1)[1].strip()
-            for line in Path("/proc/cpuinfo").read_text().splitlines()
-            if line.startswith("model name")
-        ),
-        "unknown",
+    cpuinfo = Path("/proc/cpuinfo")
+    cpu_model = (
+        next(
+            (
+                line.split(":", 1)[1].strip()
+                for line in cpuinfo.read_text().splitlines()
+                if line.startswith("model name")
+            ),
+            platform.processor() or None,
+        )
+        if cpuinfo.exists()
+        else platform.processor() or None
     )
-    load_before = os.getloadavg()
+    load_before = os.getloadavg() if hasattr(os, "getloadavg") else None
     results: list[dict[str, object]] = []
     for order_parameter, desync in [
         (0.1, False),
@@ -195,7 +204,7 @@ def main() -> None:
                 "affinity": affinity,
                 "governors": governors,
                 "load_before": load_before,
-                "load_after": os.getloadavg(),
+                "load_after": os.getloadavg() if hasattr(os, "getloadavg") else None,
                 "python": platform.python_version(),
                 "numpy": np.__version__,
                 "spo_kernel": importlib.metadata.version("spo-kernel"),

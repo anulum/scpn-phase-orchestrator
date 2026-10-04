@@ -69,6 +69,7 @@ def measure_construction(
     -----
     Measurements share a loaded host and establish reproducible local regression
     evidence. They do not establish isolated latency, speed-up or physical truth.
+    Unsupported affinity and load-average observations are recorded as null.
     Existing native and Python caller profilers are suspended for the complete
     measurement and restored through their original APIs on success or refusal.
     """
@@ -189,8 +190,10 @@ def _measure_construction(n: int, calls: int, repeats: int) -> dict[str, object]
         "python": sys.version,
         "numpy": np.__version__,
         "platform": platform.platform(),
-        "load_before": os.getloadavg(),
-        "affinity": sorted(os.sched_getaffinity(0)),
+        "load_before": os.getloadavg() if hasattr(os, "getloadavg") else None,
+        "affinity": sorted(os.sched_getaffinity(0))
+        if hasattr(os, "sched_getaffinity")
+        else None,
         "isolated": False,
         "native_build_calls_observed": calls_seen,
         "native_installation": native.__file__ if native else None,
@@ -217,9 +220,9 @@ def _measure_construction(n: int, calls: int, repeats: int) -> dict[str, object]
         directory = Path(native.__file__).parent
         row["native_binary_sha256"] = {
             path.name: hashlib.sha256(path.read_bytes()).hexdigest()
-            for path in sorted(directory.glob("*.so"))
+            for path in sorted([*directory.glob("*.so"), *directory.glob("*.pyd")])
         }
-    row["load_after"] = os.getloadavg()
+    row["load_after"] = os.getloadavg() if hasattr(os, "getloadavg") else None
     return row
 
 
