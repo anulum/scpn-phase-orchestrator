@@ -71,7 +71,10 @@ def _image_pythonpath() -> str:
     assert "COPY --from=python-builder /install /usr/local" in stage
     dockerfile = DOCKERFILE.read_text(encoding="utf-8")
     assert "--no-build-isolation \\\n        --wheel-dir /wheels ." in dockerfile
-    assert "--no-deps /wheels/*.whl\n" in dockerfile
+    assert (
+        "    PIP_PREFIX=/install python -m pip install --no-cache-dir \\\n"
+        "        --no-index --no-deps /wheels/*.whl\n"
+    ) in dockerfile
     return str(ROOT / "src")
 
 

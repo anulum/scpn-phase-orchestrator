@@ -55,12 +55,15 @@ COPY --from=rust-builder /wheels/*.whl /wheels/
 
 # The project is built into a wheel with the hash-pinned build tools above, so
 # the install step consumes only local wheels and no unpinned source tree.
+# That step gets its prefix from the environment and runs with --no-index: its
+# command line names nothing but local wheel files, and pip cannot contact a
+# package index.
 RUN python -m pip install --no-cache-dir --prefix=/install \
         --require-hashes --no-deps -r /tmp/server-lock.txt && \
     python -m pip wheel --no-cache-dir --no-deps --no-build-isolation \
         --wheel-dir /wheels . && \
-    python -m pip install --no-cache-dir --prefix=/install \
-        --no-deps /wheels/*.whl
+    PIP_PREFIX=/install python -m pip install --no-cache-dir \
+        --no-index --no-deps /wheels/*.whl
 
 # ── Stage 3: Production image ────────────────────────────────────
 FROM python:3.13-slim@sha256:e544a7fcbdf8555eceda66bf86cafb006c736339f76141918bcb812f3174c00a AS production
