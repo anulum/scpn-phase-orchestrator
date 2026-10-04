@@ -17,6 +17,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The Julia UPDE adapters resolved `juliacall.JuliaError` before every call,
+  so an environment without juliacall could not reach the adapters' output
+  validation. The exception type is now resolved only after a call fails.
+  The API reference documents `runtime.cli.serve`, and the container,
+  workflow-hygiene, documentation-inventory and UPDE dispatch tests follow
+  the installed-package image, the native-runtime CI steps, the 99 API pages
+  and the wrapped-phase output contract.
+
 - Required-native local server startup now executes public phase and amplitude
   checks, exposes the selected backend and kernel digest, and refuses fallback.
   Source checkout Rust profiles resolve the local kernel into the project

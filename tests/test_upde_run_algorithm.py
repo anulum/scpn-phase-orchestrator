@@ -151,7 +151,8 @@ def test_upde_run_dispatches_to_non_python_backend(monkeypatch):
         assert n_steps == 5
         assert n_substeps == 1
         assert np.isclose(dt, 0.01)
-        return phases + 0.5 + zeta + psi + float(atol) + float(rtol)
+        shifted = phases + 0.5 + zeta + psi + float(atol) + float(rtol)
+        return np.mod(shifted, TWO_PI)
 
     monkeypatch.setattr(run_mod, "_dispatch", lambda: backend_fn)
     monkeypatch.setattr(eng_mod, "ACTIVE_BACKEND", "rust")
@@ -168,7 +169,8 @@ def test_upde_run_dispatches_to_non_python_backend(monkeypatch):
         method="euler",
         n_substeps=1,
     )
-    assert np.allclose(out, (phases.astype(np.float64) + 0.5 + 0.1 + 0.2 + 1e-6 + 1e-3))
+    expected = np.mod(phases.astype(np.float64) + 0.5 + 0.1 + 0.2 + 1e-6 + 1e-3, TWO_PI)
+    assert np.allclose(out, expected)
 
 
 def test_rk45_step_falls_back_after_failed_adaptation(monkeypatch):
