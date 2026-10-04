@@ -9,4 +9,10 @@
 overrides:
   adm-zip: 0.6.1
   postcss: 8.5.28
-  undici: 7.29.0
+  # jsdom declares undici ^8.10.2 and @module-federation/dts-plugin declares
+  # 7.29.0. One global exact pin gave jsdom a major it does not declare and
+  # blocked the 7.29.1 security update. Each consumer now gets the patched
+  # line of its own declared major, as a range so later patches get through.
+  undici: ">=7.29.1"
+  jsdom>undici: ">=8.10.2 <9.0.0"
+  "@module-federation/dts-plugin>undici": ">=7.29.1 <8.0.0"
