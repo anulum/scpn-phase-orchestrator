@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+import sys
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any, TypeAlias, cast
@@ -47,18 +48,30 @@ def _ensure() -> Any:
     return _JULIA_MODULE
 
 
-def _julia_error_type() -> type[BaseException] | None:
-    """Return ``juliacall.JuliaError``, or ``None`` when juliacall is absent.
+def _is_julia_domain_error(exc: BaseException) -> bool:
+    """Report whether ``exc`` is a Julia ``DomainError`` raised through juliacall.
 
-    The type is resolved only after a call has failed. A process without
-    juliacall cannot have raised a Julia error, so its exception passes through
-    unchanged and the adapter's output validation stays usable there.
+    juliacall is looked up among the loaded modules and is never imported
+    here. A process that has not loaded a complete juliacall cannot have raised
+    a Julia error, so every exception of such a process is reported as foreign
+    and the adapter stays usable without the runtime.
+
+    Parameters
+    ----------
+    exc : BaseException
+        Exception raised by a Julia entry point.
+
+    Returns
+    -------
+    bool
+        ``True`` only for a ``juliacall.JuliaError`` that wraps a native
+        ``DomainError``.
     """
-    try:
-        from juliacall import JuliaError
-    except ModuleNotFoundError:
-        return None
-    return cast("type[BaseException]", JuliaError)
+    julia_error = getattr(sys.modules.get("juliacall"), "JuliaError", None)
+    if julia_error is None or not isinstance(exc, julia_error):
+        return False
+    main = require_julia_main()
+    return bool(main.isa(cast("Any", exc).exception, main.DomainError))
 
 
 def _invoke(func: Callable[..., object], *args: object) -> object:
@@ -80,17 +93,13 @@ def _invoke(func: Callable[..., object], *args: object) -> object:
     ------
     ValueError
         Native Julia ``DomainError`` indicates divergent numerical computation.
-    juliacall.JuliaError
-        Other native Julia failures retain their original exception.
+    Exception
+        Every other failure, Julia or not, is re-raised unchanged.
     """
     try:
         return func(*args)
     except Exception as exc:
-        julia_error = _julia_error_type()
-        if julia_error is None or not isinstance(exc, julia_error):
-            raise
-        main = require_julia_main()
-        if bool(main.isa(cast("Any", exc).exception, main.DomainError)):
+        if _is_julia_domain_error(exc):
             raise ValueError(
                 "Julia UPDE computation diverged with a domain error"
             ) from exc
