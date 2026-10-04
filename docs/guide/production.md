@@ -34,13 +34,41 @@ The repository includes a production-ready `Dockerfile` with three stages:
 
 1. **Rust builder** (`python:3.13-slim`, digest-pinned, Rust 1.95.0 from a
    checksum-verified rustup installer) — builds spo-kernel via maturin
-2. **Python builder** (`python:3.13-slim`, same digest) — installs SPO + Rust wheel
+2. **Python builder** (`python:3.13-slim`, same digest) — installs hash-locked
+   server dependencies and build tools, then builds SPO and installs the Rust wheel
 3. **Production** (`python:3.13-slim`, same digest) — minimal image, non-root user
 
 ```bash
 docker build -t spo .
-docker run --rm spo run domainpacks/queuewaves/binding_spec.yaml --steps 1000
+docker run --rm --restart=no -p 127.0.0.1:8000:8000 spo
 ```
+
+The default command serves `domainpacks/minimal_domain/binding_spec.yaml` with
+verified native computation. The listener inside the container uses
+`0.0.0.0:8000`; the command above publishes it only on host loopback. Ctrl-C
+stops the foreground process and `--rm` removes its container.
+
+For a checkout environment, install with
+`uv sync --locked --extra server --extra rust` and run
+`.venv/bin/spo serve domainpacks/minimal_domain/binding_spec.yaml`. The host
+kernel stays in the project's `.venv` and runs within that process.
+
+The default Compose file starts only SPO and uses `restart: "no"`:
+
+```bash
+docker compose -f deploy/docker-compose.yml up --build spo-server
+# Stop with Ctrl-C, then remove this stack's stopped container and network.
+docker compose -f deploy/docker-compose.yml down
+```
+
+The optional monitoring stack lives in `deploy/docker-compose.monitoring.yml`.
+Start it only when needed, using that additional file and an explicitly supplied
+`GRAFANA_ADMIN_PASSWORD`. Its password requirement remains mandatory.
+The standalone SPO stack requires no Redis or monitoring service.
+
+`GET /api/config` reports the selected backend, required-native admission and
+verified kernel version/digest. `POST /api/step` advances the actual simulation.
+See [Runtime API](../reference/api/runtime.md).
 
 ## Deployment readiness checkpoints
 

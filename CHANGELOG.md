@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Required-native local server startup now executes public phase and amplitude
+  checks, exposes the selected backend and kernel digest, and refuses fallback.
+  Source checkout Rust profiles resolve the local kernel into the project
+  environment. The container installs server dependencies and builds the Python
+  package, serves by default, and publishes locally without automatic restart.
+  Native FFI CI explicitly exercises real CLI/HTTP and kernel-absent profiles.
+  Native admission also refuses a process that retained NumPy selection before
+  a real kernel installation. Embedded CPython loading without a library path
+  now reports a clear refusal after numerical verification instead of raising
+  an unhandled attribute error.
+
 - Scalar dense/CSR UPDE, stateless Python/Rust/Go/Julia/Mojo schedules, JAX
   dense/masked Kuramoto and generated WebGPU Euler canonicalise a floating
   remainder rounded to the upper phase endpoint, and signed zero, to positive

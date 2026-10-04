@@ -200,6 +200,7 @@ nav:
       - "Coupling — HCP Connectome": reference/api/coupling_connectome.md
       - Supervisor: reference/api/supervisor.md
       - Studio: reference/api/studio.md
+      - Runtime server and kernel: reference/api/runtime.md
       - Monitor: reference/api/monitor.md
       - "Monitor — Adaptive Kuramoto": reference/api/monitor_adaptive_kuramoto.md
       - "Monitor — Chimera": reference/api/monitor_chimera.md

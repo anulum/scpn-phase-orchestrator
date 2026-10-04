@@ -92,7 +92,7 @@ bench-rust:  ## Rust Criterion benchmarks
 bridge:  ## Build Rust FFI into the selected Python env
 	$(PYTHON) tools/install_spo_kernel.py --release
 
-bridge-check:  ## Verify spo_kernel imports in the selected Python env
+bridge-check:  ## Verify real native phase and amplitude calculations
 	$(PYTHON) tools/install_spo_kernel.py --check-only
 
 build:  ## Build sdist + wheel
@@ -101,8 +101,8 @@ build:  ## Build sdist + wheel
 docker-build:  ## Build Docker image
 	docker build -t scpn-phase-orchestrator .
 
-docker-run:  ## Run Docker image
-	docker run --rm -it scpn-phase-orchestrator spo info
+docker-run:  ## Serve locally until interrupted; remove the container on exit
+	docker run --rm -it --restart=no -p 127.0.0.1:8000:8000 scpn-phase-orchestrator
 
 clean:  ## Remove build artifacts
 	rm -rf build/ dist/ *.egg-info src/*.egg-info .mypy_cache .pytest_cache .ruff_cache

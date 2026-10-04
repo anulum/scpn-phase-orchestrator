@@ -333,6 +333,18 @@ jobs:
             -m "not slow and not performance and not native_runtime" \
             -k "not performance" \
             --cov=scpn_phase_orchestrator --cov-report= --cov-fail-under=0
+          pytest tests/test_kernel_runtime.py tests/test_cli_serve.py tests/test_kernel_deployment.py \
+            -m native_runtime --strict-markers --tb=short \
+            --cov=scpn_phase_orchestrator --cov-append --cov-report= --cov-fail-under=0
+          mv .coverage .coverage.ffi
+      - name: Exercise real built-in native loading (Linux, Python 3.12)
+        if: runner.os == 'Linux' && matrix.python-version == '3.12'
+        run: |
+          . .venv/bin/activate
+          mv .coverage.ffi .coverage
+          pytest tests/test_kernel_embedded_profile.py \
+            -m native_runtime --strict-markers --tb=short \
+            --cov=scpn_phase_orchestrator --cov-append --cov-report= --cov-fail-under=0
           mv .coverage .coverage.ffi
       - name: Upload coverage data (ffi, ubuntu only)
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
@@ -362,6 +374,14 @@ jobs:
             --ignore-glob=tests/test_nn_physics_validation*.py \
             -m "not slow and not performance and not native_runtime" \
             -k "not performance"
+          pytest tests/test_kernel_runtime.py tests/test_cli_serve.py tests/test_kernel_deployment.py \
+            -m native_runtime --strict-markers --tb=short
+      - name: Exercise real built-in native loading (Linux, Python 3.11)
+        if: runner.os == 'Linux' && matrix.python-version == '3.11'
+        run: |
+          . .venv/bin/activate
+          pytest tests/test_kernel_embedded_profile.py \
+            -m native_runtime --strict-markers --tb=short
       - name: Build and test (Windows)
         if: runner.os == 'Windows'
         shell: bash
@@ -384,3 +404,5 @@ jobs:
             --ignore-glob=tests/test_nn_physics_validation*.py \
             -m "not slow and not performance and not native_runtime" \
             -k "not performance"
+          pytest tests/test_kernel_runtime.py tests/test_cli_serve.py tests/test_kernel_deployment.py \
+            -m native_runtime --strict-markers --tb=short

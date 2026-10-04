@@ -16,25 +16,27 @@ behaviour before production or benchmark runs.
 
 | Profile | Install command | Preflight command | Expected fallback |
 | --- | --- | --- | --- |
-| Python-only | `pip install scpn-phase-orchestrator` | `python -m scpn_phase_orchestrator.runtime.cli --help` | Rust/JAX unavailable paths fall back to Python where implemented. |
-| Rust FFI | `pip install scpn-phase-orchestrator` + built `spo_kernel` | `python -c "import spo_kernel; print('spo_kernel OK')"` | If `spo_kernel` missing, modules use Python fallback (same public API). |
+| Python-only | `pip install scpn-phase-orchestrator` | `spo --help` | Supported numerical consumers can use NumPy. |
+| Rust FFI, source checkout | `uv sync --locked --extra rust` | `.venv/bin/python tools/install_spo_kernel.py --check-only --json` | The check requires actual native phase and amplitude results. |
+| Simulation server, source checkout | `uv sync --locked --extra server --extra rust` | `.venv/bin/spo serve domainpacks/minimal_domain/binding_spec.yaml` | Startup refuses missing or unusable native computation. |
 | JAX | `pip install scpn-phase-orchestrator[nn]` or `pip install scpn-phase-orchestrator[jax]` | `python -c "from scpn_phase_orchestrator.nn import HAS_JAX; print(HAS_JAX)"` | JAX-specific modules require JAX; they do not silently switch semantics. |
 | QueueWaves | `pip install scpn-phase-orchestrator[queuewaves]` | `python -c "import httpx; print('httpx OK')"` | Collector/server components requiring `httpx` stay unavailable if missing. |
 | Full extras | `pip install scpn-phase-orchestrator[full]` | `python -m pytest -q tests/test_backend_module_imports.py` | Missing optional toolchains demote affected backends to fallback chain. |
 
 ## PyPI availability boundary
 
-The base package and most extras install from public PyPI. Three extras pull in
-packages that are **not** on public PyPI, so they do not resolve from a bare
-`pip install` for an outsider:
+The base package and most extras install from public PyPI. The source checkout
+resolves `spo-kernel` from `spo-kernel/crates/spo-ffi` through maturin. If an
+index does not supply the required kernel release, use that source-backed path.
+Separate product extras retain their own distribution requirements:
 
 | Extra | Requires | Availability |
 | --- | --- | --- |
-| `rust` | `spo-kernel` | Not on public PyPI. `spo-kernel` is this project's own Rust acceleration; build it from the in-repo `spo-kernel/` workspace with `python tools/build_spo_kernel.py`, or obtain the commercial wheel. |
+| `rust` | `spo-kernel>=0.5.11` | `uv sync --locked --extra rust` builds the in-repo Rust workspace into this project's `.venv`. An already prepared environment can use `make bridge PYTHON=.venv/bin/python`. |
 | `fusion` | `scpn-fusion-core` | Not on public PyPI. A separate product, obtained from its own distribution channel. |
-| `scpn-all` | the two above, plus `scpn-quantum-control` and `scpn-control` | Cannot resolve from public PyPI while `spo-kernel` and `scpn-fusion-core` are unavailable, even though its other two members are published. |
+| `scpn-all` | the two above, plus `scpn-quantum-control` and `scpn-control` | Kernel installation does not establish the availability or namespace compatibility of the other products. |
 
-Every other extra (`quantum`, `plasma`, `nn`, `mpc`, `eeg`, `cardiac`,
+Every other extra (`server`, `quantum`, `plasma`, `nn`, `mpc`, `eeg`, `cardiac`,
 `queuewaves`, `studio`, `otel`, `opcua`, `mqtt`, `pqc`, `plot`, `julia`,
 `notebook`, `full`) installs from public PyPI.
 
@@ -53,9 +55,20 @@ backend as an honest `[warn]` in that case, not a failure.
 
 ### 2. Rust FFI
 
-- `spo_kernel` import success confirms accelerated path is usable.
-- If import fails, runtime remains functional on Python fallback for supported
-  modules, at lower performance.
+- The verification executes public phase and amplitude integration against
+  analytical solutions and reports the loaded native library's version and digest.
+- A required-native server refuses startup if those checks or native dispatch
+  fail. For an intentionally Python-only server, install `[server]` and pass
+  `--allow-python` explicitly; this permits fallback rather than forcing it.
+
+### Local server lifecycle
+
+On the host, the kernel is installed in the SPO project environment. It is an
+in-process library: the consuming process loads it and releases it on exit.
+`spo serve` runs in the foreground on `127.0.0.1:8000` by default; Ctrl-C stops
+it. Container packaging carries its own native library in the image.
+See [Runtime API](../reference/api/runtime.md) and
+[Production Deployment](production.md) for startup and shutdown commands.
 
 ### 3. JAX
 
