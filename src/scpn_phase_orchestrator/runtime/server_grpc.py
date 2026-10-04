@@ -203,8 +203,11 @@ def _guard_unary(
     def decorate(
         method: Callable[[PhaseStreamServicer, Any, Any], _Response],
     ) -> Callable[[PhaseStreamServicer, Any, Any], _Response]:
+        """Wrap one unary RPC method with the unexpected-failure guard."""
+
         @wraps(method)
         def guarded(self: PhaseStreamServicer, request: Any, context: Any) -> _Response:
+            """Run the RPC; keep a chosen abort status, else answer ``INTERNAL``."""
             try:
                 return method(self, request, context)
             except _RpcAbortedError:
@@ -228,10 +231,13 @@ def _guard_stream(
     def decorate(
         method: Callable[[PhaseStreamServicer, Any, Any], Iterator[_Response]],
     ) -> Callable[[PhaseStreamServicer, Any, Any], Iterator[_Response]]:
+        """Wrap one streaming RPC method with the unexpected-failure guard."""
+
         @wraps(method)
         def guarded(
             self: PhaseStreamServicer, request: Any, context: Any
         ) -> Iterator[_Response]:
+            """Stream the RPC; keep a chosen abort status, else answer ``INTERNAL``."""
             try:
                 yield from method(self, request, context)
             except _RpcAbortedError:

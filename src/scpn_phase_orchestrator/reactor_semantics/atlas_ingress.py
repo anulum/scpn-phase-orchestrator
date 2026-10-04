@@ -109,6 +109,7 @@ atlas_format_checker.checks("date-time")(_valid_atlas_datetime)
 
 @lru_cache(maxsize=1)
 def _atlas_validator() -> Draft202012Validator:
+    """Return the cached Draft 2020-12 validator for the packaged atlas schema."""
     resource = files("scpn_phase_orchestrator.reactor_semantics").joinpath(
         "data/reactor_technology_diagnostic_atlas.schema.json"
     )
