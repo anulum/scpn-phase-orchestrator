@@ -200,8 +200,10 @@ def test_foreground_server_uses_native_engine_and_stops(
             except subprocess.TimeoutExpired:
                 process.kill()
                 process.wait(timeout=5)
-        # Uvicorn can re-emit SIGTERM after its complete graceful shutdown.
-        expected_exit = {0} if sys.platform == "win32" else {0, -signal.SIGTERM}
+        # Uvicorn re-raises the captured stop signal after its complete graceful
+        # shutdown. The default action ends the process with -SIGTERM on POSIX
+        # and, in the Windows C runtime, with exit code 3.
+        expected_exit = {0, 3} if sys.platform == "win32" else {0, -signal.SIGTERM}
         assert process.returncode in expected_exit, (
             tmp_path / "server.log"
         ).read_text()
