@@ -180,8 +180,10 @@ def test_real_python_only_profile_refuses_required_kernel(
             except subprocess.TimeoutExpired:
                 allowed.kill()
                 allowed.wait(timeout=5)
-        # Uvicorn can re-emit SIGTERM after its complete graceful shutdown.
-        expected_exit = {0} if sys.platform == "win32" else {0, -signal.SIGTERM}
+        # Uvicorn re-raises the captured stop signal after its complete graceful
+        # shutdown. The default action ends the process with -SIGTERM on POSIX
+        # and, in the Windows C runtime, with exit code 3.
+        expected_exit = {0, 3} if sys.platform == "win32" else {0, -signal.SIGTERM}
         assert allowed.returncode in expected_exit
         assert (
             "Application shutdown complete"
