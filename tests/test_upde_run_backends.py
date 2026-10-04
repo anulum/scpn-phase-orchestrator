@@ -18,8 +18,9 @@ integrators. Tolerances:
 
 from __future__ import annotations
 
+import sys
 from collections.abc import Callable
-from types import SimpleNamespace
+from types import ModuleType, SimpleNamespace
 from typing import get_type_hints
 
 import numpy as np
@@ -227,6 +228,50 @@ class TestDirectBackendBoundaryContracts:
 
         with pytest.raises(RuntimeError, match=r"^backend exploded$"):
             upde_run_julia(*_direct_payload())
+
+    def test_julia_adapter_propagates_a_failure_under_a_partial_runtime(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """A loaded juliacall without ``JuliaError`` cannot mask the failure."""
+
+        def explode(*_args: object) -> object:
+            raise RuntimeError("backend exploded")
+
+        monkeypatch.setitem(sys.modules, "juliacall", ModuleType("juliacall"))
+        monkeypatch.setattr(
+            engine_julia_mod,
+            "_ensure",
+            lambda: SimpleNamespace(upde_run=explode),
+        )
+
+        with pytest.raises(RuntimeError, match=r"^backend exploded$"):
+            upde_run_julia(*_direct_payload())
+
+    def test_julia_adapter_reuses_the_loaded_module(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """A module already in the adapter's cache is used without a new probe.
+
+        The cache slot is filled directly because the memoisation contract is
+        observable only there; the solver itself is exercised by the native
+        runtime tests. The replaced probe fails the test if it is reached.
+        """
+        payload = _direct_payload()
+        expected = np.mod(payload[0] + 0.25, TWO_PI)
+
+        def probe() -> object:
+            raise AssertionError("the runtime was probed despite a cached module")
+
+        monkeypatch.setattr(engine_julia_mod, "require_julia_main", probe)
+        monkeypatch.setattr(
+            engine_julia_mod,
+            "_JULIA_MODULE",
+            SimpleNamespace(upde_run=lambda *_args: expected),
+        )
+
+        np.testing.assert_array_equal(upde_run_julia(*payload), expected)
 
     def test_julia_schedule_raw_numeric_string_output_fails_closed(
         self,
