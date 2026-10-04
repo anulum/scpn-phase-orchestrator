@@ -82,7 +82,8 @@ stateful steps per method:
 
 Both paths remain O(N²). These are the maintained comparison's formatted
 aggregate wall times, with different NumPy versions on a shared host; they do
-not establish a causal speedup or deadline. The
+not establish a causal speedup or deadline. They are regression context,
+not portable throughput or real-time guarantees. The
 [current raw runtime record](../reference/data/upde_phase_wrapping_benchmark_2026-10-01.json)
 also contains the nine stateless geometries across Rust/Mojo/Julia/Go/Python,
 scheduled comparisons, actual CSR repeats, JAX float32/float64 readbacks and

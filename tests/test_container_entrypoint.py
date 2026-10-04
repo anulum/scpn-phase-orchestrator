@@ -62,15 +62,16 @@ def _image_pythonpath() -> str:
     """Return the repository source root that mirrors the installed package.
 
     The production stage copies the builder's ``/install`` prefix into
-    ``/usr/local`` and sets no ``PYTHONPATH``. The builder installs the project
-    itself, so the repository ``src`` tree is the same package.
+    ``/usr/local`` and sets no ``PYTHONPATH``. The builder builds the project
+    into a wheel and installs it, so the repository ``src`` tree is the same
+    package.
     """
     stage = _production_stage()
     assert not [line for line in stage if line.startswith("ENV PYTHONPATH=")]
     assert "COPY --from=python-builder /install /usr/local" in stage
-    assert "--no-build-isolation /wheels/*.whl ." in DOCKERFILE.read_text(
-        encoding="utf-8"
-    )
+    dockerfile = DOCKERFILE.read_text(encoding="utf-8")
+    assert "--no-build-isolation \\\n        --wheel-dir /wheels ." in dockerfile
+    assert "--no-deps /wheels/*.whl\n" in dockerfile
     return str(ROOT / "src")
 
 
