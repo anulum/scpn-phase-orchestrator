@@ -201,6 +201,34 @@ def test_ci_slow_tests_run_once_outside_python_matrix() -> None:
     assert "python-quality" in jobs["ci-gate"]["needs"]
 
 
+def test_ci_audits_the_studio_frontend_lock_without_suppression() -> None:
+    """The frontend lock is audited at every head, with nothing filtered out."""
+    workflow = _ci_workflow()
+    jobs = workflow["jobs"]
+    audit_job = jobs["studio-web-audit"]
+
+    assert "continue-on-error" not in audit_job
+    assert "if" not in audit_job
+    assert audit_job["defaults"]["run"]["working-directory"] == "studio-web"
+    assert all("continue-on-error" not in step for step in audit_job["steps"])
+    commands = [
+        str(step["run"]).strip() for step in audit_job["steps"] if "run" in step
+    ]
+    assert commands == ["pnpm audit"]
+
+    lock = (ROOT / "studio-web/pnpm-lock.yaml").read_text(encoding="utf-8")
+    assert lock.startswith("lockfileVersion:")
+
+    policy = load_ci_workflow_policy()
+    frontend_category = next(
+        category
+        for category in policy["categories"]
+        if category["id"] == "studio-frontend"
+    )
+    assert "studio-web-audit" in frontend_category["jobs"]
+    assert "studio-frontend" in jobs["ci-gate"]["needs"]
+
+
 def test_ci_lint_job_ratchets_source_docstring_coverage() -> None:
     workflow = _ci_workflow()
     lint_steps = workflow["jobs"]["lint"]["steps"]

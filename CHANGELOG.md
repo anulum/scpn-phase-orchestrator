@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- CI now audits the Studio frontend lock on every run. The new
+  `studio-web-audit` job runs `pnpm audit` against `studio-web/pnpm-lock.yaml`
+  with no severity threshold and no ignore flags, so a known advisory in any
+  locked package fails CI at the head that contains it. Until now only the
+  Python locks were audited, and a vulnerable frontend package was visible
+  only as a repository alert.
+
 - The image build installed the project with `pip install .`, which the
   supply-chain scan reports as an unpinned install. The builder stage now
   builds the project wheel with the hash-pinned build tools and installs
