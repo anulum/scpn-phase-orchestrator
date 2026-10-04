@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- `studio-web` resolved every `undici` consumer to one exact `7.29.0` pin,
+  below the patched `7.29.1` (GHSA-w293-vg96-wgc3 and five further
+  advisories), and the pin blocked the automated update. The overrides are
+  now ranges scoped to each consumer's declared major: `jsdom` resolves
+  `8.11.2` and `@module-federation/dts-plugin` resolves `7.30.0`.
+
 ### Fixed
 
 - Required-native local server startup now executes public phase and amplitude
