@@ -397,6 +397,17 @@ class UPDEEngine:
         self._lock = threading.RLock()
 
     @property
+    def backend(self) -> str:
+        """Identify the implementation that executes this engine's steps.
+
+        Returns
+        -------
+        str
+            "rust" for the installed native stepper, otherwise "numpy".
+        """
+        return "rust" if self._rust is not None else "numpy"
+
+    @property
     def last_dt(self) -> float:
         """Return the diagnostic timestep exposed by this Python engine.
 

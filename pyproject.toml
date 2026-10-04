@@ -43,6 +43,12 @@ dependencies = [
 
 [project.optional-dependencies]
 rust = ["spo-kernel>=0.5.11"]
+server = [
+    "fastapi>=0.136.1,<1.0",
+    "starlette>=1.3.1,<2.0",
+    "anyio>=4.14.2,<5.0",
+    "uvicorn[standard]>=0.27,<1.0",
+]
 quantum = ["scpn-quantum-control>=0.1.0"]
 plasma = ["scpn-control>=0.1.0"]
 fusion = ["scpn-fusion-core>=3.9.0"]
@@ -171,7 +177,10 @@ Changelog = "https://github.com/anulum/scpn-phase-orchestrator/blob/main/CHANGEL
 Discussions = "https://github.com/anulum/scpn-phase-orchestrator/discussions"
 
 [tool.uv]
-exclude-dependencies = ["scpn-fusion-core", "spo-kernel"]
+exclude-dependencies = ["scpn-fusion-core"]
+
+[tool.uv.sources]
+spo-kernel = { path = "spo-kernel/crates/spo-ffi" }
 
 [tool.setuptools.packages.find]
 where = ["src"]

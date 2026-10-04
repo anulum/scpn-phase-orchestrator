@@ -11,9 +11,9 @@
 
 ``maturin develop`` installs the built wheel through uv when the target
 environment was created by uv, and uv applies the configuration of the project it
-is run from. This repository's ``[tool.uv] exclude-dependencies`` lists
-``spo-kernel``, so an install run from the checkout is skipped while maturin still
-reports it as installed. ``maturin develop`` also installs into the environment
+is run from. To keep the selected target independent of a caller's uv dependency
+exclusions, this installer uses an isolated working directory.
+``maturin develop`` also installs into the environment
 named by ``VIRTUAL_ENV`` or found as a ``.venv`` above the working directory,
 not into the interpreter that runs it. The installer therefore runs maturin from
 an empty working directory outside any project with ``VIRTUAL_ENV`` set to the
@@ -166,12 +166,15 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--check-only",
         action="store_true",
-        help="Only verify that the target interpreter can import the module.",
+        help=(
+            "Run the selected module check without reinstalling; spo_kernel "
+            "executes native phase and amplitude checks."
+        ),
     )
     parser.add_argument(
         "--verify-module",
         default="spo_kernel",
-        help="Module imported by --check-only after installation.",
+        help="Module to verify; spo_kernel runs numerical checks, others import only.",
     )
     parser.add_argument(
         "--dry-run",
@@ -219,29 +222,37 @@ def resolve_plan(args: argparse.Namespace) -> KernelInstallPlan:
 
 
 def run_check(python: Path, module_name: str) -> subprocess.CompletedProcess[str]:
-    """Verify that ``module_name`` imports in ``python``.
+    """Verify native computation, or an explicitly selected compatibility import.
 
     Parameters
     ----------
     python : Path
         Python interpreter to execute.
     module_name : str
-        Module name to import.
+        spo_kernel executes public phase and amplitude numerical checks.
+        Other explicitly selected modules receive an import check only.
 
     Returns
     -------
     subprocess.CompletedProcess[str]
-        Completed import check process.
+        Completed numerical or compatibility-import check process.
     """
     if not module_name.strip() or not all(
         part.isidentifier() for part in module_name.split(".")
     ):
         raise ValueError(f"invalid module name for import check: {module_name!r}")
-    snippet = (
-        "import importlib; "
-        f"module = importlib.import_module({module_name!r}); "
-        "print(module.__name__)"
-    )
+    if module_name == "spo_kernel":
+        snippet = (
+            "import json; from dataclasses import asdict; "
+            "from scpn_phase_orchestrator.runtime.kernel import verify_kernel; "
+            "print(json.dumps(asdict(verify_kernel()), sort_keys=True))"
+        )
+    else:
+        snippet = (
+            "import importlib; "
+            f"module = importlib.import_module({module_name!r}); "
+            "print(module.__name__)"
+        )
     return subprocess.run(
         [str(python), "-c", snippet],
         check=True,

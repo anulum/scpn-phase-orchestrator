@@ -12,7 +12,8 @@
 FROM python:3.13-slim@sha256:e544a7fcbdf8555eceda66bf86cafb006c736339f76141918bcb812f3174c00a AS rust-builder
 
 # rustup 1.29.1 installer; digest published beside rustup-init upstream.
-ENV CARGO_HOME=/usr/local/cargo \
+ENV CARGO_BUILD_JOBS=1 \
+    CARGO_HOME=/usr/local/cargo \
     RUSTUP_HOME=/usr/local/rustup \
     PATH=/usr/local/cargo/bin:$PATH \
     RUSTUP_INIT_SHA256=dda7234360b7f578ca8b0ddcb80145646fa61a67c1720a5abc7051b35c9fcb71
@@ -44,12 +45,18 @@ FROM python:3.13-slim@sha256:e544a7fcbdf8555eceda66bf86cafb006c736339f76141918bc
 
 WORKDIR /build
 
-COPY requirements/runtime-lock.txt /tmp/runtime-lock.txt
+COPY requirements/build-tools.txt /tmp/build-tools.txt
+RUN python -m pip install --no-cache-dir \
+    --require-hashes --no-deps -r /tmp/build-tools.txt
+COPY pyproject.toml README.md LICENSE ./
+COPY src/ src/
+COPY requirements/server-lock.txt /tmp/server-lock.txt
 COPY --from=rust-builder /wheels/*.whl /wheels/
 
 RUN python -m pip install --no-cache-dir --prefix=/install \
-        --require-hashes --no-deps -r /tmp/runtime-lock.txt && \
-    python -c "import glob, pathlib, sysconfig, zipfile; target = pathlib.Path(sysconfig.get_paths(vars={'base': '/install', 'platbase': '/install'})['platlib']); target.mkdir(parents=True, exist_ok=True); wheels = glob.glob('/wheels/*.whl'); assert len(wheels) == 1, wheels; zipfile.ZipFile(wheels[0]).extractall(target)"
+        --require-hashes --no-deps -r /tmp/server-lock.txt && \
+    python -m pip install --no-cache-dir --prefix=/install \
+        --no-deps --no-build-isolation /wheels/*.whl .
 
 # ── Stage 3: Production image ────────────────────────────────────
 FROM python:3.13-slim@sha256:e544a7fcbdf8555eceda66bf86cafb006c736339f76141918bcb812f3174c00a AS production
@@ -68,17 +75,16 @@ RUN groupadd --gid 1000 spo && \
     useradd --uid 1000 --gid spo --create-home spo
 
 COPY --from=python-builder /install /usr/local
-COPY --chown=spo:spo src/ /app/src/
 COPY --chown=spo:spo domainpacks/ /app/domainpacks/
 
 WORKDIR /app
-ENV PYTHONPATH=/app/src
 USER spo
 
 # Plain HTTP is deliberate: this is an in-container loopback liveness probe; it
 # crosses no trust boundary and carries no credentials or sensitive payload.
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
-    CMD ["python", "-c", "import urllib.request as u; r=u.urlopen('http://127.0.0.1:8000/api/health'); assert b'healthy' in r.read()"]
+    CMD ["python", "-c", "import json, urllib.request; r=urllib.request.urlopen('http://127.0.0.1:8000/api/health', timeout=4); assert json.load(r)['status']=='healthy'"]
 
 ENTRYPOINT ["python", "-c", "from scpn_phase_orchestrator.runtime.cli import main; main()"]
-CMD ["--help"]
+EXPOSE 8000
+CMD ["serve", "domainpacks/minimal_domain/binding_spec.yaml", "--host", "0.0.0.0", "--port", "8000", "--require-kernel"]

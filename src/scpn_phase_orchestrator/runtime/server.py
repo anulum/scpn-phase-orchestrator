@@ -41,7 +41,7 @@ import threading
 import time
 from collections.abc import Awaitable, Callable
 from pathlib import Path
-from typing import Any, TypeAlias
+from typing import TYPE_CHECKING, Any, TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -60,6 +60,7 @@ from scpn_phase_orchestrator.imprint.state import ImprintState
 from scpn_phase_orchestrator.imprint.update import ImprintModel
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryObserver
 from scpn_phase_orchestrator.oscillators.init_phases import extract_initial_phases
+from scpn_phase_orchestrator.runtime.kernel import verify_kernel
 from scpn_phase_orchestrator.runtime.observability import (
     RuntimeMetricSnapshot,
     RuntimeObservability,
@@ -72,6 +73,9 @@ from scpn_phase_orchestrator.upde.engine import UPDEEngine
 from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
 from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
+
+if TYPE_CHECKING:
+    from fastapi import FastAPI
 
 try:
     from fastapi import Request as FastAPIRequest
@@ -430,23 +434,27 @@ fetchState().then(render);
 </html>"""
 
 
-def create_app(spec_path: str | Path) -> object:  # pragma: no cover
+def create_app(spec_path: str | Path, *, require_kernel: bool = False) -> FastAPI:
     """Create FastAPI app for the given binding spec.
 
     Parameters
     ----------
     spec_path : str | Path
         Filesystem path to the binding-spec file.
+    require_kernel : bool, default False
+        Require native phase and amplitude verification and native dispatch
+        in the configured simulation before accepting requests.
 
     Returns
     -------
-    object
+    fastapi.FastAPI
         The configured FastAPI application.
 
     Raises
     ------
     RuntimeError
-        If the runtime operation fails.
+        If the configured simulation selects NumPy when native execution is
+        required, or native verification fails.
     ImportError
         If a required optional dependency is not installed.
     HTTPException
@@ -470,6 +478,12 @@ def create_app(spec_path: str | Path) -> object:  # pragma: no cover
 
     spec = load_binding_spec(spec_path)
     sim = SimulationState(spec)
+    kernel_report = None
+    if require_kernel:
+        selected_engine = sim.sl_engine if sim.amplitude_mode else sim.engine
+        if selected_engine is None or selected_engine.backend != "rust":
+            raise RuntimeError("spo-kernel required: simulation selected NumPy")
+        kernel_report = verify_kernel()
 
     @asynccontextmanager
     async def _lifespan(_app: FastAPI) -> AsyncIterator[None]:
@@ -597,6 +611,20 @@ def create_app(spec_path: str | Path) -> object:  # pragma: no cover
             "amplitude_mode": sim.amplitude_mode,
             "sample_period_s": spec.sample_period_s,
             "control_period_s": spec.control_period_s,
+            "backend": (
+                sim.sl_engine.backend
+                if sim.sl_engine is not None
+                else sim.engine.backend
+            ),
+            "kernel_required": require_kernel,
+            "kernel": (
+                {
+                    "version": kernel_report.version,
+                    "sha256": kernel_report.sha256,
+                }
+                if kernel_report is not None
+                else None
+            ),
         }
 
     @app.get("/api/metrics")

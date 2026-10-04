@@ -200,14 +200,14 @@ class StuartLandauEngine:
         self._last_dt = dt
 
         self._use_rust = False
-        try:  # pragma: no cover
-            import spo_kernel  # noqa: PLC0415
+        try:
+            import spo_kernel
 
             self._rust = spo_kernel.PyStuartLandauStepper(
                 n_oscillators, dt=dt, method=method, n_substeps=1, atol=atol, rtol=rtol
             )
             self._use_rust = True
-        except ImportError:  # pragma: no cover — Rust FFI optional
+        except ImportError:
             pass
 
         n = n_oscillators
@@ -225,6 +225,17 @@ class StuartLandauEngine:
         # Serialise concurrent step() callers on this instance so the
         # pre-allocated scratch arrays above are not shared across threads.
         self._lock = threading.RLock()
+
+    @property
+    def backend(self) -> str:
+        """Identify the implementation that executes phase-amplitude steps.
+
+        Returns
+        -------
+        str
+            "rust" for the installed native stepper, otherwise "numpy".
+        """
+        return "rust" if self._use_rust else "numpy"
 
     @property
     def last_dt(self) -> float:
@@ -291,7 +302,7 @@ class StuartLandauEngine:
             epsilon,
         ) = self._validate(state, omegas, mu, knm, knm_r, zeta, psi, alpha, epsilon)
         with self._lock:
-            if self._use_rust:  # pragma: no cover
+            if self._use_rust:
                 result = _validate_state_array(
                     self._rust.step(
                         state,

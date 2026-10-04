@@ -165,7 +165,60 @@ def _input_lock(
     )
 
 
+def _server_lock(output: str, python: str, *, windows: bool = False) -> LockSpec:
+    """Select the platform resolver for a server dependency lock.
+
+    Parameters
+    ----------
+    output : str
+        Repository-relative output file.
+    python : str
+        Target Python major.minor version.
+    windows : bool
+        Resolve Windows markers with uv instead of the host pip interpreter.
+
+    Returns
+    -------
+    LockSpec
+        Exact reproducible command for the server profile.
+    """
+    if windows:
+        return LockSpec(
+            output=output,
+            generator="uv",
+            python=python,
+            arguments=(
+                "--python-platform",
+                "windows",
+                "--python-version",
+                python,
+                "--extra",
+                "server",
+                *_HASHED,
+                "--strip-extras",
+                "pyproject.toml",
+                "-o",
+                output,
+            ),
+        )
+    return LockSpec(
+        output=output,
+        generator="pip-compile",
+        python=python,
+        arguments=(
+            "--extra=server",
+            *_HASHED,
+            f"--output-file={output}",
+            "--strip-extras",
+            "pyproject.toml",
+        ),
+    )
+
+
 LOCKS: tuple[LockSpec, ...] = (
+    _input_lock(
+        "requirements/build-tools.txt", "requirements/build-tools.in", allow_unsafe=True
+    ),
     _dev_lock("requirements/dev-lock.txt", "3.12"),
     _dev_lock("requirements/dev-lock-py311.txt", "3.11"),
     _dev_lock("requirements/dev-lock-py313.txt", "3.13"),
@@ -181,6 +234,10 @@ LOCKS: tuple[LockSpec, ...] = (
             "pyproject.toml",
         ),
     ),
+    _server_lock("requirements/server-lock.txt", "3.12"),
+    _server_lock("requirements/server-lock-py311.txt", "3.11"),
+    _server_lock("requirements/server-lock-windows-py311.txt", "3.11", windows=True),
+    _server_lock("requirements/server-lock-windows-py312.txt", "3.12", windows=True),
     LockSpec(
         output="requirements/queuewaves-lock.txt",
         generator="pip-compile",

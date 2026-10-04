@@ -36,7 +36,13 @@ Docker builds, and CI.
 
 All lockfiles are hash-pinned and committed under `requirements/`:
 
-- `runtime-lock.txt` — runtime install set used by production image paths.
+- `runtime-lock.txt` — base Python runtime install set.
+- `server-lock.txt` / `server-lock-py311.txt` — simulation server dependencies
+  for Python 3.12/3.13 and 3.11 on Linux/macOS, respectively.
+- `server-lock-windows-py311.txt` / `server-lock-windows-py312.txt` — Windows
+  server profiles with platform markers resolved by uv.
+- `build-tools.txt` — hash-locked setuptools and wheel for the source package
+  build in Docker; generated from `build-tools.in`.
 - `queuewaves-lock.txt` — QueueWaves deployment/install set.
 - `dev-lock.txt` — primary Linux/macOS development + CI profile (Python 3.12).
 - `dev-lock-py311.txt` — CI matrix profile for Python 3.11.
@@ -82,7 +88,7 @@ The target runs `tools/refresh_dependency_locks.py`, which:
 - runs each `pip-compile` lock with pip-tools 7.6.1 through
   `uvx --python <version> --from pip-tools==7.6.1 pip-compile`, so the 3.11,
   3.12 and 3.13 locks are resolved by the interpreter their headers name;
-- resolves the two Windows FFI locks with
+- resolves the Windows FFI and server locks with
   `uv pip compile --python-platform windows`;
 - refreshes `dev-lock.txt` before the locks that use it as a `--constraint`;
 - restores the licence block that precedes a generated header, and restores

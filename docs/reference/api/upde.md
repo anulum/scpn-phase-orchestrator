@@ -1,5 +1,10 @@
 # UPDE Engine
 
+`UPDEEngine.backend` and `StuartLandauEngine.backend` report the implementation
+that executes their steps: `"rust"` or `"numpy"`. The
+[required-native runtime](runtime.md) checks the selected simulation engine and
+executes analytical phase/amplitude verification before serving requests.
+
 The Unified Phase Dynamics Engine (UPDE) is SPO's core integrator subsystem.
 It provides 19 ODE engine variants covering standard Kuramoto, Bayesian
 uncertainty propagation, amplitude
