@@ -10,6 +10,7 @@
 
 from __future__ import annotations
 
+import re
 import tomllib
 from pathlib import Path
 from typing import Any, cast
@@ -239,18 +240,39 @@ def test_dev_locks_hash_pin_interrogate_docstring_gate() -> None:
         assert "tabulate==0.10.0 \\" in text
 
 
-def test_ffi_matrix_excludes_slow_tests() -> None:
-    workflow = _ci_workflow()
-    ffi_steps = workflow["jobs"]["ffi-test"]["steps"]
-    pytest_commands = [
-        str(step["run"])
-        for step in ffi_steps
-        if "pytest tests/" in str(step.get("run"))
+def _pytest_invocations(run: str) -> list[str]:
+    """Return each pytest command of a workflow ``run`` script on one line."""
+    joined = run.replace("\\\n", " ")
+    return [
+        " ".join(line.split())
+        for line in joined.splitlines()
+        if re.match(r"\s*(?:\S*/)?pytest\s", line)
     ]
 
-    assert pytest_commands
+
+def test_ffi_matrix_excludes_slow_tests() -> None:
+    """The FFI suite excludes slow tests; native-runtime runs name their files."""
+    workflow = _ci_workflow()
+    ffi_steps = workflow["jobs"]["ffi-test"]["steps"]
+    invocations = [
+        invocation
+        for step in ffi_steps
+        for invocation in _pytest_invocations(str(step.get("run", "")))
+    ]
+    suite_runs = [command for command in invocations if " tests/ " in command]
+    native_runs = [command for command in invocations if command not in suite_runs]
+
+    assert suite_runs
     assert all(
         '-m "not slow and not performance and not native_runtime"' in command
-        for command in pytest_commands
+        for command in suite_runs
     )
-    assert all('-k "not performance"' in command for command in pytest_commands)
+    assert all('-k "not performance"' in command for command in suite_runs)
+
+    assert native_runs
+    for command in native_runs:
+        assert "-m native_runtime --strict-markers" in command
+        targets = [part for part in command.split()[1:] if not part.startswith("-")]
+        selected = targets[: targets.index("native_runtime")]
+        assert selected
+        assert all(re.fullmatch(r"tests/test_\w+\.py", path) for path in selected)

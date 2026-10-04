@@ -210,6 +210,24 @@ class TestDirectBackendBoundaryContracts:
         with pytest.raises(TypeError, match="result must be numeric"):
             upde_run_julia(*_direct_payload())
 
+    def test_julia_adapter_propagates_a_non_julia_failure_unchanged(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """A failure that is not a Julia error keeps its type and message."""
+
+        def explode(*_args: object) -> object:
+            raise RuntimeError("backend exploded")
+
+        monkeypatch.setattr(
+            engine_julia_mod,
+            "_ensure",
+            lambda: SimpleNamespace(upde_run=explode),
+        )
+
+        with pytest.raises(RuntimeError, match=r"^backend exploded$"):
+            upde_run_julia(*_direct_payload())
+
     def test_julia_schedule_raw_numeric_string_output_fails_closed(
         self,
         monkeypatch: pytest.MonkeyPatch,

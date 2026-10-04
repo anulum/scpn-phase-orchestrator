@@ -83,3 +83,9 @@ numerical verification to the loaded native library.
 ::: scpn_phase_orchestrator.runtime.kernel
 
 ::: scpn_phase_orchestrator.runtime.server.create_app
+
+## Command module
+
+`spo serve` is implemented in `scpn_phase_orchestrator.runtime.cli.serve`.
+
+::: scpn_phase_orchestrator.runtime.cli.serve

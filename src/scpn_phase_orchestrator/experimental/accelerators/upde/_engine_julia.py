@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any, TypeAlias
+from typing import Any, TypeAlias, cast
 
 import numpy as np
 from numpy.typing import NDArray
@@ -47,6 +47,20 @@ def _ensure() -> Any:
     return _JULIA_MODULE
 
 
+def _julia_error_type() -> type[BaseException] | None:
+    """Return ``juliacall.JuliaError``, or ``None`` when juliacall is absent.
+
+    The type is resolved only after a call has failed. A process without
+    juliacall cannot have raised a Julia error, so its exception passes through
+    unchanged and the adapter's output validation stays usable there.
+    """
+    try:
+        from juliacall import JuliaError
+    except ModuleNotFoundError:
+        return None
+    return cast("type[BaseException]", JuliaError)
+
+
 def _invoke(func: Callable[..., object], *args: object) -> object:
     """Invoke the real Julia solver with numeric-domain error translation.
 
@@ -69,13 +83,14 @@ def _invoke(func: Callable[..., object], *args: object) -> object:
     juliacall.JuliaError
         Other native Julia failures retain their original exception.
     """
-    from juliacall import JuliaError
-
     try:
         return func(*args)
-    except JuliaError as exc:
+    except Exception as exc:
+        julia_error = _julia_error_type()
+        if julia_error is None or not isinstance(exc, julia_error):
+            raise
         main = require_julia_main()
-        if bool(main.isa(exc.exception, main.DomainError)):
+        if bool(main.isa(cast("Any", exc).exception, main.DomainError)):
             raise ValueError(
                 "Julia UPDE computation diverged with a domain error"
             ) from exc
