@@ -94,6 +94,7 @@ def check(config_path: str) -> None:
     )
 
     async def collect() -> None:
+        """Backfill the collector buffers once, then close its HTTP client."""
         try:
             await collector.backfill(
                 end=time.time(),
