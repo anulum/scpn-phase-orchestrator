@@ -56,6 +56,8 @@ jobs:
           fi
       - name: Audit Cargo.lock
         run: cargo audit --file Cargo.lock
+      - name: Audit the non-publishable fixture dependency lock
+        run: cargo audit --file ../tests/native_output_fixture/Cargo.lock
   cargo-deny:
     runs-on: ubuntu-latest
     permissions:

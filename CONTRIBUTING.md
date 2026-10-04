@@ -19,6 +19,46 @@ python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 ```
 
+## Required branch coverage profiles
+
+The branch ratchet consumes measurements from the same revision, complete
+installed Python package, locked dependencies and coverage configuration. CI
+produces a genuine `spo-kernel` profile, a profile with the kernel genuinely
+absent, and a defective native profile with two compiled variants. Raw branch
+databases, package and input hashes, extension provenance and public contract
+results accompany each artifact. A missing, stale, statement-only or mismatched
+artifact fails the required coverage category.
+
+`python -m tools.branch_coverage_profiles record` observes each installed runtime.
+`python -m tools.branch_coverage_profiles combine` admits the four artifacts,
+uses `coverage combine` without deleting originals, and verifies that the
+combined data holds exactly the raw source membership and arc union. `--root`
+names the checkout; the command can be started from any directory, and
+relative paths are taken from that directory. A checkout
+source that changed after recording, or that is a symbolic link, is refused.
+`tools/coverage_guard.py` then applies the existing file, domain and
+global thresholds to the aggregate XML. The guard qualification for E/I, sheaf
+and sparse engines is a separate check; it does not establish global coverage.
+
+The Rust extension in `tests/native_output_fixture/` deliberately emits invalid
+native outputs or omits stepper classes. It runs only in isolated environments
+after `prove-absent` records actual kernel absence. It implements no successful
+numerical solver. Its coverage credit is restricted to the reviewed defensive
+statements and branch outcomes in `tools/branch_profile_residuals.json`; genuine
+profiles must cover every other success path. Both variants are compiled with
+the checked-in lock, checked by clippy and covered by the blocking Cargo audit.
+The fixture is excluded from release wheels and source distributions. Its wheels
+are not uploaded as CI artifacts or installed as a production backend.
+
+Run the explicit fixture contracts in their corresponding prepared environment:
+`output_contracts.py` for invalid outputs and `missing_classes_contracts.py` for
+both the missing-classes variant and genuine absence. After all actual profile
+artifacts are available under `native/`, `absent/`, `defective-output/` and
+`defective-missing/`, set `SPO_BRANCH_PROFILE_INPUTS` to their parent directory
+and run `pytest tests/native_output_fixture/admission_contracts.py`. These tests
+invoke the public admission CLI and verify refusal using copied metadata faults
+or actual incomplete and statement-only measurements.
+
 ## Adding Domainpacks
 
 Create a directory under `domainpacks/<name>/` with a `binding_spec.yaml`:

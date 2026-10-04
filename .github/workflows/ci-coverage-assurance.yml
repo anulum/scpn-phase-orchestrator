@@ -83,3 +83,188 @@ jobs:
           files: coverage-python.xml
           use_oidc: true
       - run: python tools/coverage_guard.py --coverage-xml coverage-python.xml
+
+  branch-absent:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      HYPOTHESIS_PROFILE: dev
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install whole Python package with genuine kernel absence
+        run: |
+          python -m venv .venv
+          . .venv/bin/activate
+          pip install --require-hashes --no-deps -r requirements/ci-tools.txt
+          pip install --require-hashes --no-deps -r requirements/build-tools.txt
+          pip install --require-hashes --no-deps -r requirements/dev-lock.txt
+          pip install --require-hashes --no-deps -r requirements/studio-sdk.txt
+          pip wheel --no-deps --no-build-isolation --wheel-dir package-wheels .
+          pip install --no-index --no-deps package-wheels/*.whl
+          mkdir -p .ci-branch/absent
+          python -m tools.branch_coverage_profiles prove-absent --output .ci-branch/absent/absence-observed.json
+      - name: Measure real Python fallback owning contracts
+        run: |
+          . .venv/bin/activate
+          export COVERAGE_FILE="$PWD/.ci-branch/absent/.coverage"
+          pytest tests/test_ei_balance.py tests/test_ei_balance_measurement_inputs.py \
+            tests/test_sparse_engine.py tests/test_sparse_engine_python_fallback.py \
+            tests/test_sparse_engine_config_validation.py tests/test_sparse_engine_phase_wrapping.py \
+            tests/test_sheaf_engine.py tests/test_sheaf_engine_python_fallback.py \
+            tests/native_output_fixture/missing_classes_contracts.py \
+            --tb=short -p no:cacheprovider \
+            --cov=scpn_phase_orchestrator --cov-branch --cov-report= --cov-fail-under=0 \
+            --junitxml=.ci-branch/absent/public-contracts.junit.xml
+          python -m tools.branch_coverage_profiles record \
+            --profile absent --revision "$GITHUB_SHA" --database "$COVERAGE_FILE" \
+            --output .ci-branch/absent/profile.json
+      - name: Upload genuinely absent branch data and provenance
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: branch-profile-absent
+          path: .ci-branch/absent
+          include-hidden-files: true
+          if-no-files-found: error
+
+  branch-defective:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [output, missing]
+    env:
+      HYPOTHESIS_PROFILE: dev
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+      - uses: dtolnay/rust-toolchain@631a55b12751854ce901bb631d5902ceb48146f7 # stable
+      - name: Build marked fixture after proving genuine kernel absence
+        run: |
+          python -m venv .venv
+          . .venv/bin/activate
+          pip install --require-hashes --no-deps -r requirements/ci-tools.txt
+          pip install --require-hashes --no-deps -r requirements/build-tools.txt
+          pip install --require-hashes --no-deps -r requirements/dev-lock.txt
+          pip install --require-hashes --no-deps -r requirements/studio-sdk.txt
+          pip wheel --no-deps --no-build-isolation --wheel-dir package-wheels .
+          pip install --no-index --no-deps package-wheels/*.whl
+          mkdir -p .ci-branch/defective-${{ matrix.variant }}
+          python -m tools.branch_coverage_profiles prove-absent \
+            --output .ci-branch/defective-${{ matrix.variant }}/absence-observed.json
+          if [ "${{ matrix.variant }}" = missing ]; then
+            cargo clippy --locked --all-targets --no-default-features \
+              --manifest-path tests/native_output_fixture/Cargo.toml -- -D warnings
+            maturin build --release --locked --no-default-features \
+              -m tests/native_output_fixture/Cargo.toml --out fixture-wheels
+          else
+            cargo fmt --manifest-path tests/native_output_fixture/Cargo.toml -- --check
+            cargo clippy --locked --all-targets --all-features \
+              --manifest-path tests/native_output_fixture/Cargo.toml -- -D warnings
+            maturin build --release --locked \
+              -m tests/native_output_fixture/Cargo.toml --out fixture-wheels
+          fi
+          pip install --no-index --no-deps fixture-wheels/*.whl
+      - name: Measure owning public defensive contracts
+        run: |
+          . .venv/bin/activate
+          export COVERAGE_FILE="$PWD/.ci-branch/defective-${{ matrix.variant }}/.coverage"
+          if [ "${{ matrix.variant }}" = missing ]; then
+            contract=tests/native_output_fixture/missing_classes_contracts.py
+          else
+            contract=tests/native_output_fixture/output_contracts.py
+          fi
+          pytest "$contract" --tb=short -p no:cacheprovider \
+            --cov=scpn_phase_orchestrator.coupling.ei_balance \
+            --cov=scpn_phase_orchestrator.upde.sheaf_engine \
+            --cov=scpn_phase_orchestrator.upde.sparse_engine \
+            --cov-branch --cov-report= --cov-fail-under=0 \
+            --junitxml=.ci-branch/defective-${{ matrix.variant }}/public-contracts.junit.xml
+          wheel=(fixture-wheels/*.whl)
+          python -m tools.branch_coverage_profiles record \
+            --profile defective-${{ matrix.variant }} --revision "$GITHUB_SHA" \
+            --database "$COVERAGE_FILE" \
+            --fixture-wheel "${wheel[0]}" \
+            --before-install .ci-branch/defective-${{ matrix.variant }}/absence-observed.json \
+            --output .ci-branch/defective-${{ matrix.variant }}/profile.json
+      - name: Upload only measured coverage, contracts and provenance
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: branch-profile-defective-${{ matrix.variant }}
+          path: .ci-branch/defective-${{ matrix.variant }}
+          include-hidden-files: true
+          if-no-files-found: error
+
+  branch-profile-guard:
+    needs: [branch-absent, branch-defective]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Prepare the same whole package and locked coverage toolchain
+        run: |
+          python -m venv .venv
+          . .venv/bin/activate
+          pip install --require-hashes --no-deps -r requirements/ci-tools.txt
+          pip install --require-hashes --no-deps -r requirements/build-tools.txt
+          pip install --require-hashes --no-deps -r requirements/dev-lock.txt
+          pip install --require-hashes --no-deps -r requirements/studio-sdk.txt
+          pip wheel --no-deps --no-build-isolation --wheel-dir package-wheels .
+          pip install --no-index --no-deps package-wheels/*.whl
+      - name: Download genuine native branch profile
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: branch-profile-native
+          path: .ci-branch-inputs/native
+      - name: Download genuinely absent branch profile
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: branch-profile-absent
+          path: .ci-branch-inputs/absent
+      - name: Download actual defective output branch profile
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: branch-profile-defective-output
+          path: .ci-branch-inputs/defective-output
+      - name: Download actual missing classes branch profile
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: branch-profile-defective-missing
+          path: .ci-branch-inputs/defective-missing
+      - name: Exercise public admission and refusal on downloaded real profiles
+        env:
+          SPO_BRANCH_PROFILE_INPUTS: ${{ github.workspace }}/.ci-branch-inputs
+        run: |
+          . .venv/bin/activate
+          pytest tests/native_output_fixture/admission_contracts.py \
+            --import-mode=importlib --strict-markers -p no:cacheprovider --tb=short \
+            --junitxml=branch-admission-contracts.junit.xml
+      - name: Admit raw profiles and preserve genuine success coverage
+        run: |
+          . .venv/bin/activate
+          python -m tools.branch_coverage_profiles combine \
+            --revision "$GITHUB_SHA" --destination .ci-branch-aggregate \
+            --native .ci-branch-inputs/native \
+            --absent .ci-branch-inputs/absent \
+            --defective-output .ci-branch-inputs/defective-output \
+            --defective-missing .ci-branch-inputs/defective-missing
+          python tools/coverage_guard.py --coverage-xml .ci-branch-aggregate/coverage-branch.xml \
+            --thresholds tools/coverage_guard_branch_thresholds.json
+      - name: Upload actual aggregate and admission receipts
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: branch-profile-aggregate
+          path: .ci-branch-aggregate
+          include-hidden-files: true
+          if-no-files-found: error

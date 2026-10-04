@@ -1,0 +1,99 @@
+{
+  "schema_version": 1,
+  "thresholds_sha256": "c2422f91375a026084c883555721902ff28a801d3d98f085b924f4d05ddedb89",
+  "files": {
+    "src/scpn_phase_orchestrator/coupling/ei_balance.py": {
+      "source_sha256": "257d9f9b8a3f69c3761a92cb5b161fd5792fbd1627d65125999603f12f3d2893",
+      "lines": [
+        201
+      ],
+      "branches": [
+        [
+          198,
+          201
+        ]
+      ],
+      "line_hashes": {
+        "198": "ea091bedd6b5cddb2a27492c9748938b14a85c29725c3b7f31943068478d3d06",
+        "201": "379a922d828386b22112c6465c7c989f2dabb26965ef0f104ff1fe3b972c8114"
+      }
+    },
+    "src/scpn_phase_orchestrator/upde/sheaf_engine.py": {
+      "source_sha256": "69a68b401fee4af9ac130355b2dca4172cf7ded0379990178b11532f596bd66d",
+      "lines": [
+        144,
+        147,
+        151,
+        153,
+        259,
+        260
+      ],
+      "branches": [
+        [
+          143,
+          144
+        ],
+        [
+          146,
+          147
+        ],
+        [
+          150,
+          151
+        ],
+        [
+          152,
+          153
+        ]
+      ],
+      "line_hashes": {
+        "143": "756bac195f7a3c3068373ecd39853e3206333dcf72d43487ec7b16f127c64794",
+        "144": "e1a964a71600cb07926a9f1d432d331f7f5672b6bc6265aaf5e2305879bd2c8a",
+        "146": "cb4ce3fb846b87977cdcae681582344fa728c0a502e881ade8a45eb883da2088",
+        "147": "64382562e60f49f78f2888dea56a68df20b998c18a31871662d37ab798e1ec0e",
+        "150": "d84eb081bcd406906025526cf7dbd3687b124c8c9d0fe0d314a11fe031d914e0",
+        "151": "0c2b36a953ad5a27fb940d16faf19bf63b3123514f3beaf5fc4458a7537a1e38",
+        "152": "101226663fde636db385828e0b76dbbc24e5fa4a6d649daaf23449be183ec7a4",
+        "153": "406df20e8daf29406307387b59ba9fe078a6724bd0a8a656a69071087c6e0df5",
+        "259": "080c9529c93d687e47a30c60ba196ff829d22a4d7bcc81e9cfb919999b02d8f5",
+        "260": "0eec50c965441e0e15d7f27d793d1e8468ccc93731b98bb41a9a0c6605108c5e"
+      }
+    },
+    "src/scpn_phase_orchestrator/upde/sparse_engine.py": {
+      "source_sha256": "c6aa5665e7d0062ca16b4f9ba2d3148297d5baed61111a797bcc852810a99775",
+      "lines": [
+        184,
+        185,
+        425,
+        426,
+        434,
+        440
+      ],
+      "branches": [
+        [
+          424,
+          425
+        ],
+        [
+          430,
+          434
+        ],
+        [
+          439,
+          440
+        ]
+      ],
+      "line_hashes": {
+        "184": "080c9529c93d687e47a30c60ba196ff829d22a4d7bcc81e9cfb919999b02d8f5",
+        "185": "0eec50c965441e0e15d7f27d793d1e8468ccc93731b98bb41a9a0c6605108c5e",
+        "424": "2bbbcb402d28d4d99a77b5f87a889ef19789cd1aaad4bf3d0c1c85aa00e8e74c",
+        "425": "0ba3ab10173804a8a7d0a090fe3197fdfe7a61032e5c7337c91b85768e8b04f9",
+        "426": "d04a34bf9fe0870ea5385797579ca21472334c8e14ba3773c1cc9bc47d83cd92",
+        "430": "1e8a2397b379766dd6d8c330d48aa12d6749e2e12f7f19ade7ea74edc711909f",
+        "434": "d04a34bf9fe0870ea5385797579ca21472334c8e14ba3773c1cc9bc47d83cd92",
+        "439": "6385254ef12f599a2953e6a971f893816426fe32611f6719827c24be83d14df3",
+        "440": "beec91ee571b393c588a1a88ac9b07f7a0c25d6e361ee43c60d7b25673036798"
+      }
+    }
+  }
+}
