@@ -78,6 +78,12 @@ def test_embedded_native_library_without_file_is_refused(tmp_path: Path) -> None
         data_file = active.get_option("run:data_file")
         assert isinstance(data_file, str)
         env["SPO_KERNEL_COVERAGE_FILE"] = data_file
+        # The child writes a parallel data file beside the active one. Coverage
+        # refuses to combine branch data with statement data, so the child
+        # measures in the mode of the run that will combine it.
+        env["SPO_KERNEL_COVERAGE_BRANCH"] = (
+            "1" if active.get_option("run:branch") else "0"
+        )
     probe = tmp_path / "embedded-probe.py"
     program = (
         f"import sys; sys.path.insert(0,{str(ROOT / 'src')!r})\n"
@@ -99,7 +105,8 @@ measurement=None
 if "SPO_KERNEL_COVERAGE_FILE" in os.environ:
     from coverage import Coverage
     measurement=Coverage(source=[],include=["*/src/scpn_phase_orchestrator/runtime/kernel.py"],
-                         data_file=os.environ["SPO_KERNEL_COVERAGE_FILE"],data_suffix=True,branch=True)
+                         data_file=os.environ["SPO_KERNEL_COVERAGE_FILE"],data_suffix=True,
+                         branch=os.environ["SPO_KERNEL_COVERAGE_BRANCH"]=="1")
     measurement.start()
 previous=sys.getprofile()
 sys.setprofile(observe)

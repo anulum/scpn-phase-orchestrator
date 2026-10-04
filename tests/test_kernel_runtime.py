@@ -173,6 +173,12 @@ def test_kernel_installed_after_import_requires_process_restart(tmp_path: Path) 
         data_file = active.get_option("run:data_file")
         assert isinstance(data_file, str)
         env["SPO_KERNEL_COVERAGE_FILE"] = data_file
+        # The child writes a parallel data file beside the active one. Coverage
+        # refuses to combine branch data with statement data, so the child
+        # measures in the mode of the run that will combine it.
+        env["SPO_KERNEL_COVERAGE_BRANCH"] = (
+            "1" if active.get_option("run:branch") else "0"
+        )
     probe = tmp_path / "late-install.py"
     program = """
 import importlib.util,json,os,subprocess,sys
@@ -190,7 +196,8 @@ measurement=None
 if "SPO_KERNEL_COVERAGE_FILE" in os.environ:
     from coverage import Coverage
     measurement=Coverage(source=[],include=["*/src/scpn_phase_orchestrator/runtime/kernel.py"],
-                         data_file=os.environ["SPO_KERNEL_COVERAGE_FILE"],data_suffix=True,branch=True)
+                         data_file=os.environ["SPO_KERNEL_COVERAGE_FILE"],data_suffix=True,
+                         branch=os.environ["SPO_KERNEL_COVERAGE_BRANCH"]=="1")
     measurement.start()
 try:
     verify_kernel()
