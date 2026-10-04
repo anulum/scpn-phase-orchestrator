@@ -183,15 +183,22 @@ jobs:
             spo-kernel/target
           key: cargo-ffi-${{ runner.os }}-py3.12-${{ hashFiles('spo-kernel/Cargo.lock') }}
           restore-keys: cargo-ffi-${{ runner.os }}-
-      - name: Build kernel and run tests with branch coverage
+      - name: Build actual kernels and the whole Python package
         run: |
           python -m venv .venv
           . .venv/bin/activate
           pip install --require-hashes --no-deps -r requirements/ci-tools.txt
-          maturin develop --release -m spo-kernel/crates/spo-ffi/Cargo.toml
+          pip install --require-hashes --no-deps -r requirements/build-tools.txt
           pip install --require-hashes --no-deps -r requirements/dev-lock.txt
           pip install --require-hashes --no-deps -r requirements/studio-sdk.txt
-          pip install --no-deps -e .
+          maturin build --release --locked -m spo-kernel/crates/spo-ffi/Cargo.toml --out kernel-wheels
+          pip wheel --no-deps --no-build-isolation --wheel-dir package-wheels .
+          pip install --no-index --no-deps kernel-wheels/*.whl package-wheels/*.whl
+      - name: Measure actual native public contracts
+        run: |
+          . .venv/bin/activate
+          mkdir -p .ci-branch/native
+          export COVERAGE_FILE="$PWD/.ci-branch/native/.coverage"
           pytest tests/ --tb=short -p no:cacheprovider \
             --ignore=tests/test_kuramoto_layer.py \
             --ignore=tests/test_stuart_landau_nn.py \
@@ -205,14 +212,20 @@ jobs:
             --ignore-glob=tests/test_nn_physics_validation*.py \
             -m "not slow and not performance and not native_runtime" \
             -k "not performance" \
-            --cov=scpn_phase_orchestrator --cov-branch --cov-report= --cov-fail-under=0
-          coverage xml -o coverage-branch.xml
-      - name: Upload branch coverage XML
+            --cov=scpn_phase_orchestrator --cov-branch --cov-report= --cov-fail-under=0 \
+            --junitxml=.ci-branch/native/public-contracts.junit.xml
+          pytest tests/test_kernel_runtime.py tests/test_kernel_embedded_profile.py \
+            tests/test_kernel_deployment.py tests/test_cli_serve.py \
+            --tb=short -p no:cacheprovider -m native_runtime \
+            --cov=scpn_phase_orchestrator --cov-branch --cov-append --cov-report= --cov-fail-under=0 \
+            --junitxml=.ci-branch/native/native-runtime.junit.xml
+          python -m tools.branch_coverage_profiles record \
+            --profile native --revision "$GITHUB_SHA" --database "$COVERAGE_FILE" \
+            --output .ci-branch/native/profile.json
+      - name: Upload actual native branch data and provenance
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: coverage-xml-branch
-          path: coverage-branch.xml
-      - run: >
-          python tools/coverage_guard.py
-          --coverage-xml coverage-branch.xml
-          --thresholds tools/coverage_guard_branch_thresholds.json
+          name: branch-profile-native
+          path: .ci-branch/native
+          include-hidden-files: true
+          if-no-files-found: error

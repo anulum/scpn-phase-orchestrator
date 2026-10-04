@@ -14,13 +14,22 @@
       "id": "static-analysis",
       "workflow": ".github/workflows/ci-static-analysis.yml",
       "caller_needs": [],
-      "jobs": ["lint", "typecheck", "module-linkage"]
+      "jobs": [
+        "lint",
+        "typecheck",
+        "module-linkage"
+      ]
     },
     {
       "id": "python-quality",
       "workflow": ".github/workflows/ci-python-quality.yml",
       "caller_needs": [],
-      "jobs": ["test", "slow-tests", "nn-coverage", "branch-coverage"]
+      "jobs": [
+        "test",
+        "slow-tests",
+        "nn-coverage",
+        "branch-coverage"
+      ]
     },
     {
       "id": "integration",
@@ -38,26 +47,47 @@
     {
       "id": "coverage-assurance",
       "workflow": ".github/workflows/ci-coverage-assurance.yml",
-      "caller_needs": ["python-quality", "integration"],
-      "jobs": ["coverage-guard"]
+      "caller_needs": [
+        "python-quality",
+        "integration"
+      ],
+      "jobs": [
+        "coverage-guard",
+        "branch-absent",
+        "branch-defective",
+        "branch-profile-guard"
+      ]
     },
     {
       "id": "security-assurance",
       "workflow": ".github/workflows/ci-security-assurance.yml",
       "caller_needs": [],
-      "jobs": ["security", "cargo-audit", "cargo-deny", "rust-miri", "rust-msrv"]
+      "jobs": [
+        "security",
+        "cargo-audit",
+        "cargo-deny",
+        "rust-miri",
+        "rust-msrv"
+      ]
     },
     {
       "id": "performance-evidence",
       "workflow": ".github/workflows/ci-performance-evidence.yml",
       "caller_needs": [],
-      "jobs": ["benchmark"]
+      "jobs": [
+        "benchmark"
+      ]
     },
     {
       "id": "studio-frontend",
       "workflow": ".github/workflows/ci-studio-frontend.yml",
-      "caller_needs": ["static-analysis"],
-      "jobs": ["studio-web", "studio-web-audit"]
+      "caller_needs": [
+        "static-analysis"
+      ],
+      "jobs": [
+        "studio-web",
+        "studio-web-audit"
+      ]
     }
   ],
   "job_order": [
@@ -82,7 +112,10 @@
     "rust-msrv",
     "benchmark",
     "studio-web",
-    "studio-web-audit"
+    "studio-web-audit",
+    "branch-absent",
+    "branch-defective",
+    "branch-profile-guard"
   ],
   "optional_jobs": []
 }
