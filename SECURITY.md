@@ -99,6 +99,12 @@ layer the post-quantum chain seal above on top.
   release lands in the lockfiles — verified by auditing
   `requirements/dev-lock.txt` and `requirements/audit-tools.txt` with no
   ignore flags.
+- **The Studio frontend lock is audited on every CI run**: the
+  `studio-web-audit` job runs `pnpm audit` against `studio-web/pnpm-lock.yaml`
+  with no severity threshold, no production-only filter and no ignore flags,
+  so an advisory in any locked package fails CI. A vulnerable transitive
+  package that its parent pins is raised through a scoped override in
+  `studio-web/pnpm-workspace.yaml`.
 
 ### Supply-chain provenance
 Released artefacts carry **SLSA build provenance**, signed keylessly through

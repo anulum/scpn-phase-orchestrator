@@ -57,7 +57,7 @@
       "id": "studio-frontend",
       "workflow": ".github/workflows/ci-studio-frontend.yml",
       "caller_needs": ["static-analysis"],
-      "jobs": ["studio-web"]
+      "jobs": ["studio-web", "studio-web-audit"]
     }
   ],
   "job_order": [
@@ -81,7 +81,8 @@
     "rust-miri",
     "rust-msrv",
     "benchmark",
-    "studio-web"
+    "studio-web",
+    "studio-web-audit"
   ],
   "optional_jobs": []
 }
