@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- The image build installed the project with `pip install .`, which the
+  supply-chain scan reports as an unpinned install. The builder stage now
+  builds the project wheel with the hash-pinned build tools and installs
+  local wheels only.
+
 - `studio-web` resolved every `undici` consumer to one exact `7.29.0` pin,
   below the patched `7.29.1` (GHSA-w293-vg96-wgc3 and five further
   advisories), and the pin blocked the automated update. The overrides are
