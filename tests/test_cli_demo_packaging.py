@@ -25,8 +25,10 @@ from click.testing import CliRunner
 from scpn_phase_orchestrator.runtime.cli import main
 from scpn_phase_orchestrator.runtime.cli import scaffold as scaffold_mod
 
+# The repository source is located from this file, not from the imported
+# package: an installed wheel does not sit inside the checkout.
 _REPO_MINIMAL_BINDING = (
-    Path(scaffold_mod.__file__).resolve().parents[4]
+    Path(__file__).resolve().parents[1]
     / "domainpacks"
     / "minimal_domain"
     / "binding_spec.yaml"
