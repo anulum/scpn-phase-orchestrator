@@ -16,6 +16,7 @@ of the coverage transport contract, not substitutes for limiter behaviour tests.
 from __future__ import annotations
 
 import ast
+import importlib.util
 import os
 import subprocess
 import sys
@@ -27,7 +28,12 @@ from coverage import CoverageData
 _ROOT = Path(__file__).resolve().parents[1]
 _CONFIG = _ROOT / "pyproject.toml"
 _DRIVER = _ROOT / "tests/fixtures/coverage_process_driver.py"
-_RUNTIME = _ROOT / "src/scpn_phase_orchestrator/runtime"
+# The child imports the installed package, which is the checkout source in an
+# editable install and site-packages in a wheel install. Locating the package
+# does not import it.
+_PACKAGE = importlib.util.find_spec("scpn_phase_orchestrator")
+assert _PACKAGE is not None and _PACKAGE.origin is not None
+_RUNTIME = Path(_PACKAGE.origin).resolve().parent / "runtime"
 _LIMITER = _RUNTIME / "network_security.py"
 
 
