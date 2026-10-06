@@ -144,6 +144,20 @@ class TestFastAPIEndpoints:
     def test_application_version_matches_package(self, client):
         assert client.app.version == __version__
 
+    def test_websocket_streams_snapshots_without_advancing(self, client):
+        """The stream observes the simulation; only a step request advances it."""
+        before = client.get("/api/state").json()
+        with client.websocket_connect("/ws/stream") as stream:
+            first = stream.receive_json()
+            second = stream.receive_json()
+        assert first == second == before
+        stepped = client.post("/api/step").json()
+        assert stepped["step"] == before["step"] + 1
+        with client.websocket_connect("/ws/stream") as stream:
+            assert stream.receive_json() == client.get("/api/state").json()
+        # A closed stream ends its handler; the application keeps serving.
+        assert client.get("/api/state").json()["step"] == stepped["step"]
+
     def test_get_state(self, client):
         r = client.get("/api/state")
         assert r.status_code == 200

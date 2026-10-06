@@ -178,7 +178,9 @@ and extras are absent.
 pyproject `fail_under` is a local soft floor; the CI test and ffi lanes run with
 `--cov-fail-under=0`; the authoritative gate is the `coverage-guard` job, which
 combines the test and ffi coverage and enforces the per-module thresholds in
-`tools/coverage_guard_thresholds.json`. JAX/equinox-trained behaviour is asserted
+`tools/coverage_guard_thresholds.json`. Lines that can only run with an absent
+or defective native kernel are credited from the branch-profile aggregate once
+the profile guard has admitted it. JAX/equinox-trained behaviour is asserted
 on platform-robust invariants (a learned frequency is checked by magnitude, not
 sign, because of the phase autoencoder's reflection symmetry).
 

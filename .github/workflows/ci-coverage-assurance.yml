@@ -16,6 +16,12 @@ permissions:
 
 jobs:
   coverage-guard:
+    # The line floors are applied to the combined line data of the standard
+    # lanes plus the lines of the admitted branch-profile aggregate. A few
+    # guard lines can only run where the native kernel is absent or defective;
+    # those runs are the separate profiles below, and their aggregate exists
+    # only after the profile guard has admitted them against the reviewed list.
+    needs: [branch-profile-guard]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -82,11 +88,22 @@ jobs:
           fail_ci_if_error: true
           files: coverage-python.xml
           use_oidc: true
-      - run: python tools/coverage_guard.py --coverage-xml coverage-python.xml
+      - name: Download the admitted branch-profile aggregate
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: branch-profile-aggregate
+          path: .ci-branch-aggregate
+      - run: >
+          python tools/coverage_guard.py --coverage-xml coverage-python.xml
+          --admitted-profile-xml .ci-branch-aggregate/coverage-branch.xml
 
   branch-absent:
+    # The whole public-contract selection without the native kernel. The
+    # native profile runs the same selection with the kernel; the Python
+    # fallbacks of every module run only here. Wider timeout for the same
+    # reason as the native lane: branch measurement uses the C tracer.
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 90
     env:
       HYPOTHESIS_PROFILE: dev
     steps:
@@ -111,14 +128,25 @@ jobs:
         run: |
           . .venv/bin/activate
           export COVERAGE_FILE="$PWD/.ci-branch/absent/.coverage"
-          pytest tests/test_ei_balance.py tests/test_ei_balance_measurement_inputs.py \
-            tests/test_sparse_engine.py tests/test_sparse_engine_python_fallback.py \
-            tests/test_sparse_engine_config_validation.py tests/test_sparse_engine_phase_wrapping.py \
-            tests/test_sheaf_engine.py tests/test_sheaf_engine_python_fallback.py \
-            tests/native_output_fixture/missing_classes_contracts.py \
-            --tb=short -p no:cacheprovider \
+          pytest tests/ --tb=short -p no:cacheprovider \
+            --ignore=tests/test_kuramoto_layer.py \
+            --ignore=tests/test_stuart_landau_nn.py \
+            --ignore=tests/test_bold.py \
+            --ignore=tests/test_reservoir.py \
+            --ignore=tests/test_ude_kuramoto.py \
+            --ignore=tests/test_inverse.py \
+            --ignore=tests/test_oim.py \
+            --ignore=tests/test_quantum_bridge_live.py \
+            --ignore=tests/test_geometry_walk.py \
+            --ignore-glob=tests/test_nn_physics_validation*.py \
+            -m "not slow and not performance and not native_runtime" \
+            -k "not performance" \
             --cov=scpn_phase_orchestrator --cov-branch --cov-report= --cov-fail-under=0 \
             --junitxml=.ci-branch/absent/public-contracts.junit.xml
+          pytest tests/native_output_fixture/missing_classes_contracts.py \
+            --tb=short -p no:cacheprovider \
+            --cov=scpn_phase_orchestrator --cov-branch --cov-append --cov-report= --cov-fail-under=0 \
+            --junitxml=.ci-branch/absent/missing-classes.junit.xml
           python -m tools.branch_coverage_profiles record \
             --profile absent --revision "$GITHUB_SHA" --database "$COVERAGE_FILE" \
             --output .ci-branch/absent/profile.json

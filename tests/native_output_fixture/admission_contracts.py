@@ -303,15 +303,24 @@ def test_aggregate_takes_relative_paths_from_the_callers_directory(
 ) -> None:
     """Resolve relative inputs and destination where the caller stands.
 
-    The caller stands in the directory of the downloaded profiles and names
-    them and the destination relatively. Nothing may be written into the
-    checkout, and the profiles must be found.
+    The caller stands in a copy of the downloaded profiles, outside the
+    checkout, and names the profiles and the destination relatively. The
+    profiles must be found there, and nothing may be written to the place the
+    same relative name denotes from the checkout. The copy keeps the two
+    places distinct wherever the profiles were downloaded to: from a directory
+    deep enough, a relative name climbs past the filesystem root and denotes
+    one place from everywhere.
     """
     revision = json.loads((measured_inputs / "native/profile.json").read_text())[
         "revision"
     ]
+    inputs = tmp_path / "inputs"
+    shutil.copytree(measured_inputs, inputs)
     destination = tmp_path / "accepted"
-    relative = os.path.relpath(destination, measured_inputs)
+    relative = os.path.relpath(destination, inputs)
+    from_checkout = (ROOT / relative).resolve()
+    assert from_checkout != destination.resolve()
+    assert not from_checkout.exists()
     command = [
         sys.executable,
         "-m",
@@ -328,7 +337,7 @@ def test_aggregate_takes_relative_paths_from_the_callers_directory(
         command.extend(["--" + profile, profile])
     result = subprocess.run(
         command,
-        cwd=measured_inputs,
+        cwd=inputs,
         env={**os.environ, "PYTHONPATH": str(ROOT)},
         check=False,
         text=True,
@@ -336,7 +345,7 @@ def test_aggregate_takes_relative_paths_from_the_callers_directory(
     )
     assert result.returncode == 0, result.stderr
     assert (destination / "admission.json").is_file()
-    assert not (ROOT / relative).exists()
+    assert not from_checkout.exists()
 
 
 def _checkout_copy(destination: Path) -> Path:

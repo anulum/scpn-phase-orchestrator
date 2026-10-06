@@ -24,7 +24,9 @@ pip install -e ".[dev]"
 The branch ratchet consumes measurements from the same revision, complete
 installed Python package, locked dependencies and coverage configuration. CI
 produces a genuine `spo-kernel` profile, a profile with the kernel genuinely
-absent, and a defective native profile with two compiled variants. Raw branch
+absent, and a defective native profile with two compiled variants. The first
+two run the same public-contract selection, so the Python fallback of every
+module is measured where the kernel is absent. Raw branch
 databases, package and input hashes, extension provenance and public contract
 results accompany each artifact. A missing, stale, statement-only or mismatched
 artifact fails the required coverage category.
@@ -39,6 +41,17 @@ source that changed after recording, or that is a symbolic link, is refused.
 `tools/coverage_guard.py` then applies the existing file, domain and
 global thresholds to the aggregate XML. The guard qualification for E/I, sheaf
 and sparse engines is a separate check; it does not establish global coverage.
+
+A measured file is a member of the installed package or the same member in the
+checkout the package was built from; tests start child interpreters on the
+checkout source in environments that hold no installed package. Anything else
+is refused.
+
+The line gate (`coverage-guard`) runs after this admission. It applies its
+floors to the combined line data of the standard lanes plus the lines the
+admitted aggregate executed (`--admitted-profile-xml`), because some guard
+lines can only run with an absent or defective kernel. The two reports must
+describe the same statements of a file, otherwise the credit is refused.
 
 The Rust extension in `tests/native_output_fixture/` deliberately emits invalid
 native outputs or omits stepper classes. It runs only in isolated environments
