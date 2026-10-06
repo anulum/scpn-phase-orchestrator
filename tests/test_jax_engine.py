@@ -98,6 +98,42 @@ def test_jax_upde_rejects_invalid_step_inputs(jax_upde, field, value, match):
         )
 
 
+class _RefusesArrayConversion:
+    """An array-like whose conversion protocol refuses every request."""
+
+    def __array__(self, dtype=None, copy=None):
+        """Refuse conversion, as an exhausted or closed data source does."""
+        raise ValueError("this source cannot be converted to an array")
+
+
+@pytest.mark.parametrize("field", ["phases", "omegas", "knm", "alpha"])
+@pytest.mark.parametrize("kind", ["refuses-conversion", "integer-beyond-float64"])
+def test_jax_upde_rejects_values_that_cannot_become_float64(jax_upde, field, kind):
+    """An input that cannot be converted is refused by name before any JAX call."""
+    shape = (8, 8) if field in {"knm", "alpha"} else (8,)
+    values = {
+        "phases": np.zeros(8),
+        "omegas": np.ones(8),
+        "knm": np.zeros((8, 8)),
+        "alpha": np.zeros((8, 8)),
+    }
+    before = {name: array.copy() for name, array in values.items()}
+    if kind == "refuses-conversion":
+        values[field] = _RefusesArrayConversion()
+    else:
+        too_large = np.zeros(shape, dtype=object)
+        too_large.flat[0] = 10**400
+        values[field] = too_large
+    with pytest.raises(ValueError, match=f"{field} must be a finite array with shape"):
+        jax_upde.step(
+            values["phases"], values["omegas"], values["knm"], 0.0, 0.0, values["alpha"]
+        )
+    result = jax_upde.step(
+        before["phases"], before["omegas"], before["knm"], 0.0, 0.0, before["alpha"]
+    )
+    assert result.shape == (8,)
+
+
 @pytest.mark.parametrize("field", ["phases", "omegas", "knm", "alpha"])
 @pytest.mark.parametrize("alias_kind", ["numeric-string", "complex", "object-boolean"])
 def test_jax_upde_rejects_coercive_array_aliases(jax_upde, field, alias_kind):

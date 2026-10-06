@@ -209,6 +209,17 @@ class TestDirectBackendBoundaryContracts:
         with pytest.raises(ValueError, match=match):
             delay_validation.validate_delay_backend_output(bad_output, n=2)
 
+    def test_output_validator_returns_an_owned_copy_of_a_valid_phase_vector(
+        self,
+    ) -> None:
+        """A valid backend vector is returned as a contiguous float64 copy."""
+        produced = np.array([0.25, 6.0], dtype=np.float32)
+        validated = delay_validation.validate_delay_backend_output(produced, n=2)
+        assert validated.dtype == np.float64 and validated.flags.c_contiguous
+        np.testing.assert_array_equal(validated, produced.astype(np.float64))
+        validated[0] = 1.0
+        assert produced[0] == np.float32(0.25)
+
     @pytest.mark.parametrize(
         "backend",
         [

@@ -110,7 +110,9 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
-          python-version: "3.12"
+          # One exact interpreter for every profile job: the aggregate refuses
+          # profiles recorded under different patch releases.
+          python-version: "3.12.15"
           cache: pip
       - name: Install whole Python package with genuine kernel absence
         run: |
@@ -171,7 +173,9 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
-          python-version: "3.12"
+          # One exact interpreter for every profile job: the aggregate refuses
+          # profiles recorded under different patch releases.
+          python-version: "3.12.15"
           cache: pip
       - uses: dtolnay/rust-toolchain@631a55b12751854ce901bb631d5902ceb48146f7 # stable
       - name: Build marked fixture after proving genuine kernel absence
@@ -238,7 +242,9 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
-          python-version: "3.12"
+          # One exact interpreter for every profile job: the aggregate refuses
+          # profiles recorded under different patch releases.
+          python-version: "3.12.15"
           cache: pip
       - name: Prepare the same whole package and locked coverage toolchain
         run: |
