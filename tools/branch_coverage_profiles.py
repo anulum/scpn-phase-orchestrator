@@ -31,6 +31,7 @@ from tools.branch_profile_provenance import (
     record_profile,
     sha256,
     source_inputs,
+    source_member,
 )
 
 
@@ -45,7 +46,7 @@ def _read_receipt(directory: Path, profile: str, revision: str) -> ProfileReceip
     value = json.loads((directory / "profile.json").read_text(encoding="utf-8"))
     if (
         not isinstance(value, dict)
-        or value.get("schema_version") != 1
+        or value.get("schema_version") != 2
         or value.get("profile") != profile
         or value.get("revision") != revision
     ):
@@ -57,7 +58,7 @@ def _read_receipt(directory: Path, profile: str, revision: str) -> ProfileReceip
             isinstance(k, str) and isinstance(v, str) for k, v in field.items()
         ):
             raise ValueError(f"{profile}: malformed {name}")
-    for name in ("package_root", "database_sha256"):
+    for name in ("package_root", "source_root", "database_sha256"):
         if not isinstance(value.get(name), str):
             raise ValueError(f"{profile}: malformed {name}")
     database_name = value.get("database")
@@ -70,10 +71,10 @@ def _read_receipt(directory: Path, profile: str, revision: str) -> ProfileReceip
     if not raw.has_arcs() or not raw.measured_files():
         raise ValueError(f"{profile}: missing, empty or statement-only database")
     package_root = Path(receipt["package_root"])
+    source_root = Path(receipt["source_root"])
     for name in raw.measured_files():
-        relative = Path(name).relative_to(package_root)
         if (
-            "scpn_phase_orchestrator/" + relative.as_posix()
+            "scpn_phase_orchestrator/" + source_member(name, package_root, source_root)
             not in receipt["source_hashes"]
         ):
             raise ValueError(f"{profile}: unbound measured source")
@@ -155,8 +156,9 @@ def _combine(
 
     The combined data must hold exactly the source members of the raw databases
     under their checkout paths, and for each member exactly the union of the raw
-    arcs. A checkout member that resolves to another path, such as a symbolic
-    link, changes the membership and is refused.
+    arcs. A member measured both in the installed package and in the checkout
+    source it was built from is one member. A checkout member that resolves to
+    another path, such as a symbolic link, changes the membership and is refused.
     """
     expected: dict[str, set[tuple[int, int]]] = {}
     inputs: list[str] = []
@@ -166,7 +168,9 @@ def _combine(
         raw = CoverageData(basename=str(filename))
         raw.read()
         for measured in raw.measured_files():
-            relative = Path(measured).relative_to(receipt["package_root"])
+            relative = source_member(
+                measured, Path(receipt["package_root"]), Path(receipt["source_root"])
+            )
             canonical = str(root / "src/scpn_phase_orchestrator" / relative)
             expected.setdefault(canonical, set()).update(raw.arcs(measured) or [])
     measurement = Coverage(
@@ -268,9 +272,13 @@ def _aggregate(
         )
     destination.mkdir(parents=True)
     config = destination / "measurement-config.toml"
-    aliases = [str(root / "src/scpn_phase_orchestrator")] + [
-        receipts[profile]["package_root"] for profile in PROFILES
-    ]
+    aliases = list(
+        dict.fromkeys(
+            [str(root / "src/scpn_phase_orchestrator")]
+            + [receipts[profile]["package_root"] for profile in PROFILES]
+            + [receipts[profile]["source_root"] for profile in PROFILES]
+        )
+    )
     config.write_text(
         (root / "pyproject.toml").read_text(encoding="utf-8")
         + "\n[tool.coverage.paths]\nprofile_package = "

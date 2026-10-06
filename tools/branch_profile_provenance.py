@@ -42,6 +42,7 @@ class ProfileReceipt(TypedDict):
     input_hashes: dict[str, str]
     environment: dict[str, str]
     package_root: str
+    source_root: str
     database: str
     database_sha256: str
     kernel: dict[str, str]
@@ -120,6 +121,27 @@ def _installed_sources(root: Path) -> tuple[Path, dict[str, str]]:
             "installed package has incomplete or unexpected Python membership"
         )
     return package_root, sources
+
+
+def source_member(measured: str, package_root: Path, source_root: Path) -> str:
+    """Name a measured file by its member path inside the package.
+
+    A measured file is a member of the installed package or the same member in
+    the checkout that the package was built from. Tests start child
+    interpreters on the checkout source where no installed package can exist,
+    for example in a fresh environment before the kernel wheel is installed.
+    A profile is recorded only after every checkout member has been found equal
+    to its installed copy byte for byte, and the aggregate compares the
+    checkout with the recorded hashes again, so both names identify one source.
+    Anything else is refused.
+    """
+    path = Path(measured)
+    for base in (package_root, source_root):
+        if path.is_relative_to(base):
+            return path.relative_to(base).as_posix()
+    raise ValueError(
+        f"measured file is outside the installed package and its source: {measured}"
+    )
 
 
 def _kernel_identity(profile: str) -> dict[str, str]:
@@ -222,10 +244,11 @@ def record_profile(
     raw.read()
     if not raw.has_arcs() or not raw.measured_files():
         raise ValueError("profile database is missing, empty or statement-only")
+    source_root = root / "src/scpn_phase_orchestrator"
     for name in raw.measured_files():
-        path = Path(name)
-        relative = path.relative_to(package_root)
-        key = "scpn_phase_orchestrator/" + relative.as_posix()
+        key = "scpn_phase_orchestrator/" + source_member(
+            name, package_root, source_root
+        )
         if key not in sources:
             raise ValueError(f"database measured unbound source: {name}")
     inputs = source_inputs(root)
@@ -259,7 +282,7 @@ def record_profile(
         for name in ("Cargo.toml", "Cargo.lock", "pyproject.toml", "src/lib.rs"):
             fixture[name] = sha256(root / "tests/native_output_fixture" / name)
     receipt: ProfileReceipt = {
-        "schema_version": 1,
+        "schema_version": 2,
         "profile": profile,
         "revision": revision,
         "source_hashes": sources,
@@ -272,6 +295,7 @@ def record_profile(
             },
         },
         "package_root": str(package_root),
+        "source_root": str(source_root),
         "database": database.name,
         "database_sha256": sha256(database),
         "kernel": kernel,
