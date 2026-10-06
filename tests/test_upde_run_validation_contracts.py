@@ -10,6 +10,9 @@
 
 from __future__ import annotations
 
+import json
+import subprocess
+import sys
 from typing import Any
 
 import numpy as np
@@ -199,3 +202,88 @@ def test_public_run_normalises_valid_array_likes(
 
     np.testing.assert_allclose(result, np.array([0.1, 0.2]))
     assert result.dtype == np.float64
+
+
+@pytest.mark.parametrize("schedule", [False, True])
+def test_public_run_uses_python_when_no_listed_backend_loads(
+    monkeypatch: pytest.MonkeyPatch, schedule: bool
+) -> None:
+    """A backend list without the Python entry still ends in the Python integrator.
+
+    The public backend state names one optional backend and omits ``python``.
+    Where that backend cannot be loaded the dispatcher runs out of candidates;
+    where it can, it computes the same step. Either way the result is the
+    Python reference.
+    """
+    payload = _payload()
+    monkeypatch.setattr(run_mod, "ACTIVE_BACKEND", "python")
+    monkeypatch.setattr(run_mod, "AVAILABLE_BACKENDS", ["python"])
+    if schedule:
+        arguments = (
+            payload[0],
+            np.array([[1.0, 1.2]], dtype=np.float64),
+            *payload[2:7],
+            *payload[8:12],
+        )
+        reference = run_mod.upde_run_omega_schedule(*arguments)
+    else:
+        reference = run_mod.upde_run(*payload)
+
+    monkeypatch.setattr(run_mod, "ACTIVE_BACKEND", "mojo")
+    monkeypatch.setattr(run_mod, "AVAILABLE_BACKENDS", ["mojo", "mojo"])
+    if schedule:
+        result = run_mod.upde_run_omega_schedule(*arguments)
+    else:
+        result = run_mod.upde_run(*payload)
+
+    np.testing.assert_allclose(result, reference, rtol=1e-12, atol=1e-12)
+
+
+def test_backend_state_is_resolved_once_when_two_readers_arrive_together() -> None:
+    """A reader that waited for another reader's resolution takes its result.
+
+    In a fresh interpreter the main thread holds the resolution lock, as a
+    first reader does. A second thread then reads the public attribute, finds
+    no state and waits. The main thread publishes the resolved state and
+    releases the lock; the waiting reader must return that state without
+    resolving again.
+    """
+    program = """
+import json, threading, time
+import scpn_phase_orchestrator.upde._run as run
+assert "ACTIVE_BACKEND" not in vars(run)
+resolutions = []
+resolve = run._resolve_backends
+seen = {}
+def read():
+    seen["active"] = run.ACTIVE_BACKEND
+    seen["available"] = list(run.AVAILABLE_BACKENDS)
+with run._BACKEND_STATE_LOCK:
+    reader = threading.Thread(target=read)
+    reader.start()
+    time.sleep(0.5)
+    assert reader.is_alive() and not seen
+    active, available = resolve()
+    resolutions.append(active)
+    run.ACTIVE_BACKEND, run.AVAILABLE_BACKENDS = active, available
+reader.join(timeout=30)
+assert not reader.is_alive()
+report = {"seen": seen, "published": [active, available]}
+report["resolutions"] = len(resolutions)
+print(json.dumps(report))
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", program],
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=120,
+    )
+    assert result.returncode == 0, result.stderr
+    observed = json.loads(result.stdout)
+    assert observed["seen"] == {
+        "active": observed["published"][0],
+        "available": observed["published"][1],
+    }
+    assert observed["published"][1][-1] == "python"
+    assert observed["resolutions"] == 1

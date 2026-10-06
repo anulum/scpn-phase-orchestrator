@@ -36,8 +36,9 @@ ROOT = Path(__file__).resolve().parents[1]
 BINDING = ROOT / "domainpacks/minimal_domain/binding_spec.yaml"
 CLI = "from scpn_phase_orchestrator.runtime.cli import main; main()"
 # The child runs in an environment of its own, so the parent's measurement does
-# not reach it. When the parent measures, the child measures the server module
-# itself, in the parent's mode, into a parallel data file beside the parent's.
+# not reach it. When the parent measures, the child measures the modules these
+# tests are about itself, in the parent's mode, into a parallel data file
+# beside the parent's.
 MEASURED = """
 import os
 measurement = None
@@ -45,7 +46,10 @@ if "SPO_SERVER_COVERAGE_FILE" in os.environ:
     from coverage import Coverage
     measurement = Coverage(
         source=[],
-        include=["*/src/scpn_phase_orchestrator/runtime/server.py"],
+        include=[
+            "*/src/scpn_phase_orchestrator/runtime/server.py",
+            "*/src/scpn_phase_orchestrator/upde/jax_engine.py",
+        ],
         data_file=os.environ["SPO_SERVER_COVERAGE_FILE"],
         data_suffix=True,
         branch=os.environ["SPO_SERVER_COVERAGE_BRANCH"] == "1",
@@ -266,14 +270,15 @@ def test_real_python_only_profile_refuses_required_kernel(
     os.name == "nt" or sys.version_info[:2] != (3, 12),
     reason="the base runtime lock is built for Python 3.12 on POSIX",
 )
-def test_real_profile_without_the_web_framework_refuses_to_build_the_app(
+def test_real_base_runtime_names_each_missing_optional_package(
     tmp_path: Path,
 ) -> None:
-    """Install the base runtime alone and ask it for the HTTP application.
+    """Install the base runtime alone and ask it for two optional capabilities.
 
-    The base runtime lock holds the numerical packages and no web framework.
-    The application factory must name the missing framework instead of failing
-    somewhere inside its first use.
+    The base runtime lock holds the numerical packages, no web framework and no
+    JAX. The application factory and the two JAX engines must each name the
+    package that is missing instead of failing somewhere inside their first
+    use, and the JAX module must report that JAX is absent.
     """
     environment = tmp_path / "base-runtime"
     subprocess.run(
@@ -285,14 +290,25 @@ def test_real_profile_without_the_web_framework_refuses_to_build_the_app(
     program = (
         "import importlib.util, json, sys\n"
         "from scpn_phase_orchestrator.runtime.server import create_app\n"
+        "from scpn_phase_orchestrator.upde import jax_engine\n"
         "assert importlib.util.find_spec('fastapi') is None\n"
+        "assert importlib.util.find_spec('jax') is None\n"
+        "report = {'has_jax': jax_engine.HAS_JAX, 'engines': []}\n"
+        "for engine in (jax_engine.JaxUPDEEngine, jax_engine.JaxStuartLandauEngine):\n"
+        "    try:\n"
+        "        engine(2, 0.01)\n"
+        "    except ImportError as error:\n"
+        "        report['engines'].append(str(error))\n"
+        "    else:\n"
+        "        raise AssertionError('a JAX engine was built without JAX')\n"
         "try:\n"
         "    create_app(sys.argv[1])\n"
         "except ImportError as error:\n"
-        "    print(json.dumps({'refused': str(error), "
-        "'cause': type(error.__cause__).__name__}))\n"
+        "    report['refused'] = str(error)\n"
+        "    report['cause'] = type(error.__cause__).__name__\n"
         "else:\n"
-        "    raise AssertionError('an application was built without its framework')"
+        "    raise AssertionError('an application was built without its framework')\n"
+        "print(json.dumps(report))"
     )
     indented = program.replace("\n", "\n    ")
     result = subprocess.run(
@@ -305,6 +321,8 @@ def test_real_profile_without_the_web_framework_refuses_to_build_the_app(
     )
     assert result.returncode == 0, result.stderr
     assert json.loads(result.stdout) == {
+        "has_jax": False,
+        "engines": ["JAX not installed. Install with: pip install jax jaxlib"] * 2,
         "refused": "fastapi not installed. pip install fastapi uvicorn",
         "cause": "ModuleNotFoundError",
     }

@@ -1380,7 +1380,7 @@
     "src/scpn_phase_orchestrator/upde/geometric.py": 100.0,
     "src/scpn_phase_orchestrator/upde/hypergraph.py": 97.5,
     "src/scpn_phase_orchestrator/upde/inertial.py": 100.0,
-    "src/scpn_phase_orchestrator/upde/jax_engine.py": 100.0,
+    "src/scpn_phase_orchestrator/upde/jax_engine.py": 96.87,
     "src/scpn_phase_orchestrator/upde/market.py": 98.38,
     "src/scpn_phase_orchestrator/upde/moving_frame.py": 95.16,
     "src/scpn_phase_orchestrator/upde/numerics.py": 100.0,
@@ -1410,5 +1410,6 @@
   "_comment_causal_public_refusal": "2026-09-27: three real public causal API refusal contracts exercised; focused 80-test report measures 141/148 statements and 61/66 branches. Conservative file floors 95.27% line and 92.42% branch retain all existing limits. Five numerical guard paths remain without public reproduction; no full-module or global 100% claim. Production semantics unchanged.",
   "_comment_causal_candidate_admission": "2026-09-27: public temporal experiment JSON schema refusal, intervention matrix shape refusal, input preservation and recovery verified alongside existing real causal tests: 317/318 statements and 123/124 branches. Conservative file floors 99.68% line and 99.19% branch; post-normalization score guard remains open without public reproduction. Production semantics unchanged.",
   "_comment_petri_protocol_inputs": "2026-09-27: real protocol builder and net/adapter admission tests verify malformed numeric guard thresholds, JSON context non-mappings and blank regime-map place keys with token/input preservation and valid recovery. Adapter measures 77/77 statements and 38/38 branches; net 157/158 statements and 51/52 branches, retaining the unexercised post-validation operator guard. Production semantics and benchmark evidence unchanged.",
-  "_comment_federated_batch_identifier": "2026-09-27: public signed-envelope refusal for nonfinite decoded JSON batch identifiers and unsupported Decimal identifiers preserves node seals and admits valid recovery through batch validation/replay. Focused93tests measure428/430statements204/206branches. Conservative floors99.53%line99.02%branch; generated-parent-hash and duplicate-envelope guards remain without reproduction. Production semantics unchanged."
+  "_comment_federated_batch_identifier": "2026-09-27: public signed-envelope refusal for nonfinite decoded JSON batch identifiers and unsupported Decimal identifiers preserves node seals and admits valid recovery through batch validation/replay. Focused93tests measure428/430statements204/206branches. Conservative floors99.53%line99.02%branch; generated-parent-hash and duplicate-envelope guards remain without reproduction. Production semantics unchanged.",
+  "_comment_jax_engine_output_guard": "2026-10-06: owner decision. The branch floor of upde/jax_engine.py goes from 100% to 96.87% (31 of 32 branches). The one branch left is the refusal of a JAX result outside [0, 2*pi). A healthy JAX backend never returns one: tiny negative drifts were tried on both integrators and wrap to zero. The 100% floor was recorded while a replaced backend exercised that guard; tests no longer replace it. The guard stays in the code. Every other branch of the module is executed by real tests, including the JAX-absent refusals in a separately installed base runtime. This is the only floor that decreases."
 }
