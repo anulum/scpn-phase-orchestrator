@@ -27,7 +27,7 @@ import sys
 from pathlib import Path
 
 import pytest
-from coverage import Coverage
+from coverage import Coverage, CoverageData
 
 ROOT = Path(__file__).resolve().parents[2]
 PROFILES = ("native", "absent", "defective-output", "defective-missing")
@@ -94,6 +94,21 @@ def test_actual_profile_union_preserves_inputs_and_qualifies_only_reviewed_guard
     ]
     result = _invoke(measured_inputs, tmp_path / "accepted", revision=revision)
     assert result.returncode == 0, result.stderr
+    # The native lane starts child interpreters on the checkout source, in
+    # environments that hold no installed package. Their measurements belong to
+    # the same members and must have been admitted, not dropped.
+    native = json.loads((measured_inputs / "native/profile.json").read_text())
+    raw = CoverageData(basename=str(measured_inputs / "native" / native["database"]))
+    raw.read()
+    checkout_name = str(Path(native["source_root"]) / "runtime/kernel.py")
+    installed_name = str(Path(native["package_root"]) / "runtime/kernel.py")
+    assert raw.arcs(checkout_name)
+    admitted = CoverageData(basename=str(tmp_path / "accepted/.coverage.all"))
+    admitted.read()
+    canonical = str(ROOT / "src/scpn_phase_orchestrator/runtime/kernel.py")
+    assert set(raw.arcs(checkout_name) or []) | set(
+        raw.arcs(installed_name) or []
+    ) <= set(admitted.arcs(canonical) or [])
     report = json.loads((tmp_path / "accepted/admission.json").read_text())
     assert report["exact_arc_union_verified"]
     assert report["originals_unchanged"]
@@ -180,6 +195,8 @@ measurement.save()
         ("absence-proof", "No such file"),
         ("lock-mismatch", "configuration or environment mismatch"),
         ("package-root-type", "malformed package_root"),
+        ("source-root-type", "malformed source_root"),
+        ("foreign-measurement", "outside the installed package and its source"),
         ("absence-environment-type", "malformed absent-kernel observation"),
         ("unreviewed-gap", "unreviewed"),
     ],
@@ -202,6 +219,7 @@ def test_actual_artifact_faults_fail_closed(
         "database-hash",
         "statement-only",
         "unreviewed-gap",
+        "foreign-measurement",
     }:
         profile = "native"
     receipt_path = inputs / profile / "profile.json"
@@ -224,6 +242,13 @@ def test_actual_artifact_faults_fail_closed(
         receipt["input_hashes"]["requirements/dev-lock.txt"] = "0" * 64
     elif failure == "package-root-type":
         receipt["package_root"] = 5
+    elif failure == "source-root-type":
+        receipt["source_root"] = 5
+    elif failure == "foreign-measurement":
+        # The database is untouched; the receipt names two other directories,
+        # so every measured file lies outside both of them.
+        receipt["package_root"] = str(tmp_path / "another-environment")
+        receipt["source_root"] = str(tmp_path / "another-checkout")
     elif failure == "absence-environment-type":
         proof_path = receipt_path.parent / receipt["fixture"]["before_install"]
         proof = json.loads(proof_path.read_text())
