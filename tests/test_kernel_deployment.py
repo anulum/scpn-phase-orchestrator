@@ -262,7 +262,10 @@ def test_real_python_only_profile_refuses_required_kernel(
             assert stopped.connect_ex(("127.0.0.1", port)) != 0
 
 
-@pytest.mark.skipif(os.name == "nt", reason="the base runtime lock is built for POSIX")
+@pytest.mark.skipif(
+    os.name == "nt" or sys.version_info[:2] != (3, 12),
+    reason="the base runtime lock is built for Python 3.12 on POSIX",
+)
 def test_real_profile_without_the_web_framework_refuses_to_build_the_app(
     tmp_path: Path,
 ) -> None:
