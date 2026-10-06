@@ -25,6 +25,7 @@ from typing import Any
 import numpy as np
 import pytest
 import yaml
+from websockets.sync.client import connect
 
 from scpn_phase_orchestrator.binding.loader import load_binding_spec
 from scpn_phase_orchestrator.runtime.server import SimulationState
@@ -193,6 +194,16 @@ def test_foreground_server_uses_native_engine_and_stops(
                     expected_amplitude, abs=1e-4
                 )
             assert request("/api/reset", "POST")["step"] == 0
+            with connect(f"ws://127.0.0.1:{port}/ws/stream", open_timeout=5) as stream:
+                streamed = json.loads(stream.recv(timeout=5))
+                assert json.loads(stream.recv(timeout=5)) == streamed
+            assert streamed == request("/api/state")
+            # The stream handler meets the closed client at its next send, one
+            # sample period later, and must end without disturbing the server.
+            # The server reports nothing when it does, so the test waits a
+            # hundred sample periods before it asks again.
+            time.sleep(100 * dt)
+            assert request("/api/state")["step"] == 0
         finally:
             process.send_signal(STOP_SIGNAL)
             try:

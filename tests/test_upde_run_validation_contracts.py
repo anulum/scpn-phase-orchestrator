@@ -138,6 +138,8 @@ def test_public_schedule_rejects_numeric_string_aliases_before_dispatch(
         np.array([0.1, np.inf]),
         np.array([0.1]),
         np.array([[0.1, 0.2]]),
+        np.array([0.1, 2.0 * np.pi]),
+        np.array([-1e-9, 0.2]),
     ],
 )
 def test_public_run_rejects_malformed_backend_outputs(

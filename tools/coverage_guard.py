@@ -23,6 +23,14 @@ The line lane (CI ``coverage-guard`` job) uses
 ``tools/coverage_guard_thresholds.json``; the perf-isolated branch lane
 (CI ``branch-coverage`` job) uses
 ``tools/coverage_guard_branch_thresholds.json``.
+
+Some guard lines can only run where the native kernel is absent or defective.
+Those runs are separate measured profiles, and their aggregate is written only
+after ``tools/branch_coverage_profiles.py`` has admitted them: every line a
+fault fixture adds is on a reviewed list and the checkout source equals the
+measured source. ``--admitted-profile-xml`` credits the lines that aggregate
+executed to the line report before the floors are applied. The two reports
+must describe the same statements of a file, otherwise the credit is refused.
 """
 
 from __future__ import annotations
@@ -67,6 +75,7 @@ class CoverageSummary:
     domain_branch_rate_pct: dict[str, float] = field(default_factory=dict)
     branches_covered: int = 0
     branches_valid: int = 0
+    admitted_lines_credited: int = 0
 
 
 def _resolve(path_value: str) -> Path:
@@ -123,8 +132,65 @@ def _branch_counts(cls: ET.Element, *, filename: str) -> tuple[int, int]:
     return covered, total
 
 
-def load_coverage(path: Path) -> CoverageSummary:
+def _credit_admitted_lines(report: ET.Element, admitted: ET.Element) -> int:
+    """Mark lines of ``report`` executed where the admitted aggregate ran them.
+
+    Only hit counts change, and only from zero. Each file named by the
+    aggregate must be in the report with exactly the same statement lines;
+    a different statement set means the two reports measured different
+    source, and the credit is refused. The per-file and root line rates are
+    recomputed from the line elements. Returns the number of lines credited.
+    """
+    classes = {
+        cls.get("filename", "").replace("\\", "/"): cls
+        for cls in report.findall(".//class")
+    }
+    credited = 0
+    for other in admitted.findall(".//class"):
+        filename = other.get("filename", "").replace("\\", "/")
+        if not filename:
+            continue
+        cls = classes.get(filename)
+        if cls is None:
+            raise ValueError(
+                f"Admitted profile names a file the report lacks: {filename}"
+            )
+        lines = {line.get("number"): line for line in cls.findall("./lines/line")}
+        admitted_hits = {
+            line.get("number"): int(line.get("hits", "0"))
+            for line in other.findall("./lines/line")
+        }
+        if set(lines) != set(admitted_hits):
+            raise ValueError(
+                f"Admitted profile measured different statements in {filename}."
+            )
+        gained = 0
+        for number, line in lines.items():
+            if int(line.get("hits", "0")) == 0 and admitted_hits[number] > 0:
+                line.set("hits", str(admitted_hits[number]))
+                gained += 1
+        if gained:
+            covered = sum(
+                1 for line in lines.values() if int(line.get("hits", "0")) > 0
+            )
+            cls.set("line-rate", repr(covered / len(lines)))
+            credited += gained
+    if credited:
+        valid = int(report.get("lines-valid", "0"))
+        covered = int(report.get("lines-covered", "0")) + credited
+        if valid <= 0 or covered > valid:
+            raise ValueError("Report line totals disagree with its line elements.")
+        report.set("lines-covered", str(covered))
+        report.set("line-rate", repr(covered / valid))
+    return credited
+
+
+def load_coverage(path: Path, admitted_profile: Path | None = None) -> CoverageSummary:
     """Parse a Cobertura XML report into a :class:`CoverageSummary`.
+
+    With ``admitted_profile``, the lines that the admitted branch-profile
+    aggregate executed are credited to the report first; see
+    :func:`_credit_admitted_lines`.
 
     Line rates come from the root / per-class ``line-rate`` attributes
     with per-domain rates aggregated from line hit counts. Branch rates
@@ -137,6 +203,16 @@ def load_coverage(path: Path) -> CoverageSummary:
     if not path.exists():
         raise FileNotFoundError(f"Coverage XML not found: {path}")
     root = ET.parse(path).getroot()  # noqa: S314 — input is local CI artifact
+    credited = 0
+    if admitted_profile is not None:
+        if not admitted_profile.exists():
+            raise FileNotFoundError(
+                f"Admitted profile XML not found: {admitted_profile}"
+            )
+        credited = _credit_admitted_lines(
+            root,
+            ET.parse(admitted_profile).getroot(),  # noqa: S314 — local CI artifact
+        )
 
     line_rate = _validate_percent(
         float(root.get("line-rate", "0.0")) * 100.0, label="line_rate"
@@ -213,6 +289,7 @@ def load_coverage(path: Path) -> CoverageSummary:
         domain_branch_rate_pct=domain_branch_rate_pct,
         branches_covered=branches_covered,
         branches_valid=branches_valid,
+        admitted_lines_credited=credited,
     )
 
 
@@ -374,12 +451,27 @@ def main(argv: list[str] | None = None) -> int:
         default=str(DEFAULT_THRESHOLDS),
         help="JSON file containing coverage thresholds.",
     )
+    parser.add_argument(
+        "--admitted-profile-xml",
+        default=None,
+        help=(
+            "Coverage XML of the admitted branch-profile aggregate; lines it "
+            "executed are credited to the report before the floors apply."
+        ),
+    )
     args = parser.parse_args(argv)
 
     coverage_path = _resolve(args.coverage_xml)
     thresholds_path = _resolve(args.thresholds)
-    summary = load_coverage(coverage_path)
+    admitted_path = (
+        None
+        if args.admitted_profile_xml is None
+        else _resolve(args.admitted_profile_xml)
+    )
+    summary = load_coverage(coverage_path, admitted_path)
     thresholds = load_thresholds(thresholds_path)
+    if admitted_path is not None:
+        print(f"Admitted profile credit: {summary.admitted_lines_credited} lines")
 
     print(
         f"Coverage line rate: {summary.line_rate_pct:.2f}% "

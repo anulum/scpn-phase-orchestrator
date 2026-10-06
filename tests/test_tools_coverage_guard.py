@@ -439,6 +439,145 @@ def test_main_returns_one_on_fail(
 
 
 # ---------------------------------------------------------------------
+# Credit from the admitted branch-profile aggregate
+# ---------------------------------------------------------------------
+
+_GUARDED = "src/scpn_phase_orchestrator/upde/sparse_engine.py"
+_OTHER = "src/scpn_phase_orchestrator/monitor/pid.py"
+
+
+def _line_report(path: Path) -> None:
+    """Write a line report in which two guard lines of one file never ran."""
+    _write_cobertura(
+        path,
+        line_rate=0.6,
+        classes=[
+            (_GUARDED, [(1, 4), (2, 0), (3, 0)]),
+            (_OTHER, [(1, 1), (2, 1)]),
+        ],
+    )
+
+
+def test_admitted_profile_credits_only_lines_it_executed(tmp_path: Path) -> None:
+    """Lines the aggregate ran become covered; rates follow the line elements."""
+    report = tmp_path / "cov.xml"
+    admitted = tmp_path / "admitted.xml"
+    _line_report(report)
+    _write_cobertura(
+        admitted,
+        line_rate=0.4,
+        classes=[
+            (_GUARDED, [(1, 0), (2, 7), (3, 0)]),
+            (_OTHER, [(1, 0), (2, 0)]),
+        ],
+    )
+    plain = mod.load_coverage(report)
+    credited = mod.load_coverage(report, admitted)
+    assert plain.admitted_lines_credited == 0
+    assert plain.file_line_rate_pct[_GUARDED] == pytest.approx(100 / 3)
+    assert credited.admitted_lines_credited == 1
+    assert credited.file_line_rate_pct[_GUARDED] == pytest.approx(200 / 3)
+    assert credited.file_line_rate_pct[_OTHER] == 100.0
+    assert credited.domain_line_rate_pct["upde"] == pytest.approx(200 / 3)
+    assert (credited.lines_covered, credited.lines_valid) == (4, 5)
+    assert credited.line_rate_pct == pytest.approx(80.0)
+    # The report on disk is not rewritten.
+    assert mod.load_coverage(report).lines_covered == 3
+
+
+def test_admitted_profile_without_new_lines_changes_nothing(tmp_path: Path) -> None:
+    """An aggregate that ran nothing new leaves every rate as reported."""
+    report = tmp_path / "cov.xml"
+    admitted = tmp_path / "admitted.xml"
+    _line_report(report)
+    _write_cobertura(
+        admitted, line_rate=0.2, classes=[(_GUARDED, [(1, 9), (2, 0), (3, 0)])]
+    )
+    plain = mod.load_coverage(report)
+    credited = mod.load_coverage(report, admitted)
+    assert credited.admitted_lines_credited == 0
+    assert credited.line_rate_pct == plain.line_rate_pct == 60.0
+    assert credited.file_line_rate_pct == plain.file_line_rate_pct
+
+
+@pytest.mark.parametrize(
+    ("classes", "message"),
+    [
+        ([(_GUARDED, [(1, 1), (2, 1)])], "different statements"),
+        ([(_GUARDED, [(1, 1), (2, 1), (4, 1)])], "different statements"),
+        (
+            [("src/scpn_phase_orchestrator/upde/unknown.py", [(1, 1)])],
+            "names a file the report lacks",
+        ),
+    ],
+)
+def test_admitted_profile_of_other_source_is_refused(
+    tmp_path: Path,
+    classes: list[tuple[str, list[tuple[int, int]]]],
+    message: str,
+) -> None:
+    """A report of different statements or files cannot lend its lines."""
+    report = tmp_path / "cov.xml"
+    admitted = tmp_path / "admitted.xml"
+    _line_report(report)
+    _write_cobertura(admitted, line_rate=1.0, classes=classes)
+    with pytest.raises(ValueError, match=message):
+        mod.load_coverage(report, admitted)
+
+
+def test_admitted_profile_must_exist(tmp_path: Path) -> None:
+    """A named but absent aggregate is an error, not an uncredited pass."""
+    report = tmp_path / "cov.xml"
+    _line_report(report)
+    with pytest.raises(FileNotFoundError, match="Admitted profile XML not found"):
+        mod.load_coverage(report, tmp_path / "absent.xml")
+
+
+def test_admitted_profile_refuses_inconsistent_report_totals(tmp_path: Path) -> None:
+    """A report whose root totals cannot hold the credit is refused."""
+    report = tmp_path / "cov.xml"
+    admitted = tmp_path / "admitted.xml"
+    _line_report(report)
+    report.write_text(
+        report.read_text(encoding="utf-8").replace(
+            'lines-valid="5"', 'lines-valid="3"'
+        ),
+        encoding="utf-8",
+    )
+    _write_cobertura(
+        admitted, line_rate=1.0, classes=[(_GUARDED, [(1, 1), (2, 1), (3, 1)])]
+    )
+    with pytest.raises(ValueError, match="line totals disagree"):
+        mod.load_coverage(report, admitted)
+
+
+def test_main_applies_file_floor_after_admitted_credit(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The same report fails its file floor alone and passes with the aggregate."""
+    report = tmp_path / "cov.xml"
+    admitted = tmp_path / "admitted.xml"
+    _line_report(report)
+    _write_cobertura(
+        admitted, line_rate=1.0, classes=[(_GUARDED, [(1, 1), (2, 1), (3, 1)])]
+    )
+    thresholds = tmp_path / "t.json"
+    thresholds.write_text(
+        json.dumps(
+            {"global_min_line_rate": 50.0, "file_min_line_rate": {_GUARDED: 100.0}}
+        ),
+        encoding="utf-8",
+    )
+    arguments = ["--coverage-xml", str(report), "--thresholds", str(thresholds)]
+    assert mod.main(arguments) == 1
+    assert "Admitted profile credit" not in capsys.readouterr().out
+    assert mod.main([*arguments, "--admitted-profile-xml", str(admitted)]) == 0
+    output = capsys.readouterr().out
+    assert "Admitted profile credit: 2 lines" in output
+    assert "Coverage guard passed" in output
+
+
+# ---------------------------------------------------------------------
 # Branch axis
 # ---------------------------------------------------------------------
 

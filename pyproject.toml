@@ -387,6 +387,10 @@ markers = [
 source = ["scpn_phase_orchestrator"]
 concurrency = ["thread"]
 patch = ["subprocess"]
+# The foreground server ends by the stop signal that Uvicorn re-raises after
+# its graceful shutdown, so no exit handler runs. Saving on SIGTERM keeps the
+# lines that only the real server process executes.
+sigterm = true
 parallel = true
 omit = [
     "*/runtime/grpc_gen/*",
