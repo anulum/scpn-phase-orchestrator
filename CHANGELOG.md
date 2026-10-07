@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- `studio-web` locked `source-map-js` 1.2.1, which GHSA-68fv-2mgg-jv7q
+  covers (event-loop denial of service through indexed source-map section
+  offsets; fixed in 1.2.2). The lock now holds 1.2.2. Every consumer's
+  declared range admits it, so no override is added.
+
 - CI now audits the Studio frontend lock on every run. The new
   `studio-web-audit` job runs `pnpm audit` against `studio-web/pnpm-lock.yaml`
   with no severity threshold and no ignore flags, so a known advisory in any
@@ -131,6 +136,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `LicenseRef-ANULUM-Brand` terms rather than the software AGPL licence.
   REUSE metadata preserves the concepts (1996–2026) and code (2020–2026)
   copyright years.
+- The branch profile tool admits a measured file that lies under the checkout
+  source the installed package was built from, not only one under the
+  installed package. Child interpreters that the kernel and container tests
+  start on the checkout source write into the same profile, and the record
+  step refused it for their file names. The receipt records the checkout
+  source root; its schema version is 2.
+- The line coverage guard takes the admitted profile aggregate
+  (`--admitted-profile-xml`) and credits the lines it executed before the
+  floors apply, so guards that run only with an absent or defective kernel
+  count. The credit is refused unless both reports describe the same
+  statements of each file. `coverage-guard` runs after
+  `branch-profile-guard`.
+- The kernel-absent profile lane runs the same test selection as the native
+  lane; it ran nine files, so the Python fallback of most modules was
+  measured in no profile. The four profile jobs and the guard job name one
+  exact Python release, because the aggregate refuses profiles recorded
+  under different interpreters.
+- Coverage is saved when the foreground server ends by the stop signal.
+  Tests added for the websocket stream, the refusal of a required kernel in
+  a Python-only install, the refusal to build the application without the
+  web framework, the dispatcher's exhausted candidate list and waiting
+  reader, the JAX engine's conversion and JAX-absent refusals, and the delay
+  output validator's success path.
+- The branch floor of `upde/jax_engine.py` is 96.87 % (31 of 32) instead of
+  100 %. The remaining branch refuses a JAX result outside [0, 2π), which a
+  working JAX does not return; the guard stays in the code and the
+  thresholds file carries the dated note.
 
 ### Changed
 
