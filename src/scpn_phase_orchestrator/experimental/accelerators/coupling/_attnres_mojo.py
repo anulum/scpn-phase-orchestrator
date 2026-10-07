@@ -6,18 +6,16 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Mojo bridge for multi-head AttnRes
 
-"""Mojo backend for the multi-head AttnRes dispatcher.
+"""Execute the compiled Mojo phase attention kernel through versioned text.
 
-Mojo 0.26 has not yet stabilised the ``UnsafePointer`` C-ABI surface,
-so this bridge shells out to the compiled ``mojo/attnres_mojo``
-executable with a one-line whitespace-separated text protocol. Swap
-to ctypes + a ``mojo build --emit shared-lib`` artefact once the
-pointer ABI ships (Mojo 0.27+); the algorithm in ``mojo/attnres.mojo``
-stays the same.
+The bridge negotiates protocol V2, carries the projection width explicitly,
+and validates finite coupling output. Subprocess and serialization costs are
+part of its measured runtime; no future pointer ABI or speed is promised.
 """
 
 from __future__ import annotations
 
+import math
 import subprocess
 from pathlib import Path
 from typing import TypeAlias
@@ -39,13 +37,19 @@ FloatArray: TypeAlias = NDArray[np.float64]
 
 
 def _ensure_exe() -> Path:
-    """Build the Mojo backend executable if it is missing, else raise."""
+    """Require an existing executable implementing the dimension-aware protocol."""
     if not _EXE_PATH.exists():
         raise ImportError(
             f"{_EXE_PATH} not built. Run: mojo build mojo/attnres.mojo "
             f"-o mojo/attnres_mojo -Xlinker -lm"
         )
-    return require_mojo_executable(_EXE_PATH)
+    exe = require_mojo_executable(_EXE_PATH)
+    protocol = run_mojo_executable(exe, "PROTOCOL\n", runner=subprocess.run)
+    if protocol.returncode != 0 or protocol.stdout.strip() != "2":
+        raise ImportError(
+            "Mojo AttnRes executable lacks the V2 dimension protocol; rebuild it"
+        )
+    return exe
 
 
 def attnres_modulate_mojo(
@@ -61,10 +65,42 @@ def attnres_modulate_mojo(
     temperature: float,
     lambda_: float,
 ) -> FloatArray:
-    """Mojo-backed multi-head AttnRes. Signature matches the Rust FFI.
+    """Compute phase attention coupling through the original Mojo runtime.
 
-    Pays a subprocess spawn + text-serialisation cost; used as the
-    fallback between Julia and Go rather than the fast path.
+    Parameters
+    ----------
+    knm_flat : numpy.ndarray
+        Row-major symmetric coupling graph, ``N*N`` finite real values.
+    theta : numpy.ndarray
+        ``N`` oscillator phases in radians.
+    w_q, w_k, w_v, w_o : numpy.ndarray
+        Row-major projection buffers containing ``D*D`` finite real values.
+        ``D`` is even, at least two, and divisible by the head count.
+    n : int
+        Non-negative oscillator count matching the supplied graph and phases.
+    n_heads : int
+        Positive head count dividing the model width.
+    block_size : int
+        ``-1`` selects all neighbours; a positive value limits index distance.
+    temperature : float
+        Positive finite softmax temperature.
+    lambda_ : float
+        Non-negative finite multiplicative strength.
+
+    Returns
+    -------
+    numpy.ndarray
+        Flattened float64 coupling with validated symmetry, zero diagonal
+        and preserved absent edges. Empty graphs need no optional runtime.
+
+    Raises
+    ------
+    ValueError
+        On invalid types, shapes, controls, topology, numerical intermediates
+        or returned coupling values. Boolean, complex, text and temporal
+        aliases are rejected before coercion.
+    ImportError
+        If the optional runtime or a compatible compiled artifact is missing.
     """
     (
         knm_flat,
@@ -96,11 +132,13 @@ def attnres_modulate_mojo(
     exe = _ensure_exe()
 
     tokens: list[str] = [
+        "V2",
         str(n),
         str(n_heads),
         str(block_size),
         repr(float(temperature)),
         repr(float(lambda_)),
+        str(math.isqrt(w_o.size)),
     ]
     tokens.extend(repr(float(x)) for x in knm_flat.tolist())
     tokens.extend(repr(float(x)) for x in theta.tolist())
@@ -129,6 +167,4 @@ def attnres_modulate_mojo(
         raise ValueError(
             "Mojo AttnRes output must contain finite modulated coupling values"
         )
-    if result.size != n * n:
-        raise ValueError(f"Mojo returned {result.size} values, expected {n * n}")
     return validate_attnres_backend_output(result, n=n, knm_flat=knm_flat)

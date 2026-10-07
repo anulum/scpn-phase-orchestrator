@@ -134,8 +134,16 @@ contain finite real non-boolean values, remain symmetric, keep a zero diagonal,
 and preserve the input `K_nm` zero-edge topology. Public coupling, phase, and
 projection arrays, direct flattened buffers, backend outputs, and Julia raw
 returns also reject numeric-string aliases before Python, NumPy, or accelerator
-coercion. Malformed AttnRes physics payloads raise immediately, preserving
-fallback only for loader or runtime unavailability.
+coercion. Malformed attention coupling payloads raise immediately. Automatic
+selection follows the configured owner preference; an explicit `backend=`
+requires that owner and raises `ImportError` when unavailable.
+
+The phase attention law uses Fourier features over oscillator neighbours. It is
+an attention-inspired adaptation, distinct from the source paper's network-depth
+Attention Residuals. Go's `AttnResModulateV2` and Mojo's negotiated V2 text
+protocol carry the even projection width explicitly; the legacy interfaces retain
+their width-eight contract. See the [coupling API](../../reference/api/coupling_attention_residuals.md)
+for equations, build commands, shape constraints and measured diagnostics.
 Merge-window Rust, Go, Julia, and Mojo source-contract adapters route
 `MergeReport` evidence through the shared validator before parity publication:
 numeric fields must be finite real non-boolean scalars, lock fields must be

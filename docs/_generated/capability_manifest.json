@@ -11,8 +11,8 @@
     "python_package_modules": 764,
     "research_experimental_modules": 205,
     "runtime_serving_modules": 160,
-    "rust_kernel_files": 124,
-    "test_files": 1093
+    "rust_kernel_files": 125,
+    "test_files": 1095
   },
   "documentation": {
     "public_pages": [
@@ -2005,7 +2005,9 @@
       "tests/test_attention_residuals.py",
       "tests/test_attention_residuals_backends.py",
       "tests/test_attention_residuals_measurement_inputs.py",
+      "tests/test_attention_residuals_real_runtime.py",
       "tests/test_attention_residuals_stability.py",
+      "tests/test_attnres_modulation_benchmark.py",
       "tests/test_attnres_validation_guards.py",
       "tests/test_audit_chain_unhashed_insertion.py",
       "tests/test_audit_event_stream.py",
@@ -3119,6 +3121,7 @@
     "spo-kernel/crates/spo-engine/src/twin_confidence.rs",
     "spo-kernel/crates/spo-engine/src/upde.rs",
     "spo-kernel/crates/spo-engine/src/winding.rs",
+    "spo-kernel/crates/spo-engine/tests/attnres_contract.rs",
     "spo-kernel/crates/spo-engine/tests/proptests.rs",
     "spo-kernel/crates/spo-engine/tests/rk45_tests.rs",
     "spo-kernel/crates/spo-ffi/Cargo.toml",

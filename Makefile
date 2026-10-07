@@ -11,7 +11,7 @@
 .PHONY: help install install-dev quickstart test test-rust test-all lint fmt bandit sast \
         preflight preflight-fast docs docs-build bench bench-rust bridge bridge-check \
         lock-refresh lock-check \
-        build docker-build docker-run clean install-hooks phase-sindy-quality
+        build docker-build docker-run clean install-hooks phase-sindy-quality attention-residuals-quality
 
 PYTHON ?= python
 
@@ -20,6 +20,18 @@ PHASE_SINDY_QUALITY_FILES := src/scpn_phase_orchestrator/autotune/sindy.py \
     benchmarks/phase_sindy_benchmark.py native-tests/test_sindy_runtime_profiles.py \
     native-tests/helpers/sindy_cli_probe.py tools/phase_sindy_coverage.py \
     tests/test_phase_sindy_coverage.py
+
+ATTENTION_RESIDUALS_QUALITY_FILES := src/scpn_phase_orchestrator/coupling/attention_residuals.py \
+    src/scpn_phase_orchestrator/coupling/_attnres_validation.py \
+    src/scpn_phase_orchestrator/experimental/accelerators/coupling/_attnres_go.py \
+    src/scpn_phase_orchestrator/experimental/accelerators/coupling/_attnres_julia.py \
+    src/scpn_phase_orchestrator/experimental/accelerators/coupling/_attnres_mojo.py \
+    tests/test_attention_residuals.py tests/test_attention_residuals_backends.py \
+    tests/test_attention_residuals_real_runtime.py \
+    tests/test_attention_residuals_stability.py \
+    tests/test_attnres_modulation_benchmark.py \
+    benchmarks/attnres_reference.py benchmarks/attnres_modulation_benchmark.py \
+    native-tests/test_attention_residuals_profiles.py
 
 help:  ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
@@ -56,6 +68,11 @@ phase-sindy-quality:  ## Check Phase-SINDy source, tests and runtime diagnostics
 	$(PYTHON) -m ruff format --check $(PHASE_SINDY_QUALITY_FILES)
 	$(PYTHON) -m mypy --config-file tools/phase_sindy_mypy.ini $(PHASE_SINDY_QUALITY_FILES)
 	$(PYTHON) tools/phase_sindy_coverage.py --python-report tests/fixtures/phase_sindy_coverage/python.json --native-report tests/fixtures/phase_sindy_coverage/native.json
+
+attention-residuals-quality:  ## Check phase attention source, tests and diagnostics
+	$(PYTHON) -m ruff check --isolated --select E,F,W,I,UP,B,SIM,N,C4,RET,PTH,D --ignore N803,N806,D105 --config 'lint.pydocstyle.convention="numpy"' $(ATTENTION_RESIDUALS_QUALITY_FILES)
+	$(PYTHON) -m ruff format --check $(ATTENTION_RESIDUALS_QUALITY_FILES)
+	$(PYTHON) -m mypy --config-file tools/attention_residuals_mypy.ini $(ATTENTION_RESIDUALS_QUALITY_FILES)
 
 fmt:  ## Auto-format Python + Rust
 	ruff format src/ tests/

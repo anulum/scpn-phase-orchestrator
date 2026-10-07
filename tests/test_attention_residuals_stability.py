@@ -6,34 +6,13 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — AttnRes stability validation (Lyapunov criterion)
 
-"""Stability validation for the AttnRes Phase-3 spike.
+"""Measure bounded trajectory diagnostics for the phase attention adaptation.
 
-Research doc ``research_attention_residuals_2026-04-06.md §5``
-requires the maximum Lyapunov exponent to stay non-positive under
-AttnRes modulation — i.e. the state-dependent coupling must not
-introduce new instabilities.
-
-The bundled ``monitor.lyapunov.lyapunov_spectrum`` expects a static
-``K_nm`` matrix, which does not fit AttnRes (K changes every step
-from the current phases). Two validation paths are used here:
-
-1. **Perturbation decay** — the canonical "maximum Lyapunov exponent
-   via two trajectories" test: run AttnRes for a warm-up, fork into
-   two copies one of which has a small random ``δθ`` perturbation,
-   then continue both for ``n_measure`` steps and regress
-   ``log |δθ|`` against time. The slope estimates ``λ_max``. Must be
-   ≤ ``+0.05`` across seeds — the small positive budget absorbs the
-   chaos-like behaviour near the critical coupling without letting
-   a genuinely unstable configuration slip through.
-2. **Frozen-K agreement** — freeze the modulated K at steady state
-   and compute the full Lyapunov spectrum using the existing
-   ``lyapunov_spectrum`` helper. The max exponent must agree with
-   the baseline (un-modulated) spectrum to within a small tolerance.
-   This catches any macroscopic change in the local stability
-   neighbourhood that AttnRes induces.
-
-Both tests are gated behind ``pytest.mark.slow`` so they are not on
-the fast CI path; full suite picks them up through ``pytest -m slow``.
+The perturbation fixture retains its numerical slope ceiling of +0.05,
+and the frozen-coupling fixture retains its +0.1 ceiling. Positive ceilings
+and a frozen graph do not prove non-positive exponents of the time-dependent
+law. These slow tests diagnose their sampled graphs; the research proposal's
+global stability requirement remains unqualified.
 """
 
 from __future__ import annotations
@@ -43,6 +22,7 @@ import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
+from benchmarks.attnres_reference import FloatArray
 from scpn_phase_orchestrator.coupling.attention_residuals import (
     attnres_modulate,
 )
@@ -55,7 +35,8 @@ TWO_PI = 2.0 * np.pi
 pytestmark = pytest.mark.slow
 
 
-def _symmetric_knm(n: int, strength: float, seed: int) -> np.ndarray:
+def _symmetric_knm(n: int, strength: float, seed: int) -> FloatArray:
+    """Build a seeded symmetric graph without self coupling."""
     rng = np.random.default_rng(seed)
     half = rng.uniform(0.0, 2.0 * strength, size=(n, n))
     knm = 0.5 * (half + half.T)
@@ -65,14 +46,14 @@ def _symmetric_knm(n: int, strength: float, seed: int) -> np.ndarray:
 
 def _integrate_attnres(
     engine: UPDEEngine,
-    phases: np.ndarray,
-    omegas: np.ndarray,
-    knm: np.ndarray,
-    alpha: np.ndarray,
+    phases: FloatArray,
+    omegas: FloatArray,
+    knm: FloatArray,
+    alpha: FloatArray,
     n_steps: int,
     block_size: int = 4,
     lambda_: float = 0.5,
-) -> np.ndarray:
+) -> FloatArray:
     """Run n_steps of AttnRes-modulated Kuramoto integration."""
     for _ in range(n_steps):
         knm_mod = attnres_modulate(knm, phases, block_size=block_size, lambda_=lambda_)
@@ -92,14 +73,7 @@ def _integrate_attnres(
     suppress_health_check=[HealthCheck.too_slow],
 )
 def test_attnres_perturbation_decay(seed: int) -> None:
-    """Two nearby trajectories under AttnRes modulation must not
-    diverge exponentially.
-
-    Estimates ``λ_max`` from the slope of
-    ``log |δθ(t)| ≈ λ_max · t + c`` over a linear-regime window after
-    a warm-up. The supercritical Kuramoto regime is strictly
-    contracting (``λ_max < 0``); AttnRes must not push it above ≈ 0.
-    """
+    """Measure the nearby-trajectory slope against the existing +0.05 ceiling."""
     n = 16
     dt = 0.01
     n_warmup = 400
@@ -150,7 +124,7 @@ def test_attnres_perturbation_decay(seed: int) -> None:
         diff = (raw + np.pi) % TWO_PI - np.pi
         norm = float(np.linalg.norm(diff))
         if norm > 0.0:
-            log_norms.append(np.log(norm))
+            log_norms.append(float(np.log(norm)))
             times.append(step * dt)
 
     # Regress log|δθ| vs time; slope is λ_max.
@@ -158,8 +132,7 @@ def test_attnres_perturbation_decay(seed: int) -> None:
     start = len(log_norms) * 2 // 5
     window_log = np.array(log_norms[start:])
     window_t = np.array(times[start:])
-    if window_t.size < 10:
-        pytest.skip("Not enough finite log-norm samples for regression")
+    assert window_t.size >= 10, "Insufficient perturbation samples for regression"
 
     slope, _intercept = np.polyfit(window_t, window_log, 1)
 
@@ -176,15 +149,7 @@ def test_attnres_perturbation_decay(seed: int) -> None:
 
 
 def test_attnres_frozen_k_lyapunov_agrees() -> None:
-    """Freeze K_nm at the AttnRes steady state and compute the full
-    Lyapunov spectrum. The maximum exponent must not differ from the
-    baseline (un-modulated) spectrum by more than 0.1 — i.e. the
-    modulation reshapes weights but does not open new unstable
-    directions in the local neighbourhood.
-
-    This is deterministic (single seed) because the frozen-K pipeline
-    is itself deterministic.
-    """
+    """Compare frozen-graph exponents against the existing +0.1 limits."""
     n = 12
     dt = 0.01
     seed = 2026
@@ -222,9 +187,8 @@ def test_attnres_frozen_k_lyapunov_agrees() -> None:
 
     # R, the mean-field order parameter at the fixed point, determines
     # the magnitude of the leading exponent. Require that the AttnRes
-    # fixed point is still contracting (λ_max ≤ 0.1, the same ceiling
-    # used in the perturbation test) and does not exceed the baseline
-    # by more than 0.1.
+    # fixture stays below its +0.1 ceiling and does not exceed the baseline
+    # by more than 0.1; neither bound proves contraction.
     assert modulated[0] <= 0.1, (
         f"AttnRes frozen-K max Lyapunov {modulated[0]:.4f} exceeds the "
         f"0.1 stability ceiling"
@@ -245,9 +209,7 @@ def test_attnres_frozen_k_lyapunov_agrees() -> None:
 
 
 def test_attnres_long_run_r_stays_bounded() -> None:
-    """Integrate AttnRes for many steps; the order parameter R must
-    stay in [0, 1] and the trajectory must not explode. Guards against
-    the feedback loop amplifying numerical drift."""
+    """Require finite long trajectories and the existing order-parameter bounds."""
     n = 16
     dt = 0.01
     n_steps = 2000

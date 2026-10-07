@@ -6,9 +6,10 @@
 // Contact: www.anulum.li | protoscience@anulum.li
 // SCPN Phase Orchestrator — AttnRes coupling modulation (Go multi-head)
 
-// Package main builds ``libattnres.so`` — a C-shared library that the
-// Python side calls through ctypes. Implements the full multi-head
-// AttnRes algorithm matching the Rust / NumPy / Julia references.
+// Package main builds “libattnres.so“ — a C-shared library that the
+// Python side calls through ctypes. Implements SPO multi-head phase attention
+// matching the Rust / NumPy / Julia coupling law. This is an oscillator
+// adaptation, not the depth-residual operator from arXiv:2603.15031.
 //
 // Build with::
 //
@@ -36,6 +37,9 @@ func attnres(
 	temperature float64,
 	lambda float64,
 ) ([]float64, error) {
+	if n < 0 || (n > 0 && n > int(^uint(0)>>1)/n) {
+		return nil, errors.New("n*n is outside the integer domain")
+	}
 	if len(knm) != n*n {
 		return nil, errors.New("knm length mismatch")
 	}
@@ -48,8 +52,28 @@ func attnres(
 	if temperature <= 0.0 || math.IsNaN(temperature) || math.IsInf(temperature, 0) {
 		return nil, errors.New("temperature must be finite and > 0")
 	}
-	if lambda < 0.0 {
-		return nil, errors.New("lambda must be >= 0")
+	if lambda < 0.0 || math.IsNaN(lambda) || math.IsInf(lambda, 0) {
+		return nil, errors.New("lambda must be finite and >= 0")
+	}
+	if blockSize != -1 && blockSize < 1 {
+		return nil, errors.New("blockSize must be -1 or positive")
+	}
+	for _, values := range [][]float64{knm, theta, wQ, wK, wV, wO} {
+		for _, value := range values {
+			if math.IsNaN(value) || math.IsInf(value, 0) {
+				return nil, errors.New("inputs must contain only finite values")
+			}
+		}
+	}
+	for i := 0; i < n; i++ {
+		if math.Abs(knm[i*n+i]) > 1e-12 {
+			return nil, errors.New("knm diagonal must be zero")
+		}
+		for j := 0; j < n; j++ {
+			if math.Abs(knm[i*n+j]-knm[j*n+i]) > 1e-12+1e-12*math.Abs(knm[j*n+i]) {
+				return nil, errors.New("knm must be symmetric")
+			}
+		}
 	}
 	if len(wQ) != len(wK) || len(wQ) != len(wV) {
 		return nil, errors.New("W_K/W_V must match W_Q")
@@ -60,16 +84,19 @@ func attnres(
 	perHead := len(wQ) / nHeads
 	dHeadF := math.Sqrt(float64(perHead) / float64(nHeads))
 	dHead := int(math.Round(dHeadF))
-	if dHead*dHead*nHeads != perHead {
+	if dHead < 1 || dHead*dHead*nHeads != perHead {
 		return nil, errors.New("cannot infer d_head")
 	}
 	dModel := nHeads * dHead
+	if dModel < 2 || dModel%2 != 0 {
+		return nil, errors.New("d_model must be even and >= 2")
+	}
 	if len(wO) != nHeads*perHead {
 		return nil, errors.New("W_O shape mismatch")
 	}
 
 	out := make([]float64, n*n)
-	if lambda == 0.0 {
+	if n == 0 || lambda == 0.0 {
 		copy(out, knm)
 		return out, nil
 	}
@@ -109,7 +136,17 @@ func attnres(
 	}
 
 	// 3. Attention softmax per head.
-	invScale := 1.0 / (math.Sqrt(float64(dHead)) * temperature)
+	for _, values := range [][]float64{q, k, v} {
+		for _, value := range values {
+			if math.IsNaN(value) || math.IsInf(value, 0) {
+				return nil, errors.New("attention projections must be finite")
+			}
+		}
+	}
+	invScale := (1.0 / math.Sqrt(float64(dHead))) / temperature
+	if math.IsNaN(invScale) || math.IsInf(invScale, 0) {
+		return nil, errors.New("attention scale must be finite")
+	}
 	attn := make([]float64, nHeads*n*n)
 	rowLogits := make([]float64, n)
 	for h := 0; h < nHeads; h++ {
@@ -137,6 +174,9 @@ func attnres(
 						k[h*n*dHead+j*dHead+e]
 				}
 				rowLogits[j] = dot * invScale
+				if math.IsNaN(rowLogits[j]) || math.IsInf(rowLogits[j], 0) {
+					return nil, errors.New("attention logits must be finite")
+				}
 				anyUnmasked = true
 			}
 			if !anyUnmasked {
@@ -204,6 +244,9 @@ func attnres(
 			s += val * val
 		}
 		oNorm[i] = math.Sqrt(s) + 1e-12
+		if math.IsNaN(oNorm[i]) || math.IsInf(oNorm[i], 0) {
+			return nil, errors.New("attention output norms must be finite")
+		}
 	}
 	aAgg := make([]float64, n*n)
 	for i := 0; i < n; i++ {
@@ -222,9 +265,9 @@ func attnres(
 			}
 			dot := 0.0
 			for d := 0; d < dModel; d++ {
-				dot += o[i*dModel+d] * o[j*dModel+d]
+				dot += (o[i*dModel+d] / oNorm[i]) * (o[j*dModel+d] / oNorm[j])
 			}
-			cosSim := dot / (oNorm[i] * oNorm[j])
+			cosSim := math.Max(-1.0, math.Min(1.0, dot))
 			aAgg[i*n+j] = 0.5 * (1.0 + cosSim)
 		}
 	}
@@ -241,71 +284,65 @@ func attnres(
 			if i == j {
 				continue
 			}
-			out[i*n+j] = 0.5 * (rowwise[i*n+j] + rowwise[j*n+i])
+			out[i*n+j] = 0.5*rowwise[i*n+j] + 0.5*rowwise[j*n+i]
+			if math.IsNaN(out[i*n+j]) || math.IsInf(out[i*n+j], 0) {
+				return nil, errors.New("modulated coupling must be finite")
+			}
 		}
 	}
 	return out, nil
 }
 
-//export AttnResModulate
+// AttnResModulate preserves the legacy D=8 ABI. Callers must supply six
+// correctly sized buffers and an N*N output buffer. Use V2 for other widths.
 //
-// AttnResModulate is the exported C-ABI entry point.
+//export AttnResModulate
 func AttnResModulate(
-	knmPtr *C.double,
-	thetaPtr *C.double,
-	wQPtr *C.double,
-	wKPtr *C.double,
-	wVPtr *C.double,
-	wOPtr *C.double,
-	n C.int,
-	nHeads C.int,
-	blockSize C.int,
-	temperature C.double,
-	lambda C.double,
+	knmPtr, thetaPtr, wQPtr, wKPtr, wVPtr, wOPtr *C.double,
+	n, nHeads, blockSize C.int,
+	temperature, lambda C.double,
 	outPtr *C.double,
 ) C.int {
-	nn := int(n)
-	nH := int(nHeads)
-	knm := unsafe.Slice((*float64)(unsafe.Pointer(knmPtr)), nn*nn)
-	theta := unsafe.Slice((*float64)(unsafe.Pointer(thetaPtr)), nn)
-	// W matrices are nHeads * dModel * dHead; infer dHead from dModel and
-	// trust caller shape — Python side always passes d_model = 8.
-	// We cannot statically know d_model here so we trust wQ length. The
-	// Go kernel does the arithmetic on the flat slices directly.
-	// To obtain the length we need wQ's true size; cgo slices require it.
-	// The Python side guarantees d_model = 8 and d_head = d_model / nHeads.
-	// Derive wLen = nHeads * d_model * (d_model / nHeads) = d_model ** 2.
-	// For safety we pass a separate arg would be nicer, but we keep the
-	// C ABI stable by recovering d_model via the wO length constraint:
-	// wO is (nHeads * d_head, d_model) = d_model rows · d_model cols, so
-	// wOLen = d_model**2. Pass wO first then wQ/wK/wV: all same length
-	// when d_model = nHeads * d_head and d_head = d_model / nHeads.
-	wLen := 64 // default d_model = 8 -> 8*8 = 64; caller guarantees
-	// We re-derive wLen by scanning wQPtr for a reasonable bound: use
-	// nHeads * d_model * d_head. With the Python-side contract that
-	// d_model = 8, d_head = 8/nHeads, wLen = 8 * 8 = 64 regardless of
-	// nHeads. This is a documented contract (PHASE_EMBED_DIM = 8).
-	_ = wLen
-	// Accept the convention: d_model = 8 → all W buffers are 64 f64.
-	dModel := 8
-	dHead := dModel / nH
-	qLen := nH * dModel * dHead
-	oLen := nH * dHead * dModel
+	return AttnResModulateV2(knmPtr, thetaPtr, wQPtr, wKPtr, wVPtr, wOPtr,
+		n, nHeads, 8, blockSize, temperature, lambda, outPtr)
+}
 
-	wQ := unsafe.Slice((*float64)(unsafe.Pointer(wQPtr)), qLen)
-	wK := unsafe.Slice((*float64)(unsafe.Pointer(wKPtr)), qLen)
-	wV := unsafe.Slice((*float64)(unsafe.Pointer(wVPtr)), qLen)
-	wO := unsafe.Slice((*float64)(unsafe.Pointer(wOPtr)), oLen)
-	out := unsafe.Slice((*float64)(unsafe.Pointer(outPtr)), nn*nn)
-
+// AttnResModulateV2 carries the projection width explicitly. Each projection
+// buffer contains D*D doubles; coupling/output contain N*N, and theta N.
+// Buffers must remain valid for the call. Invalid dimensions are refused
+// before constructing any unsafe slice; numerical failures leave output intact.
+//
+//export AttnResModulateV2
+func AttnResModulateV2(
+	knmPtr, thetaPtr, wQPtr, wKPtr, wVPtr, wOPtr *C.double,
+	n, nHeads, dModel, blockSize C.int,
+	temperature, lambda C.double,
+	outPtr *C.double,
+) C.int {
+	nn, heads, width := int(n), int(nHeads), int(dModel)
+	maxElements := int(^uint(0)>>1) / int(unsafe.Sizeof(float64(0)))
+	if nn < 0 || heads < 1 || width < 2 || width%2 != 0 || width%heads != 0 ||
+		width > maxElements/width ||
+		(nn > 0 && (nn > maxElements/nn || nn > maxElements/width || heads > maxElements/(nn*nn))) {
+		return 1
+	}
+	if wQPtr == nil || wKPtr == nil || wVPtr == nil || wOPtr == nil ||
+		(nn > 0 && (knmPtr == nil || thetaPtr == nil || outPtr == nil)) {
+		return 1
+	}
 	result, err := attnres(
-		knm, theta, wQ, wK, wV, wO, nn, nH,
-		int(blockSize), float64(temperature), float64(lambda),
+		unsafe.Slice((*float64)(unsafe.Pointer(knmPtr)), nn*nn),
+		unsafe.Slice((*float64)(unsafe.Pointer(thetaPtr)), nn),
+		unsafe.Slice((*float64)(unsafe.Pointer(wQPtr)), width*width),
+		unsafe.Slice((*float64)(unsafe.Pointer(wKPtr)), width*width),
+		unsafe.Slice((*float64)(unsafe.Pointer(wVPtr)), width*width),
+		unsafe.Slice((*float64)(unsafe.Pointer(wOPtr)), width*width),
+		nn, heads, int(blockSize), float64(temperature), float64(lambda),
 	)
 	if err != nil {
 		return 1
 	}
-	copy(out, result)
+	copy(unsafe.Slice((*float64)(unsafe.Pointer(outPtr)), nn*nn), result)
 	return 0
 }
 

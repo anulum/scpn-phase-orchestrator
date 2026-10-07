@@ -43,6 +43,8 @@ jobs:
       - name: Check Phase-SINDy source, tests and runtime diagnostics
         if: matrix.python-version == '3.12'
         run: make phase-sindy-quality PYTHON=python
+      - name: Check complete phase attention source, tests and diagnostics
+        run: make attention-residuals-quality PYTHON=python
       - name: Run tests (with coverage on 3.12)
         run: >
           pytest tests/ -v --tb=short
