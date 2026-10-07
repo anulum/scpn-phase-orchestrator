@@ -91,6 +91,11 @@ jobs:
               measurement.save()
           raise SystemExit(result)
           PY
+      - name: Qualify required Julia phase attention runtime
+        env:
+          SPO_ATTNRES_REQUIRED_BACKENDS: "python,julia"
+          COVERAGE_FILE: .coverage.julia
+        run: python -m pytest tests/test_attention_residuals_real_runtime.py tests/test_attention_residuals_backends.py --strict-markers --tb=short --cov=scpn_phase_orchestrator --cov-append --cov-report= --cov-fail-under=0
       - name: Upload Julia bridge coverage
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
@@ -129,18 +134,28 @@ jobs:
           go mod download
           fail=0
           for src in *.go; do
+            case "$src" in *_test.go) continue ;; esac
             if ! go build -buildmode=c-shared -o "lib${src%.go}.so" "$src"; then
               echo "::error file=go/${src}::go build -buildmode=c-shared failed"
               fail=1
             fi
           done
           exit "$fail"
+      - name: Check native phase attention Go contracts
+        run: |
+          go test -count=1 go/attnres.go go/attnres_test.go
+          go vet go/attnres.go go/attnres_test.go
       - name: Install Python measurement test dependencies
         run: pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
       - name: Execute Go measurement ingress contracts with coverage
         run: |
           pytest tests/test_chimera_measurement_inputs.py tests/test_embedding_measurement_inputs.py tests/test_entropy_prod_measurement_inputs.py tests/test_opt_entropy_measurement_inputs.py tests/test_dimension_backends.py tests/test_npe_backends.py tests/test_pid_backends.py tests/test_poincare_backends.py tests/test_psychedelic_backends.py tests/test_recurrence_backends.py tests/test_transfer_entropy_backends.py tests/test_twin_confidence_backends.py tests/test_winding_backends.py tests/test_delay_backends.py native-tests/test_upde_runtime_phase_wrapping.py -m "not slow and not performance" -k "(go and native_runtime) or GoParity or (test_public_divergence_uses_real_backend and go) or PoincareSectionParity or PhasePoincareParity" --tb=short --strict-markers --cov=scpn_phase_orchestrator --cov-report= --cov-fail-under=0
           mv .coverage .coverage.go
+      - name: Qualify required Go phase attention runtime
+        env:
+          SPO_ATTNRES_REQUIRED_BACKENDS: "python,go"
+          COVERAGE_FILE: .coverage.go
+        run: python -m pytest tests/test_attention_residuals_real_runtime.py tests/test_attention_residuals_backends.py --strict-markers --tb=short --cov=scpn_phase_orchestrator --cov-append --cov-report= --cov-fail-under=0
       - name: Upload Go measurement coverage
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
@@ -196,6 +211,11 @@ jobs:
         run: |
           .venv/bin/pytest tests/test_chimera_measurement_inputs.py tests/test_embedding_measurement_inputs.py tests/test_entropy_prod_measurement_inputs.py tests/test_opt_entropy_measurement_inputs.py tests/test_dimension_backends.py tests/test_npe_backends.py tests/test_pid_backends.py tests/test_poincare_backends.py tests/test_psychedelic_backends.py tests/test_recurrence_backends.py tests/test_transfer_entropy_backends.py tests/test_twin_confidence_backends.py tests/test_winding_backends.py tests/test_delay_backends.py native-tests/test_upde_runtime_phase_wrapping.py -m "not slow and not performance" -k "(mojo and native_runtime) or MojoParity or (test_public_divergence_uses_real_backend and mojo) or PoincareSectionParity or PhasePoincareParity" --tb=short --strict-markers --cov=scpn_phase_orchestrator --cov-report= --cov-fail-under=0
           mv .coverage .coverage.mojo
+      - name: Qualify required Mojo phase attention runtime
+        env:
+          SPO_ATTNRES_REQUIRED_BACKENDS: "python,mojo"
+          COVERAGE_FILE: .coverage.mojo
+        run: .venv/bin/python -m pytest tests/test_attention_residuals_real_runtime.py tests/test_attention_residuals_backends.py --strict-markers --tb=short --cov=scpn_phase_orchestrator --cov-append --cov-report= --cov-fail-under=0
       - name: Upload Mojo measurement coverage
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
@@ -334,7 +354,7 @@ jobs:
             -m "not slow and not performance and not native_runtime" \
             -k "not performance" \
             --cov=scpn_phase_orchestrator --cov-report= --cov-fail-under=0
-          pytest tests/test_kernel_runtime.py tests/test_cli_serve.py tests/test_kernel_deployment.py native-tests/test_sindy_runtime_profiles.py \
+          pytest tests/test_kernel_runtime.py tests/test_cli_serve.py tests/test_kernel_deployment.py native-tests/test_sindy_runtime_profiles.py native-tests/test_attention_residuals_profiles.py \
             -m native_runtime --strict-markers --tb=short \
             --cov=scpn_phase_orchestrator --cov-append --cov-report= --cov-fail-under=0
           mv .coverage .coverage.ffi
@@ -376,7 +396,7 @@ jobs:
             --ignore-glob=tests/test_nn_physics_validation*.py \
             -m "not slow and not performance and not native_runtime" \
             -k "not performance"
-          pytest tests/test_kernel_runtime.py tests/test_cli_serve.py tests/test_kernel_deployment.py native-tests/test_sindy_runtime_profiles.py \
+          pytest tests/test_kernel_runtime.py tests/test_cli_serve.py tests/test_kernel_deployment.py native-tests/test_sindy_runtime_profiles.py native-tests/test_attention_residuals_profiles.py \
             -m native_runtime --strict-markers --tb=short
       - name: Exercise real built-in native loading (Linux, Python 3.11)
         if: runner.os == 'Linux' && matrix.python-version == '3.11'
@@ -407,5 +427,5 @@ jobs:
             --ignore-glob=tests/test_nn_physics_validation*.py \
             -m "not slow and not performance and not native_runtime" \
             -k "not performance"
-          pytest tests/test_kernel_runtime.py tests/test_cli_serve.py tests/test_kernel_deployment.py native-tests/test_sindy_runtime_profiles.py \
+          pytest tests/test_kernel_runtime.py tests/test_cli_serve.py tests/test_kernel_deployment.py native-tests/test_sindy_runtime_profiles.py native-tests/test_attention_residuals_profiles.py \
             -m native_runtime --strict-markers --tb=short

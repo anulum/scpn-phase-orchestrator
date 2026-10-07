@@ -191,7 +191,7 @@ def _validate_zero_edge_preservation(
         raise ValueError(
             f"knm_flat length {reference.size} does not match n*n={expected}"
         )
-    zero_edges = np.isclose(reference.reshape(n, n), 0.0, rtol=0.0, atol=1e-12)
+    zero_edges = reference.reshape(n, n) == 0.0
     if not np.allclose(matrix[zero_edges], 0.0, rtol=0.0, atol=1e-12):
         raise ValueError(f"{name} must preserve zero coupling edges")
 
@@ -221,7 +221,39 @@ def validate_attnres_backend_inputs(
     float,
     float,
 ]:
-    """Validate direct AttnRes inputs before optional runtime loading."""
+    """Validate direct phase attention measurements before loading a runtime.
+
+    Parameters
+    ----------
+    knm_flat : object
+        Row-major finite real symmetric coupling graph with zero diagonal.
+    theta : object
+        Finite real phase vector with one entry per oscillator.
+    w_q, w_k, w_v, w_o : object
+        Flattened finite real projections for an even square model width.
+    n : object
+        Plain non-negative integer oscillator count.
+    n_heads : object
+        Plain positive integer dividing the model width.
+    block_size : object
+        Plain integer, either ``-1`` or positive.
+    temperature : object
+        Finite positive real softmax temperature.
+    lambda_ : object
+        Finite non-negative real modulation strength.
+
+    Returns
+    -------
+    tuple
+        Six contiguous float64 buffers, validated counts/band, temperature
+        and modulation strength, in their original argument order.
+
+    Raises
+    ------
+    ValueError
+        On boolean, complex, text, temporal or non-finite aliases, malformed
+        buffer dimensions, invalid graph topology or scalar domains.
+    """
     n_int = _validate_non_negative_int(n, name="n")
     n_heads_int = _validate_positive_int(n_heads, name="n_heads")
     block_size_int = _validate_block_size(block_size)
@@ -231,6 +263,7 @@ def validate_attnres_backend_inputs(
     expected_k = n_int * n_int
     if k.size != expected_k:
         raise ValueError(f"knm_flat length {k.size} does not match n*n={expected_k}")
+    _validate_output_topology(k.reshape(n_int, n_int), name="knm_flat")
     theta_vec = _validate_float_vector(theta, name="theta")
     if theta_vec.size != n_int:
         raise ValueError(f"theta length {theta_vec.size} does not match n={n_int}")
@@ -277,7 +310,30 @@ def validate_attnres_backend_output(
     knm_flat: object | None = None,
     name: str = "attnres output",
 ) -> FloatArray:
-    """Validate direct AttnRes backend output before returning it."""
+    """Validate a real backend coupling result before publication.
+
+    Parameters
+    ----------
+    value : object
+        Flattened or square output coupling values.
+    n : int
+        Non-negative oscillator count.
+    knm_flat : object or None
+        Optional reference graph for validating preservation of absent edges.
+    name : str
+        Buffer label used in diagnostics.
+
+    Returns
+    -------
+    numpy.ndarray
+        Contiguous, finite real float64 vector of length ``n*n``.
+
+    Raises
+    ------
+    ValueError
+        On invalid measurement aliases, cardinality, symmetry, self-coupling,
+        reference shape or newly created coupling edges.
+    """
     n_int = _validate_non_negative_int(n, name="n")
     output = _validate_float_array(value, name=name)
     expected = n_int * n_int

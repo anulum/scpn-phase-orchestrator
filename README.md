@@ -348,9 +348,9 @@ inside a dashboard or notebook; it turns them into inspectable artefacts.
 | Integration modules | 32 |
 | Research/Experimental modules | 205 |
 | Domainpack files | 36 |
-| Rust kernel files | 124 |
+| Rust kernel files | 125 |
 | Optional extras | 24 |
-| Python test files | 1093 |
+| Python test files | 1095 |
 | Public documentation pages | 244 |
 | GitHub Actions workflows | 19 |
 

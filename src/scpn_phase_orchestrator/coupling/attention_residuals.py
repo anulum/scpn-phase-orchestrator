@@ -6,46 +6,25 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — AttnRes coupling modulation (full multi-head)
 
-"""Attention-Residuals (AttnRes) coupling modulation — full multi-head.
+"""State-dependent coupling from multi-head attention over Fourier phase features.
 
-Direct port of the Transformer-style multi-head attention used in
-arXiv:2603.15031 (Moonshot AI / Kimi Team, March 2026) to the SCPN
-coupling matrix. Every Transformer component is present here:
+SPO projects each oscillator's phase features into query, key and value heads,
+attends over existing graph neighbours, projects the concatenated values, and
+modulates symmetric coupling using regularised cosine similarity. This is an
+attention-inspired oscillator adaptation. It does not implement the learned
+pseudo-query/RMSNorm aggregation over preceding network layers proposed in
+arXiv:2603.15031 (Attention Residuals).
 
-* **H learnable Q, K, V projections** — ``W_Q, W_K, W_V ∈ R^{H × d × d_h}``
-  with ``d = 2`` (``[cos θ, sin θ]`` phase embedding) and
-  ``d_h = d // H`` (default ``d = 8, d_h = 2, H = 4`` gives a
-  full-rank projection over the 2-D phase torus).
-* **Per-head scaled dot-product attention** —
-  ``A_h[i, j] = softmax_j(q_h[i] · k_h[j] / √d_h / temp_h)``
-  with a per-head temperature vector (paper uses uniform; both are
-  supported).
-* **Optional local mask** — a ``±block_size`` band mask plus the
-  zero-edge mask from ``K_nm``. ``block_size = None`` means full-N
-  attention (closest to the paper).
-* **Output projection** ``W_O ∈ R^{(H·d_h) × d}`` mapping the
-  concatenated head outputs back to the 2-D phase embedding space.
-* **Modulation rule** —
-  ``K_mod[i, j] = K[i, j] · (1 + λ · a_agg[i, j])``
-  where ``a_agg`` is the symmetrised, scalar projection of the
-  multi-head attention weights onto the pair (i, j). Symmetrisation
-  is ``(a + aᵀ) / 2`` so ``K_mod`` stays symmetric.
-
-**Default projections.** The module ships a helper
-``default_projections(n_heads, seed)`` that returns the four
-matrices (W_Q, W_K, W_V, W_O) sampled from a seeded Gaussian with
-the canonical Xavier/Glorot scaling. Callers that want bit-stable
-behaviour pass their own matrices. Callers that need reproducible
-default initialisation rely on the default seed.
-
-**Architecture contract.** This file implements the complete
-multi-head path directly: learned per-head projections, full
-scaled dot-product attention, output projection, and symmetric
-coupling modulation are all part of the public implementation.
+Default projections are reproducible random parameters, not trained weights.
+The legacy public names are retained. Rust, Mojo, Julia, Go and NumPy execute
+this same coupling law within floating-point tolerances, rather than bitwise
+identity. A non-negative modulation strength preserves edge signs and boosts
+magnitudes; it does not implement down-weighting or guarantee physical stability.
 """
 
 from __future__ import annotations
 
+import importlib
 from collections.abc import Callable
 from numbers import Integral, Real
 from typing import TypeAlias
@@ -57,7 +36,6 @@ from scpn_phase_orchestrator._array_types import require_real_values
 from scpn_phase_orchestrator.coupling import (
     _attnres_validation as attnres_validation,
 )
-from scpn_phase_orchestrator.coupling._julia_runtime import require_juliacall_main
 
 __all__ = [
     "ACTIVE_BACKEND",
@@ -75,12 +53,7 @@ FloatArray: TypeAlias = NDArray[np.float64]
 
 
 PHASE_EMBED_DIM: int = 8
-"""Width of the per-oscillator hidden state. 2 would suffice for a
-pure ``[cos, sin]`` embedding; the paper uses d_model well above the
-intrinsic data rank to give the attention heads room to specialise.
-Default ``d = 8`` with ``H = 4`` gives ``d_h = 2`` — matches the
-single-ring structure of Kuramoto phases while leaving three extra
-heads for higher-order Fourier components."""
+"""Default even Fourier-feature width: four cosine/sine harmonic pairs."""
 
 
 def _validate_positive_int(name: str, value: object) -> int:
@@ -193,7 +166,10 @@ def default_projections(
     seed: int = 0,
     d_model: int = PHASE_EMBED_DIM,
 ) -> tuple[FloatArray, FloatArray, FloatArray, FloatArray]:
-    """Seeded Xavier-initialised projections ``(W_Q, W_K, W_V, W_O)``.
+    """Generate seeded Gaussian projections ``(W_Q, W_K, W_V, W_O)``.
+
+    All four arrays retain the legacy variance ``2 / (d_model + d_head)``.
+    For the output projection this differs from Xavier variance ``1/d_model``.
 
     Parameters
     ----------
@@ -207,9 +183,9 @@ def default_projections(
 
     Returns
     -------
-    ``(w_q, w_k, w_v, w_o)`` — all ``float64``. Shapes:
-    ``w_q, w_k, w_v`` each ``(H, d_model, d_head)``;
-    ``w_o`` is ``(H · d_head, d_model)``.
+    tuple of numpy.ndarray
+        Four float64 arrays. Query/key/value shapes are ``(H,D,D/H)``;
+        output projection shape is ``(D,D)``.
 
     Raises
     ------
@@ -264,12 +240,14 @@ def _load_rust() -> _BackendFn:
     """Load the Rust AttnRes backend callable."""
     from typing import cast
 
-    from spo_kernel import attnres_modulate_rust
+    kernel = importlib.import_module("spo_kernel")
+    function = getattr(kernel, "attnres_modulate_rust", None)
+    if not callable(function):
+        raise ImportError("installed spo_kernel lacks attnres_modulate_rust")
+    return cast("_BackendFn", function)
 
-    return cast("_BackendFn", attnres_modulate_rust)
 
-
-def _load_mojo() -> _BackendFn:  # pragma: no cover — toolchain-gated
+def _load_mojo() -> _BackendFn:
     """Load the Mojo AttnRes backend callable."""
     from ..experimental.accelerators.coupling._attnres_mojo import (
         _ensure_exe,
@@ -280,17 +258,18 @@ def _load_mojo() -> _BackendFn:  # pragma: no cover — toolchain-gated
     return attnres_modulate_mojo
 
 
-def _load_julia() -> _BackendFn:  # pragma: no cover — toolchain-gated
-    """Load the Julia AttnRes backend callable."""
-    require_juliacall_main()
+def _load_julia() -> _BackendFn:
+    """Load the actual Julia module before admitting its numerical callable."""
     from ..experimental.accelerators.coupling._attnres_julia import (
+        _ensure_julia_loaded,
         attnres_modulate_julia,
     )
 
+    _ensure_julia_loaded()
     return attnres_modulate_julia
 
 
-def _load_go() -> _BackendFn:  # pragma: no cover — toolchain-gated
+def _load_go() -> _BackendFn:
     """Load the Go AttnRes backend callable."""
     from ..experimental.accelerators.coupling._attnres_go import (
         _load_lib,
@@ -321,7 +300,7 @@ def _load_backend(name: str) -> _BackendFn:
 
 
 def _resolve_backends() -> tuple[str, list[str]]:
-    """Resolve the active and available backends, fastest-first."""
+    """Resolve installed owners in the configured preference order."""
     _BACKEND_CACHE.clear()
     available: list[str] = []
     for name in _BACKEND_NAMES[:-1]:
@@ -338,7 +317,7 @@ ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
 def _dispatch_backend() -> _BackendFn | None:
-    """Return the fastest available backend callable, or ``None`` for Python."""
+    """Return the preferred available owner, or ``None`` for Python."""
     ordered_backends = [ACTIVE_BACKEND] + list(AVAILABLE_BACKENDS)
     seen: set[str] = set()
     for backend in ordered_backends:
@@ -363,9 +342,7 @@ def _embed_phase(theta: FloatArray, d_model: int) -> FloatArray:
     """Fourier-feature embedding of the phase scalar to ``d_model`` dims.
 
     Produces ``[cos θ, sin θ, cos 2θ, sin 2θ, ..., cos (d/2)θ, sin (d/2)θ]``.
-    This is the canonical positional / Fourier-feature lift used in the
-    paper to give the attention mechanism a richer representation of
-    the periodic signal than a bare scalar would.
+    The lift is specific to this oscillator adaptation, not the source paper.
     """
     n = theta.shape[0]
     x = np.empty((n, d_model), dtype=np.float64)
@@ -390,11 +367,8 @@ def _python_fallback(
 ) -> FloatArray:
     """Compute the reference multi-head AttnRes forward pass.
 
-    Every compiled backend must reproduce this output bit-for-bit.
+    Compiled backends preserve this coupling law within float64 tolerance.
     """
-    if lambda_ == 0.0:
-        return knm_flat.astype(np.float64, copy=True)
-
     knm = knm_flat.reshape(n, n)
     d_model = w_q.shape[1]
     d_head = w_q.shape[2]
@@ -407,10 +381,14 @@ def _python_fallback(
     q = np.einsum("nd,hde->hne", x, w_q)
     k = np.einsum("nd,hde->hne", x, w_k)
     v = np.einsum("nd,hde->hne", x, w_v)
+    if any(not np.all(np.isfinite(values)) for values in (q, k, v)):
+        raise ValueError("attention projections must be finite")
 
     # 3. Scaled dot-product attention per head.
     # logits[h, i, j] = q[h, i] · k[h, j] / (sqrt(d_h) * temperature).
-    inv_scale = 1.0 / (np.sqrt(d_head) * temperature)
+    inv_scale = (1.0 / np.sqrt(d_head)) / temperature
+    if not np.isfinite(inv_scale):
+        raise ValueError("attention scale must be finite")
     logits = np.einsum("hie,hje->hij", q, k) * inv_scale  # (H, n, n)
 
     # 4. Mask: (a) diagonal, (b) ±block_size if bounded,
@@ -424,6 +402,8 @@ def _python_fallback(
     band &= knm != 0.0
     # Broadcast to (H, n, n).
     mask3 = np.broadcast_to(band, (n_heads, n, n))
+    if not np.all(np.isfinite(logits[mask3])):
+        raise ValueError("attention logits must be finite")
 
     masked = np.where(mask3, logits, -np.inf)
     row_max = np.max(masked, axis=2, keepdims=True)
@@ -446,8 +426,11 @@ def _python_fallback(
     # of the output vectors, restricted to the existing edges. This is
     # the single scalar per pair used to modulate K.
     o_norms = np.linalg.norm(o, axis=1, keepdims=True) + 1e-12
+    if not np.all(np.isfinite(o_norms)):
+        raise ValueError("attention output norms must be finite")
     o_unit = o / o_norms
     a_agg = o_unit @ o_unit.T  # (n, n)
+    a_agg = np.clip(a_agg, -1.0, 1.0)
     # Rescale to [0, 1] via (1 + cos)/2 so the modulation factor stays
     # non-negative and the “neutral” pair (cos = 0) gives λ/2 boost.
     a_agg = 0.5 * (1.0 + a_agg)
@@ -456,7 +439,7 @@ def _python_fallback(
 
     # 8. Modulation and symmetrisation.
     rowwise = knm * (1.0 + lambda_ * a_agg)
-    k_mod = 0.5 * (rowwise + rowwise.T)
+    k_mod = 0.5 * rowwise + 0.5 * rowwise.T
     np.fill_diagonal(k_mod, 0.0)
     return np.asarray(k_mod.ravel(), dtype=np.float64)
 
@@ -479,8 +462,9 @@ def attnres_modulate(
     temperature: float = 1.0,
     lambda_: float = 0.5,
     projection_seed: int = 0,
+    backend: str | None = None,
 ) -> FloatArray:
-    """Full multi-head AttnRes modulation.
+    """Modulate an oscillator graph with multi-head phase attention.
 
     Parameters
     ----------
@@ -497,19 +481,23 @@ def attnres_modulate(
     n_heads:
         Number of attention heads. Must divide ``d_model``.
     block_size:
-        ``None`` (default) → full-N attention (paper-faithful).
+        ``None`` (default) attends over all existing neighbours.
         Integer ≥ 1 → local ``±block_size`` band mask.
     temperature:
-        Softmax temperature (paper uses 1.0; lower values sharpen
-        attention).
+        Positive finite softmax temperature; lower values sharpen attention.
     lambda_:
         Modulation strength. ``0`` returns ``knm`` unchanged.
     projection_seed:
         RNG seed used when any projection is ``None``.
+    backend:
+        ``None`` uses the automatic fallback chain. A named ``rust``, ``mojo``,
+        ``julia``, ``go`` or ``python`` backend is required explicitly: missing
+        runtimes raise ``ImportError`` and never silently select another owner.
 
     Returns
     -------
-    ``(N, N)`` modulated coupling, symmetric with zero diagonal.
+    numpy.ndarray
+        Float64 ``(N,N)`` modulated coupling, symmetric with zero diagonal.
 
     Raises
     ------
@@ -518,8 +506,10 @@ def attnres_modulate(
         non-symmetric or self-coupled ``knm`` topology, negative
         ``lambda_``, non-positive ``temperature``, non-finite numeric
         inputs, invalid model topology, or non-physical optional-backend
-        output.
+        output, or unrepresentable numerical intermediates.
     """
+    if backend is not None and backend not in _BACKEND_NAMES:
+        raise ValueError(f"unknown attention backend: {backend!r}")
     n_heads = _validate_positive_int("n_heads", n_heads)
     projection_seed = _validate_seed("projection_seed", projection_seed)
     temperature = _validate_finite_real("temperature", temperature)
@@ -539,9 +529,6 @@ def attnres_modulate(
     if theta64.shape != (n,):
         raise ValueError(f"theta shape {theta64.shape} does not match knm (N={n})")
     _validate_coupling_contract(knm64)
-    if n == 0:
-        return knm64.copy()
-
     if any(p is None for p in (w_q, w_k, w_v, w_o)):
         d_q, d_k, d_v, d_o = default_projections(n_heads=n_heads, seed=projection_seed)
         w_q = d_q if w_q is None else w_q
@@ -570,7 +557,7 @@ def attnres_modulate(
     if w_o.shape != (n_heads * d_head, d_model):
         raise ValueError(f"w_o shape {w_o.shape} != ({n_heads * d_head}, {d_model})")
 
-    if lambda_ == 0.0:
+    if n == 0 or lambda_ == 0.0:
         return knm64.copy()
 
     knm_flat = np.ascontiguousarray(knm64.ravel(), dtype=np.float64)
@@ -584,7 +571,13 @@ def attnres_modulate(
     wv_flat = np.ascontiguousarray(w_v.ravel(), dtype=np.float64)
     wo_flat = np.ascontiguousarray(w_o.ravel(), dtype=np.float64)
 
-    backend_fn = _dispatch_backend()
+    backend_fn = (
+        _dispatch_backend()
+        if backend is None
+        else None
+        if backend == "python"
+        else _load_backend(backend)
+    )
     if backend_fn is not None:
         out = backend_fn(
             knm_flat,
@@ -601,17 +594,20 @@ def attnres_modulate(
         )
         return _validate_backend_output(out, n=n, knm_flat=knm_flat)
 
-    out = _python_fallback(
-        knm_flat,
-        theta64,
-        np.ascontiguousarray(w_q, dtype=np.float64),
-        np.ascontiguousarray(w_k, dtype=np.float64),
-        np.ascontiguousarray(w_v, dtype=np.float64),
-        np.ascontiguousarray(w_o, dtype=np.float64),
-        n,
-        n_heads,
-        bs_int,
-        temperature,
-        lambda_,
-    )
-    return out.reshape(n, n)
+    # The native law evaluates only unmasked logits. Explicit stage checks also
+    # permit overflow in unused entries without admitting a non-finite result.
+    with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
+        out = _python_fallback(
+            knm_flat,
+            theta64,
+            np.ascontiguousarray(w_q, dtype=np.float64),
+            np.ascontiguousarray(w_k, dtype=np.float64),
+            np.ascontiguousarray(w_v, dtype=np.float64),
+            np.ascontiguousarray(w_o, dtype=np.float64),
+            n,
+            n_heads,
+            bs_int,
+            temperature,
+            lambda_,
+        )
+    return _validate_backend_output(out, n=n, knm_flat=knm_flat)

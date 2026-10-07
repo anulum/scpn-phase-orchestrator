@@ -9,11 +9,12 @@
 """
 attnres.jl
 
-Full multi-head Attention-Residuals port. Mirrors
+SPO multi-head phase attention coupling. Mirrors
 ``spo-kernel/crates/spo-engine/src/attnres.rs`` and the NumPy
 reference at ``src/scpn_phase_orchestrator/coupling/attention_residuals.py``.
 
-Every Transformer component present: Fourier-feature embedding,
+This spatial adaptation is not the depth-residual operator in arXiv:2603.15031.
+Its components are Fourier-feature embedding,
 per-head Q/K/V projections, scaled dot-product attention with
 softmax, optional local mask, output projection, symmetric
 pairwise aggregation.
@@ -47,26 +48,40 @@ function attnres_modulate(
     temperature::Float64,
     lambda_::Float64,
 )
+    (n isa Bool || n_heads isa Bool || block_size isa Bool) &&
+        error("count and band controls must not be boolean")
     # ── Validation ────────────────────────────────────────────────────
+    n >= 0 && n <= isqrt(typemax(Int)) || error("invalid n*n size")
     length(knm) == n * n       || error("knm length mismatch")
     length(theta) == n         || error("theta length mismatch")
     n_heads >= 1               || error("n_heads must be ≥ 1")
     temperature > 0.0 && isfinite(temperature) ||
         error("temperature must be finite and > 0")
-    lambda_ >= 0.0             || error("lambda_ must be ≥ 0")
+    lambda_ >= 0.0 && isfinite(lambda_) || error("lambda_ must be finite and ≥ 0")
+    (block_size == -1 || block_size >= 1) || error("block_size must be -1 or positive")
+    all(values -> all(isfinite, values), (knm, theta, w_q, w_k, w_v, w_o)) ||
+        error("inputs must contain only finite values")
+    for i in 0:(n - 1)
+        abs(knm[i * n + i + 1]) <= 1e-12 || error("knm diagonal must be zero")
+        for j in 0:(n - 1)
+            reverse = knm[j * n + i + 1]
+            abs(knm[i * n + j + 1] - reverse) <= 1e-12 + 1e-12 * abs(reverse) ||
+                error("knm must be symmetric")
+        end
+    end
     length(w_q) == length(w_k) || error("w_k shape mismatch")
     length(w_q) == length(w_v) || error("w_v shape mismatch")
     length(w_q) % n_heads == 0 || error("w_q not divisible by n_heads")
 
-    if lambda_ == 0.0
+    d_model = isqrt(length(w_o))
+    d_model >= 2 && iseven(d_model) && d_model^2 == length(w_o) ||
+        error("w_o must encode an even square d_model")
+    d_model % n_heads == 0 || error("d_model must be divisible by n_heads")
+    length(w_q) == length(w_o) || error("w_q/w_o shape mismatch")
+    d_head = d_model ÷ n_heads
+    if n == 0 || lambda_ == 0.0
         return copy(knm)
     end
-
-    per_head = length(w_q) ÷ n_heads
-    d_head = Int(round(sqrt(per_head / n_heads)))
-    d_head^2 * n_heads == per_head || error("cannot infer d_head")
-    d_model = n_heads * d_head
-    length(w_o) == n_heads * per_head || error("w_o shape mismatch")
 
     # ── 1. Fourier-feature embedding ─────────────────────────────────
     x = zeros(Float64, n * d_model)
@@ -101,7 +116,9 @@ function attnres_modulate(
     end
 
     # ── 3. Attention logits + softmax per head ───────────────────────
-    inv_scale = 1.0 / (sqrt(Float64(d_head)) * temperature)
+    all(values -> all(isfinite, values), (q, k, v)) || error("attention projections must be finite")
+    inv_scale = (1.0 / sqrt(Float64(d_head))) / temperature
+    isfinite(inv_scale) || error("attention scale must be finite")
     attn = zeros(Float64, n_heads * n * n)
     @inbounds for h in 0:(n_heads - 1)
         for i in 0:(n - 1)
@@ -119,6 +136,7 @@ function attnres_modulate(
                            k[h * n * d_head + j * d_head + e + 1]
                 end
                 row_logits[j + 1] = dot * inv_scale
+                isfinite(row_logits[j + 1]) || error("attention logits must be finite")
                 any_unmasked = true
             end
             any_unmasked || continue
@@ -181,6 +199,7 @@ function attnres_modulate(
             s += val * val
         end
         o_norm[i + 1] = sqrt(s) + 1e-12
+        isfinite(o_norm[i + 1]) || error("attention output norms must be finite")
     end
     a_agg = zeros(Float64, n * n)
     @inbounds for i in 0:(n - 1)
@@ -192,9 +211,10 @@ function attnres_modulate(
             end
             dot = 0.0
             for d in 0:(d_model - 1)
-                dot += o[i * d_model + d + 1] * o[j * d_model + d + 1]
+                dot += (o[i * d_model + d + 1] / o_norm[i + 1]) *
+                       (o[j * d_model + d + 1] / o_norm[j + 1])
             end
-            cos_sim = dot / (o_norm[i + 1] * o_norm[j + 1])
+            cos_sim = clamp(dot, -1.0, 1.0)
             a_agg[i * n + j + 1] = 0.5 * (1.0 + cos_sim)
         end
     end
@@ -211,8 +231,9 @@ function attnres_modulate(
     @inbounds for i in 0:(n - 1)
         for j in 0:(n - 1)
             if i != j
-                out[i * n + j + 1] = 0.5 *
-                    (rowwise[i * n + j + 1] + rowwise[j * n + i + 1])
+                out[i * n + j + 1] = 0.5 * rowwise[i * n + j + 1] +
+                    0.5 * rowwise[j * n + i + 1]
+                isfinite(out[i * n + j + 1]) || error("modulated coupling must be finite")
             end
         end
     end

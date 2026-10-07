@@ -6,43 +6,33 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Per-backend parity tests for multi-head AttnRes
 
-"""Per-backend parity tests for the multi-head AttnRes dispatcher.
+"""Exercise real phase attention runtimes and negative ingress/output contracts.
 
-Complements ``test_attention_residuals.py`` (which covers the
-algorithm invariants through whatever backend is active) by
-exercising each non-Python backend individually against the NumPy
-reference. Any drift between backends is a silent physics bug — the
-tests here guard against it.
-
-Each backend is gated on its toolchain being present:
-
-* Rust — always in a working SPO dev environment (built by maturin).
-  Expect bit-exact parity (Python and Rust share identical f64
-  arithmetic on the same hardware).
-* Mojo — needs ``mojo/attnres_mojo`` compiled on disk. Parity is
-  ~1e-13 (text round-trip rounding on the 17-digit payload).
-* Julia — needs ``juliacall`` installed and ``julia/attnres.jl`` on
-  disk. Bit-exact parity.
-* Go — needs ``go/libattnres.so`` compiled. Bit-exact parity.
-
-Tests that require a backend gate on ``pytest.skip`` when absent so
-CI can run on hosts without the full toolchain matrix.
+Explicit owner requests cannot fall back. Available ports compute actual
+results; an absent optional owner must raise ImportError. Required profile
+assertions in the real-runtime suite separately prevent missing compiled
+owners from qualifying a declared native lane. No skip or fake loader supplies
+successful numerical evidence. Numerical parity uses stated float64
+allclose tolerances and does not assert bitwise equality.
 """
 
 from __future__ import annotations
 
-import sys
-import types
+import subprocess
 from collections.abc import Callable
-from typing import get_type_hints
+from pathlib import Path
+from typing import Unpack, cast, get_type_hints
 
 import numpy as np
 import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
+from numpy.typing import NDArray
 
-from scpn_phase_orchestrator.coupling import (
-    _attnres_validation as attnres_validation,
+from benchmarks.attnres_reference import (
+    AttnResOptions,
+    FloatArray,
+    phase_attention_oracle,
 )
 from scpn_phase_orchestrator.coupling import (
     attention_residuals as attnres_mod,
@@ -50,6 +40,7 @@ from scpn_phase_orchestrator.coupling import (
 from scpn_phase_orchestrator.coupling.attention_residuals import (
     AVAILABLE_BACKENDS,
     attnres_modulate,
+    default_projections,
 )
 from scpn_phase_orchestrator.experimental.accelerators.coupling import (
     _attnres_julia,
@@ -68,30 +59,53 @@ from tests.typing_contracts import assert_precise_ndarray_hint
 
 
 def test__attnres_validation_helper_is_directly_linked_to_backend_tests() -> None:
-    assert callable(attnres_validation.validate_attnres_backend_inputs)
-    assert callable(attnres_validation.validate_attnres_backend_output)
+    """Direct ingress refuses a malformed graph before optional runtime access."""
+    knm, theta, q, key, value, out, n, heads, radius, temp, strength = _direct_payload()
+    knm[0] = 0.1
+    for backend in (attnres_modulate_go, attnres_modulate_julia, attnres_modulate_mojo):
+        with pytest.raises(ValueError, match="diagonal"):
+            backend(knm, theta, q, key, value, out, n, heads, radius, temp, strength)
 
 
-TWO_PI = 2.0 * np.pi
-AttnResDirectBackend = Callable[
+RefusalCall = Callable[
     [
-        np.ndarray,
-        np.ndarray,
-        np.ndarray,
-        np.ndarray,
-        np.ndarray,
-        np.ndarray,
+        object,
+        object,
+        object,
+        object,
+        object,
+        object,
         object,
         object,
         object,
         object,
         object,
     ],
-    np.ndarray,
+    FloatArray,
 ]
 
 
-def _symmetric_knm(n: int, strength: float = 0.3, seed: int = 0) -> np.ndarray:
+TWO_PI = 2.0 * np.pi
+AttnResDirectBackend = Callable[
+    [
+        FloatArray,
+        FloatArray,
+        FloatArray,
+        FloatArray,
+        FloatArray,
+        FloatArray,
+        object,
+        object,
+        object,
+        object,
+        object,
+    ],
+    FloatArray,
+]
+
+
+def _symmetric_knm(n: int, strength: float = 0.3, seed: int = 0) -> FloatArray:
+    """Draw a reproducible undirected graph with no self-coupling."""
     rng = np.random.default_rng(seed)
     half = rng.uniform(0.0, 2.0 * strength, size=(n, n))
     knm = 0.5 * (half + half.T)
@@ -100,36 +114,35 @@ def _symmetric_knm(n: int, strength: float = 0.3, seed: int = 0) -> np.ndarray:
 
 
 def _force_backend(
-    backend: str, knm: np.ndarray, theta: np.ndarray, **kw: object
-) -> np.ndarray:
-    saved = attnres_mod.ACTIVE_BACKEND
-    try:
-        attnres_mod.ACTIVE_BACKEND = backend
-        out = attnres_modulate(knm, theta, **kw)
-    finally:
-        attnres_mod.ACTIVE_BACKEND = saved
-    return np.asarray(out, dtype=np.float64)
+    backend: str, knm: FloatArray, theta: FloatArray, **kw: Unpack[AttnResOptions]
+) -> FloatArray:
+    """Require the named real backend through the supported public API."""
+    return attnres_modulate(knm, theta, backend=backend, **kw)
 
 
-def _python_reference(knm: np.ndarray, theta: np.ndarray, **kw: object) -> np.ndarray:
-    return _force_backend("python", knm, theta, **kw)
+def _python_reference(
+    knm: FloatArray, theta: FloatArray, **kw: Unpack[AttnResOptions]
+) -> FloatArray:
+    """Compute the real NumPy reference without changing dispatch state."""
+    return attnres_modulate(knm, theta, backend="python", **kw)
 
 
 def _direct_payload(
     n: int = 3,
 ) -> tuple[
-    np.ndarray,
-    np.ndarray,
-    np.ndarray,
-    np.ndarray,
-    np.ndarray,
-    np.ndarray,
+    FloatArray,
+    FloatArray,
+    FloatArray,
+    FloatArray,
+    FloatArray,
+    FloatArray,
     int,
     int,
     int,
     float,
     float,
 ]:
+    """Prepare valid flat buffers for direct ingress and refusal tests."""
     knm = _symmetric_knm(n, seed=11).ravel()
     theta = np.linspace(0.0, TWO_PI, n, endpoint=False)
     w = np.zeros((1, 8, 8), dtype=np.float64).ravel()
@@ -137,6 +150,7 @@ def _direct_payload(
 
 
 def _mojo_proc(stdout: str) -> object:
+    """Represent intentionally malformed subprocess output for refusal controls."""
     return type("Proc", (), {"returncode": 0, "stdout": stdout, "stderr": ""})()
 
 
@@ -188,6 +202,7 @@ class TestDirectBackendBoundaryContracts:
         error: type[Exception],
         match: str,
     ) -> None:
+        """Reject corrupted direct buffers and controls before optional loading."""
         payload = list(_direct_payload())
         index = {
             "knm": 0,
@@ -204,7 +219,10 @@ class TestDirectBackendBoundaryContracts:
         }[field]
         payload[index] = replacement
         with pytest.raises(error, match=match):
-            backend(*payload)
+            cast(
+                "RefusalCall",
+                backend,
+            )(*payload)
 
     @pytest.mark.parametrize(
         "backend",
@@ -218,6 +236,7 @@ class TestDirectBackendBoundaryContracts:
         self,
         backend: AttnResDirectBackend,
     ) -> None:
+        """Return an empty vector without requiring an optional runtime."""
         w = np.zeros(64, dtype=np.float64)
         out = backend(
             np.array([], dtype=np.float64),
@@ -243,9 +262,14 @@ class TestDirectJuliaBoundaryContracts:
         self,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
+        """Reject injected numeric text from the Julia return boundary."""
+
         class _JuliaAttnRes:
+            """Supply numeric text for the Julia output refusal boundary."""
+
             @staticmethod
-            def attnres_modulate(*_args: object) -> np.ndarray:
+            def attnres_modulate(*_args: object) -> NDArray[np.str_]:
+                """Return deliberately invalid numeric text for output validation."""
                 return np.array(
                     ["0.0", "0.25", "0.25", "0.0"],
                     dtype=str,
@@ -284,9 +308,10 @@ class TestDirectMojoBoundaryContracts:
         stdout: str,
         match: str,
     ) -> None:
+        """Reject injected stdout with wrong cardinality or non-finite topology."""
         monkeypatch.setattr(_attnres_mojo, "_ensure_exe", lambda: "attnres")
         monkeypatch.setattr(
-            _attnres_mojo.subprocess,
+            subprocess,
             "run",
             lambda *_args, **_kwargs: _mojo_proc(stdout),
         )
@@ -298,9 +323,10 @@ class TestDirectMojoBoundaryContracts:
         self,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
+        """Reject injected stdout that creates absent graph edges."""
         monkeypatch.setattr(_attnres_mojo, "_ensure_exe", lambda: "attnres")
         monkeypatch.setattr(
-            _attnres_mojo.subprocess,
+            subprocess,
             "run",
             lambda *_args, **_kwargs: _mojo_proc(
                 "0\n0.25\n0.5\n0.25\n0\n0\n0.5\n0\n0\n"
@@ -340,6 +366,8 @@ class TestDirectMojoBoundaryContracts:
 
 
 class TestBackendTypingContracts:
+    """Check maintained float64 annotations on the actual bridge APIs."""
+
     @pytest.mark.parametrize(
         ("fn", "label"),
         [
@@ -348,7 +376,10 @@ class TestBackendTypingContracts:
             (attnres_modulate_mojo, "mojo"),
         ],
     )
-    def test_backend_annotations_use_float64_ndarray(self, fn, label: str) -> None:
+    def test_backend_annotations_use_float64_ndarray(
+        self, fn: object, label: str
+    ) -> None:
+        """Retain precise float64 buffer annotations on direct bridge APIs."""
         hints = get_type_hints(fn)
         for name in ("knm_flat", "theta", "w_q", "w_k", "w_v", "w_o", "return"):
             text = str(hints[name])
@@ -362,10 +393,7 @@ class TestBackendTypingContracts:
 
 
 class TestRustParity:
-    @pytest.fixture(autouse=True)
-    def _skip_if_absent(self) -> None:
-        if "rust" not in AVAILABLE_BACKENDS:
-            pytest.skip("Rust backend not built on this host")
+    """Exercise the real Rust numerical owner or its explicit missing-runtime error."""
 
     @given(
         n=st.integers(min_value=4, max_value=16),
@@ -376,7 +404,16 @@ class TestRustParity:
         deadline=None,
         suppress_health_check=[HealthCheck.too_slow],
     )
-    def test_bit_exact_parity(self, n: int, seed: int) -> None:
+    def test_numerical_parity(self, n: int, seed: int) -> None:
+        """Match the real reference within the stated float64 tolerance."""
+        if "rust" not in AVAILABLE_BACKENDS:
+            with pytest.raises(ImportError):
+                attnres_modulate(
+                    np.array([[0.0, 0.3], [0.3, 0.0]]),
+                    np.array([0.1, 0.7]),
+                    backend="rust",
+                )
+            return
         rng = np.random.default_rng(seed)
         knm = _symmetric_knm(n, seed=seed)
         theta = rng.uniform(0.0, TWO_PI, size=n)
@@ -385,6 +422,7 @@ class TestRustParity:
         np.testing.assert_allclose(rs, py, atol=1e-12)
 
     def test_lambda_zero_passthrough(self) -> None:
+        """Preserve exact identity semantics independently of native availability."""
         knm = _symmetric_knm(8, seed=99)
         theta = np.arange(8, dtype=np.float64) * 0.1
         py = _python_reference(knm, theta, lambda_=0.0)
@@ -393,6 +431,14 @@ class TestRustParity:
 
     def test_block_size_honoured(self) -> None:
         """Rust kernel respects ``block_size`` the same way Python does."""
+        if "rust" not in AVAILABLE_BACKENDS:
+            with pytest.raises(ImportError):
+                attnres_modulate(
+                    np.array([[0.0, 0.3], [0.3, 0.0]]),
+                    np.array([0.1, 0.7]),
+                    backend="rust",
+                )
+            return
         n = 12
         rng = np.random.default_rng(3)
         knm = _symmetric_knm(n, seed=3)
@@ -408,15 +454,19 @@ class TestRustParity:
 
 
 class TestJuliaParity:
-    @pytest.fixture(autouse=True)
-    def _skip_if_absent(self) -> None:
-        if "julia" not in AVAILABLE_BACKENDS:
-            pytest.skip("Julia backend not available on this host")
+    """Exercise the real Julia numerical owner or its explicit missing-runtime error."""
 
     @pytest.mark.parametrize("n", [6, 10, 14])
-    def test_bit_exact_parity(self, n: int) -> None:
-        """juliacall's bootstrap is expensive; use parametrised seeds
-        rather than Hypothesis."""
+    def test_numerical_parity(self, n: int) -> None:
+        """Match Julia numerics across deterministic network sizes."""
+        if "julia" not in AVAILABLE_BACKENDS:
+            with pytest.raises(ImportError):
+                attnres_modulate(
+                    np.array([[0.0, 0.3], [0.3, 0.0]]),
+                    np.array([0.1, 0.7]),
+                    backend="julia",
+                )
+            return
         rng = np.random.default_rng(42 + n)
         knm = _symmetric_knm(n, seed=42 + n)
         theta = rng.uniform(0.0, TWO_PI, size=n)
@@ -425,6 +475,15 @@ class TestJuliaParity:
         np.testing.assert_allclose(jl, py, atol=1e-12)
 
     def test_symmetry_preserved(self) -> None:
+        """Preserve undirected coupling under arbitrary oscillator phases."""
+        if "julia" not in AVAILABLE_BACKENDS:
+            with pytest.raises(ImportError):
+                attnres_modulate(
+                    np.array([[0.0, 0.3], [0.3, 0.0]]),
+                    np.array([0.1, 0.7]),
+                    backend="julia",
+                )
+            return
         n = 10
         rng = np.random.default_rng(7)
         knm = _symmetric_knm(n, seed=7)
@@ -439,10 +498,7 @@ class TestJuliaParity:
 
 
 class TestGoParity:
-    @pytest.fixture(autouse=True)
-    def _skip_if_absent(self) -> None:
-        if "go" not in AVAILABLE_BACKENDS:
-            pytest.skip("Go backend not built on this host")
+    """Exercise the real Go numerical owner or its explicit missing-runtime error."""
 
     @given(
         n=st.integers(min_value=4, max_value=14),
@@ -453,7 +509,16 @@ class TestGoParity:
         deadline=None,
         suppress_health_check=[HealthCheck.too_slow],
     )
-    def test_bit_exact_parity(self, n: int, seed: int) -> None:
+    def test_numerical_parity(self, n: int, seed: int) -> None:
+        """Match the real reference within the stated float64 tolerance."""
+        if "go" not in AVAILABLE_BACKENDS:
+            with pytest.raises(ImportError):
+                attnres_modulate(
+                    np.array([[0.0, 0.3], [0.3, 0.0]]),
+                    np.array([0.1, 0.7]),
+                    backend="go",
+                )
+            return
         rng = np.random.default_rng(seed)
         knm = _symmetric_knm(n, seed=seed)
         theta = rng.uniform(0.0, TWO_PI, size=n)
@@ -462,6 +527,7 @@ class TestGoParity:
         np.testing.assert_allclose(go, py, atol=1e-12)
 
     def test_invalid_block_size_surfaces(self) -> None:
+        """Reject zero-band configuration before a Go computation can start."""
         n = 4
         knm = _symmetric_knm(n, seed=0)
         theta = np.zeros(n)
@@ -476,13 +542,19 @@ class TestGoParity:
 
 
 class TestMojoParity:
-    @pytest.fixture(autouse=True)
-    def _skip_if_absent(self) -> None:
-        if "mojo" not in AVAILABLE_BACKENDS:
-            pytest.skip("Mojo backend not built on this host")
+    """Exercise the real Mojo numerical owner or its explicit missing-runtime error."""
 
     @pytest.mark.parametrize("n", [4, 8, 12])
     def test_numerical_parity(self, n: int) -> None:
+        """Match the real Mojo output within the documented numeric tolerance."""
+        if "mojo" not in AVAILABLE_BACKENDS:
+            with pytest.raises(ImportError):
+                attnres_modulate(
+                    np.array([[0.0, 0.3], [0.3, 0.0]]),
+                    np.array([0.1, 0.7]),
+                    backend="mojo",
+                )
+            return
         rng = np.random.default_rng(13 + n)
         knm = _symmetric_knm(n, seed=13 + n)
         theta = rng.uniform(0.0, TWO_PI, size=n)
@@ -493,6 +565,15 @@ class TestMojoParity:
         np.testing.assert_allclose(mj, py, atol=1e-13)
 
     def test_shape_preserved(self) -> None:
+        """Preserve coupling cardinality through an actual Mojo call."""
+        if "mojo" not in AVAILABLE_BACKENDS:
+            with pytest.raises(ImportError):
+                attnres_modulate(
+                    np.array([[0.0, 0.3], [0.3, 0.0]]),
+                    np.array([0.1, 0.7]),
+                    backend="mojo",
+                )
+            return
         n = 8
         knm = _symmetric_knm(n, seed=3)
         theta = np.linspace(0.0, TWO_PI, n, endpoint=False)
@@ -506,11 +587,10 @@ class TestMojoParity:
 
 
 class TestCrossBackendConsistency:
-    @pytest.mark.skipif(
-        len(AVAILABLE_BACKENDS) < 2,
-        reason="Only the Python fallback is available",
-    )
+    """Compare computations from the actual discovered optional owners."""
+
     def test_all_backends_agree(self) -> None:
+        """Compare every discovered original owner on the same graph and phases."""
         rng = np.random.default_rng(2026)
         n = 10
         knm = _symmetric_knm(n, seed=2026)
@@ -539,178 +619,146 @@ class TestCrossBackendConsistency:
             )
 
 
-class TestBackendLoaderDispatch:
-    def test_mojo_loader_invokes_toolchain_bootstrap(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        ensure_calls: list[str] = []
-        backend_calls: list[tuple[np.ndarray, np.ndarray]] = []
+class TestPublicOwnerSelection:
+    """Exercise supported public selection rather than substitute private loaders."""
 
-        def _ensure_exe() -> None:
-            ensure_calls.append("called")
-
-        def _backend(
-            knm_flat: np.ndarray,
-            theta: np.ndarray,
-            w_q: np.ndarray,
-            w_k: np.ndarray,
-            w_v: np.ndarray,
-            w_o: np.ndarray,
-            n: int,
-            n_heads: int,
-            block_size: int,
-            temperature: float,
-            lambda_: float,
-        ) -> np.ndarray:
-            backend_calls.append((knm_flat, np.asarray(theta)))
-            return knm_flat
-
-        fake_module = types.ModuleType(
-            "scpn_phase_orchestrator.experimental.accelerators.coupling._attnres_mojo"
-        )
-        fake_module._ensure_exe = _ensure_exe
-        fake_module.attnres_modulate_mojo = _backend
-        monkeypatch.setitem(sys.modules, fake_module.__name__, fake_module)
-
-        loader = attnres_mod._load_mojo()
-        knm = _symmetric_knm(3, seed=11)
-        theta = np.linspace(0.0, TWO_PI, 3, endpoint=False)
-        w = np.zeros((1, 8, 8), dtype=np.float64)
-
-        out = loader(
-            knm.ravel(),
+    def test_named_mojo_executes_nondefault_width_or_refuses_absence(self) -> None:
+        """Exercise the original mojo runtime on non-default projection width."""
+        knm = _symmetric_knm(4, seed=11)
+        theta = np.array([0.1, 0.7, 1.8, 2.4])
+        if "mojo" not in AVAILABLE_BACKENDS:
+            with pytest.raises(ImportError):
+                attnres_modulate(knm, theta, backend="mojo")
+            return
+        weights = default_projections(n_heads=4, d_model=12, seed=6)
+        expected = phase_attention_oracle(knm, theta, weights)
+        out = attnres_modulate(
+            knm,
             theta,
-            w.ravel(),
-            w.ravel(),
-            w.ravel(),
-            np.zeros((8, 8), dtype=np.float64),
-            3,
-            1,
-            -1,
-            1.0,
-            0.25,
+            w_q=weights[0],
+            w_k=weights[1],
+            w_v=weights[2],
+            w_o=weights[3],
+            n_heads=4,
+            backend="mojo",
         )
+        np.testing.assert_allclose(out, expected, rtol=0.0, atol=1e-12)
+        assert np.max(np.abs(out - knm)) > 1e-4
 
-        assert ensure_calls == ["called"]
-        assert backend_calls and backend_calls[0][0].shape == (9,)
-        np.testing.assert_array_equal(out, knm.ravel())
-
-    def test_go_loader_invokes_shared_object_loader(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        load_calls: list[str] = []
-
-        def _load_lib() -> None:
-            load_calls.append("loaded")
-
-        def _backend(
-            knm_flat: np.ndarray,
-            theta: np.ndarray,
-            w_q: np.ndarray,
-            w_k: np.ndarray,
-            w_v: np.ndarray,
-            w_o: np.ndarray,
-            n: int,
-            n_heads: int,
-            block_size: int,
-            temperature: float,
-            lambda_: float,
-        ) -> np.ndarray:
-            return np.asarray(knm_flat, dtype=np.float64)
-
-        fake_module = types.ModuleType(
-            "scpn_phase_orchestrator.experimental.accelerators.coupling._attnres_go"
-        )
-        fake_module._load_lib = _load_lib
-        fake_module.attnres_modulate_go = _backend
-        monkeypatch.setitem(sys.modules, fake_module.__name__, fake_module)
-
-        loader = attnres_mod._load_go()
-        knm = _symmetric_knm(2, seed=5)
-        theta = np.linspace(0.0, TWO_PI, 2, endpoint=False)
-        w = np.zeros((1, 8, 8), dtype=np.float64)
-
-        out = loader(
-            knm.ravel(),
+    def test_named_go_executes_nondefault_width_or_refuses_absence(self) -> None:
+        """Exercise the original go runtime on non-default projection width."""
+        knm = _symmetric_knm(4, seed=11)
+        theta = np.array([0.1, 0.7, 1.8, 2.4])
+        if "go" not in AVAILABLE_BACKENDS:
+            with pytest.raises(ImportError):
+                attnres_modulate(knm, theta, backend="go")
+            return
+        weights = default_projections(n_heads=4, d_model=12, seed=6)
+        expected = phase_attention_oracle(knm, theta, weights)
+        out = attnres_modulate(
+            knm,
             theta,
-            w.ravel(),
-            w.ravel(),
-            w.ravel(),
-            np.zeros((8, 8), dtype=np.float64),
-            2,
-            1,
-            -1,
-            1.0,
-            0.25,
+            w_q=weights[0],
+            w_k=weights[1],
+            w_v=weights[2],
+            w_o=weights[3],
+            n_heads=4,
+            backend="go",
         )
+        np.testing.assert_allclose(out, expected, rtol=0.0, atol=1e-12)
+        assert np.max(np.abs(out - knm)) > 1e-4
 
-        assert load_calls == ["loaded"]
-        np.testing.assert_array_equal(out, knm.ravel())
-
-    def test_julia_loader_imports_juliacall(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        fake_backend = object()
-
-        fake_juliacall = types.ModuleType("juliacall")
-        fake_juliacall.Main = object()
-        fake_julia = types.ModuleType(
-            "scpn_phase_orchestrator.experimental.accelerators.coupling._attnres_julia"
+    def test_named_julia_executes_nondefault_width_or_refuses_absence(self) -> None:
+        """Exercise the original julia runtime on non-default projection width."""
+        knm = _symmetric_knm(4, seed=11)
+        theta = np.array([0.1, 0.7, 1.8, 2.4])
+        if "julia" not in AVAILABLE_BACKENDS:
+            with pytest.raises(ImportError):
+                attnres_modulate(knm, theta, backend="julia")
+            return
+        weights = default_projections(n_heads=4, d_model=12, seed=6)
+        expected = phase_attention_oracle(knm, theta, weights)
+        out = attnres_modulate(
+            knm,
+            theta,
+            w_q=weights[0],
+            w_k=weights[1],
+            w_v=weights[2],
+            w_o=weights[3],
+            n_heads=4,
+            backend="julia",
         )
-        fake_julia.attnres_modulate_julia = fake_backend
-        monkeypatch.setitem(sys.modules, "juliacall", fake_juliacall)
-        monkeypatch.setitem(
-            sys.modules,
-            "scpn_phase_orchestrator.experimental.accelerators.coupling._attnres_julia",
-            fake_julia,
-        )
+        np.testing.assert_allclose(out, expected, rtol=0.0, atol=1e-12)
+        assert np.max(np.abs(out - knm)) > 1e-4
 
-        assert attnres_mod._load_julia() is fake_backend
+    def test_automatic_and_named_active_owner_agree(self) -> None:
+        """Default public dispatch computes the same law as the named active owner."""
+        knm = _symmetric_knm(5, seed=42)
+        theta = np.linspace(0.0, TWO_PI, 5, endpoint=False)
+        actual = attnres_modulate(knm, theta)
+        explicit = attnres_modulate(knm, theta, backend=attnres_mod.ACTIVE_BACKEND)
+        np.testing.assert_allclose(actual, explicit, rtol=0.0, atol=1e-12)
+        assert np.max(np.abs(actual - knm)) > 1e-4
 
-    def test_resolve_backends_chooses_first_healthy_backend(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        calls: list[str] = []
+    def test_explicit_numpy_matches_independent_law(self) -> None:
+        """The always-available NumPy owner computes the independent coupling oracle."""
+        knm = _symmetric_knm(4, seed=8)
+        theta = np.linspace(0.0, TWO_PI, 4, endpoint=False)
+        weights = default_projections(seed=8)
+        expected = phase_attention_oracle(knm, theta, weights)
+        actual = attnres_modulate(knm, theta, backend="python", projection_seed=8)
+        np.testing.assert_allclose(actual, expected, rtol=0.0, atol=1e-12)
 
-        def _fail() -> object:
-            calls.append("fail")
-            raise RuntimeError("backend unavailable")
 
-        def _go() -> object:
-            calls.append("go")
-            return lambda *args: np.array([0.0], dtype=np.float64)
+@pytest.mark.parametrize("source_state", ["missing", "invalid"])
+def test_real_julia_loader_refuses_missing_or_invalid_source(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, source_state: str
+) -> None:
+    """Reject actual missing files and Julia syntax failures without substitution."""
+    coupling = np.array([[0.0, 0.3], [0.3, 0.0]])
+    phases = np.array([0.1, 0.7])
+    if "julia" not in AVAILABLE_BACKENDS:
+        with pytest.raises(ImportError):
+            attnres_modulate(coupling, phases, backend="julia")
+        return
+    source = tmp_path / "attnres.jl"
+    if source_state == "invalid":
+        source.write_text("function broken(\n", encoding="utf-8")
+    monkeypatch.setattr(_attnres_julia, "_JULIA_FILE", source)
+    monkeypatch.setattr(_attnres_julia, "_JULIA_MODULE", None)
+    with pytest.raises(ImportError, match="not found|cannot load"):
+        attnres_modulate(coupling, phases, backend="julia")
 
-        monkeypatch.setitem(attnres_mod._LOADERS, "rust", _fail)
-        monkeypatch.setitem(attnres_mod._LOADERS, "mojo", _fail)
-        monkeypatch.setitem(attnres_mod._LOADERS, "julia", _fail)
-        monkeypatch.setitem(attnres_mod._LOADERS, "go", _go)
 
-        active, available = attnres_mod._resolve_backends()
-        assert active == "go"
-        assert available == ["go", "python"]
-        assert calls == ["fail", "fail", "fail", "go"]
+@pytest.mark.parametrize("boundary", ["include", "compute"])
+def test_julia_unexpected_python_errors_are_not_relabelled_as_numeric_failures(
+    monkeypatch: pytest.MonkeyPatch, boundary: str
+) -> None:
+    """Injected non-Julia failures must propagate; they supply no numerical result."""
+    coupling = np.array([[0.0, 0.3], [0.3, 0.0]])
+    phases = np.array([0.1, 0.7])
+    if "julia" not in AVAILABLE_BACKENDS:
+        with pytest.raises(ImportError):
+            attnres_modulate(coupling, phases, backend="julia")
+        return
 
-    def test_resolve_backends_falls_back_to_python_when_all_backends_fail(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        calls: list[str] = []
+    class RefusingBoundary:
+        """Raise only unexpected Python exceptions at a negative runtime boundary."""
 
-        def _fail() -> object:
-            calls.append("fail")
-            raise RuntimeError("backend unavailable")
+        @staticmethod
+        def include(_path: str) -> None:
+            """Refuse inclusion without returning a substitute Julia module."""
+            raise RuntimeError("unexpected include failure")
 
-        monkeypatch.setitem(attnres_mod._LOADERS, "rust", _fail)
-        monkeypatch.setitem(attnres_mod._LOADERS, "mojo", _fail)
-        monkeypatch.setitem(attnres_mod._LOADERS, "julia", _fail)
-        monkeypatch.setitem(attnres_mod._LOADERS, "go", _fail)
+        @staticmethod
+        def attnres_modulate(*_arguments: object) -> object:
+            """Refuse computation without returning a substitute coupling matrix."""
+            raise RuntimeError("unexpected compute failure")
 
-        active, available = attnres_mod._resolve_backends()
-
-        assert active == "python"
-        assert available == ["python"]
-        assert calls == ["fail", "fail", "fail", "fail"]
+    if boundary == "include":
+        monkeypatch.setattr(_attnres_julia, "_JULIA_MODULE", None)
+        monkeypatch.setattr(_attnres_julia, "require_julia_main", RefusingBoundary)
+    else:
+        monkeypatch.setattr(_attnres_julia, "_JULIA_MODULE", RefusingBoundary())
+    with pytest.raises(RuntimeError, match=f"unexpected {boundary} failure"):
+        attnres_modulate(coupling, phases, backend="julia")

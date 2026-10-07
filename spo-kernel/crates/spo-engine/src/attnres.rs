@@ -6,36 +6,22 @@
 // Contact: www.anulum.li | protoscience@anulum.li
 // SCPN Phase Orchestrator — AttnRes coupling modulation (full multi-head)
 
-//! Full multi-head Attention-Residuals port
-//! (arXiv:2603.15031 Moonshot/Kimi 2026) applied to the SCPN coupling
-//! matrix. Mirrors
-//! ``src/scpn_phase_orchestrator/coupling/attention_residuals.py``
-//! bit-for-bit.
+//! SPO multi-head phase attention coupling.
 //!
-//! The previous single-equation Hebbian proxy has been retired per
-//! the ``feedback_no_simplistic_models.md`` rule — this file
-//! implements the full Transformer stack: Fourier-feature embedding,
-//! per-head Q/K/V projections, scaled dot-product attention with
-//! softmax, optional local mask, output projection, symmetric
-//! pairwise aggregation onto the coupling matrix.
+//! Fourier phase features, projected Q/K/V spatial attention and cosine readout
+//! define a state-dependent coupling adaptation. This is not the learned
+//! pseudo-query depth-residual operator in arXiv:2603.15031. The NumPy, Go,
+//! Julia and Mojo implementations share this oscillator coupling law.
 //!
-//! Input layout (row-major flat arrays):
-//!
-//! * ``knm``        — ``(N, N)`` coupling matrix, symmetric, zero diagonal.
-//! * ``theta``      — ``(N,)`` phase vector.
-//! * ``w_q``        — ``(H, D, D_h)`` per-head query projection.
-//! * ``w_k``        — ``(H, D, D_h)`` per-head key projection.
-//! * ``w_v``        — ``(H, D, D_h)`` per-head value projection.
-//! * ``w_o``        — ``(H·D_h, D)`` output projection.
-//!
-//! Here ``D`` is the hidden-state dimension (even; paper lifts the
-//! scalar phase onto ``[cos θ, sin θ, cos 2θ, sin 2θ, …]``) and
-//! ``D_h = D / H``.
+//! All buffers are row-major: K(N,N), theta(N), Q/K/V(H,D,D/H), O(D,D).
+//! D must be even and positive, H divides D, and K is symmetric with zero
+//! diagonal. Unrepresentable intermediate values are errors, not iterates.
 
-/// Compute the full multi-head AttnRes modulated coupling matrix.
+/// Compute the SPO multi-head phase attention modulated coupling matrix.
 ///
 /// # Errors
-/// Returns `Err` for shape / parameter mismatches.
+/// Returns `Err` for shape, topology, finite-value or parameter mismatches,
+/// integer size overflow, or non-finite numerical intermediates.
 #[allow(clippy::too_many_arguments)]
 pub fn attnres_modulate(
     knm: &[f64],
@@ -50,12 +36,9 @@ pub fn attnres_modulate(
     temperature: f64,
     lambda_: f64,
 ) -> Result<Vec<f64>, String> {
-    // Validation --------------------------------------------------------
-    if knm.len() != n * n {
-        return Err(format!("knm length {} != n*n {}", knm.len(), n * n));
-    }
-    if theta.len() != n {
-        return Err(format!("theta length {} != n {}", theta.len(), n));
+    let nn = n.checked_mul(n).ok_or("n*n overflows usize")?;
+    if knm.len() != nn || theta.len() != n {
+        return Err("knm/theta length mismatch".into());
     }
     if n_heads == 0 {
         return Err("n_heads must be ≥ 1".into());
@@ -63,49 +46,47 @@ pub fn attnres_modulate(
     if temperature <= 0.0 || !temperature.is_finite() {
         return Err("temperature must be finite and > 0".into());
     }
-    if lambda_ < 0.0 {
-        return Err("lambda_ must be ≥ 0".into());
+    if lambda_ < 0.0 || !lambda_.is_finite() {
+        return Err("lambda_ must be finite and ≥ 0".into());
     }
-    // Infer d_model and d_head from w_q length.
-    if !w_q.len().is_multiple_of(n_heads) {
-        return Err(format!(
-            "w_q length {} not divisible by n_heads {}",
-            w_q.len(),
-            n_heads
-        ));
+    if block_size != -1 && block_size < 1 {
+        return Err("block_size must be -1 or positive".into());
     }
-    let per_head = w_q.len() / n_heads; // = d_model * d_head
-                                        // Use w_o: (H·d_head, d_model) == (n_heads * d_head) rows × d_model cols
-                                        // → w_o.len() = n_heads * d_head * d_model, and per_head = d_model * d_head,
-                                        // so w_o.len() == n_heads * per_head. That doesn't pin d_model; we rely on
-                                        // the caller shapes. The NumPy side always passes d_model = PHASE_EMBED_DIM
-                                        // (default 8). We infer d_model via gcd-ish: w_q is (H, D, D_h) so per_head =
-                                        // D * D_h, and w_o is (H·D_h, D) so w_o.len() = H * D_h * D → D · D_h = D * D_h
-                                        // must hold; we need a second hint. Require w_v, w_k, w_k match w_q in length
-                                        // and w_o.len() == H * per_head. Then resolve D_h = w_o.len() / (H·D). The
-                                        // caller always ships d_model divisible by H, so D_h = D / H.
-    if w_k.len() != w_q.len() || w_v.len() != w_q.len() {
-        return Err("w_k / w_v must match w_q in length".into());
+    if [knm, theta, w_q, w_k, w_v, w_o]
+        .iter()
+        .any(|values| values.iter().any(|value| !value.is_finite()))
+    {
+        return Err("inputs must contain only finite values".into());
     }
-    if w_o.len() != n_heads * per_head {
-        return Err(format!(
-            "w_o length {} != n_heads·per_head {}",
-            w_o.len(),
-            n_heads * per_head
-        ));
+    for i in 0..n {
+        if knm[i * n + i].abs() > 1e-12 {
+            return Err("knm diagonal must be zero".into());
+        }
+        for j in 0..n {
+            let reverse = knm[j * n + i];
+            if (knm[i * n + j] - reverse).abs() > 1e-12 + 1e-12 * reverse.abs() {
+                return Err("knm must be symmetric".into());
+            }
+        }
     }
-    // Solve D_h from `per_head = D·D_h` and `D = H·D_h` (d_model even-split).
-    // Then D_h² = per_head / H  →  D_h = sqrt(per_head / H).
-    let per_head_per_h = per_head as f64 / n_heads as f64;
-    let d_head = per_head_per_h.sqrt().round() as usize;
-    if d_head * d_head * n_heads != per_head {
-        return Err(format!(
-            "cannot infer d_head from w_q shape: per_head={per_head}, n_heads={n_heads}"
-        ));
+    let d_model = w_o.len().isqrt();
+    if d_model < 2 || !d_model.is_multiple_of(2) || d_model * d_model != w_o.len() {
+        return Err("w_o must encode an even square d_model".into());
     }
-    let d_model = n_heads * d_head;
+    if !d_model.is_multiple_of(n_heads) {
+        return Err("d_model must be divisible by n_heads".into());
+    }
+    if [w_q, w_k, w_v].iter().any(|w| w.len() != w_o.len()) {
+        return Err("w_q / w_k / w_v must match w_o in length".into());
+    }
+    let d_head = d_model / n_heads;
+    n.checked_mul(d_model)
+        .ok_or("embedding size overflows usize")?;
+    n_heads
+        .checked_mul(nn)
+        .ok_or("attention size overflows usize")?;
 
-    if lambda_ == 0.0 {
+    if n == 0 || lambda_ == 0.0 {
         return Ok(knm.to_vec());
     }
 
@@ -144,7 +125,16 @@ pub fn attnres_modulate(
 
     // 3. Attention logits per head:
     //   logits[h, i, j] = sum_e q[h,i,e] * k[h,j,e] / (sqrt(d_h) * temp).
-    let inv_scale = 1.0 / ((d_head as f64).sqrt() * temperature);
+    if [q.as_slice(), k.as_slice(), v.as_slice()]
+        .iter()
+        .any(|values| values.iter().any(|value| !value.is_finite()))
+    {
+        return Err("attention projections must be finite".into());
+    }
+    let inv_scale = (1.0 / (d_head as f64).sqrt()) / temperature;
+    if !inv_scale.is_finite() {
+        return Err("attention scale must be finite".into());
+    }
     let mut attn = vec![0.0_f64; n_heads * n * n];
     for h in 0..n_heads {
         for i in 0..n {
@@ -169,6 +159,9 @@ pub fn attnres_modulate(
                     dot += q[h * n * d_head + i * d_head + e] * k[h * n * d_head + j * d_head + e];
                 }
                 row_logits[j] = dot * inv_scale;
+                if !row_logits[j].is_finite() {
+                    return Err("attention logits must be finite".into());
+                }
                 any_unmasked = true;
             }
             if !any_unmasked {
@@ -238,6 +231,9 @@ pub fn attnres_modulate(
             s += val * val;
         }
         o_norm[i] = s.sqrt() + 1e-12;
+        if !o_norm[i].is_finite() {
+            return Err("attention output norms must be finite".into());
+        }
     }
     let mut a_agg = vec![0.0_f64; n * n];
     for i in 0..n {
@@ -258,9 +254,9 @@ pub fn attnres_modulate(
             }
             let mut dot = 0.0_f64;
             for d in 0..d_model {
-                dot += o[i * d_model + d] * o[j * d_model + d];
+                dot += (o[i * d_model + d] / o_norm[i]) * (o[j * d_model + d] / o_norm[j]);
             }
-            let cos_sim = dot / (o_norm[i] * o_norm[j]);
+            let cos_sim = dot.clamp(-1.0, 1.0);
             a_agg[i * n + j] = 0.5 * (1.0 + cos_sim);
         }
     }
@@ -278,7 +274,10 @@ pub fn attnres_modulate(
             if i == j {
                 continue;
             }
-            out[i * n + j] = 0.5 * (rowwise[i * n + j] + rowwise[j * n + i]);
+            out[i * n + j] = 0.5 * rowwise[i * n + j] + 0.5 * rowwise[j * n + i];
+            if !out[i * n + j].is_finite() {
+                return Err("modulated coupling must be finite".into());
+            }
         }
     }
     Ok(out)

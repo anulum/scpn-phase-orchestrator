@@ -16,6 +16,7 @@ dispatcher then falls through to the next backend.
 from __future__ import annotations
 
 import ctypes
+import math
 from pathlib import Path
 from typing import TypeAlias
 
@@ -48,8 +49,12 @@ def _load_lib() -> ctypes.CDLL:
             f"cd go && go build -buildmode=c-shared -o libattnres.so attnres.go"
         )
     lib = load_go_library(_LIB_PATH)
-    lib.AttnResModulate.restype = ctypes.c_int
-    lib.AttnResModulate.argtypes = [
+    if not hasattr(lib, "AttnResModulateV2"):
+        raise ImportError(
+            "Go AttnRes library lacks the dimension-aware V2 ABI; rebuild it"
+        )
+    lib.AttnResModulateV2.restype = ctypes.c_int
+    lib.AttnResModulateV2.argtypes = [
         ctypes.POINTER(ctypes.c_double),  # knm
         ctypes.POINTER(ctypes.c_double),  # theta
         ctypes.POINTER(ctypes.c_double),  # w_q
@@ -58,6 +63,7 @@ def _load_lib() -> ctypes.CDLL:
         ctypes.POINTER(ctypes.c_double),  # w_o
         ctypes.c_int,  # n
         ctypes.c_int,  # n_heads
+        ctypes.c_int,  # d_model
         ctypes.c_int,  # block_size
         ctypes.c_double,  # temperature
         ctypes.c_double,  # lambda
@@ -80,7 +86,43 @@ def attnres_modulate_go(
     temperature: float,
     lambda_: float,
 ) -> FloatArray:
-    """Go-backed multi-head AttnRes. Signature matches the Rust FFI."""
+    """Compute phase attention coupling through the original Go runtime.
+
+    Parameters
+    ----------
+    knm_flat : numpy.ndarray
+        Row-major symmetric coupling graph, ``N*N`` finite real values.
+    theta : numpy.ndarray
+        ``N`` oscillator phases in radians.
+    w_q, w_k, w_v, w_o : numpy.ndarray
+        Row-major projection buffers containing ``D*D`` finite real values.
+        ``D`` is even, at least two, and divisible by the head count.
+    n : int
+        Non-negative oscillator count matching the supplied graph and phases.
+    n_heads : int
+        Positive head count dividing the model width.
+    block_size : int
+        ``-1`` selects all neighbours; a positive value limits index distance.
+    temperature : float
+        Positive finite softmax temperature.
+    lambda_ : float
+        Non-negative finite multiplicative strength.
+
+    Returns
+    -------
+    numpy.ndarray
+        Flattened float64 coupling with validated symmetry, zero diagonal
+        and preserved absent edges. Empty graphs need no optional runtime.
+
+    Raises
+    ------
+    ValueError
+        On invalid types, shapes, controls, topology, numerical intermediates
+        or returned coupling values. Boolean, complex, text and temporal
+        aliases are rejected before coercion.
+    ImportError
+        If the optional runtime or a compatible compiled artifact is missing.
+    """
     (
         knm64,
         theta64,
@@ -110,7 +152,7 @@ def attnres_modulate_go(
         return np.zeros(0, dtype=np.float64)
     lib = _load_lib()
     out = np.zeros(n * n, dtype=np.float64)
-    rc = lib.AttnResModulate(
+    rc = lib.AttnResModulateV2(
         knm64.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
         theta64.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
         wq64.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
@@ -119,11 +161,12 @@ def attnres_modulate_go(
         wo64.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
         ctypes.c_int(n),
         ctypes.c_int(n_heads),
+        ctypes.c_int(math.isqrt(wo64.size)),
         ctypes.c_int(block_size),
         ctypes.c_double(temperature),
         ctypes.c_double(lambda_),
         out.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
     )
     if rc != 0:
-        raise ValueError(f"Go AttnResModulate returned error code {rc}")
+        raise ValueError(f"Go AttnResModulateV2 returned error code {rc}")
     return validate_attnres_backend_output(out, n=n, knm_flat=knm64)
