@@ -6,7 +6,7 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Steady-state R (Mojo port)
 
-"""One-trial Kuramoto steady-state R as a Mojo executable.
+"""One-trial finite-window Kuramoto mean R as a Mojo executable.
 
 Stdin:
 
@@ -33,7 +33,7 @@ fn _kuramoto_step(
     n: Int,
     k_scale: Float64,
     dt: Float64,
-) -> None:
+) raises -> None:
     var old = List[Float64](capacity=n)
     for i in range(n):
         old.append(phases[i])
@@ -43,19 +43,21 @@ fn _kuramoto_step(
         var theta_i = old[i]
         for j in range(n):
             var k_ij = knm_flat[base + j] * k_scale
-            var abs_k = k_ij
-            if abs_k < 0.0:
-                abs_k = -abs_k
-            if abs_k < 1e-30:
+            require_finite(k_ij)
+            if k_ij == 0.0:
                 continue
             var a_ij = alpha_flat[base + j]
-            coupling += k_ij * sin(old[j] - theta_i - a_ij)
-        phases[i] = theta_i + dt * (omegas[i] + coupling)
+            var angle = old[j] - theta_i - a_ij
+            require_finite(angle)
+            coupling += k_ij * sin(angle)
+        var velocity = omegas[i] + coupling
+        require_finite(velocity)
+        phases[i] = theta_i + dt * velocity
+        require_finite(phases[i])
 
 
 fn _order_parameter(phases: List[Float64], n: Int) -> Float64:
-    if n == 0:
-        return 0.0
+    # The admitted native trial requires n to be positive.
     var nn = Float64(n)
     var sum_cos: Float64 = 0.0
     var sum_sin: Float64 = 0.0
@@ -77,7 +79,27 @@ fn steady_state_r(
     dt: Float64,
     n_transient: Int,
     n_measure: Int,
-) -> Float64:
+) raises -> Float64:
+    if n <= 0 or n_transient < 0 or n_measure < 0:
+        raise Error("invalid trial dimensions or counts")
+    if len(phases_init) != n or len(omegas) != n:
+        raise Error("trial vectors must match n")
+    if n > len(knm_flat) // n or len(knm_flat) != n * n or len(alpha_flat) != n * n:
+        raise Error("trial matrices must match n squared")
+    require_finite(k_scale)
+    require_finite(dt)
+    if dt <= 0.0:
+        raise Error("dt must be positive")
+    for value in phases_init:
+        require_finite(value)
+    for value in omegas:
+        require_finite(value)
+    for value in knm_flat:
+        require_finite(value)
+    for value in alpha_flat:
+        require_finite(value)
+    if n_measure == 0:
+        return 0.0
     var phases = List[Float64](capacity=n)
     for i in range(n):
         phases.append(phases_init[i])
@@ -87,9 +109,11 @@ fn steady_state_r(
     for _ in range(n_measure):
         _kuramoto_step(phases, omegas, knm_flat, alpha_flat, n, k_scale, dt)
         r_sum += _order_parameter(phases, n)
-    if n_measure == 0:
-        return 0.0
-    return r_sum / Float64(n_measure)
+    var r = r_sum / Float64(n_measure)
+    require_finite(r)
+    if r < 0.0 or r > 1.0 + 1e-12:
+        raise Error("mean R must lie in [0, 1]")
+    return min(r, Float64(1.0))
 
 
 fn main() raises:
@@ -98,11 +122,12 @@ fn main() raises:
     for tok in line.split():
         tokens.append(String(tok))
 
+    if len(tokens) < 6:
+        raise Error("incomplete STEADY header")
     var idx = 0
     var op = tokens[idx]; idx += 1
     if op != "STEADY":
-        print(-1)
-        return
+        raise Error("unknown operation; expected STEADY")
 
     var n = Int(atol(tokens[idx])); idx += 1
     var k_scale = atof(tokens[idx]); idx += 1
@@ -110,21 +135,50 @@ fn main() raises:
     var n_transient = Int(atol(tokens[idx])); idx += 1
     var n_measure = Int(atol(tokens[idx])); idx += 1
 
+    if n <= 0 or n_transient < 0 or n_measure < 0:
+        raise Error("positive n and nonnegative step counts required")
+    require_finite(k_scale)
+    require_finite(dt)
+    if dt <= 0.0:
+        raise Error("dt must be positive")
+    # Bound every product using the actual request before allocating buffers.
+    if n > len(tokens) or n > len(tokens) // n:
+        raise Error("dimensions exceed request length")
+    var remaining = len(tokens) - idx
+    if n > remaining // 2:
+        raise Error("vector dimensions exceed request length")
+    if n * n != (remaining - 2 * n) // 2 or remaining != 2 * n + 2 * n * n:
+        raise Error("STEADY buffer cardinality mismatch")
+
     var phases = List[Float64](capacity=n)
     for _ in range(n):
-        phases.append(atof(tokens[idx])); idx += 1
+        var value = atof(tokens[idx]); idx += 1
+        require_finite(value)
+        phases.append(value)
     var omegas = List[Float64](capacity=n)
     for _ in range(n):
-        omegas.append(atof(tokens[idx])); idx += 1
+        var value = atof(tokens[idx]); idx += 1
+        require_finite(value)
+        omegas.append(value)
     var knm = List[Float64](capacity=n * n)
     for _ in range(n * n):
-        knm.append(atof(tokens[idx])); idx += 1
+        var value = atof(tokens[idx]); idx += 1
+        require_finite(value)
+        knm.append(value)
     var alpha = List[Float64](capacity=n * n)
     for _ in range(n * n):
-        alpha.append(atof(tokens[idx])); idx += 1
+        var value = atof(tokens[idx]); idx += 1
+        require_finite(value)
+        alpha.append(value)
 
     var r = steady_state_r(
         phases, omegas, knm, alpha,
         n, k_scale, dt, n_transient, n_measure,
     )
     print(r)
+
+
+fn require_finite(value: Float64) raises:
+    """Reject nonfinite values before numerical computation or publication."""
+    if not (value <= Float64.MAX_FINITE and value >= Float64.MIN_FINITE):
+        raise Error("STEADY numerical values must be finite")

@@ -81,8 +81,10 @@ half-width gamma:
 K_c = 2 * gamma
 ```
 
-For general distributions, `find_critical_coupling()` in the
-`upde.bifurcation` module computes K_c numerically via bisection.
+`find_critical_coupling()` in `upde.bifurcation` bisects a finite-window
+R=0.1 classification response on [0,20]. It assumes monotonicity and does
+not certify the physical critical coupling in the formula above. See the
+[numerical API contract](../reference/api/upde_bifurcation.md).
 
 ### Supervisor Use
 

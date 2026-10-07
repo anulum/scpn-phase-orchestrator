@@ -8,8 +8,8 @@
 
 """Hypothesis-driven invariant proofs for basin stability estimation.
 
-Each test is a computational theorem proving mathematical bounds on
-basin stability S_B and multi-basin analysis. Menck et al. 2013.
+The bounded generated cases exercise sample fractions, inclusive thresholds,
+R values and reproducibility through the original public numerical functions.
 """
 
 from __future__ import annotations
@@ -18,6 +18,7 @@ import numpy as np
 import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
+from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.upde.basin_stability import (
     BasinStabilityResult,
@@ -25,10 +26,12 @@ from scpn_phase_orchestrator.upde.basin_stability import (
     multi_basin_stability,
 )
 
+FloatArray = NDArray[np.float64]
+
 TWO_PI = 2.0 * np.pi
 
 
-def _connected_knm(n: int, strength: float = 1.0, seed: int = 0) -> np.ndarray:
+def _connected_knm(n: int, strength: float = 1.0, seed: int = 0) -> FloatArray:
     rng = np.random.default_rng(seed)
     raw = rng.uniform(0.3, 1.0, (n, n)) * strength
     knm = 0.5 * (raw + raw.T)
@@ -51,6 +54,7 @@ class TestBasinStabilityBounds:
         max_examples=40, suppress_health_check=[HealthCheck.too_slow], deadline=None
     )
     def test_sb_in_unit_interval(self, n: int, strength: float, seed: int) -> None:
+        """Actual sampled fractions remain within the unit interval."""
         rng = np.random.default_rng(seed)
         omegas = rng.uniform(-1, 1, n)
         knm = _connected_knm(n, strength=strength, seed=seed)
@@ -72,6 +76,7 @@ class TestBasinStabilityBounds:
         max_examples=30, suppress_health_check=[HealthCheck.too_slow], deadline=None
     )
     def test_n_converged_leq_n_samples(self, n: int, seed: int) -> None:
+        """Actual threshold-passing counts cannot exceed sampled initial conditions."""
         rng = np.random.default_rng(seed)
         omegas = rng.uniform(-1, 1, n)
         knm = _connected_knm(n, seed=seed)
@@ -115,6 +120,7 @@ class TestBasinStabilityBounds:
         max_examples=30, suppress_health_check=[HealthCheck.too_slow], deadline=None
     )
     def test_r_final_shape(self, n: int, seed: int) -> None:
+        """Actual returned trial cardinality matches the requested sample count."""
         rng = np.random.default_rng(seed)
         omegas = rng.uniform(-1, 1, n)
         knm = _connected_knm(n, seed=seed)
@@ -192,7 +198,7 @@ class TestBasinStabilityPhysics:
         max_examples=20, suppress_health_check=[HealthCheck.too_slow], deadline=None
     )
     def test_identical_freqs_high_sb(self, seed: int) -> None:
-        """Identical frequencies always sync (any connected K)."""
+        """The specified dense positive graph passes most identical-frequency trials."""
         n = 4
         omegas = np.full(n, 2.0)
         knm = _connected_knm(n, strength=5.0, seed=seed)
@@ -225,9 +231,7 @@ class TestBasinStabilityPhysics:
 
 
 class TestMultiBasinMonotonicity:
-    """S_B(lower threshold) ≥ S_B(higher threshold). More trials pass a
-    lower bar than a higher one.
-    """
+    """The same trials pass lower thresholds at least as often as higher ones."""
 
     @given(
         n=st.integers(min_value=2, max_value=6),
@@ -237,6 +241,7 @@ class TestMultiBasinMonotonicity:
         max_examples=30, suppress_health_check=[HealthCheck.too_slow], deadline=None
     )
     def test_monotonic_thresholds(self, n: int, seed: int) -> None:
+        """The same trials cannot pass a higher threshold more often."""
         rng = np.random.default_rng(seed)
         omegas = rng.uniform(-1, 1, n)
         knm = _connected_knm(n, strength=3.0, seed=seed)
@@ -262,6 +267,7 @@ class TestMultiBasinMonotonicity:
         max_examples=30, suppress_health_check=[HealthCheck.too_slow], deadline=None
     )
     def test_multi_returns_all_thresholds(self, n: int, seed: int) -> None:
+        """Every requested distinct threshold retains its established result label."""
         rng = np.random.default_rng(seed)
         omegas = rng.uniform(-1, 1, n)
         knm = _connected_knm(n, seed=seed)
@@ -288,6 +294,7 @@ class TestMultiBasinMonotonicity:
         max_examples=30, suppress_health_check=[HealthCheck.too_slow], deadline=None
     )
     def test_multi_all_sb_bounded(self, n: int, seed: int) -> None:
+        """Every actual threshold fraction and count retains its sampling bounds."""
         rng = np.random.default_rng(seed)
         omegas = rng.uniform(-1, 1, n)
         knm = _connected_knm(n, seed=seed)
@@ -336,6 +343,7 @@ class TestCustomThreshold:
 
     @pytest.mark.parametrize("thresh", [0.1, 0.3, 0.5, 0.7, 0.9, 0.99])
     def test_threshold_stored(self, thresh: float) -> None:
+        """The actual sampling record retains the requested classification threshold."""
         n = 3
         omegas = np.ones(n)
         knm = _connected_knm(n)

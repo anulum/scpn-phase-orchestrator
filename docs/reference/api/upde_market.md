@@ -400,12 +400,17 @@ def update_risk_dashboard(new_returns_row):
         alert("TRANSITION", level="medium", R=R_current)
 ```
 
-### 5.8 Bifurcation Diagram of Market K_c
+### 5.8 Finite-window coupling classification
+
+This illustrative oscillator mapping samples an R=0.1 threshold crossing.
+Return means and correlations are proxies, without a validated physical rate
+mapping. The result does not establish a market bifurcation or an investment
+signal. See the [numerical API contract](upde_bifurcation.md).
 
 ```python
 from scpn_phase_orchestrator.upde.bifurcation import trace_sync_transition
 
-# Treat market as Kuramoto system: estimate K_c from return data
+# Illustrative oscillator response using return-derived proxies
 # omegas = mean return rates, knm = correlation-derived coupling
 correlation = np.corrcoef(returns.T)  # N×N
 omegas_market = np.mean(returns, axis=0) * 252  # annualised
@@ -420,7 +425,7 @@ diagram = trace_sync_transition(
     K_range=(0.0, 10.0),
     n_points=30,
 )
-print(f"Market-implied K_c = {diagram.K_critical}")
+print(f"Sampled R=0.1 crossing = {diagram.K_critical}")
 ```
 
 ### 5.9 Sector Decomposition

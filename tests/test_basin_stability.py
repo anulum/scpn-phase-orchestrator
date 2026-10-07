@@ -6,13 +6,16 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Basin stability tests
 
+"""Public finite-window basin contracts and separate invalid-input controls."""
+
 from __future__ import annotations
 
+import cProfile
 import sys
 import types
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any, cast
+from typing import Protocol, cast
 
 import numpy as np
 import pytest
@@ -33,7 +36,25 @@ from scpn_phase_orchestrator.upde.basin_stability import (
 )
 
 FloatArray = NDArray[np.float64]
-BasinBackend = Callable[..., float]
+BasinBackend = Callable[
+    [FloatArray, FloatArray, FloatArray, FloatArray, int, float, float, int, int], float
+]
+
+
+class MonteCarloRunner(Protocol):
+    """Public sampling signature used by deliberately invalid output controls."""
+
+    def __call__(
+        self,
+        omegas: FloatArray,
+        knm: FloatArray,
+        *,
+        n_transient: int,
+        n_measure: int,
+        n_samples: int,
+    ) -> object:
+        """Run an actual public estimator with the selected fault-injected kernel."""
+        ...
 
 
 class _ArrayConversionFailure:
@@ -85,6 +106,8 @@ class _FakeJuliaModule:
 
 
 class TestBasinStability:
+    """Public finite-window sampling fractions, counts and reproducibility."""
+
     def test_identical_frequencies_high_stability(self) -> None:
         """Identical omegas + strong coupling → S_B ≈ 1."""
         N = 6
@@ -109,6 +132,7 @@ class TestBasinStability:
         assert result.S_B < 0.5
 
     def test_result_fields(self) -> None:
+        """Returned counts and trial cardinality match the requested sample count."""
         N = 4
         omegas = np.zeros(N)
         knm = np.ones((N, N))
@@ -122,6 +146,7 @@ class TestBasinStability:
         assert result.R_threshold == 0.8
 
     def test_custom_threshold(self) -> None:
+        """The actual estimator retains its requested inclusive threshold."""
         N = 4
         omegas = np.zeros(N)
         knm = np.ones((N, N)) * 3.0
@@ -138,7 +163,10 @@ class TestBasinStability:
 
 
 class TestMultiBasinStability:
+    """Shared trial values classified at multiple inclusive thresholds."""
+
     def test_returns_dict(self) -> None:
+        """The public multi-threshold result uses its established labels."""
         N = 4
         omegas = np.zeros(N)
         knm = np.ones((N, N)) * 2.0
@@ -173,11 +201,10 @@ class TestMultiBasinStability:
 
 
 class TestBasinStabilityPipelineWiring:
-    """Pipeline: basin_stability uses UPDEEngine internally."""
+    """Public Monte Carlo results from the deterministic Euler trial kernel."""
 
-    def test_basin_stability_uses_engine(self) -> None:
-        """basin_stability drives UPDEEngine for each random IC sample,
-        proving the module is wired into the simulation core."""
+    def test_public_monte_carlo_returns_finite_threshold_classification(self) -> None:
+        """Exercise the original public Monte Carlo loop and its result fields."""
         n = 4
         omegas = np.ones(n)
         knm = np.ones((n, n)) * 0.5
@@ -195,7 +222,10 @@ class TestBasinStabilityPipelineWiring:
 
 
 class TestBasinStabilityValidation:
+    """Reject malformed public arrays and scalar sampling controls."""
+
     def test_invalid_omegas_shape(self) -> None:
+        """A frequency matrix cannot be admitted as a one-dimensional population."""
         N = 4
         knm = np.ones((N, N))
         np.fill_diagonal(knm, 0)
@@ -206,6 +236,7 @@ class TestBasinStabilityValidation:
             basin_stability(np.full((N, 1), 1.0), knm, n_samples=10)
 
     def test_invalid_coupling_shape(self) -> None:
+        """Coupling dimensions must match the admitted oscillator population."""
         N = 4
         omegas = np.zeros(N)
         knm = np.ones((N - 1, N - 1))
@@ -213,6 +244,7 @@ class TestBasinStabilityValidation:
             basin_stability(omegas, knm, n_samples=10)
 
     def test_invalid_alpha_shape(self) -> None:
+        """Lag dimensions must match the admitted oscillator population."""
         N = 4
         omegas = np.zeros(N)
         knm = np.ones((N, N))
@@ -226,6 +258,7 @@ class TestBasinStabilityValidation:
             )
 
     def test_nonfinite_inputs(self) -> None:
+        """Nonfinite graph entries are refused before numerical integration."""
         N = 4
         omegas = np.ones(N)
         knm = np.ones((N, N))
@@ -248,6 +281,7 @@ class TestBasinStabilityValidation:
         ],
     )
     def test_invalid_scalar_parameters(self, value: float | int, param: str) -> None:
+        """Invalid step, sample, seed and threshold controls are refused."""
         N = 4
         omegas = np.zeros(N)
         knm = np.ones((N, N))
@@ -288,7 +322,7 @@ class TestBasinStabilityValidation:
             basin_stability(
                 np.zeros(2, dtype=np.float64),
                 np.array([[0.0, 0.4], [0.4, 0.0]], dtype=np.float64),
-                dt=object(),
+                dt=cast(float, object()),
                 n_samples=1,
                 n_transient=1,
                 n_measure=1,
@@ -340,6 +374,7 @@ class TestBasinStabilityValidation:
             )
 
     def test_boolean_is_rejected_where_integer_is_required(self) -> None:
+        """Boolean counts cannot masquerade as integer sampling controls."""
         N = 4
         omegas = np.zeros(N)
         knm = np.ones((N, N))
@@ -381,7 +416,18 @@ class TestBasinStabilityValidation:
         kwargs[field] = value
 
         with pytest.raises(ValueError, match="numeric-string"):
-            basin_stability(**kwargs)
+            basin_stability(
+                omegas=cast("FloatArray", kwargs["omegas"]),
+                knm=cast("FloatArray", kwargs["knm"]),
+                alpha=cast("FloatArray | None", kwargs.get("alpha")),
+                dt=cast("float", kwargs.get("dt", 0.01)),
+                n_transient=cast("int", kwargs.get("n_transient", 500)),
+                n_measure=cast("int", kwargs.get("n_measure", 200)),
+                n_samples=cast("int", kwargs.get("n_samples", 100)),
+                R_threshold=cast("float", kwargs.get("R_threshold", 0.8)),
+                seed=cast("int", kwargs.get("seed", 42)),
+                backend=cast("str | None", kwargs.get("backend")),
+            )
 
     @pytest.mark.parametrize(
         ("field", "value"),
@@ -419,11 +465,24 @@ class TestBasinStabilityValidation:
         kwargs[field] = value
 
         with pytest.raises(ValueError, match="numeric-string"):
-            steady_state_r(**kwargs)
+            steady_state_r(
+                phases_init=cast("FloatArray", kwargs["phases_init"]),
+                omegas=cast("FloatArray", kwargs["omegas"]),
+                knm=cast("FloatArray", kwargs["knm"]),
+                alpha=cast("FloatArray | None", kwargs.get("alpha")),
+                k_scale=cast("float", kwargs.get("k_scale", 1.0)),
+                dt=cast("float", kwargs.get("dt", 0.01)),
+                n_transient=cast("int", kwargs.get("n_transient", 500)),
+                n_measure=cast("int", kwargs.get("n_measure", 200)),
+                backend=cast("str | None", kwargs.get("backend")),
+            )
 
 
 class TestBasinStabilityEdgeSemantics:
+    """Empty sampling and measurement windows retain explicit conventions."""
+
     def test_zero_samples_returns_empty_results(self) -> None:
+        """No sampled initial conditions produces empty values and a zero fraction."""
         N = 4
         omegas = np.zeros(N)
         knm = np.ones((N, N))
@@ -442,6 +501,7 @@ class TestBasinStabilityEdgeSemantics:
         assert result.R_final.shape == (0,)
 
     def test_zero_measurements_classify_with_zero_threshold(self) -> None:
+        """An empty window yields zero R, satisfying an inclusive zero threshold."""
         N = 4
         omegas = np.array([0.4, 0.5, 0.6, 0.7])
         knm = np.ones((N, N))
@@ -498,6 +558,8 @@ class TestBasinStabilityEdgeSemantics:
 
 
 class TestPublicBasinStabilityOutputContracts:
+    """Deliberately invalid scalar returns are negative boundary controls."""
+
     def _problem(self) -> tuple[FloatArray, FloatArray, FloatArray]:
         phases = np.array([0.1, 0.2, 0.3], dtype=np.float64)
         omegas = np.array([1.0, 1.1, 1.2], dtype=np.float64)
@@ -520,11 +582,13 @@ class TestPublicBasinStabilityOutputContracts:
         output: object,
         match: str,
     ) -> None:
+        """Deliberately invalid scalars cannot become published trial measurements."""
+
         def fake_backend(*_args: object) -> object:
             return output
 
         phases, omegas, knm = self._problem()
-        monkeypatch.setattr(basin_mod, "_dispatch", lambda: fake_backend)
+        monkeypatch.setattr(basin_mod, "_dispatch", lambda _owner=None: fake_backend)
 
         with pytest.raises((TypeError, ValueError), match=match):
             steady_state_r(
@@ -543,13 +607,15 @@ class TestPublicBasinStabilityOutputContracts:
     def test_public_monte_carlo_rejects_boolean_backend_output(
         self,
         monkeypatch: pytest.MonkeyPatch,
-        runner: Callable[..., object],
+        runner: MonteCarloRunner,
     ) -> None:
+        """Deliberate boolean returns cannot enter either public sample classifier."""
+
         def fake_backend(*_args: object) -> bool:
             return True
 
         _, omegas, knm = self._problem()
-        monkeypatch.setattr(basin_mod, "_dispatch", lambda: fake_backend)
+        monkeypatch.setattr(basin_mod, "_dispatch", lambda _owner=None: fake_backend)
 
         with pytest.raises(TypeError, match="steady-state R"):
             runner(
@@ -568,7 +634,7 @@ class TestPublicBasinStabilityOutputContracts:
     def test_public_monte_carlo_rejects_numeric_string_backend_output(
         self,
         monkeypatch: pytest.MonkeyPatch,
-        runner: Callable[..., object],
+        runner: MonteCarloRunner,
     ) -> None:
         """Monte Carlo publication must reject stringified backend scalars."""
 
@@ -576,7 +642,7 @@ class TestPublicBasinStabilityOutputContracts:
             return "0.5"
 
         _, omegas, knm = self._problem()
-        monkeypatch.setattr(basin_mod, "_dispatch", lambda: fake_backend)
+        monkeypatch.setattr(basin_mod, "_dispatch", lambda _owner=None: fake_backend)
 
         with pytest.raises(ValueError, match="numeric-string"):
             runner(
@@ -591,12 +657,15 @@ class TestPublicBasinStabilityOutputContracts:
         self,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
+        """A deliberately invalid native return is rejected by its original wrapper."""
+
         def fake_steady_state(*_args: object) -> bool:
             return True
 
         fake_spo = types.ModuleType("spo_kernel")
-        fake_spo_dynamic = cast(Any, fake_spo)
-        fake_spo_dynamic.steady_state_r_rust = fake_steady_state
+        monkeypatch.setattr(
+            fake_spo, "steady_state_r_rust", fake_steady_state, raising=False
+        )
         monkeypatch.setitem(sys.modules, "spo_kernel", fake_spo)
 
         phases, omegas, knm = self._problem()
@@ -617,10 +686,14 @@ class TestPublicBasinStabilityOutputContracts:
 
 
 class TestBasinStabilityDefensiveContracts:
+    """Reject malformed ingress and unavailable-owner negative controls."""
+
     def test_dispatch_returns_python_fallback_when_all_loaders_fail(
         self,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
+        """Injected loader failures leave the explicit Python fallback available."""
+
         def fail_backend(_name: str) -> BasinBackend:
             raise ImportError("backend unavailable")
 
@@ -633,16 +706,19 @@ class TestBasinStabilityDefensiveContracts:
     def test_boolean_alias_probe_treats_conversion_failure_as_not_boolean(
         self,
     ) -> None:
+        """A failing conversion hook is not itself a boolean-alias observation."""
         assert basin_mod._contains_boolean_alias(_ArrayConversionFailure()) is False
 
     def test_numeric_string_probe_treats_conversion_failure_as_not_string(
         self,
     ) -> None:
+        """A failing conversion hook is not itself a numeric-string observation."""
         assert (
             basin_mod._contains_numeric_string_alias(_ArrayConversionFailure()) is False
         )
 
     def test_steady_state_rejects_uncoercible_matrix_values(self) -> None:
+        """Nonnumeric graph values cannot cross the real-valued public boundary."""
         bad_knm = cast(FloatArray, np.array([["not-float"]], dtype=object))
 
         with pytest.raises(ValueError, match="knm must be a finite float array"):
@@ -655,6 +731,7 @@ class TestBasinStabilityDefensiveContracts:
             )
 
     def test_steady_state_rejects_uncoercible_phase_vector(self) -> None:
+        """Nonnumeric initial phases cannot cross the real-valued public boundary."""
         bad_phases = cast(FloatArray, np.array(["not-float"], dtype=object))
 
         with pytest.raises(
@@ -670,6 +747,7 @@ class TestBasinStabilityDefensiveContracts:
             )
 
     def test_steady_state_rejects_empty_phase_vector(self) -> None:
+        """A trial requires at least one oscillator after ingress validation."""
         with pytest.raises(
             ValueError,
             match="phases_init must contain at least one oscillator",
@@ -682,25 +760,26 @@ class TestBasinStabilityDefensiveContracts:
                 n_measure=1,
             )
 
-    def test_python_reference_zero_measurement_returns_zero(self) -> None:
+    def test_public_python_zero_measurement_returns_zero(self) -> None:
+        """The original public zero-window convention returns exactly zero."""
         assert (
-            basin_mod._python_steady_state_r(
-                np.zeros(1, dtype=np.float64),
-                np.ones(1, dtype=np.float64),
-                np.zeros(1, dtype=np.float64),
-                np.zeros(1, dtype=np.float64),
-                1,
-                1.0,
-                0.01,
-                1,
-                0,
+            steady_state_r(
+                np.zeros(1),
+                np.ones(1),
+                np.zeros((1, 1)),
+                n_transient=1,
+                n_measure=0,
+                backend="python",
             )
             == 0.0
         )
 
 
 class TestDirectBasinStabilityValidationContracts:
+    """Direct accelerator ingress rejects aliases and invalid dimensions."""
+
     def test_rejects_nonnumeric_backend_vectors(self) -> None:
+        """Direct flattened inputs refuse text rather than converting it to phases."""
         with pytest.raises(TypeError, match="phases_init must be numeric"):
             basin_validation.validate_basin_stability_inputs(
                 cast(FloatArray, np.array(["not-float"], dtype=object)),
@@ -715,6 +794,7 @@ class TestDirectBasinStabilityValidationContracts:
             )
 
     def test_rejects_empty_backend_vectors(self) -> None:
+        """Direct accelerator ingress requires nonempty oscillator vectors."""
         with pytest.raises(
             ValueError,
             match="phases_init must contain at least one oscillator",
@@ -732,6 +812,7 @@ class TestDirectBasinStabilityValidationContracts:
             )
 
     def test_rejects_nonreal_backend_scalars(self) -> None:
+        """Direct numerical controls reject non-real scalar objects."""
         with pytest.raises(TypeError, match="k_scale must be a real scalar"):
             basin_validation.validate_basin_stability_inputs(
                 np.zeros(1, dtype=np.float64),
@@ -746,6 +827,7 @@ class TestDirectBasinStabilityValidationContracts:
             )
 
     def test_rejects_noninteger_backend_counts(self) -> None:
+        """Direct oscillator dimensions must be integer-valued metadata."""
         with pytest.raises(TypeError, match="n must be an integer"):
             basin_validation.validate_basin_stability_inputs(
                 np.zeros(1, dtype=np.float64),
@@ -776,29 +858,100 @@ class TestDirectBasinStabilityValidationContracts:
 
 
 class TestBasinStabilityJuliaBridgeContracts:
-    def test_ensure_loads_side_file_and_caches_module(
+    """Original Julia computations, cache reuse and explicit negative fault controls."""
+
+    def test_named_julia_public_trial_executes_original_side_module(self) -> None:
+        """A named original trial retains the analytically required tiny-edge effect."""
+        phases = np.array([0.0, np.pi / 2])
+        graph = np.array([[0.0, 5e-31], [5e-31, 0.0]])
+        if "julia" not in basin_mod.AVAILABLE_BACKENDS:
+            with pytest.raises(ImportError, match="requested basin backend 'julia'"):
+                steady_state_r(
+                    phases,
+                    np.zeros(2),
+                    graph,
+                    dt=1e30,
+                    n_transient=0,
+                    n_measure=1,
+                    backend="julia",
+                )
+            return
+        value = steady_state_r(
+            phases,
+            np.zeros(2),
+            graph,
+            dt=1e30,
+            n_transient=0,
+            n_measure=1,
+            backend="julia",
+        )
+        assert value == pytest.approx(np.cos((np.pi / 2 - 1) / 2), abs=2e-15)
+        np.testing.assert_array_equal(phases, [0.0, np.pi / 2])
+
+    def test_public_julia_calls_reuse_actual_loaded_module(self) -> None:
+        """Repeated real computations retain the same original Julia module object."""
+        phases = np.array([0.0, 1.0])
+        graph = np.zeros((2, 2))
+        if "julia" not in basin_mod.AVAILABLE_BACKENDS:
+            with pytest.raises(ImportError, match="requested basin backend 'julia'"):
+                steady_state_r(
+                    phases,
+                    np.zeros(2),
+                    graph,
+                    n_transient=0,
+                    n_measure=1,
+                    backend="julia",
+                )
+            return
+        first = steady_state_r(
+            phases, np.zeros(2), graph, n_transient=0, n_measure=1, backend="julia"
+        )
+        loaded = basin_julia._JULIA_MODULE
+        assert loaded is not None
+        second = steady_state_r(
+            phases, np.zeros(2), graph, n_transient=0, n_measure=1, backend="julia"
+        )
+        assert basin_julia._JULIA_MODULE is loaded
+        assert first == second == pytest.approx(np.cos(0.5), abs=2e-15)
+
+    def test_original_julia_arithmetic_error_allows_a_healthy_following_trial(
         self,
-        monkeypatch: pytest.MonkeyPatch,
-        tmp_path: Path,
     ) -> None:
-        module = object()
-        fake_main = _FakeJuliaMain(module)
-        side_file = tmp_path / "basin_stability.jl"
-        side_file.write_text("module BasinStabilityJL\nend\n", encoding="utf-8")
-
-        monkeypatch.setattr(basin_julia, "_JULIA_MODULE", None)
-        monkeypatch.setattr(basin_julia, "_JULIA_FILE", side_file)
-        monkeypatch.setattr(basin_julia, "require_julia_main", lambda: fake_main)
-
-        assert basin_julia._ensure() is module
-        assert basin_julia._ensure() is module
-        assert fake_main.included == [str(side_file)]
+        """An original native overflow propagates without poisoning a later trial."""
+        phases = np.array([0.0, 1.0])
+        graph = np.zeros((2, 2))
+        if "julia" not in basin_mod.AVAILABLE_BACKENDS:
+            with pytest.raises(ImportError, match="requested basin backend 'julia'"):
+                steady_state_r(
+                    phases,
+                    np.zeros(2),
+                    graph,
+                    n_transient=0,
+                    n_measure=1,
+                    backend="julia",
+                )
+            return
+        with pytest.raises(ValueError):
+            steady_state_r(
+                phases,
+                np.full(2, 1e308),
+                graph,
+                dt=2.0,
+                n_transient=0,
+                n_measure=1,
+                backend="julia",
+            )
+        recovered = steady_state_r(
+            phases, np.zeros(2), graph, n_transient=0, n_measure=1, backend="julia"
+        )
+        assert recovered == pytest.approx(np.cos(0.5), abs=2e-15)
 
     def test_ensure_reports_missing_side_file(
         self,
         monkeypatch: pytest.MonkeyPatch,
         tmp_path: Path,
     ) -> None:
+        """A missing Julia source is an explicit load error."""
         monkeypatch.setattr(basin_julia, "_JULIA_MODULE", None)
         monkeypatch.setattr(basin_julia, "_JULIA_FILE", tmp_path / "missing.jl")
         monkeypatch.setattr(
@@ -809,37 +962,6 @@ class TestBasinStabilityJuliaBridgeContracts:
 
         with pytest.raises(ImportError, match="julia side-file not found"):
             basin_julia._ensure()
-
-    def test_public_julia_loader_returns_bridge_callable(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        """Public Julia loader returns the direct bridge callable after probing."""
-        monkeypatch.setattr(basin_mod, "require_juliacall_main", lambda: object())
-
-        assert basin_mod._load_julia_fn() is basin_julia.steady_state_r_julia
-
-    def test_steady_state_bridge_validates_and_returns_backend_output(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        fake_module = _FakeJuliaModule(output=0.75)
-        monkeypatch.setattr(basin_julia, "_ensure", lambda: fake_module)
-
-        result = basin_julia.steady_state_r_julia(
-            np.zeros(2, dtype=np.float64),
-            np.ones(2, dtype=np.float64),
-            np.zeros(4, dtype=np.float64),
-            np.zeros(4, dtype=np.float64),
-            2,
-            1.0,
-            0.01,
-            0,
-            1,
-        )
-
-        assert result == 0.75
-        assert fake_module.seen_n_measure == 1
 
     def test_steady_state_bridge_rejects_numeric_string_output(
         self,
@@ -871,82 +993,81 @@ def test_basin_stability_docs_record_numeric_string_contract() -> None:
 
 
 class TestDispatchFallbackChain:
+    """Observe public computation after an injected first-loader failure."""
+
+    def test_repeated_public_trials_reuse_the_original_named_owner(self) -> None:
+        """Actual repeated values retain the cached original callable identity."""
+        owner = next(
+            (
+                name
+                for name in ("rust", "go", "julia", "mojo")
+                if name in basin_mod.AVAILABLE_BACKENDS
+            ),
+            "python",
+        )
+        phases = np.array([0.0, 1.0])
+        graph = np.zeros((2, 2))
+        first = steady_state_r(
+            phases, np.zeros(2), graph, n_transient=0, n_measure=1, backend=owner
+        )
+        cached = basin_mod._BACKEND_CACHE.get(owner)
+        second = steady_state_r(
+            phases, np.zeros(2), graph, n_transient=0, n_measure=1, backend=owner
+        )
+        assert first == second == pytest.approx(np.cos(0.5), abs=2e-15)
+        if owner != "python":
+            assert cached is not None and basin_mod._BACKEND_CACHE[owner] is cached
+
     def test_dispatch_falls_back_to_next_backend_when_active_fails(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        import scpn_phase_orchestrator.upde.basin_stability as basin_mod
+        """An injected first-loader failure leaves subsequent owners original."""
+        if basin_mod.ACTIVE_BACKEND == "python":
+            assert steady_state_r(
+                np.array([0.0, 1.0]),
+                np.zeros(2),
+                np.zeros((2, 2)),
+                n_transient=0,
+                n_measure=1,
+            ) == pytest.approx(np.cos(0.5))
+            return
+        active = basin_mod.ACTIVE_BACKEND
 
-        calls: dict[str, int] = {"rust": 0, "go": 0}
-
-        def _fail_rust() -> BasinBackend:
-            calls["rust"] += 1
-            raise ImportError("rust unavailable")
-
-        def _ok_go() -> BasinBackend:
-            calls["go"] += 1
-
-            def backend(*_args: object, **_kwargs: object) -> float:
-                return 0.5
-
-            return backend
-
-        monkeypatch.setattr(basin_mod, "_BACKEND_CACHE", {})
-        monkeypatch.setattr(basin_mod, "ACTIVE_BACKEND", "rust")
-        monkeypatch.setattr(basin_mod, "AVAILABLE_BACKENDS", ["rust", "go", "python"])
-        monkeypatch.setattr(basin_mod, "_LOADERS", {"rust": _fail_rust, "go": _ok_go})
-
-        fn = basin_mod._dispatch()
-        assert fn is not None
-        assert float(fn()) == 0.5
-        assert calls == {"rust": 1, "go": 1}
-
-    def test_dispatch_uses_cached_loader_once(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        import scpn_phase_orchestrator.upde.basin_stability as basin_mod
-
-        calls: dict[str, int] = {"go": 0}
-
-        def _ok_go() -> BasinBackend:
-            calls["go"] += 1
-
-            def backend(*_args: object, **_kwargs: object) -> float:
-                return 0.25
-
-            return backend
+        def unavailable() -> BasinBackend:
+            """Negative control: fail the actual first preference at load time."""
+            raise ImportError("first owner unavailable")
 
         monkeypatch.setattr(basin_mod, "_BACKEND_CACHE", {})
-        monkeypatch.setattr(basin_mod, "ACTIVE_BACKEND", "go")
-        monkeypatch.setattr(basin_mod, "AVAILABLE_BACKENDS", ["go", "python"])
-        monkeypatch.setattr(basin_mod, "_LOADERS", {"go": _ok_go})
+        monkeypatch.setitem(basin_mod._LOADERS, active, unavailable)
+        with cProfile.Profile() as profile:
+            result = steady_state_r(
+                np.array([0.0, 1.0]),
+                np.zeros(2),
+                np.zeros((2, 2)),
+                n_transient=0,
+                n_measure=1,
+            )
+        assert result == pytest.approx(np.cos(0.5), abs=2e-15)
+        profile.create_stats()
+        assert any("steady_state_r" in key[2] for key in profile.stats)
 
-        basin_mod._dispatch()
-        basin_mod._dispatch()
-
-        assert calls["go"] == 1
-
-    def test_steady_state_zero_measure_shortcuts_without_backend(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        import scpn_phase_orchestrator.upde.basin_stability as basin_mod
-
-        monkeypatch.setattr(
-            basin_mod,
-            "_dispatch",
-            lambda: (_ for _ in ()).throw(
-                RuntimeError("backend should not run"),
-            ),
+    def test_public_empty_window_does_not_integrate_unused_transient(self) -> None:
+        """An unused transient cannot overflow an empty public measurement window."""
+        assert (
+            steady_state_r(
+                np.array([0.1, 0.2]),
+                np.array([1e308, -1e308]),
+                np.zeros((2, 2)),
+                dt=2.0,
+                n_transient=10,
+                n_measure=0,
+                backend="python",
+            )
+            == 0.0
         )
-        got = basin_mod.steady_state_r(
-            np.array([0.1, 0.2]),
-            np.array([1.0, -1.0]),
-            np.ones((2, 2)),
-            n_measure=0,
-        )
-        assert got == 0.0
 
     def test_multi_basin_rejects_empty_threshold_tuple(self) -> None:
+        """Multi-threshold classification requires at least one threshold."""
         N = 4
         omegas = np.zeros(N)
         knm = np.ones((N, N))
@@ -962,9 +1083,12 @@ class TestDispatchFallbackChain:
 
 
 class TestBasinDispatch:
+    """Distinguish automatic fallback from strict named-owner refusal."""
+
     def test_dispatch_falls_back_to_python_when_loader_fails(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        """An injected unavailable loader leaves the Python automatic fallback."""
         import scpn_phase_orchestrator.upde.basin_stability as basin_mod
 
         previous_backend = basin_mod.ACTIVE_BACKEND
@@ -992,36 +1116,30 @@ class TestBasinDispatch:
     def test_dispatch_uses_next_available_backend(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        import scpn_phase_orchestrator.upde.basin_stability as basin_mod
+        """A named first-owner load failure cannot return an automatic fallback."""
+        if basin_mod.ACTIVE_BACKEND == "python":
+            assert steady_state_r(
+                np.array([0.0, 1.0]),
+                np.zeros(2),
+                np.zeros((2, 2)),
+                n_transient=0,
+                n_measure=1,
+            ) == pytest.approx(np.cos(0.5))
+            return
+        active = basin_mod.ACTIVE_BACKEND
 
-        previous_backend = basin_mod.ACTIVE_BACKEND
-        previous_available = list(basin_mod.AVAILABLE_BACKENDS)
-        previous_go = basin_mod._LOADERS["go"]
-        previous_rust = basin_mod._LOADERS["rust"]
-        previous_cache = dict(basin_mod._BACKEND_CACHE)
-        basin_mod.ACTIVE_BACKEND = "go"
-        basin_mod.AVAILABLE_BACKENDS = ["go", "rust", "python"]
-        basin_mod._BACKEND_CACHE.clear()
+        def unavailable() -> BasinBackend:
+            """Negative control: fail the actual first preference at load time."""
+            raise ImportError("first owner unavailable")
 
-        def fake_backend(*_args: object) -> float:
-            return 0.0
-
-        def fail_go() -> BasinBackend:
-            raise ImportError("go backend unavailable")
-
-        monkeypatch.setitem(
-            basin_mod._LOADERS,
-            "go",
-            fail_go,
-        )
-        monkeypatch.setitem(basin_mod._LOADERS, "rust", lambda: fake_backend)
-        try:
-            backend = basin_mod._dispatch()
-        finally:
-            basin_mod.ACTIVE_BACKEND = previous_backend
-            basin_mod.AVAILABLE_BACKENDS = previous_available
-            monkeypatch.setitem(basin_mod._LOADERS, "go", previous_go)
-            monkeypatch.setitem(basin_mod._LOADERS, "rust", previous_rust)
-            basin_mod._BACKEND_CACHE = previous_cache
-
-        assert backend is fake_backend
+        monkeypatch.setattr(basin_mod, "_BACKEND_CACHE", {})
+        monkeypatch.setitem(basin_mod._LOADERS, active, unavailable)
+        with pytest.raises(ImportError, match="requested basin backend"):
+            steady_state_r(
+                np.array([0.0, 1.0]),
+                np.zeros(2),
+                np.zeros((2, 2)),
+                n_transient=0,
+                n_measure=1,
+                backend=active,
+            )

@@ -232,6 +232,9 @@ ignore = ["S101", "N802", "N803", "N806", "N815", "N816", "D105"]
 # The attention profile likewise executes repository-owned constant probes with
 # the verified installed interpreters, an argv list, no shell and a timeout.
 "native-tests/test_attention_residuals_profiles.py" = ["S603"]
+# Basin profiles execute constant repository-owned probes in verified interpreters,
+# using argv lists, no shell and finite timeouts, under the same harness policy.
+"native-tests/test_basin_bifurcation_profiles.py" = ["S603"]
 "tests/test_exceptions.py" = ["S301"]  # pickle round-trip is the test subject
 "tests/test_kuramoto_layer.py" = ["E402"]
 "tests/test_stuart_landau_nn.py" = ["E402"]

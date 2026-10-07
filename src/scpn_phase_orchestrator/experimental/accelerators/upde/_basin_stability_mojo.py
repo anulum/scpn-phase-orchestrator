@@ -52,9 +52,36 @@ def steady_state_r_mojo(
     n_transient: int,
     n_measure: int,
 ) -> float:
-    """Compute steady-state order parameter for basin-stability trials.
+    """Measure one finite-window Kuramoto trial through the original Mojo runtime.
 
-    The calculation is delegated to the Mojo backend.
+    Parameters
+    ----------
+    phases_init, omegas : numpy.ndarray
+        Finite real phases in radians and frequencies in rad/s, N entries.
+    knm_flat, alpha_flat : numpy.ndarray
+        Row-major N*N target/source rate coupling and radian phase lags.
+    n : int
+        Positive population count matching every supplied buffer.
+    k_scale : float
+        Finite coupling multiplier, without implicit population normalization.
+    dt : float
+        Finite positive timestep in seconds.
+    n_transient, n_measure : int
+        Nonnegative discarded and post-step measurement counts.
+
+    Returns
+    -------
+    float
+        Mean post-step R in [0,1]; the zero-window identity is zero.
+
+    Raises
+    ------
+    ImportError
+        If a required runtime artifact is unavailable.
+    TypeError
+        If input or output payloads contain unsupported numerical aliases.
+    ValueError
+        If shapes, finite domains, metadata or native arithmetic fail.
     """
     (
         p,

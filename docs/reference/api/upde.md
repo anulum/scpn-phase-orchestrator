@@ -12,7 +12,7 @@ dynamics (Stuart-Landau), higher-order interactions (simplicial), inertial
 systems (power grids), stochastic resonance, geometric integration, time
 delays, financial markets, spatial-phase coupling (swarmalators),
 hypergraph k-body coupling, mean-field reduction, variational prediction,
-adjoint gradients, and bifurcation continuation.
+adjoint gradients, and finite-horizon coupling sweeps.
 
 ## Pipeline position
 
@@ -521,19 +521,20 @@ phase update decomposition.
 
 ::: scpn_phase_orchestrator.upde.splitting
 
-## Bifurcation Continuation
+## Coupling sweeps
 
-Traces the synchronization transition R(K) as a function of coupling
-strength. The incoherent state (R≈0) bifurcates to partial synchronization
-(R>0) at the critical coupling K_c.
+Measures finite-horizon R(K) using independent seeded Euler trajectories.
+The first R=0.1 upcrossing is a numerical classification, not a stability
+certificate or pseudo-arclength continuation. See the [full API contract](upde_bifurcation.md).
 
 **Two interfaces:**
 
 - `trace_sync_transition()`: sweep R(K) over a range of coupling strengths
-- `find_critical_coupling()`: binary search for K_c with configurable precision
+- `find_critical_coupling()`: binary search for the R=0.1 classification with a configurable interval tolerance
 
-**Analytical reference:** K_c = 2/(π g(0)) for Lorentzian g(ω) with half-width
-Δ gives K_c = 2Δ (Kuramoto 1975, Strogatz 2000).
+Both consumers accept a keyword-only `backend` name. Naming an unavailable
+owner raises `ImportError` without fallback. Binary search assumes a monotone
+finite-window response; its tolerance does not bound scientific error.
 
 **Usage:**
 
@@ -544,9 +545,9 @@ from scpn_phase_orchestrator.upde.bifurcation import (
 
 # Sweep R(K) curve
 diagram = trace_sync_transition(omegas, K_range=(0, 5), n_points=50)
-print(f"K_c ≈ {diagram.K_critical}")
+print(f"Sampled R=0.1 crossing = {diagram.K_critical}")
 
-# Precise K_c via binary search
+# Interval search assuming a monotone finite-window response
 Kc = find_critical_coupling(omegas, tol=0.05)
 ```
 
@@ -554,24 +555,24 @@ Kc = find_critical_coupling(omegas, tol=0.05)
 
 ## Basin Stability
 
-Monte Carlo estimation of the volume of the basin of attraction for
-the synchronised state. Basin stability S_B is the probability that a
-random initial condition converges to the synchronised attractor.
+Reports the fraction of NumPy-seeded finite-horizon Euler trials meeting
+an order-parameter threshold. It does not certify convergence or attraction-basin
+volume. See the [full API contract](upde_basin_stability.md).
 
 **Procedure:** Draw n_samples random phase configurations from [0, 2π)^N,
-integrate each to steady state, check if R_final > R_threshold. S_B = fraction
-that converge.
+discard a finite transient, then average post-step R over the measurement
+window. Classify with `R_final >= R_threshold`; S_B is the passing fraction.
 
 `multi_basin_stability()` classifies outcomes at multiple R thresholds
-to detect multi-stability (chimera states, partial synchronization).
+to assess threshold sensitivity on the same trials; it does not identify attractors.
 
 Optional Rust, Go, Julia, and Mojo backend outputs are validated before public
 publication: each steady-state order-parameter scalar must be finite,
 non-boolean, non-numeric-string, and inside `[0, 1]`. Public and direct
 phase, frequency, flattened coupling, phase-lag, scalar-control, threshold,
 and count inputs reject numeric-string aliases before float coercion.
-Loader/runtime unavailability can still fall through to Python; malformed
-backend physics evidence fails closed.
+Automatic selection may fall through the declared preference chain. An
+unavailable named owner raises `ImportError`; numerical and output faults propagate.
 
 **Usage:**
 

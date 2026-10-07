@@ -6,39 +6,26 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Bifurcation analysis for Kuramoto networks
 
-"""Bifurcation continuation for Kuramoto synchronisation transitions.
+"""Independent finite-horizon coupling sweeps and threshold searches.
 
-Traces steady-state order parameter ``R`` as a function of coupling
-strength ``K`` using pseudo-arclength continuation (Keller 1977).
-Detects critical coupling ``K_c`` where the incoherent state
-``R ≈ 0`` bifurcates to partial synchronisation ``R > 0``.
+Every grid point starts from the same NumPy-seeded phases and uses explicit Euler.
+This is not pseudo-arclength continuation. The reported crossing is the first
+sampled upcrossing of R=0.1; binary search assumes a monotone response on [0,20].
+Neither crossing certifies a dynamical bifurcation. The classical continuum
+Kuramoto critical-coupling formula is not a finite-network acceptance oracle.
 
-Analytical reference: ``K_c = 2 / (π g(0))`` for Lorentzian ``g(ω)``
-with half-width ``Δ`` → ``K_c = 2Δ`` (Kuramoto 1975, Strogatz 2000).
-
-5-backend chain via delegation
-------------------------------
-The single-trial kernel ``steady_state_r(phases, omegas, knm,
-alpha, k_scale, dt, n_transient, n_measure) → R`` is already
-dispatched across Rust / Mojo / Julia / Go / Python in
-:mod:`scpn_phase_orchestrator.upde.basin_stability`. This module
-delegates to it rather than re-implementing the Euler trial
-integrator, which means every ``trace_sync_transition`` /
-``find_critical_coupling`` call in the Python-composite branch
-inherits the full fallback chain for free.
-
-The two composite Rust kernels — ``trace_sync_transition_rust``
-(batched K-sweep) and ``find_critical_coupling_bif_rust`` (binary
-search inside Rust) — are preserved as one-shot fast paths: a
-single FFI call amortises the per-K boundary overhead better than
-the N_points × dispatch-call path.
+Automatic dispatch uses the batched Rust composites when installed, otherwise
+the basin trial preference chain. Named owners forbid fallback. The historical
+``stable=True`` field is a compatibility marker, not a measured stability result.
 """
 
 from __future__ import annotations
 
+import importlib
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from numbers import Complex, Integral, Real
-from typing import TypeAlias
+from typing import TypeAlias, cast
 
 import numpy as np
 from numpy.typing import NDArray
@@ -47,14 +34,36 @@ from scpn_phase_orchestrator.upde.basin_stability import (
     steady_state_r as _dispatched_steady_state_r,
 )
 
-try:
-    from spo_kernel import (
-        find_critical_coupling_bif_rust as _rust_find_kc,
-    )
-    from spo_kernel import (
-        trace_sync_transition_rust as _rust_trace,
-    )
+FloatArray: TypeAlias = NDArray[np.float64]
+NativeTraceKernel: TypeAlias = Callable[
+    [
+        FloatArray,
+        FloatArray,
+        FloatArray,
+        int,
+        FloatArray,
+        float,
+        float,
+        int,
+        float,
+        int,
+        int,
+    ],
+    tuple[object, object, object],
+]
+NativeSearchKernel: TypeAlias = Callable[
+    [FloatArray, FloatArray, FloatArray, int, FloatArray, float, int, int, float],
+    object,
+]
 
+try:
+    _native_module = importlib.import_module("spo_kernel")
+    _trace_function = getattr(_native_module, "trace_sync_transition_rust", None)
+    _search_function = getattr(_native_module, "find_critical_coupling_bif_rust", None)
+    if not callable(_trace_function) or not callable(_search_function):
+        raise ImportError("Rust kernel lacks the composite coupling entry points")
+    _rust_trace = cast("NativeTraceKernel", _trace_function)
+    _rust_find_kc = cast("NativeSearchKernel", _search_function)
     _HAS_COMPOSITE_RUST = True
 except ImportError:
     _HAS_COMPOSITE_RUST = False
@@ -65,7 +74,6 @@ __all__ = [
     "find_critical_coupling",
     "trace_sync_transition",
 ]
-FloatArray: TypeAlias = NDArray[np.float64]
 
 
 def _as_real_numeric_array(value: object, *, name: str) -> FloatArray:
@@ -98,7 +106,18 @@ def _as_real_numeric_array(value: object, *, name: str) -> FloatArray:
 
 @dataclass
 class BifurcationPoint:
-    """One sampled point on a Kuramoto synchronisation branch."""
+    """One independent finite-window coupling sample.
+
+    Attributes
+    ----------
+    K : float
+        Sampled nonnegative coupling multiplier.
+    R : float
+        Mean post-step order parameter in the finite measurement window.
+    stable : bool
+        Historical compatibility flag. Generated samples set this to True;
+        it is not a measured stability result or a stability certificate.
+    """
 
     K: float
     R: float
@@ -141,23 +160,23 @@ class BifurcationDiagram:
 
     @property
     def K_values(self) -> FloatArray:
-        """Return continuation coupling strengths in diagram order.
+        """Return sampled coupling strengths in diagram order.
 
         Returns
         -------
         FloatArray
-            Return continuation coupling strengths in diagram order.
+            Return sampled coupling strengths in diagram order.
         """
         return np.array([p.K for p in self.points])
 
     @property
     def R_values(self) -> FloatArray:
-        """Return continuation order parameters in diagram order.
+        """Return finite-window order parameters in diagram order.
 
         Returns
         -------
         FloatArray
-            Return continuation order parameters in diagram order.
+            Return finite-window order parameters in diagram order.
         """
         return np.array([p.R for p in self.points])
 
@@ -255,7 +274,7 @@ def _validate_rust_trace_result(
     n_points: int,
     K_range: tuple[float, float],
 ) -> tuple[FloatArray, FloatArray]:
-    """Return the Rust continuation trace matching the reference, else raise."""
+    """Return a Rust independent-grid trace matching the reference, else raise."""
     k_arr = _as_real_numeric_array(
         K_values,
         name="Rust bifurcation trace K values",
@@ -278,7 +297,20 @@ def _validate_rust_trace_result(
     start, stop = K_range
     if np.any(k_arr < start - 1e-12) or np.any(k_arr > stop + 1e-12):
         raise ValueError("Rust bifurcation trace returned K outside K_range")
+    expected = np.linspace(start, stop, n_points)
+    if not np.allclose(k_arr, expected, rtol=0.0, atol=1e-12):
+        raise ValueError("Rust bifurcation trace returned a different coupling grid")
     return k_arr, r_arr
+
+
+def _first_upcrossing(k_values: FloatArray, r_values: FloatArray) -> float | None:
+    """Interpolate the first sampled R=0.1 upcrossing, or return no crossing."""
+    crossings = np.flatnonzero((r_values[:-1] < 0.1) & (r_values[1:] >= 0.1))
+    if crossings.size == 0:
+        return None
+    index = int(crossings[0])
+    fraction = (0.1 - r_values[index]) / (r_values[index + 1] - r_values[index])
+    return float(k_values[index] + fraction * (k_values[index + 1] - k_values[index]))
 
 
 def _validate_optional_critical_coupling(value: object) -> float | None:
@@ -314,6 +346,7 @@ def _steady_state_R_dispatch(
     dt: float,
     n_transient: int,
     n_measure: int,
+    backend: str | None = None,
 ) -> float:
     """Thin wrapper around the 5-backend-dispatched kernel.
 
@@ -331,6 +364,7 @@ def _steady_state_R_dispatch(
         dt=dt,
         n_transient=n_transient,
         n_measure=n_measure,
+        backend=backend,
     )
 
 
@@ -344,11 +378,13 @@ def trace_sync_transition(
     n_transient: int = 2000,
     n_measure: int = 500,
     seed: int = 42,
+    *,
+    backend: str | None = None,
 ) -> BifurcationDiagram:
     """Trace R(K) for the Kuramoto synchronisation transition.
 
     Sweeps coupling strength ``K`` from ``K_range[0]`` to
-    ``K_range[1]``, running the ODE to steady state at each point,
+    ``K_range[1]``, independently measuring a finite window at each point,
     and returns a :class:`BifurcationDiagram` with the ``(K, R)``
     pairs plus the estimated critical coupling ``K_c``.
 
@@ -364,7 +400,7 @@ def trace_sync_transition(
         Finite real numeric natural frequencies in rad/s, shape ``(N,)``.
         Boolean, complex, and numeric-string aliases are rejected.
     knm_template : FloatArray | None
-        Unit coupling template scaled along the continuation, or ``None`` for
+        Unit coupling template scaled across the grid, or ``None`` for
         all-to-all. Must be finite, real numeric, and zero-diagonal.
     alpha : FloatArray | None
         Finite real numeric phase-lag matrix in radians, shape ``(N, N)``, or
@@ -381,6 +417,9 @@ def trace_sync_transition(
         Number of steps averaged to measure the order parameter.
     seed : int
         Seed for the deterministic RNG.
+    backend : str | None
+        Named numerical owner, or automatic batched Rust / trial preference.
+        An unavailable named owner raises ImportError without fallback.
 
     Returns
     -------
@@ -414,7 +453,9 @@ def trace_sync_transition(
     phases_init = rng.uniform(0, 2 * np.pi, n)
     diagram = BifurcationDiagram()
 
-    if _HAS_COMPOSITE_RUST:
+    if backend is not None and backend not in ("rust", "mojo", "julia", "go", "python"):
+        raise ValueError(f"unknown basin backend: {backend!r}")
+    if _HAS_COMPOSITE_RUST and backend in (None, "rust"):
         o = np.ascontiguousarray(omegas, dtype=np.float64)
         k = np.ascontiguousarray(knm_template.ravel(), dtype=np.float64)
         a = np.ascontiguousarray(alpha.ravel(), dtype=np.float64)
@@ -439,6 +480,15 @@ def trace_sync_transition(
             K_range=K_range,
         )
         critical = _validate_optional_critical_coupling(kc)
+        expected_critical = _first_upcrossing(kv, rv)
+        if (critical is None) != (expected_critical is None):
+            raise ValueError("Rust K_critical disagrees with the sampled upcrossing")
+        if (
+            critical is not None
+            and expected_critical is not None
+            and not np.isclose(critical, expected_critical, rtol=1e-12, atol=1e-12)
+        ):
+            raise ValueError("Rust K_critical disagrees with the sampled interpolation")
         for i in range(len(kv)):
             diagram.points.append(
                 BifurcationPoint(
@@ -464,22 +514,13 @@ def trace_sync_transition(
             dt,
             n_transient,
             n_measure,
+            backend,
         )
         diagram.points.append(
             BifurcationPoint(K=float(K_val), R=R, stable=True),
         )
 
-    R_arr = diagram.R_values
-    threshold = 0.1
-    crossings = np.where(
-        (R_arr[:-1] < threshold) & (R_arr[1:] >= threshold),
-    )[0]
-    if len(crossings) > 0:
-        idx = crossings[0]
-        K_lo, K_hi = float(K_values[idx]), float(K_values[idx + 1])
-        R_lo, R_hi = float(R_arr[idx]), float(R_arr[idx + 1])
-        frac = (threshold - R_lo) / (R_hi - R_lo)
-        diagram.K_critical = K_lo + frac * (K_hi - K_lo)
+    diagram.K_critical = _first_upcrossing(K_values, diagram.R_values)
     return diagram
 
 
@@ -491,12 +532,16 @@ def find_critical_coupling(
     n_measure: int = 1000,
     tol: float = 0.05,
     seed: int = 42,
+    *,
+    backend: str | None = None,
 ) -> float:
-    """Binary-search the critical coupling ``K_c`` where ``R`` crosses 0.1.
+    """Bisect a finite-window R=0.1 classification response on [0,20].
 
-    More precise than :func:`trace_sync_transition` when only
-    ``K_c`` is needed. Returns ``nan`` if no transition is found
-    in ``[0, 20]``.
+    Assumes a monotone finite-horizon R response; it is not a stability test.
+    Returns NaN only when the upper endpoint has R below 0.1. The lower
+    endpoint is not measured. If its response is already above threshold,
+    bisection can return a small positive lower-bracket midpoint without
+    any transition. This historical interval-return convention is retained.
 
     Parameters
     ----------
@@ -504,7 +549,7 @@ def find_critical_coupling(
         Finite real numeric natural frequencies in rad/s, shape ``(N,)``.
         Boolean, complex, and numeric-string aliases are rejected.
     knm_template : FloatArray | None
-        Unit coupling template scaled along the continuation, or ``None`` for
+        Unit coupling template scaled across the grid, or ``None`` for
         all-to-all. Must be finite, real numeric, and zero-diagonal.
     dt : float
         Integration step size.
@@ -513,14 +558,19 @@ def find_critical_coupling(
     n_measure : int
         Number of steps averaged to measure the order parameter.
     tol : float
-        Convergence tolerance for the binary search.
+        Positive stopping tolerance for the coupling interval width.
     seed : int
         Seed for the deterministic RNG.
+    backend : str | None
+        Named numerical owner, or automatic batched Rust / trial preference.
+        An unavailable named owner raises ImportError without fallback.
 
     Returns
     -------
     float
-        The critical coupling ``K_c`` where ``R`` first crosses 0.1.
+        Final interval midpoint, or NaN when R at K=20 is below 0.1.
+        A midpoint is not evidence that the lower endpoint was subthreshold
+        or that any physical transition occurred.
     """
     omegas = _validate_omegas(omegas)
     n = int(omegas.shape[0])
@@ -544,7 +594,9 @@ def find_critical_coupling(
     rng = np.random.default_rng(seed)
     phases_init = rng.uniform(0, 2 * np.pi, n)
 
-    if _HAS_COMPOSITE_RUST:
+    if backend is not None and backend not in ("rust", "mojo", "julia", "go", "python"):
+        raise ValueError(f"unknown basin backend: {backend!r}")
+    if _HAS_COMPOSITE_RUST and backend in (None, "rust"):
         o = np.ascontiguousarray(omegas, dtype=np.float64)
         k = np.ascontiguousarray(knm_template.ravel(), dtype=np.float64)
         a = np.ascontiguousarray(alpha.ravel(), dtype=np.float64)
@@ -575,6 +627,7 @@ def find_critical_coupling(
         dt,
         n_transient,
         n_measure,
+        backend,
     )
     if R_hi < threshold:
         return float("nan")
@@ -590,6 +643,7 @@ def find_critical_coupling(
             dt,
             n_transient,
             n_measure,
+            backend,
         )
         if R_mid < threshold:
             K_lo = K_mid

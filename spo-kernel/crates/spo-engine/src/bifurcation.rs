@@ -6,32 +6,90 @@
 // Contact: www.anulum.li | protoscience@anulum.li
 // SCPN Phase Orchestrator — Bifurcation analysis (Keller 1977, Kuramoto 1975)
 
-//! Bifurcation continuation for Kuramoto synchronisation transitions.
+//! Finite-horizon Kuramoto measurements over independent coupling trials.
 //!
-//! Traces steady-state order parameter R as a function of coupling strength K.
-//! Detects critical coupling K_c where R bifurcates from 0 to partial sync.
-//!
-//! References:
-//!   Kuramoto 1975, International Symposium on Mathematical Problems
-//!     in Theoretical Physics, Lecture Notes in Physics 39:420-422.
-//!   Strogatz 2000, Physica D 143:1-20.
-//!   Keller 1977, "Numerical Solution of Bifurcation and Nonlinear
-//!     Eigenvalue Problems".
+//! Uses full-snapshot explicit Euler, with row-major target/source coupling
+//! and no implicit population normalization. A crossing of R=0.1 is a
+//! numerical classification, not a certified bifurcation or stability proof.
 
-/// Run Kuramoto ODE to steady state and return time-averaged R.
+/// Check dimensions and finite inputs before allocating or indexing.
 ///
-/// Euler integration of dθ_i/dt = ω_i + Σ_j K_ij sin(θ_j − θ_i − α_ij)
+/// # Errors
+/// Returns an error for dimensions, nonfinite values, or invalid timestep.
+#[allow(clippy::too_many_arguments)]
+pub fn validate_trial_inputs(
+    phases: &[f64],
+    omegas: &[f64],
+    knm: &[f64],
+    alpha: &[f64],
+    n: usize,
+    k_scale: f64,
+    dt: f64,
+) -> Result<(), &'static str> {
+    if n == 0 {
+        return Err("n must be positive");
+    }
+    let square = n.checked_mul(n).ok_or("n squared overflows usize")?;
+    if phases.len() != n || omegas.len() != n || knm.len() != square || alpha.len() != square {
+        return Err("trial array lengths must match n and n squared");
+    }
+    if !phases
+        .iter()
+        .chain(omegas)
+        .chain(knm)
+        .chain(alpha)
+        .all(|v| v.is_finite())
+    {
+        return Err("trial arrays must contain only finite values");
+    }
+    if !k_scale.is_finite() || !dt.is_finite() || dt <= 0.0 {
+        return Err("k_scale must be finite and dt finite and positive");
+    }
+    Ok(())
+}
+
+/// Return the post-step mean R, or an explicit input/arithmetic error.
 ///
-/// # Arguments
-/// * `phases_init` — (N,) initial phases
-/// * `omegas` — (N,) natural frequencies
-/// * `knm_flat` — (N×N) row-major coupling template (will be scaled by k_scale)
-/// * `alpha_flat` — (N×N) row-major phase lag matrix
-/// * `n` — number of oscillators
-/// * `k_scale` — coupling strength multiplier
-/// * `dt` — integration timestep
-/// * `n_transient` — steps to discard
-/// * `n_measure` — steps to average R over
+/// A zero measurement window returns zero after input validation, without
+/// executing transient steps. No convergence or stability certificate is made.
+///
+/// # Errors
+/// Returns an error for malformed inputs or unrepresentable arithmetic.
+#[allow(clippy::too_many_arguments)]
+pub fn try_steady_state_r(
+    phases_init: &[f64],
+    omegas: &[f64],
+    knm_flat: &[f64],
+    alpha_flat: &[f64],
+    n: usize,
+    k_scale: f64,
+    dt: f64,
+    n_transient: usize,
+    n_measure: usize,
+) -> Result<f64, &'static str> {
+    validate_trial_inputs(phases_init, omegas, knm_flat, alpha_flat, n, k_scale, dt)?;
+    if n_measure == 0 {
+        return Ok(0.0);
+    }
+    let mut phases = phases_init.to_vec();
+    for _ in 0..n_transient {
+        try_kuramoto_step(&mut phases, omegas, knm_flat, alpha_flat, n, k_scale, dt)?;
+    }
+    let mut r_sum = 0.0;
+    for _ in 0..n_measure {
+        try_kuramoto_step(&mut phases, omegas, knm_flat, alpha_flat, n, k_scale, dt)?;
+        r_sum += order_parameter(&phases);
+    }
+    let r = r_sum / n_measure as f64;
+    if !r.is_finite() || !(0.0..=1.0 + 1e-12).contains(&r) {
+        return Err("steady-state R must be finite and lie in [0, 1]");
+    }
+    Ok(r.min(1.0))
+}
+
+/// Compatible scalar API; invalid inputs/arithmetic produce NaN.
+///
+/// Use `try_steady_state_r` to obtain the error reason.
 #[must_use]
 #[allow(clippy::too_many_arguments)]
 pub fn steady_state_r(
@@ -45,25 +103,21 @@ pub fn steady_state_r(
     n_transient: usize,
     n_measure: usize,
 ) -> f64 {
-    let mut phases = phases_init.to_vec();
-
-    // Transient: integrate to steady state
-    for _ in 0..n_transient {
-        kuramoto_step(&mut phases, omegas, knm_flat, alpha_flat, n, k_scale, dt);
-    }
-
-    // Measure: time-averaged R
-    let mut r_sum = 0.0;
-    for _ in 0..n_measure {
-        kuramoto_step(&mut phases, omegas, knm_flat, alpha_flat, n, k_scale, dt);
-        r_sum += order_parameter(&phases);
-    }
-
-    r_sum / n_measure as f64
+    try_steady_state_r(
+        phases_init,
+        omegas,
+        knm_flat,
+        alpha_flat,
+        n,
+        k_scale,
+        dt,
+        n_transient,
+        n_measure,
+    )
+    .unwrap_or(f64::NAN)
 }
 
-/// Single Euler step for Kuramoto model.
-fn kuramoto_step(
+fn try_kuramoto_step(
     phases: &mut [f64],
     omegas: &[f64],
     knm_flat: &[f64],
@@ -71,51 +125,127 @@ fn kuramoto_step(
     n: usize,
     k_scale: f64,
     dt: f64,
-) {
-    // Compute coupling: c_i = Σ_j K_ij * sin(θ_j − θ_i − α_ij)
-    // Then θ_i += dt * (ω_i + c_i)
+) -> Result<(), &'static str> {
     let old = phases.to_vec();
     for i in 0..n {
         let mut coupling = 0.0;
         for j in 0..n {
             let k_ij = knm_flat[i * n + j] * k_scale;
-            if k_ij.abs() < 1e-30 {
+            if !k_ij.is_finite() {
+                return Err("scaled coupling overflow");
+            }
+            if k_ij == 0.0 {
                 continue;
             }
-            let a_ij = alpha_flat[i * n + j];
-            coupling += k_ij * (old[j] - old[i] - a_ij).sin();
+            let angle = old[j] - old[i] - alpha_flat[i * n + j];
+            if !angle.is_finite() {
+                return Err("phase difference overflow");
+            }
+            coupling += k_ij * angle.sin();
         }
-        phases[i] = old[i] + dt * (omegas[i] + coupling);
+        let velocity = omegas[i] + coupling;
+        let next = old[i] + dt * velocity;
+        if !velocity.is_finite() || !next.is_finite() {
+            return Err("Euler step overflow");
+        }
+        phases[i] = next;
     }
+    Ok(())
 }
 
-/// Kuramoto order parameter R = |<exp(iθ)>|.
+#[cfg(test)]
+fn kuramoto_step(
+    phases: &mut [f64],
+    omegas: &[f64],
+    knm: &[f64],
+    alpha: &[f64],
+    n: usize,
+    scale: f64,
+    dt: f64,
+) {
+    try_kuramoto_step(phases, omegas, knm, alpha, n, scale, dt).expect("valid unit-test trial");
+}
+
 fn order_parameter(phases: &[f64]) -> f64 {
-    if phases.is_empty() {
-        return 0.0;
-    }
+    // The checked exported trial requires a nonempty population.
     let n = phases.len() as f64;
-    let mut sum_cos = 0.0;
-    let mut sum_sin = 0.0;
+    let mut c = 0.0;
+    let mut s = 0.0;
     for &theta in phases {
-        sum_cos += theta.cos();
-        sum_sin += theta.sin();
+        c += theta.cos();
+        s += theta.sin();
     }
-    ((sum_cos / n).powi(2) + (sum_sin / n).powi(2)).sqrt()
+    ((c / n).powi(2) + (s / n).powi(2)).sqrt()
 }
 
-/// Trace R(K) bifurcation diagram.
+/// Independently measure every grid point and interpolate the first upcrossing.
 ///
-/// Returns (K_values, R_values, K_critical).
-/// K_critical is NaN if no transition found.
+/// The optional crossing is represented by NaN when absent. Sampling the grid
+/// is not pseudo-arclength continuation; each trial uses the same initial phases.
+/// The direct native API retains singleton grids, equal endpoints and negative
+/// coupling. The public Python sweep separately requires an increasing nonnegative
+/// range and at least two points.
+///
+/// # Errors
+/// Returns an error for an invalid grid or any invalid or overflowing trial.
+#[allow(clippy::too_many_arguments)]
+pub fn try_trace_sync_transition(
+    omegas: &[f64],
+    knm: &[f64],
+    alpha: &[f64],
+    n: usize,
+    phases: &[f64],
+    k_min: f64,
+    k_max: f64,
+    n_points: usize,
+    dt: f64,
+    n_transient: usize,
+    n_measure: usize,
+) -> Result<(Vec<f64>, Vec<f64>, f64), &'static str> {
+    use rayon::prelude::*;
+    validate_trial_inputs(phases, omegas, knm, alpha, n, 1.0, dt)?;
+    if !k_min.is_finite() || !k_max.is_finite() || k_max < k_min {
+        return Err("native coupling range must be finite and nondecreasing");
+    }
+    if n_points == 0 {
+        return Err("n_points must be positive");
+    }
+    let k_values: Vec<f64> = (0..n_points)
+        .map(|i| {
+            if n_points == 1 {
+                return k_min;
+            }
+            let fraction = i as f64 / (n_points - 1) as f64;
+            (1.0 - fraction) * k_min + fraction * k_max
+        })
+        .collect();
+    let r_values: Vec<f64> = k_values
+        .par_iter()
+        .map(|&k| try_steady_state_r(phases, omegas, knm, alpha, n, k, dt, n_transient, n_measure))
+        .collect::<Result<_, _>>()?;
+    let mut critical = f64::NAN;
+    for i in 0..n_points - 1 {
+        if r_values[i] < 0.1 && r_values[i + 1] >= 0.1 {
+            let fraction = (0.1 - r_values[i]) / (r_values[i + 1] - r_values[i]);
+            // Convex interpolation keeps finite opposite-sign endpoints finite.
+            critical = (1.0 - fraction) * k_values[i] + fraction * k_values[i + 1];
+            break;
+        }
+    }
+    Ok((k_values, r_values, critical))
+}
+
+/// Compatible sweep API; errors produce empty arrays and NaN.
+///
+/// Use `try_trace_sync_transition` to obtain the error reason.
 #[must_use]
 #[allow(clippy::too_many_arguments)]
 pub fn trace_sync_transition(
     omegas: &[f64],
-    knm_flat: &[f64],
-    alpha_flat: &[f64],
+    knm: &[f64],
+    alpha: &[f64],
     n: usize,
-    phases_init: &[f64],
+    phases: &[f64],
     k_min: f64,
     k_max: f64,
     n_points: usize,
@@ -123,115 +253,117 @@ pub fn trace_sync_transition(
     n_transient: usize,
     n_measure: usize,
 ) -> (Vec<f64>, Vec<f64>, f64) {
-    use rayon::prelude::*;
+    try_trace_sync_transition(
+        omegas,
+        knm,
+        alpha,
+        n,
+        phases,
+        k_min,
+        k_max,
+        n_points,
+        dt,
+        n_transient,
+        n_measure,
+    )
+    .unwrap_or_else(|_| (vec![], vec![], f64::NAN))
+}
 
-    let k_values: Vec<f64> = (0..n_points)
-        .map(|i| {
-            if n_points > 1 {
-                k_min + (k_max - k_min) * i as f64 / (n_points - 1) as f64
-            } else {
-                k_min
-            }
-        })
-        .collect();
-    // Each K is an independent trajectory — parallelise across the sweep.
-    let r_values: Vec<f64> = k_values
-        .par_iter()
-        .map(|&k| {
-            steady_state_r(
-                phases_init,
-                omegas,
-                knm_flat,
-                alpha_flat,
-                n,
-                k,
-                dt,
-                n_transient,
-                n_measure,
-            )
-        })
-        .collect();
-
-    // Find K_critical: first crossing of R = 0.1
-    let threshold = 0.1;
-    let mut k_critical = f64::NAN;
-    for i in 0..r_values.len() - 1 {
-        if r_values[i] < threshold && r_values[i + 1] >= threshold {
-            let r_lo = r_values[i];
-            let r_hi = r_values[i + 1];
-            if r_hi > r_lo {
-                let frac = (threshold - r_lo) / (r_hi - r_lo);
-                k_critical = k_values[i] + frac * (k_values[i + 1] - k_values[i]);
-            } else {
-                k_critical = k_values[i + 1];
-            }
+/// Search for the R=0.1 classification boundary on `[0,20]`.
+///
+/// Assumes a monotone response; performs at most 30 iterations. Returns NaN
+/// when the upper endpoint is below the threshold, including an empty window.
+/// The lower endpoint is not measured. An already-superthreshold lower bracket
+/// can therefore return a small positive interval midpoint without a transition.
+///
+/// # Errors
+/// Returns an error for an invalid tolerance or any invalid or overflowing trial.
+#[allow(clippy::too_many_arguments)]
+pub fn try_find_critical_coupling(
+    omegas: &[f64],
+    knm: &[f64],
+    alpha: &[f64],
+    n: usize,
+    phases: &[f64],
+    dt: f64,
+    n_transient: usize,
+    n_measure: usize,
+    tol: f64,
+) -> Result<f64, &'static str> {
+    validate_trial_inputs(phases, omegas, knm, alpha, n, 1.0, dt)?;
+    if !tol.is_finite() || tol <= 0.0 {
+        return Err("tol must be finite and positive");
+    }
+    let mut lo = 0.0;
+    let mut hi = 20.0;
+    if try_steady_state_r(
+        phases,
+        omegas,
+        knm,
+        alpha,
+        n,
+        hi,
+        dt,
+        n_transient,
+        n_measure,
+    )? < 0.1
+    {
+        return Ok(f64::NAN);
+    }
+    for _ in 0..30 {
+        let mid = (lo + hi) / 2.0;
+        if try_steady_state_r(
+            phases,
+            omegas,
+            knm,
+            alpha,
+            n,
+            mid,
+            dt,
+            n_transient,
+            n_measure,
+        )? < 0.1
+        {
+            lo = mid;
+        } else {
+            hi = mid;
+        }
+        if hi - lo < tol {
             break;
         }
     }
-
-    (k_values, r_values, k_critical)
+    Ok((lo + hi) / 2.0)
 }
 
-/// Binary search for critical coupling K_c.
+/// Compatible search API; subthreshold upper endpoint or invalid computation is NaN.
 ///
-/// Returns K_c or NaN if no transition in [0, 20].
+/// The untested lower-bracket midpoint convention is retained. Use
+/// `try_find_critical_coupling` to distinguish input/arithmetic errors.
 #[must_use]
 #[allow(clippy::too_many_arguments)]
 pub fn find_critical_coupling(
     omegas: &[f64],
-    knm_flat: &[f64],
-    alpha_flat: &[f64],
+    knm: &[f64],
+    alpha: &[f64],
     n: usize,
-    phases_init: &[f64],
+    phases: &[f64],
     dt: f64,
     n_transient: usize,
     n_measure: usize,
     tol: f64,
 ) -> f64 {
-    let threshold = 0.1;
-
-    let mut k_lo = 0.0;
-    let mut k_hi = 20.0;
-
-    let r_hi = steady_state_r(
-        phases_init,
+    try_find_critical_coupling(
         omegas,
-        knm_flat,
-        alpha_flat,
+        knm,
+        alpha,
         n,
-        k_hi,
+        phases,
         dt,
         n_transient,
         n_measure,
-    );
-    if r_hi < threshold {
-        return f64::NAN;
-    }
-
-    for _ in 0..30 {
-        let k_mid = (k_lo + k_hi) / 2.0;
-        let r_mid = steady_state_r(
-            phases_init,
-            omegas,
-            knm_flat,
-            alpha_flat,
-            n,
-            k_mid,
-            dt,
-            n_transient,
-            n_measure,
-        );
-        if r_mid < threshold {
-            k_lo = k_mid;
-        } else {
-            k_hi = k_mid;
-        }
-        if k_hi - k_lo < tol {
-            break;
-        }
-    }
-
-    (k_lo + k_hi) / 2.0
+        tol,
+    )
+    .unwrap_or(f64::NAN)
 }
 
 #[cfg(test)]
@@ -262,8 +394,8 @@ mod tests {
     }
 
     #[test]
-    fn test_order_parameter_empty() {
-        assert_eq!(order_parameter(&[]), 0.0);
+    fn test_empty_trial_is_refused_at_the_exported_boundary() {
+        assert!(try_steady_state_r(&[], &[], &[], &[], 0, 1.0, 0.01, 0, 1).is_err());
     }
 
     #[test]

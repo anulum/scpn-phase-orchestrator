@@ -96,6 +96,13 @@ jobs:
           SPO_ATTNRES_REQUIRED_BACKENDS: "python,julia"
           COVERAGE_FILE: .coverage.julia
         run: python -m pytest tests/test_attention_residuals_real_runtime.py tests/test_attention_residuals_backends.py --strict-markers --tb=short --cov=scpn_phase_orchestrator --cov-append --cov-report= --cov-fail-under=0
+      - name: Qualify required Julia basin and coupling-sweep consumers
+        env:
+          SPO_REQUIRED_BASIN_BACKENDS: "python,julia"
+          COVERAGE_FILE: .coverage.julia
+        run: python -m pytest tests/test_basin_bifurcation_real_runtime.py tests/test_basin_stability_backends.py tests/test_basin_stability_benchmark.py --strict-markers --tb=short --cov=scpn_phase_orchestrator --cov-append --cov-report= --cov-fail-under=0
+      - name: Check original native Julia basin contracts and type inference
+        run: python -c "from juliacall import Main; Main.include('julia/test_basin_stability.jl')"
       - name: Upload Julia bridge coverage
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
@@ -145,6 +152,10 @@ jobs:
         run: |
           go test -count=1 go/attnres.go go/attnres_test.go
           go vet go/attnres.go go/attnres_test.go
+      - name: Check native basin Go contracts
+        run: |
+          go test -count=1 go/basin_stability.go go/basin_stability_test.go
+          go vet go/basin_stability.go go/basin_stability_test.go
       - name: Install Python measurement test dependencies
         run: pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
       - name: Execute Go measurement ingress contracts with coverage
@@ -156,6 +167,11 @@ jobs:
           SPO_ATTNRES_REQUIRED_BACKENDS: "python,go"
           COVERAGE_FILE: .coverage.go
         run: python -m pytest tests/test_attention_residuals_real_runtime.py tests/test_attention_residuals_backends.py --strict-markers --tb=short --cov=scpn_phase_orchestrator --cov-append --cov-report= --cov-fail-under=0
+      - name: Qualify required Go basin and coupling-sweep consumers
+        env:
+          SPO_REQUIRED_BASIN_BACKENDS: "python,go"
+          COVERAGE_FILE: .coverage.go
+        run: python -m pytest tests/test_basin_bifurcation_real_runtime.py tests/test_basin_stability_backends.py tests/test_basin_stability_benchmark.py --strict-markers --tb=short --cov=scpn_phase_orchestrator --cov-append --cov-report= --cov-fail-under=0
       - name: Upload Go measurement coverage
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
@@ -216,6 +232,15 @@ jobs:
           SPO_ATTNRES_REQUIRED_BACKENDS: "python,mojo"
           COVERAGE_FILE: .coverage.mojo
         run: .venv/bin/python -m pytest tests/test_attention_residuals_real_runtime.py tests/test_attention_residuals_backends.py --strict-markers --tb=short --cov=scpn_phase_orchestrator --cov-append --cov-report= --cov-fail-under=0
+      - name: Qualify required Mojo basin and coupling-sweep consumers
+        env:
+          SPO_REQUIRED_BASIN_BACKENDS: "python,mojo"
+          COVERAGE_FILE: .coverage.mojo
+        run: .venv/bin/python -m pytest tests/test_basin_bifurcation_real_runtime.py tests/test_basin_stability_backends.py tests/test_basin_stability_benchmark.py --strict-markers --tb=short --cov=scpn_phase_orchestrator --cov-append --cov-report= --cov-fail-under=0
+      - name: Check original Mojo basin request admission and numerical output
+        env:
+          SPO_REQUIRED_BASIN_BACKENDS: "python,mojo"
+        run: .venv/bin/python -m pytest native-tests/test_basin_bifurcation_profiles.py -k test_original_mojo_protocol_or_genuine_owner_absence --strict-markers --tb=short
       - name: Upload Mojo measurement coverage
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
@@ -354,7 +379,7 @@ jobs:
             -m "not slow and not performance and not native_runtime" \
             -k "not performance" \
             --cov=scpn_phase_orchestrator --cov-report= --cov-fail-under=0
-          pytest tests/test_kernel_runtime.py tests/test_cli_serve.py tests/test_kernel_deployment.py native-tests/test_sindy_runtime_profiles.py native-tests/test_attention_residuals_profiles.py \
+          pytest tests/test_kernel_runtime.py tests/test_cli_serve.py tests/test_kernel_deployment.py native-tests/test_sindy_runtime_profiles.py native-tests/test_attention_residuals_profiles.py native-tests/test_basin_bifurcation_profiles.py \
             -m native_runtime --strict-markers --tb=short \
             --cov=scpn_phase_orchestrator --cov-append --cov-report= --cov-fail-under=0
           mv .coverage .coverage.ffi
@@ -396,7 +421,7 @@ jobs:
             --ignore-glob=tests/test_nn_physics_validation*.py \
             -m "not slow and not performance and not native_runtime" \
             -k "not performance"
-          pytest tests/test_kernel_runtime.py tests/test_cli_serve.py tests/test_kernel_deployment.py native-tests/test_sindy_runtime_profiles.py native-tests/test_attention_residuals_profiles.py \
+          pytest tests/test_kernel_runtime.py tests/test_cli_serve.py tests/test_kernel_deployment.py native-tests/test_sindy_runtime_profiles.py native-tests/test_attention_residuals_profiles.py native-tests/test_basin_bifurcation_profiles.py \
             -m native_runtime --strict-markers --tb=short
       - name: Exercise real built-in native loading (Linux, Python 3.11)
         if: runner.os == 'Linux' && matrix.python-version == '3.11'
@@ -427,5 +452,5 @@ jobs:
             --ignore-glob=tests/test_nn_physics_validation*.py \
             -m "not slow and not performance and not native_runtime" \
             -k "not performance"
-          pytest tests/test_kernel_runtime.py tests/test_cli_serve.py tests/test_kernel_deployment.py native-tests/test_sindy_runtime_profiles.py native-tests/test_attention_residuals_profiles.py \
+          pytest tests/test_kernel_runtime.py tests/test_cli_serve.py tests/test_kernel_deployment.py native-tests/test_sindy_runtime_profiles.py native-tests/test_attention_residuals_profiles.py native-tests/test_basin_bifurcation_profiles.py \
             -m native_runtime --strict-markers --tb=short

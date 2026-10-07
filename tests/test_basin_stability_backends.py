@@ -10,21 +10,24 @@
 
 All five backends (Rust / Mojo / Julia / Go / Python) integrate the
 Kuramoto ODE via explicit Euler with full-snapshot step semantics
-and must produce bit-exact R values for identical inputs. This file
-pins the dispatcher to each backend in turn, runs the same problem,
+and must reproduce R within numerical tolerance for identical inputs. This file
+names each actual owner explicitly, runs the same problem,
 and cross-checks against the Python reference with a tight tolerance.
 """
 
 from __future__ import annotations
 
-import contextlib
+import subprocess
 from collections.abc import Callable
+from typing import cast
 
 import numpy as np
 import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
+from numpy.typing import NDArray
 
+from benchmarks.kuramoto_trial_reference import scalar_trial
 from scpn_phase_orchestrator.experimental.accelerators.upde import (
     _basin_stability_go as basin_go,
 )
@@ -34,22 +37,23 @@ from scpn_phase_orchestrator.experimental.accelerators.upde import (
 from scpn_phase_orchestrator.experimental.accelerators.upde import (
     _basin_stability_mojo as basin_mojo,
 )
-from scpn_phase_orchestrator.upde import (
-    _basin_stability_validation as basin_validation,
-)
 from scpn_phase_orchestrator.upde import basin_stability as b_mod
 from scpn_phase_orchestrator.upde.basin_stability import (
     basin_stability,
     steady_state_r,
 )
 
+FloatArray = NDArray[np.float64]
+Payload = tuple[
+    FloatArray, FloatArray, FloatArray, FloatArray, int, float, float, int, int
+]
 TOL = 1e-12
 DirectBackend = Callable[
     [
-        np.ndarray,
-        np.ndarray,
-        np.ndarray,
-        np.ndarray,
+        FloatArray,
+        FloatArray,
+        FloatArray,
+        FloatArray,
         int,
         float,
         float,
@@ -66,27 +70,18 @@ DIRECT_BACKENDS = (
 
 
 def test__basin_stability_validation_linkage() -> None:
-    assert callable(basin_validation.validate_basin_stability_inputs)
-    assert callable(basin_validation.validate_basin_stability_output)
+    """A malformed actual public trial exercises the shared ingress contract."""
+    with pytest.raises(ValueError, match="omegas shape"):
+        steady_state_r(np.zeros(2), np.zeros(1), np.zeros((2, 2)), backend="python")
 
 
-@contextlib.contextmanager
-def _force_backend(name: str):
-    prev = b_mod.ACTIVE_BACKEND
-    b_mod.ACTIVE_BACKEND = name
-    try:
-        yield
-    finally:
-        b_mod.ACTIVE_BACKEND = prev
-
-
-def _all_to_all(n: int, strength: float = 1.0) -> np.ndarray:
+def _all_to_all(n: int, strength: float = 1.0) -> FloatArray:
     k = np.ones((n, n)) * strength / n
     np.fill_diagonal(k, 0.0)
     return k
 
 
-def _direct_payload(n: int = 5):
+def _direct_payload(n: int = 5) -> Payload:
     rng = np.random.default_rng(17)
     phases = rng.uniform(0.0, 2.0 * np.pi, size=n)
     omegas = rng.normal(0.0, 0.2, size=n)
@@ -95,45 +90,56 @@ def _direct_payload(n: int = 5):
     return phases, omegas, knm, alpha, n, 1.0, 0.01, 20, 10
 
 
-def _mojo_proc(stdout: str) -> object:
-    return type("Proc", (), {"returncode": 0, "stdout": stdout, "stderr": ""})()
+def _mojo_proc(stdout: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.CompletedProcess(["negative-control"], 0, stdout, "")
 
 
 def _reference_R(n: int, strength: float, seed: int) -> float:
-    omegas = np.ones(n)
-    knm = _all_to_all(n, strength=strength)
-    rng = np.random.default_rng(seed)
-    phases = rng.uniform(0, 2 * np.pi, n)
-    with _force_backend("python"):
-        return steady_state_r(
-            phases,
-            omegas,
-            knm,
-            dt=0.01,
-            n_transient=200,
-            n_measure=100,
-        )
+    """Use a separately implemented scalar oracle on the same initial phases."""
+    phases = np.random.default_rng(seed).uniform(0, 2 * np.pi, n)
+    return scalar_trial(
+        phases.tolist(),
+        np.ones(n).tolist(),
+        _all_to_all(n, strength).tolist(),
+        np.zeros((n, n)).tolist(),
+        dt=0.01,
+        transient=200,
+        measure=100,
+    )
 
 
 def _backend_R(backend: str, n: int, strength: float, seed: int) -> float:
-    if backend not in b_mod.AVAILABLE_BACKENDS:
-        pytest.skip(f"backend {backend!r} unavailable")
-    omegas = np.ones(n)
-    knm = _all_to_all(n, strength=strength)
-    rng = np.random.default_rng(seed)
-    phases = rng.uniform(0, 2 * np.pi, n)
-    with _force_backend(backend):
-        return steady_state_r(
-            phases,
-            omegas,
-            knm,
-            dt=0.01,
-            n_transient=200,
-            n_measure=100,
-        )
+    """Call the named original public owner without mutation or fallback."""
+    phases = np.random.default_rng(seed).uniform(0, 2 * np.pi, n)
+    return steady_state_r(
+        phases,
+        np.ones(n),
+        _all_to_all(n, strength),
+        dt=0.01,
+        n_transient=200,
+        n_measure=100,
+        backend=backend,
+    )
+
+
+def _direct(backend: DirectBackend, payload: list[object]) -> float:
+    """Forward hostile original values through a direct boundary negative control."""
+    return backend(
+        cast(FloatArray, payload[0]),
+        cast(FloatArray, payload[1]),
+        cast(FloatArray, payload[2]),
+        cast(FloatArray, payload[3]),
+        cast(int, payload[4]),
+        cast(float, payload[5]),
+        cast(float, payload[6]),
+        cast(int, payload[7]),
+        cast(int, payload[8]),
+    )
 
 
 class TestDirectBackendBoundaryContracts:
+    """Actual direct adapters reject invalid ingress and malformed stdout."""
+
     @pytest.mark.parametrize("backend", DIRECT_BACKENDS)
     @pytest.mark.parametrize(
         ("index", "replacement"),
@@ -168,23 +174,37 @@ class TestDirectBackendBoundaryContracts:
         self,
         backend: DirectBackend,
         index: int,
-        replacement: Callable[[tuple], object],
+        replacement: Callable[[Payload], object],
     ) -> None:
         """Direct Go/Julia/Mojo wrappers share the steady-state R contract."""
-
-        payload = list(_direct_payload())
-        payload[index] = replacement(tuple(payload))
+        payload: list[object] = list(_direct_payload())
+        payload[index] = replacement(cast(Payload, tuple(payload)))
         with pytest.raises((TypeError, ValueError)):
-            backend(*payload)
+            _direct(backend, payload)
 
-    @pytest.mark.parametrize("backend", DIRECT_BACKENDS)
-    def test_zero_measure_returns_zero_without_optional_runtime(
-        self,
-        backend: DirectBackend,
-    ) -> None:
-        payload = list(_direct_payload())
-        payload[8] = 0
-        assert backend(*payload) == 0.0
+    @pytest.mark.parametrize("owner", ("go", "julia", "mojo"))
+    def test_zero_measure_validates_named_runtime(self, owner: str) -> None:
+        """A named zero-window request still requires that original owner to load."""
+        if owner not in b_mod.AVAILABLE_BACKENDS:
+            with pytest.raises(ImportError):
+                steady_state_r(
+                    np.zeros(2),
+                    np.zeros(2),
+                    np.zeros((2, 2)),
+                    n_measure=0,
+                    backend=owner,
+                )
+        else:
+            assert (
+                steady_state_r(
+                    np.zeros(2),
+                    np.zeros(2),
+                    np.zeros((2, 2)),
+                    n_measure=0,
+                    backend=owner,
+                )
+                == 0.0
+            )
 
     @pytest.mark.parametrize("backend", DIRECT_BACKENDS)
     @pytest.mark.parametrize(
@@ -204,14 +224,13 @@ class TestDirectBackendBoundaryContracts:
         self,
         backend: DirectBackend,
         index: int,
-        replacement: Callable[[tuple], object],
+        replacement: Callable[[Payload], object],
     ) -> None:
         """Direct Go/Julia/Mojo inputs must reject numeric-string aliases."""
-
-        payload = list(_direct_payload())
-        payload[index] = replacement(tuple(payload))
+        payload: list[object] = list(_direct_payload())
+        payload[index] = replacement(cast(Payload, tuple(payload)))
         with pytest.raises(ValueError, match="numeric-string"):
-            backend(*payload)
+            _direct(backend, payload)
 
     @pytest.mark.parametrize(
         ("stdout", "match"),
@@ -228,9 +247,10 @@ class TestDirectBackendBoundaryContracts:
     def test_mojo_steady_state_rejects_malformed_stdout(
         self, monkeypatch: pytest.MonkeyPatch, stdout: str, match: str
     ) -> None:
+        """Injected malformed stdout cannot become a finite trial measurement."""
         monkeypatch.setattr(basin_mojo, "_ensure_exe", lambda: "basin_stability")
         monkeypatch.setattr(
-            basin_mojo.subprocess,
+            subprocess,
             "run",
             lambda *_args, **_kwargs: _mojo_proc(stdout),
         )
@@ -240,22 +260,44 @@ class TestDirectBackendBoundaryContracts:
 
 
 class TestSteadyStateRParity:
-    def test_rust_matches_python(self):
+    """Named original owners agree with independent scalar Euler trials."""
+
+    def test_rust_matches_python(self) -> None:
+        """The original named Rust trial agrees with the scalar Euler oracle."""
+        if "rust" not in b_mod.AVAILABLE_BACKENDS:
+            with pytest.raises(ImportError):
+                _backend_R("rust", 3, 1.0, 0)
+            return
         ref = _reference_R(6, strength=3.0, seed=0)
         got = _backend_R("rust", 6, strength=3.0, seed=0)
         assert abs(got - ref) < TOL
 
-    def test_julia_matches_python(self):
+    def test_julia_matches_python(self) -> None:
+        """The original named Julia trial agrees with the scalar Euler oracle."""
+        if "julia" not in b_mod.AVAILABLE_BACKENDS:
+            with pytest.raises(ImportError):
+                _backend_R("julia", 3, 1.0, 0)
+            return
         ref = _reference_R(6, strength=3.0, seed=1)
         got = _backend_R("julia", 6, strength=3.0, seed=1)
         assert abs(got - ref) < TOL
 
-    def test_go_matches_python(self):
+    def test_go_matches_python(self) -> None:
+        """The original named Go trial agrees with the scalar Euler oracle."""
+        if "go" not in b_mod.AVAILABLE_BACKENDS:
+            with pytest.raises(ImportError):
+                _backend_R("go", 3, 1.0, 0)
+            return
         ref = _reference_R(6, strength=3.0, seed=2)
         got = _backend_R("go", 6, strength=3.0, seed=2)
         assert abs(got - ref) < TOL
 
-    def test_mojo_matches_python(self):
+    def test_mojo_matches_python(self) -> None:
+        """The original named Mojo trial agrees within floating-point tolerance."""
+        if "mojo" not in b_mod.AVAILABLE_BACKENDS:
+            with pytest.raises(ImportError):
+                _backend_R("mojo", 3, 1.0, 0)
+            return
         ref = _reference_R(5, strength=2.5, seed=3)
         got = _backend_R("mojo", 5, strength=2.5, seed=3)
         # Mojo text round-trip introduces ≤ 1e-14 drift over ~300 steps.
@@ -265,52 +307,60 @@ class TestSteadyStateRParity:
 class TestBasinStabilityParity:
     """S_B must agree across backends for identical RNG seed."""
 
-    def _compare(self, backend: str):
+    def _compare(self, backend: str) -> None:
         if backend not in b_mod.AVAILABLE_BACKENDS:
-            pytest.skip(f"backend {backend!r} unavailable")
+            with pytest.raises(ImportError):
+                _backend_R(backend, 5, 2.5, 42)
+            return
         n = 5
         omegas = np.ones(n)
         knm = _all_to_all(n, strength=2.5)
-        with _force_backend("python"):
-            ref = basin_stability(
-                omegas,
-                knm,
-                dt=0.01,
-                n_transient=100,
-                n_measure=50,
-                n_samples=6,
-                R_threshold=0.5,
-                seed=42,
-            )
-        with _force_backend(backend):
-            got = basin_stability(
-                omegas,
-                knm,
-                dt=0.01,
-                n_transient=100,
-                n_measure=50,
-                n_samples=6,
-                R_threshold=0.5,
-                seed=42,
-            )
+        ref = basin_stability(
+            omegas,
+            knm,
+            dt=0.01,
+            n_transient=100,
+            n_measure=50,
+            n_samples=6,
+            R_threshold=0.5,
+            seed=42,
+            backend="python",
+        )
+        got = basin_stability(
+            omegas,
+            knm,
+            dt=0.01,
+            n_transient=100,
+            n_measure=50,
+            n_samples=6,
+            R_threshold=0.5,
+            seed=42,
+            backend=backend,
+        )
         np.testing.assert_allclose(got.R_final, ref.R_final, atol=1e-10)
         assert got.S_B == ref.S_B
         assert got.n_converged == ref.n_converged
 
-    def test_rust(self):
+    def test_rust(self) -> None:
+        """Actual Rust sampling retains the public NumPy seed and classification."""
         self._compare("rust")
 
-    def test_julia(self):
+    def test_julia(self) -> None:
+        """Actual Julia sampling retains the public NumPy seed and classification."""
         self._compare("julia")
 
-    def test_go(self):
+    def test_go(self) -> None:
+        """Actual Go sampling retains the public NumPy seed and classification."""
         self._compare("go")
 
-    def test_mojo(self):
+    def test_mojo(self) -> None:
+        """Actual Mojo sampling retains the public NumPy seed and classification."""
         self._compare("mojo")
 
 
 class TestHypothesisParity:
+    """Sampled original owner comparisons against scalar Euler values."""
+
     @given(
         n=st.integers(min_value=2, max_value=6),
         strength=st.floats(min_value=0.5, max_value=4.0),
@@ -321,9 +371,12 @@ class TestHypothesisParity:
         deadline=None,
         suppress_health_check=[HealthCheck.too_slow],
     )
-    def test_rust_hypothesis(self, n, strength, seed):
+    def test_rust_hypothesis(self, n: int, strength: float, seed: int) -> None:
+        """Sampled Rust trials agree with independent scalar measurements."""
         if "rust" not in b_mod.AVAILABLE_BACKENDS:
-            pytest.skip("rust unavailable")
+            with pytest.raises(ImportError):
+                _backend_R("rust", n, strength, seed)
+            return
         ref = _reference_R(n, strength, seed)
         got = _backend_R("rust", n, strength, seed)
         assert abs(got - ref) < TOL
@@ -338,9 +391,12 @@ class TestHypothesisParity:
         deadline=None,
         suppress_health_check=[HealthCheck.too_slow],
     )
-    def test_go_hypothesis(self, n, strength, seed):
+    def test_go_hypothesis(self, n: int, strength: float, seed: int) -> None:
+        """Sampled Go trials agree with independent scalar measurements."""
         if "go" not in b_mod.AVAILABLE_BACKENDS:
-            pytest.skip("go unavailable")
+            with pytest.raises(ImportError):
+                _backend_R("go", n, strength, seed)
+            return
         ref = _reference_R(n, strength, seed)
         got = _backend_R("go", n, strength, seed)
         assert abs(got - ref) < TOL
