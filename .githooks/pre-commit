@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Commercial license available
+# © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
+# © Code 2020–2026 Miroslav Šotek. All rights reserved.
+# ORCID: 0009-0009-3560-0851
+# Contact: www.anulum.li | protoscience@anulum.li
+# SCPN Phase Orchestrator — Staged source checks
+
+set -euo pipefail
+repository=$(git rev-parse --show-toplevel)
+python="${repository}/.venv/bin/python"
+if [[ ! -x "${python}" ]]; then
+    python="${repository}/.venv/Scripts/python.exe"
+fi
+# Explicit files keep pre-commit from stashing other seats' tracked work.
+mapfile -d '' -t files < <(git diff --cached --name-only --diff-filter=ACMR -z)
+if (( ${#files[@]} == 0 )); then
+    files=(.githooks/pre-commit)
+fi
+for file in "${files[@]}"; do
+    if git diff --quiet -- "${file}"; then
+        continue
+    else
+        status=$?
+        if (( status == 1 )); then
+            printf 'Commit refused: staged file also has unstaged changes: %s\n' "${file}" >&2
+        fi
+        exit "${status}"
+    fi
+done
+exec "${python}" -m pre_commit run --hook-stage pre-commit --files "${files[@]}"

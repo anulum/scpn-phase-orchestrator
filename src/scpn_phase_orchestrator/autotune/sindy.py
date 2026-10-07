@@ -19,13 +19,13 @@ state.
 from __future__ import annotations
 
 from collections.abc import Callable
+from importlib import import_module
 from math import isfinite
 from numbers import Integral, Real
-from typing import TypeAlias, cast
+from typing import Protocol, TypeAlias, cast
 
 import numpy as np
 from numpy.typing import NDArray
-from scipy.linalg import lstsq
 
 FloatArray: TypeAlias = NDArray[np.float64]
 _RustSindyFit: TypeAlias = Callable[
@@ -33,17 +33,28 @@ _RustSindyFit: TypeAlias = Callable[
     object,
 ]
 
+
+class _LeastSquares(Protocol):
+    """Typed boundary to the installed SciPy rectangular least-squares API."""
+
+    def __call__(
+        self, matrix: FloatArray, target: FloatArray, *, cond: float
+    ) -> tuple[object, ...]:
+        """Return solver outputs whose coefficient payload is validated by fit."""
+        ...
+
+
+lstsq = cast(_LeastSquares, import_module("scipy.linalg").lstsq)
+
 try:
-    from spo_kernel import (
-        sindy_fit_rust as _loaded_rust_sindy_fit,
-    )
+    _loaded_rust_sindy_fit = import_module("spo_kernel").sindy_fit_rust
 
     _rust_sindy_fit: _RustSindyFit | None = cast(
         "_RustSindyFit",
         _loaded_rust_sindy_fit,
     )
     _HAS_RUST = True
-except ImportError:
+except (ImportError, AttributeError):
     _rust_sindy_fit = None
     _HAS_RUST = False
 
@@ -80,14 +91,36 @@ def _coerce_lstsq_coefficients(values: object, expected_size: int) -> FloatArray
 
 
 class PhaseSINDy:
-    """Symbolic Discovery of Phase Dynamics using SINDy.
+    """Fit sparse Kuramoto equations from sampled phase trajectories.
 
-    Discovers the governing equations of a coupled oscillator network
-    by performing sparse regression on a library of trigonometric
-    interaction terms.
+    Parameters
+    ----------
+    threshold : float, default=0.05
+        Non-negative coefficient magnitude below which a term is removed.
+        Frequencies and coupling coefficients are in radians per second.
+    max_iter : int, default=10
+        Positive number of threshold-and-refit iterations after initial least
+        squares. Threshold equality retains the term.
+
+    Attributes
+    ----------
+    coefficients : list[FloatArray]
+        One vector per target node: its frequency first, then couplings from
+        the other nodes in ascending source-index order. Empty before fitting.
+    feature_names : list[list[str]]
+        Matching constant and sine-feature names for equation formatting.
+
+    Notes
+    -----
+    The installed Rust extension is used when available; otherwise SciPy
+    supplies the Python implementation. Both solve rectangular least squares
+    with a relative singular-value cutoff of machine epsilon. Dependent
+    features yield a minimum-norm solution, not identifiable physical couplings.
+    Sampling must resolve phase increments below half a turn; unwrapping cannot
+    reconstruct physical rotations lost to sampling aliasing.
     """
 
-    def __init__(self, threshold: float = 0.05, max_iter: int = 10):
+    def __init__(self, threshold: float = 0.05, max_iter: int = 10) -> None:
         """Create a SINDy estimator with validated sparsity controls."""
         if _is_boolean_alias(threshold) or not isinstance(threshold, Real):
             raise ValueError("threshold must be finite and non-negative")
@@ -105,24 +138,38 @@ class PhaseSINDy:
         self.feature_names: list[list[str]] = []
 
     def fit(self, phases: FloatArray, dt: float) -> list[FloatArray]:
-        """Discover equations node-by-node to handle independent coupling.
+        """Fit each target's constant and directed sine-coupling coefficients.
 
         Parameters
         ----------
         phases : FloatArray
-            Oscillator phases in radians, shape ``(N,)``.
+            Finite real phases in radians, shape ``(T, N)``, with at least
+            ``N`` derivative samples: ``T - 1 >= N >= 1``. Boolean aliases
+            and complex values are rejected before numerical conversion.
         dt : float
-            Integration step size.
+            Finite positive sample period in seconds. Adjacent phase increments
+            are unwrapped into the principal interval, preserving the original
+            sign at exact positive and negative half turns.
 
         Returns
         -------
         list[FloatArray]
-            Equations node-by-node to handle independent coupling.
+            ``N`` finite vectors of shape ``(N,)``. Each contains the target's
+            frequency followed by couplings from source indices other than
+            itself. The result is also stored in ``coefficients``.
 
         Raises
         ------
         ValueError
-            If the inputs are invalid or inconsistent.
+            If controls, trajectory shape, values, derived arithmetic or a
+            backend result are invalid. Too few samples or zero nodes clear
+            the previous fit; other failures preserve the previous fit.
+
+        Notes
+        -----
+        New coefficients and feature names are published together only after
+        every target fits successfully. This estimator does not change any live
+        network or approve discovered equations for actuation.
         """
         if _is_boolean_alias(dt) or not isinstance(dt, Real):
             raise ValueError("dt must be a finite and positive scalar")
@@ -206,12 +253,15 @@ class PhaseSINDy:
                 self.feature_names.append(names)
             return self.coefficients
 
-        unwrapped = np.unwrap(phases_array, axis=0)
-        theta_dot = np.diff(unwrapped, axis=0) / parsed_dt
+        with np.errstate(over="ignore", invalid="ignore", divide="ignore"):
+            unwrapped = np.unwrap(phases_array, axis=0)
+            theta_dot = np.diff(unwrapped, axis=0) / parsed_dt
+        if not np.all(np.isfinite(theta_dot)):
+            raise ValueError("PhaseSINDy phase derivatives must remain finite")
         X = phases_array[:-1, :]
 
-        self.coefficients = []
-        self.feature_names = []
+        fitted_coefficients: list[FloatArray] = []
+        fitted_names: list[list[str]] = []
 
         for i in range(N):
             # 1. Build library for node i: [1, sin(theta_j - theta_i) for all j != i]
@@ -221,15 +271,18 @@ class PhaseSINDy:
             for j in range(N):
                 if i == j:
                     continue
-                diff = X[:, j] - X[:, i]
-                library.append(np.sin(diff)[:, np.newaxis])
+                with np.errstate(over="ignore", invalid="ignore"):
+                    diff = X[:, j] - X[:, i]
+                    library.append(np.sin(diff)[:, np.newaxis])
                 f_names.append(f"sin(theta_{j} - theta_{i})")
 
             Theta = np.hstack(library)
+            if not np.all(np.isfinite(Theta)):
+                raise ValueError("PhaseSINDy feature library must remain finite")
 
             # 2. STLSQ for this node
             xi = _coerce_lstsq_coefficients(
-                lstsq(Theta, theta_dot[:, i])[0],
+                lstsq(Theta, theta_dot[:, i], cond=np.finfo(np.float64).eps)[0],
                 Theta.shape[1],
             )
 
@@ -239,13 +292,19 @@ class PhaseSINDy:
                 big_indices = ~small_indices
                 if np.any(big_indices):
                     xi[big_indices] = _coerce_lstsq_coefficients(
-                        lstsq(Theta[:, big_indices], theta_dot[:, i])[0],
+                        lstsq(
+                            Theta[:, big_indices],
+                            theta_dot[:, i],
+                            cond=np.finfo(np.float64).eps,
+                        )[0],
                         int(np.count_nonzero(big_indices)),
                     )
 
-            self.coefficients.append(xi)
-            self.feature_names.append(f_names)
+            fitted_coefficients.append(xi)
+            fitted_names.append(f_names)
 
+        self.coefficients = fitted_coefficients
+        self.feature_names = fitted_names
         return self.coefficients
 
     def get_equations(self) -> list[str]:
@@ -254,12 +313,13 @@ class PhaseSINDy:
         Returns
         -------
         list[str]
-            Format fitted sparse coefficients as per-node phase equations.
+            One equation per target, with four decimal places. Terms with
+            magnitude at most ``1e-6`` are omitted; an empty equation is zero.
 
         Raises
         ------
         RuntimeError
-            If the operation fails.
+            If no successfully fitted coefficients are available.
         """
         if not self.coefficients:
             raise RuntimeError("PhaseSINDy.get_equations() called before fit()")

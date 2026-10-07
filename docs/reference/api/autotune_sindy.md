@@ -1,575 +1,222 @@
-# Phase-SINDy Symbolic Discovery
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<!-- Commercial license available -->
+<!-- © Concepts 1996–2026 Miroslav Šotek. All rights reserved. -->
+<!-- © Code 2020–2026 Miroslav Šotek. All rights reserved. -->
+<!-- ORCID: 0009-0009-3560-0851 -->
+<!-- Contact: www.anulum.li | protoscience@anulum.li -->
+<!-- SCPN Phase Orchestrator — Phase-SINDy public numerical contract -->
 
-## 1. Mathematical Formalism
+# Phase-SINDy symbolic discovery
 
-### Sparse Identification of Nonlinear Dynamics (SINDy)
+`PhaseSINDy` estimates constant frequencies and directed sine couplings from
+sampled phase trajectories. It fits a specified Kuramoto feature library;
+interactions outside that library are not discovered by this estimator.
+The fitted model is an offline inference result requiring operator review.
 
-SINDy discovers governing equations from data by solving a sparse
-regression problem. For coupled phase oscillators, the dynamics
-of oscillator $i$ are:
+## Equations, sampling and units
 
-$$\frac{d\theta_i}{dt} = \omega_i + \sum_{j \neq i} K_{ij} \sin(\theta_j - \theta_i)$$
+For target node $i$, the assumed model is
 
-### Library Construction
+$$
+\dot\theta_i = \omega_i + \sum_{j\ne i} K_{ij}\sin(\theta_j-\theta_i).
+$$
 
-For each oscillator $i$, construct a library matrix
-$\Theta \in \mathbb{R}^{(T-1) \times (1 + N-1)}$:
+`phases` has shape `(T, N)` and contains real finite angles in radians. `dt` is
+a positive finite sample period in seconds. The fit requires `N >= 1` and
+`T - 1 >= N`; one oscillator with two samples is sufficient for admission.
+Admission does not establish that the data identify a physical model.
 
-$$\Theta = \begin{bmatrix} 1 & \sin(\theta_1 - \theta_i) & \sin(\theta_2 - \theta_i) & \cdots & \sin(\theta_N - \theta_i) \end{bmatrix}$$
+Derivatives use adjacent unwrapped increments divided by `dt`. Whole-turn
+aliases are reduced by arbitrary integer multiples of $2\pi$. Exact positive
+and negative half turns retain the sign of the original increment. The Python
+path uses [NumPy unwrapping](https://numpy.org/doc/stable/reference/generated/numpy.unwrap.html);
+the native path implements the same principal-increment convention.
+Floating-point operations need not be bit-identical across implementations.
 
-The first column is a constant (captures $\omega_i$); the remaining
-columns are pairwise sinusoidal interaction terms.
+Physical angular velocity is identifiable from these sampled increments only
+when the sampling resolves the rotation between observations. Unwrapping
+cannot recover missing complete turns. Finite differences also introduce
+sampling error and amplify measurement noise.
 
-### Target Vector
+Rows of $K$ are targets and columns are sources: $K_{ij}$ describes $j\to i$.
+Both $\omega_i$ and $K_{ij}$ are reported in radians per second. This estimator
+allows signed couplings and omits self-coupling terms.
 
-The time derivative is estimated from the phase trajectory:
+## Sparse regression and numerical rank
 
-$$\dot{\theta}_i(t) \approx \frac{\theta_i(t + \Delta t) - \theta_i(t)}{\Delta t}$$
+For each target, the Python library consists of a constant column followed by
+$\sin(\theta_j-\theta_i)$ for ascending source indices other than the target.
+Its shape is `(T - 1, N)`.
 
-with phase unwrapping to handle $2\pi$ wraparounds.
+Sequential thresholded least squares starts with a rectangular least-squares
+fit, sets terms with magnitude strictly below `threshold` to zero, and refits
+the retained features. It performs `max_iter` threshold/refit rounds. A term
+exactly equal to the threshold is retained. If no features remain, the
+coefficient vector is zero.
 
-### STLSQ (Sequential Thresholded Least Squares)
+This follows the sparse-library approach of
+[Brunton, Proctor and Kutz (2016)](https://doi.org/10.1073/pnas.1517384113).
+The selected features and sampling assumptions constrain the equations that
+can be inferred; sparsity is not a guarantee of global optimisation or truth.
 
-SINDy solves the regression $\dot{\theta}_i = \Theta \cdot \xi_i$
-using iterative hard thresholding:
+The Python implementation uses
+[SciPy least squares](https://docs.scipy.org/doc/scipy/reference/generated/scipy.linalg.lstsq.html)
+with `cond` set to double-precision machine epsilon. Rust uses the existing
+`nalgebra` rectangular SVD primitive with the corresponding relative cutoff,
+without forming normal equations. The native solve scales the target to avoid
+projection overflow and limits SVD convergence iterations. Invalid derived
+arithmetic or a failed solve is refused.
 
-1. **Initialise:** $\xi_i = (\Theta^T \Theta)^{-1} \Theta^T \dot{\theta}_i$
-   (least squares)
-2. **Threshold:** Set $|\xi_{i,k}| < \lambda$ to zero
-3. **Re-solve:** Least squares on remaining non-zero coefficients
-4. **Repeat** for `max_iter` iterations
+Dependent feature columns yield a minimum-norm least-squares solution. For
+example, two trajectories with a constant phase offset have constant sine
+features, which cannot independently distinguish a frequency from its coupling.
+Even a small residual does not make those separate coefficients identifiable.
+Full-rank, sufficiently excited data and a suitable model library are needed
+for unique coefficient recovery. Near-dependent features require particular
+care when interpreting a fit.
 
-The threshold $\lambda$ controls sparsity: higher $\lambda$ produces
-sparser equations (fewer coupling terms), lower $\lambda$ retains
-more structure.
+## Public coefficient layout and state
 
-### Coefficient Interpretation
+`fit` returns `N` double-precision vectors, each of shape `(N,)`. For three
+nodes, the layout is:
 
-The coefficient vector $\xi_i$ decodes as:
+| Target | Returned vector |
+|---|---|
+| 0 | `[omega_0, K_01, K_02]` |
+| 1 | `[omega_1, K_10, K_12]` |
+| 2 | `[omega_2, K_20, K_21]` |
 
-| Index | Feature | Coefficient | Physical Meaning |
-|-------|---------|-------------|------------------|
-| 0 | 1 | $\omega_i$ | Natural frequency |
-| 1 | $\sin(\theta_1 - \theta_i)$ | $K_{i1}$ | Coupling $1 \to i$ |
-| 2 | $\sin(\theta_2 - \theta_i)$ | $K_{i2}$ | Coupling $2 \to i$ |
-| ... | ... | ... | ... |
+The native engine returns a row-major `(N, N)` matrix with frequencies on the
+diagonal and couplings off the diagonal. The Python public wrapper remaps it
+into the layout above. `feature_names` matches every returned vector.
 
-### Normal Equations (Rust)
+`get_equations()` returns one equation per target, formatted to four decimal
+places. Terms of magnitude at most `1e-6` are omitted from text; the numerical
+coefficients remain available independently. An equation with no displayed
+terms is `d(theta_i)/dt = 0`. Calling this method before a successful fit raises
+`RuntimeError`.
 
-The Rust implementation solves the normal equations directly:
+Boolean aliases, complex phases, invalid controls, non-finite values,
+inconsistent dimensions and invalid backend output are rejected. A trajectory
+with too few samples or zero nodes clears the previous fit. Other failed fits
+preserve previous coefficients and equations. The Python path publishes its
+new state only after every target has fitted successfully.
 
-$$\xi = (X^T X)^{-1} X^T y$$
+## Example
 
-using Gaussian elimination with partial pivoting, rather than the
-SVD-based lstsq used in Python (via LAPACK dgelsd).
-
----
-
-## 2. Theoretical Context
-
-### Why SINDy for Oscillator Networks?
-
-Traditional system identification methods assume a model structure
-(e.g., linear state-space). SINDy is **data-driven**: it discovers
-the governing equations from observed dynamics without assuming
-a specific model.
-
-For coupled oscillators, this is powerful because:
-1. The coupling topology $K_{ij}$ is often unknown
-2. The natural frequencies $\omega_i$ may be uncertain
-3. The interaction function (assumed sinusoidal) can be verified
-   by inspecting the residuals
-
-### Relation to Compressed Sensing
-
-STLSQ is a greedy sparse recovery algorithm, related to:
-- **LASSO** ($L_1$ penalty): convex relaxation of sparsity
-- **Orthogonal Matching Pursuit (OMP):** greedy selection
-- **Iterative Hard Thresholding:** closest to STLSQ
-
-STLSQ is preferred because it preserves the least-squares fit
-quality while enforcing sparsity through hard thresholding.
-
-### Phase-SINDy Specifics
-
-The standard SINDy library includes polynomials, trigonometric
-functions, and their products. Phase-SINDy specialises the library
-to the Kuramoto interaction terms:
-- Constant term (natural frequency)
-- Pairwise $\sin(\theta_j - \theta_i)$ (first harmonic coupling)
-
-Higher harmonics ($\sin(2(\theta_j - \theta_i))$, etc.) could be
-added but are not included in the current implementation.
-
-### Historical Context
-
-- **Brunton, S. L., Proctor, J. L., & Kutz, J. N.** (2016):
-  "Discovering governing equations from data by sparse identification
-  of nonlinear dynamical systems." The original SINDy paper.
-  *PNAS* 113(15):3932-3937.
-- **Champion, K. et al.** (2019): "Data-driven discovery of
-  coordinates and governing equations." Extended SINDy with
-  autoencoder coordinates.
-- **Stankovski, T. et al.** (2012): "Inference of time-varying
-  Kuramoto coupling functions." Phase-specific coupling discovery.
-- **Kralemann, B. et al.** (2008): "Phase dynamics of coupled
-  oscillators reconstructed from data." Bayesian approach to
-  coupling function estimation.
-
-### Limitations
-
-1. **Assumes sinusoidal coupling:** If the true interaction is
-   non-sinusoidal, SINDy will produce biased estimates
-2. **Requires sufficient data:** $T \gg N$ for reliable regression
-3. **Noise sensitivity:** Finite-difference derivatives amplify noise
-4. **Global coupling only:** Cannot detect time-varying or
-   state-dependent coupling
-
-### Identifiability
-
-For the Kuramoto model, coupling coefficients are identifiable
-from phase data if and only if:
-1. **The system is not fully synchronised** ($R < 1$): at $R = 1$,
-   all $\sin(\theta_j - \theta_i) = 0$ and the coupling matrix
-   disappears from the regression
-2. **There is sufficient excitation**: oscillators must explore
-   a range of phase differences for the regression to distinguish
-   different couplings
-3. **The library is correctly specified**: if the true coupling
-   includes higher harmonics or phase frustration, the pure
-   $\sin(\Delta\theta)$ library is misspecified
-
-### Comparison with Other System Identification Methods
-
-| Method | Linearity | Sparsity | Noise | Complexity |
-|--------|-----------|----------|-------|------------|
-| Phase-SINDy (STLSQ) | Nonlinear | Yes | Moderate | $O(TN^2)$ |
-| Granger causality | Linear | No | Good | $O(TN^2)$ |
-| Transfer entropy | Nonlinear | No | Good | $O(T N^2 B)$ |
-| Dynamic Mode Decomposition | Linear | No | Good | $O(TN^2)$ |
-| Bayesian coupling inference | Nonlinear | No | Excellent | $O(T N^3)$ |
-
-Phase-SINDy is unique in combining nonlinear discovery with
-built-in sparsity promotion. It is the natural choice when the
-coupling topology is expected to be sparse (most $K_{ij} = 0$).
-
-### STLSQ Convergence
-
-The STLSQ algorithm is not guaranteed to converge to a global
-minimum. It is a greedy heuristic that works well in practice
-for sparse problems. Typical convergence requires 5-20 iterations.
-The `max_iter` parameter defaults to 10, which is sufficient for
-most oscillator networks.
-
-The algorithm can oscillate if two features have nearly identical
-contributions (aliasing). In this case, increasing the threshold
-or adding a small $L_2$ regularisation can help.
-
----
-
-## 3. Pipeline Position
-
-```
- UPDEEngine.run() ──→ phases(t), shape (T, N)
-                           │
-                           ↓
- ┌── PhaseSINDy.fit(phases, dt) ─────────────────┐
- │                                                 │
- │  Step 1: Compute θ̇ via finite differences     │
- │  Step 2: Build library Θ for each node         │
- │  Step 3: STLSQ regression → ξ_i               │
- │  Step 4: Extract ω_i (diagonal), K_ij (off)    │
- │                                                 │
- │  Output: list of coefficient vectors            │
- │          [ω_i, K_i1, K_i2, ...] per oscillator │
- └──────────────────┬──────────────────────────────┘
-                    │
-                    ↓
- PhaseSINDy.get_equations() → symbolic equations
-                    │
-                    ↓
- CouplingBuilder.from_discovered(ξ) → updated K_nm
-```
-
-### Input Contracts
-
-| Parameter | Type | Shape | Range | Meaning |
-|-----------|------|-------|-------|---------|
-| `phases` | `NDArray[float64]` | `(T, N)` | finite real, no boolean aliases | Phase trajectory |
-| `dt` | `float` | scalar | $> 0$ | Time step |
-
-### Output Contract
-
-| Field | Type | Shape | Meaning |
-|-------|------|-------|---------|
-| `coefficients` | `list[NDArray]` | $N \times [1+N-1]$ | Per-node coefficient vectors |
-| `feature_names` | `list[list[str]]` | $N \times [1+N-1]$ | Human-readable feature labels |
-
-Logical masks and complex phasors are rejected before coercion into the real
-phase-regression library. When the optional Rust backend is active, its
-coefficient payload must be numeric, finite, and exactly `N*N` entries before
-the diagonal frequency and off-diagonal coupling layout is remapped into the
-Python coefficient vectors.
-
----
-
-## 4. Features
-
-- **Data-driven equation discovery** — no assumed coupling topology
-- **STLSQ sparse regression** — identifies active couplings,
-  prunes spurious ones
-- **Per-node regression** — handles independent coupling per oscillator
-- **Symbolic equations** — `get_equations()` returns human-readable
-  discovered dynamics
-- **Rust FFI acceleration** — 7.8-15x speedup for small N (≤ 8)
-- **Coefficient remapping** — Rust diagonal=ω, off-diagonal=K_ij
-  correctly mapped to Python layout
-- **Configurable threshold** — controls sparsity/accuracy trade-off
-- **Configurable max iterations** — controls STLSQ convergence
-
----
-
-## 5. Usage Examples
-
-### Basic: Discover Equations
+This self-contained example generates independently specified Euler samples of
+a two-node network, fits them and prints the inferred equations. It uses
+synthetic data; successful recovery does not validate a measured physical system.
 
 ```python
 import numpy as np
 from scpn_phase_orchestrator.autotune.sindy import PhaseSINDy
-from scpn_phase_orchestrator.upde.engine import UPDEEngine
 
-N = 4
-dt = 0.01
-eng = UPDEEngine(N, dt=dt)
-rng = np.random.default_rng(42)
-phases = rng.uniform(0, 2 * np.pi, N)
-omegas = np.array([1.0, 1.5, 2.0, 0.5])
-knm = np.array([
-    [0.0, 0.3, 0.0, 0.0],
-    [0.3, 0.0, 0.5, 0.0],
-    [0.0, 0.5, 0.0, 0.2],
-    [0.0, 0.0, 0.2, 0.0],
-])
-alpha = np.zeros((N, N))
+omega = np.array([1.0, 1.7])
+k = np.array([[0.0, 0.2], [-0.1, 0.0]])
+dt = 0.02
+phases = np.empty((400, 2), dtype=np.float64)
+phases[0] = [0.0, 0.8]
+for sample in range(1, len(phases)):
+    previous = phases[sample - 1]
+    derivative = omega + np.array([
+        k[0, 1] * np.sin(previous[1] - previous[0]),
+        k[1, 0] * np.sin(previous[0] - previous[1]),
+    ])
+    phases[sample] = (previous + dt * derivative) % (2 * np.pi)
 
-# Collect trajectory
-trajectory = [phases.copy()]
-for _ in range(500):
-    phases = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
-    trajectory.append(phases.copy())
-traj = np.array(trajectory)  # (T, N)
-
-# Discover equations
-sindy = PhaseSINDy(threshold=0.05, max_iter=10)
-sindy.fit(traj, dt)
-for eq in sindy.get_equations():
-    print(eq)
+model = PhaseSINDy(threshold=0.01)
+coefficients = model.fit(phases, dt)
+np.testing.assert_allclose(coefficients, [[1.0, 0.2], [1.7, -0.1]], atol=1e-9)
+print(*model.get_equations(), sep="\n")
 ```
 
-### Compare Discovered vs True Coupling
+For CSV onboarding, phase-like columns feed the same estimator through
+[auto-binding](../../guide/auto_binding.md). The discovery record preserves
+signed source/target edges, equations, derivative sample counts and residual
+quality. The proposal remains subject to binding validation and operator
+review; a self-fit does not receive external-validation status.
 
-```python
-import numpy as np
-from scpn_phase_orchestrator.autotune.sindy import PhaseSINDy
+## Real runtime diagnostics
 
-# True: K_01 = 0.3, K_12 = 0.5
-# SINDy should recover these
-sindy = PhaseSINDy(threshold=0.01)
-coeffs = sindy.fit(trajectory, dt=0.01)
+Run the same scoped source, test and diagnostic quality checks locally and in CI:
 
-# coeffs[0] = [ω_0, K_01, K_02, K_03]
-print(f"True ω_0 = 1.0, Discovered: {coeffs[0][0]:.3f}")
-print(f"True K_01 = 0.3, Discovered: {coeffs[0][1]:.3f}")
+```bash
+make phase-sindy-quality PYTHON=.venv/bin/python
 ```
 
-### Threshold Sensitivity
+The maintained diagnostic exercises directed recovery, arbitrary whole-turn
+aliases, analytical dependent features and empty support through `PhaseSINDy`.
+It observes the installed native callable or SciPy call without replacing it,
+checks independent references, and retains repeated timings with source,
+binary and environment identity.
 
-```python
-import numpy as np
-from scpn_phase_orchestrator.autotune.sindy import PhaseSINDy
-
-for threshold in [0.01, 0.05, 0.1, 0.5]:
-    sindy = PhaseSINDy(threshold=threshold)
-    sindy.fit(trajectory, dt=0.01)
-    n_nonzero = sum(np.count_nonzero(c) for c in sindy.coefficients)
-    print(f"λ={threshold:.2f}: {n_nonzero} non-zero coefficients")
+```bash
+.venv/bin/python benchmarks/phase_sindy_benchmark.py --expect-backend native --repeats 20
 ```
 
-### Pipeline: Discover → Validate → Deploy
+Use `--expect-backend python` in a genuinely separate installation without
+`spo-kernel`. A required backend mismatch or failed numerical reference exits
+non-zero. The optional estimator uses Python when the native entry point is
+unavailable; requiring native execution is a separate explicit runtime contract.
+The kernel runs in process during a fit and needs no permanently running service.
 
-```python
-import numpy as np
-from scpn_phase_orchestrator.autotune.sindy import PhaseSINDy
-from scpn_phase_orchestrator.upde.engine import UPDEEngine
-from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
+Shared-workstation timings are local diagnostics. They do not establish an
+isolated speedup, real-data discovery quality or production latency guarantees.
 
-N = 8
-dt = 0.01
-eng = UPDEEngine(N, dt=dt)
-rng = np.random.default_rng(42)
+### Source-bound coverage admission
 
-# True parameters
-true_omegas = rng.uniform(0.5, 2.0, N)
-true_knm = np.zeros((N, N))
-for i in range(N - 1):
-    true_knm[i, i+1] = 0.3
-    true_knm[i+1, i] = 0.3
+`tools/phase_sindy_coverage_policy.json` binds the owning source files and locked
+native dependency to the reviewed measurement. Changes invalidate that binding
+until new real measurements and review replace it. The admission command checks
+complete Python statement and branch membership and rejects additional gaps:
 
-# Generate trajectory
-phases = rng.uniform(0, 2 * np.pi, N)
-trajectory = [phases.copy()]
-for _ in range(1000):
-    phases = eng.step(phases, true_omegas, true_knm, 0.0, 0.0, np.zeros((N, N)))
-    trajectory.append(phases.copy())
-traj = np.array(trajectory)
-
-# Discover
-sindy = PhaseSINDy(threshold=0.05)
-sindy.fit(traj, dt)
-
-# Extract discovered coupling
-K_disc = np.zeros((N, N))
-for i, xi in enumerate(sindy.coefficients):
-    j_idx = 0
-    for j in range(N):
-        if j != i:
-            K_disc[i, j] = xi[1 + j_idx]
-            j_idx += 1
-
-# Validate: simulate with discovered K
-phases2 = rng.uniform(0, 2 * np.pi, N)
-for _ in range(500):
-    phases2 = eng.step(phases2, true_omegas, K_disc, 0.0, 0.0, np.zeros((N, N)))
-R, _ = compute_order_parameter(phases2)
-print(f"R with discovered K: {R:.4f}")
+```bash
+python tools/phase_sindy_coverage.py --python-report python.json --native-report native.json
 ```
 
-### Visualise Discovered Equations
+The eight statements in the original-owner profile observers execute while
+Python tracing is suspended. They remained unrecorded with coverage.py 7.16.1's
+monitoring core on Python 3.12.3 in both actual runtime profiles. Their exact
+lines and branch outcomes are measurement exclusions, not numerical coverage.
+If a report records them, no exclusion is credited.
 
-```python
-from scpn_phase_orchestrator.autotune.sindy import PhaseSINDy
+Native SVD nonconvergence remains an uncovered defensive path, including its
+error propagation during refitting. The 100000-iteration bound and refusal are
+retained. Native statement coverage is below 100%; the admission receipt states
+this explicitly. The separate solve-error closure is source-bound to nalgebra
+0.35.0's retained U/V and non-negative cutoff invariant. Neither condition
+changes the repository's global or per-module coverage thresholds.
 
-sindy = PhaseSINDy(threshold=0.05)
-sindy.fit(trajectory, dt=0.01)
-equations = sindy.get_equations()
-for eq in equations:
-    print(eq)
-# Example output:
-# d(theta_0)/dt = 1.0021 * 1 + 0.2987 * sin(theta_1 - theta_0)
-# d(theta_1)/dt = 1.5003 * 1 + 0.3012 * sin(theta_0 - theta_1)
-```
+The small recorded exports under `tests/fixtures/phase_sindy_coverage/` exercise
+the admission protocol and source binding in CI. They contain real branch and
+region vectors, not substituted successful solver results. They do not replace
+fresh runtime tests or establish current hosted coverage by themselves.
+The command validates report structure and source scope; it does not authenticate
+the measuring process. Updating source hashes alone cannot qualify a changed
+implementation. Source changes, including changes to the owning tests and
+observers, require new raw measurements, source receipts and review. The repository
+does not automate the complete native/Python report join.
 
----
-
-## 6. Technical Reference
-
-### Class: PhaseSINDy
+## API reference
 
 ::: scpn_phase_orchestrator.autotune.sindy
+    options:
+      docstring_style: numpy
 
-### Constructor
-
-```python
-PhaseSINDy(threshold: float = 0.05, max_iter: int = 10)
-```
-
-### Rust Engine Function
+The native Rust entry point is:
 
 ```rust
 pub fn sindy_fit(
-    phases: &[f64],   // row-major (T × N) phase trajectory
+    phases: &[f64],
     n_osc: usize,
     n_time: usize,
     dt: f64,
     threshold: f64,
     max_iter: usize,
-) -> Vec<f64>         // N×N: [i][i]=ω_i, [i][j]=K_ij for j≠i
+) -> Result<Vec<f64>, String>
 ```
 
-Internal helpers:
-- `compute_theta_dot` — finite-difference derivative with unwrapping
-- `build_library` — construct Θ for one node
-- `stlsq_node` — STLSQ regression for one node
-
-### Coefficient Layout
-
-| Backend | Layout |
-|---------|--------|
-| Rust | $N \times N$ matrix: diagonal=ω, off-diagonal=K |
-| Python | List of vectors: $[\omega_i, K_{j_1}, K_{j_2}, \ldots]$ per node |
-
-The Python wrapper remaps the Rust layout to match the Python
-convention.
-
----
-
-## 7. Performance Benchmarks
-
-Measured on Intel Core i5-11600K @ 3.90 GHz, 32 GB DDR4-2400.
-T = 500 timesteps, threshold = 0.05, max_iter = 10.
-
-| N | Python (ms) | Rust (ms) | Speedup |
-|---|-------------|-----------|---------|
-| 4 | 4.800 | 0.321 | **15.0x** |
-| 8 | 9.917 | 1.274 | **7.8x** |
-| 16 | 26.316 | 28.722 | **0.9x** |
-
-### Why Does Rust Slow Down at N=16?
-
-The bottleneck shifts from Python overhead (dominant at small N)
-to the linear algebra solver:
-- **Python:** LAPACK lstsq (dgelsd) via SciPy, $O(TN^2)$ with
-  optimised BLAS
-- **Rust:** Normal equations with Gaussian elimination, $O(TN^2 + N^3)$
-  with naive loops
-
-At N=16, the LAPACK solver's SIMD advantage dominates.
-
-### Memory Usage
-
-- Library Θ: $(T-1) \times N$ per node = $N \times (T-1) \times N$ total
-- Working storage: $N \times N$ for normal equations per node
-- Total for N=8, T=500: ~160 KB
-
-### Test Coverage
-
-- **Rust tests:** 5 (sindy module in spo-engine)
-- **Python tests:** 1 (`tests/test_sindy.py`)
-- **Source lines:** 269 (Rust) + 113 (Python) = 382 total
-
----
-
-## 8. Citations
-
-1. **Brunton, S. L., Proctor, J. L., & Kutz, J. N.** (2016).
-   "Discovering governing equations from data by sparse identification
-   of nonlinear dynamical systems."
-   *PNAS* 113(15):3932-3937.
-   DOI: [10.1073/pnas.1517384113](https://doi.org/10.1073/pnas.1517384113)
-
-2. **Champion, K., Lusch, B., Kutz, J. N., & Brunton, S. L.** (2019).
-   "Data-driven discovery of coordinates and governing equations."
-   *PNAS* 116(45):22445-22451.
-   DOI: [10.1073/pnas.1906995116](https://doi.org/10.1073/pnas.1906995116)
-
-3. **Stankovski, T., Duggento, A., McClintock, P. V. E., &
-   Stefanovska, A.** (2012).
-   "Inference of time-evolving coupled dynamical systems in the
-   presence of noise."
-   *Physical Review Letters* 109(2):024101.
-   DOI: [10.1103/PhysRevLett.109.024101](https://doi.org/10.1103/PhysRevLett.109.024101)
-
-4. **Kralemann, B., Cimponeriu, L., Rosenblum, M., Pikovsky, A., &
-   Mrowka, R.** (2008).
-   "Phase dynamics of coupled oscillators reconstructed from data."
-   *Physical Review E* 77(6):066205.
-   DOI: [10.1103/PhysRevE.77.066205](https://doi.org/10.1103/PhysRevE.77.066205)
-
-5. **Tibshirani, R.** (1996).
-   "Regression shrinkage and selection via the lasso."
-   *Journal of the Royal Statistical Society B* 58(1):267-288.
-
-6. **Donoho, D. L.** (2006).
-   "Compressed sensing."
-   *IEEE Transactions on Information Theory* 52(4):1289-1306.
-   DOI: [10.1109/TIT.2006.871582](https://doi.org/10.1109/TIT.2006.871582)
-
-7. **Kuramoto, Y.** (1984).
-   *Chemical Oscillations, Waves, and Turbulence.*
-   Springer. ISBN: 978-3-642-69691-6.
-
-8. **Rudy, S. H., Brunton, S. L., Proctor, J. L., & Kutz, J. N.**
-   (2017).
-   "Data-driven discovery of partial differential equations."
-   *Science Advances* 3(4):e1602614.
-   DOI: [10.1126/sciadv.1602614](https://doi.org/10.1126/sciadv.1602614)
-
----
-
-## Edge Cases and Limitations
-
-### Too Few Timesteps
-
-For $T < N + 2$, the regression is underdetermined. The function
-requires $T \geq 3$ for finite-difference derivatives. Recommended:
-$T \geq 10 N$.
-
-### Noisy Phase Data
-
-Finite-difference derivatives amplify noise by factor $1/\Delta t$.
-For noisy data, consider smoothing the trajectory before fitting
-or using a Savitzky-Golay filter for derivatives.
-
-### All Coefficients Thresholded to Zero
-
-If the threshold $\lambda$ is too high, all coefficients may be
-zeroed out. The discovered equation becomes $\dot{\theta}_i = 0$.
-Reduce $\lambda$ or increase the trajectory length.
-
-### Phase Wrapping
-
-The Python path uses `np.unwrap` to handle $2\pi$ discontinuities.
-The Rust path implements inline unwrapping. Both produce identical
-results for smooth trajectories but may differ for highly noisy data
-where unwrapping ambiguity exists.
-
----
-
-## Troubleshooting
-
-### Issue: Discovered ω Differs from True ω
-
-**Diagnosis:** The finite-difference derivative estimates
-$\dot{\theta}$ with first-order accuracy. For large $\Delta t$,
-this introduces systematic bias.
-
-**Solution:** Use smaller $\Delta t$ or a higher-order derivative
-estimate (central differences, Savitzky-Golay).
-
-### Issue: Spurious Coupling Detected
-
-**Diagnosis:** The threshold $\lambda$ is too low, allowing noise
-to appear as coupling.
-
-**Solution:** Increase $\lambda$. A good heuristic: $\lambda \approx
-2 \sigma_{\text{noise}} / \sqrt{T}$ where $\sigma_{\text{noise}}$
-is the phase noise standard deviation.
-
----
-
-## Integration with Other SPO Modules
-
-### With CouplingBuilder
-
-Discovered coupling coefficients can initialise or validate the
-coupling matrix:
-
-```python
-sindy = PhaseSINDy(threshold=0.05)
-sindy.fit(trajectory, dt)
-# Extract K matrix from coefficients
-K_discovered = np.zeros((N, N))
-for i, xi in enumerate(sindy.coefficients):
-    j_idx = 0
-    for j in range(N):
-        if j != i:
-            K_discovered[i, j] = xi[1 + j_idx]
-            j_idx += 1
-```
-
-### With UniversalPrior
-
-The discovered $\omega_i$ and $K_{ij}$ can be compared to the
-universal prior's expectations. Large deviations suggest the domain
-is unusual and may benefit from custom prior parameters.
-
-### With TE-Directed Adaptation
-
-SINDy and TE-directed adaptation are complementary:
-- **SINDy:** Discovers the static coupling structure from a single
-  trajectory window (offline)
-- **TE-directed:** Continuously adapts coupling based on ongoing
-  causal information flow (online)
-
-A typical workflow: use SINDy for initial discovery, then hand off
-to TE-directed adaptation for online refinement.
+The PyO3 binding exposes `spo_kernel.sindy_fit_rust`; rejected native inputs or
+numerical errors become Python `ValueError`. Public input/output shape, units
+and source/target orientation remain the same for both supported implementations.

@@ -14,13 +14,33 @@
 //!
 //! Brunton, Proctor & Kutz 2016, PNAS 113(15):3932-3937.
 
+use nalgebra::{DMatrix, DVector, SVD};
 use rayon::prelude::*;
 
 use std::f64::consts::{PI, TAU};
 
 /// Run Phase-SINDy: discover coupling coefficients for each oscillator.
 ///
-/// Returns (N × N) where `[i][i]` = ω_i and `[i][j]` = K_ij for j≠i.
+/// `phases` is a row-major `n_time × n_osc` trajectory in radians; `dt` is
+/// the positive sample period in seconds. Adjacent phase increments are
+/// reduced to the principal interval, with the original sign retained for
+/// exact half turns. Sampling must resolve increments below half a turn to
+/// identify physical angular velocity rather than its sampled alias.
+///
+/// Sequential thresholded least squares uses a rectangular SVD, retaining
+/// singular values larger than machine epsilon times the largest value.
+/// Rank-deficient libraries receive a minimum-norm solution; their individual
+/// coupling coefficients are not identifiable from the trajectory alone.
+///
+/// Returns a row-major `N × N` matrix: `[i][i] = ω_i` and `[i][j] = K_ij`
+/// for `j != i`, so rows are targets and columns are sources. Coefficients
+/// have units of radians per second. Terms strictly below `threshold` are
+/// removed, then the remaining features are refitted for `max_iter` rounds.
+///
+/// # Errors
+///
+/// Returns an error for invalid dimensions, controls, non-finite input or
+/// derived arithmetic, failed SVD convergence, or non-finite coefficients.
 pub fn sindy_fit(
     phases: &[f64],
     n_osc: usize,
@@ -33,16 +53,19 @@ pub fn sindy_fit(
 
     let t_eff = n_time - 1;
     let theta_dot = compute_theta_dot(phases, n_osc, n_time, dt);
+    if theta_dot.iter().any(|value| !value.is_finite()) {
+        return Err("Phase-SINDy phase derivatives must remain finite".to_string());
+    }
     let mut result = vec![0.0; n_osc * n_osc];
 
-    result
-        .par_chunks_mut(n_osc)
-        .enumerate()
-        .for_each(|(i, res_row)| {
+    result.par_chunks_mut(n_osc).enumerate().try_for_each(
+        |(i, res_row)| -> Result<(), String> {
             let (library, target) = build_library(phases, &theta_dot, n_osc, t_eff, i);
-            let xi = stlsq_node(&library, &target, t_eff, n_osc, threshold, max_iter);
+            let xi = stlsq_node(&library, &target, t_eff, n_osc, threshold, max_iter)?;
             res_row[..n_osc].copy_from_slice(&xi[..n_osc]);
-        });
+            Ok(())
+        },
+    )?;
 
     if result.iter().any(|v| !v.is_finite()) {
         return Err("Phase-SINDy produced non-finite coefficients".to_string());
@@ -99,25 +122,17 @@ fn compute_theta_dot(phases: &[f64], n_osc: usize, n_time: usize, dt: f64) -> Ve
     let t_eff = n_time - 1;
     let mut theta_dot = vec![0.0; n_osc * t_eff];
 
-    // Use chunks if we change layout, but let is keep layout and use a different approach.
-    // Or just parallelize over time steps tt? No, dependencies between tt.
-    // Let is stick to sequential for theta_dot as it is O(N*T) while STLSQ is O(N^2 * T) or more.
-
     for i in 0..n_osc {
         let mut prev = phases[i];
         for tt in 0..t_eff {
             let curr = phases[(tt + 1) * n_osc + i];
-            let mut diff = curr - prev;
-            if diff > PI {
-                diff -= TAU;
-            } else if diff < -PI {
-                diff += TAU;
+            let raw_diff = curr - prev;
+            let mut diff = (raw_diff + PI).rem_euclid(TAU) - PI;
+            if diff == -PI && raw_diff > 0.0 {
+                diff = PI;
             }
-            // Repeat once more for edge cases
-            if diff > PI {
-                diff -= TAU;
-            } else if diff < -PI {
-                diff += TAU;
+            if raw_diff.abs() < PI {
+                diff = raw_diff;
             }
 
             theta_dot[tt * n_osc + i] = diff / dt;
@@ -163,8 +178,8 @@ fn stlsq_node(
     n_features: usize,
     threshold: f64,
     max_iter: usize,
-) -> Vec<f64> {
-    let mut xi = lstsq(library, target, t_eff, n_features);
+) -> Result<Vec<f64>, String> {
+    let mut xi = lstsq(library, target, t_eff, n_features)?;
 
     for _ in 0..max_iter {
         for v in xi.iter_mut() {
@@ -189,7 +204,7 @@ fn stlsq_node(
                 lib_red[tt * n_big + k] = library[tt * n_features + feat_idx];
             }
         }
-        let xi_red = lstsq(&lib_red, target, t_eff, n_big);
+        let xi_red = lstsq(&lib_red, target, t_eff, n_big)?;
         let mut xi_new = vec![0.0; n_features];
         for (k, &feat_idx) in big.iter().enumerate() {
             xi_new[feat_idx] = xi_red[k];
@@ -197,79 +212,26 @@ fn stlsq_node(
         xi = xi_new;
     }
 
-    xi
+    Ok(xi)
 }
 
-/// Least squares via normal equations: (AᵀA)⁻¹ Aᵀ b.
-fn lstsq(a: &[f64], b: &[f64], m: usize, n: usize) -> Vec<f64> {
-    let mut ata = vec![0.0; n * n];
-
-    // ATA is symmetric, parallelize over rows
-    ata.par_chunks_mut(n).enumerate().for_each(|(j, row)| {
-        for k in 0..n {
-            let mut sum = 0.0;
-            for i in 0..m {
-                sum += a[i * n + j] * a[i * n + k];
-            }
-            row[k] = sum;
-        }
-    });
-
-    let mut atb = vec![0.0; n];
-    atb.par_iter_mut().enumerate().for_each(|(j, val)| {
-        let mut sum = 0.0;
-        for i in 0..m {
-            sum += a[i * n + j] * b[i];
-        }
-        *val = sum;
-    });
-
-    solve_linear_sys(n, &mut ata, &mut atb)
-}
-
-/// Gaussian elimination with partial pivoting.
-fn solve_linear_sys(n: usize, a: &mut [f64], b: &mut [f64]) -> Vec<f64> {
-    for col in 0..n {
-        let mut max_val = 0.0;
-        let mut max_row = col;
-        for row in col..n {
-            let v = a[row * n + col].abs();
-            if v > max_val {
-                max_val = v;
-                max_row = row;
-            }
-        }
-        if max_val < 1e-14 {
-            continue;
-        }
-        if max_row != col {
-            for k in 0..n {
-                a.swap(col * n + k, max_row * n + k);
-            }
-            b.swap(col, max_row);
-        }
-        let pivot = a[col * n + col];
-        for row in (col + 1)..n {
-            let factor = a[row * n + col] / pivot;
-            for k in col..n {
-                a[row * n + k] -= factor * a[col * n + k];
-            }
-            b[row] -= factor * b[col];
-        }
+/// Solve the rectangular least-squares problem without squaring its condition number.
+fn lstsq(a: &[f64], b: &[f64], m: usize, n: usize) -> Result<Vec<f64>, String> {
+    if a.iter().any(|value| !value.is_finite()) {
+        return Err("Phase-SINDy feature library must remain finite".to_string());
     }
-    let mut x = vec![0.0; n];
-    for col in (0..n).rev() {
-        let diag = a[col * n + col];
-        if diag.abs() < 1e-14 {
-            continue;
-        }
-        let mut sum = b[col];
-        for k in (col + 1)..n {
-            sum -= a[col * n + k] * x[k];
-        }
-        x[col] = sum / diag;
-    }
-    x
+    let matrix = DMatrix::from_row_slice(m, n, a);
+    // Scale only the target: it leaves rank and the minimum-norm solution
+    // unchanged while avoiding overflow in the orthogonal projection.
+    let scale = b.iter().map(|value| value.abs()).fold(1.0_f64, f64::max);
+    let target = DVector::from_iterator(m, b.iter().map(|value| value / scale));
+    let decomposition = SVD::try_new(matrix, true, true, 5.0 * f64::EPSILON, 100_000)
+        .ok_or_else(|| "Phase-SINDy least-squares SVD did not converge".to_string())?;
+    let cutoff = f64::EPSILON * decomposition.singular_values[0];
+    let coefficients = decomposition
+        .solve(&target, cutoff)
+        .map_err(|error| format!("Phase-SINDy least-squares failed: {error}"))?;
+    Ok(coefficients.iter().map(|value| value * scale).collect())
 }
 
 #[cfg(test)]
@@ -284,8 +246,8 @@ mod tests {
         coupling: &[f64],
     ) -> Vec<f64> {
         let mut phases = vec![0.0; t * n];
-        for i in 0..n {
-            phases[i] = i as f64 * 0.5;
+        for (i, phase) in phases.iter_mut().take(n).enumerate() {
+            *phase = i as f64 * 0.5;
         }
         for tt in 1..t {
             for i in 0..n {
@@ -312,12 +274,18 @@ mod tests {
         let phases = generate_kuramoto_trajectory(n, t, dt, &omegas, &coupling);
         let result = sindy_fit(&phases, n, t, dt, 0.05, 10).expect("valid SINDy fit");
         for i in 0..n {
-            assert!(
-                (result[i * n + i] - omegas[i]).abs() < 0.5,
-                "ω_{i}: got {}, expected {}",
-                result[i * n + i],
-                omegas[i],
-            );
+            for j in 0..n {
+                let expected = if i == j {
+                    omegas[i]
+                } else {
+                    coupling[i * n + j]
+                };
+                assert!(
+                    (result[i * n + j] - expected).abs() < 2e-8,
+                    "coefficient[{i},{j}]: {} != {expected}",
+                    result[i * n + j]
+                );
+            }
         }
     }
 
@@ -333,11 +301,7 @@ mod tests {
         for i in 0..n {
             for j in 0..n {
                 if i != j {
-                    assert!(
-                        result[i * n + j].abs() < 0.3,
-                        "K[{i},{j}]={}",
-                        result[i * n + j]
-                    );
+                    assert!(result[i * n + j] == 0.0, "K[{i},{j}]={}", result[i * n + j]);
                 }
             }
         }
@@ -358,12 +322,16 @@ mod tests {
 
     #[test]
     fn test_rejects_invalid_controls_and_payloads() {
-        assert!(sindy_fit(&[0.0; 6], 2, 3, 0.0, 0.05, 10)
-            .expect_err("zero dt must fail closed")
-            .contains("dt"));
-        assert!(sindy_fit(&[0.0; 6], 2, 3, 0.01, f64::NAN, 10)
-            .expect_err("non-finite threshold must fail closed")
-            .contains("threshold"));
+        for dt in [0.0, -1.0, f64::NAN, f64::INFINITY] {
+            assert!(sindy_fit(&[0.0; 6], 2, 3, dt, 0.05, 10)
+                .expect_err("invalid dt must fail closed")
+                .contains("dt"));
+        }
+        for threshold in [-1.0, f64::NAN, f64::INFINITY] {
+            assert!(sindy_fit(&[0.0; 6], 2, 3, 0.01, threshold, 10)
+                .expect_err("invalid threshold must fail closed")
+                .contains("threshold"));
+        }
         assert!(sindy_fit(&[0.0; 6], 2, 3, 0.01, 0.05, 0)
             .expect_err("zero iterations must fail closed")
             .contains("max_iter"));
@@ -383,11 +351,69 @@ mod tests {
     }
 
     #[test]
-    fn test_lstsq_simple() {
-        let a = vec![1.0, 0.0, 0.0, 1.0];
-        let b = vec![3.0, 5.0];
-        let x = lstsq(&a, &b, 2, 2);
-        assert!((x[0] - 3.0).abs() < 1e-10);
-        assert!((x[1] - 5.0).abs() < 1e-10);
+    fn test_multiple_turn_alias_has_principal_angular_velocity() {
+        let phases: Vec<f64> = (0..8).map(|time| time as f64 * (0.1 + 3.0 * TAU)).collect();
+        let result = sindy_fit(&phases, 1, 8, 0.1, 0.0, 3).expect("finite alias fit");
+        assert!((result[0] - 1.0).abs() < 1e-11);
+    }
+
+    #[test]
+    fn test_dependent_features_have_closed_form_minimum_norm_solution() {
+        let phases: Vec<f64> = (0..40)
+            .flat_map(|time| [time as f64 * 0.01, time as f64 * 0.01 + 0.4])
+            .collect();
+        let result = sindy_fit(&phases, 2, 40, 0.01, 0.0, 3).expect("finite rank-deficient fit");
+        let sine = 0.4_f64.sin();
+        let omega = 1.0 / (1.0 + sine * sine);
+        for (actual, expected) in result
+            .iter()
+            .zip([omega, sine * omega, -sine * omega, omega])
+        {
+            assert!((actual - expected).abs() < 1e-12, "{actual} != {expected}");
+        }
+    }
+
+    #[test]
+    fn test_half_turns_retain_the_original_increment_sign() {
+        for increment in [PI, -PI, 3.0 * PI, -3.0 * PI] {
+            let result =
+                sindy_fit(&[0.0, increment], 1, 2, 1.0, 0.0, 1).expect("finite half-turn fit");
+            assert!((result[0] - increment.signum() * PI).abs() < 1e-14);
+        }
+    }
+
+    #[test]
+    fn test_all_terms_below_threshold_return_zero_equation() {
+        let result =
+            sindy_fit(&[0.0, 0.1, 0.2], 1, 3, 1.0, 1.0, 2).expect("finite thresholded fit");
+        assert_eq!(result, [0.0]);
+    }
+
+    #[test]
+    fn test_non_finite_derived_arithmetic_is_rejected() {
+        assert!(sindy_fit(&[0.0, 1.0], 1, 2, 1e-320, 0.0, 1)
+            .expect_err("overflowing derivative must be refused")
+            .contains("derivatives"));
+        let phases = [-1e308, 1e308, -1e308, 1e308, -1e308, 1e308];
+        assert!(sindy_fit(&phases, 2, 3, 1.0, 0.0, 1)
+            .expect_err("overflowing feature must be refused")
+            .contains("feature library"));
+        let phases = [0.0, 1e-8, 0.1, 0.1 + 2e-8, 0.1, 0.1 + 3e-8];
+        assert!(sindy_fit(&phases, 2, 3, 1e-309, 0.0, 1)
+            .expect_err("overflowing solve output must be refused")
+            .contains("non-finite coefficients"));
+    }
+
+    #[test]
+    fn test_empty_dimensions_and_overflow_are_rejected_before_allocation() {
+        assert!(sindy_fit(&[], 0, 3, 1.0, 0.0, 1)
+            .expect_err("zero nodes must be refused")
+            .contains("oscillator"));
+        assert!(sindy_fit(&[0.0], 1, 1, 1.0, 0.0, 1)
+            .expect_err("one sample must be refused")
+            .contains("time samples"));
+        assert!(sindy_fit(&[], usize::MAX / 2, usize::MAX, 1.0, 0.0, 1)
+            .expect_err("dimension product must not overflow")
+            .contains("dimensions overflow"));
     }
 }

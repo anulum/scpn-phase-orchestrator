@@ -1,0 +1,163 @@
+{
+  "python": {
+    "benchmarks/phase_sindy_benchmark.py": {
+      "sha256": "c355ccb3910299ad3ef0b17364af68d77c9e900b9a3e81ab6b40cc4db9e7a63f",
+      "statements": 147,
+      "branches": 32,
+      "excluded_lines": [],
+      "measurement_exclusions": [
+        215,
+        216,
+        217,
+        218
+      ],
+      "measurement_arcs": [
+        [
+          215,
+          216
+        ],
+        [
+          215,
+          217
+        ],
+        [
+          217,
+          -208
+        ],
+        [
+          217,
+          218
+        ]
+      ]
+    },
+    "native-tests/helpers/sindy_cli_probe.py": {
+      "sha256": "b8614002c5f17f48e65ec0f6f62bf852f99d4817d6666e5f981f10d99900fca0",
+      "statements": 38,
+      "branches": 8,
+      "excluded_lines": [],
+      "measurement_exclusions": [
+        57,
+        58,
+        59,
+        64
+      ],
+      "measurement_arcs": [
+        [
+          57,
+          58
+        ],
+        [
+          57,
+          59
+        ],
+        [
+          59,
+          -55
+        ],
+        [
+          59,
+          64
+        ]
+      ]
+    },
+    "native-tests/test_sindy_runtime_profiles.py": {
+      "sha256": "19ebcc8853a25321f295429bd1d1af996450cc576fa67572424b59e6c6d286dd",
+      "statements": 160,
+      "branches": 32,
+      "excluded_lines": [],
+      "measurement_exclusions": [],
+      "measurement_arcs": []
+    },
+    "src/scpn_phase_orchestrator/autotune/sindy.py": {
+      "sha256": "9835d14740ff39388f66f8750089a67ce708bc0452495c758333735f762bfb80",
+      "statements": 151,
+      "branches": 62,
+      "excluded_lines": [
+        44,
+        45,
+        46,
+        215,
+        216
+      ],
+      "measurement_exclusions": [],
+      "measurement_arcs": []
+    },
+    "tests/test_autotune_sindy.py": {
+      "sha256": "7548bbd30179464eebe8cbc109e2ebb94680f9b18b97481f4cc26d4ce3d5e407",
+      "statements": 77,
+      "branches": 8,
+      "excluded_lines": [],
+      "measurement_exclusions": [],
+      "measurement_arcs": []
+    },
+    "tests/test_sindy.py": {
+      "sha256": "7e541d15e9d9455f4fe26d9c61e81d136bd41609e45a797f01ef89cc40f66886",
+      "statements": 110,
+      "branches": 14,
+      "excluded_lines": [],
+      "measurement_exclusions": [],
+      "measurement_arcs": []
+    }
+  },
+  "native": {
+    "path": "spo-kernel/crates/spo-engine/src/sindy.rs",
+    "sha256": "c625240fa98c8c9b1d88b78ce4f35eb7caefceec732e4dc115881eb2a48135d0",
+    "lock_sha256": "638a7ee20b824bd9b4c16d09edf45283d66d493c09f43898dca3db2a2f4219e9",
+    "nalgebra": "0.35.0",
+    "residual_regions": [
+      [
+        207,
+        59,
+        0,
+        true,
+        true,
+        false
+      ],
+      [
+        229,
+        24,
+        0,
+        true,
+        true,
+        false
+      ],
+      [
+        229,
+        85,
+        0,
+        true,
+        true,
+        false
+      ],
+      [
+        233,
+        26,
+        0,
+        true,
+        true,
+        false
+      ],
+      [
+        233,
+        70,
+        0,
+        true,
+        true,
+        false
+      ],
+      [
+        233,
+        79,
+        0,
+        true,
+        true,
+        false
+      ]
+    ],
+    "solve_error_invariant": "Dynamic DMatrix SVD with both singular-vector sets retained and a non-negative cutoff cannot return a solve error. This source-bound exclusion lapses on source or locked-dependency change.",
+    "convergence_debt": "Bounded SVD convergence has no public finite reproducer or impossibility proof. Its closure at line 229 and the associated error propagation at line 207 remain uncovered; the guard and 100000-iteration limit are retained.",
+    "branch_records": 22,
+    "segment_records": 908
+  },
+  "measurement_exclusion_reason": "Eight original-owner observer statements execute while Python tracing is suspended. Genuine native and kernel-absent benchmark and CSV processes also left them untraced under coverage.py 7.16.1 sysmon on Python 3.12.3. A report that records them receives no exclusion credit."
+}
