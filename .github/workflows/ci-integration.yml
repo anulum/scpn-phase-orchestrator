@@ -319,6 +319,7 @@ jobs:
           pip install --require-hashes --no-deps -r requirements/ci-tools.txt
           maturin develop --release -m spo-kernel/crates/spo-ffi/Cargo.toml
           pip install --require-hashes --no-deps -r ${{ matrix.lockfile }} && pip install --no-deps -e .
+          pip install --require-hashes --no-deps -r requirements/build-tools.txt
           pytest tests/ native-tests/ -v --tb=short \
             --ignore=tests/test_kuramoto_layer.py \
             --ignore=tests/test_stuart_landau_nn.py \
@@ -333,7 +334,7 @@ jobs:
             -m "not slow and not performance and not native_runtime" \
             -k "not performance" \
             --cov=scpn_phase_orchestrator --cov-report= --cov-fail-under=0
-          pytest tests/test_kernel_runtime.py tests/test_cli_serve.py tests/test_kernel_deployment.py \
+          pytest tests/test_kernel_runtime.py tests/test_cli_serve.py tests/test_kernel_deployment.py native-tests/test_sindy_runtime_profiles.py \
             -m native_runtime --strict-markers --tb=short \
             --cov=scpn_phase_orchestrator --cov-append --cov-report= --cov-fail-under=0
           mv .coverage .coverage.ffi
@@ -361,6 +362,7 @@ jobs:
           pip install --require-hashes --no-deps -r requirements/ci-tools.txt
           maturin develop --release -m spo-kernel/crates/spo-ffi/Cargo.toml
           pip install --require-hashes --no-deps -r ${{ matrix.lockfile }} && pip install --no-deps -e .
+          pip install --require-hashes --no-deps -r requirements/build-tools.txt
           pytest tests/ native-tests/ -v --tb=short \
             --ignore=tests/test_kuramoto_layer.py \
             --ignore=tests/test_stuart_landau_nn.py \
@@ -374,7 +376,7 @@ jobs:
             --ignore-glob=tests/test_nn_physics_validation*.py \
             -m "not slow and not performance and not native_runtime" \
             -k "not performance"
-          pytest tests/test_kernel_runtime.py tests/test_cli_serve.py tests/test_kernel_deployment.py \
+          pytest tests/test_kernel_runtime.py tests/test_cli_serve.py tests/test_kernel_deployment.py native-tests/test_sindy_runtime_profiles.py \
             -m native_runtime --strict-markers --tb=short
       - name: Exercise real built-in native loading (Linux, Python 3.11)
         if: runner.os == 'Linux' && matrix.python-version == '3.11'
@@ -391,6 +393,7 @@ jobs:
           pip install --require-hashes --no-deps -r requirements/ci-tools.txt
           maturin develop --release -m spo-kernel/crates/spo-ffi/Cargo.toml
           pip install --require-hashes --no-deps -r ${{ matrix.lockfile }} && pip install --no-deps -e .
+          pip install --require-hashes --no-deps -r requirements/build-tools.txt
           pytest tests/ native-tests/ -v --tb=short \
             --ignore=tests/test_kuramoto_layer.py \
             --ignore=tests/test_stuart_landau_nn.py \
@@ -404,5 +407,5 @@ jobs:
             --ignore-glob=tests/test_nn_physics_validation*.py \
             -m "not slow and not performance and not native_runtime" \
             -k "not performance"
-          pytest tests/test_kernel_runtime.py tests/test_cli_serve.py tests/test_kernel_deployment.py \
+          pytest tests/test_kernel_runtime.py tests/test_cli_serve.py tests/test_kernel_deployment.py native-tests/test_sindy_runtime_profiles.py \
             -m native_runtime --strict-markers --tb=short

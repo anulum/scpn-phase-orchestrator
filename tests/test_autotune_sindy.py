@@ -6,10 +6,16 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Phase-SINDy tests
 
+"""Exercise SINDy refusal, failure-state and array-protocol contracts.
+
+Malformed upstream payloads below are explicit negative ABI controls. They
+never provide successful numerical evidence or simulate kernel installation.
+All successful fits use the implementation selected by the actual environment.
+"""
+
 from __future__ import annotations
 
-import builtins
-import importlib
+import importlib.util
 from typing import cast
 
 import numpy as np
@@ -23,64 +29,32 @@ FloatArray = NDArray[np.float64]
 
 
 def _phase_table(samples: int = 12) -> FloatArray:
+    """Provide finite nondegenerate phases for negative upstream-result controls."""
     times = np.linspace(0.0, 1.0, samples, dtype=np.float64)
     return np.column_stack(
-        [
+        (
             0.6 * times,
             0.8 * times + 0.2 * np.sin(times),
             0.4 * times + 0.1 * np.cos(times),
-        ]
+        )
     )
-
-
-def test_phase_sindy_fits_python_path_and_formats_equations(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setattr(sindy_mod, "_HAS_RUST", False)
-    model = PhaseSINDy(threshold=0.0, max_iter=2)
-
-    coefficients = model.fit(_phase_table(), 0.1)
-    equations = model.get_equations()
-
-    assert len(coefficients) == 3
-    assert len(equations) == 3
-    assert all(coefficient.shape == (3,) for coefficient in coefficients)
-    assert all(equation.startswith("d(theta_") for equation in equations)
-
-
-def test_phase_sindy_import_falls_back_when_rust_extension_is_unavailable(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    original_import = builtins.__import__
-
-    def blocked_import(
-        name: str,
-        globals_: object = None,
-        locals_: object = None,
-        fromlist: tuple[str, ...] = (),
-        level: int = 0,
-    ) -> object:
-        if name == "spo_kernel":
-            raise ImportError("blocked for test")
-        return original_import(name, globals_, locals_, fromlist, level)
-
-    with monkeypatch.context() as context:
-        context.setattr(builtins, "__import__", blocked_import)
-        reloaded = importlib.reload(sindy_mod)
-        assert reloaded._HAS_RUST is False
-
-    importlib.reload(sindy_mod)
 
 
 @pytest.mark.parametrize(
     ("threshold", "max_iter", "match"),
     [
         (True, 1, "threshold"),
+        (np.bool_(True), 1, "threshold"),
+        ("0.1", 1, "threshold"),
         (-0.1, 1, "threshold"),
         (np.inf, 1, "threshold"),
+        (np.nan, 1, "threshold"),
         (0.1, True, "max_iter"),
+        (0.1, np.bool_(True), "max_iter"),
         (0.1, 0, "max_iter"),
+        (0.1, -1, "max_iter"),
         (0.1, 1.2, "max_iter"),
+        (0.1, "2", "max_iter"),
     ],
 )
 def test_phase_sindy_constructor_rejects_invalid_controls(
@@ -88,6 +62,7 @@ def test_phase_sindy_constructor_rejects_invalid_controls(
     max_iter: object,
     match: str,
 ) -> None:
+    """Reject nonnumeric, boolean, nonfinite and out-of-domain public controls."""
     with pytest.raises(ValueError, match=match):
         PhaseSINDy(cast(float, threshold), cast(int, max_iter))
 
@@ -96,141 +71,154 @@ def test_phase_sindy_constructor_rejects_invalid_controls(
     ("phases", "dt", "match"),
     [
         (_phase_table(), True, "dt"),
+        (_phase_table(), np.bool_(True), "dt"),
+        (_phase_table(), "0.1", "dt"),
         (_phase_table(), 0.0, "dt"),
+        (_phase_table(), -0.1, "dt"),
         (_phase_table(), np.inf, "dt"),
+        (_phase_table(), np.nan, "dt"),
         (np.asarray([[False], [True]], dtype=object), 0.1, "boolean"),
+        (np.asarray([[False], [True]], dtype=np.bool_), 0.1, "boolean"),
+        (np.asarray([[0.0], [np.bool_(True)]], dtype=object), 0.1, "boolean"),
         (np.asarray([[0.0 + 1.0j], [1.0 + 0.0j]]), 0.1, "finite 2D"),
         (np.asarray([["x"], ["y"]], dtype=object), 0.1, "finite 2D"),
         ([0.0, 1.0, 2.0], 0.1, "2D"),
-        (np.asarray([[np.nan], [1.0]], dtype=np.float64), 0.1, "finite"),
-        (np.empty((1, 0), dtype=np.float64), 0.1, "at least two time samples"),
-        (np.ones((2, 3), dtype=np.float64), 0.1, "derivative sample"),
+        (np.zeros((2, 2, 1)), 0.1, "2D"),
+        (np.asarray([[np.nan], [1.0]]), 0.1, "finite"),
+        (np.asarray([[np.inf], [1.0]]), 0.1, "finite"),
+        (np.empty((1, 0)), 0.1, "at least two time samples"),
+        (np.empty((0, 2)), 0.1, "at least two time samples"),
+        (np.empty((4, 0)), 0.1, "at least two time samples"),
+        (np.ones((2, 3)), 0.1, "derivative sample"),
     ],
 )
 def test_phase_sindy_fit_rejects_invalid_inputs(
-    phases: object,
-    dt: object,
-    match: str,
+    phases: object, dt: object, match: str
 ) -> None:
+    """Input coercion and dimensional admission remain fail-closed through fit."""
     with pytest.raises(ValueError, match=match):
         PhaseSINDy().fit(cast(FloatArray, phases), cast(float, dt))
 
 
-def test_phase_sindy_rejects_raw_boolean_arrays_after_alias_guard(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setattr(sindy_mod, "_HAS_RUST", False)
-    monkeypatch.setattr(sindy_mod, "_contains_boolean_alias", lambda _value: False)
+class _DtypeDependentInput:
+    """Supply inconsistent public array-protocol views as an adversarial input.
 
+    The object view contains finite numbers, but the default view contains
+    booleans. This tests the second admission guard without changing either
+    production guard or backend selection.
+    """
+
+    def __array__(
+        self, dtype: object = None, copy: bool | None = None
+    ) -> NDArray[np.object_] | NDArray[np.bool_]:
+        """Return the requested object view or the inconsistent boolean view."""
+        if dtype is not None:
+            return np.array([[0.0], [1.0]], dtype=object)
+        return np.array([[False], [True]], dtype=np.bool_)
+
+
+def test_phase_sindy_rejects_inconsistent_array_protocol_boolean_view() -> None:
+    """Reject an actual user array-protocol object without bypassing the alias guard."""
     with pytest.raises(ValueError, match="boolean"):
-        PhaseSINDy().fit(np.asarray([[False], [True]], dtype=np.bool_), 0.1)
+        PhaseSINDy().fit(cast(FloatArray, _DtypeDependentInput()), 0.1)
+
+
+def test_phase_sindy_accepts_numpy_numeric_controls_and_numeric_strings() -> None:
+    """Real scalar aliases and convertible phase values use the public numeric path."""
+    model = PhaseSINDy(cast(float, np.float64(0.0)), cast(int, np.int64(2)))
+    phases = cast(FloatArray, np.array([["0.0"], ["0.2"], ["0.4"]]))
+    np.testing.assert_allclose(model.fit(phases, 0.1), [[2.0]], rtol=0.0, atol=1e-12)
 
 
 def test_phase_sindy_get_equations_requires_fit() -> None:
+    """Equation export fails until a fit has produced coefficients."""
     with pytest.raises(RuntimeError, match="before fit"):
         PhaseSINDy().get_equations()
 
 
-def test_phase_sindy_rejects_bad_lstsq_outputs(
+@pytest.mark.parametrize("case", ["non-numeric", "wrong", "non-finite"])
+def test_phase_sindy_rejects_upstream_abi_fault_and_preserves_fit(
     monkeypatch: pytest.MonkeyPatch,
+    case: str,
 ) -> None:
-    def wrong_size(*_args: object, **_kwargs: object) -> tuple[FloatArray]:
-        return (np.asarray([1.0, 2.0], dtype=np.float64),)
+    """Inject only rejected ABI results; genuine prior coefficients remain intact.
 
-    monkeypatch.setattr(sindy_mod, "_HAS_RUST", False)
-    monkeypatch.setattr(sindy_mod, "lstsq", wrong_size)
+    These negative controls exercise defensive output validation. They are
+    explicitly not observations of successful native or SciPy computation.
+    Backend presence is never changed, and every prior fit is a real call.
+    """
+    model = PhaseSINDy(threshold=0.0)
+    before = model.fit(np.array([[0.0], [0.2], [0.4]]), 0.1)
+    equations = model.get_equations()
+    native = importlib.util.find_spec("spo_kernel") is not None
+    count = 9 if native else 3
+    payload: object
+    if case == "non-numeric":
+        payload = ["not-a-number"]
+    elif case == "wrong":
+        payload = np.zeros(4, dtype=np.float64)
+    else:
+        payload = np.full(count, np.nan, dtype=np.float64)
+    if native:
 
-    with pytest.raises(ValueError, match="wrong coefficient count"):
-        PhaseSINDy().fit(_phase_table(), 0.1)
+        def rejected_native(*args: object, **kwargs: object) -> object:
+            """Return a deliberately malformed ABI payload for rejection only."""
+            return payload
 
+        monkeypatch.setattr(sindy_mod, "_rust_sindy_fit", rejected_native)
+    else:
 
-def test_phase_sindy_rejects_non_numeric_lstsq_outputs(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    def non_numeric(*_args: object, **_kwargs: object) -> tuple[list[str]]:
-        return (["not-a-number", "still-not"],)
+        def rejected_lstsq(*args: object, **kwargs: object) -> tuple[object]:
+            """Supply a malformed least-squares payload for rejection only."""
+            return (payload,)
 
-    monkeypatch.setattr(sindy_mod, "_HAS_RUST", False)
-    monkeypatch.setattr(sindy_mod, "lstsq", non_numeric)
-
-    with pytest.raises(ValueError, match="non-numeric coefficients"):
-        PhaseSINDy().fit(_phase_table(), 0.1)
-
-
-def test_phase_sindy_rejects_non_finite_lstsq_outputs(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    def non_finite(*_args: object, **_kwargs: object) -> tuple[FloatArray]:
-        return (np.full(3, np.inf, dtype=np.float64),)
-
-    monkeypatch.setattr(sindy_mod, "_HAS_RUST", False)
-    monkeypatch.setattr(sindy_mod, "lstsq", non_finite)
-
-    with pytest.raises(ValueError, match="non-finite coefficients"):
-        PhaseSINDy().fit(_phase_table(), 0.1)
-
-
-def test_phase_sindy_maps_valid_rust_coefficients(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    def rust_fit(
-        _flat: FloatArray,
-        _nodes: int,
-        _samples: int,
-        _dt: float,
-        _threshold: float,
-        _max_iter: int,
-    ) -> FloatArray:
-        return np.asarray(
-            [
-                0.1,
-                0.2,
-                0.3,
-                0.4,
-                0.5,
-                0.6,
-                0.7,
-                0.8,
-                0.9,
-            ],
-            dtype=np.float64,
-        )
-
-    monkeypatch.setattr(sindy_mod, "_HAS_RUST", True)
-    monkeypatch.setattr(sindy_mod, "_rust_sindy_fit", rust_fit)
-
-    coefficients = PhaseSINDy().fit(_phase_table(), 0.1)
-
-    np.testing.assert_array_equal(coefficients[0], np.asarray([0.1, 0.2, 0.3]))
-    np.testing.assert_array_equal(coefficients[1], np.asarray([0.5, 0.4, 0.6]))
-    assert PhaseSINDy().threshold == pytest.approx(0.05)
+        monkeypatch.setattr(sindy_mod, "lstsq", rejected_lstsq)
+    with pytest.raises(ValueError, match=case):
+        model.fit(_phase_table(), 0.1)
+    np.testing.assert_array_equal(model.coefficients, before)
+    assert model.get_equations() == equations
 
 
 @pytest.mark.parametrize(
-    ("rust_result", "match"),
+    ("phases", "dt", "match"),
     [
-        (["not-number"], "non-numeric"),
-        ([1.0, 2.0], "wrong number"),
-        ([1.0, np.nan, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0], "non-finite"),
+        (np.array([[0.0], [1.0]]), 1e-320, "derivatives"),
+        (np.tile(np.array([-1e308, 1e308]), (3, 1)), 1.0, "feature library"),
+        (np.array([[-1e308], [1e308]]), 1.0, "derivatives"),
+        (
+            np.array([[0.0, 1e-8], [0.1, 0.1 + 2e-8], [0.1, 0.1 + 3e-8]]),
+            1e-309,
+            "non-finite coefficients",
+        ),
     ],
 )
-def test_phase_sindy_rejects_invalid_rust_coefficients(
-    monkeypatch: pytest.MonkeyPatch,
-    rust_result: object,
+def test_phase_sindy_derived_overflow_preserves_previous_fit(
+    phases: FloatArray,
+    dt: float,
     match: str,
 ) -> None:
-    def rust_fit(
-        _flat: FloatArray,
-        _nodes: int,
-        _samples: int,
-        _dt: float,
-        _threshold: float,
-        _max_iter: int,
-    ) -> object:
-        return rust_result
-
-    monkeypatch.setattr(sindy_mod, "_HAS_RUST", True)
-    monkeypatch.setattr(sindy_mod, "_rust_sindy_fit", rust_fit)
-
+    """Finite raw inputs that overflow derived arithmetic cannot corrupt prior fit."""
+    model = PhaseSINDy(threshold=0.0)
+    before = model.fit(np.array([[0.0], [0.2], [0.4]]), 0.1)
+    equations = model.get_equations()
     with pytest.raises(ValueError, match=match):
-        PhaseSINDy().fit(_phase_table(), 0.1)
+        model.fit(phases, dt)
+    np.testing.assert_array_equal(model.coefficients, before)
+    assert model.get_equations() == equations
+
+
+@pytest.mark.parametrize(
+    "phases", [np.empty((0, 1)), np.zeros((1, 1)), np.zeros((2, 2)), np.empty((4, 0))]
+)
+def test_phase_sindy_underdetermined_refit_clears_equation_state(
+    phases: FloatArray,
+) -> None:
+    """Preserve the documented clearing contract for insufficient trajectories."""
+    model = PhaseSINDy(threshold=0.0)
+    model.fit(np.array([[0.0], [0.2], [0.4]]), 0.1)
+    with pytest.raises(ValueError, match="at least"):
+        model.fit(phases, 0.1)
+    assert model.coefficients == []
+    assert model.feature_names == []
+    with pytest.raises(RuntimeError, match="before fit"):
+        model.get_equations()

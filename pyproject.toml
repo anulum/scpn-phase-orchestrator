@@ -226,6 +226,9 @@ ignore = ["S101", "N802", "N803", "N806", "N815", "N816", "D105"]
 "bench/**/*.py" = ["D"]
 "tests/**/*.py" = ["S104", "S603", "D"]
 "tests/*.py" = ["S104", "S603", "D"]
+# This owning test launches validated real interpreter profiles with argv lists,
+# no shell and finite timeouts; apply the existing test-harness subprocess policy.
+"native-tests/test_sindy_runtime_profiles.py" = ["S603"]
 "tests/test_exceptions.py" = ["S301"]  # pickle round-trip is the test subject
 "tests/test_kuramoto_layer.py" = ["E402"]
 "tests/test_stuart_landau_nn.py" = ["E402"]

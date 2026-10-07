@@ -74,6 +74,15 @@ sampling-rate inference path. Non-phase tables carry an explicit phase-SINDy
 skipped status instead of a fitted phase model. These records are audit evidence
 for operator review; they do not enable automatic actuation.
 
+Phase trajectories use the [Phase-SINDy sampling and coefficient contract](../reference/api/autotune_sindy.md).
+Angles are in radians and sample periods in seconds. The per-target library must
+identify the requested coefficients; synchronised or otherwise dependent
+features can yield a small residual with unidentifiable individual couplings.
+Whole-turn representation aliases do not establish physical rotations lost to
+sampling. Python and installed native execution preserve the same public
+coefficient and source/target orientation. The native kernel executes only while
+needed by the process; this workflow needs no continuously running kernel service.
+
 Time-series proposals also bind each inferred oscillator family to concrete
 extractor parameters in the generated YAML. The family `config` records the
 source column, column index, sampling rate, sample period, finite sample count,

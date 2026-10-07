@@ -34,6 +34,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Phase-SINDy now uses rectangular SVD in the native kernel, matching the
+  Python minimum-norm fit for dependent features. Native phase derivatives
+  handle arbitrary whole turns and preserve exact half-turn signs. Failed
+  Python fits retain previous equations. Installed native and Python-only
+  CSV/CLI regressions and diagnostics verify signed directed coefficients.
+  Dedicated strict quality and native runtime CI lanes exercise these profiles.
+  Source-bound coverage admission checks retained report fixtures and named
+  observer exceptions; bounded native SVD nonconvergence remains measured debt.
+  The restored commit hook checks explicit staged files without withdrawing
+  other work, and the native subprocess tests use the existing test policy.
+
 - The Julia UPDE adapters resolved `juliacall.JuliaError` before every call,
   so an environment without juliacall could not reach the adapters' output
   validation. The exception type is now resolved only after a call fails.

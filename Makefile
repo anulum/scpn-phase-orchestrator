@@ -11,9 +11,15 @@
 .PHONY: help install install-dev quickstart test test-rust test-all lint fmt bandit sast \
         preflight preflight-fast docs docs-build bench bench-rust bridge bridge-check \
         lock-refresh lock-check \
-        build docker-build docker-run clean install-hooks
+        build docker-build docker-run clean install-hooks phase-sindy-quality
 
 PYTHON ?= python
+
+PHASE_SINDY_QUALITY_FILES := src/scpn_phase_orchestrator/autotune/sindy.py \
+    tests/test_autotune_sindy.py tests/test_sindy.py \
+    benchmarks/phase_sindy_benchmark.py native-tests/test_sindy_runtime_profiles.py \
+    native-tests/helpers/sindy_cli_probe.py tools/phase_sindy_coverage.py \
+    tests/test_phase_sindy_coverage.py
 
 help:  ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
@@ -44,6 +50,12 @@ test-all: test test-rust  ## Run Python + Rust tests
 lint:  ## Check code style
 	ruff check src/ tests/
 	ruff format --check src/ tests/
+
+phase-sindy-quality:  ## Check Phase-SINDy source, tests and runtime diagnostics
+	$(PYTHON) -m ruff check --isolated --select E,F,W,I,UP,B,SIM,N,C4,RET,PTH,D --ignore N803,N806,D105 --config 'lint.pydocstyle.convention="numpy"' $(PHASE_SINDY_QUALITY_FILES)
+	$(PYTHON) -m ruff format --check $(PHASE_SINDY_QUALITY_FILES)
+	$(PYTHON) -m mypy --config-file tools/phase_sindy_mypy.ini $(PHASE_SINDY_QUALITY_FILES)
+	$(PYTHON) tools/phase_sindy_coverage.py --python-report tests/fixtures/phase_sindy_coverage/python.json --native-report tests/fixtures/phase_sindy_coverage/native.json
 
 fmt:  ## Auto-format Python + Rust
 	ruff format src/ tests/
