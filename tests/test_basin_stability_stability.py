@@ -16,50 +16,36 @@ because the canonical problem uses ``alpha = 0``).
 
 from __future__ import annotations
 
-import functools
 import math
 
 import numpy as np
 import pytest
+from numpy.typing import NDArray
 
-from scpn_phase_orchestrator.upde import basin_stability as b_mod
 from scpn_phase_orchestrator.upde.basin_stability import (
     basin_stability,
     multi_basin_stability,
     steady_state_r,
 )
 
+FloatArray = NDArray[np.float64]
+
 TWO_PI = 2.0 * math.pi
 
 pytestmark = pytest.mark.slow
 
 
-def _python(func):
-    @functools.wraps(func)
-    def wrapper(*args, **kwargs):
-        prev = b_mod.ACTIVE_BACKEND
-        b_mod.ACTIVE_BACKEND = "python"
-        try:
-            return func(*args, **kwargs)
-        finally:
-            b_mod.ACTIVE_BACKEND = prev
-
-    return wrapper
-
-
-def _all_to_all(n: int, strength: float) -> np.ndarray:
+def _all_to_all(n: int, strength: float) -> FloatArray:
     k = np.ones((n, n)) * strength / n
     np.fill_diagonal(k, 0.0)
     return k
 
 
 class TestLongRunMonteCarlo:
-    @_python
-    def test_sb_converges_toward_expected_range(self):
-        """Strong coupling (K/N = 5) on a homogeneous population
-        at ``R_threshold = 0.8`` should converge to ``S_B ≥ 0.8``
-        as the sample size grows. The point estimate is stable
-        enough at 30 samples that we can assert the lower bound."""
+    """Specified longer finite-window samples retain bounded classifications."""
+
+    def test_sb_converges_toward_expected_range(self) -> None:
+        """The specified strong homogeneous graph passes most of thirty trials."""
         n = 6
         omegas = np.ones(n)
         knm = _all_to_all(n, strength=5.0)
@@ -72,11 +58,11 @@ class TestLongRunMonteCarlo:
             n_samples=30,
             R_threshold=0.8,
             seed=101,
+            backend="python",
         )
         assert result.S_B >= 0.8
 
-    @_python
-    def test_multi_threshold_monotone_over_sweep(self):
+    def test_multi_threshold_monotone_over_sweep(self) -> None:
         """S_B(R≥θ) must be monotone non-increasing in θ."""
         n = 5
         omegas = np.ones(n)
@@ -90,6 +76,7 @@ class TestLongRunMonteCarlo:
             n_samples=20,
             R_thresholds=(0.1, 0.3, 0.5, 0.7, 0.9),
             seed=77,
+            backend="python",
         )
         thresholds = [0.1, 0.3, 0.5, 0.7, 0.9]
         sb_vals = [results[f"R>={t:.2f}"].S_B for t in thresholds]
@@ -100,11 +87,8 @@ class TestLongRunMonteCarlo:
 class TestAlphaNonZero:
     """Cover the ``alpha != None`` branch in both entry points."""
 
-    @_python
-    def test_basin_stability_with_alpha_shift(self):
-        """Non-zero phase lag reduces the steady-state R in the
-        locked regime — the MC S_B should still be well-defined
-        and inside the unit interval."""
+    def test_basin_stability_with_alpha_shift(self) -> None:
+        """The specified lagged population retains a bounded sampled fraction."""
         n = 5
         omegas = np.ones(n)
         knm = _all_to_all(n, strength=5.0)
@@ -120,11 +104,12 @@ class TestAlphaNonZero:
             n_samples=10,
             R_threshold=0.5,
             seed=5,
+            backend="python",
         )
         assert 0.0 <= result.S_B <= 1.0
 
-    @_python
-    def test_multi_basin_stability_with_alpha(self):
+    def test_multi_basin_stability_with_alpha(self) -> None:
+        """Finite nonzero lag retains bounded shared threshold classifications."""
         n = 4
         omegas = np.ones(n)
         knm = _all_to_all(n, strength=3.0)
@@ -140,6 +125,7 @@ class TestAlphaNonZero:
             n_samples=8,
             R_thresholds=(0.3, 0.7),
             seed=9,
+            backend="python",
         )
         for res in results.values():
             assert 0.0 <= res.S_B <= 1.0
@@ -148,8 +134,10 @@ class TestAlphaNonZero:
 
 
 class TestSteadyStateRAlphaBranch:
-    @_python
-    def test_steady_state_r_with_alpha(self):
+    """Actual Python trials admit finite nonzero phase-lag matrices."""
+
+    def test_steady_state_r_with_alpha(self) -> None:
+        """The specified lagged population has a bounded finite-window measurement."""
         n = 5
         omegas = np.ones(n)
         knm = _all_to_all(n, strength=5.0)
@@ -163,6 +151,7 @@ class TestSteadyStateRAlphaBranch:
             dt=0.01,
             n_transient=300,
             n_measure=100,
+            backend="python",
         )
         r_with_lag = steady_state_r(
             phases,
@@ -172,6 +161,7 @@ class TestSteadyStateRAlphaBranch:
             dt=0.01,
             n_transient=300,
             n_measure=100,
+            backend="python",
         )
         # Both are bounded in [0, 1]; with lag, R should be lower
         # (or equal in the degenerate case) than the no-lag value.

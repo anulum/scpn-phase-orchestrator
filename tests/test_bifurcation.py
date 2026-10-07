@@ -6,13 +6,18 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Bifurcation continuation tests
 
+"""Public finite-horizon sweep, search and generic record contracts."""
+
 from __future__ import annotations
 
-from typing import Any
+import cProfile
+from typing import cast
 
 import numpy as np
 import pytest
+from numpy.typing import NDArray
 
+from benchmarks.kuramoto_trial_reference import scalar_trial
 from scpn_phase_orchestrator.upde import bifurcation as bif
 from scpn_phase_orchestrator.upde.bifurcation import (
     BifurcationDiagram,
@@ -21,9 +26,14 @@ from scpn_phase_orchestrator.upde.bifurcation import (
     trace_sync_transition,
 )
 
+FloatArray = NDArray[np.float64]
+
 
 class TestBifurcationPoint:
-    def test_fields(self):
+    """Finite sample records preserve their compatibility marker and values."""
+
+    def test_fields(self) -> None:
+        """A valid sample record preserves its supplied numerical fields."""
         p = BifurcationPoint(K=1.0, R=0.5, stable=True)
         assert p.K == 1.0
         assert p.R == 0.5
@@ -44,19 +54,28 @@ class TestBifurcationPoint:
     def test_rejects_invalid_physical_sample_values(
         self, kwargs: dict[str, object], match: str
     ) -> None:
+        """Malformed finite-sample fields cannot enter a public diagram."""
         base: dict[str, object] = {"K": 1.0, "R": 0.5, "stable": True}
         base.update(kwargs)
         with pytest.raises(ValueError, match=match):
-            BifurcationPoint(**base)
+            BifurcationPoint(
+                K=cast("float", base["K"]),
+                R=cast("float", base["R"]),
+                stable=cast("bool", base["stable"]),
+            )
 
 
 class TestBifurcationDiagram:
-    def test_empty(self):
+    """Generic sampled diagram records and their ordered array views."""
+
+    def test_empty(self) -> None:
+        """An empty generic diagram has no samples or critical estimate."""
         d = BifurcationDiagram()
         assert len(d.points) == 0
         assert d.K_critical is None
 
-    def test_properties(self):
+    def test_properties(self) -> None:
+        """Ordered record fields produce matching K and R array views."""
         d = BifurcationDiagram(
             points=[
                 BifurcationPoint(K=0.0, R=0.01, stable=True),
@@ -67,7 +86,8 @@ class TestBifurcationDiagram:
         np.testing.assert_array_equal(d.R_values, [0.01, 0.8])
 
     def test_valid_critical_coupling_is_normalised_to_float(self) -> None:
-        diagram = BifurcationDiagram(K_critical=np.float32(1.25))
+        """A finite real critical value retains its canonical Python float form."""
+        diagram = BifurcationDiagram(K_critical=cast(float, np.float32(1.25)))
 
         assert diagram.K_critical == 1.25
         assert isinstance(diagram.K_critical, float)
@@ -85,14 +105,21 @@ class TestBifurcationDiagram:
     def test_rejects_invalid_diagram_record_values(
         self, kwargs: dict[str, object], match: str
     ) -> None:
+        """Malformed diagram lists and critical-value aliases are refused."""
         base: dict[str, object] = {"points": [], "K_critical": None}
         base.update(kwargs)
         with pytest.raises(ValueError, match=match):
-            BifurcationDiagram(**base)
+            BifurcationDiagram(
+                points=cast("list[BifurcationPoint]", base.get("points", [])),
+                K_critical=cast("float | None", base.get("K_critical")),
+            )
 
 
 class TestTraceSyncTransition:
-    def test_returns_diagram(self):
+    """Original public independent coupling sweeps and threshold crossings."""
+
+    def test_returns_diagram(self) -> None:
+        """The original public sweep returns the requested sampled diagram."""
         N = 8
         rng = np.random.default_rng(42)
         omegas = rng.normal(0, 0.5, N)
@@ -106,7 +133,8 @@ class TestTraceSyncTransition:
         assert isinstance(diag, BifurcationDiagram)
         assert len(diag.points) == 10
 
-    def test_R_increases_with_K(self):
+    def test_R_increases_with_K(self) -> None:
+        """The specified network has a larger response at the upper grid endpoint."""
         N = 8
         rng = np.random.default_rng(0)
         omegas = rng.normal(0, 0.3, N)
@@ -121,7 +149,8 @@ class TestTraceSyncTransition:
         R_last = diag.R_values[-3:].mean()
         assert R_last > R_first
 
-    def test_finds_K_critical(self):
+    def test_finds_K_critical(self) -> None:
+        """The sampled response returns a bounded crossing when one is detected."""
         N = 8
         rng = np.random.default_rng(42)
         omegas = rng.standard_cauchy(N) * 0.5
@@ -140,7 +169,7 @@ class TestTraceSyncTransition:
 class TestTraceSyncTransitionCoverage:
     """Validate K_critical interpolation when the response crosses threshold."""
 
-    def test_k_critical_interpolation(self):
+    def test_k_critical_interpolation(self) -> None:
         """Force a clear R threshold crossing to exercise interpolation."""
         omegas = np.linspace(-1, 1, 10)
         diag = trace_sync_transition(
@@ -153,7 +182,7 @@ class TestTraceSyncTransitionCoverage:
         if diag.K_critical is not None:
             assert 0.0 < diag.K_critical < 8.0
 
-    def test_no_crossing_k_critical_none(self):
+    def test_no_crossing_k_critical_none(self) -> None:
         """Very low K range + wide ω → R stays below threshold → K_critical None."""
         omegas = np.linspace(-50, 50, 6)
         diag = trace_sync_transition(
@@ -165,7 +194,8 @@ class TestTraceSyncTransitionCoverage:
         )
         assert diag.K_critical is None
 
-    def test_custom_knm_template(self):
+    def test_custom_knm_template(self) -> None:
+        """An admitted custom graph retains the requested grid cardinality."""
         n = 4
         omegas = np.linspace(-0.5, 0.5, n)
         knm = np.ones((n, n)) * 0.5
@@ -180,7 +210,7 @@ class TestTraceSyncTransitionCoverage:
         )
         assert len(diag.points) == 5
 
-    def test_trace_rejects_self_coupling_diagonal(self):
+    def test_trace_rejects_self_coupling_diagonal(self) -> None:
         """K_ii is not a physical pair interaction in the Kuramoto graph."""
         n = 4
         omegas = np.linspace(-0.5, 0.5, n)
@@ -197,7 +227,8 @@ class TestTraceSyncTransitionCoverage:
                 n_measure=1,
             )
 
-    def test_r_values_bounded(self):
+    def test_r_values_bounded(self) -> None:
+        """Original public sweep measurements remain within the unit interval."""
         omegas = np.linspace(-1, 1, 6)
         diag = trace_sync_transition(
             omegas,
@@ -209,72 +240,72 @@ class TestTraceSyncTransitionCoverage:
         assert np.all(diag.R_values >= 0)
         assert np.all(diag.R_values <= 1.0 + 1e-6)
 
-    def test_python_fallback_interpolates_threshold_crossing(self, monkeypatch):
-        """Controlled R(K) curve gives the expected interpolated K_c."""
-        from scpn_phase_orchestrator.upde import bifurcation as bif
-
-        monkeypatch.setattr(bif, "_HAS_COMPOSITE_RUST", False)
-        r_by_k = {
-            0.0: 0.02,
-            1.0: 0.07,
-            2.0: 0.13,
-            3.0: 0.40,
-        }
-
-        def _steady_state_probe(
-            _phases_init,
-            _omegas,
-            K_scale,
-            _knm_template,
-            _alpha,
-            _dt,
-            _n_transient,
-            _n_measure,
-        ):
-            return r_by_k[float(K_scale)]
-
-        monkeypatch.setattr(bif, "_steady_state_R_dispatch", _steady_state_probe)
-        diag = bif.trace_sync_transition(
-            np.array([-0.2, 0.0, 0.2]),
-            K_range=(0.0, 3.0),
-            n_points=4,
+    def test_python_fallback_interpolates_threshold_crossing(self) -> None:
+        """Two-oscillator algebra determines the first interpolated upcrossing."""
+        phases = np.random.default_rng(92).uniform(0, 2 * np.pi, 2)
+        delta = float(phases[1] - phases[0])
+        grid = np.linspace(0.0, 1.0, 3)
+        expected = np.array(
+            [abs(np.cos((delta - 2 * scale * np.sin(delta)) / 2)) for scale in grid]
+        )
+        diagram = trace_sync_transition(
+            np.zeros(2),
+            np.array([[0.0, 1.0], [1.0, 0.0]]),
+            K_range=(0.0, 1.0),
+            n_points=3,
+            dt=1.0,
             n_transient=0,
             n_measure=1,
+            seed=92,
+            backend="python",
         )
-        assert [point.stable for point in diag.points] == [True, True, True, True]
-        np.testing.assert_allclose(diag.R_values, [0.02, 0.07, 0.13, 0.40])
-        assert diag.K_critical == 1.5
+        np.testing.assert_allclose(diagram.R_values, expected, atol=2e-15)
+        assert expected[0] < 0.1 < expected[1]
+        crossing = 0.5 * (0.1 - expected[0]) / (expected[1] - expected[0])
+        assert diagram.K_critical == pytest.approx(crossing, abs=2e-15)
 
 
 class TestInputValidation:
+    """Public numerical domains reject malformed shapes and coercive aliases."""
+
     def test_array_guard_rejects_failed_array_protocol(self) -> None:
+        """A deliberately failed conversion hook cannot become numerical evidence."""
+
         class FailedArray:
-            def __array__(self, dtype=None, copy=None):
+            def __array__(
+                self, dtype: object = None, copy: object = None
+            ) -> FloatArray:
                 raise TypeError("unavailable array payload")
 
         with pytest.raises(ValueError, match="probe must be a numeric array"):
             bif._as_real_numeric_array(FailedArray(), name="probe")
 
     def test_array_guard_rejects_float_conversion_overflow(self) -> None:
+        """An unrepresentable integer cannot become a finite numerical array."""
         huge_integer = np.array([10**1000], dtype=object)
 
         with pytest.raises(ValueError, match="probe must be a numeric array"):
             bif._as_real_numeric_array(huge_integer, name="probe")
 
     def test_array_guard_preserves_real_numeric_object_arrays(self) -> None:
-        values = np.array([np.float32(0.25), 2, -0.5], dtype=object)
-
-        validated = bif._as_real_numeric_array(values, name="probe")
-
-        np.testing.assert_allclose(validated, [0.25, 2.0, -0.5])
-        assert validated.dtype == np.float64
-        assert validated.flags.c_contiguous
+        """The original public graph accepts finite real object-valued arrays."""
+        diagram = trace_sync_transition(
+            np.array([np.float32(0.25), 2, -0.5], dtype=object),
+            n_points=2,
+            n_transient=0,
+            n_measure=1,
+            backend="python",
+        )
+        assert len(diagram.points) == 2
+        assert np.all(np.isfinite(diagram.R_values))
 
     def test_trace_rejects_empty_frequency_sample(self) -> None:
+        """A public coupling grid requires at least one oscillator."""
         with pytest.raises(ValueError, match="at least one oscillator"):
             trace_sync_transition(np.array([], dtype=np.float64))
 
     def test_trace_rejects_non_finite_matrix(self) -> None:
+        """Nonfinite custom coupling entries are rejected before trial execution."""
         knm = np.zeros((2, 2), dtype=np.float64)
         knm[0, 1] = np.inf
 
@@ -282,8 +313,11 @@ class TestInputValidation:
             trace_sync_transition(np.zeros(2), knm_template=knm)
 
     def test_trace_rejects_non_tuple_k_range(self) -> None:
+        """The public grid range retains its two-value tuple contract."""
         with pytest.raises(ValueError, match="exactly two finite values"):
-            trace_sync_transition(np.zeros(2), K_range=[0.0, 1.0])
+            trace_sync_transition(
+                np.zeros(2), K_range=cast("tuple[float, float]", [0.0, 1.0])
+            )
 
     @pytest.mark.parametrize(
         ("field", "bad_value", "match"),
@@ -300,9 +334,10 @@ class TestInputValidation:
     def test_trace_rejects_invalid_arrays(
         self,
         field: str,
-        bad_value: np.ndarray,
+        bad_value: FloatArray,
         match: str,
     ) -> None:
+        """Malformed graph, lag and frequency shapes fail public ingress."""
         kwargs = {
             "omegas": np.ones(3, dtype=np.float64),
             "knm_template": np.zeros((3, 3), dtype=np.float64),
@@ -314,7 +349,18 @@ class TestInputValidation:
         kwargs[field] = bad_value
 
         with pytest.raises(ValueError, match=match):
-            trace_sync_transition(**kwargs)
+            trace_sync_transition(
+                omegas=cast("FloatArray", kwargs["omegas"]),
+                knm_template=cast("FloatArray | None", kwargs.get("knm_template")),
+                alpha=cast("FloatArray | None", kwargs.get("alpha")),
+                K_range=cast("tuple[float,float]", kwargs.get("K_range", (0.0, 5.0))),
+                n_points=cast("int", kwargs.get("n_points", 50)),
+                dt=cast("float", kwargs.get("dt", 0.01)),
+                n_transient=cast("int", kwargs.get("n_transient", 2000)),
+                n_measure=cast("int", kwargs.get("n_measure", 500)),
+                seed=cast("int", kwargs.get("seed", 42)),
+                backend=cast("str | None", kwargs.get("backend")),
+            )
 
     @pytest.mark.parametrize(
         ("field", "bad_value", "match"),
@@ -357,9 +403,10 @@ class TestInputValidation:
         self,
         monkeypatch: pytest.MonkeyPatch,
         field: str,
-        bad_value: np.ndarray,
+        bad_value: FloatArray,
         match: str,
     ) -> None:
+        """Boolean, text and complex payloads cannot reach the trial dispatcher."""
         monkeypatch.setattr(bif, "_HAS_COMPOSITE_RUST", False)
         monkeypatch.setattr(
             bif,
@@ -377,7 +424,18 @@ class TestInputValidation:
         kwargs[field] = bad_value
 
         with pytest.raises(ValueError, match=match):
-            trace_sync_transition(**kwargs)
+            trace_sync_transition(
+                omegas=cast("FloatArray", kwargs["omegas"]),
+                knm_template=cast("FloatArray | None", kwargs.get("knm_template")),
+                alpha=cast("FloatArray | None", kwargs.get("alpha")),
+                K_range=cast("tuple[float,float]", kwargs.get("K_range", (0.0, 5.0))),
+                n_points=cast("int", kwargs.get("n_points", 50)),
+                dt=cast("float", kwargs.get("dt", 0.01)),
+                n_transient=cast("int", kwargs.get("n_transient", 2000)),
+                n_measure=cast("int", kwargs.get("n_measure", 500)),
+                seed=cast("int", kwargs.get("seed", 42)),
+                backend=cast("str | None", kwargs.get("backend")),
+            )
 
     @pytest.mark.parametrize(
         ("field", "bad_value"),
@@ -399,8 +457,9 @@ class TestInputValidation:
     def test_trace_rejects_invalid_runtime_parameters(
         self,
         field: str,
-        bad_value: Any,
+        bad_value: object,
     ) -> None:
+        """Invalid grid bounds, counts, timestep and seed aliases are refused."""
         kwargs = {
             "K_range": (0.0, 1.0),
             "n_points": 2,
@@ -412,7 +471,18 @@ class TestInputValidation:
         kwargs[field] = bad_value
 
         with pytest.raises(ValueError, match=field):
-            trace_sync_transition(np.ones(3, dtype=np.float64), **kwargs)
+            trace_sync_transition(
+                np.ones(3, dtype=np.float64),
+                knm_template=cast("FloatArray | None", kwargs.get("knm_template")),
+                alpha=cast("FloatArray | None", kwargs.get("alpha")),
+                K_range=cast("tuple[float,float]", kwargs.get("K_range", (0.0, 5.0))),
+                n_points=cast("int", kwargs.get("n_points", 50)),
+                dt=cast("float", kwargs.get("dt", 0.01)),
+                n_transient=cast("int", kwargs.get("n_transient", 2000)),
+                n_measure=cast("int", kwargs.get("n_measure", 500)),
+                seed=cast("int", kwargs.get("seed", 42)),
+                backend=cast("str | None", kwargs.get("backend")),
+            )
 
     @pytest.mark.parametrize(
         ("field", "bad_value"),
@@ -431,8 +501,9 @@ class TestInputValidation:
     def test_find_rejects_invalid_contract(
         self,
         field: str,
-        bad_value: Any,
+        bad_value: object,
     ) -> None:
+        """Invalid graph and search controls fail before numerical bisection."""
         kwargs = {
             "omegas": np.ones(3, dtype=np.float64),
             "knm_template": np.zeros((3, 3), dtype=np.float64),
@@ -443,10 +514,19 @@ class TestInputValidation:
             "seed": 1,
         }
         kwargs[field] = bad_value
-        omegas = kwargs.pop("omegas")
+        omegas = cast(FloatArray, kwargs.pop("omegas"))
 
         with pytest.raises(ValueError, match=field):
-            find_critical_coupling(omegas, **kwargs)
+            find_critical_coupling(
+                omegas,
+                knm_template=cast("FloatArray | None", kwargs.get("knm_template")),
+                dt=cast("float", kwargs.get("dt", 0.01)),
+                n_transient=cast("int", kwargs.get("n_transient", 3000)),
+                n_measure=cast("int", kwargs.get("n_measure", 1000)),
+                tol=cast("float", kwargs.get("tol", 0.05)),
+                seed=cast("int", kwargs.get("seed", 42)),
+                backend=cast("str | None", kwargs.get("backend")),
+            )
 
     @pytest.mark.parametrize(
         ("field", "bad_value", "match"),
@@ -476,9 +556,10 @@ class TestInputValidation:
         self,
         monkeypatch: pytest.MonkeyPatch,
         field: str,
-        bad_value: np.ndarray,
+        bad_value: FloatArray,
         match: str,
     ) -> None:
+        """Coercive numerical aliases cannot reach the threshold-search trials."""
         monkeypatch.setattr(bif, "_HAS_COMPOSITE_RUST", False)
         monkeypatch.setattr(
             bif,
@@ -492,10 +573,19 @@ class TestInputValidation:
             "n_measure": 1,
         }
         kwargs[field] = bad_value
-        omegas = kwargs.pop("omegas")
+        omegas = cast(FloatArray, kwargs.pop("omegas"))
 
         with pytest.raises(ValueError, match=match):
-            find_critical_coupling(omegas, **kwargs)
+            find_critical_coupling(
+                omegas,
+                knm_template=cast("FloatArray | None", kwargs.get("knm_template")),
+                dt=cast("float", kwargs.get("dt", 0.01)),
+                n_transient=cast("int", kwargs.get("n_transient", 3000)),
+                n_measure=cast("int", kwargs.get("n_measure", 1000)),
+                tol=cast("float", kwargs.get("tol", 0.05)),
+                seed=cast("int", kwargs.get("seed", 42)),
+                backend=cast("str | None", kwargs.get("backend")),
+            )
 
     def test_find_rejects_self_coupling_diagonal(self) -> None:
         """Binary-search K_c uses the same zero-self-coupling graph contract."""
@@ -512,7 +602,10 @@ class TestInputValidation:
 
 
 class TestFindCriticalCoupling:
-    def test_returns_finite(self):
+    """Original threshold searches, finite windows and bounded iterations."""
+
+    def test_returns_finite(self) -> None:
+        """The specified finite frequency sample produces a finite search estimate."""
         N = 8
         rng = np.random.default_rng(42)
         omegas = rng.normal(0, 0.3, N)
@@ -520,15 +613,17 @@ class TestFindCriticalCoupling:
         assert np.isfinite(Kc)
         assert Kc > 0
 
-    def test_no_transition(self):
+    def test_no_transition(self) -> None:
         """Identical frequencies → R=1 at any K>0, K_c ≈ 0."""
         N = 8
         omegas = np.zeros(N)
-        Kc = find_critical_coupling(omegas, n_transient=100, n_measure=50, tol=0.15)
+        Kc = find_critical_coupling(
+            cast(FloatArray, omegas), n_transient=100, n_measure=50, tol=0.15
+        )
         assert np.isfinite(Kc)
         assert Kc < 1.0
 
-    def test_wide_spread_returns_float(self):
+    def test_wide_spread_returns_float(self) -> None:
         """Wide ω spread → K_c either NaN or large positive."""
         n = 8
         omegas = np.linspace(-100, 100, n)
@@ -542,7 +637,7 @@ class TestFindCriticalCoupling:
         if not np.isnan(Kc):
             assert Kc >= 0
 
-    def test_binary_search_converges(self):
+    def test_binary_search_converges(self) -> None:
         """Moderate ω spread → binary search finds K_c in range."""
         omegas = np.linspace(-2, 2, 8)
         Kc = find_critical_coupling(
@@ -554,39 +649,16 @@ class TestFindCriticalCoupling:
         if not np.isnan(Kc):
             assert 0.0 < Kc < 20.0
 
-    def test_measurement_window_zero_returns_nan(self, monkeypatch):
-        """n_measure=0 keeps searching and returns a finite small positive Kc."""
-        from scpn_phase_orchestrator.upde import bifurcation as bif
-
-        monkeypatch.setattr(bif, "_HAS_COMPOSITE_RUST", False)
-        calls: list[int] = []
-
-        def _steady_state_r(
-            _phases_init: np.ndarray,
-            _omegas: np.ndarray,
-            _K_scale: float,
-            _knm_template: np.ndarray,
-            _alpha: np.ndarray,
-            _dt: float,
-            _n_transient: int,
-            n_measure: int,
-        ) -> float:
-            calls.append(n_measure)
-            return 0.25
-
-        monkeypatch.setattr(bif, "_steady_state_R_dispatch", _steady_state_r)
-
-        Kc = bif.find_critical_coupling(
-            np.array([0.1, -0.2, 0.3]),
-            n_transient=0,
-            n_measure=0,
+    def test_measurement_window_zero_returns_nan(self) -> None:
+        """A real empty window has R=0 at the upper endpoint and no crossing."""
+        assert np.isnan(
+            find_critical_coupling(
+                np.array([0.1, -0.2, 0.3]), n_transient=0, n_measure=0, backend="python"
+            )
         )
 
-        assert np.isfinite(Kc)
-        assert Kc < 0.05
-        assert all(v == 0 for v in calls)
-
-    def test_default_knm(self):
+    def test_default_knm(self) -> None:
+        """An omitted graph uses the original default coupling template."""
         omegas = np.array([1.0, 2.0, 3.0, 4.0])
         Kc = find_critical_coupling(
             omegas,
@@ -597,162 +669,102 @@ class TestFindCriticalCoupling:
         )
         assert isinstance(Kc, float)
 
-    def test_returns_nan_when_upper_bound_remains_subcritical(self, monkeypatch):
-        from scpn_phase_orchestrator.upde import bifurcation as bif
+    def test_returns_nan_when_upper_bound_remains_subcritical(self) -> None:
+        """A fixed disconnected antiphase sample remains below threshold."""
+        with cProfile.Profile() as profile:
+            critical = find_critical_coupling(
+                np.zeros(2),
+                np.zeros((2, 2)),
+                n_transient=0,
+                n_measure=1,
+                seed=92,
+                backend="python",
+            )
+        profile.create_stats()
+        calls = [
+            item[1]
+            for key, item in profile.stats.items()
+            if key[2] == "_python_steady_state_r"
+        ]
+        assert np.isnan(critical)
+        assert calls == [1]
 
-        monkeypatch.setattr(bif, "_HAS_COMPOSITE_RUST", False)
-        calls: list[float] = []
-
-        def _always_subcritical(
-            _phases_init,
-            _omegas,
-            K_scale,
-            _knm_template,
-            _alpha,
-            _dt,
-            _n_transient,
-            _n_measure,
-        ):
-            calls.append(float(K_scale))
-            return 0.05
-
-        monkeypatch.setattr(bif, "_steady_state_R_dispatch", _always_subcritical)
-        Kc = bif.find_critical_coupling(
-            np.array([-1.0, 1.0]),
-            n_transient=0,
-            n_measure=1,
-        )
-        assert np.isnan(Kc)
-        assert calls == [20.0]
-
-    def test_binary_search_moves_lower_bound_after_subcritical_midpoint(
-        self,
-        monkeypatch,
-    ):
-        from scpn_phase_orchestrator.upde import bifurcation as bif
-
-        monkeypatch.setattr(bif, "_HAS_COMPOSITE_RUST", False)
-        calls: list[float] = []
-
-        def _threshold_response(
-            _phases_init,
-            _omegas,
-            K_scale,
-            _knm_template,
-            _alpha,
-            _dt,
-            _n_transient,
-            _n_measure,
-        ):
-            calls.append(float(K_scale))
-            return 0.05 if K_scale < 15.0 else 0.8
-
-        monkeypatch.setattr(bif, "_steady_state_R_dispatch", _threshold_response)
-        Kc = bif.find_critical_coupling(
-            np.array([-0.5, 0.5]),
+    def test_binary_search_moves_lower_bound_after_subcritical_midpoint(self) -> None:
+        """Actual one-step algebra places K=10 below and K=15 above R=0.1."""
+        p = np.random.default_rng(92).uniform(0, 2 * np.pi, 2)
+        delta = float(p[1] - p[0])
+        assert abs(np.cos((delta - 0.2 * np.sin(delta)) / 2)) < 0.1
+        assert abs(np.cos((delta - 0.3 * np.sin(delta)) / 2)) > 0.1
+        critical = find_critical_coupling(
+            np.zeros(2),
+            np.array([[0.0, 1.0], [1.0, 0.0]]),
+            dt=0.01,
             n_transient=0,
             n_measure=1,
             tol=6.0,
+            seed=92,
+            backend="python",
         )
-        assert calls[:3] == [20.0, 10.0, 15.0]
-        assert Kc == 12.5
+        assert critical == 12.5
 
-    def test_binary_search_honours_the_iteration_cap(self, monkeypatch):
-        monkeypatch.setattr(bif, "_HAS_COMPOSITE_RUST", False)
-        calls: list[float] = []
-
-        def _always_supercritical(
-            _phases_init,
-            _omegas,
-            K_scale,
-            _knm_template,
-            _alpha,
-            _dt,
-            _n_transient,
-            _n_measure,
-        ):
-            calls.append(float(K_scale))
-            return 0.5
-
-        monkeypatch.setattr(bif, "_steady_state_R_dispatch", _always_supercritical)
-        kc = bif.find_critical_coupling(
-            np.array([-0.5, 0.5]),
-            n_transient=0,
-            n_measure=1,
-            tol=1e-20,
-        )
-
-        assert len(calls) == 31
-        assert 0.0 < kc < 2e-8
+    def test_binary_search_honours_the_iteration_cap(self) -> None:
+        """A real singleton R=1 stops at 30 bisections despite tiny tolerance."""
+        with cProfile.Profile() as profile:
+            critical = find_critical_coupling(
+                np.zeros(1), n_transient=0, n_measure=1, tol=1e-20, backend="python"
+            )
+        profile.create_stats()
+        calls = [
+            item[1]
+            for key, item in profile.stats.items()
+            if key[2] == "_python_steady_state_r"
+        ]
+        assert calls == [31]
+        assert critical == 20.0 / (2**31)
 
 
 class TestBifurcationDispatchSurface:
-    def test_python_path_forwards_kernel_inputs(self, monkeypatch):
-        calls: dict[str, float] = {}
-        k_scales: list[float] = []
+    """Original delegated inputs agree with independent Euler measurements."""
 
-        def fake_steady_state_r(
-            phases_init: np.ndarray,
-            omegas: np.ndarray,
-            knm_template: np.ndarray,
-            alpha: np.ndarray,
-            k_scale: float,
-            dt: float,
-            n_transient: int,
-            n_measure: int,
-        ) -> float:
-            calls["phases_size"] = int(phases_init.shape[0])
-            calls["omegas_size"] = int(omegas.shape[0])
-            calls["knm_shape"] = tuple(knm_template.shape)
-            calls["alpha_shape"] = tuple(alpha.shape)
-            calls["k_scale"] = float(k_scale)
-            k_scales.append(float(k_scale))
-            calls["dt"] = dt
-            calls["n_transient"] = n_transient
-            calls["n_measure"] = n_measure
-            return 0.25
-
-        monkeypatch.setattr(bif, "_HAS_COMPOSITE_RUST", False)
-        monkeypatch.setattr(bif, "_dispatched_steady_state_r", fake_steady_state_r)
-
-        omegas = np.array([-0.2, 0.1, 0.4], dtype=np.float64)
-        knm = np.array(
-            [[0.0, 0.2, 0.3], [0.4, 0.0, 0.5], [0.2, 0.4, 0.0]],
-            dtype=np.float64,
-        )
-        alpha = np.full((3, 3), 0.05, dtype=np.float64)
-
+    def test_python_path_forwards_kernel_inputs(self) -> None:
+        """Signed directed lagged public inputs match independent scalar trials."""
+        omegas = np.array([-0.2, 0.1, 0.4])
+        knm = np.array([[0.0, 0.2, 0.3], [0.4, 0.0, 0.5], [0.2, 0.4, 0.0]])
+        alpha = np.full((3, 3), 0.05)
+        phases = np.random.default_rng(7).uniform(0, 2 * np.pi, 3)
         diagram = trace_sync_transition(
             omegas,
-            knm_template=knm,
-            alpha=alpha,
+            knm,
+            alpha,
             K_range=(0.0, 4.0),
             n_points=4,
             dt=0.03,
             n_transient=10,
             n_measure=5,
             seed=7,
+            backend="python",
         )
+        expected = [
+            scalar_trial(
+                phases.tolist(),
+                omegas.tolist(),
+                knm.tolist(),
+                alpha.tolist(),
+                scale=float(scale),
+                dt=0.03,
+                transient=10,
+                measure=5,
+            )
+            for scale in np.linspace(0.0, 4.0, 4)
+        ]
+        np.testing.assert_allclose(diagram.R_values, expected, atol=2e-14, rtol=2e-14)
 
-        assert len(diagram.points) == 4
-        np.testing.assert_allclose(diagram.R_values, 0.25)
-        assert calls["phases_size"] == 3
-        assert calls["omegas_size"] == 3
-        assert calls["knm_shape"] == (3, 3)
-        assert calls["alpha_shape"] == (3, 3)
-        assert calls["k_scale"] == 4.0
-        np.testing.assert_allclose(k_scales, np.linspace(0.0, 4.0, 4))
-        assert calls["dt"] == 0.03
-        assert calls["n_transient"] == 10
-        assert calls["n_measure"] == 5
 
-
-class TestBifurcationPipelineWiring:
+class TestBifurcationPublicMeasurements:
     """Pipeline: bifurcation analysis uses UPDEEngine internally."""
 
-    def test_trace_sync_uses_engine(self):
-        """trace_sync_transition scans K values → R trajectory.
-        Proves the bifurcation module drives the engine."""
+    def test_trace_sync_returns_real_grid_measurements(self) -> None:
+        """The original public sweep returns finite measurements at every grid point."""
         omegas = np.array([1.0, 1.5, 2.0, 0.5])
         diag = trace_sync_transition(
             omegas,

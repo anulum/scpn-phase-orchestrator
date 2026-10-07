@@ -11,7 +11,7 @@
 from __future__ import annotations
 
 from numbers import Integral, Real
-from typing import Any, TypeAlias
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -39,7 +39,7 @@ ValidatedInputs: TypeAlias = tuple[
 ]
 
 
-def _as_finite_vector(value: Any, *, name: str) -> FloatArray:
+def _as_finite_vector(value: object, *, name: str) -> FloatArray:
     """Return ``value`` as a validated finite vector, else raise."""
     if _contains_numeric_string_alias(value):
         raise ValueError(f"{name} must not contain numeric-string aliases")
@@ -60,7 +60,7 @@ def _as_finite_vector(value: Any, *, name: str) -> FloatArray:
     return out
 
 
-def _as_flat_matrix(value: Any, *, name: str, n: int) -> FloatArray:
+def _as_flat_matrix(value: object, *, name: str, n: int) -> FloatArray:
     """Return ``value`` as a validated flattened matrix, else raise."""
     array = _as_finite_vector(value, name=name)
     expected = n * n
@@ -69,7 +69,7 @@ def _as_flat_matrix(value: Any, *, name: str, n: int) -> FloatArray:
     return array
 
 
-def _as_finite_real(value: Any, *, name: str, positive: bool = False) -> float:
+def _as_finite_real(value: object, *, name: str, positive: bool = False) -> float:
     """Return ``value`` as a finite real float, else raise ``ValueError``."""
     if _is_numeric_string_alias(value):
         raise ValueError(f"{name} must not be a numeric-string alias")
@@ -85,7 +85,7 @@ def _as_finite_real(value: Any, *, name: str, positive: bool = False) -> float:
     return out
 
 
-def _as_int(value: Any, *, name: str, minimum: int) -> int:
+def _as_int(value: object, *, name: str, minimum: int) -> int:
     """Return ``value`` as a validated integer, else raise ``ValueError``."""
     if _is_numeric_string_alias(value):
         raise ValueError(f"{name} must not be a numeric-string alias")
@@ -158,7 +158,7 @@ def validate_basin_stability_inputs(
     )
 
 
-def validate_basin_stability_output(value: Any) -> float:
+def validate_basin_stability_output(value: object) -> float:
     """Validate an order-parameter result from a direct backend."""
     out = _as_finite_real(value, name="steady-state R")
     if out < 0.0 or out > 1.0 + 1e-12:

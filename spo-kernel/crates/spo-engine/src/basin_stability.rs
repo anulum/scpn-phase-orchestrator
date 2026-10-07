@@ -8,34 +8,37 @@
 
 //! Basin stability estimation for Kuramoto synchronisation.
 //!
-//! Monte Carlo estimation of the synchronised state's basin of attraction.
+//! Fraction of LCG-sampled trials above a finite-horizon R threshold.
+//! This is not a certified attraction-basin volume or a linear-stability test.
 //!
 //! References:
 //!   Menck, Heitzig, Marwan & Kurths 2013, Nature Physics 9:89-92.
-//!   Ji, Peron, Rodrigues & Kurths 2014, Sci. Reports 4:4783.
+//! Direct native sampling uses an LCG, distinct from the public Python NumPy RNG.
 
-use crate::bifurcation::steady_state_r;
+use crate::bifurcation::{try_steady_state_r, validate_trial_inputs};
 use std::f64::consts::TAU;
 
 /// Basin stability result.
 pub struct BasinStabilityResult {
-    /// Fraction of ICs that converged to synchronised state.
+    /// Fraction of finite-window measurements meeting the threshold.
     pub s_b: f64,
-    /// Final R for each sample.
+    /// Mean post-step R in the measurement window for each sample.
     pub r_finals: Vec<f64>,
-    /// Number of converged samples.
+    /// Number of samples whose mean R meets the inclusive threshold.
     pub n_converged: usize,
 }
 
-/// Estimate basin stability of the synchronised state.
+/// Estimate the finite-window synchronisation-threshold passing fraction.
 ///
 /// Draws n_samples random ICs from [0, 2π)^N, integrates each to
-/// steady state, and checks if R_final ≥ r_threshold.
+/// the specified finite window, and checks if R_final ≥ r_threshold.
 ///
 /// Uses LCG PRNG for deterministic randomness without external deps.
+///
+/// # Errors
+/// Returns an error for invalid trial inputs, thresholds or arithmetic.
 #[allow(clippy::too_many_arguments)]
-#[must_use]
-pub fn basin_stability(
+pub fn try_basin_stability(
     omegas: &[f64],
     knm_flat: &[f64],
     alpha_flat: &[f64],
@@ -46,7 +49,12 @@ pub fn basin_stability(
     n_samples: usize,
     r_threshold: f64,
     seed: u64,
-) -> BasinStabilityResult {
+) -> Result<BasinStabilityResult, &'static str> {
+    let phases = vec![0.0; omegas.len()];
+    validate_trial_inputs(&phases, omegas, knm_flat, alpha_flat, n, 1.0, dt)?;
+    if !r_threshold.is_finite() || !(0.0..=1.0).contains(&r_threshold) {
+        return Err("r_threshold must be finite and lie in [0, 1]");
+    }
     let mut r_finals = Vec::with_capacity(n_samples);
     let mut rng_state = seed;
     let mut n_converged = 0usize;
@@ -62,7 +70,7 @@ pub fn basin_stability(
             phases_init.push(u * TAU);
         }
 
-        let r = steady_state_r(
+        let r = try_steady_state_r(
             &phases_init,
             omegas,
             knm_flat,
@@ -72,7 +80,7 @@ pub fn basin_stability(
             dt,
             n_transient,
             n_measure,
-        );
+        )?;
         if r >= r_threshold {
             n_converged += 1;
         }
@@ -85,11 +93,55 @@ pub fn basin_stability(
         0.0
     };
 
-    BasinStabilityResult {
+    Ok(BasinStabilityResult {
         s_b,
         r_finals,
         n_converged,
+    })
+}
+
+/// Compatible LCG-sampling API; invalid trials produce NaN and no samples.
+///
+/// The historical empty-sample result is retained, including n=0. Use
+/// `try_basin_stability` for explicit input and arithmetic errors.
+#[allow(clippy::too_many_arguments)]
+#[must_use]
+pub fn basin_stability(
+    omegas: &[f64],
+    knm: &[f64],
+    alpha: &[f64],
+    n: usize,
+    dt: f64,
+    n_transient: usize,
+    n_measure: usize,
+    n_samples: usize,
+    threshold: f64,
+    seed: u64,
+) -> BasinStabilityResult {
+    if n_samples == 0 {
+        return BasinStabilityResult {
+            s_b: 0.0,
+            r_finals: vec![],
+            n_converged: 0,
+        };
     }
+    try_basin_stability(
+        omegas,
+        knm,
+        alpha,
+        n,
+        dt,
+        n_transient,
+        n_measure,
+        n_samples,
+        threshold,
+        seed,
+    )
+    .unwrap_or_else(|_| BasinStabilityResult {
+        s_b: f64::NAN,
+        r_finals: vec![],
+        n_converged: 0,
+    })
 }
 
 #[cfg(test)]

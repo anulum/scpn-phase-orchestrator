@@ -45,6 +45,8 @@ jobs:
         run: make phase-sindy-quality PYTHON=python
       - name: Check complete phase attention source, tests and diagnostics
         run: make attention-residuals-quality PYTHON=python
+      - name: Check complete basin and coupling-sweep source, tests and diagnostics
+        run: make basin-bifurcation-quality PYTHON=python
       - name: Run tests (with coverage on 3.12)
         run: >
           pytest tests/ -v --tb=short
@@ -201,6 +203,10 @@ jobs:
           maturin build --release --locked -m spo-kernel/crates/spo-ffi/Cargo.toml --out kernel-wheels
           pip wheel --no-deps --no-build-isolation --wheel-dir package-wheels .
           pip install --no-index --no-deps kernel-wheels/*.whl package-wheels/*.whl
+      - name: Qualify required Rust basin and coupling-sweep consumers
+        env:
+          SPO_REQUIRED_BASIN_BACKENDS: "python,rust"
+        run: .venv/bin/python -m pytest tests/test_basin_bifurcation_real_runtime.py tests/test_bifurcation_dispatch.py tests/test_basin_stability_benchmark.py --strict-markers --tb=short
       - name: Measure actual native public contracts
         run: |
           . .venv/bin/activate

@@ -74,6 +74,8 @@ open(output_path, "w") do io
 
     for source_path in sort!(readdir(source_root; join = true))
         endswith(source_path, ".jl") || continue
+        # Native test entry points execute in their CI contracts, not API rendering.
+        startswith(basename(source_path), "test_") && continue
         source = read(source_path, String)
         mod = Base.include(Main, source_path)
         mod isa Module || error("$(basename(source_path)) did not evaluate to a module")

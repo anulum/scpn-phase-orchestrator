@@ -156,20 +156,18 @@ scalars must be finite values in `[0, 1]`, and PAC-matrix payloads must keep
 vectors and histories reject boolean, complex, and numeric-string aliases
 before conversion, and the Julia matrix bridge preserves raw return dtype until
 the shared output validator runs. Mojo stdout remains a declared text protocol.
-The public basin-stability dispatcher applies the shared direct output
-validator to optional backend returns before publication: steady-state order
-parameters must be finite non-boolean, non-numeric-string scalars inside
-`[0, 1]`. Public and direct phase, frequency, flattened coupling, phase-lag,
-scalar-control, and count inputs also reject numeric-string aliases before
-float coercion, preserving fallback only for loader/runtime unavailability and
-not for malformed backend physics evidence.
-The public bifurcation sweep and critical-coupling search validate frequency,
-coupling-template, and phase-lag arrays as finite real numeric payloads before
-dispatch. Boolean, complex, and numeric-string aliases fail closed before
-conversion. The composite Rust sweep replays the same source-type contract on
-raw `K` and `R` arrays before checking cardinality, monotonicity, sweep bounds,
-the physical `[0, 1]` order-parameter range, and optional critical coupling;
-malformed backend evidence is never published as a bifurcation diagram.
+The basin trial and coupling-sweep APIs share full-snapshot explicit Euler,
+target-row/source-column rate coupling and post-step mean R. Cross-language
+parity is within numerical tolerance. Named owners never fall back; missing
+owners raise `ImportError`, and arithmetic/output errors propagate. Public
+Monte Carlo samples remain NumPy-owned; the direct Rust LCG sampler is separate.
+Go's checked `SteadyStateRV2` admits buffer-length metadata before slices;
+Julia and Rust validate domains before indexing, and Mojo validates requests
+before allocation. An empty measurement window validates inputs and returns
+zero without an unused transient. These finite-horizon classifications do not
+certify attraction volumes, bifurcations or stability. See the
+[basin](../../reference/api/upde_basin_stability.md) and
+[coupling-sweep](../../reference/api/upde_bifurcation.md) contracts.
 The public Stuart-Landau engine validates state, frequency, growth, phase and
 amplitude coupling, and phase-lag arrays as finite real numeric payloads before
 solver selection; diagnostic state uses the same boundary. Boolean, complex,

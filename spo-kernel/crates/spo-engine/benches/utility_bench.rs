@@ -22,7 +22,7 @@
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 
 use spo_engine::attnres::attnres_modulate;
-use spo_engine::basin_stability::basin_stability;
+use spo_engine::basin_stability::try_basin_stability;
 use spo_engine::carrier::decode;
 use spo_engine::connectome::load_hcp_connectome;
 use spo_engine::ei_balance::compute_ei_balance;
@@ -59,7 +59,8 @@ fn bench_basin_stability(c: &mut Criterion) {
         let omegas: Vec<f64> = (0..n).map(|i| 1.0 + 0.05 * i as f64).collect();
         group.bench_with_input(BenchmarkId::from_parameter(n), &n, |b, &n| {
             b.iter(|| {
-                let r = basin_stability(&omegas, &knm, &alpha, n, 0.01, 100, 50, 16, 0.5, 42);
+                let r = try_basin_stability(&omegas, &knm, &alpha, n, 0.01, 100, 50, 16, 0.5, 42)
+                    .expect("finite ring basin diagnostic");
                 criterion::black_box(r);
             });
         });

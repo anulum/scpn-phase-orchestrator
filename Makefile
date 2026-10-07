@@ -140,3 +140,23 @@ clean:  ## Remove build artifacts
 install-hooks:  ## Install git hooks
 	git config core.hooksPath .githooks
 	@echo "Hooks installed from .githooks/"
+
+BASIN_BIFURCATION_QUALITY_FILES := src/scpn_phase_orchestrator/upde/basin_stability.py \
+    src/scpn_phase_orchestrator/upde/bifurcation.py \
+    src/scpn_phase_orchestrator/upde/_basin_stability_validation.py \
+    src/scpn_phase_orchestrator/experimental/accelerators/upde/_basin_stability_go.py \
+    src/scpn_phase_orchestrator/experimental/accelerators/upde/_basin_stability_julia.py \
+    src/scpn_phase_orchestrator/experimental/accelerators/upde/_basin_stability_mojo.py \
+    tests/test_basin_stability.py tests/test_basin_stability_algorithm.py \
+    tests/test_basin_stability_backends.py tests/test_basin_stability_stability.py \
+    tests/test_prop_basin_stability.py tests/test_bifurcation.py \
+    tests/test_bifurcation_dispatch.py tests/test_basin_bifurcation_real_runtime.py \
+    tests/test_basin_stability_benchmark.py \
+    native-tests/test_basin_bifurcation_profiles.py \
+    benchmarks/basin_stability_benchmark.py benchmarks/kuramoto_trial_reference.py
+
+.PHONY: basin-bifurcation-quality
+basin-bifurcation-quality:  ## Check whole basin and coupling-sweep source/tests/diagnostics
+	$(PYTHON) -m ruff check --isolated --select E,F,W,I,UP,B,SIM,N,C4,RET,PTH,D --ignore N802,N803,N806,D105 --config 'lint.pydocstyle.convention="numpy"' $(BASIN_BIFURCATION_QUALITY_FILES)
+	$(PYTHON) -m ruff format --check $(BASIN_BIFURCATION_QUALITY_FILES)
+	$(PYTHON) -m mypy --config-file tools/basin_bifurcation_mypy.ini $(BASIN_BIFURCATION_QUALITY_FILES)

@@ -208,9 +208,12 @@ advanced analysis tools.
 
 **Key concepts for you:**
 - `upde.bifurcation`: `trace_sync_transition()` sweeps coupling
-  strength, `find_critical_coupling()` locates K_c.
+  strength over independent finite-window trials; `find_critical_coupling()`
+  searches for the R=0.1 classification threshold. Neither certifies a
+  physical bifurcation; see the [API contract](../reference/api/upde_bifurcation.md).
 - `upde.reduction`: Ott-Antonsen mean-field reduction for large N.
-- `upde.basin_stability`: Monte Carlo basin stability analysis.
+- `upde.basin_stability`: seeded finite-window threshold-passing fractions;
+  see the [API contract](../reference/api/upde_basin_stability.md) for their limits.
 - `coupling.hodge`: Hodge decomposition of coupling matrix into
   gradient, curl, and harmonic components.
 - `coupling.spectral`: graph Laplacian, Fiedler value/vector,

@@ -63,7 +63,7 @@ These are computational theorem provers. Each `@given` test generates 50-500 ran
 | File | Tests | What it proves |
 |------|-------|----------------|
 | `test_prop_lyapunov_dimension.py` | 44 | Lyapunov spectrum: length=N, sorted descending, finite. Kaplan-Yorke D_KY ∈ [0,N]. Correlation integral monotonic in ε. |
-| `test_prop_basin_stability.py` | 28 | S_B ∈ [0,1], n_converged ≤ n_samples. Multi-basin threshold monotonicity. Strong coupling → high S_B. |
+| `test_prop_basin_stability.py` | 28 | Bounded generated cases exercise S_B ∈ [0,1], threshold-passing counts, paired-sample threshold monotonicity and finite-window reproducibility. |
 | `test_prop_entropy_transfer.py` | 25 | EPR ≥ 0, TE ≥ 0, TE diagonal = 0. TE-adaptive coupling preserves zero diagonal and non-negativity. |
 | `test_prop_hodge_spectral.py` | 30 | Laplacian: PSD, row sums = 0. Fiedler λ₂ > 0 iff connected. Hodge: gradient + curl + harmonic = total. |
 | `test_prop_recurrence_rqa.py` | 26 | Recurrence matrix: symmetric, diagonal = True. RR, DET, LAM ∈ [0,1]. Cross-recurrence shape and bounds. |
@@ -174,7 +174,7 @@ Dedicated test files for each subsystem covering unit-level behaviour, input val
 | Drivers | `test_drivers_oscillators.py` | PhysicalDriver, PhaseQualityScorer, CoherenceMonitor |
 | Supervisor | `test_supervisor_modules.py` | EventBus, RegimeManager, InformationalDriver, SymbolicDriver |
 | Imprint | `test_imprint_actuation.py` | ImprintModel, ActionProjector, ActuationMapper |
-| Bifurcation | `test_bifurcation.py` | trace_sync_transition, find_critical_coupling |
+| Coupling sweeps | `test_bifurcation.py`, `test_basin_bifurcation_real_runtime.py` | Original independent-grid and threshold-search consumers; scalar Euler and analytic two-oscillator comparisons for five named owners |
 
 ## Writing New Tests
 

@@ -11,10 +11,23 @@
 use crate::call_arguments::CallArguments;
 use crate::return_types::ArraysWithScalar;
 use numpy::{PyArray1, PyReadonlyArray1};
-use pyo3::exceptions::PyValueError;
+use pyo3::exceptions::{PyTypeError, PyValueError};
 use pyo3::prelude::*;
-use pyo3::types::{PyDict, PyTuple};
+use pyo3::types::{PyBool, PyDict, PyTuple};
 use spo_engine::{basin_stability, bifurcation};
+
+/// Refuse Python and NumPy boolean aliases before scalar extraction.
+fn reject_boolean_scalars(call: &CallArguments<'_>, indices: &[usize]) -> PyResult<()> {
+    for &index in indices {
+        let value: Bound<'_, PyAny> = call.extract(index)?;
+        let type_name = value.get_type().name()?;
+        let type_name = type_name.to_str()?;
+        if value.is_instance_of::<PyBool>() || type_name == "bool" || type_name == "bool_" {
+            return Err(PyTypeError::new_err("numerical scalar must not be boolean"));
+        }
+    }
+    Ok(())
+}
 
 /// Seeded basin sampling and synchronization-transition review measurements.
 ///
@@ -42,6 +55,7 @@ pub(crate) fn basin_stability_rust<'py>(
         ],
         "basin_stability_rust",
     )?;
+    reject_boolean_scalars(&call, &[3, 4, 5, 6, 7, 8, 9])?;
     let py = args.py();
     let omegas: PyReadonlyArray1<'py, f64> = call.extract(0)?;
     let knm_flat: PyReadonlyArray1<'py, f64> = call.extract(1)?;
@@ -62,7 +76,7 @@ pub(crate) fn basin_stability_rust<'py>(
     let a = alpha_flat
         .as_slice()
         .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let result = basin_stability::basin_stability(
+    let result = basin_stability::try_basin_stability(
         o,
         k,
         a,
@@ -73,7 +87,8 @@ pub(crate) fn basin_stability_rust<'py>(
         n_samples,
         r_threshold,
         seed,
-    );
+    )
+    .map_err(PyValueError::new_err)?;
     Ok((
         result.s_b,
         PyArray1::from_vec(py, result.r_finals),
@@ -106,6 +121,7 @@ pub(crate) fn steady_state_r_rust<'py>(
         ],
         "steady_state_r_rust",
     )?;
+    reject_boolean_scalars(&call, &[4, 5, 6, 7, 8])?;
     let phases_init: PyReadonlyArray1<'py, f64> = call.extract(0)?;
     let omegas: PyReadonlyArray1<'py, f64> = call.extract(1)?;
     let knm_flat: PyReadonlyArray1<'py, f64> = call.extract(2)?;
@@ -127,17 +143,8 @@ pub(crate) fn steady_state_r_rust<'py>(
     let a = alpha_flat
         .as_slice()
         .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    Ok(bifurcation::steady_state_r(
-        p,
-        o,
-        k,
-        a,
-        n,
-        k_scale,
-        dt,
-        n_transient,
-        n_measure,
-    ))
+    bifurcation::try_steady_state_r(p, o, k, a, n, k_scale, dt, n_transient, n_measure)
+        .map_err(PyValueError::new_err)
 }
 
 /// Seeded basin sampling and synchronization-transition review measurements.
@@ -167,6 +174,7 @@ pub(crate) fn trace_sync_transition_rust<'py>(
         ],
         "trace_sync_transition_rust",
     )?;
+    reject_boolean_scalars(&call, &[3, 5, 6, 7, 8, 9, 10])?;
     let py = args.py();
     let omegas: PyReadonlyArray1<'py, f64> = call.extract(0)?;
     let knm_flat: PyReadonlyArray1<'py, f64> = call.extract(1)?;
@@ -191,7 +199,7 @@ pub(crate) fn trace_sync_transition_rust<'py>(
     let p = phases_init
         .as_slice()
         .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let (kv, rv, kc) = bifurcation::trace_sync_transition(
+    let (kv, rv, kc) = bifurcation::try_trace_sync_transition(
         o,
         k,
         a,
@@ -203,7 +211,8 @@ pub(crate) fn trace_sync_transition_rust<'py>(
         dt,
         n_transient,
         n_measure,
-    );
+    )
+    .map_err(PyValueError::new_err)?;
     Ok((PyArray1::from_vec(py, kv), PyArray1::from_vec(py, rv), kc))
 }
 
@@ -232,6 +241,7 @@ pub(crate) fn find_critical_coupling_bif_rust<'py>(
         ],
         "find_critical_coupling_bif_rust",
     )?;
+    reject_boolean_scalars(&call, &[3, 5, 6, 7, 8])?;
     let omegas: PyReadonlyArray1<'py, f64> = call.extract(0)?;
     let knm_flat: PyReadonlyArray1<'py, f64> = call.extract(1)?;
     let alpha_flat: PyReadonlyArray1<'py, f64> = call.extract(2)?;
@@ -253,15 +263,6 @@ pub(crate) fn find_critical_coupling_bif_rust<'py>(
     let p = phases_init
         .as_slice()
         .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    Ok(bifurcation::find_critical_coupling(
-        o,
-        k,
-        a,
-        n,
-        p,
-        dt,
-        n_transient,
-        n_measure,
-        tol,
-    ))
+    bifurcation::try_find_critical_coupling(o, k, a, n, p, dt, n_transient, n_measure, tol)
+        .map_err(PyValueError::new_err)
 }
