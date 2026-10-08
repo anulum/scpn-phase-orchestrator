@@ -6,8 +6,6 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Public API typing facade
 
-from typing import Any
-
 from scpn_phase_orchestrator.api import Orchestrator as Orchestrator
 from scpn_phase_orchestrator.api import OrchestratorState as OrchestratorState
 from scpn_phase_orchestrator.artifacts.qpu_data import (
@@ -71,5 +69,5 @@ from scpn_phase_orchestrator.upde.stuart_landau import (
 __version__: str
 __all__: list[str]
 
-def __getattr__(name: str) -> Any: ...
+def __getattr__(name: str) -> object: ...
 def __dir__() -> list[str]: ...

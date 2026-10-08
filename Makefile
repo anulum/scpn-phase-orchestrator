@@ -162,7 +162,7 @@ basin-bifurcation-quality:  ## Check whole basin and coupling-sweep source/tests
 	$(PYTHON) -m mypy --config-file tools/basin_bifurcation_mypy.ini $(BASIN_BIFURCATION_QUALITY_FILES)
 
 CHIMERA_QUALITY_FILES := src/scpn_phase_orchestrator/monitor/chimera.py \
-    src/scpn_phase_orchestrator/experimental/accelerators/monitor/_chimera_validation.py \
+    src/scpn_phase_orchestrator/monitor/_chimera_validation.py \
     src/scpn_phase_orchestrator/experimental/accelerators/monitor/_chimera_go.py \
     src/scpn_phase_orchestrator/experimental/accelerators/monitor/_chimera_julia.py \
     src/scpn_phase_orchestrator/experimental/accelerators/monitor/_chimera_mojo.py \

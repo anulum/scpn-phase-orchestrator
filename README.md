@@ -343,10 +343,10 @@ inside a dashboard or notebook; it turns them into inspectable artefacts.
 | Package version | 1.4.3 |
 | Public API exports | 29 |
 | Python package modules | 765 |
-| Core Engine modules | 363 |
+| Core Engine modules | 364 |
 | Runtime/Serving modules | 160 |
 | Integration modules | 32 |
-| Research/Experimental modules | 205 |
+| Research/Experimental modules | 204 |
 | Domainpack files | 36 |
 | Rust kernel files | 129 |
 | Optional extras | 24 |

@@ -17,11 +17,12 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
-from .._go_runtime import load_go_library
-from ._chimera_validation import (
+from scpn_phase_orchestrator.monitor._chimera_validation import (
     validate_chimera_backend_inputs,
     validate_chimera_backend_output,
 )
+
+from .._go_runtime import load_go_library
 
 FloatArray: TypeAlias = NDArray[np.float64]
 

@@ -8,9 +8,7 @@
 
 """Declare the installed JuliaCall exception boundary and dynamic Main module."""
 
-from typing import Any
-
-Main: Any
+Main: object
 
 class JuliaError(Exception):
     """Represent the actual JuliaCall native exception and optional backtrace."""

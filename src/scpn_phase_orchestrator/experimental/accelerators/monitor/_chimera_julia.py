@@ -19,8 +19,7 @@ from numpy.typing import NDArray
 from scpn_phase_orchestrator.experimental.accelerators._julia_runtime import (
     require_julia_main,
 )
-
-from ._chimera_validation import (
+from scpn_phase_orchestrator.monitor._chimera_validation import (
     validate_chimera_backend_inputs,
     validate_chimera_backend_output,
 )

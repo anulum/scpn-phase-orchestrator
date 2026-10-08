@@ -40,7 +40,7 @@ from typing import TypeAlias, cast
 import numpy as np
 from numpy.typing import NDArray
 
-from ..experimental.accelerators.monitor._chimera_validation import _measurement_array
+from ._chimera_validation import _measurement_array
 
 FloatArray: TypeAlias = NDArray[np.float64]
 ChimeraBackendFn: TypeAlias = Callable[[FloatArray, FloatArray, int], FloatArray]
