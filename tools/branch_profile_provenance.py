@@ -17,9 +17,10 @@ import importlib.metadata
 import importlib.util
 import json
 import platform
+import subprocess
 import sys
 from pathlib import Path
-from typing import TypedDict
+from typing import NotRequired, TypedDict, cast
 
 from coverage import CoverageData
 
@@ -47,6 +48,7 @@ class ProfileReceipt(TypedDict):
     database_sha256: str
     kernel: dict[str, str]
     fixture: dict[str, str]
+    additional_absent_profiles: NotRequired[list[dict[str, str]]]
 
 
 def sha256(path: Path) -> str:
@@ -123,7 +125,12 @@ def _installed_sources(root: Path) -> tuple[Path, dict[str, str]]:
     return package_root, sources
 
 
-def source_member(measured: str, package_root: Path, source_root: Path) -> str:
+def source_member(
+    measured: str,
+    package_root: Path,
+    source_root: Path,
+    additional_package_roots: tuple[Path, ...] = (),
+) -> str:
     """Name a measured file by its member path inside the package.
 
     A measured file is a member of the installed package or the same member in
@@ -133,15 +140,145 @@ def source_member(measured: str, package_root: Path, source_root: Path) -> str:
     A profile is recorded only after every checkout member has been found equal
     to its installed copy byte for byte, and the aggregate compares the
     checkout with the recorded hashes again, so both names identify one source.
-    Anything else is refused.
+    Explicit additional roots must have separately proven kernel absence and
+    identical complete package bytes. Anything else is refused.
     """
     path = Path(measured)
-    for base in (package_root, source_root):
+    for base in (package_root, source_root, *additional_package_roots):
         if path.is_relative_to(base):
             return path.relative_to(base).as_posix()
     raise ValueError(
         f"measured file is outside the installed package and its source: {measured}"
     )
+
+
+def additional_roots(receipt: ProfileReceipt) -> tuple[Path, ...]:
+    """Validate the recorded absence and byte-identity proof for child packages.
+
+    Parameters
+    ----------
+    receipt : ProfileReceipt
+        Main runtime identity and observations of separately installed children.
+
+    Returns
+    -------
+    tuple[Path, ...]
+        Explicit installed roots with matching source and dependency identities.
+
+    Raises
+    ------
+    ValueError
+        If an observation is malformed, mismatched or outside its environment.
+    """
+    profiles = receipt.get("additional_absent_profiles", [])
+    if not isinstance(profiles, list):
+        raise ValueError("additional absent profiles must be a list")
+    expected_digest = hashlib.sha256(
+        json.dumps(receipt["source_hashes"], sort_keys=True).encode()
+    ).hexdigest()
+    roots = []
+    keys = {
+        "executable",
+        "prefix",
+        "package_root",
+        "kernel_status",
+        "source_hashes_sha256",
+        "python",
+        "numpy",
+        "scipy",
+        "coverage",
+    }
+    for profile in profiles:
+        if (
+            not isinstance(profile, dict)
+            or set(profile) != keys
+            or not all(isinstance(value, str) for value in profile.values())
+            or profile["kernel_status"] != "absent"
+            or profile["source_hashes_sha256"] != expected_digest
+            or any(
+                profile[name] != receipt["environment"][name]
+                for name in ("python", "numpy", "scipy", "coverage")
+            )
+        ):
+            raise ValueError("additional installed profile has invalid provenance")
+        root = Path(profile["package_root"])
+        if not root.is_absolute() or not root.is_relative_to(profile["prefix"]):
+            raise ValueError("additional package is outside its installed environment")
+        if root in roots or root in (
+            Path(receipt["package_root"]),
+            Path(receipt["source_root"]),
+        ):
+            raise ValueError("additional package roots must be distinct")
+        roots.append(root)
+    return tuple(roots)
+
+
+def _observe_absent_package(python: Path, sources: dict[str, str]) -> dict[str, str]:
+    """Observe an isolated installed child and verify every package member's bytes."""
+    script = """
+import importlib.metadata as metadata, importlib.util, json, platform, sys
+from pathlib import Path
+import scpn_phase_orchestrator as package
+assert importlib.util.find_spec("spo_kernel") is None
+try:
+    metadata.distribution("spo-kernel")
+except metadata.PackageNotFoundError:
+    pass
+else:
+    raise AssertionError("kernel distribution remains installed")
+root = Path(package.__file__).resolve().parent
+root.relative_to(Path(sys.prefix).resolve())
+print(json.dumps(dict(executable=sys.executable, prefix=str(Path(sys.prefix).resolve()),
+    package_root=str(root), kernel_status="absent", python=platform.python_version(),
+    **{name: metadata.version(name) for name in ("numpy", "scipy", "coverage")})))
+"""
+    result = subprocess.run(
+        [str(python.absolute()), "-I", "-B", "-c", script],
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=60,
+    )
+    if result.returncode:
+        raise ValueError("additional installed profile did not prove kernel absence")
+    try:
+        observed: object = json.loads(result.stdout)
+    except json.JSONDecodeError as error:
+        raise ValueError(
+            "additional installed profile returned malformed provenance"
+        ) from error
+    if (
+        not isinstance(observed, dict)
+        or not all(
+            isinstance(key, str) and isinstance(value, str)
+            for key, value in observed.items()
+        )
+        or set(observed)
+        != {
+            "executable",
+            "prefix",
+            "package_root",
+            "kernel_status",
+            "python",
+            "numpy",
+            "scipy",
+            "coverage",
+        }
+    ):
+        raise ValueError("additional installed profile returned malformed provenance")
+    proof = cast(dict[str, str], observed)
+    base = Path(proof["package_root"])
+    actual = {
+        "scpn_phase_orchestrator/" + path.relative_to(base).as_posix(): sha256(path)
+        for path in base.rglob("*")
+        if path.is_file() and path.suffix != ".pyc" and "__pycache__" not in path.parts
+    }
+    if actual != sources:
+        raise ValueError("additional installed package source mismatch")
+    proof["source_hashes_sha256"] = hashlib.sha256(
+        json.dumps(sources, sort_keys=True).encode()
+    ).hexdigest()
+    return proof
 
 
 def _kernel_identity(profile: str) -> dict[str, str]:
@@ -235,11 +372,16 @@ def record_profile(
     output: Path,
     fixture_wheel: Path | None = None,
     before_install: Path | None = None,
+    absent_interpreters: tuple[Path, ...] = (),
 ) -> None:
     """Record an actual whole-package runtime and an existing branch database."""
     if profile not in PROFILES:
         raise ValueError(f"unknown required branch profile: {profile}")
     package_root, sources = _installed_sources(root)
+    additional = [
+        _observe_absent_package(python, sources) for python in absent_interpreters
+    ]
+    roots = tuple(Path(proof["package_root"]) for proof in additional)
     raw = CoverageData(basename=str(database))
     raw.read()
     if not raw.has_arcs() or not raw.measured_files():
@@ -247,10 +389,12 @@ def record_profile(
     source_root = root / "src/scpn_phase_orchestrator"
     for name in raw.measured_files():
         key = "scpn_phase_orchestrator/" + source_member(
-            name, package_root, source_root
+            name, package_root, source_root, roots
         )
         if key not in sources:
             raise ValueError(f"database measured unbound source: {name}")
+        if sha256(Path(name)) != sources[key]:
+            raise ValueError(f"database measured changed source: {name}")
     inputs = source_inputs(root)
     kernel = _kernel_identity(profile)
     fixture: dict[str, str] = {}
@@ -300,6 +444,8 @@ def record_profile(
         "database_sha256": sha256(database),
         "kernel": kernel,
         "fixture": fixture,
+        "additional_absent_profiles": additional,
     }
+    additional_roots(receipt)
     license_artifact(database)
     dump_json(output, receipt)

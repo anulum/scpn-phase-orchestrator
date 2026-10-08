@@ -69,7 +69,7 @@
       "measurement_arcs": []
     },
     "src/scpn_phase_orchestrator/autotune/sindy.py": {
-      "sha256": "9835d14740ff39388f66f8750089a67ce708bc0452495c758333735f762bfb80",
+      "sha256": "567a0e3a0ae14cc9cbdd173ca7b7b28ef6a8d36908e8cc5362bfa079368960ef",
       "statements": 151,
       "branches": 62,
       "excluded_lines": [
@@ -91,8 +91,8 @@
       "measurement_arcs": []
     },
     "tests/test_sindy.py": {
-      "sha256": "7e541d15e9d9455f4fe26d9c61e81d136bd41609e45a797f01ef89cc40f66886",
-      "statements": 110,
+      "sha256": "8e53a97d95c9e00265e292bea3ee217dd93395dd194cb5fa40dd5063190f5f45",
+      "statements": 121,
       "branches": 14,
       "excluded_lines": [],
       "measurement_exclusions": [],
@@ -101,12 +101,12 @@
   },
   "native": {
     "path": "spo-kernel/crates/spo-engine/src/sindy.rs",
-    "sha256": "c625240fa98c8c9b1d88b78ce4f35eb7caefceec732e4dc115881eb2a48135d0",
+    "sha256": "a5610d72cb3592ecc403619027b6a4307ceeaf9d9cbe96c94efb73d7f10c9d96",
     "lock_sha256": "f47ff107a3074f6d74bb14d3f8573eba7005708d5daa652bfff6ab35a05fc854",
     "nalgebra": "0.35.0",
     "residual_regions": [
       [
-        207,
+        216,
         59,
         0,
         true,
@@ -114,7 +114,7 @@
         false
       ],
       [
-        229,
+        238,
         24,
         0,
         true,
@@ -122,7 +122,7 @@
         false
       ],
       [
-        229,
+        238,
         85,
         0,
         true,
@@ -130,7 +130,7 @@
         false
       ],
       [
-        233,
+        242,
         26,
         0,
         true,
@@ -138,7 +138,7 @@
         false
       ],
       [
-        233,
+        242,
         70,
         0,
         true,
@@ -146,7 +146,7 @@
         false
       ],
       [
-        233,
+        242,
         79,
         0,
         true,
@@ -155,9 +155,9 @@
       ]
     ],
     "solve_error_invariant": "Dynamic DMatrix SVD with both singular-vector sets retained and a non-negative cutoff cannot return a solve error. This source-bound exclusion lapses on source or locked-dependency change.",
-    "convergence_debt": "Bounded SVD convergence has no public finite reproducer or impossibility proof. Its closure at line 229 and the associated error propagation at line 207 remain uncovered; the guard and 100000-iteration limit are retained.",
-    "branch_records": 22,
-    "segment_records": 908
+    "convergence_debt": "Bounded SVD convergence has no public finite reproducer or impossibility proof. Its closure at line 238 and the associated error propagation at line 216 remain uncovered; the guard and 100000-iteration limit are retained.",
+    "branch_records": 23,
+    "segment_records": 929
   },
   "measurement_exclusion_reason": "Eight original-owner observer statements execute while Python tracing is suspended. Genuine native and kernel-absent benchmark and CSV processes also left them untraced under coverage.py 7.16.1 sysmon on Python 3.12.3. A report that records them receives no exclusion credit."
 }

@@ -28,7 +28,7 @@ use std::f64::consts::{PI, TAU};
 /// identify physical angular velocity rather than its sampled alias.
 ///
 /// Sequential thresholded least squares uses a rectangular SVD, retaining
-/// singular values larger than machine epsilon times the largest value.
+/// singular values above epsilon * max(rows, columns) * the largest value.
 /// Rank-deficient libraries receive a minimum-norm solution; their individual
 /// coupling coefficients are not identifiable from the trajectory alone.
 ///
@@ -62,7 +62,14 @@ pub fn sindy_fit(
         |(i, res_row)| -> Result<(), String> {
             let (library, target) = build_library(phases, &theta_dot, n_osc, t_eff, i);
             let xi = stlsq_node(&library, &target, t_eff, n_osc, threshold, max_iter)?;
-            res_row[..n_osc].copy_from_slice(&xi[..n_osc]);
+            res_row[i] = xi[0];
+            let mut feature = 1;
+            for (j, value) in res_row.iter_mut().enumerate() {
+                if j != i {
+                    *value = xi[feature];
+                    feature += 1;
+                }
+            }
             Ok(())
         },
     )?;
@@ -157,12 +164,14 @@ fn build_library(
 
     for tt in 0..t_eff {
         target[tt] = theta_dot[tt * n_osc + i];
-        library[tt * n_osc + i] = 1.0; // constant feature
+        library[tt * n_osc] = 1.0; // match the Python constant-first library
+        let mut feature = 1;
         for j in 0..n_osc {
             if j != i {
                 let phi_j = phases[tt * n_osc + j];
                 let phi_i = phases[tt * n_osc + i];
-                library[tt * n_osc + j] = (phi_j - phi_i).sin();
+                library[tt * n_osc + feature] = (phi_j - phi_i).sin();
+                feature += 1;
             }
         }
     }
@@ -227,7 +236,7 @@ fn lstsq(a: &[f64], b: &[f64], m: usize, n: usize) -> Result<Vec<f64>, String> {
     let target = DVector::from_iterator(m, b.iter().map(|value| value / scale));
     let decomposition = SVD::try_new(matrix, true, true, 5.0 * f64::EPSILON, 100_000)
         .ok_or_else(|| "Phase-SINDy least-squares SVD did not converge".to_string())?;
-    let cutoff = f64::EPSILON * decomposition.singular_values[0];
+    let cutoff = f64::EPSILON * m.max(n) as f64 * decomposition.singular_values[0];
     let coefficients = decomposition
         .solve(&target, cutoff)
         .map_err(|error| format!("Phase-SINDy least-squares failed: {error}"))?;
@@ -359,17 +368,19 @@ mod tests {
 
     #[test]
     fn test_dependent_features_have_closed_form_minimum_norm_solution() {
-        let phases: Vec<f64> = (0..40)
-            .flat_map(|time| [time as f64 * 0.01, time as f64 * 0.01 + 0.4])
-            .collect();
-        let result = sindy_fit(&phases, 2, 40, 0.01, 0.0, 3).expect("finite rank-deficient fit");
-        let sine = 0.4_f64.sin();
-        let omega = 1.0 / (1.0 + sine * sine);
-        for (actual, expected) in result
-            .iter()
-            .zip([omega, sine * omega, -sine * omega, omega])
-        {
-            assert!((actual - expected).abs() < 1e-12, "{actual} != {expected}");
+        for (dt, offset) in [(0.01, 0.4), (0.015625, 0.5)] {
+            let phases: Vec<f64> = (0..40)
+                .flat_map(|time| [time as f64 * dt, time as f64 * dt + offset])
+                .collect();
+            let result = sindy_fit(&phases, 2, 40, dt, 0.0, 3).expect("finite rank-deficient fit");
+            let sine = f64::sin(offset);
+            let omega = 1.0 / (1.0 + sine * sine);
+            for (actual, expected) in result
+                .iter()
+                .zip([omega, sine * omega, -sine * omega, omega])
+            {
+                assert!((actual - expected).abs() < 1e-12, "{actual} != {expected}");
+            }
         }
     }
 

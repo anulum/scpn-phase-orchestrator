@@ -114,8 +114,8 @@ class PhaseSINDy:
     -----
     The installed Rust extension is used when available; otherwise SciPy
     supplies the Python implementation. Both solve rectangular least squares
-    with a relative singular-value cutoff of machine epsilon. Dependent
-    features yield a minimum-norm solution, not identifiable physical couplings.
+    with a relative cutoff of machine epsilon times the larger matrix dimension.
+    Dependent features yield a minimum-norm solution, not identifiable couplings.
     Sampling must resolve phase increments below half a turn; unwrapping cannot
     reconstruct physical rotations lost to sampling aliasing.
     """
@@ -282,7 +282,11 @@ class PhaseSINDy:
 
             # 2. STLSQ for this node
             xi = _coerce_lstsq_coefficients(
-                lstsq(Theta, theta_dot[:, i], cond=np.finfo(np.float64).eps)[0],
+                lstsq(
+                    Theta,
+                    theta_dot[:, i],
+                    cond=np.finfo(np.float64).eps * max(Theta.shape),
+                )[0],
                 Theta.shape[1],
             )
 
@@ -295,7 +299,7 @@ class PhaseSINDy:
                         lstsq(
                             Theta[:, big_indices],
                             theta_dot[:, i],
-                            cond=np.finfo(np.float64).eps,
+                            cond=np.finfo(np.float64).eps * max(Theta.shape),
                         )[0],
                         int(np.count_nonzero(big_indices)),
                     )

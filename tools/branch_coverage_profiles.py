@@ -25,6 +25,7 @@ from tools.branch_profile_provenance import (
     FIXTURE_MARKER,
     PROFILES,
     ProfileReceipt,
+    additional_roots,
     dump_json,
     license_artifact,
     prove_absence,
@@ -72,9 +73,11 @@ def _read_receipt(directory: Path, profile: str, revision: str) -> ProfileReceip
         raise ValueError(f"{profile}: missing, empty or statement-only database")
     package_root = Path(receipt["package_root"])
     source_root = Path(receipt["source_root"])
+    extra_roots = additional_roots(receipt)
     for name in raw.measured_files():
         if (
-            "scpn_phase_orchestrator/" + source_member(name, package_root, source_root)
+            "scpn_phase_orchestrator/"
+            + source_member(name, package_root, source_root, extra_roots)
             not in receipt["source_hashes"]
         ):
             raise ValueError(f"{profile}: unbound measured source")
@@ -169,7 +172,10 @@ def _combine(
         raw.read()
         for measured in raw.measured_files():
             relative = source_member(
-                measured, Path(receipt["package_root"]), Path(receipt["source_root"])
+                measured,
+                Path(receipt["package_root"]),
+                Path(receipt["source_root"]),
+                additional_roots(receipt),
             )
             canonical = str(root / "src/scpn_phase_orchestrator" / relative)
             expected.setdefault(canonical, set()).update(raw.arcs(measured) or [])
@@ -277,6 +283,11 @@ def _aggregate(
             [str(root / "src/scpn_phase_orchestrator")]
             + [receipts[profile]["package_root"] for profile in PROFILES]
             + [receipts[profile]["source_root"] for profile in PROFILES]
+            + [
+                str(path)
+                for profile in PROFILES
+                for path in additional_roots(receipts[profile])
+            ]
         )
     )
     config.write_text(
@@ -388,6 +399,7 @@ def main(arguments: list[str] | None = None) -> int:
     record.add_argument("--output", type=Path, required=True)
     record.add_argument("--fixture-wheel", type=Path)
     record.add_argument("--before-install", type=Path)
+    record.add_argument("--absent-interpreter", type=Path, action="append", default=[])
     combine = commands.add_parser("combine")
     combine.add_argument("--root", type=Path, default=Path.cwd())
     combine.add_argument("--revision", required=True)
@@ -407,6 +419,7 @@ def main(arguments: list[str] | None = None) -> int:
                 output=args.output,
                 fixture_wheel=args.fixture_wheel,
                 before_install=args.before_install,
+                absent_interpreters=tuple(args.absent_interpreter),
             )
         else:
             combine_profiles(
