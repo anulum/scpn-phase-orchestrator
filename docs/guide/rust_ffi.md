@@ -181,7 +181,7 @@ See [geometry constraints](../specs/geometry_constraints.md) and
 | `SplittingEngine` | `splitting_run_rust` | Strang split `run()` |
 | `te_adapt_coupling` | `te_adapt_coupling_rust` | TE-directed coupling update |
 | `UniversalPrior.log_probability` | `prior_log_probability_rust` | Bayesian log-density |
-| `load_hcp_connectome` | `load_hcp_connectome_rust` | synthetic connectome generation |
+| `load_hcp_connectome` | `load_hcp_connectome_rust` | checked synthetic generation; [contract and current measurements](../reference/api/coupling_connectome.md) |
 | `GeometryCarrier.decode` | `carrier_decode_rust` | softplus(A·z) decode |
 | `compute_ethical_cost` | `compute_ethical_cost_rust` | SEC score and weighted residual diagnostic; [contract and current measurements](../reference/api/ssgf_ethical.md) |
 | `classify_sleep_stage` | `classify_sleep_stage_rust` | stage classification, explicit `backend="rust"` |
@@ -190,6 +190,17 @@ See [geometry constraints](../specs/geometry_constraints.md) and
 | `PhaseSINDy.fit` | `sindy_fit_rust` | STLSQ sparse regression |
 | `estimate_coupling` | (disabled) | normal equations (3x slower than LAPACK) |
 | `extract_phases` | (disabled) | naive DFT (60x slower than SciPy FFT) |
+
+### Connectome boundary
+
+The original two-argument builtin returns flat row-major float64 weights. It
+admits genuine integer metadata, checks square and signed-byte capacity before
+allocation, and translates reservation failure to `ValueError`. Public Python
+reshapes and validates the original result, then returns an independent copy.
+Its 128-entry cache makes warm copies distinct from cold generation. Rust LCG
+uniform noise differs from the Python PCG64 Gaussian law; repeatability is per
+owner. Public wrapper measurements include validation and marshalling and do
+not establish a native-core speed-up.
 
 ### Symbolic input boundaries
 

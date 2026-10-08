@@ -157,12 +157,18 @@ The intended use is:
 
 ## Synthetic HCP Connectome Generation
 
-Generates neuroscience-realistic coupling matrices inspired by the
-Human Connectome Project:
+Generates synthetic structural weights for algorithm development:
 
 - Intra-hemispheric exponential distance decay
 - Inter-hemispheric corpus callosum pattern
-- Default Mode Network hub structure
+- Repeated hub-fraction boosts, including multiplicities at small counts
+
+The optional original neurolib HCP provider returns real subject-average
+weights in cortical AAL2/LRLR ordering. Both loaders validate source types,
+storage and structural weights; synthetic output has an exact zero diagonal,
+and the HCP ingress clears the admitted provider diagonal. Public copies are
+independent. Python and Rust use different seeded noise laws. See the
+[complete contract and current measurements](../reference/api/coupling_connectome.md).
 
 ::: scpn_phase_orchestrator.coupling.connectome
 

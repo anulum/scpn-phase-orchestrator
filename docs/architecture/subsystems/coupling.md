@@ -1,7 +1,6 @@
 # Subsystem: `coupling` — K_nm construction, adaptation, analysis
 
-Builds and adapts the coupling matrix that drives the integrator. 27 files,
-~5.4k LOC.
+Builds and adapts the coupling matrix that drives the integrator.
 
 ## Inputs
 
@@ -41,6 +40,12 @@ The HCP connectome seam applies the same source-aware rejection to optional
 Rust and neurolib matrices before publication, then replays shape, finiteness,
 non-negativity, symmetry, and zero-diagonal invariants. Unlike the builder,
 invalid connectome backend output fails closed rather than changing data source.
+Synthetic counts are checked for addressable dense storage before dispatch;
+the native boundary also checks storage and allocation. Exact zero self-edges
+are required for synthetic output. Optional neurolib ingress reads the original
+AAL2/LRLR subject average and clears its admitted diagonal. Cached synthetic
+results are copied for each public caller. Python/Rust seeded noise laws differ;
+see the [connectome contract](../../reference/api/coupling_connectome.md).
 `coupling_est` is intentionally Python-only for small-N least-squares review.
 `plasticity` is also intentionally Python-only at the public API boundary:
 `spo-engine/src/plasticity.rs` includes a native model with decay and `dt`, while

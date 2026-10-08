@@ -51,6 +51,8 @@ jobs:
         run: make chimera-quality PYTHON=python
       - name: Check ethical-cost source, owning consumers and actual comparisons
         run: make ethical-cost-quality PYTHON=python
+      - name: Check connectome source, original consumers and installed comparison
+        run: make connectome-quality PYTHON=python
       - name: Qualify the distinct actual JAX chimera model
         run: python -m pytest tests/test_nn_chimera.py --strict-markers --tb=short
       - name: Run tests (with coverage on 3.12)
@@ -213,6 +215,13 @@ jobs:
         env:
           SPO_REQUIRED_BASIN_BACKENDS: "python,rust"
         run: .venv/bin/python -m pytest tests/test_basin_bifurcation_real_runtime.py tests/test_bifurcation_dispatch.py tests/test_basin_stability_benchmark.py --strict-markers --tb=short
+      - name: Prepare genuine installed connectome profiles for the global branch gate
+        run: |
+          python -m venv .connectome-python-coverage
+          .connectome-python-coverage/bin/python -m pip install --require-hashes --no-deps -r requirements/connectome-runtime-lock.txt
+          .connectome-python-coverage/bin/python -m pip install --no-index --no-deps package-wheels/*.whl
+          .venv/bin/python -m pip install --require-hashes --no-deps -r requirements/connectome-hcp-lock.txt
+          .connectome-python-coverage/bin/python -m pip check
       - name: Measure actual native public contracts
         run: |
           . .venv/bin/activate
@@ -244,6 +253,14 @@ jobs:
           pytest tests/test_chimera.py::test_local_order_parameter_uses_backend_when_available \
             native-tests/test_chimera_boundary.py tests/test_nn_chimera.py \
             --strict-markers --tb=short -p no:cacheprovider \
+            --cov=scpn_phase_orchestrator --cov-branch --cov-append --cov-report= --cov-fail-under=0
+          export SPO_CONNECTOME_PYTHON_PROFILE="$PWD/.connectome-python-coverage/bin/python"
+          export SPO_CONNECTOME_RUST_PROFILE="$PWD/.venv/bin/python"
+          pytest tests/test_connectome.py tests/test_connectome_python_fallback.py \
+            tests/test_connectome_validation_guards.py tests/test_connectome_measurement_inputs.py \
+            tests/test_connectome_real_runtime.py tests/test_connectome_benchmark.py \
+            native-tests/test_connectome_runtime_profiles.py \
+            -o addopts= --strict-markers --tb=short -p no:cacheprovider \
             --cov=scpn_phase_orchestrator --cov-branch --cov-append --cov-report= --cov-fail-under=0
           python -m tools.branch_coverage_profiles record \
             --profile native --revision "$GITHUB_SHA" --database "$COVERAGE_FILE" \

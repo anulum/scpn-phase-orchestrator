@@ -202,3 +202,18 @@ ethical-cost-quality:  ## Check ethical-cost owners, original consumers and meas
 	$(PYTHON) -m ruff check --no-cache --isolated --select E,F,W,I,UP,B,SIM,N,C4,RET,PTH,D --ignore N802,N803,N806,D105 --config 'lint.pydocstyle.convention="numpy"' $(ETHICAL_COST_QUALITY_FILES)
 	$(PYTHON) -m ruff format --no-cache --check $(ETHICAL_COST_QUALITY_FILES)
 	$(PYTHON) -m mypy --cache-dir=/dev/null --config-file tools/ethical_cost_mypy.ini $(ETHICAL_COST_QUALITY_FILES)
+
+CONNECTOME_QUALITY_FILES := src/scpn_phase_orchestrator/coupling/connectome.py \
+    src/scpn_phase_orchestrator/coupling/_connectome_validation.py \
+    tests/test_connectome.py tests/test_connectome_python_fallback.py \
+    tests/test_connectome_validation_guards.py tests/test_connectome_measurement_inputs.py \
+    tests/test_connectome_real_runtime.py tests/test_connectome_benchmark.py \
+    native-tests/test_connectome_runtime_profiles.py tests/test_ci_workflow_modularity.py \
+    benchmarks/connectome_benchmark.py benchmarks/connectome_reference.py
+
+.PHONY: connectome-quality
+connectome-quality:  ## Check connectome owners, original consumers and installed comparisons
+	$(PYTHON) -m ruff check --no-cache $(CONNECTOME_QUALITY_FILES)
+	$(PYTHON) -m ruff check --no-cache --isolated --select D --config 'lint.pydocstyle.convention="numpy"' $(CONNECTOME_QUALITY_FILES)
+	$(PYTHON) -m ruff format --no-cache --check $(CONNECTOME_QUALITY_FILES)
+	$(PYTHON) -m mypy --strict --cache-dir=/dev/null --config-file tools/connectome_mypy.ini $(CONNECTOME_QUALITY_FILES)

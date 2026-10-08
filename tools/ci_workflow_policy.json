@@ -41,7 +41,9 @@
         "mojo-backend",
         "hierarchy-transport-smoke",
         "rust-check",
-        "ffi-test"
+        "ffi-test",
+        "ethical-cost-runtime",
+        "connectome-runtime"
       ]
     },
     {
@@ -106,6 +108,8 @@
     "security",
     "rust-check",
     "ffi-test",
+    "ethical-cost-runtime",
+    "connectome-runtime",
     "cargo-audit",
     "cargo-deny",
     "rust-miri",

@@ -1,18 +1,18 @@
 {
   "SPDX-License-Identifier": "AGPL-3.0-or-later",
   "counts": {
-    "core_engine_modules": 362,
+    "core_engine_modules": 363,
     "domainpacks": 36,
     "github_workflows": 19,
     "integration_modules": 32,
     "optional_extras": 24,
     "public_api_exports": 29,
     "public_documentation_pages": 244,
-    "python_package_modules": 764,
+    "python_package_modules": 765,
     "research_experimental_modules": 205,
     "runtime_serving_modules": 160,
-    "rust_kernel_files": 128,
-    "test_files": 1101
+    "rust_kernel_files": 129,
+    "test_files": 1103
   },
   "documentation": {
     "public_pages": [
@@ -431,6 +431,7 @@
       "src/scpn_phase_orchestrator/coupling/_attnres_julia.py",
       "src/scpn_phase_orchestrator/coupling/_attnres_mojo.py",
       "src/scpn_phase_orchestrator/coupling/_attnres_validation.py",
+      "src/scpn_phase_orchestrator/coupling/_connectome_validation.py",
       "src/scpn_phase_orchestrator/coupling/_hodge_go.py",
       "src/scpn_phase_orchestrator/coupling/_hodge_julia.py",
       "src/scpn_phase_orchestrator/coupling/_hodge_mojo.py",
@@ -1286,6 +1287,7 @@
     "src/scpn_phase_orchestrator/coupling/_attnres_julia.py",
     "src/scpn_phase_orchestrator/coupling/_attnres_mojo.py",
     "src/scpn_phase_orchestrator/coupling/_attnres_validation.py",
+    "src/scpn_phase_orchestrator/coupling/_connectome_validation.py",
     "src/scpn_phase_orchestrator/coupling/_hodge_go.py",
     "src/scpn_phase_orchestrator/coupling/_hodge_julia.py",
     "src/scpn_phase_orchestrator/coupling/_hodge_mojo.py",
@@ -2168,8 +2170,10 @@
       "tests/test_competitor_ar1_kendall.py",
       "tests/test_conformal_alarm.py",
       "tests/test_connectome.py",
+      "tests/test_connectome_benchmark.py",
       "tests/test_connectome_measurement_inputs.py",
       "tests/test_connectome_python_fallback.py",
+      "tests/test_connectome_real_runtime.py",
       "tests/test_connectome_validation_guards.py",
       "tests/test_container_entrypoint.py",
       "tests/test_control_barrier.py",
@@ -3136,6 +3140,7 @@
     "spo-kernel/crates/spo-ffi/src/adaptive_coupling.rs",
     "spo-kernel/crates/spo-ffi/src/call_arguments.rs",
     "spo-kernel/crates/spo-ffi/src/chimera_boundary.rs",
+    "spo-kernel/crates/spo-ffi/src/connectome_boundary.rs",
     "spo-kernel/crates/spo-ffi/src/coupling_builder.rs",
     "spo-kernel/crates/spo-ffi/src/delayed_boundary.rs",
     "spo-kernel/crates/spo-ffi/src/ei_balance_boundary.rs",

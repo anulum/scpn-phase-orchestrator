@@ -1,251 +1,96 @@
-# Synthetic HCP-Inspired Connectome
+# Synthetic and optional HCP connectomes
 
-## 1. Mathematical Formalism
+`load_hcp_connectome(n_regions, seed=42)` produces synthetic structural weights
+for algorithm development. `load_neurolib_hcp(n_regions=80)` reads the optional
+neurolib HCP dataset. Both return an independent writable C-contiguous
+`float64` square matrix with finite non-negative symmetric weights and exact
+zero diagonal. Supply that matrix explicitly to an integrator or monitor.
 
-### Structural Connectivity Matrix
+The synthetic constants and region-index distances are heuristics. They are
+not measured fibre counts, geodesic cortical distances or calibrated anatomical
+coordinates. The background references below explain the architectural motifs;
+they do not establish these numerical parameters or biological validity.
 
-The `load_hcp_connectome` function generates a synthetic coupling
-matrix $W \in \mathbb{R}^{N \times N}$ that mimics the macroscale
-structural connectivity of the human brain. The matrix is constructed
-from three architectural components:
+## Public contracts
 
-### Component 1: Intra-Hemispheric Coupling
+| Loader | Region count | Seed | Data and dependencies |
+|---|---|---|---|
+| `load_hcp_connectome` | Genuine non-boolean integer, at least 2; dense storage must be addressable | Genuine non-boolean integer in `0..2**64-1`, default 42 | NumPy; original Rust builtin when available |
+| `load_neurolib_hcp` | Genuine non-boolean integer in `2..80`, default 80 | No seed | Original neurolib dataset and its dependencies |
 
-For each hemisphere (left: indices $[0, N/2)$, right: $[N/2, N)$),
-the coupling between regions $i$ and $j$ within the same hemisphere
-follows exponential distance decay:
+NumPy integer scalars are admitted. Boolean, text, float, complex and temporal
+metadata aliases are refused before allocation or optional dataset I/O. Count
+or seed type errors raise `TypeError`; invalid ranges, dense-storage overflow,
+allocation refusal and invalid structural weights raise `ValueError`. Missing
+neurolib raises `ImportError`. Invalid native output is refused without changing
+the data source.
 
-$$W_{ij}^{\text{intra}} = K_{\text{intra}} \cdot e^{-\beta \cdot |i - j|} + \epsilon_{ij}$$
+For synthetic generation, `8 * n_regions**2` must fit the platform's signed
+addressable byte range. This check does not certify available RAM. Python
+allocation failures and Rust reservation failures become a public `ValueError`.
+Validation and intermediate arrays consume additional memory. Up to 128
+synthetic matrices are cached across actual generator/count/seed keys; every
+public call returns a separate copy. Warm-cache copies and cold generation
+have different costs.
 
-where:
-- $K_{\text{intra}} = 0.5$ — intra-hemispheric base strength
-- $\beta = 0.3$ — spatial decay rate
-- $\epsilon_{ij} \sim \mathcal{N}(0, 0.02)$ — biological noise,
-  clamped to $\geq 0$
+Producer types are checked before float conversion: boolean, complex,
+numeric-string and temporal aliases are refused. Finite real numeric object
+storage remains compatible. Shape, finiteness, non-negativity and symmetry
+(`atol=1e-12`, `rtol=0`) are checked. Synthetic output must already have an
+exact zero diagonal, including refusal of subnormal self-edges. The HCP loader
+admits the provider matrix first, copies its requested slice, then clears the
+provider diagonal before final structural validation.
 
-The exponential decay models the well-established principle that
-structural connectivity decreases with geodesic cortical distance
-(Hagmann et al. 2008; Ercsey-Ravasz et al. 2013).
+## Synthetic construction
 
-### Component 2: Inter-Hemispheric (Callosal) Connections
+Let `h = floor(N/2)`. The left half contains `h` nodes; the right half contains
+`N-h`. Region indices are synthetic coordinates.
 
-The corpus callosum connects homotopic regions (same functional
-area in opposite hemispheres) with the strongest fibres:
+Within each half, each directed off-diagonal weight starts as
 
-$$W_{ij}^{\text{callosal}} = K_{\text{inter}} \cdot e^{-0.5 \cdot |\text{offset}|}$$
+$$A_{ij} = \max(0,\;0.5e^{-0.3|i-j|}+\epsilon_{ij}).$$
 
-where:
-- $K_{\text{inter}} = 0.15$ — inter-hemispheric base strength
-- offset is the displacement from the homotopic position
-- spread = $\min(3, N/2)$ — maximum callosal range
+Python draws PCG64 Gaussian perturbations with standard deviation `0.02` for
+each complete block, including diagonal draws that are subsequently cleared.
+Rust advances a wrapping 64-bit LCG for off-diagonal entries only and maps its
+upper 31 bits to a uniform perturbation in `[-0.02, 0.02)`. Each owner is seeded
+and repeatable. Their noise distributions and draw schedules differ, so the
+same seed does not imply elementwise Python/Rust equality.
 
-Homotopic connections (offset = 0) have full strength;
-non-homotopic callosal fibres decay with offset distance.
+For left index `a` and right-local index `b < h`, callosal weights are
 
-### Component 3: Default Mode Network Hubs
+$$A_{a,h+b}=A_{h+b,a}=0.15e^{-0.5|a-b|},$$
 
-The default mode network (DMN) consists of interconnected hub
-regions that are more strongly coupled than their cortical-distance
-neighbours would predict:
+when `|a-b| <= min(3,h)`; remaining cross-half entries start at zero. For odd
+counts the extra right node has intra-half edges rather than a homotopic pair.
 
-$$W_{ij}^{\text{DMN}} = \begin{cases} W_{ij} + K_{\text{hub}} & \text{if } i, j \in \text{DMN} \text{ and } i \neq j \\ W_{ij} & \text{otherwise} \end{cases}$$
+Hub fractions are `[0.15, 0.45, 0.65, 0.85]`. Their left indices are
+`floor(f*h)` and their right indices add `h`. Repeated indices retain their
+historical multiplicity. If `m_i` counts occurrences of index `i`, each
+unequal hub pair receives `0.3*m_i*m_j`. At `N=2`, each node occurs four times,
+so both off-diagonal entries are exactly `0.15 + 16*0.3 = 4.95`, independently
+of the seed. These fractions are synthetic placements rather than atlas labels.
 
-where $K_{\text{hub}} = 0.3$ and the DMN nodes are placed at
-cortical fractions $\{0.15, 0.45, 0.65, 0.85\}$ of each hemisphere,
-representing approximately:
-- 0.15: medial prefrontal cortex (mPFC)
-- 0.45: posterior cingulate cortex / precuneus (PCC)
-- 0.65: lateral parietal cortex
-- 0.85: medial temporal lobe (MTL)
+Finally, average the two directions, clear the diagonal and clamp weights to
+zero. No spectral-gap, connectivity, synchronisation-regime or brain-state
+outcome is guaranteed for arbitrary sizes and seeds.
 
-### Final Assembly
+## Original neurolib HCP ingress
 
-The raw matrix is symmetrised and cleaned:
+The qualified neurolib 0.6.2 `Dataset("hcp")` provider reads its packaged HCP
+subject matrices. Its source uses the AAL2/LRLR ordering, removes designated
+subcortical indices from the original 94-region arrays, normalises each subject
+by its own maximum and averages the seven subject structural matrices to
+80 cortical regions. `load_neurolib_hcp(k)` returns the top-left `k`-region
+slice in that existing ordering; it does not select or fit another parcellation.
 
-$$W = \frac{W + W^T}{2}, \quad W_{ii} = 0, \quad W_{ij} \geq 0$$
+The synthetic left/right block ordering and the real provider ordering differ.
+Do not interpret a top-left slice or a synthetic half as an anatomical selection
+in the other dataset. No clinical or physiological calibration follows from
+loading either matrix. Review the upstream dataset terms before redistributing
+its assets; this package provides the loader, not a copied dataset.
 
-This ensures undirected, non-negative coupling with no self-loops.
-
-### Spectral Properties
-
-The resulting matrix has characteristic spectral structure:
-- $\lambda_2(L(W)) > 0$ (connected graph)
-- Clear spectral gap between $\lambda_2$ and $\lambda_3$ when
-  hemispheric structure is present
-- DMN hubs appear as high-degree nodes in the degree distribution
-
----
-
-## 2. Theoretical Context
-
-### Why Synthetic Rather Than Real Data?
-
-Real HCP data (Van Essen et al. 2013) requires:
-1. Large download (~10 GB per subject for diffusion MRI)
-2. Preprocessing pipeline (FreeSurfer + MRtrix3 tractography)
-3. Parcellation-dependent matrix dimensions
-4. Data use agreements
-
-The synthetic generator provides:
-- **Zero external dependencies** — no downloads, no licenses
-- **Arbitrary size** — any $N$, not locked to parcellation atlas
-- **Deterministic** — same seed → same matrix (reproducible tests)
-- **Structurally realistic** — preserves the key architectural
-  principles that affect synchronisation dynamics
-
-### Neuroanatomical Basis
-
-The three-component architecture is grounded in:
-
-1. **Exponential distance decay** — Ercsey-Ravasz et al. (2013)
-   showed that macaque cortical connectivity decays exponentially
-   with inter-areal distance. This has been confirmed in human DTI
-   tractography (Hagmann et al. 2008).
-
-2. **Callosal homotopic bias** — Jarbo et al. (2012) demonstrated
-   that corpus callosum fibres preferentially connect mirror
-   regions across hemispheres. This homotopic bias is the strongest
-   inter-hemispheric connectivity pattern.
-
-3. **DMN hub structure** — The default mode network (Raichle et al.
-   2001; Buckner et al. 2008) consists of hub regions with
-   disproportionately strong interconnections. These hubs are critical
-   for understanding resting-state dynamics and consciousness
-   theories (Tononi & Koch 2015).
-
-### Historical Context
-
-- **Hagmann, P. et al. (2008):** First comprehensive mapping of the
-  human structural connectome using diffusion spectrum imaging.
-  Identified exponential distance-decay as the primary connectivity
-  principle.
-- **Van Essen, D. C. et al. (2013):** The Human Connectome Project —
-  1200 subjects, multimodal imaging, publicly available.
-- **Cakan, C. & Obermayer, K. (2021):** neurolib — Python framework
-  for whole-brain simulation with real HCP connectivity.
-  Used the 80-region Desikan-Killiany parcellation.
-- **Ercsey-Ravasz, M. et al. (2013):** Quantified exponential
-  distance rule in macaque cortex.
-- **Raichle, M. E. et al. (2001):** Discovery of the default mode
-  network as a coherent resting-state network.
-
-### Comparison: Synthetic vs Real HCP
-
-| Property | Synthetic | Real HCP (neurolib) |
-|----------|-----------|---------------------|
-| Size | Any $N \geq 2$ | Fixed 80 regions |
-| Dependencies | None | neurolib + data |
-| Deterministic | Yes (seeded) | Fixed (subject average) |
-| Hemispheric structure | Parametric | Anatomical |
-| DMN hubs | At fixed fractions | At parcellation regions |
-| Biological noise | Gaussian | Subject variability |
-| Suitable for | Algorithm testing | Realistic simulation |
-
-The `load_neurolib_hcp` function provides access to the real HCP
-data (80 regions, Desikan-Killiany atlas) when neurolib is installed.
-
----
-
-## 3. Pipeline Position
-
-```
- Domain: neuroscience (EEG, fMRI, MEG)
-                      │
-                      ↓
- ┌── load_hcp_connectome(n_regions, seed) ────────┐
- │                                                 │
- │  Generates: symmetric (N, N) coupling matrix   │
- │  Components: intra-hemi + callosal + DMN hubs  │
- │  Rust path: deterministic native generation    │
- │                                                 │
- └──────────────────┬──────────────────────────────┘
-                    │
-                    ↓
-         W = coupling matrix
-                    │
-                    ↓
-         UPDEEngine.step(phases, omegas, W, ζ, ψ, α)
-                    │
-                    ↓
-         compute_order_parameter(phases) → R, ψ
-                    │
-                    ↓
-         Monitor / Supervisor / SSGF geometry control
-```
-
-### Alternative: Real HCP Data
-
-```
- load_neurolib_hcp(n_regions=80)
-            │
-            ↓
- Real structural connectivity (80 × 80)
-            │
-            ↓
- Same downstream pipeline
-```
-
-### Input Contracts
-
-**load_hcp_connectome:**
-
-| Parameter | Type | Range | Default | Meaning |
-|-----------|------|-------|---------|---------|
-| `n_regions` | `int` | $\geq 2$; booleans rejected | — | Number of cortical regions |
-| `seed` | `int` | unsigned 64-bit range; booleans rejected | 42 | Random seed for noise |
-
-**load_neurolib_hcp:**
-
-| Parameter | Type | Range | Default | Meaning |
-|-----------|------|-------|---------|---------|
-| `n_regions` | `int` | $[2, 80]$; booleans rejected | 80 | Regions to return |
-
-### Output Contract
-
-| Field | Type | Shape | Constraints |
-|-------|------|-------|-------------|
-| (return) | `NDArray[float64]` | `(N, N)` | Symmetric, $\geq 0$, diagonal = 0 |
-
-Both Python and optional Rust-backed paths are validated at the public Python
-boundary before returning. Invalid optional-backend or neurolib matrices fail
-closed if they are non-finite, asymmetric, negative, incorrectly shaped, or
-contain self-coupling on the diagonal.
-
----
-
-## 4. Features
-
-- **Three-component architecture** — intra-hemispheric decay, callosal
-  connections, DMN hub boosting
-- **Arbitrary size** — any $N \geq 2$, not locked to atlas parcellation
-- **Deterministic** — same seed produces identical matrix
-- **Symmetric** — $(W + W^T)/2$ ensures undirected coupling
-- **Non-negative** — all entries clamped to $\geq 0$
-- **Zero diagonal** — no self-coupling
-- **Biological noise** — Gaussian perturbation for realism
-- **Rust FFI acceleration** — 13-50x speedup over Python
-- **Real data option** — `load_neurolib_hcp` for genuine HCP connectivity
-- **Hemispheric structure** — enables study of inter-hemispheric
-  synchronisation and callosal function
-- **DMN modelling** — hub-and-spoke structure for consciousness research
-
----
-
-## 5. Usage Examples
-
-### Basic: Generate Connectome
-
-```python
-from scpn_phase_orchestrator.coupling.connectome import load_hcp_connectome
-
-W = load_hcp_connectome(n_regions=80, seed=42)
-print(f"Shape: {W.shape}")           # (80, 80)
-print(f"Symmetric: {(W == W.T).all()}")  # True
-print(f"Max coupling: {W.max():.4f}")
-print(f"Min off-diag: {W[W > 0].min():.4f}")
-```
-
-### Whole-Brain Simulation
+## Explicit downstream use
 
 ```python
 import numpy as np
@@ -253,173 +98,96 @@ from scpn_phase_orchestrator.coupling.connectome import load_hcp_connectome
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
 from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
-N = 80
-W = load_hcp_connectome(N)
-eng = UPDEEngine(N, dt=0.01)
-rng = np.random.default_rng(42)
-phases = rng.uniform(0, 2 * np.pi, N)
-# Alpha band oscillators: 8-12 Hz
-omegas = rng.uniform(8, 12, N) * 2 * np.pi
-alpha = np.zeros((N, N))
-
-for step in range(2000):
-    phases = eng.step(phases, omegas, W, 0.0, 0.0, alpha)
-
-R, psi = compute_order_parameter(phases)
-print(f"R = {R:.4f}")
+n = 20
+weights = load_hcp_connectome(n, seed=42)
+phases = np.linspace(0.0, 2.0 * np.pi, n, endpoint=False)
+engine = UPDEEngine(n, dt=0.01, method="rk4")
+for _ in range(300):
+    phases = engine.step(phases, np.ones(n), weights, 0.0, 0.0, np.zeros_like(weights))
+coherence, mean_phase = compute_order_parameter(phases)
+assert np.isfinite(coherence) and np.isfinite(mean_phase)
 ```
 
-### Hemispheric Coherence Analysis
+To use original HCP weights, install neurolib and replace the matrix source:
 
 ```python
-import numpy as np
-from scpn_phase_orchestrator.coupling.connectome import load_hcp_connectome
-from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
+from scpn_phase_orchestrator.coupling.connectome import load_neurolib_hcp
 
-N = 80
-half = N // 2
-W = load_hcp_connectome(N)
-
-# Check hemispheric coupling structure
-intra_left = W[:half, :half].sum()
-intra_right = W[half:, half:].sum()
-inter = W[:half, half:].sum()
-print(f"Intra-left: {intra_left:.1f}")
-print(f"Intra-right: {intra_right:.1f}")
-print(f"Inter-hemi: {inter:.1f}")
-print(f"Ratio intra/inter: {(intra_left + intra_right) / (2 * inter):.1f}")
+weights = load_neurolib_hcp(20)
+assert weights.shape == (20, 20)
 ```
 
-### Compare Synthetic vs Real HCP
+The loaders do not attach a supervisor, change SSGF geometry or infer a sleep
+stage. Those consumers require explicit configuration. Independent scalar
+Euler/RK4 trajectory, torus, coherence and regime oracles exercise original
+synthetic and HCP downstream consumers in the owning tests.
 
-```python
-import numpy as np
-from scpn_phase_orchestrator.coupling.connectome import (
-    load_hcp_connectome,
-    load_neurolib_hcp,
-)
+## Native boundary
 
-W_synth = load_hcp_connectome(80)
-try:
-    W_real = load_neurolib_hcp(80)
-    # Compare spectral properties
-    L_synth = np.diag(W_synth.sum(axis=1)) - W_synth
-    L_real = np.diag(W_real.sum(axis=1)) - W_real
-    eig_synth = np.sort(np.linalg.eigvalsh(L_synth))
-    eig_real = np.sort(np.linalg.eigvalsh(L_real))
-    print(f"λ₂ (synth): {eig_synth[1]:.4f}")
-    print(f"λ₂ (real):  {eig_real[1]:.4f}")
-except ImportError:
-    print("neurolib not installed — only synthetic available")
+The registered original `spo_kernel.load_hcp_connectome_rust(n_regions, seed)`
+builtin preserves its two-argument ABI and flat row-major `float64` output of
+length `n_regions**2`. It independently refuses metadata aliases, counts below
+two, square/byte overflow and allocation refusal. The Python wrapper reshapes
+and validates that original result.
+
+Rust core callers can use
+`try_load_hcp_connectome(usize, u64) -> Result<Vec<f64>, &'static str>`.
+The retained `load_hcp_connectome(usize, u64) -> Vec<f64>` core API preserves its
+historical all-zero outputs at counts zero/one and panics on storage or
+allocation failure. Foreign callers use the checked API, so those failures
+become `ValueError` rather than an indexing panic.
+
+## Current measurements
+
+The [current local comparison](../data/connectome_comparison.local.json) records
+real installed Python and original Rust owners using the same NumPy 2.5.3,
+current production source hashes and binary identity. Each case has 20 batches:
+100 unique-seed cold calls or 2,000 already-cached fixed-seed copies. Full
+owner-specific independent matrix oracles pass before timing admission.
+
+The complete Rust release production source prefix remains byte-identical
+after subsequent test-only additions; its identity is recorded with the
+original measured file and current candidate hashes.
+
+These are local diagnostics on a shared, unreserved workstation. A separate owning-test cohort ran concurrently; its profile-mutation
+negatives restore the original bytes and all comparison source/matrix/call
+checks passed. The source-reference comment correction leaves the complete
+Python AST unchanged, as bound in the numeric artifact. Cold public calls include
+original generation, foreign marshalling where applicable, structural validation
+and a copy; they are not Rust-core timings or a controlled speed-up claim.
+
+| Regions | Mode | Public Python (µs) | Public Rust (µs) |
+|---:|---|---:|---:|
+| 16 | cold | 979.94 | 1585.98 |
+| 16 | warm | 8.94 | 7.78 |
+| 64 | cold | 11851.53 | 18299.30 |
+| 64 | warm | 9.50 | 9.27 |
+| 256 | cold | 124676.69 | 213088.56 |
+| 256 | warm | 44.13 | 35.62 |
+
+| Regions | Uncached Rust core median sample (µs) |
+|---:|---:|
+| 16 | 1.93 |
+| 64 | 19.39 |
+| 256 | 445.47 |
+
+For reproduction with trusted operator-owned installations of the same current
+source and Python binary:
+
+```bash
+python -m benchmarks.connectome_benchmark --python /path/to/python-profile/bin/python --rust /path/to/rust-profile/bin/python
 ```
 
----
-
-## 6. Technical Reference
-
-### Function: load_hcp_connectome
+The Python profile must actually lack `spo_kernel`; the Rust profile must expose
+the original compiled builtin. The runner records source/binary identities and
+observed native calls, refuses mismatched installed source, and checks copy
+ownership. `make connectome-quality` checks owning source, consumers and
+benchmarks. CI separately qualifies actual installed owners and all original
+contracts, with a 100% line-and-branch gate for both Python production modules.
 
 ::: scpn_phase_orchestrator.coupling.connectome
 
-### Architectural Constants
-
-| Constant | Value | Meaning | Source |
-|----------|-------|---------|--------|
-| `INTRA_HEMI_STRENGTH` | 0.5 | Base intra-hemispheric coupling | Hagmann et al. 2008 |
-| `INTER_HEMI_STRENGTH` | 0.15 | Base callosal coupling | Jarbo et al. 2012 |
-| `DMN_HUB_BOOST` | 0.3 | Additional DMN hub coupling | Buckner et al. 2008 |
-| Decay rate (intra) | 0.3 | Exponential distance decay | Ercsey-Ravasz et al. 2013 |
-| Callosal spread | 3 | Max offset for non-homotopic fibres | — |
-| DMN fractions | [0.15, 0.45, 0.65, 0.85] | Hub positions | Raichle et al. 2001 |
-
-### Rust Implementation
-
-The Rust path (`connectome.rs`) decomposes the matrix generation
-into four pure functions:
-
-```rust
-pub fn load_hcp_connectome(n_regions: usize, seed: u64) -> Vec<f64>
-fn build_intra_hemi(knm: &mut [f64], n: usize, half: usize, seed: u64)
-fn build_inter_hemi(knm: &mut [f64], n: usize, half: usize)
-fn add_dmn_hubs(knm: &mut [f64], n: usize, half: usize)
-fn symmetrise(knm: &mut [f64], n: usize)
-```
-
-The noise is generated using a 64-bit LCG (linear congruential
-generator) for determinism without external dependencies. The LCG
-constants are from Knuth's TAOCP.
-
-### Python Implementation
-
-The Python path uses `numpy.random.default_rng(seed)` for noise
-generation. Due to different PRNG algorithms (NumPy uses PCG64,
-Rust uses LCG), the Python and Rust paths produce **different**
-matrices for the same seed. The structural properties (symmetric,
-hemispheric, DMN hubs) are identical; only the noise differs.
-The public Python wrapper validates those structural properties after optional
-Rust execution instead of trusting the foreign-function boundary blindly.
-
-The public and direct Rust generators require at least two regions and genuine
-non-boolean integer metadata. Counts and seeds reject text and temporal aliases
-before allocation or RNG execution; seeds preserve the full unsigned 64-bit
-range. External matrix source types are checked before float conversion, with
-real numeric object matrices supported and temporal aliases refused.
-
-### Auto-Select Logic
-
-```python
-try:
-    from spo_kernel import load_hcp_connectome_rust as _rust_load_hcp
-    _HAS_RUST = True
-except ImportError:
-    _HAS_RUST = False
-```
-
----
-
-## 7. Performance Benchmarks
-
-Measured 2026-09-26 through actual public cold-cache calls, median of 50
-iterations on a shared host. The system interpreter has no Rust kernel; the
-selected project environment has the installed release kernel. Their NumPy
-versions differ, so these snapshots do not establish a controlled speed-up.
-
-| N | Public Python fallback (µs) | Public Rust path (µs) |
-|---|---:|---:|
-| 20 | 523.3 | 553.3 |
-| 80 | 4900.0 | 7715.7 |
-| 200 | 34811.8 | 50694.5 |
-
-[Source hashes, environment versions and reproduction script](../data/connectome_measurement_types_benchmark_2026-09-26.json).
-Both paths passed finite, non-negative, symmetric, zero-diagonal and per-backend
-determinism checks. Seeded elementwise equivalence is not claimed because their
-noise generators differ.
-
-### Allocation behavior
-
-The Python generator creates intermediate NumPy arrays for distances, exponential
-weights, noise and clipping. The Rust generator writes into its output vector;
-both public paths also perform structural validation and return a matrix copy.
-
-### Memory Usage
-
-- Matrix: $N^2$ floats (51.2 KB for $N = 80$)
-- Python: ~4 temporary $N^2$ arrays (204.8 KB for $N = 80$)
-- Rust: 1 allocation ($N^2$ output)
-
-### Test Coverage
-
-- **Rust tests:** 8 (connectome module in spo-engine)
-  - Output size, diagonal zero, symmetric, non-negative,
-    intra > inter, small N, deterministic, different seed
-- **Python tests:** 21 (`tests/test_connectome.py`)
-  - Shape, symmetry, non-negative, diagonal zero, hemispheric
-    structure, DMN hubs, spectral properties, pipeline wiring,
-    neurolib interface (optional), determinism, edge cases
-
----
-
-## 8. Citations
+## Background references
 
 1. **Hagmann, P., Cammoun, L., Gigandet, X., Meuli, R., Honey, C. J.,
    Wedeen, V. J., & Sporns, O.** (2008).
@@ -433,11 +201,10 @@ both public paths also perform structural validation and return a matrix copy.
    *NeuroImage* 80:62-79.
    DOI: [10.1016/j.neuroimage.2013.05.041](https://doi.org/10.1016/j.neuroimage.2013.05.041)
 
-3. **Cakan, C. & Obermayer, K.** (2021).
-   "neurolib: A simulation framework for whole-brain neural mass
-   modeling."
-   *NeuroImage* 227:117474.
-   DOI: [10.1016/j.neuroimage.2020.117474](https://doi.org/10.1016/j.neuroimage.2020.117474)
+3. **Cakan, C., Jajcay, N., & Obermayer, K.** (2023; online 2021).
+   "neurolib: A Simulation Framework for Whole-Brain Neural Mass Modeling."
+   *Cognitive Computation* 15:1132–1152.
+   DOI: [10.1007/s12559-021-09931-9](https://doi.org/10.1007/s12559-021-09931-9)
 
 4. **Ercsey-Ravasz, M., Markov, N. T., Lamy, C., Van Essen, D. C.,
    Knoblauch, K., Toroczkai, Z., & Kennedy, H.** (2013).
@@ -468,140 +235,3 @@ both public paths also perform structural validation and return a matrix copy.
    "Consciousness: Here, there and everywhere?"
    *Philosophical Transactions of the Royal Society B* 370(1668):20140167.
    DOI: [10.1098/rstb.2014.0167](https://doi.org/10.1098/rstb.2014.0167)
-
----
-
-## Edge Cases and Limitations
-
-### n_regions = 2
-
-With only 2 regions, there is 1 region per hemisphere. The matrix
-is 2×2 with a single off-diagonal entry representing the callosal
-connection. No DMN structure is possible.
-
-### Odd n_regions
-
-The hemispheric split is $\lfloor N/2 \rfloor$ left, remainder right.
-For odd $N$, the right hemisphere has one more region. The callosal
-connections bridge the two unequal halves.
-
-### Very Large N (> 1000)
-
-The matrix grows as $O(N^2)$. For $N = 1000$, the matrix is 8 MB.
-The generation time remains sub-millisecond in Rust but reaches
-~4 ms in Python.
-
-### PRNG Difference Between Python and Rust
-
-The Python path uses PCG64 (NumPy default) and the Rust path uses
-a 64-bit LCG for noise generation. This means **the exact matrices
-differ** between backends for the same seed. The structural properties
-(symmetry, hemispheric structure, DMN hubs) are preserved; only
-the noise pattern differs.
-
-For reproducible cross-backend comparisons, use `seed=42` and
-compare statistical properties (mean, std, spectral gap) rather
-than element-wise values.
-
-### Not Real Brain Data
-
-This generator captures qualitative architectural principles, not
-quantitative fibre counts. For realistic whole-brain simulation,
-use `load_neurolib_hcp` with real HCP data. The synthetic generator
-is intended for algorithm development and testing.
-
----
-
-## Troubleshooting
-
-### Issue: neurolib Import Fails
-
-**Symptom:** `ImportError: neurolib is required for real HCP data`
-
-**Diagnosis:** The `load_neurolib_hcp` function requires the
-`neurolib` package. It is not installed by default because it brings
-heavy dependencies (numba, tqdm, xarray).
-
-**Solution:** `pip install neurolib`. Only needed for real HCP data;
-the synthetic generator works without any external dependencies.
-
-### Issue: Matrices Differ Between Python and Rust
-
-**Diagnosis:** This is expected — the PRNG algorithms differ
-(PCG64 vs LCG). See §Edge Cases above.
-
-**Solution:** Compare structural properties (spectral gap, degree
-distribution, hemispheric ratio) rather than element-wise values.
-For deterministic cross-backend comparison, implement the same PRNG
-in both backends (future work).
-
-### Issue: Spectral Gap Too Small
-
-**Diagnosis:** For large $N$ with default parameters, the long-range
-connections become very weak ($e^{-0.3 \cdot N/2}$), leading to
-near-disconnection between distant regions.
-
-**Solution:** Increase `INTRA_HEMI_STRENGTH` or decrease the decay
-rate. Alternatively, use a custom coupling matrix with the
-`CouplingBuilder`.
-
-### Issue: DMN Hubs Not Visible in Degree Distribution
-
-**Diagnosis:** The DMN boost ($K_{\text{hub}} = 0.3$) adds to
-all DMN-to-DMN connections but not DMN-to-non-DMN. For small $N$,
-the degree boost may be masked by the intra-hemispheric baseline.
-
-**Solution:** For $N < 16$, increase the DMN fraction or boost
-value. The effect is clearest for $N \geq 40$ where the DMN nodes
-are well-separated in index space.
-
-### Issue: Inter-Hemispheric Synchronisation Too Weak
-
-**Diagnosis:** The callosal strength (0.15) is 3.3x weaker than
-intra-hemispheric strength (0.5). This mimics the biological
-ratio but may be too weak for applications requiring strong
-bilateral coupling.
-
-**Solution:** Scale the inter-hemispheric connections post-hoc:
-```python
-W = load_hcp_connectome(80)
-half = 40
-W[:half, half:] *= 2.0  # Double callosal strength
-W[half:, :half] *= 2.0
-```
-
----
-
-## Integration with Other SPO Modules
-
-### With OttAntonsenReduction
-
-The OA reduction assumes all-to-all coupling. The HCP connectome
-is sparse and heterogeneous. For OA validation, use a reduced
-"mean-field effective coupling" derived from the connectome:
-
-$$K_{\text{eff}} = \frac{1}{N} \sum_{i,j} W_{ij}$$
-
-### With SSGF Geometry Control
-
-The SSGF engine can use the HCP connectome as the initial geometry:
-
-```python
-W = load_hcp_connectome(80)
-# SSGF will adapt W to optimise synchronisation
-# while respecting the connectome's structural constraints
-```
-
-### With Sleep Staging Monitor
-
-Brain-state-dependent connectivity changes can be modelled by
-scaling the connectome:
-
-```python
-# Wake: full connectivity
-W_wake = load_hcp_connectome(80)
-# NREM: reduced long-range connectivity
-W_nrem = W_wake.copy()
-W_nrem[:40, 40:] *= 0.5  # Reduced callosal
-W_nrem[40:, :40] *= 0.5
-```

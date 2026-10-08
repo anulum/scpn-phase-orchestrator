@@ -19,7 +19,7 @@
 //!
 //! Run with: ``cargo bench -p spo-engine --bench utility_bench``.
 
-use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 
 use spo_engine::attnres::attnres_modulate;
 use spo_engine::basin_stability::try_basin_stability;
@@ -232,10 +232,11 @@ fn bench_compute_ethical_cost(c: &mut Criterion) {
     group.finish();
 }
 
+/// Measure uncached dense generation, including checked storage and symmetrisation.
 fn bench_load_hcp_connectome(c: &mut Criterion) {
-    // Connectome load + symmetrise; deterministic per seed.
     let mut group = c.benchmark_group("load_hcp_connectome");
     for &n in &[16usize, 64, 256] {
+        group.throughput(Throughput::Elements((n * n) as u64));
         group.bench_with_input(BenchmarkId::from_parameter(n), &n, |b, &n| {
             b.iter(|| {
                 let r = load_hcp_connectome(n, 42);
