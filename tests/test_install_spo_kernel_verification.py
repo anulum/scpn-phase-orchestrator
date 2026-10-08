@@ -96,6 +96,7 @@ def _sha256(path: Path) -> str:
 @requires_cargo
 @pytest.mark.parametrize(("release", "profile"), [(True, "release"), (False, "debug")])
 def test_built_extension_names_the_profile_library(release: bool, profile: str) -> None:
+    """Resolve the declared native library from actual Cargo metadata."""
     name, library = tool.built_extension(_plan(MANIFEST, release=release))
 
     assert name == "spo_kernel"
@@ -116,12 +117,14 @@ def test_built_extension_needs_cargo_on_path(monkeypatch: pytest.MonkeyPatch) ->
 
 @requires_cargo
 def test_built_extension_rejects_a_workspace_manifest() -> None:
+    """Refuse workspace metadata without a package-specific native target."""
     with pytest.raises(tool.KernelInstallError, match="cargo metadata does not list"):
         tool.built_extension(_plan(REPO_ROOT / "spo-kernel" / "Cargo.toml"))
 
 
 @requires_cargo
 def test_built_extension_rejects_a_crate_without_cdylib(tmp_path: Path) -> None:
+    """Refuse a real Cargo crate that declares no shared extension target."""
     (tmp_path / "src").mkdir()
     (tmp_path / "src" / "lib.rs").write_text("", encoding="utf-8")
     (tmp_path / "Cargo.toml").write_text(
@@ -135,6 +138,7 @@ def test_built_extension_rejects_a_crate_without_cdylib(tmp_path: Path) -> None:
 
 
 def test_verify_accepts_the_package_extension_that_was_built(tmp_path: Path) -> None:
+    """Match package-layout extension file identity to the recorded build bytes."""
     python, site = _environment(tmp_path / "env")
     package = site / "kernelpkg"
     package.mkdir()
@@ -151,6 +155,7 @@ def test_verify_accepts_the_package_extension_that_was_built(tmp_path: Path) -> 
 
 
 def test_verify_accepts_a_single_file_extension_module(tmp_path: Path) -> None:
+    """Match single-file extension identity to the recorded build bytes."""
     python, site = _environment(tmp_path / "env")
     installed = site / f"kernelmod{EXT}"
     installed.write_bytes(b"new build")
@@ -180,6 +185,7 @@ def test_verify_rejects_a_stale_extension(tmp_path: Path) -> None:
 def test_verify_rejects_a_module_without_the_extension(
     tmp_path: Path, module: str
 ) -> None:
+    """Refuse absent and ordinary Python modules as native extension identities."""
     python, site = _environment(tmp_path / "env")
     (site / "plainmod.py").write_text("", encoding="utf-8")
     library = tmp_path / "libkernel.so"
@@ -190,6 +196,7 @@ def test_verify_rejects_a_module_without_the_extension(
 
 
 def test_verify_rejects_a_missing_built_library(tmp_path: Path) -> None:
+    """Refuse an extension identity check without its original built file."""
     python, _ = _environment(tmp_path / "env")
 
     with pytest.raises(tool.KernelInstallError, match="built library not found"):
@@ -211,9 +218,9 @@ def test_installer_run_from_the_checkout_installs_into_a_uv_environment(
 ) -> None:
     """Run the installer from the repository root into a fresh uv environment.
 
-    The environment is created by uv, as the repository's own is, so maturin
-    installs through uv; the working directory is the checkout, whose uv
-    configuration excludes ``spo-kernel``.
+    The selected environment contains the real SPO package and its complete
+    hashed runtime/build dependencies before native verification. Maturin uses
+    uv from the checkout, whose configuration excludes ``spo-kernel``.
     """
     assert UV is not None
     env = tmp_path / "uvenv"
@@ -234,6 +241,38 @@ def test_installer_run_from_the_checkout_installs_into_a_uv_environment(
         pytest.skip(
             f"{_pinned_maturin()} is not available offline: {provisioned.stderr}"
         )
+    subprocess.run(
+        [
+            UV,
+            "pip",
+            "install",
+            "--python",
+            str(python),
+            "--require-hashes",
+            "--no-deps",
+            "-r",
+            str(REPO_ROOT / "requirements" / "runtime-lock.txt"),
+            "-r",
+            str(REPO_ROOT / "requirements" / "build-tools.txt"),
+        ],
+        cwd=tmp_path,
+        check=True,
+    )
+    subprocess.run(
+        [
+            UV,
+            "pip",
+            "install",
+            "--python",
+            str(python),
+            "--no-deps",
+            "--no-build-isolation",
+            "-e",
+            str(REPO_ROOT),
+        ],
+        cwd=tmp_path,
+        check=True,
+    )
     monkeypatch.chdir(REPO_ROOT)
 
     argv = ["--python", str(python), "--manifest", str(MANIFEST), "--debug", "--json"]
@@ -242,7 +281,11 @@ def test_installer_run_from_the_checkout_installs_into_a_uv_environment(
 
     _, library = tool.built_extension(_plan(MANIFEST, release=False))
     assert record["ok"] is True
-    assert record["stdout"] == "spo_kernel"
+    verified = json.loads(record["stdout"])
+    assert set(verified) == {"version", "extension", "sha256"}
+    assert verified["version"] == "0.5.11"
+    assert verified["extension"] == record["extension"]
+    assert verified["sha256"] == record["extension_sha256"]
     assert record["extension_sha256"] == _sha256(library)
     assert Path(record["extension"]).is_relative_to(env)
 
@@ -264,6 +307,7 @@ def _run_main(
 def test_cli_dry_run_prints_the_release_command(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
+    """Emit the selected interpreter and actual release-build argument plan."""
     status, out, _ = _run_main(["--dry-run", "--manifest", str(MANIFEST)], capsys)
 
     assert status == 0
@@ -281,6 +325,7 @@ def test_cli_dry_run_prints_the_release_command(
 def test_cli_check_only_prints_the_imported_module(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
+    """Exercise the explicitly requested standard-library compatibility check."""
     status, out, _ = _run_main(
         ["--check-only", "--verify-module", "json", "--manifest", str(MANIFEST)], capsys
     )
@@ -292,6 +337,7 @@ def test_cli_check_only_prints_the_imported_module(
 def test_cli_resolves_a_relative_interpreter_against_the_working_directory(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
+    """Resolve the real selected environment from the caller working directory."""
     python, _ = _environment(tmp_path / "env")
     monkeypatch.chdir(tmp_path)
     relative = python.relative_to(tmp_path)
@@ -317,6 +363,7 @@ def test_cli_resolves_a_relative_interpreter_against_the_working_directory(
 def test_cli_reports_errors_as_text_and_json(
     argv: list[str], message: str, capsys: pytest.CaptureFixture[str]
 ) -> None:
+    """Preserve public CLI refusal details in both declared output formats."""
     base = ["--manifest", str(MANIFEST), *argv]
 
     status, _, err = _run_main(base, capsys)
