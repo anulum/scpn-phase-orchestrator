@@ -272,7 +272,7 @@ jobs:
             -o addopts= --strict-markers --tb=short -p no:cacheprovider \
             --cov=scpn_phase_orchestrator --cov-branch --cov-append --cov-report= --cov-fail-under=0
           export SPO_SINDY_PYTHON_ONLY="$SPO_CONNECTOME_PYTHON_PROFILE"
-          pytest native-tests/test_attention_residuals_profiles.py \
+          python -m pytest native-tests/test_attention_residuals_profiles.py \
             native-tests/test_basin_bifurcation_profiles.py \
             -o addopts= --strict-markers --tb=short -p no:cacheprovider \
             --cov=scpn_phase_orchestrator --cov-branch --cov-append --cov-report= --cov-fail-under=0
