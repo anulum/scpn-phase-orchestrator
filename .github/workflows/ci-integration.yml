@@ -493,3 +493,44 @@ jobs:
           python -m benchmarks.chimera_benchmark --parity-gate --sizes 16 --calls 20 --require-backends rust
           pytest tests/test_kernel_runtime.py tests/test_cli_serve.py tests/test_kernel_deployment.py native-tests/test_sindy_runtime_profiles.py native-tests/test_attention_residuals_profiles.py native-tests/test_basin_bifurcation_profiles.py \
             -m native_runtime --strict-markers --tb=short
+  ethical-cost-runtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      HYPOTHESIS_PROFILE: dev
+      SPO_ETHICAL_PYTHON_PROFILE: ${{ github.workspace }}/.ethical-python/bin/python
+      SPO_ETHICAL_RUST_PROFILE: ${{ github.workspace }}/.ethical-rust/bin/python
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12.15"
+          cache: pip
+      - uses: dtolnay/rust-toolchain@631a55b12751854ce901bb631d5902ceb48146f7 # stable
+      - name: Build actual Python and native ethical-cost owners
+        run: |
+          pip install --require-hashes --no-deps -r requirements/ci-tools.txt
+          pip install --require-hashes --no-deps -r requirements/build-tools.txt
+          maturin build --release --locked -m spo-kernel/crates/spo-ffi/Cargo.toml --out ethical-kernel-wheels
+          pip wheel --no-deps --no-build-isolation --wheel-dir ethical-package-wheels .
+      - name: Install separate original native and kernel-absent profiles
+        run: |
+          python -m venv .ethical-python
+          python -m venv .ethical-rust
+          for profile in .ethical-python .ethical-rust; do
+            "$profile/bin/python" -m pip install --require-hashes --no-deps -r requirements/dev-lock.txt
+            "$profile/bin/python" -m pip install --no-index --no-deps ethical-package-wheels/*.whl
+          done
+          .ethical-rust/bin/python -m pip install --no-index --no-deps ethical-kernel-wheels/*.whl
+      - name: Qualify all original ethical-cost consumers and FFI contracts
+        run: |
+          .ethical-rust/bin/python -I -B -m pytest \
+            tests/test_closure_ethical.py tests/test_ssgf_ethical_cost_inputs.py \
+            tests/test_ssgf_modules.py tests/test_ethical_cost_real_runtime.py \
+            tests/test_ethical_cost_benchmark.py native-tests/test_ethical_cost_runtime_profiles.py \
+            --strict-markers --tb=short -p no:cacheprovider
+          .ethical-python/bin/python -I -B -m pytest \
+            tests/test_closure_ethical.py tests/test_ssgf_ethical_cost_inputs.py \
+            tests/test_ssgf_modules.py tests/test_ethical_cost_real_runtime.py \
+            tests/test_ethical_cost_benchmark.py native-tests/test_ethical_cost_runtime_profiles.py \
+            -m "not native_runtime" --strict-markers --tb=short -p no:cacheprovider

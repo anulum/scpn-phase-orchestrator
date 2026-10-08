@@ -34,6 +34,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Ethical-cost density now counts all exactly nonzero entries, and the native
+  Jacobi solver preserves tiny graph scales. The public adapter rejects
+  original measurement/scalar aliases, converts floating/eigen failures to
+  `ValueError`, and copies unaligned buffers safely for FFI. Original owning
+  consumer tests use actual installed native and kernel-absent runtimes;
+  independent numerical regressions and fresh public/Criterion measurements
+  replace flag-switched parity and stale timing/compliance claims.
+
 - Phase-SINDy now uses rectangular SVD in the native kernel, matching the
   Python minimum-norm fit for dependent features. Native phase derivatives
   handle arbitrary whole turns and preserve exact half-turn signs. Failed

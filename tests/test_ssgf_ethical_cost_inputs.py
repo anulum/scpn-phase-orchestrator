@@ -16,11 +16,16 @@ did not match the phases, returning different costs.
 from __future__ import annotations
 
 import math
+from importlib import import_module
+from typing import cast
 
 import numpy as np
 import pytest
 
 import scpn_phase_orchestrator.ssgf.ethical as ethical
+from benchmarks.ethical_cost_reference import reference_cost
+from scpn_phase_orchestrator.ssgf.ethical import EthicalKernel, FloatArray
+from tests.test_ethical_cost_real_runtime import installed_cost
 
 _K4 = np.full((4, 4), 0.5)
 np.fill_diagonal(_K4, 0.0)
@@ -40,48 +45,51 @@ np.fill_diagonal(_K4, 0.0)
     ],
 )
 def test_invalid_inputs_are_refused(
-    phases: np.ndarray, knm: np.ndarray, match: str
+    phases: FloatArray, knm: FloatArray, match: str
 ) -> None:
+    """Public validation refuses non-finite or mismatched measurements."""
     with pytest.raises(ValueError, match=match):
         ethical.compute_ethical_cost(phases, knm)
 
 
 @pytest.mark.parametrize("name", ["R_min", "kappa", "max_coupling"])
 def test_non_finite_parameters_are_refused(name: str) -> None:
+    """Invalid thresholds and penalty weights fail before owner dispatch."""
     with pytest.raises(ValueError, match=f"{name} must be a finite real number"):
         ethical.compute_ethical_cost(np.zeros(4), _K4, **{name: math.nan})
 
 
-@pytest.mark.skipif(not ethical._HAS_RUST, reason="spo_kernel not built")
-def test_backends_agree_on_valid_inputs(monkeypatch: pytest.MonkeyPatch) -> None:
+@pytest.mark.native_runtime
+def test_backends_agree_on_valid_inputs() -> None:
+    """Independent installed owners reproduce the same scalar/eigenvalue oracle."""
     rng = np.random.default_rng(3)
     phases = rng.uniform(0, 2 * np.pi, 6)
     knm = np.abs(rng.normal(size=(6, 6)))
     np.fill_diagonal(knm, 0.0)
-    rust = ethical.compute_ethical_cost(phases, knm, R_min=0.7)
-    monkeypatch.setattr(ethical, "_HAS_RUST", False)
-    numpy_path = ethical.compute_ethical_cost(phases, knm, R_min=0.7)
-    assert rust.c15_sec == pytest.approx(numpy_path.c15_sec, abs=1e-12)
-    assert rust.constraints_violated == numpy_path.constraints_violated
+    expected = reference_cost(phases, knm, R_min=0.7)
+    for owner in ("rust", "python"):
+        actual = installed_cost(owner, phases, knm, R_min=0.7)
+        np.testing.assert_allclose(actual[:3], expected[:3], rtol=1e-11, atol=1e-11)
+        assert actual[3] == expected[3]
 
 
+@pytest.mark.native_runtime
 @pytest.mark.parametrize("use_rust", [False, True])
-def test_extreme_finite_coupling_refuses_nonfinite_cost(
-    monkeypatch: pytest.MonkeyPatch, use_rust: bool
-) -> None:
-    if use_rust and not ethical._HAS_RUST:
-        pytest.skip("spo_kernel not built")
-    if not use_rust:
-        monkeypatch.setattr(ethical, "_HAS_RUST", False)
+def test_extreme_finite_coupling_refuses_nonfinite_cost(use_rust: bool) -> None:
+    """Actually separate owners refuse a finite but unrepresentable penalty."""
     knm = np.full((4, 4), 1e200)
     np.fill_diagonal(knm, 0.0)
     with pytest.raises(ValueError, match="arithmetic must remain finite"):
-        ethical.compute_ethical_cost(np.zeros(4), knm)
+        installed_cost("rust" if use_rust else "python", np.zeros(4), knm)
 
 
+@pytest.mark.native_runtime
 def test_direct_rust_ffi_refuses_unrepresentable_cost() -> None:
-    kernel = pytest.importorskip("spo_kernel")
-    compute_ethical_cost_rust = kernel.compute_ethical_cost_rust
+    """The original compiled FFI refuses overflow in the weighted penalty."""
+    kernel = import_module("spo_kernel")
+    compute_ethical_cost_rust = cast(
+        "EthicalKernel", vars(kernel)["compute_ethical_cost_rust"]
+    )
     knm = np.full((2, 2), 1e200)
     np.fill_diagonal(knm, 0.0)
     with pytest.raises(ValueError, match="cost arithmetic must remain finite"):
@@ -90,9 +98,13 @@ def test_direct_rust_ffi_refuses_unrepresentable_cost() -> None:
         )
 
 
+@pytest.mark.native_runtime
 def test_direct_rust_ffi_refuses_nan_before_constraint_clamps() -> None:
-    kernel = pytest.importorskip("spo_kernel")
-    compute_ethical_cost_rust = kernel.compute_ethical_cost_rust
+    """The original compiled FFI refuses NaN before residual clamping."""
+    kernel = import_module("spo_kernel")
+    compute_ethical_cost_rust = cast(
+        "EthicalKernel", vars(kernel)["compute_ethical_cost_rust"]
+    )
     with pytest.raises(ValueError, match="contain only finite values"):
         compute_ethical_cost_rust(
             np.array([0.0, math.nan]),

@@ -183,7 +183,7 @@ See [geometry constraints](../specs/geometry_constraints.md) and
 | `UniversalPrior.log_probability` | `prior_log_probability_rust` | Bayesian log-density |
 | `load_hcp_connectome` | `load_hcp_connectome_rust` | synthetic connectome generation |
 | `GeometryCarrier.decode` | `carrier_decode_rust` | softplus(A·z) decode |
-| `compute_ethical_cost` | `compute_ethical_cost_rust` | SEC + CBF ethical cost |
+| `compute_ethical_cost` | `compute_ethical_cost_rust` | SEC score and weighted residual diagnostic; [contract and current measurements](../reference/api/ssgf_ethical.md) |
 | `classify_sleep_stage` | `classify_sleep_stage_rust` | stage classification, explicit `backend="rust"` |
 | `ultradian_phase` | `ultradian_phase_rust` | cycle phase, explicit `backend="rust"` |
 | `EVSMonitor._frequency_specificity` | `frequency_specificity_rust` | target/control ITPC ratio |

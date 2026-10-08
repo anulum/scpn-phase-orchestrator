@@ -49,6 +49,8 @@ jobs:
         run: make basin-bifurcation-quality PYTHON=python
       - name: Check complete chimera owners, tests, benchmarks and consumers
         run: make chimera-quality PYTHON=python
+      - name: Check ethical-cost source, owning consumers and actual comparisons
+        run: make ethical-cost-quality PYTHON=python
       - name: Qualify the distinct actual JAX chimera model
         run: python -m pytest tests/test_nn_chimera.py --strict-markers --tb=short
       - name: Run tests (with coverage on 3.12)

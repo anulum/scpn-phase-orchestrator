@@ -8,19 +8,23 @@
 
 //! Ethical Lagrangian from R5 Insight 19:
 //! L_ethical = U_total + w_c15 · C15_sec
-//! C15_sec = (1 - J_sec) + κ · Φ_ethics
+//! C15_sec = (1 - J_sec) + phi_ethics, where phi_ethics = κ · Φ_ethics.
 //!
 //! J_sec = α·R + β·K_norm + γ·Q - ν·S_dev  (SEC functional)
 //! Φ_ethics = Σ max(0, g_k)²                (CBF constraint penalties)
 //!
-//! Grounded in: Harsanyi aggregation, MacAskill ECW,
-//! Lyapunov/CBF safety, Wiener cybernetic ethics.
+//! This numerical diagnostic does not establish ethical compliance or safety.
 
 use std::f64::consts::PI;
 
 /// Compute C15_sec ethical cost term.
 ///
 /// Returns `(j_sec, phi_ethics, c15_sec, n_violated)`.
+/// Density counts exactly nonzero entries, including signed and diagonal
+/// weights. Connectivity uses reciprocal magnitude averages without self-loops.
+/// Dispersion is the population standard deviation of the raw phases divided
+/// by pi. Finite signed parameters are supported; kappa weights the residual
+/// sum once and does not change the strictly positive violation count.
 ///
 /// # Errors
 /// Rejects mismatched shapes, non-finite inputs or parameters, and arithmetic
@@ -91,9 +95,9 @@ fn compute_sec_inputs(
 ) -> Result<(f64, f64, f64, f64), String> {
     let sx: f64 = phases.iter().map(|p| p.sin()).sum();
     let cx: f64 = phases.iter().map(|p| p.cos()).sum();
-    let r = (sx * sx + cx * cx).sqrt() / n as f64;
+    let r = sx.hypot(cx) / n as f64;
     let lam2 = fiedler_value_inline(knm, n)?;
-    let n_nonzero = knm.iter().filter(|&&v| v.abs() > 1e-15).count();
+    let n_nonzero = knm.iter().filter(|&&v| v != 0.0).count();
     let n_possible = n * (n - 1);
     let q = if n_possible > 0 {
         n_nonzero as f64 / n_possible as f64
@@ -184,9 +188,13 @@ fn fiedler_value_inline(knm: &[f64], n: usize) -> Result<f64, String> {
 
 /// Jacobi eigenvalue algorithm for symmetric matrix.
 fn jacobi_eigenvalues(a: &[f64], n: usize) -> Vec<f64> {
-    let mut mat = a.to_vec();
+    let scale = a.iter().map(|v| v.abs()).fold(0.0, f64::max);
+    if scale == 0.0 {
+        return vec![0.0; n];
+    }
+    let mut mat: Vec<f64> = a.iter().map(|v| v / scale).collect();
     let max_iter = 100 * n * n;
-    let eps = 1e-12;
+    let eps = 8.0 * f64::EPSILON * n as f64;
 
     for _ in 0..max_iter {
         let (max_val, p, q) = find_max_offdiag(&mat, n);
@@ -196,7 +204,7 @@ fn jacobi_eigenvalues(a: &[f64], n: usize) -> Vec<f64> {
         jacobi_rotate(&mut mat, n, p, q);
     }
 
-    (0..n).map(|i| mat[i * n + i]).collect()
+    (0..n).map(|i| mat[i * n + i] * scale).collect()
 }
 
 /// Find largest off-diagonal element and its position.
@@ -224,9 +232,9 @@ fn jacobi_rotate(mat: &mut [f64], n: usize, p: usize, q: usize) {
     let apq = mat[p * n + q];
     let tau = (aqq - app) / (2.0 * apq);
     let t = if tau >= 0.0 {
-        1.0 / (tau + (1.0 + tau * tau).sqrt())
+        1.0 / (tau + tau.hypot(1.0))
     } else {
-        -1.0 / (-tau + (1.0 + tau * tau).sqrt())
+        -1.0 / (-tau + tau.hypot(1.0))
     };
     let c = 1.0 / (1.0 + t * t).sqrt();
     let s = t * c;
@@ -426,7 +434,10 @@ mod tests {
                 }
             }
         }
-        let lam2 = fiedler_value_inline(&knm, n).expect("finite valid coupling");
+        let (j, _, _, _) =
+            compute_ethical_cost(&[0.0; 4], &knm, n, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 5.0)
+                .expect("finite public connectivity score");
+        let lam2 = j * n as f64;
         // Complete graph K_n: λ₂ = n
         assert!((lam2 - n as f64).abs() < 0.1, "λ₂={lam2}, expected {n}");
     }
@@ -435,7 +446,10 @@ mod tests {
     fn test_fiedler_disconnected() {
         let n = 4;
         let knm = vec![0.0; n * n];
-        let lam2 = fiedler_value_inline(&knm, n).expect("finite valid coupling");
+        let (j, _, _, _) =
+            compute_ethical_cost(&[0.0; 4], &knm, n, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 5.0)
+                .expect("finite public connectivity score");
+        let lam2 = j * n as f64;
         assert!(lam2 < 1e-10, "disconnected graph: λ₂={lam2} should be ~0");
     }
 
@@ -453,11 +467,141 @@ mod tests {
                 }
             }
         }
-        let a = fiedler_value_inline(&asym, n).expect("finite valid coupling");
-        let b = fiedler_value_inline(&sym, n).expect("finite valid coupling");
+        let (a, _, _, _) =
+            compute_ethical_cost(&[0.0; 3], &asym, n, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 5.0)
+                .expect("finite public asymmetric graph");
+        let (b, _, _, _) =
+            compute_ethical_cost(&[0.0; 3], &sym, n, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 5.0)
+                .expect("finite public symmetric graph");
         assert!(
             (a - b).abs() < 1e-9,
             "asymmetric λ₂={a} vs symmetrised λ₂={b}"
         );
+    }
+    #[test]
+    fn density_counts_tiny_signed_and_diagonal_nonzero_weights() {
+        for weight in [f64::from_bits(1), 1e-300, 1e-16, 1.0] {
+            let result = compute_ethical_cost(
+                &[0.0; 2],
+                &[-weight; 4],
+                2,
+                0.0,
+                0.0,
+                1.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                5.0,
+            )
+            .expect("finite signed density diagnostic");
+            assert_eq!(result, (2.0, 0.0, -1.0, 0));
+        }
+        let result = compute_ethical_cost(
+            &[0.0; 2],
+            &[0.0, -0.0, -0.0, 0.0],
+            2,
+            0.0,
+            0.0,
+            1.0,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            5.0,
+        )
+        .expect("zero density diagnostic");
+        assert_eq!(result, (0.0, 0.0, 1.0, 0));
+    }
+
+    #[test]
+    fn connectivity_preserves_graph_scale() {
+        for weight in [1e-300, 1e-16, 1.0, 1e100] {
+            let (j, phi, c15, violations) = compute_ethical_cost(
+                &[0.0; 2],
+                &[0.0, -weight, -weight, 0.0],
+                2,
+                0.0,
+                1.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                0.0,
+                5.0,
+            )
+            .expect("finite graph scale diagnostic");
+            assert!((j / weight - 1.0).abs() < 1e-14, "scale {weight}: {j}");
+            assert_eq!(phi, 0.0);
+            assert_eq!(c15, 1.0 - j);
+            assert_eq!(violations, 0);
+        }
+    }
+
+    #[test]
+    fn raw_phase_population_dispersion_is_not_wrapped() {
+        let phases = [0.0, 2.0 * PI];
+        let (j, phi, c15, violations) = compute_ethical_cost(
+            &phases, &[0.0; 4], 2, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 5.0,
+        )
+        .expect("raw phase dispersion");
+        assert!((j + 1.0).abs() < 1e-15);
+        assert_eq!(phi, 0.0);
+        assert!((c15 - 2.0).abs() < 1e-15);
+        assert_eq!(violations, 0);
+    }
+
+    #[test]
+    fn signed_multiplier_weights_the_penalty_once() {
+        let (j, phi, c15, violations) = compute_ethical_cost(
+            &[0.0],
+            &[0.0],
+            1,
+            -0.4,
+            0.0,
+            0.0,
+            0.0,
+            -2.0,
+            1.5,
+            0.25,
+            -10.0,
+        )
+        .expect("finite signed parameters");
+        assert_eq!(j, -0.4);
+        assert_eq!(phi, -2.0 * (0.5_f64.powi(2) + 0.25_f64.powi(2)));
+        assert_eq!(c15, 1.0 - j + phi);
+        assert_eq!(violations, 2);
+    }
+
+    #[test]
+    fn constraint_equality_does_not_count_as_a_violation() {
+        let result = compute_ethical_cost(
+            &[0.0; 2],
+            &[0.0, 0.5, 0.5, 0.0],
+            2,
+            0.0,
+            0.0,
+            0.0,
+            0.0,
+            3.0,
+            1.0,
+            1.0,
+            0.5,
+        )
+        .expect("threshold equality");
+        assert_eq!(result, (0.0, 0.0, 1.0, 0));
+    }
+    #[test]
+    fn finite_degrees_with_unrepresentable_eigenvalues_are_refused() {
+        let mut matrix = vec![-7e307; 9];
+        for i in 0..3 {
+            matrix[i * 3 + i] = 0.0;
+        }
+        let result = compute_ethical_cost(
+            &[0.0; 3], &matrix, 3, 0.4, 0.3, 0.2, 0.1, 1.0, 0.2, 0.1, 5.0,
+        );
+        assert!(result
+            .expect_err("lambda2=3*7e307 exceeds binary64")
+            .contains("eigenvalue arithmetic"));
     }
 }

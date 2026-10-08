@@ -23,6 +23,7 @@ mod delayed_boundary;
 mod ei_balance_boundary;
 mod embedding_boundary;
 mod entropy_boundary;
+mod ethical_boundary;
 mod hypergraph_boundary;
 mod inertial_boundary;
 mod measurement_types;
@@ -45,6 +46,7 @@ use coupling_builder::PyCouplingBuilder;
 use delayed_boundary::delayed_kuramoto_run_rust;
 use ei_balance_boundary::{adjust_ei_ratio_rust, compute_ei_balance_rust};
 use embedding_boundary::{delay_embed_rust, optimal_delay_rust, optimal_dimension_rust};
+use ethical_boundary::compute_ethical_cost_rust;
 use hypergraph_boundary::{hypergraph_run_rust, PyHypergraphStepper};
 use inertial_boundary::{inertial_run_rust, inertial_step_rust};
 use measurement_types::{real_values, PlainI32, PlainI64, PlainReal, PlainU64, PlainUsize};
@@ -73,7 +75,7 @@ use pyo3::types::PyDict;
 use spo_engine::{
     carrier, connectome,
     coupling::{spatial_modulate_flat, SpatialDecayForm},
-    coupling_est, dimension, envelope, ethical, evs, free_energy, freq_id, hodge,
+    coupling_est, dimension, envelope, evs, free_energy, freq_id, hodge,
     imprint::ImprintModel,
     inertial, itpc,
     lif_ensemble::{LIFEnsemble, LIFParams},
@@ -2117,45 +2119,6 @@ fn prior_distance_decay_rust(
 ) -> PyResult<Py<PyArray1<f64>>> {
     let result = prior::distance_decay_matrix(n, k_base, decay_alpha);
     Ok(PyArray1::from_vec(py, result).into())
-}
-
-// ─── Ethical Cost ───────────────────────────────────────────────────
-
-#[pyfunction]
-#[allow(clippy::too_many_arguments)]
-fn compute_ethical_cost_rust(
-    phases: PyReadonlyArray1<f64>,
-    knm: PyReadonlyArray1<f64>,
-    n: usize,
-    alpha_r: f64,
-    beta_k: f64,
-    gamma_q: f64,
-    nu_s: f64,
-    kappa: f64,
-    r_min: f64,
-    connectivity_min: f64,
-    max_coupling: f64,
-) -> PyResult<(f64, f64, f64, usize)> {
-    let p = phases
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let k = knm
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    ethical::compute_ethical_cost(
-        p,
-        k,
-        n,
-        alpha_r,
-        beta_k,
-        gamma_q,
-        nu_s,
-        kappa,
-        r_min,
-        connectivity_min,
-        max_coupling,
-    )
-    .map_err(PyValueError::new_err)
 }
 
 // ─── Sleep Staging ──────────────────────────────────────────────────
