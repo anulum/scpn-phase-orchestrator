@@ -50,7 +50,13 @@ jobs:
           assert 'julia' in AVAILABLE_BACKENDS, AVAILABLE_BACKENDS;
           print('backends:', AVAILABLE_BACKENDS)"
       - name: Run native-backend parity tests without coverage
-        run: pytest tests/ -k backends -m "not slow" --tb=short -p no:cacheprovider
+        # Rust, Go and Mojo are required in their provisioned lanes below; this
+        # Julia-only lane previously skipped these three unavailable owners.
+        run: >
+          pytest tests/ -k backends -m "not slow" --tb=short -p no:cacheprovider
+          --deselect=tests/test_chimera_backends.py::TestRustParity
+          --deselect=tests/test_chimera_backends.py::TestGoParity
+          --deselect=tests/test_chimera_backends.py::TestMojoParity
       - name: Execute Julia measurement ingress contracts
         run: |
           python - <<'PY'
@@ -103,6 +109,13 @@ jobs:
         run: python -m pytest tests/test_basin_bifurcation_real_runtime.py tests/test_basin_stability_backends.py tests/test_basin_stability_benchmark.py --strict-markers --tb=short --cov=scpn_phase_orchestrator --cov-append --cov-report= --cov-fail-under=0
       - name: Check original native Julia basin contracts and type inference
         run: python -c "from juliacall import Main; Main.include('julia/test_basin_stability.jl')"
+      - name: Qualify required Julia chimera public runtime
+        env:
+          COVERAGE_FILE: .coverage.julia
+        run: |
+          python -m pytest tests/test_chimera_backends.py tests/test_chimera_real_runtime.py -k julia --strict-markers --tb=short --cov=scpn_phase_orchestrator --cov-append --cov-report= --cov-fail-under=0
+          python -c "from juliacall import Main; Main.include('julia/test_chimera.jl')"
+          python -m benchmarks.chimera_benchmark --parity-gate --sizes 16 --calls 20 --require-backends julia
       - name: Upload Julia bridge coverage
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
@@ -172,6 +185,14 @@ jobs:
           SPO_REQUIRED_BASIN_BACKENDS: "python,go"
           COVERAGE_FILE: .coverage.go
         run: python -m pytest tests/test_basin_bifurcation_real_runtime.py tests/test_basin_stability_backends.py tests/test_basin_stability_benchmark.py --strict-markers --tb=short --cov=scpn_phase_orchestrator --cov-append --cov-report= --cov-fail-under=0
+      - name: Qualify required Go chimera public runtime
+        env:
+          COVERAGE_FILE: .coverage.go
+        run: |
+          go test -cover go/chimera.go go/chimera_test.go
+          go vet go/chimera.go go/chimera_test.go
+          python -m pytest tests/test_chimera_backends.py tests/test_chimera_real_runtime.py -k go --strict-markers --tb=short --cov=scpn_phase_orchestrator --cov-append --cov-report= --cov-fail-under=0
+          python -m benchmarks.chimera_benchmark --parity-gate --sizes 16 --calls 20 --require-backends go
       - name: Upload Go measurement coverage
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
@@ -241,6 +262,12 @@ jobs:
         env:
           SPO_REQUIRED_BASIN_BACKENDS: "python,mojo"
         run: .venv/bin/python -m pytest native-tests/test_basin_bifurcation_profiles.py -k test_original_mojo_protocol_or_genuine_owner_absence --strict-markers --tb=short
+      - name: Qualify required Mojo chimera public runtime
+        env:
+          COVERAGE_FILE: .coverage.mojo
+        run: |
+          .venv/bin/python -m pytest tests/test_chimera_backends.py tests/test_chimera_real_runtime.py -k mojo --strict-markers --tb=short --cov=scpn_phase_orchestrator --cov-append --cov-report= --cov-fail-under=0
+          .venv/bin/python -m benchmarks.chimera_benchmark --parity-gate --sizes 16 --calls 20 --require-backends mojo
       - name: Upload Mojo measurement coverage
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
@@ -379,6 +406,10 @@ jobs:
             -m "not slow and not performance and not native_runtime" \
             -k "not performance" \
             --cov=scpn_phase_orchestrator --cov-report= --cov-fail-under=0
+          pytest tests/test_chimera_backends.py tests/test_chimera_real_runtime.py -k rust --strict-markers --tb=short --cov=scpn_phase_orchestrator --cov-append --cov-report= --cov-fail-under=0
+          pytest native-tests/test_chimera_boundary.py --strict-markers --tb=short --cov=scpn_phase_orchestrator --cov-append --cov-report= --cov-fail-under=0
+          pytest tests/test_chimera.py::test_local_order_parameter_uses_backend_when_available --strict-markers --tb=short --cov=scpn_phase_orchestrator --cov-append --cov-report= --cov-fail-under=0
+          python -m benchmarks.chimera_benchmark --parity-gate --sizes 16 --calls 20 --require-backends rust
           pytest tests/test_kernel_runtime.py tests/test_cli_serve.py tests/test_kernel_deployment.py native-tests/test_sindy_runtime_profiles.py native-tests/test_attention_residuals_profiles.py native-tests/test_basin_bifurcation_profiles.py \
             -m native_runtime --strict-markers --tb=short \
             --cov=scpn_phase_orchestrator --cov-append --cov-report= --cov-fail-under=0
@@ -421,6 +452,10 @@ jobs:
             --ignore-glob=tests/test_nn_physics_validation*.py \
             -m "not slow and not performance and not native_runtime" \
             -k "not performance"
+          pytest tests/test_chimera_backends.py tests/test_chimera_real_runtime.py -k rust --strict-markers --tb=short --cov=scpn_phase_orchestrator --cov-append --cov-report= --cov-fail-under=0
+          pytest native-tests/test_chimera_boundary.py --strict-markers --tb=short --cov=scpn_phase_orchestrator --cov-append --cov-report= --cov-fail-under=0
+          pytest tests/test_chimera.py::test_local_order_parameter_uses_backend_when_available --strict-markers --tb=short --cov=scpn_phase_orchestrator --cov-append --cov-report= --cov-fail-under=0
+          python -m benchmarks.chimera_benchmark --parity-gate --sizes 16 --calls 20 --require-backends rust
           pytest tests/test_kernel_runtime.py tests/test_cli_serve.py tests/test_kernel_deployment.py native-tests/test_sindy_runtime_profiles.py native-tests/test_attention_residuals_profiles.py native-tests/test_basin_bifurcation_profiles.py \
             -m native_runtime --strict-markers --tb=short
       - name: Exercise real built-in native loading (Linux, Python 3.11)
@@ -452,5 +487,9 @@ jobs:
             --ignore-glob=tests/test_nn_physics_validation*.py \
             -m "not slow and not performance and not native_runtime" \
             -k "not performance"
+          pytest tests/test_chimera_backends.py tests/test_chimera_real_runtime.py -k rust --strict-markers --tb=short --cov=scpn_phase_orchestrator --cov-append --cov-report= --cov-fail-under=0
+          pytest native-tests/test_chimera_boundary.py --strict-markers --tb=short --cov=scpn_phase_orchestrator --cov-append --cov-report= --cov-fail-under=0
+          pytest tests/test_chimera.py::test_local_order_parameter_uses_backend_when_available --strict-markers --tb=short --cov=scpn_phase_orchestrator --cov-append --cov-report= --cov-fail-under=0
+          python -m benchmarks.chimera_benchmark --parity-gate --sizes 16 --calls 20 --require-backends rust
           pytest tests/test_kernel_runtime.py tests/test_cli_serve.py tests/test_kernel_deployment.py native-tests/test_sindy_runtime_profiles.py native-tests/test_attention_residuals_profiles.py native-tests/test_basin_bifurcation_profiles.py \
             -m native_runtime --strict-markers --tb=short

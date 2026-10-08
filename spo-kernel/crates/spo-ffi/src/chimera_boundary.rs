@@ -52,7 +52,7 @@ pub(crate) fn detect_chimera_rust<'py>(
             "knm self-coupling diagonal must be zero",
         ));
     }
-    let result = chimera::detect_chimera(p, k, n);
+    let result = chimera::try_detect_chimera(p, k, n).map_err(PyValueError::new_err)?;
     Ok((
         result.coherent_indices,
         result.incoherent_indices,

@@ -253,7 +253,12 @@ shared chimera validators before optional runtime loading and after backend
 execution: phase vectors, flattened coupling matrices, and backend local-order
 outputs reject boolean aliases, complex/object-complex aliases, numeric-string
 aliases, non-finite values, wrong cardinality, non-zero coupling diagonals, and
-unit-interval drift before float coercion or publication.
+unit-interval drift before float coercion or publication. Tiny admitted
+diagonal residues are explicitly excluded from neighbours. Exact magnitude
+factorization avoids overflowing finite phase differences in every owner. Go
+requires the extent-checked V2 ABI; Julia source must actually load; named
+unavailable owners raise rather than recording a fallback as their execution.
+See the [chimera runtime contract](../../reference/api/monitor_chimera.md).
 The public delay-embedding dispatcher and direct Go, Julia, and Mojo bridges
 apply shared embedding validators before optional runtime loading and after
 backend execution: scalar signals, embedded trajectories, mutual-information

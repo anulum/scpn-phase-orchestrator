@@ -3,29 +3,42 @@
 # Commercial license available
 # © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
 # © Code 2020–2026 Miroslav Šotek. All rights reserved.
+# ORCID: 0009-0009-3560-0851
+# Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Example: EEG File Ingestion
-#
-# Shows how to go from a real EEG data file to SPO phase dynamics.
-# Generates synthetic EEG-like data (alpha band + noise) as a stand-in
-# for real .edf/.csv files, then extracts phases via Hilbert transform
-# and runs the UPDE engine.
-#
-# For real EEG: replace the synthetic signal with mne.io.read_raw_edf()
-# or numpy.loadtxt() from your recording system.
-#
-# Usage: python examples/eeg_file_ingestion.py
-# Requires: pip install scpn-phase-orchestrator scipy
+
+
+"""Demonstrate synthetic oscillator phases through the public UPDE and monitor.
+
+The chimera monitor uses positive non-self adjacency and unweighted local
+coherence, with strict 0.7/0.3 thresholds. Its index is the boundary fraction;
+one snapshot does not demonstrate a persistent chimera or classify clinical EEG.
+Run with ``python examples/eeg_file_ingestion.py``.
+"""
 
 from __future__ import annotations
 
+from importlib import import_module
+from typing import Protocol, cast
+
 import numpy as np
 from numpy.typing import NDArray
-from scipy.signal import hilbert
 
 from scpn_phase_orchestrator.monitor.chimera import detect_chimera
 from scpn_phase_orchestrator.monitor.npe import compute_npe
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
 from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
+
+
+class HilbertTransform(Protocol):
+    """Describe the float64 SciPy Hilbert call used by this example."""
+
+    def __call__(self, x: NDArray[np.float64], *, axis: int) -> NDArray[np.complex128]:
+        """Return the complex128 analytic signal along the given sample axis."""
+        ...
+
+
+hilbert = cast(HilbertTransform, import_module("scipy.signal").hilbert)
 
 TWO_PI = 2.0 * np.pi
 
@@ -36,11 +49,26 @@ def generate_synthetic_eeg(
     sample_rate: float = 256.0,
     alpha_freq: float = 10.0,
     seed: int = 42,
-) -> tuple[NDArray[np.floating], float]:
-    """Generate synthetic EEG-like signals (alpha band + pink noise).
+) -> tuple[NDArray[np.float64], float]:
+    """Generate an alpha sinusoid with independent white Gaussian noise.
 
-    Returns (n_samples, n_channels) array and sample rate.
-    Replace this with your real EEG loader.
+    Parameters
+    ----------
+    n_channels : int
+        Number of simulated channels.
+    duration_s : float
+        Duration in seconds.
+    sample_rate : float
+        Samples per second.
+    alpha_freq : float
+        Mean oscillator frequency in hertz.
+    seed : int
+        NumPy random seed.
+
+    Returns
+    -------
+    tuple[numpy.ndarray, float]
+        Float64 samples of shape (n_samples, n_channels) and sample rate.
     """
     rng = np.random.default_rng(seed)
     n_samples = int(duration_s * sample_rate)
@@ -57,17 +85,26 @@ def generate_synthetic_eeg(
     return signals, sample_rate
 
 
-def extract_phases_hilbert(signals: NDArray[np.floating]) -> NDArray[np.floating]:
-    """Extract instantaneous phase from each channel via Hilbert transform.
+def extract_phases_hilbert(signals: NDArray[np.float64]) -> NDArray[np.float64]:
+    """Extract phases from the Hilbert analytic signal along the sample axis.
 
-    This is the standard method for narrowband EEG signals.
-    For broadband: bandpass filter first (e.g. 8-13 Hz for alpha).
+    Parameters
+    ----------
+    signals : numpy.ndarray
+        Float64 array with samples in rows and channels in columns. A recording
+        needs application-appropriate filtering before interpreting its phase.
+
+    Returns
+    -------
+    numpy.ndarray
+        Float64 phase angles in [0, 2*pi), with the same shape as signals.
     """
     analytic = hilbert(signals, axis=0)
-    return np.angle(analytic) % TWO_PI
+    return np.asarray(np.angle(analytic) % TWO_PI, dtype=np.float64)
 
 
 def main() -> None:
+    """Run the original synthetic example through real public consumers."""
     print("EEG File Ingestion → SPO Phase Dynamics")
     print("=" * 50)
 
@@ -83,7 +120,6 @@ def main() -> None:
 
     # Step 3: Build coupling matrix from electrode distances
     n = signals.shape[1]
-    np.random.default_rng(0)
     dist = np.abs(np.arange(n)[:, None] - np.arange(n)[None, :])
     knm = 1.5 * np.exp(-0.5 * dist)
     np.fill_diagonal(knm, 0.0)
@@ -108,7 +144,7 @@ def main() -> None:
         t = (epoch + 1) * 100 / sr
         print(
             f"   t={t:.2f}s: R={R:.3f}, NPE={npe:.3f}, "
-            f"chimera={chimera.chimera_index:.3f}"
+            f"boundary_fraction={chimera.chimera_index:.3f}"
         )
 
     print("\nDone. In production, replace generate_synthetic_eeg()")

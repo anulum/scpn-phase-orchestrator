@@ -544,10 +544,13 @@ Features: `[cos(θ_1), sin(θ_1), ..., cos(θ_N), sin(θ_N), R]`
 
 ## 7. Chimera Detection (`chimera.py`)
 
-Chimera states: spatiotemporal patterns where synchronised and incoherent
-domains coexist (Kuramoto & Battogtokh 2002). All functions are
-differentiable, enabling gradient-based search for chimera-producing
-coupling matrices.
+This JAX snapshot diagnostic counts all nonzero edges, including signed and
+self edges. Its local-order magnitude uses exact centre-phasor factorization,
+its index is population variance, and its masks use inclusive 0.8/0.3 defaults.
+Phase gradients apply on fixed adjacency away from zero phasors; hard support
+has zero coupling-amplitude gradients and does not support topology search.
+Threshold masks are discrete. See the [JAX contract](nn_chimera_contract.md);
+the [CPU monitor](api/monitor_chimera.md) has separate adjacency/index/mask semantics.
 
 ### Local order parameter
 
@@ -560,7 +563,7 @@ Neighbours defined by nonzero entries in $K$.
 | Function | Returns |
 |---|---|
 | `local_order_parameter(phases, K)` | `(N,)` local R per oscillator |
-| `chimera_index(phases, K)` | Scalar variance of local R. High = chimera. |
+| `chimera_index(phases, K)` | Scalar variance of local R in `[0,0.25]` for a nonempty finite population. |
 | `detect_chimera(phases, K, coherent_threshold=0.8, incoherent_threshold=0.3)` | `(coherent_mask, incoherent_mask)` boolean arrays |
 
 ---

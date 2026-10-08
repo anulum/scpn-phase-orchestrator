@@ -310,8 +310,15 @@ Universal approximation near edge-of-bifurcation (arXiv:2407.16172).
 
 ## Differentiable Chimera Metrics
 
-JAX-native local order-parameter and chimera-index helpers for gradient-aware
-topology searches.
+JAX-native local order and local-order variance with phase sensitivity on
+fixed adjacency; hard support does not provide coupling-topology gradients.
+
+Local order uses nonzero adjacency, including negative and self edges. The index
+is variance rather than the CPU boundary fraction. Inclusive masks use 0.8/0.3
+defaults. Only phase gradients on fixed adjacency away from zero phasors are
+supported; hard support gives zero coupling-amplitude gradients and discrete
+masks. See the [JAX contract](../nn_chimera_contract.md) and
+[CPU model comparison](monitor_chimera.md).
 
 ::: scpn_phase_orchestrator.nn.chimera
 

@@ -348,9 +348,9 @@ inside a dashboard or notebook; it turns them into inspectable artefacts.
 | Integration modules | 32 |
 | Research/Experimental modules | 205 |
 | Domainpack files | 36 |
-| Rust kernel files | 126 |
+| Rust kernel files | 127 |
 | Optional extras | 24 |
-| Python test files | 1097 |
+| Python test files | 1099 |
 | Public documentation pages | 244 |
 | GitHub Actions workflows | 19 |
 
@@ -611,7 +611,7 @@ Selected reference suites:
 | `kuramoto_reference_strogatz_2000` | Strogatz/Acebron synchronisation plus exact two-oscillator locking acceptance | `13096.772262633993` |
 | `stuart_landau_reference_pikovsky_2001` | Stuart-Landau Hopf limit-cycle and subcritical-decay acceptance | `9921.368080173932` |
 | `petri_net_reachability` | Petri-net exact reachability, token-conservation, and cycle-period acceptance | `196485.20274453718` |
-| `chimera_polyglot_parity_gate` | Kuramoto-Battogtokh local-order parity and chimera invariants across Rust/Mojo/Julia/Go/Python slots | `9.181678783030513` |
+| `chimera_polyglot_parity_gate` | Positive non-self local-order contracts across Rust/Mojo/Julia/Go/Python | Current 20-call comparison linked below |
 | `itpc_polyglot_parity_gate` | Lachaux ITPC vector and pause-persistence parity across Rust/Mojo/Julia/Go/Python slots | `12.85877096230649` |
 | `spectral_polyglot_parity_gate` | Dorfler-Bullo Laplacian spectral parity and exact graph spectra across Rust/Mojo/Julia/Go/Python slots | `3.0281704851806226` |
 | `hodge_polyglot_parity_gate` | Jiang Hodge gradient/curl/harmonic reconstruction parity and topological-flow invariants across Rust/Mojo/Julia/Go/Python slots | `709.996494491663` |
@@ -647,7 +647,7 @@ The ITPC polyglot record checks the Lachaux inter-trial phase-coherence
 estimator across every declared backend slot, including unit coherence for
 aligned trials, zero coherence for opposite-phase trials, bounded pause
 persistence, and explicit unavailable-toolchain evidence.
-The chimera polyglot record checks the Kuramoto-Battogtokh local-order vector
+The chimera polyglot record checks unweighted positive non-self local coherence
 across every declared backend slot, including global phase-gauge invariance,
 synchronised unit local order, disconnected zero local order, the exact
 uniform-circle all-to-all reference, and explicit unavailable-toolchain
@@ -904,3 +904,11 @@ See [CITATION.cff](CITATION.cff).
   <br>
   <em>Developed by <a href="https://www.anulum.li">ANULUM</a> / Fortis Studio</em>
 </p>
+
+The [current chimera comparison](docs/reference/api/monitor_chimera.md#current-comparison)
+replaces the earlier chimera snapshot timing. It contains 20 completed samples per
+owner/size for all five CPU owners plus distinct actual JAX JIT local order.
+Raw distributions and source/artifact/workload hashes accompany the shared-host
+measurements. Monitor thresholds classify a snapshot's boundary fraction; JAX
+retains its separate variance and inclusive-mask contract. Neither snapshot
+establishes persistent dynamical coexistence.

@@ -16,23 +16,24 @@ All backends agree with the Python reference within:
 
 from __future__ import annotations
 
+import subprocess
 from collections.abc import Callable
+from pathlib import Path
 from types import SimpleNamespace
-from typing import NoReturn, get_type_hints
+from typing import cast, get_type_hints
 
 import numpy as np
 import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
+from numpy.typing import NDArray
 
+from benchmarks.chimera_local_order_reference import scalar_local_order
 from scpn_phase_orchestrator.experimental.accelerators.monitor import (
     _chimera_julia as chimera_julia,
 )
 from scpn_phase_orchestrator.experimental.accelerators.monitor import (
     _chimera_mojo as chimera_mojo,
-)
-from scpn_phase_orchestrator.experimental.accelerators.monitor import (
-    _chimera_validation as chimera_validation,
 )
 from scpn_phase_orchestrator.experimental.accelerators.monitor._chimera_go import (
     local_order_parameter_go,
@@ -51,43 +52,25 @@ from scpn_phase_orchestrator.monitor.chimera import (
 )
 from tests.typing_contracts import assert_precise_ndarray_hint
 
+FloatArray = NDArray[np.float64]
+
 TWO_PI = 2.0 * np.pi
-LocalOrderBackend = Callable[[np.ndarray, np.ndarray, object], np.ndarray]
-
-
-class _ArrayProtocolFailure:
-    def __array__(
-        self,
-        dtype: object | None = None,
-        copy: object | None = None,
-    ) -> NoReturn:
-        raise ValueError("synthetic array conversion failure")
+LocalOrderBackend = Callable[[FloatArray, FloatArray, int], FloatArray]
 
 
 def test__chimera_validation_helper_is_directly_linked_to_backend_tests() -> None:
-    assert callable(chimera_validation.validate_chimera_backend_inputs)
-    assert callable(chimera_validation.validate_chimera_backend_output)
+    """Original direct APIs refuse mismatched counts before runtime transport."""
+    for backend in (
+        local_order_parameter_go,
+        local_order_parameter_julia,
+        local_order_parameter_mojo,
+    ):
+        with pytest.raises(ValueError, match="phases length"):
+            backend(np.zeros(2), np.zeros(9), 3)
 
 
-def _force(backend: str) -> str:
-    prev = ch_mod.ACTIVE_BACKEND
-    ch_mod.ACTIVE_BACKEND = backend
-    return prev
-
-
-def _reset(prev: str) -> None:
-    ch_mod.ACTIVE_BACKEND = prev
-
-
-def _reference(phases: np.ndarray, knm: np.ndarray) -> np.ndarray:
-    prev = _force("python")
-    try:
-        return local_order_parameter(phases, knm)
-    finally:
-        _reset(prev)
-
-
-def _problem(seed: int, n: int = 16) -> tuple[np.ndarray, np.ndarray]:
+def _problem(seed: int, n: int = 16) -> tuple[FloatArray, FloatArray]:
+    """Build deterministic finite phases and directed positive non-self coupling."""
     rng = np.random.default_rng(seed)
     phases = rng.uniform(0.0, TWO_PI, n)
     knm = rng.uniform(0.0, 1.0, (n, n))
@@ -97,6 +80,7 @@ def _problem(seed: int, n: int = 16) -> tuple[np.ndarray, np.ndarray]:
 
 
 def test_backend_array_contracts_are_parameterised() -> None:
+    """Keep precise float64 array annotations on direct numerical boundaries."""
     functions = (
         local_order_parameter_go,
         local_order_parameter_julia,
@@ -115,19 +99,15 @@ class TestDirectBackendBoundaryContracts:
     def test_validation_alias_helpers_fail_closed_on_array_protocol_failure(
         self,
     ) -> None:
-        value = _ArrayProtocolFailure()
-
-        assert chimera_validation._contains_boolean_alias(value) is False
-        assert chimera_validation._contains_complex_alias(value) is False
-        assert chimera_validation._contains_numeric_string_alias(value) is False
-        assert chimera_validation._has_complex_payload(value) is False
-        assert chimera_validation._is_numeric_string_alias(0.5) is False
-        assert (
-            chimera_validation._contains_numeric_string_alias(
-                np.array([0.0, "1.0"], dtype=object)
-            )
-            is True
-        )
+        """Direct public boundaries refuse real ragged numerical sequences."""
+        ragged = cast(FloatArray, [[0.0], [0.0, 0.1]])
+        for backend in (
+            local_order_parameter_go,
+            local_order_parameter_julia,
+            local_order_parameter_mojo,
+        ):
+            with pytest.raises(ValueError):
+                backend(ragged, np.zeros(4), 2)
 
     @pytest.mark.parametrize(
         "backend",
@@ -187,13 +167,14 @@ class TestDirectBackendBoundaryContracts:
     def test_validation_precedes_runtime_load(
         self,
         backend: LocalOrderBackend,
-        phases: np.ndarray,
-        knm_flat: np.ndarray,
+        phases: FloatArray,
+        knm_flat: FloatArray,
         n: object,
         match: str,
     ) -> None:
+        """Reject invalid original measurements before optional runtime loading."""
         with pytest.raises(ValueError, match=match):
-            backend(phases, knm_flat, n)
+            backend(phases, knm_flat, cast(int, n))
 
     @pytest.mark.parametrize(
         ("local_order", "match"),
@@ -204,35 +185,51 @@ class TestDirectBackendBoundaryContracts:
             (np.array([0.1, 0.2 + 0.1j], dtype=object), "real-valued"),
             (np.array(["0.1", "0.2"], dtype=object), "numeric-string"),
             (np.array([0.1, 1.2]), "\\[0, 1\\]"),
-            (np.array([0.1]), "length"),
+            (np.array([0.1]), "shape"),
         ],
     )
     def test_output_validation_rejects_nonphysical_local_order(
-        self, local_order: np.ndarray, match: str
+        self, monkeypatch: pytest.MonkeyPatch, local_order: FloatArray, match: str
     ) -> None:
-        with pytest.raises(ValueError, match=match):
-            chimera_validation.validate_chimera_backend_output(local_order, 2)
+        """Refuse deliberately invalid outputs solely as negative controls."""
 
+        def invalid_output(_p: FloatArray, _k: FloatArray, _n: int) -> FloatArray:
+            """Supply a deliberately invalid return solely as a negative control."""
+            return local_order
+
+        monkeypatch.setattr(ch_mod, "_dispatch", lambda backend=None: invalid_output)
+        with pytest.raises(ValueError, match=match):
+            local_order_parameter(np.zeros(2), np.array([[0.0, 1.0], [1.0, 0.0]]))
+
+    @pytest.mark.parametrize("bad", [np.array([0.25, 1.25]), np.array([0.25])])
     def test_julia_backend_rejects_nonphysical_output_before_return(
-        self, monkeypatch: pytest.MonkeyPatch
+        self, monkeypatch: pytest.MonkeyPatch, bad: FloatArray
     ) -> None:
+        """Refuse corrupted Julia output solely as a negative boundary control."""
+
         class _FakeJulia:
+            """Supply invalid output solely to exercise the refusal contract."""
+
             @staticmethod
             def local_order_parameter(
-                phases: np.ndarray, knm: np.ndarray, n: int
-            ) -> np.ndarray:
-                return np.array([0.25, 1.25])
+                phases: FloatArray, knm: FloatArray, n: int
+            ) -> FloatArray:
+                """Return the deliberately invalid Julia boundary-control vector."""
+                return bad
 
         monkeypatch.setattr(chimera_julia, "_ensure", lambda: _FakeJulia())
         phases, knm = _problem(11, n=2)
 
-        with pytest.raises(ValueError, match="\\[0, 1\\]"):
+        with pytest.raises(ValueError, match="\\[0, 1\\]|length"):
             local_order_parameter_julia(phases, knm.ravel(), 2)
 
     def test_mojo_backend_rejects_nonfinite_output_before_return(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        """Refuse corrupted Mojo output solely as a negative boundary control."""
+
         def _fake_run(payload: str, *, expected_count: int, label: str) -> list[float]:
+            """Supply nonfinite transport output solely as a negative control."""
             assert expected_count == 2
             assert label == "CHI"
             return [0.25, np.inf]
@@ -244,40 +241,45 @@ class TestDirectBackendBoundaryContracts:
             local_order_parameter_mojo(phases, knm.ravel(), 2)
 
     @pytest.mark.parametrize(
-        ("stdout", "match"),
+        ("stdout", "status", "match"),
         [
-            ("", "expected 2"),
-            ("0.25\n", "expected 2"),
-            ("0.25\n\n0.75\n", "expected 2"),
-            ("0.25\nnot-a-scalar\n", "non-scalar chimera value"),
+            ("", 0, "expected 2"),
+            ("0.25\n", 0, "expected 2"),
+            ("0.25\n\n0.75\n", 0, "expected 2"),
+            ("0.25\nnot-a-scalar\n", 0, "non-scalar chimera value"),
+            ("", 1, "returned exit 1"),
         ],
     )
     def test_mojo_subprocess_stdout_contract_rejects_malformed_local_order(
         self,
         monkeypatch: pytest.MonkeyPatch,
         stdout: str,
+        status: int,
         match: str,
     ) -> None:
-        monkeypatch.setattr(chimera_mojo, "_ensure_exe", lambda: "chimera_mojo")
+        """Refuse deliberately corrupted transport only as a negative control."""
+        monkeypatch.setattr(chimera_mojo, "_ensure_exe", lambda: Path("chimera_mojo"))
         monkeypatch.setattr(
-            chimera_mojo.subprocess,
+            subprocess,
             "run",
             lambda *args, **kwargs: SimpleNamespace(
-                returncode=0,
+                returncode=status,
                 stdout=stdout,
-                stderr="",
+                stderr="negative transport fault control",
             ),
         )
-
         with pytest.raises(ValueError, match=match):
-            chimera_mojo._run("CHI 2 0 1 0 1 1 0\n", expected_count=2, label="CHI")
+            local_order_parameter_mojo(np.zeros(2), np.array([0.0, 1.0, 1.0, 0.0]), 2)
 
 
+@pytest.mark.native_runtime
 class TestRustParity:
+    """Require the actual Rust owner and compare its output to the scalar oracle."""
+
     @pytest.fixture(autouse=True)
     def _skip_if_absent(self) -> None:
-        if "rust" not in AVAILABLE_BACKENDS:
-            pytest.skip("Rust backend not built")
+        """Fail qualification when the required original native owner is unavailable."""
+        assert "rust" in AVAILABLE_BACKENDS, "Required rust owner is unavailable"
 
     @given(
         n=st.integers(min_value=2, max_value=40),
@@ -289,39 +291,39 @@ class TestRustParity:
         suppress_health_check=[HealthCheck.too_slow],
     )
     def test_matches_python(self, n: int, seed: int) -> None:
+        """Compare the actual named native owner to the independent scalar equation."""
         phases, knm = _problem(seed, n)
-        ref = _reference(phases, knm)
-        prev = _force("rust")
-        try:
-            got = local_order_parameter(phases, knm)
-        finally:
-            _reset(prev)
+        ref = scalar_local_order(phases, knm)
+        got = local_order_parameter(phases, knm, backend="rust")
         np.testing.assert_allclose(got, ref, atol=1e-12)
 
 
+@pytest.mark.native_runtime
 class TestJuliaParity:
+    """Require the actual Julia owner and compare its output to the scalar oracle."""
+
     @pytest.fixture(autouse=True)
     def _skip_if_absent(self) -> None:
-        if "julia" not in AVAILABLE_BACKENDS:
-            pytest.skip("Julia backend not available")
+        """Fail qualification when the required original native owner is unavailable."""
+        assert "julia" in AVAILABLE_BACKENDS, "Required julia owner is unavailable"
 
     @pytest.mark.parametrize("seed", [0, 42])
     def test_matches_python(self, seed: int) -> None:
+        """Compare the actual named native owner to the independent scalar equation."""
         phases, knm = _problem(seed)
-        ref = _reference(phases, knm)
-        prev = _force("julia")
-        try:
-            got = local_order_parameter(phases, knm)
-        finally:
-            _reset(prev)
+        ref = scalar_local_order(phases, knm)
+        got = local_order_parameter(phases, knm, backend="julia")
         np.testing.assert_allclose(got, ref, atol=1e-12)
 
 
+@pytest.mark.native_runtime
 class TestGoParity:
+    """Require the actual Go owner and compare its output to the scalar oracle."""
+
     @pytest.fixture(autouse=True)
     def _skip_if_absent(self) -> None:
-        if "go" not in AVAILABLE_BACKENDS:
-            pytest.skip("Go backend not built")
+        """Fail qualification when the required original native owner is unavailable."""
+        assert "go" in AVAILABLE_BACKENDS, "Required go owner is unavailable"
 
     @given(
         n=st.integers(min_value=2, max_value=30),
@@ -333,42 +335,39 @@ class TestGoParity:
         suppress_health_check=[HealthCheck.too_slow],
     )
     def test_matches_python(self, n: int, seed: int) -> None:
+        """Compare the actual named native owner to the independent scalar equation."""
         phases, knm = _problem(seed, n)
-        ref = _reference(phases, knm)
-        prev = _force("go")
-        try:
-            got = local_order_parameter(phases, knm)
-        finally:
-            _reset(prev)
+        ref = scalar_local_order(phases, knm)
+        got = local_order_parameter(phases, knm, backend="go")
         np.testing.assert_allclose(got, ref, atol=1e-12)
 
 
+@pytest.mark.native_runtime
 class TestMojoParity:
+    """Require the actual Mojo owner and compare its output to the scalar oracle."""
+
     @pytest.fixture(autouse=True)
     def _skip_if_absent(self) -> None:
-        if "mojo" not in AVAILABLE_BACKENDS:
-            pytest.skip("Mojo backend not built")
+        """Fail qualification when the required original native owner is unavailable."""
+        assert "mojo" in AVAILABLE_BACKENDS, "Required mojo owner is unavailable"
 
     @pytest.mark.parametrize("seed", [0, 77])
     def test_matches_python(self, seed: int) -> None:
+        """Compare the actual named native owner to the independent scalar equation."""
         phases, knm = _problem(seed)
-        ref = _reference(phases, knm)
-        prev = _force("mojo")
-        try:
-            got = local_order_parameter(phases, knm)
-        finally:
-            _reset(prev)
+        ref = scalar_local_order(phases, knm)
+        got = local_order_parameter(phases, knm, backend="mojo")
         np.testing.assert_allclose(got, ref, atol=1e-9)
 
 
+@pytest.mark.native_runtime
 class TestCrossBackendConsistency:
-    @pytest.mark.skipif(
-        len(AVAILABLE_BACKENDS) < 2,
-        reason="Only Python fallback available",
-    )
+    """Compare every available owner on the same directed graph."""
+
     def test_all_backends_agree(self) -> None:
+        """Compare each actual resolved owner against one independent scalar vector."""
         phases, knm = _problem(2026, n=24)
-        ref = _reference(phases, knm)
+        ref = scalar_local_order(phases, knm)
         tolerances = {
             "rust": 1e-12,
             "julia": 1e-12,
@@ -377,11 +376,7 @@ class TestCrossBackendConsistency:
             "python": 0.0,
         }
         for backend in AVAILABLE_BACKENDS:
-            prev = _force(backend)
-            try:
-                got = local_order_parameter(phases, knm)
-            finally:
-                _reset(prev)
+            got = local_order_parameter(phases, knm, backend=backend)
             np.testing.assert_allclose(
                 got,
                 ref,
@@ -390,8 +385,7 @@ class TestCrossBackendConsistency:
             )
 
     def test_detect_chimera_uses_dispatcher(self) -> None:
-        """``detect_chimera`` must flow through ``local_order_parameter``
-        so every available backend is exercised."""
+        """Classify actual default-owner output through the public dispatcher."""
         phases, knm = _problem(3, n=12)
         state = detect_chimera(phases, knm)
         total = (
@@ -400,3 +394,21 @@ class TestCrossBackendConsistency:
             + int(round(state.chimera_index * 12))
         )
         assert total == 12
+
+
+def test_go_error_code_propagates_as_negative_control(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An injected execution failure cannot become a successful local-order vector."""
+    from scpn_phase_orchestrator.experimental.accelerators.monitor import _chimera_go
+
+    class FailedRuntime:
+        """Represent a failed native call solely for a negative boundary control."""
+
+        def LocalOrderParameterV2(self, *args: object) -> int:
+            """Return a nonzero error code without claiming numerical execution."""
+            return 2
+
+    monkeypatch.setattr(_chimera_go, "_load_lib", lambda: FailedRuntime())
+    with pytest.raises(ValueError, match="LocalOrderParameterV2 rc=2"):
+        local_order_parameter_go(np.zeros(2), np.array([0.0, 1.0, 1.0, 0.0]), 2)

@@ -22,33 +22,22 @@ from __future__ import annotations
 
 import numpy as np
 import pytest
+from numpy.typing import NDArray
 
-from scpn_phase_orchestrator.monitor import chimera as ch_mod
 from scpn_phase_orchestrator.monitor.chimera import (
     detect_chimera,
     local_order_parameter,
 )
+
+FloatArray = NDArray[np.float64]
 
 TWO_PI = 2.0 * np.pi
 
 pytestmark = pytest.mark.slow
 
 
-def _python(func):
-    def wrapper(*args, **kwargs):
-        prev = ch_mod.ACTIVE_BACKEND
-        ch_mod.ACTIVE_BACKEND = "python"
-        try:
-            return func(*args, **kwargs)
-        finally:
-            ch_mod.ACTIVE_BACKEND = prev
-
-    wrapper.__name__ = func.__name__
-    return wrapper
-
-
-@_python
-def test_global_shift_invariance():
+def test_global_shift_invariance() -> None:
+    """Preserve local magnitudes under a global phase rotation."""
     rng = np.random.default_rng(0)
     n = 40
     phases = rng.uniform(0, TWO_PI, n)
@@ -58,16 +47,16 @@ def test_global_shift_invariance():
 
     shifted = (phases + 1.234) % TWO_PI
     np.testing.assert_allclose(
-        local_order_parameter(phases, knm),
-        local_order_parameter(shifted, knm),
+        local_order_parameter(phases, knm, backend="python"),
+        local_order_parameter(shifted, knm, backend="python"),
         atol=1e-10,
     )
 
 
-@_python
-def test_staged_chimera_on_local_coupling_ring():
-    """Half-locked + half-random on a **narrow-kernel ring** produces
-    a true Kuramoto-Battogtokh chimera: the locked half has high
+def test_staged_chimera_on_local_coupling_ring() -> None:
+    """Check mixed instantaneous local coherence on a narrow-kernel ring.
+
+    The locked half has high
     ``R_i``; the random half has low ``R_i``. All-to-all would smear
     both into the boundary band, so the test uses a radius-2 ring
     where each oscillator only sees its 4 nearest neighbours.
@@ -82,21 +71,21 @@ def test_staged_chimera_on_local_coupling_ring():
             for off in (-2, -1, 1, 2):
                 knm[i, (i + off) % n] = 1.0
         phases = np.concatenate([np.zeros(n // 2), rng.uniform(0, TWO_PI, n // 2)])
-        state = detect_chimera(phases, knm)
+        state = detect_chimera(phases, knm, backend="python")
         if state.coherent_indices and state.incoherent_indices:
             successes += 1
     assert successes >= 7
 
 
-@_python
-def test_large_N_stress_finite():
+def test_large_N_stress_finite() -> None:
+    """Run the actual Python owner on a finite five-hundred-node graph."""
     rng = np.random.default_rng(7)
     n = 500
     phases = rng.uniform(0, TWO_PI, n)
     knm = rng.uniform(0.0, 1.0, (n, n))
     knm = (knm > 0.2).astype(np.float64) * knm
     np.fill_diagonal(knm, 0.0)
-    r = local_order_parameter(phases, knm)
+    r = local_order_parameter(phases, knm, backend="python")
     assert r.shape == (n,)
     assert np.all(np.isfinite(r))
     assert np.all(r <= 1.0 + 1e-12)

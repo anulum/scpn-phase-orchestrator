@@ -8,8 +8,9 @@
 
 //! Chimera state detection via local order parameter.
 //!
-//! A chimera state is the coexistence of coherent and incoherent oscillator
-//! populations in a network of identically coupled oscillators.
+//! This instantaneous, unweighted adjacency diagnostic reports local coherence
+//! and a boundary fraction. It does not certify a dynamical chimera state or
+//! implement the weighted nonlocal field or temporal classification below.
 //!
 //! References:
 //! - Kuramoto & Battogtokh 2002, Nonlinear Phenom. Complex Syst. 5:380-385.
@@ -33,7 +34,7 @@ pub struct ChimeraResult {
     pub local_order: Vec<f64>,
 }
 
-// Kuramoto & Battogtokh 2002 thresholds
+// Implementation thresholds for the instantaneous boundary-fraction diagnostic.
 const COHERENT_THRESHOLD: f64 = 0.7;
 const INCOHERENT_THRESHOLD: f64 = 0.3;
 
@@ -41,7 +42,7 @@ const INCOHERENT_THRESHOLD: f64 = 0.3;
 ///
 /// R_i = |<exp(i(θ_j − θ_i))>|_j∈N(i)
 ///
-/// where N(i) = {j : K_ij > 0} is the set of neighbours of oscillator i.
+/// where N(i) = {j : j != i and K_ij > 0}. Admitted diagonal residue is ignored.
 ///
 /// # Arguments
 /// * `phases` - (N,) oscillator phases
@@ -49,9 +50,29 @@ const INCOHERENT_THRESHOLD: f64 = 0.3;
 /// * `n` - number of oscillators
 ///
 /// # Returns
-/// (N,) local order parameters in [0, 1].
-#[must_use]
-pub fn local_order_parameter(phases: &[f64], knm: &[f64], n: usize) -> Vec<f64> {
+/// (N,) local order parameters in [0, 1], including the empty identity.
+///
+/// # Errors
+/// Refuses inconsistent dimensions, nonfinite values and nonzero diagonal.
+pub fn try_local_order_parameter(
+    phases: &[f64],
+    knm: &[f64],
+    n: usize,
+) -> Result<Vec<f64>, &'static str> {
+    let expected = n.checked_mul(n).ok_or("n*n overflows usize")?;
+    if phases.len() != n || knm.len() != expected {
+        return Err("phases or knm cardinality does not match n");
+    }
+    if phases
+        .iter()
+        .chain(knm.iter())
+        .any(|value| !value.is_finite())
+    {
+        return Err("phases and knm must contain only finite values");
+    }
+    if (0..n).any(|i| knm[i * n + i].abs() > 1e-15) {
+        return Err("knm self-coupling diagonal must be zero");
+    }
     let mut r_local = vec![0.0_f64; n];
     // Parallelise per-oscillator neighbourhood sums; each row of knm is
     // read independently so there is no shared-mutability hazard.
@@ -60,10 +81,9 @@ pub fn local_order_parameter(phases: &[f64], knm: &[f64], n: usize) -> Vec<f64> 
         let mut im_sum = 0.0_f64;
         let mut count = 0usize;
         for j in 0..n {
-            if knm[i * n + j] > 0.0 {
-                let diff = phases[j] - phases[i];
-                re_sum += diff.cos();
-                im_sum += diff.sin();
+            if j != i && knm[i * n + j] > 0.0 {
+                re_sum += phases[j].cos();
+                im_sum += phases[j].sin();
                 count += 1;
             }
         }
@@ -71,10 +91,19 @@ pub fn local_order_parameter(phases: &[f64], knm: &[f64], n: usize) -> Vec<f64> 
             let c = count as f64;
             let mean_re = re_sum / c;
             let mean_im = im_sum / c;
-            *val = (mean_re * mean_re + mean_im * mean_im).sqrt();
+            *val = mean_re.hypot(mean_im).min(1.0);
         }
     });
-    r_local
+    Ok(r_local)
+}
+
+/// Compatible local-order API: invalid input returns an empty vector.
+///
+/// Valid results have exactly n entries. Use `try_local_order_parameter`
+/// to distinguish a malformed request from the valid n=0 identity.
+#[must_use]
+pub fn local_order_parameter(phases: &[f64], knm: &[f64], n: usize) -> Vec<f64> {
+    try_local_order_parameter(phases, knm, n).unwrap_or_default()
 }
 
 /// Detect chimera states in a Kuramoto network.
@@ -90,18 +119,23 @@ pub fn local_order_parameter(phases: &[f64], knm: &[f64], n: usize) -> Vec<f64> 
 /// # Returns
 /// `ChimeraResult` with coherent/incoherent indices, chimera index,
 /// and local order parameters.
-#[must_use]
-pub fn detect_chimera(phases: &[f64], knm: &[f64], n: usize) -> ChimeraResult {
+///
+/// # Errors
+/// Refuses invalid inputs through `try_local_order_parameter`.
+pub fn try_detect_chimera(
+    phases: &[f64],
+    knm: &[f64],
+    n: usize,
+) -> Result<ChimeraResult, &'static str> {
+    let r_local = try_local_order_parameter(phases, knm, n)?;
     if n == 0 {
-        return ChimeraResult {
+        return Ok(ChimeraResult {
             coherent_indices: vec![],
             incoherent_indices: vec![],
             chimera_index: 0.0,
             local_order: vec![],
-        };
+        });
     }
-
-    let r_local = local_order_parameter(phases, knm, n);
 
     let mut coherent = Vec::new();
     let mut incoherent = Vec::new();
@@ -116,12 +150,26 @@ pub fn detect_chimera(phases: &[f64], knm: &[f64], n: usize) -> ChimeraResult {
     let boundary_count = n - coherent.len() - incoherent.len();
     let chimera_index = boundary_count as f64 / n as f64;
 
-    ChimeraResult {
+    Ok(ChimeraResult {
         coherent_indices: coherent,
         incoherent_indices: incoherent,
         chimera_index,
         local_order: r_local,
-    }
+    })
+}
+
+/// Compatible detection API: invalid inputs return NaN and empty partitions.
+///
+/// Use `try_detect_chimera` for an explicit error. Valid inputs, including n=0,
+/// retain the historical classification and boundary-fraction result.
+#[must_use]
+pub fn detect_chimera(phases: &[f64], knm: &[f64], n: usize) -> ChimeraResult {
+    try_detect_chimera(phases, knm, n).unwrap_or_else(|_| ChimeraResult {
+        coherent_indices: vec![],
+        incoherent_indices: vec![],
+        chimera_index: f64::NAN,
+        local_order: vec![],
+    })
 }
 
 #[cfg(test)]

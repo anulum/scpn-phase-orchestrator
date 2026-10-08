@@ -65,7 +65,7 @@ that the unrelated historical suites below were rerun.
 | `meta_transfer_corpus` | `meta_transfer_audit_corpus_quality` | `1` | `n/a` | `n/a` | `n/a` | `n/a` | `0.0032466729171574116` | `1848.0457234519433` | `n/a` |
 | `meta_transfer` | `meta_transfer_package_manifest_quality` | `1` | `n/a` | `n/a` | `n/a` | `n/a` | `0.0005292121786624193` | `7558.405042964008` | `n/a` |
 | `plugin_ecosystem` | `plugin_ecosystem_catalog_quality` | `1` | `n/a` | `n/a` | `n/a` | `n/a` | `0.00033764494583010674` | `8885.073024340527` | `n/a` |
-| `chimera_polyglot` | `chimera_polyglot_parity_gate` | `1` | `32` | `n/a` | `1` | `n/a` | `0.4488149988465011` | `8.91235812145404` | `n/a` |
+| `chimera_polyglot` | `chimera-public-comparison-v1` | `1` | `16/64/256` | `n/a` | `20` | `n/a` | `see raw record` | `n/a` | `shared_host_diagnostic` |
 | `dimension_polyglot` | `dimension_polyglot_parity_gate` | `1` | `n/a` | `n/a` | `1` | `n/a` | `0.13092619297094643` | `30.551564276276114` | `n/a` |
 | `embedding_polyglot` | `embedding_polyglot_parity_gate` | `1` | `160` | `n/a` | `1` | `n/a` | `0.2652903499547392` | `2412.4511129379166` | `local_regression_non_isolated` |
 | `entropy_production_polyglot` | `entropy_production_polyglot_parity_gate` | `1` | `16` | `n/a` | `1` | `n/a` | `0.07693091011606157` | `831.9152848113536` | `local_regression_non_isolated` |
@@ -109,3 +109,13 @@ record (command and runtime metadata) before capacity or SLO claims are made.
 - This page is a directional evidence snapshot and should not be copied as a production guarantee.
 - Refresh the snapshot with matching command and environment metadata whenever dependency stacks or benchmark baselines change.
 - Keep the provenance fields visible with any pull request that updates benchmark numbers or adds new test matrices.
+
+## Current chimera comparison
+
+The chimera row is superseded by the current separate all-owner comparison,
+collected on 2026-10-08. Other rows retain their historical snapshot metadata.
+See [current mean timings and reproducibility](../reference/api/monitor_chimera.md#current-comparison)
+and the [raw samples, source/artifact/workload hashes and host metadata](../reference/data/chimera_real_runtime_benchmark_2026-10-07.json).
+Each of the five CPU owners and separately labelled JAX JIT model has twenty
+completed public-call samples at each of N=16,64,256. These shared-host timings
+carry no controlled fastest-owner or deployment-performance claim.

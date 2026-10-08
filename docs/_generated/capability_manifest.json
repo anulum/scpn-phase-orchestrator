@@ -11,8 +11,8 @@
     "python_package_modules": 764,
     "research_experimental_modules": 205,
     "runtime_serving_modules": 160,
-    "rust_kernel_files": 126,
-    "test_files": 1097
+    "rust_kernel_files": 127,
+    "test_files": 1099
   },
   "documentation": {
     "public_pages": [
@@ -2102,8 +2102,10 @@
       "tests/test_chimera.py",
       "tests/test_chimera_algorithm.py",
       "tests/test_chimera_backends.py",
+      "tests/test_chimera_benchmark.py",
       "tests/test_chimera_dispatch_contracts.py",
       "tests/test_chimera_measurement_inputs.py",
+      "tests/test_chimera_real_runtime.py",
       "tests/test_chimera_stability.py",
       "tests/test_ci_category_results.py",
       "tests/test_ci_workflow_modularity.py",
@@ -3125,6 +3127,7 @@
     "spo-kernel/crates/spo-engine/src/winding.rs",
     "spo-kernel/crates/spo-engine/tests/attnres_contract.rs",
     "spo-kernel/crates/spo-engine/tests/basin_bifurcation_contract.rs",
+    "spo-kernel/crates/spo-engine/tests/chimera_contract.rs",
     "spo-kernel/crates/spo-engine/tests/proptests.rs",
     "spo-kernel/crates/spo-engine/tests/rk45_tests.rs",
     "spo-kernel/crates/spo-ffi/Cargo.toml",

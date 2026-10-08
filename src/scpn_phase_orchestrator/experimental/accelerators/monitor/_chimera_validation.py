@@ -15,7 +15,7 @@ real numeric object arrays are supported and counts must be plain integers.
 from __future__ import annotations
 
 from numbers import Integral
-from typing import TypeAlias, cast
+from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -25,65 +25,63 @@ from scpn_phase_orchestrator._array_types import require_real_values
 FloatArray: TypeAlias = NDArray[np.float64]
 
 
-def _contains_boolean_alias(raw: object) -> bool:
-    """Return whether the value contains any boolean alias."""
-    try:
-        array = np.asarray(raw, dtype=object)
-    except (TypeError, ValueError):
-        return False
-    return any(isinstance(item, (bool, np.bool_)) for item in array.flat)
+def _measurement_array(
+    value: object, *, name: str, conversion_error: str
+) -> FloatArray:
+    """Convert an original real measurement while preserving its dimensions.
 
+    Parameters
+    ----------
+    value : object
+        Original array or sequence, before dtype coercion.
+    name : str
+        Owning field name used in alias diagnostics.
+    conversion_error : str
+        Owning error for malformed or nonrepresentable Float64 payloads.
 
-def _contains_complex_alias(value: object) -> bool:
-    """Return whether the value contains any complex-number alias."""
-    try:
-        array = np.asarray(value, dtype=object)
-    except (TypeError, ValueError):
-        return False
-    return any(isinstance(item, (complex, np.complexfloating)) for item in array.flat)
+    Returns
+    -------
+    FloatArray
+        An independent Float64 array retaining the original shape. The owning
+        contract checks dimensions, finiteness and physical bounds afterward.
 
-
-def _is_string_like(value: object) -> bool:
-    """Return whether ``value`` is a Python or NumPy string scalar."""
-    return isinstance(value, (str, bytes, np.str_, np.bytes_))
-
-
-def _is_numeric_string_alias(value: object) -> bool:
-    """Return whether ``value`` is a string scalar parsable as a float."""
-    if not _is_string_like(value):
-        return False
-    try:
-        float(cast("str | bytes", value))
-    except (TypeError, ValueError):
-        return False
-    return True
-
-
-def _contains_numeric_string_alias(raw: object) -> bool:
-    """Return whether the value contains numeric string aliases."""
-    try:
-        array = np.asarray(raw)
-    except (TypeError, ValueError):
-        return False
-    if array.dtype.kind not in {"O", "S", "U"}:
-        return False
-    saw_string = False
-    for value in array.astype(object, copy=False).flat:
-        if not _is_string_like(value):
-            continue
-        saw_string = True
-        if not _is_numeric_string_alias(value):
-            return False
-    return saw_string
-
-
-def _has_complex_payload(value: object) -> bool:
-    """Return whether the value carries a complex-number payload."""
+    Raises
+    ------
+    ValueError
+        For malformed arrays, boolean/text/complex/temporal aliases or values
+        that cannot be represented as Float64 measurements.
+    """
     try:
         raw = np.asarray(value)
-    except (TypeError, ValueError):
-        return _contains_complex_alias(value)
-    return bool(np.iscomplexobj(raw) or _contains_complex_alias(value))
+        # Primitive NumPy numeric storage cannot hide an original source alias.
+        # Sequences and other dtypes retain original elements for admission.
+        if isinstance(value, np.ndarray) and raw.dtype.kind in "iuf":
+            objects = None
+        else:
+            objects = np.asarray(value, dtype=object)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(conversion_error) from exc
+    if objects is not None:
+        if any(isinstance(item, (bool, np.bool_)) for item in objects.flat):
+            raise ValueError(f"{name} must not contain boolean values")
+        if np.iscomplexobj(raw) or any(
+            isinstance(item, (complex, np.complexfloating)) for item in objects.flat
+        ):
+            raise ValueError(f"{name} must be real-valued")
+        strings = [item for item in objects.flat if isinstance(item, (str, bytes))]
+        if strings:
+            try:
+                for item in strings:
+                    float(item)
+            except ValueError as exc:
+                raise ValueError(conversion_error) from exc
+            raise ValueError(f"{name} must not contain numeric-string aliases")
+    try:
+        require_real_values(value, name=name, allow_object=True)
+        result: FloatArray = raw.astype(np.float64, copy=True)
+    except (TypeError, ValueError, OverflowError, FloatingPointError) as exc:
+        raise ValueError(conversion_error) from exc
+    return result
 
 
 def _validate_n(value: object) -> int:
@@ -100,20 +98,11 @@ def _validate_n(value: object) -> int:
 
 def _validate_float_vector(value: object, name: str) -> FloatArray:
     """Return ``value`` as a validated finite float vector, else raise."""
-    raw = np.asarray(value)
-    if _contains_boolean_alias(value):
-        raise ValueError(f"{name} must not contain boolean values")
-    if _has_complex_payload(value):
-        raise ValueError(f"{name} must be real-valued")
-    if _contains_numeric_string_alias(raw):
-        raise ValueError(f"{name} must not contain numeric-string aliases")
-    try:
-        require_real_values(value, name=name, allow_object=True)
-        array = raw.astype(np.float64, copy=True)
-    except (TypeError, ValueError) as exc:
-        raise ValueError(
-            f"{name} must be a finite one-dimensional float array"
-        ) from exc
+    array = _measurement_array(
+        value,
+        name=name,
+        conversion_error=f"{name} must be a finite one-dimensional float array",
+    )
     if array.ndim != 1:
         raise ValueError(f"{name} must be one-dimensional, got shape {array.shape}")
     if not np.all(np.isfinite(array)):
@@ -125,9 +114,13 @@ def validate_chimera_backend_inputs(
     phases: object,
     knm_flat: object,
     n: object,
+    *,
+    maximum_n: int | None = None,
 ) -> tuple[FloatArray, FloatArray, int]:
     """Validate direct local-order inputs before optional runtime loading."""
     n_int = _validate_n(n)
+    if maximum_n is not None and n_int > maximum_n:
+        raise ValueError(f"n exceeds backend integer range {maximum_n}")
     phases_vec = _validate_float_vector(phases, "phases")
     if phases_vec.size != n_int:
         raise ValueError(f"phases length {phases_vec.size} does not match n={n_int}")

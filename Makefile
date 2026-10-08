@@ -160,3 +160,33 @@ basin-bifurcation-quality:  ## Check whole basin and coupling-sweep source/tests
 	$(PYTHON) -m ruff check --isolated --select E,F,W,I,UP,B,SIM,N,C4,RET,PTH,D --ignore N802,N803,N806,D105 --config 'lint.pydocstyle.convention="numpy"' $(BASIN_BIFURCATION_QUALITY_FILES)
 	$(PYTHON) -m ruff format --check $(BASIN_BIFURCATION_QUALITY_FILES)
 	$(PYTHON) -m mypy --config-file tools/basin_bifurcation_mypy.ini $(BASIN_BIFURCATION_QUALITY_FILES)
+
+CHIMERA_QUALITY_FILES := src/scpn_phase_orchestrator/monitor/chimera.py \
+    src/scpn_phase_orchestrator/experimental/accelerators/monitor/_chimera_validation.py \
+    src/scpn_phase_orchestrator/experimental/accelerators/monitor/_chimera_go.py \
+    src/scpn_phase_orchestrator/experimental/accelerators/monitor/_chimera_julia.py \
+    src/scpn_phase_orchestrator/experimental/accelerators/monitor/_chimera_mojo.py \
+    tests/test_chimera.py \
+    tests/test_chimera_algorithm.py \
+    tests/test_chimera_backends.py \
+    tests/test_chimera_dispatch_contracts.py \
+    tests/test_chimera_measurement_inputs.py \
+    tests/test_chimera_stability.py \
+    tests/test_prop_chimera_winding.py \
+    native-tests/test_chimera_boundary.py \
+    benchmarks/chimera_benchmark.py \
+    tests/test_chimera_real_runtime.py \
+    tests/test_chimera_benchmark.py \
+    native-tests/test_chimera_runtime_profiles.py \
+    benchmarks/chimera_local_order_reference.py \
+    src/scpn_phase_orchestrator/nn/chimera.py \
+    tests/test_nn_chimera.py \
+    examples/neuroscience_eeg.py \
+    examples/eeg_file_ingestion.py \
+    benchmarks/chimera_comparison.py
+
+.PHONY: chimera-quality
+chimera-quality:  ## Check complete chimera owners, tests, benchmarks and consumers
+	$(PYTHON) -m ruff check --no-cache --isolated --select E,F,W,I,UP,B,SIM,N,C4,RET,PTH,D --ignore N802,N803,N806,D105 --config 'lint.pydocstyle.convention="numpy"' $(CHIMERA_QUALITY_FILES)
+	$(PYTHON) -m ruff format --check $(CHIMERA_QUALITY_FILES)
+	$(PYTHON) -m mypy --cache-dir=/dev/null --config-file tools/chimera_mypy.ini $(CHIMERA_QUALITY_FILES)

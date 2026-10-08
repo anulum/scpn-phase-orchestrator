@@ -6,22 +6,24 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Chimera multi-backend benchmark
 
-"""Per-backend wall-clock benchmark for
-``monitor.chimera.local_order_parameter``."""
+"""Benchmark public local-order calls and original polyglot parity contracts."""
 
 from __future__ import annotations
 
 import argparse
 import hashlib
 import json
+import os
+import sys
 import time
-from collections.abc import Callable, Mapping
+from collections.abc import Mapping
 from pathlib import Path
+from typing import cast
 
 import numpy as np
 from numpy.typing import NDArray
 
-from scpn_phase_orchestrator.monitor import chimera as ch_mod
+from benchmarks.chimera_local_order_reference import scalar_local_order
 from scpn_phase_orchestrator.monitor.chimera import (
     ACTIVE_BACKEND,
     AVAILABLE_BACKENDS,
@@ -39,26 +41,28 @@ PARITY_TOLERANCES = {
 }
 
 
-def _bench(backend: str, phases, knm, calls: int) -> float:
-    saved = ch_mod.ACTIVE_BACKEND
-    try:
-        ch_mod.ACTIVE_BACKEND = backend
-        local_order_parameter(phases, knm)
-        t0 = time.perf_counter()
-        for _ in range(calls):
-            local_order_parameter(phases, knm)
-        return time.perf_counter() - t0
-    finally:
-        ch_mod.ACTIVE_BACKEND = saved
+def _bench(
+    backend: str, phases: NDArray[np.float64], knm: NDArray[np.float64], calls: int
+) -> float:
+    """Time actual named public calls after one untimed warm-up."""
+    local_order_parameter(phases, knm, backend=backend)
+    t0 = time.perf_counter()
+    for _ in range(calls):
+        local_order_parameter(phases, knm, backend=backend)
+    return time.perf_counter() - t0
 
 
-def bench_at(n: int, density: float, calls: int) -> dict:
+def bench_at(n: int, density: float, calls: int) -> dict[str, object]:
+    """Compare named public owners on one deterministic admitted graph."""
+    n = _validate_int_control(n, name="n", minimum=3)
+    calls = _validate_int_control(calls, name="calls", minimum=1)
+    density = _validate_density_control(density)
     rng = np.random.default_rng(42)
     phases = rng.uniform(0, TWO_PI, n)
     knm = rng.uniform(0.0, 1.0, (n, n))
     knm = (knm > (1.0 - density)).astype(np.float64) * knm
     np.fill_diagonal(knm, 0.0)
-    row: dict = {
+    row: dict[str, object] = {
         "n": n,
         "density": density,
         "calls": calls,
@@ -70,19 +74,65 @@ def bench_at(n: int, density: float, calls: int) -> dict:
     return row
 
 
+def _emit_json(text: str) -> None:
+    """Emit complete native JSON despite Julia's nonblocking stdout side effect."""
+    stream = sys.stdout
+    if "julia" in AVAILABLE_BACKENDS and sys.stdout is sys.__stdout__:
+        # Julia's libuv initialization changes the original POSIX pipe flags.
+        # Captured Python streams remain owned by their caller.
+        os.set_blocking(stream.fileno(), True)
+    print(text)
+
+
 def main() -> int:
+    """Run real owner timing, parity or the complete comparison CLI."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, default=None)
     parser.add_argument("--sizes", type=int, nargs="+", default=[16, 64, 256])
     parser.add_argument("--density", type=float, default=0.3)
-    parser.add_argument("--calls", type=int, default=10)
+    parser.add_argument("--calls", type=int, default=20)
     parser.add_argument("--seed", type=int, default=2026)
-    parser.add_argument(
+    modes = parser.add_mutually_exclusive_group()
+    modes.add_argument(
         "--parity-gate",
         action="store_true",
         help="emit deterministic all-backend chimera parity-gate JSON",
     )
+    modes.add_argument(
+        "--comparison",
+        action="store_true",
+        help="emit current all-CPU and distinct JAX raw comparison JSON",
+    )
+    parser.add_argument(
+        "--require-backends",
+        nargs="*",
+        default=[],
+        help="refuse a missing exact owner before any measurement",
+    )
     args = parser.parse_args()
+    try:
+        args.calls = _validate_int_control(args.calls, name="calls", minimum=1)
+        args.seed = _validate_int_control(args.seed, name="seed", minimum=0)
+        args.density = _validate_density_control(args.density)
+        args.sizes = [
+            _validate_int_control(n, name="size", minimum=3) for n in args.sizes
+        ]
+        from benchmarks.chimera_comparison import require_owners
+
+        require_owners(args.require_backends)
+        if args.comparison:
+            from benchmarks.chimera_comparison import benchmark_comparison
+
+            result = benchmark_comparison(
+                args.sizes, calls=args.calls, density=args.density, seed=args.seed
+            )
+            text = json.dumps(result, indent=2, sort_keys=True)
+            _emit_json(text)
+            if args.output:
+                args.output.write_text(text + "\n", encoding="utf-8")
+            return 0
+    except ValueError as exc:
+        parser.error(str(exc))
 
     if args.parity_gate:
         result = benchmark_chimera_polyglot_parity_gate(
@@ -92,10 +142,10 @@ def main() -> int:
             seed=args.seed,
         )
         text = json.dumps(result, indent=2, sort_keys=True)
-        print(text)
+        _emit_json(text)
         if args.output:
             args.output.write_text(text + "\n", encoding="utf-8")
-        return 0
+        return 0 if result["acceptance_passed"] == 1 else 1
 
     print(f"Active: {ACTIVE_BACKEND}  Available: {AVAILABLE_BACKENDS}\n")
     header = f"{'N':>5} {'dens':>6} {'calls':>6}"
@@ -103,13 +153,13 @@ def main() -> int:
         header += f" {b + '_ms':>12}"
     print(header)
     print("-" * len(header))
-    results: list[dict] = []
+    results: list[dict[str, object]] = []
     for n in args.sizes:
         row = bench_at(n, args.density, args.calls)
         results.append(row)
         line = f"{n:>5} {args.density:>6.2f} {args.calls:>6}"
         for b in AVAILABLE_BACKENDS:
-            line += f" {row[f'{b}_ms_per_call']:>12.4f}"
+            line += f" {cast('float', row[f'{b}_ms_per_call']):>12.4f}"
         print(line)
     if args.output:
         args.output.write_text(
@@ -119,6 +169,7 @@ def main() -> int:
 
 
 def _validate_int_control(value: object, *, name: str, minimum: int) -> int:
+    """Admit a nonboolean integer control at its declared minimum."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(
         value,
         (int, np.integer),
@@ -131,6 +182,7 @@ def _validate_int_control(value: object, *, name: str, minimum: int) -> int:
 
 
 def _validate_density_control(value: object) -> float:
+    """Admit a finite real adjacency density in the unit interval."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(
         value,
         (int, float, np.integer, np.floating),
@@ -143,6 +195,7 @@ def _validate_density_control(value: object) -> float:
 
 
 def _all_to_all(n: int) -> NDArray[np.float64]:
+    """Construct positive unit coupling with explicitly excluded self edges."""
     knm = np.ones((n, n), dtype=np.float64)
     np.fill_diagonal(knm, 0.0)
     return knm
@@ -160,8 +213,8 @@ def _problem(
     NDArray[np.float64],
     NDArray[np.float64],
     NDArray[np.float64],
-    NDArray[np.float64],
 ]:
+    """Build deterministic finite phases and directed positive non-self coupling."""
     rng = np.random.default_rng(seed)
     phases = np.ascontiguousarray(rng.uniform(0.0, TWO_PI, n), dtype=np.float64)
     knm = rng.uniform(0.0, 1.0, (n, n))
@@ -184,35 +237,20 @@ def _problem(
         uniform_circle,
         disconnected,
         all_to_all,
-        np.zeros(n, dtype=np.float64),
     )
 
 
 def _vector_sha256(values: NDArray[np.float64]) -> str:
+    """Hash canonical float64 result bytes for evidence custody."""
     payload = np.ascontiguousarray(values, dtype=np.float64)
     return hashlib.sha256(payload.tobytes()).hexdigest()
 
 
-def _bundle_sha256(bundle: Mapping[str, NDArray[np.float64]]) -> str:
-    digest = hashlib.sha256()
-    for key in sorted(bundle):
-        digest.update(key.encode("utf-8"))
-        digest.update(b"\0")
-        digest.update(np.ascontiguousarray(bundle[key], dtype=np.float64).tobytes())
-    return digest.hexdigest()
-
-
 def _backend_status(backend: str) -> tuple[bool, str]:
+    """Report actual optional runtime availability without changing dispatch."""
     if backend in AVAILABLE_BACKENDS:
         return True, ""
     return False, f"{backend} backend was not resolved by monitor.chimera"
-
-
-def _backend_function(backend: str) -> Callable[..., NDArray[np.float64]]:
-    loaded = ch_mod._load_backend(backend)
-    if not callable(loaded):
-        raise ValueError(f"{backend} backend is not callable")
-    return loaded
 
 
 def _direct_local_order(
@@ -220,21 +258,8 @@ def _direct_local_order(
     phases: NDArray[np.float64],
     knm: NDArray[np.float64],
 ) -> NDArray[np.float64]:
-    phases, knm = ch_mod._validate_chimera_inputs(phases, knm)
-    n = int(phases.size)
-    if backend == "python":
-        saved = ch_mod.ACTIVE_BACKEND
-        try:
-            ch_mod.ACTIVE_BACKEND = "python"
-            return local_order_parameter(phases, knm)
-        finally:
-            ch_mod.ACTIVE_BACKEND = saved
-    raw = _backend_function(backend)(
-        phases,
-        np.ascontiguousarray(knm.ravel(), dtype=np.float64),
-        n,
-    )
-    return ch_mod._validate_local_order(raw, n_oscillators=n)
+    """Exercise a strict named public owner; retained name preserves the harness."""
+    return local_order_parameter(phases, knm, backend=backend)
 
 
 def _direct_bundle(
@@ -247,6 +272,7 @@ def _direct_bundle(
     disconnected: NDArray[np.float64],
     all_to_all: NDArray[np.float64],
 ) -> dict[str, NDArray[np.float64]]:
+    """Exercise the original local-order contracts through the named owner."""
     return {
         "local_order": _direct_local_order(backend, phases, knm),
         "shifted_local_order": _direct_local_order(backend, shifted, knm),
@@ -279,8 +305,9 @@ def _bench_with_output(
     all_to_all: NDArray[np.float64],
     *,
     calls: int,
-) -> tuple[float, dict[str, NDArray[np.float64]]]:
-    _direct_bundle(
+) -> tuple[float, dict[str, NDArray[np.float64]], list[float]]:
+    """Warm one complete contract bundle and retain each actual call duration."""
+    output = _direct_bundle(
         backend,
         phases,
         knm,
@@ -290,9 +317,9 @@ def _bench_with_output(
         disconnected,
         all_to_all,
     )
-    output: dict[str, NDArray[np.float64]] | None = None
-    t0 = time.perf_counter()
+    samples: list[float] = []
     for _ in range(calls):
+        started = time.perf_counter_ns()
         output = _direct_bundle(
             backend,
             phases,
@@ -303,26 +330,23 @@ def _bench_with_output(
             disconnected,
             all_to_all,
         )
-    if output is None:
-        raise RuntimeError("benchmark calls must be positive")
-    return time.perf_counter() - t0, output
+        samples.append((time.perf_counter_ns() - started) / 1e9)
+    return sum(samples), output, samples
 
 
 def _bundle_errors(
     actual: Mapping[str, NDArray[np.float64]],
     expected: Mapping[str, NDArray[np.float64]],
 ) -> dict[str, float]:
+    """Measure maximum absolute error against each independent reference."""
     errors: dict[str, float] = {}
     for key in expected:
-        errors[key] = (
-            float(np.max(np.abs(actual[key] - expected[key])))
-            if actual[key].size
-            else 0.0
-        )
+        errors[key] = float(np.max(np.abs(actual[key] - expected[key])))
     return errors
 
 
 def _unit_interval(values: NDArray[np.float64]) -> bool:
+    """Check finite local-order bounds in every returned vector."""
     tolerance = 1.0e-12
     return bool(np.all(values >= -tolerance) and np.all(values <= 1.0 + tolerance))
 
@@ -332,6 +356,7 @@ def _reference_contracts_passed(
     *,
     n: int,
 ) -> bool:
+    """Check topology, singleton, empty and synchronized reference behavior."""
     expected_uniform = 1.0 / (n - 1)
     return (
         _unit_interval(bundle["local_order"])
@@ -380,12 +405,11 @@ def benchmark_chimera_polyglot_parity_gate(
 ) -> dict[str, object]:
     """Record chimera local-order parity across declared backend slots.
 
-    Available backends must preserve the Kuramoto-Battogtokh local-order
-    vector against the Python reference, including global phase-gauge
+    Available backends must preserve the unweighted positive-adjacency local-order
+    vector against an independent scalar equation oracle, including phase-gauge
     invariance, synchronised unit local order, disconnected zero local order,
     and the exact uniform-circle all-to-all reference ``1 / (N - 1)``.
     """
-
     n = _validate_int_control(n, name="n", minimum=3)
     calls = _validate_int_control(calls, name="calls", minimum=1)
     seed = _validate_int_control(seed, name="seed", minimum=0)
@@ -399,18 +423,14 @@ def benchmark_chimera_polyglot_parity_gate(
         uniform_circle,
         disconnected,
         all_to_all,
-        _empty,
     ) = _problem(n, density, seed)
-    reference = _direct_bundle(
-        "python",
-        phases,
-        knm,
-        shifted,
-        synchronised,
-        uniform_circle,
-        disconnected,
-        all_to_all,
-    )
+    reference = {
+        "local_order": scalar_local_order(phases, knm),
+        "shifted_local_order": scalar_local_order(shifted, knm),
+        "synchronised_local_order": scalar_local_order(synchronised, all_to_all),
+        "uniform_circle_local_order": scalar_local_order(uniform_circle, all_to_all),
+        "disconnected_local_order": scalar_local_order(phases, disconnected),
+    }
 
     records: list[dict[str, object]] = []
     parity_checked_count = 0
@@ -447,7 +467,7 @@ def benchmark_chimera_polyglot_parity_gate(
             continue
 
         available_backend_count += 1
-        elapsed, bundle = _bench_with_output(
+        elapsed, bundle, samples = _bench_with_output(
             backend,
             phases,
             knm,
@@ -469,6 +489,9 @@ def benchmark_chimera_polyglot_parity_gate(
                 "backend": backend,
                 "status": "available",
                 "ms_per_call": (elapsed / calls) * 1000.0,
+                "sample_seconds": samples,
+                "sample_count": len(samples),
+                "timed_operation": "five public local-order contract calls",
                 "local_order_sha256": _vector_sha256(bundle["local_order"]),
                 "shifted_local_order_sha256": _vector_sha256(
                     bundle["shifted_local_order"]

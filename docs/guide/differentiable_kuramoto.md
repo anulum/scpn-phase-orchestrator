@@ -403,8 +403,12 @@ output = layer(phases)
 
 ## Chimera State Detection
 
-Detect chimera states — coexistence of synchronised and incoherent domains
-(Kuramoto & Battogtokh 2002). All functions are differentiable.
+Measure instantaneous local coherence on JAX nonzero adjacency, including
+signed and self edges. The index is local-order variance; masks use inclusive
+0.8/0.3 defaults. Phase gradients apply on fixed support away from zero phasors.
+The hard `K != 0` decision gives zero coupling-amplitude gradients and cannot
+search across topology changes. Threshold masks are discrete. See the
+[complete JAX contract](../reference/nn_chimera_contract.md).
 
 ```python
 from scpn_phase_orchestrator.nn import (
@@ -414,18 +418,19 @@ from scpn_phase_orchestrator.nn import (
     generate_chimera_data,
 )
 
-# Generate chimera-producing data on a ring
+# Generate a nonlocal ring trajectory with a partially coherent initial state
 K, phases0, trajectory = generate_chimera_data(
     N=64, T=2000, coupling_strength=0.5, coupling_range=4, key=key
 )
 
-# Detect chimera at final timestep
+# Measure the final snapshot; establish dynamical coexistence separately
 R_local = local_order_parameter(trajectory[-1], K)   # (N,) per-oscillator R
-chi = chimera_index(trajectory[-1], K)                # scalar: high = chimera
+chi = chimera_index(trajectory[-1], K)                # scalar: variance of local R
 coherent, incoherent = detect_chimera(trajectory[-1], K)  # boolean masks
 
-# Gradient-based search for chimera-producing coupling
-grad_K = jax.grad(lambda K: chimera_index(trajectory[-1], K))(K)
+# Phase sensitivity on the fixed adjacency
+grad_phases = jax.grad(lambda p: chimera_index(p, K))(trajectory[-1])
+# K-amplitude gradients of this hard-adjacency diagnostic are zero.
 ```
 
 ## Spectral Analysis (Topology Metrics)

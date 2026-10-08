@@ -47,6 +47,10 @@ jobs:
         run: make attention-residuals-quality PYTHON=python
       - name: Check complete basin and coupling-sweep source, tests and diagnostics
         run: make basin-bifurcation-quality PYTHON=python
+      - name: Check complete chimera owners, tests, benchmarks and consumers
+        run: make chimera-quality PYTHON=python
+      - name: Qualify the distinct actual JAX chimera model
+        run: python -m pytest tests/test_nn_chimera.py --strict-markers --tb=short
       - name: Run tests (with coverage on 3.12)
         run: >
           pytest tests/ -v --tb=short
@@ -121,7 +125,7 @@ jobs:
           - shard: a
             files: tests/test_inverse.py tests/test_oim.py tests/test_bold.py
           - shard: b
-            files: tests/test_reservoir.py tests/test_ude_kuramoto.py tests/test_kuramoto_layer.py tests/test_stuart_landau_nn.py
+            files: tests/test_reservoir.py tests/test_ude_kuramoto.py tests/test_kuramoto_layer.py tests/test_stuart_landau_nn.py tests/test_nn_chimera.py
           - shard: c
             files: tests/test_nn_physics_validation.py
           - shard: d
@@ -232,6 +236,13 @@ jobs:
             --tb=short -p no:cacheprovider -m native_runtime \
             --cov=scpn_phase_orchestrator --cov-branch --cov-append --cov-report= --cov-fail-under=0 \
             --junitxml=.ci-branch/native/native-runtime.junit.xml
+          pytest tests/test_chimera_backends.py tests/test_chimera_real_runtime.py -k rust \
+            --strict-markers --tb=short -p no:cacheprovider \
+            --cov=scpn_phase_orchestrator --cov-branch --cov-append --cov-report= --cov-fail-under=0
+          pytest tests/test_chimera.py::test_local_order_parameter_uses_backend_when_available \
+            native-tests/test_chimera_boundary.py tests/test_nn_chimera.py \
+            --strict-markers --tb=short -p no:cacheprovider \
+            --cov=scpn_phase_orchestrator --cov-branch --cov-append --cov-report= --cov-fail-under=0
           python -m tools.branch_coverage_profiles record \
             --profile native --revision "$GITHUB_SHA" --database "$COVERAGE_FILE" \
             --output .ci-branch/native/profile.json

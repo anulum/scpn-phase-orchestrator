@@ -3,14 +3,18 @@
 # Commercial license available
 # © Concepts 1996–2026 Miroslav Šotek. All rights reserved.
 # © Code 2020–2026 Miroslav Šotek. All rights reserved.
+# ORCID: 0009-0009-3560-0851
+# Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Example: EEG Phase Synchronization
-#
-# Simulates an 8-electrode EEG network with distance-dependent coupling.
-# Detects chimera states (coexistent coherent/incoherent clusters)
-# and monitors the Normalized Persistent Entropy (NPE).
-#
-# Usage: python examples/neuroscience_eeg.py
-# Requires: pip install scpn-phase-orchestrator
+
+
+"""Demonstrate synthetic oscillator phases through the public UPDE and monitor.
+
+The chimera monitor uses positive non-self adjacency and unweighted local
+coherence, with strict 0.7/0.3 thresholds. Its index is the boundary fraction;
+one snapshot does not demonstrate a persistent chimera or classify clinical EEG.
+Run with ``python examples/neuroscience_eeg.py``.
+"""
 
 from __future__ import annotations
 
@@ -25,6 +29,7 @@ TWO_PI = 2.0 * np.pi
 
 
 def main() -> None:
+    """Run the original synthetic example through real public consumers."""
     n = 8  # electrodes: Fp1, Fp2, F3, F4, C3, C4, P3, P4
     labels = ["Fp1", "Fp2", "F3", "F4", "C3", "C4", "P3", "P4"]
     rng = np.random.default_rng(42)
@@ -60,13 +65,13 @@ def main() -> None:
         for _ in range(500):
             phases = engine.step(phases, omegas, knm, 0.0, 0.0, alpha)
 
-        R, psi = compute_order_parameter(phases)
+        R, _ = compute_order_parameter(phases)
         npe = compute_npe(phases)
         chimera = detect_chimera(phases, knm)
 
         t = (epoch + 1) * 0.5
         ci = chimera.chimera_index
-        print(f"t={t:.1f}s: R={R:.3f}, NPE={npe:.3f}, chi={ci:.3f}")
+        print(f"t={t:.1f}s: R={R:.3f}, NPE={npe:.3f}, boundary_fraction={ci:.3f}")
         if chimera.coherent_indices:
             coh = [labels[i] for i in chimera.coherent_indices]
             print(f"  Coherent cluster: {', '.join(coh)}")

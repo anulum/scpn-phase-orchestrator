@@ -165,11 +165,18 @@ phase-coherence estimator. It records Rust/Mojo/Julia/Go/Python slot status,
 vector parity, pause-persistence parity, aligned-trial unit coherence,
 opposite-phase zero coherence, unit-interval bounds, and unavailable-toolchain
 reasons without mocking the backend boundary.
-The chimera record is a polyglot physics gate for the Kuramoto-Battogtokh
-local-order vector. It records Rust/Mojo/Julia/Go/Python slot status, local
+The original chimera record is an unweighted positive non-self adjacency
+local-order gate, rather than a reproduction of the weighted nonlocal
+Kuramoto-Battogtokh dynamical model. It records Rust/Mojo/Julia/Go/Python slot status, local
 order parity, global phase-gauge invariance, synchronised unit local order,
 disconnected zero local order, and the exact uniform-circle all-to-all
-reference `1 / (N - 1)`.
+reference `1 / (N - 1)`. A five-contract timing bundle is separately labelled
+from one completed public call. Use `--require-backends` for provisioned owners;
+failed numerical acceptance exits nonzero. The current all-CPU and separately
+labelled JAX comparison retains 20 raw timings per owner/size, distributions,
+source/native/workload hashes and host metadata. See the
+[current record](../reference/api/monitor_chimera.md#current-comparison).
+These shared-host diagnostics do not establish controlled speedups or deadlines.
 The spectral record is a polyglot mathematics gate for the Dörfler-Bullo
 combinatorial graph Laplacian. It records Rust/Mojo/Julia/Go/Python slot
 status, algebraic-connectivity parity, Fiedler-vector direction parity,

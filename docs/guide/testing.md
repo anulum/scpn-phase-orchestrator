@@ -339,3 +339,19 @@ For each release train, this section is treated as a pre-merge control list:
 
 The result is not just a pass/fail signal. It is evidence that a regression in
 control, safety, or replay logic is likely to be detected before deployment.
+
+## Chimera runtime qualification
+
+`make chimera-quality` checks all maintained chimera source, owning tests,
+native-boundary/profile harnesses, scalar oracle, benchmark CLI and both original
+EEG consumers with NumPy docstrings, formatting and unmasked strict typing.
+The existing winding test definitions remain included. Named-owner public tests
+require their actual runtimes. Julia/Go/Mojo provisioned lanes and the Rust FFI
+matrix qualify their respective original owners; the Python quality matrix also
+executes the distinct actual JAX model.
+
+The benchmark contract tests exercise saved CLI data, twenty retained samples,
+genuine installed owner absence and deliberate negative output/custody controls.
+An unavailable record is never counted as native execution. Coverage of native
+source, Python bridges, benchmark harnesses and global package totals are separate
+claims. See the [complete CPU contract](../reference/api/monitor_chimera.md).
