@@ -61,11 +61,16 @@ can be inferred; sparsity is not a guarantee of global optimisation or truth.
 
 The Python implementation uses
 [SciPy least squares](https://docs.scipy.org/doc/scipy/reference/generated/scipy.linalg.lstsq.html)
-with `cond` set to double-precision machine epsilon. Rust uses the existing
+with `cond` set to double-precision machine epsilon times the larger matrix
+dimension, matching [NumPy's rank cutoff](https://numpy.org/doc/stable/reference/generated/numpy.linalg.lstsq.html).
+Rust uses the existing
 `nalgebra` rectangular SVD primitive with the corresponding relative cutoff,
 without forming normal equations. The native solve scales the target to avoid
 projection overflow and limits SVD convergence iterations. Invalid derived
 arithmetic or a failed solve is refused.
+
+Both owners order the regression's constant column first. Rust remaps the fitted
+coefficients back to its public diagonal-frequency layout after solving.
 
 Dependent feature columns yield a minimum-norm least-squares solution. For
 example, two trajectories with a constant phase offset have constant sine

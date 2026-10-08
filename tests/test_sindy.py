@@ -16,6 +16,7 @@ profile tests prove actual native use and genuine Python-only execution.
 from __future__ import annotations
 
 import math
+from dataclasses import replace
 
 import numpy as np
 import pytest
@@ -116,17 +117,20 @@ def test_sindy_preserves_exact_half_turn_sign(increment: float) -> None:
     )
 
 
-def test_sindy_rank_deficiency_has_analytic_minimum_norm_solution() -> None:
+@pytest.mark.parametrize(("dt", "offset"), [(0.01, 0.4), (0.015625, 0.5)])
+def test_sindy_rank_deficiency_has_analytic_minimum_norm_solution(
+    dt: float, offset: float
+) -> None:
     """Dependent sine/constant features yield the closed-form pseudoinverse solution."""
-    times = np.arange(40, dtype=np.float64) * 0.01
-    phases = np.column_stack((times, times + 0.4))
-    sine = math.sin(0.4)
+    times = np.arange(40, dtype=np.float64) * dt
+    phases = np.column_stack((times, times + offset))
+    sine = math.sin(offset)
     inverse_norm = 1.0 / (1.0 + sine * sine)
     expected = [
         [inverse_norm, sine * inverse_norm],
         [inverse_norm, -sine * inverse_norm],
     ]
-    coefficients = PhaseSINDy(threshold=0.0, max_iter=3).fit(phases, 0.01)
+    coefficients = PhaseSINDy(threshold=0.0, max_iter=3).fit(phases, dt)
     np.testing.assert_allclose(coefficients, expected, rtol=0.0, atol=2e-12)
 
 
@@ -146,6 +150,24 @@ def test_sindy_nodewise_turn_shifts_and_strides_preserve_directed_fit() -> None:
             (omega[target : target + 1], np.delete(coupling[target], target))
         )
         np.testing.assert_allclose(actual, expected, rtol=0.0, atol=2e-8)
+
+
+def test_benchmark_refuses_corrupt_reference_after_actual_fit(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """An intentionally wrong oracle cannot admit real public numerical work."""
+    from benchmarks import phase_sindy_benchmark as diagnostic
+
+    original_cases = diagnostic._cases
+
+    def wrong_reference() -> list[diagnostic._Case]:
+        """Damage only expected data; retain the original trajectory and solver."""
+        case = original_cases()[0]
+        return [replace(case, reference=case.reference + 1.0)]
+
+    monkeypatch.setattr(diagnostic, "_cases", wrong_reference)
+    with pytest.raises(RuntimeError, match="coefficient error"):
+        diagnostic.benchmark_phase_sindy(repeats=1)
 
 
 def test_sindy_zero_coupling() -> None:

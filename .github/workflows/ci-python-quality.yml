@@ -256,6 +256,8 @@ jobs:
             --cov=scpn_phase_orchestrator --cov-branch --cov-append --cov-report= --cov-fail-under=0
           export SPO_CONNECTOME_PYTHON_PROFILE="$PWD/.connectome-python-coverage/bin/python"
           export SPO_CONNECTOME_RUST_PROFILE="$PWD/.venv/bin/python"
+          pytest native-tests/test_branch_profile_package_aliases.py \
+            -o addopts= --strict-markers --tb=short -p no:cacheprovider
           pytest tests/test_connectome.py tests/test_connectome_python_fallback.py \
             tests/test_connectome_validation_guards.py tests/test_connectome_measurement_inputs.py \
             tests/test_connectome_real_runtime.py tests/test_connectome_benchmark.py \
@@ -264,6 +266,7 @@ jobs:
             --cov=scpn_phase_orchestrator --cov-branch --cov-append --cov-report= --cov-fail-under=0
           python -m tools.branch_coverage_profiles record \
             --profile native --revision "$GITHUB_SHA" --database "$COVERAGE_FILE" \
+            --absent-interpreter "$SPO_CONNECTOME_PYTHON_PROFILE" \
             --output .ci-branch/native/profile.json
       - name: Upload actual native branch data and provenance
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
