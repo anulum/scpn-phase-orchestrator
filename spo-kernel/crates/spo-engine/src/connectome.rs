@@ -19,13 +19,36 @@ const DMN_HUB_BOOST: f64 = 0.3;
 /// callosal connections, and default mode network hub structure.
 ///
 /// Returns row-major (n × n) symmetric matrix, zero diagonal.
+/// Counts below two retain their historical all-zero result.
+///
+/// # Panics
+///
+/// Panics if the dense matrix cannot be addressed or allocated. Foreign
+/// callers use [`try_load_hcp_connectome`] to receive that failure as a result.
 #[must_use]
 pub fn load_hcp_connectome(n_regions: usize, seed: u64) -> Vec<f64> {
+    try_load_hcp_connectome(n_regions, seed).expect("cannot allocate connectome matrix")
+}
+
+/// Generate the same synthetic matrix with checked storage and allocation.
+///
+/// # Errors
+///
+/// Returns an error before generation if the square float64 storage exceeds
+/// the platform address range or the allocator refuses the reservation.
+pub fn try_load_hcp_connectome(n_regions: usize, seed: u64) -> Result<Vec<f64>, &'static str> {
+    let count = n_regions
+        .checked_mul(n_regions)
+        .filter(|&count| count <= isize::MAX as usize / std::mem::size_of::<f64>())
+        .ok_or("connectome matrix exceeds addressable float64 storage")?;
+    let mut knm = Vec::new();
+    knm.try_reserve_exact(count)
+        .map_err(|_| "cannot allocate connectome matrix")?;
+    knm.resize(count, 0.0);
     if n_regions < 2 {
-        return vec![0.0; n_regions * n_regions];
+        return Ok(knm);
     }
     let n = n_regions;
-    let mut knm = vec![0.0; n * n];
     let half = n / 2;
 
     build_intra_hemi(&mut knm, n, half, seed);
@@ -33,7 +56,7 @@ pub fn load_hcp_connectome(n_regions: usize, seed: u64) -> Vec<f64> {
     add_dmn_hubs(&mut knm, n, half);
     symmetrise(&mut knm, n);
 
-    knm
+    Ok(knm)
 }
 
 /// Intra-hemispheric exponential distance decay with noise.
@@ -197,5 +220,52 @@ mod tests {
         let a = load_hcp_connectome(10, 42);
         let b = load_hcp_connectome(10, 99);
         assert_ne!(a, b);
+    }
+
+    /// Both multiplication and signed byte limits are refused without allocation.
+    #[test]
+    fn test_checked_storage_refuses_multiplication_and_byte_overflow() {
+        for n in [usize::MAX, 1usize << (usize::BITS / 2)] {
+            assert_eq!(
+                try_load_hcp_connectome(n, 42),
+                Err("connectome matrix exceeds addressable float64 storage")
+            );
+        }
+        let n = 1usize << ((usize::BITS - 3) / 2);
+        assert_eq!(
+            try_load_hcp_connectome(n, 42),
+            Err("connectome matrix exceeds addressable float64 storage")
+        );
+    }
+
+    /// Checked generation preserves legacy small-count and full seed semantics.
+    #[test]
+    fn test_checked_generation_preserves_existing_small_matrix_and_seed_contracts() {
+        for n in [0, 1, 2, 3, 16] {
+            for seed in [0, 42, u64::MAX] {
+                assert_eq!(
+                    try_load_hcp_connectome(n, seed).expect("valid small fixture"),
+                    load_hcp_connectome(n, seed)
+                );
+            }
+        }
+        let two = try_load_hcp_connectome(2, 0).expect("valid two-region fixture");
+        // Four repeated hub fractions at each single-node hemisphere add 16 boosts.
+        assert!((two[1] - (0.15 + 16.0 * 0.3)).abs() < 2e-15);
+        assert_eq!(two[1], two[2]);
+        assert_eq!(two[0], 0.0);
+        assert_eq!(two[3], 0.0);
+    }
+
+    /// The retained Vec API panics on impossible storage and remains usable.
+    #[test]
+    fn test_legacy_allocation_panic_preserves_following_generation() {
+        let refused = std::panic::catch_unwind(|| load_hcp_connectome(usize::MAX, 42));
+        assert!(refused.is_err());
+        let recovered = load_hcp_connectome(2, 42);
+        assert!((recovered[1] - 4.95).abs() < 2e-15);
+        assert_eq!(recovered[1], recovered[2]);
+        assert_eq!(recovered[0], 0.0);
+        assert_eq!(recovered[3], 0.0);
     }
 }

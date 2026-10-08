@@ -702,29 +702,26 @@ containing real values remain supported.
 
 ## HCP Connectome Generator
 
-Neuroscience-realistic coupling matrices.
+`load_hcp_connectome(n_regions, seed=42)` generates synthetic intra-half,
+callosal and repeated-hub structural weights. It requires a genuine integer
+count of at least two, addressable dense float64 storage and an unsigned 64-bit
+integer seed. Available RAM is an additional constraint. Python uses PCG64
+Gaussian noise; the original Rust builtin uses LCG uniform noise, so seeded
+matrices are deterministic within each owner rather than elementwise equal.
+A 128-entry cache retains validated matrices; every call publishes a copy.
 
-### Synthetic generator
+`load_neurolib_hcp(n_regions=80)` loads the original optional neurolib subject
+average in cortical AAL2/LRLR ordering. Counts 2 through 80 return top-left
+slices in that ordering. Counts are validated before dataset I/O.
 
-`load_hcp_connectome(n_regions, seed=42)` generates a matrix with:
+Both paths reject source aliases and invalid structural weights before returning
+finite, non-negative symmetric C-contiguous float64 matrices. Synthetic output
+must have an exact zero diagonal; the HCP ingress clears the admitted provider
+diagonal. Native square/byte overflow and reservation errors become `ValueError`.
 
-- Intra-hemispheric: exponential distance decay
-- Inter-hemispheric: corpus callosum pattern (homotopic connections)
-- Default Mode Network: hub structure with elevated coupling
-
-### Real data bridge
-
-`load_neurolib_hcp(n_regions=80)` loads real HCP structural connectivity
-from the neurolib library. Supports n_regions from 2 to 80.
-
-Both loaders validate optional-backend matrices before publication. Boolean,
-complex/object-complex, and numeric-string aliases are rejected before
-`float64` conversion; finite real numeric-object matrices remain compatible.
-Shape, finiteness, non-negativity, symmetry, and zero-diagonal constraints are
-then replayed at the public Python boundary.
-
-**Performance:** `load_hcp_connectome(80)` < 10 ms (Python), ~48 µs (Rust, 17.6x speedup).
-**Detailed documentation:** [HCP Connectome — detailed reference](coupling_connectome.md)
+[Contracts, equations, actual consumers and current cold/warm measurements](coupling_connectome.md).
+Public validation and marshalling costs are included in those public measurements;
+uncached Rust-core generation is reported separately without a speed-up claim.
 
 ::: scpn_phase_orchestrator.coupling.connectome
 
@@ -750,7 +747,7 @@ diagonal checks still run before publication.
 | `CouplingBuilder.build(100)` | < 10 ms | See current construction measurements above |
 | `build_scpn_physics()` | < 5 ms | See current construction measurements above |
 | `estimate_from_distances(64)` | < 5 ms | ~0.5 ms |
-| `load_hcp_connectome(80)` | < 10 ms | ~3 ms |
+| `load_hcp_connectome` | [Current cold/warm public calls](coupling_connectome.md#current-measurements) | Original checked native generation, measured separately |
 | `validate_knm(64)` | Profile-dependent | Not timed separately in the current projection snapshot |
 | `graph_laplacian(64)` | < 1 ms | ~0.007 ms |
 | `fiedler_value(64)` | < 1 ms | ~0.12 ms |

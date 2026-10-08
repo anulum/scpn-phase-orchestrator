@@ -342,15 +342,15 @@ inside a dashboard or notebook; it turns them into inspectable artefacts.
 |---|---:|
 | Package version | 1.4.3 |
 | Public API exports | 29 |
-| Python package modules | 764 |
-| Core Engine modules | 362 |
+| Python package modules | 765 |
+| Core Engine modules | 363 |
 | Runtime/Serving modules | 160 |
 | Integration modules | 32 |
 | Research/Experimental modules | 205 |
 | Domainpack files | 36 |
-| Rust kernel files | 128 |
+| Rust kernel files | 129 |
 | Optional extras | 24 |
-| Python test files | 1101 |
+| Python test files | 1103 |
 | Public documentation pages | 244 |
 | GitHub Actions workflows | 19 |
 
@@ -485,7 +485,11 @@ For CI and smoke tests on CPU-only hosts, use
 Order parameter, PLV, PAC (cross-frequency coupling), chimera detection,
 EVS (entrainment verification), PID (redundancy/synergy), Lyapunov
 exponent, entropy production, winding number, ITPC, coupling estimation
-(including non-sinusoidal harmonics), HCP connectome generation.
+(including non-sinusoidal harmonics), synthetic HCP-inspired connectome generation
+and an optional original neurolib HCP loader. Connectome weights are validated
+and copied before publication; dense storage and allocation are checked in
+Python and the original Rust boundary. Seeded Python/Rust noise laws differ.
+See the [contract and current measurements](docs/reference/api/coupling_connectome.md).
 
 ### Detector Auditing (`evaluation/`)
 

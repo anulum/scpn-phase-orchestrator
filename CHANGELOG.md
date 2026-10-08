@@ -34,6 +34,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Connectome generation checks dense square/byte capacity and allocation in
+  Python and the original Rust boundary, so oversized requests raise `ValueError`
+  instead of a native indexing panic. Cache keys retain the selected original
+  generator, and every public result remains a separate writable copy.
+- Original neurolib HCP ingress validates counts before data access and preserves
+  cortical AAL2/LRLR subject-average ordering. Synthetic self-coupling must be
+  exactly zero. Original pipeline consumers now match independent Euler/RK4
+  trajectories; installed Rust/HCP and genuinely absent Python profiles exercise
+  all owning contracts. Current cold/warm measurements replace unsupported
+  acceleration claims; Python/Rust seeded noise laws remain distinct.
+- CI enrolls connectome source, original owning tests, installed runtime coverage
+  and complete hash-locked provider dependencies. The distributed job inventory
+  also includes the existing ethical-cost runtime job.
+
 - Ethical-cost density now counts all exactly nonzero entries, and the native
   Jacobi solver preserves tiny graph scales. The public adapter rejects
   original measurement/scalar aliases, converts floating/eigen failures to

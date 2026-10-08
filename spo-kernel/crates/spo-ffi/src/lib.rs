@@ -18,6 +18,7 @@
 mod adaptive_coupling;
 mod call_arguments;
 mod chimera_boundary;
+mod connectome_boundary;
 mod coupling_builder;
 mod delayed_boundary;
 mod ei_balance_boundary;
@@ -42,6 +43,7 @@ mod torus_boundary;
 mod upde_stepper;
 
 use adaptive_coupling::te_adapt_coupling_rust;
+use connectome_boundary::load_hcp_connectome_rust;
 use coupling_builder::PyCouplingBuilder;
 use delayed_boundary::delayed_kuramoto_run_rust;
 use ei_balance_boundary::{adjust_ei_ratio_rust, compute_ei_balance_rust};
@@ -49,7 +51,7 @@ use embedding_boundary::{delay_embed_rust, optimal_delay_rust, optimal_dimension
 use ethical_boundary::compute_ethical_cost_rust;
 use hypergraph_boundary::{hypergraph_run_rust, PyHypergraphStepper};
 use inertial_boundary::{inertial_run_rust, inertial_step_rust};
-use measurement_types::{real_values, PlainI32, PlainI64, PlainReal, PlainU64, PlainUsize};
+use measurement_types::{real_values, PlainI32, PlainI64, PlainReal, PlainUsize};
 use ordinal_entropy::{ordinal_pattern_sequence, transition_entropy};
 use phase_lag::PyLagModel;
 use phase_quality::PyPhaseQualityScorer;
@@ -73,7 +75,7 @@ use pyo3::prelude::*;
 use pyo3::types::PyDict;
 
 use spo_engine::{
-    carrier, connectome,
+    carrier,
     coupling::{spatial_modulate_flat, SpatialDecayForm},
     coupling_est, dimension, envelope, evs, free_energy, freq_id, hodge,
     imprint::ImprintModel,
@@ -1993,21 +1995,6 @@ fn carrier_decode_rust(
         .as_slice()
         .map_err(|e| PyValueError::new_err(e.to_string()))?;
     let result = carrier::decode(zv, av, n);
-    Ok(PyArray1::from_vec(py, result).into())
-}
-
-// ─── Connectome ─────────────────────────────────────────────────────
-
-#[pyfunction]
-fn load_hcp_connectome_rust(
-    py: Python<'_>,
-    n_regions: PlainUsize,
-    seed: PlainU64,
-) -> PyResult<Py<PyArray1<f64>>> {
-    if n_regions.0 < 2 {
-        return Err(PyValueError::new_err("n_regions must be >= 2"));
-    }
-    let result = connectome::load_hcp_connectome(n_regions.0, seed.0);
     Ok(PyArray1::from_vec(py, result).into())
 }
 

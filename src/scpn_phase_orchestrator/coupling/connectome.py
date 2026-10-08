@@ -12,8 +12,8 @@
 #   - Weaker inter-hemispheric coupling (corpus callosum pattern)
 #   - Default mode network (DMN) hub structure
 #
-# For real HCP data, use neurolib (Cakan & Obermayer 2021, Neuroimage 227:117474)
-# or the HCP1200 parcellation directly.
+# For real HCP data, use neurolib (Cakan, Jajcay & Obermayer 2021,
+# doi:10.1007/s12559-021-09931-9) or the HCP1200 parcellation directly.
 
 """Synthetic and optional neurolib HCP coupling loaders.
 
@@ -26,106 +26,45 @@ for examples, validation, and explicit downstream review.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from functools import lru_cache
-from numbers import Integral
-from typing import TypeAlias
+from importlib import import_module
+from typing import Protocol, TypeAlias, cast
 
 import numpy as np
 from numpy.typing import NDArray
 
 from scpn_phase_orchestrator._array_types import require_real_values
+from scpn_phase_orchestrator.coupling._connectome_validation import (
+    _coerce_connectome_matrix,
+    _validate_connectome_matrix,
+    _validate_n_regions,
+    _validate_seed,
+)
 
 try:
-    from spo_kernel import (
-        load_hcp_connectome_rust as _rust_load_hcp,
+    _rust_load_hcp = cast(
+        "ConnectomeBackend | None",
+        getattr(import_module("spo_kernel"), "load_hcp_connectome_rust", None),
     )
-
-    _HAS_RUST = True
 except ImportError:
-    _HAS_RUST = False
+    _rust_load_hcp = None
+
+_HAS_RUST = callable(_rust_load_hcp)
 
 __all__ = ["load_hcp_connectome", "load_neurolib_hcp"]
 
 FloatArray: TypeAlias = NDArray[np.float64]
-
-_NEUROLIB_HCP_SIZE = 80  # Cakan & Obermayer 2021, Neuroimage 227:117474
-_MAX_SEED = 2**64 - 1
+ConnectomeBackend: TypeAlias = Callable[[int, int], object]
 
 
-def _validate_n_regions(value: object, *, max_regions: int | None = None) -> int:
-    """Return the region count as a positive integer, else raise."""
-    if isinstance(value, bool) or not isinstance(value, Integral):
-        raise TypeError("n_regions must be an integer")
-    require_real_values(value, name="n_regions")
-    n_regions = int(value)
-    if n_regions < 2:
-        msg = f"n_regions must be >= 2, got {n_regions}"
-        raise ValueError(msg)
-    if max_regions is not None and n_regions > max_regions:
-        msg = f"n_regions must be <= {max_regions}, got {n_regions}"
-        raise ValueError(msg)
-    return n_regions
+class _HCPDataset(Protocol):
+    """Structural weights supplied by the optional neurolib dataset loader."""
+
+    Cmat: object
 
 
-def _validate_seed(value: object) -> int:
-    """Return the validated random seed, else raise."""
-    if isinstance(value, bool) or not isinstance(value, Integral):
-        raise TypeError("seed must be an integer in the u64 range")
-    require_real_values(value, name="seed")
-    seed = int(value)
-    if seed < 0 or seed > _MAX_SEED:
-        raise ValueError("seed must be an integer in the u64 range")
-    return seed
-
-
-def _validate_connectome_matrix(
-    value: object, *, n_regions: int, source: str
-) -> FloatArray:
-    """Return the connectome as a validated finite matrix, else raise."""
-    matrix = _coerce_connectome_matrix(value, n_regions=n_regions, source=source)
-    if not np.allclose(np.diag(matrix), 0.0, atol=1e-15, rtol=0.0):
-        raise ValueError(f"{source} connectome output diagonal must be zero")
-    return np.ascontiguousarray(matrix, dtype=np.float64)
-
-
-def _coerce_connectome_matrix(
-    value: object, *, n_regions: int, source: str
-) -> FloatArray:
-    """Return the value coerced to a connectome matrix, else raise."""
-    raw = np.asarray(value, dtype=object)
-    if any(isinstance(item, bool | np.bool_) for item in raw.ravel()):
-        raise ValueError(f"{source} connectome output must not contain boolean values")
-    if any(isinstance(item, complex | np.complexfloating) for item in raw.ravel()):
-        raise ValueError(f"{source} connectome output must contain real-valued weights")
-    for item in raw.ravel():
-        if not isinstance(item, str | bytes | np.str_ | np.bytes_):
-            continue
-        try:
-            float(item)
-        except (TypeError, ValueError):
-            continue
-        raise ValueError(
-            f"{source} connectome output must not contain numeric-string aliases"
-        )
-    try:
-        require_real_values(
-            value, name=f"{source} connectome output", allow_object=True
-        )
-        matrix = np.asarray(raw, dtype=np.float64)
-    except (TypeError, ValueError, OverflowError) as exc:
-        raise ValueError(f"{source} connectome output must be a float matrix") from exc
-    if matrix.shape != (n_regions, n_regions):
-        raise ValueError(
-            f"{source} connectome output must have shape "
-            f"({n_regions}, {n_regions}), got {matrix.shape}"
-        )
-    if not np.all(np.isfinite(matrix)):
-        raise ValueError(f"{source} connectome output must contain only finite values")
-    if np.any(matrix < 0.0):
-        raise ValueError(f"{source} connectome output must be non-negative")
-    if not np.allclose(matrix, matrix.T, atol=1e-12, rtol=0.0):
-        raise ValueError(f"{source} connectome output must be symmetric")
-    return np.ascontiguousarray(matrix, dtype=np.float64)
+_NEUROLIB_HCP_SIZE = 80  # neurolib 0.6.2 cortical AAL2/LRLR dataset
 
 
 def load_neurolib_hcp(n_regions: int = 80) -> FloatArray:
@@ -134,35 +73,43 @@ def load_neurolib_hcp(n_regions: int = 80) -> FloatArray:
     Parameters
     ----------
     n_regions : int
-        number of regions to return (max 80). If < 80, returns the top-left (n_regions,
-        n_regions) submatrix.
+        Genuine non-boolean integer from two through 80. Smaller counts return
+        the top-left square slice of the original subject-average matrix.
 
     Returns
     -------
     FloatArray
-        Symmetric non-negative coupling matrix, shape (n_regions, n_regions).
+        Independent writable C-contiguous float64 matrix of shape
+        ``(n_regions, n_regions)``, symmetric, non-negative and zero diagonal.
 
     Raises
     ------
     ImportError
         If neurolib is not installed.
+    TypeError
+        If the region count is not a genuine non-boolean integer.
     ValueError
-        If n_regions < 2 or > 80.
+        If the region count or original provider's structural weights are invalid.
+
+    Notes
+    -----
+    The qualified neurolib 0.6.2 provider averages separately normalised subject
+    weights in the 80-region cortical AAL2/LRLR ordering. The slice preserves
+    that ordering; it does not select a new anatomical parcellation. The original
+    provider diagonal is canonicalised to zero after source admission.
     """
+    n_regions = _validate_n_regions(n_regions, max_regions=_NEUROLIB_HCP_SIZE)
     try:
-        # type ignore: neurolib is optional and currently lacks complete type metadata;
-        # runtime availability is handled by the ModuleNotFoundError branch.
-        from neurolib.utils.loadData import (  # type: ignore[import-untyped,import-not-found]
-            Dataset,
+        dataset_factory = cast(
+            "Callable[[str], _HCPDataset]",
+            import_module("neurolib.utils.loadData").Dataset,
         )
     except ModuleNotFoundError:
         raise ImportError(
             "neurolib is required for real HCP data: pip install neurolib"
         ) from None
 
-    n_regions = _validate_n_regions(n_regions, max_regions=_NEUROLIB_HCP_SIZE)
-
-    ds = Dataset("hcp")
+    ds = dataset_factory("hcp")
     sc = _coerce_connectome_matrix(
         ds.Cmat,
         n_regions=_NEUROLIB_HCP_SIZE,
@@ -188,28 +135,70 @@ def load_hcp_connectome(n_regions: int, seed: int = 42) -> FloatArray:
     Parameters
     ----------
     n_regions : int
-        number of cortical regions (must be >= 2, even recommended).
+        Number of synthetic regions, at least two. The dense float64 matrix
+        must fit the platform's addressable storage; even counts are optional.
+    seed : int
+        Non-boolean integer in the unsigned 64-bit range, default 42.
 
     Returns
     -------
     FloatArray
-        Symmetric coupling matrix, shape (n_regions, n_regions), zero diagonal.
+        Independent writable C-contiguous symmetric non-negative matrix with
+        shape ``(n_regions, n_regions)`` and zero diagonal.
+
+    Raises
+    ------
+    TypeError
+        If a region count or seed is not a genuine non-boolean integer.
+    ValueError
+        If a count, seed, allocation or returned structural matrix is invalid.
+
+    Notes
+    -----
+    The default uses the original Rust builtin when available, otherwise NumPy.
+    Python uses PCG64 Gaussian noise; Rust uses LCG uniform noise. Seeds are
+    repeatable within an owner, without elementwise cross-owner equivalence.
+    Up to 128 matrices are cached; every call returns a copy. These are synthetic
+    weights, not HCP observations or a calibrated brain model.
     """
     n_regions = _validate_n_regions(n_regions)
     seed = _validate_seed(seed)
-    backend = _rust_load_hcp if _HAS_RUST else None
-    return _load_hcp_connectome_cached(n_regions, seed, _HAS_RUST, backend).copy()
+    backend: ConnectomeBackend | None = _rust_load_hcp if _HAS_RUST else None
+    try:
+        return _load_hcp_connectome_cached(n_regions, seed, backend).copy()
+    except MemoryError as exc:
+        raise ValueError("cannot allocate connectome matrix") from exc
 
 
 @lru_cache(maxsize=128)
 def _load_hcp_connectome_cached(
-    n_regions: int, seed: int, has_rust: bool, backend: object | None
+    n_regions: int, seed: int, backend: ConnectomeBackend | None
 ) -> FloatArray:
-    """Load and cache the optional neurolib HCP connectome."""
-    del backend  # cache key preserves monkeypatched FFI-loader identity
+    """Cache the selected original generator and its validated structural weights.
 
-    if has_rust:
-        raw_array = np.asarray(_rust_load_hcp(n_regions, seed))
+    Parameters
+    ----------
+    n_regions : int
+        Publicly admitted dense matrix dimension.
+    seed : int
+        Publicly admitted unsigned 64-bit seed.
+    backend : Callable or None
+        Actual selected native callable, or genuine NumPy fallback selection.
+
+    Returns
+    -------
+    FloatArray
+        Cached structural matrix; the public caller publishes a separate copy.
+
+    Raises
+    ------
+    ValueError
+        If original native weights or allocation are invalid.
+    MemoryError
+        If NumPy allocation fails, translated by the public caller.
+    """
+    if backend is not None:
+        raw_array = np.asarray(backend(n_regions, seed))
         if np.issubdtype(raw_array.dtype, np.bool_):
             raise ValueError(
                 "Rust HCP connectome output must not contain boolean values"
@@ -264,7 +253,7 @@ def _load_hcp_connectome_cached(
         idx = np.arange(size)
         dist = np.abs(idx[:, np.newaxis] - idx[np.newaxis, :])
         block = _INTRA_HEMI_STRENGTH * np.exp(-0.3 * dist)
-        # Small noise for biological realism
+        # Seeded weight perturbation; no biological calibration is implied.
         block += rng.normal(0, 0.02, block.shape)
         block = np.clip(block, 0, None)
         np.fill_diagonal(block, 0.0)

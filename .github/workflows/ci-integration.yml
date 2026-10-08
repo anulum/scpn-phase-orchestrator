@@ -534,3 +534,87 @@ jobs:
             tests/test_ssgf_modules.py tests/test_ethical_cost_real_runtime.py \
             tests/test_ethical_cost_benchmark.py native-tests/test_ethical_cost_runtime_profiles.py \
             -m "not native_runtime" --strict-markers --tb=short -p no:cacheprovider
+  connectome-runtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      HYPOTHESIS_PROFILE: dev
+      SPO_CONNECTOME_PYTHON_PROFILE: ${{ github.workspace }}/.connectome-python/bin/python
+      SPO_CONNECTOME_RUST_PROFILE: ${{ github.workspace }}/.connectome-rust/bin/python
+      COVERAGE_FILE: ${{ github.workspace }}/.connectome-coverage/.coverage
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12.15"
+          cache: pip
+      - uses: dtolnay/rust-toolchain@631a55b12751854ce901bb631d5902ceb48146f7 # stable
+      - name: Build original connectome kernel and the whole Python package
+        run: |
+          pip install --require-hashes --no-deps -r requirements/ci-tools.txt
+          pip install --require-hashes --no-deps -r requirements/build-tools.txt
+          maturin build --release --locked -m spo-kernel/crates/spo-ffi/Cargo.toml --out connectome-kernel-wheels
+          pip wheel --no-deps --no-build-isolation --wheel-dir connectome-package-wheels .
+      - name: Install genuine kernel-absent and original Rust HCP profiles
+        run: |
+          python -m venv .connectome-python
+          python -m venv .connectome-rust
+          for profile in .connectome-python .connectome-rust; do
+            "$profile/bin/python" -m pip install --require-hashes --no-deps -r requirements/connectome-runtime-lock.txt
+            "$profile/bin/python" -m pip install --no-index --no-deps connectome-package-wheels/*.whl
+          done
+          .connectome-rust/bin/python -m pip install --require-hashes --no-deps -r requirements/connectome-hcp-lock.txt
+          .connectome-rust/bin/python -m pip install --no-index --no-deps connectome-kernel-wheels/*.whl
+          .connectome-python/bin/python -m pip check
+          .connectome-rust/bin/python -m pip check
+      - name: Trace actual installed source in parent and original child runtimes
+        run: |
+          mkdir -p .connectome-coverage
+          python - <<'PY'
+          import subprocess
+          from pathlib import Path
+
+          root = Path.cwd()
+          configuration = (
+              "[run]\nbranch = True\nparallel = True\n"
+              "source_pkgs = scpn_phase_orchestrator.coupling.connectome, "
+              "scpn_phase_orchestrator.coupling._connectome_validation\n"
+              "[paths]\ncoupling =\n    "
+              + str(root / "src/scpn_phase_orchestrator/coupling")
+              + "\n    */site-packages/scpn_phase_orchestrator/coupling\n"
+          )
+          (root / ".connectome-coverage/coverage.ini").write_text(configuration)
+          for name in (".connectome-python", ".connectome-rust"):
+              executable = root / name / "bin/python"
+              result = subprocess.run(
+                  [str(executable), "-I", "-B", "-c",
+                   "import sysconfig; print(sysconfig.get_paths()['purelib'])"],
+                  check=True, capture_output=True, text=True,
+              )
+              startup = Path(result.stdout.strip()) / "connectome_coverage_startup.pth"
+              startup.write_text("import coverage; coverage.process_startup()\n")
+          PY
+      - name: Qualify every original owning contract and exact line and branch coverage
+        env:
+          COVERAGE_PROCESS_START: ${{ github.workspace }}/.connectome-coverage/coverage.ini
+        run: |
+          cohort=(tests/test_connectome.py tests/test_connectome_python_fallback.py
+            tests/test_connectome_validation_guards.py tests/test_connectome_measurement_inputs.py
+            tests/test_connectome_real_runtime.py tests/test_connectome_benchmark.py
+            native-tests/test_connectome_runtime_profiles.py)
+          .connectome-rust/bin/python -I -B -m coverage run --rcfile "$COVERAGE_PROCESS_START" \
+            -m pytest "${cohort[@]}" -o addopts= --strict-markers --tb=short -p no:cacheprovider
+          .connectome-python/bin/python -I -B -m coverage run --rcfile "$COVERAGE_PROCESS_START" \
+            -m pytest "${cohort[@]}" -o addopts= -m "not native_runtime" --strict-markers --tb=short -p no:cacheprovider
+          rm .connectome-python/lib/python*/site-packages/connectome_coverage_startup.pth \
+            .connectome-rust/lib/python*/site-packages/connectome_coverage_startup.pth
+          .connectome-rust/bin/python -I -B -m coverage combine --rcfile "$COVERAGE_PROCESS_START" --keep .connectome-coverage
+          .connectome-rust/bin/python -I -B -m coverage json --rcfile "$COVERAGE_PROCESS_START" -o .connectome-coverage/coverage.json
+          .connectome-rust/bin/python -I -B -m coverage report --rcfile "$COVERAGE_PROCESS_START" --fail-under=100
+      - name: Retain original installed source coverage
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: connectome-installed-source-coverage
+          path: .connectome-coverage
+          include-hidden-files: true
