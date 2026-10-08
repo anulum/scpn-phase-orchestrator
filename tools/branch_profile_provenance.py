@@ -349,6 +349,10 @@ def source_inputs(root: Path) -> dict[str, str]:
             "requirements/ci-tools.txt",
             "requirements/build-tools.txt",
             "requirements/studio-sdk.txt",
+            "requirements/julia-lock.txt",
+            "requirements/mojo-lock.txt",
+            "go/go.mod",
+            "go/go.sum",
             "spo-kernel/Cargo.lock",
             "spo-kernel/Cargo.toml",
             "tools/coverage_guard_branch_thresholds.json",
@@ -360,6 +364,10 @@ def source_inputs(root: Path) -> dict[str, str]:
     for path in (root / "spo-kernel/crates").rglob("*"):
         if path.is_file() and path.suffix in {".rs", ".toml"}:
             inputs[path.relative_to(root).as_posix()] = sha256(path)
+    for language, extension in (("go", "go"), ("julia", "jl"), ("mojo", "mojo")):
+        for name in ("attnres", "basin_stability", "chimera"):
+            relative = f"{language}/{name}.{extension}"
+            inputs[relative] = sha256(root / relative)
     return inputs
 
 
