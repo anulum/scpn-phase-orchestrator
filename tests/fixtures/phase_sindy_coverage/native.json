@@ -7551,48 +7551,19 @@
               "percent": 98.77049180327869
             }
           }
-        },
-        {
-          "filename": "spo-kernel/crates/spo-engine/src/attnres.rs",
-          "summary": {
-            "branches": {
-              "count": 54,
-              "covered": 0,
-              "notcovered": 54,
-              "percent": 0.0
-            },
-            "mcdc": {
-              "count": 0,
-              "covered": 0,
-              "notcovered": 0,
-              "percent": 0.0
-            },
-            "functions": {
-              "count": 13,
-              "covered": 0,
-              "percent": 0.0
-            },
-            "instantiations": {
-              "count": 13,
-              "covered": 0,
-              "percent": 0.0
-            },
-            "lines": {
-              "count": 275,
-              "covered": 0,
-              "percent": 0.0
-            },
-            "regions": {
-              "count": 495,
-              "covered": 0,
-              "notcovered": 495,
-              "percent": 0.0
-            }
-          }
         }
       ]
     }
   ],
   "type": "llvm.coverage.json.export",
-  "version": "3.1.0"
+  "version": "3.1.0",
+  "measurement": {
+    "source_sha256": "c625240fa98c8c9b1d88b78ce4f35eb7caefceec732e4dc115881eb2a48135d0",
+    "lock_sha256": "f47ff107a3074f6d74bb14d3f8573eba7005708d5daa652bfff6ab35a05fc854",
+    "compiler": "rustc 1.100.0-nightly (0fc141305 2026-09-11)",
+    "command": "cargo +nightly llvm-cov --locked --branch -p spo-engine --lib --json --output-path native.json -- sindy::",
+    "tests_passed": 11,
+    "raw_export_sha256": "e3cc048a9cbd9dab40d828e31c821d6b59f0ea7d47f1a842cb66c506ebe8a2d1",
+    "scope": "Original SINDy source file only; all exported branch and segment vectors retained without counter edits"
+  }
 }

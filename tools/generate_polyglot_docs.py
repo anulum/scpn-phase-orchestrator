@@ -87,7 +87,11 @@ def _generate_go(repo_root: Path, output_root: Path) -> None:
     source_root = repo_root / "go"
     destination = output_root / "go"
     destination.mkdir(parents=True, exist_ok=True)
-    sources = sorted(source_root.glob("*.go"))
+    sources = sorted(
+        source
+        for source in source_root.glob("*.go")
+        if not source.name.endswith("_test.go")
+    )
     if not sources:
         raise RuntimeError(f"no Go documentation sources found under {source_root}")
 
