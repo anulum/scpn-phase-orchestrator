@@ -212,6 +212,20 @@ def test_real_object_integer_overflow_is_a_measurement_refusal() -> None:
         )
 
 
+@pytest.mark.parametrize("field", ["phases", "knm"])
+def test_ragged_real_sequences_are_measurement_refusals(field: str) -> None:
+    """Both public consumers refuse irregular operator measurements unchanged."""
+    phases = [[0.0], [1.0, 2.0]] if field == "phases" else [0.0, 1.0]
+    graph = [[0.0, 1.0], [1.0]] if field == "knm" else [[0.0, 1.0], [1.0, 0.0]]
+    original = repr((phases, graph))
+    for function in (local_order_parameter, detect_chimera):
+        with pytest.raises(ValueError):
+            function(
+                cast(FloatArray, phases), cast(FloatArray, graph), backend="python"
+            )
+        assert repr((phases, graph)) == original
+
+
 def test_go_count_range_precedes_impossible_buffer_requirements() -> None:
     """The direct API refuses oversized C.int metadata using real empty buffers."""
     from scpn_phase_orchestrator.experimental.accelerators.monitor._chimera_go import (

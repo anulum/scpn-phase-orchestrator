@@ -241,6 +241,8 @@ ignore = ["S101", "N802", "N803", "N806", "N815", "N816", "D105"]
 # Installed-profile provenance probes use verified interpreter paths, constant
 # source-owned programs, bounded argv calls and no shell, under the same policy.
 "native-tests/test_branch_profile_package_aliases.py" = ["S603"]
+"native-tests/test_branch_native_assets.py" = ["S603"]
+"native-tests/test_attention_legacy_kernel.py" = ["S603"]
 "tests/test_exceptions.py" = ["S301"]  # pickle round-trip is the test subject
 "tests/test_kuramoto_layer.py" = ["E402"]
 "tests/test_stuart_landau_nn.py" = ["E402"]

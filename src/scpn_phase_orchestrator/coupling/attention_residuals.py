@@ -317,20 +317,15 @@ ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
 def _dispatch_backend() -> _BackendFn | None:
-    """Return the preferred available owner, or ``None`` for Python."""
-    ordered_backends = [ACTIVE_BACKEND] + list(AVAILABLE_BACKENDS)
-    seen: set[str] = set()
-    for backend in ordered_backends:
-        if backend in seen:
-            continue
-        seen.add(backend)
-        if backend == "python":
-            return None
-        try:
-            return _load_backend(backend)
-        except (ImportError, RuntimeError, OSError, KeyError):
-            continue
-    return None
+    """Return the owner registered by startup discovery, or ``None`` for NumPy.
+
+    Discovery caches each admitted callable before publishing the selected
+    owner. Calling a cached owner again cannot discover another availability
+    state. Explicit named requests use their own checked loader path.
+    """
+    if ACTIVE_BACKEND == "python":
+        return None
+    return _BACKEND_CACHE[ACTIVE_BACKEND]
 
 
 # ---------------------------------------------------------------------

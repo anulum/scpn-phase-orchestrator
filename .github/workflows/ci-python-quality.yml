@@ -185,12 +185,19 @@ jobs:
       HYPOTHESIS_PROFILE: dev
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The compatibility test builds one immutable real historical SDK.
+          fetch-depth: 0
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           # One exact interpreter for every profile job: the aggregate refuses
           # profiles recorded under different patch releases.
           python-version: "3.12.15"
           cache: pip
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go/go.mod
+          cache-dependency-path: go/go.sum
       - uses: dtolnay/rust-toolchain@631a55b12751854ce901bb631d5902ceb48146f7 # stable
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -264,9 +271,111 @@ jobs:
             native-tests/test_connectome_runtime_profiles.py \
             -o addopts= --strict-markers --tb=short -p no:cacheprovider \
             --cov=scpn_phase_orchestrator --cov-branch --cov-append --cov-report= --cov-fail-under=0
+          export SPO_SINDY_PYTHON_ONLY="$SPO_CONNECTOME_PYTHON_PROFILE"
+          pytest native-tests/test_attention_residuals_profiles.py \
+            native-tests/test_basin_bifurcation_profiles.py \
+            -o addopts= --strict-markers --tb=short -p no:cacheprovider \
+            --cov=scpn_phase_orchestrator --cov-branch --cov-append --cov-report= --cov-fail-under=0
+      - name: Build the original pre-AttnRes Rust compatibility artifact
+        run: |
+          . .venv/bin/activate
+          mkdir -p .ci-legacy-kernel/source .ci-branch/native/legacy-kernel-wheels
+          git archive b18440e61f651d7bc204ea882dbde7be42b2c7cc spo-kernel \
+            | tar -x -C .ci-legacy-kernel/source
+          CARGO_TARGET_DIR="$PWD/.ci-legacy-kernel/target" maturin build --release --locked \
+            -m .ci-legacy-kernel/source/spo-kernel/crates/spo-ffi/Cargo.toml \
+            --out .ci-branch/native/legacy-kernel-wheels
+          python - <<'PY'
+          import hashlib, json, pathlib
+          root = pathlib.Path('.ci-legacy-kernel/source/spo-kernel')
+          pathlib.Path('.ci-branch/native/legacy-kernel-provenance.json').write_text(json.dumps({
+              'git_commit': 'b18440e61f651d7bc204ea882dbde7be42b2c7cc',
+              'source_sha256': {str(path.relative_to(root)): hashlib.sha256(path.read_bytes()).hexdigest()
+                                for path in sorted(root.rglob('*')) if path.is_file()},
+              'wheel_sha256': {str(path): hashlib.sha256(path.read_bytes()).hexdigest()
+                               for path in pathlib.Path('.ci-branch/native/legacy-kernel-wheels').glob('*.whl')},
+          }, indent=2) + '\n')
+          PY
+          legacy_wheel="$(find "$PWD/.ci-branch/native/legacy-kernel-wheels" -name '*.whl' -type f)"
+          current_wheel="$(find "$PWD/kernel-wheels" -name '*.whl' -type f)"
+          test -n "$legacy_wheel" && test -n "$current_wheel"
+          echo "SPO_ATTENTION_LEGACY_KERNEL_WHEEL=$legacy_wheel" >> "$GITHUB_ENV"
+          echo "SPO_ATTENTION_CURRENT_KERNEL_WHEEL=$current_wheel" >> "$GITHUB_ENV"
+      - name: Provision original Go, Julia and Mojo branch owners
+        run: |
+          . .venv/bin/activate
+          pip install --require-hashes --no-deps -r requirements/julia-lock.txt
+          pip install --require-hashes --no-deps -r requirements/mojo-lock.txt
+          asset_root="$(python -c 'import sys; print(sys.prefix + "/lib/python" + str(sys.version_info.major) + "." + str(sys.version_info.minor))')"
+          mkdir -p "$asset_root/go" "$asset_root/julia" "$asset_root/mojo"
+          for name in attnres basin_stability chimera; do
+            go build -buildmode=c-shared -o "$asset_root/go/lib${name}.so" "go/${name}.go"
+            cp "julia/${name}.jl" "$asset_root/julia/${name}.jl"
+            mojo build "mojo/${name}.mojo" --target-cpu x86-64 \
+              -o "$asset_root/mojo/${name}_mojo" -Xlinker -lm
+          done
+          echo "SPO_BRANCH_ASSET_ROOT=$asset_root" >> "$GITHUB_ENV"
+          python - <<'PY'
+          import hashlib, json, pathlib, sys
+          root = pathlib.Path(sys.prefix) / 'lib' / ('python' + str(sys.version_info.major) + '.' + str(sys.version_info.minor))
+          files = sorted(path for folder in ('go', 'julia', 'mojo') for path in (root / folder).iterdir() if path.is_file())
+          pathlib.Path('.ci-branch/native/native-assets.json').write_text(json.dumps({
+              'files': {str(path): hashlib.sha256(path.read_bytes()).hexdigest() for path in files},
+              'sources': {str(path): hashlib.sha256(path.read_bytes()).hexdigest()
+                          for folder, extension in (('go', 'go'), ('julia', 'jl'), ('mojo', 'mojo'))
+                          for name in ('attnres', 'basin_stability', 'chimera')
+                          for path in (pathlib.Path(folder) / (name + '.' + extension),)},
+          }, indent=2) + '\n')
+          PY
+      - name: Append real phase-attention, basin and chimera branch observations
+        env:
+          COVERAGE_FILE: ${{ github.workspace }}/.ci-branch/native/.coverage
+          SPO_ATTNRES_REQUIRED_BACKENDS: "python,rust,go,julia,mojo"
+          SPO_REQUIRED_BASIN_BACKENDS: "python,rust,go,julia,mojo"
+          SPO_CHIMERA_ABSENT_PYTHON: ${{ github.workspace }}/.connectome-python-coverage/bin/python
+        run: |
+          . .venv/bin/activate
+          python - <<'PY'
+          import os, pathlib, shutil
+          from juliacall import Main
+          from coverage import Coverage
+          import pytest
+
+          assert Main is not None
+          database = pathlib.Path(os.environ['COVERAGE_FILE'])
+          shutil.copyfile(database, database.parent / 'raw-before-polyglot')
+          measurement = Coverage(data_file=str(database), data_suffix=False, branch=True)
+          measurement.load()
+          # Julia initializes before the tracer. Asset-refusal children start
+          # their own real measurement after initializing Julia as well.
+          measurement.set_option('run:patch', [])
+          measurement.start()
+          try:
+              result = pytest.main([
+                  'tests/test_attention_residuals_real_runtime.py',
+                  'tests/test_basin_bifurcation_real_runtime.py',
+                  'tests/test_chimera_real_runtime.py',
+                  'native-tests/test_branch_native_assets.py',
+                  'native-tests/test_attention_legacy_kernel.py',
+                  '-o', 'addopts=', '--strict-markers', '--tb=short',
+                  '-p', 'no:cacheprovider',
+                  '--basetemp', '.ci-branch/native/owning-pytest',
+                  '--junitxml', '.ci-branch/native/polyglot-owning.junit.xml',
+              ])
+          finally:
+              measurement.stop()
+              measurement.save()
+          if result:
+              raise SystemExit(result)
+          measurement.combine(data_paths=[str(database.parent)], strict=True, keep=True)
+          measurement.save()
+          PY
+      - name: Bind the completed genuine native branch profile
+        run: |
+          . .venv/bin/activate
           python -m tools.branch_coverage_profiles record \
-            --profile native --revision "$GITHUB_SHA" --database "$COVERAGE_FILE" \
-            --absent-interpreter "$SPO_CONNECTOME_PYTHON_PROFILE" \
+            --profile native --revision "$GITHUB_SHA" --database "$PWD/.ci-branch/native/.coverage" \
+            --absent-interpreter "$PWD/.connectome-python-coverage/bin/python" \
             --output .ci-branch/native/profile.json
       - name: Upload actual native branch data and provenance
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
