@@ -19,18 +19,22 @@ from __future__ import annotations
 __version__ = "1.4.3"
 
 import os as _os
+import sys as _sys
 from importlib import import_module as _import_module
-from typing import Any as _Any
 
-# juliacall 0.9.34's init() references an undefined ``Base`` in its
-# multithreaded-warning branch when ``PYTHON_JULIACALL_HANDLE_SIGNALS`` is unset
-# and the host process is multithreaded (for example under coverage's thread
-# tracer), raising NameError and aborting the optional Julia backend probe.
-# The upstream-recommended value skips that branch; the guard keeps any
-# operator-provided override intact. Must run before the first submodule import
-# that may load juliacall.
+# JuliaCall 0.9.34 requires an explicit mode to avoid its undefined Base warning
+# branch. Single-threaded Julia must retain Python's foreground signal handling;
+# multithreaded Julia needs its native handlers for GC safepoints.
 if "PYTHON_JULIACALL_HANDLE_SIGNALS" not in _os.environ:
-    _os.environ["PYTHON_JULIACALL_HANDLE_SIGNALS"] = "yes"
+    _julia_threads = _sys._xoptions.get(
+        "juliacall-threads",
+        _os.environ.get(
+            "PYTHON_JULIACALL_THREADS", _os.environ.get("JULIA_NUM_THREADS", "1")
+        ),
+    )
+    _os.environ["PYTHON_JULIACALL_HANDLE_SIGNALS"] = (
+        "no" if _julia_threads == "1" else "yes"
+    )
 
 _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
     "AuditLogger": ("scpn_phase_orchestrator.runtime.audit_logger", "AuditLogger"),
@@ -119,8 +123,24 @@ _LAZY_EXPORTS: dict[str, tuple[str, str]] = {
 }
 
 
-def __getattr__(name: str) -> _Any:
-    """Resolve one compatibility export only when it is explicitly requested."""
+def __getattr__(name: str) -> object:
+    """Resolve one compatibility export when it is explicitly requested.
+
+    Parameters
+    ----------
+    name : str
+        Export name from the reviewed public manifest.
+
+    Returns
+    -------
+    object
+        Original exported class or function, cached in the package namespace.
+
+    Raises
+    ------
+    AttributeError
+        If the requested name is not a compatibility export.
+    """
     try:
         module_name, attribute_name = _LAZY_EXPORTS[name]
     except KeyError as exc:

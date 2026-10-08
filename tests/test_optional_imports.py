@@ -6,6 +6,8 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Optional dependency import guard tests
 
+"""Exercise optional import boundaries and real package signal configuration."""
+
 from __future__ import annotations
 
 import importlib
@@ -14,25 +16,26 @@ import subprocess
 import sys
 
 import numpy as np
+import pytest
 
 
 class TestJaxEngineImportGuard:
-    """Verify that jax_engine module is usable regardless of JAX availability,
-    and that HAS_JAX correctly reflects the runtime state."""
+    """Check actual JAX availability and engine construction."""
 
-    def test_has_jax_is_bool(self):
+    def test_has_jax_is_bool(self) -> None:
+        """Expose availability as a boolean for the original installed runtime."""
         from scpn_phase_orchestrator.upde.jax_engine import HAS_JAX
 
         assert isinstance(HAS_JAX, bool)
 
-    def test_has_jax_matches_importlib(self):
+    def test_has_jax_matches_importlib(self) -> None:
         """HAS_JAX must agree with whether jax is actually importable."""
         from scpn_phase_orchestrator.upde.jax_engine import HAS_JAX
 
         jax_available = importlib.util.find_spec("jax") is not None
         assert jax_available == HAS_JAX
 
-    def test_jax_engine_usable_when_available(self):
+    def test_jax_engine_usable_when_available(self) -> None:
         """If JAX is installed, JaxUPDEEngine must produce valid output."""
         from scpn_phase_orchestrator.upde.jax_engine import HAS_JAX
 
@@ -54,7 +57,7 @@ class TestJaxEngineImportGuard:
         assert np.all(np.isfinite(result))
         assert not np.allclose(result, phases), "Phases must advance under coupling"
 
-    def test_numpy_engine_fallback_always_works(self):
+    def test_numpy_engine_fallback_always_works(self) -> None:
         """UPDEEngine (NumPy) must always work, regardless of JAX."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
 
@@ -73,17 +76,16 @@ class TestJaxEngineImportGuard:
 
 
 class TestNNModuleImportGuard:
-    """Verify that the nn/ package uses lazy loading and doesn't crash
-    on import when JAX is absent."""
+    """Check the lazy neural namespace against actual installed dependencies."""
 
-    def test_nn_module_imports(self):
+    def test_nn_module_imports(self) -> None:
+        """Import the public neural namespace before resolving optional exports."""
         import scpn_phase_orchestrator.nn as nn_mod
 
         assert hasattr(nn_mod, "__all__")
 
-    def test_nn_all_exports_exist(self):
-        """Every name in __all__ must be resolvable when JAX is available,
-        or raise a clear AttributeError when JAX is absent."""
+    def test_nn_all_exports_exist(self) -> None:
+        """Resolve declared exports or report an unavailable optional owner."""
         import importlib.util
 
         import scpn_phase_orchestrator.nn as nn_mod
@@ -106,19 +108,22 @@ class TestNNModuleImportGuard:
 
 
 class TestJuliaSignalHandlingGuard:
-    """The package must keep the optional Julia backend probe importable on a
-    multithreaded host. juliacall 0.9.34's ``init()`` references an undefined
-    ``Base`` in its multithreaded-warning branch unless
-    ``PYTHON_JULIACALL_HANDLE_SIGNALS`` is set, so the package root sets it
-    before the first submodule import that may load juliacall."""
+    """Check real package signal configuration and the public solver fallback."""
 
     _MARKER = "SPO_HS_RESULT="
 
-    def _handle_signals_after_import(self, preset: dict[str, str]) -> str:
+    def _handle_signals_after_import(
+        self, preset: dict[str, str], options: tuple[str, ...] = ()
+    ) -> str:
         env = {
             key: value
             for key, value in os.environ.items()
-            if key != "PYTHON_JULIACALL_HANDLE_SIGNALS"
+            if key
+            not in {
+                "PYTHON_JULIACALL_HANDLE_SIGNALS",
+                "PYTHON_JULIACALL_THREADS",
+                "JULIA_NUM_THREADS",
+            }
         }
         env.update(preset)
         script = (
@@ -127,7 +132,7 @@ class TestJuliaSignalHandlingGuard:
             "os.environ.get('PYTHON_JULIACALL_HANDLE_SIGNALS', '<unset>'))"
         )
         completed = subprocess.run(
-            [sys.executable, "-c", script],
+            [sys.executable, *options, "-c", script],
             env=env,
             capture_output=True,
             text=True,
@@ -141,22 +146,47 @@ class TestJuliaSignalHandlingGuard:
             f"marker not found in subprocess stdout: {completed.stdout!r}"
         )
 
-    def test_default_enables_signal_handling(self):
-        """A clean environment must come back with the upstream-recommended
-        value so the multithreaded juliacall init branch is skipped."""
-        assert self._handle_signals_after_import({}) == "yes"
+    def test_default_preserves_python_signal_handling(self) -> None:
+        """An explicit single-thread mode avoids Base and retains Python signals."""
+        assert self._handle_signals_after_import({}) == "no"
 
-    def test_operator_override_is_preserved(self):
+    @pytest.mark.parametrize(
+        "preset,expected",
+        [
+            ({"JULIA_NUM_THREADS": "2"}, "yes"),
+            ({"PYTHON_JULIACALL_THREADS": "auto"}, "yes"),
+            ({"PYTHON_JULIACALL_THREADS": "1", "JULIA_NUM_THREADS": "2"}, "no"),
+            ({"PYTHON_JULIACALL_HANDLE_SIGNALS": "yes"}, "yes"),
+        ],
+    )
+    def test_explicit_thread_and_signal_modes(
+        self, preset: dict[str, str], expected: str
+    ) -> None:
+        """Actual package imports honour Julia thread precedence and overrides."""
+        assert self._handle_signals_after_import(preset) == expected
+
+    @pytest.mark.parametrize("threads,expected", [("1", "no"), ("2", "yes")])
+    def test_python_thread_option_has_precedence(
+        self, threads: str, expected: str
+    ) -> None:
+        """The real interpreter option precedes conflicting environment defaults."""
+        assert (
+            self._handle_signals_after_import(
+                {"PYTHON_JULIACALL_THREADS": "auto", "JULIA_NUM_THREADS": "4"},
+                ("-X", "juliacall-threads=" + threads),
+            )
+            == expected
+        )
+
+    def test_operator_override_is_preserved(self) -> None:
         """An operator-provided value must not be overwritten by the package."""
         assert (
             self._handle_signals_after_import({"PYTHON_JULIACALL_HANDLE_SIGNALS": "no"})
             == "no"
         )
 
-    def test_package_import_yields_python_backend_floor(self):
-        """Importing the package must always leave a usable UPDE backend chain
-        with the Python reference present, even when optional toolchains are
-        unavailable, and the stateless integrator must advance phases."""
+    def test_package_import_yields_python_backend_floor(self) -> None:
+        """Advance real phases through the public dispatcher and Python floor."""
         from scpn_phase_orchestrator.upde._run import AVAILABLE_BACKENDS, upde_run
 
         assert "python" in AVAILABLE_BACKENDS
