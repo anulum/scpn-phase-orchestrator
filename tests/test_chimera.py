@@ -6,28 +6,38 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Chimera state detection tests
 
+"""Exercise original public chimera measurement and classification contracts."""
+
 from __future__ import annotations
 
-from typing import Any
+import cProfile
+from typing import cast
 
 import numpy as np
 import pytest
+from numpy.typing import NDArray
 
+from benchmarks.chimera_local_order_reference import scalar_local_order
 from scpn_phase_orchestrator.monitor import chimera as chimera_module
 from scpn_phase_orchestrator.monitor.chimera import (
     ChimeraState,
     detect_chimera,
     local_order_parameter,
 )
+from tests.test_chimera_real_runtime import installed_absent_probe
+
+FloatArray = NDArray[np.float64]
 
 
-def _uniform_knm(n: int, strength: float = 1.0) -> np.ndarray:
-    knm = np.full((n, n), strength)
+def _uniform_knm(n: int, strength: float = 1.0) -> FloatArray:
+    """Construct finite positive all-to-all coupling with a zero diagonal."""
+    knm = np.full((n, n), strength, dtype=np.float64)
     np.fill_diagonal(knm, 0.0)
     return knm
 
 
-def test_fully_synchronised_all_coherent():
+def test_fully_synchronised_all_coherent() -> None:
+    """Classify every coupled synchronized oscillator as coherent."""
     phases = np.zeros(20)
     knm = _uniform_knm(20)
     state = detect_chimera(phases, knm)
@@ -36,7 +46,8 @@ def test_fully_synchronised_all_coherent():
     assert state.chimera_index == 0.0
 
 
-def test_uniform_random_phases_mostly_incoherent():
+def test_uniform_random_phases_mostly_incoherent() -> None:
+    """Resolve low neighbourhood coherence on a seeded random population."""
     rng = np.random.default_rng(7)
     phases = rng.uniform(0, 2 * np.pi, 100)
     knm = _uniform_knm(100)
@@ -44,7 +55,7 @@ def test_uniform_random_phases_mostly_incoherent():
     assert len(state.incoherent_indices) > 50
 
 
-def test_chimera_state_has_mixed_groups():
+def test_chimera_state_has_mixed_groups() -> None:
     """Half synchronised, half scattered — the hallmark chimera.
 
     Uses block-diagonal coupling so each group's R_i is computed only
@@ -65,7 +76,8 @@ def test_chimera_state_has_mixed_groups():
     assert len(state.incoherent_indices) > 0
 
 
-def test_chimera_index_between_zero_and_one():
+def test_chimera_index_between_zero_and_one() -> None:
+    """Keep the public boundary fraction in its declared interval."""
     rng = np.random.default_rng(99)
     phases = rng.uniform(0, 2 * np.pi, 50)
     knm = _uniform_knm(50)
@@ -73,19 +85,21 @@ def test_chimera_index_between_zero_and_one():
     assert 0.0 <= state.chimera_index <= 1.0
 
 
-def test_empty_phases_returns_empty_state():
+def test_empty_phases_returns_empty_state() -> None:
+    """Preserve the valid empty classification identity."""
     state = detect_chimera(np.array([]), np.zeros((0, 0)))
     assert state == ChimeraState()
 
 
-def test_two_oscillators_in_phase():
+def test_two_oscillators_in_phase() -> None:
+    """Classify two coupled synchronized oscillators as coherent."""
     phases = np.array([0.0, 0.0])
     knm = np.array([[0.0, 1.0], [1.0, 0.0]])
     state = detect_chimera(phases, knm)
     assert len(state.coherent_indices) == 2
 
 
-def test_no_coupling_gives_zero_r_local():
+def test_no_coupling_gives_zero_r_local() -> None:
     """With zero coupling, no oscillator has neighbors — all R_i = 0."""
     phases = np.zeros(10)
     knm = np.zeros((10, 10))
@@ -95,7 +109,8 @@ def test_no_coupling_gives_zero_r_local():
     assert len(state.coherent_indices) == 0
 
 
-def test_dataclass_fields():
+def test_dataclass_fields() -> None:
+    """Retain the public result fields and original values."""
     state = ChimeraState(
         coherent_indices=[0, 1],
         incoherent_indices=[3],
@@ -124,9 +139,16 @@ def test_dataclass_fields():
         {"coherent_indices": [], "incoherent_indices": [], "chimera_index": 0.5 + 0.0j},
     ],
 )
-def test_chimera_state_rejects_invalid_public_record(payload: dict[str, Any]) -> None:
+def test_chimera_state_rejects_invalid_public_record(
+    payload: dict[str, object],
+) -> None:
+    """Refuse genuine invalid record fields without coercing their original types."""
     with pytest.raises(ValueError):
-        ChimeraState(**payload)
+        ChimeraState(
+            coherent_indices=cast(list[int], payload["coherent_indices"]),
+            incoherent_indices=cast(list[int], payload["incoherent_indices"]),
+            chimera_index=cast(float, payload["chimera_index"]),
+        )
 
 
 @pytest.mark.parametrize(
@@ -168,47 +190,47 @@ def test_chimera_state_rejects_invalid_public_record(payload: dict[str, Any]) ->
     ],
 )
 def test_rejects_invalid_chimera_inputs(
-    phases: Any,
-    knm: Any,
+    phases: object,
+    knm: object,
     match: str,
 ) -> None:
+    """Refuse source aliases, nonfinite values and invalid graph dimensions."""
     with pytest.raises(ValueError, match=match):
-        local_order_parameter(phases, knm)
+        local_order_parameter(cast(FloatArray, phases), cast(FloatArray, knm))
 
 
-def test_local_order_parameter_uses_backend_when_available(
-    monkeypatch: pytest.MonkeyPatch,
-):
-    calls: list[tuple[np.ndarray, np.ndarray, int]] = []
-
-    def _fake_backend(phases: np.ndarray, knm_flat: np.ndarray, n: int) -> np.ndarray:
-        calls.append((phases, knm_flat, n))
-        return np.ones(n, dtype=np.float64)
-
-    monkeypatch.setattr(chimera_module, "_dispatch", lambda: _fake_backend)
-    phases = np.array([0.0, 0.2, 0.4], dtype=np.float64)
+@pytest.mark.native_runtime
+def test_local_order_parameter_uses_backend_when_available() -> None:
+    """Observe the original Rust builtin through the actual preferred public API."""
+    phases = np.array([0.0, 0.2, 0.4])
     knm = _uniform_knm(3)
-    local = local_order_parameter(phases, knm)
-    np.testing.assert_allclose(local, np.ones(3), atol=1e-12)
-    assert len(calls) == 1
+    assert chimera_module.ACTIVE_BACKEND == "rust"
+    profiler = cProfile.Profile()
+    with profiler:
+        local = local_order_parameter(phases, knm)
+    np.testing.assert_allclose(
+        local, scalar_local_order(phases, knm), atol=1e-12, rtol=0
+    )
+    calls = sum(
+        entry.callcount
+        for entry in profiler.getstats()
+        if isinstance(entry.code, str) and "detect_chimera_rust" in entry.code
+    )
+    assert calls == 1
 
 
 def test_local_order_parameter_falls_back_when_backend_raises(
     monkeypatch: pytest.MonkeyPatch,
-):
-    def _raising_backend(
-        _phases: np.ndarray, _knm_flat: np.ndarray, _n: int
-    ) -> np.ndarray:
+) -> None:
+    """Computation faults propagate in the retained original fallback test slot."""
+
+    def failing(_p: FloatArray, _k: FloatArray, _n: int) -> FloatArray:
+        """Raise solely as an explicit negative execution-fault control."""
         raise RuntimeError("boom")
 
-    monkeypatch.setattr(chimera_module, "_dispatch", lambda: _raising_backend)
-    phases = np.array([0.0, 0.2, 0.4], dtype=np.float64)
-    knm = _uniform_knm(3)
-    local = local_order_parameter(phases, knm)
-    assert local.shape == (3,)
-    assert np.all(np.isfinite(local))
-    assert np.all(local >= 0.0)
-    assert np.all(local <= 1.0)
+    monkeypatch.setattr(chimera_module, "_dispatch", lambda backend=None: failing)
+    with pytest.raises(RuntimeError, match="boom"):
+        local_order_parameter(np.array([0.0, 0.2, 0.4]), _uniform_knm(3))
 
 
 @pytest.mark.parametrize(
@@ -227,16 +249,19 @@ def test_local_order_parameter_falls_back_when_backend_raises(
 )
 def test_local_order_parameter_invalid_backend_payload_fails_closed(
     monkeypatch: pytest.MonkeyPatch,
-    backend_output: np.ndarray,
+    backend_output: FloatArray,
 ) -> None:
+    """Reject deliberately invalid execution returns as a negative boundary control."""
+
     def _fake_backend(
-        _phases: np.ndarray,
-        _knm_flat: np.ndarray,
+        _phases: FloatArray,
+        _knm_flat: FloatArray,
         _n: int,
-    ) -> np.ndarray:
+    ) -> FloatArray:
+        """Return the original invalid payload solely for negative validation."""
         return backend_output
 
-    monkeypatch.setattr(chimera_module, "_dispatch", lambda: _fake_backend)
+    monkeypatch.setattr(chimera_module, "_dispatch", lambda backend=None: _fake_backend)
     phases = np.array([0.0, 0.0], dtype=np.float64)
     knm = np.array([[0.0, 1.0], [1.0, 0.0]], dtype=np.float64)
 
@@ -244,71 +269,50 @@ def test_local_order_parameter_invalid_backend_payload_fails_closed(
         local_order_parameter(phases, knm)
 
 
-def test_dispatch_falls_back_to_python_when_loader_fails(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    previous_backend = chimera_module.ACTIVE_BACKEND
-    previous_available = list(chimera_module.AVAILABLE_BACKENDS)
-    previous_loader = chimera_module._LOADERS["go"]
-    chimera_module.ACTIVE_BACKEND = "go"
-    chimera_module.AVAILABLE_BACKENDS = ["go", "python"]
-    chimera_module._BACKEND_CACHE.clear()
-    monkeypatch.setitem(
-        chimera_module._LOADERS,
-        "go",
-        lambda: (_ for _ in ()).throw(ImportError("go backend unavailable")),
+@pytest.mark.native_runtime
+def test_dispatch_falls_back_to_python_when_loader_fails() -> None:
+    """A current installed profile genuinely lacks Go and preserves Python output."""
+    record = installed_absent_probe()
+    assert "go" in cast(list[str], record["missing"])
+    assert record["active"] == "python"
+    assert record["local"] == [0.0, 0.0]
+
+
+@pytest.mark.native_runtime
+def test_dispatch_uses_cached_loader_once() -> None:
+    """Real Go public calls reuse the resolved loader and execute its bridge."""
+    phases = np.array([0.0, 0.2, 0.4])
+    knm = _uniform_knm(3)
+    expected = scalar_local_order(phases, knm)
+    np.testing.assert_allclose(
+        local_order_parameter(phases, knm, backend="go"), expected, atol=1e-12, rtol=0
     )
-    try:
-        backend = chimera_module._dispatch()
-    finally:
-        chimera_module.ACTIVE_BACKEND = previous_backend
-        chimera_module.AVAILABLE_BACKENDS = previous_available
-        monkeypatch.setitem(chimera_module._LOADERS, "go", previous_loader)
-        chimera_module._BACKEND_CACHE.clear()
-
-    assert backend is None
-
-
-def test_dispatch_uses_cached_loader_once(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    previous_backend = chimera_module.ACTIVE_BACKEND
-    previous_available = list(chimera_module.AVAILABLE_BACKENDS)
-    previous_loader = chimera_module._LOADERS["go"]
-    chimera_module.ACTIVE_BACKEND = "go"
-    chimera_module.AVAILABLE_BACKENDS = ["go", "python"]
-    chimera_module._BACKEND_CACHE.clear()
-    call_count = 0
-
-    def fake_backend(_phases: np.ndarray, _knm_flat: np.ndarray, n: int) -> np.ndarray:
-        return np.zeros(n, dtype=np.float64)
-
-    def loader():
-        nonlocal call_count
-        call_count += 1
-        return fake_backend
-
-    monkeypatch.setitem(chimera_module._LOADERS, "go", loader)
-    try:
-        b1 = chimera_module._dispatch()
-        b2 = chimera_module._dispatch()
-    finally:
-        chimera_module.ACTIVE_BACKEND = previous_backend
-        chimera_module.AVAILABLE_BACKENDS = previous_available
-        monkeypatch.setitem(chimera_module._LOADERS, "go", previous_loader)
-        chimera_module._BACKEND_CACHE.clear()
-
-    assert b1 is fake_backend
-    assert b2 is fake_backend
-    assert call_count == 1
+    profiler = cProfile.Profile()
+    with profiler:
+        first = local_order_parameter(phases, knm, backend="go")
+        second = local_order_parameter(phases, knm, backend="go")
+    np.testing.assert_allclose(first, expected, atol=1e-12, rtol=0)
+    np.testing.assert_allclose(second, expected, atol=1e-12, rtol=0)
+    names = [
+        entry.code.co_name
+        for entry in profiler.getstats()
+        if not isinstance(entry.code, str)
+    ]
+    assert "_load_go_fn" not in names
+    calls = sum(
+        entry.callcount
+        for entry in profiler.getstats()
+        if not isinstance(entry.code, str)
+        and entry.code.co_name == "local_order_parameter_go"
+    )
+    assert calls == 2
 
 
 class TestChimeraPipelineWiring:
     """Pipeline: engine phases → detect_chimera → chimera_index."""
 
-    def test_engine_phases_to_chimera_detection(self):
-        """UPDEEngine → phases → detect_chimera: classifies coherent
-        vs incoherent oscillators from engine output."""
+    def test_engine_phases_to_chimera_detection(self) -> None:
+        """Classify actual UPDE engine phases through the public chimera monitor."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
 
         n = 16

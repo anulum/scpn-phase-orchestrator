@@ -4,12 +4,12 @@
 # © Code 2020–2026 Miroslav Šotek. All rights reserved.
 # ORCID: 0009-0009-3560-0851
 # Contact: www.anulum.li | protoscience@anulum.li
-# SCPN Phase Orchestrator — Property-based chimera & winding number proofs
+# SCPN Phase Orchestrator — Sampled chimera and winding-number invariants
 
-"""Hypothesis-driven invariant proofs for chimera state detection and
-phase winding number computation.
+"""Sample public chimera classification and phase winding-number invariants.
 
-Chimera: Kuramoto & Battogtokh 2002. Winding: topological invariant.
+The monitor reports instantaneous threshold populations; these sampled tests
+do not establish a persistent dynamical chimera or a formal proof.
 """
 
 from __future__ import annotations
@@ -18,6 +18,7 @@ import numpy as np
 import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
+from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.monitor.chimera import detect_chimera
 from scpn_phase_orchestrator.monitor.winding import winding_numbers, winding_vector
@@ -25,7 +26,8 @@ from scpn_phase_orchestrator.monitor.winding import winding_numbers, winding_vec
 TWO_PI = 2.0 * np.pi
 
 
-def _connected_knm(n: int, strength: float = 1.0, seed: int = 0) -> np.ndarray:
+def _connected_knm(n: int, strength: float = 1.0, seed: int = 0) -> NDArray[np.float64]:
+    """Build deterministic symmetric positive non-self coupling."""
     rng = np.random.default_rng(seed)
     raw = rng.uniform(0.3, 1.0, (n, n)) * strength
     knm = 0.5 * (raw + raw.T)
@@ -37,6 +39,8 @@ def _connected_knm(n: int, strength: float = 1.0, seed: int = 0) -> np.ndarray:
 
 
 class TestChimeraInvariants:
+    """Exercise sampled public classification invariants."""
+
     @given(
         n=st.integers(min_value=2, max_value=16),
         seed=st.integers(min_value=0, max_value=200),
@@ -96,6 +100,7 @@ class TestChimeraInvariants:
         assert len(result.coherent_indices) == n
 
     def test_empty_phases(self) -> None:
+        """Return an empty zero-index classification for an empty population."""
         result = detect_chimera(np.array([]), np.zeros((0, 0)))
         assert result.chimera_index == 0.0
         assert result.coherent_indices == []
@@ -136,6 +141,8 @@ class TestChimeraInvariants:
 
 
 class TestWindingNumberInvariants:
+    """Exercise sampled public winding-number invariants."""
+
     @given(
         n=st.integers(min_value=1, max_value=8),
         t=st.integers(min_value=10, max_value=50),
@@ -156,6 +163,7 @@ class TestWindingNumberInvariants:
     )
     @settings(max_examples=50, deadline=None)
     def test_length_n(self, n: int, t: int, seed: int) -> None:
+        """Retain one winding-number result per trajectory channel."""
         rng = np.random.default_rng(seed)
         traj = rng.uniform(0, TWO_PI, (t, n))
         wn = winding_numbers(traj)
@@ -174,7 +182,7 @@ class TestWindingNumberInvariants:
         """Linearly advancing phase → predictable winding."""
         n_steps = 1000
         dt = 0.01
-        t = np.arange(n_steps + 1) * dt
+        t = np.arange(n_steps + 1, dtype=np.float64) * dt
         phases = (omega * t) % TWO_PI
         traj = phases.reshape(-1, 1)
         wn = winding_numbers(traj)
@@ -199,7 +207,7 @@ class TestWindingNumberInvariants:
         """Reversing time should negate (or closely negate) winding numbers."""
         n_steps = 500
         dt = 0.01
-        t = np.arange(n_steps + 1) * dt
+        t = np.arange(n_steps + 1, dtype=np.float64) * dt
         omega = 3.0
         phases = (omega * t) % TWO_PI
         traj = phases.reshape(-1, 1)
@@ -214,6 +222,7 @@ class TestWindingNumberInvariants:
     )
     @settings(max_examples=30, deadline=None)
     def test_finite(self, n: int, seed: int) -> None:
+        """Return finite winding-vector values for finite sampled trajectories."""
         rng = np.random.default_rng(seed)
         traj = rng.uniform(0, TWO_PI, (30, n))
         wn = winding_numbers(traj)

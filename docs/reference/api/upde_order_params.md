@@ -109,7 +109,11 @@ $$
 
 $R_2$ detects two-cluster states (where $R_1 \approx 0$ but $R_2 \approx 1$).
 $R_3$ detects three-cluster states. The SCPN chimera detector uses local
-order parameters $R_i$ computed in a neighbourhood (see `monitor/chimera.py`).
+order parameters $R_i$ computed on directed positive non-self adjacency,
+with unweighted positive edges. Its index is an instantaneous boundary fraction,
+not a certificate of dynamical coexistence. See the
+[CPU contract](monitor_chimera.md) for explicit owner selection and the
+[distinct JAX variance model](../nn_chimera_contract.md).
 
 ### 1.7 PLV vs Coherence Measures
 

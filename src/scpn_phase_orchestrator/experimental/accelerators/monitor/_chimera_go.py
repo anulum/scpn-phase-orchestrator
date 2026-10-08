@@ -42,12 +42,21 @@ def _load_lib() -> ctypes.CDLL:
             f"cd go && go build -buildmode=c-shared -o libchimera.so chimera.go"
         )
     lib = load_go_library(_LIB_PATH)
-    lib.LocalOrderParameter.restype = ctypes.c_int
-    lib.LocalOrderParameter.argtypes = [
+    try:
+        native = lib.LocalOrderParameterV2
+    except AttributeError as exc:
+        raise ImportError(
+            "libchimera.so lacks LocalOrderParameterV2; rebuild chimera.go"
+        ) from exc
+    native.restype = ctypes.c_int
+    native.argtypes = [
         ctypes.POINTER(ctypes.c_double),
+        ctypes.c_size_t,
         ctypes.POINTER(ctypes.c_double),
+        ctypes.c_size_t,
         ctypes.c_int,
         ctypes.POINTER(ctypes.c_double),
+        ctypes.c_size_t,
     ]
     _LIB = lib
     return lib
@@ -58,18 +67,45 @@ def local_order_parameter_go(
     knm_flat: FloatArray,
     n: int,
 ) -> FloatArray:
-    """Compute local phase order parameters through the Go backend."""
-    p, k, n = validate_chimera_backend_inputs(phases, knm_flat, n)
+    """Measure positive non-self adjacency through the extent-aware Go ABI.
+
+    Parameters
+    ----------
+    phases : FloatArray
+        Finite real radian phases, N entries; original aliases are refused.
+    knm_flat : FloatArray
+        Finite row-major N*N coupling. Positive off-diagonal entries are
+        equally weighted neighbours; the diagonal tolerance is 1e-15.
+    n : int
+        Plain nonnegative count at most 2**31-1, checked before buffers.
+
+    Returns
+    -------
+    FloatArray
+        N finite local magnitudes in [0,1]; an empty request returns the
+        identity without loading a shared library.
+
+    Raises
+    ------
+    ImportError
+        If the library is missing or lacks LocalOrderParameterV2.
+    ValueError
+        If aliases, counts, cardinalities or numerical domains are invalid.
+    """
+    p, k, n = validate_chimera_backend_inputs(phases, knm_flat, n, maximum_n=2**31 - 1)
     if n == 0:
         return np.zeros(0, dtype=np.float64)
     lib = _load_lib()
     out = np.zeros(n, dtype=np.float64)
-    rc = lib.LocalOrderParameter(
+    rc = lib.LocalOrderParameterV2(
         p.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+        ctypes.c_size_t(p.size),
         k.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+        ctypes.c_size_t(k.size),
         ctypes.c_int(int(n)),
         out.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
+        ctypes.c_size_t(out.size),
     )
     if rc != 0:
-        raise ValueError(f"Go LocalOrderParameter rc={rc}")
+        raise ValueError(f"Go LocalOrderParameterV2 rc={rc}")
     return validate_chimera_backend_output(out, n)

@@ -2,8 +2,8 @@
 
 The monitor subsystem provides 30+ dynamical observers plus STL runtime
 monitoring for different aspects of oscillator network behavior. Most oscillator
-simulators provide only the global order parameter R. SPO's monitors detect
-chimera states, cross-frequency coupling, causal information flow, topological
+simulators provide only the global order parameter R. SPO's monitors report
+local coherence, cross-frequency coupling, causal information flow, topological
 invariants, and thermodynamic irreversibility — phenomena that R alone cannot
 capture.
 
@@ -294,33 +294,25 @@ aliases before conversion, including object-carried temporal values. Numeric
 object arrays remain supported; backend local-order values obey the same source
 type contract.
 
-Detects chimera states: the coexistence of coherent (phase-locked) and
-incoherent (desynchronised) clusters within the same network. This is a
-fundamentally different phenomenon from uniform synchronization or
-uniform incoherence — it requires spatially resolved analysis.
-
-**Theory:** Kuramoto & Battogtokh 2002 discovered that identical
-oscillators with identical coupling can spontaneously split into
-synchronised and desynchronised subpopulations. This was later confirmed
-experimentally in chemical oscillators and electronic circuits.
-
-**Algorithm:**
-
-1. Compute local order parameter R_i for each oscillator based on its
-   coupled neighbors (oscillators j where K_ij > 0)
-2. Classify: R_i > 0.7 → coherent, R_i < 0.3 → incoherent
-3. Chimera index = fraction of oscillators in the boundary region
-
-**Usage:**
+The monitor classifies instantaneous local coherence on directed positive
+non-self adjacency. Edge amplitudes are unweighted; negative edges do not count.
+The exact magnitude factorization avoids extreme-angle subtraction overflow.
+Coherent means `R_i > 0.7`, incoherent means `R_i < 0.3`, and the index is the
+remaining boundary fraction. Those thresholds are implementation choices;
+a snapshot or a positive boundary fraction does not establish a persistent chimera.
 
 ```python
 from scpn_phase_orchestrator.monitor.chimera import detect_chimera
 
-state = detect_chimera(phases, knm)
-# state.coherent_indices: list of phase-locked oscillators
-# state.incoherent_indices: list of desynchronised oscillators
-# state.chimera_index: 0.0 = pure state, >0 = chimera
+state = detect_chimera(phases, knm, backend="python")
+# coherent_indices and incoherent_indices: strict threshold populations
+# chimera_index: boundary_count / N (zero for an empty population)
 ```
+
+A named missing owner raises `ImportError`; automatic selection uses cached
+availability in Rust/Mojo/Julia/Go/Python order. Numerical failures propagate.
+See the [complete measurement, runtime and comparison contract](monitor_chimera.md).
+The [JAX model](../nn_chimera_contract.md) uses different adjacency, index and masks.
 
 ::: scpn_phase_orchestrator.monitor.chimera
 

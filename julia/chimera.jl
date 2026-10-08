@@ -19,26 +19,43 @@ module ChimeraJL
 
 export local_order_parameter
 
+"""
+    local_order_parameter(phases, knm_flat, n)
+
+Return unweighted local coherence on positive directed row-major edges,
+excluding self even within the admitted diagonal tolerance of 1e-15.
+Finite Float64 buffers must have exact n and n*n lengths; n is a plain
+nonnegative integer. Empty input returns an empty vector. ArgumentError
+reports invalid domains before allocation/indexing. Factoring the centre
+phasor avoids overflow in finite unwrapped phase differences.
+"""
 
 function local_order_parameter(
     phases::AbstractVector{Float64},
     knm_flat::AbstractVector{Float64},
     n::Integer,
 )
-    length(phases) == n || error("phases shape mismatch")
-    length(knm_flat) == n * n || error("knm shape mismatch")
-    out = zeros(Float64, n)
-    @inbounds for i in 1:n
+    n isa Bool && throw(ArgumentError("n must be a plain nonnegative integer"))
+    0 <= n <= typemax(Int) || throw(ArgumentError("n must fit a nonnegative Int"))
+    nn = Int(n)
+    Base.require_one_based_indexing(phases, knm_flat)
+    (nn == 0 || nn <= typemax(Int) ÷ nn) || throw(ArgumentError("n*n overflows Int"))
+    length(phases) == nn || throw(ArgumentError("phases shape mismatch"))
+    length(knm_flat) == nn * nn || throw(ArgumentError("knm shape mismatch"))
+    all(isfinite, phases) && all(isfinite, knm_flat) ||
+        throw(ArgumentError("phases and knm must be finite"))
+    all(i -> abs(knm_flat[(i - 1) * nn + i]) <= 1e-15, 1:nn) ||
+        throw(ArgumentError("knm self-coupling diagonal must be zero"))
+    out = zeros(Float64, nn)
+    @inbounds for i in 1:nn
         sr = 0.0
         si = 0.0
         cnt = 0
-        theta_i = phases[i]
-        base = (i - 1) * n
-        for j in 1:n
-            if knm_flat[base + j] > 0.0
-                δ = phases[j] - theta_i
-                sr += cos(δ)
-                si += sin(δ)
+        base = (i - 1) * nn
+        for j in 1:nn
+            if j != i && knm_flat[base + j] > 0.0
+                sr += cos(phases[j])
+                si += sin(phases[j])
                 cnt += 1
             end
         end
@@ -48,7 +65,7 @@ function local_order_parameter(
             inv = 1.0 / Float64(cnt)
             sr *= inv
             si *= inv
-            out[i] = sqrt(sr * sr + si * si)
+            out[i] = min(hypot(sr, si), 1.0)
         end
     end
     return out

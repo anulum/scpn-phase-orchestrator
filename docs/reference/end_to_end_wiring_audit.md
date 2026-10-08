@@ -165,3 +165,13 @@ Difference: 0.0000 (float32 sufficient for this configuration).
 | NumPy↔JAX parity | R difference = 0.0000 on power_grid | OK |
 
 **Total: 0 broken wires. All modules functional and correctly interconnected.**
+
+## Chimera model boundary
+
+The `nn.chimera` row above records public exports, not equality with the CPU
+monitor or whole-system runtime qualification. JAX retains nonzero signed/self
+adjacency, local-order variance and inclusive masks. CPU monitoring uses positive
+non-self adjacency, boundary fraction and strict masks. Both original synthetic
+EEG examples consume real UPDE output through the CPU monitor; their reported
+index is labelled `boundary_fraction`. See the [runtime contract](api/monitor_chimera.md)
+and [JAX contract](nn_chimera_contract.md).

@@ -59,16 +59,15 @@ oscillation bands (theta-gamma, alpha-beta).
 
 ## Chimera State Detection
 
-Detects chimera states: coexisting coherent and incoherent clusters
-within the same network. Uses local order parameter R_i based on
-neighborhood coupling.
+Classify a snapshot's local phase coherence using directed positive non-self
+neighbours. Positive edge magnitudes count equally. Coherent means `R_i > 0.7`,
+incoherent means `R_i < 0.3`, and the boundary fraction is `boundary_count / N`.
+A snapshot does not establish a persistent dynamical chimera. The exact magnitude
+factorization avoids overflowing finite phase differences. Use explicit `backend`
+to require an owner; numerical or output failure propagates.
 
-- Coherent: R_i > 0.7
-- Incoherent: R_i < 0.3
-- Boundary: in-between
-- Chimera index = boundary_count / N
-
-Detects phase transitions that global R misses.
+See the [CPU monitor contract](../reference/api/monitor_chimera.md) and the
+[distinct JAX variance/mask contract](../reference/nn_chimera_contract.md).
 
 ::: scpn_phase_orchestrator.monitor.chimera
     options:

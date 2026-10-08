@@ -8,12 +8,13 @@
 
 """Chimera state detection with a 5-backend fallback chain.
 
-Kuramoto & Battogtokh 2002, Nonlinear Phenomena in Complex Systems
-5:380–385. An oscillator ``i`` is coherent when its local order
+An oscillator ``i`` is coherent when its local order
 parameter ``R_i = |⟨exp(i(θ_j − θ_i))⟩_{j ∈ N(i)}|`` exceeds the
 coherence threshold, incoherent when it falls below the incoherence
 threshold. The chimera index is the fraction of oscillators that sit
-in the boundary band in between.
+in the boundary band in between. These implementation thresholds are an
+instantaneous adjacency diagnostic, not a dynamical chimera certificate or
+the weighted nonlocal field of Kuramoto & Battogtokh (2002).
 
 Measurements must be plain real numbers before conversion. Boolean, text,
 complex and temporal values are refused; real numeric object arrays remain
@@ -39,8 +40,7 @@ from typing import TypeAlias, cast
 import numpy as np
 from numpy.typing import NDArray
 
-from scpn_phase_orchestrator._array_types import require_real_values
-from scpn_phase_orchestrator.monitor._julia_runtime import require_juliacall_main
+from ..experimental.accelerators.monitor._chimera_validation import _measurement_array
 
 FloatArray: TypeAlias = NDArray[np.float64]
 ChimeraBackendFn: TypeAlias = Callable[[FloatArray, FloatArray, int], FloatArray]
@@ -58,7 +58,7 @@ __all__ = [
 ]
 
 
-# Kuramoto & Battogtokh 2002, Nonlinear Phenom. Complex Syst. 5:380-385
+# Implementation thresholds for the instantaneous boundary-fraction diagnostic.
 _COHERENT_THRESHOLD = 0.7
 _INCOHERENT_THRESHOLD = 0.3
 
@@ -96,11 +96,12 @@ def _load_mojo_fn() -> ChimeraBackendFn:
 
 def _load_julia_fn() -> ChimeraBackendFn:
     """Load the Julia chimera-detection backend callable."""
-    require_juliacall_main()
     from ..experimental.accelerators.monitor._chimera_julia import (
+        _ensure,
         local_order_parameter_julia,
     )
 
+    _ensure()
     return cast("ChimeraBackendFn", local_order_parameter_julia)
 
 
@@ -135,7 +136,7 @@ def _load_backend(name: str) -> ChimeraBackendFn:
 
 
 def _resolve_backends() -> tuple[str, list[str]]:
-    """Resolve the active and available backends, fastest-first."""
+    """Resolve active and available backends in the declared preference order."""
     _BACKEND_CACHE.clear()
     available: list[str] = []
     for name in _BACKEND_NAMES[:-1]:
@@ -151,22 +152,22 @@ def _resolve_backends() -> tuple[str, list[str]]:
 ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
-def _dispatch() -> ChimeraBackendFn | None:
-    """Return the fastest available backend callable, or ``None`` for Python."""
-    ordered_backends = [ACTIVE_BACKEND] + list(AVAILABLE_BACKENDS)
-    deduped: list[str] = []
-    for backend in ordered_backends:
-        if backend in deduped:
-            continue
-        deduped.append(backend)
-    for backend in deduped:
+def _dispatch(backend: str | None = None) -> ChimeraBackendFn | None:
+    """Resolve an explicit owner strictly, or use the automatic fallback chain."""
+    if backend is not None:
+        if not isinstance(backend, str) or backend not in _BACKEND_NAMES:
+            raise ValueError(f"backend must be one of {_BACKEND_NAMES}, or None")
         if backend == "python":
             return None
         try:
             return _load_backend(backend)
-        except (ImportError, RuntimeError, OSError, KeyError):
-            continue
-    return None
+        except (ImportError, RuntimeError, OSError, KeyError) as exc:
+            raise ImportError(f"chimera backend {backend!r} is unavailable") from exc
+    # Import-time resolution has already cached each admitted implementation.
+    # Use its selected default; computation faults remain visible to callers.
+    if ACTIVE_BACKEND == "python":
+        return None
+    return _load_backend(ACTIVE_BACKEND)
 
 
 @dataclass(frozen=True)
@@ -178,7 +179,7 @@ class ChimeraState:
     chimera_index: float = 0.0
 
     def __post_init__(self) -> None:
-        """Validate and normalise immutable Chimera result fields."""
+        """Validate and copy result fields at construction."""
         coherent = _validate_index_list(self.coherent_indices, name="coherent_indices")
         incoherent = _validate_index_list(
             self.incoherent_indices,
@@ -201,7 +202,7 @@ class ChimeraState:
 
 
 def _validate_index_list(indices: object, *, name: str) -> list[int]:
-    """Return a validated list of in-range integer indices, else raise."""
+    """Return copied distinct nonnegative integer indices, else raise."""
     if isinstance(indices, (str, bytes)) or not isinstance(indices, Iterable):
         raise ValueError(f"{name} must be a sequence of non-negative integer indices")
     values = list(indices)
@@ -218,102 +219,27 @@ def _validate_index_list(indices: object, *, name: str) -> list[int]:
     return normalised
 
 
-def _contains_boolean_alias(value: object) -> bool:
-    """Return whether the value contains any boolean alias."""
-    try:
-        raw = np.asarray(value, dtype=object)
-    except (TypeError, ValueError):
-        return False
-    return any(isinstance(item, (bool, np.bool_)) for item in raw.flat)
-
-
-def _contains_complex_alias(value: object) -> bool:
-    """Return whether the value contains any complex-number alias."""
-    try:
-        raw = np.asarray(value, dtype=object)
-    except (TypeError, ValueError):
-        return False
-    return any(isinstance(item, (complex, np.complexfloating)) for item in raw.flat)
-
-
-def _is_string_like(value: object) -> bool:
-    """Return whether ``value`` is a Python or NumPy string scalar."""
-    return isinstance(value, (str, bytes, np.str_, np.bytes_))
-
-
-def _is_numeric_string_alias(value: object) -> bool:
-    """Return whether ``value`` is a string scalar parsable as a float."""
-    if not _is_string_like(value):
-        return False
-    try:
-        float(cast("str | bytes", value))
-    except (TypeError, ValueError):
-        return False
-    return True
-
-
-def _contains_numeric_string_alias(value: object) -> bool:
-    """Return whether the value contains numeric string aliases."""
-    try:
-        raw = np.asarray(value)
-    except (TypeError, ValueError):
-        return False
-    if raw.dtype.kind not in {"O", "S", "U"}:
-        return False
-    saw_string = False
-    for item in raw.astype(object, copy=False).flat:
-        if not _is_string_like(item):
-            continue
-        saw_string = True
-        if not _is_numeric_string_alias(item):
-            return False
-    return saw_string
-
-
-def _has_complex_payload(value: object) -> bool:
-    """Return whether the value carries a complex-number payload."""
-    try:
-        raw = np.asarray(value)
-    except (TypeError, ValueError):
-        return _contains_complex_alias(value)
-    return bool(np.iscomplexobj(raw) or _contains_complex_alias(value))
-
-
 def _validate_chimera_inputs(
     phases: object,
     knm: object,
 ) -> tuple[FloatArray, FloatArray]:
-    """Return the validated phase array and group indices for detection."""
-    raw_phases = np.asarray(phases)
-    if _contains_boolean_alias(raw_phases):
-        raise ValueError("phases must not contain boolean values")
-    if _has_complex_payload(phases):
-        raise ValueError("phases must contain real-valued phase samples")
-    if _contains_numeric_string_alias(raw_phases):
-        raise ValueError("phases must not contain numeric-string aliases")
-    try:
-        require_real_values(phases, name="phases", allow_object=True)
-        phases_array = raw_phases.astype(np.float64, copy=True)
-    except (TypeError, ValueError) as exc:
-        raise ValueError("phases must be a finite one-dimensional array") from exc
+    """Return validated phase and coupling arrays for detection."""
+    phases_array = _measurement_array(
+        phases,
+        name="phases",
+        conversion_error="phases must be a finite one-dimensional array",
+    )
     if phases_array.ndim != 1:
         raise ValueError(f"phases shape {phases_array.shape} must be one-dimensional")
     if not np.all(np.isfinite(phases_array)):
         raise ValueError("phases must contain only finite values")
 
     n = int(phases_array.size)
-    raw_knm = np.asarray(knm)
-    if _contains_boolean_alias(raw_knm):
-        raise ValueError("knm must not contain boolean values")
-    if _has_complex_payload(knm):
-        raise ValueError("knm must contain real-valued couplings")
-    if _contains_numeric_string_alias(raw_knm):
-        raise ValueError("knm must not contain numeric-string aliases")
-    try:
-        require_real_values(knm, name="knm", allow_object=True)
-        knm_array = raw_knm.astype(np.float64, copy=True)
-    except (TypeError, ValueError) as exc:
-        raise ValueError("knm must be a finite square coupling matrix") from exc
+    knm_array = _measurement_array(
+        knm,
+        name="knm",
+        conversion_error="knm must be a finite square coupling matrix",
+    )
     if knm_array.shape != (n, n):
         raise ValueError(f"knm shape {knm_array.shape} does not match {(n, n)}")
     if not np.all(np.isfinite(knm_array)):
@@ -328,20 +254,11 @@ def _validate_chimera_inputs(
 
 def _validate_local_order(value: object, *, n_oscillators: int) -> FloatArray:
     """Return backend local order parameters matching the reference, else raise."""
-    raw = np.asarray(value)
-    if _contains_boolean_alias(raw):
-        raise ValueError("local order parameter output must not contain boolean values")
-    if _has_complex_payload(value):
-        raise ValueError("local order parameter output must contain real values")
-    if _contains_numeric_string_alias(raw):
-        raise ValueError(
-            "local order parameter output must not contain numeric-string aliases"
-        )
-    try:
-        require_real_values(value, name="local order parameter", allow_object=True)
-        local = raw.astype(np.float64, copy=True)
-    except (TypeError, ValueError) as exc:
-        raise ValueError("local order parameter output must be numeric") from exc
+    local = _measurement_array(
+        value,
+        name="local order parameter output",
+        conversion_error="local order parameter output must be numeric",
+    )
     if local.shape != (n_oscillators,):
         raise ValueError(
             f"local order parameter shape {local.shape} does not match "
@@ -355,11 +272,14 @@ def _validate_local_order(value: object, *, n_oscillators: int) -> FloatArray:
     return np.ascontiguousarray(np.clip(local, 0.0, 1.0), dtype=np.float64)
 
 
-def local_order_parameter(phases: FloatArray, knm: FloatArray) -> FloatArray:
+def local_order_parameter(
+    phases: FloatArray, knm: FloatArray, *, backend: str | None = None
+) -> FloatArray:
     """Per-oscillator local order parameter.
 
     ``R_i = |⟨exp(i(θ_j − θ_i))⟩_{j ∈ N(i)}|`` with ``N(i) =
-    {j : K_ij > 0}`` and a required zero self-coupling diagonal. Zero
+    {j : j != i and K_ij > 0}`` and a required zero self-coupling diagonal
+    (absolute tolerance ``1e-15``). Admitted diagonal residue is ignored. Zero
     when oscillator ``i`` has no neighbours.
 
     Parameters
@@ -368,6 +288,10 @@ def local_order_parameter(phases: FloatArray, knm: FloatArray) -> FloatArray:
         Oscillator phases in radians, shape ``(N,)``.
     knm : FloatArray
         Coupling matrix ``K_nm``, shape ``(N, N)``.
+    backend : str or None, optional
+        Explicit ``python``, ``rust``, ``go``, ``julia`` or ``mojo`` owner.
+        An unavailable explicit owner raises ImportError. None selects the
+        automatic chain. Computation and output-validation failures propagate.
 
     Returns
     -------
@@ -376,34 +300,33 @@ def local_order_parameter(phases: FloatArray, knm: FloatArray) -> FloatArray:
     """
     phases, knm = _validate_chimera_inputs(phases, knm)
     n = int(phases.size)
+    backend_fn = _dispatch(backend)
     if n == 0:
         return np.zeros(0, dtype=np.float64)
     knm_flat = np.ascontiguousarray(knm.ravel(), dtype=np.float64)
 
-    backend_fn = _dispatch()
     if backend_fn is not None:
-        try:
-            return _validate_local_order(
-                backend_fn(phases, knm_flat, n), n_oscillators=n
-            )
-        except (ImportError, RuntimeError, OSError, KeyError):
-            backend_fn = None
+        return _validate_local_order(backend_fn(phases, knm_flat, n), n_oscillators=n)
 
     r_local: FloatArray = np.zeros(n, dtype=np.float64)
     knm_2d = knm_flat.reshape(n, n)
-    diffs = phases[np.newaxis, :] - phases[:, np.newaxis]
-    unit = np.exp(1j * diffs)
+    # Factoring out exp(-i*theta_i) preserves the magnitude and avoids
+    # subtracting finite unwrapped phases whose difference could overflow.
+    unit = np.cos(phases) + 1j * np.sin(phases)
     for i in range(n):
         mask = knm_2d[i] > 0
+        mask[i] = False
         if not np.any(mask):
             r_local[i] = 0.0
             continue
-        r_local[i] = float(np.abs(np.mean(unit[i, mask])))
+        r_local[i] = float(np.abs(np.mean(unit[mask])))
     return _validate_local_order(r_local, n_oscillators=n)
 
 
-def detect_chimera(phases: FloatArray, knm: FloatArray) -> ChimeraState:
-    """Detect chimera states in a Kuramoto network.
+def detect_chimera(
+    phases: FloatArray, knm: FloatArray, *, backend: str | None = None
+) -> ChimeraState:
+    """Classify instantaneous local phase coherence in a Kuramoto network.
 
     Parameters
     ----------
@@ -412,6 +335,8 @@ def detect_chimera(phases: FloatArray, knm: FloatArray) -> ChimeraState:
     knm : FloatArray
         ``(N, N)`` coupling matrix. ``K_ij > 0`` defines neighbours; diagonal
         self-coupling must be zero.
+    backend : str or None, optional
+        Strict named owner or automatic selection, as in local_order_parameter.
 
     Returns
     -------
@@ -419,16 +344,15 @@ def detect_chimera(phases: FloatArray, knm: FloatArray) -> ChimeraState:
         :class:`ChimeraState` with coherent / incoherent index lists and the
         boundary-fraction chimera index.
     """
-    phases, knm = _validate_chimera_inputs(phases, knm)
-    n = int(phases.size)
+    r_local = local_order_parameter(phases, knm, backend=backend)
+    n = int(r_local.size)
     if n == 0:
         return ChimeraState()
 
-    r_local = local_order_parameter(phases, knm)
     coherent = [int(i) for i in range(n) if r_local[i] > _COHERENT_THRESHOLD]
     incoherent = [int(i) for i in range(n) if r_local[i] < _INCOHERENT_THRESHOLD]
     boundary = n - len(coherent) - len(incoherent)
-    chimera_index = boundary / n if n > 0 else 0.0
+    chimera_index = boundary / n
     return ChimeraState(
         coherent_indices=coherent,
         incoherent_indices=incoherent,

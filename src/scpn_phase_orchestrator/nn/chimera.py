@@ -10,8 +10,12 @@
 
 Chimera states are spatiotemporal patterns where synchronised and
 incoherent domains coexist (Kuramoto & Battogtokh 2002). This module
-provides differentiable detection, enabling gradient-based search for
-chimera-producing coupling matrices.
+provides instantaneous local-coherence diagnostics and phase gradients on
+fixed adjacency. Hard ``K != 0`` support decisions give zero coupling-amplitude
+gradients away from topology changes; they do not enable gradient-based
+topology search. A vanishing neighbourhood phasor has a nondifferentiable
+magnitude, and threshold masks are discrete. A snapshot does not certify a
+dynamical chimera state.
 
 Requires: jax>=0.4
 """
@@ -30,7 +34,9 @@ def local_order_parameter(
 
     R_i = |mean(exp(i·Δθ_j)) for neighbours j of i|
 
-    Neighbours defined by nonzero entries in K. Vectorised — no Python loops.
+    Neighbours are all nonzero entries in K, including negative and self edges.
+    This differs from monitor.chimera's positive non-self adjacency. Vectorised
+    without Python loops; empty neighbourhoods return zero.
 
     Parameters
     ----------
@@ -45,10 +51,11 @@ def local_order_parameter(
         (N,) local order parameters in [0, 1].
     """
     mask = (K != 0).astype(jnp.float32)
-    diff = phases[jnp.newaxis, :] - phases[:, jnp.newaxis]  # (N, N)
-    # Complex phasors weighted by adjacency
-    cos_diff = jnp.cos(diff) * mask
-    sin_diff = jnp.sin(diff) * mask
+    # The centre phasor has unit magnitude, so remove it before summing.
+    # This preserves the nonzero adjacency model, including signed/self edges,
+    # and avoids overflow in finite unwrapped phase differences.
+    cos_diff = jnp.cos(phases)[jnp.newaxis, :] * mask
+    sin_diff = jnp.sin(phases)[jnp.newaxis, :] * mask
     n_neighbours = jnp.sum(mask, axis=1).clip(min=1.0)
     mean_cos = jnp.sum(cos_diff, axis=1) / n_neighbours
     mean_sin = jnp.sum(sin_diff, axis=1) / n_neighbours
@@ -61,9 +68,10 @@ def chimera_index(
 ) -> jax.Array:
     """Scalar chimera index: variance of local order parameters.
 
-    High variance = coexistence of coherent (R≈1) and incoherent (R≈0)
-    domains. Zero variance = uniform state (either all sync or all desync).
-    Differentiable.
+    Variance summarizes instantaneous heterogeneity, without certifying
+    dynamical coexistence. Zero variance means equal local-order values.
+    Phase gradients are defined on fixed adjacency away from zero phasors;
+    hard support decisions do not provide coupling-topology gradients.
 
     Parameters
     ----------
@@ -75,7 +83,7 @@ def chimera_index(
     Returns
     -------
     jax.Array
-        Scalar chimera index (higher = more chimera-like).
+        Scalar local-order variance; the nonempty finite range is [0, 0.25].
     """
     R_local = local_order_parameter(phases, K)
     return jnp.var(R_local)
@@ -96,9 +104,9 @@ def detect_chimera(
     K : jax.Array
         (N, N) coupling matrix.
     coherent_threshold : float
-        R_i above this → coherent.
+        R_i greater than or equal to this → coherent.
     incoherent_threshold : float
-        R_i below this → incoherent.
+        R_i less than or equal to this → incoherent.
 
     Returns
     -------

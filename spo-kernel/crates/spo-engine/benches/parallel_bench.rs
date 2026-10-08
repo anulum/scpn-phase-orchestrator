@@ -68,9 +68,14 @@ fn make_ring_phases(n_osc: usize, n_time: usize, freq: f64) -> Vec<f64> {
 
 fn bench_chimera_local_order(c: &mut Criterion) {
     let mut group = c.benchmark_group("chimera_local_order");
+    group.sample_size(20);
     for &n in &[64usize, 256, 1024] {
         let knm = make_ring_knm(n);
         let phases: Vec<f64> = (0..n).map(|i| i as f64 * 0.17).collect();
+        // An interior row has its two immediate neighbours, so its exact
+        // magnitude is cos(0.17), independent of the centre phase.
+        let reference = local_order_parameter(&phases, &knm, n);
+        assert!((reference[n / 2] - 0.17_f64.cos()).abs() < 1e-12);
         group.bench_with_input(BenchmarkId::from_parameter(n), &n, |b, &n| {
             b.iter(|| {
                 let r = local_order_parameter(&phases, &knm, n);
