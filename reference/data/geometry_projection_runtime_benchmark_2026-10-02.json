@@ -1,0 +1,697 @@
+{
+  "recorded_utc": "2026-10-02T00:00:24.351806+00:00",
+  "snapshot_date_local": "2026-10-02 Europe/Zurich",
+  "scope": "Linux shared-workstation coupling projection; functional parity and local regression only",
+  "isolated": false,
+  "source_sha256": {
+    "src/scpn_phase_orchestrator/coupling/geometry_constraints.py": "27ce1c0a1b8c2c6c7a34fa2dfbeef98c07a6f3c35bf084c25801707708bcad89",
+    "spo-kernel/crates/spo-engine/src/coupling.rs": "ba9168ba2b0a2421c3fc95fc4506e0b33d4185112276936b642449ef2ea6fdac",
+    "spo-kernel/crates/spo-ffi/src/coupling_builder.rs": "a6153ac3274647117a9d6cc83672f344fb990be6d4a8f20411ecbb3f17276032",
+    "benchmarks/geometry_projection_benchmark.py": "fbb49d641abef34639563d32ff3cf6c6a17c04b93a2fe9ed818dab9943906a98",
+    "spo-kernel/crates/spo-engine/benches/coupling_projection_bench.rs": "147bbb9e838544d7e64b1fab03a87ea5169d121a340a773d76ee12d065bfc1f1"
+  },
+  "native_binary_provenance": {
+    "wheel": "/media/anulum/GOTM/aaa_God_of_the_Math_Collection/.coordination/evidence/SCPN-PHASE-ORCHESTRATOR/geometry_projection_real_runtime_2026-10-01T232632Z/wheels-v1/spo_kernel-0.5.11-cp310-abi3-manylinux_2_35_x86_64.whl",
+    "wheel_sha256": "b7b400688a5ebeb515837b89441e7c8cb7e7d5ceea87422280cf94188828ddcc",
+    "member": "spo_kernel/spo_kernel.abi3.so",
+    "binary": "/media/anulum/GOTM/aaa_God_of_the_Math_Collection/03_CODE/SCPN-SYSTEMS-INTEGRATION-AND-CONTROL/repositories/SCPN-PHASE-ORCHESTRATOR/.venv/lib/python3.12/site-packages/spo_kernel/spo_kernel.abi3.so",
+    "binary_sha256": "289918bbea5659ff44616996d416b35b4cba1f5643f470c8f8e2a97c551bb7d4",
+    "member_matches_installed": true,
+    "source_sha256": {
+      "spo-kernel/crates/spo-engine/src/coupling.rs": "ba9168ba2b0a2421c3fc95fc4506e0b33d4185112276936b642449ef2ea6fdac",
+      "spo-kernel/crates/spo-ffi/src/coupling_builder.rs": "a6153ac3274647117a9d6cc83672f344fb990be6d4a8f20411ecbb3f17276032"
+    }
+  },
+  "reproduction": {
+    "public": "PYTHONPATH=src:. python -m benchmarks.geometry_projection_benchmark --sizes 16 64 256 --calls 10 --repeats 3",
+    "rust": "cargo bench -p spo-engine --bench coupling_projection_bench -- --sample-size 10 --warm-up-time 0.1 --measurement-time 0.2 --noplot"
+  },
+  "same_real_input_bytes_all_runtimes": true,
+  "input_encoding": "little-endian IEEE754 binary64, row-major; Rust bits emitted before timed work",
+  "native_environment": {
+    "source_sha256": {
+      "src/scpn_phase_orchestrator/coupling/geometry_constraints.py": "27ce1c0a1b8c2c6c7a34fa2dfbeef98c07a6f3c35bf084c25801707708bcad89",
+      "spo-kernel/crates/spo-engine/src/coupling.rs": "ba9168ba2b0a2421c3fc95fc4506e0b33d4185112276936b642449ef2ea6fdac",
+      "spo-kernel/crates/spo-ffi/src/coupling_builder.rs": "a6153ac3274647117a9d6cc83672f344fb990be6d4a8f20411ecbb3f17276032",
+      "benchmarks/geometry_projection_benchmark.py": "fbb49d641abef34639563d32ff3cf6c6a17c04b93a2fe9ed818dab9943906a98"
+    },
+    "rows": [
+      {
+        "n": 16,
+        "calls": 10,
+        "repeats": 3,
+        "input_sha256": "1967f3845dc0d1dfb8af1e82c363a426acb05136b00fd09760d0fe0ff137d3a0",
+        "input_encoding": "little-endian IEEE754 binary64, row-major",
+        "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]",
+        "numpy": "2.5.3",
+        "platform": "Linux-7.0.0-34-generic-x86_64-with-glibc2.39",
+        "load_before": [
+          20.478515625,
+          32.32275390625,
+          32.09033203125
+        ],
+        "affinity": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "isolated": false,
+        "native_installation": "/media/anulum/GOTM/aaa_God_of_the_Math_Collection/03_CODE/SCPN-SYSTEMS-INTEGRATION-AND-CONTROL/repositories/SCPN-PHASE-ORCHESTRATOR/.venv/lib/python3.12/site-packages/spo_kernel/__init__.py",
+        "public_python": {
+          "samples_us": [
+            473.10430090874434,
+            406.99289966141805,
+            407.89010090520605
+          ],
+          "median_us": 407.89010090520605
+        },
+        "direct_native": {
+          "samples_us": [
+            28.98399980040267,
+            25.636299687903374,
+            25.431299582123756
+          ],
+          "median_us": 25.636299687903374
+        },
+        "load_after": [
+          20.478515625,
+          32.32275390625,
+          32.09033203125
+        ]
+      },
+      {
+        "n": 64,
+        "calls": 10,
+        "repeats": 3,
+        "input_sha256": "a923a398a36c846c18057d73f30d116d91fcbcf073fa7a34a644297f2e983e70",
+        "input_encoding": "little-endian IEEE754 binary64, row-major",
+        "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]",
+        "numpy": "2.5.3",
+        "platform": "Linux-7.0.0-34-generic-x86_64-with-glibc2.39",
+        "load_before": [
+          20.478515625,
+          32.32275390625,
+          32.09033203125
+        ],
+        "affinity": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "isolated": false,
+        "native_installation": "/media/anulum/GOTM/aaa_God_of_the_Math_Collection/03_CODE/SCPN-SYSTEMS-INTEGRATION-AND-CONTROL/repositories/SCPN-PHASE-ORCHESTRATOR/.venv/lib/python3.12/site-packages/spo_kernel/__init__.py",
+        "public_python": {
+          "samples_us": [
+            7192.214400856756,
+            6279.496899514925,
+            6377.140700351447
+          ],
+          "median_us": 6377.140700351447
+        },
+        "direct_native": {
+          "samples_us": [
+            352.6366999722086,
+            357.98750031972304,
+            329.6299997600727
+          ],
+          "median_us": 352.6366999722086
+        },
+        "load_after": [
+          20.478515625,
+          32.32275390625,
+          32.09033203125
+        ]
+      },
+      {
+        "n": 256,
+        "calls": 10,
+        "repeats": 3,
+        "input_sha256": "0fda52325eeb80cc28cdba0f8cbc6708416ecf5ebc165d28060b92f6a808f948",
+        "input_encoding": "little-endian IEEE754 binary64, row-major",
+        "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]",
+        "numpy": "2.5.3",
+        "platform": "Linux-7.0.0-34-generic-x86_64-with-glibc2.39",
+        "load_before": [
+          20.478515625,
+          32.32275390625,
+          32.09033203125
+        ],
+        "affinity": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "isolated": false,
+        "native_installation": "/media/anulum/GOTM/aaa_God_of_the_Math_Collection/03_CODE/SCPN-SYSTEMS-INTEGRATION-AND-CONTROL/repositories/SCPN-PHASE-ORCHESTRATOR/.venv/lib/python3.12/site-packages/spo_kernel/__init__.py",
+        "public_python": {
+          "samples_us": [
+            130820.97630103817,
+            182245.18670031102,
+            187408.6387004354
+          ],
+          "median_us": 182245.18670031102
+        },
+        "direct_native": {
+          "samples_us": [
+            7318.921499245334,
+            7925.904099829495,
+            9537.955799896736
+          ],
+          "median_us": 7925.904099829495
+        },
+        "load_after": [
+          22.6025390625,
+          32.56689453125,
+          32.1708984375
+        ]
+      }
+    ]
+  },
+  "kernel_absent_environment": {
+    "source_sha256": {
+      "src/scpn_phase_orchestrator/coupling/geometry_constraints.py": "27ce1c0a1b8c2c6c7a34fa2dfbeef98c07a6f3c35bf084c25801707708bcad89",
+      "spo-kernel/crates/spo-engine/src/coupling.rs": "ba9168ba2b0a2421c3fc95fc4506e0b33d4185112276936b642449ef2ea6fdac",
+      "spo-kernel/crates/spo-ffi/src/coupling_builder.rs": "a6153ac3274647117a9d6cc83672f344fb990be6d4a8f20411ecbb3f17276032",
+      "benchmarks/geometry_projection_benchmark.py": "fbb49d641abef34639563d32ff3cf6c6a17c04b93a2fe9ed818dab9943906a98"
+    },
+    "rows": [
+      {
+        "n": 16,
+        "calls": 10,
+        "repeats": 3,
+        "input_sha256": "1967f3845dc0d1dfb8af1e82c363a426acb05136b00fd09760d0fe0ff137d3a0",
+        "input_encoding": "little-endian IEEE754 binary64, row-major",
+        "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]",
+        "numpy": "2.2.6",
+        "platform": "Linux-7.0.0-34-generic-x86_64-with-glibc2.39",
+        "load_before": [
+          20.478515625,
+          32.32275390625,
+          32.09033203125
+        ],
+        "affinity": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "isolated": false,
+        "native_installation": null,
+        "public_python": {
+          "samples_us": [
+            583.3032002556138,
+            447.81780015910044,
+            490.4066998278722
+          ],
+          "median_us": 490.4066998278722
+        },
+        "load_after": [
+          20.478515625,
+          32.32275390625,
+          32.09033203125
+        ]
+      },
+      {
+        "n": 64,
+        "calls": 10,
+        "repeats": 3,
+        "input_sha256": "a923a398a36c846c18057d73f30d116d91fcbcf073fa7a34a644297f2e983e70",
+        "input_encoding": "little-endian IEEE754 binary64, row-major",
+        "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]",
+        "numpy": "2.2.6",
+        "platform": "Linux-7.0.0-34-generic-x86_64-with-glibc2.39",
+        "load_before": [
+          20.478515625,
+          32.32275390625,
+          32.09033203125
+        ],
+        "affinity": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "isolated": false,
+        "native_installation": null,
+        "public_python": {
+          "samples_us": [
+            7498.499400389846,
+            6992.32530023437,
+            7186.183499288745
+          ],
+          "median_us": 7186.183499288745
+        },
+        "load_after": [
+          20.478515625,
+          32.32275390625,
+          32.09033203125
+        ]
+      },
+      {
+        "n": 256,
+        "calls": 10,
+        "repeats": 3,
+        "input_sha256": "0fda52325eeb80cc28cdba0f8cbc6708416ecf5ebc165d28060b92f6a808f948",
+        "input_encoding": "little-endian IEEE754 binary64, row-major",
+        "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]",
+        "numpy": "2.2.6",
+        "platform": "Linux-7.0.0-34-generic-x86_64-with-glibc2.39",
+        "load_before": [
+          20.478515625,
+          32.32275390625,
+          32.09033203125
+        ],
+        "affinity": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11
+        ],
+        "isolated": false,
+        "native_installation": null,
+        "public_python": {
+          "samples_us": [
+            135688.74019983923,
+            197699.0797003964,
+            208637.68970011733
+          ],
+          "median_us": 197699.0797003964
+        },
+        "load_after": [
+          22.6025390625,
+          32.56689453125,
+          32.1708984375
+        ]
+      }
+    ]
+  },
+  "rust_core": [
+    {
+      "n": 16,
+      "input_sha256": "1967f3845dc0d1dfb8af1e82c363a426acb05136b00fd09760d0fe0ff137d3a0",
+      "raw_bit_count": 256,
+      "estimates_ns": {
+        "mean": {
+          "confidence_interval": {
+            "confidence_level": 0.95,
+            "lower_bound": 1076.5873877551019,
+            "upper_bound": 1863.0287407677358
+          },
+          "point_estimate": 1457.1948966634272,
+          "standard_error": 201.8051668777773
+        },
+        "median": {
+          "confidence_interval": {
+            "confidence_level": 0.95,
+            "lower_bound": 919.1065051020407,
+            "upper_bound": 1960.9552769679299
+          },
+          "point_estimate": 1363.1802721088434,
+          "standard_error": 238.9492052406842
+        },
+        "median_abs_dev": {
+          "confidence_interval": {
+            "confidence_level": 0.95,
+            "lower_bound": 148.38037756980341,
+            "upper_bound": 1210.5893748512797
+          },
+          "point_estimate": 640.954405799356,
+          "standard_error": 288.2648509487344
+        },
+        "slope": {
+          "confidence_interval": {
+            "confidence_level": 0.95,
+            "lower_bound": 1344.120744863602,
+            "upper_bound": 2195.151683774059
+          },
+          "point_estimate": 1794.8521971905645,
+          "standard_error": 217.17272896795896
+        },
+        "std_dev": {
+          "confidence_interval": {
+            "confidence_level": 0.95,
+            "lower_bound": 343.62058341744944,
+            "upper_bound": 841.0188208235845
+          },
+          "point_estimate": 672.3281391704687,
+          "standard_error": 124.98844704811948
+        }
+      },
+      "estimates_sha256": "369da007583261899866bea356c378557cfc93070f25f9ef1ddce9d529e9bc73"
+    },
+    {
+      "n": 64,
+      "input_sha256": "a923a398a36c846c18057d73f30d116d91fcbcf073fa7a34a644297f2e983e70",
+      "raw_bit_count": 4096,
+      "estimates_ns": {
+        "mean": {
+          "confidence_interval": {
+            "confidence_level": 0.95,
+            "lower_bound": 13489.659365079366,
+            "upper_bound": 34740.46581699346
+          },
+          "point_estimate": 23146.525303454713,
+          "standard_error": 5481.301385859632
+        },
+        "median": {
+          "confidence_interval": {
+            "confidence_level": 0.95,
+            "lower_bound": 10234.122549019608,
+            "upper_bound": 37345.94117647059
+          },
+          "point_estimate": 12929.077497665734,
+          "standard_error": 7777.562879030488
+        },
+        "median_abs_dev": {
+          "confidence_interval": {
+            "confidence_level": 0.95,
+            "lower_bound": 505.8897590578783,
+            "upper_bound": 31052.261852633714
+          },
+          "point_estimate": 6911.501775335531,
+          "standard_error": 8278.323182459442
+        },
+        "slope": {
+          "confidence_interval": {
+            "confidence_level": 0.95,
+            "lower_bound": 14489.226987942615,
+            "upper_bound": 49071.20902636917
+          },
+          "point_estimate": 35892.93180544945,
+          "standard_error": 8427.842639444674
+        },
+        "std_dev": {
+          "confidence_interval": {
+            "confidence_level": 0.95,
+            "lower_bound": 7337.814126047117,
+            "upper_bound": 23892.26575307294
+          },
+          "point_estimate": 18251.263662093832,
+          "standard_error": 4303.342150400402
+        }
+      },
+      "estimates_sha256": "895dc5ad214479629fd4bb64e6accd0e5ed66538348795637a8e29913caa80b1"
+    },
+    {
+      "n": 256,
+      "input_sha256": "0fda52325eeb80cc28cdba0f8cbc6708416ecf5ebc165d28060b92f6a808f948",
+      "raw_bit_count": 65536,
+      "estimates_ns": {
+        "mean": {
+          "confidence_interval": {
+            "confidence_level": 0.95,
+            "lower_bound": 411592.7136507937,
+            "upper_bound": 809356.5547619046
+          },
+          "point_estimate": 593407.2255026454,
+          "standard_error": 101782.03525148227
+        },
+        "median": {
+          "confidence_interval": {
+            "confidence_level": 0.95,
+            "lower_bound": 356811.7083333334,
+            "upper_bound": 746273.380952381
+          },
+          "point_estimate": 531137.1092592592,
+          "standard_error": 87542.91465094405
+        },
+        "median_abs_dev": {
+          "confidence_interval": {
+            "confidence_level": 0.95,
+            "lower_bound": 25419.746251487042,
+            "upper_bound": 488104.3520344155
+          },
+          "point_estimate": 244052.17601720776,
+          "standard_error": 135512.38060781115
+        },
+        "slope": {
+          "confidence_interval": {
+            "confidence_level": 0.95,
+            "lower_bound": 494697.8344988345,
+            "upper_bound": 774711.8493815603
+          },
+          "point_estimate": 594343.4311688312,
+          "standard_error": 72231.96430548068
+        },
+        "std_dev": {
+          "confidence_interval": {
+            "confidence_level": 0.95,
+            "lower_bound": 139375.59296669954,
+            "upper_bound": 467259.31661427685
+          },
+          "point_estimate": 339210.42690423026,
+          "standard_error": 92783.93080065341
+        }
+      },
+      "estimates_sha256": "87c8b76d4d555996f8ab86bc5271e73e499f78f5e4b2d3658e57652916af73a4"
+    }
+  ],
+  "limitations": [
+    "Shared-host non-isolated runs establish no causal speed-up or production latency; concurrent owned scoped test/build work and other uncharacterised host load were not removed.",
+    "Native and absent environments use different NumPy versions; recorded current results are checked for projection correctness and identical actual input hashes, not a controlled cross-version performance experiment.",
+    "Python public projection times include Python source validation/constraint calls; PyO3 calls include sequence extraction/output conversion; Rust iter_batched keeps raw clone setup outside its interval but includes returned-buffer handling. These are different entry-point costs.",
+    "Historical 2026-09-26 construction/projection snapshot used different inputs and toolchains; historical Criterion first local projection run also used inputs unlike then-current Python RNG sample. Both remain historical evidence, not current-head or isolated baselines.",
+    "Empty/extreme structural projection does not guarantee stable physical dynamics under every possible coupling magnitude.",
+    "No Go/Julia/Mojo counterpart for this fixed K_nm projection was found in maintained native source directories. No global coverage or Rust instruction100 claim.",
+    "Initial v3 Python timing collection ran under coverage and was retained verbatim internally as instrumented evidence; current v4 raw receipts replace those timings with independent uninstrumented runs."
+  ],
+  "raw_receipts": {
+    "projection-benchmark-native-v3": {
+      "launch": {
+        "pid": 2999628,
+        "pgid": 2999628,
+        "argv": [
+          "env",
+          "COVERAGE_FILE=/media/anulum/GOTM/aaa_God_of_the_Math_Collection/.coordination/evidence/SCPN-PHASE-ORCHESTRATOR/geometry_projection_real_runtime_2026-10-01T232632Z/.coverage-cli-native-v3",
+          "PYTHONPATH=/media/anulum/GOTM/aaa_God_of_the_Math_Collection/03_CODE/SCPN-SYSTEMS-INTEGRATION-AND-CONTROL/repositories/SCPN-PHASE-ORCHESTRATOR/src:/media/anulum/GOTM/aaa_God_of_the_Math_Collection/03_CODE/SCPN-SYSTEMS-INTEGRATION-AND-CONTROL/repositories/SCPN-PHASE-ORCHESTRATOR",
+          "/media/anulum/GOTM/aaa_God_of_the_Math_Collection/03_CODE/SCPN-SYSTEMS-INTEGRATION-AND-CONTROL/repositories/SCPN-PHASE-ORCHESTRATOR/.venv/bin/python",
+          "-m",
+          "coverage",
+          "run",
+          "--source=benchmarks.geometry_projection_benchmark",
+          "--branch",
+          "-m",
+          "benchmarks.geometry_projection_benchmark",
+          "--sizes",
+          "16",
+          "64",
+          "256",
+          "--calls",
+          "10",
+          "--repeats",
+          "3"
+        ],
+        "cwd": "/media/anulum/GOTM/aaa_God_of_the_Math_Collection/03_CODE/SCPN-SYSTEMS-INTEGRATION-AND-CONTROL/repositories/SCPN-PHASE-ORCHESTRATOR",
+        "bound_seconds": 180.0,
+        "recorded_utc": "2026-10-01T23:54:25.535723+00:00"
+      },
+      "terminal": {
+        "exit_code": 0,
+        "timed_out": false,
+        "process_reaped": true,
+        "elapsed_s": 31.794684794003842,
+        "pid": 2999628,
+        "pgid": 2999628
+      },
+      "stdout_sha256": "262610abce988ad205f8a3524ffa94b8704768c21e363753759df00e55c96197",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "projection-benchmark-absent-v3": {
+      "launch": {
+        "pid": 2999651,
+        "pgid": 2999651,
+        "argv": [
+          "env",
+          "COVERAGE_FILE=/media/anulum/GOTM/aaa_God_of_the_Math_Collection/.coordination/evidence/SCPN-PHASE-ORCHESTRATOR/geometry_projection_real_runtime_2026-10-01T232632Z/.coverage-cli-absent-v3",
+          "PYTHONPATH=/media/anulum/GOTM/aaa_God_of_the_Math_Collection/03_CODE/SCPN-SYSTEMS-INTEGRATION-AND-CONTROL/repositories/SCPN-PHASE-ORCHESTRATOR/src:/media/anulum/GOTM/aaa_God_of_the_Math_Collection/03_CODE/SCPN-SYSTEMS-INTEGRATION-AND-CONTROL/repositories/SCPN-PHASE-ORCHESTRATOR",
+          "/usr/bin/python3",
+          "-m",
+          "coverage",
+          "run",
+          "--source=benchmarks.geometry_projection_benchmark",
+          "--branch",
+          "-m",
+          "benchmarks.geometry_projection_benchmark",
+          "--sizes",
+          "16",
+          "64",
+          "256",
+          "--calls",
+          "10",
+          "--repeats",
+          "3"
+        ],
+        "cwd": "/media/anulum/GOTM/aaa_God_of_the_Math_Collection/03_CODE/SCPN-SYSTEMS-INTEGRATION-AND-CONTROL/repositories/SCPN-PHASE-ORCHESTRATOR",
+        "bound_seconds": 180.0,
+        "recorded_utc": "2026-10-01T23:54:25.718381+00:00"
+      },
+      "terminal": {
+        "exit_code": 0,
+        "timed_out": false,
+        "process_reaped": true,
+        "elapsed_s": 24.431933924002806,
+        "pid": 2999651,
+        "pgid": 2999651
+      },
+      "stdout_sha256": "944e11ccb0bfc6337a660956b435c15ca9d7a32a9c2d0518c94f748fa58fd256",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "projection-criterion-v3": {
+      "launch": {
+        "pid": 2986983,
+        "pgid": 2986983,
+        "argv": [
+          "env",
+          "CARGO_BUILD_JOBS=2",
+          "cargo",
+          "bench",
+          "-p",
+          "spo-engine",
+          "--bench",
+          "coupling_projection_bench",
+          "--",
+          "--sample-size",
+          "10",
+          "--warm-up-time",
+          "0.1",
+          "--measurement-time",
+          "0.2",
+          "--noplot"
+        ],
+        "cwd": "/media/anulum/GOTM/aaa_God_of_the_Math_Collection/03_CODE/SCPN-SYSTEMS-INTEGRATION-AND-CONTROL/repositories/SCPN-PHASE-ORCHESTRATOR/spo-kernel",
+        "bound_seconds": 600.0,
+        "recorded_utc": "2026-10-01T23:53:20.036298+00:00"
+      },
+      "terminal": {
+        "exit_code": 0,
+        "timed_out": false,
+        "process_reaped": true,
+        "elapsed_s": 58.67392414700589,
+        "pid": 2986983,
+        "pgid": 2986983
+      },
+      "stdout_sha256": "04b8585d04eb343bd0ac1b7000021775019f96422ea5ccdf7ade4f6ecb157286",
+      "stderr_sha256": "bb98e1a14f03d58f5f50b5aa1e0d0f76daa8ee6961309ef1805ba1e016cb31fa"
+    },
+    "projection-benchmark-native-untraced-v4": {
+      "launch": {
+        "pid": 3041214,
+        "pgid": 3041214,
+        "argv": [
+          "env",
+          "PYTHONPATH=/media/anulum/GOTM/aaa_God_of_the_Math_Collection/03_CODE/SCPN-SYSTEMS-INTEGRATION-AND-CONTROL/repositories/SCPN-PHASE-ORCHESTRATOR/src:/media/anulum/GOTM/aaa_God_of_the_Math_Collection/03_CODE/SCPN-SYSTEMS-INTEGRATION-AND-CONTROL/repositories/SCPN-PHASE-ORCHESTRATOR",
+          "/media/anulum/GOTM/aaa_God_of_the_Math_Collection/03_CODE/SCPN-SYSTEMS-INTEGRATION-AND-CONTROL/repositories/SCPN-PHASE-ORCHESTRATOR/.venv/bin/python",
+          "-m",
+          "benchmarks.geometry_projection_benchmark",
+          "--sizes",
+          "16",
+          "64",
+          "256",
+          "--calls",
+          "10",
+          "--repeats",
+          "3"
+        ],
+        "cwd": "/media/anulum/GOTM/aaa_God_of_the_Math_Collection/03_CODE/SCPN-SYSTEMS-INTEGRATION-AND-CONTROL/repositories/SCPN-PHASE-ORCHESTRATOR",
+        "bound_seconds": 180.0,
+        "recorded_utc": "2026-10-01T23:58:43.860119+00:00"
+      },
+      "terminal": {
+        "exit_code": 0,
+        "timed_out": false,
+        "process_reaped": true,
+        "elapsed_s": 6.152967747999355,
+        "pid": 3041214,
+        "pgid": 3041214
+      },
+      "stdout_sha256": "c68f1f27ac8f4a287bbf5a05209d006089f12e81a5417ceede23ff3f946142db",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "projection-benchmark-absent-untraced-v4": {
+      "launch": {
+        "pid": 3041215,
+        "pgid": 3041215,
+        "argv": [
+          "env",
+          "PYTHONPATH=/media/anulum/GOTM/aaa_God_of_the_Math_Collection/03_CODE/SCPN-SYSTEMS-INTEGRATION-AND-CONTROL/repositories/SCPN-PHASE-ORCHESTRATOR/src:/media/anulum/GOTM/aaa_God_of_the_Math_Collection/03_CODE/SCPN-SYSTEMS-INTEGRATION-AND-CONTROL/repositories/SCPN-PHASE-ORCHESTRATOR",
+          "/usr/bin/python3",
+          "-m",
+          "benchmarks.geometry_projection_benchmark",
+          "--sizes",
+          "16",
+          "64",
+          "256",
+          "--calls",
+          "10",
+          "--repeats",
+          "3"
+        ],
+        "cwd": "/media/anulum/GOTM/aaa_God_of_the_Math_Collection/03_CODE/SCPN-SYSTEMS-INTEGRATION-AND-CONTROL/repositories/SCPN-PHASE-ORCHESTRATOR",
+        "bound_seconds": 180.0,
+        "recorded_utc": "2026-10-01T23:58:43.864829+00:00"
+      },
+      "terminal": {
+        "exit_code": 0,
+        "timed_out": false,
+        "process_reaped": true,
+        "elapsed_s": 6.210156568995444,
+        "pid": 3041215,
+        "pgid": 3041215
+      },
+      "stdout_sha256": "dd3856b933536a21045d106a584c7204c82c91bd0a49e1329a8cfe6cd800ff7a",
+      "stderr_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  "timing_collection": "Python and direct PyO3 current timings run without coverage invocation; source-coverage runs retained separately. Rust Criterion release measurements run without Python tracing."
+}

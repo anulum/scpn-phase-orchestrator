@@ -1,0 +1,965 @@
+{
+  "schema": "phase-quality-runtime-benchmark.v1",
+  "recorded_utc": "2026-10-03T03:50:39.660523+00:00",
+  "base_commit": "0d158b35be1aea4a3501f01ae21c27bffc751e4a",
+  "qualification": "Shared-host repeated regression observations; validation boundaries differ; not isolated latency, speedup or physical control certification. Python profiling/tracing absent. Rust release compiler fingerprint has empty rustflags.",
+  "source_sha256": {
+    "src/scpn_phase_orchestrator/oscillators/quality.py": "bd1ef57ee191aa785f70c3e399797dbc70b73cb8a6f6f3431e7eb91d94db2cf3",
+    "spo-kernel/crates/spo-ffi/src/phase_quality.rs": "4b57f2baba89f54bb7d3e10a9d4fac8c0af4b2322177060013a39897c32c882b",
+    "spo-kernel/crates/spo-oscillators/src/quality.rs": "6a6e58753def098cd637679bec87b21d68bbb91f2644363a7b0a5c3a4dde656d",
+    "spo-kernel/crates/spo-oscillators/benches/quality_bench.rs": "f38ff5f120b00d5eba0307f021dfc823baaec9cf1f216af4e347d76eea316a14",
+    "benchmarks/phase_quality_benchmark.py": "1d3b7829d9e7798eb549b41db48ea7121b92efdc492e8390746bb77acfa69fe7"
+  },
+  "raw_stdout_sha256": {
+    "quality-python-benchmark-native-v2": "3e1bd1aad6d69eaeb2eab2a229d9dbd85bfa15213308dd222b059b136dc07ce7",
+    "quality-python-benchmark-absence-v2": "fffa56e3efb734b2c619c85a4eddea813afc5a77dfb5ec22d2fa3c1475075439",
+    "quality-rust-benchmark-v2": "2692272390ad873ed36853e67127b1482572030a6fb7bdbb3a663ba365a3df4c"
+  },
+  "reproduce": {
+    "python": "python -m benchmarks.phase_quality_benchmark --sizes 10 100 1000 --calls 100 --repeats 5",
+    "rust": "cargo bench -p spo-oscillators --bench quality_bench --locked"
+  },
+  "installed_python": [
+    {
+      "recorded_utc": "2026-10-03T03:44:08.125364+00:00",
+      "n": 10,
+      "calls": 100,
+      "repeats": 5,
+      "python": "/media/anulum/GOTM/aaa_God_of_the_Math_Collection/03_CODE/SCPN-SYSTEMS-INTEGRATION-AND-CONTROL/repositories/SCPN-PHASE-ORCHESTRATOR/.venv/bin/python",
+      "python_version": "3.12.3",
+      "platform": "Linux-7.0.0-34-generic-x86_64-with-glibc2.39",
+      "host_load": [
+        37.49462890625,
+        39.3154296875,
+        36.96923828125
+      ],
+      "profile_present": false,
+      "trace_present": false,
+      "public_backend": "native",
+      "native_binary": {
+        "path": "/media/anulum/GOTM/aaa_God_of_the_Math_Collection/03_CODE/SCPN-SYSTEMS-INTEGRATION-AND-CONTROL/repositories/SCPN-PHASE-ORCHESTRATOR/.venv/lib/python3.12/site-packages/spo_kernel/spo_kernel.abi3.so",
+        "bytes": 2528008,
+        "sha256": "c2f735234ce251b2d6349780016bd9005873025824ef664f6d366c7514aee1e3"
+      },
+      "normal_weight_bits": 4607182418800017408,
+      "huge_weight_bits": 9214871658872686752,
+      "source_sha256": {
+        "src/scpn_phase_orchestrator/oscillators/quality.py": "bd1ef57ee191aa785f70c3e399797dbc70b73cb8a6f6f3431e7eb91d94db2cf3",
+        "spo-kernel/crates/spo-ffi/src/phase_quality.rs": "4b57f2baba89f54bb7d3e10a9d4fac8c0af4b2322177060013a39897c32c882b",
+        "spo-kernel/crates/spo-oscillators/src/quality.rs": "6a6e58753def098cd637679bec87b21d68bbb91f2644363a7b0a5c3a4dde656d",
+        "spo-kernel/crates/spo-oscillators/benches/quality_bench.rs": "f38ff5f120b00d5eba0307f021dfc823baaec9cf1f216af4e347d76eea316a14",
+        "benchmarks/phase_quality_benchmark.py": "1d3b7829d9e7798eb549b41db48ea7121b92efdc492e8390746bb77acfa69fe7"
+      },
+      "operations": {
+        "public_score": {
+          "seconds_per_call": [
+            1.3983060198370367e-05,
+            1.0379370069131255e-05,
+            1.1673130211420358e-05,
+            1.3323220191523432e-05,
+            1.2197880132589488e-05
+          ],
+          "median_seconds": 1.2197880132589488e-05,
+          "expected_mean": 0.45,
+          "checked_result": 0.45
+        },
+        "public_score_huge": {
+          "seconds_per_call": [
+            1.0689939954318106e-05,
+            1.2734509946312755e-05,
+            1.536457013571635e-05,
+            1.1641310120467096e-05,
+            1.1186540068592877e-05
+          ],
+          "median_seconds": 1.1641310120467096e-05,
+          "expected_mean": 0.45,
+          "checked_result": 0.45
+        },
+        "public_mask": {
+          "seconds_per_call": [
+            9.822659776546062e-06,
+            1.1220729793421925e-05,
+            1.1143340088892728e-05,
+            1.3123470125719905e-05,
+            1.2880389986094088e-05
+          ],
+          "median_seconds": 1.1220729793421925e-05,
+          "expected_mean": 0.45,
+          "checked_result": {
+            "dtype": "little-endian float64",
+            "count": 10,
+            "sha256": "ec4b38338b93deb995864a091b2f92a68ea9b1f1c14ff757cb91242340e68d2c",
+            "first_three": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "last_three": [
+              0.7,
+              0.8,
+              0.9
+            ]
+          }
+        },
+        "public_override_mask": {
+          "seconds_per_call": [
+            2.2700300032738596e-05,
+            1.9094449817202987e-05,
+            2.456468006130308e-05,
+            1.8489210051484407e-05,
+            1.9627200090326368e-05
+          ],
+          "median_seconds": 1.9627200090326368e-05,
+          "expected_mean": 0.45,
+          "checked_result": {
+            "dtype": "little-endian float64",
+            "count": 10,
+            "sha256": "6458d79ecd44729918b08d06ce739b0a3b859c2f588c241a001be2b03cad2b48",
+            "first_three": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "last_three": [
+              0.7,
+              0.8,
+              0.9
+            ]
+          }
+        },
+        "native_score": {
+          "seconds_per_call": [
+            4.050879797432572e-06,
+            3.7309600156731903e-06,
+            3.662270028144121e-06,
+            5.120639980304986e-06,
+            4.072989977430552e-06
+          ],
+          "median_seconds": 4.050879797432572e-06,
+          "expected_mean": 0.45,
+          "checked_result": 0.45
+        },
+        "native_score_huge": {
+          "seconds_per_call": [
+            8.610649965703487e-06,
+            4.25212987465784e-06,
+            5.717809835914523e-06,
+            1.0207929881289601e-05,
+            4.095879849046468e-06
+          ],
+          "median_seconds": 5.717809835914523e-06,
+          "expected_mean": 0.45,
+          "checked_result": 0.45
+        },
+        "native_mask": {
+          "seconds_per_call": [
+            2.3665800108574333e-06,
+            6.756090151611715e-06,
+            2.3105001309886573e-06,
+            2.1506799384951592e-06,
+            7.286560139618814e-06
+          ],
+          "median_seconds": 2.3665800108574333e-06,
+          "expected_mean": 0.45,
+          "checked_result": {
+            "dtype": "little-endian float64",
+            "count": 10,
+            "sha256": "ec4b38338b93deb995864a091b2f92a68ea9b1f1c14ff757cb91242340e68d2c",
+            "first_three": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "last_three": [
+              0.7,
+              0.8,
+              0.9
+            ]
+          }
+        }
+      }
+    },
+    {
+      "recorded_utc": "2026-10-03T03:44:08.260220+00:00",
+      "n": 100,
+      "calls": 100,
+      "repeats": 5,
+      "python": "/media/anulum/GOTM/aaa_God_of_the_Math_Collection/03_CODE/SCPN-SYSTEMS-INTEGRATION-AND-CONTROL/repositories/SCPN-PHASE-ORCHESTRATOR/.venv/bin/python",
+      "python_version": "3.12.3",
+      "platform": "Linux-7.0.0-34-generic-x86_64-with-glibc2.39",
+      "host_load": [
+        37.49462890625,
+        39.3154296875,
+        36.96923828125
+      ],
+      "profile_present": false,
+      "trace_present": false,
+      "public_backend": "native",
+      "native_binary": {
+        "path": "/media/anulum/GOTM/aaa_God_of_the_Math_Collection/03_CODE/SCPN-SYSTEMS-INTEGRATION-AND-CONTROL/repositories/SCPN-PHASE-ORCHESTRATOR/.venv/lib/python3.12/site-packages/spo_kernel/spo_kernel.abi3.so",
+        "bytes": 2528008,
+        "sha256": "c2f735234ce251b2d6349780016bd9005873025824ef664f6d366c7514aee1e3"
+      },
+      "normal_weight_bits": 4607182418800017408,
+      "huge_weight_bits": 9214871658872686752,
+      "source_sha256": {
+        "src/scpn_phase_orchestrator/oscillators/quality.py": "bd1ef57ee191aa785f70c3e399797dbc70b73cb8a6f6f3431e7eb91d94db2cf3",
+        "spo-kernel/crates/spo-ffi/src/phase_quality.rs": "4b57f2baba89f54bb7d3e10a9d4fac8c0af4b2322177060013a39897c32c882b",
+        "spo-kernel/crates/spo-oscillators/src/quality.rs": "6a6e58753def098cd637679bec87b21d68bbb91f2644363a7b0a5c3a4dde656d",
+        "spo-kernel/crates/spo-oscillators/benches/quality_bench.rs": "f38ff5f120b00d5eba0307f021dfc823baaec9cf1f216af4e347d76eea316a14",
+        "benchmarks/phase_quality_benchmark.py": "1d3b7829d9e7798eb549b41db48ea7121b92efdc492e8390746bb77acfa69fe7"
+      },
+      "operations": {
+        "public_score": {
+          "seconds_per_call": [
+            4.224760981742293e-05,
+            4.5228690141811966e-05,
+            4.027820978080854e-05,
+            5.4446010035462675e-05,
+            8.105584973236546e-05
+          ],
+          "median_seconds": 4.5228690141811966e-05,
+          "expected_mean": 0.45,
+          "checked_result": 0.45
+        },
+        "public_score_huge": {
+          "seconds_per_call": [
+            8.079263992840425e-05,
+            5.92489299015142e-05,
+            4.434408008819446e-05,
+            4.672050999943167e-05,
+            4.5459030079655346e-05
+          ],
+          "median_seconds": 4.672050999943167e-05,
+          "expected_mean": 0.45,
+          "checked_result": 0.45
+        },
+        "public_mask": {
+          "seconds_per_call": [
+            7.255397009430454e-05,
+            4.6167679829522965e-05,
+            3.594222012907267e-05,
+            4.317621991503984e-05,
+            3.2854859891813245e-05
+          ],
+          "median_seconds": 4.317621991503984e-05,
+          "expected_mean": 0.45,
+          "checked_result": {
+            "dtype": "little-endian float64",
+            "count": 100,
+            "sha256": "8874283e193c4536b47b96550a887ab8a78ecf000df43d3d8498d83d0ef9dde6",
+            "first_three": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "last_three": [
+              0.7,
+              0.8,
+              0.9
+            ]
+          }
+        },
+        "public_override_mask": {
+          "seconds_per_call": [
+            3.244599996833131e-05,
+            3.170122974552214e-05,
+            3.3409960160497576e-05,
+            3.125656017800793e-05,
+            3.8056769990362225e-05
+          ],
+          "median_seconds": 3.244599996833131e-05,
+          "expected_mean": 0.45,
+          "checked_result": {
+            "dtype": "little-endian float64",
+            "count": 100,
+            "sha256": "39160dc61e9b6eff6ff7cab313514902ab37f0b5742b79e0cb59e624dc9af089",
+            "first_three": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "last_three": [
+              0.7,
+              0.8,
+              0.9
+            ]
+          }
+        },
+        "native_score": {
+          "seconds_per_call": [
+            1.153330027591437e-05,
+            9.110599930863828e-06,
+            2.166391001082957e-05,
+            8.820640214253217e-06,
+            8.736640156712383e-06
+          ],
+          "median_seconds": 9.110599930863828e-06,
+          "expected_mean": 0.45,
+          "checked_result": 0.45
+        },
+        "native_score_huge": {
+          "seconds_per_call": [
+            2.0136550010647624e-05,
+            1.248819986358285e-05,
+            1.0537499911151826e-05,
+            1.2701399973593653e-05,
+            1.5935480187181385e-05
+          ],
+          "median_seconds": 1.2701399973593653e-05,
+          "expected_mean": 0.45,
+          "checked_result": 0.45
+        },
+        "native_mask": {
+          "seconds_per_call": [
+            6.011119985487312e-06,
+            2.6824709784705192e-05,
+            6.043209868948906e-06,
+            6.300829991232604e-06,
+            6.723709811922163e-06
+          ],
+          "median_seconds": 6.300829991232604e-06,
+          "expected_mean": 0.45,
+          "checked_result": {
+            "dtype": "little-endian float64",
+            "count": 100,
+            "sha256": "8874283e193c4536b47b96550a887ab8a78ecf000df43d3d8498d83d0ef9dde6",
+            "first_three": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "last_three": [
+              0.7,
+              0.8,
+              0.9
+            ]
+          }
+        }
+      }
+    },
+    {
+      "recorded_utc": "2026-10-03T03:44:09.079489+00:00",
+      "n": 1000,
+      "calls": 100,
+      "repeats": 5,
+      "python": "/media/anulum/GOTM/aaa_God_of_the_Math_Collection/03_CODE/SCPN-SYSTEMS-INTEGRATION-AND-CONTROL/repositories/SCPN-PHASE-ORCHESTRATOR/.venv/bin/python",
+      "python_version": "3.12.3",
+      "platform": "Linux-7.0.0-34-generic-x86_64-with-glibc2.39",
+      "host_load": [
+        37.49462890625,
+        39.3154296875,
+        36.96923828125
+      ],
+      "profile_present": false,
+      "trace_present": false,
+      "public_backend": "native",
+      "native_binary": {
+        "path": "/media/anulum/GOTM/aaa_God_of_the_Math_Collection/03_CODE/SCPN-SYSTEMS-INTEGRATION-AND-CONTROL/repositories/SCPN-PHASE-ORCHESTRATOR/.venv/lib/python3.12/site-packages/spo_kernel/spo_kernel.abi3.so",
+        "bytes": 2528008,
+        "sha256": "c2f735234ce251b2d6349780016bd9005873025824ef664f6d366c7514aee1e3"
+      },
+      "normal_weight_bits": 4607182418800017408,
+      "huge_weight_bits": 9214871658872686752,
+      "source_sha256": {
+        "src/scpn_phase_orchestrator/oscillators/quality.py": "bd1ef57ee191aa785f70c3e399797dbc70b73cb8a6f6f3431e7eb91d94db2cf3",
+        "spo-kernel/crates/spo-ffi/src/phase_quality.rs": "4b57f2baba89f54bb7d3e10a9d4fac8c0af4b2322177060013a39897c32c882b",
+        "spo-kernel/crates/spo-oscillators/src/quality.rs": "6a6e58753def098cd637679bec87b21d68bbb91f2644363a7b0a5c3a4dde656d",
+        "spo-kernel/crates/spo-oscillators/benches/quality_bench.rs": "f38ff5f120b00d5eba0307f021dfc823baaec9cf1f216af4e347d76eea316a14",
+        "benchmarks/phase_quality_benchmark.py": "1d3b7829d9e7798eb549b41db48ea7121b92efdc492e8390746bb77acfa69fe7"
+      },
+      "operations": {
+        "public_score": {
+          "seconds_per_call": [
+            0.00038944684987654907,
+            0.0003295147101744078,
+            0.00039720689004752786,
+            0.00044991533999564124,
+            0.0003563771297922358
+          ],
+          "median_seconds": 0.00038944684987654907,
+          "expected_mean": 0.45,
+          "checked_result": 0.45
+        },
+        "public_score_huge": {
+          "seconds_per_call": [
+            0.0007516438397578895,
+            0.0008321055801934563,
+            0.0008133192398236133,
+            0.0003291366100893356,
+            0.00034288840979570525
+          ],
+          "median_seconds": 0.0007516438397578895,
+          "expected_mean": 0.45,
+          "checked_result": 0.45
+        },
+        "public_mask": {
+          "seconds_per_call": [
+            0.0002441526702023111,
+            0.0002409657699172385,
+            0.00021768232982140036,
+            0.00023902913992060348,
+            0.0003148321999469772
+          ],
+          "median_seconds": 0.0002409657699172385,
+          "expected_mean": 0.45,
+          "checked_result": {
+            "dtype": "little-endian float64",
+            "count": 1000,
+            "sha256": "1ca137d71bc888415b9ac9b32b289511b9c686405dd3289f4a3e3830ddc0a380",
+            "first_three": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "last_three": [
+              0.7,
+              0.8,
+              0.9
+            ]
+          }
+        },
+        "public_override_mask": {
+          "seconds_per_call": [
+            0.00019804362003924324,
+            0.0002184291501180269,
+            0.00020079076988622547,
+            0.0001786710898159072,
+            0.00018430729978717862
+          ],
+          "median_seconds": 0.00019804362003924324,
+          "expected_mean": 0.45,
+          "checked_result": {
+            "dtype": "little-endian float64",
+            "count": 1000,
+            "sha256": "b201c89267d56f642008274a65a19c8f6bc550bd66aeb1edd9c7037463fe03aa",
+            "first_three": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "last_three": [
+              0.7,
+              0.8,
+              0.9
+            ]
+          }
+        },
+        "native_score": {
+          "seconds_per_call": [
+            5.6694700033403935e-05,
+            6.362140993587673e-05,
+            5.084264994366094e-05,
+            5.129577999468893e-05,
+            5.209258000832051e-05
+          ],
+          "median_seconds": 5.209258000832051e-05,
+          "expected_mean": 0.45,
+          "checked_result": 0.45
+        },
+        "native_score_huge": {
+          "seconds_per_call": [
+            6.501947995275259e-05,
+            6.528313999297097e-05,
+            4.563060007058084e-05,
+            4.5967750193085525e-05,
+            4.9289499875158073e-05
+          ],
+          "median_seconds": 4.9289499875158073e-05,
+          "expected_mean": 0.45,
+          "checked_result": 0.45
+        },
+        "native_mask": {
+          "seconds_per_call": [
+            4.3030949891544877e-05,
+            4.458705021534115e-05,
+            4.360771010397002e-05,
+            4.39732099766843e-05,
+            4.431433015270159e-05
+          ],
+          "median_seconds": 4.39732099766843e-05,
+          "expected_mean": 0.45,
+          "checked_result": {
+            "dtype": "little-endian float64",
+            "count": 1000,
+            "sha256": "1ca137d71bc888415b9ac9b32b289511b9c686405dd3289f4a3e3830ddc0a380",
+            "first_three": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "last_three": [
+              0.7,
+              0.8,
+              0.9
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "kernel_absent_python": [
+    {
+      "recorded_utc": "2026-10-03T03:44:08.227802+00:00",
+      "n": 10,
+      "calls": 100,
+      "repeats": 5,
+      "python": "/usr/bin/python3",
+      "python_version": "3.12.3",
+      "platform": "Linux-7.0.0-34-generic-x86_64-with-glibc2.39",
+      "host_load": [
+        37.49462890625,
+        39.3154296875,
+        36.96923828125
+      ],
+      "profile_present": false,
+      "trace_present": false,
+      "public_backend": "python",
+      "native_binary": null,
+      "normal_weight_bits": 4607182418800017408,
+      "huge_weight_bits": 9214871658872686752,
+      "source_sha256": {
+        "src/scpn_phase_orchestrator/oscillators/quality.py": "bd1ef57ee191aa785f70c3e399797dbc70b73cb8a6f6f3431e7eb91d94db2cf3",
+        "spo-kernel/crates/spo-ffi/src/phase_quality.rs": "4b57f2baba89f54bb7d3e10a9d4fac8c0af4b2322177060013a39897c32c882b",
+        "spo-kernel/crates/spo-oscillators/src/quality.rs": "6a6e58753def098cd637679bec87b21d68bbb91f2644363a7b0a5c3a4dde656d",
+        "spo-kernel/crates/spo-oscillators/benches/quality_bench.rs": "f38ff5f120b00d5eba0307f021dfc823baaec9cf1f216af4e347d76eea316a14",
+        "benchmarks/phase_quality_benchmark.py": "1d3b7829d9e7798eb549b41db48ea7121b92efdc492e8390746bb77acfa69fe7"
+      },
+      "operations": {
+        "public_score": {
+          "seconds_per_call": [
+            9.775508020538837e-05,
+            7.718228996964172e-05,
+            0.00011371420987416059,
+            7.996950997039676e-05,
+            7.804927008692175e-05
+          ],
+          "median_seconds": 7.996950997039676e-05,
+          "expected_mean": 0.45,
+          "checked_result": 0.45
+        },
+        "public_score_huge": {
+          "seconds_per_call": [
+            0.00011373597022611648,
+            8.424972009379416e-05,
+            5.6975499901454896e-05,
+            8.016081003006548e-05,
+            9.697089990368113e-05
+          ],
+          "median_seconds": 8.424972009379416e-05,
+          "expected_mean": 0.45,
+          "checked_result": 0.45
+        },
+        "public_mask": {
+          "seconds_per_call": [
+            2.706721017602831e-05,
+            2.0970650075469167e-05,
+            4.7948749852366745e-05,
+            2.025513997068629e-05,
+            2.5073960132431238e-05
+          ],
+          "median_seconds": 2.5073960132431238e-05,
+          "expected_mean": 0.45,
+          "checked_result": {
+            "dtype": "little-endian float64",
+            "count": 10,
+            "sha256": "ec4b38338b93deb995864a091b2f92a68ea9b1f1c14ff757cb91242340e68d2c",
+            "first_three": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "last_three": [
+              0.7,
+              0.8,
+              0.9
+            ]
+          }
+        },
+        "public_override_mask": {
+          "seconds_per_call": [
+            4.43199701840058e-05,
+            2.2858939773868768e-05,
+            2.5657140067778528e-05,
+            1.9587950082495808e-05,
+            2.6670219958759845e-05
+          ],
+          "median_seconds": 2.5657140067778528e-05,
+          "expected_mean": 0.45,
+          "checked_result": {
+            "dtype": "little-endian float64",
+            "count": 10,
+            "sha256": "6458d79ecd44729918b08d06ce739b0a3b859c2f588c241a001be2b03cad2b48",
+            "first_three": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "last_three": [
+              0.7,
+              0.8,
+              0.9
+            ]
+          }
+        }
+      }
+    },
+    {
+      "recorded_utc": "2026-10-03T03:44:08.350338+00:00",
+      "n": 100,
+      "calls": 100,
+      "repeats": 5,
+      "python": "/usr/bin/python3",
+      "python_version": "3.12.3",
+      "platform": "Linux-7.0.0-34-generic-x86_64-with-glibc2.39",
+      "host_load": [
+        37.49462890625,
+        39.3154296875,
+        36.96923828125
+      ],
+      "profile_present": false,
+      "trace_present": false,
+      "public_backend": "python",
+      "native_binary": null,
+      "normal_weight_bits": 4607182418800017408,
+      "huge_weight_bits": 9214871658872686752,
+      "source_sha256": {
+        "src/scpn_phase_orchestrator/oscillators/quality.py": "bd1ef57ee191aa785f70c3e399797dbc70b73cb8a6f6f3431e7eb91d94db2cf3",
+        "spo-kernel/crates/spo-ffi/src/phase_quality.rs": "4b57f2baba89f54bb7d3e10a9d4fac8c0af4b2322177060013a39897c32c882b",
+        "spo-kernel/crates/spo-oscillators/src/quality.rs": "6a6e58753def098cd637679bec87b21d68bbb91f2644363a7b0a5c3a4dde656d",
+        "spo-kernel/crates/spo-oscillators/benches/quality_bench.rs": "f38ff5f120b00d5eba0307f021dfc823baaec9cf1f216af4e347d76eea316a14",
+        "benchmarks/phase_quality_benchmark.py": "1d3b7829d9e7798eb549b41db48ea7121b92efdc492e8390746bb77acfa69fe7"
+      },
+      "operations": {
+        "public_score": {
+          "seconds_per_call": [
+            7.893114991020412e-05,
+            7.717354979831725e-05,
+            7.661829993594438e-05,
+            9.80291998712346e-05,
+            8.42529401415959e-05
+          ],
+          "median_seconds": 7.893114991020412e-05,
+          "expected_mean": 0.45,
+          "checked_result": 0.45
+        },
+        "public_score_huge": {
+          "seconds_per_call": [
+            7.861822989070788e-05,
+            7.432274986058474e-05,
+            7.116118009435012e-05,
+            8.395692013436929e-05,
+            7.625471975188703e-05
+          ],
+          "median_seconds": 7.625471975188703e-05,
+          "expected_mean": 0.45,
+          "checked_result": 0.45
+        },
+        "public_mask": {
+          "seconds_per_call": [
+            3.1052020203787835e-05,
+            2.9000349750276656e-05,
+            3.620648989453912e-05,
+            3.057752997847274e-05,
+            3.4203770046588036e-05
+          ],
+          "median_seconds": 3.1052020203787835e-05,
+          "expected_mean": 0.45,
+          "checked_result": {
+            "dtype": "little-endian float64",
+            "count": 100,
+            "sha256": "8874283e193c4536b47b96550a887ab8a78ecf000df43d3d8498d83d0ef9dde6",
+            "first_three": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "last_three": [
+              0.7,
+              0.8,
+              0.9
+            ]
+          }
+        },
+        "public_override_mask": {
+          "seconds_per_call": [
+            4.630483977962285e-05,
+            4.310993012040853e-05,
+            2.888867020374164e-05,
+            4.403266997542232e-05,
+            3.602273995056748e-05
+          ],
+          "median_seconds": 4.310993012040853e-05,
+          "expected_mean": 0.45,
+          "checked_result": {
+            "dtype": "little-endian float64",
+            "count": 100,
+            "sha256": "39160dc61e9b6eff6ff7cab313514902ab37f0b5742b79e0cb59e624dc9af089",
+            "first_three": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "last_three": [
+              0.7,
+              0.8,
+              0.9
+            ]
+          }
+        }
+      }
+    },
+    {
+      "recorded_utc": "2026-10-03T03:44:08.999716+00:00",
+      "n": 1000,
+      "calls": 100,
+      "repeats": 5,
+      "python": "/usr/bin/python3",
+      "python_version": "3.12.3",
+      "platform": "Linux-7.0.0-34-generic-x86_64-with-glibc2.39",
+      "host_load": [
+        37.49462890625,
+        39.3154296875,
+        36.96923828125
+      ],
+      "profile_present": false,
+      "trace_present": false,
+      "public_backend": "python",
+      "native_binary": null,
+      "normal_weight_bits": 4607182418800017408,
+      "huge_weight_bits": 9214871658872686752,
+      "source_sha256": {
+        "src/scpn_phase_orchestrator/oscillators/quality.py": "bd1ef57ee191aa785f70c3e399797dbc70b73cb8a6f6f3431e7eb91d94db2cf3",
+        "spo-kernel/crates/spo-ffi/src/phase_quality.rs": "4b57f2baba89f54bb7d3e10a9d4fac8c0af4b2322177060013a39897c32c882b",
+        "spo-kernel/crates/spo-oscillators/src/quality.rs": "6a6e58753def098cd637679bec87b21d68bbb91f2644363a7b0a5c3a4dde656d",
+        "spo-kernel/crates/spo-oscillators/benches/quality_bench.rs": "f38ff5f120b00d5eba0307f021dfc823baaec9cf1f216af4e347d76eea316a14",
+        "benchmarks/phase_quality_benchmark.py": "1d3b7829d9e7798eb549b41db48ea7121b92efdc492e8390746bb77acfa69fe7"
+      },
+      "operations": {
+        "public_score": {
+          "seconds_per_call": [
+            0.0004175256899907254,
+            0.0003758842698880471,
+            0.00043641316005960107,
+            0.00039166943985037507,
+            0.0004001864098245278
+          ],
+          "median_seconds": 0.0004001864098245278,
+          "expected_mean": 0.45,
+          "checked_result": 0.45
+        },
+        "public_score_huge": {
+          "seconds_per_call": [
+            0.0004026092399726622,
+            0.00040460079006152225,
+            0.0005280693201348185,
+            0.0004228411600342952,
+            0.0003862664999905974
+          ],
+          "median_seconds": 0.00040460079006152225,
+          "expected_mean": 0.45,
+          "checked_result": 0.45
+        },
+        "public_mask": {
+          "seconds_per_call": [
+            0.0002403900001081638,
+            0.00022018974996171892,
+            0.0001645296599599533,
+            0.00023544419993413613,
+            0.00024438966007437555
+          ],
+          "median_seconds": 0.00023544419993413613,
+          "expected_mean": 0.45,
+          "checked_result": {
+            "dtype": "little-endian float64",
+            "count": 1000,
+            "sha256": "1ca137d71bc888415b9ac9b32b289511b9c686405dd3289f4a3e3830ddc0a380",
+            "first_three": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "last_three": [
+              0.7,
+              0.8,
+              0.9
+            ]
+          }
+        },
+        "public_override_mask": {
+          "seconds_per_call": [
+            0.0002018186799250543,
+            0.00020884750003460795,
+            0.0002335939000477083,
+            0.00021751924010459333,
+            0.00023938010999700055
+          ],
+          "median_seconds": 0.00021751924010459333,
+          "expected_mean": 0.45,
+          "checked_result": {
+            "dtype": "little-endian float64",
+            "count": 1000,
+            "sha256": "b201c89267d56f642008274a65a19c8f6bc550bd66aeb1edd9c7037463fe03aa",
+            "first_three": [
+              0.0,
+              0.0,
+              0.0
+            ],
+            "last_three": [
+              0.7,
+              0.8,
+              0.9
+            ]
+          }
+        }
+      }
+    }
+  ],
+  "typed_rust": [
+    {
+      "n": 10,
+      "operation": "score",
+      "calls": 1000,
+      "repeats": 5,
+      "normal_weight_bits": 4607182418800017408,
+      "huge_weight_bits": 9214871658872686752,
+      "seconds_per_call": [
+        3.7983e-08,
+        3.7895e-08,
+        6.485710000000001e-07,
+        8.85111e-07,
+        3.9817000000000005e-08
+      ],
+      "median_seconds": 3.9817000000000005e-08
+    },
+    {
+      "n": 10,
+      "operation": "score_huge",
+      "calls": 1000,
+      "repeats": 5,
+      "normal_weight_bits": 4607182418800017408,
+      "huge_weight_bits": 9214871658872686752,
+      "seconds_per_call": [
+        3.9728000000000003e-08,
+        5.516539999999999e-07,
+        4.7471e-08,
+        3.8970000000000004e-08,
+        3.9273000000000004e-08
+      ],
+      "median_seconds": 3.9728000000000003e-08
+    },
+    {
+      "n": 10,
+      "operation": "mask",
+      "calls": 1000,
+      "repeats": 5,
+      "normal_weight_bits": 4607182418800017408,
+      "huge_weight_bits": 9214871658872686752,
+      "seconds_per_call": [
+        3.1782999999999994e-08,
+        4.3411399999999997e-07,
+        2.9689e-08,
+        3.0297e-08,
+        5.99334e-07
+      ],
+      "median_seconds": 3.1782999999999994e-08
+    },
+    {
+      "n": 100,
+      "operation": "score",
+      "calls": 1000,
+      "repeats": 5,
+      "normal_weight_bits": 4607182418800017408,
+      "huge_weight_bits": 9214871658872686752,
+      "seconds_per_call": [
+        1.123775e-06,
+        2.484286e-06,
+        1.903535e-06,
+        2.2587499999999998e-06,
+        1.721827e-06
+      ],
+      "median_seconds": 1.903535e-06
+    },
+    {
+      "n": 100,
+      "operation": "score_huge",
+      "calls": 1000,
+      "repeats": 5,
+      "normal_weight_bits": 4607182418800017408,
+      "huge_weight_bits": 9214871658872686752,
+      "seconds_per_call": [
+        1.067131e-06,
+        1.597005e-06,
+        1.647306e-06,
+        1.361341e-06,
+        1.1743380000000001e-06
+      ],
+      "median_seconds": 1.361341e-06
+    },
+    {
+      "n": 100,
+      "operation": "mask",
+      "calls": 1000,
+      "repeats": 5,
+      "normal_weight_bits": 4607182418800017408,
+      "huge_weight_bits": 9214871658872686752,
+      "seconds_per_call": [
+        6.435329999999999e-07,
+        8.33834e-07,
+        6.10226e-07,
+        4.5476000000000003e-07,
+        9.232170000000001e-07
+      ],
+      "median_seconds": 6.435329999999999e-07
+    },
+    {
+      "n": 1000,
+      "operation": "score",
+      "calls": 1000,
+      "repeats": 5,
+      "normal_weight_bits": 4607182418800017408,
+      "huge_weight_bits": 9214871658872686752,
+      "seconds_per_call": [
+        1.3950207e-05,
+        2.6379255e-05,
+        2.2311662999999997e-05,
+        2.4106525e-05,
+        1.8866298e-05
+      ],
+      "median_seconds": 2.2311662999999997e-05
+    },
+    {
+      "n": 1000,
+      "operation": "score_huge",
+      "calls": 1000,
+      "repeats": 5,
+      "normal_weight_bits": 4607182418800017408,
+      "huge_weight_bits": 9214871658872686752,
+      "seconds_per_call": [
+        1.7935798e-05,
+        1.1718105e-05,
+        4.016849e-06,
+        8.350916e-06,
+        4.2518210000000005e-06
+      ],
+      "median_seconds": 8.350916e-06
+    },
+    {
+      "n": 1000,
+      "operation": "mask",
+      "calls": 1000,
+      "repeats": 5,
+      "normal_weight_bits": 4607182418800017408,
+      "huge_weight_bits": 9214871658872686752,
+      "seconds_per_call": [
+        1.431154e-06,
+        1.733644e-06,
+        1.7094919999999999e-06,
+        1.307085e-06,
+        1.695025e-06
+      ],
+      "median_seconds": 1.695025e-06
+    }
+  ],
+  "vector_representation": "Validated vectors retain count, canonical float64 digest and edge samples; raw stdout hashes bind the complete original results."
+}
