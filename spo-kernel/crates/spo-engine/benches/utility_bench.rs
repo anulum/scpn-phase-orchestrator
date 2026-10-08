@@ -213,8 +213,9 @@ fn bench_carrier_decode(c: &mut Criterion) {
     group.finish();
 }
 
+/// Measure the public ethical-cost core on rings with 16, 64 and 256 nodes.
 fn bench_compute_ethical_cost(c: &mut Criterion) {
-    // SSGF ethical cost: per-step controller call, O(N²) network sums.
+    // Largest-pivot Jacobi requires O(N²) search work per rotation.
     let mut group = c.benchmark_group("compute_ethical_cost");
     for &n in &[16usize, 64, 256] {
         let knm = ring_knm(n, 0.2);

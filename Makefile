@@ -190,3 +190,15 @@ chimera-quality:  ## Check complete chimera owners, tests, benchmarks and consum
 	$(PYTHON) -m ruff check --no-cache --isolated --select E,F,W,I,UP,B,SIM,N,C4,RET,PTH,D --ignore N802,N803,N806,D105 --config 'lint.pydocstyle.convention="numpy"' $(CHIMERA_QUALITY_FILES)
 	$(PYTHON) -m ruff format --check $(CHIMERA_QUALITY_FILES)
 	$(PYTHON) -m mypy --cache-dir=/dev/null --config-file tools/chimera_mypy.ini $(CHIMERA_QUALITY_FILES)
+
+ETHICAL_COST_QUALITY_FILES := src/scpn_phase_orchestrator/ssgf/ethical.py \
+    tests/test_closure_ethical.py tests/test_ssgf_ethical_cost_inputs.py \
+    tests/test_ssgf_modules.py tests/test_ethical_cost_real_runtime.py \
+    tests/test_ethical_cost_benchmark.py native-tests/test_ethical_cost_runtime_profiles.py \
+    benchmarks/ethical_cost_benchmark.py benchmarks/ethical_cost_reference.py
+
+.PHONY: ethical-cost-quality
+ethical-cost-quality:  ## Check ethical-cost owners, original consumers and measured comparisons
+	$(PYTHON) -m ruff check --no-cache --isolated --select E,F,W,I,UP,B,SIM,N,C4,RET,PTH,D --ignore N802,N803,N806,D105 --config 'lint.pydocstyle.convention="numpy"' $(ETHICAL_COST_QUALITY_FILES)
+	$(PYTHON) -m ruff format --no-cache --check $(ETHICAL_COST_QUALITY_FILES)
+	$(PYTHON) -m mypy --cache-dir=/dev/null --config-file tools/ethical_cost_mypy.ini $(ETHICAL_COST_QUALITY_FILES)

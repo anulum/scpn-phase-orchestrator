@@ -277,7 +277,7 @@ across the two backends.
 | Topological integration (H1) | Full | In Progress | Moving to streaming Rust engine |
 | Plasticity (Hebbian)| Full | Full | Sub-microsecond inner loop |
 | Geometry Carrier | Full | Full | softplus decode (Python NumPy faster for N>16) |
-| Ethical Cost (C15) | Full | Full | SEC + CBF, 4.9x at N=8, Jacobi eigenvalues |
+| Ethical Cost (C15) | Full | Full | Numerical SEC/residual diagnostic; exact nonzero density, reciprocal-magnitude graph and scaled Jacobi. [Current measured runtimes](ssgf_ethical.md#current-local-measurements). |
 
 ---
 

@@ -28,32 +28,66 @@ and violation count independently.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import TypeAlias
+from importlib import import_module
+from numbers import Real
+from typing import TypeAlias, cast
 
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator._array_types import require_real_values
 from scpn_phase_orchestrator.coupling.spectral import fiedler_value
 from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
-
-try:
-    from spo_kernel import (
-        compute_ethical_cost_rust as _rust_ethical_cost,
-    )
-
-    _HAS_RUST = True
-except ImportError:
-    _HAS_RUST = False
 
 __all__ = ["EthicalCost", "compute_ethical_cost"]
 
 FloatArray: TypeAlias = NDArray[np.float64]
+EthicalKernel: TypeAlias = Callable[
+    [
+        FloatArray,
+        FloatArray,
+        int,
+        float,
+        float,
+        float,
+        float,
+        float,
+        float,
+        float,
+        float,
+    ],
+    tuple[float, float, float, int],
+]
+
+try:
+    _kernel = import_module("spo_kernel")
+    _rust_ethical_cost: EthicalKernel | None = cast(
+        "EthicalKernel | None", getattr(_kernel, "compute_ethical_cost_rust", None)
+    )
+except ImportError:
+    _rust_ethical_cost = None
+
+_HAS_RUST = _rust_ethical_cost is not None
 
 
 @dataclass
 class EthicalCost:
-    """C15_sec ethical cost: SEC functional, CBF penalties, violations."""
+    """Report the numerical score and weighted constraint penalties.
+
+    Attributes
+    ----------
+    J_sec : float
+        Weighted coherence, connectivity, density and phase-dispersion score.
+        Finite signed weights and self-loops can put it outside ``[0, 1]``.
+    phi_ethics : float
+        ``kappa`` times the sum of squared positive constraint residuals.
+    c15_sec : float
+        ``1 - J_sec + phi_ethics``; this diagnostic is not a safety guarantee.
+    constraints_violated : int
+        Number of strictly positive residuals, independent of ``kappa``.
+    """
 
     J_sec: float
     phi_ethics: float
@@ -76,13 +110,17 @@ def _finite_cost(j: float, phi: float, c15: float, nv: int) -> EthicalCost:
 def _validated_inputs(phases: object, knm: object) -> tuple[FloatArray, FloatArray]:
     """Return finite phases and a matching square coupling matrix, else raise.
 
-    Validated once, before the backend is chosen: the Rust kernel returned
-    NaN or numbers for inputs the NumPy path refused, and both accepted a
-    coupling matrix whose size did not match the phases (with different
-    results).
+    Source types are checked before float conversion so boolean, text,
+    complex and temporal aliases cannot become admissible measurements.
+    Plain real numeric object arrays retain their ordinary numeric meaning.
     """
-    phase_array = np.asarray(phases, dtype=np.float64)
-    knm_array = np.asarray(knm, dtype=np.float64)
+    try:
+        require_real_values(phases, name="phases", allow_object=True)
+        require_real_values(knm, name="knm", allow_object=True)
+        phase_array = np.asarray(phases, dtype=np.float64)
+        knm_array = np.asarray(knm, dtype=np.float64)
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise ValueError("phases and knm must contain plain real numbers") from exc
     if phase_array.ndim != 1:
         raise ValueError("phases must be a one-dimensional vector")
     n = phase_array.shape[0]
@@ -95,6 +133,21 @@ def _validated_inputs(phases: object, knm: object) -> tuple[FloatArray, FloatArr
     if not np.all(np.isfinite(knm_array)):
         raise ValueError("knm must contain only finite values")
     return phase_array, knm_array
+
+
+def _finite_parameter(value: object, *, name: str) -> float:
+    """Extract a representable real parameter without source-type coercion."""
+    if isinstance(
+        value, (bool, np.bool_, np.datetime64, np.timedelta64)
+    ) or not isinstance(value, Real):
+        raise ValueError(f"{name} must be a finite real number, got {value!r}")
+    try:
+        scalar = float(value)
+    except (ValueError, OverflowError) as exc:
+        raise ValueError(f"{name} must be a finite real number") from exc
+    if not np.isfinite(scalar):
+        raise ValueError(f"{name} must be a finite real number, got {value!r}")
+    return scalar
 
 
 def compute_ethical_cost(
@@ -115,9 +168,13 @@ def compute_ethical_cost(
     J_sec = α·R + β·K_norm + γ·Q - ν·S_dev
     where:
       R = Kuramoto order parameter (coherence)
-      K_norm = λ₂(L) / max(λ₂) (normalized connectivity, Wiener)
-      Q = 1 - sparsity (coupling quality)
-      S_dev = std(phases) / π (phase deviation from uniform)
+      K_norm = λ₂(L) / N (unit-complete-graph normalization)
+      Q = count_nonzero(knm) / (N * (N - 1)), or zero for N < 2
+      S_dev = std(phases, ddof=0) / π (raw, not wrapped, phase dispersion)
+
+    The graph uses reciprocal magnitude averages and excludes self-loops.
+    Density counts every exactly nonzero matrix entry, including signed,
+    arbitrarily small and diagonal entries. Inputs are never modified.
 
     Φ_ethics = Σ max(0, g_k)² where g_k are CBF constraint violations:
       g_1: R_min - R                   (non-harm: minimum coherence)
@@ -127,9 +184,11 @@ def compute_ethical_cost(
     Parameters
     ----------
     phases : FloatArray
-        Oscillator phases in radians, shape ``(N,)``.
+        Finite real oscillator phases in radians, shape ``(N,)``. They need
+        not be wrapped; boolean, text, complex and temporal aliases are refused.
     knm : FloatArray
-        Coupling matrix ``K_nm``, shape ``(N, N)``.
+        Finite real coupling matrix ``K_nm``, shape ``(N, N)``. Signed,
+        asymmetric and diagonal weights are supported.
     alpha_R : float
         Order-parameter cost weight.
     beta_K : float
@@ -137,15 +196,16 @@ def compute_ethical_cost(
     gamma_Q : float
         Quality-cost weight.
     nu_S : float
-        Symbolic-cost weight.
+        Raw phase-dispersion cost weight.
     kappa : float
-        Coupling/curvature parameter.
+        Multiplier applied once to the squared positive residual sum.
     R_min : float
         Minimum order-parameter target.
     connectivity_min : float
         Minimum algebraic connectivity.
     max_coupling : float
-        Maximum allowed coupling value.
+        Threshold for the largest positive coupling. If there is no positive
+        entry, the coupling residual is zero regardless of this threshold.
 
     Returns
     -------
@@ -157,21 +217,24 @@ def compute_ethical_cost(
     ValueError
         If ``phases`` is not a finite 1-D vector, ``knm`` is not a finite
         square matrix matching it, a weight or threshold is not finite,
-        or constraint or cost arithmetic cannot remain finite.
+        or constraint or cost arithmetic cannot remain finite. Scalar weights
+        and thresholds must be non-boolean real numbers; signed finite values
+        remain admissible. Empty inputs still validate these parameters.
     """
     phases, knm = _validated_inputs(phases, knm)
-    for name, value in (
-        ("alpha_R", alpha_R),
-        ("beta_K", beta_K),
-        ("gamma_Q", gamma_Q),
-        ("nu_S", nu_S),
-        ("kappa", kappa),
-        ("R_min", R_min),
-        ("connectivity_min", connectivity_min),
-        ("max_coupling", max_coupling),
-    ):
-        if isinstance(value, bool) or not np.isfinite(value):
-            raise ValueError(f"{name} must be a finite real number, got {value!r}")
+    alpha_R, beta_K, gamma_Q, nu_S, kappa, R_min, connectivity_min, max_coupling = (
+        _finite_parameter(value, name=name)
+        for name, value in (
+            ("alpha_R", alpha_R),
+            ("beta_K", beta_K),
+            ("gamma_Q", gamma_Q),
+            ("nu_S", nu_S),
+            ("kappa", kappa),
+            ("R_min", R_min),
+            ("connectivity_min", connectivity_min),
+            ("max_coupling", max_coupling),
+        )
+    )
     n = len(phases)
     if n == 0:
         return EthicalCost(
@@ -184,9 +247,11 @@ def compute_ethical_cost(
     ):
         raise ValueError("ethical constraint arithmetic must remain finite")
 
-    if _HAS_RUST:
-        p: FloatArray = np.ascontiguousarray(phases, dtype=np.float64)
-        k: FloatArray = np.ascontiguousarray(knm.ravel(), dtype=np.float64)
+    if _rust_ethical_cost is not None:
+        p: FloatArray = np.require(phases, dtype=np.float64, requirements=["C", "A"])
+        k: FloatArray = np.require(
+            knm.ravel(), dtype=np.float64, requirements=["C", "A"]
+        )
         j, phi, c15, nv = _rust_ethical_cost(
             p,
             k,
@@ -202,16 +267,19 @@ def compute_ethical_cost(
         )
         return _finite_cost(j, phi, c15, nv)
 
-    R, _ = compute_order_parameter(phases)
-    lam2 = fiedler_value(knm)
+    try:
+        with np.errstate(over="raise", invalid="raise"):
+            R, _ = compute_order_parameter(phases)
+            lam2 = fiedler_value(knm)
+            S_dev = float(np.std(phases)) / np.pi
+    except (np.linalg.LinAlgError, FloatingPointError) as exc:
+        raise ValueError("ethical SEC arithmetic must remain finite") from exc
     lam2_max = float(n)  # max λ₂ for complete graph with unit weights
     K_norm = lam2 / lam2_max if lam2_max > 0 else 0.0
 
     n_nonzero = np.count_nonzero(knm)
     n_possible = n * (n - 1)
     Q = n_nonzero / n_possible if n_possible > 0 else 0.0
-
-    S_dev = float(np.std(phases)) / np.pi
 
     J_sec = alpha_R * R + beta_K * K_norm + gamma_Q * Q - nu_S * S_dev
 

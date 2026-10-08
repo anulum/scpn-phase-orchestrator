@@ -11,8 +11,8 @@
     "python_package_modules": 764,
     "research_experimental_modules": 205,
     "runtime_serving_modules": 160,
-    "rust_kernel_files": 127,
-    "test_files": 1099
+    "rust_kernel_files": 128,
+    "test_files": 1101
   },
   "documentation": {
     "public_pages": [
@@ -2297,6 +2297,8 @@
       "tests/test_envelope_backends.py",
       "tests/test_envelope_measurement_inputs.py",
       "tests/test_envelope_public_backend_output_contracts.py",
+      "tests/test_ethical_cost_benchmark.py",
+      "tests/test_ethical_cost_real_runtime.py",
       "tests/test_evaluation_auditor.py",
       "tests/test_evaluation_cross_domain_transfer.py",
       "tests/test_evaluation_input_contracts.py",
@@ -3139,6 +3141,7 @@
     "spo-kernel/crates/spo-ffi/src/ei_balance_boundary.rs",
     "spo-kernel/crates/spo-ffi/src/embedding_boundary.rs",
     "spo-kernel/crates/spo-ffi/src/entropy_boundary.rs",
+    "spo-kernel/crates/spo-ffi/src/ethical_boundary.rs",
     "spo-kernel/crates/spo-ffi/src/hypergraph_boundary.rs",
     "spo-kernel/crates/spo-ffi/src/inertial_boundary.rs",
     "spo-kernel/crates/spo-ffi/src/lib.rs",
