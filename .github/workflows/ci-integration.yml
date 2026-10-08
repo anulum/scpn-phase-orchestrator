@@ -52,11 +52,15 @@ jobs:
       - name: Run native-backend parity tests without coverage
         # Rust, Go and Mojo are required in their provisioned lanes below; this
         # Julia-only lane previously skipped these three unavailable owners.
+        # Installed absence and Python/Rust cost parity require the separate
+        # profiles provisioned and exercised in ethical-cost-runtime below.
         run: >
           pytest tests/ -k backends -m "not slow" --tb=short -p no:cacheprovider
           --deselect=tests/test_chimera_backends.py::TestRustParity
           --deselect=tests/test_chimera_backends.py::TestGoParity
           --deselect=tests/test_chimera_backends.py::TestMojoParity
+          --deselect=tests/test_chimera_dispatch_contracts.py::test_resolve_backends_keeps_python_when_optional_loaders_fail
+          --deselect=tests/test_ssgf_ethical_cost_inputs.py::test_backends_agree_on_valid_inputs
       - name: Execute Julia measurement ingress contracts
         run: |
           python - <<'PY'
@@ -500,6 +504,7 @@ jobs:
       HYPOTHESIS_PROFILE: dev
       SPO_ETHICAL_PYTHON_PROFILE: ${{ github.workspace }}/.ethical-python/bin/python
       SPO_ETHICAL_RUST_PROFILE: ${{ github.workspace }}/.ethical-rust/bin/python
+      SPO_CHIMERA_ABSENT_PYTHON: ${{ github.workspace }}/.ethical-python/bin/python
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
@@ -522,6 +527,13 @@ jobs:
             "$profile/bin/python" -m pip install --no-index --no-deps ethical-package-wheels/*.whl
           done
           .ethical-rust/bin/python -m pip install --no-index --no-deps ethical-kernel-wheels/*.whl
+      - name: Qualify genuine installed chimera fallback and missing owners
+        run: |
+          .ethical-rust/bin/python -I -B -m pytest \
+            tests/test_chimera_dispatch_contracts.py::test_resolve_backends_keeps_python_when_optional_loaders_fail \
+            tests/test_chimera_dispatch_contracts.py::test_dispatch_returns_none_when_no_backend_survives \
+            tests/test_chimera_real_runtime.py::test_genuine_installed_default_python_and_missing_owner_refusal \
+            --strict-markers --tb=short -p no:cacheprovider
       - name: Qualify all original ethical-cost consumers and FFI contracts
         run: |
           .ethical-rust/bin/python -I -B -m pytest \
