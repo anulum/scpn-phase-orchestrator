@@ -42,7 +42,7 @@ SOURCE_FILES = (
     "src/scpn_phase_orchestrator/experimental/accelerators/monitor/_chimera_go.py",
     "src/scpn_phase_orchestrator/experimental/accelerators/monitor/_chimera_julia.py",
     "src/scpn_phase_orchestrator/experimental/accelerators/monitor/_chimera_mojo.py",
-    "src/scpn_phase_orchestrator/experimental/accelerators/monitor/_chimera_validation.py",
+    "src/scpn_phase_orchestrator/monitor/_chimera_validation.py",
     "spo-kernel/crates/spo-engine/src/chimera.rs",
     "spo-kernel/crates/spo-ffi/src/chimera_boundary.rs",
     "go/chimera.go",

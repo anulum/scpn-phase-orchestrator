@@ -228,7 +228,7 @@
     "src/scpn_phase_orchestrator/experimental/accelerators/monitor/_chimera_go.py": 93.75,
     "src/scpn_phase_orchestrator/experimental/accelerators/monitor/_chimera_julia.py": 92.3,
     "src/scpn_phase_orchestrator/experimental/accelerators/monitor/_chimera_mojo.py": 94.87,
-    "src/scpn_phase_orchestrator/experimental/accelerators/monitor/_chimera_validation.py": 100.0,
+    "src/scpn_phase_orchestrator/monitor/_chimera_validation.py": 100.0,
     "src/scpn_phase_orchestrator/experimental/accelerators/monitor/_dimension_go.py": 95.34,
     "src/scpn_phase_orchestrator/experimental/accelerators/monitor/_dimension_julia.py": 96.77,
     "src/scpn_phase_orchestrator/experimental/accelerators/monitor/_dimension_mojo.py": 98.03,

@@ -17,11 +17,12 @@ from typing import TypeAlias
 import numpy as np
 from numpy.typing import NDArray
 
-from .._mojo_runtime import require_mojo_executable, run_mojo_executable
-from ._chimera_validation import (
+from scpn_phase_orchestrator.monitor._chimera_validation import (
     validate_chimera_backend_inputs,
     validate_chimera_backend_output,
 )
+
+from .._mojo_runtime import require_mojo_executable, run_mojo_executable
 
 FloatArray: TypeAlias = NDArray[np.float64]
 
