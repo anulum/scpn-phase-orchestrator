@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import re
+import shlex
 import tomllib
 from pathlib import Path
 from typing import Any, cast
@@ -279,7 +280,7 @@ def _pytest_invocations(run: str) -> list[str]:
 
 
 def test_ffi_matrix_excludes_slow_tests() -> None:
-    """The FFI suite excludes slow tests; native-runtime runs name their files."""
+    """The broad suite excludes slow tests; owner cohorts name explicit targets."""
     workflow = _ci_workflow()
     ffi_steps = workflow["jobs"]["ffi-test"]["steps"]
     invocations = [
@@ -298,9 +299,18 @@ def test_ffi_matrix_excludes_slow_tests() -> None:
     assert all('-k "not performance"' in command for command in suite_runs)
 
     assert native_runs
+    assert any(
+        "-m native_runtime --strict-markers" in command for command in native_runs
+    )
     for command in native_runs:
-        assert "-m native_runtime --strict-markers" in command
-        targets = [part for part in command.split()[1:] if not part.startswith("-")]
-        selected = targets[: targets.index("native_runtime")]
+        assert "--strict-markers" in command
+        selected = []
+        for part in shlex.split(command)[1:]:
+            if part.startswith("-"):
+                break
+            selected.append(part)
         assert selected
-        assert all(re.fullmatch(r"tests/test_\w+\.py", path) for path in selected)
+        assert all(
+            re.fullmatch(r"(?:tests|native-tests)/test_\w+\.py(?:::\w+)*", path)
+            for path in selected
+        )

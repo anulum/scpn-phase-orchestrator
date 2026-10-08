@@ -425,6 +425,13 @@ def trace_sync_transition(
     -------
     BifurcationDiagram
         The traced ``R(K)`` bifurcation diagram.
+
+    Raises
+    ------
+    ValueError
+        If measurements, controls, or numerical owner outputs are invalid.
+    ImportError
+        If the explicitly requested numerical owner is unavailable.
     """
     omegas = _validate_omegas(omegas)
     n = int(omegas.shape[0])
@@ -571,6 +578,13 @@ def find_critical_coupling(
         Final interval midpoint, or NaN when R at K=20 is below 0.1.
         A midpoint is not evidence that the lower endpoint was subthreshold
         or that any physical transition occurred.
+
+    Raises
+    ------
+    ValueError
+        If measurements, controls, or numerical owner outputs are invalid.
+    ImportError
+        If the explicitly requested numerical owner is unavailable.
     """
     omegas = _validate_omegas(omegas)
     n = int(omegas.shape[0])
