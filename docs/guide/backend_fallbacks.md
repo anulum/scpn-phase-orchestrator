@@ -8,7 +8,7 @@
 
 # Backend Fallback Chain
 
-SCPN Phase Orchestrator has two maintained execution paths for production use:
+SCPN Phase Orchestrator provides the following execution paths:
 
 - **Rust FFI** for hot numerical kernels, supervisor primitives, extractors,
   monitors, and deployment-facing acceleration.
@@ -110,6 +110,17 @@ or class, for example `hodge_decomposition`, `spectral_eig`,
 UPDE/monitor package page. If an auxiliary shim becomes a stable user-facing
 backend, promote it by adding an explicit public module, parity tests,
 benchmarks, and a dedicated reference section before exposing it in tutorials.
+
+## Julia signal configuration
+
+Before Julia is initialised, SPO selects Python signal handling for one Julia
+thread so foreground servers can shut down normally. Multithreaded configurations
+default to Julia's native signal handlers for garbage-collection safepoints.
+Thread selection follows `-X juliacall-threads`, then
+`PYTHON_JULIACALL_THREADS`, then `JULIA_NUM_THREADS`; the default is one thread.
+An explicit `PYTHON_JULIACALL_HANDLE_SIGNALS=yes` or `no` remains authoritative.
+Julia's native handlers affect Python interrupt handling; see the
+[JuliaCall threading guide](https://juliapy.github.io/PythonCall.jl/stable/juliacall/#Multi-threading).
 
 ## JAX Path
 
