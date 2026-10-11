@@ -111,8 +111,43 @@ def test_direct_adapters_refuse_invalid_simplicial_complex(
         backend(coupling, phases, 3, edges, n_edges, triangles, n_triangles)
 
 
-def test__hodge_validation_helper_is_directly_linked_to_backend_tests() -> None:
-    assert callable(hodge_validation.validate_hodge_backend_inputs)
+@pytest.mark.native_runtime
+@pytest.mark.parametrize(
+    "backend",
+    [
+        pytest.param(hodge_decomposition_go, id="go"),
+        pytest.param(hodge_decomposition_julia, id="julia"),
+        pytest.param(hodge_decomposition_mojo, id="mojo"),
+    ],
+)
+def test_direct_adapter_admission_preserves_single_edge_gradient(
+    backend: HodgeDirectBackend,
+) -> None:
+    """Admitted asymmetric measurements reach the original native projection."""
+    coupling = np.array([0.0, 3.0, 1.0, 0.0], dtype=np.float64)
+    phases = np.array([0.3, -0.2], dtype=np.float64)
+    before = coupling.copy(), phases.copy()
+    admitted = hodge_validation.validate_hodge_backend_inputs(
+        coupling,
+        phases,
+        2,
+        np.array([0, 1], dtype=np.int64),
+        1,
+        np.empty(0, dtype=np.int64),
+        0,
+    )
+    gradient, curl, harmonic = backend(*admitted)
+    current = 2.0 * np.sin(-0.5)
+    expected = np.array([[0.0, current], [-current, 0.0]])
+    for component in (gradient, curl, harmonic):
+        assert component.shape == (2, 2)
+        assert component.dtype == np.float64
+        assert np.isfinite(component).all()
+    np.testing.assert_allclose(gradient, expected, rtol=1e-10, atol=1e-12)
+    np.testing.assert_allclose(curl, 0.0, atol=1e-12)
+    np.testing.assert_allclose(harmonic, 0.0, atol=1e-12)
+    np.testing.assert_array_equal(coupling, before[0])
+    np.testing.assert_array_equal(phases, before[1])
 
 
 def _reference(knm: FloatArray, phases: FloatArray) -> HodgeResult:

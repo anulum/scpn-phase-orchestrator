@@ -62,6 +62,8 @@ jobs:
           --deselect=tests/test_hodge_backends.py::TestRustParity
           --deselect=tests/test_hodge_backends.py::TestGoParity
           --deselect=tests/test_hodge_backends.py::TestMojoParity
+          --deselect='tests/test_hodge_backends.py::test_direct_adapter_admission_preserves_single_edge_gradient[go]'
+          --deselect='tests/test_hodge_backends.py::test_direct_adapter_admission_preserves_single_edge_gradient[mojo]'
           --deselect=tests/test_hodge_backends.py::TestBackendLoaderDispatch::test_rust_loader_wraps_spo_kernel_flattened_arrays
           --deselect=tests/test_hodge_backends.py::TestBackendLoaderDispatch::test_go_loader_invokes_shared_object_loader
           --deselect=tests/test_hodge_backends.py::TestBackendLoaderDispatch::test_mojo_loader_runs_preflight_and_returns_backend

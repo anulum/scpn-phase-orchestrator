@@ -453,7 +453,7 @@ def _edge_flow(k_sym: FloatArray, phases: FloatArray, edges: IntArray) -> FloatA
 
 
 def _psd_pinv_apply(matrix: FloatArray, vector: FloatArray) -> FloatArray:
-    """Apply the Moore–Penrose pseudoinverse of an SPD matrix to a vector.
+    """Apply the Moore–Penrose pseudoinverse of a PSD matrix to a vector.
 
     Eigenvalues at or below ``_PINV_RCOND · λ_max`` are treated as the
     null space. Every backend mirrors this algorithm so the projections
