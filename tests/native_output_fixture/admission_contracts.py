@@ -29,6 +29,8 @@ from pathlib import Path
 import pytest
 from coverage import Coverage, CoverageData
 
+from tools.branch_profile_provenance import source_inputs
+
 ROOT = Path(__file__).resolve().parents[2]
 PROFILES = ("native", "absent", "defective-output", "defective-missing")
 
@@ -135,11 +137,12 @@ def test_actual_profile_union_preserves_inputs_and_qualifies_only_reviewed_guard
 
 def _actual_incomplete_data(database: Path, *, branch: bool) -> None:
     """Measure a real public consumer in a fresh process without synthetic hits."""
+    measurement_database = database.with_name(database.name + ".incomplete")
     program = f"""
 from coverage import Coverage
 measurement = Coverage(
     config_file={str(ROOT / "pyproject.toml")!r},
-    data_file={str(database)!r}, branch={branch!r},
+    data_file={str(measurement_database)!r}, branch={branch!r},
     source=[
         "scpn_phase_orchestrator.coupling.ei_balance",
         "scpn_phase_orchestrator.upde.sheaf_engine",
@@ -172,12 +175,12 @@ measurement.save()
     # Combine those actual pieces instead of assuming a single unsuffixed file.
     pieces = [
         str(path)
-        for path in database.parent.glob(database.name + ".*")
+        for path in measurement_database.parent.glob(measurement_database.name + ".*")
         if path.suffix != ".license"
     ]
     assert pieces
     collected = Coverage(
-        config_file=str(ROOT / "pyproject.toml"), data_file=str(database)
+        config_file=str(ROOT / "pyproject.toml"), data_file=str(database), branch=branch
     )
     collected.combine(data_paths=pieces, strict=True, keep=True)
     collected.save()
@@ -362,8 +365,10 @@ def _checkout_copy(destination: Path) -> Path:
             destination / name,
             ignore=shutil.ignore_patterns("__pycache__"),
         )
-    for name in ("pyproject.toml", "spo-kernel/Cargo.toml", "spo-kernel/Cargo.lock"):
-        shutil.copy2(ROOT / name, destination / name)
+    for name in source_inputs(ROOT):
+        target = destination / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(ROOT / name, target)
     return destination
 
 
