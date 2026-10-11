@@ -130,6 +130,38 @@ def _cycle_contracts(backend: str) -> dict[str, float | int]:
     }
 
 
+def _empty_network_contracts(backend: str) -> dict[str, int]:
+    """Require valid empty results and refusal of inconsistent empty-network input."""
+    phases = np.empty(0, dtype=np.float64)
+    coupling = np.empty((0, 0), dtype=np.float64)
+    result = hodge_decomposition(coupling, phases, triangles=[], backend=backend)
+    valid = (
+        all(
+            component.shape == (0, 0) and component.dtype == np.float64
+            for component in (
+                result.gradient,
+                result.curl,
+                result.harmonic,
+                result.flow,
+            )
+        )
+        and result.potential.shape == (0,)
+        and result.betti_one == 0
+    )
+    contracts = {"empty_network_contract_passed": int(valid)}
+    for name, matrix, triangles in (
+        ("empty_coupling_shape_refused", np.ones((1, 1), dtype=np.float64), None),
+        ("empty_triangle_refused", coupling, [(0, 1, 2)]),
+    ):
+        try:
+            hodge_decomposition(matrix, phases, triangles, backend=backend)
+        except ValueError:
+            contracts[name] = 1
+        else:
+            contracts[name] = 0
+    return contracts
+
+
 def _reference_contracts(
     knm: FloatArray,
     phases: FloatArray,
@@ -177,10 +209,20 @@ def _reference_contracts(
         "finite_components": int(finite_components),
     }
     contracts.update(_cycle_contracts(backend))
+    contracts.update(_empty_network_contracts(backend))
     return contracts
 
 
 def _contracts_passed(contracts: dict[str, float | int]) -> bool:
+    if any(
+        int(contracts[key]) != 1
+        for key in (
+            "empty_network_contract_passed",
+            "empty_coupling_shape_refused",
+            "empty_triangle_refused",
+        )
+    ):
+        return False
     if int(contracts["finite_components"]) != 1:
         return False
     if int(contracts["cycle_betti_one"]) != 1:
@@ -246,6 +288,9 @@ def _backend_record(
         "tolerance": tolerance,
         "parity_passed": False,
         "reference_contracts_passed": False,
+        "empty_network_contract_passed": None,
+        "empty_coupling_shape_refused": None,
+        "empty_triangle_refused": None,
         "gradient_abs_error": None,
         "curl_abs_error": None,
         "harmonic_abs_error": None,
@@ -278,6 +323,13 @@ def _backend_record(
             "status": "available",
             "parity_passed": parity_passed,
             "reference_contracts_passed": _contracts_passed(contracts),
+            "empty_network_contract_passed": int(
+                contracts["empty_network_contract_passed"]
+            ),
+            "empty_coupling_shape_refused": int(
+                contracts["empty_coupling_shape_refused"]
+            ),
+            "empty_triangle_refused": int(contracts["empty_triangle_refused"]),
             "gradient_abs_error": errors["gradient_abs_error"],
             "curl_abs_error": errors["curl_abs_error"],
             "harmonic_abs_error": errors["harmonic_abs_error"],
@@ -406,6 +458,7 @@ def benchmark_hodge_polyglot_parity_gate(
         "require_cycle_betti_one": True,
         "require_nontrivial_cycle_harmonic": True,
         "require_no_invalid_backend_outputs": True,
+        "require_empty_network_validation": True,
         "required_backends": list(required),
         "production_timing_claim": False,
     }
@@ -424,6 +477,13 @@ def benchmark_hodge_polyglot_parity_gate(
         "python_reference_present": int(python_reference_present),
         "all_available_passed": int(all_available_passed),
         "reference_contracts_passed": int(reference_contracts_passed),
+        "empty_network_contract_passed": int(
+            reference_contracts["empty_network_contract_passed"]
+        ),
+        "empty_coupling_shape_refused": int(
+            reference_contracts["empty_coupling_shape_refused"]
+        ),
+        "empty_triangle_refused": int(reference_contracts["empty_triangle_refused"]),
         "acceptance_passed": int(acceptance_passed),
         "required_backends_present": int(required_backends_present),
         "required_backends_json": json.dumps(required),

@@ -132,6 +132,26 @@ class TestHodgeDecomposition:
         assert res.harmonic.size == 0
         assert res.betti_one == 0
 
+    @pytest.mark.parametrize("backend", [None, "python", "rust", "go", "julia", "mojo"])
+    def test_empty_network_checks_coupling_and_triangles(
+        self, backend: str | None
+    ) -> None:
+        """Every selector validates empty-network dimensions and simplex support."""
+        phases = np.empty(0, dtype=np.float64)
+        coupling = np.empty((0, 0), dtype=np.float64)
+        result = hodge_decomposition(coupling, phases, triangles=[], backend=backend)
+        for component in (result.gradient, result.curl, result.harmonic, result.flow):
+            assert component.shape == (0, 0)
+            assert component.dtype == np.float64
+        assert result.potential.shape == (0,)
+        assert result.betti_one == 0
+        with pytest.raises(ValueError, match=r"does not match \(0, 0\)"):
+            hodge_decomposition(np.ones((1, 1)), phases, backend=backend)
+        with pytest.raises(ValueError, match=r"triangle node outside \[0, 0\)"):
+            hodge_decomposition(
+                coupling, phases, triangles=[(0, 1, 2)], backend=backend
+            )
+
     def test_single_oscillator(self) -> None:
         """A lone oscillator cannot carry an edge current."""
         res = hodge_decomposition(np.array([[0.0]]), np.array([1.0]))

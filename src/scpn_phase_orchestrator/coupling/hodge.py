@@ -171,7 +171,6 @@ def _load_rust_fn() -> HodgeBackend:
 
 
 def _load_mojo_fn() -> HodgeBackend:
-    # pragma: no cover — toolchain
     """Load the Mojo Hodge-decomposition backend callable."""
     from ..experimental.accelerators.coupling._hodge_mojo import (
         _ensure_exe,
@@ -183,7 +182,6 @@ def _load_mojo_fn() -> HodgeBackend:
 
 
 def _load_julia_fn() -> HodgeBackend:
-    # pragma: no cover — toolchain
     """Load the Julia Hodge-decomposition backend callable."""
     require_juliacall_main()
     from ..experimental.accelerators.coupling._hodge_julia import (
@@ -194,7 +192,6 @@ def _load_julia_fn() -> HodgeBackend:
 
 
 def _load_go_fn() -> HodgeBackend:
-    # pragma: no cover — toolchain
     """Load the Go Hodge-decomposition backend callable."""
     from ..experimental.accelerators.coupling._hodge_go import (
         _load_lib,
@@ -584,16 +581,19 @@ def hodge_decomposition(
     ----------
     knm : FloatArray
         Square ``(N, N)`` coupling matrix; the symmetric part defines the edge support
-        and the current magnitude.
+        and the current magnitude. An empty phase vector still requires a valid
+        ``(0, 0)`` matrix.
     phases : FloatArray
         ``(N,)`` oscillator phases.
     triangles : Sequence[Sequence[int]] | None
         Optional explicit 2-simplices as node triples; each must reference existing
-        edges. When omitted, all 3-cliques of the coupling graph are used.
+        edges. When omitted, all 3-cliques of the coupling graph are used. An empty
+        network admits no triangles.
     backend : str | None
         ``None`` uses the available fallback chain. ``"python"`` uses NumPy;
         ``"rust"``, ``"go"``, ``"julia"`` or ``"mojo"`` requires that actual
         runtime and refuses a numerical parity mismatch instead of falling back.
+        A valid empty network requires no native calculation.
 
     Returns
     -------
@@ -613,6 +613,9 @@ def hodge_decomposition(
         raise ValueError(f"unknown Hodge backend: {backend!r}")
     phases = _validate_phase_vector(phases, name="phases")
     n = int(phases.size)
+    k = _validate_coupling_matrix(knm, expected_n=n)
+    k_sym = 0.5 * (k + k.T)
+    edges, tri = _simplicial_complex(k_sym, n, triangles)
     if n == 0:
         empty = np.zeros((0, 0), dtype=np.float64)
         return HodgeResult(
@@ -623,10 +626,6 @@ def hodge_decomposition(
             potential=np.array([], dtype=np.float64),
             betti_one=0,
         )
-
-    k = _validate_coupling_matrix(knm, expected_n=n)
-    k_sym = 0.5 * (k + k.T)
-    edges, tri = _simplicial_complex(k_sym, n, triangles)
 
     gradient, curl, harmonic, flow_matrix, potential, betti = _decompose(
         k, phases, edges, tri

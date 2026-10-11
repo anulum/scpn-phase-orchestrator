@@ -422,7 +422,11 @@ The default `backend=None` retains the available fallback chain. Use
 A named native runtime raises `ImportError` when unavailable and `ValueError`
 when its valid output disagrees with the reference; it never credits a NumPy
 fallback as execution of the requested backend. Empty systems require no
-native calculation, but still reject an unknown backend name.
+native calculation, but still reject an unknown backend name. An empty phase
+vector requires a real non-boolean `(0, 0)` coupling matrix and no triangle
+faces. Coupling cardinality, source dtype and explicit simplex support are
+validated before the empty result is returned; an empty phase vector cannot
+hide a stale nonempty coupling matrix.
 
 Because the decomposition relies on two least-squares pseudoinverse
 solves, exact cross-language parity is not attainable; the dispatcher
@@ -431,8 +435,8 @@ validates each accelerated backend against the NumPy reference within
 back to NumPy under default selection only after the backend has returned a
 valid Hodge payload.
 
-Direct accelerator boundary contract: the public Python dispatcher, public Rust
-wrapper, and the Go, Julia, and Mojo Hodge adapters reject numeric-string
+Direct accelerator boundary contract: the public Python dispatcher, including
+its Rust selection, and the direct Go, Julia, and Mojo Hodge adapters reject numeric-string
 aliases before Python, NumPy, shared-library, Julia, or subprocess coercion.
 The public surface applies the boundary to `knm`, `phases`, and explicit
 triangle nodes; the direct adapters apply it to counts, flattened coupling,
@@ -452,7 +456,11 @@ without requiring optional runtimes, matching the public Python special case.
 
 The parity benchmark calls the public selector for each runtime and checks
 reconstruction, orthogonality, phase-shift invariance, scaling and the analytic
-harmonic circulation of a triangle-free cycle. Require installed owners with:
+harmonic circulation of a triangle-free cycle. Each measured owner also checks
+valid empty-network results and refusal of inconsistent coupling cardinality
+and nonempty triangle sets on an empty network. These boundary checks require
+no native calculation; the nonempty comparison proves runtime execution. Require
+installed owners with:
 
 ```bash
 python -m benchmarks.hodge_benchmark --parity-gate --sizes 8 --calls 3 \
