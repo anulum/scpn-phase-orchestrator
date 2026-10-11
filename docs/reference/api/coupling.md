@@ -412,15 +412,24 @@ edge `i → j`, `M[j, i] = −M[i, j]`).
   the SCPN identity-coherence model this is the identity invariant that
   persists across regime changes.
 
-`hodge_decomposition(knm, phases, triangles=None)` computes all three
+`hodge_decomposition(knm, phases, triangles=None, *, backend=None)` computes all three
 components; pass an explicit `triangles` list of node triples to override
 the default 3-clique fill.
+
+The default `backend=None` retains the available fallback chain. Use
+`backend="python"` for the NumPy implementation, or explicitly select
+`"rust"`, `"go"`, `"julia"` or `"mojo"` to require that actual runtime.
+A named native runtime raises `ImportError` when unavailable and `ValueError`
+when its valid output disagrees with the reference; it never credits a NumPy
+fallback as execution of the requested backend. Empty systems require no
+native calculation, but still reject an unknown backend name.
 
 Because the decomposition relies on two least-squares pseudoinverse
 solves, exact cross-language parity is not attainable; the dispatcher
 validates each accelerated backend against the NumPy reference within
 `rtol = 1e-10` / `atol = 1e-12` (matching the spectral solver) and falls
-back to NumPy only after the backend has returned a valid Hodge payload.
+back to NumPy under default selection only after the backend has returned a
+valid Hodge payload.
 
 Direct accelerator boundary contract: the public Python dispatcher, public Rust
 wrapper, and the Go, Julia, and Mojo Hodge adapters reject numeric-string
@@ -437,9 +446,24 @@ length does not match `n`, and invalid oscillator counts before optional runtime
 loading. After backend execution, the same output validator checks that
 `gradient`, `curl`, and `harmonic` are finite real non-boolean `(N, N)` or
 flattened `N*N` antisymmetric matrices before publication or parity fallback.
-Malformed backend outputs raise immediately; fallback is reserved for validated
-numerical parity mismatches. Empty Hodge systems return empty components
+Malformed backend outputs raise immediately; default-selection fallback is
+reserved for validated numerical parity mismatches. Empty Hodge systems return empty components
 without requiring optional runtimes, matching the public Python special case.
+
+The parity benchmark calls the public selector for each runtime and checks
+reconstruction, orthogonality, phase-shift invariance, scaling and the analytic
+harmonic circulation of a triangle-free cycle. Require installed owners with:
+
+```bash
+python -m benchmarks.hodge_benchmark --parity-gate --sizes 8 --calls 3 \
+  --require-backends python rust go julia mojo
+```
+
+A missing required runtime, invalid result or failed invariant produces a
+nonzero exit status. CI retains fresh per-runtime and all-runtime comparison
+artifacts. These timings include public validation and NumPy parity checking;
+they are non-isolated regression measurements and cannot be compared directly
+with historical direct-kernel timings.
 
 ::: scpn_phase_orchestrator.coupling.hodge
 

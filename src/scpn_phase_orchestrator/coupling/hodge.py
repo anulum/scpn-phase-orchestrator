@@ -78,8 +78,9 @@ The decomposition needs two least-squares solves (``L0⁺``, ``L2⁺``), so
 exact cross-language parity is not attainable; the dispatcher validates
 each accelerated backend against the NumPy reference within
 ``rtol = 1e-10`` / ``atol = 1e-12`` (matching the spectral solver) and
-falls back to NumPy on any valid numerical mismatch. Malformed backend
-payloads fail closed before parity fallback.
+falls back to NumPy on any valid numerical mismatch with default selection.
+An explicit native selection raises instead of substituting NumPy when the
+runtime is unavailable or disagrees. Malformed backend payloads fail closed.
 
 Reference
 ---------
@@ -91,6 +92,7 @@ from __future__ import annotations
 
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
+from importlib import import_module
 from numbers import Integral
 from typing import TypeAlias, cast
 
@@ -109,7 +111,9 @@ FloatArray: TypeAlias = NDArray[np.float64]
 IntArray: TypeAlias = NDArray[np.int64]
 # (gradient, curl, harmonic) edge-flow matrices, each (N, N) antisymmetric.
 HodgeTuple: TypeAlias = tuple[FloatArray, FloatArray, FloatArray]
-HodgeBackend: TypeAlias = Callable[..., HodgeTuple]
+HodgeBackend: TypeAlias = Callable[
+    [FloatArray, FloatArray, int, IntArray, int, IntArray, int], HodgeTuple
+]
 
 # Backend acceptance tolerance: the least-squares pseudoinverse solves
 # preclude bit-exact parity across LAPACK/BLAS implementations.
@@ -134,7 +138,13 @@ _BACKEND_NAMES = ("rust", "mojo", "julia", "go", "python")
 
 def _load_rust_fn() -> HodgeBackend:
     """Load the Rust Hodge-decomposition backend callable."""
-    from spo_kernel import hodge_decomposition_rust
+    native = getattr(import_module("spo_kernel"), "hodge_decomposition_rust", None)
+    if not callable(native):
+        raise ImportError("spo_kernel does not export hodge_decomposition_rust")
+    rust_kernel = cast(
+        Callable[[FloatArray, FloatArray, int, IntArray, int, IntArray, int], object],
+        native,
+    )
 
     def _rust(
         knm_flat: FloatArray,
@@ -146,7 +156,7 @@ def _load_rust_fn() -> HodgeBackend:
         n_tris: int,
     ) -> HodgeTuple:
         """Call the Rust Hodge-decomposition kernel."""
-        g, c, h = hodge_decomposition_rust(
+        raw = rust_kernel(
             np.ascontiguousarray(knm_flat.ravel(), dtype=np.float64),
             np.ascontiguousarray(phases.ravel(), dtype=np.float64),
             int(n),
@@ -155,7 +165,7 @@ def _load_rust_fn() -> HodgeBackend:
             np.ascontiguousarray(tris_flat.ravel(), dtype=np.int64),
             int(n_tris),
         )
-        return validate_hodge_backend_output((g, c, h), n=n)
+        return validate_hodge_backend_output(raw, n=n)
 
     return cast("HodgeBackend", _rust)
 
@@ -578,6 +588,8 @@ def hodge_decomposition(
     knm: FloatArray,
     phases: FloatArray,
     triangles: Sequence[Sequence[int]] | None = None,
+    *,
+    backend: str | None = None,
 ) -> HodgeResult:
     """Decompose the Kuramoto coupling current into orthogonal edge flows.
 
@@ -591,13 +603,27 @@ def hodge_decomposition(
     triangles : Sequence[Sequence[int]] | None
         Optional explicit 2-simplices as node triples; each must reference existing
         edges. When omitted, all 3-cliques of the coupling graph are used.
+    backend : str | None
+        ``None`` uses the available fallback chain. ``"python"`` uses NumPy;
+        ``"rust"``, ``"go"``, ``"julia"`` or ``"mojo"`` requires that actual
+        runtime and refuses a numerical parity mismatch instead of falling back.
 
     Returns
     -------
     HodgeResult
         :class:`HodgeResult` with the three flow components as antisymmetric ``(N, N)``
         matrices, the input current, the node potential, and the first Betti number.
+
+    Raises
+    ------
+    ValueError
+        If inputs or backend payloads are invalid, the requested runtime is
+        unknown, or its numerical result disagrees with the reference.
+    ImportError
+        If an explicitly requested native runtime cannot be loaded.
     """
+    if backend is not None and backend not in _BACKEND_NAMES:
+        raise ValueError(f"unknown Hodge backend: {backend!r}")
     phases = _validate_phase_vector(phases, name="phases")
     n = int(phases.size)
     if n == 0:
@@ -626,7 +652,15 @@ def hodge_decomposition(
     tris_flat = np.ascontiguousarray(tri.ravel(), dtype=np.int64)
     k_flat = np.ascontiguousarray(k.ravel(), dtype=np.float64)
 
-    backend_fn = _dispatch()
+    if backend is None:
+        backend_fn = _dispatch()
+    elif backend == "python":
+        backend_fn = None
+    else:
+        try:
+            backend_fn = _load_backend(backend)
+        except (ImportError, RuntimeError, OSError, KeyError) as exc:
+            raise ImportError(f"Hodge backend {backend!r} is unavailable") from exc
     if backend_fn is not None:
         backend_output = _normalise_backend_output(
             backend_fn(
@@ -650,6 +684,8 @@ def hodge_decomposition(
                 potential=potential,
                 betti_one=betti,
             )
+        if backend is not None:
+            raise ValueError(f"Hodge backend {backend!r} disagrees with the reference")
 
     return HodgeResult(
         gradient=gradient,

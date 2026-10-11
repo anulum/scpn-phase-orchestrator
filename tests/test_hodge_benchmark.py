@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import json
 
+import pytest
+
 from benchmarks.hodge_benchmark import (
     BENCHMARK_EVIDENCE_KIND,
     bench_at,
@@ -28,6 +30,8 @@ def test_hodge_polyglot_parity_gate_reports_declared_backend_slots() -> None:
     assert out["all_available_passed"] == 1
     assert out["reference_contracts_passed"] == 1
     assert out["acceptance_passed"] == 1
+    assert out["required_backends_present"] == 1
+    assert json.loads(str(out["required_backends_json"])) == []
     assert out["benchmark_evidence_kind"] == BENCHMARK_EVIDENCE_KIND
     assert out["isolation_method"] == "none"
     assert out["production_timing_claim"] == 0
@@ -43,6 +47,7 @@ def test_hodge_polyglot_parity_gate_reports_declared_backend_slots() -> None:
     assert float(out["scale_covariance_max_abs_error"]) <= 1.0e-10
     assert float(out["cycle_curl_max_abs_error"]) <= 1.0e-10
     assert float(out["cycle_harmonic_max_abs"]) > 1.0e-3
+    assert float(out["cycle_harmonic_max_abs_error"]) <= 1.0e-10
     assert int(out["cycle_betti_one"]) == 1
     assert thresholds["backend_order"] == ["rust", "mojo", "julia", "go", "python"]
     assert thresholds["require_reconstruction_contract"] is True
@@ -86,6 +91,15 @@ def test_hodge_polyglot_parity_gate_rejects_invalid_controls() -> None:
         except ValueError:
             continue
         raise AssertionError(f"invalid Hodge benchmark controls accepted: {kwargs!r}")
+
+
+@pytest.mark.parametrize("required", [["unknown"], ["python", "python"]])
+def test_hodge_polyglot_gate_rejects_invalid_runtime_requirements(
+    required: list[str],
+) -> None:
+    """Unknown and duplicate runtime requirements cannot qualify a report."""
+    with pytest.raises(ValueError, match="required Hodge backend names"):
+        benchmark_hodge_polyglot_parity_gate(require_backends=required)
 
 
 def test_hodge_wallclock_benchmark_is_labelled_non_isolated_regression_evidence() -> (
