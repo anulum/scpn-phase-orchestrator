@@ -186,7 +186,28 @@ def validate_hodge_backend_inputs(
     tris_flat: object,
     n_tris: object,
 ) -> tuple[FloatArray, FloatArray, int, IntArray, int, IntArray, int]:
-    """Validate direct Hodge inputs before optional runtime loading."""
+    """Validate direct Hodge inputs before optional runtime loading.
+
+    Parameters
+    ----------
+    knm_flat, phases : array-like
+        Finite real vectors with exactly ``n*n`` and ``n`` entries.
+    n, n_edges, n_tris : int
+        Non-negative non-boolean counts, checked even for an empty network.
+    edges_flat, tris_flat : array-like
+        Flattened unique ascending node pairs and triples. Every triangle
+        must be supported by its three supplied edges.
+
+    Returns
+    -------
+    tuple
+        Contiguous float64 measurements, int64 simplices and validated counts.
+
+    Raises
+    ------
+    ValueError
+        If a source type, cardinality, index or simplicial contract is invalid.
+    """
     n_int = _validate_n(n)
     k = _validate_float_vector(knm_flat, name="knm_flat")
     expected_k = n_int * n_int
@@ -211,6 +232,21 @@ def validate_hodge_backend_inputs(
         count=n_tris_int,
         n=n_int,
     )
+    edge_pairs = {(int(i), int(j)) for i, j in edges.reshape(-1, 2)}
+    if any(i >= j for i, j in edge_pairs):
+        raise ValueError("edges_flat pairs must be ascending")
+    if len(edge_pairs) != n_edges_int:
+        raise ValueError("edges_flat pairs must be unique")
+    triangle_rows = [(int(i), int(j), int(k)) for i, j, k in tris.reshape(-1, 3)]
+    if any(not i < j < k for i, j, k in triangle_rows):
+        raise ValueError("tris_flat triples must be ascending")
+    if len(set(triangle_rows)) != n_tris_int:
+        raise ValueError("tris_flat triples must be unique")
+    if any(
+        any(edge not in edge_pairs for edge in ((i, j), (i, k), (j, k)))
+        for i, j, k in triangle_rows
+    ):
+        raise ValueError("tris_flat triangle references a missing edge")
     return k, p, n_int, edges, n_edges_int, tris, n_tris_int
 
 

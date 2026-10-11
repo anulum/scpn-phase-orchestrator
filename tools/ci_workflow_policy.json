@@ -41,6 +41,7 @@
         "mojo-backend",
         "hierarchy-transport-smoke",
         "rust-check",
+        "hodge-native-coverage",
         "ffi-test",
         "ethical-cost-runtime",
         "connectome-runtime"
@@ -107,6 +108,7 @@
     "hierarchy-transport-smoke",
     "security",
     "rust-check",
+    "hodge-native-coverage",
     "ffi-test",
     "ethical-cost-runtime",
     "connectome-runtime",

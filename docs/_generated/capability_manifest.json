@@ -11,7 +11,7 @@
     "python_package_modules": 765,
     "research_experimental_modules": 204,
     "runtime_serving_modules": 160,
-    "rust_kernel_files": 129,
+    "rust_kernel_files": 131,
     "test_files": 1104
   },
   "documentation": {
@@ -3094,6 +3094,7 @@
     "spo-kernel/crates/spo-engine/src/freq_id.rs",
     "spo-kernel/crates/spo-engine/src/geometric.rs",
     "spo-kernel/crates/spo-engine/src/hodge.rs",
+    "spo-kernel/crates/spo-engine/src/hodge_inputs.rs",
     "spo-kernel/crates/spo-engine/src/hypergraph.rs",
     "spo-kernel/crates/spo-engine/src/imprint.rs",
     "spo-kernel/crates/spo-engine/src/inertial.rs",
@@ -3148,6 +3149,7 @@
     "spo-kernel/crates/spo-ffi/src/embedding_boundary.rs",
     "spo-kernel/crates/spo-ffi/src/entropy_boundary.rs",
     "spo-kernel/crates/spo-ffi/src/ethical_boundary.rs",
+    "spo-kernel/crates/spo-ffi/src/hodge_boundary.rs",
     "spo-kernel/crates/spo-ffi/src/hypergraph_boundary.rs",
     "spo-kernel/crates/spo-ffi/src/inertial_boundary.rs",
     "spo-kernel/crates/spo-ffi/src/lib.rs",

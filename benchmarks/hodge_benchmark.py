@@ -14,15 +14,29 @@ import argparse
 import hashlib
 import json
 import time
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
+from importlib import import_module
+from typing import cast
 
 import numpy as np
 from numpy.typing import NDArray
 
+from scpn_phase_orchestrator.coupling._hodge_validation import (
+    validate_hodge_backend_inputs,
+)
 from scpn_phase_orchestrator.coupling.hodge import hodge_decomposition
 
 FloatArray = NDArray[np.float64]
 HodgeTuple = tuple[FloatArray, FloatArray, FloatArray]
+DirectInputBoundary = Callable[
+    [object, object, object, object, object, object, object], object
+]
+DIRECT_INPUT_CONTRACTS = (
+    "direct_empty_coupling_refused",
+    "direct_boolean_count_refused",
+    "direct_duplicate_edge_refused",
+    "direct_missing_triangle_edge_refused",
+)
 
 BACKEND_ORDER = ("rust", "mojo", "julia", "go", "python")
 PARITY_TOLERANCES = {
@@ -162,6 +176,45 @@ def _empty_network_contracts(backend: str) -> dict[str, int]:
     return contracts
 
 
+def _direct_input_contracts(backend: str) -> dict[str, int]:
+    """Require actual direct adapters to refuse malformed metadata and topology."""
+    if backend == "python":
+        boundary: DirectInputBoundary = validate_hodge_backend_inputs
+    else:
+        module = import_module(
+            "spo_kernel"
+            if backend == "rust"
+            else (
+                "scpn_phase_orchestrator.experimental.accelerators.coupling."
+                f"_hodge_{backend}"
+            )
+        )
+        boundary = cast(
+            DirectInputBoundary, getattr(module, f"hodge_decomposition_{backend}")
+        )
+    empty = np.empty(0, dtype=np.float64)
+    indices = np.empty(0, dtype=np.int64)
+    coupling = (np.ones((3, 3)) - np.eye(3)).ravel()
+    phases = np.array([0.0, 1.0, 2.3])
+    requests: tuple[
+        tuple[object, object, object, object, object, object, object], ...
+    ] = (
+        (np.ones(1), empty, 0, indices, 0, indices, 0),
+        (empty, empty, False, indices, 0, indices, 0),
+        (coupling, phases, 3, np.array([0, 1, 0, 1]), 2, indices, 0),
+        (coupling, phases, 3, np.array([0, 1, 1, 2]), 2, np.array([0, 1, 2]), 1),
+    )
+    flags = dict.fromkeys(DIRECT_INPUT_CONTRACTS, 0)
+    for name, request in zip(DIRECT_INPUT_CONTRACTS, requests, strict=True):
+        try:
+            boundary(*request)
+        except ValueError:
+            flags[name] = 1
+        else:
+            return flags
+    return flags
+
+
 def _reference_contracts(
     knm: FloatArray,
     phases: FloatArray,
@@ -210,10 +263,13 @@ def _reference_contracts(
     }
     contracts.update(_cycle_contracts(backend))
     contracts.update(_empty_network_contracts(backend))
+    contracts.update(_direct_input_contracts(backend))
     return contracts
 
 
 def _contracts_passed(contracts: dict[str, float | int]) -> bool:
+    if any(int(contracts[key]) != 1 for key in DIRECT_INPUT_CONTRACTS):
+        return False
     if any(
         int(contracts[key]) != 1
         for key in (
@@ -291,6 +347,12 @@ def _backend_record(
         "empty_network_contract_passed": None,
         "empty_coupling_shape_refused": None,
         "empty_triangle_refused": None,
+        **dict.fromkeys(DIRECT_INPUT_CONTRACTS),
+        "direct_input_surface": (
+            "validate_hodge_backend_inputs"
+            if backend == "python"
+            else f"hodge_decomposition_{backend}"
+        ),
         "gradient_abs_error": None,
         "curl_abs_error": None,
         "harmonic_abs_error": None,
@@ -330,6 +392,7 @@ def _backend_record(
                 contracts["empty_coupling_shape_refused"]
             ),
             "empty_triangle_refused": int(contracts["empty_triangle_refused"]),
+            **{key: int(contracts[key]) for key in DIRECT_INPUT_CONTRACTS},
             "gradient_abs_error": errors["gradient_abs_error"],
             "curl_abs_error": errors["curl_abs_error"],
             "harmonic_abs_error": errors["harmonic_abs_error"],
@@ -459,6 +522,7 @@ def benchmark_hodge_polyglot_parity_gate(
         "require_nontrivial_cycle_harmonic": True,
         "require_no_invalid_backend_outputs": True,
         "require_empty_network_validation": True,
+        "require_direct_input_validation": True,
         "required_backends": list(required),
         "production_timing_claim": False,
     }
@@ -484,6 +548,7 @@ def benchmark_hodge_polyglot_parity_gate(
             reference_contracts["empty_coupling_shape_refused"]
         ),
         "empty_triangle_refused": int(reference_contracts["empty_triangle_refused"]),
+        **{key: int(reference_contracts[key]) for key in DIRECT_INPUT_CONTRACTS},
         "acceptance_passed": int(acceptance_passed),
         "required_backends_present": int(required_backends_present),
         "required_backends_json": json.dumps(required),

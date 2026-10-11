@@ -21,6 +21,7 @@ from numpy.typing import NDArray
 from benchmarks import hodge_benchmark as hodge_benchmark_module
 from benchmarks.hodge_benchmark import (
     BENCHMARK_EVIDENCE_KIND,
+    DIRECT_INPUT_CONTRACTS,
     bench_at,
     benchmark_hodge_polyglot_parity_gate,
 )
@@ -42,6 +43,7 @@ def test_hodge_polyglot_parity_gate_reports_declared_backend_slots() -> None:
     assert out["empty_network_contract_passed"] == 1
     assert out["empty_coupling_shape_refused"] == 1
     assert out["empty_triangle_refused"] == 1
+    assert all(out[key] == 1 for key in DIRECT_INPUT_CONTRACTS)
     assert out["required_backends_present"] == 1
     assert json.loads(str(out["required_backends_json"])) == []
     assert out["benchmark_evidence_kind"] == BENCHMARK_EVIDENCE_KIND
@@ -72,6 +74,7 @@ def test_hodge_polyglot_parity_gate_reports_declared_backend_slots() -> None:
     assert thresholds["require_nontrivial_cycle_harmonic"] is True
     assert thresholds["production_timing_claim"] is False
     assert thresholds["require_empty_network_validation"] is True
+    assert thresholds["require_direct_input_validation"] is True
 
     assert [record["backend"] for record in records] == thresholds["backend_order"]
     for record in records:
@@ -80,6 +83,7 @@ def test_hodge_polyglot_parity_gate_reports_declared_backend_slots() -> None:
             assert record["empty_network_contract_passed"] == 1
             assert record["empty_coupling_shape_refused"] == 1
             assert record["empty_triangle_refused"] == 1
+            assert all(record[key] == 1 for key in DIRECT_INPUT_CONTRACTS)
             assert record["reference_contracts_passed"] is True
             assert record["max_abs_error"] <= record["tolerance"]
             assert record["gradient_sha256"] is not None
@@ -172,3 +176,24 @@ def test_hodge_comparison_refuses_empty_network_boundary_faults(
         assert report["empty_triangle_refused"] == 0
     else:
         assert report["empty_network_contract_passed"] == 0
+
+
+def test_hodge_comparison_refuses_unchecked_direct_input_boundary(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Good numerical projections cannot admit a boundary accepting invalid counts."""
+
+    def accepts_invalid_request(*args: object) -> None:
+        """Inject a missing metadata validator, without replacing a numerical result."""
+
+    monkeypatch.setattr(
+        hodge_benchmark_module, "validate_hodge_backend_inputs", accepts_invalid_request
+    )
+    report = benchmark_hodge_polyglot_parity_gate(
+        n=4, calls=1, require_backends=("python",)
+    )
+    assert report["python_reference_present"] == 1
+    assert float(report["reconstruction_max_abs_error"]) < 1e-10
+    assert report["direct_empty_coupling_refused"] == 0
+    assert report["reference_contracts_passed"] == 0
+    assert report["acceptance_passed"] == 0

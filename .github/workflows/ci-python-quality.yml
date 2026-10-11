@@ -57,6 +57,8 @@ jobs:
         run: >
           python -m mypy --strict --config-file tools/connectome_mypy.ini
           src/scpn_phase_orchestrator/coupling/hodge.py
+          src/scpn_phase_orchestrator/coupling/_hodge_validation.py
+          native-tests/test_hodge_boundary.py
           tests/test_coupling_hodge.py tests/test_hodge_backends.py
           tests/test_hodge_real_runtime.py tests/test_hodge_benchmark.py
           tests/test_hodge.py tests/test_hodge_algorithm.py
@@ -67,6 +69,7 @@ jobs:
           --config 'lint.pydocstyle.convention="numpy"'
           tests/test_hodge.py tests/test_hodge_algorithm.py
           tests/test_coupling_hodge.py tests/test_hodge_benchmark.py
+          native-tests/test_hodge_boundary.py
       - name: Qualify the distinct actual JAX chimera model
         run: python -m pytest tests/test_nn_chimera.py --strict-markers --tb=short
       - name: Run tests (with coverage on 3.12)
@@ -275,7 +278,7 @@ jobs:
             --strict-markers --tb=short -p no:cacheprovider \
             --cov=scpn_phase_orchestrator --cov-branch --cov-append --cov-report= --cov-fail-under=0
           pytest tests/test_chimera.py::test_local_order_parameter_uses_backend_when_available \
-            native-tests/test_chimera_boundary.py tests/test_nn_chimera.py \
+            native-tests/test_chimera_boundary.py native-tests/test_hodge_boundary.py tests/test_nn_chimera.py \
             --strict-markers --tb=short -p no:cacheprovider \
             --cov=scpn_phase_orchestrator --cov-branch --cov-append --cov-report= --cov-fail-under=0
           export SPO_CONNECTOME_PYTHON_PROFILE="$PWD/.connectome-python-coverage/bin/python"
@@ -293,6 +296,13 @@ jobs:
             native-tests/test_basin_bifurcation_profiles.py \
             -o addopts= --strict-markers --tb=short -p no:cacheprovider \
             --cov=scpn_phase_orchestrator --cov-branch --cov-append --cov-report= --cov-fail-under=0
+      - name: Retain the current release kernel for on-demand Hodge consumers
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: hodge-current-kernel-wheel
+          path: kernel-wheels/*.whl
+          if-no-files-found: error
+          retention-days: 14
       - name: Build the original pre-AttnRes Rust compatibility artifact
         run: |
           . .venv/bin/activate
