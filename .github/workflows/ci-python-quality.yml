@@ -66,6 +66,7 @@ jobs:
           python -m ruff check --isolated --select D
           --config 'lint.pydocstyle.convention="numpy"'
           tests/test_hodge.py tests/test_hodge_algorithm.py
+          tests/test_coupling_hodge.py tests/test_hodge_benchmark.py
       - name: Qualify the distinct actual JAX chimera model
         run: python -m pytest tests/test_nn_chimera.py --strict-markers --tb=short
       - name: Run tests (with coverage on 3.12)
