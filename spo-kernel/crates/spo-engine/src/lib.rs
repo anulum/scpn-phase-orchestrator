@@ -64,6 +64,7 @@ pub mod free_energy;
 pub mod freq_id;
 pub mod geometric;
 pub mod hodge;
+mod hodge_inputs;
 pub mod hypergraph;
 pub mod inertial;
 pub mod itpc;

@@ -69,6 +69,48 @@ _K3_EDGES = np.array([0, 1, 0, 2, 1, 2], dtype=np.int64)
 _K3_TRIS = np.array([0, 1, 2], dtype=np.int64)
 
 
+@pytest.mark.parametrize(
+    "backend",
+    [
+        pytest.param(hodge_decomposition_go, id="go"),
+        pytest.param(hodge_decomposition_julia, id="julia"),
+        pytest.param(hodge_decomposition_mojo, id="mojo"),
+    ],
+)
+@pytest.mark.parametrize(
+    "edges,n_edges,triangles,n_triangles,match",
+    [
+        (np.array([1, 0]), 1, np.empty(0, dtype=np.int64), 0, "ascending"),
+        (np.array([0, 1, 0, 1]), 2, np.empty(0, dtype=np.int64), 0, "unique"),
+        (_K3_EDGES, 3, np.array([0, 2, 1]), 1, "ascending"),
+        (_K3_EDGES, 3, np.array([1, 0, 2]), 1, "ascending"),
+        (_K3_EDGES, 3, np.array([0, 1, 2, 0, 1, 2]), 2, "unique"),
+        (np.array([0, 1, 1, 2]), 2, _K3_TRIS, 1, "missing edge"),
+    ],
+    ids=[
+        "reversed-edge",
+        "duplicate-edge",
+        "reversed-face",
+        "reversed-first-face-edge",
+        "duplicate-face",
+        "missing-face-edge",
+    ],
+)
+def test_direct_adapters_refuse_invalid_simplicial_complex(
+    backend: HodgeDirectBackend,
+    edges: IntArray,
+    n_edges: int,
+    triangles: IntArray,
+    n_triangles: int,
+    match: str,
+) -> None:
+    """Real direct adapters refuse invalid simplices before loading a native owner."""
+    coupling = (np.ones((3, 3)) - np.eye(3)).ravel()
+    phases = np.array([0.0, 1.0, 2.3])
+    with pytest.raises(ValueError, match=match):
+        backend(coupling, phases, 3, edges, n_edges, triangles, n_triangles)
+
+
 def test__hodge_validation_helper_is_directly_linked_to_backend_tests() -> None:
     assert callable(hodge_validation.validate_hodge_backend_inputs)
 

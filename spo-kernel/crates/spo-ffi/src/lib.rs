@@ -25,6 +25,7 @@ mod ei_balance_boundary;
 mod embedding_boundary;
 mod entropy_boundary;
 mod ethical_boundary;
+mod hodge_boundary;
 mod hypergraph_boundary;
 mod inertial_boundary;
 mod measurement_types;
@@ -49,6 +50,7 @@ use delayed_boundary::delayed_kuramoto_run_rust;
 use ei_balance_boundary::{adjust_ei_ratio_rust, compute_ei_balance_rust};
 use embedding_boundary::{delay_embed_rust, optimal_delay_rust, optimal_dimension_rust};
 use ethical_boundary::compute_ethical_cost_rust;
+use hodge_boundary::hodge_decomposition_rust;
 use hypergraph_boundary::{hypergraph_run_rust, PyHypergraphStepper};
 use inertial_boundary::{inertial_run_rust, inertial_step_rust};
 use measurement_types::{real_values, PlainI32, PlainI64, PlainReal, PlainUsize};
@@ -77,7 +79,7 @@ use pyo3::types::PyDict;
 use spo_engine::{
     carrier,
     coupling::{spatial_modulate_flat, SpatialDecayForm},
-    coupling_est, dimension, envelope, evs, free_energy, freq_id, hodge,
+    coupling_est, dimension, envelope, evs, free_energy, freq_id,
     imprint::ImprintModel,
     inertial, itpc,
     lif_ensemble::{LIFEnsemble, LIFParams},
@@ -1759,40 +1761,6 @@ fn add_langevin_noise_rust<'py>(
     Ok(PyArray1::from_vec(
         py,
         free_energy::add_langevin_noise(zv, temperature, dt, seed),
-    ))
-}
-
-// ─── Hodge Decomposition ──────────────────────────────────────────
-
-#[pyfunction]
-#[allow(clippy::too_many_arguments)]
-fn hodge_decomposition_rust<'py>(
-    py: Python<'py>,
-    knm_flat: PyReadonlyArray1<'py, f64>,
-    phases: PyReadonlyArray1<'py, f64>,
-    n: usize,
-    edges_flat: PyReadonlyArray1<'py, i64>,
-    n_edges: usize,
-    tris_flat: PyReadonlyArray1<'py, i64>,
-    n_tris: usize,
-) -> PyResult<ArrayTriple<'py>> {
-    let k = knm_flat
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let p = phases
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let edges = edges_flat
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let tris = tris_flat
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let (g, c, h) = hodge::hodge_decomposition(k, p, n, edges, n_edges, tris, n_tris);
-    Ok((
-        PyArray1::from_vec(py, g),
-        PyArray1::from_vec(py, c),
-        PyArray1::from_vec(py, h),
     ))
 }
 

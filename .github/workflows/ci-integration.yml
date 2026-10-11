@@ -399,6 +399,92 @@ jobs:
       # ``ffi-test`` instead.
       - if: runner.os == 'Linux'
         run: cargo test -p spo-ffi --no-default-features --lib
+  hodge-native-coverage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CARGO_LLVM_COV_TARGET_DIR: ${{ github.workspace }}/.ci-hodge/target
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - uses: dtolnay/rust-toolchain@631a55b12751854ce901bb631d5902ceb48146f7
+        with:
+          toolchain: nightly
+          components: llvm-tools-preview
+      - name: Prepare original native Hodge measurement dependencies
+        run: |
+          python -m pip install --require-hashes --no-deps -r requirements/connectome-runtime-lock.txt
+          python -m pip install --require-hashes --no-deps -r requirements/ci-tools.txt
+          cargo install cargo-llvm-cov --version 0.9.1 --locked
+      - name: Measure the checked public Rust core and actual PyO3 boundary
+        working-directory: spo-kernel
+        shell: bash
+        run: |
+          mkdir -p ../.ci-hodge/evidence
+          cargo clippy --locked -p spo-ffi --lib --no-default-features -- -D warnings
+          cargo llvm-cov --release --branch --no-report -p spo-engine --lib hodge::tests
+          eval "$(cargo llvm-cov show-env --sh)"
+          export RUSTFLAGS="$RUSTFLAGS -Z coverage-options=branch"
+          maturin build --release --locked -m crates/spo-ffi/Cargo.toml --out ../.ci-hodge/wheels
+          python -m pip install --no-index --no-deps --force-reinstall ../.ci-hodge/wheels/*.whl
+          python -m pytest ../native-tests/test_hodge_boundary.py \
+            -o addopts= --strict-markers --tb=short -p no:cacheprovider \
+            --junitxml=../.ci-hodge/evidence/native-hodge.junit.xml
+          cargo llvm-cov report --release --json --output-path ../.ci-hodge/evidence/native-all.json
+          python - <<'PY'
+          import hashlib, json, os, pathlib, shutil, subprocess
+          import spo_kernel
+
+          root = pathlib.Path.cwd().parent
+          evidence = root / '.ci-hodge/evidence'
+          target = root / '.ci-hodge/target'
+          source_paths = [
+              pathlib.Path('crates/spo-engine/src/hodge.rs'),
+              pathlib.Path('crates/spo-engine/src/hodge_inputs.rs'),
+              pathlib.Path('crates/spo-ffi/src/hodge_boundary.rs'),
+          ]
+          binary = next(pathlib.Path(spo_kernel.__file__).parent.glob('*.so'))
+          shutil.copyfile(binary, evidence / binary.name)
+          for path in target.rglob('*.profraw'):
+              destination = evidence / 'raw' / path.relative_to(target)
+              destination.parent.mkdir(parents=True, exist_ok=True)
+              shutil.copyfile(path, destination)
+          for path in (target / 'release/deps').glob('spo_engine-*'):
+              if path.is_file() and os.access(path, os.X_OK):
+                  shutil.copyfile(path, evidence / path.name)
+          records = [item for group in json.loads((evidence / 'native-all.json').read_text())['data']
+                     for item in group['files']]
+          selected = {pathlib.Path(item['filename']).name: item for item in records
+                      if pathlib.Path(item['filename']).name in {'hodge_inputs.rs', 'hodge_boundary.rs'}}
+          receipt = {
+              'revision': os.environ['GITHUB_SHA'],
+              'rustc': subprocess.check_output(['rustc', '-Vv'], text=True),
+              'cargo_llvm_cov': subprocess.check_output(['cargo', 'llvm-cov', '--version'], text=True),
+              'sources': {str(path): hashlib.sha256(path.read_bytes()).hexdigest() for path in source_paths},
+              'native_binary': str(binary),
+              'binary_sha256': hashlib.sha256(binary.read_bytes()).hexdigest(),
+              'scoped_input_and_boundary': {name: item['summary'] for name, item in selected.items()},
+              'hodge_raw_file': [item['summary'] for item in records if pathlib.Path(item['filename']).name == 'hodge.rs'],
+              'scope': 'Native ingress sources only; raw mathematical file includes original unit tests and is not a global production coverage claim.',
+          }
+          (evidence / 'native-ingress-receipt.json').write_text(json.dumps(receipt, indent=2) + '\n')
+          assert set(selected) == {'hodge_inputs.rs', 'hodge_boundary.rs'}, selected.keys()
+          for item in selected.values():
+              lines = item['summary']['lines']
+              assert lines['count'] > 0 and lines['covered'] == lines['count'], item['summary']
+          branches = selected['hodge_inputs.rs']['summary']['branches']
+          assert branches['count'] > 0 and branches['covered'] == branches['count'], branches
+          PY
+      - name: Retain original Hodge native measurements and binary provenance
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: hodge-native-input-coverage
+          path: .ci-hodge/evidence
+          if-no-files-found: error
+          retention-days: 14
   ffi-test:
     strategy:
       matrix:
@@ -462,7 +548,7 @@ jobs:
             -k "not performance" \
             --cov=scpn_phase_orchestrator --cov-report= --cov-fail-under=0
           pytest tests/test_chimera_backends.py tests/test_chimera_real_runtime.py -k rust --strict-markers --tb=short --cov=scpn_phase_orchestrator --cov-append --cov-report= --cov-fail-under=0
-          pytest native-tests/test_chimera_boundary.py --strict-markers --tb=short --cov=scpn_phase_orchestrator --cov-append --cov-report= --cov-fail-under=0
+          pytest native-tests/test_chimera_boundary.py native-tests/test_hodge_boundary.py --strict-markers --tb=short --cov=scpn_phase_orchestrator --cov-append --cov-report= --cov-fail-under=0
           pytest tests/test_chimera.py::test_local_order_parameter_uses_backend_when_available --strict-markers --tb=short --cov=scpn_phase_orchestrator --cov-append --cov-report= --cov-fail-under=0
           python -m benchmarks.chimera_benchmark --parity-gate --sizes 16 --calls 20 --require-backends rust
           pytest tests/test_kernel_runtime.py tests/test_cli_serve.py tests/test_kernel_deployment.py native-tests/test_sindy_runtime_profiles.py native-tests/test_attention_residuals_profiles.py native-tests/test_basin_bifurcation_profiles.py \
@@ -508,7 +594,7 @@ jobs:
             -m "not slow and not performance and not native_runtime" \
             -k "not performance"
           pytest tests/test_chimera_backends.py tests/test_chimera_real_runtime.py -k rust --strict-markers --tb=short --cov=scpn_phase_orchestrator --cov-append --cov-report= --cov-fail-under=0
-          pytest native-tests/test_chimera_boundary.py --strict-markers --tb=short --cov=scpn_phase_orchestrator --cov-append --cov-report= --cov-fail-under=0
+          pytest native-tests/test_chimera_boundary.py native-tests/test_hodge_boundary.py --strict-markers --tb=short --cov=scpn_phase_orchestrator --cov-append --cov-report= --cov-fail-under=0
           pytest tests/test_chimera.py::test_local_order_parameter_uses_backend_when_available --strict-markers --tb=short --cov=scpn_phase_orchestrator --cov-append --cov-report= --cov-fail-under=0
           python -m benchmarks.chimera_benchmark --parity-gate --sizes 16 --calls 20 --require-backends rust
           pytest tests/test_kernel_runtime.py tests/test_cli_serve.py tests/test_kernel_deployment.py native-tests/test_sindy_runtime_profiles.py native-tests/test_attention_residuals_profiles.py native-tests/test_basin_bifurcation_profiles.py \
@@ -543,7 +629,7 @@ jobs:
             -m "not slow and not performance and not native_runtime" \
             -k "not performance"
           pytest tests/test_chimera_backends.py tests/test_chimera_real_runtime.py -k rust --strict-markers --tb=short --cov=scpn_phase_orchestrator --cov-append --cov-report= --cov-fail-under=0
-          pytest native-tests/test_chimera_boundary.py --strict-markers --tb=short --cov=scpn_phase_orchestrator --cov-append --cov-report= --cov-fail-under=0
+          pytest native-tests/test_chimera_boundary.py native-tests/test_hodge_boundary.py --strict-markers --tb=short --cov=scpn_phase_orchestrator --cov-append --cov-report= --cov-fail-under=0
           pytest tests/test_chimera.py::test_local_order_parameter_uses_backend_when_available --strict-markers --tb=short --cov=scpn_phase_orchestrator --cov-append --cov-report= --cov-fail-under=0
           python -m benchmarks.chimera_benchmark --parity-gate --sizes 16 --calls 20 --require-backends rust
           pytest tests/test_kernel_runtime.py tests/test_cli_serve.py tests/test_kernel_deployment.py native-tests/test_sindy_runtime_profiles.py native-tests/test_attention_residuals_profiles.py native-tests/test_basin_bifurcation_profiles.py \

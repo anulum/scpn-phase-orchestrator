@@ -27,8 +27,12 @@
 //!
 //! Jiang, Lim, Yao & Ye 2011, Math. Program. 127(1):203-244.
 
+use crate::hodge_inputs::validate_hodge_inputs;
 use crate::spectral::symmetric_eigen;
 use std::collections::HashMap;
+
+/// Gradient, curl and harmonic components as flattened antisymmetric matrices.
+pub type HodgeFlows = (Vec<f64>, Vec<f64>, Vec<f64>);
 
 /// Relative eigenvalue cutoff for the symmetric PSD pseudoinverse; mirrors the
 /// Python reference `_PINV_RCOND` so the projections agree.
@@ -77,11 +81,16 @@ fn psd_pinv_apply(mat: &[f64], dim: usize, vec: &[f64]) -> Vec<f64> {
     out
 }
 
-/// Hodge decomposition result: (gradient, curl, harmonic) as row-major
+/// Decompose an admitted simplicial complex into row-major
 /// antisymmetric `N×N` flow matrices.
 ///
 /// `edges` is a flattened `(n_edges, 2)` int list of `i < j` pairs; `tris` is a
 /// flattened `(n_tris, 3)` int list of `i < j < k` triangles whose edges exist.
+/// Untrusted callers should use [`try_hodge_decomposition`].
+///
+/// # Panics
+///
+/// May panic if array cardinalities or simplex indices violate the stated contract.
 #[must_use]
 pub fn hodge_decomposition(
     knm_flat: &[f64],
@@ -91,7 +100,7 @@ pub fn hodge_decomposition(
     n_edges: usize,
     tris: &[i64],
     n_tris: usize,
-) -> (Vec<f64>, Vec<f64>, Vec<f64>) {
+) -> HodgeFlows {
     if n == 0 {
         return (vec![], vec![], vec![]);
     }
@@ -192,6 +201,40 @@ pub fn hodge_decomposition(
     (grad_m, curl_m, harm_m)
 }
 
+/// Validate a simplicial complex before applying the unchanged Hodge projections.
+///
+/// Coupling and phases must be finite, with exactly `n*n` and `n` entries.
+/// Each edge is a unique ordered pair `0 <= i < j < n`; each triangle is a
+/// unique ordered triple `0 <= i < j < k < n` supported by three supplied edges.
+/// Empty networks still require consistent empty arrays and counts.
+///
+/// # Errors
+///
+/// Returns an error for overflowing dimensions, inconsistent cardinality,
+/// nonfinite measurements, invalid simplices or nonfinite computed components.
+pub fn try_hodge_decomposition(
+    knm_flat: &[f64],
+    phases: &[f64],
+    n: usize,
+    edges: &[i64],
+    n_edges: usize,
+    tris: &[i64],
+    n_tris: usize,
+) -> Result<HodgeFlows, String> {
+    validate_hodge_inputs(knm_flat, phases, n, edges, n_edges, tris, n_tris)?;
+    let result = hodge_decomposition(knm_flat, phases, n, edges, n_edges, tris, n_tris);
+    if result
+        .0
+        .iter()
+        .chain(&result.1)
+        .chain(&result.2)
+        .any(|value| !value.is_finite())
+    {
+        return Err("Hodge decomposition produced nonfinite components".into());
+    }
+    Ok(result)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -204,7 +247,8 @@ mod tests {
 
     #[test]
     fn empty_returns_empty() {
-        let (g, c, h) = hodge_decomposition(&[], &[], 0, &[], 0, &[], 0);
+        let (g, c, h) = try_hodge_decomposition(&[], &[], 0, &[], 0, &[], 0)
+            .expect("valid canonical Hodge input");
         assert!(g.is_empty() && c.is_empty() && h.is_empty());
     }
 
@@ -214,7 +258,8 @@ mod tests {
         let knm = vec![0.0, 1.0, 0.5, 1.0, 0.0, 0.8, 0.5, 0.8, 0.0];
         let phases = vec![0.0, PI / 4.0, PI / 2.0];
         let (edges, tris) = triangle_complex();
-        let (g, c, h) = hodge_decomposition(&knm, &phases, n, &edges, 3, &tris, 1);
+        let (g, c, h) = try_hodge_decomposition(&knm, &phases, n, &edges, 3, &tris, 1)
+            .expect("valid canonical Hodge input");
         for i in 0..n {
             for j in 0..n {
                 assert!((g[i * n + j] + g[j * n + i]).abs() < 1e-12);
@@ -235,7 +280,8 @@ mod tests {
         let knm = vec![0.0, 1.0, 1.0, 1.0, 0.0, 1.0, 1.0, 1.0, 0.0];
         let phases = vec![0.0, 1.0, 2.3];
         let (edges, tris) = triangle_complex();
-        let (_, _, h) = hodge_decomposition(&knm, &phases, n, &edges, 3, &tris, 1);
+        let (_, _, h) = try_hodge_decomposition(&knm, &phases, n, &edges, 3, &tris, 1)
+            .expect("valid canonical Hodge input");
         for value in &h {
             assert!(value.abs() < 1e-9, "harmonic {value} should vanish");
         }
@@ -252,7 +298,8 @@ mod tests {
         }
         let phases = vec![0.0, 0.7, 1.9, 2.8];
         let edges = vec![0, 1, 0, 3, 1, 2, 2, 3];
-        let (g, c, h) = hodge_decomposition(&knm, &phases, n, &edges, 4, &[], 0);
+        let (g, c, h) = try_hodge_decomposition(&knm, &phases, n, &edges, 4, &[], 0)
+            .expect("valid canonical Hodge input");
         let curl_max = c.iter().fold(0.0_f64, |m, v| m.max(v.abs()));
         let harm_max = h.iter().fold(0.0_f64, |m, v| m.max(v.abs()));
         assert!(
@@ -281,7 +328,8 @@ mod tests {
         }
         let phases = vec![0.1, 0.9, 1.7];
         let edges = vec![0, 1, 1, 2];
-        let (g, c, h) = hodge_decomposition(&knm, &phases, n, &edges, 2, &[], 0);
+        let (g, c, h) = try_hodge_decomposition(&knm, &phases, n, &edges, 2, &[], 0)
+            .expect("valid canonical Hodge input");
         for i in 0..n {
             for j in 0..n {
                 assert!(c[i * n + j].abs() < 1e-12);
@@ -290,6 +338,73 @@ mod tests {
                 let flow = k_sym * (phases[j] - phases[i]).sin();
                 assert!((g[i * n + j] - flow).abs() < 1e-9);
             }
+        }
+    }
+
+    #[test]
+    fn empty_cardinality_and_dimension_overflow_are_refused() {
+        let empty_requests: [(&[f64], &[f64], &[i64], &[i64]); 4] = [
+            (&[1.0], &[], &[], &[]),
+            (&[], &[1.0], &[], &[]),
+            (&[], &[], &[0, 1], &[]),
+            (&[], &[], &[], &[0, 1, 2]),
+        ];
+        for (k, p, edges, triangles) in empty_requests {
+            assert!(try_hodge_decomposition(k, p, 0, edges, 0, triangles, 0).is_err());
+        }
+        for (n, n_edges, n_tris) in [(usize::MAX, 0, 0), (0, usize::MAX, 0), (0, 0, usize::MAX)] {
+            assert!(try_hodge_decomposition(&[], &[], n, &[], n_edges, &[], n_tris).is_err());
+        }
+    }
+
+    #[test]
+    fn invalid_simplices_are_refused_before_projection() {
+        let k = [0.0, 1.0, 1.0, 1.0, 0.0, 1.0, 1.0, 1.0, 0.0];
+        let phases = [0.0, 1.0, 2.3];
+        let bad_edges: [(&[i64], usize); 5] = [
+            (&[-1, 1], 1),
+            (&[0, 3], 1),
+            (&[1, 0], 1),
+            (&[0, 0], 1),
+            (&[0, 1, 0, 1], 2),
+        ];
+        for (edges, count) in bad_edges {
+            assert!(try_hodge_decomposition(&k, &phases, 3, edges, count, &[], 0).is_err());
+        }
+        let (edges, _) = triangle_complex();
+        let bad_faces: [(&[i64], usize); 5] = [
+            (&[-1, 1, 2], 1),
+            (&[1, 0, 2], 1),
+            (&[0, 2, 1], 1),
+            (&[0, 1, 3], 1),
+            (&[0, 1, 2, 0, 1, 2], 2),
+        ];
+        for (faces, count) in bad_faces {
+            assert!(try_hodge_decomposition(&k, &phases, 3, &edges, 3, faces, count).is_err());
+        }
+        assert!(try_hodge_decomposition(&k, &phases, 3, &[0, 1, 1, 2], 2, &[0, 1, 2], 1).is_err());
+    }
+
+    #[test]
+    fn nonfinite_measurements_and_computed_flows_are_refused() {
+        let phases = [0.0, 1.0];
+        let k = [0.0, 1.0, 1.0, 0.0];
+        let mut bad_k = k;
+        bad_k[1] = f64::NAN;
+        assert!(try_hodge_decomposition(&bad_k, &phases, 2, &[0, 1], 1, &[], 0).is_err());
+        assert!(try_hodge_decomposition(&k, &[0.0, f64::INFINITY], 2, &[0, 1], 1, &[], 0).is_err());
+        let overflowing_current = [0.0, f64::MAX, f64::MAX, 0.0];
+        assert!(
+            try_hodge_decomposition(&overflowing_current, &phases, 2, &[0, 1], 1, &[], 0).is_err()
+        );
+    }
+
+    #[test]
+    fn edgeless_admitted_network_has_zero_projections() {
+        let result = try_hodge_decomposition(&[0.0; 4], &[0.1, 0.9], 2, &[], 0, &[], 0)
+            .expect("valid edgeless network");
+        for component in [&result.0, &result.1, &result.2] {
+            assert_eq!(component, &[0.0; 4]);
         }
     }
 }

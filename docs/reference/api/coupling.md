@@ -454,12 +454,33 @@ Malformed backend outputs raise immediately; default-selection fallback is
 reserved for validated numerical parity mismatches. Empty Hodge systems return empty components
 without requiring optional runtimes, matching the public Python special case.
 
+Direct simplex arrays describe unique ascending pairs `0 <= i < j < n` and
+unique ascending triples `0 <= i < j < k < n`. Every triangle must reference
+three supplied edges. Reversed, repeated and unsupported simplices are refused
+before a solver runs. The higher-level `triangles` argument remains canonicalised
+by the public Python API before these arrays reach a backend.
+
+The exposed `spo_kernel.hodge_decomposition_rust` boundary accepts contiguous
+`float64` measurement vectors, contiguous `int64` simplex vectors and plain
+non-boolean integer counts. It calls Rust's checked
+`hodge::try_hodge_decomposition`, including cardinality checks for `n=0` and
+refusal of non-finite computed components. Native array-type mismatches raise
+`TypeError`, counts outside the unsigned integer range raise `OverflowError`,
+and invalid dimensions, values or topology raise `ValueError`. The legacy Rust
+`hodge::hodge_decomposition` function remains a kernel for already admitted
+complexes; callers accepting untrusted data should use the checked entry point.
+
 The parity benchmark calls the public selector for each runtime and checks
 reconstruction, orthogonality, phase-shift invariance, scaling and the analytic
 harmonic circulation of a triangle-free cycle. Each measured owner also checks
 valid empty-network results and refusal of inconsistent coupling cardinality
 and nonempty triangle sets on an empty network. These boundary checks require
-no native calculation; the nonempty comparison proves runtime execution. Require
+no native calculation; the nonempty comparison proves runtime execution. Four
+additional admission flags require the actual direct Rust/Go/Julia/Mojo entries
+to refuse malformed empty coupling, boolean counts, duplicate edges and missing
+triangle support. Python checks its public flat-input validator, identified in
+the report's `direct_input_surface`. An unchecked direct boundary fails admission
+even when its valid numerical output agrees. Require
 installed owners with:
 
 ```bash
