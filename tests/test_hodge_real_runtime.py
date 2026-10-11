@@ -187,3 +187,20 @@ print(json.dumps(dict(refused=refused,
     assert [r["backend"] for r in backend_records if r["status"] == "available"] == [
         "python"
     ]
+
+
+@pytest.mark.parametrize("backend", [None, "python", "rust", "go", "julia", "mojo"])
+def test_public_hodge_refuses_nonfinite_computed_reference(
+    backend: str | None,
+) -> None:
+    """Floating-point overflow cannot publish nonfinite reference components."""
+    largest = np.finfo(np.float64).max
+    coupling = np.array([[0.0, largest], [largest, 0.0]])
+    phases = np.array([0.0, np.pi / 2.0])
+    assert np.isfinite(coupling).all()
+    assert np.isfinite(phases).all()
+    with (
+        np.errstate(over="ignore", invalid="ignore"),
+        pytest.raises(ValueError, match="finite"),
+    ):
+        hodge_decomposition(coupling, phases, backend=backend)
