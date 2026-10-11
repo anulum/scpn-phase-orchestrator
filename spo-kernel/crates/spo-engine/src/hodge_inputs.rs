@@ -45,8 +45,7 @@ pub(crate) fn validate_hodge_inputs(
         return Err("Hodge measurements must contain only finite values".into());
     }
     let mut edge_set = HashSet::with_capacity(n_edges);
-    for edge in edges.chunks_exact(2) {
-        let (i, j) = (edge[0], edge[1]);
+    for &[i, j] in edges.as_chunks::<2>().0 {
         if i < 0 || i >= j || j as u64 >= n as u64 {
             return Err("Hodge edges must satisfy 0 <= i < j < n".into());
         }
@@ -55,8 +54,7 @@ pub(crate) fn validate_hodge_inputs(
         }
     }
     let mut triangle_set = HashSet::with_capacity(n_tris);
-    for triangle in tris.chunks_exact(3) {
-        let (i, j, k) = (triangle[0], triangle[1], triangle[2]);
+    for &[i, j, k] in tris.as_chunks::<3>().0 {
         if i < 0 || i >= j || j >= k || k as u64 >= n as u64 {
             return Err("Hodge triangles must satisfy 0 <= i < j < k < n".into());
         }
