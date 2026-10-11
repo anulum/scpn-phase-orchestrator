@@ -424,7 +424,7 @@ jobs:
         run: |
           mkdir -p ../.ci-hodge/evidence
           cargo clippy --locked -p spo-ffi --lib --no-default-features -- -D warnings
-          cargo llvm-cov --release --branch --no-report -p spo-engine --lib hodge::tests
+          cargo llvm-cov --release --branch --no-report -p spo-engine --lib -- hodge::tests
           eval "$(cargo llvm-cov show-env --sh)"
           export RUSTFLAGS="$RUSTFLAGS -Z coverage-options=branch"
           maturin build --release --locked -m crates/spo-ffi/Cargo.toml --out ../.ci-hodge/wheels
