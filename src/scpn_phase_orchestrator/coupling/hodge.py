@@ -551,19 +551,6 @@ def _decompose(
     )
 
 
-def _python_decomposition(
-    k: FloatArray,
-    phases: FloatArray,
-    triangles: Sequence[Sequence[int]] | None = None,
-) -> HodgeTuple:
-    """Return the gradient/curl/harmonic flow matrices (NumPy reference)."""
-    n = int(phases.size)
-    k_sym = 0.5 * (k + k.T)
-    edges, tri = _simplicial_complex(k_sym, n, triangles)
-    gradient, curl, harmonic, _, _, _ = _decompose(k, phases, edges, tri)
-    return gradient, curl, harmonic
-
-
 def _normalise_backend_output(
     output: object,
     *,
