@@ -17,6 +17,8 @@ runtime is loaded.
 
 from __future__ import annotations
 
+import cProfile
+import subprocess
 import sys
 import types
 from collections.abc import Callable
@@ -26,6 +28,7 @@ import numpy as np
 import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
+from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.coupling import (
     _hodge_validation as hodge_validation,
@@ -33,6 +36,7 @@ from scpn_phase_orchestrator.coupling import (
 from scpn_phase_orchestrator.coupling import hodge as h_mod
 from scpn_phase_orchestrator.coupling.hodge import (
     AVAILABLE_BACKENDS,
+    HodgeResult,
     hodge_decomposition,
 )
 from scpn_phase_orchestrator.experimental.accelerators.coupling import (
@@ -51,8 +55,14 @@ from scpn_phase_orchestrator.experimental.accelerators.coupling._hodge_mojo impo
 )
 from tests.typing_contracts import assert_precise_ndarray_hint
 
+FloatArray = NDArray[np.float64]
+IntArray = NDArray[np.int64]
+
 TWO_PI = 2.0 * np.pi
-HodgeDirectBackend = Callable[..., tuple[np.ndarray, np.ndarray, np.ndarray]]
+HodgeDirectBackend = Callable[
+    [object, object, object, object, object, object, object],
+    tuple[FloatArray, FloatArray, FloatArray],
+]
 
 # Complete graph K3: edges (0,1),(0,2),(1,2) and the single 2-simplex.
 _K3_EDGES = np.array([0, 1, 0, 2, 1, 2], dtype=np.int64)
@@ -63,25 +73,12 @@ def test__hodge_validation_helper_is_directly_linked_to_backend_tests() -> None:
     assert callable(hodge_validation.validate_hodge_backend_inputs)
 
 
-def _force(backend: str) -> str:
-    prev = h_mod.ACTIVE_BACKEND
-    h_mod.ACTIVE_BACKEND = backend
-    return prev
+def _reference(knm: FloatArray, phases: FloatArray) -> HodgeResult:
+    """Compute the real public NumPy comparison without global mutation."""
+    return hodge_decomposition(knm, phases, backend="python")
 
 
-def _reset(prev: str) -> None:
-    h_mod.ACTIVE_BACKEND = prev
-
-
-def _reference(knm, phases):
-    prev = _force("python")
-    try:
-        return hodge_decomposition(knm, phases)
-    finally:
-        _reset(prev)
-
-
-def _problem(seed: int, n: int = 16):
+def _problem(seed: int, n: int = 16) -> tuple[FloatArray, FloatArray]:
     rng = np.random.default_rng(seed)
     k = rng.uniform(-1, 1, (n, n))
     np.fill_diagonal(k, 0.0)
@@ -89,7 +86,7 @@ def _problem(seed: int, n: int = 16):
     return k, phases
 
 
-def _zeros_int() -> np.ndarray:
+def _zeros_int() -> IntArray:
     return np.zeros(0, dtype=np.int64)
 
 
@@ -139,8 +136,8 @@ class TestDirectBackendBoundaryContracts:
     def test_validation_precedes_runtime_load(
         self,
         backend: HodgeDirectBackend,
-        knm_flat: np.ndarray,
-        phases: np.ndarray,
+        knm_flat: object,
+        phases: object,
         n: object,
         match: str,
     ) -> None:
@@ -180,9 +177,9 @@ class TestDirectBackendBoundaryContracts:
     def test_simplex_validation_rejects_malformed_complex(
         self,
         backend: HodgeDirectBackend,
-        edges: np.ndarray,
+        edges: object,
         n_edges: int,
-        tris: np.ndarray,
+        tris: object,
         n_tris: int,
         match: str,
     ) -> None:
@@ -284,7 +281,7 @@ class TestDirectBackendBoundaryContracts:
         monkeypatch: pytest.MonkeyPatch,
         backend: HodgeDirectBackend,
         patch_target: object,
-        args: tuple[object, ...],
+        args: tuple[object, object, object, object, object, object, object],
     ) -> None:
         """Stringified numeric direct inputs fail before loading any runtime."""
 
@@ -350,7 +347,7 @@ class TestDirectMojoBoundaryContracts:
         phases = np.array([0.0, 1.0, 2.3], dtype=np.float64)
         monkeypatch.setattr(_hodge_mojo, "_ensure_exe", lambda: "hodge")
         monkeypatch.setattr(
-            _hodge_mojo.subprocess,
+            subprocess,
             "run",
             lambda *_args, **_kwargs: _mojo_proc(stdout),
         )
@@ -361,12 +358,8 @@ class TestDirectMojoBoundaryContracts:
             )
 
 
+@pytest.mark.native_runtime
 class TestRustParity:
-    @pytest.fixture(autouse=True)
-    def _skip_if_absent(self) -> None:
-        if "rust" not in AVAILABLE_BACKENDS:
-            pytest.skip("Rust backend not built")
-
     @given(
         # Keep n <= 16: the dense QR eigensolver in the Rust backend is
         # bounded but can exceed the 60 s test budget for n > 16 under load.
@@ -381,42 +374,26 @@ class TestRustParity:
     def test_matches_python(self, n: int, seed: int) -> None:
         knm, phases = _problem(seed, n)
         ref = _reference(knm, phases)
-        prev = _force("rust")
-        try:
-            got = hodge_decomposition(knm, phases)
-        finally:
-            _reset(prev)
+        got = hodge_decomposition(knm, phases, backend="rust")
         np.testing.assert_allclose(got.gradient, ref.gradient, atol=1e-10)
         np.testing.assert_allclose(got.curl, ref.curl, atol=1e-10)
         np.testing.assert_allclose(got.harmonic, ref.harmonic, atol=1e-10)
 
 
+@pytest.mark.native_runtime
 class TestJuliaParity:
-    @pytest.fixture(autouse=True)
-    def _skip_if_absent(self) -> None:
-        if "julia" not in AVAILABLE_BACKENDS:
-            pytest.skip("Julia backend not available")
-
     @pytest.mark.parametrize("seed", [0, 42])
     def test_matches_python(self, seed: int) -> None:
         knm, phases = _problem(seed)
         ref = _reference(knm, phases)
-        prev = _force("julia")
-        try:
-            got = hodge_decomposition(knm, phases)
-        finally:
-            _reset(prev)
+        got = hodge_decomposition(knm, phases, backend="julia")
         np.testing.assert_allclose(got.gradient, ref.gradient, atol=1e-10)
         np.testing.assert_allclose(got.curl, ref.curl, atol=1e-10)
         np.testing.assert_allclose(got.harmonic, ref.harmonic, atol=1e-10)
 
 
+@pytest.mark.native_runtime
 class TestGoParity:
-    @pytest.fixture(autouse=True)
-    def _skip_if_absent(self) -> None:
-        if "go" not in AVAILABLE_BACKENDS:
-            pytest.skip("Go backend not built")
-
     @given(
         # Keep n <= 16: the Go backend's dense eigensolver does not reliably
         # finish inside the 60 s test budget for n > 16.
@@ -431,41 +408,25 @@ class TestGoParity:
     def test_matches_python(self, n: int, seed: int) -> None:
         knm, phases = _problem(seed, n)
         ref = _reference(knm, phases)
-        prev = _force("go")
-        try:
-            got = hodge_decomposition(knm, phases)
-        finally:
-            _reset(prev)
+        got = hodge_decomposition(knm, phases, backend="go")
         np.testing.assert_allclose(got.gradient, ref.gradient, atol=1e-10)
         np.testing.assert_allclose(got.curl, ref.curl, atol=1e-10)
         np.testing.assert_allclose(got.harmonic, ref.harmonic, atol=1e-10)
 
 
+@pytest.mark.native_runtime
 class TestMojoParity:
-    @pytest.fixture(autouse=True)
-    def _skip_if_absent(self) -> None:
-        if "mojo" not in AVAILABLE_BACKENDS:
-            pytest.skip("Mojo backend not built")
-
     @pytest.mark.parametrize("seed", [0, 77])
     def test_matches_python(self, seed: int) -> None:
         knm, phases = _problem(seed)
         ref = _reference(knm, phases)
-        prev = _force("mojo")
-        try:
-            got = hodge_decomposition(knm, phases)
-        finally:
-            _reset(prev)
+        got = hodge_decomposition(knm, phases, backend="mojo")
         np.testing.assert_allclose(got.gradient, ref.gradient, atol=1e-8)
         np.testing.assert_allclose(got.curl, ref.curl, atol=1e-8)
         np.testing.assert_allclose(got.harmonic, ref.harmonic, atol=1e-8)
 
 
 class TestCrossBackendConsistency:
-    @pytest.mark.skipif(
-        len(AVAILABLE_BACKENDS) < 2,
-        reason="Only Python fallback available",
-    )
     def test_all_backends_agree(self) -> None:
         knm, phases = _problem(2026, n=12)
         ref = _reference(knm, phases)
@@ -477,11 +438,7 @@ class TestCrossBackendConsistency:
             "python": 0.0,
         }
         for backend in AVAILABLE_BACKENDS:
-            prev = _force(backend)
-            try:
-                got = hodge_decomposition(knm, phases)
-            finally:
-                _reset(prev)
+            got = hodge_decomposition(knm, phases, backend=backend)
             atol = tolerances[backend]
             np.testing.assert_allclose(got.gradient, ref.gradient, atol=atol)
             np.testing.assert_allclose(got.curl, ref.curl, atol=atol)
@@ -498,7 +455,9 @@ class TestBackendTypingContracts:
             (hodge_decomposition_mojo, "mojo"),
         ],
     )
-    def test_backend_annotations_use_float64_ndarray(self, fn, label: str) -> None:
+    def test_backend_annotations_use_float64_ndarray(
+        self, fn: HodgeDirectBackend, label: str
+    ) -> None:
         hints = get_type_hints(fn)
         for name in ("knm_flat", "phases", "return"):
             text = str(hints[name])
@@ -506,44 +465,33 @@ class TestBackendTypingContracts:
             assert "numpy.float64" in text, f"{label}:{name} missing float64 annotation"
 
 
-def _matrix_backend(*args: object) -> tuple:
-    n = int(args[2])  # type: ignore[arg-type]
-    return (
-        np.full((n, n), 1.0, dtype=np.float64),
-        np.full((n, n), 2.0, dtype=np.float64),
-        np.full((n, n), 3.0, dtype=np.float64),
-    )
-
-
 class TestBackendLoaderDispatch:
-    def test_rust_loader_wraps_spo_kernel_flattened_arrays(self, monkeypatch) -> None:
-        calls: list[tuple] = []
-
-        def fake_rust(knm_flat, phases, n, edges, n_edges, tris, n_tris):
-            calls.append((knm_flat, phases, n, n_edges, n_tris))
-            flat = np.array([0.0, 1.0, -1.0, 0.0], dtype=np.float64)
-            return (flat, flat * 2.0, flat * 3.0)
-
-        fake_module = types.ModuleType("spo_kernel")
-        fake_module.hodge_decomposition_rust = fake_rust
-        monkeypatch.setitem(sys.modules, "spo_kernel", fake_module)
-
-        backend = h_mod._load_rust_fn()
-        knm = np.array([[0.0, 0.5], [-0.25, 0.0]], dtype=np.float64)
-        phases = np.array([0.1, 0.4], dtype=np.float64)
-
-        gradient, curl, harmonic = backend(
-            knm, phases, 2, _K3_EDGES[:2], 1, _zeros_int(), 0
+    @pytest.mark.native_runtime
+    def test_rust_loader_wraps_spo_kernel_flattened_arrays(self) -> None:
+        """The native kernel receives noncontiguous public arrays correctly."""
+        knm = np.array([[0.0, -0.25], [0.5, 0.0]], dtype=np.float64).T
+        phases = np.array([0.1, 9.0, 0.4, 9.0], dtype=np.float64)[::2]
+        measurement = cProfile.Profile()
+        measurement.enable()
+        try:
+            result = hodge_decomposition(knm, phases, backend="rust")
+        finally:
+            measurement.disable()
+        assert (
+            sum(
+                entry.callcount
+                for entry in measurement.getstats()
+                if isinstance(entry.code, str)
+                and "hodge_decomposition_rust>" in entry.code
+            )
+            == 1
         )
-
-        assert gradient.shape == (2, 2)
-        np.testing.assert_array_equal(
-            gradient,
-            np.array([[0.0, 1.0], [-1.0, 0.0]], dtype=np.float64),
+        flow = 0.125 * np.sin(0.3)
+        np.testing.assert_allclose(
+            result.gradient, [[0.0, flow], [-flow, 0.0]], atol=1e-12
         )
-        assert calls[0][2] == 2
-        assert calls[0][0].flags.c_contiguous
-        np.testing.assert_array_equal(calls[0][0], knm.ravel())
+        np.testing.assert_allclose(result.curl, 0.0, atol=1e-12)
+        np.testing.assert_allclose(result.harmonic, 0.0, atol=1e-12)
 
     def test_rust_loader_rejects_boolean_output_alias(
         self,
@@ -555,7 +503,9 @@ class TestBackendLoaderDispatch:
             return bad_gradient, zero, zero.copy()
 
         fake_module = types.ModuleType("spo_kernel")
-        fake_module.hodge_decomposition_rust = fake_rust
+        monkeypatch.setattr(
+            fake_module, "hodge_decomposition_rust", fake_rust, raising=False
+        )
         monkeypatch.setitem(sys.modules, "spo_kernel", fake_module)
 
         backend = h_mod._load_rust_fn()
@@ -571,102 +521,51 @@ class TestBackendLoaderDispatch:
                 0,
             )
 
-    def test_julia_loader_requires_juliacall_then_returns_backend(
-        self,
-        monkeypatch,
-    ) -> None:
-        sentinel = object()
-        fake_juliacall = types.ModuleType("juliacall")
-        fake_juliacall.Main = object()
-        fake_backend = types.ModuleType(
-            "scpn_phase_orchestrator.experimental.accelerators.coupling._hodge_julia"
+    @pytest.mark.native_runtime
+    def test_julia_loader_requires_juliacall_then_returns_backend(self) -> None:
+        """The public Julia owner resolves and decomposes a nonzero edge."""
+        result = hodge_decomposition(
+            np.array([[0.0, 0.5], [-0.25, 0.0]]),
+            np.array([0.1, 0.4]),
+            backend="julia",
         )
-        fake_backend.hodge_decomposition_julia = sentinel
-        monkeypatch.setitem(sys.modules, "juliacall", fake_juliacall)
-        monkeypatch.setitem(
-            sys.modules,
-            "scpn_phase_orchestrator.experimental.accelerators.coupling._hodge_julia",
-            fake_backend,
+        assert result.gradient[0, 1] == pytest.approx(0.125 * np.sin(0.3), abs=1e-12)
+        np.testing.assert_allclose(result.curl, 0.0, atol=1e-12)
+        np.testing.assert_allclose(result.harmonic, 0.0, atol=1e-12)
+
+    @pytest.mark.native_runtime
+    def test_mojo_loader_runs_preflight_and_returns_backend(self) -> None:
+        """The compiled Mojo owner executes through the public selector."""
+        result = hodge_decomposition(
+            np.array([[0.0, 0.5], [-0.25, 0.0]]),
+            np.array([0.1, 0.4]),
+            backend="mojo",
         )
+        assert result.gradient[0, 1] == pytest.approx(0.125 * np.sin(0.3), abs=1e-10)
+        np.testing.assert_allclose(result.curl, 0.0, atol=1e-10)
+        np.testing.assert_allclose(result.harmonic, 0.0, atol=1e-10)
 
-        assert h_mod._load_julia_fn() is sentinel
-
-    def test_mojo_loader_runs_preflight_and_returns_backend(
-        self,
-        monkeypatch,
-    ) -> None:
-        events: list[str] = []
-
-        def fake_ensure_exe() -> None:
-            events.append("ensure")
-
-        def fake_backend(*args: object) -> tuple:
-            events.append("called")
-            return _matrix_backend(*args)
-
-        fake_module = types.ModuleType(
-            "scpn_phase_orchestrator.experimental.accelerators.coupling._hodge_mojo"
+    @pytest.mark.native_runtime
+    def test_go_loader_invokes_shared_object_loader(self) -> None:
+        """The actual Go shared object executes through the public selector."""
+        result = hodge_decomposition(
+            np.array([[0.0, 0.5], [-0.25, 0.0]]),
+            np.array([0.1, 0.4]),
+            backend="go",
         )
-        fake_module._ensure_exe = fake_ensure_exe
-        fake_module.hodge_decomposition_mojo = fake_backend
-        monkeypatch.setitem(
-            sys.modules,
-            "scpn_phase_orchestrator.experimental.accelerators.coupling._hodge_mojo",
-            fake_module,
-        )
-
-        backend = h_mod._load_mojo_fn()
-        knm = np.array([[0.0, 0.5], [-0.25, 0.0]], dtype=np.float64)
-        phases = np.array([0.1, 0.4], dtype=np.float64)
-        gradient, curl, harmonic = backend(
-            knm, phases, 2, _K3_EDGES[:2], 1, _zeros_int(), 0
-        )
-
-        np.testing.assert_array_equal(gradient, np.full((2, 2), 1.0))
-        np.testing.assert_array_equal(curl, np.full((2, 2), 2.0))
-        np.testing.assert_array_equal(harmonic, np.full((2, 2), 3.0))
-        assert events == ["ensure", "called"]
-
-    def test_go_loader_invokes_shared_object_loader(self, monkeypatch) -> None:
-        events: list[str] = []
-
-        def fake_load_lib() -> None:
-            events.append("load")
-
-        def fake_backend(*args: object) -> tuple:
-            events.append("called")
-            return _matrix_backend(*args)
-
-        fake_module = types.ModuleType(
-            "scpn_phase_orchestrator.experimental.accelerators.coupling._hodge_go"
-        )
-        fake_module._load_lib = fake_load_lib
-        fake_module.hodge_decomposition_go = fake_backend
-        monkeypatch.setitem(
-            sys.modules,
-            "scpn_phase_orchestrator.experimental.accelerators.coupling._hodge_go",
-            fake_module,
-        )
-
-        backend = h_mod._load_go_fn()
-        knm = np.array([[0.0, 0.5], [-0.25, 0.0]], dtype=np.float64)
-        phases = np.array([0.1, 0.4], dtype=np.float64)
-        gradient, curl, harmonic = backend(
-            knm, phases, 2, _K3_EDGES[:2], 1, _zeros_int(), 0
-        )
-
-        assert events == ["load", "called"]
-        np.testing.assert_array_equal(gradient, np.full((2, 2), 1.0))
-        np.testing.assert_array_equal(curl, np.full((2, 2), 2.0))
-        np.testing.assert_array_equal(harmonic, np.full((2, 2), 3.0))
+        assert result.gradient[0, 1] == pytest.approx(0.125 * np.sin(0.3), abs=1e-12)
+        np.testing.assert_allclose(result.curl, 0.0, atol=1e-12)
+        np.testing.assert_allclose(result.harmonic, 0.0, atol=1e-12)
 
 
 class TestBackendResolution:
+    @pytest.mark.native_runtime
     def test_resolve_backends_chooses_first_available_backend(
         self,
-        monkeypatch,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         calls: list[str] = []
+        real_go_loader = h_mod._load_go_fn
 
         def _fail() -> h_mod.HodgeBackend:
             calls.append("fail")
@@ -674,7 +573,7 @@ class TestBackendResolution:
 
         def _go() -> h_mod.HodgeBackend:
             calls.append("go")
-            return _matrix_backend
+            return real_go_loader()
 
         monkeypatch.setitem(h_mod._LOADERS, "rust", _fail)
         monkeypatch.setitem(h_mod._LOADERS, "mojo", _fail)
@@ -685,10 +584,17 @@ class TestBackendResolution:
         assert active == "go"
         assert available == ["go", "python"]
         assert calls == ["fail", "fail", "fail", "go"]
+        monkeypatch.setattr(h_mod, "ACTIVE_BACKEND", active)
+        monkeypatch.setattr(h_mod, "AVAILABLE_BACKENDS", available)
+        monkeypatch.setattr(h_mod, "_BACKEND_CACHE", {})
+        result = hodge_decomposition(
+            np.array([[0.0, 1.0], [1.0, 0.0]]), np.array([0.0, 0.4])
+        )
+        assert result.gradient[0, 1] == pytest.approx(np.sin(0.4), abs=1e-12)
 
     def test_resolve_backends_falls_back_to_python_when_all_backends_fail(
         self,
-        monkeypatch,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         calls: list[str] = []
 
@@ -706,3 +612,10 @@ class TestBackendResolution:
         assert active == "python"
         assert available == ["python"]
         assert calls == ["fail", "fail", "fail", "fail"]
+        monkeypatch.setattr(h_mod, "ACTIVE_BACKEND", active)
+        monkeypatch.setattr(h_mod, "AVAILABLE_BACKENDS", available)
+        monkeypatch.setattr(h_mod, "_BACKEND_CACHE", {})
+        result = hodge_decomposition(
+            np.array([[0.0, 1.0], [1.0, 0.0]]), np.array([0.0, 0.4])
+        )
+        assert result.gradient[0, 1] == pytest.approx(np.sin(0.4), abs=1e-12)

@@ -59,6 +59,13 @@ jobs:
           --deselect=tests/test_chimera_backends.py::TestRustParity
           --deselect=tests/test_chimera_backends.py::TestGoParity
           --deselect=tests/test_chimera_backends.py::TestMojoParity
+          --deselect=tests/test_hodge_backends.py::TestRustParity
+          --deselect=tests/test_hodge_backends.py::TestGoParity
+          --deselect=tests/test_hodge_backends.py::TestMojoParity
+          --deselect=tests/test_hodge_backends.py::TestBackendLoaderDispatch::test_rust_loader_wraps_spo_kernel_flattened_arrays
+          --deselect=tests/test_hodge_backends.py::TestBackendLoaderDispatch::test_go_loader_invokes_shared_object_loader
+          --deselect=tests/test_hodge_backends.py::TestBackendLoaderDispatch::test_mojo_loader_runs_preflight_and_returns_backend
+          --deselect=tests/test_hodge_backends.py::TestBackendResolution::test_resolve_backends_chooses_first_available_backend
           --deselect=tests/test_chimera_dispatch_contracts.py::test_resolve_backends_keeps_python_when_optional_loaders_fail
           --deselect=tests/test_ssgf_ethical_cost_inputs.py::test_backends_agree_on_valid_inputs
       - name: Execute Julia measurement ingress contracts
@@ -120,6 +127,19 @@ jobs:
           python -m pytest tests/test_chimera_backends.py tests/test_chimera_real_runtime.py -k julia --strict-markers --tb=short --cov=scpn_phase_orchestrator --cov-append --cov-report= --cov-fail-under=0
           python -c "from juliacall import Main; Main.include('julia/test_chimera.jl')"
           python -m benchmarks.chimera_benchmark --parity-gate --sizes 16 --calls 20 --require-backends julia
+      - name: Qualify required Julia public Hodge runtime
+        env:
+          COVERAGE_FILE: .coverage.julia
+        run: |
+          python -m pytest tests/test_hodge_backends.py tests/test_hodge_real_runtime.py tests/test_coupling_hodge.py -k "julia or JuliaParity" --strict-markers --tb=short --cov=scpn_phase_orchestrator --cov-append --cov-report= --cov-fail-under=0
+          mkdir -p build/hodge
+          python -m benchmarks.hodge_benchmark --parity-gate --sizes 8 --calls 3 --require-backends julia > build/hodge/julia.json
+      - name: Upload Julia Hodge comparison
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: hodge-comparison-julia
+          path: build/hodge/julia.json
+          if-no-files-found: error
       - name: Upload Julia bridge coverage
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
@@ -197,6 +217,19 @@ jobs:
           go vet go/chimera.go go/chimera_test.go
           python -m pytest tests/test_chimera_backends.py tests/test_chimera_real_runtime.py -k go --strict-markers --tb=short --cov=scpn_phase_orchestrator --cov-append --cov-report= --cov-fail-under=0
           python -m benchmarks.chimera_benchmark --parity-gate --sizes 16 --calls 20 --require-backends go
+      - name: Qualify required Go public Hodge runtime
+        env:
+          COVERAGE_FILE: .coverage.go
+        run: |
+          python -m pytest tests/test_hodge_backends.py tests/test_hodge_real_runtime.py tests/test_coupling_hodge.py -k "go or GoParity or first_available" --strict-markers --tb=short --cov=scpn_phase_orchestrator --cov-append --cov-report= --cov-fail-under=0
+          mkdir -p build/hodge
+          python -m benchmarks.hodge_benchmark --parity-gate --sizes 8 --calls 3 --require-backends go > build/hodge/go.json
+      - name: Upload Go Hodge comparison
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: hodge-comparison-go
+          path: build/hodge/go.json
+          if-no-files-found: error
       - name: Upload Go measurement coverage
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
@@ -272,6 +305,19 @@ jobs:
         run: |
           .venv/bin/python -m pytest tests/test_chimera_backends.py tests/test_chimera_real_runtime.py -k mojo --strict-markers --tb=short --cov=scpn_phase_orchestrator --cov-append --cov-report= --cov-fail-under=0
           .venv/bin/python -m benchmarks.chimera_benchmark --parity-gate --sizes 16 --calls 20 --require-backends mojo
+      - name: Qualify required Mojo public Hodge runtime
+        env:
+          COVERAGE_FILE: .coverage.mojo
+        run: |
+          .venv/bin/python -m pytest tests/test_hodge_backends.py tests/test_hodge_real_runtime.py tests/test_coupling_hodge.py -k "mojo or MojoParity" --strict-markers --tb=short --cov=scpn_phase_orchestrator --cov-append --cov-report= --cov-fail-under=0
+          mkdir -p build/hodge
+          .venv/bin/python -m benchmarks.hodge_benchmark --parity-gate --sizes 8 --calls 3 --require-backends mojo > build/hodge/mojo.json
+      - name: Upload Mojo Hodge comparison
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: hodge-comparison-mojo
+          path: build/hodge/mojo.json
+          if-no-files-found: error
       - name: Upload Mojo measurement coverage
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:

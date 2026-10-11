@@ -6,6 +6,8 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Combinatorial Hodge decomposition benchmark gate
 
+"""Compare actual public Hodge runtimes and their topological invariants."""
+
 from __future__ import annotations
 
 import argparse
@@ -13,16 +15,13 @@ import hashlib
 import json
 import time
 from collections.abc import Sequence
-from typing import Any
 
 import numpy as np
 from numpy.typing import NDArray
 
-from scpn_phase_orchestrator.coupling import hodge as hodge_module
 from scpn_phase_orchestrator.coupling.hodge import hodge_decomposition
 
 FloatArray = NDArray[np.float64]
-IntArray = NDArray[np.int64]
 HodgeTuple = tuple[FloatArray, FloatArray, FloatArray]
 
 BACKEND_ORDER = ("rust", "mojo", "julia", "go", "python")
@@ -57,13 +56,6 @@ def _problem(n: int, seed: int) -> tuple[FloatArray, FloatArray]:
     np.fill_diagonal(structured, 0.0)
     phases = rng.uniform(-np.pi, np.pi, size=n)
     return structured.astype(np.float64), phases.astype(np.float64)
-
-
-def _complex(knm: FloatArray, phases: FloatArray) -> tuple[IntArray, IntArray]:
-    k_sym = 0.5 * (knm + knm.T)
-    return hodge_module._simplicial_complex(  # noqa: SLF001
-        k_sym, int(phases.size), None
-    )
 
 
 def _array_sha256(value: FloatArray) -> str:
@@ -111,7 +103,7 @@ def _flow_inner(a: FloatArray, b: FloatArray) -> float:
     return float(np.sum(a[upper] * b[upper]))
 
 
-def _cycle_contracts() -> dict[str, float | int]:
+def _cycle_contracts(backend: str) -> dict[str, float | int]:
     """Triangle-free 4-cycle: β₁ = 1, curl vanishes, harmonic is non-trivial."""
     n = 4
     knm = np.zeros((n, n), dtype=np.float64)
@@ -119,11 +111,22 @@ def _cycle_contracts() -> dict[str, float | int]:
         knm[i, j] = 1.0
         knm[j, i] = 1.0
     phases = np.array([0.0, 0.7, 1.9, 2.8], dtype=np.float64)
-    result = hodge_decomposition(knm, phases)
+    result = hodge_decomposition(knm, phases, backend=backend)
+    circulation = float(
+        sum(np.sin(phases[j] - phases[i]) for i, j in ((0, 1), (1, 2), (2, 3), (3, 0)))
+        / 4.0
+    )
+    expected_harmonic = np.zeros((n, n), dtype=np.float64)
+    for i, j in ((0, 1), (1, 2), (2, 3), (3, 0)):
+        expected_harmonic[i, j] = circulation
+        expected_harmonic[j, i] = -circulation
     return {
         "cycle_curl_max_abs_error": float(np.max(np.abs(result.curl))),
         "cycle_harmonic_max_abs": float(np.max(np.abs(result.harmonic))),
         "cycle_betti_one": int(result.betti_one),
+        "cycle_harmonic_max_abs_error": _max_abs_error(
+            result.harmonic, expected_harmonic
+        ),
     }
 
 
@@ -132,12 +135,14 @@ def _reference_contracts(
     phases: FloatArray,
     reference: HodgeTuple,
     flow: FloatArray,
+    *,
+    backend: str = "python",
 ) -> dict[str, float | int]:
     gradient, curl, harmonic = reference
     reconstruction = gradient + curl + harmonic
-    shifted = hodge_module._python_decomposition(knm, phases + 1.2345)  # noqa: SLF001
+    shifted = _run_backend_once(backend, knm, phases + 1.2345)
     scale = 2.5
-    scaled = hodge_module._python_decomposition(scale * knm, phases)  # noqa: SLF001
+    scaled = _run_backend_once(backend, scale * knm, phases)
 
     # Divergence of an antisymmetric flow at node i is the row sum.
     curl_divergence = float(np.max(np.abs(curl.sum(axis=1)))) if curl.size else 0.0
@@ -171,7 +176,7 @@ def _reference_contracts(
         ),
         "finite_components": int(finite_components),
     }
-    contracts.update(_cycle_contracts())
+    contracts.update(_cycle_contracts(backend))
     return contracts
 
 
@@ -191,6 +196,7 @@ def _contracts_passed(contracts: dict[str, float | int]) -> bool:
         "phase_shift_max_abs_error",
         "scale_covariance_max_abs_error",
         "cycle_curl_max_abs_error",
+        "cycle_harmonic_max_abs_error",
     )
     return all(float(contracts[key]) <= REFERENCE_TOLERANCE for key in bounded_keys)
 
@@ -204,38 +210,21 @@ def _run_backend_once(
     backend: str,
     knm: FloatArray,
     phases: FloatArray,
-    edges: IntArray,
-    triangles: IntArray,
 ) -> HodgeTuple:
-    if backend == "python":
-        return hodge_module._python_decomposition(knm, phases)  # noqa: SLF001
-    backend_fn = hodge_module._load_backend(backend)  # noqa: SLF001
-    raw = backend_fn(
-        np.ascontiguousarray(knm.ravel(), dtype=np.float64),
-        phases,
-        int(phases.size),
-        np.ascontiguousarray(edges.ravel(), dtype=np.int64),
-        int(edges.shape[0]),
-        np.ascontiguousarray(triangles.ravel(), dtype=np.int64),
-        int(triangles.shape[0]),
-    )
-    return hodge_module._normalise_backend_output(  # noqa: SLF001
-        raw, expected_n=int(phases.size)
-    )
+    result = hodge_decomposition(knm, phases, backend=backend)
+    return result.gradient, result.curl, result.harmonic
 
 
 def _bench_backend(
     backend: str,
     knm: FloatArray,
     phases: FloatArray,
-    edges: IntArray,
-    triangles: IntArray,
     calls: int,
 ) -> tuple[float, HodgeTuple]:
     t0 = time.perf_counter()
     result: HodgeTuple | None = None
     for _ in range(calls):
-        result = _run_backend_once(backend, knm, phases, edges, triangles)
+        result = _run_backend_once(backend, knm, phases)
     elapsed = time.perf_counter() - t0
     if result is None:
         raise RuntimeError("benchmark did not produce a Hodge result")
@@ -246,14 +235,12 @@ def _backend_record(
     backend: str,
     knm: FloatArray,
     phases: FloatArray,
-    edges: IntArray,
-    triangles: IntArray,
     reference: HodgeTuple,
     flow: FloatArray,
     calls: int,
-) -> dict[str, Any]:
+) -> dict[str, object]:
     tolerance = PARITY_TOLERANCES[backend]
-    base: dict[str, Any] = {
+    base: dict[str, object] = {
         "backend": backend,
         "status": "unavailable",
         "tolerance": tolerance,
@@ -271,7 +258,8 @@ def _backend_record(
         "unavailable_reason": "",
     }
     try:
-        elapsed, result = _bench_backend(backend, knm, phases, edges, triangles, calls)
+        elapsed, result = _bench_backend(backend, knm, phases, calls)
+        contracts = _reference_contracts(knm, phases, result, flow, backend=backend)
     except (ImportError, ModuleNotFoundError, OSError, RuntimeError) as exc:
         base["unavailable_reason"] = _unavailable_reason(backend, exc)
         return base
@@ -284,7 +272,6 @@ def _backend_record(
 
     errors = _tuple_component_errors(result, reference)
     max_error = max(errors.values())
-    contracts = _reference_contracts(knm, phases, result, flow)
     parity_passed = max_error <= tolerance and _contracts_passed(contracts)
     base.update(
         {
@@ -305,13 +292,9 @@ def _backend_record(
     return base
 
 
-def _deterministic_hash(payload: dict[str, Any]) -> str:
+def _deterministic_hash(payload: dict[str, object]) -> str:
     encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return hashlib.sha256(encoded).hexdigest()
-
-
-def _clear_backend_cache() -> None:
-    hodge_module._BACKEND_CACHE.clear()  # noqa: SLF001
 
 
 def benchmark_hodge_polyglot_parity_gate(
@@ -319,21 +302,50 @@ def benchmark_hodge_polyglot_parity_gate(
     n: int = 10,
     calls: int = 1,
     seed: int = 2026,
+    require_backends: Sequence[str] = (),
 ) -> dict[str, float | int | str]:
-    """Run the Hodge polyglot parity and combinatorial-invariant gate."""
+    """Measure public Hodge runtimes and refuse missing required owners.
+
+    Parameters
+    ----------
+    n : int
+        Number of vertices in the directed coupling problem, at least two.
+    calls : int
+        Positive number of measured public calls per available runtime.
+    seed : int
+        Non-negative seed for the reproducible coupling and phase inputs.
+    require_backends : Sequence[str]
+        Runtime names that must execute successfully for acceptance.
+
+    Returns
+    -------
+    dict[str, float | int | str]
+        Runtime results, source-independent flow checks, numerical hashes and
+        non-isolated public-call timings. Structured records are encoded as JSON.
+
+    Raises
+    ------
+    ValueError
+        If controls or required runtime names are invalid.
+    """
     n = _validate_int_control(n, name="n", minimum=2)
     calls = _validate_int_control(calls, name="calls", minimum=1)
     seed = _validate_int_control(seed, name="seed", minimum=0)
+    required = tuple(require_backends)
+    if any(name not in BACKEND_ORDER for name in required):
+        raise ValueError("required Hodge backend names must be known runtimes")
+    if len(set(required)) != len(required):
+        raise ValueError("required Hodge backend names must be unique")
     knm, phases = _problem(n, seed)
-    edges, triangles = _complex(knm, phases)
-    reference = hodge_module._python_decomposition(knm, phases)  # noqa: SLF001
-    flow = hodge_decomposition(knm, phases).flow
+    reference = _run_backend_once("python", knm, phases)
+    k_sym = 0.5 * (knm + knm.T)
+    flow = k_sym * np.sin(phases[np.newaxis, :] - phases[:, np.newaxis])
+    np.fill_diagonal(flow, 0.0)
     reference_contracts = _reference_contracts(knm, phases, reference, flow)
 
-    _clear_backend_cache()
     t0 = time.perf_counter()
     records = [
-        _backend_record(backend, knm, phases, edges, triangles, reference, flow, calls)
+        _backend_record(backend, knm, phases, reference, flow, calls)
         for backend in BACKEND_ORDER
     ]
     elapsed = time.perf_counter() - t0
@@ -353,13 +365,18 @@ def benchmark_hodge_polyglot_parity_gate(
         for record in records
     )
     reference_contracts_passed = _contracts_passed(reference_contracts)
+    required_backends_present = all(
+        any(record["backend"] == name for record in available_records)
+        for name in required
+    )
     acceptance_passed = (
         python_reference_present
         and reference_contracts_passed
         and all_available_passed
         and not invalid_records
+        and required_backends_present
     )
-    deterministic_payload = {
+    deterministic_payload: dict[str, object] = {
         "suite": "hodge_polyglot_parity_gate",
         "backend_records": [
             {
@@ -371,6 +388,7 @@ def benchmark_hodge_polyglot_parity_gate(
         ],
         "reference_contracts": reference_contracts,
         "reference_sha256": _tuple_sha256(reference),
+        "required_backends": list(required),
     }
     thresholds = {
         "backend_order": list(BACKEND_ORDER),
@@ -388,6 +406,7 @@ def benchmark_hodge_polyglot_parity_gate(
         "require_cycle_betti_one": True,
         "require_nontrivial_cycle_harmonic": True,
         "require_no_invalid_backend_outputs": True,
+        "required_backends": list(required),
         "production_timing_claim": False,
     }
     return {
@@ -406,6 +425,8 @@ def benchmark_hodge_polyglot_parity_gate(
         "all_available_passed": int(all_available_passed),
         "reference_contracts_passed": int(reference_contracts_passed),
         "acceptance_passed": int(acceptance_passed),
+        "required_backends_present": int(required_backends_present),
+        "required_backends_json": json.dumps(required),
         "reference_gradient_sha256": _array_sha256(reference[0]),
         "reference_curl_sha256": _array_sha256(reference[1]),
         "reference_harmonic_sha256": _array_sha256(reference[2]),
@@ -435,6 +456,9 @@ def benchmark_hodge_polyglot_parity_gate(
             reference_contracts["cycle_curl_max_abs_error"]
         ),
         "cycle_harmonic_max_abs": float(reference_contracts["cycle_harmonic_max_abs"]),
+        "cycle_harmonic_max_abs_error": float(
+            reference_contracts["cycle_harmonic_max_abs_error"]
+        ),
         "cycle_betti_one": int(reference_contracts["cycle_betti_one"]),
         "backend_records_json": json.dumps(records, sort_keys=True),
         "acceptance_thresholds_json": json.dumps(thresholds, sort_keys=True),
@@ -462,6 +486,27 @@ def bench_at(
     *,
     seed: int = 2026,
 ) -> list[dict[str, float | int | str]]:
+    """Measure default public dispatch without claiming an isolated speedup.
+
+    Parameters
+    ----------
+    sizes : Sequence[int]
+        Vertex counts of the directed coupling problems.
+    calls : int
+        Positive number of measured public calls for each size.
+    seed : int
+        Non-negative reproducible input seed.
+
+    Returns
+    -------
+    list[dict[str, float | int | str]]
+        Non-isolated wall-clock measurements with input controls and labels.
+
+    Raises
+    ------
+    ValueError
+        If a vertex count, call count or seed is invalid.
+    """
     calls = _validate_int_control(calls, name="calls", minimum=1)
     seed = _validate_int_control(seed, name="seed", minimum=0)
     records: list[dict[str, float | int | str]] = []
@@ -490,20 +535,28 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--calls", type=int, default=100)
     parser.add_argument("--seed", type=int, default=2026)
     parser.add_argument("--parity-gate", action="store_true")
+    parser.add_argument("--require-backends", nargs="+", default=[])
     return parser.parse_args()
 
 
 def main() -> None:
+    """Print the requested diagnostics and exit unsuccessfully on refusal."""
     args = _parse_args()
+    payload: dict[str, object]
     if args.parity_gate:
-        payload = benchmark_hodge_polyglot_parity_gate(
-            n=int(args.sizes[0]),
-            calls=args.calls,
-            seed=args.seed,
+        payload = dict(
+            benchmark_hodge_polyglot_parity_gate(
+                n=int(args.sizes[0]),
+                calls=args.calls,
+                seed=args.seed,
+                require_backends=args.require_backends,
+            )
         )
     else:
         payload = {"benchmarks": bench_at(args.sizes, args.calls, seed=args.seed)}
     print(json.dumps(payload, indent=2, sort_keys=True))
+    if args.parity_gate and payload["acceptance_passed"] != 1:
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":
