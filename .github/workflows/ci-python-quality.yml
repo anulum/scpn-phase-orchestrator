@@ -324,7 +324,7 @@ jobs:
           asset_root="$(python -c 'import sys; print(sys.prefix + "/lib/python" + str(sys.version_info.major) + "." + str(sys.version_info.minor))')"
           mkdir -p "$asset_root/go" "$asset_root/julia" "$asset_root/mojo"
           for name in attnres basin_stability chimera hodge; do
-            go build -buildmode=c-shared -o "$asset_root/go/lib${name}.so" "go/${name}.go"
+            go -C go build -buildmode=c-shared -o "$asset_root/go/lib${name}.so" "${name}.go"
             cp "julia/${name}.jl" "$asset_root/julia/${name}.jl"
             mojo build "mojo/${name}.mojo" --target-cpu x86-64 \
               -o "$asset_root/mojo/${name}_mojo" -Xlinker -lm
@@ -392,8 +392,11 @@ jobs:
       - name: Compare all required Hodge public runtimes
         run: |
           . .venv/bin/activate
+          status=0
           python -m benchmarks.hodge_benchmark --parity-gate --sizes 8 --calls 3 \
-            --require-backends python rust go julia mojo > .ci-branch/native/hodge-comparison.json
+            --require-backends python rust go julia mojo > .ci-branch/native/hodge-comparison.json || status=$?
+          cat .ci-branch/native/hodge-comparison.json
+          exit "$status"
       - name: Bind the completed genuine native branch profile
         run: |
           . .venv/bin/activate
