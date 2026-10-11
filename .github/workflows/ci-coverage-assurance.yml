@@ -281,7 +281,7 @@ jobs:
           SPO_BRANCH_PROFILE_INPUTS: ${{ github.workspace }}/.ci-branch-inputs
         run: |
           . .venv/bin/activate
-          pytest tests/native_output_fixture/admission_contracts.py \
+          python -m pytest tests/native_output_fixture/admission_contracts.py \
             --import-mode=importlib --strict-markers -p no:cacheprovider --tb=short \
             --junitxml=branch-admission-contracts.junit.xml
       - name: Admit raw profiles and preserve genuine success coverage
