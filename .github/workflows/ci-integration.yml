@@ -279,6 +279,11 @@ jobs:
             fi
           done
           exit "$fail"
+      - name: Install Hodge LAPACK runtime
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y liblapack3
+          test -r /usr/lib/x86_64-linux-gnu/liblapack.so.3
       - name: Install Python measurement test dependencies
         run: .venv/bin/pip install --require-hashes --no-deps -r requirements/dev-lock.txt && .venv/bin/pip install --no-deps -e .
       - name: Execute Mojo measurement ingress contracts with coverage

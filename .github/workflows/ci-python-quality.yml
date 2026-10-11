@@ -311,6 +311,11 @@ jobs:
           test -n "$legacy_wheel" && test -n "$current_wheel"
           echo "SPO_ATTENTION_LEGACY_KERNEL_WHEEL=$legacy_wheel" >> "$GITHUB_ENV"
           echo "SPO_ATTENTION_CURRENT_KERNEL_WHEEL=$current_wheel" >> "$GITHUB_ENV"
+      - name: Install Hodge LAPACK runtime
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y liblapack3
+          test -r /usr/lib/x86_64-linux-gnu/liblapack.so.3
       - name: Provision original Go, Julia and Mojo branch owners
         run: |
           . .venv/bin/activate
