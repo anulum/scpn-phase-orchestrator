@@ -156,3 +156,34 @@ print(json.dumps(dict(refused=refused,
         record["source_sha256"]
         == hashlib.sha256(Path(hodge.__file__).read_bytes()).hexdigest()
     )
+
+    benchmark = Path(__file__).resolve().parents[1] / "benchmarks/hodge_benchmark.py"
+    required = subprocess.run(
+        [
+            interpreter,
+            "-I",
+            "-B",
+            str(benchmark),
+            "--parity-gate",
+            "--sizes",
+            "4",
+            "--calls",
+            "1",
+            "--require-backends",
+            "rust",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=90,
+    )
+    assert required.returncode == 1, required.stdout + required.stderr
+    report = json.loads(required.stdout)
+    assert report["acceptance_passed"] == 0
+    assert report["required_backends_present"] == 0
+    assert report["python_reference_present"] == 1
+    assert json.loads(report["required_backends_json"]) == ["rust"]
+    backend_records = json.loads(report["backend_records_json"])
+    assert [r["backend"] for r in backend_records if r["status"] == "available"] == [
+        "python"
+    ]
