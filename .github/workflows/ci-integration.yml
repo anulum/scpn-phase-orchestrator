@@ -137,13 +137,13 @@ jobs:
           mkdir -p build/hodge
           python -m benchmarks.hodge_benchmark --parity-gate --sizes 8 --calls 3 --require-backends julia > build/hodge/julia.json
       - name: Upload Julia Hodge comparison
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: hodge-comparison-julia
           path: build/hodge/julia.json
           if-no-files-found: error
       - name: Upload Julia bridge coverage
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: coverage-data-julia
           path: .coverage.julia
@@ -151,7 +151,7 @@ jobs:
       - name: Generate Julia API documentation
         run: python tools/generate_polyglot_docs.py julia --output build/polyglot-docs
       - name: Upload Julia API documentation
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: polyglot-docs-julia
           path: build/polyglot-docs/julia
@@ -227,13 +227,13 @@ jobs:
           mkdir -p build/hodge
           python -m benchmarks.hodge_benchmark --parity-gate --sizes 8 --calls 3 --require-backends go > build/hodge/go.json
       - name: Upload Go Hodge comparison
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: hodge-comparison-go
           path: build/hodge/go.json
           if-no-files-found: error
       - name: Upload Go measurement coverage
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: coverage-data-go
           path: .coverage.go
@@ -241,7 +241,7 @@ jobs:
       - name: Generate Go API documentation
         run: python tools/generate_polyglot_docs.py go --output build/polyglot-docs
       - name: Upload Go API documentation
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: polyglot-docs-go
           path: build/polyglot-docs/go
@@ -320,13 +320,13 @@ jobs:
           mkdir -p build/hodge
           .venv/bin/python -m benchmarks.hodge_benchmark --parity-gate --sizes 8 --calls 3 --require-backends mojo > build/hodge/mojo.json
       - name: Upload Mojo Hodge comparison
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: hodge-comparison-mojo
           path: build/hodge/mojo.json
           if-no-files-found: error
       - name: Upload Mojo measurement coverage
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: coverage-data-mojo
           path: .coverage.mojo
@@ -334,7 +334,7 @@ jobs:
       - name: Generate Mojo API documentation
         run: .venv/bin/python tools/generate_polyglot_docs.py mojo --output build/polyglot-docs
       - name: Upload Mojo API documentation
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: polyglot-docs-mojo
           path: build/polyglot-docs/mojo
@@ -385,7 +385,7 @@ jobs:
           cargo doc --locked --no-deps --workspace
       - name: Upload Rust API documentation
         if: runner.os == 'Linux'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: polyglot-docs-rust
           path: spo-kernel/target/doc
@@ -482,7 +482,7 @@ jobs:
           PY
       - name: Retain original Hodge native measurements and binary provenance
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: hodge-native-input-coverage
           path: .ci-hodge/evidence
@@ -569,7 +569,7 @@ jobs:
           mv .coverage .coverage.ffi
       - name: Upload coverage data (ffi, ubuntu only)
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.12'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: coverage-data-ffi
           path: .coverage.ffi
@@ -765,7 +765,7 @@ jobs:
           .connectome-rust/bin/python -I -B -m coverage report --rcfile "$COVERAGE_PROCESS_START" --fail-under=100
       - name: Retain original installed source coverage
         if: always()
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: connectome-installed-source-coverage
           path: .connectome-coverage
