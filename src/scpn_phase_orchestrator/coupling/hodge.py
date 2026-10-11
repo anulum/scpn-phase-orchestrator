@@ -604,8 +604,8 @@ def hodge_decomposition(
     Raises
     ------
     ValueError
-        If inputs or backend payloads are invalid, the requested runtime is
-        unknown, or its numerical result disagrees with the reference.
+        If inputs, computed reference components or backend payloads are invalid,
+        the requested runtime is unknown, or its result disagrees with the reference.
     ImportError
         If an explicitly requested native runtime cannot be loaded.
     """
@@ -630,7 +630,9 @@ def hodge_decomposition(
     gradient, curl, harmonic, flow_matrix, potential, betti = _decompose(
         k, phases, edges, tri
     )
-    reference: HodgeTuple = (gradient, curl, harmonic)
+    reference: HodgeTuple = validate_hodge_backend_output(
+        (gradient, curl, harmonic), n=n
+    )
 
     n_edges = int(edges.shape[0])
     n_tris = int(tri.shape[0])

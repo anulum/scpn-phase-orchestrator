@@ -426,7 +426,9 @@ native calculation, but still reject an unknown backend name. An empty phase
 vector requires a real non-boolean `(0, 0)` coupling matrix and no triangle
 faces. Coupling cardinality, source dtype and explicit simplex support are
 validated before the empty result is returned; an empty phase vector cannot
-hide a stale nonempty coupling matrix.
+hide a stale nonempty coupling matrix. The computed NumPy reference is also
+validated before backend selection: floating-point overflow from finite inputs
+raises `ValueError` instead of publishing non-finite components.
 
 Because the decomposition relies on two least-squares pseudoinverse
 solves, exact cross-language parity is not attainable; the dispatcher
