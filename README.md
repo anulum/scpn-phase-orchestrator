@@ -18,7 +18,7 @@ way to ask three questions, each answer bound to a reproducible record:
 1. **What is locking together,** and is that lock useful or dangerous?
 2. **Is the system's damping falling toward a regime change?** SPO estimates this
    where the signature is a physically deterministic mode — e.g. a grid
-   oscillation, checked against small-signal eigenvalues. On noisier domains,
+   oscillation. On noisier domains,
    generic early-warning detection is at chance at an honest operating point, and
    SPO is built to *report that* rather than overclaim (see **Evidence status**
    below).
@@ -223,12 +223,14 @@ an independent ground truth from what has not.
 
 **Externally validated (against an independent reference):**
 
-- **Grid modal damping ranking.** On the simulated IEEE-39 and Kundur systems, a
-  benchmark in this repository ranks operating points by modal damping in
-  agreement with a small-signal reference eigenvalue from the ANDES simulator
-  (Spearman ρ between 0.47 and 0.87, depending on system and aggregation;
-  [study §3.9](docs/studies/early_warning_matched_false_alarm.md)). It is a rank
-  agreement on two simulated systems, not an estimate of the eigenvalue's value.
+- **Withdrawn on 12 October 2026 — grid modal damping against ANDES eigenvalues.**
+  This list named a cross-system check on the simulated IEEE-39 and Kundur
+  systems, published with rank correlations of 0.87 and 0.60–0.66. It does not
+  hold up. In the published runs the simulator reports a failed initialisation at 5 of 14 operating points
+  on IEEE-39 and at 6 of 14 on Kundur, and continues; the Kundur runs also contained a line outage scripted in the case file, which the benchmark left active. On the operating points with a valid initialisation no rank agreement can be shown on either system.
+  Nothing follows about the detector in either direction. Found by the project's
+  own re-run and reviewed internally once; not yet checked by anyone outside. See
+  [study §3.9](docs/studies/early_warning_matched_false_alarm.md).
 - **The eigenvalue regime map.** Across five systems (fold, pitchfork, Hopf, and
   the unimodal and bimodal Kuramoto transitions) the shipped detectors recover the
   analytic eigenvalue's real part, and the correct estimator is regime-dependent
@@ -253,9 +255,10 @@ physically deterministic growing mode.
 / quantum / neuromorphic actuation, and live deployment are review-only and carry
 no field evidence.
 
-**In one line:** SPO is a synchronisation-dynamics and honest-evaluation toolkit
-whose one externally-validated detection niche is grid modal damping against
-eigenvalues; it is **not** a validated general tipping-point predictor.
+**In one line:** SPO is a synchronisation-dynamics and honest-evaluation toolkit.
+Its detectors recover analytic eigenvalues on normal-form systems (study
+§3.10–3.14); the grid cross-system check it was also credited with has been
+withdrawn; it is **not** a validated general tipping-point predictor.
 
 ## Reader Map
 

@@ -237,6 +237,24 @@ generic detectors from the genuinely skilled grid detector.
 
 ### 3.9 Cross-system external validation against eigenvalue ground truth
 
+> **Withdrawn on 12 October 2026.** The result of this section does not hold up.
+> In the published runs the simulator reports a failed initialisation at 5 of 14 operating points
+> on IEEE-39 and at 6 of 14 on Kundur, and continues; the Kundur runs also contained a
+> line outage scripted in the case file, which the benchmark left active. On the
+> operating points with a valid initialisation no rank agreement can be shown on either system.
+> Restricted to the valid points (nine on IEEE-39, eight on Kundur) the detector's values
+> for the two aggregations over all buses lie within about 0.01 1/s of zero, far below the
+> reference values, and their rank correlations with the reference are +0.52 and −1.00 on
+> IEEE-39 and negative on Kundur. The five IEEE-39 points that carried the published 0.87
+> are exactly the five with a failed initialisation. **Nothing follows about the detector
+> in either direction;** what follows is that this section is not evidence for it. The
+> defects were found by the project's own re-run, in which the simulator's messages were
+> captured for the first time; the re-run has been reviewed internally once and has not
+> been checked by anyone outside the project. The text below and the sealed file are kept
+> as the record of what was published. Sections that cite §3.9 as a validation
+> (§3.11–§3.14 and the conclusions) inherit this withdrawal for their grid part; their
+> normal-form parts are not affected.
+
 The PSML result is on one 23-bus corpus, and its held-out ceiling (≈ 50 %) proved robust
 across method classes (matrix-pencil modal identification) and aggregations (per-bus focal,
 dominant spatial mode) — none beat the ceiling at a matched false alarm, and their union of
@@ -316,14 +334,14 @@ decay cannot be read below the noise it sinks into.
 
 ### 3.12 The eigenvalue regime map, consolidated
 
-The three external validations above (§3.9–§3.11) are one result seen from three angles.
+The three external validations above (§3.9–§3.11) are one result seen from three angles — of which the first, the grid (§3.9), was withdrawn on 12 October 2026; read what follows for the two normal-form results only.
 Each pins a shipped detector against an *independent* ground truth for the mode's eigenvalue
 — one simulated (ANDES small-signal analysis), two analytic (normal-form Jacobian) — and
 together they map which estimator recovers that eigenvalue in which regime:
 
 | Mode (§) | Systems | Ground truth for the eigenvalue | Estimator that recovers it | Recovery |
 |----------|---------|----------------------------------|----------------------------|----------|
-| Oscillatory, real systems (§3.9) | IEEE-39, Kundur | ANDES small-signal eigenvalue σ (simulated) | envelope-growth, coherent aggregation | rank only (mean ρ = 0.87 / 0.60; spatial ρ = 0.47 / 0.66) |
+| Oscillatory, real systems (§3.9) | IEEE-39, Kundur | ANDES small-signal eigenvalue σ (simulated) | envelope-growth, coherent aggregation | **withdrawn 2026-10-12** — see the note at §3.9 (published: mean ρ = 0.87 / 0.60; spatial ρ = 0.47 / 0.66) |
 | Non-oscillatory bifurcation (§3.10) | fold, supercritical pitchfork | normal-form Jacobian λ (analytic) | autocorrelation, ln(AR1)/Δt | **magnitude** (ρ = 0.98 / 0.96, Pearson too) |
 | Oscillatory bifurcation (§3.11) | Hopf normal form | normal-form eigenvalue α (analytic) | envelope-growth σ | **magnitude** (ρ = 0.97, \|σ − α\| = 0.04) |
 
@@ -453,7 +471,7 @@ headlines, including the negatives.
 
 **A domain-specific detector wins where the signature is deterministic — and the moat certifies which.** The commodity result is about *modality-neutral* detectors. When the domain carries a physically deterministic, directly-measurable instability — a growing electromechanical mode, whose exponential envelope *is* the eigenvalue crossing into instability — a detector that reads that quantity beats the whole generic suite decisively (grid modal growth, 36/90, p = 0.0001, versus every generic member at chance). But the same detector *idea* on a murky domain (the preictal spectral rise) is itself at chance. So the deliverable is not "build domain-specific detectors" as a slogan — a domain-specific detector does not automatically win — but the **matched-false-alarm moat that certifies the difference**: the identical honest test that flags commodity detection as at chance also licenses a genuinely-skilled detector where a real signature exists, and refuses to license a plausible-but-empty one where it does not. Value is unlocked per-domain, and only when the physics carries a detectable signal that clears the operational bar.
 
-**The winning detector estimates an eigenvalue, and that is externally checkable.** The domain-specific grid result is not a black box that happens to correlate with trouble: the quantity it reads is the dominant mode's growth rate — the real part of a physical eigenvalue crossing toward instability — and §3.9–§3.12 check it against three *independent* ground truths (a power-system simulator's small-signal eigenvalues, where the agreement is in rank order only, and the closed-form Jacobian eigenvalues of two bifurcation classes, where it is in magnitude). This turns the moat from a matched-false-alarm *ranking* into a claim about a named, first-principles quantity, and it yields a small operational rule (§3.12): the eigenvalue's real part is universal, but read it with the envelope-growth family on an oscillatory mode and the autocorrelation family on a non-oscillatory one — because on an oscillatory mode the lag-one autocorrelation is confounded by the oscillation, and on a non-oscillatory one there is no envelope to fit. A detector that clears the operational bar *and* estimates a quantity you can check against an eigenvalue is a stronger deliverable than either property alone.
+**The winning detector estimates an eigenvalue, and that is externally checkable.** (Its grid part was withdrawn on 12 October 2026 — see §3.9; the paragraph stands for the normal-form systems only.) The domain-specific grid result is not a black box that happens to correlate with trouble: the quantity it reads is the dominant mode's growth rate — the real part of a physical eigenvalue crossing toward instability — and §3.9–§3.12 check it against three *independent* ground truths (a power-system simulator's small-signal eigenvalues, where the agreement is in rank order only, and the closed-form Jacobian eigenvalues of two bifurcation classes, where it is in magnitude). This turns the moat from a matched-false-alarm *ranking* into a claim about a named, first-principles quantity, and it yields a small operational rule (§3.12): the eigenvalue's real part is universal, but read it with the envelope-growth family on an oscillatory mode and the autocorrelation family on a non-oscillatory one — because on an oscillatory mode the lag-one autocorrelation is confounded by the oscillation, and on a non-oscillatory one there is no envelope to fit. A detector that clears the operational bar *and* estimates a quantity you can check against an eigenvalue is a stronger deliverable than either property alone.
 
 **Selection freedom is a hidden operating cost.** The bulk-DNB case adds a specific lesson: when the detector *chooses* its own module (or feature set) to peak at the transition, an honest null must be granted the same choice. A surrogate that re-selects from scratch on shuffled time absorbs most of the apparent signal — so a fair null for a self-selecting detector is not an afterthought but the whole test.
 

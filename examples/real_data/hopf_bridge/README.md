@@ -4,8 +4,9 @@
 suite's two detector families against one analytic ground truth, on the bifurcation where
 they meet.
 
-The [grid ANDES test](../grid_external_validation/README.md) validates the *oscillatory*
-envelope-growth family on real systems; the
+The [grid ANDES test](../grid_external_validation/README.md) was meant to validate the
+*oscillatory* envelope-growth family on simulated power systems and was withdrawn on
+12 October 2026; the
 [critical-slowing-down test](../csd_bifurcation/README.md) validates the *single-series*
 autocorrelation family on *non-oscillatory* bifurcations. A **Hopf** bifurcation presents an
 *oscillatory* critical slowing down (eigenvalue α ± iω with α → 0⁻), so both families point at

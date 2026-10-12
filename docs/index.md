@@ -54,11 +54,13 @@ review artefacts.
 SPO's most defensible asset is not a magic detector; it is **honesty under a
 controlled false-alarm rate**. Stated plainly:
 
-- **One externally-validated detection niche: grid modal damping.** On the IEEE-39
-  and Kundur systems, SPO's estimate of the dominant electromechanical mode's
-  growth rate tracks the small-signal eigenvalue computed by the ANDES simulator
-  (Spearman ρ up to 0.87) — a checkable physical quantity, not a proxy. See the
-  [early-warning study](studies/early_warning_matched_false_alarm.md).
+- **Withdrawn on 12 October 2026: the grid modal-damping check against ANDES
+  eigenvalues.** It was presented here as the one externally-validated detection
+  niche (IEEE-39 and Kundur, Spearman ρ up to 0.87). It does not hold up: the
+  published runs contain failed initialisations on both systems and an unintended
+  line outage on Kundur, and on the valid operating points no rank agreement can
+  be shown. See the
+  [early-warning study](studies/early_warning_matched_false_alarm.md), §3.9.
 - **Generic early-warning detection is at chance on real data, and SPO reports
   that.** Across five real modalities (grid, EEG, ecological/climate, molecular),
   generic tipping-point indicators at an honest operating point perform at chance

@@ -124,10 +124,11 @@ SPO's value is concrete and evidence-bound, not a slogan:
   can check whether a detector — theirs or a vendor's — beats chance *before* trusting
   it. Most published tipping-point indicators do not, and measuring that honestly is
   uncommon.
-- **One externally-validated niche: grid modal damping.** SPO's growth-rate estimate
-  tracks ANDES small-signal eigenvalues (Spearman ρ up to 0.87) on independent systems
-  — a checkable physical quantity a grid team can act on, positioned as a complement to
-  ANDES, not a competitor to commercial mode meters.
+- **Withdrawn on 12 October 2026: the grid modal-damping niche.** This overview said
+  that SPO's growth-rate estimate tracks ANDES small-signal eigenvalues (Spearman ρ up
+  to 0.87) on independent systems. That check does not hold up (failed initialisations
+  in the published runs on both systems, an unintended line outage on one); see the
+  early-warning study, §3.9. No grid result here is something a grid team can act on.
 - **Evidence continuity.** One artefact chain — binding spec → phase state → coupling →
   regime → bounded proposal → deterministic replay log — so a control decision is
   reconstructible and reviewable end to end, across simulation and runtime.

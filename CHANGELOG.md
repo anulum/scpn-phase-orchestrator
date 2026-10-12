@@ -34,6 +34,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Withdrawn: the grid cross-system external validation (IEEE-39 and Kundur against
+  ANDES small-signal eigenvalues).** A re-run that reproduces the published values to
+  their rounding, with the simulator's messages captured, shows that the published
+  runs contain a failed initialisation at 5 of 14 operating points on IEEE-39 and at
+  6 of 14 on Kundur, and that the Kundur runs also contained a line outage scripted in
+  the case file. On the operating points with a valid initialisation no rank agreement
+  is shown on either system; the five IEEE-39 points that carried the published 0.87
+  are the five with a failed initialisation. The README, the fact-based overview, the
+  documentation index, the executive overview, the use-case and gallery tables, the
+  engine guide, the study (§3.9 and the places that cite it) and the example's README
+  now say so. The benchmark script, the sealed artefact and its tests are unchanged
+  and are kept as the record of what was published; correcting or retiring them is
+  separate work.
 - The grid cross-system result is now stated as what the sealed evidence shows.
   The study (§3.9), the README and the fact-based overview said the detector's
   estimate "matches" or "recovers" the small-signal eigenvalue and quoted
