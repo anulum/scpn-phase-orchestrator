@@ -21,10 +21,12 @@ $$\dot{\theta}_i = \omega_i + \sum_j K_{ij}\,\sin(\theta_j - \theta_i - \alpha_{
 
 **Externally validated against an independent reference:**
 
-- **Grid modal damping estimation.** On the IEEE-39 and Kundur systems, the
-  estimated growth rate of the dominant electromechanical mode matches the
-  small-signal eigenvalue from the ANDES simulator
-  ([study §3.9](studies/early_warning_matched_false_alarm.md)).
+- **Grid modal damping ranking.** On the simulated IEEE-39 and Kundur systems, a
+  repository benchmark ranks operating points by modal damping in agreement with
+  a small-signal reference eigenvalue from the ANDES simulator (Spearman ρ between
+  0.47 and 0.87, depending on system and aggregation;
+  [study §3.9](studies/early_warning_matched_false_alarm.md)). It is a rank
+  agreement, not an estimate of the eigenvalue's value.
 - **The eigenvalue regime map.** Across five systems (fold, pitchfork, Hopf, and
   the unimodal and bimodal Kuramoto transitions) the shipped detectors recover the
   analytic eigenvalue's real part; the correct estimator is regime-dependent
