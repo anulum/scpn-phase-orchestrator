@@ -34,6 +34,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The grid cross-system result is now stated as what the sealed evidence shows.
+  The study (§3.9), the README and the fact-based overview said the detector's
+  estimate "matches" or "recovers" the small-signal eigenvalue and quoted
+  "ρ = 0.87 / 0.60–0.66" for "the coherent aggregation". The sealed file holds a
+  rank agreement only, for two aggregations that are each better on one system
+  (mean 0.87 and 0.60, spatial 0.47 and 0.66), against a reference that is the
+  largest real part in a frequency band rather than a tracked mode. The texts
+  now say so; no evidence file, code or number is changed.
 - Connectome generation checks dense square/byte capacity and allocation in
   Python and the original Rust boundary, so oversized requests raise `ValueError`
   instead of a native indexing panic. Cache keys retain the selected original

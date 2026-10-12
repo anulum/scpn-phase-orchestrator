@@ -223,11 +223,12 @@ an independent ground truth from what has not.
 
 **Externally validated (against an independent reference):**
 
-- **Grid modal damping estimation.** On the IEEE-39 and Kundur systems, SPO's
-  estimate of the dominant electromechanical mode's growth rate matches the
-  small-signal eigenvalue from the ANDES simulator
-  ([study §3.9](docs/studies/early_warning_matched_false_alarm.md)) — a checkable
-  physical quantity, not a proxy.
+- **Grid modal damping ranking.** On the simulated IEEE-39 and Kundur systems, a
+  benchmark in this repository ranks operating points by modal damping in
+  agreement with a small-signal reference eigenvalue from the ANDES simulator
+  (Spearman ρ between 0.47 and 0.87, depending on system and aggregation;
+  [study §3.9](docs/studies/early_warning_matched_false_alarm.md)). It is a rank
+  agreement on two simulated systems, not an estimate of the eigenvalue's value.
 - **The eigenvalue regime map.** Across five systems (fold, pitchfork, Hopf, and
   the unimodal and bimodal Kuramoto transitions) the shipped detectors recover the
   analytic eigenvalue's real part, and the correct estimator is regime-dependent

@@ -243,23 +243,30 @@ dominant spatial mode) — none beat the ceiling at a matched false alarm, and t
 led transitions is unharvestable there because combining raises the null floor. To test the
 detector on *independent* systems, we run a stronger, non-circular check: on the IEEE 39-bus
 New England system and the Kundur two-area system (both in the open-source ANDES simulator),
-we sweep the operating point, take the true dominant electromechanical mode's growth rate σ
-from ANDES **small-signal eigenvalue analysis** — a completely different method from the
-detector's time-domain envelope slope — and score a ringdown from a small disturbance at
-each point. The detector's **coherent** aggregation (the cross-bus mean, or the dominant
-spatial mode) recovers the true σ trend on both systems (Spearman ρ = 0.87 on IEEE-39,
-0.60–0.66 on Kundur), so the quantity the detector estimates — the dominant mode's damping —
-generalises across systems and simulators. The **focal** aggregation, the PSML winner, does
-**not** transfer (ρ = −0.59 and −0.27): on a slow coherent inter-area mode the per-bus
-maximum locks onto spurious local excursions rather than the network mode. The
-growth-rate quantity is therefore universal, but the best **aggregation is
-regime-dependent** — focal for PSML's fast, localised oscillations, coherent for the slow
-inter-area modes here — a new, actionable finding hash-sealed in
+we sweep the operating point, take a reference growth rate σ from ANDES **small-signal
+eigenvalue analysis** — a completely different method from the detector's time-domain
+envelope slope — and score a ringdown from a small disturbance at each point. The reference
+is the largest real part among the eigenvalues with a frequency between 0.1 and 2.5 Hz; no
+participation filter is applied and no mode is tracked along the sweep, so it is a band
+maximum and need not be the same mode at every point. The two **coherent** aggregations
+follow the rank order of the reference σ, each better on one system: the cross-bus mean
+gives Spearman ρ = 0.87 on IEEE-39 and 0.60 on Kundur, the dominant spatial mode 0.47 and
+0.66. The **focal** aggregation, the PSML winner, does **not** transfer (ρ = −0.59 and
+−0.27): on a slow coherent inter-area mode the per-bus maximum locks onto spurious local
+excursions rather than the network mode. The agreement is one of **rank, not of value**:
+the detector's numbers are one to three orders of magnitude smaller than the reference σ
+(on IEEE-39 the mean aggregation spans −0.017 to 0.0001 1/s against −0.48 to −0.19 1/s),
+and nine of its fourteen IEEE-39 values lie within 0.0006 1/s of zero, where their order is
+not resolved by a nonlinear time-domain run. The damping ranking therefore carries over to
+these two systems, but the best **aggregation is regime-dependent** — focal for PSML's
+fast, localised oscillations, coherent for the slow inter-area modes here — and no rule
+for choosing it in advance exists. The finding is hash-sealed in
 `examples/real_data/grid_external_validation/grid_eigenvalue_external_validation.json`. The
 test is honest about its limits: a simulated (not field-PMU) ground truth, stable operating
 points only (the well-damped benchmarks do not enter a clean growing-oscillation regime, so
-this is a damping-ranking test, not a stable-versus-unstable classification), and a
-fourteen-point sweep per system.
+this is a damping-ranking test, not a stable-versus-unstable classification), a
+fourteen-point sweep per system, and a benchmark script that lives in the repository's
+`bench/` directory rather than in the installed package.
 
 ### 3.10 Critical-slowing-down external validation against the analytic eigenvalue
 
@@ -316,7 +323,7 @@ together they map which estimator recovers that eigenvalue in which regime:
 
 | Mode (§) | Systems | Ground truth for the eigenvalue | Estimator that recovers it | Recovery |
 |----------|---------|----------------------------------|----------------------------|----------|
-| Oscillatory, real systems (§3.9) | IEEE-39, Kundur | ANDES small-signal eigenvalue σ (simulated) | envelope-growth, coherent aggregation | rank (ρ = 0.87 / 0.60–0.66) |
+| Oscillatory, real systems (§3.9) | IEEE-39, Kundur | ANDES small-signal eigenvalue σ (simulated) | envelope-growth, coherent aggregation | rank only (mean ρ = 0.87 / 0.60; spatial ρ = 0.47 / 0.66) |
 | Non-oscillatory bifurcation (§3.10) | fold, supercritical pitchfork | normal-form Jacobian λ (analytic) | autocorrelation, ln(AR1)/Δt | **magnitude** (ρ = 0.98 / 0.96, Pearson too) |
 | Oscillatory bifurcation (§3.11) | Hopf normal form | normal-form eigenvalue α (analytic) | envelope-growth σ | **magnitude** (ρ = 0.97, \|σ − α\| = 0.04) |
 
@@ -446,7 +453,7 @@ headlines, including the negatives.
 
 **A domain-specific detector wins where the signature is deterministic — and the moat certifies which.** The commodity result is about *modality-neutral* detectors. When the domain carries a physically deterministic, directly-measurable instability — a growing electromechanical mode, whose exponential envelope *is* the eigenvalue crossing into instability — a detector that reads that quantity beats the whole generic suite decisively (grid modal growth, 36/90, p = 0.0001, versus every generic member at chance). But the same detector *idea* on a murky domain (the preictal spectral rise) is itself at chance. So the deliverable is not "build domain-specific detectors" as a slogan — a domain-specific detector does not automatically win — but the **matched-false-alarm moat that certifies the difference**: the identical honest test that flags commodity detection as at chance also licenses a genuinely-skilled detector where a real signature exists, and refuses to license a plausible-but-empty one where it does not. Value is unlocked per-domain, and only when the physics carries a detectable signal that clears the operational bar.
 
-**The winning detector estimates an eigenvalue, and that is externally checkable.** The domain-specific grid result is not a black box that happens to correlate with trouble: the quantity it reads is the dominant mode's growth rate — the real part of a physical eigenvalue crossing toward instability — and §3.9–§3.12 confirm it against three *independent* ground truths (a power-system simulator's small-signal eigenvalues, and the closed-form Jacobian eigenvalues of two bifurcation classes). This turns the moat from a matched-false-alarm *ranking* into a claim about a named, first-principles quantity, and it yields a small operational rule (§3.12): the eigenvalue's real part is universal, but read it with the envelope-growth family on an oscillatory mode and the autocorrelation family on a non-oscillatory one — because on an oscillatory mode the lag-one autocorrelation is confounded by the oscillation, and on a non-oscillatory one there is no envelope to fit. A detector that clears the operational bar *and* estimates a quantity you can check against an eigenvalue is a stronger deliverable than either property alone.
+**The winning detector estimates an eigenvalue, and that is externally checkable.** The domain-specific grid result is not a black box that happens to correlate with trouble: the quantity it reads is the dominant mode's growth rate — the real part of a physical eigenvalue crossing toward instability — and §3.9–§3.12 check it against three *independent* ground truths (a power-system simulator's small-signal eigenvalues, where the agreement is in rank order only, and the closed-form Jacobian eigenvalues of two bifurcation classes, where it is in magnitude). This turns the moat from a matched-false-alarm *ranking* into a claim about a named, first-principles quantity, and it yields a small operational rule (§3.12): the eigenvalue's real part is universal, but read it with the envelope-growth family on an oscillatory mode and the autocorrelation family on a non-oscillatory one — because on an oscillatory mode the lag-one autocorrelation is confounded by the oscillation, and on a non-oscillatory one there is no envelope to fit. A detector that clears the operational bar *and* estimates a quantity you can check against an eigenvalue is a stronger deliverable than either property alone.
 
 **Selection freedom is a hidden operating cost.** The bulk-DNB case adds a specific lesson: when the detector *chooses* its own module (or feature set) to peak at the transition, an honest null must be granted the same choice. A surrogate that re-selects from scratch on shuffled time absorbs most of the apparent signal — so a fair null for a self-selecting detector is not an afterthought but the whole test.
 
