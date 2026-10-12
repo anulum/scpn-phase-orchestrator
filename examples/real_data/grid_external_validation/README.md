@@ -1,5 +1,15 @@
 # Cross-system external validation — eigenvalue ground truth
 
+> **Withdrawn on 12 October 2026.** This file and the sealed artefact beside it record a
+> result that does not hold up. In the
+> published runs the simulator reports a failed initialisation at 5 of 14 operating
+> points on IEEE-39 and at 6 of 14 on Kundur, and continues; the Kundur runs also contained a
+> line outage scripted in the case file, which the benchmark left active. On the
+> operating points with a valid initialisation no rank agreement can be shown on either system.
+> The sealed artefact — including its `verdict` field, which still says that the growth
+> rate "generalises" — is kept byte for byte as the record of what was published; it is
+> not a current claim. See the early-warning study, §3.9.
+
 `grid_eigenvalue_external_validation.json` is a hash-sealed external validation of the grid
 modal-growth detector on **independent** power systems, against a ground truth the detector
 never sees: the true small-signal eigenvalue.

@@ -39,9 +39,10 @@ bounded control proposals with deterministic replay evidence.
 
 ## Where It Creates Value
 
-Read the **Evidence** column honestly: exactly one domain — the power grid — is
-externally validated (SPO's growth-rate estimate tracks ANDES small-signal
-eigenvalues, ρ up to 0.87). Every other row is a **reusable scaffold**: a working
+Read the **Evidence** column honestly: **no domain is externally validated today.**
+The power-grid row was marked validated against ANDES small-signal eigenvalues
+(ρ up to 0.87) until 12 October 2026, when that check was withdrawn (early-warning
+study, §3.9). Every row is a **reusable scaffold**: a working
 binding that parses, runs, and gives you a starting point, **not** a validated
 detector for that domain. Generic early-warning detection is at chance on real data
 outside the grid, and SPO reports that rather than overclaiming. Use the
@@ -50,7 +51,7 @@ before you trust it.
 
 | Market or domain | Operational problem | SPO value path | Evidence |
 |------------------|---------------------|----------------|----------|
-| Power and energy | Grid oscillations, weak damping, inverter coordination | detect harmful coherence, test coupling policies, produce audit-backed control proposals | **Validated** — growth rate vs ANDES eigenvalues (ρ≤0.87) |
+| Power and energy | Grid oscillations, weak damping, inverter coordination | detect harmful coherence, test coupling policies, produce audit-backed control proposals | **Withdrawn 2026-10-12** — the check against ANDES eigenvalues (ρ≤0.87) did not hold up; scaffold |
 | Fusion and plasma | MHD mode coupling, transport oscillations, control timing | map multi-rate observables into coupled phase channels and review stabilising proposals | Scaffold — not yet validated |
 | Cloud and platform operations | Retry storms, queue cascades, service-heartbeat lock-in | detect synchronised failure modes and desynchronise overloaded layers | Scaffold — not yet validated |
 | Manufacturing and machinery | Vibration, process drift, cyclic defects, SPC patterns | expose phase coupling between process variables and control loops | Scaffold — not yet validated |

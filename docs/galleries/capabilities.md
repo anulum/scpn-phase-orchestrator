@@ -23,7 +23,7 @@ scaffold, or a benchmark from being mistaken for a field-proven product.
 | Maturity | Current SPO surface | What the label permits |
 |---|---|---|
 | Stable software contract | 24 top-level Python exports, CLI, binding validation, simulation, audit/replay | downstream integration under semantic versioning |
-| Externally checked scientific niche | grid modal-damping estimation against ANDES small-signal eigenvalues | a bounded grid-modal claim under the documented study protocol |
+| Externally checked scientific niche | none today — the grid modal-damping check against ANDES small-signal eigenvalues was withdrawn on 12 October 2026 (study §3.9) | no grid-modal claim |
 | Reproducible evaluation method | matched-false-alarm detector audit, permutation significance, sealed record | honest comparison of a detector with event/null data |
 | Tested engineering capability | phase extraction, coupled dynamics, monitors, policy projection, deterministic replay, optional Rust parity | local R&D and pre-deployment evaluation |
 | Domain scaffold | 36 binding specs spanning engineering, physical, biological, and digital systems | a starting model whose assumptions still require domain evidence |

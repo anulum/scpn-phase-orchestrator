@@ -74,10 +74,10 @@ documented in [Advanced Dynamics](advanced_dynamics.md):
 
 ## Honesty note — validated niche
 
-Choosing a fancier engine does not make a claim validated. SPO's externally
-validated result is **grid inter-area modal damping** (IEEE-39 / Kundur vs ANDES
-eigenvalues); generic early-warning across the other modalities is honestly
-reported at chance on real data. See the README *Evidence status* table. Pick the
+Choosing a fancier engine does not make a claim validated. The result this note
+named as externally validated — grid inter-area modal damping (IEEE-39 / Kundur vs
+ANDES eigenvalues) — was withdrawn on 12 October 2026; generic early-warning across
+the other modalities is honestly reported at chance on real data. See the README *Evidence status* table. Pick the
 engine your physics needs, then rely on the [honest evaluation
 auditor](../reference/api/evaluation.md) — not the engine's sophistication — to
 tell you whether a detector beats chance on your data.

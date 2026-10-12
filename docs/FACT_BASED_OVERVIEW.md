@@ -21,12 +21,12 @@ $$\dot{\theta}_i = \omega_i + \sum_j K_{ij}\,\sin(\theta_j - \theta_i - \alpha_{
 
 **Externally validated against an independent reference:**
 
-- **Grid modal damping ranking.** On the simulated IEEE-39 and Kundur systems, a
-  repository benchmark ranks operating points by modal damping in agreement with
-  a small-signal reference eigenvalue from the ANDES simulator (Spearman ρ between
-  0.47 and 0.87, depending on system and aggregation;
-  [study §3.9](studies/early_warning_matched_false_alarm.md)). It is a rank
-  agreement, not an estimate of the eigenvalue's value.
+- **Withdrawn on 12 October 2026 — grid modal damping against ANDES eigenvalues.**
+  The cross-system check on the simulated IEEE-39 and Kundur systems, published
+  with rank correlations of 0.87 and 0.60–0.66, does not hold up. In the published runs the simulator reports a failed initialisation at 5 of 14 operating points on IEEE-39 and at 6 of 14 on Kundur, and continues; the Kundur runs also contained a line outage scripted in the case file, which the benchmark left active. On the operating points with a valid initialisation no rank agreement can be shown on either system.
+  Nothing follows about the detector in either direction; not yet checked by
+  anyone outside the project. See
+  [study §3.9](studies/early_warning_matched_false_alarm.md).
 - **The eigenvalue regime map.** Across five systems (fold, pitchfork, Hopf, and
   the unimodal and bimodal Kuramoto transitions) the shipped detectors recover the
   analytic eigenvalue's real part; the correct estimator is regime-dependent
@@ -73,11 +73,12 @@ run metadata as unverified.
 
 ## 5. Where SPO fits
 
-SPO is between an academic research toolkit and a production monitoring system. Its
-one externally-validated niche is grid modal-damping estimation checked against
-eigenvalues; its most transferable asset is the honest, false-alarm-controlled
+SPO is between an academic research toolkit and a production monitoring system. The
+grid modal-damping check against eigenvalues that this page named as its one
+externally-validated niche was withdrawn on 12 October 2026 (section above); its
+most transferable asset is the honest, false-alarm-controlled
 evaluation methodology, which applies to any early-warning claim. It is a
-complement to ground-truth tools such as ANDES (which it validates against), not a
+complement to ground-truth tools such as ANDES, not a
 replacement for deployed control-room monitoring products.
 
 For related material, see the [study](studies/early_warning_matched_false_alarm.md)

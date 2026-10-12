@@ -7,9 +7,9 @@ simulations.
 !!! note "What a domainpack is — and is not"
     A domainpack is a **reusable scaffold**: a working binding that parses, runs end
     to end, and gives you a starting point for that domain. It is **not** a validated
-    detector for that domain. Exactly one domain — **power grid** — is externally
-    validated (growth rate vs ANDES eigenvalues, ρ≤0.87); the rest are templates that
-    demonstrate SPO is domain-agnostic. Before trusting any detector on real data, run
+    detector for that domain. **No domain is externally validated today**: the power-grid
+    check against ANDES eigenvalues (ρ≤0.87) was withdrawn on 12 October 2026. The packs
+    are templates that demonstrate SPO is domain-agnostic. Before trusting any detector on real data, run
     it through the [`spo audit-detector`](../reference/api/evaluation.md) auditor —
     generic early-warning detection is at chance outside the grid, and SPO reports that.
 
