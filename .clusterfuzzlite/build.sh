@@ -27,6 +27,7 @@ for fuzzer in "$project_root"/fuzzers/*_fuzzer.py; do
     --onefile \
     --name "$fuzzer_package" \
     --hidden-import atheris \
+    --hidden-import numpy._core._exceptions \
     --hidden-import yaml \
     --paths "$project_root/src" \
     "$fuzzer"
