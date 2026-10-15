@@ -269,7 +269,7 @@ class HodgeResult:
     ----------
         gradient: Conservative (curl-free) component ``grad(s)``.
         curl: Rotational (divergence-free) component bounded by triangles.
-        harmonic: Topological residual in ``ker(L1)``; non-zero exactly
+        harmonic: Topological residual in ``ker(L1)``; may be non-zero
             when the graph carries cycles not filled by triangles.
         flow: The input alternating coupling current
             ``K^{sym}_{ij} · sin(θ_j − θ_i)``.

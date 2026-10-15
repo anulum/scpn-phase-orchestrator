@@ -19,6 +19,23 @@ python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 ```
 
+## Fuzz runtime dependencies
+
+The pinned ClusterFuzzLite builder uses CPython 3.11. Its image checks that
+interpreter before installing `requirements/runtime-lock-py311.txt` with
+hash enforcement, then runs `pip check`. The Python 3.12 runtime lock remains
+separate because its NumPy and SciPy versions need not support Python 3.11.
+
+Regenerate the fuzz runtime lock through the maintained command, which selects
+Python 3.11 and the pinned pip-tools release:
+
+```bash
+python tools/refresh_dependency_locks.py --only runtime-lock-py311.txt
+```
+
+CI audits this lock at every head. Changes to it also trigger the actual
+ClusterFuzzLite build and fuzzer run on pull requests.
+
 ## Required branch coverage profiles
 
 The branch ratchet consumes measurements from the same revision, complete

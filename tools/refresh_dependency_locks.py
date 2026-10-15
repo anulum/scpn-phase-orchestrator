@@ -234,6 +234,16 @@ LOCKS: tuple[LockSpec, ...] = (
             "pyproject.toml",
         ),
     ),
+    LockSpec(
+        output="requirements/runtime-lock-py311.txt",
+        generator="pip-compile",
+        python="3.11",
+        arguments=(
+            *_HASHED,
+            "--output-file=requirements/runtime-lock-py311.txt",
+            "pyproject.toml",
+        ),
+    ),
     _server_lock("requirements/server-lock.txt", "3.12"),
     _server_lock("requirements/server-lock-py311.txt", "3.11"),
     _server_lock("requirements/server-lock-windows-py311.txt", "3.11", windows=True),
