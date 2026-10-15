@@ -35,6 +35,8 @@ jobs:
         run: |
           pip-audit --require-hashes -r requirements/connectome-runtime-lock.txt
           pip-audit --require-hashes -r requirements/connectome-hcp-lock.txt
+      - name: Audit the locked Python 3.11 fuzz runtime
+        run: pip-audit --require-hashes -r requirements/runtime-lock-py311.txt
   cargo-audit:
     runs-on: ubuntu-latest
     permissions:
