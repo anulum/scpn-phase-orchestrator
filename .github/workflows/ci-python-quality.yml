@@ -93,7 +93,7 @@ jobs:
         run: mv .coverage .coverage.test
       - name: Upload coverage data (test)
         if: matrix.python-version == '3.12'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: coverage-data-test
           path: .coverage.test
@@ -177,7 +177,7 @@ jobs:
       - name: Rename coverage data (nn shard)
         run: mv .coverage .coverage.nn-${{ matrix.shard }}
       - name: Upload coverage data (nn shard)
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: coverage-data-nn-${{ matrix.shard }}
           path: .coverage.nn-${{ matrix.shard }}
@@ -297,7 +297,7 @@ jobs:
             -o addopts= --strict-markers --tb=short -p no:cacheprovider \
             --cov=scpn_phase_orchestrator --cov-branch --cov-append --cov-report= --cov-fail-under=0
       - name: Retain the current release kernel for on-demand Hodge consumers
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: hodge-current-kernel-wheel
           path: kernel-wheels/*.whl
@@ -424,7 +424,7 @@ jobs:
             --absent-interpreter "$PWD/.connectome-python-coverage/bin/python" \
             --output .ci-branch/native/profile.json
       - name: Upload actual native branch data and provenance
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: branch-profile-native
           path: .ci-branch/native
