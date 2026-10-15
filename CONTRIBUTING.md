@@ -160,19 +160,25 @@ class MyExtractor(PhaseExtractor):
         ...
 ```
 
-## Pre-push Preflight (mandatory)
+## Local checks and hosted validation
 
-Every push is gated by a local CI mirror. Set it up once:
+Enable the repository hooks in a new checkout:
 
 ```bash
 git config core.hooksPath .githooks
 git config commit.template .gitmessage
 ```
 
-This installs a `commit-msg` hook that requires the project authorship trailer
-and a `pre-push` hook that runs `tools/preflight.py` — the same 10 gates CI
-enforces (ruff, format, version-sync, mypy, module-linkage, pytest, bandit,
-cargo fmt, cargo clippy, cargo test). Push is blocked if any gate fails.
+The `commit-msg` hook checks the project authorship trailer. The `pre-commit`
+hook checks the staged files, and `pre-push` runs fast outgoing-commit and
+working-tree checks. Keep the hooks enabled. Preserve any existing managed
+hook chain when configuring a maintained checkout.
+
+Run focused tests, strict typing and linting for the changed surface locally.
+The shared workstation must not run full test suites or builds. GitHub CI
+owns the full test selection, coverage profiles, runtime matrices and builds;
+verify its results for the exact pushed commit. A successful push alone does
+not prove those checks passed.
 
 Every new commit message must include exactly one project authorship trailer:
 
@@ -183,11 +189,11 @@ Authored by Anulum Fortis & Arcane Sapience (protoscience@anulum.li)
 Historical `Co-Authored-By: Arcane Sapience <protoscience@anulum.li>` trailers
 are left unchanged, but the old trailer is no longer accepted for new commits.
 
-To run manually at any time:
+On a dedicated validation host with resources reserved, the CI mirror supports:
 
 ```bash
-python tools/preflight.py                   # full (~3 min)
-python tools/preflight.py --no-tests        # lint-only (~5 sec)
+python tools/preflight.py                   # full validation
+python tools/preflight.py --no-tests        # omit the plain pytest gate
 python tools/preflight.py --coverage        # full + line-coverage guard
 python tools/preflight.py --branch-coverage # full + branch-coverage guard
                                             # (performance tests deselected)
