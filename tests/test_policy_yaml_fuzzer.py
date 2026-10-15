@@ -6,6 +6,8 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Policy YAML fuzzer tests
 
+"""Check canonical parsing while isolating the instrumentation boundary."""
+
 from __future__ import annotations
 
 import contextlib
@@ -13,27 +15,45 @@ import importlib.util
 import sys
 import types
 from pathlib import Path
+from types import FrameType
 
 import pytest
 
+from scpn_phase_orchestrator.supervisor.policy_rules import load_policy_rules
 
-def test_policy_yaml_fuzzer_loads_policy_rules_with_stubs(
+
+def test_policy_yaml_fuzzer_executes_canonical_policy_loader(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """Observe real parsing; the hosted image separately exercises Atheris."""
     atheris = types.ModuleType("atheris")
-    atheris.instrument_imports = lambda: contextlib.nullcontext()
-    atheris.Setup = lambda *args, **kwargs: None
-    atheris.Fuzz = lambda: None
+    monkeypatch.setattr(
+        atheris, "instrument_imports", contextlib.nullcontext, raising=False
+    )
     monkeypatch.setitem(sys.modules, "atheris", atheris)
 
-    path = Path("fuzzers/policy_yaml_fuzzer.py")
+    root = Path(__file__).resolve().parents[1]
+    path = root / "fuzzers/policy_yaml_fuzzer.py"
     spec = importlib.util.spec_from_file_location("_policy_yaml_fuzzer_test", path)
     assert spec is not None
     assert spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
+    assert module.load_policy_rules is load_policy_rules
 
-    load_policy_rules = module._load_policy_rules()
+    policy = root / "domainpacks/minimal_domain/policy.yaml"
+    expected_rules = load_policy_rules(policy)
+    assert expected_rules
+    observed_results: list[object] = []
 
-    assert load_policy_rules.__name__ == "load_policy_rules"
-    assert "scpn_phase_orchestrator.monitor.stl" in sys.modules
+    def observe(frame: FrameType, event: str, result: object) -> None:
+        if frame.f_code is load_policy_rules.__code__ and event == "return":
+            observed_results.append(result)
+
+    previous_profile = sys.getprofile()
+    sys.setprofile(observe)
+    try:
+        module.TestOneInput(policy.read_bytes())
+    finally:
+        sys.setprofile(previous_profile)
+    assert observed_results == [expected_rules]
