@@ -1,0 +1,255 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://anulum.li/schemas/scpn-phase-orchestrator/reactor-regime-assessment-v1.json",
+  "title": "SCPN Phase Orchestrator reactor regime assessment",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["payload", "payload_sha256", "schema", "schema_version"],
+  "properties": {
+    "schema": {
+      "const": "scpn-phase-orchestrator.reactor-regime-assessment.v1"
+    },
+    "schema_version": {"const": "1.0.0"},
+    "payload_sha256": {"$ref": "#/$defs/sha256"},
+    "payload": {"$ref": "#/$defs/payload"}
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9_.:\\-]{0,127}$"
+    },
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "git_revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "semver": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"
+    },
+    "probability": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+    "nullable_identifier": {
+      "oneOf": [{"$ref": "#/$defs/identifier"}, {"type": "null"}]
+    },
+    "nullable_sha256": {
+      "oneOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]
+    },
+    "nullable_semver": {
+      "oneOf": [{"$ref": "#/$defs/semver"}, {"type": "null"}]
+    },
+    "evidence_binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reference_id", "role_id"],
+      "properties": {
+        "reference_id": {"$ref": "#/$defs/identifier"},
+        "role_id": {"$ref": "#/$defs/identifier"}
+      }
+    },
+    "axis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "actionable",
+        "applicability_basis",
+        "authority",
+        "axis_id",
+        "classifier_id",
+        "classifier_sha256",
+        "classifier_version",
+        "confidence",
+        "disposition",
+        "dwell_samples",
+        "evidence_bindings",
+        "evidence_class",
+        "evidence_ids",
+        "hysteresis_policy_id",
+        "hysteresis_policy_sha256",
+        "hysteresis_policy_version",
+        "label",
+        "observability",
+        "provenance_id",
+        "quality",
+        "quality_id",
+        "static_applicability",
+        "threshold_policy_id",
+        "threshold_policy_sha256",
+        "threshold_policy_version",
+        "uncertainty_basis_id",
+        "uncertainty_probability",
+        "unknown_reason_id",
+        "validity",
+        "validity_id"
+      ],
+      "properties": {
+        "actionable": {"const": false},
+        "applicability_basis": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/identifier"},
+          "uniqueItems": true
+        },
+        "authority": {"const": "review_only"},
+        "axis_id": {
+          "enum": [
+            "confinement_or_assembly",
+            "diagnostic_observability",
+            "driver_synchronization",
+            "evidence_maturity",
+            "exhaust_or_boundary",
+            "plant_readiness",
+            "power_or_burn",
+            "stability_or_symmetry"
+          ]
+        },
+        "classifier_id": {"$ref": "#/$defs/nullable_identifier"},
+        "classifier_sha256": {"$ref": "#/$defs/nullable_sha256"},
+        "classifier_version": {"$ref": "#/$defs/nullable_semver"},
+        "confidence": {"$ref": "#/$defs/probability"},
+        "disposition": {
+          "enum": ["classified", "unknown", "not_applicable"]
+        },
+        "dwell_samples": {
+          "oneOf": [
+            {"type": "integer", "minimum": 1},
+            {"type": "null"}
+          ]
+        },
+        "evidence_bindings": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/evidence_binding"},
+          "uniqueItems": true
+        },
+        "evidence_class": {
+          "enum": ["O", "X", "S", "D", "C", "G", "R", "U"]
+        },
+        "evidence_ids": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/identifier"},
+          "uniqueItems": true
+        },
+        "hysteresis_policy_id": {"$ref": "#/$defs/nullable_identifier"},
+        "hysteresis_policy_sha256": {"$ref": "#/$defs/nullable_sha256"},
+        "hysteresis_policy_version": {"$ref": "#/$defs/nullable_semver"},
+        "label": {"$ref": "#/$defs/nullable_identifier"},
+        "observability": {"$ref": "#/$defs/probability"},
+        "provenance_id": {"$ref": "#/$defs/identifier"},
+        "quality": {"enum": ["valid", "degraded", "unknown", "invalid"]},
+        "quality_id": {"$ref": "#/$defs/identifier"},
+        "static_applicability": {"enum": ["applicable", "not_applicable"]},
+        "threshold_policy_id": {"$ref": "#/$defs/nullable_identifier"},
+        "threshold_policy_sha256": {"$ref": "#/$defs/nullable_sha256"},
+        "threshold_policy_version": {"$ref": "#/$defs/nullable_semver"},
+        "uncertainty_basis_id": {"$ref": "#/$defs/nullable_identifier"},
+        "uncertainty_probability": {"$ref": "#/$defs/probability"},
+        "unknown_reason_id": {"$ref": "#/$defs/nullable_identifier"},
+        "validity": {
+          "enum": [
+            "valid",
+            "degraded",
+            "unknown",
+            "stale",
+            "out_of_distribution",
+            "unobservable",
+            "invalid"
+          ]
+        },
+        "validity_id": {"$ref": "#/$defs/identifier"}
+      }
+    },
+    "payload": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "actionable",
+        "assessed_at_ns",
+        "assessment_id",
+        "authority",
+        "axes",
+        "classification_performed",
+        "clock_domain",
+        "clock_epoch",
+        "clock_kind",
+        "clock_synchronization_id",
+        "configuration",
+        "event_id",
+        "evidence_timestamp_ns",
+        "latency_s",
+        "observability_registry_digest",
+        "observability_registry_version",
+        "ontology_digest",
+        "ontology_version",
+        "producer_artifact_sha256",
+        "producer_project",
+        "producer_revision",
+        "reactor_context_id",
+        "reactor_registry_digest",
+        "reactor_registry_version",
+        "sample_rate_hz",
+        "semantic_profile_registry_digest",
+        "semantic_profile_registry_version",
+        "source_handoff_schema",
+        "source_handoff_sha256",
+        "source_project",
+        "source_revision",
+        "source_semantic_ids",
+        "timestamp_offset_ps",
+        "valid_from_ns",
+        "valid_until_ns"
+      ],
+      "properties": {
+        "actionable": {"const": false},
+        "assessed_at_ns": {"type": "integer", "minimum": 0},
+        "assessment_id": {"$ref": "#/$defs/identifier"},
+        "authority": {"const": "review_only"},
+        "axes": {
+          "type": "array",
+          "minItems": 8,
+          "maxItems": 8,
+          "items": {"$ref": "#/$defs/axis"},
+          "uniqueItems": true
+        },
+        "classification_performed": {"const": false},
+        "clock_domain": {"$ref": "#/$defs/identifier"},
+        "clock_epoch": {"$ref": "#/$defs/identifier"},
+        "clock_kind": {
+          "enum": [
+            "plant_monotonic",
+            "simulation_monotonic",
+            "shot_relative",
+            "facility_synchronized",
+            "wall_clock",
+            "model_tick"
+          ]
+        },
+        "clock_synchronization_id": {"$ref": "#/$defs/identifier"},
+        "configuration": {"$ref": "#/$defs/identifier"},
+        "event_id": {"$ref": "#/$defs/identifier"},
+        "evidence_timestamp_ns": {"type": "integer", "minimum": 0},
+        "latency_s": {"type": "number", "minimum": 0.0},
+        "observability_registry_digest": {"$ref": "#/$defs/sha256"},
+        "observability_registry_version": {"$ref": "#/$defs/semver"},
+        "ontology_digest": {"$ref": "#/$defs/sha256"},
+        "ontology_version": {"$ref": "#/$defs/semver"},
+        "producer_artifact_sha256": {"$ref": "#/$defs/sha256"},
+        "producer_project": {"const": "SCPN-PHASE-ORCHESTRATOR"},
+        "producer_revision": {"$ref": "#/$defs/git_revision"},
+        "reactor_context_id": {"$ref": "#/$defs/identifier"},
+        "reactor_registry_digest": {"$ref": "#/$defs/sha256"},
+        "reactor_registry_version": {"$ref": "#/$defs/semver"},
+        "sample_rate_hz": {"type": "number", "exclusiveMinimum": 0.0},
+        "semantic_profile_registry_digest": {"$ref": "#/$defs/sha256"},
+        "semantic_profile_registry_version": {"$ref": "#/$defs/semver"},
+        "source_handoff_schema": {"$ref": "#/$defs/identifier"},
+        "source_handoff_sha256": {"$ref": "#/$defs/sha256"},
+        "source_project": {"enum": ["SCPN-FUSION-CORE", "SCPN-MIF-CORE"]},
+        "source_revision": {"$ref": "#/$defs/git_revision"},
+        "source_semantic_ids": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/identifier"},
+          "uniqueItems": true
+        },
+        "timestamp_offset_ps": {"type": "integer", "minimum": 0, "maximum": 999},
+        "valid_from_ns": {"type": "integer", "minimum": 0},
+        "valid_until_ns": {"type": "integer", "minimum": 0}
+      }
+    }
+  }
+}

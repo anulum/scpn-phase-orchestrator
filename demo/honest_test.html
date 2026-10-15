@@ -1,0 +1,195 @@
+<title>The Honest Test</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --ground:#F7F8F6; --panel:#FFFFFF; --ink:#1A2330; --muted:#5B6672;
+    --line:#D9DEDA; --grid:#E7EBE7;
+    --score:#12A594; --score-soft:#E2F3F0; --alarm:#B4552D; --alarm-soft:#F6E9E2;
+    --dim:#B9C2C6; --mono-bg:#EEF1EE;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:#10161D; --panel:#171F28; --ink:#E5EAE8; --muted:#93A0A8;
+      --line:#2A3540; --grid:#212B36;
+      --score:#2FA093; --score-soft:#143029; --alarm:#C97B50; --alarm-soft:#392318;
+      --dim:#3A4652; --mono-bg:#1D2732;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:#10161D; --panel:#171F28; --ink:#E5EAE8; --muted:#93A0A8;
+    --line:#2A3540; --grid:#212B36;
+    --score:#2FA093; --score-soft:#143029; --alarm:#C97B50; --alarm-soft:#392318;
+    --dim:#3A4652; --mono-bg:#1D2732;
+  }
+  * { box-sizing:border-box; }
+  body {
+    background:var(--ground); color:var(--ink);
+    font-family:"Public Sans","Segoe UI",system-ui,sans-serif;
+    font-size:16px; line-height:1.55; margin:0; padding:0 20px 90px;
+  }
+  main { max-width:56rem; margin:0 auto; }
+  header.masthead { border-bottom:2px solid var(--ink); padding:48px 0 18px; margin-bottom:26px; }
+  .eyebrow { font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--score); font-weight:600; margin:0 0 10px; }
+  h1 { font-family:"Newsreader",Georgia,serif; font-weight:500; font-size:clamp(28px,4.6vw,40px); line-height:1.12; margin:0 0 10px; text-wrap:balance; }
+  .standfirst { color:var(--muted); margin:0; max-width:44rem; }
+  h2 { font-family:"Newsreader",Georgia,serif; font-weight:600; font-size:22px; margin:40px 0 10px; text-wrap:balance; }
+  p { max-width:44rem; margin:0 0 12px; }
+  ul { margin:0 0 12px; padding-left:1.15rem; }
+  li { margin-bottom:7px; max-width:43rem; }
+  .tiles { display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:12px; margin:22px 0 6px; }
+  .tile { background:var(--panel); border:1px solid var(--line); padding:14px 16px; }
+  .tile .k { font-size:11px; letter-spacing:.12em; text-transform:uppercase; font-weight:600; color:var(--muted); margin-bottom:6px; }
+  .tile .v { font-family:"IBM Plex Mono",monospace; font-size:22px; font-weight:500; font-variant-numeric:tabular-nums; }
+  .tile .v small { font-size:12px; color:var(--muted); font-weight:400; }
+  .chartcard { background:var(--panel); border:1px solid var(--line); padding:18px 18px 12px; margin:16px 0; }
+  .chartcard h3 { font-size:14px; font-weight:700; margin:0 0 2px; }
+  .chartcard .sub { font-size:12.5px; color:var(--muted); margin:0 0 12px; max-width:none; }
+  .chartwrap { overflow-x:auto; }
+  svg text { font-family:"Public Sans",system-ui,sans-serif; }
+  .legend { display:flex; gap:18px; font-size:12px; color:var(--muted); margin:8px 0 0; flex-wrap:wrap; }
+  .legend span { display:inline-flex; align-items:center; gap:6px; }
+  .sw { width:12px; height:12px; border-radius:2px; display:inline-block; }
+  code { font-family:"IBM Plex Mono",monospace; font-size:.85em; background:var(--mono-bg); padding:1px 5px; border-radius:3px; word-break:break-all; }
+  .seal { background:var(--panel); border:1px solid var(--line); border-left:3px solid var(--score); padding:14px 18px; margin:10px 0; }
+  .seal .k { font-size:11px; letter-spacing:.12em; text-transform:uppercase; font-weight:600; color:var(--muted); }
+  .pivot { background:var(--panel); border:1px solid var(--line); border-top:3px solid var(--score); padding:18px 22px; margin:18px 0; }
+  .pivot p:last-child { margin-bottom:0; }
+  .caveats { border-left:3px solid var(--alarm); background:var(--panel); border-top:1px solid var(--line); border-right:1px solid var(--line); border-bottom:1px solid var(--line); padding:14px 18px; margin:14px 0; }
+  .footer-note { margin-top:44px; padding-top:14px; border-top:1px solid var(--line); font:12px "IBM Plex Mono",monospace; color:var(--muted); }
+  .tooltip { position:fixed; pointer-events:none; background:var(--ink); color:var(--ground); font:12px "IBM Plex Mono",monospace; padding:5px 9px; border-radius:3px; display:none; z-index:9; white-space:nowrap; }
+  a { color:var(--score); }
+</style>
+
+<main>
+<header class="masthead">
+  <p class="eyebrow">SCPN Phase Orchestrator &middot; four-domain falsification &middot; matched false alarm</p>
+  <h1>We ran the fair test. Nobody passed &mdash; including us.</h1>
+  <p class="standfirst">Generic early-warning detection &mdash; ours and the classical
+  AR(1)-Kendall baseline of the tipping-point literature &mdash; was evaluated on real
+  transitions in four domains at a matched false alarm with permutation significance.
+  No detector reached significance in any domain. That result is sealed, published,
+  and it is the reason this platform certifies detectors instead of overclaiming one.</p>
+</header>
+
+<div class="tiles">
+  <div class="tile"><div class="k">Domains</div><div class="v">4 <small>brain &middot; heart &middot; grid &middot; climate</small></div></div>
+  <div class="tile"><div class="k">Real transitions</div><div class="v">30 <small>seizures, AF onsets, instabilities, tippings</small></div></div>
+  <div class="tile"><div class="k">Detectors significant</div><div class="v">0 <small>of 10 detector-domain runs</small></div></div>
+  <div class="tile"><div class="k">Strongest signal anywhere</div><div class="v">p = 0.067 <small>classical, EEG &mdash; short of 0.05</small></div></div>
+</div>
+
+<div class="chartcard">
+  <h3>Transitions led at a matched 10% false alarm &mdash; best SCPN member vs the classical baseline</h3>
+  <p class="sub">Per domain: the best-performing SCPN suite member against the canonical
+  Dakos et&nbsp;al. 2008 AR(1)-Kendall-&tau; detector, both calibrated on the same nulls and
+  scored on the same transitions. The tick is the count expected by chance at the
+  detector&#8217;s own alarm rate.</p>
+  <div class="chartwrap"><svg id="fd" width="820" height="420" role="img" aria-label="Grouped bar chart: per domain, transitions led by the best SCPN member and by the classical AR1-Kendall detector, all with p-values above 0.05"></svg></div>
+  <div class="legend">
+    <span><span class="sw" style="background:var(--score)"></span>best SCPN suite member</span>
+    <span><span class="sw" style="background:var(--dim)"></span>classical AR(1)-Kendall-&tau; (Dakos 2008)</span>
+    <span><span class="sw" style="border-left:2px dashed var(--ink);width:0;height:12px;border-radius:0"></span>expected by chance</span>
+  </div>
+</div>
+
+<h2>What the numbers say</h2>
+<ul>
+  <li><strong>Palaeoclimate:</strong> SCPN 1/6 (p&nbsp;=&nbsp;0.51); the classical detector
+  0/6 (p&nbsp;=&nbsp;1.00) &mdash; on the same class of records its own literature made famous,
+  at an operational matched-false-alarm threshold rather than retrospective per-record trends.</li>
+  <li><strong>Grid (generic observables):</strong> SCPN 3/12 (p&nbsp;=&nbsp;0.20), classical
+  1/12 (p&nbsp;=&nbsp;0.71). The domain-specific modal detector is the separate, positive
+  counterpoint &mdash; see the <a href="grid_modal_head_to_head.html">head-to-head demo</a>.</li>
+  <li><strong>Cardiac:</strong> SCPN 2/6 (p&nbsp;=&nbsp;0.22), classical 0/6 (p&nbsp;=&nbsp;1.00).</li>
+  <li><strong>EEG:</strong> SCPN 2/6 (p&nbsp;=&nbsp;0.22), classical 3/6 (p&nbsp;=&nbsp;0.067)
+  &mdash; the strongest signal anywhere in the study, and still short of significance.</li>
+</ul>
+
+<div class="pivot">
+  <p><strong>Why publish a negative result about our own detectors?</strong> Because the
+  test is the product. The same harness that demoted our generic suite &mdash; matched
+  false-alarm calibration, label-permutation significance, selection-controlled
+  surrogates, hash-sealed byte-reproducible records &mdash; is what certified the one
+  detector that does clear the bar, and it is what we run against any detector,
+  anyone&#8217;s, on their data. A certification you can trust is one that is allowed
+  to say no.</p>
+</div>
+
+<h2>The sealed record</h2>
+<p>The full comparison is a committed artefact in the public repository
+(<code>examples/real_data/head_to_head_ar1_kendall/</code>), alongside the
+publication-form study
+(<code>docs/studies/early_warning_matched_false_alarm.md</code>) and the per-domain
+sealed evidence directories it draws on.</p>
+<div class="seal"><div class="k">Committed artefact &mdash; SHA-256 of the record file</div>
+<code>2c78a7308a183414&hellip;</code></div>
+
+<div class="caveats">
+  <strong>Claim boundary (read before quoting)</strong>
+  <ul>
+    <li>Corpora are small (6&ndash;12 transitions per domain) &mdash; low statistical power;
+    the honest statement is &ldquo;no detector demonstrated significance here&rdquo;, not
+    &ldquo;early warning is impossible&rdquo;.</li>
+    <li>One classical competitor was implemented; the EEG corpus is single-subject.</li>
+    <li>All operating points are matched-false-alarm calibrated; results at other
+    operating points may differ and would need the same protocol to claim anything.</li>
+  </ul>
+</div>
+
+<p class="footer-note">SCPN Phase Orchestrator &middot; data: CHB-MIT scalp EEG (Shoeb 2009),
+MIT-BIH AFDB, PSML (Zheng et&nbsp;al. 2021), Dakos et&nbsp;al. 2008 records &mdash; all
+citation-only &middot; protocol: matched false alarm + label permutation (10&nbsp;000 draws,
+seed 0) &middot; &copy; 1996&ndash;2026 Miroslav &Scaron;otek</p>
+</main>
+<div class="tooltip" id="tip"></div>
+
+<script>
+const DOMAINS = [
+  {domain:"EEG (seizures)",        n:6,  scpn:{led:2, p:"0.22", name:"critical slowing down"}, classic:{led:3, p:"0.067", exp:2.7}, scpnExp:2.1},
+  {domain:"Cardiac (AF onsets)",   n:6,  scpn:{led:2, p:"0.22", name:"synchronisation"},       classic:{led:0, p:"1.00",  exp:0.5}, scpnExp:1.0},
+  {domain:"Grid (instabilities)",  n:12, scpn:{led:3, p:"0.20", name:"critical slowing down"}, classic:{led:1, p:"0.71",  exp:1.0}, scpnExp:1.4},
+  {domain:"Climate (tippings)",    n:6,  scpn:{led:1, p:"0.51", name:"critical slowing down"}, classic:{led:0, p:"1.00",  exp:0.5}, scpnExp:0.6},
+];
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+(function(){
+  const svg = document.getElementById('fd');
+  const W=820,H=420,m={t:12,r:170,b:30,l:175};
+  const iw=W-m.l-m.r, ih=H-m.t-m.b;
+  const groupH = ih/DOMAINS.length, barH = 18, gap = 4;
+  const X = f => m.l + iw*f;
+  const NS='http://www.w3.org/2000/svg';
+  const el=(n,a)=>{const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);return e;};
+  const tip=document.getElementById('tip');
+  for(let f=0; f<=1; f+=0.25){
+    svg.appendChild(el('line',{x1:X(f),x2:X(f),y1:m.t,y2:m.t+ih,stroke:css('--grid'),'stroke-width':1}));
+    const t=el('text',{x:X(f),y:H-8,'text-anchor':'middle','font-size':11,fill:css('--muted')});
+    t.textContent=Math.round(f*100)+'%'; svg.appendChild(t);
+  }
+  DOMAINS.forEach((d,i)=>{
+    const gy = m.t + i*groupH + groupH/2;
+    const name=el('text',{x:m.l-10,y:gy+4,'text-anchor':'end','font-size':13,fill:css('--ink'),'font-weight':600});
+    name.textContent=d.domain; svg.appendChild(name);
+    const rows=[
+      {y:gy-barH-gap/2, led:d.scpn.led, p:d.scpn.p, exp:d.scpnExp, fill:css('--score'),
+       label:d.scpn.led+'/'+d.n+' \u00B7 p = '+d.scpn.p, who:'SCPN '+d.scpn.name},
+      {y:gy+gap/2, led:d.classic.led, p:d.classic.p, exp:d.classic.exp, fill:css('--dim'),
+       label:d.classic.led+'/'+d.n+' \u00B7 p = '+d.classic.p, who:'AR(1)-Kendall-\u03C4'}
+    ];
+    rows.forEach(r=>{
+      svg.appendChild(el('rect',{x:m.l,y:r.y,width:Math.max(X(r.led/d.n)-m.l,2),height:barH,rx:3,fill:r.fill}));
+      svg.appendChild(el('line',{x1:X(r.exp/d.n),x2:X(r.exp/d.n),y1:r.y-3,y2:r.y+barH+3,
+        stroke:css('--ink'),'stroke-width':1.6,'stroke-dasharray':'3 3'}));
+      const lab=el('text',{x:X(r.led/d.n)+8,y:r.y+barH/2+4,'font-size':12,'font-family':'IBM Plex Mono,monospace',fill:css('--muted')});
+      lab.textContent=r.label; svg.appendChild(lab);
+      const hit=el('rect',{x:m.l-170,y:r.y-2,width:iw+m.r+165,height:barH+4,fill:'transparent'});
+      hit.addEventListener('pointermove',e=>{
+        tip.style.display='block';
+        tip.style.left=(e.clientX+14)+'px'; tip.style.top=(e.clientY-10)+'px';
+        tip.textContent=r.who+': led '+r.led+'/'+d.n+', expected '+r.exp+' by chance, p='+r.p;
+      });
+      hit.addEventListener('pointerleave',()=>{tip.style.display='none';});
+      svg.appendChild(hit);
+    });
+  });
+})();
+</script>
