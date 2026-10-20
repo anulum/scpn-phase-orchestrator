@@ -51,17 +51,53 @@ def delayed_kuramoto_run_mojo(
     delay_steps: int,
     n_steps: int,
 ) -> FloatArray:
-    """Integrate delayed Kuramoto dynamics via the Mojo executable."""
+    """Integrate via Mojo, returning an independent input copy for zero steps.
+
+    Invalid controls, process failures and invalid numerical results raise
+    ValueError. A positive batch requires the compiled executable.
+
+    Parameters
+    ----------
+    phases, omegas : FloatArray
+        Finite source phases in radians and frequencies in rad/s, shape ``(n,)``.
+    knm_flat, alpha_flat : FloatArray
+        Row-major coupling and phase-lag matrices, each with ``n*n`` entries.
+    n : int
+        Positive oscillator count matching the supplied buffers.
+    zeta, psi : float
+        Finite external drive strength and reference phase in radians.
+    dt : float
+        Positive finite Euler timestep in seconds.
+    delay_steps : int
+        Positive discrete delay; steps before this delay use current phases.
+    n_steps : int
+        Nonnegative number of integration steps.
+
+    Returns
+    -------
+    FloatArray
+        Independent float64 final phases. Positive batches project into
+        ``[0, 2*pi)`` with positive zero; zero steps preserve the validated input.
+
+    Raises
+    ------
+    ValueError
+        If inputs, native arithmetic or the returned phase vector are invalid.
+    ImportError
+        If a positive batch cannot load its actual native artifact.
+    """
     ph, om, knm, alpha, n, zeta, psi, dt, delay_steps, n_steps = (
         validate_delay_backend_inputs(
             phases, omegas, knm_flat, alpha_flat, n, zeta, psi, dt, delay_steps, n_steps
         )
     )
+    if n_steps == 0:
+        return ph
     exe = _ensure_exe()
     tokens: list[str] = [
         "DELAY",
         str(int(n)),
-        str(int(delay_steps)),
+        str(min(delay_steps, n_steps)),
         str(int(n_steps)),
         repr(float(zeta)),
         repr(float(psi)),

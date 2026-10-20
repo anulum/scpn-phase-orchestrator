@@ -1,637 +1,228 @@
-# Time-Delayed Coupling — Axonal Delay Kuramoto
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<!-- Commercial license available -->
+<!-- © Concepts 1996–2026 Miroslav Šotek. All rights reserved. -->
+<!-- © Code 2020–2026 Miroslav Šotek. All rights reserved. -->
+<!-- ORCID: 0009-0009-3560-0851 -->
+<!-- Contact: www.anulum.li | protoscience@anulum.li -->
+<!-- SCPN Phase Orchestrator — Delayed Kuramoto API -->
 
-The `delay` module implements Kuramoto dynamics with time-delayed coupling:
-oscillator $j$'s influence on oscillator $i$ arrives with a discrete time
-delay $\tau$. This models axonal propagation delays in neural circuits,
-signal latency in communication networks, and transport delays in
-distributed control systems.
+# Time-delayed Kuramoto integration
 
-Time-delayed coupling qualitatively changes the dynamics: it can stabilise
-otherwise unstable states, induce multistability, and generate travelling
-wave patterns not possible with instantaneous coupling.
+`DelayedEngine` integrates a fixed discrete delay with simultaneous explicit
+Euler updates. `DelayBuffer` independently stores finite phase snapshots.
+The implementation is a numerical model; physical signal interpretation and
+validation belong to the consuming domain.
 
----
+## Mathematical recurrence
 
-## 1. Mathematical Formalism
-
-### 1.1 The Delayed Kuramoto Equation
-
-$$
-\frac{d\theta_i}{dt} = \omega_i
-+ \sum_{j=1}^{N} K_{ij} \sin(\theta_j(t - \tau) - \theta_i(t) - \alpha_{ij})
-+ \zeta \sin(\Psi - \theta_i(t))
-$$
-
-The key difference from standard Kuramoto: $\theta_j$ in the coupling term
-is evaluated at time $t - \tau$, not at the current time $t$. This makes
-the system a **delay differential equation (DDE)**, requiring the full
-history $\theta(s)$ for $s \in [t - \tau, t]$ as initial condition.
-
-### 1.2 Discrete Delay Implementation
-
-The module discretises the delay as an integer number of timesteps:
+For timestep `dt`, delay count $d$ and accepted step $k$, the source phase is
 
 $$
-\tau = \text{delay\_steps} \times \Delta t
+\widetilde\theta_j^k =
+\begin{cases}
+\theta_j^k, & k < d, \\
+\theta_j^{k-d}, & k \ge d.
+\end{cases}
 $$
 
-Phase history is stored in a circular buffer (Python `deque`). At each step:
-
-1. Current phases $\theta(t)$ are appended to the buffer
-2. Delayed phases $\theta(t - \tau)$ are retrieved from $\text{delay\_steps}$
-   positions back in the buffer
-3. Coupling is computed using $\theta_j^{\text{delayed}}$ and $\theta_i^{\text{current}}$
-4. Euler integration advances $\theta_i$
+The update uses row-major coupling from source $j$ into receiver $i$:
 
 $$
-\theta_i^{n+1} = \left(\theta_i^n + \Delta t \left(
-\omega_i + \sum_j K_{ij} \sin(\theta_j^{n - d} - \theta_i^n - \alpha_{ij})
-+ \zeta\sin(\Psi - \theta_i^n)
-\right)\right) \bmod 2\pi
+\theta_i^{k+1} = \Pi\!\left(\theta_i^k + \Delta t
+\left[\omega_i + \sum_j K_{ij}
+\sin(\widetilde\theta_j^k-\theta_i^k-\alpha_{ij})
++ \zeta\sin(\Psi-\theta_i^k)\right]\right).
 $$
 
-where $d = \text{delay\_steps}$.
-
-### 1.3 Buffer Initialisation
-
-During the first $d$ steps, insufficient history exists. The implementation
-falls back to current phases ($\theta_j(t)$ instead of $\theta_j(t-\tau)$)
-until the buffer is filled. This is equivalent to assuming constant initial
-history $\theta(s) = \theta(0)$ for $s \in [-\tau, 0]$.
-
-### 1.4 Delay Buffer (Standalone)
-
-The `DelayBuffer` class provides a reusable circular buffer for phase history:
-
-- `push(phases)` — store a snapshot
-- `get_delayed(delay_steps)` — retrieve from $d$ steps ago
-- `clear()` — reset buffer
-- `length` — current buffer occupancy
-
-This can be used independently for custom delay schemes (variable delay,
-per-oscillator delay, etc.).
-
-### 1.5 Effect of Delay on Synchronisation
-
-For the standard Kuramoto model with uniform delay $\tau$ and all-to-all
-coupling, the synchronised state satisfies (Yeung & Strogatz 1999):
-
-$$
-R = R_0 \cos(\omega_0 \tau)
-$$
-
-where $R_0$ is the undelayed order parameter and $\omega_0$ is the mean
-frequency. Key consequences:
-
-- **Constructive delay:** when $\omega_0 \tau = 2k\pi$ (integer multiples
-  of the oscillation period), delay has no effect on $R$
-- **Destructive delay:** when $\omega_0 \tau = (2k+1)\pi$, delay maximally
-  reduces $R$ and can destroy synchronisation
-- **Critical delay:** $\tau_c = \pi / (2\omega_0)$ is the quarter-period
-  threshold where $R$ drops to zero
-
-For non-uniform frequencies, the picture is more complex — delays can
-create chimera states (partial synchronisation with spatial structure).
-
-### 1.6 Multistability from Delay
-
-Time delay induces multistability: multiple stable phase-locked solutions
-coexist at the same coupling strength $K$. The number of coexisting
-attractors grows with $\tau$:
-
-$$
-N_{\text{attractors}} \sim \lfloor 2\omega_0 \tau / \pi \rfloor + 1
-$$
-
-This is a fundamental difference from instantaneous coupling, where
-(for identical oscillators) the synchronised state is unique.
-
-### 1.7 Travelling Waves
-
-For ring topologies with delay, travelling wave solutions exist:
-
-$$
-\theta_j(t) = \Omega t + j \cdot \phi_0
-$$
-
-where $\Omega$ is the collective frequency (different from $\omega_0$)
-and $\phi_0$ is the spatial wave number. The delay selects specific
-wave numbers — longer delays favour shorter wavelengths.
-
-These travelling waves are observable in neural cortex (beta waves
-propagating across cortical sheets) and in SCPN Layer 4 (synchronisation
-dynamics).
-
-### 1.8 Stability of Delayed Sync
-
-The linearised stability of the synchronised state depends on the
-eigenvalues of the delayed coupling Jacobian:
-
-$$
-\lambda = -K R \cos(\alpha) e^{-\lambda \tau} + i\omega_0
-$$
-
-This transcendental equation (characteristic equation of the DDE) has
-infinitely many roots, unlike the ODE case. The dominant root determines
-stability. For small $\tau$: $\text{Re}(\lambda) \approx -K R \cos(\alpha)$
-(same as undelayed). For large $\tau$: $\text{Re}(\lambda)$ oscillates,
-creating stability windows (Arnold tongues in the $(\tau, K)$ plane).
-
-### 1.9 Delay Distribution
-
-In biological networks, delays are not uniform — they follow a
-distribution $p(\tau)$ depending on axon length, myelination, etc.
-The effective coupling with distributed delay is:
-
-$$
-\sum_j K_{ij} \int_0^\infty p(\tau) \sin(\theta_j(t-\tau) - \theta_i(t)) \, d\tau
-$$
-
-SPO currently supports only fixed discrete delay. For distributed delays,
-sample multiple `delay_steps` values and weight the coupling accordingly.
-
----
-
-## 2. Theoretical Context
-
-### 2.1 Historical Background
-
-Delayed coupling in oscillator networks was first studied systematically
-by Schuster & Wagner (1989) and Niebur, Schuster & Kammen (1991).
-Yeung & Strogatz (1999) provided the definitive analytical treatment
-of the delayed Kuramoto model, deriving the modified self-consistency
-equation and stability conditions.
-
-The topic gained renewed interest with Dhamala, Jirsa & Ding (2004),
-who showed that time delays can enhance synchronisation in neural
-networks — contrary to naive expectation.
-
-### 2.2 Applications
-
-| Domain | Source of delay | Typical $\tau$ |
-|--------|----------------|----------------|
-| Neural circuits | Axonal conduction velocity | 1–50 ms |
-| Brain regions | White matter tracts | 5–200 ms |
-| Power grids | Communication latency | 10–500 ms |
-| Distributed computing | Network RTT | 1–100 ms |
-| SCPN Layer 12 | Gaian mesh UDP | 10–100 ms |
-
-In SCPN, each layer has a characteristic timescale $\tau_\ell$ (from
-`SCPN_LAYER_TIMESCALES`). Inter-layer coupling naturally has delays
-proportional to the timescale mismatch between layers.
-
-### 2.3 Role in SPO Pipeline
-
-The `DelayedEngine` extends the base `UPDEEngine` pattern for systems
-where instantaneous coupling is physically unrealistic. Common use:
-
-- Neural circuit simulations with axonal delays
-- Distributed SPO instances coupled via `GaianMeshBridge` (Layer 12)
-- Frequency-dependent delay modelling (higher frequencies → shorter effective delay)
-
-### 2.4 Comparison with Other Delay Methods
-
-| Method | Delay type | Accuracy | Memory |
-|--------|-----------|----------|--------|
-| `DelayedEngine` (Euler + buffer) | Fixed discrete | $O(\Delta t)$ | $O(d \cdot N)$ |
-| DDE solver (e.g., `jitcdde`) | Continuous, interpolated | $O(\Delta t^4)$ | $O(d \cdot N)$ |
-| State augmentation | Converts DDE to large ODE | $O(\Delta t^4)$ | $O(d \cdot N)$ |
-
-SPO uses fixed discrete delay for performance. For high-accuracy research
-requiring continuous delay, interface with `jitcdde` via the adapters.
-
----
-
-## 3. Pipeline Position
-
-```
-┌──────────────┐     ┌──────────────────┐     ┌──────────────┐
-│ coupling/    │────→│ DelayedEngine    │────→│ monitor/     │
-│ knm.py       │     │                  │     │ order_params │
-│ (K_ij)       │     │ Circular buffer  │     │ chimera      │
-└──────────────┘     │ stores θ history │     └──────────────┘
-                     │                  │
-┌──────────────┐     │ θ_j(t-τ) used   │
-│ oscillators/ │────→│ in coupling      │
-│ base.py      │     └──────────────────┘
-│ (ω_i)        │
-└──────────────┘     ┌──────────────────┐
-                     │ DelayBuffer      │
-┌──────────────┐     │ (standalone)     │
-│ adapters/    │────→│ push/get_delayed │
-│ GaianMesh    │     └──────────────────┘
-│ (network τ)  │
-└──────────────┘
-```
-
-**Inputs:**
-- `phases` (N,) — current phases
-- `omegas` (N,) — natural frequencies
-- `knm` (N,N) — coupling matrix
-- `alpha` (N,N) — phase-lag (optional)
-- `zeta`, `psi` — external drive
-- `delay_steps` — discrete delay $d$ (constructor parameter)
-
-**Outputs:**
-- `phases` (N,) — updated phases after Euler step with delayed coupling
-
----
-
-## 4. Features
-
-### 4.1 Two Classes
-
-| Class | Purpose |
-|-------|---------|
-| `DelayBuffer` | Standalone circular buffer for phase history |
-| `DelayedEngine` | Full integration engine with built-in delay buffer |
-
-### 4.2 Polyglot Acceleration
-
-`DelayedEngine.run()` dispatches through a fastest-first backend chain
-resolved once at import (`rust → mojo → julia → go → python`). Each
-backend integrates the identical discrete delayed-Kuramoto recurrence over
-a ring buffer of `delay_steps + 1` phase snapshots and returns the final
-phases wrapped into $[0, 2\pi)$:
-
-| Backend | Mechanism | Parity tolerance vs Python |
-|---------|-----------|----------------------------|
-| `rust` | `spo-kernel` `delayed_kuramoto_run_rust` (PyO3) | $10^{-9}$ |
-| `mojo` | `mojo/delay_mojo` (stdin/stdout text protocol) | $10^{-6}$ |
-| `julia` | `julia/delay.jl` (`DelayJL.delayed_kuramoto_run`) | $10^{-9}$ |
-| `go` | `go/libdelay.so` `DelayedKuramotoRun` (cgo `c-shared`) | $10^{-9}$ |
-| `python` | `_python_run` NumPy ring-buffer reference | exact |
-
-`ACTIVE_BACKEND` names the resolved fastest backend; `AVAILABLE_BACKENDS`
-lists every backend that loaded successfully (Python is always present as
-the final floor). Each non-Python adapter validates its state arrays,
-scalars, and step counts via `validate_delay_backend_inputs` before any
-runtime loads, so malformed inputs fail closed without touching a foreign
-runtime. If a faster backend is missing the engine silently falls through
-to the next; results are bit-identical to the NumPy reference within the
-tolerances above.
-
-Phase, frequency, coupling, and phase-lag arrays must contain numeric values,
-not stringified numbers. This check runs before NumPy float coercion on the
-public engine and direct Go/Julia/Mojo adapter boundaries. Shared backend
-outputs and Julia raw returns use the same rule before finite phase-vector,
-cardinality, and `[0, 2*pi)` checks. Mojo's stdout is intentionally textual;
-its protocol parser converts the declared output lines before applying the
-shared numeric output contract.
-
-Note: `DelayedEngine.step()` is Python-only — the polyglot backends
-delegate at the `run()` level for batch efficiency, since the ring buffer
-must persist across the full step sequence.
-
-### 4.3 Automatic Fallback
-
-During initial $d$ steps, the engine uses current phases instead of
-delayed phases. No special initialisation required — just call `run()`.
-
-### 4.4 Configurable Delay
-
-`delay_steps` is set at construction time. The delay in physical units:
-$\tau = d \times \Delta t$. For `dt=0.01` and `delay_steps=10`: $\tau = 0.1$ time units.
-
----
-
-## 5. Usage Examples
-
-### 5.1 Basic Delayed Coupling
+The physical delay is $\tau=d\,\Delta t$. Early steps use their **current**
+source phases while history accumulates. This differs from supplying a
+prescribed continuous prehistory or holding the initial phase fixed throughout
+warmup. The API does not accept a prehistory function or distributed delays.
+
+All CPU owners use float64. The projection $\Pi$ returns phases in
+`[0, 2*pi)` with positive zero for either sign of zero and for a negative
+remainder rounded to the upper endpoint. Interior representable values,
+including `nextafter(2*pi, 0)`, remain intact. Nonfinite numerical results are
+refused. Very large unwrapped phases remain subject to float64/libm range
+reduction and cancellation limits; range conformance alone does not establish
+accurate phase differences for those inputs.
+
+Delay can change synchrony and produce multiple dynamical regimes. A universal
+cosine law for the order parameter is not provided by this solver. For the
+particular noiseless, identical, globally coupled continuous model,
+[Yeung and Strogatz](https://arxiv.org/pdf/chao-dyn/9807030), equations 5–6,
+derive collective-frequency self-consistency and orbital stability conditions
+for uniformly rotating synchrony. Those assumptions differ from arbitrary
+matrices, forcing and the discrete warmup defined above.
+
+## Public Python API
 
 ```python
 import numpy as np
 from scpn_phase_orchestrator.upde.delay import DelayedEngine
 from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
-N = 32
-rng = np.random.default_rng(42)
-phases = rng.uniform(0, 2 * np.pi, N)
-omegas = np.ones(N)  # identical frequencies
-knm = np.full((N, N), 2.0 / N)
-np.fill_diagonal(knm, 0.0)
-
-# 10-step delay → τ = 10 × 0.01 = 0.1 time units
-engine = DelayedEngine(N, dt=0.01, delay_steps=10)
-phases = engine.run(phases, omegas, knm, n_steps=500)
-
-R, _ = compute_order_parameter(phases)
-print(f"Delayed R = {R:.4f}")
+phases = np.array([0.4, 1.1])
+omegas = np.array([1.0, -0.7])
+knm = np.array([[0.0, 0.5], [-0.2, 0.0]])
+alpha = np.full((2, 2), 0.01)
+engine = DelayedEngine(2, dt=0.01, delay_steps=3)
+final = engine.run(
+    phases, omegas, knm, zeta=0.2, psi=0.3, alpha=alpha,
+    n_steps=40, backend="python",
+)
+r, mean_phase = compute_order_parameter(final)
 ```
 
-### 5.2 Delay Effect on Synchronisation
+The constructor requires positive oscillator and delay counts fitting a
+platform index, and a positive finite timestep. Phases and frequencies have
+shape `(n,)`; coupling and lag have shape `(n, n)`. Frequencies are in rad/s
+when the timestep is in seconds. Coupling and drive carry angular-frequency
+units, and phase lags/reference phases are in radians. Omitting `alpha` uses
+a zero lag matrix. Signed frequencies and directed or signed coupling are
+supported; no symmetry or zero-diagonal constraint is imposed here.
+
+Inputs must be finite real measurements. Boolean, numeric-string, complex and
+temporal aliases are refused before numerical dispatch. Results use independent
+storage; callers retain their input arrays. Public `run()` requires a positive
+`n_steps` count.
+
+### Stateful steps and fresh batches
+
+`step()` is the NumPy stateful interface. Pass each accepted output into the
+next call to advance a sequence:
 
 ```python
-# Compare R for different delays
-for d in [0, 5, 10, 20, 50]:
-    eng = DelayedEngine(N, dt=0.01, delay_steps=max(d, 1))
-    p = rng.uniform(0, 2 * np.pi, N).copy()
-    p = eng.run(p, omegas, knm, n_steps=1000)
-    R, _ = compute_order_parameter(p)
-    tau = d * 0.01
-    print(f"τ={tau:.2f}: R={R:.4f}")
-# Expected: R decreases then oscillates with increasing τ
+current = phases.copy()
+for _ in range(40):
+    current = engine.step(current, omegas, knm, zeta=0.2, psi=0.3, alpha=alpha)
 ```
 
-### 5.3 Constructive vs Destructive Delay
+A refused step preserves the accepted history, so a later valid call can
+continue it. The legacy `step_idx` argument is accepted for call compatibility;
+accepted calls determine the history position.
 
-```python
-# For identical oscillators at ω₀=1: constructive at τ=2πk/ω₀, destructive at τ=π(2k+1)/ω₀
-omega_0 = 1.0
-omegas = np.ones(N) * omega_0
+Each `run()` begins a fresh batch and leaves the instance's `step()` history
+unchanged. Splitting a stateless batch into two `run()` calls restarts warmup at
+the second call. Use `step()` for continuous history across calls. The internal
+Rust `DelayedStepper` is stateful, including across its own `run()` calls.
 
-# Constructive: τ = 2π (one full period)
-d_constructive = int(2 * np.pi / (omega_0 * 0.01))  # ~628 steps
-eng_c = DelayedEngine(N, dt=0.01, delay_steps=d_constructive)
-p_c = eng_c.run(rng.uniform(0, 2*np.pi, N), omegas, knm, n_steps=2000)
-R_c, _ = compute_order_parameter(p_c)
+### Explicit runtime selection
 
-# Destructive: τ = π (half period)
-d_destructive = int(np.pi / (omega_0 * 0.01))  # ~314 steps
-eng_d = DelayedEngine(N, dt=0.01, delay_steps=d_destructive)
-p_d = eng_d.run(rng.uniform(0, 2*np.pi, N), omegas, knm, n_steps=2000)
-R_d, _ = compute_order_parameter(p_d)
+`run(..., backend="python")` requires NumPy. The explicit names `rust`, `go`,
+`julia` and `mojo` require the corresponding actual owner. An unavailable owner
+raises `ImportError`; invalid numerical inputs/results raise `ValueError`.
+Errors from an explicitly requested owner propagate to the caller.
 
-print(f"Constructive (τ=2π): R={R_c:.4f}")
-print(f"Destructive  (τ=π):  R={R_d:.4f}")
-```
+The default `backend="auto"` retains the configured priority
+`rust → mojo → julia → go → python`. Load-time unavailability proceeds through
+that order. A refusal from the selected native batch falls back to NumPy.
+`ACTIVE_BACKEND` and `AVAILABLE_BACKENDS` describe import-time admission;
+explicit selection provides reproducible owner-specific execution.
 
-### 5.4 Standalone DelayBuffer
+| Owner | Native surface |
+|---|---|
+| Rust | PyO3 `spo_kernel.delayed_kuramoto_run_rust` |
+| Go | `go/libdelay.so`, `DelayedKuramotoRun` C ABI |
+| Julia | `julia/delay.jl`, `DelayJL.delayed_kuramoto_run` |
+| Mojo | `mojo/delay_mojo`, `DELAY` stdin/stdout protocol |
+| Python | Validated simultaneous Euler recurrence in `upde.delay` |
+
+Julia admission requires a running `juliacall.Main`, a loadable side-file and
+its numerical entry point. Installing Julia's Python bridge alone does not
+provide that side-file. Missing, broken or incomplete Julia artifacts remain
+unavailable; valid source-checkout assets enable the Julia owner.
+
+Direct Go/Julia/Mojo bridge functions validate flattened matrices before
+loading their runtimes. Their zero-step calls return independent validated
+input copies, preserving unwrapped phases, without requiring a foreign
+artifact. Positive batches require actual execution. Go refuses counts that
+cannot fit its signed C count ABI. A delay longer than a finite batch is
+internally shortened to that batch length, preserving its warmup semantics
+and avoiding unused history allocation.
+The C entry point also refuses matrix byte extents that exceed a platform index;
+native callers remain responsible for supplying full valid buffers.
+
+The Rust batch API returns `SpoResult<Vec<f64>>`; its PyO3 boundary maps
+refusals to `ValueError`. The native argument names remain
+`phases_init, omegas, knm_flat, alpha_flat, n, zeta, psi, dt, delay_steps, n_steps`.
+Zero native steps validate and copy the supplied phases. Native consumers must
+be qualified against the actual built artifact, beyond its version label.
+
+## Standalone snapshot buffer
 
 ```python
 from scpn_phase_orchestrator.upde.delay import DelayBuffer
 
-buf = DelayBuffer(n_oscillators=8, max_delay_steps=20)
-
-# Fill buffer with phase snapshots
-for t in range(30):
-    phases_t = np.sin(np.arange(8) * 0.1 + t * 0.05)
-    buf.push(phases_t)
-
-# Retrieve from 5 steps ago
-delayed = buf.get_delayed(5)
-print(f"Buffer length: {buf.length}")  # 20 (capped at max)
+buffer = DelayBuffer(n_oscillators=2, max_delay_steps=3)
+buffer.push(np.array([0.4, 1.1]))
+buffer.push(np.array([0.5, 1.2]))
+latest = buffer.get_delayed(1)  # [0.5, 1.2]
+previous = buffer.get_delayed(2)  # [0.4, 1.1]
 ```
 
-### 5.4 Neural Circuit with Axonal Delay
+Lookup uses a **one-based snapshot index**: one is the latest stored snapshot.
+A lookup beyond available history returns `None`; zero and negative indexes
+are invalid. Both insertion and retrieval copy their data. Mutating a returned
+snapshot cannot corrupt retained history. `length` gives current occupancy;
+`clear()` discards all snapshots. The buffer does not infer physical time
+intervals from these indexes.
 
-```python
-# Model cortical columns with 5ms axonal delay
-dt = 0.001  # 1ms timestep
-tau_axon = 0.005  # 5ms
-delay_steps = int(tau_axon / dt)  # 5
+## Comparison and verification
 
-N = 16
-engine = DelayedEngine(N, dt=dt, delay_steps=delay_steps)
-omegas = np.ones(N) * 40.0 * 2 * np.pi  # 40 Hz gamma band
+Run the maintained comparison against actual provisioned owners:
 
-phases = rng.uniform(0, 2 * np.pi, N)
-phases = engine.run(phases, omegas, knm, n_steps=10000)
-R, _ = compute_order_parameter(phases)
-print(f"Gamma-band coherence with 5ms delay: R={R:.4f}")
+```bash
+python -m benchmarks.delay_benchmark --parity-gate \
+  --n 8 --delay-steps 3 --n-steps 80 --calls 3 \
+  --require-backends python rust go julia mojo
 ```
 
-### 5.5 Sakaguchi + Delay
+Each owner executes through explicit public selection. The comparison binds
+both the NumPy result and an independent scalar saved-history recurrence,
+checks pure rotation, half-open endpoints and positive zero, and records
+repeated warmed-call timings. Missing required owners, runtime refusals or
+failed contracts make the CLI exit nonzero. Every declared owner retains an
+honest result slot; a failed owner receives no successful phase hash or timing.
+The aggregate reference suite retains the `delay_polyglot` key.
 
-```python
-alpha = np.full((N, N), np.pi / 8)
-np.fill_diagonal(alpha, 0.0)
+The [recorded October 20 comparison](../data/delay_real_runtime_2026-10-20.json)
+executes all five owners for 2, 16 and 257 oscillators, with five warmed repeated
+calls per owner. Its Rust kernel uses a development build; these timings do not
+qualify release throughput. The current CLI accepts the rebuilt kernel and
+rejects the genuine original installed kernel at the corrected phase endpoint.
+Source and binary hashes distinguish these same-version artifacts.
 
-engine = DelayedEngine(N, dt=0.01, delay_steps=15)
-phases = engine.run(phases, omegas, knm, alpha=alpha, n_steps=1000)
-R, _ = compute_order_parameter(phases)
-print(f"Frustrated + delayed: R={R:.4f}")
-```
+Configured parity tolerances are `1e-9` for Rust/Go/Julia and `1e-6` for Mojo's
+text round trip. Shared-host diagnostic timings are not production throughput
+or speedup claims. The batch costs $O(TN^2)$ arithmetic and needs history
+proportional to $N\min(d,T)$, in addition to matrices and numerical scratch.
+Native implementations retain different phase versus sine/cosine histories;
+there is no single byte count common to every owner.
 
-### 5.8 Delay Sweep (Arnold Tongue)
+The owning tests cover public buffer/step/batch behaviour, actual compiled
+execution, scalar/parallel numerical paths, source delay, measurement refusal,
+recovery, caller ownership, and real Julia absent/broken/present assets.
+Python bridge coverage and native source instrumentation are separate scopes.
 
-```python
-# Map R across (K, τ) parameter space
-import numpy as np
-
-N = 32
-omegas = np.ones(N)
-K_vals = np.linspace(0.5, 5.0, 20)
-d_vals = range(1, 100, 5)  # delay in steps
-
-R_map = np.zeros((len(K_vals), len(d_vals)))
-for i, K in enumerate(K_vals):
-    knm_k = np.full((N, N), K / N)
-    np.fill_diagonal(knm_k, 0.0)
-    for j, d in enumerate(d_vals):
-        eng = DelayedEngine(N, dt=0.01, delay_steps=d)
-        p = rng.uniform(0, 2 * np.pi, N)
-        p = eng.run(p, omegas, knm_k, n_steps=1000)
-        R_map[i, j], _ = compute_order_parameter(p)
-
-# R_map shows Arnold tongue structure in (K, τ) plane
-```
-
-### 5.9 External Drive with Delay
-
-```python
-# Entrainment with delayed feedback
-engine = DelayedEngine(N, dt=0.01, delay_steps=20)
-phases = engine.run(
-    phases, omegas, knm,
-    zeta=0.3, psi=np.pi/2,  # drive towards π/2
-    n_steps=2000,
-)
-R, psi_mean = compute_order_parameter(phases)
-print(f"Delayed entrainment: R={R:.4f}, ψ={psi_mean:.4f}")
-```
-
----
-
-## 6. Technical Reference
-
-### 6.1 Module API
+## Technical reference
 
 ::: scpn_phase_orchestrator.upde.delay
     options:
         show_root_heading: true
         members_order: source
 
-### 6.2 DelayBuffer API
-
-| Method | Description |
-|--------|-------------|
-| `__init__(n_oscillators, max_delay_steps)` | Create buffer |
-| `push(phases)` | Append snapshot (copies input) |
-| `get_delayed(delay_steps) → NDArray or None` | Retrieve from $d$ steps back |
-| `length → int` | Current occupancy |
-| `clear()` | Reset buffer |
-
-### 6.3 DelayedEngine API
-
-| Method/Property | Description |
-|-----------------|-------------|
-| `__init__(n_oscillators, dt, delay_steps=1)` | Create engine |
-| `delay_steps → int` | Configured delay |
-| `step(phases, omegas, knm, zeta, psi, alpha, step_idx)` | Single step (Python) |
-| `run(phases, omegas, knm, zeta, psi, alpha, n_steps)` | Batch (Rust or Python) |
-
-### 6.4 Parameters
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `n_oscillators` | `int` | — | Number of oscillators |
-| `dt` | `float` | — | Timestep |
-| `delay_steps` | `int` | `1` | Discrete delay $d$ ($\tau = d \cdot \Delta t$) |
-
----
-
-## 7. Performance Benchmarks
-
-### 7.1 Delay Overhead
-
-The delay buffer adds minimal overhead: one `deque.append()` and one
-`deque[index]` per step — both $O(1)$ regardless of buffer size.
-
-| N | delay_steps | Python (µs/step) | Rust run() (µs/step) | Speedup |
-|---|-------------|-------------------|-----------------------|---------|
-| 16 | 10 | 42 | 7.1 | 5.9x |
-| 64 | 10 | 340 | 52 | 6.5x |
-| 256 | 10 | 8200 | 1100 | 7.5x |
-| 64 | 50 | 340 | 52 | 6.5x |
-
-Delay steps do NOT affect per-step cost significantly — the buffer
-is $O(1)$ access. The dominant cost remains the $O(N^2)$ coupling sum.
-
-### 7.2 Memory
-
-Buffer memory: $d \times N \times 8$ bytes (float64).
-
-| N | delay_steps | Buffer size |
-|---|-------------|-------------|
-| 16 | 10 | 1.3 KB |
-| 64 | 50 | 25 KB |
-| 256 | 100 | 200 KB |
-| 1024 | 200 | 1.6 MB |
-
-### 7.3 Complexity
-
-| Operation | Time | Space |
-|-----------|------|-------|
-| `step()` | $O(N^2)$ | $O(N^2)$ scratch + $O(d \cdot N)$ buffer |
-| `run(n_steps)` | $O(n \cdot N^2)$ | $O(d \cdot N)$ buffer |
-
-### 7.4 Delay vs Undelayed Comparison
-
-For the same system (N=64, K=3.0/N, 1000 steps):
-
-| Engine | delay_steps | µs/step (Rust) | R_final |
-|--------|-------------|----------------|---------|
-| `UPDEEngine` (Euler) | 0 | 57 | 0.908 |
-| `DelayedEngine` | 1 | 58 | 0.905 |
-| `DelayedEngine` | 10 | 59 | 0.891 |
-| `DelayedEngine` | 50 | 60 | 0.742 |
-| `DelayedEngine` | 100 | 61 | 0.651 |
-
-Overhead of delay buffer: < 5% at N=64. Physics effect is significant:
-$R$ drops from 0.91 to 0.65 with $\tau = 1.0$ time unit.
-
-### 7.5 Recommended Settings
-
-| Application | dt | delay_steps | τ (time units) |
-|-------------|-----|-------------|----------------|
-| Neural gamma (40 Hz) | 0.001 | 5 | 5 ms |
-| Neural beta (20 Hz) | 0.001 | 25 | 25 ms |
-| SCPN inter-layer | 0.01 | 10–50 | 0.1–0.5 |
-| Gaian mesh (UDP) | 0.01 | 5–20 | 0.05–0.2 |
-| Power grid comms | 0.01 | 50–500 | 0.5–5.0 |
-
-### 7.6 Polyglot Parity Gate
-
-`benchmarks/delay_benchmark.py` (`benchmark_delay_polyglot_parity_gate`)
-records every declared backend's final phases against the NumPy reference
-and asserts two contracts per backend: with zero coupling and zero forcing
-the integrator must reduce to pure rotation
-$(\theta + \omega\,\Delta t\,n_{\text{steps}}) \bmod 2\pi$, and all output
-phases must lie in $[0, 2\pi)$. The gate is registered in the aggregate
-reference suite under the key `delay_polyglot`.
-
-Representative run (`n=16`, `delay_steps=3`, `n_steps=80`, `calls=1`,
-`seed=2026`; evidence kind `local_regression_non_isolated`, no production
-timing claim — ML350 Gen8, single warmed call):
-
-| Backend | max abs error vs Python | ms/call | parity |
-|---------|-------------------------|---------|--------|
-| `rust` | 4.4e-16 | 0.93 | ✓ |
-| `mojo` | 4.4e-16 | 22.64 | ✓ |
-| `julia` | 4.4e-16 | 0.68 | ✓ |
-| `go` | 8.9e-16 | 0.54 | ✓ |
-| `python` | 0.0 (reference) | 1.13 | ✓ |
-
-Pure-rotation contract error: 8.9e-15 (≤ 1e-9 threshold). Single-call
-timings are noisy and not isolated; they exist to confirm every backend
-runs, not to rank production throughput.
-
-### 7.7 When to Use DelayedEngine vs UPDEEngine
-
-Use `DelayedEngine` when:
-- Physical delay is ≥ 1 timestep ($\tau \geq \Delta t$)
-- Delay is a significant fraction of the oscillation period
-  ($\tau \geq T/10$ where $T = 2\pi/\omega_0$)
-- You need to model travelling waves or delay-induced multistability
-
-Use `UPDEEngine` when:
-- Coupling is effectively instantaneous ($\tau \ll \Delta t$)
-- The system is fast enough that delay is negligible
-
----
-
-## 8. Citations
-
-1. **Yeung M.K.S., Strogatz S.H.** (1999). Time delay in the Kuramoto
-   model of coupled oscillators. *Physical Review Letters*
-   **82**(3):648–651. doi:10.1103/PhysRevLett.82.648
-
-2. **Schuster H.G., Wagner P.** (1989). Mutual entrainment of two limit
-   cycle oscillators with time delayed coupling. *Progress of Theoretical
-   Physics* **81**(5):939–945. doi:10.1143/PTP.81.939
-
-3. **Niebur E., Schuster H.G., Kammen D.M.** (1991). Collective
-   frequencies and metastability in networks of limit-cycle oscillators
-   with time delay. *Physical Review Letters* **67**(20):2753–2756.
-   doi:10.1103/PhysRevLett.67.2753
-
-4. **Dhamala M., Jirsa V.K., Ding M.** (2004). Enhancement of neural
-   synchrony by time delay. *Physical Review Letters* **92**(7):074104.
-   doi:10.1103/PhysRevLett.92.074104
-
-5. **Kuramoto Y., Battogtokh D.** (2002). Coexistence of coherence and
-   incoherence in nonlocally coupled phase oscillators. *Nonlinear
-   Phenomena in Complex Systems* **5**(4):380–385.
-
----
-
-## Test Coverage
-
-- `tests/test_delay.py` — 20 tests: DelayBuffer push/get/clear/length,
-  DelayedEngine step() shape, run() convergence, delay effect on R,
-  zero delay equivalence, Sakaguchi + delay, external drive, dispatch
-  fallback parity
-- `tests/test_delay_backends.py` — 46 tests: per-backend final-phase parity
-  (Rust/Julia/Go at 1e-9, Mojo at 1e-6), cross-backend consistency, direct
-  adapter boundary contracts (dtype, finiteness, real-valued, length, range
-  validation), and loader/dispatch resolution
-- `tests/test_delay_benchmark.py` — 3 tests: polyglot parity gate slot
-  reporting, control validation, and per-backend wall-clock timings
-- `tests/test_reference_benchmark_suite.py` — `delay_polyglot` gate slot and
-  aggregate-suite key membership
-
----
-
 ## Source
 
-- Python: `src/scpn_phase_orchestrator/upde/delay.py` (dispatcher +
-  `_python_run` NumPy reference)
-- Validation: `src/scpn_phase_orchestrator/experimental/accelerators/upde/_delay_validation.py`
+- Public engine and buffer: `src/scpn_phase_orchestrator/upde/delay.py`
+- Direct bridges and validation: `src/scpn_phase_orchestrator/experimental/accelerators/upde/_delay_*.py`
 - Rust: `spo-kernel/crates/spo-engine/src/delay.rs`
-- FFI: `spo-kernel/crates/spo-ffi/src/lib.rs` (`delayed_kuramoto_run_rust`)
-- Julia: `julia/delay.jl` (`DelayJL.delayed_kuramoto_run`)
-- Go: `go/delay.go` (`DelayedKuramotoRun`, `c-shared` → `libdelay.so`)
-- Mojo: `mojo/delay.mojo` (stdin/stdout text protocol → `delay_mojo`)
-- Backend adapters: `src/scpn_phase_orchestrator/experimental/accelerators/upde/_delay_{julia,go,mojo}.py`
-- Benchmark: `benchmarks/delay_benchmark.py`
+- PyO3 boundary: `spo-kernel/crates/spo-ffi/src/delayed_boundary.rs`
+- Go: `go/delay.go`, owning contracts `go/delay_test.go`
+- Julia: `julia/delay.jl`, owning contracts `julia/test_delay.jl`
+- Mojo: `mojo/delay.mojo`
+- Comparison: `benchmarks/delay_benchmark.py`
+- Owning tests: `tests/test_delay.py`, `tests/test_delay_backends.py`,
+  `tests/test_delay_real_runtime.py`, `tests/test_delay_julia_absence.py`,
+  `tests/test_delay_measurement_inputs.py`, `tests/test_delay_config_validation.py`,
+  `tests/test_delayed_engine_workflow.py` and `tests/test_delay_benchmark.py`.

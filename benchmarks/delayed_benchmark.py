@@ -6,6 +6,8 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — delayed-coupling UPDE engine benchmark
 
+"""Measure the public delayed engine and its resulting order parameter."""
+
 import time
 
 import numpy as np
@@ -14,7 +16,27 @@ from scpn_phase_orchestrator.upde.delay import DelayedEngine
 from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
 
-def run_delayed_bench(n=1000, n_steps=100, delay_steps=10):
+def run_delayed_bench(
+    n: int = 1000,
+    n_steps: int = 100,
+    delay_steps: int = 10,
+) -> None:
+    """Print actual delayed integration latency and its resulting order parameter.
+
+    Parameters
+    ----------
+    n : int
+        Positive number of oscillators.
+    n_steps : int
+        Positive number of Euler integration steps.
+    delay_steps : int
+        Positive discrete source delay.
+
+    Raises
+    ------
+    ValueError
+        If an engine control or numerical result is invalid.
+    """
     rng = np.random.default_rng(42)
     phases = rng.uniform(0, 2 * np.pi, n)
     omegas = np.ones(n)

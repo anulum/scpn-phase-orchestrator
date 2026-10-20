@@ -64,6 +64,7 @@ pub(crate) fn delayed_kuramoto_run_rust<'py>(
     let a = alpha_flat
         .as_slice()
         .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let result = delay::delayed_kuramoto_run(p, o, k, a, n, zeta, psi, dt, delay_steps, n_steps);
+    let result = delay::delayed_kuramoto_run(p, o, k, a, n, zeta, psi, dt, delay_steps, n_steps)
+        .map_err(|error| PyValueError::new_err(error.to_string()))?;
     Ok(PyArray1::from_vec(py, result))
 }

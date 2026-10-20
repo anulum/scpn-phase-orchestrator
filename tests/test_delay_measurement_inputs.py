@@ -56,6 +56,7 @@ RunFn: TypeAlias = Callable[
 def test_direct_delay_rejects_real_objects_outside_float_range(
     run: RunFn, argument: int
 ) -> None:
+    """Preserve the overflow cause when direct buffers exceed float64 range."""
     arrays = [np.zeros(2), np.zeros(2), np.zeros(4), np.zeros(4)]
     invalid = arrays[argument].astype(object)
     invalid[0] = 10**400
@@ -73,6 +74,7 @@ def test_direct_delay_rejects_real_objects_outside_float_range(
     "dtype", ["U", "S", "bool", "timedelta64[ms]", "datetime64[ms]"]
 )
 def test_delayed_engine_rejects_measurement_aliases(argument: int, dtype: str) -> None:
+    """Reject text, boolean and temporal state representations before dispatch."""
     arrays = [np.zeros(2), np.zeros(2), np.zeros((2, 2)), np.zeros((2, 2))]
     arrays[argument] = arrays[argument].astype(dtype)
     name = ("phases", "omegas", "knm", "alpha")[argument]
@@ -86,6 +88,7 @@ def test_delayed_engine_rejects_measurement_aliases(argument: int, dtype: str) -
     "argument", [0, 1, 2, 3], ids=["phases", "omegas", "knm", "alpha"]
 )
 def test_delayed_engine_rejects_real_objects_outside_float_range(argument: int) -> None:
+    """Refuse oversized real objects at each public engine buffer boundary."""
     arrays = [np.zeros(2), np.zeros(2), np.zeros((2, 2)), np.zeros((2, 2))]
     invalid = arrays[argument].astype(object)
     invalid.flat[0] = 10**400
@@ -102,6 +105,7 @@ def test_delayed_engine_rejects_real_objects_outside_float_range(argument: int) 
     "dtype", ["U", "S", "bool", "timedelta64[ms]", "datetime64[ms]"]
 )
 def test_delay_buffer_rejects_measurement_aliases(dtype: str) -> None:
+    """Reject aliased measurements without appending invalid history."""
     buffer = DelayBuffer(2, max_delay_steps=5)
     with pytest.raises(ValueError, match="phases"):
         buffer.push(np.array([0, 1]).astype(dtype))
@@ -109,6 +113,7 @@ def test_delay_buffer_rejects_measurement_aliases(dtype: str) -> None:
 
 
 def test_delayed_engine_preserves_real_object_trajectories() -> None:
+    """Preserve valid real object arrays through actual delayed integration."""
     phases = np.array([0.2, 0.5])
     omegas = np.array([0.1, 0.3])
     knm = np.array([[0.0, 0.5], [0.5, 0.0]])
@@ -128,6 +133,7 @@ def test_delayed_engine_preserves_real_object_trajectories() -> None:
 
 
 def test_delayed_step_preserves_external_drive_rotation() -> None:
+    """Match the independent forced-rotation update with zero coupling."""
     phases = np.array([0.2, 0.5])
     omegas = np.array([0.1, 0.3])
     dt, zeta, psi = 0.05, 0.7, 1.2

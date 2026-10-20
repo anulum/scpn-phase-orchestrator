@@ -20,8 +20,10 @@ from __future__ import annotations
 
 from collections import deque
 from collections.abc import Callable
+from importlib import import_module
 from math import isfinite
 from numbers import Integral, Real
+from sys import maxsize
 from typing import TypeAlias, cast
 
 import numpy as np
@@ -30,6 +32,7 @@ from numpy.typing import NDArray
 from scpn_phase_orchestrator._array_types import require_real_values
 from scpn_phase_orchestrator._compat import TWO_PI
 from scpn_phase_orchestrator.upde._julia_runtime import require_juliacall_main
+from scpn_phase_orchestrator.upde._phase_wrap import wrap_phases
 
 __all__ = [
     "ACTIVE_BACKEND",
@@ -40,12 +43,29 @@ __all__ = [
 FloatArray: TypeAlias = NDArray[np.float64]
 
 _BACKEND_NAMES = ("rust", "mojo", "julia", "go", "python")
-_DelayBackend: TypeAlias = Callable[..., FloatArray]
+_DelayBackend: TypeAlias = Callable[
+    [
+        FloatArray,
+        FloatArray,
+        FloatArray,
+        FloatArray,
+        int,
+        float,
+        float,
+        float,
+        int,
+        int,
+    ],
+    FloatArray,
+]
 
 
 def _load_rust_fn() -> _DelayBackend:
     """Load the Rust delayed-Kuramoto backend callable."""
-    from spo_kernel import delayed_kuramoto_run_rust
+    native = getattr(import_module("spo_kernel"), "delayed_kuramoto_run_rust", None)
+    if not callable(native):
+        raise ImportError("spo_kernel has no callable delayed_kuramoto_run_rust")
+    delayed_kuramoto_run_rust = cast("_DelayBackend", native)
 
     def _rust(
         phases: FloatArray,
@@ -76,11 +96,10 @@ def _load_rust_fn() -> _DelayBackend:
             dtype=np.float64,
         )
 
-    return cast("_DelayBackend", _rust)
+    return _rust
 
 
 def _load_mojo_fn() -> _DelayBackend:
-    # pragma: no cover — toolchain
     """Load the Mojo delayed-Kuramoto backend callable."""
     from ..experimental.accelerators.upde._delay_mojo import (
         _ensure_exe,
@@ -92,19 +111,19 @@ def _load_mojo_fn() -> _DelayBackend:
 
 
 def _load_julia_fn() -> _DelayBackend:
-    # pragma: no cover — toolchain
     """Load the Julia delayed-Kuramoto backend callable."""
     require_juliacall_main()
 
     from ..experimental.accelerators.upde._delay_julia import (
+        _ensure,
         delayed_kuramoto_run_julia,
     )
 
+    _ensure()
     return delayed_kuramoto_run_julia
 
 
 def _load_go_fn() -> _DelayBackend:
-    # pragma: no cover — toolchain
     """Load the Go delayed-Kuramoto backend callable."""
     from ..experimental.accelerators.upde._delay_go import (
         _load_lib,
@@ -170,16 +189,23 @@ def _dispatch() -> _DelayBackend | None:
 
 def _validate_positive_int(value: object, *, name: str) -> int:
     """Return ``value`` as a positive integer, else raise ``ValueError``."""
-    if isinstance(value, bool) or not isinstance(value, Integral) or value < 1:
-        raise ValueError(f"{name} must be a positive integer, got {value!r}")
-    return int(value)
+    message = f"{name} must be a positive integer fitting a platform index"
+    if isinstance(value, bool) or not isinstance(value, Integral):
+        raise ValueError(message)
+    result = int(value)
+    if not 1 <= result <= maxsize:
+        raise ValueError(message)
+    return result
 
 
 def _validate_positive_float(value: object, *, name: str) -> float:
     """Return ``value`` as a strictly positive finite float, else raise."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite positive real, got {value!r}")
-    value = float(value)
+    try:
+        value = float(value)
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise ValueError(f"{name} must be a finite positive real") from exc
     if not isfinite(value) or value <= 0.0:
         raise ValueError(f"{name} must be a finite positive real, got {value!r}")
     return value
@@ -189,7 +215,10 @@ def _validate_finite_float(value: object, *, name: str) -> float:
     """Return ``value`` as a finite float, else raise ``ValueError``."""
     if isinstance(value, bool) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite real, got {value!r}")
-    value = float(value)
+    try:
+        value = float(value)
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise ValueError(f"{name} must be a finite real") from exc
     if not isfinite(value):
         raise ValueError(f"{name} must be a finite real, got {value!r}")
     return value
@@ -269,6 +298,29 @@ def _contains_numeric_string_alias(value: object) -> bool:
     return any(_is_numeric_string_alias(item) for item in arr.flat)
 
 
+def _euler_step(
+    phases: FloatArray,
+    delayed: FloatArray,
+    omegas: FloatArray,
+    knm: FloatArray,
+    alpha: FloatArray,
+    zeta: float,
+    psi: float,
+    dt: float,
+) -> FloatArray:
+    """Advance the simultaneous delayed recurrence, refusing nonfinite arithmetic."""
+    try:
+        with np.errstate(over="raise", invalid="raise"):
+            diff = delayed[np.newaxis, :] - phases[:, np.newaxis] - alpha
+            derivative = omegas + np.sum(knm * np.sin(diff), axis=1)
+            if zeta != 0.0:
+                derivative = derivative + zeta * np.sin(psi - phases)
+            result = wrap_phases(phases + dt * derivative)
+    except FloatingPointError as exc:
+        raise ValueError("delayed integration produced nonfinite phases") from exc
+    return result
+
+
 def _python_run(
     phases: FloatArray,
     omegas: FloatArray,
@@ -289,7 +341,7 @@ def _python_run(
     """
     knm = knm_flat.reshape(n, n)
     alpha = alpha_flat.reshape(n, n)
-    max_buf = delay_steps + 1
+    max_buf = min(delay_steps, n_steps) + 1
     history = np.zeros((max_buf, n), dtype=np.float64)
     p = phases.copy()
     for i in range(n_steps):
@@ -299,23 +351,25 @@ def _python_run(
             delayed = history[(i - delay_steps) % max_buf]
         else:
             delayed = p
-        diff = delayed[np.newaxis, :] - p[:, np.newaxis] - alpha
-        coupling = np.sum(knm * np.sin(diff), axis=1)
-        dtheta = omegas + coupling
-        if zeta != 0.0:
-            dtheta = dtheta + zeta * np.sin(psi - p)
-        p = (p + dt * dtheta) % TWO_PI
+        p = _euler_step(p, delayed, omegas, knm, alpha, zeta, psi, dt)
     return p
 
 
 class DelayBuffer:
     """Circular buffer storing phase history for delayed coupling.
 
-    Stores last `max_delay_steps` snapshots. Retrieves phases from
-    `delay_steps` steps ago.
+    Parameters
+    ----------
+    n_oscillators : int
+        Positive number of phases per snapshot.
+    max_delay_steps : int
+        Positive maximum number of retained snapshots. Lookup index one denotes
+        the latest snapshot; pushing and retrieving both preserve independent
+        storage.
     """
 
-    def __init__(self, n_oscillators: int, max_delay_steps: int):
+    def __init__(self, n_oscillators: int, max_delay_steps: int) -> None:
+        """Create a bounded history for positive oscillator and snapshot counts."""
         self._n = _validate_positive_int(n_oscillators, name="n_oscillators")
         self._max = _validate_positive_int(max_delay_steps, name="max_delay_steps")
         self._buffer: deque[FloatArray] = deque(maxlen=self._max)
@@ -333,23 +387,23 @@ class DelayBuffer:
         self._buffer.append(phases64.copy())
 
     def get_delayed(self, delay_steps: int) -> FloatArray | None:
-        """Return phases from `delay_steps` ago, or None if not enough history.
+        """Return an indexed snapshot copy, or None if history is too short.
 
         Parameters
         ----------
         delay_steps : int
-            Number of steps in the past to retrieve from the delay buffer.
+            Positive one-based snapshot index; one retrieves the latest entry.
 
         Returns
         -------
         FloatArray | None
-            The phase snapshot from ``delay_steps`` ago, or ``None`` if history is
-            short.
+            An independent copy of the indexed snapshot, or ``None`` if history
+            is short. Index one denotes the latest stored snapshot.
         """
         delay = _validate_positive_int(delay_steps, name="delay_steps")
         if delay > len(self._buffer):
             return None
-        return self._buffer[-delay]
+        return self._buffer[-delay].copy()
 
     @property
     def length(self) -> int:
@@ -370,14 +424,29 @@ class DelayBuffer:
 class DelayedEngine:
     """Kuramoto with time-delayed coupling.
 
-    dθ_i/dt = ω_i + Σ_j K_ij sin(θ_j(t-τ) - θ_i(t) - α_ij)
+    Parameters
+    ----------
+    n_oscillators : int
+        Positive oscillator count.
+    dt : float
+        Positive finite Euler timestep, in seconds when frequencies are rad/s.
+    delay_steps : int
+        Positive discrete source delay. The first ``delay_steps`` accepted
+        steps use their current source phases while history accumulates.
+
+    Notes
+    -----
+    Coupling uses ``sum_j K_ij*sin(theta_j(t-tau)-theta_i(t)-alpha_ij)``
+    with natural frequency and optional ``zeta*sin(psi-theta_i)`` drive.
+    Stateful ``step`` calls preserve history; every ``run`` starts a new batch.
     """
 
-    def __init__(self, n_oscillators: int, dt: float, delay_steps: int = 1):
+    def __init__(self, n_oscillators: int, dt: float, delay_steps: int = 1) -> None:
+        """Configure a positive timestep and discrete source-phase delay."""
         self._n = _validate_positive_int(n_oscillators, name="n_oscillators")
         self._dt = _validate_positive_float(dt, name="dt")
         self._delay_steps = _validate_positive_int(delay_steps, name="delay_steps")
-        self._buffer: deque[FloatArray] = deque(maxlen=self._delay_steps + 1)
+        self._buffer: deque[FloatArray] = deque(maxlen=self._delay_steps)
 
     @property
     def delay_steps(self) -> int:
@@ -418,13 +487,19 @@ class DelayedEngine:
         alpha : FloatArray | None
             Phase-lag matrix in radians, shape ``(N, N)``, or ``None`` for no lag.
         step_idx : int
-            Zero-based index of the current step, used to address delayed coupling
-            history.
+            Legacy argument retained for call compatibility. History advances
+            with accepted calls, independently of this value.
 
         Returns
         -------
         FloatArray
             The phases after one delayed Kuramoto step, in ``[0, 2π)``.
+
+        Raises
+        ------
+        ValueError
+            If inputs or computed phases are invalid. A refused step does not
+            append history; the next accepted step uses the prior history.
         """
         del step_idx
         phases64 = _validate_state_array(phases, name="phases", shape=(self._n,))
@@ -441,14 +516,15 @@ class DelayedEngine:
             )
         zeta = _validate_finite_float(zeta, name="zeta")
         psi = _validate_finite_float(psi, name="psi")
+        delayed = (
+            self._buffer[-self._delay_steps]
+            if len(self._buffer) >= self._delay_steps
+            else phases64
+        )
+        step_out = _euler_step(
+            phases64, delayed, omegas64, knm64, alpha64, zeta, psi, self._dt
+        )
         self._buffer.append(phases64.copy())
-        delayed = self._buffer[0] if len(self._buffer) > self._delay_steps else phases64
-        diff = delayed[np.newaxis, :] - phases64[:, np.newaxis] - alpha64
-        coupling = np.sum(knm64 * np.sin(diff), axis=1)
-        dtheta = omegas64 + coupling
-        if zeta != 0.0:
-            dtheta += zeta * np.sin(psi - phases64)
-        step_out: FloatArray = (phases64 + self._dt * dtheta) % TWO_PI
         return step_out
 
     def run(
@@ -460,6 +536,8 @@ class DelayedEngine:
         psi: float = 0.0,
         alpha: FloatArray | None = None,
         n_steps: int = 100,
+        *,
+        backend: str = "auto",
     ) -> FloatArray:
         """Run delayed Kuramoto integration for ``n_steps`` validated steps.
 
@@ -480,12 +558,26 @@ class DelayedEngine:
             Phase-lag matrix in radians, shape ``(N, N)``, or ``None`` for no lag.
         n_steps : int
             Number of integration steps to run.
+        backend : str
+            ``auto`` preserves fastest-first selection and Python fallback.
+            An explicit ``python``, ``rust``, ``go``, ``julia`` or ``mojo``
+            requires that owner and propagates its refusal without fallback.
 
         Returns
         -------
         FloatArray
-            The final phases after ``n_steps`` delayed Kuramoto steps.
+            Independent final phases from a fresh batch history. This does not
+            consume or extend the history accumulated by ``step``.
+
+        Raises
+        ------
+        ValueError
+            If controls, arrays, computed phases or the backend name are invalid.
+        ImportError
+            If an explicitly selected native owner cannot be loaded.
         """
+        if not isinstance(backend, str) or backend not in ("auto", *_BACKEND_NAMES):
+            raise ValueError(f"unknown delay backend: {backend!r}")
         n_steps = _validate_positive_int(n_steps, name="n_steps")
         phases64 = _validate_state_array(phases, name="phases", shape=(self._n,))
         omegas64 = _validate_state_array(omegas, name="omegas", shape=(self._n,))
@@ -503,7 +595,15 @@ class DelayedEngine:
         psi = _validate_finite_float(psi, name="psi")
         knm_flat = np.ascontiguousarray(knm64.ravel(), dtype=np.float64)
         alpha_flat = np.ascontiguousarray(alpha64.ravel(), dtype=np.float64)
-        backend_fn = _dispatch()
+        if backend == "auto":
+            backend_fn = _dispatch()
+        elif backend == "python":
+            backend_fn = None
+        else:
+            try:
+                backend_fn = _load_backend(backend)
+            except (ImportError, RuntimeError, OSError, KeyError) as exc:
+                raise ImportError(f"delay backend {backend!r} is unavailable") from exc
         if backend_fn is not None:
             try:
                 return _validate_phase_output(
@@ -516,13 +616,14 @@ class DelayedEngine:
                         zeta,
                         psi,
                         self._dt,
-                        self._delay_steps,
+                        min(self._delay_steps, n_steps),
                         n_steps,
                     ),
                     n_oscillators=self._n,
                 )
             except (ImportError, RuntimeError, OSError, KeyError, ValueError):
-                pass
+                if backend != "auto":
+                    raise
         return _python_run(
             phases64,
             omegas64,

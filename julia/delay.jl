@@ -26,7 +26,20 @@ export delayed_kuramoto_run
 
 const TWO_PI = 2.0 * pi
 
+"""
+    delayed_kuramoto_run(phases_init, omegas, knm_flat, alpha_flat, n,
+                         zeta, psi, dt, delay_steps, n_steps)
 
+Return an independent final phase vector from simultaneous Euler updates.
+Flattened coupling and lag matrices use row-major order. Before the nonnegative
+discrete delay is available, coupling uses the current snapshot. A positive
+batch projects phases into `[0, 2pi)` with positive zero; zero steps preserve
+the validated input without projection. Only usable history is allocated.
+
+Dimensions and counts must be actual integers in the platform range, and all
+numerical inputs must be finite with positive `dt`. Invalid arguments or
+nonfinite arithmetic are refused without modifying caller-owned arrays.
+"""
 function delayed_kuramoto_run(
     phases_init::AbstractVector{Float64},
     omegas::AbstractVector{Float64},
@@ -39,13 +52,30 @@ function delayed_kuramoto_run(
     delay_steps::Integer,
     n_steps::Integer,
 )
+    any(value -> value isa Bool, (n, delay_steps, n_steps)) &&
+        throw(ArgumentError("delay counts must not be boolean"))
+    0 < n <= typemax(Int) && 0 <= n_steps <= typemax(Int) &&
+        0 <= delay_steps <= typemax(Int) ||
+        throw(ArgumentError("delay counts must fit the platform integer range"))
     big_n = Int(n)
-    delay = Int(delay_steps)
     steps = Int(n_steps)
-    maxbuf = delay + 1
+    big_n > 0 || throw(ArgumentError("n must be positive"))
+    delay_steps >= 0 && steps >= 0 || throw(ArgumentError("counts must be nonnegative"))
+    isfinite(dt) && dt > 0 && isfinite(zeta) && isfinite(psi) ||
+        throw(ArgumentError("controls must be finite and dt positive"))
+    cells = Base.checked_mul(big_n, big_n)
+    length(phases_init) == big_n && length(omegas) == big_n &&
+        length(knm_flat) == cells && length(alpha_flat) == cells ||
+        throw(ArgumentError("delay buffer dimensions must match n"))
+    for values in (phases_init, omegas, knm_flat, alpha_flat)
+        all(isfinite, values) || throw(ArgumentError("delay inputs must be finite"))
+    end
     p = collect(Float64, phases_init)
+    steps == 0 && return p
+    delay = Int(min(delay_steps, steps))
+    maxbuf = Base.checked_add(delay, 1)
     newp = zeros(Float64, big_n)
-    hist = zeros(Float64, maxbuf * big_n)
+    hist = zeros(Float64, Base.checked_mul(maxbuf, big_n))
     alpha_zero = all(==(0.0), alpha_flat)
 
     @inbounds for i in 0:(steps - 1)
@@ -70,7 +100,10 @@ function delayed_kuramoto_run(
             if zeta != 0.0
                 dtheta += zeta * sin(psi - theta_i)
             end
-            newp[ii] = mod(theta_i + dt * dtheta, TWO_PI)
+            raw = theta_i + dt * dtheta
+            isfinite(raw) || throw(ArgumentError("delay step produced nonfinite phases"))
+            wrapped = mod(raw, TWO_PI)
+            newp[ii] = wrapped >= TWO_PI || wrapped == 0.0 ? 0.0 : wrapped
         end
         p, newp = newp, p
     end

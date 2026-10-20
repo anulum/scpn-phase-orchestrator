@@ -12,6 +12,10 @@ Every accelerated backend must reproduce the NumPy reference final phases
 within 1e-9 (Rust / Julia / Go) or 1e-6 (Mojo, subprocess text round-trip).
 Direct backend adapters validate the state arrays, scalars, and step counts
 before any runtime loads.
+
+Required native cases execute their explicit real owners. Deliberately malformed
+foreign-response injections are bounded Python refusal diagnostics; genuine
+native execution and actual absence have separate numerical/profile contracts.
 """
 
 from __future__ import annotations
@@ -19,10 +23,11 @@ from __future__ import annotations
 import ctypes
 import subprocess
 import sys
-import types
 from collections.abc import Callable
+from importlib import import_module
 from pathlib import Path
-from typing import Any, TypeAlias, cast
+from types import FrameType, SimpleNamespace
+from typing import TypeAlias, cast
 
 import numpy as np
 import pytest
@@ -51,11 +56,26 @@ from scpn_phase_orchestrator.experimental.accelerators.upde._delay_mojo import (
 )
 from scpn_phase_orchestrator.upde import delay as delay_mod
 from scpn_phase_orchestrator.upde.delay import AVAILABLE_BACKENDS, DelayedEngine
+from tests.test_delay_julia_absence import run_source_profile
 
 TWO_PI = 2.0 * np.pi
 FloatArray: TypeAlias = NDArray[np.float64]
 DelayProblem: TypeAlias = tuple[FloatArray, FloatArray, FloatArray, FloatArray]
-DirectDelayBackend: TypeAlias = Callable[..., FloatArray]
+DirectDelayBackend: TypeAlias = Callable[
+    [
+        FloatArray,
+        FloatArray,
+        FloatArray,
+        FloatArray,
+        int,
+        float,
+        float,
+        float,
+        int,
+        int,
+    ],
+    FloatArray,
+]
 
 
 def _direct_backend_args() -> tuple[
@@ -96,101 +116,111 @@ def _problem(seed: int, n: int = 6) -> DelayProblem:
 
 
 def _reference(problem: DelayProblem, delay: int, steps: int) -> FloatArray:
+    """Run the explicit NumPy owner from a fresh public batch."""
     phases, omegas, knm, alpha = problem
-    prev = delay_mod.ACTIVE_BACKEND
-    delay_mod.ACTIVE_BACKEND = "python"
-    try:
-        eng = DelayedEngine(len(phases), dt=0.05, delay_steps=delay)
-        return eng.run(phases, omegas, knm, 0.3, 0.7, alpha, n_steps=steps)
-    finally:
-        delay_mod.ACTIVE_BACKEND = prev
+    return DelayedEngine(len(phases), dt=0.05, delay_steps=delay).run(
+        phases, omegas, knm, 0.3, 0.7, alpha, n_steps=steps, backend="python"
+    )
 
 
 def _assert_parity(backend: str, seed: int, atol: float, delay: int = 2) -> None:
+    """Compare actual explicit native execution with the public NumPy owner."""
     problem = _problem(seed)
     ref = _reference(problem, delay, 40)
     phases, omegas, knm, alpha = problem
-    prev = delay_mod.ACTIVE_BACKEND
-    delay_mod.ACTIVE_BACKEND = backend
-    try:
-        eng = DelayedEngine(len(phases), dt=0.05, delay_steps=delay)
-        got = eng.run(phases, omegas, knm, 0.3, 0.7, alpha, n_steps=40)
-    finally:
-        delay_mod.ACTIVE_BACKEND = prev
-    np.testing.assert_allclose(got, ref, atol=atol)
+    got = DelayedEngine(len(phases), dt=0.05, delay_steps=delay).run(
+        phases, omegas, knm, 0.3, 0.7, alpha, n_steps=40, backend=backend
+    )
+    np.testing.assert_allclose(got, ref, atol=atol, rtol=0.0)
 
 
 def test__delay_validation_helper_is_directly_linked_to_backend_tests() -> None:
-    assert callable(delay_validation.validate_delay_backend_inputs)
-    assert callable(delay_validation.validate_delay_backend_output)
+    """The exported ingress validator owns all converted buffers and scalar controls."""
+    phases = np.array([0.4, 0.0, 1.1, 0.0])[::2]
+    omega = np.ones(4)[::2]
+    coupling = np.array([0.0, 0.5, 0.2, 0.0])
+    lag = np.full(4, 0.01)
+    result = delay_validation.validate_delay_backend_inputs(
+        phases,
+        omega,
+        coupling,
+        lag,
+        2,
+        0.2,
+        0.3,
+        0.01,
+        3,
+        4,
+    )
+    for converted, original in zip(
+        result[:4], (phases, omega, coupling, lag), strict=True
+    ):
+        assert converted.dtype == np.float64 and converted.flags.c_contiguous
+        np.testing.assert_array_equal(converted, original)
+        assert not np.shares_memory(converted, original)
+    assert result[4:] == (2, 0.2, 0.3, 0.01, 3, 4)
 
 
+@pytest.mark.native_runtime
 class TestRustParity:
-    @pytest.fixture(autouse=True)
-    def _skip_if_absent(self) -> None:
-        if "rust" not in AVAILABLE_BACKENDS:
-            pytest.skip("Rust backend not built")
+    """Compare genuine Rust batches against the explicit NumPy owner."""
 
     @pytest.mark.parametrize("seed", [0, 1, 7])
     def test_matches_python(self, seed: int) -> None:
+        """Reproduce the same seeded delayed trajectory in the required runtime."""
         _assert_parity("rust", seed, atol=1e-9)
 
 
+@pytest.mark.native_runtime
 class TestJuliaParity:
-    @pytest.fixture(autouse=True)
-    def _skip_if_absent(self) -> None:
-        if "julia" not in AVAILABLE_BACKENDS:
-            pytest.skip("Julia backend not available")
+    """Compare genuine Julia batches against the explicit NumPy owner."""
 
     @pytest.mark.parametrize("seed", [0, 42])
     def test_matches_python(self, seed: int) -> None:
+        """Reproduce the same seeded delayed trajectory in the required runtime."""
         _assert_parity("julia", seed, atol=1e-9)
 
 
+@pytest.mark.native_runtime
 class TestGoParity:
-    @pytest.fixture(autouse=True)
-    def _skip_if_absent(self) -> None:
-        if "go" not in AVAILABLE_BACKENDS:
-            pytest.skip("Go backend not built")
+    """Compare genuine Go batches against the explicit NumPy owner."""
 
     @pytest.mark.parametrize("seed", [0, 13])
     def test_matches_python(self, seed: int) -> None:
+        """Reproduce the same seeded delayed trajectory in the required runtime."""
         _assert_parity("go", seed, atol=1e-9)
 
 
+@pytest.mark.native_runtime
 class TestMojoParity:
-    @pytest.fixture(autouse=True)
-    def _skip_if_absent(self) -> None:
-        if "mojo" not in AVAILABLE_BACKENDS:
-            pytest.skip("Mojo backend not built")
+    """Compare genuine Mojo batches against the explicit NumPy owner."""
 
     @pytest.mark.parametrize("seed", [0, 77])
     def test_matches_python(self, seed: int) -> None:
+        """Reproduce the same seeded delayed trajectory in the required runtime."""
         _assert_parity("mojo", seed, atol=1e-6)
 
 
+@pytest.mark.native_runtime
 class TestCrossBackendConsistency:
-    @pytest.mark.skipif(
-        len(AVAILABLE_BACKENDS) < 2,
-        reason="Only Python fallback available",
-    )
+    """Require agreement between all installed numerical owners."""
+
     def test_all_backends_agree(self) -> None:
+        """Compare every explicit owner with a shared delayed reference."""
         problem = _problem(2026, n=8)
         ref = _reference(problem, 3, 60)
         phases, omegas, knm, alpha = problem
         tol = {"rust": 1e-9, "julia": 1e-9, "go": 1e-9, "mojo": 1e-6, "python": 0.0}
         for backend in AVAILABLE_BACKENDS:
-            prev = delay_mod.ACTIVE_BACKEND
-            delay_mod.ACTIVE_BACKEND = backend
-            try:
-                eng = DelayedEngine(len(phases), dt=0.05, delay_steps=3)
-                got = eng.run(phases, omegas, knm, 0.3, 0.7, alpha, n_steps=60)
-            finally:
-                delay_mod.ACTIVE_BACKEND = prev
-            np.testing.assert_allclose(got, ref, atol=tol[backend])
+            got = DelayedEngine(len(phases), dt=0.05, delay_steps=3).run(
+                phases, omegas, knm, 0.3, 0.7, alpha, n_steps=60, backend=backend
+            )
+            np.testing.assert_allclose(got, ref, atol=tol[backend], rtol=0.0)
 
 
 class TestDirectBackendBoundaryContracts:
+    """Exercise public bridge ingress and isolated response refusals."""
+
     @pytest.mark.parametrize(
         ("bad_output", "match"),
         [
@@ -206,6 +236,7 @@ class TestDirectBackendBoundaryContracts:
     def test_output_validator_rejects_invalid_phase_vector(
         self, bad_output: object, match: str
     ) -> None:
+        """Reject malformed, aliased or out-of-range public validator output."""
         with pytest.raises(ValueError, match=match):
             delay_validation.validate_delay_backend_output(bad_output, n=2)
 
@@ -255,6 +286,7 @@ class TestDirectBackendBoundaryContracts:
     def test_validation_precedes_runtime_load(
         self, backend: DirectDelayBackend, kwargs: dict[str, object], match: str
     ) -> None:
+        """Refuse invalid arguments at each public direct bridge ingress."""
         base: dict[str, object] = {
             "phases": np.zeros(2),
             "omegas": np.zeros(2),
@@ -270,56 +302,70 @@ class TestDirectBackendBoundaryContracts:
         base.update(kwargs)
         with pytest.raises(ValueError, match=match):
             backend(
-                base["phases"],
-                base["omegas"],
-                base["knm_flat"],
-                base["alpha_flat"],
-                base["n"],
-                base["zeta"],
-                base["psi"],
-                base["dt"],
-                base["delay_steps"],
-                base["n_steps"],
+                cast(FloatArray, base["phases"]),
+                cast(FloatArray, base["omegas"]),
+                cast(FloatArray, base["knm_flat"]),
+                cast(FloatArray, base["alpha_flat"]),
+                cast(int, base["n"]),
+                cast(float, base["zeta"]),
+                cast(float, base["psi"]),
+                cast(float, base["dt"]),
+                cast(int, base["delay_steps"]),
+                cast(int, base["n_steps"]),
             )
 
     def test_go_rejects_runtime_output_outside_phase_range(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        """Refuse an injected invalid Go response before returning to the caller."""
+
         class FakeGoLib:
             """C-shared Go shim writing an invalid phase vector."""
 
-            def DelayedKuramotoRun(self, *_args: object) -> int:
+            def invalid_response(self, *_args: object) -> int:
                 out_ptr = ctypes.cast(
-                    cast(Any, _args[-1]), ctypes.POINTER(ctypes.c_double)
+                    cast("ctypes._Pointer[ctypes.c_double]", _args[-1]),
+                    ctypes.POINTER(ctypes.c_double),
                 )
                 out_ptr[0] = 0.0
                 out_ptr[1] = 100.0
                 return 0
 
-        monkeypatch.setattr(delay_go, "_load_lib", lambda: FakeGoLib())
+        monkeypatch.setattr(
+            delay_go,
+            "_load_lib",
+            lambda: SimpleNamespace(DelayedKuramotoRun=FakeGoLib().invalid_response),
+        )
 
         with pytest.raises(ValueError, match="phases"):
             delayed_kuramoto_run_go(*_direct_backend_args())
 
     def test_go_missing_library_raises_import_error(
-        self, monkeypatch: pytest.MonkeyPatch
+        self,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
+        """A public Go request refuses an actual nonexistent configured artifact."""
         monkeypatch.setattr(delay_go, "_LIB", None)
         monkeypatch.setattr(delay_go, "_LIB_PATH", Path("missing-libdelay.so"))
-
         with pytest.raises(ImportError, match="libdelay.so not found"):
-            delay_go._load_lib()
+            delayed_kuramoto_run_go(*_direct_backend_args())
 
     def test_go_rejects_nonzero_runtime_status(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        """Surface an injected foreign refusal status as a public ValueError."""
+
         class FakeGoLib:
             """C-shared Go shim reporting a runtime failure."""
 
-            def DelayedKuramotoRun(self, *_args: object) -> int:
+            def invalid_response(self, *_args: object) -> int:
                 return 17
 
-        monkeypatch.setattr(delay_go, "_load_lib", lambda: FakeGoLib())
+        monkeypatch.setattr(
+            delay_go,
+            "_load_lib",
+            lambda: SimpleNamespace(DelayedKuramotoRun=FakeGoLib().invalid_response),
+        )
 
         with pytest.raises(ValueError, match="rc=17"):
             delayed_kuramoto_run_go(*_direct_backend_args())
@@ -327,6 +373,8 @@ class TestDirectBackendBoundaryContracts:
     def test_julia_rejects_runtime_output_outside_phase_range(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        """Refuse an injected Julia response outside the supported phase range."""
+
         class FakeJuliaModule:
             """Julia shim returning an invalid phase vector."""
 
@@ -341,6 +389,8 @@ class TestDirectBackendBoundaryContracts:
     def test_julia_rejects_raw_numeric_string_output(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        """Reject textual Julia output before numerical conversion can hide its type."""
+
         class FakeJuliaModule:
             """Julia shim returning stringified phase values."""
 
@@ -352,52 +402,73 @@ class TestDirectBackendBoundaryContracts:
         with pytest.raises(ValueError, match="numeric-string"):
             delayed_kuramoto_run_julia(*_direct_backend_args())
 
-    def test_julia_ensure_returns_cached_module(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        cached = object()
-        monkeypatch.setattr(delay_julia, "_JULIA_MODULE", cached)
+    @pytest.mark.native_runtime
+    def test_julia_ensure_returns_cached_module(self) -> None:
+        """Repeated real public Julia batches retain the loaded numerical module."""
+        main = import_module("juliacall").Main
+        evaluate = cast("Callable[[str], object]", main.seval)
+        identity = str(evaluate("objectid(DelayJL)"))
+        for _ in range(2):
+            result = DelayedEngine(2, dt=0.01, delay_steps=3).run(
+                np.array([0.4, 1.1]),
+                np.ones(2),
+                np.array([[0.0, 0.5], [0.2, 0.0]]),
+                0.2,
+                0.3,
+                np.full((2, 2), 0.01),
+                n_steps=4,
+                backend="julia",
+            )
+            np.testing.assert_allclose(
+                result,
+                [0.45155943106653923, 1.1289796554407023],
+                atol=1e-13,
+                rtol=0.0,
+            )
+            assert str(evaluate("objectid(DelayJL)")) == identity
 
-        assert delay_julia._ensure() is cached
-
+    @pytest.mark.native_runtime
     def test_julia_missing_side_file_raises_import_error(
-        self, monkeypatch: pytest.MonkeyPatch
+        self,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
+        """Real Julia refuses a public request for a missing configured file."""
         monkeypatch.setattr(delay_julia, "_JULIA_MODULE", None)
-        monkeypatch.setattr(delay_julia, "require_julia_main", lambda: object())
         monkeypatch.setattr(delay_julia, "_JULIA_FILE", Path("missing-delay.jl"))
-
         with pytest.raises(ImportError, match="julia side-file not found"):
-            delay_julia._ensure()
+            delayed_kuramoto_run_julia(*_direct_backend_args())
 
-    def test_julia_ensure_includes_side_file(
-        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-    ) -> None:
-        side_file = tmp_path / "delay.jl"
-        side_file.write_text("module DelayJL\nend\n", encoding="utf-8")
-        module = object()
-
-        class FakeJuliaMain:
-            """Minimal Julia main shim for loader coverage."""
-
-            def __init__(self) -> None:
-                self.DelayJL = module
-                self.includes: list[str] = []
-
-            def include(self, path: str) -> None:
-                self.includes.append(path)
-
-        fake_main = FakeJuliaMain()
-        monkeypatch.setattr(delay_julia, "_JULIA_MODULE", None)
-        monkeypatch.setattr(delay_julia, "_JULIA_FILE", side_file)
-        monkeypatch.setattr(delay_julia, "require_julia_main", lambda: fake_main)
-
-        assert delay_julia._ensure() is module
-        assert fake_main.includes == [str(side_file)]
+    @pytest.mark.native_runtime
+    def test_julia_ensure_includes_side_file(self) -> None:
+        """The real public Julia result comes from the declared numerical side-file."""
+        result = DelayedEngine(2, dt=0.01, delay_steps=3).run(
+            np.array([0.4, 1.1]),
+            np.ones(2),
+            np.array([[0.0, 0.5], [0.2, 0.0]]),
+            0.2,
+            0.3,
+            np.full((2, 2), 0.01),
+            n_steps=4,
+            backend="julia",
+        )
+        np.testing.assert_allclose(
+            result,
+            [0.45155943106653923, 1.1289796554407023],
+            atol=1e-13,
+            rtol=0.0,
+        )
+        main = import_module("juliacall").Main
+        evaluate = cast("Callable[[str], object]", main.seval)
+        actual_file = str(
+            evaluate("String(first(methods(DelayJL.delayed_kuramoto_run)).file)")
+        )
+        assert Path(actual_file).resolve() == delay_julia._JULIA_FILE.resolve()
 
     def test_mojo_rejects_runtime_output_outside_phase_range(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        """Refuse an injected malformed Mojo phase vector at the public boundary."""
+
         def fake_run_mojo_executable(
             _exe: Path,
             _stdin: str,
@@ -419,12 +490,13 @@ class TestDirectBackendBoundaryContracts:
             delayed_kuramoto_run_mojo(*_direct_backend_args())
 
     def test_mojo_missing_executable_raises_import_error(
-        self, monkeypatch: pytest.MonkeyPatch
+        self,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
+        """The public Mojo bridge refuses a nonexistent configured executable."""
         monkeypatch.setattr(delay_mojo, "_EXE_PATH", Path("missing-delay-mojo"))
-
         with pytest.raises(ImportError, match="not built"):
-            delay_mojo._ensure_exe()
+            delayed_kuramoto_run_mojo(*_direct_backend_args())
 
     @pytest.mark.parametrize(
         ("stdout", "returncode", "match"),
@@ -441,6 +513,8 @@ class TestDirectBackendBoundaryContracts:
         returncode: int,
         match: str,
     ) -> None:
+        """Refuse injected process errors, truncation and nonnumeric Mojo output."""
+
         def fake_run_mojo_executable(
             _exe: Path,
             _stdin: str,
@@ -463,55 +537,84 @@ class TestDirectBackendBoundaryContracts:
 
 
 class TestBackendLoaderDispatch:
-    def test_rust_loader_wraps_spo_kernel(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        calls: list[tuple[int, int, int]] = []
+    """Qualify real public compiled calls and genuine resource absence."""
 
-        def fake_rust(
-            _phases: FloatArray,
-            _omegas: FloatArray,
-            _knm: FloatArray,
-            _alpha: FloatArray,
-            n: int,
-            _zeta: float,
-            _psi: float,
-            _dt: float,
-            delay: int,
-            steps: int,
-        ) -> FloatArray:
-            calls.append((n, delay, steps))
-            return np.zeros(n, dtype=np.float64)
+    @pytest.mark.native_runtime
+    def test_rust_loader_wraps_spo_kernel(self) -> None:
+        """Repeated public calls execute the installed kernel for strided inputs."""
+        native = import_module("spo_kernel").delayed_kuramoto_run_rust
+        events: list[str] = []
 
-        fake_module = types.ModuleType("spo_kernel")
-        fake_module.delayed_kuramoto_run_rust = fake_rust  # type: ignore[attr-defined]
-        monkeypatch.setitem(sys.modules, "spo_kernel", fake_module)
+        def observe(_frame: FrameType, event: str, argument: object) -> None:
+            """Observe real cached native execution through the public entry point."""
+            if argument is native and event in {"c_call", "c_return", "c_exception"}:
+                events.append(event)
 
-        backend = delay_mod._load_rust_fn()
-        out = backend(
-            np.zeros(2), np.zeros(2), np.zeros(4), np.zeros(4), 2, 0.0, 0.0, 0.05, 1, 5
+        phases = np.array([0.4, 0.0, 1.1, 0.0])[::2]
+        frequencies = np.ones(4)[::2]
+        coupling = np.array([[0.0, 0.5], [0.2, 0.0]])
+        alpha = np.full((2, 2), 0.01)
+        expected = np.array([0.45155943106653923, 1.1289796554407023])
+        assert not phases.flags.c_contiguous
+        assert sys.getprofile() is None
+        sys.setprofile(observe)
+        try:
+            first = DelayedEngine(2, dt=0.01, delay_steps=3).run(
+                phases,
+                frequencies,
+                coupling,
+                0.2,
+                0.3,
+                alpha,
+                n_steps=4,
+                backend="rust",
+            )
+            second = DelayedEngine(2, dt=0.01, delay_steps=3).run(
+                phases,
+                frequencies,
+                coupling,
+                0.2,
+                0.3,
+                alpha,
+                n_steps=4,
+                backend="rust",
+            )
+        finally:
+            sys.setprofile(None)
+        assert events == ["c_call", "c_return", "c_call", "c_return"]
+        np.testing.assert_allclose(first, expected, rtol=0.0, atol=1e-13)
+        np.testing.assert_allclose(second, expected, rtol=0.0, atol=1e-13)
+        assert not np.shares_memory(first, second)
+        np.testing.assert_array_equal(phases, [0.4, 1.1])
+
+    @pytest.mark.native_runtime
+    def test_julia_loader_returns_direct_bridge(self) -> None:
+        """Explicit Julia handles readonly strided input through its actual bridge."""
+        phases = np.array([0.4, 0.0, 1.1, 0.0])[::2]
+        phases.setflags(write=False)
+        result = DelayedEngine(2, dt=0.01, delay_steps=3).run(
+            phases,
+            np.ones(2),
+            np.array([[0.0, 0.5], [0.2, 0.0]]),
+            0.2,
+            0.3,
+            np.full((2, 2), 0.01),
+            n_steps=4,
+            backend="julia",
         )
-        assert out.shape == (2,)
-        assert calls[0] == (2, 1, 5)
+        np.testing.assert_allclose(
+            result,
+            [0.45155943106653923, 1.1289796554407023],
+            atol=1e-13,
+            rtol=0.0,
+        )
+        assert not np.shares_memory(result, phases)
+        np.testing.assert_array_equal(phases, [0.4, 1.1])
 
-    def test_julia_loader_returns_direct_bridge(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        monkeypatch.setattr(delay_mod, "require_juliacall_main", lambda: object())
-
-        assert delay_mod._load_julia_fn() is delayed_kuramoto_run_julia
-
-    def test_resolve_backends_falls_back_to_python(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        def _fail() -> delay_mod._DelayBackend:
-            raise RuntimeError("unavailable")
-
-        for name in ("rust", "mojo", "julia", "go"):
-            monkeypatch.setitem(delay_mod._LOADERS, name, _fail)
-        active, available = delay_mod._resolve_backends()
-        assert active == "python"
-        assert available == ["python"]
+    @pytest.mark.native_runtime
+    def test_resolve_backends_falls_back_to_python(self, tmp_path: Path) -> None:
+        """Actual no-Rust/no-asset admission selects NumPy despite running Julia."""
+        run_source_profile(tmp_path, "missing")
 
 
 class _ArrayRaises:
@@ -522,44 +625,87 @@ class _ArrayRaises:
 
 
 class TestDispatchFallthrough:
-    def test_dispatch_skips_failing_active_and_dedups(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        def sentinel(*_a: object, **_k: object) -> FloatArray:
-            return np.zeros(2, dtype=np.float64)
+    """Preserve numerical auto-mode fallback after bounded loader failures."""
 
-        def fake_load(name: str) -> delay_mod._DelayBackend:
-            if name == "rust":
-                raise RuntimeError("rust unavailable at dispatch")
-            return sentinel
+    def test_dispatch_skips_failing_active_and_dedups(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """A loader-failure diagnostic falls back through the real public model."""
+        attempts: list[str] = []
+
+        def unavailable(name: str) -> delay_mod._DelayBackend:
+            """Refuse every native load; never supply a successful solver."""
+            attempts.append(name)
+            raise ImportError("injected loader refusal")
 
         monkeypatch.setattr(delay_mod, "ACTIVE_BACKEND", "rust")
         monkeypatch.setattr(delay_mod, "AVAILABLE_BACKENDS", ["rust", "go", "python"])
-        monkeypatch.setattr(delay_mod, "_load_backend", fake_load)
+        monkeypatch.setattr(delay_mod, "_load_backend", unavailable)
+        result = DelayedEngine(2, dt=0.01, delay_steps=3).run(
+            np.array([0.4, 1.1]),
+            np.ones(2),
+            np.array([[0.0, 0.5], [0.2, 0.0]]),
+            0.2,
+            0.3,
+            np.full((2, 2), 0.01),
+            n_steps=4,
+        )
+        np.testing.assert_allclose(
+            result,
+            [0.45155943106653923, 1.1289796554407023],
+            atol=1e-13,
+            rtol=0.0,
+        )
+        assert attempts == ["rust", "go"]
 
-        # ordered = [rust(active), rust, go, python]: active rust raises, the
-        # second rust is deduplicated, go resolves.
-        assert delay_mod._dispatch() is sentinel
-
-    def test_dispatch_returns_none_when_only_python(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        monkeypatch.setattr(delay_mod, "ACTIVE_BACKEND", "python")
-        monkeypatch.setattr(delay_mod, "AVAILABLE_BACKENDS", ["python"])
-        assert delay_mod._dispatch() is None
+    def test_dispatch_returns_none_when_only_python(self) -> None:
+        """Explicit NumPy selection produces the scalar delayed reference trajectory."""
+        result = DelayedEngine(2, dt=0.01, delay_steps=3).run(
+            np.array([0.4, 1.1]),
+            np.ones(2),
+            np.array([[0.0, 0.5], [0.2, 0.0]]),
+            0.2,
+            0.3,
+            np.full((2, 2), 0.01),
+            n_steps=4,
+            backend="python",
+        )
+        np.testing.assert_allclose(
+            result,
+            [0.45155943106653923, 1.1289796554407023],
+            atol=1e-13,
+            rtol=0.0,
+        )
 
     def test_dispatch_none_when_all_accelerators_fail(
-        self, monkeypatch: pytest.MonkeyPatch
+        self,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        def fake_load(_name: str) -> delay_mod._DelayBackend:
-            raise RuntimeError("no accelerator resolves")
+        """Native loader exhaustion retains a real NumPy result for legacy auto mode."""
+
+        def unavailable(_name: str) -> delay_mod._DelayBackend:
+            """Refuse an accelerator without synthesising numerical success."""
+            raise ImportError("injected loader refusal")
 
         monkeypatch.setattr(delay_mod, "ACTIVE_BACKEND", "rust")
         monkeypatch.setattr(delay_mod, "AVAILABLE_BACKENDS", ["rust", "go"])
-        monkeypatch.setattr(delay_mod, "_load_backend", fake_load)
-        # No "python" entry and every accelerator fails: dispatch must still
-        # signal the NumPy fallback rather than raise.
-        assert delay_mod._dispatch() is None
+        monkeypatch.setattr(delay_mod, "_load_backend", unavailable)
+        result = DelayedEngine(2, dt=0.01, delay_steps=3).run(
+            np.array([0.4, 1.1]),
+            np.ones(2),
+            np.array([[0.0, 0.5], [0.2, 0.0]]),
+            0.2,
+            0.3,
+            np.full((2, 2), 0.01),
+            n_steps=4,
+        )
+        np.testing.assert_allclose(
+            result,
+            [0.45155943106653923, 1.1289796554407023],
+            atol=1e-13,
+            rtol=0.0,
+        )
 
 
 class TestBackendOutputContract:
@@ -577,6 +723,8 @@ class TestBackendOutputContract:
     def test_invalid_backend_output_falls_back(
         self, monkeypatch: pytest.MonkeyPatch, bad_output: object
     ) -> None:
+        """Reject an injected bad response and retain the actual stationary solution."""
+
         def bad_backend(*_a: object, **_k: object) -> object:
             return bad_output
 
@@ -586,10 +734,13 @@ class TestBackendOutputContract:
         assert out.shape == (2,)
         assert np.all(np.isfinite(out))
         assert np.all((out >= 0.0) & (out < TWO_PI))
+        np.testing.assert_array_equal(out, [0.4, 1.1])
 
     def test_numeric_string_backend_output_falls_back_before_publication(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        """Retain real phases when an injected response contains numeric text."""
+
         def bad_backend(*_a: object, **_k: object) -> list[str]:
             return ["0.2", "0.4"]
 
@@ -600,11 +751,20 @@ class TestBackendOutputContract:
         np.testing.assert_array_equal(out, phases)
 
 
+def test_public_output_validator_refuses_unconvertible_arrays() -> None:
+    """Refuse a failing array protocol without leaking its conversion exception."""
+    with pytest.raises(ValueError, match="finite phase vector"):
+        delay_validation.validate_delay_backend_output(_ArrayRaises(), n=2)
+
+
 class TestStateArrayDefensiveGuards:
+    """Reject invalid public state arrays and scalar controls."""
+
     def test_step_rejects_unconvertible_object(self) -> None:
+        """Map a failing array conversion to the public input error contract."""
         eng = DelayedEngine(2, dt=0.05, delay_steps=1)
         with pytest.raises(ValueError, match="finite float array"):
-            eng.step(_ArrayRaises(), np.zeros(2), np.zeros((2, 2)))
+            eng.step(cast(FloatArray, _ArrayRaises()), np.zeros(2), np.zeros((2, 2)))
 
     @pytest.mark.parametrize(
         ("phases", "match"),
@@ -616,6 +776,7 @@ class TestStateArrayDefensiveGuards:
     def test_step_rejects_invalid_numeric_state_arrays(
         self, phases: FloatArray, match: str
     ) -> None:
+        """Reject complex, nonfinite or misshaped phases before stepping."""
         eng = DelayedEngine(2, dt=0.05, delay_steps=1)
         with pytest.raises(ValueError, match=match):
             eng.step(phases, np.zeros(2), np.zeros((2, 2)))
@@ -630,6 +791,7 @@ class TestStateArrayDefensiveGuards:
     def test_step_rejects_invalid_scalar_controls(
         self, kwargs: dict[str, object], match: str
     ) -> None:
+        """Reject nonfinite, aliased and complex external-drive controls."""
         eng = DelayedEngine(2, dt=0.05, delay_steps=1)
         with pytest.raises(ValueError, match=match):
             eng.step(
@@ -641,18 +803,39 @@ class TestStateArrayDefensiveGuards:
             )
 
     def test_boolean_alias_probe_handles_unconvertible(self) -> None:
-        assert delay_mod._contains_boolean_alias(_ArrayRaises()) is False
-        assert delay_validation._contains_boolean_alias(_ArrayRaises()) is False
+        """Unconvertible public measurements are refused before any native load."""
+        for owner in (
+            delayed_kuramoto_run_go,
+            delayed_kuramoto_run_julia,
+            delayed_kuramoto_run_mojo,
+        ):
+            with pytest.raises(ValueError, match="phases must be a finite float array"):
+                owner(
+                    cast(FloatArray, _ArrayRaises()),
+                    np.zeros(2),
+                    np.zeros(4),
+                    np.zeros(4),
+                    2,
+                    0.0,
+                    0.0,
+                    0.01,
+                    1,
+                    1,
+                )
 
     def test_numeric_string_alias_probes_cover_defensive_edges(self) -> None:
-        for module in (delay_mod, delay_validation):
-            assert module._is_numeric_string_alias(1.0) is False
-            assert module._is_numeric_string_alias("") is False
-            assert module._is_numeric_string_alias("not-a-number") is False
-            assert module._contains_numeric_string_alias(_ArrayRaises()) is False
-            assert module._contains_numeric_string_alias(
-                np.array([1.0, "2.0"], dtype=object)
-            )
+        """Public history rejects text aliases and retains actual numeric snapshots."""
+        history = delay_mod.DelayBuffer(2, max_delay_steps=2)
+        for value in (
+            np.array([1.0, "2.0"], dtype=object),
+            np.array([1.0, ""], dtype=object),
+            np.array([1.0, "not-a-number"], dtype=object),
+        ):
+            with pytest.raises(ValueError, match="phases"):
+                history.push(cast(FloatArray, value))
+            assert history.length == 0
+        history.push(np.array([1.0, 2.0]))
+        np.testing.assert_array_equal(history.get_delayed(1), [1.0, 2.0])
 
     @pytest.mark.parametrize(
         ("kwargs", "match"),
@@ -672,6 +855,7 @@ class TestStateArrayDefensiveGuards:
     def test_public_arrays_reject_numeric_string_aliases(
         self, kwargs: dict[str, object], match: str
     ) -> None:
+        """Reject textual aliases in every public step state buffer."""
         base: dict[str, object] = {
             "phases": np.zeros(2),
             "omegas": np.zeros(2),

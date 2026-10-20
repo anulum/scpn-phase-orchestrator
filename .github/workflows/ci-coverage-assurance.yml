@@ -217,6 +217,7 @@ jobs:
             --cov=scpn_phase_orchestrator.coupling.ei_balance \
             --cov=scpn_phase_orchestrator.upde.sheaf_engine \
             --cov=scpn_phase_orchestrator.upde.sparse_engine \
+            --cov=scpn_phase_orchestrator.upde.delay \
             --cov-branch --cov-report= --cov-fail-under=0 \
             --junitxml=.ci-branch/defective-${{ matrix.variant }}/public-contracts.junit.xml
           wheel=(fixture-wheels/*.whl)

@@ -16,6 +16,8 @@ pub struct DelayedStepper {
     dt: f64,
     delay_steps: usize,
     head: usize,
+    steps_taken: usize,
+    cached_order: (f64, f64),
     history_sincos: Vec<f64>,
     sin_theta: Vec<f64>,
     cos_theta: Vec<f64>,
@@ -42,27 +44,37 @@ impl DelayedStepper {
             return Err(SpoError::InvalidDimension("n must be > 0".into()));
         }
         config.validate()?;
-        let max_buf = delay_steps + 1;
+        let max_buf = delay_steps
+            .checked_add(1)
+            .ok_or_else(|| SpoError::InvalidDimension("delay history count overflow".into()))?;
+        n.checked_mul(n)
+            .ok_or_else(|| SpoError::InvalidDimension("delay matrix size overflow".into()))?;
+        let history_len = max_buf
+            .checked_mul(n)
+            .and_then(|size| size.checked_mul(2))
+            .ok_or_else(|| SpoError::InvalidDimension("delay history size overflow".into()))?;
         Ok(Self {
             n,
             dt: config.dt,
             delay_steps,
             head: 0,
-            history_sincos: vec![0.0; max_buf * 2 * n],
-            sin_theta: vec![0.0; n],
-            cos_theta: vec![0.0; n],
-            deriv_buf: vec![0.0; n],
+            steps_taken: 0,
+            cached_order: (0.0, 0.0),
+            history_sincos: zero_buffer(history_len)?,
+            sin_theta: zero_buffer(n)?,
+            cos_theta: zero_buffer(n)?,
+            deriv_buf: zero_buffer(n)?,
         })
     }
 
     /// Advance one delayed-coupling timestep in place.
     ///
-    /// `step_idx` selects whether the configured delay is available yet; early
-    /// steps use the current phase snapshot as the delayed state.
+    /// Accepted calls determine whether history is available. The legacy
+    /// `step_idx` argument is retained for call compatibility and is ignored.
     ///
     /// # Errors
-    /// Currently returns `Ok(())` after construction-time validation; the result
-    /// type is retained for API parity with other Rust steppers.
+    /// Refuses invalid dimensions, nonfinite inputs and nonfinite computed phases.
+    /// Refusal preserves caller phases, accepted history position and cached order.
     pub fn step(
         &mut self,
         phases: &mut [f64],
@@ -71,35 +83,10 @@ impl DelayedStepper {
         alpha: &[f64],
         zeta: f64,
         psi: f64,
-        step_idx: usize,
+        _step_idx: usize,
     ) -> SpoResult<()> {
         let n = self.n;
-        if phases.len() != n || omegas.len() != n {
-            return Err(SpoError::InvalidDimension(format!(
-                "expected phases and omegas length {n}, got {}/{}",
-                phases.len(),
-                omegas.len()
-            )));
-        }
-        if knm.len() != n * n || alpha.len() != n * n {
-            return Err(SpoError::InvalidDimension(format!(
-                "expected knm/alpha length {} got {}/{}",
-                n * n,
-                knm.len(),
-                alpha.len()
-            )));
-        }
-        if phases.iter().any(|v| !v.is_finite())
-            || omegas.iter().any(|v| !v.is_finite())
-            || knm.iter().any(|v| !v.is_finite())
-            || alpha.iter().any(|v| !v.is_finite())
-            || !zeta.is_finite()
-            || !psi.is_finite()
-        {
-            return Err(SpoError::IntegrationDiverged(
-                "delay step inputs contain NaN/Inf".into(),
-            ));
-        }
+        self.validate_inputs(phases, omegas, knm, alpha, zeta, psi)?;
         let max_buf = self.delay_steps + 1;
         for i in 0..n {
             let (s, c) = phases[i].sin_cos();
@@ -108,7 +95,7 @@ impl DelayedStepper {
             self.history_sincos[self.head * 2 * n + 2 * i] = s;
             self.history_sincos[self.head * 2 * n + 2 * i + 1] = c;
         }
-        let delayed_idx = if self.delay_steps > 0 && step_idx >= self.delay_steps {
+        let delayed_idx = if self.delay_steps > 0 && self.steps_taken >= self.delay_steps {
             (self.head + max_buf - self.delay_steps) % max_buf
         } else {
             self.head
@@ -192,10 +179,64 @@ impl DelayedStepper {
                     });
             }
         }
-        for i in 0..n {
-            phases[i] = (phases[i] + self.dt * self.deriv_buf[i]).rem_euclid(TAU);
+        for (candidate, phase) in self.deriv_buf.iter_mut().zip(phases.iter()) {
+            let raw = phase + self.dt * *candidate;
+            if !raw.is_finite() {
+                return Err(SpoError::IntegrationDiverged(
+                    "delay step produced nonfinite phases".into(),
+                ));
+            }
+            let wrapped = raw.rem_euclid(TAU);
+            *candidate = if wrapped >= TAU || wrapped == 0.0 {
+                0.0
+            } else {
+                wrapped
+            };
         }
+        phases.copy_from_slice(&self.deriv_buf);
+        self.cached_order = crate::order_params::compute_order_parameter(phases);
         self.head = (self.head + 1) % max_buf;
+        self.steps_taken = self.steps_taken.saturating_add(1);
+        Ok(())
+    }
+
+    /// Validate complete finite state and controls before touching retained history.
+    fn validate_inputs(
+        &self,
+        phases: &[f64],
+        omegas: &[f64],
+        knm: &[f64],
+        alpha: &[f64],
+        zeta: f64,
+        psi: f64,
+    ) -> SpoResult<()> {
+        let n = self.n;
+        if phases.len() != n || omegas.len() != n {
+            return Err(SpoError::InvalidDimension(format!(
+                "expected phases and omegas length {n}, got {}/{}",
+                phases.len(),
+                omegas.len()
+            )));
+        }
+        if knm.len() != n * n || alpha.len() != n * n {
+            return Err(SpoError::InvalidDimension(format!(
+                "expected knm/alpha length {} got {}/{}",
+                n * n,
+                knm.len(),
+                alpha.len()
+            )));
+        }
+        if phases.iter().any(|v| !v.is_finite())
+            || omegas.iter().any(|v| !v.is_finite())
+            || knm.iter().any(|v| !v.is_finite())
+            || alpha.iter().any(|v| !v.is_finite())
+            || !zeta.is_finite()
+            || !psi.is_finite()
+        {
+            return Err(SpoError::IntegrationDiverged(
+                "delay step inputs contain NaN/Inf".into(),
+            ));
+        }
         Ok(())
     }
 
@@ -213,6 +254,7 @@ impl DelayedStepper {
         psi: f64,
         n_steps: usize,
     ) -> SpoResult<()> {
+        self.validate_inputs(phases, omegas, knm, alpha, zeta, psi)?;
         for step_idx in 0..n_steps {
             self.step(phases, omegas, knm, alpha, zeta, psi, step_idx)?;
         }
@@ -221,11 +263,15 @@ impl DelayedStepper {
 
     /// Return the current Kuramoto order parameter `(R, psi)` from cached phases.
     pub fn order_parameter(&self) -> (f64, f64) {
-        crate::order_params::compute_order_parameter_from_sincos(&self.sin_theta, &self.cos_theta)
+        self.cached_order
     }
 }
 
 /// Run delayed Kuramoto dynamics from an initial phase snapshot.
+///
+/// # Errors
+/// Refuses invalid dimensions/configuration, unavailable history capacity and
+/// nonfinite inputs or computed phases. Zero steps return a validated input copy.
 pub fn delayed_kuramoto_run(
     phases_init: &[f64],
     omegas: &[f64],
@@ -237,20 +283,28 @@ pub fn delayed_kuramoto_run(
     dt: f64,
     delay_steps: usize,
     n_steps: usize,
-) -> Vec<f64> {
+) -> SpoResult<Vec<f64>> {
     let mut s = DelayedStepper::new(
         n,
-        delay_steps,
+        delay_steps.min(n_steps),
         IntegrationConfig {
             dt,
             ..Default::default()
         },
-    )
-    .expect("stepper init failed");
+    )?;
     let mut p = phases_init.to_vec();
-    s.run(&mut p, omegas, knm_flat, alpha_flat, zeta, psi, n_steps)
-        .expect("stepper init failed");
-    p
+    s.run(&mut p, omegas, knm_flat, alpha_flat, zeta, psi, n_steps)?;
+    Ok(p)
+}
+
+/// Allocate initialised numerical storage while reporting unavailable capacity.
+fn zero_buffer(length: usize) -> SpoResult<Vec<f64>> {
+    let mut buffer = Vec::new();
+    buffer.try_reserve_exact(length).map_err(|error| {
+        SpoError::InvalidDimension(format!("delay history capacity unavailable: {error}"))
+    })?;
+    buffer.resize(length, 0.0);
+    Ok(buffer)
 }
 
 #[cfg(test)]
@@ -264,7 +318,8 @@ mod delayed_kuramoto_run_tests {
         let knm = vec![0.0; 4];
         let alpha = vec![0.0; 4];
 
-        let result = delayed_kuramoto_run(&phases, &omegas, &knm, &alpha, 2, 0.0, 0.0, 0.01, 1, 0);
+        let result = delayed_kuramoto_run(&phases, &omegas, &knm, &alpha, 2, 0.0, 0.0, 0.01, 1, 0)
+            .expect("valid zero-step inputs");
 
         assert_eq!(result, phases);
     }
@@ -276,9 +331,191 @@ mod delayed_kuramoto_run_tests {
         let knm = vec![0.0; 4];
         let alpha = vec![0.0; 4];
 
-        let result = delayed_kuramoto_run(&phases, &omegas, &knm, &alpha, 2, 0.0, 0.0, 0.1, 1, 1);
+        let result = delayed_kuramoto_run(&phases, &omegas, &knm, &alpha, 2, 0.0, 0.0, 0.1, 1, 1)
+            .expect("valid uncoupled rotation");
 
         assert!((result[0] - 0.3).abs() < 1e-12);
         assert!((result[1] - 0.05).abs() < 1e-12);
+    }
+
+    #[test]
+    fn rounded_endpoints_and_signed_zero_are_canonical() {
+        let interior = f64::from_bits(TAU.to_bits() - 1);
+        let phases = [-f64::from_bits(1), -0.0, interior];
+        let result = delayed_kuramoto_run(
+            &phases, &[0.0; 3], &[0.0; 9], &[0.0; 9], 3, 0.0, 0.0, 0.01, 1, 1,
+        )
+        .expect("finite endpoint inputs");
+        assert_eq!(result, [0.0, 0.0, interior]);
+        assert!(result[0].is_sign_positive());
+        assert!(result[1].is_sign_positive());
+    }
+
+    #[test]
+    fn refusal_preserves_accepted_history_and_cached_order() {
+        let config = IntegrationConfig {
+            dt: 0.01,
+            ..Default::default()
+        };
+        let mut actual = DelayedStepper::new(2, 2, config.clone()).expect("valid config");
+        let mut reference = DelayedStepper::new(2, 2, config).expect("valid config");
+        let mut phases = [0.4, 1.1];
+        let mut expected = phases;
+        let omega = [1.0, 1.0];
+        let coupling = [0.0, 0.5, 0.2, 0.0];
+        let alpha = [0.01; 4];
+        actual
+            .step(&mut phases, &omega, &coupling, &alpha, 0.2, 0.3, 999)
+            .expect("first actual step");
+        reference
+            .step(&mut expected, &omega, &coupling, &alpha, 0.2, 0.3, 0)
+            .expect("first reference step");
+        let order = actual.order_parameter();
+        assert_eq!(order, crate::order_params::compute_order_parameter(&phases));
+        let mut refused = [1.1, 0.4];
+        assert!(actual
+            .step(
+                &mut refused,
+                &[f64::MAX; 2],
+                &coupling,
+                &alpha,
+                f64::MAX,
+                std::f64::consts::FRAC_PI_2,
+                0,
+            )
+            .is_err());
+        assert_eq!(refused, [1.1, 0.4]);
+        assert_eq!(actual.order_parameter(), order);
+        for _ in 0..5 {
+            actual
+                .step(&mut phases, &omega, &coupling, &alpha, 0.2, 0.3, 0)
+                .expect("recovered actual step");
+            reference
+                .step(&mut expected, &omega, &coupling, &alpha, 0.2, 0.3, 999)
+                .expect("reference continuation");
+            assert_eq!(phases, expected);
+        }
+    }
+
+    #[test]
+    fn repeated_stateful_batches_keep_the_same_history() {
+        let config = IntegrationConfig {
+            dt: 0.05,
+            ..Default::default()
+        };
+        let mut actual = DelayedStepper::new(2, 2, config.clone()).expect("valid config");
+        let mut reference = DelayedStepper::new(2, 2, config).expect("valid config");
+        let mut phases = [0.4, 1.1];
+        let mut expected = phases;
+        let omega = [1.0, -0.7];
+        let coupling = [0.0, 0.5, -0.2, 0.0];
+        let alpha = [0.01; 4];
+        for _ in 0..2 {
+            actual
+                .run(&mut phases, &omega, &coupling, &alpha, 0.2, 0.3, 3)
+                .expect("stateful three-step batch");
+        }
+        reference
+            .run(&mut expected, &omega, &coupling, &alpha, 0.2, 0.3, 6)
+            .expect("continuous six-step reference");
+        assert_eq!(phases, expected);
+    }
+
+    #[test]
+    fn direct_batches_refuse_invalid_inputs_without_panicking() {
+        assert!(delayed_kuramoto_run(&[], &[], &[], &[], 0, 0.0, 0.0, 0.01, 1, 0,).is_err());
+        assert!(delayed_kuramoto_run(
+            &[0.2],
+            &[0.0; 2],
+            &[0.0; 4],
+            &[0.0; 4],
+            2,
+            0.0,
+            0.0,
+            0.01,
+            1,
+            0,
+        )
+        .is_err());
+        assert!(
+            delayed_kuramoto_run(&[f64::NAN], &[0.0], &[0.0], &[0.0], 1, 0.0, 0.0, 0.01, 1, 0,)
+                .is_err()
+        );
+        for value in [0.0, -0.1, f64::INFINITY, f64::NAN] {
+            assert!(DelayedStepper::new(
+                1,
+                1,
+                IntegrationConfig {
+                    dt: value,
+                    ..Default::default()
+                },
+            )
+            .is_err());
+        }
+        assert!(DelayedStepper::new(usize::MAX, 1, IntegrationConfig::default()).is_err());
+        assert!(DelayedStepper::new(1, usize::MAX, IntegrationConfig::default()).is_err());
+        assert!(
+            DelayedStepper::new(1, isize::MAX as usize / 2, IntegrationConfig::default(),).is_err()
+        );
+        let initial = [-1.0, TAU + 1.0];
+        let copy = delayed_kuramoto_run(
+            &initial,
+            &[0.0; 2],
+            &[0.0; 4],
+            &[0.0; 4],
+            2,
+            0.0,
+            0.0,
+            0.01,
+            usize::MAX,
+            0,
+        )
+        .expect("zero steps need no history allocation");
+        assert_eq!(copy, initial);
+        assert_ne!(copy.as_ptr(), initial.as_ptr());
+    }
+
+    #[test]
+    fn scalar_and_parallel_paths_match_independent_full_history() {
+        for n in [2, 256, 257] {
+            for lag in [0.0, 0.17] {
+                let phases: Vec<f64> = (0..n).map(|i| TAU * i as f64 / n as f64).collect();
+                let omega: Vec<f64> = (0..n).map(|i| i as f64 / n as f64 - 0.7).collect();
+                let coupling: Vec<f64> = (0..n * n)
+                    .map(|index| ((index * 3 % 7) as f64 - 3.0) * 0.04)
+                    .collect();
+                let alpha = vec![lag; n * n];
+                let mut history = Vec::new();
+                let mut expected = phases.clone();
+                for step in 0..6 {
+                    history.push(expected.clone());
+                    let delayed = if step >= 2 {
+                        &history[step - 2]
+                    } else {
+                        &expected
+                    };
+                    expected = (0..n)
+                        .map(|i| {
+                            let force: f64 = (0..n)
+                                .map(|j| {
+                                    coupling[i * n + j] * (delayed[j] - expected[i] - lag).sin()
+                                })
+                                .sum();
+                            (expected[i]
+                                + 0.01 * (omega[i] + force + 0.3 * (0.7 - expected[i]).sin()))
+                            .rem_euclid(TAU)
+                        })
+                        .collect();
+                }
+                let actual = delayed_kuramoto_run(
+                    &phases, &omega, &coupling, &alpha, n, 0.3, 0.7, 0.01, 2, 6,
+                )
+                .expect("valid scalar/parallel problem");
+                assert!(actual
+                    .iter()
+                    .zip(&expected)
+                    .all(|(a, e)| (a - e).abs() < 1e-12));
+            }
+        }
     }
 }

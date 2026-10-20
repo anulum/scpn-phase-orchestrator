@@ -1,0 +1,451 @@
+{
+  "all_required_rows_passed": true,
+  "cli_controls": {
+    "current": {
+      "acceptance_passed": 1,
+      "exit": 0,
+      "kernel_sha256": "dd1127618c3628f1c1cad7038953abcd605270caa74760477d759914b85a114e",
+      "required_backends": [
+        "python",
+        "rust",
+        "go",
+        "julia",
+        "mojo"
+      ]
+    },
+    "original-kernel": {
+      "acceptance_passed": 0,
+      "claim": "genuine original installed kernel fails the current half-open endpoint contract",
+      "exit": 1,
+      "kernel_sha256": "9766c8cbc3f8f47703e9c6c475d21826393ec11b75e20db432e26969e532fc11",
+      "rust_status": "failed"
+    }
+  },
+  "finished_unix": 1792508677.2853398,
+  "host": {
+    "cpu_affinity": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ],
+    "load_after": [
+      16.197265625,
+      15.1171875,
+      17.287109375
+    ],
+    "load_before": [
+      14.9423828125,
+      14.83984375,
+      17.26171875
+    ],
+    "logical_cpus": 12,
+    "platform": "Linux-7.0.0-34-generic-x86_64-with-glibc2.39"
+  },
+  "kernel_build_profile": "dev: unoptimised with debug information",
+  "kernel_extension_sha256": "dd1127618c3628f1c1cad7038953abcd605270caa74760477d759914b85a114e",
+  "kernel_wheel_sha256": "e9164ce29a792311557ee134935ee3fe5e8930f1b01d5d345f42015065e19134",
+  "native_assets_sha256": {
+    "go": "9c97509c25c317d1ca0bd0bee891005d9ffadd494a58670006ccb4f114f33b69",
+    "julia": "38748296ed73c4af5d92ea998977fd6e9f53eab99158e30153ee1bddfd89de29",
+    "mojo": "72ca9b08bc768283fc4189206ea7206fe6322664de00003768841c13ec452762"
+  },
+  "production_timing_claim": false,
+  "python_package_tree_sha256": "d58cab5c2a66bc891780aab546732a32c6383ae3130f1587c578ba709228a8a1",
+  "rows": [
+    {
+      "acceptance_passed": 1,
+      "acceptance_thresholds": {
+        "backend_order": [
+          "rust",
+          "mojo",
+          "julia",
+          "go",
+          "python"
+        ],
+        "max_reference_contract_abs_error": 1e-09,
+        "parity_tolerances": {
+          "go": 1e-09,
+          "julia": 1e-09,
+          "mojo": 1e-06,
+          "python": 0.0,
+          "rust": 1e-09
+        },
+        "production_timing_claim": false,
+        "require_all_available_parity": true,
+        "require_all_declared_backend_records": true,
+        "require_phases_in_range": true,
+        "require_pure_rotation_limit": true,
+        "require_python_reference": true
+      },
+      "all_available_passed": 1,
+      "available_backend_count": 5,
+      "backend_count": 5,
+      "backend_records": [
+        {
+          "backend": "rust",
+          "independent_max_abs_error": 0.0,
+          "max_abs_error": 0.0,
+          "ms_per_call": 0.10289037600159645,
+          "parity_passed": true,
+          "phases_sha256": "f2d178f4198f6acf34b9cfecc8ed24e97e44df3e7c65a9b2f5ef8ad7d6a22abf",
+          "reference_contracts_passed": true,
+          "status": "available",
+          "tolerance": 1e-09,
+          "unavailable_reason": ""
+        },
+        {
+          "backend": "mojo",
+          "independent_max_abs_error": 0.0,
+          "max_abs_error": 0.0,
+          "ms_per_call": 37.48305421322584,
+          "parity_passed": true,
+          "phases_sha256": "f2d178f4198f6acf34b9cfecc8ed24e97e44df3e7c65a9b2f5ef8ad7d6a22abf",
+          "reference_contracts_passed": true,
+          "status": "available",
+          "tolerance": 1e-06,
+          "unavailable_reason": ""
+        },
+        {
+          "backend": "julia",
+          "independent_max_abs_error": 0.0,
+          "max_abs_error": 0.0,
+          "ms_per_call": 0.27318219654262066,
+          "parity_passed": true,
+          "phases_sha256": "f2d178f4198f6acf34b9cfecc8ed24e97e44df3e7c65a9b2f5ef8ad7d6a22abf",
+          "reference_contracts_passed": true,
+          "status": "available",
+          "tolerance": 1e-09,
+          "unavailable_reason": ""
+        },
+        {
+          "backend": "go",
+          "independent_max_abs_error": 0.0,
+          "max_abs_error": 0.0,
+          "ms_per_call": 0.13394257985055447,
+          "parity_passed": true,
+          "phases_sha256": "f2d178f4198f6acf34b9cfecc8ed24e97e44df3e7c65a9b2f5ef8ad7d6a22abf",
+          "reference_contracts_passed": true,
+          "status": "available",
+          "tolerance": 1e-09,
+          "unavailable_reason": ""
+        },
+        {
+          "backend": "python",
+          "independent_max_abs_error": 0.0,
+          "max_abs_error": 0.0,
+          "ms_per_call": 0.10168980807065964,
+          "parity_passed": true,
+          "phases_sha256": "f2d178f4198f6acf34b9cfecc8ed24e97e44df3e7c65a9b2f5ef8ad7d6a22abf",
+          "reference_contracts_passed": true,
+          "status": "available",
+          "tolerance": 0.0,
+          "unavailable_reason": ""
+        }
+      ],
+      "benchmark_evidence_kind": "local_regression_non_isolated",
+      "benchmark_sha256": "2b8852d9321ca4d04a9f9c53e3a46d2d810f6a987cc764b4d00820afaaad9cc5",
+      "calls": 5,
+      "delay_steps": 3,
+      "independent_reference_max_abs_error": 0.0,
+      "independent_reference_sha256": "f2d178f4198f6acf34b9cfecc8ed24e97e44df3e7c65a9b2f5ef8ad7d6a22abf",
+      "isolation_method": "none",
+      "n": 2,
+      "n_steps": 4,
+      "parity_checked_count": 5,
+      "parity_pass_count": 5,
+      "production_timing_claim": 0,
+      "pure_rotation_max_abs_error": 4.440892098500626e-15,
+      "python_reference_present": 1,
+      "reference_contracts_passed": 1,
+      "reference_phases_sha256": "f2d178f4198f6acf34b9cfecc8ed24e97e44df3e7c65a9b2f5ef8ad7d6a22abf",
+      "required_backends": [
+        "python",
+        "rust",
+        "go",
+        "julia",
+        "mojo"
+      ],
+      "seed": 2026,
+      "steps_per_second": 2.377729489831281,
+      "suite": "delay_polyglot_parity_gate",
+      "unavailable_backend_count": 0,
+      "wall_time_s": 2.1028464429546148
+    },
+    {
+      "acceptance_passed": 1,
+      "acceptance_thresholds": {
+        "backend_order": [
+          "rust",
+          "mojo",
+          "julia",
+          "go",
+          "python"
+        ],
+        "max_reference_contract_abs_error": 1e-09,
+        "parity_tolerances": {
+          "go": 1e-09,
+          "julia": 1e-09,
+          "mojo": 1e-06,
+          "python": 0.0,
+          "rust": 1e-09
+        },
+        "production_timing_claim": false,
+        "require_all_available_parity": true,
+        "require_all_declared_backend_records": true,
+        "require_phases_in_range": true,
+        "require_pure_rotation_limit": true,
+        "require_python_reference": true
+      },
+      "all_available_passed": 1,
+      "available_backend_count": 5,
+      "backend_count": 5,
+      "backend_records": [
+        {
+          "backend": "rust",
+          "independent_max_abs_error": 4.440892098500626e-16,
+          "max_abs_error": 4.440892098500626e-16,
+          "ms_per_call": 1.6655116342008114,
+          "parity_passed": true,
+          "phases_sha256": "cce9cfd1e98eeafe8fb16966be44831b756199dc302aa90490187cbdb1260f7e",
+          "reference_contracts_passed": true,
+          "status": "available",
+          "tolerance": 1e-09,
+          "unavailable_reason": ""
+        },
+        {
+          "backend": "mojo",
+          "independent_max_abs_error": 4.440892098500626e-16,
+          "max_abs_error": 4.440892098500626e-16,
+          "ms_per_call": 36.7549663875252,
+          "parity_passed": true,
+          "phases_sha256": "af6e2b09c2eb8acda09211d1aa53b8caa897a604bc7a53f64b53b2d072025d23",
+          "reference_contracts_passed": true,
+          "status": "available",
+          "tolerance": 1e-06,
+          "unavailable_reason": ""
+        },
+        {
+          "backend": "julia",
+          "independent_max_abs_error": 4.440892098500626e-16,
+          "max_abs_error": 4.440892098500626e-16,
+          "ms_per_call": 0.6037423852831125,
+          "parity_passed": true,
+          "phases_sha256": "af6e2b09c2eb8acda09211d1aa53b8caa897a604bc7a53f64b53b2d072025d23",
+          "reference_contracts_passed": true,
+          "status": "available",
+          "tolerance": 1e-09,
+          "unavailable_reason": ""
+        },
+        {
+          "backend": "go",
+          "independent_max_abs_error": 4.440892098500626e-16,
+          "max_abs_error": 8.881784197001252e-16,
+          "ms_per_call": 0.6188719999045134,
+          "parity_passed": true,
+          "phases_sha256": "703e6a02181f89e695bcd6c42ae06857b099f5cd9f638ae4457a59da5a00ccef",
+          "reference_contracts_passed": true,
+          "status": "available",
+          "tolerance": 1e-09,
+          "unavailable_reason": ""
+        },
+        {
+          "backend": "python",
+          "independent_max_abs_error": 4.440892098500626e-16,
+          "max_abs_error": 0.0,
+          "ms_per_call": 1.8609555903822184,
+          "parity_passed": true,
+          "phases_sha256": "0e0fa9786eb0e1d37c241710831e2f351764d0fa83e101ed09eeb3b9268ea3cb",
+          "reference_contracts_passed": true,
+          "status": "available",
+          "tolerance": 0.0,
+          "unavailable_reason": ""
+        }
+      ],
+      "benchmark_evidence_kind": "local_regression_non_isolated",
+      "benchmark_sha256": "ac5efd2bd44d5a3018f3e235eeb3b13d28e4e52d04e8abbe8b54232827351ba8",
+      "calls": 5,
+      "delay_steps": 3,
+      "independent_reference_max_abs_error": 4.440892098500626e-16,
+      "independent_reference_sha256": "b9e7878bc523627c25999a2ec914e646c0d7a5ce88f5763ce286a83b63dbd185",
+      "isolation_method": "none",
+      "n": 16,
+      "n_steps": 80,
+      "parity_checked_count": 5,
+      "parity_pass_count": 5,
+      "production_timing_claim": 0,
+      "pure_rotation_max_abs_error": 8.881784197001252e-15,
+      "python_reference_present": 1,
+      "reference_contracts_passed": 1,
+      "reference_phases_sha256": "0e0fa9786eb0e1d37c241710831e2f351764d0fa83e101ed09eeb3b9268ea3cb",
+      "required_backends": [
+        "python",
+        "rust",
+        "go",
+        "julia",
+        "mojo"
+      ],
+      "seed": 2026,
+      "steps_per_second": 17.37753366643205,
+      "suite": "delay_polyglot_parity_gate",
+      "unavailable_backend_count": 0,
+      "wall_time_s": 0.28772782697342336
+    },
+    {
+      "acceptance_passed": 1,
+      "acceptance_thresholds": {
+        "backend_order": [
+          "rust",
+          "mojo",
+          "julia",
+          "go",
+          "python"
+        ],
+        "max_reference_contract_abs_error": 1e-09,
+        "parity_tolerances": {
+          "go": 1e-09,
+          "julia": 1e-09,
+          "mojo": 1e-06,
+          "python": 0.0,
+          "rust": 1e-09
+        },
+        "production_timing_claim": false,
+        "require_all_available_parity": true,
+        "require_all_declared_backend_records": true,
+        "require_phases_in_range": true,
+        "require_pure_rotation_limit": true,
+        "require_python_reference": true
+      },
+      "all_available_passed": 1,
+      "available_backend_count": 5,
+      "backend_count": 5,
+      "backend_records": [
+        {
+          "backend": "rust",
+          "independent_max_abs_error": 1.1546319456101628e-14,
+          "max_abs_error": 1.4210854715202004e-14,
+          "ms_per_call": 70.08839561603963,
+          "parity_passed": true,
+          "phases_sha256": "2b8cb97182051b9bbb6229d94b11dde16bec0a1c53a7159408022320d3413b2a",
+          "reference_contracts_passed": true,
+          "status": "available",
+          "tolerance": 1e-09,
+          "unavailable_reason": ""
+        },
+        {
+          "backend": "mojo",
+          "independent_max_abs_error": 7.105427357601002e-15,
+          "max_abs_error": 4.440892098500626e-15,
+          "ms_per_call": 321.56491219066083,
+          "parity_passed": true,
+          "phases_sha256": "e318b242405955e5bd957f9735ea1c618fd3abf8fb005b4051f3bd969e6bec44",
+          "reference_contracts_passed": true,
+          "status": "available",
+          "tolerance": 1e-06,
+          "unavailable_reason": ""
+        },
+        {
+          "backend": "julia",
+          "independent_max_abs_error": 7.105427357601002e-15,
+          "max_abs_error": 4.440892098500626e-15,
+          "ms_per_call": 106.00778898224235,
+          "parity_passed": true,
+          "phases_sha256": "fa128600380be2661f20a2db274a52d639f6ede7fb62ff16ce3eea56f0fcb518",
+          "reference_contracts_passed": true,
+          "status": "available",
+          "tolerance": 1e-09,
+          "unavailable_reason": ""
+        },
+        {
+          "backend": "go",
+          "independent_max_abs_error": 6.217248937900877e-15,
+          "max_abs_error": 4.440892098500626e-15,
+          "ms_per_call": 103.49943162873387,
+          "parity_passed": true,
+          "phases_sha256": "09bab3000b7607f3ee4302daeb0adaa6166fb1bb9dbdc24ae36253566471826b",
+          "reference_contracts_passed": true,
+          "status": "available",
+          "tolerance": 1e-09,
+          "unavailable_reason": ""
+        },
+        {
+          "backend": "python",
+          "independent_max_abs_error": 3.552713678800501e-15,
+          "max_abs_error": 0.0,
+          "ms_per_call": 34.026740631088614,
+          "parity_passed": true,
+          "phases_sha256": "bebb5b8f9a8b61bbc604c81f453a321062b0eb2b3855617ba0c486fcd4879a16",
+          "reference_contracts_passed": true,
+          "status": "available",
+          "tolerance": 0.0,
+          "unavailable_reason": ""
+        }
+      ],
+      "benchmark_evidence_kind": "local_regression_non_isolated",
+      "benchmark_sha256": "87ac5b6650059a102a88f906a2f80dece7f5e9a08ac570199cf9debe0252eec1",
+      "calls": 5,
+      "delay_steps": 2,
+      "independent_reference_max_abs_error": 3.552713678800501e-15,
+      "independent_reference_sha256": "0d2cc2aca6c4e614552692b08978de436ed3f7830888d7274b22967714e377c1",
+      "isolation_method": "none",
+      "n": 257,
+      "n_steps": 5,
+      "parity_checked_count": 5,
+      "parity_pass_count": 5,
+      "production_timing_claim": 0,
+      "pure_rotation_max_abs_error": 8.881784197001252e-15,
+      "python_reference_present": 1,
+      "reference_contracts_passed": 1,
+      "reference_phases_sha256": "bebb5b8f9a8b61bbc604c81f453a321062b0eb2b3855617ba0c486fcd4879a16",
+      "required_backends": [
+        "python",
+        "rust",
+        "go",
+        "julia",
+        "mojo"
+      ],
+      "seed": 2026,
+      "steps_per_second": 1.1616417832051351,
+      "suite": "delay_polyglot_parity_gate",
+      "unavailable_backend_count": 0,
+      "wall_time_s": 4.304252887843177
+    }
+  ],
+  "schema": "spo.delay-real-runtime-diagnostics.v1",
+  "source_binding": "working tree source bytes; genuine rebuilt isolated installed kernel and actual native assets",
+  "source_revision_base": "cf1718621fdd3772f862d1a2834470e25ebcf414",
+  "sources": {
+    "benchmarks/delay_benchmark.py": "bebe30e74d8ad00e2fa0f37ad2d0317f0728504e30b20dd4aad84ab893b0587e",
+    "benchmarks/delayed_benchmark.py": "aa8fdfcfc00eea6e4c5213f18ce0b21064bd3b38f6a228b36553af1d12541c63",
+    "go/delay.go": "882ffe85efde991743c555ae43c8b41d6d3e301370136782345a6a5e93ae01aa",
+    "julia/delay.jl": "38748296ed73c4af5d92ea998977fd6e9f53eab99158e30153ee1bddfd89de29",
+    "mojo/delay.mojo": "b2188077623e5c3dd6f6308b2622bc72db54fad7696e2e0c2e6578fb80dbcc1f",
+    "spo-kernel/crates/spo-engine/src/delay.rs": "54f90a7395d1f994c482c544b7152dbed58b094f6c4f2e9b2657b0d6678a7276",
+    "spo-kernel/crates/spo-ffi/src/delayed_boundary.rs": "3229dc15299b2292b3228a7f105f3546ba8905497d0d8f7618add993e37a0efa",
+    "src/scpn_phase_orchestrator/experimental/accelerators/upde/_delay_go.py": "76264bc475613952a998584d64252be63526ac9d622069c6ca919686f80572e7",
+    "src/scpn_phase_orchestrator/experimental/accelerators/upde/_delay_julia.py": "69b1502dee8dcde2d26d3fb20640f800c407acb0885ded694bab2a5ceef82088",
+    "src/scpn_phase_orchestrator/experimental/accelerators/upde/_delay_mojo.py": "6898305bb5f55248575de84629fdf09d063256b8287991127eb7bbc3ae31f771",
+    "src/scpn_phase_orchestrator/experimental/accelerators/upde/_delay_validation.py": "3c1d9ea189a8dad91e023da42171f7baaeb25fc751f19486856616630576a164",
+    "src/scpn_phase_orchestrator/upde/_phase_wrap.py": "5551ef413db67a5027e9e72379c3a903320f0c272dba8105c297a3760f6a5dbd",
+    "src/scpn_phase_orchestrator/upde/delay.py": "2bf4def8ba6f3b5231b5ae8f186da64ae31cb123c32ebba2317e3e73b9a80fee"
+  },
+  "started_unix": 1792508652.338579,
+  "timing_boundary": "shared-host warmed repeated diagnostics; no isolated throughput, speedup or production budget acceptance",
+  "versions": {
+    "go": "go version go1.27.1 linux/amd64",
+    "julia": "1.11.9",
+    "juliacall": "0.9.36",
+    "mojo": "Mojo 0.26.2.0 (d627decc)",
+    "numpy": "2.5.3",
+    "python": "3.12.3 (main, Aug 31 2026, 10:18:26) [GCC 13.3.0]",
+    "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)"
+  }
+}

@@ -365,7 +365,7 @@ def source_inputs(root: Path) -> dict[str, str]:
         if path.is_file() and path.suffix in {".rs", ".toml"}:
             inputs[path.relative_to(root).as_posix()] = sha256(path)
     for language, extension in (("go", "go"), ("julia", "jl"), ("mojo", "mojo")):
-        for name in ("attnres", "basin_stability", "chimera"):
+        for name in ("attnres", "basin_stability", "chimera", "delay"):
             relative = f"{language}/{name}.{extension}"
             inputs[relative] = sha256(root / relative)
     return inputs

@@ -71,12 +71,51 @@ def delayed_kuramoto_run_go(
     delay_steps: int,
     n_steps: int,
 ) -> FloatArray:
-    """Integrate delayed Kuramoto dynamics through the Go backend."""
+    """Integrate through Go, returning an independent input copy for zero steps.
+
+    Positive batches must fit the C ABI's signed count range. Delays longer
+    than the batch are reduced to its length, preserving current-phase warmup.
+    Invalid controls, native refusals and invalid phase results raise ValueError.
+
+    Parameters
+    ----------
+    phases, omegas : FloatArray
+        Finite source phases in radians and frequencies in rad/s, shape ``(n,)``.
+    knm_flat, alpha_flat : FloatArray
+        Row-major coupling and phase-lag matrices, each with ``n*n`` entries.
+    n : int
+        Positive oscillator count matching the supplied buffers.
+    zeta, psi : float
+        Finite external drive strength and reference phase in radians.
+    dt : float
+        Positive finite Euler timestep in seconds.
+    delay_steps : int
+        Positive discrete delay; steps before this delay use current phases.
+    n_steps : int
+        Nonnegative number of integration steps.
+
+    Returns
+    -------
+    FloatArray
+        Independent float64 final phases. Positive batches project into
+        ``[0, 2*pi)`` with positive zero; zero steps preserve the validated input.
+
+    Raises
+    ------
+    ValueError
+        If inputs, native arithmetic or the returned phase vector are invalid.
+    ImportError
+        If a positive batch cannot load its actual native artifact.
+    """
     ph, om, knm, alpha, n, zeta, psi, dt, delay_steps, n_steps = (
         validate_delay_backend_inputs(
             phases, omegas, knm_flat, alpha_flat, n, zeta, psi, dt, delay_steps, n_steps
         )
     )
+    if n_steps == 0:
+        return ph
+    if n > np.iinfo(np.int32).max or n_steps > np.iinfo(np.int32).max:
+        raise ValueError("Go delay n and n_steps must fit signed 32-bit counts")
     lib = _load_lib()
     out: FloatArray = np.zeros(n, dtype=np.float64)
     rc = lib.DelayedKuramotoRun(
@@ -88,7 +127,7 @@ def delayed_kuramoto_run_go(
         ctypes.c_double(float(zeta)),
         ctypes.c_double(float(psi)),
         ctypes.c_double(float(dt)),
-        ctypes.c_int(int(delay_steps)),
+        ctypes.c_int(min(delay_steps, n_steps)),
         ctypes.c_int(int(n_steps)),
         out.ctypes.data_as(ctypes.POINTER(ctypes.c_double)),
     )

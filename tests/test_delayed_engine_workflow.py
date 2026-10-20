@@ -6,10 +6,7 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Delayed engine order-parameter workflow contract
 
-"""
-Workflow contract for DelayedEngine phase evolution feeding the order-parameter
-monitor.
-"""
+"""Qualify delayed phase evolution feeding the real order-parameter monitor."""
 
 from __future__ import annotations
 
@@ -20,10 +17,10 @@ from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
 
 class TestEngineVariantsPipelineWiring:
-    """Verify that all engine variants (delayed, torus, simplicial) produce
-    physically valid output and wire into the order_parameter pipeline."""
+    """Delayed phase evolution feeds the real order-parameter monitor."""
 
-    def test_delayed_engine_phases_finite_and_advance(self):
+    def test_delayed_engine_phases_finite_and_advance(self) -> None:
+        """Actual delayed steps advance finite phases consumed by the order monitor."""
         n = 4
         eng = DelayedEngine(n, dt=0.01, delay_steps=2)
         phases = np.array([0.0, 0.5, 1.0, 1.5])

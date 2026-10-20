@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 from numbers import Integral, Real
+from sys import maxsize
 from typing import TypeAlias
 
 import numpy as np
@@ -59,7 +60,7 @@ def _count(value: object, *, name: str, minimum: int) -> int:
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral):
         raise ValueError(f"{name} must be an integer >= {minimum}")
     result = int(value)
-    if result < minimum:
+    if not minimum <= result <= maxsize:
         raise ValueError(f"{name} must be >= {minimum}, got {result}")
     return result
 
@@ -68,7 +69,10 @@ def _finite_float(value: object, *, name: str) -> float:
     """Return ``value`` as a finite float, else raise ``ValueError``."""
     if isinstance(value, (bool, np.bool_)) or not isinstance(value, Real):
         raise ValueError(f"{name} must be a finite real")
-    result = float(value)
+    try:
+        result = float(value)
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise ValueError(f"{name} must be a finite real") from exc
     if not np.isfinite(result):
         raise ValueError(f"{name} must be a finite real")
     return result
@@ -88,7 +92,10 @@ def _float_vector(value: object, *, name: str, size: int) -> FloatArray:
         raise ValueError(f"{name} must not contain numeric-string aliases")
     if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
-    raw = np.asarray(value)
+    try:
+        raw = np.asarray(value)
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise ValueError(f"{name} must be a finite float array") from exc
     if np.iscomplexobj(raw):
         raise ValueError(f"{name} must be real-valued")
     try:
@@ -112,13 +119,33 @@ def validate_delay_backend_output(value: object, *, n: object) -> FloatArray:
     right, not only implementation details of ``DelayedEngine``. The adapters
     must therefore reject non-finite, shape-mismatched, or out-of-range backend
     output before returning it to callers.
+
+    Parameters
+    ----------
+    value : object
+        Real numerical vector from a positive native integration batch.
+    n : object
+        Positive integral oscillator count, excluding boolean aliases.
+
+    Returns
+    -------
+    FloatArray
+        Independent contiguous float64 vector of shape ``(n,)`` in ``[0, 2*pi)``.
+
+    Raises
+    ------
+    ValueError
+        If the dimension, numeric types, shape, finiteness or phase range fails.
     """
     n_int = _count(n, name="n", minimum=1)
     if _contains_numeric_string_alias(value):
         raise ValueError("delay backend output must not contain numeric-string aliases")
     if _contains_boolean_alias(value):
         raise ValueError("delay backend output must not contain boolean values")
-    raw = np.asarray(value)
+    try:
+        raw = np.asarray(value)
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise ValueError("delay backend output must be a finite phase vector") from exc
     if np.iscomplexobj(raw):
         raise ValueError("delay backend output must be real-valued")
     try:
@@ -151,7 +178,38 @@ def validate_delay_backend_inputs(
 ) -> tuple[
     FloatArray, FloatArray, FloatArray, FloatArray, int, float, float, float, int, int
 ]:
-    """Validate direct delayed-Kuramoto inputs before optional runtime loading."""
+    """Validate direct delayed-Kuramoto inputs before optional runtime loading.
+
+    Parameters
+    ----------
+    phases, omegas : object
+        Real finite vectors of length ``n``, in radians and radians per second.
+    knm_flat, alpha_flat : object
+        Real finite row-major matrices flattened to ``n*n`` values; coupling is
+        measured in inverse seconds and phase lag in radians.
+    n : object
+        Positive integral oscillator count, excluding boolean aliases.
+    zeta, psi : object
+        Real finite drive strength in inverse seconds and phase in radians.
+    dt : object
+        Positive finite timestep in seconds.
+    delay_steps : object
+        Positive integral source delay within the platform integer range.
+    n_steps : object
+        Nonnegative integral integration count within the platform integer range.
+
+    Returns
+    -------
+    tuple
+        Four independent contiguous float64 buffers followed by validated
+        ``n, zeta, psi, dt, delay_steps, n_steps`` in argument order.
+
+    Raises
+    ------
+    ValueError
+        If a buffer has invalid types, shape or values, or a scalar/count fails
+        its stated bounds. Textual numeric aliases and booleans are refused.
+    """
     n_int = _count(n, name="n", minimum=1)
     delay_int = _count(delay_steps, name="delay_steps", minimum=1)
     steps_int = _count(n_steps, name="n_steps", minimum=0)

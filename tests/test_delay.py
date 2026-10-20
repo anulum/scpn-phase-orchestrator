@@ -6,17 +6,26 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Delayed coupling tests
 
+"""Exercise delayed state history, native dispatch and monitor integration."""
+
 from __future__ import annotations
 
 import os
+import sys
 import time
+from importlib import import_module
+from types import FrameType
+from typing import TypeAlias
 
 import numpy as np
 import pytest
+from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.upde import delay as delay_mod
 from scpn_phase_orchestrator.upde.delay import DelayBuffer, DelayedEngine
 from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
+
+FloatArray: TypeAlias = NDArray[np.float64]
 
 
 def _skip_wall_clock_perf_gate_under_shared_load() -> None:
@@ -31,7 +40,10 @@ def _skip_wall_clock_perf_gate_under_shared_load() -> None:
 
 
 class TestDelayBuffer:
-    def test_push_and_get(self):
+    """Verify bounded owned snapshots and one-based history lookup."""
+
+    def test_push_and_get(self) -> None:
+        """Retrieve the three pushed snapshots in reverse insertion order."""
         buf = DelayBuffer(3, max_delay_steps=5)
         p1 = np.array([0.0, 1.0, 2.0])
         p2 = np.array([0.1, 1.1, 2.1])
@@ -44,19 +56,22 @@ class TestDelayBuffer:
         np.testing.assert_array_equal(buf.get_delayed(2), p2)
         np.testing.assert_array_equal(buf.get_delayed(3), p1)
 
-    def test_get_current(self):
+    def test_get_current(self) -> None:
+        """Reject zero rather than treating it as a latest-entry lookup."""
         buf = DelayBuffer(2, max_delay_steps=3)
         p = np.array([1.0, 2.0])
         buf.push(p)
         with pytest.raises(ValueError, match="delay_steps"):
             buf.get_delayed(0)
 
-    def test_not_enough_history(self):
+    def test_not_enough_history(self) -> None:
+        """Report unavailable history before enough snapshots have been pushed."""
         buf = DelayBuffer(2, max_delay_steps=5)
         buf.push(np.zeros(2))
         assert buf.get_delayed(3) is None
 
-    def test_circular_eviction(self):
+    def test_circular_eviction(self) -> None:
+        """Evict old snapshots while retaining exactly the configured capacity."""
         buf = DelayBuffer(2, max_delay_steps=3)
         for i in range(5):
             buf.push(np.full(2, float(i)))
@@ -65,26 +80,34 @@ class TestDelayBuffer:
         assert oldest is not None
         np.testing.assert_array_equal(oldest, np.full(2, 2.0))
 
-    def test_invalid_max_delay(self):
+    def test_invalid_max_delay(self) -> None:
+        """Reject a buffer that cannot retain any snapshot."""
         with pytest.raises(ValueError):
             DelayBuffer(2, max_delay_steps=0)
 
-    def test_clear(self):
+    def test_clear(self) -> None:
+        """Remove every retained snapshot from the buffer."""
         buf = DelayBuffer(2, max_delay_steps=3)
         buf.push(np.zeros(2))
         buf.clear()
         assert buf.length == 0
 
-    def test_copies_input(self):
+    def test_copies_input(self) -> None:
+        """Keep stored history independent of later caller mutations."""
         buf = DelayBuffer(2, max_delay_steps=3)
         p = np.array([1.0, 2.0])
         buf.push(p)
         p[0] = 999.0
-        assert buf.get_delayed(1)[0] == 1.0
+        latest = buf.get_delayed(1)
+        assert latest is not None
+        assert latest[0] == 1.0
 
 
 class TestDelayedEngine:
-    def test_output_in_range(self):
+    """Verify phase projection, delayed evolution and synchronisation."""
+
+    def test_output_in_range(self) -> None:
+        """Keep every accepted stateful step inside the half-open phase range."""
         n = 4
         eng = DelayedEngine(n, dt=0.01, delay_steps=3)
         rng = np.random.default_rng(42)
@@ -98,7 +121,8 @@ class TestDelayedEngine:
         assert np.all(phases >= 0)
         assert np.all(phases < 2 * np.pi)
 
-    def test_falls_back_to_instantaneous(self):
+    def test_falls_back_to_instantaneous(self) -> None:
+        """Use current-state coupling during the first warmup step."""
         n = 4
         eng = DelayedEngine(n, dt=0.01, delay_steps=5)
         phases = np.array([0.0, 1.0, 2.0, 3.0])
@@ -110,7 +134,8 @@ class TestDelayedEngine:
         result = eng.step(phases, omegas, knm, 0.0, 0.0, alpha)
         assert result.shape == (n,)
 
-    def test_delay_changes_dynamics(self):
+    def test_delay_changes_dynamics(self) -> None:
+        """Distinguish two source delays for the same directed trajectory."""
         n = 6
         rng = np.random.default_rng(42)
         phases0 = rng.uniform(0, 2 * np.pi, n)
@@ -130,7 +155,8 @@ class TestDelayedEngine:
 
         assert not np.allclose(p0, p10)
 
-    def test_synchronization(self):
+    def test_synchronization(self) -> None:
+        """Synchronise identical frequencies under strong attractive coupling."""
         n = 8
         eng = DelayedEngine(n, dt=0.01, delay_steps=2)
         rng = np.random.default_rng(42)
@@ -143,7 +169,8 @@ class TestDelayedEngine:
         R, _ = compute_order_parameter(result)
         assert R > 0.8
 
-    def test_delay_steps_property(self):
+    def test_delay_steps_property(self) -> None:
+        """Expose the validated source-delay configuration."""
         eng = DelayedEngine(4, dt=0.01, delay_steps=7)
         assert eng.delay_steps == 7
 
@@ -151,7 +178,7 @@ class TestDelayedEngine:
 class TestDelayBufferEdgeCases:
     """Advanced edge-case testing for the circular delay buffer."""
 
-    def test_push_exactly_max_delay(self):
+    def test_push_exactly_max_delay(self) -> None:
         """Pushing exactly max_delay items fills buffer completely."""
         buf = DelayBuffer(3, max_delay_steps=4)
         for i in range(4):
@@ -160,7 +187,7 @@ class TestDelayBufferEdgeCases:
         np.testing.assert_array_equal(buf.get_delayed(4), np.full(3, 0.0))
         np.testing.assert_array_equal(buf.get_delayed(1), np.full(3, 3.0))
 
-    def test_rapid_push_overflow_correctness(self):
+    def test_rapid_push_overflow_correctness(self) -> None:
         """After many pushes (>> max_delay), oldest correct entry preserved."""
         buf = DelayBuffer(2, max_delay_steps=5)
         for i in range(100):
@@ -169,7 +196,7 @@ class TestDelayBufferEdgeCases:
         np.testing.assert_array_equal(buf.get_delayed(1), np.full(2, 99.0))
         np.testing.assert_array_equal(buf.get_delayed(5), np.full(2, 95.0))
 
-    def test_single_capacity_buffer(self):
+    def test_single_capacity_buffer(self) -> None:
         """max_delay_steps=1 → only most recent entry."""
         buf = DelayBuffer(3, max_delay_steps=1)
         buf.push(np.array([1.0, 2.0, 3.0]))
@@ -178,57 +205,44 @@ class TestDelayBufferEdgeCases:
         assert buf.get_delayed(2) is None
 
 
-def test_rust_path_is_used_when_flagged(monkeypatch):
-    call = {}
+@pytest.mark.native_runtime
+def test_rust_path_is_used_when_flagged() -> None:
+    """Explicit Rust executes the real kernel and matches scalar saved-history Euler."""
+    native = import_module("spo_kernel").delayed_kuramoto_run_rust
+    events: list[str] = []
 
-    def fake_rust_run(
-        phases64: np.ndarray,
-        omegas64: np.ndarray,
-        knm_flat: np.ndarray,
-        alpha_flat: np.ndarray,
-        n: int,
-        zeta: float,
-        psi: float,
-        dt: float,
-        delay_steps: int,
-        n_steps: int,
-    ) -> np.ndarray:
-        call.update(
-            {
-                "phases_shape": tuple(phases64.shape),
-                "omegas_shape": tuple(omegas64.shape),
-                "knm_size": int(knm_flat.size),
-                "alpha_size": int(alpha_flat.size),
-                "n": n,
-                "n_steps": n_steps,
-                "delay_steps": delay_steps,
-                "dt": dt,
-                "zeta": zeta,
-                "psi": psi,
-            }
+    def observe(_frame: FrameType, event: str, argument: object) -> None:
+        """Record actual compiled calls and returns without substituting a solver."""
+        if argument is native and event in {"c_call", "c_return", "c_exception"}:
+            events.append(event)
+
+    phases = np.array([0.4, 1.1])
+    omegas = np.ones(2)
+    knm = np.array([[0.0, 0.5], [0.2, 0.0]])
+    alpha = np.full((2, 2), 0.01)
+    originals = [value.copy() for value in (phases, omegas, knm, alpha)]
+    assert sys.getprofile() is None
+    sys.setprofile(observe)
+    try:
+        out = DelayedEngine(2, dt=0.01, delay_steps=3).run(
+            phases, omegas, knm, 0.2, 0.3, alpha, n_steps=4, backend="rust"
         )
-        return phases64 + 0.123
-
-    monkeypatch.setattr(delay_mod, "_dispatch", lambda: fake_rust_run)
-    eng = delay_mod.DelayedEngine(2, dt=0.01, delay_steps=3)
-
-    phases = np.array([0.4, 1.1], dtype=np.float64)
-    omegas = np.ones(2, dtype=np.float64)
-    knm = np.array([[0.0, 0.5], [0.2, 0.0]], dtype=np.float64)
-    alpha = np.full((2, 2), 0.01, dtype=np.float64)
-
-    out = eng.run(phases, omegas, knm, 0.2, 0.3, alpha, n_steps=4)
-
-    assert np.allclose(out, phases + 0.123)
-    assert call["n"] == 2
-    assert call["n_steps"] == 4
-    assert call["delay_steps"] == 3
-    assert call["knm_size"] == 4
-    assert call["alpha_size"] == 4
+    finally:
+        sys.setprofile(None)
+    assert events == ["c_call", "c_return"]
+    np.testing.assert_allclose(
+        out, [0.45155943106653923, 1.1289796554407023], rtol=0.0, atol=1e-13
+    )
+    for value, original in zip((phases, omegas, knm, alpha), originals, strict=True):
+        np.testing.assert_array_equal(value, original)
 
 
-def test_rust_path_invalid_output_falls_back_to_python(monkeypatch):
-    def fake_rust_run(*_args: object) -> np.ndarray:
+def test_rust_path_invalid_output_falls_back_to_python(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Reject an injected invalid response and compute the real NumPy trajectory."""
+
+    def fake_rust_run(*_args: object) -> FloatArray:
         return np.array([0.0, np.nan], dtype=np.float64)
 
     monkeypatch.setattr(delay_mod, "_dispatch", lambda: fake_rust_run)
@@ -250,7 +264,8 @@ def test_rust_path_invalid_output_falls_back_to_python(monkeypatch):
 class TestDelayedEnginePipelineEndToEnd:
     """Full pipeline: CouplingBuilder → DelayedEngine → R → RegimeManager."""
 
-    def test_coupling_delayed_engine_regime(self):
+    def test_coupling_delayed_engine_regime(self) -> None:
+        """Feed actual delayed phases through coupling, order and regime monitoring."""
         from scpn_phase_orchestrator.coupling.knm import CouplingBuilder
         from scpn_phase_orchestrator.monitor.boundaries import BoundaryState
         from scpn_phase_orchestrator.supervisor.regimes import RegimeManager
@@ -279,7 +294,7 @@ class TestDelayedEnginePipelineEndToEnd:
         regime = rm.evaluate(state, BoundaryState())
         assert regime.name in {"NOMINAL", "DEGRADED", "CRITICAL", "RECOVERY"}
 
-    def test_delay_reduces_sync_compared_to_instant(self):
+    def test_delay_reduces_sync_compared_to_instant(self) -> None:
         """Delayed coupling should reduce or maintain sync relative to instant."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
 
@@ -309,7 +324,7 @@ class TestDelayedEnginePipelineEndToEnd:
         assert np.isfinite(r_del)
 
     @pytest.mark.performance
-    def test_performance_delayed_step_32_under_1ms(self):
+    def test_performance_delayed_step_32_under_1ms(self) -> None:
         """DelayedEngine.step(32 oscillators, delay=5) stays inside CI budgets."""
         _skip_wall_clock_perf_gate_under_shared_load()
         n = 32
@@ -335,7 +350,8 @@ class TestDelayedEnginePipelineEndToEnd:
 class TestAlphaDefaults:
     """Omitting ``alpha`` is equivalent to a zero phase-lag matrix."""
 
-    def test_step_defaults_alpha_to_zero(self):
+    def test_step_defaults_alpha_to_zero(self) -> None:
+        """Match explicit zero lag when a stateful step omits alpha."""
         eng = DelayedEngine(3, dt=0.05, delay_steps=2)
         phases = np.zeros(3)
         omegas = np.full(3, 0.2)
@@ -348,17 +364,16 @@ class TestAlphaDefaults:
         # Zero coupling: dθ = ω, so θ advances by dt·ω.
         np.testing.assert_allclose(omitted, (0.05 * omegas) % (2 * np.pi))
 
-    def test_run_defaults_alpha_to_zero(self, monkeypatch):
-        monkeypatch.setattr(delay_mod, "ACTIVE_BACKEND", "python")
-        monkeypatch.setattr(delay_mod, "AVAILABLE_BACKENDS", ["python"])
+    def test_run_defaults_alpha_to_zero(self) -> None:
+        """Match explicit zero lag when a fresh NumPy batch omits alpha."""
         eng = DelayedEngine(3, dt=0.05, delay_steps=2)
         phases = np.array([0.1, 0.5, 1.2])
         omegas = np.full(3, 0.2)
         knm = np.full((3, 3), 0.3)
         np.fill_diagonal(knm, 0.0)
-        omitted = eng.run(phases, omegas, knm, n_steps=8)
+        omitted = eng.run(phases, omegas, knm, n_steps=8, backend="python")
         explicit = DelayedEngine(3, dt=0.05, delay_steps=2).run(
-            phases, omegas, knm, alpha=np.zeros((3, 3)), n_steps=8
+            phases, omegas, knm, alpha=np.zeros((3, 3)), n_steps=8, backend="python"
         )
         np.testing.assert_array_equal(omitted, explicit)
 

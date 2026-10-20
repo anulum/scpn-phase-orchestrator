@@ -75,7 +75,7 @@ output (order parameters, monitors, supervisor).
 | `compute_order_parameter()` | 256 | < 100 μs | ~ 2 μs |
 | `StuartLandauEngine.step()` | 32 | < 2 ms | — |
 | `SplittingEngine.step()` | 64 | < 1 ms | — |
-| `DelayedEngine.step()` | 32 | < 1 ms | — |
+| `DelayedEngine.step()` | 32 | Diagnostic target: < 1 ms under isolated load | Python step |
 
 ## Core Kuramoto Engine
 
@@ -359,14 +359,21 @@ coercion or optional native runtime loading.
 
 ## Time-Delayed Coupling Engine
 
-The circular buffer supports one fixed discrete delay for every coupling pair,
-with current-phase history used while the buffer fills. Time delays generate
-"effective higher-order interactions for free" (Ciszak et al. 2025) because
-the delayed coupling mixes information across multiple timescales.
-Public and direct phase, frequency, coupling, and phase-lag arrays reject
-numeric-string aliases before float coercion. The same pre-coercion contract
-guards optional-backend outputs and direct Julia raw returns before phase
-cardinality, finiteness, and `[0, 2*pi)` validation.
+The circular buffer supports one fixed discrete delay for every coupling pair.
+Before that delay becomes available, each Euler step couples against its current
+phases; later steps use saved source snapshots. Stateful `step()` retains only
+accepted history, while each `run()` starts an independent batch.
+
+On `run()`, set `backend="python"`, `"rust"`, `"go"`, `"julia"` or `"mojo"`
+to require an owner.
+Explicit selection propagates absence and numerical refusal. Default `"auto"`
+retains its NumPy fallback policy. Positive batches return independent finite
+phases in `[0, 2*pi)` with positive zero, including rounded upper endpoints.
+Public arrays reject boolean, textual and temporal aliases before conversion;
+direct bridges also validate counts and their actual native resources.
+
+See [the delay reference](upde_delay.md) for the exact recurrence, history
+conventions, runtime requirements and current diagnostic comparison command.
 
 ::: scpn_phase_orchestrator.upde.delay
 

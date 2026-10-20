@@ -70,6 +70,11 @@ jobs:
           --deselect=tests/test_hodge_backends.py::TestBackendResolution::test_resolve_backends_chooses_first_available_backend
           --deselect=tests/test_chimera_dispatch_contracts.py::test_resolve_backends_keeps_python_when_optional_loaders_fail
           --deselect=tests/test_ssgf_ethical_cost_inputs.py::test_backends_agree_on_valid_inputs
+          --deselect=tests/test_delay_backends.py::TestRustParity
+          --deselect=tests/test_delay_backends.py::TestGoParity
+          --deselect=tests/test_delay_backends.py::TestMojoParity
+          --deselect=tests/test_delay_backends.py::TestCrossBackendConsistency
+          --deselect=tests/test_delay_backends.py::TestBackendLoaderDispatch::test_rust_loader_wraps_spo_kernel
       - name: Execute Julia measurement ingress contracts
         run: |
           python - <<'PY'
@@ -93,6 +98,7 @@ jobs:
               'tests/test_twin_confidence_backends.py',
               'tests/test_winding_backends.py',
               'tests/test_delay_backends.py',
+              'tests/test_delay_real_runtime.py',
               'native-tests/test_upde_runtime_phase_wrapping.py',
               '-m',
               'not slow and not performance',
@@ -146,6 +152,15 @@ jobs:
           name: hodge-comparison-julia
           path: build/hodge/julia.json
           if-no-files-found: error
+      - name: Qualify Julia delayed integration and actual side-file refusal
+        env:
+          COVERAGE_FILE: .coverage.julia
+        run: |
+          python -m pytest tests/test_delay_julia_absence.py \
+            tests/test_delay_backends.py::TestBackendLoaderDispatch::test_resolve_backends_falls_back_to_python \
+            -o addopts= --strict-markers --tb=short -p no:cacheprovider
+          python -m benchmarks.delay_benchmark --parity-gate --calls 3 --require-backends python julia
+          python -c "from juliacall import Main; Main.include('julia/test_delay.jl')"
       - name: Upload Julia bridge coverage
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
@@ -195,6 +210,8 @@ jobs:
         run: |
           go test -count=1 go/attnres.go go/attnres_test.go
           go vet go/attnres.go go/attnres_test.go
+          go test -count=1 go/delay.go go/delay_test.go
+          go vet go/delay.go go/delay_test.go
       - name: Check native basin Go contracts
         run: |
           go test -count=1 go/basin_stability.go go/basin_stability_test.go
@@ -236,6 +253,11 @@ jobs:
           name: hodge-comparison-go
           path: build/hodge/go.json
           if-no-files-found: error
+      - name: Qualify required Go delayed integration
+        run: |
+          python -m pytest tests/test_delay_real_runtime.py -k go \
+            --strict-markers --tb=short --cov=scpn_phase_orchestrator --cov-append --cov-report= --cov-fail-under=0
+          python -m benchmarks.delay_benchmark --parity-gate --calls 3 --require-backends python go
       - name: Upload Go measurement coverage
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
@@ -329,6 +351,11 @@ jobs:
           name: hodge-comparison-mojo
           path: build/hodge/mojo.json
           if-no-files-found: error
+      - name: Qualify required Mojo delayed integration
+        run: |
+          .venv/bin/python -m pytest tests/test_delay_real_runtime.py -k mojo \
+            --strict-markers --tb=short --cov=scpn_phase_orchestrator --cov-append --cov-report= --cov-fail-under=0
+          .venv/bin/python -m benchmarks.delay_benchmark --parity-gate --calls 3 --require-backends python mojo
       - name: Upload Mojo measurement coverage
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:

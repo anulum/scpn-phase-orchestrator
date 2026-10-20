@@ -23,6 +23,7 @@ import importlib.util
 import numpy as np
 import pytest
 
+from scpn_phase_orchestrator.upde.delay import AVAILABLE_BACKENDS, DelayedEngine
 from scpn_phase_orchestrator.upde.sheaf_engine import SheafUPDEEngine
 from scpn_phase_orchestrator.upde.sparse_engine import SparseUPDEEngine
 
@@ -81,3 +82,21 @@ def test_public_sparse_missing_class_matches_absent_numpy_contract(count: int) -
     np.testing.assert_array_equal(phases, before)
     assert not np.shares_memory(result, phases)
     assert engine.last_dt == 0.125
+
+
+def test_public_delay_refuses_missing_native_function_and_runs_numpy() -> None:
+    """An actually incomplete extension cannot acquire successful delay attribution."""
+    _require_runtime()
+    assert AVAILABLE_BACKENDS == ["python"]
+    phases = np.array([0.4, 1.1])
+    omega = np.ones(2)
+    coupling = np.array([[0.0, 0.5], [0.2, 0.0]])
+    alpha = np.full((2, 2), 0.01)
+    engine = DelayedEngine(2, dt=0.01, delay_steps=3)
+    with pytest.raises(ImportError, match="delay backend 'rust' is unavailable"):
+        engine.run(phases, omega, coupling, 0.2, 0.3, alpha, n_steps=4, backend="rust")
+    actual = engine.run(phases, omega, coupling, 0.2, 0.3, alpha, n_steps=4)
+    np.testing.assert_allclose(
+        actual, [0.45155943106653923, 1.1289796554407023], atol=1e-13, rtol=0.0
+    )
+    np.testing.assert_array_equal(phases, [0.4, 1.1])

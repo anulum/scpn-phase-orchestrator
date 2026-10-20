@@ -6,36 +6,45 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — delay constructor validation tests
 
+"""Reject invalid delay counts, time controls and boolean state aliases."""
+
 from __future__ import annotations
+
+from typing import cast
 
 import numpy as np
 import pytest
+from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.upde.delay import DelayBuffer, DelayedEngine
 
 
 @pytest.mark.parametrize("n_oscillators", [False, 0, -1, 1.5, "4"])
 def test_delay_buffer_rejects_invalid_oscillator_count(n_oscillators: object) -> None:
+    """Reject nonpositive and nonintegral buffer dimensions without coercion."""
     with pytest.raises(ValueError, match="n_oscillators"):
-        DelayBuffer(n_oscillators=n_oscillators, max_delay_steps=3)
+        DelayBuffer(n_oscillators=cast(int, n_oscillators), max_delay_steps=3)
 
 
 @pytest.mark.parametrize("max_delay_steps", [True, 0, -1, 1.5, "3"])
 def test_delay_buffer_rejects_invalid_max_delay(max_delay_steps: object) -> None:
+    """Reject a nonpositive or aliased history capacity."""
     with pytest.raises(ValueError, match="max_delay_steps"):
-        DelayBuffer(n_oscillators=4, max_delay_steps=max_delay_steps)
+        DelayBuffer(n_oscillators=4, max_delay_steps=cast(int, max_delay_steps))
 
 
 @pytest.mark.parametrize("delay_steps", [False, 0, -1, 1.5, "2"])
 def test_delay_buffer_rejects_invalid_delayed_lookup(delay_steps: object) -> None:
+    """Reject invalid one-based lookup counts on a populated buffer."""
     buffer = DelayBuffer(n_oscillators=2, max_delay_steps=3)
     buffer.push(np.array([0.0, 0.5], dtype=np.float64))
 
     with pytest.raises(ValueError, match="delay_steps"):
-        buffer.get_delayed(delay_steps)
+        buffer.get_delayed(cast(int, delay_steps))
 
 
 def test_delay_buffer_push_rejects_boolean_phase_alias() -> None:
+    """Reject boolean phase aliases rather than converting them to radians."""
     buffer = DelayBuffer(n_oscillators=2, max_delay_steps=3)
 
     with pytest.raises(ValueError, match="boolean"):
@@ -44,20 +53,23 @@ def test_delay_buffer_push_rejects_boolean_phase_alias() -> None:
 
 @pytest.mark.parametrize("n_oscillators", [True, 0, -1, 1.5, "4"])
 def test_delayed_engine_rejects_invalid_oscillator_count(n_oscillators: object) -> None:
+    """Reject nonpositive and aliased oscillator counts at construction."""
     with pytest.raises(ValueError, match="n_oscillators"):
-        DelayedEngine(n_oscillators=n_oscillators, dt=0.01)
+        DelayedEngine(n_oscillators=cast(int, n_oscillators), dt=0.01)
 
 
 @pytest.mark.parametrize("dt", [False, 0.0, -0.01, float("nan"), float("inf"), "0.01"])
 def test_delayed_engine_rejects_invalid_dt(dt: object) -> None:
+    """Require an actual positive finite Euler timestep."""
     with pytest.raises(ValueError, match="dt"):
-        DelayedEngine(n_oscillators=4, dt=dt)
+        DelayedEngine(n_oscillators=4, dt=cast(float, dt))
 
 
 @pytest.mark.parametrize("delay_steps", [False, 0, -1, 1.5, "3"])
 def test_delayed_engine_rejects_invalid_delay_steps(delay_steps: object) -> None:
+    """Require an actual positive integral source delay."""
     with pytest.raises(ValueError, match="delay_steps"):
-        DelayedEngine(n_oscillators=4, dt=0.01, delay_steps=delay_steps)
+        DelayedEngine(n_oscillators=4, dt=0.01, delay_steps=cast(int, delay_steps))
 
 
 @pytest.mark.parametrize(
@@ -82,8 +94,9 @@ def test_delayed_engine_rejects_invalid_delay_steps(delay_steps: object) -> None
 )
 def test_delayed_engine_step_rejects_boolean_state_aliases(
     field: str,
-    bad_value: np.ndarray,
+    bad_value: object,
 ) -> None:
+    """Reject boolean aliases in each public numerical state buffer."""
     engine = DelayedEngine(n_oscillators=4, dt=0.01, delay_steps=2)
     values = {
         "phases": np.zeros(4, dtype=np.float64),
@@ -91,7 +104,7 @@ def test_delayed_engine_step_rejects_boolean_state_aliases(
         "knm": np.zeros((4, 4), dtype=np.float64),
         "alpha": np.zeros((4, 4), dtype=np.float64),
     }
-    values[field] = bad_value
+    values[field] = cast("NDArray[np.float64]", bad_value)
 
     with pytest.raises(ValueError, match="boolean"):
         engine.step(
