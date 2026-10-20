@@ -355,7 +355,7 @@ inside a dashboard or notebook; it turns them into inspectable artefacts.
 | Domainpack files | 36 |
 | Rust kernel files | 131 |
 | Optional extras | 24 |
-| Python test files | 1104 |
+| Python test files | 1105 |
 | Public documentation pages | 244 |
 | GitHub Actions workflows | 19 |
 

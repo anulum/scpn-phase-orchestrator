@@ -136,6 +136,10 @@ jobs:
           python -m pytest tests/test_hodge_backends.py tests/test_hodge_real_runtime.py tests/test_coupling_hodge.py tests/test_hodge.py -k "julia or JuliaParity" --strict-markers --tb=short --cov=scpn_phase_orchestrator --cov-append --cov-report= --cov-fail-under=0
           mkdir -p build/hodge
           python -m benchmarks.hodge_benchmark --parity-gate --sizes 8 --calls 3 --require-backends julia > build/hodge/julia.json
+      - name: Qualify genuine Julia Hodge side-file absence and recovery
+        run: >
+          python -m pytest tests/test_hodge_julia_absence.py -o addopts=
+          --strict-markers --tb=short -p no:cacheprovider
       - name: Upload Julia Hodge comparison
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:

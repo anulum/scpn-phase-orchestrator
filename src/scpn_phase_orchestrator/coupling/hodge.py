@@ -182,12 +182,14 @@ def _load_mojo_fn() -> HodgeBackend:
 
 
 def _load_julia_fn() -> HodgeBackend:
-    """Load the Julia Hodge-decomposition backend callable."""
+    """Load the Julia runtime and side-file before advertising the backend."""
     require_juliacall_main()
     from ..experimental.accelerators.coupling._hodge_julia import (
+        _ensure,
         hodge_decomposition_julia,
     )
 
+    _ensure()
     return hodge_decomposition_julia
 
 

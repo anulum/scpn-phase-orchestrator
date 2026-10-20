@@ -419,6 +419,10 @@ the default 3-clique fill.
 The default `backend=None` retains the available fallback chain. Use
 `backend="python"` for the NumPy implementation, or explicitly select
 `"rust"`, `"go"`, `"julia"` or `"mojo"` to require that actual runtime.
+Julia availability requires both a running `juliacall.Main` and successful
+loading of `julia/hodge.jl`. If that side-file is absent, default selection
+continues through the remaining available backends to NumPy. Installing the
+Julia extra alone does not make this backend available.
 A named native runtime raises `ImportError` when unavailable and `ValueError`
 when its valid output disagrees with the reference; it never credits a NumPy
 fallback as execution of the requested backend. Empty systems require no
