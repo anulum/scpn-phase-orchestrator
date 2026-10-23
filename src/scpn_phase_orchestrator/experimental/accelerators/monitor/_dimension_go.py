@@ -37,7 +37,18 @@ _LIB: ctypes.CDLL | None = None
 
 
 def _load_lib() -> ctypes.CDLL:
-    """Load the compiled Go backend shared library, else raise."""
+    """Admit a loadable Go library with both required numerical exports.
+
+    Returns
+    -------
+    ctypes.CDLL
+        Cached library with the dimension C ABI configured.
+
+    Raises
+    ------
+    ImportError
+        If the artifact is absent, unusable or lacks either dimension export.
+    """
     global _LIB
     if _LIB is not None:
         return _LIB
@@ -48,6 +59,10 @@ def _load_lib() -> ctypes.CDLL:
             f"dimension.go"
         )
     lib = load_go_library(_LIB_PATH)
+    if not all(
+        hasattr(lib, name) for name in ("CorrelationIntegral", "KaplanYorkeDimension")
+    ):
+        raise ImportError("Go dimension library lacks required CI/KY exports")
     lib.CorrelationIntegral.restype = ctypes.c_int
     lib.CorrelationIntegral.argtypes = [
         ctypes.POINTER(ctypes.c_double),
@@ -78,7 +93,31 @@ def correlation_integral_go(
     idx_j: IntArray,
     epsilons: FloatArray,
 ) -> FloatArray:
-    """Compute the phase-space correlation integral through the Go backend."""
+    """Count selected strict-radius pairs through the Go runtime.
+
+    Parameters
+    ----------
+    traj_flat : ndarray of float64
+        Flat finite real trajectory with exactly ``t * d`` entries.
+    t, d : int
+        Nonnegative sample count and positive coordinate count.
+    idx_i, idx_j : ndarray of int64
+        Equal-length, in-range, off-diagonal zero-based pair indices.
+    epsilons : ndarray of float64
+        Finite nonnegative radii in nondecreasing order.
+
+    Returns
+    -------
+    ndarray of float64
+        Normalised pair counts in radius order; zero when no pairs exist.
+
+    Raises
+    ------
+    ValueError
+        If inputs, runtime status or numerical outputs violate the contract.
+    ImportError
+        If the required Go artifact cannot be admitted.
+    """
     traj, t_int, d_int, ii, jj, eps = validate_correlation_integral_backend_inputs(
         traj_flat,
         t,
@@ -87,6 +126,10 @@ def correlation_integral_go(
         idx_j,
         epsilons,
     )
+    if any(
+        count > np.iinfo(np.int32).max for count in (t_int, d_int, ii.size, eps.size)
+    ):
+        raise ValueError("Go dimension counts must fit signed C int")
     lib = _load_lib()
     out = np.zeros(eps.size, dtype=np.float64)
     rc = lib.CorrelationIntegral(
@@ -114,7 +157,27 @@ def correlation_integral_go(
 
 
 def kaplan_yorke_dimension_go(lyapunov_exponents: FloatArray) -> float:
-    """Estimate the Kaplan-Yorke dimension through the Go backend."""
+    """Evaluate the Kaplan-Yorke spectrum formula through the Go runtime.
+
+    Parameters
+    ----------
+    lyapunov_exponents : ndarray of float64
+        One-dimensional finite real spectrum; sorted internally without mutation.
+
+    Returns
+    -------
+    float
+        Dimension between zero and spectrum length, including both endpoints.
+
+    Raises
+    ------
+    ValueError
+        If the input, native status or result violates the spectrum contract.
+    ImportError
+        If the required Go artifact cannot be admitted.
+    """
+    if np.asarray(lyapunov_exponents).size > np.iinfo(np.int32).max:
+        raise ValueError("Go spectrum length must fit signed C int")
     le = validate_kaplan_yorke_backend_input(lyapunov_exponents)
     lib = _load_lib()
     out = ctypes.c_double(0.0)

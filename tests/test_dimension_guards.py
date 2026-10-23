@@ -8,17 +8,19 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+from typing import cast
+
 import numpy as np
 import pytest
+from numpy.typing import NDArray
 
-from scpn_phase_orchestrator.monitor import dimension as dimension_mod
 from scpn_phase_orchestrator.monitor.dimension import (
     CorrelationDimensionResult,
     _validate_ci_values,
     _validate_ky_dimension,
-    correlation_dimension,
-    kaplan_yorke_dimension,
 )
+from tests.test_dimension_julia_absence import run_source_profile
 
 
 def _result(slope: object) -> CorrelationDimensionResult:
@@ -26,7 +28,7 @@ def _result(slope: object) -> CorrelationDimensionResult:
         D2=1.0,
         epsilons=np.array([0.1, 0.2, 0.3], dtype=np.float64),
         C_eps=np.array([0.1, 0.2, 0.3], dtype=np.float64),
-        slope=slope,  # type: ignore[arg-type]  # corrupted on purpose
+        slope=cast("NDArray[np.float64]", slope),
         scaling_range=(0.1, 0.3),
     )
 
@@ -55,39 +57,18 @@ class TestOutputContracts:
 
 
 class TestKaplanYorkeBackendFallback:
+    @pytest.mark.native_runtime
     def test_falls_back_to_exact_reference_when_backend_raises(
-        self, monkeypatch: pytest.MonkeyPatch
+        self, tmp_path: Path
     ) -> None:
-        def _failing(_name: str) -> object:
-            def _fn(_values: object) -> float:
-                raise RuntimeError("simulated backend runtime failure")
-
-            return _fn
-
-        monkeypatch.setattr(dimension_mod, "_dispatch", _failing)
-
-        result = kaplan_yorke_dimension(np.array([1.0, -2.0], dtype=np.float64))
-
-        assert np.isfinite(result)
-        assert result >= 0.0
+        """Loss of execution permission after actual Mojo admission preserves KY."""
+        run_source_profile(tmp_path, "unusable-mojo")
 
 
 class TestCorrelationBackendFallback:
+    @pytest.mark.native_runtime
     def test_correlation_dimension_uses_numpy_when_backend_raises(
-        self, monkeypatch: pytest.MonkeyPatch
+        self, tmp_path: Path
     ) -> None:
-        def _failing(_name: str) -> object:
-            def _fn(*_args: object, **_kwargs: object) -> object:
-                raise RuntimeError("simulated backend runtime failure")
-
-            return _fn
-
-        monkeypatch.setattr(dimension_mod, "_dispatch", _failing)
-
-        angles = np.linspace(0.0, 2.0 * np.pi, 64, endpoint=False)
-        trajectory = np.column_stack([np.sin(angles), np.cos(angles)])
-
-        result = correlation_dimension(trajectory, n_epsilons=12, max_pairs=500, seed=7)
-
-        assert np.isfinite(result.D2)
-        assert result.D2 >= 0.0
+        """The real admitted binary becoming unusable preserves the public D2 grid."""
+        run_source_profile(tmp_path, "unusable-mojo")

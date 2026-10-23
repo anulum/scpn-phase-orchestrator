@@ -347,15 +347,15 @@ inside a dashboard or notebook; it turns them into inspectable artefacts.
 |---|---:|
 | Package version | 1.4.3 |
 | Public API exports | 29 |
-| Python package modules | 765 |
-| Core Engine modules | 364 |
+| Python package modules | 766 |
+| Core Engine modules | 365 |
 | Runtime/Serving modules | 160 |
 | Integration modules | 32 |
 | Research/Experimental modules | 204 |
 | Domainpack files | 36 |
-| Rust kernel files | 131 |
+| Rust kernel files | 132 |
 | Optional extras | 24 |
-| Python test files | 1107 |
+| Python test files | 1112 |
 | Public documentation pages | 244 |
 | GitHub Actions workflows | 19 |
 
@@ -601,6 +601,13 @@ RK45's `last_dt` is its next internal proposal. Run
 contains both actual runtime environments, raw repeats and provenance. These
 shared-host timings establish neither a causal speedup nor production latency.
 See the [cellular-sheaf contract](docs/reference/api/upde.md#cellular-sheaf-engine).
+
+Dimension comparisons exercise required public CI/KY owners across all five
+languages, with strict-radius scalar geometry and exact rational spectrum
+references. See the [dimension contract](docs/reference/api/monitor_dimension.md)
+and [23 October 2026 comparison](docs/reference/data/dimension_real_runtime_2026-10-23.json).
+Shared-host timings include validation and both public calls; they do not
+establish native-only cost or production speedup.
 
 SPO keeps reference benchmarks as reproducible evidence, not as marketing
 claims. The checked-in snapshot is dated `2026-06-14` and was generated with:

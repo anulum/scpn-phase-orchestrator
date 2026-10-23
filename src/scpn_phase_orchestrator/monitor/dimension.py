@@ -17,14 +17,15 @@ Implements:
 
 For parity across backends the RNG that picks subsampled pairs is
 owned by the Python dispatcher and its seeded indices are passed to
-every non-Rust backend. The Rust path keeps its own internal RNG for
-backward compatibility; full-pairs mode is bit-exact across all five.
+every non-Rust backend. Rust retains its legacy internal RNG. Full-pairs
+paths use identical point pairs and a stable float64 reference check.
 """
 
 from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from importlib import import_module
 from numbers import Integral, Real
 from typing import TypeAlias, cast
 
@@ -32,6 +33,10 @@ import numpy as np
 from numpy.typing import NDArray
 
 from scpn_phase_orchestrator._array_types import require_real_values
+from scpn_phase_orchestrator.monitor._dimension_numerics import (
+    kaplan_yorke_reference,
+    row_distances,
+)
 from scpn_phase_orchestrator.monitor._julia_runtime import require_juliacall_main
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -52,15 +57,12 @@ _BACKEND_NAMES = ("rust", "mojo", "julia", "go", "python")
 
 def _load_rust_fns() -> dict[str, object]:
     """Load the Rust fractal-dimension backend callables."""
-    from spo_kernel import (
-        correlation_integral_rust,
-        kaplan_yorke_dimension_rust,
-    )
-
-    return {
-        "ci": correlation_integral_rust,
-        "ky": kaplan_yorke_dimension_rust,
-    }
+    module = import_module("spo_kernel")
+    ci: object = getattr(module, "correlation_integral_rust", None)
+    ky: object = getattr(module, "kaplan_yorke_dimension_rust", None)
+    if not callable(ci) or not callable(ky):
+        raise ImportError("spo_kernel lacks callable dimension CI/KY exports")
+    return {"ci": ci, "ky": ky}
 
 
 def _load_mojo_fns() -> dict[str, object]:
@@ -79,10 +81,12 @@ def _load_julia_fns() -> dict[str, object]:
     """Load the Julia fractal-dimension backend callables."""
     require_juliacall_main()
     from ..experimental.accelerators.monitor._dimension_julia import (
+        _ensure,
         correlation_integral_julia,
         kaplan_yorke_dimension_julia,
     )
 
+    _ensure()
     return {
         "ci": correlation_integral_julia,
         "ky": kaplan_yorke_dimension_julia,
@@ -136,9 +140,14 @@ def _resolve_backends() -> tuple[str, list[str]]:
 ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
-def _dispatch(fn_name: str) -> object | None:
-    """Return the fastest available backend callables, or ``None`` for Python."""
-    ordered_backends = [ACTIVE_BACKEND] + list(AVAILABLE_BACKENDS)
+def _dispatch(fn_name: str, backend: str = "auto") -> tuple[str, object | None]:
+    """Resolve a callable together with its ABI owner; require explicit owners."""
+    if backend not in (*_BACKEND_NAMES, "auto"):
+        raise ValueError(f"unknown dimension backend: {backend!r}")
+    required = backend != "auto"
+    ordered_backends = (
+        [ACTIVE_BACKEND] + list(AVAILABLE_BACKENDS) if backend == "auto" else [backend]
+    )
     deduped: list[str] = []
     for backend in ordered_backends:
         if backend in deduped:
@@ -146,16 +155,22 @@ def _dispatch(fn_name: str) -> object | None:
         deduped.append(backend)
     for backend in deduped:
         if backend == "python":
-            return None
+            return "python", None
         try:
             backend_cache = _load_backend(backend)
-        except (ImportError, RuntimeError, OSError, KeyError):
+        except (ImportError, RuntimeError, OSError, KeyError) as exc:
+            if required:
+                raise RuntimeError(
+                    f"dimension backend {backend!r} unavailable"
+                ) from exc
             continue
         fn = backend_cache.get(fn_name)
-        if fn is None:
+        if not callable(fn):
+            if required:
+                raise RuntimeError(f"dimension backend {backend!r} lacks {fn_name}")
             continue
-        return fn
-    return None
+        return backend, fn
+    return "python", None
 
 
 def _contains_boolean_alias(value: object) -> bool:
@@ -217,12 +232,14 @@ def _validate_trajectory(trajectory: object) -> FloatArray:
     try:
         require_real_values(trajectory, name="trajectory", allow_object=True)
         traj = raw.astype(np.float64, copy=True)
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, OverflowError) as exc:
         raise ValueError("trajectory must be a finite 1D or 2D float array") from exc
     if traj.ndim == 1:
         traj = traj[:, np.newaxis]
     elif traj.ndim != 2:
         raise ValueError(f"trajectory must be 1D or 2D, got shape {traj.shape}")
+    if traj.shape[1] == 0:
+        raise ValueError("trajectory must have a positive coordinate dimension")
     if not np.all(np.isfinite(traj)):
         raise ValueError("trajectory must contain only finite values")
     return np.ascontiguousarray(traj, dtype=np.float64)
@@ -240,7 +257,7 @@ def _validate_epsilons(epsilons: object) -> FloatArray:
     try:
         require_real_values(epsilons, name="epsilons", allow_object=True)
         eps = raw.astype(np.float64, copy=True)
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, OverflowError) as exc:
         raise ValueError("epsilons must be a finite one-dimensional array") from exc
     if eps.ndim != 1:
         raise ValueError(f"epsilons must be one-dimensional, got shape {eps.shape}")
@@ -269,6 +286,35 @@ def _validate_int_at_least(value: object, *, name: str, minimum: int) -> int:
     return result
 
 
+def _validate_sampling_controls(max_pairs: object, seed: object) -> tuple[int, int]:
+    """Validate shared native ranges before selecting any numerical owner.
+
+    Parameters
+    ----------
+    max_pairs : object
+        Positive pair budget fitting the platform's native unsigned integer.
+    seed : object
+        Non-negative unsigned 64-bit random seed.
+
+    Returns
+    -------
+    tuple[int, int]
+        Plain integer pair budget and seed admitted by every public owner.
+
+    Raises
+    ------
+    ValueError
+        If either control has an invalid source type or exceeds its range.
+    """
+    count = _validate_int_at_least(max_pairs, name="max_pairs", minimum=1)
+    random_seed = _validate_int_at_least(seed, name="seed", minimum=0)
+    if count > int(np.iinfo(np.uintp).max):
+        raise ValueError("max_pairs must fit a native unsigned integer")
+    if random_seed > 2**64 - 1:
+        raise ValueError("seed must fit an unsigned 64-bit integer")
+    return count, random_seed
+
+
 def _validate_spectrum(lyapunov_exponents: object) -> FloatArray:
     """Return the Lyapunov spectrum as a validated finite vector, else raise."""
     raw = np.asarray(lyapunov_exponents)
@@ -283,7 +329,7 @@ def _validate_spectrum(lyapunov_exponents: object) -> FloatArray:
             lyapunov_exponents, name="lyapunov_exponents", allow_object=True
         )
         le = raw.astype(np.float64, copy=True)
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, OverflowError) as exc:
         raise ValueError("lyapunov_exponents must be a finite 1D float array") from exc
     if le.ndim != 1:
         raise ValueError(
@@ -318,7 +364,7 @@ def _validate_ci_values(value: object, *, expected_size: int) -> FloatArray:
     try:
         require_real_values(value, name="value", allow_object=True)
         ci = raw.astype(np.float64, copy=True)
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, OverflowError) as exc:
         raise ValueError("correlation integral output must be numeric") from exc
     if ci.shape != (expected_size,):
         raise ValueError(
@@ -406,7 +452,7 @@ class CorrelationDimensionResult:
             raise ValueError("slope must contain real values")
         try:
             slope = np.asarray(self.slope, dtype=np.float64)
-        except (TypeError, ValueError) as exc:
+        except (TypeError, ValueError, OverflowError) as exc:
             raise ValueError("slope must be a finite one-dimensional array") from exc
         if slope.ndim != 1:
             raise ValueError("slope must be one-dimensional")
@@ -424,7 +470,7 @@ class CorrelationDimensionResult:
         self.D2 = d2
         self.epsilons = epsilons
         self.C_eps = c_eps
-        self.slope = np.ascontiguousarray(slope, dtype=np.float64)
+        self.slope = np.array(slope, dtype=np.float64, order="C", copy=True)
         self.scaling_range = (lo, hi)
 
 
@@ -464,8 +510,7 @@ def _correlation_integral_exact_reference(
     """Return the exact correlation-integral reference (NumPy floor)."""
     if idx_i.size == 0:
         return np.zeros(epsilons.size, dtype=np.float64)
-    diffs = trajectory[idx_i] - trajectory[idx_j]
-    dists = np.sqrt(np.sum(diffs**2, axis=1))
+    dists = row_distances(trajectory[idx_i], trajectory[idx_j])
     return _validate_ci_values(
         np.array([np.sum(dists < eps) / dists.size for eps in epsilons]),
         expected_size=int(epsilons.size),
@@ -474,25 +519,7 @@ def _correlation_integral_exact_reference(
 
 def _kaplan_yorke_exact_reference(lyapunov_exponents: FloatArray) -> float:
     """Return the exact Kaplan-Yorke dimension from a Lyapunov spectrum."""
-    if lyapunov_exponents.size == 0:
-        return 0.0
-    le_sorted = np.sort(lyapunov_exponents)[::-1]
-    cumsum = np.cumsum(le_sorted)
-    if cumsum[0] < 0:
-        return 0.0
-
-    j = 0
-    for i in range(len(cumsum)):
-        if cumsum[i] >= 0:
-            j = i
-        else:
-            break
-
-    if j + 1 >= len(le_sorted):
-        return float(len(le_sorted))
-
-    denom = abs(le_sorted[j + 1])
-    return float(j + 1) + float(cumsum[j]) / float(denom)
+    return kaplan_yorke_reference(lyapunov_exponents)
 
 
 def correlation_integral(
@@ -500,6 +527,8 @@ def correlation_integral(
     epsilons: object,
     max_pairs: object = 50000,
     seed: object = 42,
+    *,
+    backend: str = "auto",
 ) -> FloatArray:
     """Correlation integral ``C(ε) = fraction of pairs within ε``.
 
@@ -507,8 +536,8 @@ def correlation_integral(
     region.
 
     Dispatches to the active backend. For ``T · (T−1)/2 ≤ max_pairs``
-    all pairs are evaluated and every backend returns bit-exact
-    agreement; when subsampling is needed the Python dispatcher owns
+    all pairs are evaluated against a stable float64 reference. When
+    subsampling is needed the Python dispatcher owns
     the RNG and passes deterministic indices to every non-Rust
     backend, while the Rust path keeps its in-kernel RNG for API
     stability.
@@ -520,9 +549,11 @@ def correlation_integral(
     epsilons : object
         ``(K,)`` distance thresholds.
     max_pairs : object
-        maximum number of pairs to evaluate.
+        Positive native-width unsigned pair budget.
     seed : object
-        RNG seed for pair subsampling.
+        Unsigned 64-bit seed for pair subsampling.
+    backend : str
+        Required runtime, or ``"auto"`` for the legacy fallback policy.
 
     Returns
     -------
@@ -532,8 +563,8 @@ def correlation_integral(
     traj = _validate_trajectory(trajectory)
     t, d = int(traj.shape[0]), int(traj.shape[1])
     eps_sorted = _validate_epsilons(epsilons)
-    max_pairs = _validate_int_at_least(max_pairs, name="max_pairs", minimum=1)
-    seed = _validate_int_at_least(seed, name="seed", minimum=0)
+    max_pairs, seed = _validate_sampling_controls(max_pairs, seed)
+    owner, backend_fn = _dispatch("ci", backend)
     pair_result = _prepare_pair_indices(t, max_pairs, seed)
     if pair_result is None:
         return np.zeros(eps_sorted.size, dtype=np.float64)
@@ -541,8 +572,7 @@ def correlation_integral(
     expected = _correlation_integral_exact_reference(traj, idx_i, idx_j, eps_sorted)
     full_pairs = idx_i.size == t * (t - 1) // 2
 
-    backend_fn = _dispatch("ci")
-    if backend_fn is not None and ACTIVE_BACKEND == "rust":
+    if backend_fn is not None and owner == "rust":
         fn_rust = cast(
             "Callable[[FloatArray, int, int, FloatArray, int, int], FloatArray]",
             backend_fn,
@@ -566,7 +596,9 @@ def correlation_integral(
                 rust_output,
                 expected_size=int(eps_sorted.size),
             )
-        except (ImportError, RuntimeError, OSError, KeyError):
+        except (ImportError, RuntimeError, OSError, KeyError) as exc:
+            if backend != "auto":
+                raise RuntimeError(f"dimension backend {owner!r} failed") from exc
             backend_fn = None
 
     if backend_fn is not None:
@@ -586,9 +618,11 @@ def correlation_integral(
                     eps_sorted,
                 ),
                 expected=expected,
-                atol=1e-9 if ACTIVE_BACKEND == "mojo" else 1e-12,
+                atol=1e-9 if owner == "mojo" else 1e-12,
             )
-        except (ImportError, RuntimeError, OSError, KeyError):
+        except (ImportError, RuntimeError, OSError, KeyError) as exc:
+            if backend != "auto":
+                raise RuntimeError(f"dimension backend {owner!r} failed") from exc
             backend_fn = None
 
     return expected
@@ -599,6 +633,8 @@ def correlation_dimension(
     n_epsilons: object = 30,
     max_pairs: object = 50000,
     seed: object = 42,
+    *,
+    backend: str = "auto",
 ) -> CorrelationDimensionResult:
     """Estimate ``D₂`` via a log-log plateau over ``C(ε)``.
 
@@ -607,11 +643,14 @@ def correlation_dimension(
     trajectory : object
         Phase-space trajectory, shape ``(T, d)``.
     n_epsilons : object
-        Number of radii sampled across the log-log range.
+        Number of radii, at least two and fitting native float64 array capacity.
     max_pairs : object
-        Maximum number of point pairs sampled, or ``None`` for all.
+        Positive native-width unsigned pair budget. A budget covering
+        ``T * (T - 1) // 2`` evaluates all pairs.
     seed : object
-        Seed for the deterministic RNG.
+        Unsigned 64-bit seed for the selected owner's sampling law.
+    backend : str
+        Required integral runtime, or ``"auto"`` for legacy fallback.
 
     Returns
     -------
@@ -624,24 +663,32 @@ def correlation_dimension(
         name="n_epsilons",
         minimum=2,
     )
-    max_pairs = _validate_int_at_least(max_pairs, name="max_pairs", minimum=1)
-    seed = _validate_int_at_least(seed, name="seed", minimum=0)
+    if n_epsilons > int(np.iinfo(np.intp).max) // np.dtype(np.float64).itemsize:
+        raise ValueError("n_epsilons must fit native float64 array capacity")
+    max_pairs, seed = _validate_sampling_controls(max_pairs, seed)
+    _dispatch("ci", backend)
     diam = _attractor_diameter(traj)
     if diam == 0:
+        epsilons = np.array([1.0], dtype=np.float64)
         return CorrelationDimensionResult(
             D2=0.0,
-            epsilons=np.array([1.0]),
-            C_eps=np.array([1.0]),
+            epsilons=epsilons,
+            C_eps=correlation_integral(
+                traj, epsilons, max_pairs, seed, backend=backend
+            ),
             slope=np.array([0.0]),
             scaling_range=(1.0, 1.0),
         )
     upper_epsilon = diam * (1.0 - 8.0 * np.finfo(np.float64).eps)
+    if not np.isfinite(diam) or diam * 0.01 == 0.0:
+        raise ValueError("trajectory diameter cannot produce finite positive radii")
     epsilons = np.logspace(
         np.log10(diam * 0.01),
         np.log10(upper_epsilon),
         n_epsilons,
     )
-    C_eps = correlation_integral(traj, epsilons, max_pairs, seed)
+    _validate_dimension_result_epsilons(epsilons)
+    C_eps = correlation_integral(traj, epsilons, max_pairs, seed, backend=backend)
 
     valid = C_eps > 0
     if valid.sum() < 3:
@@ -697,27 +744,31 @@ def _attractor_diameter(trajectory: FloatArray) -> float:
         sample = trajectory
     maxd = 0.0
     for i in range(len(sample)):
-        dists = np.sqrt(np.sum((sample[i] - sample) ** 2, axis=1))
+        dists = row_distances(sample[i], sample)
         d = float(np.max(dists))
         if d > maxd:
             maxd = d
     return maxd
 
 
-def kaplan_yorke_dimension(lyapunov_exponents: FloatArray) -> float:
-    """Kaplan-Yorke / information dimension from a Lyapunov spectrum.
+def kaplan_yorke_dimension(
+    lyapunov_exponents: object, *, backend: str = "auto"
+) -> float:
+    """Kaplan-Yorke dimension estimate from a Lyapunov spectrum.
 
     ``D_KY = j + (Σ_{i=1}^{j} λ_i) / |λ_{j+1}|`` where ``j`` is the
     largest index such that the cumulative sum of the first ``j``
     exponents is non-negative.
 
-    Kaplan & Yorke 1979. The Kaplan-Yorke conjecture equates this to
-    the information dimension ``D₁``.
+    Kaplan & Yorke 1979. This computes the spectrum formula; it does not
+    validate dynamical hypotheses identifying it with information dimension.
 
     Parameters
     ----------
-    lyapunov_exponents : FloatArray
+    lyapunov_exponents : object
         ``(N,)`` Lyapunov exponents.
+    backend : str
+        Required runtime, or ``"auto"`` for the legacy fallback policy.
 
     Returns
     -------
@@ -726,10 +777,10 @@ def kaplan_yorke_dimension(lyapunov_exponents: FloatArray) -> float:
         point, zero-dimensional attractor).
     """
     le = _validate_spectrum(lyapunov_exponents)
+    owner, backend_fn = _dispatch("ky", backend)
     if le.size == 0:
         return 0.0
     expected = _kaplan_yorke_exact_reference(le)
-    backend_fn = _dispatch("ky")
     if backend_fn is not None:
         fn = cast("Callable[[FloatArray], float]", backend_fn)
         le_sorted = np.sort(le)[::-1]
@@ -738,9 +789,11 @@ def kaplan_yorke_dimension(lyapunov_exponents: FloatArray) -> float:
                 fn(np.ascontiguousarray(le_sorted, dtype=np.float64)),
                 n_exponents=int(le_sorted.size),
                 expected=expected,
-                atol=1e-9 if ACTIVE_BACKEND == "mojo" else 1e-12,
+                atol=1e-9 if owner == "mojo" else 1e-12,
             )
-        except (ImportError, RuntimeError, OSError, KeyError):
+        except (ImportError, RuntimeError, OSError, KeyError) as exc:
+            if backend != "auto":
+                raise RuntimeError(f"dimension backend {owner!r} failed") from exc
             backend_fn = None
 
     return expected

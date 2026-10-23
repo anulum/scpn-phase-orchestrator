@@ -21,14 +21,16 @@ triu-indices pair list. Tolerances:
 
 from __future__ import annotations
 
+import subprocess
 from collections.abc import Callable
 from types import SimpleNamespace
-from typing import get_type_hints
+from typing import TypeAlias, get_type_hints
 
 import numpy as np
 import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
+from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.experimental.accelerators.monitor import (
     _dimension_julia as dimension_julia,
@@ -62,11 +64,13 @@ from scpn_phase_orchestrator.monitor.dimension import (
 )
 from tests.typing_contracts import assert_precise_ndarray_hint
 
+FloatArray: TypeAlias = NDArray[np.float64]
+
 CiBackend = Callable[
-    [np.ndarray, object, object, np.ndarray, np.ndarray, np.ndarray],
-    np.ndarray,
+    [FloatArray, object, object, FloatArray, FloatArray, FloatArray],
+    FloatArray,
 ]
-KyBackend = Callable[[np.ndarray], float]
+KyBackend = Callable[[FloatArray], float]
 
 
 def test__dimension_validation_helper_is_directly_linked_to_backend_tests() -> None:
@@ -89,8 +93,8 @@ def _reset(prev: str) -> None:
 
 
 def _reference_ci(
-    traj: np.ndarray, eps: np.ndarray, max_pairs: int = 10_000
-) -> np.ndarray:
+    traj: FloatArray, eps: FloatArray, max_pairs: int = 10_000
+) -> FloatArray:
     prev = _force("python")
     try:
         return correlation_integral(traj, eps, max_pairs=max_pairs)
@@ -98,7 +102,7 @@ def _reference_ci(
         _reset(prev)
 
 
-def _reference_ky(le: np.ndarray) -> float:
+def _reference_ky(le: FloatArray) -> float:
     prev = _force("python")
     try:
         return kaplan_yorke_dimension(le)
@@ -106,11 +110,11 @@ def _reference_ky(le: np.ndarray) -> float:
         _reset(prev)
 
 
-def _trajectory(seed: int, t: int = 40, d: int = 3) -> np.ndarray:
+def _trajectory(seed: int, t: int = 40, d: int = 3) -> FloatArray:
     return np.random.default_rng(seed).normal(0.0, 1.0, (t, d))
 
 
-def _eps(n_k: int = 10) -> np.ndarray:
+def _eps(n_k: int = 10) -> FloatArray:
     return np.logspace(-1, 0.5, n_k)
 
 
@@ -133,8 +137,8 @@ def test_backend_array_contracts_are_parameterised() -> None:
         for key in ("idx_i", "idx_j"):
             assert_precise_ndarray_hint(hints[key])
             assert "int64" in str(hints[key])
-    for fn in ky_functions:
-        hints = get_type_hints(fn)
+    for ky_fn in ky_functions:
+        hints = get_type_hints(ky_fn)
         assert_precise_ndarray_hint(hints["lyapunov_exponents"])
         assert "float64" in str(hints["lyapunov_exponents"])
 
@@ -159,7 +163,7 @@ class TestDirectBackendBoundaryContracts:
     ) -> None:
         monkeypatch.setattr(dimension_mojo, "_ensure_exe", lambda: "dimension_mojo")
         monkeypatch.setattr(
-            dimension_mojo.subprocess,
+            subprocess,
             "run",
             lambda *args, **kwargs: SimpleNamespace(
                 returncode=0, stdout=stdout, stderr=""
@@ -414,12 +418,12 @@ class TestDirectBackendBoundaryContracts:
     def test_correlation_integral_backend_rejects_invalid_inputs_before_runtime_load(
         self,
         fn: CiBackend,
-        traj_flat: np.ndarray,
+        traj_flat: FloatArray,
         t: object,
         d: object,
-        idx_i: np.ndarray,
-        idx_j: np.ndarray,
-        epsilons: np.ndarray,
+        idx_i: FloatArray,
+        idx_j: FloatArray,
+        epsilons: FloatArray,
         message: str,
     ) -> None:
         with pytest.raises(ValueError, match=message):
@@ -448,7 +452,7 @@ class TestDirectBackendBoundaryContracts:
     def test_kaplan_yorke_backend_rejects_invalid_spectrum_before_runtime_load(
         self,
         fn: KyBackend,
-        lyapunov_exponents: np.ndarray,
+        lyapunov_exponents: FloatArray,
     ) -> None:
         with pytest.raises(ValueError, match="lyapunov_exponents"):
             fn(lyapunov_exponents)
@@ -467,7 +471,7 @@ class TestDirectBackendBoundaryContracts:
         ],
     )
     def test_correlation_integral_output_validation_rejects_nonphysical_values(
-        self, values: np.ndarray, match: str
+        self, values: FloatArray, match: str
     ) -> None:
         with pytest.raises(ValueError, match=match):
             dimension_validation.validate_correlation_integral_backend_output(
@@ -601,7 +605,7 @@ class TestDirectBackendBoundaryContracts:
     ) -> None:
         class _FakeJulia:
             @staticmethod
-            def correlation_integral(*args: object) -> np.ndarray:
+            def correlation_integral(*args: object) -> FloatArray:
                 return np.array([0.4, 0.3])
 
         monkeypatch.setattr(dimension_julia, "_ensure", lambda: _FakeJulia())
@@ -622,7 +626,7 @@ class TestDirectBackendBoundaryContracts:
     ) -> None:
         class _FakeJulia:
             @staticmethod
-            def correlation_integral(*args: object) -> np.ndarray:
+            def correlation_integral(*args: object) -> FloatArray:
                 return np.array([0.0])
 
         monkeypatch.setattr(dimension_julia, "_ensure", lambda: _FakeJulia())
@@ -687,38 +691,47 @@ class TestDirectBackendBoundaryContracts:
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         def _bad_backend(
-            traj_flat: np.ndarray,
+            traj_flat: FloatArray,
             t: int,
             d: int,
-            idx_i: np.ndarray,
-            idx_j: np.ndarray,
-            epsilons: np.ndarray,
-        ) -> np.ndarray:
+            idx_i: FloatArray,
+            idx_j: FloatArray,
+            epsilons: FloatArray,
+        ) -> FloatArray:
             return np.zeros(epsilons.size, dtype=np.float64)
 
-        monkeypatch.setattr(dim_mod, "_dispatch", lambda name: _bad_backend)
-        prev = _force("go")
-        try:
-            with pytest.raises(ValueError, match="exact reference"):
-                correlation_integral(
-                    np.array([[0.0], [0.05]]),
-                    np.array([0.1]),
-                    max_pairs=10,
-                )
-        finally:
-            _reset(prev)
+        def corrupted_dispatch(
+            _name: str, _backend: str = "auto"
+        ) -> tuple[str, object]:
+            """Inject a corrupt native result solely to exercise fail-closed policy."""
+            return "go", _bad_backend
+
+        monkeypatch.setattr(dim_mod, "_dispatch", corrupted_dispatch)
+        with pytest.raises(ValueError, match="exact reference"):
+            correlation_integral(
+                np.array([[0.0], [0.05]]),
+                np.array([0.1]),
+                max_pairs=10,
+                backend="go",
+            )
 
     def test_public_kaplan_yorke_rejects_exact_divergence(
         self,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        monkeypatch.setattr(dim_mod, "_dispatch", lambda name: lambda le: 1.0)
-        prev = _force("go")
-        try:
-            with pytest.raises(ValueError, match="exact reference"):
-                kaplan_yorke_dimension(np.array([0.4, -0.2, -0.8]))
-        finally:
-            _reset(prev)
+        def corrupt_dimension(_values: object) -> float:
+            """Supply a physically bounded but mathematically incorrect result."""
+            return 1.0
+
+        def corrupted_dispatch(
+            _name: str, _backend: str = "auto"
+        ) -> tuple[str, object]:
+            """Keep the injected corruption labelled as a Go negative contract."""
+            return "go", corrupt_dimension
+
+        monkeypatch.setattr(dim_mod, "_dispatch", corrupted_dispatch)
+        with pytest.raises(ValueError, match="exact reference"):
+            kaplan_yorke_dimension(np.array([0.4, -0.2, -0.8]), backend="go")
 
 
 class TestRustParity:
@@ -887,3 +900,90 @@ class TestCrossBackendConsistency:
             assert abs(got_ky - ref_ky) <= tolerances[backend], (
                 f"{backend} KY diverged: {got_ky} vs {ref_ky}"
             )
+
+
+def test_go_rejects_unrepresentable_counts_without_large_allocation() -> None:
+    """Refuse C-int metadata and virtual spectra before native execution/copying."""
+    maximum = int(np.iinfo(np.int32).max)
+    with pytest.raises(ValueError, match="counts must fit"):
+        correlation_integral_go(
+            np.array([]),
+            0,
+            maximum + 1,
+            np.array([], dtype=np.int64),
+            np.array([], dtype=np.int64),
+            np.array([1.0]),
+        )
+    virtual = np.broadcast_to(np.array([0.0]), (maximum + 1,))
+    assert virtual.strides == (0,)
+    with pytest.raises(ValueError, match="spectrum length must fit"):
+        kaplan_yorke_dimension_go(virtual)
+
+
+@pytest.mark.native_runtime
+@pytest.mark.parametrize(
+    "fn",
+    [correlation_integral_go, correlation_integral_julia, correlation_integral_mojo],
+)
+def test_direct_integral_accepts_integral_real_pairs_and_refuses_unsorted_radii(
+    fn: CiBackend,
+) -> None:
+    """Direct adapters admit integral indices and require ordered radius metadata."""
+    values = np.array([0.0, 1.0])
+    first, second = np.array([0.0]), np.array([1.0])
+    np.testing.assert_array_equal(
+        fn(values, 2, 1, first, second, np.array([1.0, 2.0])), [0.0, 1.0]
+    )
+    with pytest.raises(ValueError, match="sorted|non-decreasing"):
+        fn(values, 2, 1, first, second, np.array([2.0, 1.0]))
+    np.testing.assert_array_equal(first, [0.0])
+    np.testing.assert_array_equal(second, [1.0])
+
+
+def test_standalone_output_contracts_accept_physical_values_without_reference() -> None:
+    """Optional-reference validators still enforce physical shape and bounds."""
+    values = dimension_validation.validate_correlation_integral_backend_output(
+        np.array([0.0, 1.0]), np.array([0.0, 2.0])
+    )
+    np.testing.assert_array_equal(values, [0.0, 1.0])
+    assert (
+        dimension_validation.validate_kaplan_yorke_backend_output(
+            1.5, np.array([1.0, -2.0])
+        )
+        == 1.5
+    )
+
+
+@pytest.mark.parametrize("kernel", ["CorrelationIntegral", "KaplanYorkeDimension"])
+def test_go_adapter_propagates_native_refusal(
+    monkeypatch: pytest.MonkeyPatch,
+    kernel: str,
+) -> None:
+    """A failure-only native return-code injection must never become a result."""
+    from scpn_phase_orchestrator.experimental.accelerators.monitor import _dimension_go
+
+    def refuse(*_args: object) -> int:
+        return 1
+
+    monkeypatch.setattr(
+        _dimension_go, "_load_lib", lambda: SimpleNamespace(**{kernel: refuse})
+    )
+    with pytest.raises(ValueError, match="rc=1"):
+        if kernel == "CorrelationIntegral":
+            correlation_integral_go(
+                np.array([0.0, 1.0]),
+                2,
+                1,
+                np.array([0]),
+                np.array([1]),
+                np.array([2.0]),
+            )
+        else:
+            kaplan_yorke_dimension_go(np.array([1.0, -2.0]))
+
+
+@pytest.mark.native_runtime
+def test_mojo_adapter_propagates_actual_process_refusal() -> None:
+    """An actual malformed protocol request exits nonzero through the adapter."""
+    with pytest.raises(ValueError, match="Mojo dimension returned exit"):
+        run_dimension_mojo("KY 1 nan\n", expected_count=1, label="KY")

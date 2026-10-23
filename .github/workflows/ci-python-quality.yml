@@ -53,6 +53,8 @@ jobs:
         run: make ethical-cost-quality PYTHON=python
       - name: Check connectome source, original consumers and installed comparison
         run: make connectome-quality PYTHON=python
+      - name: Check complete dimension APIs, native boundaries and comparisons
+        run: make dimension-quality PYTHON=python
       - name: Check public Hodge source, original dispatch tests and diagnostics
         run: >
           python -m mypy --strict --config-file tools/connectome_mypy.ini
@@ -359,7 +361,7 @@ jobs:
           pip install --require-hashes --no-deps -r requirements/mojo-lock.txt
           asset_root="$(python -c 'import sys; print(sys.prefix + "/lib/python" + str(sys.version_info.major) + "." + str(sys.version_info.minor))')"
           mkdir -p "$asset_root/go" "$asset_root/julia" "$asset_root/mojo"
-          for name in attnres basin_stability chimera hodge delay; do
+          for name in attnres basin_stability chimera hodge delay dimension; do
             go -C go build -buildmode=c-shared -o "$asset_root/go/lib${name}.so" "${name}.go"
             cp "julia/${name}.jl" "$asset_root/julia/${name}.jl"
             mojo build "mojo/${name}.mojo" --target-cpu x86-64 \
@@ -378,7 +380,7 @@ jobs:
               'files': {str(path): hashlib.sha256(path.read_bytes()).hexdigest() for path in files},
               'sources': {str(path): hashlib.sha256(path.read_bytes()).hexdigest()
                           for folder, extension in (('go', 'go'), ('julia', 'jl'), ('mojo', 'mojo'))
-                          for name in ('attnres', 'basin_stability', 'chimera', 'hodge', 'delay')
+                          for name in ('attnres', 'basin_stability', 'chimera', 'hodge', 'delay', 'dimension')
                           for path in (pathlib.Path(folder) / (name + '.' + extension),)},
           }, indent=2) + '\n')
           PY
@@ -389,6 +391,11 @@ jobs:
           SPO_REQUIRED_BASIN_BACKENDS: "python,rust,go,julia,mojo"
           SPO_HODGE_ABSENT_PYTHON: ${{ github.workspace }}/.connectome-python-coverage/bin/python
           SPO_CHIMERA_ABSENT_PYTHON: ${{ github.workspace }}/.connectome-python-coverage/bin/python
+          SPO_DIMENSION_COVERAGE_PACKAGE_ONLY: "1"
+          SPO_DIMENSION_JULIA_ONLY_PYTHON: ${{ github.workspace }}/.delay-julia-only/bin/python
+          SPO_DIMENSION_GO_LIB: ${{ env.SPO_BRANCH_ASSET_ROOT }}/go/libdimension.so
+          SPO_DIMENSION_MISSING_EXPORT_LIB: ${{ env.SPO_BRANCH_ASSET_ROOT }}/go/libhodge.so
+          SPO_DIMENSION_MOJO_EXE: ${{ env.SPO_BRANCH_ASSET_ROOT }}/mojo/dimension_mojo
           SPO_DELAY_JULIA_ONLY_PYTHON: ${{ github.workspace }}/.delay-julia-only/bin/python
         run: |
           . .venv/bin/activate
@@ -413,6 +420,19 @@ jobs:
                   'tests/test_basin_bifurcation_real_runtime.py',
                   'tests/test_chimera_real_runtime.py',
                   'tests/test_hodge_real_runtime.py',
+                  'tests/test_dimension.py',
+                  'tests/test_dimension_backends.py',
+                  'tests/test_dimension_guards.py',
+                  'tests/test_dimension_validation_guards.py',
+                  'tests/test_dimension_measurement_inputs.py',
+                  'tests/test_dimension_algorithm.py',
+                  'tests/test_dimension_stability.py',
+                  'tests/test_dimension_benchmark.py',
+                  'tests/test_prop_lyapunov_dimension.py',
+                  'tests/test_dimension_real_runtime.py',
+                  'tests/test_dimension_sampling.py',
+                  'tests/test_dimension_native_absence.py',
+                  'native-tests/test_dimension_boundary.py',
                   'tests/test_delay.py',
                   'tests/test_delay_backends.py',
                   'tests/test_delay_benchmark.py',
@@ -451,6 +471,11 @@ jobs:
           . .venv/bin/activate
           python -m benchmarks.delay_benchmark --parity-gate --n 16 --n-steps 80 --calls 3 \
             --require-backends python rust go julia mojo --output .ci-branch/native/delay-comparison.json
+      - name: Compare all required public dimension owners
+        run: |
+          . .venv/bin/activate
+          python -m benchmarks.dimension_benchmark --parity-gate --T-list 16 --calls 2 \
+            --require-backends python rust go julia mojo --output .ci-branch/native/dimension-comparison.json
       - name: Bind the completed genuine native branch profile
         run: |
           . .venv/bin/activate

@@ -10,16 +10,20 @@
 
 from __future__ import annotations
 
-from numbers import Integral
+from math import isfinite
+from numbers import Integral, Real
 from typing import TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
 
 from scpn_phase_orchestrator._array_types import require_real_values
+from scpn_phase_orchestrator.monitor._dimension_numerics import (
+    kaplan_yorke_reference,
+    row_distances,
+)
 
 FloatArray: TypeAlias = NDArray[np.float64]
-ArrayPayload: TypeAlias = NDArray[np.generic]
 IntArray: TypeAlias = NDArray[np.int64]
 
 __all__ = [
@@ -34,13 +38,10 @@ __all__ = [
 ]
 
 
-def _contains_boolean_alias(raw: ArrayPayload) -> bool:
-    """Return whether the value contains any boolean alias."""
-    if raw.dtype == np.bool_:
-        return True
-    if raw.dtype != object:
-        return False
-    return any(isinstance(value, (bool, np.bool_)) for value in raw.flat)
+def _contains_boolean_alias(value: object) -> bool:
+    """Inspect original scalar types before NumPy can coerce mixed booleans."""
+    raw = np.asarray(value, dtype=object)
+    return any(isinstance(item, (bool, np.bool_)) for item in raw.flat)
 
 
 def _contains_complex_alias(value: object) -> bool:
@@ -60,12 +61,10 @@ def _is_numeric_string_alias(value: object) -> bool:
     return True
 
 
-def _contains_numeric_string_alias(raw: ArrayPayload) -> bool:
-    """Return whether the array contains a numeric string alias."""
-    if raw.dtype.kind not in {"O", "S", "U"}:
-        return False
-    object_array = raw.astype(object, copy=False)
-    return any(_is_numeric_string_alias(value) for value in object_array.flat)
+def _contains_numeric_string_alias(value: object) -> bool:
+    """Return whether the original scalar payload contains numeric strings."""
+    raw = np.asarray(value, dtype=object)
+    return any(_is_numeric_string_alias(item) for item in raw.flat)
 
 
 def _has_complex_payload(value: object) -> bool:
@@ -87,7 +86,7 @@ def _validate_int_at_least(value: object, *, name: str, minimum: int) -> int:
 def _validate_float_vector(value: object, *, name: str) -> FloatArray:
     """Return ``value`` as a validated finite float vector, else raise."""
     raw = np.asarray(value)
-    if _contains_boolean_alias(raw):
+    if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
     if _contains_numeric_string_alias(raw):
         raise ValueError(f"{name} must not contain numeric-string aliases")
@@ -96,7 +95,7 @@ def _validate_float_vector(value: object, *, name: str) -> FloatArray:
     try:
         require_real_values(value, name=name, allow_object=True)
         array = raw.astype(np.float64, copy=True)
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, OverflowError) as exc:
         msg = f"{name} must be a finite one-dimensional float array"
         raise ValueError(msg) from exc
     if array.ndim != 1:
@@ -109,31 +108,32 @@ def _validate_float_vector(value: object, *, name: str) -> FloatArray:
 def _validate_index_vector(value: object, *, name: str, upper_bound: int) -> IntArray:
     """Return ``value`` as a validated integer index vector, else raise."""
     raw = np.asarray(value)
-    if _contains_boolean_alias(raw):
+    if _contains_boolean_alias(value):
         raise ValueError(f"{name} must not contain boolean values")
     if _contains_numeric_string_alias(raw):
         raise ValueError(f"{name} must not contain numeric-string aliases")
     if _has_complex_payload(value):
         raise ValueError(f"{name} must contain integer indices")
-    try:
-        require_real_values(value, name=name, allow_object=True)
-        numeric = raw.astype(np.float64, copy=True)
-    except (TypeError, ValueError) as exc:
-        raise ValueError(f"{name} must be a one-dimensional integer array") from exc
-    if numeric.ndim != 1:
-        raise ValueError(f"{name} must be one-dimensional, got shape {numeric.shape}")
-    if not np.all(np.isfinite(numeric)):
-        raise ValueError(f"{name} must contain only finite values")
-    if not np.all(np.equal(numeric, np.floor(numeric))):
-        raise ValueError(f"{name} must contain integer indices")
-    indices = numeric.astype(np.int64, copy=True)
-    if upper_bound <= 0:
-        if indices.size:
-            raise ValueError(f"{name} must be empty when t is zero")
-        return np.ascontiguousarray(indices, dtype=np.int64)
-    if np.any(indices < 0) or np.any(indices >= upper_bound):
-        raise ValueError(f"{name} indices must lie in [0, {upper_bound})")
-    return np.ascontiguousarray(indices, dtype=np.int64)
+    if raw.ndim != 1:
+        raise ValueError(f"{name} must be one-dimensional, got shape {raw.shape}")
+    if upper_bound <= 0 and raw.size:
+        raise ValueError(f"{name} must be empty when t is zero")
+    indices: list[int] = []
+    for item in np.asarray(value, dtype=object):
+        if isinstance(item, Integral):
+            index = int(item)
+        elif (
+            isinstance(item, Real)
+            and isfinite(float(item))
+            and float(item).is_integer()
+        ):
+            index = int(float(item))
+        else:
+            raise ValueError(f"{name} must contain integer indices")
+        if index < 0 or index >= upper_bound or index > np.iinfo(np.int64).max:
+            raise ValueError(f"{name} indices must lie in [0, {upper_bound})")
+        indices.append(index)
+    return np.array(indices, dtype=np.int64)
 
 
 def _validate_epsilons(epsilons: object) -> FloatArray:
@@ -141,6 +141,8 @@ def _validate_epsilons(epsilons: object) -> FloatArray:
     eps = _validate_float_vector(epsilons, name="epsilons")
     if np.any(eps < 0.0):
         raise ValueError("epsilons must contain only finite non-negative values")
+    if np.any(np.diff(eps) < 0.0):
+        raise ValueError("epsilons must be sorted in non-decreasing order")
     return eps
 
 
@@ -190,8 +192,7 @@ def expected_correlation_integral_backend_output(
     if idx_i.size == 0:
         return np.zeros(epsilons.size, dtype=np.float64)
     traj = np.ascontiguousarray(traj_flat.reshape(t, d), dtype=np.float64)
-    diffs = traj[idx_i] - traj[idx_j]
-    dists = np.sqrt(np.sum(diffs**2, axis=1))
+    dists = row_distances(traj[idx_i], traj[idx_j])
     return np.ascontiguousarray(
         np.array([np.sum(dists < eps) / dists.size for eps in epsilons]),
         dtype=np.float64,
@@ -200,22 +201,7 @@ def expected_correlation_integral_backend_output(
 
 def expected_kaplan_yorke_backend_output(lyapunov_exponents: FloatArray) -> float:
     """Return the exact Kaplan-Yorke dimension for a Lyapunov spectrum."""
-    spectrum = np.sort(lyapunov_exponents)[::-1]
-    if spectrum.size == 0:
-        return 0.0
-    cumsum = np.cumsum(spectrum)
-    if cumsum[0] < 0:
-        return 0.0
-    j = 0
-    for i, value in enumerate(cumsum):
-        if value >= 0:
-            j = i
-        else:
-            break
-    if j + 1 >= spectrum.size:
-        return float(spectrum.size)
-    denom = abs(float(spectrum[j + 1]))
-    return float(j + 1) + float(cumsum[j]) / denom
+    return kaplan_yorke_reference(lyapunov_exponents)
 
 
 def validate_correlation_integral_backend_output(
@@ -267,7 +253,7 @@ def validate_kaplan_yorke_backend_output(
         raise ValueError("kaplan_yorke_dimension must be real-valued")
     try:
         dimension = float(raw)
-    except (TypeError, ValueError) as exc:
+    except (TypeError, ValueError, OverflowError) as exc:
         raise ValueError("kaplan_yorke_dimension must be a finite real scalar") from exc
     if not np.isfinite(dimension):
         raise ValueError("kaplan_yorke_dimension must be finite")
@@ -286,7 +272,7 @@ def validate_kaplan_yorke_backend_output(
             raise ValueError("expected kaplan_yorke_dimension must be real-valued")
         try:
             expected_value = float(expected_raw)
-        except (TypeError, ValueError) as exc:
+        except (TypeError, ValueError, OverflowError) as exc:
             raise ValueError(
                 "expected kaplan_yorke_dimension must be a finite real scalar"
             ) from exc

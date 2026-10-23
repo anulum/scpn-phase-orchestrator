@@ -21,6 +21,13 @@ module DimensionJL
 export correlation_integral, kaplan_yorke_dimension
 
 
+"""
+    correlation_integral(traj_flat, t, d, idx_i, idx_j, epsilons)
+
+Count caller-prepared zero-based nonself pairs at sorted finite nonnegative radii.
+Return fresh fractions using strict Euclidean distance comparison. Reject malformed
+shapes, nonfinite coordinates, boolean metadata and invalid indices before indexing.
+"""
 function correlation_integral(
     traj_flat::AbstractVector{Float64},
     t::Integer,
@@ -29,8 +36,18 @@ function correlation_integral(
     idx_j::AbstractVector{<:Integer},
     epsilons::AbstractVector{Float64},
 )
-    length(traj_flat) == t * d || error("traj_flat shape mismatch")
-    length(idx_i) == length(idx_j) || error("idx_i / idx_j length mismatch")
+    (t isa Bool || d isa Bool || t < 0 || d <= 0) &&
+        throw(ArgumentError("invalid trajectory dimensions"))
+    shape = Base.checked_mul(Int(t), Int(d))
+    length(traj_flat) == shape || throw(ArgumentError("traj_flat shape mismatch"))
+    length(idx_i) == length(idx_j) || throw(ArgumentError("pair length mismatch"))
+    all(isfinite, traj_flat) || throw(ArgumentError("coordinates must be finite"))
+    all(x -> isfinite(x) && x >= 0.0, epsilons) && issorted(epsilons) ||
+        throw(ArgumentError("radii must be sorted finite and nonnegative"))
+    for (i, j) in zip(idx_i, idx_j)
+        (i isa Bool || j isa Bool || !(0 <= i < t) || !(0 <= j < t) || i == j) &&
+            throw(ArgumentError("invalid zero-based nonself pair"))
+    end
     np = length(idx_i)
     nk = length(epsilons)
     if np == 0
@@ -45,12 +62,11 @@ function correlation_integral(
         base_j = (j - 1) * d
         for k in 1:d
             δ = traj_flat[base_i + k] - traj_flat[base_j + k]
-            s += δ * δ
+            s = hypot(s, δ)
         end
-        dists[p] = sqrt(s)
+        dists[p] = s
     end
     out = zeros(Float64, nk)
-    inv_np = 1.0 / Float64(np)
     @inbounds for k in 1:nk
         cnt = 0
         ε = epsilons[k]
@@ -59,44 +75,37 @@ function correlation_integral(
                 cnt += 1
             end
         end
-        out[k] = Float64(cnt) * inv_np
+        out[k] = Float64(cnt) / Float64(np)
     end
     return out
 end
 
 
+"""
+    kaplan_yorke_dimension(lyapunov_exponents)
+
+Evaluate the sorted spectrum using scaled compensated cumulative sums. Return a
+finite dimension in `[0, length]`; reject nonfinite exponents. Inputs are preserved.
+"""
 function kaplan_yorke_dimension(lyapunov_exponents::AbstractVector{Float64})
-    n = length(lyapunov_exponents)
-    if n == 0
-        return 0.0
-    end
+    all(isfinite, lyapunov_exponents) || throw(ArgumentError("exponents must be finite"))
+    scale = maximum(abs, lyapunov_exponents; init = 0.0)
+    scale == 0.0 && return Float64(length(lyapunov_exponents))
     le = sort(collect(lyapunov_exponents); rev = true)
-    cumsum_val = 0.0
-    j = -1
-    @inbounds for i in 1:n
-        cumsum_val += le[i]
-        if cumsum_val >= 0.0
-            j = i
-        else
-            break
-        end
+    total = 0.0
+    correction = 0.0
+    accepted = 0.0
+    for (index, exponent) in enumerate(le)
+        value = exponent / scale
+        updated = total + value
+        correction += abs(total) >= abs(value) ?
+            (total - updated) + value : (value - updated) + total
+        total = updated
+        prefix = total + correction
+        prefix < 0.0 && return Float64(index - 1) + accepted / abs(value)
+        accepted = prefix
     end
-    if j == -1
-        return 0.0                     # λ_1 < 0 → D_KY = 0
-    end
-    if j >= n
-        return Float64(n)              # all λ ≥ 0 → volume expanding
-    end
-    denom = abs(le[j + 1])
-    if denom == 0.0
-        return Float64(j)
-    end
-    # cumsum_val walked one step past rejection, so recompute Σ_{i=1}^{j}.
-    s_j = 0.0
-    for i in 1:j
-        s_j += le[i]
-    end
-    return Float64(j) + s_j / denom
+    return Float64(length(le))
 end
 
 end  # module

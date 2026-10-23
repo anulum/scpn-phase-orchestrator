@@ -1,18 +1,18 @@
 {
   "SPDX-License-Identifier": "AGPL-3.0-or-later",
   "counts": {
-    "core_engine_modules": 364,
+    "core_engine_modules": 365,
     "domainpacks": 36,
     "github_workflows": 19,
     "integration_modules": 32,
     "optional_extras": 24,
     "public_api_exports": 29,
     "public_documentation_pages": 244,
-    "python_package_modules": 765,
+    "python_package_modules": 766,
     "research_experimental_modules": 204,
     "runtime_serving_modules": 160,
-    "rust_kernel_files": 131,
-    "test_files": 1107
+    "rust_kernel_files": 132,
+    "test_files": 1112
   },
   "documentation": {
     "public_pages": [
@@ -471,6 +471,7 @@
       "src/scpn_phase_orchestrator/monitor/_dimension_go.py",
       "src/scpn_phase_orchestrator/monitor/_dimension_julia.py",
       "src/scpn_phase_orchestrator/monitor/_dimension_mojo.py",
+      "src/scpn_phase_orchestrator/monitor/_dimension_numerics.py",
       "src/scpn_phase_orchestrator/monitor/_embedding_go.py",
       "src/scpn_phase_orchestrator/monitor/_embedding_julia.py",
       "src/scpn_phase_orchestrator/monitor/_embedding_mojo.py",
@@ -1500,6 +1501,7 @@
     "src/scpn_phase_orchestrator/monitor/_dimension_go.py",
     "src/scpn_phase_orchestrator/monitor/_dimension_julia.py",
     "src/scpn_phase_orchestrator/monitor/_dimension_mojo.py",
+    "src/scpn_phase_orchestrator/monitor/_dimension_numerics.py",
     "src/scpn_phase_orchestrator/monitor/_embedding_go.py",
     "src/scpn_phase_orchestrator/monitor/_embedding_julia.py",
     "src/scpn_phase_orchestrator/monitor/_embedding_mojo.py",
@@ -1957,6 +1959,7 @@
     ],
     "test_files": [
       "tests/__init__.py",
+      "tests/_dimension_profile_coverage.py",
       "tests/apps/__init__.py",
       "tests/apps/queuewaves/__init__.py",
       "tests/apps/queuewaves/conftest.py",
@@ -2230,7 +2233,11 @@
       "tests/test_dimension_backends.py",
       "tests/test_dimension_benchmark.py",
       "tests/test_dimension_guards.py",
+      "tests/test_dimension_julia_absence.py",
       "tests/test_dimension_measurement_inputs.py",
+      "tests/test_dimension_native_absence.py",
+      "tests/test_dimension_real_runtime.py",
+      "tests/test_dimension_sampling.py",
       "tests/test_dimension_stability.py",
       "tests/test_dimension_validation_guards.py",
       "tests/test_discrete_signal_ingress.py",
@@ -3148,6 +3155,7 @@
     "spo-kernel/crates/spo-ffi/src/connectome_boundary.rs",
     "spo-kernel/crates/spo-ffi/src/coupling_builder.rs",
     "spo-kernel/crates/spo-ffi/src/delayed_boundary.rs",
+    "spo-kernel/crates/spo-ffi/src/dimension_boundary.rs",
     "spo-kernel/crates/spo-ffi/src/ei_balance_boundary.rs",
     "spo-kernel/crates/spo-ffi/src/embedding_boundary.rs",
     "spo-kernel/crates/spo-ffi/src/entropy_boundary.rs",

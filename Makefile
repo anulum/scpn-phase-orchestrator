@@ -217,3 +217,23 @@ connectome-quality:  ## Check connectome owners, original consumers and installe
 	$(PYTHON) -m ruff check --no-cache --isolated --select D --config 'lint.pydocstyle.convention="numpy"' $(CONNECTOME_QUALITY_FILES)
 	$(PYTHON) -m ruff format --no-cache --check $(CONNECTOME_QUALITY_FILES)
 	$(PYTHON) -m mypy --strict --cache-dir=/dev/null --config-file tools/connectome_mypy.ini $(CONNECTOME_QUALITY_FILES)
+
+DIMENSION_QUALITY_FILES := src/scpn_phase_orchestrator/monitor/dimension.py \
+    src/scpn_phase_orchestrator/monitor/_dimension_numerics.py \
+    src/scpn_phase_orchestrator/experimental/accelerators/monitor/_dimension_validation.py \
+    src/scpn_phase_orchestrator/experimental/accelerators/monitor/_dimension_go.py \
+    src/scpn_phase_orchestrator/experimental/accelerators/monitor/_dimension_julia.py \
+    src/scpn_phase_orchestrator/experimental/accelerators/monitor/_dimension_mojo.py \
+    tests/test_dimension.py tests/test_dimension_backends.py tests/test_dimension_guards.py \
+    tests/test_dimension_benchmark.py tests/test_dimension_real_runtime.py \
+    tests/test_dimension_sampling.py tests/test_dimension_native_absence.py \
+    tests/test_dimension_julia_absence.py tests/_dimension_profile_coverage.py \
+    native-tests/test_dimension_boundary.py benchmarks/dimension_benchmark.py \
+    benchmarks/_dimension_reference.py tools/branch_profile_provenance.py
+
+.PHONY: dimension-quality
+dimension-quality:  ## Check dimension APIs, native boundaries and comparison tools
+	$(PYTHON) -m mypy --strict --config-file tools/connectome_mypy.ini $(DIMENSION_QUALITY_FILES)
+	$(PYTHON) -m ruff check $(DIMENSION_QUALITY_FILES)
+	$(PYTHON) -m ruff check --select D --ignore D105 --config 'lint.pydocstyle.convention="numpy"' $(DIMENSION_QUALITY_FILES)
+	$(PYTHON) -m ruff format --check $(DIMENSION_QUALITY_FILES)

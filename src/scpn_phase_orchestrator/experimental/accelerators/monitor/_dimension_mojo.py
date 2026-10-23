@@ -40,7 +40,7 @@ _EXE_PATH = Path(__file__).resolve().parents[5] / "mojo" / "dimension_mojo"
 
 
 def _ensure_exe() -> Path:
-    """Build the Mojo backend executable if it is missing, else raise."""
+    """Require an existing executable Mojo artifact; never build during dispatch."""
     if not _EXE_PATH.exists():
         raise ImportError(
             f"{_EXE_PATH} not built. Run: mojo build mojo/dimension.mojo "
@@ -82,7 +82,31 @@ def correlation_integral_mojo(
     idx_j: IntArray,
     epsilons: FloatArray,
 ) -> FloatArray:
-    """Compute the phase-space correlation integral through the Mojo backend."""
+    """Count selected strict-radius pairs through the Mojo runtime.
+
+    Parameters
+    ----------
+    traj_flat : ndarray of float64
+        Flat finite real trajectory with exactly ``t * d`` entries.
+    t, d : int
+        Nonnegative sample count and positive coordinate count.
+    idx_i, idx_j : ndarray of int64
+        Equal-length, in-range, off-diagonal zero-based pair indices.
+    epsilons : ndarray of float64
+        Finite nonnegative radii in nondecreasing order.
+
+    Returns
+    -------
+    ndarray of float64
+        Normalised pair counts in radius order; zero when no pairs exist.
+
+    Raises
+    ------
+    ValueError
+        If inputs, runtime status or numerical outputs violate the contract.
+    ImportError
+        If the required Mojo artifact cannot be admitted.
+    """
     traj, t_int, d_int, ii, jj, eps = validate_correlation_integral_backend_inputs(
         traj_flat,
         t,
@@ -91,7 +115,7 @@ def correlation_integral_mojo(
         idx_j,
         epsilons,
     )
-    n_p = int(idx_i.size)
+    n_p = int(ii.size)
     n_k = int(eps.size)
     tokens: list[str] = [
         "CI",
@@ -122,7 +146,25 @@ def correlation_integral_mojo(
 
 
 def kaplan_yorke_dimension_mojo(lyapunov_exponents: FloatArray) -> float:
-    """Estimate the Kaplan-Yorke dimension through the Mojo backend."""
+    """Evaluate the Kaplan-Yorke spectrum formula through the Mojo runtime.
+
+    Parameters
+    ----------
+    lyapunov_exponents : ndarray of float64
+        One-dimensional finite real spectrum; sorted internally without mutation.
+
+    Returns
+    -------
+    float
+        Dimension between zero and spectrum length, including both endpoints.
+
+    Raises
+    ------
+    ValueError
+        If the input, native status or result violates the spectrum contract.
+    ImportError
+        If the required Mojo artifact cannot be admitted.
+    """
     le = validate_kaplan_yorke_backend_input(lyapunov_exponents)
     n = int(le.size)
     tokens: list[str] = ["KY", str(n)]

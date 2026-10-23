@@ -6,25 +6,33 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Fractal-dimension multi-backend benchmark
 
-"""Per-backend wall-clock benchmark for
-``monitor.dimension.correlation_integral`` (full-pairs mode)."""
+"""Compare required public dimension runtimes against independent scalar oracles.
+
+Timings include public validation and both CI/KY calls. They are shared-host
+regression measurements, with no production speedup or native-kernel-only claim.
+"""
 
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
+import statistics
 import time
+from collections.abc import Sequence
 from pathlib import Path
 
 import numpy as np
-from numpy.typing import NDArray
 
-from scpn_phase_orchestrator.monitor import dimension as dim_mod
+from benchmarks._dimension_reference import (
+    FloatArray,
+    array_sha256,
+    output_errors,
+    payload_sha256,
+    reference_outputs,
+)
 from scpn_phase_orchestrator.monitor.dimension import (
-    ACTIVE_BACKEND,
-    AVAILABLE_BACKENDS,
     correlation_integral,
+    kaplan_yorke_dimension,
 )
 
 BACKEND_ORDER = ("rust", "mojo", "julia", "go", "python")
@@ -35,49 +43,12 @@ PARITY_TOLERANCES = {
     "go": 1.0e-12,
     "python": 0.0,
 }
-
-
-def _bench(
-    backend: str,
-    traj: NDArray[np.floating],
-    eps: NDArray[np.floating],
-    calls: int,
-) -> float:
-    saved = dim_mod.ACTIVE_BACKEND
-    try:
-        dim_mod.ACTIVE_BACKEND = backend
-        correlation_integral(traj, eps, max_pairs=1_000_000)
-        t0 = time.perf_counter()
-        for _ in range(calls):
-            correlation_integral(traj, eps, max_pairs=1_000_000)
-        return time.perf_counter() - t0
-    finally:
-        dim_mod.ACTIVE_BACKEND = saved
-
-
-def bench_at(t: int, d: int, n_k: int, calls: int) -> dict:
-    rng = np.random.default_rng(42)
-    traj = rng.normal(0, 1, (t, d))
-    eps = np.logspace(-1, 0.5, n_k)
-    row: dict = {
-        "T": t,
-        "d": d,
-        "n_k": n_k,
-        "calls": calls,
-        "available": AVAILABLE_BACKENDS,
-        "boundary_contract": "exact_numpy_dimension_reference_validated",
-    }
-    for backend in AVAILABLE_BACKENDS:
-        tt = _bench(backend, traj, eps, calls)
-        row[f"{backend}_ms_per_call"] = (tt / calls) * 1000.0
-    return row
+Report = dict[str, float | int | str | None]
 
 
 def _validate_int_control(value: object, *, name: str, minimum: int) -> int:
-    if isinstance(value, (bool, np.bool_)) or not isinstance(
-        value,
-        (int, np.integer),
-    ):
+    """Admit true Python/NumPy integers at or above the specified minimum."""
+    if isinstance(value, (bool, np.bool_)) or not isinstance(value, (int, np.integer)):
         raise ValueError(f"{name} must be an integer")
     result = int(value)
     if result < minimum:
@@ -86,135 +57,116 @@ def _validate_int_control(value: object, *, name: str, minimum: int) -> int:
 
 
 def _problem(
-    t: int,
-    d: int,
-    n_k: int,
-    seed: int,
-) -> tuple[NDArray[np.float64], NDArray[np.float64], NDArray[np.float64]]:
+    t: int, d: int, n_k: int, seed: int
+) -> tuple[FloatArray, FloatArray, FloatArray]:
+    """Construct a seeded smooth trajectory and a binary-exact KY spectrum."""
     rng = np.random.default_rng(seed)
     grid = np.linspace(0.0, 6.0 * np.pi, t, dtype=np.float64)
     basis = []
-    for idx in range(d):
-        freq = 0.45 + 0.23 * idx
+    for index in range(d):
+        frequency = 0.45 + 0.23 * index
         phase = rng.uniform(0.0, 2.0 * np.pi)
-        basis.append(np.sin(freq * grid + phase) + 0.35 * np.cos(1.7 * freq * grid))
-    trajectory = np.ascontiguousarray(np.column_stack(basis), dtype=np.float64)
-    epsilons = np.ascontiguousarray(np.logspace(-1.3, 0.45, n_k), dtype=np.float64)
-    spectrum = np.ascontiguousarray(
-        np.array([0.42, 0.03, -0.20, -1.10, -2.40], dtype=np.float64),
-        dtype=np.float64,
-    )
-    return trajectory, epsilons, spectrum
-
-
-def _array_sha256(values: NDArray[np.floating]) -> str:
-    contiguous = np.ascontiguousarray(values, dtype=np.float64)
-    return hashlib.sha256(contiguous.tobytes()).hexdigest()
-
-
-def _scalar_sha256(value: float) -> str:
-    payload = json.dumps(float(value), separators=(",", ":"), sort_keys=True)
-    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
-
-
-def _backend_status(backend: str) -> tuple[bool, str]:
-    if backend in AVAILABLE_BACKENDS:
-        return True, ""
-    return False, f"{backend} backend was not resolved by monitor.dimension"
-
-
-def _pair_indices(t: int) -> tuple[NDArray[np.int64], NDArray[np.int64]]:
-    pairs = dim_mod._prepare_pair_indices(t, t * (t - 1) // 2, seed=0)
-    if pairs is None:
-        raise ValueError("dimension parity gate requires at least two samples")
-    return pairs
-
-
-def _direct_outputs(
-    backend: str,
-    trajectory: NDArray[np.float64],
-    epsilons: NDArray[np.float64],
-    spectrum: NDArray[np.float64],
-    *,
-    idx_i: NDArray[np.int64],
-    idx_j: NDArray[np.int64],
-) -> tuple[NDArray[np.float64], float]:
-    t, d = int(trajectory.shape[0]), int(trajectory.shape[1])
-    flat = np.ascontiguousarray(trajectory.ravel(), dtype=np.float64)
-    reference_ci = dim_mod._correlation_integral_exact_reference(
-        trajectory,
-        idx_i,
-        idx_j,
-        epsilons,
-    )
-    reference_ky = dim_mod._kaplan_yorke_exact_reference(spectrum)
-    if backend == "python":
-        return reference_ci, reference_ky
-
-    loaded = dim_mod._load_backend(backend)
-    ci_fn = loaded.get("ci")
-    ky_fn = loaded.get("ky")
-    if not callable(ci_fn) or not callable(ky_fn):
-        raise ValueError(f"{backend} backend must expose ci and ky kernels")
-
-    if backend == "rust":
-        ci_raw = ci_fn(
-            flat,
-            t,
-            d,
-            epsilons,
-            t * (t - 1) // 2,
-            0,
+        basis.append(
+            np.sin(frequency * grid + phase) + 0.35 * np.cos(1.7 * frequency * grid)
         )
-    else:
-        ci_raw = ci_fn(flat, t, d, idx_i, idx_j, epsilons)
-    ci = dim_mod._validate_ci_exact_reference(
-        ci_raw,
-        expected=reference_ci,
-        atol=PARITY_TOLERANCES[backend],
+    return (
+        np.ascontiguousarray(np.column_stack(basis), dtype=np.float64),
+        np.logspace(-1.3, 0.45, n_k, dtype=np.float64),
+        np.array([0.5, 0.03125, -0.25, -1.0, -2.0], dtype=np.float64),
     )
-    ky = dim_mod._validate_ky_dimension(
-        ky_fn(spectrum),
-        n_exponents=int(spectrum.size),
-        expected=reference_ky,
-        atol=PARITY_TOLERANCES[backend],
-    )
-    return ci, ky
 
 
-def _bench_with_output(
+def _public_outputs(
+    backend: str, problem: tuple[FloatArray, FloatArray, FloatArray]
+) -> tuple[FloatArray, float]:
+    """Call a required public owner over all pairs, preserving dispatch state."""
+    trajectory, epsilons, spectrum = problem
+    pairs = len(trajectory) * (len(trajectory) - 1) // 2
+    return (
+        correlation_integral(
+            trajectory, epsilons, max_pairs=pairs, seed=0, backend=backend
+        ),
+        kaplan_yorke_dimension(spectrum, backend=backend),
+    )
+
+
+def _checked_outputs(
     backend: str,
-    trajectory: NDArray[np.float64],
-    epsilons: NDArray[np.float64],
-    spectrum: NDArray[np.float64],
+    problem: tuple[FloatArray, FloatArray, FloatArray],
+    reference: tuple[FloatArray, float],
+) -> tuple[FloatArray, float]:
+    """Require every public result to satisfy independent geometry and rational KY."""
+    actual = _public_outputs(backend, problem)
+    errors = output_errors(actual, reference)
+    if (
+        float(errors["max_abs_error"]) > PARITY_TOLERANCES[backend]
+        or not errors["ci_monotonic"]
+        or not errors["ci_unit_interval"]
+        or not 0.0 <= actual[1] <= float(problem[2].size)
+    ):
+        raise ValueError(
+            f"{backend} public dimension output disagrees with independent reference"
+        )
+    return actual
+
+
+def _backend_record(
+    backend: str,
+    problem: tuple[FloatArray, FloatArray, FloatArray],
+    reference: tuple[FloatArray, float],
     *,
-    idx_i: NDArray[np.int64],
-    idx_j: NDArray[np.int64],
     calls: int,
-) -> tuple[float, NDArray[np.float64], float]:
-    _direct_outputs(
-        backend,
-        trajectory,
-        epsilons,
-        spectrum,
-        idx_i=idx_i,
-        idx_j=idx_j,
+    warmups: int,
+    repeats: int,
+) -> dict[str, object]:
+    """Record one actual owner; any failure discards timing and success hashes."""
+    record: dict[str, object] = {
+        "backend": backend,
+        "status": "unavailable",
+        "ms_per_call": None,
+        "repeat_ms_per_call": [],
+        "correlation_integral_sha256": None,
+        "kaplan_yorke_sha256": None,
+        "ci_max_abs_error": None,
+        "ky_abs_error": None,
+        "max_abs_error": None,
+        "ci_monotonic": False,
+        "ci_unit_interval": False,
+        "ky_bounds_passed": False,
+        "parity_passed": False,
+        "tolerance": PARITY_TOLERANCES[backend],
+        "unavailable_reason": "",
+    }
+    try:
+        for _ in range(warmups):
+            _checked_outputs(backend, problem, reference)
+        samples = []
+        actual: tuple[FloatArray, float] = reference
+        for _ in range(repeats):
+            started = time.perf_counter()
+            for _ in range(calls):
+                actual = _checked_outputs(backend, problem, reference)
+            samples.append((time.perf_counter() - started) * 1000.0 / calls)
+    except (ImportError, OSError, RuntimeError) as exc:
+        record["unavailable_reason"] = f"{backend}: {type(exc).__name__}: {exc}"
+        return record
+    except (TypeError, ValueError, OverflowError) as exc:
+        record["status"] = "invalid"
+        record["unavailable_reason"] = f"{backend}: {type(exc).__name__}: {exc}"
+        return record
+    record.update(output_errors(actual, reference))
+    record.update(
+        {
+            "status": "available",
+            "ms_per_call": statistics.median(samples),
+            "repeat_ms_per_call": samples,
+            "correlation_integral_sha256": array_sha256(actual[0]),
+            "kaplan_yorke_sha256": payload_sha256(actual[1]),
+            "ky_bounds_passed": True,
+            "parity_passed": True,
+        }
     )
-    t0 = time.perf_counter()
-    ci: NDArray[np.float64] | None = None
-    ky: float | None = None
-    for _ in range(calls):
-        ci, ky = _direct_outputs(
-            backend,
-            trajectory,
-            epsilons,
-            spectrum,
-            idx_i=idx_i,
-            idx_j=idx_j,
-        )
-    if ci is None or ky is None:
-        raise RuntimeError("benchmark calls must be positive")
-    return time.perf_counter() - t0, ci, ky
+    return record
 
 
 def benchmark_dimension_polyglot_parity_gate(
@@ -224,100 +176,69 @@ def benchmark_dimension_polyglot_parity_gate(
     n_k: int = 12,
     calls: int = 1,
     seed: int = 2026,
-) -> dict[str, object]:
-    """Record exact fractal-dimension parity across declared backends."""
+    warmups: int = 1,
+    repeats: int = 3,
+    require_backends: Sequence[str] = ("python",),
+) -> Report:
+    """Measure public CI/KY calls and refuse missing requested owners.
 
+    Parameters
+    ----------
+    t, d, n_k : int
+        Trajectory samples (at least2), coordinates (at least1), radii (at least2).
+    calls, warmups, repeats : int
+        Positive measured calls per repeat, unmeasured warmups and repeat count.
+    seed : int
+        Nonnegative seed for benchmark input generation, not native subsampling.
+    require_backends : Sequence[str]
+        Unique known owners that must pass. The portable reference-suite API
+        requires Python by default; the CLI requires all five by default.
+
+    Returns
+    -------
+    dict[str, float | int | str | None]
+        Five honest owner slots, independent reference hashes, JSON records,
+        explicit required scope and qualified wall-clock timings. Acceptance
+        requires every requested owner and every available result to pass.
+        Failure has no success benchmark hash. Timing is excluded from hashing.
+
+    Raises
+    ------
+    ValueError
+        If input controls or the nonempty required-owner selection are invalid.
+    """
     t = _validate_int_control(t, name="t", minimum=2)
     d = _validate_int_control(d, name="d", minimum=1)
     n_k = _validate_int_control(n_k, name="n_k", minimum=2)
     calls = _validate_int_control(calls, name="calls", minimum=1)
     seed = _validate_int_control(seed, name="seed", minimum=0)
-
-    trajectory, epsilons, spectrum = _problem(t, d, n_k, seed)
-    idx_i, idx_j = _pair_indices(t)
-    reference_ci, reference_ky = _direct_outputs(
-        "python",
-        trajectory,
-        epsilons,
-        spectrum,
-        idx_i=idx_i,
-        idx_j=idx_j,
-    )
-
-    records: list[dict[str, object]] = []
-    parity_checked_count = 0
-    parity_pass_count = 0
-    available_backend_count = 0
-    t0 = time.perf_counter()
-
-    for backend in BACKEND_ORDER:
-        tolerance = PARITY_TOLERANCES[backend]
-        available, reason = _backend_status(backend)
-        if not available:
-            records.append(
-                {
-                    "backend": backend,
-                    "status": "unavailable",
-                    "ms_per_call": None,
-                    "correlation_integral_sha256": None,
-                    "kaplan_yorke_sha256": None,
-                    "ci_max_abs_error": None,
-                    "ky_abs_error": None,
-                    "max_abs_error": None,
-                    "ci_monotonic": False,
-                    "ci_unit_interval": False,
-                    "ky_bounds_passed": False,
-                    "parity_passed": False,
-                    "tolerance": tolerance,
-                    "unavailable_reason": reason,
-                }
-            )
-            continue
-
-        available_backend_count += 1
-        elapsed, ci, ky = _bench_with_output(
-            backend,
-            trajectory,
-            epsilons,
-            spectrum,
-            idx_i=idx_i,
-            idx_j=idx_j,
-            calls=calls,
+    warmups = _validate_int_control(warmups, name="warmups", minimum=1)
+    repeats = _validate_int_control(repeats, name="repeats", minimum=1)
+    required = tuple(require_backends)
+    if not required or any(name not in BACKEND_ORDER for name in required):
+        raise ValueError(
+            "required dimension backends must be nonempty known runtime names"
         )
-        ci_max_abs_error = float(np.max(np.abs(ci - reference_ci)))
-        ky_abs_error = abs(float(ky) - float(reference_ky))
-        max_abs_error = max(ci_max_abs_error, ky_abs_error)
-        ci_monotonic = bool(np.all(np.diff(ci) >= -1.0e-12))
-        ci_unit_interval = bool(np.all(ci >= -1.0e-12) and np.all(ci <= 1.0 + 1.0e-12))
-        ky_bounds_passed = bool(0.0 <= ky <= float(spectrum.size) + 1.0e-12)
-        parity_passed = (
-            max_abs_error <= tolerance
-            and ci_monotonic
-            and ci_unit_interval
-            and ky_bounds_passed
+    if len(set(required)) != len(required):
+        raise ValueError("required dimension backends must be unique")
+    problem = _problem(t, d, n_k, seed)
+    reference = reference_outputs(*problem)
+    started = time.perf_counter()
+    records = [
+        _backend_record(
+            backend, problem, reference, calls=calls, warmups=warmups, repeats=repeats
         )
-        parity_checked_count += 1
-        parity_pass_count += int(parity_passed)
-        records.append(
-            {
-                "backend": backend,
-                "status": "available",
-                "ms_per_call": (elapsed / calls) * 1000.0,
-                "correlation_integral_sha256": _array_sha256(ci),
-                "kaplan_yorke_sha256": _scalar_sha256(ky),
-                "ci_max_abs_error": ci_max_abs_error,
-                "ky_abs_error": ky_abs_error,
-                "max_abs_error": max_abs_error,
-                "ci_monotonic": ci_monotonic,
-                "ci_unit_interval": ci_unit_interval,
-                "ky_bounds_passed": ky_bounds_passed,
-                "parity_passed": parity_passed,
-                "tolerance": tolerance,
-                "unavailable_reason": "",
-            }
-        )
-
-    wall_time = time.perf_counter() - t0
+        for backend in BACKEND_ORDER
+    ]
+    wall_time = time.perf_counter() - started
+    available = [row for row in records if row["status"] == "available"]
+    invalid = [row for row in records if row["status"] == "invalid"]
+    unavailable = [row for row in records if row["status"] == "unavailable"]
+    present = {str(row["backend"]) for row in available}
+    required_present = set(required).issubset(present)
+    acceptance = required_present and "python" in present and not invalid
+    # Retain the reference-suite threshold schema; required scope is explicit
+    # in required_backends_json and comparison_complete, never inferred from slots.
     thresholds = {
         "backend_order": list(BACKEND_ORDER),
         "max_mojo_abs_error": PARITY_TOLERANCES["mojo"],
@@ -331,62 +252,105 @@ def benchmark_dimension_polyglot_parity_gate(
         "require_python_reference": True,
         "require_unit_interval_correlation_integral": True,
     }
-    acceptance_passed = (
-        len(records) == len(BACKEND_ORDER)
-        and any(
-            record["backend"] == "python" and record["status"] == "available"
-            for record in records
-        )
-        and parity_pass_count == parity_checked_count
-        and np.all(np.diff(reference_ci) >= -1.0e-12)
-        and np.all(reference_ci >= -1.0e-12)
-        and np.all(reference_ci <= 1.0 + 1.0e-12)
-        and 0.0 <= reference_ky <= float(spectrum.size) + 1.0e-12
-    )
-    benchmark_payload = {
-        "T": t,
-        "d": d,
-        "n_k": n_k,
-        "calls": calls,
-        "seed": seed,
-        "records": records,
-        "thresholds": thresholds,
-        "reference_correlation_integral_sha256": _array_sha256(reference_ci),
-        "reference_kaplan_yorke_sha256": _scalar_sha256(reference_ky),
+    deterministic = {
+        "controls": [t, d, n_k, calls, seed, warmups, repeats],
+        "required_backends": required,
+        "references": [array_sha256(reference[0]), payload_sha256(reference[1])],
+        "records": [
+            {
+                key: value
+                for key, value in row.items()
+                if key
+                not in {"ms_per_call", "repeat_ms_per_call", "unavailable_reason"}
+            }
+            for row in records
+        ],
     }
-    benchmark_sha = hashlib.sha256(
-        json.dumps(benchmark_payload, sort_keys=True, separators=(",", ":")).encode()
-    ).hexdigest()
-
     return {
         "suite": "dimension_polyglot_parity_gate",
         "backend_count": len(records),
-        "available_backend_count": available_backend_count,
-        "unavailable_backend_count": len(records) - available_backend_count,
-        "parity_checked_count": parity_checked_count,
-        "parity_pass_count": parity_pass_count,
-        "all_available_passed": int(parity_pass_count == parity_checked_count),
-        "python_reference_present": 1,
+        "available_backend_count": len(available),
+        "unavailable_backend_count": len(unavailable),
+        "invalid_backend_count": len(invalid),
+        "parity_checked_count": len(available) + len(invalid),
+        "parity_pass_count": len(available),
+        "all_available_passed": int(bool(available) and not invalid),
+        "python_reference_present": int("python" in present),
+        "required_backends_present": int(required_present),
+        "required_backends_json": json.dumps(required),
+        "comparison_complete": int(len(available) == len(BACKEND_ORDER)),
         "T": t,
         "d": d,
         "n_k": n_k,
         "calls": calls,
         "seed": seed,
-        "reference_ci_min": float(np.min(reference_ci)),
-        "reference_ci_max": float(np.max(reference_ci)),
-        "reference_kaplan_yorke": float(reference_ky),
-        "reference_correlation_integral_sha256": _array_sha256(reference_ci),
-        "reference_kaplan_yorke_sha256": _scalar_sha256(reference_ky),
-        "benchmark_sha256": benchmark_sha,
+        "warmups": warmups,
+        "repeats": repeats,
+        "reference_ci_min": float(np.min(reference[0])),
+        "reference_ci_max": float(np.max(reference[0])),
+        "reference_kaplan_yorke": reference[1],
+        "reference_correlation_integral_sha256": array_sha256(reference[0]),
+        "reference_kaplan_yorke_sha256": payload_sha256(reference[1]),
+        "benchmark_sha256": payload_sha256(deterministic) if acceptance else None,
         "wall_time_s": wall_time,
-        "steps_per_second": parity_checked_count / wall_time if wall_time else 0.0,
-        "acceptance_passed": int(acceptance_passed),
+        "steps_per_second": len(available) * calls * repeats / wall_time
+        if wall_time
+        else 0.0,
+        "acceptance_passed": int(acceptance),
         "acceptance_thresholds_json": json.dumps(thresholds, sort_keys=True),
-        "backend_records_json": json.dumps(records, sort_keys=True),
+        "backend_records_json": json.dumps(records, sort_keys=True, allow_nan=False),
+        "reference_kind": "math.dist full-pair counts; exact Fraction KY prefixes",
+        "timed_surface": "public CI+KY, production validators, oracle comparison",
+        "benchmark_evidence_kind": "local_regression_non_isolated",
+        "production_timing_claim": 0,
     }
 
 
+def bench_at(
+    t: int,
+    d: int,
+    n_k: int,
+    calls: int,
+    *,
+    warmups: int = 1,
+    repeats: int = 3,
+    seed: int = 2026,
+    require_backends: Sequence[str] = ("python",),
+) -> Report:
+    """Measure one full-pair public CI/KY problem with explicit required owners.
+
+    Parameters
+    ----------
+    t, d, n_k, calls, warmups, repeats, seed, require_backends
+        Controls with the same meaning and validation as the parity gate.
+
+    Returns
+    -------
+    dict[str, float | int | str | None]
+        Parity-gate evidence and legacy per-owner median timing keys. Each timing
+        measures the documented combined public CI/KY surface.
+    """
+    result = benchmark_dimension_polyglot_parity_gate(
+        t=t,
+        d=d,
+        n_k=n_k,
+        calls=calls,
+        seed=seed,
+        warmups=warmups,
+        repeats=repeats,
+        require_backends=require_backends,
+    )
+    records = json.loads(str(result["backend_records_json"]))
+    for row in records:
+        value: object = row["ms_per_call"]
+        result[f"{row['backend']}_ms_per_call"] = (
+            float(value) if isinstance(value, (int, float)) else None
+        )
+    return result
+
+
 def main() -> int:
+    """Print and optionally save JSON; fail when required comparison is refused."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, default=None)
     parser.add_argument("--T-list", type=int, nargs="+", default=[50, 150, 400])
@@ -394,47 +358,42 @@ def main() -> int:
     parser.add_argument("--n-k", type=int, default=20)
     parser.add_argument("--calls", type=int, default=5)
     parser.add_argument("--seed", type=int, default=2026)
+    parser.add_argument("--warmups", type=int, default=1)
+    parser.add_argument("--repeats", type=int, default=3)
+    parser.add_argument(
+        "--require-backends",
+        nargs="+",
+        choices=BACKEND_ORDER,
+        default=list(BACKEND_ORDER),
+    )
     parser.add_argument(
         "--parity-gate",
         action="store_true",
-        help="emit deterministic all-backend dimension parity-gate JSON",
+        help="emit one parity gate for the first T-list entry",
     )
     args = parser.parse_args()
-
-    if args.parity_gate:
-        result = benchmark_dimension_polyglot_parity_gate(
-            t=args.T_list[0],
-            d=args.d,
-            n_k=args.n_k,
-            calls=args.calls,
-            seed=args.seed,
-        )
-        text = json.dumps(result, indent=2, sort_keys=True)
-        print(text)
-        if args.output:
-            args.output.write_text(text + "\n", encoding="utf-8")
-        return 0
-
-    print(f"Active: {ACTIVE_BACKEND}  Available: {AVAILABLE_BACKENDS}")
-    print("Boundary contract: exact NumPy dimension reference validated\n")
-    header = f"{'T':>5} {'d':>3} {'K':>3} {'calls':>6}"
-    for b in AVAILABLE_BACKENDS:
-        header += f" {b + '_ms':>12}"
-    print(header)
-    print("-" * len(header))
-    results: list[dict] = []
-    for t in args.T_list:
-        row = bench_at(t, args.d, args.n_k, args.calls)
-        results.append(row)
-        line = f"{t:>5} {args.d:>3} {args.n_k:>3} {args.calls:>6}"
-        for b in AVAILABLE_BACKENDS:
-            line += f" {row[f'{b}_ms_per_call']:>12.4f}"
-        print(line)
+    try:
+        results = [
+            bench_at(
+                t,
+                args.d,
+                args.n_k,
+                args.calls,
+                seed=args.seed,
+                warmups=args.warmups,
+                repeats=args.repeats,
+                require_backends=args.require_backends,
+            )
+            for t in (args.T_list[:1] if args.parity_gate else args.T_list)
+        ]
+    except ValueError as exc:
+        parser.error(str(exc))
+    payload: object = results[0] if args.parity_gate else {"results": results}
+    text = json.dumps(payload, indent=2, sort_keys=True, allow_nan=False)
+    print(text)
     if args.output:
-        args.output.write_text(
-            json.dumps({"results": results}, indent=2), encoding="utf-8"
-        )
-    return 0
+        args.output.write_text(text + "\n", encoding="utf-8")
+    return 0 if all(row["acceptance_passed"] == 1 for row in results) else 1
 
 
 if __name__ == "__main__":

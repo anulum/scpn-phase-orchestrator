@@ -21,6 +21,7 @@ mod chimera_boundary;
 mod connectome_boundary;
 mod coupling_builder;
 mod delayed_boundary;
+mod dimension_boundary;
 mod ei_balance_boundary;
 mod embedding_boundary;
 mod entropy_boundary;
@@ -47,6 +48,7 @@ use adaptive_coupling::te_adapt_coupling_rust;
 use connectome_boundary::load_hcp_connectome_rust;
 use coupling_builder::PyCouplingBuilder;
 use delayed_boundary::delayed_kuramoto_run_rust;
+use dimension_boundary::{correlation_integral_rust, kaplan_yorke_dimension_rust};
 use ei_balance_boundary::{adjust_ei_ratio_rust, compute_ei_balance_rust};
 use embedding_boundary::{delay_embed_rust, optimal_delay_rust, optimal_dimension_rust};
 use ethical_boundary::compute_ethical_cost_rust;
@@ -79,7 +81,7 @@ use pyo3::types::PyDict;
 use spo_engine::{
     carrier,
     coupling::{spatial_modulate_flat, SpatialDecayForm},
-    coupling_est, dimension, envelope, evs, free_energy, freq_id,
+    coupling_est, envelope, evs, free_energy, freq_id,
     imprint::ImprintModel,
     inertial, itpc,
     lif_ensemble::{LIFEnsemble, LIFParams},
@@ -1415,39 +1417,6 @@ fn lyapunov_spectrum_rust<'py>(
     Ok(PyArray1::from_vec(py, result))
 }
 
-// ─── Fractal Dimension ──────────────────────────────────────────────
-
-#[pyfunction]
-#[pyo3(signature = (trajectory, t, d, epsilons, max_pairs = 50000, seed = 42))]
-#[allow(clippy::too_many_arguments)]
-fn correlation_integral_rust<'py>(
-    py: Python<'py>,
-    trajectory: PyReadonlyArray1<'py, f64>,
-    t: usize,
-    d: usize,
-    epsilons: PyReadonlyArray1<'py, f64>,
-    max_pairs: usize,
-    seed: u64,
-) -> PyResult<Bound<'py, PyArray1<f64>>> {
-    let traj = trajectory
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let eps = epsilons
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let result = dimension::correlation_integral(traj, t, d, eps, max_pairs, seed)
-        .map_err(PyValueError::new_err)?;
-    Ok(PyArray1::from_vec(py, result))
-}
-
-#[pyfunction]
-fn kaplan_yorke_dimension_rust(exponents: PyReadonlyArray1<'_, f64>) -> PyResult<f64> {
-    let le = exponents
-        .as_slice()
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    Ok(dimension::kaplan_yorke_dimension(le))
-}
-
 // ─── Chimera Detection ──────────────────────────────────────────────
 
 // ─── Spectral Analysis ──────────────────────────────────────────────
@@ -2343,7 +2312,7 @@ mod tests {
     }
 
     #[test]
-    fn regime_to_str_roundtrip() {
+    fn regime_to_str_roundtrip() -> PyResult<()> {
         for (regime, expected) in [
             (Regime::Nominal, "nominal"),
             (Regime::Degraded, "degraded"),
@@ -2351,8 +2320,9 @@ mod tests {
             (Regime::Recovery, "recovery"),
         ] {
             assert_eq!(regime_to_str(regime), expected);
-            assert_eq!(str_to_regime(expected).unwrap(), regime);
+            assert_eq!(str_to_regime(expected)?, regime);
         }
+        Ok(())
     }
 
     #[test]
@@ -2361,7 +2331,7 @@ mod tests {
     }
 
     #[test]
-    fn knob_roundtrip() {
+    fn knob_roundtrip() -> PyResult<()> {
         for (knob, expected) in [
             (Knob::K, "K"),
             (Knob::Alpha, "alpha"),
@@ -2369,8 +2339,9 @@ mod tests {
             (Knob::Psi, "Psi"),
         ] {
             assert_eq!(knob_to_str(knob), expected);
-            assert_eq!(str_to_knob(expected).unwrap(), knob);
+            assert_eq!(str_to_knob(expected)?, knob);
         }
+        Ok(())
     }
 
     #[test]

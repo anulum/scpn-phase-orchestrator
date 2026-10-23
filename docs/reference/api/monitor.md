@@ -759,39 +759,26 @@ tokens are rejected before the value reaches downstream monitor logic.
 
 ## Fractal Dimension
 
-Estimates the fractal dimension of attractors from embedded trajectories.
-Two complementary measures:
+`correlation_integral` counts strict-radius pairs; `correlation_dimension`
+selects an empirical stable log-slope window. `kaplan_yorke_dimension`
+evaluates a finite real Lyapunov spectrum formula, without establishing the
+dynamical hypotheses needed to identify it with an information dimension.
 
-**Correlation dimension D₂** (Grassberger & Procaccia 1983):
-Counts the fraction of point pairs within distance ε, then extracts
-the power-law exponent C(ε) ~ ε^D₂. The scaling region is
-automatically identified as the range with most stable local slopes.
+All three accept keyword-only `backend=`. Explicit Rust/Mojo/Julia/Go/Python
+selection requires that owner; `auto` retains automatic fallback. Inputs reject
+nonfinite, boolean, complex and numeric-string aliases. Stable distances and
+scaled compensated spectrum prefixes handle extreme finite values. Full-pair
+parity uses numerical tolerances; Rust's sampled RNG differs from the prepared
+NumPy pairs used by the other owners.
 
-**Kaplan-Yorke dimension D_KY** (Kaplan & Yorke 1979):
-Computed from the Lyapunov spectrum as D_KY = j + (Σᵢ₌₁ʲ λᵢ)/|λⱼ₊₁|
-where j is the largest index with non-negative cumulative sum.
-The Kaplan-Yorke conjecture equates D_KY to the information dimension.
-
-**Usage:**
+See [the dimension API](monitor_dimension.md) for sampling, degenerate results,
+representability limits, direct native boundaries and comparison evidence.
 
 ```python
-from scpn_phase_orchestrator.monitor.dimension import (
-    correlation_dimension, kaplan_yorke_dimension,
-)
+from scpn_phase_orchestrator.monitor.dimension import kaplan_yorke_dimension
 
-# From embedded trajectory
-result = correlation_dimension(trajectory, n_epsilons=30)
-print(f"D2={result.D2:.2f}, scaling={result.scaling_range}")
-
-# From Lyapunov spectrum
-from scpn_phase_orchestrator.monitor.lyapunov import lyapunov_spectrum
-spec = lyapunov_spectrum(phases, omegas, knm, alpha)
-D_KY = kaplan_yorke_dimension(spec)
-print(f"D_KY={D_KY:.2f}")
+assert kaplan_yorke_dimension([1.0, -2.0], backend="python") == 1.5
 ```
-
-**References:** Grassberger & Procaccia 1983, Phys. Rev. Lett. 50:346-349;
-Kaplan & Yorke 1979, Lecture Notes in Mathematics 730:228-237.
 
 ::: scpn_phase_orchestrator.monitor.dimension
 

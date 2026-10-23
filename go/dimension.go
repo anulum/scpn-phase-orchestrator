@@ -6,7 +6,7 @@
 // Contact: www.anulum.li | protoscience@anulum.li
 // SCPN Phase Orchestrator — Fractal-dimension kernels (Go port)
 
-// Package main builds ``libdimension.so`` — Grassberger-Procaccia
+// Package main builds “libdimension.so“ — Grassberger-Procaccia
 // correlation integral + Kaplan-Yorke dimension. Python owns the
 // RNG / pair subsampling for cross-backend parity.
 //
@@ -47,11 +47,10 @@ func correlationIntegral(
 		baseJ := j * d
 		for k := 0; k < d; k++ {
 			delta := traj[baseI+k] - traj[baseJ+k]
-			s += delta * delta
+			s = math.Hypot(s, delta)
 		}
-		dists[p] = math.Sqrt(s)
+		dists[p] = s
 	}
-	invP := 1.0 / float64(nP)
 	for k := 0; k < nK; k++ {
 		cnt := 0
 		eps := epsilons[k]
@@ -60,50 +59,52 @@ func correlationIntegral(
 				cnt++
 			}
 		}
-		out[k] = float64(cnt) * invP
+		out[k] = float64(cnt) / float64(nP)
 	}
 }
 
 func kaplanYorkeDimension(le []float64) float64 {
-	n := len(le)
-	if n == 0 {
-		return 0.0
-	}
-	sorted := make([]float64, n)
-	copy(sorted, le)
-	sort.Sort(sort.Reverse(sort.Float64Slice(sorted)))
-	cumsum := 0.0
-	j := -1
-	for i := 0; i < n; i++ {
-		cumsum += sorted[i]
-		if cumsum >= 0.0 {
-			j = i
-		} else {
-			break
+	scale := 0.0
+	for _, value := range le {
+		if !finite(value) {
+			return math.NaN()
 		}
+		scale = math.Max(scale, math.Abs(value))
 	}
-	if j == -1 {
-		return 0.0
+	if scale == 0.0 {
+		return float64(len(le))
 	}
-	if j >= n-1 {
-		return float64(n)
+	sorted := append([]float64(nil), le...)
+	sort.Sort(sort.Reverse(sort.Float64Slice(sorted)))
+	total, correction, accepted := 0.0, 0.0, 0.0
+	for index, exponent := range sorted {
+		value := exponent / scale
+		updated := total + value
+		if math.Abs(total) >= math.Abs(value) {
+			correction += (total - updated) + value
+		} else {
+			correction += (value - updated) + total
+		}
+		total = updated
+		prefix := total + correction
+		if prefix < 0.0 {
+			return float64(index) + accepted/math.Abs(value)
+		}
+		accepted = prefix
 	}
-	denom := math.Abs(sorted[j+1])
-	if denom == 0.0 {
-		return float64(j + 1)
-	}
-	sJ := 0.0
-	for i := 0; i <= j; i++ {
-		sJ += sorted[i]
-	}
-	return float64(j+1) + sJ/denom
+	return float64(len(sorted))
 }
 
-//export CorrelationIntegral
-//
+// finite reports whether a numerical measurement belongs to the accepted domain.
+func finite(value float64) bool {
+	return !math.IsNaN(value) && !math.IsInf(value, 0)
+}
+
 // CorrelationIntegral writes nK fractions into outPtr.
 // trajPtr: flat (T, d) row-major. idxI/idxJ: pair index arrays of
 // length nP. epsPtr: nK thresholds.
+//
+//export CorrelationIntegral
 func CorrelationIntegral(
 	trajPtr *C.double,
 	t C.int,
@@ -119,25 +120,58 @@ func CorrelationIntegral(
 	dd := int(d)
 	np_ := int(nP)
 	nk := int(nK)
+	// Pointer capacity remains the C caller's obligation. Reject invalid metadata
+	// and null pointers before creating any slices or writing output storage.
+	if tt < 0 || dd <= 0 || np_ < 0 || nk < 0 || (tt > 0 && dd > int(^uint(0)>>1)/tt) {
+		return -1
+	}
+	if (tt*dd > 0 && trajPtr == nil) || (np_ > 0 && (idxIPtr == nil || idxJPtr == nil)) ||
+		(nk > 0 && (epsPtr == nil || outPtr == nil)) {
+		return -1
+	}
 	traj := unsafe.Slice((*float64)(unsafe.Pointer(trajPtr)), tt*dd)
 	idxI := unsafe.Slice((*int64)(unsafe.Pointer(idxIPtr)), np_)
 	idxJ := unsafe.Slice((*int64)(unsafe.Pointer(idxJPtr)), np_)
 	eps := unsafe.Slice((*float64)(unsafe.Pointer(epsPtr)), nk)
 	out := unsafe.Slice((*float64)(unsafe.Pointer(outPtr)), nk)
+	for _, value := range traj {
+		if !finite(value) {
+			return -2
+		}
+	}
+	for p, i := range idxI {
+		j := idxJ[p]
+		if i < 0 || j < 0 || i >= int64(tt) || j >= int64(tt) || i == j {
+			return -3
+		}
+	}
+	for k, value := range eps {
+		if !finite(value) || value < 0.0 || (k > 0 && value < eps[k-1]) {
+			return -4
+		}
+	}
 	correlationIntegral(traj, tt, dd, idxI, idxJ, eps, out)
 	return 0
 }
 
-//export KaplanYorkeDimension
-//
 // KaplanYorkeDimension writes a single f64 scalar into outVal.
+//
+//export KaplanYorkeDimension
 func KaplanYorkeDimension(
 	lePtr *C.double,
 	n C.int,
 	outVal *C.double,
 ) C.int {
 	nn := int(n)
+	if nn < 0 || outVal == nil || (nn > 0 && lePtr == nil) {
+		return -1
+	}
 	le := unsafe.Slice((*float64)(unsafe.Pointer(lePtr)), nn)
+	for _, value := range le {
+		if !finite(value) {
+			return -2
+		}
+	}
 	*outVal = C.double(kaplanYorkeDimension(le))
 	return 0
 }

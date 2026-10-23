@@ -340,7 +340,23 @@ def _kernel_identity(profile: str) -> dict[str, str]:
 
 
 def source_inputs(root: Path) -> dict[str, str]:
-    """Hash the complete common lock, configuration and native source inputs."""
+    """Hash the common lock, configuration, runtime sources and profile drivers.
+
+    Parameters
+    ----------
+    root : Path
+        Canonical repository whose installed package is being qualified.
+
+    Returns
+    -------
+    dict[str, str]
+        Relative input names mapped to SHA-256 of their actual current bytes.
+
+    Raises
+    ------
+    OSError
+        If an expected owned input cannot be read; missing inputs are not omitted.
+    """
     inputs = {
         name: sha256(root / name)
         for name in (
@@ -359,13 +375,16 @@ def source_inputs(root: Path) -> dict[str, str]:
             "tools/branch_profile_provenance.py",
             "tools/branch_coverage_profiles.py",
             "tools/branch_profile_residuals.json",
+            "tests/_dimension_profile_coverage.py",
+            "tests/test_dimension_native_absence.py",
+            "tests/test_dimension_julia_absence.py",
         )
     }
     for path in (root / "spo-kernel/crates").rglob("*"):
         if path.is_file() and path.suffix in {".rs", ".toml"}:
             inputs[path.relative_to(root).as_posix()] = sha256(path)
     for language, extension in (("go", "go"), ("julia", "jl"), ("mojo", "mojo")):
-        for name in ("attnres", "basin_stability", "chimera", "delay"):
+        for name in ("attnres", "basin_stability", "chimera", "delay", "dimension"):
             relative = f"{language}/{name}.{extension}"
             inputs[relative] = sha256(root / relative)
     return inputs
