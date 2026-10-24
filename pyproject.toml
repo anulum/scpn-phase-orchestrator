@@ -159,7 +159,7 @@ dev = [
     # The julia CI lane installs requirements/julia-lock.txt on top of this dev lock,
     # and juliapkg 0.1.27 (newest) requires filelock<4; without this bound the julia
     # lock backtracks to juliacall 0.9.24 / juliapkg 0.1.15 instead.
-    "filelock>=3.16,<4.0",
+    "filelock>=3.16,<5.0",
     "pytest-benchmark>=5.0,<6.0",
     "msgpack>=1.2.1",  # security floor (dev/test transitive)
 ]
