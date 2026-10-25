@@ -160,7 +160,7 @@ jobs:
         with:
           name: wheel-fallback
           path: dist/
-      - uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
+      - uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3
 
   build-container:
     name: Build, scan, and push container image
@@ -288,6 +288,6 @@ jobs:
           path: dist/
       # skip-existing: the kernel keeps its own version; a main-package tag
       # that does not bump spo-kernel must not fail on the duplicate upload.
-      - uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
+      - uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3
         with:
           skip-existing: true
