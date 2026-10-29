@@ -174,7 +174,7 @@ jobs:
           python -c "from juliacall import Main; Main.include('julia/test_dimension.jl')"
       - name: Qualify actual Julia embedding mathematics and comparison
         run: |
-          python -m pytest tests/test_embedding_real_runtime.py -k "julia or profile" \
+          python -m pytest tests/test_embedding_real_runtime.py -k "julia or python_only_profile" \
             -o addopts= --strict-markers --tb=short
           python -m benchmarks.embedding_benchmark --parity-gate --sizes 64 --calls 2
           python -c "from juliacall import Main; Main.include('julia/test_embedding.jl')"

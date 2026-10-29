@@ -19,12 +19,16 @@ import numpy as np
 import pytest
 from numpy.typing import NDArray
 
-from scpn_phase_orchestrator.experimental.accelerators.monitor._dimension_go import (
-    _load_lib,
-)
-
 FloatArray: TypeAlias = NDArray[np.float64]
 pytestmark = pytest.mark.native_runtime
+
+
+def _load_lib() -> ctypes.CDLL:
+    """Load the Go library only for Go cases, so Rust-only lanes need no package."""
+    module = import_module(
+        "scpn_phase_orchestrator.experimental.accelerators.monitor._dimension_go"
+    )
+    return cast(ctypes.CDLL, module._load_lib())
 
 
 class NativeIntegral(Protocol):
