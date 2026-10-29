@@ -703,7 +703,7 @@ distances are defined over real scalar observations.
 Real numeric object samples remain supported. Delay, dimension, histogram and
 FNN metadata preserve their original integer/real types; the installed Rust ABI
 also checks finite samples and size products before allocation. The
-[embedding source-type benchmark](../data/embedding_measurement_types_benchmark_2026-09-26.json)
+[embedding real-runtime parity record](../data/embedding_real_runtime_2026-10-29.json)
 records actual supported backend contracts and measurement limits.
 The Mojo subprocess adapter also validates raw stdout cardinality for
 delay-coordinate rows, mutual-information scalars, and nearest-neighbour

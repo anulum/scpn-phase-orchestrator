@@ -34,6 +34,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Delay embedding: every native owner now follows the Python law.**
+  - Mutual information in the Go, Julia and Mojo owners binned with
+    `floor((x - min) / dx)`. NumPy `histogram2d` instead uses its edge array
+    with an inclusive last edge, so values on a bin edge were counted in
+    different bins. In a probe, 45 of 300 bin-edge cases gave a different
+    mutual information.
+  - The Rust owner took one global range for both windows and multiplied by
+    `1/n`, so its `optimal_delay` followed a different law.
+  - All four natives now share the edge law and use separate window ranges.
+    Each has a native bin-edge unit test.
+  - The nearest-neighbour search compares squared distances in every owner
+    and takes the square root at the end.
+  - `delay_embed`, `mutual_information`, `nearest_neighbor_distances`,
+    `optimal_delay`, `optimal_dimension` and `auto_embed` accept `backend=`.
+    The new `embedding_backend(slot, backend)` names the owner that a call
+    would use.
+  - An explicitly named owner that fails, or returns output that disagrees
+    with the reference, raises `RuntimeError` instead of falling back.
+  - Native mutual information is checked against the reference within a
+    relative 1e-12. Native neighbours are checked for optimality.
+  - The RT027–RT032 substitute tests are replaced by
+    `tests/test_embedding_real_runtime.py`. It calls the real public
+    functions on every available owner and compares them with independent
+    oracles. Child-process profiles cover the Python-only and Rust-only
+    installs.
+  - CI qualifies the Go, Julia and Mojo owners in their lanes.
+  - Comparison evidence: `docs/reference/data/embedding_real_runtime_2026-10-29.json`.
+
 - **Withdrawn: the grid cross-system external validation (IEEE-39 and Kundur against
   ANDES small-signal eigenvalues).** A re-run that reproduces the published values to
   their rounding, with the simulator's messages captured, shows that the published

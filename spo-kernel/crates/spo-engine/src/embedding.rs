@@ -51,45 +51,62 @@ pub fn delay_embed(signal: &[f64], delay: usize, dimension: usize) -> Result<Vec
     Ok(out)
 }
 
+/// NumPy histogram edges of `n_bins` equal-width bins over `[lo, hi]`.
+///
+/// Edge `k` is `k * step + lo` for `k < n_bins` (the product is rounded
+/// before the addition) and the last edge is `hi`.
+fn histogram_edges(lo: f64, hi: f64, n_bins: usize) -> Vec<f64> {
+    let step = (hi - lo) / n_bins as f64;
+    let mut edges: Vec<f64> = (0..n_bins).map(|k| (k as f64 * step) + lo).collect();
+    edges.push(hi);
+    edges
+}
+
+/// Zero-based bin of `value`: the last edge not greater than it, with a value
+/// equal to the last edge counted in the last bin (NumPy `histogramdd`).
+fn histogram_bin(edges: &[f64], value: f64) -> usize {
+    let above = edges.partition_point(|&edge| edge <= value);
+    above.saturating_sub(1).min(edges.len() - 2)
+}
+
+/// Minimum and maximum of a non-empty window.
+fn window_range(window: &[f64]) -> (f64, f64) {
+    window
+        .iter()
+        .fold((f64::INFINITY, f64::NEG_INFINITY), |(lo, hi), &v| {
+            (lo.min(v), hi.max(v))
+        })
+}
+
 /// Average mutual information between x(t) and x(t+lag).
 ///
-/// Histogram-based estimation (Fraser & Swinney 1986).
+/// Histogram-based estimation (Fraser & Swinney 1986). The x and y windows
+/// are binned over their own ranges with NumPy `histogram2d` edges, and the
+/// probabilities divide the counts by the number of pairs, matching the
+/// Python reference term by term.
 fn mutual_information(signal: &[f64], lag: usize, n_bins: usize) -> f64 {
     let t_len = signal.len();
     if lag >= t_len || n_bins == 0 {
         return 0.0;
     }
     let n = t_len - lag;
-
-    // Find min/max for binning
-    let mut min_val = f64::INFINITY;
-    let mut max_val = f64::NEG_INFINITY;
-    for &v in signal {
-        if v < min_val {
-            min_val = v;
-        }
-        if v > max_val {
-            max_val = v;
-        }
-    }
-    let range = max_val - min_val;
-    if range == 0.0 {
+    let x = &signal[..n];
+    let y = &signal[lag..lag + n];
+    let (x_min, x_max) = window_range(x);
+    let (y_min, y_max) = window_range(y);
+    if x_max <= x_min || y_max <= y_min {
         return 0.0;
     }
+    let x_edges = histogram_edges(x_min, x_max, n_bins);
+    let y_edges = histogram_edges(y_min, y_max, n_bins);
 
-    let bin_width = range / n_bins as f64;
-
-    // Build joint histogram
     let mut hist_xy = vec![0u64; n_bins * n_bins];
-    for i in 0..n {
-        let bx = ((signal[i] - min_val) / bin_width) as usize;
-        let by = ((signal[i + lag] - min_val) / bin_width) as usize;
-        let bx = bx.min(n_bins - 1);
-        let by = by.min(n_bins - 1);
+    for (&xv, &yv) in x.iter().zip(y) {
+        let bx = histogram_bin(&x_edges, xv);
+        let by = histogram_bin(&y_edges, yv);
         hist_xy[bx * n_bins + by] += 1;
     }
 
-    // Marginals
     let mut hist_x = vec![0u64; n_bins];
     let mut hist_y = vec![0u64; n_bins];
     for bx in 0..n_bins {
@@ -100,21 +117,17 @@ fn mutual_information(signal: &[f64], lag: usize, n_bins: usize) -> f64 {
         }
     }
 
-    // MI = Σ p(x,y) log(p(x,y) / (p(x) p(y)))
-    let inv_n = 1.0 / n as f64;
+    let total = n as f64;
     let mut mi = 0.0;
     for bx in 0..n_bins {
-        if hist_x[bx] == 0 {
-            continue;
-        }
-        let px = hist_x[bx] as f64 * inv_n;
         for by in 0..n_bins {
             let c = hist_xy[bx * n_bins + by];
-            if c == 0 || hist_y[by] == 0 {
+            if c == 0 || hist_x[bx] == 0 || hist_y[by] == 0 {
                 continue;
             }
-            let pxy = c as f64 * inv_n;
-            let py = hist_y[by] as f64 * inv_n;
+            let pxy = c as f64 / total;
+            let px = hist_x[bx] as f64 / total;
+            let py = hist_y[by] as f64 / total;
             mi += pxy * (pxy / (px * py)).ln();
         }
     }
@@ -155,7 +168,7 @@ fn nearest_neighbor_distances(embedded: &[f64], t: usize, m: usize) -> (Vec<f64>
     let results: Vec<(f64, usize)> = (0..t)
         .into_par_iter()
         .map(|i| {
-            let mut min_d = f64::INFINITY;
+            let mut min_d2 = f64::INFINITY;
             let mut min_idx = 0;
             let ei = &embedded[i * m..(i + 1) * m];
 
@@ -169,12 +182,13 @@ fn nearest_neighbor_distances(embedded: &[f64], t: usize, m: usize) -> (Vec<f64>
                     let diff = ei[k] - ej[k];
                     d2 += diff * diff;
                 }
-                if d2 < min_d * min_d {
-                    min_d = d2.sqrt();
+                // First minimum of the squared distance, as in every backend.
+                if d2 < min_d2 {
+                    min_d2 = d2;
                     min_idx = j;
                 }
             }
-            (min_d, min_idx)
+            (min_d2.sqrt(), min_idx)
         })
         .collect();
 
@@ -408,5 +422,30 @@ mod tests {
             m >= 1 && m <= 5,
             "logistic map embedding dimension {m} unexpected"
         );
+    }
+
+    #[test]
+    fn test_mutual_information_counts_values_on_interior_edges() {
+        // Edges 0.1, 0.15000000000000002, 0.2, 0.25, 0.30000000000000004: both
+        // interior-edge samples open their own bins, so lag 0 gives log(4).
+        let signal = [0.30000000000000004, 0.1, 0.2, 0.15000000000000002];
+        assert_eq!(mutual_information(&signal, 0, 4), 4.0_f64.ln());
+    }
+
+    #[test]
+    fn test_histogram_bin_closes_only_the_last_bin() {
+        let edges = histogram_edges(0.0, 4.0, 4);
+        let bins: Vec<usize> = [0.0, 0.999, 1.0, 3.0, 4.0]
+            .iter()
+            .map(|&v| histogram_bin(&edges, v))
+            .collect();
+        assert_eq!(bins, vec![0, 0, 1, 3, 3]);
+    }
+
+    #[test]
+    fn test_mutual_information_bins_windows_separately() {
+        // lag 4: x = [0, 1] and y = [10, 20] use their own ranges -> log(2).
+        let signal = [0.0, 1.0, 0.0, 1.0, 10.0, 20.0];
+        assert!((mutual_information(&signal, 4, 2) - 2.0_f64.ln()).abs() < 1e-15);
     }
 }

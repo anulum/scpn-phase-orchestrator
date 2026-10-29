@@ -55,6 +55,41 @@ func DelayEmbed(
 	return 0
 }
 
+// histogramEdges returns the NumPy histogram edges of nBins equal-width bins
+// over [lo, hi]: edge k is k*step+lo for k < nBins and the last edge is hi.
+// The explicit conversion keeps the product rounded before the addition.
+func histogramEdges(lo, hi float64, nBins int) []float64 {
+	step := (hi - lo) / float64(nBins)
+	edges := make([]float64, nBins+1)
+	for k := 0; k < nBins; k++ {
+		edges[k] = float64(float64(k)*step) + lo
+	}
+	edges[nBins] = hi
+	return edges
+}
+
+// histogramBin returns the bin of v: the last edge not greater than v, with a
+// value equal to the last edge counted in the last bin (NumPy histogramdd).
+func histogramBin(edges []float64, v float64) int {
+	low, high := 0, len(edges)
+	for low < high {
+		mid := (low + high) / 2
+		if edges[mid] > v {
+			high = mid
+		} else {
+			low = mid + 1
+		}
+	}
+	bin := low - 1
+	if bin >= len(edges)-1 {
+		bin = len(edges) - 2
+	}
+	if bin < 0 {
+		bin = 0
+	}
+	return bin
+}
+
 func mutualInformation(signal []float64, lag, nBins int) float64 {
 	tTotal := len(signal) - lag
 	if tTotal <= 0 {
@@ -83,20 +118,12 @@ func mutualInformation(signal []float64, lag, nBins int) float64 {
 	if xMax <= xMin || yMax <= yMin {
 		return 0.0
 	}
-	dx := (xMax - xMin) / float64(nBins)
-	dy := (yMax - yMin) / float64(nBins)
+	xEdges := histogramEdges(xMin, xMax, nBins)
+	yEdges := histogramEdges(yMin, yMax, nBins)
 	hist := make([]float64, nBins*nBins)
 	for i := 0; i < tTotal; i++ {
-		x := signal[i]
-		y := signal[i+lag]
-		bx := int(math.Floor((x - xMin) / dx))
-		by := int(math.Floor((y - yMin) / dy))
-		if bx >= nBins {
-			bx = nBins - 1
-		}
-		if by >= nBins {
-			by = nBins - 1
-		}
+		bx := histogramBin(xEdges, signal[i])
+		by := histogramBin(yEdges, signal[i+lag])
 		hist[bx*nBins+by] += 1.0
 	}
 	total := float64(tTotal)

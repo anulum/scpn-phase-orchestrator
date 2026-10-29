@@ -168,6 +168,12 @@ jobs:
           python -m benchmarks.dimension_benchmark --parity-gate --T-list 16 --calls 2 \
             --require-backends python julia
           python -c "from juliacall import Main; Main.include('julia/test_dimension.jl')"
+      - name: Qualify actual Julia embedding mathematics and comparison
+        run: |
+          python -m pytest tests/test_embedding_real_runtime.py -k "julia or profile" \
+            -o addopts= --strict-markers --tb=short
+          python -m benchmarks.embedding_benchmark --parity-gate --sizes 64 --calls 2
+          python -c "from juliacall import Main; Main.include('julia/test_embedding.jl')"
       - name: Upload Julia bridge coverage
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
@@ -273,6 +279,12 @@ jobs:
             --require-backends python go
           go -C go test dimension.go dimension_test.go
           go -C go vet dimension.go dimension_test.go
+      - name: Qualify actual Go embedding mathematics and comparison
+        run: |
+          python -m pytest tests/test_embedding_real_runtime.py -k go \
+            -o addopts= --strict-markers --tb=short
+          go -C go test embedding.go embedding_test.go
+          go -C go vet embedding.go embedding_test.go
       - name: Upload Go measurement coverage
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
@@ -377,6 +389,11 @@ jobs:
             -k "mojo or MojoParity" -o addopts= --strict-markers --tb=short
           .venv/bin/python -m benchmarks.dimension_benchmark --parity-gate --T-list 16 --calls 2 \
             --require-backends python mojo
+      - name: Qualify actual Mojo embedding mathematics and comparison
+        run: |
+          .venv/bin/mojo build mojo/embedding.mojo -o mojo/embedding_mojo -Xlinker -lm
+          .venv/bin/python -m pytest tests/test_embedding_real_runtime.py -k mojo \
+            -o addopts= --strict-markers --tb=short
       - name: Upload Mojo measurement coverage
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:

@@ -20,8 +20,9 @@ Build with::
     mojo build mojo/embedding.mojo -o mojo/embedding_mojo -Xlinker -lm
 """
 
-from std.math import log, sqrt, floor
+from std.math import sqrt
 from std.collections import List
+from std.ffi import external_call
 
 
 fn delay_embed(
@@ -34,6 +35,35 @@ fn delay_embed(
     for i in range(t_eff):
         for d in range(dim):
             out[i * dim + d] = signal[i + d * delay]
+
+
+fn histogram_edges(lo: Float64, hi: Float64, n_bins: Int) -> List[Float64]:
+    """NumPy histogram edges: ``k*step + lo`` for ``k < n_bins``, then ``hi``."""
+    var step = (hi - lo) / Float64(n_bins)
+    var edges = List[Float64](capacity=n_bins + 1)
+    for k in range(n_bins):
+        var product = Float64(k) * step
+        edges.append(product + lo)
+    edges.append(hi)
+    return edges^
+
+
+fn histogram_bin(edges: List[Float64], value: Float64) -> Int:
+    """Last edge not greater than ``value``; the last edge closes the last bin."""
+    var low = 0
+    var high = len(edges)
+    while low < high:
+        var mid = (low + high) // 2
+        if edges[mid] > value:
+            high = mid
+        else:
+            low = mid + 1
+    var bin = low - 1
+    if bin > len(edges) - 2:
+        bin = len(edges) - 2
+    if bin < 0:
+        bin = 0
+    return bin
 
 
 fn mutual_information(
@@ -62,20 +92,14 @@ fn mutual_information(
             y_max = v
     if x_max <= x_min or y_max <= y_min:
         return 0.0
-    var dx = (x_max - x_min) / Float64(n_bins)
-    var dy = (y_max - y_min) / Float64(n_bins)
+    var x_edges = histogram_edges(x_min, x_max, n_bins)
+    var y_edges = histogram_edges(y_min, y_max, n_bins)
     var hist = List[Float64](capacity=n_bins * n_bins)
     for _ in range(n_bins * n_bins):
         hist.append(0.0)
     for i in range(t_total):
-        var x = signal[i]
-        var y = signal[i + lag]
-        var bx = Int(floor((x - x_min) / dx))
-        var by = Int(floor((y - y_min) / dy))
-        if bx >= n_bins:
-            bx = n_bins - 1
-        if by >= n_bins:
-            by = n_bins - 1
+        var bx = histogram_bin(x_edges, signal[i])
+        var by = histogram_bin(y_edges, signal[i + lag])
         hist[bx * n_bins + by] = hist[bx * n_bins + by] + 1.0
     var total = Float64(t_total)
     var hx = List[Float64](capacity=n_bins)
@@ -96,7 +120,9 @@ fn mutual_information(
                 var p_xy = h / total
                 var p_x = hx[i] / total
                 var p_y = hy[j] / total
-                mi += p_xy * log(p_xy / (p_x * p_y))
+                mi += p_xy * external_call["log", Float64](
+                    p_xy / (p_x * p_y)
+                )
     return mi
 
 

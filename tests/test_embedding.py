@@ -94,43 +94,27 @@ class TestDelayEmbed:
 
         np.testing.assert_array_equal(emb, [[0.0, 1.0], [1.0, 2.0], [2.0, 3.0]])
 
-    def test_uses_dispatched_backend_kernel(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        calls: dict[str, object] = {}
-
-        def _dispatch(fn_name: str) -> object | None:
-            calls["fn_name"] = fn_name
-            if fn_name == "de":
-                return lambda signal, delay, dimension: np.array(
-                    [0.0, 1.0, 1.0, 2.0, 2.0, 3.0],
-                    dtype=np.float64,
-                )
-            return None
-
-        monkeypatch.setattr(em_mod, "_dispatch", _dispatch)
+    @pytest.mark.native_runtime
+    @pytest.mark.parametrize("backend", ["python", "rust", "mojo", "julia", "go"])
+    def test_each_real_owner_returns_exact_windows(self, backend: str) -> None:
+        """Every actual owner returns the exact shifted windows of the signal."""
+        assert em_mod.embedding_backend("de", backend) == backend
         emb = em_mod.delay_embed(
             np.array([0, 1, 2, 3], dtype=np.float64),
             delay=1,
             dimension=2,
+            backend=backend,
         )
-
-        assert calls["fn_name"] == "de"
-        assert emb.shape == (3, 2)
-        np.testing.assert_array_equal(emb[0], [0.0, 1.0])
-        np.testing.assert_array_equal(emb[1], [1.0, 2.0])
+        np.testing.assert_array_equal(emb, [[0.0, 1.0], [1.0, 2.0], [2.0, 3.0]])
 
     def test_python_fallback_returns_shifted_windows(
         self,
-        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        monkeypatch.setattr(em_mod, "ACTIVE_BACKEND", "python")
-        monkeypatch.setattr(em_mod, "_dispatch", lambda fn_name: None)
         emb = em_mod.delay_embed(
             np.array([5, 4, 3, 2, 1], dtype=np.float64),
             delay=2,
             dimension=2,
+            backend="python",
         )
         np.testing.assert_array_equal(emb, [[5.0, 3.0], [4.0, 2.0], [3.0, 1.0]])
 
@@ -188,10 +172,11 @@ class TestMutualInformationContracts:
                 np.array([], dtype=np.float64),
             )
 
-        monkeypatch.setattr(em_mod, "_dispatch", lambda _fn_name: None)
         monkeypatch.setattr(em_mod.np, "histogram2d", _zero_histogram2d)
 
-        assert mutual_information(np.array([0.0, 1.0, 2.0]), 1, 2) == 0.0
+        assert (
+            mutual_information(np.array([0.0, 1.0, 2.0]), 1, 2, backend="python") == 0.0
+        )
 
 
 class TestNearestNeighborContracts:
@@ -484,12 +469,8 @@ class TestOptimalDelay:
 
     def test_python_fallback_returns_default_without_local_minimum(
         self,
-        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        monkeypatch.setattr(em_mod, "ACTIVE_BACKEND", "python")
-        monkeypatch.setattr(em_mod, "_dispatch", lambda _fn_name: None)
-
-        assert optimal_delay(np.ones(30), max_lag=6, n_bins=4) == 1
+        assert optimal_delay(np.ones(30), max_lag=6, n_bins=4, backend="python") == 1
 
     @pytest.mark.parametrize("max_lag", [False, 0, -1, 1.5, "10"])
     def test_rejects_invalid_max_lag(self, max_lag: Any) -> None:
@@ -518,14 +499,10 @@ class TestOptimalDimension:
 
     def test_python_fallback_skips_zero_distance_neighbors(
         self,
-        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        monkeypatch.setattr(em_mod, "ACTIVE_BACKEND", "python")
-        monkeypatch.setattr(em_mod, "_dispatch", lambda _fn_name: None)
-
         signal = np.array([0.0, 0.0, 1.0, 1.0, 2.0, 2.0] * 4)
 
-        assert optimal_dimension(signal, delay=1, max_dim=3) >= 1
+        assert optimal_dimension(signal, delay=1, max_dim=3, backend="python") >= 1
 
     @pytest.mark.parametrize("delay", [False, 0, -1, 1.5, "1"])
     def test_rejects_invalid_delay(self, delay: Any) -> None:
@@ -648,8 +625,10 @@ class TestEmbeddingBackendFallbacks:
         monkeypatch.setattr(
             em_mod,
             "_dispatch",
-            lambda fn_name: (
-                (lambda *_args: backend_output) if fn_name == "de" else None
+            lambda fn_name, backend="auto": (
+                ("faulty", lambda *_args: backend_output)
+                if fn_name == "de"
+                else ("python", None)
             ),
         )
 
@@ -667,7 +646,9 @@ class TestEmbeddingBackendFallbacks:
         monkeypatch.setattr(
             em_mod,
             "_dispatch",
-            lambda fn_name: _raising_de if fn_name == "de" else None,
+            lambda fn_name, backend="auto": (
+                ("faulty", _raising_de) if fn_name == "de" else ("python", None)
+            ),
         )
         emb = delay_embed(np.array([0.0, 1.0, 2.0, 3.0], dtype=np.float64), 1, 2)
         np.testing.assert_array_equal(emb, [[0.0, 1.0], [1.0, 2.0], [2.0, 3.0]])
@@ -681,7 +662,9 @@ class TestEmbeddingBackendFallbacks:
         monkeypatch.setattr(
             em_mod,
             "_dispatch",
-            lambda fn_name: _raising_mi if fn_name == "mi" else None,
+            lambda fn_name, backend="auto": (
+                ("faulty", _raising_mi) if fn_name == "mi" else ("python", None)
+            ),
         )
         mi = mutual_information(np.array([0.0, 1.0, 0.0, 1.0], dtype=np.float64), 1, 2)
         assert np.isfinite(mi)
@@ -708,7 +691,11 @@ class TestEmbeddingBackendFallbacks:
         monkeypatch.setattr(
             em_mod,
             "_dispatch",
-            lambda fn_name: (lambda *_args: backend_value) if fn_name == "mi" else None,
+            lambda fn_name, backend="auto": (
+                ("faulty", lambda *_args: backend_value)
+                if fn_name == "mi"
+                else ("python", None)
+            ),
         )
 
         with pytest.raises(ValueError):
@@ -725,7 +712,9 @@ class TestEmbeddingBackendFallbacks:
         monkeypatch.setattr(
             em_mod,
             "_dispatch",
-            lambda fn_name: _raising_nn if fn_name == "nn" else None,
+            lambda fn_name, backend="auto": (
+                ("faulty", _raising_nn) if fn_name == "nn" else ("python", None)
+            ),
         )
         dist, idx = nearest_neighbor_distances(np.array([[0.0], [1.0], [3.0]]))
         np.testing.assert_allclose(dist, [1.0, 1.0, 2.0])
@@ -782,8 +771,10 @@ class TestEmbeddingBackendFallbacks:
         monkeypatch.setattr(
             em_mod,
             "_dispatch",
-            lambda fn_name: (
-                (lambda *_args: (distances, indices)) if fn_name == "nn" else None
+            lambda fn_name, backend="auto": (
+                ("faulty", lambda *_args: (distances, indices))
+                if fn_name == "nn"
+                else ("python", None)
             ),
         )
 
@@ -837,53 +828,217 @@ class TestEmbeddingBackendFallbacks:
         assert 1 <= dim <= 5
 
 
-class TestDispatchFallbackChain:
-    def test_dispatch_prefers_active_backend_before_available_order(
+class TestDispatchOwnership:
+    @pytest.mark.native_runtime
+    def test_auto_selects_active_owner_then_first_owner_with_the_kernel(self) -> None:
+        """Rust owns embedding and the searches; MI and kNN fall to the next owner.
+
+        Rust exposes no standalone MI or kNN kernel, so automatic selection
+        uses the first owner in ``AVAILABLE_BACKENDS`` that provides it.
+        """
+        available = list(em_mod.AVAILABLE_BACKENDS)
+        assert available[0] == em_mod.ACTIVE_BACKEND
+        assert available[-1] == "python"
+        assert em_mod.embedding_backend("de") == em_mod.ACTIVE_BACKEND
+        first_with_kernel = next(name for name in available if name != "rust")
+        assert em_mod.embedding_backend("mi") == first_with_kernel
+        assert em_mod.embedding_backend("nn") == first_with_kernel
+        searches = "rust" if em_mod.ACTIVE_BACKEND == "rust" else "python"
+        assert em_mod.embedding_backend("optimal_delay") == searches
+        assert em_mod.embedding_backend("optimal_dimension") == searches
+
+    @pytest.mark.native_runtime
+    def test_repeated_auto_calls_agree_with_explicit_owner(self) -> None:
+        """Automatic and explicit calls of the selected owners give equal results."""
+        signal = np.sin(np.linspace(0.0, 12.0, 120))
+        for _ in range(2):
+            np.testing.assert_array_equal(
+                delay_embed(signal, 2, 3),
+                delay_embed(signal, 2, 3, backend=em_mod.embedding_backend("de")),
+            )
+            assert mutual_information(signal, 3, 8) == mutual_information(
+                signal, 3, 8, backend=em_mod.embedding_backend("mi")
+            )
+
+    def test_unknown_operation_and_owner_are_refused(self) -> None:
+        """Unknown operations and owner names are refused before any work."""
+        with pytest.raises(ValueError, match="unknown embedding operation"):
+            em_mod.embedding_backend("fft")
+        with pytest.raises(ValueError, match="unknown embedding backend"):
+            em_mod.embedding_backend("de", "cuda")
+        with pytest.raises(ValueError, match="unknown embedding backend"):
+            em_mod.embedding_backend("optimal_delay", "cuda")
+        with pytest.raises(ValueError, match="unknown embedding backend"):
+            optimal_delay(np.ones(4), max_lag=1, backend="cuda")
+
+    @pytest.mark.native_runtime
+    def test_rust_refuses_operations_it_does_not_own(self) -> None:
+        """An explicit Rust request for MI or kNN fails instead of falling back."""
+        assert em_mod.embedding_backend("optimal_delay", "julia") == "python"
+        with pytest.raises(RuntimeError, match="embedding backend 'rust' lacks mi"):
+            em_mod.embedding_backend("mi", "rust")
+        with pytest.raises(RuntimeError, match="embedding backend 'rust' lacks mi"):
+            mutual_information(np.arange(8.0), 1, 2, backend="rust")
+        with pytest.raises(RuntimeError, match="embedding backend 'rust' lacks nn"):
+            nearest_neighbor_distances(np.arange(6.0).reshape(3, 2), backend="rust")
+
+
+def _faulty_dispatch(slot: str, value: object) -> object:
+    """Return a dispatcher whose owner ``faulty`` serves one slot with ``value``."""
+
+    def dispatch(fn_name: str, backend: str = "auto") -> tuple[str, object | None]:
+        if fn_name != slot:
+            return "python", None
+        if callable(value):
+            return "faulty", value
+        return "faulty", lambda *_args: value
+
+    return dispatch
+
+
+def _raise_runtime(*_args: object) -> object:
+    """Fail like a native call that lost its runtime."""
+    raise RuntimeError("native runtime lost")
+
+
+class TestExplicitOwnerContracts:
+    """Deliberately faulty owners: explicit requests fail, results are checked."""
+
+    @pytest.mark.parametrize(
+        ("slot", "call"),
+        [
+            ("de", lambda: delay_embed(np.arange(6.0), 1, 2, backend="go")),
+            ("mi", lambda: mutual_information(np.arange(6.0), 1, 2, backend="go")),
+            (
+                "nn",
+                lambda: nearest_neighbor_distances(
+                    np.arange(6.0).reshape(3, 2), backend="go"
+                ),
+            ),
+        ],
+    )
+    def test_failing_explicit_owner_is_refused(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        slot: str,
+        call: Any,
+    ) -> None:
+        """An explicit owner whose native call fails never falls back silently."""
+        monkeypatch.setattr(em_mod, "_dispatch", _faulty_dispatch(slot, _raise_runtime))
+        with pytest.raises(RuntimeError, match="embedding backend 'faulty' failed"):
+            call()
+
+    @pytest.mark.parametrize(
+        ("slot", "call"),
+        [
+            (
+                "optimal_delay",
+                lambda: optimal_delay(np.sin(np.arange(40.0)), 10, backend="rust"),
+            ),
+            (
+                "optimal_dimension",
+                lambda: optimal_dimension(
+                    np.sin(np.arange(40.0)), 1, 4, backend="rust"
+                ),
+            ),
+        ],
+    )
+    def test_failing_explicit_rust_search_is_refused(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        slot: str,
+        call: Any,
+    ) -> None:
+        """A failing explicit Rust search raises instead of composing primitives."""
+        monkeypatch.setattr(
+            em_mod,
+            "_dispatch",
+            lambda fn_name, backend="auto": ("rust", _raise_runtime),
+        )
+        with pytest.raises(RuntimeError, match="embedding backend 'rust' failed"):
+            call()
+
+    def test_diverging_mutual_information_is_refused(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        calls: dict[str, int] = {"go": 0, "julia": 0}
+        """A finite non-negative MI that disagrees with the reference is refused."""
+        monkeypatch.setattr(em_mod, "_dispatch", _faulty_dispatch("mi", 0.25))
+        with pytest.raises(ValueError, match="diverged from reference"):
+            mutual_information([0.0, 1.0, 0.0, 1.0], 1, 2)
 
-        def _go_backend() -> dict[str, object]:
-            calls["go"] += 1
-            return {"de": None, "mi": None, "nn": None}
+    @pytest.mark.parametrize(
+        ("distances", "indices", "message"),
+        [
+            ([1.0, 1.0, 1.5], [1, 0, 1], "differ from their neighbours"),
+            ([1.0, 2.0, 2.0], [1, 2, 1], "not nearest neighbours"),
+        ],
+    )
+    def test_wrong_nearest_neighbours_are_refused(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        distances: list[float],
+        indices: list[int],
+        message: str,
+    ) -> None:
+        """Points 0, 1, 3: a wrong distance or a non-minimal neighbour is refused."""
+        payload = (np.array(distances), np.array(indices, dtype=np.int64))
+        monkeypatch.setattr(em_mod, "_dispatch", _faulty_dispatch("nn", payload))
+        with pytest.raises(ValueError, match=message):
+            nearest_neighbor_distances([[0.0], [1.0], [3.0]])
 
-        def _julia_backend() -> dict[str, object]:
-            calls["julia"] += 1
-            return {"de": lambda signal, delay, dim: np.zeros(6, dtype=np.float64)}
-
-        monkeypatch.setattr(em_mod, "_BACKEND_CACHE", {})
-        monkeypatch.setattr(em_mod, "ACTIVE_BACKEND", "go")
-        monkeypatch.setattr(em_mod, "AVAILABLE_BACKENDS", ["julia", "go", "python"])
+    @pytest.mark.parametrize(
+        ("value", "message"),
+        [(True, "must be an integer"), (2.5, "must be an integer"), (99, "outside")],
+    )
+    def test_rust_search_selection_must_be_an_admissible_integer(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        value: object,
+        message: str,
+    ) -> None:
+        """Native searches must return an integer inside their search range."""
         monkeypatch.setattr(
-            em_mod, "_LOADERS", {"go": _go_backend, "julia": _julia_backend}
+            em_mod,
+            "_dispatch",
+            lambda fn_name, backend="auto": ("rust", lambda *_args: value),
+        )
+        signal = np.sin(np.arange(40.0))
+        with pytest.raises(ValueError, match=message):
+            optimal_delay(signal, 10, backend="rust")
+        with pytest.raises(ValueError, match=message):
+            optimal_dimension(signal, 1, 4, backend="rust")
+
+    def test_auto_searches_compose_primitives_when_rust_lacks_them(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """With Rust active but no native search, auto composes the primitives."""
+        monkeypatch.setattr(em_mod, "ACTIVE_BACKEND", "rust")
+        monkeypatch.setattr(
+            em_mod,
+            "_dispatch",
+            lambda fn_name, backend="auto": ("python", None),
+        )
+        signal = np.sin(0.3 * np.arange(90))
+        assert optimal_delay(signal, 30, 12) == optimal_delay(
+            signal, 30, 12, backend="python"
+        )
+        assert optimal_dimension(signal, 2, 5) == optimal_dimension(
+            signal, 2, 5, backend="python"
         )
 
-        fn = em_mod._dispatch("de")
-        assert fn is not None
-        assert calls == {"go": 1, "julia": 1}
-
-    def test_dispatch_uses_cached_loader_once(
+    def test_unavailable_owner_is_skipped_or_refused(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        calls: dict[str, int] = {"go": 0}
+        """A loader failure skips the owner in auto mode and refuses it explicitly."""
 
-        def _go_backend() -> dict[str, object]:
-            calls["go"] += 1
-            return {
-                "de": lambda signal, delay, dim: np.zeros(6, dtype=np.float64),
-                "mi": lambda signal, lag, n_bins: 0.0,
-                "nn": lambda emb: (
-                    np.zeros(1, dtype=np.float64),
-                    np.zeros(1, dtype=np.int64),
-                ),
-            }
+        def _unavailable() -> dict[str, object]:
+            raise OSError("shared library missing")
 
         monkeypatch.setattr(em_mod, "_BACKEND_CACHE", {})
         monkeypatch.setattr(em_mod, "ACTIVE_BACKEND", "go")
         monkeypatch.setattr(em_mod, "AVAILABLE_BACKENDS", ["go", "python"])
-        monkeypatch.setattr(em_mod, "_LOADERS", {"go": _go_backend})
-
-        em_mod._dispatch("de")
-        em_mod._dispatch("mi")
-
-        assert calls["go"] == 1
+        monkeypatch.setitem(em_mod._LOADERS, "go", _unavailable)
+        assert em_mod.embedding_backend("de") == "python"
+        assert em_mod.embedding_backend("optimal_delay") == "python"
+        with pytest.raises(RuntimeError, match="embedding backend 'go' unavailable"):
+            em_mod.embedding_backend("de", "go")

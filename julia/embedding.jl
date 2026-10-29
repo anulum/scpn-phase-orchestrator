@@ -44,6 +44,34 @@ function delay_embed(
 end
 
 
+"""
+    histogram_edges(lo, hi, n_bins)
+
+NumPy histogram edges over ``[lo, hi]``: edge ``k`` is ``k*step + lo`` for
+``k < n_bins`` (product rounded before the addition) and the last edge is ``hi``.
+"""
+function histogram_edges(lo::Float64, hi::Float64, n_bins::Integer)
+    step = (hi - lo) / Float64(n_bins)
+    edges = Vector{Float64}(undef, n_bins + 1)
+    for k in 0:(n_bins - 1)
+        product = Float64(k) * step
+        edges[k + 1] = product + lo
+    end
+    edges[n_bins + 1] = hi
+    return edges
+end
+
+"""
+    histogram_bin(edges, value)
+
+Zero-based bin of ``value``: the last edge not greater than it, with a value
+equal to the last edge counted in the last bin (NumPy ``histogramdd``).
+"""
+function histogram_bin(edges::Vector{Float64}, value::Float64)
+    bin = searchsortedlast(edges, value) - 1
+    return clamp(bin, 0, length(edges) - 2)
+end
+
 function mutual_information(
     signal::AbstractVector{Float64},
     lag::Integer,
@@ -64,21 +92,13 @@ function mutual_information(
         return 0.0
     end
 
-    dx = (x_max - x_min) / Float64(n_bins)
-    dy = (y_max - y_min) / Float64(n_bins)
+    x_edges = histogram_edges(x_min, x_max, n_bins)
+    y_edges = histogram_edges(y_min, y_max, n_bins)
 
     hist = zeros(Float64, n_bins * n_bins)
     @inbounds for i in 1:t_total
-        x = signal[i]
-        y = signal[i + lag]
-        bx = Int(floor((x - x_min) / dx))
-        by = Int(floor((y - y_min) / dy))
-        if bx >= n_bins
-            bx = n_bins - 1
-        end
-        if by >= n_bins
-            by = n_bins - 1
-        end
+        bx = histogram_bin(x_edges, signal[i])
+        by = histogram_bin(y_edges, signal[i + lag])
         hist[bx * n_bins + by + 1] += 1.0
     end
 

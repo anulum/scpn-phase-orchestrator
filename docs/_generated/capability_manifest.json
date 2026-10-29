@@ -12,7 +12,7 @@
     "research_experimental_modules": 204,
     "runtime_serving_modules": 160,
     "rust_kernel_files": 132,
-    "test_files": 1112
+    "test_files": 1113
   },
   "documentation": {
     "public_pages": [
@@ -2291,6 +2291,7 @@
       "tests/test_embedding_backends.py",
       "tests/test_embedding_benchmark.py",
       "tests/test_embedding_measurement_inputs.py",
+      "tests/test_embedding_real_runtime.py",
       "tests/test_embedding_stability.py",
       "tests/test_embedding_validation_guards.py",
       "tests/test_end_to_end_pipeline.py",

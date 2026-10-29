@@ -36,6 +36,7 @@ replacement for raw trace quality checks.
 ```python
 from scpn_phase_orchestrator.monitor.embedding import (
     delay_embed,
+    embedding_backend,
     mutual_information,
     nearest_neighbor_distances,
     optimal_delay,
@@ -54,6 +55,40 @@ v(t) = [x(t), x(t + tau), x(t + 2 tau), ...]
 `mutual_information(signal, lag, n_bins)` estimates average mutual
 information for delay selection. `nearest_neighbor_distances(embedded)`
 supports false-nearest-neighbor dimension selection.
+
+## Owner selection
+
+Every function accepts `backend="auto"` or one owner: `rust`, `mojo`, `julia`,
+`go` or `python`.
+
+- `"auto"` uses the fastest available owner that provides the operation. Rust
+  owns delay embedding and the two native searches. Rust has no standalone MI
+  or kNN kernel, so those operations go to the next available owner.
+- An explicit owner must be available, must provide the operation and must
+  succeed. Otherwise the call raises `RuntimeError`; it never falls back.
+  For example, `mutual_information(..., backend="rust")` is refused.
+- `optimal_delay` and `optimal_dimension` with a non-Rust owner compose that
+  owner's MI, embedding and kNN primitives.
+- `embedding_backend(slot, backend="auto")` reports the owner that serves
+  `"de"`, `"mi"`, `"nn"`, `"optimal_delay"` or `"optimal_dimension"`. For the
+  searches, `python` means the composed search.
+
+## Shared numerical law
+
+All owners compute the same quantities:
+
+- **Mutual information.** Each window (`x(t)` and `x(t + lag)`) is binned over
+  its own range with the edges of NumPy `histogram2d`: edge `k` is
+  `k * step + min` and the last edge is `max`. A value on an interior edge
+  opens the next bin; the last edge closes the last bin. Probabilities divide
+  counts by the number of pairs. Native results are checked against the
+  NumPy reference with a relative tolerance of `1e-12`.
+- **Nearest neighbours.** The neighbour of a row is the first minimum of the
+  squared distance accumulated over coordinates in order; the distance is its
+  square root. A native result is accepted when each distance equals the
+  distance to its own neighbour within `1e-14` relative and that neighbour is
+  minimal within `1e-12` relative. The Mojo compiler may fuse the squared sum
+  into multiply-adds, which changes the last bit.
 
 ## Direct backend boundary
 
@@ -92,22 +127,25 @@ finite nonnegative FNN tolerances. Embedding-window, output-size and histogram-s
 products are checked before allocation. A valid delay exceeding the series length
 returns dimension 1 from the native FNN selector without signed truncation.
 
-The [source-type benchmark](../data/embedding_measurement_types_benchmark_2026-09-26.json)
-records the canonical parity gate on actual Python, Rust, Go, Julia and Mojo
-backends at 64 and 160 samples, with source and extension hashes. Rust has no
-standalone mutual-information or nearest-neighbor FFI; its supported contracts
-are recorded separately. Three calls per backend on a shared host are local
-regression evidence, not a controlled speedup comparison.
+The [real-runtime parity record](../data/embedding_real_runtime_2026-10-29.json)
+holds the canonical parity gate on actual Python, Rust, Go, Julia and Mojo
+backends at 64 and 160 samples, with source, extension and native-artefact
+hashes. Rust has no standalone mutual-information or nearest-neighbor FFI; its
+supported contracts are recorded separately. Three calls per backend on a shared
+host are local regression evidence, not a controlled speedup comparison. The
+earlier [source-type benchmark](../data/embedding_measurement_types_benchmark_2026-09-26.json)
+predates the shared binning law.
 
 ## Invariants
 
 `delay_embed` is exact indexing and should match across backends without
 tolerance. Mutual information is non-negative. Nearest-neighbor distances
 are finite non-negative values with integer neighbor indices in range and
-no self-neighbor for non-trivial inputs. Optional backend outputs that violate
-those invariants are rejected and the dispatcher falls back to the next
-available backend rather than returning a corrupted embedding or a truncated
-neighbor index.
+no self-neighbor for non-trivial inputs. Backend outputs that violate those
+invariants, or that disagree with the reference, raise `ValueError`; they are
+never returned. In automatic selection, an owner whose native call fails with a
+runtime or loading error is replaced by the Python reference; an explicit owner
+raises `RuntimeError` instead.
 
 ## Practical usage profile
 

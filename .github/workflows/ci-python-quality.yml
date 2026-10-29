@@ -361,7 +361,7 @@ jobs:
           pip install --require-hashes --no-deps -r requirements/mojo-lock.txt
           asset_root="$(python -c 'import sys; print(sys.prefix + "/lib/python" + str(sys.version_info.major) + "." + str(sys.version_info.minor))')"
           mkdir -p "$asset_root/go" "$asset_root/julia" "$asset_root/mojo"
-          for name in attnres basin_stability chimera hodge delay dimension; do
+          for name in attnres basin_stability chimera hodge delay dimension embedding; do
             go -C go build -buildmode=c-shared -o "$asset_root/go/lib${name}.so" "${name}.go"
             cp "julia/${name}.jl" "$asset_root/julia/${name}.jl"
             mojo build "mojo/${name}.mojo" --target-cpu x86-64 \
@@ -380,7 +380,7 @@ jobs:
               'files': {str(path): hashlib.sha256(path.read_bytes()).hexdigest() for path in files},
               'sources': {str(path): hashlib.sha256(path.read_bytes()).hexdigest()
                           for folder, extension in (('go', 'go'), ('julia', 'jl'), ('mojo', 'mojo'))
-                          for name in ('attnres', 'basin_stability', 'chimera', 'hodge', 'delay', 'dimension')
+                          for name in ('attnres', 'basin_stability', 'chimera', 'hodge', 'delay', 'dimension', 'embedding')
                           for path in (pathlib.Path(folder) / (name + '.' + extension),)},
           }, indent=2) + '\n')
           PY

@@ -28,19 +28,30 @@ primitives):
   ``optimal_dimension``, and :func:`delay_embed`.
 
 The Rust backend exposes native ``optimal_delay_rust`` and
-``optimal_dimension_rust`` entry points; when Rust is active those
-wrappers use the native path for maximum throughput. The Python
-fallback composes the primitives through the dispatcher.
+``optimal_dimension_rust`` entry points; when Rust is the selected
+owner those wrappers use the native path. Other owners compose the
+primitives through the dispatcher.
 
 MI and NN are exposed by Julia / Go / Mojo / Python only — Rust
-does not expose standalone MI or kNN FFI; those slots dispatch to
-the next available backend in the chain.
+does not expose standalone MI or kNN FFI. In automatic selection
+those slots dispatch to the next available backend in the chain; an
+explicitly requested ``backend="rust"`` refuses them.
+
+Every public function accepts ``backend``: ``"auto"`` (the fallback
+chain) or one owner name. An explicit owner must be available and
+must succeed; it never falls back silently. All owners share one
+numerical law: mutual information bins each window over its own range
+with NumPy ``histogram2d`` edges, and nearest neighbours take the first
+minimum of the sequentially accumulated squared distance. Native
+mutual-information and nearest-neighbour results are checked against
+that reference before they are returned.
 """
 
 from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
+from importlib import import_module
 from numbers import Integral, Real
 from typing import TypeAlias, cast
 
@@ -59,6 +70,7 @@ __all__ = [
     "EmbeddingResult",
     "auto_embed",
     "delay_embed",
+    "embedding_backend",
     "mutual_information",
     "nearest_neighbor_distances",
     "optimal_delay",
@@ -71,17 +83,24 @@ _BACKEND_NAMES = ("rust", "mojo", "julia", "go", "python")
 
 def _load_rust_fns() -> dict[str, object]:
     """Load the Rust delay-embedding backend callables."""
-    from spo_kernel import (
-        delay_embed_rust,
-        optimal_delay_rust,
-        optimal_dimension_rust,
+    module = import_module("spo_kernel")
+    delay_embed_rust: object = getattr(module, "delay_embed_rust", None)
+    optimal_delay_rust: object = getattr(module, "optimal_delay_rust", None)
+    optimal_dimension_rust: object = getattr(module, "optimal_dimension_rust", None)
+    if not all(
+        callable(fn)
+        for fn in (delay_embed_rust, optimal_delay_rust, optimal_dimension_rust)
+    ):
+        raise ImportError("spo_kernel lacks callable delay-embedding exports")
+    native_delay_embed = cast(
+        "Callable[[FloatArray, int, int], object]", delay_embed_rust
     )
 
     def _de(signal: FloatArray, delay: int, dimension: int) -> FloatArray:
         """Call the Rust delay-embedding kernel with a contiguous signal."""
         flat = np.ascontiguousarray(signal, dtype=np.float64)
         return np.asarray(
-            delay_embed_rust(flat, int(delay), int(dimension)),
+            native_delay_embed(flat, int(delay), int(dimension)),
             dtype=np.float64,
         )
 
@@ -180,28 +199,99 @@ def _resolve_backends() -> tuple[str, list[str]]:
 ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
-def _dispatch(fn_name: str) -> object | None:
-    """Return the backend function or ``None`` to signal Python fallback.
+def _dispatch(fn_name: str, backend: str = "auto") -> tuple[str, object | None]:
+    """Resolve a callable together with its owner; require explicit owners.
 
-    If the active backend lacks ``fn_name`` (e.g. Rust has no standalone
-    MI kernel), we fall through to the next available backend in the
-    chain rather than crashing or silently diverging.
+    In automatic selection a backend that lacks ``fn_name`` (Rust has no
+    standalone MI or kNN kernel) falls through to the next available owner.
+    An explicitly requested owner must provide the callable.
+
+    Parameters
+    ----------
+    fn_name : str
+        Backend slot: ``"de"``, ``"mi"``, ``"nn"``, ``"optimal_delay"`` or
+        ``"optimal_dimension"``.
+    backend : str
+        ``"auto"`` or one of ``rust``, ``mojo``, ``julia``, ``go``, ``python``.
+
+    Returns
+    -------
+    tuple[str, object | None]
+        The owner name and its callable, or ``("python", None)`` for the
+        Python reference.
+
+    Raises
+    ------
+    ValueError
+        If ``backend`` is not a known owner.
+    RuntimeError
+        If an explicitly requested owner is unavailable or lacks the slot.
     """
-    ordered_backends = [ACTIVE_BACKEND] + list(AVAILABLE_BACKENDS)
+    _require_known_backend(backend)
+    required = backend != "auto"
+    ordered = [ACTIVE_BACKEND, *AVAILABLE_BACKENDS] if backend == "auto" else [backend]
     seen: set[str] = set()
-    for name in ordered_backends:
+    for name in ordered:
         if name in seen:
             continue
         seen.add(name)
         if name == "python":
-            return None
+            return "python", None
         try:
-            fn = _load_backend(name)[fn_name]
-        except (ImportError, RuntimeError, OSError, KeyError):
+            fn = _load_backend(name).get(fn_name)
+        except (ImportError, RuntimeError, OSError, KeyError) as exc:
+            if required:
+                raise RuntimeError(f"embedding backend {name!r} unavailable") from exc
             continue
-        if fn is not None:
-            return fn
-    return None
+        if callable(fn):
+            return name, fn
+        if required:
+            raise RuntimeError(f"embedding backend {name!r} lacks {fn_name}")
+    return "python", None
+
+
+_SLOTS = ("de", "mi", "nn", "optimal_delay", "optimal_dimension")
+
+
+def embedding_backend(slot: str, backend: str = "auto") -> str:
+    """Return the owner that serves one embedding operation.
+
+    Parameters
+    ----------
+    slot : str
+        ``"de"`` (delay embedding), ``"mi"`` (mutual information), ``"nn"``
+        (nearest neighbours), ``"optimal_delay"`` or ``"optimal_dimension"``.
+    backend : str
+        ``"auto"`` or an explicit owner name.
+
+    Returns
+    -------
+    str
+        The owner name: ``rust``, ``mojo``, ``julia``, ``go`` or ``python``.
+        For the two searches, ``python`` means the search composes the
+        primitives of the requested owner.
+
+    Raises
+    ------
+    ValueError
+        If ``slot`` or ``backend`` is unknown.
+    RuntimeError
+        If an explicitly requested owner is unavailable or lacks the operation.
+    """
+    if slot not in _SLOTS:
+        raise ValueError(f"unknown embedding operation: {slot!r}")
+    if slot in ("optimal_delay", "optimal_dimension") and backend not in (
+        "rust",
+        "auto",
+    ):
+        _require_known_backend(backend)
+        return "python"
+    if slot in ("optimal_delay", "optimal_dimension") and (
+        backend == "auto" and ACTIVE_BACKEND != "rust"
+    ):
+        return "python"
+    owner, _ = _dispatch(slot, backend)
+    return owner
 
 
 @dataclass
@@ -470,10 +560,26 @@ def _validate_nn_output(
     )
 
 
+_NATIVE_FAILURES = (ImportError, RuntimeError, OSError, KeyError)
+_MI_RELATIVE_TOLERANCE = 1e-12
+
+
+def _owner_failed(owner: str) -> RuntimeError:
+    """Return the refusal raised when an explicitly requested owner fails."""
+    return RuntimeError(f"embedding backend {owner!r} failed")
+
+
+def _require_known_backend(backend: str) -> None:
+    """Refuse an unknown owner name before any computation."""
+    if backend not in (*_BACKEND_NAMES, "auto"):
+        raise ValueError(f"unknown embedding backend: {backend!r}")
+
+
 def delay_embed(
     signal: object,
     delay: object,
     dimension: object,
+    backend: str = "auto",
 ) -> FloatArray:
     """Time-delay embedding: ``v(t) = [x(t), x(t+τ), x(t+2τ), …]``.
 
@@ -485,6 +591,9 @@ def delay_embed(
         Embedding delay ``τ`` in samples.
     dimension : object
         Embedding dimension.
+    backend : str
+        ``"auto"`` or an explicit owner (``rust``, ``mojo``, ``julia``,
+        ``go``, ``python``).
 
     Returns
     -------
@@ -494,7 +603,10 @@ def delay_embed(
     Raises
     ------
     ValueError
-        If ``delay`` or ``dimension`` is non-positive or too large for the signal.
+        If ``delay`` or ``dimension`` is non-positive or too large for the
+        signal, or a backend returns a wrong embedding.
+    RuntimeError
+        If an explicitly requested backend is unavailable or fails.
     """
     s = _validate_signal(signal)
     delay = _validate_int_at_least(delay, name="delay", minimum=1)
@@ -507,7 +619,7 @@ def delay_embed(
         )
         raise ValueError(msg)
 
-    backend_fn = _dispatch("de")
+    owner, backend_fn = _dispatch("de", backend)
     if backend_fn is not None:
         fn = cast("Callable[[FloatArray, int, int], FloatArray]", backend_fn)
         try:
@@ -518,8 +630,9 @@ def delay_embed(
                 t_effective=t_eff,
                 dimension=dimension,
             )
-        except (ImportError, RuntimeError, OSError, KeyError):
-            backend_fn = None
+        except _NATIVE_FAILURES as exc:
+            if backend != "auto":
+                raise _owner_failed(owner) from exc
 
     indices = np.arange(dimension) * delay
     rows = np.arange(t_eff)[:, np.newaxis] + indices[np.newaxis, :]
@@ -533,44 +646,8 @@ def delay_embed(
     )
 
 
-def mutual_information(
-    signal: object,
-    lag: object,
-    n_bins: object = 32,
-) -> float:
-    """Fraser-Swinney 1986 average mutual information at ``lag``.
-
-    Parameters
-    ----------
-    signal : object
-        Real-valued time series, shape ``(T,)``.
-    lag : object
-        Lag in samples.
-    n_bins : object
-        Number of histogram bins.
-
-    Returns
-    -------
-    float
-        The average mutual information at the given lag.
-    """
-    s = _validate_signal(signal)
-    lag = _validate_int_at_least(lag, name="lag", minimum=0)
-    n_bins = _validate_int_at_least(n_bins, name="n_bins", minimum=2)
-    if s.size - lag <= 0:
-        return 0.0
-
-    backend_fn = _dispatch("mi")
-    if backend_fn is not None:
-        fn = cast("Callable[[FloatArray, int, int], float]", backend_fn)
-        try:
-            return _validate_non_negative_scalar(
-                fn(s, lag, n_bins),
-                name="mutual_information",
-            )
-        except (ImportError, RuntimeError, OSError, KeyError):
-            backend_fn = None
-
+def _mutual_information_reference(s: FloatArray, lag: int, n_bins: int) -> float:
+    """Return the NumPy ``histogram2d`` mutual-information reference."""
     t_total = s.size - lag
     x = s[:t_total]
     y = s[lag : lag + t_total]
@@ -591,54 +668,185 @@ def mutual_information(
     return _validate_non_negative_scalar(mi, name="mutual_information")
 
 
+def _validate_mi_against_reference(value: float, expected: float) -> float:
+    """Return a native MI value only when it agrees with the reference."""
+    if abs(value - expected) > _MI_RELATIVE_TOLERANCE * max(1.0, abs(expected)):
+        raise ValueError("mutual_information backend output diverged from reference")
+    return value
+
+
+def mutual_information(
+    signal: object,
+    lag: object,
+    n_bins: object = 32,
+    backend: str = "auto",
+) -> float:
+    """Fraser-Swinney 1986 average mutual information at ``lag``.
+
+    Each window is binned over its own range with NumPy ``histogram2d``
+    edges; a value on an interior edge opens the next bin and the last edge
+    closes the last bin.
+
+    Parameters
+    ----------
+    signal : object
+        Real-valued time series, shape ``(T,)``.
+    lag : object
+        Lag in samples.
+    n_bins : object
+        Number of histogram bins.
+    backend : str
+        ``"auto"`` or an explicit owner. Rust has no MI kernel, so
+        ``backend="rust"`` is refused.
+
+    Returns
+    -------
+    float
+        The average mutual information at the given lag.
+
+    Raises
+    ------
+    ValueError
+        If an input is invalid or a backend result diverges from the reference.
+    RuntimeError
+        If an explicitly requested backend is unavailable, lacks MI or fails.
+    """
+    s = _validate_signal(signal)
+    lag = _validate_int_at_least(lag, name="lag", minimum=0)
+    n_bins = _validate_int_at_least(n_bins, name="n_bins", minimum=2)
+    owner, backend_fn = _dispatch("mi", backend)
+    if s.size - lag <= 0:
+        return 0.0
+
+    expected = _mutual_information_reference(s, lag, n_bins)
+    if backend_fn is not None:
+        fn = cast("Callable[[FloatArray, int, int], float]", backend_fn)
+        try:
+            value = _validate_non_negative_scalar(
+                fn(s, lag, n_bins),
+                name="mutual_information",
+            )
+        except _NATIVE_FAILURES as exc:
+            if backend != "auto":
+                raise _owner_failed(owner) from exc
+        else:
+            return _validate_mi_against_reference(value, expected)
+    return expected
+
+
+def _nearest_neighbor_reference(e: FloatArray) -> tuple[FloatArray, IntArray]:
+    """Return the first minimum of the sequentially summed squared distance."""
+    t = int(e.shape[0])
+    nn_dist = np.full(t, np.inf)
+    nn_idx = np.zeros(t, dtype=np.int64)
+    for i in range(t):
+        squared = np.zeros(t, dtype=np.float64)
+        for k in range(int(e.shape[1])):
+            difference = e[:, k] - e[i, k]
+            squared += difference * difference
+        squared[i] = np.inf
+        j = int(np.argmin(squared))
+        nn_dist[i] = np.sqrt(squared[j])
+        nn_idx[i] = j
+    return _validate_nn_output(nn_dist, nn_idx, n_points=t)
+
+
 def nearest_neighbor_distances(
     embedded: object,
+    backend: str = "auto",
 ) -> tuple[FloatArray, IntArray]:
     """Brute-force ``k = 1`` kNN on the rows of ``embedded``.
+
+    The neighbour of a row is the first minimum of the squared distance
+    accumulated over coordinates in order; the reported distance is its
+    square root.
 
     Parameters
     ----------
     embedded : object
         Delay-embedded trajectory, shape ``(M, dimension)``.
+    backend : str
+        ``"auto"`` or an explicit owner. Rust has no kNN kernel, so
+        ``backend="rust"`` is refused.
 
     Returns
     -------
     tuple[FloatArray, IntArray]
         The nearest-neighbour distances and their indices.
+
+    Raises
+    ------
+    ValueError
+        If the input is invalid or a backend result differs from the reference.
+    RuntimeError
+        If an explicitly requested backend is unavailable, lacks kNN or fails.
     """
     e = _validate_embedded(embedded)
     t, m = int(e.shape[0]), int(e.shape[1])
+    owner, backend_fn = _dispatch("nn", backend)
     if t == 0:
         return np.zeros(0, dtype=np.float64), np.zeros(0, dtype=np.int64)
 
-    backend_fn = _dispatch("nn")
+    expected_dist, expected_idx = _nearest_neighbor_reference(e)
     if backend_fn is not None:
         fn = cast(
             "Callable[[FloatArray, int, int], tuple[FloatArray, IntArray]]",
             backend_fn,
         )
         try:
-            dist, idx = fn(np.ascontiguousarray(e.ravel(), dtype=np.float64), t, m)
-            return _validate_nn_output(dist, idx, n_points=t)
-        except (ImportError, RuntimeError, OSError, KeyError):
-            backend_fn = None
+            dist, idx = _validate_nn_output(
+                *fn(np.ascontiguousarray(e.ravel(), dtype=np.float64), t, m),
+                n_points=t,
+            )
+        except _NATIVE_FAILURES as exc:
+            if backend != "auto":
+                raise _owner_failed(owner) from exc
+        else:
+            return _validate_nn_against_reference(dist, idx, e, expected_dist)
+    return expected_dist, expected_idx
 
-    nn_dist = np.full(t, np.inf)
-    nn_idx = np.zeros(t, dtype=np.int64)
-    for i in range(t):
-        diffs = e - e[i]
-        dists = np.sqrt(np.sum(diffs**2, axis=1))
-        dists[i] = np.inf
-        j = int(np.argmin(dists))
-        nn_dist[i] = dists[j]
-        nn_idx[i] = j
-    return _validate_nn_output(nn_dist, nn_idx, n_points=t)
+
+def _validate_nn_against_reference(
+    dist: FloatArray,
+    idx: IntArray,
+    e: FloatArray,
+    expected_dist: FloatArray,
+) -> tuple[FloatArray, IntArray]:
+    """Return native neighbours that are true nearest neighbours of each row.
+
+    A native compiler may contract the squared-distance sum into fused
+    multiply-adds, so distances can differ from the reference in the last
+    bits. Each returned distance must equal the reference distance to its own
+    neighbour within ``1e-14`` relative, and that neighbour must be minimal
+    within ``1e-12`` relative.
+    """
+    chosen = np.zeros(idx.size, dtype=np.float64)
+    for k in range(int(e.shape[1])):
+        difference = e[:, k] - e[idx, k]
+        chosen += difference * difference
+    chosen_dist = np.sqrt(chosen)
+    if not np.allclose(dist, chosen_dist, rtol=1e-14, atol=0.0):
+        raise ValueError("nearest-neighbor distances differ from their neighbours")
+    if np.any(chosen_dist > expected_dist * (1.0 + 1e-12)):
+        raise ValueError("nearest-neighbor indices are not nearest neighbours")
+    return dist, idx
+
+
+def _validate_selected_int(value: object, *, name: str, lower: int, upper: int) -> int:
+    """Return a native integer selection inside ``[lower, upper]``, else raise."""
+    if isinstance(value, (bool, np.bool_)) or not isinstance(value, Integral):
+        raise ValueError(f"{name} backend output must be an integer")
+    result = int(value)
+    if not lower <= result <= upper:
+        raise ValueError(f"{name} backend output {result} outside [{lower}, {upper}]")
+    return result
 
 
 def optimal_delay(
     signal: object,
     max_lag: object = 100,
     n_bins: object = 32,
+    backend: str = "auto",
 ) -> int:
     """First local minimum of :func:`mutual_information` vs ``lag``.
 
@@ -650,28 +858,50 @@ def optimal_delay(
         Largest lag to search.
     n_bins : object
         Number of histogram bins.
+    backend : str
+        ``"auto"`` or an explicit owner. Rust uses its native search; other
+        owners compose their own MI primitive.
 
     Returns
     -------
     int
-        The first mutual-information minimum, as a lag in samples.
+        The first mutual-information minimum, as a lag in samples (1 when
+        there is none).
+
+    Raises
+    ------
+    ValueError
+        If an input is invalid or a native result is out of range.
+    RuntimeError
+        If an explicitly requested backend is unavailable or fails.
     """
     s = _validate_signal(signal)
     max_lag = _validate_int_at_least(max_lag, name="max_lag", minimum=1)
     n_bins = _validate_int_at_least(n_bins, name="n_bins", minimum=2)
+    _require_known_backend(backend)
+    searched = min(max_lag, s.size // 2)
 
-    if ACTIVE_BACKEND == "rust":
-        try:
-            fn = cast(
-                "Callable[[FloatArray, int, int], int]",
-                _load_backend("rust")["optimal_delay"],
-            )
-            return int(fn(s, max_lag, n_bins))
-        except (ImportError, RuntimeError, OSError, KeyError):
-            max_lag = int(max_lag)
+    use_rust = backend == "rust" or (backend == "auto" and ACTIVE_BACKEND == "rust")
+    if use_rust:
+        owner, native = _dispatch(
+            "optimal_delay", "rust" if backend == "rust" else "auto"
+        )
+        if owner == "rust" and native is not None:
+            fn = cast("Callable[[FloatArray, int, int], int]", native)
+            try:
+                return _validate_selected_int(
+                    fn(s, max_lag, n_bins),
+                    name="optimal_delay",
+                    lower=1,
+                    upper=max(1, searched - 2),
+                )
+            except _NATIVE_FAILURES as exc:
+                if backend != "auto":
+                    raise _owner_failed(owner) from exc
 
-    max_lag = min(max_lag, s.size // 2)
-    mi_values = np.array([mutual_information(s, lag, n_bins) for lag in range(max_lag)])
+    mi_values = np.array(
+        [mutual_information(s, lag, n_bins, backend=backend) for lag in range(searched)]
+    )
     for i in range(1, len(mi_values) - 1):
         if mi_values[i] < mi_values[i - 1] and mi_values[i] < mi_values[i + 1]:
             return i
@@ -684,6 +914,7 @@ def optimal_dimension(
     max_dim: object = 10,
     rtol: object = 15.0,
     atol: object = 2.0,
+    backend: str = "auto",
 ) -> int:
     """Kennel-Brown-Abarbanel 1992 FNN to select embedding dimension.
 
@@ -699,40 +930,57 @@ def optimal_dimension(
         Relative tolerance for the false-nearest-neighbour test.
     atol : object
         Absolute tolerance for the false-nearest-neighbour test.
+    backend : str
+        ``"auto"`` or an explicit owner. Rust uses its native search; other
+        owners compose their own embedding and kNN primitives.
 
     Returns
     -------
     int
         The selected embedding dimension.
+
+    Raises
+    ------
+    ValueError
+        If an input is invalid or a native result is out of range.
+    RuntimeError
+        If an explicitly requested backend is unavailable or fails.
     """
     s = _validate_signal(signal)
     delay = _validate_int_at_least(delay, name="delay", minimum=1)
     max_dim = _validate_int_at_least(max_dim, name="max_dim", minimum=1)
     rtol = _validate_non_negative_real(rtol, name="rtol")
     atol = _validate_non_negative_real(atol, name="atol")
+    _require_known_backend(backend)
     sigma = float(np.std(s))
     if sigma == 0:
         return 1
 
-    if ACTIVE_BACKEND == "rust":
-        try:
-            fn = cast(
-                "Callable[..., int]",
-                _load_backend("rust")["optimal_dimension"],
-            )
-            return int(
-                fn(s, delay, max_dim, rtol, atol),
-            )
-        except (ImportError, RuntimeError, OSError, KeyError):
-            max_dim = int(max_dim)
+    use_rust = backend == "rust" or (backend == "auto" and ACTIVE_BACKEND == "rust")
+    if use_rust:
+        owner, native = _dispatch(
+            "optimal_dimension", "rust" if backend == "rust" else "auto"
+        )
+        if owner == "rust" and native is not None:
+            fn = cast("Callable[..., int]", native)
+            try:
+                return _validate_selected_int(
+                    fn(s, delay, max_dim, rtol, atol),
+                    name="optimal_dimension",
+                    lower=1,
+                    upper=max_dim,
+                )
+            except _NATIVE_FAILURES as exc:
+                if backend != "auto":
+                    raise _owner_failed(owner) from exc
 
     for m in range(1, max_dim + 1):
         t_next = s.size - m * delay
         if t_next <= 1:
             return m
-        emb_m = delay_embed(s, delay, m)
+        emb_m = delay_embed(s, delay, m, backend=backend)
         t_m = emb_m.shape[0]
-        nn_dist, nn_idx = nearest_neighbor_distances(emb_m)
+        nn_dist, nn_idx = nearest_neighbor_distances(emb_m, backend=backend)
 
         n_false = 0
         n_valid = 0
@@ -763,6 +1011,7 @@ def auto_embed(
     signal: object,
     max_lag: object = 100,
     max_dim: object = 10,
+    backend: str = "auto",
 ) -> EmbeddingResult:
     """``optimal_delay`` ∘ ``optimal_dimension`` ∘ ``delay_embed``.
 
@@ -774,15 +1023,17 @@ def auto_embed(
         Largest lag to search.
     max_dim : object
         Largest embedding dimension to test.
+    backend : str
+        ``"auto"`` or an explicit owner passed to every stage.
 
     Returns
     -------
     EmbeddingResult
         The auto-selected delay/dimension embedding result.
     """
-    tau = optimal_delay(signal, max_lag)
-    m = optimal_dimension(signal, tau, max_dim)
-    traj = delay_embed(signal, tau, m)
+    tau = optimal_delay(signal, max_lag, backend=backend)
+    m = optimal_dimension(signal, tau, max_dim, backend=backend)
+    traj = delay_embed(signal, tau, m, backend=backend)
     return EmbeddingResult(
         trajectory=traj,
         delay=tau,
