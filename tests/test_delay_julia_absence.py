@@ -16,6 +16,7 @@ import runpy
 import shutil
 import subprocess
 import sys
+import tomllib
 from collections.abc import Callable
 from importlib import import_module
 from importlib.util import find_spec
@@ -26,6 +27,21 @@ from typing import cast
 import numpy as np
 import pytest
 from coverage import Coverage, CoverageData
+
+
+def _repository_omit() -> list[str]:
+    """Return the measurement omit patterns declared in pyproject.toml."""
+    document = tomllib.loads(
+        (Path(__file__).resolve().parents[1] / "pyproject.toml").read_text(
+            encoding="utf-8"
+        )
+    )
+    patterns = document["tool"]["coverage"]["run"]["omit"]
+    if not isinstance(patterns, list) or not all(
+        isinstance(pattern, str) for pattern in patterns
+    ):
+        raise TypeError("tool.coverage.run.omit must be a list of strings")
+    return list(patterns)
 
 
 def _qualify(exported: Path, mode: str, source_hash: str) -> None:
@@ -43,6 +59,9 @@ def _qualify(exported: Path, mode: str, source_hash: str) -> None:
             data_file=str(exported / "profile-coverage"),
             branch=True,
             source=[str(exported / "src/scpn_phase_orchestrator")],
+            # config_file=False drops the repository's omit list; apply it so
+            # unimported generated stubs are not recorded as unexecuted source.
+            omit=_repository_omit(),
         )
         if coverage_file
         else None

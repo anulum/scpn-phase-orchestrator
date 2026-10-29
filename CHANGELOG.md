@@ -16,6 +16,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   their own lanes. The public dimension functions document their `Raises`
   contracts, and `monitor/_dimension_numerics.py` gets direct tests against
   exact rational and `math.hypot` oracles.
+- The branch profile guard's first hosted runs found three more gaps:
+  - The reviewed residual disposition was not rebound after the dimension
+    floors were raised.
+  - The delay loader has a missing-export refusal that only the
+    defective-kernel fixture reaches. It is now a reviewed residual, bound to
+    its source and line digests.
+  - The delay Julia-absence child measured the whole package with
+    `config_file=False`, which dropped the repository omit list and recorded
+    the generated gRPC stubs as unexecuted source. It now applies the omit
+    patterns from `pyproject.toml`.
+- The native branch observation step now runs the embedding tests, so the
+  native return paths of `monitor/embedding.py` are measured in the profile.
 
 ### Security
 
