@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "thresholds_sha256": "61baef622a351e20085444d45d5342e0071911af0caa8c6a00c2478cc97a9bce",
+  "thresholds_sha256": "4d28911e92dc1faba5c449ed9998ce4f4978179e7b329196c2d0fd5fd8147dc0",
   "files": {
     "src/scpn_phase_orchestrator/coupling/ei_balance.py": {
       "source_sha256": "257d9f9b8a3f69c3761a92cb5b161fd5792fbd1627d65125999603f12f3d2893",
