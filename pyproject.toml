@@ -117,8 +117,8 @@ full = [
     # grpcio-tools release (GRPC_GENERATED_VERSION) and that protobuf is at least
     # the gencode version with the same major; keep these floors equal to the
     # release that generated them.
-    "grpcio>=1.84.0,<2.0",
-    "grpcio-tools>=1.84.0,<2.0",
+    "grpcio>=1.85.0,<2.0",
+    "grpcio-tools>=1.85.0,<2.0",
     "pymodbus>=3.5,<4.0",
     "asyncua>=1.0,<3.0",
     "anyio>=4.14.2,<5.0",
@@ -129,7 +129,9 @@ full = [
     "ripser>=0.6,<1.0",
 ]
 dev = [
-    "pytest>=9.0.3,<10.0",
+    # pytest-benchmark 5.3.0 (newest) fails at setup under pytest 9.2
+    # ('Function' object has no attribute '_nodeid'); hold 9.1 until it is fixed.
+    "pytest>=9.0.3,<9.2",
     "pytest-asyncio>=0.23,<2.0",
     "pytest-cov>=7.1,<8.0",
     "hypothesis>=6.82,<7.0",

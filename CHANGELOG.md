@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- The dimension commit's CI wiring could not run as written. The coverage
+  lane passed `--no-report --no-clean`, which cargo-llvm-cov 0.9.1 refuses;
+  `--no-report` already keeps profiles between runs, so the flag is dropped.
+  The Julia lane now deselects the Go, Mojo and Rust owner tests that run in
+  their own lanes. The public dimension functions document their `Raises`
+  contracts, and `monitor/_dimension_numerics.py` gets direct tests against
+  exact rational and `math.hypot` oracles.
+
 ### Security
 
 - The whole dependency chain was aligned before a push. Open advisories
@@ -25,6 +35,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     vitest 5.0.5. The undici override floors are raised to 7.30.1 and 8.12.2,
     and postcss to 8.5.32.
   - Action pins move to the newest release of each major.
+  - Held: pytest stays below 9.2. pytest-benchmark 5.3.0 (its newest
+    release) fails at setup under pytest 9.2 with "'Function' object has no
+    attribute '_nodeid'".
+  - The gRPC stubs are regenerated with grpcio-tools 1.85.0, and the grpcio
+    and grpcio-tools floors move to 1.85.0 to match the stub's version check.
+  - The Phase-SINDy native coverage fixture is re-measured under the new
+    Cargo lock. The source is unchanged, and so are every branch location and
+    the hit or miss outcome of every branch and segment. Only the execution
+    counts and the lock digest change.
   - Held: mojo stays at 0.26.2.0, because Mojo 1.0 removes the `fn` syntax that
     the Mojo accelerators use; that migration is its own unit.
   - pytest-asyncio 1.4.1 warns when the fixture loop scope is unset, so it is

@@ -12,7 +12,7 @@
     "research_experimental_modules": 204,
     "runtime_serving_modules": 160,
     "rust_kernel_files": 132,
-    "test_files": 1113
+    "test_files": 1114
   },
   "documentation": {
     "public_pages": [
@@ -2236,6 +2236,7 @@
       "tests/test_dimension_julia_absence.py",
       "tests/test_dimension_measurement_inputs.py",
       "tests/test_dimension_native_absence.py",
+      "tests/test_dimension_numerics.py",
       "tests/test_dimension_real_runtime.py",
       "tests/test_dimension_sampling.py",
       "tests/test_dimension_stability.py",

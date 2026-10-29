@@ -559,6 +559,14 @@ def correlation_integral(
     -------
     FloatArray
         ``(K,)`` array of ``C(ε)`` values.
+
+    Raises
+    ------
+    ValueError
+        If an input is malformed or out of range, or ``backend`` is unknown.
+    RuntimeError
+        If an explicitly named ``backend`` is unavailable, lacks the kernel,
+        or fails.
     """
     traj = _validate_trajectory(trajectory)
     t, d = int(traj.shape[0]), int(traj.shape[1])
@@ -656,6 +664,14 @@ def correlation_dimension(
     -------
     CorrelationDimensionResult
         The estimated correlation dimension ``D₂`` result.
+
+    Raises
+    ------
+    ValueError
+        If an input is malformed or out of range, or ``backend`` is unknown.
+    RuntimeError
+        If an explicitly named ``backend`` is unavailable, lacks the kernel,
+        or fails.
     """
     traj = _validate_trajectory(trajectory)
     n_epsilons = _validate_int_at_least(
@@ -775,6 +791,14 @@ def kaplan_yorke_dimension(
     float
         ``D_KY``. Returns ``0.0`` if the largest exponent is negative (stable fixed
         point, zero-dimensional attractor).
+
+    Raises
+    ------
+    ValueError
+        If an input is malformed or out of range, or ``backend`` is unknown.
+    RuntimeError
+        If an explicitly named ``backend`` is unavailable, lacks the kernel,
+        or fails.
     """
     le = _validate_spectrum(lyapunov_exponents)
     owner, backend_fn = _dispatch("ky", backend)
