@@ -9,6 +9,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- The whole dependency chain was aligned before a push. Open advisories
+  covered pillow (fixed in 13.0.0), virtualenv, aiohttp, setuptools,
+  nbconvert, filelock, gitpython, opentelemetry-api, and in `studio-web`
+  vite, `@vitest/mocker` and undici.
+  - Every generated lock was re-resolved to the newest compatible releases.
+    The two derived connectome locks follow `dev-lock.txt` and `uv.lock`.
+    The HCP closure gains `tzdata`, which python-dateutil 3.0.0 requires.
+  - The filelock bound is raised to `>=4.2.1,<5.0`: juliapkg 0.1.28 admits
+    filelock 4, so the old `<4` hold no longer applies.
+  - ruff moves to 0.17.3, and maturin, mkdocs-material, mkdocstrings and
+    pymdown-extensions to their newest releases. Both Cargo locks are updated
+    (proptest 1.12 brings rand 0.10, dev-only), and the MSRV 1.89 check passes.
+  - `studio-web` moves to Node 22.23.4, pnpm 12.16.1, vite 8.3.5 and
+    vitest 5.0.5. The undici override floors are raised to 7.30.1 and 8.12.2,
+    and postcss to 8.5.32.
+  - Action pins move to the newest release of each major.
+  - Held: mojo stays at 0.26.2.0, because Mojo 1.0 removes the `fn` syntax that
+    the Mojo accelerators use; that migration is its own unit.
+  - pytest-asyncio 1.4.1 warns when the fixture loop scope is unset, so it is
+    set to `function`, the scope every async fixture here already uses.
+  - pip-audit on every lock, `pnpm audit` and `cargo audit` report no known
+    vulnerabilities.
+
 - `studio-web` locked `source-map-js` 1.2.1, which GHSA-68fv-2mgg-jv7q
   covers (event-loop denial of service through indexed source-map section
   offsets; fixed in 1.2.2). The lock now holds 1.2.2. Every consumer's

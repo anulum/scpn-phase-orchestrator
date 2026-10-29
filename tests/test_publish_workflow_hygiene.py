@@ -218,7 +218,8 @@ def test_ci_audits_the_studio_frontend_lock_without_suppression() -> None:
     assert commands == ["pnpm audit"]
 
     lock = (ROOT / "studio-web/pnpm-lock.yaml").read_text(encoding="utf-8")
-    assert lock.startswith("lockfileVersion:")
+    # pnpm 12 opens the lock with a YAML document marker before the version.
+    assert lock.removeprefix("---\n").startswith("lockfileVersion:")
 
     policy = load_ci_workflow_policy()
     frontend_category = next(
