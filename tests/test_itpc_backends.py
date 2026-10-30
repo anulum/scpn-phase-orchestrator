@@ -562,163 +562,95 @@ def test_direct_loader_wrappers_return_backend_functions(
     assert float(persistence) == pytest.approx(math.fsum(pause) / len(pause), abs=atol)
 
 
-def test_rust_itpc_dispatch_uses_contiguous_flattened_input(
+ITPC_OWNERS = ("python", "rust", "mojo", "julia", "go")
+
+
+def _require_owner(owner: str) -> None:
+    """Skip when ``owner`` is not installed in this interpreter."""
+    if owner not in it_mod.AVAILABLE_BACKENDS:
+        pytest.skip(f"{owner} unavailable")
+
+
+@pytest.mark.native_runtime
+@pytest.mark.parametrize("owner", ITPC_OWNERS)
+def test_each_owner_computes_itpc_from_fortran_order_trials(owner: str) -> None:
+    """Each owner computes ITPC from Fortran-order trials as from C-order ones."""
+    _require_owner(owner)
+    phases, _ = _loader_case()
+    fortran = np.asfortranarray(phases)
+    assert not fortran.flags.c_contiguous
+    assert it_mod.itpc_backend("itpc", owner) == owner
+
+    got = compute_itpc(fortran, backend=owner)
+
+    np.testing.assert_allclose(
+        got,
+        _oracle_itpc(phases.tolist()),
+        rtol=0.0,
+        atol=1e-9 if owner == "mojo" else 1e-12,
+    )
+
+
+@pytest.mark.native_runtime
+@pytest.mark.parametrize("owner", ITPC_OWNERS)
+def test_each_owner_averages_itpc_over_pause_indices(owner: str) -> None:
+    """Each owner averages ITPC over in-range pause indices, repeats included."""
+    _require_owner(owner)
+    phases, _ = _loader_case()
+    indices = [11, 3, 3, -1, 40, 0]
+    expected = _oracle_itpc(phases.tolist())
+    kept = [expected[k] for k in indices if 0 <= k < 12]
+    assert it_mod.itpc_backend("persistence", owner) == owner
+
+    got = itpc_persistence(np.asfortranarray(phases), indices, backend=owner)
+
+    assert got == pytest.approx(
+        math.fsum(kept) / len(kept), abs=1e-9 if owner == "mojo" else 1e-12
+    )
+
+
+def test_named_owner_absent_or_failing_refuses(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Rust dispatch flattens Fortran-order trials to contiguous input."""
-    calls: list[tuple[np.ndarray, int, int]] = []
+    """A named owner that is absent or failing refuses instead of using NumPy."""
 
-    def fake_rust_itpc(
-        phases_flat: np.ndarray,
-        n_trials: int,
-        n_tp: int,
-    ) -> np.ndarray:
-        calls.append((phases_flat, n_trials, n_tp))
-        return _reference_itpc(phases_flat.reshape(n_trials, n_tp))
+    def broken_loader() -> dict[str, object]:
+        """Fail like a missing shared library."""
+        raise OSError("libitpc.so missing")
 
-    monkeypatch.setattr(it_mod, "ACTIVE_BACKEND", "rust")
-    monkeypatch.setattr(it_mod, "AVAILABLE_BACKENDS", ["rust", "python"])
+    def crash(*_args: object) -> object:
+        """Fail like a crashed kernel."""
+        raise RuntimeError("kernel crashed")
+
+    phases, _ = _loader_case()
+    monkeypatch.setattr(it_mod, "_BACKEND_FN_CACHE", {})
+    monkeypatch.setitem(it_mod._LOADERS, "go", broken_loader)
+    with pytest.raises(RuntimeError, match="ITPC backend 'go' unavailable"):
+        compute_itpc(phases, backend="go")
     monkeypatch.setitem(
-        it_mod._BACKEND_FN_CACHE,
-        "rust",
-        {"itpc": fake_rust_itpc, "persistence": lambda *_args: 0.0},
+        it_mod._LOADERS, "go", lambda: {"itpc": crash, "persistence": crash}
     )
-    monkeypatch.setitem(
-        it_mod._LOADERS,
-        "rust",
-        lambda: {"itpc": fake_rust_itpc, "persistence": lambda *_args: 0.0},
-    )
-    phases = np.asfortranarray(
-        np.array([[0.0, 0.5, 1.0], [1.5, 2.0, 2.5]], dtype=np.float64)
-    )
-
-    result = compute_itpc(phases)
-
-    np.testing.assert_allclose(result, _reference_itpc(phases))
-    assert len(calls) == 1
-    phases_flat, n_trials, n_tp = calls[0]
-    assert phases_flat.flags.c_contiguous
-    np.testing.assert_array_equal(phases_flat, phases.ravel())
-    assert (n_trials, n_tp) == (2, 3)
+    it_mod._BACKEND_FN_CACHE.clear()
+    with pytest.raises(RuntimeError, match="ITPC backend 'go' failed"):
+        compute_itpc(phases, backend="go")
+    with pytest.raises(RuntimeError, match="ITPC backend 'go' failed"):
+        itpc_persistence(phases, [1, 2], backend="go")
 
 
-def test_rust_persistence_dispatch_uses_contiguous_arrays(
+def test_named_owner_without_kernel_or_unknown_name_refuses(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Rust persistence dispatch passes contiguous arrays."""
-    calls: list[tuple[np.ndarray, int, int, np.ndarray]] = []
-
-    def fake_rust_persistence(
-        phases_flat: np.ndarray,
-        n_trials: int,
-        n_tp: int,
-        pause_indices: np.ndarray,
-    ) -> float:
-        calls.append((phases_flat, n_trials, n_tp, pause_indices))
-        return _reference_pers(phases_flat.reshape(n_trials, n_tp), pause_indices)
-
-    monkeypatch.setattr(it_mod, "ACTIVE_BACKEND", "rust")
-    monkeypatch.setattr(it_mod, "AVAILABLE_BACKENDS", ["rust", "python"])
-    monkeypatch.setitem(
-        it_mod._BACKEND_FN_CACHE,
-        "rust",
-        {"itpc": lambda *_args: np.array([]), "persistence": fake_rust_persistence},
-    )
-    monkeypatch.setitem(
-        it_mod._LOADERS,
-        "rust",
-        lambda: {
-            "itpc": lambda *_args: np.array([]),
-            "persistence": fake_rust_persistence,
-        },
-    )
-    phases = np.asfortranarray(
-        np.array([[0.0, 0.5, 1.0], [1.5, 2.0, 2.5]], dtype=np.float64)
-    )
-
-    result = itpc_persistence(phases, [0, 2])
-
-    assert result == _reference_pers(phases, np.array([0, 2], dtype=np.int64))
-    assert len(calls) == 1
-    phases_flat, n_trials, n_tp, pause_indices = calls[0]
-    assert phases_flat.flags.c_contiguous
-    assert pause_indices.flags.c_contiguous
-    assert pause_indices.dtype == np.int64
-    np.testing.assert_array_equal(phases_flat, phases.ravel())
-    np.testing.assert_array_equal(pause_indices, np.array([0, 2], dtype=np.int64))
-    assert (n_trials, n_tp) == (2, 3)
-
-
-def test_non_rust_dispatch_flattens_inputs_and_preserves_exact_backend_result(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Non-Rust dispatch flattens input and keeps an exact result."""
-    calls: list[tuple[np.ndarray, int, int]] = []
-
-    def fake_itpc(phases_flat: np.ndarray, n_trials: int, n_tp: int) -> np.ndarray:
-        calls.append((phases_flat.copy(), n_trials, n_tp))
-        return _reference_itpc(phases_flat.reshape(n_trials, n_tp))
-
-    monkeypatch.setattr(it_mod, "ACTIVE_BACKEND", "go")
-    monkeypatch.setattr(it_mod, "AVAILABLE_BACKENDS", ["go", "python"])
-    monkeypatch.setitem(
-        it_mod._BACKEND_FN_CACHE,
-        "go",
-        {"itpc": fake_itpc, "persistence": lambda *_args: 0.0},
-    )
-    monkeypatch.setitem(
-        it_mod._LOADERS,
-        "go",
-        lambda: {"itpc": fake_itpc, "persistence": lambda *_args: 0.0},
-    )
-    phases = np.array([[0.0, 0.5, 1.0], [1.5, 2.0, 2.5]], dtype=np.float64)
-
-    result = compute_itpc(phases)
-
-    np.testing.assert_allclose(result, _reference_itpc(phases))
-    assert len(calls) == 1
-    phases_flat, n_trials, n_tp = calls[0]
-    np.testing.assert_array_equal(phases_flat, phases.ravel())
-    assert (n_trials, n_tp) == (2, 3)
-
-
-def test_non_rust_persistence_dispatch_passes_pause_indices(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Non-Rust persistence dispatch passes the pause indices."""
-    calls: list[tuple[np.ndarray, int, int, np.ndarray]] = []
-
-    def fake_persistence(
-        phases_flat: np.ndarray,
-        n_trials: int,
-        n_tp: int,
-        pause_indices: np.ndarray,
-    ) -> float:
-        calls.append((phases_flat.copy(), n_trials, n_tp, pause_indices.copy()))
-        return _reference_pers(phases_flat.reshape(n_trials, n_tp), pause_indices)
-
-    monkeypatch.setattr(it_mod, "ACTIVE_BACKEND", "mojo")
-    monkeypatch.setattr(it_mod, "AVAILABLE_BACKENDS", ["mojo", "python"])
-    monkeypatch.setitem(
-        it_mod._BACKEND_FN_CACHE,
-        "mojo",
-        {"itpc": lambda *_args: np.array([]), "persistence": fake_persistence},
-    )
-    monkeypatch.setitem(
-        it_mod._LOADERS,
-        "mojo",
-        lambda: {"itpc": lambda *_args: np.array([]), "persistence": fake_persistence},
-    )
-    phases = np.array([[0.0, 0.25, 0.5], [1.0, 1.25, 1.5]], dtype=np.float64)
-
-    result = itpc_persistence(phases, [0, 2])
-
-    assert result == _reference_pers(phases, np.array([0, 2], dtype=np.int64))
-    assert len(calls) == 1
-    phases_flat, n_trials, n_tp, pause_indices = calls[0]
-    np.testing.assert_array_equal(phases_flat, phases.ravel())
-    assert (n_trials, n_tp) == (2, 3)
-    np.testing.assert_array_equal(pause_indices, np.array([0, 2]))
+    """A named owner without the kernel refuses; unknown names are ValueErrors."""
+    monkeypatch.setattr(it_mod, "_BACKEND_FN_CACHE", {})
+    monkeypatch.setitem(it_mod._LOADERS, "go", lambda: {"itpc": object()})
+    with pytest.raises(RuntimeError, match="ITPC backend 'go' lacks persistence"):
+        it_mod.itpc_backend("persistence", "go")
+    with pytest.raises(ValueError, match="unknown ITPC backend"):
+        compute_itpc(np.zeros((2, 3)), backend="cuda")
+    with pytest.raises(ValueError, match="unknown ITPC backend"):
+        itpc_persistence(np.zeros((2, 3)), [0], backend="cuda")
+    with pytest.raises(ValueError, match="unknown ITPC operation"):
+        it_mod.itpc_backend("coherence")
 
 
 def test_public_itpc_rejects_backend_that_breaks_exact_contract(

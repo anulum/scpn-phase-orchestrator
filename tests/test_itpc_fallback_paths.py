@@ -119,14 +119,14 @@ def test_dispatch_returns_none_when_no_loader_or_backend_function(
     monkeypatch.setattr(itpc_mod, "ACTIVE_BACKEND", "ghost")
     monkeypatch.setattr(itpc_mod, "AVAILABLE_BACKENDS", ["ghost"])
 
-    assert itpc_mod._dispatch("itpc") is None
+    assert itpc_mod._dispatch("itpc") == ("python", None)
 
     monkeypatch.setattr(itpc_mod, "ACTIVE_BACKEND", "go")
     monkeypatch.setattr(itpc_mod, "AVAILABLE_BACKENDS", ["go"])
     itpc_mod._BACKEND_FN_CACHE.clear()
     monkeypatch.setitem(itpc_mod._LOADERS, "go", lambda: {"persistence": object()})
 
-    assert itpc_mod._dispatch("itpc") is None
+    assert itpc_mod._dispatch("itpc") == ("python", None)
     itpc_mod._BACKEND_FN_CACHE.clear()
 
 

@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `compute_itpc` and `itpc_persistence` take `backend=`, and the new
+  `itpc_backend(slot, backend)` names the owner. A named owner that is
+  absent, lacks the kernel or fails raises `RuntimeError`; `auto` keeps its
+  NumPy fallback. The calling convention now follows the owner that was
+  resolved, not `ACTIVE_BACKEND`. The RT-051–RT-054 dispatch substitutes,
+  which forced `ACTIVE_BACKEND` and installed fake kernels, are replaced by
+  calls into every installed owner on Fortran-order trials and repeated or
+  out-of-range pause indices, against a plain-loop `cmath` oracle, plus
+  stand-in refusal contracts. The four tests are renamed to say what they
+  check.
 - The ITPC loader tests (RT-049, RT-050) no longer install a fake
   `spo_kernel` or patch the Mojo, Julia and Go preflights. They call the
   real loaders and check each returned ITPC and persistence kernel against

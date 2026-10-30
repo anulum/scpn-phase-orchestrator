@@ -12,6 +12,11 @@ Two kernels:
 
 * :func:`compute_itpc` — ITPC across trials at each time point.
 * :func:`itpc_persistence` — mean ITPC at stimulus-pause indices.
+
+Both take ``backend``. ``"auto"`` uses the fastest available owner and falls
+back to NumPy if a native owner fails. A named owner must run the
+computation: if it is absent, lacks the kernel or fails, the call raises
+``RuntimeError``. :func:`itpc_backend` names the owner a call would use.
 """
 
 from __future__ import annotations
@@ -34,6 +39,7 @@ __all__ = [
     "ACTIVE_BACKEND",
     "AVAILABLE_BACKENDS",
     "compute_itpc",
+    "itpc_backend",
     "itpc_persistence",
 ]
 
@@ -124,30 +130,87 @@ def _resolve_backends() -> tuple[str, list[str]]:
 ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
-def _dispatch(fn_name: str) -> object | None:
-    """Return the fastest available backend callables, or ``None`` for Python."""
-    ordered_backends = [ACTIVE_BACKEND] + list(AVAILABLE_BACKENDS)
-    deduped: list[str] = []
-    for backend in ordered_backends:
-        if backend in deduped:
-            continue
-        deduped.append(backend)
+_NATIVE_FAILURES = (ImportError, RuntimeError, OSError, KeyError)
+_SLOTS = ("itpc", "persistence")
 
-    for backend in deduped:
-        if backend == "python":
-            return None
-        loader = _LOADERS.get(backend)
-        if loader is None:
+
+def _require_known_backend(backend: str) -> None:
+    """Refuse an unknown owner name before any computation."""
+    if backend not in (*_BACKEND_NAMES, "auto"):
+        raise ValueError(f"unknown ITPC backend: {backend!r}")
+
+
+def _dispatch(fn_name: str, backend: str = "auto") -> tuple[str, object | None]:
+    """Resolve the owner of ``fn_name`` and its callable.
+
+    Parameters
+    ----------
+    fn_name : str
+        ``"itpc"`` or ``"persistence"``.
+    backend : str
+        ``"auto"`` or one of ``rust``, ``mojo``, ``julia``, ``go``, ``python``.
+
+    Returns
+    -------
+    tuple[str, object | None]
+        The owner name and its callable, or ``("python", None)``.
+
+    Raises
+    ------
+    ValueError
+        If ``backend`` is not a known owner.
+    RuntimeError
+        If an explicitly requested owner is unavailable or lacks the kernel.
+    """
+    _require_known_backend(backend)
+    ordered = [ACTIVE_BACKEND, *AVAILABLE_BACKENDS] if backend == "auto" else [backend]
+    seen: set[str] = set()
+    for name in ordered:
+        if name in seen:
             continue
+        seen.add(name)
+        if name == "python":
+            return "python", None
         try:
-            backend_cache = _load_backend(backend)
-        except (ImportError, RuntimeError, OSError, KeyError):
+            fn = _load_backend(name).get(fn_name)
+        except _NATIVE_FAILURES as exc:
+            if backend != "auto":
+                raise RuntimeError(f"ITPC backend {name!r} unavailable") from exc
             continue
-        fn = backend_cache.get(fn_name)
         if fn is None:
+            if backend != "auto":
+                raise RuntimeError(f"ITPC backend {name!r} lacks {fn_name}")
             continue
-        return fn
-    return None
+        return name, fn
+    return "python", None
+
+
+def itpc_backend(slot: str, backend: str = "auto") -> str:
+    """Return the owner that serves one ITPC operation.
+
+    Parameters
+    ----------
+    slot : str
+        ``"itpc"`` or ``"persistence"``.
+    backend : str
+        ``"auto"`` or an explicit owner name.
+
+    Returns
+    -------
+    str
+        ``rust``, ``mojo``, ``julia``, ``go`` or ``python``.
+
+    Raises
+    ------
+    ValueError
+        If ``slot`` or ``backend`` is unknown.
+    RuntimeError
+        If an explicitly requested owner is unavailable or lacks the kernel.
+    """
+    if slot not in _SLOTS:
+        raise ValueError(f"unknown ITPC operation: {slot!r}")
+    owner, _ = _dispatch(slot, backend)
+    return owner
 
 
 def _contains_boolean_alias(raw: ArrayPayload) -> bool:
@@ -327,7 +390,7 @@ def _validate_persistence_value(
     return clipped
 
 
-def compute_itpc(phases_trials: object) -> FloatArray:
+def compute_itpc(phases_trials: object, backend: str = "auto") -> FloatArray:
     """Inter-Trial Phase Coherence at each time point.
 
     ``ITPC = |mean(exp(i·θ))|`` across trials (Lachaux et al. 1999).
@@ -337,12 +400,23 @@ def compute_itpc(phases_trials: object) -> FloatArray:
     phases_trials : object
         shape ``(n_trials, n_timepoints)`` — phases in radians. A 1-D input is treated
         as a single trial.
+    backend : str
+        ``"auto"`` or an explicit owner.
 
     Returns
     -------
     FloatArray
         ``(n_timepoints,)`` array of ITPC values in ``[0, 1]``.
+
+    Raises
+    ------
+    ValueError
+        If the input or backend name is invalid, or a backend result differs
+        from the NumPy reference.
+    RuntimeError
+        If an explicitly requested owner is unavailable or fails.
     """
+    _require_known_backend(backend)
     phases = _validate_phases_trials(phases_trials)
     if phases.ndim == 1:
         return np.array([1.0], dtype=np.float64)
@@ -351,10 +425,10 @@ def compute_itpc(phases_trials: object) -> FloatArray:
     n_trials, n_tp = phases.shape
     expected = _compute_itpc_reference(phases)
 
-    backend_fn = _dispatch("itpc")
+    owner, backend_fn = _dispatch("itpc", backend)
     if backend_fn is not None:
         try:
-            if ACTIVE_BACKEND == "rust":
+            if owner == "rust":
                 fn_rust = cast(
                     "Callable[[FloatArray, int, int], FloatArray]",
                     backend_fn,
@@ -370,10 +444,11 @@ def compute_itpc(phases_trials: object) -> FloatArray:
                 fn(phases.ravel(), int(n_trials), int(n_tp)),
                 n_timepoints=n_tp,
                 expected=expected,
-                atol=1e-9 if ACTIVE_BACKEND == "mojo" else 1e-12,
+                atol=1e-9 if owner == "mojo" else 1e-12,
             )
-        except (ImportError, RuntimeError, OSError, KeyError):
-            backend_fn = None
+        except _NATIVE_FAILURES as exc:
+            if backend != "auto":
+                raise RuntimeError(f"ITPC backend {owner!r} failed") from exc
 
     return _validate_itpc_values(expected, n_timepoints=n_tp, expected=expected)
 
@@ -381,6 +456,7 @@ def compute_itpc(phases_trials: object) -> FloatArray:
 def itpc_persistence(
     phases_trials: object,
     pause_indices: object,
+    backend: str = "auto",
 ) -> float:
     """Mean ITPC at stimulus-pause indices.
 
@@ -395,12 +471,23 @@ def itpc_persistence(
         ``(n_trials, n_timepoints)`` phases in radians.
     pause_indices : object
         time-point indices falling within / after a pause.
+    backend : str
+        ``"auto"`` or an explicit owner.
 
     Returns
     -------
     float
         Mean ITPC across ``pause_indices``. ``0.0`` if empty.
+
+    Raises
+    ------
+    ValueError
+        If an input or the backend name is invalid, or a backend result
+        differs from the NumPy reference.
+    RuntimeError
+        If an explicitly requested owner is unavailable or fails.
     """
+    _require_known_backend(backend)
     phases = _validate_phases_trials(phases_trials)
     pause_idx = _validate_pause_indices(pause_indices)
     if pause_idx.size == 0:
@@ -413,10 +500,10 @@ def itpc_persistence(
     valid = pause_idx[(pause_idx >= 0) & (pause_idx < itpc_full.size)]
     expected = 0.0 if valid.size == 0 else float(np.mean(itpc_full[valid]))
 
-    backend_fn = _dispatch("persistence")
+    owner, backend_fn = _dispatch("persistence", backend)
     if backend_fn is not None:
         try:
-            if ACTIVE_BACKEND == "rust":
+            if owner == "rust":
                 fn_rust = cast(
                     "Callable[[FloatArray, int, int, IntArray], float]",
                     backend_fn,
@@ -434,9 +521,10 @@ def itpc_persistence(
             return _validate_persistence_value(
                 fn(phases.ravel(), int(n_trials), int(n_tp), pause_idx),
                 expected=expected,
-                atol=1e-9 if ACTIVE_BACKEND == "mojo" else 1e-12,
+                atol=1e-9 if owner == "mojo" else 1e-12,
             )
-        except (ImportError, RuntimeError, OSError, KeyError):
-            backend_fn = None
+        except _NATIVE_FAILURES as exc:
+            if backend != "auto":
+                raise RuntimeError(f"ITPC backend {owner!r} failed") from exc
 
     return _validate_persistence_value(expected, expected=expected)

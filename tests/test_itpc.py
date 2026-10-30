@@ -232,14 +232,14 @@ class TestITPCBackendDispatch:
             lambda: (_ for _ in ()).throw(ImportError("go backend unavailable")),
         )
         try:
-            fn = itpc_mod._dispatch("itpc")
+            owner, fn = itpc_mod._dispatch("itpc")
         finally:
             itpc_mod.ACTIVE_BACKEND = previous_backend
             itpc_mod.AVAILABLE_BACKENDS = previous_available
             monkeypatch.setitem(itpc_mod._LOADERS, "go", previous_loader)
             itpc_mod._BACKEND_FN_CACHE.clear()
 
-        assert fn is None
+        assert (owner, fn) == ("python", None)
 
     def test_dispatch_uses_cached_backend_functions(self, monkeypatch):
         previous_backend = itpc_mod.ACTIVE_BACKEND
@@ -257,16 +257,17 @@ class TestITPCBackendDispatch:
         itpc_mod._BACKEND_FN_CACHE.clear()
         monkeypatch.setitem(itpc_mod._LOADERS, "go", loader)
         try:
-            fn1 = itpc_mod._dispatch("itpc")
-            fn2 = itpc_mod._dispatch("itpc")
+            owner1, fn1 = itpc_mod._dispatch("itpc")
+            owner2, fn2 = itpc_mod._dispatch("itpc")
         finally:
             itpc_mod.ACTIVE_BACKEND = previous_backend
             itpc_mod.AVAILABLE_BACKENDS = previous_available
             monkeypatch.setitem(itpc_mod._LOADERS, "go", previous_loader)
             itpc_mod._BACKEND_FN_CACHE.clear()
 
+        assert owner1 == owner2 == "go"
         assert fn1 is not None
-        assert fn2 is not None
+        assert fn2 is fn1
         assert call_count == 1
 
     @pytest.mark.parametrize(

@@ -88,15 +88,16 @@ after ``t_{stim}^{off}``; evoked responses collapse immediately.
 from scpn_phase_orchestrator.monitor.itpc import (
     ACTIVE_BACKEND,        # str — e.g. "rust"
     AVAILABLE_BACKENDS,    # list — first entry is ACTIVE_BACKEND
-    compute_itpc,          # (phases_trials) -> NDArray
-    itpc_persistence,      # (phases_trials, pause_indices) -> float
+    compute_itpc,          # (phases_trials, backend="auto") -> NDArray
+    itpc_backend,          # (slot, backend="auto") -> str
+    itpc_persistence,      # (phases_trials, pause_indices, backend="auto") -> float
 )
 ```
 
 ### 2.1 `compute_itpc`
 
 ```python
-def compute_itpc(phases_trials: NDArray) -> NDArray: ...
+def compute_itpc(phases_trials: NDArray, backend: str = "auto") -> NDArray: ...
 ```
 
 Returns ``(n_timepoints,)`` floats in ``[0, 1]``. A 1-D input is
@@ -112,12 +113,23 @@ aliases are rejected before float coercion.
 def itpc_persistence(
     phases_trials: NDArray,
     pause_indices: list[int] | NDArray,
+    backend: str = "auto",
 ) -> float: ...
 ```
 
 Returns the mean ITPC at the provided indices after filtering to valid
 ``[0, n_timepoints)`` entries. Empty ``pause_indices`` or all-invalid indices
 return ``0.0``.
+
+### 2.3 Choosing the owner
+
+``backend="auto"`` uses the active owner and falls back to NumPy if a native
+owner fails. A named owner (``"rust"``, ``"mojo"``, ``"julia"``, ``"go"`` or
+``"python"``) must run the computation: if it is absent, lacks the kernel or
+fails, the call raises ``RuntimeError`` (for example
+``ITPC backend 'go' unavailable``). An unknown name raises ``ValueError``.
+``itpc_backend("itpc" | "persistence", backend)`` names the owner a call
+would use. Native results are still checked against the NumPy reference.
 
 ---
 
