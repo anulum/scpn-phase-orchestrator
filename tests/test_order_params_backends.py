@@ -19,7 +19,9 @@ Tolerance budgets match the AttnRes reference:
 
 from __future__ import annotations
 
+import cmath
 import ctypes
+from collections.abc import Callable
 from types import SimpleNamespace
 
 import numpy as np
@@ -370,65 +372,45 @@ class TestDirectBackendBoundaryContracts:
         assert plv_fn(phases, phases) == 0.0
         assert layer_fn(phases, np.array([], dtype=np.int64)) == 0.0
 
+    @pytest.mark.native_runtime
     @pytest.mark.parametrize(
-        ("module", "order_fn", "plv_fn", "layer_fn", "patcher"),
+        ("owner", "order_fn", "plv_fn", "layer_fn"),
         [
-            (
-                order_params_go_mod,
-                order_parameter_go,
-                plv_go,
-                layer_coherence_go,
-                lambda monkeypatch, **kw: monkeypatch.setattr(
-                    order_params_go_mod,
-                    "_load_lib",
-                    lambda: _FakeGoOrderParamsLib(**kw),
-                ),
-            ),
-            (
-                order_params_julia_mod,
-                order_parameter_julia,
-                plv_julia,
-                layer_coherence_julia,
-                lambda monkeypatch, **kw: monkeypatch.setattr(
-                    order_params_julia_mod,
-                    "_ensure_julia_loaded",
-                    lambda: _FakeJuliaOrderParams(**kw),
-                ),
-            ),
-            (
-                order_params_mojo_mod,
-                order_parameter_mojo,
-                plv_mojo,
-                layer_coherence_mojo,
-                None,
-            ),
+            ("go", order_parameter_go, plv_go, layer_coherence_go),
+            ("julia", order_parameter_julia, plv_julia, layer_coherence_julia),
+            ("mojo", order_parameter_mojo, plv_mojo, layer_coherence_mojo),
         ],
     )
     def test_direct_backend_outputs_are_physical_and_canonical(
         self,
-        monkeypatch: pytest.MonkeyPatch,
-        module,
-        order_fn,
-        plv_fn,
-        layer_fn,
-        patcher,
+        owner: str,
+        order_fn: Callable[[np.ndarray], tuple[float, float]],
+        plv_fn: Callable[[np.ndarray, np.ndarray], float],
+        layer_fn: Callable[[np.ndarray, np.ndarray], float],
     ) -> None:
-        phases = np.array([0.0, 1.0], dtype=np.float64)
-        indices = np.array([0], dtype=np.int64)
+        """Real direct adapters return physical values and a mean phase in [0, 2π)."""
+        if owner not in op_mod.AVAILABLE_BACKENDS:
+            pytest.skip(f"{owner} unavailable")
+        # The mean phasor points below the real axis, so a raw atan2 is negative.
+        phases = np.array([-2.0, -1.2, -0.4, 0.3], dtype=np.float64)
+        other = np.array([0.5, -0.5, 1.5, 2.5], dtype=np.float64)
+        indices = np.array([0, 2], dtype=np.int64)
+        atol = 1e-9 if owner == "mojo" else 1e-12
 
-        if module is order_params_mojo_mod:
-            monkeypatch.setattr(module, "_run", lambda *_args, **_kwargs: [0.5, -0.25])
-        else:
-            patcher(monkeypatch, order=(0.5, -0.25), plv=0.25, layer=0.75)
-        assert order_fn(phases) == pytest.approx((0.5, (-0.25) % TWO_PI))
+        def mean(values: list[float]) -> complex:
+            """Return the mean unit phasor."""
+            return sum(cmath.exp(1j * v) for v in values) / len(values)
 
-        if module is order_params_mojo_mod:
-            monkeypatch.setattr(module, "_run", lambda *_args, **_kwargs: [0.25])
-        assert plv_fn(phases, phases) == pytest.approx(0.25)
-
-        if module is order_params_mojo_mod:
-            monkeypatch.setattr(module, "_run", lambda *_args, **_kwargs: [0.75])
-        assert layer_fn(phases, indices) == pytest.approx(0.75)
+        z = mean(phases.tolist())
+        assert cmath.phase(z) < 0.0
+        r, psi = order_fn(phases)
+        assert r == pytest.approx(abs(z), abs=atol)
+        assert 0.0 <= psi < TWO_PI
+        assert psi == pytest.approx(cmath.phase(z) % TWO_PI, abs=atol)
+        diffs = [a - b for a, b in zip(phases.tolist(), other.tolist(), strict=True)]
+        assert plv_fn(phases, other) == pytest.approx(abs(mean(diffs)), abs=atol)
+        layer = abs(mean([phases[k] for k in indices.tolist()]))
+        assert layer_fn(phases, indices) == pytest.approx(layer, abs=atol)
 
     @pytest.mark.parametrize(
         ("module", "order_fn", "plv_fn", "layer_fn", "patcher"),

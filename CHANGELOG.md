@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The direct order-parameter adapter test (RT-073) no longer injects
+  outputs into fake Go, Julia and Mojo runtimes. It runs the real adapters
+  on phases whose mean phasor lies below the real axis and checks R, PLV,
+  layer coherence and a mean phase canonicalised into [0, 2π) against
+  `cmath` oracles.
 - `compute_order_parameter`, `compute_plv` and `compute_layer_coherence`
   take `backend=`, and the new `order_params_backend(slot, backend)` names
   the owner; a named owner that is absent or lacks the kernel raises
