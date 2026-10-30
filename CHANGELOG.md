@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The coupling-reduction test (RT-078) no longer forces the Rust flag and
+  installs a fake kernel. It profiles the real `reduce_coupling` call, which
+  reaches the compiled `reduce_coupling_rust` exactly when `spo_kernel` is
+  installed, and checks the restored square matrix element by element.
 - `poincare_section`, `return_times` and `phase_poincare` take `backend=`,
   and the new `poincare_backend(slot, backend)` names the owner; a named
   owner that is absent, lacks the kernel or fails raises `RuntimeError`.

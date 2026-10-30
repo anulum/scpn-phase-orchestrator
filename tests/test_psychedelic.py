@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+import cProfile
+import importlib.util
 from typing import Any, get_type_hints
 
 import numpy as np
@@ -111,21 +113,26 @@ def test_reduce_coupling_rejects_invalid_rust_reduce_output(
         reduce_coupling(np.eye(2), 0.5)
 
 
-def test_reduce_coupling_accepts_flat_backend_matrix(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Backend flat n*n payloads are restored to the public matrix contract."""
-    monkeypatch.setattr(psychedelic_mod, "_HAS_RUST_REDUCE", True)
-    monkeypatch.setattr(
-        psychedelic_mod,
-        "_rust_reduce",
-        lambda flat, factor: flat * (1.0 - factor),
-        raising=False,
+@pytest.mark.native_runtime
+def test_reduce_coupling_accepts_flat_backend_matrix() -> None:
+    """The compiled kernel runs when installed and the matrix keeps its shape."""
+    rng = np.random.default_rng(79)
+    knm = rng.uniform(-1.0, 2.0, (4, 4))
+    profile = cProfile.Profile()
+    profile.enable()
+    try:
+        result = reduce_coupling(knm, 0.25)
+    finally:
+        profile.disable()
+    rust_calls = sum(
+        entry.callcount
+        for entry in profile.getstats()
+        if isinstance(entry.code, str) and "reduce_coupling_rust" in entry.code
     )
-
-    result = reduce_coupling(np.eye(3), 0.25)
-
-    np.testing.assert_allclose(result, np.eye(3) * 0.75)
+    assert rust_calls == (1 if importlib.util.find_spec("spo_kernel") else 0)
+    assert result.shape == (4, 4)
+    expected = [[v * 0.75 for v in row] for row in knm.tolist()]
+    np.testing.assert_allclose(result, expected, rtol=0.0, atol=1e-15)
 
 
 def test_entropy_uniform_phases_high():
