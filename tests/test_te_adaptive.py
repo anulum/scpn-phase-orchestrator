@@ -210,6 +210,10 @@ class TestTEAdaptive:
 
         np.testing.assert_allclose(result, expected, rtol=0.0, atol=1e-15)
 
+
+class TestTEAdaptivePipelineWiring:
+    """Pipeline: engine trajectory → TE → adapt coupling → engine."""
+
     def test_te_adapted_knm_drives_engine(self):
         """Engine trajectory → te_adapt_coupling → updated K_nm → engine."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine

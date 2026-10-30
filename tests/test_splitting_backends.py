@@ -648,6 +648,38 @@ class TestBackendResolutionContracts:
         assert loads == 1
         assert first is second
 
+    def test_probe_marks_backend_failure_as_infinite(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A loader that fails during probing is timed as infinitely slow."""
+
+        def failing_backend() -> object:
+            """Fail like a broken toolchain."""
+            raise RuntimeError("backend unavailable")
+
+        monkeypatch.setitem(sp_mod._LOADERS, "rust", failing_backend)
+        monkeypatch.setattr(sp_mod, "_BACKEND_CACHE", {})
+
+        assert sp_mod._splitting_probe_seconds("rust") == float("inf")
+
+    def test_resolve_backends_falls_back_to_python_when_all_backends_fail_probe(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """With every native loader failing, resolution keeps Python only."""
+
+        def fail_loader() -> object:
+            """Fail like a broken toolchain."""
+            raise RuntimeError("backend unavailable")
+
+        for name in ("rust", "mojo", "julia", "go"):
+            monkeypatch.setitem(sp_mod._LOADERS, name, fail_loader)
+        monkeypatch.setattr(sp_mod, "_BACKEND_CACHE", {})
+
+        active, available = sp_mod._resolve_backends()
+
+        assert active == "python"
+        assert available == ["python"]
+
     def test_resolve_backends_prefers_fastest_loaded_backend(self) -> None:
         """Resolution lists the working loaders and picks a finite, fastest probe."""
         loadable = []
