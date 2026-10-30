@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The swarmalator loader tests (RT-106, RT-107) no longer install fake
+  `spo_kernel`, `juliacall` or backend modules. They run one step of the
+  real Rust, Mojo, Julia and Go kernels in 2-D and 3-D against a plain-loop
+  O'Keeffe–Hong–Strogatz oracle.
 - `SplittingEngine` takes `backend=`, and the new `splitting_backend()`
   names the owner; a named owner that is absent or fails raises
   `RuntimeError`, and a named native owner refuses a negative `dt`. The

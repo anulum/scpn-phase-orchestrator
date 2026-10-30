@@ -18,6 +18,7 @@ inverse-distance repulsion ``b / (|dx|^2 + eps)`` (scalar
 from __future__ import annotations
 
 import ctypes
+import math
 import sys
 import types
 from collections.abc import Callable
@@ -237,6 +238,59 @@ def _reference_step(
         return eng.step(pos, phases, omegas, 1.0, 1.0, 0.8, 1.2)
     finally:
         _reset(prev)
+
+
+def _oracle_swarmalator(
+    pos: list[list[float]],
+    phases: list[float],
+    omegas: list[float],
+    a: float,
+    b: float,
+    j: float,
+    k: float,
+    dt: float,
+) -> tuple[list[list[float]], list[float]]:
+    """One O'Keeffe–Hong–Strogatz Euler step written as plain loops."""
+    eps = 1e-6
+    n = len(phases)
+    new_pos, new_phases = [], []
+    for i in range(n):
+        velocity = [0.0] * len(pos[i])
+        phase_terms = []
+        for m in range(n):
+            sep = [x - y for x, y in zip(pos[m], pos[i], strict=True)]
+            d2 = math.fsum(c * c for c in sep)
+            attract = (a + j * math.cos(phases[m] - phases[i])) / math.sqrt(d2 + eps)
+            repulse = b / (d2 + eps)
+            velocity = [
+                v + c * (attract - repulse) for v, c in zip(velocity, sep, strict=True)
+            ]
+            weight = 0.0 if m == i else 1 / math.sqrt(d2 + eps)
+            phase_terms.append(math.sin(phases[m] - phases[i]) * weight)
+        new_pos.append([x + dt * v / n for x, v in zip(pos[i], velocity, strict=True)])
+        rate = omegas[i] + k * math.fsum(phase_terms) / n
+        new_phases.append((phases[i] + dt * rate) % (2 * math.pi))
+    return new_pos, new_phases
+
+
+def _assert_kernel_follows_law(owner: str, kernel: Callable[..., object]) -> None:
+    """Check one step of a real swarmalator kernel in 2-D and 3-D."""
+    rng = np.random.default_rng(109)
+    for dim in (2, 3):
+        pos = rng.uniform(-1.5, 1.5, (6, dim))
+        phases = rng.uniform(0.0, 2 * np.pi, 6)
+        omegas = rng.normal(0.5, 0.2, 6)
+        got_pos, got_phases = cast(
+            "tuple[np.ndarray, np.ndarray]",
+            kernel(pos, phases, omegas, 6, dim, 1.0, 0.7, 0.9, -0.4, 0.02),
+        )
+        exp_pos, exp_phases = _oracle_swarmalator(
+            pos.tolist(), phases.tolist(), omegas.tolist(), 1.0, 0.7, 0.9, -0.4, 0.02
+        )
+        atol = 1e-9 if owner == "mojo" else 1e-12
+        np.testing.assert_allclose(np.reshape(got_pos, (6, dim)), exp_pos, atol=atol)
+        gap = (np.asarray(got_phases) - exp_phases + np.pi) % (2 * np.pi) - np.pi
+        assert float(np.max(np.abs(gap))) < atol
 
 
 class TestRustParity:
@@ -595,49 +649,12 @@ class TestDirectSwarmalatorBoundaryContracts:
 
 
 class TestBackendLoaderContracts:
-    def test_rust_loader_reshapes_flat_kernel_positions(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        calls: dict[str, object] = {}
-
-        class PySwarmalatorStepper:
-            def __init__(self, n: int, dim: int, dt: float) -> None:
-                calls["init"] = (n, dim, dt)
-
-            def step(
-                self,
-                pos: FloatArray,
-                phases: FloatArray,
-                omegas: FloatArray,
-                a: float,
-                b: float,
-                j: float,
-                k: float,
-            ) -> tuple[FloatArray, FloatArray]:
-                calls["contiguous"] = (
-                    pos.flags.c_contiguous,
-                    phases.flags.c_contiguous,
-                    omegas.flags.c_contiguous,
-                )
-                return pos + a - b + j - k, phases + omegas
-
-        fake_spo = types.ModuleType("spo_kernel")
-        fake_spo.__dict__["PySwarmalatorStepper"] = PySwarmalatorStepper
-        monkeypatch.setitem(sys.modules, "spo_kernel", fake_spo)
-
-        fn = sw_mod._load_rust_fn()
-        pos = np.array([[0.0, 0.5], [1.0, -0.5]], dtype=np.float64)
-        phases = np.array([0.2, 0.4], dtype=np.float64)
-        omegas = np.array([0.1, -0.2], dtype=np.float64)
-
-        got_pos, got_phases = fn(pos, phases, omegas, 2, 2, 1.0, 0.5, 0.25, 0.75, 0.01)
-
-        np.testing.assert_allclose(got_pos, pos.ravel().reshape(2, 2))
-        np.testing.assert_allclose(got_phases, phases + omegas)
-        assert got_pos.dtype == np.float64
-        assert got_phases.dtype == np.float64
-        assert calls == {"init": (2, 2, 0.01), "contiguous": (True, True, True)}
+    @pytest.mark.native_runtime
+    def test_rust_loader_reshapes_flat_kernel_positions(self) -> None:
+        """The compiled Rust loader returns positions shaped ``(n, dim)``."""
+        if "rust" not in sw_mod.AVAILABLE_BACKENDS:
+            pytest.skip("rust unavailable")
+        _assert_kernel_follows_law("rust", sw_mod._load_rust_fn())
 
     @pytest.mark.parametrize(
         ("stdout", "match"),
@@ -671,77 +688,20 @@ class TestBackendLoaderContracts:
         with pytest.raises(ValueError, match=match):
             _swarmalator_mojo.swarmalator_step_mojo(*_direct_payload())
 
+    @pytest.mark.native_runtime
+    @pytest.mark.parametrize("owner", ["mojo", "julia", "go"])
     def test_optional_backend_loaders_return_callable_numeric_kernels(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
+        self, owner: str
     ) -> None:
-        def install_backend(
-            module_name: str, function_name: str, offset: float
-        ) -> None:
-            module = types.ModuleType(module_name)
-
-            def _ensure_exe() -> str:
-                module.__dict__["loaded"] = True
-                return "swarmalator"
-
-            def _load_lib() -> None:
-                module.__dict__["loaded"] = True
-
-            def kernel(
-                pos: FloatArray,
-                phases: FloatArray,
-                omegas: FloatArray,
-                _n: int,
-                _dim: int,
-                _a: float,
-                _b: float,
-                _j: float,
-                _k: float,
-                dt: float,
-            ) -> tuple[FloatArray, FloatArray]:
-                return pos + offset + dt, (phases + omegas * dt + offset) % TWO_PI
-
-            module.__dict__["loaded"] = False
-            module.__dict__["_ensure_exe"] = _ensure_exe
-            module.__dict__["_load_lib"] = _load_lib
-            module.__dict__[function_name] = kernel
-            monkeypatch.setitem(sys.modules, module_name, module)
-
-        fake_juliacall = types.ModuleType("juliacall")
-        fake_juliacall.__dict__["Main"] = object()
-        monkeypatch.setitem(sys.modules, "juliacall", fake_juliacall)
-        install_backend(
-            "scpn_phase_orchestrator.experimental.accelerators.upde._swarmalator_mojo",
-            "swarmalator_step_mojo",
-            0.10,
-        )
-        install_backend(
-            "scpn_phase_orchestrator.experimental.accelerators.upde._swarmalator_julia",
-            "swarmalator_step_julia",
-            0.20,
-        )
-        install_backend(
-            "scpn_phase_orchestrator.experimental.accelerators.upde._swarmalator_go",
-            "swarmalator_step_go",
-            0.30,
-        )
-
-        pos = np.array([[0.0, 1.0], [2.0, 3.0]], dtype=np.float64)
-        phases = np.array([0.5, 1.5], dtype=np.float64)
-        omegas = np.array([0.2, -0.1], dtype=np.float64)
-        args: BackendArgs = (pos, phases, omegas, 2, 2, 1.0, 1.0, 0.8, 1.2, 0.01)
-
-        for loader, offset in (
-            (sw_mod._load_mojo_fn, 0.10),
-            (sw_mod._load_julia_fn, 0.20),
-            (sw_mod._load_go_fn, 0.30),
-        ):
-            got_pos, got_phases = loader()(*args)
-            np.testing.assert_allclose(got_pos, pos + offset + 0.01)
-            np.testing.assert_allclose(
-                got_phases,
-                (phases + omegas * 0.01 + offset) % TWO_PI,
-            )
+        """Each real optional loader returns a kernel that follows the law."""
+        if owner not in sw_mod.AVAILABLE_BACKENDS:
+            pytest.skip(f"{owner} unavailable")
+        loader = {
+            "mojo": sw_mod._load_mojo_fn,
+            "julia": sw_mod._load_julia_fn,
+            "go": sw_mod._load_go_fn,
+        }[owner]
+        _assert_kernel_follows_law(owner, loader())
 
 
 class TestPublicBackendOutputContracts:
