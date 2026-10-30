@@ -21,6 +21,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The RT-113 probe test no longer injects a fake `juliacall` module. It
+  calls `require_juliacall_main()` on the real installation: with
+  `juliacall` present the result is the imported module itself and its
+  `Main` evaluates `sum(1:10)`; without it the probe raises `ImportError`.
 - `phase_transfer_entropy` and `transfer_entropy_matrix` take `backend=`,
   and the new `transfer_entropy_backend(slot, backend)` names the owner; a
   named owner that is absent, lacks the kernel or fails raises

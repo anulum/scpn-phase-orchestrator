@@ -10,6 +10,8 @@
 
 from __future__ import annotations
 
+import importlib
+import importlib.util
 import sys
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -105,12 +107,20 @@ def test_upde_julia_loaders_reject_runtime_without_main(
         case.loader()
 
 
-def test_runtime_probe_returns_complete_juliacall_module(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """A complete ``juliacall`` module must pass through unchanged."""
-    stub = ModuleType("juliacall")
-    stub.Main = object()
-    monkeypatch.setitem(sys.modules, "juliacall", stub)
+@pytest.mark.native_runtime
+def test_runtime_probe_returns_complete_juliacall_module() -> None:
+    """The probe returns the live ``juliacall`` module, or refuses when absent.
 
-    assert require_juliacall_main() is stub
+    With ``juliacall`` installed the result is the imported module itself and
+    its ``Main`` evaluates Julia code; without it the probe raises
+    ``ImportError``. Both branches use the real installation.
+    """
+    if importlib.util.find_spec("juliacall") is None:
+        with pytest.raises(ImportError):
+            require_juliacall_main()
+        return
+
+    juliacall = require_juliacall_main()
+
+    assert juliacall is importlib.import_module("juliacall")
+    assert juliacall.Main.seval("sum(1:10)") == 55
