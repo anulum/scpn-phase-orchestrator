@@ -57,7 +57,7 @@ make quickstart
 | Task | Start with | Verify with |
 |------|------------|-------------|
 | Change public Python API | owning `src/` module and API page | focused `pytest`, `ruff`, `mypy`, docs build |
-| Add a domainpack | `domainpacks/<name>/binding_spec.yaml` | `spo validate`, short `spo run`, README |
+| Add a domainpack | `domainpacks/<name>/binding_spec.yaml` | `spo validate`, short `spo run`, README; a `run.py` must pass `mypy --strict domainpacks/` and `tests/test_domainpack_runners.py`, and takes natural frequencies from the spec's per-layer `omegas` |
 | Add a notebook | closest existing notebook | notebook matrix row and `nbconvert` when practical |
 | Add a CLI or demo path | `examples/`, `tools/`, or `cli.py` | documented command and smoke run |
 | Change Rust acceleration | `spo-kernel/` crate and Python fallback | Rust tests plus Python parity test |

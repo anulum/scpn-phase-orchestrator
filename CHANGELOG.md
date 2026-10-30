@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Six domainpack runners failed when run:
+  - `agent_coordination`, `swarm_robotics` and `traffic_flow` kept hard-coded frequency arrays shorter than the layers their specs gained. They now take the spec's per-layer `omegas`. The swarm and traffic specs carry the former values with their citations, plus slow scaffold values (marked as uncalibrated) for the layers added later.
+  - The three `*_nchannel` runners imported `scpn_phase_orchestrator.server`, which moved to `runtime.server`.
+  - The new `tests/test_domainpack_runners.py` runs every runner as `__main__` on a copy of its pack, so plots and imprint state stay in a temporary directory.
+- `domainpacks/` now passes `mypy --strict`, and CI checks it:
+  - the relaxed `domainpacks` mypy override is removed;
+  - runners narrow optional `amplitude`, `imprint_model` and `knm_r` explicitly, raising a named `RuntimeError` instead of an `AttributeError`;
+  - the hierarchy transport demos read accepted names from the typed ledger.
+
 - The live audit tail (`iter_event_stream`, `tail_event_stream`,
   `spo watch`) no longer stops with "truncated protobuf envelope" when it
   polls while a writer is mid-frame. The writer wrote the length prefix and

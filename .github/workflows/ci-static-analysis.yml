@@ -52,6 +52,8 @@ jobs:
           cache: pip
       - run: pip install --require-hashes --no-deps -r requirements/dev-lock.txt && pip install --no-deps -e .
       - run: mypy --strict --explicit-package-bases src/scpn_phase_orchestrator/ tools/
+      - name: Strictly check the domainpack runners
+        run: mypy --strict domainpacks/
       - name: Strictly check the policy fuzz runtime boundary
         run: >
           python -m mypy --strict --config-file tools/connectome_mypy.ini

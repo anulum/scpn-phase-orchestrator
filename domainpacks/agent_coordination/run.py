@@ -14,7 +14,11 @@ from pathlib import Path
 
 import numpy as np
 
-from scpn_phase_orchestrator.binding import load_binding_spec, validate_binding_spec
+from scpn_phase_orchestrator.binding import (
+    BindingSpec,
+    load_binding_spec,
+    validate_binding_spec,
+)
 from scpn_phase_orchestrator.coupling.knm import CouplingBuilder, CouplingState
 from scpn_phase_orchestrator.imprint.state import ImprintState
 from scpn_phase_orchestrator.imprint.update import ImprintModel
@@ -34,9 +38,9 @@ SPEC_PATH = Path(__file__).parent / "binding_spec.yaml"
 TWO_PI = 2.0 * np.pi
 
 
-def _build_layer_map(spec):
+def _build_layer_map(spec: BindingSpec) -> dict[int, list[int]]:
     osc_idx = 0
-    ranges = {}
+    ranges: dict[int, list[int]] = {}
     for layer in spec.layers:
         n = len(layer.oscillator_ids)
         ranges[layer.index] = list(range(osc_idx, osc_idx + n))
@@ -44,7 +48,7 @@ def _build_layer_map(spec):
     return ranges
 
 
-def main():
+def main() -> None:
     spec = load_binding_spec(SPEC_PATH)
     errors = validate_binding_spec(spec)
     if errors:
@@ -60,29 +64,15 @@ def main():
     regime_manager = RegimeManager()
     supervisor = SupervisorPolicy(regime_manager)
 
+    if spec.imprint_model is None:
+        raise RuntimeError("binding spec defines no imprint_model")
     imprint_model = ImprintModel(
         spec.imprint_model.decay_rate, spec.imprint_model.saturation
     )
     imprint_state = ImprintState(m_k=np.zeros(n_osc), last_update=0.0)
 
     rng = np.random.default_rng(42)
-    omegas = np.array(
-        [
-            0.1,
-            0.1,
-            0.1,
-            0.05,
-            0.01,
-            0.01,
-            0.01,
-            0.005,
-            0.005,
-            0.005,
-            0.005,
-            0.005,
-        ]
-    )
-    omegas = omegas[:n_osc]
+    omegas = np.array(spec.get_omegas(), dtype=np.float64)
     phases = extract_initial_phases(spec, omegas)
     layer_map = _build_layer_map(spec)
 

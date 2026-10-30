@@ -14,7 +14,11 @@ from pathlib import Path
 
 import numpy as np
 
-from scpn_phase_orchestrator.binding import load_binding_spec, validate_binding_spec
+from scpn_phase_orchestrator.binding import (
+    BindingSpec,
+    load_binding_spec,
+    validate_binding_spec,
+)
 from scpn_phase_orchestrator.coupling.knm import CouplingBuilder, CouplingState
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryObserver
 from scpn_phase_orchestrator.oscillators.init_phases import extract_initial_phases
@@ -39,9 +43,9 @@ TWO_PI = 2.0 * np.pi
 OMEGAS = np.array([1.0, 1.05, 0.95, 1.0])
 
 
-def _build_layer_map(spec):
+def _build_layer_map(spec: BindingSpec) -> dict[int, list[int]]:
     osc_idx = 0
-    ranges = {}
+    ranges: dict[int, list[int]] = {}
     for layer in spec.layers:
         n = len(layer.oscillator_ids)
         ranges[layer.index] = list(range(osc_idx, osc_idx + n))
@@ -49,7 +53,7 @@ def _build_layer_map(spec):
     return ranges
 
 
-def main():
+def main() -> None:
     spec = load_binding_spec(SPEC_PATH)
     errors = validate_binding_spec(spec)
     if errors:
@@ -57,9 +61,8 @@ def main():
 
     n_osc = sum(len(layer.oscillator_ids) for layer in spec.layers)
     builder = CouplingBuilder()
-    amplitude_mode = spec.amplitude is not None
-    if amplitude_mode:
-        amp = spec.amplitude
+    amp = spec.amplitude
+    if amp is not None:
         coupling = builder.build_with_amplitude(
             n_osc,
             spec.coupling.base_strength,
@@ -85,7 +88,7 @@ def main():
     rng = np.random.default_rng(42)
     omegas = OMEGAS[:n_osc].copy()
     phases = extract_initial_phases(spec, omegas)
-    if amplitude_mode:
+    if amp is not None:
         sl_state = np.concatenate([phases, np.sqrt(np.maximum(mu, 0.0))])
     layer_map = _build_layer_map(spec)
 
@@ -112,13 +115,16 @@ def main():
             )
             zeta = 0.2
 
-        if amplitude_mode:
+        if amp is not None:
+            knm_r = coupling.knm_r
+            if knm_r is None:
+                raise RuntimeError("amplitude coupling has no knm_r")
             sl_state = sl_engine.step(
                 sl_state,
                 omegas,
                 mu,
                 coupling.knm,
-                coupling.knm_r,
+                knm_r,
                 zeta,
                 psi_target,
                 coupling.alpha,

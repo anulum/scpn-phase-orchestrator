@@ -17,26 +17,35 @@ layers:
   - name: intersection
     index: 0
     oscillator_ids: [signal_phase, queue_length, pedestrian]
+    # Cycle ~90 s normalised; Gershenson & Rosenblueth (2012).
+    omegas: [1.00, 0.80, 0.50]
     family: signal_cycle
   - name: corridor
     index: 1
     oscillator_ids: [green_wave, travel_time, bus_priority]
+    omegas: [1.00, 0.60, 0.30]
     family: demand_event
   - name: network
     index: 2
     oscillator_ids: [area_flow, congestion_index]
+    omegas: [0.20, 0.15]
     family: signal_state
   - name: demand
     index: 3
     oscillator_ids: [commuter, freight]
+    omegas: [0.10, 0.05]
     family: demand_event
   - name: weather
     index: 4
     oscillator_ids: [rain_intensity, visibility]
+    # Scaffold assumption, not calibrated: weather drifts slower than demand.
+    omegas: [0.02, 0.02]
     family: weather_phase
   - name: equity_pressure
     index: 5
     oscillator_ids: [pedestrian_wait, transit_delay]
+    # Scaffold assumption, not calibrated: equity pressure follows demand.
+    omegas: [0.10, 0.05]
     family: equity_pressure
 
 oscillator_families:

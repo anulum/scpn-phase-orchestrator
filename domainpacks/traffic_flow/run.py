@@ -14,7 +14,11 @@ from pathlib import Path
 
 import numpy as np
 
-from scpn_phase_orchestrator.binding import load_binding_spec, validate_binding_spec
+from scpn_phase_orchestrator.binding import (
+    BindingSpec,
+    load_binding_spec,
+    validate_binding_spec,
+)
 from scpn_phase_orchestrator.coupling.knm import CouplingBuilder, CouplingState
 from scpn_phase_orchestrator.imprint.state import ImprintState
 from scpn_phase_orchestrator.imprint.update import ImprintModel
@@ -38,26 +42,12 @@ STEPS = 200
 SPEC_PATH = Path(__file__).parent / "binding_spec.yaml"
 TWO_PI = 2.0 * np.pi
 
-# Cycle ~90 s normalised; Gershenson & Rosenblueth (2012)
-OMEGAS = np.array(
-    [
-        1.00,
-        0.80,
-        0.50,  # intersection: signal, queue, pedestrian
-        1.00,
-        0.60,
-        0.30,  # corridor: green_wave, travel_time, bus
-        0.20,
-        0.15,  # network: area_flow, congestion_index
-        0.10,
-        0.05,  # demand: commuter, freight
-    ]
-)
+# Natural frequencies come from the per-layer ``omegas`` in the spec.
 
 
-def _build_layer_map(spec):
+def _build_layer_map(spec: BindingSpec) -> dict[int, list[int]]:
     osc_idx = 0
-    ranges = {}
+    ranges: dict[int, list[int]] = {}
     for layer in spec.layers:
         n = len(layer.oscillator_ids)
         ranges[layer.index] = list(range(osc_idx, osc_idx + n))
@@ -65,7 +55,7 @@ def _build_layer_map(spec):
     return ranges
 
 
-def main():
+def main() -> None:
     spec = load_binding_spec(SPEC_PATH)
     errors = validate_binding_spec(spec)
     if errors:
@@ -73,9 +63,8 @@ def main():
 
     n_osc = sum(len(layer.oscillator_ids) for layer in spec.layers)
     builder = CouplingBuilder()
-    amplitude_mode = spec.amplitude is not None
-    if amplitude_mode:
-        amp = spec.amplitude
+    amp = spec.amplitude
+    if amp is not None:
         coupling = builder.build_with_amplitude(
             n_osc,
             spec.coupling.base_strength,
@@ -98,15 +87,18 @@ def main():
     rules = load_policy_rules(policy_path)
     policy_engine = PolicyEngine(rules) if rules else None
 
+    if spec.imprint_model is None:
+        raise RuntimeError("binding spec defines no imprint_model")
     imprint_model = ImprintModel(
         spec.imprint_model.decay_rate, spec.imprint_model.saturation
     )
     imprint_state = ImprintState(m_k=np.zeros(n_osc), last_update=0.0)
 
     rng = np.random.default_rng(42)
-    omegas = OMEGAS[:n_osc].copy()
+    base_omegas = np.array(spec.get_omegas(), dtype=np.float64)
+    omegas = base_omegas.copy()
     phases = extract_initial_phases(spec, omegas)
-    if amplitude_mode:
+    if amp is not None:
         sl_state = np.concatenate([phases, np.sqrt(np.maximum(mu, 0.0))])
     layer_map = _build_layer_map(spec)
 
@@ -135,7 +127,7 @@ def main():
 
         # Phase 4 (120-159): adaptive signal control
         if step == 120:
-            omegas[:n_osc] = OMEGAS[:n_osc]
+            omegas[:] = base_omegas
             zeta = 0.3
 
         # Phase 5 (160-199): green wave recovery
@@ -145,14 +137,17 @@ def main():
         eff_knm = imprint_model.modulate_coupling(coupling.knm, imprint_state)
         eff_alpha = imprint_model.modulate_lag(coupling.alpha, imprint_state)
 
-        if amplitude_mode:
+        if amp is not None:
             eff_mu = imprint_model.modulate_mu(mu, imprint_state)
+            knm_r = coupling.knm_r
+            if knm_r is None:
+                raise RuntimeError("amplitude coupling has no knm_r")
             sl_state = sl_engine.step(
                 sl_state,
                 omegas,
                 eff_mu,
                 eff_knm,
-                coupling.knm_r,
+                knm_r,
                 zeta,
                 psi_target,
                 eff_alpha,

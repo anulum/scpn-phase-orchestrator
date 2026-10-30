@@ -14,7 +14,11 @@ from pathlib import Path
 
 import numpy as np
 
-from scpn_phase_orchestrator.binding import load_binding_spec, validate_binding_spec
+from scpn_phase_orchestrator.binding import (
+    BindingSpec,
+    load_binding_spec,
+    validate_binding_spec,
+)
 from scpn_phase_orchestrator.coupling.knm import CouplingBuilder, CouplingState
 from scpn_phase_orchestrator.imprint.state import ImprintState
 from scpn_phase_orchestrator.imprint.update import ImprintModel
@@ -59,9 +63,9 @@ OMEGAS = np.array(
 )
 
 
-def _build_layer_map(spec):
+def _build_layer_map(spec: BindingSpec) -> dict[int, list[int]]:
     osc_idx = 0
-    ranges = {}
+    ranges: dict[int, list[int]] = {}
     for layer in spec.layers:
         n = len(layer.oscillator_ids)
         ranges[layer.index] = list(range(osc_idx, osc_idx + n))
@@ -69,7 +73,7 @@ def _build_layer_map(spec):
     return ranges
 
 
-def main():
+def main() -> None:
     spec = load_binding_spec(SPEC_PATH)
     errors = validate_binding_spec(spec)
     if errors:
@@ -89,6 +93,8 @@ def main():
     rules = load_policy_rules(policy_path) if policy_path.exists() else []
     policy_engine = PolicyEngine(rules) if rules else None
 
+    if spec.imprint_model is None:
+        raise RuntimeError("binding spec defines no imprint_model")
     imprint_model = ImprintModel(
         spec.imprint_model.decay_rate, spec.imprint_model.saturation
     )

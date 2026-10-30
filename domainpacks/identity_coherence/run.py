@@ -26,8 +26,13 @@ from pathlib import Path
 
 import numpy as np
 
-from scpn_phase_orchestrator.binding import load_binding_spec, validate_binding_spec
+from scpn_phase_orchestrator.binding import (
+    BindingSpec,
+    load_binding_spec,
+    validate_binding_spec,
+)
 from scpn_phase_orchestrator.coupling.geometry_constraints import (
+    GeometryConstraint,
     NonNegativeConstraint,
     SymmetryConstraint,
     project_knm,
@@ -36,7 +41,11 @@ from scpn_phase_orchestrator.coupling.knm import CouplingState
 from scpn_phase_orchestrator.imprint.state import ImprintState
 from scpn_phase_orchestrator.imprint.update import ImprintModel
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryObserver
-from scpn_phase_orchestrator.monitor.session_start import check_session_start
+from scpn_phase_orchestrator.monitor.session_start import (
+    SessionCoherenceReport,
+    check_session_start,
+)
+from scpn_phase_orchestrator.oscillators.base import PhaseState
 from scpn_phase_orchestrator.oscillators.informational import InformationalExtractor
 from scpn_phase_orchestrator.oscillators.physical import PhysicalExtractor
 from scpn_phase_orchestrator.oscillators.symbolic import SymbolicExtractor
@@ -142,9 +151,9 @@ OMEGAS = np.array(
 )
 
 
-def _build_layer_map(spec):
+def _build_layer_map(spec: BindingSpec) -> dict[int, list[int]]:
     osc_idx = 0
-    ranges = {}
+    ranges: dict[int, list[int]] = {}
     for layer in spec.layers:
         n = len(layer.oscillator_ids)
         ranges[layer.index] = list(range(osc_idx, osc_idx + n))
@@ -152,7 +161,7 @@ def _build_layer_map(spec):
     return ranges
 
 
-def _build_identity_knm(n_osc: int, layer_map: dict) -> np.ndarray:
+def _build_identity_knm(n_osc: int, layer_map: dict[int, list[int]]) -> np.ndarray:
     """Build coupling matrix with explicit layer-aware structure.
 
     The CouplingBuilder's index-based exponential decay assumes spatial
@@ -204,7 +213,7 @@ def _generate_layer_signals(
     omegas: np.ndarray,
     imprint_mk: np.ndarray,
     rng: np.random.Generator,
-) -> tuple[list, list, list]:
+) -> tuple[list[PhaseState], list[PhaseState], list[PhaseState]]:
     """Generate representative P/I/S signals for one layer's oscillators.
 
     P (substrate): sinusoid at natural frequency + noise scaled by (1 - imprint).
@@ -218,9 +227,9 @@ def _generate_layer_signals(
     duration = 1.0
     t = np.arange(0, duration, 1.0 / fs)
 
-    p_states_all = []
-    i_states_all = []
-    s_states_all = []
+    p_states_all: list[PhaseState] = []
+    i_states_all: list[PhaseState] = []
+    s_states_all: list[PhaseState] = []
 
     for k in range(n_osc):
         omega_k = omegas[k]
@@ -253,12 +262,12 @@ def _generate_layer_signals(
 
 
 def extract_identity_phases(
-    spec,
-    layer_map: dict,
+    spec: BindingSpec,
+    layer_map: dict[int, list[int]],
     omegas: np.ndarray,
     imprint_state: ImprintState,
     seed: int = 42,
-) -> tuple[np.ndarray, list]:
+) -> tuple[np.ndarray, list[PhaseState]]:
     """Extract initial phases from P/I/S signals instead of random init.
 
     Physical channel (Hilbert) provides the initial phase for each oscillator.
@@ -271,7 +280,7 @@ def extract_identity_phases(
     n_osc = sum(len(layer.oscillator_ids) for layer in spec.layers)
     rng = np.random.default_rng(seed)
     phases = np.zeros(n_osc)
-    all_states = []
+    all_states: list[PhaseState] = []
 
     for layer in spec.layers:
         ids = layer_map[layer.index]
@@ -296,7 +305,13 @@ def extract_identity_phases(
     return phases, all_states
 
 
-def run_session_start_check(spec, layer_map, omegas, imprint_state, seed=42):
+def run_session_start_check(
+    spec: BindingSpec,
+    layer_map: dict[int, list[int]],
+    omegas: np.ndarray,
+    imprint_state: ImprintState,
+    seed: int = 42,
+) -> tuple[np.ndarray, SessionCoherenceReport]:
     """Extract P/I/S phases, run coherence gate, print report."""
     n_osc = sum(len(layer.oscillator_ids) for layer in spec.layers)
     phases, all_states = extract_identity_phases(
@@ -321,7 +336,7 @@ def run_session_start_check(spec, layer_map, omegas, imprint_state, seed=42):
     return phases, report
 
 
-def main():
+def main() -> None:
     spec = load_binding_spec(SPEC_PATH)
     errors = validate_binding_spec(spec)
     if errors:
@@ -344,19 +359,24 @@ def main():
     rules = load_policy_rules(policy_path)
     policy_engine = PolicyEngine(rules) if rules else None
 
+    if spec.imprint_model is None:
+        raise RuntimeError("binding spec defines no imprint_model")
     imprint_model = ImprintModel(
         spec.imprint_model.decay_rate, spec.imprint_model.saturation
     )
     imprint_state = load_imprint(n_osc)
 
-    constraint_map = {
+    constraint_map: dict[str, list[GeometryConstraint]] = {
         "symmetric_non_negative": [SymmetryConstraint(), NonNegativeConstraint()],
         "symmetric": [SymmetryConstraint()],
         "non_negative": [NonNegativeConstraint()],
     }
     default_ct = "symmetric_non_negative"
     ct = spec.geometry_prior.constraint_type if spec.geometry_prior else default_ct
-    default_gc = [SymmetryConstraint(), NonNegativeConstraint()]
+    default_gc: list[GeometryConstraint] = [
+        SymmetryConstraint(),
+        NonNegativeConstraint(),
+    ]
     geo_constraints = constraint_map.get(ct, default_gc)
 
     # P/I/S extraction + session-start coherence gate
@@ -509,7 +529,7 @@ def main():
     print(f"Imprint saved to {dst}")
 
 
-def run_stuart_landau():
+def run_stuart_landau() -> None:
     """Stuart-Landau conviction dynamics on identity dispositions.
 
     mu > 0 = supercritical = self-sustaining conviction.
@@ -523,9 +543,13 @@ def run_stuart_landau():
     alpha = np.zeros((n_osc, n_osc))
 
     amp_cfg = spec.amplitude
+    if amp_cfg is None:
+        raise RuntimeError("binding spec defines no amplitude section")
     epsilon = amp_cfg.epsilon
 
     sl_engine = StuartLandauEngine(n_osc, dt=spec.sample_period_s)
+    if spec.imprint_model is None:
+        raise RuntimeError("binding spec defines no imprint_model")
     imprint_model = ImprintModel(
         spec.imprint_model.decay_rate, spec.imprint_model.saturation
     )
@@ -546,7 +570,7 @@ def run_stuart_landau():
     print("-" * 65)
 
     dk_ids = layer_map[4]
-    core_ids = []
+    core_ids: list[int] = []
     for idx in [0, 1, 2, 3]:
         core_ids.extend(layer_map[idx])
 

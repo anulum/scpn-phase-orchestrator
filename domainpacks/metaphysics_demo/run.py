@@ -15,11 +15,13 @@ and prints R_good / R_bad trajectories for comparison.
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TypedDict
 
 import numpy as np
 
 from scpn_phase_orchestrator.binding import load_binding_spec, validate_binding_spec
 from scpn_phase_orchestrator.coupling.geometry_constraints import (
+    GeometryConstraint,
     NonNegativeConstraint,
     SymmetryConstraint,
     project_knm,
@@ -45,7 +47,17 @@ STEPS = 300
 SPEC_PATH = Path(__file__).parent / "binding_spec.yaml"
 
 
-def _run_sim(use_imprint: bool) -> dict:
+class SimResult(TypedDict):
+    """Final and traced order parameters of one ablation run."""
+
+    r_good_final: float
+    r_bad_final: float
+    r_good_trace: list[float]
+    r_bad_trace: list[float]
+    regime: str
+
+
+def _run_sim(use_imprint: bool) -> SimResult:
     spec = load_binding_spec(SPEC_PATH)
     errors = validate_binding_spec(spec)
     if errors:
@@ -78,7 +90,7 @@ def _run_sim(use_imprint: bool) -> dict:
         )
         imprint_state = ImprintState(m_k=np.zeros(n_osc), last_update=0.0)
 
-    geo_constraints = []
+    geo_constraints: list[GeometryConstraint] = []
     if spec.geometry_prior is not None:
         ct = spec.geometry_prior.constraint_type.lower()
         if "symmetric" in ct:
@@ -106,8 +118,8 @@ def _run_sim(use_imprint: bool) -> dict:
     )
     psi_target = spec.drivers.physical.get("psi", 0.0)
 
-    r_good_trace = []
-    r_bad_trace = []
+    r_good_trace: list[float] = []
+    r_bad_trace: list[float] = []
 
     for _ in range(STEPS):
         eff_knm = coupling.knm
@@ -214,7 +226,7 @@ def _run_sim(use_imprint: bool) -> dict:
     }
 
 
-def main():
+def main() -> None:
     print("=== Metaphysics Demo: Imprint + Geometry Ablation ===\n")
 
     print(f"Running {STEPS} steps WITH imprint + geometry...")

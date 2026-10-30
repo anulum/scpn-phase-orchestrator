@@ -17,22 +17,31 @@ layers:
   - name: individual_heading
     index: 0
     oscillator_ids: [bot_0, bot_1, bot_2, bot_3]
+    # Vicsek et al. (1995): heading angles as phase oscillators.
+    omegas: [0.50, 0.52, 0.48, 0.51]
     family: heading_angle
   - name: formation_shape
     index: 1
     oscillator_ids: [form_radius, form_angle]
+    omegas: [0.20, 0.15]
     family: formation_event
   - name: flock_direction
     index: 2
     oscillator_ids: [flock_heading, flock_speed]
+    omegas: [0.05, 0.03]
     family: formation_state
   - name: obstacle_field
     index: 3
     oscillator_ids: [obstacle_left, obstacle_right, obstacle_front]
+    # Scaffold assumption, not calibrated: environment phases drift slower
+    # than the flock direction.
+    omegas: [0.02, 0.02, 0.02]
     family: obstacle_phase
   - name: mission_intent
     index: 4
     oscillator_ids: [target_heading, target_spacing]
+    # Scaffold assumption, not calibrated: mission intent is the slowest layer.
+    omegas: [0.01, 0.01]
     family: mission_phase
 
 # Vicsek et al., PRL 75(6), 1995.

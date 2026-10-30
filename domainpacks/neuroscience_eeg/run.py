@@ -14,7 +14,11 @@ from pathlib import Path
 
 import numpy as np
 
-from scpn_phase_orchestrator.binding import load_binding_spec, validate_binding_spec
+from scpn_phase_orchestrator.binding import (
+    BindingSpec,
+    load_binding_spec,
+    validate_binding_spec,
+)
 from scpn_phase_orchestrator.coupling.geometry_constraints import (
     NonNegativeConstraint,
     SymmetryConstraint,
@@ -47,9 +51,9 @@ OMEGAS_HZ = [2, 2, 2, 6, 6, 10, 10, 10, 20, 20, 40, 40, 0.1, 0.1]
 TWO_PI = 2.0 * np.pi
 
 
-def _build_layer_map(spec):
+def _build_layer_map(spec: BindingSpec) -> dict[int, list[int]]:
     osc_idx = 0
-    ranges = {}
+    ranges: dict[int, list[int]] = {}
     for layer in spec.layers:
         n = len(layer.oscillator_ids)
         ranges[layer.index] = list(range(osc_idx, osc_idx + n))
@@ -57,7 +61,7 @@ def _build_layer_map(spec):
     return ranges
 
 
-def main():
+def main() -> None:
     spec = load_binding_spec(SPEC_PATH)
     errors = validate_binding_spec(spec)
     if errors:
@@ -65,9 +69,8 @@ def main():
 
     n_osc = sum(len(layer.oscillator_ids) for layer in spec.layers)
     builder = CouplingBuilder()
-    amplitude_mode = spec.amplitude is not None
-    if amplitude_mode:
-        amp = spec.amplitude
+    amp = spec.amplitude
+    if amp is not None:
         coupling = builder.build_with_amplitude(
             n_osc,
             spec.coupling.base_strength,
@@ -90,6 +93,8 @@ def main():
     rules = load_policy_rules(policy_path)
     policy_engine = PolicyEngine(rules) if rules else None
 
+    if spec.imprint_model is None:
+        raise RuntimeError("binding spec defines no imprint_model")
     imprint_model = ImprintModel(
         spec.imprint_model.decay_rate, spec.imprint_model.saturation
     )
@@ -99,7 +104,7 @@ def main():
 
     omegas = np.array([TWO_PI * f for f in OMEGAS_HZ[:n_osc]], dtype=np.float64)
     phases = extract_initial_phases(spec, omegas)
-    if amplitude_mode:
+    if amp is not None:
         sl_state = np.concatenate([phases, np.sqrt(np.maximum(mu, 0.0))])
     layer_map = _build_layer_map(spec)
 
@@ -133,14 +138,17 @@ def main():
         eff_alpha = imprint_model.modulate_lag(coupling.alpha, imprint_state)
         eff_knm = project_knm(eff_knm, geo_constraints)
 
-        if amplitude_mode:
+        if amp is not None:
             eff_mu = imprint_model.modulate_mu(mu, imprint_state)
+            knm_r = coupling.knm_r
+            if knm_r is None:
+                raise RuntimeError("amplitude coupling has no knm_r")
             sl_state = sl_engine.step(
                 sl_state,
                 omegas,
                 eff_mu,
                 eff_knm,
-                coupling.knm_r,
+                knm_r,
                 zeta,
                 psi_target,
                 eff_alpha,

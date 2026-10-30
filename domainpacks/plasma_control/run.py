@@ -24,7 +24,7 @@ N_STEPS = 200
 SEED = 42
 
 
-def main():
+def main() -> None:
     spec = load_binding_spec(SPEC_PATH)
     n_osc = sum(len(layer.oscillator_ids) for layer in spec.layers)
 

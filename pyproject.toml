@@ -314,11 +314,6 @@ disallow_incomplete_defs = false
 ignore_errors = true
 
 [[tool.mypy.overrides]]
-module = ["domainpacks", "domainpacks.*"]
-disallow_untyped_defs = false
-disallow_incomplete_defs = false
-
-[[tool.mypy.overrides]]
 module = [
     "grpc_tools",
     "grpc_tools.*",

@@ -130,10 +130,7 @@ def run_demo() -> dict[str, object]:
         "channel_count": CHANNEL_COUNT,
         "accepted_count": rest.accepted_count,
         "channels": ["P", "I"],
-        "accepted_names": [
-            record["summary"]["name"]
-            for record in rest.to_audit_record()["ledger"]["accepted"]
-        ],
+        "accepted_names": [envelope.summary.name for envelope in rest.ledger.accepted],
         "rest_boundary": rest.to_audit_record(),
         "websocket_frame": frame.to_audit_record(),
         "jsonl_replay": jsonl.to_audit_record(),

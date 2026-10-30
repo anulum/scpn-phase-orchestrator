@@ -12,7 +12,7 @@
     "research_experimental_modules": 204,
     "runtime_serving_modules": 160,
     "rust_kernel_files": 132,
-    "test_files": 1122
+    "test_files": 1123
   },
   "documentation": {
     "public_pages": [
@@ -2263,6 +2263,7 @@
       "tests/test_domain_detectors.py",
       "tests/test_domainpack_amplitude.py",
       "tests/test_domainpack_binding_workflow.py",
+      "tests/test_domainpack_runners.py",
       "tests/test_domainpack_validate_run_agreement.py",
       "tests/test_domainpack_validation.py",
       "tests/test_doppler_validation_guards.py",
