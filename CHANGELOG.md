@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The spatial-modulator loader and adapter tests (RT-092–RT-094) no longer
+  patch preflights, install a fake `spo_kernel` or feed fake Go, Julia and
+  Mojo runtimes. They run the real Rust, Mojo, Julia and Go kernels and
+  direct adapters on every decay form against a plain-loop oracle built on
+  `math.dist`; the now unused fake runtimes are removed.
 - The simplicial loader tests (RT-087–RT-089, and the Go loader test) no
   longer install fake `spo_kernel`, `juliacall` or backend modules. They run
   the real Rust, Mojo, Julia and Go kernels, with and without phase lags,

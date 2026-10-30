@@ -10,9 +10,9 @@
 
 from __future__ import annotations
 
-import ctypes
 import importlib
 import json
+import math
 import sys
 import types
 from collections.abc import Callable
@@ -248,29 +248,6 @@ def test_swarmalator_python_reference_uses_bit_true_inverse_distance_kernel() ->
     np.testing.assert_allclose(got_phases, expected_phases, atol=1.0e-12)
 
 
-class _FakeGoSpatialLib:
-    def __init__(self, values: tuple[float, ...], rc: int = 0) -> None:
-        self.values = values
-        self.rc = rc
-
-    def SpatialModulate(self, *_args: object) -> int:
-        out_ref = ctypes.cast(
-            cast(Any, _args[-1]),
-            ctypes.POINTER(ctypes.c_double),
-        )
-        for index, value in enumerate(self.values):
-            out_ref[index] = value
-        return self.rc
-
-
-class _FakeJuliaSpatialModule:
-    def __init__(self, values: tuple[float, ...]) -> None:
-        self.values = values
-
-    def spatial_modulate(self, *_args: object) -> FloatArray:
-        return np.array(self.values, dtype=np.float64)
-
-
 class _StringJuliaSpatialModule:
     def spatial_modulate(self, *_args: object) -> object:
         return np.array(["0.0", "0.2", "0.2", "0.0"], dtype=object)
@@ -301,6 +278,53 @@ class _FirstArrayCallRejector:
         if self.calls == 1:
             raise ValueError("first array conversion rejected")
         return np.array(["not-a-number"], dtype=object)
+
+
+def _oracle_modulation(
+    knm: list[list[float]],
+    positions: list[list[float]],
+    k_base: float,
+    form: int,
+    exponent: float,
+    scale: float,
+    epsilon: float,
+) -> list[float]:
+    """Return ``K_ij · k_base · w(d_ij)`` with a zero diagonal, by plain loops."""
+    n = len(knm)
+    out = []
+    for i in range(n):
+        for j in range(n):
+            if i == j:
+                out.append(0.0)
+                continue
+            d = math.dist(positions[i], positions[j])
+            weight = (
+                1 / (1 + d),
+                math.exp(-d / scale),
+                (1 + d / scale) ** -exponent,
+                1 / math.sqrt(d * d + epsilon),
+            )[form]
+            out.append(knm[i][j] * k_base * weight)
+    return out
+
+
+def _assert_kernel_follows_law(owner: str, kernel: Callable[..., object]) -> None:
+    """Check a real spatial-modulation kernel on every decay form."""
+    if owner not in sm_mod.AVAILABLE_BACKENDS:
+        pytest.skip(f"{owner} unavailable")
+    rng = np.random.default_rng(103)
+    knm = rng.uniform(0.0, 1.0, (4, 4))
+    np.fill_diagonal(knm, 0.0)
+    positions = rng.uniform(-2.0, 2.0, (4, 2))
+    for form in range(4):
+        args = (knm.ravel(), positions.ravel(), 4, 2, 0.8, form, 1.7, 1.3, 1e-9)
+        expected = _oracle_modulation(
+            knm.tolist(), positions.tolist(), 0.8, form, 1.7, 1.3, 1e-9
+        )
+        got = np.asarray(kernel(*args), dtype=np.float64).ravel()
+        np.testing.assert_allclose(
+            got, expected, rtol=1e-12, atol=1e-9 if owner == "mojo" else 1e-14
+        )
 
 
 def _direct_args() -> DirectArgs:
@@ -347,12 +371,18 @@ def test_public_backend_output_rejects_first_array_conversion_failure() -> None:
         sm_mod._validate_backend_output(_FirstArrayCallRejector(), n=2)
 
 
-def test_backend_loader_success_paths(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(sm_mod, "require_juliacall_main", lambda: object())
-    monkeypatch.setattr(_spatial_modulator_go, "_load_lib", lambda: object())
-
-    assert sm_mod._load_julia_fn() is _spatial_modulator_julia.spatial_modulate_julia
-    assert sm_mod._load_go_fn() is _spatial_modulator_go.spatial_modulate_go
+@pytest.mark.native_runtime
+@pytest.mark.parametrize("owner", ["mojo", "julia", "go"])
+def test_backend_loader_success_paths(owner: str) -> None:
+    """Each real optional loader returns a kernel that follows the law."""
+    loader = {
+        "mojo": sm_mod._load_mojo_fn,
+        "julia": sm_mod._load_julia_fn,
+        "go": sm_mod._load_go_fn,
+    }[owner]
+    if owner not in sm_mod.AVAILABLE_BACKENDS:
+        pytest.skip(f"{owner} unavailable")
+    _assert_kernel_follows_law(owner, loader())
 
 
 def test_dispatch_skips_failed_optional_backend(
@@ -462,44 +492,16 @@ def test_direct_backend_rejects_numeric_string_inputs_before_runtime_loading(
         _spatial_modulator_go.spatial_modulate_go(*args)
 
 
-def test_direct_go_julia_mojo_outputs_are_validated(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    monkeypatch.setattr(
-        _spatial_modulator_go,
-        "_load_lib",
-        lambda: _FakeGoSpatialLib((0.0, 0.1, 0.1, 0.0)),
-    )
-    np.testing.assert_allclose(
-        _spatial_modulator_go.spatial_modulate_go(*_direct_args()),
-        np.array([0.0, 0.1, 0.1, 0.0], dtype=np.float64),
-    )
-
-    monkeypatch.setattr(
-        _spatial_modulator_julia,
-        "_ensure",
-        lambda: _FakeJuliaSpatialModule((0.0, 0.2, 0.2, 0.0)),
-    )
-    np.testing.assert_allclose(
-        _spatial_modulator_julia.spatial_modulate_julia(*_direct_args()),
-        np.array([0.0, 0.2, 0.2, 0.0], dtype=np.float64),
-    )
-
-    monkeypatch.setattr(
-        _spatial_modulator_mojo, "_ensure_exe", lambda: "spatial_modulator"
-    )
-    mojo_subprocess = cast(Any, _spatial_modulator_mojo.__dict__["subprocess"])
-    monkeypatch.setattr(
-        mojo_subprocess,
-        "run",
-        lambda *_args, **_kwargs: types.SimpleNamespace(
-            returncode=0, stdout="0.0\n0.3\n0.3\n0.0\n", stderr=""
-        ),
-    )
-    np.testing.assert_allclose(
-        _spatial_modulator_mojo.spatial_modulate_mojo(*_direct_args()),
-        np.array([0.0, 0.3, 0.3, 0.0], dtype=np.float64),
-    )
+@pytest.mark.native_runtime
+@pytest.mark.parametrize("owner", ["go", "julia", "mojo"])
+def test_direct_go_julia_mojo_outputs_are_validated(owner: str) -> None:
+    """Each real direct adapter returns validated values that follow the law."""
+    direct = {
+        "go": _spatial_modulator_go.spatial_modulate_go,
+        "julia": _spatial_modulator_julia.spatial_modulate_julia,
+        "mojo": _spatial_modulator_mojo.spatial_modulate_mojo,
+    }[owner]
+    _assert_kernel_follows_law(owner, direct)
 
 
 def test_direct_julia_rejects_boolean_output_alias(
@@ -604,19 +606,12 @@ def test_spatial_backend_validation_rejects_bad_output_invariants() -> None:
         )
 
 
-def test_rust_loader_contract(monkeypatch: pytest.MonkeyPatch) -> None:
-    fake_spo = types.ModuleType("spo_kernel")
-
-    def spatial_modulate_rust(*_args: object) -> list[float]:
-        return [0.0, 0.4, 0.4, 0.0]
-
-    fake_spo.__dict__["spatial_modulate_rust"] = spatial_modulate_rust
-    monkeypatch.setitem(sys.modules, "spo_kernel", fake_spo)
-    fn = sm_mod._load_rust_fn()
-    np.testing.assert_allclose(
-        fn(*_direct_args()),
-        np.array([0.0, 0.4, 0.4, 0.0], dtype=np.float64),
-    )
+@pytest.mark.native_runtime
+def test_rust_loader_contract() -> None:
+    """The compiled Rust loader returns a kernel that follows the law."""
+    if "rust" not in sm_mod.AVAILABLE_BACKENDS:
+        pytest.skip("rust unavailable")
+    _assert_kernel_follows_law("rust", sm_mod._load_rust_fn())
 
 
 def test_rust_loader_rejects_boolean_output_alias(
