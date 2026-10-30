@@ -32,6 +32,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   symlinked environments under the uploaded basetemp, which made the native
   profile artifact 3.3 GB instead of 8 MB, and the guard runner died while
   reading it. They remain qualified in the Julia lane and in ffi-test.
+- The Go and Mojo delayed-integration steps appended coverage without the
+  lane's `COVERAGE_FILE`. With `parallel = true`, pytest-cov then combined and
+  removed `.coverage.go` and `.coverage.mojo`, so both lane coverage artifacts
+  went missing and the coverage guard could not start. Both steps now write
+  to their lane's data file.
 
 ### Security
 

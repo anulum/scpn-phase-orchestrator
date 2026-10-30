@@ -271,6 +271,8 @@ jobs:
           path: build/hodge/go.json
           if-no-files-found: error
       - name: Qualify required Go delayed integration
+        env:
+          COVERAGE_FILE: .coverage.go
         run: |
           python -m pytest tests/test_delay_real_runtime.py -k go \
             --strict-markers --tb=short --cov=scpn_phase_orchestrator --cov-append --cov-report= --cov-fail-under=0
@@ -383,6 +385,8 @@ jobs:
           path: build/hodge/mojo.json
           if-no-files-found: error
       - name: Qualify required Mojo delayed integration
+        env:
+          COVERAGE_FILE: .coverage.mojo
         run: |
           .venv/bin/python -m pytest tests/test_delay_real_runtime.py -k mojo \
             --strict-markers --tb=short --cov=scpn_phase_orchestrator --cov-append --cov-report= --cov-fail-under=0
