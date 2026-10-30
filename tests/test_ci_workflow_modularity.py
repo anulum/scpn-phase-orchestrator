@@ -108,7 +108,7 @@ def test_live_inventory_is_complete_unique_and_bounded() -> None:
     jobs = [job for category in policy["categories"] for job in category["jobs"]]
 
     assert len(policy["categories"]) == 8
-    assert len(jobs) == len(set(jobs)) == len(policy["job_order"]) == 28
+    assert len(jobs) == len(set(jobs)) == len(policy["job_order"]) == 32
     assert set(jobs) == set(policy["job_order"])
     assert modularity.audit_ci_workflow_modularity(policy) == []
     assert modularity.main() == 0
@@ -137,6 +137,27 @@ def test_branch_profiles_start_with_the_run_and_gate_coverage_assurance() -> Non
         inventory.workflow_path_for_job("branch-profile-guard").name
         == "ci-coverage-assurance.yml"
     )
+
+
+def test_native_branch_shards_build_once_and_feed_the_profile_binder() -> None:
+    """Order the shared build and timing snapshot before shards and the binder."""
+    policy = inventory.load_ci_workflow_policy()
+    quality = next(c for c in policy["categories"] if c["id"] == "python-quality")
+    assert quality["jobs"] == [
+        "test",
+        "slow-tests",
+        "nn-coverage",
+        "branch-native-build",
+        "branch-native-timing",
+        "branch-native-shard",
+        "branch-coverage",
+        "branch-native-timings",
+    ]
+    source = inventory.workflow_path_for_job("branch-coverage").read_text("utf-8")
+    assert "needs: [branch-native-build, branch-native-timing]" in source
+    assert "needs: [branch-native-build, branch-native-shard]" in source
+    assert "verify --count 4 .ci-branch/native/shards/selection-*.json" in source
+    assert "shard: [1, 2, 3, 4]" in source
 
 
 def test_inventory_reconstructs_real_jobs_and_resolves_owners() -> None:

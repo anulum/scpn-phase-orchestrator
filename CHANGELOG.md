@@ -16,6 +16,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   guard and the coverage floors are unchanged. In the last complete run
   (41036389305) this chain took 56 minutes; `branch-absent` (13 minutes) no
   longer sits on it.
+- The native branch profile's public-contract selection runs in four shards
+  instead of one 23-minute step. One job builds the release kernel and the
+  package wheel once. The shards install those exact wheels (checked by
+  SHA-256), and each one schedules from the same timing snapshot.
+  `branch-coverage` then refuses the run unless the shard selections cover
+  every discovered module exactly once, combines their branch data and runs
+  the rest of the profile unchanged. `tools/pytest_shards.py` balances the
+  modules by measured duration (round-robin on a cold run), and
+  `tools/pytest_timing_plugin.py` records the durations for the next run.
+  Timings decide only where a module runs, never whether it runs. On the
+  JUnit times of run 41036389305, four shards take 4.4 minutes each with
+  measured timings and at most 5.7 minutes cold.
 
 ### Fixed
 

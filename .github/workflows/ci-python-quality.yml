@@ -203,6 +203,165 @@ jobs:
           name: coverage-data-nn-${{ matrix.shard }}
           path: .coverage.nn-${{ matrix.shard }}
           include-hidden-files: true
+  branch-native-build:
+    # One release kernel and one package wheel for every native branch job, so
+    # the shards and the profile binder measure the same installed bytes.
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The compatibility test builds one immutable real historical SDK.
+          fetch-depth: 0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          # One exact interpreter for every profile job: the aggregate refuses
+          # profiles recorded under different patch releases.
+          python-version: "3.12.15"
+          cache: pip
+      - uses: dtolnay/rust-toolchain@631a55b12751854ce901bb631d5902ceb48146f7 # stable
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            spo-kernel/target
+          key: cargo-ffi-${{ runner.os }}-py3.12-${{ hashFiles('spo-kernel/Cargo.lock') }}
+          restore-keys: cargo-ffi-${{ runner.os }}-
+      - name: Build the actual kernel and the whole Python package once
+        run: |
+          python -m venv .venv
+          . .venv/bin/activate
+          pip install --require-hashes --no-deps -r requirements/ci-tools.txt
+          pip install --require-hashes --no-deps -r requirements/build-tools.txt
+          pip install --require-hashes --no-deps -r requirements/dev-lock.txt
+          pip install --require-hashes --no-deps -r requirements/studio-sdk.txt
+          maturin build --release --locked -m spo-kernel/crates/spo-ffi/Cargo.toml --out kernel-wheels
+          pip wheel --no-deps --no-build-isolation --wheel-dir package-wheels .
+          sha256sum kernel-wheels/*.whl package-wheels/*.whl > native-wheels.sha256
+          test "$(wc -l < native-wheels.sha256)" -eq 2
+      - name: Share the exact wheels with every native branch job
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: branch-native-wheels
+          path: |
+            kernel-wheels/*.whl
+            package-wheels/*.whl
+            native-wheels.sha256
+          if-no-files-found: error
+          retention-days: 7
+
+  branch-native-timing:
+    # One immutable timing snapshot per run: every shard schedules from the
+    # same measurements. A cache miss is a cold run with an empty snapshot,
+    # which still selects every module exactly once.
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Restore the latest measured module durations
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .ci-timing/branch-native.json
+          key: spo-branch-native-timings-v1-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: spo-branch-native-timings-v1-
+      - name: Start cold when no measurement exists
+        run: |
+          mkdir -p .ci-timing
+          test -f .ci-timing/branch-native.json \
+            || printf '{"durations": {}, "schema": 1}\n' > .ci-timing/branch-native.json
+      - name: Share this run's timing snapshot
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: branch-native-timing-snapshot
+          path: .ci-timing/branch-native.json
+          if-no-files-found: error
+          retention-days: 7
+
+  branch-native-shard:
+    # The native public-contract selection, split by measured module duration.
+    # The selection, markers, Hypothesis profile and branch measurement are
+    # those of the single run they replace; branch-coverage proves the shards
+    # selected every module exactly once before combining their data.
+    needs: [branch-native-build, branch-native-timing]
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    env:
+      HYPOTHESIS_PROFILE: dev
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # The compatibility test builds one immutable real historical SDK.
+          fetch-depth: 0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          # One exact interpreter for every profile job: the aggregate refuses
+          # profiles recorded under different patch releases.
+          python-version: "3.12.15"
+          cache: pip
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go/go.mod
+          cache-dependency-path: go/go.sum
+      - uses: dtolnay/rust-toolchain@631a55b12751854ce901bb631d5902ceb48146f7 # stable
+      - name: Download the shared kernel and package wheels
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: branch-native-wheels
+      - name: Install the shared kernel and the whole Python package
+        run: |
+          sha256sum --check --strict native-wheels.sha256
+          python -m venv .venv
+          . .venv/bin/activate
+          pip install --require-hashes --no-deps -r requirements/ci-tools.txt
+          pip install --require-hashes --no-deps -r requirements/build-tools.txt
+          pip install --require-hashes --no-deps -r requirements/dev-lock.txt
+          pip install --require-hashes --no-deps -r requirements/studio-sdk.txt
+          pip install --no-index --no-deps kernel-wheels/*.whl package-wheels/*.whl
+      - name: Prepare genuine installed connectome profiles for the global branch gate
+        run: |
+          python -m venv .connectome-python-coverage
+          .connectome-python-coverage/bin/python -m pip install --require-hashes --no-deps -r requirements/connectome-runtime-lock.txt
+          .connectome-python-coverage/bin/python -m pip install --no-index --no-deps package-wheels/*.whl
+          .venv/bin/python -m pip install --require-hashes --no-deps -r requirements/connectome-hcp-lock.txt
+          .connectome-python-coverage/bin/python -m pip check
+      - name: Download this run's timing snapshot
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: branch-native-timing-snapshot
+          path: .ci-timing
+      - name: Measure this shard of the native public contracts
+        run: |
+          . .venv/bin/activate
+          mkdir -p .ci-branch-shard
+          python -m tools.pytest_shards --ignore tests/test_kuramoto_layer.py --ignore tests/test_stuart_landau_nn.py \
+            --ignore tests/test_bold.py --ignore tests/test_reservoir.py \
+            --ignore tests/test_ude_kuramoto.py --ignore tests/test_inverse.py \
+            --ignore tests/test_oim.py --ignore tests/test_quantum_bridge_live.py \
+            --ignore tests/test_geometry_walk.py \
+            --ignore 'tests/test_nn_physics_validation*.py' \
+            select --shard "${{ matrix.shard }}/4" --timings .ci-timing/branch-native.json \
+            --receipt .ci-branch-shard/selection.json > .ci-branch-shard/modules.txt
+          mapfile -t modules < .ci-branch-shard/modules.txt
+          export COVERAGE_FILE="$PWD/.ci-branch-shard/.coverage"
+          python -m pytest "${modules[@]}" --tb=short -p no:cacheprovider \
+            -p tools.pytest_timing_plugin --module-timings .ci-branch-shard/timings.json \
+            -m "not slow and not performance and not native_runtime" \
+            -k "not performance" \
+            --cov=scpn_phase_orchestrator --cov-branch --cov-report= --cov-fail-under=0 \
+            --junitxml=.ci-branch-shard/public-contracts.junit.xml
+      - name: Upload this shard's coverage, selection and timings
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: branch-native-shard-${{ matrix.shard }}
+          path: .ci-branch-shard
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
+
   branch-coverage:
     # Branch instrumentation is heavier than line instrumentation and flips
     # host-sensitive wall-clock performance tests, which is why the main
@@ -217,6 +376,7 @@ jobs:
     # property-based correctness — the main lanes already run the ci profile
     # (500 examples) — and 500-example properties under the C tracer would
     # dominate the lane's wall clock.
+    needs: [branch-native-build, branch-native-shard]
     runs-on: ubuntu-latest
     timeout-minutes: 90
     env:
@@ -245,16 +405,19 @@ jobs:
             spo-kernel/target
           key: cargo-ffi-${{ runner.os }}-py3.12-${{ hashFiles('spo-kernel/Cargo.lock') }}
           restore-keys: cargo-ffi-${{ runner.os }}-
-      - name: Build actual kernels and the whole Python package
+      - name: Download the shared kernel and package wheels
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          name: branch-native-wheels
+      - name: Install the shared kernel and the whole Python package
         run: |
+          sha256sum --check --strict native-wheels.sha256
           python -m venv .venv
           . .venv/bin/activate
           pip install --require-hashes --no-deps -r requirements/ci-tools.txt
           pip install --require-hashes --no-deps -r requirements/build-tools.txt
           pip install --require-hashes --no-deps -r requirements/dev-lock.txt
           pip install --require-hashes --no-deps -r requirements/studio-sdk.txt
-          maturin build --release --locked -m spo-kernel/crates/spo-ffi/Cargo.toml --out kernel-wheels
-          pip wheel --no-deps --no-build-isolation --wheel-dir package-wheels .
           pip install --no-index --no-deps kernel-wheels/*.whl package-wheels/*.whl
       - name: Qualify required Rust basin and coupling-sweep consumers
         env:
@@ -267,26 +430,31 @@ jobs:
           .connectome-python-coverage/bin/python -m pip install --no-index --no-deps package-wheels/*.whl
           .venv/bin/python -m pip install --require-hashes --no-deps -r requirements/connectome-hcp-lock.txt
           .connectome-python-coverage/bin/python -m pip check
+      - name: Download every native public-contract shard
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          pattern: branch-native-shard-*
+          path: .ci-branch-shards
       - name: Measure actual native public contracts
         run: |
           . .venv/bin/activate
           mkdir -p .ci-branch/native
           export COVERAGE_FILE="$PWD/.ci-branch/native/.coverage"
-          pytest tests/ --tb=short -p no:cacheprovider \
-            --ignore=tests/test_kuramoto_layer.py \
-            --ignore=tests/test_stuart_landau_nn.py \
-            --ignore=tests/test_bold.py \
-            --ignore=tests/test_reservoir.py \
-            --ignore=tests/test_ude_kuramoto.py \
-            --ignore=tests/test_inverse.py \
-            --ignore=tests/test_oim.py \
-            --ignore=tests/test_quantum_bridge_live.py \
-            --ignore=tests/test_geometry_walk.py \
-            --ignore-glob=tests/test_nn_physics_validation*.py \
-            -m "not slow and not performance and not native_runtime" \
-            -k "not performance" \
-            --cov=scpn_phase_orchestrator --cov-branch --cov-report= --cov-fail-under=0 \
-            --junitxml=.ci-branch/native/public-contracts.junit.xml
+          mkdir -p .ci-branch/native/shards
+          for shard in 1 2 3 4; do
+            cp .ci-branch-shards/branch-native-shard-$shard/selection.json .ci-branch/native/shards/selection-$shard.json
+            cp .ci-branch-shards/branch-native-shard-$shard/public-contracts.junit.xml \
+              .ci-branch/native/shards/public-contracts-$shard.junit.xml
+          done
+          python -m tools.pytest_shards --ignore tests/test_kuramoto_layer.py --ignore tests/test_stuart_landau_nn.py \
+            --ignore tests/test_bold.py --ignore tests/test_reservoir.py \
+            --ignore tests/test_ude_kuramoto.py --ignore tests/test_inverse.py \
+            --ignore tests/test_oim.py --ignore tests/test_quantum_bridge_live.py \
+            --ignore tests/test_geometry_walk.py \
+            --ignore 'tests/test_nn_physics_validation*.py' \
+            verify --count 4 .ci-branch/native/shards/selection-*.json
+          coverage combine --keep --data-file="$COVERAGE_FILE" \
+            .ci-branch-shards/branch-native-shard-*/.coverage
           pytest tests/test_kernel_runtime.py tests/test_kernel_embedded_profile.py \
             tests/test_kernel_deployment.py tests/test_cli_serve.py \
             --tb=short -p no:cacheprovider -m native_runtime \
@@ -503,3 +671,37 @@ jobs:
           path: .ci-branch/native
           include-hidden-files: true
           if-no-files-found: error
+
+  branch-native-timings:
+    # Feed this run's measured durations to later runs. Timings decide only
+    # where a module runs, never whether it runs.
+    needs: [branch-native-timing, branch-native-shard]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12.15"
+      - name: Download the snapshot and every shard's timings
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+        with:
+          pattern: branch-native-*
+          path: .ci-timing-inputs
+      - name: Record the next timing snapshot from actual durations
+        run: |
+          mkdir -p .ci-timing
+          python -m tools.pytest_shards --ignore tests/test_kuramoto_layer.py --ignore tests/test_stuart_landau_nn.py \
+            --ignore tests/test_bold.py --ignore tests/test_reservoir.py \
+            --ignore tests/test_ude_kuramoto.py --ignore tests/test_inverse.py \
+            --ignore tests/test_oim.py --ignore tests/test_quantum_bridge_live.py \
+            --ignore tests/test_geometry_walk.py \
+            --ignore 'tests/test_nn_physics_validation*.py' \
+            record --previous .ci-timing-inputs/branch-native-timing-snapshot/branch-native.json \
+            --output .ci-timing/branch-native.json \
+            .ci-timing-inputs/branch-native-shard-*/timings.json
+      - name: Keep the measurement for later runs
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .ci-timing/branch-native.json
+          key: spo-branch-native-timings-v1-${{ github.run_id }}-${{ github.run_attempt }}

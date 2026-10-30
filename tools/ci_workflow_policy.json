@@ -28,7 +28,11 @@
         "test",
         "slow-tests",
         "nn-coverage",
-        "branch-coverage"
+        "branch-native-build",
+        "branch-native-timing",
+        "branch-native-shard",
+        "branch-coverage",
+        "branch-native-timings"
       ]
     },
     {
@@ -111,7 +115,11 @@
     "go-backend",
     "mojo-backend",
     "coverage-guard",
+    "branch-native-build",
+    "branch-native-timing",
+    "branch-native-shard",
     "branch-coverage",
+    "branch-native-timings",
     "module-linkage",
     "hierarchy-transport-smoke",
     "security",
