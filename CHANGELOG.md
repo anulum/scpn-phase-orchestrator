@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The RT-037 probe test no longer injects a fake `juliacall` module. It
+  calls `require_julia_main()` on the real installation: with `juliacall`
+  present the result is the runtime's own `Main` and evaluates
+  `sum(1:10)`; without it the probe raises `ImportError`.
 - `EVSMonitor(backend=)`, `EVSMonitor._frequency_specificity(..., backend=)`
   and the new `frequency_specificity_backend()` name the owner of the EVS
   specificity ratio. Naming Rust without the compiled kernel raises

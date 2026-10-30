@@ -11,10 +11,11 @@
 from __future__ import annotations
 
 import importlib
+import importlib.util
 import sys
 from collections.abc import Callable
 from types import ModuleType
-from typing import cast
+from typing import Any, cast
 
 import pytest
 
@@ -84,18 +85,24 @@ def test_direct_julia_bridges_reject_runtime_without_main(
         _direct_loader(module)()
 
 
-def test_direct_runtime_probe_returns_main_symbol(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """The direct runtime probe must return the injected ``Main`` symbol."""
+@pytest.mark.native_runtime
+def test_direct_runtime_probe_returns_main_symbol() -> None:
+    """The probe returns the live ``juliacall.Main``, or refuses when absent.
+
+    With ``juliacall`` installed the returned object is the runtime's own
+    ``Main`` and evaluates Julia code; without it the probe raises
+    ``ImportError``. Both branches use the real installation.
+    """
     runtime_module = importlib.import_module(
         "scpn_phase_orchestrator.experimental.accelerators._julia_runtime"
     )
-    expected_main = object()
-    juliacall = ModuleType("juliacall")
-    juliacall.__dict__["Main"] = expected_main
-    monkeypatch.setitem(sys.modules, "juliacall", juliacall)
+    probe = cast(Callable[[], Any], runtime_module.require_julia_main)
+    if importlib.util.find_spec("juliacall") is None:
+        with pytest.raises(ImportError):
+            probe()
+        return
 
-    probe = cast(Callable[[], object], runtime_module.require_julia_main)
+    main = probe()
 
-    assert probe() is expected_main
+    assert main is importlib.import_module("juliacall").Main
+    assert main.seval("sum(1:10)") == 55
