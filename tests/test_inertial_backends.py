@@ -17,6 +17,7 @@ and Mojo drifts only by the text-round-trip epsilon.
 from __future__ import annotations
 
 import contextlib
+import math
 import sys
 import types
 from collections.abc import Callable, Iterator
@@ -80,6 +81,7 @@ DIRECT_BACKENDS = cast(
 
 
 def test__inertial_validation_helper_is_directly_linked_to_backend_tests() -> None:
+    """The shared validation helper module is exercised directly by these tests."""
     assert callable(inertial_validation.validate_inertial_inputs)
     assert callable(inertial_validation.validate_inertial_output)
 
@@ -127,25 +129,31 @@ def _run_backend(backend: str, n: int, seed: int) -> tuple[FloatArray, FloatArra
 
 
 class TestBackendParity:
+    """Each owner agrees with the NumPy law for one step."""
+
     def test_rust_matches_python(self) -> None:
+        """Rust agrees with the NumPy law."""
         ref_th, ref_od = _run_backend("python", 8, 0)
         got_th, got_od = _run_backend("rust", 8, 0)
         assert np.max(np.abs(got_th - ref_th)) < TOL
         assert np.max(np.abs(got_od - ref_od)) < TOL
 
     def test_julia_matches_python(self) -> None:
+        """Julia agrees with the NumPy law."""
         ref_th, ref_od = _run_backend("python", 8, 1)
         got_th, got_od = _run_backend("julia", 8, 1)
         assert np.max(np.abs(got_th - ref_th)) < TOL
         assert np.max(np.abs(got_od - ref_od)) < TOL
 
     def test_go_matches_python(self) -> None:
+        """Go agrees with the NumPy law."""
         ref_th, ref_od = _run_backend("python", 8, 2)
         got_th, got_od = _run_backend("go", 8, 2)
         assert np.max(np.abs(got_th - ref_th)) < TOL
         assert np.max(np.abs(got_od - ref_od)) < TOL
 
     def test_mojo_matches_python(self) -> None:
+        """Mojo agrees with the NumPy law."""
         ref_th, ref_od = _run_backend("python", 6, 3)
         got_th, got_od = _run_backend("mojo", 6, 3)
         # Text round-trip on a single RK4 step ≤ 1e-14.
@@ -180,12 +188,14 @@ class TestMultiStepParity:
         return fin_th, fin_od
 
     def test_rust_vs_python_50_steps(self) -> None:
+        """Rust stays with the NumPy law over 50 steps."""
         ref_th, ref_od = self._ref_run("python", 8, 4, 50)
         got_th, got_od = self._ref_run("rust", 8, 4, 50)
         assert np.max(np.abs(got_th - ref_th)) < 1e-10
         assert np.max(np.abs(got_od - ref_od)) < 1e-10
 
     def test_go_vs_python_50_steps(self) -> None:
+        """Go stays with the NumPy law over 50 steps."""
         ref_th, ref_od = self._ref_run("python", 8, 5, 50)
         got_th, got_od = self._ref_run("go", 8, 5, 50)
         assert np.max(np.abs(got_th - ref_th)) < 1e-10
@@ -193,6 +203,8 @@ class TestMultiStepParity:
 
 
 class TestHypothesisParity:
+    """Random problems agree across owners."""
+
     @given(
         n=st.integers(min_value=2, max_value=8),
         seed=st.integers(min_value=0, max_value=2**31 - 1),
@@ -203,6 +215,7 @@ class TestHypothesisParity:
         suppress_health_check=[HealthCheck.too_slow],
     )
     def test_rust_hypothesis(self, n: int, seed: int) -> None:
+        """Rust agrees with the NumPy law on random problems."""
         if "rust" not in i_mod.AVAILABLE_BACKENDS:
             pytest.skip("rust unavailable")
         ref_th, ref_od = _run_backend("python", n, seed)
@@ -220,6 +233,7 @@ class TestHypothesisParity:
         suppress_health_check=[HealthCheck.too_slow],
     )
     def test_go_hypothesis(self, n: int, seed: int) -> None:
+        """Go agrees with the NumPy law on random problems."""
         if "go" not in i_mod.AVAILABLE_BACKENDS:
             pytest.skip("go unavailable")
         ref_th, ref_od = _run_backend("python", n, seed)
@@ -228,131 +242,124 @@ class TestHypothesisParity:
         assert np.max(np.abs(got_od - ref_od)) < TOL
 
 
-class TestBackendLoaderContracts:
-    def test_rust_loader_adapts_kernel_output_to_float64_arrays(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        calls: dict[str, object] = {}
+def _oracle_swing_step(
+    theta: list[float],
+    omega: list[float],
+    power: list[float],
+    knm: list[list[float]],
+    inertia: list[float],
+    damping: list[float],
+    dt: float,
+) -> tuple[list[float], list[float]]:
+    """Take one RK4 step of the swing equation with ``math.sin`` in plain loops."""
+    n = len(theta)
 
-        def inertial_step_rust(
-            theta: FloatArray,
-            omega_dot: FloatArray,
-            _power: FloatArray,
-            knm_flat: FloatArray,
-            _inertia: FloatArray,
-            damping: FloatArray,
-            n: int,
-            dt: float,
-        ) -> tuple[FloatArray, FloatArray]:
-            calls["n"] = n
-            calls["dt"] = dt
-            calls["contiguous"] = (
-                theta.flags.c_contiguous and knm_flat.flags.c_contiguous
+    def deriv(th: list[float], od: list[float]) -> tuple[list[float], list[float]]:
+        """Return (dθ/dt, dω/dt) = (ω, (P + Σ K sin(θj − θi) − D ω) / M)."""
+        accel = [
+            (
+                power[i]
+                + math.fsum(knm[i][j] * math.sin(th[j] - th[i]) for j in range(n))
+                - damping[i] * od[i]
             )
-            return theta + dt * omega_dot, omega_dot + dt * (_power - damping)
+            / inertia[i]
+            for i in range(n)
+        ]
+        return list(od), accel
 
-        fake_spo = types.ModuleType("spo_kernel")
-        fake_spo.__dict__["inertial_step_rust"] = inertial_step_rust
-        monkeypatch.setitem(sys.modules, "spo_kernel", fake_spo)
+    def shifted(base: list[float], slope: list[float], h: float) -> list[float]:
+        """Return ``base + h * slope``."""
+        return [b + h * k for b, k in zip(base, slope, strict=True)]
 
-        fn = i_mod._load_rust_fn()
-        theta = np.array([0.1, 0.3], dtype=np.float64)
-        omega = np.array([0.2, -0.1], dtype=np.float64)
-        power = np.array([1.0, -0.5], dtype=np.float64)
-        knm = np.array([[0.0, 0.2], [0.1, 0.0]], dtype=np.float64)
-        inertia = np.ones(2, dtype=np.float64)
-        damping = np.array([0.3, 0.4], dtype=np.float64)
+    k1t, k1o = deriv(theta, omega)
+    k2t, k2o = deriv(shifted(theta, k1t, dt / 2), shifted(omega, k1o, dt / 2))
+    k3t, k3o = deriv(shifted(theta, k2t, dt / 2), shifted(omega, k2o, dt / 2))
+    k4t, k4o = deriv(shifted(theta, k3t, dt), shifted(omega, k3o, dt))
+    new_theta = [
+        (theta[i] + dt / 6 * (k1t[i] + 2 * k2t[i] + 2 * k3t[i] + k4t[i]))
+        % (2 * math.pi)
+        for i in range(n)
+    ]
+    new_omega = [
+        omega[i] + dt / 6 * (k1o[i] + 2 * k2o[i] + 2 * k3o[i] + k4o[i])
+        for i in range(n)
+    ]
+    return new_theta, new_omega
 
-        got_theta, got_omega = fn(
-            theta, omega, power, knm.ravel(), inertia, damping, 2, 0.05
-        )
 
-        np.testing.assert_allclose(got_theta, theta + 0.05 * omega)
-        np.testing.assert_allclose(got_omega, omega + 0.05 * (power - damping))
-        assert got_theta.dtype == np.float64
-        assert got_omega.dtype == np.float64
-        assert calls == {"n": 2, "dt": 0.05, "contiguous": True}
+def _swing_case() -> BackendArgs:
+    """Return a four-machine case with non-trivial coupling, inertia and damping."""
+    rng = np.random.default_rng(5)
+    n = 4
+    knm = rng.uniform(0.0, 1.2, (n, n))
+    np.fill_diagonal(knm, 0.0)
+    return (
+        rng.uniform(0.0, 2 * np.pi, n),
+        rng.normal(0.0, 0.5, n),
+        rng.normal(0.0, 0.8, n),
+        knm.ravel(),
+        rng.uniform(0.5, 2.0, n),
+        rng.uniform(0.1, 0.6, n),
+        n,
+        0.02,
+    )
 
+
+def _assert_matches_oracle(
+    got: tuple[FloatArray, FloatArray], args: BackendArgs
+) -> None:
+    """Compare one kernel step with the oracle, wrapping the phase difference."""
+    theta, omega, power, knm_flat, inertia, damping, n, dt = args
+    exp_theta, exp_omega = _oracle_swing_step(
+        theta.tolist(),
+        omega.tolist(),
+        power.tolist(),
+        knm_flat.reshape(n, n).tolist(),
+        inertia.tolist(),
+        damping.tolist(),
+        dt,
+    )
+    got_theta, got_omega = got
+    gap = (np.asarray(got_theta) - exp_theta + np.pi) % TWO_PI - np.pi
+    assert float(np.max(np.abs(gap))) < 1e-12
+    np.testing.assert_allclose(got_omega, exp_omega, rtol=0.0, atol=1e-12)
+
+
+class TestBackendLoaderContracts:
+    """The real loaders return kernels that take one RK4 swing-equation step."""
+
+    def test_rust_loader_adapts_kernel_output_to_float64_arrays(self) -> None:
+        """The compiled Rust loader steps non-contiguous input to float64 output."""
+        if "rust" not in i_mod.AVAILABLE_BACKENDS:
+            pytest.skip("rust unavailable")
+        args = _swing_case()
+        theta = np.repeat(args[0], 2)[::2]
+        assert not theta.flags.c_contiguous
+        got = i_mod._load_rust_fn()(theta, *args[1:])
+        assert got[0].dtype == np.float64
+        assert got[1].dtype == np.float64
+        _assert_matches_oracle(got, args)
+
+    @pytest.mark.parametrize("owner", ["mojo", "julia", "go"])
     def test_optional_backend_loaders_return_callable_numeric_kernels(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
+        self, owner: str
     ) -> None:
-        def install_backend(
-            module_name: str, function_name: str, offset: float
-        ) -> None:
-            module = types.ModuleType(module_name)
-            module.__dict__["loaded"] = False
-
-            def _ensure_exe() -> str:
-                module.__dict__["loaded"] = True
-                return "inertial"
-
-            def _load_lib() -> None:
-                module.__dict__["loaded"] = True
-
-            def kernel(
-                theta: FloatArray,
-                omega_dot: FloatArray,
-                _power: FloatArray,
-                _knm_flat: FloatArray,
-                _inertia: FloatArray,
-                _damping: FloatArray,
-                _n: int,
-                dt: float,
-            ) -> tuple[FloatArray, FloatArray]:
-                return theta + offset + dt, omega_dot - offset + dt
-
-            module.__dict__["_ensure_exe"] = _ensure_exe
-            module.__dict__["_load_lib"] = _load_lib
-            module.__dict__[function_name] = kernel
-            monkeypatch.setitem(sys.modules, module_name, module)
-
-        fake_juliacall = types.ModuleType("juliacall")
-        fake_juliacall.__dict__["Main"] = object()
-        monkeypatch.setitem(sys.modules, "juliacall", fake_juliacall)
-        install_backend(
-            "scpn_phase_orchestrator.experimental.accelerators.upde._inertial_mojo",
-            "inertial_step_mojo",
-            0.10,
-        )
-        install_backend(
-            "scpn_phase_orchestrator.experimental.accelerators.upde._inertial_julia",
-            "inertial_step_julia",
-            0.20,
-        )
-        install_backend(
-            "scpn_phase_orchestrator.experimental.accelerators.upde._inertial_go",
-            "inertial_step_go",
-            0.30,
-        )
-
-        theta = np.array([0.0, 1.0], dtype=np.float64)
-        omega = np.array([0.5, -0.5], dtype=np.float64)
-        args: BackendArgs = (
-            theta,
-            omega,
-            np.ones(2, dtype=np.float64),
-            np.zeros(4, dtype=np.float64),
-            np.ones(2, dtype=np.float64),
-            np.ones(2, dtype=np.float64),
-            2,
-            0.01,
-        )
-
-        for loader, offset in (
-            (i_mod._load_mojo_fn, 0.10),
-            (i_mod._load_julia_fn, 0.20),
-            (i_mod._load_go_fn, 0.30),
-        ):
-            got_theta, got_omega = loader()(*args)
-            np.testing.assert_allclose(got_theta, theta + offset + 0.01)
-            np.testing.assert_allclose(got_omega, omega - offset + 0.01)
+        """Each installed optional loader returns a kernel that follows the law."""
+        if owner not in i_mod.AVAILABLE_BACKENDS:
+            pytest.skip(f"{owner} unavailable")
+        loader = {
+            "mojo": i_mod._load_mojo_fn,
+            "julia": i_mod._load_julia_fn,
+            "go": i_mod._load_go_fn,
+        }[owner]
+        args = _swing_case()
+        _assert_matches_oracle(loader()(*args), args)
 
     def test_julia_loader_rejects_partial_juliacall_runtime(
         self,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
+        """A juliacall module without Main is refused by the loader."""
         fake_juliacall = types.ModuleType("juliacall")
         monkeypatch.setitem(sys.modules, "juliacall", fake_juliacall)
 
@@ -372,6 +379,8 @@ def _direct_payload(n: int = 4) -> BackendArgs:
 
 
 class TestDirectMojoBoundaryContracts:
+    """The direct Mojo runner validates its raw output."""
+
     @pytest.mark.parametrize(
         ("stdout", "match"),
         [
@@ -391,6 +400,7 @@ class TestDirectMojoBoundaryContracts:
         stdout: str,
         match: str,
     ) -> None:
+        """Malformed Mojo executable output is refused."""
         monkeypatch.setattr(_inertial_mojo, "_ensure_exe", lambda: "inertial")
         monkeypatch.setattr(
             cast(object, _inertial_mojo.__dict__["subprocess"]),
@@ -432,6 +442,7 @@ class TestDirectBackendBoundaryContracts:
         index: int,
         replacement: object,
     ) -> None:
+        """Invalid input is refused before a runtime loads."""
         args = list(_direct_payload())
         args[index] = replacement
         with pytest.raises(ValueError):
@@ -439,6 +450,7 @@ class TestDirectBackendBoundaryContracts:
 
     @pytest.mark.parametrize("backend", DIRECT_BACKENDS)
     def test_rejects_self_coupling_diagonal(self, backend: BackendFn) -> None:
+        """A non-zero coupling diagonal is refused."""
         args = list(_direct_payload())
         knm = np.full((4, 4), 0.03, dtype=np.float64)
         np.fill_diagonal(knm, 0.2)
@@ -448,6 +460,7 @@ class TestDirectBackendBoundaryContracts:
             backend(*cast(BackendArgs, tuple(args)))
 
     def test_validation_rejects_out_of_range_backend_theta(self) -> None:
+        """Backend phases outside the torus are refused."""
         with pytest.raises(ValueError, match=r"\[0, 2\*pi\)"):
             inertial_validation.validate_inertial_output(
                 np.array([0.1, 7.0], dtype=np.float64),
@@ -480,6 +493,7 @@ class TestDirectBackendBoundaryContracts:
         replacement: object,
         match: str,
     ) -> None:
+        """Numeric-string inputs are refused before a runtime loads."""
         args = list(_direct_payload())
         args[index] = replacement
 
@@ -507,6 +521,7 @@ class TestDirectBackendBoundaryContracts:
         omega_dot: object,
         match: str,
     ) -> None:
+        """Numeric-string backend outputs are refused."""
         with pytest.raises(ValueError, match=match):
             inertial_validation.validate_inertial_output(theta, omega_dot, n=2)
 
@@ -515,6 +530,7 @@ class TestDirectValidationDefensiveBranches:
     """Shared inertial validator pins non-runtime defensive branches."""
 
     def test_numeric_string_helper_handles_scalar_and_nonnumeric_strings(self) -> None:
+        """Scalar and non-numeric strings are classified correctly."""
         assert inertial_validation._contains_numeric_string_alias(b"0.1") is True
         assert inertial_validation._contains_numeric_string_alias(" ") is False
         assert inertial_validation._contains_numeric_string_alias("bad") is False
@@ -522,6 +538,8 @@ class TestDirectValidationDefensiveBranches:
     def test_numeric_string_helper_treats_uncoercible_payloads_as_not_aliases(
         self,
     ) -> None:
+        """Uncoercible payloads are not numeric-string aliases."""
+
         class BadArray:
             def __array__(self, dtype: object | None = None) -> object:
                 raise TypeError("cannot coerce")
@@ -531,6 +549,7 @@ class TestDirectValidationDefensiveBranches:
     def test_direct_validator_keeps_nonnumeric_string_payload_on_generic_path(
         self,
     ) -> None:
+        """Non-numeric string payloads keep the generic refusal."""
         args = list(_direct_payload())
         args[0] = np.array(["bad", "phase", "payload", "values"])
 
@@ -553,6 +572,7 @@ class TestDirectValidationDefensiveBranches:
         replacement: object,
         match: str,
     ) -> None:
+        """Scalar domain checks refuse each invalid value."""
         args = list(_direct_payload())
         args[index] = replacement
 
@@ -575,6 +595,8 @@ class TestPublicBackendOutputContracts:
         monkeypatch: pytest.MonkeyPatch,
         backend_theta: FloatArray,
     ) -> None:
+        """Public steps refuse backend phases outside the torus."""
+
         def malformed_backend(
             _theta: FloatArray,
             _omega_dot: FloatArray,
@@ -604,6 +626,8 @@ class TestPublicBackendOutputContracts:
         self,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
+        """Public steps refuse a backend velocity of the wrong length."""
+
         def malformed_backend(
             _theta: FloatArray,
             _omega_dot: FloatArray,
@@ -636,6 +660,8 @@ class TestPublicBackendOutputContracts:
         self,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
+        """Public steps refuse numeric-string backend output."""
+
         def malformed_backend(
             _theta: FloatArray,
             _omega_dot: FloatArray,
@@ -668,6 +694,8 @@ class TestPublicBackendOutputContracts:
         self,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
+        """The Julia bridge refuses numeric-string raw output."""
+
         class FakeJuliaModule:
             def inertial_step(
                 self,
@@ -697,6 +725,8 @@ class TestPublicBackendOutputContracts:
         self,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
+        """The Rust wrapper refuses phases outside the torus."""
+
         def inertial_step_rust(
             _theta: FloatArray,
             _omega_dot: FloatArray,
@@ -726,6 +756,7 @@ class TestPublicInputContracts:
     """Public inertial dispatchers fail closed on malformed input payloads."""
 
     def test_step_rejects_uncoercible_theta_payload(self) -> None:
+        """An uncoercible phase payload is refused."""
         engine = InertialKuramotoEngine(2, 0.01)
 
         with pytest.raises(ValueError, match="theta must be a finite float array"):
@@ -739,6 +770,7 @@ class TestPublicInputContracts:
             )
 
     def test_step_rejects_negative_damping(self) -> None:
+        """Negative damping is refused."""
         engine = InertialKuramotoEngine(2, 0.01)
 
         with pytest.raises(ValueError, match="damping must contain only non-negative"):
@@ -753,10 +785,13 @@ class TestPublicInputContracts:
 
 
 class TestDispatchFallbackChain:
+    """Automatic dispatch falls through failing loaders."""
+
     def test_dispatch_falls_back_to_python_when_loader_fails(
         self,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
+        """A failing loader resolves to the NumPy law."""
         previous_backend = i_mod.ACTIVE_BACKEND
         previous_available = list(i_mod.AVAILABLE_BACKENDS)
         previous_loader = i_mod._LOADERS["go"]
@@ -782,6 +817,7 @@ class TestDispatchFallbackChain:
         self,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
+        """With every native loader failing, dispatch resolves to Python."""
         previous_backend = i_mod.ACTIVE_BACKEND
         previous_available = list(i_mod.AVAILABLE_BACKENDS)
         previous_loader = i_mod._LOADERS["go"]
@@ -807,6 +843,7 @@ class TestDispatchFallbackChain:
         self,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
+        """Repeated dispatch loads an owner once."""
         previous_backend = i_mod.ACTIVE_BACKEND
         previous_available = list(i_mod.AVAILABLE_BACKENDS)
         previous_loader = i_mod._LOADERS["go"]

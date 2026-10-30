@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The inertial (swing-equation) loader tests (RT-047, RT-048) no longer
+  install fake `spo_kernel`, `juliacall` or backend modules. They call the
+  real Rust, Mojo, Julia and Go loaders and compare one step of each
+  returned kernel with a plain-loop RK4 oracle within 1e-12.
 - The torus-integrator loader tests (RT-041, RT-042) no longer install fake
   `spo_kernel`, `juliacall` or backend modules. They call the real Rust,
   Mojo, Julia and Go loaders and check each returned kernel, with and
