@@ -21,6 +21,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `upde_run` and `upde_run_omega_schedule` (in `upde._run` and the
+  `upde.engine` facade) take `backend=`, and the new
+  `upde_run_backend(slot, backend)` names the owner of the `"step"` or
+  `"schedule"` slot. A named owner that is absent, has no kernel for the
+  slot (WebGPU has no schedule kernel) or fails for want of a symbol raises
+  `RuntimeError`; an unknown name raises `ValueError`; `"auto"` keeps the
+  fallback chain. The RT-114–RT-122 substitutes (fake dispatchers, loaders,
+  `spo_kernel` steppers and Go probes) are replaced by the real Rust,
+  Mojo, Julia, Go and Python owners. They are checked against plain-loop
+  Euler, RK4 and Dormand–Prince 5(4) oracles, profiled owner calls, real
+  loader-cache counts, and child-process resolver profiles with owners
+  genuinely absent.
 - The RT-113 probe test no longer injects a fake `juliacall` module. It
   calls `require_juliacall_main()` on the real installation: with
   `juliacall` present the result is the imported module itself and its

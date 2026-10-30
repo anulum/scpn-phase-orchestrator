@@ -275,6 +275,15 @@ batch runs use the schedule dispatcher. WebGPU dispatch requires a host-provided
 `SPO_WEBGPU_DISPATCH_BRIDGE=module:function` adapter, implements Euler only, and
 has no schedule runner. See [host dispatch setup](../../guide/webgpu_backend.md).
 
+`upde_run(..., backend=)` and `upde_run_omega_schedule(..., backend=)` take
+`"auto"` (the chain above) or one owner name: `rust`, `webgpu`, `mojo`,
+`julia`, `go` or `python`. A named owner serves the call or raises
+`RuntimeError`: when its loader fails, when it has no kernel for the slot
+(WebGPU has no schedule kernel), or when a schedule call fails for want of a
+symbol, which under `"auto"` falls back to the Python reference. An unknown
+name raises `ValueError`. `upde_run_backend(slot, backend)` names the owner
+of the `"step"` or `"schedule"` slot without running it.
+
 | Backend | Probe                                                         | Artefact                         |
 | ------- | ------------------------------------------------------------- | -------------------------------- |
 | Rust    | `from spo_kernel import PyUPDEStepper`                        | `spo_kernel` wheel via maturin.  |

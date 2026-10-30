@@ -37,6 +37,7 @@ __all__ = [
     "AVAILABLE_BACKENDS",
     "UPDEEngine",
     "upde_run",
+    "upde_run_backend",
     "upde_run_omega_schedule",
 ]
 
@@ -85,6 +86,7 @@ def upde_run(
     n_substeps: int = 1,
     atol: float = 1e-6,
     rtol: float = 1e-3,
+    backend: str = "auto",
 ) -> FloatArray:
     """Run the stateless UPDE integrator through the engine facade.
 
@@ -117,6 +119,10 @@ def upde_run(
         Absolute tolerance for the adaptive (rk45) integrator.
     rtol : float
         Relative tolerance for the adaptive (rk45) integrator.
+    backend : str
+        ``"auto"`` follows ``ACTIVE_BACKEND`` and the fallback chain; a named
+        owner (``rust``, ``webgpu``, ``mojo``, ``julia``, ``go``, ``python``)
+        serves the call or raises ``RuntimeError``.
 
     Returns
     -------
@@ -127,10 +133,10 @@ def upde_run(
     Raises
     ------
     ValueError
-        Inputs are invalid or the actual backend produces malformed, nonfinite,
-        or out-of-torus phases.
+        Inputs are invalid, ``backend`` is unknown, or the actual backend
+        produces malformed, nonfinite, or out-of-torus phases.
     RuntimeError
-        The selected backend cannot execute in the current runtime.
+        The selected or named backend cannot execute in the current runtime.
 
     Notes
     -----
@@ -156,6 +162,7 @@ def upde_run(
             n_substeps,
             atol,
             rtol,
+            backend=backend,
         )
     finally:
         _run_mod.ACTIVE_BACKEND = previous
@@ -173,6 +180,7 @@ def upde_run_omega_schedule(
     n_substeps: int = 1,
     atol: float = 1e-6,
     rtol: float = 1e-3,
+    backend: str = "auto",
 ) -> FloatArray:
     """Run UPDE with one resolved natural-frequency vector per outer step.
 
@@ -200,6 +208,10 @@ def upde_run_omega_schedule(
         Absolute tolerance for the adaptive (rk45) integrator.
     rtol : float
         Relative tolerance for the adaptive (rk45) integrator.
+    backend : str
+        ``"auto"`` follows ``ACTIVE_BACKEND`` and the fallback chain; a named
+        owner (``rust``, ``mojo``, ``julia``, ``go``, ``python``) serves the
+        call or raises ``RuntimeError``.
 
     Returns
     -------
@@ -209,10 +221,10 @@ def upde_run_omega_schedule(
     Raises
     ------
     ValueError
-        Inputs are invalid or the actual backend produces malformed, nonfinite,
-        or out-of-torus phases.
+        Inputs are invalid, ``backend`` is unknown, or the actual backend
+        produces malformed, nonfinite, or out-of-torus phases.
     RuntimeError
-        The selected backend is unavailable or does not implement schedules.
+        The named backend is unavailable or does not implement schedules.
 
     Notes
     -----
@@ -236,9 +248,13 @@ def upde_run_omega_schedule(
             n_substeps,
             atol,
             rtol,
+            backend=backend,
         )
     finally:
         _run_mod.ACTIVE_BACKEND = previous
+
+
+upde_run_backend = _run_mod.upde_run_backend
 
 
 def _validate_positive_int(value: object, *, name: str) -> int:

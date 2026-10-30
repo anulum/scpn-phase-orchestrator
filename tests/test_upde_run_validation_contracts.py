@@ -43,11 +43,6 @@ def _payload() -> list[Any]:
     ]
 
 
-def _identity_backend(phases: FloatArray, *_args: object) -> FloatArray:
-    """Return a copy of the supplied phases for dispatch-boundary tests."""
-    return phases.copy()
-
-
 def test_core_engine_validator_is_directly_linked() -> None:
     """Keep the core-owned validator visible to module-linkage checks."""
     assert callable(engine_validation.validate_upde_backend_inputs)
@@ -185,23 +180,6 @@ def test_public_schedule_rejects_numeric_string_backend_output(
             payload[10],
             payload[11],
         )
-
-
-def test_public_run_normalises_valid_array_likes(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Keep ordinary real-valued array-like inputs supported."""
-    payload = _payload()
-    payload[0] = payload[0].tolist()
-    payload[1] = payload[1].tolist()
-    payload[2] = payload[2].ravel().tolist()
-    payload[3] = payload[3].ravel().tolist()
-    monkeypatch.setattr(run_mod, "_dispatch", lambda: _identity_backend)
-
-    result = run_mod.upde_run(*payload)
-
-    np.testing.assert_allclose(result, np.array([0.1, 0.2]))
-    assert result.dtype == np.float64
 
 
 @pytest.mark.parametrize("schedule", [False, True])

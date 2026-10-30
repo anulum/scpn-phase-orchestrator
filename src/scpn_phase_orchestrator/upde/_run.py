@@ -16,6 +16,8 @@ Exports:
 * :func:`upde_run` — stateless entry point that any caller can use
   directly; :class:`scpn_phase_orchestrator.upde.engine.UPDEEngine`
   also routes through here.
+* :func:`upde_run_backend` — names the owner that serves a step or
+  schedule run, under ``"auto"`` or an explicit owner name.
 """
 
 from __future__ import annotations
@@ -46,6 +48,7 @@ __all__ = [
     "ACTIVE_BACKEND",
     "AVAILABLE_BACKENDS",
     "upde_run",
+    "upde_run_backend",
     "upde_run_omega_schedule",
 ]
 
@@ -299,42 +302,108 @@ def __getattr__(name: str) -> object:
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
-def _dispatch() -> Callable[..., FloatArray] | None:
-    """Prefer the selected step backend, returning ``None`` for Python."""
+_SLOTS = ("step", "schedule")
+_STEP_LOAD_FAILURES = (ImportError, RuntimeError, OSError, KeyError)
+_SCHEDULE_LOAD_FAILURES = (ImportError, RuntimeError, OSError, AttributeError)
+
+
+def _auto_select(slot: str) -> tuple[str, Callable[..., FloatArray] | None]:
+    """Return the first loadable owner of ``slot`` in preference order.
+
+    The active backend is tried first, then the available list; an owner
+    whose loader fails is skipped, and ``python`` ends the search with no
+    native callable.
+    """
     active, available = _backend_state()
-    ordered_backends = [active, *available]
     seen: set[str] = set()
-    for backend in ordered_backends:
+    for backend in [active, *available]:
         if backend in seen:
             continue
         seen.add(backend)
         if backend == "python":
-            return None
+            return "python", None
+        if slot == "schedule":
+            if backend not in _SCHEDULE_LOADERS:
+                continue
+            try:
+                return backend, _load_schedule_backend(backend)
+            except _SCHEDULE_LOAD_FAILURES:
+                continue
         try:
-            return _load_backend(backend)
-        except (ImportError, RuntimeError, OSError, KeyError):
+            return backend, _load_backend(backend)
+        except _STEP_LOAD_FAILURES:
             continue
-    return None
+    return "python", None
+
+
+def _named_select(slot: str, backend: str) -> Callable[..., FloatArray] | None:
+    """Return the named owner's ``slot`` callable, or ``None`` for Python.
+
+    Raises
+    ------
+    RuntimeError
+        If the owner has no kernel for ``slot`` or its loader fails.
+    """
+    if backend == "python":
+        return None
+    loaders = _LOADERS if slot == "step" else _SCHEDULE_LOADERS
+    if backend not in loaders:
+        raise RuntimeError(f"UPDE backend {backend!r} has no {slot} kernel")
+    try:
+        if slot == "step":
+            return _load_backend(backend)
+        return _load_schedule_backend(backend)
+    except (*_STEP_LOAD_FAILURES, AttributeError) as exc:
+        raise RuntimeError(f"UPDE backend {backend!r} unavailable") from exc
+
+
+def _require_known(slot: str, backend: str) -> None:
+    """Refuse an unknown slot or owner name before any computation."""
+    if slot not in _SLOTS:
+        raise ValueError(f"unknown UPDE run slot: {slot!r}")
+    if backend not in (*_BACKEND_NAMES, "auto"):
+        raise ValueError(f"unknown UPDE backend: {backend!r}")
+
+
+def _dispatch() -> Callable[..., FloatArray] | None:
+    """Prefer the selected step backend, returning ``None`` for Python."""
+    return _auto_select("step")[1]
 
 
 def _dispatch_schedule() -> Callable[..., FloatArray] | None:
     """Prefer the selected schedule backend, returning ``None`` for Python."""
-    active, available = _backend_state()
-    ordered_backends = [active, *available]
-    seen: set[str] = set()
-    for backend in ordered_backends:
-        if backend in seen:
-            continue
-        seen.add(backend)
-        if backend == "python":
-            return None
-        if backend not in _SCHEDULE_LOADERS:
-            continue
-        try:
-            return _load_schedule_backend(backend)
-        except (ImportError, RuntimeError, OSError, AttributeError):
-            continue
-    return None
+    return _auto_select("schedule")[1]
+
+
+def upde_run_backend(slot: str = "step", backend: str = "auto") -> str:
+    """Return the owner that serves a UPDE run.
+
+    Parameters
+    ----------
+    slot : str
+        ``"step"`` for :func:`upde_run` or ``"schedule"`` for
+        :func:`upde_run_omega_schedule`.
+    backend : str
+        ``"auto"`` or one of ``rust``, ``webgpu``, ``mojo``, ``julia``,
+        ``go``, ``python``.
+
+    Returns
+    -------
+    str
+        The owner name.
+
+    Raises
+    ------
+    ValueError
+        If ``slot`` or ``backend`` is unknown.
+    RuntimeError
+        If a named owner has no kernel for ``slot`` or is unavailable.
+    """
+    _require_known(slot, backend)
+    if backend == "auto":
+        return _auto_select(slot)[0]
+    _named_select(slot, backend)
+    return backend
 
 
 def upde_run(
@@ -350,6 +419,7 @@ def upde_run(
     n_substeps: int = 1,
     atol: float = 1e-6,
     rtol: float = 1e-3,
+    backend: str = "auto",
 ) -> FloatArray:
     """Run the stateless UPDE integrator through the selected real backend.
 
@@ -384,12 +454,24 @@ def upde_run(
         Absolute tolerance for the adaptive (rk45) integrator.
     rtol : float
         Relative tolerance for the adaptive (rk45) integrator.
+    backend : str
+        ``"auto"`` for the fastest loadable owner, or one of ``rust``,
+        ``webgpu``, ``mojo``, ``julia``, ``go``, ``python``.
 
     Returns
     -------
     FloatArray
         The final phases after ``n_steps`` integration steps.
+
+    Raises
+    ------
+    ValueError
+        If ``backend`` is unknown, or the inputs or the backend output are
+        invalid.
+    RuntimeError
+        If the named owner is unavailable.
     """
+    _require_known("step", backend)
     (
         p,
         o,
@@ -420,7 +502,7 @@ def upde_run(
     n = int(p.size)
     k_matrix = k.reshape((n, n))
     a_matrix = a.reshape((n, n))
-    backend_fn = _dispatch()
+    backend_fn = _dispatch() if backend == "auto" else _named_select("step", backend)
     if backend_fn is None:
         result = upde_run_python(
             p,
@@ -466,6 +548,7 @@ def upde_run_omega_schedule(
     n_substeps: int = 1,
     atol: float = 1e-6,
     rtol: float = 1e-3,
+    backend: str = "auto",
 ) -> FloatArray:
     """Run UPDE with one resolved natural-frequency vector per outer step.
 
@@ -493,12 +576,27 @@ def upde_run_omega_schedule(
         Absolute tolerance for the adaptive (rk45) integrator.
     rtol : float
         Relative tolerance for the adaptive (rk45) integrator.
+    backend : str
+        ``"auto"`` for the fastest loadable schedule owner, or one of
+        ``rust``, ``mojo``, ``julia``, ``go``, ``python``. WebGPU has no
+        schedule kernel.
 
     Returns
     -------
     FloatArray
         The final phases after integrating the omega schedule.
+
+    Raises
+    ------
+    ValueError
+        If ``backend`` is unknown, or the inputs or the backend output are
+        invalid.
+    RuntimeError
+        If the named owner has no schedule kernel, is unavailable, or fails
+        for want of a symbol; under ``"auto"`` such a call-time failure falls
+        back to the Python reference.
     """
+    _require_known("schedule", backend)
     (
         p,
         schedule,
@@ -528,7 +626,11 @@ def upde_run_omega_schedule(
     n = int(p.size)
     k_matrix = k.reshape((n, n))
     a_matrix = a.reshape((n, n))
-    backend_fn = _dispatch_schedule()
+    backend_fn = (
+        _dispatch_schedule()
+        if backend == "auto"
+        else _named_select("schedule", backend)
+    )
     if backend_fn is None:
         result = upde_run_omega_schedule_python(
             p,
@@ -558,7 +660,9 @@ def upde_run_omega_schedule(
                 atol_f,
                 rtol_f,
             )
-        except (AttributeError, ImportError):
+        except (AttributeError, ImportError) as exc:
+            if backend != "auto":
+                raise RuntimeError(f"UPDE backend {backend!r} failed") from exc
             result = upde_run_omega_schedule_python(
                 p,
                 schedule,

@@ -40,23 +40,6 @@ def _backend_identity(phases: FloatArray, *_args: object) -> FloatArray:
 
 
 class TestScheduleDispatch:
-    def test_schedule_backend_cache_loads_once(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        calls: dict[str, int] = {"go": 0}
-
-        def _ok_go() -> BackendFn:
-            calls["go"] += 1
-            return _backend_identity
-
-        monkeypatch.setattr(run_mod, "_SCHEDULE_BACKEND_CACHE", {})
-        monkeypatch.setattr(run_mod, "_SCHEDULE_LOADERS", {"go": _ok_go})
-
-        assert run_mod._load_schedule_backend("go") is _backend_identity
-        assert run_mod._load_schedule_backend("go") is _backend_identity
-        assert calls["go"] == 1
-
     def test_dispatch_schedule_skips_unsupported_and_failed_backends(
         self,
         monkeypatch: pytest.MonkeyPatch,
@@ -170,25 +153,6 @@ class TestRunEntryPoints:
             1,
         )
         np.testing.assert_allclose(result, expected)
-
-    def test_schedule_run_uses_loaded_backend(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        phases, _, knm, alpha = _arrays()
-        monkeypatch.setattr(run_mod, "_dispatch_schedule", lambda: _backend_identity)
-
-        result = run_mod.upde_run_omega_schedule(
-            phases,
-            _schedule(),
-            knm,
-            alpha,
-            0.0,
-            0.0,
-            0.01,
-        )
-
-        np.testing.assert_allclose(result, phases + 0.25)
 
     @pytest.mark.parametrize(
         "exc",

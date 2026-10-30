@@ -18,9 +18,6 @@ import pytest
 from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.experimental.accelerators.upde import (
-    _engine_go as engine_go_mod,
-)
-from scpn_phase_orchestrator.experimental.accelerators.upde import (
     _engine_mojo as engine_mojo_mod,
 )
 from scpn_phase_orchestrator.upde import _run as run_mod
@@ -44,14 +41,17 @@ def _backend_identity(phases: FloatArray, *_args: object) -> FloatArray:
     return np.asarray(phases, dtype=np.float64) + 0.25
 
 
-def _install_fake_spo_kernel(
-    monkeypatch: pytest.MonkeyPatch,
-    *,
-    with_schedule: bool,
-) -> None:
-    fake_module = ModuleType("spo_kernel")
+def _install_old_spo_kernel(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Install a ``spo_kernel`` whose stepper predates ``run_omega_schedule``.
 
-    class FakeStepper:
+    Such a build cannot be produced from the current sources, so this
+    negative contract keeps a stand-in for the old compiled module.
+    """
+    old_module = ModuleType("spo_kernel")
+
+    class OldStepper:
+        """Stepper of an old build: constructible, without schedule support."""
+
         def __init__(
             self,
             n_oscillators: int,
@@ -63,112 +63,17 @@ def _install_fake_spo_kernel(
             rtol: float,
         ) -> None:
             self.n_oscillators = n_oscillators
-            self.dt = dt
-            self.method = method
-            self.n_substeps = n_substeps
-            self.atol = atol
-            self.rtol = rtol
 
-        def run(
-            self,
-            phases: FloatArray,
-            omegas: FloatArray,
-            knm: FloatArray,
-            zeta: float,
-            psi: float,
-            alpha: FloatArray,
-            n_steps: int,
-        ) -> FloatArray:
-            assert self.n_oscillators == phases.size
-            assert omegas.shape == phases.shape
-            assert knm.shape == (phases.size * phases.size,)
-            assert alpha.shape == (phases.size * phases.size,)
-            assert n_steps == 3
-            return np.asarray(phases, dtype=np.float64) + zeta + psi
-
-    stepper_type: type[object]
-    if with_schedule:
-
-        class FakeStepperWithSchedule(FakeStepper):
-            def run_omega_schedule(
-                self,
-                phases: FloatArray,
-                omega_schedule: FloatArray,
-                knm: FloatArray,
-                zeta: float,
-                psi: float,
-                alpha: FloatArray,
-                n_steps: int,
-            ) -> FloatArray:
-                assert self.n_oscillators == phases.size
-                assert omega_schedule.shape == (n_steps * phases.size,)
-                assert knm.shape == (phases.size * phases.size,)
-                assert alpha.shape == (phases.size * phases.size,)
-                return np.asarray(phases, dtype=np.float64) + zeta - psi
-
-        stepper_type = FakeStepperWithSchedule
-    else:
-        stepper_type = FakeStepper
-
-    fake_module.__dict__["PyUPDEStepper"] = stepper_type
-    monkeypatch.setitem(sys.modules, "spo_kernel", fake_module)
+    old_module.__dict__["PyUPDEStepper"] = OldStepper
+    monkeypatch.setitem(sys.modules, "spo_kernel", old_module)
 
 
 class TestOptionalBackendLoaders:
-    def test_rust_loader_wraps_py_stepper_run(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        _install_fake_spo_kernel(monkeypatch, with_schedule=True)
-        phases, omegas, knm, alpha = _arrays()
-
-        backend = run_mod._load_rust_fn()
-        result = backend(
-            phases,
-            omegas,
-            knm,
-            alpha,
-            0.5,
-            0.125,
-            0.01,
-            3,
-            "rk4",
-            2,
-            1e-8,
-            1e-5,
-        )
-
-        np.testing.assert_allclose(result, phases + 0.625)
-
-    def test_rust_schedule_loader_wraps_py_stepper_schedule(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        _install_fake_spo_kernel(monkeypatch, with_schedule=True)
-        phases, _, knm, alpha = _arrays()
-
-        backend = run_mod._load_rust_schedule_fn()
-        result = backend(
-            phases,
-            _schedule(),
-            knm,
-            alpha,
-            0.5,
-            0.125,
-            0.01,
-            "rk4",
-            2,
-            1e-8,
-            1e-5,
-        )
-
-        np.testing.assert_allclose(result, phases + 0.375)
-
     def test_rust_schedule_loader_fails_when_symbol_is_absent(
         self,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        _install_fake_spo_kernel(monkeypatch, with_schedule=False)
+        _install_old_spo_kernel(monkeypatch)
         phases, _, knm, alpha = _arrays()
 
         backend = run_mod._load_rust_schedule_fn()
@@ -186,6 +91,27 @@ class TestOptionalBackendLoaders:
                 1e-8,
                 1e-5,
             )
+
+    def test_named_rust_schedule_on_an_old_kernel_is_refused(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """A named owner that fails for want of a symbol raises; ``auto`` falls back."""
+        _install_old_spo_kernel(monkeypatch)
+        monkeypatch.setattr(run_mod, "_SCHEDULE_BACKEND_CACHE", {})
+        monkeypatch.setattr(run_mod, "ACTIVE_BACKEND", "rust")
+        monkeypatch.setattr(run_mod, "AVAILABLE_BACKENDS", ["rust", "python"])
+        phases, _, knm, alpha = _arrays()
+        arguments = (phases, _schedule(), knm, alpha, 0.5, 0.125, 0.01)
+
+        with pytest.raises(RuntimeError, match="UPDE backend 'rust' failed") as info:
+            run_mod.upde_run_omega_schedule(*arguments, backend="rust")
+        assert "run_omega_schedule" in str(info.value.__cause__)
+
+        reference = run_mod.upde_run_omega_schedule(*arguments, backend="python")
+        np.testing.assert_array_equal(
+            run_mod.upde_run_omega_schedule(*arguments), reference
+        )
 
     def test_mojo_schedule_loader_runs_availability_probe(
         self,
@@ -217,23 +143,3 @@ class TestOptionalBackendLoaders:
         pytest.importorskip("juliacall")
         assert callable(run_mod._load_julia_fn())
         assert callable(run_mod._load_julia_schedule_fn())
-
-    def test_go_schedule_loader_runs_shared_library_probe(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        calls: dict[str, int] = {"load": 0}
-
-        def _load_lib() -> object:
-            calls["load"] += 1
-            return object()
-
-        monkeypatch.setattr(engine_go_mod, "_load_lib", _load_lib)
-        monkeypatch.setattr(
-            engine_go_mod,
-            "upde_run_omega_schedule_go",
-            _backend_identity,
-        )
-
-        assert run_mod._load_go_schedule_fn() is _backend_identity
-        assert calls["load"] == 1

@@ -12,7 +12,7 @@
     "research_experimental_modules": 204,
     "runtime_serving_modules": 160,
     "rust_kernel_files": 132,
-    "test_files": 1120
+    "test_files": 1121
   },
   "documentation": {
     "public_pages": [
@@ -3055,6 +3055,7 @@
       "tests/test_upde_run_backends.py",
       "tests/test_upde_run_dispatch.py",
       "tests/test_upde_run_loader_contracts.py",
+      "tests/test_upde_run_real_runtime.py",
       "tests/test_upde_run_schedule_dispatch.py",
       "tests/test_upde_run_stability.py",
       "tests/test_upde_run_validation_contracts.py",

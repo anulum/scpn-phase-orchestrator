@@ -27,7 +27,6 @@ from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
 from scpn_phase_orchestrator.upde import _ref_kernel as ref_kernel_mod
-from scpn_phase_orchestrator.upde import _run as run_mod
 from scpn_phase_orchestrator.upde import engine as eng_mod
 from scpn_phase_orchestrator.upde.engine import upde_run
 
@@ -140,37 +139,6 @@ class TestMethodDispatch:
             method=method,
         )
         assert np.all(np.isfinite(out))
-
-
-def test_upde_run_dispatches_to_non_python_backend(monkeypatch):
-    def backend_fn(*args, **kwargs):
-        phases, _, _, _, zeta, psi, dt, n_steps, method, n_substeps, atol, rtol = args
-        assert args[0].dtype == np.float64
-        assert args[1].dtype == np.float64
-        assert method == "euler"
-        assert n_steps == 5
-        assert n_substeps == 1
-        assert np.isclose(dt, 0.01)
-        shifted = phases + 0.5 + zeta + psi + float(atol) + float(rtol)
-        return np.mod(shifted, TWO_PI)
-
-    monkeypatch.setattr(run_mod, "_dispatch", lambda: backend_fn)
-    monkeypatch.setattr(eng_mod, "ACTIVE_BACKEND", "rust")
-    phases, omegas, knm, alpha = _problem(np.random.default_rng(12), n=3)
-    out = upde_run(
-        phases,
-        omegas,
-        knm,
-        alpha,
-        zeta=0.1,
-        psi=0.2,
-        dt=0.01,
-        n_steps=5,
-        method="euler",
-        n_substeps=1,
-    )
-    expected = np.mod(phases.astype(np.float64) + 0.5 + 0.1 + 0.2 + 1e-6 + 1e-3, TWO_PI)
-    assert np.allclose(out, expected)
 
 
 def test_rk45_step_falls_back_after_failed_adaptation(monkeypatch):
