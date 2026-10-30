@@ -48,16 +48,24 @@
       ]
     },
     {
+      "id": "branch-profiles",
+      "workflow": ".github/workflows/ci-branch-profiles.yml",
+      "caller_needs": [],
+      "jobs": [
+        "branch-absent",
+        "branch-defective"
+      ]
+    },
+    {
       "id": "coverage-assurance",
       "workflow": ".github/workflows/ci-coverage-assurance.yml",
       "caller_needs": [
         "python-quality",
-        "integration"
+        "integration",
+        "branch-profiles"
       ],
       "jobs": [
         "coverage-guard",
-        "branch-absent",
-        "branch-defective",
         "branch-profile-guard"
       ]
     },

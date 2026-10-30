@@ -3,7 +3,7 @@
   "counts": {
     "core_engine_modules": 365,
     "domainpacks": 36,
-    "github_workflows": 19,
+    "github_workflows": 20,
     "integration_modules": 32,
     "optional_extras": 24,
     "public_api_exports": 29,
@@ -1938,6 +1938,7 @@
   ],
   "quality_gates": {
     "github_workflows": [
+      ".github/workflows/ci-branch-profiles.yml",
       ".github/workflows/ci-coverage-assurance.yml",
       ".github/workflows/ci-integration.yml",
       ".github/workflows/ci-performance-evidence.yml",

@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- The kernel-absent and defective-kernel branch profiles move into their own
+  CI category, `branch-profiles`, which starts with the run. They download
+  nothing from other categories, yet they used to wait for every standard
+  lane to finish. Coverage assurance now waits for them, and the profile
+  guard and the coverage floors are unchanged. In the last complete run
+  (41036389305) this chain took 56 minutes; `branch-absent` (13 minutes) no
+  longer sits on it.
+
 ### Fixed
 
 - The dimension commit's CI wiring could not run as written. The coverage

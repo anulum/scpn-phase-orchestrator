@@ -107,11 +107,36 @@ def test_live_inventory_is_complete_unique_and_bounded() -> None:
     policy = inventory.load_ci_workflow_policy()
     jobs = [job for category in policy["categories"] for job in category["jobs"]]
 
-    assert len(policy["categories"]) == 7
+    assert len(policy["categories"]) == 8
     assert len(jobs) == len(set(jobs)) == len(policy["job_order"]) == 28
     assert set(jobs) == set(policy["job_order"])
     assert modularity.audit_ci_workflow_modularity(policy) == []
     assert modularity.main() == 0
+
+
+def test_branch_profiles_start_with_the_run_and_gate_coverage_assurance() -> None:
+    """Keep the independent branch profiles off the standard lanes' critical path."""
+    policy = inventory.load_ci_workflow_policy()
+    categories = {category["id"]: category for category in policy["categories"]}
+
+    profiles = categories["branch-profiles"]
+    assert profiles["caller_needs"] == []
+    assert profiles["jobs"] == ["branch-absent", "branch-defective"]
+    assurance = categories["coverage-assurance"]
+    assert assurance["caller_needs"] == [
+        "python-quality",
+        "integration",
+        "branch-profiles",
+    ]
+    assert assurance["jobs"] == ["coverage-guard", "branch-profile-guard"]
+    assert (
+        inventory.workflow_path_for_job("branch-absent").name
+        == "ci-branch-profiles.yml"
+    )
+    assert (
+        inventory.workflow_path_for_job("branch-profile-guard").name
+        == "ci-coverage-assurance.yml"
+    )
 
 
 def test_inventory_reconstructs_real_jobs_and_resolves_owners() -> None:

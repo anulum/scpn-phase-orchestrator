@@ -31,8 +31,11 @@ jobs:
   integration:
     uses: ./.github/workflows/ci-integration.yml
 
+  branch-profiles:
+    uses: ./.github/workflows/ci-branch-profiles.yml
+
   coverage-assurance:
-    needs: [python-quality, integration]
+    needs: [python-quality, integration, branch-profiles]
     permissions:
       contents: read
       id-token: write
@@ -54,6 +57,7 @@ jobs:
       - static-analysis
       - python-quality
       - integration
+      - branch-profiles
       - coverage-assurance
       - security-assurance
       - performance-evidence
