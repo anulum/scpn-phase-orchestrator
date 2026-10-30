@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The spectral loader, cache and fast-path tests (RT-095–RT-099) no longer
+  force the active backend or use fake loaders, modules or a fake Rust
+  bundle. They run the real Mojo, Julia and Go primitives and the compiled
+  Rust bundle on a weighted path graph, whose Laplacian spectrum
+  `2w(1 − cos(πk/n))` and Fiedler vector `cos(π(j + ½)/n)` are known in
+  closed form; real loader runs are counted with `cProfile`, and with Rust
+  active each derived metric is shown to call its compiled fast path once.
 - The spatial-modulator loader and adapter tests (RT-092–RT-094) no longer
   patch preflights, install a fake `spo_kernel` or feed fake Go, Julia and
   Mojo runtimes. They run the real Rust, Mojo, Julia and Go kernels and

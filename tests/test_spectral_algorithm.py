@@ -18,9 +18,10 @@ oscillator and empty edge cases.
 
 from __future__ import annotations
 
+import cProfile
 import functools
-import sys
-import types
+import math
+from collections.abc import Callable
 
 import numpy as np
 import pytest
@@ -53,6 +54,49 @@ def _python(func):
             s_mod._PRIM_CACHE = None
 
     return wrapper
+
+
+def _path_graph(n: int, weight: float) -> np.ndarray:
+    """Return the weighted path graph ``0 – 1 – … – (n−1)``."""
+    knm = np.zeros((n, n))
+    for i in range(n - 1):
+        knm[i, i + 1] = knm[i + 1, i] = weight
+    return knm
+
+
+def _path_spectrum(n: int, weight: float) -> list[float]:
+    """Return the path-graph Laplacian eigenvalues ``2w(1 − cos(πk/n))``."""
+    return [2 * weight * (1 - math.cos(math.pi * k / n)) for k in range(n)]
+
+
+def _path_fiedler(n: int) -> np.ndarray:
+    """Return the unit Fiedler vector ``cos(π(j + ½)/n)`` of the path graph."""
+    vector = np.array([math.cos(math.pi * (j + 0.5) / n) for j in range(n)])
+    return vector / np.linalg.norm(vector)
+
+
+def _count_calls(code_name: str, action: Callable[[], object]) -> int:
+    """Return how often a Python function named ``code_name`` ran in ``action``."""
+    profile = cProfile.Profile()
+    profile.enable()
+    try:
+        action()
+    finally:
+        profile.disable()
+    return sum(
+        entry.callcount
+        for entry in profile.getstats()
+        if not isinstance(entry.code, str) and entry.code.co_name == code_name
+    )
+
+
+def _builtin_calls(profile: cProfile.Profile, name: str) -> int:
+    """Return how often a compiled function named ``name`` ran under ``profile``."""
+    return sum(
+        entry.callcount
+        for entry in profile.getstats()
+        if isinstance(entry.code, str) and f"{name}>" in entry.code
+    )
 
 
 class TestGraphLaplacian:
@@ -357,27 +401,21 @@ class TestPrimitiveDispatchFallback:
         np.testing.assert_allclose(eigvals, np.zeros(2, dtype=np.float64))
         np.testing.assert_allclose(fiedler, np.zeros(2, dtype=np.float64))
 
+    @pytest.mark.native_runtime
+    @pytest.mark.parametrize("owner", ["mojo", "julia", "go"])
     def test_primitive_uses_cached_loader_once(
-        self, monkeypatch: pytest.MonkeyPatch
+        self, owner: str, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        calls: dict[str, int] = {"go": 0}
-
-        def _ok_go():
-            calls["go"] += 1
-            return lambda flat, n: (
-                np.zeros(n, dtype=np.float64),
-                np.zeros(n, dtype=np.float64),
-            )
-
+        """On a cold cache two loads of an installed primitive run its loader once."""
+        if owner not in s_mod.AVAILABLE_BACKENDS:
+            pytest.skip(f"{owner} unavailable")
         monkeypatch.setattr(s_mod, "_PRIM_CACHE", {})
-        monkeypatch.setattr(s_mod, "ACTIVE_BACKEND", "go")
-        monkeypatch.setattr(s_mod, "AVAILABLE_BACKENDS", ["go", "python"])
-        monkeypatch.setattr(s_mod, "_LOADERS", {"go": _ok_go, "rust": lambda: {}})
-
-        s_mod._primitive()
-        s_mod._primitive()
-
-        assert calls["go"] == 1
+        loads = _count_calls(
+            f"_load_{owner}_primitive",
+            lambda: [s_mod._load_primitive_backend(owner) for _ in range(2)],
+        )
+        assert loads == 1
+        assert s_mod._load_primitive_backend(owner) is s_mod._PRIM_CACHE[owner]
 
 
 class TestDispatcherSurface:
@@ -432,81 +470,45 @@ class TestDispatcherSurface:
     def test_active_is_first(self):
         assert s_mod.AVAILABLE_BACKENDS[0] == s_mod.ACTIVE_BACKEND
 
-    def test_toolchain_loaders_return_verified_backend_callables(self, monkeypatch):
-        def spectral_eig_backend(flat, n):
-            return np.arange(n, dtype=np.float64), np.ones(n, dtype=np.float64)
-
-        mojo = types.ModuleType(
-            "scpn_phase_orchestrator.experimental.accelerators.coupling._spectral_mojo"
-        )
-        mojo.spectral_eig_mojo = spectral_eig_backend
-        mojo.ensure_called = False
-
-        def ensure_exe():
-            mojo.ensure_called = True
-
-        mojo._ensure_exe = ensure_exe
-        julia = types.ModuleType(
-            "scpn_phase_orchestrator.experimental.accelerators.coupling._spectral_julia"
-        )
-        julia.spectral_eig_julia = spectral_eig_backend
-        go = types.ModuleType(
-            "scpn_phase_orchestrator.experimental.accelerators.coupling._spectral_go"
-        )
-        go.spectral_eig_go = spectral_eig_backend
-        go.load_called = False
-
-        def load_lib():
-            go.load_called = True
-
-        go._load_lib = load_lib
-
-        fake_juliacall = types.ModuleType("juliacall")
-        fake_juliacall.Main = object()
-        monkeypatch.setitem(sys.modules, "juliacall", fake_juliacall)
-        monkeypatch.setitem(
-            sys.modules,
-            "scpn_phase_orchestrator.experimental.accelerators.coupling._spectral_mojo",
-            mojo,
-        )
-        monkeypatch.setitem(
-            sys.modules,
-            "scpn_phase_orchestrator.experimental.accelerators.coupling._spectral_julia",
-            julia,
-        )
-        monkeypatch.setitem(
-            sys.modules,
-            "scpn_phase_orchestrator.experimental.accelerators.coupling._spectral_go",
-            go,
+    @pytest.mark.native_runtime
+    @pytest.mark.parametrize("owner", ["mojo", "julia", "go"])
+    def test_toolchain_loaders_return_verified_backend_callables(
+        self, owner: str
+    ) -> None:
+        """Each real primitive loader returns the analytic path-graph spectrum."""
+        if owner not in s_mod.AVAILABLE_BACKENDS:
+            pytest.skip(f"{owner} unavailable")
+        loader = {
+            "mojo": s_mod._load_mojo_primitive,
+            "julia": s_mod._load_julia_primitive,
+            "go": s_mod._load_go_primitive,
+        }[owner]
+        eigvals, fiedler = loader()(_path_graph(7, 0.8).ravel(), 7)
+        atol = 1e-9 if owner == "mojo" else 1e-12
+        np.testing.assert_allclose(eigvals, _path_spectrum(7, 0.8), atol=atol)
+        np.testing.assert_allclose(
+            abs(float(np.dot(fiedler, _path_fiedler(7)))), 1.0, atol=atol
         )
 
-        assert s_mod._load_mojo_primitive() is spectral_eig_backend
-        assert mojo.ensure_called is True
-        assert s_mod._load_julia_primitive() is spectral_eig_backend
-        assert s_mod._load_go_primitive() is spectral_eig_backend
-        assert go.load_called is True
-
-    def test_non_rust_non_python_primitive_is_cached(self, monkeypatch):
-        calls = 0
-
-        def backend(flat, n):
-            return np.arange(n, dtype=np.float64), np.ones(n, dtype=np.float64)
-
-        def loader():
-            nonlocal calls
-            calls += 1
-            return backend
-
-        monkeypatch.setitem(s_mod._LOADERS, "go", loader)
-        monkeypatch.setattr(s_mod, "ACTIVE_BACKEND", "go")
+    @pytest.mark.native_runtime
+    @pytest.mark.parametrize("owner", ["mojo", "julia", "go"])
+    def test_non_rust_non_python_primitive_is_cached(
+        self, owner: str, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A dropped primitive cache is rebuilt by one real load and then reused."""
+        if owner not in s_mod.AVAILABLE_BACKENDS:
+            pytest.skip(f"{owner} unavailable")
         monkeypatch.setattr(s_mod, "_PRIM_CACHE", None)
-
-        first = s_mod._primitive()
-        second = s_mod._primitive()
-
-        assert first is backend
-        assert second is backend
-        assert calls == 1
+        first: list[object] = []
+        loads = _count_calls(
+            f"_load_{owner}_primitive",
+            lambda: first.extend(
+                s_mod._load_primitive_backend(owner) for _ in range(2)
+            ),
+        )
+        assert loads == 1
+        assert first[0] is first[1]
+        assert isinstance(s_mod._PRIM_CACHE, dict)
 
 
 class TestValidationBoundaries:
@@ -674,65 +676,65 @@ class TestValidationBoundaries:
         np.testing.assert_allclose(eigvals, [0.0, 1.0, 3.0], atol=1e-12)
         assert fiedler.shape == (3,)
 
-    def test_rust_bundle_loader_exposes_direct_fast_path_functions(self, monkeypatch):
-        spo_kernel = types.ModuleType("spo_kernel")
-        spo_kernel.fiedler_value_rust = lambda flat, n: 2.0
-        spo_kernel.fiedler_vector_rust = lambda flat, n: np.arange(n, dtype=np.float64)
-        spo_kernel.spectral_gap_rust = lambda flat, n: 3.0
-        spo_kernel.critical_coupling_rust = lambda omegas, flat, n: 4.0
-        spo_kernel.sync_convergence_rate_rust = lambda flat, omegas, n, gamma_max: (
-            5.0 + gamma_max
-        )
-        monkeypatch.setitem(sys.modules, "spo_kernel", spo_kernel)
-
+    @pytest.mark.native_runtime
+    def test_rust_bundle_loader_exposes_direct_fast_path_functions(self) -> None:
+        """The compiled Rust bundle returns the analytic path-graph metrics."""
+        if "rust" not in s_mod.AVAILABLE_BACKENDS:
+            pytest.skip("rust unavailable")
         bundle = s_mod._load_rust_bundle()
-
-        assert bundle["fv"](np.zeros(4), 2) == 2.0
-        np.testing.assert_allclose(bundle["fvec"](np.zeros(4), 2), [0.0, 1.0])
-        assert bundle["sg"](np.zeros(4), 2) == 3.0
-        assert bundle["kc"](np.zeros(2), np.zeros(4), 2) == 4.0
-        assert bundle["scr"](np.zeros(4), np.zeros(2), 2, 0.25) == 5.25
-
-    def test_rust_active_backend_routes_derived_metrics_to_fast_paths(
-        self, monkeypatch
-    ):
-        calls = []
-        knm = np.array([[0.0, 1.0], [1.0, 0.0]], dtype=np.float64)
-        knm_gap = np.array(
-            [
-                [0.0, 1.0, 0.0],
-                [1.0, 0.0, 2.0],
-                [0.0, 2.0, 0.0],
-            ],
-            dtype=np.float64,
+        flat, spectrum = _path_graph(7, 0.8).ravel(), _path_spectrum(7, 0.8)
+        omegas = np.array([0.3, -0.2, 1.1, 0.0, 0.5, 0.9, -0.4])
+        assert bundle["fv"](flat, 7) == pytest.approx(spectrum[1], abs=1e-12)
+        fvec = np.asarray(bundle["fvec"](flat, 7))
+        assert abs(float(np.dot(fvec, _path_fiedler(7)))) == pytest.approx(
+            1.0, abs=1e-12
         )
-        omegas = np.array([0.0, 2.0], dtype=np.float64)
+        assert bundle["sg"](flat, 7) == pytest.approx(
+            spectrum[2] - spectrum[1], abs=1e-12
+        )
+        assert bundle["kc"](omegas, flat, 7) == pytest.approx(
+            1.5 / spectrum[1], rel=1e-12
+        )
+        assert bundle["scr"](flat, omegas, 7, 0.3) == pytest.approx(
+            0.8 * spectrum[1] * math.cos(0.3) / 7, rel=1e-12
+        )
 
-        def rust_bundle():
-            return {
-                "fv": lambda flat, n: calls.append(("fv", flat.copy(), n)) or 2.0,
-                "fvec": lambda flat, n: (
-                    calls.append(("fvec", flat.copy(), n)) or np.array([1.0, -1.0])
-                ),
-                "sg": lambda flat, n: calls.append(("sg", flat.copy(), n)) or 0.0,
-                "kc": lambda o, flat, n: (
-                    calls.append(("kc", o.copy(), flat.copy(), n)) or 1.0
-                ),
-                "scr": lambda flat, o, n, gamma_max: (
-                    calls.append(("scr", flat.copy(), o.copy(), n, gamma_max)) or 0.5
-                ),
-            }
-
-        monkeypatch.setattr(s_mod, "ACTIVE_BACKEND", "rust")
-        monkeypatch.setattr(s_mod, "_RUST_CACHE", None)
-        monkeypatch.setattr(s_mod, "_load_rust_bundle", rust_bundle)
-
-        assert fiedler_value(knm) == 2.0
-        np.testing.assert_allclose(fiedler_vector(knm), [1.0, -1.0])
-        assert spectral_gap(knm_gap) == 0.0
-        assert critical_coupling(omegas, knm) == 1.0
-        assert sync_convergence_rate(knm, omegas, gamma_max=0.25) == 0.5
-        assert [call[0] for call in calls] == ["fv", "fvec", "sg", "kc", "scr"]
+    @pytest.mark.native_runtime
+    def test_rust_active_backend_routes_derived_metrics_to_fast_paths(self) -> None:
+        """With Rust active, each derived metric calls its compiled fast path once."""
+        if s_mod.ACTIVE_BACKEND != "rust":
+            pytest.skip("Rust is not the active spectral backend")
+        knm = _path_graph(6, 1.2)
+        omegas = np.linspace(-1.0, 1.0, 6)
+        spectrum = _path_spectrum(6, 1.2)
+        profile = cProfile.Profile()
+        profile.enable()
+        try:
+            values = (
+                fiedler_value(knm),
+                fiedler_vector(knm),
+                spectral_gap(knm),
+                critical_coupling(omegas, knm),
+                sync_convergence_rate(knm, omegas, gamma_max=0.2),
+            )
+        finally:
+            profile.disable()
+        names = [
+            "fiedler_value_rust",
+            "fiedler_vector_rust",
+            "spectral_gap_rust",
+            "critical_coupling_rust",
+            "sync_convergence_rate_rust",
+        ]
+        for name in names:
+            assert _builtin_calls(profile, name) == 1, name
+        assert values[0] == pytest.approx(spectrum[1], abs=1e-12)
+        assert abs(float(np.dot(values[1], _path_fiedler(6)))) == pytest.approx(1.0)
+        assert values[2] == pytest.approx(spectrum[2] - spectrum[1], abs=1e-12)
+        assert values[3] == pytest.approx(2.0 / spectrum[1], rel=1e-12)
+        assert values[4] == pytest.approx(
+            1.2 * spectrum[1] * math.cos(0.2) / 6, rel=1e-12
+        )
 
     @_python
     def test_critical_coupling_empty_graph_rejects_frequency_mismatch(self):
