@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `entropy_production_rate` takes `backend=`, and the new
+  `entropy_production_backend()` names the owner a call would use. `auto`
+  keeps the fastest-first chain and its NumPy fallback. A named owner must
+  run the computation: if it is absent or fails, the call raises
+  `RuntimeError` instead of silently using another owner. The RT-033
+  substitute test, which replaced the dispatcher with a fake kernel, is
+  replaced by `tests/test_entropy_prod_real_runtime.py`: every owner is
+  called by name and checked against an independent plain-loop oracle
+  within 1e-12, and child-process Python-only and Rust-only profiles show
+  absent owners refusing.
 - The kernel-absent and defective-kernel branch profiles move into their own
   CI category, `branch-profiles`, which starts with the run. They download
   nothing from other categories, yet they used to wait for every standard

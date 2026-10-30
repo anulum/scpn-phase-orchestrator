@@ -13,6 +13,11 @@
 
 Zero at frequency-locked fixed points; positive otherwise.
 
+``backend="auto"`` takes the fastest available owner and falls back to the
+NumPy law if a native owner fails. An explicitly named owner must run the
+computation: if it is absent or fails, the call raises ``RuntimeError``.
+:func:`entropy_production_backend` names the owner a call would use.
+
 Measurements and controls must be plain real values before conversion. Boolean,
 text, complex and temporal aliases are refused; real numeric object arrays remain
 supported.
@@ -36,6 +41,7 @@ FloatArray: TypeAlias = NDArray[np.float64]
 __all__ = [
     "ACTIVE_BACKEND",
     "AVAILABLE_BACKENDS",
+    "entropy_production_backend",
     "entropy_production_rate",
 ]
 
@@ -136,22 +142,77 @@ def _resolve_backends() -> tuple[str, list[str]]:
 ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
-def _dispatch() -> Callable[..., float] | None:
-    """Return the fastest available backend callable, or ``None`` for Python."""
-    ordered_backends = [ACTIVE_BACKEND] + list(AVAILABLE_BACKENDS)
-    deduped: list[str] = []
-    for backend in ordered_backends:
-        if backend in deduped:
+_NATIVE_FAILURES = (ImportError, RuntimeError, OSError, KeyError)
+
+
+def _require_known_backend(backend: str) -> None:
+    """Refuse an unknown owner name before any computation."""
+    if backend not in (*_BACKEND_NAMES, "auto"):
+        raise ValueError(f"unknown entropy production backend: {backend!r}")
+
+
+def _dispatch(backend: str = "auto") -> tuple[str, Callable[..., float] | None]:
+    """Resolve the owner and its callable; an explicit owner must be present.
+
+    Parameters
+    ----------
+    backend : str
+        ``"auto"`` or one of ``rust``, ``mojo``, ``julia``, ``go``, ``python``.
+
+    Returns
+    -------
+    tuple[str, Callable[..., float] | None]
+        The owner name and its callable, or ``("python", None)`` for the
+        NumPy law.
+
+    Raises
+    ------
+    ValueError
+        If ``backend`` is not a known owner.
+    RuntimeError
+        If an explicitly requested owner is unavailable.
+    """
+    _require_known_backend(backend)
+    ordered = [ACTIVE_BACKEND, *AVAILABLE_BACKENDS] if backend == "auto" else [backend]
+    seen: set[str] = set()
+    for name in ordered:
+        if name in seen:
             continue
-        deduped.append(backend)
-    for backend in deduped:
-        if backend == "python":
-            return None
+        seen.add(name)
+        if name == "python":
+            return "python", None
         try:
-            return _load_backend(backend)
-        except (ImportError, RuntimeError, OSError, KeyError):
-            continue
-    return None
+            return name, _load_backend(name)
+        except _NATIVE_FAILURES as exc:
+            if backend != "auto":
+                raise RuntimeError(
+                    f"entropy production backend {name!r} unavailable"
+                ) from exc
+    return "python", None
+
+
+def entropy_production_backend(backend: str = "auto") -> str:
+    """Return the owner that :func:`entropy_production_rate` would use.
+
+    Parameters
+    ----------
+    backend : str
+        ``"auto"`` or an explicit owner name.
+
+    Returns
+    -------
+    str
+        ``rust``, ``mojo``, ``julia``, ``go`` or ``python``.
+
+    Raises
+    ------
+    ValueError
+        If ``backend`` is not a known owner.
+    RuntimeError
+        If an explicitly requested owner is unavailable.
+    """
+    owner, _ = _dispatch(backend)
+    return owner
 
 
 def _contains_boolean_alias(value: object) -> bool:
@@ -293,6 +354,7 @@ def entropy_production_rate(
     knm: object,
     alpha: object,
     dt: object,
+    backend: str = "auto",
 ) -> float:
     """Thermodynamic dissipation rate ``Σ (dθ/dt)² · dt``.
 
@@ -313,6 +375,10 @@ def entropy_production_rate(
         global coupling strength.
     dt : object
         integration timestep for the ``· dt`` factor.
+    backend : str
+        ``"auto"`` (fastest available owner, NumPy law if a native owner
+        fails) or an explicit owner: ``rust``, ``mojo``, ``julia``, ``go``,
+        ``python``.
 
     Returns
     -------
@@ -322,8 +388,12 @@ def entropy_production_rate(
     Raises
     ------
     ValueError
-        If the inputs are non-finite or mismatched.
+        If the inputs are non-finite or mismatched, the backend name is
+        unknown, or a backend returns a negative or non-finite rate.
+    RuntimeError
+        If an explicitly requested backend is unavailable or fails.
     """
+    owner, backend_fn = _dispatch(backend)
     phases = _validate_vector(phases, name="phases")
     n = int(phases.size)
     omegas = _validate_vector(omegas, name="omegas")
@@ -336,12 +406,14 @@ def entropy_production_rate(
         raise ValueError(f"dt must be non-negative, got {dt!r}")
     if n == 0 or dt == 0.0:
         return 0.0
-    backend_fn = _dispatch()
     if backend_fn is not None:
         try:
             backend_rate = backend_fn(phases, omegas, knm, alpha, dt)
-        except (ImportError, RuntimeError, OSError, KeyError):
-            backend_fn = None
+        except _NATIVE_FAILURES as exc:
+            if backend != "auto":
+                raise RuntimeError(
+                    f"entropy production backend {owner!r} failed"
+                ) from exc
         else:
             return _validate_entropy_rate(
                 backend_rate,

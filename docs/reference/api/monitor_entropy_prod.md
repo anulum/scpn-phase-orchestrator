@@ -90,6 +90,7 @@ non-negative.
 from scpn_phase_orchestrator.monitor.entropy_prod import (
     ACTIVE_BACKEND,
     AVAILABLE_BACKENDS,
+    entropy_production_backend,
     entropy_production_rate,
 )
 ```
@@ -103,6 +104,7 @@ def entropy_production_rate(
     knm: NDArray,       # (N, N) coupling matrix, zero diagonal by convention
     alpha: float,       # global coupling strength
     dt: float,          # integration timestep
+    backend: str = "auto",
 ) -> float: ...
 ```
 
@@ -115,6 +117,22 @@ real components, because ``Σ`` is defined on real phase velocities.
 Object-dtype complex aliases are rejected at the same real-valued
 boundary before float coercion, including scalar backend outputs from
 direct Go/Julia/Mojo adapters.
+
+``backend="auto"`` takes the active owner and falls back to the NumPy law if
+a native owner fails at run time. An explicit owner (``"rust"``, ``"mojo"``,
+``"julia"``, ``"go"`` or ``"python"``) must run the computation: if it is
+absent the call raises ``RuntimeError("entropy production backend 'go'
+unavailable")``, and if it fails, ``RuntimeError(... 'go' failed)``. An
+unknown name raises ``ValueError``.
+
+### 2.2 `entropy_production_backend`
+
+```python
+def entropy_production_backend(backend: str = "auto") -> str: ...
+```
+
+Returns the owner a call with the same ``backend`` would use, with the same
+``ValueError`` and ``RuntimeError`` refusals.
 
 ---
 
@@ -313,13 +331,13 @@ critical = alphas[np.argmax(np.abs(np.diff(sigmas)))]
 ### 6.4 Forcing a specific backend
 
 ```python
-from scpn_phase_orchestrator.monitor import entropy_prod as ep_mod
-saved = ep_mod.ACTIVE_BACKEND
-try:
-    ep_mod.ACTIVE_BACKEND = "julia"
-    sigma = entropy_production_rate(phases, omegas, knm, 0.5, 0.01)
-finally:
-    ep_mod.ACTIVE_BACKEND = saved
+from scpn_phase_orchestrator.monitor.entropy_prod import (
+    entropy_production_backend,
+    entropy_production_rate,
+)
+
+assert entropy_production_backend("julia") == "julia"  # raises if absent
+sigma = entropy_production_rate(phases, omegas, knm, 0.5, 0.01, backend="julia")
 ```
 
 ---
@@ -365,10 +383,22 @@ Three files (21 tests total):
 * `test_alpha_sweep_monotone_in_knm_variance` — with ``ω = 0``,
   doubling ``α`` exactly quadruples Σ.
 
-Run all three:
+### 7.4 `tests/test_entropy_prod_real_runtime.py` — 18 tests
+
+No substitutes: every owner is called by name through the public function.
+
+* Each of Python, Rust, Mojo, Julia and Go matches a plain-loop
+  ``math.fsum`` oracle within ``1e-12`` relative, returns ``0`` at a locked
+  state and leaves its inputs untouched.
+* ``auto`` names the active owner and gives that owner's result.
+* Child-process profiles run an exported source copy without native
+  owners (Python only) and with only Rust; absent owners refuse by name.
+
+Run them:
 
 ```bash
 pytest tests/test_entropy_prod_algorithm.py tests/test_entropy_prod_backends.py
+pytest tests/test_entropy_prod_real_runtime.py
 pytest tests/test_entropy_prod_stability.py -m slow
 ```
 

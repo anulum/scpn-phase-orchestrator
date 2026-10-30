@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 import numpy as np
 import pytest
 
@@ -24,13 +26,16 @@ class _ArrayRaises:
 
 
 def _all_to_all(n: int, k: float = 1.0) -> np.ndarray:
+    """Return an all-to-all coupling matrix of strength ``k`` with a zero diagonal."""
     knm = np.full((n, n), k)
     np.fill_diagonal(knm, 0.0)
     return knm
 
 
 class TestEntropyProductionRate:
-    def test_zero_at_fixed_point(self):
+    """Values, scaling laws and input refusals of the public rate."""
+
+    def test_zero_at_fixed_point(self) -> None:
         """Identical phases and frequencies → dθ/dt = 0 → dissipation = 0."""
         phases = np.zeros(4)
         omegas = np.zeros(4)
@@ -38,7 +43,7 @@ class TestEntropyProductionRate:
         rate = entropy_production_rate(phases, omegas, knm, alpha=1.0, dt=0.01)
         assert rate == pytest.approx(0.0, abs=1e-12)
 
-    def test_positive_for_nonzero_frequencies(self):
+    def test_positive_for_nonzero_frequencies(self) -> None:
         """Non-zero natural frequencies produce positive dissipation."""
         phases = np.zeros(4)
         omegas = np.array([1.0, 2.0, 3.0, 4.0])
@@ -47,7 +52,7 @@ class TestEntropyProductionRate:
         # Σ ω_i² · dt = (1+4+9+16)·0.01 = 0.30
         assert rate == pytest.approx(0.30, abs=1e-10)
 
-    def test_scales_with_dt(self):
+    def test_scales_with_dt(self) -> None:
         """Doubling dt doubles dissipation."""
         phases = np.array([0.0, 0.5])
         omegas = np.array([1.0, -1.0])
@@ -56,7 +61,7 @@ class TestEntropyProductionRate:
         r2 = entropy_production_rate(phases, omegas, knm, alpha=1.0, dt=0.02)
         assert r2 == pytest.approx(2.0 * r1, rel=1e-10)
 
-    def test_coupling_reduces_dissipation_near_lock(self):
+    def test_coupling_reduces_dissipation_near_lock(self) -> None:
         """Strong coupling at phases where sin opposes ω should reduce dθ/dt."""
         # ω_0=+1, ω_1=-1 with θ_0 behind θ_1: coupling pulls 0 forward, 1 backward
         _phases = np.array([0.0, 1.0])
@@ -95,26 +100,29 @@ class TestEntropyProductionRate:
         )
         assert rate_fp < rate_perturbed
 
-    def test_empty_phases(self):
+    def test_empty_phases(self) -> None:
+        """An empty network dissipates nothing."""
         rate = entropy_production_rate(
             np.array([]), np.array([]), np.zeros((0, 0)), alpha=1.0, dt=0.01
         )
         assert rate == 0.0
 
-    def test_zero_dt_returns_zero(self):
+    def test_zero_dt_returns_zero(self) -> None:
+        """A zero timestep gives zero dissipation."""
         phases = np.array([0.0, 1.0])
         omegas = np.array([1.0, 2.0])
         knm = _all_to_all(2)
         assert entropy_production_rate(phases, omegas, knm, alpha=1.0, dt=0.0) == 0.0
 
-    def test_negative_dt_returns_zero(self):
+    def test_negative_dt_is_refused(self) -> None:
+        """A negative timestep is refused."""
         phases = np.array([0.0, 1.0])
         omegas = np.array([1.0, 2.0])
         knm = _all_to_all(2)
         with pytest.raises(ValueError, match="dt must be non-negative"):
             entropy_production_rate(phases, omegas, knm, alpha=1.0, dt=-0.01)
 
-    def test_alpha_scaling(self):
+    def test_alpha_scaling(self) -> None:
         """Doubling alpha changes the coupling contribution."""
         phases = np.array([0.0, 1.0, 2.0])
         omegas = np.zeros(3)
@@ -155,6 +163,7 @@ class TestEntropyProductionRate:
     def test_rejects_mixed_boolean_alias_arrays(
         self, field: str, bad_value: object, match: str
     ) -> None:
+        """Boolean, numeric-string, non-numeric and complex arrays are refused."""
         kwargs: dict[str, object] = {
             "phases": np.zeros(2),
             "omegas": np.ones(2),
@@ -181,6 +190,7 @@ class TestEntropyProductionRate:
         ],
     )
     def test_rejects_boolean_alias_scalars(self, alpha: object, dt: object) -> None:
+        """Boolean alpha or dt is refused."""
         phases = np.array([0.0, 1.0], dtype=np.float64)
         omegas = np.array([1.0, 2.0], dtype=np.float64)
         knm = _all_to_all(2)
@@ -196,6 +206,7 @@ class TestEntropyProductionRate:
         ],
     )
     def test_rejects_numeric_string_scalars(self, alpha: object, dt: object) -> None:
+        """Numeric-string alpha or dt is refused."""
         phases = np.array([0.0, 1.0], dtype=np.float64)
         omegas = np.array([1.0, 2.0], dtype=np.float64)
         knm = _all_to_all(2)
@@ -204,6 +215,7 @@ class TestEntropyProductionRate:
             entropy_production_rate(phases, omegas, knm, alpha=alpha, dt=dt)
 
     def test_rejects_non_numeric_scalar_payload(self) -> None:
+        """A non-numeric alpha is refused."""
         phases = np.array([0.0, 1.0], dtype=np.float64)
         omegas = np.array([1.0, 2.0], dtype=np.float64)
         knm = _all_to_all(2)
@@ -221,6 +233,7 @@ class TestEntropyProductionRate:
     def test_rejects_complex_scalars(
         self, alpha: object, dt: object, match: str
     ) -> None:
+        """Complex alpha or dt is refused by name."""
         phases = np.array([0.0, 1.0], dtype=np.float64)
         omegas = np.array([1.0, 2.0], dtype=np.float64)
         knm = _all_to_all(2)
@@ -232,7 +245,7 @@ class TestEntropyProductionRate:
 class TestEntropyProdPipelineWiring:
     """Pipeline: engine phases → entropy production rate → thermodynamics."""
 
-    def test_engine_phases_to_entropy_rate(self):
+    def test_engine_phases_to_entropy_rate(self) -> None:
         """Engine → phases → entropy_production_rate: measures
         irreversibility of coupled oscillator dynamics."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
@@ -266,6 +279,8 @@ class TestEntropyProdPipelineWiring:
 
 
 class TestEntropyProdRustDispatch:
+    """Dispatch, fallback and explicit-owner contracts with stand-in kernels."""
+
     def test_load_julia_function_returns_bridge_callable(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -276,35 +291,11 @@ class TestEntropyProdRustDispatch:
 
         assert callable(loaded)
 
-    def test_entropy_production_uses_backend_when_available(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        calls: list[tuple[np.ndarray, np.ndarray, np.ndarray, float, float]] = []
-
-        def _fake_backend(
-            phases: np.ndarray,
-            omegas: np.ndarray,
-            knm: np.ndarray,
-            alpha: float,
-            dt: float,
-        ) -> float:
-            calls.append((phases, omegas, knm, alpha, dt))
-            return 0.777
-
-        monkeypatch.setattr(entropy_prod_module, "_dispatch", lambda: _fake_backend)
-        rate = entropy_production_rate(
-            np.array([0.0, 1.0], dtype=np.float64),
-            np.array([1.0, 2.0], dtype=np.float64),
-            np.array([[0.0, 0.5], [0.5, 0.0]], dtype=np.float64),
-            alpha=1.0,
-            dt=0.01,
-        )
-        assert rate == pytest.approx(0.777, abs=1e-12)
-        assert len(calls) == 1
-
     def test_entropy_production_falls_back_when_backend_raises(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        """In automatic selection a failing kernel falls back to the NumPy law."""
+
         def _raising_backend(
             _phases: np.ndarray,
             _omegas: np.ndarray,
@@ -314,7 +305,11 @@ class TestEntropyProdRustDispatch:
         ) -> float:
             raise RuntimeError("boom")
 
-        monkeypatch.setattr(entropy_prod_module, "_dispatch", lambda: _raising_backend)
+        monkeypatch.setattr(
+            entropy_prod_module,
+            "_dispatch",
+            lambda backend="auto": ("go", _raising_backend),
+        )
         rate = entropy_production_rate(
             np.array([0.0, 1.0], dtype=np.float64),
             np.array([1.0, 2.0], dtype=np.float64),
@@ -329,6 +324,8 @@ class TestEntropyProdRustDispatch:
     def test_entropy_production_rejects_invalid_backend_rate(
         self, monkeypatch: pytest.MonkeyPatch, backend_rate: object
     ) -> None:
+        """A negative, non-finite or boolean kernel result is refused."""
+
         def _invalid_backend(
             _phases: np.ndarray,
             _omegas: np.ndarray,
@@ -338,7 +335,11 @@ class TestEntropyProdRustDispatch:
         ) -> float:
             return backend_rate
 
-        monkeypatch.setattr(entropy_prod_module, "_dispatch", lambda: _invalid_backend)
+        monkeypatch.setattr(
+            entropy_prod_module,
+            "_dispatch",
+            lambda backend="auto": ("go", _invalid_backend),
+        )
         with pytest.raises(ValueError, match="backend entropy rate"):
             entropy_production_rate(
                 np.array([0.0, 1.0], dtype=np.float64),
@@ -351,6 +352,7 @@ class TestEntropyProdRustDispatch:
     def test_dispatch_falls_back_to_python_when_loader_fails(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        """A failing loader in automatic selection resolves to Python."""
         previous_backend = entropy_prod_module.ACTIVE_BACKEND
         previous_available = list(entropy_prod_module.AVAILABLE_BACKENDS)
         previous_loader = entropy_prod_module._LOADERS["go"]
@@ -370,11 +372,12 @@ class TestEntropyProdRustDispatch:
             monkeypatch.setitem(entropy_prod_module._LOADERS, "go", previous_loader)
             entropy_prod_module._BACKEND_CACHE.clear()
 
-        assert backend is None
+        assert backend == ("python", None)
 
     def test_dispatch_returns_python_when_all_selected_loaders_fail(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        """With every native loader failing, automatic selection resolves to Python."""
         previous_backend = entropy_prod_module.ACTIVE_BACKEND
         previous_available = list(entropy_prod_module.AVAILABLE_BACKENDS)
         previous_loader = entropy_prod_module._LOADERS["go"]
@@ -394,11 +397,12 @@ class TestEntropyProdRustDispatch:
             monkeypatch.setitem(entropy_prod_module._LOADERS, "go", previous_loader)
             entropy_prod_module._BACKEND_CACHE.clear()
 
-        assert backend is None
+        assert backend == ("python", None)
 
     def test_dispatch_uses_cached_loader_once(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        """Repeated dispatch loads an owner once and reuses it."""
         previous_backend = entropy_prod_module.ACTIVE_BACKEND
         previous_available = list(entropy_prod_module.AVAILABLE_BACKENDS)
         previous_loader = entropy_prod_module._LOADERS["go"]
@@ -414,9 +418,11 @@ class TestEntropyProdRustDispatch:
             _alpha: float,
             _dt: float,
         ) -> float:
+            """Return zero dissipation."""
             return 0.0
 
-        def loader():
+        def loader() -> Callable[..., float]:
+            """Count loads and hand out the stand-in kernel."""
             nonlocal call_count
             call_count += 1
             return fake_backend
@@ -431,9 +437,61 @@ class TestEntropyProdRustDispatch:
             monkeypatch.setitem(entropy_prod_module._LOADERS, "go", previous_loader)
             entropy_prod_module._BACKEND_CACHE.clear()
 
-        assert b1 is fake_backend
-        assert b2 is fake_backend
+        assert b1 == ("go", fake_backend)
+        assert b2 == ("go", fake_backend)
         assert call_count == 1
+
+    def test_explicit_owner_failure_raises(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A named owner that fails refuses instead of falling back."""
+
+        def _raising_backend(
+            _phases: np.ndarray,
+            _omegas: np.ndarray,
+            _knm: np.ndarray,
+            _alpha: float,
+            _dt: float,
+        ) -> float:
+            """Fail like a crashed native kernel."""
+            raise RuntimeError("boom")
+
+        monkeypatch.setattr(
+            entropy_prod_module,
+            "_dispatch",
+            lambda backend="auto": ("go", _raising_backend),
+        )
+        with pytest.raises(
+            RuntimeError, match="entropy production backend 'go' failed"
+        ):
+            entropy_production_rate(
+                np.array([0.0, 1.0]),
+                np.array([1.0, 2.0]),
+                np.array([[0.0, 0.5], [0.5, 0.0]]),
+                alpha=1.0,
+                dt=0.01,
+                backend="go",
+            )
+
+    def test_explicit_owner_whose_loader_fails_is_unavailable(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Naming an owner whose loader fails raises instead of using Python."""
+        monkeypatch.setattr(entropy_prod_module, "_BACKEND_CACHE", {})
+        monkeypatch.setitem(
+            entropy_prod_module._LOADERS,
+            "go",
+            lambda: (_ for _ in ()).throw(ImportError("go backend unavailable")),
+        )
+        with pytest.raises(RuntimeError, match="'go' unavailable"):
+            entropy_prod_module.entropy_production_backend("go")
+
+    def test_unknown_backend_name_is_refused(self) -> None:
+        """An unknown owner name is a ValueError before any computation."""
+        with pytest.raises(ValueError, match="unknown entropy production backend"):
+            entropy_production_rate(
+                np.zeros(2), np.zeros(2), np.zeros((2, 2)), 1.0, 0.01, backend="cuda"
+            )
 
 
 def test_entropy_prod_alias_helpers_cover_defensive_edges() -> None:

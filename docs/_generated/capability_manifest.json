@@ -12,7 +12,7 @@
     "research_experimental_modules": 204,
     "runtime_serving_modules": 160,
     "rust_kernel_files": 132,
-    "test_files": 1115
+    "test_files": 1116
   },
   "documentation": {
     "public_pages": [
@@ -2307,6 +2307,7 @@
       "tests/test_entropy_prod_backends.py",
       "tests/test_entropy_prod_benchmark.py",
       "tests/test_entropy_prod_measurement_inputs.py",
+      "tests/test_entropy_prod_real_runtime.py",
       "tests/test_entropy_prod_stability.py",
       "tests/test_entropy_prod_validation_guards.py",
       "tests/test_envelope.py",
