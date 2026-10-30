@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `te_adapt_coupling` takes `backend=`, and the new `te_adapt_backend()`
+  names the owner of the coupling update; naming Rust without its kernel
+  raises `RuntimeError`. The RT-108 and RT-109 substitutes (a forced Rust
+  flag with a fake kernel, a fake transfer-entropy matrix) are replaced by
+  both owners applying the update law to the real transfer-entropy matrix
+  of a driven four-oscillator history.
 - The swarmalator loader tests (RT-106, RT-107) no longer install fake
   `spo_kernel`, `juliacall` or backend modules. They run one step of the
   real Rust, Mojo, Julia and Go kernels in 2-D and 3-D against a plain-loop

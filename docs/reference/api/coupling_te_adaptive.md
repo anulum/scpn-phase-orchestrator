@@ -215,7 +215,9 @@ TE cost over many cheap integration steps.
 - **Guaranteed non-negative** — coupling clamped to $\geq 0$
 - **Zero self-coupling** — diagonal always forced to zero
 - **Rust FFI for update step** — the coupling update (not TE
-  computation) dispatches to Rust
+  computation) dispatches to Rust. `te_adapt_coupling(..., backend=)` takes
+  `"auto"` (Rust when installed), `"rust"` (refused with `RuntimeError` if
+  absent) or `"python"`; `te_adapt_backend()` names the owner
 - **Configurable histogram resolution** — `n_bins` trades off
   statistical precision vs. bias
 - **Composable** — output is a standard coupling matrix compatible

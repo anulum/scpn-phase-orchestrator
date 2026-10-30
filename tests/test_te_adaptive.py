@@ -181,52 +181,34 @@ class TestTEAdaptive:
                 np.ones((2, 5), dtype=np.float64),
             )
 
+    @pytest.mark.native_runtime
+    @pytest.mark.parametrize("owner", ["python", "rust"])
     def test_rust_dispatch_uses_flattened_transfer_entropy_matrix(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
+        self, owner: str
     ) -> None:
-        calls: dict[str, object] = {}
+        """Each owner applies the update law to the real transfer-entropy matrix."""
+        if owner == "rust" and not te_mod._HAS_RUST:
+            pytest.skip("Rust backend not built")
+        assert te_mod.te_adapt_backend(owner) == owner
+        rng = np.random.default_rng(113)
+        history = np.cumsum(rng.normal(0.3, 0.4, (4, 200)), axis=1)
+        history[1, 1:] += 0.8 * history[0, :-1]
+        knm = rng.uniform(0.0, 0.5, (4, 4))
+        np.fill_diagonal(knm, 0.0)
+        te = te_mod.transfer_entropy_matrix(history, n_bins=6).tolist()
+        expected = [
+            [
+                0.0 if i == j else max(0.0, 0.85 * knm[i, j] + 0.3 * te[i][j])
+                for j in range(4)
+            ]
+            for i in range(4)
+        ]
 
-        def fake_transfer_entropy_matrix(history, *, n_bins):
-            calls["history_shape"] = tuple(history.shape)
-            calls["n_bins"] = n_bins
-            return np.array([[0.0, 0.4], [0.2, 0.0]], dtype=np.float64)
-
-        def fake_rust(k_flat, te_flat, n, lr, decay):
-            calls["k_flat"] = tuple(float(value) for value in k_flat)
-            calls["te_flat"] = tuple(float(value) for value in te_flat)
-            calls["n"] = n
-            calls["lr"] = lr
-            calls["decay"] = decay
-            return np.array([0.0, 0.8, 0.3, 0.0], dtype=np.float64)
-
-        monkeypatch.setattr(te_mod, "_HAS_RUST", True)
-        monkeypatch.setattr(te_mod, "_rust_te_adapt", fake_rust, raising=False)
-        monkeypatch.setattr(
-            te_mod,
-            "transfer_entropy_matrix",
-            fake_transfer_entropy_matrix,
+        result = te_adapt_coupling(
+            knm, history, lr=0.3, decay=0.15, n_bins=6, backend=owner
         )
 
-        knm = np.array([[0.0, 0.1], [0.2, 0.0]], dtype=np.float64)
-        history = np.ones((2, 5), dtype=np.float64)
-
-        result = te_adapt_coupling(knm, history, lr=0.25, decay=0.1, n_bins=5)
-
-        np.testing.assert_allclose(result, [[0.0, 0.8], [0.3, 0.0]])
-        assert calls == {
-            "history_shape": (2, 5),
-            "n_bins": 5,
-            "k_flat": (0.0, 0.1, 0.2, 0.0),
-            "te_flat": (0.0, 0.4, 0.2, 0.0),
-            "n": 2,
-            "lr": 0.25,
-            "decay": 0.1,
-        }
-
-
-class TestTEAdaptivePipelineWiring:
-    """Pipeline: engine trajectory → TE → adapt coupling → engine."""
+        np.testing.assert_allclose(result, expected, rtol=0.0, atol=1e-15)
 
     def test_te_adapted_knm_drives_engine(self):
         """Engine trajectory → te_adapt_coupling → updated K_nm → engine."""
@@ -339,18 +321,14 @@ class TestTEAdaptiveBackendContracts:
         with pytest.raises(RuntimeError, match="non-zero self coupling"):
             te_adapt_coupling(np.zeros((2, 2)), np.ones((2, 10)))
 
-    def test_pure_python_fallback(self, monkeypatch):
+    def test_pure_python_fallback(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Without the kernel ``auto`` uses Python; naming Rust then refuses."""
         monkeypatch.setattr(te_mod, "_HAS_RUST", False)
-        monkeypatch.setattr(
-            te_mod,
-            "transfer_entropy_matrix",
-            lambda *a, **kw: np.array([[0.0, 0.1], [0.1, 0.0]]),
-        )
-        knm = np.array([[0.0, 0.5], [0.5, 0.0]])
-        history = np.ones((2, 10))
-        result = te_adapt_coupling(knm, history, lr=0.1, decay=0.1)
-        expected = np.array([[0.0, 0.46], [0.46, 0.0]])
-        np.testing.assert_allclose(result, expected, atol=1e-12)
+        assert te_mod.te_adapt_backend() == "python"
+        with pytest.raises(RuntimeError, match="'rust' unavailable"):
+            te_adapt_coupling(np.zeros((2, 2)), np.ones((2, 10)), backend="rust")
+        with pytest.raises(ValueError, match="unknown TE-adaptive backend"):
+            te_adapt_coupling(np.zeros((2, 2)), np.ones((2, 10)), backend="cuda")
 
 
 class TestTEAdaptiveValidationGuards:

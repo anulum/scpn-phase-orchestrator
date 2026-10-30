@@ -38,7 +38,41 @@ try:
 except ImportError:
     _HAS_RUST = False
 
-__all__ = ["te_adapt_coupling"]
+__all__ = ["te_adapt_backend", "te_adapt_coupling"]
+
+_BACKEND_NAMES = ("rust", "python")
+
+
+def te_adapt_backend(backend: str = "auto") -> str:
+    """Return the owner of the transfer-entropy coupling update.
+
+    Parameters
+    ----------
+    backend : str
+        ``"auto"`` (Rust when ``spo_kernel`` is installed, else Python),
+        ``"rust"`` or ``"python"``.
+
+    Returns
+    -------
+    str
+        ``"rust"`` or ``"python"``.
+
+    Raises
+    ------
+    ValueError
+        If ``backend`` is not a known owner.
+    RuntimeError
+        If ``"rust"`` is requested and the Rust kernel is not installed.
+    """
+    if backend not in (*_BACKEND_NAMES, "auto"):
+        raise ValueError(f"unknown TE-adaptive backend: {backend!r}")
+    if backend == "auto":
+        return "rust" if _HAS_RUST else "python"
+    if backend == "rust" and not _HAS_RUST:
+        raise RuntimeError("TE-adaptive backend 'rust' unavailable")
+    return backend
+
+
 FloatArray: TypeAlias = NDArray[np.float64]
 
 
@@ -153,6 +187,7 @@ def te_adapt_coupling(
     lr: float = 0.01,
     decay: float = 0.0,
     n_bins: int = 8,
+    backend: str = "auto",
 ) -> FloatArray:
     """Adapt coupling matrix using transfer entropy as learning signal.
 
@@ -176,6 +211,8 @@ def te_adapt_coupling(
         coupling decay rate per update (0 = no decay).
     n_bins : int
         histogram bins for TE estimation.
+    backend : str
+        Owner of the update: ``"auto"``, ``"rust"`` or ``"python"``.
 
     Returns
     -------
@@ -184,9 +221,13 @@ def te_adapt_coupling(
 
     Raises
     ------
+    ValueError
+        If an input or the backend name is invalid.
     RuntimeError
-        If the transfer-entropy backend fails.
+        If the transfer-entropy backend fails, or ``"rust"`` is requested and
+        not installed.
     """
+    owner = te_adapt_backend(backend)
     knm = _validate_knm(knm)
     n = knm.shape[0]
     phase_history = _validate_phase_history(phase_history, n=n)
@@ -197,7 +238,7 @@ def te_adapt_coupling(
         transfer_entropy_matrix(phase_history, n_bins=n_bins),
         n=n,
     )
-    if _HAS_RUST:
+    if owner == "rust":
         k_flat = np.ascontiguousarray(knm.ravel(), dtype=np.float64)
         t_flat = np.ascontiguousarray(te.ravel(), dtype=np.float64)
         raw_result = _rust_te_adapt(k_flat, t_flat, n, lr, decay)
