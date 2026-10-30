@@ -114,8 +114,15 @@ for the trajectory.
 
 ## Public boundary contract
 
-`poincare_section(trajectory, normal, offset=0.0, direction="positive")` accepts
-finite real 1-D or 2-D trajectories and a finite real section normal.
+`poincare_section(trajectory, normal, offset=0.0, direction="positive",
+backend="auto")` accepts finite real 1-D or 2-D trajectories and a finite real
+section normal.
+
+`backend="auto"` uses the active owner and falls back to NumPy if a native
+owner fails. A named owner (`"rust"`, `"mojo"`, `"julia"`, `"go"`, `"python"`)
+must serve the call; absent, lacking the kernel or failing, it raises
+`RuntimeError`. `return_times` and `phase_poincare` take the same `backend`,
+and `poincare_backend("section" | "phase", backend)` names the owner.
 
 The public boundary rejects:
 
@@ -142,7 +149,7 @@ A two-dimensional trajectory is interpreted as `(timesteps, dimension)`.
 
 ## Phase boundary contract
 
-`phase_poincare(phases, oscillator_idx=0, section_phase=0.0)` accepts finite
+`phase_poincare(phases, oscillator_idx=0, section_phase=0.0, backend="auto")` accepts finite
 real phase histories with shape `(T, N)`.
 
 The public boundary rejects:

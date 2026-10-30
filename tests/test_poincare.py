@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import math
 from typing import Any
 
 import numpy as np
@@ -20,6 +21,59 @@ from scpn_phase_orchestrator.monitor.poincare import (
     poincare_section,
     return_times,
 )
+
+
+def _oracle_section(
+    traj: list[list[float]], normal: list[float], offset: float, direction: str
+) -> tuple[list[list[float]], list[float]]:
+    """Return interpolated hyperplane crossings and their fractional times."""
+    norm = math.sqrt(math.fsum(c * c for c in normal))
+    dist = [
+        math.fsum(a * c for a, c in zip(p, normal, strict=True)) / norm - offset
+        for p in traj
+    ]
+    points, times = [], []
+    for i in range(len(traj) - 1):
+        d0, d1 = dist[i], dist[i + 1]
+        crossing = {
+            "positive": d0 < 0 <= d1,
+            "negative": d0 > 0 >= d1,
+            "both": d0 * d1 < 0,
+        }[direction]
+        if not crossing:
+            continue
+        alpha = -d0 / (d1 - d0) if abs(d1 - d0) > 1e-15 else 0.5
+        points.append(
+            [a + alpha * (b - a) for a, b in zip(traj[i], traj[i + 1], strict=True)]
+        )
+        times.append(i + alpha)
+    return points, times
+
+
+def _oracle_phase_section(
+    rows: list[list[float]], idx: int, section: float
+) -> tuple[list[list[float]], list[float]]:
+    """Return crossings of the unwrapped phase ``rows[:, idx]`` through ``section``."""
+    two_pi = 2 * math.pi
+    target = [rows[0][idx]]
+    for prev, cur in zip(rows, rows[1:], strict=False):
+        step = cur[idx] - prev[idx]
+        wrapped = (step + math.pi) % two_pi - math.pi
+        if wrapped == -math.pi and step > 0:
+            wrapped = math.pi
+        target.append(target[-1] + (wrapped if abs(step) >= math.pi else step))
+    shifted = [(v - section) % two_pi for v in target]
+    points, times = [], []
+    for i in range(len(rows) - 1):
+        if shifted[i] > math.pi and shifted[i + 1] < math.pi:
+            denom = (two_pi - shifted[i]) + shifted[i + 1]
+            alpha = (two_pi - shifted[i]) / denom if denom > 1e-15 else 0.5
+            alpha = min(max(alpha, 0.0), 1.0)
+            points.append(
+                [a + alpha * (b - a) for a, b in zip(rows[i], rows[i + 1], strict=True)]
+            )
+            times.append(i + alpha)
+    return points, times
 
 
 class TestPoincareSection:
@@ -134,33 +188,23 @@ class TestPoincareSection:
 
         assert result.crossings.shape == (1, 1)
 
-    def test_section_uses_backend_when_available(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        calls: list[tuple[np.ndarray, int, int, np.ndarray, float, int]] = []
-
-        def _fake_section(
-            traj_flat: np.ndarray,
-            t: int,
-            d: int,
-            normal: np.ndarray,
-            offset: float,
-            direction_id: int,
-        ) -> tuple[np.ndarray, np.ndarray, int]:
-            calls.append((traj_flat, t, d, normal, offset, direction_id))
-            cr = np.array([0.0], dtype=np.float64)
-            times = np.array([0.5], dtype=np.float64)
-            return cr, times, 1
-
-        monkeypatch.setattr(
-            poincare_module,
-            "_dispatch",
-            lambda _fn_name: _fake_section,
-        )
-        result = poincare_section([[-1.0], [1.0]], normal=[1.0], offset=0.0)
-        assert result.crossings.shape == (1, 1)
-        assert result.crossing_times.shape == (1,)
-        assert len(calls) == 1
+    @pytest.mark.native_runtime
+    @pytest.mark.parametrize("owner", ["python", "rust", "mojo", "julia", "go"])
+    def test_section_uses_backend_when_available(self, owner: str) -> None:
+        """Each named owner finds the oracle's hyperplane crossings on a helix."""
+        if owner not in poincare_module.AVAILABLE_BACKENDS:
+            pytest.skip(f"{owner} unavailable")
+        assert poincare_module.poincare_backend("section", owner) == owner
+        t = np.linspace(0.0, 20.0, 400)
+        helix = np.column_stack([np.cos(t), np.sin(t), 0.1 * t])
+        normal, offset = [1.0, 0.5, 0.0], 0.2
+        atol = 1e-9 if owner == "mojo" else 1e-12
+        for direction in ("positive", "negative", "both"):
+            got = poincare_section(helix, normal, offset, direction, backend=owner)
+            points, times = _oracle_section(helix.tolist(), normal, offset, direction)
+            assert len(times) > 0
+            np.testing.assert_allclose(got.crossings, points, rtol=0.0, atol=atol)
+            np.testing.assert_allclose(got.crossing_times, times, rtol=0.0, atol=atol)
 
     def test_section_falls_back_when_backend_raises(
         self, monkeypatch: pytest.MonkeyPatch
@@ -178,7 +222,7 @@ class TestPoincareSection:
         monkeypatch.setattr(
             poincare_module,
             "_dispatch",
-            lambda _fn_name: _raising_section,
+            lambda _fn_name, _backend="auto": ("go", _raising_section),
         )
         result = poincare_section([[-1.0], [1.0]], normal=[1.0], offset=0.0)
         assert result.crossings.shape == (1, 1)
@@ -214,7 +258,7 @@ class TestPoincareSection:
         monkeypatch.setattr(
             poincare_module,
             "_dispatch",
-            lambda _fn_name: _invalid_section,
+            lambda _fn_name, _backend="auto": ("go", _invalid_section),
         )
         with pytest.raises(ValueError):
             poincare_section([[-1.0], [1.0]], normal=[1.0], offset=0.0)
@@ -306,32 +350,53 @@ class TestPhasePoincare:
 
         assert result.crossings.shape[1] == 1
 
-    def test_phase_uses_backend_when_available(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        calls: list[tuple[np.ndarray, int, int, int, float]] = []
+    @pytest.mark.native_runtime
+    @pytest.mark.parametrize("owner", ["python", "rust", "mojo", "julia", "go"])
+    def test_phase_uses_backend_when_available(self, owner: str) -> None:
+        """Each named owner finds the oracle's phase-section crossings."""
+        if owner not in poincare_module.AVAILABLE_BACKENDS:
+            pytest.skip(f"{owner} unavailable")
+        assert poincare_module.poincare_backend("phase", owner) == owner
+        steps = np.arange(300)
+        phases = np.column_stack([(0.37 * steps) % (2 * np.pi), 0.11 * steps])
+        atol = 1e-9 if owner == "mojo" else 1e-12
+        for section_phase in (0.0, 1.3):
+            got = phase_poincare(phases, 0, section_phase, backend=owner)
+            points, times = _oracle_phase_section(phases.tolist(), 0, section_phase)
+            assert len(times) > 0
+            np.testing.assert_allclose(got.crossings, points, rtol=0.0, atol=atol)
+            np.testing.assert_allclose(got.crossing_times, times, rtol=0.0, atol=atol)
 
-        def _fake_phase(
-            phases_flat: np.ndarray,
-            t: int,
-            n: int,
-            oscillator_idx: int,
-            section_phase: float,
-        ) -> tuple[np.ndarray, np.ndarray, int]:
-            calls.append((phases_flat, t, n, oscillator_idx, section_phase))
-            cr = np.array([0.1, 0.2], dtype=np.float64)
-            times = np.array([0.25], dtype=np.float64)
-            return cr, times, 1
+    def test_named_owner_refusals(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Absent, failing or incomplete named owners and unknown names refuse."""
 
-        monkeypatch.setattr(
-            poincare_module,
-            "_dispatch",
-            lambda _fn_name: _fake_phase,
+        def crash(*_args: object) -> object:
+            """Fail like a crashed kernel."""
+            raise RuntimeError("kernel crashed")
+
+        traj = [[-1.0], [1.0]]
+        monkeypatch.setattr(poincare_module, "_BACKEND_CACHE", {})
+        monkeypatch.setitem(
+            poincare_module._LOADERS,
+            "go",
+            lambda: (_ for _ in ()).throw(OSError("libpoincare.so missing")),
         )
-        result = phase_poincare([[0.0, 0.0], [0.2, 0.3]], oscillator_idx=0)
-        assert result.crossings.shape == (1, 2)
-        assert result.crossing_times.shape == (1,)
-        assert len(calls) == 1
+        with pytest.raises(RuntimeError, match="'go' unavailable"):
+            poincare_section(traj, [1.0], backend="go")
+        monkeypatch.setitem(poincare_module._LOADERS, "go", lambda: {"section": crash})
+        poincare_module._BACKEND_CACHE.clear()
+        with pytest.raises(RuntimeError, match="'go' failed"):
+            return_times(traj, [1.0], backend="go")
+        with pytest.raises(RuntimeError, match="'go' lacks phase"):
+            phase_poincare([[0.0], [1.0]], backend="go")
+        monkeypatch.setitem(poincare_module._LOADERS, "go", lambda: {"phase": crash})
+        poincare_module._BACKEND_CACHE.clear()
+        with pytest.raises(RuntimeError, match="'go' failed"):
+            phase_poincare([[0.0], [1.0]], backend="go")
+        with pytest.raises(ValueError, match="unknown Poincaré backend"):
+            poincare_section(traj, [1.0], backend="cuda")
+        with pytest.raises(ValueError, match="unknown Poincaré operation"):
+            poincare_module.poincare_backend("orbit")
 
     def test_phase_falls_back_when_backend_raises(
         self, monkeypatch: pytest.MonkeyPatch
@@ -348,7 +413,7 @@ class TestPhasePoincare:
         monkeypatch.setattr(
             poincare_module,
             "_dispatch",
-            lambda _fn_name: _raising_phase,
+            lambda _fn_name, _backend="auto": ("go", _raising_phase),
         )
         result = phase_poincare([[0.0], [2.0 * np.pi + 0.1]], oscillator_idx=0)
         assert result.crossings.shape[1] == 1
@@ -368,7 +433,7 @@ class TestPhasePoincare:
         monkeypatch.setattr(
             poincare_module,
             "_dispatch",
-            lambda _fn_name: _invalid_phase,
+            lambda _fn_name, _backend="auto": ("go", _invalid_phase),
         )
         with pytest.raises(ValueError):
             phase_poincare([[0.0], [2.0 * np.pi + 0.1]], oscillator_idx=0)
@@ -488,7 +553,7 @@ class TestPoincareBackendDispatch:
             monkeypatch.setitem(poincare_module._LOADERS, "go", previous_loader)
             poincare_module._BACKEND_CACHE.clear()
 
-        assert fn is None
+        assert fn == ("python", None)
 
     def test_dispatch_uses_cached_backend_loader_once(
         self, monkeypatch: pytest.MonkeyPatch
@@ -526,6 +591,6 @@ class TestPoincareBackendDispatch:
             monkeypatch.setitem(poincare_module._LOADERS, "go", previous_loader)
             poincare_module._BACKEND_CACHE.clear()
 
-        assert fn1 is fake_section
-        assert fn2 is fake_section
+        assert fn1 == ("go", fake_section)
+        assert fn2 == ("go", fake_section)
         assert call_count == 1

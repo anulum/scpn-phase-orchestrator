@@ -42,6 +42,7 @@ __all__ = [
     "AVAILABLE_BACKENDS",
     "PoincareResult",
     "phase_poincare",
+    "poincare_backend",
     "poincare_section",
     "return_times",
 ]
@@ -178,24 +179,87 @@ def _resolve_backends() -> tuple[str, list[str]]:
 ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
-def _dispatch(fn_name: str) -> object | None:
-    """Return the fastest available backend callables, or ``None`` for Python."""
-    ordered_backends = [ACTIVE_BACKEND] + list(AVAILABLE_BACKENDS)
-    deduped: list[str] = []
-    for backend in ordered_backends:
-        if backend in deduped:
+_NATIVE_FAILURES = (ImportError, RuntimeError, OSError, KeyError)
+_SLOTS = ("section", "phase")
+
+
+def _require_known_backend(backend: str) -> None:
+    """Refuse an unknown owner name before any computation."""
+    if backend not in (*_BACKEND_NAMES, "auto"):
+        raise ValueError(f"unknown Poincaré backend: {backend!r}")
+
+
+def _dispatch(fn_name: str, backend: str = "auto") -> tuple[str, object | None]:
+    """Resolve the owner of ``fn_name`` and its callable.
+
+    Parameters
+    ----------
+    fn_name : str
+        ``"section"`` or ``"phase"``.
+    backend : str
+        ``"auto"`` or one of ``rust``, ``mojo``, ``julia``, ``go``, ``python``.
+
+    Returns
+    -------
+    tuple[str, object | None]
+        The owner name and its callable, or ``("python", None)``.
+
+    Raises
+    ------
+    ValueError
+        If ``backend`` is not a known owner.
+    RuntimeError
+        If an explicitly requested owner is unavailable or lacks the kernel.
+    """
+    _require_known_backend(backend)
+    ordered = [ACTIVE_BACKEND, *AVAILABLE_BACKENDS] if backend == "auto" else [backend]
+    seen: set[str] = set()
+    for name in ordered:
+        if name in seen:
             continue
-        deduped.append(backend)
-    for backend in deduped:
-        if backend == "python":
-            return None
+        seen.add(name)
+        if name == "python":
+            return "python", None
         try:
-            fn = _load_backend(backend).get(fn_name)
-        except (ImportError, RuntimeError, OSError, KeyError):
+            fn = _load_backend(name).get(fn_name)
+        except _NATIVE_FAILURES as exc:
+            if backend != "auto":
+                raise RuntimeError(f"Poincaré backend {name!r} unavailable") from exc
             continue
-        if fn is not None:
-            return fn
-    return None
+        if fn is None:
+            if backend != "auto":
+                raise RuntimeError(f"Poincaré backend {name!r} lacks {fn_name}")
+            continue
+        return name, fn
+    return "python", None
+
+
+def poincare_backend(slot: str, backend: str = "auto") -> str:
+    """Return the owner that serves one Poincaré operation.
+
+    Parameters
+    ----------
+    slot : str
+        ``"section"`` (hyperplane) or ``"phase"`` (phase section).
+    backend : str
+        ``"auto"`` or an explicit owner name.
+
+    Returns
+    -------
+    str
+        ``rust``, ``mojo``, ``julia``, ``go`` or ``python``.
+
+    Raises
+    ------
+    ValueError
+        If ``slot`` or ``backend`` is unknown.
+    RuntimeError
+        If an explicitly requested owner is unavailable or lacks the kernel.
+    """
+    if slot not in _SLOTS:
+        raise ValueError(f"unknown Poincaré operation: {slot!r}")
+    owner, _ = _dispatch(slot, backend)
+    return owner
 
 
 def _contains_boolean_alias(value: object) -> bool:
@@ -504,6 +568,7 @@ def poincare_section(
     normal: object,
     offset: object = 0.0,
     direction: str = "positive",
+    backend: str = "auto",
 ) -> PoincareResult:
     """Hyperplane-crossing Poincaré section.
 
@@ -517,6 +582,8 @@ def poincare_section(
         Scalar offset of the Poincaré hyperplane.
     direction : str
         Crossing direction to record (e.g. ``positive``).
+    backend : str
+        ``"auto"`` (NumPy if a native owner fails) or an explicit owner.
 
     Returns
     -------
@@ -526,8 +593,11 @@ def poincare_section(
     Raises
     ------
     ValueError
-        If the normal vector or direction is invalid.
+        If the normal vector, direction or backend name is invalid.
+    RuntimeError
+        If an explicitly requested owner is unavailable or fails.
     """
+    _require_known_backend(backend)
     traj = _validate_state_history(trajectory, name="trajectory")
     t, d = int(traj.shape[0]), int(traj.shape[1])
     norm_vec = _validate_normal(normal, expected_dim=d)
@@ -542,7 +612,7 @@ def poincare_section(
     if norm_mag == 0.0:
         return _assemble_result(np.zeros(t * d), np.zeros(t), 0, d)
 
-    backend_fn = _dispatch("section")
+    owner, backend_fn = _dispatch("section", backend)
     if backend_fn is not None:
         fn = cast(
             "Callable[[FloatArray, int, int, FloatArray, float, int], "
@@ -559,8 +629,9 @@ def poincare_section(
                 int(direction_id),
             )
             return _assemble_result(cr_flat, times, n_cr, d)
-        except (ImportError, RuntimeError, OSError, KeyError):
-            direction_id = int(direction_id)
+        except _NATIVE_FAILURES as exc:
+            if backend != "auto":
+                raise RuntimeError(f"Poincaré backend {owner!r} failed") from exc
 
     n = norm_vec / norm_mag
     signed_dist = traj @ n - offset
@@ -590,6 +661,7 @@ def return_times(
     trajectory: object,
     normal: object,
     offset: object = 0.0,
+    backend: str = "auto",
 ) -> FloatArray:
     """Shortcut: return only the return-time sequence.
 
@@ -601,6 +673,8 @@ def return_times(
         Normal vector defining the Poincaré hyperplane.
     offset : object
         Scalar offset of the Poincaré hyperplane.
+    backend : str
+        ``"auto"`` or an explicit owner, as for :func:`poincare_section`.
 
     Returns
     -------
@@ -612,6 +686,7 @@ def return_times(
         normal,
         offset,
         direction="positive",
+        backend=backend,
     ).return_times
 
 
@@ -619,6 +694,7 @@ def phase_poincare(
     phases: object,
     oscillator_idx: object = 0,
     section_phase: object = 0.0,
+    backend: str = "auto",
 ) -> PoincareResult:
     """Poincaré section for phase-oscillator trajectories.
 
@@ -633,18 +709,28 @@ def phase_poincare(
         Index of the oscillator whose phase defines the section.
     section_phase : object
         Phase value at which to record a crossing.
+    backend : str
+        ``"auto"`` (NumPy if a native owner fails) or an explicit owner.
 
     Returns
     -------
     PoincareResult
         The Poincaré-section result for the phase oscillator.
+
+    Raises
+    ------
+    ValueError
+        If an input or the backend name is invalid.
+    RuntimeError
+        If an explicitly requested owner is unavailable or fails.
     """
+    _require_known_backend(backend)
     phases = _validate_state_history(phases, name="phases")
     t, n = int(phases.shape[0]), int(phases.shape[1])
     oscillator_idx = _validate_oscillator_idx(oscillator_idx, n=n)
     section_phase = _validate_finite_real(section_phase, name="section_phase")
 
-    backend_fn = _dispatch("phase")
+    owner, backend_fn = _dispatch("phase", backend)
     if backend_fn is not None:
         fn = cast(
             "Callable[[FloatArray, int, int, int, float], "
@@ -660,8 +746,9 @@ def phase_poincare(
                 section_phase,
             )
             return _assemble_result(cr_flat, times, n_cr, n)
-        except (ImportError, RuntimeError, OSError, KeyError):
-            oscillator_idx = int(oscillator_idx)
+        except _NATIVE_FAILURES as exc:
+            if backend != "auto":
+                raise RuntimeError(f"Poincaré backend {owner!r} failed") from exc
 
     target = np.unwrap(phases[:, oscillator_idx])
     shifted = (target - section_phase) % (2 * np.pi)

@@ -10,9 +10,7 @@
 
 from __future__ import annotations
 
-import sys
 from collections.abc import Callable
-from types import ModuleType
 from typing import NoReturn, cast
 
 import numpy as np
@@ -34,14 +32,6 @@ PhaseBackend = Callable[
     [FloatArray, int, int, int, float],
     tuple[FloatArray, FloatArray, int],
 ]
-RustSectionKernel = Callable[
-    [FloatArray, int, int, FloatArray, float, str],
-    tuple[FloatArray, FloatArray, int],
-]
-RustPhaseKernel = Callable[
-    [FloatArray, int, int, int, float],
-    tuple[FloatArray, FloatArray, int],
-]
 
 
 class _ExplodingArray:
@@ -54,13 +44,6 @@ class _ExplodingArray:
     ) -> NoReturn:
         """Raise during NumPy coercion to exercise defensive fallback paths."""
         raise ValueError("cannot materialize array")
-
-
-class _FakeSpoKernel(ModuleType):
-    """Typed synthetic ``spo_kernel`` module for Rust adapter tests."""
-
-    poincare_section_rust: RustSectionKernel
-    phase_poincare_rust: RustPhaseKernel
 
 
 def _base_result_payload() -> dict[str, object]:
@@ -98,76 +81,33 @@ def test_alias_helpers_fail_closed_when_array_protocol_raises() -> None:
     )
 
 
-def test_rust_backend_loader_wraps_and_pads_kernel_outputs(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Rust backend adapters must preserve output cardinality and padding."""
-    kernel = _FakeSpoKernel("spo_kernel")
-
-    def poincare_section_rust(
-        traj_flat: FloatArray,
-        t: int,
-        d: int,
-        normal: FloatArray,
-        offset: float,
-        direction: str,
-    ) -> tuple[FloatArray, FloatArray, int]:
-        """Return one compact section crossing from a fake Rust kernel."""
-        assert traj_flat.shape == (4,)
-        assert (t, d, offset, direction) == (2, 2, 0.25, "negative")
-        np.testing.assert_allclose(normal, [1.0, 0.0])
-        return (
-            np.array([3.0, 5.0], dtype=np.float64),
-            np.array([0.75], dtype=np.float64),
-            1,
-        )
-
-    def phase_poincare_rust(
-        phases_flat: FloatArray,
-        t: int,
-        n: int,
-        oscillator_idx: int,
-        section_phase: float,
-    ) -> tuple[FloatArray, FloatArray, int]:
-        """Return one compact phase crossing from a fake Rust kernel."""
-        assert phases_flat.shape == (4,)
-        assert (t, n, oscillator_idx, section_phase) == (2, 2, 1, 0.5)
-        return (
-            np.array([7.0, 11.0], dtype=np.float64),
-            np.array([1.25], dtype=np.float64),
-            1,
-        )
-
-    kernel.poincare_section_rust = poincare_section_rust
-    kernel.phase_poincare_rust = phase_poincare_rust
-    monkeypatch.setitem(sys.modules, "spo_kernel", kernel)
-
+@pytest.mark.native_runtime
+def test_rust_backend_loader_wraps_and_pads_kernel_outputs() -> None:
+    """The compiled Rust loader pads crossings to the trajectory size."""
+    if "rust" not in poincare_module.AVAILABLE_BACKENDS:
+        pytest.skip("rust unavailable")
     loaded = poincare_module._load_rust_fns()
     section_fn = cast(SectionBackend, loaded["section"])
     phase_fn = cast(PhaseBackend, loaded["phase"])
 
-    section_crossings, section_times, section_count = section_fn(
-        np.array([-1.0, 0.0, 1.0, 0.0], dtype=np.float64),
-        2,
-        2,
-        np.array([1.0, 0.0], dtype=np.float64),
-        0.25,
-        1,
-    )
-    phase_crossings, phase_times, phase_count = phase_fn(
-        np.array([0.0, 0.1, 0.2, 0.3], dtype=np.float64),
-        2,
-        2,
-        1,
-        0.5,
-    )
+    # One downward crossing of x = 0.25 between the two samples, at 3/8.
+    traj = np.array([1.0, 2.0, -1.0, 4.0], dtype=np.float64)
+    crossings, times, count = section_fn(traj, 2, 2, np.array([1.0, 0.0]), 0.25, 1)
+    assert count == 1
+    assert crossings.shape == (4,) and times.shape == (2,)
+    np.testing.assert_allclose(crossings, [0.25, 2.75, 0.0, 0.0], atol=1e-12)
+    np.testing.assert_allclose(times, [0.375, 0.0], atol=1e-12)
 
-    np.testing.assert_allclose(section_crossings, [3.0, 5.0, 0.0, 0.0])
-    np.testing.assert_allclose(section_times, [0.75, 0.0])
-    assert section_count == 1
-    np.testing.assert_allclose(phase_crossings, [7.0, 11.0, 0.0, 0.0])
-    np.testing.assert_allclose(phase_times, [1.25, 0.0])
-    assert phase_count == 1
+    # Oscillator 1 passes 0.5 (mod 2π) once, a third of the way through.
+    phases = np.array([0.0, 6.0, 0.3, 6.0 + 0.9], dtype=np.float64)
+    crossings, times, count = phase_fn(phases, 2, 2, 1, 0.5)
+    alpha = (2 * np.pi - (6.0 - 0.5)) / ((2 * np.pi - 5.5) + (6.9 - 2 * np.pi - 0.5))
+    assert count == 1
+    assert crossings.shape == (4,) and times.shape == (2,)
+    np.testing.assert_allclose(
+        crossings, [0.3 * alpha, 6.0 + 0.9 * alpha, 0.0, 0.0], atol=1e-12
+    )
+    np.testing.assert_allclose(times, [alpha, 0.0], atol=1e-12)
 
 
 def test_julia_backend_loader_returns_poincare_callables(
@@ -195,7 +135,7 @@ def test_dispatch_returns_none_when_backend_lacks_requested_callable(
 
     try:
         monkeypatch.setitem(poincare_module._LOADERS, "go", lambda: {})
-        assert poincare_module._dispatch("section") is None
+        assert poincare_module._dispatch("section") == ("python", None)
     finally:
         poincare_module.ACTIVE_BACKEND = previous_backend
         poincare_module.AVAILABLE_BACKENDS = previous_available
@@ -231,7 +171,7 @@ def test_public_section_rejects_numeric_string_backend_payload(
     monkeypatch.setattr(
         poincare_module,
         "_dispatch",
-        lambda _fn_name: _numeric_string_section,
+        lambda _fn_name, _backend="auto": ("go", _numeric_string_section),
     )
 
     with pytest.raises(ValueError, match="numeric-string"):

@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `poincare_section`, `return_times` and `phase_poincare` take `backend=`,
+  and the new `poincare_backend(slot, backend)` names the owner; a named
+  owner that is absent, lacks the kernel or fails raises `RuntimeError`.
+  The RT-075–RT-077 substitutes (a fake dispatcher and a fake `spo_kernel`)
+  are replaced by every installed owner on a helix and a wrapping phase
+  history against plain-loop crossing oracles, and by the compiled Rust
+  loader's padded outputs on hand-computed crossings.
 - The PID Rust loader test (RT-074) no longer installs a fake `spo_kernel`.
   It runs the compiled kernel on a seeded phase history at 4 and 8 bins and
   checks redundancy and synergy against an independent Williams & Beer
