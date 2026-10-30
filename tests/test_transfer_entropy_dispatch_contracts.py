@@ -73,7 +73,7 @@ def test_dispatch_skips_missing_backend_function_and_exhausts_chain(
         monkeypatch.setitem(te_mod._LOADERS, "rust", previous_loader)
         te_mod._BACKEND_CACHE.clear()
 
-    assert resolved is None
+    assert resolved == ("python", None)
 
 
 def test_boolean_alias_probe_fails_closed_for_uncoercible_array() -> None:
@@ -113,7 +113,9 @@ def test_public_phase_transfer_entropy_rejects_nonreal_backend_scalar(
     ) -> object:
         return object()
 
-    monkeypatch.setattr(te_mod, "_dispatch", lambda _name: invalid_phase_te)
+    monkeypatch.setattr(
+        te_mod, "_dispatch", lambda _name, _backend="auto": ("go", invalid_phase_te)
+    )
 
     series = _phase_series()
     with pytest.raises(ValueError, match="finite non-negative scalar"):
@@ -132,7 +134,9 @@ def test_public_phase_transfer_entropy_rejects_unfloatable_real_backend_scalar(
     ) -> _ExplodingReal:
         return _ExplodingReal()
 
-    monkeypatch.setattr(te_mod, "_dispatch", lambda _name: invalid_phase_te)
+    monkeypatch.setattr(
+        te_mod, "_dispatch", lambda _name, _backend="auto": ("go", invalid_phase_te)
+    )
 
     series = _phase_series()
     with pytest.raises(ValueError, match="finite non-negative scalar"):
@@ -152,7 +156,9 @@ def test_public_transfer_entropy_matrix_rejects_nonnumeric_backend_payload(
     ) -> object:
         return object()
 
-    monkeypatch.setattr(te_mod, "_dispatch", lambda _name: invalid_matrix)
+    monkeypatch.setattr(
+        te_mod, "_dispatch", lambda _name, _backend="auto": ("go", invalid_matrix)
+    )
 
     with pytest.raises(ValueError, match="matrix must be numeric"):
         te_mod.transfer_entropy_matrix(_phase_series(), n_bins=2)

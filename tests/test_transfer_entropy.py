@@ -18,6 +18,7 @@ from scpn_phase_orchestrator.monitor.transfer_entropy import (
     phase_transfer_entropy,
     transfer_entropy_matrix,
 )
+from tests.transfer_entropy_oracle import oracle_phase_te, oracle_te_matrix
 from tests.typing_contracts import assert_precise_ndarray_hint
 
 
@@ -239,7 +240,11 @@ class TestTransferEntropy:
         monkeypatch.setattr(
             te_mod,
             "_dispatch",
-            lambda fn_name: backend_with_roundoff if fn_name == "te_matrix" else None,
+            lambda fn_name, _backend="auto": (
+                ("go", backend_with_roundoff)
+                if fn_name == "te_matrix"
+                else ("python", None)
+            ),
         )
 
         te = transfer_entropy_matrix(series, n_bins=8)
@@ -304,43 +309,59 @@ class TestTEPipelineWiring:
         np.testing.assert_array_equal(np.diag(te), 0.0)
 
 
-def test_backend_dispatchers_are_honoured_for_phase_te_and_matrix(monkeypatch):
-    def fake_phase_te(src: np.ndarray, tgt: np.ndarray, bins: int) -> float:
-        assert src.shape == (3,)
-        assert tgt.shape == (3,)
-        assert bins == 6
-        return te_mod._phase_te_reference(src, tgt, bins)
+@pytest.mark.native_runtime
+@pytest.mark.parametrize("owner", ["python", "rust", "mojo", "julia", "go"])
+def test_backend_dispatchers_are_honoured_for_phase_te_and_matrix(owner: str) -> None:
+    """Each named owner serves both operations and matches the counting oracle."""
+    if owner not in te_mod.AVAILABLE_BACKENDS:
+        pytest.skip(f"{owner} unavailable")
+    for slot in ("phase_te", "te_matrix"):
+        assert te_mod.transfer_entropy_backend(slot, owner) == owner
+    rng = np.random.default_rng(127)
+    series = np.cumsum(rng.normal(0.4, 0.6, (3, 160)), axis=1)
+    series[1, 1:] += 0.9 * series[0, :-1]
+    atol = 1e-9 if owner == "mojo" else 1e-12
 
-    def fake_matrix(flat: np.ndarray, n_osc: int, n_time: int, bins: int) -> np.ndarray:
-        assert n_osc == 3
-        assert n_time == 3
-        assert bins == 6
-        return te_mod._te_matrix_reference(flat.reshape(n_osc, n_time), bins)
-
-    def fake_dispatch(fn_name: str):
-        if fn_name == "phase_te":
-            return fake_phase_te
-        if fn_name == "te_matrix":
-            return fake_matrix
-        return None
-
-    monkeypatch.setattr(te_mod, "_dispatch", fake_dispatch)
-    source = np.linspace(0.0, 1.0, 3)
-    target = np.linspace(0.1, 1.1, 3)
-    phase_value = phase_transfer_entropy(source, target, n_bins=6)
-    matrix_value = transfer_entropy_matrix(
-        np.stack([source, target, np.array([0.2, 0.4, 0.6])]), n_bins=6
+    got = phase_transfer_entropy(series[0], series[1], n_bins=6, backend=owner)
+    assert got == pytest.approx(
+        oracle_phase_te(series[0].tolist(), series[1].tolist(), 6), abs=atol
     )
-
-    assert phase_value == te_mod._phase_te_reference(source, target, 6)
-    assert matrix_value.shape == (3, 3)
+    matrix = transfer_entropy_matrix(series, n_bins=6, backend=owner)
     np.testing.assert_allclose(
-        matrix_value,
-        te_mod._te_matrix_reference(
-            np.stack([source, target, np.array([0.2, 0.4, 0.6])]),
-            6,
-        ),
+        matrix, oracle_te_matrix(series.tolist(), 6), rtol=0.0, atol=atol
     )
+
+
+def test_named_owner_refusals(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Absent, failing or incomplete named owners and unknown names refuse."""
+
+    def crash(*_args: object) -> object:
+        """Fail like a crashed kernel."""
+        raise RuntimeError("kernel crashed")
+
+    series = np.cumsum(np.ones((2, 20)), axis=1)
+    monkeypatch.setattr(te_mod, "_BACKEND_CACHE", {})
+    monkeypatch.setitem(
+        te_mod._LOADERS,
+        "go",
+        lambda: (_ for _ in ()).throw(OSError("libte.so missing")),
+    )
+    with pytest.raises(RuntimeError, match="'go' unavailable"):
+        transfer_entropy_matrix(series, backend="go")
+    monkeypatch.setitem(te_mod._LOADERS, "go", lambda: {"phase_te": crash})
+    te_mod._BACKEND_CACHE.clear()
+    with pytest.raises(RuntimeError, match="'go' failed"):
+        phase_transfer_entropy(series[0], series[1], backend="go")
+    with pytest.raises(RuntimeError, match="'go' lacks te_matrix"):
+        transfer_entropy_matrix(series, backend="go")
+    monkeypatch.setitem(te_mod._LOADERS, "go", lambda: {"te_matrix": crash})
+    te_mod._BACKEND_CACHE.clear()
+    with pytest.raises(RuntimeError, match="'go' failed"):
+        transfer_entropy_matrix(series, backend="go")
+    with pytest.raises(ValueError, match="unknown transfer-entropy backend"):
+        phase_transfer_entropy(series[0], series[1], backend="cuda")
+    with pytest.raises(ValueError, match="unknown transfer-entropy operation"):
+        te_mod.transfer_entropy_backend("granger")
 
 
 def test_phase_te_backend_failure_falls_back_to_python(monkeypatch):
@@ -352,7 +373,9 @@ def test_phase_te_backend_failure_falls_back_to_python(monkeypatch):
     monkeypatch.setattr(
         te_mod,
         "_dispatch",
-        lambda fn_name: raising_phase_te if fn_name == "phase_te" else None,
+        lambda fn_name, _backend="auto": (
+            ("go", raising_phase_te) if fn_name == "phase_te" else ("python", None)
+        ),
     )
     try:
         source = np.linspace(0.0, 2 * np.pi, 64, endpoint=False)
@@ -381,7 +404,9 @@ def test_phase_te_backend_invalid_scalar_fails_closed(
     monkeypatch.setattr(
         te_mod,
         "_dispatch",
-        lambda fn_name: invalid_phase_te if fn_name == "phase_te" else None,
+        lambda fn_name, _backend="auto": (
+            ("go", invalid_phase_te) if fn_name == "phase_te" else ("python", None)
+        ),
     )
     try:
         source = np.linspace(0.0, 2 * np.pi, 64, endpoint=False)
@@ -403,7 +428,9 @@ def test_te_matrix_backend_failure_falls_back_to_python(monkeypatch):
     monkeypatch.setattr(
         te_mod,
         "_dispatch",
-        lambda fn_name: raising_matrix if fn_name == "te_matrix" else None,
+        lambda fn_name, _backend="auto": (
+            ("go", raising_matrix) if fn_name == "te_matrix" else ("python", None)
+        ),
     )
     try:
         data = np.stack(
@@ -456,7 +483,9 @@ def test_te_matrix_backend_invalid_payload_fails_closed(
     monkeypatch.setattr(
         te_mod,
         "_dispatch",
-        lambda fn_name: invalid_matrix if fn_name == "te_matrix" else None,
+        lambda fn_name, _backend="auto": (
+            ("go", invalid_matrix) if fn_name == "te_matrix" else ("python", None)
+        ),
     )
     try:
         data = np.stack(
@@ -505,7 +534,7 @@ def test_dispatch_falls_back_to_python_when_loader_fails(monkeypatch):
         monkeypatch.setitem(te_mod._LOADERS, "go", previous_loader)
         te_mod._BACKEND_CACHE.clear()
 
-    assert fn is None
+    assert fn == ("python", None)
 
 
 def test_dispatch_uses_cached_loader_once(monkeypatch):
@@ -535,6 +564,6 @@ def test_dispatch_uses_cached_loader_once(monkeypatch):
         monkeypatch.setitem(te_mod._LOADERS, "go", previous_loader)
         te_mod._BACKEND_CACHE.clear()
 
-    assert fn1 is fake_phase_te
-    assert fn2 is fake_phase_te
+    assert fn1 == ("go", fake_phase_te)
+    assert fn2 == ("go", fake_phase_te)
     assert call_count == 1

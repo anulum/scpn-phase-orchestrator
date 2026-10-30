@@ -183,17 +183,15 @@ amplifies the 17-digit text-protocol floor for Mojo).
 ### 3.2 Dispatcher override
 
 ```python
-from scpn_phase_orchestrator.monitor import transfer_entropy as te_mod
-
-saved = te_mod.ACTIVE_BACKEND
-try:
-    te_mod.ACTIVE_BACKEND = "julia"
-    value = phase_transfer_entropy(source, target, 16)
-finally:
-    te_mod.ACTIVE_BACKEND = saved
+value = phase_transfer_entropy(source, target, 16, backend="julia")
+matrix = transfer_entropy_matrix(series, 16, backend="julia")
 ```
 
-Useful for A/B comparisons or deterministic cross-backend tests.
+A named owner (`"rust"`, `"mojo"`, `"julia"`, `"go"`, `"python"`) runs the
+call or raises `RuntimeError` when it is absent, lacks the kernel or fails;
+`"auto"` keeps the NumPy fallback. `transfer_entropy_backend(slot, backend)`
+names the owner. Useful for A/B comparisons or deterministic cross-backend
+tests, without touching module state.
 
 ---
 

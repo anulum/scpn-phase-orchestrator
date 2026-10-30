@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `phase_transfer_entropy` and `transfer_entropy_matrix` take `backend=`,
+  and the new `transfer_entropy_backend(slot, backend)` names the owner; a
+  named owner that is absent, lacks the kernel or fails raises
+  `RuntimeError`. The Mojo tolerance now follows the resolved owner instead
+  of `ACTIVE_BACKEND`. The RT-110–RT-112 substitutes (a fake dispatcher, a
+  fake `spo_kernel`, fake kernels under a forced backend) are replaced by
+  every installed owner and the compiled Rust loader against an independent
+  `bisect`/`Counter` oracle (`tests/transfer_entropy_oracle.py`). A
+  resolution test left its stand-in Rust kernels in the module cache for
+  later tests; it now isolates the cache.
 - `te_adapt_coupling` takes `backend=`, and the new `te_adapt_backend()`
   names the owner of the coupling update; naming Rust without its kernel
   raises `RuntimeError`. The RT-108 and RT-109 substitutes (a forced Rust

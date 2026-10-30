@@ -44,6 +44,7 @@ __all__ = [
     "ACTIVE_BACKEND",
     "AVAILABLE_BACKENDS",
     "phase_transfer_entropy",
+    "transfer_entropy_backend",
     "transfer_entropy_matrix",
 ]
 
@@ -134,25 +135,89 @@ def _resolve_backends() -> tuple[str, list[str]]:
 ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
-def _dispatch(fn_name: str) -> object:
-    """Return the fastest available backend callables, or ``None`` for Python."""
-    ordered_backends = [ACTIVE_BACKEND] + list(AVAILABLE_BACKENDS)
-    deduped: list[str] = []
-    for backend in ordered_backends:
-        if backend in deduped:
+_NATIVE_FAILURES = (ImportError, RuntimeError, OSError, KeyError)
+_SLOTS = ("phase_te", "te_matrix")
+
+
+def _require_known_backend(backend: str) -> None:
+    """Refuse an unknown owner name before any computation."""
+    if backend not in (*_BACKEND_NAMES, "auto"):
+        raise ValueError(f"unknown transfer-entropy backend: {backend!r}")
+
+
+def _dispatch(fn_name: str, backend: str = "auto") -> tuple[str, object | None]:
+    """Resolve the owner of ``fn_name`` and its callable.
+
+    Parameters
+    ----------
+    fn_name : str
+        ``"phase_te"`` or ``"te_matrix"``.
+    backend : str
+        ``"auto"`` or one of ``rust``, ``mojo``, ``julia``, ``go``, ``python``.
+
+    Returns
+    -------
+    tuple[str, object | None]
+        The owner name and its callable, or ``("python", None)``.
+
+    Raises
+    ------
+    ValueError
+        If ``backend`` is not a known owner.
+    RuntimeError
+        If an explicitly requested owner is unavailable or lacks the kernel.
+    """
+    _require_known_backend(backend)
+    ordered = [ACTIVE_BACKEND, *AVAILABLE_BACKENDS] if backend == "auto" else [backend]
+    seen: set[str] = set()
+    for name in ordered:
+        if name in seen:
             continue
-        deduped.append(backend)
-    for backend in deduped:
-        if backend == "python":
-            return None
+        seen.add(name)
+        if name == "python":
+            return "python", None
         try:
-            fn = _load_backend(backend).get(fn_name)
-        except (ImportError, RuntimeError, OSError, KeyError):
+            fn = _load_backend(name).get(fn_name)
+        except _NATIVE_FAILURES as exc:
+            if backend != "auto":
+                raise RuntimeError(
+                    f"transfer-entropy backend {name!r} unavailable"
+                ) from exc
             continue
         if fn is None:
+            if backend != "auto":
+                raise RuntimeError(f"transfer-entropy backend {name!r} lacks {fn_name}")
             continue
-        return fn
-    return None
+        return name, fn
+    return "python", None
+
+
+def transfer_entropy_backend(slot: str, backend: str = "auto") -> str:
+    """Return the owner that serves one transfer-entropy operation.
+
+    Parameters
+    ----------
+    slot : str
+        ``"phase_te"`` or ``"te_matrix"``.
+    backend : str
+        ``"auto"`` or an explicit owner name.
+
+    Returns
+    -------
+    str
+        ``rust``, ``mojo``, ``julia``, ``go`` or ``python``.
+
+    Raises
+    ------
+    ValueError
+        If ``slot`` or ``backend`` is unknown.
+    RuntimeError
+        If an explicitly requested owner is unavailable or lacks the kernel.
+    """
+    if slot not in _SLOTS:
+        raise ValueError(f"unknown transfer-entropy operation: {slot!r}")
+    owner, _ = _dispatch(slot, backend)
+    return owner
 
 
 def _contains_boolean_alias(value: object) -> bool:
@@ -395,7 +460,7 @@ def _te_matrix_reference(series: FloatArray, bin_count: int) -> FloatArray:
 
 
 def phase_transfer_entropy(
-    source: FloatArray, target: FloatArray, n_bins: int = 16
+    source: FloatArray, target: FloatArray, n_bins: int = 16, backend: str = "auto"
 ) -> float:
     """Transfer entropy ``TE(X → Y)`` on binned phase series.
 
@@ -407,6 +472,8 @@ def phase_transfer_entropy(
         Target phase series, shape ``(T,)``.
     n_bins : int
         Number of histogram bins.
+    backend : str
+        ``"auto"`` (NumPy if a native owner fails) or an explicit owner.
 
     Returns
     -------
@@ -418,8 +485,12 @@ def phase_transfer_entropy(
     ValueError
         If the source or target series contain boolean aliases, numeric-string
         aliases, complex values, time-unit values, non-finite values, or
-        non-vector shapes, or if their lengths differ.
+        non-vector shapes, if their lengths differ, or if the backend name is
+        unknown.
+    RuntimeError
+        If an explicitly requested owner is unavailable or fails.
     """
+    _require_known_backend(backend)
     bin_count = _validate_n_bins(n_bins)
     source_values = _validate_phase_vector(source, name="source")
     target_values = _validate_phase_vector(target, name="target")
@@ -431,7 +502,7 @@ def phase_transfer_entropy(
     if len(source_values) < 3:
         return 0.0
     expected = _phase_te_reference(source_values, target_values, bin_count)
-    backend_fn = _dispatch("phase_te")
+    owner, backend_fn = _dispatch("phase_te", backend)
     if backend_fn is not None:
         fn = cast("Callable[[FloatArray, FloatArray, int], float]", backend_fn)
         try:
@@ -449,19 +520,24 @@ def phase_transfer_entropy(
                 result,
                 expected,
                 rtol=0.0,
-                atol=1e-9 if ACTIVE_BACKEND == "mojo" else 1e-12,
+                atol=1e-9 if owner == "mojo" else 1e-12,
             ):
                 raise ValueError(
                     "backend transfer entropy diverged from exact reference"
                 )
             return result
-        except (ImportError, RuntimeError, OSError, KeyError):
-            bin_count = int(bin_count)
+        except _NATIVE_FAILURES as exc:
+            if backend != "auto":
+                raise RuntimeError(
+                    f"transfer-entropy backend {owner!r} failed"
+                ) from exc
 
     return expected
 
 
-def transfer_entropy_matrix(phase_series: FloatArray, n_bins: int = 16) -> FloatArray:
+def transfer_entropy_matrix(
+    phase_series: FloatArray, n_bins: int = 16, backend: str = "auto"
+) -> FloatArray:
     """Return the pairwise TE matrix ``[i, j] = TE(i → j)`` with zero diagonal.
 
     Parameters
@@ -470,6 +546,8 @@ def transfer_entropy_matrix(phase_series: FloatArray, n_bins: int = 16) -> Float
         Phase time series, shape ``(N, T)``: one row per oscillator.
     n_bins : int
         Number of histogram bins.
+    backend : str
+        ``"auto"`` (NumPy if a native owner fails) or an explicit owner.
 
     Returns
     -------
@@ -481,13 +559,16 @@ def transfer_entropy_matrix(phase_series: FloatArray, n_bins: int = 16) -> Float
     ValueError
         If ``phase_series`` contains boolean aliases, numeric-string aliases,
         complex values, time-unit values, non-finite values, or a non-matrix
-        shape.
+        shape, or if the backend name is unknown.
+    RuntimeError
+        If an explicitly requested owner is unavailable or fails.
     """
+    _require_known_backend(backend)
     bin_count = _validate_n_bins(n_bins)
     series = _validate_phase_series(phase_series, name="phase_series")
     n_osc, n_time = series.shape
     expected = _te_matrix_reference(series, bin_count)
-    backend_fn = _dispatch("te_matrix")
+    owner, backend_fn = _dispatch("te_matrix", backend)
     if backend_fn is not None:
         fn = cast("Callable[[FloatArray, int, int, int], FloatArray]", backend_fn)
         try:
@@ -502,9 +583,12 @@ def transfer_entropy_matrix(phase_series: FloatArray, n_bins: int = 16) -> Float
                 n_osc=n_osc,
                 max_entropy=float(np.log(bin_count)),
                 expected=expected,
-                atol=1e-9 if ACTIVE_BACKEND == "mojo" else 1e-12,
+                atol=1e-9 if owner == "mojo" else 1e-12,
             )
-        except (ImportError, RuntimeError, OSError, KeyError):
-            n_time = int(n_time)
+        except _NATIVE_FAILURES as exc:
+            if backend != "auto":
+                raise RuntimeError(
+                    f"transfer-entropy backend {owner!r} failed"
+                ) from exc
 
     return expected
