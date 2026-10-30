@@ -150,7 +150,7 @@ def test_dispatch_returns_python_floor_after_exhausting_optional_backends(
     monkeypatch.setattr(order_params, "AVAILABLE_BACKENDS", ["rust"])
     monkeypatch.setattr(order_params, "_load_backend", lambda _name: {})
 
-    assert order_params._dispatch("order_parameter") is None
+    assert order_params._dispatch("order_parameter") == ("python", None)
 
 
 def test_public_order_parameter_rejects_boolean_backend_magnitude(

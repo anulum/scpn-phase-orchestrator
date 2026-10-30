@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `compute_order_parameter`, `compute_plv` and `compute_layer_coherence`
+  take `backend=`, and the new `order_params_backend(slot, backend)` names
+  the owner; a named owner that is absent or lacks the kernel raises
+  `RuntimeError`. The RT-072 substitute (fake kernels under a forced Rust
+  flag) is replaced by every installed owner on strided input against
+  `cmath` oracles. The RT-071 fall-through test keeps its stand-in owner,
+  now documented as the justified negative contract: no shipped owner lacks
+  a kernel.
 - The order-parameter loader, probe, cache and resolver tests (RT-067–RT-070)
   no longer use fake `spo_kernel` symbols, a fake Python kernel, fake
   loaders or a patched resolver. They run the compiled Rust kernels against

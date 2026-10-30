@@ -529,8 +529,9 @@ class TestDispatcher:
         monkeypatch.setattr(op_mod, "AVAILABLE_BACKENDS", ["rust", "go", "python"])
         monkeypatch.setattr(op_mod, "_LOADERS", {"rust": _fail_rust, "go": _ok_go})
 
-        fn = op_mod._dispatch("order_parameter")
-        assert fn is not None
+        owner, fn = op_mod._dispatch("order_parameter")
+        assert owner == "go"
+        assert callable(fn)
         assert fn(np.array([0.0, 1.0], dtype=np.float64)) == (0.75, 0.0)
         assert calls == {"rust": 1, "go": 1}
 
@@ -571,7 +572,7 @@ class TestDispatcher:
         monkeypatch.setattr(op_mod, "_HAS_RUST", True)
         monkeypatch.setattr(op_mod, "_load_backend", lambda name: {})
 
-        assert op_mod._dispatch("plv") is None
+        assert op_mod._dispatch("plv") == ("python", None)
 
     def test_probe_marks_faulty_backend_unusable(self, monkeypatch) -> None:
         import scpn_phase_orchestrator.upde.order_params as op_mod
@@ -606,6 +607,12 @@ class TestDispatcher:
     def test_dispatch_falls_through_when_active_backend_has_no_symbol(
         self, monkeypatch
     ) -> None:
+        """Automatic dispatch skips an owner that lacks the kernel.
+
+        Every shipped owner exports all three kernels, so an incomplete owner
+        can only be a stand-in; this is the justified negative contract for
+        the fall-through branch.
+        """
         import scpn_phase_orchestrator.upde.order_params as op_mod
 
         monkeypatch.setattr(op_mod, "_BACKEND_CACHE", {})
@@ -619,8 +626,9 @@ class TestDispatcher:
             ),
         )
 
-        fn = op_mod._dispatch("order_parameter")
-        assert fn is not None
+        owner, fn = op_mod._dispatch("order_parameter")
+        assert owner == "go"
+        assert callable(fn)
         assert fn(np.array([0.0], dtype=np.float64)) == (0.3, 0.0)
 
     def test_dispatch_falls_back_when_active_backend_raises(self, monkeypatch) -> None:
@@ -633,69 +641,63 @@ class TestDispatcher:
         monkeypatch.setattr(op_mod, "_HAS_RUST", False)
         monkeypatch.setattr(op_mod, "_load_backend", failing_loader)
 
-        assert op_mod._dispatch("plv") is None
+        assert op_mod._dispatch("plv") == ("python", None)
 
+    @pytest.mark.native_runtime
+    @pytest.mark.parametrize("owner", ["python", "rust", "mojo", "julia", "go"])
     def test_public_kernels_use_active_backend_with_flat_contiguous_payloads(
-        self, monkeypatch
+        self, owner: str
     ) -> None:
+        """Each named owner serves the public kernels on strided input."""
         import scpn_phase_orchestrator.upde.order_params as op_mod
 
-        observed: dict[str, tuple[tuple[int, ...], bool, str]] = {}
+        if owner not in op_mod.AVAILABLE_BACKENDS:
+            pytest.skip(f"{owner} unavailable")
+        for slot in ("order_parameter", "plv", "layer_coherence"):
+            assert op_mod.order_params_backend(slot, owner) == owner
+        rng = np.random.default_rng(67)
+        grid = rng.uniform(-np.pi, np.pi, (2, 13))
+        phases, other = grid[0, ::1], grid[1, ::-1]
+        assert not other.flags.c_contiguous
+        mask = np.zeros(13, dtype=bool)
+        mask[[1, 2, 7, 12]] = True
+        atol = 1e-9 if owner == "mojo" else 1e-12
 
-        def fake_order(phases: np.ndarray) -> tuple[float, float]:
-            observed["order"] = (
-                phases.shape,
-                phases.flags.c_contiguous,
-                phases.dtype.name,
-            )
-            return 0.25, 1.5
+        def mean(values: list[float]) -> complex:
+            """Return the mean unit phasor."""
+            return sum(cmath.exp(1j * v) for v in values) / len(values)
 
-        def fake_plv(a: np.ndarray, b: np.ndarray) -> float:
-            observed["plv_a"] = (a.shape, a.flags.c_contiguous, a.dtype.name)
-            observed["plv_b"] = (b.shape, b.flags.c_contiguous, b.dtype.name)
-            return 0.75
-
-        def fake_layer(phases: np.ndarray, indices: np.ndarray) -> float:
-            observed["layer_phases"] = (
-                phases.shape,
-                phases.flags.c_contiguous,
-                phases.dtype.name,
-            )
-            observed["layer_indices"] = (
-                indices.shape,
-                indices.flags.c_contiguous,
-                indices.dtype.name,
-            )
-            return 0.5
-
-        monkeypatch.setattr(op_mod, "ACTIVE_BACKEND", "rust")
-        monkeypatch.setattr(op_mod, "_HAS_RUST", True)
-        monkeypatch.setattr(
-            op_mod,
-            "_load_backend",
-            lambda name: {
-                "order_parameter": fake_order,
-                "plv": fake_plv,
-                "layer_coherence": fake_layer,
-            },
+        r, psi = compute_order_parameter(phases, backend=owner)
+        z = mean(phases.tolist())
+        assert r == pytest.approx(abs(z), abs=atol)
+        assert abs((psi - cmath.phase(z) + np.pi) % (2 * np.pi) - np.pi) < atol
+        diffs = [a - b for a, b in zip(phases.tolist(), other.tolist(), strict=True)]
+        assert compute_plv(phases, other, backend=owner) == pytest.approx(
+            abs(mean(diffs)), abs=atol
+        )
+        layer = abs(mean(phases[mask].tolist()))
+        assert compute_layer_coherence(phases, mask, backend=owner) == pytest.approx(
+            layer, abs=atol
         )
 
-        phases_2d = np.array([[0.0, 0.5], [1.0, 1.5]], dtype=np.float32)
-        r, psi = op_mod.compute_order_parameter(phases_2d)
-        plv = op_mod.compute_plv(phases_2d, phases_2d + 0.25)
-        layer = op_mod.compute_layer_coherence(
-            phases_2d,
-            np.array([True, False, True, False]),
-        )
+    def test_named_owner_refusals(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """An absent or incomplete named owner and unknown names refuse."""
+        import scpn_phase_orchestrator.upde.order_params as op_mod
 
-        assert (r, psi) == (0.25, 1.5)
-        assert plv == 0.75
-        assert layer == 0.5
-        assert observed["order"] == ((4,), True, "float64")
-        assert observed["plv_a"] == ((4,), True, "float64")
-        assert observed["plv_b"] == ((4,), True, "float64")
-        assert observed["layer_phases"] == ((4,), True, "float64")
-        assert observed["layer_indices"] == ((2,), True, "int64")
+        def broken(name: str) -> dict[str, object]:
+            """Fail like a missing shared library."""
+            raise OSError(f"{name} missing")
+
+        monkeypatch.setattr(op_mod, "_load_backend", broken)
+        with pytest.raises(RuntimeError, match="'go' unavailable"):
+            compute_order_parameter(np.zeros(3), backend="go")
+        monkeypatch.setattr(op_mod, "_load_backend", lambda name: {"plv": object()})
+        with pytest.raises(RuntimeError, match="'go' lacks layer_coherence"):
+            compute_layer_coherence(np.zeros(3), np.array([0]), backend="go")
+        with pytest.raises(ValueError, match="unknown order-parameter backend"):
+            compute_plv(np.zeros(2), np.zeros(2), backend="cuda")
+        with pytest.raises(ValueError, match="unknown order-parameter operation"):
+            op_mod.order_params_backend("chimera")
 
     def test_layer_coherence_empty_selected_subarray_returns_zero(
         self, monkeypatch

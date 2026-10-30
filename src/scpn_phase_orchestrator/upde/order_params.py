@@ -55,6 +55,7 @@ __all__ = [
     "compute_order_parameter",
     "compute_plv",
     "debiased_squared_order_parameter",
+    "order_params_backend",
 ]
 
 
@@ -277,27 +278,96 @@ def __getattr__(name: str) -> object:
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
-def _dispatch(fn_name: str) -> object:
-    """Return the fastest available backend callables, or ``None`` for Python."""
-    active, available = _backend_state()
-    ordered_backends = [active, *available]
+_NATIVE_FAILURES = (ImportError, RuntimeError, OSError, KeyError)
+_SLOTS = ("order_parameter", "plv", "layer_coherence")
+
+
+def _require_known_backend(backend: str) -> None:
+    """Refuse an unknown owner name before any computation."""
+    if backend not in (*_BACKEND_NAMES, "auto"):
+        raise ValueError(f"unknown order-parameter backend: {backend!r}")
+
+
+def _dispatch(fn_name: str, backend: str = "auto") -> tuple[str, object | None]:
+    """Resolve the owner of ``fn_name`` and its callable.
+
+    Under ``"auto"`` the chain stops at Python, the reference floor. A named
+    owner must provide the kernel.
+
+    Parameters
+    ----------
+    fn_name : str
+        ``"order_parameter"``, ``"plv"`` or ``"layer_coherence"``.
+    backend : str
+        ``"auto"`` or one of ``rust``, ``mojo``, ``julia``, ``go``, ``python``.
+
+    Returns
+    -------
+    tuple[str, object | None]
+        The owner name and its callable, or ``("python", None)``.
+
+    Raises
+    ------
+    ValueError
+        If ``backend`` is not a known owner.
+    RuntimeError
+        If an explicitly requested owner is unavailable or lacks the kernel.
+    """
+    _require_known_backend(backend)
+    if backend == "auto":
+        active, available = _backend_state()
+        ordered = [active, *available]
+    else:
+        ordered = [backend]
     seen: set[str] = set()
-    for backend in ordered_backends:
-        if backend in seen:
+    for name in ordered:
+        if name in seen:
             continue
-        seen.add(backend)
-        if backend == "python":
-            # Python is the reference floor: stop probing external backends and
-            # fall through to the ``None`` sentinel that selects the NumPy path.
-            break
+        seen.add(name)
+        if name == "python":
+            return "python", None
         try:
-            fn = _load_backend(backend).get(fn_name)
-        except (ImportError, RuntimeError, OSError, KeyError):
+            fn = _load_backend(name).get(fn_name)
+        except _NATIVE_FAILURES as exc:
+            if backend != "auto":
+                raise RuntimeError(
+                    f"order-parameter backend {name!r} unavailable"
+                ) from exc
             continue
         if fn is None:
+            if backend != "auto":
+                raise RuntimeError(f"order-parameter backend {name!r} lacks {fn_name}")
             continue
-        return fn
-    return None
+        return name, fn
+    return "python", None
+
+
+def order_params_backend(slot: str, backend: str = "auto") -> str:
+    """Return the owner that serves one order-parameter operation.
+
+    Parameters
+    ----------
+    slot : str
+        ``"order_parameter"``, ``"plv"`` or ``"layer_coherence"``.
+    backend : str
+        ``"auto"`` or an explicit owner name.
+
+    Returns
+    -------
+    str
+        ``rust``, ``mojo``, ``julia``, ``go`` or ``python``.
+
+    Raises
+    ------
+    ValueError
+        If ``slot`` or ``backend`` is unknown.
+    RuntimeError
+        If an explicitly requested owner is unavailable or lacks the kernel.
+    """
+    if slot not in _SLOTS:
+        raise ValueError(f"unknown order-parameter operation: {slot!r}")
+    owner, _ = _dispatch(slot, backend)
+    return owner
 
 
 # ---------------------------------------------------------------------
@@ -305,7 +375,9 @@ def _dispatch(fn_name: str) -> object:
 # ---------------------------------------------------------------------
 
 
-def compute_order_parameter(phases: FloatArray) -> tuple[float, float]:
+def compute_order_parameter(
+    phases: FloatArray, backend: str = "auto"
+) -> tuple[float, float]:
     """Kuramoto global order parameter ``(R, ψ)``.
 
     ``R = |mean(exp(i · θ))|``;
@@ -315,6 +387,9 @@ def compute_order_parameter(phases: FloatArray) -> tuple[float, float]:
     ----------
     phases : FloatArray
         Oscillator phases in radians, shape ``(N,)``.
+    backend : str
+        ``"auto"`` or an explicit owner; a named owner that is absent or
+        lacks the kernel raises ``RuntimeError``.
 
     Returns
     -------
@@ -329,10 +404,11 @@ def compute_order_parameter(phases: FloatArray) -> tuple[float, float]:
     :func:`debiased_squared_order_parameter`, whose expectation is 0 under
     uniformity, rather than reading the raw ``R`` as if it were unbiased.
     """
+    _require_known_backend(backend)
     phases = _validate_phases("phases", phases)
     if phases.size == 0:
         return (0.0, 0.0)
-    backend_fn = _dispatch("order_parameter")
+    _, backend_fn = _dispatch("order_parameter", backend)
     if backend_fn is not None:
         fn = cast("Callable[[FloatArray], tuple[float, float]]", backend_fn)
         p = np.ascontiguousarray(phases.ravel(), dtype=np.float64)
@@ -390,7 +466,9 @@ def debiased_squared_order_parameter(phases: FloatArray) -> float:
     return float((n * coherence * coherence - 1.0) / (n - 1))
 
 
-def compute_plv(phases_a: FloatArray, phases_b: FloatArray) -> float:
+def compute_plv(
+    phases_a: FloatArray, phases_b: FloatArray, backend: str = "auto"
+) -> float:
     """Phase-locking value between two equal-length phase series.
 
     PLV = ``|mean(exp(i · (φ_a − φ_b)))|`` over samples.
@@ -401,6 +479,9 @@ def compute_plv(phases_a: FloatArray, phases_b: FloatArray) -> float:
         First phase series in radians, shape ``(T,)``.
     phases_b : FloatArray
         Second phase series in radians, shape ``(T,)``.
+    backend : str
+        ``"auto"`` or an explicit owner; a named owner that is absent or
+        lacks the kernel raises ``RuntimeError``.
 
     Returns
     -------
@@ -412,6 +493,7 @@ def compute_plv(phases_a: FloatArray, phases_b: FloatArray) -> float:
     ValueError
         If the two phase series have different lengths.
     """
+    _require_known_backend(backend)
     phases_a = _validate_phases("phases_a", phases_a)
     phases_b = _validate_phases("phases_b", phases_b)
     if phases_a.size != phases_b.size:
@@ -420,7 +502,7 @@ def compute_plv(phases_a: FloatArray, phases_b: FloatArray) -> float:
         )
     if phases_a.size == 0:
         return 0.0
-    backend_fn = _dispatch("plv")
+    _, backend_fn = _dispatch("plv", backend)
     if backend_fn is not None:
         fn = cast(
             "Callable[[FloatArray, FloatArray], float]",
@@ -437,7 +519,7 @@ def compute_plv(phases_a: FloatArray, phases_b: FloatArray) -> float:
 
 
 def compute_layer_coherence(
-    phases: FloatArray, layer_mask: BoolArray | IntArray
+    phases: FloatArray, layer_mask: BoolArray | IntArray, backend: str = "auto"
 ) -> float:
     """Return the order parameter R for the oscillators in ``layer_mask``.
 
@@ -447,19 +529,23 @@ def compute_layer_coherence(
         Oscillator phases in radians, shape ``(N,)``.
     layer_mask : BoolArray | IntArray
         Boolean mask or integer index array selecting the layer's oscillators.
+    backend : str
+        ``"auto"`` or an explicit owner; a named owner that is absent or
+        lacks the kernel raises ``RuntimeError``.
 
     Returns
     -------
     float
         The Kuramoto order parameter ``R`` for the selected oscillators.
     """
+    _require_known_backend(backend)
     phases = _validate_phases("phases", phases)
     if phases.size == 0:
         return 0.0
     indices = _layer_indices(layer_mask, phases.size)
     if indices.size == 0:
         return 0.0
-    backend_fn = _dispatch("layer_coherence")
+    _, backend_fn = _dispatch("layer_coherence", backend)
     if backend_fn is not None:
         fn = cast("Callable[[FloatArray, IntArray], float]", backend_fn)
         p = np.ascontiguousarray(phases.ravel(), dtype=np.float64)

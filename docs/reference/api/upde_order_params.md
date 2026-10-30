@@ -225,6 +225,12 @@ Both `compute_order_parameter` and `compute_plv` have Rust backends via
 when `spo-kernel` is installed. The Rust implementation uses SIMD-friendly
 sin/cos computation and avoids complex number overhead.
 
+`compute_order_parameter`, `compute_plv` and `compute_layer_coherence` take
+`backend="auto"`; `order_params_backend(slot, backend)` names the owner. A
+named owner (`"rust"`, `"mojo"`, `"julia"`, `"go"`, `"python"`) must serve the
+call: absent or lacking the kernel, it raises `RuntimeError`. An unknown name
+raises `ValueError`.
+
 ### 4.2 Public and Accelerator Boundary Contract
 
 Optional Rust, Go, Julia, and Mojo returns use the same scalar output contract
