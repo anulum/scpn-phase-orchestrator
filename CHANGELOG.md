@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The PID Rust loader test (RT-074) no longer installs a fake `spo_kernel`.
+  It runs the compiled kernel on a seeded phase history at 4 and 8 bins and
+  checks redundancy and synergy against an independent Williams & Beer
+  oracle built from `cmath` phases and `collections.Counter` frequencies.
 - The direct order-parameter adapter test (RT-073) no longer injects
   outputs into fake Go, Julia and Mojo runtimes. It runs the real adapters
   on phases whose mean phasor lies below the real axis and checks R, PLV,

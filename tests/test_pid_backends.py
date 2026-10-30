@@ -16,8 +16,9 @@ and bin count before any runtime loads.
 
 from __future__ import annotations
 
-import sys
-import types
+import cmath
+import collections
+import math
 
 import numpy as np
 import pytest
@@ -189,22 +190,75 @@ def _matrix_backend(*args: object) -> tuple:
     return (0.5, 0.25)
 
 
+def _oracle_pid(
+    rows: list[list[float]], group_a: list[int], group_b: list[int], n_bins: int
+) -> tuple[float, float]:
+    """Return Williams & Beer ``(I_min redundancy, synergy)`` by plain counting."""
+
+    def phase_bin(values: list[float]) -> int:
+        """Bin the order-parameter phase of ``values`` into equal arcs."""
+        angle = cmath.phase(sum(cmath.exp(1j * v) for v in values) / len(values))
+        index = math.floor((angle % (2 * math.pi)) / (2 * math.pi / n_bins))
+        return min(max(index, 0), n_bins - 1)
+
+    y = [phase_bin(r) for r in rows]
+    a = [phase_bin([r[k] for k in group_a]) for r in rows]
+    b = [phase_bin([r[k] for k in group_b]) for r in rows]
+    total = len(rows)
+    py = collections.Counter(y)
+
+    def mutual_information(x: list[object]) -> float:
+        """Return ``MI(X; Y)`` from the joint and marginal frequencies."""
+        px, pxy = collections.Counter(x), collections.Counter(zip(x, y, strict=True))
+        return max(
+            0.0,
+            math.fsum(
+                c / total * math.log((c / total) / (px[xv] / total * py[yv] / total))
+                for (xv, yv), c in pxy.items()
+            ),
+        )
+
+    def specific(x: list[int], yv: int) -> float:
+        """Return the specific information ``I(Y = y; X)``."""
+        px, pxy = collections.Counter(x), collections.Counter(zip(x, y, strict=True))
+        return math.fsum(
+            pxy[(xv, yv)]
+            / py[yv]
+            * math.log((pxy[(xv, yv)] / px[xv]) / (py[yv] / total))
+            for xv in px
+            if pxy[(xv, yv)] > 0
+        )
+
+    redundancy = max(
+        0.0,
+        math.fsum(py[yv] / total * min(specific(a, yv), specific(b, yv)) for yv in py),
+    )
+    pair: list[object] = list(zip(a, b, strict=True))
+    synergy = max(
+        0.0,
+        mutual_information(pair)
+        - mutual_information(list(a))
+        - mutual_information(list(b))
+        + redundancy,
+    )
+    return redundancy, synergy
+
+
 class TestBackendLoaderDispatch:
-    def test_rust_loader_wraps_spo_kernel(self, monkeypatch) -> None:
-        calls: list[tuple] = []
-
-        def fake_rust(history, t, n, ga, gb, n_bins):
-            calls.append((t, n, n_bins))
-            return (0.3, 0.7)
-
-        fake_module = types.ModuleType("spo_kernel")
-        fake_module.pid_decomposition_rust = fake_rust
-        monkeypatch.setitem(sys.modules, "spo_kernel", fake_module)
-
+    @pytest.mark.native_runtime
+    def test_rust_loader_wraps_spo_kernel(self) -> None:
+        """The compiled Rust loader returns the Williams & Beer PID of the oracle."""
+        if "rust" not in pid_module.AVAILABLE_BACKENDS:
+            pytest.skip("rust unavailable")
         backend = pid_module._load_rust_fn()
-        red, syn = backend(np.zeros(4), 2, 2, np.array([0]), np.array([1]), 8)
-        assert (red, syn) == (0.3, 0.7)
-        assert calls[0] == (2, 2, 8)
+        rng = np.random.default_rng(71)
+        history = rng.uniform(-np.pi, np.pi, (60, 5)) + np.linspace(0, 6, 60)[:, None]
+        group_a, group_b = np.array([0, 1]), np.array([2, 3, 4])
+        for n_bins in (4, 8):
+            red, syn = backend(history.ravel(), 60, 5, group_a, group_b, n_bins)
+            exp_red, exp_syn = _oracle_pid(history.tolist(), [0, 1], [2, 3, 4], n_bins)
+            assert red == pytest.approx(exp_red, abs=1e-12)
+            assert syn == pytest.approx(exp_syn, abs=1e-12)
 
     def test_resolve_backends_falls_back_to_python(self, monkeypatch) -> None:
         def _fail() -> pid_module.PidBackend:
