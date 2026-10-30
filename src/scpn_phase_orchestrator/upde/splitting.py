@@ -57,6 +57,7 @@ __all__ = [
     "ACTIVE_BACKEND",
     "AVAILABLE_BACKENDS",
     "SplittingEngine",
+    "splitting_backend",
 ]
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -202,22 +203,74 @@ def _splitting_probe_seconds(name: str) -> float:
     return perf_counter() - start
 
 
-def _dispatch() -> Callable[..., FloatArray] | None:
-    """Return the fastest available backend callable, or ``None`` for Python."""
-    ordered_backends = [ACTIVE_BACKEND] + list(AVAILABLE_BACKENDS)
-    deduped: list[str] = []
-    for backend in ordered_backends:
-        if backend in deduped:
+_NATIVE_FAILURES = (ImportError, RuntimeError, OSError, KeyError)
+
+
+def _require_known_backend(backend: str) -> None:
+    """Refuse an unknown owner name before any computation."""
+    if backend not in (*_BACKEND_NAMES, "auto"):
+        raise ValueError(f"unknown splitting backend: {backend!r}")
+
+
+def _dispatch(backend: str = "auto") -> tuple[str, Callable[..., FloatArray] | None]:
+    """Resolve the owner of the Strang step and its callable.
+
+    Parameters
+    ----------
+    backend : str
+        ``"auto"`` or one of ``rust``, ``mojo``, ``julia``, ``go``, ``python``.
+
+    Returns
+    -------
+    tuple[str, Callable[..., FloatArray] | None]
+        The owner name and its callable, or ``("python", None)``.
+
+    Raises
+    ------
+    ValueError
+        If ``backend`` is not a known owner.
+    RuntimeError
+        If an explicitly requested owner is unavailable.
+    """
+    _require_known_backend(backend)
+    ordered = [ACTIVE_BACKEND, *AVAILABLE_BACKENDS] if backend == "auto" else [backend]
+    seen: set[str] = set()
+    for name in ordered:
+        if name in seen:
             continue
-        deduped.append(backend)
-    for backend in deduped:
-        if backend == "python":
-            return None
+        seen.add(name)
+        if name == "python":
+            return "python", None
         try:
-            return _load_backend(backend)
-        except (ImportError, RuntimeError, OSError, KeyError):
-            continue
-    return None
+            return name, _load_backend(name)
+        except _NATIVE_FAILURES as exc:
+            if backend != "auto":
+                raise RuntimeError(f"splitting backend {name!r} unavailable") from exc
+    return "python", None
+
+
+def splitting_backend(backend: str = "auto") -> str:
+    """Return the owner that runs the Strang-split step.
+
+    Parameters
+    ----------
+    backend : str
+        ``"auto"`` or an explicit owner name.
+
+    Returns
+    -------
+    str
+        ``rust``, ``mojo``, ``julia``, ``go`` or ``python``.
+
+    Raises
+    ------
+    ValueError
+        If ``backend`` is not a known owner.
+    RuntimeError
+        If an explicitly requested owner is unavailable.
+    """
+    owner, _ = _dispatch(backend)
+    return owner
 
 
 def _validate_positive_int(value: object, *, name: str) -> int:
@@ -462,8 +515,16 @@ class SplittingEngine:
     The engine's geometry is ``(n, dt)``; the step is stateless.
     """
 
-    def __init__(self, n_oscillators: int, dt: float):
-        """Create a Strang-splitting engine for ``n_oscillators`` and ``dt``."""
+    def __init__(self, n_oscillators: int, dt: float, backend: str = "auto"):
+        """Create a Strang-splitting engine for ``n_oscillators`` and ``dt``.
+
+        ``backend`` names the owner of :meth:`run` (``"auto"`` or ``rust``,
+        ``mojo``, ``julia``, ``go``, ``python``). The native owners need a
+        positive ``dt``; ``"auto"`` uses Python for a negative one, and a
+        named native owner refuses it.
+        """
+        _require_known_backend(backend)
+        self._backend = backend
         n_oscillators = _validate_positive_int(
             n_oscillators,
             name="n_oscillators",
@@ -545,7 +606,10 @@ class SplittingEngine:
         Raises
         ------
         ValueError
-            If ``n_steps`` is negative or the state arrays are invalid.
+            If ``n_steps`` is negative, the state arrays are invalid, or a
+            named native owner is given a negative ``dt``.
+        RuntimeError
+            If the named owner is unavailable or fails.
         """
         phases64 = _validate_state_array(phases, name="phases", shape=(self._n,))
         omegas64 = _validate_state_array(omegas, name="omegas", shape=(self._n,))
@@ -562,13 +626,17 @@ class SplittingEngine:
         n_steps = _validate_positive_int(n_steps, name="n_steps")
         knm_flat = knm64.ravel()
         alpha_flat = alpha64.ravel()
-        backend_fn = _dispatch() if self._dt > 0.0 else None
-        # Non-Rust backends also validate dt > 0 internally, so
-        # negative dt (symplectic-reversibility checks) falls back
-        # to the Python reference.
+        # The native kernels require dt > 0, so a negative dt
+        # (symplectic-reversibility checks) runs the Python reference.
+        if self._dt > 0.0:
+            owner, backend_fn = _dispatch(self._backend)
+        elif self._backend in ("auto", "python"):
+            owner, backend_fn = "python", None
+        else:
+            raise ValueError(f"splitting backend {self._backend!r} needs a positive dt")
         if backend_fn is not None:
-            return _validate_backend_output(
-                backend_fn(
+            try:
+                raw = backend_fn(
                     phases64,
                     omegas64,
                     knm_flat,
@@ -578,9 +646,12 @@ class SplittingEngine:
                     float(psi),
                     float(self._dt),
                     int(n_steps),
-                ),
-                n=self._n,
-            )
+                )
+            except _NATIVE_FAILURES as exc:
+                if self._backend == "auto":
+                    raise
+                raise RuntimeError(f"splitting backend {owner!r} failed") from exc
+            return _validate_backend_output(raw, n=self._n)
         return _python_run(
             phases64,
             omegas64,

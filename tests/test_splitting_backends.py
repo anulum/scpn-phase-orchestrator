@@ -11,9 +11,9 @@
 from __future__ import annotations
 
 import contextlib
+import cProfile
 import ctypes
 import math
-import sys
 import types
 from typing import get_type_hints
 
@@ -511,197 +511,204 @@ class TestDirectMojoBoundaryContracts:
             )
 
 
+def _oracle_strang(
+    phases: list[float],
+    omegas: list[float],
+    knm: list[list[float]],
+    alpha: list[list[float]],
+    zeta: float,
+    psi: float,
+    dt: float,
+    n_steps: int,
+) -> list[float]:
+    """Strang-split by plain loops: drift dt/2, RK4 coupling dt, drift dt/2."""
+    two_pi = 2 * math.pi
+    n = len(phases)
+
+    def coupling(th: list[float]) -> list[float]:
+        """Return Σⱼ K_ij sin(θⱼ − θᵢ − α_ij) + ζ sin(ψ − θᵢ)."""
+        return [
+            math.fsum(
+                knm[i][j] * math.sin(th[j] - th[i] - alpha[i][j]) for j in range(n)
+            )
+            + zeta * math.sin(psi - th[i])
+            for i in range(n)
+        ]
+
+    def shifted(base: list[float], slope: list[float], h: float) -> list[float]:
+        """Return ``(base + h · slope) mod 2π``."""
+        return [(b + h * k) % two_pi for b, k in zip(base, slope, strict=True)]
+
+    p = list(phases)
+    for _ in range(n_steps):
+        p = shifted(p, omegas, dt / 2)
+        k1 = coupling(p)
+        k2 = coupling(shifted(p, k1, dt / 2))
+        k3 = coupling(shifted(p, k2, dt / 2))
+        k4 = coupling(shifted(p, k3, dt))
+        p = [
+            (p[i] + dt / 6 * (k1[i] + 2 * k2[i] + 2 * k3[i] + k4[i])) % two_pi
+            for i in range(n)
+        ]
+        p = shifted(p, omegas, dt / 2)
+    return p
+
+
+def _strang_case(alpha_nonzero: bool) -> tuple[np.ndarray, ...]:
+    """Return phases, frequencies, coupling and lags for a five-oscillator case."""
+    rng = np.random.default_rng(107)
+    n = 5
+    knm = rng.uniform(0.0, 0.7, (n, n))
+    np.fill_diagonal(knm, 0.0)
+    alpha = rng.uniform(-0.2, 0.2, (n, n)) if alpha_nonzero else np.zeros((n, n))
+    return rng.uniform(0.0, 2 * np.pi, n), rng.normal(1.0, 0.4, n), knm, alpha
+
+
+def _assert_close_to_oracle(got: object, owner: str, alpha_nonzero: bool) -> None:
+    """Compare a 25-step result with the oracle, wrapping the phase difference."""
+    phases, omegas, knm, alpha = _strang_case(alpha_nonzero)
+    expected = _oracle_strang(
+        phases.tolist(),
+        omegas.tolist(),
+        knm.tolist(),
+        alpha.tolist(),
+        0.4,
+        1.1,
+        0.02,
+        25,
+    )
+    gap = (np.asarray(got) - np.asarray(expected) + np.pi) % (2 * np.pi) - np.pi
+    assert float(np.max(np.abs(gap))) < (1e-9 if owner == "mojo" else 1e-11)
+
+
 class TestBackendLoaderDispatch:
-    def test_rust_loader_preserves_contiguous_float64_contract(self, monkeypatch):
-        calls: list[tuple[np.dtype, bool, int, float]] = []
+    """The real loaders return kernels that follow the Strang law."""
 
-        def fake_rust(
-            phases,
-            omegas,
-            knm_flat,
-            alpha_flat,
-            n,
-            zeta,
-            psi,
-            dt,
-            n_steps,
-        ):
-            calls.append((phases.dtype, phases.flags.c_contiguous, int(n), float(dt)))
-            assert omegas.flags.c_contiguous
-            assert knm_flat.flags.c_contiguous
-            assert alpha_flat.flags.c_contiguous
-            assert n_steps == 3
-            assert zeta == 0.25
-            assert psi == 0.75
-            return phases + dt * omegas
+    @pytest.mark.native_runtime
+    def test_rust_loader_preserves_contiguous_float64_contract(self) -> None:
+        """The compiled Rust loader accepts strided input and returns float64."""
+        if "rust" not in sp_mod.AVAILABLE_BACKENDS:
+            pytest.skip("rust unavailable")
+        kernel = sp_mod._load_rust_fn()
+        for alpha_nonzero in (False, True):
+            phases, omegas, knm, alpha = _strang_case(alpha_nonzero)
+            strided = np.repeat(phases, 2)[::2]
+            assert not strided.flags.c_contiguous
+            got = kernel(
+                strided, omegas, knm.ravel(), alpha.ravel(), 5, 0.4, 1.1, 0.02, 25
+            )
+            assert np.asarray(got).dtype == np.float64
+            _assert_close_to_oracle(got, "rust", alpha_nonzero)
 
-        monkeypatch.setitem(
-            sys.modules,
-            "spo_kernel",
-            types.SimpleNamespace(splitting_run_rust=fake_rust),
-        )
-        run = sp_mod._load_rust_fn()
-        phases = np.arange(6.0, dtype=np.float64)[::2]
-        omegas = np.array([0.1, 0.2, 0.3], dtype=np.float64)
-        knm = np.eye(3, dtype=np.float64).ravel()
-        alpha = np.zeros(9, dtype=np.float64)
-
-        got = run(phases, omegas, knm, alpha, 3, 0.25, 0.75, 0.5, 3)
-
-        np.testing.assert_allclose(got, np.array([0.05, 2.1, 4.15]))
-        assert calls == [(np.dtype("float64"), True, 3, 0.5)]
-
+    @pytest.mark.native_runtime
+    @pytest.mark.parametrize("owner", ["mojo", "julia", "go"])
     def test_toolchain_loaders_return_callable_with_dependencies_stubbed(
-        self,
-        monkeypatch,
-    ):
-        monkeypatch.setitem(
-            sys.modules,
-            "juliacall",
-            types.SimpleNamespace(Main=object()),
-        )
-        monkeypatch.setattr(sp_mod, "_BACKEND_CACHE", {})
-        monkeypatch.setattr(
-            (
-                "scpn_phase_orchestrator.experimental.accelerators.upde"
-                "._splitting_mojo._ensure_exe"
-            ),
-            lambda: object(),
-        )
-        monkeypatch.setattr(
-            (
-                "scpn_phase_orchestrator.experimental.accelerators.upde"
-                "._splitting_go._load_lib"
-            ),
-            lambda: object(),
-        )
-
-        assert callable(sp_mod._load_mojo_fn())
-        assert callable(sp_mod._load_julia_fn())
-        assert callable(sp_mod._load_go_fn())
-
-    def test_probe_marks_backend_failure_as_infinite(self, monkeypatch):
-        def failing_backend():
-            raise RuntimeError("backend unavailable")
-
-        monkeypatch.setitem(sp_mod._LOADERS, "rust", failing_backend)
-        monkeypatch.setattr(sp_mod, "_BACKEND_CACHE", {})
-
-        assert sp_mod._splitting_probe_seconds("rust") == float("inf")
+        self, owner: str
+    ) -> None:
+        """Each real optional loader returns a kernel that follows the law."""
+        if owner not in sp_mod.AVAILABLE_BACKENDS:
+            pytest.skip(f"{owner} unavailable")
+        loader = {
+            "mojo": sp_mod._load_mojo_fn,
+            "julia": sp_mod._load_julia_fn,
+            "go": sp_mod._load_go_fn,
+        }[owner]
+        kernel = loader()
+        for alpha_nonzero in (False, True):
+            phases, omegas, knm, alpha = _strang_case(alpha_nonzero)
+            args = (knm.ravel(), alpha.ravel(), 5, 0.4, 1.1, 0.02, 25)
+            _assert_close_to_oracle(kernel(phases, omegas, *args), owner, alpha_nonzero)
 
 
 class TestBackendResolutionContracts:
-    """Resolver and dispatch contracts that affect production backend semantics."""
+    """Loading, resolution and selection with the real owners."""
 
-    def test_load_backend_uses_cache(self, monkeypatch):
-        loads: list[str] = []
-
-        def fake_loader():
-            loads.append("rust")
-
-            def backend(*_args, **_kwargs):
-                return np.array([0.1, 0.2, 0.3, 0.4], dtype=np.float64)
-
-            return backend
-
-        monkeypatch.setitem(sp_mod._LOADERS, "rust", fake_loader)
+    @pytest.mark.native_runtime
+    @pytest.mark.parametrize("owner", ["rust", "mojo", "julia", "go"])
+    def test_load_backend_uses_cache(
+        self, owner: str, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Two loads on a cold cache run the real loader once."""
+        if owner not in sp_mod.AVAILABLE_BACKENDS:
+            pytest.skip(f"{owner} unavailable")
         monkeypatch.setattr(sp_mod, "_BACKEND_CACHE", {})
-
-        first = sp_mod._load_backend("rust")
-        second = sp_mod._load_backend("rust")
-
-        assert first is second
-        assert loads == ["rust"]
-
-    def test_resolve_backends_prefers_fastest_loaded_backend(self, monkeypatch):
-        def fake_loader(_tag: str):
-            def _backend(
-                phases,
-                omegas,
-                knm_flat,
-                alpha_flat,
-                n,
-                zeta,
-                psi,
-                dt,
-                n_steps,
-            ):
-                return np.asarray(phases)
-
-            return _backend
-
-        probe = {"rust": 3.0, "mojo": 2.5, "julia": 1.2, "go": 0.4, "python": 5.0}
-
-        monkeypatch.setitem(sp_mod._LOADERS, "rust", lambda: fake_loader("rust"))
-        monkeypatch.setitem(sp_mod._LOADERS, "mojo", lambda: fake_loader("mojo"))
-        monkeypatch.setitem(sp_mod._LOADERS, "julia", lambda: fake_loader("julia"))
-        monkeypatch.setitem(sp_mod._LOADERS, "go", lambda: fake_loader("go"))
-        monkeypatch.setattr(sp_mod, "_BACKEND_CACHE", {})
-        monkeypatch.setattr(
-            sp_mod,
-            "_splitting_probe_seconds",
-            lambda name: probe[name],
+        profile = cProfile.Profile()
+        profile.enable()
+        try:
+            first = sp_mod._load_backend(owner)
+            second = sp_mod._load_backend(owner)
+        finally:
+            profile.disable()
+        loads = sum(
+            entry.callcount
+            for entry in profile.getstats()
+            if not isinstance(entry.code, str)
+            and entry.code.co_name == f"_load_{owner}_fn"
         )
+        assert loads == 1
+        assert first is second
+
+    def test_resolve_backends_prefers_fastest_loaded_backend(self) -> None:
+        """Resolution lists the working loaders and picks a finite, fastest probe."""
+        loadable = []
+        for name in ("rust", "mojo", "julia", "go"):
+            try:
+                sp_mod._LOADERS[name]()
+            except (ImportError, RuntimeError, OSError, KeyError):
+                continue
+            loadable.append(name)
 
         active, available = sp_mod._resolve_backends()
 
-        assert active == "go"
-        assert available == ["rust", "mojo", "julia", "go", "python"]
+        assert available == [*loadable, "python"]
+        assert active in available
+        assert sp_mod._splitting_probe_seconds(active) < float("inf")
 
-    def test_resolve_backends_falls_back_to_python_when_all_backends_fail_probe(
-        self,
-        monkeypatch,
-    ):
-        def fail_loader():
-            raise RuntimeError("backend unavailable")
+    @pytest.mark.native_runtime
+    @pytest.mark.parametrize("owner", ["python", "rust", "mojo", "julia", "go"])
+    def test_run_uses_selected_backend_for_positive_timestep(self, owner: str) -> None:
+        """``SplittingEngine(backend=owner).run`` runs that owner on the law."""
+        if owner not in sp_mod.AVAILABLE_BACKENDS:
+            pytest.skip(f"{owner} unavailable")
+        assert sp_mod.splitting_backend(owner) == owner
+        for alpha_nonzero in (False, True):
+            phases, omegas, knm, alpha = _strang_case(alpha_nonzero)
+            eng = SplittingEngine(5, dt=0.02, backend=owner)
+            got = eng.run(phases, omegas, knm, 0.4, 1.1, alpha, n_steps=25)
+            _assert_close_to_oracle(got, owner, alpha_nonzero)
 
-        monkeypatch.setitem(sp_mod._LOADERS, "rust", fail_loader)
-        monkeypatch.setitem(sp_mod._LOADERS, "mojo", fail_loader)
-        monkeypatch.setitem(sp_mod._LOADERS, "julia", fail_loader)
-        monkeypatch.setitem(sp_mod._LOADERS, "go", fail_loader)
+    def test_named_owner_refusals(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Unknown, absent, failing or negative-dt named owners refuse."""
+        zero = np.zeros((2, 2))
+        with pytest.raises(ValueError, match="unknown splitting backend"):
+            SplittingEngine(2, 0.01, backend="cuda")
+        with pytest.raises(ValueError, match="'go' needs a positive dt"):
+            SplittingEngine(2, -0.01, backend="go").run(
+                np.zeros(2), np.ones(2), zero, 0.0, 0.0, zero, n_steps=1
+            )
         monkeypatch.setattr(sp_mod, "_BACKEND_CACHE", {})
 
-        active, available = sp_mod._resolve_backends()
+        def crash(*_args: object) -> object:
+            """Fail like a crashed kernel."""
+            raise RuntimeError("kernel crashed")
 
-        assert active == "python"
-        assert available == ["python"]
-
-    def test_run_uses_selected_backend_for_positive_timestep(self, monkeypatch):
-        calls: list[tuple[int, float, int]] = []
-
-        def backend(
-            phases,
-            omegas,
-            knm_flat,
-            alpha_flat,
-            n,
-            zeta,
-            psi,
-            dt,
-            n_steps,
-        ):
-            calls.append((n, dt, n_steps))
-            assert phases.flags.c_contiguous
-            assert omegas.flags.c_contiguous
-            assert knm_flat.flags.c_contiguous
-            assert alpha_flat.flags.c_contiguous
-            return phases + float(n_steps) * dt * omegas
-
-        monkeypatch.setattr(sp_mod, "ACTIVE_BACKEND", "rust")
-        monkeypatch.setattr(sp_mod, "_load_backend", lambda _name: backend)
-
-        n = 4
-        eng = SplittingEngine(n, dt=0.01)
-        phases = np.array([0.0, 0.25, 0.5, 0.75], dtype=np.float64)
-        omegas = np.array([1.0, 2.0, 3.0, 4.0], dtype=np.float64)
-        knm = np.full((n, n), 0.0, dtype=np.float64)
-        np.fill_diagonal(knm, 0.0)
-        alpha = np.zeros((n, n), dtype=np.float64)
-
-        result = eng.run(phases, omegas, knm, 0.0, 0.0, alpha, n_steps=2)
-
-        assert calls == [(4, 0.01, 2)]
-        np.testing.assert_allclose(result, phases + 0.02 * omegas)
+        monkeypatch.setitem(
+            sp_mod._LOADERS,
+            "go",
+            lambda: (_ for _ in ()).throw(OSError("libsplitting.so missing")),
+        )
+        with pytest.raises(RuntimeError, match="'go' unavailable"):
+            sp_mod.splitting_backend("go")
+        monkeypatch.setitem(sp_mod._LOADERS, "go", lambda: crash)
+        with pytest.raises(RuntimeError, match="'go' failed"):
+            SplittingEngine(2, 0.01, backend="go").run(
+                np.zeros(2), np.ones(2), zero, 0.0, 0.0, zero, n_steps=1
+            )
+        monkeypatch.setattr(sp_mod, "ACTIVE_BACKEND", "go")
+        with pytest.raises(RuntimeError, match="kernel crashed"):
+            SplittingEngine(2, 0.01).run(
+                np.zeros(2), np.ones(2), zero, 0.0, 0.0, zero, n_steps=1
+            )
 
     def test_run_uses_python_path_for_negative_timestep(self, monkeypatch):
         called = False

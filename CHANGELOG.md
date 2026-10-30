@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `SplittingEngine` takes `backend=`, and the new `splitting_backend()`
+  names the owner; a named owner that is absent or fails raises
+  `RuntimeError`, and a named native owner refuses a negative `dt`. The
+  RT-100–RT-105 substitutes (fake dispatchers, loaders, modules and probe
+  timings) are replaced by the real owners and loaders checked against a
+  plain-loop Strang oracle (drift, RK4 coupling, drift), real loader-cache
+  counts and the real resolver.
 - The spectral loader, cache and fast-path tests (RT-095–RT-099) no longer
   force the active backend or use fake loaders, modules or a fake Rust
   bundle. They run the real Mojo, Julia and Go primitives and the compiled

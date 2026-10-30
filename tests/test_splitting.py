@@ -174,7 +174,9 @@ class TestSplittingEngine:
         ):
             return np.array([0.0, 2.0 * np.pi], dtype=np.float64)
 
-        monkeypatch.setattr(split_mod, "_dispatch", lambda: malformed_backend)
+        monkeypatch.setattr(
+            split_mod, "_dispatch", lambda _backend="auto": ("go", malformed_backend)
+        )
 
         eng = SplittingEngine(2, dt=0.01)
         with pytest.raises(ValueError, match="backend output phases"):
@@ -206,7 +208,9 @@ class TestSplittingEngine:
         ):
             return np.array(["0.1", "0.2"], dtype=object)
 
-        monkeypatch.setattr(split_mod, "_dispatch", lambda: malformed_backend)
+        monkeypatch.setattr(
+            split_mod, "_dispatch", lambda _backend="auto": ("go", malformed_backend)
+        )
 
         eng = SplittingEngine(2, dt=0.01)
         with pytest.raises(ValueError, match="numeric-string"):
@@ -241,7 +245,9 @@ class TestSplittingEngine:
     ):
         import scpn_phase_orchestrator.upde.splitting as split_mod
 
-        monkeypatch.setattr(split_mod, "_dispatch", lambda: None)
+        monkeypatch.setattr(
+            split_mod, "_dispatch", lambda _backend="auto": ("go", None)
+        )
         values = {
             "phases": np.array([0.1, 0.2]),
             "omegas": np.ones(2),
@@ -281,7 +287,11 @@ class TestSplittingEngine:
     ):
         import scpn_phase_orchestrator.upde.splitting as split_mod
 
-        monkeypatch.setattr(split_mod, "_dispatch", lambda: lambda *_args: payload)
+        monkeypatch.setattr(
+            split_mod,
+            "_dispatch",
+            lambda _backend="auto": ("go", lambda *_args: payload),
+        )
         eng = SplittingEngine(2, dt=0.01)
 
         with pytest.raises(ValueError, match=match):
@@ -294,27 +304,34 @@ class TestSplittingEngine:
                 np.zeros((2, 2)),
             )
 
+    @pytest.mark.native_runtime
+    @pytest.mark.parametrize("owner", ["python", "rust", "mojo", "julia", "go"])
     def test_public_arrays_preserve_real_numeric_object_compatibility(
-        self,
-        monkeypatch,
-    ):
+        self, owner: str
+    ) -> None:
+        """Object arrays of real NumPy scalars run on every owner like float64."""
         import scpn_phase_orchestrator.upde.splitting as split_mod
 
-        payload = np.array([np.float32(0.1), np.int64(0)], dtype=object)
-        monkeypatch.setattr(split_mod, "_dispatch", lambda: lambda *_args: payload)
-        eng = SplittingEngine(2, dt=0.01)
+        if owner not in split_mod.AVAILABLE_BACKENDS:
+            pytest.skip(f"{owner} unavailable")
+        eng = SplittingEngine(2, dt=0.01, backend=owner)
+        phases = np.array([np.float32(0.1), np.int64(0)], dtype=object)
+        omegas = np.array([np.float32(1.0), np.int64(1)], dtype=object)
+        knm = np.array([[0, np.float32(0.5)], [np.int64(1), 0]], dtype=object)
+        lag = np.array([[0, 0.0], [0.0, 0]], dtype=object)
 
-        result = eng.step(
-            np.array([np.float32(0.1), np.int64(0)], dtype=object),
-            np.array([np.float32(1.0), np.int64(1)], dtype=object),
-            np.array([[0, 0.0], [0.0, 0]], dtype=object),
+        result = eng.step(phases, omegas, knm, 0.0, 0.0, lag)
+        expected = eng.step(
+            phases.astype(np.float64),
+            omegas.astype(np.float64),
+            knm.astype(np.float64),
             0.0,
             0.0,
-            np.array([[0, 0.0], [0.0, 0]], dtype=object),
+            lag.astype(np.float64),
         )
 
         assert result.dtype == np.float64
-        np.testing.assert_allclose(result, [0.1, 0.0])
+        np.testing.assert_array_equal(result, expected)
 
     @pytest.mark.parametrize(
         ("phases", "match"),
@@ -371,7 +388,9 @@ class TestSplittingEngine:
         ):
             return backend_output
 
-        monkeypatch.setattr(split_mod, "_dispatch", lambda: malformed_backend)
+        monkeypatch.setattr(
+            split_mod, "_dispatch", lambda _backend="auto": ("go", malformed_backend)
+        )
 
         eng = SplittingEngine(2, dt=0.01)
         with pytest.raises(ValueError, match=match):
@@ -410,7 +429,7 @@ class TestSplittingDispatch:
             monkeypatch.setitem(split_mod._LOADERS, "go", previous_loader)
             split_mod._BACKEND_CACHE.clear()
 
-        assert backend is None
+        assert backend == ("python", None)
 
     def test_dispatch_returns_none_when_all_non_python_backends_fail(self, monkeypatch):
         import scpn_phase_orchestrator.upde.splitting as split_mod
@@ -434,7 +453,7 @@ class TestSplittingDispatch:
             monkeypatch.setitem(split_mod._LOADERS, "go", previous_loader)
             split_mod._BACKEND_CACHE.clear()
 
-        assert backend is None
+        assert backend == ("python", None)
 
     def test_dispatch_uses_cached_loader_once(
         self, monkeypatch: pytest.MonkeyPatch
@@ -477,8 +496,8 @@ class TestSplittingDispatch:
             monkeypatch.setitem(split_mod._LOADERS, "go", previous_loader)
             split_mod._BACKEND_CACHE.clear()
 
-        assert b1 is fake_backend
-        assert b2 is fake_backend
+        assert b1 == ("go", fake_backend)
+        assert b2 == ("go", fake_backend)
         assert call_count == 1
 
 

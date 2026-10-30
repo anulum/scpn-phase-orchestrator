@@ -365,8 +365,15 @@ print(f"R = {R:.4f}, Regime: {regime.name}")
 ### Constructor
 
 ```python
-SplittingEngine(n_oscillators: int, dt: float)
+SplittingEngine(n_oscillators: int, dt: float, backend: str = "auto")
 ```
+
+`backend` names the owner of `run` and `step`: `"auto"` or one of
+`"rust"`, `"mojo"`, `"julia"`, `"go"`, `"python"`. A named owner that is
+absent or fails raises `RuntimeError`. The native kernels need a positive
+`dt`: under `"auto"` a negative `dt` (reversibility checks) runs the Python
+reference, and a named native owner refuses it with `ValueError`.
+`splitting_backend(backend)` names the owner.
 
 Pre-allocates three scratch arrays:
 - `_phase_diff`: `(N, N)` — pairwise phase differences
