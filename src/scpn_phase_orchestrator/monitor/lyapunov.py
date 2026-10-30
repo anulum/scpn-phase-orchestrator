@@ -39,6 +39,7 @@ __all__ = [
     "AVAILABLE_BACKENDS",
     "LyapunovGuard",
     "LyapunovState",
+    "lyapunov_backend",
     "lyapunov_spectrum",
 ]
 
@@ -126,22 +127,74 @@ def _resolve_backends() -> tuple[str, list[str]]:
 ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
-def _dispatch() -> LyapunovBackendFn | None:
-    """Return the fastest available backend callable, or ``None`` for Python."""
-    ordered_backends = [ACTIVE_BACKEND] + list(AVAILABLE_BACKENDS)
-    deduped: list[str] = []
-    for backend in ordered_backends:
-        if backend in deduped:
+_NATIVE_FAILURES = (ImportError, RuntimeError, OSError, KeyError)
+
+
+def _require_known_backend(backend: str) -> None:
+    """Refuse an unknown owner name before any computation."""
+    if backend not in (*_BACKEND_NAMES, "auto"):
+        raise ValueError(f"unknown Lyapunov backend: {backend!r}")
+
+
+def _dispatch(backend: str = "auto") -> tuple[str, LyapunovBackendFn | None]:
+    """Resolve the spectrum owner and its callable.
+
+    Parameters
+    ----------
+    backend : str
+        ``"auto"`` or one of ``rust``, ``mojo``, ``julia``, ``go``, ``python``.
+
+    Returns
+    -------
+    tuple[str, LyapunovBackendFn | None]
+        The owner name and its callable, or ``("python", None)``.
+
+    Raises
+    ------
+    ValueError
+        If ``backend`` is not a known owner.
+    RuntimeError
+        If an explicitly requested owner is unavailable.
+    """
+    _require_known_backend(backend)
+    ordered = [ACTIVE_BACKEND, *AVAILABLE_BACKENDS] if backend == "auto" else [backend]
+    seen: set[str] = set()
+    for name in ordered:
+        if name in seen:
             continue
-        deduped.append(backend)
-    for backend in deduped:
-        if backend == "python":
-            return None
+        seen.add(name)
+        if name == "python":
+            return "python", None
         try:
-            return _load_backend(backend)
-        except (ImportError, RuntimeError, OSError, KeyError):
-            continue
-    return None
+            return name, _load_backend(name)
+        except _NATIVE_FAILURES as exc:
+            if backend != "auto":
+                raise RuntimeError(f"Lyapunov backend {name!r} unavailable") from exc
+    return "python", None
+
+
+def lyapunov_backend(backend: str = "auto") -> str:
+    """Return the owner that :func:`lyapunov_spectrum` would use.
+
+    Parameters
+    ----------
+    backend : str
+        ``"auto"`` or an explicit owner name.
+
+    Returns
+    -------
+    str
+        ``rust``, ``mojo``, ``julia``, ``go`` or ``python``.
+
+    Raises
+    ------
+    ValueError
+        If ``backend`` is not a known owner.
+    RuntimeError
+        If an explicitly requested owner is unavailable.
+    """
+    owner, _ = _dispatch(backend)
+    return owner
 
 
 def _contains_boolean_alias(value: object) -> bool:
@@ -586,6 +639,7 @@ def lyapunov_spectrum(
     qr_interval: object = 10,
     zeta: object = 0.0,
     psi: object = 0.0,
+    backend: str = "auto",
 ) -> FloatArray:
     """Full Lyapunov spectrum (all N exponents) via QR decomposition.
 
@@ -621,6 +675,9 @@ def lyapunov_spectrum(
         driver strength.
     psi : object
         target driver phase.
+    backend : str
+        ``"auto"`` (fastest owner, NumPy if a native owner fails) or an
+        explicit owner: ``rust``, ``mojo``, ``julia``, ``go``, ``python``.
 
     Returns
     -------
@@ -630,8 +687,11 @@ def lyapunov_spectrum(
     Raises
     ------
     ValueError
-        If the integration parameters are invalid.
+        If the integration parameters or the backend name are invalid.
+    RuntimeError
+        If an explicitly requested owner is unavailable or fails.
     """
+    _require_known_backend(backend)
     p = _validate_vector(phases_init, name="phases_init")
     n = int(p.size)
     if n < 1:
@@ -651,47 +711,18 @@ def lyapunov_spectrum(
     )
     zeta = _validate_non_negative_real(zeta, name="zeta")
     psi = _validate_finite_real(psi, name="psi")
-    backend_fn = _dispatch()
-    if backend_fn is None:
-        return _validate_spectrum_output(
-            _lyapunov_spectrum_python(
-                p,
-                o,
-                k,
-                a,
-                float(dt),
-                int(n_steps),
-                int(qr_interval),
-                float(zeta),
-                float(psi),
-            ),
-            n=n,
-        )
-    # Rust PyO3 binding takes flat (N*N,) row-major k/alpha; the other
-    # backends accept the 2-D forms directly.
-    if ACTIVE_BACKEND == "rust":
+    owner, backend_fn = _dispatch(backend)
+    if backend_fn is not None:
+        # The Rust PyO3 binding takes flat (N*N,) row-major k and alpha; the
+        # other owners accept the 2-D forms.
+        flat = owner == "rust"
         try:
             return _validate_spectrum_output(
                 backend_fn(
                     p,
                     o,
-                    k.ravel(),
-                    a.ravel(),
-                    dt,
-                    n_steps,
-                    qr_interval,
-                    zeta,
-                    psi,
-                ),
-                n=n,
-            )
-        except (ImportError, RuntimeError, OSError, KeyError):
-            return _validate_spectrum_output(
-                _lyapunov_spectrum_python(
-                    p,
-                    o,
-                    k,
-                    a,
+                    k.ravel() if flat else k,
+                    a.ravel() if flat else a,
                     float(dt),
                     int(n_steps),
                     int(qr_interval),
@@ -700,33 +731,20 @@ def lyapunov_spectrum(
                 ),
                 n=n,
             )
-    try:
-        return _validate_spectrum_output(
-            backend_fn(
-                p,
-                o,
-                k,
-                a,
-                float(dt),
-                int(n_steps),
-                int(qr_interval),
-                float(zeta),
-                float(psi),
-            ),
-            n=n,
-        )
-    except (ImportError, RuntimeError, OSError, KeyError):
-        return _validate_spectrum_output(
-            _lyapunov_spectrum_python(
-                p,
-                o,
-                k,
-                a,
-                float(dt),
-                int(n_steps),
-                int(qr_interval),
-                float(zeta),
-                float(psi),
-            ),
-            n=n,
-        )
+        except _NATIVE_FAILURES as exc:
+            if backend != "auto":
+                raise RuntimeError(f"Lyapunov backend {owner!r} failed") from exc
+    return _validate_spectrum_output(
+        _lyapunov_spectrum_python(
+            p,
+            o,
+            k,
+            a,
+            float(dt),
+            int(n_steps),
+            int(qr_interval),
+            float(zeta),
+            float(psi),
+        ),
+        n=n,
+    )

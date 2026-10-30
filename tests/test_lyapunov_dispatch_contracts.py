@@ -10,23 +10,14 @@
 
 from __future__ import annotations
 
-import sys
-from types import ModuleType
-from typing import TypeAlias
+import math
+from collections.abc import Callable
+from typing import TypeAlias, cast
 
 import numpy as np
 import pytest
 from numpy.typing import NDArray
 
-from scpn_phase_orchestrator.experimental.accelerators.monitor import (
-    _lyapunov_go as lyapunov_go_mod,
-)
-from scpn_phase_orchestrator.experimental.accelerators.monitor import (
-    _lyapunov_julia as lyapunov_julia_mod,
-)
-from scpn_phase_orchestrator.experimental.accelerators.monitor import (
-    _lyapunov_mojo as lyapunov_mojo_mod,
-)
 from scpn_phase_orchestrator.monitor import lyapunov as lyapunov_mod
 
 FloatArray: TypeAlias = NDArray[np.float64]
@@ -98,7 +89,9 @@ def _spectrum_with_backend(
 ) -> FloatArray:
     """Evaluate ``lyapunov_spectrum`` with a monkeypatched backend."""
     monkeypatch.setattr(lyapunov_mod, "ACTIVE_BACKEND", active_backend)
-    monkeypatch.setattr(lyapunov_mod, "_dispatch", lambda: backend)
+    monkeypatch.setattr(
+        lyapunov_mod, "_dispatch", lambda _backend="auto": (active_backend, backend)
+    )
     return lyapunov_mod.lyapunov_spectrum(
         np.array([0.0, 0.1], dtype=np.float64),
         np.array([1.0, 1.0], dtype=np.float64),
@@ -110,22 +103,32 @@ def _spectrum_with_backend(
     )
 
 
-def test_optional_backend_loader_returns_mojo_callable(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """The Mojo loader returns the backend callable after executable probing."""
+def _synchronised_spectrum(n: int, k: float, dt: float) -> list[float]:
+    """Return the RK4 spectrum of an all-to-all network at sync (see test_lyapunov)."""
+    z = -n * k * dt
+    return [0.0] + [math.log(1 + z + z**2 / 2 + z**3 / 6 + z**4 / 24) / dt] * (n - 1)
 
-    def _fake_ensure_exe() -> str:
-        return "lyapunov_mojo"
 
-    monkeypatch.setattr(lyapunov_mojo_mod, "_ensure_exe", _fake_ensure_exe)
-    monkeypatch.setattr(
-        lyapunov_mojo_mod,
-        "lyapunov_spectrum_mojo",
-        _sorted_backend,
+def _assert_loader_follows_the_law(owner: str, loader: object) -> None:
+    """Run the kernel a real loader returns on the analytic synchronised case."""
+    if owner not in lyapunov_mod.AVAILABLE_BACKENDS:
+        pytest.skip(f"{owner} unavailable")
+    kernel = cast("Callable[[], lyapunov_mod.LyapunovBackendFn]", loader)()
+    n, k, dt = 3, 0.4, 0.01
+    knm = np.full((n, n), k)
+    np.fill_diagonal(knm, 0.0)
+    spec = kernel(
+        np.full(n, 0.7), np.full(n, 1.3), knm, np.zeros((n, n)), dt, 200, 5, 0.0, 0.0
+    )
+    np.testing.assert_allclose(
+        spec, _synchronised_spectrum(n, k, dt), rtol=1e-9, atol=1e-12
     )
 
-    assert lyapunov_mod._load_mojo_fn() is _sorted_backend
+
+@pytest.mark.native_runtime
+def test_optional_backend_loader_returns_mojo_callable() -> None:
+    """The real Mojo loader returns a kernel with the analytic sync spectrum."""
+    _assert_loader_follows_the_law("mojo", lyapunov_mod._load_mojo_fn)
 
 
 def test_complex_alias_helper_handles_failure_and_complex_dtype() -> None:
@@ -139,34 +142,70 @@ def test_complex_alias_helper_handles_failure_and_complex_dtype() -> None:
     )
 
 
-def test_optional_backend_loader_returns_julia_callable(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """The Julia loader returns the backend callable when juliacall imports."""
-    fake_juliacall = ModuleType("juliacall")
-    fake_juliacall.Main = object()
-    monkeypatch.setitem(sys.modules, "juliacall", fake_juliacall)
-    monkeypatch.setattr(
-        lyapunov_julia_mod,
-        "lyapunov_spectrum_julia",
-        _sorted_backend,
+@pytest.mark.native_runtime
+def test_optional_backend_loader_returns_julia_callable() -> None:
+    """The real Julia loader returns a kernel with the analytic sync spectrum."""
+    _assert_loader_follows_the_law("julia", lyapunov_mod._load_julia_fn)
+
+
+@pytest.mark.native_runtime
+def test_optional_backend_loader_returns_go_callable() -> None:
+    """The real Go loader returns a kernel with the analytic sync spectrum."""
+    _assert_loader_follows_the_law("go", lyapunov_mod._load_go_fn)
+
+
+@pytest.mark.native_runtime
+@pytest.mark.parametrize("owner", ["python", "rust", "mojo", "julia", "go"])
+def test_each_named_owner_serves_the_public_spectrum(owner: str) -> None:
+    """``lyapunov_spectrum(backend=owner)`` runs that owner on the analytic case."""
+    if owner not in lyapunov_mod.AVAILABLE_BACKENDS:
+        pytest.skip(f"{owner} unavailable")
+    assert lyapunov_mod.lyapunov_backend(owner) == owner
+    n, k, dt = 4, 0.3, 0.02
+    knm = np.full((n, n), k)
+    np.fill_diagonal(knm, 0.0)
+    spec = lyapunov_mod.lyapunov_spectrum(
+        np.full(n, 2.0),
+        np.full(n, -0.4),
+        knm,
+        np.zeros((n, n)),
+        dt=dt,
+        n_steps=150,
+        qr_interval=3,
+        backend=owner,
+    )
+    np.testing.assert_allclose(
+        spec, _synchronised_spectrum(n, k, dt), rtol=1e-9, atol=1e-12
     )
 
-    assert lyapunov_mod._load_julia_fn() is _sorted_backend
+
+def test_named_owner_refusals(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Absent or failing named owners and unknown names refuse."""
+    monkeypatch.setattr(lyapunov_mod, "_BACKEND_CACHE", {})
+    monkeypatch.setitem(lyapunov_mod._LOADERS, "go", _missing_backend)
+    with pytest.raises(RuntimeError, match="Lyapunov backend 'go' unavailable"):
+        lyapunov_mod.lyapunov_backend("go")
+    monkeypatch.setitem(lyapunov_mod._LOADERS, "go", lambda: _raising_backend)
+    lyapunov_mod._BACKEND_CACHE.clear()
+    with pytest.raises(RuntimeError, match="Lyapunov backend 'go' failed"):
+        lyapunov_mod.lyapunov_spectrum(
+            np.array([0.0, 0.1]),
+            np.ones(2),
+            _matrix(),
+            _alpha(),
+            n_steps=2,
+            qr_interval=1,
+            backend="go",
+        )
+    with pytest.raises(ValueError, match="unknown Lyapunov backend"):
+        lyapunov_mod.lyapunov_spectrum(
+            np.zeros(2), np.ones(2), _matrix(), _alpha(), backend="cuda"
+        )
 
 
-def test_optional_backend_loader_returns_go_callable(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """The Go loader returns the backend callable after library probing."""
-
-    def _fake_load_lib() -> object:
-        return object()
-
-    monkeypatch.setattr(lyapunov_go_mod, "_load_lib", _fake_load_lib)
-    monkeypatch.setattr(lyapunov_go_mod, "lyapunov_spectrum_go", _sorted_backend)
-
-    assert lyapunov_mod._load_go_fn() is _sorted_backend
+def _missing_backend() -> lyapunov_mod.LyapunovBackendFn:
+    """Fail like an absent shared library."""
+    raise ImportError("go backend unavailable")
 
 
 def test_dispatch_returns_none_when_no_backend_survives(
@@ -192,7 +231,7 @@ def test_dispatch_returns_none_when_no_backend_survives(
         monkeypatch.setitem(lyapunov_mod._LOADERS, "go", previous_loader)
         lyapunov_mod._BACKEND_CACHE.clear()
 
-    assert backend is None
+    assert backend == ("python", None)
 
 
 def test_resolve_backends_keeps_python_when_optional_loaders_fail(
@@ -403,7 +442,9 @@ def test_python_spectrum_covers_driven_jacobian_path(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A non-zero driver exercises the forced Kuramoto Jacobian branch."""
-    monkeypatch.setattr(lyapunov_mod, "_dispatch", lambda: None)
+    monkeypatch.setattr(
+        lyapunov_mod, "_dispatch", lambda _backend="auto": ("python", None)
+    )
 
     spectrum = lyapunov_mod.lyapunov_spectrum(
         np.array([0.0, 0.1], dtype=np.float64),

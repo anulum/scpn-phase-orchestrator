@@ -182,8 +182,15 @@ def lyapunov_spectrum(
     qr_interval: int = 10,
     zeta: float = 0.0,
     psi: float = 0.0,
+    backend: str = "auto",
 ) -> NDArray: ...
 ```
+
+`backend="auto"` takes the active owner and falls back to NumPy if a native
+owner fails. A named owner (`"rust"`, `"mojo"`, `"julia"`, `"go"`,
+`"python"`) must run the spectrum; absent or failing, it raises
+`RuntimeError` (for example `Lyapunov backend 'go' unavailable`). An unknown
+name raises `ValueError`. `lyapunov_backend(backend)` names the owner.
 
 Returns `(N,)` exponents sorted descending. `knm` and `alpha` are
 row-major `(N, N)` matrices; flat versions are also accepted (the
@@ -243,7 +250,7 @@ always appended as the guaranteed fallback.
 from scpn_phase_orchestrator.monitor import lyapunov as ly_mod
 ly_mod.ACTIVE_BACKEND       # e.g. "rust"
 ly_mod.AVAILABLE_BACKENDS   # e.g. ["rust", "mojo", "julia", "go", "python"]
-ly_mod.ACTIVE_BACKEND = "python"   # force a specific backend (tests)
+ly_mod.lyapunov_backend("julia")   # "julia", or RuntimeError if absent
 ```
 
 ### 3.3 Semantic equivalence
@@ -496,18 +503,13 @@ this particular `(ω, K, α)` tuple.
 ### 6.4 Forcing a specific backend
 
 ```python
-from scpn_phase_orchestrator.monitor import lyapunov as ly_mod
-
-saved = ly_mod.ACTIVE_BACKEND
-try:
-    ly_mod.ACTIVE_BACKEND = "julia"
-    spec = lyapunov_spectrum(phases, omegas, knm, alpha)
-finally:
-    ly_mod.ACTIVE_BACKEND = saved
+spec = lyapunov_spectrum(phases, omegas, knm, alpha, backend="julia")
 ```
 
-This pattern is how the parity tests pin a specific backend for
-comparison against the Python reference.
+A named owner either runs the spectrum or raises; it never hands the call
+to another owner. The real-runtime tests use this to check every owner
+against the analytic spectrum of a synchronised all-to-all network,
+`[0, log R(−N·k·dt)/dt, …]` with `R` the RK4 stability polynomial.
 
 ---
 

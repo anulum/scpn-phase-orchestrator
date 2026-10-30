@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `lyapunov_spectrum` takes `backend=`, and the new `lyapunov_backend()`
+  names the owner. A named owner that is absent or fails raises
+  `RuntimeError`; `auto` keeps its NumPy fallback. The Rust flat-matrix
+  convention now follows the resolved owner instead of `ACTIVE_BACKEND`,
+  and the three nearly identical dispatch branches are one. The RT-055–057
+  substitutes (a fake dispatcher and fake Julia/Go kernels) are replaced by
+  the real owners and loaders, checked against the analytic spectrum of a
+  synchronised all-to-all network, `[0, log R(−N·k·dt)/dt, …]`.
 - `compute_itpc` and `itpc_persistence` take `backend=`, and the new
   `itpc_backend(slot, backend)` names the owner. A named owner that is
   absent, lacks the kernel or fails raises `RuntimeError`; `auto` keeps its

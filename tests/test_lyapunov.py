@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import math
 from typing import Any
 
 import numpy as np
@@ -17,6 +18,20 @@ from scpn_phase_orchestrator.monitor import lyapunov as lyapunov_mod
 from scpn_phase_orchestrator.monitor.lyapunov import LyapunovGuard, LyapunovState
 
 
+def _synchronised_spectrum(n: int, k: float, dt: float) -> list[float]:
+    """Return the RK4 Lyapunov spectrum of an all-to-all network at sync.
+
+    At equal phases with equal frequencies the Jacobian is the constant
+    ``k·11ᵀ − n·k·I``: eigenvalue 0 on the uniform mode and ``−n·k`` on the
+    rest. One RK4 step multiplies the stable modes by the stability
+    polynomial ``R(z)`` at ``z = −n·k·dt``, so their exponent is
+    ``log R(z) / dt``.
+    """
+    z = -n * k * dt
+    stability = 1 + z + z**2 / 2 + z**3 / 6 + z**4 / 24
+    return [0.0] + [math.log(stability) / dt] * (n - 1)
+
+
 def _all_to_all(n: int, k: float = 1.0) -> np.ndarray:
     knm = np.full((n, n), k)
     np.fill_diagonal(knm, 0.0)
@@ -24,14 +39,19 @@ def _all_to_all(n: int, k: float = 1.0) -> np.ndarray:
 
 
 class TestLyapunovFunction:
+    """The Lyapunov stability function, its derivative and the basin test."""
+
     def test_spectrum_min_steps_uses_python_fallback_path(self, monkeypatch):
+        """One step below the QR interval leaves the NumPy spectrum at zero."""
         n = 4
         phases = np.array([0.0, 1.0, 2.0, 3.0])
         omegas = np.array([1.0, 1.1, 1.2, 1.3])
         knm = _all_to_all(n, k=0.4)
         alpha = np.zeros((n, n))
 
-        monkeypatch.setattr(lyapunov_mod, "_dispatch", lambda: None)
+        monkeypatch.setattr(
+            lyapunov_mod, "_dispatch", lambda _backend="auto": ("python", None)
+        )
         spectrum = lyapunov_mod.lyapunov_spectrum(
             phases, omegas, knm, alpha, n_steps=1, qr_interval=10
         )
@@ -40,6 +60,7 @@ class TestLyapunovFunction:
         assert np.all(spectrum == 0.0)
 
     def test_synchronized_minimum(self):
+        """Synchronised phases give the minimum V."""
         phases = np.zeros(4)
         knm = _all_to_all(4)
         guard = LyapunovGuard()
@@ -49,6 +70,7 @@ class TestLyapunovFunction:
         assert state.in_basin
 
     def test_anti_phase_maximum(self):
+        """Anti-phase oscillators give a larger V than sync."""
         phases = np.array([0.0, np.pi, 0.0, np.pi])
         knm = _all_to_all(4)
         guard = LyapunovGuard()
@@ -57,6 +79,7 @@ class TestLyapunovFunction:
         assert state.V > -1.0
 
     def test_V_decreases_toward_sync(self):
+        """V falls as phases approach sync."""
         knm = _all_to_all(4)
         guard = LyapunovGuard()
         # Start spread, move toward sync
@@ -68,11 +91,13 @@ class TestLyapunovFunction:
         assert s2.dV_dt < 0
 
     def test_dV_dt_zero_on_first_call(self):
+        """The first evaluation reports zero dV/dt."""
         guard = LyapunovGuard()
         state = guard.evaluate(np.zeros(3), _all_to_all(3))
         assert state.dV_dt == 0.0
 
     def test_basin_inside(self):
+        """Small phase differences are inside the basin."""
         phases = np.array([0.0, 0.5, 1.0, 1.5])
         knm = _all_to_all(4)
         guard = LyapunovGuard()
@@ -81,6 +106,7 @@ class TestLyapunovFunction:
         assert state.in_basin
 
     def test_basin_outside(self):
+        """Large phase differences are outside the basin."""
         phases = np.array([0.0, 0.0, 0.0, np.pi])
         knm = _all_to_all(4)
         guard = LyapunovGuard()
@@ -89,12 +115,14 @@ class TestLyapunovFunction:
         assert not state.in_basin
 
     def test_empty_phases(self):
+        """An empty network evaluates without error."""
         guard = LyapunovGuard()
         state = guard.evaluate(np.array([]), np.zeros((0, 0)))
         assert state.V == 0.0
         assert state.in_basin
 
     def test_no_connections(self):
+        """A network without couplings evaluates without error."""
         phases = np.array([0.0, 1.0, 2.0])
         knm = np.zeros((3, 3))
         guard = LyapunovGuard()
@@ -103,6 +131,7 @@ class TestLyapunovFunction:
         assert state.max_phase_diff == 0.0
 
     def test_reset_clears_prev(self):
+        """Reset forgets the previous V."""
         guard = LyapunovGuard()
         guard.evaluate(np.zeros(3), _all_to_all(3))
         guard.reset()
@@ -110,6 +139,7 @@ class TestLyapunovFunction:
         assert state.dV_dt == 0.0
 
     def test_custom_basin_threshold(self):
+        """A custom basin threshold changes the basin verdict."""
         phases = np.array([0.0, 1.0])
         knm = np.array([[0.0, 1.0], [1.0, 0.0]])
         guard = LyapunovGuard(basin_threshold=0.5)
@@ -121,6 +151,7 @@ class TestLyapunovFunction:
         [False, 0.0, -0.1, np.nan, np.inf, "1.0"],
     )
     def test_rejects_invalid_basin_threshold(self, basin_threshold: Any) -> None:
+        """Invalid basin thresholds are refused."""
         with pytest.raises(ValueError, match="basin_threshold"):
             LyapunovGuard(basin_threshold=basin_threshold)
 
@@ -148,17 +179,20 @@ class TestLyapunovFunction:
         knm: Any,
         match: str,
     ) -> None:
+        """Invalid evaluation inputs are refused."""
         guard = LyapunovGuard()
         with pytest.raises(ValueError, match=match):
             guard.evaluate(phases, knm)
 
     def test_evaluate_accepts_array_like_inputs(self) -> None:
+        """Array-like inputs are accepted."""
         guard = LyapunovGuard()
         state = guard.evaluate([0.0, 0.1], [[0.0, 1.0], [1.0, 0.0]])
 
         assert isinstance(state.V, float)
 
     def test_evaluate_rejects_self_coupling_diagonal(self) -> None:
+        """A non-zero coupling diagonal is refused."""
         guard = LyapunovGuard()
         knm = np.array([[0.2, 1.0], [1.0, 0.0]], dtype=np.float64)
 
@@ -166,6 +200,7 @@ class TestLyapunovFunction:
             guard.evaluate(np.array([0.0, 0.1]), knm)
 
     def test_wrapping_phase_diff(self):
+        """Phase differences wrap around 2π."""
         # Phases near 0 and 2π should have small diff, not large
         phases = np.array([0.1, 2 * np.pi - 0.1])
         knm = np.array([[0.0, 1.0], [1.0, 0.0]])
@@ -225,7 +260,10 @@ class TestLyapunovPipelineWiring:
 
 
 class TestLyapunovStateValidation:
+    """LyapunovState normalises and validates its fields."""
+
     def test_normalizes_public_monitor_record(self) -> None:
+        """A valid record is normalised."""
         state = LyapunovState(
             V=np.float64(-1.0),
             dV_dt=np.float64(-0.1),
@@ -254,6 +292,7 @@ class TestLyapunovStateValidation:
     def test_rejects_invalid_public_monitor_record_values(
         self, kwargs: dict[str, object], match: str
     ) -> None:
+        """Invalid record values are refused."""
         base: dict[str, object] = {
             "V": -1.0,
             "dV_dt": 0.0,
@@ -267,55 +306,34 @@ class TestLyapunovStateValidation:
 
 
 class TestLyapunovRustDispatch:
-    def test_spectrum_uses_rust_backend_signature_when_active(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        calls: list[
-            tuple[
-                np.ndarray,
-                np.ndarray,
-                np.ndarray,
-                np.ndarray,
-                float,
-                int,
-                int,
-                float,
-                float,
-            ]
-        ] = []
+    """Spectrum dispatch: the real Rust owner and stand-in failure contracts."""
 
-        def _fake_backend(
-            p: np.ndarray,
-            o: np.ndarray,
-            k_flat: np.ndarray,
-            a_flat: np.ndarray,
-            dt: float,
-            n_steps: int,
-            qr_interval: int,
-            zeta: float,
-            psi: float,
-        ) -> np.ndarray:
-            calls.append((p, o, k_flat, a_flat, dt, n_steps, qr_interval, zeta, psi))
-            return np.array([3.0, 2.0, 1.0], dtype=np.float64)
-
-        monkeypatch.setattr(lyapunov_mod, "ACTIVE_BACKEND", "rust")
-        monkeypatch.setattr(lyapunov_mod, "_dispatch", lambda: _fake_backend)
-        phases = np.array([0.0, 1.0, 2.0], dtype=np.float64)
-        omegas = np.array([1.0, 1.1, 1.2], dtype=np.float64)
-        knm = _all_to_all(3, k=0.4)
-        alpha = np.zeros((3, 3), dtype=np.float64)
-
+    @pytest.mark.native_runtime
+    def test_spectrum_uses_rust_backend_signature_when_active(self) -> None:
+        """The compiled Rust owner returns the analytic synchronised spectrum."""
+        if "rust" not in lyapunov_mod.AVAILABLE_BACKENDS:
+            pytest.skip("rust unavailable")
+        assert lyapunov_mod.lyapunov_backend("rust") == "rust"
+        n, k, dt = 3, 0.4, 0.01
         spec = lyapunov_mod.lyapunov_spectrum(
-            phases, omegas, knm, alpha, dt=0.01, n_steps=10, qr_interval=2
+            np.full(n, 0.7),
+            np.full(n, 1.3),
+            _all_to_all(n, k=k),
+            np.zeros((n, n)),
+            dt=dt,
+            n_steps=200,
+            qr_interval=5,
+            backend="rust",
         )
-        np.testing.assert_allclose(spec, [3.0, 2.0, 1.0], atol=1e-12)
-        assert len(calls) == 1
-        assert calls[0][2].ndim == 1
-        assert calls[0][3].ndim == 1
+        np.testing.assert_allclose(
+            spec, _synchronised_spectrum(n, k, dt), rtol=1e-10, atol=1e-12
+        )
 
     def test_spectrum_falls_back_to_python_when_backend_raises(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        """In auto mode a failing kernel falls back to the NumPy spectrum."""
+
         def _raising_backend(
             *_args: object,
             **_kwargs: object,
@@ -323,7 +341,11 @@ class TestLyapunovRustDispatch:
             raise RuntimeError("boom")
 
         monkeypatch.setattr(lyapunov_mod, "ACTIVE_BACKEND", "rust")
-        monkeypatch.setattr(lyapunov_mod, "_dispatch", lambda: _raising_backend)
+        monkeypatch.setattr(
+            lyapunov_mod,
+            "_dispatch",
+            lambda _backend="auto": ("rust", _raising_backend),
+        )
         phases = np.array([0.0, 1.0, 2.0], dtype=np.float64)
         omegas = np.array([1.0, 1.1, 1.2], dtype=np.float64)
         knm = _all_to_all(3, k=0.4)
@@ -338,11 +360,17 @@ class TestLyapunovRustDispatch:
     def test_spectrum_fails_closed_when_backend_returns_invalid_payload(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        """A non-finite kernel spectrum is refused."""
+
         def _invalid_backend(*_args: object, **_kwargs: object) -> np.ndarray:
             return np.array([0.0, np.nan, 1.0], dtype=np.float64)
 
         monkeypatch.setattr(lyapunov_mod, "ACTIVE_BACKEND", "rust")
-        monkeypatch.setattr(lyapunov_mod, "_dispatch", lambda: _invalid_backend)
+        monkeypatch.setattr(
+            lyapunov_mod,
+            "_dispatch",
+            lambda _backend="auto": ("rust", _invalid_backend),
+        )
         phases = np.array([0.0, 1.0, 2.0], dtype=np.float64)
         omegas = np.array([1.0, 1.1, 1.2], dtype=np.float64)
         knm = _all_to_all(3, k=0.4)
@@ -356,6 +384,7 @@ class TestLyapunovRustDispatch:
     def test_dispatch_falls_back_to_python_when_loader_fails(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        """A failing loader resolves to the NumPy spectrum."""
         previous_backend = lyapunov_mod.ACTIVE_BACKEND
         previous_available = list(lyapunov_mod.AVAILABLE_BACKENDS)
         previous_loader = lyapunov_mod._LOADERS["go"]
@@ -375,11 +404,12 @@ class TestLyapunovRustDispatch:
             monkeypatch.setitem(lyapunov_mod._LOADERS, "go", previous_loader)
             lyapunov_mod._BACKEND_CACHE.clear()
 
-        assert backend is None
+        assert backend == ("python", None)
 
     def test_dispatch_uses_cached_loader_once(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        """Repeated dispatch loads an owner once."""
         previous_backend = lyapunov_mod.ACTIVE_BACKEND
         previous_available = list(lyapunov_mod.AVAILABLE_BACKENDS)
         previous_loader = lyapunov_mod._LOADERS["go"]
@@ -416,25 +446,31 @@ class TestLyapunovRustDispatch:
             monkeypatch.setitem(lyapunov_mod._LOADERS, "go", previous_loader)
             lyapunov_mod._BACKEND_CACHE.clear()
 
-        assert b1 is fake_backend
-        assert b2 is fake_backend
+        assert b1 == ("go", fake_backend)
+        assert b2 == ("go", fake_backend)
         assert call_count == 1
 
 
 # Salvaged module-specific behavioural contracts from deleted broad tests.
 class TestLyapunovGuardValidation:
+    """Basin threshold validation of LyapunovGuard."""
+
     def test_rejects_zero_basin_threshold(self) -> None:
+        """A zero basin threshold is refused."""
         with pytest.raises(ValueError, match="basin_threshold must be positive"):
             LyapunovGuard(basin_threshold=0.0)
 
     def test_rejects_negative_basin_threshold(self) -> None:
+        """A negative basin threshold is refused."""
         with pytest.raises(ValueError, match="basin_threshold must be positive"):
             LyapunovGuard(basin_threshold=-0.5)
 
     def test_default_basin_threshold_is_half_pi(self) -> None:
+        """The default basin threshold is π/2."""
         m = LyapunovGuard()
         assert abs(m._basin_threshold - np.pi / 2.0) < 1e-12
 
     def test_rejects_basin_threshold_above_geodesic_phase_limit(self) -> None:
+        """A threshold above π is refused."""
         with pytest.raises(ValueError, match="basin_threshold must be <= pi"):
             LyapunovGuard(basin_threshold=np.pi + 1e-6)
