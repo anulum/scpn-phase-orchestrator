@@ -18,7 +18,9 @@ invariant; Hypothesis property that output shapes match the spec.
 from __future__ import annotations
 
 import cmath
+import cProfile
 import functools
+import importlib.util
 import sys
 import types
 from collections.abc import Callable
@@ -415,29 +417,27 @@ class TestBackendLoaderContracts:
         }[owner]
         _assert_loader_follows_the_laws(owner, loader)
 
-    def test_detect_regimes_uses_rust_classifier_when_available(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        seen: dict[str, object] = {}
-
-        def fake_detect(
-            r_flat: np.ndarray,
-            sync_threshold: float,
-            desync_threshold: float,
-        ) -> np.ndarray:
-            seen["args"] = (r_flat.copy(), sync_threshold, desync_threshold)
-            return np.array([0, 2, 1], dtype=np.int32)
-
-        fake_spo = types.ModuleType("spo_kernel")
-        fake_spo.detect_regimes_rust = fake_detect
-        monkeypatch.setitem(sys.modules, "spo_kernel", fake_spo)
-
-        R = np.array([0.1, 0.9, 0.5])
-        regimes = detect_regimes(R, sync_threshold=0.8, desync_threshold=0.2)
-        np.testing.assert_array_equal(regimes, [0, 2, 1])
-        r_flat, sync_threshold, desync_threshold = seen["args"]
-        np.testing.assert_array_equal(r_flat, R)
-        assert (sync_threshold, desync_threshold) == (0.8, 0.2)
+    @pytest.mark.native_runtime
+    def test_detect_regimes_uses_rust_classifier_when_available(self) -> None:
+        """The compiled classifier runs when installed and matches the threshold law."""
+        values = [0.1, 0.2, 0.5, 0.8, 0.9, 0.2000000001, 0.7999999999]
+        profile = cProfile.Profile()
+        profile.enable()
+        try:
+            regimes = detect_regimes(
+                np.array(values), sync_threshold=0.8, desync_threshold=0.2
+            )
+        finally:
+            profile.disable()
+        rust_calls = sum(
+            entry.callcount
+            for entry in profile.getstats()
+            if isinstance(entry.code, str) and "detect_regimes_rust" in entry.code
+        )
+        installed = importlib.util.find_spec("spo_kernel") is not None
+        assert rust_calls == (1 if installed else 0)
+        expected = [2 if v >= 0.8 else 0 if v <= 0.2 else 1 for v in values]
+        np.testing.assert_array_equal(regimes, expected)
 
 
 class TestNamedMarketOwners:

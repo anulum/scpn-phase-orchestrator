@@ -20,6 +20,7 @@ rounding, so parity is tight (~1e-15) but not always 0.0.
 from __future__ import annotations
 
 import contextlib
+import cProfile
 from collections.abc import Callable
 from types import SimpleNamespace
 
@@ -369,29 +370,29 @@ class TestDispatchFallbackChain:
         assert np.allclose(op, 0.5)
         assert calls == {"rust": 1, "go": 1}
 
+    @pytest.mark.native_runtime
+    @pytest.mark.parametrize("owner", ["rust", "mojo", "julia", "go"])
     def test_dispatch_uses_cached_loader_once(
-        self, monkeypatch: pytest.MonkeyPatch
+        self, owner: str, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        calls: dict[str, int] = {"go": 0}
-
-        def _ok_go():
-            calls["go"] += 1
-            return (
-                lambda phases_flat, t, n: np.full(t, 0.25, dtype=np.float64),
-                lambda phases_flat, t, n, window: np.zeros(
-                    ((t - window + 1), n, n), dtype=np.float64
-                ),
-            )
-
+        """Two public calls on a cold cache run the real loader exactly once."""
+        if owner not in m_mod.AVAILABLE_BACKENDS:
+            pytest.skip(f"{owner} unavailable")
         monkeypatch.setattr(m_mod, "_BACKEND_CACHE", {})
-        monkeypatch.setattr(m_mod, "ACTIVE_BACKEND", "go")
-        monkeypatch.setattr(m_mod, "AVAILABLE_BACKENDS", ["go", "python"])
-        monkeypatch.setattr(m_mod, "_LOADERS", {"go": _ok_go})
-
-        phases = np.zeros((7, 3), dtype=np.float64)
-        first = m_mod.market_order_parameter(phases)
-        second = m_mod.market_order_parameter(phases)
-
-        assert np.allclose(first, 0.25)
-        assert np.allclose(second, 0.25)
-        assert calls["go"] == 1
+        loader_name = f"_load_{owner}_fn"
+        phases = np.linspace(0.0, 3.0, 21).reshape(7, 3)
+        profile = cProfile.Profile()
+        profile.enable()
+        try:
+            first = m_mod.market_order_parameter(phases, backend=owner)
+            second = m_mod.market_order_parameter(phases, backend=owner)
+        finally:
+            profile.disable()
+        loads = sum(
+            entry.callcount
+            for entry in profile.getstats()
+            if not isinstance(entry.code, str) and entry.code.co_name == loader_name
+        )
+        assert loads == 1
+        np.testing.assert_array_equal(first, second)
+        assert m_mod._BACKEND_CACHE[owner] is m_mod._load_backend(owner)

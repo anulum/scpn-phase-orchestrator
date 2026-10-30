@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The regime-classifier test (RT-061) no longer installs a fake
+  `spo_kernel`; it profiles the real call, which reaches the compiled
+  `detect_regimes_rust` exactly when `spo_kernel` is installed, and checks
+  the threshold law including values just inside each threshold. The
+  loader-cache test (RT-062) no longer feeds a fake loader; two public calls
+  per installed owner on a cold cache run the real loader exactly once.
 - `market_order_parameter` and `market_plv` take `backend=`, and the new
   `market_backend()` names the owner; a named owner that is absent raises
   `RuntimeError`. The RT-058–RT-060 substitutes (fake loaders, a fake
