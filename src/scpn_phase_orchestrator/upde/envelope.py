@@ -19,6 +19,11 @@ front-pad of the first valid value. The 1-D path is on the
 5-backend chain; the 2-D ``(T, N)`` batched path stays pure NumPy
 because the Rust FFI is 1-D-only and the vectorised NumPy form is
 already near-optimal at realistic ``N``.
+
+Both public functions take ``backend``. ``"auto"`` uses the chain above. A
+named owner must serve the 1-D call: if it is absent or fails, the call
+raises ``RuntimeError``. :func:`envelope_backend` names the owner a call
+would use.
 """
 
 from __future__ import annotations
@@ -44,6 +49,7 @@ __all__ = [
     "ACTIVE_BACKEND",
     "AVAILABLE_BACKENDS",
     "EnvelopeState",
+    "envelope_backend",
     "envelope_modulation_depth",
     "extract_envelope",
 ]
@@ -197,29 +203,99 @@ def _extract_probe_seconds(name: str) -> float:
 ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
-def _dispatch(fn_name: str) -> object | None:
-    """Return the fastest available backend callables, or ``None`` for Python."""
-    ordered_backends = [ACTIVE_BACKEND] + list(AVAILABLE_BACKENDS)
+_NATIVE_FAILURES = (ImportError, RuntimeError, OSError, KeyError)
+_SLOTS = ("extract", "mod")
+
+
+def _require_known_backend(backend: str) -> None:
+    """Refuse an unknown owner name before any computation."""
+    if backend not in (*_BACKEND_NAMES, "auto"):
+        raise ValueError(f"unknown envelope backend: {backend!r}")
+
+
+def _dispatch(fn_name: str, backend: str = "auto") -> tuple[str, object | None]:
+    """Resolve the owner of ``fn_name`` and its callable.
+
+    Parameters
+    ----------
+    fn_name : str
+        ``"extract"`` or ``"mod"``.
+    backend : str
+        ``"auto"`` or one of ``rust``, ``mojo``, ``julia``, ``go``, ``python``.
+
+    Returns
+    -------
+    tuple[str, object | None]
+        The owner name and its callable, or ``("python", None)`` for the
+        NumPy law.
+
+    Raises
+    ------
+    ValueError
+        If ``backend`` is not a known owner.
+    RuntimeError
+        If an explicitly requested owner is unavailable or lacks ``fn_name``.
+    """
+    _require_known_backend(backend)
+    ordered = [ACTIVE_BACKEND, *AVAILABLE_BACKENDS] if backend == "auto" else [backend]
     seen: set[str] = set()
-    for backend in ordered_backends:
-        if backend in seen:
+    for name in ordered:
+        if name in seen:
             continue
-        seen.add(backend)
-        if backend == "python":
-            return None
+        seen.add(name)
+        if name == "python":
+            return "python", None
         try:
-            fn = _load_backend(backend).get(fn_name)
-        except (ImportError, RuntimeError, OSError, KeyError):
+            fn = _load_backend(name).get(fn_name)
+        except _NATIVE_FAILURES as exc:
+            if backend != "auto":
+                raise RuntimeError(f"envelope backend {name!r} unavailable") from exc
             continue
         if fn is None:
+            if backend != "auto":
+                raise RuntimeError(f"envelope backend {name!r} lacks {fn_name}")
             continue
-        return fn
-    return None
+        return name, fn
+    return "python", None
+
+
+def envelope_backend(slot: str, backend: str = "auto") -> str:
+    """Return the owner that serves one 1-D envelope operation.
+
+    Parameters
+    ----------
+    slot : str
+        ``"extract"`` (sliding-window RMS) or ``"mod"`` (modulation depth).
+    backend : str
+        ``"auto"`` or an explicit owner name.
+
+    Returns
+    -------
+    str
+        ``rust``, ``mojo``, ``julia``, ``go`` or ``python``.
+
+    Raises
+    ------
+    ValueError
+        If ``slot`` or ``backend`` is unknown.
+    RuntimeError
+        If an explicitly requested owner is unavailable or lacks the slot.
+    """
+    if slot not in _SLOTS:
+        raise ValueError(f"unknown envelope operation: {slot!r}")
+    owner, _ = _dispatch(slot, backend)
+    return owner
+
+
+def _owner_failed(owner: str) -> RuntimeError:
+    """Return the refusal raised when an explicitly requested owner fails."""
+    return RuntimeError(f"envelope backend {owner!r} failed")
 
 
 def extract_envelope(
     amplitudes_history: FloatArray,
     window: int = 10,
+    backend: str = "auto",
 ) -> FloatArray:
     """Sliding-window RMS envelope.
 
@@ -229,6 +305,10 @@ def extract_envelope(
         ``(T,)`` or ``(T, N)`` amplitude time series.
     window : int
         RMS window length in samples.
+    backend : str
+        ``"auto"`` or an explicit owner for the 1-D path. A window at least
+        as long as the series, and the 2-D path, use the NumPy law for every
+        owner.
 
     Returns
     -------
@@ -239,8 +319,12 @@ def extract_envelope(
     Raises
     ------
     ValueError
-        If ``window`` is not a positive integer no larger than the history.
+        If ``window`` is not a positive integer no larger than the history,
+        or ``backend`` is unknown.
+    RuntimeError
+        If an explicitly requested owner is unavailable or fails.
     """
+    _require_known_backend(backend)
     if _contains_numeric_string_alias(amplitudes_history):
         raise ValueError("amplitudes_history must not contain numeric-string aliases")
     if _is_numeric_string_alias(window):
@@ -259,13 +343,16 @@ def extract_envelope(
     if amplitudes.ndim == 1:
         if window >= amplitudes.size:
             return _extract_1d_python(amplitudes, int(window))
-        backend_fn = _dispatch("extract")
+        owner, backend_fn = _dispatch("extract", backend)
         if backend_fn is not None:
             fn = cast("Callable[[FloatArray, int], FloatArray]", backend_fn)
-            return validate_extract_envelope_output(
-                fn(amplitudes, int(window)),
-                n=int(amplitudes.size),
-            )
+            try:
+                result = fn(amplitudes, int(window))
+            except _NATIVE_FAILURES as exc:
+                if backend == "auto":
+                    raise
+                raise _owner_failed(owner) from exc
+            return validate_extract_envelope_output(result, n=int(amplitudes.size))
         return _extract_1d_python(amplitudes, int(window))
 
     if amplitudes.ndim != 2:
@@ -283,7 +370,7 @@ def extract_envelope(
     return np.vstack([np.tile(first, (window - 1, 1)), rms])
 
 
-def envelope_modulation_depth(envelope: FloatArray) -> float:
+def envelope_modulation_depth(envelope: FloatArray, backend: str = "auto") -> float:
     """Modulation depth ``(max − min) / (max + min) ∈ [0, 1]``.
 
     Returns ``0.0`` for empty or non-positive envelopes.
@@ -292,6 +379,8 @@ def envelope_modulation_depth(envelope: FloatArray) -> float:
     ----------
     envelope : FloatArray
         An amplitude-envelope time series, shape ``(T,)``.
+    backend : str
+        ``"auto"`` or an explicit owner.
 
     Returns
     -------
@@ -301,17 +390,27 @@ def envelope_modulation_depth(envelope: FloatArray) -> float:
     Raises
     ------
     ValueError
-        If ``envelope`` contains numeric-string aliases.
+        If ``envelope`` contains numeric-string aliases, or ``backend`` is
+        unknown.
+    RuntimeError
+        If an explicitly requested owner is unavailable or fails.
     """
+    _require_known_backend(backend)
     if _contains_numeric_string_alias(envelope):
         raise ValueError("envelope must not contain numeric-string aliases")
     require_real_values(envelope, name="envelope", allow_object=True)
     if envelope.size == 0:
         return 0.0
-    backend_fn = _dispatch("mod")
+    owner, backend_fn = _dispatch("mod", backend)
     if backend_fn is not None:
         fn = cast("Callable[[FloatArray], float]", backend_fn)
-        return validate_envelope_modulation_output(fn(envelope))
+        try:
+            depth = fn(envelope)
+        except _NATIVE_FAILURES as exc:
+            if backend == "auto":
+                raise
+            raise _owner_failed(owner) from exc
+        return validate_envelope_modulation_output(depth)
     flat = envelope.ravel()
     vmax = float(np.max(flat))
     vmin = float(np.min(flat))

@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `extract_envelope` and `envelope_modulation_depth` take `backend=`, and
+  the new `envelope_backend(slot, backend)` names the owner. A named owner
+  that is absent, lacks the operation or fails raises `RuntimeError`; `auto`
+  is unchanged. The RT-034 substitute, which installed a fake `spo_kernel`
+  module, now runs the compiled Rust loader on 2-D and strided input against
+  a plain-loop oracle. `tests/test_envelope_real_runtime.py` calls all five
+  owners by name, with Python-only and Rust-only child profiles. The
+  forced-Python modulation test uses `backend="python"` instead of patching
+  the dispatcher.
 - `entropy_production_rate` takes `backend=`, and the new
   `entropy_production_backend()` names the owner a call would use. `auto`
   keeps the fastest-first chain and its NumPy fallback. A named owner must

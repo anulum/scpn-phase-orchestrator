@@ -213,13 +213,12 @@ def test_public_extract_two_dimensional_global_rms_shape() -> None:
     np.testing.assert_allclose(result, expected)
 
 
-def test_public_modulation_non_positive_python_floor_returns_zero(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
+def test_public_modulation_non_positive_python_floor_returns_zero() -> None:
     """Preserve the documented zero depth for non-positive Python-floor input."""
-    monkeypatch.setattr(envelope_mod, "_dispatch", lambda _fn_name: None)
-
-    assert envelope_modulation_depth(np.array([-3.0, -1.0], dtype=np.float64)) == 0.0
+    depth = envelope_modulation_depth(
+        np.array([-3.0, -1.0], dtype=np.float64), backend="python"
+    )
+    assert depth == 0.0
 
 
 def test_envelope_reference_docs_pin_numeric_string_contracts() -> None:

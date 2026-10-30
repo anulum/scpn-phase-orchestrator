@@ -371,6 +371,25 @@ the submitted 1-D input, while modulation depth must be a finite scalar in
 `[0, 1]`. Optional backend loader/runtime unavailability still falls through to
 the Python implementation; malformed backend physics payloads fail closed.
 
+### Choosing the owner
+
+Both public functions take `backend="auto"`. `auto` uses the probe-selected
+owner and the fallback chain above. A named owner (`"rust"`, `"mojo"`,
+`"julia"`, `"go"` or `"python"`) must serve the 1-D call: if it is absent,
+lacks the operation or fails, the call raises `RuntimeError` (for example
+`envelope backend 'go' unavailable`) instead of using another owner. An
+unknown name raises `ValueError`. A window at least as long as the trace,
+and the 2-D path, use the NumPy law for every owner.
+`envelope_backend("extract" | "mod", backend)` names the owner a call would
+use.
+
+```python
+from scpn_phase_orchestrator.upde.envelope import envelope_backend, extract_envelope
+
+assert envelope_backend("extract", "rust") == "rust"  # raises if Rust is absent
+env = extract_envelope(amplitudes, window=10, backend="rust")
+```
+
 ---
 
 ## 7. Performance Benchmarks
@@ -422,6 +441,11 @@ due to SIMD optimisation in NumPy's C backend.
   Mojo parity plus direct accelerator boundary contracts for invalid inputs,
   empty inputs, global-RMS edge cases, non-positive modulation inputs, and
   malformed Mojo stdout rejection.
+- **Real-runtime tests:** `tests/test_envelope_real_runtime.py` calls every
+  owner by name against plain-loop oracles (RMS within `1e-12` relative plus
+  the bounded cumulative-sum rounding, depth within `1e-12`), and runs
+  Python-only and Rust-only child-process profiles in which absent owners
+  refuse by name.
 - **Source lines:** 168 (Rust) + 75 (Python) = 243 total
 
 ---
