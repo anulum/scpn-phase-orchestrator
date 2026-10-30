@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The order-parameter loader, probe, cache and resolver tests (RT-067–RT-070)
+  no longer use fake `spo_kernel` symbols, a fake Python kernel, fake
+  loaders or a patched resolver. They run the compiled Rust kernels against
+  `cmath` oracles for R, ψ, PLV and layer coherence, profile the Python probe
+  (one call, finite time), count real loader runs on a cold cache, and check
+  that resolution lists exactly the working real loaders before Python.
 - `ordinal_pattern_sequence` and `transition_entropy` take `backend=`, and
   the new `opt_entropy_backend(slot, backend)` names the owner; a named
   owner that is absent, lacks the kernel or fails raises `RuntimeError`.

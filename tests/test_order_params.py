@@ -17,8 +17,10 @@ invariants. Per-backend parity lives in
 
 from __future__ import annotations
 
-import sys
-import types
+import cmath
+import cProfile
+from collections.abc import Callable
+from typing import cast
 
 import numpy as np
 import pytest
@@ -432,32 +434,34 @@ class TestLayerCoherence:
 
 
 class TestDispatcher:
-    def test_rust_loader_maps_spo_kernel_symbols(self, monkeypatch) -> None:
+    @pytest.mark.native_runtime
+    def test_rust_loader_maps_spo_kernel_symbols(self) -> None:
+        """The compiled Rust loader maps kernels that follow the three laws."""
         import scpn_phase_orchestrator.upde.order_params as op_mod
 
-        def order_parameter(phases: np.ndarray) -> tuple[float, float]:
-            return float(phases.size), 0.0
-
-        def plv(a: np.ndarray, b: np.ndarray) -> float:
-            return float(a.size == b.size)
-
-        def compute_layer_coherence_rust(
-            phases: np.ndarray, indices: np.ndarray
-        ) -> float:
-            return float(indices.size) / max(float(phases.size), 1.0)
-
-        fake_spo_kernel = types.ModuleType("spo_kernel")
-        fake_spo_kernel.order_parameter = order_parameter
-        fake_spo_kernel.plv = plv
-        fake_spo_kernel.compute_layer_coherence_rust = compute_layer_coherence_rust
-        monkeypatch.setitem(sys.modules, "spo_kernel", fake_spo_kernel)
-
+        if "rust" not in op_mod.AVAILABLE_BACKENDS:
+            pytest.skip("rust unavailable")
         loaded = op_mod._load_rust_fns()
+        rng = np.random.default_rng(61)
+        phases = rng.uniform(-np.pi, np.pi, 11)
+        other = rng.uniform(-np.pi, np.pi, 11)
+        indices = np.array([0, 3, 4, 9], dtype=np.int64)
 
-        phases = np.arange(4.0)
-        assert loaded["order_parameter"](phases) == (4.0, 0.0)
-        assert loaded["plv"](phases, phases) == 1.0
-        assert loaded["layer_coherence"](phases, np.array([0, 2])) == 0.5
+        mean = sum(cmath.exp(1j * v) for v in phases.tolist()) / 11
+        r, psi = cast(
+            "Callable[[np.ndarray], tuple[float, float]]", loaded["order_parameter"]
+        )(phases)
+        assert r == pytest.approx(abs(mean), abs=1e-12)
+        gap = (psi - cmath.phase(mean) + np.pi) % (2 * np.pi) - np.pi
+        assert abs(gap) < 1e-12
+        diffs = (a - b for a, b in zip(phases.tolist(), other.tolist(), strict=True))
+        plv = abs(sum(cmath.exp(1j * d) for d in diffs) / 11)
+        assert cast("Callable[..., float]", loaded["plv"])(
+            phases, other
+        ) == pytest.approx(plv, abs=1e-12)
+        layer = abs(sum(cmath.exp(1j * phases[k]) for k in indices.tolist()) / 4)
+        got = cast("Callable[..., float]", loaded["layer_coherence"])(phases, indices)
+        assert got == pytest.approx(layer, abs=1e-12)
 
     def test_python_is_always_available(self) -> None:
         assert "python" in AVAILABLE_BACKENDS
@@ -471,23 +475,24 @@ class TestDispatcher:
         indices = [canonical.index(b) for b in AVAILABLE_BACKENDS]
         assert indices == sorted(indices)
 
-    def test_order_parameter_probe_uses_python_path(self, monkeypatch) -> None:
+    def test_order_parameter_probe_uses_python_path(self) -> None:
+        """The Python probe runs the NumPy order parameter once and is finite."""
         import scpn_phase_orchestrator.upde.order_params as op_mod
 
-        observed: dict[str, int] = {}
-
-        def fake_python_order_parameter(phases: np.ndarray) -> tuple[float, float]:
-            observed["n"] = phases.size
-            return 0.0, 0.0
-
-        monkeypatch.setattr(
-            op_mod, "_python_order_parameter", fake_python_order_parameter
+        profile = cProfile.Profile()
+        profile.enable()
+        try:
+            elapsed = op_mod._order_parameter_probe_seconds("python")
+        finally:
+            profile.disable()
+        calls = sum(
+            entry.callcount
+            for entry in profile.getstats()
+            if not isinstance(entry.code, str)
+            and entry.code.co_name == "_python_order_parameter"
         )
-
-        elapsed = op_mod._order_parameter_probe_seconds("python")
-
-        assert elapsed != float("inf")
-        assert observed["n"] == 256
+        assert calls == 1
+        assert 0.0 <= elapsed < float("inf")
 
     def test_resolve_backends_falls_back_to_python_if_optional_backends_fail(
         self, monkeypatch
@@ -529,30 +534,33 @@ class TestDispatcher:
         assert fn(np.array([0.0, 1.0], dtype=np.float64)) == (0.75, 0.0)
         assert calls == {"rust": 1, "go": 1}
 
+    @pytest.mark.native_runtime
+    @pytest.mark.parametrize("owner", ["rust", "mojo", "julia", "go"])
     def test_dispatch_uses_cached_loader_once(
-        self, monkeypatch: pytest.MonkeyPatch
+        self, owner: str, monkeypatch: pytest.MonkeyPatch
     ) -> None:
+        """On a cold cache two loads of an installed owner run its loader once."""
         import scpn_phase_orchestrator.upde.order_params as op_mod
 
-        calls: dict[str, int] = {"go": 0}
-
-        def _ok_go() -> dict[str, object]:
-            calls["go"] += 1
-            return {
-                "order_parameter": lambda phases: (0.5, 0.0),
-                "plv": lambda a, b: 0.5,
-                "layer_coherence": lambda phases, idx: 0.5,
-            }
-
+        if owner not in op_mod.AVAILABLE_BACKENDS:
+            pytest.skip(f"{owner} unavailable")
         monkeypatch.setattr(op_mod, "_BACKEND_CACHE", {})
-        monkeypatch.setattr(op_mod, "ACTIVE_BACKEND", "go")
-        monkeypatch.setattr(op_mod, "AVAILABLE_BACKENDS", ["go", "python"])
-        monkeypatch.setattr(op_mod, "_LOADERS", {"go": _ok_go})
-
-        op_mod._dispatch("order_parameter")
-        op_mod._dispatch("plv")
-
-        assert calls["go"] == 1
+        profile = cProfile.Profile()
+        profile.enable()
+        try:
+            first = op_mod._load_backend(owner)
+            second = op_mod._load_backend(owner)
+        finally:
+            profile.disable()
+        loads = sum(
+            entry.callcount
+            for entry in profile.getstats()
+            if not isinstance(entry.code, str)
+            and entry.code.co_name == f"_load_{owner}_fns"
+        )
+        assert loads == 1
+        assert first is second
+        assert set(first) == {"order_parameter", "plv", "layer_coherence"}
 
     def test_dispatch_returns_none_when_active_backend_symbol_missing(
         self, monkeypatch
@@ -577,33 +585,23 @@ class TestDispatcher:
 
         assert elapsed == float("inf")
 
-    def test_resolve_backends_keeps_working_backend_before_python(
-        self, monkeypatch
-    ) -> None:
+    def test_resolve_backends_keeps_working_backend_before_python(self) -> None:
+        """Resolution lists the working real loaders in order, then Python."""
         import scpn_phase_orchestrator.upde.order_params as op_mod
 
-        def fake_loader(name: str) -> dict[str, object]:
-            if name == "rust":
-                return {
-                    "order_parameter": lambda phases: (
-                        float(phases.size),
-                        float(phases[0]),
-                    )
-                }
-            raise ImportError(name)
-
-        monkeypatch.setattr(op_mod, "_BACKEND_NAMES", ("rust", "mojo", "python"))
-        monkeypatch.setattr(op_mod, "_load_backend", fake_loader)
-        monkeypatch.setattr(
-            op_mod,
-            "_order_parameter_probe_seconds",
-            lambda name: 0.0 if name == "rust" else 1.0,
-        )
+        loadable = []
+        for name in ("rust", "mojo", "julia", "go"):
+            try:
+                op_mod._LOADERS[name]()
+            except (ImportError, RuntimeError, OSError, KeyError):
+                continue
+            loadable.append(name)
 
         active, available = op_mod._resolve_backends()
 
-        assert active == "rust"
-        assert available == ["rust", "python"]
+        assert available == [*loadable, "python"]
+        assert active in available
+        assert op_mod._order_parameter_probe_seconds(active) < float("inf")
 
     def test_dispatch_falls_through_when_active_backend_has_no_symbol(
         self, monkeypatch
