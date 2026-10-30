@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The SSGF free-energy helpers (`add_langevin_noise`, `boltzmann_weight`,
+  `effective_temperature`) take `backend=`, and `free_energy_backend()`
+  names the owner. Naming Rust without its kernels raises `RuntimeError`;
+  Rust with a caller `rng` is a `ValueError`. The RT-038–RT-040 substitutes,
+  which swapped in fake Rust functions, now call the compiled kernels:
+  Langevin noise is checked for shape, variance and fresh seeding, the
+  Boltzmann weight against `math.exp` with the clamp and T = 0 law, and the
+  effective temperature on a 2-D history against `statistics`.
+  `tests/test_free_energy_real_runtime.py` runs both owners and the
+  Python-only and Rust-only child profiles.
 - The RT-037 probe test no longer injects a fake `juliacall` module. It
   calls `require_julia_main()` on the real installation: with `juliacall`
   present the result is the runtime's own `Main` and evaluates

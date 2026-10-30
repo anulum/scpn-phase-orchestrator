@@ -14,6 +14,10 @@ edge semantics: non-positive temperature or time step returns an unchanged copy
 for Langevin noise, zero-temperature Boltzmann evaluation is explicit, and short
 or near-zero cost histories report zero effective temperature. Optional Rust
 kernels mirror those public contracts.
+
+Each function takes ``backend``: ``"auto"`` uses Rust when ``spo_kernel`` is
+installed, ``"rust"`` requires it (``RuntimeError`` otherwise) and
+``"python"`` runs the NumPy law. :func:`free_energy_backend` names the owner.
 """
 
 from __future__ import annotations
@@ -38,7 +42,45 @@ try:
 except ImportError:
     _HAS_RUST = False
 
-__all__ = ["add_langevin_noise", "boltzmann_weight", "effective_temperature"]
+__all__ = [
+    "add_langevin_noise",
+    "boltzmann_weight",
+    "effective_temperature",
+    "free_energy_backend",
+]
+
+_BACKEND_NAMES = ("rust", "python")
+
+
+def free_energy_backend(backend: str = "auto") -> str:
+    """Return the owner of the free-energy kernels.
+
+    Parameters
+    ----------
+    backend : str
+        ``"auto"`` (Rust when ``spo_kernel`` is installed, else Python),
+        ``"rust"`` or ``"python"``.
+
+    Returns
+    -------
+    str
+        ``"rust"`` or ``"python"``.
+
+    Raises
+    ------
+    ValueError
+        If ``backend`` is not a known owner.
+    RuntimeError
+        If ``"rust"`` is requested and the Rust kernels are not installed.
+    """
+    if backend not in (*_BACKEND_NAMES, "auto"):
+        raise ValueError(f"unknown free-energy backend: {backend!r}")
+    if backend == "auto":
+        return "rust" if _HAS_RUST else "python"
+    if backend == "rust" and not _HAS_RUST:
+        raise RuntimeError("free-energy backend 'rust' unavailable")
+    return backend
+
 
 FloatArray: TypeAlias = NDArray[np.float64]
 
@@ -58,6 +100,7 @@ def add_langevin_noise(
     temperature: float,
     dt: float,
     rng: np.random.Generator | None = None,
+    backend: str = "auto",
 ) -> FloatArray:
     """Add Langevin stochastic noise to a z-space vector.
 
@@ -77,7 +120,10 @@ def add_langevin_noise(
     dt : float
         Integration step size.
     rng : np.random.Generator | None
-        NumPy random generator, or ``None``.
+        NumPy random generator, or ``None``. A generator selects the NumPy
+        law under ``"auto"``; the Rust kernel draws its own seeded noise.
+    backend : str
+        ``"auto"``, ``"rust"`` or ``"python"``.
 
     Returns
     -------
@@ -87,14 +133,20 @@ def add_langevin_noise(
     Raises
     ------
     ValueError
-        If ``temperature`` or ``dt`` is not finite.
+        If ``temperature`` or ``dt`` is not finite, the backend name is
+        unknown, or ``rng`` is given with ``backend="rust"``.
+    RuntimeError
+        If ``"rust"`` is requested and the Rust kernels are not installed.
     """
+    owner = free_energy_backend(backend)
+    if backend == "rust" and rng is not None:
+        raise ValueError("rng is only supported by the python backend")
     _require_finite(temperature, "temperature")
     _require_finite(dt, "dt")
     if temperature <= 0.0 or dt <= 0.0:
         return z.copy()
 
-    if _HAS_RUST and rng is None:
+    if owner == "rust" and rng is None:
         flat: FloatArray = np.ascontiguousarray(z.ravel(), dtype=np.float64)
         # A fresh seed per call: a fixed seed returned the same "noise" on
         # every step, while the NumPy path drew new noise each time.
@@ -114,7 +166,9 @@ def add_langevin_noise(
     return result
 
 
-def boltzmann_weight(u_total: float, temperature: float) -> float:
+def boltzmann_weight(
+    u_total: float, temperature: float, backend: str = "auto"
+) -> float:
     """Boltzmann factor exp(-U/T) for a given total energy and temperature.
 
     Clamps exponent to [-700, 700] to avoid over/underflow.
@@ -126,6 +180,8 @@ def boltzmann_weight(u_total: float, temperature: float) -> float:
         Total exogenous input.
     temperature : float
         Annealing temperature.
+    backend : str
+        ``"auto"``, ``"rust"`` or ``"python"``.
 
     Returns
     -------
@@ -135,12 +191,16 @@ def boltzmann_weight(u_total: float, temperature: float) -> float:
     Raises
     ------
     ValueError
-        If ``u_total`` or ``temperature`` is not finite. With NaN the NumPy
-        path clamped the exponent to +700 and returned the largest weight.
+        If ``u_total`` or ``temperature`` is not finite, or the backend name
+        is unknown. With NaN the NumPy path clamped the exponent to +700 and
+        returned the largest weight.
+    RuntimeError
+        If ``"rust"`` is requested and the Rust kernels are not installed.
     """
+    owner = free_energy_backend(backend)
     _require_finite(u_total, "u_total")
     _require_finite(temperature, "temperature")
-    if _HAS_RUST:
+    if owner == "rust":
         return float(_rust_boltzmann(u_total, temperature))
     if temperature <= 0.0:
         return 1.0 if u_total <= 0.0 else 0.0
@@ -149,7 +209,7 @@ def boltzmann_weight(u_total: float, temperature: float) -> float:
     return float(np.exp(exponent))
 
 
-def effective_temperature(costs_history: FloatArray) -> float:
+def effective_temperature(costs_history: FloatArray, backend: str = "auto") -> float:
     """Estimate effective temperature from cost fluctuations.
 
     T_eff = Var(U) / (2 · <U>)
@@ -163,16 +223,26 @@ def effective_temperature(costs_history: FloatArray) -> float:
     Parameters
     ----------
     costs_history : FloatArray
-        Per-iteration cost history.
+        Per-iteration cost history; a 2-D history is taken in row order.
+    backend : str
+        ``"auto"``, ``"rust"`` or ``"python"``.
 
     Returns
     -------
     float
         Effective temperature from cost fluctuations.
+
+    Raises
+    ------
+    ValueError
+        If the backend name is unknown.
+    RuntimeError
+        If ``"rust"`` is requested and the Rust kernels are not installed.
     """
+    owner = free_energy_backend(backend)
     if len(costs_history) < 2:
         return 0.0
-    if _HAS_RUST:
+    if owner == "rust":
         c: FloatArray = np.ascontiguousarray(costs_history, dtype=np.float64).ravel()
         return float(_rust_teff(c))
     var = float(np.var(costs_history, ddof=1))

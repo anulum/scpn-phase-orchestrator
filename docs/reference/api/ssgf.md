@@ -79,6 +79,13 @@ configured SSGF stability envelope.
 Variational free-energy primitives shared by the SSGF monitors and predictive
 supervisor paths.
 
+`add_langevin_noise`, `boltzmann_weight` and `effective_temperature` take
+`backend="auto"`; `free_energy_backend()` names the owner. `auto` uses the
+Rust kernels when `spo_kernel` is installed. `backend="rust"` requires them
+and raises `RuntimeError("free-energy backend 'rust' unavailable")` without
+them; it also refuses a caller `rng`, because the Rust kernel seeds its own
+noise. `backend="python"` runs the NumPy law.
+
 ::: scpn_phase_orchestrator.ssgf.free_energy
 
 ## Architecture & Theory
