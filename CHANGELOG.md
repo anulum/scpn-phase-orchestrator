@@ -37,6 +37,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   removed `.coverage.go` and `.coverage.mojo`, so both lane coverage artifacts
   went missing and the coverage guard could not start. Both steps now write
   to their lane's data file.
+- The dimension unit had added branch floors to the line-coverage threshold
+  file, whose guard reads line-only data and therefore refused on every run.
+  The same six 100 % branch floors already live in the branch threshold file,
+  which the branch-profile guard enforces, so the duplicate section is
+  removed. No floor is lowered.
 
 ### Security
 
