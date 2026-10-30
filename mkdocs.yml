@@ -54,6 +54,7 @@ theme:
 
 nav:
   - Home: index.md
+  - Group and Project Map: group_map.md
   - Getting Started:
       - Onboarding Handbook: getting-started/onboarding.md
       - Executive Overview: getting-started/executive_overview.md

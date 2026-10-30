@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SPDX-License-Identifier: AGPL-3.0-or-later -->
+<!-- © Concepts 1996–2026 Miroslav Šotek. All rights reserved. -->
+<!-- © Code 2020–2026 Miroslav Šotek. All rights reserved. -->
+<!-- SCPN Systems Integration and Control — group map -->
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1040" viewBox="0 0 1600 1040" role="img" aria-labelledby="title desc">
+  <title id="title">SCPN Systems Integration and Control: group map</title>
+  <desc id="desc">Four projects. SCPN Phase Orchestrator analyses coupled rhythms and seals the evidence. SCPN Control builds fusion control loops on it. SCPN Studio Platform is the shared studio SDK and evidence standard. SCPN Studio Hub federates the studios. Solid arrows are required package dependencies, dashed arrows are optional install extras, and the dotted line marks the Control studio panel the Hub hosts.</desc>
+  <defs>
+    <marker id="solid" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#1f3a5f"/>
+    </marker>
+    <marker id="dashed" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#5b7a99"/>
+    </marker>
+    <style>
+      .title { font: 700 34px "DejaVu Sans", Arial, sans-serif; fill: #10233a; }
+      .subtitle { font: 400 19px "DejaVu Sans", Arial, sans-serif; fill: #3a4b5c; }
+      .name { font: 700 25px "DejaVu Sans", Arial, sans-serif; fill: #10233a; }
+      .role { font: 400 17px "DejaVu Sans", Arial, sans-serif; fill: #24364a; }
+      .status { font: 600 15px "DejaVu Sans", Arial, sans-serif; fill: #6b4e00; }
+      .edge { font: 400 15px "DejaVu Sans", Arial, sans-serif; fill: #24364a; }
+      .legend { font: 400 16px "DejaVu Sans", Arial, sans-serif; fill: #24364a; }
+      .box { fill: #f4f7fb; stroke: #1f3a5f; stroke-width: 2.5; }
+      .sdk { fill: #eef6ef; stroke: #2f6b3a; stroke-width: 2.5; }
+      .hub { fill: #fbf3ea; stroke: #8a5a1f; stroke-width: 2.5; }
+      .req { stroke: #1f3a5f; stroke-width: 3; fill: none; }
+      .opt { stroke: #5b7a99; stroke-width: 2.5; fill: none; stroke-dasharray: 10 7; }
+      .host { stroke: #8a5a1f; stroke-width: 2.5; fill: none; stroke-dasharray: 2 6; stroke-linecap: round; }
+    </style>
+  </defs>
+  <rect width="1600" height="1040" fill="#ffffff"/>
+  <text x="60" y="70" class="title">SCPN Systems Integration and Control</text>
+  <text x="60" y="104" class="subtitle">Four projects, one group. Lines show declared package relationships only; they are not runtime validation.</text>
+
+  <!-- SPO -->
+  <rect x="60" y="160" width="620" height="230" rx="18" class="box"/>
+  <text x="90" y="205" class="name">SCPN Phase Orchestrator (SPO)</text>
+  <text x="90" y="242" class="role">Turns repeating signals into phase, detects drift into or</text>
+  <text x="90" y="266" class="role">out of synchrony, and seals the evidence for replay.</text>
+  <text x="90" y="290" class="role">Python library and CLI with a Rust kernel (spo-kernel) and</text>
+  <text x="90" y="314" class="role">optional Go, Julia and Mojo backends.</text>
+  <text x="90" y="356" class="status">Released on PyPI: 1.4.3 · public repository</text>
+
+  <!-- CONTROL -->
+  <rect x="920" y="160" width="620" height="230" rx="18" class="box"/>
+  <text x="950" y="205" class="name">SCPN Control</text>
+  <text x="950" y="242" class="role">Research-grade control and validation for fusion plasma</text>
+  <text x="950" y="266" class="role">control loops: stochastic Petri-net controllers with</text>
+  <text x="950" y="290" class="role">runtime contracts and equilibrium, transport, disruption</text>
+  <text x="950" y="314" class="role">and hardware-in-the-loop evidence gates.</text>
+  <text x="950" y="356" class="status">Released on PyPI: 0.23.0 (alpha) · public repository</text>
+
+  <!-- PLATFORM -->
+  <rect x="60" y="640" width="620" height="230" rx="18" class="sdk"/>
+  <text x="90" y="685" class="name">SCPN Studio Platform</text>
+  <text x="90" y="722" class="role">Domain-neutral SDK for standalone scientific studios:</text>
+  <text x="90" y="746" class="role">capability manifests, evidence bundles, claim boundaries</text>
+  <text x="90" y="770" class="role">and the federation gate. Every studio builds on it.</text>
+  <text x="90" y="812" class="status">Released on PyPI: 0.11.3 · source not public</text>
+
+  <!-- HUB -->
+  <rect x="920" y="640" width="620" height="230" rx="18" class="hub"/>
+  <text x="950" y="685" class="name">SCPN Studio Hub</text>
+  <text x="950" y="722" class="role">Federating Hub: catalogues the studios, audits their</text>
+  <text x="950" y="746" class="role">evidence across domains, renders every claim at its true</text>
+  <text x="950" y="770" class="role">boundary and gates execution by the contract's rules.</text>
+  <text x="950" y="812" class="status">In development (0.1.0, alpha) · not publicly released</text>
+
+  <!-- Control -> SPO (required) -->
+  <path d="M920,250 L690,250" class="req" marker-end="url(#solid)"/>
+  <text x="712" y="236" class="edge">requires SPO (1.4.x)</text>
+  <!-- SPO -> Control (optional plasma extra) -->
+  <path d="M690,310 L910,310" class="opt" marker-end="url(#dashed)"/>
+  <text x="712" y="340" class="edge">optional extra "plasma"</text>
+  <!-- SPO -> Platform (optional studio extra) -->
+  <path d="M300,400 L300,630" class="opt" marker-end="url(#dashed)"/>
+  <text x="315" y="520" class="edge">optional extra "studio"</text>
+  <!-- Control -> Platform (optional studio extra) -->
+  <path d="M1000,400 C900,520 760,600 690,660" class="opt" marker-end="url(#dashed)"/>
+  <text x="975" y="470" class="edge">optional extra "studio"</text>
+  <!-- Hub -> Platform (required) -->
+  <path d="M920,755 L690,755" class="req" marker-end="url(#solid)"/>
+  <text x="712" y="740" class="edge">requires the SDK (0.11.x)</text>
+  <!-- Hub hosts the Control studio panel -->
+  <path d="M1400,630 L1400,400" class="host"/>
+  <text x="1415" y="520" class="edge">hosts the Control</text>
+  <text x="1415" y="542" class="edge">studio panel</text>
+
+  <!-- Legend -->
+  <rect x="60" y="920" width="1480" height="90" rx="12" fill="#f8f9fb" stroke="#c9d3de"/>
+  <path d="M90,955 L170,955" class="req" marker-end="url(#solid)"/>
+  <text x="185" y="961" class="legend">required package dependency</text>
+  <path d="M520,955 L600,955" class="opt" marker-end="url(#dashed)"/>
+  <text x="615" y="961" class="legend">optional install extra</text>
+  <path d="M900,955 L980,955" class="host"/>
+  <text x="995" y="961" class="legend">user-interface hosting, no package dependency</text>
+  <text x="90" y="993" class="legend">Status is the published package version or the repository state; it does not certify scientific validity or hardware qualification.</text>
+</svg>

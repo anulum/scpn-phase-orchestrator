@@ -272,6 +272,22 @@ withdrawn; it is **not** a validated general tipping-point predictor.
 | ML researcher | [Differentiable Kuramoto](docs/guide/differentiable_kuramoto.md) | use JAX layers, SAF loss, inverse coupling, and accelerator checks |
 | Reviewer | [Release Hygiene](docs/RELEASE_HYGIENE.md) | verify docs, benchmarks, CI, security, and release evidence |
 
+## Group and Project Map
+
+SPO is one of four projects in **SCPN Systems Integration and Control**:
+
+| Project | Function | Status |
+|---------|----------|--------|
+| SCPN Phase Orchestrator (this repository) | Phase and synchronisation analysis with sealed, replayable evidence | PyPI 1.4.3 |
+| [SCPN Control](https://github.com/anulum/scpn-control) | Fusion plasma control loops built on SPO, with physics and hardware-in-the-loop evidence gates | PyPI 0.23.0, alpha |
+| SCPN Studio Platform | Shared SDK and evidence standard for scientific studios | PyPI 0.11.3; source not public |
+| SCPN Studio Hub | Federating Hub that audits and renders studio evidence | In development; not publicly released |
+
+The [group map](docs/group_map.md) shows the declared package relationships
+between them ([SVG](docs/assets/scpn_siac_group_map.svg),
+[PNG](docs/assets/scpn_siac_group_map.png)). Its arrows are packaging
+relationships, not runtime validation.
+
 ## Evaluate It in This Order
 
 The repository is large because it covers modelling, supervision, evidence,
@@ -356,7 +372,7 @@ inside a dashboard or notebook; it turns them into inspectable artefacts.
 | Rust kernel files | 132 |
 | Optional extras | 24 |
 | Python test files | 1114 |
-| Public documentation pages | 244 |
+| Public documentation pages | 245 |
 | GitHub Actions workflows | 19 |
 
 Evidence boundary: this snapshot is a static inventory. Performance, coverage, hardware, and scientific-fidelity claims require their own committed evidence artifacts.
