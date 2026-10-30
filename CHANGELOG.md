@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The torus-integrator loader tests (RT-041, RT-042) no longer install fake
+  `spo_kernel`, `juliacall` or backend modules. They call the real Rust,
+  Mojo, Julia and Go loaders and check each returned kernel, with and
+  without phase lags, against a plain-loop `cmath` phasor oracle within
+  1e-10 (wrapped angular distance).
 - The SSGF free-energy helpers (`add_langevin_noise`, `boltzmann_weight`,
   `effective_temperature`) take `backend=`, and `free_energy_backend()`
   names the owner. Naming Rust without its kernels raises `RuntimeError`;

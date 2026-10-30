@@ -19,10 +19,9 @@ enough for sub-``1e-12`` agreement after 50 steps.
 
 from __future__ import annotations
 
+import cmath
 import contextlib
 import math
-import sys
-import types
 from collections.abc import Callable
 from pathlib import Path
 
@@ -71,6 +70,7 @@ DIRECT_BACKENDS = (torus_run_go, torus_run_julia, torus_run_mojo)
 
 
 def test__geometric_validation_helper_is_directly_linked_to_backend_tests() -> None:
+    """The shared validation helper module is exercised directly by these tests."""
     assert callable(geometric_validation.validate_torus_inputs)
     assert callable(geometric_validation.validate_torus_output)
 
@@ -122,6 +122,8 @@ def _run_backend(
 
 
 class TestDirectMojoBoundaryContracts:
+    """The direct Mojo runner validates its raw output."""
+
     @pytest.mark.parametrize(
         ("stdout", "match"),
         [
@@ -139,6 +141,7 @@ class TestDirectMojoBoundaryContracts:
         stdout: str,
         match: str,
     ) -> None:
+        """Malformed Mojo executable output is refused."""
         monkeypatch.setattr(_geometric_mojo, "_ensure_exe", lambda: "geometric")
         monkeypatch.setattr(
             _geometric_mojo.subprocess,
@@ -155,6 +158,8 @@ class TestDirectMojoBoundaryContracts:
 
 
 class TestDirectBackendBoundaryContracts:
+    """Direct Go/Julia/Mojo adapters validate inputs before loading runtimes."""
+
     @pytest.mark.parametrize("backend", DIRECT_BACKENDS)
     @pytest.mark.parametrize(
         ("index", "replacement"),
@@ -427,6 +432,7 @@ class TestDirectBackendBoundaryContracts:
         self,
         backend: DirectBackend,
     ) -> None:
+        """Zero steps only wraps the phases, without loading a runtime."""
         payload = list(_direct_payload())
         payload[0] = np.array([-0.25, 0.0, TWO_PI + 0.5, 8.0, -TWO_PI])
         payload[8] = 0
@@ -434,27 +440,34 @@ class TestDirectBackendBoundaryContracts:
 
 
 class TestAlphaZero:
+    """Owners agree with the NumPy law without phase lags."""
+
     def test_rust(self):
+        """Rust agrees with the NumPy law."""
         ref = _run_backend("python", 0)
         got = _run_backend("rust", 0)
         assert np.max(np.abs(got - ref)) < TOL_EXPANSION
 
     def test_julia(self):
+        """Julia agrees with the NumPy law."""
         ref = _run_backend("python", 1)
         got = _run_backend("julia", 1)
         assert np.max(np.abs(got - ref)) < TOL_EXPANSION
 
     def test_go(self):
+        """Go agrees with the NumPy law."""
         ref = _run_backend("python", 2)
         got = _run_backend("go", 2)
         assert np.max(np.abs(got - ref)) < TOL_EXPANSION
 
     def test_mojo(self):
+        """Mojo agrees with the NumPy law."""
         ref = _run_backend("python", 3, n=5)
         got = _run_backend("mojo", 3, n=5)
         assert np.max(np.abs(got - ref)) < TOL_ATAN2
 
     def test_mojo_wraps_negative_zero_roundoff_to_zero(self):
+        """Mojo wraps a negative round-off phase to zero."""
         if "mojo" not in g_mod.AVAILABLE_BACKENDS:
             pytest.skip("backend 'mojo' unavailable")
         phases = np.array([0.5, 2.0, 5.0])
@@ -481,23 +494,30 @@ class TestAlphaZero:
 
 
 class TestAlphaNonZero:
+    """Owners agree with the NumPy law with phase lags."""
+
     def test_rust(self):
+        """Rust agrees with the NumPy law."""
         ref = _run_backend("python", 4, alpha_nonzero=True, zeta=0.5, psi=1.2)
         got = _run_backend("rust", 4, alpha_nonzero=True, zeta=0.5, psi=1.2)
         assert np.max(np.abs(got - ref)) < TOL_ATAN2
 
     def test_julia(self):
+        """Julia agrees with the NumPy law."""
         ref = _run_backend("python", 5, alpha_nonzero=True, zeta=0.5, psi=1.2)
         got = _run_backend("julia", 5, alpha_nonzero=True, zeta=0.5, psi=1.2)
         assert np.max(np.abs(got - ref)) < TOL_ATAN2
 
     def test_go(self):
+        """Go agrees with the NumPy law."""
         ref = _run_backend("python", 6, alpha_nonzero=True, zeta=0.5, psi=1.2)
         got = _run_backend("go", 6, alpha_nonzero=True, zeta=0.5, psi=1.2)
         assert np.max(np.abs(got - ref)) < TOL_ATAN2
 
 
 class TestHypothesisParity:
+    """Seeded random problems agree across owners."""
+
     @given(
         n=st.integers(min_value=3, max_value=8),
         seed=st.integers(min_value=0, max_value=2**31 - 1),
@@ -508,6 +528,7 @@ class TestHypothesisParity:
         suppress_health_check=[HealthCheck.too_slow],
     )
     def test_rust_hypothesis(self, n, seed):
+        """Rust agrees with the NumPy law on random problems."""
         if "rust" not in g_mod.AVAILABLE_BACKENDS:
             pytest.skip("rust unavailable")
         ref = _run_backend("python", seed, n=n)
@@ -524,6 +545,7 @@ class TestHypothesisParity:
         suppress_health_check=[HealthCheck.too_slow],
     )
     def test_go_hypothesis(self, n, seed):
+        """Go agrees with the NumPy law on random problems."""
         if "go" not in g_mod.AVAILABLE_BACKENDS:
             pytest.skip("go unavailable")
         ref = _run_backend("python", seed, n=n)
@@ -531,101 +553,126 @@ class TestHypothesisParity:
         assert np.max(np.abs(got - ref)) < TOL_EXPANSION
 
 
-class TestBackendLoaderContracts:
-    def test_rust_loader_returns_float64_torus_phases(self, monkeypatch):
-        calls = {}
-
-        def torus_run_rust(
-            phases, omegas, knm_flat, alpha_flat, n, zeta, psi, dt, n_steps
-        ):
-            calls["params"] = (n, zeta, psi, dt, n_steps)
-            calls["contiguous"] = (
-                phases.flags.c_contiguous,
-                omegas.flags.c_contiguous,
-                knm_flat.flags.c_contiguous,
-                alpha_flat.flags.c_contiguous,
+def _oracle_torus(
+    phases: list[float],
+    omegas: list[float],
+    knm: list[list[float]],
+    alpha: list[list[float]],
+    zeta: float,
+    psi: float,
+    dt: float,
+    n_steps: int,
+) -> list[float]:
+    """Rotate unit phasors by the Kuramoto rate with ``cmath``, in plain loops."""
+    n = len(phases)
+    z = [cmath.exp(1j * theta) for theta in phases]
+    for _ in range(n_steps):
+        theta = [cmath.phase(zi) for zi in z]
+        rates = [
+            omegas[i]
+            + math.fsum(
+                knm[i][j] * math.sin(theta[j] - theta[i] - alpha[i][j])
+                for j in range(n)
             )
-            return phases + dt * n_steps * omegas + zeta * np.sin(psi - phases)
+            + zeta * math.sin(psi - theta[i])
+            for i in range(n)
+        ]
+        z = [zi * cmath.exp(1j * rate * dt) for zi, rate in zip(z, rates, strict=True)]
+        z = [zi / abs(zi) for zi in z]
+    return [cmath.phase(zi) % TWO_PI for zi in z]
 
-        fake_spo = types.ModuleType("spo_kernel")
-        fake_spo.torus_run_rust = torus_run_rust
-        monkeypatch.setitem(sys.modules, "spo_kernel", fake_spo)
 
-        fn = g_mod._load_rust_fn()
-        phases = np.array([0.1, 0.3], dtype=np.float64)
-        omegas = np.array([1.0, -0.5], dtype=np.float64)
-        knm_flat = np.zeros(4, dtype=np.float64)
-        alpha_flat = np.zeros(4, dtype=np.float64)
+def _circular_gap(got: np.ndarray, expected: list[float]) -> float:
+    """Return the largest wrapped angular distance between two phase vectors."""
+    diff = (np.asarray(got) - np.asarray(expected) + np.pi) % TWO_PI - np.pi
+    return float(np.max(np.abs(diff)))
 
-        got = fn(phases, omegas, knm_flat, alpha_flat, 2, 0.2, 1.1, 0.01, 5)
 
-        np.testing.assert_allclose(
-            got,
-            phases + 0.05 * omegas + 0.2 * np.sin(1.1 - phases),
-        )
-        assert got.dtype == np.float64
-        assert calls == {
-            "params": (2, 0.2, 1.1, 0.01, 5),
-            "contiguous": (True, True, True, True),
-        }
+class TestBackendLoaderContracts:
+    """The real loaders return kernels that integrate the torus law."""
 
+    @staticmethod
+    def _case(alpha_nonzero: bool) -> tuple[np.ndarray, ...]:
+        """Return phases, frequencies and flat coupling and lag matrices."""
+        rng = np.random.default_rng(11)
+        n = 5
+        phases = rng.uniform(0.0, TWO_PI, n)
+        omegas = rng.normal(1.0, 0.4, n)
+        knm = rng.uniform(0.0, 0.8, (n, n))
+        np.fill_diagonal(knm, 0.0)
+        alpha = rng.uniform(-0.3, 0.3, (n, n)) if alpha_nonzero else np.zeros((n, n))
+        return phases, omegas, knm, alpha
+
+    def test_rust_loader_returns_float64_torus_phases(self) -> None:
+        """The compiled Rust loader integrates the law on contiguous float64 input."""
+        if "rust" not in g_mod.AVAILABLE_BACKENDS:
+            pytest.skip("rust unavailable")
+        kernel = g_mod._load_rust_fn()
+        for alpha_nonzero in (False, True):
+            phases, omegas, knm, alpha = self._case(alpha_nonzero)
+            got = kernel(
+                phases[::-1][::-1],
+                omegas,
+                knm.ravel(),
+                alpha.ravel(),
+                5,
+                0.2,
+                1.1,
+                0.01,
+                40,
+            )
+            assert got.dtype == np.float64
+            assert got.shape == (5,)
+            expected = _oracle_torus(
+                phases.tolist(),
+                omegas.tolist(),
+                knm.tolist(),
+                alpha.tolist(),
+                0.2,
+                1.1,
+                0.01,
+                40,
+            )
+            assert _circular_gap(got, expected) < TOL_ATAN2
+
+    @pytest.mark.parametrize("owner", ["mojo", "julia", "go"])
     def test_optional_backend_loaders_return_callable_numeric_kernels(
-        self, monkeypatch
-    ):
-        def install_backend(
-            module_name: str, function_name: str, offset: float
-        ) -> None:
-            module = types.ModuleType(module_name)
-            module.loaded = False
-
-            def _ensure_exe() -> None:
-                module.loaded = True
-
-            def _load_lib() -> None:
-                module.loaded = True
-
-            def kernel(phases, omegas, knm_flat, alpha_flat, n, zeta, psi, dt, n_steps):
-                return (phases + offset + dt * n_steps * omegas) % TWO_PI
-
-            module._ensure_exe = _ensure_exe
-            module._load_lib = _load_lib
-            setattr(module, function_name, kernel)
-            monkeypatch.setitem(sys.modules, module_name, module)
-
-        fake_juliacall = types.ModuleType("juliacall")
-        fake_juliacall.Main = object()
-        monkeypatch.setitem(sys.modules, "juliacall", fake_juliacall)
-        install_backend(
-            "scpn_phase_orchestrator.experimental.accelerators.upde._geometric_mojo",
-            "torus_run_mojo",
-            0.10,
-        )
-        install_backend(
-            "scpn_phase_orchestrator.experimental.accelerators.upde._geometric_julia",
-            "torus_run_julia",
-            0.20,
-        )
-        install_backend(
-            "scpn_phase_orchestrator.experimental.accelerators.upde._geometric_go",
-            "torus_run_go",
-            0.30,
-        )
-
-        phases = np.array([0.2, 0.8], dtype=np.float64)
-        omegas = np.array([1.0, -0.25], dtype=np.float64)
-        args = (phases, omegas, np.zeros(4), np.zeros(4), 2, 0.0, 0.0, 0.01, 3)
-
-        for loader, offset in (
-            (g_mod._load_mojo_fn, 0.10),
-            (g_mod._load_julia_fn, 0.20),
-            (g_mod._load_go_fn, 0.30),
-        ):
-            got = loader()(*args)
-            np.testing.assert_allclose(got, (phases + offset + 0.03 * omegas) % TWO_PI)
+        self, owner: str
+    ) -> None:
+        """Each installed optional loader returns a kernel that follows the law."""
+        if owner not in g_mod.AVAILABLE_BACKENDS:
+            pytest.skip(f"{owner} unavailable")
+        loader = {
+            "mojo": g_mod._load_mojo_fn,
+            "julia": g_mod._load_julia_fn,
+            "go": g_mod._load_go_fn,
+        }[owner]
+        kernel = loader()
+        for alpha_nonzero in (False, True):
+            phases, omegas, knm, alpha = self._case(alpha_nonzero)
+            got = np.asarray(
+                kernel(
+                    phases, omegas, knm.ravel(), alpha.ravel(), 5, 0.2, 1.1, 0.01, 40
+                )
+            )
+            expected = _oracle_torus(
+                phases.tolist(),
+                omegas.tolist(),
+                knm.tolist(),
+                alpha.tolist(),
+                0.2,
+                1.1,
+                0.01,
+                40,
+            )
+            assert _circular_gap(got, expected) < TOL_ATAN2
 
 
 class TestDispatchFallbackChain:
+    """Automatic dispatch falls through failing loaders."""
+
     def test_dispatch_falls_back_to_python_when_loader_fails(self, monkeypatch):
+        """A failing loader resolves to the NumPy law."""
         previous_backend = g_mod.ACTIVE_BACKEND
         previous_available = list(g_mod.AVAILABLE_BACKENDS)
         previous_loader = g_mod._LOADERS["go"]
@@ -648,6 +695,7 @@ class TestDispatchFallbackChain:
         assert backend is None
 
     def test_dispatch_uses_cached_loader_once(self, monkeypatch):
+        """Repeated dispatch loads an owner once."""
         previous_backend = g_mod.ACTIVE_BACKEND
         previous_available = list(g_mod.AVAILABLE_BACKENDS)
         previous_loader = g_mod._LOADERS["go"]
