@@ -273,6 +273,12 @@ strict = true
 explicit_package_bases = true
 mypy_path = ["$MYPY_CONFIG_FILE_DIR/src", "$MYPY_CONFIG_FILE_DIR"]
 
+# Generated protoc output, exempt by exact module name only. Provenance:
+# tools/generate_grpc.py regenerates both modules from proto/spo.proto, and
+# tests/test_generate_grpc_tool.py fails when the committed files differ
+# from a deterministic regeneration. The hand-written grpc_gen package code
+# stays strict, and tests/test_grpc_caller_safe_errors.py drives the stubs
+# through a real gRPC server and channel.
 [[tool.mypy.overrides]]
 module = ["scpn_phase_orchestrator.runtime.grpc_gen.spo_pb2", "scpn_phase_orchestrator.runtime.grpc_gen.spo_pb2_grpc"]
 ignore_errors = true
