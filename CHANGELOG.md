@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `EVSMonitor(backend=)`, `EVSMonitor._frequency_specificity(..., backend=)`
+  and the new `frequency_specificity_backend()` name the owner of the EVS
+  specificity ratio. Naming Rust without the compiled kernel raises
+  `RuntimeError`. The RT-035 and RT-036 substitutes, which installed a fake
+  `spo_kernel` and a fake kernel function, now check the real import and
+  call the compiled kernel on non-contiguous trials against a plain-loop
+  ITPC oracle. The old RT-035 test reloaded the module with Rust disabled
+  and left it so for later tests; two tests that patch the NumPy reference
+  depended on that and now ask for `backend="python"`.
+  `tests/test_evs_real_runtime.py` covers both owners and Python-only and
+  Rust-only child profiles.
 - `extract_envelope` and `envelope_modulation_depth` take `backend=`, and
   the new `envelope_backend(slot, backend)` names the owner. A named owner
   that is absent, lacks the operation or fails raises `RuntimeError`; `auto`

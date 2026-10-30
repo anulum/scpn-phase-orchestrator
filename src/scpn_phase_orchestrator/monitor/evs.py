@@ -40,7 +40,39 @@ try:
 except ImportError:
     _HAS_RUST = False
 
-__all__ = ["EVSMonitor", "EVSResult"]
+__all__ = ["EVSMonitor", "EVSResult", "frequency_specificity_backend"]
+
+_BACKEND_NAMES = ("rust", "python")
+
+
+def frequency_specificity_backend(backend: str = "auto") -> str:
+    """Return the owner that computes the frequency-specificity ratio.
+
+    Parameters
+    ----------
+    backend : str
+        ``"auto"`` (Rust when ``spo_kernel`` is installed, else Python),
+        ``"rust"`` or ``"python"``.
+
+    Returns
+    -------
+    str
+        ``"rust"`` or ``"python"``.
+
+    Raises
+    ------
+    ValueError
+        If ``backend`` is not a known owner.
+    RuntimeError
+        If ``"rust"`` is requested and the Rust kernel is not installed.
+    """
+    if backend not in (*_BACKEND_NAMES, "auto"):
+        raise ValueError(f"unknown EVS backend: {backend!r}")
+    if backend == "auto":
+        return "rust" if _HAS_RUST else "python"
+    if backend == "rust" and not _HAS_RUST:
+        raise RuntimeError("EVS backend 'rust' unavailable")
+    return backend
 
 
 @dataclass(frozen=True, slots=True)
@@ -85,7 +117,31 @@ class EVSMonitor:
         itpc_threshold: float = 0.6,
         persistence_threshold: float = 0.4,
         specificity_threshold: float = 1.5,
+        backend: str = "auto",
     ) -> None:
+        """Validate the three thresholds and the specificity owner.
+
+        Parameters
+        ----------
+        itpc_threshold : float
+            Minimum mean ITPC, in ``[0, 1]``.
+        persistence_threshold : float
+            Minimum ITPC in the pause window, in ``[0, 1]``.
+        specificity_threshold : float
+            Minimum target/control ITPC ratio, positive.
+        backend : str
+            Owner of the specificity ratio: ``"auto"``, ``"rust"`` or
+            ``"python"``.
+
+        Raises
+        ------
+        ValueError
+            If a threshold or the backend name is invalid.
+        RuntimeError
+            If ``"rust"`` is requested and the Rust kernel is not installed.
+        """
+        frequency_specificity_backend(backend)
+        self.backend = backend
         self.itpc_threshold = _validate_unit_threshold(
             itpc_threshold, name="itpc_threshold"
         )
@@ -138,6 +194,7 @@ class EVSMonitor:
             phases,
             target,
             control,
+            backend=self.backend,
         )
 
         entrained = (
@@ -158,6 +215,7 @@ class EVSMonitor:
         phases_trials: FloatArray,
         target_freq: float,
         control_freq: float,
+        backend: str = "auto",
     ) -> float:
         """Ratio of mean ITPC at target vs control frequency.
 
@@ -165,13 +223,39 @@ class EVSMonitor:
         by rescaling the target-frequency phases by the frequency ratio.
         This models the assumption that the raw signal was band-pass
         filtered at each frequency before phase extraction.
+
+        Parameters
+        ----------
+        phases_trials : FloatArray
+            ``(n_trials, n_timepoints)`` phases at the target frequency.
+        target_freq : float
+            Stimulus frequency.
+        control_freq : float
+            Control frequency.
+        backend : str
+            ``"auto"``, ``"rust"`` or ``"python"``.
+
+        Returns
+        -------
+        float
+            The non-negative target/control ITPC ratio (``inf`` for a locked
+            target against an incoherent control).
+
+        Raises
+        ------
+        ValueError
+            If an input or the backend name is invalid, or the Rust result
+            diverges from the NumPy reference.
+        RuntimeError
+            If ``"rust"`` is requested and the Rust kernel is not installed.
         """
+        owner = frequency_specificity_backend(backend)
         phases = _validate_phase_trials(phases_trials)
         target = _validate_positive_real(target_freq, name="target_freq")
         control = _validate_positive_real(control_freq, name="control_freq")
         expected = _frequency_specificity_reference(phases, target, control)
 
-        if _HAS_RUST:
+        if owner == "rust":
             p = np.ascontiguousarray(phases, dtype=np.float64)
             n_trials, n_tp = p.shape
             return _validate_specificity_ratio(

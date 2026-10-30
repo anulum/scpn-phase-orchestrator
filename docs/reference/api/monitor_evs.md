@@ -319,13 +319,19 @@ print(f"Engine-based ITPC: {result.itpc_value:.4f}")
 | `itpc_threshold` | `float` | 0.6 | Minimum mean ITPC |
 | `persistence_threshold` | `float` | 0.4 | Minimum pause-window ITPC |
 | `specificity_threshold` | `float` | 1.5 | Minimum target/control ratio |
+| `backend` | `str` | `"auto"` | Owner of the specificity ratio: `"auto"`, `"rust"` or `"python"` |
 
 ### Methods
 
 | Method | Input | Output |
 |--------|-------|--------|
 | `evaluate(phases_trials, pause_indices, target_freq, control_freq)` | Trial phases + params | `EVSResult` |
-| `_frequency_specificity(phases_trials, target_freq, control_freq)` | Trial phases + freqs | `float` ratio |
+| `_frequency_specificity(phases_trials, target_freq, control_freq, backend="auto")` | Trial phases + freqs | `float` ratio |
+
+`frequency_specificity_backend(backend="auto")` names the owner: Rust when
+`spo_kernel` is installed, else Python. Naming `"rust"` without the kernel
+raises `RuntimeError("EVS backend 'rust' unavailable")`, also from the
+`EVSMonitor` constructor; an unknown name raises `ValueError`.
 
 ### Rust Engine Function
 

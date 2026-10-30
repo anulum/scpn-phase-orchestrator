@@ -8,10 +8,10 @@
 
 from __future__ import annotations
 
+import cmath
 import importlib
+import importlib.util
 import math
-import sys
-import types
 from numbers import Real
 from typing import Any, cast, get_type_hints
 
@@ -43,6 +43,7 @@ def _random_phases(n_trials: int = 80, n_time: int = 120, seed: int = 99) -> np.
 
 
 def test_entrained_signal_passes():
+    """Phase-locked trials pass all three criteria."""
     phases = _entrained_phases()
     mon = EVSMonitor(
         itpc_threshold=0.6,
@@ -56,6 +57,7 @@ def test_entrained_signal_passes():
 
 
 def test_public_array_contracts_are_parameterised():
+    """Public array parameters carry precise float64 hints."""
     evaluate_hints = get_type_hints(EVSMonitor.evaluate)
     specificity_hints = get_type_hints(EVSMonitor._frequency_specificity)
     hints = (
@@ -71,6 +73,7 @@ def test_public_array_contracts_are_parameterised():
 
 
 def test_random_signal_fails():
+    """Random phases fail entrainment."""
     phases = _random_phases()
     mon = EVSMonitor()
     result = mon.evaluate(phases, list(range(100, 120)), 10.0, 23.0)
@@ -89,6 +92,7 @@ def test_random_signal_fails():
     ],
 )
 def test_constructor_rejects_invalid_thresholds(kwargs, match):
+    """Out-of-range or invalid thresholds are refused."""
     with pytest.raises((TypeError, ValueError), match=match):
         EVSMonitor(**kwargs)
 
@@ -105,11 +109,13 @@ def test_constructor_rejects_invalid_thresholds(kwargs, match):
     ],
 )
 def test_evaluate_rejects_invalid_phase_trials(phases, match):
+    """Malformed phase trials are refused."""
     with pytest.raises(ValueError, match=match):
         EVSMonitor().evaluate(phases, [0], 10.0, 20.0)
 
 
 def test_evaluate_rejects_object_complex_phase_trials_as_non_real() -> None:
+    """Object-dtype complex phases are refused as non-real."""
     phases = np.asarray(
         [[0.0, complex(0.1, 0.0)], [0.2, 0.3]],
         dtype=object,
@@ -120,6 +126,7 @@ def test_evaluate_rejects_object_complex_phase_trials_as_non_real() -> None:
 
 
 def test_evaluate_rejects_numeric_string_phase_aliases() -> None:
+    """Numeric-string phases are refused."""
     phases = np.asarray([["0.0", "1.0"], ["0.2", "1.2"]])
 
     with pytest.raises(ValueError, match="phases_trials"):
@@ -127,6 +134,8 @@ def test_evaluate_rejects_numeric_string_phase_aliases() -> None:
 
 
 def test_evaluate_wraps_a_broken_phase_array_protocol() -> None:
+    """A broken array protocol becomes a ValueError."""
+
     class BrokenArray:
         def __array__(self) -> np.ndarray:
             raise TypeError("broken")
@@ -136,6 +145,7 @@ def test_evaluate_wraps_a_broken_phase_array_protocol() -> None:
 
 
 def test_evaluate_accepts_real_numeric_object_phase_samples() -> None:
+    """Real numbers in an object array are accepted."""
     phases = np.asarray([[0, 1.0], [0.2, np.float32(1.2)]], dtype=object)
 
     result = EVSMonitor(specificity_threshold=1.0).evaluate(
@@ -149,6 +159,8 @@ def test_evaluate_accepts_real_numeric_object_phase_samples() -> None:
 
 
 def test_evaluate_wraps_a_broken_real_scalar_conversion() -> None:
+    """A real scalar that fails conversion becomes a ValueError."""
+
     class BrokenReal:
         def __float__(self) -> float:
             raise TypeError("broken")
@@ -165,6 +177,7 @@ def test_evaluate_wraps_a_broken_real_scalar_conversion() -> None:
     [[0.5], [True], [0, True], np.array([[0, 1]]), ["not-an-index"], [math.inf]],
 )
 def test_evaluate_rejects_invalid_pause_indices(pause_indices):
+    """Invalid pause indices are refused."""
     phases = _entrained_phases(n_trials=4, n_time=8)
     with pytest.raises((TypeError, ValueError), match="pause_indices"):
         EVSMonitor().evaluate(phases, pause_indices, 10.0, 20.0)
@@ -173,6 +186,7 @@ def test_evaluate_rejects_invalid_pause_indices(pause_indices):
 def test_pause_indices_are_bounded_and_deduplicated_before_persistence(
     monkeypatch,
 ) -> None:
+    """Pause indices reach persistence bounded and deduplicated."""
     phases = _entrained_phases(n_trials=4, n_time=3)
     captured: dict[str, np.ndarray] = {}
 
@@ -186,7 +200,7 @@ def test_pause_indices_are_bounded_and_deduplicated_before_persistence(
     monkeypatch.setattr(
         EVSMonitor,
         "_frequency_specificity",
-        staticmethod(lambda *_args: 1.0),
+        staticmethod(lambda *_args, **_kwargs: 1.0),
     )
 
     EVSMonitor(specificity_threshold=1.0).evaluate(
@@ -200,6 +214,7 @@ def test_pause_indices_are_bounded_and_deduplicated_before_persistence(
 
 
 def test_pause_indices_reject_int64_overflow_and_broken_array_protocol() -> None:
+    """Overflowing or unconvertible pause indices are refused."""
     phases = _entrained_phases(n_trials=4, n_time=3)
 
     with pytest.raises(ValueError, match="pause_indices"):
@@ -218,6 +233,7 @@ def test_pause_indices_reject_int64_overflow_and_broken_array_protocol() -> None
     [(0.0, 20.0), (10.0, 0.0), (math.inf, 20.0), (10.0, math.nan), (True, 20.0)],
 )
 def test_evaluate_rejects_invalid_frequencies(target_freq, control_freq):
+    """Non-positive or non-finite frequencies are refused."""
     phases = _entrained_phases(n_trials=4, n_time=8)
     with pytest.raises((TypeError, ValueError), match="freq"):
         EVSMonitor().evaluate(phases, [0], target_freq, control_freq)
@@ -235,6 +251,7 @@ def test_evaluate_rejects_object_complex_frequency_controls(
     control_freq: object,
     match: str,
 ) -> None:
+    """Object-dtype complex frequencies are refused."""
     phases = _entrained_phases(n_trials=4, n_time=8)
 
     with pytest.raises((TypeError, ValueError), match=match):
@@ -262,6 +279,7 @@ def test_constructor_rejects_object_complex_threshold_controls(
     kwargs: dict[str, object],
     match: str,
 ) -> None:
+    """Object-dtype complex thresholds are refused."""
     with pytest.raises((TypeError, ValueError), match=match):
         EVSMonitor(**kwargs)
 
@@ -276,6 +294,7 @@ def test_persistence_criterion_required():
 
 
 def test_pause_indices_are_clipped_to_valid_range():
+    """Pause indices beyond the trace are dropped."""
     phases = np.tile(np.array([0.0, np.pi / 2, np.pi]), (4, 1))
     mon = EVSMonitor(
         itpc_threshold=0.95,
@@ -296,6 +315,7 @@ def test_pause_indices_are_clipped_to_valid_range():
 
 
 def test_specificity_with_same_freq_gives_one():
+    """Equal target and control frequencies give a ratio of one."""
     phases = _entrained_phases()
     mon = EVSMonitor(specificity_threshold=0.9)
     result = mon.evaluate(phases, list(range(80, 100)), 10.0, 10.0)
@@ -303,74 +323,93 @@ def test_specificity_with_same_freq_gives_one():
 
 
 def test_specificity_zero_freq_handled():
+    """A zero target frequency is refused."""
     phases = _entrained_phases()
     mon = EVSMonitor()
     with pytest.raises(ValueError, match="target_freq"):
         mon.evaluate(phases, list(range(80, 100)), 0.0, 10.0)
 
 
-def test_module_detects_available_rust_frequency_specificity(monkeypatch):
-    fake_spo = types.ModuleType("spo_kernel")
-    fake_spo.frequency_specificity_rust = lambda *_args: 1.75
-    monkeypatch.setitem(sys.modules, "spo_kernel", fake_spo)
+def test_named_rust_owner_is_unavailable_without_the_kernel(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Without the compiled kernel a named Rust owner refuses, at once."""
+    monkeypatch.setattr(evs_mod, "_HAS_RUST", False)
+    with pytest.raises(RuntimeError, match="EVS backend 'rust' unavailable"):
+        evs_mod.frequency_specificity_backend("rust")
+    with pytest.raises(RuntimeError, match="EVS backend 'rust' unavailable"):
+        EVSMonitor(backend="rust")
+    assert evs_mod.frequency_specificity_backend() == "python"
 
-    reloaded = importlib.reload(evs_mod)
-    try:
-        assert reloaded._HAS_RUST is True
-        assert reloaded._rust_freq_spec is fake_spo.frequency_specificity_rust
-    finally:
-        monkeypatch.setitem(sys.modules, "spo_kernel", None)
-        importlib.reload(evs_mod)
+
+def test_module_detects_available_rust_frequency_specificity() -> None:
+    """The module finds the compiled kernel exactly when ``spo_kernel`` installs."""
+    installed = importlib.util.find_spec("spo_kernel") is not None
+    assert evs_mod._HAS_RUST is installed
+    assert evs_mod.frequency_specificity_backend() == (
+        "rust" if installed else "python"
+    )
 
 
 def test_specificity_zero_control_mean_preserves_target_lock(monkeypatch):
+    """The NumPy law gives an infinite ratio for a zero control ITPC."""
     phases = _entrained_phases()
     calls = iter([np.full(phases.shape[1], 0.8), np.zeros(phases.shape[1])])
     monkeypatch.setattr(evs_mod, "compute_itpc", lambda _phases: next(calls))
 
-    specificity = EVSMonitor._frequency_specificity(phases, 10.0, 20.0)
+    specificity = EVSMonitor._frequency_specificity(
+        phases, 10.0, 20.0, backend="python"
+    )
 
     assert math.isinf(specificity)
 
 
 def test_specificity_zero_control_and_zero_target_returns_zero(monkeypatch):
+    """The NumPy law gives zero when both ITPC means are zero."""
     phases = _random_phases()
     calls = iter([np.zeros(phases.shape[1]), np.zeros(phases.shape[1])])
     monkeypatch.setattr(evs_mod, "compute_itpc", lambda _phases: next(calls))
 
-    specificity = EVSMonitor._frequency_specificity(phases, 10.0, 20.0)
+    specificity = EVSMonitor._frequency_specificity(
+        phases, 10.0, 20.0, backend="python"
+    )
 
     assert specificity == 0.0
 
 
-def test_rust_frequency_specificity_receives_flat_phase_trials(monkeypatch):
-    phases = _entrained_phases(n_trials=3, n_time=5)
-    expected = evs_mod._frequency_specificity_reference(phases, 12.0, 18.0)
-    captured: dict[str, object] = {}
+def test_rust_frequency_specificity_receives_flat_phase_trials() -> None:
+    """The compiled kernel gets non-contiguous trials flattened in row order."""
+    if not evs_mod._HAS_RUST:
+        pytest.skip("Rust backend not built")
+    phases = _entrained_phases(n_trials=3, n_time=5)[:, ::-1]
+    assert not phases.flags.c_contiguous
 
-    def rust_freq_spec(
-        flat: np.ndarray,
-        n_trials: int,
-        n_tp: int,
-        target_freq: float,
-        control_freq: float,
-    ) -> float:
-        captured["flat_contiguous"] = flat.flags.c_contiguous
-        captured["shape"] = (n_trials, n_tp)
-        captured["frequencies"] = (target_freq, control_freq)
-        return expected
+    specificity = EVSMonitor._frequency_specificity(phases, 12.0, 18.0, backend="rust")
 
-    monkeypatch.setattr(evs_mod, "_HAS_RUST", True)
-    monkeypatch.setattr(evs_mod, "_rust_freq_spec", rust_freq_spec, raising=False)
+    assert specificity == pytest.approx(
+        _oracle_specificity(phases.tolist(), 12.0, 18.0), rel=1e-12
+    )
 
-    specificity = EVSMonitor._frequency_specificity(phases[:, ::-1], 12.0, 18.0)
 
-    assert specificity == pytest.approx(expected)
-    assert captured == {
-        "flat_contiguous": True,
-        "shape": (3, 5),
-        "frequencies": (12.0, 18.0),
-    }
+def _oracle_specificity(
+    trials: list[list[float]], target: float, control: float
+) -> float:
+    """Return mean target ITPC over mean control ITPC by plain loops."""
+
+    def mean_itpc(rows: list[list[float]]) -> float:
+        """Average ``|mean_k exp(iθ_kt)|`` over time points."""
+        n = len(rows)
+        values = [
+            abs(sum(cmath.exp(1j * row[t]) for row in rows) / n)
+            for t in range(len(rows[0]))
+        ]
+        return math.fsum(values) / len(values)
+
+    scaled = [[v * control / target for v in row] for row in trials]
+    target_mean, control_mean = mean_itpc(trials), mean_itpc(scaled)
+    if control_mean < 1e-12:
+        return math.inf if target_mean > 0 else 0.0
+    return target_mean / control_mean
 
 
 @pytest.mark.parametrize(
@@ -381,6 +420,7 @@ def test_rust_frequency_specificity_rejects_invalid_backend_output(
     monkeypatch,
     backend_value: object,
 ):
+    """Invalid kernel results are refused."""
     phases = _entrained_phases(n_trials=3, n_time=5)
 
     monkeypatch.setattr(evs_mod, "_HAS_RUST", True)
@@ -398,6 +438,7 @@ def test_rust_frequency_specificity_rejects_invalid_backend_output(
 def test_rust_frequency_specificity_rejects_plausible_wrong_output(
     monkeypatch,
 ) -> None:
+    """A plausible but wrong kernel result is refused against the reference."""
     phases = _entrained_phases(n_trials=3, n_time=5)
     monkeypatch.setattr(evs_mod, "_HAS_RUST", True)
     monkeypatch.setattr(evs_mod, "_rust_freq_spec", lambda *_args: 1.25)
@@ -407,11 +448,13 @@ def test_rust_frequency_specificity_rejects_plausible_wrong_output(
 
 
 def test_evs_result_rejects_object_complex_specificity_ratio() -> None:
+    """A complex specificity ratio is refused."""
     with pytest.raises((TypeError, ValueError), match="specificity_ratio.*real"):
         EVSResult(0.8, 0.6, np.asarray(complex(1.2, 0.0), dtype=object), True)
 
 
 def test_evs_result_is_frozen():
+    """EVSResult fields cannot be reassigned."""
     r = EVSResult(0.8, 0.6, 2.0, True)
     mutable = cast(Any, r)
     with pytest.raises(AttributeError):
@@ -429,11 +472,13 @@ def test_evs_result_is_frozen():
     ],
 )
 def test_evs_result_rejects_invalid_physics_scores(args, match):
+    """Out-of-range scores are refused."""
     with pytest.raises((TypeError, ValueError), match=match):
         EVSResult(*args)
 
 
 def test_evs_result_accepts_infinite_specificity_for_zero_control_itpc():
+    """An infinite specificity ratio is accepted."""
     result = EVSResult(0.8, 0.6, math.inf, True)
 
     assert math.isinf(result.specificity_ratio)
@@ -493,6 +538,7 @@ class TestEVSBehavioural:
     """Verify EVSMonitor produces structured results with valid fields."""
 
     def test_single_trial_returns_result(self):
+        """A single trial still yields a result."""
         from scpn_phase_orchestrator.monitor.evs import EVSMonitor
 
         m = EVSMonitor()
@@ -507,6 +553,7 @@ class TestEVSBehavioural:
         assert isinstance(result.is_entrained, bool)
 
     def test_multi_trial_aggregation(self):
+        """Several trials aggregate into one result."""
         from scpn_phase_orchestrator.monitor.evs import EVSMonitor
 
         m = EVSMonitor()
