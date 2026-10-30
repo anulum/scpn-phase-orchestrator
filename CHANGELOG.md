@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The chimera and AttnRes Julia loaders probe the `juliacall` runtime
+  before using their cached side-file module, as every other Julia loader
+  does. A partial `juliacall` (no `Main`) was accepted once the side file had
+  been loaded, so the partial-runtime contract failed on hosts with Julia
+  installed. The runtime-probe test (RT-063) no longer installs a stub: it
+  checks that the probes return the live `juliacall` module, whose `Main`
+  evaluates Julia, or raise `ImportError` without it.
 - The regime-classifier test (RT-061) no longer installs a fake
   `spo_kernel`; it profiles the real call, which reaches the compiled
   `detect_regimes_rust` exactly when `spo_kernel` is installed, and checks

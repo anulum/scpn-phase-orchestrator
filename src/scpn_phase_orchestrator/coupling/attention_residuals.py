@@ -36,6 +36,7 @@ from scpn_phase_orchestrator._array_types import require_real_values
 from scpn_phase_orchestrator.coupling import (
     _attnres_validation as attnres_validation,
 )
+from scpn_phase_orchestrator.coupling._julia_runtime import require_juliacall_main
 
 __all__ = [
     "ACTIVE_BACKEND",
@@ -259,7 +260,12 @@ def _load_mojo() -> _BackendFn:
 
 
 def _load_julia() -> _BackendFn:
-    """Load the actual Julia module before admitting its numerical callable."""
+    """Load the actual Julia module before admitting its numerical callable.
+
+    The runtime is probed first, as by every other Julia loader, so a partial
+    ``juliacall`` is refused even when the side-file module is already cached.
+    """
+    require_juliacall_main()
     from ..experimental.accelerators.coupling._attnres_julia import (
         _ensure_julia_loaded,
         attnres_modulate_julia,

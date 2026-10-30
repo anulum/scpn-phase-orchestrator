@@ -10,9 +10,12 @@
 
 from __future__ import annotations
 
+import importlib
+import importlib.util
 import sys
 from collections.abc import Callable
 from types import ModuleType
+from typing import Any, cast
 
 import pytest
 
@@ -100,15 +103,23 @@ def test_public_julia_loaders_reject_partial_juliacall_runtime(
         ("monitor", require_monitor_juliacall_main),
     ),
 )
+@pytest.mark.native_runtime
 def test_julia_runtime_probe_returns_complete_runtime(
     probe_name: str,
     probe: RuntimeProbe,
-    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Runtime probes must return the complete `juliacall` module unchanged."""
-    stub = ModuleType("juliacall")
-    stub.Main = object()
-    monkeypatch.setitem(sys.modules, "juliacall", stub)
+    """Probes return the live ``juliacall`` module, or refuse when it is absent.
 
-    assert probe() is stub
-    assert probe_name
+    With ``juliacall`` installed the probe returns the imported module itself,
+    whose ``Main`` evaluates Julia code; without it the probe raises
+    ``ImportError``. Both branches use the real installation.
+    """
+    if importlib.util.find_spec("juliacall") is None:
+        with pytest.raises(ImportError):
+            probe()
+        return
+
+    runtime = cast(Any, probe())
+
+    assert runtime is importlib.import_module("juliacall"), probe_name
+    assert runtime.Main.seval("prod(1:5)") == 120

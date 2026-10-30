@@ -41,6 +41,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from ._chimera_validation import _measurement_array
+from ._julia_runtime import require_juliacall_main
 
 FloatArray: TypeAlias = NDArray[np.float64]
 ChimeraBackendFn: TypeAlias = Callable[[FloatArray, FloatArray, int], FloatArray]
@@ -95,7 +96,12 @@ def _load_mojo_fn() -> ChimeraBackendFn:
 
 
 def _load_julia_fn() -> ChimeraBackendFn:
-    """Load the Julia chimera-detection backend callable."""
+    """Load the Julia chimera-detection backend callable.
+
+    The runtime is probed first, as by every other Julia loader, so a partial
+    ``juliacall`` is refused even when the side-file module is already cached.
+    """
+    require_juliacall_main()
     from ..experimental.accelerators.monitor._chimera_julia import (
         _ensure,
         local_order_parameter_julia,
