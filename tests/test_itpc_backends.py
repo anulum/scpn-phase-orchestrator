@@ -18,10 +18,11 @@ measured parity sits at ~5e-17 on this host (bit-equivalent).
 
 from __future__ import annotations
 
-import sys
+import cmath
+import math
 from collections.abc import Callable
-from types import ModuleType, SimpleNamespace
-from typing import get_type_hints
+from types import SimpleNamespace
+from typing import cast, get_type_hints
 
 import numpy as np
 import pytest
@@ -60,12 +61,16 @@ from scpn_phase_orchestrator.monitor.itpc import (
 )
 from tests.typing_contracts import assert_precise_ndarray_hint
 
+ItpcKernel = Callable[[np.ndarray, int, int], object]
+PersistenceKernel = Callable[[np.ndarray, int, int, np.ndarray], float]
+
 TWO_PI = 2.0 * np.pi
 ItpcBackend = Callable[[np.ndarray, object, object], np.ndarray]
 PersistenceBackend = Callable[[np.ndarray, object, object, object], float]
 
 
 def test__itpc_validation_helper_is_directly_linked_to_backend_tests() -> None:
+    """The shared validation helper module is exercised directly by these tests."""
     assert callable(itpc_validation.validate_compute_itpc_backend_inputs)
     assert callable(itpc_validation.expected_compute_itpc_backend_output)
     assert callable(itpc_validation.validate_itpc_persistence_backend_inputs)
@@ -104,6 +109,7 @@ def _problem(seed: int, n_trials: int = 30, n_tp: int = 80):
 
 
 def test_backend_array_contracts_are_parameterised() -> None:
+    """Backend array parameters carry precise float64 hints."""
     functions = (
         compute_itpc_go,
         compute_itpc_julia,
@@ -196,6 +202,7 @@ class TestDirectBackendBoundaryContracts:
         label: str,
         match: str,
     ) -> None:
+        """Malformed Mojo executable output is refused."""
         monkeypatch.setattr(itpc_mojo_mod, "_ensure_exe", lambda: "itpc_mojo")
         monkeypatch.setattr(
             itpc_mojo_mod.subprocess,
@@ -241,6 +248,7 @@ class TestDirectBackendBoundaryContracts:
         n_tp: object,
         match: str,
     ) -> None:
+        """Invalid ITPC input is refused before a runtime loads."""
         with pytest.raises(ValueError, match=match):
             backend(phases_flat, n_trials, n_tp)
 
@@ -279,6 +287,7 @@ class TestDirectBackendBoundaryContracts:
         pause_indices: object,
         match: str,
     ) -> None:
+        """Invalid persistence input is refused before a runtime loads."""
         with pytest.raises(ValueError, match=match):
             backend(phases_flat, n_trials, n_tp, pause_indices)
 
@@ -296,6 +305,7 @@ class TestDirectBackendBoundaryContracts:
         backend_name: str,
         match: str,
     ) -> None:
+        """Invalid ITPC backend output is refused."""
         phases = np.array([0.0, 0.2, 0.4, 0.6], dtype=np.float64)
         if backend_name == "go":
             fake = _FakeGoITPC(vector=np.array([0.25, 1.25], dtype=np.float64))
@@ -333,6 +343,7 @@ class TestDirectBackendBoundaryContracts:
         backend_name: str,
         invalid_value: float,
     ) -> None:
+        """Invalid persistence backend output is refused."""
         phases = np.array([0.0, 0.2, 0.4, 0.6], dtype=np.float64)
         indices = np.array([0, 1], dtype=np.int64)
         if backend_name == "go":
@@ -366,6 +377,7 @@ class TestDirectBackendBoundaryContracts:
     def test_compute_rejects_in_range_backend_output_that_breaks_exact_itpc(
         self,
     ) -> None:
+        """In-range ITPC output that differs from the reference is refused."""
         phases = np.array([0.0, 0.2, 1.5, 1.7], dtype=np.float64)
         expected = itpc_validation.expected_compute_itpc_backend_output(phases, 2, 2)
         wrong = np.zeros_like(expected)
@@ -380,6 +392,7 @@ class TestDirectBackendBoundaryContracts:
     def test_persistence_rejects_in_range_backend_output_that_breaks_exact_itpc(
         self,
     ) -> None:
+        """In-range persistence output that differs from the reference is refused."""
         phases = np.array([0.0, 0.2, 1.5, 1.7], dtype=np.float64)
         indices = np.array([0, 1], dtype=np.int64)
         expected = itpc_validation.expected_itpc_persistence_backend_output(
@@ -399,6 +412,7 @@ class TestDirectBackendBoundaryContracts:
     def test_backend_output_validators_reject_object_complex_aliases_as_non_real(
         self,
     ) -> None:
+        """Object-dtype complex backend output is refused as non-real."""
         with pytest.raises(ValueError, match="real-valued"):
             itpc_validation.validate_compute_itpc_backend_output(
                 np.array([0.5 + 0.25j], dtype=object),
@@ -416,6 +430,7 @@ class TestDirectBackendBoundaryContracts:
         monkeypatch: pytest.MonkeyPatch,
         backend_name: str,
     ) -> None:
+        """Direct adapters refuse ITPC output that diverges from the reference."""
         phases = np.array([0.0, 0.2, 1.5, 1.7], dtype=np.float64)
         wrong = np.zeros(2, dtype=np.float64)
         if backend_name == "go":
@@ -449,6 +464,7 @@ class TestDirectBackendBoundaryContracts:
         monkeypatch: pytest.MonkeyPatch,
         backend_name: str,
     ) -> None:
+        """Direct adapters refuse persistence output off the reference."""
         phases = np.array([0.0, 0.2, 1.5, 1.7], dtype=np.float64)
         indices = np.array([0, 1], dtype=np.int64)
         wrong = 0.0
@@ -484,48 +500,72 @@ class TestDirectBackendBoundaryContracts:
             backend(phases, 2, 2, indices)
 
 
-def test_rust_loader_returns_kernel_functions(monkeypatch: pytest.MonkeyPatch) -> None:
-    fake_kernel = ModuleType("spo_kernel")
-    fake_kernel.compute_itpc_rust = object()
-    fake_kernel.itpc_persistence_rust = object()
-    monkeypatch.setitem(sys.modules, "spo_kernel", fake_kernel)
+def _oracle_itpc(trials: list[list[float]]) -> list[float]:
+    """Return ``|mean_k exp(iθ_kt)|`` per time point with ``cmath``, in plain loops."""
+    n = len(trials)
+    return [
+        abs(sum(cmath.exp(1j * row[t]) for row in trials) / n)
+        for t in range(len(trials[0]))
+    ]
 
+
+def _loader_case() -> tuple[np.ndarray, np.ndarray]:
+    """Return seeded partly locked trials and pause indices."""
+    rng = np.random.default_rng(31)
+    base = np.linspace(0.0, 3.0, 12)
+    phases = base + rng.normal(0.0, 0.7, (6, 12))
+    return phases, np.array([2, 5, 5, 11], dtype=np.int64)
+
+
+def test_rust_loader_returns_kernel_functions() -> None:
+    """The compiled Rust loader returns ITPC and persistence kernels."""
+    if "rust" not in it_mod.AVAILABLE_BACKENDS:
+        pytest.skip("rust unavailable")
     loaded = it_mod._load_rust_fns()
+    phases, indices = _loader_case()
+    flat = np.ascontiguousarray(phases.ravel())
+    expected = _oracle_itpc(phases.tolist())
 
-    assert loaded == {
-        "itpc": fake_kernel.compute_itpc_rust,
-        "persistence": fake_kernel.itpc_persistence_rust,
-    }
+    itpc = np.asarray(cast(ItpcKernel, loaded["itpc"])(flat, 6, 12))
+    persistence = cast(PersistenceKernel, loaded["persistence"])(flat, 6, 12, indices)
+
+    np.testing.assert_allclose(itpc, expected, rtol=0.0, atol=1e-12)
+    pause = [expected[k] for k in indices.tolist()]
+    assert float(persistence) == pytest.approx(math.fsum(pause) / len(pause), abs=1e-12)
 
 
+@pytest.mark.parametrize(
+    ("owner", "atol"), [("mojo", 1e-9), ("julia", 1e-12), ("go", 1e-12)]
+)
 def test_direct_loader_wrappers_return_backend_functions(
-    monkeypatch: pytest.MonkeyPatch,
+    owner: str, atol: float
 ) -> None:
-    monkeypatch.setattr(itpc_mojo_mod, "_ensure_exe", lambda: "itpc_mojo")
-    mojo_loaded = it_mod._load_mojo_fns()
-    assert mojo_loaded == {
-        "itpc": compute_itpc_mojo,
-        "persistence": itpc_persistence_mojo,
-    }
+    """Each installed optional loader returns kernels that follow the law."""
+    if owner not in it_mod.AVAILABLE_BACKENDS:
+        pytest.skip(f"{owner} unavailable")
+    loader = {
+        "mojo": it_mod._load_mojo_fns,
+        "julia": it_mod._load_julia_fns,
+        "go": it_mod._load_go_fns,
+    }[owner]
+    loaded = loader()
+    phases, indices = _loader_case()
+    expected = _oracle_itpc(phases.tolist())
 
-    monkeypatch.setattr(it_mod, "require_juliacall_main", lambda: object())
-    julia_loaded = it_mod._load_julia_fns()
-    assert julia_loaded == {
-        "itpc": compute_itpc_julia,
-        "persistence": itpc_persistence_julia,
-    }
+    itpc = np.asarray(cast(ItpcKernel, loaded["itpc"])(phases.ravel(), 6, 12))
+    persistence = cast(PersistenceKernel, loaded["persistence"])(
+        phases.ravel(), 6, 12, indices
+    )
 
-    monkeypatch.setattr(itpc_go_mod, "_load_lib", lambda: object())
-    go_loaded = it_mod._load_go_fns()
-    assert go_loaded == {
-        "itpc": compute_itpc_go,
-        "persistence": itpc_persistence_go,
-    }
+    np.testing.assert_allclose(itpc, expected, rtol=0.0, atol=atol)
+    pause = [expected[k] for k in indices.tolist()]
+    assert float(persistence) == pytest.approx(math.fsum(pause) / len(pause), abs=atol)
 
 
 def test_rust_itpc_dispatch_uses_contiguous_flattened_input(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """Rust dispatch flattens Fortran-order trials to contiguous input."""
     calls: list[tuple[np.ndarray, int, int]] = []
 
     def fake_rust_itpc(
@@ -565,6 +605,7 @@ def test_rust_itpc_dispatch_uses_contiguous_flattened_input(
 def test_rust_persistence_dispatch_uses_contiguous_arrays(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """Rust persistence dispatch passes contiguous arrays."""
     calls: list[tuple[np.ndarray, int, int, np.ndarray]] = []
 
     def fake_rust_persistence(
@@ -611,6 +652,7 @@ def test_rust_persistence_dispatch_uses_contiguous_arrays(
 def test_non_rust_dispatch_flattens_inputs_and_preserves_exact_backend_result(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """Non-Rust dispatch flattens input and keeps an exact result."""
     calls: list[tuple[np.ndarray, int, int]] = []
 
     def fake_itpc(phases_flat: np.ndarray, n_trials: int, n_tp: int) -> np.ndarray:
@@ -643,6 +685,7 @@ def test_non_rust_dispatch_flattens_inputs_and_preserves_exact_backend_result(
 def test_non_rust_persistence_dispatch_passes_pause_indices(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """Non-Rust persistence dispatch passes the pause indices."""
     calls: list[tuple[np.ndarray, int, int, np.ndarray]] = []
 
     def fake_persistence(
@@ -681,6 +724,7 @@ def test_non_rust_persistence_dispatch_passes_pause_indices(
 def test_public_itpc_rejects_backend_that_breaks_exact_contract(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """Public ITPC refuses a backend that breaks the exact contract."""
     phases = np.array([[0.0, 0.5, 1.0], [1.5, 2.0, 2.5]], dtype=np.float64)
 
     def fake_itpc(_phases_flat: np.ndarray, _n_trials: int, _n_tp: int) -> np.ndarray:
@@ -706,6 +750,7 @@ def test_public_itpc_rejects_backend_that_breaks_exact_contract(
 def test_public_persistence_rejects_backend_that_breaks_exact_contract(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    """Public persistence refuses a backend that breaks the exact contract."""
     phases = np.array([[0.0, 0.25, 0.5], [1.0, 1.25, 1.5]], dtype=np.float64)
     pause_indices = np.array([0, 2], dtype=np.int64)
 
@@ -735,6 +780,8 @@ def test_public_persistence_rejects_backend_that_breaks_exact_contract(
 
 
 class TestRustParity:
+    """Rust agrees with the NumPy law."""
+
     @pytest.fixture(autouse=True)
     def _skip_if_absent(self) -> None:
         if "rust" not in AVAILABLE_BACKENDS:
@@ -751,6 +798,7 @@ class TestRustParity:
         suppress_health_check=[HealthCheck.too_slow],
     )
     def test_itpc(self, n_trials: int, n_tp: int, seed: int) -> None:
+        """ITPC agrees with the NumPy law."""
         phases = _problem(seed, n_trials, n_tp)
         ref = _reference_itpc(phases)
         prev = _force("rust")
@@ -761,6 +809,7 @@ class TestRustParity:
         np.testing.assert_allclose(result, ref, atol=1e-12)
 
     def test_persistence(self) -> None:
+        """Persistence agrees with the NumPy law."""
         phases = _problem(7)
         idx = np.array([5, 10, 25, 40, 75])
         ref = _reference_pers(phases, idx)
@@ -773,6 +822,8 @@ class TestRustParity:
 
 
 class TestJuliaParity:
+    """Julia agrees with the NumPy law."""
+
     @pytest.fixture(autouse=True)
     def _skip_if_absent(self) -> None:
         if "julia" not in AVAILABLE_BACKENDS:
@@ -780,6 +831,7 @@ class TestJuliaParity:
 
     @pytest.mark.parametrize("seed", [0, 42])
     def test_itpc(self, seed: int) -> None:
+        """ITPC agrees with the NumPy law."""
         phases = _problem(seed)
         ref = _reference_itpc(phases)
         prev = _force("julia")
@@ -791,6 +843,8 @@ class TestJuliaParity:
 
 
 class TestGoParity:
+    """Go agrees with the NumPy law."""
+
     @pytest.fixture(autouse=True)
     def _skip_if_absent(self) -> None:
         if "go" not in AVAILABLE_BACKENDS:
@@ -806,6 +860,7 @@ class TestGoParity:
         suppress_health_check=[HealthCheck.too_slow],
     )
     def test_itpc(self, n_trials: int, seed: int) -> None:
+        """ITPC agrees with the NumPy law."""
         phases = _problem(seed, n_trials=n_trials)
         ref = _reference_itpc(phases)
         prev = _force("go")
@@ -816,6 +871,7 @@ class TestGoParity:
         np.testing.assert_allclose(result, ref, atol=1e-12)
 
     def test_persistence(self) -> None:
+        """Persistence agrees with the NumPy law."""
         phases = _problem(11)
         idx = np.array([0, 15, 30, 60])
         ref = _reference_pers(phases, idx)
@@ -828,6 +884,8 @@ class TestGoParity:
 
 
 class TestMojoParity:
+    """Mojo agrees with the NumPy law."""
+
     @pytest.fixture(autouse=True)
     def _skip_if_absent(self) -> None:
         if "mojo" not in AVAILABLE_BACKENDS:
@@ -835,6 +893,7 @@ class TestMojoParity:
 
     @pytest.mark.parametrize("seed", [0, 77])
     def test_itpc(self, seed: int) -> None:
+        """ITPC agrees with the NumPy law."""
         phases = _problem(seed)
         ref = _reference_itpc(phases)
         prev = _force("mojo")
@@ -847,6 +906,7 @@ class TestMojoParity:
         np.testing.assert_allclose(result, ref, atol=1e-9)
 
     def test_persistence(self) -> None:
+        """Persistence agrees with the NumPy law."""
         phases = _problem(99)
         idx = np.array([2, 8, 16, 40])
         ref = _reference_pers(phases, idx)
@@ -859,11 +919,14 @@ class TestMojoParity:
 
 
 class TestCrossBackendConsistency:
+    """All available owners agree with each other."""
+
     @pytest.mark.skipif(
         len(AVAILABLE_BACKENDS) < 2,
         reason="Only Python fallback available",
     )
     def test_all_backends_agree(self) -> None:
+        """Every available owner gives the same ITPC within tolerance."""
         phases = _problem(2026, n_trials=40, n_tp=100)
         idx = np.array([5, 25, 50, 75, 95])
         ref_itpc = _reference_itpc(phases)

@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The ITPC loader tests (RT-049, RT-050) no longer install a fake
+  `spo_kernel` or patch the Mojo, Julia and Go preflights. They call the
+  real loaders and check each returned ITPC and persistence kernel against
+  a plain-loop `cmath` oracle (1e-12, Mojo 1e-9).
 - The inertial (swing-equation) loader tests (RT-047, RT-048) no longer
   install fake `spo_kernel`, `juliacall` or backend modules. They call the
   real Rust, Mojo, Julia and Go loaders and compare one step of each
