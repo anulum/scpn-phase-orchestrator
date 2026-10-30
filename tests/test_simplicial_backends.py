@@ -705,116 +705,100 @@ class TestDirectMojoBoundaryContracts:
             )
 
 
-class TestOptionalLoaderSuccessPaths:
-    def test_rust_loader_wraps_spo_kernel_function(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        calls: list[tuple[object, ...]] = []
+def _oracle_simplicial(
+    phases: list[float],
+    omegas: list[float],
+    knm: list[list[float]],
+    alpha: list[list[float]],
+    zeta: float,
+    psi: float,
+    sigma2: float,
+    dt: float,
+    n_steps: int,
+) -> list[float]:
+    """Euler-step the pairwise + 3-body Kuramoto law written as double sums."""
+    n = len(phases)
+    p = list(phases)
+    for _ in range(n_steps):
+        rates = []
+        for i in range(n):
+            pair = math.fsum(
+                knm[i][j] * math.sin(p[j] - p[i] - alpha[i][j]) for j in range(n)
+            )
+            triad = (
+                sigma2
+                / n**2
+                * math.fsum(
+                    math.sin(p[j] + p[k] - 2 * p[i]) for j in range(n) for k in range(n)
+                )
+                if sigma2 != 0.0 and n >= 3
+                else 0.0
+            )
+            rates.append(omegas[i] + pair + triad + zeta * math.sin(psi - p[i]))
+        p = [(v + dt * r) % (2 * math.pi) for v, r in zip(p, rates, strict=True)]
+    return p
 
-        def simplicial_run_rust(*args: object) -> list[float]:
-            calls.append(args)
-            return [0.1, 0.2, 0.3]
 
-        fake_spo = types.ModuleType("spo_kernel")
-        fake_spo.__dict__["simplicial_run_rust"] = simplicial_run_rust
-        monkeypatch.setitem(sys.modules, "spo_kernel", fake_spo)
-
-        run = s_mod._load_rust_fn()
-        out = run(
-            np.array([0.0, 0.1, 0.2], dtype=np.float64),
-            np.ones(3, dtype=np.float64),
-            np.zeros(9, dtype=np.float64),
-            np.zeros(9, dtype=np.float64),
-            3,
-            0.2,
+def _assert_loader_follows_law(owner: str) -> None:
+    """Run the kernel of a real loader against the double-sum oracle."""
+    if owner not in s_mod.AVAILABLE_BACKENDS:
+        pytest.skip(f"{owner} unavailable")
+    loader = {
+        "rust": s_mod._load_rust_fn,
+        "mojo": s_mod._load_mojo_fn,
+        "julia": s_mod._load_julia_fn,
+        "go": s_mod._load_go_fn,
+    }[owner]
+    kernel = cast("Callable[..., FloatArray]", loader())
+    rng = np.random.default_rng(101)
+    n = 5
+    phases = rng.uniform(0.0, 2 * np.pi, n)
+    omegas = rng.normal(1.0, 0.3, n)
+    knm = rng.uniform(0.0, 0.6, (n, n))
+    np.fill_diagonal(knm, 0.0)
+    for alpha in (np.zeros((n, n)), rng.uniform(-0.2, 0.2, (n, n))):
+        got = np.asarray(
+            kernel(
+                phases, omegas, knm.ravel(), alpha.ravel(), n, 0.3, 1.2, 0.8, 0.01, 30
+            )
+        )
+        expected = _oracle_simplicial(
+            phases.tolist(),
+            omegas.tolist(),
+            knm.tolist(),
+            alpha.tolist(),
             0.3,
-            0.4,
+            1.2,
+            0.8,
             0.01,
-            2,
+            30,
         )
-        np.testing.assert_allclose(out, [0.1, 0.2, 0.3], atol=1e-12)
-        assert calls
-        assert calls[0][4] == 3
-        assert calls[0][9] == 2
+        gap = (got - np.asarray(expected) + np.pi) % (2 * np.pi) - np.pi
+        assert float(np.max(np.abs(gap))) < (1e-9 if owner == "mojo" else 1e-11)
 
-    def test_mojo_loader_runs_availability_probe(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        fake_mojo = types.ModuleType(
-            "scpn_phase_orchestrator.experimental.accelerators.upde._simplicial_mojo"
-        )
-        probe_calls: list[bool] = []
 
-        def _ensure_exe() -> None:
-            probe_calls.append(True)
+class TestOptionalLoaderSuccessPaths:
+    """The real loaders return kernels that integrate the simplicial law."""
 
-        def simplicial_run_mojo(*args: object) -> FloatArray:
-            return np.array([0.4, 0.5], dtype=np.float64)
+    @pytest.mark.native_runtime
+    def test_rust_loader_wraps_spo_kernel_function(self) -> None:
+        """The compiled Rust loader's kernel matches the double-sum oracle."""
+        _assert_loader_follows_law("rust")
 
-        fake_mojo.__dict__["_ensure_exe"] = _ensure_exe
-        fake_mojo.__dict__["simplicial_run_mojo"] = simplicial_run_mojo
-        monkeypatch.setitem(
-            sys.modules,
-            "scpn_phase_orchestrator.experimental.accelerators.upde._simplicial_mojo",
-            fake_mojo,
-        )
+    @pytest.mark.native_runtime
+    def test_mojo_loader_runs_availability_probe(self) -> None:
+        """The real Mojo loader runs its probe and follows the law."""
+        _assert_loader_follows_law("mojo")
 
-        run = s_mod._load_mojo_fn()
-        np.testing.assert_allclose(run(), [0.4, 0.5], atol=1e-12)
-        assert probe_calls == [True]
+    @pytest.mark.native_runtime
+    def test_julia_loader_requires_juliacall_and_returns_runner(self) -> None:
+        """The real Julia loader returns a runner that follows the law."""
+        _assert_loader_follows_law("julia")
 
-    def test_julia_loader_requires_juliacall_and_returns_runner(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        fake_juliacall = types.ModuleType("juliacall")
-        fake_juliacall.__dict__["Main"] = object()
-        fake_julia = types.ModuleType(
-            "scpn_phase_orchestrator.experimental.accelerators.upde._simplicial_julia"
-        )
-
-        def simplicial_run_julia(*args: object) -> FloatArray:
-            return np.array([0.6, 0.7], dtype=np.float64)
-
-        fake_julia.__dict__["simplicial_run_julia"] = simplicial_run_julia
-        monkeypatch.setitem(sys.modules, "juliacall", fake_juliacall)
-        monkeypatch.setitem(
-            sys.modules,
-            "scpn_phase_orchestrator.experimental.accelerators.upde._simplicial_julia",
-            fake_julia,
-        )
-
-        run = s_mod._load_julia_fn()
-        np.testing.assert_allclose(run(), [0.6, 0.7], atol=1e-12)
-
-    def test_go_loader_runs_shared_library_probe(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        fake_go = types.ModuleType(
-            "scpn_phase_orchestrator.experimental.accelerators.upde._simplicial_go"
-        )
-        probe_calls: list[bool] = []
-
-        def _load_lib() -> None:
-            probe_calls.append(True)
-
-        def simplicial_run_go(*args: object) -> FloatArray:
-            return np.array([0.8, 0.9], dtype=np.float64)
-
-        fake_go.__dict__["_load_lib"] = _load_lib
-        fake_go.__dict__["simplicial_run_go"] = simplicial_run_go
-        monkeypatch.setitem(
-            sys.modules,
-            "scpn_phase_orchestrator.experimental.accelerators.upde._simplicial_go",
-            fake_go,
-        )
-
-        run = s_mod._load_go_fn()
-        np.testing.assert_allclose(run(), [0.8, 0.9], atol=1e-12)
-        assert probe_calls == [True]
+    @pytest.mark.native_runtime
+    def test_go_loader_runs_shared_library_probe(self) -> None:
+        """The real Go loader probes its library and follows the law."""
+        _assert_loader_follows_law("go")
 
 
 class TestDispatchFallbackChain:

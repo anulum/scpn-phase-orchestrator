@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The simplicial loader tests (RT-087–RT-089, and the Go loader test) no
+  longer install fake `spo_kernel`, `juliacall` or backend modules. They run
+  the real Rust, Mojo, Julia and Go kernels, with and without phase lags,
+  against an oracle that writes the 3-body term as the double sum
+  `(σ₂/N²) Σⱼₖ sin(θⱼ + θₖ − 2θᵢ)` instead of the module's `2·Sᵢ·Cᵢ` identity.
 - `OttAntonsenReduction` takes `backend=`, and the new `reduction_backend()`
   names the owner of the integration; a named owner that is absent raises
   `RuntimeError`. The RT-081–RT-086 substitutes (forced scalar flags, fake
