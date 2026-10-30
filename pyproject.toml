@@ -308,12 +308,6 @@ module = [
 warn_unused_ignores = false
 
 [[tool.mypy.overrides]]
-module = ["tests", "tests.*"]
-disallow_untyped_defs = false
-disallow_incomplete_defs = false
-ignore_errors = true
-
-[[tool.mypy.overrides]]
 module = [
     "grpc_tools",
     "grpc_tools.*",

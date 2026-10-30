@@ -17,16 +17,6 @@
     },
     {
       "modules": [
-        "domainpacks",
-        "domainpacks.*"
-      ],
-      "settings": {
-        "disallow_incomplete_defs": false,
-        "disallow_untyped_defs": false
-      }
-    },
-    {
-      "modules": [
         "grpc_tools",
         "grpc_tools.*",
         "jax",
@@ -131,17 +121,6 @@
       "settings": {
         "follow_imports": "skip",
         "ignore_missing_imports": true
-      }
-    },
-    {
-      "modules": [
-        "tests",
-        "tests.*"
-      ],
-      "settings": {
-        "disallow_incomplete_defs": false,
-        "disallow_untyped_defs": false,
-        "ignore_errors": true
       }
     }
   ],

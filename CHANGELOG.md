@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The test suite is no longer exempt from type checking. The blanket
+  `ignore_errors = true` mypy override for `tests` is replaced by
+  `tools/tests_typing_ratchet.py`, which CI runs in ci-static-analysis.
+  - It counts `mypy --strict` errors per test file against
+    `tools/tests_typing_baseline.json`: 598 files, 8 694 errors.
+  - A new or clean test file must stay clean, and no file may gain errors.
+  - `--write` only lowers or drops ceilings and refuses to raise them.
+
 - Six domainpack runners failed when run:
   - `agent_coordination`, `swarm_robotics` and `traffic_flow` kept hard-coded frequency arrays shorter than the layers their specs gained. They now take the spec's per-layer `omegas`. The swarm and traffic specs carry the former values with their citations, plus slow scaffold values (marked as uncalibrated) for the layers added later.
   - The three `*_nchannel` runners imported `scpn_phase_orchestrator.server`, which moved to `runtime.server`.

@@ -54,6 +54,8 @@ jobs:
       - run: mypy --strict --explicit-package-bases src/scpn_phase_orchestrator/ tools/
       - name: Strictly check the domainpack runners
         run: mypy --strict domainpacks/
+      - name: Hold the test-suite strict typing ratchet
+        run: python tools/tests_typing_ratchet.py
       - name: Strictly check the policy fuzz runtime boundary
         run: >
           python -m mypy --strict --config-file tools/connectome_mypy.ini
