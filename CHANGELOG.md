@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `market_order_parameter` and `market_plv` take `backend=`, and the new
+  `market_backend()` names the owner; a named owner that is absent raises
+  `RuntimeError`. The RT-058–RT-060 substitutes (fake loaders, a fake
+  `spo_kernel` and fake backend modules) are replaced: resolution is checked
+  against the real loaders, and each installed owner's order-parameter and
+  rolling-PLV kernels against plain-loop `cmath` oracles (1e-12, Mojo
+  1e-9), through both the loaders and the public functions.
 - `lyapunov_spectrum` takes `backend=`, and the new `lyapunov_backend()`
   names the owner. A named owner that is absent or fails raises
   `RuntimeError`; `auto` keeps its NumPy fallback. The Rust flat-matrix

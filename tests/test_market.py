@@ -182,35 +182,20 @@ class TestMarketPipelineWiring:
 
 
 class TestMarketDispatchSurface:
-    def test_resolve_backends_prefers_first_available(self, monkeypatch):
-        def fail_once() -> tuple:
-            raise RuntimeError("backend unavailable")
+    def test_resolve_backends_prefers_first_available(self) -> None:
+        """Resolution lists exactly the owners whose real loaders work, in order."""
+        loadable = []
+        for name in ("rust", "mojo", "julia", "go"):
+            try:
+                m_mod._LOADERS[name]()
+            except (ImportError, RuntimeError, OSError, KeyError):
+                continue
+            loadable.append(name)
 
-        op_calls: list[str] = []
+        active, available = m_mod._resolve_backends()
 
-        def good_loader() -> tuple:
-            op_calls.append("mojo")
-            return (
-                lambda *args: np.array([0.2, 0.2], dtype=np.float64),
-                lambda *args: np.zeros((0,), dtype=np.float64),
-            )
-
-        monkeypatch.setattr(m_mod, "_BACKEND_CACHE", {})
-        monkeypatch.setattr(
-            m_mod,
-            "_LOADERS",
-            {
-                "rust": fail_once,
-                "mojo": good_loader,
-                "julia": fail_once,
-                "go": fail_once,
-            },
-        )
-
-        backend, available = m_mod._resolve_backends()
-        assert backend == "mojo"
-        assert available == ["mojo", "python"]
-        assert op_calls == ["mojo"]
+        assert available == [*loadable, "python"]
+        assert active == available[0]
 
     def test_resolve_backends_falls_back_to_python_only(self, monkeypatch):
         def loader_a() -> tuple:
@@ -234,6 +219,21 @@ class TestMarketDispatchSurface:
         assert backend == "python"
         assert available == ["python"]
 
+    def test_dispatch_returns_python_when_every_listed_owner_fails(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """With no Python entry and every native loader failing, auto uses NumPy."""
+
+        def broken_loader() -> tuple[object, object]:
+            """Fail like a missing shared library."""
+            raise OSError("libmarket.so missing")
+
+        monkeypatch.setattr(m_mod, "_BACKEND_CACHE", {})
+        monkeypatch.setattr(m_mod, "ACTIVE_BACKEND", "go")
+        monkeypatch.setattr(m_mod, "AVAILABLE_BACKENDS", ["go"])
+        monkeypatch.setitem(m_mod._LOADERS, "go", broken_loader)
+        assert m_mod._dispatch() == ("python", None)
+
     def test_dispatch_returns_none_for_python_backend(self, monkeypatch):
         monkeypatch.setattr(m_mod, "ACTIVE_BACKEND", "python")
-        assert m_mod._dispatch() is None
+        assert m_mod._dispatch() == ("python", None)

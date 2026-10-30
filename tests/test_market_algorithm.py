@@ -17,10 +17,12 @@ invariant; Hypothesis property that output shapes match the spec.
 
 from __future__ import annotations
 
+import cmath
 import functools
 import sys
 import types
-from typing import Any
+from collections.abc import Callable
+from typing import Any, cast
 
 import numpy as np
 import pytest
@@ -337,38 +339,54 @@ class TestDispatcherSurface:
         assert m_mod.AVAILABLE_BACKENDS[0] == m_mod.ACTIVE_BACKEND
 
 
+def _oracle_order(rows: list[list[float]]) -> list[float]:
+    """Return ``|mean_n exp(iθ_tn)|`` per time step with ``cmath``."""
+    return [abs(sum(cmath.exp(1j * v) for v in row) / len(row)) for row in rows]
+
+
+def _oracle_plv(rows: list[list[float]], window: int) -> list[float]:
+    """Return the flattened rolling PLV matrices ``|mean_t exp(i(θ_j − θ_i))|``."""
+    n = len(rows[0])
+    out = []
+    for start in range(len(rows) - window + 1):
+        chunk = rows[start : start + window]
+        for i in range(n):
+            for j in range(n):
+                total = sum(cmath.exp(1j * (r[j] - r[i])) for r in chunk)
+                out.append(abs(total / window))
+    return out
+
+
+def _assert_loader_follows_the_laws(owner: str, loader: object) -> None:
+    """Run the kernels a real loader returns against the ``cmath`` oracles."""
+    if owner not in m_mod.AVAILABLE_BACKENDS:
+        pytest.skip(f"{owner} unavailable")
+    op_fn, plv_fn = cast(
+        "Callable[[], tuple[Callable[..., object], Callable[..., object]]]", loader
+    )()
+    rng = np.random.default_rng(17)
+    phases = rng.uniform(-np.pi, np.pi, (9, 4))
+    flat = np.ascontiguousarray(phases.ravel())
+    atol = 1e-9 if owner == "mojo" else 1e-12
+    np.testing.assert_allclose(
+        np.asarray(op_fn(flat, 9, 4)),
+        _oracle_order(phases.tolist()),
+        rtol=0.0,
+        atol=atol,
+    )
+    np.testing.assert_allclose(
+        np.asarray(plv_fn(flat, 9, 4, 5)),
+        _oracle_plv(phases.tolist(), 5),
+        rtol=0.0,
+        atol=atol,
+    )
+
+
 class TestBackendLoaderContracts:
-    def test_rust_loader_wraps_order_parameter_and_plv_kernels(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        seen: dict[str, object] = {}
-
-        def fake_order(phases_flat: np.ndarray, t: int, n: int) -> np.ndarray:
-            seen["order"] = (phases_flat.flags.c_contiguous, t, n)
-            return np.linspace(0.25, 0.75, t, dtype=np.float64)
-
-        def fake_plv(
-            phases_flat: np.ndarray,
-            t: int,
-            n: int,
-            window: int,
-        ) -> np.ndarray:
-            seen["plv"] = (phases_flat.flags.c_contiguous, t, n, window)
-            return np.eye(n, dtype=np.float64).ravel()
-
-        fake_spo = types.ModuleType("spo_kernel")
-        fake_spo.market_order_parameter_rust = fake_order
-        fake_spo.market_plv_rust = fake_plv
-        monkeypatch.setitem(sys.modules, "spo_kernel", fake_spo)
-
-        op_fn, plv_fn = m_mod._load_rust_fn()
-        phases = np.arange(6, dtype=np.float64)
-        np.testing.assert_allclose(op_fn(phases, 3, 2), [0.25, 0.5, 0.75])
-        np.testing.assert_allclose(plv_fn(phases, 3, 2, 3).reshape(2, 2), np.eye(2))
-        assert seen == {
-            "order": (True, 3, 2),
-            "plv": (True, 3, 2, 3),
-        }
+    @pytest.mark.native_runtime
+    def test_rust_loader_wraps_order_parameter_and_plv_kernels(self) -> None:
+        """The compiled Rust loader returns kernels that follow both laws."""
+        _assert_loader_follows_the_laws("rust", m_mod._load_rust_fn)
 
     def test_rust_loader_rejects_numeric_string_raw_returns(
         self, monkeypatch: pytest.MonkeyPatch
@@ -384,45 +402,18 @@ class TestBackendLoaderContracts:
         with pytest.raises(TypeError, match="phase-locking value must be numeric"):
             plv_fn(np.zeros(4, dtype=np.float64), 2, 2, 2)
 
+    @pytest.mark.native_runtime
+    @pytest.mark.parametrize("owner", ["mojo", "julia", "go"])
     def test_optional_loader_contracts_return_order_and_plv_functions(
-        self, monkeypatch: pytest.MonkeyPatch
+        self, owner: str
     ) -> None:
-        def fake_order(*_args: object) -> np.ndarray:
-            return np.array([1.0])
-
-        def fake_plv(*_args: object) -> np.ndarray:
-            return np.array([1.0])
-
-        mojo_mod = types.ModuleType(
-            "scpn_phase_orchestrator.experimental.accelerators.upde._market_mojo"
-        )
-        mojo_mod._ensure_exe = lambda: None
-        mojo_mod.market_order_parameter_mojo = fake_order
-        mojo_mod.market_plv_mojo = fake_plv
-
-        julia_mod = types.ModuleType(
-            "scpn_phase_orchestrator.experimental.accelerators.upde._market_julia"
-        )
-        julia_mod.market_order_parameter_julia = fake_order
-        julia_mod.market_plv_julia = fake_plv
-
-        go_mod = types.ModuleType(
-            "scpn_phase_orchestrator.experimental.accelerators.upde._market_go"
-        )
-        go_mod._load_lib = lambda: None
-        go_mod.market_order_parameter_go = fake_order
-        go_mod.market_plv_go = fake_plv
-
-        monkeypatch.setitem(sys.modules, mojo_mod.__name__, mojo_mod)
-        fake_juliacall = types.ModuleType("juliacall")
-        fake_juliacall.Main = object()
-        monkeypatch.setitem(sys.modules, "juliacall", fake_juliacall)
-        monkeypatch.setitem(sys.modules, julia_mod.__name__, julia_mod)
-        monkeypatch.setitem(sys.modules, go_mod.__name__, go_mod)
-
-        assert m_mod._load_mojo_fn() == (fake_order, fake_plv)
-        assert m_mod._load_julia_fn() == (fake_order, fake_plv)
-        assert m_mod._load_go_fn() == (fake_order, fake_plv)
+        """Each installed optional loader returns kernels that follow both laws."""
+        loader = {
+            "mojo": m_mod._load_mojo_fn,
+            "julia": m_mod._load_julia_fn,
+            "go": m_mod._load_go_fn,
+        }[owner]
+        _assert_loader_follows_the_laws(owner, loader)
 
     def test_detect_regimes_uses_rust_classifier_when_available(
         self, monkeypatch: pytest.MonkeyPatch
@@ -447,3 +438,46 @@ class TestBackendLoaderContracts:
         r_flat, sync_threshold, desync_threshold = seen["args"]
         np.testing.assert_array_equal(r_flat, R)
         assert (sync_threshold, desync_threshold) == (0.8, 0.2)
+
+
+class TestNamedMarketOwners:
+    """``backend=`` runs the named owner or refuses; it never substitutes."""
+
+    @pytest.mark.native_runtime
+    @pytest.mark.parametrize("owner", ["python", "rust", "mojo", "julia", "go"])
+    def test_each_named_owner_serves_both_public_functions(self, owner: str) -> None:
+        """The public functions run the named owner against the oracles."""
+        if owner not in m_mod.AVAILABLE_BACKENDS:
+            pytest.skip(f"{owner} unavailable")
+        assert m_mod.market_backend(owner) == owner
+        rng = np.random.default_rng(23)
+        phases = rng.uniform(0.0, 2 * np.pi, (8, 3))
+        atol = 1e-9 if owner == "mojo" else 1e-12
+        np.testing.assert_allclose(
+            market_order_parameter(phases, backend=owner),
+            _oracle_order(phases.tolist()),
+            rtol=0.0,
+            atol=atol,
+        )
+        np.testing.assert_allclose(
+            m_mod.market_plv(phases, 4, backend=owner).ravel(),
+            _oracle_plv(phases.tolist(), 4),
+            rtol=0.0,
+            atol=atol,
+        )
+
+    def test_absent_owner_and_unknown_name_are_refused(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """An absent named owner is a RuntimeError; an unknown name a ValueError."""
+
+        def broken_loader() -> tuple[object, object]:
+            """Fail like a missing shared library."""
+            raise OSError("libmarket.so missing")
+
+        monkeypatch.setattr(m_mod, "_BACKEND_CACHE", {})
+        monkeypatch.setitem(m_mod._LOADERS, "go", broken_loader)
+        with pytest.raises(RuntimeError, match="market backend 'go' unavailable"):
+            market_order_parameter(np.zeros((3, 2)), backend="go")
+        with pytest.raises(ValueError, match="unknown market backend"):
+            m_mod.market_plv(np.zeros((3, 2)), 2, backend="cuda")

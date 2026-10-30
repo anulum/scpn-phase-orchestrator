@@ -281,6 +281,12 @@ non-finite output is rejected before public arrays are returned.
 backends via spo-kernel. Speedup is significant for `market_plv` which
 is $O(T \cdot W \cdot N^2)$.
 
+`market_order_parameter` and `market_plv` take `backend="auto"`;
+`market_backend()` names the owner. A named owner (`"rust"`, `"mojo"`,
+`"julia"`, `"go"`, `"python"`) must serve the call: absent, it raises
+`RuntimeError("market backend 'go' unavailable")`. An unknown name raises
+`ValueError`.
+
 ### 4.3 Vectorised Implementation
 
 The Python fallback uses fully vectorised NumPy operations — no Python

@@ -53,6 +53,7 @@ __all__ = [
     "AVAILABLE_BACKENDS",
     "detect_regimes",
     "extract_phase",
+    "market_backend",
     "market_order_parameter",
     "market_plv",
     "sync_warning",
@@ -173,23 +174,75 @@ def _resolve_backends() -> tuple[str, list[str]]:
 ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
-def _dispatch() -> tuple[_MarketFn, _MarketFn] | None:
-    """Return the fastest available backend callable, or ``None`` for Python."""
-    if ACTIVE_BACKEND == "python":
-        return None
-    ordered_backends = [ACTIVE_BACKEND] + list(AVAILABLE_BACKENDS)
+_NATIVE_FAILURES = (ImportError, RuntimeError, OSError, KeyError)
+
+
+def _require_known_backend(backend: str) -> None:
+    """Refuse an unknown owner name before any computation."""
+    if backend not in (*_BACKEND_NAMES, "auto"):
+        raise ValueError(f"unknown market backend: {backend!r}")
+
+
+def _dispatch(backend: str = "auto") -> tuple[str, tuple[_MarketFn, _MarketFn] | None]:
+    """Resolve the owner of the market kernels and its callables.
+
+    Parameters
+    ----------
+    backend : str
+        ``"auto"`` or one of ``rust``, ``mojo``, ``julia``, ``go``, ``python``.
+
+    Returns
+    -------
+    tuple[str, tuple[_MarketFn, _MarketFn] | None]
+        The owner name and its (order parameter, PLV) kernels, or
+        ``("python", None)``.
+
+    Raises
+    ------
+    ValueError
+        If ``backend`` is not a known owner.
+    RuntimeError
+        If an explicitly requested owner is unavailable.
+    """
+    _require_known_backend(backend)
+    ordered = [ACTIVE_BACKEND, *AVAILABLE_BACKENDS] if backend == "auto" else [backend]
     seen: set[str] = set()
-    for backend in ordered_backends:
-        if backend in seen:
+    for name in ordered:
+        if name in seen:
             continue
-        seen.add(backend)
-        if backend == "python":
-            continue
+        seen.add(name)
+        if name == "python":
+            return "python", None
         try:
-            return _load_backend(backend)
-        except (ImportError, RuntimeError, OSError, KeyError):
-            continue
-    return None
+            return name, _load_backend(name)
+        except _NATIVE_FAILURES as exc:
+            if backend != "auto":
+                raise RuntimeError(f"market backend {name!r} unavailable") from exc
+    return "python", None
+
+
+def market_backend(backend: str = "auto") -> str:
+    """Return the owner of the market order-parameter and PLV kernels.
+
+    Parameters
+    ----------
+    backend : str
+        ``"auto"`` or an explicit owner name.
+
+    Returns
+    -------
+    str
+        ``rust``, ``mojo``, ``julia``, ``go`` or ``python``.
+
+    Raises
+    ------
+    ValueError
+        If ``backend`` is not a known owner.
+    RuntimeError
+        If an explicitly requested owner is unavailable.
+    """
+    owner, _ = _dispatch(backend)
+    return owner
 
 
 def _validate_positive_int(value: object, *, name: str) -> int:
@@ -317,25 +370,35 @@ def _python_market_order_parameter(
     return np.ascontiguousarray(R, dtype=np.float64)
 
 
-def market_order_parameter(phases: FloatArray) -> FloatArray:
+def market_order_parameter(phases: FloatArray, backend: str = "auto") -> FloatArray:
     """Return the Kuramoto order parameter ``R(t)`` across ``N`` assets.
 
     Parameters
     ----------
     phases : FloatArray
         Oscillator phases in radians, shape ``(N,)``.
+    backend : str
+        ``"auto"`` or an explicit owner.
 
     Returns
     -------
     FloatArray
         The Kuramoto order parameter time series ``R(t)``.
+
+    Raises
+    ------
+    ValueError
+        If the phases or the backend name are invalid.
+    RuntimeError
+        If an explicitly requested owner is unavailable.
     """
+    _require_known_backend(backend)
     phases = _validate_phase_matrix(phases)
     T, N = phases.shape
     if T == 0:
         return np.empty(0, dtype=np.float64)
     flat = np.ascontiguousarray(phases.ravel(), dtype=np.float64)
-    dispatched = _dispatch()
+    _, dispatched = _dispatch(backend)
     if dispatched is not None:
         op_fn, _ = dispatched
         return validate_market_order_output(op_fn(flat, T, N), t=T)
@@ -366,7 +429,9 @@ def _python_market_plv(
     return out
 
 
-def market_plv(phases: FloatArray, window: int = 50) -> FloatArray:
+def market_plv(
+    phases: FloatArray, window: int = 50, backend: str = "auto"
+) -> FloatArray:
     """Compute the rolling phase-locking-value matrix between assets.
 
     Returns shape ``(T − window + 1, N, N)``.
@@ -377,19 +442,29 @@ def market_plv(phases: FloatArray, window: int = 50) -> FloatArray:
         Oscillator phases in radians, shape ``(N,)``.
     window : int
         Sliding-window length in samples.
+    backend : str
+        ``"auto"`` or an explicit owner.
 
     Returns
     -------
     FloatArray
         The rolling phase-locking-value matrices, shape ``(T − window + 1, N, N)``.
+
+    Raises
+    ------
+    ValueError
+        If the phases, the window or the backend name are invalid.
+    RuntimeError
+        If an explicitly requested owner is unavailable.
     """
+    _require_known_backend(backend)
     phases = _validate_phase_matrix(phases)
     window = _validate_positive_int(window, name="window")
     T, N = phases.shape
     if window > T or N == 0:
         return np.empty((0, N, N), dtype=np.float64)
     flat = np.ascontiguousarray(phases.ravel(), dtype=np.float64)
-    dispatched = _dispatch()
+    _, dispatched = _dispatch(backend)
     if dispatched is not None:
         _, plv_fn = dispatched
         result_flat = validate_market_plv_output(
