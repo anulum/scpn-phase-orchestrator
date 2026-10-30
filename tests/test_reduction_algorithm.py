@@ -165,6 +165,15 @@ class TestStep:
         assert pytest.approx(0.0, abs=1e-14) == state.R
 
 
+def _analytic_oa_amplitude(r0: float, delta: float, k: float, t: float) -> float:
+    """Return the OA amplitude ``R(t)`` from ``dR/dt = (K/2 − Δ)R − (K/2)R³``."""
+    rate = k / 2 - delta
+    r_star_sq = 1 - 2 * delta / k
+    return math.sqrt(
+        r_star_sq / (1 + (r_star_sq / r0**2 - 1) * math.exp(-2 * rate * t))
+    )
+
+
 class TestPredictFromOscillators:
     @_python
     def test_infers_delta_and_omega_from_sample(self):
@@ -212,38 +221,35 @@ class TestPredictFromOscillators:
         with pytest.raises(ValueError, match="K must be a finite real"):
             red.predict_from_oscillators([0.1, 0.2, 0.3], K=K)
 
+    @pytest.mark.parametrize("owner", ["python", "rust"])
     def test_predict_from_oscillators_uses_iqr_fallback_when_spread_collapses(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
+        self, owner: str
     ) -> None:
-        red = OttAntonsenReduction(omega_0=0.0, delta=0.1, K=2.0, dt=0.01)
-        seen: dict[str, float] = {}
-
-        def fake_python_oa_run(
-            z_re: float,
-            z_im: float,
-            omega_0: float,
-            delta: float,
-            k_coupling: float,
-            dt: float,
-            n_steps: int,
-        ) -> tuple[float, float, float, float]:
-            seen["omega_0"] = omega_0
-            seen["delta"] = delta
-            seen["n_steps"] = n_steps
-            return 0.01, 0.0, 0.01, 0.0
-
-        monkeypatch.setattr(r_mod, "_HAS_RUST_SCALAR", False, raising=False)
-        monkeypatch.setattr(r_mod, "_dispatch", lambda: None)
-        monkeypatch.setattr(r_mod, "_python_oa_run", fake_python_oa_run)
+        """A collapsed spread fits Δ = 0.01 and relaxes along the analytic OA curve."""
+        if owner == "rust" and not r_mod._HAS_RUST_SCALAR:
+            pytest.skip("Rust scalar helpers not built")
+        red = OttAntonsenReduction(
+            omega_0=0.0, delta=0.1, K=2.0, dt=0.01, backend=owner
+        )
 
         state = red.predict_from_oscillators(np.array([1.0, 1.0, 1.0]), K=1.4)
 
-        assert pytest.approx(1.0) == seen["omega_0"]
-        assert pytest.approx(0.01) == seen["delta"]
-        assert seen["n_steps"] == int(10.0 / red._dt)
-        assert isinstance(state, OAState)
         assert state.K_c == pytest.approx(0.02)
+        assert (
+            pytest.approx(_analytic_oa_amplitude(0.01, 0.01, 1.4, 10.0), abs=1e-8)
+            == state.R
+        )
+
+    def test_python_and_rust_fit_the_same_lorentzian(self) -> None:
+        """Both owners use nearest-rank quartiles, so their fits agree exactly."""
+        if not r_mod._HAS_RUST_SCALAR:
+            pytest.skip("Rust scalar helpers not built")
+        rng = np.random.default_rng(97)
+        for n in range(1, 40):
+            sample = rng.standard_cauchy(n)
+            assert r_mod._fit_lorentzian_python(sample) == r_mod._rust_fit_lorentzian(
+                sample
+            )
 
 
 class TestHypothesis:

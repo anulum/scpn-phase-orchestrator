@@ -77,6 +77,7 @@ __all__ = [
     "AVAILABLE_BACKENDS",
     "OAState",
     "OttAntonsenReduction",
+    "reduction_backend",
 ]
 
 
@@ -241,23 +242,114 @@ def __getattr__(name: str) -> object:
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
-def _dispatch() -> Callable[..., tuple[float, float, float, float]] | None:
-    """Return the fastest available backend callable, or ``None`` for Python."""
-    active, available = _backend_state()
-    ordered_backends = [active, *available]
-    deduped: list[str] = []
-    for backend in ordered_backends:
-        if backend in deduped:
+_NATIVE_FAILURES = (ImportError, RuntimeError, OSError, KeyError)
+
+
+def _require_known_backend(backend: str) -> None:
+    """Refuse an unknown owner name before any computation."""
+    if backend not in (*_BACKEND_NAMES, "auto"):
+        raise ValueError(f"unknown reduction backend: {backend!r}")
+
+
+def _dispatch(
+    backend: str = "auto",
+) -> tuple[str, Callable[..., tuple[float, float, float, float]] | None]:
+    """Resolve the owner of the OA integration and its callable.
+
+    Parameters
+    ----------
+    backend : str
+        ``"auto"`` or one of ``rust``, ``mojo``, ``julia``, ``go``, ``python``.
+
+    Returns
+    -------
+    tuple[str, Callable[..., tuple[float, float, float, float]] | None]
+        The owner name and its callable, or ``("python", None)``.
+
+    Raises
+    ------
+    ValueError
+        If ``backend`` is not a known owner.
+    RuntimeError
+        If an explicitly requested owner is unavailable.
+    """
+    _require_known_backend(backend)
+    if backend == "auto":
+        active, available = _backend_state()
+        ordered = [active, *available]
+    else:
+        ordered = [backend]
+    seen: set[str] = set()
+    for name in ordered:
+        if name in seen:
             continue
-        deduped.append(backend)
-    for backend in deduped:
-        if backend == "python":
-            return None
+        seen.add(name)
+        if name == "python":
+            return "python", None
         try:
-            return _load_backend(backend)
-        except (ImportError, RuntimeError, OSError, KeyError):
-            continue
-    return None
+            return name, _load_backend(name)
+        except _NATIVE_FAILURES as exc:
+            if backend != "auto":
+                raise RuntimeError(f"reduction backend {name!r} unavailable") from exc
+    return "python", None
+
+
+def reduction_backend(backend: str = "auto") -> str:
+    """Return the owner that integrates the Ott-Antonsen ODE.
+
+    Parameters
+    ----------
+    backend : str
+        ``"auto"`` or an explicit owner name.
+
+    Returns
+    -------
+    str
+        ``rust``, ``mojo``, ``julia``, ``go`` or ``python``.
+
+    Raises
+    ------
+    ValueError
+        If ``backend`` is not a known owner.
+    RuntimeError
+        If an explicitly requested owner is unavailable.
+    """
+    owner, _ = _dispatch(backend)
+    return owner
+
+
+def _scalar_owner(backend: str) -> str:
+    """Return the owner of the steady-state and Lorentzian-fit helpers.
+
+    Only Rust and Python provide them: ``"auto"`` takes Rust when installed,
+    ``"rust"`` requires it, and every other owner uses Python.
+    """
+    if backend == "rust" and not _HAS_RUST_SCALAR:
+        raise RuntimeError("reduction backend 'rust' unavailable")
+    if backend in ("auto", "rust") and _HAS_RUST_SCALAR:
+        return "rust"
+    return "python"
+
+
+def _fit_lorentzian_python(omegas: FloatArray) -> tuple[float, float]:
+    """Return ``(median, IQR / 2)`` with the nearest-rank quartiles of the Rust kernel.
+
+    The quartiles are ``sorted[n // 4]`` and ``sorted[3n // 4]``, exactly as in
+    ``fit_lorentzian_rust``, so both owners fit the same Lorentzian. A
+    collapsed spread gives ``Δ = 0.01``.
+    """
+    ordered = np.sort(omegas)
+    n = int(ordered.size)
+    half = n // 2
+    omega_0 = (
+        float((ordered[half - 1] + ordered[half]) / 2.0)
+        if n % 2 == 0
+        else float(ordered[half])
+    )
+    q25 = float(ordered[n // 4])
+    q75 = float(ordered[3 * n // 4])
+    delta = (q75 - q25) / 2.0 if q75 > q25 else 0.01
+    return omega_0, delta
 
 
 def _validate_finite_real(value: object, *, name: str) -> float:
@@ -377,7 +469,33 @@ class OttAntonsenReduction:
         delta: float,
         K: float,
         dt: float = 0.01,
+        backend: str = "auto",
     ):
+        """Validate the Lorentzian, coupling, step and owner of the reduction.
+
+        Parameters
+        ----------
+        omega_0 : float
+            Lorentzian centre frequency.
+        delta : float
+            Lorentzian half-width, non-negative.
+        K : float
+            Global coupling strength.
+        dt : float
+            RK4 step, positive.
+        backend : str
+            Owner of the integration (``"auto"`` or ``rust``, ``mojo``,
+            ``julia``, ``go``, ``python``). The steady-state and fit helpers
+            use Rust when it owns the call or ``"auto"`` finds it installed,
+            and Python otherwise. A named owner that is absent raises
+            ``RuntimeError`` when used.
+
+        Raises
+        ------
+        ValueError
+            If a parameter or the backend name is invalid.
+        """
+        _require_known_backend(backend)
         omega_0 = _validate_finite_real(omega_0, name="omega_0")
         delta = _validate_finite_real(delta, name="delta")
         K = _validate_finite_real(K, name="K")
@@ -390,6 +508,7 @@ class OttAntonsenReduction:
         self._delta = delta
         self._K = K
         self._dt = dt
+        self._backend = backend
 
     @property
     def K_c(self) -> float:
@@ -410,7 +529,7 @@ class OttAntonsenReduction:
         float
             Return the analytical steady-state ``R_ss = √(1 − 2Δ/K)`` for ``K > K_c``.
         """
-        if _HAS_RUST_SCALAR:
+        if _scalar_owner(self._backend) == "rust":
             value = _rust_steady_state_r(self._delta, self._K)
         elif self.K_c >= self._K:
             value = 0.0
@@ -463,7 +582,7 @@ class OttAntonsenReduction:
     ) -> tuple[float, float, float, float]:
         """Run the scalar Ott-Antonsen reduction and return the trajectory."""
         n_steps = _validate_positive_int(n_steps, name="n_steps")
-        backend_fn = _dispatch()
+        _, backend_fn = _dispatch(self._backend)
         if backend_fn is not None:
             return _reduction_validation.validate_oa_output(
                 *backend_fn(
@@ -510,11 +629,11 @@ class OttAntonsenReduction:
             name="omegas",
         )
         K = _validate_finite_real(K, name="K")
-        if _HAS_RUST_SCALAR:
+        if _scalar_owner(self._backend) == "rust":
             omega_0, delta = _rust_fit_lorentzian(omegas64)
         else:
-            omega_0 = float(np.median(omegas64))
-            q75, q25 = np.percentile(omegas64, [75, 25])
-            delta = (q75 - q25) / 2.0 if q75 > q25 else 0.01
-        reducer = OttAntonsenReduction(omega_0, delta, K, dt=self._dt)
+            omega_0, delta = _fit_lorentzian_python(omegas64)
+        reducer = OttAntonsenReduction(
+            omega_0, delta, K, dt=self._dt, backend=self._backend
+        )
         return reducer.run(complex(0.01, 0.0), n_steps=int(10.0 / self._dt))

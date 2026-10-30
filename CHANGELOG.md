@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `OttAntonsenReduction` takes `backend=`, and the new `reduction_backend()`
+  names the owner of the integration; a named owner that is absent raises
+  `RuntimeError`. The RT-081–RT-086 substitutes (forced scalar flags, fake
+  kernels, fake loader modules and a module reload that left Rust disabled
+  for later tests) are replaced by the real loaders and helpers checked
+  against the analytic OA solution `z(t) = R(t)·exp(i(ψ₀ − ω₀ t))` with the
+  logistic amplitude, and by the analytic steady state.
 - `recurrence_matrix` and `cross_recurrence_matrix` take `backend=`, and
   the new `recurrence_backend(slot, backend)` names the owner; a named owner
   that is absent, lacks the kernel or fails raises `RuntimeError`. The
@@ -181,6 +188,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The Python Lorentzian fit in `OttAntonsenReduction.predict_from_oscillators`
+  used interpolated percentiles while `fit_lorentzian_rust` uses nearest-rank
+  quartiles, so the two owners fitted different `Δ` for the same sample
+  (for example `[1, …, 8]`: 1.75 against 2.0). The Python path now uses the
+  Rust law; a parity test compares both on Cauchy samples of size 1–39.
 - The Mojo lane builds the embedding executable with `--target-cpu x86-64`,
   as every other Mojo build in CI does. Built for the native CPU, it died
   with SIGILL (exit -4) on some hosted runners.

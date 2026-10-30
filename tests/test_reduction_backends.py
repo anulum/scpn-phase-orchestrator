@@ -15,9 +15,11 @@ epsilon on Mojo.
 
 from __future__ import annotations
 
+import cmath
 import contextlib
 import ctypes
 import importlib
+import math
 import sys
 import types
 from collections.abc import Callable, Iterator
@@ -358,7 +360,9 @@ class TestPublicReductionOutputContracts:
             return output
 
         reducer = OttAntonsenReduction(omega_0=0.0, delta=0.1, K=1.0, dt=0.01)
-        monkeypatch.setattr(r_mod, "_dispatch", lambda: fake_backend)
+        monkeypatch.setattr(
+            r_mod, "_dispatch", lambda _backend="auto": ("go", fake_backend)
+        )
 
         with pytest.raises((TypeError, ValueError), match=match):
             reducer.run(complex(0.2, 0.0), n_steps=8)
@@ -568,30 +572,41 @@ class TestHypothesisParity:
         assert abs(got.z.imag - ref.z.imag) < TOL
 
 
+def _analytic_oa_amplitude(r0: float, delta: float, k: float, t: float) -> float:
+    """Return the OA amplitude ``R(t)`` from ``dR/dt = (K/2 − Δ)R − (K/2)R³``."""
+    rate = k / 2 - delta
+    r_star_sq = 1 - 2 * delta / k
+    growth = (r_star_sq / r0**2 - 1) * math.exp(-2 * rate * t)
+    return math.sqrt(r_star_sq / (1 + growth))
+
+
+def _assert_loader_follows_oa(owner: str, loader: Callable[[], object]) -> None:
+    """Run the runner a real loader returns against the analytic OA solution.
+
+    With ``dz/dt = −(Δ + iω₀)z + (K/2)(1 − |z|²)z`` the phase turns at
+    exactly ``−ω₀`` and the amplitude follows the logistic law, so
+    ``z(t) = R(t)·exp(i(ψ₀ − ω₀ t))``.
+    """
+    if owner not in r_mod.AVAILABLE_BACKENDS:
+        pytest.skip(f"{owner} unavailable")
+    run = cast("Callable[..., OAOutput]", loader())
+    z0, omega_0, delta, k, dt, steps = cmath.rect(0.05, 0.4), 0.7, 0.1, 1.0, 0.01, 800
+    z_re, z_im, r, psi = run(z0.real, z0.imag, omega_0, delta, k, dt, steps)
+    t = dt * steps
+    expected = cmath.rect(_analytic_oa_amplitude(0.05, delta, k, t), 0.4 - omega_0 * t)
+    atol = 1e-8 if owner == "mojo" else 1e-9
+    assert complex(z_re, z_im) == pytest.approx(expected, abs=atol)
+    assert r == pytest.approx(abs(expected), abs=atol)
+    assert cmath.rect(1.0, psi) == pytest.approx(
+        cmath.rect(1.0, cmath.phase(expected)), abs=atol
+    )
+
+
 class TestOptionalLoaderSuccessPaths:
-    def test_rust_loader_wraps_spo_kernel_function(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        calls: list[tuple[object, ...]] = []
-
-        def oa_run_rust(*args: object) -> OAOutput:
-            calls.append(args)
-            return 0.1, 0.2, float(np.hypot(0.1, 0.2)), float(np.arctan2(0.2, 0.1))
-
-        fake_spo = types.ModuleType("spo_kernel")
-        fake_spo_dynamic = cast(Any, fake_spo)
-        fake_spo_dynamic.oa_run_rust = oa_run_rust
-        monkeypatch.setitem(sys.modules, "spo_kernel", fake_spo)
-
-        run = r_mod._load_rust_fn()
-        assert run(0.01, 0.02, 0.5, 0.1, 1.0, 0.01, 3) == (
-            0.1,
-            0.2,
-            float(np.hypot(0.1, 0.2)),
-            float(np.arctan2(0.2, 0.1)),
-        )
-        assert calls == [(0.01, 0.02, 0.5, 0.1, 1.0, 0.01, 3)]
+    @pytest.mark.native_runtime
+    def test_rust_loader_wraps_spo_kernel_function(self) -> None:
+        """The compiled Rust loader integrates the analytic OA solution."""
+        _assert_loader_follows_oa("rust", r_mod._load_rust_fn)
 
     def test_rust_loader_rejects_inconsistent_backend_output(
         self,
@@ -631,177 +646,52 @@ class TestOptionalLoaderSuccessPaths:
             run(0.01, 0.02, 0.5, 0.1, 1.0, value, 3)
         assert calls == []
 
-    def test_mojo_loader_runs_availability_probe(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        fake_mojo = types.ModuleType(
-            "scpn_phase_orchestrator.experimental.accelerators.upde._reduction_mojo"
+    @pytest.mark.native_runtime
+    def test_mojo_loader_runs_availability_probe(self) -> None:
+        """The real Mojo loader runs its probe and integrates the OA solution."""
+        _assert_loader_follows_oa("mojo", r_mod._load_mojo_fn)
+
+    @pytest.mark.native_runtime
+    def test_julia_loader_requires_juliacall_and_returns_runner(self) -> None:
+        """The real Julia loader returns a runner for the OA solution."""
+        _assert_loader_follows_oa("julia", r_mod._load_julia_fn)
+
+    @pytest.mark.native_runtime
+    def test_go_loader_runs_shared_library_probe(self) -> None:
+        """The real Go loader probes its library and integrates the OA solution."""
+        _assert_loader_follows_oa("go", r_mod._load_go_fn)
+
+    @pytest.mark.native_runtime
+    def test_scalar_rust_helpers_feed_steady_state_and_fit(self) -> None:
+        """The compiled scalar helpers give the analytic steady state and fit."""
+        if not r_mod._HAS_RUST_SCALAR:
+            pytest.skip("Rust scalar helpers not built")
+        red = OttAntonsenReduction(
+            omega_0=0.0, delta=0.2, K=1.0, dt=0.01, backend="rust"
         )
-        probe_calls: list[bool] = []
-
-        def _ensure_exe() -> None:
-            probe_calls.append(True)
-
-        def oa_run_mojo(*_args: object) -> OAOutput:
-            return 0.2, 0.3, 0.4, 0.5
-
-        fake_mojo_dynamic = cast(Any, fake_mojo)
-        fake_mojo_dynamic._ensure_exe = _ensure_exe
-        fake_mojo_dynamic.oa_run_mojo = oa_run_mojo
-        monkeypatch.setitem(
-            sys.modules,
-            "scpn_phase_orchestrator.experimental.accelerators.upde._reduction_mojo",
-            fake_mojo,
-        )
-
-        run = r_mod._load_mojo_fn()
-        assert run() == (0.2, 0.3, 0.4, 0.5)
-        assert probe_calls == [True]
-
-    def test_julia_loader_requires_juliacall_and_returns_runner(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        fake_juliacall = types.ModuleType("juliacall")
-        fake_juliacall_dynamic = cast(Any, fake_juliacall)
-        fake_juliacall_dynamic.Main = object()
-        fake_julia = types.ModuleType(
-            "scpn_phase_orchestrator.experimental.accelerators.upde._reduction_julia"
+        assert red.steady_state_R() == pytest.approx(math.sqrt(1 - 0.4), abs=1e-15)
+        assert (
+            OttAntonsenReduction(0.0, 0.6, 1.0, backend="rust").steady_state_R() == 0.0
         )
 
-        def oa_run_julia(*_args: object) -> OAOutput:
-            return 0.3, 0.4, 0.5, 0.6
-
-        fake_julia_dynamic = cast(Any, fake_julia)
-        fake_julia_dynamic.oa_run_julia = oa_run_julia
-        monkeypatch.setitem(sys.modules, "juliacall", fake_juliacall)
-        monkeypatch.setitem(
-            sys.modules,
-            "scpn_phase_orchestrator.experimental.accelerators.upde._reduction_julia",
-            fake_julia,
+        sample = np.array([0.9, 1.1, 1.4, 1.5, 2.0, 2.6, 3.0])
+        omega_0, delta = sorted(sample.tolist())[3], (2.6 - 1.1) / 2
+        state = red.predict_from_oscillators(sample, K=4.0)
+        assert state.K_c == pytest.approx(2 * delta)
+        assert (
+            pytest.approx(_analytic_oa_amplitude(0.01, delta, 4.0, 10.0), abs=1e-8)
+            == state.R
         )
+        assert omega_0 == 1.5
 
-        run = r_mod._load_julia_fn()
-        assert run(0.01, 0.02, 0.5, 0.1, 1.0, 0.01, 3) == (
-            0.3,
-            0.4,
-            0.5,
-            0.6,
-        )
-
-    def test_go_loader_runs_shared_library_probe(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        fake_go = types.ModuleType(
-            "scpn_phase_orchestrator.experimental.accelerators.upde._reduction_go"
-        )
-        probe_calls: list[bool] = []
-
-        def _load_lib() -> None:
-            probe_calls.append(True)
-
-        def oa_run_go(*_args: object) -> OAOutput:
-            return 0.4, 0.5, 0.6, 0.7
-
-        fake_go_dynamic = cast(Any, fake_go)
-        fake_go_dynamic._load_lib = _load_lib
-        fake_go_dynamic.oa_run_go = oa_run_go
-        monkeypatch.setitem(
-            sys.modules,
-            "scpn_phase_orchestrator.experimental.accelerators.upde._reduction_go",
-            fake_go,
-        )
-
-        run = r_mod._load_go_fn()
-        assert run(0.01, 0.02, 0.5, 0.1, 1.0, 0.01, 3) == (
-            0.4,
-            0.5,
-            0.6,
-            0.7,
-        )
-        assert probe_calls == [True]
-
-    def test_scalar_rust_helpers_feed_steady_state_and_fit(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        def steady_state(delta: float, coupling: float) -> float:
-            assert (delta, coupling) == (0.2, 1.0)
-            return 0.75
-
-        def fit_lorentzian(omegas: NDArray[np.float64]) -> tuple[float, float]:
-            assert omegas.flags.c_contiguous
-            return 1.25, 0.35
-
-        def fake_run(
-            z_re: float,
-            z_im: float,
-            omega_0: float,
-            delta: float,
-            k_coupling: float,
-            dt: float,
-            n_steps: int,
-        ) -> OAOutput:
-            assert (omega_0, delta, k_coupling, dt, n_steps) == (
-                1.25,
-                0.35,
-                1.4,
-                0.01,
-                1000,
-            )
-            return z_re, z_im, 0.5, 0.0
-
-        monkeypatch.setattr(r_mod, "_HAS_RUST_SCALAR", True)
-        monkeypatch.setattr(r_mod, "_rust_steady_state_r", steady_state, raising=False)
-        monkeypatch.setattr(
-            r_mod,
-            "_rust_fit_lorentzian",
-            fit_lorentzian,
-            raising=False,
-        )
-        monkeypatch.setattr(r_mod, "_python_oa_run", fake_run)
-        monkeypatch.setattr(r_mod, "ACTIVE_BACKEND", "python")
-
-        red = OttAntonsenReduction(omega_0=0.0, delta=0.2, K=1.0, dt=0.01)
-        assert red.steady_state_R() == 0.75
-
-        state = red.predict_from_oscillators(
-            np.array([1.0, 1.5, 2.0]),
-            K=1.4,
-        )
-        assert state.R == 0.5
-        assert state.K_c == 0.7
-
-    def test_module_import_detects_scalar_rust_helpers(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        """Reload-time scalar helper detection should wire the optional Rust
-        steady-state and Lorentzian-fit helpers when spo_kernel provides them."""
-
-        def fit_lorentzian_rust(
-            _omegas: NDArray[np.float64],
-        ) -> tuple[float, float]:
-            return 0.0, 0.1
-
-        def steady_state_r_oa_rust(_delta: float, _coupling: float) -> float:
-            return 0.2
-
-        fake_spo = types.ModuleType("spo_kernel")
-        fake_spo_dynamic = cast(Any, fake_spo)
-        fake_spo_dynamic.fit_lorentzian_rust = fit_lorentzian_rust
-        fake_spo_dynamic.steady_state_r_oa_rust = steady_state_r_oa_rust
-        monkeypatch.setitem(sys.modules, "spo_kernel", fake_spo)
-
-        reloaded = importlib.reload(r_mod)
-        assert reloaded._HAS_RUST_SCALAR is True
-        assert reloaded._rust_fit_lorentzian is fit_lorentzian_rust
-        assert reloaded._rust_steady_state_r is steady_state_r_oa_rust
-
-        monkeypatch.setitem(sys.modules, "spo_kernel", None)
-        importlib.reload(r_mod)
+    def test_module_import_detects_scalar_rust_helpers(self) -> None:
+        """Import wires the compiled scalar helpers exactly when they are installed."""
+        installed = importlib.util.find_spec("spo_kernel") is not None
+        assert r_mod._HAS_RUST_SCALAR is installed
+        if installed:
+            kernel = importlib.import_module("spo_kernel")
+            assert r_mod._rust_fit_lorentzian is kernel.fit_lorentzian_rust
+            assert r_mod._rust_steady_state_r is kernel.steady_state_r_oa_rust
 
 
 class TestDispatchFallbackChain:
@@ -828,7 +718,7 @@ class TestDispatchFallbackChain:
             monkeypatch.setitem(r_mod._LOADERS, "go", previous_loader)
             r_mod._BACKEND_CACHE.clear()
 
-        assert backend is None
+        assert backend == ("python", None)
 
     def test_dispatch_falls_back_to_python_when_loader_fails(
         self,
@@ -853,7 +743,7 @@ class TestDispatchFallbackChain:
             monkeypatch.setitem(r_mod._LOADERS, "go", previous_loader)
             r_mod._BACKEND_CACHE.clear()
 
-        assert backend is None
+        assert backend == ("python", None)
 
     def test_dispatch_uses_cached_loader_once(
         self,
@@ -893,6 +783,43 @@ class TestDispatchFallbackChain:
             monkeypatch.setitem(r_mod._LOADERS, "go", previous_loader)
             r_mod._BACKEND_CACHE.clear()
 
-        assert b1 is fake_backend
-        assert b2 is fake_backend
+        assert b1 == ("go", fake_backend)
+        assert b2 == ("go", fake_backend)
         assert call_count == 1
+
+
+class TestNamedReductionOwners:
+    """``backend=`` selects the owner of the integration and of the scalars."""
+
+    @pytest.mark.native_runtime
+    @pytest.mark.parametrize("owner", ["python", "rust", "mojo", "julia", "go"])
+    def test_each_named_owner_runs_the_analytic_solution(self, owner: str) -> None:
+        """``run`` on a named owner follows ``z(t) = R(t)·exp(i(ψ₀ − ω₀ t))``."""
+        if owner not in r_mod.AVAILABLE_BACKENDS:
+            pytest.skip(f"{owner} unavailable")
+        assert r_mod.reduction_backend(owner) == owner
+        red = OttAntonsenReduction(0.7, 0.1, 1.0, dt=0.01, backend=owner)
+        state = red.run(cmath.rect(0.05, 0.4), 800)
+        expected = cmath.rect(_analytic_oa_amplitude(0.05, 0.1, 1.0, 8.0), 0.4 - 5.6)
+        assert state.z == pytest.approx(expected, abs=1e-8 if owner == "mojo" else 1e-9)
+
+    def test_python_scalars_give_the_analytic_steady_state(self) -> None:
+        """The Python owner computes ``√(1 − 2Δ/K)`` itself."""
+        red = OttAntonsenReduction(0.0, 0.2, 1.0, backend="python")
+        assert red.steady_state_R() == pytest.approx(math.sqrt(0.6), abs=1e-15)
+
+    def test_named_owner_refusals(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Absent named owners and unknown names refuse."""
+        with pytest.raises(ValueError, match="unknown reduction backend"):
+            OttAntonsenReduction(0.0, 0.1, 1.0, backend="cuda")
+        monkeypatch.setattr(r_mod, "_BACKEND_CACHE", {})
+        monkeypatch.setitem(
+            r_mod._LOADERS,
+            "go",
+            lambda: (_ for _ in ()).throw(OSError("libreduction.so missing")),
+        )
+        with pytest.raises(RuntimeError, match="'go' unavailable"):
+            r_mod.reduction_backend("go")
+        monkeypatch.setattr(r_mod, "_HAS_RUST_SCALAR", False)
+        with pytest.raises(RuntimeError, match="'rust' unavailable"):
+            OttAntonsenReduction(0.0, 0.1, 1.0, backend="rust").steady_state_R()

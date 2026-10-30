@@ -119,7 +119,24 @@ $(\omega_0, \Delta)$ from a set of measured frequencies:
 - $\omega_0 = \text{median}(\omega)$ (robust central tendency)
 - $\Delta = \text{IQR}(\omega) / 2$ (the IQR of a Lorentzian equals $2\Delta$)
 
+The quartiles are nearest-rank, `sorted[n // 4]` and `sorted[3n // 4]`, in
+both the Rust kernel and the Python path, so the two owners fit the same
+Lorentzian; a collapsed spread gives $\Delta = 0.01$.
+
 This enables one-call diagnostics: pass frequencies, get predicted $R$.
+
+### Choosing the owner
+
+`OttAntonsenReduction(..., backend="auto")` selects the owner of `run`,
+`step` and the relaxation in `predict_from_oscillators`: `"auto"` or one of
+`"rust"`, `"mojo"`, `"julia"`, `"go"`, `"python"`. A named owner that is
+absent raises `RuntimeError`. The steady-state and fit helpers exist in Rust
+and Python only: they use Rust when it owns the call or `"auto"` finds it
+installed, and Python otherwise. `reduction_backend(backend)` names the owner
+of the integration. With `dz/dt = −(Δ + iω₀)z + (K/2)(1 − |z|²)z` the phase
+turns at $-\omega_0$ and $R$ follows the logistic law
+$R(t)^2 = R_*^2 / (1 + (R_*^2/R_0^2 - 1)e^{-2(K/2-\Delta)t})$, which the
+real-runtime tests use as their oracle.
 
 ---
 
