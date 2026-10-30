@@ -31,6 +31,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The Mojo lane builds the embedding executable with `--target-cpu x86-64`,
+  as every other Mojo build in CI does. Built for the native CPU, it died
+  with SIGILL (exit -4) on some hosted runners.
+
 - The dimension commit's CI wiring could not run as written. The coverage
   lane passed `--no-report --no-clean`, which cargo-llvm-cov 0.9.1 refuses;
   `--no-report` already keeps profiles between runs, so the flag is dropped.

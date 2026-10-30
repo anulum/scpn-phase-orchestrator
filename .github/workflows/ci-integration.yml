@@ -399,7 +399,7 @@ jobs:
             --require-backends python mojo
       - name: Qualify actual Mojo embedding mathematics and comparison
         run: |
-          .venv/bin/mojo build mojo/embedding.mojo -o mojo/embedding_mojo -Xlinker -lm
+          .venv/bin/mojo build mojo/embedding.mojo --target-cpu x86-64 -o mojo/embedding_mojo -Xlinker -lm
           .venv/bin/python -m pytest tests/test_embedding_real_runtime.py -k mojo \
             -o addopts= --strict-markers --tb=short
       - name: Upload Mojo measurement coverage
