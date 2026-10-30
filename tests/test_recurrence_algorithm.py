@@ -19,8 +19,8 @@ from __future__ import annotations
 
 import functools
 import math
-import sys
-import types
+from collections.abc import Callable
+from typing import cast
 
 import numpy as np
 import pytest
@@ -246,47 +246,40 @@ class TestDispatcherSurface:
         assert r_mod.AVAILABLE_BACKENDS[0] == r_mod.ACTIVE_BACKEND
 
 
+def _oracle(
+    a: np.ndarray, b: np.ndarray, epsilon: float, angular: bool
+) -> list[list[bool]]:
+    """Return ``dist(a_i, b_j) <= epsilon`` by plain loops (chord if angular)."""
+
+    def dist(x: list[float], y: list[float]) -> float:
+        """Return the Euclidean or the S¹-chord distance."""
+        terms = (
+            4 * math.sin((u - v) / 2) ** 2 if angular else (u - v) ** 2
+            for u, v in zip(x, y, strict=True)
+        )
+        return math.sqrt(math.fsum(terms))
+
+    return [[dist(x, y) <= epsilon for y in b.tolist()] for x in a.tolist()]
+
+
 class TestBackendLoaderContracts:
-    def test_rust_loader_wraps_recurrence_kernels(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        seen: dict[str, object] = {}
-
-        def fake_rm(
-            traj_flat: np.ndarray,
-            t: int,
-            d: int,
-            epsilon: float,
-            angular: bool,
-        ) -> np.ndarray:
-            seen["rm"] = (traj_flat.copy(), t, d, epsilon, angular)
-            return np.eye(t, dtype=np.uint8).ravel()
-
-        def fake_cross(
-            a_flat: np.ndarray,
-            b_flat: np.ndarray,
-            t: int,
-            d: int,
-            epsilon: float,
-            angular: bool,
-        ) -> np.ndarray:
-            seen["cross"] = (a_flat.copy(), b_flat.copy(), t, d, epsilon, angular)
-            return np.ones(t * t, dtype=np.uint8)
-
-        fake_spo = types.ModuleType("spo_kernel")
-        fake_spo.recurrence_matrix_rust = fake_rm
-        fake_spo.cross_recurrence_matrix_rust = fake_cross
-        monkeypatch.setitem(sys.modules, "spo_kernel", fake_spo)
-
+    @pytest.mark.native_runtime
+    def test_rust_loader_wraps_recurrence_kernels(self) -> None:
+        """The compiled Rust loader returns kernels that threshold like the oracle."""
+        if "rust" not in r_mod.AVAILABLE_BACKENDS:
+            pytest.skip("rust unavailable")
         loaded = r_mod._load_rust_fns()
-        traj_flat = np.arange(6, dtype=np.float64)
-        rm = loaded["rm"](traj_flat, 3, 2, 0.25, True).reshape(3, 3)
-        cross = loaded["cross_rm"](traj_flat, traj_flat + 1.0, 3, 2, 0.5, False)
-
-        np.testing.assert_array_equal(rm, np.eye(3, dtype=np.uint8))
-        np.testing.assert_array_equal(cross, np.ones(9, dtype=np.uint8))
-        rm_flat, t, d, epsilon, angular = seen["rm"]
-        np.testing.assert_array_equal(rm_flat, traj_flat)
-        assert (t, d, epsilon, angular) == (3, 2, 0.25, True)
-        _, _, t, d, epsilon, angular = seen["cross"]
-        assert (t, d, epsilon, angular) == (3, 2, 0.5, False)
+        rm = cast("Callable[..., np.ndarray]", loaded["rm"])
+        cross = cast("Callable[..., np.ndarray]", loaded["cross_rm"])
+        rng = np.random.default_rng(89)
+        a = rng.uniform(-np.pi, np.pi, (9, 2))
+        b = rng.uniform(-np.pi, np.pi, (9, 2))
+        for angular, epsilon in ((False, 2.1), (True, 1.4)):
+            got = np.asarray(rm(a.ravel(), 9, 2, epsilon, angular)).reshape(9, 9)
+            np.testing.assert_array_equal(
+                got.astype(bool), _oracle(a, a, epsilon, angular)
+            )
+            got = np.asarray(cross(a.ravel(), b.ravel(), 9, 2, epsilon, angular))
+            np.testing.assert_array_equal(
+                got.reshape(9, 9).astype(bool), _oracle(a, b, epsilon, angular)
+            )

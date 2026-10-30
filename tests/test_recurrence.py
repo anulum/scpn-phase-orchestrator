@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import math
 import sys
 from types import ModuleType
 from typing import Any
@@ -28,6 +29,24 @@ from scpn_phase_orchestrator.monitor.recurrence import (
 class _ArrayConversionFailure:
     def __array__(self, dtype: object | None = None) -> np.ndarray[Any, Any]:
         raise ValueError("synthetic conversion failure")
+
+
+def _oracle_recurrence(
+    a: np.ndarray, b: np.ndarray, epsilon: float, metric: str
+) -> list[list[bool]]:
+    """Return ``dist(a_i, b_j) <= epsilon`` by plain loops (chord for angular)."""
+
+    def dist(x: list[float], y: list[float]) -> float:
+        """Return the Euclidean or the S¹-chord distance."""
+        if metric == "angular":
+            return math.sqrt(
+                math.fsum(
+                    4 * math.sin((u - v) / 2) ** 2 for u, v in zip(x, y, strict=True)
+                )
+            )
+        return math.sqrt(math.fsum((u - v) ** 2 for u, v in zip(x, y, strict=True)))
+
+    return [[dist(x, y) <= epsilon for y in b.tolist()] for x in a.tolist()]
 
 
 class TestRecurrenceMatrix:
@@ -104,35 +123,59 @@ class TestRecurrenceMatrix:
         assert R.shape == (3, 3)
         assert R.dtype == bool
 
-    def test_non_rust_dispatch_uses_flat_buffers(self, monkeypatch) -> None:
-        calls: list[tuple[int, int, float, bool]] = []
-
-        def fake_rm(traj_flat, t, d, epsilon, angular):
-            calls.append((traj_flat.shape[0], int(t), float(epsilon), bool(angular)))
-            return (
-                np.array(
-                    [1, 0, 0, 1],
-                    dtype=np.uint8,
-                )
-                .reshape(2, 2)
-                .ravel()
+    @pytest.mark.native_runtime
+    @pytest.mark.parametrize("owner", ["python", "rust", "mojo", "julia", "go"])
+    def test_non_rust_dispatch_uses_flat_buffers(self, owner: str) -> None:
+        """Each named owner returns the oracle's thresholded distances."""
+        if owner not in recurrence_module.AVAILABLE_BACKENDS:
+            pytest.skip(f"{owner} unavailable")
+        for slot in ("rm", "cross_rm"):
+            assert recurrence_module.recurrence_backend(slot, owner) == owner
+        rng = np.random.default_rng(83)
+        a = rng.uniform(-np.pi, np.pi, (14, 3))
+        b = rng.uniform(-np.pi, np.pi, (14, 3))
+        for metric, epsilon in (("euclidean", 2.3), ("angular", 1.7)):
+            got = recurrence_matrix(a, epsilon, metric, backend=owner)
+            np.testing.assert_array_equal(
+                got, _oracle_recurrence(a, a, epsilon, metric)
+            )
+            got = cross_recurrence_matrix(a, b, epsilon, metric, backend=owner)
+            np.testing.assert_array_equal(
+                got, _oracle_recurrence(a, b, epsilon, metric)
             )
 
-        import scpn_phase_orchestrator.monitor.recurrence as rec_mod
+    def test_named_owner_refusals(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Absent, failing or incomplete named owners and unknown names refuse."""
 
-        monkeypatch.setattr(
-            rec_mod,
-            "_dispatch",
-            lambda fn_name: fake_rm if fn_name == "rm" else None,
-        )
-        R = recurrence_matrix(
-            np.array([[0.0], [1.0]]),
-            epsilon=0.5,
-            metric="angular",
-        )
+        def crash(*_args: object) -> object:
+            """Fail like a crashed kernel."""
+            raise RuntimeError("kernel crashed")
 
-        np.testing.assert_array_equal(R, np.array([[True, False], [False, True]]))
-        assert calls == [(2, 2, 0.5, True)]
+        traj = np.zeros((3, 1))
+        monkeypatch.setattr(recurrence_module, "_BACKEND_CACHE", {})
+        monkeypatch.setitem(
+            recurrence_module._LOADERS,
+            "go",
+            lambda: (_ for _ in ()).throw(OSError("librecurrence.so missing")),
+        )
+        with pytest.raises(RuntimeError, match="'go' unavailable"):
+            recurrence_matrix(traj, 0.1, backend="go")
+        monkeypatch.setitem(recurrence_module._LOADERS, "go", lambda: {"rm": crash})
+        recurrence_module._BACKEND_CACHE.clear()
+        with pytest.raises(RuntimeError, match="'go' failed"):
+            recurrence_matrix(traj, 0.1, backend="go")
+        with pytest.raises(RuntimeError, match="'go' lacks cross_rm"):
+            cross_recurrence_matrix(traj, traj, 0.1, backend="go")
+        monkeypatch.setitem(
+            recurrence_module._LOADERS, "go", lambda: {"cross_rm": crash}
+        )
+        recurrence_module._BACKEND_CACHE.clear()
+        with pytest.raises(RuntimeError, match="'go' failed"):
+            cross_recurrence_matrix(traj, traj, 0.1, backend="go")
+        with pytest.raises(ValueError, match="unknown recurrence backend"):
+            recurrence_matrix(traj, 0.1, backend="cuda")
+        with pytest.raises(ValueError, match="unknown recurrence operation"):
+            recurrence_module.recurrence_backend("rqa")
 
     @pytest.mark.parametrize(
         "backend_output",
@@ -159,7 +202,9 @@ class TestRecurrenceMatrix:
         monkeypatch.setattr(
             rec_mod,
             "_dispatch",
-            lambda fn_name: fake_rm if fn_name == "rm" else None,
+            lambda fn_name, _backend="auto": (
+                ("go", fake_rm) if fn_name == "rm" else ("python", None)
+            ),
         )
         with pytest.raises(ValueError):
             recurrence_matrix(np.array([[0.0], [1.0]]), epsilon=0.5)
@@ -175,7 +220,9 @@ class TestRecurrenceMatrix:
         monkeypatch.setattr(
             rec_mod,
             "_dispatch",
-            lambda fn_name: fake_rm if fn_name == "rm" else None,
+            lambda fn_name, _backend="auto": (
+                ("go", fake_rm) if fn_name == "rm" else ("python", None)
+            ),
         )
         monkeypatch.setattr(
             rec_mod,
@@ -203,7 +250,7 @@ class TestRecurrenceMatrix:
         monkeypatch.setitem(recurrence_module._LOADERS, "empty", lambda: {})
         recurrence_module._BACKEND_CACHE.clear()
         try:
-            assert recurrence_module._dispatch("rm") is None
+            assert recurrence_module._dispatch("rm") == ("python", None)
         finally:
             recurrence_module._BACKEND_CACHE.clear()
             recurrence_module.ACTIVE_BACKEND = previous_active
@@ -459,7 +506,9 @@ class TestCrossRecurrence:
         monkeypatch.setattr(
             recurrence_module,
             "_dispatch",
-            lambda fn_name: fake_cross_rm if fn_name == "cross_rm" else None,
+            lambda fn_name, _backend="auto": (
+                ("go", fake_cross_rm) if fn_name == "cross_rm" else ("python", None)
+            ),
         )
         with pytest.raises(ValueError):
             cross_recurrence_matrix(np.array([0.0, 1.0]), np.array([0.0, 2.0]), 0.5)
@@ -508,7 +557,9 @@ class TestRecurrenceBackendFallbacks:
         monkeypatch.setattr(
             recurrence_module,
             "_dispatch",
-            lambda fn_name: _raising_rm if fn_name == "rm" else None,
+            lambda fn_name, _backend="auto": (
+                ("go", _raising_rm) if fn_name == "rm" else ("python", None)
+            ),
         )
         traj = np.array([[0.0], [1.0]], dtype=np.float64)
         R = recurrence_matrix(traj, epsilon=0.5, metric="euclidean")
@@ -530,7 +581,9 @@ class TestRecurrenceBackendFallbacks:
         monkeypatch.setattr(
             recurrence_module,
             "_dispatch",
-            lambda fn_name: _raising_cross_rm if fn_name == "cross_rm" else None,
+            lambda fn_name, _backend="auto": (
+                ("go", _raising_cross_rm) if fn_name == "cross_rm" else ("python", None)
+            ),
         )
         traj_a = np.array([[0.0], [1.0]], dtype=np.float64)
         traj_b = np.array([[0.0], [2.0]], dtype=np.float64)
@@ -559,7 +612,7 @@ class TestRecurrenceBackendFallbacks:
             monkeypatch.setitem(recurrence_module._LOADERS, "go", previous_loader)
             recurrence_module._BACKEND_CACHE.clear()
 
-        assert fn is None
+        assert fn == ("python", None)
 
     def test_dispatch_uses_cached_loader_once(
         self, monkeypatch: pytest.MonkeyPatch
@@ -596,6 +649,6 @@ class TestRecurrenceBackendFallbacks:
             monkeypatch.setitem(recurrence_module._LOADERS, "go", previous_loader)
             recurrence_module._BACKEND_CACHE.clear()
 
-        assert fn1 is fake_rm
-        assert fn2 is fake_rm
+        assert fn1 == ("go", fake_rm)
+        assert fn2 == ("go", fake_rm)
         assert call_count == 1

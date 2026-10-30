@@ -46,6 +46,7 @@ __all__ = [
     "RQAResult",
     "cross_recurrence_matrix",
     "cross_rqa",
+    "recurrence_backend",
     "recurrence_matrix",
     "rqa",
 ]
@@ -178,28 +179,87 @@ def _resolve_backends() -> tuple[str, list[str]]:
 ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
-def _dispatch(fn_name: str) -> object | None:
-    """Return the fastest available backend callables, or ``None`` for Python."""
-    ordered_backends = [ACTIVE_BACKEND] + list(AVAILABLE_BACKENDS)
-    deduped: list[str] = []
-    for backend in ordered_backends:
-        if backend in deduped:
-            continue
-        deduped.append(backend)
+_NATIVE_FAILURES = (ImportError, RuntimeError, OSError, KeyError)
+_SLOTS = ("rm", "cross_rm")
 
-    for backend in deduped:
-        if backend == "python":
-            return None
-        if backend not in _LOADERS:
+
+def _require_known_backend(backend: str) -> None:
+    """Refuse an unknown owner name before any computation."""
+    if backend not in (*_BACKEND_NAMES, "auto"):
+        raise ValueError(f"unknown recurrence backend: {backend!r}")
+
+
+def _dispatch(fn_name: str, backend: str = "auto") -> tuple[str, object | None]:
+    """Resolve the owner of ``fn_name`` and its callable.
+
+    Parameters
+    ----------
+    fn_name : str
+        ``"rm"`` or ``"cross_rm"``.
+    backend : str
+        ``"auto"`` or one of ``rust``, ``mojo``, ``julia``, ``go``, ``python``.
+
+    Returns
+    -------
+    tuple[str, object | None]
+        The owner name and its callable, or ``("python", None)``.
+
+    Raises
+    ------
+    ValueError
+        If ``backend`` is not a known owner.
+    RuntimeError
+        If an explicitly requested owner is unavailable or lacks the kernel.
+    """
+    _require_known_backend(backend)
+    ordered = [ACTIVE_BACKEND, *AVAILABLE_BACKENDS] if backend == "auto" else [backend]
+    seen: set[str] = set()
+    for name in ordered:
+        if name in seen:
             continue
+        seen.add(name)
+        if name == "python":
+            return "python", None
         try:
-            fn = _load_backend(backend).get(fn_name)
-        except (ImportError, RuntimeError, OSError, KeyError):
+            fn = _load_backend(name).get(fn_name)
+        except _NATIVE_FAILURES as exc:
+            if backend != "auto":
+                raise RuntimeError(f"recurrence backend {name!r} unavailable") from exc
             continue
         if fn is None:
+            if backend != "auto":
+                raise RuntimeError(f"recurrence backend {name!r} lacks {fn_name}")
             continue
-        return fn
-    return None
+        return name, fn
+    return "python", None
+
+
+def recurrence_backend(slot: str, backend: str = "auto") -> str:
+    """Return the owner that serves one recurrence operation.
+
+    Parameters
+    ----------
+    slot : str
+        ``"rm"`` (recurrence matrix) or ``"cross_rm"`` (cross-recurrence).
+    backend : str
+        ``"auto"`` or an explicit owner name.
+
+    Returns
+    -------
+    str
+        ``rust``, ``mojo``, ``julia``, ``go`` or ``python``.
+
+    Raises
+    ------
+    ValueError
+        If ``slot`` or ``backend`` is unknown.
+    RuntimeError
+        If an explicitly requested owner is unavailable or lacks the kernel.
+    """
+    if slot not in _SLOTS:
+        raise ValueError(f"unknown recurrence operation: {slot!r}")
+    owner, _ = _dispatch(slot, backend)
+    return owner
 
 
 def _contains_boolean_alias(value: object) -> bool:
@@ -442,6 +502,7 @@ def recurrence_matrix(
     trajectory: FloatArray,
     epsilon: float,
     metric: str = "euclidean",
+    backend: str = "auto",
 ) -> BoolArray:
     """Binary recurrence matrix ``R_ij = ‖x_i − x_j‖ ≤ ε``.
 
@@ -453,12 +514,23 @@ def recurrence_matrix(
         recurrence threshold.
     metric : str
         ``"euclidean"`` or ``"angular"`` (chord distance on ``S¹``).
+    backend : str
+        ``"auto"`` (NumPy if a native owner fails) or an explicit owner.
 
     Returns
     -------
     BoolArray
         ``(T, T)`` boolean array.
+
+    Raises
+    ------
+    ValueError
+        If an input or the backend name is invalid, or a backend result
+        differs from the exact threshold.
+    RuntimeError
+        If an explicitly requested owner is unavailable or fails.
     """
+    _require_known_backend(backend)
     traj = _validate_trajectory(trajectory, name="trajectory")
     epsilon = _validate_epsilon(epsilon)
     t, d = int(traj.shape[0]), int(traj.shape[1])
@@ -473,7 +545,7 @@ def recurrence_matrix(
         angular=angular,
     )
 
-    backend_fn = _dispatch("rm")
+    owner, backend_fn = _dispatch("rm", backend)
     if backend_fn is not None:
         fn = cast(
             "Callable[[FloatArray, int, int, float, bool], ByteArray]",
@@ -486,8 +558,9 @@ def recurrence_matrix(
                 name="recurrence_matrix",
                 expected=expected,
             )
-        except (ImportError, RuntimeError, OSError, KeyError):
-            angular = bool(angular)
+        except _NATIVE_FAILURES as exc:
+            if backend != "auto":
+                raise RuntimeError(f"recurrence backend {owner!r} failed") from exc
 
     return expected
 
@@ -497,6 +570,7 @@ def cross_recurrence_matrix(
     traj_b: FloatArray,
     epsilon: float,
     metric: str = "euclidean",
+    backend: str = "auto",
 ) -> BoolArray:
     """Cross-recurrence matrix ``CR_ij = ‖x_i − y_j‖ ≤ ε``.
 
@@ -513,6 +587,8 @@ def cross_recurrence_matrix(
         Recurrence threshold.
     metric : str
         Distance metric name.
+    backend : str
+        ``"auto"`` (NumPy if a native owner fails) or an explicit owner.
 
     Returns
     -------
@@ -522,8 +598,12 @@ def cross_recurrence_matrix(
     Raises
     ------
     ValueError
-        If the two trajectories are incompatible.
+        If the two trajectories are incompatible or the backend name is
+        unknown.
+    RuntimeError
+        If an explicitly requested owner is unavailable or fails.
     """
+    _require_known_backend(backend)
     a = _validate_trajectory(traj_a, name="traj_a")
     b = _validate_trajectory(traj_b, name="traj_b")
     epsilon = _validate_epsilon(epsilon)
@@ -542,7 +622,7 @@ def cross_recurrence_matrix(
         angular=angular,
     )
 
-    backend_fn = _dispatch("cross_rm")
+    owner, backend_fn = _dispatch("cross_rm", backend)
     if backend_fn is not None:
         fn = cast(
             "Callable[[FloatArray, FloatArray, int, int, float, bool], ByteArray]",
@@ -555,8 +635,9 @@ def cross_recurrence_matrix(
                 name="cross_recurrence_matrix",
                 expected=expected,
             )
-        except (ImportError, RuntimeError, OSError, KeyError):
-            angular = bool(angular)
+        except _NATIVE_FAILURES as exc:
+            if backend != "auto":
+                raise RuntimeError(f"recurrence backend {owner!r} failed") from exc
 
     return expected
 

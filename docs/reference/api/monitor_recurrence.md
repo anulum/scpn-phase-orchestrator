@@ -97,15 +97,20 @@ from scpn_phase_orchestrator.monitor.recurrence import (
 ```python
 def recurrence_matrix(
     trajectory: NDArray, epsilon: float, metric: str = "euclidean",
+    backend: str = "auto",
 ) -> NDArray: ...
 
 def cross_recurrence_matrix(
     traj_a: NDArray, traj_b: NDArray, epsilon: float,
-    metric: str = "euclidean",
+    metric: str = "euclidean", backend: str = "auto",
 ) -> NDArray: ...
 ```
 
-Both return ``(T, T)`` boolean arrays.
+Both return ``(T, T)`` boolean arrays. ``backend="auto"`` uses the active
+owner and falls back to NumPy if a native owner fails; a named owner
+(``"rust"``, ``"mojo"``, ``"julia"``, ``"go"``, ``"python"``) must serve the
+call and raises ``RuntimeError`` if it is absent, lacks the kernel or fails.
+``recurrence_backend("rm" | "cross_rm", backend)`` names the owner.
 
 Input trajectories are real-valued phase-space samples. The public
 Python boundary rejects boolean aliases, complex-valued buffers,

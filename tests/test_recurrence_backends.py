@@ -412,7 +412,9 @@ class TestDirectBackendBoundaryContracts:
             del traj_flat, d, epsilon, angular
             return np.ones((t, t), dtype=np.uint8)
 
-        monkeypatch.setattr(r_mod, "_dispatch", lambda _name: _wrong_backend)
+        monkeypatch.setattr(
+            r_mod, "_dispatch", lambda _name, _backend="auto": ("go", _wrong_backend)
+        )
 
         with pytest.raises(ValueError, match="exact recurrence threshold"):
             recurrence_matrix(traj, 0.5)
@@ -434,7 +436,9 @@ class TestDirectBackendBoundaryContracts:
             del traj_a_flat, traj_b_flat, t, d, epsilon, angular
             return np.array([1, 1, 0, 1], dtype=np.uint8)
 
-        monkeypatch.setattr(r_mod, "_dispatch", lambda _name: _wrong_backend)
+        monkeypatch.setattr(
+            r_mod, "_dispatch", lambda _name, _backend="auto": ("go", _wrong_backend)
+        )
 
         with pytest.raises(ValueError, match="exact recurrence threshold"):
             cross_recurrence_matrix(traj_a, traj_b, 0.5)

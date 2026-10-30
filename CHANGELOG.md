@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `recurrence_matrix` and `cross_recurrence_matrix` take `backend=`, and
+  the new `recurrence_backend(slot, backend)` names the owner; a named owner
+  that is absent, lacks the kernel or fails raises `RuntimeError`. The
+  RT-079 and RT-080 substitutes (a fake dispatcher and a fake `spo_kernel`)
+  are replaced by every installed owner and the compiled Rust loader,
+  checked against plain-loop Euclidean and S¹-chord distance oracles.
 - The coupling-reduction test (RT-078) no longer forces the Rust flag and
   installs a fake kernel. It profiles the real `reduce_coupling` call, which
   reaches the compiled `reduce_coupling_rust` exactly when `spo_kernel` is
