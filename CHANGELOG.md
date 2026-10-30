@@ -21,6 +21,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `winding_numbers` and `winding_vector` take `backend=`, and the new
+  `winding_backend(backend)` names the owner; a named owner that is absent
+  or whose call fails raises `RuntimeError` instead of falling back, and an
+  unknown name raises `ValueError`. The RT-123 substitute (a fake
+  dispatcher) is replaced by the real Rust, Mojo, Julia, Go and Python
+  owners, checked against a plain-loop `math.remainder`/`math.fsum` oracle
+  with profiled owner calls and child-process profiles.
 - `upde_run` and `upde_run_omega_schedule` (in `upde._run` and the
   `upde.engine` facade) take `backend=`, and the new
   `upde_run_backend(slot, backend)` names the owner of the `"step"` or

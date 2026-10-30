@@ -12,6 +12,9 @@
 Counts how many full ``2π`` rotations each oscillator completes
 across a phase history; positive = counterclockwise, negative =
 clockwise.
+
+:func:`winding_numbers` takes ``backend=`` (``"auto"`` or an owner name),
+and :func:`winding_backend` names the owner that counts.
 """
 
 from __future__ import annotations
@@ -31,6 +34,7 @@ IntArray: TypeAlias = NDArray[np.int64]
 __all__ = [
     "ACTIVE_BACKEND",
     "AVAILABLE_BACKENDS",
+    "winding_backend",
     "winding_numbers",
     "winding_vector",
 ]
@@ -121,22 +125,70 @@ def _resolve_backends() -> tuple[str, list[str]]:
 ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
+_NATIVE_FAILURES = (ImportError, RuntimeError, OSError, KeyError)
+
+
+def _require_known_backend(backend: str) -> None:
+    """Refuse an unknown owner name before any computation."""
+    if backend not in (*_BACKEND_NAMES, "auto"):
+        raise ValueError(f"unknown winding backend: {backend!r}")
+
+
 def _dispatch() -> Callable[..., IntArray] | None:
     """Return the fastest available backend callable, or ``None`` for Python."""
-    ordered_backends = [ACTIVE_BACKEND] + list(AVAILABLE_BACKENDS)
-    deduped: list[str] = []
-    for backend in ordered_backends:
-        if backend in deduped:
+    return _select("auto")[1]
+
+
+def _select(backend: str) -> tuple[str, Callable[..., IntArray] | None]:
+    """Return the owner of a winding count and its callable.
+
+    ``"auto"`` tries the active backend, then the available list, skipping
+    owners whose loader fails; a named owner must load.
+
+    Raises
+    ------
+    RuntimeError
+        If a named native owner is unavailable.
+    """
+    ordered = [ACTIVE_BACKEND, *AVAILABLE_BACKENDS] if backend == "auto" else [backend]
+    seen: set[str] = set()
+    for name in ordered:
+        if name in seen:
             continue
-        deduped.append(backend)
-    for backend in deduped:
-        if backend == "python":
-            return None
+        seen.add(name)
+        if name == "python":
+            return "python", None
         try:
-            return _load_backend(backend)
-        except (ImportError, RuntimeError, OSError, KeyError):
-            continue
-    return None
+            return name, _load_backend(name)
+        except _NATIVE_FAILURES as exc:
+            if backend != "auto":
+                raise RuntimeError(f"winding backend {name!r} unavailable") from exc
+    return "python", None
+
+
+def winding_backend(backend: str = "auto") -> str:
+    """Return the owner that counts windings.
+
+    Parameters
+    ----------
+    backend : str
+        ``"auto"`` or one of ``rust``, ``mojo``, ``julia``, ``go``,
+        ``python``.
+
+    Returns
+    -------
+    str
+        The owner name.
+
+    Raises
+    ------
+    ValueError
+        If ``backend`` is unknown.
+    RuntimeError
+        If a named native owner is unavailable.
+    """
+    _require_known_backend(backend)
+    return _select(backend)[0]
 
 
 def _contains_boolean_alias(value: object) -> bool:
@@ -283,7 +335,7 @@ def _validate_backend_winding(
     return winding
 
 
-def winding_numbers(phases_history: FloatArray) -> IntArray:
+def winding_numbers(phases_history: FloatArray, *, backend: str = "auto") -> IntArray:
     """Cumulative winding number of each oscillator over a trajectory.
 
     ``w_i = floor(Σ_t wrap(Δθ_{i,t}) / 2π)`` with
@@ -297,6 +349,11 @@ def winding_numbers(phases_history: FloatArray) -> IntArray:
     ----------
     phases_history : FloatArray
         ``(T, N)`` phases in radians; ``T < 2`` gives a zero vector.
+    backend : str
+        ``"auto"`` for the fastest loadable owner, falling back to the NumPy
+        reference when a native call fails, or one of ``rust``, ``mojo``,
+        ``julia``, ``go``, ``python``. Every native count is checked against
+        the exact reference.
 
     Returns
     -------
@@ -306,9 +363,13 @@ def winding_numbers(phases_history: FloatArray) -> IntArray:
     Raises
     ------
     ValueError
-        If the history is not a finite, real, two-dimensional ``(T, N)`` array
-        of radians.
+        If ``backend`` is unknown, the history is not a finite, real,
+        two-dimensional ``(T, N)`` array of radians, or a native count
+        diverges from the reference.
+    RuntimeError
+        If the named owner is unavailable or fails.
     """
+    _require_known_backend(backend)
     phases_history = _validate_phase_history(phases_history)
     if phases_history.shape[0] < 2:
         return np.zeros(phases_history.shape[1], dtype=np.int64)
@@ -317,7 +378,7 @@ def winding_numbers(phases_history: FloatArray) -> IntArray:
     flat: FloatArray = np.ascontiguousarray(phases_history.ravel(), dtype=np.float64)
     expected = _winding_reference(phases_history)
 
-    backend_fn = _dispatch()
+    owner, backend_fn = ("auto", _dispatch()) if backend == "auto" else _select(backend)
     if backend_fn is not None:
         try:
             return _validate_backend_winding(
@@ -326,13 +387,14 @@ def winding_numbers(phases_history: FloatArray) -> IntArray:
                 t=t,
                 expected=expected,
             )
-        except (ImportError, RuntimeError, OSError, KeyError):
-            n = int(n)
+        except _NATIVE_FAILURES as exc:
+            if backend != "auto":
+                raise RuntimeError(f"winding backend {owner!r} failed") from exc
 
     return _validate_backend_winding(expected, n=n, t=t, expected=expected)
 
 
-def winding_vector(phases_history: FloatArray) -> IntArray:
+def winding_vector(phases_history: FloatArray, *, backend: str = "auto") -> IntArray:
     """N-dimensional integer classification vector from winding numbers.
 
     Alias for :func:`winding_numbers`; topologically distinct
@@ -342,10 +404,12 @@ def winding_vector(phases_history: FloatArray) -> IntArray:
     ----------
     phases_history : FloatArray
         Phase history, shape ``(T, N)``.
+    backend : str
+        Owner name, as for :func:`winding_numbers`.
 
     Returns
     -------
     IntArray
         The integer winding classification vector.
     """
-    return winding_numbers(phases_history)
+    return winding_numbers(phases_history, backend=backend)

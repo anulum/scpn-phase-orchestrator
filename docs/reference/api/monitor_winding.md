@@ -63,6 +63,7 @@ the true cumulative angular displacement.
 ```python
 from scpn_phase_orchestrator.monitor.winding import (
     ACTIVE_BACKEND, AVAILABLE_BACKENDS,
+    winding_backend,
     winding_numbers,
     winding_vector,
 )
@@ -71,7 +72,7 @@ from scpn_phase_orchestrator.monitor.winding import (
 ### 2.1 `winding_numbers`
 
 ```python
-def winding_numbers(phases_history: NDArray) -> NDArray: ...
+def winding_numbers(phases_history: NDArray, *, backend: str = "auto") -> NDArray: ...
 ```
 
 Takes a ``(T, N)`` phase history; returns ``(N,)`` int64 array.
@@ -82,9 +83,14 @@ The public boundary rejects boolean aliases, numeric-string aliases, complex
 dtypes, and object arrays containing complex scalar aliases before any float
 coercion, preserving the real-valued wrapped-increment topology contract.
 
+`backend` is `"auto"` (the chain in §3) or one owner name: `rust`, `mojo`,
+`julia`, `go` or `python`. A named owner that is absent or whose call fails
+raises `RuntimeError` instead of falling back; an unknown name raises
+`ValueError`. `winding_backend(backend)` names the owner without counting.
+
 ### 2.2 `winding_vector`
 
-Alias for `winding_numbers`; emphasises the integer-lattice
+Alias for `winding_numbers` (same `backend=`); emphasises the integer-lattice
 interpretation for topological classification.
 
 ---
@@ -134,8 +140,8 @@ runtimes:
 Invalid topological phase histories therefore fail deterministically in Python
 before shared-library loading, Julia initialisation, or subprocess execution.
 At the public API, a backend that emits a bounded but wrong winding vector fails
-closed with a `ValueError`; import/runtime loader failures fall back to the next
-available backend and finally to the Python reference.
+closed with a `ValueError`; under `"auto"`, import/runtime loader failures fall
+back to the next available backend and finally to the Python reference.
 
 ---
 

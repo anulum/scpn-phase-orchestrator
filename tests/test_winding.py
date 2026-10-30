@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from pathlib import Path
 from typing import get_type_hints
 
@@ -188,29 +189,6 @@ class TestWindingPipelineWiring:
 
 
 class TestWindingRustDispatch:
-    def test_winding_uses_backend_when_available(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        calls: list[tuple[np.ndarray, int, int]] = []
-
-        def _fake_backend(flat: np.ndarray, t: int, n: int) -> np.ndarray:
-            calls.append((flat, t, n))
-            return winding_module._winding_reference(flat.reshape(t, n))
-
-        monkeypatch.setattr(winding_module, "_dispatch", lambda: _fake_backend)
-        history = np.array(
-            [
-                [0.0, 0.0],
-                [0.7 * np.pi, -0.7 * np.pi],
-                [1.4 * np.pi, -1.4 * np.pi],
-                [2.1 * np.pi, -2.1 * np.pi],
-            ],
-            dtype=np.float64,
-        )
-        w = winding_numbers(history)
-        np.testing.assert_array_equal(w, winding_module._winding_reference(history))
-        assert len(calls) == 1
-
     def test_winding_falls_back_when_backend_raises(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -221,6 +199,44 @@ class TestWindingRustDispatch:
         history = np.array([[0.0, 0.0], [2.1 * np.pi, -2.1 * np.pi]], dtype=np.float64)
         w = winding_numbers(history)
         np.testing.assert_array_equal(w, [0, -1])
+
+    def test_named_owner_whose_loader_fails_is_refused(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A named owner that cannot load raises; ``auto`` skips it.
+
+        The real absence is proven by the child-process profiles in
+        ``test_winding_real_runtime.py``; this in-process contract measures
+        the same branch with a loader that fails as an absent library does.
+        """
+
+        def _absent() -> Callable[..., np.ndarray]:
+            raise ImportError("libwinding.so not found")
+
+        monkeypatch.setattr(winding_module, "_BACKEND_CACHE", {})
+        monkeypatch.setitem(winding_module._LOADERS, "go", _absent)
+        with pytest.raises(RuntimeError, match="winding backend 'go' unavailable"):
+            winding_module.winding_backend("go")
+        monkeypatch.setattr(winding_module, "ACTIVE_BACKEND", "go")
+        monkeypatch.setattr(winding_module, "AVAILABLE_BACKENDS", ["go", "python"])
+        assert winding_module.winding_backend() == "python"
+
+    def test_named_owner_whose_call_fails_is_refused(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A named owner that fails at call time raises instead of falling back.
+
+        A native call that fails after a successful load cannot be produced
+        from a real installation, so this negative contract keeps a stand-in.
+        """
+
+        def _raising_backend(_flat: np.ndarray, _t: int, _n: int) -> np.ndarray:
+            raise RuntimeError("boom")
+
+        monkeypatch.setitem(winding_module._BACKEND_CACHE, "rust", _raising_backend)
+        history = np.array([[0.0, 0.0], [2.1 * np.pi, -2.1 * np.pi]], dtype=np.float64)
+        with pytest.raises(RuntimeError, match="winding backend 'rust' failed"):
+            winding_numbers(history, backend="rust")
 
     @pytest.mark.parametrize(
         "backend_output",
