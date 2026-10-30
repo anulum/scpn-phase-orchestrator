@@ -134,7 +134,9 @@ def _verify_watched_events(
     if from_start or not events:
         return verify_event_stream_integrity(events)
     last_sequence = events[-1].sequence
-    chain = [e for e in read_event_stream(stream_path) if e.sequence <= last_sequence]
+    # Events past the last watched one may still be in flight.
+    stream = read_event_stream(stream_path, allow_partial_tail=True)
+    chain = [e for e in stream if e.sequence <= last_sequence]
     if [e.event_hash for e in chain[-len(events) :]] != [e.event_hash for e in events]:
         return False, 0
     return verify_event_stream_integrity(chain)

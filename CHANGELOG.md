@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- The live audit tail (`iter_event_stream`, `tail_event_stream`,
+  `spo watch`) no longer stops with "truncated protobuf envelope" when it
+  polls while a writer is mid-frame. The writer wrote the length prefix and
+  the envelope in two writes, and the tail re-read the file strictly. The
+  writer now emits each frame in one write, and the tail reads with the new
+  `read_event_stream(path, allow_partial_tail=True)`, which returns the
+  complete events and leaves an incomplete trailing frame for the next poll.
+  A closed stream that ends inside a frame is still refused. This failed
+  `test_tail_of_a_valid_stream_verifies` on macOS in CI run 41080725056.
+
 ### Changed
 
 - `phase_transfer_entropy` and `transfer_entropy_matrix` take `backend=`,

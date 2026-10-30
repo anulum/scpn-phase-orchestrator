@@ -23,8 +23,12 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
-from scpn_phase_orchestrator.runtime.audit_stream import EventStreamWriter
+from scpn_phase_orchestrator.runtime.audit_stream import (
+    EventStreamWriter,
+    read_event_stream,
+)
 from scpn_phase_orchestrator.runtime.cli import main
+from scpn_phase_orchestrator.runtime.cli.audit import _verify_watched_events
 
 _SPEC = str(
     Path(__file__).resolve().parents[1]
@@ -71,6 +75,19 @@ def test_tail_of_a_valid_stream_verifies(tmp_path: Path) -> None:
     assert code == 0, output
     assert "#4 step" in output and "#5 step" in output
     assert "stream integrity: OK (5 events)" in output
+
+
+def test_tail_verifies_while_a_later_frame_is_in_flight(tmp_path: Path) -> None:
+    """Half of a frame after the watched events does not fail their check."""
+    stream = tmp_path / "live.spoa"
+    _stream(stream, range(5))
+    complete = stream.read_bytes()
+    _stream(stream, range(5, 6))
+    in_flight = stream.read_bytes()[len(complete) :]
+    stream.write_bytes(complete + in_flight[:3])
+    watched = read_event_stream(stream, allow_partial_tail=True)[3:]
+    assert [event.sequence for event in watched] == [4, 5]
+    assert _verify_watched_events(str(stream), watched, False) == (True, 5)
 
 
 def test_tail_still_refuses_a_broken_prefix(tmp_path: Path) -> None:

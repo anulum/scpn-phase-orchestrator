@@ -193,6 +193,13 @@ events = read_event_stream("audit.spoa")
 ok, verified = verify_event_stream_integrity(events)
 ```
 
+A closed stream that ends inside a frame is refused. A stream that is still
+being appended may end inside a frame at any moment, so the live tail
+(`iter_event_stream`, `tail_event_stream`, `spo watch`) reads it with
+`read_event_stream(path, allow_partial_tail=True)`: the complete events are
+returned and the incomplete frame is picked up on the next poll. The writer
+emits each frame in a single write.
+
 The stream is not a replacement for deterministic replay; it is the live
 transport for the same audit records. The JSONL file remains the compatibility
 format for existing reports and replay tooling.

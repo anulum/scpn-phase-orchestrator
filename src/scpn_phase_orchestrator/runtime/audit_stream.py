@@ -277,6 +277,10 @@ def _encode_varint(value: int) -> bytes:
     return bytes(chunks)
 
 
+class _TruncatedStreamError(ValueError):
+    """The stream ends inside a frame: a writer may still be appending it."""
+
+
 def _read_varint(fh: BinaryIO) -> int | None:
     """Read a protobuf varint from the byte stream."""
     shift = 0
@@ -286,7 +290,7 @@ def _read_varint(fh: BinaryIO) -> int | None:
         if raw == b"":
             if shift == 0:
                 return None
-            raise ValueError("truncated varint in audit event stream")
+            raise _TruncatedStreamError("truncated varint in audit event stream")
         byte = raw[0]
         result |= (byte & 0x7F) << shift
         if not byte & 0x80:
@@ -490,8 +494,9 @@ class EventStreamWriter:
         message.signature = signature
         message.audit_mode = audit_mode
         raw = message.SerializeToString(deterministic=True)
-        self._fh.write(_encode_varint(len(raw)))
-        self._fh.write(raw)
+        # One write per frame, so a concurrent tail never sees a length
+        # prefix without its envelope between two separate writes.
+        self._fh.write(_encode_varint(len(raw)) + raw)
         self._previous_hash = event_hash
 
     def resolve_event_type(
@@ -558,39 +563,68 @@ class EventStreamWriter:
         self._fh.close()
 
 
-def _read_events_from_handle(fh: BinaryIO) -> list[AuditStreamEvent]:
-    """Read audit events from an open file handle."""
+def _read_events_from_handle(
+    fh: BinaryIO, *, allow_partial_tail: bool = False
+) -> list[AuditStreamEvent]:
+    """Read audit events from an open file handle.
+
+    With ``allow_partial_tail`` a stream that ends inside its magic header or
+    inside a frame yields the complete events before that point; otherwise
+    the incomplete end is a :class:`ValueError`.
+    """
     magic = fh.read(len(STREAM_MAGIC))
     if magic != STREAM_MAGIC:
+        if allow_partial_tail and STREAM_MAGIC.startswith(magic):
+            return []
         raise ValueError("not an SPO audit event stream")
     events: list[AuditStreamEvent] = []
     while True:
-        size = _read_varint(fh)
-        if size is None:
-            return events
-        raw = fh.read(size)
-        if len(raw) != size:
-            raise ValueError("truncated protobuf envelope in audit event stream")
+        try:
+            size = _read_varint(fh)
+            if size is None:
+                return events
+            raw = fh.read(size)
+            if len(raw) != size:
+                raise _TruncatedStreamError(
+                    "truncated protobuf envelope in audit event stream"
+                )
+        except _TruncatedStreamError:
+            if allow_partial_tail:
+                return events
+            raise
         message = _AuditEnvelope()
         message.ParseFromString(raw)
         events.append(_message_to_event(message))
 
 
-def read_event_stream(path: str | Path) -> list[AuditStreamEvent]:
+def read_event_stream(
+    path: str | Path, *, allow_partial_tail: bool = False
+) -> list[AuditStreamEvent]:
     """Read all protobuf events from an SPO audit stream.
 
     Parameters
     ----------
     path : str | Path
         Filesystem path to the target file.
+    allow_partial_tail : bool
+        Whether a stream that ends inside its header or inside a frame, as a
+        stream still being appended may, yields the complete events before
+        that point. A closed stream is read with the default ``False``, which
+        refuses any incomplete end.
 
     Returns
     -------
     list[AuditStreamEvent]
         The decoded audit stream events.
+
+    Raises
+    ------
+    ValueError
+        If the stream magic is wrong, a frame is malformed, or, without
+        ``allow_partial_tail``, the stream ends inside a frame.
     """
     with Path(path).open("rb") as fh:
-        return _read_events_from_handle(fh)
+        return _read_events_from_handle(fh, allow_partial_tail=allow_partial_tail)
 
 
 def _validate_poll_interval_s(value: object) -> float:
@@ -645,11 +679,17 @@ def iter_event_stream(
     path_obj = Path(path)
     if not from_start and not path_obj.exists():
         raise FileNotFoundError(f"audit event stream path does not exist: {path_obj}")
+    # A writer may be mid-frame at any poll; the incomplete frame is left for
+    # the next poll instead of ending the tail.
     offset = 0
     if not from_start and path_obj.exists():
-        offset = len(read_event_stream(path_obj))
+        offset = len(read_event_stream(path_obj, allow_partial_tail=True))
     while True:
-        current = read_event_stream(path_obj) if path_obj.exists() else []
+        current = (
+            read_event_stream(path_obj, allow_partial_tail=True)
+            if path_obj.exists()
+            else []
+        )
         yield from current[offset:]
         offset = len(current)
         time.sleep(poll_interval)

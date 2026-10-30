@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import cProfile
 import hashlib
 import importlib.util
 import io
@@ -639,6 +640,88 @@ def test_read_event_stream_rejects_unknown_stream_magic(tmp_path) -> None:
     path.write_bytes(b"WRONG\n")
     with pytest.raises(ValueError, match="not an SPO audit event stream"):
         read_event_stream(path)
+
+
+def _two_event_stream_bytes(tmp_path: Path) -> tuple[bytes, bytes]:
+    """Return a one-event stream and the bytes of its complete second frame."""
+    path = tmp_path / "source.spoa"
+    writer = EventStreamWriter(path)
+    writer.write({"event": "first"})
+    writer.close()
+    first = path.read_bytes()
+    writer = EventStreamWriter(path)
+    writer.write({"event": "second"})
+    writer.close()
+    return first, path.read_bytes()[len(first) :]
+
+
+@pytest.mark.parametrize("cut", [1, 2, -1], ids=["varint", "body-start", "body-end"])
+def test_partial_tail_reader_returns_the_complete_events(tmp_path, cut: int) -> None:
+    """A stream ending inside a frame yields the events before it, strictly not."""
+    first, frame = _two_event_stream_bytes(tmp_path)
+    path = tmp_path / "live.spoa"
+    # A one-byte cut of a multi-byte varint ends inside the length prefix.
+    assert frame[0] & 0x80
+    path.write_bytes(first + frame[:cut])
+    events = read_event_stream(path, allow_partial_tail=True)
+    assert [event.event_type for event in events] == ["first"]
+    with pytest.raises(ValueError, match="truncated"):
+        read_event_stream(path)
+
+
+@pytest.mark.parametrize("length", [0, 1, len(STREAM_MAGIC) - 1])
+def test_partial_tail_reader_waits_for_the_magic_header(tmp_path, length: int) -> None:
+    """A header still being written reads as empty; a wrong header still fails."""
+    path = tmp_path / "live.spoa"
+    path.write_bytes(STREAM_MAGIC[:length])
+    assert read_event_stream(path, allow_partial_tail=True) == []
+    path.write_bytes(b"WRONG\n")
+    with pytest.raises(ValueError, match="not an SPO audit event stream"):
+        read_event_stream(path, allow_partial_tail=True)
+
+
+def test_iter_event_stream_waits_for_a_frame_in_flight(
+    tmp_path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A poll that sees half a frame yields it once the writer finishes it."""
+    first, frame = _two_event_stream_bytes(tmp_path)
+    path = tmp_path / "live.spoa"
+    path.write_bytes(first + frame[:3])
+    polls: list[float] = []
+
+    def _finish_frame(seconds: float) -> None:
+        polls.append(seconds)
+        if len(polls) > 1:
+            raise _StopPollingError
+        with path.open("ab") as fh:
+            fh.write(frame[3:])
+
+    monkeypatch.setattr(audit_stream_module.time, "sleep", _finish_frame)
+    collected: list[AuditStreamEvent] = []
+    with pytest.raises(_StopPollingError):
+        for event in iter_event_stream(path, from_start=True, poll_interval_s=0.0):
+            collected.append(event)
+    assert [event.event_type for event in collected] == ["first", "second"]
+    assert verify_event_stream_integrity(collected) == (True, 2)
+
+
+def test_writer_emits_each_frame_in_one_write(tmp_path) -> None:
+    """The length prefix and envelope reach the file in a single write call."""
+    writer = EventStreamWriter(tmp_path / "audit.spoa")
+    profiler = cProfile.Profile()
+    profiler.enable()
+    for step in range(4):
+        writer.write({"step": step})
+    profiler.disable()
+    writer.close()
+    writes = sum(
+        entry.callcount
+        for entry in profiler.getstats()
+        if isinstance(entry.code, str)
+        and "method 'write' of '_io.FileIO' objects" in entry.code
+    )
+    assert writes == 4
 
 
 def test_tail_event_stream_requires_max_events(tmp_path) -> None:
