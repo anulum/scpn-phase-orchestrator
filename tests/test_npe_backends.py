@@ -449,7 +449,9 @@ class TestDirectBackendBoundaryContracts:
             np.fill_diagonal(wrong, 0.0)
             return wrong
 
-        monkeypatch.setattr(npe_mod, "_dispatch", lambda _name: _wrong_backend)
+        monkeypatch.setattr(
+            npe_mod, "_dispatch", lambda _name, _backend="auto": ("go", _wrong_backend)
+        )
 
         with pytest.raises(ValueError, match="exact circular phase distances"):
             phase_distance_matrix(phases)
@@ -465,7 +467,9 @@ class TestDirectBackendBoundaryContracts:
             del phases_in, radius
             return 0.0 if ref_npe > 0.1 else 0.75
 
-        monkeypatch.setattr(npe_mod, "_dispatch", lambda _name: _wrong_backend)
+        monkeypatch.setattr(
+            npe_mod, "_dispatch", lambda _name, _backend="auto": ("go", _wrong_backend)
+        )
 
         with pytest.raises(ValueError, match="exact persistent-entropy reference"):
             compute_npe(phases)

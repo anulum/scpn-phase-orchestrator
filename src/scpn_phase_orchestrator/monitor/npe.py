@@ -38,6 +38,7 @@ __all__ = [
     "ACTIVE_BACKEND",
     "AVAILABLE_BACKENDS",
     "compute_npe",
+    "npe_backend",
     "phase_distance_matrix",
 ]
 
@@ -133,25 +134,87 @@ def _resolve_backends() -> tuple[str, list[str]]:
 ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
-def _dispatch(fn_name: str) -> object:
-    """Return the fastest available backend callables, or ``None`` for Python."""
-    ordered_backends = [ACTIVE_BACKEND] + list(AVAILABLE_BACKENDS)
-    deduped: list[str] = []
-    for backend in ordered_backends:
-        if backend in deduped:
+_NATIVE_FAILURES = (ImportError, RuntimeError, OSError, KeyError)
+_SLOTS = ("phase_distance_matrix", "compute_npe")
+
+
+def _require_known_backend(backend: str) -> None:
+    """Refuse an unknown owner name before any computation."""
+    if backend not in (*_BACKEND_NAMES, "auto"):
+        raise ValueError(f"unknown NPE backend: {backend!r}")
+
+
+def _dispatch(fn_name: str, backend: str = "auto") -> tuple[str, object | None]:
+    """Resolve the owner of ``fn_name`` and its callable.
+
+    Parameters
+    ----------
+    fn_name : str
+        ``"phase_distance_matrix"`` or ``"compute_npe"``.
+    backend : str
+        ``"auto"`` or one of ``rust``, ``mojo``, ``julia``, ``go``, ``python``.
+
+    Returns
+    -------
+    tuple[str, object | None]
+        The owner name and its callable, or ``("python", None)``.
+
+    Raises
+    ------
+    ValueError
+        If ``backend`` is not a known owner.
+    RuntimeError
+        If an explicitly requested owner is unavailable or lacks the kernel.
+    """
+    _require_known_backend(backend)
+    ordered = [ACTIVE_BACKEND, *AVAILABLE_BACKENDS] if backend == "auto" else [backend]
+    seen: set[str] = set()
+    for name in ordered:
+        if name in seen:
             continue
-        deduped.append(backend)
-    for backend in deduped:
-        if backend == "python":
-            return None
+        seen.add(name)
+        if name == "python":
+            return "python", None
         try:
-            fn = _load_backend(backend).get(fn_name)
-        except (ImportError, RuntimeError, OSError, KeyError):
+            fn = _load_backend(name).get(fn_name)
+        except _NATIVE_FAILURES as exc:
+            if backend != "auto":
+                raise RuntimeError(f"NPE backend {name!r} unavailable") from exc
             continue
         if fn is None:
+            if backend != "auto":
+                raise RuntimeError(f"NPE backend {name!r} lacks {fn_name}")
             continue
-        return fn
-    return None
+        return name, fn
+    return "python", None
+
+
+def npe_backend(slot: str, backend: str = "auto") -> str:
+    """Return the owner that serves one NPE operation.
+
+    Parameters
+    ----------
+    slot : str
+        ``"phase_distance_matrix"`` or ``"compute_npe"``.
+    backend : str
+        ``"auto"`` or an explicit owner name.
+
+    Returns
+    -------
+    str
+        ``rust``, ``mojo``, ``julia``, ``go`` or ``python``.
+
+    Raises
+    ------
+    ValueError
+        If ``slot`` or ``backend`` is unknown.
+    RuntimeError
+        If an explicitly requested owner is unavailable or lacks the kernel.
+    """
+    if slot not in _SLOTS:
+        raise ValueError(f"unknown NPE operation: {slot!r}")
+    owner, _ = _dispatch(slot, backend)
+    return owner
 
 
 def _contains_boolean_alias(raw: ArrayPayload) -> bool:
@@ -368,35 +431,49 @@ def _compute_npe_reference(phases: FloatArray, radius: float) -> float:
     return _npe_from_distance_matrix(_phase_distance_reference(phases), radius)
 
 
-def phase_distance_matrix(phases: FloatArray) -> FloatArray:
+def phase_distance_matrix(phases: FloatArray, backend: str = "auto") -> FloatArray:
     """Pairwise circular distance matrix ``d[i, j] ∈ [0, π]``.
 
     Parameters
     ----------
     phases : FloatArray
         Oscillator phases in radians, shape ``(N,)``.
+    backend : str
+        ``"auto"`` (NumPy if a native owner fails) or an explicit owner.
 
     Returns
     -------
     FloatArray
         The pairwise circular distance matrix, shape ``(N, N)``.
+
+    Raises
+    ------
+    ValueError
+        If the phases or the backend name are invalid, or a backend result
+        differs from the NumPy reference.
+    RuntimeError
+        If an explicitly requested owner is unavailable or fails.
     """
+    _require_known_backend(backend)
     phases = _validate_phases(phases)
     n = phases.size
     expected = _phase_distance_reference(phases)
-    backend_fn = _dispatch("phase_distance_matrix")
+    owner, backend_fn = _dispatch("phase_distance_matrix", backend)
     if backend_fn is not None:
         fn = cast("Callable[[FloatArray], FloatArray]", backend_fn)
         try:
             flat = fn(np.ascontiguousarray(phases.ravel(), dtype=np.float64))
             return _validate_distance_matrix(flat, n_phases=n, expected=expected)
-        except (ImportError, RuntimeError, OSError, KeyError):
-            backend_fn = None
+        except _NATIVE_FAILURES as exc:
+            if backend != "auto":
+                raise RuntimeError(f"NPE backend {owner!r} failed") from exc
 
     return expected
 
 
-def compute_npe(phases: FloatArray, max_radius: float | None = None) -> float:
+def compute_npe(
+    phases: FloatArray, max_radius: float | None = None, backend: str = "auto"
+) -> float:
     """Normalised Persistent Entropy from H₀ persistence diagram.
 
     ``NPE = H(p) / log(|p|)`` where ``p_i = lifetime_i / Σ lifetimes``
@@ -411,12 +488,23 @@ def compute_npe(phases: FloatArray, max_radius: float | None = None) -> float:
         Oscillator phases in radians, shape ``(N,)``.
     max_radius : float | None
         Maximum radius for the persistence filtration, or ``None``.
+    backend : str
+        ``"auto"`` (NumPy if a native owner fails) or an explicit owner.
 
     Returns
     -------
     float
         The normalised persistent entropy.
+
+    Raises
+    ------
+    ValueError
+        If an input or the backend name is invalid, or a backend result
+        differs from the reference.
+    RuntimeError
+        If an explicitly requested owner is unavailable or fails.
     """
+    _require_known_backend(backend)
     phases = _validate_phases(phases)
     n = phases.size
     radius = _validate_max_radius(max_radius)
@@ -424,7 +512,7 @@ def compute_npe(phases: FloatArray, max_radius: float | None = None) -> float:
         return 0.0
     expected = _compute_npe_reference(phases, radius)
 
-    backend_fn = _dispatch("compute_npe")
+    owner, backend_fn = _dispatch("compute_npe", backend)
     if backend_fn is not None:
         fn = cast("Callable[[FloatArray, float], float]", backend_fn)
         try:
@@ -435,7 +523,8 @@ def compute_npe(phases: FloatArray, max_radius: float | None = None) -> float:
                 ),
                 expected=expected,
             )
-        except (ImportError, RuntimeError, OSError, KeyError):
-            backend_fn = None
+        except _NATIVE_FAILURES as exc:
+            if backend != "auto":
+                raise RuntimeError(f"NPE backend {owner!r} failed") from exc
 
     return expected

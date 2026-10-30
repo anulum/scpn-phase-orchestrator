@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `phase_distance_matrix` and `compute_npe` take `backend=`, and the new
+  `npe_backend(slot, backend)` names the owner; a named owner that is
+  absent, lacks the kernel or fails raises `RuntimeError`. The RT-064 and
+  RT-065 substitutes (a fake dispatcher) are replaced by calls into every
+  installed owner, checked against a plain circular-distance oracle and an
+  independent Prim-MST persistent-entropy oracle at three filtration radii.
+  The documented way to force an owner is now `backend=` instead of
+  reassigning `ACTIVE_BACKEND`.
 - The chimera and AttnRes Julia loaders probe the `juliacall` runtime
   before using their cached side-file module, as every other Julia loader
   does. A partial `juliacall` (no `Main`) was accepted once the side file had

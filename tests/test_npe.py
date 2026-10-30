@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import math
 from typing import Any, get_type_hints
 
 import numpy as np
@@ -185,24 +186,55 @@ class TestNPEPipelineWiring:
         assert npe < 0.3, f"Synced engine phases → NPE should be low, got {npe}"
 
 
+def _circular_distance(a: float, b: float) -> float:
+    """Return the shortest arc between two angles."""
+    gap = abs(a - b) % (2 * math.pi)
+    return min(gap, 2 * math.pi - gap)
+
+
+def _oracle_npe(phases: list[float], radius: float) -> float:
+    """Return the H0 persistent entropy from Prim's minimum spanning tree.
+
+    Single-linkage H0 lifetimes are the MST edge weights; edges longer than
+    ``radius`` never merge within the filtration and are dropped.
+    """
+    n = len(phases)
+    in_tree = [False] * n
+    best = [math.inf] * n
+    best[0] = 0.0
+    lifetimes = []
+    for _ in range(n):
+        u = min((i for i in range(n) if not in_tree[i]), key=lambda i: best[i])
+        if any(in_tree):
+            lifetimes.append(best[u])
+        in_tree[u] = True
+        for v in range(n):
+            if not in_tree[v]:
+                best[v] = min(best[v], _circular_distance(phases[u], phases[v]))
+    kept = [life for life in lifetimes if life <= radius]
+    total = math.fsum(kept)
+    if not kept or total < 1e-15:
+        return 0.0
+    probs = [life / total for life in kept if life > 0]
+    if len(probs) < 2:
+        return 0.0
+    return -math.fsum(p * math.log(p) for p in probs) / math.log(len(probs))
+
+
 class TestNPERustDispatch:
-    def test_phase_distance_uses_backend_when_available(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        calls: list[np.ndarray] = []
-
-        def _fake_pdm(phases: np.ndarray) -> np.ndarray:
-            calls.append(phases)
-            return np.array([0.0, 1.0, 1.0, 0.0], dtype=np.float64)
-
-        monkeypatch.setattr(
-            npe_module,
-            "_dispatch",
-            lambda fn_name: _fake_pdm if fn_name == "phase_distance_matrix" else None,
-        )
-        D = phase_distance_matrix(np.array([0.0, 1.0], dtype=np.float64))
-        np.testing.assert_allclose(D, np.array([[0.0, 1.0], [1.0, 0.0]]), atol=1e-12)
-        assert len(calls) == 1
+    @pytest.mark.native_runtime
+    @pytest.mark.parametrize("owner", ["python", "rust", "mojo", "julia", "go"])
+    def test_phase_distance_uses_backend_when_available(self, owner: str) -> None:
+        """Each named owner returns the circular distances of the oracle."""
+        if owner not in npe_module.AVAILABLE_BACKENDS:
+            pytest.skip(f"{owner} unavailable")
+        assert npe_module.npe_backend("phase_distance_matrix", owner) == owner
+        phases = np.array([0.1, 2 * np.pi - 0.1, 3.0, -2.5, 6.0])
+        got = phase_distance_matrix(phases, backend=owner)
+        expected = [
+            [_circular_distance(a, b) for b in phases.tolist()] for a in phases.tolist()
+        ]
+        np.testing.assert_allclose(got, expected, rtol=0.0, atol=1e-12)
 
     def test_phase_distance_falls_back_when_backend_raises(
         self, monkeypatch: pytest.MonkeyPatch
@@ -213,8 +245,10 @@ class TestNPERustDispatch:
         monkeypatch.setattr(
             npe_module,
             "_dispatch",
-            lambda fn_name: (
-                _raising_pdm if fn_name == "phase_distance_matrix" else None
+            lambda fn_name, _backend="auto": (
+                ("go", _raising_pdm)
+                if fn_name == "phase_distance_matrix"
+                else ("python", None)
             ),
         )
         phases = np.array([0.1, 2 * np.pi - 0.1], dtype=np.float64)
@@ -222,26 +256,55 @@ class TestNPERustDispatch:
         assert D.shape == (2, 2)
         assert D[0, 1] < 0.3
 
-    def test_compute_npe_uses_backend_when_available(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        calls: list[tuple[np.ndarray, float]] = []
-        phases = np.array([0.0, 1.0, 2.0], dtype=np.float64)
-        radius = 1.5
-        expected = npe_module._compute_npe_reference(phases, radius)
+    @pytest.mark.native_runtime
+    @pytest.mark.parametrize("owner", ["python", "rust", "mojo", "julia", "go"])
+    def test_compute_npe_uses_backend_when_available(self, owner: str) -> None:
+        """Each named owner returns the Prim-MST persistent entropy of the oracle."""
+        if owner not in npe_module.AVAILABLE_BACKENDS:
+            pytest.skip(f"{owner} unavailable")
+        assert npe_module.npe_backend("compute_npe", owner) == owner
+        rng = np.random.default_rng(41)
+        for radius in (np.pi, 1.0, 0.3):
+            phases = rng.uniform(0.0, 2 * np.pi, 9)
+            got = compute_npe(phases, max_radius=radius, backend=owner)
+            # The Mojo text bridge carries about 1e-11; the module admits 1e-9.
+            assert got == pytest.approx(
+                _oracle_npe(phases.tolist(), radius),
+                abs=1e-9 if owner == "mojo" else 1e-12,
+            )
 
-        def _fake_npe(phases: np.ndarray, radius: float) -> float:
-            calls.append((phases, radius))
-            return expected
+    def test_named_owner_refusals(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Absent, failing or incomplete named owners and unknown names refuse."""
 
-        monkeypatch.setattr(
-            npe_module,
-            "_dispatch",
-            lambda fn_name: _fake_npe if fn_name == "compute_npe" else None,
+        def broken_loader() -> dict[str, object]:
+            """Fail like a missing shared library."""
+            raise OSError("libnpe.so missing")
+
+        def crash(*_args: object) -> object:
+            """Fail like a crashed kernel."""
+            raise RuntimeError("kernel crashed")
+
+        phases = np.array([0.0, 1.0, 2.0])
+        monkeypatch.setattr(npe_module, "_BACKEND_CACHE", {})
+        monkeypatch.setitem(npe_module._LOADERS, "go", broken_loader)
+        with pytest.raises(RuntimeError, match="NPE backend 'go' unavailable"):
+            compute_npe(phases, backend="go")
+        monkeypatch.setitem(
+            npe_module._LOADERS, "go", lambda: {"phase_distance_matrix": crash}
         )
-        npe = compute_npe(phases, max_radius=radius)
-        assert npe == pytest.approx(expected, abs=1e-12)
-        assert len(calls) == 1
+        npe_module._BACKEND_CACHE.clear()
+        with pytest.raises(RuntimeError, match="NPE backend 'go' failed"):
+            phase_distance_matrix(phases, backend="go")
+        with pytest.raises(RuntimeError, match="NPE backend 'go' lacks compute_npe"):
+            compute_npe(phases, backend="go")
+        monkeypatch.setitem(npe_module._LOADERS, "go", lambda: {"compute_npe": crash})
+        npe_module._BACKEND_CACHE.clear()
+        with pytest.raises(RuntimeError, match="NPE backend 'go' failed"):
+            compute_npe(phases, backend="go")
+        with pytest.raises(ValueError, match="unknown NPE backend"):
+            phase_distance_matrix(phases, backend="cuda")
+        with pytest.raises(ValueError, match="unknown NPE operation"):
+            npe_module.npe_backend("betti")
 
     def test_compute_npe_falls_back_when_backend_raises(
         self, monkeypatch: pytest.MonkeyPatch
@@ -252,7 +315,9 @@ class TestNPERustDispatch:
         monkeypatch.setattr(
             npe_module,
             "_dispatch",
-            lambda fn_name: _raising_npe if fn_name == "compute_npe" else None,
+            lambda fn_name, _backend="auto": (
+                ("go", _raising_npe) if fn_name == "compute_npe" else ("python", None)
+            ),
         )
         npe = compute_npe(np.array([0.0, 1.0, 2.0], dtype=np.float64), max_radius=1.5)
         assert 0.0 <= npe <= 1.0
@@ -279,7 +344,7 @@ class TestNPERustDispatch:
             monkeypatch.setitem(npe_module._LOADERS, "go", previous_loader)
             npe_module._BACKEND_CACHE.clear()
 
-        assert fn is None
+        assert fn == ("python", None)
 
     def test_dispatch_uses_cached_loader_once(
         self, monkeypatch: pytest.MonkeyPatch
@@ -310,8 +375,8 @@ class TestNPERustDispatch:
             monkeypatch.setitem(npe_module._LOADERS, "go", previous_loader)
             npe_module._BACKEND_CACHE.clear()
 
-        assert fn1 is fake_compute_npe
-        assert fn2 is fake_compute_npe
+        assert fn1 == ("go", fake_compute_npe)
+        assert fn2 == ("go", fake_compute_npe)
         assert call_count == 1
 
 
@@ -424,7 +489,7 @@ class TestNPEBoundaryHardening:
             lambda: {"phase_distance_matrix": lambda _phases: np.zeros((1, 1))},
         )
         try:
-            assert npe_module._dispatch("compute_npe") is None
+            assert npe_module._dispatch("compute_npe") == ("python", None)
         finally:
             npe_module.ACTIVE_BACKEND = previous_backend
             npe_module.AVAILABLE_BACKENDS = previous_available

@@ -97,6 +97,7 @@ on the Rust backend.
 ```python
 from scpn_phase_orchestrator.monitor.npe import (
     compute_npe,
+    npe_backend,
     phase_distance_matrix,
     ACTIVE_BACKEND,
     AVAILABLE_BACKENDS,
@@ -110,6 +111,10 @@ value = compute_npe(phases)                # scalar in [0, 1]
 
 # Custom filtration cutoff.
 value_small = compute_npe(phases, max_radius=0.5)
+
+# A named owner runs the call or raises RuntimeError; it never substitutes.
+value_go = compute_npe(phases, backend="go")
+npe_backend("compute_npe", "go")           # "go", or RuntimeError if absent
 ```
 
 Key parameters:
@@ -316,19 +321,12 @@ do not enter the entropy sum.
 ### 5.3 Backend switch for benchmarking
 
 ```python
-from scpn_phase_orchestrator.monitor import npe as npe_mod
-
-saved = npe_mod.ACTIVE_BACKEND
-try:
-    npe_mod.ACTIVE_BACKEND = "julia"
-    val = compute_npe(phases)
-finally:
-    npe_mod.ACTIVE_BACKEND = saved
+val = compute_npe(phases, backend="julia")
 ```
 
-No global state survives the ``finally`` — the dispatcher always
-reads ``ACTIVE_BACKEND`` at call time, so this pattern is safe in
-concurrent code.
+``backend=`` touches no module state, so it is safe in concurrent code. A
+named owner that is absent, lacks the kernel or fails raises
+``RuntimeError``; ``"auto"`` keeps its NumPy fallback.
 
 ---
 
