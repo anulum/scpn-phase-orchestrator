@@ -100,6 +100,7 @@ ordinal dynamics are read.
 
 ```python
 from scpn_phase_orchestrator.monitor.opt_entropy import (
+    opt_entropy_backend,
     ordinal_pattern_sequence,
     transition_entropy,
     ACTIVE_BACKEND,
@@ -124,6 +125,10 @@ Key parameters:
   slower timescales.
 * A series shorter than one window returns an empty code vector and
   `transition_entropy` returns `0.0`.
+* `backend`: `"auto"` (NumPy if a native owner fails) or an explicit owner
+  (`"rust"`, `"mojo"`, `"julia"`, `"go"`, `"python"`). A named owner that is
+  absent, lacks the kernel or fails raises `RuntimeError`; an unknown name
+  raises `ValueError`. `opt_entropy_backend(slot, backend)` names the owner.
 
 ---
 
@@ -260,18 +265,10 @@ trace = [transition_entropy(window, dimension=3, delay=1) for window in windows]
 ### 6.2 Backend switch for cross-checking
 
 ```python
-from scpn_phase_orchestrator.monitor import opt_entropy as oe
-
-saved = oe.ACTIVE_BACKEND
-try:
-    oe.ACTIVE_BACKEND = "julia"
-    value = transition_entropy(series)
-finally:
-    oe.ACTIVE_BACKEND = saved
+value = transition_entropy(series, backend="julia")
 ```
 
-The dispatcher reads `ACTIVE_BACKEND` at call time, so this pattern is safe to
-restore in a `finally` block.
+`backend=` touches no module state, so it is safe in concurrent code.
 
 ---
 

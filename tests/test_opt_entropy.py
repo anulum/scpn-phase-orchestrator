@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import collections
 import itertools
 import math
 from typing import Any, get_type_hints
@@ -153,25 +154,85 @@ class TestInputValidation:
             transition_entropy(np.arange(20, dtype=np.float64), 3, delay)
 
 
+def _oracle_codes(values: list[float], dimension: int, delay: int) -> list[int]:
+    """Return each window's rank permutation as its lexicographic index."""
+    lexicon = sorted(itertools.permutations(range(dimension)))
+    span = (dimension - 1) * delay
+    codes = []
+    for start in range(len(values) - span):
+        window = values[start : start + span + 1 : delay]
+        perm = tuple(sorted(range(dimension), key=lambda i: (window[i], i)))
+        codes.append(lexicon.index(perm))
+    return codes
+
+
+def _oracle_transition_entropy(codes: list[int], dimension: int) -> float:
+    """Return the transition entropy normalised by the log of distinct pairs."""
+    pairs = collections.Counter(zip(codes, codes[1:], strict=False))
+    if len(codes) < 2 or len(pairs) < 2:
+        return 0.0
+    total = len(codes) - 1
+    entropy = -math.fsum(c / total * math.log(c / total) for c in pairs.values())
+    return entropy / math.log(len(pairs))
+
+
 class TestDispatch:
-    def test_transition_entropy_uses_backend_when_available(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
-        series = np.array([0.0, 1.0, 0.5, 2.0, 1.5, 3.0], dtype=np.float64)
-        expected = oe_module._transition_entropy_reference(series, 3, 1)
-        calls: list[tuple[np.ndarray, int, int]] = []
+    @pytest.mark.native_runtime
+    @pytest.mark.parametrize("owner", ["python", "rust", "mojo", "julia", "go"])
+    def test_transition_entropy_uses_backend_when_available(self, owner: str) -> None:
+        """Each named owner matches the permutation-index oracle for both kernels."""
+        if owner not in oe_module.AVAILABLE_BACKENDS:
+            pytest.skip(f"{owner} unavailable")
+        assert oe_module.opt_entropy_backend("transition_entropy", owner) == owner
+        rng = np.random.default_rng(53)
+        series = np.round(rng.normal(size=80), 1)  # rounding forces ties
+        for dimension, delay in ((3, 1), (4, 2), (2, 3)):
+            codes = _oracle_codes(series.tolist(), dimension, delay)
+            np.testing.assert_array_equal(
+                ordinal_pattern_sequence(series, dimension, delay, backend=owner), codes
+            )
+            assert transition_entropy(
+                series, dimension, delay, backend=owner
+            ) == pytest.approx(
+                _oracle_transition_entropy(codes, dimension),
+                # Mojo's text bridge carries ~1e-11; the module admits this.
+                abs=oe_module._DISPATCH_ENTROPY_TOLERANCE if owner == "mojo" else 1e-12,
+            )
 
-        def _fake(s: np.ndarray, d: int, tau: int) -> float:
-            calls.append((s, d, tau))
-            return expected
+    def test_named_owner_refusals(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """Absent, failing or incomplete named owners and unknown names refuse."""
 
-        monkeypatch.setattr(
-            oe_module,
-            "_dispatch",
-            lambda fn_name: _fake if fn_name == "transition_entropy" else None,
+        def crash(*_args: object) -> object:
+            """Fail like a crashed kernel."""
+            raise RuntimeError("kernel crashed")
+
+        series = np.sin(np.linspace(0.0, 9.0, 40))
+        monkeypatch.setattr(oe_module, "_BACKEND_CACHE", {})
+        monkeypatch.setitem(
+            oe_module._LOADERS,
+            "go",
+            lambda: (_ for _ in ()).throw(OSError("libopt.so missing")),
         )
-        assert transition_entropy(series, 3, 1) == pytest.approx(expected, abs=1e-12)
-        assert len(calls) == 1
+        with pytest.raises(RuntimeError, match="'go' unavailable"):
+            transition_entropy(series, 3, 1, backend="go")
+        monkeypatch.setitem(
+            oe_module._LOADERS, "go", lambda: {"ordinal_pattern_sequence": crash}
+        )
+        oe_module._BACKEND_CACHE.clear()
+        with pytest.raises(RuntimeError, match="'go' failed"):
+            ordinal_pattern_sequence(series, 3, 1, backend="go")
+        with pytest.raises(RuntimeError, match="'go' lacks transition_entropy"):
+            transition_entropy(series, 3, 1, backend="go")
+        monkeypatch.setitem(
+            oe_module._LOADERS, "go", lambda: {"transition_entropy": crash}
+        )
+        oe_module._BACKEND_CACHE.clear()
+        with pytest.raises(RuntimeError, match="'go' failed"):
+            transition_entropy(series, 3, 1, backend="go")
+        with pytest.raises(ValueError, match="unknown ordinal-entropy backend"):
+            transition_entropy(series, 3, 1, backend="cuda")
+        with pytest.raises(ValueError, match="unknown ordinal-entropy operation"):
+            oe_module.opt_entropy_backend("spectral")
 
     def test_transition_entropy_falls_back_when_backend_raises(
         self, monkeypatch: pytest.MonkeyPatch
@@ -182,7 +243,11 @@ class TestDispatch:
         monkeypatch.setattr(
             oe_module,
             "_dispatch",
-            lambda fn_name: _raising if fn_name == "transition_entropy" else None,
+            lambda fn_name, _backend="auto": (
+                ("go", _raising)
+                if fn_name == "transition_entropy"
+                else ("python", None)
+            ),
         )
         series = np.sin(np.linspace(0.0, 50.0, 500))
         value = transition_entropy(series, 3, 1)
@@ -199,7 +264,11 @@ class TestDispatch:
         monkeypatch.setattr(
             oe_module,
             "_dispatch",
-            lambda fn_name: _wrong if fn_name == "ordinal_pattern_sequence" else None,
+            lambda fn_name, _backend="auto": (
+                ("go", _wrong)
+                if fn_name == "ordinal_pattern_sequence"
+                else ("python", None)
+            ),
         )
         with pytest.raises(ValueError, match="ordinal pattern"):
             ordinal_pattern_sequence(series, 3, 1)
@@ -216,7 +285,9 @@ class TestDispatch:
         monkeypatch.setattr(
             oe_module,
             "_dispatch",
-            lambda fn_name: _wrong if fn_name == "transition_entropy" else None,
+            lambda fn_name, _backend="auto": (
+                ("go", _wrong) if fn_name == "transition_entropy" else ("python", None)
+            ),
         )
         with pytest.raises(ValueError, match="exact reference"):
             transition_entropy(series, 3, 1)
@@ -240,7 +311,7 @@ class TestDispatch:
             oe_module.ACTIVE_BACKEND = previous_backend
             oe_module.AVAILABLE_BACKENDS = previous_available
             oe_module._BACKEND_CACHE.clear()
-        assert fn is None
+        assert fn == ("python", None)
 
 
 class TestPythonReferencePath:
@@ -249,7 +320,9 @@ class TestPythonReferencePath:
     ) -> None:
         # _dispatch returning None is the pure-Python path: the public
         # functions return the NumPy reference directly.
-        monkeypatch.setattr(oe_module, "_dispatch", lambda _name: None)
+        monkeypatch.setattr(
+            oe_module, "_dispatch", lambda _name, _backend="auto": ("python", None)
+        )
         series = np.array([3.0, 1.0, 2.0, 4.0, 0.0, 5.0], dtype=np.float64)
         np.testing.assert_array_equal(
             ordinal_pattern_sequence(series, 3, 1),
@@ -298,7 +371,9 @@ class TestBackendBoundaryHardening:
         monkeypatch.setattr(
             oe_module,
             "_dispatch",
-            lambda fn_name: _bad if fn_name == "transition_entropy" else None,
+            lambda fn_name, _backend="auto": (
+                ("go", _bad) if fn_name == "transition_entropy" else ("python", None)
+            ),
         )
         with pytest.raises(ValueError):
             transition_entropy(np.sin(np.linspace(0.0, 40.0, 300)), 3, 1)
@@ -327,7 +402,11 @@ class TestBackendBoundaryHardening:
         monkeypatch.setattr(
             oe_module,
             "_dispatch",
-            lambda fn_name: _bad if fn_name == "ordinal_pattern_sequence" else None,
+            lambda fn_name, _backend="auto": (
+                ("go", _bad)
+                if fn_name == "ordinal_pattern_sequence"
+                else ("python", None)
+            ),
         )
         with pytest.raises(ValueError):
             ordinal_pattern_sequence(
@@ -383,7 +462,7 @@ class TestDispatchInternals:
             oe_module.ACTIVE_BACKEND = previous_backend
             oe_module.AVAILABLE_BACKENDS = previous_available
             oe_module._BACKEND_CACHE.clear()
-        assert fn is None
+        assert fn == ("python", None)
 
     def test_ordinal_sequence_falls_back_when_backend_raises(
         self, monkeypatch: pytest.MonkeyPatch
@@ -394,7 +473,11 @@ class TestDispatchInternals:
         monkeypatch.setattr(
             oe_module,
             "_dispatch",
-            lambda fn_name: _raising if fn_name == "ordinal_pattern_sequence" else None,
+            lambda fn_name, _backend="auto": (
+                ("go", _raising)
+                if fn_name == "ordinal_pattern_sequence"
+                else ("python", None)
+            ),
         )
         series = np.array([3.0, 1.0, 2.0, 4.0, 0.0], dtype=np.float64)
         codes = ordinal_pattern_sequence(series, 3, 1)
@@ -421,4 +504,4 @@ class TestDispatchInternals:
             oe_module.ACTIVE_BACKEND = previous_backend
             oe_module.AVAILABLE_BACKENDS = previous_available
             oe_module._BACKEND_CACHE.clear()
-        assert fn is None
+        assert fn == ("python", None)

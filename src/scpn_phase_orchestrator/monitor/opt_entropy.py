@@ -76,6 +76,7 @@ __all__ = [
     "DEFAULT_DIMENSION",
     "MAX_DIMENSION",
     "MIN_DIMENSION",
+    "opt_entropy_backend",
     "ordinal_pattern_sequence",
     "transition_entropy",
 ]
@@ -345,25 +346,89 @@ def _resolve_backends() -> tuple[str, list[str]]:
 ACTIVE_BACKEND, AVAILABLE_BACKENDS = _resolve_backends()
 
 
-def _dispatch(fn_name: str) -> object:
-    """Return the fastest available backend callables, or ``None`` for Python."""
-    ordered_backends = [ACTIVE_BACKEND] + list(AVAILABLE_BACKENDS)
-    deduped: list[str] = []
-    for backend in ordered_backends:
-        if backend in deduped:
+_NATIVE_FAILURES = (ImportError, RuntimeError, OSError, KeyError)
+_SLOTS = ("ordinal_pattern_sequence", "transition_entropy")
+
+
+def _require_known_backend(backend: str) -> None:
+    """Refuse an unknown owner name before any computation."""
+    if backend not in (*_BACKEND_NAMES, "auto"):
+        raise ValueError(f"unknown ordinal-entropy backend: {backend!r}")
+
+
+def _dispatch(fn_name: str, backend: str = "auto") -> tuple[str, object | None]:
+    """Resolve the owner of ``fn_name`` and its callable.
+
+    Parameters
+    ----------
+    fn_name : str
+        ``"ordinal_pattern_sequence"`` or ``"transition_entropy"``.
+    backend : str
+        ``"auto"`` or one of ``rust``, ``mojo``, ``julia``, ``go``, ``python``.
+
+    Returns
+    -------
+    tuple[str, object | None]
+        The owner name and its callable, or ``("python", None)``.
+
+    Raises
+    ------
+    ValueError
+        If ``backend`` is not a known owner.
+    RuntimeError
+        If an explicitly requested owner is unavailable or lacks the kernel.
+    """
+    _require_known_backend(backend)
+    ordered = [ACTIVE_BACKEND, *AVAILABLE_BACKENDS] if backend == "auto" else [backend]
+    seen: set[str] = set()
+    for name in ordered:
+        if name in seen:
             continue
-        deduped.append(backend)
-    for backend in deduped:
-        if backend == "python":
-            return None
+        seen.add(name)
+        if name == "python":
+            return "python", None
         try:
-            fn = _load_backend(backend).get(fn_name)
-        except (ImportError, RuntimeError, OSError, KeyError):
+            fn = _load_backend(name).get(fn_name)
+        except _NATIVE_FAILURES as exc:
+            if backend != "auto":
+                raise RuntimeError(
+                    f"ordinal-entropy backend {name!r} unavailable"
+                ) from exc
             continue
         if fn is None:
+            if backend != "auto":
+                raise RuntimeError(f"ordinal-entropy backend {name!r} lacks {fn_name}")
             continue
-        return fn
-    return None
+        return name, fn
+    return "python", None
+
+
+def opt_entropy_backend(slot: str, backend: str = "auto") -> str:
+    """Return the owner that serves one ordinal-pattern operation.
+
+    Parameters
+    ----------
+    slot : str
+        ``"ordinal_pattern_sequence"`` or ``"transition_entropy"``.
+    backend : str
+        ``"auto"`` or an explicit owner name.
+
+    Returns
+    -------
+    str
+        ``rust``, ``mojo``, ``julia``, ``go`` or ``python``.
+
+    Raises
+    ------
+    ValueError
+        If ``slot`` or ``backend`` is unknown.
+    RuntimeError
+        If an explicitly requested owner is unavailable or lacks the kernel.
+    """
+    if slot not in _SLOTS:
+        raise ValueError(f"unknown ordinal-entropy operation: {slot!r}")
+    owner, _ = _dispatch(slot, backend)
+    return owner
 
 
 def _stable_argsort(window: NDArray[np.float64]) -> list[int]:
@@ -441,6 +506,7 @@ def ordinal_pattern_sequence(
     series: FloatArray,
     dimension: int = DEFAULT_DIMENSION,
     delay: int = DEFAULT_DELAY,
+    backend: str = "auto",
 ) -> IntArray:
     """Lehmer-encoded ordinal-pattern sequence of a scalar series.
 
@@ -455,13 +521,24 @@ def ordinal_pattern_sequence(
         spans ``D`` samples.
     delay : int
         Positive embedding delay ``τ`` (default 1).
+    backend : str
+        ``"auto"`` (NumPy if a native owner fails) or an explicit owner.
 
     Returns
     -------
     IntArray
         Pattern codes in ``[0, D! − 1]``, shape ``(T − (D − 1)·τ,)``;
         empty when the series is shorter than one window.
+
+    Raises
+    ------
+    ValueError
+        If an input or the backend name is invalid, or a backend result
+        differs from the reference.
+    RuntimeError
+        If an explicitly requested owner is unavailable or fails.
     """
+    _require_known_backend(backend)
     series = _validate_series(series)
     dimension, delay = _validate_ordinal_params(dimension, delay)
     count = _ordinal_window_count(int(series.shape[0]), dimension, delay)
@@ -469,7 +546,7 @@ def ordinal_pattern_sequence(
     if count == 0:
         return expected
 
-    backend_fn = _dispatch("ordinal_pattern_sequence")
+    owner, backend_fn = _dispatch("ordinal_pattern_sequence", backend)
     if backend_fn is not None:
         fn = cast("Callable[[FloatArray, int, int], IntArray]", backend_fn)
         try:
@@ -479,8 +556,9 @@ def ordinal_pattern_sequence(
                 dimension=dimension,
                 expected=expected,
             )
-        except (ImportError, RuntimeError, OSError, KeyError):
-            backend_fn = None
+        except _NATIVE_FAILURES as exc:
+            if backend != "auto":
+                raise RuntimeError(f"ordinal-entropy backend {owner!r} failed") from exc
 
     return expected
 
@@ -489,6 +567,7 @@ def transition_entropy(
     series: FloatArray,
     dimension: int = DEFAULT_DIMENSION,
     delay: int = DEFAULT_DELAY,
+    backend: str = "auto",
 ) -> float:
     """Normalised ordinal-pattern transition entropy in ``[0, 1]``.
 
@@ -508,20 +587,31 @@ def transition_entropy(
         Embedding dimension ``D`` in ``[2, 7]`` (default 3).
     delay : int
         Positive embedding delay ``τ`` (default 1).
+    backend : str
+        ``"auto"`` (NumPy if a native owner fails) or an explicit owner.
 
     Returns
     -------
     float
         The normalised transition entropy; ``0.0`` when fewer than two
         transitions or a single transition type is observed.
+
+    Raises
+    ------
+    ValueError
+        If an input or the backend name is invalid, or a backend result
+        differs from the reference.
+    RuntimeError
+        If an explicitly requested owner is unavailable or fails.
     """
+    _require_known_backend(backend)
     series = _validate_series(series)
     dimension, delay = _validate_ordinal_params(dimension, delay)
     expected = _transition_entropy_reference(series, dimension, delay)
     if _ordinal_window_count(int(series.size), dimension, delay) < 2:
         return expected
 
-    backend_fn = _dispatch("transition_entropy")
+    owner, backend_fn = _dispatch("transition_entropy", backend)
     if backend_fn is not None:
         fn = cast("Callable[[FloatArray, int, int], float]", backend_fn)
         try:
@@ -530,7 +620,8 @@ def transition_entropy(
                 expected=expected,
                 atol=_DISPATCH_ENTROPY_TOLERANCE,
             )
-        except (ImportError, RuntimeError, OSError, KeyError):
-            backend_fn = None
+        except _NATIVE_FAILURES as exc:
+            if backend != "auto":
+                raise RuntimeError(f"ordinal-entropy backend {owner!r} failed") from exc
 
     return expected

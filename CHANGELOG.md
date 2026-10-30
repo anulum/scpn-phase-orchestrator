@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `ordinal_pattern_sequence` and `transition_entropy` take `backend=`, and
+  the new `opt_entropy_backend(slot, backend)` names the owner; a named
+  owner that is absent, lacks the kernel or fails raises `RuntimeError`.
+  The RT-066 substitute (a fake dispatcher) is replaced by calls into every
+  installed owner, with tie-heavy series, against an independent oracle
+  that indexes each window's rank permutation in the lexicographic list of
+  permutations and counts transition pairs with `collections.Counter`.
 - `phase_distance_matrix` and `compute_npe` take `backend=`, and the new
   `npe_backend(slot, backend)` names the owner; a named owner that is
   absent, lacks the kernel or fails raises `RuntimeError`. The RT-064 and

@@ -279,7 +279,9 @@ class TestDirectBackendBoundaryContracts:
         def _wrong(_s: np.ndarray, _d: int, _t: int) -> float:
             return 0.0 if ref > 0.1 else 0.9
 
-        monkeypatch.setattr(oe_mod, "_dispatch", lambda _name: _wrong)
+        monkeypatch.setattr(
+            oe_mod, "_dispatch", lambda _name, _backend="auto": ("go", _wrong)
+        )
         with pytest.raises(ValueError, match="exact reference"):
             transition_entropy(series, 3, 1)
 
