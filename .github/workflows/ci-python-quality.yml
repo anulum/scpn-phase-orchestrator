@@ -452,6 +452,11 @@ jobs:
                   'tests/test_hodge_algorithm.py',
                   'native-tests/test_branch_native_assets.py',
                   'native-tests/test_attention_legacy_kernel.py',
+                  # The two child-process profiles build symlinked environments
+                  # under basetemp, which this step uploads; their children are
+                  # not measured, and they are qualified in the profile lanes.
+                  '--deselect', 'tests/test_embedding_real_runtime.py::test_python_only_profile_refuses_absent_owners',
+                  '--deselect', 'tests/test_embedding_real_runtime.py::test_rust_only_profile_owns_embedding_and_searches',
                   '-m', 'not performance',
                   '-o', 'addopts=', '--strict-markers', '--tb=short',
                   '-p', 'no:cacheprovider',

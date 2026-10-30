@@ -28,6 +28,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     patterns from `pyproject.toml`.
 - The native branch observation step now runs the embedding tests, so the
   native return paths of `monitor/embedding.py` are measured in the profile.
+  Its two child-process profile tests are deselected there. They build
+  symlinked environments under the uploaded basetemp, which made the native
+  profile artifact 3.3 GB instead of 8 MB, and the guard runner died while
+  reading it. They remain qualified in the Julia lane and in ffi-test.
 
 ### Security
 
