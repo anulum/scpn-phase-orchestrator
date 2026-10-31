@@ -14,7 +14,9 @@ import pytest
 from scpn_phase_orchestrator.coupling.templates import KnmTemplate, KnmTemplateSet
 
 
-def _tpl(name, n=3, fill=0.0, desc="test template"):
+def _tpl(
+    name: str, n: int = 3, fill: float = 0.0, desc: str = "test template"
+) -> KnmTemplate:
     knm = np.full((n, n), fill)
     np.fill_diagonal(knm, 0.0)
     alpha = np.zeros((n, n))
@@ -30,21 +32,24 @@ class TestKnmTemplateIntegrity:
     """Verify that templates preserve coupling matrices exactly
     and cannot be mutated after creation."""
 
-    def test_arrays_preserved_exactly(self):
+    def test_arrays_preserved_exactly(self) -> None:
         knm = np.array([[0.0, 0.3, 0.1], [0.3, 0.0, 0.2], [0.1, 0.2, 0.0]])
         alpha = np.array([[0.0, 0.05, -0.1], [-0.05, 0.0, 0.0], [0.1, 0.0, 0.0]])
         tpl = KnmTemplate("precise", knm=knm, alpha=alpha, description="test")
         np.testing.assert_array_equal(tpl.knm, knm)
         np.testing.assert_array_equal(tpl.alpha, alpha)
 
-    def test_frozen_rejects_mutation(self):
+    def test_frozen_rejects_mutation(self) -> None:
         tpl = _tpl("frozen")
+        # Assign through setattr: a direct assignment to a frozen field is a
+        # static error, and the runtime refusal is what this test checks.
+        name, description = "name", "description"
         with pytest.raises(AttributeError):
-            tpl.name = "changed"
+            setattr(tpl, name, "changed")
         with pytest.raises(AttributeError):
-            tpl.description = "changed"
+            setattr(tpl, description, "changed")
 
-    def test_metadata_preserved(self):
+    def test_metadata_preserved(self) -> None:
         tpl = KnmTemplate(
             "cortical_ring", np.eye(2), np.zeros((2, 2)), "Ring topology from Paper 12"
         )
@@ -61,7 +66,7 @@ class TestKnmTemplateSetRegistry:
     """Verify the template registry: add, retrieve, list, overwrite, error
     reporting with available names."""
 
-    def test_add_and_retrieve_roundtrip(self):
+    def test_add_and_retrieve_roundtrip(self) -> None:
         ts = KnmTemplateSet()
         knm = np.array([[0.0, 0.5], [0.5, 0.0]])
         tpl = KnmTemplate(
@@ -72,7 +77,7 @@ class TestKnmTemplateSetRegistry:
         np.testing.assert_array_equal(retrieved.knm, knm)
         assert retrieved.description == "symmetric"
 
-    def test_registered_template_matrices_are_alias_safe_snapshots(self):
+    def test_registered_template_matrices_are_alias_safe_snapshots(self) -> None:
         ts = KnmTemplateSet()
         knm = np.array([[0.0, 0.5], [0.5, 0.0]])
         alpha = np.array([[0.0, 0.2], [-0.2, 0.0]])
@@ -92,7 +97,7 @@ class TestKnmTemplateSetRegistry:
         np.testing.assert_allclose(fresh.knm, [[0.0, 0.5], [0.5, 0.0]])
         np.testing.assert_allclose(fresh.alpha, [[0.0, 0.2], [-0.2, 0.0]])
 
-    def test_list_names_ordering(self):
+    def test_list_names_ordering(self) -> None:
         ts = KnmTemplateSet()
         ts.add(_tpl("beta"))
         ts.add(_tpl("alpha"))
@@ -101,7 +106,7 @@ class TestKnmTemplateSetRegistry:
         assert set(names) == {"alpha", "beta", "gamma"}
         assert len(names) == 3
 
-    def test_overwrite_replaces_completely(self):
+    def test_overwrite_replaces_completely(self) -> None:
         """Re-adding with same name must replace knm, alpha, and description."""
         ts = KnmTemplateSet()
         ts.add(KnmTemplate("x", np.eye(2), np.zeros((2, 2)), "first"))
@@ -113,7 +118,7 @@ class TestKnmTemplateSetRegistry:
         np.testing.assert_array_equal(result.knm, new_knm)
         np.testing.assert_array_equal(result.alpha, new_alpha)
 
-    def test_multiple_templates_independent(self):
+    def test_multiple_templates_independent(self) -> None:
         """Templates with different names must be independent."""
         ts = KnmTemplateSet()
         ts.add(_tpl("ring", n=4, fill=0.3))
@@ -124,7 +129,7 @@ class TestKnmTemplateSetRegistry:
             "Different templates must have different coupling matrices"
         )
 
-    def test_empty_set_operations(self):
+    def test_empty_set_operations(self) -> None:
         ts = KnmTemplateSet()
         assert ts.list_names() == []
         with pytest.raises(KeyError):
@@ -140,7 +145,7 @@ class TestTemplateErrorReporting:
     """Verify that error messages help users identify what went wrong
     and what options are available."""
 
-    def test_missing_template_lists_available(self):
+    def test_missing_template_lists_available(self) -> None:
         ts = KnmTemplateSet()
         ts.add(_tpl("alpha"))
         ts.add(_tpl("beta"))
@@ -150,12 +155,12 @@ class TestTemplateErrorReporting:
         assert "beta" in str(exc_info.value)
         assert "gamma" in str(exc_info.value)
 
-    def test_missing_from_empty_shows_none(self):
+    def test_missing_from_empty_shows_none(self) -> None:
         ts = KnmTemplateSet()
         with pytest.raises(KeyError, match="none"):
             ts.get("anything")
 
-    def test_error_includes_requested_name(self):
+    def test_error_includes_requested_name(self) -> None:
         ts = KnmTemplateSet()
         ts.add(_tpl("x"))
         with pytest.raises(KeyError, match="nonexistent"):
@@ -171,7 +176,7 @@ class TestTemplatePhysicsIntegration:
     """Verify that templates can be used to switch coupling matrices
     at runtime — the primary use case for regime-dependent coupling."""
 
-    def test_switching_templates_changes_dynamics(self):
+    def test_switching_templates_changes_dynamics(self) -> None:
         """Switching from weak to strong coupling template must change
         the UPDE step output."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
@@ -201,7 +206,7 @@ class TestTemplatePhysicsIntegration:
             f"weak={diff_weak:.4f}, strong={diff_strong:.4f}"
         )
 
-    def test_template_alpha_affects_phase_lag(self):
+    def test_template_alpha_affects_phase_lag(self) -> None:
         """Non-zero alpha in a template should shift phase dynamics
         compared to zero alpha."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
@@ -227,7 +232,7 @@ class TestTemplatePipelineEndToEnd:
     """Full pipeline: KnmTemplateSet → CouplingBuilder.switch_template →
     Engine → R → RegimeManager. Proves templates are infrastructure, not decorative."""
 
-    def test_template_switch_engine_regime(self):
+    def test_template_switch_engine_regime(self) -> None:
         """Switch template mid-simulation and verify regime still evaluates."""
         from scpn_phase_orchestrator.coupling.knm import CouplingBuilder
         from scpn_phase_orchestrator.monitor.boundaries import BoundaryState
@@ -273,7 +278,7 @@ class TestTemplatePipelineEndToEnd:
         regime = rm.evaluate(state, BoundaryState())
         assert regime.name in {"NOMINAL", "DEGRADED", "CRITICAL", "RECOVERY"}
 
-    def test_template_registry_in_loop(self):
+    def test_template_registry_in_loop(self) -> None:
         """Use KnmTemplateSet to cycle through topologies in a simulation loop."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
         from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
