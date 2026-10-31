@@ -12,8 +12,10 @@ from __future__ import annotations
 
 import importlib.util
 import sys
+from collections.abc import Callable
 from pathlib import Path
 from types import ModuleType
+from typing import Any
 
 import pytest
 
@@ -22,48 +24,51 @@ from scpn_phase_orchestrator.reporting.plots import CoherencePlot
 
 _HAS_MPL = importlib.util.find_spec("matplotlib") is not None
 
+# Logs that deliberately hold non-dict records the plot must skip.
+_plot_any: Callable[..., CoherencePlot] = CoherencePlot
+
 
 class _FakeAxis:
     def __init__(self) -> None:
         self.vertical_markers: list[int] = []
 
-    def plot(self, *args, **kwargs):
+    def plot(self, *args: object, **kwargs: object) -> list[object]:
         return [object()]
 
-    def set_xlabel(self, *args, **kwargs) -> None:
+    def set_xlabel(self, *args: object, **kwargs: object) -> None:
         return None
 
-    def set_ylabel(self, *args, **kwargs) -> None:
+    def set_ylabel(self, *args: object, **kwargs: object) -> None:
         return None
 
-    def set_ylim(self, *args, **kwargs) -> None:
+    def set_ylim(self, *args: object, **kwargs: object) -> None:
         return None
 
-    def set_xlim(self, *args, **kwargs) -> None:
+    def set_xlim(self, *args: object, **kwargs: object) -> None:
         return None
 
-    def set_yticks(self, *args, **kwargs) -> None:
+    def set_yticks(self, *args: object, **kwargs: object) -> None:
         return None
 
-    def legend(self, *args, **kwargs) -> None:
+    def legend(self, *args: object, **kwargs: object) -> None:
         return None
 
-    def add_patch(self, *args, **kwargs) -> None:
+    def add_patch(self, *args: object, **kwargs: object) -> None:
         return None
 
-    def axvline(self, step_x, *args, **kwargs) -> None:
+    def axvline(self, step_x: int, *args: object, **kwargs: object) -> None:
         self.vertical_markers.append(step_x)
 
-    def tick_params(self, *args, **kwargs) -> None:
+    def tick_params(self, *args: object, **kwargs: object) -> None:
         return None
 
-    def twinx(self):
+    def twinx(self) -> _FakeAxis:
         return _FakeAxis()
 
-    def get_legend_handles_labels(self):
+    def get_legend_handles_labels(self) -> tuple[list[object], list[str]]:
         return [], []
 
-    def imshow(self, *args, **kwargs):
+    def imshow(self, *args: object, **kwargs: object) -> object:
         return object()
 
 
@@ -71,11 +76,11 @@ class _FakeFigure:
     def tight_layout(self) -> None:
         return None
 
-    def savefig(self, output_path, *args, **kwargs) -> None:
+    def savefig(self, output_path: str | Path, *args: object, **kwargs: object) -> None:
         with Path(output_path).open("wb") as handle:
             handle.write(b"fake-rendered-plot")
 
-    def colorbar(self, *args, **kwargs) -> None:
+    def colorbar(self, *args: object, **kwargs: object) -> None:
         return None
 
 
@@ -83,22 +88,24 @@ class _FakePyplot:
     def __init__(self) -> None:
         self.closed: list[_FakeFigure] = []
 
-    def subplots(self, *args, **kwargs):
+    def subplots(
+        self, *args: object, **kwargs: object
+    ) -> tuple[_FakeFigure, _FakeAxis]:
         return _FakeFigure(), _FakeAxis()
 
-    def close(self, fig) -> None:
+    def close(self, fig: _FakeFigure) -> None:
         self.closed.append(fig)
 
 
-def _fake_rectangle(*args, **kwargs):
+def _fake_rectangle(*args: object, **kwargs: object) -> dict[str, object]:
     return {"args": args, "kwargs": kwargs}
 
 
-def _make_log(n_steps: int = 20, n_layers: int = 3) -> list[dict]:
-    records = []
+def _make_log(n_steps: int = 20, n_layers: int = 3) -> list[dict[str, Any]]:
+    records: list[dict[str, Any]] = []
     regimes = ["NOMINAL"] * 10 + ["DEGRADED"] * 5 + ["RECOVERY"] * 5
     for i in range(n_steps):
-        record = {
+        record: dict[str, Any] = {
             "step": i,
             "regime": regimes[i % len(regimes)],
             "stability": 0.5 + 0.01 * i,
@@ -124,34 +131,43 @@ def _make_log(n_steps: int = 20, n_layers: int = 3) -> list[dict]:
 
 
 class TestMatplotlibLoaderContracts:
-    def test_cached_matplotlib_handles_are_reused(self, monkeypatch) -> None:
+    def test_cached_matplotlib_handles_are_reused(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         fake_pyplot = _FakePyplot()
         monkeypatch.setattr(plots_module, "_plt", fake_pyplot)
         monkeypatch.setattr(plots_module, "_Rectangle", _fake_rectangle)
 
         assert plots_module._require_matplotlib() == (fake_pyplot, _fake_rectangle)
 
-    def test_missing_matplotlib_raises_actionable_extra_message(self, monkeypatch):
+    def test_missing_matplotlib_raises_actionable_extra_message(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.setattr(plots_module, "_plt", None)
         monkeypatch.setattr(plots_module, "_HAS_MPL", False)
 
         with pytest.raises(ImportError, match=r"scpn-phase-orchestrator\[plot\]"):
             plots_module._require_matplotlib()
 
-    def test_uncached_loader_selects_headless_backend(self, monkeypatch) -> None:
+    def test_uncached_loader_selects_headless_backend(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         backend_updates: list[str] = []
 
         fake_matplotlib = ModuleType("matplotlib")
-        fake_matplotlib.__path__ = []
-        fake_matplotlib.get_backend = lambda: "TkAgg"
-        fake_matplotlib.use = backend_updates.append
+        matplotlib_attrs: Any = fake_matplotlib
+        matplotlib_attrs.__path__ = []
+        matplotlib_attrs.get_backend = lambda: "TkAgg"
+        matplotlib_attrs.use = backend_updates.append
 
         fake_pyplot = ModuleType("matplotlib.pyplot")
-        fake_pyplot.subplots = _FakePyplot().subplots
-        fake_pyplot.close = _FakePyplot().close
+        pyplot_attrs: Any = fake_pyplot
+        pyplot_attrs.subplots = _FakePyplot().subplots
+        pyplot_attrs.close = _FakePyplot().close
 
         fake_patches = ModuleType("matplotlib.patches")
-        fake_patches.Rectangle = _fake_rectangle
+        patches_attrs: Any = fake_patches
+        patches_attrs.Rectangle = _fake_rectangle
 
         monkeypatch.setattr(plots_module, "_plt", None)
         monkeypatch.setattr(plots_module, "_Rectangle", None)
@@ -166,7 +182,7 @@ class TestMatplotlibLoaderContracts:
 
 class TestCoherencePlotHeadlessRendering:
     def test_all_plot_methods_write_outputs_with_headless_renderer(
-        self, monkeypatch, tmp_path
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
         fake_pyplot = _FakePyplot()
         monkeypatch.setattr(
@@ -194,35 +210,35 @@ class TestCoherencePlotHeadlessRendering:
 
 @pytest.mark.skipif(not _HAS_MPL, reason="matplotlib not installed")
 class TestCoherencePlot:
-    def test_r_timeline(self, tmp_path) -> None:
+    def test_r_timeline(self, tmp_path: Path) -> None:
         out = tmp_path / "r_timeline.png"
         plot = CoherencePlot(_make_log())
         result = plot.plot_r_timeline(out)
         assert result.exists()
         assert result.stat().st_size > 0
 
-    def test_regime_timeline(self, tmp_path) -> None:
+    def test_regime_timeline(self, tmp_path: Path) -> None:
         out = tmp_path / "regime.png"
         plot = CoherencePlot(_make_log())
         result = plot.plot_regime_timeline(out)
         assert result.exists()
         assert result.stat().st_size > 0
 
-    def test_action_audit(self, tmp_path) -> None:
+    def test_action_audit(self, tmp_path: Path) -> None:
         out = tmp_path / "actions.png"
         plot = CoherencePlot(_make_log())
         result = plot.plot_action_audit(out)
         assert result.exists()
         assert result.stat().st_size > 0
 
-    def test_amplitude_timeline(self, tmp_path) -> None:
+    def test_amplitude_timeline(self, tmp_path: Path) -> None:
         out = tmp_path / "amplitude.png"
         plot = CoherencePlot(_make_log())
         result = plot.plot_amplitude_timeline(out)
         assert result.exists()
         assert result.stat().st_size > 0
 
-    def test_pac_heatmap(self, tmp_path) -> None:
+    def test_pac_heatmap(self, tmp_path: Path) -> None:
         n = 4
         matrix = [0.1 * (i * n + j) / (n * n) for i in range(n) for j in range(n)]
         log_data = _make_log()
@@ -251,7 +267,7 @@ class TestExtractors:
         assert len(series[0]) == 10
 
     def test_extract_r_series_ignores_malformed_layer_containers(self) -> None:
-        plot = CoherencePlot(
+        plot = _plot_any(
             [
                 "corrupted-jsonl-line",
                 {"step": 0, "regime": "NOMINAL", "layers": None},
@@ -268,7 +284,7 @@ class TestExtractors:
         assert series == [[0.0, 0.4]]
 
     def test_constructor_ignores_non_dict_audit_payloads(self) -> None:
-        plot = CoherencePlot(
+        plot = _plot_any(
             [
                 None,
                 17,
@@ -469,7 +485,7 @@ class TestExtractors:
     def test_extract_pac_matrix_skips_non_dict_records_and_rejects_non_list_matrix(
         self,
     ) -> None:
-        plot = CoherencePlot(
+        plot = _plot_any(
             [
                 "corrupted-jsonl-line",
                 {"event": "pac_snapshot", "pac_matrix": "not-a-flat-list", "n": 2},
@@ -553,7 +569,7 @@ def test_matplotlib_not_imported_on_module_import() -> None:
 class TestReportingPlotsPipelineWiring:
     """Pipeline: audit log → CoherencePlot → R time series."""
 
-    def test_audit_log_to_coherence_plot(self):
+    def test_audit_log_to_coherence_plot(self) -> None:
         """AuditLogger log → CoherencePlot → _extract_r_series.
         Proves reporting consumes audit pipeline output."""
         log = _make_log()
