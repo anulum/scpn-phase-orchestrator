@@ -16,8 +16,10 @@ bit-equivalent (0.0) on Rust/Julia/Go and 3.3e-15 on Mojo.
 from __future__ import annotations
 
 import math
+import subprocess
 import types
 from collections.abc import Callable
+from pathlib import Path
 from typing import cast, get_type_hints
 
 import numpy as np
@@ -86,7 +88,8 @@ def _reset(prev: str) -> None:
     e_mod.ACTIVE_BACKEND = prev
 
 
-def _ref_env(amps, window):
+def _ref_env(amps: np.ndarray, window: int) -> np.ndarray:
+    """Return the NumPy-reference envelope."""
     prev = _force("python")
     try:
         return extract_envelope(amps, window)
@@ -94,7 +97,8 @@ def _ref_env(amps, window):
         _reset(prev)
 
 
-def _ref_mod(env):
+def _ref_mod(env: np.ndarray) -> float:
+    """Return the NumPy-reference modulation depth."""
     prev = _force("python")
     try:
         return envelope_modulation_depth(env)
@@ -167,8 +171,10 @@ class TestDirectBackendBoundaryContracts:
         window: object,
     ) -> None:
         """Invalid extraction inputs are refused before any runtime loads."""
+        # Loose alias: the parametrised window is deliberately invalid.
+        unchecked: Callable[..., object] = backend
         with pytest.raises((TypeError, ValueError)):
-            backend(amps, window)
+            unchecked(amps, window)
 
     @pytest.mark.parametrize("backend", DIRECT_MOD_BACKENDS)
     @pytest.mark.parametrize(
@@ -361,7 +367,7 @@ class TestDirectBackendBoundaryContracts:
         """The Mojo runner refuses malformed executable output."""
         monkeypatch.setattr(envelope_mojo_mod, "_ensure_exe", lambda: "envelope")
         monkeypatch.setattr(
-            envelope_mojo_mod.subprocess,
+            subprocess,
             "run",
             lambda *_args, **_kwargs: types.SimpleNamespace(
                 returncode=0,
@@ -571,7 +577,9 @@ class TestBackendTypingContracts:
             (extract_envelope_mojo, "mojo:extract"),
         ],
     )
-    def test_extract_annotations_use_float64_ndarray(self, fn, label: str) -> None:
+    def test_extract_annotations_use_float64_ndarray(
+        self, fn: Callable[..., object], label: str
+    ) -> None:
         """Extraction adapters annotate float64 arrays."""
         hints = get_type_hints(fn)
         for name in ("amps", "return"):
@@ -590,7 +598,9 @@ class TestBackendTypingContracts:
             (envelope_modulation_depth_mojo, "mojo:mod"),
         ],
     )
-    def test_mod_annotations_use_float64_ndarray(self, fn, label: str) -> None:
+    def test_mod_annotations_use_float64_ndarray(
+        self, fn: Callable[..., object], label: str
+    ) -> None:
         """Modulation adapters annotate float64 arrays."""
         hints = get_type_hints(fn)
         text = str(hints["env"])
@@ -604,7 +614,9 @@ class TestBackendTypingContracts:
 class TestBackendLoaderContracts:
     """Loader behaviour of the Julia and Rust envelope owners."""
 
-    def test_julia_loader_returns_cached_module(self, monkeypatch) -> None:
+    def test_julia_loader_returns_cached_module(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """The Julia loader returns its cached module."""
         cached = object()
         monkeypatch.setattr(envelope_julia_mod, "_JULIA_MODULE", cached)
@@ -612,7 +624,7 @@ class TestBackendLoaderContracts:
         assert envelope_julia_mod._ensure() is cached
 
     def test_julia_loader_rejects_missing_side_file(
-        self, monkeypatch, tmp_path
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
         """The Julia loader refuses a missing side file."""
         monkeypatch.setattr(envelope_julia_mod, "_JULIA_MODULE", None)
@@ -628,8 +640,8 @@ class TestBackendLoaderContracts:
 
     def test_julia_loader_includes_side_file_and_caches_module(
         self,
-        monkeypatch,
-        tmp_path,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
     ) -> None:
         """The Julia loader includes its side file once and caches the module."""
         module = object()
@@ -709,7 +721,7 @@ class TestDispatchFallbackChain:
         assert calls == {"rust": 1, "go": 1}
 
     def test_probe_returns_infinite_latency_for_broken_backend(
-        self, monkeypatch
+        self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """A broken owner probes as infinitely slow."""
 
@@ -722,7 +734,7 @@ class TestDispatchFallbackChain:
         assert e_mod._extract_probe_seconds("go") == float("inf")
 
     def test_dispatch_falls_back_to_python_when_active_backend_fails(
-        self, monkeypatch
+        self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """An active owner that disappears falls back to the NumPy law."""
 
