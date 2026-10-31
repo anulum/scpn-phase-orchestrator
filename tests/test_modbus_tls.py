@@ -10,6 +10,9 @@ from __future__ import annotations
 
 import builtins
 import importlib
+from collections.abc import Callable
+from pathlib import Path
+from types import ModuleType
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -18,13 +21,13 @@ import pytest
 class TestSecureModbusAdapterTLS:
     def test_optional_client_import_failure_disables_tls_adapter(
         self,
-        monkeypatch,
-    ):
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
         import scpn_phase_orchestrator.adapters.modbus_tls as modbus_tls
 
-        real_import = builtins.__import__
+        real_import: Callable[..., ModuleType] = builtins.__import__
 
-        def guarded_import(name, *args, **kwargs):
+        def guarded_import(name: str, *args: object, **kwargs: object) -> ModuleType:
             if name == "pymodbus.client":
                 raise ImportError("pymodbus client unavailable")
             return real_import(name, *args, **kwargs)
@@ -37,7 +40,7 @@ class TestSecureModbusAdapterTLS:
         restored = importlib.reload(modbus_tls)
         assert restored.HAS_PYMODBUS is True
 
-    def test_missing_cert_raises(self, tmp_path):
+    def test_missing_cert_raises(self, tmp_path: Path) -> None:
         from scpn_phase_orchestrator.adapters.modbus_tls import SecureModbusAdapter
 
         key = tmp_path / "client.key"
@@ -45,7 +48,7 @@ class TestSecureModbusAdapterTLS:
         with pytest.raises(ConnectionError, match="certificate not found"):
             SecureModbusAdapter("localhost", 802, tmp_path / "no.pem", key)
 
-    def test_missing_key_raises(self, tmp_path):
+    def test_missing_key_raises(self, tmp_path: Path) -> None:
         from scpn_phase_orchestrator.adapters.modbus_tls import SecureModbusAdapter
 
         cert = tmp_path / "client.pem"
@@ -53,7 +56,7 @@ class TestSecureModbusAdapterTLS:
         with pytest.raises(ConnectionError, match="key not found"):
             SecureModbusAdapter("localhost", 802, cert, tmp_path / "no.key")
 
-    def test_missing_ca_bundle_raises_without_full_path(self, tmp_path):
+    def test_missing_ca_bundle_raises_without_full_path(self, tmp_path: Path) -> None:
         from scpn_phase_orchestrator.adapters.modbus_tls import SecureModbusAdapter
 
         cert = tmp_path / "client.pem"
@@ -72,8 +75,8 @@ class TestSecureModbusAdapterTLS:
 
     def test_default_tls_context_uses_system_trust_and_requires_server_auth(
         self,
-        tmp_path,
-    ):
+        tmp_path: Path,
+    ) -> None:
         cert = tmp_path / "client.pem"
         key = tmp_path / "client.key"
         cert.write_text("dummy-cert")
@@ -106,7 +109,9 @@ class TestSecureModbusAdapterTLS:
             assert mock_ctx.check_hostname is True
             assert mock_ctx.verify_mode is mock_ssl.CERT_REQUIRED
 
-    def test_tls_context_uses_explicit_ca_bundle_when_configured(self, tmp_path):
+    def test_tls_context_uses_explicit_ca_bundle_when_configured(
+        self, tmp_path: Path
+    ) -> None:
         cert = tmp_path / "client.pem"
         key = tmp_path / "client.key"
         ca = tmp_path / "ca.pem"
@@ -139,7 +144,7 @@ class TestSecureModbusAdapterTLS:
             assert mock_ctx.check_hostname is True
             assert mock_ctx.verify_mode is mock_ssl.CERT_REQUIRED
 
-    def test_pymodbus_missing_raises(self, tmp_path):
+    def test_pymodbus_missing_raises(self, tmp_path: Path) -> None:
         cert = tmp_path / "client.pem"
         key = tmp_path / "client.key"
         cert.write_text("dummy-cert")
@@ -159,7 +164,7 @@ class TestSecureModbusAdapterTLS:
             with pytest.raises(ConnectionError, match="pymodbus"):
                 SecureModbusAdapter("localhost", 802, cert, key)
 
-    def test_read_register_success(self, tmp_path):
+    def test_read_register_success(self, tmp_path: Path) -> None:
         cert = tmp_path / "client.pem"
         key = tmp_path / "client.key"
         cert.write_text("dummy-cert")
@@ -190,7 +195,9 @@ class TestSecureModbusAdapterTLS:
             assert adapter.read_register(100) == 42
 
     @pytest.mark.parametrize("address", [-1, True, 1.5])
-    def test_read_register_rejects_invalid_address(self, tmp_path, address):
+    def test_read_register_rejects_invalid_address(
+        self, tmp_path: Path, address: object
+    ) -> None:
         cert = tmp_path / "client.pem"
         key = tmp_path / "client.key"
         cert.write_text("dummy-cert")
@@ -215,10 +222,11 @@ class TestSecureModbusAdapterTLS:
 
             adapter = SecureModbusAdapter("localhost", 802, cert, key)
             with pytest.raises(ValueError, match="address"):
-                adapter.read_register(address)  # type: ignore[arg-type]
+                read_unchecked: Callable[..., object] = adapter.read_register
+                read_unchecked(address)
             mock_client.read_holding_registers.assert_not_called()
 
-    def test_write_register_error(self, tmp_path):
+    def test_write_register_error(self, tmp_path: Path) -> None:
         cert = tmp_path / "client.pem"
         key = tmp_path / "client.key"
         cert.write_text("dummy-cert")
@@ -252,7 +260,9 @@ class TestSecureModbusAdapterTLS:
         ("address", "value"),
         [(-1, 1), (True, 1), (1.5, 1), (0, True), (0, 1.5)],
     )
-    def test_write_register_rejects_invalid_payload(self, tmp_path, address, value):
+    def test_write_register_rejects_invalid_payload(
+        self, tmp_path: Path, address: object, value: object
+    ) -> None:
         cert = tmp_path / "client.pem"
         key = tmp_path / "client.key"
         cert.write_text("dummy-cert")
@@ -277,10 +287,11 @@ class TestSecureModbusAdapterTLS:
 
             adapter = SecureModbusAdapter("localhost", 802, cert, key)
             with pytest.raises(ValueError, match="address|value"):
-                adapter.write_register(address, value)  # type: ignore[arg-type]
+                write_unchecked: Callable[..., object] = adapter.write_register
+                write_unchecked(address, value)
             mock_client.write_register.assert_not_called()
 
-    def test_validate_connection_true(self, tmp_path):
+    def test_validate_connection_true(self, tmp_path: Path) -> None:
         cert = tmp_path / "client.pem"
         key = tmp_path / "client.key"
         cert.write_text("dummy-cert")
@@ -307,7 +318,7 @@ class TestSecureModbusAdapterTLS:
             adapter = SecureModbusAdapter("localhost", 802, cert, key)
             assert adapter.validate_connection() is True
 
-    def test_validate_connection_exception(self, tmp_path):
+    def test_validate_connection_exception(self, tmp_path: Path) -> None:
         cert = tmp_path / "client.pem"
         key = tmp_path / "client.key"
         cert.write_text("dummy-cert")
@@ -336,7 +347,9 @@ class TestSecureModbusAdapterTLS:
             adapter = SecureModbusAdapter("localhost", 802, cert, key)
             assert adapter.validate_connection() is False
 
-    def test_validate_connection_unexpected_exception_propagates(self, tmp_path):
+    def test_validate_connection_unexpected_exception_propagates(
+        self, tmp_path: Path
+    ) -> None:
         cert = tmp_path / "client.pem"
         key = tmp_path / "client.key"
         cert.write_text("dummy-cert")
@@ -366,7 +379,7 @@ class TestSecureModbusAdapterTLS:
             with pytest.raises(ValueError, match="bad state"):
                 adapter.validate_connection()
 
-    def test_context_manager_closes_client(self, tmp_path):
+    def test_context_manager_closes_client(self, tmp_path: Path) -> None:
         cert = tmp_path / "client.pem"
         key = tmp_path / "client.key"
         cert.write_text("dummy-cert")
@@ -394,7 +407,7 @@ class TestSecureModbusAdapterTLS:
 
             mock_client.close.assert_called_once_with()
 
-    def test_connection_failure_raises(self, tmp_path):
+    def test_connection_failure_raises(self, tmp_path: Path) -> None:
         cert = tmp_path / "client.pem"
         key = tmp_path / "client.key"
         cert.write_text("dummy-cert")
@@ -420,7 +433,7 @@ class TestSecureModbusAdapterTLS:
             with pytest.raises(ConnectionError, match="connection failed"):
                 SecureModbusAdapter("localhost", 802, cert, key)
 
-    def test_connection_failure_does_not_leak_endpoint(self, tmp_path):
+    def test_connection_failure_does_not_leak_endpoint(self, tmp_path: Path) -> None:
         cert = tmp_path / "client.pem"
         key = tmp_path / "client.key"
         cert.write_text("dummy-cert")
@@ -450,7 +463,9 @@ class TestSecureModbusAdapterTLS:
             assert "plc.internal.example" not in msg
             assert "802" not in msg
 
-    def test_tls_context_error_does_not_leak_backend_detail(self, tmp_path):
+    def test_tls_context_error_does_not_leak_backend_detail(
+        self, tmp_path: Path
+    ) -> None:
         cert = tmp_path / "secret" / "client.pem"
         key = tmp_path / "secret" / "client.key"
         cert.parent.mkdir()
@@ -477,7 +492,7 @@ class TestSecureModbusAdapterTLS:
             assert "client.key" not in msg
             assert str(tmp_path) not in msg
 
-    def test_missing_cert_error_does_not_leak_full_path(self, tmp_path):
+    def test_missing_cert_error_does_not_leak_full_path(self, tmp_path: Path) -> None:
         from scpn_phase_orchestrator.adapters.modbus_tls import SecureModbusAdapter
 
         key = tmp_path / "client.key"
@@ -490,7 +505,7 @@ class TestSecureModbusAdapterTLS:
         assert str(tmp_path) not in msg
         assert "subdir" not in msg
 
-    def test_missing_key_error_does_not_leak_full_path(self, tmp_path):
+    def test_missing_key_error_does_not_leak_full_path(self, tmp_path: Path) -> None:
         from scpn_phase_orchestrator.adapters.modbus_tls import SecureModbusAdapter
 
         cert = tmp_path / "client.pem"
