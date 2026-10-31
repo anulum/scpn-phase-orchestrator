@@ -1,6 +1,6 @@
 {
   "description": "mypy --strict error ceilings per tests/ file; maintained by tools/tests_typing_ratchet.py. Absent files must have no errors; ceilings may only fall.",
-  "total": 6128,
+  "total": 6072,
   "files": {
     "tests/apps/queuewaves/test_server.py": 23,
     "tests/test_action_projection.py": 51,
@@ -22,7 +22,6 @@
     "tests/test_boundary_observer_deep.py": 33,
     "tests/test_causal_supervisor.py": 37,
     "tests/test_cli.py": 255,
-    "tests/test_cli_evaluation.py": 19,
     "tests/test_cli_evolutionary_grammar.py": 33,
     "tests/test_cli_federated_dp_noise_service.py": 24,
     "tests/test_cli_federated_secure_aggregation.py": 27,
@@ -33,7 +32,6 @@
     "tests/test_coupling_lags.py": 24,
     "tests/test_coupling_prior.py": 23,
     "tests/test_coupling_templates.py": 28,
-    "tests/test_dimension_algorithm.py": 19,
     "tests/test_domainpack_validation.py": 125,
     "tests/test_doppler_validation_guards.py": 22,
     "tests/test_drivers.py": 38,
@@ -167,7 +165,6 @@
     "tests/test_upde_engine.py": 34,
     "tests/test_upde_engine_validation.py": 18,
     "tests/test_upde_numerics.py": 22,
-    "tests/test_upde_run_algorithm.py": 18,
     "tests/test_visualization.py": 56,
     "tests/test_viz_streamer.py": 71,
     "tests/test_winding_algorithm.py": 23

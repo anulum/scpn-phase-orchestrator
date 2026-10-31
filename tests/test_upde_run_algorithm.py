@@ -20,22 +20,32 @@ from __future__ import annotations
 
 import functools
 import math
+from collections.abc import Callable
+from typing import ParamSpec, TypeVar
 
 import numpy as np
 import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
+from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.upde import _ref_kernel as ref_kernel_mod
 from scpn_phase_orchestrator.upde import engine as eng_mod
 from scpn_phase_orchestrator.upde.engine import upde_run
 
 TWO_PI = 2.0 * math.pi
+FloatArray = NDArray[np.float64]
 
 
-def _python(func):
+_P = ParamSpec("_P")
+_R = TypeVar("_R")
+
+
+def _python(func: Callable[_P, _R]) -> Callable[_P, _R]:
+    """Run ``func`` with the pure-Python backend forced."""
+
     @functools.wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _R:
         prev = eng_mod.ACTIVE_BACKEND
         eng_mod.ACTIVE_BACKEND = "python"
         try:
@@ -46,7 +56,9 @@ def _python(func):
     return wrapper
 
 
-def _problem(rng: np.random.Generator, n: int):
+def _problem(
+    rng: np.random.Generator, n: int
+) -> tuple[FloatArray, FloatArray, FloatArray, FloatArray]:
     phases = rng.uniform(0.0, TWO_PI, size=n)
     omegas = rng.normal(0.0, 0.3, size=n)
     knm = rng.uniform(0.3, 1.0, size=(n, n))
@@ -58,7 +70,7 @@ def _problem(rng: np.random.Generator, n: int):
 
 class TestShape:
     @_python
-    def test_output_shape(self):
+    def test_output_shape(self) -> None:
         phases, omegas, knm, alpha = _problem(np.random.default_rng(0), n=5)
         out = upde_run(
             phases,
@@ -73,7 +85,7 @@ class TestShape:
         assert out.shape == (5,)
 
     @_python
-    def test_wrapped_in_two_pi(self):
+    def test_wrapped_in_two_pi(self) -> None:
         phases, omegas, knm, alpha = _problem(np.random.default_rng(1), n=4)
         out = upde_run(
             phases,
@@ -91,7 +103,7 @@ class TestShape:
 
 class TestMethodDispatch:
     @_python
-    def test_unknown_method_rejected(self):
+    def test_unknown_method_rejected(self) -> None:
         phases, omegas, knm, alpha = _problem(np.random.default_rng(0), n=3)
         with pytest.raises(ValueError, match="unknown method"):
             upde_run(
@@ -107,7 +119,7 @@ class TestMethodDispatch:
             )
 
     @_python
-    def test_n_substeps_floor(self):
+    def test_n_substeps_floor(self) -> None:
         phases, omegas, knm, alpha = _problem(np.random.default_rng(0), n=3)
         with pytest.raises(ValueError, match="n_substeps"):
             upde_run(
@@ -125,7 +137,7 @@ class TestMethodDispatch:
 
     @pytest.mark.parametrize("method", ["euler", "rk4", "rk45"])
     @_python
-    def test_three_methods_all_finite(self, method: str):
+    def test_three_methods_all_finite(self, method: str) -> None:
         phases, omegas, knm, alpha = _problem(np.random.default_rng(7), n=4)
         out = upde_run(
             phases,
@@ -141,8 +153,10 @@ class TestMethodDispatch:
         assert np.all(np.isfinite(out))
 
 
-def test_rk45_step_falls_back_after_failed_adaptation(monkeypatch):
-    def bad_dp_stages(*args):
+def test_rk45_step_falls_back_after_failed_adaptation(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def bad_dp_stages(*args: object) -> tuple[FloatArray, FloatArray]:
         phases = np.asarray(args[0], dtype=np.float64)
         y5 = phases + 0.5
         y4 = phases
@@ -172,7 +186,7 @@ def test_rk45_step_falls_back_after_failed_adaptation(monkeypatch):
 
 class TestSubstepping:
     @_python
-    def test_euler_more_substeps_closer_to_rk4(self):
+    def test_euler_more_substeps_closer_to_rk4(self) -> None:
         """More Euler substeps approach the RK4 solution (higher order)."""
         phases, omegas, knm, alpha = _problem(np.random.default_rng(11), n=4)
         ref = upde_run(
@@ -217,7 +231,7 @@ class TestSubstepping:
 
 class TestAttractor:
     @_python
-    def test_strong_coupling_synchronises(self):
+    def test_strong_coupling_synchronises(self) -> None:
         """Strong all-to-all coupling with zero ω pulls phases close
         together: final phase spread < initial spread."""
         rng = np.random.default_rng(21)
@@ -247,7 +261,7 @@ class TestAttractor:
 
 class TestDriverPulling:
     @_python
-    def test_driver_pulls_phases_to_psi(self):
+    def test_driver_pulls_phases_to_psi(self) -> None:
         """A strong driver at ψ pulls phases towards ψ."""
         rng = np.random.default_rng(31)
         n = 4
@@ -280,7 +294,7 @@ class TestInputValidation:
         deadline=None,
         suppress_health_check=[HealthCheck.too_slow],
     )
-    def test_random_seed_no_nan(self, seed: int):
+    def test_random_seed_no_nan(self, seed: int) -> None:
         rng = np.random.default_rng(seed)
         phases, omegas, knm, alpha = _problem(rng, n=5)
         out = upde_run(
@@ -297,7 +311,7 @@ class TestInputValidation:
         assert np.all(np.isfinite(out))
 
     @_python
-    def test_zero_n_steps(self):
+    def test_zero_n_steps(self) -> None:
         phases, omegas, knm, alpha = _problem(np.random.default_rng(3), n=3)
         out = upde_run(
             phases,
@@ -316,7 +330,7 @@ class TestInputValidation:
 
 class TestRK45Tolerances:
     @_python
-    def test_tighter_tolerance_smaller_error(self):
+    def test_tighter_tolerance_smaller_error(self) -> None:
         """Tightening ``atol/rtol`` should narrow the gap between
         RK45 and a high-sub-step RK4 reference."""
         rng = np.random.default_rng(41)

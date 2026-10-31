@@ -13,6 +13,7 @@ from pathlib import Path
 
 import click
 import numpy as np
+import pytest
 from click.testing import CliRunner
 
 import scpn_phase_orchestrator.runtime.cli.evaluation as cli_evaluation
@@ -34,7 +35,7 @@ def _skilful_spec() -> dict[str, object]:
 
 
 class TestCommandRegistration:
-    def test_command_is_a_registered_click_command(self):
+    def test_command_is_a_registered_click_command(self) -> None:
         command = cli_evaluation.audit_detector_command
         assert isinstance(command, click.Command)
         assert command.name == "audit-detector"
@@ -42,7 +43,7 @@ class TestCommandRegistration:
 
 
 class TestAuditDetectorCommand:
-    def test_bare_verdict_without_sealing(self, tmp_path):
+    def test_bare_verdict_without_sealing(self, tmp_path: Path) -> None:
         spec = _write_spec(tmp_path / "scores.json", _skilful_spec())
         result = CliRunner().invoke(
             main, ["audit-detector", str(spec), "--n-permutations", "500"]
@@ -55,7 +56,7 @@ class TestAuditDetectorCommand:
         # A bare verdict carries no seal.
         assert "content_hash" not in payload
 
-    def test_sealed_record_when_provenance_given(self, tmp_path):
+    def test_sealed_record_when_provenance_given(self, tmp_path: Path) -> None:
         spec = _write_spec(tmp_path / "scores.json", _skilful_spec())
         result = CliRunner().invoke(
             main,
@@ -76,7 +77,7 @@ class TestAuditDetectorCommand:
         assert payload["corpus_id"] == "demo-corpus"
         assert payload["audit"]["detector_name"] == "demo-cli"
 
-    def test_output_file_is_written(self, tmp_path):
+    def test_output_file_is_written(self, tmp_path: Path) -> None:
         spec = _write_spec(tmp_path / "scores.json", _skilful_spec())
         out = tmp_path / "verdict.json"
         result = CliRunner().invoke(
@@ -94,7 +95,7 @@ class TestAuditDetectorCommand:
         assert out.exists()
         assert json.loads(out.read_text())["detector_name"] == "demo-cli"
 
-    def test_detector_name_defaults_when_absent(self, tmp_path):
+    def test_detector_name_defaults_when_absent(self, tmp_path: Path) -> None:
         spec = _skilful_spec()
         del spec["detector_name"]
         path = _write_spec(tmp_path / "scores.json", spec)
@@ -104,7 +105,7 @@ class TestAuditDetectorCommand:
         assert result.exit_code == 0, result.output
         assert json.loads(result.output)["detector_name"] == "detector"
 
-    def test_reproducible_seed(self, tmp_path):
+    def test_reproducible_seed(self, tmp_path: Path) -> None:
         spec = _write_spec(tmp_path / "scores.json", _skilful_spec())
         runs = [
             CliRunner().invoke(
@@ -118,26 +119,26 @@ class TestAuditDetectorCommand:
 
 
 class TestAuditDetectorErrors:
-    def test_invalid_json_is_reported(self, tmp_path):
+    def test_invalid_json_is_reported(self, tmp_path: Path) -> None:
         bad = tmp_path / "bad.json"
         bad.write_text("{not json", encoding="utf-8")
         result = CliRunner().invoke(main, ["audit-detector", str(bad)])
         assert result.exit_code != 0
         assert "not valid JSON" in result.output
 
-    def test_non_object_payload_rejected(self, tmp_path):
+    def test_non_object_payload_rejected(self, tmp_path: Path) -> None:
         spec = _write_spec(tmp_path / "list.json", [1, 2, 3])
         result = CliRunner().invoke(main, ["audit-detector", str(spec)])
         assert result.exit_code != 0
         assert "must hold a JSON object" in result.output
 
-    def test_missing_event_scores_rejected(self, tmp_path):
+    def test_missing_event_scores_rejected(self, tmp_path: Path) -> None:
         spec = _write_spec(tmp_path / "s.json", {"null_scores": [0.0, 1.0]})
         result = CliRunner().invoke(main, ["audit-detector", str(spec)])
         assert result.exit_code != 0
         assert "'event_scores' must be a JSON array" in result.output
 
-    def test_empty_scores_rejected(self, tmp_path):
+    def test_empty_scores_rejected(self, tmp_path: Path) -> None:
         spec = _write_spec(
             tmp_path / "s.json", {"event_scores": [], "null_scores": [0.0]}
         )
@@ -145,7 +146,7 @@ class TestAuditDetectorErrors:
         assert result.exit_code != 0
         assert "'event_scores' must not be empty" in result.output
 
-    def test_non_numeric_score_rejected(self, tmp_path):
+    def test_non_numeric_score_rejected(self, tmp_path: Path) -> None:
         spec = _write_spec(
             tmp_path / "s.json",
             {"event_scores": [1.0, "x"], "null_scores": [0.0, 1.0]},
@@ -154,7 +155,7 @@ class TestAuditDetectorErrors:
         assert result.exit_code != 0
         assert "must be a number" in result.output
 
-    def test_bool_score_rejected(self, tmp_path):
+    def test_bool_score_rejected(self, tmp_path: Path) -> None:
         spec = _write_spec(
             tmp_path / "s.json",
             {"event_scores": [1.0, True], "null_scores": [0.0, 1.0]},
@@ -163,7 +164,7 @@ class TestAuditDetectorErrors:
         assert result.exit_code != 0
         assert "must be a number" in result.output
 
-    def test_non_finite_score_rejected(self, tmp_path):
+    def test_non_finite_score_rejected(self, tmp_path: Path) -> None:
         # Infinity is legal JSON to Python's json module but not a finite score.
         (tmp_path / "s.json").write_text(
             '{"event_scores": [Infinity], "null_scores": [0.0, 1.0]}',
@@ -173,7 +174,7 @@ class TestAuditDetectorErrors:
         assert result.exit_code != 0
         assert "must be finite" in result.output
 
-    def test_nan_score_rejected(self, tmp_path):
+    def test_nan_score_rejected(self, tmp_path: Path) -> None:
         # NaN is legal to Python's json module but not a finite score.
         (tmp_path / "s.json").write_text(
             '{"event_scores": [NaN], "null_scores": [0.0, 1.0]}',
@@ -183,7 +184,7 @@ class TestAuditDetectorErrors:
         assert result.exit_code != 0
         assert "must be finite" in result.output
 
-    def test_half_provenance_rejected(self, tmp_path):
+    def test_half_provenance_rejected(self, tmp_path: Path) -> None:
         spec = _write_spec(tmp_path / "scores.json", _skilful_spec())
         result = CliRunner().invoke(
             main,
@@ -192,7 +193,7 @@ class TestAuditDetectorErrors:
         assert result.exit_code != 0
         assert "must be given together" in result.output
 
-    def test_out_of_range_target_false_alarm_reported(self, tmp_path):
+    def test_out_of_range_target_false_alarm_reported(self, tmp_path: Path) -> None:
         spec = _write_spec(tmp_path / "scores.json", _skilful_spec())
         result = CliRunner().invoke(
             main,
@@ -203,7 +204,9 @@ class TestAuditDetectorErrors:
 
 
 class TestSignedSeal:
-    def test_sign_emits_a_verifiable_signature(self, tmp_path, monkeypatch):
+    def test_sign_emits_a_verifiable_signature(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.setenv("SPO_AUDIT_KEY", "cli-signing-key")
         spec = _write_spec(tmp_path / "scores.json", _skilful_spec())
         result = CliRunner().invoke(
@@ -224,7 +227,9 @@ class TestSignedSeal:
         assert payload["signature_algorithm"] == "HMAC-SHA256"
         assert "signing_key_id" in payload
 
-    def test_sign_without_key_is_reported(self, tmp_path, monkeypatch):
+    def test_sign_without_key_is_reported(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.delenv("SPO_AUDIT_KEY", raising=False)
         spec = _write_spec(tmp_path / "scores.json", _skilful_spec())
         result = CliRunner().invoke(
@@ -242,7 +247,7 @@ class TestSignedSeal:
         assert result.exit_code != 0
         assert "SPO_AUDIT_KEY" in result.output
 
-    def test_sign_without_sealing_is_reported(self, tmp_path):
+    def test_sign_without_sealing_is_reported(self, tmp_path: Path) -> None:
         spec = _write_spec(tmp_path / "scores.json", _skilful_spec())
         result = CliRunner().invoke(
             main,
