@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "measured_utc": "2026-10-08T12:21:17.711599+00:00",
-  "git_base": "c4b5415fda704537b2bcf1ceeb93b7089ec4362b",
+  "git_base": "e07a16a7cffb3708afe43597ecb6350a1a0577dd",
   "source_sha256_executed": {
     "src/scpn_phase_orchestrator/coupling/connectome.py": "127156ca1c739d0f57ba07d8385d6ebd450fa4a477de9491703c8d4ae95959e7",
     "src/scpn_phase_orchestrator/coupling/_connectome_validation.py": "b275038e867d06365c0c32a86b0b4bf8b53a4c79f8f12e4f99edff5a28e12d8e",

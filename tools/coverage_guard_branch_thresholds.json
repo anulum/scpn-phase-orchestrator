@@ -1,5 +1,5 @@
 {
-  "_comment": "2026-09-27: no-regression floors from successful CI run 36330774494 at ce9cd69210d68642f7a194e938f1c7233a20c4d7; branch report SHA-256 d6ef90fe55b34299e52ea1446b2afe69ca452e0c746b93ccb7763a735e576fc9. Floors round down to two decimals from exact counts and parsed XML rates; existing thresholds never decrease. Complete line scopes reproduce prior CI or real local runtime evidence; branch scopes reproduce the unchanged-source branch lane. Omissions and native instrumentation remain separate gaps. No global 100% or scientific validity claim.",
+  "_comment": "2026-09-27: no-regression floors from successful CI run 36330774494 at 18bcf3b58a034d40c22737afac75c234f7108d08; branch report SHA-256 d6ef90fe55b34299e52ea1446b2afe69ca452e0c746b93ccb7763a735e576fc9. Floors round down to two decimals from exact counts and parsed XML rates; existing thresholds never decrease. Complete line scopes reproduce prior CI or real local runtime evidence; branch scopes reproduce the unchanged-source branch lane. Omissions and native instrumentation remain separate gaps. No global 100% or scientific validity claim.",
   "global_min_line_rate": 97.69,
   "global_min_branch_rate": 96.96,
   "domain_min_branch_rate": {

@@ -1,7 +1,7 @@
 {
   "schema": "phase-quality-runtime-benchmark.v1",
   "recorded_utc": "2026-10-03T03:50:39.660523+00:00",
-  "base_commit": "0d158b35be1aea4a3501f01ae21c27bffc751e4a",
+  "base_commit": "d9b00f4bd15b9b7d79448b0597c0a5722a89451c",
   "qualification": "Shared-host repeated regression observations; validation boundaries differ; not isolated latency, speedup or physical control certification. Python profiling/tracing absent. Rust release compiler fingerprint has empty rustflags.",
   "source_sha256": {
     "src/scpn_phase_orchestrator/oscillators/quality.py": "bd1ef57ee191aa785f70c3e399797dbc70b73cb8a6f6f3431e7eb91d94db2cf3",

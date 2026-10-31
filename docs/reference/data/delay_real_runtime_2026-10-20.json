@@ -421,7 +421,7 @@
   ],
   "schema": "spo.delay-real-runtime-diagnostics.v1",
   "source_binding": "working tree source bytes; genuine rebuilt isolated installed kernel and actual native assets",
-  "source_revision_base": "cf1718621fdd3772f862d1a2834470e25ebcf414",
+  "source_revision_base": "15dbcae049d8101302a0ba21afa4148872dc291f",
   "sources": {
     "benchmarks/delay_benchmark.py": "bebe30e74d8ad00e2fa0f37ad2d0317f0728504e30b20dd4aad84ab893b0587e",
     "benchmarks/delayed_benchmark.py": "aa8fdfcfc00eea6e4c5213f18ce0b21064bd3b38f6a228b36553af1d12541c63",

@@ -1,5 +1,5 @@
 {
-  "_comment": "2026-09-27: no-regression floors from successful CI run 36330774494 at ce9cd69210d68642f7a194e938f1c7233a20c4d7; merged report SHA-256 068fde0173e5ebab6426a943e421b30dd8943623426ce8ec566e7ed197ffd713. Floors round down to two decimals from exact counts and parsed XML rates; existing thresholds never decrease. Complete line scopes reproduce prior CI or real local runtime evidence; branch scopes reproduce the unchanged-source branch lane. Omissions and native instrumentation remain separate gaps. No global 100% or scientific validity claim.",
+  "_comment": "2026-09-27: no-regression floors from successful CI run 36330774494 at 18bcf3b58a034d40c22737afac75c234f7108d08; merged report SHA-256 068fde0173e5ebab6426a943e421b30dd8943623426ce8ec566e7ed197ffd713. Floors round down to two decimals from exact counts and parsed XML rates; existing thresholds never decrease. Complete line scopes reproduce prior CI or real local runtime evidence; branch scopes reproduce the unchanged-source branch lane. Omissions and native instrumentation remain separate gaps. No global 100% or scientific validity claim.",
   "global_min_line_rate": 98.67,
   "domain_min_line_rate": {
     "__init__.py": 100.0,

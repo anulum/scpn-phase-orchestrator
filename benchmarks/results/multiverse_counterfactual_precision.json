@@ -1,7 +1,7 @@
 {
   "metadata": {
     "snapshot_date": "2026-09-29",
-    "baseline_source_commit": "569ebee2ce93c46760e0c4dfdc3068a23ed3bbed",
+    "baseline_source_commit": "6eb10387972fbf1bd838d26815946a108b6d4dff",
     "source_change": "Binary64 round-trip action-label formatting",
     "command": "taskset -c 0 .venv/bin/python -c 'import json; from benchmarks.reference_suite import benchmark_multiverse_counterfactual_gate; print(json.dumps(benchmark_multiverse_counterfactual_gate(), indent=2))'",
     "benchmark_evidence_kind": "local_regression_non_isolated",
