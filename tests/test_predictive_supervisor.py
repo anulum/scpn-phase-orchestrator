@@ -300,8 +300,8 @@ class TestDecide:
         actions = ps.decide(
             phases, omegas, knm, alpha, _make_state(0.5), BoundaryState()
         )
-        if actions:
-            assert "MPC" in actions[0].justification
+        assert actions, "a predicted degradation must produce a preemptive action"
+        assert "MPC" in actions[0].justification
 
     def test_prediction_fields(self) -> None:
         pred = Prediction(
