@@ -10,16 +10,21 @@ from __future__ import annotations
 
 import builtins
 import importlib
+from collections.abc import Callable
 
 import numpy as np
 import pytest
+from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.coupling import te_adaptive as te_mod
 from scpn_phase_orchestrator.coupling.te_adaptive import te_adapt_coupling
+from scpn_phase_orchestrator.monitor.transfer_entropy import transfer_entropy_matrix
+
+FloatArray = NDArray[np.float64]
 
 
 class TestTEAdaptive:
-    def test_output_shape(self):
+    def test_output_shape(self) -> None:
         knm = np.full((4, 4), 0.5)
         np.fill_diagonal(knm, 0.0)
         rng = np.random.default_rng(42)
@@ -27,7 +32,7 @@ class TestTEAdaptive:
         result = te_adapt_coupling(knm, history)
         assert result.shape == (4, 4)
 
-    def test_zero_diagonal(self):
+    def test_zero_diagonal(self) -> None:
         knm = np.full((3, 3), 0.5)
         np.fill_diagonal(knm, 0.0)
         rng = np.random.default_rng(42)
@@ -35,7 +40,7 @@ class TestTEAdaptive:
         result = te_adapt_coupling(knm, history)
         np.testing.assert_array_equal(np.diag(result), 0.0)
 
-    def test_non_negative(self):
+    def test_non_negative(self) -> None:
         knm = np.full((3, 3), 0.1)
         np.fill_diagonal(knm, 0.0)
         rng = np.random.default_rng(42)
@@ -43,7 +48,7 @@ class TestTEAdaptive:
         result = te_adapt_coupling(knm, history, lr=0.01)
         assert np.all(result >= 0)
 
-    def test_coupling_increases(self):
+    def test_coupling_increases(self) -> None:
         knm = np.full((4, 4), 0.1)
         np.fill_diagonal(knm, 0.0)
         rng = np.random.default_rng(42)
@@ -52,7 +57,7 @@ class TestTEAdaptive:
         # With lr=1.0, TE contribution should increase off-diagonal
         assert float(result.sum()) >= float(knm.sum())
 
-    def test_decay_reduces(self):
+    def test_decay_reduces(self) -> None:
         knm = np.full((3, 3), 1.0)
         np.fill_diagonal(knm, 0.0)
         rng = np.random.default_rng(42)
@@ -135,14 +140,18 @@ class TestTEAdaptive:
         kwargs: dict[str, object],
         message: str,
     ) -> None:
+        # Loose alias: the parametrised kwargs deliberately carry invalid values.
+        adapt_unchecked: Callable[..., FloatArray] = te_adapt_coupling
         with pytest.raises(ValueError, match=message):
-            te_adapt_coupling(knm, history, **kwargs)
+            adapt_unchecked(knm, history, **kwargs)
 
     def test_transfer_entropy_backend_negative_scores_fail_closed(
         self,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        def fake_transfer_entropy_matrix(_history, *, n_bins):
+        def fake_transfer_entropy_matrix(
+            _history: FloatArray, *, n_bins: int
+        ) -> FloatArray:
             return np.array([[0.0, -0.2], [0.1, 0.0]], dtype=np.float64)
 
         monkeypatch.setattr(
@@ -161,10 +170,18 @@ class TestTEAdaptive:
         self,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        def fake_transfer_entropy_matrix(_history, *, n_bins):
+        def fake_transfer_entropy_matrix(
+            _history: FloatArray, *, n_bins: int
+        ) -> FloatArray:
             return np.array([[0.0, 0.2], [0.1, 0.0]], dtype=np.float64)
 
-        def fake_rust(_k_flat, _te_flat, _n, _lr, _decay):
+        def fake_rust(
+            _k_flat: FloatArray,
+            _te_flat: FloatArray,
+            _n: int,
+            _lr: float,
+            _decay: float,
+        ) -> FloatArray:
             return np.array([0.0, -0.1, 0.2, 0.0], dtype=np.float64)
 
         monkeypatch.setattr(te_mod, "_HAS_RUST", True)
@@ -195,7 +212,7 @@ class TestTEAdaptive:
         history[1, 1:] += 0.8 * history[0, :-1]
         knm = rng.uniform(0.0, 0.5, (4, 4))
         np.fill_diagonal(knm, 0.0)
-        te = te_mod.transfer_entropy_matrix(history, n_bins=6).tolist()
+        te = transfer_entropy_matrix(history, n_bins=6).tolist()
         expected = [
             [
                 0.0 if i == j else max(0.0, 0.85 * knm[i, j] + 0.3 * te[i][j])
@@ -214,7 +231,7 @@ class TestTEAdaptive:
 class TestTEAdaptivePipelineWiring:
     """Pipeline: engine trajectory → TE → adapt coupling → engine."""
 
-    def test_te_adapted_knm_drives_engine(self):
+    def test_te_adapted_knm_drives_engine(self) -> None:
         """Engine trajectory → te_adapt_coupling → updated K_nm → engine."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
         from scpn_phase_orchestrator.upde.order_params import (
@@ -254,7 +271,7 @@ class TestTEAdaptivePipelineWiring:
 
 
 class TestTEAdaptiveBackendContracts:
-    def test_public_inputs_reject_boolean_complex_and_non_finite_values(self):
+    def test_public_inputs_reject_boolean_complex_and_non_finite_values(self) -> None:
         with pytest.raises(ValueError, match="knm must not contain boolean values"):
             te_adapt_coupling(
                 np.array([[False, True], [True, False]]),
@@ -275,7 +292,9 @@ class TestTEAdaptiveBackendContracts:
         with pytest.raises(ValueError, match="n_bins must be an integer >= 2"):
             te_adapt_coupling(np.zeros((2, 2)), np.ones((2, 10)), n_bins=1)
 
-    def test_transfer_entropy_backend_wrong_shape(self, monkeypatch):
+    def test_transfer_entropy_backend_wrong_shape(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.setattr(
             te_mod,
             "transfer_entropy_matrix",
@@ -284,7 +303,9 @@ class TestTEAdaptiveBackendContracts:
         with pytest.raises(RuntimeError, match="wrong shape"):
             te_adapt_coupling(np.zeros((2, 2)), np.ones((2, 10)))
 
-    def test_transfer_entropy_backend_non_zero_diagonal(self, monkeypatch):
+    def test_transfer_entropy_backend_non_zero_diagonal(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.setattr(
             te_mod,
             "transfer_entropy_matrix",
@@ -293,7 +314,7 @@ class TestTEAdaptiveBackendContracts:
         with pytest.raises(RuntimeError, match="non-zero self scores"):
             te_adapt_coupling(np.zeros((2, 2)), np.ones((2, 10)))
 
-    def test_rust_backend_wrong_shape(self, monkeypatch):
+    def test_rust_backend_wrong_shape(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(te_mod, "_HAS_RUST", True)
         monkeypatch.setattr(
             te_mod,
@@ -309,7 +330,9 @@ class TestTEAdaptiveBackendContracts:
         with pytest.raises(RuntimeError, match="wrong shape"):
             te_adapt_coupling(np.zeros((2, 2)), np.ones((2, 10)))
 
-    def test_rust_backend_non_zero_diagonal(self, monkeypatch):
+    def test_rust_backend_non_zero_diagonal(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.setattr(te_mod, "_HAS_RUST", True)
         monkeypatch.setattr(
             te_mod,
