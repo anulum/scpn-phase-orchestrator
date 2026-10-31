@@ -13,33 +13,44 @@ payload boundaries.
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from pathlib import Path
+from typing import TypeVar
+
 import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.runtime.audit_logger import AuditLogger
 
+_R = TypeVar("_R")
 
-def test_u1_audit_logger_rejects_directory_path(tmp_path) -> None:
+
+def _call(fn: Callable[..., _R], *args: object, **kwargs: object) -> _R:
+    """Call ``fn`` with arguments that are deliberately outside its types."""
+    return fn(*args, **kwargs)
+
+
+def test_u1_audit_logger_rejects_directory_path(tmp_path: Path) -> None:
     with pytest.raises(Exception, match="directory"):
         AuditLogger(tmp_path)
 
 
-def test_u1_audit_logger_rejects_blank_event_stream_path(tmp_path) -> None:
+def test_u1_audit_logger_rejects_blank_event_stream_path(tmp_path: Path) -> None:
     with pytest.raises(Exception, match="event_stream path must be non-empty"):
         AuditLogger(tmp_path / "audit.jsonl", event_stream=" ")
 
 
 def test_u1_audit_logger_rejects_non_path_type() -> None:
     with pytest.raises(Exception, match="str or Path"):
-        AuditLogger(123)  # type: ignore[arg-type]
+        _call(AuditLogger, 123)
 
 
-def test_u1_audit_logger_rejects_non_path_event_stream_type(tmp_path) -> None:
+def test_u1_audit_logger_rejects_non_path_event_stream_type(tmp_path: Path) -> None:
     with pytest.raises(Exception, match="str, Path, or None"):
-        AuditLogger(tmp_path / "audit.jsonl", event_stream=123)  # type: ignore[arg-type]
+        _call(AuditLogger, tmp_path / "audit.jsonl", event_stream=123)
 
 
-def test_u1_audit_logger_header_rejects_non_positive_dt(tmp_path) -> None:
+def test_u1_audit_logger_header_rejects_non_positive_dt(tmp_path: Path) -> None:
     logger = AuditLogger(tmp_path / "audit.jsonl")
     try:
         with pytest.raises(Exception, match="finite positive real"):
@@ -48,16 +59,16 @@ def test_u1_audit_logger_header_rejects_non_positive_dt(tmp_path) -> None:
         logger._fh.close()
 
 
-def test_u1_audit_logger_header_rejects_boolean_dt(tmp_path) -> None:
+def test_u1_audit_logger_header_rejects_boolean_dt(tmp_path: Path) -> None:
     logger = AuditLogger(tmp_path / "audit.jsonl")
     try:
         with pytest.raises(Exception, match="finite positive real"):
-            logger.log_header(n_oscillators=4, dt=True)  # type: ignore[arg-type]
+            _call(logger.log_header, n_oscillators=4, dt=True)
     finally:
         logger._fh.close()
 
 
-def test_u1_audit_logger_header_rejects_non_finite_dt(tmp_path) -> None:
+def test_u1_audit_logger_header_rejects_non_finite_dt(tmp_path: Path) -> None:
     logger = AuditLogger(tmp_path / "audit.jsonl")
     try:
         with pytest.raises(Exception, match="finite positive real"):
@@ -66,16 +77,18 @@ def test_u1_audit_logger_header_rejects_non_finite_dt(tmp_path) -> None:
         logger._fh.close()
 
 
-def test_u1_audit_logger_header_rejects_boolean_n_oscillators(tmp_path) -> None:
+def test_u1_audit_logger_header_rejects_boolean_n_oscillators(tmp_path: Path) -> None:
     logger = AuditLogger(tmp_path / "audit.jsonl")
     try:
         with pytest.raises(Exception, match="positive integer"):
-            logger.log_header(n_oscillators=True, dt=0.1)  # type: ignore[arg-type]
+            _call(logger.log_header, n_oscillators=True, dt=0.1)
     finally:
         logger._fh.close()
 
 
-def test_u1_audit_logger_header_rejects_non_positive_n_oscillators(tmp_path) -> None:
+def test_u1_audit_logger_header_rejects_non_positive_n_oscillators(
+    tmp_path: Path,
+) -> None:
     logger = AuditLogger(tmp_path / "audit.jsonl")
     try:
         with pytest.raises(Exception, match="positive integer"):
@@ -84,7 +97,7 @@ def test_u1_audit_logger_header_rejects_non_positive_n_oscillators(tmp_path) -> 
         logger._fh.close()
 
 
-def test_u1_audit_logger_header_rejects_blank_method(tmp_path) -> None:
+def test_u1_audit_logger_header_rejects_blank_method(tmp_path: Path) -> None:
     logger = AuditLogger(tmp_path / "audit.jsonl")
     try:
         with pytest.raises(Exception, match="non-empty string"):
@@ -93,143 +106,155 @@ def test_u1_audit_logger_header_rejects_blank_method(tmp_path) -> None:
         logger._fh.close()
 
 
-def test_u1_audit_logger_header_rejects_boolean_seed(tmp_path) -> None:
+def test_u1_audit_logger_header_rejects_boolean_seed(tmp_path: Path) -> None:
     logger = AuditLogger(tmp_path / "audit.jsonl")
     try:
         with pytest.raises(Exception, match="seed must be integer or None"):
-            logger.log_header(n_oscillators=4, dt=0.1, seed=True)  # type: ignore[arg-type]
+            _call(logger.log_header, n_oscillators=4, dt=0.1, seed=True)
     finally:
         logger._fh.close()
 
 
-def test_u1_audit_logger_header_rejects_non_dict_binding_config(tmp_path) -> None:
+def test_u1_audit_logger_header_rejects_non_dict_binding_config(tmp_path: Path) -> None:
     logger = AuditLogger(tmp_path / "audit.jsonl")
     try:
         with pytest.raises(Exception, match="binding_config"):
-            logger.log_header(n_oscillators=4, dt=0.1, binding_config=["bad"])  # type: ignore[arg-type]
+            _call(logger.log_header, n_oscillators=4, dt=0.1, binding_config=["bad"])
     finally:
         logger._fh.close()
 
 
-def test_u1_audit_logger_header_rejects_non_bool_amplitude_mode(tmp_path) -> None:
+def test_u1_audit_logger_header_rejects_non_bool_amplitude_mode(tmp_path: Path) -> None:
     logger = AuditLogger(tmp_path / "audit.jsonl")
     try:
         with pytest.raises(Exception, match="amplitude_mode must be bool"):
-            logger.log_header(n_oscillators=4, dt=0.1, amplitude_mode=1)  # type: ignore[arg-type]
+            _call(logger.log_header, n_oscillators=4, dt=0.1, amplitude_mode=1)
     finally:
         logger._fh.close()
 
 
-def test_u1_audit_logger_header_rejects_non_dict_binding_summary(tmp_path) -> None:
+def test_u1_audit_logger_header_rejects_non_dict_binding_summary(
+    tmp_path: Path,
+) -> None:
     logger = AuditLogger(tmp_path / "audit.jsonl")
     try:
         with pytest.raises(Exception, match="binding_summary"):
-            logger.log_header(
+            _call(
+                logger.log_header,
                 n_oscillators=4,
                 dt=0.1,
-                binding_summary=["bad"],  # type: ignore[arg-type]
+                binding_summary=["bad"],
             )
     finally:
         logger._fh.close()
 
 
-def test_u1_audit_logger_log_step_rejects_negative_step(tmp_path) -> None:
+def test_u1_audit_logger_log_step_rejects_negative_step(tmp_path: Path) -> None:
     logger = AuditLogger(tmp_path / "audit.jsonl")
     try:
         with pytest.raises(Exception, match="non-negative integer"):
-            logger.log_step(
+            _call(
+                logger.log_step,
                 -1,
-                object(),  # type: ignore[arg-type]
+                object(),
                 [],
             )
     finally:
         logger._fh.close()
 
 
-def test_u1_audit_logger_log_step_rejects_boolean_step(tmp_path) -> None:
+def test_u1_audit_logger_log_step_rejects_boolean_step(tmp_path: Path) -> None:
     logger = AuditLogger(tmp_path / "audit.jsonl")
     try:
         with pytest.raises(Exception, match="non-negative integer"):
-            logger.log_step(
-                True,  # type: ignore[arg-type]
-                object(),  # type: ignore[arg-type]
+            _call(
+                logger.log_step,
+                True,
+                object(),
                 [],
             )
     finally:
         logger._fh.close()
 
 
-def test_u1_audit_logger_log_step_rejects_non_upde_state(tmp_path) -> None:
+def test_u1_audit_logger_log_step_rejects_non_upde_state(tmp_path: Path) -> None:
     logger = AuditLogger(tmp_path / "audit.jsonl")
     try:
         with pytest.raises(Exception, match="UPDEState"):
-            logger.log_step(0, object(), [])
+            _call(logger.log_step, 0, object(), [])
     finally:
         logger._fh.close()
 
 
-def test_u1_audit_logger_log_step_rejects_non_action_entries(tmp_path) -> None:
+def test_u1_audit_logger_log_step_rejects_non_action_entries(tmp_path: Path) -> None:
     from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
 
     logger = AuditLogger(tmp_path / "audit.jsonl")
     try:
-        state = UPDEState(
+        state = _call(
+            UPDEState,
             regime_id="nominal",
             stability_proxy=0.0,
             layers=[LayerState(0.0, 0.0)],
             cross_layer_alignment=[],
         )
         with pytest.raises(Exception, match="actions\\[0\\]"):
-            logger.log_step(0, state, [object()])  # type: ignore[list-item]
+            _call(logger.log_step, 0, state, [object()])
     finally:
         logger._fh.close()
 
 
-def test_u1_audit_logger_log_step_rejects_non_list_actions(tmp_path) -> None:
+def test_u1_audit_logger_log_step_rejects_non_list_actions(tmp_path: Path) -> None:
     from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
 
     logger = AuditLogger(tmp_path / "audit.jsonl")
     try:
-        state = UPDEState(
+        state = _call(
+            UPDEState,
             regime_id="nominal",
             stability_proxy=0.0,
             layers=[LayerState(0.0, 0.0)],
             cross_layer_alignment=[],
         )
         with pytest.raises(Exception, match="actions must be list"):
-            logger.log_step(0, state, {})  # type: ignore[arg-type]
+            _call(logger.log_step, 0, state, {})
     finally:
         logger._fh.close()
 
 
-def test_u1_audit_logger_log_step_rejects_non_dict_channel_runtime(tmp_path) -> None:
+def test_u1_audit_logger_log_step_rejects_non_dict_channel_runtime(
+    tmp_path: Path,
+) -> None:
     from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
 
     logger = AuditLogger(tmp_path / "audit.jsonl")
     try:
-        state = UPDEState(
+        state = _call(
+            UPDEState,
             regime_id="nominal",
             stability_proxy=0.0,
             layers=[LayerState(0.0, 0.0)],
             cross_layer_alignment=[],
         )
         with pytest.raises(Exception, match="channel_runtime"):
-            logger.log_step(
+            _call(
+                logger.log_step,
                 0,
                 state,
                 [],
-                channel_runtime=["bad"],  # type: ignore[arg-type]
+                channel_runtime=["bad"],
             )
     finally:
         logger._fh.close()
 
 
-def test_u1_audit_logger_log_step_rejects_non_finite_epsilon(tmp_path) -> None:
+def test_u1_audit_logger_log_step_rejects_non_finite_epsilon(tmp_path: Path) -> None:
     from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
 
     logger = AuditLogger(tmp_path / "audit.jsonl")
     try:
-        state = UPDEState(
+        state = _call(
+            UPDEState,
             regime_id="nominal",
             stability_proxy=0.0,
             layers=[LayerState(0.0, 0.0)],
@@ -241,42 +266,45 @@ def test_u1_audit_logger_log_step_rejects_non_finite_epsilon(tmp_path) -> None:
         logger._fh.close()
 
 
-def test_u1_audit_logger_log_step_rejects_boolean_epsilon(tmp_path) -> None:
+def test_u1_audit_logger_log_step_rejects_boolean_epsilon(tmp_path: Path) -> None:
     from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
 
     logger = AuditLogger(tmp_path / "audit.jsonl")
     try:
-        state = UPDEState(
+        state = _call(
+            UPDEState,
             regime_id="nominal",
             stability_proxy=0.0,
             layers=[LayerState(0.0, 0.0)],
             cross_layer_alignment=[],
         )
         with pytest.raises(Exception, match="epsilon must be finite real"):
-            logger.log_step(0, state, [], epsilon=True)  # type: ignore[arg-type]
+            _call(logger.log_step, 0, state, [], epsilon=True)
     finally:
         logger._fh.close()
 
 
-def test_u1_audit_logger_log_event_rejects_non_string_event_type(tmp_path) -> None:
+def test_u1_audit_logger_log_event_rejects_non_string_event_type(
+    tmp_path: Path,
+) -> None:
     logger = AuditLogger(tmp_path / "audit.jsonl")
     try:
         with pytest.raises(Exception, match="event_type must be a non-empty string"):
-            logger.log_event(1, {})  # type: ignore[arg-type]
+            _call(logger.log_event, 1, {})
     finally:
         logger._fh.close()
 
 
-def test_u1_audit_logger_log_event_rejects_boolean_event_type(tmp_path) -> None:
+def test_u1_audit_logger_log_event_rejects_boolean_event_type(tmp_path: Path) -> None:
     logger = AuditLogger(tmp_path / "audit.jsonl")
     try:
         with pytest.raises(Exception, match="event_type must be a non-empty string"):
-            logger.log_event(True, {})  # type: ignore[arg-type]
+            _call(logger.log_event, True, {})
     finally:
         logger._fh.close()
 
 
-def test_u1_audit_logger_log_event_rejects_blank_event_type(tmp_path) -> None:
+def test_u1_audit_logger_log_event_rejects_blank_event_type(tmp_path: Path) -> None:
     logger = AuditLogger(tmp_path / "audit.jsonl")
     try:
         with pytest.raises(Exception, match="event_type must be a non-empty string"):
@@ -285,22 +313,25 @@ def test_u1_audit_logger_log_event_rejects_blank_event_type(tmp_path) -> None:
         logger._fh.close()
 
 
-def test_u1_audit_logger_log_event_rejects_non_dict_data(tmp_path) -> None:
+def test_u1_audit_logger_log_event_rejects_non_dict_data(tmp_path: Path) -> None:
     logger = AuditLogger(tmp_path / "audit.jsonl")
     try:
         with pytest.raises(Exception, match="data must be dict"):
-            logger.log_event("evt", ["bad"])  # type: ignore[arg-type]
+            _call(logger.log_event, "evt", ["bad"])
     finally:
         logger._fh.close()
 
 
-def test_u1_audit_logger_log_step_rejects_non_finite_phases_payload(tmp_path) -> None:
+def test_u1_audit_logger_log_step_rejects_non_finite_phases_payload(
+    tmp_path: Path,
+) -> None:
     from scpn_phase_orchestrator.actuation.mapper import ControlAction
     from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
 
     logger = AuditLogger(tmp_path / "audit.jsonl")
     try:
-        state = UPDEState(
+        state = _call(
+            UPDEState,
             regime_id="nominal",
             stability_proxy=0.0,
             layers=[LayerState(0.0, 0.0)],
@@ -320,13 +351,16 @@ def test_u1_audit_logger_log_step_rejects_non_finite_phases_payload(tmp_path) ->
         logger._fh.close()
 
 
-def test_u1_audit_logger_log_step_rejects_non_finite_omegas_payload(tmp_path) -> None:
+def test_u1_audit_logger_log_step_rejects_non_finite_omegas_payload(
+    tmp_path: Path,
+) -> None:
     from scpn_phase_orchestrator.actuation.mapper import ControlAction
     from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
 
     logger = AuditLogger(tmp_path / "audit.jsonl")
     try:
-        state = UPDEState(
+        state = _call(
+            UPDEState,
             regime_id="nominal",
             stability_proxy=0.0,
             layers=[LayerState(0.0, 0.0)],
@@ -346,13 +380,16 @@ def test_u1_audit_logger_log_step_rejects_non_finite_omegas_payload(tmp_path) ->
         logger._fh.close()
 
 
-def test_u1_audit_logger_log_step_rejects_non_finite_knm_payload(tmp_path) -> None:
+def test_u1_audit_logger_log_step_rejects_non_finite_knm_payload(
+    tmp_path: Path,
+) -> None:
     from scpn_phase_orchestrator.actuation.mapper import ControlAction
     from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
 
     logger = AuditLogger(tmp_path / "audit.jsonl")
     try:
-        state = UPDEState(
+        state = _call(
+            UPDEState,
             regime_id="nominal",
             stability_proxy=0.0,
             layers=[LayerState(0.0, 0.0)],
@@ -372,13 +409,16 @@ def test_u1_audit_logger_log_step_rejects_non_finite_knm_payload(tmp_path) -> No
         logger._fh.close()
 
 
-def test_u1_audit_logger_log_step_rejects_non_finite_alpha_payload(tmp_path) -> None:
+def test_u1_audit_logger_log_step_rejects_non_finite_alpha_payload(
+    tmp_path: Path,
+) -> None:
     from scpn_phase_orchestrator.actuation.mapper import ControlAction
     from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
 
     logger = AuditLogger(tmp_path / "audit.jsonl")
     try:
-        state = UPDEState(
+        state = _call(
+            UPDEState,
             regime_id="nominal",
             stability_proxy=0.0,
             layers=[LayerState(0.0, 0.0)],
