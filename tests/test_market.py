@@ -25,7 +25,7 @@ N_ASSETS = 5
 
 
 @pytest.fixture()
-def synced_returns():
+def synced_returns() -> np.ndarray:
     """All assets move together (high R)."""
     t = np.linspace(0, 4 * np.pi, T)
     base = np.sin(t)
@@ -33,23 +33,23 @@ def synced_returns():
 
 
 @pytest.fixture()
-def random_returns():
+def random_returns() -> np.ndarray:
     """Independent random walks (low R)."""
     rng = np.random.default_rng(42)
     return rng.standard_normal((T, N_ASSETS))
 
 
 class TestExtractPhase:
-    def test_output_shape_1d(self):
+    def test_output_shape_1d(self) -> None:
         series = np.sin(np.linspace(0, 4 * np.pi, 100))
         phase = extract_phase(series)
         assert phase.shape == (100,)
 
-    def test_output_shape_2d(self, synced_returns):
+    def test_output_shape_2d(self, synced_returns: np.ndarray) -> None:
         phase = extract_phase(synced_returns)
         assert phase.shape == (T, N_ASSETS)
 
-    def test_phase_range(self, synced_returns):
+    def test_phase_range(self, synced_returns: np.ndarray) -> None:
         phase = extract_phase(synced_returns)
         assert np.all(phase >= 0.0)
         assert np.all(phase < 2.0 * np.pi)
@@ -60,22 +60,22 @@ class TestExtractPhase:
 
 
 class TestMarketOrderParameter:
-    def test_output_shape(self, synced_returns):
+    def test_output_shape(self, synced_returns: np.ndarray) -> None:
         phases = extract_phase(synced_returns)
         R = market_order_parameter(phases)
         assert R.shape == (T,)
 
-    def test_synced_high_R(self, synced_returns):
+    def test_synced_high_R(self, synced_returns: np.ndarray) -> None:
         phases = extract_phase(synced_returns)
         R = market_order_parameter(phases)
         assert np.mean(R) > 0.7
 
-    def test_random_low_R(self, random_returns):
+    def test_random_low_R(self, random_returns: np.ndarray) -> None:
         phases = extract_phase(random_returns)
         R = market_order_parameter(phases)
         assert np.mean(R) < 0.7
 
-    def test_range(self, synced_returns):
+    def test_range(self, synced_returns: np.ndarray) -> None:
         phases = extract_phase(synced_returns)
         R = market_order_parameter(phases)
         assert np.all(R >= 0.0)
@@ -83,24 +83,26 @@ class TestMarketOrderParameter:
 
 
 class TestMarketPLV:
-    def test_output_shape(self, synced_returns):
+    def test_output_shape(self, synced_returns: np.ndarray) -> None:
         phases = extract_phase(synced_returns)
         plv = market_plv(phases, window=50)
         assert plv.shape == (T - 50 + 1, N_ASSETS, N_ASSETS)
 
-    def test_diagonal_ones(self, synced_returns):
+    def test_diagonal_ones(self, synced_returns: np.ndarray) -> None:
         phases = extract_phase(synced_returns)
         plv = market_plv(phases, window=50)
         for t in range(plv.shape[0]):
             np.testing.assert_allclose(np.diag(plv[t]), 1.0, atol=0.01)
 
-    def test_range(self, synced_returns):
+    def test_range(self, synced_returns: np.ndarray) -> None:
         phases = extract_phase(synced_returns)
         plv = market_plv(phases, window=50)
         assert np.all(plv >= -0.01)
         assert np.all(plv <= 1.01)
 
-    def test_too_long_window_returns_empty(self, monkeypatch):
+    def test_too_long_window_returns_empty(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.setattr(m_mod, "ACTIVE_BACKEND", "python")
         phases = np.zeros((10, 3), dtype=np.float64)
         plv = market_plv(phases, window=20)
@@ -108,27 +110,27 @@ class TestMarketPLV:
 
 
 class TestDetectRegimes:
-    def test_output_shape(self):
+    def test_output_shape(self) -> None:
         R = np.random.rand(100)
         regimes = detect_regimes(R)
         assert regimes.shape == (100,)
 
-    def test_high_R_synchronized(self):
+    def test_high_R_synchronized(self) -> None:
         R = np.ones(50) * 0.9
         regimes = detect_regimes(R)
         assert np.all(regimes == 2)
 
-    def test_low_R_desynchronized(self):
+    def test_low_R_desynchronized(self) -> None:
         R = np.ones(50) * 0.1
         regimes = detect_regimes(R)
         assert np.all(regimes == 0)
 
-    def test_mid_R_transition(self):
+    def test_mid_R_transition(self) -> None:
         R = np.ones(50) * 0.5
         regimes = detect_regimes(R)
         assert np.all(regimes == 1)
 
-    def test_threshold_order_rejected(self):
+    def test_threshold_order_rejected(self) -> None:
         with pytest.raises(
             ValueError, match="sync_threshold must be greater than or equal"
         ):
@@ -136,17 +138,17 @@ class TestDetectRegimes:
 
 
 class TestSyncWarning:
-    def test_output_shape(self):
+    def test_output_shape(self) -> None:
         R = np.random.rand(100)
         w = sync_warning(R)
         assert w.shape == (100,)
 
-    def test_detects_crossing(self):
+    def test_detects_crossing(self) -> None:
         R = np.concatenate([np.ones(50) * 0.3, np.ones(50) * 0.9])
         w = sync_warning(R, threshold=0.7, lookback=1)
         assert np.any(w)
 
-    def test_no_warning_when_stable(self):
+    def test_no_warning_when_stable(self) -> None:
         R = np.ones(100) * 0.5
         w = sync_warning(R, threshold=0.7, lookback=1)
         assert not np.any(w)
@@ -159,7 +161,7 @@ class TestSyncWarning:
 class TestMarketPipelineWiring:
     """Pipeline: market returns → extract_phase → R → regime detection."""
 
-    def test_returns_to_sync_regime(self):
+    def test_returns_to_sync_regime(self) -> None:
         """extract_phase → market_order_parameter → detect_regimes:
         proves the market module processes real-like data end-to-end."""
         rng = np.random.default_rng(42)
@@ -197,11 +199,13 @@ class TestMarketDispatchSurface:
         assert available == [*loadable, "python"]
         assert active == available[0]
 
-    def test_resolve_backends_falls_back_to_python_only(self, monkeypatch):
-        def loader_a() -> tuple:
+    def test_resolve_backends_falls_back_to_python_only(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def loader_a() -> tuple[object, object]:
             raise ImportError("rust unavailable")
 
-        def loader_b() -> tuple:
+        def loader_b() -> tuple[object, object]:
             raise RuntimeError("go unavailable")
 
         monkeypatch.setattr(m_mod, "_BACKEND_CACHE", {})
@@ -234,6 +238,8 @@ class TestMarketDispatchSurface:
         monkeypatch.setitem(m_mod._LOADERS, "go", broken_loader)
         assert m_mod._dispatch() == ("python", None)
 
-    def test_dispatch_returns_none_for_python_backend(self, monkeypatch):
+    def test_dispatch_returns_none_for_python_backend(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.setattr(m_mod, "ACTIVE_BACKEND", "python")
         assert m_mod._dispatch() == ("python", None)
