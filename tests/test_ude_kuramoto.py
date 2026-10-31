@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pytest
 
 jax = pytest.importorskip("jax", reason="JAX required")
@@ -22,18 +24,24 @@ from scpn_phase_orchestrator.nn.ude import (
     ude_kuramoto_step,
 )
 
+if TYPE_CHECKING:
+    from jax import Array
+
+_Setup = tuple["Array", "Array", "Array", CouplingResidual]
+
 N = 6
 DT = 0.01
 N_STEPS = 20
 
 
 @pytest.fixture()
-def key():
-    return jax.random.PRNGKey(42)
+def key() -> Array:
+    prng_key: Array = jax.random.PRNGKey(42)
+    return prng_key
 
 
 @pytest.fixture()
-def setup(key):
+def setup(key: Array) -> _Setup:
     k1, k2, k3, k4 = jax.random.split(key, 4)
     phases = jax.random.uniform(k1, (N,), maxval=2.0 * jnp.pi)
     omegas = jax.random.normal(k2, (N,))
@@ -44,17 +52,17 @@ def setup(key):
 
 
 class TestCouplingResidual:
-    def test_scalar_output(self, key):
+    def test_scalar_output(self, key: Array) -> None:
         res = CouplingResidual(hidden=8, key=key)
         out = res(jnp.array(0.5))
         assert out.shape == ()
 
-    def test_zero_input(self, key):
+    def test_zero_input(self, key: Array) -> None:
         res = CouplingResidual(hidden=8, key=key)
         out = res(jnp.array(0.0))
         assert jnp.isfinite(out)
 
-    def test_vmap_over_array(self, key):
+    def test_vmap_over_array(self, key: Array) -> None:
         res = CouplingResidual(hidden=8, key=key)
         inputs = jnp.linspace(-jnp.pi, jnp.pi, 10)
         outputs = jax.vmap(res)(inputs)
@@ -62,12 +70,12 @@ class TestCouplingResidual:
 
 
 class TestUDEKuramotoStep:
-    def test_output_shape(self, setup):
+    def test_output_shape(self, setup: _Setup) -> None:
         phases, omegas, K, residual = setup
         out = ude_kuramoto_step(phases, omegas, K, residual, DT)
         assert out.shape == (N,)
 
-    def test_phases_in_range(self, setup):
+    def test_phases_in_range(self, setup: _Setup) -> None:
         phases, omegas, K, residual = setup
         out = ude_kuramoto_step(phases, omegas, K, residual, DT)
         assert jnp.all(out >= 0.0)
@@ -75,23 +83,23 @@ class TestUDEKuramotoStep:
 
 
 class TestUDEKuramotoForward:
-    def test_trajectory_shape(self, setup):
+    def test_trajectory_shape(self, setup: _Setup) -> None:
         phases, omegas, K, residual = setup
         final, traj = ude_kuramoto_forward(phases, omegas, K, residual, DT, N_STEPS)
         assert final.shape == (N,)
         assert traj.shape == (N_STEPS, N)
 
-    def test_final_matches_last(self, setup):
+    def test_final_matches_last(self, setup: _Setup) -> None:
         phases, omegas, K, residual = setup
         final, traj = ude_kuramoto_forward(phases, omegas, K, residual, DT, N_STEPS)
         assert jnp.allclose(final, traj[-1], atol=1e-6)
 
 
 class TestUDEGradients:
-    def test_grad_wrt_K(self, setup):
+    def test_grad_wrt_K(self, setup: _Setup) -> None:
         phases, omegas, K, residual = setup
 
-        def loss_fn(K_):
+        def loss_fn(K_: Array) -> Array:
             final, _ = ude_kuramoto_forward(phases, omegas, K_, residual, DT, N_STEPS)
             return order_parameter(final)
 
@@ -99,15 +107,16 @@ class TestUDEGradients:
         assert grad_K.shape == K.shape
         assert jnp.isfinite(grad_K).all()
 
-    def test_grad_through_residual(self, setup):
+    def test_grad_through_residual(self, setup: _Setup) -> None:
         phases, omegas, K, residual = setup
 
-        @eqx.filter_grad
-        def grad_fn(res):
+        def sync_of(res: CouplingResidual) -> Array:
             final, _ = ude_kuramoto_forward(phases, omegas, K, res, DT, N_STEPS)
             return order_parameter(final)
 
-        grads = grad_fn(residual)
+        # equinox comes from importorskip and is untyped, so filter_grad is
+        # applied as a call rather than as a decorator.
+        grads = eqx.filter_grad(sync_of)(residual)
         # Check that at least some parameters have non-zero gradients
         flat_grads = jax.tree.leaves(grads)
         has_nonzero = any(not jnp.all(g == 0.0) for g in flat_grads)
@@ -115,19 +124,19 @@ class TestUDEGradients:
 
 
 class TestUDEKuramotoLayer:
-    def test_init(self, key):
+    def test_init(self, key: Array) -> None:
         layer = UDEKuramotoLayer(N, n_steps=N_STEPS, dt=DT, key=key)
         assert layer.K.shape == (N, N)
         assert layer.omegas.shape == (N,)
         assert layer.n == N
 
-    def test_forward_shape(self, key):
+    def test_forward_shape(self, key: Array) -> None:
         layer = UDEKuramotoLayer(N, n_steps=N_STEPS, dt=DT, key=key)
         phases = jax.random.uniform(key, (N,), maxval=2.0 * jnp.pi)
         out = layer(phases)
         assert out.shape == (N,)
 
-    def test_forward_with_trajectory_records_final_state(self, key):
+    def test_forward_with_trajectory_records_final_state(self, key: Array) -> None:
         layer = UDEKuramotoLayer(N, n_steps=N_STEPS, dt=DT, key=key)
         phases = jax.random.uniform(key, (N,), maxval=2.0 * jnp.pi)
         final, trajectory = layer.forward_with_trajectory(phases)
@@ -136,27 +145,26 @@ class TestUDEKuramotoLayer:
         assert jnp.allclose(final, trajectory[-1])
         assert jnp.isfinite(trajectory).all()
 
-    def test_sync_score(self, key):
+    def test_sync_score(self, key: Array) -> None:
         layer = UDEKuramotoLayer(N, n_steps=N_STEPS, dt=DT, key=key)
         phases = jax.random.uniform(key, (N,), maxval=2.0 * jnp.pi)
         R = layer.sync_score(phases)
         assert R.shape == ()
         assert 0.0 <= float(R) <= 1.0
 
-    def test_gradient_through_layer(self, key):
+    def test_gradient_through_layer(self, key: Array) -> None:
         layer = UDEKuramotoLayer(N, n_steps=10, dt=DT, hidden=8, key=key)
         phases = jax.random.uniform(key, (N,), maxval=2.0 * jnp.pi)
 
-        @eqx.filter_grad
-        def grad_fn(model):
+        def sync_of(model: UDEKuramotoLayer) -> Array:
             return model.sync_score(phases)
 
-        grads = grad_fn(layer)
+        grads = eqx.filter_grad(sync_of)(layer)
         assert grads.K.shape == (N, N)
         assert jnp.isfinite(grads.K).all()
         assert jnp.isfinite(grads.omegas).all()
 
-    def test_deterministic(self):
+    def test_deterministic(self) -> None:
         l1 = UDEKuramotoLayer(N, key=jax.random.PRNGKey(99))
         l2 = UDEKuramotoLayer(N, key=jax.random.PRNGKey(99))
         assert jnp.allclose(l1.K, l2.K)
@@ -165,7 +173,7 @@ class TestUDEKuramotoLayer:
 class TestUDEPipelineWiring:
     """Verify UDE Kuramoto wires into analysis pipeline."""
 
-    def test_ude_to_order_parameter(self, key):
+    def test_ude_to_order_parameter(self, key: Array) -> None:
         from scpn_phase_orchestrator.nn.functional import order_parameter
 
         layer = UDEKuramotoLayer(N, n_steps=50, dt=DT, key=key)
@@ -174,7 +182,7 @@ class TestUDEPipelineWiring:
         r = float(order_parameter(final))
         assert 0.0 <= r <= 1.0, f"UDE output must give valid R, got {r}"
 
-    def test_residual_bounded(self, key):
+    def test_residual_bounded(self, key: Array) -> None:
         """CouplingResidual output should be bounded (no explosion)."""
         residual = CouplingResidual(hidden=8, key=key)
         phases = jax.random.uniform(key, (N,), maxval=2.0 * jnp.pi)
