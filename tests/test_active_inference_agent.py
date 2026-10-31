@@ -18,11 +18,11 @@ PyActiveInferenceAgent = spo_kernel.PyActiveInferenceAgent
 
 
 class TestActiveInferenceAgent:
-    def test_invalid_hidden_size_raises(self):
+    def test_invalid_hidden_size_raises(self) -> None:
         with pytest.raises(ValueError, match="n_hidden"):
             PyActiveInferenceAgent(n_hidden=0)
 
-    def test_agent_adjusts_zeta(self):
+    def test_agent_adjusts_zeta(self) -> None:
         # Target R = 0.5 (metastability)
         agent = PyActiveInferenceAgent(n_hidden=4, target_r=0.5, lr=2.0)
 
@@ -41,13 +41,13 @@ class TestActiveInferenceAgent:
         # psi should be anti-phase (pi)
         assert abs(psi_high - np.pi) < 1e-10
 
-    def test_target_r_property(self):
+    def test_target_r_property(self) -> None:
         agent = PyActiveInferenceAgent(target_r=0.8)
         assert agent.target_r == 0.8
         agent.target_r = 0.3
         assert agent.target_r == 0.3
 
-    def test_target_r_rejects_out_of_range_values(self):
+    def test_target_r_rejects_out_of_range_values(self) -> None:
         for target_r in (-1.0, 2.0):
             try:
                 agent = PyActiveInferenceAgent(target_r=target_r, lr=1.0)
@@ -60,7 +60,7 @@ class TestActiveInferenceAgent:
 
 
 class TestControlDirectionality:
-    def test_at_target_error_small(self):
+    def test_at_target_error_small(self) -> None:
         """When r_obs equals target, the control magnitude should be small."""
         agent = PyActiveInferenceAgent(n_hidden=4, target_r=0.5, lr=2.0)
         zeta, _ = agent.control(r_obs=0.5, psi_obs=0.0, dt=0.01)
@@ -70,7 +70,7 @@ class TestControlDirectionality:
         zeta_away, _ = agent.control(r_obs=0.1, psi_obs=0.0, dt=0.01)
         assert abs(zeta) < abs(zeta_away)
 
-    def test_psi_tracks_observed_phase_when_below_target(self):
+    def test_psi_tracks_observed_phase_when_below_target(self) -> None:
         """For R < target the agent drives sync toward the observed phase."""
         agent = PyActiveInferenceAgent(n_hidden=4, target_r=0.5, lr=2.0)
         for psi_obs in (0.0, 0.5, 1.5, 3.0):
@@ -79,7 +79,7 @@ class TestControlDirectionality:
                 f"ψ={psi} should track observed {psi_obs} when R < target"
             )
 
-    def test_psi_antiphase_when_above_target(self):
+    def test_psi_antiphase_when_above_target(self) -> None:
         """For R > target the agent drives desync by shifting Ψ by π."""
         agent = PyActiveInferenceAgent(n_hidden=4, target_r=0.5, lr=2.0)
         for psi_obs in (0.0, 0.5, 1.5):
@@ -90,7 +90,7 @@ class TestControlDirectionality:
 
 
 class TestControlBoundaryEdges:
-    def test_r_obs_out_of_range_stays_finite(self):
+    def test_r_obs_out_of_range_stays_finite(self) -> None:
         """Accept out-of-band order-parameter observations without NaN/Inf output."""
         agent = PyActiveInferenceAgent(n_hidden=4, target_r=0.5, lr=1.0)
         for r_obs in (-1.0, 0.0, 0.5, 1.0, 2.0):
@@ -98,7 +98,7 @@ class TestControlBoundaryEdges:
             assert np.isfinite(zeta)
             assert np.isfinite(psi)
 
-    def test_psi_tracks_observed_phase_beyond_2pi(self):
+    def test_psi_tracks_observed_phase_beyond_2pi(self) -> None:
         agent = PyActiveInferenceAgent(n_hidden=4, target_r=0.5, lr=2.0)
         for psi_obs in (-2.75, -1.0, 0.0, 1.0, 2 * np.pi, 2.5 * np.pi, 6.0 * np.pi):
             _, psi = agent.control(r_obs=0.1, psi_obs=psi_obs, dt=0.01)
@@ -107,7 +107,7 @@ class TestControlBoundaryEdges:
             diff = psi - expected
             assert abs(diff) < 1e-10
 
-    def test_psi_antiphase_wrapping_invariant(self):
+    def test_psi_antiphase_wrapping_invariant(self) -> None:
         agent = PyActiveInferenceAgent(n_hidden=4, target_r=0.5, lr=2.0)
         for psi_obs in (-2.75, -1.0, 0.0, 1.0, 2 * np.pi, 2.5 * np.pi, 6.0 * np.pi):
             _, psi = agent.control(r_obs=0.9, psi_obs=psi_obs, dt=0.01)
@@ -118,22 +118,22 @@ class TestControlBoundaryEdges:
 
 
 class TestTargetRProperty:
-    def test_target_r_accepts_zero(self):
+    def test_target_r_accepts_zero(self) -> None:
         agent = PyActiveInferenceAgent(target_r=0.0)
         assert agent.target_r == 0.0
 
-    def test_target_r_accepts_one(self):
+    def test_target_r_accepts_one(self) -> None:
         agent = PyActiveInferenceAgent(target_r=1.0)
         assert agent.target_r == 1.0
 
-    def test_target_r_default_is_metastability(self):
+    def test_target_r_default_is_metastability(self) -> None:
         """Default target should land in the metastable band (0.4–0.7)."""
         agent = PyActiveInferenceAgent()
         assert 0.0 <= agent.target_r <= 1.0
 
 
 class TestLearningRateBehaviour:
-    def test_higher_lr_produces_larger_response(self):
+    def test_higher_lr_produces_larger_response(self) -> None:
         """Same error, larger lr → larger control magnitude."""
         low = PyActiveInferenceAgent(n_hidden=4, target_r=0.5, lr=0.1)
         high = PyActiveInferenceAgent(n_hidden=4, target_r=0.5, lr=5.0)
@@ -141,7 +141,7 @@ class TestLearningRateBehaviour:
         zeta_high, _ = high.control(r_obs=0.1, psi_obs=0.0, dt=0.01)
         assert abs(zeta_high) >= abs(zeta_low)
 
-    def test_lr_rejects_non_positive_values(self):
+    def test_lr_rejects_non_positive_values(self) -> None:
         for lr in (0.0, -1.0):
             try:
                 agent = PyActiveInferenceAgent(n_hidden=4, target_r=0.5, lr=lr)
@@ -159,14 +159,14 @@ class TestLearningRateBehaviour:
 
 
 class TestPhaseVectorControl:
-    def test_control_accepts_phase_vector(self):
+    def test_control_accepts_phase_vector(self) -> None:
         agent = PyActiveInferenceAgent(n_hidden=4, target_r=0.5, lr=1.0)
         phases = np.linspace(0.0, 2.0 * np.pi, 8, endpoint=False)
         zeta, psi = agent.control(phases=phases)
         assert np.isfinite(zeta)
         assert np.isfinite(psi)
 
-    def test_non_contiguous_phases_match_contiguous(self):
+    def test_non_contiguous_phases_match_contiguous(self) -> None:
         """A strided view must not silently degrade to an empty slice."""
         agent_strided = PyActiveInferenceAgent(n_hidden=4, target_r=0.5, lr=1.0)
         agent_contig = PyActiveInferenceAgent(n_hidden=4, target_r=0.5, lr=1.0)
@@ -182,7 +182,7 @@ class TestPhaseVectorControl:
 
 
 class TestStepwiseAdaptation:
-    def test_repeated_calls_produce_finite_output(self):
+    def test_repeated_calls_produce_finite_output(self) -> None:
         """Agent does not diverge under repeated invocation (stability)."""
         agent = PyActiveInferenceAgent(n_hidden=4, target_r=0.5, lr=1.0)
         rng = np.random.default_rng(42)
@@ -193,7 +193,7 @@ class TestStepwiseAdaptation:
             assert np.isfinite(zeta)
             assert np.isfinite(psi_out)
 
-    def test_zero_dt_is_handled(self):
+    def test_zero_dt_is_handled(self) -> None:
         """dt = 0 must not produce NaN/Inf (degenerate integration step)."""
         agent = PyActiveInferenceAgent(n_hidden=4, target_r=0.5, lr=1.0)
         zeta, psi = agent.control(r_obs=0.1, psi_obs=0.0, dt=0.0)
@@ -201,7 +201,7 @@ class TestStepwiseAdaptation:
         assert np.isfinite(psi)
 
     @pytest.mark.parametrize("dt", [-0.1, 0.0, 0.01, 10.0, float("inf"), float("nan")])
-    def test_invalid_dt_values_do_not_break_control(self, dt):
+    def test_invalid_dt_values_do_not_break_control(self, dt: float) -> None:
         """Non-physical dt values should not break the control contract."""
         agent = PyActiveInferenceAgent(n_hidden=4, target_r=0.5, lr=1.0)
         zeta, psi = agent.control(r_obs=0.5, psi_obs=0.0, dt=dt)
