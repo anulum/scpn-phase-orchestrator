@@ -45,6 +45,7 @@ from scpn_phase_orchestrator.monitor.transfer_entropy import (
     phase_transfer_entropy,
     transfer_entropy_matrix,
 )
+from tests._runtime_owners import NEEDS_KERNEL, owner_params
 from tests.transfer_entropy_oracle import oracle_phase_te, oracle_te_matrix
 from tests.typing_contracts import assert_precise_ndarray_hint
 
@@ -147,7 +148,7 @@ def test_backend_resolution_records_first_available_backend(
     assert calls == ["rust", "mojo", "julia", "go"]
 
 
-@pytest.mark.native_runtime
+@NEEDS_KERNEL
 def test_rust_loader_exposes_phase_and_matrix_kernels() -> None:
     """The compiled Rust loader's kernels match the counting oracle."""
     if "rust" not in te_mod.AVAILABLE_BACKENDS:
@@ -180,8 +181,9 @@ def test_julia_loader_exposes_direct_bridge_callables(
     assert kernels["te_matrix"] is te_matrix_julia
 
 
-@pytest.mark.native_runtime
-@pytest.mark.parametrize("owner", ["python", "rust", "mojo", "julia", "go"])
+@pytest.mark.parametrize(
+    "owner", owner_params(["python", "rust", "mojo", "julia", "go"])
+)
 def test_dispatch_calls_active_backend_with_contiguous_arrays(owner: str) -> None:
     """Strided inputs reach every named owner and still match the oracle."""
     if owner not in te_mod.AVAILABLE_BACKENDS:

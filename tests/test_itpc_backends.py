@@ -61,6 +61,7 @@ from scpn_phase_orchestrator.monitor.itpc import (
     compute_itpc,
     itpc_persistence,
 )
+from tests._runtime_owners import owner_params
 from tests.typing_contracts import assert_precise_ndarray_hint
 
 ItpcKernel = Callable[[np.ndarray, int, int], object]
@@ -564,7 +565,7 @@ def test_direct_loader_wrappers_return_backend_functions(
     assert float(persistence) == pytest.approx(math.fsum(pause) / len(pause), abs=atol)
 
 
-ITPC_OWNERS = ("python", "rust", "mojo", "julia", "go")
+ITPC_OWNERS = owner_params(("python", "rust", "mojo", "julia", "go"))
 
 
 def _require_owner(owner: str) -> None:
@@ -573,7 +574,6 @@ def _require_owner(owner: str) -> None:
         pytest.skip(f"{owner} unavailable")
 
 
-@pytest.mark.native_runtime
 @pytest.mark.parametrize("owner", ITPC_OWNERS)
 def test_each_owner_computes_itpc_from_fortran_order_trials(owner: str) -> None:
     """Each owner computes ITPC from Fortran-order trials as from C-order ones."""
@@ -593,7 +593,6 @@ def test_each_owner_computes_itpc_from_fortran_order_trials(owner: str) -> None:
     )
 
 
-@pytest.mark.native_runtime
 @pytest.mark.parametrize("owner", ITPC_OWNERS)
 def test_each_owner_averages_itpc_over_pause_indices(owner: str) -> None:
     """Each owner averages ITPC over in-range pause indices, repeats included."""
