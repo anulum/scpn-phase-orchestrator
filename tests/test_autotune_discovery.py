@@ -8,7 +8,8 @@
 
 from __future__ import annotations
 
-from typing import get_type_hints
+from collections.abc import Callable, Mapping
+from typing import Any, TypeVar, get_type_hints
 
 import numpy as np
 import pytest
@@ -33,6 +34,19 @@ from scpn_phase_orchestrator.binding.types import (
 )
 from tests.typing_contracts import assert_precise_ndarray_hint
 
+_R = TypeVar("_R")
+
+
+def _call(fn: Callable[..., _R], *args: object, **kwargs: object) -> _R:
+    """Call ``fn`` with arguments that are deliberately outside its types."""
+    return fn(*args, **kwargs)
+
+
+def _record(value: object) -> Mapping[str, Any]:
+    """Return a JSON audit block as a mapping, asserting that it is one."""
+    assert isinstance(value, Mapping)
+    return value
+
 
 def test_discover_time_series_structure_reports_json_ready_evidence() -> None:
     samples = np.asarray(
@@ -54,7 +68,7 @@ def test_discover_time_series_structure_reports_json_ready_evidence() -> None:
         columns=("source", "driven", "independent"),
         sample_period_s=0.1,
     )
-    audit_record = report.to_audit_record()
+    audit_record = _record(report.to_audit_record())
 
     assert audit_record["sindy"]["library"] == "affine_state_derivative"
     assert audit_record["sindy"]["active_terms"] > 0
@@ -104,8 +118,8 @@ def test_discover_time_series_structure_reports_phase_sindy_edges() -> None:
         columns=("theta_source", "theta_driven", "theta_aux"),
         sample_period_s=float(times[1] - times[0]),
     )
-    audit_record = report.to_audit_record()
-    phase_sindy = audit_record["phase_sindy"]
+    audit_record = _record(report.to_audit_record())
+    phase_sindy = _record(audit_record["phase_sindy"])
 
     assert phase_sindy["status"] == "fitted"
     assert phase_sindy["library"] == "kuramoto_sine_phase_differences"
@@ -148,7 +162,7 @@ def test_discover_time_series_structure_wires_phase_sindy_confidence() -> None:
     assert confidence.tier in VALID_VALIDATION_TIERS
     assert confidence.tier != VALIDATION_TIER_EXTERNALLY_VALIDATED
 
-    audit_confidence = report.to_audit_record()["phase_sindy_confidence"]
+    audit_confidence = _record(report.to_audit_record()["phase_sindy_confidence"])
     assert audit_confidence == confidence.to_audit_record()
     assert audit_confidence["tier"] != VALIDATION_TIER_EXTERNALLY_VALIDATED
 
@@ -224,7 +238,7 @@ def test_discover_time_series_structure_ranks_sindy_libraries() -> None:
         columns=("theta_source", "theta_driven", "theta_aux"),
         sample_period_s=float(times[1] - times[0]),
     )
-    selection = report.to_audit_record()["sindy_model_selection"]
+    selection = _record(report.to_audit_record()["sindy_model_selection"])
 
     assert selection["method"] == "residual_bic_with_sparsity_tie_break"
     assert selection["candidate_count"] == 2
@@ -254,7 +268,7 @@ def test_discover_time_series_structure_reports_lagged_graph_edges() -> None:
         columns=("driver", "response", "independent"),
         sample_period_s=0.1,
     )
-    learned_graph = report.to_audit_record()["learned_graph"]
+    learned_graph = _record(report.to_audit_record()["learned_graph"])
 
     assert learned_graph["status"] == "fitted"
     assert learned_graph["method"] == "lagged_sparse_linear_prediction"
@@ -278,14 +292,14 @@ def test_discover_time_series_structure_marks_non_phase_sindy_skipped() -> None:
         sample_period_s=1.0,
     )
 
-    phase_sindy = report.to_audit_record()["phase_sindy"]
+    phase_sindy = _record(report.to_audit_record()["phase_sindy"])
     assert phase_sindy["status"] == "skipped_non_phase_like"
     # A skipped fit must not fabricate a quality signal: no R^2, no samples,
     # no nodes were regressed.
     assert phase_sindy["r_squared"] is None
     assert phase_sindy["sample_count"] == 0
     assert phase_sindy["node_count"] == 0
-    selection = report.to_audit_record()["sindy_model_selection"]
+    selection = _record(report.to_audit_record()["sindy_model_selection"])
     assert selection["selected_library"] == "affine_state_derivative"
     assert selection["candidate_count"] == 2
     assert "phase_sindy_sparsity" not in report.confidence_evidence
@@ -335,8 +349,9 @@ def test_infer_sample_rate_rejects_degenerate_median_period(
     def zero_median(_values: object) -> float:
         return 0.0
 
-    monkeypatch.setattr(discovery_mod.np, "median", zero_median)
-    monkeypatch.setattr(discovery_mod.np, "allclose", lambda *_args, **_kwargs: True)
+    assert vars(discovery_mod)["np"] is np
+    monkeypatch.setattr(np, "median", zero_median)
+    monkeypatch.setattr(np, "allclose", lambda *_args, **_kwargs: True)
 
     with pytest.raises(ValueError, match="could not be inferred"):
         infer_sample_rate_from_time_column(rows, ("time", "signal"))
@@ -347,7 +362,7 @@ def test_discovery_config_rejects_boolean_and_complex_threshold_aliases() -> Non
         TimeSeriesDiscoveryConfig(correlation_threshold=True)
 
     with pytest.raises(ValueError, match="sindy_threshold"):
-        TimeSeriesDiscoveryConfig(sindy_threshold=1.0 + 0.0j)
+        _call(TimeSeriesDiscoveryConfig, sindy_threshold=1.0 + 0.0j)
 
     config = TimeSeriesDiscoveryConfig(
         correlation_threshold=np.float64(0.5),
@@ -403,7 +418,8 @@ def test_discover_time_series_structure_rejects_aliasing_inputs() -> None:
         )
 
     with pytest.raises(ValueError, match="signal column names must be strings"):
-        discover_time_series_structure(
+        _call(
+            discover_time_series_structure,
             np.asarray([[0.0], [1.0]], dtype=np.float64),
             columns=(1,),
             sample_period_s=1.0,
@@ -471,7 +487,8 @@ def test_discover_time_series_structure_rejects_malformed_tables(
     match: str,
 ) -> None:
     with pytest.raises(ValueError, match=match):
-        discover_time_series_structure(
+        _call(
+            discover_time_series_structure,
             samples,
             columns=columns,
             sample_period_s=sample_period_s,
@@ -486,7 +503,7 @@ def test_discover_time_series_structure_reports_skipped_graphs_for_one_signal() 
         columns=("constant",),
         sample_period_s=1.0,
     )
-    audit_record = report.to_audit_record()
+    audit_record = _record(report.to_audit_record())
 
     assert audit_record["correlation_graph"]["density"] == 0.0
     assert (
@@ -505,7 +522,7 @@ def test_discover_time_series_structure_reports_short_phase_and_learned_skips() 
         columns=("theta_a", "theta_b"),
         sample_period_s=1.0,
     )
-    audit_record = report.to_audit_record()
+    audit_record = _record(report.to_audit_record())
 
     assert audit_record["phase_sindy"]["status"] == "requires_at_least_three_samples"
     assert audit_record["learned_graph"]["status"] == "requires_at_least_three_samples"
@@ -531,7 +548,7 @@ def test_discover_time_series_structure_reports_under_sampled_phase_sindy_skip()
     )
 
     assert (
-        report.to_audit_record()["phase_sindy"]["status"]
+        _record(report.to_audit_record()["phase_sindy"])["status"]
         == "requires_at_least_one_derivative_sample_per_feature"
     )
 
@@ -551,7 +568,7 @@ def test_discover_time_series_structure_handles_constant_columns() -> None:
         columns=("constant_a", "constant_b"),
         sample_period_s=1.0,
     )
-    audit_record = report.to_audit_record()
+    audit_record = _record(report.to_audit_record())
 
     assert audit_record["correlation_graph"]["edge_count"] == 0
     assert audit_record["correlation_graph"]["density"] == 0.0
@@ -568,7 +585,7 @@ def test_infer_sample_rate_rejects_boolean_time_aliases() -> None:
     ]
 
     with pytest.raises(ValueError, match="non-numeric sample at row 0"):
-        infer_sample_rate_from_time_column(rows, ("time", "signal"))
+        _call(infer_sample_rate_from_time_column, rows, ("time", "signal"))
 
 
 def test_infer_sample_rate_accepts_real_time_values() -> None:
@@ -578,7 +595,8 @@ def test_infer_sample_rate_accepts_real_time_values() -> None:
         {"time": 1.0, "signal": "0.0"},
     ]
 
-    sample_rate_hz, inference = infer_sample_rate_from_time_column(
+    sample_rate_hz, inference = _call(
+        infer_sample_rate_from_time_column,
         rows,
         ("time", "signal"),
     )
@@ -626,7 +644,7 @@ def test_infer_sample_rate_rejects_malformed_time_columns(
     match: str,
 ) -> None:
     with pytest.raises(ValueError, match=match):
-        infer_sample_rate_from_time_column(rows, ("time", "signal"))
+        _call(infer_sample_rate_from_time_column, rows, ("time", "signal"))
 
 
 def test_infer_sample_rate_rejects_non_string_fieldnames() -> None:
@@ -636,7 +654,7 @@ def test_infer_sample_rate_rejects_non_string_fieldnames() -> None:
     ]
 
     with pytest.raises(ValueError, match="fieldnames must be strings"):
-        infer_sample_rate_from_time_column(rows, ("time", 1))
+        _call(infer_sample_rate_from_time_column, rows, ("time", 1))
 
 
 def test_report_cluster_coverage_handles_empty_column_set() -> None:
