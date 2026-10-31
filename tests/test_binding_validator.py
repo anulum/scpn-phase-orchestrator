@@ -33,17 +33,19 @@ from scpn_phase_orchestrator.binding.validator import (
 )
 
 
-def test_valid_spec_no_errors(sample_binding_spec):
+def test_valid_spec_no_errors(sample_binding_spec: BindingSpec) -> None:
     errors = validate_binding_spec(sample_binding_spec)
     assert errors == []
 
 
-def test_valid_spec_security_no_errors(sample_binding_spec):
+def test_valid_spec_security_no_errors(sample_binding_spec: BindingSpec) -> None:
     errors = validate_binding_spec_security(sample_binding_spec)
     assert errors == []
 
 
-def test_security_validation_rejects_executable_config_strings(sample_binding_spec):
+def test_security_validation_rejects_executable_config_strings(
+    sample_binding_spec: BindingSpec,
+) -> None:
     families = {
         "phys": OscillatorFamily(
             channel="P",
@@ -59,13 +61,13 @@ def test_security_validation_rejects_executable_config_strings(sample_binding_sp
     assert "__import__" in errors[0]
 
 
-def test_empty_name_error(sample_binding_spec):
+def test_empty_name_error(sample_binding_spec: BindingSpec) -> None:
     bad = replace(sample_binding_spec, name="")
     errors = validate_binding_spec(bad)
     assert any("name" in e for e in errors)
 
 
-def test_bad_version_format(sample_binding_spec):
+def test_bad_version_format(sample_binding_spec: BindingSpec) -> None:
     bad = replace(sample_binding_spec, version="1.0")
     errors = validate_binding_spec(bad)
     assert any("version" in e for e in errors)
@@ -75,25 +77,25 @@ def test_bad_version_format(sample_binding_spec):
     assert any("version" in e for e in errors2)
 
 
-def test_invalid_safety_tier(sample_binding_spec):
+def test_invalid_safety_tier(sample_binding_spec: BindingSpec) -> None:
     bad = replace(sample_binding_spec, safety_tier="military")
     errors = validate_binding_spec(bad)
     assert any("safety_tier" in e for e in errors)
 
 
-def test_negative_sample_period(sample_binding_spec):
+def test_negative_sample_period(sample_binding_spec: BindingSpec) -> None:
     bad = replace(sample_binding_spec, sample_period_s=-0.01)
     errors = validate_binding_spec(bad)
     assert any("sample_period_s" in e for e in errors)
 
 
-def test_nonfinite_sample_period_rejected(sample_binding_spec):
+def test_nonfinite_sample_period_rejected(sample_binding_spec: BindingSpec) -> None:
     bad = replace(sample_binding_spec, sample_period_s=float("nan"))
     errors = validate_binding_spec(bad)
     assert any("sample_period_s" in e and "finite" in e for e in errors)
 
 
-def test_invalid_channel_identifier(sample_binding_spec):
+def test_invalid_channel_identifier(sample_binding_spec: BindingSpec) -> None:
     bad_families = {
         "x": OscillatorFamily(
             channel="bad channel",
@@ -106,7 +108,7 @@ def test_invalid_channel_identifier(sample_binding_spec):
     assert any("channel" in e for e in errors)
 
 
-def test_bad_actuator_knob(sample_binding_spec):
+def test_bad_actuator_knob(sample_binding_spec: BindingSpec) -> None:
     bad_actuators = [
         ActuatorMapping(name="bad", knob="omega", scope="global", limits=(0.0, 1.0)),
     ]
@@ -116,8 +118,8 @@ def test_bad_actuator_knob(sample_binding_spec):
 
 
 def test_validator_reports_malformed_actuator_limits_from_bypassed_constructor(
-    sample_binding_spec,
-):
+    sample_binding_spec: BindingSpec,
+) -> None:
     actuator = object.__new__(ActuatorMapping)
     object.__setattr__(actuator, "name", "malformed")
     object.__setattr__(actuator, "knob", "K")
@@ -131,7 +133,7 @@ def test_validator_reports_malformed_actuator_limits_from_bypassed_constructor(
     assert any("limits must be finite and lo <= hi" in e for e in errors)
 
 
-def test_bad_boundary_severity(sample_binding_spec):
+def test_bad_boundary_severity(sample_binding_spec: BindingSpec) -> None:
     bad_bounds = [
         BoundaryDef(name="b", variable="R", lower=0.0, upper=1.0, severity="extreme"),
     ]
@@ -140,20 +142,22 @@ def test_bad_boundary_severity(sample_binding_spec):
     assert any("severity" in e for e in errors)
 
 
-def test_empty_layers_error(sample_binding_spec):
+def test_empty_layers_error(sample_binding_spec: BindingSpec) -> None:
     bad = replace(sample_binding_spec, layers=[])
     errors = validate_binding_spec(bad)
     assert any("at least one layer" in e for e in errors)
 
 
-def test_objective_references_missing_layer(sample_binding_spec):
+def test_objective_references_missing_layer(sample_binding_spec: BindingSpec) -> None:
     bad_obj = ObjectivePartition(good_layers=[0, 99], bad_layers=[])
     bad = replace(sample_binding_spec, objectives=bad_obj)
     errors = validate_binding_spec(bad)
     assert any("layer index 99" in e for e in errors)
 
 
-def test_layer_family_must_reference_declared_oscillator_family(sample_binding_spec):
+def test_layer_family_must_reference_declared_oscillator_family(
+    sample_binding_spec: BindingSpec,
+) -> None:
     bad = replace(
         sample_binding_spec,
         layers=[
@@ -176,30 +180,30 @@ def test_layer_family_must_reference_declared_oscillator_family(sample_binding_s
     )
 
 
-def test_control_period_must_be_positive(sample_binding_spec):
+def test_control_period_must_be_positive(sample_binding_spec: BindingSpec) -> None:
     bad = replace(sample_binding_spec, control_period_s=0.0)
     errors = validate_binding_spec(bad)
     assert any("control_period_s" in e and "> 0" in e for e in errors)
 
 
-def test_nonfinite_control_period_rejected(sample_binding_spec):
+def test_nonfinite_control_period_rejected(sample_binding_spec: BindingSpec) -> None:
     bad = replace(sample_binding_spec, control_period_s=float("inf"))
     errors = validate_binding_spec(bad)
     assert any("control_period_s" in e and "finite" in e for e in errors)
 
 
-def test_control_period_ge_sample_period(sample_binding_spec):
+def test_control_period_ge_sample_period(sample_binding_spec: BindingSpec) -> None:
     bad = replace(sample_binding_spec, sample_period_s=0.1, control_period_s=0.05)
     errors = validate_binding_spec(bad)
     assert any("control_period_s must be >= sample_period_s" in e for e in errors)
 
 
-def test_actuator_limits_ordering(sample_binding_spec):
+def test_actuator_limits_ordering(sample_binding_spec: BindingSpec) -> None:
     with pytest.raises(ValueError, match="limits require lower <= upper"):
         ActuatorMapping(name="inv", knob="K", scope="global", limits=(1.0, 0.0))
 
 
-def test_actuator_limits_must_be_finite(sample_binding_spec):
+def test_actuator_limits_must_be_finite(sample_binding_spec: BindingSpec) -> None:
     with pytest.raises(ValueError, match="limits must be finite reals"):
         ActuatorMapping(
             name="inf", knob="K", scope="global", limits=(float("inf"), 1.0)
@@ -211,7 +215,7 @@ def test_actuator_limits_must_be_finite(sample_binding_spec):
         )
 
 
-def test_empty_objectives_error(sample_binding_spec):
+def test_empty_objectives_error(sample_binding_spec: BindingSpec) -> None:
     bad_obj = ObjectivePartition(good_layers=[], bad_layers=[])
     bad = replace(sample_binding_spec, objectives=bad_obj)
     errors = validate_binding_spec(bad)
@@ -223,7 +227,7 @@ def test_empty_objectives_error(sample_binding_spec):
 # ---------------------------------------------------------------------------
 
 
-def test_all_valid_safety_tiers_accepted(sample_binding_spec):
+def test_all_valid_safety_tiers_accepted(sample_binding_spec: BindingSpec) -> None:
     """Every valid safety_tier must produce zero tier-related errors."""
     for tier in ["research", "clinical", "production", "consumer"]:
         spec = replace(sample_binding_spec, safety_tier=tier)
@@ -232,7 +236,7 @@ def test_all_valid_safety_tiers_accepted(sample_binding_spec):
         assert tier_errors == [], f"tier={tier!r} should be valid, got: {tier_errors}"
 
 
-def test_valid_channels_accepted(sample_binding_spec):
+def test_valid_channels_accepted(sample_binding_spec: BindingSpec) -> None:
     """Standard and named extension channels must pass validation."""
     for ch in ["P", "I", "S", "Q", "sensor_4", "edge-node"]:
         families = {
@@ -253,7 +257,7 @@ def test_valid_channels_accepted(sample_binding_spec):
         assert ch_errors == [], f"channel={ch!r} should be valid, got: {ch_errors}"
 
 
-def test_valid_knobs_accepted(sample_binding_spec):
+def test_valid_knobs_accepted(sample_binding_spec: BindingSpec) -> None:
     """All valid knobs (K, alpha, zeta, Psi) must pass validation."""
     for knob in ["K", "alpha", "zeta", "Psi"]:
         actuators = [
@@ -267,7 +271,7 @@ def test_valid_knobs_accepted(sample_binding_spec):
         assert knob_errors == [], f"knob={knob!r} should be valid, got: {knob_errors}"
 
 
-def test_multiple_errors_all_reported(sample_binding_spec):
+def test_multiple_errors_all_reported(sample_binding_spec: BindingSpec) -> None:
     """Multiple simultaneous violations must all be reported (not fail-fast)."""
     bad = replace(
         sample_binding_spec,
@@ -281,7 +285,7 @@ def test_multiple_errors_all_reported(sample_binding_spec):
     assert len(errors) >= 4, f"Should report ≥4 errors, got {len(errors)}: {errors}"
 
 
-def test_valid_version_formats(sample_binding_spec):
+def test_valid_version_formats(sample_binding_spec: BindingSpec) -> None:
     """Semver versions with all-numeric parts must pass."""
     for v in ["0.0.1", "1.0.0", "10.20.30"]:
         spec = replace(sample_binding_spec, version=v)
@@ -290,7 +294,7 @@ def test_valid_version_formats(sample_binding_spec):
         assert ver_errors == [], f"version={v!r} should be valid, got: {ver_errors}"
 
 
-def test_named_nchannel_must_be_declared(sample_binding_spec):
+def test_named_nchannel_must_be_declared(sample_binding_spec: BindingSpec) -> None:
     families = {
         "risk": OscillatorFamily(channel="Risk", extractor_type="event", config={}),
     }
@@ -301,7 +305,9 @@ def test_named_nchannel_must_be_declared(sample_binding_spec):
     assert any("named N-channel" in e and "Risk" in e for e in errors)
 
 
-def test_required_channel_must_have_runtime_evidence(sample_binding_spec):
+def test_required_channel_must_have_runtime_evidence(
+    sample_binding_spec: BindingSpec,
+) -> None:
     bad = replace(
         sample_binding_spec,
         channels={"Risk": ChannelSpec(role="risk", required=True)},
@@ -312,7 +318,9 @@ def test_required_channel_must_have_runtime_evidence(sample_binding_spec):
     assert any("required channel" in e and "Risk" in e for e in errors)
 
 
-def test_derived_channel_requires_derived_replay_semantics(sample_binding_spec):
+def test_derived_channel_requires_derived_replay_semantics(
+    sample_binding_spec: BindingSpec,
+) -> None:
     bad = replace(
         sample_binding_spec,
         channels={
@@ -331,7 +339,9 @@ def test_derived_channel_requires_derived_replay_semantics(sample_binding_spec):
     assert any("replay_semantics='derived'" in e for e in errors)
 
 
-def test_derived_replay_semantics_requires_sources(sample_binding_spec):
+def test_derived_replay_semantics_requires_sources(
+    sample_binding_spec: BindingSpec,
+) -> None:
     bad = replace(
         sample_binding_spec,
         channels={
@@ -348,7 +358,7 @@ def test_derived_replay_semantics_requires_sources(sample_binding_spec):
     assert any("requires derived_from" in e for e in errors)
 
 
-def test_derive_rule_requires_sources(sample_binding_spec):
+def test_derive_rule_requires_sources(sample_binding_spec: BindingSpec) -> None:
     bad = replace(
         sample_binding_spec,
         channels={
@@ -366,7 +376,7 @@ def test_derive_rule_requires_sources(sample_binding_spec):
     assert any("derive_rule requires derived_from" in e for e in errors)
 
 
-def test_invalid_replay_semantics_is_reported(sample_binding_spec):
+def test_invalid_replay_semantics_is_reported(sample_binding_spec: BindingSpec) -> None:
     bad = replace(
         sample_binding_spec,
         channels={
@@ -379,7 +389,9 @@ def test_invalid_replay_semantics_is_reported(sample_binding_spec):
     assert any("replay_semantics must be one of" in e and "log" in e for e in errors)
 
 
-def test_derived_channel_cannot_reference_itself(sample_binding_spec):
+def test_derived_channel_cannot_reference_itself(
+    sample_binding_spec: BindingSpec,
+) -> None:
     bad = replace(
         sample_binding_spec,
         channels={
@@ -398,7 +410,9 @@ def test_derived_channel_cannot_reference_itself(sample_binding_spec):
     assert any("derived_from must not include itself" in e for e in errors)
 
 
-def test_derived_channel_references_unknown_source(sample_binding_spec):
+def test_derived_channel_references_unknown_source(
+    sample_binding_spec: BindingSpec,
+) -> None:
     bad = replace(
         sample_binding_spec,
         channels={
@@ -420,7 +434,7 @@ def test_derived_channel_references_unknown_source(sample_binding_spec):
     )
 
 
-def test_channel_group_rejects_unknown_member(sample_binding_spec):
+def test_channel_group_rejects_unknown_member(sample_binding_spec: BindingSpec) -> None:
     bad = replace(
         sample_binding_spec,
         channel_groups={
@@ -434,7 +448,9 @@ def test_channel_group_rejects_unknown_member(sample_binding_spec):
     assert any("MissingRisk" in e for e in errors)
 
 
-def test_cross_channel_coupling_rejects_unknown_source_and_target(sample_binding_spec):
+def test_cross_channel_coupling_rejects_unknown_source_and_target(
+    sample_binding_spec: BindingSpec,
+) -> None:
     bad = replace(
         sample_binding_spec,
         cross_channel_couplings=[
@@ -455,7 +471,7 @@ def test_cross_channel_coupling_rejects_unknown_source_and_target(sample_binding
     assert any("UnknownTarget" in e for e in errors)
 
 
-def test_invalid_extractor_type_is_reported(sample_binding_spec):
+def test_invalid_extractor_type_is_reported(sample_binding_spec: BindingSpec) -> None:
     bad = replace(
         sample_binding_spec,
         oscillator_families={
@@ -471,7 +487,9 @@ def test_invalid_extractor_type_is_reported(sample_binding_spec):
     assert any("spectrogram" in e for e in errors)
 
 
-def test_boundary_lower_greater_than_upper_is_reported(sample_binding_spec):
+def test_boundary_lower_greater_than_upper_is_reported(
+    sample_binding_spec: BindingSpec,
+) -> None:
     boundary = object.__new__(BoundaryDef)
     object.__setattr__(boundary, "name", "unsafe_R")
     object.__setattr__(boundary, "variable", "R")
@@ -485,7 +503,9 @@ def test_boundary_lower_greater_than_upper_is_reported(sample_binding_spec):
     assert any("unsafe_R" in e and "must be <= upper" in e for e in errors)
 
 
-def test_actuator_scope_must_match_global_or_layer_index(sample_binding_spec):
+def test_actuator_scope_must_match_global_or_layer_index(
+    sample_binding_spec: BindingSpec,
+) -> None:
     bad = replace(
         sample_binding_spec,
         actuators=[
@@ -500,7 +520,7 @@ def test_actuator_scope_must_match_global_or_layer_index(sample_binding_spec):
     assert any("scope 'layer_99'" in e and "valid scopes" in e for e in errors)
 
 
-def test_imprint_model_bounds_are_reported(sample_binding_spec):
+def test_imprint_model_bounds_are_reported(sample_binding_spec: BindingSpec) -> None:
     bad = replace(
         sample_binding_spec,
         imprint_model=ImprintSpec(decay_rate=-0.01, saturation=0.0, modulates=["K"]),
@@ -512,7 +532,7 @@ def test_imprint_model_bounds_are_reported(sample_binding_spec):
     assert any("imprint_model.saturation must be finite and > 0" in e for e in errors)
 
 
-def test_imprint_model_fields_must_be_finite(sample_binding_spec):
+def test_imprint_model_fields_must_be_finite(sample_binding_spec: BindingSpec) -> None:
     bad = replace(
         sample_binding_spec,
         imprint_model=ImprintSpec(
@@ -527,7 +547,7 @@ def test_imprint_model_fields_must_be_finite(sample_binding_spec):
     assert any("imprint_model.saturation" in e for e in errors)
 
 
-def test_amplitude_model_bounds_are_reported(sample_binding_spec):
+def test_amplitude_model_bounds_are_reported(sample_binding_spec: BindingSpec) -> None:
     bad = replace(
         sample_binding_spec,
         amplitude=AmplitudeSpec(mu=float("inf"), epsilon=-0.01),
@@ -539,7 +559,7 @@ def test_amplitude_model_bounds_are_reported(sample_binding_spec):
     assert any("amplitude.epsilon must be finite and >= 0" in e for e in errors)
 
 
-def test_amplitude_fields_must_be_finite(sample_binding_spec):
+def test_amplitude_fields_must_be_finite(sample_binding_spec: BindingSpec) -> None:
     bad = replace(
         sample_binding_spec,
         amplitude=AmplitudeSpec(mu=1.0, epsilon=float("nan")),
@@ -560,7 +580,9 @@ class TestBoundaryInvertedLimitsValidation:
     """Verify that the binding validator catches inverted boundary limits
     and related constraint violations."""
 
-    def _make_spec_with_boundary(self, lower, upper, severity="hard"):
+    def _make_spec_with_boundary(
+        self, lower: float, upper: float, severity: str = "hard"
+    ) -> BindingSpec:
         bdef = BoundaryDef(
             name="test_bound",
             variable="R",
@@ -587,7 +609,7 @@ class TestBoundaryInvertedLimitsValidation:
             actuators=[],
         )
 
-    def test_inverted_boundary_reports_error(self):
+    def test_inverted_boundary_reports_error(self) -> None:
         """lower > upper must produce a validation error with both values reported."""
         from scpn_phase_orchestrator.binding.validator import validate_binding_spec
 
@@ -597,7 +619,7 @@ class TestBoundaryInvertedLimitsValidation:
             "lower (0.8)" in e and "must be <= upper (0.2)" in e for e in errors
         ), f"Expected inverted-limits error, got: {errors}"
 
-    def test_valid_boundary_no_errors(self):
+    def test_valid_boundary_no_errors(self) -> None:
         """Correct boundaries produce no validation errors related to limits."""
         from scpn_phase_orchestrator.binding.validator import validate_binding_spec
 
@@ -611,13 +633,13 @@ class TestBoundaryInvertedLimitsValidation:
 
 # Salvaged module-specific behavioural contracts from deleted mixed tests.
 class TestBindingValidatorExtras:
-    def test_boundary_lower_gt_upper(self, sample_binding_spec):
+    def test_boundary_lower_gt_upper(self, sample_binding_spec: BindingSpec) -> None:
         from scpn_phase_orchestrator.binding.types import BoundaryDef
 
         with pytest.raises(ValueError, match="lower.*upper"):
             BoundaryDef(name="inv", variable="R", lower=0.9, upper=0.1, severity="hard")
 
-    def test_actuator_scope_unknown(self, sample_binding_spec):
+    def test_actuator_scope_unknown(self, sample_binding_spec: BindingSpec) -> None:
         from scpn_phase_orchestrator.binding.types import ActuatorMapping
 
         bad_act = [
@@ -629,7 +651,7 @@ class TestBindingValidatorExtras:
         errors = validate_binding_spec(bad)
         assert any("scope" in e for e in errors)
 
-    def test_invalid_extractor_type(self, sample_binding_spec):
+    def test_invalid_extractor_type(self, sample_binding_spec: BindingSpec) -> None:
         from scpn_phase_orchestrator.binding.types import OscillatorFamily
 
         bad_fam = {
@@ -643,25 +665,25 @@ class TestBindingValidatorExtras:
         errors = validate_binding_spec(bad)
         assert any("extractor_type" in e for e in errors)
 
-    def test_imprint_negative_decay(self, sample_binding_spec):
+    def test_imprint_negative_decay(self, sample_binding_spec: BindingSpec) -> None:
         imprint = ImprintSpec(decay_rate=-0.1, saturation=1.0, modulates=["K"])
         bad = replace(sample_binding_spec, imprint_model=imprint)
         errors = validate_binding_spec(bad)
         assert any("decay_rate" in e for e in errors)
 
-    def test_imprint_zero_saturation(self, sample_binding_spec):
+    def test_imprint_zero_saturation(self, sample_binding_spec: BindingSpec) -> None:
         imprint = ImprintSpec(decay_rate=0.1, saturation=0.0, modulates=["K"])
         bad = replace(sample_binding_spec, imprint_model=imprint)
         errors = validate_binding_spec(bad)
         assert any("saturation" in e for e in errors)
 
-    def test_amplitude_non_finite_mu(self, sample_binding_spec):
+    def test_amplitude_non_finite_mu(self, sample_binding_spec: BindingSpec) -> None:
         amp = AmplitudeSpec(mu=float("inf"), epsilon=1.0)
         bad = replace(sample_binding_spec, amplitude=amp)
         errors = validate_binding_spec(bad)
         assert any("mu" in e for e in errors)
 
-    def test_amplitude_negative_epsilon(self, sample_binding_spec):
+    def test_amplitude_negative_epsilon(self, sample_binding_spec: BindingSpec) -> None:
         amp = AmplitudeSpec(mu=1.0, epsilon=-0.1)
         bad = replace(sample_binding_spec, amplitude=amp)
         errors = validate_binding_spec(bad)
