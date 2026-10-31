@@ -8,6 +8,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from typing import TypeVar
+
 import numpy as np
 import pytest
 
@@ -26,6 +29,13 @@ from scpn_phase_orchestrator.supervisor.policy import SupervisorPolicy
 from scpn_phase_orchestrator.supervisor.regimes import Regime, RegimeManager
 from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
 
+_R = TypeVar("_R")
+
+
+def _call(fn: Callable[..., _R], *args: object, **kwargs: object) -> _R:
+    """Call ``fn`` with arguments that are deliberately outside its types."""
+    return fn(*args, **kwargs)
+
 
 def _make_upde(rs: list[float]) -> UPDEState:
     return UPDEState(
@@ -36,7 +46,7 @@ def _make_upde(rs: list[float]) -> UPDEState:
     )
 
 
-def _protocol_net():
+def _protocol_net() -> PetriNet:
     places = [Place("warmup"), Place("nominal"), Place("cooldown"), Place("done")]
     transitions = [
         Transition(
@@ -60,7 +70,7 @@ def _protocol_net():
     return PetriNet(places, transitions)
 
 
-def _place_regime_map():
+def _place_regime_map() -> dict[str, str]:
     return {
         "warmup": "NOMINAL",
         "nominal": "NOMINAL",
@@ -69,7 +79,7 @@ def _place_regime_map():
     }
 
 
-def test_initial_regime():
+def test_initial_regime() -> None:
     adapter = PetriNetAdapter(
         _protocol_net(),
         Marking(tokens={"warmup": 1}),
@@ -78,7 +88,7 @@ def test_initial_regime():
     assert adapter._active_regime() == Regime.NOMINAL
 
 
-def test_step_no_transition():
+def test_step_no_transition() -> None:
     adapter = PetriNetAdapter(
         _protocol_net(),
         Marking(tokens={"warmup": 1}),
@@ -89,7 +99,7 @@ def test_step_no_transition():
     assert adapter.marking["warmup"] == 1
 
 
-def test_step_fires_start():
+def test_step_fires_start() -> None:
     adapter = PetriNetAdapter(
         _protocol_net(),
         Marking(tokens={"warmup": 1}),
@@ -101,7 +111,7 @@ def test_step_fires_start():
     assert adapter.marking["warmup"] == 0
 
 
-def test_full_protocol_sequence():
+def test_full_protocol_sequence() -> None:
     adapter = PetriNetAdapter(
         _protocol_net(),
         Marking(tokens={"warmup": 1}),
@@ -122,7 +132,7 @@ def test_full_protocol_sequence():
     assert adapter.marking["done"] == 1
 
 
-def test_event_bus_receives_petri_events():
+def test_event_bus_receives_petri_events() -> None:
     bus = EventBus()
     adapter = PetriNetAdapter(
         _protocol_net(),
@@ -136,7 +146,7 @@ def test_event_bus_receives_petri_events():
     assert bus.history[0].detail == "start"
 
 
-def test_no_event_when_no_transition():
+def test_no_event_when_no_transition() -> None:
     bus = EventBus()
     adapter = PetriNetAdapter(
         _protocol_net(),
@@ -148,7 +158,7 @@ def test_no_event_when_no_transition():
     assert bus.count == 0
 
 
-def test_invalid_regime_name():
+def test_invalid_regime_name() -> None:
     with pytest.raises(ValueError, match="unknown regime"):
         PetriNetAdapter(
             _protocol_net(),
@@ -166,8 +176,10 @@ def test_invalid_regime_name():
         ({"event_bus": object()}, "event_bus"),
     ],
 )
-def test_rejects_invalid_constructor_inputs(kwargs, match):
-    values = {
+def test_rejects_invalid_constructor_inputs(
+    kwargs: dict[str, object], match: str
+) -> None:
+    values: dict[str, object] = {
         "net": _protocol_net(),
         "initial_marking": Marking(tokens={"warmup": 1}),
         "place_to_regime": _place_regime_map(),
@@ -175,10 +187,10 @@ def test_rejects_invalid_constructor_inputs(kwargs, match):
     }
     values.update(kwargs)
     with pytest.raises(ValueError, match=match):
-        PetriNetAdapter(**values)
+        _call(PetriNetAdapter, **values)
 
 
-def test_rejects_mapping_for_unknown_place():
+def test_rejects_mapping_for_unknown_place() -> None:
     with pytest.raises(ValueError, match="unknown place"):
         PetriNetAdapter(
             _protocol_net(),
@@ -188,17 +200,17 @@ def test_rejects_mapping_for_unknown_place():
 
 
 @pytest.mark.parametrize("ctx", [None, [], {"stability_proxy": "0.8"}, {"R_0": True}])
-def test_step_rejects_invalid_context(ctx):
+def test_step_rejects_invalid_context(ctx: object) -> None:
     adapter = PetriNetAdapter(
         _protocol_net(),
         Marking(tokens={"warmup": 1}),
         _place_regime_map(),
     )
     with pytest.raises(ValueError, match="ctx"):
-        adapter.step(ctx)
+        _call(adapter.step, ctx)
 
 
-def test_highest_priority_regime_wins():
+def test_highest_priority_regime_wins() -> None:
     places = [Place("a"), Place("b")]
     net = PetriNet(places, [])
     adapter = PetriNetAdapter(
@@ -209,7 +221,7 @@ def test_highest_priority_regime_wins():
     assert adapter._active_regime() == Regime.CRITICAL
 
 
-def test_marking_property():
+def test_marking_property() -> None:
     adapter = PetriNetAdapter(
         _protocol_net(),
         Marking(tokens={"warmup": 1}),
@@ -218,13 +230,13 @@ def test_marking_property():
     assert adapter.marking["warmup"] == 1
 
 
-def test_net_property():
+def test_net_property() -> None:
     net = _protocol_net()
     adapter = PetriNetAdapter(net, Marking(), _place_regime_map())
     assert adapter.net is net
 
 
-def test_empty_marking_gives_nominal():
+def test_empty_marking_gives_nominal() -> None:
     adapter = PetriNetAdapter(
         _protocol_net(),
         Marking(),
@@ -233,7 +245,7 @@ def test_empty_marking_gives_nominal():
     assert adapter._active_regime() == Regime.NOMINAL
 
 
-def test_unmapped_place_defaults_nominal():
+def test_unmapped_place_defaults_nominal() -> None:
     places = [Place("unknown_place"), Place("mapped_place")]
     net = PetriNet(places, [])
     adapter = PetriNetAdapter(
@@ -244,7 +256,7 @@ def test_unmapped_place_defaults_nominal():
     assert adapter._active_regime() == Regime.NOMINAL
 
 
-def test_adapter_multiple_steps():
+def test_adapter_multiple_steps() -> None:
     adapter = PetriNetAdapter(
         _protocol_net(),
         Marking(tokens={"warmup": 1}),
@@ -255,7 +267,7 @@ def test_adapter_multiple_steps():
     assert adapter.marking["warmup"] == 1
 
 
-def test_case_insensitive_regime():
+def test_case_insensitive_regime() -> None:
     adapter = PetriNetAdapter(
         _protocol_net(),
         Marking(tokens={"warmup": 1}),
@@ -264,7 +276,7 @@ def test_case_insensitive_regime():
     assert adapter._active_regime() == Regime.NOMINAL
 
 
-def test_cooldown_place_to_recovery():
+def test_cooldown_place_to_recovery() -> None:
     adapter = PetriNetAdapter(
         _protocol_net(),
         Marking(tokens={"cooldown": 1}),
@@ -273,7 +285,7 @@ def test_cooldown_place_to_recovery():
     assert adapter._active_regime() == Regime.RECOVERY
 
 
-def test_step_increments():
+def test_step_increments() -> None:
     bus = EventBus()
     adapter = PetriNetAdapter(
         _protocol_net(),
@@ -287,7 +299,7 @@ def test_step_increments():
     assert bus.history[1].step == 2
 
 
-def test_degraded_regime_mapping():
+def test_degraded_regime_mapping() -> None:
     places = [Place("degraded_place")]
     net = PetriNet(places, [])
     adapter = PetriNetAdapter(
@@ -298,7 +310,7 @@ def test_degraded_regime_mapping():
     assert adapter._active_regime() == Regime.DEGRADED
 
 
-def test_multiple_marked_priority():
+def test_multiple_marked_priority() -> None:
     places = [Place("a"), Place("b"), Place("c")]
     net = PetriNet(places, [])
     adapter = PetriNetAdapter(
@@ -309,7 +321,7 @@ def test_multiple_marked_priority():
     assert adapter._active_regime() == Regime.RECOVERY
 
 
-def test_supervisor_fires_petri_transition():
+def test_supervisor_fires_petri_transition() -> None:
     """End-to-end: SupervisorPolicy → PetriNetAdapter → RegimeManager."""
     bus = EventBus()
     rm = RegimeManager(event_bus=bus)
@@ -322,7 +334,7 @@ def test_supervisor_fires_petri_transition():
     supervisor = SupervisorPolicy(rm, petri_adapter=adapter)
     upde = UPDEState(
         layers=[LayerState(R=0.8, psi=0.0)],
-        cross_layer_alignment=[[1.0]],
+        cross_layer_alignment=np.array([[1.0]]),
         stability_proxy=0.8,
         regime_id="nominal",
     )
@@ -334,22 +346,13 @@ def test_supervisor_fires_petri_transition():
     assert any(e.kind == "petri_transition" for e in bus.history)
 
 
-def _make_upde(rs: list[float]) -> UPDEState:
-    return UPDEState(
-        layers=[LayerState(R=r, psi=0.0) for r in rs],
-        cross_layer_alignment=np.zeros((len(rs), len(rs))),
-        stability_proxy=sum(rs) / max(len(rs), 1),
-        regime_id="test",
-    )
-
-
 # Pipeline wiring is proven by test_supervisor_fires_petri_transition above:
 # SupervisorPolicy → PetriNetAdapter → RegimeManager → EventBus.
 
 
 # Salvaged module-specific behavioural contracts from deleted mixed tests.
 class TestSupervisorPolicyPetriPath:
-    def test_petri_adapter_path(self):
+    def test_petri_adapter_path(self) -> None:
         from scpn_phase_orchestrator.monitor.boundaries import BoundaryState
         from scpn_phase_orchestrator.supervisor.petri_adapter import PetriNetAdapter
         from scpn_phase_orchestrator.supervisor.petri_net import (
