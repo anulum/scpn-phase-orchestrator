@@ -794,31 +794,26 @@ class TestOrderParameterEdgeCases:
 
 # Salvaged module-specific behavioural contracts from deleted mixed tests.
 class TestOrderParamsPythonPath:
-    def test_compute_order_parameter_python(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_compute_order_parameter_python(self) -> None:
         import scpn_phase_orchestrator.upde.order_params as op_mod
 
-        monkeypatch.setattr(op_mod, "_HAS_RUST", False)
         phases = np.zeros(8)
-        r, psi = op_mod.compute_order_parameter(phases)
+        r, psi = op_mod.compute_order_parameter(phases, backend="python")
         np.testing.assert_allclose(r, 1.0, atol=1e-10)
 
-    def test_compute_plv_python(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_compute_plv_python(self) -> None:
         import scpn_phase_orchestrator.upde.order_params as op_mod
 
-        monkeypatch.setattr(op_mod, "_HAS_RUST", False)
         a = np.zeros(10)
         b = np.zeros(10)
-        plv = op_mod.compute_plv(a, b)
+        plv = op_mod.compute_plv(a, b, backend="python")
         np.testing.assert_allclose(plv, 1.0, atol=1e-10)
 
-    def test_compute_plv_size_mismatch(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_compute_plv_size_mismatch(self) -> None:
         import scpn_phase_orchestrator.upde.order_params as op_mod
 
-        monkeypatch.setattr(op_mod, "_HAS_RUST", False)
         with pytest.raises(ValueError, match="equal-length"):
-            op_mod.compute_plv(np.zeros(5), np.zeros(3))
+            op_mod.compute_plv(np.zeros(5), np.zeros(3), backend="python")
 
 
 # ──────────────────────────────────────────────────────────────────────

@@ -82,14 +82,12 @@ class TestRustPythonParity:
 
         phases = np.array([0.0, 0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5])
 
-        # Python path
-        saved = op_mod._HAS_RUST
-        op_mod._HAS_RUST = False
-        r_py, psi_py = op_mod.compute_order_parameter(phases)
-        op_mod._HAS_RUST = saved
-
-        # Default path (Rust if available)
-        r_def, psi_def = op_mod.compute_order_parameter(phases)
+        # The default backend is chosen by a timing probe and _HAS_RUST is only
+        # a mirrored status, so both sides are named explicitly.
+        if "rust" not in op_mod.AVAILABLE_BACKENDS:
+            pytest.skip("Rust order-parameter backend is not available")
+        r_py, psi_py = op_mod.compute_order_parameter(phases, backend="python")
+        r_def, psi_def = op_mod.compute_order_parameter(phases, backend="rust")
 
         np.testing.assert_allclose(r_py, r_def, atol=1e-10)
         np.testing.assert_allclose(psi_py, psi_def, atol=1e-10)
@@ -184,14 +182,11 @@ class TestPerformanceBudgets:
 
         import scpn_phase_orchestrator.upde.order_params as op_mod
 
-        saved = op_mod._HAS_RUST
-        op_mod._HAS_RUST = False
         phases = np.random.default_rng(0).uniform(0, TWO_PI, 256)
 
         elapsed = self._time_fn(
-            lambda: op_mod.compute_order_parameter(phases),
+            lambda: op_mod.compute_order_parameter(phases, backend="python"),
         )
-        op_mod._HAS_RUST = saved
         print(f"  Python order_param(256): {elapsed * 1e6:.0f}μs")
         limit = 0.0005
         assert elapsed < limit, (
