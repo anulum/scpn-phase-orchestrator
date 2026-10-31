@@ -438,10 +438,15 @@ def test_rust_frequency_specificity_rejects_invalid_backend_output(
 def test_rust_frequency_specificity_rejects_plausible_wrong_output(
     monkeypatch,
 ) -> None:
-    """A plausible but wrong kernel result is refused against the reference."""
+    """A plausible but wrong kernel result is refused against the reference.
+
+    A defective kernel cannot be produced from a real build, so this negative
+    contract installs one. Without ``spo_kernel`` the module has no
+    ``_rust_freq_spec`` attribute, hence ``raising=False``.
+    """
     phases = _entrained_phases(n_trials=3, n_time=5)
     monkeypatch.setattr(evs_mod, "_HAS_RUST", True)
-    monkeypatch.setattr(evs_mod, "_rust_freq_spec", lambda *_args: 1.25)
+    monkeypatch.setattr(evs_mod, "_rust_freq_spec", lambda *_args: 1.25, raising=False)
 
     with pytest.raises(ValueError, match="diverged from exact reference"):
         EVSMonitor._frequency_specificity(phases, 12.0, 18.0)
