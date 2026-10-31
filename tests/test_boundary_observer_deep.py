@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import logging
 
+import pytest
+
 from scpn_phase_orchestrator.binding.types import BoundaryDef
 from scpn_phase_orchestrator.monitor.boundaries import BoundaryObserver, BoundaryState
 from scpn_phase_orchestrator.supervisor.events import EventBus, RegimeEvent
@@ -17,13 +19,23 @@ from scpn_phase_orchestrator.supervisor.events import EventBus, RegimeEvent
 # ── Helpers ─────────────────────────────────────────────────────────────
 
 
-def _soft_def(name: str, variable: str, lower=None, upper=None) -> BoundaryDef:
+def _soft_def(
+    name: str,
+    variable: str,
+    lower: float | None = None,
+    upper: float | None = None,
+) -> BoundaryDef:
     return BoundaryDef(
         name=name, variable=variable, lower=lower, upper=upper, severity="soft"
     )
 
 
-def _hard_def(name: str, variable: str, lower=None, upper=None) -> BoundaryDef:
+def _hard_def(
+    name: str,
+    variable: str,
+    lower: float | None = None,
+    upper: float | None = None,
+) -> BoundaryDef:
     return BoundaryDef(
         name=name, variable=variable, lower=lower, upper=upper, severity="hard"
     )
@@ -33,13 +45,13 @@ def _hard_def(name: str, variable: str, lower=None, upper=None) -> BoundaryDef:
 
 
 class TestBoundaryState:
-    def test_default_empty_lists(self):
+    def test_default_empty_lists(self) -> None:
         state = BoundaryState()
         assert state.violations == []
         assert state.soft_violations == []
         assert state.hard_violations == []
 
-    def test_mutable_lists_are_independent(self):
+    def test_mutable_lists_are_independent(self) -> None:
         """Two BoundaryState instances must not share list references."""
         a = BoundaryState()
         b = BoundaryState()
@@ -51,43 +63,43 @@ class TestBoundaryState:
 
 
 class TestSingleBoundary:
-    def test_lower_bound_exact_not_violated(self):
+    def test_lower_bound_exact_not_violated(self) -> None:
         """Value exactly at the lower bound is not a violation."""
         obs = BoundaryObserver([_soft_def("R_floor", "R", lower=0.2)])
         state = obs.observe({"R": 0.2})
         assert state.violations == []
 
-    def test_lower_bound_epsilon_below_violated(self):
+    def test_lower_bound_epsilon_below_violated(self) -> None:
         """Value just below the lower bound triggers violation."""
         obs = BoundaryObserver([_soft_def("R_floor", "R", lower=0.2)])
         state = obs.observe({"R": 0.19999})
         assert len(state.violations) == 1
 
-    def test_upper_bound_exact_not_violated(self):
+    def test_upper_bound_exact_not_violated(self) -> None:
         """Value exactly at the upper bound is not a violation."""
         obs = BoundaryObserver([_hard_def("T_cap", "T", upper=100.0)])
         state = obs.observe({"T": 100.0})
         assert state.violations == []
 
-    def test_upper_bound_epsilon_above_violated(self):
+    def test_upper_bound_epsilon_above_violated(self) -> None:
         """Value just above upper bound triggers violation."""
         obs = BoundaryObserver([_hard_def("T_cap", "T", upper=100.0)])
         state = obs.observe({"T": 100.001})
         assert len(state.violations) == 1
 
-    def test_lower_only_high_value_ok(self):
+    def test_lower_only_high_value_ok(self) -> None:
         """Lower-only bound: any value above lower is fine."""
         obs = BoundaryObserver([_soft_def("R_floor", "R", lower=0.2)])
         state = obs.observe({"R": 999.0})
         assert state.violations == []
 
-    def test_upper_only_low_value_ok(self):
+    def test_upper_only_low_value_ok(self) -> None:
         """Upper-only bound: any value below upper is fine."""
         obs = BoundaryObserver([_hard_def("T_cap", "T", upper=100.0)])
         state = obs.observe({"T": -999.0})
         assert state.violations == []
 
-    def test_no_bounds_defined(self):
+    def test_no_bounds_defined(self) -> None:
         """Boundary with both lower=None and upper=None never fires."""
         bdef = BoundaryDef(
             name="X", variable="X", lower=None, upper=None, severity="soft"
@@ -101,7 +113,7 @@ class TestSingleBoundary:
 
 
 class TestMultipleViolations:
-    def test_all_violated_simultaneously(self):
+    def test_all_violated_simultaneously(self) -> None:
         """Three boundaries, all violated at once."""
         defs = [
             _soft_def("R_floor", "R", lower=0.2),
@@ -114,19 +126,19 @@ class TestMultipleViolations:
         assert len(state.soft_violations) == 2
         assert len(state.hard_violations) == 1
 
-    def test_band_violation_below(self):
+    def test_band_violation_below(self) -> None:
         """Value below lower of a band boundary."""
         obs = BoundaryObserver([_soft_def("P_band", "P", lower=1.0, upper=10.0)])
         state = obs.observe({"P": 0.5})
         assert len(state.violations) == 1
 
-    def test_band_violation_above(self):
+    def test_band_violation_above(self) -> None:
         """Value above upper of a band boundary."""
         obs = BoundaryObserver([_soft_def("P_band", "P", lower=1.0, upper=10.0)])
         state = obs.observe({"P": 11.0})
         assert len(state.violations) == 1
 
-    def test_band_within_ok(self):
+    def test_band_within_ok(self) -> None:
         """Value within band → no violation."""
         obs = BoundaryObserver([_soft_def("P_band", "P", lower=1.0, upper=10.0)])
         state = obs.observe({"P": 5.0})
@@ -137,18 +149,18 @@ class TestMultipleViolations:
 
 
 class TestStepTracking:
-    def test_step_defaults_to_zero(self):
+    def test_step_defaults_to_zero(self) -> None:
         """Without explicit step, internal counter starts at 0."""
         obs = BoundaryObserver([])
         assert obs._step == 0
 
-    def test_step_updates_on_observe(self):
+    def test_step_updates_on_observe(self) -> None:
         """Passing step= to observe updates the internal counter."""
         obs = BoundaryObserver([])
         obs.observe({}, step=42)
         assert obs._step == 42
 
-    def test_step_persists_across_calls(self):
+    def test_step_persists_across_calls(self) -> None:
         """Step from previous call persists if not overridden."""
         obs = BoundaryObserver([])
         obs.observe({}, step=10)
@@ -160,21 +172,21 @@ class TestStepTracking:
 
 
 class TestEventBus:
-    def test_set_event_bus(self):
+    def test_set_event_bus(self) -> None:
         """set_event_bus stores the bus for later use."""
         obs = BoundaryObserver([])
         bus = EventBus()
         obs.set_event_bus(bus)
         assert obs._event_bus is bus
 
-    def test_no_event_bus_no_post(self):
+    def test_no_event_bus_no_post(self) -> None:
         """Without event bus, violations do not raise errors."""
         obs = BoundaryObserver([_soft_def("R_floor", "R", lower=0.2)])
         # Should not raise even with violations
         state = obs.observe({"R": 0.0})
         assert len(state.violations) == 1
 
-    def test_event_bus_receives_boundary_breach(self):
+    def test_event_bus_receives_boundary_breach(self) -> None:
         """When violations occur and event bus is set, a RegimeEvent is posted."""
         obs = BoundaryObserver([_hard_def("T_cap", "T", upper=100.0)])
         bus = EventBus()
@@ -188,7 +200,7 @@ class TestEventBus:
         assert event.step == 5
         assert "T_cap" in event.detail
 
-    def test_event_bus_not_called_when_no_violations(self):
+    def test_event_bus_not_called_when_no_violations(self) -> None:
         """No violations → event bus not called."""
         obs = BoundaryObserver([_hard_def("T_cap", "T", upper=100.0)])
         bus = EventBus()
@@ -198,7 +210,7 @@ class TestEventBus:
         obs.observe({"T": 50.0})
         assert events == []
 
-    def test_event_bus_detail_joins_multiple_violations(self):
+    def test_event_bus_detail_joins_multiple_violations(self) -> None:
         """Multiple violations are joined with '; ' in the event detail."""
         defs = [
             _soft_def("R_floor", "R", lower=0.2),
@@ -218,17 +230,17 @@ class TestEventBus:
 
 
 class TestViolationMessages:
-    def test_message_contains_variable_name(self):
+    def test_message_contains_variable_name(self) -> None:
         obs = BoundaryObserver([_soft_def("R_floor", "R", lower=0.2)])
         state = obs.observe({"R": 0.1})
         assert "R=" in state.violations[0]
 
-    def test_message_contains_boundary_name(self):
+    def test_message_contains_boundary_name(self) -> None:
         obs = BoundaryObserver([_soft_def("R_floor", "R", lower=0.2)])
         state = obs.observe({"R": 0.1})
         assert "R_floor" in state.violations[0]
 
-    def test_message_contains_bounds(self):
+    def test_message_contains_bounds(self) -> None:
         obs = BoundaryObserver([_soft_def("P_band", "P", lower=1.0, upper=10.0)])
         state = obs.observe({"P": 0.5})
         assert "1.0" in state.violations[0] or "1" in state.violations[0]
@@ -239,7 +251,9 @@ class TestViolationMessages:
 
 
 class TestUnknownSeverity:
-    def test_unknown_severity_logged_as_warning(self, caplog):
+    def test_unknown_severity_logged_as_warning(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
         """Unrecognised severity should log a warning and treat as hard."""
         bdef = BoundaryDef(
             name="X", variable="X", lower=0.0, upper=None, severity="banana"
@@ -251,7 +265,9 @@ class TestUnknownSeverity:
         assert len(state.hard_violations) == 1
         assert "banana" in caplog.text
 
-    def test_empty_severity_treated_as_hard(self, caplog):
+    def test_empty_severity_treated_as_hard(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
         """Empty string severity is unknown → hard."""
         bdef = BoundaryDef(name="Y", variable="Y", lower=0.0, upper=None, severity="")
         obs = BoundaryObserver([bdef])
@@ -265,12 +281,12 @@ class TestUnknownSeverity:
 
 
 class TestEmptyObserver:
-    def test_no_definitions_no_violations(self):
+    def test_no_definitions_no_violations(self) -> None:
         obs = BoundaryObserver([])
         state = obs.observe({"R": 0.0, "T": 999.0})
         assert state.violations == []
 
-    def test_empty_values_no_violations(self):
+    def test_empty_values_no_violations(self) -> None:
         obs = BoundaryObserver([_soft_def("R_floor", "R", lower=0.2)])
         state = obs.observe({})
         assert state.violations == []
@@ -280,17 +296,17 @@ class TestEmptyObserver:
 
 
 class TestSpecialValues:
-    def test_negative_value_below_negative_lower(self):
+    def test_negative_value_below_negative_lower(self) -> None:
         obs = BoundaryObserver([_hard_def("neg", "V", lower=-10.0, upper=-1.0)])
         state = obs.observe({"V": -20.0})
         assert len(state.violations) == 1
 
-    def test_zero_value_within_bounds(self):
+    def test_zero_value_within_bounds(self) -> None:
         obs = BoundaryObserver([_soft_def("zero_ok", "V", lower=-1.0, upper=1.0)])
         state = obs.observe({"V": 0.0})
         assert state.violations == []
 
-    def test_very_large_value(self):
+    def test_very_large_value(self) -> None:
         obs = BoundaryObserver([_hard_def("cap", "V", upper=1e10)])
         state = obs.observe({"V": 1e20})
         assert len(state.violations) == 1
