@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 import pytest
 
 from scpn_phase_orchestrator.supervisor.lineage import (
@@ -20,6 +22,39 @@ from scpn_phase_orchestrator.supervisor.lineage import (
 
 _PARENT_POLICY = {"K": 0.42, "alpha": 0.18, "zeta": 0.09}
 _REPLAYS = [{"replay_id": "nominal", "reward": 0.82, "safety_margin": 0.24}]
+
+# Calls that deliberately pass values outside the declared types.
+_inheritance_any: Callable[..., dict[str, object]] = (
+    build_intergenerational_policy_inheritance
+)
+_history_any: Callable[..., dict[str, object]] = (
+    build_intergenerational_policy_inheritance_history
+)
+_sandbox_any: Callable[..., dict[str, object]] = build_autopoietic_lineage_sandbox
+
+
+def _mapping(value: object) -> dict[str, object]:
+    """Narrow a manifest section to a mapping."""
+    assert isinstance(value, dict)
+    return value
+
+
+def _items(value: object) -> list[object]:
+    """Narrow a manifest list section to a list."""
+    assert isinstance(value, list | tuple)
+    return list(value)
+
+
+def _rows(value: object) -> list[dict[str, object]]:
+    """Narrow a manifest list section to a list of mappings."""
+    assert isinstance(value, list | tuple)
+    return [_mapping(row) for row in value]
+
+
+def _number(value: object) -> float:
+    """Narrow a manifest scalar to a real number."""
+    assert isinstance(value, int | float)
+    return value
 
 
 def _valid_lineage() -> dict[str, object]:
@@ -39,10 +74,8 @@ def _accepted_child(lineage: dict[str, object]) -> dict[str, object]:
     return next(c for c in candidates if c["status"] == "accepted_for_review")
 
 
-def _inherit(
-    lineage: dict[str, object], child: dict[str, object], **kwargs: object
-) -> dict[str, object]:
-    return build_intergenerational_policy_inheritance(
+def _inherit(lineage: object, child: object, **kwargs: object) -> dict[str, object]:
+    return _inheritance_any(
         lineage,
         child,
         signer_id="operator-review-key",
@@ -92,7 +125,7 @@ def test_autopoietic_lineage_sandbox_is_deterministic_and_review_only() -> None:
     assert first["schema"] == "scpn_autopoietic_lineage_sandbox_v1"
     assert first["child_budget"] == 3
     assert first["child_candidate_count"] == 3
-    assert first["accepted_child_count"] >= 1
+    assert _number(first["accepted_child_count"]) >= 1
     assert first["review_required"] is True
     assert first["execution_disabled"] is True
     assert first["live_merge_permitted"] is False
@@ -111,11 +144,11 @@ def test_autopoietic_lineage_sandbox_is_deterministic_and_review_only() -> None:
     assert all(
         candidate["execution_disabled"] is True
         and candidate["hot_patch_permitted"] is False
-        for candidate in first["child_candidates"]
+        for candidate in _rows(first["child_candidates"])
     )
     assert all(
         candidate["policy_diff"]
-        for candidate in first["child_candidates"]
+        for candidate in _rows(first["child_candidates"])
         if candidate["status"] == "accepted_for_review"
     )
 
@@ -132,8 +165,8 @@ def test_autopoietic_lineage_replay_corpus_is_curated_and_deterministic() -> Non
         "power_grid",
         "traffic_flow",
     }
-    assert all(row["reward"] >= 0.7 for row in first)
-    assert all(row["safety_margin"] >= 0.1 for row in first)
+    assert all(_number(row["reward"]) >= 0.7 for row in first)
+    assert all(_number(row["safety_margin"]) >= 0.1 for row in first)
     assert all(row["violations"] == [] for row in first)
 
 
@@ -156,20 +189,20 @@ def test_autopoietic_lineage_sandbox_rejects_unsafe_child_candidates() -> None:
 
     assert manifest["accepted_child_count"] == 0
     assert manifest["rejected_child_count"] == 2
-    assert {candidate["status"] for candidate in manifest["child_candidates"]} == {
-        "rejected"
-    }
+    assert {
+        candidate["status"] for candidate in _rows(manifest["child_candidates"])
+    } == {"rejected"}
     assert all(
-        "replay_reward_below_minimum" in candidate["blocked_reasons"]
-        for candidate in manifest["child_candidates"]
+        "replay_reward_below_minimum" in _items(candidate["blocked_reasons"])
+        for candidate in _rows(manifest["child_candidates"])
     )
     assert all(
-        "safety_margin_below_minimum" in candidate["blocked_reasons"]
-        for candidate in manifest["child_candidates"]
+        "safety_margin_below_minimum" in _items(candidate["blocked_reasons"])
+        for candidate in _rows(manifest["child_candidates"])
     )
     assert all(
-        "replay_violations_present" in candidate["blocked_reasons"]
-        for candidate in manifest["child_candidates"]
+        "replay_violations_present" in _items(candidate["blocked_reasons"])
+        for candidate in _rows(manifest["child_candidates"])
     )
 
 
@@ -200,7 +233,7 @@ def test_intergenerational_policy_inheritance_is_signed_and_review_only() -> Non
         minimum_replay_reward=0.7,
         minimum_safety_margin=0.1,
     )
-    child = lineage["child_candidates"][0]
+    child = _rows(lineage["child_candidates"])[0]
 
     first = build_intergenerational_policy_inheritance(
         lineage,
@@ -219,11 +252,13 @@ def test_intergenerational_policy_inheritance_is_signed_and_review_only() -> Non
 
     assert first == second
     assert first["schema"] == "scpn_intergenerational_policy_inheritance_v1"
-    assert first["signed_metadata"]["signer_id"] == "operator-review-key"
-    assert len(str(first["signed_metadata"]["signature_sha256"])) == 64
+    signed_metadata = _mapping(first["signed_metadata"])
+    assert signed_metadata["signer_id"] == "operator-review-key"
+    assert len(str(signed_metadata["signature_sha256"])) == 64
     assert len(str(first["inheritance_sha256"])) == 64
-    assert first["inherited_policy_genome"]["K"] == pytest.approx(0.44)
-    assert first["multi_objective_replay_fitness"]["fitness_score"] > 0.0
+    assert _mapping(first["inherited_policy_genome"])["K"] == pytest.approx(0.44)
+    fitness = _mapping(first["multi_objective_replay_fitness"])
+    assert _number(fitness["fitness_score"]) > 0.0
     assert first["hot_patch_review_required"] is True
     assert first["direct_hot_patch_permitted"] is False
     assert first["actuation_permitted"] is False
@@ -249,7 +284,7 @@ def test_intergenerational_policy_inheritance_history_preserves_review_records()
             signing_key="local-test-key",
             objective_weights={"reward": 0.6, "safety": 0.3, "simplicity": 0.1},
         )
-        for child in lineage["child_candidates"]
+        for child in _rows(lineage["child_candidates"])
         if child["status"] == "accepted_for_review"
     ]
 
@@ -265,8 +300,9 @@ def test_intergenerational_policy_inheritance_history_preserves_review_records()
     assert first["actuation_permitted"] is False
     assert first["operator_review_required"] is True
     assert len(str(first["history_sha256"])) == 64
-    assert [row["generation_index"] for row in first["child_rows"]] == [0, 1]
-    assert all(row["fitness_score"] > 0.0 for row in first["child_rows"])
+    child_rows = _rows(first["child_rows"])
+    assert [row["generation_index"] for row in child_rows] == [0, 1]
+    assert all(_number(row["fitness_score"]) > 0.0 for row in child_rows)
 
 
 def test_intergenerational_policy_inheritance_rejects_unreviewed_children() -> None:
@@ -289,7 +325,7 @@ def test_intergenerational_policy_inheritance_rejects_unreviewed_children() -> N
     with pytest.raises(ValueError, match="accepted_for_review"):
         build_intergenerational_policy_inheritance(
             lineage,
-            lineage["child_candidates"][0],
+            _rows(lineage["child_candidates"])[0],
             signer_id="operator-review-key",
             signing_key="local-test-key",
         )
@@ -306,7 +342,7 @@ def test_intergenerational_policy_inheritance_rejects_bad_signature_inputs() -> 
     with pytest.raises(ValueError, match="signer_id"):
         build_intergenerational_policy_inheritance(
             lineage,
-            lineage["child_candidates"][0],
+            _rows(lineage["child_candidates"])[0],
             signer_id="",
             signing_key="local-test-key",
         )
@@ -314,7 +350,7 @@ def test_intergenerational_policy_inheritance_rejects_bad_signature_inputs() -> 
     with pytest.raises(ValueError, match="signing_key"):
         build_intergenerational_policy_inheritance(
             lineage,
-            lineage["child_candidates"][0],
+            _rows(lineage["child_candidates"])[0],
             signer_id="operator-review-key",
             signing_key="",
         )
@@ -333,7 +369,9 @@ def test_intergenerational_policy_inheritance_rejects_bad_signature_inputs() -> 
         ({"child_candidates": "x"}, None, "child_candidates must be a non-empty list"),
     ],
 )
-def test_inheritance_rejects_corrupt_lineage_manifest(changes, drop, match) -> None:
+def test_inheritance_rejects_corrupt_lineage_manifest(
+    changes: dict[str, object] | None, drop: str | None, match: str
+) -> None:
     lineage = _valid_lineage()
     child = _accepted_child(lineage)
     corrupt = {k: v for k, v in lineage.items() if k != drop}
@@ -357,7 +395,9 @@ def test_inheritance_rejects_corrupt_lineage_manifest(changes, drop, match) -> N
         ({"policy_diff": ["x"]}, r"policy_diff\[0\] must be a mapping"),
     ],
 )
-def test_inheritance_rejects_corrupt_child_candidate(changes, match) -> None:
+def test_inheritance_rejects_corrupt_child_candidate(
+    changes: dict[str, object], match: str
+) -> None:
     lineage = _valid_lineage()
     child = {**_accepted_child(lineage), **changes}
     with pytest.raises(ValueError, match=match):
@@ -372,10 +412,12 @@ def test_inheritance_rejects_corrupt_child_candidate(changes, match) -> None:
         ({"child_value": float("nan")}, r"child_value must be finite"),
     ],
 )
-def test_inheritance_rejects_corrupt_policy_diff_entry(diff_changes, match) -> None:
+def test_inheritance_rejects_corrupt_policy_diff_entry(
+    diff_changes: dict[str, object], match: str
+) -> None:
     lineage = _valid_lineage()
     child = _accepted_child(lineage)
-    first_diff = {**child["policy_diff"][0], **diff_changes}
+    first_diff = {**_rows(child["policy_diff"])[0], **diff_changes}
     corrupt_child = {**child, "policy_diff": [first_diff]}
     with pytest.raises(ValueError, match=match):
         _inherit(lineage, corrupt_child)
@@ -389,7 +431,9 @@ def test_inheritance_rejects_corrupt_policy_diff_entry(diff_changes, match) -> N
         ({"reward": -0.1, "safety": 0.4, "simplicity": 0.1}, "must be non-negative"),
     ],
 )
-def test_inheritance_rejects_corrupt_objective_weights(weights, match) -> None:
+def test_inheritance_rejects_corrupt_objective_weights(
+    weights: object, match: str
+) -> None:
     lineage = _valid_lineage()
     child = _accepted_child(lineage)
     with pytest.raises(ValueError, match=match):
@@ -442,7 +486,9 @@ def _valid_history_inputs() -> tuple[dict[str, object], dict[str, object]]:
         ({"policy_diff": ["x"]}, True, "policy_diff entries must be mappings"),
     ],
 )
-def test_history_rejects_corrupt_inheritance_manifest(changes, rehash, match) -> None:
+def test_history_rejects_corrupt_inheritance_manifest(
+    changes: dict[str, object], rehash: bool, match: str
+) -> None:
     lineage, inheritance = _valid_history_inputs()
     corrupt = (
         _resigned(inheritance, **changes) if rehash else {**inheritance, **changes}
@@ -456,7 +502,7 @@ def test_history_rejects_corrupt_signed_metadata() -> None:
     bad_algorithm = _resigned(
         inheritance,
         signed_metadata={
-            **inheritance["signed_metadata"],
+            **_mapping(inheritance["signed_metadata"]),
             "signature_algorithm": "rsa",
         },
     )
@@ -466,7 +512,7 @@ def test_history_rejects_corrupt_signed_metadata() -> None:
     bad_signature = _resigned(
         inheritance,
         signed_metadata={
-            **inheritance["signed_metadata"],
+            **_mapping(inheritance["signed_metadata"]),
             "signature_sha256": "NOTHEX",
         },
     )
@@ -480,7 +526,7 @@ def test_history_rejects_corrupt_signed_metadata() -> None:
         ("not-a-mapping", "lineage_manifest must be a mapping"),
     ],
 )
-def test_inheritance_rejects_non_mapping_lineage(value, match) -> None:
+def test_inheritance_rejects_non_mapping_lineage(value: object, match: str) -> None:
     with pytest.raises(ValueError, match=match):
         _inherit(value, {})
 
@@ -507,7 +553,9 @@ def test_inheritance_rejects_non_mapping_parent_genome() -> None:
         ([{"policy_diff": ["x"]}], "lineage policy diff must be a mapping"),
     ],
 )
-def test_parent_genome_fallback_rejects_corrupt_candidates(candidates, match) -> None:
+def test_parent_genome_fallback_rejects_corrupt_candidates(
+    candidates: list[object], match: str
+) -> None:
     lineage = _valid_lineage()
     child = _accepted_child(lineage)
     corrupt = {k: v for k, v in lineage.items() if k != "parent_policy_genome"}
@@ -519,7 +567,7 @@ def test_parent_genome_fallback_rejects_corrupt_candidates(candidates, match) ->
 def test_history_rejects_non_mapping_inheritance() -> None:
     lineage = _valid_lineage()
     with pytest.raises(ValueError, match="inheritance_manifest must be a mapping"):
-        build_intergenerational_policy_inheritance_history(lineage, ["not-a-mapping"])
+        _history_any(lineage, ["not-a-mapping"])
 
 
 @pytest.mark.parametrize(
@@ -538,6 +586,8 @@ def test_history_rejects_non_mapping_inheritance() -> None:
         ),
     ],
 )
-def test_sandbox_rejects_malformed_inputs(parent_policy, replays, match) -> None:
+def test_sandbox_rejects_malformed_inputs(
+    parent_policy: object, replays: object, match: str
+) -> None:
     with pytest.raises(ValueError, match=match):
-        build_autopoietic_lineage_sandbox(parent_policy, replays)
+        _sandbox_any(parent_policy, replays)
