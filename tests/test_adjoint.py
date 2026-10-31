@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable, Sequence
+
 import numpy as np
 import pytest
 
@@ -18,6 +20,13 @@ from scpn_phase_orchestrator.upde.adjoint import (
 )
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
 
+_System = tuple[UPDEEngine, np.ndarray, np.ndarray, np.ndarray, np.ndarray]
+
+# The refusal tests pass deliberately invalid scalars, so they call the two
+# gradient implementations through unchecked aliases.
+_fd_unchecked: Callable[..., np.ndarray] = gradient_knm_fd
+_jax_unchecked: Callable[..., np.ndarray] = gradient_knm_jax
+
 
 def _offdiag(matrix: np.ndarray) -> np.ndarray:
     """Return the off-diagonal entries of a square matrix, flattened."""
@@ -25,7 +34,7 @@ def _offdiag(matrix: np.ndarray) -> np.ndarray:
 
 
 @pytest.fixture()
-def small_system():
+def small_system() -> _System:
     N = 4
     rng = np.random.default_rng(42)
     phases = rng.uniform(0, 2 * np.pi, N)
@@ -38,15 +47,15 @@ def small_system():
 
 
 class TestCostR:
-    def test_synchronized_low_cost(self):
+    def test_synchronized_low_cost(self) -> None:
         phases = np.zeros(8)
         assert cost_R(phases) == pytest.approx(0.0, abs=1e-10)
 
-    def test_uniform_high_cost(self):
+    def test_uniform_high_cost(self) -> None:
         phases = np.linspace(0, 2 * np.pi, 8, endpoint=False)
         assert cost_R(phases) > 0.9
 
-    def test_range(self):
+    def test_range(self) -> None:
         rng = np.random.default_rng(0)
         for _ in range(10):
             phases = rng.uniform(0, 2 * np.pi, 16)
@@ -55,22 +64,22 @@ class TestCostR:
 
 
 class TestGradientFD:
-    def test_shape(self, small_system):
+    def test_shape(self, small_system: _System) -> None:
         engine, phases, omegas, knm, alpha = small_system
         grad = gradient_knm_fd(engine, phases, omegas, knm, alpha, n_steps=10)
         assert grad.shape == knm.shape
 
-    def test_zero_diagonal(self, small_system):
+    def test_zero_diagonal(self, small_system: _System) -> None:
         engine, phases, omegas, knm, alpha = small_system
         grad = gradient_knm_fd(engine, phases, omegas, knm, alpha, n_steps=10)
         np.testing.assert_array_equal(np.diag(grad), 0.0)
 
-    def test_gradient_not_all_zero(self, small_system):
+    def test_gradient_not_all_zero(self, small_system: _System) -> None:
         engine, phases, omegas, knm, alpha = small_system
         grad = gradient_knm_fd(engine, phases, omegas, knm, alpha, n_steps=20)
         assert np.any(grad != 0.0)
 
-    def test_gradient_direction(self, small_system):
+    def test_gradient_direction(self, small_system: _System) -> None:
         engine, phases, omegas, knm, alpha = small_system
         grad = gradient_knm_fd(engine, phases, omegas, knm, alpha, n_steps=50)
         knm_new = knm - 0.1 * grad
@@ -79,7 +88,7 @@ class TestGradientFD:
         p_new = engine.run(phases, omegas, knm_new, 0, 0, alpha, 50)
         assert cost_R(p_new) <= cost_R(p_old) + 0.1
 
-    def test_zero_coupling(self):
+    def test_zero_coupling(self) -> None:
         N = 3
         engine = UPDEEngine(N, dt=0.01)
         phases = np.array([0.0, 1.0, 2.0])
@@ -95,13 +104,13 @@ class TestGradientFD:
     )
     def test_rejects_invalid_finite_difference_perturbation(
         self,
-        small_system,
-        epsilon,
-    ):
+        small_system: _System,
+        epsilon: object,
+    ) -> None:
         engine, phases, omegas, knm, alpha = small_system
 
         with pytest.raises(ValueError, match="epsilon"):
-            gradient_knm_fd(
+            _fd_unchecked(
                 engine,
                 phases,
                 omegas,
@@ -126,7 +135,7 @@ def _adjoint_payload() -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
 
 def _call_adjoint_with_payload(
     implementation: str,
-    payload: tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray],
+    payload: Sequence[np.ndarray],
 ) -> np.ndarray:
     """Call one adjoint implementation with a small validated payload."""
     phases, omegas, knm, alpha = payload
@@ -237,7 +246,7 @@ def test_adjoint_rejects_invalid_step_count(
 
     with pytest.raises(ValueError, match="n_steps"):
         if implementation == "fd":
-            gradient_knm_fd(
+            _fd_unchecked(
                 UPDEEngine(3, dt=0.01),
                 phases,
                 omegas,
@@ -246,7 +255,7 @@ def test_adjoint_rejects_invalid_step_count(
                 n_steps=n_steps,
             )
         else:
-            gradient_knm_jax(
+            _jax_unchecked(
                 phases,
                 omegas,
                 knm,
@@ -261,11 +270,11 @@ def test_jax_adjoint_rejects_invalid_timestep_before_backend_import(dt: object) 
     phases, omegas, knm, alpha = _adjoint_payload()
 
     with pytest.raises(ValueError, match="dt"):
-        gradient_knm_jax(phases, omegas, knm, alpha, n_steps=1, dt=dt)
+        _jax_unchecked(phases, omegas, knm, alpha, n_steps=1, dt=dt)
 
 
 class TestGradientJAX:
-    def test_jax_import_error(self):
+    def test_jax_import_error(self) -> None:
         from scpn_phase_orchestrator.upde.adjoint import gradient_knm_jax
 
         try:
@@ -283,7 +292,7 @@ class TestGradientJAX:
 class TestAdjointPipelineWiring:
     """Pipeline: gradient_knm_fd → optimised K_nm → engine → improved R."""
 
-    def test_gradient_optimisation_improves_r(self):
+    def test_gradient_optimisation_improves_r(self) -> None:
         """gradient_knm_fd → K_nm update → engine → R increases.
         Proves adjoint gradient feeds back into coupling optimisation."""
         from scpn_phase_orchestrator.upde.order_params import (
@@ -332,7 +341,7 @@ class TestGradientKnmJax:
     """The diffrax continuous-adjoint gradient path (KIMI B1 M3)."""
 
     @staticmethod
-    def _system(n: int = 5):
+    def _system(n: int = 5) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
         rng = np.random.default_rng(0)
         phases = rng.uniform(0.0, 2.0 * np.pi, size=n)
         omegas = rng.normal(0.0, 0.5, size=n)
@@ -342,7 +351,7 @@ class TestGradientKnmJax:
         alpha = np.zeros((n, n))
         return phases, omegas, knm, alpha
 
-    def test_shape_and_finite(self):
+    def test_shape_and_finite(self) -> None:
         pytest.importorskip("jax")
         pytest.importorskip("diffrax")
         phases, omegas, knm, alpha = self._system()
@@ -350,7 +359,7 @@ class TestGradientKnmJax:
         assert grad.shape == (5, 5)
         assert np.all(np.isfinite(grad))
 
-    def test_agrees_with_finite_difference(self):
+    def test_agrees_with_finite_difference(self) -> None:
         """Continuous adjoint tracks the discrete-Euler FD (zeta=psi=0).
 
         Measured on the calibration seed: cos>=0.99999, rel_norm~=0.003. The
@@ -369,7 +378,7 @@ class TestGradientKnmJax:
         assert cosine >= 0.999
         assert rel_norm < 0.05
 
-    def test_converges_to_fd_as_dt_shrinks(self):
+    def test_converges_to_fd_as_dt_shrinks(self) -> None:
         """The FD gap is O(dt): halving dt tightens the agreement.
 
         This distinguishes a genuine continuum correspondence from a
@@ -393,7 +402,7 @@ class TestGradientKnmJax:
         fine = rel(0.005, 200)
         assert fine < coarse
 
-    def test_does_not_leak_global_x64(self):
+    def test_does_not_leak_global_x64(self) -> None:
         """Regression lock: the solver must not flip ``jax_enable_x64``.
 
         The previous hand-rolled implementation mutated the process-global
