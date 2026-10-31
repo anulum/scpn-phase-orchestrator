@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Callable
 from typing import Any, get_type_hints
 
 import numpy as np
@@ -21,7 +22,7 @@ from tests.typing_contracts import assert_precise_ndarray_hint
 
 
 class TestPhaseDistanceMatrix:
-    def test_public_array_contracts_are_parameterised(self):
+    def test_public_array_contracts_are_parameterised(self) -> None:
         hints = (
             get_type_hints(phase_distance_matrix)["phases"],
             get_type_hints(phase_distance_matrix)["return"],
@@ -32,22 +33,22 @@ class TestPhaseDistanceMatrix:
             assert_precise_ndarray_hint(hint)
             assert "float64" in str(hint)
 
-    def test_symmetric(self):
+    def test_symmetric(self) -> None:
         phases = np.array([0.0, 1.0, 2.0])
         D = phase_distance_matrix(phases)
         np.testing.assert_allclose(D, D.T)
 
-    def test_diagonal_zero(self):
+    def test_diagonal_zero(self) -> None:
         phases = np.array([0.0, 1.0, 2.0, 3.0])
         D = phase_distance_matrix(phases)
         np.testing.assert_allclose(np.diag(D), 0.0)
 
-    def test_wrapping(self):
+    def test_wrapping(self) -> None:
         phases = np.array([0.1, 2 * np.pi - 0.1])
         D = phase_distance_matrix(phases)
         assert D[0, 1] < 0.3
 
-    def test_max_distance_is_pi(self):
+    def test_max_distance_is_pi(self) -> None:
         phases = np.array([0.0, np.pi])
         D = phase_distance_matrix(phases)
         assert abs(D[0, 1] - np.pi) < 1e-10
@@ -77,43 +78,43 @@ class TestPhaseDistanceMatrix:
 
 
 class TestNPE:
-    def test_synchronized_low_npe(self):
+    def test_synchronized_low_npe(self) -> None:
         phases = np.zeros(10)
         npe = compute_npe(phases)
         assert npe == 0.0
 
-    def test_spread_high_npe(self):
+    def test_spread_high_npe(self) -> None:
         phases = np.linspace(0, 2 * np.pi, 10, endpoint=False)
         npe = compute_npe(phases)
         assert npe > 0.5
 
-    def test_single_oscillator(self):
+    def test_single_oscillator(self) -> None:
         assert compute_npe(np.array([1.0])) == 0.0
 
-    def test_empty(self):
+    def test_empty(self) -> None:
         assert compute_npe(np.array([])) == 0.0
 
-    def test_two_in_phase(self):
+    def test_two_in_phase(self) -> None:
         npe = compute_npe(np.array([0.0, 0.0]))
         assert npe == 0.0
 
-    def test_two_anti_phase(self):
+    def test_two_anti_phase(self) -> None:
         npe = compute_npe(np.array([0.0, np.pi]))
         assert npe == 0.0  # only one lifetime → entropy 0
 
-    def test_range_zero_one(self):
+    def test_range_zero_one(self) -> None:
         rng = np.random.default_rng(42)
         for _ in range(10):
             phases = rng.uniform(0, 2 * np.pi, 16)
             npe = compute_npe(phases)
             assert 0.0 <= npe <= 1.0
 
-    def test_zero_radius_forces_zero_npe(self):
+    def test_zero_radius_forces_zero_npe(self) -> None:
         phases = np.linspace(0.0, np.pi, 12)
         npe = compute_npe(phases, max_radius=0.0)
         assert npe == 0.0
 
-    def test_more_sync_lower_npe(self):
+    def test_more_sync_lower_npe(self) -> None:
         rng = np.random.default_rng(42)
         spread = rng.uniform(0, 2 * np.pi, 20)
         tight = rng.normal(1.0, 0.1, 20) % (2 * np.pi)
@@ -121,7 +122,7 @@ class TestNPE:
         npe_tight = compute_npe(tight)
         assert npe_tight < npe_spread
 
-    def test_custom_max_radius(self):
+    def test_custom_max_radius(self) -> None:
         phases = np.linspace(0, 2 * np.pi, 8, endpoint=False)
         _npe_full = compute_npe(phases)
         npe_half = compute_npe(phases, max_radius=0.5)
@@ -160,7 +161,9 @@ class TestNPE:
             compute_npe(np.array([0.0, 1.0, 2.0]), max_radius=max_radius)
 
     def test_accepts_array_like_phase_buffer(self) -> None:
-        npe = compute_npe([0.0, 1.0, 2.0, 3.0], max_radius=1.5)
+        # The boundary accepts an array-like buffer, which is what this checks.
+        npe_unchecked: Callable[..., float] = compute_npe
+        npe = npe_unchecked([0.0, 1.0, 2.0, 3.0], max_radius=1.5)
 
         assert 0.0 <= npe <= 1.0
 
@@ -168,7 +171,7 @@ class TestNPE:
 class TestNPEPipelineWiring:
     """Pipeline: engine phases → NPE → topological disorder measure."""
 
-    def test_engine_synced_phases_low_npe(self):
+    def test_engine_synced_phases_low_npe(self) -> None:
         """UPDEEngine with strong coupling → synchronised → NPE low.
         Proves NPE measures disorder from engine output."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
@@ -388,20 +391,20 @@ class TestNPEPhysicsContracts:
     """Verify NPE (normalised phase entropy) satisfies
     information-theoretic bounds."""
 
-    def test_identical_phases_zero_entropy(self):
+    def test_identical_phases_zero_entropy(self) -> None:
         """All phases identical → no disorder → NPE = 0."""
         assert compute_npe(np.array([1.0, 1.0, 1.0])) == 0.0
 
-    def test_two_phases_zero(self):
+    def test_two_phases_zero(self) -> None:
         assert compute_npe(np.array([0.0, 1.0])) == 0.0
 
-    def test_uniform_phases_high_entropy(self):
+    def test_uniform_phases_high_entropy(self) -> None:
         """Uniformly spread phases → maximum disorder → NPE near 1."""
         phases = np.linspace(0, 2 * np.pi, 64, endpoint=False)
         npe = compute_npe(phases)
         assert npe > 0.8, f"Uniform phases should give NPE near 1, got {npe:.3f}"
 
-    def test_npe_bounded_zero_to_one(self):
+    def test_npe_bounded_zero_to_one(self) -> None:
         """NPE must always be in [0, 1]."""
         rng = np.random.default_rng(42)
         for _ in range(10):
@@ -541,7 +544,10 @@ class TestNPEBoundaryHardening:
                 return original_log(value)
             return 0.0
 
-        monkeypatch.setattr(npe_module.np, "log", fake_log)
+        # The module calls log through the shared numpy module, so patching
+        # numpy itself patches what the module resolves.
+        assert vars(npe_module)["np"] is np
+        monkeypatch.setattr(np, "log", fake_log)
 
         assert (
             npe_module._npe_from_distance_matrix(

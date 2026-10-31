@@ -1,6 +1,6 @@
 {
   "description": "mypy --strict error ceilings per tests/ file; maintained by tools/tests_typing_ratchet.py. Absent files must have no errors; ceilings may only fall.",
-  "total": 5491,
+  "total": 5469,
   "files": {
     "tests/apps/queuewaves/test_server.py": 23,
     "tests/test_action_projection.py": 51,
@@ -72,7 +72,6 @@
     "tests/test_nn_physics_validation_p7.py": 64,
     "tests/test_nn_physics_validation_p8.py": 27,
     "tests/test_nn_physics_validation_p9.py": 29,
-    "tests/test_npe.py": 22,
     "tests/test_oim.py": 26,
     "tests/test_openqasm_conformance.py": 31,
     "tests/test_order_params.py": 33,
