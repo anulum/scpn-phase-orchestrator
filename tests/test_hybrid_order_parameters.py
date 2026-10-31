@@ -10,9 +10,16 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Callable
+from typing import TYPE_CHECKING, cast
 
 import numpy as np
 import pytest
+
+if TYPE_CHECKING:
+    from scpn_phase_orchestrator.monitor.hybrid_order import (
+        HybridOrderParameterResult,
+    )
 
 
 def test_hybrid_order_product_vs_bell_entropy_ordering() -> None:
@@ -208,8 +215,9 @@ def test_hybrid_order_invalid_inputs_fail_closed(bad_input: dict[str, object]) -
     }
     defaults.update(bad_input)
 
+    compute_any: Callable[..., object] = compute_hybrid_entanglement_order_parameter
     with pytest.raises(ValueError):
-        compute_hybrid_entanglement_order_parameter(
+        compute_any(
             phases=defaults["phases"],
             quantum_state=defaults["quantum_state"],
             bipartition=defaults.get("bipartition"),
@@ -225,8 +233,11 @@ def test_hybrid_order_accepts_numpy_integer_qubit_contracts() -> None:
     result = compute_hybrid_entanglement_order_parameter(
         phases=np.array([0.0, 1.0], dtype=np.float64),
         quantum_state=np.array([1.0, 0.0, 0.0, 0.0], dtype=np.complex128),
-        qubit_count=np.int64(2),
-        bipartition=((np.int64(0),), (np.int64(1),)),
+        qubit_count=cast(int, np.int64(2)),
+        bipartition=cast(
+            tuple[tuple[int, ...], tuple[int, ...]],
+            ((np.int64(0),), (np.int64(1),)),
+        ),
     )
 
     assert result.qubit_count == 2
@@ -285,18 +296,21 @@ _PHASES = np.array([0.0, 1.0, 2.0, 3.0], dtype=np.float64)
 _TWO_QUBIT_STATE = np.array([1.0, 0.0, 0.0, 0.0], dtype=np.complex128)
 
 
-def _compute(**kwargs):
+def _compute(**kwargs: object) -> HybridOrderParameterResult:
     from scpn_phase_orchestrator.monitor.hybrid_order import (
         compute_hybrid_entanglement_order_parameter,
     )
 
-    params = {
+    compute_any: Callable[..., HybridOrderParameterResult] = (
+        compute_hybrid_entanglement_order_parameter
+    )
+    params: dict[str, object] = {
         "phases": _PHASES,
         "quantum_state": _TWO_QUBIT_STATE,
         "bipartition": ((0,), (1,)),
     }
     params.update(kwargs)
-    return compute_hybrid_entanglement_order_parameter(**params)
+    return compute_any(**params)
 
 
 @pytest.mark.parametrize(
@@ -310,7 +324,7 @@ def _compute(**kwargs):
         (np.array([0.0, np.inf, 1.0]), "must contain finite values"),
     ],
 )
-def test_hybrid_rejects_invalid_phases(phases, match) -> None:
+def test_hybrid_rejects_invalid_phases(phases: np.ndarray, match: str) -> None:
     with pytest.raises(ValueError, match=match):
         _compute(phases=phases)
 
@@ -332,7 +346,7 @@ def test_hybrid_rejects_invalid_phases(phases, match) -> None:
         (np.array([[1.0]]), "at least two amplitudes"),
     ],
 )
-def test_hybrid_rejects_invalid_quantum_state(state, match) -> None:
+def test_hybrid_rejects_invalid_quantum_state(state: np.ndarray, match: str) -> None:
     with pytest.raises(ValueError, match=match):
         _compute(quantum_state=state, bipartition=None)
 
@@ -350,7 +364,7 @@ def test_hybrid_rejects_invalid_quantum_state(state, match) -> None:
         (((0,), (0,)), "must be disjoint"),
     ],
 )
-def test_hybrid_rejects_invalid_bipartition(bipartition, match) -> None:
+def test_hybrid_rejects_invalid_bipartition(bipartition: object, match: str) -> None:
     with pytest.raises(ValueError, match=match):
         _compute(bipartition=bipartition)
 
@@ -362,7 +376,7 @@ def test_hybrid_rejects_invalid_bipartition(bipartition, match) -> None:
         ("bogus", "must be one of"),
     ],
 )
-def test_hybrid_rejects_invalid_backend(backend, match) -> None:
+def test_hybrid_rejects_invalid_backend(backend: str, match: str) -> None:
     with pytest.raises(ValueError, match=match):
         _compute(simulator_backend=backend)
 
@@ -374,7 +388,7 @@ def test_hybrid_rejects_invalid_backend(backend, match) -> None:
         (3, "inconsistent with quantum_state size"),
     ],
 )
-def test_hybrid_rejects_invalid_qubit_count(qubit_count, match) -> None:
+def test_hybrid_rejects_invalid_qubit_count(qubit_count: int, match: str) -> None:
     with pytest.raises(ValueError, match=match):
         _compute(qubit_count=qubit_count)
 
@@ -475,21 +489,23 @@ def test_hybrid_result_rejects_fabricated_evidence(
 ) -> None:
     from scpn_phase_orchestrator.monitor.hybrid_order import HybridOrderParameterResult
 
+    result_any: Callable[..., object] = HybridOrderParameterResult
     fields = _valid_result_fields()
     fields[field] = value
     with pytest.raises(ValueError, match=match):
-        HybridOrderParameterResult(**fields)  # type: ignore[arg-type]
+        result_any(**fields)
 
 
 def test_hybrid_result_rejects_contradictory_normalised_entropy() -> None:
     from scpn_phase_orchestrator.monitor.hybrid_order import HybridOrderParameterResult
 
+    result_any: Callable[..., object] = HybridOrderParameterResult
     fields = _valid_result_fields()
     fields["entanglement_entropy"] = 0.5
     fields["normalised_entanglement_entropy"] = 0.25
     fields["record_hash"] = "0" * 64
     with pytest.raises(ValueError, match="normalised"):
-        HybridOrderParameterResult(**fields)  # type: ignore[arg-type]
+        result_any(**fields)
 
 
 def test_hybrid_result_accepts_canonical_upper_half_circle_phase() -> None:
@@ -511,8 +527,9 @@ def test_hybrid_numeric_kernel_guards(monkeypatch: pytest.MonkeyPatch) -> None:
     from scpn_phase_orchestrator.monitor import hybrid_order
 
     density = np.eye(4, dtype=np.complex128) / 4.0
+    assert vars(hybrid_order)["np"] is np
     monkeypatch.setattr(
-        hybrid_order.np.linalg,
+        np.linalg,
         "eigvalsh",
         lambda _matrix: np.array([np.nan]),
     )
@@ -523,7 +540,7 @@ def test_hybrid_numeric_kernel_guards(monkeypatch: pytest.MonkeyPatch) -> None:
         hybrid_order._von_neumann_entropy(density)
 
     monkeypatch.setattr(
-        hybrid_order.np.linalg,
+        np.linalg,
         "eigvalsh",
         lambda _matrix: np.array([-1.0, -0.5]),
     )
