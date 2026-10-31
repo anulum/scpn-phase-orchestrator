@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import math
 import sys
+from collections.abc import Callable
+from typing import TYPE_CHECKING, TypeVar
 
 import numpy as np
 import pytest
@@ -40,52 +42,72 @@ from scpn_phase_orchestrator.nn.functional import (
     winfree_step,
 )
 
+if TYPE_CHECKING:
+    from jax import Array
+
 TWO_PI = 2.0 * math.pi
+_R = TypeVar("_R")
+
+
+def _call(fn: Callable[..., _R], *args: object, **kwargs: object) -> _R:
+    """Call ``fn`` with arguments that are deliberately outside its types."""
+    return fn(*args, **kwargs)
 
 
 @pytest.fixture()
-def uniform_phases():
-    return jnp.array([0.0, math.pi / 2, math.pi, 3 * math.pi / 2])
+def uniform_phases() -> Array:
+    value: Array = jnp.array([0.0, math.pi / 2, math.pi, 3 * math.pi / 2])
+    return value
 
 
 @pytest.fixture()
-def sync_phases():
-    return jnp.zeros(8)
+def sync_phases() -> Array:
+    value: Array = jnp.zeros(8)
+    return value
 
 
 @pytest.fixture()
-def omegas4():
-    return jnp.ones(4)
+def omegas4() -> Array:
+    value: Array = jnp.ones(4)
+    return value
 
 
 @pytest.fixture()
-def zero_coupling4():
-    return jnp.zeros((4, 4))
+def zero_coupling4() -> Array:
+    value: Array = jnp.zeros((4, 4))
+    return value
 
 
 @pytest.fixture()
-def uniform_coupling4():
+def uniform_coupling4() -> Array:
     K = jnp.ones((4, 4)) * 0.5
-    return K - jnp.diag(jnp.diag(K))
+    coupling: Array = K - jnp.diag(jnp.diag(K))
+    return coupling
 
 
 # ── Kuramoto Euler ──
 
 
 class TestKuramotoStep:
-    def test_uncoupled_advances_by_omega_dt(self, omegas4, zero_coupling4):
+    def test_uncoupled_advances_by_omega_dt(
+        self, omegas4: Array, zero_coupling4: Array
+    ) -> None:
         phases = jnp.zeros(4)
         dt = 0.01
         result = kuramoto_step(phases, omegas4, zero_coupling4, dt)
         np.testing.assert_allclose(result, jnp.full(4, 0.01), atol=1e-12)
 
-    def test_phases_wrapped_to_0_2pi(self, omegas4, zero_coupling4):
+    def test_phases_wrapped_to_0_2pi(
+        self, omegas4: Array, zero_coupling4: Array
+    ) -> None:
         phases = jnp.full(4, TWO_PI - 0.005)
         result = kuramoto_step(phases, omegas4, zero_coupling4, 0.01)
         assert jnp.all(result >= 0.0)
         assert jnp.all(result < TWO_PI + 1e-10)
 
-    def test_coupling_drives_sync(self, omegas4, uniform_coupling4):
+    def test_coupling_drives_sync(
+        self, omegas4: Array, uniform_coupling4: Array
+    ) -> None:
         phases = jnp.array([0.1, 0.3, 0.5, 0.7])
         r_before = float(order_parameter(phases))
         for _ in range(500):
@@ -98,12 +120,14 @@ class TestKuramotoStep:
 
 
 class TestKuramotoRK4:
-    def test_uncoupled_exact(self, omegas4, zero_coupling4):
+    def test_uncoupled_exact(self, omegas4: Array, zero_coupling4: Array) -> None:
         phases = jnp.zeros(4)
         result = kuramoto_rk4_step(phases, omegas4, zero_coupling4, 0.01)
         np.testing.assert_allclose(result, jnp.full(4, 0.01), atol=1e-12)
 
-    def test_rk4_more_accurate_than_euler(self, uniform_phases, uniform_coupling4):
+    def test_rk4_more_accurate_than_euler(
+        self, uniform_phases: Array, uniform_coupling4: Array
+    ) -> None:
         omegas = jnp.ones(4)
         dt = 0.05
         e1 = kuramoto_step(uniform_phases, omegas, uniform_coupling4, dt)
@@ -117,20 +141,22 @@ class TestKuramotoRK4:
 
 
 class TestKuramotoForward:
-    def test_trajectory_shape(self, omegas4, zero_coupling4):
+    def test_trajectory_shape(self, omegas4: Array, zero_coupling4: Array) -> None:
         phases = jnp.zeros(4)
         final, traj = kuramoto_forward(phases, omegas4, zero_coupling4, 0.01, 50)
         assert final.shape == (4,)
         assert traj.shape == (50, 4)
 
-    def test_euler_method(self, omegas4, zero_coupling4):
+    def test_euler_method(self, omegas4: Array, zero_coupling4: Array) -> None:
         phases = jnp.zeros(4)
         final, traj = kuramoto_forward(
             phases, omegas4, zero_coupling4, 0.01, 10, method="euler"
         )
         assert final.shape == (4,)
 
-    def test_final_matches_last_trajectory(self, omegas4, zero_coupling4):
+    def test_final_matches_last_trajectory(
+        self, omegas4: Array, zero_coupling4: Array
+    ) -> None:
         phases = jnp.zeros(4)
         final, traj = kuramoto_forward(phases, omegas4, zero_coupling4, 0.01, 20)
         np.testing.assert_allclose(final, traj[-1], atol=1e-12)
@@ -140,7 +166,9 @@ class TestKuramotoForward:
 
 
 class TestMaskedKuramoto:
-    def test_zero_mask_equals_uncoupled(self, omegas4, uniform_coupling4):
+    def test_zero_mask_equals_uncoupled(
+        self, omegas4: Array, uniform_coupling4: Array
+    ) -> None:
         phases = jnp.array([0.1, 0.5, 1.0, 1.5])
         mask = jnp.zeros((4, 4))
         dt = 0.01
@@ -148,7 +176,9 @@ class TestMaskedKuramoto:
         uncoupled = kuramoto_step(phases, omegas4, jnp.zeros((4, 4)), dt)
         np.testing.assert_allclose(masked, uncoupled, atol=1e-12)
 
-    def test_ones_mask_equals_full(self, uniform_phases, omegas4, uniform_coupling4):
+    def test_ones_mask_equals_full(
+        self, uniform_phases: Array, omegas4: Array, uniform_coupling4: Array
+    ) -> None:
         mask = jnp.ones((4, 4))
         dt = 0.01
         masked = kuramoto_step_masked(
@@ -157,7 +187,9 @@ class TestMaskedKuramoto:
         full = kuramoto_step(uniform_phases, omegas4, uniform_coupling4, dt)
         np.testing.assert_allclose(masked, full, atol=1e-12)
 
-    def test_rk4_masked_works(self, uniform_phases, omegas4, uniform_coupling4):
+    def test_rk4_masked_works(
+        self, uniform_phases: Array, omegas4: Array, uniform_coupling4: Array
+    ) -> None:
         mask = jnp.eye(4)
         dt = 0.01
         result = kuramoto_rk4_step_masked(
@@ -165,7 +197,7 @@ class TestMaskedKuramoto:
         )
         assert jnp.all(jnp.isfinite(result))
 
-    def test_forward_masked(self, omegas4, uniform_coupling4):
+    def test_forward_masked(self, omegas4: Array, uniform_coupling4: Array) -> None:
         phases = jnp.zeros(4)
         mask = jnp.ones((4, 4))
         final, traj = kuramoto_forward_masked(
@@ -179,7 +211,7 @@ class TestMaskedKuramoto:
 
 
 class TestWinfree:
-    def test_zero_coupling_matches_uncoupled_rotation(self):
+    def test_zero_coupling_matches_uncoupled_rotation(self) -> None:
         phases = jnp.array([0.1, 0.5, 1.0, 1.5])
         omegas = jnp.array([0.2, 0.4, 0.6, 0.8])
         dt = 0.25
@@ -188,27 +220,27 @@ class TestWinfree:
 
         np.testing.assert_allclose(result, (phases + dt * omegas) % TWO_PI, atol=1e-7)
 
-    def test_winfree_step_advances(self):
+    def test_winfree_step_advances(self) -> None:
         phases = jnp.array([0.1, 0.5, 1.0, 1.5])
         omegas = jnp.ones(4)
         result = winfree_step(phases, omegas, K=1.0, dt=0.01)
         assert jnp.all(jnp.isfinite(result))
         assert not jnp.allclose(result, phases)
 
-    def test_winfree_rk4_step(self):
+    def test_winfree_rk4_step(self) -> None:
         phases = jnp.array([0.1, 0.5, 1.0, 1.5])
         omegas = jnp.ones(4)
         result = winfree_rk4_step(phases, omegas, K=1.0, dt=0.01)
         assert jnp.all(jnp.isfinite(result))
 
-    def test_winfree_forward(self):
+    def test_winfree_forward(self) -> None:
         phases = jnp.zeros(4)
         omegas = jnp.ones(4)
         final, traj = winfree_forward(phases, omegas, K=1.0, dt=0.01, n_steps=20)
         assert final.shape == (4,)
         assert traj.shape == (20, 4)
 
-    def test_winfree_forward_euler_records_last_state(self):
+    def test_winfree_forward_euler_records_last_state(self) -> None:
         phases = jnp.array([0.0, 0.2, 0.4, 0.6])
         omegas = jnp.ones(4)
 
@@ -224,8 +256,8 @@ class TestWinfree:
 
 class TestSimplicial:
     def test_zero_sigma2_equals_kuramoto(
-        self, uniform_phases, omegas4, uniform_coupling4
-    ):
+        self, uniform_phases: Array, omegas4: Array, uniform_coupling4: Array
+    ) -> None:
         dt = 0.01
         simp = simplicial_step(
             uniform_phases, omegas4, uniform_coupling4, dt, sigma2=0.0
@@ -233,20 +265,24 @@ class TestSimplicial:
         kura = kuramoto_step(uniform_phases, omegas4, uniform_coupling4, dt)
         np.testing.assert_allclose(simp, kura, atol=1e-10)
 
-    def test_nonzero_sigma2_differs(self, omegas4, uniform_coupling4):
+    def test_nonzero_sigma2_differs(
+        self, omegas4: Array, uniform_coupling4: Array
+    ) -> None:
         phases = jnp.array([0.1, 0.3, 0.8, 1.5])
         dt = 0.01
         s0 = simplicial_step(phases, omegas4, uniform_coupling4, dt, sigma2=0.0)
         s5 = simplicial_step(phases, omegas4, uniform_coupling4, dt, sigma2=5.0)
         assert not jnp.allclose(s0, s5)
 
-    def test_rk4_simplicial(self, uniform_phases, omegas4, uniform_coupling4):
+    def test_rk4_simplicial(
+        self, uniform_phases: Array, omegas4: Array, uniform_coupling4: Array
+    ) -> None:
         result = simplicial_rk4_step(
             uniform_phases, omegas4, uniform_coupling4, 0.01, sigma2=1.0
         )
         assert jnp.all(jnp.isfinite(result))
 
-    def test_forward_simplicial(self, omegas4, uniform_coupling4):
+    def test_forward_simplicial(self, omegas4: Array, uniform_coupling4: Array) -> None:
         phases = jnp.zeros(4)
         final, traj = simplicial_forward(
             phases, omegas4, uniform_coupling4, 0.01, 10, sigma2=0.5
@@ -255,8 +291,8 @@ class TestSimplicial:
         assert traj.shape == (10, 4)
 
     def test_forward_simplicial_euler_sigma_zero_matches_kuramoto(
-        self, omegas4, uniform_coupling4
-    ):
+        self, omegas4: Array, uniform_coupling4: Array
+    ) -> None:
         phases = jnp.array([0.1, 0.3, 0.8, 1.5])
 
         simp_final, simp_traj = simplicial_forward(
@@ -280,7 +316,7 @@ class TestSimplicial:
 
 
 class TestStuartLandau:
-    def test_step_basic(self):
+    def test_step_basic(self) -> None:
         n = 4
         phases = jnp.array([0.0, 0.5, 1.0, 1.5])
         amps = jnp.ones(n) * 0.5
@@ -293,7 +329,7 @@ class TestStuartLandau:
         assert new_r.shape == (n,)
         assert jnp.all(new_r >= 0.0)
 
-    def test_rk4_step(self):
+    def test_rk4_step(self) -> None:
         n = 4
         phases = jnp.zeros(n)
         amps = jnp.ones(n)
@@ -305,7 +341,7 @@ class TestStuartLandau:
         assert jnp.all(jnp.isfinite(new_p))
         assert jnp.all(new_r >= 0.0)
 
-    def test_forward(self):
+    def test_forward(self) -> None:
         n = 4
         phases = jnp.zeros(n)
         amps = jnp.ones(n) * 0.1
@@ -321,7 +357,7 @@ class TestStuartLandau:
         assert tp.shape == (20, n)
         assert tr.shape == (20, n)
 
-    def test_forward_euler_records_final_phase_and_amplitude(self):
+    def test_forward_euler_records_final_phase_and_amplitude(self) -> None:
         n = 3
         phases = jnp.array([0.0, 0.2, 0.4])
         amps = jnp.ones(n) * 0.2
@@ -337,7 +373,7 @@ class TestStuartLandau:
         np.testing.assert_allclose(fp, tp[-1], atol=1e-12)
         np.testing.assert_allclose(fr, tr[-1], atol=1e-12)
 
-    def test_negative_amplitudes_are_clipped_to_physical_radius(self):
+    def test_negative_amplitudes_are_clipped_to_physical_radius(self) -> None:
         n = 2
         phases = jnp.zeros(n)
         amps = jnp.array([-0.5, 0.1])
@@ -350,7 +386,7 @@ class TestStuartLandau:
 
         assert jnp.all(new_r >= 0.0)
 
-    def test_amplitude_grows_when_mu_positive(self):
+    def test_amplitude_grows_when_mu_positive(self) -> None:
         n = 2
         phases = jnp.zeros(n)
         amps = jnp.ones(n) * 0.01
@@ -368,36 +404,36 @@ class TestStuartLandau:
 
 
 class TestOrderParameter:
-    def test_sync_phases_give_r_one(self, sync_phases):
+    def test_sync_phases_give_r_one(self, sync_phases: Array) -> None:
         r = float(order_parameter(sync_phases))
         assert abs(r - 1.0) < 1e-6
 
-    def test_uniform_phases_give_r_near_zero(self):
+    def test_uniform_phases_give_r_near_zero(self) -> None:
         n = 100
         phases = jnp.linspace(0, TWO_PI, n, endpoint=False)
         r = float(order_parameter(phases))
         assert r < 0.1
 
-    def test_trajectory_input(self):
+    def test_trajectory_input(self) -> None:
         traj = jnp.zeros((10, 8))
         r = order_parameter(traj)
         assert r.shape == (10,)
 
 
 class TestPLV:
-    def test_sync_trajectory_gives_plv_one(self):
+    def test_sync_trajectory_gives_plv_one(self) -> None:
         traj = jnp.zeros((50, 4))
         plv_mat = plv(traj)
         assert plv_mat.shape == (4, 4)
         np.testing.assert_allclose(plv_mat, jnp.ones((4, 4)), atol=1e-6)
 
-    def test_plv_symmetric(self):
+    def test_plv_symmetric(self) -> None:
         key = jax.random.PRNGKey(42)
         traj = jax.random.uniform(key, (50, 4)) * TWO_PI
         plv_mat = plv(traj)
         np.testing.assert_allclose(plv_mat, plv_mat.T, atol=1e-12)
 
-    def test_constant_phase_offset_is_locked(self):
+    def test_constant_phase_offset_is_locked(self) -> None:
         base = jnp.linspace(0.0, 1.0, 25)
         traj = jnp.stack([base, base + 0.75], axis=1)
 
@@ -410,12 +446,12 @@ class TestPLV:
 
 
 class TestSAF:
-    def test_laplacian_symmetric(self):
+    def test_laplacian_symmetric(self) -> None:
         K = jnp.array([[0.0, 1.0, 0.5], [1.0, 0.0, 0.3], [0.5, 0.3, 0.0]])
         L = coupling_laplacian(K)
         np.testing.assert_allclose(L, L.T, atol=1e-12)
 
-    def test_laplacian_row_sums_zero(self):
+    def test_laplacian_row_sums_zero(self) -> None:
         K = jnp.array([[0.0, 1.0], [1.0, 0.0]])
         L = coupling_laplacian(K)
         row_sums = jnp.sum(L, axis=1)
@@ -430,17 +466,19 @@ class TestSAF:
             (jnp.ones((2, 3)), "square"),
         ],
     )
-    def test_laplacian_rejects_non_real_or_malformed_coupling(self, K, match):
+    def test_laplacian_rejects_non_real_or_malformed_coupling(
+        self, K: Array, match: str
+    ) -> None:
         with pytest.raises(ValueError, match=match):
             coupling_laplacian(K)
 
-    def test_saf_order_parameter_in_range(self):
+    def test_saf_order_parameter_in_range(self) -> None:
         K = jnp.ones((4, 4)) * 5.0 - jnp.eye(4) * 5.0
         omegas = jnp.array([1.0, 1.1, 0.9, 1.05])
         r = float(saf_order_parameter(K, omegas))
         assert 0.0 <= r <= 1.0
 
-    def test_saf_identical_frequencies_are_perfectly_aligned(self):
+    def test_saf_identical_frequencies_are_perfectly_aligned(self) -> None:
         K = jnp.ones((4, 4)) - jnp.eye(4)
         omegas = jnp.ones(4) * 2.0
 
@@ -448,7 +486,7 @@ class TestSAF:
 
         assert r == pytest.approx(1.0, abs=1e-7)
 
-    def test_saf_cg_solver_matches_eigendecomposition_contract(self):
+    def test_saf_cg_solver_matches_eigendecomposition_contract(self) -> None:
         K = jnp.array(
             [
                 [0.0, 1.4, 0.6, 0.3],
@@ -464,7 +502,7 @@ class TestSAF:
 
         np.testing.assert_allclose(iterative, exact, atol=2e-3)
 
-    def test_saf_auto_uses_cg_path_above_size_limit(self):
+    def test_saf_auto_uses_cg_path_above_size_limit(self) -> None:
         K = jnp.ones((4, 4)) * 2.0 - jnp.eye(4) * 2.0
         omegas = jnp.array([1.0, 1.2, 0.9, 1.05])
 
@@ -473,7 +511,7 @@ class TestSAF:
 
         np.testing.assert_allclose(forced_auto, forced_cg, atol=1e-12)
 
-    def test_saf_rejects_unknown_solver(self):
+    def test_saf_rejects_unknown_solver(self) -> None:
         K = jnp.ones((3, 3)) - jnp.eye(3)
         omegas = jnp.array([1.0, 1.1, 0.9])
 
@@ -515,7 +553,9 @@ class TestSAF:
             ),
         ],
     )
-    def test_saf_rejects_non_real_or_malformed_public_inputs(self, K, omegas, match):
+    def test_saf_rejects_non_real_or_malformed_public_inputs(
+        self, K: Array, omegas: Array, match: str
+    ) -> None:
         with pytest.raises(ValueError, match=match):
             saf_order_parameter(K, omegas)
 
@@ -529,27 +569,29 @@ class TestSAF:
             ({"cg_maxiter": 0}, "cg_maxiter"),
         ],
     )
-    def test_saf_rejects_invalid_solver_controls(self, kwargs, match):
+    def test_saf_rejects_invalid_solver_controls(
+        self, kwargs: dict[str, object], match: str
+    ) -> None:
         K = jnp.ones((2, 2)) - jnp.eye(2)
         omegas = jnp.array([1.0, 1.1])
 
         with pytest.raises(ValueError, match=match):
-            saf_order_parameter(K, omegas, **kwargs)
+            _call(saf_order_parameter, K, omegas, **kwargs)
 
-    def test_saf_loss_negative_r(self):
+    def test_saf_loss_negative_r(self) -> None:
         K = jnp.ones((4, 4)) * 5.0 - jnp.eye(4) * 5.0
         omegas = jnp.array([1.0, 1.1, 0.9, 1.05])
         loss = float(saf_loss(K, omegas))
         assert loss <= 0.0
 
-    def test_saf_loss_with_budget(self):
+    def test_saf_loss_with_budget(self) -> None:
         K = jnp.ones((4, 4)) * 5.0 - jnp.eye(4) * 5.0
         omegas = jnp.array([1.0, 1.1, 0.9, 1.05])
         loss_no_budget = float(saf_loss(K, omegas, budget=0.0))
         loss_budget = float(saf_loss(K, omegas, budget=1.0, budget_weight=1.0))
         assert loss_budget > loss_no_budget
 
-    def test_saf_loss_zero_budget_disables_budget_penalty(self):
+    def test_saf_loss_zero_budget_disables_budget_penalty(self) -> None:
         K = jnp.ones((3, 3)) * 0.2 - jnp.eye(3) * 0.2
         omegas = jnp.array([1.0, 1.05, 0.95])
 
@@ -567,26 +609,28 @@ class TestSAF:
             ({"budget_weight": -0.1}, "budget_weight"),
         ],
     )
-    def test_saf_loss_rejects_invalid_budget_controls(self, kwargs, match):
+    def test_saf_loss_rejects_invalid_budget_controls(
+        self, kwargs: dict[str, object], match: str
+    ) -> None:
         K = jnp.ones((2, 2)) - jnp.eye(2)
         omegas = jnp.array([1.0, 1.1])
 
         with pytest.raises(ValueError, match=match):
-            saf_loss(K, omegas, **kwargs)
+            _call(saf_loss, K, omegas, **kwargs)
 
 
 # ── Differentiability (JAX grad) ──
 
 
 class TestDifferentiability:
-    def test_order_parameter_has_grad(self):
+    def test_order_parameter_has_grad(self) -> None:
         phases = jnp.array([0.1, 0.2, 0.3, 0.4])
         grad_fn = jax.grad(lambda p: order_parameter(p).real)
         g = grad_fn(phases)
         assert g.shape == (4,)
         assert jnp.all(jnp.isfinite(g))
 
-    def test_saf_loss_has_grad(self):
+    def test_saf_loss_has_grad(self) -> None:
         # Non-degenerate coupling to avoid repeated eigenvalues in eigh grad
         K = jnp.array(
             [
@@ -602,7 +646,7 @@ class TestDifferentiability:
         assert g.shape == (4, 4)
         assert jnp.all(jnp.isfinite(g))
 
-    def test_saf_cg_loss_has_grad(self):
+    def test_saf_cg_loss_has_grad(self) -> None:
         K = jnp.array(
             [
                 [0.0, 1.0, 0.5, 0.2],
@@ -622,7 +666,7 @@ class TestDifferentiability:
 
 
 class TestEmptyInputs:
-    def test_single_oscillator_kuramoto(self):
+    def test_single_oscillator_kuramoto(self) -> None:
         phases = jnp.array([1.0])
         omegas = jnp.array([1.0])
         K = jnp.zeros((1, 1))
@@ -630,16 +674,16 @@ class TestEmptyInputs:
         assert result.shape == (1,)
         assert jnp.all(jnp.isfinite(result))
 
-    def test_single_oscillator_order_parameter(self):
+    def test_single_oscillator_order_parameter(self) -> None:
         r = float(order_parameter(jnp.array([0.5])))
         assert abs(r - 1.0) < 1e-10
 
-    def test_two_oscillators_plv(self):
+    def test_two_oscillators_plv(self) -> None:
         traj = jnp.array([[0.0, 0.0], [0.1, 0.1]])
         plv_mat = plv(traj)
         assert plv_mat.shape == (2, 2)
 
-    def test_zero_coupling_no_interaction(self):
+    def test_zero_coupling_no_interaction(self) -> None:
         n = 8
         phases = jnp.linspace(0, 5.0, n)
         omegas = jnp.zeros(n)
@@ -647,7 +691,7 @@ class TestEmptyInputs:
         result = kuramoto_step(phases, omegas, K, 0.01)
         np.testing.assert_allclose(result, phases % TWO_PI, atol=1e-12)
 
-    def test_zero_dt_no_change(self):
+    def test_zero_dt_no_change(self) -> None:
         phases = jnp.array([0.1, 0.5, 1.0, 1.5])
         omegas = jnp.ones(4)
         K = jnp.ones((4, 4))
@@ -659,7 +703,7 @@ class TestEmptyInputs:
 
 
 class TestPerformance:
-    def test_kuramoto_step_budget_n64(self):
+    def test_kuramoto_step_budget_n64(self) -> None:
         """Single kuramoto_step(N=64) must stay inside the per-platform budget."""
         import time
 
@@ -682,7 +726,7 @@ class TestPerformance:
             f"> {budget * 1000:.0f}ms on {sys.platform}"
         )
 
-    def test_order_parameter_budget(self):
+    def test_order_parameter_budget(self) -> None:
         """order_parameter(N=64) must complete in <5ms (JAX per-call overhead)."""
         import time
 
