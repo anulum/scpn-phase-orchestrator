@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pytest
 
 jax = pytest.importorskip("jax", reason="JAX required")
@@ -28,16 +30,23 @@ from scpn_phase_orchestrator.nn.ude import (
     ude_kuramoto_forward,
 )
 
+if TYPE_CHECKING:
+    from equinox import Module as EqxModule
+    from jax import Array
+
+_Setup = tuple["Array", "Array", "Array", CouplingResidual]
+
 N = 4
 
 
-def _angular_distance(a: jax.Array, b: jax.Array) -> jax.Array:
+def _angular_distance(a: Array, b: Array) -> Array:
     """Wrap-aware distance between two phase vectors, in ``[0, π]``."""
-    return jnp.abs(jnp.angle(jnp.exp(1j * (a - b))))
+    distance: Array = jnp.abs(jnp.angle(jnp.exp(1j * (a - b))))
+    return distance
 
 
 @pytest.fixture()
-def setup():
+def setup() -> _Setup:
     key = jax.random.PRNGKey(7)
     k1, k2, k3, k4 = jax.random.split(key, 4)
     phases = jax.random.uniform(k1, (N,), maxval=2.0 * jnp.pi)
@@ -49,7 +58,7 @@ def setup():
 
 
 class TestForwardConvergence:
-    def test_matches_fine_euler_within_tol(self, setup):
+    def test_matches_fine_euler_within_tol(self, setup: _Setup) -> None:
         """Adaptive Tsit5 agrees with a fine explicit-Euler roll-out."""
         phases, omegas, coupling, residual = setup
         n_steps = 500
@@ -63,14 +72,14 @@ class TestForwardConvergence:
         )
         assert float(jnp.max(_angular_distance(euler_final, ode_final))) < 1e-2
 
-    def test_final_shape_and_range(self, setup):
+    def test_final_shape_and_range(self, setup: _Setup) -> None:
         phases, omegas, coupling, residual = setup
         final = solve_ude_adjoint(phases, omegas, coupling, residual, t1=0.5)
         assert final.shape == (N,)
         assert float(jnp.min(final)) >= 0.0
         assert float(jnp.max(final)) < 2.0 * jnp.pi
 
-    def test_unwrapped_output_can_exceed_two_pi(self, setup):
+    def test_unwrapped_output_can_exceed_two_pi(self, setup: _Setup) -> None:
         """With ``wrap=False`` the raw integrated phase is returned."""
         phases, omegas, coupling, residual = setup
         wrapped = solve_ude_adjoint(phases, omegas, coupling, residual, t1=2.0)
@@ -81,7 +90,7 @@ class TestForwardConvergence:
 
 
 class TestTrajectory:
-    def test_saveat_returns_trajectory(self, setup):
+    def test_saveat_returns_trajectory(self, setup: _Setup) -> None:
         phases, omegas, coupling, residual = setup
         ts = jnp.linspace(0.0, 1.0, 5)
         traj = solve_ude_adjoint(
@@ -91,28 +100,29 @@ class TestTrajectory:
 
 
 class TestSolversAndAdjoints:
-    def test_custom_solver_dopri5(self, setup):
+    def test_custom_solver_dopri5(self, setup: _Setup) -> None:
         phases, omegas, coupling, residual = setup
         final = solve_ude_adjoint(
             phases, omegas, coupling, residual, t1=0.5, solver=diffrax.Dopri5()
         )
         assert final.shape == (N,)
 
-    def test_default_checkpoint_adjoint_gradient_is_finite(self, setup):
+    def test_default_checkpoint_adjoint_gradient_is_finite(self, setup: _Setup) -> None:
         phases, omegas, coupling, residual = setup
 
-        def loss(coupling_matrix: jax.Array) -> jax.Array:
+        def loss(coupling_matrix: Array) -> Array:
             final = solve_ude_adjoint(phases, omegas, coupling_matrix, residual, t1=0.5)
-            return jnp.sum(jnp.sin(final))
+            total: Array = jnp.sum(jnp.sin(final))
+            return total
 
         grad = jax.grad(loss)(coupling)
         assert grad.shape == (N, N)
         assert bool(jnp.all(jnp.isfinite(grad)))
 
-    def test_backsolve_adjoint_gradient_is_finite(self, setup):
+    def test_backsolve_adjoint_gradient_is_finite(self, setup: _Setup) -> None:
         phases, omegas, coupling, residual = setup
 
-        def loss(coupling_matrix: jax.Array) -> jax.Array:
+        def loss(coupling_matrix: Array) -> Array:
             final = solve_ude_adjoint(
                 phases,
                 omegas,
@@ -121,47 +131,48 @@ class TestSolversAndAdjoints:
                 t1=0.5,
                 adjoint=diffrax.BacksolveAdjoint(),
             )
-            return jnp.sum(jnp.sin(final))
+            total: Array = jnp.sum(jnp.sin(final))
+            return total
 
         grad = jax.grad(loss)(coupling)
         assert bool(jnp.all(jnp.isfinite(grad)))
 
 
 class TestValidation:
-    def test_non_1d_phases_rejected(self, setup):
+    def test_non_1d_phases_rejected(self, setup: _Setup) -> None:
         _, omegas, coupling, residual = setup
         bad = jnp.zeros((N, 1))
         with pytest.raises(ValueError, match="one-dimensional"):
             solve_ude_adjoint(bad, omegas, coupling, residual, t1=0.5)
 
-    def test_non_positive_t1_rejected(self, setup):
+    def test_non_positive_t1_rejected(self, setup: _Setup) -> None:
         phases, omegas, coupling, residual = setup
         with pytest.raises(ValueError, match="t1 must be positive"):
             solve_ude_adjoint(phases, omegas, coupling, residual, t1=0.0)
 
-    def test_non_positive_dt0_rejected(self, setup):
+    def test_non_positive_dt0_rejected(self, setup: _Setup) -> None:
         phases, omegas, coupling, residual = setup
         with pytest.raises(ValueError, match="dt0 must be positive"):
             solve_ude_adjoint(phases, omegas, coupling, residual, t1=0.5, dt0=0.0)
 
-    def test_non_positive_rtol_rejected(self, setup):
+    def test_non_positive_rtol_rejected(self, setup: _Setup) -> None:
         phases, omegas, coupling, residual = setup
         with pytest.raises(ValueError, match="rtol and atol must be positive"):
             solve_ude_adjoint(phases, omegas, coupling, residual, t1=0.5, rtol=0.0)
 
-    def test_non_positive_atol_rejected(self, setup):
+    def test_non_positive_atol_rejected(self, setup: _Setup) -> None:
         phases, omegas, coupling, residual = setup
         with pytest.raises(ValueError, match="rtol and atol must be positive"):
             solve_ude_adjoint(phases, omegas, coupling, residual, t1=0.5, atol=-1.0)
 
-    def test_non_positive_max_steps_rejected(self, setup):
+    def test_non_positive_max_steps_rejected(self, setup: _Setup) -> None:
         phases, omegas, coupling, residual = setup
         with pytest.raises(ValueError, match="max_steps must be positive"):
             solve_ude_adjoint(phases, omegas, coupling, residual, t1=0.5, max_steps=0)
 
 
 class TestBackendSwitch:
-    def test_euler_default_is_unchanged(self):
+    def test_euler_default_is_unchanged(self) -> None:
         """The Euler default still returns the exact reproducible roll-out."""
         key = jax.random.PRNGKey(3)
         layer = UDEKuramotoLayer(n=4, n_steps=10, dt=0.02, hidden=8, key=key)
@@ -173,7 +184,7 @@ class TestBackendSwitch:
         assert jnp.array_equal(final, ref_final)
         assert jnp.array_equal(traj, ref_traj)
 
-    def test_diffrax_backend_shape_and_convergence(self):
+    def test_diffrax_backend_shape_and_convergence(self) -> None:
         """The diffrax backend samples the same grid and tracks fine Euler."""
         key = jax.random.PRNGKey(5)
         layer = UDEKuramotoLayer(n=4, n_steps=200, dt=1e-3, hidden=8, key=key)
@@ -183,7 +194,7 @@ class TestBackendSwitch:
         euler_final, _ = layer.forward_with_trajectory(phases)
         assert float(jnp.max(_angular_distance(final, euler_final))) < 1e-2
 
-    def test_invalid_backend_rejected(self):
+    def test_invalid_backend_rejected(self) -> None:
         key = jax.random.PRNGKey(7)
         layer = UDEKuramotoLayer(n=3, n_steps=5, dt=0.02, hidden=4, key=key)
         phases = jnp.zeros(3)
@@ -192,7 +203,7 @@ class TestBackendSwitch:
 
 
 class TestCheckpointedAdjointTrainingPath:
-    def test_diffrax_training_reduces_loss(self):
+    def test_diffrax_training_reduces_loss(self) -> None:
         """End-to-end: the checkpointed-adjoint path trains the UDE layer down."""
         data_key = jax.random.PRNGKey(11)
         k_true, omegas_true, phases0, observed = generate_kuramoto_data(
@@ -203,7 +214,8 @@ class TestCheckpointedAdjointTrainingPath:
             n=4, n_steps=12, dt=0.05, hidden=8, key=jax.random.PRNGKey(12)
         )
 
-        def loss_fn(model: UDEKuramotoLayer) -> jax.Array:
+        def loss_fn(model: EqxModule) -> Array:
+            assert isinstance(model, UDEKuramotoLayer)
             return trajectory_loss(model, phases0, observed, backend="diffrax")
 
         initial = float(loss_fn(layer))
@@ -211,7 +223,7 @@ class TestCheckpointedAdjointTrainingPath:
         assert len(history) == 25
         assert history[-1] < initial
 
-    def test_trajectory_loss_euler_backend_matches_direct_call(self):
+    def test_trajectory_loss_euler_backend_matches_direct_call(self) -> None:
         """The default backend leaves ``trajectory_loss`` byte-for-byte."""
         data_key = jax.random.PRNGKey(21)
         _, _, phases0, observed = generate_kuramoto_data(
@@ -226,7 +238,7 @@ class TestCheckpointedAdjointTrainingPath:
 
 
 class TestStiffnessGuard:
-    def test_max_steps_exhaustion_raises_by_default(self, setup):
+    def test_max_steps_exhaustion_raises_by_default(self, setup: _Setup) -> None:
         """A solve that cannot reach ``t1`` within ``max_steps`` raises."""
         phases, omegas, coupling, residual = setup
         with pytest.raises(RuntimeError):
@@ -234,7 +246,7 @@ class TestStiffnessGuard:
                 phases, omegas, coupling, residual, t1=5.0, dt0=1e-3, max_steps=1
             )
 
-    def test_throw_false_recovers_the_solution(self, setup):
+    def test_throw_false_recovers_the_solution(self, setup: _Setup) -> None:
         """``throw=False`` returns the (incomplete) solution instead of raising."""
         phases, omegas, coupling, residual = setup
         out = solve_ude_adjoint(
@@ -251,7 +263,7 @@ class TestStiffnessGuard:
 
 
 class TestLazyExport:
-    def test_symbol_resolves_through_package(self):
+    def test_symbol_resolves_through_package(self) -> None:
         from scpn_phase_orchestrator import nn
 
         assert nn.solve_ude_adjoint is solve_ude_adjoint
