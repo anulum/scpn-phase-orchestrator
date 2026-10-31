@@ -10,7 +10,8 @@ from __future__ import annotations
 
 import io
 import json
-from typing import get_type_hints
+from collections.abc import Callable, Mapping
+from typing import TypeVar, get_type_hints
 from unittest.mock import MagicMock, patch
 from urllib.error import URLError
 
@@ -20,35 +21,55 @@ import pytest
 from scpn_phase_orchestrator.adapters.prometheus import PrometheusAdapter
 from tests.typing_contracts import assert_precise_ndarray_hint
 
+_R = TypeVar("_R")
 
-def _mock_response(body: dict):
-    data = json.dumps(body).encode()
-    resp = io.BytesIO(data)
-    resp.status = 200
-    resp.__enter__ = lambda s: s
-    resp.__exit__ = lambda s, *a: None
-    resp.read = lambda: data
-    return resp
+
+def _call(fn: Callable[..., _R], *args: object, **kwargs: object) -> _R:
+    """Call ``fn`` with arguments that are deliberately outside its types."""
+    return fn(*args, **kwargs)
+
+
+class _FakeResponse(io.BytesIO):
+    """HTTP response stand-in whose read() always returns the whole body.
+
+    BytesIO already provides the context-manager protocol the adapter uses.
+    """
+
+    status: int
+
+    def __init__(self, data: bytes, status: int | None = None) -> None:
+        super().__init__(data)
+        self._data = data
+        if status is not None:
+            self.status = status
+
+    def read(self, size: int | None = -1, /) -> bytes:
+        """Return the full response body regardless of ``size``."""
+        return self._data
+
+
+def _mock_response(body: Mapping[str, object]) -> _FakeResponse:
+    return _FakeResponse(json.dumps(body).encode(), status=200)
 
 
 class TestPrometheusConfigValidation:
     @pytest.mark.parametrize("endpoint", ["", "localhost:9090", "file:///tmp/prom"])
-    def test_endpoint_must_be_http_url(self, endpoint: str):
+    def test_endpoint_must_be_http_url(self, endpoint: str) -> None:
         with pytest.raises(ValueError, match="endpoint"):
             PrometheusAdapter(endpoint)
 
     @pytest.mark.parametrize("timeout", [0.0, -1.0, float("inf"), float("nan"), True])
-    def test_timeout_must_be_finite_and_positive(self, timeout: float):
+    def test_timeout_must_be_finite_and_positive(self, timeout: float) -> None:
         with pytest.raises(ValueError, match="timeout"):
             PrometheusAdapter("http://localhost:9090", timeout=timeout)
 
-    def test_timeout_is_normalised_to_float(self):
+    def test_timeout_is_normalised_to_float(self) -> None:
         adapter = PrometheusAdapter("http://localhost:9090", timeout=1)
         assert adapter._timeout == 1.0
 
-    def test_timeout_rejects_non_numeric_object(self):
+    def test_timeout_rejects_non_numeric_object(self) -> None:
         with pytest.raises(ValueError, match="timeout"):
-            PrometheusAdapter("http://localhost:9090", timeout=object())
+            _call(PrometheusAdapter, "http://localhost:9090", timeout=object())
 
 
 class TestFetchMetric:
@@ -56,13 +77,15 @@ class TestFetchMetric:
         ("query", "start", "message"),
         [(1, 0.0, "query"), ("up", object(), "start")],
     )
-    def test_rejects_non_contract_query_inputs(self, query, start, message):
+    def test_rejects_non_contract_query_inputs(
+        self, query: object, start: object, message: str
+    ) -> None:
         adapter = PrometheusAdapter("http://localhost:9090")
 
         with pytest.raises(ValueError, match=message):
-            adapter.fetch_metric(query, start, 1.0, 0.1)
+            _call(adapter.fetch_metric, query, start, 1.0, 0.1)
 
-    def test_rejects_malformed_range_series_through_http_boundary(self):
+    def test_rejects_malformed_range_series_through_http_boundary(self) -> None:
         adapter = PrometheusAdapter("http://localhost:9090")
         body = {"status": "success", "data": {"result": [[]]}}
 
@@ -75,12 +98,12 @@ class TestFetchMetric:
         ):
             adapter.fetch_metric("up", 0.0, 1.0, 0.1)
 
-    def test_public_array_contracts_are_parameterised(self):
+    def test_public_array_contracts_are_parameterised(self) -> None:
         hint = get_type_hints(PrometheusAdapter.fetch_metric)["return"]
         assert_precise_ndarray_hint(hint)
         assert "float64" in str(hint)
 
-    def test_returns_values(self):
+    def test_returns_values(self) -> None:
         body = {
             "status": "success",
             "data": {"result": [{"values": [[1, "0.5"], [2, "0.7"], [3, "0.9"]]}]},
@@ -93,7 +116,7 @@ class TestFetchMetric:
             result = adapter.fetch_metric("up", 0, 100, 15)
         np.testing.assert_array_almost_equal(result, [0.5, 0.7, 0.9])
 
-    def test_empty_result(self):
+    def test_empty_result(self) -> None:
         body = {"status": "success", "data": {"result": []}}
         adapter = PrometheusAdapter("http://localhost:9090")
         with patch(
@@ -103,7 +126,7 @@ class TestFetchMetric:
             result = adapter.fetch_metric("missing", 0, 100, 15)
         assert len(result) == 0
 
-    def test_error_status(self):
+    def test_error_status(self) -> None:
         body = {"status": "error", "errorType": "bad_data"}
         adapter = PrometheusAdapter("http://localhost:9090")
         with (
@@ -115,7 +138,7 @@ class TestFetchMetric:
         ):
             adapter.fetch_metric("bad", 0, 100, 15)
 
-    def test_connection_error(self):
+    def test_connection_error(self) -> None:
         from urllib.error import URLError
 
         adapter = PrometheusAdapter("http://localhost:9090")
@@ -130,7 +153,7 @@ class TestFetchMetric:
 
 
 class TestFetchInstant:
-    def test_rejects_malformed_instant_series_through_http_boundary(self):
+    def test_rejects_malformed_instant_series_through_http_boundary(self) -> None:
         adapter = PrometheusAdapter("http://localhost:9090")
         body = {"status": "success", "data": {"result": [[]]}}
 
@@ -143,7 +166,7 @@ class TestFetchInstant:
         ):
             adapter.fetch_instant("up")
 
-    def test_returns_scalar(self):
+    def test_returns_scalar(self) -> None:
         body = {
             "status": "success",
             "data": {"result": [{"value": [1234, "42.5"]}]},
@@ -156,7 +179,7 @@ class TestFetchInstant:
             result = adapter.fetch_instant("up")
         assert result == 42.5
 
-    def test_empty_result_raises(self):
+    def test_empty_result_raises(self) -> None:
         body = {"status": "success", "data": {"result": []}}
         adapter = PrometheusAdapter("http://localhost:9090")
         with (
@@ -168,7 +191,7 @@ class TestFetchInstant:
         ):
             adapter.fetch_instant("missing")
 
-    def test_strips_trailing_slash(self):
+    def test_strips_trailing_slash(self) -> None:
         adapter = PrometheusAdapter("http://localhost:9090/")
         assert adapter._endpoint == "http://localhost:9090"
 
@@ -179,7 +202,7 @@ class TestFetchInstant:
 
 # Salvaged module-specific behavioural contracts from deleted broad tests.
 class TestPrometheusAdapter:
-    def test_fetch_metric_rejects_invalid_query_and_range(self):
+    def test_fetch_metric_rejects_invalid_query_and_range(self) -> None:
         from scpn_phase_orchestrator.adapters.prometheus import PrometheusAdapter
 
         adapter = PrometheusAdapter("http://localhost:9090")
@@ -190,14 +213,14 @@ class TestPrometheusAdapter:
         with pytest.raises(ValueError, match="step must be positive"):
             adapter.fetch_metric("up", 0, 10, 0)
 
-    def test_fetch_instant_rejects_invalid_query(self):
+    def test_fetch_instant_rejects_invalid_query(self) -> None:
         from scpn_phase_orchestrator.adapters.prometheus import PrometheusAdapter
 
         adapter = PrometheusAdapter("http://localhost:9090")
         with pytest.raises(ValueError, match="non-empty string"):
             adapter.fetch_instant("")
 
-    def test_fetch_metric_url_encodes_query_text(self):
+    def test_fetch_metric_url_encodes_query_text(self) -> None:
         from scpn_phase_orchestrator.adapters.prometheus import PrometheusAdapter
 
         mock_response = json.dumps(
@@ -230,7 +253,7 @@ class TestPrometheusAdapter:
             )
             assert encoded in request_arg.full_url
 
-    def test_fetch_metric_success(self):
+    def test_fetch_metric_success(self) -> None:
         from scpn_phase_orchestrator.adapters.prometheus import PrometheusAdapter
 
         mock_response = json.dumps(
@@ -257,7 +280,7 @@ class TestPrometheusAdapter:
             assert len(result) == 3
             np.testing.assert_allclose(result, [0.5, 0.8, 0.3])
 
-    def test_fetch_metric_empty(self):
+    def test_fetch_metric_empty(self) -> None:
         from scpn_phase_orchestrator.adapters.prometheus import PrometheusAdapter
 
         mock_response = json.dumps(
@@ -283,7 +306,7 @@ class TestPrometheusAdapter:
             )
             assert request_arg.headers["Accept"] == "application/json"
 
-    def test_fetch_metric_network_error(self):
+    def test_fetch_metric_network_error(self) -> None:
         from scpn_phase_orchestrator.adapters.prometheus import PrometheusAdapter
 
         adapter = PrometheusAdapter("http://localhost:9090")
@@ -296,7 +319,7 @@ class TestPrometheusAdapter:
         ):
             adapter.fetch_metric("up", 0, 10, 1)
 
-    def test_fetch_metric_network_error_does_not_leak_endpoint_or_query(self):
+    def test_fetch_metric_network_error_does_not_leak_endpoint_or_query(self) -> None:
         from scpn_phase_orchestrator.adapters.prometheus import PrometheusAdapter
 
         adapter = PrometheusAdapter("http://metrics.internal:9090/private")
@@ -317,7 +340,7 @@ class TestPrometheusAdapter:
         assert "tenant_secret" not in msg
         assert excinfo.value.__cause__ is None
 
-    def test_fetch_instant_network_error_does_not_leak_endpoint_or_query(self):
+    def test_fetch_instant_network_error_does_not_leak_endpoint_or_query(self) -> None:
         from scpn_phase_orchestrator.adapters.prometheus import PrometheusAdapter
 
         adapter = PrometheusAdapter("http://metrics.internal:9090/private")
@@ -338,7 +361,7 @@ class TestPrometheusAdapter:
         assert "tenant_secret" not in msg
         assert excinfo.value.__cause__ is None
 
-    def test_fetch_metric_bad_json(self):
+    def test_fetch_metric_bad_json(self) -> None:
         from scpn_phase_orchestrator.adapters.prometheus import PrometheusAdapter
 
         adapter = PrometheusAdapter("http://localhost:9090")
@@ -354,7 +377,7 @@ class TestPrometheusAdapter:
             with pytest.raises(ValueError):
                 adapter.fetch_metric("up", 0, 10, 1)
 
-    def test_fetch_metric_rejects_non_finite_json_constants(self):
+    def test_fetch_metric_rejects_non_finite_json_constants(self) -> None:
         from scpn_phase_orchestrator.adapters.prometheus import PrometheusAdapter
 
         adapter = PrometheusAdapter("http://localhost:9090")
@@ -371,7 +394,7 @@ class TestPrometheusAdapter:
             with pytest.raises(ValueError, match="finite JSON"):
                 adapter.fetch_metric("up", 0, 10, 1)
 
-    def test_fetch_metric_rejects_duplicate_json_object_keys(self):
+    def test_fetch_metric_rejects_duplicate_json_object_keys(self) -> None:
         from scpn_phase_orchestrator.adapters.prometheus import PrometheusAdapter
 
         adapter = PrometheusAdapter("http://localhost:9090")
@@ -392,7 +415,9 @@ class TestPrometheusAdapter:
                 adapter.fetch_metric("up", 0, 10, 1)
 
     @pytest.mark.parametrize("timestamp", [True, -1, "not-a-timestamp"])
-    def test_fetch_metric_rejects_malformed_sample_timestamps(self, timestamp: object):
+    def test_fetch_metric_rejects_malformed_sample_timestamps(
+        self, timestamp: object
+    ) -> None:
         from scpn_phase_orchestrator.adapters.prometheus import PrometheusAdapter
 
         body = {
@@ -414,7 +439,9 @@ class TestPrometheusAdapter:
                 adapter.fetch_metric("up", 0, 10, 1)
 
     @pytest.mark.parametrize("timestamp", [False, -1, "not-a-timestamp"])
-    def test_fetch_instant_rejects_malformed_sample_timestamps(self, timestamp: object):
+    def test_fetch_instant_rejects_malformed_sample_timestamps(
+        self, timestamp: object
+    ) -> None:
         from scpn_phase_orchestrator.adapters.prometheus import PrometheusAdapter
 
         body = {
@@ -450,7 +477,7 @@ class TestPrometheusAdapter:
             },
         ],
     )
-    def test_fetch_metric_rejects_malformed_response_shape(self, body: object):
+    def test_fetch_metric_rejects_malformed_response_shape(self, body: object) -> None:
         from scpn_phase_orchestrator.adapters.prometheus import PrometheusAdapter
 
         encoded = json.dumps(body).encode()
@@ -475,7 +502,7 @@ class TestPrometheusAdapter:
             {"status": "success", "data": {"result": [{"value": [1, "inf"]}]}},
         ],
     )
-    def test_fetch_instant_rejects_malformed_response_shape(self, body: object):
+    def test_fetch_instant_rejects_malformed_response_shape(self, body: object) -> None:
         from scpn_phase_orchestrator.adapters.prometheus import PrometheusAdapter
 
         encoded = json.dumps(body).encode()
@@ -496,13 +523,8 @@ class TestPrometheusAdapter:
 # Salvaged module-specific behavioural contracts from deleted sprint file.
 
 
-def _mock_resp(body: dict):
-    data = json.dumps(body).encode()
-    resp = io.BytesIO(data)
-    resp.__enter__ = lambda s: s
-    resp.__exit__ = lambda s, *a: None
-    resp.read = lambda: data
-    return resp
+def _mock_resp(body: Mapping[str, object]) -> _FakeResponse:
+    return _FakeResponse(json.dumps(body).encode())
 
 
 # ---------------------------------------------------------------------------
@@ -514,7 +536,7 @@ class TestPrometheusErrorHandling:
     """Verify that PrometheusAdapter raises correct exceptions
     for connection failures and API errors."""
 
-    def test_connection_refused_raises_connection_error(self):
+    def test_connection_refused_raises_connection_error(self) -> None:
         adapter = PrometheusAdapter("http://localhost:9090")
         with (
             patch(
@@ -525,7 +547,7 @@ class TestPrometheusErrorHandling:
         ):
             adapter.fetch_instant("up")
 
-    def test_api_error_status_raises_value_error(self):
+    def test_api_error_status_raises_value_error(self) -> None:
         adapter = PrometheusAdapter("http://localhost:9090")
         with (
             patch(
@@ -536,7 +558,7 @@ class TestPrometheusErrorHandling:
         ):
             adapter.fetch_instant("up")
 
-    def test_successful_response_returns_data(self):
+    def test_successful_response_returns_data(self) -> None:
         """Valid Prometheus response must be parsed correctly."""
         adapter = PrometheusAdapter("http://localhost:9090")
         body = {
