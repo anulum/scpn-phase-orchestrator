@@ -29,11 +29,20 @@ from domainpacks.power_grid.hierarchy_transport_demo import (
 )
 
 
+def _section(record: dict[str, object], key: str) -> dict[str, object]:
+    """Return one nested record section, asserting that it is a dict."""
+    section = record[key]
+    assert isinstance(section, dict)
+    return section
+
+
 def _assert_boundary_consistency(payload: dict[str, object]) -> None:
     assert payload["network_opened"] is True
-    assert payload["accepted_count"] == len(payload["accepted_names"])
+    accepted_names = payload["accepted_names"]
+    assert isinstance(accepted_names, list)
+    assert payload["accepted_count"] == len(accepted_names)
     for boundary in ("rest_boundary", "websocket_frame", "jsonl_replay"):
-        audit = payload[boundary]
+        audit = _section(payload, boundary)
         assert audit["boundary"] in {"rest_boundary", "websocket_frame", "jsonl_replay"}
 
 
@@ -52,27 +61,28 @@ def test_power_grid_transport_demo_runs_all_boundaries() -> None:
     assert payload["scenario"] == "hierarchy_summary_transport_replay"
     assert payload["channel_count"] == 2
     assert payload["accepted_names"] == [
-        envelope.to_audit_record()["summary"]["name"] for envelope in envelopes
+        _section(envelope.to_audit_record(), "summary")["name"]
+        for envelope in envelopes
     ]
     assert payload["accepted_count"] == len(envelopes)
 
-    assert payload["rest_boundary"]["boundary"] == "rest_boundary"
-    assert payload["websocket_frame"]["boundary"] == "websocket_frame"
-    assert payload["jsonl_replay"]["boundary"] == "jsonl_replay"
+    assert _section(payload, "rest_boundary")["boundary"] == "rest_boundary"
+    assert _section(payload, "websocket_frame")["boundary"] == "websocket_frame"
+    assert _section(payload, "jsonl_replay")["boundary"] == "jsonl_replay"
 
-    _assert_boundary_fields(payload["rest_boundary"], expected_count=2)
-    _assert_boundary_fields(payload["websocket_frame"], expected_count=2)
-    _assert_boundary_fields(payload["jsonl_replay"], expected_count=2)
+    _assert_boundary_fields(_section(payload, "rest_boundary"), expected_count=2)
+    _assert_boundary_fields(_section(payload, "websocket_frame"), expected_count=2)
+    _assert_boundary_fields(_section(payload, "jsonl_replay"), expected_count=2)
 
-    assert payload["rest_boundary"]["watermarks"] == {
+    assert _section(payload, "rest_boundary")["watermarks"] == {
         "grid-edge-11": 11,
         "grid-edge-12": 12,
     }
-    assert payload["websocket_frame"]["watermarks"] == {
+    assert _section(payload, "websocket_frame")["watermarks"] == {
         "grid-edge-11": 11,
         "grid-edge-12": 12,
     }
-    assert payload["jsonl_replay"]["watermarks"] == {
+    assert _section(payload, "jsonl_replay")["watermarks"] == {
         "grid-edge-11": 11,
         "grid-edge-12": 12,
     }
@@ -87,22 +97,23 @@ def test_cardiac_transport_demo_reports_replayed_frames() -> None:
     assert payload["scenario"] == "hierarchy_summary_transport_replay"
     assert payload["channel_count"] == 2
     assert payload["accepted_names"] == [
-        envelope.to_audit_record()["summary"]["name"] for envelope in envelopes
+        _section(envelope.to_audit_record(), "summary")["name"]
+        for envelope in envelopes
     ]
     assert payload["accepted_count"] == len(envelopes)
 
-    _assert_boundary_fields(payload["rest_boundary"], expected_count=2)
-    _assert_boundary_fields(payload["websocket_frame"], expected_count=2)
-    _assert_boundary_fields(payload["jsonl_replay"], expected_count=2)
-    assert payload["rest_boundary"]["watermarks"] == {
+    _assert_boundary_fields(_section(payload, "rest_boundary"), expected_count=2)
+    _assert_boundary_fields(_section(payload, "websocket_frame"), expected_count=2)
+    _assert_boundary_fields(_section(payload, "jsonl_replay"), expected_count=2)
+    assert _section(payload, "rest_boundary")["watermarks"] == {
         "cardiac-edge-21": 21,
         "cardiac-edge-22": 22,
     }
-    assert payload["jsonl_replay"]["watermarks"] == {
+    assert _section(payload, "jsonl_replay")["watermarks"] == {
         "cardiac-edge-21": 21,
         "cardiac-edge-22": 22,
     }
-    assert payload["websocket_frame"]["watermarks"] == {
+    assert _section(payload, "websocket_frame")["watermarks"] == {
         "cardiac-edge-21": 21,
         "cardiac-edge-22": 22,
     }
@@ -118,24 +129,25 @@ def test_edge_consensus_transport_demo_reports_node_level_replay() -> None:
     assert payload["channel_count"] == 6
     assert payload["nodes"] == list(NODES)
     assert payload["accepted_names"] == [
-        envelope.to_audit_record()["summary"]["name"] for envelope in envelopes
+        _section(envelope.to_audit_record(), "summary")["name"]
+        for envelope in envelopes
     ]
     assert payload["accepted_count"] == len(envelopes)
 
-    _assert_boundary_fields(payload["rest_boundary"], expected_count=3)
-    _assert_boundary_fields(payload["websocket_frame"], expected_count=3)
-    _assert_boundary_fields(payload["jsonl_replay"], expected_count=3)
-    assert payload["rest_boundary"]["watermarks"] == {
+    _assert_boundary_fields(_section(payload, "rest_boundary"), expected_count=3)
+    _assert_boundary_fields(_section(payload, "websocket_frame"), expected_count=3)
+    _assert_boundary_fields(_section(payload, "jsonl_replay"), expected_count=3)
+    assert _section(payload, "rest_boundary")["watermarks"] == {
         "edge-node-31": 31,
         "edge-node-32": 32,
         "edge-node-33": 33,
     }
-    assert payload["websocket_frame"]["watermarks"] == {
+    assert _section(payload, "websocket_frame")["watermarks"] == {
         "edge-node-31": 31,
         "edge-node-32": 32,
         "edge-node-33": 33,
     }
-    assert payload["jsonl_replay"]["watermarks"] == {
+    assert _section(payload, "jsonl_replay")["watermarks"] == {
         "edge-node-31": 31,
         "edge-node-32": 32,
         "edge-node-33": 33,
