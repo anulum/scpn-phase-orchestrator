@@ -11,6 +11,9 @@ from __future__ import annotations
 import json
 import urllib.error
 import urllib.request
+from collections.abc import Callable
+from pathlib import Path
+from typing import Literal, NoReturn, TypeVar
 
 import pytest
 import yaml
@@ -21,11 +24,27 @@ from scpn_phase_orchestrator.runtime.cli import main
 from scpn_phase_orchestrator.scaffold import llm as llm_module
 from scpn_phase_orchestrator.scaffold.llm import (
     LLMScaffoldConfig,
+    LLMScaffoldProposal,
     LocalHTTPScaffoldProvider,
     StaticJSONScaffoldProvider,
     configured_llm_scaffold_provider,
     propose_domainpack_from_description,
 )
+
+_R = TypeVar("_R")
+
+
+def _call(fn: Callable[..., _R], *args: object, **kwargs: object) -> _R:
+    """Call ``fn`` with arguments that are deliberately outside its types."""
+    return fn(*args, **kwargs)
+
+
+def _rows(value: object) -> list[dict[str, object]]:
+    """Narrow a payload list section to a list of mappings."""
+    assert isinstance(value, list)
+    rows = [row for row in value if isinstance(row, dict)]
+    assert len(rows) == len(value)
+    return rows
 
 
 def _traffic_grid_payload() -> dict[str, object]:
@@ -102,7 +121,9 @@ def test_llm_scaffold_provider_generates_valid_binding() -> None:
     assert raw["coupling"]["base_strength"] == pytest.approx(0.22)
 
 
-def test_llm_scaffold_cli_writes_valid_domainpack(tmp_path, monkeypatch) -> None:
+def test_llm_scaffold_cli_writes_valid_domainpack(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.chdir(tmp_path)
     response_path = tmp_path / "response.json"
     response_path.write_text(json.dumps(_traffic_grid_payload()), encoding="utf-8")
@@ -132,7 +153,9 @@ def test_llm_scaffold_cli_writes_valid_domainpack(tmp_path, monkeypatch) -> None
     assert audit["provider"] == "static-json"
 
 
-def test_llm_scaffold_cli_fails_closed_without_provider(tmp_path, monkeypatch) -> None:
+def test_llm_scaffold_cli_fails_closed_without_provider(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     monkeypatch.chdir(tmp_path)
     monkeypatch.delenv("SPO_LLM_ENDPOINT", raising=False)
     monkeypatch.delenv("SPO_LLM_MODEL", raising=False)
@@ -204,22 +227,24 @@ class TestLLMScaffoldConfig:
             ),
         ],
     )
-    def test_invalid_config_rejected(self, kwargs, match):
+    def test_invalid_config_rejected(
+        self, kwargs: dict[str, object], match: str
+    ) -> None:
         with pytest.raises(ValueError, match=match):
-            LLMScaffoldConfig(**kwargs)
+            _call(LLMScaffoldConfig, **kwargs)
 
-    def test_valid_config_defaults(self):
+    def test_valid_config_defaults(self) -> None:
         cfg = LLMScaffoldConfig()
         assert cfg.timeout_s == 30.0
         assert cfg.max_oscillators == 128
 
 
 class TestStaticJSONProvider:
-    def test_complete_rejects_empty_prompt(self):
+    def test_complete_rejects_empty_prompt(self) -> None:
         with pytest.raises(ValueError, match="prompt must be non-empty"):
             StaticJSONScaffoldProvider("{}").complete("")
 
-    def test_name_reports_provider_name(self):
+    def test_name_reports_provider_name(self) -> None:
         assert StaticJSONScaffoldProvider("{}", provider_name="fixture").name == (
             "fixture"
         )
@@ -232,7 +257,7 @@ class _FakeHTTPResponse:
     def __enter__(self) -> _FakeHTTPResponse:
         return self
 
-    def __exit__(self, *exc: object) -> bool:
+    def __exit__(self, *exc: object) -> Literal[False]:
         return False
 
     def read(self) -> bytes:
@@ -246,9 +271,9 @@ class TestLocalHTTPProvider:
             "model": "scpn-model",
         }
         base.update(overrides)
-        return LocalHTTPScaffoldProvider(**base)  # type: ignore[arg-type]
+        return _call(LocalHTTPScaffoldProvider, **base)
 
-    def test_name_reports_provider_name(self):
+    def test_name_reports_provider_name(self) -> None:
         assert self._provider(provider_name="gw").name == "gw"
 
     @pytest.mark.parametrize(
@@ -259,14 +284,20 @@ class TestLocalHTTPProvider:
             ({"endpoint": "ftp://host/path"}, "scheme must be http or https"),
         ],
     )
-    def test_complete_rejects_invalid_config(self, overrides, match):
+    def test_complete_rejects_invalid_config(
+        self, overrides: dict[str, object], match: str
+    ) -> None:
         with pytest.raises(ValueError, match=match):
             self._provider(**overrides).complete("prompt")
 
-    def test_complete_returns_extracted_content(self, monkeypatch):
+    def test_complete_returns_extracted_content(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         captured: dict[str, object] = {}
 
-        def fake_urlopen(request, timeout):
+        def fake_urlopen(
+            request: urllib.request.Request, timeout: float
+        ) -> _FakeHTTPResponse:
             captured["timeout"] = timeout
             captured["authorization"] = request.headers.get("Authorization")
             captured["method"] = request.get_method()
@@ -283,8 +314,10 @@ class TestLocalHTTPProvider:
         assert captured["authorization"] == "Bearer secret-token"
         assert captured["method"] == "POST"
 
-    def test_complete_wraps_transport_failure(self, monkeypatch):
-        def fail(request, timeout):
+    def test_complete_wraps_transport_failure(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def fail(request: urllib.request.Request, timeout: float) -> NoReturn:
             raise urllib.error.URLError("connection refused")
 
         monkeypatch.setattr(urllib.request, "urlopen", fail)
@@ -293,7 +326,9 @@ class TestLocalHTTPProvider:
 
 
 class TestConfiguredProvider:
-    def test_builds_local_http_from_environment(self, monkeypatch):
+    def test_builds_local_http_from_environment(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.setenv("SPO_LLM_ENDPOINT", "https://gateway.local/v1/chat")
         monkeypatch.setenv("SPO_LLM_MODEL", "scpn-model")
         monkeypatch.setenv("SPO_LLM_API_KEY", "tok")
@@ -305,14 +340,21 @@ class TestConfiguredProvider:
         assert provider.model == "scpn-model"
         assert provider.api_key == "tok"
 
-    def test_fails_closed_without_environment(self, monkeypatch):
+    def test_fails_closed_without_environment(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.delenv("SPO_LLM_ENDPOINT", raising=False)
         monkeypatch.delenv("SPO_LLM_MODEL", raising=False)
         with pytest.raises(RuntimeError, match="not configured"):
             configured_llm_scaffold_provider()
 
 
-def _propose(payload, *, project_name="traffic_grid", config=None):
+def _propose(
+    payload: object,
+    *,
+    project_name: str = "traffic_grid",
+    config: LLMScaffoldConfig | None = None,
+) -> LLMScaffoldProposal:
     provider = StaticJSONScaffoldProvider(json.dumps(payload))
     return propose_domainpack_from_description(
         "modelling a coupled control system for review",
@@ -323,8 +365,8 @@ def _propose(payload, *, project_name="traffic_grid", config=None):
 
 
 class TestPayloadValidation:
-    def _with_oscillator(self, **overrides):
-        oscillator = {
+    def _with_oscillator(self, **overrides: object) -> dict[str, object]:
+        oscillator: dict[str, object] = {
             "id": "node_a",
             "channel": "P",
             "extractor_type": "physical",
@@ -335,7 +377,7 @@ class TestPayloadValidation:
         payload["oscillators"] = [oscillator]
         return payload
 
-    def test_response_not_json(self):
+    def test_response_not_json(self) -> None:
         provider = StaticJSONScaffoldProvider("definitely not json")
         with pytest.raises(ValueError, match="strict JSON object"):
             propose_domainpack_from_description(
@@ -344,7 +386,7 @@ class TestPayloadValidation:
                 provider=provider,
             )
 
-    def test_response_not_object(self):
+    def test_response_not_object(self) -> None:
         provider = StaticJSONScaffoldProvider("[1, 2, 3]")
         with pytest.raises(ValueError, match="must be a JSON object"):
             propose_domainpack_from_description(
@@ -371,20 +413,21 @@ class TestPayloadValidation:
             ({"sample_period_s": -1.0}, "sample_period_s must be positive"),
         ],
     )
-    def test_top_level_errors(self, overrides, match):
+    def test_top_level_errors(self, overrides: dict[str, object], match: str) -> None:
         payload = _traffic_grid_payload()
         payload.update(overrides)
         with pytest.raises(ValueError, match=match):
             _propose(payload)
 
-    def test_too_many_oscillators(self):
+    def test_too_many_oscillators(self) -> None:
         payload = _traffic_grid_payload()
         with pytest.raises(ValueError, match="exceeds 1 oscillators"):
             _propose(payload, config=LLMScaffoldConfig(max_oscillators=1))
 
-    def test_duplicate_oscillator_id(self):
+    def test_duplicate_oscillator_id(self) -> None:
         payload = _traffic_grid_payload()
-        payload["oscillators"][1]["id"] = payload["oscillators"][0]["id"]
+        oscillators = _rows(payload["oscillators"])
+        oscillators[1]["id"] = oscillators[0]["id"]
         with pytest.raises(ValueError, match="duplicate oscillator id"):
             _propose(payload)
 
@@ -398,11 +441,11 @@ class TestPayloadValidation:
             ({"omega": float("nan")}, "must be finite"),
         ],
     )
-    def test_oscillator_errors(self, overrides, match):
+    def test_oscillator_errors(self, overrides: dict[str, object], match: str) -> None:
         with pytest.raises(ValueError, match=match):
             _propose(self._with_oscillator(**overrides))
 
-    def test_oscillator_not_mapping(self):
+    def test_oscillator_not_mapping(self) -> None:
         payload = _traffic_grid_payload()
         payload["oscillators"] = ["not-a-mapping"]
         with pytest.raises(ValueError, match="must be a mapping"):
@@ -433,7 +476,7 @@ class TestPayloadValidation:
             ),
         ],
     )
-    def test_boundary_errors(self, boundary, match):
+    def test_boundary_errors(self, boundary: dict[str, object], match: str) -> None:
         payload = _traffic_grid_payload()
         payload["boundaries"] = [boundary]
         with pytest.raises(ValueError, match=match):
@@ -456,7 +499,7 @@ class TestPayloadValidation:
             ),
         ],
     )
-    def test_actuator_errors(self, actuator, match):
+    def test_actuator_errors(self, actuator: dict[str, object], match: str) -> None:
         payload = _traffic_grid_payload()
         payload["actuators"] = [actuator]
         with pytest.raises(ValueError, match=match):
@@ -474,14 +517,14 @@ class TestCompletionAndYamlHelpers:
             ({"choices": [{"text": "from-choice-text"}]}, "from-choice-text"),
         ],
     )
-    def test_extract_completion_text(self, payload, expected):
+    def test_extract_completion_text(self, payload: object, expected: str) -> None:
         assert llm_module._extract_completion_text(payload) == expected
 
     @pytest.mark.parametrize(
         "payload",
         [123, {}, {"choices": []}, {"choices": ["x"]}, {"choices": [{}]}],
     )
-    def test_extract_completion_text_rejects(self, payload):
+    def test_extract_completion_text_rejects(self, payload: object) -> None:
         with pytest.raises(ValueError):
             llm_module._extract_completion_text(payload)
 
@@ -498,32 +541,32 @@ class TestCompletionAndYamlHelpers:
             (1.5, "1.5"),
         ],
     )
-    def test_yaml_value(self, value, expected):
+    def test_yaml_value(self, value: object, expected: str) -> None:
         assert llm_module._yaml_value(value) == expected
 
-    def test_yaml_value_rejects_unsupported(self):
+    def test_yaml_value_rejects_unsupported(self) -> None:
         with pytest.raises(TypeError, match="unsupported YAML value"):
             llm_module._yaml_value(object())
 
-    def test_validation_errors_reports_load_failure(self):
+    def test_validation_errors_reports_load_failure(self) -> None:
         errors = llm_module._validation_errors("name: 5\nlayers: not-a-list\n")
         assert errors
         assert isinstance(errors[0], str)
 
 
 class TestProposeGuards:
-    def test_rejects_invalid_project_name(self):
+    def test_rejects_invalid_project_name(self) -> None:
         with pytest.raises(ValueError, match="project_name must match"):
             _propose(_traffic_grid_payload(), project_name="bad name!")
 
-    def test_rejects_empty_description(self):
+    def test_rejects_empty_description(self) -> None:
         provider = StaticJSONScaffoldProvider(json.dumps(_traffic_grid_payload()))
         with pytest.raises(ValueError, match="description must be non-empty"):
             propose_domainpack_from_description(
                 "   ", project_name="traffic_grid", provider=provider
             )
 
-    def test_rejects_overlong_description(self):
+    def test_rejects_overlong_description(self) -> None:
         provider = StaticJSONScaffoldProvider(json.dumps(_traffic_grid_payload()))
         with pytest.raises(ValueError, match="exceeds 16 characters"):
             propose_domainpack_from_description(
@@ -533,7 +576,7 @@ class TestProposeGuards:
                 config=LLMScaffoldConfig(max_description_chars=16),
             )
 
-    def test_invalid_channel_rejected(self):
+    def test_invalid_channel_rejected(self) -> None:
         oscillator = {
             "id": "node_a",
             "channel": "1bad",
@@ -544,11 +587,11 @@ class TestProposeGuards:
         with pytest.raises(ValueError, match="invalid oscillator channel"):
             _propose(payload)
 
-    def test_oscillators_key_omitted(self):
+    def test_oscillators_key_omitted(self) -> None:
         with pytest.raises(ValueError, match="at least one oscillator"):
             _propose({"name": "traffic_grid"})
 
-    def test_generated_spec_failing_validation_fails_closed(self):
+    def test_generated_spec_failing_validation_fails_closed(self) -> None:
         # Normalisation accepts the actuator scope string, but the binding
         # validator rejects a scope that targets a non-existent layer; the
         # generated proposal must fail closed rather than be returned.
@@ -561,7 +604,7 @@ class TestProposeGuards:
 
 
 class TestOptionalFieldDefaults:
-    def test_optional_fields_fall_back_to_defaults(self):
+    def test_optional_fields_fall_back_to_defaults(self) -> None:
         payload = {
             "name": "traffic_grid",
             "oscillators": [
@@ -578,20 +621,20 @@ class TestOptionalFieldDefaults:
         assert raw["boundaries"] == []
         assert raw["actuators"] == []
 
-    def test_coupling_partial_mapping_uses_defaults(self):
+    def test_coupling_partial_mapping_uses_defaults(self) -> None:
         payload = _traffic_grid_payload()
         payload["coupling"] = {"decay_alpha": 0.5}
         raw = yaml.safe_load(_propose(payload).yaml_text)
         assert raw["coupling"]["base_strength"] == pytest.approx(0.45)
         assert raw["coupling"]["decay_alpha"] == pytest.approx(0.5)
 
-    def test_coupling_negative_rejected(self):
+    def test_coupling_negative_rejected(self) -> None:
         payload = _traffic_grid_payload()
         payload["coupling"] = {"base_strength": -0.1}
         with pytest.raises(ValueError, match="base_strength must be non-negative"):
             _propose(payload)
 
-    def test_boundary_open_upper_bound(self):
+    def test_boundary_open_upper_bound(self) -> None:
         payload = _traffic_grid_payload()
         payload["boundaries"] = [
             {"name": "queue", "variable": "q", "lower": 0.0, "severity": "soft"}
