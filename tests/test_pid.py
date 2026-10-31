@@ -9,6 +9,8 @@
 from __future__ import annotations
 
 import functools
+from collections.abc import Callable
+from typing import ParamSpec, TypeVar, cast
 
 import numpy as np
 import pytest
@@ -18,10 +20,20 @@ from scpn_phase_orchestrator.monitor.pid import redundancy, synergy
 
 TWO_PI = 2.0 * np.pi
 
+_P = ParamSpec("_P")
+_R = TypeVar("_R")
 
-def _python(func):
+# The validation tests pass deliberately mistyped arguments, so they call the
+# estimators through unchecked aliases.
+_redundancy_unchecked: Callable[..., float] = redundancy
+_synergy_unchecked: Callable[..., float] = synergy
+
+
+def _python(func: Callable[_P, _R]) -> Callable[_P, _R]:
+    """Run ``func`` with the pure-Python backend forced."""
+
     @functools.wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _R:
         prev = pid_module.ACTIVE_BACKEND
         pid_module.ACTIVE_BACKEND = "python"
         try:
@@ -46,20 +58,20 @@ def _coherent_groups(t: int, seed: int = 0) -> np.ndarray:
 
 class TestPidSemantics:
     @_python
-    def test_components_non_negative(self):
+    def test_components_non_negative(self) -> None:
         rng = np.random.default_rng(7)
         history = rng.uniform(0, TWO_PI, (800, 8))
         assert redundancy(history, [0, 1, 2, 3], [4, 5, 6, 7], 16) >= 0.0
         assert synergy(history, [0, 1, 2, 3], [4, 5, 6, 7], 16) >= 0.0
 
     @_python
-    def test_co_varying_sources_have_positive_synergy(self):
+    def test_co_varying_sources_have_positive_synergy(self) -> None:
         history = _coherent_groups(2000)
         s = synergy(history, [0, 1, 2, 3], [4, 5, 6, 7], 8)
         assert s > 1e-2
 
     @_python
-    def test_fully_redundant_has_zero_synergy(self):
+    def test_fully_redundant_has_zero_synergy(self) -> None:
         """A single sweeping phase shared by all oscillators → A = B = Y, so
         the shared information is redundant and synergy vanishes."""
         idx = np.arange(2000, dtype=np.float64)
@@ -70,38 +82,40 @@ class TestPidSemantics:
         assert syn == pytest.approx(0.0, abs=1e-9)
 
     @_python
-    def test_single_snapshot_is_zero(self):
+    def test_single_snapshot_is_zero(self) -> None:
         history = np.arange(8, dtype=np.float64).reshape(1, 8)
         assert redundancy(history, [0, 1, 2, 3], [4, 5, 6, 7]) == 0.0
         assert synergy(history, [0, 1, 2, 3], [4, 5, 6, 7]) == 0.0
 
     @_python
-    def test_one_dimensional_history_treated_as_single_snapshot(self):
+    def test_one_dimensional_history_treated_as_single_snapshot(self) -> None:
         assert redundancy(np.zeros(8), [0, 1], [2, 3]) == 0.0
         assert synergy(np.zeros(8), [0, 1], [2, 3]) == 0.0
 
     @_python
-    def test_empty_history(self):
+    def test_empty_history(self) -> None:
         assert redundancy(np.zeros((0, 0)), [0], [1]) == 0.0
         assert synergy(np.zeros((0, 0)), [0], [1]) == 0.0
 
     @_python
-    def test_empty_groups(self):
+    def test_empty_groups(self) -> None:
         history = _coherent_groups(64)
         assert redundancy(history, [], [4, 5]) == 0.0
         assert synergy(history, [0, 1], []) == 0.0
 
     @_python
-    def test_deterministic(self):
+    def test_deterministic(self) -> None:
         history = _coherent_groups(512, seed=3)
         ga, gb = [0, 1, 2, 3], [4, 5, 6, 7]
         assert redundancy(history, ga, gb, 8) == redundancy(history, ga, gb, 8)
         assert synergy(history, ga, gb, 8) == synergy(history, ga, gb, 8)
 
     @_python
-    def test_accepts_numpy_integer_bin_count(self):
+    def test_accepts_numpy_integer_bin_count(self) -> None:
         history = _coherent_groups(256)
-        assert redundancy(history, [0, 1], [2, 3], n_bins=np.int64(8)) >= 0.0
+        # The validator genuinely accepts NumPy integers as the bin count.
+        n_bins = cast("int", np.int64(8))
+        assert redundancy(history, [0, 1], [2, 3], n_bins=n_bins) >= 0.0
 
 
 class TestPidValidation:
@@ -116,15 +130,15 @@ class TestPidValidation:
             np.array([[0.0, 1.0 + 0.0j], [1.0, 2.0]]),
         ],
     )
-    def test_rejects_invalid_history(self, history):
+    def test_rejects_invalid_history(self, history: object) -> None:
         with pytest.raises(ValueError, match="phases"):
-            redundancy(history, [0], [1])
+            _redundancy_unchecked(history, [0], [1])
 
     @_python
-    def test_object_complex_history_rejected_as_real_valued(self):
+    def test_object_complex_history_rejected_as_real_valued(self) -> None:
         history = np.array([[0.0, complex(1.0, 0.0)]], dtype=object)
         with pytest.raises(ValueError, match="real-valued"):
-            synergy(history, [0], [1])
+            _synergy_unchecked(history, [0], [1])
 
     @_python
     @pytest.mark.parametrize(
@@ -138,28 +152,32 @@ class TestPidValidation:
             (np.array([[0]]), ValueError),
         ],
     )
-    def test_rejects_invalid_group_indices(self, group, error):
+    def test_rejects_invalid_group_indices(
+        self, group: object, error: type[Exception]
+    ) -> None:
         history = _coherent_groups(32)
         with pytest.raises(error, match="group_a"):
-            redundancy(history, group, [4, 5])
+            _redundancy_unchecked(history, group, [4, 5])
 
     @_python
     @pytest.mark.parametrize("n_bins", [0, 1, False, np.bool_(True), 4.5])
-    def test_rejects_invalid_bin_count(self, n_bins):
+    def test_rejects_invalid_bin_count(self, n_bins: object) -> None:
         history = _coherent_groups(32)
         with pytest.raises((TypeError, ValueError), match="n_bins"):
-            redundancy(history, [0, 1], [4, 5], n_bins=n_bins)
+            _redundancy_unchecked(history, [0, 1], [4, 5], n_bins=n_bins)
 
 
 class TestDispatcherSurface:
-    def test_available_non_empty(self):
+    def test_available_non_empty(self) -> None:
         assert pid_module.AVAILABLE_BACKENDS
         assert "python" in pid_module.AVAILABLE_BACKENDS
 
-    def test_active_is_first(self):
+    def test_active_is_first(self) -> None:
         assert pid_module.AVAILABLE_BACKENDS[0] == pid_module.ACTIVE_BACKEND
 
-    def test_dispatch_returns_none_for_python(self, monkeypatch):
+    def test_dispatch_returns_none_for_python(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.setattr(pid_module, "ACTIVE_BACKEND", "python")
         assert pid_module._dispatch() is None
 
@@ -168,7 +186,7 @@ class TestPidPipelineWiring:
     """Pipeline: engine phase history → PID redundancy/synergy between groups."""
 
     @_python
-    def test_engine_history_to_pid(self):
+    def test_engine_history_to_pid(self) -> None:
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
 
         n = 8
