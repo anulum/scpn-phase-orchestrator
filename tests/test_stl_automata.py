@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 import pytest
 
 import scpn_phase_orchestrator.monitor.stl as stl_module
@@ -35,8 +37,25 @@ from scpn_phase_orchestrator.supervisor.policy_rules import (
     synthesise_policy_stl_automata,
 )
 
+# Expected transitions and candidates hold pytest.approx comparators in their
+# float fields, and refusal tests pass deliberately invalid traces and
+# horizons, so those constructions and calls go through unchecked aliases.
+_transition_expected: Callable[..., STLAutomatonTransition] = STLAutomatonTransition
+_candidate_expected: Callable[..., STLControllerCandidate] = STLControllerCandidate
+_synthesise_unchecked: Callable[..., object] = synthesise_stl_monitoring_automaton
+_plan_unchecked: Callable[..., object] = synthesise_stl_closed_loop_plan
 
-def test_always_automaton_records_first_violation_and_worst_margin():
+
+def _entry(record: dict[str, object], key: str, index: int) -> dict[str, object]:
+    """Return one entry of a record list, asserting the list and entry types."""
+    entries = record[key]
+    assert isinstance(entries, list)
+    entry = entries[index]
+    assert isinstance(entry, dict)
+    return entry
+
+
+def test_always_automaton_records_first_violation_and_worst_margin() -> None:
     automaton = synthesise_stl_monitoring_automaton(
         "always (R >= 0.3 and amplitude_spread < 0.2)",
         {"R": [0.8, 0.2, 0.5], "amplitude_spread": [0.1, 0.1, 0.35]},
@@ -56,21 +75,21 @@ def test_always_automaton_records_first_violation_and_worst_margin():
         first_hit_index=1,
     )
     assert automaton.transitions == (
-        STLAutomatonTransition(
+        _transition_expected(
             source="holding",
             target="holding",
             time_index=0,
             guard="R >= 0.3 and amplitude_spread < 0.2",
             robustness=pytest.approx(0.1),
         ),
-        STLAutomatonTransition(
+        _transition_expected(
             source="holding",
             target="violated",
             time_index=1,
             guard="R >= 0.3 and amplitude_spread < 0.2",
             robustness=pytest.approx(-0.1),
         ),
-        STLAutomatonTransition(
+        _transition_expected(
             source="violated",
             target="violated",
             time_index=2,
@@ -81,11 +100,11 @@ def test_always_automaton_records_first_violation_and_worst_margin():
 
     record = automaton.to_audit_record()
     assert record["backend"] == "builtin"
-    assert record["states"][1]["first_hit_index"] == 1
-    assert record["transitions"][2]["target"] == "violated"
+    assert _entry(record, "states", 1)["first_hit_index"] == 1
+    assert _entry(record, "transitions", 2)["target"] == "violated"
 
 
-def test_eventually_automaton_records_first_satisfaction_and_best_margin():
+def test_eventually_automaton_records_first_satisfaction_and_best_margin() -> None:
     automaton = synthesize_stl_monitoring_automaton(
         "eventually (R >= 0.8)",
         {"R": [0.1, 0.75, 0.85, 0.9]},
@@ -103,7 +122,7 @@ def test_eventually_automaton_records_first_satisfaction_and_best_margin():
     ]
 
 
-def test_automaton_synthesis_rejects_unsupported_or_incomplete_traces():
+def test_automaton_synthesis_rejects_unsupported_or_incomplete_traces() -> None:
     with pytest.raises(ValueError, match="simple STL syntax"):
         synthesise_stl_monitoring_automaton("R >= 0.3", {"R": [0.5]})
 
@@ -136,10 +155,10 @@ def test_automaton_and_controller_paths_reject_non_real_or_nonfinite_traces(
     match: str,
 ) -> None:
     with pytest.raises(ValueError, match=match):
-        synthesise_stl_monitoring_automaton("always (R >= 0.3)", trace)
+        _synthesise_unchecked("always (R >= 0.3)", trace)
 
 
-def test_policy_stl_automata_preserve_policy_identity_and_audit_severity():
+def test_policy_stl_automata_preserve_policy_identity_and_audit_severity() -> None:
     specs = [
         PolicySTLSpec(
             name="hard_floor",
@@ -159,14 +178,14 @@ def test_policy_stl_automata_preserve_policy_identity_and_audit_severity():
     assert audit_records[0]["name"] == "hard_floor"
     assert audit_records[0]["severity"] == "hard"
     assert audit_records[0]["satisfied"] is False
-    assert audit_records[0]["states"][1]["first_hit_index"] == 0
+    assert _entry(audit_records[0], "states", 1)["first_hit_index"] == 0
     assert audit_records[1]["name"] == "eventual_recovery"
     assert audit_records[1]["severity"] == "soft"
     assert audit_records[1]["satisfied"] is True
-    assert audit_records[1]["states"][1]["first_hit_index"] == 2
+    assert _entry(audit_records[1], "states", 1)["first_hit_index"] == 2
 
 
-def test_stl_controller_synthesis_proposes_non_actuating_violation_actions():
+def test_stl_controller_synthesis_proposes_non_actuating_violation_actions() -> None:
     trace = {"R": [0.8, 0.2, 0.5], "amplitude_spread": [0.1, 0.1, 0.35]}
     automaton = synthesise_stl_monitoring_automaton(
         "always (R >= 0.3 and amplitude_spread < 0.2)",
@@ -184,7 +203,7 @@ def test_stl_controller_synthesis_proposes_non_actuating_violation_actions():
     assert synthesis.actuating is False
     assert synthesis.source_backend == "builtin"
     assert synthesis.candidates == (
-        STLControllerCandidate(
+        _candidate_expected(
             signal="amplitude_spread",
             action="dampen_amplitude",
             direction="decrease",
@@ -213,7 +232,7 @@ def test_stl_controller_synthesis_proposes_non_actuating_violation_actions():
     }
 
 
-def test_stl_controller_synthesis_handles_unsatisfied_eventually_specs():
+def test_stl_controller_synthesis_handles_unsatisfied_eventually_specs() -> None:
     trace = {"R": [0.1, 0.2, 0.75]}
     automaton = synthesize_stl_monitoring_automaton(
         "eventually (R >= 0.8)",
@@ -225,7 +244,7 @@ def test_stl_controller_synthesis_handles_unsatisfied_eventually_specs():
     assert synthesis.satisfied is False
     assert synthesis.actuating is False
     assert synthesis.candidates == (
-        STLControllerCandidate(
+        _candidate_expected(
             signal="R",
             action="increase_R",
             direction="increase",
@@ -236,7 +255,7 @@ def test_stl_controller_synthesis_handles_unsatisfied_eventually_specs():
     )
 
 
-def test_stl_controller_synthesis_returns_no_actions_for_satisfied_specs():
+def test_stl_controller_synthesis_returns_no_actions_for_satisfied_specs() -> None:
     trace = {"K": [1.0, 2.0, 3.0]}
     automaton = synthesise_stl_monitoring_automaton(
         "always (K <= 10.0)",
@@ -250,7 +269,7 @@ def test_stl_controller_synthesis_returns_no_actions_for_satisfied_specs():
     assert synthesis.candidates == ()
 
 
-def test_stl_controller_synthesis_rejects_mismatched_automata():
+def test_stl_controller_synthesis_rejects_mismatched_automata() -> None:
     trace = {"R": [0.1, 0.2, 0.4]}
     automaton = synthesise_stl_monitoring_automaton(
         "always (R >= 0.3)",
@@ -270,7 +289,7 @@ def test_stl_controller_synthesis_rejects_mismatched_automata():
         synthesise_stl_controller_candidates(mismatched, trace)
 
 
-def test_stl_candidate_projection_uses_policy_templates_and_projector():
+def test_stl_candidate_projection_uses_policy_templates_and_projector() -> None:
     trace = {"R": [0.1, 0.2, 0.75]}
     automaton = synthesise_stl_monitoring_automaton(
         "eventually (R >= 0.8)",
@@ -320,7 +339,9 @@ def test_stl_candidate_projection_uses_policy_templates_and_projector():
     ]
 
 
-def test_stl_candidate_projection_rejects_unmapped_candidates_without_actuation():
+def test_stl_candidate_projection_rejects_unmapped_candidates_without_actuation() -> (
+    None
+):
     trace = {"R": [0.1, 0.2, 0.75]}
     automaton = synthesise_stl_monitoring_automaton(
         "eventually (R >= 0.8)",
@@ -341,7 +362,7 @@ def test_stl_candidate_projection_rejects_unmapped_candidates_without_actuation(
     )
 
 
-def test_stl_projection_template_validation_raises_for_invalid_inputs():
+def test_stl_projection_template_validation_raises_for_invalid_inputs() -> None:
     with pytest.raises(ValueError, match="projection value_bounds must be ordered"):
         STLActionProjectionTemplate(
             action="a",
@@ -355,7 +376,7 @@ def test_stl_projection_template_validation_raises_for_invalid_inputs():
         )
 
 
-def test_stl_closed_loop_plan_binds_projection_and_review_horizon():
+def test_stl_closed_loop_plan_binds_projection_and_review_horizon() -> None:
     trace = {"R": [0.1, 0.2, 0.75]}
     automaton = synthesise_stl_monitoring_automaton(
         "eventually (R >= 0.8)",
@@ -414,7 +435,9 @@ def test_stl_closed_loop_plan_binds_projection_and_review_horizon():
         ),
         blocked_reasons=(),
     )
-    assert plan.to_audit_record()["projected_action_plan"]["approved_actions"] == [
+    projected = plan.to_audit_record()["projected_action_plan"]
+    assert isinstance(projected, dict)
+    assert projected["approved_actions"] == [
         {
             "knob": "K",
             "scope": "global",
@@ -447,7 +470,7 @@ def test_stl_closed_loop_plan_binds_projection_and_review_horizon():
     }
 
 
-def test_stl_closed_loop_plan_records_fail_closed_blockers():
+def test_stl_closed_loop_plan_records_fail_closed_blockers() -> None:
     trace = {"R": [0.1, 0.2, 0.75]}
     automaton = synthesize_stl_monitoring_automaton(
         "eventually (R >= 0.8)",
@@ -469,7 +492,7 @@ def test_stl_closed_loop_plan_records_fail_closed_blockers():
     ]
 
 
-def test_stl_closed_loop_plan_satisfied_monitor_never_projects_actions():
+def test_stl_closed_loop_plan_satisfied_monitor_never_projects_actions() -> None:
     trace = {"R": [0.8, 0.9]}
     automaton = synthesise_stl_monitoring_automaton(
         "always (R >= 0.3)",
@@ -488,7 +511,7 @@ def test_stl_closed_loop_plan_satisfied_monitor_never_projects_actions():
     assert plan.runtime_gate.blocked_reasons == ("no_runtime_actions",)
 
 
-def test_stl_runtime_actuation_gate_fails_closed_for_invalid_runtime_knob():
+def test_stl_runtime_actuation_gate_fails_closed_for_invalid_runtime_knob() -> None:
     synthesis = STLControllerSynthesis(
         spec="always (theta >= 0.0)",
         satisfied=False,
@@ -530,7 +553,7 @@ def test_stl_runtime_actuation_gate_fails_closed_for_invalid_runtime_knob():
 
 
 @pytest.mark.parametrize("bad_horizon", [0, -1, True, 1.5])
-def test_stl_closed_loop_plan_rejects_invalid_horizon(bad_horizon):
+def test_stl_closed_loop_plan_rejects_invalid_horizon(bad_horizon: object) -> None:
     trace = {"R": [0.1, 0.2, 0.75]}
     automaton = synthesise_stl_monitoring_automaton(
         "eventually (R >= 0.8)",
@@ -538,7 +561,7 @@ def test_stl_closed_loop_plan_rejects_invalid_horizon(bad_horizon):
     )
 
     with pytest.raises(ValueError, match="horizon_steps"):
-        synthesise_stl_closed_loop_plan(
+        _plan_unchecked(
             automaton,
             trace,
             (),
@@ -546,7 +569,9 @@ def test_stl_closed_loop_plan_rejects_invalid_horizon(bad_horizon):
         )
 
 
-def test_synthesis_rejects_unknown_parsed_temporal_operator(monkeypatch):
+def test_synthesis_rejects_unknown_parsed_temporal_operator(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """The synthesis dispatch fails closed on an unsupported parsed operator."""
     monkeypatch.setattr(
         automaton_module,
