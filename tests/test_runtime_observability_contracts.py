@@ -10,7 +10,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from typing import cast
 
 import numpy as np
@@ -69,10 +69,21 @@ def _digital_twin_record() -> dict[str, object]:
     }
 
 
+class _UnimplementedEvidence(PrometheusEvidenceSource):
+    """Explicit protocol subclass that does not implement the audit record."""
+
+
 def test_prometheus_evidence_base_requires_override() -> None:
-    """The evidence protocol base fails closed until implemented."""
-    with pytest.raises(NotImplementedError):
-        PrometheusEvidenceSource().to_audit_record()
+    """The evidence protocol fails closed until a source implements it."""
+    # Loose alias: instantiating the protocol is the refusal under test.
+    make_protocol: Callable[[], object] = PrometheusEvidenceSource
+    with pytest.raises(TypeError, match="Protocols cannot be instantiated"):
+        make_protocol()
+    # Loose alias: mypy already rejects the abstract subclass; this checks the
+    # runtime refusal of a source that slipped through without an override.
+    make_unimplemented: Callable[[], PrometheusEvidenceSource] = _UnimplementedEvidence
+    with pytest.raises(ValueError, match="must return a mapping"):
+        MetricsExporter().export_digital_twin_operator_evidence(make_unimplemented())
 
 
 def test_runtime_prometheus_rejects_nonreal_state_metric() -> None:

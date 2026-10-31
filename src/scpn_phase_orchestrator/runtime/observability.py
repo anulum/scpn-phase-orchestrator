@@ -22,7 +22,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass
 from math import isfinite
 from numbers import Integral, Real
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, Protocol
 
 from scpn_phase_orchestrator.upde.metrics import UPDEState
 
@@ -70,8 +70,12 @@ class RuntimeMetricSnapshot:
             _validated_step_idx(self.step_idx)
 
 
-class PrometheusEvidenceSource:
-    """Protocol-like base for audit-record evidence exported as metrics."""
+class PrometheusEvidenceSource(Protocol):
+    """Evidence that exports its audit record as Prometheus metrics.
+
+    Any object with a ``to_audit_record()`` method qualifies, which is what
+    the exporters check at runtime; no subclassing is needed.
+    """
 
     def to_audit_record(self) -> Mapping[str, object]:
         """Return JSON-safe evidence fields for Prometheus exposition.
@@ -79,14 +83,9 @@ class PrometheusEvidenceSource:
         Returns
         -------
         Mapping[str, object]
-            Return JSON-safe evidence fields for Prometheus exposition.
-
-        Raises
-        ------
-        NotImplementedError
-            If the operation is not implemented.
+            JSON-safe evidence fields for Prometheus exposition.
         """
-        raise NotImplementedError
+        ...
 
 
 class _NoOpSpan:

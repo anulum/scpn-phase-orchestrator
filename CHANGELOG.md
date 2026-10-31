@@ -50,6 +50,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `PrometheusEvidenceSource` is a `typing.Protocol`. Any object with a
+  `to_audit_record()` method, such as `DigitalTwinOperatorEvidence`, now
+  type-checks as evidence for the Prometheus exporters, matching what they
+  already accepted at runtime. The protocol itself cannot be instantiated. A
+  subclass that leaves `to_audit_record()` unimplemented is rejected by
+  mypy, and at runtime the exporter refuses its result.
 - `winding_numbers` and `winding_vector` take `backend=`, and the new
   `winding_backend(backend)` names the owner; a named owner that is absent
   or whose call fails raises `RuntimeError` instead of falling back, and an

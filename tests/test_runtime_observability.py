@@ -236,10 +236,7 @@ def test_runtime_observability_exports_digital_twin_operator_evidence() -> None:
         ),
     )
 
-    # Loose alias: the exporter duck-types ``to_audit_record()`` at runtime, but
-    # DigitalTwinOperatorEvidence does not subclass PrometheusEvidenceSource.
-    twin_text: Callable[..., str] = RuntimeObservability().digital_twin_prometheus_text
-    text = twin_text(evidence)
+    text = RuntimeObservability().digital_twin_prometheus_text(evidence)
 
     assert "spo_digital_twin_sync_accepted_total" in text
     assert "spo_digital_twin_sync_rejected_total" in text
