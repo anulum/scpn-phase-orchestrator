@@ -717,8 +717,18 @@ jobs:
             'tests/test_upde_run_real_runtime.py::test_resolver_skips_absent_owners_to_the_first_that_loads' \
             'tests/test_upde_run_real_runtime.py::test_resolver_falls_back_to_python_without_native_owners' \
             'tests/test_upde_run_real_runtime.py::test_resolver_prefers_rust_when_it_is_installed' \
-            -o addopts= --strict-markers --tb=short -p no:cacheprovider \
-            --basetemp "$RUNNER_TEMP/upde-resolver-profiles"
+            -o addopts= --strict-markers --tb=short -p no:cacheprovider -rs \
+            --basetemp "$RUNNER_TEMP/upde-resolver-profiles" \
+            --junitxml "$RUNNER_TEMP/upde-resolver-profiles.junit.xml"
+          # A skip would leave the step green without proving the order.
+          python - "$RUNNER_TEMP/upde-resolver-profiles.junit.xml" <<'PY'
+          import sys
+          import xml.etree.ElementTree as ET
+          suite = ET.parse(sys.argv[1]).getroot().iter("testsuite").__next__()
+          counts = {k: int(suite.get(k, "0")) for k in ("tests", "skipped", "failures", "errors")}
+          if counts != {"tests": 3, "skipped": 0, "failures": 0, "errors": 0}:
+              raise SystemExit(f"UPDE resolver profiles were not all run: {counts}")
+          PY
       - name: Compare all required Hodge public runtimes
         run: |
           . .venv/bin/activate
