@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 from scpn_phase_orchestrator.binding.types import (
     BindingSpec,
     CouplingSpec,
@@ -20,8 +22,8 @@ from scpn_phase_orchestrator.binding.types import (
 from scpn_phase_orchestrator.binding.validator import validate_binding_spec
 
 
-def _base_spec(**overrides) -> BindingSpec:
-    defaults = {
+def _base_spec(**overrides: object) -> BindingSpec:
+    defaults: dict[str, object] = {
         "name": "test",
         "version": "0.1.0",
         "safety_tier": "research",
@@ -40,17 +42,19 @@ def _base_spec(**overrides) -> BindingSpec:
         "geometry_prior": None,
     }
     defaults.update(overrides)
-    return BindingSpec(**defaults)
+    # Overrides may be deliberately invalid, so the spec is built unchecked.
+    spec_unchecked: Callable[..., BindingSpec] = BindingSpec
+    return spec_unchecked(**defaults)
 
 
-def test_valid_imprint_passes():
+def test_valid_imprint_passes() -> None:
     spec = _base_spec(
         imprint_model=ImprintSpec(decay_rate=0.01, saturation=3.0, modulates=[]),
     )
     assert validate_binding_spec(spec) == []
 
 
-def test_negative_decay_rate_fails():
+def test_negative_decay_rate_fails() -> None:
     spec = _base_spec(
         imprint_model=ImprintSpec(decay_rate=-0.5, saturation=3.0, modulates=[]),
     )
@@ -58,7 +62,7 @@ def test_negative_decay_rate_fails():
     assert any("decay_rate" in e for e in errors)
 
 
-def test_zero_saturation_fails():
+def test_zero_saturation_fails() -> None:
     spec = _base_spec(
         imprint_model=ImprintSpec(decay_rate=0.01, saturation=0.0, modulates=[]),
     )
@@ -66,7 +70,7 @@ def test_zero_saturation_fails():
     assert any("saturation" in e for e in errors)
 
 
-def test_no_imprint_passes():
+def test_no_imprint_passes() -> None:
     spec = _base_spec(imprint_model=None)
     assert validate_binding_spec(spec) == []
 
@@ -74,7 +78,7 @@ def test_no_imprint_passes():
 class TestImprintValidationPipelineWiring:
     """Pipeline: validated imprint spec → ImprintModel construction."""
 
-    def test_validated_imprint_builds_model(self):
+    def test_validated_imprint_builds_model(self) -> None:
         """Valid imprint spec → ImprintModel: validates config drives
         model construction without errors."""
         from scpn_phase_orchestrator.imprint.update import ImprintModel
@@ -85,6 +89,7 @@ class TestImprintValidationPipelineWiring:
         errors = validate_binding_spec(spec)
         assert errors == []
 
+        assert spec.imprint_model is not None
         model = ImprintModel(
             spec.imprint_model.decay_rate,
             spec.imprint_model.saturation,
