@@ -1,6 +1,6 @@
 {
   "description": "mypy --strict error ceilings per tests/ file; maintained by tools/tests_typing_ratchet.py. Absent files must have no errors; ceilings may only fall.",
-  "total": 5959,
+  "total": 5940,
   "files": {
     "tests/apps/queuewaves/test_server.py": 23,
     "tests/test_action_projection.py": 51,
@@ -107,7 +107,6 @@
     "tests/test_predictive_supervisor.py": 48,
     "tests/test_prometheus.py": 53,
     "tests/test_psychedelic.py": 23,
-    "tests/test_qpu_data_artifact.py": 19,
     "tests/test_quantum_bridge.py": 54,
     "tests/test_quantum_bridge_live.py": 49,
     "tests/test_quantum_control_bridge.py": 62,

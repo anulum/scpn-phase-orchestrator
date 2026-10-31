@@ -9,8 +9,9 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable, Sequence
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import pytest
@@ -199,8 +200,10 @@ def test_hash_mismatch_in_manifest_is_rejected_with_precise_message() -> None:
 
 
 def test_validate_rejects_non_mapping_payload() -> None:
+    # Loose alias: a list payload is the malformed input under test.
+    validate_unchecked: Callable[..., object] = validate_qpu_data_artifact
     with pytest.raises(ValueError, match="artifact payload must be a mapping"):
-        validate_qpu_data_artifact([1, 2, 3])
+        validate_unchecked([1, 2, 3])
 
 
 def test_metadata_and_provenance_are_normalised_and_layer_ids_strified() -> None:
@@ -211,7 +214,8 @@ def test_metadata_and_provenance_are_normalised_and_layer_ids_strified() -> None
         K_nm=np.array([[0.0, 0.6], [0.6, 0.0]]),
         omega=np.array([1.0, 1.2]),
         theta0=np.array([0.0, 0.5]),
-        layer_assignments=[1, " two "],
+        # The emitter accepts integer layer ids and strifies them.
+        layer_assignments=cast("Sequence[str]", [1, " two "]),
         normalization=" normalized ",
         extraction_method=" test-extractor ",
         replay_id="unit:replay:normalised",
@@ -306,7 +310,7 @@ def test_artifact_sha256_is_verified() -> None:
 def test_emit_rejects_missing_required_provenance_strings(
     field: str, value: object, match: str
 ) -> None:
-    kwargs = {
+    kwargs: dict[str, object] = {
         "domain": "unit",
         "source_name": "unit-fixture",
         "source_mode": "curated",
@@ -317,9 +321,11 @@ def test_emit_rejects_missing_required_provenance_strings(
         "replay_id": "unit:replay:1",
     }
     kwargs[field] = value
+    # Loose alias: the parametrised field deliberately carries a bad value.
+    emit_unchecked: Callable[..., object] = emit_qpu_data_artifact
 
     with pytest.raises(ValueError, match=match):
-        emit_qpu_data_artifact(**kwargs)
+        emit_unchecked(**kwargs)
 
 
 @pytest.mark.parametrize(
@@ -332,7 +338,7 @@ def test_emit_rejects_missing_required_provenance_strings(
 def test_emit_rejects_malformed_numeric_arrays(
     field: str, value: object, match: str
 ) -> None:
-    kwargs = {
+    kwargs: dict[str, object] = {
         "domain": "unit",
         "source_name": "unit-fixture",
         "source_mode": "curated",
@@ -343,9 +349,11 @@ def test_emit_rejects_malformed_numeric_arrays(
         "replay_id": "unit:replay:1",
     }
     kwargs[field] = value
+    # Loose alias: the parametrised field deliberately carries a bad value.
+    emit_unchecked: Callable[..., object] = emit_qpu_data_artifact
 
     with pytest.raises(ValueError, match=match):
-        emit_qpu_data_artifact(**kwargs)
+        emit_unchecked(**kwargs)
 
 
 def test_from_dict_rejects_missing_fields_and_schema_mismatch() -> None:
@@ -389,7 +397,9 @@ def test_json_roundtrip_preserves_payload_and_hashes() -> None:
     assert artifact.replay_id == "unit:replay:1"
 
 
-def test_qpu_artifact_file_io_writes_newline_and_reads_validated_payload(tmp_path):
+def test_qpu_artifact_file_io_writes_newline_and_reads_validated_payload(
+    tmp_path: Path,
+) -> None:
     payload = _base_payload()
     artifact = QPUDataArtifact.from_dict(payload)
     path = tmp_path / "qpu-data-artifact.json"
