@@ -11,6 +11,7 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import json
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -25,7 +26,9 @@ def test_presplit_audit_logger_submodule_is_removed() -> None:
     assert importlib.util.find_spec("scpn_phase_orchestrator.audit.logger") is None
 
 
-def _sample_state(r0=0.8, r1=0.6, regime="nominal"):
+def _sample_state(
+    r0: float = 0.8, r1: float = 0.6, regime: str = "nominal"
+) -> UPDEState:
     return UPDEState(
         layers=[LayerState(R=r0, psi=0.5), LayerState(R=r1, psi=1.0)],
         cross_layer_alignment=np.eye(2),
@@ -34,7 +37,7 @@ def _sample_state(r0=0.8, r1=0.6, regime="nominal"):
     )
 
 
-def _sample_actions():
+def _sample_actions() -> list[ControlAction]:
     return [
         ControlAction(
             knob="K", scope="global", value=0.05, ttl_s=5.0, justification="boost"
@@ -51,7 +54,7 @@ class TestAuditHashChain:
     """Verify the SHA-256 hash chain that ensures tamper detection.
     This is the core security property of the audit log."""
 
-    def test_single_record_hash_chains_from_zero(self, tmp_path):
+    def test_single_record_hash_chains_from_zero(self, tmp_path: Path) -> None:
         """First record must chain from the null hash (64 zeros)."""
         log_path = tmp_path / "audit.jsonl"
         with AuditLogger(log_path) as logger:
@@ -67,7 +70,7 @@ class TestAuditHashChain:
             f"Expected {expected}, got {record['_hash']}"
         )
 
-    def test_multi_record_hash_chain_is_continuous(self, tmp_path):
+    def test_multi_record_hash_chain_is_continuous(self, tmp_path: Path) -> None:
         """Each record's hash must depend on the previous record's hash,
         forming an unbroken chain. Tampering with any record would break
         all subsequent hashes."""
@@ -91,7 +94,9 @@ class TestAuditHashChain:
             )
             prev_hash = record["_hash"]
 
-    def test_header_record_seeds_following_step_hash_chain(self, tmp_path):
+    def test_header_record_seeds_following_step_hash_chain(
+        self, tmp_path: Path
+    ) -> None:
         """A forged prepended header must invalidate the following step hash."""
         log_path = tmp_path / "audit.jsonl"
         with AuditLogger(log_path) as logger:
@@ -112,7 +117,7 @@ class TestAuditHashChain:
         expected = hashlib.sha256((header["_hash"] + json_line).encode()).hexdigest()
         assert step["_hash"] == expected
 
-    def test_hash_excludes_hash_field_itself(self, tmp_path):
+    def test_hash_excludes_hash_field_itself(self, tmp_path: Path) -> None:
         """The _hash field must not be included in the hash computation
         (otherwise the hash would be self-referential)."""
         log_path = tmp_path / "audit.jsonl"
@@ -127,7 +132,9 @@ class TestAuditHashChain:
             "Hash must exclude the _hash field — otherwise it's self-referential"
         )
 
-    def test_unsigned_development_mode_is_explicit(self, tmp_path, monkeypatch):
+    def test_unsigned_development_mode_is_explicit(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Unsigned audit logs must make development mode visible in metadata."""
         monkeypatch.delenv("SPO_AUDIT_KEY", raising=False)
         monkeypatch.delenv("SPO_AUDIT_KEYRING", raising=False)
@@ -141,8 +148,8 @@ class TestAuditHashChain:
         assert "_signature" not in record
 
     def test_unsigned_development_records_expose_canonical_payload_hash(
-        self, tmp_path, monkeypatch
-    ):
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Equivalent payloads must hash identically regardless of dict order."""
         monkeypatch.delenv("SPO_AUDIT_KEY", raising=False)
         monkeypatch.delenv("SPO_AUDIT_KEYRING", raising=False)
@@ -169,8 +176,8 @@ class TestAuditHashChain:
         assert second["_audit_mode"] == "unsigned-development"
 
     def test_hmac_signed_records_expose_only_key_fingerprint(
-        self, tmp_path, monkeypatch
-    ):
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Configured audit keys must sign every record without leaking the key."""
         monkeypatch.setenv("SPO_AUDIT_KEY", "unit-test-secret-key")
         log_path = tmp_path / "signed.jsonl"
@@ -203,7 +210,7 @@ class TestAuditDataIntegrity:
     """Verify that logged data is faithfully preserved: values, types,
     structure, and ordering."""
 
-    def test_step_preserves_all_fields(self, tmp_path):
+    def test_step_preserves_all_fields(self, tmp_path: Path) -> None:
         """Step record must contain step, regime, stability, layers, actions,
         and timestamp — all with correct values."""
         log_path = tmp_path / "audit.jsonl"
@@ -227,7 +234,7 @@ class TestAuditDataIntegrity:
         assert record["actions"][0]["justification"] == "boost"
         assert "ts" in record
 
-    def test_event_preserves_arbitrary_data(self, tmp_path):
+    def test_event_preserves_arbitrary_data(self, tmp_path: Path) -> None:
         """Event records must preserve the event type and all data fields."""
         log_path = tmp_path / "audit.jsonl"
         with AuditLogger(log_path) as logger:
@@ -241,7 +248,7 @@ class TestAuditDataIntegrity:
         assert record["to"] == "critical"
         assert record["step"] == 99
 
-    def test_event_rejects_non_finite_payload_numbers(self, tmp_path):
+    def test_event_rejects_non_finite_payload_numbers(self, tmp_path: Path) -> None:
         """Audit event payloads must not write non-standard JSON constants."""
         log_path = tmp_path / "audit.jsonl"
         with (
@@ -250,7 +257,7 @@ class TestAuditDataIntegrity:
         ):
             logger.log_event("operator_note", {"value": float("nan")})
 
-    def test_full_state_replay_fields_round_trip(self, tmp_path):
+    def test_full_state_replay_fields_round_trip(self, tmp_path: Path) -> None:
         """When phases/omegas/knm/alpha are provided, they must be
         preserved exactly for deterministic replay."""
         log_path = tmp_path / "audit.jsonl"
@@ -287,7 +294,7 @@ class TestAuditDataIntegrity:
         recovered_knm = np.array(record["knm"])
         np.testing.assert_allclose(recovered_knm, knm)
 
-    def test_phases_without_omegas_raises_audit_error(self, tmp_path):
+    def test_phases_without_omegas_raises_audit_error(self, tmp_path: Path) -> None:
         """Providing phases without omegas/knm/alpha must raise AuditError,
         because the log would be un-replayable."""
         log_path = tmp_path / "audit.jsonl"
@@ -297,7 +304,7 @@ class TestAuditDataIntegrity:
         ):
             logger.log_step(0, _sample_state(), [], phases=np.array([0.1, 0.2]))
 
-    def test_amplitude_and_mu_fields_preserved(self, tmp_path):
+    def test_amplitude_and_mu_fields_preserved(self, tmp_path: Path) -> None:
         """Stuart-Landau specific fields (amplitudes, mu, knm_r, epsilon)
         must be preserved for SL replay."""
         log_path = tmp_path / "audit.jsonl"
@@ -338,7 +345,7 @@ class TestAuditJSONLFormat:
     """Verify strict JSONL format: one valid JSON object per line,
     no trailing content, no blank lines."""
 
-    def test_each_line_is_valid_json(self, tmp_path):
+    def test_each_line_is_valid_json(self, tmp_path: Path) -> None:
         """Every line in the log must parse as valid JSON."""
         log_path = tmp_path / "audit.jsonl"
         with AuditLogger(log_path) as logger:
@@ -357,7 +364,7 @@ class TestAuditJSONLFormat:
             assert "ts" in parsed, f"Line {i} missing timestamp"
             assert "_hash" in parsed, f"Line {i} missing hash chain"
 
-    def test_close_flushes_all_data(self, tmp_path):
+    def test_close_flushes_all_data(self, tmp_path: Path) -> None:
         """After close(), all logged data must be readable from disk."""
         log_path = tmp_path / "audit.jsonl"
         logger = AuditLogger(log_path)
@@ -368,7 +375,7 @@ class TestAuditJSONLFormat:
         lines = log_path.read_text().strip().split("\n")
         assert len(lines) == 2, "Both steps must be flushed after close()"
 
-    def test_context_manager_flushes_on_exit(self, tmp_path):
+    def test_context_manager_flushes_on_exit(self, tmp_path: Path) -> None:
         """Using AuditLogger as context manager must flush on __exit__."""
         log_path = tmp_path / "audit.jsonl"
         with AuditLogger(log_path) as logger:
@@ -389,7 +396,7 @@ class TestAuditHeader:
     """Verify that log_header produces correct engine configuration records
     for replay reconstruction."""
 
-    def test_header_contains_engine_config(self, tmp_path):
+    def test_header_contains_engine_config(self, tmp_path: Path) -> None:
         log_path = tmp_path / "audit.jsonl"
         with AuditLogger(log_path) as logger:
             logger.log_header(n_oscillators=8, dt=0.01, method="rk4", seed=42)
@@ -402,7 +409,7 @@ class TestAuditHeader:
         assert record["seed"] == 42
         assert record["control_mode"] == "supervisor_policy"
 
-    def test_header_rejects_invalid_control_mode(self, tmp_path):
+    def test_header_rejects_invalid_control_mode(self, tmp_path: Path) -> None:
         log_path = tmp_path / "audit.jsonl"
         with (
             AuditLogger(log_path) as logger,
@@ -410,7 +417,7 @@ class TestAuditHeader:
         ):
             logger.log_header(n_oscillators=8, dt=0.01, control_mode="")
 
-    def test_header_amplitude_mode_flag(self, tmp_path):
+    def test_header_amplitude_mode_flag(self, tmp_path: Path) -> None:
         log_path = tmp_path / "audit.jsonl"
         with AuditLogger(log_path) as logger:
             logger.log_header(n_oscillators=4, dt=0.005, amplitude_mode=True)
@@ -418,9 +425,9 @@ class TestAuditHeader:
         record = json.loads(log_path.read_text().strip())
         assert record["amplitude_mode"] is True
 
-    def test_header_contains_binding_config_when_provided(self, tmp_path):
+    def test_header_contains_binding_config_when_provided(self, tmp_path: Path) -> None:
         log_path = tmp_path / "audit.jsonl"
-        binding_config = {
+        binding_config: dict[str, object] = {
             "name": "demo",
             "engine_mode": "kuramoto",
             "channels": {"P": {"driver_keys": ["frequency"]}},
@@ -436,9 +443,11 @@ class TestAuditHeader:
         assert record["binding_config"] == binding_config
         assert record["binding_summary"] == binding_config
 
-    def test_header_contains_binding_summary_when_provided(self, tmp_path):
+    def test_header_contains_binding_summary_when_provided(
+        self, tmp_path: Path
+    ) -> None:
         log_path = tmp_path / "audit.jsonl"
-        binding_summary = {
+        binding_summary: dict[str, object] = {
             "name": "resolved",
             "engine_mode": "stuart_landau",
             "channels": {"P": {"driver_keys": ["frequency"]}},
@@ -453,7 +462,7 @@ class TestAuditHeader:
         record = json.loads(log_path.read_text().strip())
         assert record["binding_summary"] == binding_summary
 
-    def test_header_without_seed_omits_field(self, tmp_path):
+    def test_header_without_seed_omits_field(self, tmp_path: Path) -> None:
         """Optional fields must be absent, not null, when not provided."""
         log_path = tmp_path / "audit.jsonl"
         with AuditLogger(log_path) as logger:
@@ -468,7 +477,7 @@ class TestAuditHeader:
     # TestAuditDataIntegrity prove the audit pipeline.
 
     # Salvaged module-specific behavioural contracts from deleted mixed tests.
-    def test_log_step_phases_without_omegas_raises(self, tmp_path):
+    def test_log_step_phases_without_omegas_raises(self, tmp_path: Path) -> None:
         log = tmp_path / "bad.jsonl"
         logger = AuditLogger(log)
         state = UPDEState(
