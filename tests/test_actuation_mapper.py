@@ -10,11 +10,20 @@ from __future__ import annotations
 
 import subprocess
 import sys
+from collections.abc import Callable
+from typing import TypeVar
 
 import pytest
 
 from scpn_phase_orchestrator.actuation.mapper import ActuationMapper, ControlAction
 from scpn_phase_orchestrator.binding.types import ActuatorMapping
+
+_R = TypeVar("_R")
+
+
+def _call(fn: Callable[..., _R], *args: object, **kwargs: object) -> _R:
+    """Call ``fn`` with arguments that are deliberately outside its types."""
+    return fn(*args, **kwargs)
 
 
 def test_audit_logger_import_is_independent_of_mapper_import_order() -> None:
@@ -46,14 +55,19 @@ def test_audit_logger_import_is_independent_of_mapper_import_order() -> None:
     )
 
 
-def _action(knob, scope, value):
-    return ControlAction(
-        knob=knob, scope=scope, value=value, ttl_s=5.0, justification="test"
+def _action(knob: str, scope: str, value: object) -> ControlAction:
+    return _call(
+        ControlAction,
+        knob=knob,
+        scope=scope,
+        value=value,
+        ttl_s=5.0,
+        justification="test",
     )
 
 
 @pytest.fixture()
-def mapper():
+def mapper() -> ActuationMapper:
     return ActuationMapper(
         [
             ActuatorMapping(name="K_glob", knob="K", scope="global", limits=(0.0, 1.0)),
@@ -74,27 +88,29 @@ class TestActionMapping:
     """Verify that ControlActions are correctly routed to matching actuators
     with values clamped to configured limits."""
 
-    def test_global_action_matches_global_actuator(self, mapper):
+    def test_global_action_matches_global_actuator(
+        self, mapper: ActuationMapper
+    ) -> None:
         cmds = mapper.map_actions([_action("K", "global", 0.3)])
         assert len(cmds) >= 1
         k_cmds = [c for c in cmds if c["actuator"] == "K_glob"]
         assert len(k_cmds) == 1
         assert k_cmds[0]["value"] == 0.3
 
-    def test_value_clamped_to_upper_limit(self, mapper):
+    def test_value_clamped_to_upper_limit(self, mapper: ActuationMapper) -> None:
         cmds = mapper.map_actions([_action("K", "global", 5.0)])
         k_glob = [c for c in cmds if c["actuator"] == "K_glob"]
         assert k_glob[0]["value"] == 1.0, "Must clamp to upper limit"
 
-    def test_value_clamped_to_lower_limit(self, mapper):
+    def test_value_clamped_to_lower_limit(self, mapper: ActuationMapper) -> None:
         cmds = mapper.map_actions([_action("zeta", "global", -1.0)])
         assert cmds[0]["value"] == 0.0, "Must clamp to lower limit"
 
-    def test_unmatched_knob_produces_empty(self, mapper):
+    def test_unmatched_knob_produces_empty(self, mapper: ActuationMapper) -> None:
         cmds = mapper.map_actions([_action("Psi", "layer_0", 0.1)])
         assert cmds == []
 
-    def test_command_contains_all_fields(self, mapper):
+    def test_command_contains_all_fields(self, mapper: ActuationMapper) -> None:
         cmds = mapper.map_actions([_action("K", "global", 0.5)])
         cmd = cmds[0]
         assert "actuator" in cmd
@@ -104,20 +120,24 @@ class TestActionMapping:
         assert "ttl_s" in cmd
         assert cmd["ttl_s"] == 5.0
 
-    def test_multiple_actions_produce_multiple_commands(self, mapper):
+    def test_multiple_actions_produce_multiple_commands(
+        self, mapper: ActuationMapper
+    ) -> None:
         actions = [_action("K", "global", 0.3), _action("zeta", "global", 0.2)]
         cmds = mapper.map_actions(actions)
         knobs = {c["knob"] for c in cmds}
         assert "K" in knobs and "zeta" in knobs
 
-    def test_layer_scoped_action_matches_layer_actuator(self, mapper):
+    def test_layer_scoped_action_matches_layer_actuator(
+        self, mapper: ActuationMapper
+    ) -> None:
         """layer_0 scope action should match K_L0 (scope=layer_0)."""
         cmds = mapper.map_actions([_action("K", "layer_0", 1.5)])
         l0_cmds = [c for c in cmds if c["actuator"] == "K_L0"]
         assert len(l0_cmds) == 1
         assert l0_cmds[0]["value"] == 1.5
 
-    def test_layer_actuator_has_wider_limits(self, mapper):
+    def test_layer_actuator_has_wider_limits(self, mapper: ActuationMapper) -> None:
         """K_L0 has limits (0, 2.0) — wider than K_glob (0, 1.0)."""
         cmds = mapper.map_actions([_action("K", "layer_0", 1.8)])
         l0_cmds = [c for c in cmds if c["actuator"] == "K_L0"]
@@ -133,33 +153,33 @@ class TestActionValidation:
     """Verify that validate_action correctly distinguishes valid from
     invalid actions before they reach the control loop."""
 
-    def test_valid_knob_in_range(self, mapper):
+    def test_valid_knob_in_range(self, mapper: ActuationMapper) -> None:
         assert mapper.validate_action(_action("K", "global", 0.5)) is True
 
-    def test_valid_at_lower_boundary(self, mapper):
+    def test_valid_at_lower_boundary(self, mapper: ActuationMapper) -> None:
         assert mapper.validate_action(_action("K", "global", 0.0)) is True
 
-    def test_valid_at_upper_boundary(self, mapper):
+    def test_valid_at_upper_boundary(self, mapper: ActuationMapper) -> None:
         assert mapper.validate_action(_action("K", "global", 1.0)) is True
 
-    def test_invalid_above_all_limits(self, mapper):
+    def test_invalid_above_all_limits(self, mapper: ActuationMapper) -> None:
         """Value above ALL actuator limits for this knob must be rejected."""
         # K_glob has (0,1), K_L0 has (0,2) — global scope matches both
         assert mapper.validate_action(_action("K", "global", 2.5)) is False
 
-    def test_invalid_below_lower(self, mapper):
+    def test_invalid_below_lower(self, mapper: ActuationMapper) -> None:
         assert mapper.validate_action(_action("K", "global", -0.1)) is False
 
-    def test_invalid_unknown_knob(self, mapper):
+    def test_invalid_unknown_knob(self, mapper: ActuationMapper) -> None:
         """Knobs not in VALID_KNOBS must be rejected regardless of value."""
         assert mapper.validate_action(_action("omega", "global", 0.1)) is False
 
-    def test_invalid_unmatched_scope(self, mapper):
+    def test_invalid_unmatched_scope(self, mapper: ActuationMapper) -> None:
         """Valid knob but unmatched scope should fail validation."""
         result = mapper.validate_action(_action("zeta", "layer_99", 0.1))
         assert result is False, "No actuator for scope=layer_99"
 
-    def test_layer_scope_with_wider_limits(self, mapper):
+    def test_layer_scope_with_wider_limits(self, mapper: ActuationMapper) -> None:
         """K_L0 has wider limits (0,2) than K_glob (0,1).
         layer_0 scope at 1.5 is valid via K_L0.
         global scope at 1.5 also valid because global matches K_L0 too."""
@@ -168,7 +188,9 @@ class TestActionValidation:
         assert mapper.validate_action(_action("K", "global", 1.5)) is True
 
     @pytest.mark.parametrize("value", [True, float("nan"), float("inf"), "0.5"])
-    def test_malformed_action_values_are_rejected(self, mapper, value):
+    def test_malformed_action_values_are_rejected(
+        self, mapper: ActuationMapper, value: object
+    ) -> None:
         action = _action("K", "global", value)
         assert mapper.validate_action(action) is False
         assert mapper.map_actions([action]) == []
@@ -182,9 +204,9 @@ class TestActionValidation:
 class TestActuationMapperEdgeCases:
     """Verify behaviour with empty or degenerate configurations."""
 
-    def test_rejects_malformed_actuator_mapping_entries(self):
+    def test_rejects_malformed_actuator_mapping_entries(self) -> None:
         with pytest.raises(ValueError, match="actuator_mappings"):
-            ActuationMapper([object()])
+            _call(ActuationMapper, [object()])
 
     @pytest.mark.parametrize(
         "mapping_kwargs, message",
@@ -218,21 +240,23 @@ class TestActuationMapperEdgeCases:
             ),
         ],
     )
-    def test_rejects_invalid_actuator_mapping_fields(self, mapping_kwargs, message):
+    def test_rejects_invalid_actuator_mapping_fields(
+        self, mapping_kwargs: dict[str, object], message: str
+    ) -> None:
         with pytest.raises(ValueError, match=message):
-            mapping = ActuatorMapping(**mapping_kwargs)
+            mapping = _call(ActuatorMapping, **mapping_kwargs)
             ActuationMapper([mapping])
 
-    def test_empty_mapper_produces_empty(self):
+    def test_empty_mapper_produces_empty(self) -> None:
         mapper = ActuationMapper([])
         cmds = mapper.map_actions([_action("K", "global", 0.5)])
         assert cmds == []
 
-    def test_empty_mapper_validation_rejects_all(self):
+    def test_empty_mapper_validation_rejects_all(self) -> None:
         mapper = ActuationMapper([])
         assert mapper.validate_action(_action("K", "global", 0.5)) is False
 
-    def test_empty_action_list(self, mapper):
+    def test_empty_action_list(self, mapper: ActuationMapper) -> None:
         assert mapper.map_actions([]) == []
 
 
@@ -242,7 +266,7 @@ class TestActuationMapperPipelineEndToEnd:
     Proves ActuationMapper is the output adapter, not decorative.
     """
 
-    def test_policy_actions_map_to_device_commands(self):
+    def test_policy_actions_map_to_device_commands(self) -> None:
         """Policy.decide() → ActuationMapper.map_actions() → valid commands."""
         import numpy as np
 
@@ -293,7 +317,7 @@ class TestActuationMapperPipelineEndToEnd:
             assert cmd["actuator"] in {"K_glob", "zeta_glob"}
             assert cmd["value"] is not None
 
-    def test_performance_map_actions_under_10us(self):
+    def test_performance_map_actions_under_10us(self) -> None:
         """ActuationMapper.map_actions() < 10μs per call."""
         import time
 
@@ -328,18 +352,25 @@ def _k_mapper() -> ActuationMapper:
     "ttl_s",
     [float("nan"), float("inf"), float("-inf"), -1.0, True, "5", None],
 )
-def test_action_with_inadmissible_ttl_is_rejected_and_not_mapped(ttl_s) -> None:
+def test_action_with_inadmissible_ttl_is_rejected_and_not_mapped(
+    ttl_s: object,
+) -> None:
     """A TTL that is not a finite, non-negative real never becomes a command."""
     mapper = _k_mapper()
-    action = ControlAction(
-        knob="K", scope="global", value=1.0, ttl_s=ttl_s, justification="probe"
+    action = _call(
+        ControlAction,
+        knob="K",
+        scope="global",
+        value=1.0,
+        ttl_s=ttl_s,
+        justification="probe",
     )
     assert mapper.validate_action(action) is False
     assert mapper.map_actions([action]) == []
 
 
 @pytest.mark.parametrize("ttl_s", [0.0, 0, 5.0, 30])
-def test_action_with_admissible_ttl_is_mapped_with_its_ttl(ttl_s) -> None:
+def test_action_with_admissible_ttl_is_mapped_with_its_ttl(ttl_s: float) -> None:
     """Finite, non-negative TTLs, including zero, pass through unchanged."""
     mapper = _k_mapper()
     action = ControlAction(
