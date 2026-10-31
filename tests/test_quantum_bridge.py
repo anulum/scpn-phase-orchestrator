@@ -6,15 +6,35 @@
 # Contact: www.anulum.li | protoscience@anulum.li
 # SCPN Phase Orchestrator — Quantum Bridge tests
 
-from typing import Any, cast
+from collections.abc import Callable
+from typing import TypeVar, cast
 
 import numpy as np
 import pytest
 
 from scpn_phase_orchestrator.adapters.quantum_control_bridge import QuantumControlBridge
 
+_R = TypeVar("_R")
 
-def test_quantum_bridge_import_artifact():
+
+def _call(fn: Callable[..., _R], *args: object, **kwargs: object) -> _R:
+    """Call ``fn`` with arguments that are deliberately outside its types."""
+    return fn(*args, **kwargs)
+
+
+def _items(value: object) -> list[object]:
+    """Narrow a manifest list section to a list."""
+    assert isinstance(value, list | tuple)
+    return list(value)
+
+
+def _mapping(value: object) -> dict[str, object]:
+    """Narrow a manifest section to a mapping."""
+    assert isinstance(value, dict)
+    return value
+
+
+def test_quantum_bridge_import_artifact() -> None:
     bridge = QuantumControlBridge(n_oscillators=4)
     artifact = {
         "phases": [0.0, 0.1, 3.14, 3.2],
@@ -30,7 +50,7 @@ def test_quantum_bridge_import_artifact():
     assert state.layers[1].R > 0.9
 
 
-def test_quantum_solve():
+def test_quantum_solve() -> None:
     import importlib.util
 
     if importlib.util.find_spec("qiskit") is None:
@@ -47,42 +67,43 @@ def test_quantum_solve():
 
 
 class TestConstructorValidation:
-    def test_rejects_zero_oscillators(self):
+    def test_rejects_zero_oscillators(self) -> None:
         with pytest.raises(ValueError, match="n_oscillators"):
             QuantumControlBridge(n_oscillators=0)
 
-    def test_rejects_negative_oscillators(self):
+    def test_rejects_negative_oscillators(self) -> None:
         with pytest.raises(ValueError, match="n_oscillators"):
             QuantumControlBridge(n_oscillators=-3)
 
     @pytest.mark.parametrize("n_oscillators", [True, 2.0, "2"])
-    def test_rejects_non_integer_oscillator_count(self, n_oscillators: object):
+    def test_rejects_non_integer_oscillator_count(self, n_oscillators: object) -> None:
         with pytest.raises(ValueError, match="n_oscillators must be an integer"):
-            QuantumControlBridge(n_oscillators=cast("Any", n_oscillators))
+            _call(QuantumControlBridge, n_oscillators=n_oscillators)
 
-    def test_normalises_integer_oscillator_count(self):
-        b = QuantumControlBridge(n_oscillators=np.int64(2))
+    def test_normalises_integer_oscillator_count(self) -> None:
+        b = QuantumControlBridge(n_oscillators=cast(int, np.int64(2)))
         assert b._n == 2
 
-    def test_default_trotter_order_is_one(self):
+    def test_default_trotter_order_is_one(self) -> None:
         b = QuantumControlBridge(n_oscillators=2)
         assert b._trotter_order == 1
 
-    def test_custom_trotter_order_propagates(self):
+    def test_custom_trotter_order_propagates(self) -> None:
         b = QuantumControlBridge(n_oscillators=2, trotter_order=4)
         assert b._trotter_order == 4
 
     @pytest.mark.parametrize("trotter_order", [0, -1, 1.5, "2", True])
-    def test_rejects_invalid_trotter_order(self, trotter_order: object):
+    def test_rejects_invalid_trotter_order(self, trotter_order: object) -> None:
         with pytest.raises(ValueError, match="trotter_order"):
-            QuantumControlBridge(
+            _call(
+                QuantumControlBridge,
                 n_oscillators=2,
-                trotter_order=cast("Any", trotter_order),
+                trotter_order=trotter_order,
             )
 
 
 class TestImportArtifactEdges:
-    def test_default_layer_split_when_assignments_missing(self):
+    def test_default_layer_split_when_assignments_missing(self) -> None:
         """No layer_assignments → artefact is bisected at the midpoint."""
         bridge = QuantumControlBridge(n_oscillators=4)
         state = bridge.import_artifact(
@@ -90,18 +111,18 @@ class TestImportArtifactEdges:
         )
         assert len(state.layers) == 2
 
-    def test_missing_fidelity_defaults_to_zero(self):
+    def test_missing_fidelity_defaults_to_zero(self) -> None:
         """``fidelity`` key is optional; absent → stability_proxy = 0."""
         bridge = QuantumControlBridge(n_oscillators=2)
         state = bridge.import_artifact({"phases": [0.0, np.pi], "regime": "NOMINAL"})
         assert state.stability_proxy == 0.0
 
-    def test_missing_regime_defaults_to_nominal(self):
+    def test_missing_regime_defaults_to_nominal(self) -> None:
         bridge = QuantumControlBridge(n_oscillators=2)
         state = bridge.import_artifact({"phases": [0.0, 0.1], "fidelity": 0.3})
         assert state.regime_id == "NOMINAL"
 
-    def test_empty_layer_group_gives_zero_order(self):
+    def test_empty_layer_group_gives_zero_order(self) -> None:
         """A layer with no oscillator indices must produce R = 0, ψ = 0."""
         bridge = QuantumControlBridge(n_oscillators=4)
         state = bridge.import_artifact(
@@ -115,7 +136,7 @@ class TestImportArtifactEdges:
         assert state.layers[1].R == 0.0
         assert state.layers[1].psi == 0.0
 
-    def test_antiphase_group_has_low_order(self):
+    def test_antiphase_group_has_low_order(self) -> None:
         """Two oscillators at opposite phases → R ≈ 0."""
         bridge = QuantumControlBridge(n_oscillators=2)
         state = bridge.import_artifact(
@@ -128,7 +149,7 @@ class TestImportArtifactEdges:
         )
         assert state.layers[0].R < 1e-10
 
-    def test_phases_wrapped_modulo_two_pi(self):
+    def test_phases_wrapped_modulo_two_pi(self) -> None:
         """Input phases outside [0, 2π) must be wrapped on import."""
         bridge = QuantumControlBridge(n_oscillators=2)
         state = bridge.import_artifact(
@@ -144,32 +165,32 @@ class TestImportArtifactEdges:
 
 
 class TestImportArtifactValidation:
-    def test_rejects_non_mapping_artifact(self):
+    def test_rejects_non_mapping_artifact(self) -> None:
         bridge = QuantumControlBridge(n_oscillators=2)
         with pytest.raises(ValueError, match="artifact_dict must be a mapping"):
-            bridge.import_artifact(cast("Any", [0.0, 0.1]))
+            _call(bridge.import_artifact, [0.0, 0.1])
 
-    def test_rejects_missing_phases(self):
+    def test_rejects_missing_phases(self) -> None:
         bridge = QuantumControlBridge(n_oscillators=2)
         with pytest.raises(ValueError, match="must include 'phases'"):
             bridge.import_artifact({"fidelity": 0.5})
 
-    def test_rejects_non_finite_fidelity(self):
+    def test_rejects_non_finite_fidelity(self) -> None:
         bridge = QuantumControlBridge(n_oscillators=2)
         with pytest.raises(ValueError, match="fidelity must be finite"):
             bridge.import_artifact({"phases": [0.0, 1.0], "fidelity": float("inf")})
 
-    def test_rejects_invalid_fidelity(self):
+    def test_rejects_invalid_fidelity(self) -> None:
         bridge = QuantumControlBridge(n_oscillators=2)
         with pytest.raises(ValueError, match="fidelity must be finite"):
             bridge.import_artifact({"phases": [0.0, 1.0], "fidelity": "high"})
 
-    def test_rejects_out_of_range_fidelity(self):
+    def test_rejects_out_of_range_fidelity(self) -> None:
         bridge = QuantumControlBridge(n_oscillators=2)
         with pytest.raises(ValueError, match="fidelity must be finite"):
             bridge.import_artifact({"phases": [0.0, 1.0], "fidelity": 1.7})
 
-    def test_rejects_non_list_layer_assignments(self):
+    def test_rejects_non_list_layer_assignments(self) -> None:
         bridge = QuantumControlBridge(n_oscillators=2)
         with pytest.raises(ValueError, match="must be a list of index groups"):
             bridge.import_artifact(
@@ -180,7 +201,7 @@ class TestImportArtifactValidation:
                 }
             )
 
-    def test_rejects_non_integral_layer_index(self):
+    def test_rejects_non_integral_layer_index(self) -> None:
         bridge = QuantumControlBridge(n_oscillators=2)
         with pytest.raises(ValueError, match="must contain integer indexes"):
             bridge.import_artifact(
@@ -191,7 +212,7 @@ class TestImportArtifactValidation:
                 }
             )
 
-    def test_rejects_out_of_range_layer_index(self):
+    def test_rejects_out_of_range_layer_index(self) -> None:
         bridge = QuantumControlBridge(n_oscillators=2)
         with pytest.raises(ValueError, match="out of phase range"):
             bridge.import_artifact(
@@ -202,7 +223,7 @@ class TestImportArtifactValidation:
                 }
             )
 
-    def test_rejects_repeated_layer_index(self):
+    def test_rejects_repeated_layer_index(self) -> None:
         bridge = QuantumControlBridge(n_oscillators=2)
         with pytest.raises(ValueError, match="must not repeat phase indexes"):
             bridge.import_artifact(
@@ -213,7 +234,7 @@ class TestImportArtifactValidation:
                 }
             )
 
-    def test_rejects_incomplete_layer_assignments(self):
+    def test_rejects_incomplete_layer_assignments(self) -> None:
         bridge = QuantumControlBridge(n_oscillators=4)
         with pytest.raises(
             ValueError, match="must cover every phase index exactly once"
@@ -228,41 +249,41 @@ class TestImportArtifactValidation:
 
 
 class TestImportKnm:
-    def test_square_matrix_accepted(self):
+    def test_square_matrix_accepted(self) -> None:
         bridge = QuantumControlBridge(n_oscillators=3)
         knm = 0.2 * np.ones((3, 3))
         state = bridge.import_knm(knm)
         assert state.knm.shape == (3, 3)
         assert state.active_template == "quantum_import"
 
-    def test_rejects_non_square_matrix(self):
+    def test_rejects_non_square_matrix(self) -> None:
         bridge = QuantumControlBridge(n_oscillators=3)
         with pytest.raises(ValueError, match="Knm must be square"):
             bridge.import_knm(np.zeros((2, 3)))
 
-    def test_rejects_one_dimensional_input(self):
+    def test_rejects_one_dimensional_input(self) -> None:
         bridge = QuantumControlBridge(n_oscillators=3)
         with pytest.raises(ValueError, match="Knm must be square"):
             bridge.import_knm(np.arange(9).astype(np.float64))
 
-    def test_alpha_initialised_to_zero(self):
+    def test_alpha_initialised_to_zero(self) -> None:
         bridge = QuantumControlBridge(n_oscillators=2)
         state = bridge.import_knm(np.array([[0.0, 0.4], [0.4, 0.0]]))
         assert np.all(state.alpha == 0.0)
 
-    def test_accepts_array_like_input(self):
+    def test_accepts_array_like_input(self) -> None:
         bridge = QuantumControlBridge(n_oscillators=2)
-        state = bridge.import_knm([[0.0, 0.4], [0.4, 0.0]])
+        state = _call(bridge.import_knm, [[0.0, 0.4], [0.4, 0.0]])
         assert state.knm.shape == (2, 2)
 
-    def test_rejects_non_finite_knm(self):
+    def test_rejects_non_finite_knm(self) -> None:
         bridge = QuantumControlBridge(n_oscillators=2)
         with pytest.raises(ValueError, match="must contain finite values"):
-            bridge.import_knm([[0.0, float("nan")], [0.0, 0.0]])
+            _call(bridge.import_knm, [[0.0, float("nan")], [0.0, 0.0]])
 
 
 class TestCompilerManifestValidation:
-    def test_rejects_invalid_shapes(self):
+    def test_rejects_invalid_shapes(self) -> None:
         bridge = QuantumControlBridge(n_oscillators=3)
         with pytest.raises(ValueError, match="does not match n_oscillators=3"):
             bridge.build_quantum_compiler_manifest(
@@ -271,7 +292,7 @@ class TestCompilerManifestValidation:
                 dt=0.1,
             )
 
-    def test_rejects_non_finite_dt(self):
+    def test_rejects_non_finite_dt(self) -> None:
         bridge = QuantumControlBridge(n_oscillators=2)
         with pytest.raises(ValueError, match="dt must be finite and positive"):
             bridge.build_quantum_compiler_manifest(
@@ -280,7 +301,7 @@ class TestCompilerManifestValidation:
                 dt=float("nan"),
             )
 
-    def test_rejects_non_finite_compiler_arrays(self):
+    def test_rejects_non_finite_compiler_arrays(self) -> None:
         bridge = QuantumControlBridge(n_oscillators=2)
         with pytest.raises(ValueError, match="must contain finite values"):
             bridge.build_quantum_compiler_manifest(
@@ -289,7 +310,9 @@ class TestCompilerManifestValidation:
                 dt=0.1,
             )
 
-    def test_marks_parity_status_as_failed_when_terms_differ(self, monkeypatch: Any):
+    def test_marks_parity_status_as_failed_when_terms_differ(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         bridge = QuantumControlBridge(n_oscillators=2)
 
         def _fake_parity(
@@ -318,9 +341,10 @@ class TestCompilerManifestValidation:
             dt=0.05,
         )
         assert manifest["status"] == "co_simulation_parity_failed"
-        assert manifest["co_simulation_parity"]["max_abs_frequency_error"] == 0.75
+        parity = _mapping(manifest["co_simulation_parity"])
+        assert parity["max_abs_frequency_error"] == 0.75
 
-    def test_qpu_target_readiness_blocks_without_operator_preconditions(self):
+    def test_qpu_target_readiness_blocks_without_operator_preconditions(self) -> None:
         bridge = QuantumControlBridge(n_oscillators=2)
         manifest = bridge.build_quantum_compiler_manifest(
             knm=np.array([[0.0, 0.2], [0.2, 0.0]]),
@@ -350,7 +374,7 @@ class TestCompilerManifestValidation:
         ]
         assert readiness["readiness_sha256"] == repeated["readiness_sha256"]
 
-    def test_qpu_target_readiness_can_be_ready_but_never_executing(self):
+    def test_qpu_target_readiness_can_be_ready_but_never_executing(self) -> None:
         bridge = QuantumControlBridge(n_oscillators=2)
         manifest = bridge.build_quantum_compiler_manifest(
             knm=np.array([[0.0, 0.2], [0.2, 0.0]]),
@@ -372,7 +396,9 @@ class TestCompilerManifestValidation:
         assert readiness["actuation_permitted"] is False
         assert len(str(readiness["readiness_sha256"])) == 64
 
-    def test_qpu_target_readiness_rejects_invalid_provider_and_target_metadata(self):
+    def test_qpu_target_readiness_rejects_invalid_provider_and_target_metadata(
+        self,
+    ) -> None:
         bridge = QuantumControlBridge(n_oscillators=2)
         manifest = bridge.build_quantum_compiler_manifest(
             knm=np.array([[0.0, 0.2], [0.2, 0.0]]),
@@ -404,7 +430,7 @@ class TestCompilerManifestValidation:
                 provider="\x01",
             )
 
-    def test_qpu_target_readiness_rejects_bad_flag_types(self):
+    def test_qpu_target_readiness_rejects_bad_flag_types(self) -> None:
         bridge = QuantumControlBridge(n_oscillators=2)
         manifest = bridge.build_quantum_compiler_manifest(
             knm=np.array([[0.0, 0.2], [0.2, 0.0]]),
@@ -415,14 +441,16 @@ class TestCompilerManifestValidation:
         with pytest.raises(
             ValueError, match="credentials_configured must be a boolean"
         ):
-            bridge.audit_qpu_target_readiness(
+            _call(
+                bridge.audit_qpu_target_readiness,
                 manifest,
                 target_backend="qiskit_openqasm3",
                 provider="ibm_quantum",
                 credentials_configured="yes",
             )
         with pytest.raises(ValueError, match="operator_approved must be a boolean"):
-            bridge.audit_qpu_target_readiness(
+            _call(
+                bridge.audit_qpu_target_readiness,
                 manifest,
                 target_backend="qiskit_openqasm3",
                 provider="ibm_quantum",
@@ -430,7 +458,9 @@ class TestCompilerManifestValidation:
                 operator_approved=1,
             )
 
-    def test_qpu_target_readiness_blocks_if_execution_permissions_escape_sandbox(self):
+    def test_qpu_target_readiness_blocks_if_execution_permissions_escape_sandbox(
+        self,
+    ) -> None:
         bridge = QuantumControlBridge(n_oscillators=2)
         manifest = bridge.build_quantum_compiler_manifest(
             knm=np.array([[0.0, 0.2], [0.2, 0.0]]),
@@ -449,14 +479,13 @@ class TestCompilerManifestValidation:
         )
 
         assert readiness["status"] == "blocked"
-        assert (
-            "qpu_execution_permission_must_remain_false" in readiness["blocked_reasons"]
-        )
-        assert "actuation_permission_must_remain_false" in readiness["blocked_reasons"]
+        blocked_reasons = _items(readiness["blocked_reasons"])
+        assert "qpu_execution_permission_must_remain_false" in blocked_reasons
+        assert "actuation_permission_must_remain_false" in blocked_reasons
         assert readiness["qpu_execution_permitted"] is False
         assert readiness["actuation_permitted"] is False
 
-    def test_qpu_target_readiness_record_is_deterministic(self):
+    def test_qpu_target_readiness_record_is_deterministic(self) -> None:
         bridge = QuantumControlBridge(n_oscillators=2)
         manifest = bridge.build_quantum_compiler_manifest(
             knm=np.array([[0.0, 0.2], [0.2, 0.0]]),
@@ -482,7 +511,7 @@ class TestCompilerManifestValidation:
         assert readiness_a["readiness_sha256"] == readiness_b["readiness_sha256"]
         assert readiness_a["status"] == readiness_b["status"]
 
-    def test_qpu_target_readiness_rejects_bad_manifest_and_target(self):
+    def test_qpu_target_readiness_rejects_bad_manifest_and_target(self) -> None:
         bridge = QuantumControlBridge(n_oscillators=2)
         manifest = bridge.build_quantum_compiler_manifest(
             knm=np.array([[0.0, 0.2], [0.2, 0.0]]),
@@ -505,21 +534,21 @@ class TestCompilerManifestValidation:
 
 
 class TestSolveQUPDEValidation:
-    def test_rejects_invalid_t_max(self):
+    def test_rejects_invalid_t_max(self) -> None:
         bridge = QuantumControlBridge(n_oscillators=2)
         knm = np.array([[0.5, 0.5], [0.5, 0.5]])
         omegas = np.ones(2)
         with pytest.raises(ValueError, match="t_max must be finite and positive"):
             bridge.solve_q_upde(knm, omegas, t_max=0.0)
 
-    def test_rejects_invalid_dt(self):
+    def test_rejects_invalid_dt(self) -> None:
         bridge = QuantumControlBridge(n_oscillators=2)
         knm = np.array([[0.5, 0.5], [0.5, 0.5]])
         omegas = np.ones(2)
         with pytest.raises(ValueError, match="dt must be finite and positive"):
             bridge.solve_q_upde(knm, omegas, t_max=1.0, dt=float("inf"))
 
-    def test_rejects_invalid_trotter_per_step(self):
+    def test_rejects_invalid_trotter_per_step(self) -> None:
         bridge = QuantumControlBridge(n_oscillators=2)
         knm = np.array([[0.5, 0.5], [0.5, 0.5]])
         omegas = np.ones(2)
@@ -530,7 +559,7 @@ class TestSolveQUPDEValidation:
 
 
 class TestExportArtifact:
-    def test_round_trip_preserves_fields(self):
+    def test_round_trip_preserves_fields(self) -> None:
         bridge = QuantumControlBridge(n_oscillators=2)
         original = {
             "phases": [0.1, 0.2],
