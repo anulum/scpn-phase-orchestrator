@@ -18,7 +18,8 @@ TWO_PI = 2.0 * np.pi
 
 def _py_engine(n: int, dt: float = 0.01, method: str = "euler", **kwargs):
     engine = UPDEEngine(n_oscillators=n, dt=dt, method=method, **kwargs)
-    engine._use_rust = False
+    engine._rust = None
+    assert engine.backend == "numpy"
     return engine
 
 
