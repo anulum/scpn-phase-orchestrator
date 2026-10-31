@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 import numpy as np
 import pytest
 
@@ -25,7 +27,7 @@ class _UncoercibleArray:
 
 
 class TestObservablesToPhases:
-    def test_nominal_output_range(self):
+    def test_nominal_output_range(self) -> None:
         bridge = FusionCoreBridge(n_layers=6)
         snapshot = {
             "q_profile": 2.0,
@@ -42,7 +44,7 @@ class TestObservablesToPhases:
         assert np.all(phases >= 0.0)
         assert np.all(phases <= TWO_PI)
 
-    def test_sawtooth_kick(self):
+    def test_sawtooth_kick(self) -> None:
         bridge = FusionCoreBridge(n_layers=6)
         snap_0 = {"sawtooth_count": 0}
         snap_1 = {"sawtooth_count": 1}
@@ -51,20 +53,20 @@ class TestObservablesToPhases:
         assert p1[3] == pytest.approx(np.pi)
         assert p0[3] == pytest.approx(0.0)
 
-    def test_elm_kick(self):
+    def test_elm_kick(self) -> None:
         bridge = FusionCoreBridge(n_layers=6)
         snap = {"elm_count": 3}
         phases = bridge.observables_to_phases(snap)
         expected = (3 * np.pi) % TWO_PI
         assert phases[4] == pytest.approx(expected)
 
-    def test_beta_n_at_limit(self):
+    def test_beta_n_at_limit(self) -> None:
         bridge = FusionCoreBridge(n_layers=6)
         snap = {"beta_n": BETA_N_LIMIT}
         phases = bridge.observables_to_phases(snap)
         assert phases[1] == pytest.approx(TWO_PI)
 
-    def test_clamps_above_limit(self):
+    def test_clamps_above_limit(self) -> None:
         bridge = FusionCoreBridge(n_layers=6)
         snap = {"beta_n": 5.0}
         phases = bridge.observables_to_phases(snap)
@@ -85,10 +87,13 @@ class TestObservablesToPhases:
             ("not-a-dict", "snapshot"),
         ],
     )
-    def test_rejects_invalid_observable_snapshot(self, snapshot: object, field: str):
+    def test_rejects_invalid_observable_snapshot(
+        self, snapshot: object, field: str
+    ) -> None:
         bridge = FusionCoreBridge(n_layers=6)
+        to_phases_any: Callable[..., object] = bridge.observables_to_phases
         with pytest.raises(ValueError, match=field):
-            bridge.observables_to_phases(snapshot)  # type: ignore[arg-type]
+            to_phases_any(snapshot)
 
 
 class TestPhasesToFeedback:
@@ -100,13 +105,15 @@ class TestPhasesToFeedback:
             np.array(["not-numeric"], dtype=object),
         ],
     )
-    def test_rejects_non_numeric_phase_payloads(self, phases: object):
+    def test_rejects_non_numeric_phase_payloads(self, phases: object) -> None:
         bridge = FusionCoreBridge(n_layers=1)
 
-        with pytest.raises(ValueError, match="phases"):
-            bridge.phases_to_feedback(phases, np.array([1.0]))
+        feedback_any: Callable[..., object] = bridge.phases_to_feedback
 
-    def test_output_format(self):
+        with pytest.raises(ValueError, match="phases"):
+            feedback_any(phases, np.array([1.0]))
+
+    def test_output_format(self) -> None:
         bridge = FusionCoreBridge(n_layers=6)
         phases = np.zeros(6)
         omegas = np.ones(6)
@@ -133,26 +140,28 @@ class TestPhasesToFeedback:
         phases: object,
         omegas: object,
         field: str,
-    ):
+    ) -> None:
         bridge = FusionCoreBridge(n_layers=3)
+        feedback_any: Callable[..., object] = bridge.phases_to_feedback
         with pytest.raises(ValueError, match=field):
-            bridge.phases_to_feedback(phases, omegas)  # type: ignore[arg-type]
+            feedback_any(phases, omegas)
 
 
 class TestConstructorValidation:
     @pytest.mark.parametrize("n_layers", [True, 1.5, "2", 0, 7])
-    def test_invalid_n_layers_raise(self, n_layers: object):
+    def test_invalid_n_layers_raise(self, n_layers: object) -> None:
+        bridge_any: Callable[..., FusionCoreBridge] = FusionCoreBridge
         with pytest.raises(ValueError, match="n_layers"):
-            FusionCoreBridge(n_layers=n_layers)
+            bridge_any(n_layers=n_layers)
 
-    def test_supported_subset_layer_count(self):
+    def test_supported_subset_layer_count(self) -> None:
         bridge = FusionCoreBridge(n_layers=3)
         phases = bridge.observables_to_phases({})
         assert phases.shape == (3,)
 
 
 class TestQProfileImport:
-    def test_dict_import(self):
+    def test_dict_import(self) -> None:
         bridge = FusionCoreBridge()
         q_data = {
             "q_min": 0.9,
@@ -164,13 +173,13 @@ class TestQProfileImport:
         assert result["q_min"] == pytest.approx(0.9)
         assert result["q_edge"] == pytest.approx(3.8)
 
-    def test_missing_keys_use_defaults(self):
+    def test_missing_keys_use_defaults(self) -> None:
         bridge = FusionCoreBridge()
         result = bridge.import_q_profile({})
         assert result["q_min"] == pytest.approx(1.0)
         assert result["q_max"] == pytest.approx(5.0)
 
-    def test_object_import_via_getattr(self):
+    def test_object_import_via_getattr(self) -> None:
         bridge = FusionCoreBridge()
 
         class QProfile:
@@ -193,14 +202,14 @@ class TestQProfileImport:
             {"q_min": 1.0, "q_max": 5.0, "q_edge": 0.5},
         ],
     )
-    def test_rejects_invalid_q_profile(self, q_data: dict):
+    def test_rejects_invalid_q_profile(self, q_data: dict[str, float]) -> None:
         bridge = FusionCoreBridge()
         with pytest.raises(ValueError, match="q_"):
             bridge.import_q_profile(q_data)
 
 
 class TestStabilityChecks:
-    def test_nominal_no_violations(self):
+    def test_nominal_no_violations(self) -> None:
         bridge = FusionCoreBridge()
         violations = bridge.check_stability(
             {
@@ -211,25 +220,25 @@ class TestStabilityChecks:
         )
         assert violations == []
 
-    def test_q_min_violation(self):
+    def test_q_min_violation(self) -> None:
         bridge = FusionCoreBridge()
         violations = bridge.check_stability({"q_min": 0.7})
         assert len(violations) == 1
         assert violations[0]["variable"] == "q_min"
 
-    def test_beta_n_violation(self):
+    def test_beta_n_violation(self) -> None:
         bridge = FusionCoreBridge()
         violations = bridge.check_stability({"beta_n": 3.5})
         assert len(violations) == 1
         assert violations[0]["variable"] == "beta_n"
 
-    def test_tau_e_ratio_soft_violation(self):
+    def test_tau_e_ratio_soft_violation(self) -> None:
         bridge = FusionCoreBridge()
         violations = bridge.check_stability({"tau_e_ratio": 0.3})
         assert len(violations) == 1
         assert violations[0]["severity"] == "soft"
 
-    def test_q_profile_fallback_for_q_min(self):
+    def test_q_profile_fallback_for_q_min(self) -> None:
         bridge = FusionCoreBridge()
         violations = bridge.check_stability({"q_profile": 0.8})
         assert len(violations) == 1
@@ -246,14 +255,15 @@ class TestStabilityChecks:
             "not-a-dict",
         ],
     )
-    def test_rejects_invalid_stability_payload(self, observables: object):
+    def test_rejects_invalid_stability_payload(self, observables: object) -> None:
         bridge = FusionCoreBridge()
+        stability_any: Callable[..., object] = bridge.check_stability
         with pytest.raises(ValueError, match="stability"):
-            bridge.check_stability(observables)  # type: ignore[arg-type]
+            stability_any(observables)
 
 
 class TestEquilibriumImport:
-    def test_import_equilibrium(self):
+    def test_import_equilibrium(self) -> None:
         bridge = FusionCoreBridge()
         result = bridge.import_equilibrium(
             {
@@ -285,14 +295,15 @@ class TestEquilibriumImport:
         self,
         kernel_result: object,
         field: str,
-    ):
+    ) -> None:
         bridge = FusionCoreBridge()
+        equilibrium_any: Callable[..., object] = bridge.import_equilibrium
         with pytest.raises(ValueError, match=field):
-            bridge.import_equilibrium(kernel_result)  # type: ignore[arg-type]
+            equilibrium_any(kernel_result)
 
 
 class TestFusionDomainpack:
-    def test_binding_spec_loads(self):
+    def test_binding_spec_loads(self) -> None:
         from pathlib import Path
 
         from scpn_phase_orchestrator.binding.loader import load_binding_spec
@@ -305,7 +316,7 @@ class TestFusionDomainpack:
         n_osc = sum(len(ly.oscillator_ids) for ly in spec.layers)
         assert n_osc == 12
 
-    def test_binding_spec_validates(self):
+    def test_binding_spec_validates(self) -> None:
         from pathlib import Path
 
         from scpn_phase_orchestrator.binding import validate_binding_spec
@@ -321,7 +332,7 @@ class TestFusionDomainpack:
 class TestFusionCorePipelineWiring:
     """Pipeline: FusionCoreBridge → K_nm → engine → R."""
 
-    def test_fusion_observables_to_engine(self):
+    def test_fusion_observables_to_engine(self) -> None:
         """FusionCoreBridge.observables_to_phases → engine → R∈[0,1].
         Proves tokamak observables feed simulation core."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
