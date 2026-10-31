@@ -9,8 +9,9 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from dataclasses import replace
-from typing import cast
+from typing import TypedDict, TypeVar
 
 import pytest
 
@@ -45,7 +46,26 @@ def _seed_response() -> DpNoiseServiceResponseManifest:
     return build_dp_noise_service_manifest(_seed_request())
 
 
-def _preflight_labels(operator_approved: bool = True) -> dict[str, object]:
+_R = TypeVar("_R")
+
+
+def _call(fn: Callable[..., _R], *args: object, **kwargs: object) -> _R:
+    """Call ``fn`` with arguments that are deliberately outside its types."""
+    return fn(*args, **kwargs)
+
+
+class _PreflightLabels(TypedDict):
+    """Keyword labels accepted by the deployment preflight builder."""
+
+    mechanism_label: str
+    privacy_accountant_owner: str
+    seed_custody_label: str
+    budget_issuer_label: str
+    service_endpoint_label: str
+    operator_approved: bool
+
+
+def _preflight_labels(operator_approved: bool = True) -> _PreflightLabels:
     return {
         "mechanism_label": "mechanism-v1",
         "privacy_accountant_owner": "accountant-a",
@@ -220,19 +240,21 @@ def test_dp_noise_service_deployment_preflight_manifest_rejects_malformed_input(
     response = _seed_response()
 
     with pytest.raises(ValueError, match="operator_approved must be a boolean"):
-        build_dp_noise_service_deployment_preflight_manifest(
+        _call(
+            build_dp_noise_service_deployment_preflight_manifest,
             request,
             response,
-            **_preflight_labels(operator_approved=False) | {"operator_approved": "no"},
+            **{**_preflight_labels(operator_approved=False), "operator_approved": "no"},
         )
     with pytest.raises(
         ValueError, match="request_manifest must be a DpNoiseServiceRequestManifest"
     ):
-        build_dp_noise_service_deployment_preflight_manifest(
+        _call(
+            build_dp_noise_service_deployment_preflight_manifest,
             None,
             response_manifest=response,
             **_preflight_labels(),
-        )  # type: ignore[arg-type]
+        )
 
 
 def test_dp_noise_service_deployment_preflight_payload_is_json_safe() -> None:
@@ -297,9 +319,11 @@ def test_dp_noise_service_deployment_preflight_hash_is_stable() -> None:
         ({"policy_keys": ("alpha", 1)}, "policy key must be a non-empty string"),
     ],
 )
-def test_request_manifest_rejects_scalar_fields(changes, match) -> None:
+def test_request_manifest_rejects_scalar_fields(
+    changes: dict[str, object], match: str
+) -> None:
     with pytest.raises(ValueError, match=match):
-        replace(_seed_request(), **changes)
+        _call(replace, _seed_request(), **changes)
 
 
 def _budgets(*pairs: tuple[str, float]) -> tuple[DpNoiseNodePrivacyBudget, ...]:
@@ -320,18 +344,23 @@ def _budgets(*pairs: tuple[str, float]) -> tuple[DpNoiseNodePrivacyBudget, ...]:
         (_budgets(("a", -0.1), ("b", 0.1)), "epsilon spent must be non-negative"),
     ],
 )
-def test_request_manifest_rejects_node_budgets(node_budgets, match) -> None:
+def test_request_manifest_rejects_node_budgets(
+    node_budgets: object, match: str
+) -> None:
     with pytest.raises(ValueError, match=match):
-        replace(_seed_request(), node_budgets=node_budgets)
+        _call(replace, _seed_request(), node_budgets=node_budgets)
 
 
 def test_preflight_manifest_rejects_non_boolean_operator_flag() -> None:
     request = _seed_request()
     response = build_dp_noise_service_manifest(request)
-    labels = _preflight_labels() | {"operator_approved": "yes"}
+    labels: dict[str, object] = {**_preflight_labels(), "operator_approved": "yes"}
     with pytest.raises(ValueError, match="operator_approved must be a boolean"):
-        build_dp_noise_service_deployment_preflight_manifest(
-            request, response, **labels
+        _call(
+            build_dp_noise_service_deployment_preflight_manifest,
+            request,
+            response,
+            **labels,
         )
 
 
@@ -339,8 +368,11 @@ def test_preflight_rejects_non_response_manifest() -> None:
     with pytest.raises(
         ValueError, match="response_manifest must be a DpNoiseServiceResponseManifest"
     ):
-        build_dp_noise_service_deployment_preflight_manifest(
-            _seed_request(), "not-a-response", **_preflight_labels()
+        _call(
+            build_dp_noise_service_deployment_preflight_manifest,
+            _seed_request(),
+            "not-a-response",
+            **_preflight_labels(),
         )
 
 
@@ -393,7 +425,7 @@ def test_deployment_preflight_manifest_rejects_malformed_fields(
     match: str,
 ) -> None:
     with pytest.raises(ValueError, match=match):
-        replace(_preflight_manifest(), **changes)
+        _call(replace, _preflight_manifest(), **changes)
 
 
 def test_preflight_rejects_non_string_label_through_builder() -> None:
@@ -401,10 +433,11 @@ def test_preflight_rejects_non_string_label_through_builder() -> None:
     response = _seed_response()
 
     with pytest.raises(ValueError, match="mechanism_label must be a non-empty string"):
-        build_dp_noise_service_deployment_preflight_manifest(
+        _call(
+            build_dp_noise_service_deployment_preflight_manifest,
             request,
             response,
-            **_preflight_labels() | {"mechanism_label": cast(str, object())},
+            **{**_preflight_labels(), "mechanism_label": object()},
         )
 
 
@@ -419,9 +452,13 @@ def test_preflight_rejects_non_string_label_through_builder() -> None:
         ({"delta": 2.0}, "response delta must be finite in"),
     ],
 )
-def test_preflight_detects_request_response_inconsistency(changes, reason) -> None:
+def test_preflight_detects_request_response_inconsistency(
+    changes: dict[str, object], reason: str
+) -> None:
     request = _seed_request()
-    response = replace(_seed_response(), **changes)
+    response: DpNoiseServiceResponseManifest = _call(
+        replace, _seed_response(), **changes
+    )
     preflight = build_dp_noise_service_deployment_preflight_manifest(
         request, response, **_preflight_labels()
     )
