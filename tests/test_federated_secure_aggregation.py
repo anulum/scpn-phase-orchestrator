@@ -10,7 +10,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Callable
 from dataclasses import replace
+from typing import TypeVar
 
 import pytest
 
@@ -20,6 +22,13 @@ from scpn_phase_orchestrator.supervisor.federated_secure_aggregation import (
     build_federated_secure_aggregation_manifest,
     build_federated_secure_aggregation_preflight_manifest,
 )
+
+_R = TypeVar("_R")
+
+
+def _call(fn: Callable[..., _R], *args: object, **kwargs: object) -> _R:
+    """Call ``fn`` with arguments that are deliberately outside its types."""
+    return fn(*args, **kwargs)
 
 
 def _stable_hash(value: object) -> str:
@@ -340,8 +349,9 @@ def test_federated_secure_aggregation_preflight_manifest_malformed_inputs() -> N
         )
 
     with pytest.raises(TypeError, match="FederatedSecureAggregationManifest"):
-        build_federated_secure_aggregation_preflight_manifest(
-            "not-a-manifest",  # type: ignore[arg-type]
+        _call(
+            build_federated_secure_aggregation_preflight_manifest,
+            "not-a-manifest",
             quorum_evidence=(_quorum_evidence("node-a"),),
             custody_rotation_policy="continuous",
             custody_records=(
@@ -468,10 +478,12 @@ def test_secure_aggregation_manifest_report_type() -> None:
         ((), "node_commitments must be non-empty"),
     ],
 )
-def test_build_manifest_rejects_bad_container(container, match) -> None:
+def test_build_manifest_rejects_bad_container(container: object, match: str) -> None:
     with pytest.raises(ValueError, match=match):
-        build_federated_secure_aggregation_manifest(
-            container, required_policy_keys=("theta",)
+        _call(
+            build_federated_secure_aggregation_manifest,
+            container,
+            required_policy_keys=("theta",),
         )
 
 
@@ -492,9 +504,12 @@ def test_build_manifest_rejects_delta_out_of_range() -> None:
         ("x", "clipping_norm must be a real number"),
     ],
 )
-def test_build_manifest_rejects_bad_clipping_norm(clipping_norm, match) -> None:
+def test_build_manifest_rejects_bad_clipping_norm(
+    clipping_norm: object, match: str
+) -> None:
     with pytest.raises(ValueError, match=match):
-        build_federated_secure_aggregation_manifest(
+        _call(
+            build_federated_secure_aggregation_manifest,
             (_node_commitment("node-a", {"theta": 0.1}, 5),),
             required_policy_keys=("theta",),
             min_node_count=1,
@@ -510,9 +525,12 @@ def test_build_manifest_rejects_bad_clipping_norm(clipping_norm, match) -> None:
         (("theta", "theta"), "required_policy_keys must be non-empty and unique"),
     ],
 )
-def test_build_manifest_rejects_bad_required_policy_keys(keys, match) -> None:
+def test_build_manifest_rejects_bad_required_policy_keys(
+    keys: object, match: str
+) -> None:
     with pytest.raises(ValueError, match=match):
-        build_federated_secure_aggregation_manifest(
+        _call(
+            build_federated_secure_aggregation_manifest,
             (_node_commitment("node-a", {"theta": 0.1}, 5),),
             required_policy_keys=keys,
             min_node_count=1,
@@ -542,16 +560,21 @@ def test_build_manifest_discovers_policy_keys_when_unspecified() -> None:
     ],
 )
 def test_build_manifest_discovery_path_rejects_bad_commitments(
-    commitments, match
+    commitments: object, match: str
 ) -> None:
     with pytest.raises(ValueError, match=match):
-        build_federated_secure_aggregation_manifest(commitments, min_node_count=1)
+        _call(
+            build_federated_secure_aggregation_manifest, commitments, min_node_count=1
+        )
 
 
 def test_build_manifest_rejects_non_mapping_commitment_with_keys() -> None:
     with pytest.raises(ValueError, match="each node commitment must be a mapping"):
-        build_federated_secure_aggregation_manifest(
-            (123,), required_policy_keys=("theta",), min_node_count=1
+        _call(
+            build_federated_secure_aggregation_manifest,
+            (123,),
+            required_policy_keys=("theta",),
+            min_node_count=1,
         )
 
 
@@ -629,16 +652,20 @@ def _preflight_kwargs(**overrides: object) -> dict[str, object]:
 def test_preflight_rejects_manifest_without_quorum_met() -> None:
     manifest = replace(_build_ready_manifest(), quorum_met=False)
     with pytest.raises(ValueError, match="quorum not met"):
-        build_federated_secure_aggregation_preflight_manifest(
-            manifest, **_preflight_kwargs()
+        _call(
+            build_federated_secure_aggregation_preflight_manifest,
+            manifest,
+            **_preflight_kwargs(),
         )
 
 
 def test_preflight_rejects_zero_threshold() -> None:
     manifest = _build_ready_manifest()
     with pytest.raises(ValueError, match="accepted_node_threshold must be a positive"):
-        build_federated_secure_aggregation_preflight_manifest(
-            manifest, **_preflight_kwargs(accepted_node_threshold=0)
+        _call(
+            build_federated_secure_aggregation_preflight_manifest,
+            manifest,
+            **_preflight_kwargs(accepted_node_threshold=0),
         )
 
 
@@ -650,18 +677,23 @@ def test_preflight_rejects_zero_threshold() -> None:
         ((123,), "each quorum evidence entry must be a mapping"),
     ],
 )
-def test_preflight_rejects_bad_quorum_evidence_container(evidence, match) -> None:
+def test_preflight_rejects_bad_quorum_evidence_container(
+    evidence: object, match: str
+) -> None:
     manifest = _build_ready_manifest()
     with pytest.raises(ValueError, match=match):
-        build_federated_secure_aggregation_preflight_manifest(
-            manifest, **_preflight_kwargs(quorum_evidence=evidence)
+        _call(
+            build_federated_secure_aggregation_preflight_manifest,
+            manifest,
+            **_preflight_kwargs(quorum_evidence=evidence),
         )
 
 
 def test_preflight_rejects_duplicate_and_unknown_quorum_nodes() -> None:
     manifest = _build_ready_manifest()
     with pytest.raises(ValueError, match="quorum evidence duplicated node_id"):
-        build_federated_secure_aggregation_preflight_manifest(
+        _call(
+            build_federated_secure_aggregation_preflight_manifest,
             manifest,
             **_preflight_kwargs(
                 quorum_evidence=(
@@ -673,7 +705,8 @@ def test_preflight_rejects_duplicate_and_unknown_quorum_nodes() -> None:
         )
 
     with pytest.raises(ValueError, match="quorum evidence must reference accepted"):
-        build_federated_secure_aggregation_preflight_manifest(
+        _call(
+            build_federated_secure_aggregation_preflight_manifest,
             manifest,
             **_preflight_kwargs(
                 quorum_evidence=(
@@ -693,18 +726,21 @@ def test_preflight_rejects_duplicate_and_unknown_quorum_nodes() -> None:
         ((123,), "each custody record must be a mapping"),
     ],
 )
-def test_preflight_rejects_bad_custody_container(records, match) -> None:
+def test_preflight_rejects_bad_custody_container(records: object, match: str) -> None:
     manifest = _build_ready_manifest()
     with pytest.raises(ValueError, match=match):
-        build_federated_secure_aggregation_preflight_manifest(
-            manifest, **_preflight_kwargs(custody_records=records)
+        _call(
+            build_federated_secure_aggregation_preflight_manifest,
+            manifest,
+            **_preflight_kwargs(custody_records=records),
         )
 
 
 def test_preflight_rejects_duplicate_and_unknown_custody_nodes() -> None:
     manifest = _build_ready_manifest()
     with pytest.raises(ValueError, match="custody record duplicated node_id"):
-        build_federated_secure_aggregation_preflight_manifest(
+        _call(
+            build_federated_secure_aggregation_preflight_manifest,
             manifest,
             **_preflight_kwargs(
                 custody_records=(
@@ -716,7 +752,8 @@ def test_preflight_rejects_duplicate_and_unknown_custody_nodes() -> None:
         )
 
     with pytest.raises(ValueError, match="custody labels must reference accepted"):
-        build_federated_secure_aggregation_preflight_manifest(
+        _call(
+            build_federated_secure_aggregation_preflight_manifest,
             manifest,
             **_preflight_kwargs(
                 custody_records=(
@@ -733,7 +770,8 @@ def test_preflight_rejects_share_custody_continuity_mismatch() -> None:
     broken = _custody_record("node-a", "continuous")
     broken["share_custody_continuity_hash"] = "0" * 64
     with pytest.raises(ValueError, match="share custody continuity hash mismatch"):
-        build_federated_secure_aggregation_preflight_manifest(
+        _call(
+            build_federated_secure_aggregation_preflight_manifest,
             manifest,
             **_preflight_kwargs(
                 custody_records=(
