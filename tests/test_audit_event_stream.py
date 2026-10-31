@@ -80,11 +80,14 @@ def test_audit_envelope_descriptor_contract_is_stable() -> None:
     ]
 
 
+_ROOT = Path(__file__).resolve().parents[1]
+
+
 @pytest.mark.parametrize(
     "proto_path",
     [
-        Path("proto/audit.proto"),
-        Path("src/scpn_phase_orchestrator/audit/audit.proto"),
+        _ROOT / "proto/audit.proto",
+        _ROOT / "src/scpn_phase_orchestrator/audit/audit.proto",
     ],
 )
 def test_static_audit_proto_matches_runtime_descriptor(
