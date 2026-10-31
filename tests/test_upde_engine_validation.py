@@ -9,10 +9,12 @@
 from __future__ import annotations
 
 import importlib.util
-from typing import Any
+from collections.abc import Callable
+from typing import Any, cast
 
 import numpy as np
 import pytest
+from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.upde.delay import DelayBuffer, DelayedEngine
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
@@ -27,6 +29,8 @@ from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
 from scpn_phase_orchestrator.upde.swarmalator import SwarmalatorEngine
 
 _HAS_JAX = importlib.util.find_spec("jax") is not None
+
+FloatArray = NDArray[np.float64]
 
 
 class TestUPDEEngineValidation:
@@ -80,7 +84,7 @@ class TestUPDEEngineValidation:
 
     def test_normalises_accepted_numpy_scalars(self) -> None:
         engine = UPDEEngine(
-            n_oscillators=np.int64(4),
+            n_oscillators=cast(int, np.int64(4)),
             dt=np.float64(0.01),
             atol=np.float64(1e-6),
             rtol=np.float64(1e-3),
@@ -118,7 +122,7 @@ class TestStuartLandauEngineValidation:
 
     def test_normalises_accepted_numpy_scalars(self) -> None:
         engine = StuartLandauEngine(
-            n_oscillators=np.int64(4),
+            n_oscillators=cast(int, np.int64(4)),
             dt=np.float64(0.01),
             atol=np.float64(1e-6),
             rtol=np.float64(1e-3),
@@ -198,8 +202,10 @@ class TestStuartLandauEngineValidation:
 
     def test_step_accepts_array_like_float_buffers(self) -> None:
         engine = StuartLandauEngine(n_oscillators=2, dt=0.01)
+        # Loose alias: plain float lists are the array-like inputs under test.
+        step_unchecked: Callable[..., FloatArray] = engine.step
 
-        out = engine.step(
+        out = step_unchecked(
             [0.0, 0.1, 1.0, 1.0],
             [1.0, 1.0],
             [0.5, 0.5],
@@ -269,8 +275,8 @@ class TestSheafUPDEEngineValidation:
 
     def test_normalises_accepted_numpy_scalars(self) -> None:
         engine = SheafUPDEEngine(
-            n_oscillators=np.int64(4),
-            d_dimensions=np.int64(2),
+            n_oscillators=cast(int, np.int64(4)),
+            d_dimensions=cast(int, np.int64(2)),
             dt=np.float64(0.01),
             atol=np.float64(1e-6),
             rtol=np.float64(1e-3),
@@ -327,8 +333,8 @@ class TestSwarmalatorEngineValidation:
 
     def test_normalises_accepted_numpy_scalars(self) -> None:
         engine = SwarmalatorEngine(
-            n_agents=np.int64(4),
-            dim=np.int64(2),
+            n_agents=cast(int, np.int64(4)),
+            dim=cast(int, np.int64(2)),
             dt=np.float64(0.01),
         )
 
@@ -531,7 +537,7 @@ class TestSimplicialEngineValidation:
 
     def test_normalises_accepted_numpy_scalars(self) -> None:
         engine = SimplicialEngine(
-            n_oscillators=np.int64(4),
+            n_oscillators=cast(int, np.int64(4)),
             dt=np.float64(0.01),
             sigma2=np.float64(0.1),
         )
@@ -983,47 +989,61 @@ class TestJaxEngineValidation:
     def test_rejects_zero_n(self) -> None:
         from scpn_phase_orchestrator.upde.jax_engine import JaxUPDEEngine
 
+        # Loose alias: the parametrised argument is deliberately invalid.
+        make_unchecked: Callable[..., object] = JaxUPDEEngine
         with pytest.raises(ValueError, match="n"):
-            JaxUPDEEngine(n=0)
+            make_unchecked(n=0)
 
     @pytest.mark.parametrize("n", [True, 1.5, "4"])
     def test_rejects_invalid_n_type(self, n: object) -> None:
         from scpn_phase_orchestrator.upde.jax_engine import JaxUPDEEngine
 
+        # Loose alias: the parametrised argument is deliberately invalid.
+        make_unchecked: Callable[..., object] = JaxUPDEEngine
         with pytest.raises(ValueError, match="n"):
-            JaxUPDEEngine(n=n)
+            make_unchecked(n=n)
 
     def test_rejects_zero_dt(self) -> None:
         from scpn_phase_orchestrator.upde.jax_engine import JaxUPDEEngine
 
+        # Loose alias: the parametrised argument is deliberately invalid.
+        make_unchecked: Callable[..., object] = JaxUPDEEngine
         with pytest.raises(ValueError, match="dt"):
-            JaxUPDEEngine(n=4, dt=0.0)
+            make_unchecked(n=4, dt=0.0)
 
     @pytest.mark.parametrize("dt", [False, -0.01, float("nan"), float("inf"), "0.01"])
     def test_rejects_invalid_dt(self, dt: object) -> None:
         from scpn_phase_orchestrator.upde.jax_engine import JaxUPDEEngine
 
+        # Loose alias: the parametrised argument is deliberately invalid.
+        make_unchecked: Callable[..., object] = JaxUPDEEngine
         with pytest.raises(ValueError, match="dt"):
-            JaxUPDEEngine(n=4, dt=dt)
+            make_unchecked(n=4, dt=dt)
 
     def test_rejects_unknown_method(self) -> None:
         from scpn_phase_orchestrator.upde.jax_engine import JaxUPDEEngine
 
+        # Loose alias: the parametrised argument is deliberately invalid.
+        make_unchecked: Callable[..., object] = JaxUPDEEngine
         with pytest.raises(ValueError, match="unsupported method"):
-            JaxUPDEEngine(n=4, method="adams-bashforth")
+            make_unchecked(n=4, method="adams-bashforth")
 
     def test_rejects_non_string_method(self) -> None:
         from scpn_phase_orchestrator.upde.jax_engine import JaxUPDEEngine
 
+        # Loose alias: the parametrised argument is deliberately invalid.
+        make_unchecked: Callable[..., object] = JaxUPDEEngine
         with pytest.raises(ValueError, match="unsupported method"):
-            JaxUPDEEngine(n=4, method=True)
+            make_unchecked(n=4, method=True)
 
     @pytest.mark.parametrize("n", [False, 0, 1.5, "4"])
     def test_stuart_landau_rejects_invalid_n(self, n: object) -> None:
         from scpn_phase_orchestrator.upde.jax_engine import JaxStuartLandauEngine
 
+        # Loose alias: the parametrised argument is deliberately invalid.
+        make_unchecked: Callable[..., object] = JaxStuartLandauEngine
         with pytest.raises(ValueError, match="n"):
-            JaxStuartLandauEngine(n=n)
+            make_unchecked(n=n)
 
     @pytest.mark.parametrize(
         "dt", [False, 0.0, -0.01, float("nan"), float("inf"), "0.01"]
@@ -1031,8 +1051,10 @@ class TestJaxEngineValidation:
     def test_stuart_landau_rejects_invalid_dt(self, dt: object) -> None:
         from scpn_phase_orchestrator.upde.jax_engine import JaxStuartLandauEngine
 
+        # Loose alias: the parametrised argument is deliberately invalid.
+        make_unchecked: Callable[..., object] = JaxStuartLandauEngine
         with pytest.raises(ValueError, match="dt"):
-            JaxStuartLandauEngine(n=4, dt=dt)
+            make_unchecked(n=4, dt=dt)
 
 
 # Pipeline wiring: engine constructors guard the boundary between user

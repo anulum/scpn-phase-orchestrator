@@ -1,6 +1,6 @@
 {
   "description": "mypy --strict error ceilings per tests/ file; maintained by tools/tests_typing_ratchet.py. Absent files must have no errors; ceilings may only fall.",
-  "total": 6072,
+  "total": 6054,
   "files": {
     "tests/apps/queuewaves/test_server.py": 23,
     "tests/test_action_projection.py": 51,
@@ -163,7 +163,6 @@
     "tests/test_ude_kuramoto.py": 22,
     "tests/test_upde_doppler.py": 27,
     "tests/test_upde_engine.py": 34,
-    "tests/test_upde_engine_validation.py": 18,
     "tests/test_upde_numerics.py": 22,
     "tests/test_visualization.py": 56,
     "tests/test_viz_streamer.py": 71,
