@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import math
+from collections.abc import Callable
 from dataclasses import replace
 
 import numpy as np
@@ -100,12 +101,13 @@ def test_numeric_summaries_are_finite() -> None:
     for scenario in scenarios:
         for summary_key in ("initial_phases_summary", "initial_omegas_summary"):
             summary = scenario[summary_key]
+            assert isinstance(summary, dict)
+            values = scenario[
+                "initial_phases" if "phases" in summary_key else "initial_omegas"
+            ]
+            assert isinstance(values, list)
             assert isinstance(summary["count"], int)
-            assert summary["count"] == len(
-                scenario[
-                    "initial_phases" if "phases" in summary_key else "initial_omegas"
-                ]
-            )
+            assert summary["count"] == len(values)
             assert math.isfinite(summary["min"])
             assert math.isfinite(summary["max"])
             assert math.isfinite(summary["mean"])
@@ -148,11 +150,17 @@ def test_domain_specific_objective_labels_and_candidate_flags() -> None:
     }
 
     for scenario in scenarios:
-        expected_labels = expected[scenario["domain"]]
-        labels = set(scenario["objective_labels"])
+        domain = scenario["domain"]
+        assert isinstance(domain, str)
+        expected_labels = expected[domain]
+        objective_labels = scenario["objective_labels"]
+        assert isinstance(objective_labels, list)
+        labels = set(objective_labels)
         assert expected_labels.issubset(labels)
 
-        for candidate in scenario["branch_candidates"]:
+        candidates = scenario["branch_candidates"]
+        assert isinstance(candidates, list)
+        for candidate in candidates:
             assert candidate["non_actuating"] is True
             assert candidate["execution_disabled"] is True
             assert candidate["claim_boundary"] == CounterfactualBoundary
@@ -173,7 +181,11 @@ def test_scenario_corpus_has_physics_safe_phase_vectors() -> None:
     for scenario in scenarios:
         phases = scenario["initial_phases"]
         omegas = scenario["initial_omegas"]
-        total_candidate_count += len(scenario["branch_candidates"])
+        candidates = scenario["branch_candidates"]
+        assert isinstance(phases, list)
+        assert isinstance(omegas, list)
+        assert isinstance(candidates, list)
+        total_candidate_count += len(candidates)
 
         assert len(phases) == len(omegas)
         assert len(phases) >= 5
@@ -199,7 +211,9 @@ def test_rejects_malformed_scenarios() -> None:
 
 
 def test_rejects_boolean_and_complex_phase_or_frequency_aliases() -> None:
-    base_candidate = build_multiverse_domain_scenarios()[0]["branch_candidates"][0]
+    base_candidates = build_multiverse_domain_scenarios()[0]["branch_candidates"]
+    assert isinstance(base_candidates, list)
+    base_candidate = base_candidates[0]
     candidate = (
         BranchCandidate(
             candidate_id=base_candidate["candidate_id"],
@@ -236,6 +250,9 @@ def test_rejects_boolean_and_complex_phase_or_frequency_aliases() -> None:
 
 
 def test_rejects_boolean_and_complex_branch_knob_aliases() -> None:
+    # The knob values are deliberately not floats: the validator must refuse
+    # them, so the candidate is built through an unchecked constructor alias.
+    candidate_unchecked: Callable[..., BranchCandidate] = BranchCandidate
     for knob_value in (True, np.bool_(True), 0.1 + 0.2j, np.complex128(0.1 + 0.2j)):
         bad_scenario = DomainScenario(
             domain="power_grid",
@@ -243,7 +260,7 @@ def test_rejects_boolean_and_complex_branch_knob_aliases() -> None:
             initial_phases=np.array([0.0, 0.1], dtype=np.float64),
             initial_omegas=np.array([60.0, 60.1], dtype=np.float64),
             branch_candidates=(
-                BranchCandidate(
+                candidate_unchecked(
                     candidate_id="bad_knob_alias",
                     knob_variations=(("K", knob_value),),
                     topology_variations=("mesh_reinforced",),
@@ -276,7 +293,10 @@ def _valid_scenario(**changes: object) -> DomainScenario:
         "objective_labels": ("reward",),
     }
     base.update(changes)
-    return DomainScenario(**base)  # type: ignore[arg-type]
+    # The changes deliberately corrupt fields, so the scenario is built
+    # through an unchecked constructor alias.
+    scenario_unchecked: Callable[..., DomainScenario] = DomainScenario
+    return scenario_unchecked(**base)
 
 
 @pytest.mark.parametrize(
@@ -297,9 +317,14 @@ def _valid_scenario(**changes: object) -> DomainScenario:
         ({"claim_boundary": "live"}, "must use claim_boundary"),
     ],
 )
-def test_validate_branch_candidate_rejects_corruptions(changes, match) -> None:
+def test_validate_branch_candidate_rejects_corruptions(
+    changes: dict[str, object], match: str
+) -> None:
+    # The changes deliberately corrupt fields, so the copy is made through an
+    # unchecked alias of dataclasses.replace.
+    replace_unchecked: Callable[..., BranchCandidate] = replace
     with pytest.raises(ValueError, match=match):
-        _validate_branch_candidate(replace(_valid_candidate(), **changes))
+        _validate_branch_candidate(replace_unchecked(_valid_candidate(), **changes))
 
 
 @pytest.mark.parametrize(
@@ -330,7 +355,9 @@ def test_validate_branch_candidate_rejects_corruptions(changes, match) -> None:
         ({"objective_labels": ("  ",)}, "has invalid objective labels"),
     ],
 )
-def test_validate_scenario_rejects_corruptions(changes, match) -> None:
+def test_validate_scenario_rejects_corruptions(
+    changes: dict[str, object], match: str
+) -> None:
     with pytest.raises(ValueError, match=match):
         _validate_scenario(_valid_scenario(**changes))
 
