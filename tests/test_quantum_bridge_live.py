@@ -11,8 +11,10 @@ from __future__ import annotations
 import importlib.util
 import json
 import sys
+from collections.abc import Callable, Mapping
 from hashlib import sha256
 from types import ModuleType
+from typing import Any, TypeVar
 
 import numpy as np
 import pytest
@@ -23,6 +25,25 @@ from scpn_phase_orchestrator.adapters.quantum_control_bridge import (
 from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
 
 HAS_QC = importlib.util.find_spec("scpn_quantum_control") is not None
+
+_R = TypeVar("_R")
+
+
+def _call(fn: Callable[..., _R], *args: object, **kwargs: object) -> _R:
+    """Call ``fn`` with arguments that are deliberately outside its types."""
+    return fn(*args, **kwargs)
+
+
+def _items(value: object) -> list[object]:
+    """Narrow a manifest list section to a list."""
+    assert isinstance(value, list | tuple)
+    return list(value)
+
+
+def _mapping(value: object) -> dict[str, object]:
+    """Narrow a manifest section to a mapping."""
+    assert isinstance(value, dict)
+    return value
 
 
 def _make_state() -> UPDEState:
@@ -40,8 +61,8 @@ def _make_state() -> UPDEState:
 def _install_fake_quantum_module(
     monkeypatch: pytest.MonkeyPatch,
     *,
-    orchestrator_to_quantum_phases=None,
-    quantum_to_orchestrator_phases=None,
+    orchestrator_to_quantum_phases: Callable[..., object] | None = None,
+    quantum_to_orchestrator_phases: Callable[..., object] | None = None,
 ) -> None:
     for module_name in (
         "scpn_quantum_control.bridge",
@@ -51,26 +72,30 @@ def _install_fake_quantum_module(
     ):
         monkeypatch.delitem(sys.modules, module_name, raising=False)
     module = ModuleType("scpn_quantum_control")
+    attrs: Any = module
     if orchestrator_to_quantum_phases is not None:
-        module.orchestrator_to_quantum_phases = orchestrator_to_quantum_phases
+        attrs.orchestrator_to_quantum_phases = orchestrator_to_quantum_phases
     if quantum_to_orchestrator_phases is not None:
-        module.quantum_to_orchestrator_phases = quantum_to_orchestrator_phases
+        attrs.quantum_to_orchestrator_phases = quantum_to_orchestrator_phases
     monkeypatch.setitem(sys.modules, "scpn_quantum_control", module)
 
 
 def _install_fake_quantum_bridge_modules(
     monkeypatch: pytest.MonkeyPatch,
     *,
-    knm_to_hamiltonian,
+    knm_to_hamiltonian: Callable[..., object],
 ) -> None:
     base_module = ModuleType("scpn_quantum_control")
     bridge_module = ModuleType("scpn_quantum_control.bridge")
     hamiltonian_module = ModuleType("scpn_quantum_control.bridge.knm_hamiltonian")
-    bridge_module.__path__ = []  # type: ignore[attr-defined]
-    hamiltonian_module.knm_to_hamiltonian = knm_to_hamiltonian
-    bridge_module.knm_hamiltonian = hamiltonian_module
-    base_module.bridge = bridge_module
-    base_module.__path__ = []  # type: ignore[attr-defined]
+    base_attrs: Any = base_module
+    bridge_attrs: Any = bridge_module
+    hamiltonian_attrs: Any = hamiltonian_module
+    bridge_attrs.__path__ = []
+    hamiltonian_attrs.knm_to_hamiltonian = knm_to_hamiltonian
+    bridge_attrs.knm_hamiltonian = hamiltonian_module
+    base_attrs.bridge = bridge_module
+    base_attrs.__path__ = []
     monkeypatch.setitem(sys.modules, "scpn_quantum_control", base_module)
     monkeypatch.setitem(sys.modules, "scpn_quantum_control.bridge", bridge_module)
     monkeypatch.setitem(
@@ -88,11 +113,14 @@ def _install_fake_quantum_solver_module(
     base_module = ModuleType("scpn_quantum_control")
     phase_module = ModuleType("scpn_quantum_control.phase")
     phase_xy_module = ModuleType("scpn_quantum_control.phase.xy_kuramoto")
-    phase_module.__path__ = []  # type: ignore[attr-defined]
-    phase_xy_module.QuantumKuramotoSolver = solver_type
-    phase_module.xy_kuramoto = phase_xy_module
-    base_module.phase = phase_module
-    base_module.__path__ = []  # type: ignore[attr-defined]
+    base_attrs: Any = base_module
+    phase_attrs: Any = phase_module
+    phase_xy_attrs: Any = phase_xy_module
+    phase_attrs.__path__ = []
+    phase_xy_attrs.QuantumKuramotoSolver = solver_type
+    phase_attrs.xy_kuramoto = phase_xy_module
+    base_attrs.phase = phase_module
+    base_attrs.__path__ = []
     monkeypatch.setitem(sys.modules, "scpn_quantum_control", base_module)
     monkeypatch.setitem(sys.modules, "scpn_quantum_control.phase", phase_module)
     monkeypatch.setitem(
@@ -113,7 +141,7 @@ def _install_fake_quantum_solver_module(
 class TestQuantumBridgeAdapterLocal:
     """Paths that do not reach into the scpn-quantum-control library."""
 
-    def test_export_artifact_populates_all_fields(self):
+    def test_export_artifact_populates_all_fields(self) -> None:
         bridge = QuantumControlBridge(n_oscillators=4)
         state = _make_state()
         d = bridge.export_artifact(state)
@@ -121,7 +149,7 @@ class TestQuantumBridgeAdapterLocal:
         assert d["fidelity"] == 0.8
         assert len(d["layers"]) == 2
 
-    def test_export_import_roundtrip_local(self):
+    def test_export_import_roundtrip_local(self) -> None:
         bridge = QuantumControlBridge(n_oscillators=4)
         state = _make_state()
         bridge.export_artifact(state)
@@ -131,7 +159,7 @@ class TestQuantumBridgeAdapterLocal:
         assert len(imported.layers) == 2
         assert imported.stability_proxy == 0.95
 
-    def test_import_knm_preserves_values(self):
+    def test_import_knm_preserves_values(self) -> None:
         bridge = QuantumControlBridge(n_oscillators=4)
         knm = np.array(
             [
@@ -145,29 +173,29 @@ class TestQuantumBridgeAdapterLocal:
         assert coupling.knm.shape == (4, 4)
         np.testing.assert_allclose(coupling.knm, knm)
 
-    def test_import_knm_initialises_zero_alpha(self):
+    def test_import_knm_initialises_zero_alpha(self) -> None:
         bridge = QuantumControlBridge(n_oscillators=3)
         knm = np.array([[0.0, 0.4, 0.1], [0.4, 0.0, 0.2], [0.1, 0.2, 0.0]])
         coupling = bridge.import_knm(knm)
         assert np.all(coupling.alpha == 0.0)
 
-    def test_import_knm_rejects_non_square(self):
+    def test_import_knm_rejects_non_square(self) -> None:
         bridge = QuantumControlBridge(n_oscillators=3)
         with pytest.raises(ValueError, match="Knm must be square"):
             bridge.import_knm(np.zeros((2, 4)))
 
-    def test_import_artifact_defaults_when_fields_missing(self):
+    def test_import_artifact_defaults_when_fields_missing(self) -> None:
         bridge = QuantumControlBridge(n_oscillators=2)
         state = bridge.import_artifact({"phases": [0.0, np.pi]})
         assert state.stability_proxy == 0.0
         assert state.regime_id == "NOMINAL"
 
-    def test_export_artifact_rejects_non_upde_state(self):
+    def test_export_artifact_rejects_non_upde_state(self) -> None:
         bridge = QuantumControlBridge(n_oscillators=2)
         with pytest.raises(ValueError, match="state must be a UPDEState"):
-            bridge.export_artifact(object())
+            _call(bridge.export_artifact, object())
 
-    def test_export_artifact_rejects_non_finite_layer_metrics(self):
+    def test_export_artifact_rejects_non_finite_layer_metrics(self) -> None:
         bridge = QuantumControlBridge(n_oscillators=2)
         state = UPDEState(
             layers=[
@@ -180,7 +208,7 @@ class TestQuantumBridgeAdapterLocal:
         with pytest.raises(ValueError, match="layers\\[0\\]\\.R must be finite"):
             bridge.export_artifact(state)
 
-    def test_export_artifact_rejects_non_finite_cross_alignment(self):
+    def test_export_artifact_rejects_non_finite_cross_alignment(self) -> None:
         bridge = QuantumControlBridge(n_oscillators=3)
         state = UPDEState(
             layers=[LayerState(R=1.0, psi=0.0)],
@@ -191,7 +219,7 @@ class TestQuantumBridgeAdapterLocal:
         with pytest.raises(ValueError, match="must contain finite values"):
             bridge.export_artifact(state)
 
-    def test_export_artifact_rejects_cross_layer_shape_mismatch(self):
+    def test_export_artifact_rejects_cross_layer_shape_mismatch(self) -> None:
         bridge = QuantumControlBridge(n_oscillators=3)
         state = UPDEState(
             layers=[
@@ -205,7 +233,9 @@ class TestQuantumBridgeAdapterLocal:
         with pytest.raises(ValueError, match="shape must match number of layers"):
             bridge.export_artifact(state)
 
-    def test_build_quantum_compiler_manifest_has_reproducible_handoff_metadata(self):
+    def test_build_quantum_compiler_manifest_has_reproducible_handoff_metadata(
+        self,
+    ) -> None:
         bridge = QuantumControlBridge(n_oscillators=3)
         knm = np.array(
             [[0.0, 0.1, 0.0], [0.1, 0.0, 0.05], [0.0, 0.05, 0.0]],
@@ -220,10 +250,12 @@ class TestQuantumBridgeAdapterLocal:
         assert manifest["qpu_execution_permitted"] is False
         assert manifest["actuation_permitted"] is False
         assert manifest["target_backends"] == ["qiskit_openqasm3", "pennylane_qasm"]
-        assert manifest["co_simulation_parity"]["term_count"] == len(
-            manifest["frequency_terms"] + manifest["coupling_terms"]
+        assert _mapping(manifest["co_simulation_parity"])["term_count"] == len(
+            _items(manifest["frequency_terms"]) + _items(manifest["coupling_terms"])
         )
-        assert manifest["openqasm"].startswith("OPENQASM 3.0;")
+        openqasm = manifest["openqasm"]
+        assert isinstance(openqasm, str)
+        assert openqasm.startswith("OPENQASM 3.0;")
         parity_projection = json.dumps(
             {key: value for key, value in manifest.items() if key != "manifest_sha256"},
             sort_keys=True,
@@ -239,11 +271,13 @@ class TestQuantumBridgeDependencyShim:
     def test_orchestrator_to_quantum_honours_contract_with_fake_dependency(
         self,
         monkeypatch: pytest.MonkeyPatch,
-    ):
+    ) -> None:
         captured: dict[str, object] = {}
 
-        def fake_orchestrator_to_quantum_phases(payload: object) -> np.ndarray:
-            captured["payload"] = dict(payload)  # type: ignore[arg-type]
+        def fake_orchestrator_to_quantum_phases(
+            payload: Mapping[str, object],
+        ) -> np.ndarray:
+            captured["payload"] = dict(payload)
             return np.array([0.1, 0.2], dtype=np.float64)
 
         _install_fake_quantum_module(
@@ -259,7 +293,7 @@ class TestQuantumBridgeDependencyShim:
     def test_orchestrator_to_quantum_contract_import_fails_if_contract_missing(
         self,
         monkeypatch: pytest.MonkeyPatch,
-    ):
+    ) -> None:
         _install_fake_quantum_module(monkeypatch)
         bridge = QuantumControlBridge(n_oscillators=4)
         with pytest.raises(ImportError, match="orchestrator_to_quantum_phases"):
@@ -268,7 +302,7 @@ class TestQuantumBridgeDependencyShim:
     def test_quantum_to_orchestrator_honours_contract_with_fake_dependency(
         self,
         monkeypatch: pytest.MonkeyPatch,
-    ):
+    ) -> None:
         captured: dict[str, object] = {}
 
         def fake_quantum_to_orchestrator_phases(payload: object) -> dict[str, object]:
@@ -285,30 +319,32 @@ class TestQuantumBridgeDependencyShim:
             np.array([0.8, 1.1], dtype=np.float64),
         )
         assert payload["phases"] == [0.8, 1.1]
-        np.testing.assert_allclose(captured["payload"], np.array([0.8, 1.1]))
+        received = captured["payload"]
+        assert isinstance(received, np.ndarray)
+        np.testing.assert_allclose(received, np.array([0.8, 1.1]))
 
     def test_quantum_to_orchestrator_contract_import_fails_if_contract_missing(
         self,
         monkeypatch: pytest.MonkeyPatch,
-    ):
+    ) -> None:
         _install_fake_quantum_module(monkeypatch)
         bridge = QuantumControlBridge(n_oscillators=2)
         with pytest.raises(ImportError, match="quantum_to_orchestrator_phases"):
             bridge.quantum_to_orchestrator(np.array([0.8, 1.1]))
 
-    def test_quantum_to_orchestrator_rejects_invalid_payload_shape(self):
+    def test_quantum_to_orchestrator_rejects_invalid_payload_shape(self) -> None:
         bridge = QuantumControlBridge(3)
         with pytest.raises(ValueError, match="quantum_theta shape"):
             bridge.quantum_to_orchestrator(np.array([0.0, 0.1]))
 
-    def test_quantum_to_orchestrator_rejects_non_finite_phases(self):
+    def test_quantum_to_orchestrator_rejects_non_finite_phases(self) -> None:
         bridge = QuantumControlBridge(2)
         with pytest.raises(
             ValueError, match="quantum_theta must contain finite values"
         ):
             bridge.quantum_to_orchestrator(np.array([0.0, float("nan")]))
 
-    def test_build_hamiltonian_rejects_invalid_shapes_without_dependency(self):
+    def test_build_hamiltonian_rejects_invalid_shapes_without_dependency(self) -> None:
         bridge = QuantumControlBridge(3)
         with pytest.raises(ValueError, match="does not match n_oscillators=3"):
             bridge.build_hamiltonian(np.ones((2, 2)), np.ones(3))
@@ -316,7 +352,7 @@ class TestQuantumBridgeDependencyShim:
     def test_build_hamiltonian_uses_fake_quantum_control_dependency(
         self,
         monkeypatch: pytest.MonkeyPatch,
-    ):
+    ) -> None:
         captured: dict[str, object] = {}
 
         def fake_knm_to_hamiltonian(
@@ -335,20 +371,25 @@ class TestQuantumBridgeDependencyShim:
         knm = np.array([[0.0, 0.2], [0.3, 0.0]])
         omegas = np.array([0.1, 0.2])
         result = bridge.build_hamiltonian(knm, omegas)
+        assert isinstance(result, dict)
         assert result["kind"] == "hamiltonian"
-        np.testing.assert_allclose(captured["knm"], np.array([[0.0, 0.2], [0.3, 0.0]]))
-        np.testing.assert_allclose(captured["omegas"], omegas)
+        received_knm = captured["knm"]
+        received_omegas = captured["omegas"]
+        assert isinstance(received_knm, np.ndarray)
+        assert isinstance(received_omegas, np.ndarray)
+        np.testing.assert_allclose(received_knm, np.array([[0.0, 0.2], [0.3, 0.0]]))
+        np.testing.assert_allclose(received_omegas, omegas)
 
     def test_build_hamiltonian_fails_if_dependency_contract_missing(
         self,
         monkeypatch: pytest.MonkeyPatch,
-    ):
+    ) -> None:
         _install_fake_quantum_module(monkeypatch)
         bridge = QuantumControlBridge(2)
         with pytest.raises(ImportError):
             bridge.build_hamiltonian(np.ones((2, 2)), np.ones(2))
 
-    def test_solve_q_upde_rejects_invalid_t_max_before_dependency_import(self):
+    def test_solve_q_upde_rejects_invalid_t_max_before_dependency_import(self) -> None:
         bridge = QuantumControlBridge(2)
         with pytest.raises(ValueError, match="t_max must be finite and positive"):
             bridge.solve_q_upde(np.ones((2, 2)), np.ones(2), t_max=0.0)
@@ -356,7 +397,7 @@ class TestQuantumBridgeDependencyShim:
     def test_solve_q_upde_uses_fake_quantum_control_dependency(
         self,
         monkeypatch: pytest.MonkeyPatch,
-    ):
+    ) -> None:
         captured: dict[str, object] = {}
 
         class FakeSolver:
@@ -404,7 +445,7 @@ class TestQuantumBridgeDependencyShim:
     def test_solve_q_upde_fails_if_solver_contract_is_missing(
         self,
         monkeypatch: pytest.MonkeyPatch,
-    ):
+    ) -> None:
         _install_fake_quantum_module(monkeypatch)
         bridge = QuantumControlBridge(2)
         with pytest.raises(ImportError):
@@ -415,7 +456,7 @@ class TestQuantumBridgeDependencyShim:
 class TestQuantumBridgeLive:
     """Paths that dispatch into the scpn_quantum_control library."""
 
-    def test_orchestrator_to_quantum_roundtrip(self):
+    def test_orchestrator_to_quantum_roundtrip(self) -> None:
         bridge = QuantumControlBridge(n_oscillators=4)
         state = _make_state()
 
@@ -427,7 +468,7 @@ class TestQuantumBridgeLive:
         result = bridge.quantum_to_orchestrator(q_phases)
         assert isinstance(result, dict)
 
-    def test_build_hamiltonian_returns_object(self):
+    def test_build_hamiltonian_returns_object(self) -> None:
         bridge = QuantumControlBridge(n_oscillators=3)
         knm = np.eye(3) * 0.0 + 0.2  # uniform non-zero off-diagonal
         np.fill_diagonal(knm, 0.0)
