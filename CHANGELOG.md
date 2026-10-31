@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `CouplingSpec.templates` is typed `dict[str, Any]`. The loader keeps each
+  template's YAML definition, for example a matrix template with `matrix`,
+  `orientation`, `columns` and `channels`, so the earlier `dict[str, str]`
+  annotation misdescribed the loaded value.
+
 - The whole dependency chain is aligned before the push:
   - Python: every generated lock and `uv.lock` are re-resolved to the newest compatible releases. Fourteen patch and minor moves, including grpcio and grpcio-tools 1.85.1, hypothesis 6.170.14, ipython 9.18.0, symengine 0.15.0 and websockets 17.4. The derived connectome locks follow `dev-lock.txt`.
   - gRPC: the stubs are regenerated with grpcio-tools 1.85.1, and the `grpcio` and `grpcio-tools` floors rise to 1.85.1, the generating release.

@@ -80,11 +80,16 @@ class OscillatorFamily:
 
 @dataclass(frozen=True)
 class CouplingSpec:
-    """Parameters for K_nm coupling matrix construction."""
+    """Parameters for K_nm coupling matrix construction.
+
+    ``templates`` maps a template name to its YAML definition as loaded,
+    for example a matrix template with ``matrix``, ``orientation``,
+    ``columns`` and ``channels`` entries.
+    """
 
     base_strength: float
     decay_alpha: float
-    templates: dict[str, str]
+    templates: dict[str, Any]
 
 
 @dataclass(frozen=True)

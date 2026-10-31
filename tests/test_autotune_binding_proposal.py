@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import importlib
 import json
-from collections.abc import Mapping
 from pathlib import Path
 from types import ModuleType
 from typing import Any
@@ -312,10 +311,7 @@ def test_time_series_csv_yaml_binds_initial_k_template(
 
     assert "auto_initial_k" in spec.coupling.templates
     initial_k_matrix = [list(row) for row in initial_k["matrix"]]
-    # CouplingSpec.templates is declared dict[str, str], but the loader keeps
-    # the YAML mapping for matrix templates; view it as object and narrow.
-    templates: Mapping[str, object] = spec.coupling.templates
-    template = templates["auto_initial_k"]
+    template = spec.coupling.templates["auto_initial_k"]
     assert isinstance(template, dict)
     assert template["matrix"] == initial_k_matrix
     assert template["orientation"] == "target_by_source"
