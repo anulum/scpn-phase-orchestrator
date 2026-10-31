@@ -8,6 +8,8 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import pytest
 
 jax = pytest.importorskip("jax", reason="JAX required")
@@ -23,6 +25,9 @@ from scpn_phase_orchestrator.nn.oim import (
     oim_step,
 )
 
+if TYPE_CHECKING:
+    from jax import Array
+
 N = 6
 DT = 0.1
 N_STEPS = 200
@@ -30,20 +35,22 @@ N_COLORS = 3
 
 
 @pytest.fixture()
-def key():
-    return jax.random.PRNGKey(42)
+def key() -> Array:
+    prng_key: Array = jax.random.PRNGKey(42)
+    return prng_key
 
 
 @pytest.fixture()
-def triangle_graph():
+def triangle_graph() -> Array:
     """K3 complete graph (3 nodes, all connected). Needs 3 colors."""
-    return jnp.array([[0, 1, 1], [1, 0, 1], [1, 1, 0]], dtype=jnp.float32)
+    graph: Array = jnp.array([[0, 1, 1], [1, 0, 1], [1, 1, 0]], dtype=jnp.float32)
+    return graph
 
 
 @pytest.fixture()
-def bipartite_graph():
+def bipartite_graph() -> Array:
     """K_{3,3} bipartite (6 nodes). Needs 2 colors."""
-    A = jnp.zeros((6, 6))
+    A: Array = jnp.zeros((6, 6))
     for i in range(3):
         for j in range(3, 6):
             A = A.at[i, j].set(1.0)
@@ -52,12 +59,12 @@ def bipartite_graph():
 
 
 class TestOIMStep:
-    def test_output_shape(self, key, bipartite_graph):
+    def test_output_shape(self, key: Array, bipartite_graph: Array) -> None:
         phases = jax.random.uniform(key, (N,), maxval=2.0 * jnp.pi)
         out = oim_step(phases, bipartite_graph, N_COLORS, DT)
         assert out.shape == (N,)
 
-    def test_phases_in_range(self, key, bipartite_graph):
+    def test_phases_in_range(self, key: Array, bipartite_graph: Array) -> None:
         phases = jax.random.uniform(key, (N,), maxval=2.0 * jnp.pi)
         out = oim_step(phases, bipartite_graph, N_COLORS, DT)
         assert jnp.all(out >= 0.0)
@@ -65,25 +72,25 @@ class TestOIMStep:
 
 
 class TestOIMForward:
-    def test_trajectory_shape(self, key, bipartite_graph):
+    def test_trajectory_shape(self, key: Array, bipartite_graph: Array) -> None:
         phases = jax.random.uniform(key, (N,), maxval=2.0 * jnp.pi)
         final, traj = oim_forward(phases, bipartite_graph, 2, DT, N_STEPS)
         assert final.shape == (N,)
         assert traj.shape == (N_STEPS, N)
 
-    def test_final_matches_last(self, key, bipartite_graph):
+    def test_final_matches_last(self, key: Array, bipartite_graph: Array) -> None:
         phases = jax.random.uniform(key, (N,), maxval=2.0 * jnp.pi)
         final, traj = oim_forward(phases, bipartite_graph, 2, DT, N_STEPS)
         assert jnp.allclose(final, traj[-1], atol=1e-6)
 
 
 class TestExtractColoring:
-    def test_output_shape(self):
+    def test_output_shape(self) -> None:
         phases = jnp.array([0.0, 2.1, 4.2])
         colors = extract_coloring(phases, 3)
         assert colors.shape == (3,)
 
-    def test_correct_assignment(self):
+    def test_correct_assignment(self) -> None:
         # 3 colors: centers at 0, 2π/3, 4π/3
         phases = jnp.array([0.1, 2.2, 4.3])
         colors = extract_coloring(phases, 3)
@@ -91,7 +98,7 @@ class TestExtractColoring:
         assert int(colors[1]) == 1
         assert int(colors[2]) == 2
 
-    def test_range(self, key):
+    def test_range(self, key: Array) -> None:
         phases = jax.random.uniform(key, (20,), maxval=2.0 * jnp.pi)
         colors = extract_coloring(phases, 5)
         assert jnp.all(colors >= 0)
@@ -99,17 +106,17 @@ class TestExtractColoring:
 
 
 class TestColoringViolations:
-    def test_perfect_coloring_zero_violations(self, triangle_graph):
+    def test_perfect_coloring_zero_violations(self, triangle_graph: Array) -> None:
         colors = jnp.array([0, 1, 2])
         v = coloring_violations(colors, triangle_graph)
         assert int(v) == 0
 
-    def test_all_same_color_max_violations(self, triangle_graph):
+    def test_all_same_color_max_violations(self, triangle_graph: Array) -> None:
         colors = jnp.array([0, 0, 0])
         v = coloring_violations(colors, triangle_graph)
         assert int(v) == 3  # 3 edges in K3
 
-    def test_one_violation(self):
+    def test_one_violation(self) -> None:
         A = jnp.array([[0, 1, 0], [1, 0, 1], [0, 1, 0]], dtype=jnp.float32)
         colors = jnp.array([0, 0, 1])  # edge (0,1) violated
         v = coloring_violations(colors, A)
@@ -117,22 +124,24 @@ class TestColoringViolations:
 
 
 class TestColoringEnergy:
-    def test_scalar_output(self, key, bipartite_graph):
+    def test_scalar_output(self, key: Array, bipartite_graph: Array) -> None:
         phases = jax.random.uniform(key, (N,), maxval=2.0 * jnp.pi)
         e = coloring_energy(phases, bipartite_graph, 2)
         assert e.shape == ()
 
-    def test_differentiable(self, key, bipartite_graph):
+    def test_differentiable(self, key: Array, bipartite_graph: Array) -> None:
         phases = jax.random.uniform(key, (N,), maxval=2.0 * jnp.pi)
 
-        def loss(p):
+        def loss(p: Array) -> Array:
             return coloring_energy(p, bipartite_graph, 2)
 
         grad = jax.grad(loss)(phases)
         assert grad.shape == (N,)
         assert jnp.isfinite(grad).all()
 
-    def test_energy_decreases_during_dynamics(self, key, bipartite_graph):
+    def test_energy_decreases_during_dynamics(
+        self, key: Array, bipartite_graph: Array
+    ) -> None:
         phases = jax.random.uniform(key, (N,), maxval=2.0 * jnp.pi)
         e_before = coloring_energy(phases, bipartite_graph, 2)
         final, _ = oim_forward(phases, bipartite_graph, 2, DT, N_STEPS)
@@ -141,19 +150,19 @@ class TestColoringEnergy:
 
 
 class TestExtractColoringSoft:
-    def test_output_shape(self):
+    def test_output_shape(self) -> None:
         phases = jnp.array([0.0, 2.1, 4.2])
         colors = extract_coloring_soft(phases, 3)
         assert colors.shape == (3,)
 
-    def test_correct_assignment(self):
+    def test_correct_assignment(self) -> None:
         phases = jnp.array([0.1, 2.2, 4.3])
         colors = extract_coloring_soft(phases, 3)
         assert int(colors[0]) == 0
         assert int(colors[1]) == 1
         assert int(colors[2]) == 2
 
-    def test_boundary_phase_goes_to_nearest(self):
+    def test_boundary_phase_goes_to_nearest(self) -> None:
         # Phase just below bucket boundary — soft should handle correctly
         bucket = 2.0 * jnp.pi / 3.0
         phases = jnp.array([bucket - 0.01, bucket + 0.01])
@@ -163,17 +172,17 @@ class TestExtractColoringSoft:
 
 
 class TestOIMSolve:
-    def test_triangle_3coloring(self, key, triangle_graph):
+    def test_triangle_3coloring(self, key: Array, triangle_graph: Array) -> None:
         colors, phases, energy = oim_solve(triangle_graph, 3, key=key)
         v = coloring_violations(colors, triangle_graph)
         assert int(v) == 0
 
-    def test_bipartite_2coloring(self, key, bipartite_graph):
+    def test_bipartite_2coloring(self, key: Array, bipartite_graph: Array) -> None:
         colors, phases, energy = oim_solve(bipartite_graph, 2, key=key)
         v = coloring_violations(colors, bipartite_graph)
         assert int(v) == 0
 
-    def test_returns_correct_shapes(self, key, bipartite_graph):
+    def test_returns_correct_shapes(self, key: Array, bipartite_graph: Array) -> None:
         colors, phases, energy = oim_solve(
             bipartite_graph,
             2,
@@ -184,7 +193,7 @@ class TestOIMSolve:
         assert phases.shape == (N,)
         assert isinstance(energy, float)
 
-    def test_energy_lower_than_random(self, key, bipartite_graph):
+    def test_energy_lower_than_random(self, key: Array, bipartite_graph: Array) -> None:
         _, _, e_solved = oim_solve(bipartite_graph, 2, key=key)
         # Compare against the EXPECTED energy of random phase configurations under
         # the SAME operative coupling the 2-colour solver optimises. oim_solve
@@ -209,13 +218,13 @@ class TestOIMSolve:
 
 
 class TestEndToEnd:
-    def test_triangle_3coloring(self, key, triangle_graph):
+    def test_triangle_3coloring(self, key: Array, triangle_graph: Array) -> None:
         """K3 should be 3-colorable via oim_solve."""
         colors, _, _ = oim_solve(triangle_graph, 3, key=key)
         v = coloring_violations(colors, triangle_graph)
         assert int(v) == 0
 
-    def test_bipartite_2coloring(self, key, bipartite_graph):
+    def test_bipartite_2coloring(self, key: Array, bipartite_graph: Array) -> None:
         """K_{3,3} should be 2-colorable via oim_solve."""
         colors, _, _ = oim_solve(bipartite_graph, 2, key=key)
         v = coloring_violations(colors, bipartite_graph)
