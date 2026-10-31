@@ -22,6 +22,7 @@ import cProfile
 import functools
 import math
 from collections.abc import Callable
+from typing import NoReturn, ParamSpec, TypeVar
 
 import numpy as np
 import pytest
@@ -41,10 +42,15 @@ from scpn_phase_orchestrator.coupling.spectral import (
 )
 from tests._runtime_owners import NEEDS_KERNEL
 
+_P = ParamSpec("_P")
+_R = TypeVar("_R")
 
-def _python(func):
+
+def _python(func: Callable[_P, _R]) -> Callable[_P, _R]:
+    """Run ``func`` with the pure-Python backend forced."""
+
     @functools.wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _R:
         prev = s_mod.ACTIVE_BACKEND
         s_mod.ACTIVE_BACKEND = "python"
         s_mod._PRIM_CACHE = None
@@ -65,6 +71,15 @@ def _path_graph(n: int, weight: float) -> np.ndarray:
     return knm
 
 
+_CallR = TypeVar("_CallR")
+_Primitive = Callable[[np.ndarray, int], tuple[np.ndarray, np.ndarray]]
+
+
+def _call(fn: Callable[..., _CallR], *args: object, **kwargs: object) -> _CallR:
+    """Call ``fn`` with arguments that are deliberately outside its types."""
+    return fn(*args, **kwargs)
+
+
 def _path_spectrum(n: int, weight: float) -> list[float]:
     """Return the path-graph Laplacian eigenvalues ``2w(1 − cos(πk/n))``."""
     return [2 * weight * (1 - math.cos(math.pi * k / n)) for k in range(n)]
@@ -73,7 +88,8 @@ def _path_spectrum(n: int, weight: float) -> list[float]:
 def _path_fiedler(n: int) -> np.ndarray:
     """Return the unit Fiedler vector ``cos(π(j + ½)/n)`` of the path graph."""
     vector = np.array([math.cos(math.pi * (j + 0.5) / n) for j in range(n)])
-    return vector / np.linalg.norm(vector)
+    unit: np.ndarray = vector / np.linalg.norm(vector)
+    return unit
 
 
 def _count_calls(code_name: str, action: Callable[[], object]) -> int:
@@ -101,26 +117,26 @@ def _builtin_calls(profile: cProfile.Profile, name: str) -> int:
 
 
 class TestGraphLaplacian:
-    def test_row_sums_zero(self):
+    def test_row_sums_zero(self) -> None:
         W = np.array([[0.0, 1.0, 2.0], [1.0, 0.0, 3.0], [2.0, 3.0, 0.0]])
         L = graph_laplacian(W)
         np.testing.assert_allclose(L.sum(axis=1), 0.0, atol=1e-14)
 
-    def test_negative_offdiag(self):
+    def test_negative_offdiag(self) -> None:
         """Off-diagonal entries of L are ``−|W_ij|``."""
         W = np.array([[0.0, 2.5], [2.5, 0.0]])
         L = graph_laplacian(W)
         assert L[0, 1] == -2.5
         assert L[1, 0] == -2.5
 
-    def test_abs_on_input(self):
+    def test_abs_on_input(self) -> None:
         """Negative weights are treated as magnitudes."""
         W = np.array([[0.0, -1.0], [-1.0, 0.0]])
         L = graph_laplacian(W)
         assert L[0, 0] == 1.0  # |−1| contributes to degree
 
     @_python
-    def test_asymmetric_coupling_preserves_undirected_spectrum(self):
+    def test_asymmetric_coupling_preserves_undirected_spectrum(self) -> None:
         """The spectral primitive operates on reciprocal undirected
         magnitude weights, so reversing the measurement direction does
         not change the Laplacian spectrum."""
@@ -148,15 +164,15 @@ class TestGraphLaplacian:
             (np.zeros((2, 3)), "knm"),
         ],
     )
-    def test_rejects_invalid_coupling_matrix(self, knm, match):
+    def test_rejects_invalid_coupling_matrix(self, knm: np.ndarray, match: str) -> None:
         with pytest.raises(ValueError, match=match):
             graph_laplacian(knm)
 
-    def test_rejects_mixed_boolean_coupling_alias(self):
+    def test_rejects_mixed_boolean_coupling_alias(self) -> None:
         with pytest.raises(ValueError, match="knm must not contain boolean"):
-            graph_laplacian([[0.0, True], [1.0, 0.0]])
+            _call(graph_laplacian, [[0.0, True], [1.0, 0.0]])
 
-    def test_rejects_numpy_boolean_coupling_alias(self):
+    def test_rejects_numpy_boolean_coupling_alias(self) -> None:
         knm = np.array(
             [[0.0, np.bool_(True)], [1.0, 0.0]],
             dtype=object,
@@ -168,14 +184,14 @@ class TestGraphLaplacian:
 
 class TestFiedlerValue:
     @_python
-    def test_connected_graph_has_positive_lambda2(self):
+    def test_connected_graph_has_positive_lambda2(self) -> None:
         n = 5
         W = np.ones((n, n))
         np.fill_diagonal(W, 0.0)
         assert fiedler_value(W) > 0.0
 
     @_python
-    def test_smallest_eigvalue_is_zero(self):
+    def test_smallest_eigvalue_is_zero(self) -> None:
         """λ₁ = 0 for any weighted graph (``1 ∈ ker L``)."""
         rng = np.random.default_rng(0)
         n = 6
@@ -186,7 +202,7 @@ class TestFiedlerValue:
         assert abs(eigvals[0]) < 1e-12
 
     @_python
-    def test_complete_graph_lambda2_equals_n(self):
+    def test_complete_graph_lambda2_equals_n(self) -> None:
         """For the complete graph with unit weights,
         ``λ₂ = λ₃ = … = λ_N = N`` (closed-form)."""
         n = 5
@@ -197,7 +213,7 @@ class TestFiedlerValue:
 
 class TestFiedlerVectorOrthogonality:
     @_python
-    def test_vector_orthogonal_to_ones(self):
+    def test_vector_orthogonal_to_ones(self) -> None:
         """All non-zero eigenvectors are orthogonal to
         ``1``, which spans ``ker L``."""
         rng = np.random.default_rng(1)
@@ -209,7 +225,7 @@ class TestFiedlerVectorOrthogonality:
         assert abs(float(np.sum(v2))) < 1e-10
 
     @_python
-    def test_vector_satisfies_eigenequation(self):
+    def test_vector_satisfies_eigenequation(self) -> None:
         """``L v₂ = λ₂ v₂`` within numerical tolerance."""
         rng = np.random.default_rng(2)
         n = 6
@@ -225,7 +241,7 @@ class TestFiedlerVectorOrthogonality:
 
 class TestCriticalCoupling:
     @_python
-    def test_critical_coupling_complete_graph(self):
+    def test_critical_coupling_complete_graph(self) -> None:
         """``K_c = Δω / λ₂ = Δω / N`` for a unit-weight complete
         graph of ``N`` oscillators."""
         n = 4
@@ -236,7 +252,7 @@ class TestCriticalCoupling:
         assert kc == pytest.approx(3.0 / n, abs=1e-10)
 
     @_python
-    def test_disconnected_graph_returns_infinity(self):
+    def test_disconnected_graph_returns_infinity(self) -> None:
         """A graph with two disconnected components has
         ``λ₂ = 0`` → ``K_c = +∞``."""
         n = 4
@@ -257,12 +273,14 @@ class TestCriticalCoupling:
             (np.zeros(2), np.array([[True, False], [False, True]]), "knm"),
         ],
     )
-    def test_rejects_invalid_frequency_or_coupling_inputs(self, omegas, knm, match):
+    def test_rejects_invalid_frequency_or_coupling_inputs(
+        self, omegas: np.ndarray, knm: np.ndarray, match: str
+    ) -> None:
         with pytest.raises(ValueError, match=match):
             critical_coupling(omegas, knm)
 
     @_python
-    def test_rejects_frequency_vector_shorter_than_layer_matrix(self):
+    def test_rejects_frequency_vector_shorter_than_layer_matrix(self) -> None:
         W = np.ones((4, 4), dtype=np.float64)
         np.fill_diagonal(W, 0.0)
 
@@ -270,15 +288,15 @@ class TestCriticalCoupling:
             critical_coupling(np.array([5.0, 10.0]), W)
 
     @_python
-    def test_rejects_mixed_boolean_frequency_alias(self):
+    def test_rejects_mixed_boolean_frequency_alias(self) -> None:
         W = np.ones((2, 2), dtype=np.float64)
         np.fill_diagonal(W, 0.0)
 
         with pytest.raises(ValueError, match="omegas must not contain boolean"):
-            critical_coupling([True, 1.0], W)
+            _call(critical_coupling, [True, 1.0], W)
 
     @_python
-    def test_rejects_complex_frequency_alias(self):
+    def test_rejects_complex_frequency_alias(self) -> None:
         W = np.ones((2, 2), dtype=np.float64)
         np.fill_diagonal(W, 0.0)
 
@@ -288,7 +306,7 @@ class TestCriticalCoupling:
 
 class TestFiedlerPartition:
     @_python
-    def test_partitions_are_disjoint(self):
+    def test_partitions_are_disjoint(self) -> None:
         """``pos`` and ``neg`` must be disjoint and cover all
         ``N`` nodes."""
         rng = np.random.default_rng(3)
@@ -303,7 +321,7 @@ class TestFiedlerPartition:
 
 class TestSpectralGap:
     @_python
-    def test_non_negative(self):
+    def test_non_negative(self) -> None:
         rng = np.random.default_rng(4)
         n = 6
         W = rng.uniform(0, 1, (n, n))
@@ -312,7 +330,7 @@ class TestSpectralGap:
         assert spectral_gap(W) >= -1e-14
 
     @_python
-    def test_complete_graph_gap_is_zero(self):
+    def test_complete_graph_gap_is_zero(self) -> None:
         """``K_N`` has λ₂ = … = λ_N = N, so ``λ₃ − λ₂ = 0``."""
         n = 5
         W = np.ones((n, n))
@@ -322,7 +340,7 @@ class TestSpectralGap:
 
 class TestSyncConvergenceRate:
     @_python
-    def test_returns_zero_for_empty(self):
+    def test_returns_zero_for_empty(self) -> None:
         assert (
             sync_convergence_rate(
                 np.zeros((0, 0)),
@@ -332,7 +350,7 @@ class TestSyncConvergenceRate:
         )
 
     @_python
-    def test_positive_for_connected(self):
+    def test_positive_for_connected(self) -> None:
         n = 4
         W = np.ones((n, n))
         np.fill_diagonal(W, 0.0)
@@ -352,9 +370,11 @@ class TestSyncConvergenceRate:
             (np.ones((2, 2)), np.zeros(2), np.nan, "gamma_max"),
         ],
     )
-    def test_rejects_invalid_convergence_inputs(self, knm, omegas, gamma_max, match):
+    def test_rejects_invalid_convergence_inputs(
+        self, knm: np.ndarray, omegas: np.ndarray, gamma_max: object, match: str
+    ) -> None:
         with pytest.raises((TypeError, ValueError), match=match):
-            sync_convergence_rate(knm, omegas, gamma_max=gamma_max)
+            _call(sync_convergence_rate, knm, omegas, gamma_max=gamma_max)
 
 
 class TestHypothesis:
@@ -368,7 +388,7 @@ class TestHypothesis:
         deadline=None,
         suppress_health_check=[HealthCheck.too_slow],
     )
-    def test_eigvals_ascending_and_nonneg(self, n, seed):
+    def test_eigvals_ascending_and_nonneg(self, n: int, seed: int) -> None:
         rng = np.random.default_rng(seed)
         W = rng.uniform(0, 1, (n, n))
         W = (W + W.T) / 2
@@ -381,10 +401,10 @@ class TestPrimitiveDispatchFallback:
     def test_primitive_falls_back_to_next_backend_when_active_loader_fails(
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
-        def _fail_go():
+        def _fail_go() -> NoReturn:
             raise ImportError("go unavailable")
 
-        def _ok_julia():
+        def _ok_julia() -> _Primitive:
             return lambda flat, n: (
                 np.zeros(n, dtype=np.float64),
                 np.zeros(n, dtype=np.float64),
@@ -416,23 +436,27 @@ class TestPrimitiveDispatchFallback:
             lambda: [s_mod._load_primitive_backend(owner) for _ in range(2)],
         )
         assert loads == 1
-        assert s_mod._load_primitive_backend(owner) is s_mod._PRIM_CACHE[owner]
+        cache = s_mod._PRIM_CACHE
+        assert cache is not None
+        assert s_mod._load_primitive_backend(owner) is cache[owner]
 
 
 class TestDispatcherSurface:
-    def test_resolve_backends_ignores_optional_loader_failures(self, monkeypatch):
+    def test_resolve_backends_ignores_optional_loader_failures(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Unavailable optional backends must be skipped while preserving
         import-path order and a deterministic python fallback."""
         calls: list[str] = []
 
-        def fail():
+        def fail() -> NoReturn:
             calls.append("fail")
             raise RuntimeError("backend not available")
 
-        def ok():
+        def ok() -> _Primitive:
             calls.append("ok")
 
-            def _primitive(flat, n):
+            def _primitive(flat: np.ndarray, n: int) -> tuple[np.ndarray, np.ndarray]:
                 return np.arange(n, dtype=np.float64), np.ones(n, dtype=np.float64)
 
             return _primitive
@@ -448,10 +472,12 @@ class TestDispatcherSurface:
         assert available_backends == ["go", "python"]
         assert calls == ["fail", "fail", "fail", "ok"]
 
-    def test_resolve_backends_falls_back_to_python_when_all_fail(self, monkeypatch):
+    def test_resolve_backends_falls_back_to_python_when_all_fail(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """If all optional loaders fail, python remains the runtime default."""
 
-        def fail():
+        def fail() -> NoReturn:
             raise OSError("toolchain not usable")
 
         monkeypatch.setitem(s_mod._LOADERS, "rust", fail)
@@ -464,11 +490,11 @@ class TestDispatcherSurface:
         assert active_backend == "python"
         assert available_backends == ["python"]
 
-    def test_available_non_empty(self):
+    def test_available_non_empty(self) -> None:
         assert s_mod.AVAILABLE_BACKENDS
         assert "python" in s_mod.AVAILABLE_BACKENDS
 
-    def test_active_is_first(self):
+    def test_active_is_first(self) -> None:
         assert s_mod.AVAILABLE_BACKENDS[0] == s_mod.ACTIVE_BACKEND
 
     @pytest.mark.native_runtime
@@ -513,18 +539,22 @@ class TestDispatcherSurface:
 
 
 class TestValidationBoundaries:
-    def test_graph_laplacian_rejects_complex_weights(self):
+    def test_graph_laplacian_rejects_complex_weights(self) -> None:
         knm = np.array([[0.0, 1.0 + 1.0j], [1.0 + 1.0j, 0.0]])
         with pytest.raises(ValueError, match="knm must be a finite square matrix"):
             graph_laplacian(knm)
 
-    def test_defensive_boolean_dtype_matrix_guard(self, monkeypatch):
+    def test_defensive_boolean_dtype_matrix_guard(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.setattr(s_mod, "_contains_boolean_alias", lambda _value: False)
 
         with pytest.raises(ValueError, match="knm must not contain boolean"):
             graph_laplacian(np.array([[True, False], [False, True]]))
 
-    def test_defensive_boolean_dtype_omega_guard(self, monkeypatch):
+    def test_defensive_boolean_dtype_omega_guard(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.setattr(s_mod, "_contains_boolean_alias", lambda _value: False)
 
         with pytest.raises(ValueError, match="omegas must not contain boolean"):
@@ -533,7 +563,9 @@ class TestValidationBoundaries:
                 np.array([True, False]),
             )
 
-    def test_optional_backend_boolean_output_fails_closed(self, monkeypatch):
+    def test_optional_backend_boolean_output_fails_closed(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         knm = np.array(
             [
                 [0.0, 1.0, 0.0],
@@ -543,7 +575,9 @@ class TestValidationBoundaries:
             dtype=np.float64,
         )
 
-        def invalid_primitive(flat, n):
+        def invalid_primitive(
+            flat: np.ndarray, n: int
+        ) -> tuple[np.ndarray, np.ndarray]:
             assert n == 3
             assert flat.shape == (9,)
             return (
@@ -556,10 +590,12 @@ class TestValidationBoundaries:
         with pytest.raises(ValueError):
             spectral_eig(knm)
 
-    def test_rust_fast_path_rejects_boolean_return_aliases(self, monkeypatch):
+    def test_rust_fast_path_rejects_boolean_return_aliases(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         knm = np.array([[0.0, 1.0], [1.0, 0.0]], dtype=np.float64)
 
-        def rust_bundle():
+        def rust_bundle() -> dict[str, Callable[[np.ndarray, int], object]]:
             return {
                 "fv": lambda flat, n: np.bool_(True),
                 "fvec": lambda flat, n: np.array([np.bool_(True), 0.0], dtype=object),
@@ -574,10 +610,12 @@ class TestValidationBoundaries:
         with pytest.raises(ValueError, match="Fiedler vector"):
             fiedler_vector(knm)
 
-    def test_rust_fast_path_rejects_numeric_string_scalar(self, monkeypatch):
+    def test_rust_fast_path_rejects_numeric_string_scalar(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         knm = np.array([[0.0, 1.0], [1.0, 0.0]], dtype=np.float64)
 
-        def rust_bundle():
+        def rust_bundle() -> dict[str, Callable[[np.ndarray, int], object]]:
             return {
                 "fv": lambda flat, n: "1.0",
                 "fvec": lambda flat, n: np.array([1.0, -1.0], dtype=np.float64),
@@ -590,8 +628,10 @@ class TestValidationBoundaries:
         with pytest.raises(ValueError, match="numeric-string"):
             fiedler_value(knm)
 
-    def test_checked_primitive_reraises_python_floor_loader_failure(self, monkeypatch):
-        def failing_python_floor(flat, n):
+    def test_checked_primitive_reraises_python_floor_loader_failure(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def failing_python_floor(flat: np.ndarray, n: int) -> NoReturn:
             raise ImportError("python floor unavailable")
 
         monkeypatch.setattr(s_mod, "_python_spectral_eig", failing_python_floor)
@@ -601,9 +641,9 @@ class TestValidationBoundaries:
             s_mod._spectral_eig_checked(np.zeros(4, dtype=np.float64), 2)
 
     def test_checked_primitive_falls_back_after_optional_loader_failure(
-        self, monkeypatch
-    ):
-        def failing_optional(_flat, _n):
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def failing_optional(_flat: np.ndarray, _n: int) -> NoReturn:
             raise ImportError("optional backend unavailable")
 
         monkeypatch.setattr(s_mod, "_primitive", lambda: failing_optional)
@@ -616,7 +656,9 @@ class TestValidationBoundaries:
         np.testing.assert_allclose(eigvals, [0.0, 2.0], atol=1e-12)
         assert fiedler.shape == (2,)
 
-    def test_primitive_uses_python_floor_when_no_named_backend_loads(self, monkeypatch):
+    def test_primitive_uses_python_floor_when_no_named_backend_loads(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.setattr(s_mod, "ACTIVE_BACKEND", "rust")
         monkeypatch.setattr(s_mod, "AVAILABLE_BACKENDS", ["rust"])
 
@@ -637,7 +679,9 @@ class TestValidationBoundaries:
             ),
         ],
     )
-    def test_convergence_rate_rejects_invalid_inputs(self, knm, omegas, match):
+    def test_convergence_rate_rejects_invalid_inputs(
+        self, knm: np.ndarray, omegas: np.ndarray, match: str
+    ) -> None:
         with pytest.raises(ValueError, match=match):
             sync_convergence_rate(knm, omegas)
 
@@ -654,13 +698,15 @@ class TestValidationBoundaries:
             ),
         ],
     )
-    def test_critical_coupling_rejects_invalid_omega_or_matrix(self, knm, omegas):
+    def test_critical_coupling_rejects_invalid_omega_or_matrix(
+        self, knm: np.ndarray, omegas: np.ndarray
+    ) -> None:
         with pytest.raises(ValueError, match="knm|omegas"):
             critical_coupling(omegas, knm)
 
     def test_rust_primitive_uses_python_eigendecomposition_without_fast_path_roundtrip(
-        self, monkeypatch
-    ):
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         knm = np.array(
             [
                 [0.0, 1.0, 0.0],
@@ -738,11 +784,11 @@ class TestValidationBoundaries:
         )
 
     @_python
-    def test_critical_coupling_empty_graph_rejects_frequency_mismatch(self):
+    def test_critical_coupling_empty_graph_rejects_frequency_mismatch(self) -> None:
         with pytest.raises(ValueError, match="omegas"):
             critical_coupling(np.array([0.0, 1.0]), np.zeros((0, 0)))
 
-    def test_spectral_eig_accepts_integer_matrices_as_floats(self):
+    def test_spectral_eig_accepts_integer_matrices_as_floats(self) -> None:
         knm = np.array(
             [
                 [0, 1, 0],
@@ -751,7 +797,7 @@ class TestValidationBoundaries:
             ],
             dtype=np.int64,
         )
-        eigvals, fiedler = spectral_eig(knm)
+        eigvals, fiedler = _call(spectral_eig, knm)
 
         assert eigvals.dtype.kind == "f"
         assert fiedler.dtype.kind == "f"
