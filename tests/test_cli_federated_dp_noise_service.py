@@ -15,7 +15,7 @@ from collections.abc import Mapping
 from pathlib import Path
 
 import pytest
-from click.testing import CliRunner
+from click.testing import CliRunner, Result
 
 import scpn_phase_orchestrator.runtime.cli.federated_dp_noise_service as _dp_noise_cli
 from scpn_phase_orchestrator.runtime.cli._app import main
@@ -62,7 +62,7 @@ def _write_json(path: Path, payload: Mapping[str, object]) -> Path:
     return path
 
 
-def _invoke(request_path: Path, deployment_path: Path, *extra: str) -> object:
+def _invoke(request_path: Path, deployment_path: Path, *extra: str) -> Result:
     """Invoke the DP noise-service preflight command."""
     return CliRunner().invoke(
         main,
