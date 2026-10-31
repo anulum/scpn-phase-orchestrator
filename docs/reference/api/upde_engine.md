@@ -280,8 +280,9 @@ has no schedule runner. See [host dispatch setup](../../guide/webgpu_backend.md)
 `julia`, `go` or `python`. A named owner serves the call or raises
 `RuntimeError`: when its loader fails, when it has no kernel for the slot
 (WebGPU has no schedule kernel), or when a schedule call fails for want of a
-symbol, which under `"auto"` falls back to the Python reference. An unknown
-name raises `ValueError`. `upde_run_backend(slot, backend)` names the owner
+symbol, which under `"auto"` falls back to the Python reference. On the step
+path, an exception that the loaded owner raises during the run propagates
+unchanged. An unknown name raises `ValueError`. `upde_run_backend(slot, backend)` names the owner
 of the `"step"` or `"schedule"` slot without running it.
 
 | Backend | Probe                                                         | Artefact                         |
