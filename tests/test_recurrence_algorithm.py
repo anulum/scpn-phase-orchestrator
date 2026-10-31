@@ -20,7 +20,7 @@ from __future__ import annotations
 import functools
 import math
 from collections.abc import Callable
-from typing import cast
+from typing import ParamSpec, TypeVar, cast
 
 import numpy as np
 import pytest
@@ -39,9 +39,15 @@ from tests._runtime_owners import NEEDS_KERNEL
 TWO_PI = 2.0 * math.pi
 
 
-def _python(func):
+_P = ParamSpec("_P")
+_R = TypeVar("_R")
+
+
+def _python(func: Callable[_P, _R]) -> Callable[_P, _R]:
+    """Run ``func`` with the pure-Python backend forced."""
+
     @functools.wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _R:
         prev = r_mod.ACTIVE_BACKEND
         r_mod.ACTIVE_BACKEND = "python"
         try:
@@ -54,21 +60,21 @@ def _python(func):
 
 class TestRecurrenceMatrix:
     @_python
-    def test_main_diagonal_always_true(self):
+    def test_main_diagonal_always_true(self) -> None:
         rng = np.random.default_rng(0)
         traj = rng.normal(0, 1, (20, 3))
         R = recurrence_matrix(traj, 0.3)
         assert np.all(np.diag(R))
 
     @_python
-    def test_symmetric(self):
+    def test_symmetric(self) -> None:
         rng = np.random.default_rng(1)
         traj = rng.normal(0, 1, (20, 3))
         R = recurrence_matrix(traj, 0.5)
         np.testing.assert_array_equal(R, R.T)
 
     @_python
-    def test_monotone_in_epsilon(self):
+    def test_monotone_in_epsilon(self) -> None:
         rng = np.random.default_rng(2)
         traj = rng.normal(0, 1, (25, 3))
         R_small = recurrence_matrix(traj, 0.3)
@@ -76,14 +82,14 @@ class TestRecurrenceMatrix:
         assert int(R_big.sum()) >= int(R_small.sum())
 
     @_python
-    def test_large_epsilon_fully_recurrent(self):
+    def test_large_epsilon_fully_recurrent(self) -> None:
         rng = np.random.default_rng(3)
         traj = rng.normal(0, 1, (15, 3))
         R = recurrence_matrix(traj, 1e12)
         assert R.all()
 
     @_python
-    def test_small_epsilon_only_diagonal(self):
+    def test_small_epsilon_only_diagonal(self) -> None:
         rng = np.random.default_rng(4)
         traj = rng.normal(0, 1, (15, 3))
         R = recurrence_matrix(traj, 1e-12)
@@ -91,7 +97,7 @@ class TestRecurrenceMatrix:
         assert int(R.sum()) == R.shape[0]
 
     @_python
-    def test_rejects_rank_three_trajectory(self):
+    def test_rejects_rank_three_trajectory(self) -> None:
         with pytest.raises(ValueError, match="trajectory must be 1D or 2D"):
             recurrence_matrix(np.zeros((2, 3, 4)), 0.1)
 
@@ -103,14 +109,14 @@ class TestRecurrenceMatrix:
             np.array([[True, False], [False, True]]),
         ],
     )
-    def test_rejects_boolean_trajectory(self, trajectory):
+    def test_rejects_boolean_trajectory(self, trajectory: np.ndarray) -> None:
         with pytest.raises(ValueError, match="trajectory"):
             recurrence_matrix(trajectory, 0.1)
 
 
 class TestAngularMetric:
     @_python
-    def test_angular_wraps_phase_boundary(self):
+    def test_angular_wraps_phase_boundary(self) -> None:
         """θ = 0 and θ = 2π − ε are nearly equal under chord distance
         but far apart under Euclidean."""
         eps = 0.05
@@ -125,7 +131,7 @@ class TestAngularMetric:
 
 class TestCrossRecurrence:
     @_python
-    def test_self_cross_equals_plain_recurrence(self):
+    def test_self_cross_equals_plain_recurrence(self) -> None:
         rng = np.random.default_rng(5)
         traj = rng.normal(0, 1, (20, 3))
         R = recurrence_matrix(traj, 0.5)
@@ -133,7 +139,7 @@ class TestCrossRecurrence:
         np.testing.assert_array_equal(R, CR)
 
     @_python
-    def test_one_dimensional_inputs_coerce_to_single_state_dimension(self):
+    def test_one_dimensional_inputs_coerce_to_single_state_dimension(self) -> None:
         t = np.linspace(0.0, 2.0 * math.pi, 32)
         a = np.sin(t)
         b = np.sin(t + 0.05)
@@ -143,14 +149,14 @@ class TestCrossRecurrence:
         assert np.any(np.diag(CR))
 
     @_python
-    def test_mismatched_shape_raises(self):
+    def test_mismatched_shape_raises(self) -> None:
         a = np.zeros((10, 3))
         b = np.zeros((8, 3))
         with pytest.raises(ValueError, match="trajectories must match"):
             cross_recurrence_matrix(a, b, 0.5)
 
     @_python
-    def test_rejects_rank_three_inputs(self):
+    def test_rejects_rank_three_inputs(self) -> None:
         good = np.zeros((4, 2))
         with pytest.raises(ValueError, match="traj_a must be 1D or 2D"):
             cross_recurrence_matrix(np.zeros((2, 3, 4)), good, 0.1)
@@ -165,12 +171,14 @@ class TestCrossRecurrence:
             (np.zeros(2), np.array([True, False]), "traj_b"),
         ],
     )
-    def test_rejects_boolean_cross_trajectories(self, traj_a, traj_b, match):
+    def test_rejects_boolean_cross_trajectories(
+        self, traj_a: np.ndarray, traj_b: np.ndarray, match: str
+    ) -> None:
         with pytest.raises(ValueError, match=match):
             cross_recurrence_matrix(traj_a, traj_b, 0.1)
 
     @_python
-    def test_cross_angular_wraps_phase_boundary(self):
+    def test_cross_angular_wraps_phase_boundary(self) -> None:
         a = np.array([0.0, math.pi])[:, np.newaxis]
         b = np.array([TWO_PI - 0.02, math.pi + 0.03])[:, np.newaxis]
         CR = cross_recurrence_matrix(a, b, 0.05, metric="angular")
@@ -181,7 +189,7 @@ class TestCrossRecurrence:
 
 class TestRQA:
     @_python
-    def test_measures_in_unit_interval(self):
+    def test_measures_in_unit_interval(self) -> None:
         rng = np.random.default_rng(7)
         traj = rng.normal(0, 1, (40, 3))
         res = rqa(traj, 0.8)
@@ -195,7 +203,7 @@ class TestRQA:
         assert res.entropy_diagonal >= 0.0
 
     @_python
-    def test_dense_recurrence_has_long_diagonals(self):
+    def test_dense_recurrence_has_long_diagonals(self) -> None:
         """A near-constant trajectory has every off-diagonal point
         recurrent. ``_diagonal_lines`` only scans the upper triangle,
         so even for a fully-recurrent off-diagonal ``det`` tops out
@@ -209,7 +217,7 @@ class TestRQA:
         assert res.max_diagonal >= 15
 
     @_python
-    def test_cross_rqa_unit_bound(self):
+    def test_cross_rqa_unit_bound(self) -> None:
         rng = np.random.default_rng(11)
         a = rng.normal(0, 1, (30, 3))
         b = rng.normal(0, 1, (30, 3))
@@ -229,7 +237,7 @@ class TestHypothesis:
         deadline=None,
         suppress_health_check=[HealthCheck.too_slow],
     )
-    def test_rm_is_symmetric_bool(self, t: int, d: int, seed: int):
+    def test_rm_is_symmetric_bool(self, t: int, d: int, seed: int) -> None:
         rng = np.random.default_rng(seed)
         traj = rng.normal(0, 1, (t, d))
         R = recurrence_matrix(traj, 1.0)
@@ -239,11 +247,11 @@ class TestHypothesis:
 
 
 class TestDispatcherSurface:
-    def test_available_non_empty(self):
+    def test_available_non_empty(self) -> None:
         assert r_mod.AVAILABLE_BACKENDS
         assert "python" in r_mod.AVAILABLE_BACKENDS
 
-    def test_active_is_first(self):
+    def test_active_is_first(self) -> None:
         assert r_mod.AVAILABLE_BACKENDS[0] == r_mod.ACTIVE_BACKEND
 
 

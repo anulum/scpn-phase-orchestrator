@@ -17,6 +17,8 @@ from __future__ import annotations
 
 import functools
 import math
+from collections.abc import Callable
+from typing import ParamSpec, TypeVar
 
 import numpy as np
 import pytest
@@ -32,10 +34,15 @@ from scpn_phase_orchestrator.monitor.embedding import (
     optimal_delay,
 )
 
+_P = ParamSpec("_P")
+_R = TypeVar("_R")
 
-def _python(func):
+
+def _python(func: Callable[_P, _R]) -> Callable[_P, _R]:
+    """Run ``func`` with the pure-Python backend forced."""
+
     @functools.wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _R:
         prev = em_mod.ACTIVE_BACKEND
         em_mod.ACTIVE_BACKEND = "python"
         try:
@@ -48,7 +55,7 @@ def _python(func):
 
 class TestDelayEmbed:
     @_python
-    def test_shape_and_content(self):
+    def test_shape_and_content(self) -> None:
         signal = np.arange(10, dtype=np.float64)
         emb = delay_embed(signal, delay=2, dimension=3)
         assert emb.shape == (6, 3)
@@ -56,17 +63,17 @@ class TestDelayEmbed:
         np.testing.assert_array_equal(emb[5], [5, 7, 9])
 
     @_python
-    def test_rejects_too_short(self):
+    def test_rejects_too_short(self) -> None:
         with pytest.raises(ValueError, match="too short"):
             delay_embed(np.arange(3, dtype=np.float64), delay=5, dimension=3)
 
     @_python
-    def test_rejects_boolean_signal(self):
+    def test_rejects_boolean_signal(self) -> None:
         with pytest.raises(ValueError, match="signal"):
             delay_embed(np.array([True, False, True]), delay=1, dimension=2)
 
     @_python
-    def test_rejects_complex_signal(self):
+    def test_rejects_complex_signal(self) -> None:
         with pytest.raises(ValueError, match="real-valued"):
             delay_embed(
                 np.array([0.0 + 0.0j, 1.0 + 0.25j, 2.0 + 0.0j]),
@@ -77,13 +84,13 @@ class TestDelayEmbed:
 
 class TestMutualInformation:
     @_python
-    def test_non_negative(self):
+    def test_non_negative(self) -> None:
         rng = np.random.default_rng(0)
         sig = rng.normal(0, 1, 500)
         assert mutual_information(sig, 5, 32) >= 0.0
 
     @_python
-    def test_zero_lag_high_mi(self):
+    def test_zero_lag_high_mi(self) -> None:
         """MI(x, x) is large — a signal is maximally informative
         about itself. The exact value depends on binning; we just
         check it exceeds the MI at a distant lag."""
@@ -92,17 +99,17 @@ class TestMutualInformation:
         assert mutual_information(sig, 0, 16) > mutual_information(sig, 100, 16)
 
     @_python
-    def test_constant_signal_zero_mi(self):
+    def test_constant_signal_zero_mi(self) -> None:
         sig = np.full(200, 0.5)
         assert mutual_information(sig, 5, 16) == 0.0
 
     @_python
-    def test_lag_without_overlap_has_zero_mi(self):
+    def test_lag_without_overlap_has_zero_mi(self) -> None:
         sig = np.arange(8, dtype=np.float64)
         assert mutual_information(sig, lag=sig.size, n_bins=8) == 0.0
 
     @_python
-    def test_negative_lag_is_rejected(self):
+    def test_negative_lag_is_rejected(self) -> None:
         sig = np.array([], dtype=np.float64)
         with pytest.raises(ValueError, match="lag"):
             mutual_information(sig, lag=-1, n_bins=4)
@@ -110,7 +117,7 @@ class TestMutualInformation:
 
 class TestNearestNeighborDistances:
     @_python
-    def test_trivial_1d(self):
+    def test_trivial_1d(self) -> None:
         """Each integer's nearest neighbour is its neighbour on the
         number line; the distance is 1."""
         emb = np.arange(8, dtype=np.float64).reshape(8, 1)
@@ -121,20 +128,20 @@ class TestNearestNeighborDistances:
         assert int(idx[-1]) == 6
 
     @_python
-    def test_empty_embedded(self):
+    def test_empty_embedded(self) -> None:
         dist, idx = nearest_neighbor_distances(np.zeros((0, 3)))
         assert dist.size == 0
         assert idx.size == 0
 
     @_python
-    def test_rejects_boolean_embedded(self):
+    def test_rejects_boolean_embedded(self) -> None:
         with pytest.raises(ValueError, match="embedded"):
             nearest_neighbor_distances(np.array([[True, False], [False, True]]))
 
 
 class TestOptimalDelay:
     @_python
-    def test_returns_valid_lag(self):
+    def test_returns_valid_lag(self) -> None:
         """``optimal_delay`` always returns a positive integer in the
         valid search window. The textbook τ ≈ P/4 behaviour requires
         continuous smooth MI; on a finite discretised signal MI has
@@ -148,12 +155,12 @@ class TestOptimalDelay:
 
 class TestOptimalDimensionEdgeCases:
     @_python
-    def test_stops_when_next_dimension_has_no_valid_pairs(self):
+    def test_stops_when_next_dimension_has_no_valid_pairs(self) -> None:
         sig = np.array([0.0, 1.0, 0.0])
         assert em_mod.optimal_dimension(sig, delay=2, max_dim=4) == 1
 
     @_python
-    def test_false_neighbour_absolute_growth_can_dominate(self):
+    def test_false_neighbour_absolute_growth_can_dominate(self) -> None:
         sig = np.array([0.0, 0.02, 1.0, 1.03, 2.1, 2.15], dtype=np.float64)
         dim = em_mod.optimal_dimension(
             sig,
@@ -165,7 +172,7 @@ class TestOptimalDimensionEdgeCases:
         assert dim == 2
 
     @_python
-    def test_returns_max_dim_when_relative_growth_never_settles(self):
+    def test_returns_max_dim_when_relative_growth_never_settles(self) -> None:
         sig = np.array([0.0, 1.0, 0.1, 1.2, 0.2, 1.4, 0.3], dtype=np.float64)
         dim = em_mod.optimal_dimension(
             sig,
@@ -179,7 +186,7 @@ class TestOptimalDimensionEdgeCases:
 
 class TestAutoEmbed:
     @_python
-    def test_composition(self):
+    def test_composition(self) -> None:
         rng = np.random.default_rng(0)
         t = np.linspace(0, 10 * 2 * math.pi, 400)
         sig = np.sin(t) + 0.1 * rng.normal(0, 1, 400)
@@ -209,7 +216,7 @@ class TestHypothesis:
         delay: int,
         dim: int,
         seed: int,
-    ):
+    ) -> None:
         rng = np.random.default_rng(seed)
         sig = rng.normal(0, 1, t)
         t_eff = t - (dim - 1) * delay
@@ -223,9 +230,9 @@ class TestHypothesis:
 
 
 class TestDispatcherSurface:
-    def test_available_non_empty(self):
+    def test_available_non_empty(self) -> None:
         assert em_mod.AVAILABLE_BACKENDS
         assert "python" in em_mod.AVAILABLE_BACKENDS
 
-    def test_active_is_first(self):
+    def test_active_is_first(self) -> None:
         assert em_mod.AVAILABLE_BACKENDS[0] == em_mod.ACTIVE_BACKEND

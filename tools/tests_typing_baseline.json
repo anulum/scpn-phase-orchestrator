@@ -1,6 +1,6 @@
 {
   "description": "mypy --strict error ceilings per tests/ file; maintained by tools/tests_typing_ratchet.py. Absent files must have no errors; ceilings may only fall.",
-  "total": 5337,
+  "total": 5268,
   "files": {
     "tests/apps/queuewaves/test_server.py": 23,
     "tests/test_action_projection.py": 51,
@@ -30,7 +30,6 @@
     "tests/test_domainpack_validation.py": 125,
     "tests/test_drivers.py": 38,
     "tests/test_early_warning_suite.py": 67,
-    "tests/test_embedding_algorithm.py": 23,
     "tests/test_evaluation_auditor.py": 24,
     "tests/test_evaluation_skill.py": 38,
     "tests/test_evs.py": 32,
@@ -51,7 +50,6 @@
     "tests/test_imprint_validation.py": 25,
     "tests/test_information_geometry_examples.py": 25,
     "tests/test_inverse.py": 38,
-    "tests/test_itpc_algorithm.py": 23,
     "tests/test_kuramoto_layer.py": 83,
     "tests/test_market.py": 26,
     "tests/test_modbus_tls.py": 23,
@@ -90,7 +88,6 @@
     "tests/test_quantum_bridge_live.py": 49,
     "tests/test_quantum_control_bridge.py": 62,
     "tests/test_recurrence.py": 27,
-    "tests/test_recurrence_algorithm.py": 23,
     "tests/test_redis_store.py": 30,
     "tests/test_reference_benchmark_suite.py": 88,
     "tests/test_regime_hysteresis.py": 54,
