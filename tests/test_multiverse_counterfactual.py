@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 
 import numpy as np
 import pytest
@@ -16,11 +17,17 @@ import pytest
 from scpn_phase_orchestrator.actuation.mapper import ControlAction
 from scpn_phase_orchestrator.supervisor.multiverse import (
     MultiverseBranchSpec,
+    MultiverseCounterfactualManifest,
     simulate_multiverse_counterfactual_branches,
 )
 
+# Calls whose options deliberately hold values outside the declared types.
+_simulate_any: Callable[..., MultiverseCounterfactualManifest] = (
+    simulate_multiverse_counterfactual_branches
+)
 
-def _base_inputs():
+
+def _base_inputs() -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     phases = np.array([0.10, 1.20, 2.40], dtype=np.float64)
     omegas = np.array([0.05, -0.02, 0.01], dtype=np.float64)
     baseline_k = np.array(
@@ -90,7 +97,10 @@ class TestMultiverseCounterfactualRollouts:
         assert len(record["manifest_hash"]) == 64
         assert json.loads(json.dumps(record, allow_nan=False))
 
-        branch_record = record["branch_records"][0]
+        branch_records = record["branch_records"]
+        assert isinstance(branch_records, list)
+        branch_record = branch_records[0]
+        assert isinstance(branch_record, dict)
         for key in ("final_R", "mean_R", "min_R", "max_R", "final_psi"):
             assert np.isfinite(branch_record[key])
         assert isinstance(branch_record["action_labels"], list)
@@ -183,7 +193,9 @@ class TestMultiverseCounterfactualRollouts:
             ),
         ],
     )
-    def test_fail_closed_on_invalid_inputs(self, bad_input, message: str) -> None:
+    def test_fail_closed_on_invalid_inputs(
+        self, bad_input: dict[str, object], message: str
+    ) -> None:
         phases, omegas, baseline_k, baseline_alpha = _base_inputs()
         valid_branch_actions = (
             (ControlAction("zeta", "global", 0.0, 1.0, "default"),),
@@ -202,7 +214,7 @@ class TestMultiverseCounterfactualRollouts:
         )
 
         with pytest.raises(ValueError, match=message):
-            simulate_multiverse_counterfactual_branches(**options)
+            _simulate_any(**options)
 
     @pytest.mark.parametrize(
         ("field", "bad_value"),
@@ -241,7 +253,7 @@ class TestMultiverseCounterfactualRollouts:
         options[field] = bad_value
 
         with pytest.raises(ValueError, match=f"{field} must be a real ndarray"):
-            simulate_multiverse_counterfactual_branches(**options)
+            _simulate_any(**options)
 
     @pytest.mark.parametrize(
         ("field", "bad_value"),
@@ -288,7 +300,7 @@ class TestMultiverseCounterfactualRollouts:
         options[field] = bad_value
 
         with pytest.raises(ValueError, match=f"{field} must be a real ndarray"):
-            simulate_multiverse_counterfactual_branches(**options)
+            _simulate_any(**options)
 
     def test_rejects_boolean_alias_topology_mask_before_float_coercion(self) -> None:
         phases, omegas, baseline_k, baseline_alpha = _base_inputs()
@@ -481,7 +493,7 @@ class TestMultiverseCounterfactualRollouts:
             )
 
 
-def _run(**overrides: object) -> object:
+def _run(**overrides: object) -> MultiverseCounterfactualManifest:
     phases, omegas, baseline_k, baseline_alpha = _base_inputs()
     opts: dict[str, object] = {
         "phases": phases,
@@ -491,7 +503,7 @@ def _run(**overrides: object) -> object:
         "branch_action_sets": ((ControlAction("zeta", "global", 0.0, 1.0, "d"),),),
     }
     opts.update(overrides)
-    return simulate_multiverse_counterfactual_branches(**opts)
+    return _simulate_any(**opts)
 
 
 @pytest.mark.parametrize(
@@ -505,7 +517,9 @@ def _run(**overrides: object) -> object:
         ({"method": "midpoint"}, "method must be 'euler' or 'rk4'"),
     ],
 )
-def test_multiverse_rejects_invalid_scalar_options(overrides, match) -> None:
+def test_multiverse_rejects_invalid_scalar_options(
+    overrides: dict[str, object], match: str
+) -> None:
     with pytest.raises(ValueError, match=match):
         _run(**overrides)
 
@@ -538,7 +552,7 @@ def test_multiverse_rejects_misaligned_topology_masks() -> None:
         ("", "action scope must be a non-empty string"),
     ],
 )
-def test_multiverse_rejects_invalid_action_scope(scope, match) -> None:
+def test_multiverse_rejects_invalid_action_scope(scope: str, match: str) -> None:
     with pytest.raises(ValueError, match=match):
         _run(branch_action_sets=((ControlAction("K", scope, 0.1, 1.0, "d"),),))
 
@@ -550,7 +564,8 @@ def _spec(**changes: object) -> MultiverseBranchSpec:
         "topology_mask": None,
     }
     base.update(changes)
-    return MultiverseBranchSpec(**base)
+    spec_any: Callable[..., MultiverseBranchSpec] = MultiverseBranchSpec
+    return spec_any(**base)
 
 
 @pytest.mark.parametrize(
@@ -565,7 +580,9 @@ def _spec(**changes: object) -> MultiverseBranchSpec:
         ),
     ],
 )
-def test_multiverse_rejects_corrupt_branch_specs(spec, match) -> None:
+def test_multiverse_rejects_corrupt_branch_specs(
+    spec: MultiverseBranchSpec, match: str
+) -> None:
     with pytest.raises(ValueError, match=match):
         _run(branch_specs=(spec,), branch_action_sets=None)
 
