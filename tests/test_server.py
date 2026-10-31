@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+from typing import NoReturn
 
 import pytest
 
@@ -21,7 +22,7 @@ DOMAINPACK_DIR = Path(__file__).parent.parent / "domainpacks"
 
 
 class TestSimulationState:
-    def test_init_cardiac(self):
+    def test_init_cardiac(self) -> None:
         spec = load_binding_spec(
             DOMAINPACK_DIR / "cardiac_rhythm" / "binding_spec.yaml"
         )
@@ -30,7 +31,7 @@ class TestSimulationState:
         assert sim.amplitude_mode is True
         assert sim.step_count == 0
 
-    def test_step_advances(self):
+    def test_step_advances(self) -> None:
         spec = load_binding_spec(
             DOMAINPACK_DIR / "minimal_domain" / "binding_spec.yaml"
         )
@@ -40,7 +41,7 @@ class TestSimulationState:
         assert "R_global" in state
         assert "layers" in state
 
-    def test_multiple_steps(self):
+    def test_multiple_steps(self) -> None:
         spec = load_binding_spec(
             DOMAINPACK_DIR / "minimal_domain" / "binding_spec.yaml"
         )
@@ -49,7 +50,7 @@ class TestSimulationState:
             state = sim.step()
         assert state["step"] == 50
 
-    def test_reset(self):
+    def test_reset(self) -> None:
         spec = load_binding_spec(
             DOMAINPACK_DIR / "minimal_domain" / "binding_spec.yaml"
         )
@@ -59,7 +60,7 @@ class TestSimulationState:
         state = sim.reset()
         assert state["step"] == 0
 
-    def test_snapshot_format(self):
+    def test_snapshot_format(self) -> None:
         spec = load_binding_spec(
             DOMAINPACK_DIR / "neuroscience_eeg" / "binding_spec.yaml"
         )
@@ -72,7 +73,7 @@ class TestSimulationState:
             assert "name" in layer
             assert "R" in layer
 
-    def test_amplitude_mode_snapshot(self):
+    def test_amplitude_mode_snapshot(self) -> None:
         spec = load_binding_spec(
             DOMAINPACK_DIR / "cardiac_rhythm" / "binding_spec.yaml"
         )
@@ -82,7 +83,7 @@ class TestSimulationState:
         assert snap["amplitude_mode"] is True
         assert "mean_amplitude" in snap
 
-    def test_phase_only_no_amplitude(self):
+    def test_phase_only_no_amplitude(self) -> None:
         spec = load_binding_spec(
             DOMAINPACK_DIR / "minimal_domain" / "binding_spec.yaml"
         )
@@ -90,7 +91,7 @@ class TestSimulationState:
         snap = sim.snapshot()
         assert isinstance(snap["amplitude_mode"], bool)
 
-    def test_geometry_constraints_applied(self):
+    def test_geometry_constraints_applied(self) -> None:
         spec = load_binding_spec(
             DOMAINPACK_DIR / "neuroscience_eeg" / "binding_spec.yaml"
         )
@@ -99,14 +100,14 @@ class TestSimulationState:
         sim.step()
         assert sim.step_count == 1
 
-    def test_geometry_constraints_absent_when_no_prior(self):
+    def test_geometry_constraints_absent_when_no_prior(self) -> None:
         spec = load_binding_spec(
             DOMAINPACK_DIR / "minimal_domain" / "binding_spec.yaml"
         )
         sim = SimulationState(spec)
         assert len(sim.geo_constraints) == 0
 
-    def test_boundary_observer_wired_to_regime(self):
+    def test_boundary_observer_wired_to_regime(self) -> None:
         spec = load_binding_spec(
             DOMAINPACK_DIR / "neuroscience_eeg" / "binding_spec.yaml"
         )
@@ -130,21 +131,27 @@ except ImportError:
 @pytest.mark.skipif(not HAS_FASTAPI, reason="fastapi not installed")
 class TestFastAPIEndpoints:
     @pytest.fixture()
-    def client(self):
+    def client(self) -> TestClient:
         from scpn_phase_orchestrator.runtime.server import create_app
 
         app = create_app(DOMAINPACK_DIR / "minimal_domain" / "binding_spec.yaml")
         return TestClient(app)
 
-    def test_dashboard(self, client):
+    def test_dashboard(self, client: TestClient) -> None:
         r = client.get("/")
         assert r.status_code == 200
         assert "SPO Dashboard" in r.text
 
-    def test_application_version_matches_package(self, client):
-        assert client.app.version == __version__
+    def test_application_version_matches_package(self, client: TestClient) -> None:
+        from fastapi import FastAPI
 
-    def test_websocket_streams_snapshots_without_advancing(self, client):
+        app = client.app
+        assert isinstance(app, FastAPI)
+        assert app.version == __version__
+
+    def test_websocket_streams_snapshots_without_advancing(
+        self, client: TestClient
+    ) -> None:
         """The stream observes the simulation; only a step request advances it."""
         before = client.get("/api/state").json()
         with client.websocket_connect("/ws/stream") as stream:
@@ -158,13 +165,13 @@ class TestFastAPIEndpoints:
         # A closed stream ends its handler; the application keeps serving.
         assert client.get("/api/state").json()["step"] == stepped["step"]
 
-    def test_get_state(self, client):
+    def test_get_state(self, client: TestClient) -> None:
         r = client.get("/api/state")
         assert r.status_code == 200
         data = r.json()
         assert "R_global" in data
 
-    def test_get_studio_feed(self, client):
+    def test_get_studio_feed(self, client: TestClient) -> None:
         r = client.get("/api/studio-feed")
         assert r.status_code == 200
         data = r.json()
@@ -177,29 +184,31 @@ class TestFastAPIEndpoints:
             "studio.phase-coherence.v1",
         }
 
-    def test_post_step(self, client):
+    def test_post_step(self, client: TestClient) -> None:
         r = client.post("/api/step")
         assert r.status_code == 200
         data = r.json()
         assert data["step"] == 1
 
-    def test_post_reset(self, client):
+    def test_post_reset(self, client: TestClient) -> None:
         client.post("/api/step")
         r = client.post("/api/reset")
         assert r.status_code == 200
         assert r.json()["step"] == 0
 
-    def test_get_config(self, client):
+    def test_get_config(self, client: TestClient) -> None:
         r = client.get("/api/config")
         assert r.status_code == 200
         data = r.json()
         assert "name" in data
         assert "n_oscillators" in data
 
-    def test_health_reports_known_runtime_error(self, monkeypatch, caplog):
+    def test_health_reports_known_runtime_error(
+        self, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+    ) -> None:
         from scpn_phase_orchestrator.runtime.server import create_app
 
-        def fail_snapshot(self):
+        def fail_snapshot(self: SimulationState) -> NoReturn:
             raise RuntimeError("engine unavailable")
 
         monkeypatch.setattr(SimulationState, "snapshot", fail_snapshot)
@@ -219,10 +228,12 @@ class TestFastAPIEndpoints:
         assert "engine unavailable" not in str(data)
         assert "engine unavailable" in caplog.text
 
-    def test_health_does_not_swallow_unexpected_fault(self, monkeypatch):
+    def test_health_does_not_swallow_unexpected_fault(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         from scpn_phase_orchestrator.runtime.server import create_app
 
-        def fail_snapshot(self):
+        def fail_snapshot(self: SimulationState) -> NoReturn:
             raise AssertionError("programming fault")
 
         monkeypatch.setattr(SimulationState, "snapshot", fail_snapshot)
@@ -232,7 +243,9 @@ class TestFastAPIEndpoints:
         with pytest.raises(AssertionError, match="programming fault"):
             client.get("/api/health")
 
-    def test_production_requires_api_key_env(self, monkeypatch):
+    def test_production_requires_api_key_env(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         from scpn_phase_orchestrator.runtime.server import create_app
 
         monkeypatch.setenv("SPO_ENV", "production")
@@ -240,7 +253,9 @@ class TestFastAPIEndpoints:
         with pytest.raises(RuntimeError, match="SPO_API_KEY"):
             create_app(DOMAINPACK_DIR / "minimal_domain" / "binding_spec.yaml")
 
-    def test_production_rejects_missing_api_key(self, monkeypatch):
+    def test_production_rejects_missing_api_key(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         from scpn_phase_orchestrator.runtime.server import create_app
 
         monkeypatch.setenv("SPO_ENV", "production")
@@ -252,7 +267,9 @@ class TestFastAPIEndpoints:
 
         assert r.status_code == 401
 
-    def test_production_api_key_check_is_timing_safe(self, monkeypatch):
+    def test_production_api_key_check_is_timing_safe(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """Key comparison must route through hmac.compare_digest (no plain !=)."""
         import hmac as hmac_module
 
@@ -262,11 +279,12 @@ class TestFastAPIEndpoints:
         compared: list[tuple[str, str]] = []
         real_compare = hmac_module.compare_digest
 
-        def recording_compare(a, b):
+        def recording_compare(a: str, b: str) -> bool:
             compared.append((a, b))
             return real_compare(a, b)
 
-        monkeypatch.setattr(server_module.hmac, "compare_digest", recording_compare)
+        assert vars(server_module)["hmac"] is hmac_module
+        monkeypatch.setattr(hmac_module, "compare_digest", recording_compare)
         monkeypatch.setenv("SPO_ENV", "production")
         monkeypatch.setenv("SPO_API_KEY", "test-key")
         app = create_app(DOMAINPACK_DIR / "minimal_domain" / "binding_spec.yaml")
@@ -280,7 +298,9 @@ class TestFastAPIEndpoints:
         assert ("wrong-key", "test-key") in compared
         assert ("test-key", "test-key") in compared
 
-    def test_production_rate_limits_mutations(self, monkeypatch):
+    def test_production_rate_limits_mutations(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         from scpn_phase_orchestrator.runtime.server import create_app
 
         monkeypatch.setenv("SPO_ENV", "production")
@@ -303,7 +323,7 @@ class TestFastAPIEndpoints:
 
 
 @pytest.mark.skipif(not HAS_FASTAPI, reason="fastapi not installed")
-def test_metrics_endpoint_is_default_runtime_observability_surface():
+def test_metrics_endpoint_is_default_runtime_observability_surface() -> None:
     from fastapi.testclient import TestClient
 
     from scpn_phase_orchestrator.runtime.server import create_app
@@ -326,7 +346,7 @@ class TestServerResetWithImprint:
     """Verify that SimulationState.reset() correctly reinitialises
     all state including imprint."""
 
-    def test_reset_zeros_step_and_preserves_imprint(self):
+    def test_reset_zeros_step_and_preserves_imprint(self) -> None:
         from pathlib import Path
 
         from scpn_phase_orchestrator.binding.loader import load_binding_spec
@@ -345,7 +365,7 @@ class TestServerResetWithImprint:
         assert result["step"] == 0, "Reset must zero step counter"
         assert sim.imprint_state is not None, "Imprint must survive reset"
 
-    def test_reset_resets_phases(self):
+    def test_reset_resets_phases(self) -> None:
         """After reset, next step must start from initial conditions."""
         from pathlib import Path
 
