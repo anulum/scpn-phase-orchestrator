@@ -8,6 +8,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from pathlib import Path
+from typing import TypeVar
+
 import numpy as np
 import pytest
 import yaml
@@ -41,6 +45,12 @@ def _make_upde(rs: list[float], stability: float | None = None) -> UPDEState:
 
 
 _state = _make_upde
+_R = TypeVar("_R")
+
+
+def _call(fn: Callable[..., _R], *args: object, **kwargs: object) -> _R:
+    """Call ``fn`` with arguments that are deliberately outside its types."""
+    return fn(*args, **kwargs)
 
 
 def _rich_state() -> UPDEState:
@@ -84,7 +94,7 @@ def _rule(
 # ── v0.1 backward compatibility ──────────────────────────────────────
 
 
-def test_fires_when_condition_met():
+def test_fires_when_condition_met() -> None:
     engine = PolicyEngine([_rule(op=">", threshold=0.5)])
     actions = engine.evaluate(Regime.NOMINAL, _state([0.8]), [0], [])
     assert len(actions) == 1
@@ -92,16 +102,16 @@ def test_fires_when_condition_met():
 
 
 @pytest.mark.parametrize("rules", [None, [], [object()]])
-def test_policy_engine_rejects_invalid_rules(rules):
+def test_policy_engine_rejects_invalid_rules(rules: object) -> None:
     with pytest.raises(ValueError, match="rules"):
-        PolicyEngine(rules)
+        _call(PolicyEngine, rules)
 
 
 @pytest.mark.parametrize("dt", [True, -0.1, float("nan"), float("inf"), "1.0"])
-def test_policy_engine_rejects_invalid_clock_increment(dt):
+def test_policy_engine_rejects_invalid_clock_increment(dt: object) -> None:
     engine = PolicyEngine([_rule()])
     with pytest.raises(ValueError, match="dt"):
-        engine.advance_clock(dt)
+        _call(engine.advance_clock, dt)
 
 
 def test_policy_engine_evaluates_compound_or_and_branching() -> None:
@@ -151,13 +161,13 @@ def test_policy_engine_evaluates_compound_or_and_branching() -> None:
     assert [action.justification for action in actions] == ["policy rule: or_rule"]
 
 
-def test_no_fire_when_condition_unmet():
+def test_no_fire_when_condition_unmet() -> None:
     engine = PolicyEngine([_rule(op=">", threshold=0.9)])
     actions = engine.evaluate(Regime.NOMINAL, _state([0.5]), [0], [])
     assert actions == []
 
 
-def test_regime_filter():
+def test_regime_filter() -> None:
     engine = PolicyEngine([_rule(regimes=["CRITICAL"])])
     actions = engine.evaluate(Regime.NOMINAL, _state([0.8]), [0], [])
     assert actions == []
@@ -165,21 +175,21 @@ def test_regime_filter():
     assert len(actions) == 1
 
 
-def test_r_bad_metric():
+def test_r_bad_metric() -> None:
     rule = _rule(metric="R_bad", layer=0, op=">", threshold=0.7)
     engine = PolicyEngine([rule])
     actions = engine.evaluate(Regime.NOMINAL, _state([0.9, 0.5]), [], [0])
     assert len(actions) == 1
 
 
-def test_r_good_metric():
+def test_r_good_metric() -> None:
     rule = _rule(metric="R_good", layer=0, op="<", threshold=0.4)
     engine = PolicyEngine([rule])
     actions = engine.evaluate(Regime.NOMINAL, _state([0.3, 0.9]), [0], [])
     assert len(actions) == 1
 
 
-def test_policy_actions_preserve_metadata_and_rule_order():
+def test_policy_actions_preserve_metadata_and_rule_order() -> None:
     first = _rule(
         name="raise_k",
         threshold=0.7,
@@ -208,7 +218,7 @@ def test_policy_actions_preserve_metadata_and_rule_order():
     ]
 
 
-def test_missing_metric_and_unsupported_operator_do_not_fire():
+def test_missing_metric_and_unsupported_operator_do_not_fire() -> None:
     rules = [
         PolicyRule(
             name="unknown_metric",
@@ -240,7 +250,7 @@ def test_missing_metric_and_unsupported_operator_do_not_fire():
 )
 def test_missing_layer_mapped_metrics_do_not_fire(
     metric: str, layer: int, threshold: float
-):
+) -> None:
     rule = _rule(metric=metric, layer=layer, op=">", threshold=threshold)
 
     actions = PolicyEngine([rule]).evaluate(Regime.NOMINAL, _rich_state(), [0], [1])
@@ -262,7 +272,7 @@ def test_missing_layer_mapped_metrics_do_not_fire(
 )
 def test_policy_engine_evaluates_diagnostic_metrics(
     metric: str, layer: int | None, op: str, threshold: float
-):
+) -> None:
     rule = PolicyRule(
         name=f"diagnostic_{metric}",
         regimes=["NOMINAL"],
@@ -282,7 +292,7 @@ def test_policy_engine_evaluates_diagnostic_metrics(
     ]
 
 
-def test_load_policy_rules_yaml(tmp_path):
+def test_load_policy_rules_yaml(tmp_path: Path) -> None:
     p = tmp_path / "policy.yaml"
     p.write_text(
         "rules:\n"
@@ -309,19 +319,19 @@ def test_load_policy_rules_yaml(tmp_path):
     assert rules[0].actions[0].knob == "K"
 
 
-def test_load_empty_policy_yaml(tmp_path):
+def test_load_empty_policy_yaml(tmp_path: Path) -> None:
     p = tmp_path / "policy.yaml"
     p.write_text("rules: []\n", encoding="utf-8")
     assert load_policy_rules(p) == []
 
 
-def test_load_policy_rules_missing_rules_section_returns_empty(tmp_path):
+def test_load_policy_rules_missing_rules_section_returns_empty(tmp_path: Path) -> None:
     p = tmp_path / "policy.yaml"
     p.write_text("stl_monitors: []\n", encoding="utf-8")
     assert load_policy_rules(p) == []
 
 
-def test_load_policy_stl_specs_yaml(tmp_path):
+def test_load_policy_stl_specs_yaml(tmp_path: Path) -> None:
     p = tmp_path / "policy.yaml"
     p.write_text(
         "rules: []\n"
@@ -350,14 +360,14 @@ def test_load_policy_stl_specs_yaml(tmp_path):
     ]
 
 
-def test_load_policy_stl_specs_missing_section_returns_empty(tmp_path):
+def test_load_policy_stl_specs_missing_section_returns_empty(tmp_path: Path) -> None:
     p = tmp_path / "policy.yaml"
     p.write_text("rules: []\n", encoding="utf-8")
 
     assert load_policy_stl_specs(p) == []
 
 
-def test_load_policy_stl_specs_rejects_bad_severity(tmp_path):
+def test_load_policy_stl_specs_rejects_bad_severity(tmp_path: Path) -> None:
     p = tmp_path / "policy.yaml"
     p.write_text(
         "stl_monitors:\n"
@@ -371,7 +381,7 @@ def test_load_policy_stl_specs_rejects_bad_severity(tmp_path):
         load_policy_stl_specs(p)
 
 
-def test_evaluate_policy_stl_specs_returns_audit_records():
+def test_evaluate_policy_stl_specs_returns_audit_records() -> None:
     specs = [
         PolicySTLSpec(
             name="keep_sync",
@@ -394,7 +404,7 @@ def test_evaluate_policy_stl_specs_returns_audit_records():
     assert audit_records[1]["satisfied"] is True
 
 
-def test_synthesise_policy_stl_automata_returns_named_audit_records():
+def test_synthesise_policy_stl_automata_returns_named_audit_records() -> None:
     specs = [
         PolicySTLSpec(
             name="recover",
@@ -412,7 +422,9 @@ def test_synthesise_policy_stl_automata_returns_named_audit_records():
     assert "states" in audit_record
 
 
-def test_load_policy_rules_recursion_error_is_parse_error(tmp_path, monkeypatch):
+def test_load_policy_rules_recursion_error_is_parse_error(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     import yaml
 
     p = tmp_path / "policy.yaml"
@@ -426,7 +438,9 @@ def test_load_policy_rules_recursion_error_is_parse_error(tmp_path, monkeypatch)
         load_policy_rules(p)
 
 
-def test_load_policy_rules_fuzzer_unicode_overflow_is_parse_error(tmp_path):
+def test_load_policy_rules_fuzzer_unicode_overflow_is_parse_error(
+    tmp_path: Path,
+) -> None:
     """Malformed YAML Unicode escapes from fuzzing must not escape the loader."""
     p = tmp_path / "policy.yaml"
     p.write_text('"\\\\\\U' + ("e" * 57) + "\\\\~", encoding="utf-8")
@@ -435,7 +449,9 @@ def test_load_policy_rules_fuzzer_unicode_overflow_is_parse_error(tmp_path):
         load_policy_rules(p)
 
 
-def test_load_policy_stl_specs_fuzzer_unicode_overflow_is_parse_error(tmp_path):
+def test_load_policy_stl_specs_fuzzer_unicode_overflow_is_parse_error(
+    tmp_path: Path,
+) -> None:
     """The STL policy loader shares the same YAML parser hardening contract."""
     p = tmp_path / "policy.yaml"
     p.write_text('"\\\\\\U' + ("e" * 57) + "\\\\~", encoding="utf-8")
@@ -444,7 +460,7 @@ def test_load_policy_stl_specs_fuzzer_unicode_overflow_is_parse_error(tmp_path):
         load_policy_stl_specs(p)
 
 
-def test_policy_loaders_wrap_unreadable_paths(tmp_path):
+def test_policy_loaders_wrap_unreadable_paths(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="cannot read policy rules"):
         load_policy_rules(tmp_path)
     with pytest.raises(ValueError, match="cannot read policy rules"):
@@ -676,7 +692,9 @@ def test_policy_loaders_wrap_unreadable_paths(tmp_path):
         ),
     ],
 )
-def test_load_policy_rules_rejects_bad_schema(tmp_path, body: str, match: str):
+def test_load_policy_rules_rejects_bad_schema(
+    tmp_path: Path, body: str, match: str
+) -> None:
     p = tmp_path / "policy.yaml"
     p.write_text(body, encoding="utf-8")
 
@@ -684,7 +702,7 @@ def test_load_policy_rules_rejects_bad_schema(tmp_path, body: str, match: str):
         load_policy_rules(p)
 
 
-def test_load_policy_rules_rejects_rule_and_action_caps(tmp_path):
+def test_load_policy_rules_rejects_rule_and_action_caps(tmp_path: Path) -> None:
     p = tmp_path / "policy.yaml"
     p.write_text("rules:\n" + ("  - {}\n" * 1001), encoding="utf-8")
     with pytest.raises(ValueError, match="too many rules"):
@@ -722,7 +740,7 @@ def test_load_policy_rules_rejects_rule_and_action_caps(tmp_path):
         load_policy_rules(p)
 
 
-def test_load_policy_stl_specs_rejects_bad_schema_and_cap(tmp_path):
+def test_load_policy_stl_specs_rejects_bad_schema_and_cap(tmp_path: Path) -> None:
     p = tmp_path / "policy.yaml"
     p.write_text("stl_monitors: not-a-list\n", encoding="utf-8")
     with pytest.raises(ValueError, match="stl_monitors must be a list"):
@@ -737,7 +755,7 @@ def test_load_policy_stl_specs_rejects_bad_schema_and_cap(tmp_path):
         load_policy_stl_specs(p)
 
 
-def test_out_of_range_layer_returns_none():
+def test_out_of_range_layer_returns_none() -> None:
     rule = _rule(metric="R", layer=99, op=">", threshold=0.0)
     engine = PolicyEngine([rule])
     actions = engine.evaluate(Regime.NOMINAL, _state([0.5]), [0], [])
@@ -747,7 +765,7 @@ def test_out_of_range_layer_returns_none():
 # ── v0.2 compound conditions ─────────────────────────────────────────
 
 
-def test_compound_and_both_true():
+def test_compound_and_both_true() -> None:
     rule = PolicyRule(
         name="both",
         regimes=["NOMINAL"],
@@ -764,7 +782,7 @@ def test_compound_and_both_true():
     assert len(engine.evaluate(Regime.NOMINAL, _state([0.8, 0.9]), [0, 1], [])) == 1
 
 
-def test_compound_and_one_false():
+def test_compound_and_one_false() -> None:
     rule = PolicyRule(
         name="partial",
         regimes=["NOMINAL"],
@@ -781,7 +799,7 @@ def test_compound_and_one_false():
     assert engine.evaluate(Regime.NOMINAL, _state([0.8, 0.2]), [0, 1], []) == []
 
 
-def test_compound_or_one_true():
+def test_compound_or_one_true() -> None:
     rule = PolicyRule(
         name="either",
         regimes=["NOMINAL"],
@@ -798,7 +816,7 @@ def test_compound_or_one_true():
     assert len(engine.evaluate(Regime.NOMINAL, _state([0.3, 0.8]), [0, 1], [])) == 1
 
 
-def test_compound_or_both_false():
+def test_compound_or_both_false() -> None:
     rule = PolicyRule(
         name="neither",
         regimes=["NOMINAL"],
@@ -815,7 +833,7 @@ def test_compound_or_both_false():
     assert engine.evaluate(Regime.NOMINAL, _state([0.3, 0.3]), [0, 1], []) == []
 
 
-def test_stability_proxy_metric():
+def test_stability_proxy_metric() -> None:
     rule = PolicyRule(
         name="stab",
         regimes=["NOMINAL"],
@@ -834,7 +852,7 @@ def test_stability_proxy_metric():
 # ── v0.2 action chains ───────────────────────────────────────────────
 
 
-def test_action_chain_multiple_actions():
+def test_action_chain_multiple_actions() -> None:
     rule = PolicyRule(
         name="chain",
         regimes=["DEGRADED"],
@@ -855,7 +873,7 @@ def test_action_chain_multiple_actions():
 # ── v0.2 cooldown and max_fires ──────────────────────────────────────
 
 
-def test_cooldown_blocks_rapid_refire():
+def test_cooldown_blocks_rapid_refire() -> None:
     rule = PolicyRule(
         name="cd",
         regimes=["NOMINAL"],
@@ -871,7 +889,7 @@ def test_cooldown_blocks_rapid_refire():
     assert len(engine.evaluate(Regime.NOMINAL, s, [0], [])) == 1
 
 
-def test_cooldown_refires_at_exact_boundary_and_preserves_rule_caps():
+def test_cooldown_refires_at_exact_boundary_and_preserves_rule_caps() -> None:
     rule = PolicyRule(
         name="boundary_cd",
         regimes=["NOMINAL"],
@@ -892,7 +910,7 @@ def test_cooldown_refires_at_exact_boundary_and_preserves_rule_caps():
     assert engine.evaluate(Regime.NOMINAL, state, [0], []) == []
 
 
-def test_max_fires_cap():
+def test_max_fires_cap() -> None:
     rule = PolicyRule(
         name="cap",
         regimes=["NOMINAL"],
@@ -910,7 +928,7 @@ def test_max_fires_cap():
 # ── v0.2 YAML compound loading ───────────────────────────────────────
 
 
-def test_load_compound_yaml(tmp_path):
+def test_load_compound_yaml(tmp_path: Path) -> None:
     p = tmp_path / "compound.yaml"
     p.write_text(
         "rules:\n"
@@ -951,7 +969,7 @@ def test_load_compound_yaml(tmp_path):
     assert r.max_fires == 5
 
 
-def test_load_mixed_v1_v2_yaml(tmp_path):
+def test_load_mixed_v1_v2_yaml(tmp_path: Path) -> None:
     p = tmp_path / "mixed.yaml"
     p.write_text(
         "rules:\n"
@@ -993,7 +1011,7 @@ def test_load_mixed_v1_v2_yaml(tmp_path):
     assert rules[1].condition.logic == "OR"
 
 
-def test_rejects_unknown_metric_and_unsupported_operator():
+def test_rejects_unknown_metric_and_unsupported_operator() -> None:
     state = UPDEState(
         layers=[LayerState(R=0.2, psi=0.0)],
         cross_layer_alignment=np.array([[1.0]]),
@@ -1023,7 +1041,7 @@ def test_rejects_unknown_metric_and_unsupported_operator():
 @pytest.mark.parametrize(
     "metric,layer", [("amplitude_spread", 3), ("mean_amplitude_layer", 3)]
 )
-def test_metric_layer_lookup_is_none_out_of_range(metric, layer):
+def test_metric_layer_lookup_is_none_out_of_range(metric: str, layer: int) -> None:
     state = UPDEState(
         layers=[LayerState(R=0.4, psi=0.0)],
         cross_layer_alignment=np.array([[1.0]]),
@@ -1040,7 +1058,7 @@ def test_metric_layer_lookup_is_none_out_of_range(metric, layer):
     assert PolicyEngine([rule]).evaluate(Regime.NOMINAL, state, [], []) == []
 
 
-def test_rule_metrics_support_boundary_violation_count_and_imprint_mean():
+def test_rule_metrics_support_boundary_violation_count_and_imprint_mean() -> None:
     state = UPDEState(
         layers=[LayerState(R=0.4, psi=0.0)],
         cross_layer_alignment=np.array([[1.0]]),
@@ -1071,7 +1089,7 @@ def test_rule_metrics_support_boundary_violation_count_and_imprint_mean():
     assert PolicyEngine([imprint]).evaluate(Regime.NOMINAL, state, [], []) != []
 
 
-def test_load_policy_rules_rejects_rule_mapping_type_errors(tmp_path):
+def test_load_policy_rules_rejects_rule_mapping_type_errors(tmp_path: Path) -> None:
     p = tmp_path / "policy.yaml"
     p.write_text("rules:\n  - 5\n", encoding="utf-8")
     with pytest.raises(ValueError, match="rule must be a mapping"):
@@ -1096,7 +1114,7 @@ def test_load_policy_rules_rejects_rule_mapping_type_errors(tmp_path):
         load_policy_rules(p)
 
 
-def test_load_policy_stl_specs_defaults_and_audit_records(tmp_path):
+def test_load_policy_stl_specs_defaults_and_audit_records(tmp_path: Path) -> None:
     p = tmp_path / "policy.yaml"
     p.write_text(
         "stl_monitors:\n  - name: sync_guard\n    spec: always (R >= 0.3)\n",
@@ -1122,7 +1140,7 @@ def test_load_policy_stl_specs_defaults_and_audit_records(tmp_path):
     assert "states" in automaton_record
 
 
-def test_load_policy_stl_specs_rejects_empty_name(tmp_path):
+def test_load_policy_stl_specs_rejects_empty_name(tmp_path: Path) -> None:
     p = tmp_path / "policy.yaml"
     p.write_text(
         "stl_monitors:\n  - name: ''\n    spec: always (R >= 0.3)\n",
@@ -1132,7 +1150,7 @@ def test_load_policy_stl_specs_rejects_empty_name(tmp_path):
         load_policy_stl_specs(p)
 
 
-def test_cooldown_then_max_fires_prevents_post_boundary_refire():
+def test_cooldown_then_max_fires_prevents_post_boundary_refire() -> None:
     rule = PolicyRule(
         name="combo",
         regimes=["NOMINAL"],
@@ -1157,7 +1175,7 @@ def test_cooldown_then_max_fires_prevents_post_boundary_refire():
 class TestPolicyRulesPipelineWiring:
     """Pipeline: engine R → UPDEState → PolicyEngine → actions."""
 
-    def test_engine_r_triggers_policy_rule(self):
+    def test_engine_r_triggers_policy_rule(self) -> None:
         """UPDEEngine → R → UPDEState → PolicyEngine.evaluate → actions.
         Proves policy rules consume engine state and produce control."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
@@ -1203,25 +1221,25 @@ class TestPolicyRulesPipelineWiring:
 
 # Salvaged module-specific behavioural contracts from deleted mixed tests.
 class TestPolicyRules:
-    def test_extract_r_bad(self):
+    def test_extract_r_bad(self) -> None:
         cond = PolicyCondition(metric="R_bad", layer=0, op=">", threshold=0.5)
         state = _make_upde([0.8, 0.6])
         val = _extract_metric(cond, state, [0], [1])
         assert val == pytest.approx(0.6)
 
-    def test_extract_r_bad_none_when_out_of_range(self):
+    def test_extract_r_bad_none_when_out_of_range(self) -> None:
         cond = PolicyCondition(metric="R_bad", layer=5, op=">", threshold=0.5)
         state = _make_upde([0.8])
         val = _extract_metric(cond, state, [0], [])
         assert val is None
 
-    def test_extract_r_good_none_when_no_layer(self):
+    def test_extract_r_good_none_when_no_layer(self) -> None:
         cond = PolicyCondition(metric="R_good", layer=None, op=">", threshold=0.5)
         state = _make_upde([0.8])
         val = _extract_metric(cond, state, [0], [])
         assert val is None
 
-    def test_extract_pac_max(self):
+    def test_extract_pac_max(self) -> None:
         cond = PolicyCondition(metric="pac_max", layer=None, op=">", threshold=0.1)
         state = UPDEState(
             layers=[LayerState(R=0.5, psi=0.0)],
@@ -1233,7 +1251,7 @@ class TestPolicyRules:
         val = _extract_metric(cond, state, [0], [])
         assert val == pytest.approx(0.3)
 
-    def test_extract_mean_amplitude(self):
+    def test_extract_mean_amplitude(self) -> None:
         cond = PolicyCondition(
             metric="mean_amplitude", layer=None, op=">", threshold=0.1
         )
@@ -1247,7 +1265,7 @@ class TestPolicyRules:
         val = _extract_metric(cond, state, [], [])
         assert val == pytest.approx(0.7)
 
-    def test_extract_subcritical_fraction(self):
+    def test_extract_subcritical_fraction(self) -> None:
         cond = PolicyCondition(
             metric="subcritical_fraction", layer=None, op="<", threshold=0.5
         )
@@ -1261,7 +1279,7 @@ class TestPolicyRules:
         val = _extract_metric(cond, state, [], [])
         assert val == pytest.approx(0.2)
 
-    def test_extract_amplitude_spread(self):
+    def test_extract_amplitude_spread(self) -> None:
         cond = PolicyCondition(
             metric="amplitude_spread", layer=0, op="<", threshold=1.0
         )
@@ -1274,7 +1292,7 @@ class TestPolicyRules:
         val = _extract_metric(cond, state, [], [])
         assert val == pytest.approx(0.3)
 
-    def test_extract_mean_amplitude_layer(self):
+    def test_extract_mean_amplitude_layer(self) -> None:
         cond = PolicyCondition(
             metric="mean_amplitude_layer", layer=0, op=">", threshold=0.0
         )
@@ -1287,12 +1305,12 @@ class TestPolicyRules:
         val = _extract_metric(cond, state, [], [])
         assert val == pytest.approx(0.6)
 
-    def test_extract_unknown_metric(self):
+    def test_extract_unknown_metric(self) -> None:
         cond = PolicyCondition(metric="bogus", layer=None, op=">", threshold=0.0)
         state = _make_upde([0.5])
         assert _extract_metric(cond, state, [], []) is None
 
-    def test_eval_single_unknown_op(self):
+    def test_eval_single_unknown_op(self) -> None:
         cond = PolicyCondition(
             metric="stability_proxy",
             layer=None,
@@ -1302,7 +1320,7 @@ class TestPolicyRules:
         state = _make_upde([0.5])
         assert PolicyEngine._eval_single(cond, state, [], []) is False
 
-    def test_compound_or_condition(self):
+    def test_compound_or_condition(self) -> None:
         cc = CompoundCondition(
             conditions=[
                 PolicyCondition(
@@ -1335,7 +1353,7 @@ class TestPolicyRules:
         )
         assert engine._check_condition(cc, state, [], []) is True
 
-    def test_compound_and_condition_fails(self):
+    def test_compound_and_condition_fails(self) -> None:
         cc = CompoundCondition(
             conditions=[
                 PolicyCondition(
@@ -1368,7 +1386,7 @@ class TestPolicyRules:
         )
         assert engine._check_condition(cc, state, [], []) is False
 
-    def test_cooldown_prevents_repeated_fire(self):
+    def test_cooldown_prevents_repeated_fire(self) -> None:
         rule = PolicyRule(
             name="test",
             regimes=["NOMINAL"],
@@ -1385,7 +1403,7 @@ class TestPolicyRules:
         a2 = engine.evaluate(Regime.NOMINAL, state, [0], [])
         assert len(a2) == 0
 
-    def test_max_fires_limit(self):
+    def test_max_fires_limit(self) -> None:
         rule = PolicyRule(
             name="limited",
             regimes=["NOMINAL"],
@@ -1402,7 +1420,7 @@ class TestPolicyRules:
         a3 = engine.evaluate(Regime.NOMINAL, state, [], [])
         assert len(a3) == 0
 
-    def test_load_compound_rules(self, tmp_path):
+    def test_load_compound_rules(self, tmp_path: Path) -> None:
         data = {
             "rules": [
                 {
@@ -1425,35 +1443,30 @@ class TestPolicyRules:
         assert len(rules) == 1
         assert isinstance(rules[0].condition, CompoundCondition)
 
-    def test_load_empty_rules(self, tmp_path):
+    def test_load_empty_rules(self, tmp_path: Path) -> None:
         path = tmp_path / "empty.yaml"
         path.write_text("not_rules: true\n", encoding="utf-8")
         rules = load_policy_rules(path)
         assert rules == []
 
-    def test_extract_r_layer_out_of_bounds(self):
+    def test_extract_r_layer_out_of_bounds(self) -> None:
         cond = PolicyCondition(metric="R", layer=99, op=">", threshold=0.0)
         state = _make_upde([0.5])
         assert _extract_metric(cond, state, [], []) is None
 
-    def test_extract_amplitude_spread_out_of_bounds(self):
+    def test_extract_amplitude_spread_out_of_bounds(self) -> None:
         cond = PolicyCondition(
             metric="amplitude_spread", layer=99, op="<", threshold=1.0
         )
         state = _make_upde([0.5])
         assert _extract_metric(cond, state, [], []) is None
 
-    def test_extract_mean_amplitude_layer_out_of_bounds(self):
+    def test_extract_mean_amplitude_layer_out_of_bounds(self) -> None:
         cond = PolicyCondition(
             metric="mean_amplitude_layer", layer=99, op=">", threshold=0.0
         )
         state = _make_upde([0.5])
         assert _extract_metric(cond, state, [], []) is None
-
-
-# ──────────────────────────────────────────────────────────────────────
-# supervisor/policy.py: petri_adapter path
-# ──────────────────────────────────────────────────────────────────────
 
 
 # Salvaged module-specific behavioural contracts from deleted sprint file.
@@ -1462,17 +1475,19 @@ class TestPolicyMetricExtraction:
     metrics (boundary_violation_count, imprint_mean) from UPDEState
     and uses them in rule evaluation."""
 
-    def _make_state(self, **overrides):
-        defaults = {
-            "layers": [LayerState(R=0.5, psi=0.0)],
-            "cross_layer_alignment": np.eye(1),
-            "stability_proxy": 0.5,
-            "regime_id": "nominal",
-        }
-        defaults.update(overrides)
-        return UPDEState(**defaults)
+    def _make_state(
+        self, *, boundary_violation_count: int = 0, imprint_mean: float = 0.0
+    ) -> UPDEState:
+        return UPDEState(
+            layers=[LayerState(R=0.5, psi=0.0)],
+            cross_layer_alignment=np.eye(1),
+            stability_proxy=0.5,
+            regime_id="nominal",
+            boundary_violation_count=boundary_violation_count,
+            imprint_mean=imprint_mean,
+        )
 
-    def test_boundary_violation_count_triggers_action(self):
+    def test_boundary_violation_count_triggers_action(self) -> None:
         """boundary_violation_count > 0 → actions when count=2."""
         from scpn_phase_orchestrator.supervisor.policy_rules import PolicyAction
 
@@ -1492,7 +1507,7 @@ class TestPolicyMetricExtraction:
         actions = engine.evaluate(Regime.NOMINAL, state, [0], [])
         assert len(actions) > 0, "Rule should fire when boundary_violation_count=2 > 0"
 
-    def test_boundary_violation_count_zero_no_action(self):
+    def test_boundary_violation_count_zero_no_action(self) -> None:
         from scpn_phase_orchestrator.supervisor.policy_rules import PolicyAction
 
         rule = PolicyRule(
@@ -1511,7 +1526,7 @@ class TestPolicyMetricExtraction:
         actions = engine.evaluate(Regime.NOMINAL, state, [0], [])
         assert len(actions) == 0, "Rule should not fire when count=0"
 
-    def test_imprint_mean_triggers_action(self):
+    def test_imprint_mean_triggers_action(self) -> None:
         from scpn_phase_orchestrator.supervisor.policy_rules import PolicyAction
 
         rule = PolicyRule(
@@ -1529,8 +1544,3 @@ class TestPolicyMetricExtraction:
         state = self._make_state(imprint_mean=0.8)
         actions = engine.evaluate(Regime.NOMINAL, state, [0], [])
         assert len(actions) > 0, "Rule should fire when imprint_mean=0.8 > 0.5"
-
-
-# ---------------------------------------------------------------------------
-# Engine variants: delayed, torus, simplicial — pipeline wiring
-# ---------------------------------------------------------------------------
