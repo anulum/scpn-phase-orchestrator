@@ -9,7 +9,8 @@
 from __future__ import annotations
 
 import contextlib
-from typing import cast, get_type_hints
+from collections.abc import Callable, Mapping
+from typing import Any, TypeVar, get_type_hints
 
 import numpy as np
 import pytest
@@ -22,8 +23,38 @@ from scpn_phase_orchestrator.adapters.snn_bridge import (
 from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
 from tests.typing_contracts import assert_precise_ndarray_hint
 
+_R = TypeVar("_R")
 
-def _make_state(r_values):
+
+def _call(fn: Callable[..., _R], *args: object, **kwargs: object) -> _R:
+    """Call ``fn`` with arguments that are deliberately outside its types."""
+    return fn(*args, **kwargs)
+
+
+def _mapping(value: object) -> Mapping[str, Any]:
+    """Return a manifest field as a mapping, asserting that it is one."""
+    assert isinstance(value, Mapping)
+    return value
+
+
+def _items(value: object) -> list[object]:
+    """Return a manifest field as a list, asserting a list or tuple."""
+    assert isinstance(value, (list, tuple))
+    return list(value)
+
+
+def _rows(value: object) -> list[Mapping[str, Any]]:
+    """Return a manifest field as mapping rows, asserting every row's shape."""
+    return [_mapping(row) for row in _items(value)]
+
+
+def _text(value: object) -> str:
+    """Return a manifest field as text, asserting that it is a string."""
+    assert isinstance(value, str)
+    return value
+
+
+def _make_state(r_values: list[float]) -> UPDEState:
     return UPDEState(
         layers=[LayerState(R=r, psi=0.0) for r in r_values],
         cross_layer_alignment=np.eye(len(r_values)),
@@ -32,7 +63,7 @@ def _make_state(r_values):
     )
 
 
-def test_default_lif_params():
+def test_default_lif_params() -> None:
     bridge = SNNControllerBridge()
     assert bridge.tau_rc == TAU_RC
     assert bridge.tau_ref == TAU_REF
@@ -50,26 +81,26 @@ def test_default_lif_params():
 def test_constructor_rejects_malformed_config(
     field: str,
     kwargs: dict[str, object],
-):
+) -> None:
     with pytest.raises(ValueError, match=field):
-        SNNControllerBridge(**cast(dict, kwargs))
+        _call(SNNControllerBridge, **kwargs)
 
 
-def test_upde_to_current():
+def test_upde_to_current() -> None:
     bridge = SNNControllerBridge()
     state = _make_state([0.5, 0.8, 0.3])
     currents = bridge.upde_state_to_input_current(state, i_scale=2.0)
     np.testing.assert_allclose(currents, [1.0, 1.6, 0.6])
 
 
-def test_upde_to_current_empty():
+def test_upde_to_current_empty() -> None:
     bridge = SNNControllerBridge()
     state = _make_state([])
     currents = bridge.upde_state_to_input_current(state)
     assert len(currents) == 0
 
 
-def test_upde_to_current_rejects_invalid_scale_and_state_values():
+def test_upde_to_current_rejects_invalid_scale_and_state_values() -> None:
     bridge = SNNControllerBridge()
     state = _make_state([0.5])
     with pytest.raises(ValueError, match="i_scale"):
@@ -81,13 +112,15 @@ def test_upde_to_current_rejects_invalid_scale_and_state_values():
 
 
 @pytest.mark.parametrize("r_value", [-0.01, 1.01])
-def test_upde_to_current_rejects_out_of_bounds_order_parameter(r_value: float):
+def test_upde_to_current_rejects_out_of_bounds_order_parameter(
+    r_value: float,
+) -> None:
     bridge = SNNControllerBridge()
     with pytest.raises(ValueError, match="layer 0 R"):
         bridge.upde_state_to_input_current(_make_state([r_value]))
 
 
-def test_public_array_contracts_are_parameterised():
+def test_public_array_contracts_are_parameterised() -> None:
     for hint in [
         get_type_hints(SNNControllerBridge.upde_state_to_input_current)["return"],
         get_type_hints(SNNControllerBridge.spike_rates_to_actions)["rates"],
@@ -98,7 +131,7 @@ def test_public_array_contracts_are_parameterised():
         assert "float64" in str(hint)
 
 
-def test_spike_rates_above_threshold():
+def test_spike_rates_above_threshold() -> None:
     bridge = SNNControllerBridge()
     rates = np.array([60.0, 40.0, 80.0])
     actions = bridge.spike_rates_to_actions(rates, [0, 1, 2], threshold_hz=50.0)
@@ -107,14 +140,14 @@ def test_spike_rates_above_threshold():
     assert actions[1].scope == "layer_2"
 
 
-def test_spike_rates_below_threshold():
+def test_spike_rates_below_threshold() -> None:
     bridge = SNNControllerBridge()
     rates = np.array([10.0, 20.0])
     actions = bridge.spike_rates_to_actions(rates, [0, 1], threshold_hz=50.0)
     assert len(actions) == 0
 
 
-def test_spike_rate_action_value():
+def test_spike_rate_action_value() -> None:
     bridge = SNNControllerBridge()
     rates = np.array([100.0])
     actions = bridge.spike_rates_to_actions(rates, [0], threshold_hz=50.0)
@@ -122,7 +155,7 @@ def test_spike_rate_action_value():
     assert abs(actions[0].value - expected_value) < 1e-10
 
 
-def test_spike_rates_reject_malformed_inputs():
+def test_spike_rates_reject_malformed_inputs() -> None:
     bridge = SNNControllerBridge()
     with pytest.raises(ValueError, match="rates"):
         bridge.spike_rates_to_actions(np.array([np.nan]), [0], threshold_hz=50.0)
@@ -143,9 +176,10 @@ def test_spike_rates_reject_malformed_inputs():
     with pytest.raises(ValueError, match="layer_assignments"):
         bridge.spike_rates_to_actions(np.array([60.0]), [True], threshold_hz=50.0)
     with pytest.raises(ValueError, match="layer_assignments"):
-        bridge.spike_rates_to_actions(
+        _call(
+            bridge.spike_rates_to_actions,
             np.array([60.0]),
-            (0,),  # type: ignore[arg-type]
+            (0,),
             threshold_hz=50.0,
         )
     with pytest.raises(ValueError, match="layer_assignments"):
@@ -153,14 +187,15 @@ def test_spike_rates_reject_malformed_inputs():
     with pytest.raises(ValueError, match="threshold_hz"):
         bridge.spike_rates_to_actions(np.array([60.0]), [0], threshold_hz=0.0)
     with pytest.raises(ValueError, match="rates"):
-        bridge.spike_rates_to_actions(
-            [object()],  # type: ignore[arg-type]
+        _call(
+            bridge.spike_rates_to_actions,
+            [object()],
             [0],
             threshold_hz=50.0,
         )
 
 
-def test_lif_rate_superthreshold():
+def test_lif_rate_superthreshold() -> None:
     bridge = SNNControllerBridge()
     currents = np.array([1.5, 2.0, 3.0])
     rates = bridge.lif_rate_estimate(currents)
@@ -168,21 +203,21 @@ def test_lif_rate_superthreshold():
     assert rates[0] < rates[1] < rates[2]
 
 
-def test_lif_rate_subthreshold():
+def test_lif_rate_subthreshold() -> None:
     bridge = SNNControllerBridge()
     currents = np.array([0.5, 0.9, 1.0])
     rates = bridge.lif_rate_estimate(currents)
     assert all(r == 0.0 for r in rates)
 
 
-def test_lif_rate_edge():
+def test_lif_rate_edge() -> None:
     bridge = SNNControllerBridge()
     currents = np.array([1.01])
     rates = bridge.lif_rate_estimate(currents)
     assert rates[0] > 0
 
 
-def test_lif_rate_rejects_non_finite_currents():
+def test_lif_rate_rejects_non_finite_currents() -> None:
     bridge = SNNControllerBridge()
     with pytest.raises(ValueError, match="currents"):
         bridge.lif_rate_estimate(np.array([1.0, np.inf]))
@@ -194,14 +229,14 @@ def test_lif_rate_rejects_non_finite_currents():
         bridge.lif_rate_estimate(np.array([1.0, 2.0 + 0.0j], dtype=object))
 
 
-def test_custom_lif_params():
+def test_custom_lif_params() -> None:
     bridge = SNNControllerBridge(tau_rc=0.05, tau_ref=0.005)
     currents = np.array([2.0])
     rates = bridge.lif_rate_estimate(currents)
     assert rates[0] > 0
 
 
-def test_numpy_network_builds():
+def test_numpy_network_builds() -> None:
     bridge = SNNControllerBridge(n_neurons=50)
     model = bridge.build_numpy_network(n_layers=3, seed=42)
     assert model.input_node.shape == (3,)
@@ -223,31 +258,31 @@ def test_numpy_network_builds():
 def test_numpy_network_rejects_malformed_config(
     kwargs: dict[str, object],
     field: str,
-):
+) -> None:
     bridge = SNNControllerBridge(n_neurons=50)
     with pytest.raises(ValueError, match=field):
-        bridge.build_numpy_network(**cast(dict, kwargs))
+        _call(bridge.build_numpy_network, **kwargs)
 
 
-def test_nengo_network_alias():
+def test_nengo_network_alias() -> None:
     bridge = SNNControllerBridge(n_neurons=50)
     model = bridge.build_nengo_network(n_layers=3, seed=42)
     assert model.ensemble.n_neurons == 50
 
 
-def test_lava_import_error():
+def test_lava_import_error() -> None:
     bridge = SNNControllerBridge()
     with contextlib.suppress(ImportError):
         bridge.build_lava_process(n_layers=3)
 
 
-def test_lava_process_rejects_invalid_layer_count():
+def test_lava_process_rejects_invalid_layer_count() -> None:
     bridge = SNNControllerBridge()
     with pytest.raises(ValueError, match="n_layers"):
         bridge.build_lava_process(n_layers=0)
 
 
-def test_lava_process_with_mock():
+def test_lava_process_with_mock() -> None:
     from unittest.mock import MagicMock, patch
 
     mock_lif_mod = MagicMock()
@@ -265,7 +300,7 @@ def test_lava_process_with_mock():
     mock_lif_cls.assert_called_once()
 
 
-def test_neuromorphic_schedule_manifest_is_deterministic_and_safe():
+def test_neuromorphic_schedule_manifest_is_deterministic_and_safe() -> None:
     state = _make_state([0.25, 0.75])
     state.cross_layer_alignment[0, 1] = 0.4
     bridge = SNNControllerBridge(n_neurons=32)
@@ -288,10 +323,11 @@ def test_neuromorphic_schedule_manifest_is_deterministic_and_safe():
     assert manifest["target_backends"] == ["lava", "pynn"]
     assert manifest["actuation_permitted"] is False
     assert manifest["hardware_write_permitted"] is False
-    assert len(manifest["schedule_sha256"]) == 64
-    assert manifest["populations"][0]["lava_process"] == "LIF"
-    assert manifest["populations"][0]["pynn_cell"] == "IF_curr_exp"
-    assert manifest["populations"][1]["input_current"] == 1.5
+    assert len(_text(manifest["schedule_sha256"])) == 64
+    populations = _rows(manifest["populations"])
+    assert populations[0]["lava_process"] == "LIF"
+    assert populations[0]["pynn_cell"] == "IF_curr_exp"
+    assert populations[1]["input_current"] == 1.5
     assert manifest["projections"] == [
         {
             "source": "layer_0",
@@ -301,14 +337,14 @@ def test_neuromorphic_schedule_manifest_is_deterministic_and_safe():
             "receptor_type": "excitatory",
         }
     ]
-    assert manifest["simulator_parity"]["max_abs_rate_error_hz"] == 0.0
+    assert _mapping(manifest["simulator_parity"])["max_abs_rate_error_hz"] == 0.0
     assert manifest["operator_commands"] == [
         "review neuromorphic_schedule_manifest.json",
         "run Lava or PyNN simulator parity before hardware handoff",
     ]
     # NIR-structural export is wired into the manifest and hashed.
-    assert len(manifest["nir_sha256"]) == 64
-    nir = manifest["neuromorphic_ir"]
+    assert len(_text(manifest["nir_sha256"])) == 64
+    nir = _mapping(manifest["neuromorphic_ir"])
     assert nir["metadata"]["conformance"] == "structural_subset"
     assert nir["metadata"]["format"] == "scpn-neuromorphic-ir-structural"
     assert [node["id"] for node in nir["nodes"]] == ["layer_0", "layer_1"]
@@ -325,7 +361,7 @@ def test_neuromorphic_schedule_manifest_is_deterministic_and_safe():
     ]
 
 
-def test_neuromorphic_schedule_manifest_rejects_invalid_state():
+def test_neuromorphic_schedule_manifest_rejects_invalid_state() -> None:
     bridge = SNNControllerBridge()
     state = UPDEState(
         layers=[LayerState(R=0.4, psi=0.0), LayerState(R=0.6, psi=0.0)],
@@ -342,7 +378,7 @@ def test_neuromorphic_schedule_manifest_rejects_invalid_state():
         raise AssertionError("invalid cross-layer shape must be rejected")
 
 
-def test_neuromorphic_schedule_manifest_rejects_non_real_alignment_aliases():
+def test_neuromorphic_schedule_manifest_rejects_non_real_alignment_aliases() -> None:
     bridge = SNNControllerBridge()
     state = UPDEState(
         layers=[LayerState(R=0.4, psi=0.0), LayerState(R=0.6, psi=0.0)],
@@ -355,7 +391,7 @@ def test_neuromorphic_schedule_manifest_rejects_non_real_alignment_aliases():
         bridge.build_neuromorphic_schedule_manifest(state)
 
 
-def test_neuromorphic_schedule_manifest_rejects_unbounded_order_parameter():
+def test_neuromorphic_schedule_manifest_rejects_unbounded_order_parameter() -> None:
     bridge = SNNControllerBridge()
     state = _make_state([0.4, 1.2])
 
@@ -363,7 +399,7 @@ def test_neuromorphic_schedule_manifest_rejects_unbounded_order_parameter():
         bridge.build_neuromorphic_schedule_manifest(state)
 
 
-def test_neuromorphic_target_readiness_audit_blocks_missing_preconditions():
+def test_neuromorphic_target_readiness_audit_blocks_missing_preconditions() -> None:
     state = _make_state([0.25, 0.75])
     bridge = SNNControllerBridge(n_neurons=32)
     manifest = bridge.build_neuromorphic_schedule_manifest(
@@ -390,10 +426,10 @@ def test_neuromorphic_target_readiness_audit_blocks_missing_preconditions():
     ]
     assert record["hardware_write_permitted"] is False
     assert record["actuation_permitted"] is False
-    assert len(record["readiness_sha256"]) == 64
+    assert len(_text(record["readiness_sha256"])) == 64
 
 
-def test_neuromorphic_target_readiness_audit_is_ready_not_executed_and_stable():
+def test_neuromorphic_target_readiness_audit_is_ready_not_executed_and_stable() -> None:
     state = _make_state([0.25, 0.75])
     bridge = SNNControllerBridge(n_neurons=32)
     manifest = bridge.build_neuromorphic_schedule_manifest(
@@ -434,9 +470,11 @@ def test_neuromorphic_target_readiness_audit_is_ready_not_executed_and_stable():
     ]
 
 
-def test_neuromorphic_target_readiness_audit_rejects_invalid_manifest_or_target():
+def test_neuromorphic_target_readiness_audit_rejects_invalid_manifest_or_target() -> (
+    None
+):
     bridge = SNNControllerBridge(n_neurons=32)
-    manifest = {"manifest_kind": "quantum_compiler_manifest"}
+    manifest: dict[str, object] = {"manifest_kind": "quantum_compiler_manifest"}
 
     with pytest.raises(ValueError, match="neuromorphic_schedule_manifest"):
         bridge.audit_hardware_target_readiness(
@@ -455,12 +493,13 @@ def test_neuromorphic_target_readiness_audit_rejects_invalid_manifest_or_target(
         )
 
 
-def test_neuromorphic_target_readiness_rejects_aliases_in_public_inputs():
+def test_neuromorphic_target_readiness_rejects_aliases_in_public_inputs() -> None:
     bridge = SNNControllerBridge(n_neurons=8)
     manifest = bridge.build_neuromorphic_schedule_manifest(_make_state([0.5]))
 
     with pytest.raises(ValueError, match="boolean"):
-        bridge.audit_hardware_target_readiness(
+        _call(
+            bridge.audit_hardware_target_readiness,
             manifest,
             target_backend="lava",
             hardware_site="lab",
@@ -477,8 +516,9 @@ def test_neuromorphic_target_readiness_rejects_aliases_in_public_inputs():
         )
 
     with pytest.raises(ValueError, match="mapping"):
-        bridge.audit_hardware_target_readiness(
-            [],  # type: ignore[arg-type]
+        _call(
+            bridge.audit_hardware_target_readiness,
+            [],
             target_backend="lava",
             hardware_site="lab",
         )
@@ -495,7 +535,7 @@ def test_neuromorphic_target_readiness_rejects_aliases_in_public_inputs():
             )
 
 
-def test_neuromorphic_target_readiness_records_manifest_safety_regressions():
+def test_neuromorphic_target_readiness_records_manifest_safety_regressions() -> None:
     bridge = SNNControllerBridge(n_neurons=8)
     manifest = bridge.build_neuromorphic_schedule_manifest(_make_state([0.5]))
     manifest["status"] = "draft"
@@ -508,14 +548,14 @@ def test_neuromorphic_target_readiness_records_manifest_safety_regressions():
         hardware_site="lab",
     )
 
-    assert record["blocked_reasons"][:3] == [
+    assert _items(record["blocked_reasons"])[:3] == [
         "simulator_parity_not_passed",
         "hardware_write_permission_must_remain_false",
         "actuation_permission_must_remain_false",
     ]
 
 
-def test_neuromorphic_schedule_revalidates_mutated_bridge_state():
+def test_neuromorphic_schedule_revalidates_mutated_bridge_state() -> None:
     bridge = SNNControllerBridge(n_neurons=8)
     bridge.n_neurons = 0
     with pytest.raises(ValueError, match="n_neurons"):
@@ -543,7 +583,7 @@ def test_neuromorphic_schedule_revalidates_mutated_bridge_state():
 class TestSNNPipelineWiring:
     """Pipeline: UPDEState → SNN currents → LIF rates → actions."""
 
-    def test_upde_state_to_snn_roundtrip(self):
+    def test_upde_state_to_snn_roundtrip(self) -> None:
         """UPDEState → upde_state_to_input_current → lif_rate_estimate →
         spike_rates_to_actions. Full neuro-feedback loop."""
         state = _make_state([0.3, 0.5, 0.7, 0.9])
@@ -562,7 +602,7 @@ class TestSNNPipelineWiring:
 
 # Salvaged module-specific behavioural contracts from deleted broad tests.
 class TestSNNControllerBridge:
-    def test_upde_to_current(self):
+    def test_upde_to_current(self) -> None:
         from scpn_phase_orchestrator.adapters.snn_bridge import SNNControllerBridge
         from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
 
@@ -571,7 +611,7 @@ class TestSNNControllerBridge:
             layers=[LayerState(R=0.5, psi=i * 0.1) for i in range(4)],
             cross_layer_alignment=np.eye(4),
             stability_proxy=0.5,
-            regime_id=0,
+            regime_id="nominal",
         )
         currents = bridge.upde_state_to_input_current(state)
         assert currents.shape == (4,)
@@ -582,7 +622,7 @@ class TestSNNControllerBridge:
             [1.25, 1.25, 1.25, 1.25],
         )
 
-    def test_spike_rates_to_actions(self):
+    def test_spike_rates_to_actions(self) -> None:
         from scpn_phase_orchestrator.adapters.snn_bridge import SNNControllerBridge
 
         bridge = SNNControllerBridge()
@@ -595,7 +635,7 @@ class TestSNNControllerBridge:
         assert actions[0].justification == "SNN group 2: 100.0 Hz"
         assert actions[1].justification == "SNN group 3: 200.0 Hz"
 
-    def test_lif_rate_estimate_monotonic(self):
+    def test_lif_rate_estimate_monotonic(self) -> None:
         """Higher input current → higher firing rate (LIF model property)."""
         from scpn_phase_orchestrator.adapters.snn_bridge import SNNControllerBridge
 
@@ -611,7 +651,7 @@ class TestSNNControllerBridge:
                 f"I={currents[i + 1]:.1f}→{rates[i + 1]:.1f}"
             )
 
-    def test_build_numpy_network_returns_valid_object(self):
+    def test_build_numpy_network_returns_valid_object(self) -> None:
         from scpn_phase_orchestrator.adapters.snn_bridge import SNNControllerBridge
 
         bridge = SNNControllerBridge()
@@ -626,6 +666,26 @@ class TestSNNControllerBridge:
         assert set(np.unique(net.ensemble.encoders)) == {-1.0, 1.0}
         assert np.all(net.ensemble.alpha > 0.0)
 
-    def test_snn_bridge_pipeline_wiring(self):
+    def test_snn_bridge_pipeline_wiring(self) -> None:
         """End-to-end: UPDEState → SNN currents → rates → actions.
         Verifies the full adapter pipeline, not just individual methods."""
+        from scpn_phase_orchestrator.adapters.snn_bridge import SNNControllerBridge
+        from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
+
+        bridge = SNNControllerBridge(n_neurons=100)
+        state = UPDEState(
+            layers=[LayerState(R=0.3, psi=i * 0.5) for i in range(4)],
+            cross_layer_alignment=np.eye(4),
+            stability_proxy=0.3,
+            regime_id="degraded",
+        )
+        currents = bridge.upde_state_to_input_current(state)
+        rates = bridge.lif_rate_estimate(currents)
+        actions = bridge.spike_rates_to_actions(rates, layer_assignments=[0, 1, 2, 3])
+        # Pipeline must produce finite currents, non-negative rates, and ≥0 actions
+        assert np.all(np.isfinite(currents))
+        assert np.all(rates >= 0.0)
+        assert isinstance(actions, list)
+        np.testing.assert_allclose(currents, [0.3, 0.3, 0.3, 0.3])
+        np.testing.assert_array_equal(rates, np.zeros(4))
+        assert actions == []
