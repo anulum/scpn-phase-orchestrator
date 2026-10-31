@@ -10,6 +10,10 @@
 
 from __future__ import annotations
 
+from importlib import import_module
+from types import ModuleType
+from typing import Any
+
 import pytest
 
 from scpn_phase_orchestrator._compat import HAS_RUST
@@ -31,13 +35,11 @@ pytestmark = pytest.mark.skipif(
 
 
 @pytest.fixture()
-def spo():
-    import spo_kernel
-
-    return spo_kernel
+def spo() -> ModuleType:
+    return import_module("spo_kernel")
 
 
-def _py_simple_net():
+def _py_simple_net() -> PetriNet:
     places = [Place("idle"), Place("active"), Place("done")]
     transitions = [
         Transition(
@@ -54,7 +56,8 @@ def _py_simple_net():
     return PetriNet(places, transitions)
 
 
-def _rust_simple_net(spo):
+def _rust_simple_net(spo: ModuleType) -> Any:
+    """Return the compiled PyPetriNet; the extension module has no stubs."""
     return spo.PyPetriNet(
         ["idle", "active", "done"],
         [
@@ -64,7 +67,7 @@ def _rust_simple_net(spo):
     )
 
 
-def test_step_parity(spo):
+def test_step_parity(spo: ModuleType) -> None:
     py_net = _py_simple_net()
     rust_net = _rust_simple_net(spo)
     py_marking = Marking(tokens={"idle": 1})
@@ -72,12 +75,13 @@ def test_step_parity(spo):
     py_new, py_fired = py_net.step(py_marking, {})
     rust_tokens, rust_fired = rust_net.step({"idle": 1}, {})
 
+    assert py_fired is not None
     assert py_fired.name == rust_fired
     assert py_new["active"] == rust_tokens["active"]
     assert py_new["idle"] == rust_tokens.get("idle", 0)
 
 
-def test_sequential_step_parity(spo):
+def test_sequential_step_parity(spo: ModuleType) -> None:
     py_net = _py_simple_net()
     rust_net = _rust_simple_net(spo)
     py_marking = Marking(tokens={"idle": 1})
@@ -86,17 +90,19 @@ def test_sequential_step_parity(spo):
     # Step 1: idle → active
     py_marking, py_fired = py_net.step(py_marking, {})
     rust_tokens, rust_fired = rust_net.step(rust_tokens, {})
+    assert py_fired is not None
     assert py_fired.name == rust_fired
 
     # Step 2: active → done
     py_marking, py_fired = py_net.step(py_marking, {})
     rust_tokens_dict = dict(rust_tokens)
     rust_tokens, rust_fired = rust_net.step(rust_tokens_dict, {})
+    assert py_fired is not None
     assert py_fired.name == rust_fired
     assert py_marking["done"] == 1
 
 
-def test_no_enabled_parity(spo):
+def test_no_enabled_parity(spo: ModuleType) -> None:
     py_net = _py_simple_net()
     rust_net = _rust_simple_net(spo)
 
@@ -107,7 +113,7 @@ def test_no_enabled_parity(spo):
     assert rust_fired is None
 
 
-def test_guard_parity(spo):
+def test_guard_parity(spo: ModuleType) -> None:
     py_net = PetriNet(
         [Place("a"), Place("b")],
         [
@@ -133,10 +139,11 @@ def test_guard_parity(spo):
     # Guard passes (x=0.8)
     py_m, py_f = py_net.step(Marking(tokens={"a": 1}), {"x": 0.8})
     rust_t, rust_f = rust_net.step({"a": 1}, {"x": 0.8})
+    assert py_f is not None
     assert py_f.name == rust_f == "guarded"
 
 
-def test_enabled_parity(spo):
+def test_enabled_parity(spo: ModuleType) -> None:
     py_net = PetriNet(
         [Place("a"), Place("b"), Place("c")],
         [
@@ -159,7 +166,7 @@ def test_enabled_parity(spo):
     assert len(py_enabled) == 2
 
 
-def test_weighted_arcs_parity(spo):
+def test_weighted_arcs_parity(spo: ModuleType) -> None:
     py_net = PetriNet(
         [Place("pool"), Place("out")],
         [
@@ -184,18 +191,21 @@ def test_weighted_arcs_parity(spo):
     # Enough tokens
     py_m, py_f = py_net.step(Marking(tokens={"pool": 3}), {})
     rust_t, rust_f = rust_net.step({"pool": 3}, {})
+    assert py_f is not None
     assert py_f.name == rust_f == "consume"
     assert py_m["pool"] == rust_t.get("pool", 0) == 0
     assert py_m["out"] == rust_t["out"] == 1
 
 
-def test_place_names_parity(spo):
+def test_place_names_parity(spo: ModuleType) -> None:
     py_net = _py_simple_net()
     rust_net = _rust_simple_net(spo)
     assert set(py_net.place_names) == set(rust_net.place_names)
 
 
-def test_rust_petri_net_exposes_transition_and_active_place_diagnostics(spo):
+def test_rust_petri_net_exposes_transition_and_active_place_diagnostics(
+    spo: ModuleType,
+) -> None:
     rust_net = _rust_simple_net(spo)
     if not all(
         hasattr(rust_net, attr) for attr in ("transition_names", "active_places")
@@ -206,7 +216,7 @@ def test_rust_petri_net_exposes_transition_and_active_place_diagnostics(spo):
     assert rust_net.active_places({"idle": 1, "active": 0}) == ["idle"]
 
 
-def test_rust_petri_net_rejects_invalid_surface(spo):
+def test_rust_petri_net_rejects_invalid_surface(spo: ModuleType) -> None:
     probe = _rust_simple_net(spo)
     if not hasattr(probe, "transition_names"):
         pytest.skip("installed spo_kernel lacks PyPetriNet validation slice")
