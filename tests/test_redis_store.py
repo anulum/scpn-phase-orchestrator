@@ -25,14 +25,14 @@ def _make_store() -> tuple[RedisStateStore, MagicMock]:
     return store, mock_client
 
 
-def test_save_state_calls_set():
+def test_save_state_calls_set() -> None:
     store, mock = _make_store()
     state = {"R": 0.9, "regime": "nominal"}
     store.save_state(state)
     mock.set.assert_called_once_with("spo:test", json.dumps(state))
 
 
-def test_load_state_returns_dict():
+def test_load_state_returns_dict() -> None:
     store, mock = _make_store()
     payload = {"R": 0.85, "step": 42}
     mock.get.return_value = json.dumps(payload)
@@ -40,30 +40,30 @@ def test_load_state_returns_dict():
     assert result == payload
 
 
-def test_load_state_returns_none_when_missing():
+def test_load_state_returns_none_when_missing() -> None:
     store, mock = _make_store()
     mock.get.return_value = None
     assert store.load_state() is None
 
 
-def test_delete_state_calls_delete():
+def test_delete_state_calls_delete() -> None:
     store, mock = _make_store()
     store.delete_state()
     mock.delete.assert_called_once_with("spo:test")
 
 
-def test_key_property():
+def test_key_property() -> None:
     store, _ = _make_store()
     assert store.key == "spo:test"
 
 
-def test_custom_key():
+def test_custom_key() -> None:
     mock_client = MagicMock()
     store = RedisStateStore(client=mock_client, key="custom:state:v2")
     assert store.key == "custom:state:v2"
 
 
-def test_roundtrip():
+def test_roundtrip() -> None:
     store, mock = _make_store()
     state = {"layers": [0.9, 0.8], "regime": "nominal", "step": 10}
     store.save_state(state)
@@ -72,21 +72,21 @@ def test_roundtrip():
     assert loaded == state
 
 
-def test_save_state_rejects_non_dict_payload():
+def test_save_state_rejects_non_dict_payload() -> None:
     store, mock = _make_store()
     with pytest.raises(ValueError, match="sim_state"):
         store.save_state(["not", "a", "dict"])  # type: ignore[arg-type]
     mock.set.assert_not_called()
 
 
-def test_save_state_rejects_non_json_payload():
+def test_save_state_rejects_non_json_payload() -> None:
     store, mock = _make_store()
     with pytest.raises(ValueError, match="JSON"):
         store.save_state({"bad": object()})
     mock.set.assert_not_called()
 
 
-def test_save_state_rejects_non_finite_json_numbers():
+def test_save_state_rejects_non_finite_json_numbers() -> None:
     store, mock = _make_store()
     with pytest.raises(ValueError, match="JSON"):
         store.save_state({"R": float("nan")})
@@ -94,7 +94,7 @@ def test_save_state_rejects_non_finite_json_numbers():
 
 
 @pytest.mark.parametrize("payload", ["[1, 2, 3]", '"string"', "42"])
-def test_load_state_rejects_non_object_json_payload(payload: str):
+def test_load_state_rejects_non_object_json_payload(payload: str) -> None:
     store, mock = _make_store()
     mock.get.return_value = payload
     with pytest.raises(ValueError, match="Redis payload"):
@@ -105,21 +105,21 @@ def test_load_state_rejects_non_object_json_payload(payload: str):
     "payload",
     ['{"R": NaN}', '{"R": Infinity}', '{"R": -Infinity}'],
 )
-def test_load_state_rejects_non_finite_json_numbers(payload: str):
+def test_load_state_rejects_non_finite_json_numbers(payload: str) -> None:
     store, mock = _make_store()
     mock.get.return_value = payload
     with pytest.raises(ValueError, match="Redis payload"):
         store.load_state()
 
 
-def test_load_state_rejects_malformed_json_payload():
+def test_load_state_rejects_malformed_json_payload() -> None:
     store, mock = _make_store()
     mock.get.return_value = "{not-json"
     with pytest.raises(ValueError, match="Redis payload"):
         store.load_state()
 
 
-def test_load_state_validates_recursive_numbers_through_public_boundary():
+def test_load_state_validates_recursive_numbers_through_public_boundary() -> None:
     store, mock = _make_store()
     mock.get.return_value = '{"safe": [true]}'
 
@@ -130,12 +130,14 @@ def test_load_state_validates_recursive_numbers_through_public_boundary():
         store.load_state()
 
 
-def test_constructed_client_uses_tls_auth_and_certificates(monkeypatch):
+def test_constructed_client_uses_tls_auth_and_certificates(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     captured: dict[str, object] = {}
     test_credential = "".join(("test", "-redis-auth-token"))
 
     class FakeRedis:
-        def __init__(self, **kwargs):
+        def __init__(self, **kwargs: object) -> None:
             captured.update(kwargs)
 
     fake_module = types.SimpleNamespace(Redis=FakeRedis)
@@ -169,19 +171,21 @@ def test_constructed_client_uses_tls_auth_and_certificates(monkeypatch):
     }
 
 
-def test_missing_optional_dependency_fails_at_public_constructor(monkeypatch):
+def test_missing_optional_dependency_fails_at_public_constructor(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setattr(redis_store, "_HAS_REDIS", False)
 
     with pytest.raises(RuntimeError, match="not installed"):
         redis_store.RedisStateStore()
 
 
-def test_plaintext_redis_is_rejected_for_non_loopback_hosts():
+def test_plaintext_redis_is_rejected_for_non_loopback_hosts() -> None:
     with pytest.raises(ValueError, match="loopback"):
         RedisStateStore(host="redis.internal", ssl=False)
 
 
-def test_remote_redis_requires_password():
+def test_remote_redis_requires_password() -> None:
     with pytest.raises(ValueError, match="require password authentication"):
         RedisStateStore(
             host="redis.internal",
@@ -190,25 +194,25 @@ def test_remote_redis_requires_password():
         )
 
 
-def test_remote_tls_redis_requires_ca_bundle():
+def test_remote_tls_redis_requires_ca_bundle() -> None:
     auth_token = "-".join(("secret", "token"))
     with pytest.raises(ValueError, match="require a CA bundle"):
         RedisStateStore(host="redis.internal", password=auth_token, ssl=True)
 
 
-def test_ssl_flag_must_be_bool():
+def test_ssl_flag_must_be_bool() -> None:
     with pytest.raises(ValueError, match="ssl must be a bool"):
         RedisStateStore(ssl="true", client=MagicMock())  # type: ignore[arg-type]
 
 
-def test_tls_cert_and_key_must_be_provided_together():
+def test_tls_cert_and_key_must_be_provided_together() -> None:
     with pytest.raises(ValueError, match="provided together"):
         RedisStateStore(ssl_certfile="/etc/redis/client.pem", client=MagicMock())
     with pytest.raises(ValueError, match="provided together"):
         RedisStateStore(ssl_keyfile="/etc/redis/client.key", client=MagicMock())
 
 
-def test_plaintext_redis_is_allowed_for_explicit_loopback_development_client():
+def test_plaintext_redis_is_allowed_for_explicit_loopback_development_client() -> None:
     mock_client = MagicMock()
     store = RedisStateStore(host="127.0.0.1", ssl=False, client=mock_client)
     assert store.key == "spo:sim_state"
@@ -217,7 +221,7 @@ def test_plaintext_redis_is_allowed_for_explicit_loopback_development_client():
 class TestRedisStorePipelineWiring:
     """Pipeline: engine state → save → load → verify."""
 
-    def test_engine_state_save_load_roundtrip(self):
+    def test_engine_state_save_load_roundtrip(self) -> None:
         """Save engine-produced state → load → verify preserved."""
         import numpy as np
         import pytest
@@ -243,13 +247,14 @@ class TestRedisStorePipelineWiring:
         store.save_state(state)
         mock.get.return_value = mock.set.call_args[0][1]
         loaded = store.load_state()
+        assert loaded is not None
         assert loaded["R"] == pytest.approx(r)
         assert loaded["step"] == 100
 
 
 # Salvaged module-specific behavioural contracts from deleted broad tests.
 class TestRedisStore:
-    def test_save_load_with_mock(self):
+    def test_save_load_with_mock(self) -> None:
         from scpn_phase_orchestrator.adapters.redis_store import RedisStateStore
 
         mock_client = MagicMock()
@@ -262,7 +267,7 @@ class TestRedisStore:
         result = store.load_state()
         assert result == {"R": 0.5}
 
-    def test_load_missing(self):
+    def test_load_missing(self) -> None:
         from scpn_phase_orchestrator.adapters.redis_store import RedisStateStore
 
         mock_client = MagicMock()
@@ -271,7 +276,7 @@ class TestRedisStore:
         assert store.load_state() is None
         mock_client.get.assert_called_once_with("spo:sim_state")
 
-    def test_delete_state(self):
+    def test_delete_state(self) -> None:
         from scpn_phase_orchestrator.adapters.redis_store import RedisStateStore
 
         mock_client = MagicMock()
@@ -279,7 +284,7 @@ class TestRedisStore:
         store.delete_state()
         mock_client.delete.assert_called_once_with("test:key")
 
-    def test_key_property(self):
+    def test_key_property(self) -> None:
         from scpn_phase_orchestrator.adapters.redis_store import RedisStateStore
 
         mock_client = MagicMock()
