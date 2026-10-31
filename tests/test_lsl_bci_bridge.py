@@ -67,11 +67,11 @@ class TestInit:
         assert len(bridge._data_buffer) == 0
 
 
+@pytest.mark.skipif(HAS_LSL, reason="pylsl is installed; the absent-LSL path is not")
 class TestConnectWithoutLSL:
     def test_returns_false(self) -> None:
         bridge = LSLBCIBridge()
-        if not HAS_LSL:
-            assert bridge.connect(timeout=0.1) is False
+        assert bridge.connect(timeout=0.1) is False
 
 
 class TestConnectWithLSL:
@@ -238,15 +238,17 @@ class TestGetInstantaneousPhase:
 
 
 class TestStartWithoutInlet:
+    @pytest.mark.skipif(
+        HAS_LSL, reason="pylsl is installed; the absent-LSL path is not"
+    )
     def test_start_without_connect_raises(self) -> None:
         bridge = LSLBCIBridge(stream_name="TOPOLOGY_DETAIL")
-        if not HAS_LSL:
-            with pytest.raises(RuntimeError) as excinfo:
-                bridge.start()
-            msg = str(excinfo.value)
-            assert "Could not connect" in msg
-            # Stream name must not be echoed (may reveal deployment topology).
-            assert "TOPOLOGY_DETAIL" not in msg
+        with pytest.raises(RuntimeError) as excinfo:
+            bridge.start()
+        msg = str(excinfo.value)
+        assert "Could not connect" in msg
+        # Stream name must not be echoed (may reveal deployment topology).
+        assert "TOPOLOGY_DETAIL" not in msg
 
 
 class TestStartWithInlet:
