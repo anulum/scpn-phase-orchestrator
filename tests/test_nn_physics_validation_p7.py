@@ -30,12 +30,18 @@ parity, mutual information, bimodal + FIM, FIM convergence speed.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import numpy as np
 import pytest
 
 jax = pytest.importorskip("jax", reason="JAX required for nn/ physics validation")
 jnp = pytest.importorskip("jax.numpy", reason="JAX required")
 jr = pytest.importorskip("jax.random", reason="JAX required")
+
+if TYPE_CHECKING:
+    from jax import Array
+    from numpy.typing import NDArray
 
 TWO_PI = 2.0 * np.pi
 
@@ -45,7 +51,9 @@ TWO_PI = 2.0 * np.pi
 # ──────────────────────────────────────────────────
 
 
-def _fim_kuramoto_step(phases, omegas, K, lam, dt):
+def _fim_kuramoto_step(
+    phases: Array, omegas: Array, K: Array, lam: float, dt: float
+) -> Array:
     """Single Euler step of FIM-Kuramoto.
 
     dθ_i/dt = ω_i + Σ_j K_ij sin(θ_j - θ_i) + λ·R·sin(Ψ - θ_i)
@@ -59,30 +67,37 @@ def _fim_kuramoto_step(phases, omegas, K, lam, dt):
     Psi = jnp.angle(z)
 
     fim_force = lam * R * jnp.sin(Psi - phases)
-    return (phases + dt * (omegas + coupling + fim_force)) % TWO_PI
+    stepped: Array = (phases + dt * (omegas + coupling + fim_force)) % TWO_PI
+    return stepped
 
 
-def _fim_kuramoto_rk4_step(phases, omegas, K, lam, dt):
+def _fim_kuramoto_rk4_step(
+    phases: Array, omegas: Array, K: Array, lam: float, dt: float
+) -> Array:
     """Single RK4 step of FIM-Kuramoto."""
 
-    def deriv(p):
+    def deriv(p: Array) -> Array:
         diff = p[jnp.newaxis, :] - p[:, jnp.newaxis]
         coupling = jnp.sum(K * jnp.sin(diff), axis=1)
         z = jnp.mean(jnp.exp(1j * p))
         R = jnp.abs(z)
         Psi = jnp.angle(z)
-        return omegas + coupling + lam * R * jnp.sin(Psi - p)
+        rate: Array = omegas + coupling + lam * R * jnp.sin(Psi - p)
+        return rate
 
     k1 = deriv(phases)
     k2 = deriv(phases + 0.5 * dt * k1)
     k3 = deriv(phases + 0.5 * dt * k2)
     k4 = deriv(phases + dt * k3)
-    return (phases + (dt / 6.0) * (k1 + 2.0 * k2 + 2.0 * k3 + k4)) % TWO_PI
+    stepped: Array = (phases + (dt / 6.0) * (k1 + 2.0 * k2 + 2.0 * k3 + k4)) % TWO_PI
+    return stepped
 
 
-def _fim_kuramoto_forward(phases, omegas, K, lam, dt, n_steps):
+def _fim_kuramoto_forward(
+    phases: Array, omegas: Array, K: Array, lam: float, dt: float, n_steps: int
+) -> tuple[Array, NDArray[np.float64]]:
     """Run FIM-Kuramoto for n_steps, return final phases and R trajectory."""
-    R_traj = []
+    R_traj: list[float] = []
     p = phases
     for _ in range(n_steps):
         p = _fim_kuramoto_rk4_step(p, omegas, K, lam, dt)
@@ -91,7 +106,7 @@ def _fim_kuramoto_forward(phases, omegas, K, lam, dt, n_steps):
     return p, np.array(R_traj)
 
 
-def _order_parameter(phases):
+def _order_parameter(phases: Array) -> float:
     return float(jnp.abs(jnp.mean(jnp.exp(1j * phases))))
 
 
@@ -107,7 +122,7 @@ class TestV75FIMSyncAtZeroCoupling:
     NB26 showed R=1.0 at λ≥8 with K=0 for N=16.
     """
 
-    def test_fim_only_sync(self):
+    def test_fim_only_sync(self) -> None:
         N = 16
         key = jr.PRNGKey(42)
         phases0 = jr.uniform(key, (N,), maxval=TWO_PI)
@@ -122,7 +137,7 @@ class TestV75FIMSyncAtZeroCoupling:
             "FIM should synchronise without coupling."
         )
 
-    def test_no_fim_no_sync(self):
+    def test_no_fim_no_sync(self) -> None:
         N = 16
         key = jr.PRNGKey(42)
         phases0 = jr.uniform(key, (N,), maxval=TWO_PI)
@@ -151,7 +166,7 @@ class TestV76FIMScalingLaw:
         reason="FIM scaling non-monotonic on CPU-JAX at small N",
         strict=False,  # nondeterministic finite-size/precision effect; XPASS allowed
     )
-    def test_lambda_c_scales_with_N(self):
+    def test_lambda_c_scales_with_N(self) -> None:
         lambda_c_by_N = {}
 
         for N in [4, 8, 16]:
@@ -197,36 +212,38 @@ class TestV77FIMGradient:
     (it's a mean-field coupling). Verify autodiff works.
     """
 
-    def test_fim_gradient_finite(self):
+    def test_fim_gradient_finite(self) -> None:
         N = 8
         key = jr.PRNGKey(0)
         phases0 = jr.uniform(key, (N,), maxval=TWO_PI)
         omegas = jnp.zeros(N)
         K = jnp.zeros((N, N))
 
-        def loss(lam):
+        def loss(lam: float) -> Array:
             p = phases0
             for _ in range(50):
                 p = _fim_kuramoto_step(p, omegas, K, lam, 0.01)
             z = jnp.mean(jnp.exp(1j * p))
-            return jnp.abs(z)
+            magnitude: Array = jnp.abs(z)
+            return magnitude
 
         g = float(jax.grad(loss)(3.0))
         assert np.isfinite(g), f"FIM gradient is {g}"
         assert abs(g) > 1e-8, f"FIM gradient is zero: {g}"
 
-    def test_fim_gradient_vs_fd(self):
+    def test_fim_gradient_vs_fd(self) -> None:
         N = 6
         key = jr.PRNGKey(1)
         phases0 = jr.uniform(key, (N,), maxval=TWO_PI)
         omegas = jnp.zeros(N)
         K = jnp.zeros((N, N))
 
-        def loss(lam):
+        def loss(lam: float) -> Array:
             p = phases0
             for _ in range(30):
                 p = _fim_kuramoto_step(p, omegas, K, lam, 0.01)
-            return jnp.abs(jnp.mean(jnp.exp(1j * p)))
+            magnitude: Array = jnp.abs(jnp.mean(jnp.exp(1j * p)))
+            return magnitude
 
         lam0 = 3.0
         eps = 1e-4
@@ -251,7 +268,7 @@ class TestV78FIMHysteresis:
     Backward (from sync): sync persists to K≈4.
     """
 
-    def test_hysteresis_present(self):
+    def test_hysteresis_present(self) -> None:
         N = 16
         key = jr.PRNGKey(0)
         omegas = jr.normal(key, (N,)) * 0.3
@@ -309,7 +326,7 @@ class TestV79FIMTopologyUniversality:
     Small-world gets the largest boost.
     """
 
-    def test_fim_helps_all_topologies(self):
+    def test_fim_helps_all_topologies(self) -> None:
         N = 32
         key = jr.PRNGKey(42)
         omegas = jr.normal(key, (N,)) * 0.5
@@ -369,7 +386,7 @@ class TestV80FIMMeanFieldValidation:
     """
 
     @pytest.mark.timeout(600)  # heavy CPU-JAX sim; exceeds 60s local gate
-    def test_mean_field_prediction(self):
+    def test_mean_field_prediction(self) -> None:
         delta = 0.5
         N = 256
 
@@ -423,7 +440,7 @@ class TestV81FIMThermodynamicCost:
     by the FIM term as Σ |FIM force|² per step, verify linearity in λ.
     """
 
-    def test_power_linear_in_lambda(self):
+    def test_power_linear_in_lambda(self) -> None:
         N = 16
         key = jr.PRNGKey(0)
         omegas = jr.normal(key, (N,)) * 0.3
@@ -473,7 +490,7 @@ class TestV82FIMNoiseRobustness:
     maintain sync much better than coupling alone.
     """
 
-    def test_fim_resists_noise(self):
+    def test_fim_resists_noise(self) -> None:
         N = 16
         key = jr.PRNGKey(0)
         omegas = jr.normal(key, (N,)) * 0.3
@@ -512,7 +529,7 @@ class TestV83FIMConvergenceSpeed:
     Measure time (steps) to reach R>0.9.
     """
 
-    def test_fim_faster_convergence(self):
+    def test_fim_faster_convergence(self) -> None:
         N = 16
         key = jr.PRNGKey(42)
         phases0 = jr.uniform(key, (N,), maxval=TWO_PI)
@@ -520,7 +537,7 @@ class TestV83FIMConvergenceSpeed:
         K = jnp.ones((N, N)) * (3.0 / N)
         K = K.at[jnp.diag_indices(N)].set(0.0)
 
-        def time_to_sync(lam, threshold=0.9):
+        def time_to_sync(lam: float, threshold: float = 0.9) -> int:
             p = phases0
             for step in range(5000):
                 p = _fim_kuramoto_rk4_step(p, omegas, K, lam, 0.01)
@@ -549,7 +566,7 @@ class TestV84FullPipeline:
     Nobody has tested this end-to-end.
     """
 
-    def test_pipeline_recovers_something(self):
+    def test_pipeline_recovers_something(self) -> None:
         from scpn_phase_orchestrator.nn.bold import bold_from_neural
         from scpn_phase_orchestrator.nn.functional import stuart_landau_forward
         from scpn_phase_orchestrator.nn.inverse import (
@@ -611,7 +628,7 @@ class TestV85FIMLyapunov:
     Total potential: V_total = V_coupling + V_FIM should decrease.
     """
 
-    def test_generalised_potential_decreases(self):
+    def test_generalised_potential_decreases(self) -> None:
         N = 12
         key = jr.PRNGKey(0)
         phases0 = jr.uniform(key, (N,), maxval=TWO_PI)
@@ -620,13 +637,14 @@ class TestV85FIMLyapunov:
         K = K.at[jnp.diag_indices(N)].set(0.0)
         lam = 3.0
 
-        def potential(p):
+        def potential(p: Array) -> Array:
             diff = p[jnp.newaxis, :] - p[:, jnp.newaxis]
             V_coupling = -jnp.sum(K * jnp.cos(diff))
             z = jnp.mean(jnp.exp(1j * p))
             R = jnp.abs(z)
             V_fim = -lam * R**2
-            return V_coupling + V_fim
+            total: Array = V_coupling + V_fim
+            return total
 
         p = phases0
         potentials = [float(potential(p))]
@@ -654,7 +672,7 @@ class TestV86FIMGaugeInvariance:
     So FIM-Kuramoto should preserve gauge invariance.
     """
 
-    def test_fim_gauge_invariant(self):
+    def test_fim_gauge_invariant(self) -> None:
         N = 12
         key = jr.PRNGKey(0)
         phases0 = jr.uniform(key, (N,), maxval=TWO_PI)
