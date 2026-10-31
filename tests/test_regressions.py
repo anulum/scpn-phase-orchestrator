@@ -339,19 +339,19 @@ class TestRegressionPipelineEndToEnd:
         )
         regime = mgr.evaluate(state_low, BoundaryState())
         mgr.transition(regime)
-        if mgr.current_regime == Regime.CRITICAL:
-            # High R → must go through RECOVERY
-            phases_sync = np.full(n, 1.5)
-            r_high, psi = compute_order_parameter(phases_sync)
-            layer_high = LayerState(R=r_high, psi=psi)
-            state_high = UPDEState(
-                layers=[layer_high],
-                cross_layer_alignment=np.array([r_high]),
-                stability_proxy=r_high,
-                regime_id="recovery",
-            )
-            regime2 = mgr.evaluate(state_high, BoundaryState())
-            assert regime2 == Regime.RECOVERY
+        assert mgr.current_regime == Regime.CRITICAL
+        # High R → must go through RECOVERY
+        phases_sync = np.full(n, 1.5)
+        r_high, psi = compute_order_parameter(phases_sync)
+        layer_high = LayerState(R=r_high, psi=psi)
+        state_high = UPDEState(
+            layers=[layer_high],
+            cross_layer_alignment=np.array([r_high]),
+            stability_proxy=r_high,
+            regime_id="recovery",
+        )
+        regime2 = mgr.evaluate(state_high, BoundaryState())
+        assert regime2 == Regime.RECOVERY
 
     def test_lag_model_alpha_in_engine(self) -> None:
         """Verify LagModel alpha feeds correctly into UPDEEngine."""
