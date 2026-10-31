@@ -113,7 +113,7 @@ class TestOrderParameter:
 
     @pytest.mark.parametrize("backend_r", [-0.1, 1.1])
     def test_backend_material_order_parameter_bound_violation_is_rejected(
-        self, monkeypatch, backend_r: float
+        self, monkeypatch: pytest.MonkeyPatch, backend_r: float
     ) -> None:
         import scpn_phase_orchestrator.upde.order_params as op_mod
 
@@ -131,7 +131,7 @@ class TestOrderParameter:
             op_mod.compute_order_parameter(np.array([0.25], dtype=np.float64))
 
     def test_backend_order_parameter_roundoff_overrun_is_clamped(
-        self, monkeypatch
+        self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         import scpn_phase_orchestrator.upde.order_params as op_mod
 
@@ -151,7 +151,9 @@ class TestOrderParameter:
         assert r == 1.0
         assert psi == 0.25
 
-    def test_backend_non_finite_mean_phase_is_rejected(self, monkeypatch) -> None:
+    def test_backend_non_finite_mean_phase_is_rejected(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         import scpn_phase_orchestrator.upde.order_params as op_mod
 
         def fake_order(phases: np.ndarray) -> tuple[float, float]:
@@ -233,7 +235,7 @@ class TestPLV:
 
     @pytest.mark.parametrize("backend_plv", [-0.1, 1.1])
     def test_backend_material_plv_bound_violation_is_rejected(
-        self, monkeypatch, backend_plv: float
+        self, monkeypatch: pytest.MonkeyPatch, backend_plv: float
     ) -> None:
         import scpn_phase_orchestrator.upde.order_params as op_mod
 
@@ -249,7 +251,9 @@ class TestPLV:
                 np.array([0.0, 0.1], dtype=np.float64),
             )
 
-    def test_backend_plv_roundoff_overrun_is_clamped(self, monkeypatch) -> None:
+    def test_backend_plv_roundoff_overrun_is_clamped(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         import scpn_phase_orchestrator.upde.order_params as op_mod
 
         def fake_plv(a: np.ndarray, b: np.ndarray) -> float:
@@ -267,7 +271,9 @@ class TestPLV:
 
         assert val == 1.0
 
-    def test_backend_non_finite_plv_is_rejected(self, monkeypatch) -> None:
+    def test_backend_non_finite_plv_is_rejected(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         import scpn_phase_orchestrator.upde.order_params as op_mod
 
         def fake_plv(a: np.ndarray, b: np.ndarray) -> float:
@@ -361,7 +367,7 @@ class TestLayerCoherence:
 
     @pytest.mark.parametrize("backend_r", [-0.1, 1.1])
     def test_backend_material_layer_coherence_bound_violation_is_rejected(
-        self, monkeypatch, backend_r: float
+        self, monkeypatch: pytest.MonkeyPatch, backend_r: float
     ) -> None:
         import scpn_phase_orchestrator.upde.order_params as op_mod
 
@@ -382,7 +388,7 @@ class TestLayerCoherence:
             )
 
     def test_backend_layer_coherence_roundoff_overrun_is_clamped(
-        self, monkeypatch
+        self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         import scpn_phase_orchestrator.upde.order_params as op_mod
 
@@ -407,7 +413,7 @@ class TestLayerCoherence:
 
     def test_backend_non_finite_layer_coherence_is_rejected(
         self,
-        monkeypatch,
+        monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         import scpn_phase_orchestrator.upde.order_params as op_mod
 
@@ -496,7 +502,7 @@ class TestDispatcher:
         assert 0.0 <= elapsed < float("inf")
 
     def test_resolve_backends_falls_back_to_python_if_optional_backends_fail(
-        self, monkeypatch
+        self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         import scpn_phase_orchestrator.upde.order_params as op_mod
 
@@ -564,7 +570,7 @@ class TestDispatcher:
         assert set(first) == {"order_parameter", "plv", "layer_coherence"}
 
     def test_dispatch_returns_none_when_active_backend_symbol_missing(
-        self, monkeypatch
+        self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         import scpn_phase_orchestrator.upde.order_params as op_mod
 
@@ -574,7 +580,9 @@ class TestDispatcher:
 
         assert op_mod._dispatch("plv") == ("python", None)
 
-    def test_probe_marks_faulty_backend_unusable(self, monkeypatch) -> None:
+    def test_probe_marks_faulty_backend_unusable(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         import scpn_phase_orchestrator.upde.order_params as op_mod
 
         def broken_backend(name: str) -> dict[str, object]:
@@ -605,7 +613,7 @@ class TestDispatcher:
         assert op_mod._order_parameter_probe_seconds(active) < float("inf")
 
     def test_dispatch_falls_through_when_active_backend_has_no_symbol(
-        self, monkeypatch
+        self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         """Automatic dispatch skips an owner that lacks the kernel.
 
@@ -631,7 +639,9 @@ class TestDispatcher:
         assert callable(fn)
         assert fn(np.array([0.0], dtype=np.float64)) == (0.3, 0.0)
 
-    def test_dispatch_falls_back_when_active_backend_raises(self, monkeypatch) -> None:
+    def test_dispatch_falls_back_when_active_backend_raises(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         import scpn_phase_orchestrator.upde.order_params as op_mod
 
         def failing_loader(name: str) -> dict[str, object]:
@@ -701,7 +711,7 @@ class TestDispatcher:
             op_mod.order_params_backend("chimera")
 
     def test_layer_coherence_empty_selected_subarray_returns_zero(
-        self, monkeypatch
+        self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         import scpn_phase_orchestrator.upde.order_params as op_mod
 
@@ -712,7 +722,7 @@ class TestDispatcher:
         assert op_mod.compute_layer_coherence(phases, indices) == 0.0
 
     def test_python_fallback_kernels_preserve_physical_invariants(
-        self, monkeypatch
+        self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         import scpn_phase_orchestrator.upde.order_params as op_mod
 
@@ -738,25 +748,25 @@ class TestOrderParameterEdgeCases:
     """Verify order parameter functions handle edge cases with defined behaviour,
     not just "doesn't crash"."""
 
-    def test_empty_phases_returns_zero_r_and_psi(self):
+    def test_empty_phases_returns_zero_r_and_psi(self) -> None:
         from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
         r, psi = compute_order_parameter(np.array([]))
         assert r == 0.0 and psi == 0.0, "Empty phases must give R=0, Ψ=0"
 
-    def test_single_phase_returns_r_one(self):
+    def test_single_phase_returns_r_one(self) -> None:
         from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 
         r, psi = compute_order_parameter(np.array([1.23]))
         assert abs(r - 1.0) < 1e-10, "Single oscillator must have R=1"
         assert abs(psi - 1.23) < 1e-10, "Single oscillator Ψ must equal its phase"
 
-    def test_plv_two_empty_series_returns_zero(self):
+    def test_plv_two_empty_series_returns_zero(self) -> None:
         from scpn_phase_orchestrator.upde.order_params import compute_plv
 
         assert compute_plv(np.array([]), np.array([])) == 0.0
 
-    def test_plv_one_sided_empty_series_is_invalid(self):
+    def test_plv_one_sided_empty_series_is_invalid(self) -> None:
         from scpn_phase_orchestrator.upde.order_params import compute_plv
 
         with pytest.raises(ValueError, match="equal-length"):
@@ -764,14 +774,14 @@ class TestOrderParameterEdgeCases:
         with pytest.raises(ValueError, match="equal-length"):
             compute_plv(np.array([1.0]), np.array([]))
 
-    def test_plv_identical_phases_returns_one(self):
+    def test_plv_identical_phases_returns_one(self) -> None:
         from scpn_phase_orchestrator.upde.order_params import compute_plv
 
         phases = np.array([0.5, 0.5, 0.5, 0.5])
         plv = compute_plv(phases, phases)
         assert abs(plv - 1.0) < 1e-10, "PLV of identical phases must be 1"
 
-    def test_plv_anti_phase_returns_one(self):
+    def test_plv_anti_phase_returns_one(self) -> None:
         """PLV measures consistency of phase difference, not alignment.
         Anti-phase (π offset) has a consistent difference → PLV = 1."""
         from scpn_phase_orchestrator.upde.order_params import compute_plv
@@ -784,7 +794,9 @@ class TestOrderParameterEdgeCases:
 
 # Salvaged module-specific behavioural contracts from deleted mixed tests.
 class TestOrderParamsPythonPath:
-    def test_compute_order_parameter_python(self, monkeypatch):
+    def test_compute_order_parameter_python(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         import scpn_phase_orchestrator.upde.order_params as op_mod
 
         monkeypatch.setattr(op_mod, "_HAS_RUST", False)
@@ -792,7 +804,7 @@ class TestOrderParamsPythonPath:
         r, psi = op_mod.compute_order_parameter(phases)
         np.testing.assert_allclose(r, 1.0, atol=1e-10)
 
-    def test_compute_plv_python(self, monkeypatch):
+    def test_compute_plv_python(self, monkeypatch: pytest.MonkeyPatch) -> None:
         import scpn_phase_orchestrator.upde.order_params as op_mod
 
         monkeypatch.setattr(op_mod, "_HAS_RUST", False)
@@ -801,7 +813,7 @@ class TestOrderParamsPythonPath:
         plv = op_mod.compute_plv(a, b)
         np.testing.assert_allclose(plv, 1.0, atol=1e-10)
 
-    def test_compute_plv_size_mismatch(self, monkeypatch):
+    def test_compute_plv_size_mismatch(self, monkeypatch: pytest.MonkeyPatch) -> None:
         import scpn_phase_orchestrator.upde.order_params as op_mod
 
         monkeypatch.setattr(op_mod, "_HAS_RUST", False)
@@ -815,28 +827,28 @@ class TestOrderParamsPythonPath:
 
 
 class TestDebiasedSquaredOrderParameter:
-    def test_perfect_synchrony_is_one(self):
+    def test_perfect_synchrony_is_one(self) -> None:
         phases = np.full(5, 1.234)
         assert debiased_squared_order_parameter(phases) == pytest.approx(1.0)
 
-    def test_two_antiphase_oscillators_give_minus_one(self):
+    def test_two_antiphase_oscillators_give_minus_one(self) -> None:
         # R = 0 for opposed phases; (2·0 − 1) / (2 − 1) = −1.
         phases = np.array([0.0, np.pi])
         assert debiased_squared_order_parameter(phases) == pytest.approx(-1.0)
 
-    def test_equally_spaced_phases_are_below_zero(self):
+    def test_equally_spaced_phases_are_below_zero(self) -> None:
         # Perfectly uniform (R = 0) → (N·0 − 1)/(N − 1) = −1/(N − 1), honestly < 0.
         n = 8
-        phases = np.arange(n) * (TWO_PI / n)
+        phases = np.arange(n, dtype=np.float64) * (TWO_PI / n)
         assert debiased_squared_order_parameter(phases) == pytest.approx(-1.0 / (n - 1))
 
-    def test_never_exceeds_one(self):
+    def test_never_exceeds_one(self) -> None:
         rng = np.random.default_rng(3)
         for _ in range(50):
             phases = rng.uniform(0.0, TWO_PI, 16)
             assert debiased_squared_order_parameter(phases) <= 1.0 + 1e-12
 
-    def test_removes_the_small_n_bias(self):
+    def test_removes_the_small_n_bias(self) -> None:
         # Raw R² carries the 1/N floor; the debiased estimator averages to ~0.
         rng = np.random.default_rng(0)
         n = 8
@@ -850,10 +862,10 @@ class TestDebiasedSquaredOrderParameter:
         assert np.mean(raw_squared) == pytest.approx(1.0 / n, abs=0.03)
         assert abs(float(np.mean(debiased))) < 0.02
 
-    def test_single_oscillator_rejected(self):
+    def test_single_oscillator_rejected(self) -> None:
         with pytest.raises(ValueError, match="at least two phases"):
             debiased_squared_order_parameter(np.array([0.5]))
 
-    def test_empty_rejected(self):
+    def test_empty_rejected(self) -> None:
         with pytest.raises(ValueError, match="at least two phases"):
             debiased_squared_order_parameter(np.array([]))
