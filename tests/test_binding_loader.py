@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import pytest
 
@@ -39,7 +40,7 @@ _SPEC_DATA = {
 }
 
 
-def test_load_json(tmp_path):
+def test_load_json(tmp_path: Path) -> None:
     p = tmp_path / "spec.json"
     p.write_text(json.dumps(_SPEC_DATA), encoding="utf-8")
     spec = load_binding_spec(p)
@@ -51,7 +52,7 @@ def test_load_json(tmp_path):
     assert len(spec.actuators) == 1
 
 
-def test_load_yaml(tmp_path):
+def test_load_yaml(tmp_path: Path) -> None:
     yaml = pytest.importorskip("yaml")
     p = tmp_path / "spec.yaml"
     p.write_text(yaml.dump(_SPEC_DATA), encoding="utf-8")
@@ -61,21 +62,21 @@ def test_load_yaml(tmp_path):
     assert spec.objectives.good_layers == [0]
 
 
-def test_nonexistent_file_raises():
+def test_nonexistent_file_raises() -> None:
     from scpn_phase_orchestrator.binding.loader import BindingLoadError
 
     with pytest.raises(BindingLoadError, match="cannot read"):
         load_binding_spec("/nonexistent/path/spec.json")
 
 
-def test_unsupported_extension(tmp_path):
+def test_unsupported_extension(tmp_path: Path) -> None:
     p = tmp_path / "spec.txt"
     p.write_text("{}", encoding="utf-8")
     with pytest.raises(ValueError, match="Unsupported file extension"):
         load_binding_spec(p)
 
 
-def test_load_with_imprint_model(tmp_path):
+def test_load_with_imprint_model(tmp_path: Path) -> None:
     data = {**_SPEC_DATA, "imprint_model": {"decay_rate": 0.1, "saturation": 0.9}}
     p = tmp_path / "spec.json"
     p.write_text(json.dumps(data), encoding="utf-8")
@@ -86,7 +87,7 @@ def test_load_with_imprint_model(tmp_path):
     assert spec.imprint_model.modulates == []
 
 
-def test_load_with_geometry_prior(tmp_path):
+def test_load_with_geometry_prior(tmp_path: Path) -> None:
     geo = {"constraint_type": "spherical", "params": {"radius": 1.0}}
     data = {**_SPEC_DATA, "geometry_prior": geo}
     p = tmp_path / "spec.json"
@@ -97,7 +98,7 @@ def test_load_with_geometry_prior(tmp_path):
     assert spec.geometry_prior.params == {"radius": 1.0}
 
 
-def test_loader_resolves_extractor_aliases(tmp_path):
+def test_loader_resolves_extractor_aliases(tmp_path: Path) -> None:
     """Aliases (physical/informational/symbolic) resolve to algorithm names."""
     data = {
         **_SPEC_DATA,
@@ -115,7 +116,7 @@ def test_loader_resolves_extractor_aliases(tmp_path):
     assert spec.oscillator_families["s"].extractor_type == "ring"
 
 
-def test_loader_passes_algorithm_names_through(tmp_path):
+def test_loader_passes_algorithm_names_through(tmp_path: Path) -> None:
     """Algorithm names (hilbert/event/graph) pass through unchanged."""
     data = {
         **_SPEC_DATA,
@@ -131,7 +132,7 @@ def test_loader_passes_algorithm_names_through(tmp_path):
     assert spec.oscillator_families["g"].extractor_type == "graph"
 
 
-def test_loader_preserves_named_driver_channels(tmp_path):
+def test_loader_preserves_named_driver_channels(tmp_path: Path) -> None:
     data = {
         **_SPEC_DATA,
         "drivers": {
@@ -151,7 +152,7 @@ def test_loader_preserves_named_driver_channels(tmp_path):
     assert spec.drivers.all_channel_configs()["Q"] == {"zeta": 0.25}
 
 
-def test_loader_preserves_n_channel_algebra(tmp_path):
+def test_loader_preserves_n_channel_algebra(tmp_path: Path) -> None:
     data = {
         **_SPEC_DATA,
         "oscillator_families": {
@@ -214,7 +215,7 @@ def test_loader_preserves_n_channel_algebra(tmp_path):
     assert spec.cross_channel_couplings[0].target == "P"
 
 
-def test_loader_rejects_non_mapping_drivers_block(tmp_path):
+def test_loader_rejects_non_mapping_drivers_block(tmp_path: Path) -> None:
     data = {**_SPEC_DATA, "drivers": ["physical"]}
     p = tmp_path / "spec.json"
     p.write_text(json.dumps(data), encoding="utf-8")
@@ -223,7 +224,7 @@ def test_loader_rejects_non_mapping_drivers_block(tmp_path):
         load_binding_spec(p)
 
 
-def test_loader_rejects_non_mapping_standard_driver(tmp_path):
+def test_loader_rejects_non_mapping_standard_driver(tmp_path: Path) -> None:
     data = {
         **_SPEC_DATA,
         "drivers": {"physical": 1.0, "informational": {}, "symbolic": {}},
@@ -237,7 +238,7 @@ def test_loader_rejects_non_mapping_standard_driver(tmp_path):
         load_binding_spec(p)
 
 
-def test_loader_rejects_non_mapping_named_driver(tmp_path):
+def test_loader_rejects_non_mapping_named_driver(tmp_path: Path) -> None:
     data = {
         **_SPEC_DATA,
         "drivers": {
@@ -256,7 +257,7 @@ def test_loader_rejects_non_mapping_named_driver(tmp_path):
         load_binding_spec(p)
 
 
-def test_loader_rejects_invalid_named_driver_channel(tmp_path):
+def test_loader_rejects_invalid_named_driver_channel(tmp_path: Path) -> None:
     data = {
         **_SPEC_DATA,
         "drivers": {
@@ -273,7 +274,7 @@ def test_loader_rejects_invalid_named_driver_channel(tmp_path):
         load_binding_spec(p)
 
 
-def test_loader_rejects_invalid_declared_channel_id(tmp_path):
+def test_loader_rejects_invalid_declared_channel_id(tmp_path: Path) -> None:
     data = {**_SPEC_DATA, "channels": {"bad channel": {"role": "bad"}}}
     p = tmp_path / "spec.json"
     p.write_text(json.dumps(data), encoding="utf-8")
@@ -282,7 +283,7 @@ def test_loader_rejects_invalid_declared_channel_id(tmp_path):
         load_binding_spec(p)
 
 
-def test_json_yaml_produce_identical_spec(tmp_path):
+def test_json_yaml_produce_identical_spec(tmp_path: Path) -> None:
     """Loading the same spec from JSON and YAML must produce identical BindingSpec."""
     yaml = pytest.importorskip("yaml")
     pj = tmp_path / "spec.json"
@@ -298,7 +299,7 @@ def test_json_yaml_produce_identical_spec(tmp_path):
     assert spec_j.coupling.base_strength == spec_y.coupling.base_strength
 
 
-def test_boundaries_preserved(tmp_path):
+def test_boundaries_preserved(tmp_path: Path) -> None:
     """Boundary definitions must survive load with correct field values."""
     p = tmp_path / "spec.json"
     p.write_text(json.dumps(_SPEC_DATA), encoding="utf-8")
@@ -312,7 +313,7 @@ def test_boundaries_preserved(tmp_path):
     assert b.severity == "soft"
 
 
-def test_loader_helper_type_guards_cover_optional_scalars_and_collections():
+def test_loader_helper_type_guards_cover_optional_scalars_and_collections() -> None:
     """Cover low-miss guard helpers around optional/list-like field parsing."""
     assert loader_mod._optional_list(None, "optional") == []
     assert loader_mod._optional_number(None, "level") is None
@@ -332,7 +333,7 @@ def test_loader_helper_type_guards_cover_optional_scalars_and_collections():
         loader_mod._require_number("nan", "decay_alpha")
 
 
-def test_loader_rejects_non_finite_numeric_values(tmp_path):
+def test_loader_rejects_non_finite_numeric_values(tmp_path: Path) -> None:
     data = {**_SPEC_DATA, "sample_period_s": float("nan")}
     p = tmp_path / "spec.json"
     p.write_text(json.dumps(data), encoding="utf-8")
@@ -341,7 +342,7 @@ def test_loader_rejects_non_finite_numeric_values(tmp_path):
         load_binding_spec(p)
 
 
-def test_loader_rejects_invalid_channel_group_id(tmp_path):
+def test_loader_rejects_invalid_channel_group_id(tmp_path: Path) -> None:
     """Invalid channel-group identifiers must fail during parser ingestion."""
     data = {
         **_SPEC_DATA,
@@ -360,7 +361,7 @@ def test_loader_rejects_invalid_channel_group_id(tmp_path):
         load_binding_spec(p)
 
 
-def test_actuator_limits_tuple(tmp_path):
+def test_actuator_limits_tuple(tmp_path: Path) -> None:
     """Actuator limits (from JSON list) must be accessible as (lo, hi) tuple."""
     p = tmp_path / "spec.json"
     p.write_text(json.dumps(_SPEC_DATA), encoding="utf-8")
@@ -368,7 +369,7 @@ def test_actuator_limits_tuple(tmp_path):
     assert spec.actuators[0].limits == (0.0, 1.0)
 
 
-def test_loaded_spec_passes_validation(tmp_path):
+def test_loaded_spec_passes_validation(tmp_path: Path) -> None:
     """A well-formed spec must pass validation after loading."""
     from scpn_phase_orchestrator.binding import validate_binding_spec
 
@@ -379,7 +380,7 @@ def test_loaded_spec_passes_validation(tmp_path):
     assert errors == [], f"Valid spec should produce no errors: {errors}"
 
 
-def test_validate_rejects_broken_channel_algebra(tmp_path):
+def test_validate_rejects_broken_channel_algebra(tmp_path: Path) -> None:
     from scpn_phase_orchestrator.binding import validate_binding_spec
 
     data = {
@@ -412,7 +413,7 @@ def test_validate_rejects_broken_channel_algebra(tmp_path):
     assert any("mode must be one of" in err for err in errors)
 
 
-def test_loader_validate_control_period_and_channels(tmp_path):
+def test_loader_validate_control_period_and_channels(tmp_path: Path) -> None:
     from scpn_phase_orchestrator.binding import validate_binding_spec
 
     data = {
@@ -448,7 +449,7 @@ def test_loader_validate_control_period_and_channels(tmp_path):
     assert any("knob" in e for e in errors)
 
 
-def test_loader_rejects_inverted_actuator_limits(tmp_path):
+def test_loader_rejects_inverted_actuator_limits(tmp_path: Path) -> None:
     data = {
         **_SPEC_DATA,
         "actuators": [
@@ -462,7 +463,7 @@ def test_loader_rejects_inverted_actuator_limits(tmp_path):
         load_binding_spec(p)
 
 
-def test_loader_rejects_non_string_name_after_structural_parse(tmp_path):
+def test_loader_rejects_non_string_name_after_structural_parse(tmp_path: Path) -> None:
     data = {**_SPEC_DATA, "name": False}
     p = tmp_path / "bad_name.json"
     p.write_text(json.dumps(data), encoding="utf-8")
@@ -471,7 +472,7 @@ def test_loader_rejects_non_string_name_after_structural_parse(tmp_path):
         load_binding_spec(p)
 
 
-def test_loader_rejects_boolean_layer_index(tmp_path):
+def test_loader_rejects_boolean_layer_index(tmp_path: Path) -> None:
     data = {
         **_SPEC_DATA,
         "layers": [{"name": "L1", "index": True, "oscillator_ids": ["a"]}],
@@ -485,7 +486,7 @@ def test_loader_rejects_boolean_layer_index(tmp_path):
         load_binding_spec(p)
 
 
-def test_loader_rejects_boolean_numeric_period(tmp_path):
+def test_loader_rejects_boolean_numeric_period(tmp_path: Path) -> None:
     data = {**_SPEC_DATA, "sample_period_s": True}
     p = tmp_path / "bad_period.json"
     p.write_text(json.dumps(data), encoding="utf-8")
@@ -496,7 +497,7 @@ def test_loader_rejects_boolean_numeric_period(tmp_path):
         load_binding_spec(p)
 
 
-def test_loader_rejects_non_boolean_channel_required_flag(tmp_path):
+def test_loader_rejects_non_boolean_channel_required_flag(tmp_path: Path) -> None:
     data = {
         **_SPEC_DATA,
         "channels": {"P": {"role": "plant", "required": "yes"}},
@@ -510,7 +511,7 @@ def test_loader_rejects_non_boolean_channel_required_flag(tmp_path):
         load_binding_spec(p)
 
 
-def test_loader_allows_null_derived_from_as_empty_list(tmp_path):
+def test_loader_allows_null_derived_from_as_empty_list(tmp_path: Path) -> None:
     data = {
         **_SPEC_DATA,
         "channels": {
@@ -526,7 +527,7 @@ def test_loader_allows_null_derived_from_as_empty_list(tmp_path):
     assert spec.channels["P"].derived_from == []
 
 
-def test_load_channel_groups_requires_channels_key(tmp_path):
+def test_load_channel_groups_requires_channels_key(tmp_path: Path) -> None:
     data = {
         **_SPEC_DATA,
         "channel_groups": {
@@ -543,7 +544,7 @@ def test_load_channel_groups_requires_channels_key(tmp_path):
         load_binding_spec(p)
 
 
-def test_loader_rejects_non_list_channel_group_entries(tmp_path):
+def test_loader_rejects_non_list_channel_group_entries(tmp_path: Path) -> None:
     data = {
         **_SPEC_DATA,
         "channel_groups": {"supervised": {"channels": "P"}},
@@ -558,7 +559,9 @@ def test_loader_rejects_non_list_channel_group_entries(tmp_path):
         load_binding_spec(p)
 
 
-def test_load_binding_treats_null_cross_channel_couplings_as_empty(tmp_path):
+def test_load_binding_treats_null_cross_channel_couplings_as_empty(
+    tmp_path: Path,
+) -> None:
     data = {**_SPEC_DATA, "cross_channel_couplings": None}
     p = tmp_path / "null_cross_channel_couplings.json"
     p.write_text(json.dumps(data), encoding="utf-8")
@@ -568,7 +571,9 @@ def test_load_binding_treats_null_cross_channel_couplings_as_empty(tmp_path):
     assert spec.cross_channel_couplings == []
 
 
-def test_loader_preserves_optional_layer_omegas_and_missing_boundary_bounds(tmp_path):
+def test_loader_preserves_optional_layer_omegas_and_missing_boundary_bounds(
+    tmp_path: Path,
+) -> None:
     data = {
         **_SPEC_DATA,
         "layers": [
@@ -591,7 +596,7 @@ def test_loader_preserves_optional_layer_omegas_and_missing_boundary_bounds(tmp_
     assert spec.boundaries[0].upper is None
 
 
-def test_loader_rejects_actuator_limits_with_wrong_arity(tmp_path):
+def test_loader_rejects_actuator_limits_with_wrong_arity(tmp_path: Path) -> None:
     data = {
         **_SPEC_DATA,
         "actuators": [
@@ -608,7 +613,7 @@ def test_loader_rejects_actuator_limits_with_wrong_arity(tmp_path):
         load_binding_spec(p)
 
 
-def test_loader_rejects_invalid_channel_group_identifier(tmp_path):
+def test_loader_rejects_invalid_channel_group_identifier(tmp_path: Path) -> None:
     data = {
         **_SPEC_DATA,
         "channel_groups": {"1-risk": {"channels": ["P"]}},
@@ -623,7 +628,7 @@ def test_loader_rejects_invalid_channel_group_identifier(tmp_path):
         load_binding_spec(p)
 
 
-def test_loader_preserves_protocol_net_and_amplitude_blocks(tmp_path):
+def test_loader_preserves_protocol_net_and_amplitude_blocks(tmp_path: Path) -> None:
     data = {
         **_SPEC_DATA,
         "protocol_net": {
@@ -679,7 +684,7 @@ def test_loader_preserves_protocol_net_and_amplitude_blocks(tmp_path):
     ],
 )
 def test_loader_rejects_invalid_protocol_net_transitions(
-    tmp_path, transitions: object, message: str
+    tmp_path: Path, transitions: object, message: str
 ) -> None:
     data = {
         **_SPEC_DATA,
@@ -703,7 +708,7 @@ class TestPipelineWiring:
     engine parameters into the UPDE pipeline.
     """
 
-    def test_binding_spec_to_engine_to_order_parameter(self, tmp_path):
+    def test_binding_spec_to_engine_to_order_parameter(self, tmp_path: Path) -> None:
         """E2E: load a binding spec, extract coupling params, run UPDEEngine,
         compute order parameter R."""
         import numpy as np
@@ -737,7 +742,7 @@ class TestPipelineWiring:
         assert 0.0 <= r <= 1.0, f"Order parameter out of range: {r}"
         assert spec.name == "loader-test"
 
-    def test_load_binding_spec_performance(self, tmp_path):
+    def test_load_binding_spec_performance(self, tmp_path: Path) -> None:
         """load_binding_spec must complete in < 10ms for a standard spec."""
         import time
 
@@ -756,25 +761,25 @@ class TestPipelineWiring:
 
 # Salvaged module-specific behavioural contracts from deleted mixed tests.
 class TestBindingLoader:
-    def test_json_parse_error(self, tmp_path):
+    def test_json_parse_error(self, tmp_path: Path) -> None:
         p = tmp_path / "bad.json"
         p.write_text("{invalid json", encoding="utf-8")
         with pytest.raises(BindingLoadError, match="JSON parse"):
             load_binding_spec(p)
 
-    def test_yaml_parse_error(self, tmp_path):
+    def test_yaml_parse_error(self, tmp_path: Path) -> None:
         p = tmp_path / "bad.yaml"
         p.write_text(":\n  - :\n    -:", encoding="utf-8")
         with pytest.raises(BindingLoadError, match="YAML parse"):
             load_binding_spec(p)
 
-    def test_non_dict_top_level(self, tmp_path):
+    def test_non_dict_top_level(self, tmp_path: Path) -> None:
         p = tmp_path / "list.json"
         p.write_text("[1,2,3]", encoding="utf-8")
         with pytest.raises(BindingLoadError, match="expected mapping"):
             load_binding_spec(p)
 
-    def test_protocol_net_loading(self, tmp_path):
+    def test_protocol_net_loading(self, tmp_path: Path) -> None:
         data = {
             "name": "pnet",
             "version": "1.0.0",
@@ -808,7 +813,7 @@ class TestBindingLoader:
         assert spec.protocol_net is not None
         assert len(spec.protocol_net.transitions) == 1
 
-    def test_amplitude_loading(self, tmp_path):
+    def test_amplitude_loading(self, tmp_path: Path) -> None:
         data = {
             "name": "amp",
             "version": "1.0.0",
