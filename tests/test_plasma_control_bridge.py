@@ -8,6 +8,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from typing import TypeVar
+
 import numpy as np
 import pytest
 
@@ -17,6 +20,13 @@ from scpn_phase_orchestrator.adapters.plasma_control_bridge import (
 
 TWO_PI = 2.0 * np.pi
 
+_R = TypeVar("_R")
+
+
+def _call(fn: Callable[..., _R], *args: object, **kwargs: object) -> _R:
+    """Call ``fn`` with arguments that are deliberately outside its types."""
+    return fn(*args, **kwargs)
+
 
 class _UncoercibleArray:
     def __array__(self, *_args: object, **_kwargs: object) -> np.ndarray:
@@ -25,11 +35,11 @@ class _UncoercibleArray:
 
 class TestConstructorValidation:
     @pytest.mark.parametrize("n_layers", [True, 1.5, "2", 0, 9])
-    def test_invalid_n_layers_raise(self, n_layers: object):
+    def test_invalid_n_layers_raise(self, n_layers: object) -> None:
         with pytest.raises(ValueError, match="n_layers"):
-            PlasmaControlBridge(n_layers=n_layers)
+            _call(PlasmaControlBridge, n_layers=n_layers)
 
-    def test_supported_subset_layer_count(self):
+    def test_supported_subset_layer_count(self) -> None:
         bridge = PlasmaControlBridge(n_layers=3)
         assert len(bridge.import_plasma_omega()) == 3
 
@@ -39,13 +49,13 @@ class TestKnmSpecImport:
         "matrix",
         [_UncoercibleArray(), np.array(["not-numeric"], dtype=object)],
     )
-    def test_rejects_non_numeric_coupling_payloads(self, matrix: object):
+    def test_rejects_non_numeric_coupling_payloads(self, matrix: object) -> None:
         bridge = PlasmaControlBridge(n_layers=2)
 
         with pytest.raises(ValueError, match="Layer Knm"):
             bridge.import_knm_spec(matrix)
 
-    def test_kronecker_expansion_shape(self):
+    def test_kronecker_expansion_shape(self) -> None:
         bridge = PlasmaControlBridge(n_layers=4)
         layer_knm = np.array(
             [
@@ -61,7 +71,7 @@ class TestKnmSpecImport:
         assert coupling.alpha.shape == (12, 12)
         assert np.all(np.diag(coupling.knm) == 0.0)
 
-    def test_kronecker_expansion_preserves_structure(self):
+    def test_kronecker_expansion_preserves_structure(self) -> None:
         bridge = PlasmaControlBridge(n_layers=2)
         layer_knm = np.array([[0.0, 0.8], [0.8, 0.0]])
         coupling = bridge.import_knm_spec(layer_knm)
@@ -71,32 +81,32 @@ class TestKnmSpecImport:
         assert coupling.knm[0, 2] == pytest.approx(0.8)
         assert coupling.knm[2, 0] == pytest.approx(0.8)
 
-    def test_rejects_non_square(self):
+    def test_rejects_non_square(self) -> None:
         bridge = PlasmaControlBridge(n_layers=4)
         with pytest.raises(ValueError, match="square"):
             bridge.import_knm_spec(np.zeros((3, 4)))
 
-    def test_rejects_wrong_layer_knm_size(self):
+    def test_rejects_wrong_layer_knm_size(self) -> None:
         bridge = PlasmaControlBridge(n_layers=4)
         with pytest.raises(ValueError, match="n_layers"):
             bridge.import_knm_spec(np.zeros((3, 3)))
 
-    def test_rejects_nonfinite_layer_knm(self):
+    def test_rejects_nonfinite_layer_knm(self) -> None:
         bridge = PlasmaControlBridge(n_layers=2)
         with pytest.raises(ValueError, match="finite"):
             bridge.import_knm_spec(np.array([[0.0, np.nan], [0.0, 0.0]]))
 
-    def test_rejects_boolean_layer_knm_alias(self):
+    def test_rejects_boolean_layer_knm_alias(self) -> None:
         bridge = PlasmaControlBridge(n_layers=2)
         with pytest.raises(ValueError, match="Layer Knm"):
             bridge.import_knm_spec(np.array([[False, True], [True, False]]))
 
-    def test_rejects_nonzero_layer_self_coupling(self):
+    def test_rejects_nonzero_layer_self_coupling(self) -> None:
         bridge = PlasmaControlBridge(n_layers=2)
         with pytest.raises(ValueError, match="self-coupling"):
             bridge.import_knm_spec(np.array([[0.1, 0.8], [0.8, 0.0]]))
 
-    def test_import_knm_spec_copies_input_matrix(self):
+    def test_import_knm_spec_copies_input_matrix(self) -> None:
         bridge = PlasmaControlBridge(n_layers=2)
         layer_knm = np.array([[0.0, 0.8], [0.8, 0.0]])
         coupling = bridge.import_knm_spec(layer_knm)
@@ -105,7 +115,7 @@ class TestKnmSpecImport:
         assert coupling.knm[0, 2] == pytest.approx(0.8)
 
     @pytest.mark.parametrize("n_osc_per_layer", [True, 0, -1, 1.5, "2"])
-    def test_rejects_invalid_n_osc_per_layer(self, n_osc_per_layer: object):
+    def test_rejects_invalid_n_osc_per_layer(self, n_osc_per_layer: object) -> None:
         bridge = PlasmaControlBridge(n_layers=2)
         with pytest.raises(ValueError, match="n_osc_per_layer"):
             bridge.import_knm_spec(
@@ -114,13 +124,13 @@ class TestKnmSpecImport:
 
 
 class TestSnapshotImport:
-    def test_rejects_non_mapping_tick_result(self):
+    def test_rejects_non_mapping_tick_result(self) -> None:
         bridge = PlasmaControlBridge()
 
         with pytest.raises(ValueError, match="dict"):
-            bridge.import_snapshot([])
+            _call(bridge.import_snapshot, [])
 
-    def test_snapshot_to_upde_state(self):
+    def test_snapshot_to_upde_state(self) -> None:
         bridge = PlasmaControlBridge(n_layers=4)
         phases = np.linspace(0, TWO_PI, 8, endpoint=False)
         snapshot = {
@@ -136,13 +146,13 @@ class TestSnapshotImport:
         for ls in state.layers:
             assert 0.0 <= ls.R <= 1.0
 
-    def test_snapshot_default_layer_sizes(self):
+    def test_snapshot_default_layer_sizes(self) -> None:
         bridge = PlasmaControlBridge(n_layers=4)
         snapshot = {"phases": [0.0] * 8}
         state = bridge.import_snapshot(snapshot)
         assert len(state.layers) == 4
 
-    def test_snapshot_empty_layer_group(self):
+    def test_snapshot_empty_layer_group(self) -> None:
         bridge = PlasmaControlBridge(n_layers=3)
         snapshot = {"phases": [0.1, 0.2], "layer_sizes": [1, 1, 0]}
         state = bridge.import_snapshot(snapshot)
@@ -163,25 +173,27 @@ class TestSnapshotImport:
             ({"phases": [0.0, 1.0], "regime": ""}, "regime"),
         ],
     )
-    def test_snapshot_rejects_invalid_payload(self, snapshot: dict, field: str):
+    def test_snapshot_rejects_invalid_payload(
+        self, snapshot: dict[str, object], field: str
+    ) -> None:
         bridge = PlasmaControlBridge(n_layers=2)
         with pytest.raises(ValueError, match=field):
-            bridge.import_snapshot(snapshot)
+            _call(bridge.import_snapshot, snapshot)
 
 
 class TestLyapunovVerdict:
-    def test_stable_verdict(self):
+    def test_stable_verdict(self) -> None:
         bridge = PlasmaControlBridge()
         result = bridge.import_lyapunov_verdict({"score": 0.8})
         assert result["lyapunov_score"] == pytest.approx(0.8)
         assert result["stable"] is True
 
-    def test_unstable_verdict(self):
+    def test_unstable_verdict(self) -> None:
         bridge = PlasmaControlBridge()
         result = bridge.import_lyapunov_verdict({"score": 0.1})
         assert result["stable"] is False
 
-    def test_verdict_from_object(self):
+    def test_verdict_from_object(self) -> None:
         from types import SimpleNamespace
 
         bridge = PlasmaControlBridge()
@@ -191,14 +203,14 @@ class TestLyapunovVerdict:
         assert result["stable"] is True
 
     @pytest.mark.parametrize("score", [-0.1, 1.1, np.nan, True])
-    def test_rejects_invalid_lyapunov_score(self, score: object):
+    def test_rejects_invalid_lyapunov_score(self, score: object) -> None:
         bridge = PlasmaControlBridge()
         with pytest.raises(ValueError, match="score"):
             bridge.import_lyapunov_verdict({"score": score})
 
 
 class TestPhysicsInvariants:
-    def test_nominal_no_violations(self):
+    def test_nominal_no_violations(self) -> None:
         bridge = PlasmaControlBridge()
         violations = bridge.check_physics_invariants(
             {
@@ -209,20 +221,20 @@ class TestPhysicsInvariants:
         )
         assert violations == []
 
-    def test_q_min_violation(self):
+    def test_q_min_violation(self) -> None:
         bridge = PlasmaControlBridge()
         violations = bridge.check_physics_invariants({"q_min": 0.7})
         assert len(violations) == 1
         assert violations[0]["variable"] == "q_min"
         assert violations[0]["severity"] == "hard"
 
-    def test_beta_n_violation(self):
+    def test_beta_n_violation(self) -> None:
         bridge = PlasmaControlBridge()
         violations = bridge.check_physics_invariants({"beta_n": 3.5})
         assert len(violations) == 1
         assert violations[0]["variable"] == "beta_n"
 
-    def test_multiple_violations(self):
+    def test_multiple_violations(self) -> None:
         bridge = PlasmaControlBridge()
         violations = bridge.check_physics_invariants(
             {
@@ -233,14 +245,14 @@ class TestPhysicsInvariants:
         )
         assert len(violations) == 3
 
-    def test_missing_values_no_crash(self):
+    def test_missing_values_no_crash(self) -> None:
         bridge = PlasmaControlBridge()
         violations = bridge.check_physics_invariants({})
         assert violations == []
 
 
 class TestExportActions:
-    def test_export_actions(self):
+    def test_export_actions(self) -> None:
         bridge = PlasmaControlBridge()
         result = bridge.export_control_actions(
             [
@@ -262,10 +274,10 @@ class TestExportActions:
             "not-a-list",
         ],
     )
-    def test_export_actions_rejects_invalid_payload(self, actions: object):
+    def test_export_actions_rejects_invalid_payload(self, actions: object) -> None:
         bridge = PlasmaControlBridge()
         with pytest.raises(ValueError, match="actions|knob|scope|value"):
-            bridge.export_control_actions(actions)  # type: ignore[arg-type]
+            _call(bridge.export_control_actions, actions)
 
 
 class TestPhysicsInvariantValidation:
@@ -281,33 +293,35 @@ class TestPhysicsInvariantValidation:
             "not-a-dict",
         ],
     )
-    def test_physics_invariants_reject_invalid_values(self, values: object):
+    def test_physics_invariants_reject_invalid_values(self, values: object) -> None:
         bridge = PlasmaControlBridge()
         with pytest.raises(ValueError, match="physics invariant"):
-            bridge.check_physics_invariants(values)  # type: ignore[arg-type]
+            _call(bridge.check_physics_invariants, values)
 
 
 class TestPlasmaOmega:
-    def test_omega_length(self):
+    def test_omega_length(self) -> None:
         bridge = PlasmaControlBridge(n_layers=8)
         omegas = bridge.import_plasma_omega(n_osc_per_layer=2)
         assert len(omegas) == 16
         assert np.all(omegas > 0)
 
-    def test_omega_single_oscillator(self):
+    def test_omega_single_oscillator(self) -> None:
         bridge = PlasmaControlBridge(n_layers=4)
         omegas = bridge.import_plasma_omega(n_osc_per_layer=1)
         assert len(omegas) == 4
 
     @pytest.mark.parametrize("n_osc_per_layer", [True, 0, -1, 1.5, "2"])
-    def test_omega_rejects_invalid_oscillator_count(self, n_osc_per_layer: object):
+    def test_omega_rejects_invalid_oscillator_count(
+        self, n_osc_per_layer: object
+    ) -> None:
         bridge = PlasmaControlBridge(n_layers=4)
         with pytest.raises(ValueError, match="n_osc_per_layer"):
-            bridge.import_plasma_omega(n_osc_per_layer=n_osc_per_layer)
+            _call(bridge.import_plasma_omega, n_osc_per_layer=n_osc_per_layer)
 
 
 class TestPlasmaDomainpack:
-    def test_binding_spec_loads(self):
+    def test_binding_spec_loads(self) -> None:
         from pathlib import Path
 
         from scpn_phase_orchestrator.binding.loader import load_binding_spec
@@ -320,7 +334,7 @@ class TestPlasmaDomainpack:
         n_osc = sum(len(ly.oscillator_ids) for ly in spec.layers)
         assert n_osc == 16
 
-    def test_binding_spec_validates(self):
+    def test_binding_spec_validates(self) -> None:
         from pathlib import Path
 
         from scpn_phase_orchestrator.binding import validate_binding_spec
@@ -336,7 +350,7 @@ class TestPlasmaDomainpack:
 class TestPlasmaControlPipelineWiring:
     """Pipeline: PlasmaControlBridge → K_nm + omegas → engine → R."""
 
-    def test_plasma_bridge_drives_engine(self):
+    def test_plasma_bridge_drives_engine(self) -> None:
         """import_knm_spec + import_plasma_omega → engine → R∈[0,1].
         Proves plasma control bridge feeds simulation."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
