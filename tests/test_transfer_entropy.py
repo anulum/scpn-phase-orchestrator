@@ -8,7 +8,8 @@
 
 from __future__ import annotations
 
-from typing import get_type_hints
+from collections.abc import Callable
+from typing import cast, get_type_hints
 
 import numpy as np
 import pytest
@@ -24,7 +25,7 @@ from tests.typing_contracts import assert_precise_ndarray_hint
 
 
 class TestTransferEntropy:
-    def test_public_array_contracts_are_parameterised(self):
+    def test_public_array_contracts_are_parameterised(self) -> None:
         hints = (
             get_type_hints(phase_transfer_entropy)["source"],
             get_type_hints(phase_transfer_entropy)["target"],
@@ -35,13 +36,13 @@ class TestTransferEntropy:
             assert_precise_ndarray_hint(hint)
             assert "float64" in str(hint)
 
-    def test_identical_signals_low_te(self):
+    def test_identical_signals_low_te(self) -> None:
         rng = np.random.default_rng(42)
         sig = rng.uniform(0, 2 * np.pi, 200)
         te = phase_transfer_entropy(sig, sig)
         assert te >= 0.0
 
-    def test_independent_signals_finite_te(self):
+    def test_independent_signals_finite_te(self) -> None:
         rng = np.random.default_rng(42)
         a = rng.uniform(0, 2 * np.pi, 1000)
         b = rng.uniform(0, 2 * np.pi, 1000)
@@ -49,7 +50,7 @@ class TestTransferEntropy:
         assert np.isfinite(te)
         assert te >= 0.0
 
-    def test_driven_signal_higher_te(self):
+    def test_driven_signal_higher_te(self) -> None:
         rng = np.random.default_rng(42)
         source = np.cumsum(rng.normal(0, 0.1, 500)) % (2 * np.pi)
         target = np.roll(source, 1)  # target follows source
@@ -58,7 +59,7 @@ class TestTransferEntropy:
         # Forward TE should be >= reverse (source drives target)
         assert te_fwd >= 0.0
 
-    def test_short_signals(self):
+    def test_short_signals(self) -> None:
         """Equal-length series shorter than three samples carry no estimate."""
         assert phase_transfer_entropy(np.array([1.0, 2.0]), np.array([1.0, 0.5])) == 0.0
 
@@ -93,9 +94,10 @@ class TestTransferEntropy:
             transfer_entropy_matrix(np.vstack([phases, phases]))
 
     @pytest.mark.parametrize("n_bins", [0, 1, True, 4.5])
-    def test_phase_te_rejects_invalid_bin_counts(self, n_bins):
+    def test_phase_te_rejects_invalid_bin_counts(self, n_bins: object) -> None:
+        te_any: Callable[..., float] = phase_transfer_entropy
         with pytest.raises((TypeError, ValueError), match="n_bins"):
-            phase_transfer_entropy(
+            te_any(
                 np.linspace(0.0, 1.0, 8),
                 np.linspace(0.1, 1.1, 8),
                 n_bins=n_bins,
@@ -105,7 +107,7 @@ class TestTransferEntropy:
         source = np.linspace(0.0, 4.0 * np.pi, 64)
         target = np.roll(source, 1)
 
-        value = phase_transfer_entropy(source, target, n_bins=np.int64(8))
+        value = phase_transfer_entropy(source, target, n_bins=cast(int, np.int64(8)))
 
         assert np.isfinite(value)
         assert 0.0 <= value <= np.log(8)
@@ -151,37 +153,38 @@ class TestTransferEntropy:
         ],
     )
     def test_phase_te_rejects_non_vector_or_non_finite_inputs(
-        self, source, target, match
-    ):
+        self, source: object, target: object, match: str
+    ) -> None:
+        te_any: Callable[..., float] = phase_transfer_entropy
         with pytest.raises(ValueError, match=match):
-            phase_transfer_entropy(source, target)
+            te_any(source, target)
 
-    def test_matrix_shape(self):
+    def test_matrix_shape(self) -> None:
         rng = np.random.default_rng(42)
         data = rng.uniform(0, 2 * np.pi, (4, 100))
         te = transfer_entropy_matrix(data)
         assert te.shape == (4, 4)
 
-    def test_matrix_rejects_non_oscillator_time_series_shape(self):
+    def test_matrix_rejects_non_oscillator_time_series_shape(self) -> None:
         with pytest.raises(ValueError, match="phase_series must be 2-D"):
             transfer_entropy_matrix(np.linspace(0.0, 1.0, 8))
 
-    def test_matrix_rejects_non_finite_phase_series(self):
+    def test_matrix_rejects_non_finite_phase_series(self) -> None:
         series = np.array([[0.0, 1.0, np.nan], [0.1, 1.1, 2.1]])
         with pytest.raises(ValueError, match="phase_series"):
             transfer_entropy_matrix(series)
 
-    def test_matrix_rejects_boolean_phase_series(self):
+    def test_matrix_rejects_boolean_phase_series(self) -> None:
         series = np.array([[True, False, True], [False, True, False]])
         with pytest.raises(ValueError, match="phase_series"):
             transfer_entropy_matrix(series)
 
-    def test_matrix_rejects_mixed_boolean_alias_phase_series(self):
+    def test_matrix_rejects_mixed_boolean_alias_phase_series(self) -> None:
         series = np.array([[0.0, True, 2.0], [0.1, 1.1, 2.1]], dtype=object)
         with pytest.raises(ValueError, match="phase_series"):
             transfer_entropy_matrix(series)
 
-    def test_matrix_rejects_numeric_string_phase_series(self):
+    def test_matrix_rejects_numeric_string_phase_series(self) -> None:
         series = np.array([["0.0", "1.0", "2.0"], ["0.1", "1.1", "2.1"]])
         with pytest.raises(ValueError, match="phase_series"):
             transfer_entropy_matrix(series)
@@ -193,24 +196,25 @@ class TestTransferEntropy:
         with pytest.raises(ValueError, match="phase_series"):
             transfer_entropy_matrix(series)
 
-    def test_matrix_rejects_complex_phase_series(self):
+    def test_matrix_rejects_complex_phase_series(self) -> None:
         series = np.array([[0.0 + 1.0j, 1.0 + 0.0j, 2.0 + 0.0j], [0.1, 1.1, 2.1]])
         with pytest.raises(ValueError, match="phase_series"):
             transfer_entropy_matrix(series)
 
     @pytest.mark.parametrize("shape", [(0, 8), (3, 0)])
-    def test_matrix_rejects_empty_axes(self, shape):
+    def test_matrix_rejects_empty_axes(self, shape: tuple[int, int]) -> None:
         with pytest.raises(ValueError, match="phase_series"):
             transfer_entropy_matrix(np.empty(shape))
 
     @pytest.mark.parametrize("n_bins", [0, 1, False, 8.25])
-    def test_matrix_rejects_invalid_bin_counts(self, n_bins):
+    def test_matrix_rejects_invalid_bin_counts(self, n_bins: object) -> None:
         rng = np.random.default_rng(42)
         series = rng.uniform(0, 2 * np.pi, (3, 32))
+        matrix_any: Callable[..., np.ndarray] = transfer_entropy_matrix
         with pytest.raises((TypeError, ValueError), match="n_bins"):
-            transfer_entropy_matrix(series, n_bins=n_bins)
+            matrix_any(series, n_bins=n_bins)
 
-    def test_matrix_diagonal_zero(self):
+    def test_matrix_diagonal_zero(self) -> None:
         rng = np.random.default_rng(42)
         data = rng.uniform(0, 2 * np.pi, (3, 100))
         te = transfer_entropy_matrix(data)
@@ -253,13 +257,13 @@ class TestTransferEntropy:
         np.testing.assert_allclose(te, expected, rtol=0.0, atol=1e-12)
         np.testing.assert_array_equal(np.diag(te), 0.0)
 
-    def test_non_negative(self):
+    def test_non_negative(self) -> None:
         rng = np.random.default_rng(42)
         data = rng.uniform(0, 2 * np.pi, (3, 100))
         te = transfer_entropy_matrix(data)
         assert np.all(te >= 0.0)
 
-    def test_python_fallback_matrix_populates_each_off_diagonal_pair(self):
+    def test_python_fallback_matrix_populates_each_off_diagonal_pair(self) -> None:
         previous = te_mod.ACTIVE_BACKEND
         te_mod.ACTIVE_BACKEND = "python"
         try:
@@ -284,7 +288,7 @@ class TestTransferEntropy:
 class TestTEPipelineWiring:
     """Pipeline: engine trajectory → TE matrix reveals coupling direction."""
 
-    def test_engine_trajectory_to_te_matrix(self):
+    def test_engine_trajectory_to_te_matrix(self) -> None:
         """UPDEEngine generates trajectory → transfer_entropy_matrix
         reveals directional coupling structure."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
@@ -369,7 +373,9 @@ def test_named_owner_refusals(monkeypatch: pytest.MonkeyPatch) -> None:
         te_mod.transfer_entropy_backend("granger")
 
 
-def test_phase_te_backend_failure_falls_back_to_python(monkeypatch):
+def test_phase_te_backend_failure_falls_back_to_python(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     def raising_phase_te(_src: np.ndarray, _tgt: np.ndarray, _bins: int) -> float:
         raise RuntimeError("boom")
 
@@ -399,8 +405,8 @@ def test_phase_te_backend_failure_falls_back_to_python(monkeypatch):
     [-0.1, np.nan, np.inf, True, np.bool_(True), np.log(8.0) + 1.0],
 )
 def test_phase_te_backend_invalid_scalar_fails_closed(
-    monkeypatch, backend_value: float
-):
+    monkeypatch: pytest.MonkeyPatch, backend_value: float
+) -> None:
     def invalid_phase_te(_src: np.ndarray, _tgt: np.ndarray, _bins: int) -> float:
         return backend_value
 
@@ -422,7 +428,9 @@ def test_phase_te_backend_invalid_scalar_fails_closed(
         te_mod.ACTIVE_BACKEND = previous
 
 
-def test_te_matrix_backend_failure_falls_back_to_python(monkeypatch):
+def test_te_matrix_backend_failure_falls_back_to_python(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     def raising_matrix(
         _flat: np.ndarray, _n_osc: int, _n_time: int, _bins: int
     ) -> np.ndarray:
@@ -476,8 +484,8 @@ def test_te_matrix_backend_failure_falls_back_to_python(monkeypatch):
     ],
 )
 def test_te_matrix_backend_invalid_payload_fails_closed(
-    monkeypatch, backend_value: np.ndarray
-):
+    monkeypatch: pytest.MonkeyPatch, backend_value: np.ndarray
+) -> None:
     def invalid_matrix(
         _flat: np.ndarray, _n_osc: int, _n_time: int, _bins: int
     ) -> np.ndarray:
@@ -514,12 +522,15 @@ def test_public_numeric_string_alias_probes_are_defensive(
     def raising_asarray(_value: object, *_args: object, **_kwargs: object) -> object:
         raise TypeError("cannot inspect")
 
-    monkeypatch.setattr(te_mod.np, "asarray", raising_asarray)
+    assert vars(te_mod)["np"] is np
+    monkeypatch.setattr(np, "asarray", raising_asarray)
 
     assert te_mod._contains_numeric_string_alias(object()) is False
 
 
-def test_dispatch_falls_back_to_python_when_loader_fails(monkeypatch):
+def test_dispatch_falls_back_to_python_when_loader_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     previous_backend = te_mod.ACTIVE_BACKEND
     previous_available = list(te_mod.AVAILABLE_BACKENDS)
     previous_loader = te_mod._LOADERS["go"]
@@ -542,7 +553,7 @@ def test_dispatch_falls_back_to_python_when_loader_fails(monkeypatch):
     assert fn == ("python", None)
 
 
-def test_dispatch_uses_cached_loader_once(monkeypatch):
+def test_dispatch_uses_cached_loader_once(monkeypatch: pytest.MonkeyPatch) -> None:
     previous_backend = te_mod.ACTIVE_BACKEND
     previous_available = list(te_mod.AVAILABLE_BACKENDS)
     previous_loader = te_mod._LOADERS["go"]
