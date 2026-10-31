@@ -10,7 +10,8 @@ from __future__ import annotations
 
 import os
 import time
-from typing import cast
+from collections.abc import Callable
+from typing import TypeVar
 
 import numpy as np
 import pytest
@@ -21,6 +22,13 @@ from scpn_phase_orchestrator.adapters.neurocore_bridge import (
     NeurocoreBridge,
 )
 from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
+
+_R = TypeVar("_R")
+
+
+def _call(fn: Callable[..., _R], *args: object, **kwargs: object) -> _R:
+    """Call ``fn`` with arguments that are deliberately outside its types."""
+    return fn(*args, **kwargs)
 
 
 class _MalformedRustEnsemble:
@@ -44,18 +52,18 @@ def _make_state(r_values: list[float]) -> UPDEState:
 
 
 class TestNeurocoreBridge:
-    def test_init(self):
+    def test_init(self) -> None:
         bridge = NeurocoreBridge(n_layers=4, neurons_per_layer=4)
         assert bridge._n_total == 16
 
-    def test_backend_selection(self):
+    def test_backend_selection(self) -> None:
         bridge = NeurocoreBridge(n_layers=2, neurons_per_layer=4)
         if HAS_RUST:
             assert bridge.backend == "rust"
         else:
             assert bridge.backend == "numpy"
 
-    def test_step_returns_rates(self):
+    def test_step_returns_rates(self) -> None:
         bridge = NeurocoreBridge(n_layers=3, neurons_per_layer=4)
         state = _make_state([0.9, 0.5, 0.1])
         rates = bridge.step(state, n_substeps=50)
@@ -63,20 +71,22 @@ class TestNeurocoreBridge:
         assert np.all(rates >= 0.0)
 
     @pytest.mark.parametrize("n_substeps", [0, -1, 1.5, True])
-    def test_step_rejects_invalid_substep_count(self, n_substeps: object):
+    def test_step_rejects_invalid_substep_count(self, n_substeps: object) -> None:
         bridge = NeurocoreBridge(n_layers=2, neurons_per_layer=4, backend="numpy")
         with pytest.raises(ValueError, match="n_substeps"):
-            bridge.step(_make_state([0.8, 0.6]), n_substeps=n_substeps)  # type: ignore[arg-type]
+            _call(bridge.step, _make_state([0.8, 0.6]), n_substeps=n_substeps)
 
     @pytest.mark.parametrize(
         "r_values", [[0.8], [np.nan, 0.5], [-0.1, 0.5], [1.1, 0.5]]
     )
-    def test_step_rejects_invalid_upde_state_payload(self, r_values: list[float]):
+    def test_step_rejects_invalid_upde_state_payload(
+        self, r_values: list[float]
+    ) -> None:
         bridge = NeurocoreBridge(n_layers=2, neurons_per_layer=4, backend="numpy")
         with pytest.raises(ValueError, match="state.layers|layer 0 R"):
             bridge.step(_make_state(r_values), n_substeps=10)
 
-    def test_rust_step_rejects_malformed_backend_rates(self):
+    def test_rust_step_rejects_malformed_backend_rates(self) -> None:
         bridge = NeurocoreBridge(n_layers=2, neurons_per_layer=4, backend="numpy")
         bridge._backend = "rust"
         bridge._rust_ensemble = _MalformedRustEnsemble()
@@ -84,7 +94,9 @@ class TestNeurocoreBridge:
         with pytest.raises(ValueError, match="rates"):
             bridge.step(_make_state([0.8, 0.6]), n_substeps=10)
 
-    def test_rust_step_rejects_boolean_backend_rates_before_float_coercion(self):
+    def test_rust_step_rejects_boolean_backend_rates_before_float_coercion(
+        self,
+    ) -> None:
         bridge = NeurocoreBridge(n_layers=2, neurons_per_layer=4, backend="numpy")
         bridge._backend = "rust"
         bridge._rust_ensemble = _BooleanRustEnsemble()
@@ -92,7 +104,7 @@ class TestNeurocoreBridge:
         with pytest.raises(ValueError, match="rates"):
             bridge.step(_make_state([0.8, 0.6]), n_substeps=10)
 
-    def test_high_coherence_higher_rate(self):
+    def test_high_coherence_higher_rate(self) -> None:
         bridge = NeurocoreBridge(
             n_layers=2,
             neurons_per_layer=8,
@@ -102,7 +114,7 @@ class TestNeurocoreBridge:
         rates = bridge.step(state, n_substeps=100)
         assert rates[0] >= rates[1]
 
-    def test_rates_to_actions(self):
+    def test_rates_to_actions(self) -> None:
         bridge = NeurocoreBridge(n_layers=2)
         actions = bridge.rates_to_actions(np.array([100.0, 10.0]))
         assert len(actions) == 1
@@ -121,24 +133,24 @@ class TestNeurocoreBridge:
             np.array([1.0, 2.0 + 0.0j], dtype=object),
         ],
     )
-    def test_rates_to_actions_rejects_invalid_rate_vector(self, rates: object):
+    def test_rates_to_actions_rejects_invalid_rate_vector(self, rates: object) -> None:
         bridge = NeurocoreBridge(n_layers=2, backend="numpy")
         with pytest.raises(ValueError, match="rates"):
-            bridge.rates_to_actions(rates)  # type: ignore[arg-type]
+            _call(bridge.rates_to_actions, rates)
 
-    def test_step_and_act(self):
+    def test_step_and_act(self) -> None:
         bridge = NeurocoreBridge(n_layers=3, neurons_per_layer=4)
         state = _make_state([0.9, 0.9, 0.9])
         actions = bridge.step_and_act(state, n_substeps=50)
         assert isinstance(actions, list)
 
-    def test_get_neuron_states(self):
+    def test_get_neuron_states(self) -> None:
         bridge = NeurocoreBridge(n_layers=2, neurons_per_layer=2)
         states = bridge.get_neuron_states()
         assert len(states) == 4
         assert "v" in states[0]
 
-    def test_reset(self):
+    def test_reset(self) -> None:
         bridge = NeurocoreBridge(n_layers=2, neurons_per_layer=2)
         state = _make_state([0.9, 0.9])
         bridge.step(state, n_substeps=10)
@@ -146,7 +158,7 @@ class TestNeurocoreBridge:
         assert bridge._step_count == 0 or bridge.backend == "rust"
         assert np.all(bridge._spike_counts == 0) or bridge.backend == "rust"
 
-    def test_invalid_backend(self):
+    def test_invalid_backend(self) -> None:
         with pytest.raises(ValueError, match="Unknown backend"):
             NeurocoreBridge(n_layers=2, backend="nonexistent")
 
@@ -168,7 +180,7 @@ class TestNeurocoreBridge:
         self,
         field: str,
         kwargs: dict[str, object],
-    ):
+    ) -> None:
         config: dict[str, object] = {
             "n_layers": 2,
             "neurons_per_layer": 4,
@@ -177,13 +189,13 @@ class TestNeurocoreBridge:
         config.update(kwargs)
 
         with pytest.raises(ValueError, match=field):
-            NeurocoreBridge(**cast(dict, config))
+            _call(NeurocoreBridge, **config)
 
 
 class TestNeurocoreBridgeNumpy:
     """Force numpy backend to verify Python fallback."""
 
-    def test_numpy_step(self):
+    def test_numpy_step(self) -> None:
         bridge = NeurocoreBridge(n_layers=3, neurons_per_layer=8, backend="numpy")
         assert bridge.backend == "numpy"
         state = _make_state([0.9, 0.5, 0.1])
@@ -191,7 +203,7 @@ class TestNeurocoreBridgeNumpy:
         assert rates.shape == (3,)
         assert np.all(rates >= 0.0)
 
-    def test_seeded_noise_path_returns_finite_layer_rates(self):
+    def test_seeded_noise_path_returns_finite_layer_rates(self) -> None:
         bridge = NeurocoreBridge(
             n_layers=1,
             neurons_per_layer=2,
@@ -205,12 +217,12 @@ class TestNeurocoreBridgeNumpy:
         assert rates.shape == (1,)
         assert np.all(np.isfinite(rates))
 
-    def test_positive_seed_is_accepted(self):
+    def test_positive_seed_is_accepted(self) -> None:
         bridge = NeurocoreBridge(n_layers=1, backend="numpy", seed=7)
 
         assert bridge.backend == "numpy"
 
-    def test_numpy_coherence_ordering(self):
+    def test_numpy_coherence_ordering(self) -> None:
         bridge = NeurocoreBridge(
             n_layers=2, neurons_per_layer=100, current_scale=3.0, backend="numpy"
         )
@@ -218,14 +230,14 @@ class TestNeurocoreBridgeNumpy:
         rates = bridge.step(state, n_substeps=100)
         assert rates[0] >= rates[1]
 
-    def test_numpy_get_neuron_states(self):
+    def test_numpy_get_neuron_states(self) -> None:
         bridge = NeurocoreBridge(n_layers=2, neurons_per_layer=4, backend="numpy")
         states = bridge.get_neuron_states()
         assert len(states) == 8
         assert "v" in states[0]
         assert "refractory" in states[0]
 
-    def test_numpy_reset(self):
+    def test_numpy_reset(self) -> None:
         bridge = NeurocoreBridge(n_layers=2, neurons_per_layer=4, backend="numpy")
         state = _make_state([0.9, 0.9])
         bridge.step(state, n_substeps=10)
@@ -238,7 +250,7 @@ class TestNeurocoreBridgeNumpy:
 class TestNeurocoreBridgeRust:
     """Rust backend tests."""
 
-    def test_rust_step(self):
+    def test_rust_step(self) -> None:
         bridge = NeurocoreBridge(n_layers=3, neurons_per_layer=8, backend="rust")
         assert bridge.backend == "rust"
         state = _make_state([0.9, 0.5, 0.1])
@@ -246,7 +258,7 @@ class TestNeurocoreBridgeRust:
         assert rates.shape == (3,)
         assert np.all(rates >= 0.0)
 
-    def test_rust_coherence_ordering(self):
+    def test_rust_coherence_ordering(self) -> None:
         bridge = NeurocoreBridge(
             n_layers=2, neurons_per_layer=100, current_scale=3.0, backend="rust"
         )
@@ -254,13 +266,13 @@ class TestNeurocoreBridgeRust:
         rates = bridge.step(state, n_substeps=100)
         assert rates[0] >= rates[1]
 
-    def test_rust_get_neuron_states(self):
+    def test_rust_get_neuron_states(self) -> None:
         bridge = NeurocoreBridge(n_layers=2, neurons_per_layer=4, backend="rust")
         states = bridge.get_neuron_states()
         assert len(states) == 8
         assert "v" in states[0]
 
-    def test_rust_reset(self):
+    def test_rust_reset(self) -> None:
         bridge = NeurocoreBridge(n_layers=2, neurons_per_layer=4, backend="rust")
         state = _make_state([0.9, 0.9])
         bridge.step(state, n_substeps=10)
@@ -273,7 +285,7 @@ class TestNeurocoreBridgeRust:
 class TestNeurocoreBridgeScale:
     """Scale validation: SPO supervisor controls sc-neurocore populations at N=1000+."""
 
-    def test_scale_1000_neurons(self):
+    def test_scale_1000_neurons(self) -> None:
         bridge = NeurocoreBridge(n_layers=10, neurons_per_layer=100)
         assert bridge._n_total == 1000
         state = _make_state([0.8] * 10)
@@ -281,7 +293,7 @@ class TestNeurocoreBridgeScale:
         assert rates.shape == (10,)
         assert np.all(rates >= 0.0)
 
-    def test_scale_sustained_stepping(self):
+    def test_scale_sustained_stepping(self) -> None:
         bridge = NeurocoreBridge(n_layers=10, neurons_per_layer=100, current_scale=2.5)
         state = _make_state([0.9, 0.7, 0.5, 0.3, 0.1, 0.8, 0.6, 0.4, 0.2, 0.95])
         for _ in range(5):
@@ -289,7 +301,7 @@ class TestNeurocoreBridgeScale:
         assert rates.shape == (10,)
         assert rates[0] > rates[4]
 
-    def test_scale_actions_at_scale(self):
+    def test_scale_actions_at_scale(self) -> None:
         bridge = NeurocoreBridge(n_layers=10, neurons_per_layer=100, current_scale=3.0)
         state = _make_state([0.95] * 10)
         actions = bridge.step_and_act(state, n_substeps=200)
@@ -298,7 +310,7 @@ class TestNeurocoreBridgeScale:
             assert a.knob == "K"
             assert a.value > 0
 
-    def test_scale_5000_neurons(self):
+    def test_scale_5000_neurons(self) -> None:
         bridge = NeurocoreBridge(n_layers=10, neurons_per_layer=500, current_scale=2.5)
         assert bridge._n_total == 5000
         state = _make_state([0.9, 0.7, 0.5, 0.3, 0.1, 0.8, 0.6, 0.4, 0.2, 0.95])
@@ -306,7 +318,7 @@ class TestNeurocoreBridgeScale:
         assert rates.shape == (10,)
         assert rates[0] > rates[4]
 
-    def test_scale_10000_neurons(self):
+    def test_scale_10000_neurons(self) -> None:
         bridge = NeurocoreBridge(n_layers=10, neurons_per_layer=1000, current_scale=2.5)
         assert bridge._n_total == 10000
         state = _make_state([0.9, 0.7, 0.5, 0.3, 0.1, 0.8, 0.6, 0.4, 0.2, 0.95])
@@ -336,7 +348,7 @@ class TestNeurocoreBridgeScaleTiming:
         "n_per,label",
         [(100, "1k"), (500, "5k"), (1000, "10k")],
     )
-    def test_timing_default_backend(self, n_per, label):
+    def test_timing_default_backend(self, n_per: int, label: str) -> None:
         bridge = NeurocoreBridge(
             n_layers=10,
             neurons_per_layer=n_per,
@@ -357,7 +369,7 @@ class TestNeurocoreBridgeScaleTiming:
         )
 
     @pytest.mark.parametrize("backend", ["numpy"])
-    def test_timing_numpy_10k(self, backend):
+    def test_timing_numpy_10k(self, backend: str) -> None:
         bridge = NeurocoreBridge(
             n_layers=10, neurons_per_layer=1000, current_scale=2.5, backend=backend
         )
@@ -369,7 +381,7 @@ class TestNeurocoreBridgeScaleTiming:
         print(f"\n  [numpy] N=10000: {elapsed:.4f}s")
 
     @pytest.mark.skipif(not HAS_RUST, reason="spo_kernel not installed")
-    def test_timing_rust_10k(self):
+    def test_timing_rust_10k(self) -> None:
         bridge = NeurocoreBridge(
             n_layers=10, neurons_per_layer=1000, current_scale=2.5, backend="rust"
         )
@@ -397,14 +409,14 @@ class TestNeurocoreBridgeScaleTiming:
 class TestNeurocoreBridgeScalar:
     """Scalar backend cross-validation against sc-neurocore."""
 
-    def test_scalar_step(self):
+    def test_scalar_step(self) -> None:
         bridge = NeurocoreBridge(n_layers=2, neurons_per_layer=4, backend="scalar")
         assert bridge.backend == "scalar"
         state = _make_state([0.9, 0.1])
         rates = bridge.step(state, n_substeps=50)
         assert rates.shape == (2,)
 
-    def test_scalar_coherence_ordering(self):
+    def test_scalar_coherence_ordering(self) -> None:
         bridge = NeurocoreBridge(
             n_layers=2, neurons_per_layer=8, current_scale=3.0, backend="scalar"
         )
@@ -413,5 +425,5 @@ class TestNeurocoreBridgeScalar:
         assert rates[0] >= rates[1]
 
 
-def test_has_neurocore_flag():
+def test_has_neurocore_flag() -> None:
     assert isinstance(HAS_NEUROCORE, bool)
