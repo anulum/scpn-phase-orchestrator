@@ -338,10 +338,13 @@ class TestV18BackendParity:
 
         # NumPy engine
         engine = UPDEEngine(N, dt=0.01, method="rk4")
+        # UPDEEngine picks the Rust stepper when spo_kernel is installed.
+        engine._rust = None
+        assert engine.backend == "numpy"
         p_np = phases_np.copy()
         for _ in range(500):
             p_np = engine.step(p_np, omegas_np, K_np, 0.0, 0.0, alpha_np)
-        R_np, _ = compute_order_parameter(p_np)
+        R_np, _ = compute_order_parameter(p_np, backend="python")
 
         # JAX engine
         phases_jax = jnp.array(phases_np, dtype=jnp.float32)

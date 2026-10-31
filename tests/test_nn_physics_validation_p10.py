@@ -549,10 +549,13 @@ class TestV119BackwardCompat:
 
             # NumPy
             engine = UPDEEngine(N, dt=dt, method="rk4")
+            # UPDEEngine picks the Rust stepper when spo_kernel is installed.
+            engine._rust = None
+            assert engine.backend == "numpy"
             p = phases_np.copy()
             for _ in range(n_steps):
                 p = engine.step(p, omegas_np, K_np, 0.0, 0.0, np.zeros((N, N)))
-            R_np, _ = compute_order_parameter(p)
+            R_np, _ = compute_order_parameter(p, backend="python")
 
             # JAX
             final, _ = kuramoto_forward(
