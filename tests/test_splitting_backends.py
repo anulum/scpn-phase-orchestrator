@@ -14,8 +14,11 @@ import contextlib
 import cProfile
 import ctypes
 import math
+import subprocess
 import types
-from typing import get_type_hints
+from collections.abc import Callable, Iterator
+from pathlib import Path
+from typing import Any, NoReturn, get_type_hints
 
 import numpy as np
 import pytest
@@ -42,6 +45,10 @@ splitting_run_mojo = _splitting_mojo.splitting_run_mojo
 TWO_PI = 2.0 * math.pi
 TOL = 1e-12
 
+_DirectArgs = tuple[
+    np.ndarray, np.ndarray, np.ndarray, np.ndarray, int, float, float, float, int
+]
+
 
 def test__splitting_validation_helper_is_directly_linked_to_backend_tests() -> None:
     args = _valid_direct_args()
@@ -57,7 +64,7 @@ def test__splitting_validation_helper_is_directly_linked_to_backend_tests() -> N
     np.testing.assert_array_equal(output, np.array([0.2, 0.4], dtype=np.float64))
 
 
-def _valid_direct_args():
+def _valid_direct_args() -> _DirectArgs:
     return (
         np.array([0.1, 0.3], dtype=np.float64),
         np.array([0.2, -0.1], dtype=np.float64),
@@ -71,23 +78,23 @@ def _valid_direct_args():
     )
 
 
-def _with_direct_arg(index: int, value):
-    args = list(_valid_direct_args())
+def _with_direct_arg(index: int, value: object) -> tuple[object, ...]:
+    args: list[object] = list(_valid_direct_args())
     args[index] = value
     return tuple(args)
 
 
 class _ArrayProtocolFailure:
-    def __array__(self, *_args, **_kwargs):
+    def __array__(self, *_args: object, **_kwargs: object) -> NoReturn:
         raise TypeError("array protocol failed")
 
 
 class _FakeGoSplittingLib:
-    def __init__(self, output: tuple[float, ...], rc: int = 0):
+    def __init__(self, output: tuple[float, ...], rc: int = 0) -> None:
         self.output = output
         self.rc = rc
 
-    def SplittingRun(self, *_args):
+    def SplittingRun(self, *_args: Any) -> int:
         output_ref = ctypes.cast(_args[-1], ctypes.POINTER(ctypes.c_double))
         for index, value in enumerate(self.output):
             output_ref[index] = value
@@ -95,14 +102,18 @@ class _FakeGoSplittingLib:
 
 
 class _FakeJuliaSplittingModule:
-    def __init__(self, output: tuple[float, ...]):
+    def __init__(self, output: tuple[float, ...]) -> None:
         self.output = output
 
-    def splitting_run(self, *_args):
+    def splitting_run(self, *_args: object) -> np.ndarray:
         return np.array(self.output, dtype=np.float64)
 
 
-def _call_direct_backend(module, monkeypatch, output: tuple[float, ...]):
+def _call_direct_backend(
+    module: types.ModuleType,
+    monkeypatch: pytest.MonkeyPatch,
+    output: tuple[float, ...],
+) -> np.ndarray:
     if module is _splitting_go:
         monkeypatch.setattr(
             _splitting_go,
@@ -119,8 +130,9 @@ def _call_direct_backend(module, monkeypatch, output: tuple[float, ...]):
         return _splitting_julia.splitting_run_julia(*_valid_direct_args())
 
     monkeypatch.setattr(_splitting_mojo, "_ensure_exe", lambda: "splitting")
+    assert vars(_splitting_mojo)["subprocess"] is subprocess
     monkeypatch.setattr(
-        _splitting_mojo.subprocess,
+        subprocess,
         "run",
         lambda *_args, **_kwargs: types.SimpleNamespace(
             returncode=0,
@@ -132,7 +144,7 @@ def _call_direct_backend(module, monkeypatch, output: tuple[float, ...]):
 
 
 @contextlib.contextmanager
-def _force_backend(name: str):
+def _force_backend(name: str) -> Iterator[None]:
     prev = sp_mod.ACTIVE_BACKEND
     sp_mod.ACTIVE_BACKEND = name
     try:
@@ -141,7 +153,9 @@ def _force_backend(name: str):
         sp_mod.ACTIVE_BACKEND = prev
 
 
-def _problem(seed: int, n: int = 6, alpha_nonzero: bool = False):
+def _problem(
+    seed: int, n: int = 6, alpha_nonzero: bool = False
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     rng = np.random.default_rng(seed)
     theta = rng.uniform(0, TWO_PI, n)
     omegas = rng.normal(1.0, 0.2, n)
@@ -163,7 +177,7 @@ def _run_backend(
     zeta: float = 0.0,
     psi: float = 0.0,
     alpha_nonzero: bool = False,
-):
+) -> np.ndarray:
     if backend not in sp_mod.AVAILABLE_BACKENDS:
         pytest.skip(f"backend {backend!r} unavailable")
     theta, omegas, knm, alpha = _problem(seed, n, alpha_nonzero)
@@ -173,39 +187,39 @@ def _run_backend(
 
 
 class TestAlphaZero:
-    def test_rust(self):
+    def test_rust(self) -> None:
         ref = _run_backend("python", 0)
         got = _run_backend("rust", 0)
         assert np.max(np.abs(got - ref)) < TOL
 
-    def test_julia(self):
+    def test_julia(self) -> None:
         ref = _run_backend("python", 1)
         got = _run_backend("julia", 1)
         assert np.max(np.abs(got - ref)) < TOL
 
-    def test_go(self):
+    def test_go(self) -> None:
         ref = _run_backend("python", 2)
         got = _run_backend("go", 2)
         assert np.max(np.abs(got - ref)) < TOL
 
-    def test_mojo(self):
+    def test_mojo(self) -> None:
         ref = _run_backend("python", 3, n=5)
         got = _run_backend("mojo", 3, n=5)
         assert np.max(np.abs(got - ref)) < 1e-10
 
 
 class TestAlphaNonZero:
-    def test_rust(self):
+    def test_rust(self) -> None:
         ref = _run_backend("python", 4, alpha_nonzero=True, zeta=0.5, psi=1.1)
         got = _run_backend("rust", 4, alpha_nonzero=True, zeta=0.5, psi=1.1)
         assert np.max(np.abs(got - ref)) < TOL
 
-    def test_julia(self):
+    def test_julia(self) -> None:
         ref = _run_backend("python", 5, alpha_nonzero=True, zeta=0.5, psi=1.1)
         got = _run_backend("julia", 5, alpha_nonzero=True, zeta=0.5, psi=1.1)
         assert np.max(np.abs(got - ref)) < TOL
 
-    def test_go(self):
+    def test_go(self) -> None:
         ref = _run_backend("python", 6, alpha_nonzero=True, zeta=0.5, psi=1.1)
         got = _run_backend("go", 6, alpha_nonzero=True, zeta=0.5, psi=1.1)
         assert np.max(np.abs(got - ref)) < TOL
@@ -221,7 +235,7 @@ class TestHypothesisParity:
         deadline=None,
         suppress_health_check=[HealthCheck.too_slow],
     )
-    def test_rust_hypothesis(self, n, seed):
+    def test_rust_hypothesis(self, n: int, seed: int) -> None:
         if "rust" not in sp_mod.AVAILABLE_BACKENDS:
             pytest.skip("rust unavailable")
         ref = _run_backend("python", seed, n=n)
@@ -237,7 +251,7 @@ class TestHypothesisParity:
         deadline=None,
         suppress_health_check=[HealthCheck.too_slow],
     )
-    def test_go_hypothesis(self, n, seed):
+    def test_go_hypothesis(self, n: int, seed: int) -> None:
         if "go" not in sp_mod.AVAILABLE_BACKENDS:
             pytest.skip("go unavailable")
         ref = _run_backend("python", seed, n=n)
@@ -254,7 +268,9 @@ class TestBackendTypingContracts:
             (splitting_run_mojo, "mojo"),
         ],
     )
-    def test_backend_annotations_use_float64_ndarray(self, fn, label: str) -> None:
+    def test_backend_annotations_use_float64_ndarray(
+        self, fn: Callable[..., object], label: str
+    ) -> None:
         hints = get_type_hints(fn)
         for name in ("phases", "omegas", "knm_flat", "alpha_flat", "return"):
             text = str(hints[name])
@@ -331,13 +347,13 @@ class TestDirectSplittingBoundaryContracts:
     def test_direct_backend_rejects_invalid_inputs_before_runtime_loading(
         self,
         monkeypatch: pytest.MonkeyPatch,
-        module,
+        module: types.ModuleType,
         fn_name: str,
         loader_name: str,
-        args,
+        args: tuple[object, ...],
         match: str,
     ) -> None:
-        def forbidden_loader():
+        def forbidden_loader() -> NoReturn:
             raise AssertionError("runtime loader must not be called")
 
         monkeypatch.setattr(module, loader_name, forbidden_loader)
@@ -363,11 +379,14 @@ class TestDirectSplittingBoundaryContracts:
     )
     def test_direct_validation_output_defensive_failures(
         self,
-        value,
+        value: object,
         match: str,
     ) -> None:
+        validate_any: Callable[..., object] = (
+            splitting_validation.validate_splitting_output
+        )
         with pytest.raises(ValueError, match=match):
-            splitting_validation.validate_splitting_output(value, n=2)
+            validate_any(value, n=2)
 
     def test_direct_numeric_string_probe_ignores_unarrayable_value(self) -> None:
         assert not splitting_validation._contains_numeric_string_alias(
@@ -398,7 +417,7 @@ class TestDirectSplittingBoundaryContracts:
     def test_direct_julia_loader_rejects_missing_side_file(
         self,
         monkeypatch: pytest.MonkeyPatch,
-        tmp_path,
+        tmp_path: Path,
     ) -> None:
         monkeypatch.setattr(_splitting_julia, "_JULIA_MODULE", None)
         monkeypatch.setattr(_splitting_julia, "_JULIA_FILE", tmp_path / "missing.jl")
@@ -410,7 +429,7 @@ class TestDirectSplittingBoundaryContracts:
     def test_direct_julia_loader_includes_side_file(
         self,
         monkeypatch: pytest.MonkeyPatch,
-        tmp_path,
+        tmp_path: Path,
     ) -> None:
         included: list[str] = []
         module = object()
@@ -438,7 +457,7 @@ class TestDirectSplittingBoundaryContracts:
     def test_direct_backend_accepts_valid_torus_output(
         self,
         monkeypatch: pytest.MonkeyPatch,
-        module,
+        module: types.ModuleType,
     ) -> None:
         got = _call_direct_backend(module, monkeypatch, (0.2, 0.4))
 
@@ -453,7 +472,7 @@ class TestDirectSplittingBoundaryContracts:
     def test_direct_backend_rejects_out_of_torus_outputs(
         self,
         monkeypatch: pytest.MonkeyPatch,
-        module,
+        module: types.ModuleType,
         output: tuple[float, ...],
     ) -> None:
         with pytest.raises(ValueError, match="phases"):
@@ -463,7 +482,7 @@ class TestDirectSplittingBoundaryContracts:
     def test_direct_backend_rejects_wrong_output_length(
         self,
         monkeypatch: pytest.MonkeyPatch,
-        module,
+        module: types.ModuleType,
     ) -> None:
         with pytest.raises(ValueError, match="length 2|expected 2"):
             _call_direct_backend(module, monkeypatch, (0.2,))
@@ -488,8 +507,9 @@ class TestDirectMojoBoundaryContracts:
         match: str,
     ) -> None:
         monkeypatch.setattr(_splitting_mojo, "_ensure_exe", lambda: "splitting")
+        assert vars(_splitting_mojo)["subprocess"] is subprocess
         monkeypatch.setattr(
-            _splitting_mojo.subprocess,
+            subprocess,
             "run",
             lambda *_args, **_kwargs: types.SimpleNamespace(
                 returncode=0,
@@ -743,10 +763,12 @@ class TestBackendResolutionContracts:
                 np.zeros(2), np.ones(2), zero, 0.0, 0.0, zero, n_steps=1
             )
 
-    def test_run_uses_python_path_for_negative_timestep(self, monkeypatch):
+    def test_run_uses_python_path_for_negative_timestep(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         called = False
 
-        def explode(*_args, **_kwargs):
+        def explode(*_args: object, **_kwargs: object) -> np.ndarray:
             nonlocal called
             called = True
             return np.array([0.0, 0.0, 0.0, 0.0], dtype=np.float64)
