@@ -23,6 +23,7 @@ pytest.importorskip("httpx")
 pytest.importorskip("starlette")
 
 import numpy as np
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
 
@@ -34,10 +35,20 @@ from scpn_phase_orchestrator.apps.queuewaves.pipeline import (
 from scpn_phase_orchestrator.apps.queuewaves.server import create_app
 
 
+def _asgi(app: object) -> FastAPI:
+    """Return the created app as FastAPI, which create_app builds here.
+
+    create_app is typed ``-> object`` because FastAPI is an optional
+    dependency; with it installed the app must be a FastAPI instance.
+    """
+    assert isinstance(app, FastAPI)
+    return app
+
+
 @pytest.fixture()
 def client(minimal_config: QueueWavesConfig) -> TestClient:
     app = create_app(minimal_config)
-    return TestClient(app)
+    return TestClient(_asgi(app))
 
 
 def test_health(client: TestClient) -> None:
@@ -115,7 +126,7 @@ def test_check_503_payload_is_deterministic(minimal_config: QueueWavesConfig) ->
         mock_instance.close = AsyncMock()
 
         app = create_app(minimal_config)
-        client = TestClient(app)
+        client = TestClient(_asgi(app))
         r = client.post("/api/v1/check")
 
     assert r.status_code == 503
@@ -134,7 +145,7 @@ def test_check_has_stable_response_fields(minimal_config: QueueWavesConfig) -> N
         mock_instance.close = AsyncMock()
 
         app = create_app(minimal_config)
-        client = TestClient(app)
+        client = TestClient(_asgi(app))
         r = client.post("/api/v1/check")
 
     assert r.status_code == 200
@@ -155,7 +166,7 @@ def test_health_tick_reflects_pipeline_advancement(
         mock_instance.close = AsyncMock()
 
         app = create_app(minimal_config)
-        client = TestClient(app)
+        client = TestClient(_asgi(app))
         initial = client.get("/api/v1/health")
         check = client.post("/api/v1/check")
         after = client.get("/api/v1/health")
@@ -171,7 +182,7 @@ def test_websocket_closes_on_too_large_message(
     minimal_config: QueueWavesConfig,
 ) -> None:
     app = create_app(minimal_config)
-    client = TestClient(app)
+    client = TestClient(_asgi(app))
     with client.websocket_connect("/ws/stream") as ws:
         ws.send_text("x" * 1025)
         with pytest.raises(WebSocketDisconnect) as exc_info:
@@ -183,7 +194,7 @@ def test_websocket_rejects_non_keepalive_content(
     minimal_config: QueueWavesConfig,
 ) -> None:
     app = create_app(minimal_config)
-    client = TestClient(app)
+    client = TestClient(_asgi(app))
     with client.websocket_connect("/ws/stream") as ws:
         ws.send_text('{"type":"actuate","K":9}')
         with pytest.raises(WebSocketDisconnect) as exc_info:
@@ -195,7 +206,7 @@ def test_websocket_accepts_json_keepalive(
     minimal_config: QueueWavesConfig,
 ) -> None:
     app = create_app(minimal_config)
-    client = TestClient(app)
+    client = TestClient(_asgi(app))
     with client.websocket_connect("/ws/stream") as ws:
         ws.send_text('{"type":"ping"}')
 
@@ -244,7 +255,7 @@ def test_production_rejects_present_but_wrong_api_key(
         security=SecurityConfig(mode="production"),
     )
     monkeypatch.setenv("QUEUEWAVES_API_KEY", "correct-key")
-    client = TestClient(create_app(cfg))
+    client = TestClient(_asgi(create_app(cfg)))
 
     wrong = client.get("/api/v1/health", headers={"X-API-Key": "wrong-key"})
     correct = client.get("/api/v1/health", headers={"X-API-Key": "correct-key"})
@@ -270,7 +281,7 @@ def test_websocket_rejects_present_but_wrong_api_key(
         security=SecurityConfig(mode="production"),
     )
     monkeypatch.setenv("QUEUEWAVES_API_KEY", "correct-key")
-    client = TestClient(create_app(cfg))
+    client = TestClient(_asgi(create_app(cfg)))
 
     with (
         pytest.raises(WebSocketDisconnect) as exc_info,
@@ -317,7 +328,7 @@ def test_production_requires_request_api_key(
         security=SecurityConfig(mode="production"),
     )
     monkeypatch.setenv("QUEUEWAVES_API_KEY", "test-key")
-    client = TestClient(create_app(cfg))
+    client = TestClient(_asgi(create_app(cfg)))
 
     missing = client.get("/api/v1/health")
     present = client.get("/api/v1/health", headers={"X-API-Key": "test-key"})
@@ -351,7 +362,7 @@ def test_production_badhost_headers_do_not_bypass_api_key(
         security=SecurityConfig(mode="production"),
     )
     monkeypatch.setenv("QUEUEWAVES_API_KEY", "test-key")
-    client = TestClient(create_app(cfg))
+    client = TestClient(_asgi(create_app(cfg)))
 
     response = client.get("/api/v1/health", headers={"Host": host})
 
@@ -374,7 +385,7 @@ def test_production_rate_limits_requests(
         security=SecurityConfig(mode="production", rate_limit_per_minute=1),
     )
     monkeypatch.setenv("QUEUEWAVES_API_KEY", "test-key")
-    client = TestClient(create_app(cfg))
+    client = TestClient(_asgi(create_app(cfg)))
     headers = {"X-API-Key": "test-key"}
 
     first = client.get("/api/v1/health", headers=headers)
@@ -391,7 +402,7 @@ def test_production_template_server_requires_request_api_key(
 
     cfg = load_config(Path("domainpacks/queuewaves/queuewaves.production.yaml"))
     monkeypatch.setenv("QUEUEWAVES_API_KEY", "template-key")
-    client = TestClient(create_app(cfg))
+    client = TestClient(_asgi(create_app(cfg)))
 
     missing = client.get("/api/v1/health")
     present = client.get("/api/v1/health", headers={"X-API-Key": "template-key"})
@@ -431,8 +442,11 @@ def test_root_uses_fallback_when_dashboard_missing(
     minimal_config: QueueWavesConfig,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    original_is_dir = server_mod.Path.is_dir
-    original_exists = server_mod.Path.exists
+    # The server reaches pathlib through its own Path name, which is the
+    # pathlib class itself; patching that class patches what it resolves.
+    assert vars(server_mod)["Path"] is Path
+    original_is_dir = Path.is_dir
+    original_exists = Path.exists
 
     def patched_is_dir(path: Path) -> bool:
         if path.name == "static" and path.parent.name == "queuewaves":
@@ -444,16 +458,16 @@ def test_root_uses_fallback_when_dashboard_missing(
             return False
         return original_exists(path)
 
-    monkeypatch.setattr(server_mod.Path, "is_dir", patched_is_dir)
-    monkeypatch.setattr(server_mod.Path, "exists", patched_exists)
+    monkeypatch.setattr(Path, "is_dir", patched_is_dir)
+    monkeypatch.setattr(Path, "exists", patched_exists)
 
     app = create_app(minimal_config)
-    client = TestClient(app)
+    client = TestClient(_asgi(app))
     r = client.get("/")
     assert r.status_code == 200
 
 
-def test_pipeline_loop_scrape_failure(minimal_config: QueueWavesConfig):
+def test_pipeline_loop_scrape_failure(minimal_config: QueueWavesConfig) -> None:
     """Scrape failure logs a warning but loop continues."""
     with patch(
         "scpn_phase_orchestrator.apps.queuewaves.server.PrometheusCollector"
@@ -464,14 +478,16 @@ def test_pipeline_loop_scrape_failure(minimal_config: QueueWavesConfig):
         mock_instance.get_signal_arrays = MagicMock(return_value={})
 
         app = create_app(minimal_config)
-        client = TestClient(app)
+        client = TestClient(_asgi(app))
         # App starts despite scrape errors
         r = client.get("/api/v1/health")
         assert r.status_code == 200
 
 
 class TestRunServer:
-    def test_run_server_calls_uvicorn(self, tmp_path, monkeypatch):
+    def test_run_server_calls_uvicorn(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         import yaml
 
         from scpn_phase_orchestrator.apps.queuewaves import server as srv_mod
@@ -557,7 +573,7 @@ def test_production_websocket_rejects_missing_credential(
         security=SecurityConfig(mode="production"),
     )
     monkeypatch.setenv(getattr(minimal_config.security, "api_" + "key_env"), "v")
-    client = TestClient(create_app(cfg))
+    client = TestClient(_asgi(create_app(cfg)))
 
     with (
         pytest.raises(WebSocketDisconnect) as exc_info,
@@ -583,7 +599,7 @@ def test_production_websocket_rate_limits_clients(
         security=SecurityConfig(mode="production", rate_limit_per_minute=1),
     )
     monkeypatch.setenv(getattr(minimal_config.security, "api_" + "key_env"), "v")
-    client = TestClient(create_app(cfg))
+    client = TestClient(_asgi(create_app(cfg)))
     headers = {"X-" + "API-" + "Key": "v"}
 
     with client.websocket_connect("/ws/stream", headers=headers):
