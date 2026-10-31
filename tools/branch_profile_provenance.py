@@ -60,6 +60,13 @@ NATIVE_ASSET_NAMES = (
 
 The native branch-coverage job reads this tuple, so the assets it builds and
 the sources bound in each profile's input hashes are always the same set.
+
+Six owners with Go, Julia and Mojo sources are deliberately not listed:
+hypergraph, koopman_edmd, pac, pid, psychedelic and twin_confidence. Their
+native assets are not built in this profile, so their sources cannot affect
+the measurement and their native branches are not measured here. Their
+floors are met by the profiles without those assets. Adding an owner means
+adding its name here and its suites to the native polyglot step.
 """
 _ARTIFACT_LICENSE = (
     "\n".join(Path(__file__).read_text(encoding="utf-8").splitlines()[:7])

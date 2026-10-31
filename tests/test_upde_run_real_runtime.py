@@ -47,6 +47,19 @@ from scpn_phase_orchestrator.upde import engine as engine_mod
 from tests._runtime_owners import NEEDS_KERNEL, owner_params
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def _go_library() -> Path:
+    """Return the built Go UPDE library: the checkout's, or a provisioned one.
+
+    ``SPO_UPDE_GO_LIB`` names a library built elsewhere, such as the native
+    branch job's provisioned asset beside the installed package.
+    """
+    return Path(
+        os.environ.get("SPO_UPDE_GO_LIB", str(ROOT / "go" / "libupde_engine.so"))
+    )
+
+
 TWO_PI = 2.0 * math.pi
 OWNERS = owner_params(("python", "rust", "mojo", "julia", "go"))
 METHODS = ("euler", "rk4", "rk45")
@@ -533,9 +546,7 @@ def _run_profile(
     )
     if keep_go:
         (export / "go").mkdir()
-        (export / "go" / "libupde_engine.so").symlink_to(
-            ROOT / "go" / "libupde_engine.so"
-        )
+        (export / "go" / "libupde_engine.so").symlink_to(_go_library())
     phases, omegas, knm, alpha = _problem()
     payload = json.dumps([v.tolist() for v in (phases, omegas, knm, alpha)])
     env = {"PATH": os.environ.get("PATH", ""), "HOME": str(tmp_path)}

@@ -69,7 +69,10 @@ branch-coverage job builds their assets beside the installed package for every
 owner in `NATIVE_ASSET_NAMES` (`tools/branch_profile_provenance.py`). The same
 tuple binds those sources into each profile's input hashes. The job then runs
 the owner suites under the native measurement. A new owner with toolchain
-assets must be added to that tuple, and its suites to that step.
+assets must be added to that tuple, and its suites to that step. Six
+experimental three-language owners (hypergraph, koopman_edmd, pac, pid,
+psychedelic, twin_confidence) are outside the tuple. Their native branches
+are not measured by this profile.
 
 Owner test cases are routed with `tests/_runtime_owners.py`:
 

@@ -703,6 +703,22 @@ jobs:
           measurement.combine(data_paths=[str(database.parent)], strict=True, keep=True)
           measurement.save()
           PY
+      - name: Qualify the UPDE resolver order with the provisioned Go library
+        # These child-process profiles are deselected from the measured step
+        # above, because their symlinked environments must not land in its
+        # uploaded basetemp. Their children are not measured; this step proves
+        # the Go-first and Rust-first resolver order on the real assets.
+        env:
+          SPO_UPDE_GO_LIB: ${{ env.SPO_BRANCH_ASSET_ROOT }}/go/libupde_engine.so
+        run: |
+          . .venv/bin/activate
+          test -r "$SPO_UPDE_GO_LIB"
+          python -m pytest \
+            'tests/test_upde_run_real_runtime.py::test_resolver_skips_absent_owners_to_the_first_that_loads' \
+            'tests/test_upde_run_real_runtime.py::test_resolver_falls_back_to_python_without_native_owners' \
+            'tests/test_upde_run_real_runtime.py::test_resolver_prefers_rust_when_it_is_installed' \
+            -o addopts= --strict-markers --tb=short -p no:cacheprovider \
+            --basetemp "$RUNNER_TEMP/upde-resolver-profiles"
       - name: Compare all required Hodge public runtimes
         run: |
           . .venv/bin/activate
