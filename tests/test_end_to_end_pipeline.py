@@ -122,6 +122,8 @@ class TestEndToEndKuramoto:
             )
 
         r, _ = compute_order_parameter(phases)
+        # The pack's coupling synchronises identical oscillators.
+        assert r > 0.9
 
         rule = PolicyRule(
             name="boost_coupling",
@@ -136,22 +138,25 @@ class TestEndToEndKuramoto:
         )
         policy = PolicyEngine([rule])
 
-        layers = [LayerState(R=r, psi=0.0)]
-        state = UPDEState(
-            layers=layers,
-            cross_layer_alignment=np.zeros((1, 1)),
-            stability_proxy=r,
-            regime_id="nominal",
-        )
+        # The synchronised pipeline state stays nominal, so the rule is quiet;
+        # a degraded snapshot of the same layer must trigger the boost.
+        for r_value, expected_regime in ((r, Regime.NOMINAL), (0.4, Regime.DEGRADED)):
+            state = UPDEState(
+                layers=[LayerState(R=r_value, psi=0.0)],
+                cross_layer_alignment=np.zeros((1, 1)),
+                stability_proxy=r_value,
+                regime_id="nominal",
+            )
+            mgr = RegimeManager()
+            regime = mgr.transition(mgr.evaluate(state, BoundaryState()))
+            actions = policy.evaluate(regime, state, [0], [])
 
-        mgr = RegimeManager()
-        regime = mgr.evaluate(state, BoundaryState())
-        regime = mgr.transition(regime)
-        actions = policy.evaluate(regime, state, [0], [])
-
-        if regime == Regime.DEGRADED and r < 0.6:
-            assert len(actions) >= 1
-            assert actions[0].knob == "K"
+            assert regime == expected_regime
+            if expected_regime == Regime.NOMINAL:
+                assert actions == []
+            else:
+                assert len(actions) >= 1
+                assert actions[0].knob == "K"
 
 
 class TestEndToEndStuartLandau:
