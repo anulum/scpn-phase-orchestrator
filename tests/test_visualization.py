@@ -9,7 +9,8 @@
 from __future__ import annotations
 
 import json
-from typing import get_type_hints
+from collections.abc import Callable
+from typing import TypeVar, get_type_hints
 
 import numpy as np
 import pytest
@@ -24,21 +25,28 @@ from scpn_phase_orchestrator.visualization.torus import (
 )
 from tests.typing_contracts import assert_precise_ndarray_hint
 
+_R = TypeVar("_R")
+
+
+def _call(fn: Callable[..., _R], *args: object, **kwargs: object) -> _R:
+    """Call ``fn`` with arguments that are deliberately outside its types."""
+    return fn(*args, **kwargs)
+
 
 class TestNetworkGraph:
-    def test_valid_json(self):
+    def test_valid_json(self) -> None:
         knm = np.full((4, 4), 0.5)
         np.fill_diagonal(knm, 0.0)
         data = json.loads(network_graph_json(knm))
         assert "nodes" in data
         assert "links" in data
 
-    def test_node_count(self):
+    def test_node_count(self) -> None:
         knm = np.eye(3) * 0
         data = json.loads(network_graph_json(knm))
         assert len(data["nodes"]) == 3
 
-    def test_link_threshold(self):
+    def test_link_threshold(self) -> None:
         knm = np.array([[0, 0.5, 0.001], [0.5, 0, 0.001], [0.001, 0.001, 0]])
         data = json.loads(network_graph_json(knm, threshold=0.01))
         assert len(data["links"]) == 1
@@ -47,33 +55,33 @@ class TestNetworkGraph:
         "threshold",
         [True, -0.01, float("nan"), float("inf"), "0.01"],
     )
-    def test_rejects_invalid_threshold(self, threshold: object):
+    def test_rejects_invalid_threshold(self, threshold: object) -> None:
         knm = np.array([[0.0, 0.5], [0.5, 0.0]])
         with pytest.raises(
             ValueError,
             match="threshold must be finite and non-negative",
         ):
-            network_graph_json(knm, threshold=threshold)
+            _call(network_graph_json, knm, threshold=threshold)
 
-    def test_custom_names(self):
+    def test_custom_names(self) -> None:
         knm = np.full((2, 2), 0.5)
         np.fill_diagonal(knm, 0.0)
         data = json.loads(network_graph_json(knm, layer_names=["Alpha", "Beta"]))
         assert data["nodes"][0]["name"] == "Alpha"
 
     @pytest.mark.parametrize("layer_names", [["Alpha"], ["Alpha", "Beta", "Gamma"]])
-    def test_rejects_layer_names_length_mismatch(self, layer_names: object):
+    def test_rejects_layer_names_length_mismatch(self, layer_names: object) -> None:
         knm = np.full((2, 2), 0.5)
         np.fill_diagonal(knm, 0.0)
         with pytest.raises(ValueError, match="layer_names length"):
-            network_graph_json(knm, layer_names=layer_names)
+            _call(network_graph_json, knm, layer_names=layer_names)
 
     @pytest.mark.parametrize("layer_names", [["", "Beta"], ["Alpha", True]])
-    def test_rejects_invalid_layer_names(self, layer_names: object):
+    def test_rejects_invalid_layer_names(self, layer_names: object) -> None:
         knm = np.full((2, 2), 0.5)
         np.fill_diagonal(knm, 0.0)
         with pytest.raises(ValueError, match="layer_names must be non-empty strings"):
-            network_graph_json(knm, layer_names=layer_names)
+            _call(network_graph_json, knm, layer_names=layer_names)
 
     def test_rejects_whitespace_layer_names(self) -> None:
         knm = np.full((2, 2), 0.5)
@@ -110,7 +118,7 @@ class TestNetworkGraph:
         assert data["nodes"][0]["R"] == 1.0
         assert data["nodes"][1]["R"] == 0.3333
 
-    def test_R_values(self):
+    def test_R_values(self) -> None:
         knm = np.full((2, 2), 0.5)
         np.fill_diagonal(knm, 0.0)
         data = json.loads(network_graph_json(knm, R_values=[0.8, 0.9]))
@@ -126,18 +134,18 @@ class TestNetworkGraph:
             ["0.8", "0.9"],
         ],
     )
-    def test_rejects_invalid_R_values(self, r_values: object):
+    def test_rejects_invalid_R_values(self, r_values: object) -> None:
         knm = np.full((2, 2), 0.5)
         np.fill_diagonal(knm, 0.0)
         with pytest.raises(ValueError, match="R_values must be finite"):
-            network_graph_json(knm, R_values=r_values)
+            _call(network_graph_json, knm, R_values=r_values)
 
     @pytest.mark.parametrize("r_values", [[0.8], [0.8, 0.9, 1.0]])
-    def test_rejects_R_values_length_mismatch(self, r_values: object):
+    def test_rejects_R_values_length_mismatch(self, r_values: object) -> None:
         knm = np.full((2, 2), 0.5)
         np.fill_diagonal(knm, 0.0)
         with pytest.raises(ValueError, match="R_values length"):
-            network_graph_json(knm, R_values=r_values)
+            _call(network_graph_json, knm, R_values=r_values)
 
     @pytest.mark.parametrize(
         "knm",
@@ -149,9 +157,9 @@ class TestNetworkGraph:
             np.array([["0.0", "1.0"], ["1.0", "0.0"]], dtype=object),
         ],
     )
-    def test_rejects_invalid_coupling_matrix(self, knm: object):
+    def test_rejects_invalid_coupling_matrix(self, knm: object) -> None:
         with pytest.raises(ValueError, match="knm must be finite"):
-            network_graph_json(knm)
+            _call(network_graph_json, knm)
 
     @pytest.mark.parametrize(
         "knm",
@@ -160,13 +168,13 @@ class TestNetworkGraph:
             np.array([[0.0, 1.0, 0.0], [1.0, 0.0, 1.0]]),
         ],
     )
-    def test_rejects_non_square_coupling_matrix(self, knm: object):
+    def test_rejects_non_square_coupling_matrix(self, knm: object) -> None:
         with pytest.raises(ValueError, match="knm must be a square matrix"):
-            network_graph_json(knm)
+            _call(network_graph_json, knm)
 
 
 class TestCouplingHeatmap:
-    def test_valid_json(self):
+    def test_valid_json(self) -> None:
         knm = np.full((3, 3), 0.5)
         np.fill_diagonal(knm, 0.0)
         data = json.loads(coupling_heatmap_json(knm))
@@ -174,25 +182,25 @@ class TestCouplingHeatmap:
         assert "matrix" in data
         assert len(data["matrix"]) == 3
 
-    def test_min_max(self):
+    def test_min_max(self) -> None:
         knm = np.array([[0, 1], [0.5, 0]])
         data = json.loads(coupling_heatmap_json(knm))
         assert data["min"] == 0.0
         assert data["max"] == 1.0
 
     @pytest.mark.parametrize("layer_names", [["Alpha"], ["Alpha", "Beta", "Gamma"]])
-    def test_rejects_layer_names_length_mismatch(self, layer_names: object):
+    def test_rejects_layer_names_length_mismatch(self, layer_names: object) -> None:
         knm = np.full((2, 2), 0.5)
         np.fill_diagonal(knm, 0.0)
         with pytest.raises(ValueError, match="layer_names length"):
-            coupling_heatmap_json(knm, layer_names=layer_names)
+            _call(coupling_heatmap_json, knm, layer_names=layer_names)
 
     @pytest.mark.parametrize("layer_names", [["", "Beta"], ["Alpha", True]])
-    def test_rejects_invalid_layer_names(self, layer_names: object):
+    def test_rejects_invalid_layer_names(self, layer_names: object) -> None:
         knm = np.full((2, 2), 0.5)
         np.fill_diagonal(knm, 0.0)
         with pytest.raises(ValueError, match="layer_names must be non-empty strings"):
-            coupling_heatmap_json(knm, layer_names=layer_names)
+            _call(coupling_heatmap_json, knm, layer_names=layer_names)
 
     @pytest.mark.parametrize(
         "knm",
@@ -204,9 +212,9 @@ class TestCouplingHeatmap:
             np.array([["0.0", "1.0"], ["1.0", "0.0"]], dtype=object),
         ],
     )
-    def test_rejects_invalid_coupling_matrix(self, knm: object):
+    def test_rejects_invalid_coupling_matrix(self, knm: object) -> None:
         with pytest.raises(ValueError, match="knm must be finite"):
-            coupling_heatmap_json(knm)
+            _call(coupling_heatmap_json, knm)
 
     @pytest.mark.parametrize(
         "knm",
@@ -215,9 +223,9 @@ class TestCouplingHeatmap:
             np.array([[0.0, 1.0, 0.0], [1.0, 0.0, 1.0]]),
         ],
     )
-    def test_rejects_non_square_coupling_matrix(self, knm: object):
+    def test_rejects_non_square_coupling_matrix(self, knm: object) -> None:
         with pytest.raises(ValueError, match="knm must be a square matrix"):
-            coupling_heatmap_json(knm)
+            _call(coupling_heatmap_json, knm)
 
     def test_zero_size_coupling_matrix_rejects_stats(self) -> None:
         with pytest.raises(ValueError, match="zero-size array"):
@@ -225,20 +233,20 @@ class TestCouplingHeatmap:
 
 
 class TestTorusPoints:
-    def test_valid_json(self):
+    def test_valid_json(self) -> None:
         phases = np.array([0.0, 1.0, 2.0, 3.0])
         data = json.loads(torus_points_json(phases))
         assert "points" in data
         assert len(data["points"]) == 4
 
-    def test_point_fields(self):
+    def test_point_fields(self) -> None:
         phases = np.array([0.0, np.pi])
         data = json.loads(torus_points_json(phases))
         p = data["points"][0]
         assert "x" in p and "y" in p and "z" in p
         assert "phase" in p and "R" in p
 
-    def test_custom_radii(self):
+    def test_custom_radii(self) -> None:
         phases = np.array([0.0])
         data = json.loads(torus_points_json(phases, major_radius=5.0, minor_radius=1.0))
         p = data["points"][0]
@@ -248,23 +256,23 @@ class TestTorusPoints:
         "major_radius",
         [True, 0.0, -2.0, float("nan"), float("inf"), "2.0"],
     )
-    def test_rejects_invalid_major_radius(self, major_radius: object):
+    def test_rejects_invalid_major_radius(self, major_radius: object) -> None:
         with pytest.raises(
             ValueError, match="major_radius must be finite and positive"
         ):
-            torus_points_json(np.array([0.0]), major_radius=major_radius)
+            _call(torus_points_json, np.array([0.0]), major_radius=major_radius)
 
     @pytest.mark.parametrize(
         "minor_radius",
         [True, 0.0, -0.5, float("nan"), float("inf"), "0.5"],
     )
-    def test_rejects_invalid_minor_radius(self, minor_radius: object):
+    def test_rejects_invalid_minor_radius(self, minor_radius: object) -> None:
         with pytest.raises(
             ValueError, match="minor_radius must be finite and positive"
         ):
-            torus_points_json(np.array([0.0]), minor_radius=minor_radius)
+            _call(torus_points_json, np.array([0.0]), minor_radius=minor_radius)
 
-    def test_R_values(self):
+    def test_R_values(self) -> None:
         phases = np.array([0.0, 1.0])
         data = json.loads(torus_points_json(phases, R_values=[0.5, 0.9]))
         assert data["points"][0]["R"] == 0.5
@@ -279,14 +287,14 @@ class TestTorusPoints:
             ["0.5", "0.9"],
         ],
     )
-    def test_rejects_invalid_R_values(self, r_values: object):
+    def test_rejects_invalid_R_values(self, r_values: object) -> None:
         with pytest.raises(ValueError, match="R_values must be finite"):
-            torus_points_json(np.array([0.0, 1.0]), R_values=r_values)
+            _call(torus_points_json, np.array([0.0, 1.0]), R_values=r_values)
 
     @pytest.mark.parametrize("r_values", [[0.5], [0.5, 0.9, 1.0]])
-    def test_rejects_R_values_length_mismatch(self, r_values: object):
+    def test_rejects_R_values_length_mismatch(self, r_values: object) -> None:
         with pytest.raises(ValueError, match="R_values length"):
-            torus_points_json(np.array([0.0, 1.0]), R_values=r_values)
+            _call(torus_points_json, np.array([0.0, 1.0]), R_values=r_values)
 
     @pytest.mark.parametrize(
         "phases",
@@ -298,11 +306,11 @@ class TestTorusPoints:
             np.array(["0.0"], dtype=object),
         ],
     )
-    def test_rejects_invalid_phases(self, phases: object):
+    def test_rejects_invalid_phases(self, phases: object) -> None:
         with pytest.raises(ValueError, match="phases must be finite"):
-            torus_points_json(phases)
+            _call(torus_points_json, phases)
 
-    def test_rejects_multidimensional_phases(self):
+    def test_rejects_multidimensional_phases(self) -> None:
         with pytest.raises(ValueError, match="phases must be 1-D"):
             torus_points_json(np.array([[0.0, 1.0]]))
 
@@ -313,35 +321,35 @@ class TestTorusPoints:
 
 
 class TestPhaseWheel:
-    def test_valid_json(self):
+    def test_valid_json(self) -> None:
         phases = np.array([0.0, np.pi / 2, np.pi])
         data = json.loads(phase_wheel_json(phases))
         assert "oscillators" in data
         assert len(data["oscillators"]) == 3
 
-    def test_unit_circle(self):
+    def test_unit_circle(self) -> None:
         phases = np.array([0.0])
         data = json.loads(phase_wheel_json(phases))
         osc = data["oscillators"][0]
         assert abs(osc["x"] - 1.0) < 1e-4
         assert abs(osc["y"] - 0.0) < 1e-4
 
-    def test_custom_names(self):
+    def test_custom_names(self) -> None:
         phases = np.array([0.0, 1.0])
         data = json.loads(phase_wheel_json(phases, layer_names=["A", "B"]))
         assert data["oscillators"][0]["name"] == "A"
 
     @pytest.mark.parametrize("layer_names", [["A"], ["A", "B", "C"]])
-    def test_rejects_layer_names_length_mismatch(self, layer_names: object):
+    def test_rejects_layer_names_length_mismatch(self, layer_names: object) -> None:
         phases = np.array([0.0, 1.0])
         with pytest.raises(ValueError, match="layer_names length"):
-            phase_wheel_json(phases, layer_names=layer_names)
+            _call(phase_wheel_json, phases, layer_names=layer_names)
 
     @pytest.mark.parametrize("layer_names", [["", "B"], ["A", True]])
-    def test_rejects_invalid_layer_names(self, layer_names: object):
+    def test_rejects_invalid_layer_names(self, layer_names: object) -> None:
         phases = np.array([0.0, 1.0])
         with pytest.raises(ValueError, match="layer_names must be non-empty strings"):
-            phase_wheel_json(phases, layer_names=layer_names)
+            _call(phase_wheel_json, phases, layer_names=layer_names)
 
     @pytest.mark.parametrize(
         "phases",
@@ -353,11 +361,11 @@ class TestPhaseWheel:
             np.array(["0.0"], dtype=object),
         ],
     )
-    def test_rejects_invalid_phases(self, phases: object):
+    def test_rejects_invalid_phases(self, phases: object) -> None:
         with pytest.raises(ValueError, match="phases must be finite"):
-            phase_wheel_json(phases)
+            _call(phase_wheel_json, phases)
 
-    def test_rejects_multidimensional_phases(self):
+    def test_rejects_multidimensional_phases(self) -> None:
         with pytest.raises(ValueError, match="phases must be 1-D"):
             phase_wheel_json(np.array([[0.0, 1.0]]))
 
@@ -365,7 +373,7 @@ class TestPhaseWheel:
 class TestVisualizationPipelineWiring:
     """Pipeline: engine → phases/K_nm → visualization JSON."""
 
-    def test_engine_state_to_visualization(self):
+    def test_engine_state_to_visualization(self) -> None:
         """Engine phases + K_nm → network_graph_json + phase_wheel_json."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
 
@@ -390,7 +398,7 @@ class TestVisualizationPipelineWiring:
 class TestVisualizationTypeHints:
     """Guard the V2 typed-array contract for public visualization helpers."""
 
-    def test_public_array_inputs_use_parameterised_ndarray_aliases(self):
+    def test_public_array_inputs_use_parameterised_ndarray_aliases(self) -> None:
         for fn, param in [
             (network_graph_json, "knm"),
             (coupling_heatmap_json, "knm"),
