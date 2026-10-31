@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pytest
@@ -23,7 +25,7 @@ from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
 
 
 @pytest.fixture
-def log_file(tmp_path):
+def log_file(tmp_path: Path) -> Path:
     log = tmp_path / "audit.jsonl"
     entries = [
         {
@@ -44,13 +46,13 @@ def log_file(tmp_path):
     return log
 
 
-def test_load_entries(log_file):
+def test_load_entries(log_file: Path) -> None:
     re = ReplayEngine(log_file)
     entries = re.load()
     assert len(entries) == 3
 
 
-def test_replay_step_reconstructs_state(log_file):
+def test_replay_step_reconstructs_state(log_file: Path) -> None:
     re = ReplayEngine(log_file)
     entries = re.load()
     step_data = entries[0]
@@ -61,7 +63,7 @@ def test_replay_step_reconstructs_state(log_file):
     assert state.stability_proxy == pytest.approx(0.85)
 
 
-def test_replay_step_ignores_malformed_layer_containers(tmp_path):
+def test_replay_step_ignores_malformed_layer_containers(tmp_path: Path) -> None:
     re = ReplayEngine(tmp_path / "unused.jsonl")
 
     state = re.replay_step(
@@ -77,7 +79,7 @@ def test_replay_step_ignores_malformed_layer_containers(tmp_path):
     assert state.layers[0] == LayerState(R=0.5, psi=0.25)
 
 
-def test_replay_step_sanitizes_malformed_layer_numeric_values(tmp_path):
+def test_replay_step_sanitizes_malformed_layer_numeric_values(tmp_path: Path) -> None:
     re = ReplayEngine(tmp_path / "unused.jsonl")
 
     state = re.replay_step(
@@ -103,7 +105,9 @@ def test_replay_step_sanitizes_malformed_layer_numeric_values(tmp_path):
 
 
 @pytest.mark.parametrize("value", [True, float("nan"), float("inf"), "0.5"])
-def test_replay_step_sanitizes_malformed_stability_proxy(tmp_path, value):
+def test_replay_step_sanitizes_malformed_stability_proxy(
+    tmp_path: Path, value: object
+) -> None:
     re = ReplayEngine(tmp_path / "unused.jsonl")
 
     state = re.replay_step(
@@ -118,7 +122,7 @@ def test_replay_step_sanitizes_malformed_stability_proxy(tmp_path, value):
     assert state.stability_proxy == 0.0
 
 
-def test_verify_determinism_with_matching_data(tmp_path):
+def test_verify_determinism_with_matching_data(tmp_path: Path) -> None:
     n = 4
     engine = UPDEEngine(n, dt=0.01)
     rng = np.random.default_rng(0)
@@ -147,13 +151,13 @@ def test_verify_determinism_with_matching_data(tmp_path):
     assert re.verify_determinism(engine, re.load()) is True
 
 
-def test_verify_determinism_skips_entries_without_phases(log_file):
+def test_verify_determinism_skips_entries_without_phases(log_file: Path) -> None:
     engine = UPDEEngine(2, dt=0.01)
     re = ReplayEngine(log_file)
     assert re.verify_determinism(engine, re.load()) is True
 
 
-def test_verify_determinism_returns_false_on_r_mismatch(tmp_path):
+def test_verify_determinism_returns_false_on_r_mismatch(tmp_path: Path) -> None:
     n = 4
     engine = UPDEEngine(n, dt=0.01)
     rng = np.random.default_rng(1)
@@ -179,7 +183,7 @@ def test_verify_determinism_returns_false_on_r_mismatch(tmp_path):
     assert re.verify_determinism(engine, re.load()) is False
 
 
-def _make_state(r_val, psi_val):
+def _make_state(r_val: float, psi_val: float) -> UPDEState:
     return UPDEState(
         layers=[LayerState(R=r_val, psi=psi_val)],
         cross_layer_alignment=np.zeros((1, 1)),
@@ -188,7 +192,7 @@ def _make_state(r_val, psi_val):
     )
 
 
-def test_logger_header_and_full_state(tmp_path):
+def test_logger_header_and_full_state(tmp_path: Path) -> None:
     """log_header + log_step with arrays round-trips correctly."""
     log = tmp_path / "full.jsonl"
     n = 4
@@ -221,7 +225,7 @@ def test_logger_header_and_full_state(tmp_path):
     assert entries[1]["zeta"] == 0.0
 
 
-def test_roundtrip_deterministic_replay(tmp_path):
+def test_roundtrip_deterministic_replay(tmp_path: Path) -> None:
     """Full round-trip: engine -> audit log -> replay -> chained verify."""
     log = tmp_path / "roundtrip.jsonl"
     n = 4
@@ -254,13 +258,16 @@ def test_roundtrip_deterministic_replay(tmp_path):
     header = re.load_header(entries)
     assert header is not None
     replay_eng = re.build_engine(header)
+    assert isinstance(replay_eng, UPDEEngine)
     passed, n_verified = re.verify_determinism_chained(replay_eng, entries)
     assert passed
     assert n_verified == 9
 
 
 @pytest.mark.parametrize("missing", ["n_oscillators", "dt"])
-def test_build_engine_rejects_missing_required_header_fields(tmp_path, missing):
+def test_build_engine_rejects_missing_required_header_fields(
+    tmp_path: Path, missing: str
+) -> None:
     re = ReplayEngine(tmp_path / "unused.jsonl")
     header = {
         "header": True,
@@ -275,7 +282,9 @@ def test_build_engine_rejects_missing_required_header_fields(tmp_path, missing):
 
 
 @pytest.mark.parametrize("n_oscillators", [0, -1])
-def test_build_engine_rejects_non_positive_oscillator_counts(tmp_path, n_oscillators):
+def test_build_engine_rejects_non_positive_oscillator_counts(
+    tmp_path: Path, n_oscillators: int
+) -> None:
     re = ReplayEngine(tmp_path / "unused.jsonl")
 
     with pytest.raises(
@@ -292,7 +301,9 @@ def test_build_engine_rejects_non_positive_oscillator_counts(tmp_path, n_oscilla
 
 
 @pytest.mark.parametrize("method", [True, "", "bogus"])
-def test_build_engine_rejects_malformed_method_metadata(tmp_path, method):
+def test_build_engine_rejects_malformed_method_metadata(
+    tmp_path: Path, method: object
+) -> None:
     re = ReplayEngine(tmp_path / "unused.jsonl")
 
     with pytest.raises(ValueError, match="audit header method"):
@@ -308,8 +319,8 @@ def test_build_engine_rejects_malformed_method_metadata(tmp_path, method):
 
 @pytest.mark.parametrize("amplitude_mode", [1, "true", [], object()])
 def test_build_engine_rejects_malformed_amplitude_mode_metadata(
-    tmp_path, amplitude_mode
-):
+    tmp_path: Path, amplitude_mode: object
+) -> None:
     re = ReplayEngine(tmp_path / "unused.jsonl")
 
     with pytest.raises(ValueError, match="audit header amplitude_mode"):
@@ -324,7 +335,7 @@ def test_build_engine_rejects_malformed_amplitude_mode_metadata(
         )
 
 
-def test_chained_verification_detects_divergence(tmp_path):
+def test_chained_verification_detects_divergence(tmp_path: Path) -> None:
     """Tampered phases are caught by chained verification."""
     n = 4
     dt = 0.01
@@ -336,7 +347,9 @@ def test_chained_verification_detects_divergence(tmp_path):
     np.fill_diagonal(knm, 0.0)
     alpha = np.zeros((n, n))
 
-    entries = [{"header": True, "n_oscillators": n, "dt": dt, "method": "euler"}]
+    entries: list[dict[str, Any]] = [
+        {"header": True, "n_oscillators": n, "dt": dt, "method": "euler"}
+    ]
     for step_idx in range(5):
         entries.append(
             {
@@ -365,13 +378,16 @@ def test_chained_verification_detects_divergence(tmp_path):
 
     re = ReplayEngine(log)
     loaded = re.load()
-    replay_eng = re.build_engine(re.load_header(loaded))
+    header = re.load_header(loaded)
+    assert header is not None
+    replay_eng = re.build_engine(header)
+    assert isinstance(replay_eng, UPDEEngine)
     passed, n_verified = re.verify_determinism_chained(replay_eng, loaded)
     assert not passed
     assert n_verified == 1
 
 
-def test_chained_verify_single_entry(tmp_path):
+def test_chained_verify_single_entry(tmp_path: Path) -> None:
     """Single-entry log returns (True, 0) — nothing to chain."""
     entry = {
         "header": True,
@@ -393,13 +409,18 @@ def test_chained_verify_single_entry(tmp_path):
 
     re = ReplayEngine(log)
     loaded = re.load()
-    eng = re.build_engine(re.load_header(loaded))
+    header = re.load_header(loaded)
+    assert header is not None
+    eng = re.build_engine(header)
+    assert isinstance(eng, UPDEEngine)
     passed, n = re.verify_determinism_chained(eng, loaded)
     assert passed
     assert n == 0
 
 
-def test_chained_verification_rejects_missing_required_step_arrays(tmp_path):
+def test_chained_verification_rejects_missing_required_step_arrays(
+    tmp_path: Path,
+) -> None:
     engine = UPDEEngine(2, dt=0.01)
     re = ReplayEngine(tmp_path / "unused.jsonl")
 
@@ -426,7 +447,7 @@ def test_chained_verification_rejects_missing_required_step_arrays(tmp_path):
     assert n_verified == 0
 
 
-def test_chained_verification_rejects_malformed_step_arrays(tmp_path):
+def test_chained_verification_rejects_malformed_step_arrays(tmp_path: Path) -> None:
     engine = UPDEEngine(2, dt=0.01)
     re = ReplayEngine(tmp_path / "unused.jsonl")
 
@@ -454,7 +475,9 @@ def test_chained_verification_rejects_malformed_step_arrays(tmp_path):
     assert n_verified == 0
 
 
-def test_sl_chained_verification_rejects_missing_required_step_arrays(tmp_path):
+def test_sl_chained_verification_rejects_missing_required_step_arrays(
+    tmp_path: Path,
+) -> None:
     from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
 
     engine = StuartLandauEngine(2, dt=0.01)
@@ -485,7 +508,7 @@ def test_sl_chained_verification_rejects_missing_required_step_arrays(tmp_path):
     assert n_verified == 0
 
 
-def test_sl_chained_verification_rejects_malformed_step_arrays(tmp_path):
+def test_sl_chained_verification_rejects_malformed_step_arrays(tmp_path: Path) -> None:
     from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
 
     engine = StuartLandauEngine(2, dt=0.01)
@@ -517,7 +540,7 @@ def test_sl_chained_verification_rejects_malformed_step_arrays(tmp_path):
     assert n_verified == 0
 
 
-def test_sl_chained_verification_rejects_malformed_next_state(tmp_path):
+def test_sl_chained_verification_rejects_malformed_next_state(tmp_path: Path) -> None:
     from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
 
     engine = StuartLandauEngine(2, dt=0.01)
@@ -549,7 +572,7 @@ def test_sl_chained_verification_rejects_malformed_next_state(tmp_path):
     assert n_verified == 0
 
 
-def test_cli_replay_verify_roundtrip(tmp_path):
+def test_cli_replay_verify_roundtrip(tmp_path: Path) -> None:
     """CLI: run --audit -> replay --verify succeeds."""
     import yaml
 
@@ -589,7 +612,9 @@ def test_cli_replay_verify_roundtrip(tmp_path):
     assert "9 transitions OK" in result.output
 
 
-def test_cli_replay_verify_with_audit_key_rejects_unsigned_log(tmp_path, monkeypatch):
+def test_cli_replay_verify_with_audit_key_rejects_unsigned_log(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """CLI replay verification must fail closed when signatures are required."""
     monkeypatch.setenv("SPO_AUDIT_KEY", "unit-test-secret-key")
     log = tmp_path / "unsigned.jsonl"
@@ -615,7 +640,7 @@ def test_cli_replay_verify_with_audit_key_rejects_unsigned_log(tmp_path, monkeyp
     assert "audit integrity FAILED" in result.output
 
 
-def test_hash_chain_present(tmp_path):
+def test_hash_chain_present(tmp_path: Path) -> None:
     """Every record gets a _hash field."""
     log = tmp_path / "hash.jsonl"
     n = 4
@@ -646,7 +671,7 @@ def test_hash_chain_present(tmp_path):
         assert len(entry["_hash"]) == 64
 
 
-def test_hash_chain_integrity(tmp_path):
+def test_hash_chain_integrity(tmp_path: Path) -> None:
     """verify_integrity passes on an untampered log."""
     log = tmp_path / "intact.jsonl"
     n = 4
@@ -676,7 +701,7 @@ def test_hash_chain_integrity(tmp_path):
     assert n_verified == 6
 
 
-def test_hash_chain_detects_tampering(tmp_path):
+def test_hash_chain_detects_tampering(tmp_path: Path) -> None:
     """Mutating a field without recomputing hashes breaks the chain."""
     log = tmp_path / "tampered.jsonl"
     n = 4
@@ -706,7 +731,7 @@ def test_hash_chain_detects_tampering(tmp_path):
     assert not ok
 
 
-def test_legacy_log_without_hashes(tmp_path):
+def test_legacy_log_without_hashes(tmp_path: Path) -> None:
     """Logs without _hash fields return (True, 0)."""
     log = tmp_path / "legacy.jsonl"
     entries = [
@@ -720,7 +745,9 @@ def test_legacy_log_without_hashes(tmp_path):
     assert n_verified == 0
 
 
-def test_integrity_with_audit_key_rejects_unsigned_records(tmp_path, monkeypatch):
+def test_integrity_with_audit_key_rejects_unsigned_records(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Configured SPO_AUDIT_KEY makes unsigned development logs fail closed."""
     monkeypatch.setenv("SPO_AUDIT_KEY", "unit-test-secret-key")
     log = tmp_path / "unsigned.jsonl"
@@ -734,7 +761,9 @@ def test_integrity_with_audit_key_rejects_unsigned_records(tmp_path, monkeypatch
     assert n_verified == 0
 
 
-def test_integrity_with_audit_key_rejects_signature_tampering(tmp_path, monkeypatch):
+def test_integrity_with_audit_key_rejects_signature_tampering(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Hash-preserving payload mutation must still fail HMAC verification."""
     monkeypatch.setenv("SPO_AUDIT_KEY", "unit-test-secret-key")
     log = tmp_path / "signed.jsonl"
@@ -752,7 +781,9 @@ def test_integrity_with_audit_key_rejects_signature_tampering(tmp_path, monkeypa
     assert n_verified == 0
 
 
-def test_integrity_with_audit_key_rejects_audit_mode_tampering(tmp_path, monkeypatch):
+def test_integrity_with_audit_key_rejects_audit_mode_tampering(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Signed JSONL records must bind audit mode into HMAC verification."""
     monkeypatch.setenv("SPO_AUDIT_KEY", "unit-test-secret-key")
     log = tmp_path / "signed.jsonl"
@@ -770,7 +801,9 @@ def test_integrity_with_audit_key_rejects_audit_mode_tampering(tmp_path, monkeyp
     assert n_verified == 0
 
 
-def test_integrity_verifies_records_across_rotated_audit_keys(tmp_path, monkeypatch):
+def test_integrity_verifies_records_across_rotated_audit_keys(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """A JSON keyring verifies old and current records after key rotation."""
     old_key = "old-rotation-key"
     new_key = "new-rotation-key"
@@ -804,7 +837,7 @@ def test_integrity_verifies_records_across_rotated_audit_keys(tmp_path, monkeypa
     assert n_verified == 2
 
 
-def test_sl_chained_replay(tmp_path):
+def test_sl_chained_replay(tmp_path: Path) -> None:
     """Stuart-Landau replay: engine output matches logged next state."""
     from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
 
@@ -823,7 +856,9 @@ def test_sl_chained_replay(tmp_path):
     np.fill_diagonal(knm_r, 0.0)
     alpha = np.zeros((n, n))
 
-    entries = [{"header": True, "n_oscillators": n, "dt": dt, "amplitude_mode": True}]
+    entries: list[dict[str, Any]] = [
+        {"header": True, "n_oscillators": n, "dt": dt, "amplitude_mode": True}
+    ]
     for step_idx in range(5):
         entries.append(
             {
@@ -850,6 +885,7 @@ def test_sl_chained_replay(tmp_path):
     re = ReplayEngine(log)
     loaded = re.load()
     header = re.load_header(loaded)
+    assert header is not None
     replay_eng = re.build_engine(header)
     assert isinstance(replay_eng, StuartLandauEngine)
     passed, n_verified = re.verify_determinism_sl_chained(replay_eng, loaded)
@@ -857,7 +893,7 @@ def test_sl_chained_replay(tmp_path):
     assert n_verified == 4
 
 
-def test_cli_replay_verify_no_header(tmp_path):
+def test_cli_replay_verify_no_header(tmp_path: Path) -> None:
     """CLI: replay --verify on legacy log (no header) exits 1."""
     log = tmp_path / "legacy.jsonl"
     log.write_text(
@@ -870,76 +906,70 @@ def test_cli_replay_verify_no_header(tmp_path):
     assert result.exit_code == 1
     assert "no header" in result.output
 
-    # Salvaged module-specific behavioural contracts from deleted mixed tests.
-    def test_sl_chained_single_entry(self, tmp_path):
-        from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
 
-        engine = StuartLandauEngine(2, dt=0.01)
-        entries = [
-            {"header": True, "n_oscillators": 2, "dt": 0.01, "amplitude_mode": True},
+# Salvaged module-specific behavioural contracts from deleted mixed tests.
+def test_sl_chained_single_entry(tmp_path: Path) -> None:
+    from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
+
+    engine = StuartLandauEngine(2, dt=0.01)
+    entries = [
+        {"header": True, "n_oscillators": 2, "dt": 0.01, "amplitude_mode": True},
+        {
+            "step": 0,
+            "phases": [0.1, 0.2, 0.8, 0.9],
+            "omegas": [1.0, 1.0],
+            "knm": [[0, 0.3], [0.3, 0]],
+            "alpha": [[0, 0], [0, 0]],
+        },
+    ]
+    log = tmp_path / "sl_single.jsonl"
+    log.write_text("\n".join(json.dumps(e) for e in entries) + "\n", encoding="utf-8")
+    re = ReplayEngine(log)
+    loaded = re.load()
+    passed, n = re.verify_determinism_sl_chained(engine, loaded)
+    assert passed
+    assert n == 0
+
+
+def test_sl_chained_detects_divergence(tmp_path: Path) -> None:
+    n = 2
+    from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
+
+    engine = StuartLandauEngine(n, dt=0.01)
+    state = np.array([0.1, 0.2, 0.8, 0.9])
+    omegas = np.ones(n)
+    knm = 0.3 * np.ones((n, n))
+    np.fill_diagonal(knm, 0.0)
+    alpha = np.zeros((n, n))
+    mu = np.ones(n)
+    knm_r = 0.1 * np.ones((n, n))
+    np.fill_diagonal(knm_r, 0.0)
+
+    entries: list[dict[str, Any]] = [
+        {"header": True, "n_oscillators": n, "dt": 0.01, "amplitude_mode": True}
+    ]
+    for i in range(3):
+        entries.append(
             {
-                "step": 0,
-                "phases": [0.1, 0.2, 0.8, 0.9],
-                "omegas": [1.0, 1.0],
-                "knm": [[0, 0.3], [0.3, 0]],
-                "alpha": [[0, 0], [0, 0]],
-            },
-        ]
-        log = tmp_path / "sl_single.jsonl"
-        log.write_text(
-            "\n".join(json.dumps(e) for e in entries) + "\n", encoding="utf-8"
+                "step": i,
+                "phases": state.tolist(),
+                "omegas": omegas.tolist(),
+                "knm": knm.tolist(),
+                "alpha": alpha.tolist(),
+                "mu": mu.tolist(),
+                "knm_r": knm_r.tolist(),
+                "zeta": 0.0,
+                "psi_drive": 0.0,
+            }
         )
-        re = ReplayEngine(log)
-        loaded = re.load()
-        passed, n = re.verify_determinism_sl_chained(engine, loaded)
-        assert passed
-        assert n == 0
+        state = engine.step(state, omegas, mu, knm, knm_r, 0.0, 0.0, alpha)
 
-    def test_sl_chained_detects_divergence(self, tmp_path):
-        n = 2
-        from scpn_phase_orchestrator.upde.stuart_landau import StuartLandauEngine
-
-        engine = StuartLandauEngine(n, dt=0.01)
-        state = np.array([0.1, 0.2, 0.8, 0.9])
-        omegas = np.ones(n)
-        knm = 0.3 * np.ones((n, n))
-        np.fill_diagonal(knm, 0.0)
-        alpha = np.zeros((n, n))
-        mu = np.ones(n)
-        knm_r = 0.1 * np.ones((n, n))
-        np.fill_diagonal(knm_r, 0.0)
-
-        entries = [
-            {"header": True, "n_oscillators": n, "dt": 0.01, "amplitude_mode": True}
-        ]
-        for i in range(3):
-            entries.append(
-                {
-                    "step": i,
-                    "phases": state.tolist(),
-                    "omegas": omegas.tolist(),
-                    "knm": knm.tolist(),
-                    "alpha": alpha.tolist(),
-                    "mu": mu.tolist(),
-                    "knm_r": knm_r.tolist(),
-                    "zeta": 0.0,
-                    "psi_drive": 0.0,
-                }
-            )
-            state = engine.step(state, omegas, mu, knm, knm_r, 0.0, 0.0, alpha)
-
-        # Tamper
-        entries[2]["phases"][0] += 5.0
-        log = tmp_path / "sl_tamper.jsonl"
-        log.write_text(
-            "\n".join(json.dumps(e) for e in entries) + "\n", encoding="utf-8"
-        )
-        re = ReplayEngine(log)
-        loaded = re.load()
-        passed, n_v = re.verify_determinism_sl_chained(engine, loaded)
-        assert not passed
-
-
-# ──────────────────────────────────────────────────────────────────────
-# binding/loader.py: protocol_net parsing, JSON parse error, YAML error
-# ──────────────────────────────────────────────────────────────────────
+    # Tamper
+    entries[2]["phases"][0] += 5.0
+    log = tmp_path / "sl_tamper.jsonl"
+    log.write_text("\n".join(json.dumps(e) for e in entries) + "\n", encoding="utf-8")
+    re = ReplayEngine(log)
+    loaded = re.load()
+    passed, n_v = re.verify_determinism_sl_chained(engine, loaded)
+    assert not passed
+    assert n_v == 0
