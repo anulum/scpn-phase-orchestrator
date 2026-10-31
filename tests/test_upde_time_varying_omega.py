@@ -21,8 +21,16 @@ from scpn_phase_orchestrator.upde.engine import (
 
 
 def _force_python(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Pin step(), run() and the schedule dispatch to the Python owners.
+
+    UPDEEngine builds its Rust stepper at construction when spo_kernel is
+    installed, so the engine module's kernel flag is cleared as well.
+    """
+    monkeypatch.setattr(engine_module, "_HAS_RUST", False)
     monkeypatch.setattr(engine_module, "ACTIVE_BACKEND", "python")
+    monkeypatch.setattr(engine_module, "AVAILABLE_BACKENDS", ["python"])
     monkeypatch.setattr(run_module, "ACTIVE_BACKEND", "python")
+    monkeypatch.setattr(run_module, "AVAILABLE_BACKENDS", ["python"])
 
 
 def _zero_problem(n: int = 2) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
