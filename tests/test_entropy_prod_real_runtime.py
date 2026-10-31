@@ -32,11 +32,10 @@ from scpn_phase_orchestrator.monitor.entropy_prod import (
     entropy_production_backend,
     entropy_production_rate,
 )
-
-pytestmark = pytest.mark.native_runtime
+from tests._runtime_owners import NEEDS_KERNEL, owner_params
 
 ROOT = Path(__file__).resolve().parents[1]
-OWNERS = ("python", "rust", "mojo", "julia", "go")
+OWNERS = owner_params(("python", "rust", "mojo", "julia", "go"))
 RELATIVE_TOLERANCE = 1e-12
 
 
@@ -213,6 +212,7 @@ def test_python_only_profile_refuses_every_native_owner(tmp_path: Path) -> None:
     assert result["rate"] == pytest.approx(_PROFILE_EXPECTED, rel=RELATIVE_TOLERANCE)
 
 
+@NEEDS_KERNEL
 def test_rust_only_profile_serves_rust_and_refuses_the_rest(tmp_path: Path) -> None:
     """With only Rust present, Rust serves ``auto`` and the other owners refuse."""
     result = _run_profile(tmp_path, keep_rust=True)

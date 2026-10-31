@@ -44,12 +44,11 @@ from scpn_phase_orchestrator.experimental.accelerators.upde import (
 )
 from scpn_phase_orchestrator.upde import _run as run_mod
 from scpn_phase_orchestrator.upde import engine as engine_mod
-
-pytestmark = pytest.mark.native_runtime
+from tests._runtime_owners import NEEDS_KERNEL, owner_params
 
 ROOT = Path(__file__).resolve().parents[1]
 TWO_PI = 2.0 * math.pi
-OWNERS = ("python", "rust", "mojo", "julia", "go")
+OWNERS = owner_params(("python", "rust", "mojo", "julia", "go"))
 METHODS = ("euler", "rk4", "rk45")
 N = 4
 ZETA, PSI, DT = 0.3, 0.4, 0.01
@@ -322,6 +321,8 @@ def test_each_owner_normalises_valid_array_likes(backend: str) -> None:
     _assert_on_circle(got, expected, _tolerance(backend))
 
 
+# Needs both the Go library and Julia, so it runs where every toolchain is.
+@pytest.mark.native_runtime
 def test_engine_facade_passes_the_named_owner_through() -> None:
     """The public engine facade routes ``backend=`` to the named owner."""
     phases, omegas, knm, alpha = _problem()
@@ -399,6 +400,7 @@ def test_unknown_names_are_refused() -> None:
         run_mod.upde_run_backend("spectrum")
 
 
+@pytest.mark.native_runtime
 def test_named_step_owner_is_loaded_once(monkeypatch: pytest.MonkeyPatch) -> None:
     """Two named Go runs load the Go library binding once and compute twice."""
     monkeypatch.setattr(run_mod, "_BACKEND_CACHE", {})
@@ -420,6 +422,7 @@ def test_named_step_owner_is_loaded_once(monkeypatch: pytest.MonkeyPatch) -> Non
     )
 
 
+@pytest.mark.native_runtime
 def test_schedule_owner_is_loaded_once(monkeypatch: pytest.MonkeyPatch) -> None:
     """The schedule cache loads the Go schedule binding once."""
     monkeypatch.setattr(run_mod, "_SCHEDULE_BACKEND_CACHE", {})
@@ -435,6 +438,7 @@ def test_schedule_owner_is_loaded_once(monkeypatch: pytest.MonkeyPatch) -> None:
     assert counts["_load_go_schedule_fn"] == 1
 
 
+@pytest.mark.native_runtime
 def test_go_schedule_loader_opens_the_shared_library() -> None:
     """The Go schedule loader opens the library and returns its bridge."""
     phases, _, knm, alpha = _problem()
@@ -449,6 +453,7 @@ def test_go_schedule_loader_opens_the_shared_library() -> None:
     )
 
 
+@NEEDS_KERNEL
 @pytest.mark.parametrize("method", METHODS)
 def test_rust_loaders_drive_the_compiled_stepper(method: str) -> None:
     """The Rust loaders call ``PyUPDEStepper.run`` and ``run_omega_schedule``."""
@@ -564,6 +569,7 @@ def _run_profile(
     return result
 
 
+@pytest.mark.native_runtime
 def test_resolver_skips_absent_owners_to_the_first_that_loads(tmp_path: Path) -> None:
     """Without Rust, WebGPU, Mojo and Julia, the resolver selects Go."""
     result = _run_profile(tmp_path, keep_rust=False, keep_go=True)
@@ -583,6 +589,8 @@ def test_resolver_falls_back_to_python_without_native_owners(tmp_path: Path) -> 
     assert result["available"] == ["python"]
 
 
+@NEEDS_KERNEL
+@pytest.mark.native_runtime
 def test_resolver_prefers_rust_when_it_is_installed(tmp_path: Path) -> None:
     """With the compiled kernel and Go both present, Rust leads the chain."""
     result = _run_profile(tmp_path, keep_rust=True, keep_go=True)

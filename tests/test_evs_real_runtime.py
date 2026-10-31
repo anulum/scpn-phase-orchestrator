@@ -32,15 +32,11 @@ from scpn_phase_orchestrator.monitor.evs import (
     EVSMonitor,
     frequency_specificity_backend,
 )
+from tests._runtime_owners import NEEDS_KERNEL, owner_params
 
 ROOT = Path(__file__).resolve().parents[1]
 
-# These contracts run in every profile. Only cases that need the compiled
-# kernel skip, and only where the profile genuinely lacks it.
-_NEEDS_KERNEL = pytest.mark.skipif(
-    not evs._HAS_RUST, reason="the compiled spo_kernel is not installed here"
-)
-OWNERS = ("python", pytest.param("rust", marks=_NEEDS_KERNEL))
+OWNERS = owner_params(("python", "rust"))
 
 
 def _oracle_specificity(
@@ -164,7 +160,7 @@ def test_python_only_profile_refuses_rust(tmp_path: Path) -> None:
     assert result["ratio"] == pytest.approx(_PROFILE_EXPECTED, rel=1e-12)
 
 
-@_NEEDS_KERNEL
+@NEEDS_KERNEL
 def test_rust_only_profile_serves_rust(tmp_path: Path) -> None:
     """With the compiled kernel installed, Rust serves ``auto``."""
     result = _run_profile(tmp_path, keep_rust=True)

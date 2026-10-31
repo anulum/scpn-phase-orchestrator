@@ -12,7 +12,7 @@
     "research_experimental_modules": 204,
     "runtime_serving_modules": 160,
     "rust_kernel_files": 132,
-    "test_files": 1124
+    "test_files": 1126
   },
   "documentation": {
     "public_pages": [
@@ -1962,6 +1962,7 @@
     "test_files": [
       "tests/__init__.py",
       "tests/_dimension_profile_coverage.py",
+      "tests/_runtime_owners.py",
       "tests/apps/__init__.py",
       "tests/apps/queuewaves/__init__.py",
       "tests/apps/queuewaves/conftest.py",
@@ -2821,6 +2822,7 @@
       "tests/test_runtime_modal_sentinel.py",
       "tests/test_runtime_observability.py",
       "tests/test_runtime_observability_contracts.py",
+      "tests/test_runtime_owners.py",
       "tests/test_runtime_server_grpc_contract.py",
       "tests/test_runtime_server_simulation_state.py",
       "tests/test_rust_python_parity_performance.py",

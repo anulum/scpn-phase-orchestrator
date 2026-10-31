@@ -34,11 +34,10 @@ from scpn_phase_orchestrator.upde.envelope import (
     envelope_modulation_depth,
     extract_envelope,
 )
-
-pytestmark = pytest.mark.native_runtime
+from tests._runtime_owners import NEEDS_KERNEL, owner_params
 
 ROOT = Path(__file__).resolve().parents[1]
-OWNERS = ("python", "rust", "mojo", "julia", "go")
+OWNERS = owner_params(("python", "rust", "mojo", "julia", "go"))
 RELATIVE_TOLERANCE = 1e-12
 
 
@@ -230,6 +229,7 @@ def test_python_only_profile_refuses_every_native_owner(tmp_path: Path) -> None:
     _assert_profile_values(result)
 
 
+@NEEDS_KERNEL
 def test_rust_only_profile_serves_rust_and_refuses_the_rest(tmp_path: Path) -> None:
     """With only Rust present, a named Rust call runs and the others refuse."""
     result = _run_profile(tmp_path, keep_rust=True)

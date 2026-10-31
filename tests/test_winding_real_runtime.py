@@ -40,11 +40,10 @@ from scpn_phase_orchestrator.monitor.winding import (
     winding_numbers,
     winding_vector,
 )
-
-pytestmark = pytest.mark.native_runtime
+from tests._runtime_owners import NEEDS_KERNEL, owner_params
 
 ROOT = Path(__file__).resolve().parents[1]
-OWNERS = ("python", "rust", "mojo", "julia", "go")
+OWNERS = owner_params(("python", "rust", "mojo", "julia", "go"))
 T = TypeVar("T")
 
 # Calls that prove each native owner counted.
@@ -235,6 +234,7 @@ def test_python_only_profile_refuses_every_native_owner(tmp_path: Path) -> None:
         assert message == f"winding backend {owner!r} unavailable"
 
 
+@NEEDS_KERNEL
 def test_rust_only_profile_serves_rust_and_refuses_the_rest(tmp_path: Path) -> None:
     """With only the compiled kernel present, Rust serves ``auto``."""
     result = _run_profile(tmp_path, keep_rust=True)
