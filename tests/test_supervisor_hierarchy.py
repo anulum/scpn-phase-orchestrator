@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import json
 import math
-from collections.abc import Iterator, Mapping
+from collections.abc import Callable, Iterator, Mapping
 
 import pytest
 
@@ -36,6 +36,14 @@ from scpn_phase_orchestrator.supervisor.hierarchy import (
     _reject_raw_instance_attributes,
     _reject_unknown_keys,
 )
+
+# The refusal tests pass deliberately mistyped values, so they call these
+# entry points through unchecked aliases.
+_load_mapping_unchecked: Callable[..., object] = _load_mapping_record
+_reject_keys_unchecked: Callable[..., object] = _reject_unknown_keys
+_load_envelope_unchecked: Callable[..., object] = load_hierarchy_sync_envelope
+_plan_unchecked: Callable[..., object] = build_hierarchical_orchestration_plan
+_ingest_unchecked: Callable[..., object] = ingest_hierarchy_sync_envelopes
 
 
 def test_hierarchical_plan_composes_reduced_child_summaries_only() -> None:
@@ -67,7 +75,9 @@ def test_hierarchical_plan_composes_reduced_child_summaries_only() -> None:
 
     audit = plan.to_audit_record()
     assert audit["audit_scope"] == "reduced_child_summaries_only"
-    child_record = audit["children"][0]
+    child_records = audit["children"]
+    assert isinstance(child_records, list)
+    child_record = child_records[0]
     assert child_record == {
         "name": "edge-a",
         "channel": "power",
@@ -86,7 +96,7 @@ def test_hierarchical_plan_composes_reduced_child_summaries_only() -> None:
 def test_hierarchical_plan_accepts_single_pass_child_iterable() -> None:
     child = ChildSupervisorSummary("edge-a", "power", R=0.9, psi=0.0)
 
-    plan = build_hierarchical_orchestration_plan(iter((child,)))  # type: ignore[arg-type]
+    plan = build_hierarchical_orchestration_plan(iter((child,)))
 
     assert [item.name for item in plan.children] == ["edge-a"]
     assert len(plan.parent_state.layers) == 1
@@ -130,7 +140,9 @@ def test_hierarchical_plan_escalates_degraded_critical_and_low_confidence() -> N
         ("child-degraded", "degraded", "child_coherence_below_degraded"),
         ("child-uncertain", "degraded", "child_summary_below_min_confidence"),
     ]
-    assert plan.to_audit_record()["escalations"][0]["child_regime"] == "critical"
+    escalations = plan.to_audit_record()["escalations"]
+    assert isinstance(escalations, list)
+    assert escalations[0]["child_regime"] == "critical"
 
 
 def test_hierarchical_plan_escalates_declared_regime_even_when_coherent() -> None:
@@ -334,7 +346,8 @@ def test_child_summary_rejects_non_json_safe_metadata(
 
 
 def test_child_summary_metadata_is_defensively_normalised() -> None:
-    metadata = {"site": "north", "nested": {"role": "edge"}}
+    nested: dict[str, object] = {"role": "edge"}
+    metadata: dict[str, object] = {"site": "north", "nested": nested}
     summary = ChildSupervisorSummary(
         "edge-a",
         "power",
@@ -344,7 +357,7 @@ def test_child_summary_metadata_is_defensively_normalised() -> None:
     )
 
     metadata["raw_phases"] = [0.1, 0.2]
-    metadata["nested"]["time_series"] = [0.1, 0.2]  # type: ignore[index]
+    nested["time_series"] = [0.1, 0.2]
 
     audit = summary.to_audit_record()
 
@@ -673,7 +686,7 @@ def test_load_mapping_record_parses_json_and_rejects_invalid_record_types() -> N
         ValueError,
         match="hierarchy sync envelope must be a mapping or JSON string",
     ):
-        _load_mapping_record(1)
+        _load_mapping_unchecked(1)
 
 
 def test_child_escalations_reports_confidence_and_coherence_reasons() -> None:
@@ -776,7 +789,9 @@ def test_reject_raw_hierarchy_keys_enforces_child_evidence_filter() -> None:
 
 def test_reject_unknown_keys_rejects_bad_key_types_and_unknown_fields() -> None:
     with pytest.raises(ValueError, match="keys must be strings"):
-        _reject_unknown_keys({1: "x"}, allowed=frozenset({"name"}), location="summary")
+        _reject_keys_unchecked(
+            {1: "x"}, allowed=frozenset({"name"}), location="summary"
+        )
 
     with pytest.raises(
         ValueError,
@@ -794,6 +809,7 @@ def test_normalise_metadata_value_converts_nested_containers() -> None:
         {"site": {"region": ["north", "west"]}, "active": True},
         "metadata",
     )
+    assert isinstance(value, Mapping)
     assert isinstance(value["site"], Mapping)
     assert isinstance(value["site"]["region"], tuple)
 
@@ -919,7 +935,7 @@ def test_load_hierarchy_sync_envelope_rejects_non_mapping_transport_records(
     message: str,
 ) -> None:
     with pytest.raises(ValueError, match=message):
-        load_hierarchy_sync_envelope(record)
+        _load_envelope_unchecked(record)
 
 
 @pytest.mark.parametrize(
@@ -997,7 +1013,7 @@ def test_load_hierarchy_sync_envelope_rejects_non_string_decoded_keys() -> None:
         ValueError,
         match="hierarchy sync envelope keys must be strings",
     ):
-        load_hierarchy_sync_envelope(
+        _load_envelope_unchecked(
             {
                 1: "node-a",
                 "protocol_version": "spo-hierarchy-sync/v1",
@@ -1525,12 +1541,13 @@ def test_load_hierarchy_sync_envelope_rejects_direct_raw_metadata() -> None:
 
 
 def test_load_hierarchy_sync_envelope_canonicalises_direct_envelope_metadata() -> None:
-    metadata = {"site": "north", "nested": {"role": "edge"}}
+    nested: dict[str, object] = {"role": "edge"}
+    metadata: dict[str, object] = {"site": "north", "nested": nested}
     envelope = _unchecked_hierarchy_sync_envelope(metadata)
 
     accepted = load_hierarchy_sync_envelope(envelope)
     metadata["raw_phases"] = [0.1, 0.2]
-    metadata["nested"]["time_series"] = [0.1, 0.2]  # type: ignore[index]
+    nested["time_series"] = [0.1, 0.2]
 
     assert accepted is not envelope
     assert accepted.summary.to_audit_record()["metadata"] == {
@@ -1602,8 +1619,13 @@ def test_direct_hierarchy_sync_envelope_revalidates_all_fields(
     summary_kwargs: dict[str, object],
     message: str,
 ) -> None:
-    summary = _unchecked_child_summary({}, **summary_kwargs)
-    envelope = _unchecked_hierarchy_sync_envelope(
+    # The kwargs carry deliberately invalid fields of every type.
+    summary_builder: Callable[..., ChildSupervisorSummary] = _unchecked_child_summary
+    envelope_builder: Callable[..., HierarchySyncEnvelope] = (
+        _unchecked_hierarchy_sync_envelope
+    )
+    summary = summary_builder({}, **summary_kwargs)
+    envelope = envelope_builder(
         summary=summary,
         **envelope_kwargs,
     )
@@ -1661,15 +1683,18 @@ def test_hierarchy_sync_ingestion_rejects_direct_raw_metadata() -> None:
 
 
 def test_hierarchy_sync_ingestion_canonicalises_direct_envelope_metadata() -> None:
-    metadata = {"site": "north", "nested": {"role": "edge"}}
+    nested: dict[str, object] = {"role": "edge"}
+    metadata: dict[str, object] = {"site": "north", "nested": nested}
     envelope = _unchecked_hierarchy_sync_envelope(metadata)
 
     ledger = ingest_hierarchy_sync_envelopes((envelope,))
     metadata["raw_phases"] = [0.1, 0.2]
-    metadata["nested"]["time_series"] = [0.1, 0.2]  # type: ignore[index]
+    nested["time_series"] = [0.1, 0.2]
 
     assert ledger.accepted[0] is not envelope
-    assert ledger.to_audit_record()["accepted"][0]["summary"]["metadata"] == {
+    accepted = ledger.to_audit_record()["accepted"]
+    assert isinstance(accepted, list)
+    assert accepted[0]["summary"]["metadata"] == {
         "site": "north",
         "nested": {"role": "edge"},
     }
@@ -1765,10 +1790,10 @@ def test_hierarchy_gossip_consensus_rejects_direct_raw_metadata() -> None:
 
 def test_public_entrypoints_reject_forged_object_types() -> None:
     with pytest.raises(ValueError, match="summary must be a ChildSupervisorSummary"):
-        build_hierarchical_orchestration_plan((object(),))
+        _plan_unchecked((object(),))
 
     with pytest.raises(ValueError, match="envelope must be a HierarchySyncEnvelope"):
-        ingest_hierarchy_sync_envelopes((object(),))
+        _ingest_unchecked((object(),))
 
 
 def test_direct_envelope_revalidation_rejects_negative_monotonic_time() -> None:
@@ -1903,7 +1928,9 @@ def test_hierarchy_gossip_consensus_moves_neighbours_towards_shared_state() -> N
         [0.6, 0.6]
     )
     assert first_round.plan.parent_state.regime_id == "hierarchical_degraded"
-    assert first_round.to_audit_record()["states"][0]["summary"]["metadata"] == {
+    states = first_round.to_audit_record()["states"]
+    assert isinstance(states, list)
+    assert states[0]["summary"]["metadata"] == {
         "consensus": "offline_gossip",
         "source_node": "node-a",
         "neighbour_count": 1,
