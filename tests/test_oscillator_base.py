@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import get_type_hints
 
 import numpy as np
@@ -25,7 +26,7 @@ from tests.typing_contracts import assert_precise_ndarray_hint
 
 
 class TestPhaseStateConstruction:
-    def test_basic_construction(self):
+    def test_basic_construction(self) -> None:
         ps = PhaseState(
             theta=1.5, omega=2.0, amplitude=0.8, quality=0.9, channel="P", node_id="n1"
         )
@@ -36,7 +37,7 @@ class TestPhaseStateConstruction:
         assert ps.channel == "P"
         assert ps.node_id == "n1"
 
-    def test_zero_values(self):
+    def test_zero_values(self) -> None:
         ps = PhaseState(
             theta=0.0, omega=0.0, amplitude=0.0, quality=0.0, channel="I", node_id="z"
         )
@@ -45,14 +46,14 @@ class TestPhaseStateConstruction:
         assert ps.amplitude == 0.0
         assert ps.quality == 0.0
 
-    def test_boundary_theta_zero(self):
+    def test_boundary_theta_zero(self) -> None:
         """θ = 0 is a valid phase at the lower boundary."""
         ps = PhaseState(
             theta=0.0, omega=1.0, amplitude=1.0, quality=1.0, channel="P", node_id="b0"
         )
         assert ps.theta == 0.0
 
-    def test_boundary_theta_near_two_pi(self):
+    def test_boundary_theta_near_two_pi(self) -> None:
         """θ just below 2π is valid."""
         ps = PhaseState(
             theta=2 * np.pi - 1e-10,
@@ -64,7 +65,7 @@ class TestPhaseStateConstruction:
         )
         assert ps.theta < 2 * np.pi
 
-    def test_negative_omega(self):
+    def test_negative_omega(self) -> None:
         """Negative frequencies are physically valid (backward rotation)."""
         ps = PhaseState(
             theta=1.0,
@@ -76,7 +77,7 @@ class TestPhaseStateConstruction:
         )
         assert ps.omega == -3.5
 
-    def test_all_channels(self):
+    def test_all_channels(self) -> None:
         """P, I, and S channels should all be accepted."""
         for ch in ("P", "I", "S"):
             ps = PhaseState(
@@ -94,13 +95,13 @@ class TestPhaseStateConstruction:
 
 
 class TestPhaseStateDataclass:
-    def test_is_dataclass(self):
+    def test_is_dataclass(self) -> None:
         """PhaseState should be a dataclass."""
         import dataclasses
 
         assert dataclasses.is_dataclass(PhaseState)
 
-    def test_equality(self):
+    def test_equality(self) -> None:
         """Two PhaseState with identical fields should be equal."""
         a = PhaseState(
             theta=1.0, omega=2.0, amplitude=3.0, quality=0.5, channel="P", node_id="x"
@@ -110,7 +111,7 @@ class TestPhaseStateDataclass:
         )
         assert a == b
 
-    def test_inequality_different_theta(self):
+    def test_inequality_different_theta(self) -> None:
         a = PhaseState(
             theta=1.0, omega=2.0, amplitude=3.0, quality=0.5, channel="P", node_id="x"
         )
@@ -119,7 +120,7 @@ class TestPhaseStateDataclass:
         )
         assert a != b
 
-    def test_inequality_different_node_id(self):
+    def test_inequality_different_node_id(self) -> None:
         a = PhaseState(
             theta=1.0, omega=2.0, amplitude=3.0, quality=0.5, channel="P", node_id="x"
         )
@@ -128,7 +129,7 @@ class TestPhaseStateDataclass:
         )
         assert a != b
 
-    def test_fields_mutable(self):
+    def test_fields_mutable(self) -> None:
         """PhaseState is a regular (non-frozen) dataclass — fields are mutable."""
         ps = PhaseState(
             theta=0.0, omega=0.0, amplitude=0.0, quality=0.0, channel="P", node_id="x"
@@ -136,7 +137,7 @@ class TestPhaseStateDataclass:
         ps.theta = 3.14
         assert ps.theta == 3.14
 
-    def test_repr_contains_fields(self):
+    def test_repr_contains_fields(self) -> None:
         ps = PhaseState(
             theta=1.0, omega=2.0, amplitude=3.0, quality=0.5, channel="P", node_id="n1"
         )
@@ -149,7 +150,7 @@ class TestPhaseStateDataclass:
 
 
 class TestPhaseStateCollections:
-    def test_list_of_phase_states(self):
+    def test_list_of_phase_states(self) -> None:
         states = [
             PhaseState(
                 theta=i * 0.5,
@@ -164,7 +165,7 @@ class TestPhaseStateCollections:
         assert len(states) == 10
         assert states[5].theta == pytest.approx(2.5)
 
-    def test_sorting_by_theta(self):
+    def test_sorting_by_theta(self) -> None:
         """PhaseStates can be sorted by theta for analysis."""
         states = [
             PhaseState(
@@ -200,36 +201,43 @@ class TestPhaseStateCollections:
 
 
 class TestPhaseExtractorAbstract:
-    def test_cannot_instantiate(self):
+    def test_cannot_instantiate(self) -> None:
         """PhaseExtractor is abstract — direct instantiation should fail."""
+        abstract_any: Callable[[], object] = PhaseExtractor
         with pytest.raises(TypeError):
-            PhaseExtractor()
+            abstract_any()
 
-    def test_must_implement_extract(self):
+    def test_must_implement_extract(self) -> None:
         """A subclass missing extract() cannot be instantiated."""
 
         class Incomplete(PhaseExtractor):
-            def quality_score(self, phase_states):
+            def quality_score(self, phase_states: list[PhaseState]) -> float:
                 return 0.0
 
+        incomplete_any: Callable[[], object] = Incomplete
         with pytest.raises(TypeError):
-            Incomplete()
+            incomplete_any()
 
-    def test_must_implement_quality_score(self):
+    def test_must_implement_quality_score(self) -> None:
         """A subclass missing quality_score() cannot be instantiated."""
 
         class Incomplete(PhaseExtractor):
-            def extract(self, signal, sample_rate):
+            def extract(
+                self, signal: np.ndarray, sample_rate: float
+            ) -> list[PhaseState]:
                 return []
 
+        incomplete_any: Callable[[], object] = Incomplete
         with pytest.raises(TypeError):
-            Incomplete()
+            incomplete_any()
 
-    def test_complete_subclass_works(self):
+    def test_complete_subclass_works(self) -> None:
         """A complete subclass can be instantiated and called."""
 
         class MockExtractor(PhaseExtractor):
-            def extract(self, signal, sample_rate):
+            def extract(
+                self, signal: np.ndarray, sample_rate: float
+            ) -> list[PhaseState]:
                 return [
                     PhaseState(
                         theta=0.0,
@@ -241,7 +249,7 @@ class TestPhaseExtractorAbstract:
                     )
                 ]
 
-            def quality_score(self, phase_states):
+            def quality_score(self, phase_states: list[PhaseState]) -> float:
                 if not phase_states:
                     return 0.0
                 return sum(s.quality for s in phase_states) / len(phase_states)
@@ -254,14 +262,16 @@ class TestPhaseExtractorAbstract:
         score = ext.quality_score(states)
         assert score == pytest.approx(0.9)
 
-    def test_quality_score_empty_list(self):
+    def test_quality_score_empty_list(self) -> None:
         """quality_score with empty list should not raise."""
 
         class SafeExtractor(PhaseExtractor):
-            def extract(self, signal, sample_rate):
+            def extract(
+                self, signal: np.ndarray, sample_rate: float
+            ) -> list[PhaseState]:
                 return []
 
-            def quality_score(self, phase_states):
+            def quality_score(self, phase_states: list[PhaseState]) -> float:
                 if not phase_states:
                     return 0.0
                 return sum(s.quality for s in phase_states) / len(phase_states)
@@ -276,7 +286,7 @@ class TestPhaseExtractorAbstract:
 class TestPhaseExtractorContract:
     """Verify that the abstract interface defines the correct method signatures."""
 
-    def test_extract_signature(self):
+    def test_extract_signature(self) -> None:
         """extract() has expected signature."""
         import inspect
 
@@ -285,7 +295,7 @@ class TestPhaseExtractorContract:
         assert "signal" in params
         assert "sample_rate" in params
 
-    def test_quality_score_signature(self):
+    def test_quality_score_signature(self) -> None:
         """quality_score() accepts (phase_states: list[PhaseState]) → float."""
         import inspect
 
@@ -293,15 +303,15 @@ class TestPhaseExtractorContract:
         params = list(sig.parameters.keys())
         assert "phase_states" in params
 
-    def test_extract_is_abstract(self):
+    def test_extract_is_abstract(self) -> None:
         """extract must be marked @abstractmethod."""
         assert getattr(PhaseExtractor.extract, "__isabstractmethod__", False)
 
-    def test_quality_score_is_abstract(self):
+    def test_quality_score_is_abstract(self) -> None:
         """quality_score must be marked @abstractmethod."""
         assert getattr(PhaseExtractor.quality_score, "__isabstractmethod__", False)
 
-    def test_public_array_contracts_are_parameterised(self):
+    def test_public_array_contracts_are_parameterised(self) -> None:
         """Public oscillator array contracts stay element-typed."""
         for fn, param in [
             (PhaseExtractor.extract, "signal"),
@@ -327,7 +337,7 @@ class TestPhaseExtractorContract:
 
 
 class TestPhaseStateEdgeValues:
-    def test_very_large_omega(self):
+    def test_very_large_omega(self) -> None:
         ps = PhaseState(
             theta=0.0,
             omega=1e12,
@@ -338,7 +348,7 @@ class TestPhaseStateEdgeValues:
         )
         assert ps.omega == 1e12
 
-    def test_very_small_amplitude(self):
+    def test_very_small_amplitude(self) -> None:
         ps = PhaseState(
             theta=0.0,
             omega=1.0,
@@ -349,19 +359,19 @@ class TestPhaseStateEdgeValues:
         )
         assert ps.amplitude == 1e-15
 
-    def test_quality_boundary_zero(self):
+    def test_quality_boundary_zero(self) -> None:
         ps = PhaseState(
             theta=0.0, omega=0.0, amplitude=0.0, quality=0.0, channel="P", node_id="q0"
         )
         assert ps.quality == 0.0
 
-    def test_quality_boundary_one(self):
+    def test_quality_boundary_one(self) -> None:
         ps = PhaseState(
             theta=0.0, omega=0.0, amplitude=0.0, quality=1.0, channel="P", node_id="q1"
         )
         assert ps.quality == 1.0
 
-    def test_empty_node_id(self):
+    def test_empty_node_id(self) -> None:
         """Empty string is technically valid for node_id."""
         ps = PhaseState(
             theta=0.0, omega=0.0, amplitude=0.0, quality=0.0, channel="P", node_id=""
