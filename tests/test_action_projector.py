@@ -24,34 +24,34 @@ def _action(knob: str = "K", value: float = 5.0) -> ControlAction:
 
 
 class TestActionProjectorValueBounds:
-    def test_within_bounds_unchanged(self):
+    def test_within_bounds_unchanged(self) -> None:
         proj = ActionProjector(rate_limits={}, value_bounds={"K": (0.0, 10.0)})
         result = proj.project(_action(value=5.0), previous_value=5.0)
         assert result.value == 5.0
 
-    def test_clamp_above_upper_bound(self):
+    def test_clamp_above_upper_bound(self) -> None:
         proj = ActionProjector(rate_limits={}, value_bounds={"K": (0.0, 10.0)})
         result = proj.project(_action(value=15.0), previous_value=5.0)
         assert result.value == 10.0
 
-    def test_clamp_below_lower_bound(self):
+    def test_clamp_below_lower_bound(self) -> None:
         proj = ActionProjector(rate_limits={}, value_bounds={"K": (0.0, 10.0)})
         result = proj.project(_action(value=-3.0), previous_value=5.0)
         assert result.value == 0.0
 
-    def test_no_bounds_for_knob_passes_through(self):
+    def test_no_bounds_for_knob_passes_through(self) -> None:
         proj = ActionProjector(rate_limits={}, value_bounds={})
         result = proj.project(_action(value=999.0), previous_value=0.0)
         assert result.value == 999.0
 
-    def test_negative_bounds(self):
+    def test_negative_bounds(self) -> None:
         proj = ActionProjector(rate_limits={}, value_bounds={"K": (-5.0, -1.0)})
         result = proj.project(_action(value=0.0), previous_value=-3.0)
         assert result.value == -1.0
 
 
 class TestActionProjectorRateLimits:
-    def test_rate_limit_positive_delta(self):
+    def test_rate_limit_positive_delta(self) -> None:
         proj = ActionProjector(
             rate_limits={"K": 2.0},
             value_bounds={"K": (0.0, 100.0)},
@@ -59,7 +59,7 @@ class TestActionProjectorRateLimits:
         result = proj.project(_action(value=50.0), previous_value=10.0)
         assert result.value == pytest.approx(12.0)
 
-    def test_rate_limit_negative_delta(self):
+    def test_rate_limit_negative_delta(self) -> None:
         proj = ActionProjector(
             rate_limits={"K": 2.0},
             value_bounds={"K": (0.0, 100.0)},
@@ -67,7 +67,7 @@ class TestActionProjectorRateLimits:
         result = proj.project(_action(value=5.0), previous_value=10.0)
         assert result.value == pytest.approx(8.0)
 
-    def test_rate_limit_within_limit_unchanged(self):
+    def test_rate_limit_within_limit_unchanged(self) -> None:
         proj = ActionProjector(
             rate_limits={"K": 10.0},
             value_bounds={"K": (0.0, 100.0)},
@@ -75,7 +75,7 @@ class TestActionProjectorRateLimits:
         result = proj.project(_action(value=15.0), previous_value=10.0)
         assert result.value == pytest.approx(15.0)
 
-    def test_rate_limit_respects_value_bounds(self):
+    def test_rate_limit_respects_value_bounds(self) -> None:
         proj = ActionProjector(
             rate_limits={"K": 100.0},
             value_bounds={"K": (0.0, 10.0)},
@@ -83,7 +83,7 @@ class TestActionProjectorRateLimits:
         result = proj.project(_action(value=50.0), previous_value=5.0)
         assert result.value == 10.0
 
-    def test_no_rate_limit_for_knob(self):
+    def test_no_rate_limit_for_knob(self) -> None:
         proj = ActionProjector(
             rate_limits={},
             value_bounds={"K": (0.0, 100.0)},
@@ -91,7 +91,7 @@ class TestActionProjectorRateLimits:
         result = proj.project(_action(value=100.0), previous_value=0.0)
         assert result.value == 100.0
 
-    def test_projector_uses_binding_spec_actuator_rate_limit(self):
+    def test_projector_uses_binding_spec_actuator_rate_limit(self) -> None:
         proj = ActionProjector.from_actuator_mappings(
             [
                 ActuatorMapping(
@@ -108,7 +108,7 @@ class TestActionProjectorRateLimits:
 
         assert result.value == pytest.approx(0.375)
 
-    def test_projector_rejects_conflicting_binding_rate_limits(self):
+    def test_projector_rejects_conflicting_binding_rate_limits(self) -> None:
         actuators = [
             ActuatorMapping(
                 name="global_coupling",
@@ -131,7 +131,7 @@ class TestActionProjectorRateLimits:
 
 
 class TestActionProjectorIdentityPreservation:
-    def test_other_fields_preserved(self):
+    def test_other_fields_preserved(self) -> None:
         action = ControlAction(
             knob="K", scope="layer_3", value=50.0, ttl_s=7.5, justification="reason"
         )
@@ -143,7 +143,7 @@ class TestActionProjectorIdentityPreservation:
         assert result.justification == "reason"
         assert result.value == 10.0
 
-    def test_returns_new_action_not_mutated_original(self):
+    def test_returns_new_action_not_mutated_original(self) -> None:
         action = _action(value=50.0)
         proj = ActionProjector(rate_limits={}, value_bounds={"K": (0.0, 10.0)})
         result = proj.project(action, previous_value=5.0)
@@ -153,12 +153,12 @@ class TestActionProjectorIdentityPreservation:
 
 
 class TestActionProjectorEdgeCases:
-    def test_exact_boundary_value(self):
+    def test_exact_boundary_value(self) -> None:
         proj = ActionProjector(rate_limits={}, value_bounds={"K": (0.0, 10.0)})
         result = proj.project(_action(value=10.0), previous_value=5.0)
         assert result.value == 10.0
 
-    def test_rate_limit_zero_delta(self):
+    def test_rate_limit_zero_delta(self) -> None:
         proj = ActionProjector(
             rate_limits={"K": 2.0},
             value_bounds={"K": (0.0, 100.0)},
@@ -166,7 +166,7 @@ class TestActionProjectorEdgeCases:
         result = proj.project(_action(value=10.0), previous_value=10.0)
         assert result.value == 10.0
 
-    def test_multiple_knobs(self):
+    def test_multiple_knobs(self) -> None:
         proj = ActionProjector(
             rate_limits={"K": 1.0, "zeta": 0.5},
             value_bounds={"K": (0.0, 10.0), "zeta": (0.0, 5.0)},
@@ -183,7 +183,7 @@ class TestActionProjectorProperty:
         prev=st.floats(min_value=-1000, max_value=1000, allow_nan=False),
     )
     @settings(max_examples=200)
-    def test_output_always_within_bounds(self, value: float, prev: float):
+    def test_output_always_within_bounds(self, value: float, prev: float) -> None:
         proj = ActionProjector(
             rate_limits={"K": 5.0},
             value_bounds={"K": (-10.0, 10.0)},
@@ -196,7 +196,7 @@ class TestActionProjectorProperty:
         prev=st.floats(min_value=-100, max_value=100, allow_nan=False),
     )
     @settings(max_examples=200)
-    def test_rate_limit_respected(self, value: float, prev: float):
+    def test_rate_limit_respected(self, value: float, prev: float) -> None:
         rate = 3.0
         proj = ActionProjector(
             rate_limits={"K": rate},
@@ -207,12 +207,12 @@ class TestActionProjectorProperty:
 
 
 class TestActionProjectorEmptyInputs:
-    def test_empty_rate_limits_and_bounds(self):
+    def test_empty_rate_limits_and_bounds(self) -> None:
         proj = ActionProjector(rate_limits={}, value_bounds={})
         result = proj.project(_action(value=42.0), previous_value=0.0)
         assert result.value == 42.0
 
-    def test_unknown_knob_passes_through(self):
+    def test_unknown_knob_passes_through(self) -> None:
         proj = ActionProjector(
             rate_limits={"K": 1.0},
             value_bounds={"K": (0.0, 10.0)},
@@ -222,7 +222,7 @@ class TestActionProjectorEmptyInputs:
 
 
 class TestActionProjectorPipelineIntegration:
-    def test_actuation_mapper_to_projector_flow(self):
+    def test_actuation_mapper_to_projector_flow(self) -> None:
         """Verify ActionProjector works in the ActuationMapper pipeline."""
         from scpn_phase_orchestrator.actuation.mapper import (
             ActuationMapper,
@@ -256,7 +256,7 @@ class TestActionProjectorPipelineIntegration:
 
 
 class TestActionProjectorPerformance:
-    def test_projection_budget(self):
+    def test_projection_budget(self) -> None:
         """1000 projections must complete in <10ms."""
         import time
 
