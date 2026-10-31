@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import sys
+from collections.abc import Callable
 from typing import get_type_hints
 
 import numpy as np
@@ -45,25 +46,25 @@ def test_rtamt_backend_is_present_where_it_can_import() -> None:
 
 
 class TestSTLMonitorConstants:
-    def test_sync_threshold_contains_r(self):
+    def test_sync_threshold_contains_r(self) -> None:
         assert "R" in STLMonitor.SYNC_THRESHOLD
 
-    def test_coupling_bound_contains_k(self):
+    def test_coupling_bound_contains_k(self) -> None:
         assert "K" in STLMonitor.COUPLING_BOUND
 
 
 class TestSTLBuiltinFallback:
-    def test_builtin_predicate_robustness_has_parameterised_array_return(self):
+    def test_builtin_predicate_robustness_has_parameterised_array_return(self) -> None:
         hints = get_type_hints(stl_module._predicate_robustness)
 
         assert_precise_ndarray_hint(hints["return"])
         assert "float64" in str(hints["return"])
 
-    def test_simple_spec_uses_builtin_backend(self):
+    def test_simple_spec_uses_builtin_backend(self) -> None:
         monitor = STLMonitor("always (x <= 1.0)")
         assert monitor.evaluate({"x": [0.2, 0.5, 0.9]}) > 0
 
-    def test_predicate_robustness_returns_float64_array(self):
+    def test_predicate_robustness_returns_float64_array(self) -> None:
         values = stl_module._predicate_robustness(
             "R",
             ">=",
@@ -74,17 +75,17 @@ class TestSTLBuiltinFallback:
         assert values.dtype == np.float64
         assert values.tolist() == pytest.approx([-0.1, 0.1, 0.4])
 
-    def test_eventually_spec(self):
+    def test_eventually_spec(self) -> None:
         monitor = STLMonitor("eventually (R >= 0.8)")
         assert monitor.evaluate({"R": [0.2, 0.4, 0.85]}) > 0
         assert monitor.evaluate({"R": [0.2, 0.4, 0.7]}) < 0
 
-    def test_conjunction_spec_uses_worst_predicate(self):
+    def test_conjunction_spec_uses_worst_predicate(self) -> None:
         monitor = STLMonitor("always (R >= 0.8 and amplitude_spread < 0.2)")
         assert monitor.evaluate({"R": [0.9, 0.85], "amplitude_spread": [0.1, 0.15]}) > 0
         assert monitor.evaluate({"R": [0.9, 0.85], "amplitude_spread": [0.1, 0.25]}) < 0
 
-    def test_result_audit_record(self):
+    def test_result_audit_record(self) -> None:
         result = STLMonitor("always (R >= 0.3)").evaluate_result({"R": [0.5, 0.4]})
         assert isinstance(result, STLTraceResult)
         assert result.to_audit_record() == {
@@ -94,7 +95,9 @@ class TestSTLBuiltinFallback:
             "backend": "builtin",
         }
 
-    def test_unsupported_spec_requires_rtamt_when_missing(self, monkeypatch):
+    def test_unsupported_spec_requires_rtamt_when_missing(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         # STLMonitor reads ``rtamt`` from the ``monitor`` submodule namespace
         # after the stl package split, so patch the optional import there.
         monkeypatch.setattr(stl_module.monitor, "rtamt", None)
@@ -119,24 +122,25 @@ class TestSTLBuiltinFallback:
         match: str,
     ) -> None:
         monitor = STLMonitor("always (R >= 0.3)")
+        evaluate_any: Callable[..., object] = monitor.evaluate
 
         with pytest.raises(ValueError, match=match):
-            monitor.evaluate(trace)
+            evaluate_any(trace)
 
 
 @needs_rtamt
 class TestSTLMonitor:
-    def test_constant_satisfied(self):
+    def test_constant_satisfied(self) -> None:
         mon = STLMonitor("always (x <= 1.0)")
         rob = mon.evaluate({"x": [0.5, 0.6, 0.7, 0.8]})
         assert rob > 0
 
-    def test_constant_violated(self):
+    def test_constant_violated(self) -> None:
         mon = STLMonitor("always (x <= 1.0)")
         rob = mon.evaluate({"x": [0.5, 0.6, 1.5, 0.8]})
         assert rob < 0
 
-    def test_sync_threshold_spec(self):
+    def test_sync_threshold_spec(self) -> None:
         mon = STLMonitor(STLMonitor.SYNC_THRESHOLD)
         rob_ok = mon.evaluate({"R": [0.9, 0.8, 0.7, 0.5]})
         assert rob_ok > 0
@@ -144,27 +148,27 @@ class TestSTLMonitor:
         rob_fail = mon2.evaluate({"R": [0.9, 0.2, 0.7, 0.5]})
         assert rob_fail < 0
 
-    def test_coupling_bound_spec(self):
+    def test_coupling_bound_spec(self) -> None:
         mon = STLMonitor(STLMonitor.COUPLING_BOUND)
         rob = mon.evaluate({"K": [1.0, 2.0, 5.0, 9.0]})
         assert rob > 0
 
-    def test_empty_trace_raises(self):
+    def test_empty_trace_raises(self) -> None:
         mon = STLMonitor("always (x <= 1.0)")
         with pytest.raises(ValueError, match="at least one signal"):
             mon.evaluate({})
 
-    def test_empty_signal_raises(self):
+    def test_empty_signal_raises(self) -> None:
         mon = STLMonitor("always (x <= 1.0)")
         with pytest.raises(ValueError, match="non-empty"):
             mon.evaluate({"x": []})
 
-    def test_unequal_lengths_raises(self):
+    def test_unequal_lengths_raises(self) -> None:
         mon = STLMonitor("always (x <= y)")
         with pytest.raises(ValueError, match="equal length"):
             mon.evaluate({"x": [1.0, 2.0], "y": [1.0]})
 
-    def test_robustness_magnitude(self):
+    def test_robustness_magnitude(self) -> None:
         mon = STLMonitor("always (x <= 10.0)")
         rob = mon.evaluate({"x": [5.0, 5.0, 5.0]})
         assert rob >= 5.0 - 1e-6
@@ -174,7 +178,7 @@ class TestSTLPipelineWiring:
     """Pipeline: engine R trajectory → STL monitor → robustness."""
 
     @needs_rtamt
-    def test_engine_r_trajectory_to_stl_monitor(self):
+    def test_engine_r_trajectory_to_stl_monitor(self) -> None:
         """Engine → R time series → STLMonitor.evaluate → robustness.
         Proves STL monitoring consumes engine output."""
         import numpy as np
@@ -204,7 +208,7 @@ class TestSTLPipelineWiring:
         assert isinstance(rob, float)
         assert np.isfinite(rob)
 
-    def test_builtin_engine_r_trajectory_to_stl_monitor(self):
+    def test_builtin_engine_r_trajectory_to_stl_monitor(self) -> None:
         """Engine R trace → builtin STL robustness without optional rtamt."""
         import numpy as np
 
@@ -246,22 +250,22 @@ class TestSTLBoundedBuiltin:
     Python path regardless of whether ``rtamt`` is installed.
     """
 
-    def test_bounded_always_windowed_minimum(self):
+    def test_bounded_always_windowed_minimum(self) -> None:
         # window [0, 2] over x -> min(0.5, -0.2, 0.9) = -0.2 (violated).
         monitor = STLMonitor("always[0,2] (x >= 0)")
         assert monitor.evaluate({"x": _BOUNDED_SIGNAL}) == pytest.approx(-0.2)
 
-    def test_bounded_always_offset_window(self):
+    def test_bounded_always_offset_window(self) -> None:
         # window [1, 3] over x -> min(-0.2, 0.9, 0.1) = -0.2.
         monitor = STLMonitor("always[1,3] (x >= 0)")
         assert monitor.evaluate({"x": _BOUNDED_SIGNAL}) == pytest.approx(-0.2)
 
-    def test_bounded_eventually_windowed_maximum(self):
+    def test_bounded_eventually_windowed_maximum(self) -> None:
         # window [0, 2] over x -> max(0.5, -0.2, 0.9) = 0.9 (satisfied).
         monitor = STLMonitor("eventually[0,2] (x >= 0)")
         assert monitor.evaluate({"x": _BOUNDED_SIGNAL}) == pytest.approx(0.9)
 
-    def test_bounded_backend_is_builtin(self):
+    def test_bounded_backend_is_builtin(self) -> None:
         result = STLMonitor("always[0,1] (x >= 0)").evaluate_result(
             {"x": _BOUNDED_SIGNAL}
         )
@@ -269,44 +273,46 @@ class TestSTLBoundedBuiltin:
         # min(0.5, -0.2) = -0.2 -> violated.
         assert not result.satisfied
 
-    def test_bounded_conjunction_uses_worst_predicate(self):
+    def test_bounded_conjunction_uses_worst_predicate(self) -> None:
         # pointwise = min(x, 1 - y); window [0, 1] at t=0 -> min(0.5, 0.8, -0.2, 0.5).
         monitor = STLMonitor("always[0,1] (x >= 0 and y <= 1)")
         trace = {"x": _BOUNDED_SIGNAL, "y": [0.2, 0.5, 2.0, 0.1, 0.3, 0.4]}
         assert monitor.evaluate(trace) == pytest.approx(-0.2)
 
-    def test_bounded_window_clamped_to_trace_end(self):
+    def test_bounded_window_clamped_to_trace_end(self) -> None:
         # window [2, 4] on a length-3 trace clamps to index 2 -> 0.9.
         monitor = STLMonitor("eventually[2,4] (x >= 0)")
         assert monitor.evaluate({"x": [0.5, -0.2, 0.9]}) == pytest.approx(0.9)
 
-    def test_bounded_always_empty_window_is_positive_infinity(self):
+    def test_bounded_always_empty_window_is_positive_infinity(self) -> None:
         # window starts past the trace -> vacuous always -> +inf (satisfied).
         monitor = STLMonitor("always[5,6] (x >= 0)")
         result = monitor.evaluate_result({"x": [0.5, -0.2, 0.9]})
         assert result.robustness == float("inf")
         assert result.satisfied
 
-    def test_bounded_eventually_empty_window_is_negative_infinity(self):
+    def test_bounded_eventually_empty_window_is_negative_infinity(self) -> None:
         # window starts past the trace -> vacuous eventually -> -inf (violated).
         monitor = STLMonitor("eventually[5,6] (x >= 0)")
         result = monitor.evaluate_result({"x": [0.5, -0.2, 0.9]})
         assert result.robustness == float("-inf")
         assert not result.satisfied
 
-    def test_bounded_whitespace_in_window_is_tolerated(self):
+    def test_bounded_whitespace_in_window_is_tolerated(self) -> None:
         monitor = STLMonitor("always[ 0 , 2 ] (x >= 0)")
         assert monitor.evaluate({"x": _BOUNDED_SIGNAL}) == pytest.approx(-0.2)
 
-    def test_inverted_bounds_are_not_a_builtin_spec(self):
+    def test_inverted_bounds_are_not_a_builtin_spec(self) -> None:
         # a > b is rejected by the bounded parser, so it is not builtin-evaluable
         # and (without rtamt) routes to the rtamt-required error path.
         assert stl_module.monitor._parse_bounded_spec("always[3,1] (x >= 0)") is None
 
-    def test_bounded_invalid_predicate_is_not_a_builtin_spec(self):
+    def test_bounded_invalid_predicate_is_not_a_builtin_spec(self) -> None:
         assert stl_module.monitor._parse_bounded_spec("always[0,2] (x ~ 1)") is None
 
-    def test_inverted_bounds_require_rtamt_when_missing(self, monkeypatch):
+    def test_inverted_bounds_require_rtamt_when_missing(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.setattr(stl_module.monitor, "rtamt", None)
         monitor = STLMonitor("always[3,1] (x >= 0)")
         with pytest.raises(ImportError, match="rtamt"):
