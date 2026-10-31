@@ -10,19 +10,28 @@ from __future__ import annotations
 
 import os
 import time
+from collections.abc import Callable
+from typing import TypeVar
 
 import pytest
 
+from scpn_phase_orchestrator.exceptions import PolicyError
 from scpn_phase_orchestrator.supervisor.petri_net import (
     Arc,
     Guard,
     Marking,
     PetriNet,
     Place,
-    PolicyError,
     Transition,
     parse_guard,
 )
+
+_R = TypeVar("_R")
+
+
+def _call(fn: Callable[..., _R], *args: object, **kwargs: object) -> _R:
+    """Call ``fn`` with arguments that are deliberately outside its types."""
+    return fn(*args, **kwargs)
 
 
 def _skip_wall_clock_perf_gate_under_shared_load() -> None:
@@ -36,7 +45,7 @@ def _skip_wall_clock_perf_gate_under_shared_load() -> None:
         )
 
 
-def _simple_net():
+def _simple_net() -> PetriNet:
     """warmup -> nominal -> cooldown -> done"""
     places = [Place("warmup"), Place("nominal"), Place("cooldown"), Place("done")]
     transitions = [
@@ -61,112 +70,112 @@ def _simple_net():
     return PetriNet(places, transitions)
 
 
-def test_initial_marking():
+def test_initial_marking() -> None:
     m = Marking(tokens={"warmup": 1})
     assert m["warmup"] == 1
     assert m["nominal"] == 0
 
 
 @pytest.mark.parametrize("name", ["", 3, None])
-def test_place_rejects_invalid_name(name):
+def test_place_rejects_invalid_name(name: object) -> None:
     with pytest.raises(ValueError, match="place"):
-        Place(name)
+        _call(Place, name)
 
 
 @pytest.mark.parametrize("weight", [0, -1, True, 1.5, "1"])
-def test_arc_rejects_invalid_weight(weight):
+def test_arc_rejects_invalid_weight(weight: object) -> None:
     with pytest.raises(ValueError, match="weight"):
-        Arc("warmup", weight=weight)
+        _call(Arc, "warmup", weight=weight)
 
 
 @pytest.mark.parametrize("op", ["!=", "=>", "", 3])
-def test_guard_rejects_invalid_operator(op):
+def test_guard_rejects_invalid_operator(op: object) -> None:
     with pytest.raises(ValueError, match="operator"):
-        Guard("R", op, 0.5)
+        _call(Guard, "R", op, 0.5)
 
 
 @pytest.mark.parametrize("threshold", [True, float("nan"), float("inf"), "0.5"])
-def test_guard_rejects_invalid_threshold(threshold):
+def test_guard_rejects_invalid_threshold(threshold: object) -> None:
     with pytest.raises(ValueError, match="threshold"):
-        Guard("R", ">", threshold)
+        _call(Guard, "R", ">", threshold)
 
 
 @pytest.mark.parametrize("name", ["", None, 3])
-def test_transition_rejects_invalid_name(name):
+def test_transition_rejects_invalid_name(name: object) -> None:
     with pytest.raises(ValueError, match="transition"):
-        Transition(name, inputs=[Arc("a")], outputs=[Arc("b")])
+        _call(Transition, name, inputs=[Arc("a")], outputs=[Arc("b")])
 
 
 @pytest.mark.parametrize("tokens", [{"a": -1}, {"a": True}, {"a": 1.5}, {3: 1}])
-def test_marking_rejects_invalid_initial_tokens(tokens):
+def test_marking_rejects_invalid_initial_tokens(tokens: dict[object, object]) -> None:
     with pytest.raises(ValueError, match="token|place"):
-        Marking(tokens=tokens)
+        _call(Marking, tokens=tokens)
 
 
-def test_marking_active_places():
+def test_marking_active_places() -> None:
     m = Marking(tokens={"warmup": 1, "cooldown": 0})
     assert m.active_places() == ["warmup"]
 
 
-def test_marking_copy_independent():
+def test_marking_copy_independent() -> None:
     m = Marking(tokens={"a": 1})
     m2 = m.copy()
     m2["a"] = 2
     assert m["a"] == 1
 
 
-def test_marking_negative_rejected():
+def test_marking_negative_rejected() -> None:
     m = Marking()
     with pytest.raises(ValueError, match="negative"):
         m["x"] = -1
 
 
-def test_marking_zero_removes_key():
+def test_marking_zero_removes_key() -> None:
     m = Marking(tokens={"a": 1})
     m["a"] = 0
     assert "a" not in m.tokens
 
 
-def test_parse_guard():
+def test_parse_guard() -> None:
     g = parse_guard("stability_proxy > 0.6")
     assert g.metric == "stability_proxy"
     assert g.op == ">"
     assert g.threshold == 0.6
 
 
-def test_parse_guard_bad_format():
+def test_parse_guard_bad_format() -> None:
     with pytest.raises(ValueError, match="guard must be"):
         parse_guard("bad")
 
 
 @pytest.mark.parametrize("text", ["R != 0.5", "R > NaN", "R > inf"])
-def test_parse_guard_rejects_invalid_surface(text):
+def test_parse_guard_rejects_invalid_surface(text: str) -> None:
     with pytest.raises(ValueError, match="operator|threshold"):
         parse_guard(text)
 
 
-def test_guard_evaluate_true():
+def test_guard_evaluate_true() -> None:
     g = Guard("R", ">", 0.5)
     assert g.evaluate({"R": 0.7})
 
 
-def test_guard_evaluate_false():
+def test_guard_evaluate_false() -> None:
     g = Guard("R", ">", 0.5)
     assert not g.evaluate({"R": 0.3})
 
 
-def test_guard_missing_metric():
+def test_guard_missing_metric() -> None:
     g = Guard("missing", ">", 0.5)
     assert not g.evaluate({"R": 0.7})
 
 
-def test_guard_rejects_non_finite_context_value():
+def test_guard_rejects_non_finite_context_value() -> None:
     g = Guard("R", ">", 0.5)
     with pytest.raises(ValueError, match="context metric"):
         g.evaluate({"R": float("nan")})
 
 
-def test_enabled_transitions():
+def test_enabled_transitions() -> None:
     net = _simple_net()
     m = Marking(tokens={"warmup": 1})
     ctx = {"stability_proxy": 0.8, "R_0": 0.5}
@@ -175,7 +184,7 @@ def test_enabled_transitions():
     assert enabled[0].name == "start"
 
 
-def test_enabled_rejects_unknown_context_metric():
+def test_enabled_rejects_unknown_context_metric() -> None:
     net = _simple_net()
     m = Marking(tokens={"warmup": 1})
 
@@ -183,7 +192,7 @@ def test_enabled_rejects_unknown_context_metric():
         net.enabled(m, {"stability_proxy": 0.8, "untrusted": 1.0})
 
 
-def test_step_rejects_boolean_context_value():
+def test_step_rejects_boolean_context_value() -> None:
     net = _simple_net()
     m = Marking(tokens={"warmup": 1})
 
@@ -191,7 +200,7 @@ def test_step_rejects_boolean_context_value():
         net.step(m, {"stability_proxy": True})
 
 
-def test_no_enabled_guard_fails():
+def test_no_enabled_guard_fails() -> None:
     net = _simple_net()
     m = Marking(tokens={"warmup": 1})
     ctx = {"stability_proxy": 0.3}
@@ -199,7 +208,7 @@ def test_no_enabled_guard_fails():
     assert len(enabled) == 0
 
 
-def test_fire_moves_tokens():
+def test_fire_moves_tokens() -> None:
     net = _simple_net()
     m = Marking(tokens={"warmup": 1})
     t = net.transitions[0]
@@ -209,7 +218,7 @@ def test_fire_moves_tokens():
     assert m["warmup"] == 1  # original unchanged
 
 
-def test_step_fires_first_enabled():
+def test_step_fires_first_enabled() -> None:
     net = _simple_net()
     m = Marking(tokens={"warmup": 1})
     ctx = {"stability_proxy": 0.8, "R_0": 0.5}
@@ -219,7 +228,7 @@ def test_step_fires_first_enabled():
     assert m2["nominal"] == 1
 
 
-def test_step_no_enabled():
+def test_step_no_enabled() -> None:
     net = _simple_net()
     m = Marking(tokens={"warmup": 1})
     ctx = {"stability_proxy": 0.1}
@@ -228,30 +237,34 @@ def test_step_no_enabled():
     assert m2["warmup"] == 1
 
 
-def test_full_protocol_sequence():
+def test_full_protocol_sequence() -> None:
     net = _simple_net()
     m = Marking(tokens={"warmup": 1})
 
     m, t = net.step(m, {"stability_proxy": 0.8, "R_0": 0.5})
+    assert t is not None
     assert t.name == "start"
 
     m, t = net.step(m, {"stability_proxy": 0.8, "R_0": 0.2})
+    assert t is not None
     assert t.name == "wind_down"
 
     m, t = net.step(m, {})
+    assert t is not None
     assert t.name == "finish"
     assert m["done"] == 1
 
 
-def test_guardless_transition_fires_when_tokens_present():
+def test_guardless_transition_fires_when_tokens_present() -> None:
     net = _simple_net()
     m = Marking(tokens={"cooldown": 1})
     m2, t = net.step(m, {})
+    assert t is not None
     assert t.name == "finish"
     assert m2["done"] == 1
 
 
-def test_invalid_place_reference():
+def test_invalid_place_reference() -> None:
     with pytest.raises(ValueError, match="unknown place"):
         PetriNet(
             [Place("a")],
@@ -259,7 +272,7 @@ def test_invalid_place_reference():
         )
 
 
-def test_weighted_arcs():
+def test_weighted_arcs() -> None:
     net = PetriNet(
         [Place("a"), Place("b")],
         [Transition("t", inputs=[Arc("a", weight=2)], outputs=[Arc("b", weight=3)])],
@@ -271,7 +284,7 @@ def test_weighted_arcs():
     assert m2["b"] == 3
 
 
-def test_insufficient_tokens_blocks():
+def test_insufficient_tokens_blocks() -> None:
     net = PetriNet(
         [Place("a"), Place("b")],
         [Transition("t", inputs=[Arc("a", weight=2)], outputs=[Arc("b")])],
@@ -281,7 +294,7 @@ def test_insufficient_tokens_blocks():
     assert t is None
 
 
-def test_guard_all_ops():
+def test_guard_all_ops() -> None:
     for op_str, val, threshold, expected in [
         (">", 1.0, 0.5, True),
         (">=", 0.5, 0.5, True),
@@ -294,7 +307,7 @@ def test_guard_all_ops():
         assert g.evaluate({"x": val}) == expected, f"{op_str} failed"
 
 
-def test_token_conservation_unweighted():
+def test_token_conservation_unweighted() -> None:
     """Firing an unweighted transition conserves total tokens:
     consumed from input places, produced at output places."""
     net = _simple_net()
@@ -307,7 +320,7 @@ def test_token_conservation_unweighted():
     )
 
 
-def test_weighted_token_transformation():
+def test_weighted_token_transformation() -> None:
     """Weighted arcs: 2 tokens consumed, 3 produced → net +1."""
     net = PetriNet(
         [Place("a"), Place("b")],
@@ -320,7 +333,7 @@ def test_weighted_token_transformation():
     assert m2["b"] == 3, "Should produce 3 at b"
 
 
-def test_priority_deterministic():
+def test_priority_deterministic() -> None:
     """When multiple transitions are enabled, step fires the first one
     (deterministic ordering). This is critical for reproducibility."""
     net = PetriNet(
@@ -332,11 +345,12 @@ def test_priority_deterministic():
     )
     m = Marking(tokens={"p": 1})
     m2, fired = net.step(m, {})
+    assert fired is not None
     assert fired.name == "t1", "First-declared transition must fire first"
     assert m2["q1"] == 1
 
 
-def test_multi_step_protocol_token_tracking():
+def test_multi_step_protocol_token_tracking() -> None:
     """Run the full 3-step protocol and verify token accounting at each stage."""
     net = _simple_net()
     m = Marking(tokens={"warmup": 1})
@@ -358,7 +372,7 @@ def test_multi_step_protocol_token_tracking():
     assert t is None, "All transitions exhausted"
 
 
-def test_parse_guard_all_operators():
+def test_parse_guard_all_operators() -> None:
     """parse_guard must handle all 5 operators: > >= < <= =="""
     for op in [">", ">=", "<", "<=", "=="]:
         g = parse_guard(f"metric {op} 0.5")
@@ -373,7 +387,7 @@ class TestPetriNetPipelineEndToEnd:
     Proves PetriNet is a functional supervisor component.
     """
 
-    def test_engine_r_drives_petri_guard(self):
+    def test_engine_r_drives_petri_guard(self) -> None:
         """Engine output R → guard metric → PetriNet transition fires."""
         import numpy as np
 
@@ -411,7 +425,7 @@ class TestPetriNetPipelineEndToEnd:
             assert len(enabled) == 0
 
     @pytest.mark.performance
-    def test_performance_enabled_under_10us(self):
+    def test_performance_enabled_under_10us(self) -> None:
         """PetriNet.enabled() remains microsecond-scale for a simple net."""
         _skip_wall_clock_perf_gate_under_shared_load()
         places = [Place("a"), Place("b")]
@@ -439,15 +453,15 @@ class TestPetriNetPipelineEndToEnd:
 
 # Salvaged module-specific behavioural contracts from deleted mixed tests.
 class TestPetriNetGuard:
-    def test_guard_missing_metric(self):
+    def test_guard_missing_metric(self) -> None:
         g = Guard(metric="x", op=">", threshold=0.5)
         assert g.evaluate({}) is False
 
-    def test_guard_unknown_op(self):
+    def test_guard_unknown_op(self) -> None:
         with pytest.raises(PolicyError, match="operator must be one of"):
             Guard(metric="x", op="!=", threshold=0.5)
 
-    def test_place_names_property(self):
+    def test_place_names_property(self) -> None:
         from scpn_phase_orchestrator.supervisor.petri_net import Arc, Transition
 
         places = [Place("a"), Place("b")]
