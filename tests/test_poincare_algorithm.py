@@ -19,6 +19,8 @@ from __future__ import annotations
 
 import functools
 import math
+from collections.abc import Callable
+from typing import ParamSpec, TypeVar
 
 import numpy as np
 import pytest
@@ -33,10 +35,15 @@ from scpn_phase_orchestrator.monitor.poincare import (
     return_times,
 )
 
+_P = ParamSpec("_P")
+_R = TypeVar("_R")
 
-def _python(func):
+
+def _python(func: Callable[_P, _R]) -> Callable[_P, _R]:
+    """Run ``func`` with the pure-Python backend forced."""
+
     @functools.wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _R:
         prev = p_mod.ACTIVE_BACKEND
         p_mod.ACTIVE_BACKEND = "python"
         try:
@@ -49,7 +56,7 @@ def _python(func):
 
 class TestPoincareSection:
     @_python
-    def test_sinusoid_crossings_positive_slope(self):
+    def test_sinusoid_crossings_positive_slope(self) -> None:
         """``y = sin(t)`` has positive-slope zero crossings at
         ``t = 2π, 4π, …``. Over ``[0, 6π]`` discretised into 600
         points we detect 2 such crossings — the one at ``t = 6π``
@@ -67,7 +74,7 @@ class TestPoincareSection:
         )
 
     @_python
-    def test_direction_both_counts_all(self):
+    def test_direction_both_counts_all(self) -> None:
         """``direction='both'`` counts positive- and negative-going."""
         t = np.linspace(0, 4 * math.pi, 400)
         traj = np.column_stack([t, np.sin(t)])
@@ -76,7 +83,7 @@ class TestPoincareSection:
         assert len(res.crossings) >= 3
 
     @_python
-    def test_no_crossing_returns_empty(self):
+    def test_no_crossing_returns_empty(self) -> None:
         traj = np.zeros((50, 2))
         normal = np.array([0.0, 1.0])
         res = poincare_section(traj, normal, offset=10.0)
@@ -85,14 +92,14 @@ class TestPoincareSection:
         assert res.std_return_time == 0.0
 
     @_python
-    def test_invalid_direction_raises(self):
+    def test_invalid_direction_raises(self) -> None:
         traj = np.zeros((10, 2))
         normal = np.array([1.0, 0.0])
         with pytest.raises(ValueError, match="direction"):
             poincare_section(traj, normal, direction="sideways")
 
     @_python
-    def test_rejects_boolean_trajectory(self):
+    def test_rejects_boolean_trajectory(self) -> None:
         with pytest.raises(ValueError, match="trajectory"):
             poincare_section(
                 np.array([[True, False], [False, True]]),
@@ -100,7 +107,7 @@ class TestPoincareSection:
             )
 
     @_python
-    def test_rejects_boolean_normal(self):
+    def test_rejects_boolean_normal(self) -> None:
         with pytest.raises(ValueError, match="normal"):
             poincare_section(
                 np.zeros((3, 2)),
@@ -108,7 +115,7 @@ class TestPoincareSection:
             )
 
     @_python
-    def test_return_times_shortcut(self):
+    def test_return_times_shortcut(self) -> None:
         t = np.linspace(0, 8 * math.pi, 800)
         traj = np.column_stack([t, np.sin(t)])
         normal = np.array([0.0, 1.0])
@@ -124,7 +131,7 @@ class TestPoincareSection:
 
 class TestPhasePoincare:
     @_python
-    def test_constant_frequency_return_time(self):
+    def test_constant_frequency_return_time(self) -> None:
         """A constant-frequency oscillator has return time
         ``2π / (ω · dt⁻¹) ≈ 62.83`` samples. The last return time
         is slightly smaller (~62) because the very last crossing
@@ -147,7 +154,7 @@ class TestPhasePoincare:
             )
 
     @_python
-    def test_crossing_recovers_section_phase(self):
+    def test_crossing_recovers_section_phase(self) -> None:
         """The interpolated crossing point of the section oscillator must
         sit exactly on the section phase (mod 2π). The spurious
         ``shifted[i]/(shifted[i]-shifted[i+1]+2π)`` interpolation left a
@@ -167,13 +174,13 @@ class TestPhasePoincare:
             np.testing.assert_allclose(res.return_times, period, atol=1e-6)
 
     @_python
-    def test_no_rotation_no_crossings(self):
+    def test_no_rotation_no_crossings(self) -> None:
         phases = np.full((50, 4), 0.5)
         res = phase_poincare(phases, oscillator_idx=0, section_phase=0.0)
         assert len(res.crossings) == 0
 
     @_python
-    def test_rejects_boolean_phases(self):
+    def test_rejects_boolean_phases(self) -> None:
         with pytest.raises(ValueError, match="phases"):
             phase_poincare(np.array([[True, False], [False, True]]))
 
@@ -189,7 +196,7 @@ class TestHypothesis:
         deadline=None,
         suppress_health_check=[HealthCheck.too_slow],
     )
-    def test_section_output_shapes(self, t: int, seed: int):
+    def test_section_output_shapes(self, t: int, seed: int) -> None:
         rng = np.random.default_rng(seed)
         traj = rng.normal(0, 1, (t, 3))
         normal = rng.normal(0, 1, 3)
@@ -202,9 +209,9 @@ class TestHypothesis:
 
 
 class TestDispatcherSurface:
-    def test_available_non_empty(self):
+    def test_available_non_empty(self) -> None:
         assert p_mod.AVAILABLE_BACKENDS
         assert "python" in p_mod.AVAILABLE_BACKENDS
 
-    def test_active_is_first(self):
+    def test_active_is_first(self) -> None:
         assert p_mod.AVAILABLE_BACKENDS[0] == p_mod.ACTIVE_BACKEND
