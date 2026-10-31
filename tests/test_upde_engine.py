@@ -11,6 +11,7 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
+import scpn_phase_orchestrator.upde.engine as engine_module
 from scpn_phase_orchestrator.upde.engine import UPDEEngine, upde_run
 
 TWO_PI = 2.0 * np.pi
@@ -19,10 +20,22 @@ TWO_PI = 2.0 * np.pi
 def _py_engine(
     n: int, dt: float = 0.01, method: str = "euler", **kwargs: float
 ) -> UPDEEngine:
+    """Return an engine whose step() and run() both execute the NumPy path.
+
+    ``_rust = None`` pins step(); run() dispatches through the module
+    backend, which the calling test must pin with ``_pin_python_dispatch``.
+    """
     engine = UPDEEngine(n_oscillators=n, dt=dt, method=method, **kwargs)
     engine._rust = None
     assert engine.backend == "numpy"
+    assert engine_module._backend_state()[0] == "python"
     return engine
+
+
+def _pin_python_dispatch(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Route the engine module's run dispatch to the Python owner."""
+    monkeypatch.setattr(engine_module, "ACTIVE_BACKEND", "python")
+    monkeypatch.setattr(engine_module, "AVAILABLE_BACKENDS", ["python"])
 
 
 def test_identical_phases_stay_synchronised(
@@ -289,6 +302,10 @@ class TestUPDEEngineInputValidation:
 
 
 class TestUPDEEnginePythonPath:
+    @pytest.fixture(autouse=True)
+    def _python_dispatch(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        _pin_python_dispatch(monkeypatch)
+
     def test_euler_step(self) -> None:
         n = 4
         engine = _py_engine(n, dt=0.01)
@@ -421,6 +438,10 @@ class TestUPDEEnginePythonPath:
 
 
 class TestUPDEEngineValidation:
+    @pytest.fixture(autouse=True)
+    def _python_dispatch(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        _pin_python_dispatch(monkeypatch)
+
     def test_nan_zeta_raises(self) -> None:
         engine = _py_engine(4, dt=0.01)
         with pytest.raises(ValueError, match="finite"):
