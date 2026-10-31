@@ -39,7 +39,7 @@ class _FakeContext:
     def invocation_metadata(self) -> tuple[tuple[Any, Any], ...]:
         return self._metadata
 
-    def abort(self, _code, detail: str) -> None:
+    def abort(self, _code: object, detail: str) -> None:
         raise PermissionError(detail)
 
 
@@ -57,13 +57,13 @@ class _RecordingContext(_FakeContext):
         raise PermissionError(detail)
 
 
-def _make_servicer():
+def _make_servicer() -> PhaseStreamServicer:
     spec = load_binding_spec(DOMAINPACK_DIR / "minimal_domain" / "binding_spec.yaml")
     sim = SimulationState(spec)
     return PhaseStreamServicer(sim)
 
 
-def test_stream_yields_responses():
+def test_stream_yields_responses() -> None:
     svc = _make_servicer()
     req = StreamRequest(max_steps=5, interval_s=0.0)
     results = list(svc.StreamPhases(req, _FakeContext()))
@@ -74,7 +74,7 @@ def test_stream_yields_responses():
         assert resp.regime != ""
 
 
-def test_stream_stops_on_inactive_context():
+def test_stream_stops_on_inactive_context() -> None:
     svc = _make_servicer()
     ctx = MagicMock()
     ctx.is_active.side_effect = [True, True, False]
@@ -83,7 +83,7 @@ def test_stream_stops_on_inactive_context():
     assert len(results) == 2
 
 
-def test_stream_has_layer_data():
+def test_stream_has_layer_data() -> None:
     svc = _make_servicer()
     req = StreamRequest(max_steps=3, interval_s=0.0)
     results = list(svc.StreamPhases(req, _FakeContext()))
@@ -92,28 +92,28 @@ def test_stream_has_layer_data():
     assert results[0].layers[0].name != ""
 
 
-def test_stream_with_none_context():
+def test_stream_with_none_context() -> None:
     svc = _make_servicer()
     req = StreamRequest(max_steps=2, interval_s=0.0)
     results = list(svc.StreamPhases(req, None))
     assert len(results) == 2
 
 
-def test_stream_rejects_invalid_max_steps():
+def test_stream_rejects_invalid_max_steps() -> None:
     svc = _make_servicer()
     req = StreamRequest(max_steps=-1, interval_s=0.0)
     with pytest.raises(PermissionError, match="max_steps"):
         list(svc.StreamPhases(req, _FakeContext()))
 
 
-def test_stream_rejects_zero_max_steps_for_non_protobuf_requests():
+def test_stream_rejects_zero_max_steps_for_non_protobuf_requests() -> None:
     svc = _make_servicer()
     req = type("StreamRequest", (), {"max_steps": 0, "interval_s": 0.0})()
     with pytest.raises(PermissionError, match="max_steps"):
         list(svc.StreamPhases(req, _FakeContext()))
 
 
-def test_stream_treats_unset_protobuf_zero_max_steps_as_default():
+def test_stream_treats_unset_protobuf_zero_max_steps_as_default() -> None:
     svc = _make_servicer()
 
     class _Descriptor:
@@ -123,21 +123,21 @@ def test_stream_treats_unset_protobuf_zero_max_steps_as_default():
         max_steps = 0
         interval_s = 0.0
 
-        def ListFields(self):
+        def ListFields(self) -> list[tuple[_Descriptor, float]]:
             return [(_Descriptor(), 0.0)]
 
     results = list(svc.StreamPhases(_ProtoLikeRequest(), _FakeContext()))
     assert len(results) == 100
 
 
-def test_stream_rejects_invalid_interval():
+def test_stream_rejects_invalid_interval() -> None:
     svc = _make_servicer()
     req = StreamRequest(max_steps=1, interval_s=float("nan"))
     with pytest.raises(PermissionError, match="interval_s"):
         list(svc.StreamPhases(req, _FakeContext()))
 
 
-def test_servicer_reuses_simulation_state_lock():
+def test_servicer_reuses_simulation_state_lock() -> None:
     """T6 regression: gRPC servicer must share SimulationState._lock so HTTP
     and gRPC paths serialise against the same mutex. A separate lock leaves
     shared engine state vulnerable to concurrent mutation.
@@ -148,7 +148,7 @@ def test_servicer_reuses_simulation_state_lock():
     assert servicer._lock is sim._lock
 
 
-def test_simulation_state_lock_is_thread_safe():
+def test_simulation_state_lock_is_thread_safe() -> None:
     """T6 regression: SimulationState._lock must be a threading primitive
     (not asyncio.Lock) so it can be held from gRPC thread pools.
     """
@@ -169,7 +169,7 @@ def test_simulation_state_lock_is_thread_safe():
     assert acquired.is_set(), "lock not acquirable from worker thread"
 
 
-def test_grpc_production_requires_api_key_env(monkeypatch):
+def test_grpc_production_requires_api_key_env(monkeypatch: pytest.MonkeyPatch) -> None:
     spec = load_binding_spec(DOMAINPACK_DIR / "minimal_domain" / "binding_spec.yaml")
     sim = SimulationState(spec)
     monkeypatch.setenv("SPO_GRPC_ENV", "production")
@@ -183,7 +183,9 @@ def test_grpc_production_requires_api_key_env(monkeypatch):
         monkeypatch.delenv("SPO_GRPC_ENV", raising=False)
 
 
-def test_grpc_production_rejects_missing_metadata(monkeypatch):
+def test_grpc_production_rejects_missing_metadata(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     spec = load_binding_spec(DOMAINPACK_DIR / "minimal_domain" / "binding_spec.yaml")
     sim = SimulationState(spec)
     monkeypatch.setenv("SPO_GRPC_ENV", "production")
@@ -194,7 +196,9 @@ def test_grpc_production_rejects_missing_metadata(monkeypatch):
         svc.GetState(None, _FakeContext())
 
 
-def test_grpc_production_rate_limits_metadata_identity(monkeypatch):
+def test_grpc_production_rate_limits_metadata_identity(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     spec = load_binding_spec(DOMAINPACK_DIR / "minimal_domain" / "binding_spec.yaml")
     sim = SimulationState(spec)
     monkeypatch.setenv("SPO_GRPC_ENV", "production")
@@ -211,7 +215,9 @@ def test_grpc_production_rate_limits_metadata_identity(monkeypatch):
         svc.GetState(None, ctx)
 
 
-def test_grpc_production_accepts_metadata_variants(monkeypatch):
+def test_grpc_production_accepts_metadata_variants(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     spec = load_binding_spec(DOMAINPACK_DIR / "minimal_domain" / "binding_spec.yaml")
     sim = SimulationState(spec)
     monkeypatch.setenv("SPO_GRPC_ENV", "production")
@@ -228,7 +234,7 @@ def test_grpc_production_accepts_metadata_variants(monkeypatch):
         )
 
 
-def test_grpc_context_abort_recorded_code(monkeypatch):
+def test_grpc_context_abort_recorded_code(monkeypatch: pytest.MonkeyPatch) -> None:
     spec = load_binding_spec(DOMAINPACK_DIR / "minimal_domain" / "binding_spec.yaml")
     sim = SimulationState(spec)
     monkeypatch.setenv("SPO_GRPC_ENV", "production")
@@ -245,7 +251,7 @@ def test_grpc_context_abort_recorded_code(monkeypatch):
         assert code is None
 
 
-def test_step_rejects_negative_n_steps():
+def test_step_rejects_negative_n_steps() -> None:
     svc = _make_servicer()
     req = type("StepRequest", (), {"n_steps": -1})()
     with pytest.raises(PermissionError, match="n_steps"):
