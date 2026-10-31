@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Callable
 from typing import Any, cast
 
 import pytest
@@ -40,7 +41,22 @@ def _rule(
     )
 
 
-def _hash(record: dict) -> str:
+def _entries(record: dict[str, object], key: str) -> list[dict[str, Any]]:
+    """Return one list of record entries, asserting it is a list of dicts."""
+    entries = record[key]
+    assert isinstance(entries, list)
+    assert all(isinstance(entry, dict) for entry in entries)
+    return entries
+
+
+# The refusal tests pass deliberately mistyped collections and actions, so
+# they go through unchecked aliases.
+_validate_unchecked: Callable[..., object] = (
+    topos_policy.validate_policy_composition_category
+)
+
+
+def _hash(record: dict[str, object]) -> str:
     normalized = dict(record)
     normalized.pop("report_hash", None)
     return hashlib.sha256(
@@ -71,7 +87,7 @@ def _atomic_rule(
     )
 
 
-def test_validate_policy_composition_category_passes_for_valid_rules():
+def test_validate_policy_composition_category_passes_for_valid_rules() -> None:
     rules = [
         _atomic_rule("alpha", ["NOMINAL", "CRITICAL"]),
         _rule(
@@ -106,11 +122,11 @@ def test_validate_policy_composition_category_passes_for_valid_rules():
     assert _hash(payload) == report.report_hash
     assert any(
         item["name"] == "rules_collection_valid"
-        for item in payload["obligation_records"]
+        for item in _entries(payload, "obligation_records")
     )
 
 
-def test_validate_policy_composition_category_deterministic_across_shapes():
+def test_validate_policy_composition_category_deterministic_across_shapes() -> None:
     rule_a = _atomic_rule("alpha", ["NOMINAL"], ttl_s=1.0, value=0.1)
     rule_b = _atomic_rule("beta", ["NOMINAL", "CRITICAL"], ttl_s=2.0, value=0.2)
     ordered = [rule_a, rule_b]
@@ -127,13 +143,13 @@ def test_validate_policy_composition_category_deterministic_across_shapes():
     assert json_payload == json.dumps(json.loads(json_payload))
 
 
-def test_invalid_rule_collections_fail_closed():
+def test_invalid_rule_collections_fail_closed() -> None:
     """Rule collection validation rejects malformed top-level containers."""
     with pytest.raises(ValueError, match="rules must be"):
-        topos_policy.validate_policy_composition_category(None)
+        _validate_unchecked(None)
 
     with pytest.raises(ValueError, match="rules must contain only PolicyRule"):
-        topos_policy.validate_policy_composition_category([object()])
+        _validate_unchecked([object()])
 
     with pytest.raises(ValueError, match="non-empty"):
         topos_policy.validate_policy_composition_category([])
@@ -152,7 +168,7 @@ def test_rule_names_must_be_strings() -> None:
         topos_policy.validate_policy_composition_category([rule])
 
 
-def test_duplicate_rule_names_or_invalid_compound_logic_cannot_pass():
+def test_duplicate_rule_names_or_invalid_compound_logic_cannot_pass() -> None:
     duplicate_report = topos_policy.validate_policy_composition_category(
         [
             _atomic_rule("dup", ["NOMINAL"]),
@@ -162,7 +178,7 @@ def test_duplicate_rule_names_or_invalid_compound_logic_cannot_pass():
     assert duplicate_report.passed is False
     assert any(
         item["name"] == "rule_names_unique" and item["status"] == "failed"
-        for item in duplicate_report.to_audit_record()["obligation_records"]
+        for item in _entries(duplicate_report.to_audit_record(), "obligation_records")
     )
 
     invalid_logic_report = topos_policy.validate_policy_composition_category(
@@ -183,7 +199,9 @@ def test_duplicate_rule_names_or_invalid_compound_logic_cannot_pass():
     assert invalid_logic_report.passed is False
     assert any(
         item["name"] == "rule.broken.condition" and item["status"] == "failed"
-        for item in invalid_logic_report.to_audit_record()["obligation_records"]
+        for item in _entries(
+            invalid_logic_report.to_audit_record(), "obligation_records"
+        )
     )
 
 
@@ -233,7 +251,7 @@ def test_invalid_atomic_condition_contracts_cannot_pass(
 
     condition_obligation = next(
         item
-        for item in report.to_audit_record()["obligation_records"]
+        for item in _entries(report.to_audit_record(), "obligation_records")
         if item["name"] == "rule.broken.condition"
     )
     assert report.passed is False
@@ -261,7 +279,7 @@ def test_invalid_compound_condition_member_contract_cannot_pass() -> None:
 
     condition_obligation = next(
         item
-        for item in report.to_audit_record()["obligation_records"]
+        for item in _entries(report.to_audit_record(), "obligation_records")
         if item["name"] == "rule.compound_broken.condition"
     )
     assert report.passed is False
@@ -329,7 +347,7 @@ def test_invalid_compound_condition_shapes_cannot_pass(
 
     condition_obligation = next(
         item
-        for item in report.to_audit_record()["obligation_records"]
+        for item in _entries(report.to_audit_record(), "obligation_records")
         if item["name"] == "rule.compound_shape.condition"
     )
     assert report.passed is False
@@ -352,7 +370,7 @@ def test_invalid_condition_object_cannot_pass() -> None:
 
     condition_obligation = next(
         item
-        for item in report.to_audit_record()["obligation_records"]
+        for item in _entries(report.to_audit_record(), "obligation_records")
         if item["name"] == "rule.bad_condition_object.condition"
     )
     assert report.passed is False
@@ -363,9 +381,12 @@ def test_invalid_condition_object_cannot_pass() -> None:
 
 
 def test_invalid_action_member_contract_cannot_pass() -> None:
+    # The action is deliberately not a PolicyAction, so the rule is built
+    # through an unchecked alias of the builder.
+    rule_unchecked: Callable[..., PolicyRule] = _rule
     report = topos_policy.validate_policy_composition_category(
         [
-            _rule(
+            rule_unchecked(
                 "bad_action",
                 ["NOMINAL"],
                 PolicyCondition(metric="R", layer=0, op=">", threshold=0.1),
@@ -376,7 +397,7 @@ def test_invalid_action_member_contract_cannot_pass() -> None:
 
     action_obligation = next(
         item
-        for item in report.to_audit_record()["obligation_records"]
+        for item in _entries(report.to_audit_record(), "obligation_records")
         if item["name"] == "rule.bad_action.actions"
     )
     assert report.passed is False
@@ -413,7 +434,7 @@ def test_invalid_action_collection_contracts_cannot_pass(
 
     action_obligation = next(
         item
-        for item in report.to_audit_record()["obligation_records"]
+        for item in _entries(report.to_audit_record(), "obligation_records")
         if item["name"] == "rule.bad_actions.actions"
     )
     assert report.passed is False
@@ -447,7 +468,7 @@ def test_invalid_regime_collections_cannot_pass(
 
     regime_obligation = next(
         item
-        for item in report.to_audit_record()["obligation_records"]
+        for item in _entries(report.to_audit_record(), "obligation_records")
         if item["name"] == "rule.bad_regimes.regimes"
     )
     assert report.passed is False
@@ -477,9 +498,11 @@ def test_duplicate_action_labels_create_one_morphism() -> None:
     assert len(report.objects[0].action_labels) == 2
 
 
-def test_validation_report_does_not_emit_control_actions(monkeypatch):
+def test_validation_report_does_not_emit_control_actions(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     class SpyControlAction:
-        def __init__(self, *args, **kwargs):
+        def __init__(self, *args: object, **kwargs: object) -> None:
             raise AssertionError("validation should not instantiate actuation actions")
 
     monkeypatch.setattr(topos_policy, "ControlAction", SpyControlAction, raising=False)
@@ -497,9 +520,9 @@ def test_rule_names_are_trimmed_and_blank_names_rejected() -> None:
     payload = trimmed.to_audit_record()
 
     assert trimmed.passed is True
-    assert payload["objects"][0]["name"] == "alpha"
-    assert payload["morphisms"][0]["source"] == "alpha"
-    assert payload["morphisms"][0]["target"] == "alpha"
+    assert _entries(payload, "objects")[0]["name"] == "alpha"
+    assert _entries(payload, "morphisms")[0]["source"] == "alpha"
+    assert _entries(payload, "morphisms")[0]["target"] == "alpha"
 
     with pytest.raises(ValueError, match="rule names must be non-empty"):
         topos_policy.validate_policy_composition_category(
@@ -533,8 +556,10 @@ def test_action_identity_and_compound_logic_are_canonicalised() -> None:
     payload = report.to_audit_record()
 
     assert report.passed is True
-    assert payload["objects"][0]["action_labels"] == ["action[K|global|0.25|1]"]
-    assert "action[K|global|0.25|1]" in payload["morphisms"][0]["label"]
+    assert _entries(payload, "objects")[0]["action_labels"] == [
+        "action[K|global|0.25|1]"
+    ]
+    assert "action[K|global|0.25|1]" in _entries(payload, "morphisms")[0]["label"]
 
 
 @pytest.mark.parametrize(
@@ -566,7 +591,7 @@ def test_blank_action_identity_members_cannot_pass(
     )
     action_obligation = next(
         item
-        for item in report.to_audit_record()["obligation_records"]
+        for item in _entries(report.to_audit_record(), "obligation_records")
         if item["name"] == "rule.bad_action_identity.actions"
     )
 
