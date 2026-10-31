@@ -19,11 +19,14 @@ from __future__ import annotations
 
 import functools
 import math
+from collections.abc import Callable
+from typing import ParamSpec, TypeVar
 
 import numpy as np
 import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
+from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.upde import inertial as i_mod
 from scpn_phase_orchestrator.upde.inertial import InertialKuramotoEngine
@@ -31,9 +34,15 @@ from scpn_phase_orchestrator.upde.inertial import InertialKuramotoEngine
 TWO_PI = 2.0 * math.pi
 
 
-def _python(func):
+_P = ParamSpec("_P")
+_R = TypeVar("_R")
+
+
+def _python(func: Callable[_P, _R]) -> Callable[_P, _R]:
+    """Run ``func`` with the pure-Python backend forced."""
+
     @functools.wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _R:
         prev = i_mod.ACTIVE_BACKEND
         i_mod.ACTIVE_BACKEND = "python"
         try:
@@ -44,7 +53,17 @@ def _python(func):
     return wrapper
 
 
-def _problem(seed: int, n: int = 8):
+_Problem = tuple[
+    NDArray[np.float64],
+    NDArray[np.float64],
+    NDArray[np.float64],
+    NDArray[np.float64],
+    NDArray[np.float64],
+    NDArray[np.float64],
+]
+
+
+def _problem(seed: int, n: int = 8) -> _Problem:
     rng = np.random.default_rng(seed)
     theta = rng.uniform(0, TWO_PI, n)
     omega_dot = rng.normal(0, 0.1, n)
@@ -57,18 +76,18 @@ def _problem(seed: int, n: int = 8):
 
 
 class TestConstructor:
-    def test_rejects_zero_n(self):
+    def test_rejects_zero_n(self) -> None:
         with pytest.raises(ValueError, match="n"):
             InertialKuramotoEngine(n=0, dt=0.01)
 
-    def test_rejects_non_positive_dt(self):
+    def test_rejects_non_positive_dt(self) -> None:
         with pytest.raises(ValueError, match="dt"):
             InertialKuramotoEngine(n=4, dt=0.0)
 
 
 class TestStep:
     @_python
-    def test_invalid_state_shapes_are_rejected(self):
+    def test_invalid_state_shapes_are_rejected(self) -> None:
         theta, omega_dot, power, knm, inertia, damping = _problem(11)
         eng = InertialKuramotoEngine(8, 0.01)
         with pytest.raises(ValueError, match="shape"):
@@ -87,7 +106,7 @@ class TestStep:
             eng.step(theta, omega_dot, power, knm, inertia, damping[:7])
 
     @_python
-    def test_nonfinite_step_inputs_are_rejected(self):
+    def test_nonfinite_step_inputs_are_rejected(self) -> None:
         theta, omega_dot, power, knm, inertia, damping = _problem(12)
         eng = InertialKuramotoEngine(8, 0.01)
 
@@ -106,7 +125,7 @@ class TestStep:
         with pytest.raises(ValueError, match="positive"):
             eng.step(theta, omega_dot, power, knm, neg_inertia, damping)
 
-    def test_zero_step_run_is_rejected(self):
+    def test_zero_step_run_is_rejected(self) -> None:
         theta, omega_dot, power, knm, inertia, damping = _problem(13)
         eng = InertialKuramotoEngine(8, 0.01)
         with pytest.raises(ValueError, match="n_steps"):
@@ -121,7 +140,7 @@ class TestStep:
             )
 
     @_python
-    def test_output_shapes(self):
+    def test_output_shapes(self) -> None:
         theta, od, p, k, m, d = _problem(0)
         eng = InertialKuramotoEngine(8, 0.01)
         new_th, new_od = eng.step(theta, od, p, k, m, d)
@@ -129,7 +148,7 @@ class TestStep:
         assert new_od.shape == (8,)
 
     @_python
-    def test_phases_wrap_in_two_pi(self):
+    def test_phases_wrap_in_two_pi(self) -> None:
         theta, od, p, k, m, d = _problem(1)
         eng = InertialKuramotoEngine(8, 0.01)
         new_th, _ = eng.step(theta, od, p, k, m, d)
@@ -137,7 +156,7 @@ class TestStep:
         assert np.all(new_th < TWO_PI + 1e-12)
 
     @_python
-    def test_zero_coupling_no_damping_recovers_free_rotation(self):
+    def test_zero_coupling_no_damping_recovers_free_rotation(self) -> None:
         """With K=0, D=0, inertia=1, ``dθ/dt = ω`` and
         ``dω/dt = P`` — constant acceleration. After one RK4 step
         of duration ``dt``, exactness requires polynomial-in-dt
@@ -161,7 +180,7 @@ class TestStep:
         np.testing.assert_allclose(new_od, expected_od, atol=1e-14)
 
     @_python
-    def test_damping_decays_omega(self):
+    def test_damping_decays_omega(self) -> None:
         """With K=0, P=0, finite D/M: ω(t) = ω₀ · exp(−(D/M)·t).
         RK4 gives a truncated expansion; after 50 steps at dt=0.01
         and D/M=2, ω should decay substantially."""
@@ -188,7 +207,7 @@ class TestStep:
 
 class TestRun:
     @_python
-    def test_trajectory_shapes(self):
+    def test_trajectory_shapes(self) -> None:
         theta, od, p, k, m, d = _problem(3)
         eng = InertialKuramotoEngine(8, 0.01)
         final_th, final_od, th_traj, od_traj = eng.run(
@@ -206,7 +225,7 @@ class TestRun:
         assert od_traj.shape == (5, 8)
 
     @_python
-    def test_one_step_run_matches_single_step(self):
+    def test_one_step_run_matches_single_step(self) -> None:
         theta, od, p, k, m, d = _problem(14)
         eng = InertialKuramotoEngine(8, 0.01)
         step_th, step_omega = eng.step(theta, od, p, k, m, d)
@@ -226,7 +245,7 @@ class TestRun:
         np.testing.assert_allclose(th_traj[0], step_th)
         np.testing.assert_allclose(omega_traj[0], step_omega)
 
-    def test_negative_step_count_rejected(self):
+    def test_negative_step_count_rejected(self) -> None:
         theta, od, p, k, m, d = _problem(15)
         eng = InertialKuramotoEngine(8, 0.01)
         with pytest.raises(ValueError):
@@ -235,19 +254,19 @@ class TestRun:
 
 class TestHelpers:
     @_python
-    def test_coherence_perfectly_locked(self):
+    def test_coherence_perfectly_locked(self) -> None:
         eng = InertialKuramotoEngine(10, 0.01)
         phases = np.full(10, 1.3)
         assert eng.coherence(phases) == pytest.approx(1.0, abs=1e-12)
 
     @_python
-    def test_coherence_uniform_approaches_zero(self):
+    def test_coherence_uniform_approaches_zero(self) -> None:
         eng = InertialKuramotoEngine(1000, 0.01)
         phases = np.linspace(0, TWO_PI, 1000, endpoint=False)
         assert eng.coherence(phases) < 1e-10
 
     @_python
-    def test_frequency_deviation(self):
+    def test_frequency_deviation(self) -> None:
         eng = InertialKuramotoEngine(3, 0.01)
         omega = np.array([0.1, -0.5, 0.2])
         assert eng.frequency_deviation(omega) == pytest.approx(
@@ -267,7 +286,7 @@ class TestHypothesis:
         deadline=None,
         suppress_health_check=[HealthCheck.too_slow],
     )
-    def test_finite_output(self, n, seed):
+    def test_finite_output(self, n: int, seed: int) -> None:
         theta, od, p, k, m, d = _problem(seed, n)
         eng = InertialKuramotoEngine(n, 0.01)
         new_th, new_od = eng.step(theta, od, p, k, m, d)
@@ -276,9 +295,9 @@ class TestHypothesis:
 
 
 class TestDispatcherSurface:
-    def test_available_non_empty(self):
+    def test_available_non_empty(self) -> None:
         assert i_mod.AVAILABLE_BACKENDS
         assert "python" in i_mod.AVAILABLE_BACKENDS
 
-    def test_active_is_first(self):
+    def test_active_is_first(self) -> None:
         assert i_mod.AVAILABLE_BACKENDS[0] == i_mod.ACTIVE_BACKEND
