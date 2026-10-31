@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import sys
+from collections.abc import Callable
 
 import numpy as np
 import pytest
@@ -27,7 +28,7 @@ def _state(r: float) -> UPDEState:
     )
 
 
-def _multi_layer_state(*r_values) -> UPDEState:
+def _multi_layer_state(*r_values: float) -> UPDEState:
     layers = [LayerState(R=r, psi=0.0) for r in r_values]
     n = len(r_values)
     return UPDEState(
@@ -40,6 +41,10 @@ def _multi_layer_state(*r_values) -> UPDEState:
 
 _NO_VIOLATIONS = BoundaryState()
 
+# The refusal tests pass deliberately invalid configuration values and
+# regimes, so they go through unchecked aliases.
+_manager_unchecked: Callable[..., RegimeManager] = RegimeManager
+
 
 # ---------------------------------------------------------------------------
 # Regime evaluation: R thresholds
@@ -51,52 +56,56 @@ class TestRegimeEvaluation:
     via the threshold boundaries."""
 
     @pytest.mark.parametrize("hysteresis", [False, -0.1, np.nan, np.inf, "0.05"])
-    def test_rejects_invalid_hysteresis_config(self, hysteresis):
+    def test_rejects_invalid_hysteresis_config(self, hysteresis: object) -> None:
         with pytest.raises(ValueError, match="hysteresis"):
-            RegimeManager(hysteresis=hysteresis)
+            _manager_unchecked(hysteresis=hysteresis)
 
     @pytest.mark.parametrize("cooldown_steps", [True, -1, 1.5, "10"])
-    def test_rejects_invalid_cooldown_config(self, cooldown_steps):
+    def test_rejects_invalid_cooldown_config(self, cooldown_steps: object) -> None:
         with pytest.raises(ValueError, match="cooldown_steps"):
-            RegimeManager(cooldown_steps=cooldown_steps)
+            _manager_unchecked(cooldown_steps=cooldown_steps)
 
     @pytest.mark.parametrize("hysteresis_hold_steps", [True, -1, 1.5, "3"])
-    def test_rejects_invalid_hold_steps_config(self, hysteresis_hold_steps):
+    def test_rejects_invalid_hold_steps_config(
+        self, hysteresis_hold_steps: object
+    ) -> None:
         with pytest.raises(ValueError, match="hysteresis_hold_steps"):
-            RegimeManager(hysteresis_hold_steps=hysteresis_hold_steps)
+            _manager_unchecked(hysteresis_hold_steps=hysteresis_hold_steps)
 
     @pytest.mark.parametrize("regime", [None, "critical", 3])
-    def test_transition_rejects_invalid_regime(self, regime):
+    def test_transition_rejects_invalid_regime(self, regime: object) -> None:
+        transition_unchecked: Callable[..., object] = RegimeManager().transition
         with pytest.raises(ValueError, match="regime"):
-            RegimeManager().transition(regime)
+            transition_unchecked(regime)
 
     @pytest.mark.parametrize("regime", [None, "critical", 3])
-    def test_force_transition_rejects_invalid_regime(self, regime):
+    def test_force_transition_rejects_invalid_regime(self, regime: object) -> None:
+        force_unchecked: Callable[..., object] = RegimeManager().force_transition
         with pytest.raises(ValueError, match="regime"):
-            RegimeManager().force_transition(regime)
+            force_unchecked(regime)
 
-    def test_high_r_nominal(self):
+    def test_high_r_nominal(self) -> None:
         assert RegimeManager().evaluate(_state(0.9), _NO_VIOLATIONS) == Regime.NOMINAL
 
-    def test_mid_r_degraded(self):
+    def test_mid_r_degraded(self) -> None:
         assert RegimeManager().evaluate(_state(0.5), _NO_VIOLATIONS) == Regime.DEGRADED
 
-    def test_low_r_critical(self):
+    def test_low_r_critical(self) -> None:
         assert RegimeManager().evaluate(_state(0.1), _NO_VIOLATIONS) == Regime.CRITICAL
 
-    def test_threshold_boundary_nominal_degraded(self):
+    def test_threshold_boundary_nominal_degraded(self) -> None:
         """R at the NOMINAL/DEGRADED threshold (0.6). avg_r < 0.6 → DEGRADED."""
         rm = RegimeManager()
         assert rm.evaluate(_state(0.6), _NO_VIOLATIONS) == Regime.NOMINAL
         assert rm.evaluate(_state(0.59), _NO_VIOLATIONS) == Regime.DEGRADED
 
-    def test_threshold_boundary_degraded_critical(self):
+    def test_threshold_boundary_degraded_critical(self) -> None:
         """R at the DEGRADED/CRITICAL threshold (0.3). avg_r < 0.3 → CRITICAL."""
         rm = RegimeManager()
         assert rm.evaluate(_state(0.3), _NO_VIOLATIONS) == Regime.DEGRADED
         assert rm.evaluate(_state(0.29), _NO_VIOLATIONS) == Regime.CRITICAL
 
-    def test_multi_layer_uses_mean_r(self):
+    def test_multi_layer_uses_mean_r(self) -> None:
         """Regime should be based on mean R across layers."""
         rm = RegimeManager()
         # Mean of [0.8, 0.4] = 0.6 → NOMINAL (not < 0.6)
@@ -106,7 +115,7 @@ class TestRegimeEvaluation:
         result2 = rm.evaluate(_multi_layer_state(0.7, 0.4), _NO_VIOLATIONS)
         assert result2 == Regime.DEGRADED
 
-    def test_empty_layers_critical(self):
+    def test_empty_layers_critical(self) -> None:
         rm = RegimeManager()
         empty = UPDEState(
             layers=[],
@@ -125,12 +134,12 @@ class TestRegimeEvaluation:
 class TestHardViolationOverride:
     """Hard violations must force CRITICAL regardless of R."""
 
-    def test_hard_violation_at_high_r(self):
+    def test_hard_violation_at_high_r(self) -> None:
         rm = RegimeManager()
         bs = BoundaryState(hard_violations=["temp_high"])
         assert rm.evaluate(_state(0.95), bs) == Regime.CRITICAL
 
-    def test_soft_violation_alone_no_override(self):
+    def test_soft_violation_alone_no_override(self) -> None:
         rm = RegimeManager()
         bs = BoundaryState(violations=["soft_warn"], hard_violations=[])
         assert rm.evaluate(_state(0.9), bs) == Regime.NOMINAL
@@ -145,32 +154,32 @@ class TestFSMTransitions:
     """Verify the Regime finite state machine: cooldown, hysteresis,
     and the CRITICAL→RECOVERY→NOMINAL ordering (SR-3)."""
 
-    def test_cooldown_blocks_non_critical(self):
+    def test_cooldown_blocks_non_critical(self) -> None:
         rm = RegimeManager(cooldown_steps=10)
         rm.transition(Regime.DEGRADED)
         result = rm.transition(Regime.NOMINAL)
         assert result == Regime.DEGRADED, "Cooldown must block upgrade"
 
-    def test_critical_bypasses_cooldown(self):
+    def test_critical_bypasses_cooldown(self) -> None:
         rm = RegimeManager(cooldown_steps=100)
         rm.transition(Regime.DEGRADED)
         result = rm.transition(Regime.CRITICAL)
         assert result == Regime.CRITICAL, "CRITICAL must bypass cooldown"
 
-    def test_hysteresis_prevents_premature_upgrade(self):
+    def test_hysteresis_prevents_premature_upgrade(self) -> None:
         rm = RegimeManager(hysteresis=0.05)
         rm.transition(Regime.DEGRADED)
         proposed = rm.evaluate(_state(0.62), _NO_VIOLATIONS)
         assert proposed == Regime.DEGRADED, "Within hysteresis band → stay"
 
-    def test_recovery_path_from_critical(self):
+    def test_recovery_path_from_critical(self) -> None:
         """CRITICAL + mid R → RECOVERY (not directly to NOMINAL)."""
         rm = RegimeManager()
         rm._current = Regime.CRITICAL
         proposed = rm.evaluate(_state(0.5), _NO_VIOLATIONS)
         assert proposed == Regime.RECOVERY
 
-    def test_no_direct_critical_to_nominal(self):
+    def test_no_direct_critical_to_nominal(self) -> None:
         """Safety requirement SR-3: CRITICAL must pass through RECOVERY."""
         rm = RegimeManager(cooldown_steps=0)
         rm.transition(Regime.CRITICAL)
@@ -181,7 +190,7 @@ class TestFSMTransitions:
         result = rm.transition(proposed)
         assert result != Regime.NOMINAL or rm._current != Regime.CRITICAL
 
-    def test_transition_history_bounded(self):
+    def test_transition_history_bounded(self) -> None:
         """Transition log must not grow unboundedly."""
         rm = RegimeManager()
         for _ in range(200):
@@ -191,7 +200,7 @@ class TestFSMTransitions:
             f"History should be bounded, got {len(rm.transition_history)}"
         )
 
-    def test_cooldown_counter_decrements(self):
+    def test_cooldown_counter_decrements(self) -> None:
         """After cooldown expires, transitions should succeed."""
         rm = RegimeManager(cooldown_steps=2)
         rm.transition(Regime.DEGRADED)
@@ -214,10 +223,10 @@ class TestFSMTransitions:
 class TestRegimeEnum:
     """Verify that all four regimes exist and have distinct values."""
 
-    def test_four_regimes_exist(self):
+    def test_four_regimes_exist(self) -> None:
         assert len(Regime) == 4
 
-    def test_all_distinct(self):
+    def test_all_distinct(self) -> None:
         regimes = [Regime.NOMINAL, Regime.DEGRADED, Regime.CRITICAL, Regime.RECOVERY]
         assert len(set(regimes)) == 4
 
@@ -225,7 +234,7 @@ class TestRegimeEnum:
 class TestRegimesPipelineEndToEnd:
     """Full pipeline: CouplingBuilder → Engine → R → RegimeManager → Policy."""
 
-    def test_engine_driven_regime_policy_feedback(self):
+    def test_engine_driven_regime_policy_feedback(self) -> None:
         """Engine trajectory → R → evaluate → transition → policy.decide."""
         from scpn_phase_orchestrator.coupling.knm import CouplingBuilder
         from scpn_phase_orchestrator.supervisor.policy import SupervisorPolicy
@@ -251,7 +260,7 @@ class TestRegimesPipelineEndToEnd:
         for a in actions:
             assert a.justification
 
-    def test_regime_sweep_covers_all_states(self):
+    def test_regime_sweep_covers_all_states(self) -> None:
         """Scanning R from 0→1 must visit at least 3 distinct regimes."""
         rm = RegimeManager(cooldown_steps=0)
         seen = set()
@@ -262,7 +271,7 @@ class TestRegimesPipelineEndToEnd:
             seen.add(regime)
         assert len(seen) >= 3, f"Expected ≥3 regimes, got {seen}"
 
-    def test_performance_evaluate_transition_under_budget(self):
+    def test_performance_evaluate_transition_under_budget(self) -> None:
         """evaluate + transition stays within the per-platform micro-budget."""
         import time
 
