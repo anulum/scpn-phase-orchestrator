@@ -8,8 +8,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from types import SimpleNamespace
-from typing import Any, cast
+from typing import Any, TypeVar, cast
 
 import numpy as np
 import pytest
@@ -32,6 +33,13 @@ from scpn_phase_orchestrator.upde.moving_frame import (
     moving_frame_run_python,
     validate_moving_frame_backend_inputs,
 )
+
+_R = TypeVar("_R")
+
+
+def _call(fn: Callable[..., _R], *args: object, **kwargs: object) -> _R:
+    """Call ``fn`` with a heterogeneous argument bundle built as objects."""
+    return fn(*args, **kwargs)
 
 
 def _valid_inputs(**overrides: object) -> dict[str, object]:
@@ -151,7 +159,7 @@ class TestBackendInputContract:
         self, overrides: dict[str, object], match: str
     ) -> None:
         with pytest.raises(ValueError, match=match):
-            validate_moving_frame_backend_inputs(**_valid_inputs(**overrides))
+            _call(validate_moving_frame_backend_inputs, **_valid_inputs(**overrides))
 
 
 class TestSpatialDecayWeights:
@@ -159,7 +167,9 @@ class TestSpatialDecayWeights:
 
     @pytest.mark.parametrize("decay_code", [1, 2, 3])
     def test_each_decay_law_runs_through_python_backend(self, decay_code: int) -> None:
-        out = moving_frame_run_python(**_valid_inputs(spatial_decay_form=decay_code))
+        out = _call(
+            moving_frame_run_python, **_valid_inputs(spatial_decay_form=decay_code)
+        )
 
         assert out.shape == (4,)
         assert np.all(np.isfinite(out))
@@ -202,7 +212,7 @@ class TestDirectMovingFrameAdapterOutputContracts:
         )
 
         with pytest.raises(ValueError, match="violate ballistic kinematics"):
-            moving_frame_go_module.moving_frame_run_go(*_direct_backend_args())
+            _call(moving_frame_go_module.moving_frame_run_go, *_direct_backend_args())
 
     def test_go_adapter_rejects_missing_symbol_and_nonzero_status(
         self,
@@ -214,7 +224,7 @@ class TestDirectMovingFrameAdapterOutputContracts:
             lambda: SimpleNamespace(),
         )
         with pytest.raises(ImportError, match="UPDERunMovingFrameSchedule"):
-            moving_frame_go_module.moving_frame_run_go(*_direct_backend_args())
+            _call(moving_frame_go_module.moving_frame_run_go, *_direct_backend_args())
 
         monkeypatch.setattr(
             moving_frame_go_module,
@@ -222,7 +232,7 @@ class TestDirectMovingFrameAdapterOutputContracts:
             lambda: _FailingMovingFrameGoLibrary(),
         )
         with pytest.raises(ValueError, match="rc=9"):
-            moving_frame_go_module.moving_frame_run_go(*_direct_backend_args())
+            _call(moving_frame_go_module.moving_frame_run_go, *_direct_backend_args())
 
     def test_julia_adapter_rejects_kinematic_output_violation(
         self,
@@ -239,7 +249,10 @@ class TestDirectMovingFrameAdapterOutputContracts:
         )
 
         with pytest.raises(ValueError, match="violate ballistic kinematics"):
-            moving_frame_julia_module.moving_frame_run_julia(*_direct_backend_args())
+            _call(
+                moving_frame_julia_module.moving_frame_run_julia,
+                *_direct_backend_args(),
+            )
 
     def test_julia_adapter_rejects_missing_schedule_symbol(
         self,
@@ -252,7 +265,10 @@ class TestDirectMovingFrameAdapterOutputContracts:
         )
 
         with pytest.raises(ImportError, match="upde_run_moving_frame_schedule"):
-            moving_frame_julia_module.moving_frame_run_julia(*_direct_backend_args())
+            _call(
+                moving_frame_julia_module.moving_frame_run_julia,
+                *_direct_backend_args(),
+            )
 
     def test_mojo_adapter_rejects_kinematic_output_violation(
         self,
@@ -265,7 +281,9 @@ class TestDirectMovingFrameAdapterOutputContracts:
         )
 
         with pytest.raises(ValueError, match="violate ballistic kinematics"):
-            moving_frame_mojo_module.moving_frame_run_mojo(*_direct_backend_args())
+            _call(
+                moving_frame_mojo_module.moving_frame_run_mojo, *_direct_backend_args()
+            )
 
 
 class TestMovingFrameRunDispatch:
@@ -382,7 +400,7 @@ def _engine(**overrides: object) -> MovingFrameUPDEEngine:
         "solver": "euler",
     }
     params.update(overrides)
-    return MovingFrameUPDEEngine(**params)
+    return _call(MovingFrameUPDEEngine, **params)
 
 
 class TestMovingFrameEngine:
