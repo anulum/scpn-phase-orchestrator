@@ -24,7 +24,8 @@ than on raw values.
 from __future__ import annotations
 
 import contextlib
-from collections.abc import Callable
+import subprocess
+from collections.abc import Callable, Iterator
 from typing import get_type_hints
 
 import numpy as np
@@ -71,7 +72,7 @@ def test__spectral_validation_helper_is_directly_linked_to_backend_tests() -> No
 
 
 @contextlib.contextmanager
-def _force(name: str):
+def _force(name: str) -> Iterator[None]:
     prev = s_mod.ACTIVE_BACKEND
     s_mod.ACTIVE_BACKEND = name
     s_mod._PRIM_CACHE = None
@@ -84,7 +85,7 @@ def _force(name: str):
         s_mod._RUST_CACHE = None
 
 
-def _problem(seed: int, n: int = 6):
+def _problem(seed: int, n: int = 6) -> np.ndarray:
     rng = np.random.default_rng(seed)
     W = rng.uniform(0, 1, (n, n))
     W = (W + W.T) / 2
@@ -238,8 +239,10 @@ class TestDirectMojoBoundaryContracts:
         match: str,
     ) -> None:
         monkeypatch.setattr(_spectral_mojo, "_ensure_exe", lambda: "spectral")
+        # The runner calls run through the shared subprocess module.
+        assert vars(_spectral_mojo)["subprocess"] is subprocess
         monkeypatch.setattr(
-            _spectral_mojo.subprocess,
+            subprocess,
             "run",
             lambda *_args, **_kwargs: _mojo_proc(stdout),
         )
@@ -251,8 +254,10 @@ class TestDirectMojoBoundaryContracts:
         self, monkeypatch: pytest.MonkeyPatch
     ) -> None:
         monkeypatch.setattr(_spectral_mojo, "_ensure_exe", lambda: "spectral")
+        # The runner calls run through the shared subprocess module.
+        assert vars(_spectral_mojo)["subprocess"] is subprocess
         monkeypatch.setattr(
-            _spectral_mojo.subprocess,
+            subprocess,
             "run",
             lambda *_args, **_kwargs: _mojo_proc("ERR: failed\n"),
         )
@@ -275,8 +280,10 @@ class TestDirectMojoBoundaryContracts:
         match: str,
     ) -> None:
         monkeypatch.setattr(_spectral_mojo, "_ensure_exe", lambda: "spectral")
+        # The runner calls run through the shared subprocess module.
+        assert vars(_spectral_mojo)["subprocess"] is subprocess
         monkeypatch.setattr(
-            _spectral_mojo.subprocess,
+            subprocess,
             "run",
             lambda *_args, **_kwargs: _mojo_proc(stdout),
         )
@@ -285,7 +292,9 @@ class TestDirectMojoBoundaryContracts:
             _spectral_mojo.spectral_eig_mojo(_problem(23, n=2).ravel(), 2)
 
 
-def _run_backend(backend: str, seed: int, n: int = 6):
+def _run_backend(
+    backend: str, seed: int, n: int = 6
+) -> tuple[float, np.ndarray, float, np.ndarray]:
     if backend not in s_mod.AVAILABLE_BACKENDS:
         pytest.skip(f"backend {backend!r} unavailable")
     W = _problem(seed, n)
@@ -298,22 +307,22 @@ def _run_backend(backend: str, seed: int, n: int = 6):
 
 
 class TestEigenvalueParity:
-    def test_rust(self):
+    def test_rust(self) -> None:
         _, _, _, ref = _run_backend("python", 0)
         _, _, _, got = _run_backend("rust", 0)
         assert np.max(np.abs(got - ref)) < TOL_LAPACK
 
-    def test_julia(self):
+    def test_julia(self) -> None:
         _, _, _, ref = _run_backend("python", 1)
         _, _, _, got = _run_backend("julia", 1)
         assert np.max(np.abs(got - ref)) < TOL_LAPACK
 
-    def test_go(self):
+    def test_go(self) -> None:
         _, _, _, ref = _run_backend("python", 2)
         _, _, _, got = _run_backend("go", 2)
         assert np.max(np.abs(got - ref)) < TOL_GONUM
 
-    def test_mojo(self):
+    def test_mojo(self) -> None:
         _, _, _, ref = _run_backend("python", 3, n=5)
         _, _, _, got = _run_backend("mojo", 3, n=5)
         assert np.max(np.abs(got - ref)) < TOL_MOJO
@@ -333,16 +342,16 @@ class TestAsymmetricReciprocalCouplingParity:
             got, _ = spectral_eig(W)
         np.testing.assert_allclose(got, ref, atol=tol)
 
-    def test_rust(self):
+    def test_rust(self) -> None:
         self._check("rust", TOL_LAPACK)
 
-    def test_julia(self):
+    def test_julia(self) -> None:
         self._check("julia", TOL_LAPACK)
 
-    def test_go(self):
+    def test_go(self) -> None:
         self._check("go", TOL_GONUM)
 
-    def test_mojo(self):
+    def test_mojo(self) -> None:
         self._check("mojo", TOL_MOJO)
 
 
@@ -350,22 +359,22 @@ class TestFiedlerValueParity:
     """``λ₂`` is a specific eigenvalue — sign-stable, so
     absolute difference works directly."""
 
-    def test_rust(self):
+    def test_rust(self) -> None:
         ref, *_ = _run_backend("python", 4)
         got, *_ = _run_backend("rust", 4)
         assert abs(got - ref) < TOL_LAPACK
 
-    def test_julia(self):
+    def test_julia(self) -> None:
         ref, *_ = _run_backend("python", 5)
         got, *_ = _run_backend("julia", 5)
         assert abs(got - ref) < TOL_LAPACK
 
-    def test_go(self):
+    def test_go(self) -> None:
         ref, *_ = _run_backend("python", 6)
         got, *_ = _run_backend("go", 6)
         assert abs(got - ref) < TOL_GONUM
 
-    def test_mojo(self):
+    def test_mojo(self) -> None:
         ref, *_ = _run_backend("python", 7, n=5)
         got, *_ = _run_backend("mojo", 7, n=5)
         assert abs(got - ref) < TOL_MOJO
@@ -376,7 +385,7 @@ class TestFiedlerVectorResidual:
     comparing raw eigenvector values — the ``±sign`` ambiguity
     makes element-wise comparison unreliable across backends."""
 
-    def _check(self, backend: str, seed: int, n: int, tol: float):
+    def _check(self, backend: str, seed: int, n: int, tol: float) -> None:
         if backend not in s_mod.AVAILABLE_BACKENDS:
             pytest.skip(f"backend {backend!r} unavailable")
         W = _problem(seed, n)
@@ -387,16 +396,16 @@ class TestFiedlerVectorResidual:
         residual = L @ v2 - lam2 * v2
         assert np.max(np.abs(residual)) < tol
 
-    def test_rust(self):
+    def test_rust(self) -> None:
         self._check("rust", 10, 6, TOL_LAPACK_RESIDUAL)
 
-    def test_julia(self):
+    def test_julia(self) -> None:
         self._check("julia", 11, 6, TOL_LAPACK_RESIDUAL)
 
-    def test_go(self):
+    def test_go(self) -> None:
         self._check("go", 12, 6, TOL_GONUM)
 
-    def test_mojo(self):
+    def test_mojo(self) -> None:
         self._check("mojo", 13, 5, TOL_MOJO)
 
 
@@ -410,7 +419,7 @@ class TestHypothesisParity:
         deadline=None,
         suppress_health_check=[HealthCheck.too_slow],
     )
-    def test_rust_hypothesis(self, n, seed):
+    def test_rust_hypothesis(self, n: int, seed: int) -> None:
         if "rust" not in s_mod.AVAILABLE_BACKENDS:
             pytest.skip("rust unavailable")
         _, _, _, ref = _run_backend("python", seed, n=n)
@@ -426,7 +435,7 @@ class TestHypothesisParity:
         deadline=None,
         suppress_health_check=[HealthCheck.too_slow],
     )
-    def test_go_hypothesis(self, n, seed):
+    def test_go_hypothesis(self, n: int, seed: int) -> None:
         if "go" not in s_mod.AVAILABLE_BACKENDS:
             pytest.skip("go unavailable")
         _, _, _, ref = _run_backend("python", seed, n=n)
@@ -443,7 +452,9 @@ class TestBackendTypingContracts:
             (spectral_eig_mojo, "mojo"),
         ],
     )
-    def test_backend_annotations_use_float64_ndarray(self, fn, label: str) -> None:
+    def test_backend_annotations_use_float64_ndarray(
+        self, fn: Callable[..., object], label: str
+    ) -> None:
         hints = get_type_hints(fn)
         for name in ("knm_flat", "return"):
             text = str(hints[name])
