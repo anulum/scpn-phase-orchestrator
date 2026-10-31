@@ -9,7 +9,10 @@
 from __future__ import annotations
 
 import json
+import operator
+from collections.abc import Callable
 from hashlib import sha256
+from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, get_type_hints
 
@@ -25,6 +28,12 @@ from scpn_phase_orchestrator.meta import (
     records_from_audit_directory,
     records_from_audit_jsonl,
 )
+
+# The refusal tests pass deliberately mistyped values, and the read-only
+# tests write into read-only mappings, so they go through unchecked aliases.
+_record_unchecked: Callable[..., MetaPolicyRecord] = MetaPolicyRecord
+_fit_unchecked: Callable[..., CrossDomainMetaTransfer] = CrossDomainMetaTransfer.fit
+_setitem_unchecked: Callable[..., object] = operator.setitem
 
 
 def _records() -> tuple[MetaPolicyRecord, ...]:
@@ -70,7 +79,7 @@ class TestMetaTransferContracts:
             MetaPolicyRecord("bad_reward", {"R": 0.5}, {"K": 0.1}, reward=float("inf"))
 
         with pytest.raises(ValueError, match="features keys"):
-            MetaPolicyRecord("bad_feature_key", {1: 0.5}, {"K": 0.1})
+            _record_unchecked("bad_feature_key", {1: 0.5}, {"K": 0.1})
 
     @pytest.mark.parametrize("value", [True, False, "0.5", 1.0 + 0.0j])
     def test_record_rejects_coercive_feature_aliases(self, value: Any) -> None:
@@ -94,7 +103,7 @@ class TestMetaTransferContracts:
 
     def test_record_rejects_non_mapping_and_non_canonical_keys(self) -> None:
         with pytest.raises(ValueError, match="features must be a mapping"):
-            MetaPolicyRecord("grid", [("R", 0.5)], {"K": 0.1})  # type: ignore[arg-type]
+            _record_unchecked("grid", [("R", 0.5)], {"K": 0.1})
         with pytest.raises(ValueError, match="features key"):
             MetaPolicyRecord("grid", {"": 0.5}, {"K": 0.1})
         with pytest.raises(ValueError, match="knobs key"):
@@ -111,12 +120,13 @@ class TestMetaTransferContracts:
         assert record.features == {"R": 0.5}
         assert record.knobs == {"K": 0.1}
         with pytest.raises(TypeError):
-            record.features["R"] = 1.0  # type: ignore[index]
+            _setitem_unchecked(record.features, "R", 1.0)
         with pytest.raises(TypeError):
-            record.knobs["K"] = 1.0  # type: ignore[index]
+            _setitem_unchecked(record.knobs, "K", 1.0)
 
     def test_numpy_real_evidence_normalises_to_json_safe_floats(self) -> None:
-        record = MetaPolicyRecord(
+        # The record normalises NumPy reals, so it is built unchecked.
+        record = _record_unchecked(
             "grid",
             {"R": np.float32(0.5)},
             {"K": np.float32(0.1)},
@@ -133,7 +143,9 @@ class TestMetaTransferContracts:
         with pytest.raises(ValueError, match="at least one"):
             CrossDomainMetaTransfer.fit(())
 
-    def test_fit_audit_history_requires_positive_min_records(self, tmp_path) -> None:
+    def test_fit_audit_history_requires_positive_min_records(
+        self, tmp_path: Path
+    ) -> None:
         audit_path = tmp_path / "audit.jsonl"
         audit_path.write_text("", encoding="utf-8")
 
@@ -202,7 +214,7 @@ class TestMetaTransferBehaviour:
         )
 
         with pytest.raises(TypeError):
-            proposal.knobs["K"] = 99.0  # type: ignore[index]
+            _setitem_unchecked(proposal.knobs, "K", 99.0)
 
     def test_training_summary_describes_replay_corpus(self) -> None:
         model = CrossDomainMetaTransfer.fit(_records())
@@ -218,7 +230,7 @@ class TestMetaTransferBehaviour:
         assert record["reward_min"] == pytest.approx(0.7)
         assert record["reward_max"] == pytest.approx(0.9)
 
-    def test_loads_records_from_audit_jsonl(self, tmp_path) -> None:
+    def test_loads_records_from_audit_jsonl(self, tmp_path: Path) -> None:
         audit_path = tmp_path / "audit.jsonl"
         payloads = [
             "",
@@ -255,7 +267,9 @@ class TestMetaTransferBehaviour:
         assert records[0].knobs == {"K": 0.04, "alpha": 0.02}
         assert records[1].domain == "beta"
 
-    def test_fit_audit_history_aggregates_multiple_jsonl_files(self, tmp_path) -> None:
+    def test_fit_audit_history_aggregates_multiple_jsonl_files(
+        self, tmp_path: Path
+    ) -> None:
         first = tmp_path / "first.jsonl"
         second = tmp_path / "second.jsonl"
         first.write_text(
@@ -293,7 +307,9 @@ class TestMetaTransferBehaviour:
         assert model.training_summary.domains == ("alpha", "beta")
         assert proposal.neighbours[0][0] == "beta"
 
-    def test_fit_audit_directory_discovers_nested_jsonl_corpus(self, tmp_path) -> None:
+    def test_fit_audit_directory_discovers_nested_jsonl_corpus(
+        self, tmp_path: Path
+    ) -> None:
         first_dir = tmp_path / "grid"
         second_dir = tmp_path / "cardiac" / "nested"
         first_dir.mkdir()
@@ -336,7 +352,7 @@ class TestMetaTransferBehaviour:
         assert proposal.neighbours[0][0] == "cardiac"
 
     def test_records_from_audit_directory_validates_empty_corpus(
-        self, tmp_path
+        self, tmp_path: Path
     ) -> None:
         with pytest.raises(ValueError, match="min_records"):
             records_from_audit_directory(tmp_path, min_records=0)
@@ -347,7 +363,7 @@ class TestMetaTransferBehaviour:
         with pytest.raises(ValueError, match="audit directory must exist"):
             records_from_audit_directory(tmp_path / "missing")
 
-    def test_fit_audit_history_enforces_min_records(self, tmp_path) -> None:
+    def test_fit_audit_history_enforces_min_records(self, tmp_path: Path) -> None:
         audit_path = tmp_path / "audit.jsonl"
         audit_path.write_text("", encoding="utf-8")
 
@@ -470,7 +486,7 @@ class TestMetaTransferBehaviour:
     )
     def test_audit_jsonl_rejects_invalid_feature_and_knob_payloads(
         self,
-        tmp_path,
+        tmp_path: Path,
         payload: dict[str, object],
         expected_error: str,
     ) -> None:
@@ -480,7 +496,9 @@ class TestMetaTransferBehaviour:
         with pytest.raises(ValueError, match=expected_error):
             records_from_audit_jsonl(audit_path)
 
-    def test_audit_directory_enforces_minimum_replay_count(self, tmp_path) -> None:
+    def test_audit_directory_enforces_minimum_replay_count(
+        self, tmp_path: Path
+    ) -> None:
         audit_path = tmp_path / "audit.jsonl"
         audit_path.write_text(
             json.dumps(
@@ -500,12 +518,12 @@ class TestMetaTransferBehaviour:
     def test_rejects_records_with_no_shared_feature_keys(self) -> None:
         class _RecordLike(SimpleNamespace):
             domain = "orphan"
-            features = {}
+            features: dict[str, float] = {}
             knobs = {"K": 0.2}
             reward = 1.0
 
         with pytest.raises(ValueError, match="at least one feature"):
-            CrossDomainMetaTransfer.fit((_RecordLike(),))
+            _fit_unchecked((_RecordLike(),))
 
     def test_negative_similarity_does_not_influence_top_knob(self) -> None:
         model = CrossDomainMetaTransfer.fit(
@@ -583,7 +601,7 @@ class TestMetaTransferBehaviour:
 
     def test_audit_jsonl_line_context_identifies_invalid_candidate_record(
         self,
-        tmp_path,
+        tmp_path: Path,
     ) -> None:
         audit_path = tmp_path / "audit.jsonl"
         audit_path.write_text(
@@ -613,7 +631,7 @@ class TestMetaTransferBehaviour:
 
     def test_records_from_audit_jsonl_rejects_malformed_json_line(
         self,
-        tmp_path,
+        tmp_path: Path,
     ) -> None:
         audit_path = tmp_path / "audit.jsonl"
         audit_path.write_text(
@@ -626,7 +644,7 @@ class TestMetaTransferBehaviour:
 
     def test_records_from_audit_jsonl_rejects_non_finite_json_constants(
         self,
-        tmp_path,
+        tmp_path: Path,
     ) -> None:
         audit_path = tmp_path / "audit.jsonl"
         audit_path.write_text(
@@ -639,7 +657,7 @@ class TestMetaTransferBehaviour:
 
     def test_records_from_audit_jsonl_rejects_duplicate_object_keys(
         self,
-        tmp_path,
+        tmp_path: Path,
     ) -> None:
         audit_path = tmp_path / "audit.jsonl"
         audit_path.write_text(
@@ -655,7 +673,7 @@ class TestMetaTransferBehaviour:
 
     def test_records_from_audit_jsonl_rejects_non_object_with_line_context(
         self,
-        tmp_path,
+        tmp_path: Path,
     ) -> None:
         audit_path = tmp_path / "audit.jsonl"
         audit_path.write_text("[]\n", encoding="utf-8")
@@ -679,7 +697,7 @@ class TestMetaTransferBehaviour:
     )
     def test_records_from_audit_jsonl_rejects_coercive_aliases(
         self,
-        tmp_path,
+        tmp_path: Path,
         payload: dict[str, Any],
     ) -> None:
         audit_path = tmp_path / "audit.jsonl"
@@ -690,7 +708,7 @@ class TestMetaTransferBehaviour:
 
     def test_records_from_audit_directory_handles_nested_custom_pattern(
         self,
-        tmp_path,
+        tmp_path: Path,
     ) -> None:
         root = tmp_path / "replays"
         root_nested_file = root / "2026" / "run_a" / "nested" / "audit.jsonl"
