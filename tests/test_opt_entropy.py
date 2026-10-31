@@ -23,6 +23,7 @@ from scpn_phase_orchestrator.monitor.opt_entropy import (
     ordinal_pattern_sequence,
     transition_entropy,
 )
+from tests._runtime_owners import owner_params
 from tests.typing_contracts import assert_precise_ndarray_hint
 
 
@@ -183,8 +184,9 @@ def _oracle_transition_entropy(codes: list[int], dimension: int) -> float:
 
 
 class TestDispatch:
-    @pytest.mark.native_runtime
-    @pytest.mark.parametrize("owner", ["python", "rust", "mojo", "julia", "go"])
+    @pytest.mark.parametrize(
+        "owner", owner_params(["python", "rust", "mojo", "julia", "go"])
+    )
     def test_transition_entropy_uses_backend_when_available(self, owner: str) -> None:
         """Each named owner matches the permutation-index oracle for both kernels."""
         if owner not in oe_module.AVAILABLE_BACKENDS:

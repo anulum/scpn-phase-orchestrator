@@ -49,6 +49,7 @@ from scpn_phase_orchestrator.upde.market import (
     market_order_parameter,
     market_plv,
 )
+from tests._runtime_owners import owner_params
 
 TOL = 1e-12
 FloatArray = NDArray[np.float64]
@@ -377,8 +378,7 @@ class TestDispatchFallbackChain:
         assert np.allclose(op, 0.5)
         assert calls == {"rust": 1, "go": 1}
 
-    @pytest.mark.native_runtime
-    @pytest.mark.parametrize("owner", ["rust", "mojo", "julia", "go"])
+    @pytest.mark.parametrize("owner", owner_params(["rust", "mojo", "julia", "go"]))
     def test_dispatch_uses_cached_loader_once(
         self, owner: str, monkeypatch: pytest.MonkeyPatch
     ) -> None:

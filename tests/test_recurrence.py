@@ -24,6 +24,7 @@ from scpn_phase_orchestrator.monitor.recurrence import (
     recurrence_matrix,
     rqa,
 )
+from tests._runtime_owners import owner_params
 
 
 class _ArrayConversionFailure:
@@ -123,8 +124,9 @@ class TestRecurrenceMatrix:
         assert R.shape == (3, 3)
         assert R.dtype == bool
 
-    @pytest.mark.native_runtime
-    @pytest.mark.parametrize("owner", ["python", "rust", "mojo", "julia", "go"])
+    @pytest.mark.parametrize(
+        "owner", owner_params(["python", "rust", "mojo", "julia", "go"])
+    )
     def test_non_rust_dispatch_uses_flat_buffers(self, owner: str) -> None:
         """Each named owner returns the oracle's thresholded distances."""
         if owner not in recurrence_module.AVAILABLE_BACKENDS:

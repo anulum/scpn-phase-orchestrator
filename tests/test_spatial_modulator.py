@@ -59,6 +59,7 @@ from scpn_phase_orchestrator.experimental.accelerators.coupling import (
 )
 from scpn_phase_orchestrator.upde import swarmalator as sw_mod
 from scpn_phase_orchestrator.upde.swarmalator import SwarmalatorEngine
+from tests._runtime_owners import NEEDS_KERNEL
 from tests.typing_contracts import assert_precise_ndarray_hint
 
 TWO_PI = 2.0 * np.pi
@@ -608,7 +609,7 @@ def test_spatial_backend_validation_rejects_bad_output_invariants() -> None:
         )
 
 
-@pytest.mark.native_runtime
+@NEEDS_KERNEL
 def test_rust_loader_contract() -> None:
     """The compiled Rust loader returns a kernel that follows the law."""
     if "rust" not in sm_mod.AVAILABLE_BACKENDS:

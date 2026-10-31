@@ -19,6 +19,7 @@ import pytest
 from numpy.typing import NDArray
 
 from scpn_phase_orchestrator.monitor import lyapunov as lyapunov_mod
+from tests._runtime_owners import owner_params
 
 FloatArray: TypeAlias = NDArray[np.float64]
 # A backend whose output is under test, so it may return a malformed payload.
@@ -169,8 +170,9 @@ def test_optional_backend_loader_returns_go_callable() -> None:
     _assert_loader_follows_the_law("go", lyapunov_mod._load_go_fn)
 
 
-@pytest.mark.native_runtime
-@pytest.mark.parametrize("owner", ["python", "rust", "mojo", "julia", "go"])
+@pytest.mark.parametrize(
+    "owner", owner_params(["python", "rust", "mojo", "julia", "go"])
+)
 def test_each_named_owner_serves_the_public_spectrum(owner: str) -> None:
     """``lyapunov_spectrum(backend=owner)`` runs that owner on the analytic case."""
     if owner not in lyapunov_mod.AVAILABLE_BACKENDS:

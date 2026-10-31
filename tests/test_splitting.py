@@ -16,6 +16,7 @@ import pytest
 from scpn_phase_orchestrator.upde.engine import UPDEEngine
 from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
 from scpn_phase_orchestrator.upde.splitting import SplittingEngine
+from tests._runtime_owners import owner_params
 
 SPLITTING_REFERENCE = Path("docs/reference/api/upde_splitting.md")
 
@@ -304,8 +305,9 @@ class TestSplittingEngine:
                 np.zeros((2, 2)),
             )
 
-    @pytest.mark.native_runtime
-    @pytest.mark.parametrize("owner", ["python", "rust", "mojo", "julia", "go"])
+    @pytest.mark.parametrize(
+        "owner", owner_params(["python", "rust", "mojo", "julia", "go"])
+    )
     def test_public_arrays_preserve_real_numeric_object_compatibility(
         self, owner: str
     ) -> None:

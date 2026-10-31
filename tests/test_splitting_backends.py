@@ -32,6 +32,7 @@ from scpn_phase_orchestrator.experimental.accelerators.upde import (
 )
 from scpn_phase_orchestrator.upde import splitting as sp_mod
 from scpn_phase_orchestrator.upde.splitting import SplittingEngine
+from tests._runtime_owners import NEEDS_KERNEL, owner_params
 from tests.typing_contracts import assert_precise_ndarray_hint
 
 splitting_run_go = _splitting_go.splitting_run_go
@@ -584,7 +585,7 @@ def _assert_close_to_oracle(got: object, owner: str, alpha_nonzero: bool) -> Non
 class TestBackendLoaderDispatch:
     """The real loaders return kernels that follow the Strang law."""
 
-    @pytest.mark.native_runtime
+    @NEEDS_KERNEL
     def test_rust_loader_preserves_contiguous_float64_contract(self) -> None:
         """The compiled Rust loader accepts strided input and returns float64."""
         if "rust" not in sp_mod.AVAILABLE_BACKENDS:
@@ -623,8 +624,7 @@ class TestBackendLoaderDispatch:
 class TestBackendResolutionContracts:
     """Loading, resolution and selection with the real owners."""
 
-    @pytest.mark.native_runtime
-    @pytest.mark.parametrize("owner", ["rust", "mojo", "julia", "go"])
+    @pytest.mark.parametrize("owner", owner_params(["rust", "mojo", "julia", "go"]))
     def test_load_backend_uses_cache(
         self, owner: str, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -696,8 +696,9 @@ class TestBackendResolutionContracts:
         assert active in available
         assert sp_mod._splitting_probe_seconds(active) < float("inf")
 
-    @pytest.mark.native_runtime
-    @pytest.mark.parametrize("owner", ["python", "rust", "mojo", "julia", "go"])
+    @pytest.mark.parametrize(
+        "owner", owner_params(["python", "rust", "mojo", "julia", "go"])
+    )
     def test_run_uses_selected_backend_for_positive_timestep(self, owner: str) -> None:
         """``SplittingEngine(backend=owner).run`` runs that owner on the law."""
         if owner not in sp_mod.AVAILABLE_BACKENDS:

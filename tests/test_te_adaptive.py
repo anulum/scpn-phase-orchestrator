@@ -19,6 +19,7 @@ from numpy.typing import NDArray
 from scpn_phase_orchestrator.coupling import te_adaptive as te_mod
 from scpn_phase_orchestrator.coupling.te_adaptive import te_adapt_coupling
 from scpn_phase_orchestrator.monitor.transfer_entropy import transfer_entropy_matrix
+from tests._runtime_owners import owner_params
 
 FloatArray = NDArray[np.float64]
 
@@ -198,8 +199,7 @@ class TestTEAdaptive:
                 np.ones((2, 5), dtype=np.float64),
             )
 
-    @pytest.mark.native_runtime
-    @pytest.mark.parametrize("owner", ["python", "rust"])
+    @pytest.mark.parametrize("owner", owner_params(["python", "rust"]))
     def test_rust_dispatch_uses_flattened_transfer_entropy_matrix(
         self, owner: str
     ) -> None:

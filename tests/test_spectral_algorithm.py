@@ -39,6 +39,7 @@ from scpn_phase_orchestrator.coupling.spectral import (
     spectral_gap,
     sync_convergence_rate,
 )
+from tests._runtime_owners import NEEDS_KERNEL
 
 
 def _python(func):
@@ -676,7 +677,7 @@ class TestValidationBoundaries:
         np.testing.assert_allclose(eigvals, [0.0, 1.0, 3.0], atol=1e-12)
         assert fiedler.shape == (3,)
 
-    @pytest.mark.native_runtime
+    @NEEDS_KERNEL
     def test_rust_bundle_loader_exposes_direct_fast_path_functions(self) -> None:
         """The compiled Rust bundle returns the analytic path-graph metrics."""
         if "rust" not in s_mod.AVAILABLE_BACKENDS:
@@ -699,7 +700,7 @@ class TestValidationBoundaries:
             0.8 * spectrum[1] * math.cos(0.3) / 7, rel=1e-12
         )
 
-    @pytest.mark.native_runtime
+    @NEEDS_KERNEL
     def test_rust_active_backend_routes_derived_metrics_to_fast_paths(self) -> None:
         """With Rust active, each derived metric calls its compiled fast path once."""
         if s_mod.ACTIVE_BACKEND != "rust":

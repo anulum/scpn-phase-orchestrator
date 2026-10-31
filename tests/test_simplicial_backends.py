@@ -35,6 +35,7 @@ from scpn_phase_orchestrator.upde import (
 )
 from scpn_phase_orchestrator.upde import simplicial as s_mod
 from scpn_phase_orchestrator.upde.simplicial import SimplicialEngine
+from tests._runtime_owners import NEEDS_KERNEL
 
 TWO_PI = 2.0 * math.pi
 TOL = 1e-12
@@ -780,7 +781,7 @@ def _assert_loader_follows_law(owner: str) -> None:
 class TestOptionalLoaderSuccessPaths:
     """The real loaders return kernels that integrate the simplicial law."""
 
-    @pytest.mark.native_runtime
+    @NEEDS_KERNEL
     def test_rust_loader_wraps_spo_kernel_function(self) -> None:
         """The compiled Rust loader's kernel matches the double-sum oracle."""
         _assert_loader_follows_law("rust")

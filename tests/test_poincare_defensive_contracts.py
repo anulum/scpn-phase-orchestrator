@@ -22,6 +22,7 @@ from scpn_phase_orchestrator.monitor.poincare import (
     PoincareResult,
     poincare_section,
 )
+from tests._runtime_owners import NEEDS_KERNEL
 
 FloatArray = NDArray[np.float64]
 SectionBackend = Callable[
@@ -81,7 +82,7 @@ def test_alias_helpers_fail_closed_when_array_protocol_raises() -> None:
     )
 
 
-@pytest.mark.native_runtime
+@NEEDS_KERNEL
 def test_rust_backend_loader_wraps_and_pads_kernel_outputs() -> None:
     """The compiled Rust loader pads crossings to the trajectory size."""
     if "rust" not in poincare_module.AVAILABLE_BACKENDS:

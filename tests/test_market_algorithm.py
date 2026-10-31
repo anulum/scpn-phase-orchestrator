@@ -39,6 +39,7 @@ from scpn_phase_orchestrator.upde.market import (
     market_plv,
     sync_warning,
 )
+from tests._runtime_owners import NEEDS_KERNEL, owner_params
 
 
 def _python(func):
@@ -385,7 +386,7 @@ def _assert_loader_follows_the_laws(owner: str, loader: object) -> None:
 
 
 class TestBackendLoaderContracts:
-    @pytest.mark.native_runtime
+    @NEEDS_KERNEL
     def test_rust_loader_wraps_order_parameter_and_plv_kernels(self) -> None:
         """The compiled Rust loader returns kernels that follow both laws."""
         _assert_loader_follows_the_laws("rust", m_mod._load_rust_fn)
@@ -417,7 +418,7 @@ class TestBackendLoaderContracts:
         }[owner]
         _assert_loader_follows_the_laws(owner, loader)
 
-    @pytest.mark.native_runtime
+    @NEEDS_KERNEL
     def test_detect_regimes_uses_rust_classifier_when_available(self) -> None:
         """The compiled classifier runs when installed and matches the threshold law."""
         values = [0.1, 0.2, 0.5, 0.8, 0.9, 0.2000000001, 0.7999999999]
@@ -443,8 +444,9 @@ class TestBackendLoaderContracts:
 class TestNamedMarketOwners:
     """``backend=`` runs the named owner or refuses; it never substitutes."""
 
-    @pytest.mark.native_runtime
-    @pytest.mark.parametrize("owner", ["python", "rust", "mojo", "julia", "go"])
+    @pytest.mark.parametrize(
+        "owner", owner_params(["python", "rust", "mojo", "julia", "go"])
+    )
     def test_each_named_owner_serves_both_public_functions(self, owner: str) -> None:
         """The public functions run the named owner against the oracles."""
         if owner not in m_mod.AVAILABLE_BACKENDS:

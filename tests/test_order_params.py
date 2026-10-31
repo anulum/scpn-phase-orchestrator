@@ -36,6 +36,7 @@ from scpn_phase_orchestrator.upde.order_params import (
     compute_plv,
     debiased_squared_order_parameter,
 )
+from tests._runtime_owners import NEEDS_KERNEL, owner_params
 
 TWO_PI = 2.0 * np.pi
 
@@ -434,7 +435,7 @@ class TestLayerCoherence:
 
 
 class TestDispatcher:
-    @pytest.mark.native_runtime
+    @NEEDS_KERNEL
     def test_rust_loader_maps_spo_kernel_symbols(self) -> None:
         """The compiled Rust loader maps kernels that follow the three laws."""
         import scpn_phase_orchestrator.upde.order_params as op_mod
@@ -535,8 +536,7 @@ class TestDispatcher:
         assert fn(np.array([0.0, 1.0], dtype=np.float64)) == (0.75, 0.0)
         assert calls == {"rust": 1, "go": 1}
 
-    @pytest.mark.native_runtime
-    @pytest.mark.parametrize("owner", ["rust", "mojo", "julia", "go"])
+    @pytest.mark.parametrize("owner", owner_params(["rust", "mojo", "julia", "go"]))
     def test_dispatch_uses_cached_loader_once(
         self, owner: str, monkeypatch: pytest.MonkeyPatch
     ) -> None:
@@ -643,8 +643,9 @@ class TestDispatcher:
 
         assert op_mod._dispatch("plv") == ("python", None)
 
-    @pytest.mark.native_runtime
-    @pytest.mark.parametrize("owner", ["python", "rust", "mojo", "julia", "go"])
+    @pytest.mark.parametrize(
+        "owner", owner_params(["python", "rust", "mojo", "julia", "go"])
+    )
     def test_public_kernels_use_active_backend_with_flat_contiguous_payloads(
         self, owner: str
     ) -> None:

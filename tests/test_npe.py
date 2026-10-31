@@ -16,6 +16,7 @@ import pytest
 
 from scpn_phase_orchestrator.monitor import npe as npe_module
 from scpn_phase_orchestrator.monitor.npe import compute_npe, phase_distance_matrix
+from tests._runtime_owners import owner_params
 from tests.typing_contracts import assert_precise_ndarray_hint
 
 
@@ -222,8 +223,9 @@ def _oracle_npe(phases: list[float], radius: float) -> float:
 
 
 class TestNPERustDispatch:
-    @pytest.mark.native_runtime
-    @pytest.mark.parametrize("owner", ["python", "rust", "mojo", "julia", "go"])
+    @pytest.mark.parametrize(
+        "owner", owner_params(["python", "rust", "mojo", "julia", "go"])
+    )
     def test_phase_distance_uses_backend_when_available(self, owner: str) -> None:
         """Each named owner returns the circular distances of the oracle."""
         if owner not in npe_module.AVAILABLE_BACKENDS:
@@ -256,8 +258,9 @@ class TestNPERustDispatch:
         assert D.shape == (2, 2)
         assert D[0, 1] < 0.3
 
-    @pytest.mark.native_runtime
-    @pytest.mark.parametrize("owner", ["python", "rust", "mojo", "julia", "go"])
+    @pytest.mark.parametrize(
+        "owner", owner_params(["python", "rust", "mojo", "julia", "go"])
+    )
     def test_compute_npe_uses_backend_when_available(self, owner: str) -> None:
         """Each named owner returns the Prim-MST persistent entropy of the oracle."""
         if owner not in npe_module.AVAILABLE_BACKENDS:

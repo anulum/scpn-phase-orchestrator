@@ -43,6 +43,7 @@ from scpn_phase_orchestrator.upde.swarmalator import (
     AVAILABLE_BACKENDS,
     SwarmalatorEngine,
 )
+from tests._runtime_owners import NEEDS_KERNEL
 from tests.typing_contracts import assert_precise_ndarray_hint
 
 swarmalator_step_go = _swarmalator_go.swarmalator_step_go
@@ -649,7 +650,7 @@ class TestDirectSwarmalatorBoundaryContracts:
 
 
 class TestBackendLoaderContracts:
-    @pytest.mark.native_runtime
+    @NEEDS_KERNEL
     def test_rust_loader_reshapes_flat_kernel_positions(self) -> None:
         """The compiled Rust loader returns positions shaped ``(n, dim)``."""
         if "rust" not in sw_mod.AVAILABLE_BACKENDS:

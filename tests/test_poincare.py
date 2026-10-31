@@ -22,6 +22,7 @@ from scpn_phase_orchestrator.monitor.poincare import (
     poincare_section,
     return_times,
 )
+from tests._runtime_owners import owner_params
 
 
 def _oracle_section(
@@ -189,8 +190,9 @@ class TestPoincareSection:
 
         assert result.crossings.shape == (1, 1)
 
-    @pytest.mark.native_runtime
-    @pytest.mark.parametrize("owner", ["python", "rust", "mojo", "julia", "go"])
+    @pytest.mark.parametrize(
+        "owner", owner_params(["python", "rust", "mojo", "julia", "go"])
+    )
     def test_section_uses_backend_when_available(self, owner: str) -> None:
         """Each named owner finds the oracle's hyperplane crossings on a helix."""
         if owner not in poincare_module.AVAILABLE_BACKENDS:
@@ -351,8 +353,9 @@ class TestPhasePoincare:
 
         assert result.crossings.shape[1] == 1
 
-    @pytest.mark.native_runtime
-    @pytest.mark.parametrize("owner", ["python", "rust", "mojo", "julia", "go"])
+    @pytest.mark.parametrize(
+        "owner", owner_params(["python", "rust", "mojo", "julia", "go"])
+    )
     def test_phase_uses_backend_when_available(self, owner: str) -> None:
         """Each named owner finds the oracle's phase-section crossings."""
         if owner not in poincare_module.AVAILABLE_BACKENDS:

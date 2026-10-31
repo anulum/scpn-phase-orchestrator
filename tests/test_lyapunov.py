@@ -21,6 +21,7 @@ from scpn_phase_orchestrator.monitor.lyapunov import (
     LyapunovGuard,
     LyapunovState,
 )
+from tests._runtime_owners import NEEDS_KERNEL
 
 # Alias as Callable[..., LyapunovState]: wrongly typed field values are the
 # rejected inputs of the record validation.
@@ -319,7 +320,7 @@ class TestLyapunovStateValidation:
 class TestLyapunovRustDispatch:
     """Spectrum dispatch: the real Rust owner and stand-in failure contracts."""
 
-    @pytest.mark.native_runtime
+    @NEEDS_KERNEL
     def test_spectrum_uses_rust_backend_signature_when_active(self) -> None:
         """The compiled Rust owner returns the analytic synchronised spectrum."""
         if "rust" not in lyapunov_mod.AVAILABLE_BACKENDS:

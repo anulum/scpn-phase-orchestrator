@@ -34,6 +34,7 @@ from scpn_phase_orchestrator.monitor.recurrence import (
     recurrence_matrix,
     rqa,
 )
+from tests._runtime_owners import NEEDS_KERNEL
 
 TWO_PI = 2.0 * math.pi
 
@@ -263,7 +264,7 @@ def _oracle(
 
 
 class TestBackendLoaderContracts:
-    @pytest.mark.native_runtime
+    @NEEDS_KERNEL
     def test_rust_loader_wraps_recurrence_kernels(self) -> None:
         """The compiled Rust loader returns kernels that threshold like the oracle."""
         if "rust" not in r_mod.AVAILABLE_BACKENDS:

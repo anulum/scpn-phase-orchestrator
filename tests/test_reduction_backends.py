@@ -42,6 +42,7 @@ from scpn_phase_orchestrator.upde import (
 )
 from scpn_phase_orchestrator.upde import reduction as r_mod
 from scpn_phase_orchestrator.upde.reduction import OAState, OttAntonsenReduction
+from tests._runtime_owners import NEEDS_KERNEL, owner_params
 
 TOL = 1e-12
 OAOutput = tuple[float, float, float, float]
@@ -603,7 +604,7 @@ def _assert_loader_follows_oa(owner: str, loader: Callable[[], object]) -> None:
 
 
 class TestOptionalLoaderSuccessPaths:
-    @pytest.mark.native_runtime
+    @NEEDS_KERNEL
     def test_rust_loader_wraps_spo_kernel_function(self) -> None:
         """The compiled Rust loader integrates the analytic OA solution."""
         _assert_loader_follows_oa("rust", r_mod._load_rust_fn)
@@ -661,7 +662,7 @@ class TestOptionalLoaderSuccessPaths:
         """The real Go loader probes its library and integrates the OA solution."""
         _assert_loader_follows_oa("go", r_mod._load_go_fn)
 
-    @pytest.mark.native_runtime
+    @NEEDS_KERNEL
     def test_scalar_rust_helpers_feed_steady_state_and_fit(self) -> None:
         """The compiled scalar helpers give the analytic steady state and fit."""
         if not r_mod._HAS_RUST_SCALAR:
@@ -794,8 +795,9 @@ class TestDispatchFallbackChain:
 class TestNamedReductionOwners:
     """``backend=`` selects the owner of the integration and of the scalars."""
 
-    @pytest.mark.native_runtime
-    @pytest.mark.parametrize("owner", ["python", "rust", "mojo", "julia", "go"])
+    @pytest.mark.parametrize(
+        "owner", owner_params(["python", "rust", "mojo", "julia", "go"])
+    )
     def test_each_named_owner_runs_the_analytic_solution(self, owner: str) -> None:
         """``run`` on a named owner follows ``z(t) = R(t)·exp(i(ψ₀ − ω₀ t))``."""
         if owner not in r_mod.AVAILABLE_BACKENDS:
