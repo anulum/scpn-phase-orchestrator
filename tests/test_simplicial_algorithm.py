@@ -20,6 +20,8 @@ from __future__ import annotations
 
 import functools
 import math
+from collections.abc import Callable
+from typing import ParamSpec, TypeVar
 
 import numpy as np
 import pytest
@@ -32,9 +34,15 @@ from scpn_phase_orchestrator.upde.simplicial import SimplicialEngine
 TWO_PI = 2.0 * math.pi
 
 
-def _python(func):
+_P = ParamSpec("_P")
+_R = TypeVar("_R")
+
+
+def _python(func: Callable[_P, _R]) -> Callable[_P, _R]:
+    """Run ``func`` with the pure-Python backend forced."""
+
     @functools.wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _R:
         prev = s_mod.ACTIVE_BACKEND
         s_mod.ACTIVE_BACKEND = "python"
         try:
@@ -45,7 +53,9 @@ def _python(func):
     return wrapper
 
 
-def _problem(seed: int, n: int = 6):
+def _problem(
+    seed: int, n: int = 6
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     rng = np.random.default_rng(seed)
     theta = rng.uniform(0, TWO_PI, n)
     omegas = rng.normal(1.0, 0.2, n)
@@ -56,31 +66,33 @@ def _problem(seed: int, n: int = 6):
 
 
 class TestConstructor:
-    def test_rejects_zero_n(self):
+    def test_rejects_zero_n(self) -> None:
         with pytest.raises(ValueError, match="n_oscillators"):
             SimplicialEngine(0, 0.01)
 
-    def test_rejects_boolean_n(self):
+    def test_rejects_boolean_n(self) -> None:
         with pytest.raises(ValueError, match="n_oscillators"):
             SimplicialEngine(True, 0.01)
 
-    def test_rejects_non_positive_dt(self):
+    def test_rejects_non_positive_dt(self) -> None:
         with pytest.raises(ValueError, match="dt"):
             SimplicialEngine(4, 0.0)
 
-    def test_rejects_non_real_dt(self):
+    def test_rejects_non_real_dt(self) -> None:
         with pytest.raises(ValueError, match="dt"):
-            SimplicialEngine(4, "0.01")
+            # dt is deliberately a string, so the engine is built unchecked.
+            engine_unchecked: Callable[..., SimplicialEngine] = SimplicialEngine
+            engine_unchecked(4, "0.01")
 
-    def test_rejects_negative_sigma2(self):
+    def test_rejects_negative_sigma2(self) -> None:
         with pytest.raises(ValueError, match="sigma2"):
             SimplicialEngine(4, 0.01, sigma2=-0.1)
 
-    def test_rejects_boolean_sigma2(self):
+    def test_rejects_boolean_sigma2(self) -> None:
         with pytest.raises(ValueError, match="sigma2"):
             SimplicialEngine(4, 0.01, sigma2=False)
 
-    def test_sigma2_setter_rejects_negative(self):
+    def test_sigma2_setter_rejects_negative(self) -> None:
         eng = SimplicialEngine(4, 0.01, sigma2=0.0)
         with pytest.raises(ValueError, match="sigma2"):
             eng.sigma2 = -0.5
@@ -90,7 +102,7 @@ class TestConstructor:
 
 class TestStep:
     @_python
-    def test_phases_wrap_in_two_pi(self):
+    def test_phases_wrap_in_two_pi(self) -> None:
         theta, omegas, knm, alpha = _problem(0)
         eng = SimplicialEngine(6, 0.1, sigma2=0.5)
         new_ph = eng.step(theta, omegas, knm, 0.0, 0.0, alpha)
@@ -98,7 +110,7 @@ class TestStep:
         assert np.all(new_ph < TWO_PI + 1e-12)
 
     @_python
-    def test_sigma2_zero_recovers_standard_kuramoto(self):
+    def test_sigma2_zero_recovers_standard_kuramoto(self) -> None:
         """With σ₂ = 0 the 3-body contribution vanishes and the
         stepper must reproduce the standard Kuramoto Euler step."""
         n = 5
@@ -117,7 +129,7 @@ class TestStep:
         np.testing.assert_allclose(got, expected, atol=1e-12)
 
     @_python
-    def test_rejects_non_zero_pairwise_self_coupling(self):
+    def test_rejects_non_zero_pairwise_self_coupling(self) -> None:
         """The pairwise graph represents interactions between distinct
         oscillators; self-coupling is not a physical simplicial edge."""
 
@@ -131,7 +143,7 @@ class TestStep:
 
 class TestThreeBodyIdentity:
     @_python
-    def test_two_sc_identity_matches_direct_sum(self):
+    def test_two_sc_identity_matches_direct_sum(self) -> None:
         """Brute-force Σ_{j,k} sin(θ_j + θ_k − 2θ_i) on a tiny
         N=4 example must equal 2·S_i·C_i where S_i, C_i are the
         sin/cos sums of phase differences used by the stepper."""
@@ -158,7 +170,7 @@ class TestThreeBodyIdentity:
 
 class TestDegenerateSimplex:
     @_python
-    def test_two_node_system_skips_three_body_term(self):
+    def test_two_node_system_skips_three_body_term(self) -> None:
         phases = np.array([0.2, 1.1], dtype=np.float64)
         omegas = np.array([0.3, -0.5], dtype=np.float64)
         knm = np.array([[0.0, 0.7], [0.2, 0.0]], dtype=np.float64)
@@ -176,7 +188,7 @@ class TestDegenerateSimplex:
 
 class TestSyncFixedPoint:
     @_python
-    def test_fully_synced_is_fixed_point(self):
+    def test_fully_synced_is_fixed_point(self) -> None:
         """θ_i = θ_j = θ₀ → sin(θ_j − θ_i) = 0 and
         sin(θ_j + θ_k − 2θ_i) = 0 identically, so the
         derivative is exactly ω. With ω = 0 the synced state
@@ -194,7 +206,7 @@ class TestSyncFixedPoint:
 
 class TestExternalDrive:
     @_python
-    def test_zeta_shifts_trajectory(self):
+    def test_zeta_shifts_trajectory(self) -> None:
         n = 3
         theta = np.zeros(n)
         omegas = np.zeros(n)
@@ -221,7 +233,7 @@ class TestHypothesis:
         deadline=None,
         suppress_health_check=[HealthCheck.too_slow],
     )
-    def test_finite_output(self, n, sigma2, seed):
+    def test_finite_output(self, n: int, sigma2: float, seed: int) -> None:
         theta, omegas, knm, alpha = _problem(seed, n)
         eng = SimplicialEngine(n, 0.01, sigma2=sigma2)
         fin = eng.run(theta, omegas, knm, 0.0, 0.0, alpha, n_steps=30)
@@ -231,17 +243,17 @@ class TestHypothesis:
 
 
 class TestDispatcherSurface:
-    def test_available_non_empty(self):
+    def test_available_non_empty(self) -> None:
         assert s_mod.AVAILABLE_BACKENDS
         assert "python" in s_mod.AVAILABLE_BACKENDS
 
-    def test_active_is_first(self):
+    def test_active_is_first(self) -> None:
         assert s_mod.AVAILABLE_BACKENDS[0] == s_mod.ACTIVE_BACKEND
 
 
 class TestOrderParameter:
     @_python
-    def test_locked(self):
+    def test_locked(self) -> None:
         eng = SimplicialEngine(10, 0.01, sigma2=0.0)
         assert eng.order_parameter(np.full(10, 1.3)) == pytest.approx(
             1.0,
@@ -249,7 +261,7 @@ class TestOrderParameter:
         )
 
     @_python
-    def test_uniform_near_zero(self):
+    def test_uniform_near_zero(self) -> None:
         eng = SimplicialEngine(1000, 0.01, sigma2=0.0)
         assert (
             eng.order_parameter(

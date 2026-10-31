@@ -1,6 +1,6 @@
 {
   "description": "mypy --strict error ceilings per tests/ file; maintained by tools/tests_typing_ratchet.py. Absent files must have no errors; ceilings may only fall.",
-  "total": 5108,
+  "total": 5062,
   "files": {
     "tests/test_action_projection.py": 51,
     "tests/test_actuation_mapper.py": 52,
@@ -93,7 +93,6 @@
     "tests/test_server.py": 32,
     "tests/test_server_grpc.py": 29,
     "tests/test_session_start.py": 34,
-    "tests/test_simplicial_algorithm.py": 23,
     "tests/test_simplicial_layer.py": 27,
     "tests/test_snn_bridge.py": 73,
     "tests/test_spectral.py": 28,
@@ -120,7 +119,6 @@
     "tests/test_upde_doppler.py": 27,
     "tests/test_upde_engine.py": 34,
     "tests/test_visualization.py": 56,
-    "tests/test_viz_streamer.py": 71,
-    "tests/test_winding_algorithm.py": 23
+    "tests/test_viz_streamer.py": 71
   }
 }

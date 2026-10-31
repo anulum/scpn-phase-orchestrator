@@ -18,6 +18,8 @@ from __future__ import annotations
 
 import functools
 import math
+from collections.abc import Callable
+from typing import ParamSpec, TypeVar
 
 import numpy as np
 import pytest
@@ -33,9 +35,15 @@ from scpn_phase_orchestrator.monitor.winding import (
 TWO_PI = 2.0 * math.pi
 
 
-def _python(func):
+_P = ParamSpec("_P")
+_R = TypeVar("_R")
+
+
+def _python(func: Callable[_P, _R]) -> Callable[_P, _R]:
+    """Run ``func`` with the pure-Python backend forced."""
+
     @functools.wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _R:
         prev = w_mod.ACTIVE_BACKEND
         w_mod.ACTIVE_BACKEND = "python"
         try:
@@ -53,7 +61,7 @@ def _rotator(omegas: np.ndarray, t: int, dt: float) -> np.ndarray:
 
 class TestAnalyticIdentity:
     @_python
-    def test_constant_omega_matches_floor_integral(self):
+    def test_constant_omega_matches_floor_integral(self) -> None:
         """Constant ω: ``w_i = floor(ω_i · T · dt / 2π)`` up to
         ± 1 boundary rounding. Uses 2π-wrapped phases."""
         omegas = np.array([0.5, -0.3, 2.5, -1.2])
@@ -64,7 +72,7 @@ class TestAnalyticIdentity:
         assert np.max(np.abs(w - expected)) <= 1
 
     @_python
-    def test_stationary_oscillator_zero(self):
+    def test_stationary_oscillator_zero(self) -> None:
         omegas = np.zeros(5)
         traj = _rotator(omegas, 100, 0.01)
         w = winding_numbers(traj)
@@ -76,27 +84,27 @@ class TestHalfTurnBoundary:
     counts forward, not backward (Nyquist boundary convention)."""
 
     @_python
-    def test_exact_forward_half_turns_count_forward(self):
+    def test_exact_forward_half_turns_count_forward(self) -> None:
         # Four increments of exactly +π → +4π → 2 forward windings.
         # The spurious [-π, π) wrap would alias each +π to -π → -2.
-        traj = (np.arange(5) * np.pi).reshape(5, 1)
+        traj = np.asarray((np.arange(5) * np.pi).reshape(5, 1), dtype=np.float64)
         w = winding_numbers(traj)
         assert w.tolist() == [2]
 
     @_python
-    def test_exact_backward_half_turns_alias_forward(self):
+    def test_exact_backward_half_turns_alias_forward(self) -> None:
         # Exact -π increments are indistinguishable from +π after wrapping
         # to (-π, π]; both map to +π, so the count is forward.
-        traj = (-np.arange(5) * np.pi).reshape(5, 1)
+        traj = np.asarray((-np.arange(5) * np.pi).reshape(5, 1), dtype=np.float64)
         w = winding_numbers(traj)
         assert w.tolist() == [2]
 
     @_python
-    def test_just_below_half_turn_unaffected(self):
+    def test_just_below_half_turn_unaffected(self) -> None:
         # Increments just under +π still count forward and match the
         # interior behaviour shared by both wrap conventions.
         step = np.pi - 1e-6
-        traj = (np.arange(5) * step).reshape(5, 1)
+        traj = np.asarray((np.arange(5) * step).reshape(5, 1), dtype=np.float64)
         w = winding_numbers(traj)
         expected = int(np.floor(4 * step / TWO_PI))
         assert w.tolist() == [expected]
@@ -104,7 +112,7 @@ class TestHalfTurnBoundary:
 
 class TestSignConvention:
     @_python
-    def test_positive_omega_positive_winding(self):
+    def test_positive_omega_positive_winding(self) -> None:
         omegas = np.array([1.0, 2.0, 3.0])
         traj = _rotator(omegas, 300, 0.05)
         w = winding_numbers(traj)
@@ -112,7 +120,7 @@ class TestSignConvention:
         assert np.any(w > 0)
 
     @_python
-    def test_negative_omega_negative_winding(self):
+    def test_negative_omega_negative_winding(self) -> None:
         omegas = np.array([-1.0, -2.0, -3.0])
         traj = _rotator(omegas, 300, 0.05)
         w = winding_numbers(traj)
@@ -122,19 +130,19 @@ class TestSignConvention:
 
 class TestEdgeCases:
     @_python
-    def test_single_timestep_returns_zeros(self):
+    def test_single_timestep_returns_zeros(self) -> None:
         traj = np.zeros((1, 5))
         w = winding_numbers(traj)
         assert w.shape == (5,)
         assert np.all(w == 0)
 
     @pytest.mark.parametrize("history", [np.zeros(5), np.linspace(0, 4 * np.pi, 50)])
-    def test_non_2d_history_is_rejected(self, history):
+    def test_non_2d_history_is_rejected(self, history: np.ndarray) -> None:
         """A 1-D history is ambiguous and used to return an empty result."""
         with pytest.raises(ValueError, match=r"two-dimensional \(T, N\)"):
             winding_numbers(history)
 
-    def test_zero_dimensional_history_is_rejected(self):
+    def test_zero_dimensional_history_is_rejected(self) -> None:
         with pytest.raises(ValueError, match=r"two-dimensional \(T, N\)"):
             winding_numbers(np.array(1.0))
 
@@ -145,11 +153,11 @@ class TestEdgeCases:
             np.array([["2026-09-24"], ["2026-09-25"]], dtype="datetime64[D]"),
         ],
     )
-    def test_time_unit_history_is_rejected(self, history):
+    def test_time_unit_history_is_rejected(self, history: np.ndarray) -> None:
         with pytest.raises(ValueError, match="plain radians"):
             winding_numbers(history)
 
-    def test_floor_convention_is_asymmetric_under_reversal(self):
+    def test_floor_convention_is_asymmetric_under_reversal(self) -> None:
         """Documented behaviour: floor counts any net negative drift as -1."""
         forward = np.column_stack(
             [np.linspace(0.0, 0.01, 100), np.linspace(0.0, 2 * np.pi - 0.01, 100)]
@@ -159,13 +167,13 @@ class TestEdgeCases:
         np.testing.assert_array_equal(winding_numbers(backward), [-1, -1])
 
     @_python
-    def test_winding_vector_alias(self):
+    def test_winding_vector_alias(self) -> None:
         omegas = np.array([1.0, -1.0])
         traj = _rotator(omegas, 150, 0.05)
         assert np.array_equal(winding_vector(traj), winding_numbers(traj))
 
     @_python
-    def test_rejects_boolean_phase_history(self):
+    def test_rejects_boolean_phase_history(self) -> None:
         with pytest.raises(ValueError, match="phases_history"):
             winding_numbers(np.array([[True, False], [False, True]]))
 
@@ -182,7 +190,7 @@ class TestHypothesis:
         deadline=None,
         suppress_health_check=[HealthCheck.too_slow],
     )
-    def test_bounded_by_trajectory_length(self, t: int, n: int, seed: int):
+    def test_bounded_by_trajectory_length(self, t: int, n: int, seed: int) -> None:
         """|w_i| ≤ T — each step contributes at most one full
         wrap, so cumulative winding cannot exceed T in magnitude."""
         rng = np.random.default_rng(seed)
@@ -194,9 +202,9 @@ class TestHypothesis:
 
 
 class TestDispatcherSurface:
-    def test_available_non_empty(self):
+    def test_available_non_empty(self) -> None:
         assert w_mod.AVAILABLE_BACKENDS
         assert "python" in w_mod.AVAILABLE_BACKENDS
 
-    def test_active_is_first(self):
+    def test_active_is_first(self) -> None:
         assert w_mod.AVAILABLE_BACKENDS[0] == w_mod.ACTIVE_BACKEND
