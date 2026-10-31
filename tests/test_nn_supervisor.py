@@ -9,6 +9,8 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
+from pathlib import Path
 
 import numpy as np
 import pytest
@@ -527,7 +529,9 @@ def test_ppo_supervisor_train_epochs_rejects_invalid_minibatch_size() -> None:
         )
 
 
-def test_supervisor_ppo_checkpoint_round_trip_preserves_next_update(tmp_path) -> None:
+def test_supervisor_ppo_checkpoint_round_trip_preserves_next_update(
+    tmp_path: Path,
+) -> None:
     config = DifferentiableSupervisorConfig(n_oscillators=4, hidden_width=8)
     policy = DifferentiableSupervisorPolicy(config, key=jax.random.PRNGKey(42))
     rollout = collect_supervisor_rollouts(
@@ -617,7 +621,7 @@ def test_supervisor_ppo_checkpoint_round_trip_preserves_next_update(tmp_path) ->
         assert jnp.array_equal(before, after)
 
 
-def test_supervisor_ppo_checkpoint_rejects_malformed_metadata(tmp_path) -> None:
+def test_supervisor_ppo_checkpoint_rejects_malformed_metadata(tmp_path: Path) -> None:
     checkpoint_dir = tmp_path / "checkpoint"
     checkpoint_dir.mkdir()
     (checkpoint_dir / "metadata.json").write_text(
@@ -639,7 +643,7 @@ def test_supervisor_ppo_checkpoint_rejects_malformed_metadata(tmp_path) -> None:
 
 
 def test_supervisor_ppo_checkpoint_trainer_resume_matches_direct_epochs(
-    tmp_path,
+    tmp_path: Path,
 ) -> None:
     config = DifferentiableSupervisorConfig(n_oscillators=4, hidden_width=8)
     policy = DifferentiableSupervisorPolicy(config, key=jax.random.PRNGKey(48))
@@ -1808,7 +1812,7 @@ def test_supervisor_experiment_manifest_rejects_empty_command_lock_and_device() 
     report = build_supervisor_baseline_report(
         (compare_supervisor_static_baseline(policy, _scenario()),)
     )
-    base = {
+    base: dict[str, object] = {
         "baseline_report": report,
         "command": "cmd",
         "git_sha": "abc1234",
@@ -1817,12 +1821,14 @@ def test_supervisor_experiment_manifest_rejects_empty_command_lock_and_device() 
         "seed_list": (1,),
     }
 
+    # The fields are deliberately invalid, so the manifest is built unchecked.
+    manifest_unchecked: Callable[..., object] = build_supervisor_experiment_manifest
     with pytest.raises(ValueError, match="command"):
-        build_supervisor_experiment_manifest(**dict(base, command=""))
+        manifest_unchecked(**dict(base, command=""))
     with pytest.raises(ValueError, match="dependency_lock"):
-        build_supervisor_experiment_manifest(**dict(base, dependency_lock={}))
+        manifest_unchecked(**dict(base, dependency_lock={}))
     with pytest.raises(ValueError, match="device_info"):
-        build_supervisor_experiment_manifest(**dict(base, device_info={}))
+        manifest_unchecked(**dict(base, device_info={}))
 
 
 @pytest.mark.parametrize(
@@ -1840,8 +1846,8 @@ def test_supervisor_experiment_manifest_rejects_empty_command_lock_and_device() 
     ],
 )
 def test_supervisor_scenario_corpus_rejects_boundary_record_errors(
-    mutator,
-    match,
+    mutator: Callable[[dict[str, object]], dict[str, object]],
+    match: str,
 ) -> None:
     with pytest.raises(ValueError, match=match):
         build_supervisor_scenario_corpus([mutator(_valid_supervisor_record())])
@@ -1849,7 +1855,8 @@ def test_supervisor_scenario_corpus_rejects_boundary_record_errors(
 
 def test_supervisor_scenario_corpus_rejects_non_mapping_record() -> None:
     with pytest.raises(ValueError, match="record 0 must be a mapping"):
-        build_supervisor_scenario_corpus([object()])
+        corpus_unchecked: Callable[..., object] = build_supervisor_scenario_corpus
+        corpus_unchecked([object()])
 
 
 def test_collect_supervisor_rollouts_rejects_invalid_jitter_values() -> None:
@@ -1874,7 +1881,7 @@ def test_collect_supervisor_rollouts_rejects_invalid_jitter_values() -> None:
         )
 
 
-def test_ppo_checkpoint_rejects_overwrite_and_missing_payload(tmp_path) -> None:
+def test_ppo_checkpoint_rejects_overwrite_and_missing_payload(tmp_path: Path) -> None:
     config = DifferentiableSupervisorConfig(n_oscillators=4, hidden_width=8)
     policy = DifferentiableSupervisorPolicy(config, key=jax.random.PRNGKey(97))
     optimizer = optax.adam(1e-3)
