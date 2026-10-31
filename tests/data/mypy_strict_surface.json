@@ -29,6 +29,8 @@
         "optax.*",
         "osqp",
         "osqp.*",
+        "pyedflib",
+        "pyedflib.*",
         "pylsl",
         "pylsl.*",
         "redis",
