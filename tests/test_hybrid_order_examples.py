@@ -12,7 +12,9 @@ from __future__ import annotations
 
 import json
 import math
+from collections.abc import Callable
 from copy import deepcopy
+from typing import cast
 
 import numpy as np
 import pytest
@@ -58,13 +60,19 @@ def test_build_scenarios_have_expected_domains_and_candidate_types() -> None:
         assert "product" in candidate_types
         assert "entangled" in candidate_types
         assert isinstance(scenario["scenario_hash"], str)
+        assert isinstance(scenario["domain"], str)
+        assert isinstance(scenario["scenario_id"], str)
+        assert isinstance(scenario["qubit_count"], int)
+        assert isinstance(scenario["bipartition"], list)
+        assert isinstance(scenario["objective_labels"], list)
+        part_a, part_b = scenario["bipartition"]
         assert scenario["scenario_hash"] == _compute_scenario_hash(
             HybridOrderScenario(
                 domain=scenario["domain"],
                 scenario_id=scenario["scenario_id"],
                 phases=np.array(scenario["phases"], dtype=np.float64),
                 qubit_count=int(scenario["qubit_count"]),
-                bipartition=tuple(tuple(part) for part in scenario["bipartition"]),
+                bipartition=(tuple(part_a), tuple(part_b)),
                 state_candidates=tuple(
                     HybridStateCandidate(
                         state_id=candidate["state_id"],
@@ -115,6 +123,9 @@ def test_numeric_summaries_are_finite() -> None:
 
     for scenario in scenarios:
         phases_summary = scenario["phases_summary"]
+        assert isinstance(phases_summary, dict)
+        assert isinstance(scenario["phases"], list)
+        assert isinstance(scenario["state_candidates"], list)
         assert isinstance(phases_summary["count"], int)
         assert phases_summary["count"] == len(scenario["phases"])
         assert math.isfinite(float(phases_summary["min"]))
@@ -183,6 +194,7 @@ def test_flags_and_boundaries() -> None:
             scenario["claim_boundary"]
             == "quantum_cosimulation_monitor_not_qpu_execution"
         )
+        assert isinstance(scenario["state_candidates"], list)
         for candidate in scenario["state_candidates"]:
             assert candidate["non_actuating"] is True
             assert candidate["execution_disabled"] is True
@@ -231,7 +243,7 @@ def test_flags_and_boundaries() -> None:
     ],
 )
 def test_rejects_malformed_scenarios(
-    mutator,
+    mutator: Callable[[HybridOrderScenario], object],
 ) -> None:
     # Start from a valid model and mutate a single field to create malformed input.
     scenario = _build_valid_scenario()
@@ -250,8 +262,11 @@ def test_rejects_malformed_scenarios(
 
 def test_accepts_numpy_integer_qubit_scenario_contracts() -> None:
     scenario = _build_valid_scenario()
-    scenario.qubit_count = np.int64(2)
-    scenario.bipartition = ((np.int64(0),), (np.int64(1),))
+    # The validator genuinely accepts NumPy integers for both contracts.
+    scenario.qubit_count = cast("int", np.int64(2))
+    scenario.bipartition = cast(
+        "tuple[tuple[int, ...], tuple[int, ...]]", ((np.int64(0),), (np.int64(1),))
+    )
 
     _validate_scenario(scenario)
 
@@ -315,7 +330,9 @@ def test_accepts_numpy_integer_qubit_scenario_contracts() -> None:
         lambda s: setattr(s, "objective_labels", ("  ",)),
     ],
 )
-def test_rejects_additional_malformed_scenarios(mutator) -> None:
+def test_rejects_additional_malformed_scenarios(
+    mutator: Callable[[HybridOrderScenario], object],
+) -> None:
     scenario = _build_valid_scenario()
     _validate_scenario(scenario)
     scenario.scenario_hash = _compute_scenario_hash(scenario)
@@ -371,7 +388,9 @@ def test_entanglement_entropy_uses_the_bipartition_not_basis_shannon_entropy() -
         ),
     ],
 )
-def test_rejects_internally_contradictory_candidate_evidence(mutator) -> None:
+def test_rejects_internally_contradictory_candidate_evidence(
+    mutator: Callable[[HybridOrderScenario], object],
+) -> None:
     scenario = _build_valid_scenario()
     mutator(scenario)
 
@@ -395,7 +414,10 @@ def test_rejects_coercive_phase_aliases_and_broken_protocols() -> None:
             raise TypeError("broken")
 
     scenario = _build_valid_scenario()
-    scenario.phases = BrokenArray()
+    # The broken array-like is deliberately not an ndarray; assign it through
+    # setattr because the refusal is what this test checks.
+    field_name = "phases"
+    setattr(scenario, field_name, BrokenArray())
     with pytest.raises(ValueError, match="phases"):
         _validate_scenario(scenario)
 
