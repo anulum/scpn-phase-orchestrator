@@ -26,20 +26,20 @@ from tests.typing_contracts import assert_precise_ndarray_hint
 class TestPhysicalDriver:
     """Verify sinusoidal driver against analytical sin function."""
 
-    def test_sin_zero_at_origin(self):
+    def test_sin_zero_at_origin(self) -> None:
         drv = PhysicalDriver(frequency=1.0, amplitude=2.0)
         assert drv.compute(0.0) == pytest.approx(0.0, abs=1e-12)
 
-    def test_sin_peak_at_quarter_period(self):
+    def test_sin_peak_at_quarter_period(self) -> None:
         """sin(2π·1·0.25) = sin(π/2) = 1 → amplitude·1 = 2."""
         drv = PhysicalDriver(frequency=1.0, amplitude=2.0)
         assert drv.compute(0.25) == pytest.approx(2.0, abs=1e-6)
 
-    def test_sin_trough_at_three_quarter_period(self):
+    def test_sin_trough_at_three_quarter_period(self) -> None:
         drv = PhysicalDriver(frequency=1.0, amplitude=2.0)
         assert drv.compute(0.75) == pytest.approx(-2.0, abs=1e-6)
 
-    def test_periodicity(self):
+    def test_periodicity(self) -> None:
         """Psi(t + 1/f) must equal Psi(t) for any t."""
         drv = PhysicalDriver(frequency=3.0, amplitude=1.5)
         t = 0.137
@@ -47,7 +47,7 @@ class TestPhysicalDriver:
         assert drv.compute(t) == pytest.approx(drv.compute(t + period), abs=1e-12)
         assert drv.compute(t) == pytest.approx(drv.compute(t + 5 * period), abs=1e-10)
 
-    def test_batch_matches_scalar(self):
+    def test_batch_matches_scalar(self) -> None:
         """compute_batch must produce identical results to per-element compute."""
         drv = PhysicalDriver(frequency=2.5, amplitude=0.8)
         t = np.array([0.0, 0.1, 0.2, 0.3, 0.4])
@@ -55,14 +55,14 @@ class TestPhysicalDriver:
         scalar = np.array([drv.compute(ti) for ti in t])
         np.testing.assert_allclose(batch, scalar, atol=1e-12)
 
-    def test_amplitude_scales_output(self):
+    def test_amplitude_scales_output(self) -> None:
         """Doubling amplitude must double the output at the same time."""
         t = 0.13
         drv1 = PhysicalDriver(frequency=1.0, amplitude=1.0)
         drv2 = PhysicalDriver(frequency=1.0, amplitude=3.0)
         assert drv2.compute(t) == pytest.approx(3.0 * drv1.compute(t), abs=1e-12)
 
-    def test_frequency_scales_phase(self):
+    def test_frequency_scales_phase(self) -> None:
         """Doubling frequency at same time must advance the phase 2×."""
         drv1 = PhysicalDriver(frequency=1.0)
         drv2 = PhysicalDriver(frequency=2.0)
@@ -70,29 +70,29 @@ class TestPhysicalDriver:
         # f=2 at t=0.125: sin(π/2) = 1.0
         assert abs(drv2.compute(0.125)) > abs(drv1.compute(0.125))
 
-    def test_negative_frequency_rejected(self):
+    def test_negative_frequency_rejected(self) -> None:
         with pytest.raises(ValueError, match="positive"):
             PhysicalDriver(frequency=-1.0)
 
-    def test_zero_frequency_rejected(self):
+    def test_zero_frequency_rejected(self) -> None:
         with pytest.raises(ValueError, match="positive"):
             PhysicalDriver(frequency=0.0)
 
     @pytest.mark.parametrize("frequency", [float("nan"), float("inf"), "fast"])
-    def test_invalid_frequency_rejected(self, frequency: object):
+    def test_invalid_frequency_rejected(self, frequency: object) -> None:
         with pytest.raises(ValueError, match="frequency"):
             PhysicalDriver(frequency=cast(Any, frequency))
 
     @pytest.mark.parametrize("amplitude", [float("nan"), float("inf"), -0.1, "loud"])
-    def test_invalid_amplitude_rejected(self, amplitude: object):
+    def test_invalid_amplitude_rejected(self, amplitude: object) -> None:
         with pytest.raises(ValueError, match="amplitude|frequency"):
             PhysicalDriver(frequency=1.0, amplitude=cast(Any, amplitude))
 
-    def test_zero_amplitude_is_valid_quiescent_drive(self):
+    def test_zero_amplitude_is_valid_quiescent_drive(self) -> None:
         drv = PhysicalDriver(frequency=1.0, amplitude=0.0)
         assert drv.compute(0.25) == pytest.approx(0.0)
 
-    def test_output_bounded_by_amplitude(self):
+    def test_output_bounded_by_amplitude(self) -> None:
         """Output must always be in [-amplitude, +amplitude]."""
         drv = PhysicalDriver(frequency=7.3, amplitude=2.5)
         t = np.linspace(0, 10, 5000)
@@ -110,13 +110,13 @@ class TestPhysicalDriver:
             np.array(["0.25"], dtype=object),
         ],
     )
-    def test_compute_batch_rejects_invalid_time_array(self, t_array: object):
+    def test_compute_batch_rejects_invalid_time_array(self, t_array: object) -> None:
         drv = PhysicalDriver(frequency=1.0, amplitude=2.0)
         with pytest.raises(ValueError, match="t_array must be finite"):
             drv.compute_batch(cast(Any, t_array))
 
     @pytest.mark.parametrize("t", [True, float("nan"), float("inf"), "0.25"])
-    def test_compute_rejects_invalid_scalar_time(self, t: object):
+    def test_compute_rejects_invalid_scalar_time(self, t: object) -> None:
         drv = PhysicalDriver(frequency=1.0, amplitude=2.0)
         with pytest.raises(ValueError, match="t must be finite"):
             drv.compute(cast(Any, t))
@@ -131,24 +131,24 @@ class TestInformationalDriver:
     """Verify the informational ramp driver produces monotonically
     increasing phase wrapped to [0, 2π)."""
 
-    def test_zero_at_origin(self):
+    def test_zero_at_origin(self) -> None:
         drv = InformationalDriver(cadence_hz=1.0)
         assert drv.compute(0.0) == pytest.approx(0.0)
 
-    def test_output_in_phase_range(self):
+    def test_output_in_phase_range(self) -> None:
         drv = InformationalDriver(cadence_hz=1.0)
         for t in [0.0, 0.3, 0.5, 0.99, 1.5, 10.0]:
             val = drv.compute(t)
             assert 0.0 <= val < 2.0 * np.pi, f"t={t}: output {val:.4f} outside [0, 2π)"
 
-    def test_batch_output_range(self):
+    def test_batch_output_range(self) -> None:
         drv = InformationalDriver(cadence_hz=2.0)
         t = np.linspace(0, 5, 200)
         out = drv.compute_batch(t)
         assert out.shape == (200,)
         assert np.all(out >= 0.0) and np.all(out < 2.0 * np.pi)
 
-    def test_higher_cadence_faster_ramp(self):
+    def test_higher_cadence_faster_ramp(self) -> None:
         """Higher cadence should complete more full cycles in same time."""
         drv_slow = InformationalDriver(cadence_hz=1.0)
         drv_fast = InformationalDriver(cadence_hz=5.0)
@@ -160,18 +160,18 @@ class TestInformationalDriver:
         fast_wraps = np.sum(np.abs(np.diff(fast)) > np.pi)
         assert fast_wraps > slow_wraps
 
-    def test_zero_cadence_rejected(self):
+    def test_zero_cadence_rejected(self) -> None:
         with pytest.raises(ValueError, match="positive"):
             InformationalDriver(cadence_hz=0.0)
 
-    def test_negative_cadence_rejected(self):
+    def test_negative_cadence_rejected(self) -> None:
         with pytest.raises(ValueError, match="positive"):
             InformationalDriver(cadence_hz=-1.0)
 
     @pytest.mark.parametrize(
         "cadence_hz", [float("nan"), float("inf"), "fast", True, np.bool_(True)]
     )
-    def test_invalid_cadence_rejected(self, cadence_hz: object):
+    def test_invalid_cadence_rejected(self, cadence_hz: object) -> None:
         with pytest.raises(ValueError, match="cadence_hz"):
             InformationalDriver(cadence_hz=cast(Any, cadence_hz))
 
@@ -186,13 +186,13 @@ class TestInformationalDriver:
             np.array(["0.25"], dtype=object),
         ],
     )
-    def test_compute_batch_rejects_invalid_time_array(self, t_array: object):
+    def test_compute_batch_rejects_invalid_time_array(self, t_array: object) -> None:
         drv = InformationalDriver(cadence_hz=1.0)
         with pytest.raises(ValueError, match="t_array must be finite"):
             drv.compute_batch(cast(Any, t_array))
 
     @pytest.mark.parametrize("t", [True, float("nan"), float("inf"), "0.25"])
-    def test_compute_rejects_invalid_scalar_time(self, t: object):
+    def test_compute_rejects_invalid_scalar_time(self, t: object) -> None:
         drv = InformationalDriver(cadence_hz=1.0)
         with pytest.raises(ValueError, match="t must be finite"):
             drv.compute(cast(Any, t))
@@ -206,13 +206,13 @@ class TestInformationalDriver:
 class TestSymbolicDriver:
     """Verify the symbolic driver cycles through its sequence and wraps."""
 
-    def test_sequence_values(self):
+    def test_sequence_values(self) -> None:
         drv = SymbolicDriver(sequence=[1.0, 2.0, 3.0])
         assert drv.compute(0) == 1.0
         assert drv.compute(1) == 2.0
         assert drv.compute(2) == 3.0
 
-    def test_wrapping(self):
+    def test_wrapping(self) -> None:
         """Step beyond sequence length must wrap (modulo)."""
         drv = SymbolicDriver(sequence=[1.0, 2.0, 3.0])
         assert drv.compute(3) == 1.0
@@ -220,12 +220,12 @@ class TestSymbolicDriver:
         assert drv.compute(100) == drv.compute(100 % 3)
 
     @pytest.mark.parametrize("step", [True, np.bool_(True), 1.5, "2"])
-    def test_compute_rejects_non_integer_step(self, step: object):
+    def test_compute_rejects_non_integer_step(self, step: object) -> None:
         drv = SymbolicDriver(sequence=[1.0, 2.0, 3.0])
         with pytest.raises(ValueError, match="step must be an integer"):
             drv.compute(cast(Any, step))
 
-    def test_batch_matches_scalar(self):
+    def test_batch_matches_scalar(self) -> None:
         drv = SymbolicDriver(sequence=[10.0, 20.0, 30.0])
         steps = np.array([0, 1, 2, 3, 4, 5])
         batch = drv.compute_batch(steps)
@@ -243,39 +243,39 @@ class TestSymbolicDriver:
             np.array(["1"], dtype=object),
         ],
     )
-    def test_compute_batch_rejects_non_integer_steps(self, steps: object):
+    def test_compute_batch_rejects_non_integer_steps(self, steps: object) -> None:
         drv = SymbolicDriver(sequence=[10.0, 20.0])
         with pytest.raises(ValueError, match="steps must be integer"):
             drv.compute_batch(cast(Any, steps))
 
-    def test_single_element_sequence(self):
+    def test_single_element_sequence(self) -> None:
         """Single-element sequence returns the same value always."""
         drv = SymbolicDriver(sequence=[42.0])
         assert drv.compute(0) == 42.0
         assert drv.compute(999) == 42.0
 
-    def test_empty_sequence_rejected(self):
+    def test_empty_sequence_rejected(self) -> None:
         with pytest.raises(ValueError, match="non-empty"):
             SymbolicDriver(sequence=[])
 
     @pytest.mark.parametrize("sequence", [[0.0, float("nan")], [0.0, float("inf")]])
-    def test_non_finite_sequence_rejected(self, sequence: list[float]):
+    def test_non_finite_sequence_rejected(self, sequence: list[float]) -> None:
         with pytest.raises(ValueError, match="finite"):
             SymbolicDriver(sequence=sequence)
 
-    def test_boolean_sequence_values_rejected(self):
+    def test_boolean_sequence_values_rejected(self) -> None:
         with pytest.raises(ValueError, match="finite real"):
             SymbolicDriver(sequence=cast(Any, [0.0, True]))
 
-    def test_numpy_boolean_sequence_values_rejected(self):
+    def test_numpy_boolean_sequence_values_rejected(self) -> None:
         with pytest.raises(ValueError, match="finite real"):
             SymbolicDriver(sequence=cast(Any, [0.0, np.bool_(True)]))
 
-    def test_multidimensional_sequence_rejected(self):
+    def test_multidimensional_sequence_rejected(self) -> None:
         with pytest.raises(ValueError, match="one-dimensional"):
             SymbolicDriver(sequence=cast(Any, [[0.0], [1.0]]))
 
-    def test_batch_periodicity(self):
+    def test_batch_periodicity(self) -> None:
         """Batch output must be periodic with period = len(sequence)."""
         seq = [1.0, 2.0, 3.0, 4.0]
         drv = SymbolicDriver(sequence=seq)
@@ -295,7 +295,7 @@ class TestDriversPipelineEndToEnd:
     Proves Ψ drivers are functional external drive sources.
     """
 
-    def test_physical_driver_feeds_engine(self):
+    def test_physical_driver_feeds_engine(self) -> None:
         """PhysicalDriver → psi → UPDEEngine → R."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
         from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
@@ -316,7 +316,7 @@ class TestDriversPipelineEndToEnd:
         r, _ = compute_order_parameter(phases)
         assert 0.0 <= r <= 1.0
 
-    def test_all_drivers_produce_valid_psi(self):
+    def test_all_drivers_produce_valid_psi(self) -> None:
         """All driver types produce finite float psi values."""
         phys = PhysicalDriver(frequency=5.0, amplitude=1.0)
         symb = SymbolicDriver(sequence=[0.1, 0.5, 0.9])
