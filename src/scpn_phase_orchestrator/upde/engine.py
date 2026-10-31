@@ -122,7 +122,8 @@ def upde_run(
     backend : str
         ``"auto"`` follows ``ACTIVE_BACKEND`` and the fallback chain; a named
         owner (``rust``, ``webgpu``, ``mojo``, ``julia``, ``go``, ``python``)
-        serves the call or raises ``RuntimeError``.
+        serves the call, or raises ``RuntimeError`` when it cannot be loaded.
+        An exception that the loaded owner raises during the run propagates.
 
     Returns
     -------
@@ -136,7 +137,7 @@ def upde_run(
         Inputs are invalid, ``backend`` is unknown, or the actual backend
         produces malformed, nonfinite, or out-of-torus phases.
     RuntimeError
-        The selected or named backend cannot execute in the current runtime.
+        The named backend cannot be loaded in the current runtime.
 
     Notes
     -----
