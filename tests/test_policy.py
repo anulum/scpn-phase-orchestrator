@@ -20,7 +20,7 @@ from scpn_phase_orchestrator.supervisor.regimes import RegimeManager
 from scpn_phase_orchestrator.upde.metrics import LayerState, UPDEState
 
 
-def _make_upde(r_values, regime_id="nominal"):
+def _make_upde(r_values: list[float], regime_id: str = "nominal") -> UPDEState:
     layers = [LayerState(R=r, psi=0.0) for r in r_values]
     n = len(r_values)
     return UPDEState(
@@ -32,7 +32,7 @@ def _make_upde(r_values, regime_id="nominal"):
 
 
 @pytest.fixture()
-def policy():
+def policy() -> SupervisorPolicy:
     return SupervisorPolicy(RegimeManager(cooldown_steps=0))
 
 
@@ -45,13 +45,13 @@ class TestRegimeActionMapping:
     """Verify that each regime produces the correct set of control actions
     with the expected knobs, signs, and justifications."""
 
-    def test_nominal_produces_no_actions(self, policy):
+    def test_nominal_produces_no_actions(self, policy: SupervisorPolicy) -> None:
         """High coherence → NOMINAL → no intervention needed."""
         state = _make_upde([0.9, 0.85, 0.88])
         actions = policy.decide(state, BoundaryState())
         assert actions == [], "NOMINAL must produce zero actions"
 
-    def test_degraded_produces_positive_k_boost(self, policy):
+    def test_degraded_produces_positive_k_boost(self, policy: SupervisorPolicy) -> None:
         """Mid coherence → DEGRADED → increase coupling (K > 0)."""
         state = _make_upde([0.4, 0.45, 0.5])
         actions = policy.decide(state, BoundaryState())
@@ -60,13 +60,13 @@ class TestRegimeActionMapping:
         assert actions[0].value > 0, "DEGRADED K action must be positive (boost)"
         assert actions[0].scope == "global"
 
-    def test_degraded_k_value_is_0_05(self, policy):
+    def test_degraded_k_value_is_0_05(self, policy: SupervisorPolicy) -> None:
         """Default K bump is 0.05."""
         state = _make_upde([0.4, 0.45, 0.5])
         actions = policy.decide(state, BoundaryState())
         assert actions[0].value == pytest.approx(0.05)
 
-    def test_degraded_k_value_uses_configured_gain(self):
+    def test_degraded_k_value_uses_configured_gain(self) -> None:
         """Deployment-specific gain profiles replace hardcoded constants."""
         policy = SupervisorPolicy(
             RegimeManager(cooldown_steps=0),
@@ -76,7 +76,9 @@ class TestRegimeActionMapping:
         actions = policy.decide(state, BoundaryState())
         assert actions[0].value == pytest.approx(0.12)
 
-    def test_critical_produces_zeta_and_negative_k(self, policy):
+    def test_critical_produces_zeta_and_negative_k(
+        self, policy: SupervisorPolicy
+    ) -> None:
         """Low coherence → CRITICAL → zeta damping + reduce coupling on worst layer."""
         state = _make_upde([0.1, 0.15, 0.2])
         actions = policy.decide(state, BoundaryState())
@@ -87,7 +89,7 @@ class TestRegimeActionMapping:
             "CRITICAL K action must be negative (reduce coupling)"
         )
 
-    def test_critical_targets_worst_layer(self, policy):
+    def test_critical_targets_worst_layer(self, policy: SupervisorPolicy) -> None:
         """K reduction must target the layer with lowest R."""
         state = _make_upde([0.25, 0.1, 0.2])  # Layer 1 is worst (R=0.1)
         actions = policy.decide(state, BoundaryState())
@@ -95,13 +97,15 @@ class TestRegimeActionMapping:
         scopes = [a.scope for a in k_actions]
         assert "layer_1" in scopes, f"Expected layer_1: {scopes}"
 
-    def test_critical_zeta_value_is_0_1(self, policy):
+    def test_critical_zeta_value_is_0_1(self, policy: SupervisorPolicy) -> None:
         state = _make_upde([0.05, 0.1])
         actions = policy.decide(state, BoundaryState())
         zeta = [a for a in actions if a.knob == "zeta"]
         assert zeta[0].value == pytest.approx(0.1)
 
-    def test_critical_k_reduce_value_is_minus_0_03(self, policy):
+    def test_critical_k_reduce_value_is_minus_0_03(
+        self, policy: SupervisorPolicy
+    ) -> None:
         state = _make_upde([0.05, 0.1])
         actions = policy.decide(state, BoundaryState())
         k_actions = [a for a in actions if a.knob == "K"]
@@ -117,7 +121,9 @@ class TestHardViolationOverride:
     """Verify that hard boundary violations force CRITICAL regardless
     of coherence level."""
 
-    def test_hard_violation_forces_critical_at_high_r(self, policy):
+    def test_hard_violation_forces_critical_at_high_r(
+        self, policy: SupervisorPolicy
+    ) -> None:
         """R=0.9 would be NOMINAL, but hard violation forces CRITICAL."""
         state = _make_upde([0.9, 0.85])
         boundary = BoundaryState(violations=["x"], hard_violations=["x"])
@@ -125,7 +131,9 @@ class TestHardViolationOverride:
         knobs = {a.knob for a in actions}
         assert "zeta" in knobs, "Hard violation must force CRITICAL → zeta action"
 
-    def test_soft_violation_no_critical_override(self, policy):
+    def test_soft_violation_no_critical_override(
+        self, policy: SupervisorPolicy
+    ) -> None:
         """Soft violation alone should not force CRITICAL if R is high."""
         state = _make_upde([0.9, 0.85])
         boundary = BoundaryState(violations=["x"], hard_violations=[])
@@ -143,7 +151,7 @@ class TestRecoveryRegime:
     """Verify the CRITICAL → RECOVERY transition and the gradual
     coupling restore strategy."""
 
-    def test_recovery_after_critical(self, policy):
+    def test_recovery_after_critical(self, policy: SupervisorPolicy) -> None:
         """After CRITICAL, returning to mid-R should enter RECOVERY."""
         policy.decide(_make_upde([0.1, 0.15]), BoundaryState())  # → CRITICAL
         actions = policy.decide(_make_upde([0.45, 0.50]), BoundaryState())
@@ -151,13 +159,13 @@ class TestRecoveryRegime:
         assert actions[0].knob == "K"
         assert "recovery" in actions[0].justification
 
-    def test_recovery_k_is_half_bump(self, policy):
+    def test_recovery_k_is_half_bump(self, policy: SupervisorPolicy) -> None:
         """Recovery K value uses the configured restore fraction."""
         policy.decide(_make_upde([0.1, 0.15]), BoundaryState())
         actions = policy.decide(_make_upde([0.45, 0.50]), BoundaryState())
         assert actions[0].value == pytest.approx(0.025)
 
-    def test_recovery_k_uses_configured_restore_fraction(self):
+    def test_recovery_k_uses_configured_restore_fraction(self) -> None:
         policy = SupervisorPolicy(
             RegimeManager(cooldown_steps=0),
             gains=SupervisorPolicyGains(k_bump=0.2, restore_fraction=0.25),
@@ -166,7 +174,7 @@ class TestRecoveryRegime:
         actions = policy.decide(_make_upde([0.45, 0.50]), BoundaryState())
         assert actions[0].value == pytest.approx(0.05)
 
-    def test_recovery_scope_is_global(self, policy):
+    def test_recovery_scope_is_global(self, policy: SupervisorPolicy) -> None:
         policy.decide(_make_upde([0.1, 0.15]), BoundaryState())
         actions = policy.decide(_make_upde([0.45, 0.50]), BoundaryState())
         assert actions[0].scope == "global"
@@ -180,20 +188,20 @@ class TestRecoveryRegime:
 class TestPolicyEdgeCases:
     """Verify defined behaviour for degenerate inputs."""
 
-    def test_empty_layers_forces_critical(self, policy):
+    def test_empty_layers_forces_critical(self, policy: SupervisorPolicy) -> None:
         """No layers → empty R → CRITICAL (defensive)."""
         state = _make_upde([])
         actions = policy.decide(state, BoundaryState())
         knobs = {a.knob for a in actions}
         assert "zeta" in knobs
 
-    def test_single_layer_policy(self, policy):
+    def test_single_layer_policy(self, policy: SupervisorPolicy) -> None:
         """Policy must work with a single layer."""
         actions = policy.decide(_make_upde([0.4]), BoundaryState())
         assert len(actions) >= 1
         assert actions[0].knob == "K"
 
-    def test_all_actions_have_justification(self, policy):
+    def test_all_actions_have_justification(self, policy: SupervisorPolicy) -> None:
         """Every action must carry a non-empty justification string."""
         for r_values in [[0.9], [0.4, 0.5], [0.1, 0.15], []]:
             state = _make_upde(r_values)
@@ -201,7 +209,7 @@ class TestPolicyEdgeCases:
             for a in actions:
                 assert a.justification, f"Action {a.knob} missing justification"
 
-    def test_all_actions_have_positive_ttl(self, policy):
+    def test_all_actions_have_positive_ttl(self, policy: SupervisorPolicy) -> None:
         """Every action must have a positive time-to-live."""
         for r_values in [[0.4, 0.5], [0.1, 0.15]]:
             state = _make_upde(r_values)
@@ -219,7 +227,9 @@ class TestPolicyEdgeCases:
             ({"restore_fraction": 1.1}, "restore_fraction"),
         ],
     )
-    def test_policy_gains_reject_invalid_values(self, kwargs, message):
+    def test_policy_gains_reject_invalid_values(
+        self, kwargs: dict[str, float], message: str
+    ) -> None:
         with pytest.raises(ValueError, match=message):
             SupervisorPolicyGains(**kwargs)
 
@@ -230,7 +240,7 @@ class TestPolicyPipelineEndToEnd:
     Proves SupervisorPolicy is the decision core, not decorative.
     """
 
-    def test_engine_trajectory_drives_policy_decisions(self):
+    def test_engine_trajectory_drives_policy_decisions(self) -> None:
         """Engine output → R → Policy.decide() → actionable control actions."""
         from scpn_phase_orchestrator.coupling.knm import CouplingBuilder
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
@@ -254,7 +264,7 @@ class TestPolicyPipelineEndToEnd:
             assert a.justification
             assert a.ttl_s > 0
 
-    def test_policy_feedback_loop_stabilises_engine(self):
+    def test_policy_feedback_loop_stabilises_engine(self) -> None:
         """Policy K-boost → apply to engine → R should increase."""
         from scpn_phase_orchestrator.upde.engine import UPDEEngine
         from scpn_phase_orchestrator.upde.order_params import compute_order_parameter
@@ -282,7 +292,7 @@ class TestPolicyPipelineEndToEnd:
         r_final, _ = compute_order_parameter(phases)
         assert 0.0 <= r_final <= 1.0
 
-    def test_performance_decide_under_50us(self):
+    def test_performance_decide_under_50us(self) -> None:
         """SupervisorPolicy.decide() < 50μs per call."""
         import time
 
