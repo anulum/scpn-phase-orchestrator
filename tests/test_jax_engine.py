@@ -221,6 +221,9 @@ def test_jax_upde_parity_with_numpy() -> None:
     alpha = np.zeros((n, n))
 
     py = UPDEEngine(n, dt=0.01, method="rk4")
+    # UPDEEngine picks the Rust stepper when spo_kernel is installed.
+    py._rust = None
+    assert py.backend == "numpy"
     jx = JaxUPDEEngine(n, dt=0.01, method="rk4")
 
     py_result = py.step(phases.copy(), omegas, knm, 0.0, 0.0, alpha)
