@@ -20,6 +20,8 @@ from __future__ import annotations
 
 import functools
 import math
+from collections.abc import Callable
+from typing import ParamSpec, TypeVar
 
 import numpy as np
 import pytest
@@ -32,10 +34,15 @@ from scpn_phase_orchestrator.upde.reduction import (
     OttAntonsenReduction,
 )
 
+_P = ParamSpec("_P")
+_R = TypeVar("_R")
 
-def _python(func):
+
+def _python(func: Callable[_P, _R]) -> Callable[_P, _R]:
+    """Run ``func`` with the pure-Python backend forced."""
+
     @functools.wraps(func)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> _R:
         prev = r_mod.ACTIVE_BACKEND
         r_mod.ACTIVE_BACKEND = "python"
         try:
@@ -47,11 +54,11 @@ def _python(func):
 
 
 class TestConstructor:
-    def test_rejects_negative_delta(self):
+    def test_rejects_negative_delta(self) -> None:
         with pytest.raises(ValueError, match="delta"):
             OttAntonsenReduction(omega_0=0.0, delta=-0.1, K=1.0)
 
-    def test_rejects_non_positive_dt(self):
+    def test_rejects_non_positive_dt(self) -> None:
         with pytest.raises(ValueError, match="dt"):
             OttAntonsenReduction(
                 omega_0=0.0,
@@ -69,21 +76,28 @@ class TestConstructor:
             ("dt", np.nan),
         ],
     )
-    def test_rejects_nonfinite_scalar_parameters(self, field, value):
+    def test_rejects_nonfinite_scalar_parameters(
+        self, field: str, value: float
+    ) -> None:
         params = {"omega_0": 0.0, "delta": 0.1, "K": 1.0, "dt": 0.01}
         params[field] = value
         with pytest.raises(ValueError, match="finite"):
-            OttAntonsenReduction(**params)
+            OttAntonsenReduction(
+                omega_0=params["omega_0"],
+                delta=params["delta"],
+                K=params["K"],
+                dt=params["dt"],
+            )
 
 
 class TestAnalyticalSteadyState:
     @_python
-    def test_k_critical_equals_two_delta(self):
+    def test_k_critical_equals_two_delta(self) -> None:
         red = OttAntonsenReduction(omega_0=0.0, delta=0.3, K=1.0)
         assert red.K_c == pytest.approx(0.6, abs=1e-14)
 
     @_python
-    def test_r_ss_above_critical(self):
+    def test_r_ss_above_critical(self) -> None:
         """K = 3Δ → R_ss = √(1 − 2/3) = √(1/3) ≈ 0.5774."""
         red = OttAntonsenReduction(omega_0=0.0, delta=1.0, K=3.0)
         assert red.steady_state_R() == pytest.approx(
@@ -92,25 +106,25 @@ class TestAnalyticalSteadyState:
         )
 
     @_python
-    def test_r_ss_below_critical_is_zero(self):
+    def test_r_ss_below_critical_is_zero(self) -> None:
         red = OttAntonsenReduction(omega_0=0.0, delta=1.0, K=1.5)
         assert red.steady_state_R() == 0.0
 
     @_python
-    def test_r_ss_at_critical_is_zero(self):
+    def test_r_ss_at_critical_is_zero(self) -> None:
         """K = K_c = 2Δ → R_ss = 0 (boundary case)."""
         red = OttAntonsenReduction(omega_0=0.0, delta=1.0, K=2.0)
         assert red.steady_state_R() == 0.0
 
     @_python
-    def test_r_ss_zero_coupling_no_nan(self):
+    def test_r_ss_zero_coupling_no_nan(self) -> None:
         red = OttAntonsenReduction(omega_0=0.0, delta=0.0, K=0.0)
         assert red.steady_state_R() == 0.0
 
 
 class TestTrajectoryConvergence:
     @_python
-    def test_converges_to_analytical_ss(self):
+    def test_converges_to_analytical_ss(self) -> None:
         """Above criticality, integrating from a small seed
         should converge towards the analytical ``R_ss``."""
         delta = 0.1
@@ -125,7 +139,7 @@ class TestTrajectoryConvergence:
         assert pytest.approx(red.steady_state_R(), abs=5e-3) == state.R
 
     @_python
-    def test_subcritical_decays(self):
+    def test_subcritical_decays(self) -> None:
         """Below criticality, ``R`` decays towards zero
         regardless of initial seed."""
         red = OttAntonsenReduction(
@@ -140,7 +154,7 @@ class TestTrajectoryConvergence:
 
 class TestStep:
     @_python
-    def test_step_advances_trajectory(self):
+    def test_step_advances_trajectory(self) -> None:
         red = OttAntonsenReduction(
             omega_0=0.5,
             delta=0.1,
@@ -152,7 +166,7 @@ class TestStep:
         assert z1 != z0
 
     @_python
-    def test_zero_state_is_fixed_point_at_linear_regime(self):
+    def test_zero_state_is_fixed_point_at_linear_regime(self) -> None:
         """z = 0 is always a fixed point: derivative evaluates
         to 0 at origin irrespective of Δ, ω₀, K."""
         red = OttAntonsenReduction(
@@ -176,7 +190,7 @@ def _analytic_oa_amplitude(r0: float, delta: float, k: float, t: float) -> float
 
 class TestPredictFromOscillators:
     @_python
-    def test_infers_delta_and_omega_from_sample(self):
+    def test_infers_delta_and_omega_from_sample(self) -> None:
         rng = np.random.default_rng(0)
         # Draw from a Lorentzian with omega_0=1.5, delta=0.3
         omegas = 1.5 + 0.3 * np.tan(
@@ -218,8 +232,10 @@ class TestPredictFromOscillators:
         K: object,
     ) -> None:
         red = OttAntonsenReduction(omega_0=0.0, delta=0.1, K=1.0)
+        # K is deliberately not a finite float, so the call is unchecked.
+        predict_unchecked: Callable[..., object] = red.predict_from_oscillators
         with pytest.raises(ValueError, match="K must be a finite real"):
-            red.predict_from_oscillators([0.1, 0.2, 0.3], K=K)
+            predict_unchecked([0.1, 0.2, 0.3], K=K)
 
     @pytest.mark.parametrize("owner", ["python", "rust"])
     def test_predict_from_oscillators_uses_iqr_fallback_when_spread_collapses(
@@ -247,9 +263,9 @@ class TestPredictFromOscillators:
         rng = np.random.default_rng(97)
         for n in range(1, 40):
             sample = rng.standard_cauchy(n)
-            assert r_mod._fit_lorentzian_python(sample) == r_mod._rust_fit_lorentzian(
-                sample
-            )
+            # The Rust helper is bound under a private, non-exported name.
+            rust_fit = vars(r_mod)["_rust_fit_lorentzian"]
+            assert r_mod._fit_lorentzian_python(sample) == rust_fit(sample)
 
 
 class TestHypothesis:
@@ -264,7 +280,9 @@ class TestHypothesis:
         deadline=None,
         suppress_health_check=[HealthCheck.too_slow],
     )
-    def test_r_bounded_in_unit_interval(self, delta, K_ratio, seed):
+    def test_r_bounded_in_unit_interval(
+        self, delta: float, K_ratio: float, seed: int
+    ) -> None:
         K = K_ratio * delta
         rng = np.random.default_rng(seed)
         z0 = complex(0.1 * rng.standard_normal(), 0.1 * rng.standard_normal())
@@ -279,9 +297,9 @@ class TestHypothesis:
 
 
 class TestDispatcherSurface:
-    def test_available_non_empty(self):
+    def test_available_non_empty(self) -> None:
         assert r_mod.AVAILABLE_BACKENDS
         assert "python" in r_mod.AVAILABLE_BACKENDS
 
-    def test_active_is_first(self):
+    def test_active_is_first(self) -> None:
         assert r_mod.AVAILABLE_BACKENDS[0] == r_mod.ACTIVE_BACKEND
