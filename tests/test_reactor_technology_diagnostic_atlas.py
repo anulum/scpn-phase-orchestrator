@@ -165,7 +165,9 @@ def test_primary_source_graph_is_closed_and_configuration_specific() -> None:
         for configuration in source["configurations"]
     }
     assert covered_configurations == {row["configuration"] for row in rows}
-    assert payload["counts"]["primary_sources"] == len(sources)
+    counts = payload["counts"]
+    assert isinstance(counts, dict)
+    assert counts["primary_sources"] == len(sources)
 
     for source in sources:
         assert source["url"].startswith("https://")
@@ -175,12 +177,17 @@ def test_primary_source_graph_is_closed_and_configuration_specific() -> None:
     for row in rows:
         identifier = row["configuration"]
         source_ids = row["source_ids"]
+        reference_systems = row["reference_systems"]
+        source_claims = row["capability_claims"]
+        assert isinstance(source_ids, list)
+        assert isinstance(reference_systems, list)
+        assert isinstance(source_claims, list)
         assert source_ids == sorted(source_ids)
         for source_id in source_ids:
             assert identifier in source_by_id[source_id]["configurations"]
-        for system in row["reference_systems"]:
+        for system in reference_systems:
             assert set(system["source_ids"]) <= set(source_ids)
-        for claim in row["capability_claims"]:
+        for claim in source_claims:
             assert set(claim["source_ids"]) <= set(source_ids)
             assert all(
                 identifier in source_by_id[source_id]["configurations"]
@@ -193,7 +200,9 @@ def test_rank_semantics_do_not_promote_component_or_concept_evidence() -> None:
     rows = _rows()
     payload = _payload()
 
-    assert tuple(payload["rank_order"]) == RANK_ORDER
+    rank_order = payload["rank_order"]
+    assert isinstance(rank_order, list)
+    assert tuple(rank_order) == RANK_ORDER
     ranks = Counter(row["external_evidence_rank"] for row in rows)
     assert ranks == {
         "E5_integrated_fusion_observation": 9,
@@ -205,6 +214,9 @@ def test_rank_semantics_do_not_promote_component_or_concept_evidence() -> None:
     for row in rows:
         rank = row["external_evidence_rank"]
         claims = row["capability_claims"]
+        missing = row["missing_capabilities"]
+        assert isinstance(claims, list)
+        assert isinstance(missing, list)
         capabilities = [claim["capability_id"] for claim in claims]
         assert len(capabilities) == len(set(capabilities))
         if rank == "E5_integrated_fusion_observation":
@@ -213,9 +225,9 @@ def test_rank_semantics_do_not_promote_component_or_concept_evidence() -> None:
                 and claim["status"] == "observed_integrated"
                 for claim in claims
             )
-            assert "integrated_fusion_output" not in row["missing_capabilities"]
+            assert "integrated_fusion_output" not in missing
         else:
-            assert "integrated_fusion_output" in row["missing_capabilities"]
+            assert "integrated_fusion_output" in missing
         if rank == "E3_component_or_driver_experiment":
             assert all(claim["status"] != "observed_integrated" for claim in claims)
         if rank == "E1_concept_or_simulation":
@@ -254,10 +266,12 @@ def test_external_technology_evidence_never_qualifies_spo_signals() -> None:
         assert row["actionable"] is False
         assert row["direct_actuation_authorized"] is False
         assert row["machine_protection_final_veto"] is True
-        assert row["missing_capabilities"] == sorted(row["missing_capabilities"])
-        assert "public_machine_readable_calibrated_data" in row["missing_capabilities"]
-        assert "spo_producer_adapter" in row["missing_capabilities"]
-        assert "control_admission" in row["missing_capabilities"]
+        missing = row["missing_capabilities"]
+        assert isinstance(missing, list)
+        assert missing == sorted(missing)
+        assert "public_machine_readable_calibrated_data" in missing
+        assert "spo_producer_adapter" in missing
+        assert "control_admission" in missing
 
 
 def test_extension_evidence_does_not_claim_reactor_or_energy_gain() -> None:
@@ -273,6 +287,8 @@ def test_extension_evidence_does_not_claim_reactor_or_energy_gain() -> None:
         row = rows[identifier]
         assert row["confinement_family"] == "extension"
         assert row["external_evidence_rank"] == "E5_integrated_fusion_observation"
-        assert "current_integrated_device" in row["missing_capabilities"]
-        assert "power_conversion_demonstration" in row["missing_capabilities"]
+        missing = row["missing_capabilities"]
+        assert isinstance(missing, list)
+        assert "current_integrated_device" in missing
+        assert "power_conversion_demonstration" in missing
         assert row["technology_is_control_evidence"] is False
